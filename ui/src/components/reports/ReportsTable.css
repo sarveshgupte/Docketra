@@ -1,0 +1,69 @@
+/**
+ * ReportsTable Styles
+ */
+
+.reports-table {
+  background: var(--surface-raised);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-light), var(--shadow-dark);
+}
+
+.reports-table__wrapper {
+  overflow-x: auto;
+  margin-bottom: var(--spacing-lg);
+}
+
+.reports-table__row {
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.reports-table__row:hover {
+  background: rgba(92, 124, 250, 0.05);
+}
+
+.reports-table__empty {
+  text-align: center;
+  padding: var(--spacing-2xl);
+  color: var(--text-secondary);
+}
+
+.reports-table__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-lg);
+  padding-top: var(--spacing-lg);
+  border-top: var(--border-subtle);
+}
+
+.reports-table__page-info {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.neo-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.neo-table th {
+  background: var(--surface-inset);
+  padding: var(--spacing-md);
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--surface-base);
+}
+
+.neo-table td {
+  padding: var(--spacing-md);
+  border-bottom: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.neo-table tbody tr:last-child td {
+  border-bottom: none;
+}

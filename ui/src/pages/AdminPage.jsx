@@ -71,6 +71,12 @@ export const AdminPage = () => {
           >
             User Management
           </Button>
+          <Button
+            variant={activeTab === 'reports' ? 'primary' : 'default'}
+            onClick={() => navigate('/admin/reports')}
+          >
+            Reports & MIS
+          </Button>
         </div>
 
         {activeTab === 'approvals' && (

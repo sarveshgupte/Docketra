@@ -1,0 +1,51 @@
+/**
+ * ExportModal Styles
+ */
+
+.export-modal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+}
+
+.export-modal__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.export-modal__text {
+  font-size: var(--font-size-md);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.export-modal__filters {
+  background: var(--surface-inset);
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius);
+}
+
+.export-modal__filters h4 {
+  margin: 0 0 var(--spacing-sm) 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.export-modal__filters ul {
+  margin: 0;
+  padding-left: var(--spacing-lg);
+}
+
+.export-modal__filters li {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.export-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-md);
+}
