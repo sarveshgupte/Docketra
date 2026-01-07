@@ -46,8 +46,8 @@ const authenticate = async (req, res, next) => {
     }
     
     // Special case: allow change-password endpoint even if mustChangePassword is true
-    const isChangePasswordEndpoint = req.path === '/change-password' || 
-                                      req.originalUrl.includes('/auth/change-password');
+    // Check if this is the change-password endpoint
+    const isChangePasswordEndpoint = req.path.endsWith('/change-password');
     
     // Block access to other routes if password change is required
     if (user.mustChangePassword && !isChangePasswordEndpoint) {

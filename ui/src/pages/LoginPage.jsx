@@ -19,6 +19,11 @@ export const LoginPage = () => {
 
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Get success message from location state if present
+  const successMessage = location.state?.message;
+  const messageType = location.state?.messageType;
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -86,6 +91,12 @@ export const LoginPage = () => {
             required
             placeholder="Enter your password"
           />
+
+          {successMessage && messageType === 'success' && (
+            <div className="neo-alert neo-alert--success" style={{ marginBottom: 'var(--spacing-md)' }}>
+              {successMessage}
+            </div>
+          )}
 
           {error && (
             <div className="neo-alert neo-alert--danger" style={{ marginBottom: 'var(--spacing-md)' }}>
