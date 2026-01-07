@@ -85,7 +85,18 @@ caseflow/
    docker run -d -p 27017:27017 --name mongodb mongo:latest
    ```
 
-5. **Run the application**
+5. **Initialize admin user**
+   ```bash
+   node src/scripts/seedAdmin.js
+   ```
+   
+   This creates the default admin account:
+   - **xID**: `X000001`
+   - **Password**: `ChangeMe@123`
+   
+   ⚠️ **IMPORTANT**: Change the default password immediately after first login!
+
+6. **Run the application**
    ```bash
    # Development mode with auto-restart
    npm run dev
@@ -94,7 +105,7 @@ caseflow/
    npm start
    ```
 
-6. **Verify the server is running**
+7. **Verify the server is running**
    ```bash
    curl http://localhost:3000/health
    ```
@@ -106,7 +117,34 @@ caseflow/
 http://localhost:3000/api
 ```
 
+### Authentication
+
+The API uses xID-based authentication. To access protected endpoints:
+
+1. Login to get authenticated:
+   ```bash
+   curl -X POST http://localhost:3000/api/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{
+       "xID": "X000001",
+       "password": "ChangeMe@123"
+     }'
+   ```
+
+2. Use the returned user data for subsequent requests. Protected endpoints require the `x-user-id` header:
+   ```bash
+   curl http://localhost:3000/api/users \
+     -H "x-user-id: X000001"
+   ```
+
 ### Endpoints Overview
+
+#### Authentication
+- `POST /api/auth/login` - Login with xID and password
+- `POST /api/auth/logout` - Logout (requires authentication)
+- `POST /api/auth/change-password` - Change password (requires authentication)
+- `GET /api/auth/profile` - Get user profile (requires authentication)
+- `PUT /api/auth/profile` - Update user profile (requires authentication)
 
 #### Users
 - `GET /api/users` - List all users (with pagination and filters)
@@ -193,9 +231,12 @@ curl "http://localhost:3000/api/tasks?case=CASE_ID"
 ## 🗄️ Data Models
 
 ### User Model
-- **Fields**: name, email, role (admin/manager/consultant/client), isActive
-- **Audit**: createdBy, updatedBy, timestamps
-- **Validation**: Email format, required fields
+- **Fields**: xID (immutable), name (immutable), email, role (Admin/Employee), allowedCategories, isActive
+- **Authentication**: xID-based with bcrypt password hashing
+- **Security**: Password expiry (60 days), password history (last 5), forced password change on first login
+- **Format**: xID follows pattern X123456 (X followed by 6 digits)
+- **Audit**: createdAt, passwordLastChangedAt, passwordExpiresAt
+- **Validation**: xID format, email format, required fields
 
 ### Task Model
 - **Fields**: title, description, status, priority, assignedTo, case, dueDate, estimatedHours, actualHours
@@ -271,8 +312,8 @@ Uses nodemon for automatic server restart on file changes.
 
 ## 📝 Future Enhancements
 
-- [ ] Authentication & authorization
-- [ ] React frontend
+- [x] Authentication & authorization (xID-based)
+- [x] React frontend
 - [ ] File attachments for cases/tasks
 - [ ] Email notifications
 - [ ] Time tracking integration

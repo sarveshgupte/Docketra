@@ -14,9 +14,9 @@ export const authService = {
     const response = await api.post('/auth/login', { xID, password });
     
     if (response.data.success) {
-      const { xID: userXID, user } = response.data.data;
-      localStorage.setItem(STORAGE_KEYS.X_ID, userXID);
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+      const userData = response.data.data;
+      localStorage.setItem(STORAGE_KEYS.X_ID, userData.xID);
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
     }
     
     return response.data;
