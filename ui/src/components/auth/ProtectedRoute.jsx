@@ -4,9 +4,9 @@
 
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
-import { usePermissions } from '../hooks/usePermissions';
-import { Loading } from '../components/common/Loading';
+import { useAuth } from '../../hooks/useAuth.js';
+import { usePermissions } from '../../hooks/usePermissions.js';
+import { Loading } from '../common/Loading';
 
 export const ProtectedRoute = ({ children, requireAdmin = false }) => {
   const { isAuthenticated, loading } = useAuth();

@@ -2,8 +2,8 @@
  * usePermissions Hook
  */
 
-import { useAuth } from './useAuth';
-import * as permissions from '../utils/permissions';
+import { useAuth } from './useAuth.js';
+import * as permissions from '../utils/permissions.js';
 
 export const usePermissions = () => {
   const { user } = useAuth();
