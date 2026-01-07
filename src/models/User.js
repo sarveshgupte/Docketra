@@ -14,6 +14,7 @@ const userSchema = new mongoose.Schema({
     unique: true,
     lowercase: true,
     trim: true,
+    match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email address'],
   },
   // Authentication credential; use placeholder hashing logic (bcrypt structure)
   // TODO: Implement actual password hashing with bcrypt before production
