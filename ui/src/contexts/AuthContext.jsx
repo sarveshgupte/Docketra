@@ -32,9 +32,11 @@ export const AuthProvider = ({ children }) => {
       const userData = response.data;
       setUser(userData);
       setIsAuthenticated(true);
+      return response;
+    } else {
+      // Login failed or requires password change - don't set auth state
+      throw new Error(response.message);
     }
-    
-    return response;
   };
 
   const logout = async () => {
