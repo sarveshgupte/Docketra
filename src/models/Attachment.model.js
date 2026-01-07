@@ -119,7 +119,10 @@ attachmentSchema.pre('findOneAndDelete', function(next) {
 
 /**
  * Performance Indexes
+ * - caseId + createdAt: List attachments for a case
+ * - fileName: Full-text search index for global search
  */
 attachmentSchema.index({ caseId: 1, createdAt: -1 });
+attachmentSchema.index({ fileName: 'text' });
 
 module.exports = mongoose.model('Attachment', attachmentSchema);
