@@ -2,7 +2,7 @@
  * Permission Utilities
  */
 
-import { USER_ROLES } from './constants';
+import { USER_ROLES } from './constants.js';
 
 export const isAdmin = (user) => {
   return user?.role === USER_ROLES.ADMIN;

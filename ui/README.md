@@ -68,55 +68,19 @@ npm run preview
 
 ```
 ui/
-├── public/
-│   └── index.html           # HTML template
-├── src/
-│   ├── assets/
-│   │   └── styles/          # CSS design system
-│   │       ├── tokens.css   # Design tokens (colors, spacing, etc.)
-│   │       ├── neomorphic.css  # Neomorphic component styles
-│   │       └── global.css   # Global styles and utilities
-│   ├── components/
-│   │   ├── auth/            # Authentication components
-│   │   ├── common/          # Reusable UI components
-│   │   ├── dashboard/       # Dashboard-specific components
-│   │   ├── case/            # Case-specific components
-│   │   ├── worklist/        # Worklist components
-│   │   ├── admin/           # Admin components
-│   │   └── profile/         # Profile components
-│   ├── contexts/
-│   │   ├── AuthContext.jsx  # Authentication state
-│   │   └── ToastContext.jsx # Notification system
-│   ├── hooks/
-│   │   ├── useAuth.js       # Authentication hook
-│   │   ├── usePermissions.js # Permissions hook
-│   │   └── useApi.js        # API call hook
-│   ├── pages/
-│   │   ├── LoginPage.jsx    # Login screen
-│   │   ├── DashboardPage.jsx # Dashboard
-│   │   ├── WorklistPage.jsx # My worklist
-│   │   ├── CaseDetailPage.jsx # Case view
-│   │   ├── CreateCasePage.jsx # Create case
-│   │   ├── ProfilePage.jsx  # User profile
-│   │   └── AdminPage.jsx    # Admin panel
-│   ├── services/
-│   │   ├── api.js           # Axios configuration
-│   │   ├── authService.js   # Auth API calls
-│   │   ├── caseService.js   # Case API calls
-│   │   ├── worklistService.js # Worklist API calls
-│   │   └── adminService.js  # Admin API calls
-│   ├── utils/
-│   │   ├── formatters.js    # Data formatting utilities
-│   │   ├── validators.js    # Form validation
-│   │   ├── constants.js     # App constants
-│   │   └── permissions.js   # Permission utilities
-│   ├── App.jsx              # Root component
-│   ├── Router.jsx           # Route configuration
-│   └── index.jsx            # Entry point
-├── .env.example             # Environment variable template
-├── package.json             # Dependencies
-├── vite.config.js           # Vite configuration
-└── README.md                # This file
+├── public/                  # Public assets (empty after moving index.html)
+├── src/                     # Source code
+│   ├── assets/             # CSS and static assets
+│   ├── components/         # React components
+│   ├── contexts/           # React contexts
+│   ├── hooks/              # Custom React hooks
+│   ├── pages/              # Page components
+│   ├── services/           # API services
+│   └── utils/              # Utility functions
+├── index.html              # Entry HTML file (Vite requirement)
+├── package.json            # Dependencies
+├── vite.config.js          # Vite configuration
+└── README.md               # This file
 ```
 
 ## 🔑 Features
