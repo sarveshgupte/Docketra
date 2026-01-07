@@ -126,7 +126,8 @@ if (isProduction) {
   app.use(express.static(uiBuildPath));
   
   // SPA fallback - serve index.html for all non-API routes
-  app.get('*', (req, res) => {
+  // Use a regex pattern that's compatible with Express 5
+  app.get(/^(?!\/api).*$/, (req, res) => {
     res.sendFile(path.join(uiBuildPath, 'index.html'));
   });
 }
