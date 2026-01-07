@@ -45,7 +45,7 @@ const userSchema = new mongoose.Schema({
 });
 
 // Indexes for performance
-userSchema.index({ email: 1 });
+// Note: email already has unique index from schema definition
 userSchema.index({ isActive: 1 });
 
 // Instance method to get safe user data (without sensitive info)

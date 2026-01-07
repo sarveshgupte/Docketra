@@ -12,7 +12,6 @@ const caseSchema = new mongoose.Schema({
     required: [true, 'Case number is required'],
     unique: true,
     trim: true,
-    index: true,
   },
   title: {
     type: String,
@@ -65,7 +64,6 @@ const caseSchema = new mongoose.Schema({
   leadConsultant: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    index: true,
   },
   startDate: {
     type: Date,
@@ -73,7 +71,6 @@ const caseSchema = new mongoose.Schema({
   },
   targetCloseDate: {
     type: Date,
-    index: true,
   },
   actualCloseDate: {
     type: Date,
@@ -141,20 +138,20 @@ caseSchema.index({ 'client.name': 1 });
 caseSchema.index({ targetCloseDate: 1 });
 
 // Pre-save middleware to track status changes
-caseSchema.pre('save', function(next) {
-  if (this.isModified('status')) {
+caseSchema.pre('save', async function() {
+  if (this.isModified('status') && !this.isNew) {
+    // Only add to history if this is an update, not a new document
     this.statusHistory.push({
       status: this.status,
       changedBy: this.updatedBy || this.createdBy,
       changedAt: new Date(),
     });
-    
-    // Set actualCloseDate when case is closed
-    if (this.status === 'closed' && !this.actualCloseDate) {
-      this.actualCloseDate = new Date();
-    }
   }
-  next();
+  
+  // Set actualCloseDate when case is closed
+  if (this.status === 'closed' && !this.actualCloseDate) {
+    this.actualCloseDate = new Date();
+  }
 });
 
 // Virtual for related tasks
