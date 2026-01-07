@@ -35,7 +35,8 @@ export const AuthProvider = ({ children }) => {
       return response;
     } else {
       // Login failed or requires password change - don't set auth state
-      throw new Error(response.message);
+      const errorMessage = response.message || 'Login failed';
+      throw new Error(errorMessage);
     }
   };
 

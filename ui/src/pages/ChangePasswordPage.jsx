@@ -25,6 +25,18 @@ export const ChangePasswordPage = () => {
   // Get xID from location state (passed during redirect from login)
   const xID = location.state?.xID;
 
+  // Redirect to login if xID is missing
+  React.useEffect(() => {
+    if (!xID) {
+      navigate('/login', {
+        state: {
+          message: 'Session expired. Please log in again.',
+          messageType: 'warning'
+        }
+      });
+    }
+  }, [xID, navigate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
