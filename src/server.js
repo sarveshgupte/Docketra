@@ -46,19 +46,11 @@ const isProduction = process.env.NODE_ENV === 'production';
 connectDB();
 
 // Security Headers - Helmet
-if (isProduction) {
-  // In production, use helmet with content security policy for serving static files
-  app.use(helmet({
-    contentSecurityPolicy: false, // Disable CSP since we're serving a React SPA
-    crossOriginEmbedderPolicy: false
-  }));
-} else {
-  // In development, use basic helmet
-  app.use(helmet({
-    contentSecurityPolicy: false,
-    crossOriginEmbedderPolicy: false
-  }));
-}
+// Disable CSP and COEP since we're serving a React SPA
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false
+}));
 
 // CORS Configuration
 const corsOptions = {
