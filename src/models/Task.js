@@ -34,16 +34,13 @@ const taskSchema = new mongoose.Schema({
   assignedTo: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    index: true,
   },
   case: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Case',
-    index: true,
   },
   dueDate: {
     type: Date,
-    index: true,
   },
   completedAt: {
     type: Date,
@@ -96,20 +93,20 @@ taskSchema.index({ case: 1 });
 taskSchema.index({ dueDate: 1 });
 
 // Pre-save middleware to track status changes
-taskSchema.pre('save', function(next) {
-  if (this.isModified('status')) {
+taskSchema.pre('save', async function() {
+  if (this.isModified('status') && !this.isNew) {
+    // Only add to history if this is an update, not a new document
     this.statusHistory.push({
       status: this.status,
       changedBy: this.updatedBy || this.createdBy,
       changedAt: new Date(),
     });
-    
-    // Set completedAt when task is completed
-    if (this.status === 'completed' && !this.completedAt) {
-      this.completedAt = new Date();
-    }
   }
-  next();
+  
+  // Set completedAt when task is completed
+  if (this.status === 'completed' && !this.completedAt) {
+    this.completedAt = new Date();
+  }
 });
 
 module.exports = mongoose.model('Task', taskSchema);
