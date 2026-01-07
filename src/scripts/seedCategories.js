@@ -75,7 +75,7 @@ const seedCategories = async () => {
     console.log(`✓ Total categories processed: ${defaultCategories.length}`);
 
   } catch (error) {
-    console.error('✗ Error seeding categories:', error.message);
+    console.error('✗ Error seeding categories:', error);
     process.exit(1);
   } finally {
     // Close the database connection

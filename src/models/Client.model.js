@@ -103,10 +103,10 @@ clientSchema.pre('save', async function(next) {
   if (!this.clientId) {
     try {
       // Find the client with the highest clientId number
-      // The regex ensures we only match our format: CL-XXXX
+      // The regex ensures we only match our format: CL-XXXX (or more digits for large numbers)
       // The zero-padding ensures proper string-based sorting (CL-0001 < CL-0010 < CL-0100)
       const lastClient = await this.constructor.findOne(
-        { clientId: /^CL-\d{4}$/ },
+        { clientId: /^CL-\d+$/ },
         { clientId: 1 }
       ).sort({ clientId: -1 }).lean();
       
