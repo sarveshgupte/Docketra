@@ -18,6 +18,7 @@ const newCaseRoutes = require('./routes/case.routes');  // New case routes
 const searchRoutes = require('./routes/search.routes');  // Search and worklist routes
 const authRoutes = require('./routes/auth.routes');  // Authentication routes
 const clientApprovalRoutes = require('./routes/clientApproval.routes');  // Client approval routes
+const reportsRoutes = require('./routes/reports.routes');  // Reports routes
 
 /**
  * Caseflow - Task & Case Management System
@@ -61,6 +62,7 @@ app.get('/api', (req, res) => {
       worklists: '/api/worklists',
       auth: '/api/auth',
       clientApproval: '/api/client-approval',
+      reports: '/api/reports',
     },
   });
 });
@@ -75,6 +77,7 @@ app.use('/api/cases', authenticate, newCaseRoutes);
 app.use('/api/search', authenticate, searchRoutes);
 app.use('/api/worklists', authenticate, searchRoutes);
 app.use('/api/client-approval', authenticate, clientApprovalRoutes);
+app.use('/api/reports', reportsRoutes);  // Reports routes (authentication handled in routes file)
 
 // Error handling
 app.use(notFound);

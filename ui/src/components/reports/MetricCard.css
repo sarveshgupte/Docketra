@@ -1,0 +1,46 @@
+/**
+ * MetricCard Styles
+ */
+
+.metric-card {
+  text-align: center;
+  padding: var(--spacing-xl);
+  cursor: pointer;
+  transition: var(--transition-normal);
+}
+
+.metric-card:hover {
+  box-shadow: var(--shadow-light), var(--shadow-dark), 
+    0 0 20px rgba(92, 124, 250, 0.15);
+  transform: translateY(-2px);
+}
+
+.metric-card__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.metric-card__title {
+  font-size: var(--font-size-md);
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin: 0;
+}
+
+.metric-card__value {
+  font-size: 2.5em;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.metric-card__value--warning {
+  color: var(--accent-warning);
+}
+
+.metric-card__subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: 0;
+}
