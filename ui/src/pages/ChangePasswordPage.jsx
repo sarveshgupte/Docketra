@@ -57,9 +57,13 @@ export const ChangePasswordPage = () => {
       const response = await authService.changePasswordWithXID(xID, currentPassword, newPassword);
 
       if (response.success) {
-        // Show success message and redirect to login
-        alert('Password changed successfully! Please log in with your new password.');
-        navigate('/login');
+        // Redirect to login with success message in state
+        navigate('/login', { 
+          state: { 
+            message: 'Password changed successfully! Please log in with your new password.',
+            messageType: 'success'
+          }
+        });
       } else {
         setError(response.message || 'Failed to change password');
       }
