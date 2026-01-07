@@ -160,15 +160,20 @@ caseSchema.virtual('isReadOnly').get(function() {
  * 3. Format as DCK- prefix + 4-digit zero-padded number
  * 
  * Note: This runs before validation, so caseId is available for unique constraint check
+ * 
+ * LIMITATION: This implementation has a potential race condition with concurrent saves.
+ * For production use with high concurrency, consider using MongoDB's findOneAndUpdate 
+ * with atomic increment or a dedicated counter collection.
  */
 caseSchema.pre('save', async function(next) {
   // Only generate caseId if it's not already set (for new documents)
   if (!this.caseId) {
     try {
       // Find the case with the highest caseId number
-      // Use regex to match DCK-XXXX pattern and sort by caseId descending
+      // The regex ensures we only match our format: DCK-XXXX
+      // The zero-padding ensures proper string-based sorting (DCK-0001 < DCK-0010 < DCK-0100)
       const lastCase = await this.constructor.findOne(
-        { caseId: /^DCK-\d+$/ },
+        { caseId: /^DCK-\d{4}$/ },
         { caseId: 1 }
       ).sort({ caseId: -1 }).lean();
       
