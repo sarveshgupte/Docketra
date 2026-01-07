@@ -29,7 +29,7 @@ export const AuthProvider = ({ children }) => {
     const response = await authService.login(xID, password);
     
     if (response.success) {
-      const userData = response.data.user;
+      const userData = response.data;
       setUser(userData);
       setIsAuthenticated(true);
     }
