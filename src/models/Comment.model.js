@@ -102,7 +102,10 @@ commentSchema.pre('findOneAndDelete', function(next) {
 
 /**
  * Performance Indexes
+ * - caseId + createdAt: List comments for a case
+ * - text: Full-text search index for global search
  */
 commentSchema.index({ caseId: 1, createdAt: -1 });
+commentSchema.index({ text: 'text' });
 
 module.exports = mongoose.model('Comment', commentSchema);

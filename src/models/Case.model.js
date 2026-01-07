@@ -273,17 +273,24 @@ caseSchema.pre('save', async function(next) {
 /**
  * Performance Indexes
  * 
- * - caseId: Unique index (automatic from schema definition)
+ * - caseId: Unique index (automatic from schema definition with unique: true)
  * - status + priority: Common filter combination for listing cases
  * - category: Access control and filtering by case type
  * - createdBy: Find cases created by specific user
  * - assignedTo: Find cases assigned to specific user
  * - clientId: Find cases associated with a specific client
+ * - Additional indexes for global search and worklists:
+ *   - status: Filter by status for worklists
+ *   - createdAt: Sort by creation date
+ *   - assignedTo + status: Employee worklist queries
  */
 caseSchema.index({ status: 1, priority: 1 });
 caseSchema.index({ category: 1 });
 caseSchema.index({ createdBy: 1 });
 caseSchema.index({ assignedTo: 1 });
 caseSchema.index({ clientId: 1 });
+caseSchema.index({ status: 1 });
+caseSchema.index({ createdAt: -1 });
+caseSchema.index({ assignedTo: 1, status: 1 });
 
 module.exports = mongoose.model('Case', caseSchema);
