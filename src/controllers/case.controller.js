@@ -2,6 +2,7 @@ const Case = require('../models/Case.model');
 const Comment = require('../models/Comment.model');
 const Attachment = require('../models/Attachment.model');
 const CaseHistory = require('../models/CaseHistory.model');
+const Client = require('../models/Client.model');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -56,7 +57,6 @@ const createCase = async (req, res) => {
     }
     
     // Verify client exists
-    const Client = require('../models/Client.model');
     const client = await Client.findOne({ clientId, isActive: true });
     
     if (!client) {
@@ -564,7 +564,6 @@ const getCaseByCaseId = async (req, res) => {
     const history = await CaseHistory.find({ caseId }).sort({ timestamp: -1 });
     
     // Fetch current client details
-    const Client = require('../models/Client.model');
     const client = await Client.findOne({ clientId: caseData.clientId, isActive: true });
     
     res.json({
@@ -622,7 +621,6 @@ const getCases = async (req, res) => {
       .sort({ createdAt: -1 });
     
     // Fetch client details for each case
-    const Client = require('../models/Client.model');
     const casesWithClients = await Promise.all(
       cases.map(async (caseItem) => {
         const client = await Client.findOne({ clientId: caseItem.clientId, isActive: true });
