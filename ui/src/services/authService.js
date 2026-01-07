@@ -8,6 +8,7 @@ import { STORAGE_KEYS } from '../utils/constants';
 export const authService = {
   /**
    * Login with xID and password
+   * Note: Backend expects payload key as 'xId' (lowercase 'd')
    */
   login: async (xID, password) => {
     const response = await api.post('/auth/login', { xId: xID, password });
