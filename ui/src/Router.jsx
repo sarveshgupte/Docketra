@@ -12,6 +12,8 @@ import { CaseDetailPage } from './pages/CaseDetailPage';
 import { CreateCasePage } from './pages/CreateCasePage';
 import { ProfilePage } from './pages/ProfilePage';
 import { AdminPage } from './pages/AdminPage';
+import { ReportsDashboard } from './pages/reports/ReportsDashboard';
+import { DetailedReports } from './pages/reports/DetailedReports';
 
 export const Router = () => {
   return (
@@ -69,6 +71,24 @@ export const Router = () => {
           element={
             <ProtectedRoute requireAdmin>
               <AdminPage />
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/admin/reports"
+          element={
+            <ProtectedRoute requireAdmin>
+              <ReportsDashboard />
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/admin/reports/detailed"
+          element={
+            <ProtectedRoute requireAdmin>
+              <DetailedReports />
             </ProtectedRoute>
           }
         />
