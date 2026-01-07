@@ -59,6 +59,7 @@ const caseSchema = new mongoose.Schema({
   /**
    * Current lifecycle status of the case
    * - Open: Active and being worked on
+   * - Reviewed: Ready for Admin approval (used for client cases)
    * - Pending: Waiting for external input/decision
    * - Closed: Completed and resolved
    * - Filed: Archived and finalized (read-only)
@@ -67,7 +68,7 @@ const caseSchema = new mongoose.Schema({
   status: {
     type: String,
     enum: {
-      values: ['Open', 'Pending', 'Closed', 'Filed', 'Archived'],
+      values: ['Open', 'Reviewed', 'Pending', 'Closed', 'Filed', 'Archived'],
       message: '{VALUE} is not a valid status',
     },
     default: 'Open',
