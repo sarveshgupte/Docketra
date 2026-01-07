@@ -120,17 +120,16 @@ caseHistorySchema.pre('updateMany', function(next) {
 });
 
 /**
- * Pre-remove Hook: Prevent Deletes
+ * Pre-delete Hooks: Prevent Deletes
  * 
- * This hook blocks any attempt to delete history entries.
+ * These hooks block any attempt to delete history entries.
  * 
  * Rationale: Audit logs must be retained for legal compliance.
  * If storage is a concern, consider archiving to cold storage instead.
+ * 
+ * Note: The 'remove' hook is deprecated in Mongoose 6+, so we only use
+ * the modern deletion hooks: deleteOne, deleteMany, and findOneAndDelete.
  */
-caseHistorySchema.pre('remove', function(next) {
-  next(new Error('CaseHistory entries cannot be deleted. This is an immutable audit log.'));
-});
-
 caseHistorySchema.pre('deleteOne', function(next) {
   next(new Error('CaseHistory entries cannot be deleted. This is an immutable audit log.'));
 });
