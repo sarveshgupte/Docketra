@@ -85,9 +85,8 @@ export const ResetPasswordPage = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            placeholder="Enter new password"
+            placeholder="Enter new password (at least 8 characters)"
             autoFocus
-            helperText="Password must be at least 8 characters"
           />
 
           <Input
