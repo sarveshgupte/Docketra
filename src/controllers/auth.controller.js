@@ -1,4 +1,5 @@
 const bcrypt = require('bcrypt');
+const mongoose = require('mongoose');
 const User = require('../models/User.model');
 const UserProfile = require('../models/UserProfile.model');
 const AuthAudit = require('../models/AuthAudit.model');
@@ -42,6 +43,10 @@ const login = async (req, res) => {
     
     // Find user by xID
     const user = await User.findOne({ xID: xID.toUpperCase() });
+    
+    // TEMPORARY DIAGNOSTIC LOGS - Remove after debugging
+    console.log('DB name:', mongoose.connection.name);
+    console.log('User fetched:', user);
     
     if (!user) {
       // Log failed login attempt
