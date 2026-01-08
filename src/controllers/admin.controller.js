@@ -2,6 +2,7 @@ const User = require('../models/User.model');
 const Client = require('../models/Client.model');
 const Category = require('../models/Category.model');
 const Case = require('../models/Case.model');
+const { CASE_STATUS } = require('../config/constants');
 
 /**
  * Admin Controller for Admin Panel Operations
@@ -38,7 +39,7 @@ const getAdminStats = async (req, res) => {
       
       // Pending approvals - cases with status 'Reviewed' or 'UNDER_REVIEW'
       Case.countDocuments({
-        status: { $in: ['Reviewed', 'UNDER_REVIEW'] }
+        status: { $in: [CASE_STATUS.REVIEWED, CASE_STATUS.UNDER_REVIEW] }
       }),
     ]);
     
