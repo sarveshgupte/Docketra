@@ -125,6 +125,25 @@ const userSchema = new mongoose.Schema({
     default: true,
   },
   
+  // Flag to trigger password reset flow on successful login (for first login scenario)
+  // When true, user can login but will be prompted to reset password via email
+  forcePasswordReset: {
+    type: Boolean,
+    default: false,
+  },
+  
+  // Token hash for password reset (for first login flow)
+  passwordResetTokenHash: {
+    type: String,
+    default: null,
+  },
+  
+  // Expiry timestamp for password reset token
+  passwordResetExpires: {
+    type: Date,
+    default: null,
+  },
+  
   // Audit trail for user account creation
   createdAt: {
     type: Date,

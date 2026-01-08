@@ -54,6 +54,8 @@ const seedAdmin = async () => {
       // Update password hash to ensure it's valid
       const passwordHash = await bcrypt.hash(DEFAULT_PASSWORD, SALT_ROUNDS);
       existingAdmin.passwordHash = passwordHash;
+      existingAdmin.passwordSet = true;  // Allow login with default password
+      existingAdmin.forcePasswordReset = true;  // Trigger reset flow on first login
       existingAdmin.mustChangePassword = true;
       existingAdmin.passwordLastChangedAt = new Date();
       existingAdmin.passwordExpiresAt = new Date(Date.now() + PASSWORD_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
@@ -73,6 +75,8 @@ const seedAdmin = async () => {
         allowedCategories: [],
         isActive: true,
         passwordHash,
+        passwordSet: true,  // Allow login with default password
+        forcePasswordReset: true,  // Trigger reset flow on first login
         mustChangePassword: true,
         passwordLastChangedAt: new Date(),
         passwordExpiresAt: new Date(Date.now() + PASSWORD_EXPIRY_DAYS * 24 * 60 * 60 * 1000),
