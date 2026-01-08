@@ -42,7 +42,7 @@ if (isSmtpConfigured) {
  * @returns {Promise<boolean>} Success status
  */
 const sendEmail = async (mailOptions) => {
-  const fromAddress = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@docketra.com';
+  const fromAddress = process.env.SMTP_FROM || process.env.SMTP_USER || `noreply@${process.env.SMTP_HOST || 'localhost'}`;
   
   if (transporter) {
     // Send via SMTP
@@ -66,7 +66,8 @@ const sendEmail = async (mailOptions) => {
     console.log(`Subject: ${mailOptions.subject}`);
     console.log('');
     console.log('Note: SMTP not configured. Email logged to console only.');
-    console.log('Configure SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS to enable email delivery.');
+    console.log('Configure SMTP_HOST and SMTP_PORT to enable email delivery.');
+    console.log('Optionally configure SMTP_USER and SMTP_PASS for authenticated SMTP.');
     console.log('========================================\n');
     return true;
   }
@@ -148,7 +149,7 @@ Docketra Team
   
   return await sendEmail({
     to: email,
-    subject: subject,
+    subject,
     html: htmlContent,
     text: textContent,
   });
@@ -199,7 +200,7 @@ Docketra Team
   
   return await sendEmail({
     to: email,
-    subject: subject,
+    subject,
     html: htmlContent,
     text: textContent,
   });
@@ -251,7 +252,7 @@ Docketra Team
   
   return await sendEmail({
     to: email,
-    subject: subject,
+    subject,
     html: htmlContent,
     text: textContent,
   });
@@ -301,7 +302,7 @@ Docketra Team
   
   return await sendEmail({
     to: email,
-    subject: subject,
+    subject,
     html: htmlContent,
     text: textContent,
   });
