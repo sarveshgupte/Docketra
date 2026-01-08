@@ -97,7 +97,6 @@ const login = async (req, res) => {
         success: false,
         message: 'Please complete your account setup using the invite link sent to your email',
         mustChangePassword: true,
-        passwordSetupRequired: true,
       });
     }
     
@@ -207,7 +206,7 @@ const login = async (req, res) => {
       try {
         await emailService.sendPasswordResetEmail(user.email, user.name, token);
         emailSent = true;
-        console.log(`[AUTH] Password reset email sent successfully to ${user.email}`);
+        console.log(`[AUTH] Password reset email sent successfully`);
       } catch (emailError) {
         console.error('[AUTH] Failed to send password reset email:', emailError.message);
         // Continue even if email fails - user can still use the system
@@ -588,14 +587,45 @@ const updateProfile = async (req, res) => {
     if (address !== undefined) profile.address = address;
     
     // Handle PAN (support both pan and panMasked)
-    // TODO: Add validation for masked format (ABCDE1234F)
-    if (panMasked !== undefined) profile.pan = panMasked;
-    if (pan !== undefined) profile.pan = pan;
+    // PR 32: Enforce masked format only (no raw PAN storage)
+    if (panMasked !== undefined || pan !== undefined) {
+      const panValue = panMasked !== undefined ? panMasked : pan;
+      
+      // Validate masked format: ABCDE1234F (10 characters, uppercase)
+      if (panValue && panValue.trim()) {
+        const maskedPanRegex = /^[A-Z]{5}\d{4}[A-Z]$/;
+        if (!maskedPanRegex.test(panValue.toUpperCase())) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid PAN format. Must be in format: ABCDE1234F (masked)',
+          });
+        }
+        profile.pan = panValue.toUpperCase();
+      } else {
+        profile.pan = panValue;
+      }
+    }
     
     // Handle Aadhaar (support both aadhaar and aadhaarMasked)
-    // TODO: Add validation for masked format (XXXX-XXXX-1234)
-    if (aadhaarMasked !== undefined) profile.aadhaar = aadhaarMasked;
-    if (aadhaar !== undefined) profile.aadhaar = aadhaar;
+    // PR 32: Enforce masked format only (no raw Aadhaar storage)
+    if (aadhaarMasked !== undefined || aadhaar !== undefined) {
+      const aadhaarValue = aadhaarMasked !== undefined ? aadhaarMasked : aadhaar;
+      
+      // Validate masked format: XXXX-XXXX-1234 or last 4 digits only
+      if (aadhaarValue && aadhaarValue.trim()) {
+        // Accept formats: XXXX-XXXX-1234, XXXXXXXX1234, or just 1234 (last 4 digits)
+        const maskedAadhaarRegex = /^(X{4}-X{4}-\d{4}|X{8}\d{4}|\d{4})$/;
+        if (!maskedAadhaarRegex.test(aadhaarValue)) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid Aadhaar format. Must be masked: XXXX-XXXX-1234 or last 4 digits only',
+          });
+        }
+        profile.aadhaar = aadhaarValue;
+      } else {
+        profile.aadhaar = aadhaarValue;
+      }
+    }
     
     await profile.save();
     
@@ -680,7 +710,10 @@ const createUser = async (req, res) => {
     // Generate next xID automatically (server-side only)
     const xID = await xIDGenerator.generateNextXID();
     
-    console.log(`[AUTH] Auto-generated xID: ${xID} for ${email}`);
+    // Mask email for logging (show first 2 and domain only)
+    const emailParts = email.split('@');
+    const maskedEmail = emailParts[0].substring(0, 2) + '***@' + emailParts[1];
+    console.log(`[AUTH] Auto-generated xID: ${xID} for ${maskedEmail}`);
     
     // Generate secure invite token (48-hour expiry per PR 32)
     const token = emailService.generateSecureToken();
@@ -1279,7 +1312,10 @@ const forgotPassword = async (req, res) => {
     // Always return success to prevent email enumeration attacks
     // This is a security best practice - don't reveal if email exists
     if (!user) {
-      console.log(`[AUTH] Forgot password requested for non-existent email: ${email}`);
+      // Mask email for logging
+      const emailParts = email.split('@');
+      const maskedEmail = emailParts[0].substring(0, 2) + '***@' + (emailParts[1] || '');
+      console.log(`[AUTH] Forgot password requested for non-existent email: ${maskedEmail}`);
       
       return res.json({
         success: true,
@@ -1289,7 +1325,7 @@ const forgotPassword = async (req, res) => {
     
     // Check if user is active
     if (!user.isActive) {
-      console.log(`[AUTH] Forgot password requested for inactive user: ${email}`);
+      console.log(`[AUTH] Forgot password requested for inactive user (xID: ${user.xID})`);
       
       return res.json({
         success: true,

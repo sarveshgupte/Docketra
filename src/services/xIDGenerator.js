@@ -19,22 +19,29 @@ const User = require('../models/User.model');
  */
 const generateNextXID = async () => {
   try {
-    // Find the user with the highest xID number
-    const lastUser = await User.findOne()
-      .sort({ xID: -1 })
+    // Find all users and get their xIDs
+    const users = await User.find()
       .select('xID')
       .lean();
     
-    if (!lastUser || !lastUser.xID) {
+    if (!users || users.length === 0) {
       // First user - start with X000001
       return 'X000001';
     }
     
-    // Extract the numeric part from the last xID
-    const lastNumber = parseInt(lastUser.xID.substring(1), 10);
+    // Extract numeric parts and find the highest
+    let maxNumber = 0;
+    for (const user of users) {
+      if (user.xID && /^X\d{6}$/.test(user.xID)) {
+        const number = parseInt(user.xID.substring(1), 10);
+        if (!isNaN(number) && number > maxNumber) {
+          maxNumber = number;
+        }
+      }
+    }
     
     // Increment and pad with zeros
-    const nextNumber = lastNumber + 1;
+    const nextNumber = maxNumber + 1;
     const paddedNumber = String(nextNumber).padStart(6, '0');
     
     return `X${paddedNumber}`;

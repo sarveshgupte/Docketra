@@ -121,7 +121,7 @@ export const ProfilePage = () => {
         <Card>
           <div className="profile__section">
             <h2 className="neo-section__header">Identity (Read-Only)</h2>
-            <p className="text-secondary" style={{ marginBottom: '1rem' }}>
+            <p className="text-secondary profile__section-description">
               These fields are immutable and cannot be changed
             </p>
             
@@ -154,7 +154,7 @@ export const ProfilePage = () => {
             />
           </div>
 
-          <div className="profile__section" style={{ marginTop: '2rem' }}>
+          <div className="profile__section">
             <h2 className="neo-section__header">Personal Information (Editable)</h2>
             
             <Input
@@ -211,7 +211,7 @@ export const ProfilePage = () => {
               placeholder="ABCDE1234F"
             />
             {editing && (
-              <p className="text-secondary" style={{ fontSize: '0.85rem', marginTop: '-0.5rem' }}>
+              <p className="text-secondary profile__field-hint">
                 Format: ABCDE1234F (masked)
               </p>
             )}
@@ -225,7 +225,7 @@ export const ProfilePage = () => {
               placeholder="XXXX-XXXX-1234"
             />
             {editing && (
-              <p className="text-secondary" style={{ fontSize: '0.85rem', marginTop: '-0.5rem' }}>
+              <p className="text-secondary profile__field-hint">
                 Format: XXXX-XXXX-1234 (only last 4 digits visible)
               </p>
             )}
