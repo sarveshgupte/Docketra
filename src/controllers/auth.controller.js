@@ -169,6 +169,10 @@ const login = async (req, res) => {
       const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
       console.log('PASSWORD RESET LINK:', resetUrl);
       
+      if (!process.env.FRONTEND_URL) {
+        console.warn('[AUTH] FRONTEND_URL not configured. Using default http://localhost:3000.');
+      }
+      
       // Update user with token
       user.passwordResetTokenHash = tokenHash;
       user.passwordResetExpires = tokenExpiry;
