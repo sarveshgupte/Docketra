@@ -113,6 +113,7 @@ const seedDefaultClient = async () => {
     console.log('✓ Default Client created successfully (clientId: C000001)');
   } catch (error) {
     console.error('✗ Error seeding Default Client:', error.message);
+    console.error('Stack trace:', error.stack);
     throw error;
   }
 };

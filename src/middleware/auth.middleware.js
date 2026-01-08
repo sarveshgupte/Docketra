@@ -19,7 +19,7 @@ const User = require('../models/User.model');
 const authenticate = async (req, res, next) => {
   try {
     // Accept both xID and XID from request payload, normalize internally
-    const rawXID = req.body.xID || req.body.XID || req.query.xID || req.query.XID || req.headers['x-user-id'];
+    const rawXID = req.body?.xID || req.body?.XID || req.query?.xID || req.query?.XID || req.headers['x-user-id'];
     
     if (!rawXID) {
       return res.status(401).json({
