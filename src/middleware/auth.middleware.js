@@ -49,12 +49,13 @@ const authenticate = async (req, res, next) => {
       });
     }
     
-    // Special case: allow change-password endpoint even if mustChangePassword is true
-    // Check if this is the change-password endpoint
+    // Special case: allow change-password and profile endpoints even if mustChangePassword is true
+    // Check if this is the change-password or profile endpoint
     const isChangePasswordEndpoint = req.path.endsWith('/change-password');
+    const isProfileEndpoint = req.path.endsWith('/profile');
     
     // Block access to other routes if password change is required
-    if (user.mustChangePassword && !isChangePasswordEndpoint) {
+    if (user.mustChangePassword && !isChangePasswordEndpoint && !isProfileEndpoint) {
       return res.status(403).json({
         success: false,
         message: 'You must change your password before accessing other resources.',

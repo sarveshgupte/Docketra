@@ -7,6 +7,7 @@ const helmet = require('helmet');
 const path = require('path');
 const connectDB = require('./config/database');
 const config = require('./config/config');
+const { runBootstrap } = require('./services/bootstrap.service');
 
 // Middleware
 const requestLogger = require('./middleware/requestLogger');
@@ -45,8 +46,11 @@ const app = express();
 // Detect production mode
 const isProduction = process.env.NODE_ENV === 'production';
 
-// Connect to MongoDB
-connectDB();
+// Connect to MongoDB and run bootstrap
+(async () => {
+  await connectDB();
+  await runBootstrap();
+})();
 
 // Security Headers - Helmet
 // Disable CSP and COEP since we're serving a React SPA
