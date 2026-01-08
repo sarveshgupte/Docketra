@@ -19,7 +19,7 @@ const User = require('../models/User.model');
 const authenticate = async (req, res, next) => {
   try {
     // Accept both xID and XID from request payload, normalize internally
-    const rawXID = req.body.xID || req.body.XID || req.query.xID || req.query.XID || req.headers['x-user-id'];
+    const rawXID = req.body?.xID || req.body?.XID || req.query?.xID || req.query?.XID || req.headers['x-user-id'];
     
     if (!rawXID) {
       return res.status(401).json({
@@ -49,12 +49,13 @@ const authenticate = async (req, res, next) => {
       });
     }
     
-    // Special case: allow change-password endpoint even if mustChangePassword is true
-    // Check if this is the change-password endpoint
+    // Special case: allow change-password and profile endpoints even if mustChangePassword is true
+    // Check if this is the change-password or profile endpoint
     const isChangePasswordEndpoint = req.path.endsWith('/change-password');
+    const isProfileEndpoint = req.path.endsWith('/profile');
     
     // Block access to other routes if password change is required
-    if (user.mustChangePassword && !isChangePasswordEndpoint) {
+    if (user.mustChangePassword && !isChangePasswordEndpoint && !isProfileEndpoint) {
       return res.status(403).json({
         success: false,
         message: 'You must change your password before accessing other resources.',
