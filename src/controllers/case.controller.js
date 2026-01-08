@@ -4,6 +4,7 @@ const Attachment = require('../models/Attachment.model');
 const CaseHistory = require('../models/CaseHistory.model');
 const Client = require('../models/Client.model');
 const { detectDuplicates, generateDuplicateOverrideComment } = require('../services/clientDuplicateDetector');
+const { CASE_CATEGORIES, CASE_LOCK_CONFIG } = require('../config/constants');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -78,7 +79,7 @@ const createCase = async (req, res) => {
     let duplicateMatches = null;
     let systemComment = null;
     
-    if (actualCategory === 'Client – New' || actualCategory === 'Client - New') {
+    if (actualCategory === CASE_CATEGORIES.CLIENT_NEW) {
       // Detect duplicates using client data
       const dataToCheck = clientData || (payload && payload.clientData) || {
         businessName: client.businessName,
@@ -759,14 +760,14 @@ const lockCaseEndpoint = async (req, res) => {
     if (caseData.lockStatus.isLocked && 
         caseData.lockStatus.activeUserEmail !== userEmail.toLowerCase()) {
       
-      // Check for inactivity auto-unlock (2 hours = 7200000 ms)
-      const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+      // Check for inactivity auto-unlock
+      const inactivityTimeout = CASE_LOCK_CONFIG.INACTIVITY_TIMEOUT_MS;
       const lastActivity = caseData.lockStatus.lastActivityAt || caseData.lockStatus.lockedAt;
       const now = new Date();
       
-      if (lastActivity && (now - lastActivity) > TWO_HOURS_MS) {
+      if (lastActivity && (now - lastActivity) > inactivityTimeout) {
         // Auto-unlock due to inactivity
-        console.log(`Auto-unlocking case ${caseId} due to 2-hour inactivity`);
+        console.log(`Auto-unlocking case ${caseId} due to ${CASE_LOCK_CONFIG.INACTIVITY_TIMEOUT_HOURS}-hour inactivity`);
         
         // Log the auto-unlock in history
         await CaseHistory.create({

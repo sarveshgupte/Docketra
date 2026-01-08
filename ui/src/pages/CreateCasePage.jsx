@@ -194,11 +194,11 @@ export const CreateCasePage = () => {
               />
 
               <Textarea
-                label="Description"
+                label="Description (Optional)"
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
-                placeholder="Enter detailed case description"
+                placeholder="Enter detailed case description (optional)"
                 rows={6}
               />
 
