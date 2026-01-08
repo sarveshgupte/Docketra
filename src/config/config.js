@@ -6,7 +6,7 @@
 module.exports = {
   port: process.env.PORT || 5000,
   env: process.env.NODE_ENV || 'development',
-  appName: process.env.APP_NAME || 'Caseflow',
+  appName: process.env.APP_NAME || 'Docketra',
   mongodbUri: process.env.MONGODB_URI || 'mongodb://localhost:27017/caseflow',
   
   // Pagination defaults
