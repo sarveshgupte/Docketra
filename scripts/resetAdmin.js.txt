@@ -1,0 +1,28 @@
+const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
+require('dotenv').config();
+
+const User = require('../src/models/User.model');
+
+(async () => {
+  await mongoose.connect(process.env.MONGO_URI);
+
+  const password = 'Temp@1234';
+  const hash = await bcrypt.hash(password, 10);
+
+  await User.findOneAndUpdate(
+    { xId: 'X000001' },
+    {
+      passwordHash: hash,
+      isActive: true,
+      forcePasswordChange: false,
+      role: 'Admin',
+      name: 'System Admin',
+      email: 'admin@docketra.local'
+    },
+    { upsert: true, new: true }
+  );
+
+  console.log('✅ Admin user reset successfully');
+  process.exit(0);
+})();
