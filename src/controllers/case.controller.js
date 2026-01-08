@@ -240,7 +240,7 @@ const createCase = async (req, res) => {
 const addComment = async (req, res) => {
   try {
     const { caseId } = req.params;
-    const { text, createdBy } = req.body;
+    const { text, createdBy, note } = req.body;
     
     // PR #41: Require authenticated user for security
     if (!req.user?.email) {
@@ -276,9 +276,9 @@ const addComment = async (req, res) => {
     }
     
     // PR #41: Allow comments even if case is not assigned (view mode)
-    // Only check if case is locked by someone else
+    // Only check if case is locked by someone else - use authenticated user for security
     if (caseData.lockStatus?.isLocked && 
-        caseData.lockStatus.activeUserEmail !== createdBy.toLowerCase()) {
+        caseData.lockStatus.activeUserEmail !== req.user.email.toLowerCase()) {
       return res.status(423).json({
         success: false,
         message: `Case is currently locked by ${caseData.lockStatus.activeUserEmail}`,
@@ -368,9 +368,9 @@ const addAttachment = async (req, res) => {
     }
     
     // PR #41: Allow attachments even if case is not assigned (view mode)
-    // Only check if case is locked by someone else
+    // Only check if case is locked by someone else - use authenticated user for security
     if (caseData.lockStatus?.isLocked && 
-        caseData.lockStatus.activeUserEmail !== createdBy.toLowerCase()) {
+        caseData.lockStatus.activeUserEmail !== req.user.email.toLowerCase()) {
       return res.status(423).json({
         success: false,
         message: `Case is currently locked by ${caseData.lockStatus.activeUserEmail}`,
