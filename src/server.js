@@ -54,12 +54,10 @@ app.use(helmet({
 
 // CORS Configuration
 const corsOptions = {
-  origin: isProduction 
-    ? process.env.FRONTEND_URL || false  // In production, require explicit FRONTEND_URL or block all
-    : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5000'],  // Development origins
-  credentials: true,
+  origin: true, // reflect request origin
+  credentials: false,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-user-id']
 };
 
 // Middleware

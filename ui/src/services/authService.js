@@ -8,16 +8,17 @@ import { STORAGE_KEYS } from '../utils/constants';
 export const authService = {
   /**
    * Login with xID and password
-   * Note: Backend expects payload key as 'xId' (lowercase 'd')
+   * Backend expects payload key as 'xID' (uppercase 'D')
    */
   login: async (xID, password) => {
-    const response = await api.post('/auth/login', { xId: xID, password });
+    const response = await api.post('/auth/login', { xID, password });
     
     if (response.data.success) {
-      const { xID: userXID, user } = response.data.data;
-      localStorage.setItem(STORAGE_KEYS.X_ID, userXID);
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+      const userData = response.data.data;
+      localStorage.setItem(STORAGE_KEYS.X_ID, userData.xID);
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
     }
+    // Don't store anything if login fails or requires password change
     
     return response.data;
   },
@@ -41,6 +42,29 @@ export const authService = {
     const response = await api.post('/auth/change-password', {
       currentPassword,
       newPassword,
+    });
+    return response.data;
+  },
+
+  /**
+   * Change password with xID (for users with mustChangePassword flag)
+   */
+  changePasswordWithXID: async (xID, currentPassword, newPassword) => {
+    const response = await api.post('/auth/change-password', {
+      xID,
+      currentPassword,
+      newPassword,
+    });
+    return response.data;
+  },
+
+  /**
+   * Set password using token from email
+   */
+  setPassword: async (token, password) => {
+    const response = await api.post('/auth/set-password', {
+      token,
+      password,
     });
     return response.data;
   },
