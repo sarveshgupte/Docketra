@@ -113,6 +113,12 @@ export const LoginPage = () => {
           <Button type="submit" variant="primary" className="w-full" disabled={loading}>
             {loading ? 'Logging in...' : 'Login'}
           </Button>
+
+          <div className="login-footer">
+            <Link to="/forgot-password" className="forgot-password-link">
+              Forgot Password?
+            </Link>
+          </div>
         </form>
       </Card>
     </div>
