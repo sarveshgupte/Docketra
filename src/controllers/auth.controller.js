@@ -22,6 +22,9 @@ const PASSWORD_SETUP_TOKEN_EXPIRY_HOURS = 24;
  */
 const login = async (req, res) => {
   try {
+    // TODO: TEMPORARY DEBUG LOG - Remove after debugging
+    console.log('Request Body:', req.body);
+    
     const { xID, password } = req.body;
     
     if (!xID || !password) {
