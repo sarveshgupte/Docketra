@@ -1,4 +1,5 @@
 const Case = require('../models/Case.model');
+const { CASE_LOCK_CONFIG } = require('../config/constants');
 
 /**
  * Case Lock Middleware
@@ -43,14 +44,14 @@ const checkCaseLock = async (req, res, next) => {
         caseData.lockStatus.activeUserEmail && 
         caseData.lockStatus.activeUserEmail !== userEmail.toLowerCase()) {
       
-      // Check for inactivity auto-unlock (2 hours = 7200000 ms)
-      const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+      // Check for inactivity auto-unlock (2 hours)
+      const inactivityTimeout = CASE_LOCK_CONFIG.INACTIVITY_TIMEOUT_MS;
       const lastActivity = caseData.lockStatus.lastActivityAt || caseData.lockStatus.lockedAt;
       const now = new Date();
       
-      if (lastActivity && (now - lastActivity) > TWO_HOURS_MS) {
+      if (lastActivity && (now - lastActivity) > inactivityTimeout) {
         // Auto-unlock due to inactivity
-        console.log(`Auto-unlocking case ${caseId} due to 2-hour inactivity`);
+        console.log(`Auto-unlocking case ${caseId} due to ${CASE_LOCK_CONFIG.INACTIVITY_TIMEOUT_HOURS}-hour inactivity`);
         
         const CaseHistory = require('../models/CaseHistory.model');
         

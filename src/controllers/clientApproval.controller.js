@@ -2,6 +2,7 @@ const Case = require('../models/Case.model');
 const Client = require('../models/Client.model');
 const CaseHistory = require('../models/CaseHistory.model');
 const Comment = require('../models/Comment.model');
+const { CASE_CATEGORIES } = require('../config/constants');
 
 /**
  * Client Approval Controller
@@ -57,7 +58,7 @@ const approveNewClient = async (req, res) => {
     
     // Verify case category
     const category = caseData.caseCategory || caseData.category;
-    if (category !== 'Client - New') {
+    if (category !== CASE_CATEGORIES.CLIENT_NEW) {
       return res.status(400).json({
         success: false,
         message: 'This endpoint is only for "Client - New" cases',
@@ -205,7 +206,7 @@ const approveClientEdit = async (req, res) => {
     
     // Verify case category
     const category = caseData.caseCategory || caseData.category;
-    if (category !== 'Client - Edit') {
+    if (category !== CASE_CATEGORIES.CLIENT_EDIT) {
       return res.status(400).json({
         success: false,
         message: 'This endpoint is only for "Client - Edit" cases',
@@ -407,7 +408,8 @@ const rejectClientCase = async (req, res) => {
     
     // Verify case category
     const category = caseData.caseCategory || caseData.category;
-    if (!['Client - New', 'Client - Edit', 'Client - Delete'].includes(category)) {
+    const validCategories = [CASE_CATEGORIES.CLIENT_NEW, CASE_CATEGORIES.CLIENT_EDIT, CASE_CATEGORIES.CLIENT_DELETE];
+    if (!validCategories.includes(category)) {
       return res.status(400).json({
         success: false,
         message: 'This endpoint is only for client-related cases',
