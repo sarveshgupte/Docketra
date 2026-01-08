@@ -25,7 +25,7 @@ const clientApprovalRoutes = require('./routes/clientApproval.routes');  // Clie
 const reportsRoutes = require('./routes/reports.routes');  // Reports routes
 
 /**
- * Caseflow - Task & Case Management System
+ * Docketra - Task & Case Management System
  * Backend API Server
  */
 
@@ -72,7 +72,7 @@ app.use(requestLogger);
 app.get('/health', (req, res) => {
   res.json({
     success: true,
-    message: 'Caseflow API is running',
+    message: 'Docketra API is running',
     timestamp: new Date().toISOString(),
     environment: config.env,
   });
@@ -82,7 +82,7 @@ app.get('/health', (req, res) => {
 app.get('/api', (req, res) => {
   res.json({
     success: true,
-    message: 'Welcome to Caseflow API',
+    message: 'Welcome to Docketra API',
     version: '1.0.0',
     endpoints: {
       health: '/health',
@@ -110,6 +110,11 @@ app.use('/api/worklists', authenticate, searchRoutes);
 app.use('/api/client-approval', authenticate, clientApprovalRoutes);
 app.use('/api/reports', reportsRoutes);  // Reports routes (authentication handled in routes file)
 
+// Root route - API status
+app.get('/', (req, res) => {
+  res.json({ status: 'Docketra API running' });
+});
+
 // Serve static files in production
 if (isProduction) {
   const uiBuildPath = path.join(__dirname, '..', 'ui', 'dist');
@@ -117,9 +122,9 @@ if (isProduction) {
   // Serve static files from UI build directory
   app.use(express.static(uiBuildPath));
   
-  // SPA fallback - serve index.html for all non-API routes
+  // SPA fallback - serve index.html for all non-API routes (excluding root)
   // Use a regex pattern that's compatible with Express 5
-  app.get(/^(?!\/api).*$/, (req, res) => {
+  app.get(/^(?!\/api|\/$).*$/, (req, res) => {
     res.sendFile(path.join(uiBuildPath, 'index.html'));
   });
 }
@@ -133,7 +138,7 @@ const PORT = config.port;
 const server = app.listen(PORT, () => {
   console.log(`
 ╔════════════════════════════════════════════╗
-║         Caseflow API Server                ║
+║         Docketra API Server                ║
 ║                                            ║
 ║  Status: Running                           ║
 ║  Port: ${PORT}                              ║

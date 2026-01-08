@@ -1,5 +1,5 @@
 {
-  "name": "caseflow",
+  "name": "docketra",
   "version": "1.0.0",
   "description": "Task & Case Management System - Backend API",
   "main": "src/server.js",
