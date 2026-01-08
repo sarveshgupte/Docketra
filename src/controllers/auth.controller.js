@@ -74,7 +74,7 @@ const login = async (req, res) => {
     }
     
     // Check if password has been set
-    if (!user.passwordSet) {
+    if (!user.passwordSet || !user.passwordHash) {
       return res.status(403).json({
         success: false,
         message: 'Please set your password using the link sent to your email',
@@ -154,46 +154,60 @@ const login = async (req, res) => {
       });
     }
     
-    // Check if must change password
-    if (user.mustChangePassword) {
-      // Generate new secure password setup token
+    // Check if force password reset is required (for first login)
+    // This allows login to succeed but prompts for password reset
+    let forcePasswordReset = false;
+    if (user.forcePasswordReset) {
+      console.log(`[AUTH] First login detected for user ${user.xID}, generating password reset token`);
+      
+      // Generate new secure password reset token
       const token = emailService.generateSecureToken();
       const tokenHash = emailService.hashToken(token);
       const tokenExpiry = new Date(Date.now() + PASSWORD_SETUP_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000);
       
       // Update user with token
-      user.passwordSetupTokenHash = tokenHash;
-      user.passwordSetupExpires = tokenExpiry;
-      await user.save();
+      user.passwordResetTokenHash = tokenHash;
+      user.passwordResetExpires = tokenExpiry;
       
-      // Send password setup email
-      let emailSent = false;
       try {
-        await emailService.sendPasswordSetupEmail(user.email, user.name, token);
-        emailSent = true;
-      } catch (emailError) {
-        console.error('Failed to send password setup email:', emailError);
-        // Continue even if email fails - user can request resend
+        await user.save();
+      } catch (saveError) {
+        console.error('[AUTH] Failed to save password reset token:', saveError.message);
       }
       
-      // Log password setup email attempt
+      // Validate environment variables for email
+      const frontendUrl = process.env.FRONTEND_URL;
+      if (!frontendUrl) {
+        console.warn('[AUTH] FRONTEND_URL not configured, password reset link may not work correctly');
+      }
+      
+      // Send password reset email
+      let emailSent = false;
+      try {
+        await emailService.sendPasswordResetEmail(user.email, user.name, token);
+        emailSent = true;
+        console.log(`[AUTH] Password reset email sent successfully to ${user.email}`);
+      } catch (emailError) {
+        console.error('[AUTH] Failed to send password reset email:', emailError.message);
+        // Continue even if email fails - user can still use the system
+      }
+      
+      // Log password reset email attempt
       try {
         await AuthAudit.create({
           xID: user.xID,
-          actionType: 'PasswordSetupEmailSent',
-          description: emailSent ? 'Password setup required - email sent' : 'Password setup required - email failed to send',
+          actionType: 'PasswordResetEmailSent',
+          description: emailSent 
+            ? 'Password reset email sent on first login' 
+            : 'Password reset email failed to send on first login',
           performedBy: user.xID,
           ipAddress: req.ip,
         });
       } catch (auditError) {
-        console.error('Failed to create audit log:', auditError);
+        console.error('[AUTH] Failed to create audit log:', auditError.message);
       }
       
-      return res.status(403).json({
-        success: false,
-        message: 'Password setup required. Check your email.',
-        mustChangePassword: true,
-      });
+      forcePasswordReset = true;
     }
     
     // Log successful login
@@ -206,7 +220,7 @@ const login = async (req, res) => {
     });
     
     // Return user info (exclude sensitive fields)
-    res.json({
+    const response = {
       success: true,
       message: 'Login successful',
       data: {
@@ -217,7 +231,14 @@ const login = async (req, res) => {
         allowedCategories: user.allowedCategories,
         isActive: user.isActive,
       },
-    });
+    };
+    
+    // Add forcePasswordReset flag if needed
+    if (forcePasswordReset) {
+      response.forcePasswordReset = true;
+    }
+    
+    res.json(response);
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -832,6 +853,124 @@ const setPassword = async (req, res) => {
 };
 
 /**
+ * Reset password using token from first login email
+ * POST /api/auth/reset-password-with-token
+ */
+const resetPasswordWithToken = async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    
+    if (!token || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Token and password are required',
+      });
+    }
+    
+    // Hash the token to compare with stored hash
+    const tokenHash = emailService.hashToken(token);
+    
+    // Find user with matching token hash (check both setup and reset tokens)
+    let user = await User.findOne({ 
+      passwordResetTokenHash: tokenHash,
+      passwordResetExpires: { $gt: new Date() }
+    });
+    
+    // If not found in reset tokens, check setup tokens for backward compatibility
+    if (!user) {
+      user = await User.findOne({ 
+        passwordSetupTokenHash: tokenHash,
+        passwordSetupExpires: { $gt: new Date() }
+      });
+    }
+    
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired password reset token',
+      });
+    }
+    
+    // Check if new password matches any of the last 5 passwords
+    const passwordHistory = user.passwordHistory || [];
+    
+    for (const oldPassword of passwordHistory.slice(-PASSWORD_HISTORY_LIMIT)) {
+      const isReused = await bcrypt.compare(password, oldPassword.hash);
+      if (isReused) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot reuse any of your last 5 passwords',
+        });
+      }
+    }
+    
+    // Check if new password is same as current
+    if (user.passwordHash) {
+      const isSameAsCurrent = await bcrypt.compare(password, user.passwordHash);
+      if (isSameAsCurrent) {
+        return res.status(400).json({
+          success: false,
+          message: 'New password must be different from current password',
+        });
+      }
+    }
+    
+    // Hash new password
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    
+    // Add current password to history if it exists
+    if (user.passwordHash) {
+      user.passwordHistory.push({
+        hash: user.passwordHash,
+        changedAt: new Date(),
+      });
+      
+      // Keep only last 5 passwords in history
+      if (user.passwordHistory.length > PASSWORD_HISTORY_LIMIT) {
+        user.passwordHistory = user.passwordHistory.slice(-PASSWORD_HISTORY_LIMIT);
+      }
+    }
+    
+    // Update password and clear tokens
+    user.passwordHash = passwordHash;
+    user.passwordSet = true;
+    user.passwordResetTokenHash = null;
+    user.passwordResetExpires = null;
+    user.passwordSetupTokenHash = null;
+    user.passwordSetupExpires = null;
+    user.passwordLastChangedAt = new Date();
+    user.passwordExpiresAt = new Date(Date.now() + PASSWORD_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+    user.mustChangePassword = false;
+    user.forcePasswordReset = false;
+    user.failedLoginAttempts = 0;
+    user.lockUntil = null;
+    
+    await user.save();
+    
+    // Log password reset
+    await AuthAudit.create({
+      xID: user.xID,
+      actionType: 'PasswordReset',
+      description: `User reset password via email link`,
+      performedBy: user.xID,
+      ipAddress: req.ip,
+    });
+    
+    res.json({
+      success: true,
+      message: 'Password reset successfully. You can now log in with your new password.',
+    });
+  } catch (error) {
+    console.error('[AUTH] Error resetting password:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error resetting password',
+      error: error.message,
+    });
+  }
+};
+
+/**
  * Resend password setup email (Admin only)
  * POST /api/auth/resend-setup-email
  */
@@ -1030,6 +1169,7 @@ module.exports = {
   activateUser,
   deactivateUser,
   setPassword,
+  resetPasswordWithToken,
   resendSetupEmail,
   updateUserStatus,
   unlockAccount,

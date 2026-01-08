@@ -106,9 +106,47 @@ const sendPasswordSetupReminderEmail = async (email, name, token, frontendUrl = 
   return true;
 };
 
+/**
+ * Send password reset email (for first login flow)
+ * @param {string} email - Recipient email
+ * @param {string} name - User's name
+ * @param {string} token - Password reset token (plain text)
+ * @param {string} frontendUrl - Base URL of frontend application
+ */
+const sendPasswordResetEmail = async (email, name, token, frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000') => {
+  const resetLink = `${frontendUrl}/reset-password?token=${token}`;
+  
+  console.log('\n========================================');
+  console.log('📧 PASSWORD RESET EMAIL');
+  console.log('========================================');
+  console.log(`To: ${email}`);
+  console.log(`Name: ${name}`);
+  console.log('Subject: Password Reset Required for your Caseflow account');
+  console.log('');
+  console.log('Message:');
+  console.log(`Hello ${name},`);
+  console.log('');
+  console.log('You have successfully logged in to your Caseflow account.');
+  console.log('For security reasons, you are required to reset your password.');
+  console.log('');
+  console.log('Please reset your password by clicking the link below:');
+  console.log(resetLink);
+  console.log('');
+  console.log('This link will expire in 24 hours.');
+  console.log('');
+  console.log('If you did not attempt to log in, please contact your administrator immediately.');
+  console.log('');
+  console.log('Best regards,');
+  console.log('Caseflow Team');
+  console.log('========================================\n');
+  
+  return true;
+};
+
 module.exports = {
   generateSecureToken,
   hashToken,
   sendPasswordSetupEmail,
   sendPasswordSetupReminderEmail,
+  sendPasswordResetEmail,
 };
