@@ -390,51 +390,37 @@ caseSchema.virtual('isReadOnly').get(function() {
  * For production use with high concurrency, consider using MongoDB's findOneAndUpdate 
  * with atomic increment or a dedicated counter collection.
  */
-caseSchema.pre('save', async function(next) {
+caseSchema.pre('validate', async function() {
   // Only generate IDs if they're not already set (for new documents)
   if (!this.caseId) {
-    try {
-      const { generateCaseId } = require('../services/caseIdGenerator');
-      this.caseId = await generateCaseId();
-    } catch (error) {
-      return next(error);
-    }
+    const { generateCaseId } = require('../services/caseIdGenerator');
+    this.caseId = await generateCaseId();
   }
   
   // Generate caseName if not set
   if (!this.caseName) {
-    try {
-      const { generateCaseName } = require('../services/caseNameGenerator');
-      this.caseName = await generateCaseName();
-    } catch (error) {
-      return next(error);
-    }
+    const { generateCaseName } = require('../services/caseNameGenerator');
+    this.caseName = await generateCaseName();
   }
   
   // If this is a new case and clientId is provided, fetch and snapshot the client
   // This preserves client data at the time of case creation for audit trail
   if (this.isNew && this.clientId && !this.clientSnapshot) {
-    try {
-      const Client = mongoose.model('Client');
-      const client = await Client.findOne({ clientId: this.clientId }).lean();
-      if (client) {
-        this.clientSnapshot = {
-          clientId: client.clientId,
-          businessName: client.businessName,
-          businessPhone: client.businessPhone,
-          businessEmail: client.businessEmail,
-          businessAddress: client.businessAddress,
-          PAN: client.PAN,
-          GST: client.GST,
-          CIN: client.CIN,
-        };
-      }
-    } catch (error) {
-      return next(error);
+    const Client = mongoose.model('Client');
+    const client = await Client.findOne({ clientId: this.clientId }).lean();
+    if (client) {
+      this.clientSnapshot = {
+        clientId: client.clientId,
+        businessName: client.businessName,
+        businessPhone: client.businessPhone,
+        businessEmail: client.businessEmail,
+        businessAddress: client.businessAddress,
+        PAN: client.PAN,
+        GST: client.GST,
+        CIN: client.CIN,
+      };
     }
   }
-  
-  next();
 });
 
 /**

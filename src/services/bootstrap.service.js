@@ -28,15 +28,20 @@ const Client = require('../models/Client.model');
  * - email: admin@system.local
  * - role: Admin
  * - status: ACTIVE
- * - password: null (not set yet)
- * - passwordSet: false
- * - mustChangePassword: true
+ * - password: Default password (ChangeMe@123) - should be changed after first login
+ * - passwordSet: true (allows immediate login)
+ * - mustChangePassword: false (allows full system access without forced password change)
  * - passwordExpiresAt: far future (2099)
  * - isActive: true
  * - createdByXid: SYSTEM
  */
 const seedSystemAdmin = async () => {
   try {
+    const bcrypt = require('bcrypt');
+    const SALT_ROUNDS = 10;
+    const DEFAULT_PASSWORD = 'ChangeMe@123';
+    const PASSWORD_EXPIRY_DAYS = 60;
+    
     // Check if admin already exists (by xID or by role)
     const existingAdmin = await User.findOne({
       $or: [
@@ -50,16 +55,20 @@ const seedSystemAdmin = async () => {
       return;
     }
 
-    // Create System Admin
+    // Hash the default password
+    const passwordHash = await bcrypt.hash(DEFAULT_PASSWORD, SALT_ROUNDS);
+
+    // Create System Admin with default password for immediate usability
     const systemAdmin = new User({
       xID: 'X000001',
       name: 'System Admin',
       email: 'admin@system.local',
       role: 'Admin',
       status: 'ACTIVE',
-      passwordHash: null,
-      passwordSet: false,
-      mustChangePassword: true,
+      passwordHash,
+      passwordSet: true, // Allow immediate login
+      mustChangePassword: false, // Allow full system access - admin can change password later
+      passwordLastChangedAt: new Date(),
       passwordExpiresAt: new Date('2099-12-31T23:59:59.999Z'), // Far future date
       isActive: true,
       allowedCategories: [],
@@ -68,6 +77,8 @@ const seedSystemAdmin = async () => {
 
     await systemAdmin.save();
     console.log('✓ System Admin created successfully (xID: X000001)');
+    console.log('  Default Password: ' + DEFAULT_PASSWORD);
+    console.log('  ⚠️  Please change the default password after first login');
   } catch (error) {
     console.error('✗ Error seeding System Admin:', error.message);
     throw error;
