@@ -16,6 +16,7 @@ const PASSWORD_HISTORY_LIMIT = 5;
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCK_TIME = 15 * 60 * 1000; // 15 minutes in milliseconds
 const PASSWORD_SETUP_TOKEN_EXPIRY_HOURS = 24;
+const FORGOT_PASSWORD_TOKEN_EXPIRY_MINUTES = 30; // 30 minutes for forgot password tokens
 
 /**
  * Login with xID and password
@@ -753,6 +754,14 @@ const deactivateUser = async (req, res) => {
     // Get admin from authenticated request
     const admin = req.user;
     
+    // Prevent admin from deactivating themselves
+    if (admin.xID === xID.toUpperCase()) {
+      return res.status(400).json({
+        success: false,
+        message: 'You cannot deactivate your own account',
+      });
+    }
+    
     // Find user
     const user = await User.findOne({ xID: xID.toUpperCase() });
     
@@ -1080,6 +1089,14 @@ const updateUserStatus = async (req, res) => {
     // Get admin from authenticated request
     const admin = req.user;
     
+    // Prevent admin from deactivating themselves
+    if (!active && admin.xID === xID.toUpperCase()) {
+      return res.status(400).json({
+        success: false,
+        message: 'You cannot deactivate your own account',
+      });
+    }
+    
     // Find user
     const user = await User.findOne({ xID: xID.toUpperCase() });
     
@@ -1171,6 +1188,111 @@ const unlockAccount = async (req, res) => {
   }
 };
 
+/**
+ * Forgot password - Request password reset link
+ * POST /api/auth/forgot-password
+ * Public endpoint - does not require authentication
+ */
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required',
+      });
+    }
+    
+    // Find user by email (normalize to lowercase)
+    const user = await User.findOne({ email: email.toLowerCase() });
+    
+    // Always return success to prevent email enumeration attacks
+    // This is a security best practice - don't reveal if email exists
+    if (!user) {
+      console.log(`[AUTH] Forgot password requested for non-existent email: ${email}`);
+      
+      return res.json({
+        success: true,
+        message: 'If an account exists with this email, you will receive a password reset link.',
+      });
+    }
+    
+    // Check if user is active
+    if (!user.isActive) {
+      console.log(`[AUTH] Forgot password requested for inactive user: ${email}`);
+      
+      return res.json({
+        success: true,
+        message: 'If an account exists with this email, you will receive a password reset link.',
+      });
+    }
+    
+    // Generate secure password reset token
+    const token = emailService.generateSecureToken();
+    const tokenHash = emailService.hashToken(token);
+    const tokenExpiry = new Date(Date.now() + FORGOT_PASSWORD_TOKEN_EXPIRY_MINUTES * 60 * 1000);
+    
+    // Update user with reset token
+    user.passwordResetTokenHash = tokenHash;
+    user.passwordResetExpires = tokenExpiry;
+    await user.save();
+    
+    // Send password reset email
+    try {
+      await emailService.sendForgotPasswordEmail(user.email, user.name, token);
+      
+      // Log password reset request
+      await AuthAudit.create({
+        xID: user.xID,
+        actionType: 'ForgotPasswordRequested',
+        description: `Password reset link sent to ${user.email}`,
+        performedBy: user.xID,
+        ipAddress: req.ip,
+      });
+    } catch (emailError) {
+      console.error('[AUTH] Failed to send forgot password email:', emailError);
+      // Continue even if email fails - we don't want to reveal if email exists
+    }
+    
+    res.json({
+      success: true,
+      message: 'If an account exists with this email, you will receive a password reset link.',
+    });
+  } catch (error) {
+    console.error('[AUTH] Error in forgot password:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error processing password reset request',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Get all users (Admin only)
+ * GET /api/admin/users
+ */
+const getAllUsers = async (req, res) => {
+  try {
+    // Get all users, excluding password-related fields
+    const users = await User.find()
+      .select('-passwordHash -passwordHistory -passwordSetupTokenHash -passwordResetTokenHash')
+      .sort({ createdAt: -1 });
+    
+    res.json({
+      success: true,
+      data: users,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching users',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   login,
   logout,
@@ -1186,4 +1308,6 @@ module.exports = {
   resendSetupEmail,
   updateUserStatus,
   unlockAccount,
+  forgotPassword,
+  getAllUsers,
 };

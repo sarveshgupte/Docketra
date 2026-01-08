@@ -18,7 +18,7 @@ export const adminService = {
    */
   getUsers: async (params = {}) => {
     const queryParams = new URLSearchParams(params).toString();
-    const response = await api.get(`/users${queryParams ? '?' + queryParams : ''}`);
+    const response = await api.get(`/auth/admin/users${queryParams ? '?' + queryParams : ''}`);
     return response.data;
   },
 
