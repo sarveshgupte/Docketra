@@ -1095,6 +1095,8 @@ const bulkPullCases = async (req, res) => {
       });
     }
     
+    const normalizedEmail = userEmail.trim().toLowerCase();
+    
     // Atomic bulk update - only updates cases that are still UNASSIGNED
     // This prevents race conditions when multiple users try to pull the same cases
     const result = await Case.updateMany(
@@ -1104,7 +1106,7 @@ const bulkPullCases = async (req, res) => {
       },
       {
         $set: {
-          assignedTo: userEmail.toLowerCase(),
+          assignedTo: normalizedEmail,
           assignedAt: new Date(),
           status: 'Open',
         },
@@ -1114,15 +1116,15 @@ const bulkPullCases = async (req, res) => {
     // Get the actual cases that were updated
     const updatedCases = await Case.find({
       caseId: { $in: caseIds },
-      assignedTo: userEmail.toLowerCase(),
+      assignedTo: normalizedEmail,
     });
     
     // Create history entries for successfully pulled cases
     const historyEntries = updatedCases.map(caseData => ({
       caseId: caseData.caseId,
       actionType: 'Pulled',
-      description: `Case pulled from global worklist and assigned to ${userEmail.toLowerCase()}`,
-      performedBy: userEmail.toLowerCase(),
+      description: `Case pulled from global worklist and assigned to ${normalizedEmail}`,
+      performedBy: normalizedEmail,
     }));
     
     if (historyEntries.length > 0) {
