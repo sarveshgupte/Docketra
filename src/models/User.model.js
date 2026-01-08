@@ -144,6 +144,14 @@ const userSchema = new mongoose.Schema({
     default: null,
   },
   
+  // Manager reference for hierarchical reporting structure (nullable)
+  // Supports organizational hierarchy - employees can have a manager
+  managerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
+  },
+  
   // Audit trail for user account creation
   createdAt: {
     type: Date,

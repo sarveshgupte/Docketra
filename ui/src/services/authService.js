@@ -75,6 +75,27 @@ export const authService = {
   },
 
   /**
+   * Forgot password - Request password reset email
+   */
+  forgotPassword: async (email) => {
+    const response = await api.post('/auth/forgot-password', {
+      email,
+    });
+    return response.data;
+  },
+
+  /**
+   * Reset password with token (for forgot password flow)
+   */
+  resetPasswordWithToken: async (token, password) => {
+    const response = await api.post('/auth/reset-password-with-token', {
+      token,
+      password,
+    });
+    return response.data;
+  },
+
+  /**
    * Get user profile
    */
   getProfile: async () => {
