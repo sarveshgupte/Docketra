@@ -781,8 +781,11 @@ const deactivateUser = async (req, res) => {
 };
 
 /**
- * Set password using token from email
+ * Set password using token from email (for first-time password setup)
  * POST /api/auth/set-password
+ * 
+ * Used when a new user sets their password for the first time.
+ * Does NOT check password history since this is initial setup.
  */
 const setPassword = async (req, res) => {
   try {
@@ -850,8 +853,12 @@ const setPassword = async (req, res) => {
 };
 
 /**
- * Reset password using token from first login email
+ * Reset password using token from first login email (for password resets)
  * POST /api/auth/reset-password-with-token
+ * 
+ * Used when a user resets their password (e.g., on first login with default password).
+ * DOES check password history to prevent reuse.
+ * Note: Separate from setPassword to maintain different validation rules.
  */
 const resetPasswordWithToken = async (req, res) => {
   try {
