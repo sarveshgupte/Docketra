@@ -59,6 +59,7 @@ const seedAdmin = async () => {
       existingAdmin.mustChangePassword = true;
       existingAdmin.passwordLastChangedAt = new Date();
       existingAdmin.passwordExpiresAt = new Date(Date.now() + PASSWORD_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+      existingAdmin.status = 'ACTIVE'; // Admin is immediately active with default password
       
       await existingAdmin.save();
       console.log('✓ Admin password hash updated successfully!');
@@ -80,6 +81,7 @@ const seedAdmin = async () => {
         mustChangePassword: true,
         passwordLastChangedAt: new Date(),
         passwordExpiresAt: new Date(Date.now() + PASSWORD_EXPIRY_DAYS * 24 * 60 * 60 * 1000),
+        status: 'ACTIVE', // Admin is immediately active with default password
         passwordHistory: [],
       });
 

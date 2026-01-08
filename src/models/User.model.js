@@ -125,9 +125,11 @@ const userSchema = new mongoose.Schema({
   },
   
   // Password expires 60 days after last change
+  // Not required for invited users who haven't set password yet
   passwordExpiresAt: {
     type: Date,
-    required: true,
+    required: false,
+    default: null,
   },
   
   // Store last 5 passwords to prevent reuse
@@ -179,6 +181,19 @@ const userSchema = new mongoose.Schema({
     default: false,
   },
   
+  /**
+   * User account status for lifecycle management
+   * INVITED - User created by admin, hasn't set password yet
+   * ACTIVE - User has set password and can login
+   * DISABLED - User account disabled by admin
+   */
+  status: {
+    type: String,
+    enum: ['INVITED', 'ACTIVE', 'DISABLED'],
+    default: 'INVITED',
+    required: true,
+  },
+  
   // Audit trail for user account creation
   createdAt: {
     type: Date,
@@ -194,6 +209,7 @@ const userSchema = new mongoose.Schema({
 // Note: xID and email already have unique indexes from schema definition (unique: true)
 userSchema.index({ isActive: 1 });
 userSchema.index({ role: 1 });
+userSchema.index({ status: 1 });
 
 // Virtual property to check if account is locked
 userSchema.virtual('isLocked').get(function() {
