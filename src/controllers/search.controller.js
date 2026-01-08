@@ -417,37 +417,51 @@ const globalWorklist = async (req, res) => {
     const sortDirection = sortOrder === 'desc' ? -1 : 1;
     const sort = { [sortField]: sortDirection };
     
+    // Build the base query without slaDueDate modifications for separation
+    const baseQuery = { ...query };
+    
     // Handle null slaDueDate - put them at the end
-    if (sortBy === 'slaDueDate') {
-      // Cases with no slaDueDate should appear at the end
-      query.slaDueDate = { $ne: null };
-    }
-    
-    // Execute query with pagination
-    const cases = await Case.find(query)
-      .select('caseId caseName clientId category slaDueDate createdAt createdBy')
-      .sort(sort)
-      .limit(parseInt(limit))
-      .skip((parseInt(page) - 1) * parseInt(limit))
-      .lean();
-    
-    // Get cases without slaDueDate if we're sorting by slaDueDate
+    let casesWithSLA = [];
     let casesWithoutSLA = [];
+    
     if (sortBy === 'slaDueDate') {
-      const queryWithoutSLA = { ...query };
-      delete queryWithoutSLA.slaDueDate;
-      queryWithoutSLA.slaDueDate = null;
+      // Query for cases WITH slaDueDate (not null)
+      const queryWithSLA = { ...baseQuery };
+      // Don't modify if slaStatus filter is already applied
+      if (!slaStatus) {
+        queryWithSLA.slaDueDate = { $ne: null };
+      }
       
-      casesWithoutSLA = await Case.find(queryWithoutSLA)
+      casesWithSLA = await Case.find(queryWithSLA)
         .select('caseId caseName clientId category slaDueDate createdAt createdBy')
-        .sort({ createdAt: sortDirection })
-        .limit(parseInt(limit) - cases.length)
-        .skip(Math.max(0, (parseInt(page) - 1) * parseInt(limit) - cases.length))
+        .sort(sort)
+        .limit(parseInt(limit))
+        .skip((parseInt(page) - 1) * parseInt(limit))
+        .lean();
+      
+      // Query for cases WITHOUT slaDueDate (null) - only if no slaStatus filter
+      if (!slaStatus && casesWithSLA.length < parseInt(limit)) {
+        const queryWithoutSLA = { ...baseQuery, slaDueDate: null };
+        
+        casesWithoutSLA = await Case.find(queryWithoutSLA)
+          .select('caseId caseName clientId category slaDueDate createdAt createdBy')
+          .sort({ createdAt: sortDirection })
+          .limit(parseInt(limit) - casesWithSLA.length)
+          .skip(Math.max(0, (parseInt(page) - 1) * parseInt(limit) - casesWithSLA.length))
+          .lean();
+      }
+    } else {
+      // For other sort fields, just execute the query normally
+      casesWithSLA = await Case.find(baseQuery)
+        .select('caseId caseName clientId category slaDueDate createdAt createdBy')
+        .sort(sort)
+        .limit(parseInt(limit))
+        .skip((parseInt(page) - 1) * parseInt(limit))
         .lean();
     }
     
     // Merge results
-    const allCases = [...cases, ...casesWithoutSLA];
+    const allCases = [...casesWithSLA, ...casesWithoutSLA];
     
     // Calculate SLA days remaining for each case
     const now = new Date();
@@ -472,10 +486,8 @@ const globalWorklist = async (req, res) => {
     });
     
     // Count total for pagination
-    const totalQuery = { ...query };
-    if (sortBy === 'slaDueDate') {
-      delete totalQuery.slaDueDate; // Count all, including null
-    }
+    const totalQuery = { ...baseQuery };
+    // Don't exclude null slaDueDate from count unless slaStatus filter is applied
     const total = await Case.countDocuments(totalQuery);
     
     res.json({
