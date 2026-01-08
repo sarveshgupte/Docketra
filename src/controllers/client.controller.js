@@ -142,7 +142,7 @@ const createClient = async (req, res) => {
       longitude: longitude ? parseFloat(longitude) : undefined,
       isSystemClient: false,
       isActive: true,
-      createdBy: createdBy.toLowerCase(),
+      createdBy: createdBy.trim().toLowerCase(),
     });
     
     await client.save();
