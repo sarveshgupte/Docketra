@@ -72,6 +72,15 @@ const login = async (req, res) => {
       });
     }
     
+    // Check if user status is ACTIVE (invited users cannot login)
+    if (user.status !== 'ACTIVE') {
+      return res.status(403).json({
+        success: false,
+        message: 'Please complete your account setup using the invite link sent to your email',
+        accountStatus: user.status,
+      });
+    }
+    
     // Check if account is locked
     if (user.isLocked) {
       return res.status(403).json({
@@ -153,9 +162,9 @@ const login = async (req, res) => {
       await user.save();
     }
     
-    // Check if password has expired
+    // Check if password has expired (skip if passwordExpiresAt is null)
     const now = new Date();
-    if (user.passwordExpiresAt < now) {
+    if (user.passwordExpiresAt && user.passwordExpiresAt < now) {
       // Log password expiry
       await AuthAudit.create({
         xID: user.xID,
@@ -365,7 +374,7 @@ const changePassword = async (req, res) => {
     // Update password
     user.passwordHash = newPasswordHash;
     user.passwordLastChangedAt = new Date();
-    user.passwordExpiresAt = new Date(Date.now() + PASSWORD_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+    user.passwordExpiresAt = new Date(Date.now() + PASSWORD_EXPIRY_DAYS * 24 * 60 * 60 * 1000); // Update expiry on password change
     user.mustChangePassword = false;
     
     await user.save();
@@ -425,12 +434,14 @@ const resetPassword = async (req, res) => {
     const tokenHash = emailService.hashToken(token);
     const tokenExpiry = new Date(Date.now() + PASSWORD_SETUP_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000);
     
-    // Reset password state
+    // Reset password state (put user back into invite-like state)
     user.passwordHash = null;
     user.passwordSet = false;
     user.passwordSetupTokenHash = tokenHash;
     user.passwordSetupExpires = tokenExpiry;
     user.mustChangePassword = false;
+    user.passwordExpiresAt = null; // Clear expiry until password is set
+    user.status = 'INVITED'; // User must set password to become active again
     user.failedLoginAttempts = 0;
     user.lockUntil = null;
     
@@ -720,7 +731,7 @@ const createUser = async (req, res) => {
     const tokenHash = emailService.hashToken(token);
     const tokenExpiry = new Date(Date.now() + INVITE_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000);
     
-    // Create user without password
+    // Create user without password (invite-based onboarding)
     const newUser = new User({
       xID: xID, // Auto-generated, immutable
       name,
@@ -728,11 +739,13 @@ const createUser = async (req, res) => {
       role: role || 'Employee',
       allowedCategories: allowedCategories || [],
       isActive: true,
-      passwordHash: null,
-      passwordSet: false,
+      passwordHash: null, // No password until user sets it
+      passwordSet: false, // Password not set yet
       inviteTokenHash: tokenHash, // Using alias for invite token
       inviteTokenExpiry: tokenExpiry, // 48 hours
       mustChangePassword: true, // Enforce password setup on first login
+      passwordExpiresAt: null, // Not set until password is created
+      status: 'INVITED', // User is invited, not yet active
       passwordHistory: [],
     });
     
@@ -969,8 +982,9 @@ const setPassword = async (req, res) => {
     user.passwordSetupTokenHash = null;
     user.passwordSetupExpires = null;
     user.passwordLastChangedAt = new Date();
-    user.passwordExpiresAt = new Date(Date.now() + PASSWORD_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+    user.passwordExpiresAt = new Date(Date.now() + PASSWORD_EXPIRY_DAYS * 24 * 60 * 60 * 1000); // Set expiry when password is created
     user.mustChangePassword = false;
+    user.status = 'ACTIVE'; // User becomes active after setting password
     user.failedLoginAttempts = 0;
     user.lockUntil = null;
     
@@ -1089,9 +1103,10 @@ const resetPasswordWithToken = async (req, res) => {
     user.passwordSetupTokenHash = null;
     user.passwordSetupExpires = null;
     user.passwordLastChangedAt = new Date();
-    user.passwordExpiresAt = new Date(Date.now() + PASSWORD_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+    user.passwordExpiresAt = new Date(Date.now() + PASSWORD_EXPIRY_DAYS * 24 * 60 * 60 * 1000); // Set expiry when password is reset
     user.mustChangePassword = false;
     user.forcePasswordReset = false;
+    user.status = 'ACTIVE'; // Ensure user is active after password reset
     user.failedLoginAttempts = 0;
     user.lockUntil = null;
     
