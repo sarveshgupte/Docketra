@@ -23,14 +23,15 @@ const PASSWORD_SETUP_TOKEN_EXPIRY_HOURS = 24;
  */
 const login = async (req, res) => {
   try {
-    // TODO: TEMPORARY DEBUG LOG - Remove after debugging
-    console.log('Request Body:', req.body);
+    // Accept both xID and XID from request payload, normalize internally
+    const { xID, XID, password } = req.body;
     
-    const { xID, password } = req.body;
+    // Normalize xID: accept either xID or XID, trim whitespace, convert to uppercase
+    const normalizedXID = (xID || XID)?.trim().toUpperCase();
     
-    if (!xID || !password) {
+    if (!normalizedXID || !password) {
       console.warn('[AUTH] Missing credentials in login attempt', {
-        hasXID: !!xID,
+        hasXID: !!normalizedXID,
         hasPassword: !!password,
         ip: req.ip,
       });
@@ -41,18 +42,8 @@ const login = async (req, res) => {
       });
     }
     
-    // Normalize xID by trimming whitespace before querying
-    const normalizedXID = xID.trim().toUpperCase();
-    
-    // TODO: TEMPORARY DEBUG LOG - Remove after debugging
-    console.log('Normalized xID:', normalizedXID);
-    
     // Find user by xID
     const user = await User.findOne({ xID: normalizedXID });
-    
-    // TEMPORARY DIAGNOSTIC LOGS - Remove after debugging
-    console.log('DB name:', mongoose.connection.name);
-    console.log('User fetched:', user);
     
     if (!user) {
       // Log failed login attempt

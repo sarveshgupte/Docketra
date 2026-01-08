@@ -1,7 +1,7 @@
 /**
- * Seed Admin Script for Caseflow
+ * Seed Admin Script for Docketra
  * 
- * Purpose: Creates the first Admin user for the Caseflow case management system
+ * Purpose: Creates the first Admin user for the Docketra case management system
  * 
  * Usage:
  *   1. Ensure MongoDB is running and MONGODB_URI is set in .env file
@@ -70,7 +70,7 @@ const seedAdmin = async () => {
       const adminUser = new User({
         xID: ADMIN_XID,
         name: 'System Administrator',
-        email: 'admin@caseflow.local',
+        email: 'admin@docketra.local',
         role: 'Admin',
         allowedCategories: [],
         isActive: true,

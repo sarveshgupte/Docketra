@@ -1,10 +1,10 @@
-# Caseflow - Task & Case Management System
+# Docketra - Task & Case Management System
 
 A backend-first task and case management web application designed for small consultancies. Built with Node.js, Express, and MongoDB.
 
 ## 🎯 Overview
 
-Caseflow is an internal task and case management system that prioritizes:
+Docketra is an internal task and case management system that prioritizes:
 - **Backend-first development**: Complete, robust API before frontend
 - **Strong data integrity**: Mongoose schemas with validation
 - **Comprehensive audit trail**: Automatic tracking of all changes
@@ -14,7 +14,7 @@ Caseflow is an internal task and case management system that prioritizes:
 ## 📁 Project Structure
 
 ```
-caseflow/
+docketra/
 ├── src/
 │   ├── config/          # Configuration files
 │   │   ├── database.js  # MongoDB connection setup
@@ -55,7 +55,7 @@ caseflow/
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd caseflow
+   cd docketra
    ```
 
 2. **Install dependencies**
@@ -73,7 +73,7 @@ caseflow/
    PORT=3000
    NODE_ENV=development
    MONGODB_URI=mongodb://localhost:27017/caseflow
-   APP_NAME=Caseflow
+   APP_NAME=Docketra
    ```
 
 4. **Start MongoDB**

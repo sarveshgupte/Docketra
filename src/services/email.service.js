@@ -1,5 +1,5 @@
 /**
- * Email Service for Caseflow
+ * Email Service for Docketra
  * 
  * Sends transactional emails for authentication and user management
  * Uses console logging in development (can be replaced with actual email service in production)
@@ -40,12 +40,12 @@ const sendPasswordSetupEmail = async (email, name, token, frontendUrl = process.
   console.log('========================================');
   console.log(`To: ${email}`);
   console.log(`Name: ${name}`);
-  console.log('Subject: Set your password for your Caseflow account');
+  console.log('Subject: Set your password for your Docketra account');
   console.log('');
   console.log('Message:');
   console.log(`Hello ${name},`);
   console.log('');
-  console.log('Welcome to Caseflow! An administrator has created an account for you.');
+  console.log('Welcome to Docketra! An administrator has created an account for you.');
   console.log('');
   console.log('Please set your password by clicking the link below:');
   console.log(setupLink);
@@ -55,7 +55,7 @@ const sendPasswordSetupEmail = async (email, name, token, frontendUrl = process.
   console.log('If you did not request this account, please ignore this email.');
   console.log('');
   console.log('Best regards,');
-  console.log('Caseflow Team');
+  console.log('Docketra Team');
   console.log('========================================\n');
   
   // In production, implement actual email sending here
@@ -65,7 +65,7 @@ const sendPasswordSetupEmail = async (email, name, token, frontendUrl = process.
   // await sgMail.send({
   //   to: email,
   //   from: process.env.EMAIL_FROM,
-  //   subject: 'Set your password for your Caseflow account',
+  //   subject: 'Set your password for your Docketra account',
   //   html: `...`
   // });
   
@@ -87,12 +87,12 @@ const sendPasswordSetupReminderEmail = async (email, name, token, frontendUrl = 
   console.log('========================================');
   console.log(`To: ${email}`);
   console.log(`Name: ${name}`);
-  console.log('Subject: Reminder: Set your password for your Caseflow account');
+  console.log('Subject: Reminder: Set your password for your Docketra account');
   console.log('');
   console.log('Message:');
   console.log(`Hello ${name},`);
   console.log('');
-  console.log('This is a reminder to set your password for your Caseflow account.');
+  console.log('This is a reminder to set your password for your Docketra account.');
   console.log('');
   console.log('Please set your password by clicking the link below:');
   console.log(setupLink);
@@ -100,7 +100,7 @@ const sendPasswordSetupReminderEmail = async (email, name, token, frontendUrl = 
   console.log('This link will expire in 24 hours.');
   console.log('');
   console.log('Best regards,');
-  console.log('Caseflow Team');
+  console.log('Docketra Team');
   console.log('========================================\n');
   
   return true;
@@ -121,12 +121,12 @@ const sendPasswordResetEmail = async (email, name, token, frontendUrl = process.
   console.log('========================================');
   console.log(`To: ${email}`);
   console.log(`Name: ${name}`);
-  console.log('Subject: Password Reset Required for your Caseflow account');
+  console.log('Subject: Password Reset Required for your Docketra account');
   console.log('');
   console.log('Message:');
   console.log(`Hello ${name},`);
   console.log('');
-  console.log('You have successfully logged in to your Caseflow account.');
+  console.log('You have successfully logged in to your Docketra account.');
   console.log('For security reasons, you are required to reset your password.');
   console.log('');
   console.log('Please reset your password by clicking the link below:');
@@ -137,7 +137,7 @@ const sendPasswordResetEmail = async (email, name, token, frontendUrl = process.
   console.log('If you did not attempt to log in, please contact your administrator immediately.');
   console.log('');
   console.log('Best regards,');
-  console.log('Caseflow Team');
+  console.log('Docketra Team');
   console.log('========================================\n');
   
   return true;
