@@ -1,6 +1,7 @@
 const Case = require('../models/Case.model');
 const CaseHistory = require('../models/CaseHistory.model');
 const Comment = require('../models/Comment.model');
+const { CASE_STATUS } = require('../config/constants');
 
 /**
  * Case Workflow Controller
@@ -47,7 +48,7 @@ const submitCase = async (req, res) => {
     }
     
     // Verify case is in DRAFT status
-    if (caseData.status !== 'DRAFT') {
+    if (caseData.status !== CASE_STATUS.DRAFT) {
       return res.status(400).json({
         success: false,
         message: `Case must be in DRAFT status to submit. Current status: ${caseData.status}`,
@@ -55,7 +56,7 @@ const submitCase = async (req, res) => {
     }
     
     // Update status to SUBMITTED
-    caseData.status = 'SUBMITTED';
+    caseData.status = CASE_STATUS.SUBMITTED;
     caseData.submittedAt = new Date();
     caseData.submittedBy = userEmail.toLowerCase();
     await caseData.save();
@@ -110,7 +111,7 @@ const moveToUnderReview = async (req, res) => {
     }
     
     // Verify case is in SUBMITTED status
-    if (caseData.status !== 'SUBMITTED') {
+    if (caseData.status !== CASE_STATUS.SUBMITTED) {
       return res.status(400).json({
         success: false,
         message: `Case must be in SUBMITTED status to review. Current status: ${caseData.status}`,
@@ -118,7 +119,7 @@ const moveToUnderReview = async (req, res) => {
     }
     
     // Update status to UNDER_REVIEW
-    caseData.status = 'UNDER_REVIEW';
+    caseData.status = CASE_STATUS.UNDER_REVIEW;
     await caseData.save();
     
     // Create history entry
@@ -171,7 +172,7 @@ const closeCase = async (req, res) => {
     }
     
     // Cannot close already closed cases
-    if (caseData.status === 'CLOSED') {
+    if (caseData.status === CASE_STATUS.CLOSED) {
       return res.status(400).json({
         success: false,
         message: 'Case is already closed',
@@ -181,7 +182,7 @@ const closeCase = async (req, res) => {
     const oldStatus = caseData.status;
     
     // Update status to CLOSED
-    caseData.status = 'CLOSED';
+    caseData.status = CASE_STATUS.CLOSED;
     await caseData.save();
     
     // Add comment if provided
@@ -244,7 +245,8 @@ const reopenCase = async (req, res) => {
     }
     
     // Can only reopen closed or rejected cases
-    if (!['CLOSED', 'REJECTED'].includes(caseData.status)) {
+    const validStatuses = [CASE_STATUS.CLOSED, CASE_STATUS.REJECTED];
+    if (!validStatuses.includes(caseData.status)) {
       return res.status(400).json({
         success: false,
         message: 'Only CLOSED or REJECTED cases can be reopened',
@@ -254,7 +256,7 @@ const reopenCase = async (req, res) => {
     const oldStatus = caseData.status;
     
     // Update status to DRAFT
-    caseData.status = 'DRAFT';
+    caseData.status = CASE_STATUS.DRAFT;
     await caseData.save();
     
     // Add comment if provided

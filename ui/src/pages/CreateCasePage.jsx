@@ -11,7 +11,7 @@ import { Select } from '../components/common/Select';
 import { Textarea } from '../components/common/Textarea';
 import { Button } from '../components/common/Button';
 import { caseService } from '../services/caseService';
-import { CASE_CATEGORIES, DEFAULT_CLIENT_ID } from '../utils/constants';
+import { CASE_CATEGORIES, DEFAULT_CLIENT_ID, API_BASE_URL } from '../utils/constants';
 import './CreateCasePage.css';
 
 export const CreateCasePage = () => {
@@ -34,7 +34,7 @@ export const CreateCasePage = () => {
   useEffect(() => {
     const fetchClients = async () => {
       try {
-        const response = await fetch('/api/client-approval/clients');
+        const response = await fetch(`${API_BASE_URL}/client-approval/clients`);
         const data = await response.json();
         if (data.success) {
           setClients(data.data || []);
