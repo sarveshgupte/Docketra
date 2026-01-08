@@ -13,7 +13,7 @@ export const authService = {
   login: async (xID, password) => {
     // Ensure password is always included in the request, even if empty
     const payload = {
-      xID: xID,
+      xID,
       password: password || ''
     };
     const response = await api.post('/auth/login', payload);
