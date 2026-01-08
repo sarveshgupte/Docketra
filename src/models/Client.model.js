@@ -177,34 +177,29 @@ const clientSchema = new mongoose.Schema({
  * For production use with high concurrency, consider using MongoDB's findOneAndUpdate 
  * with atomic increment or a dedicated counter collection.
  */
-clientSchema.pre('save', async function(next) {
+clientSchema.pre('save', async function() {
   // Only generate clientId if it's not already set (for new documents)
   if (!this.clientId) {
-    try {
-      // Find the client with the highest clientId number
-      // The regex ensures we only match our format: C followed by digits
-      const lastClient = await this.constructor.findOne(
-        { clientId: /^C\d+$/ },
-        { clientId: 1 }
-      ).sort({ clientId: -1 }).lean();
-      
-      let nextNumber = 1; // Start with C000001 for organization client
-      
-      if (lastClient && lastClient.clientId) {
-        // Extract the number from C000001 format
-        const match = lastClient.clientId.match(/^C(\d+)$/);
-        if (match) {
-          nextNumber = parseInt(match[1], 10) + 1;
-        }
+    // Find the client with the highest clientId number
+    // The regex ensures we only match our format: C followed by digits
+    const lastClient = await this.constructor.findOne(
+      { clientId: /^C\d+$/ },
+      { clientId: 1 }
+    ).sort({ clientId: -1 }).lean();
+    
+    let nextNumber = 1; // Start with C000001 for organization client
+    
+    if (lastClient && lastClient.clientId) {
+      // Extract the number from C000001 format
+      const match = lastClient.clientId.match(/^C(\d+)$/);
+      if (match) {
+        nextNumber = parseInt(match[1], 10) + 1;
       }
-      
-      // Format as C + 6-digit zero-padded number
-      this.clientId = `C${nextNumber.toString().padStart(6, '0')}`;
-    } catch (error) {
-      return next(error);
     }
+    
+    // Format as C + 6-digit zero-padded number
+    this.clientId = `C${nextNumber.toString().padStart(6, '0')}`;
   }
-  next();
 });
 
 /**
