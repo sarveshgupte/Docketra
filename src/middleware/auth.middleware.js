@@ -18,17 +18,21 @@ const User = require('../models/User.model');
  */
 const authenticate = async (req, res, next) => {
   try {
-    const xID = req.body.xID || req.query.xID || req.headers['x-user-id'];
+    // Accept both xID and XID from request payload, normalize internally
+    const rawXID = req.body.xID || req.body.XID || req.query.xID || req.query.XID || req.headers['x-user-id'];
     
-    if (!xID) {
+    if (!rawXID) {
       return res.status(401).json({
         success: false,
         message: 'Authentication required. Please provide xID.',
       });
     }
     
-    // Find user by xID
-    const user = await User.findOne({ xID: xID.toUpperCase() });
+    // Normalize xID: trim whitespace and convert to uppercase
+    const normalizedXID = rawXID.trim().toUpperCase();
+    
+    // Find user by normalized xID
+    const user = await User.findOne({ xID: normalizedXID });
     
     if (!user) {
       return res.status(401).json({
