@@ -51,7 +51,7 @@ const createCase = async (req, res) => {
     if (!actualCategory) {
       return res.status(400).json({
         success: false,
-        message: 'Case category is required',
+        message: 'caseCategory field is required',
       });
     }
     
