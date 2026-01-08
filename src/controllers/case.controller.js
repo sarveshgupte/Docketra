@@ -4,7 +4,7 @@ const Attachment = require('../models/Attachment.model');
 const CaseHistory = require('../models/CaseHistory.model');
 const Client = require('../models/Client.model');
 const { detectDuplicates, generateDuplicateOverrideComment } = require('../services/clientDuplicateDetector');
-const { CASE_CATEGORIES, CASE_LOCK_CONFIG } = require('../config/constants');
+const { CASE_CATEGORIES, CASE_LOCK_CONFIG, CASE_STATUS, COMMENT_PREVIEW_LENGTH } = require('../config/constants');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -289,7 +289,7 @@ const addComment = async (req, res) => {
     await CaseHistory.create({
       caseId,
       actionType: 'CASE_COMMENT_ADDED',
-      description: `Comment added by ${createdBy.toLowerCase()}: ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`,
+      description: `Comment added by ${createdBy.toLowerCase()}: ${text.substring(0, COMMENT_PREVIEW_LENGTH)}${text.length > COMMENT_PREVIEW_LENGTH ? '...' : ''}`,
       performedBy: createdBy.toLowerCase(),
     });
     
@@ -712,15 +712,17 @@ const getCaseByCaseId = async (req, res) => {
     const client = await Client.findOne({ clientId: caseData.clientId, isActive: true });
     
     // PR #41: Add CASE_VIEWED audit log
-    // Get user from auth context if available
-    const userEmail = req.user?.email || req.body.email || req.query.email || req.headers['x-user-email'] || 'anonymous';
+    // Only use authenticated user from req.user for security
+    const userEmail = req.user?.email;
     
-    await CaseHistory.create({
-      caseId,
-      actionType: 'CASE_VIEWED',
-      description: `Case viewed by ${userEmail}`,
-      performedBy: userEmail.toLowerCase(),
-    });
+    if (userEmail) {
+      await CaseHistory.create({
+        caseId,
+        actionType: 'CASE_VIEWED',
+        description: `Case viewed by ${userEmail}`,
+        performedBy: userEmail.toLowerCase(),
+      });
+    }
     
     res.json({
       success: true,

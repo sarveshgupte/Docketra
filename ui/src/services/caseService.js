@@ -48,9 +48,13 @@ export const caseService = {
     const userStr = localStorage.getItem(STORAGE_KEYS.USER);
     const user = userStr ? JSON.parse(userStr) : null;
     
+    if (!user?.email) {
+      throw new Error('User not authenticated. Please log in again.');
+    }
+    
     const response = await api.post(`/cases/${caseId}/comments`, {
       text: commentText,
-      createdBy: user?.email || 'unknown',
+      createdBy: user.email,
     });
     return response.data;
   },
@@ -64,10 +68,14 @@ export const caseService = {
     const userStr = localStorage.getItem(STORAGE_KEYS.USER);
     const user = userStr ? JSON.parse(userStr) : null;
     
+    if (!user?.email) {
+      throw new Error('User not authenticated. Please log in again.');
+    }
+    
     const formData = new FormData();
     formData.append('file', file);
     formData.append('description', description);
-    formData.append('createdBy', user?.email || 'unknown');
+    formData.append('createdBy', user.email);
     
     const response = await api.post(`/cases/${caseId}/attachments`, formData, {
       headers: {
