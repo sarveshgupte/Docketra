@@ -47,10 +47,12 @@ const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
 
 // Connect to MongoDB and run bootstrap
-(async () => {
-  await connectDB();
-  await runBootstrap();
-})();
+connectDB()
+  .then(() => runBootstrap())
+  .catch((error) => {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  });
 
 // Security Headers - Helmet
 // Disable CSP and COEP since we're serving a React SPA

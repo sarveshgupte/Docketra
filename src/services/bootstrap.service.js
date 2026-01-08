@@ -40,7 +40,6 @@ const seedSystemAdmin = async () => {
     const bcrypt = require('bcrypt');
     const SALT_ROUNDS = 10;
     const DEFAULT_PASSWORD = 'ChangeMe@123';
-    const PASSWORD_EXPIRY_DAYS = 60;
     
     // Check if admin already exists (by xID or by role)
     const existingAdmin = await User.findOne({
@@ -71,8 +70,6 @@ const seedSystemAdmin = async () => {
       passwordLastChangedAt: new Date(),
       passwordExpiresAt: new Date('2099-12-31T23:59:59.999Z'), // Far future date
       isActive: true,
-      allowedCategories: [],
-      passwordHistory: [],
     });
 
     await systemAdmin.save();
