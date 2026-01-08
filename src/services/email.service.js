@@ -143,10 +143,47 @@ const sendPasswordResetEmail = async (email, name, token, frontendUrl = process.
   return true;
 };
 
+/**
+ * Send forgot password email
+ * @param {string} email - Recipient email
+ * @param {string} name - User's name
+ * @param {string} token - Password reset token (plain text)
+ * @param {string} frontendUrl - Base URL of frontend application
+ */
+const sendForgotPasswordEmail = async (email, name, token, frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000') => {
+  const resetLink = `${frontendUrl}/reset-password?token=${token}`;
+  
+  console.log('\n========================================');
+  console.log('📧 FORGOT PASSWORD EMAIL');
+  console.log('========================================');
+  console.log(`To: ${email}`);
+  console.log(`Name: ${name}`);
+  console.log('Subject: Reset your Docketra password');
+  console.log('');
+  console.log('Message:');
+  console.log(`Hello ${name},`);
+  console.log('');
+  console.log('We received a request to reset your password for your Docketra account.');
+  console.log('');
+  console.log('Please reset your password by clicking the link below:');
+  console.log(resetLink);
+  console.log('');
+  console.log('This link will expire in 30 minutes for security reasons.');
+  console.log('');
+  console.log('If you did not request a password reset, please ignore this email and your password will remain unchanged.');
+  console.log('');
+  console.log('Best regards,');
+  console.log('Docketra Team');
+  console.log('========================================\n');
+  
+  return true;
+};
+
 module.exports = {
   generateSecureToken,
   hashToken,
   sendPasswordSetupEmail,
   sendPasswordSetupReminderEmail,
   sendPasswordResetEmail,
+  sendForgotPasswordEmail,
 };

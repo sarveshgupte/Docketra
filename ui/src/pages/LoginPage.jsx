@@ -3,7 +3,7 @@
  */
 
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
@@ -113,6 +113,12 @@ export const LoginPage = () => {
           <Button type="submit" variant="primary" className="w-full" disabled={loading}>
             {loading ? 'Logging in...' : 'Login'}
           </Button>
+
+          <div className="login-footer">
+            <Link to="/forgot-password" className="forgot-password-link">
+              Forgot Password?
+            </Link>
+          </div>
         </form>
       </Card>
     </div>

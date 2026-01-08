@@ -17,6 +17,8 @@ const {
   resendSetupEmail,
   updateUserStatus,
   unlockAccount,
+  forgotPassword,
+  getAllUsers,
 } = require('../controllers/auth.controller');
 
 /**
@@ -30,6 +32,7 @@ const {
 router.post('/login', login);
 router.post('/set-password', setPassword);
 router.post('/reset-password-with-token', resetPasswordWithToken);
+router.post('/forgot-password', forgotPassword);
 
 // Protected authentication endpoints - require authentication
 router.post('/logout', authenticate, logout);
@@ -43,6 +46,7 @@ router.put('/profile', authenticate, updateProfile);
 router.post('/reset-password', authenticate, requireAdmin, resetPassword);
 router.post('/resend-setup-email', authenticate, requireAdmin, resendSetupEmail);
 router.post('/unlock-account', authenticate, requireAdmin, unlockAccount);
+router.get('/admin/users', authenticate, requireAdmin, getAllUsers);
 router.post('/admin/users', authenticate, requireAdmin, createUser);
 router.put('/admin/users/:xID/activate', authenticate, requireAdmin, activateUser);
 router.put('/admin/users/:xID/deactivate', authenticate, requireAdmin, deactivateUser);
