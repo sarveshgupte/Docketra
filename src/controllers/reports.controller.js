@@ -89,6 +89,7 @@ const getCaseMetrics = async (req, res) => {
     }
     
     // Aggregate by employee
+    // PR #42: assignedTo now stores xID, need to resolve to user info for display
     const byEmployeeResult = await Case.aggregate([
       { $match: { ...matchStage, assignedTo: { $ne: null, $ne: '' } } },
       { $group: { _id: '$assignedTo', count: { $sum: 1 } } },
@@ -97,11 +98,17 @@ const getCaseMetrics = async (req, res) => {
     ]);
     
     // Populate employee names
+    // PR #42: assignedTo contains xID, resolve to user
     const byEmployee = [];
     for (const item of byEmployeeResult) {
-      const user = await User.findOne({ email: item._id }).lean();
+      // Try to find user by xID first, fallback to email for backward compatibility
+      let user = await User.findOne({ xID: item._id }).lean();
+      if (!user) {
+        user = await User.findOne({ email: item._id }).lean();
+      }
       byEmployee.push({
-        email: item._id,
+        xID: user ? user.xID : item._id,
+        email: user ? user.email : 'Unknown',
         name: user ? user.name : 'Unknown',
         count: item.count,
       });
@@ -202,6 +209,7 @@ const getPendingCasesReport = async (req, res) => {
     });
     
     // Aggregate by employee
+    // PR #42: assignedTo now stores xID, need to resolve to user info
     const byEmployeeMap = {};
     filteredCases.forEach(c => {
       if (c.assignedTo) {
@@ -210,12 +218,17 @@ const getPendingCasesReport = async (req, res) => {
     });
     
     const byEmployee = [];
-    for (const email of Object.keys(byEmployeeMap)) {
-      const user = await User.findOne({ email }).lean();
+    for (const assignedToValue of Object.keys(byEmployeeMap)) {
+      // Try to find user by xID first, fallback to email for backward compatibility
+      let user = await User.findOne({ xID: assignedToValue }).lean();
+      if (!user) {
+        user = await User.findOne({ email: assignedToValue }).lean();
+      }
       byEmployee.push({
-        email,
+        xID: user ? user.xID : assignedToValue,
+        email: user ? user.email : 'Unknown',
         name: user ? user.name : 'Unknown',
-        count: byEmployeeMap[email],
+        count: byEmployeeMap[assignedToValue],
       });
     }
     byEmployee.sort((a, b) => b.count - a.count);

@@ -189,7 +189,7 @@ const createCase = async (req, res) => {
       createdBy: req.user.email || req.user.xID, // Legacy field - use email or xID as fallback
       priority: priority || 'Medium',
       status: 'UNASSIGNED', // New cases default to UNASSIGNED for global worklist
-      assignedTo: assignedTo ? assignedTo.toLowerCase() : null,
+      assignedTo: assignedTo ? assignedTo.toUpperCase() : null, // PR #42: If provided, treat as xID (uppercase)
       slaDueDate: new Date(slaDueDate), // Store SLA due date - MANDATORY
       payload, // Store client case payload if provided
     });
@@ -1038,10 +1038,12 @@ const updateCaseActivity = async (req, res) => {
  * 
  * Atomically assigns the case to the logged-in user
  * - Checks if case is UNASSIGNED
- * - Sets assignedTo to user email
+ * - Sets assignedTo to user xID (canonical identifier)
  * - Sets assignedAt to current timestamp
  * - Changes status from UNASSIGNED to Open
  * - Creates history entry
+ * 
+ * PR #42: Updated to use xID for assignment
  */
 const pullCase = async (req, res) => {
   try {
@@ -1055,6 +1057,16 @@ const pullCase = async (req, res) => {
       });
     }
     
+    // Get authenticated user's xID from req.user (set by auth middleware)
+    const userXID = req.user?.xID;
+    
+    if (!userXID) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required - user identity not found',
+      });
+    }
+    
     // Use findOneAndUpdate for atomic operation to prevent double assignment
     const caseData = await Case.findOneAndUpdate(
       {
@@ -1063,7 +1075,7 @@ const pullCase = async (req, res) => {
       },
       {
         $set: {
-          assignedTo: userEmail.toLowerCase(),
+          assignedTo: userXID, // CANONICAL: Store xID, not email
           assignedAt: new Date(),
           status: 'Open',
         },
@@ -1098,7 +1110,7 @@ const pullCase = async (req, res) => {
     await CaseHistory.create({
       caseId,
       actionType: 'CASE_PULLED',
-      description: `Case pulled from global worklist and assigned to ${userEmail.toLowerCase()}`,
+      description: `Case pulled from global worklist and assigned to ${userXID}`,
       performedBy: userEmail.toLowerCase(),
     });
     
@@ -1122,6 +1134,7 @@ const pullCase = async (req, res) => {
  * 
  * Atomically assigns multiple cases to user with race safety
  * Uses updateMany with atomic filter to prevent double assignment
+ * PR #42: Updated to use xID for assignment
  */
 const bulkPullCases = async (req, res) => {
   try {
@@ -1141,6 +1154,16 @@ const bulkPullCases = async (req, res) => {
       });
     }
     
+    // Get authenticated user's xID from req.user (set by auth middleware)
+    const userXID = req.user?.xID;
+    
+    if (!userXID) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required - user identity not found',
+      });
+    }
+    
     const normalizedEmail = userEmail.trim().toLowerCase();
     
     // Atomic bulk update - only updates cases that are still UNASSIGNED
@@ -1152,7 +1175,7 @@ const bulkPullCases = async (req, res) => {
       },
       {
         $set: {
-          assignedTo: normalizedEmail,
+          assignedTo: userXID, // CANONICAL: Store xID, not email
           assignedAt: new Date(),
           status: 'Open',
         },
@@ -1162,14 +1185,14 @@ const bulkPullCases = async (req, res) => {
     // Get the actual cases that were updated
     const updatedCases = await Case.find({
       caseId: { $in: caseIds },
-      assignedTo: normalizedEmail,
+      assignedTo: userXID, // Query by xID
     });
     
     // Create history entries for successfully pulled cases
     const historyEntries = updatedCases.map(caseData => ({
       caseId: caseData.caseId,
       actionType: 'CASE_PULLED',
-      description: `Case pulled from global worklist and assigned to ${normalizedEmail}`,
+      description: `Case pulled from global worklist and assigned to ${userXID}`,
       performedBy: normalizedEmail,
     }));
     
