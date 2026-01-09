@@ -74,8 +74,6 @@ export const AdminPage = () => {
     GST: '',
     TAN: '',
     CIN: '',
-    latitude: '',
-    longitude: '',
   });
   
   // Change name form state
@@ -375,7 +373,25 @@ export const AdminPage = () => {
     setSubmitting(true);
     
     try {
-      const response = await clientService.createClient(clientForm);
+      // Explicit payload construction - DO NOT spread form state
+      const payload = {
+        businessName: clientForm.businessName,
+        businessAddress: clientForm.businessAddress,
+        businessEmail: clientForm.businessEmail,
+        primaryContactNumber: clientForm.primaryContactNumber,
+        ...(clientForm.secondaryContactNumber && { secondaryContactNumber: clientForm.secondaryContactNumber }),
+        ...(clientForm.PAN && { PAN: clientForm.PAN }),
+        ...(clientForm.TAN && { TAN: clientForm.TAN }),
+        ...(clientForm.GST && { GST: clientForm.GST }),
+        ...(clientForm.CIN && { CIN: clientForm.CIN }),
+      };
+      
+      // Frontend safety assertion - detect deprecated fields
+      if ('latitude' in payload || 'longitude' in payload || 'businessPhone' in payload) {
+        throw new Error('Deprecated fields detected in client payload');
+      }
+      
+      const response = await clientService.createClient(payload);
       
       if (response.success) {
         showToast(`Client created successfully! Client ID: ${response.data?.clientId}`, 'success');
@@ -390,15 +406,13 @@ export const AdminPage = () => {
           GST: '',
           TAN: '',
           CIN: '',
-          latitude: '',
-          longitude: '',
         });
         loadAdminData();
       } else {
         showToast(response.message || 'Failed to create client', 'error');
       }
     } catch (error) {
-      showToast(error.response?.data?.message || 'Failed to create client', 'error');
+      showToast(error.response?.data?.message || error.message || 'Failed to create client', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -406,20 +420,16 @@ export const AdminPage = () => {
 
   const handleEditClient = (client) => {
     setSelectedClient(client);
-    // Backward compatibility: Use primaryContactNumber if available, fallback to businessPhone
-    const primaryPhone = client.primaryContactNumber || client.businessPhone || '';
     setClientForm({
       businessName: client.businessName,
       businessAddress: client.businessAddress,
-      primaryContactNumber: primaryPhone,
+      primaryContactNumber: client.primaryContactNumber || '',
       secondaryContactNumber: client.secondaryContactNumber || '',
       businessEmail: client.businessEmail,
       PAN: client.PAN || '',
       GST: client.GST || '',
       TAN: client.TAN || '',
       CIN: client.CIN || '',
-      latitude: client.latitude || '',
-      longitude: client.longitude || '',
     });
     setShowClientModal(true);
   };
@@ -464,8 +474,6 @@ export const AdminPage = () => {
           GST: '',
           TAN: '',
           CIN: '',
-          latitude: '',
-          longitude: '',
         });
         loadAdminData();
       } else {
@@ -564,8 +572,6 @@ export const AdminPage = () => {
       GST: '',
       TAN: '',
       CIN: '',
-      latitude: '',
-      longitude: '',
     });
   };
   
@@ -730,8 +736,6 @@ export const AdminPage = () => {
                     GST: '',
                     TAN: '',
                     CIN: '',
-                    latitude: '',
-                    longitude: '',
                   });
                   setShowClientModal(true);
                 }}
@@ -1201,30 +1205,6 @@ export const AdminPage = () => {
             placeholder="Enter GST (optional)"
             disabled={!!selectedClient}
             title={selectedClient ? 'GST cannot be changed after creation' : ''}
-          />
-
-          <Input
-            label="Latitude"
-            name="latitude"
-            type="number"
-            step="any"
-            value={clientForm.latitude}
-            onChange={(e) => setClientForm({ ...clientForm, latitude: e.target.value })}
-            placeholder="Enter latitude (optional)"
-            disabled={!!selectedClient}
-            title={selectedClient ? 'Location cannot be changed after creation' : ''}
-          />
-
-          <Input
-            label="Longitude"
-            name="longitude"
-            type="number"
-            step="any"
-            value={clientForm.longitude}
-            onChange={(e) => setClientForm({ ...clientForm, longitude: e.target.value })}
-            placeholder="Enter longitude (optional)"
-            disabled={!!selectedClient}
-            title={selectedClient ? 'Location cannot be changed after creation' : ''}
           />
 
           <div className="neo-form-actions">
