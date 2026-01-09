@@ -89,7 +89,7 @@ const createClient = async (req, res) => {
     // STEP 1: Sanitize input - Remove empty, null, undefined values
     const sanitizedBody = Object.fromEntries(
       Object.entries(req.body).filter(
-        ([_, v]) => v !== '' && v !== null && v !== undefined
+        ([key, value]) => value !== '' && value !== null && value !== undefined
       )
     );
     
@@ -204,7 +204,8 @@ const createClient = async (req, res) => {
       message: 'Client created successfully',
     });
   } catch (error) {
-    // Enhanced error logging
+    // Enhanced error logging for debugging
+    // NOTE: In production, consider using structured logging with appropriate log levels
     console.error('❌ Client creation failed');
     console.error('Error message:', error.message);
     if (error.errors) {
