@@ -57,12 +57,17 @@ const authenticate = async (req, res, next) => {
     // Block access to other routes if password change is required
     // IMPORTANT: Admin users are exempt from this restriction to allow user management operations
     // (e.g., resending invite emails for users without passwords)
-    if (user.mustChangePassword && !isChangePasswordEndpoint && !isProfileEndpoint && user.role !== 'Admin') {
-      return res.status(403).json({
-        success: false,
-        message: 'You must change your password before accessing other resources.',
-        mustChangePassword: true,
-      });
+    if (user.mustChangePassword && !isChangePasswordEndpoint && !isProfileEndpoint) {
+      if (user.role === 'Admin') {
+        // Log admin exemption for audit purposes
+        console.log(`[AUTH] Admin user ${user.xID} accessing ${req.method} ${req.path} with mustChangePassword=true (exempted from password enforcement)`);
+      } else {
+        return res.status(403).json({
+          success: false,
+          message: 'You must change your password before accessing other resources.',
+          mustChangePassword: true,
+        });
+      }
     }
     
     // Attach full user object to request
