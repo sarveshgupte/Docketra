@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { authenticate } = require('../middleware/auth.middleware');
 const {
   createCase,
   addComment,
@@ -79,10 +80,12 @@ router.post('/:caseId/comments', addComment);
 router.post('/:caseId/attachments', upload.single('file'), addAttachment);
 
 // GET /api/cases/:caseId/attachments/:attachmentId/view - View attachment inline
-router.get('/:caseId/attachments/:attachmentId/view', viewAttachment);
+// Note: authenticate middleware accepts xID from query params (req.query.xID)
+router.get('/:caseId/attachments/:attachmentId/view', authenticate, viewAttachment);
 
 // GET /api/cases/:caseId/attachments/:attachmentId/download - Download attachment
-router.get('/:caseId/attachments/:attachmentId/download', downloadAttachment);
+// Note: authenticate middleware accepts xID from query params (req.query.xID)
+router.get('/:caseId/attachments/:attachmentId/download', authenticate, downloadAttachment);
 
 // POST /api/cases/:caseId/clone - Clone case with comments and attachments
 // PR #44: Apply xID validation for assignment fields
