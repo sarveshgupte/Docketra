@@ -15,6 +15,18 @@ const { CASE_STATUS } = require('../config/constants');
 const INVITE_TOKEN_EXPIRY_HOURS = 48; // 48 hours for invite tokens
 
 /**
+ * Helper function to safely log audit events without throwing
+ * Prevents audit logging failures from crashing admin operations
+ */
+const safeAuditLog = async (auditData) => {
+  try {
+    await AuthAudit.create(auditData);
+  } catch (auditError) {
+    console.error('[ADMIN] Failed to log audit event:', auditError.message);
+  }
+};
+
+/**
  * Get admin dashboard statistics
  * GET /api/admin/stats
  * 
@@ -132,7 +144,7 @@ const resendInviteEmail = async (req, res) => {
         console.error('[ADMIN] Failed to send invite reminder email');
         
         // Log failure but continue - token was updated
-        await AuthAudit.create({
+        await safeAuditLog({
           xID: user.xID,
           actionType: 'InviteEmailResendFailed',
           description: `Admin attempted to resend invite email but delivery failed`,
@@ -142,12 +154,12 @@ const resendInviteEmail = async (req, res) => {
         
         return res.status(500).json({
           success: false,
-          message: 'Failed to send email. Please check SMTP configuration.',
+          message: 'Failed to send email. Please check email service configuration.',
         });
       }
       
       // Log successful email send
-      await AuthAudit.create({
+      await safeAuditLog({
         xID: user.xID,
         actionType: 'InviteEmailResent',
         description: `Admin resent invite email to ${emailService.maskEmail(user.email)}`,
@@ -160,10 +172,10 @@ const resendInviteEmail = async (req, res) => {
         message: 'Invite email sent successfully',
       });
     } catch (emailError) {
-      console.error('[ADMIN] Failed to send invite email');
+      console.error('[ADMIN] Failed to send invite email:', emailError.message);
       
       // Log failure
-      await AuthAudit.create({
+      await safeAuditLog({
         xID: user.xID,
         actionType: 'InviteEmailResendFailed',
         description: `Admin attempted to resend invite email but delivery failed`,
@@ -173,7 +185,7 @@ const resendInviteEmail = async (req, res) => {
       
       return res.status(500).json({
         success: false,
-        message: 'Failed to send email. Please check SMTP configuration.',
+        message: 'Failed to send email. Please check email service configuration.',
       });
     }
   } catch (error) {
