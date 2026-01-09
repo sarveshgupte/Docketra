@@ -203,4 +203,36 @@ export const caseService = {
     const response = await api.get('/cases/my-resolved');
     return response.data;
   },
+
+  /**
+   * View attachment inline
+   * Opens attachment in new tab
+   */
+  viewAttachment: (caseId, attachmentId) => {
+    const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+    const url = `/api/cases/${caseId}/attachments/${attachmentId}/view`;
+    
+    // Open in new tab with auth header
+    window.open(`${url}?token=${token}`, '_blank');
+  },
+
+  /**
+   * Download attachment
+   * Forces file download
+   */
+  downloadAttachment: async (caseId, attachmentId, filename) => {
+    const response = await api.get(`/cases/${caseId}/attachments/${attachmentId}/download`, {
+      responseType: 'blob',
+    });
+    
+    // Create download link
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
 };
