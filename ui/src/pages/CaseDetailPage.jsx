@@ -77,7 +77,8 @@ export const CaseDetailPage = () => {
       }
     } catch (error) {
       console.error('Failed to pull case:', error);
-      alert(`Failed to pull case: ${error.response?.data?.message || error.message}`);
+      const errorMessage = error.response?.data?.message || 'Failed to pull case. Please try again.';
+      alert(`Failed to pull case: ${errorMessage}`);
     } finally {
       setPullingCase(false);
     }
@@ -98,7 +99,8 @@ export const CaseDetailPage = () => {
       }
     } catch (error) {
       console.error('Failed to move case to global worklist:', error);
-      alert(`Failed to move case: ${error.response?.data?.message || error.message}`);
+      const errorMessage = error.response?.data?.message || 'Failed to move case. Please try again.';
+      alert(`Failed to move case: ${errorMessage}`);
     } finally {
       setMovingToGlobal(false);
     }
