@@ -1487,7 +1487,7 @@ module.exports = {
   deactivateUser,
   setPassword,
   resetPasswordWithToken,
-  resendSetupEmail,
+  // resendSetupEmail - REMOVED: Deprecated in PR #48, use admin.controller.resendInviteEmail instead
   updateUserStatus,
   unlockAccount,
   forgotPassword,
