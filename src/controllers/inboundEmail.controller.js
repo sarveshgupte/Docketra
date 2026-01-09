@@ -2,6 +2,7 @@ const Case = require('../models/Case.model');
 const Attachment = require('../models/Attachment.model');
 const EmailMetadata = require('../models/EmailMetadata.model');
 const User = require('../models/User.model');
+const { getMimeType } = require('../utils/fileUtils');
 const path = require('path');
 const fs = require('fs').promises;
 
@@ -123,9 +124,10 @@ ${bodyHtml || '(no HTML body)'}
     
     await fs.writeFile(emailFilePath, emailContent, 'utf8');
     
-    // Use text/plain MIME type since we're storing as a text file
-    // In production, you would store the raw .eml file and use 'message/rfc822'
-    const mimeType = 'text/plain';
+    // Use getMimeType utility for consistency
+    // Currently storing as .txt, so this will return 'text/plain'
+    // If we switch to storing raw .eml files, just change the extension
+    const mimeType = getMimeType(emailFileName);
     
     // Create attachment record
     const attachment = await Attachment.create({
