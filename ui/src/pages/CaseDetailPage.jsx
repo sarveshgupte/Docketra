@@ -12,8 +12,10 @@ import { Badge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
 import { Textarea } from '../components/common/Textarea';
 import { Input } from '../components/common/Input';
+import { Modal } from '../components/common/Modal';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
+import { useToast } from '../hooks/useToast';
 import { caseService } from '../services/caseService';
 import { formatDateTime, formatClientDisplay } from '../utils/formatters';
 import './CaseDetailPage.css';
@@ -31,6 +33,7 @@ export const CaseDetailPage = () => {
   const { caseId } = useParams();
   const { user } = useAuth();
   const permissions = usePermissions();
+  const { showSuccess, showError, showWarning } = useToast();
   
   const [loading, setLoading] = useState(true);
   const [caseData, setCaseData] = useState(null);
@@ -42,6 +45,22 @@ export const CaseDetailPage = () => {
   const [pullingCase, setPullingCase] = useState(false);
   const [movingToGlobal, setMovingToGlobal] = useState(false);
   const fileInputRef = React.useRef(null);
+
+  // State for File action modal
+  const [showFileModal, setShowFileModal] = useState(false);
+  const [fileComment, setFileComment] = useState('');
+  const [filingCase, setFilingCase] = useState(false);
+
+  // State for Pend action modal
+  const [showPendModal, setShowPendModal] = useState(false);
+  const [pendComment, setPendComment] = useState('');
+  const [pendingUntil, setPendingUntil] = useState('');
+  const [pendingCase, setPendingCase] = useState(false);
+
+  // State for Resolve action modal
+  const [showResolveModal, setShowResolveModal] = useState(false);
+  const [resolveComment, setResolveComment] = useState('');
+  const [resolvingCase, setResolvingCase] = useState(false);
 
   useEffect(() => {
     loadCase();
@@ -72,7 +91,7 @@ export const CaseDetailPage = () => {
       const response = await caseService.pullCase(caseId);
       
       if (response.success) {
-        alert('✅ Case pulled and assigned to you');
+        showSuccess('Case pulled and assigned to you');
         await loadCase(); // Reload to update UI
       }
     } catch (error) {
@@ -82,7 +101,7 @@ export const CaseDetailPage = () => {
       const errorMessage = serverMessage && typeof serverMessage === 'string' 
         ? serverMessage.substring(0, 200) // Limit length
         : 'Failed to pull case. Please try again.';
-      alert(`Failed to pull case: ${errorMessage}`);
+      showError(errorMessage);
     } finally {
       setPullingCase(false);
     }
@@ -98,7 +117,7 @@ export const CaseDetailPage = () => {
       const response = await caseService.moveCaseToGlobal(caseId);
       
       if (response.success) {
-        alert('✅ Case moved to Global Worklist');
+        showSuccess('Case moved to Global Worklist');
         await loadCase(); // Reload to update UI
       }
     } catch (error) {
@@ -108,7 +127,7 @@ export const CaseDetailPage = () => {
       const errorMessage = serverMessage && typeof serverMessage === 'string'
         ? serverMessage.substring(0, 200) // Limit length
         : 'Failed to move case. Please try again.';
-      alert(`Failed to move case: ${errorMessage}`);
+      showError(errorMessage);
     } finally {
       setMovingToGlobal(false);
     }
@@ -138,7 +157,7 @@ export const CaseDetailPage = () => {
 
   const handleUploadFile = async () => {
     if (!selectedFile || !fileDescription.trim()) {
-      alert('Please select a file and provide a description');
+      showWarning('Please select a file and provide a description');
       return;
     }
 
@@ -154,9 +173,111 @@ export const CaseDetailPage = () => {
       await loadCase(); // Reload to show new attachment
     } catch (error) {
       console.error('Failed to upload file:', error);
-      alert('Failed to upload file. Please try again.');
+      showError('Failed to upload file. Please try again.');
     } finally {
       setUploadingFile(false);
+    }
+  };
+
+  const handleFileCase = async () => {
+    if (!fileComment.trim()) {
+      showWarning('Comment is mandatory for filing a case');
+      return;
+    }
+
+    setFilingCase(true);
+    try {
+      const response = await caseService.fileCase(caseId, fileComment);
+      
+      if (response.success) {
+        showSuccess('Case filed successfully');
+        setShowFileModal(false);
+        setFileComment('');
+        await loadCase(); // Reload to update UI
+      }
+    } catch (error) {
+      console.error('Failed to file case:', error);
+      const serverMessage = error.response?.data?.message;
+      const errorMessage = serverMessage && typeof serverMessage === 'string'
+        ? serverMessage.substring(0, 200)
+        : 'Failed to file case. Please try again.';
+      showError(errorMessage);
+    } finally {
+      setFilingCase(false);
+    }
+  };
+
+  const handlePendCase = async () => {
+    if (!pendComment.trim()) {
+      showWarning('Comment is mandatory for pending a case');
+      return;
+    }
+
+    if (!pendingUntil) {
+      showWarning('Reopen date is mandatory for pending a case');
+      return;
+    }
+
+    // Validate that reopen date is not in the past
+    const selectedDate = new Date(pendingUntil);
+    const today = new Date();
+    // Normalize both dates to midnight for accurate comparison
+    selectedDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    
+    if (selectedDate < today) {
+      showWarning('Reopen date must be today or in the future');
+      return;
+    }
+
+    setPendingCase(true);
+    try {
+      const response = await caseService.pendCase(caseId, pendComment, pendingUntil);
+      
+      if (response.success) {
+        showSuccess('Case pended successfully');
+        setShowPendModal(false);
+        setPendComment('');
+        setPendingUntil('');
+        await loadCase(); // Reload to update UI
+      }
+    } catch (error) {
+      console.error('Failed to pend case:', error);
+      const serverMessage = error.response?.data?.message;
+      const errorMessage = serverMessage && typeof serverMessage === 'string'
+        ? serverMessage.substring(0, 200)
+        : 'Failed to pend case. Please try again.';
+      showError(errorMessage);
+    } finally {
+      setPendingCase(false);
+    }
+  };
+
+  const handleResolveCase = async () => {
+    if (!resolveComment.trim()) {
+      showWarning('Comment is mandatory for resolving a case');
+      return;
+    }
+
+    setResolvingCase(true);
+    try {
+      const response = await caseService.resolveCase(caseId, resolveComment);
+      
+      if (response.success) {
+        showSuccess('Case resolved successfully');
+        setShowResolveModal(false);
+        setResolveComment('');
+        await loadCase(); // Reload to update UI
+      }
+    } catch (error) {
+      console.error('Failed to resolve case:', error);
+      const serverMessage = error.response?.data?.message;
+      const errorMessage = serverMessage && typeof serverMessage === 'string'
+        ? serverMessage.substring(0, 200)
+        : 'Failed to resolve case. Please try again.';
+      showError(errorMessage);
+    } finally {
+      setResolvingCase(false);
     }
   };
 
@@ -200,6 +321,13 @@ export const CaseDetailPage = () => {
   // Move to Global button: show only for admin users
   const showMoveToGlobalButton = isAdmin;
 
+  // Case action buttons (File, Pend, Resolve)
+  // Show only when case is in a non-terminal state
+  const isTerminalState = caseInfo.status === 'RESOLVED' || 
+                           caseInfo.status === 'FILED' || 
+                           caseInfo.status === 'CLOSED';
+  const showActionButtons = !isViewOnlyMode && !isTerminalState;
+
   return (
     <Layout>
       <div className="case-detail">
@@ -231,6 +359,37 @@ export const CaseDetailPage = () => {
               >
                 {movingToGlobal ? 'Moving...' : 'Move to Global Worklist'}
               </Button>
+            )}
+            {/* Case Action Buttons: File, Pend, Resolve */}
+            {showActionButtons && (
+              <>
+                <Button
+                  variant="default"
+                  onClick={() => setShowFileModal(true)}
+                  style={{ 
+                    borderColor: 'var(--text-secondary)',
+                    color: 'var(--text-secondary)'
+                  }}
+                >
+                  File
+                </Button>
+                <Button
+                  variant="default"
+                  onClick={() => setShowPendModal(true)}
+                  style={{ 
+                    borderColor: 'var(--warning-color)',
+                    color: 'var(--warning-color)'
+                  }}
+                >
+                  Pend
+                </Button>
+                <Button
+                  variant="success"
+                  onClick={() => setShowResolveModal(true)}
+                >
+                  Resolve
+                </Button>
+              </>
             )}
             {/* PR #45: View-Only Mode Indicator */}
             {isViewOnlyMode && (
@@ -472,6 +631,160 @@ export const CaseDetailPage = () => {
             </div>
           </Card>
         )}
+
+        {/* File Case Modal */}
+        <Modal
+          isOpen={showFileModal}
+          onClose={() => {
+            setShowFileModal(false);
+            setFileComment('');
+          }}
+          title="File Case"
+          actions={
+            <>
+              <Button
+                variant="default"
+                onClick={() => {
+                  setShowFileModal(false);
+                  setFileComment('');
+                }}
+                disabled={filingCase}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleFileCase}
+                disabled={!fileComment.trim() || filingCase}
+              >
+                {filingCase ? 'Filing...' : 'File Case'}
+              </Button>
+            </>
+          }
+        >
+          <div style={{ padding: 'var(--spacing-md)' }}>
+            <p style={{ marginBottom: 'var(--spacing-md)', color: 'var(--text-secondary)' }}>
+              Filing a case indicates it was opened in error, is a duplicate, or was incorrectly created.
+              The case will become read-only after filing.
+            </p>
+            <Textarea
+              label="Comment (Required)"
+              value={fileComment}
+              onChange={(e) => setFileComment(e.target.value)}
+              placeholder="Explain why this case is being filed..."
+              rows={4}
+              required
+              disabled={filingCase}
+            />
+          </div>
+        </Modal>
+
+        {/* Pend Case Modal */}
+        <Modal
+          isOpen={showPendModal}
+          onClose={() => {
+            setShowPendModal(false);
+            setPendComment('');
+            setPendingUntil('');
+          }}
+          title="Pend Case"
+          actions={
+            <>
+              <Button
+                variant="default"
+                onClick={() => {
+                  setShowPendModal(false);
+                  setPendComment('');
+                  setPendingUntil('');
+                }}
+                disabled={pendingCase}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handlePendCase}
+                disabled={!pendComment.trim() || !pendingUntil || pendingCase}
+              >
+                {pendingCase ? 'Pending...' : 'Pend Case'}
+              </Button>
+            </>
+          }
+        >
+          <div style={{ padding: 'var(--spacing-md)' }}>
+            <p style={{ marginBottom: 'var(--spacing-md)', color: 'var(--text-secondary)' }}>
+              Pending a case temporarily pauses it until a specified date.
+              The case will not appear in your worklist until the reopen date.
+            </p>
+            <Textarea
+              label="Comment (Required)"
+              value={pendComment}
+              onChange={(e) => setPendComment(e.target.value)}
+              placeholder="Explain why this case is being pended..."
+              rows={4}
+              required
+              disabled={pendingCase}
+            />
+            <div style={{ marginTop: 'var(--spacing-md)' }}>
+              <Input
+                type="date"
+                label="Reopen Date (Required)"
+                value={pendingUntil}
+                onChange={(e) => setPendingUntil(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+                required
+                disabled={pendingCase}
+              />
+            </div>
+          </div>
+        </Modal>
+
+        {/* Resolve Case Modal */}
+        <Modal
+          isOpen={showResolveModal}
+          onClose={() => {
+            setShowResolveModal(false);
+            setResolveComment('');
+          }}
+          title="Resolve Case"
+          actions={
+            <>
+              <Button
+                variant="default"
+                onClick={() => {
+                  setShowResolveModal(false);
+                  setResolveComment('');
+                }}
+                disabled={resolvingCase}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="success"
+                onClick={handleResolveCase}
+                disabled={!resolveComment.trim() || resolvingCase}
+              >
+                {resolvingCase ? 'Resolving...' : 'Resolve Case'}
+              </Button>
+            </>
+          }
+        >
+          <div style={{ padding: 'var(--spacing-md)' }}>
+            <p style={{ marginBottom: 'var(--spacing-md)', color: 'var(--text-secondary)' }}>
+              Resolving a case marks it as fully completed with no further action required.
+              The case will become read-only after resolution.
+            </p>
+            <Textarea
+              label="Comment (Required)"
+              value={resolveComment}
+              onChange={(e) => setResolveComment(e.target.value)}
+              placeholder="Describe how this case was resolved..."
+              rows={4}
+              required
+              disabled={resolvingCase}
+            />
+          </div>
+        </Modal>
       </div>
     </Layout>
   );
