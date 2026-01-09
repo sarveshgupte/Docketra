@@ -312,7 +312,7 @@ const caseSchema = new mongoose.Schema({
   clientSnapshot: {
     clientId: String,           // C123456 format
     businessName: String,        // Client name at time of case creation
-    businessPhone: String,
+    primaryContactNumber: String, // Primary contact at time of case creation
     businessEmail: String,
     businessAddress: String,
     PAN: String,
@@ -453,7 +453,7 @@ caseSchema.pre('validate', async function() {
       this.clientSnapshot = {
         clientId: client.clientId,
         businessName: client.businessName,
-        businessPhone: client.businessPhone,
+        primaryContactNumber: client.primaryContactNumber,
         businessEmail: client.businessEmail,
         businessAddress: client.businessAddress,
         PAN: client.PAN,

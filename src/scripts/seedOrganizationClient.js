@@ -43,10 +43,11 @@ const seedOrganizationClient = async () => {
         clientId: 'C000001',
         businessName: 'Organization',
         businessAddress: 'Organization Headquarters',
-        businessPhone: '0000000000',
+        primaryContactNumber: '0000000000',
         businessEmail: 'organization@system.local',
         isSystemClient: true,
         isActive: true,
+        status: 'ACTIVE',
         createdByXid: 'SYSTEM', // CANONICAL - system-generated identifier
         createdBy: 'system@system.local', // DEPRECATED - backward compatibility only
       });
