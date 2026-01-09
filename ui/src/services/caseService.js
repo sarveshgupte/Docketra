@@ -149,4 +149,38 @@ export const caseService = {
     const response = await api.post(`/cases/${caseId}/unassign`);
     return response.data;
   },
+
+  /**
+   * File a case with mandatory comment
+   * Changes status to FILED (read-only, archived)
+   */
+  fileCase: async (caseId, comment) => {
+    const response = await api.post(`/cases/${caseId}/file`, {
+      comment,
+    });
+    return response.data;
+  },
+
+  /**
+   * Pend a case with mandatory comment and reopen date
+   * Changes status to PENDED (temporarily paused)
+   */
+  pendCase: async (caseId, comment, pendingUntil) => {
+    const response = await api.post(`/cases/${caseId}/pend`, {
+      comment,
+      pendingUntil,
+    });
+    return response.data;
+  },
+
+  /**
+   * Resolve a case with mandatory comment
+   * Changes status to RESOLVED (completed)
+   */
+  resolveCase: async (caseId, comment) => {
+    const response = await api.post(`/cases/${caseId}/resolve`, {
+      comment,
+    });
+    return response.data;
+  },
 };
