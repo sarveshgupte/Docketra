@@ -33,12 +33,34 @@ const commentSchema = new mongoose.Schema({
   
   /**
    * Email of user who created the comment
-   * Required for accountability
+   * ⚠️ DEPRECATED - FOR DISPLAY PURPOSES ONLY ⚠️
+   * Use createdByXID and createdByName for UI display
    */
   createdBy: {
     type: String,
     required: [true, 'Creator email is required'],
     lowercase: true,
+    trim: true,
+  },
+  
+  /**
+   * xID of user who created the comment
+   * ✅ CANONICAL IDENTIFIER ✅
+   * Format: X123456
+   * Used for attribution and audit trails
+   */
+  createdByXID: {
+    type: String,
+    uppercase: true,
+    trim: true,
+  },
+  
+  /**
+   * Name of user who created the comment
+   * Used for display in UI
+   */
+  createdByName: {
+    type: String,
     trim: true,
   },
   
