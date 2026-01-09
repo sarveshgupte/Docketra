@@ -122,7 +122,7 @@ export const DashboardPage = () => {
   };
   
   const handleMyPendingCasesClick = () => {
-    navigate('/my-worklist?status=PENDING,ON_HOLD');
+    navigate('/my-worklist?status=PENDED');
   };
   
   const handlePendingApprovalsClick = () => {

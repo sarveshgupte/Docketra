@@ -1012,7 +1012,10 @@ const getCases = async (req, res) => {
     // Log case list view for audit
     if (req.user?.xID) {
       // Determine if this is an admin viewing pending approvals
-      const isPendingApprovalView = status === 'Pending' || status === 'Reviewed' || status === 'UNDER_REVIEW';
+      const isPendingApprovalView = 
+        status === CASE_STATUS.PENDING || 
+        status === CASE_STATUS.REVIEWED || 
+        status === CASE_STATUS.UNDER_REVIEW;
       
       if (isPendingApprovalView && req.user.role === 'Admin') {
         // Log admin approval queue access

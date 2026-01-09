@@ -34,7 +34,13 @@ export const WorklistPage = () => {
   
   // Get status filter from query params
   const statusParam = searchParams.get('status');
-  const isPendingView = statusParam && (statusParam.includes('PENDING') || statusParam.includes('PENDED') || statusParam.includes('ON_HOLD'));
+  // Check for PENDING or PENDED status (both are valid)
+  const isPendingView = statusParam && (
+    statusParam === 'PENDING' || 
+    statusParam === 'PENDED' || 
+    statusParam.split(',').includes('PENDING') ||
+    statusParam.split(',').includes('PENDED')
+  );
 
   useEffect(() => {
     loadWorklist();

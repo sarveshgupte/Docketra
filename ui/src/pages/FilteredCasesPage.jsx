@@ -16,6 +16,7 @@ import { Badge } from '../components/common/Badge';
 import { Loading } from '../components/common/Loading';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
+import { CASE_STATUS } from '../utils/constants';
 import api from '../services/api';
 import './FilteredCasesPage.css';
 
@@ -45,13 +46,13 @@ export const FilteredCasesPage = () => {
       let params = { page, limit: 20 };
       
       // Determine which endpoint to call
-      if (status === 'FILED') {
+      if (status === CASE_STATUS.FILED) {
         // Admin filed cases
         endpoint = '/admin/cases/filed';
       } else if (approvalStatus === 'PENDING') {
         // Pending approvals (cases with status Reviewed or UNDER_REVIEW)
         endpoint = '/cases';
-        params.status = 'Reviewed';
+        params.status = CASE_STATUS.REVIEWED;
       } else {
         // Default: filtered cases
         endpoint = '/cases';
@@ -79,7 +80,7 @@ export const FilteredCasesPage = () => {
   
   // Get page title and description
   const getPageInfo = () => {
-    if (status === 'FILED') {
+    if (status === CASE_STATUS.FILED) {
       return {
         title: 'Filed Cases',
         description: 'Archived and finalized cases (Admin only)',

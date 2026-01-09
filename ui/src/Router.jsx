@@ -68,19 +68,19 @@ export const Router = () => {
         />
         
         <Route
-          path="/cases"
+          path="/cases/:caseId"
           element={
-            <ProtectedRoute requireAdmin>
-              <FilteredCasesPage />
+            <ProtectedRoute>
+              <CaseDetailPage />
             </ProtectedRoute>
           }
         />
         
         <Route
-          path="/cases/:caseId"
+          path="/cases"
           element={
-            <ProtectedRoute>
-              <CaseDetailPage />
+            <ProtectedRoute requireAdmin>
+              <FilteredCasesPage />
             </ProtectedRoute>
           }
         />
