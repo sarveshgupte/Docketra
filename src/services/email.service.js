@@ -13,6 +13,9 @@ const https = require('https');
 // Detect production mode
 const isProduction = process.env.NODE_ENV === 'production';
 
+// Constants
+const BREVO_MESSAGE_ID_FALLBACK = 'brevo-email-sent';
+
 /**
  * Mask email address for secure logging
  * Example: user@example.com -> us***@example.com
@@ -88,7 +91,7 @@ const sendTransactionalEmail = async ({ to, subject, html, text }) => {
             const response = JSON.parse(data);
             resolve({ success: true, messageId: response.messageId });
           } catch (e) {
-            resolve({ success: true, messageId: 'brevo-sent' });
+            resolve({ success: true, messageId: BREVO_MESSAGE_ID_FALLBACK });
           }
         } else {
           reject(new Error(`Brevo API error: ${res.statusCode} - ${data}`));

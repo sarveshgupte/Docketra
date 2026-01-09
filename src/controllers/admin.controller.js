@@ -15,6 +15,18 @@ const { CASE_STATUS } = require('../config/constants');
 const INVITE_TOKEN_EXPIRY_HOURS = 48; // 48 hours for invite tokens
 
 /**
+ * Helper function to safely log audit events without throwing
+ * Prevents audit logging failures from crashing admin operations
+ */
+const safeAuditLog = async (auditData) => {
+  try {
+    await AuthAudit.create(auditData);
+  } catch (auditError) {
+    console.error('[ADMIN] Failed to log audit event:', auditError.message);
+  }
+};
+
+/**
  * Get admin dashboard statistics
  * GET /api/admin/stats
  * 
@@ -132,17 +144,13 @@ const resendInviteEmail = async (req, res) => {
         console.error('[ADMIN] Failed to send invite reminder email');
         
         // Log failure but continue - token was updated
-        try {
-          await AuthAudit.create({
-            xID: user.xID,
-            actionType: 'InviteEmailResendFailed',
-            description: `Admin attempted to resend invite email but delivery failed`,
-            performedBy: admin.xID,
-            ipAddress: req.ip,
-          });
-        } catch (auditError) {
-          console.error('[ADMIN] Failed to log email failure to audit:', auditError.message);
-        }
+        await safeAuditLog({
+          xID: user.xID,
+          actionType: 'InviteEmailResendFailed',
+          description: `Admin attempted to resend invite email but delivery failed`,
+          performedBy: admin.xID,
+          ipAddress: req.ip,
+        });
         
         return res.status(500).json({
           success: false,
@@ -151,17 +159,13 @@ const resendInviteEmail = async (req, res) => {
       }
       
       // Log successful email send
-      try {
-        await AuthAudit.create({
-          xID: user.xID,
-          actionType: 'InviteEmailResent',
-          description: `Admin resent invite email to ${emailService.maskEmail(user.email)}`,
-          performedBy: admin.xID,
-          ipAddress: req.ip,
-        });
-      } catch (auditError) {
-        console.error('[ADMIN] Failed to log successful email to audit:', auditError.message);
-      }
+      await safeAuditLog({
+        xID: user.xID,
+        actionType: 'InviteEmailResent',
+        description: `Admin resent invite email to ${emailService.maskEmail(user.email)}`,
+        performedBy: admin.xID,
+        ipAddress: req.ip,
+      });
       
       res.json({
         success: true,
@@ -171,17 +175,13 @@ const resendInviteEmail = async (req, res) => {
       console.error('[ADMIN] Failed to send invite email:', emailError.message);
       
       // Log failure
-      try {
-        await AuthAudit.create({
-          xID: user.xID,
-          actionType: 'InviteEmailResendFailed',
-          description: `Admin attempted to resend invite email but delivery failed`,
-          performedBy: admin.xID,
-          ipAddress: req.ip,
-        });
-      } catch (auditError) {
-        console.error('[ADMIN] Failed to log email failure to audit:', auditError.message);
-      }
+      await safeAuditLog({
+        xID: user.xID,
+        actionType: 'InviteEmailResendFailed',
+        description: `Admin attempted to resend invite email but delivery failed`,
+        performedBy: admin.xID,
+        ipAddress: req.ip,
+      });
       
       return res.status(500).json({
         success: false,
