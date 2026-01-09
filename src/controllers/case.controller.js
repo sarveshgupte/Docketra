@@ -1294,46 +1294,7 @@ const pullCase = async (req, res) => {
  */
 const bulkPullCases = async (req, res) => {
   try {
-    const { caseIds, userEmail, userXID } = req.body;
-    
-    // Reject legacy email-based payload
-    if (userEmail) {
-      return res.status(400).json({
-        success: false,
-        message: 'userEmail parameter is deprecated. Use userXID instead (format: X123456)',
-      });
-    }
-    
-    if (!userXID) {
-      return res.status(400).json({
-        success: false,
-        message: 'userXID is required (format: X123456)',
-      });
-    }
-    
-    // Validate userXID format (must be X followed by 6 digits)
-    if (!/^X\d{6}$/i.test(userXID)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid userXID format. Expected format: X123456',
-      });
-    }
-    
-    if (!Array.isArray(caseIds) || caseIds.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Case IDs array is required and must not be empty',
-      });
-    }
-    
-    // Validate caseIds format (reject if looks like old format)
-    const invalidCaseIds = caseIds.filter(id => !/^CASE-\d{8}-\d{5}$/i.test(id));
-    if (invalidCaseIds.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Invalid case ID format. Expected format: CASE-YYYYMMDD-XXXXX. Invalid IDs: ${invalidCaseIds.join(', ')}`,
-      });
-    }
+    const { caseIds } = req.body;
     
     // Get authenticated user from req.user (set by auth middleware)
     const user = req.user;
@@ -1345,11 +1306,19 @@ const bulkPullCases = async (req, res) => {
       });
     }
     
-    // Verify userXID matches authenticated user
-    if (user.xID.toUpperCase() !== userXID.toUpperCase()) {
-      return res.status(403).json({
+    if (!Array.isArray(caseIds) || caseIds.length === 0) {
+      return res.status(400).json({
         success: false,
-        message: 'userXID must match authenticated user',
+        message: 'Case IDs array is required and must not be empty',
+      });
+    }
+    
+    // Validate caseIds format (expect CASE-YYYYMMDD-XXXXX format)
+    const invalidCaseIds = caseIds.filter(id => !/^CASE-\d{8}-\d{5}$/i.test(id));
+    if (invalidCaseIds.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid case ID format. Expected format: CASE-YYYYMMDD-XXXXX. Invalid IDs: ${invalidCaseIds.join(', ')}`,
       });
     }
     
