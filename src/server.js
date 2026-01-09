@@ -28,6 +28,7 @@ const reportsRoutes = require('./routes/reports.routes');  // Reports routes
 const categoryRoutes = require('./routes/category.routes');  // Category routes
 const adminRoutes = require('./routes/admin.routes');  // Admin routes (PR #41)
 const debugRoutes = require('./routes/debug.routes');  // Debug routes (PR #43)
+const inboundRoutes = require('./routes/inbound.routes');  // Inbound email routes
 
 /**
  * Docketra - Task & Case Management System
@@ -150,6 +151,7 @@ app.get('/api', (req, res) => {
       categories: '/api/categories',
       admin: '/api/admin',
       debug: '/api/debug',
+      inbound: '/api/inbound',
     },
   });
 });
@@ -165,6 +167,9 @@ app.use('/api/admin', adminRoutes);
 
 // Debug routes (PR #43) - require authentication and admin role
 app.use('/api/debug', debugRoutes);
+
+// Inbound email routes (webhook - no authentication required)
+app.use('/api/inbound', inboundRoutes);
 
 // Protected routes - require authentication
 app.use('/api/users', authenticate, userRoutes);

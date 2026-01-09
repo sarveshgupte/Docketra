@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { authenticate } = require('../middleware/auth.middleware');
 const {
   createCase,
   addComment,
@@ -17,6 +18,8 @@ const {
   updateCaseActivity,
   pullCases,
   unassignCase,
+  viewAttachment,
+  downloadAttachment,
 } = require('../controllers/case.controller');
 
 // PR #44: Import xID ownership validation middleware
@@ -75,6 +78,14 @@ router.post('/:caseId/comments', addComment);
 
 // POST /api/cases/:caseId/attachments - Upload attachment to case
 router.post('/:caseId/attachments', upload.single('file'), addAttachment);
+
+// GET /api/cases/:caseId/attachments/:attachmentId/view - View attachment inline
+// Note: authenticate middleware accepts xID from query params (req.query.xID)
+router.get('/:caseId/attachments/:attachmentId/view', authenticate, viewAttachment);
+
+// GET /api/cases/:caseId/attachments/:attachmentId/download - Download attachment
+// Note: authenticate middleware accepts xID from query params (req.query.xID)
+router.get('/:caseId/attachments/:attachmentId/download', authenticate, downloadAttachment);
 
 // POST /api/cases/:caseId/clone - Clone case with comments and attachments
 // PR #44: Apply xID validation for assignment fields
