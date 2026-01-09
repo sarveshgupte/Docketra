@@ -216,7 +216,7 @@ const createCase = async (req, res) => {
       createdBy: req.user.email || req.user.xID, // Legacy field - use email or xID as fallback
       priority: priority || 'Medium',
       status: 'UNASSIGNED', // New cases default to UNASSIGNED for global worklist
-      assignedTo: assignedTo ? assignedTo.toUpperCase() : null, // PR #42: If provided, treat as xID (uppercase)
+      assignedToXID: assignedTo ? assignedTo.toUpperCase() : null, // PR: xID Canonicalization - Store in assignedToXID
       slaDueDate: new Date(slaDueDate), // Store SLA due date - MANDATORY
       payload, // Store client case payload if provided
     });
@@ -228,7 +228,8 @@ const createCase = async (req, res) => {
       caseId: newCase.caseId,
       actionType: 'Created',
       description: `Case created with status: UNASSIGNED, Client: ${finalClientId}`,
-      performedBy: createdByXID,
+      performedBy: req.user.email || req.user.xID, // Display email or xID
+      performedByXID: createdByXID.toUpperCase(), // Canonical identifier (uppercase)
     });
     
     // Add system comment if duplicate was overridden
@@ -341,6 +342,7 @@ const addComment = async (req, res) => {
       actionType: 'CASE_COMMENT_ADDED',
       description: `Comment added by ${req.user.email}: ${text.substring(0, COMMENT_PREVIEW_LENGTH)}${text.length > COMMENT_PREVIEW_LENGTH ? '...' : ''}`,
       performedBy: req.user.email.toLowerCase(),
+      performedByXID: req.user.xID.toUpperCase(), // Canonical identifier (uppercase)
     });
     
     res.status(201).json({
@@ -452,6 +454,7 @@ const addAttachment = async (req, res) => {
       actionType: 'CASE_ATTACHMENT_ADDED',
       description: `Attachment uploaded by ${req.user.email}: ${sanitizedFilename}`,
       performedBy: req.user.email.toLowerCase(),
+      performedByXID: req.user.xID.toUpperCase(), // Canonical identifier (uppercase)
     });
     
     res.status(201).json({
@@ -538,7 +541,7 @@ const cloneCase = async (req, res) => {
       status: 'Open',
       pendingUntil: null,
       createdBy: clonedBy.toLowerCase(),
-      assignedTo: assignedTo ? assignedTo.toUpperCase() : null, // PR #42: Treat as xID (uppercase)
+      assignedToXID: assignedTo ? assignedTo.toUpperCase() : null, // PR: xID Canonicalization - Store in assignedToXID
     });
     
     await newCase.save();
@@ -668,7 +671,7 @@ const unpendCase = async (req, res) => {
     
     // Update case status
     caseData.status = 'Open';
-    caseData.assignedTo = null;
+    caseData.assignedToXID = null;
     caseData.pendingUntil = null;
     
     await caseData.save();
@@ -827,7 +830,7 @@ const getCaseByCaseId = async (req, res) => {
     
     // PR #45: Determine if user is viewing in view-only mode
     // View-only mode: case is not assigned to the current user
-    const isViewOnlyMode = caseData.assignedTo !== req.user.xID;
+    const isViewOnlyMode = caseData.assignedToXID !== req.user.xID;
     const isOwner = caseData.createdByXID === req.user.xID;
     
     // PR #45: Add CaseAudit entry with xID attribution
@@ -849,6 +852,7 @@ const getCaseByCaseId = async (req, res) => {
       actionType: 'CASE_VIEWED',
       description: `Case viewed by ${req.user.email}`,
       performedBy: req.user.email.toLowerCase(),
+      performedByXID: req.user.xID.toUpperCase(), // Canonical identifier (uppercase)
     });
     
     res.json({
@@ -911,23 +915,18 @@ const getCases = async (req, res) => {
     if (category) query.category = category;
     if (priority) query.priority = priority;
     
-    // PR #42: Handle assignedTo as xID (uppercase) for canonical queries
-    // PR #44: Log warning if email-based queries are attempted
+    // PR: xID Canonicalization - Use assignedToXID field
+    // Reject email-based queries completely
     if (assignedTo) {
-      // If it looks like an xID (starts with X and has digits), treat as xID
-      // Otherwise, treat as email for backward compatibility
       const trimmedAssignedTo = assignedTo.trim();
       if (/^X\d{6}$/i.test(trimmedAssignedTo)) {
-        query.assignedTo = trimmedAssignedTo.toUpperCase();
+        query.assignedToXID = trimmedAssignedTo.toUpperCase();
       } else {
-        // PR #44: Log warning for email-based ownership query
-        if (!isProduction()) {
-          console.warn(`[xID Guardrail] Email-based ownership query detected: assignedTo="${trimmedAssignedTo}"`);
-          console.warn(`[xID Guardrail] This is deprecated. Please use xID (format: X123456) for ownership queries.`);
-          console.warn(`[xID Guardrail] Request from user: ${req.user?.xID || 'Unknown'}`);
-        }
-        // Backward compatibility: might be email, but with new system should be rare
-        query.assignedTo = trimmedAssignedTo.toLowerCase();
+        // Reject email-based queries
+        return res.status(400).json({
+          success: false,
+          message: 'Email-based assignedTo queries are not supported. Please use xID (format: X123456)',
+        });
       }
     }
     
@@ -1193,7 +1192,7 @@ const updateCaseActivity = async (req, res) => {
  * 
  * Atomically assigns the case to the logged-in user using the assignment service.
  * - Checks if case is UNASSIGNED
- * - Sets assignedTo to user xID (canonical identifier)
+ * - Sets assignedToXID to user xID (canonical identifier)
  * - Sets queueType to PERSONAL
  * - Changes status from UNASSIGNED to OPEN
  * - Sets assignedAt to current timestamp
@@ -1206,18 +1205,11 @@ const updateCaseActivity = async (req, res) => {
  * 
  * PR #42: Updated to use xID for assignment
  * PR: Case Lifecycle - Uses assignment service with queueType
+ * PR: xID Canonicalization - Removed userEmail parameter
  */
 const pullCase = async (req, res) => {
   try {
     const { caseId } = req.params;
-    const { userEmail } = req.body;
-    
-    if (!userEmail) {
-      return res.status(400).json({
-        success: false,
-        message: 'User email is required',
-      });
-    }
     
     // Get authenticated user from req.user (set by auth middleware)
     const user = req.user;
@@ -1238,7 +1230,7 @@ const pullCase = async (req, res) => {
         success: false,
         message: result.message,
         currentStatus: result.currentStatus,
-        assignedTo: result.assignedTo,
+        assignedToXID: result.assignedToXID,
       });
     }
     
@@ -1269,22 +1261,49 @@ const pullCase = async (req, res) => {
  * POST /api/cases/bulk-pull
  * 
  * Atomically assigns multiple cases to user with race safety using assignment service.
- * - Sets assignedTo to user xID
+ * - Sets assignedToXID to user xID
  * - Sets queueType to PERSONAL
  * - Changes status to OPEN
  * - Creates audit trails
  * 
  * PR #42: Updated to use xID for assignment
  * PR: Case Lifecycle - Uses assignment service with queueType
+ * PR: xID Canonicalization - Removed userEmail parameter, accepts only userXID
+ * 
+ * Required payload:
+ * {
+ *   "caseIds": ["CASE-20260109-00001", "CASE-20260109-00002"],
+ *   "userXID": "X000001"
+ * }
+ * 
+ * ❌ REJECTS:
+ * - userEmail parameter (use userXID instead)
+ * - CASE- prefixed IDs in userXID field
  */
 const bulkPullCases = async (req, res) => {
   try {
-    const { caseIds, userEmail } = req.body;
+    const { caseIds, userEmail, userXID } = req.body;
     
-    if (!userEmail) {
+    // Reject legacy email-based payload
+    if (userEmail) {
       return res.status(400).json({
         success: false,
-        message: 'User email is required',
+        message: 'userEmail parameter is deprecated. Use userXID instead (format: X123456)',
+      });
+    }
+    
+    if (!userXID) {
+      return res.status(400).json({
+        success: false,
+        message: 'userXID is required (format: X123456)',
+      });
+    }
+    
+    // Validate userXID format (must be X followed by 6 digits)
+    if (!/^X\d{6}$/i.test(userXID)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid userXID format. Expected format: X123456',
       });
     }
     
@@ -1295,6 +1314,15 @@ const bulkPullCases = async (req, res) => {
       });
     }
     
+    // Validate caseIds format (reject if looks like old format)
+    const invalidCaseIds = caseIds.filter(id => !/^CASE-\d{8}-\d{5}$/i.test(id));
+    if (invalidCaseIds.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid case ID format. Expected format: CASE-YYYYMMDD-XXXXX. Invalid IDs: ${invalidCaseIds.join(', ')}`,
+      });
+    }
+    
     // Get authenticated user from req.user (set by auth middleware)
     const user = req.user;
     
@@ -1302,6 +1330,14 @@ const bulkPullCases = async (req, res) => {
       return res.status(401).json({
         success: false,
         message: 'Authentication required - user identity not found',
+      });
+    }
+    
+    // Verify userXID matches authenticated user
+    if (user.xID.toUpperCase() !== userXID.toUpperCase()) {
+      return res.status(403).json({
+        success: false,
+        message: 'userXID must match authenticated user',
       });
     }
     

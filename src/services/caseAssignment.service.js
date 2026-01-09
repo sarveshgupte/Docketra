@@ -52,7 +52,7 @@ const assignCaseToUser = async (caseId, user) => {
     },
     {
       $set: {
-        assignedTo: user.xID.toUpperCase(), // CANONICAL: Store xID
+        assignedToXID: user.xID.toUpperCase(), // CANONICAL: Store xID in assignedToXID
         queueType: 'PERSONAL', // Move from GLOBAL to PERSONAL queue
         status: CASE_STATUS.OPEN, // Change status to OPEN
         assignedAt: new Date(),
@@ -78,7 +78,7 @@ const assignCaseToUser = async (caseId, user) => {
         success: false,
         message: 'Case is no longer available (already assigned)',
         currentStatus: existingCase.status,
-        assignedTo: existingCase.assignedTo,
+        assignedToXID: existingCase.assignedToXID,
       };
     }
   }
@@ -102,6 +102,7 @@ const assignCaseToUser = async (caseId, user) => {
     actionType: 'CASE_ASSIGNED',
     description: `Case pulled from global worklist and assigned to ${user.xID}`,
     performedBy: user.email.toLowerCase(),
+    performedByXID: user.xID.toUpperCase(), // Canonical identifier (uppercase)
   });
   
   return {
@@ -137,7 +138,7 @@ const bulkAssignCasesToUser = async (caseIds, user) => {
     },
     {
       $set: {
-        assignedTo: user.xID.toUpperCase(), // CANONICAL: Store xID
+        assignedToXID: user.xID.toUpperCase(), // CANONICAL: Store xID in assignedToXID
         queueType: 'PERSONAL', // Move from GLOBAL to PERSONAL queue
         status: CASE_STATUS.OPEN, // Change status to OPEN
         assignedAt: new Date(),
@@ -150,7 +151,7 @@ const bulkAssignCasesToUser = async (caseIds, user) => {
   // Get the actual cases that were updated
   const updatedCases = await Case.find({
     caseId: { $in: caseIds },
-    assignedTo: user.xID.toUpperCase(),
+    assignedToXID: user.xID.toUpperCase(),
     queueType: 'PERSONAL',
   });
   
@@ -177,6 +178,7 @@ const bulkAssignCasesToUser = async (caseIds, user) => {
     actionType: 'CASE_ASSIGNED',
     description: `Case bulk-assigned to ${user.xID}`,
     performedBy: user.email.toLowerCase(),
+    performedByXID: user.xID.toUpperCase(), // Canonical identifier (uppercase)
   }));
   
   if (historyEntries.length > 0) {
@@ -224,10 +226,10 @@ const reassignCase = async (caseId, newUserXID, performedBy) => {
     throw new Error('Cannot reassign filed cases');
   }
   
-  const previousAssignee = caseData.assignedTo;
+  const previousAssignee = caseData.assignedToXID;
   
   // Update assignment
-  caseData.assignedTo = newUserXID.toUpperCase();
+  caseData.assignedToXID = newUserXID.toUpperCase();
   caseData.assignedAt = new Date();
   
   await caseData.save();
@@ -250,6 +252,7 @@ const reassignCase = async (caseId, newUserXID, performedBy) => {
     actionType: 'CASE_REASSIGNED',
     description: `Case reassigned from ${previousAssignee || 'unassigned'} to ${newUserXID}`,
     performedBy: performedBy.email.toLowerCase(),
+    performedByXID: performedBy.xID.toUpperCase(), // Canonical identifier (uppercase)
   });
   
   return caseData;
