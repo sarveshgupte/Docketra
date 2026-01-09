@@ -51,13 +51,15 @@ const login = async (req, res) => {
     const user = await User.findOne({ xID: normalizedXID });
     
     if (!user) {
-      // Log failed login attempt
+      // Log failed login attempt (no firmId available as user doesn't exist)
       await AuthAudit.create({
         xID: normalizedXID,
+        firmId: 'UNKNOWN', // User not found, so firmId unknown
         actionType: 'LoginFailed',
         description: `Login failed: User not found`,
         performedBy: normalizedXID,
         ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
       });
       
       return res.status(401).json({
@@ -126,10 +128,13 @@ const login = async (req, res) => {
         // Log account lock
         await AuthAudit.create({
           xID: user.xID,
+          firmId: user.firmId,
+          userId: user._id,
           actionType: 'AccountLocked',
           description: `Account locked due to ${MAX_FAILED_ATTEMPTS} failed login attempts`,
           performedBy: user.xID,
           ipAddress: req.ip,
+          userAgent: req.get('user-agent'),
         });
         
         return res.status(403).json({
@@ -144,10 +149,13 @@ const login = async (req, res) => {
       // Log failed login attempt
       await AuthAudit.create({
         xID: user.xID,
+        firmId: user.firmId,
+        userId: user._id,
         actionType: 'LoginFailed',
         description: `Login failed: Invalid password (attempt ${user.failedLoginAttempts})`,
         performedBy: user.xID,
         ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
       });
       
       return res.status(401).json({
@@ -170,10 +178,13 @@ const login = async (req, res) => {
       // Log password expiry
       await AuthAudit.create({
         xID: user.xID,
+        firmId: user.firmId,
+        userId: user._id,
         actionType: 'PasswordExpired',
         description: `Login attempt with expired password`,
         performedBy: user.xID,
         ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
       });
       
       return res.status(403).json({
@@ -231,12 +242,15 @@ const login = async (req, res) => {
       try {
         await AuthAudit.create({
           xID: user.xID,
+          firmId: user.firmId,
+          userId: user._id,
           actionType: 'PasswordResetEmailSent',
           description: emailSent 
             ? 'Password reset email sent on first login' 
             : 'Password reset email failed to send on first login',
           performedBy: user.xID,
           ipAddress: req.ip,
+          userAgent: req.get('user-agent'),
         });
       } catch (auditError) {
         console.error('[AUTH] Failed to create audit log:', auditError.message);
@@ -509,12 +523,15 @@ const resetPassword = async (req, res) => {
       // Log password setup email sent
       await AuthAudit.create({
         xID: user.xID,
+        firmId: user.firmId,
+        userId: user._id,
         actionType: 'PasswordSetupEmailSent',
         description: emailResult.success 
           ? `Password reset email sent to ${emailService.maskEmail(user.email)}` 
           : `Password reset email failed to send to ${emailService.maskEmail(user.email)}: ${emailResult.error}`,
         performedBy: admin.xID,
         ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
       });
     } catch (emailError) {
       console.error('[AUTH] Failed to send password setup email:', emailError.message);
@@ -524,10 +541,13 @@ const resetPassword = async (req, res) => {
     // Log password reset
     await AuthAudit.create({
       xID: user.xID,
+      firmId: user.firmId,
+      userId: user._id,
       actionType: 'PasswordResetByAdmin',
       description: `Password reset by admin - setup email sent`,
       performedBy: admin.xID,
       ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
       metadata: {
         resetBy: admin.xID,
       },
@@ -715,10 +735,13 @@ const updateProfile = async (req, res) => {
     
     await AuthAudit.create({
       xID: user.xID,
+      firmId: user.firmId,
+      userId: user._id,
       actionType: 'ProfileUpdated',
       description: `User profile updated`,
       performedBy: user.xID,
       ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
       metadata: {
         changes,
       },
@@ -794,6 +817,7 @@ const createUser = async (req, res) => {
       xID: xID, // Auto-generated, immutable
       name,
       email: email.toLowerCase(),
+      firmId: admin.firmId, // Inherit firmId from admin
       role: role || 'Employee',
       allowedCategories: allowedCategories || [],
       isActive: true,
@@ -816,12 +840,15 @@ const createUser = async (req, res) => {
       // Log invite email sent
       await AuthAudit.create({
         xID: newUser.xID,
+        firmId: newUser.firmId,
+        userId: newUser._id,
         actionType: 'InviteEmailSent',
         description: emailResult.success 
           ? `Invite email sent to ${emailService.maskEmail(newUser.email)}` 
           : `Invite email failed to send to ${emailService.maskEmail(newUser.email)}: ${emailResult.error}`,
         performedBy: admin.xID,
         ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
       });
     } catch (emailError) {
       console.error('[AUTH] Failed to send invite email:', emailError.message);
@@ -829,10 +856,13 @@ const createUser = async (req, res) => {
       try {
         await AuthAudit.create({
           xID: newUser.xID,
+          firmId: newUser.firmId,
+          userId: newUser._id,
           actionType: 'InviteEmailFailed',
           description: `Failed to send invite email to ${emailService.maskEmail(newUser.email)}: ${emailError.message}`,
           performedBy: admin.xID,
           ipAddress: req.ip,
+          userAgent: req.get('user-agent'),
         });
       } catch (auditError) {
         console.error('[AUTH] Failed to log email error:', auditError.message);
@@ -842,10 +872,13 @@ const createUser = async (req, res) => {
     // Log user creation
     await AuthAudit.create({
       xID: newUser.xID,
+      firmId: newUser.firmId,
+      userId: newUser._id,
       actionType: 'UserCreated',
       description: `User account created by admin with auto-generated xID`,
       performedBy: admin.xID,
       ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
       metadata: {
         createdBy: admin.xID,
         role: newUser.role,
@@ -937,6 +970,8 @@ const activateUser = async (req, res) => {
     await AuthAudit.create({
       xID: user.xID,
       actionType: 'AccountActivated',
+      firmId: user.firmId,
+      userId: user._id,
       description: `User account activated by admin`,
       performedBy: admin.xID,
       ipAddress: req.ip,
@@ -992,6 +1027,8 @@ const deactivateUser = async (req, res) => {
     await AuthAudit.create({
       xID: user.xID,
       actionType: 'AccountDeactivated',
+      firmId: user.firmId,
+      userId: user._id,
       description: `User account deactivated by admin`,
       performedBy: admin.xID,
       ipAddress: req.ip,
@@ -1065,6 +1102,8 @@ const setPassword = async (req, res) => {
     await AuthAudit.create({
       xID: user.xID,
       actionType: 'PasswordSetup',
+      firmId: user.firmId,
+      userId: user._id,
       description: `User set password via email link`,
       performedBy: user.xID,
       ipAddress: req.ip,
@@ -1272,6 +1311,8 @@ const resendSetupEmail = async (req, res) => {
       await AuthAudit.create({
         xID: user.xID,
         actionType: 'InviteEmailResent',
+      firmId: user.firmId,
+      userId: user._id,
         description: `Invite reminder email sent to ${emailService.maskEmail(user.email)}`,
         performedBy: admin.xID,
         ipAddress: req.ip,
@@ -1398,6 +1439,8 @@ const unlockAccount = async (req, res) => {
     await AuthAudit.create({
       xID: user.xID,
       actionType: 'AccountUnlocked',
+      firmId: user.firmId,
+      userId: user._id,
       description: `Account unlocked by admin`,
       performedBy: admin.xID,
       ipAddress: req.ip,
