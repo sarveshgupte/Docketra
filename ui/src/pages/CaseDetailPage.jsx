@@ -521,15 +521,26 @@ export const CaseDetailPage = () => {
               caseData.attachments.map((attachment, index) => (
                 <div key={index} className="neo-inset" style={{ marginBottom: 'var(--spacing-md)' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xs)' }}>
-                    <div style={{ fontWeight: '500' }}>
-                      {attachment.fileName || attachment.filename}
+                    <div style={{ fontWeight: '500', fontSize: '1rem' }}>
+                      📄 {attachment.fileName || attachment.filename}
                     </div>
                     <div className="text-secondary text-sm">
-                      Attached by {attachment.createdByName && attachment.createdByXID
-                        ? `${attachment.createdByName} (${attachment.createdByXID})`
-                        : 'System (Unknown)'}
+                      {attachment.visibility === 'external' ? (
+                        <>
+                          <strong>External Email</strong>
+                          <br />
+                          From: {attachment.createdBy}
+                        </>
+                      ) : (
+                        <>
+                          Attached by {attachment.createdByName && attachment.createdByXID
+                            ? `${attachment.createdByName} (${attachment.createdByXID})`
+                            : 'System (Unknown)'}
+                        </>
+                      )}
                     </div>
                     <div className="text-secondary text-sm">
+                      {attachment.visibility === 'external' ? 'Received on: ' : 'Attached on: '}
                       {formatDateTime(attachment.createdAt)}
                     </div>
                     {attachment.description && (
@@ -537,6 +548,23 @@ export const CaseDetailPage = () => {
                         {attachment.description}
                       </div>
                     )}
+                    {/* View and Download buttons */}
+                    <div style={{ display: 'flex', gap: 'var(--spacing-sm)', marginTop: 'var(--spacing-sm)' }}>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => caseService.viewAttachment(caseId, attachment._id)}
+                      >
+                        View
+                      </Button>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => caseService.downloadAttachment(caseId, attachment._id, attachment.fileName || attachment.filename)}
+                      >
+                        Download
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))
