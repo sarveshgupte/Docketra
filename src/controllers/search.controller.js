@@ -321,7 +321,7 @@ const employeeWorklist = async (req, res) => {
     // Dashboard counts MUST use the same query
     const query = {
       assignedTo: user.xID, // CANONICAL: Query by xID
-      status: 'OPEN', // Only OPEN cases, not PENDED, not legacy 'Open'
+      status: CASE_STATUS.OPEN, // Only OPEN cases, not PENDED, not legacy 'Open'
     };
     
     const cases = await Case.find(query)

@@ -147,7 +147,14 @@ const caseSchema = new mongoose.Schema({
   status: {
     type: String,
     enum: {
-      values: ['UNASSIGNED', 'OPEN', 'PENDED', 'RESOLVED', 'FILED', 'DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'CLOSED', 'Open', 'Reviewed', 'Pending', 'Filed', 'Archived'],
+      values: [
+        // Canonical lifecycle states (NEW - use these)
+        'UNASSIGNED', 'OPEN', 'PENDED', 'RESOLVED', 'FILED',
+        // Additional workflow states
+        'DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'CLOSED',
+        // Legacy states (for backward compatibility - do NOT use for new code)
+        'Open', 'Reviewed', 'Pending', 'Filed', 'Archived'
+      ],
       message: '{VALUE} is not a valid status',
     },
     default: 'UNASSIGNED',

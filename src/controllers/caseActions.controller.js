@@ -1,4 +1,5 @@
 const caseActionService = require('../services/caseAction.service');
+const { CASE_STATUS } = require('../config/constants');
 
 /**
  * Case Actions Controller
@@ -239,7 +240,7 @@ const getMyPendingCases = async (req, res) => {
     // CANONICAL QUERY for "My Pending Cases"
     const query = {
       assignedTo: req.user.xID,
-      status: 'PENDED',
+      status: CASE_STATUS.PENDED,
       pendedByXID: req.user.xID,
     };
     
