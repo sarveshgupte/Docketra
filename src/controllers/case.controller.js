@@ -698,8 +698,6 @@ const unpendCase = async (req, res) => {
     });
   }
 };
-  }
-};
 
 /**
  * Update case status
