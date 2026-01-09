@@ -5,7 +5,7 @@ const CaseHistory = require('../models/CaseHistory.model');
 const CaseAudit = require('../models/CaseAudit.model');
 const Client = require('../models/Client.model');
 const { detectDuplicates, generateDuplicateOverrideComment } = require('../services/clientDuplicateDetector');
-const { CASE_CATEGORIES, CASE_LOCK_CONFIG, CASE_STATUS, COMMENT_PREVIEW_LENGTH } = require('../config/constants');
+const { CASE_CATEGORIES, CASE_LOCK_CONFIG, CASE_STATUS, COMMENT_PREVIEW_LENGTH, CLIENT_STATUS } = require('../config/constants');
 const { isProduction } = require('../config/config');
 const fs = require('fs').promises;
 const path = require('path');
@@ -136,13 +136,22 @@ const createCase = async (req, res) => {
     // Default clientId to C000001 if not provided
     const finalClientId = clientId || 'C000001';
     
-    // Verify client exists
-    const client = await Client.findOne({ clientId: finalClientId, isActive: true });
+    // Verify client exists and validate status
+    // PR: Client Lifecycle Enforcement - only ACTIVE clients can be used for new cases
+    const client = await Client.findOne({ clientId: finalClientId });
     
     if (!client) {
       return res.status(404).json({
         success: false,
-        message: `Client ${finalClientId} not found or inactive`,
+        message: `Client ${finalClientId} not found`,
+      });
+    }
+    
+    // Check client status
+    if (client.status !== CLIENT_STATUS.ACTIVE) {
+      return res.status(400).json({
+        success: false,
+        message: 'This client is no longer active. Please contact your administrator to proceed.',
       });
     }
     
@@ -501,6 +510,24 @@ const cloneCase = async (req, res) => {
       });
     }
     
+    // PR: Client Lifecycle Enforcement - validate client is ACTIVE before cloning
+    const client = await Client.findOne({ clientId: originalCase.clientId });
+    
+    if (!client) {
+      return res.status(404).json({
+        success: false,
+        message: `Client ${originalCase.clientId} not found`,
+      });
+    }
+    
+    // Check client status
+    if (client.status !== CLIENT_STATUS.ACTIVE) {
+      return res.status(400).json({
+        success: false,
+        message: 'This client is no longer active. Please contact your administrator to proceed.',
+      });
+    }
+    
     // Create new case
     const newCase = new Case({
       title: originalCase.title,
@@ -780,7 +807,8 @@ const getCaseByCaseId = async (req, res) => {
     
     // Fetch current client details
     // TODO: Consider using aggregation pipeline with $lookup for better performance
-    const client = await Client.findOne({ clientId: caseData.clientId, isActive: true });
+    // PR: Client Lifecycle - fetch client regardless of status to display existing cases with inactive clients
+    const client = await Client.findOne({ clientId: caseData.clientId });
     
     // PR #45: Require authenticated user with xID for audit logging
     if (!req.user?.email || !req.user?.xID) {
@@ -832,6 +860,8 @@ const getCaseByCaseId = async (req, res) => {
           businessName: client.businessName,
           primaryContactNumber: client.primaryContactNumber,
           businessEmail: client.businessEmail,
+          status: client.status, // Include status for inactive label display
+          isActive: client.isActive, // Legacy field for backward compatibility
         } : null,
         comments,
         attachments,
@@ -919,9 +949,12 @@ const getCases = async (req, res) => {
     
     // Fetch client details for each case
     // TODO: Optimize N+1 query - consider pre-fetching unique clientIds or using aggregation
+    // TODO: Use MongoDB aggregation with $lookup to join client data in a single query
+    // Example: Case.aggregate([{ $lookup: { from: 'clients', localField: 'clientId', foreignField: 'clientId', as: 'client' }}])
+    // PR: Client Lifecycle - fetch clients regardless of status to display existing cases with inactive clients
     const casesWithClients = await Promise.all(
       cases.map(async (caseItem) => {
-        const client = await Client.findOne({ clientId: caseItem.clientId, isActive: true });
+        const client = await Client.findOne({ clientId: caseItem.clientId });
         return {
           ...caseItem.toObject(),
           client: client ? {
@@ -929,6 +962,8 @@ const getCases = async (req, res) => {
             businessName: client.businessName,
             primaryContactNumber: client.primaryContactNumber,
             businessEmail: client.businessEmail,
+            status: client.status, // Include status for inactive label display
+            isActive: client.isActive, // Legacy field for backward compatibility
           } : null,
         };
       })

@@ -2,6 +2,8 @@
  * Formatting Utilities
  */
 
+import { CLIENT_STATUS } from './constants';
+
 export const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
   const date = new Date(dateString);
@@ -53,4 +55,33 @@ export const truncate = (text, maxLength = 50) => {
   if (!text) return '';
   if (text.length <= maxLength) return text;
   return text.substring(0, maxLength) + '...';
+};
+
+/**
+ * Format client display as: <ClientID> – <BusinessName>
+ * Example: C000002 – Gupte Enterprises OPC Pvt Ltd
+ * 
+ * @param {Object} client - Client object with clientId and businessName
+ * @param {boolean} showInactiveLabel - Whether to append (Inactive) for inactive clients
+ * @returns {string} Formatted client display string
+ */
+export const formatClientDisplay = (client, showInactiveLabel = false) => {
+  if (!client) return 'N/A';
+  
+  const clientId = client.clientId || '';
+  const businessName = client.businessName || '';
+  
+  if (!clientId && !businessName) return 'N/A';
+  if (!clientId) return businessName;
+  if (!businessName) return clientId;
+  
+  let display = `${clientId} – ${businessName}`;
+  
+  // Append inactive label if client is not active
+  // Use status field as the canonical field (per Client model)
+  if (showInactiveLabel && client.status !== CLIENT_STATUS.ACTIVE) {
+    display += ' (Inactive)';
+  }
+  
+  return display;
 };
