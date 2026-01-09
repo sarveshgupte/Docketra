@@ -40,6 +40,7 @@ const generateAccessToken = (payload) => {
       expiresIn: ACCESS_TOKEN_EXPIRY,
       issuer: 'docketra',
       audience: 'docketra-api',
+      algorithm: 'HS256', // Explicitly specify algorithm
     }
   );
 };
