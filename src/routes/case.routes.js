@@ -17,6 +17,8 @@ const {
   updateCaseActivity,
   pullCases,
   unassignCase,
+  viewAttachment,
+  downloadAttachment,
 } = require('../controllers/case.controller');
 
 // PR #44: Import xID ownership validation middleware
@@ -75,6 +77,12 @@ router.post('/:caseId/comments', addComment);
 
 // POST /api/cases/:caseId/attachments - Upload attachment to case
 router.post('/:caseId/attachments', upload.single('file'), addAttachment);
+
+// GET /api/cases/:caseId/attachments/:attachmentId/view - View attachment inline
+router.get('/:caseId/attachments/:attachmentId/view', viewAttachment);
+
+// GET /api/cases/:caseId/attachments/:attachmentId/download - Download attachment
+router.get('/:caseId/attachments/:attachmentId/download', downloadAttachment);
 
 // POST /api/cases/:caseId/clone - Clone case with comments and attachments
 // PR #44: Apply xID validation for assignment fields

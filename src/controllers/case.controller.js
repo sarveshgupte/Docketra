@@ -1473,6 +1473,194 @@ const unassignCase = async (req, res) => {
 };
 
 
+/**
+ * View attachment (inline in browser)
+ * GET /api/cases/:caseId/attachments/:attachmentId/view
+ * 
+ * Security:
+ * - Validates authenticated user
+ * - Validates case exists and user has access to it
+ */
+const viewAttachment = async (req, res) => {
+  try {
+    const { caseId, attachmentId } = req.params;
+    
+    // Validate authentication
+    if (!req.user?.email || !req.user?.xID) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+      });
+    }
+    
+    // Verify case exists and user has access
+    const caseData = await Case.findOne({ caseId });
+    
+    if (!caseData) {
+      return res.status(404).json({
+        success: false,
+        message: 'Case not found',
+      });
+    }
+    
+    // Find attachment
+    const attachment = await Attachment.findById(attachmentId);
+    
+    if (!attachment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Attachment not found',
+      });
+    }
+    
+    // Verify attachment belongs to this case
+    if (attachment.caseId !== caseId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Attachment does not belong to this case',
+      });
+    }
+    
+    // Check if file exists
+    try {
+      await fs.access(attachment.filePath);
+    } catch (err) {
+      return res.status(404).json({
+        success: false,
+        message: 'File not found on server',
+      });
+    }
+    
+    // Determine MIME type based on file extension
+    const ext = path.extname(attachment.fileName).toLowerCase();
+    let mimeType = 'application/octet-stream';
+    
+    if (ext === '.pdf') {
+      mimeType = 'application/pdf';
+    } else if (ext === '.jpg' || ext === '.jpeg') {
+      mimeType = 'image/jpeg';
+    } else if (ext === '.png') {
+      mimeType = 'image/png';
+    } else if (ext === '.doc') {
+      mimeType = 'application/msword';
+    } else if (ext === '.docx') {
+      mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    } else if (ext === '.eml') {
+      mimeType = 'message/rfc822';
+    } else if (ext === '.msg') {
+      mimeType = 'application/vnd.ms-outlook';
+    }
+    
+    // Set headers for inline viewing
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Content-Disposition', `inline; filename="${attachment.fileName}"`);
+    
+    // Send file
+    res.sendFile(path.resolve(attachment.filePath));
+  } catch (error) {
+    console.error('[viewAttachment] Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error viewing attachment',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Download attachment (force download)
+ * GET /api/cases/:caseId/attachments/:attachmentId/download
+ * 
+ * Security:
+ * - Validates authenticated user
+ * - Validates case exists and user has access to it
+ */
+const downloadAttachment = async (req, res) => {
+  try {
+    const { caseId, attachmentId } = req.params;
+    
+    // Validate authentication
+    if (!req.user?.email || !req.user?.xID) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+      });
+    }
+    
+    // Verify case exists and user has access
+    const caseData = await Case.findOne({ caseId });
+    
+    if (!caseData) {
+      return res.status(404).json({
+        success: false,
+        message: 'Case not found',
+      });
+    }
+    
+    // Find attachment
+    const attachment = await Attachment.findById(attachmentId);
+    
+    if (!attachment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Attachment not found',
+      });
+    }
+    
+    // Verify attachment belongs to this case
+    if (attachment.caseId !== caseId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Attachment does not belong to this case',
+      });
+    }
+    
+    // Check if file exists
+    try {
+      await fs.access(attachment.filePath);
+    } catch (err) {
+      return res.status(404).json({
+        success: false,
+        message: 'File not found on server',
+      });
+    }
+    
+    // Determine MIME type based on file extension
+    const ext = path.extname(attachment.fileName).toLowerCase();
+    let mimeType = 'application/octet-stream';
+    
+    if (ext === '.pdf') {
+      mimeType = 'application/pdf';
+    } else if (ext === '.jpg' || ext === '.jpeg') {
+      mimeType = 'image/jpeg';
+    } else if (ext === '.png') {
+      mimeType = 'image/png';
+    } else if (ext === '.doc') {
+      mimeType = 'application/msword';
+    } else if (ext === '.docx') {
+      mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    } else if (ext === '.eml') {
+      mimeType = 'message/rfc822';
+    } else if (ext === '.msg') {
+      mimeType = 'application/vnd.ms-outlook';
+    }
+    
+    // Set headers for download
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Content-Disposition', `attachment; filename="${attachment.fileName}"`);
+    
+    // Send file
+    res.sendFile(path.resolve(attachment.filePath));
+  } catch (error) {
+    console.error('[downloadAttachment] Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error downloading attachment',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createCase,
   addComment,
@@ -1487,4 +1675,6 @@ module.exports = {
   updateCaseActivity,
   pullCases,
   unassignCase,
+  viewAttachment,
+  downloadAttachment,
 };
