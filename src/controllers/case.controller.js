@@ -1442,17 +1442,8 @@ const unassignCase = async (req, res) => {
     const previousAssignedToXID = caseData.assignedToXID;
     const previousStatus = caseData.status;
     
-    // Update case to move to global worklist
-    caseData.assignedToXID = null;
-    caseData.assignedTo = null; // Also clear legacy field
-    caseData.queueType = 'GLOBAL';
-    caseData.status = 'UNASSIGNED';
-    caseData.assignedAt = null;
-    
-    await caseData.save();
-    
-    // Create audit log entry
-    await CaseAudit.create({
+    // Prepare audit log entry (validate before mutating case)
+    const auditEntry = {
       caseId,
       actionType: 'CASE_UNASSIGNED',
       description: `Case moved to Global Worklist by admin ${user.xID}${previousAssignedToXID ? ` (was assigned to ${previousAssignedToXID})` : ''}`,
@@ -1462,7 +1453,23 @@ const unassignCase = async (req, res) => {
         previousStatus,
         actionReason: 'Admin moved case to global worklist',
       },
-    });
+    };
+    
+    // Validate audit entry can be created (this will throw if validation fails)
+    const auditDoc = new CaseAudit(auditEntry);
+    await auditDoc.validate();
+    
+    // Update case to move to global worklist
+    caseData.assignedToXID = null;
+    caseData.assignedTo = null; // Also clear legacy field
+    caseData.queueType = 'GLOBAL';
+    caseData.status = 'UNASSIGNED';
+    caseData.assignedAt = null;
+    
+    await caseData.save();
+    
+    // Now create the audit log entry (validation already passed)
+    await auditDoc.save();
     
     // Also add to CaseHistory for backward compatibility
     await CaseHistory.create({
