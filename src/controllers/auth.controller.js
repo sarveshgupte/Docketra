@@ -969,12 +969,13 @@ const activateUser = async (req, res) => {
     // Log activation
     await AuthAudit.create({
       xID: user.xID,
-      actionType: 'AccountActivated',
       firmId: user.firmId,
       userId: user._id,
+      actionType: 'AccountActivated',
       description: `User account activated by admin`,
       performedBy: admin.xID,
       ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
     });
     
     res.json({
@@ -1026,12 +1027,13 @@ const deactivateUser = async (req, res) => {
     // Log deactivation
     await AuthAudit.create({
       xID: user.xID,
-      actionType: 'AccountDeactivated',
       firmId: user.firmId,
       userId: user._id,
+      actionType: 'AccountDeactivated',
       description: `User account deactivated by admin`,
       performedBy: admin.xID,
       ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
     });
     
     res.json({
@@ -1101,12 +1103,13 @@ const setPassword = async (req, res) => {
     // Log password setup
     await AuthAudit.create({
       xID: user.xID,
-      actionType: 'PasswordSetup',
       firmId: user.firmId,
       userId: user._id,
+      actionType: 'PasswordSetup',
       description: `User set password via email link`,
       performedBy: user.xID,
       ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
     });
     
     res.json({
@@ -1225,10 +1228,13 @@ const resetPasswordWithToken = async (req, res) => {
     // Log password reset
     await AuthAudit.create({
       xID: user.xID,
+      firmId: user.firmId,
+      userId: user._id,
       actionType: 'PasswordReset',
       description: `User reset password via email link`,
       performedBy: user.xID,
       ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
     });
     
     res.json({
@@ -1310,12 +1316,13 @@ const resendSetupEmail = async (req, res) => {
       // Log invite email sent
       await AuthAudit.create({
         xID: user.xID,
+        firmId: user.firmId,
+        userId: user._id,
         actionType: 'InviteEmailResent',
-      firmId: user.firmId,
-      userId: user._id,
         description: `Invite reminder email sent to ${emailService.maskEmail(user.email)}`,
         performedBy: admin.xID,
         ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
       });
     } catch (emailError) {
       console.error('[AUTH] Failed to send invite email:', emailError.message);
@@ -1383,10 +1390,13 @@ const updateUserStatus = async (req, res) => {
     // Log status change
     await AuthAudit.create({
       xID: user.xID,
+      firmId: user.firmId,
+      userId: user._id,
       actionType: active ? 'AccountActivated' : 'AccountDeactivated',
       description: `User account ${active ? 'activated' : 'deactivated'} by admin`,
       performedBy: admin.xID,
       ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
     });
     
     res.json({
@@ -1438,12 +1448,13 @@ const unlockAccount = async (req, res) => {
     // Log unlock
     await AuthAudit.create({
       xID: user.xID,
-      actionType: 'AccountUnlocked',
       firmId: user.firmId,
       userId: user._id,
+      actionType: 'AccountUnlocked',
       description: `Account unlocked by admin`,
       performedBy: admin.xID,
       ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
     });
     
     res.json({
@@ -1519,12 +1530,15 @@ const forgotPassword = async (req, res) => {
       // Log password reset request
       await AuthAudit.create({
         xID: user.xID,
+        firmId: user.firmId,
+        userId: user._id,
         actionType: 'ForgotPasswordRequested',
         description: emailResult.success 
           ? `Password reset link sent to ${emailService.maskEmail(user.email)}` 
           : `Password reset link failed to send to ${emailService.maskEmail(user.email)}: ${emailResult.error}`,
         performedBy: user.xID,
         ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
       });
     } catch (emailError) {
       console.error('[AUTH] Failed to send forgot password email:', emailError.message);
