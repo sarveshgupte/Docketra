@@ -101,6 +101,8 @@ const resolveCase = async (caseId, comment, user) => {
     caseId,
     text: comment,
     createdBy: user.email.toLowerCase(),
+    createdByXID: user.xID,
+    createdByName: user.name,
     note: 'Case resolution comment',
   });
   
@@ -169,6 +171,8 @@ const pendCase = async (caseId, comment, pendingUntil, user) => {
     caseId,
     text: comment,
     createdBy: user.email.toLowerCase(),
+    createdByXID: user.xID,
+    createdByName: user.name,
     note: 'Case pending comment',
   });
   
@@ -232,6 +236,8 @@ const fileCase = async (caseId, comment, user) => {
     caseId,
     text: comment,
     createdBy: user.email.toLowerCase(),
+    createdByXID: user.xID,
+    createdByName: user.name,
     note: 'Case filing comment',
   });
   
