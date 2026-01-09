@@ -13,6 +13,18 @@ const mongoose = require('mongoose');
  * - Comprehensive business and regulatory information
  * - Soft delete mechanism (no hard deletes)
  * - All edits require Admin approval through case workflow
+ * 
+ * REQUIRED FIELDS:
+ * - clientId (auto-generated server-side)
+ * - businessName
+ * - businessAddress
+ * - businessEmail
+ * - primaryContactNumber
+ * - createdByXid (set from authenticated user)
+ * 
+ * OPTIONAL FIELDS:
+ * - secondaryContactNumber
+ * - PAN, TAN, GST, CIN (tax/regulatory identifiers)
  */
 
 const clientSchema = new mongoose.Schema({
@@ -28,6 +40,7 @@ const clientSchema = new mongoose.Schema({
     required: true,
     trim: true,
     immutable: true, // Schema-level immutability enforcement
+    index: true, // Explicit index for uniqueness enforcement
   },
   
   /**
@@ -102,18 +115,6 @@ const clientSchema = new mongoose.Schema({
   },
   
   /**
-   * Legacy field - kept for backward compatibility
-   * Use primaryContactNumber for new implementations
-   * Not required since primaryContactNumber is the canonical field
-   * Automatically synced with primaryContactNumber on create/update
-   * @deprecated
-   */
-  businessPhone: {
-    type: String,
-    trim: true,
-  },
-  
-  /**
    * Business contact email
    * Required for communication
    */
@@ -168,22 +169,6 @@ const clientSchema = new mongoose.Schema({
     trim: true,
     uppercase: true,
     immutable: true,
-  },
-  
-  /**
-   * Latitude for location mapping
-   * Optional, for future Google Maps integration
-   */
-  latitude: {
-    type: Number,
-  },
-  
-  /**
-   * Longitude for location mapping
-   * Optional, for future Google Maps integration
-   */
-  longitude: {
-    type: Number,
   },
   
   /**
