@@ -154,7 +154,7 @@ const createClient = async (req, res) => {
       longitude: longitude ? parseFloat(longitude) : undefined,
       // System-owned fields (set server-side only)
       createdByXid, // CANONICAL - set from auth context
-      createdBy: createdBy?.trim().toLowerCase(), // DEPRECATED - backward compatibility only
+      createdBy: createdBy ? createdBy.trim().toLowerCase() : undefined, // DEPRECATED - backward compatibility only
       isSystemClient: false,
       isActive: true, // Default status
     });

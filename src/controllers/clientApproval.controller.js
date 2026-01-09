@@ -102,6 +102,8 @@ const approveNewClient = async (req, res) => {
     }
     
     // Get approver xID from middleware-provided user object
+    // Note: clientApproval routes use req.approverUser (set by checkClientApprovalPermission middleware)
+    // while direct client routes use req.user (set by authenticate middleware)
     const approverXid = req.approverUser?.xID;
     
     if (!approverXid) {
