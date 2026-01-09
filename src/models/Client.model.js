@@ -265,7 +265,10 @@ const clientSchema = new mongoose.Schema({
 });
 
 /**
- * Pre-save Hook: Auto-generate clientId
+ * Pre-save Hook: Auto-generate clientId (Fallback)
+ * 
+ * DEPRECATION NOTICE: This hook serves as a fallback only.
+ * clientId generation should now happen explicitly in the controller via clientIdGenerator service.
  * 
  * Generates sequential IDs in format C000001 (no dash, 6 digits minimum)
  * Algorithm:
@@ -273,22 +276,15 @@ const clientSchema = new mongoose.Schema({
  * 2. Increment by 1
  * 3. Format as C prefix + number (minimum 6 digits)
  * 
- * First client is always C000001 (reserved for organization)
+ * Note: Only runs if clientId is not already set (defensive fallback)
  * 
- * Note: This runs before validation, so clientId is available for unique constraint check
- * 
- * LIMITATION: String-based sorting works correctly up to C999999. Beyond that,
- * C1000000 would sort before C999999 in string order. For production systems
- * expecting more than ~1,000,000 clients, consider using a dedicated counter collection
- * or numeric-based sorting with zero-padding.
- * 
- * LIMITATION: This implementation has a potential race condition with concurrent saves.
- * For production use with high concurrency, consider using MongoDB's findOneAndUpdate 
- * with atomic increment or a dedicated counter collection.
+ * LIMITATION: This fallback implementation has a potential race condition with concurrent saves.
+ * The controller should use clientIdGenerator service which uses atomic Counter operations.
  */
 clientSchema.pre('save', async function() {
-  // Only generate clientId if it's not already set (for new documents)
+  // Only generate clientId if it's not already set (fallback for legacy/emergency use)
   if (!this.clientId) {
+    console.warn('[Client Model] Pre-save hook generating clientId (fallback). Should be generated in controller.');
     // Find the client with the highest clientId number
     // The regex ensures we only match our format: C followed by digits
     const lastClient = await this.constructor.findOne(
