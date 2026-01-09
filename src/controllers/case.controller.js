@@ -136,13 +136,22 @@ const createCase = async (req, res) => {
     // Default clientId to C000001 if not provided
     const finalClientId = clientId || 'C000001';
     
-    // Verify client exists
-    const client = await Client.findOne({ clientId: finalClientId, isActive: true });
+    // Verify client exists and is ACTIVE
+    // PR: Client Lifecycle Enforcement - only ACTIVE clients can be used for new cases
+    const client = await Client.findOne({ clientId: finalClientId });
     
     if (!client) {
       return res.status(404).json({
         success: false,
-        message: `Client ${finalClientId} not found or inactive`,
+        message: `Client ${finalClientId} not found`,
+      });
+    }
+    
+    // Validate client status is ACTIVE
+    if (client.status !== 'ACTIVE') {
+      return res.status(400).json({
+        success: false,
+        message: 'This client is no longer active. Please contact your administrator to proceed.',
       });
     }
     
@@ -498,6 +507,25 @@ const cloneCase = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Archived cases cannot be cloned',
+      });
+    }
+    
+    // PR: Client Lifecycle Enforcement - validate client is ACTIVE before cloning
+    // Fetch the client associated with the original case
+    const client = await Client.findOne({ clientId: originalCase.clientId });
+    
+    if (!client) {
+      return res.status(404).json({
+        success: false,
+        message: `Client ${originalCase.clientId} not found`,
+      });
+    }
+    
+    // Validate client status is ACTIVE - block cloning if client is deactivated
+    if (client.status !== 'ACTIVE') {
+      return res.status(400).json({
+        success: false,
+        message: 'This client is no longer active. Please contact your administrator to proceed.',
       });
     }
     

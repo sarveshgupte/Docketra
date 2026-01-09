@@ -517,19 +517,28 @@ const getClientById = async (req, res) => {
  * List All Clients
  * GET /api/client-approval/clients
  * 
- * Read-only endpoint to list all active clients
+ * Read-only endpoint to list ACTIVE clients for case creation
+ * Returns only clientId and businessName fields, sorted by clientId
  * No mutations allowed - for display purposes only
+ * 
+ * PR: Client Lifecycle Enforcement
+ * - Only returns clients with status: 'ACTIVE'
+ * - Sorted by clientId (ascending) for predictable ordering
+ * - Minimal field projection for performance
  */
 const listClients = async (req, res) => {
   try {
     const { page = 1, limit = 20, includeInactive = false } = req.query;
     
-    const query = includeInactive === 'true' ? {} : { isActive: true };
+    // For case creation dropdown: only ACTIVE clients, unless explicitly requesting all
+    // This enforces client lifecycle rules - deactivated clients cannot be used for new cases
+    const query = includeInactive === 'true' ? {} : { status: 'ACTIVE' };
     
     const clients = await Client.find(query)
+      .select('clientId businessName status isActive') // Select only necessary fields
       .limit(parseInt(limit))
       .skip((parseInt(page) - 1) * parseInt(limit))
-      .sort({ createdAt: -1 });
+      .sort({ clientId: 1 }); // Sort by clientId ascending for predictable ordering
     
     const total = await Client.countDocuments(query);
     
