@@ -181,10 +181,22 @@ const getPendingCasesReport = async (req, res) => {
       filteredCases = casesWithAgeing.filter(c => c.ageingBucket === ageingBucket);
     }
     
-    // Populate client names
+    // Populate client names and resolve assignedTo xID to user info
     const casesWithClientNames = [];
     for (const caseItem of filteredCases) {
       const client = await Client.findOne({ clientId: caseItem.clientId }).lean();
+      
+      // PR #42: Resolve assignedTo xID to user info for display
+      let assignedToDisplay = caseItem.assignedTo || '';
+      if (caseItem.assignedTo) {
+        // Try to find user by xID first, fallback to email for backward compatibility
+        let assignedUser = await User.findOne({ xID: caseItem.assignedTo }).lean();
+        if (!assignedUser) {
+          assignedUser = await User.findOne({ email: caseItem.assignedTo }).lean();
+        }
+        assignedToDisplay = assignedUser ? assignedUser.email : caseItem.assignedTo;
+      }
+      
       casesWithClientNames.push({
         caseId: caseItem.caseId,
         caseName: caseItem.caseName,
@@ -192,7 +204,7 @@ const getPendingCasesReport = async (req, res) => {
         category: caseItem.category,
         clientId: caseItem.clientId,
         clientName: client ? client.businessName : 'Unknown',
-        assignedTo: caseItem.assignedTo,
+        assignedTo: assignedToDisplay, // Display email, not xID
         pendingUntil: caseItem.pendingUntil,
         ageingDays: caseItem.ageingDays,
         ageingBucket: caseItem.ageingBucket,
@@ -299,10 +311,22 @@ const getCasesByDateRange = async (req, res) => {
       .limit(parseInt(limit))
       .lean();
     
-    // Populate client names
+    // Populate client names and resolve assignedTo xID to user info
     const casesWithClientNames = [];
     for (const caseItem of cases) {
       const client = await Client.findOne({ clientId: caseItem.clientId }).lean();
+      
+      // PR #42: Resolve assignedTo xID to user info for display
+      let assignedToDisplay = caseItem.assignedTo || '';
+      if (caseItem.assignedTo) {
+        // Try to find user by xID first, fallback to email for backward compatibility
+        let assignedUser = await User.findOne({ xID: caseItem.assignedTo }).lean();
+        if (!assignedUser) {
+          assignedUser = await User.findOne({ email: caseItem.assignedTo }).lean();
+        }
+        assignedToDisplay = assignedUser ? assignedUser.email : caseItem.assignedTo;
+      }
+      
       casesWithClientNames.push({
         caseId: caseItem.caseId,
         caseName: caseItem.caseName,
@@ -311,7 +335,7 @@ const getCasesByDateRange = async (req, res) => {
         category: caseItem.category,
         clientId: caseItem.clientId,
         clientName: client ? client.businessName : 'Unknown',
-        assignedTo: caseItem.assignedTo,
+        assignedTo: assignedToDisplay, // Display email, not xID
         createdAt: caseItem.createdAt,
         createdBy: caseItem.createdBy,
       });
@@ -372,10 +396,22 @@ const exportCasesCSV = async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
     
-    // Populate client names
+    // Populate client names and resolve assignedTo xID to user info
     const casesWithClientNames = [];
     for (const caseItem of cases) {
       const client = await Client.findOne({ clientId: caseItem.clientId }).lean();
+      
+      // PR #42: Resolve assignedTo xID to user info for display
+      let assignedToDisplay = caseItem.assignedTo || '';
+      if (caseItem.assignedTo) {
+        // Try to find user by xID first, fallback to email for backward compatibility
+        let assignedUser = await User.findOne({ xID: caseItem.assignedTo }).lean();
+        if (!assignedUser) {
+          assignedUser = await User.findOne({ email: caseItem.assignedTo }).lean();
+        }
+        assignedToDisplay = assignedUser ? assignedUser.email : caseItem.assignedTo;
+      }
+      
       casesWithClientNames.push({
         caseId: caseItem.caseId,
         caseName: caseItem.caseName,
@@ -384,7 +420,7 @@ const exportCasesCSV = async (req, res) => {
         category: caseItem.category,
         clientId: caseItem.clientId,
         clientName: client ? client.businessName : 'Unknown',
-        assignedTo: caseItem.assignedTo || '',
+        assignedTo: assignedToDisplay, // Display email, not xID
         createdAt: caseItem.createdAt.toISOString(),
         createdBy: caseItem.createdBy,
       });
@@ -447,10 +483,22 @@ const exportCasesExcel = async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
     
-    // Populate client names
+    // Populate client names and resolve assignedTo xID to user info
     const casesWithClientNames = [];
     for (const caseItem of cases) {
       const client = await Client.findOne({ clientId: caseItem.clientId }).lean();
+      
+      // PR #42: Resolve assignedTo xID to user info for display
+      let assignedToDisplay = caseItem.assignedTo || '';
+      if (caseItem.assignedTo) {
+        // Try to find user by xID first, fallback to email for backward compatibility
+        let assignedUser = await User.findOne({ xID: caseItem.assignedTo }).lean();
+        if (!assignedUser) {
+          assignedUser = await User.findOne({ email: caseItem.assignedTo }).lean();
+        }
+        assignedToDisplay = assignedUser ? assignedUser.email : caseItem.assignedTo;
+      }
+      
       casesWithClientNames.push({
         caseId: caseItem.caseId,
         caseName: caseItem.caseName,
@@ -459,7 +507,7 @@ const exportCasesExcel = async (req, res) => {
         category: caseItem.category,
         clientId: caseItem.clientId,
         clientName: client ? client.businessName : 'Unknown',
-        assignedTo: caseItem.assignedTo || '',
+        assignedTo: assignedToDisplay, // Display email, not xID
         createdAt: caseItem.createdAt,
         createdBy: caseItem.createdBy,
       });
