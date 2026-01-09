@@ -406,10 +406,12 @@ export const AdminPage = () => {
 
   const handleEditClient = (client) => {
     setSelectedClient(client);
+    // Backward compatibility: Use primaryContactNumber if available, fallback to businessPhone
+    const primaryPhone = client.primaryContactNumber || client.businessPhone || '';
     setClientForm({
       businessName: client.businessName,
       businessAddress: client.businessAddress,
-      primaryContactNumber: client.primaryContactNumber || client.businessPhone || '',
+      primaryContactNumber: primaryPhone,
       secondaryContactNumber: client.secondaryContactNumber || '',
       businessEmail: client.businessEmail,
       PAN: client.PAN || '',
@@ -761,7 +763,7 @@ export const AdminPage = () => {
                       <td>{client.clientId}</td>
                       <td>{client.businessName}</td>
                       <td>{client.businessEmail}</td>
-                      <td>{client.businessPhone}</td>
+                      <td>{client.primaryContactNumber || client.businessPhone}</td>
                       <td>
                         <Badge status={client.isActive ? 'Approved' : 'Rejected'}>
                           {client.isActive ? 'Active' : 'Inactive'}

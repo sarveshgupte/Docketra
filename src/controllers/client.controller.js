@@ -117,9 +117,10 @@ const createClient = async (req, res) => {
       });
     }
     
-    // Support both new and legacy phone field names
-    const phoneNumber = primaryContactNumber || businessPhone;
-    if (!phoneNumber || !phoneNumber.trim()) {
+    // Support both new and legacy phone field names for backward compatibility
+    // Priority: primaryContactNumber (new) > businessPhone (legacy)
+    const primaryPhone = primaryContactNumber || businessPhone;
+    if (!primaryPhone || !primaryPhone.trim()) {
       return res.status(400).json({
         success: false,
         message: 'Primary contact number is required',
@@ -151,7 +152,7 @@ const createClient = async (req, res) => {
       // Business fields from request
       businessName: businessName.trim(),
       businessAddress: businessAddress.trim(),
-      primaryContactNumber: phoneNumber.trim(),
+      primaryContactNumber: primaryPhone.trim(),
       secondaryContactNumber: secondaryContactNumber ? secondaryContactNumber.trim() : undefined,
       businessEmail: businessEmail.trim().toLowerCase(),
       PAN: PAN ? PAN.trim().toUpperCase() : undefined,
@@ -160,8 +161,8 @@ const createClient = async (req, res) => {
       CIN: CIN ? CIN.trim().toUpperCase() : undefined,
       latitude: latitude ? parseFloat(latitude) : undefined,
       longitude: longitude ? parseFloat(longitude) : undefined,
-      // Legacy backward compatibility
-      businessPhone: phoneNumber.trim(),
+      // Legacy backward compatibility - sync businessPhone with primaryContactNumber
+      businessPhone: primaryPhone.trim(),
       // System-owned fields (set server-side only)
       createdByXid, // CANONICAL - set from auth context
       createdBy: createdBy ? createdBy.trim().toLowerCase() : undefined, // DEPRECATED - backward compatibility only
@@ -282,7 +283,7 @@ const updateClient = async (req, res) => {
         });
       }
       client.primaryContactNumber = primaryContactNumber.trim();
-      // Update legacy field for backward compatibility
+      // Keep legacy businessPhone field in sync for backward compatibility
       client.businessPhone = primaryContactNumber.trim();
     }
     
