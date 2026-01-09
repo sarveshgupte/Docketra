@@ -3,11 +3,13 @@ const mongoose = require('mongoose');
 const User = require('../models/User.model');
 const UserProfile = require('../models/UserProfile.model');
 const AuthAudit = require('../models/AuthAudit.model');
+const RefreshToken = require('../models/RefreshToken.model');
 const emailService = require('../services/email.service');
 const xIDGenerator = require('../services/xIDGenerator');
+const jwtService = require('../services/jwt.service');
 
 /**
- * Authentication Controller for xID-based Enterprise Authentication
+ * Authentication Controller for JWT-based Enterprise Authentication
  * PART B - Identity and Authentication Management
  */
 
@@ -244,21 +246,49 @@ const login = async (req, res) => {
     // Log successful login
     await AuthAudit.create({
       xID: user.xID,
+      firmId: user.firmId,
+      userId: user._id,
       actionType: 'Login',
       description: `User logged in successfully`,
       performedBy: user.xID,
       ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
     });
     
-    // Return user info (exclude sensitive fields)
+    // Generate JWT access token
+    const accessToken = jwtService.generateAccessToken({
+      userId: user._id.toString(),
+      firmId: user.firmId,
+      role: user.role,
+    });
+    
+    // Generate refresh token
+    const refreshToken = jwtService.generateRefreshToken();
+    const refreshTokenHash = jwtService.hashRefreshToken(refreshToken);
+    
+    // Store refresh token in database
+    await RefreshToken.create({
+      tokenHash: refreshTokenHash,
+      userId: user._id,
+      firmId: user.firmId,
+      expiresAt: jwtService.getRefreshTokenExpiry(),
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
+    
+    // Return user info with tokens (exclude sensitive fields)
     const response = {
       success: true,
       message: user.forcePasswordReset ? 'Password reset required' : 'Login successful',
+      accessToken,
+      refreshToken,
       data: {
+        id: user._id.toString(),
         xID: user.xID,
         name: user.name,
         email: user.email,
         role: user.role,
+        firmId: user.firmId,
         allowedCategories: user.allowedCategories,
         isActive: user.isActive,
       },
@@ -272,6 +302,7 @@ const login = async (req, res) => {
     
     res.json(response);
   } catch (error) {
+    console.error('[AUTH] Login error:', error);
     res.status(500).json({
       success: false,
       message: 'Error during login',
@@ -286,16 +317,25 @@ const login = async (req, res) => {
  */
 const logout = async (req, res) => {
   try {
-    // Get xID from authenticated user
-    const xID = req.user.xID;
+    // Get user from authenticated request
+    const user = req.user;
+    
+    // Revoke all refresh tokens for this user
+    await RefreshToken.updateMany(
+      { userId: user._id, isRevoked: false },
+      { isRevoked: true }
+    );
     
     // Log logout
     await AuthAudit.create({
-      xID: xID,
+      xID: user.xID,
+      firmId: user.firmId,
+      userId: user._id,
       actionType: 'Logout',
       description: `User logged out`,
-      performedBy: xID,
+      performedBy: user.xID,
       ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
     });
     
     res.json({
@@ -303,6 +343,7 @@ const logout = async (req, res) => {
       message: 'Logout successful',
     });
   } catch (error) {
+    console.error('[AUTH] Logout error:', error);
     res.status(500).json({
       success: false,
       message: 'Error during logout',
@@ -383,13 +424,22 @@ const changePassword = async (req, res) => {
     
     await user.save();
     
+    // Revoke all refresh tokens for security (force re-login)
+    await RefreshToken.updateMany(
+      { userId: user._id, isRevoked: false },
+      { isRevoked: true }
+    );
+    
     // Log password change
     await AuthAudit.create({
       xID: user.xID,
+      firmId: user.firmId,
+      userId: user._id,
       actionType: 'PasswordChanged',
       description: `User changed their password`,
       performedBy: user.xID,
       ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
     });
     
     res.json({
@@ -397,6 +447,7 @@ const changePassword = async (req, res) => {
       message: 'Password changed successfully',
     });
   } catch (error) {
+    console.error('[AUTH] Change password error:', error);
     res.status(500).json({
       success: false,
       message: 'Error changing password',
@@ -1475,6 +1526,101 @@ const getAllUsers = async (req, res) => {
   }
 };
 
+/**
+ * Refresh access token using refresh token
+ * POST /api/auth/refresh
+ */
+const refreshAccessToken = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    
+    if (!refreshToken) {
+      return res.status(400).json({
+        success: false,
+        message: 'Refresh token is required',
+      });
+    }
+    
+    // Hash the provided refresh token
+    const tokenHash = jwtService.hashRefreshToken(refreshToken);
+    
+    // Find the refresh token in database
+    const storedToken = await RefreshToken.findOne({
+      tokenHash,
+      isRevoked: false,
+      expiresAt: { $gt: new Date() },
+    });
+    
+    if (!storedToken) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired refresh token',
+      });
+    }
+    
+    // Get the user
+    const user = await User.findById(storedToken.userId);
+    
+    if (!user || !user.isActive) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not found or inactive',
+      });
+    }
+    
+    // Revoke the old refresh token (token rotation)
+    storedToken.isRevoked = true;
+    await storedToken.save();
+    
+    // Generate new access token
+    const newAccessToken = jwtService.generateAccessToken({
+      userId: user._id.toString(),
+      firmId: user.firmId,
+      role: user.role,
+    });
+    
+    // Generate new refresh token
+    const newRefreshToken = jwtService.generateRefreshToken();
+    const newTokenHash = jwtService.hashRefreshToken(newRefreshToken);
+    
+    // Store new refresh token
+    await RefreshToken.create({
+      tokenHash: newTokenHash,
+      userId: user._id,
+      firmId: user.firmId,
+      expiresAt: jwtService.getRefreshTokenExpiry(),
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
+    
+    // Log token refresh
+    await AuthAudit.create({
+      xID: user.xID,
+      firmId: user.firmId,
+      userId: user._id,
+      actionType: 'TokenRefreshed',
+      description: 'Access token refreshed successfully',
+      performedBy: user.xID,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
+    
+    res.json({
+      success: true,
+      message: 'Token refreshed successfully',
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+    });
+  } catch (error) {
+    console.error('[AUTH] Refresh token error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error refreshing token',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   login,
   logout,
@@ -1492,4 +1638,5 @@ module.exports = {
   unlockAccount,
   forgotPassword,
   getAllUsers,
+  refreshAccessToken, // NEW: JWT token refresh
 };
