@@ -47,7 +47,8 @@ const seedOrganizationClient = async () => {
         businessEmail: 'organization@system.local',
         isSystemClient: true,
         isActive: true,
-        createdBy: 'system@system.local',
+        createdByXid: 'SYSTEM', // CANONICAL - system-generated identifier
+        createdBy: 'system@system.local', // DEPRECATED - backward compatibility only
       });
 
       await organizationClient.save();
