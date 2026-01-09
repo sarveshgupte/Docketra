@@ -15,6 +15,7 @@ import { Input } from '../components/common/Input';
 import { Modal } from '../components/common/Modal';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
+import { useToast } from '../hooks/useToast';
 import { caseService } from '../services/caseService';
 import { formatDateTime, formatClientDisplay } from '../utils/formatters';
 import './CaseDetailPage.css';
@@ -32,6 +33,7 @@ export const CaseDetailPage = () => {
   const { caseId } = useParams();
   const { user } = useAuth();
   const permissions = usePermissions();
+  const { showSuccess, showError, showWarning } = useToast();
   
   const [loading, setLoading] = useState(true);
   const [caseData, setCaseData] = useState(null);
@@ -89,7 +91,7 @@ export const CaseDetailPage = () => {
       const response = await caseService.pullCase(caseId);
       
       if (response.success) {
-        alert('✅ Case pulled and assigned to you');
+        showSuccess('Case pulled and assigned to you');
         await loadCase(); // Reload to update UI
       }
     } catch (error) {
@@ -99,7 +101,7 @@ export const CaseDetailPage = () => {
       const errorMessage = serverMessage && typeof serverMessage === 'string' 
         ? serverMessage.substring(0, 200) // Limit length
         : 'Failed to pull case. Please try again.';
-      alert(`Failed to pull case: ${errorMessage}`);
+      showError(errorMessage);
     } finally {
       setPullingCase(false);
     }
@@ -115,7 +117,7 @@ export const CaseDetailPage = () => {
       const response = await caseService.moveCaseToGlobal(caseId);
       
       if (response.success) {
-        alert('✅ Case moved to Global Worklist');
+        showSuccess('Case moved to Global Worklist');
         await loadCase(); // Reload to update UI
       }
     } catch (error) {
@@ -125,7 +127,7 @@ export const CaseDetailPage = () => {
       const errorMessage = serverMessage && typeof serverMessage === 'string'
         ? serverMessage.substring(0, 200) // Limit length
         : 'Failed to move case. Please try again.';
-      alert(`Failed to move case: ${errorMessage}`);
+      showError(errorMessage);
     } finally {
       setMovingToGlobal(false);
     }
@@ -155,7 +157,7 @@ export const CaseDetailPage = () => {
 
   const handleUploadFile = async () => {
     if (!selectedFile || !fileDescription.trim()) {
-      alert('Please select a file and provide a description');
+      showWarning('Please select a file and provide a description');
       return;
     }
 
@@ -171,7 +173,7 @@ export const CaseDetailPage = () => {
       await loadCase(); // Reload to show new attachment
     } catch (error) {
       console.error('Failed to upload file:', error);
-      alert('Failed to upload file. Please try again.');
+      showError('Failed to upload file. Please try again.');
     } finally {
       setUploadingFile(false);
     }
@@ -179,7 +181,7 @@ export const CaseDetailPage = () => {
 
   const handleFileCase = async () => {
     if (!fileComment.trim()) {
-      alert('Comment is mandatory for filing a case');
+      showWarning('Comment is mandatory for filing a case');
       return;
     }
 
@@ -188,7 +190,7 @@ export const CaseDetailPage = () => {
       const response = await caseService.fileCase(caseId, fileComment);
       
       if (response.success) {
-        alert('✅ Case filed successfully');
+        showSuccess('Case filed successfully');
         setShowFileModal(false);
         setFileComment('');
         await loadCase(); // Reload to update UI
@@ -199,7 +201,7 @@ export const CaseDetailPage = () => {
       const errorMessage = serverMessage && typeof serverMessage === 'string'
         ? serverMessage.substring(0, 200)
         : 'Failed to file case. Please try again.';
-      alert(`Failed to file case: ${errorMessage}`);
+      showError(errorMessage);
     } finally {
       setFilingCase(false);
     }
@@ -207,12 +209,12 @@ export const CaseDetailPage = () => {
 
   const handlePendCase = async () => {
     if (!pendComment.trim()) {
-      alert('Comment is mandatory for pending a case');
+      showWarning('Comment is mandatory for pending a case');
       return;
     }
 
     if (!pendingUntil) {
-      alert('Reopen date is mandatory for pending a case');
+      showWarning('Reopen date is mandatory for pending a case');
       return;
     }
 
@@ -222,7 +224,7 @@ export const CaseDetailPage = () => {
     today.setHours(0, 0, 0, 0);
     
     if (selectedDate < today) {
-      alert('Reopen date must be today or in the future');
+      showWarning('Reopen date must be today or in the future');
       return;
     }
 
@@ -231,7 +233,7 @@ export const CaseDetailPage = () => {
       const response = await caseService.pendCase(caseId, pendComment, pendingUntil);
       
       if (response.success) {
-        alert('✅ Case pended successfully');
+        showSuccess('Case pended successfully');
         setShowPendModal(false);
         setPendComment('');
         setPendingUntil('');
@@ -243,7 +245,7 @@ export const CaseDetailPage = () => {
       const errorMessage = serverMessage && typeof serverMessage === 'string'
         ? serverMessage.substring(0, 200)
         : 'Failed to pend case. Please try again.';
-      alert(`Failed to pend case: ${errorMessage}`);
+      showError(errorMessage);
     } finally {
       setPendingCase(false);
     }
@@ -251,7 +253,7 @@ export const CaseDetailPage = () => {
 
   const handleResolveCase = async () => {
     if (!resolveComment.trim()) {
-      alert('Comment is mandatory for resolving a case');
+      showWarning('Comment is mandatory for resolving a case');
       return;
     }
 
@@ -260,7 +262,7 @@ export const CaseDetailPage = () => {
       const response = await caseService.resolveCase(caseId, resolveComment);
       
       if (response.success) {
-        alert('✅ Case resolved successfully');
+        showSuccess('Case resolved successfully');
         setShowResolveModal(false);
         setResolveComment('');
         await loadCase(); // Reload to update UI
@@ -271,7 +273,7 @@ export const CaseDetailPage = () => {
       const errorMessage = serverMessage && typeof serverMessage === 'string'
         ? serverMessage.substring(0, 200)
         : 'Failed to resolve case. Please try again.';
-      alert(`Failed to resolve case: ${errorMessage}`);
+      showError(errorMessage);
     } finally {
       setResolvingCase(false);
     }
