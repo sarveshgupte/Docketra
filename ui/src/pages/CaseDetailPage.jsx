@@ -167,7 +167,7 @@ export const CaseDetailPage = () => {
           <div className="neo-alert neo-alert--warning" style={{ marginBottom: 'var(--spacing-lg)' }}>
             <h3>Case is Currently Locked</h3>
             <p>
-              This case is currently being worked on by <strong>{caseInfo.lockStatus.activeUserEmail}</strong> since{' '}
+              This case is currently being worked on by another user since{' '}
               {formatDateTime(caseInfo.lockStatus.lastActivityAt || caseInfo.lockStatus.lockedAt)}.
             </p>
             <p>You can view the case in read-only mode.</p>
