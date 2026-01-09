@@ -321,8 +321,6 @@ const updateClient = async (req, res) => {
         });
       }
       client.primaryContactNumber = primaryContactNumber.trim();
-      // Keep legacy businessPhone field in sync for backward compatibility
-      client.businessPhone = primaryContactNumber.trim();
     }
     
     if (secondaryContactNumber !== undefined) {

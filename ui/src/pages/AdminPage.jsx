@@ -767,7 +767,7 @@ export const AdminPage = () => {
                       <td>{client.clientId}</td>
                       <td>{client.businessName}</td>
                       <td>{client.businessEmail}</td>
-                      <td>{client.primaryContactNumber || client.businessPhone}</td>
+                      <td>{client.primaryContactNumber}</td>
                       <td>
                         <Badge status={client.isActive ? 'Approved' : 'Rejected'}>
                           {client.isActive ? 'Active' : 'Inactive'}

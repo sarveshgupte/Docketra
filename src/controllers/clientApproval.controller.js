@@ -91,7 +91,7 @@ const approveNewClient = async (req, res) => {
     }
     
     // Validate required client fields
-    const requiredFields = ['businessName', 'businessAddress', 'businessPhone', 'businessEmail'];
+    const requiredFields = ['businessName', 'businessAddress', 'primaryContactNumber', 'businessEmail'];
     const missingFields = requiredFields.filter(field => !clientData[field]);
     
     if (missingFields.length > 0) {
@@ -117,15 +117,16 @@ const approveNewClient = async (req, res) => {
     const newClient = new Client({
       businessName: clientData.businessName,
       businessAddress: clientData.businessAddress,
-      businessPhone: clientData.businessPhone,
+      primaryContactNumber: clientData.primaryContactNumber,
+      secondaryContactNumber: clientData.secondaryContactNumber || null,
       businessEmail: clientData.businessEmail,
-      PAN: clientData.PAN !== undefined ? clientData.PAN : null,
-      GST: clientData.GST !== undefined ? clientData.GST : null,
-      CIN: clientData.CIN !== undefined ? clientData.CIN : null,
-      latitude: clientData.latitude !== undefined ? clientData.latitude : null,
-      longitude: clientData.longitude !== undefined ? clientData.longitude : null,
+      PAN: clientData.PAN || null,
+      GST: clientData.GST || null,
+      TAN: clientData.TAN || null,
+      CIN: clientData.CIN || null,
       isSystemClient: false,
       isActive: true,
+      status: 'ACTIVE',
       createdByXid: approverXid, // CANONICAL - set from approver's xID
       createdBy: approverEmail.toLowerCase(), // DEPRECATED - backward compatibility only
     });
@@ -302,8 +303,8 @@ const approveClientEdit = async (req, res) => {
     
     // Apply updates and track changes
     const allowedFields = [
-      'businessName', 'businessAddress', 'businessPhone', 'businessEmail',
-      'PAN', 'GST', 'CIN', 'latitude', 'longitude', 'isActive'
+      'businessName', 'businessAddress', 'primaryContactNumber', 'secondaryContactNumber', 'businessEmail',
+      'PAN', 'GST', 'TAN', 'CIN', 'isActive'
     ];
     
     for (const field of allowedFields) {

@@ -95,7 +95,7 @@ function calculateSimilarity(str1, str2) {
  * @param {Object} clientData - Client data to check
  * @param {string} clientData.businessName - Business name
  * @param {string} clientData.businessAddress - Business address
- * @param {string} clientData.businessPhone - Business phone
+ * @param {string} clientData.primaryContactNumber - Primary contact number
  * @param {string} clientData.businessEmail - Business email
  * @param {string} clientData.PAN - PAN number
  * @param {string} clientData.GST - GST number
@@ -107,7 +107,7 @@ async function detectDuplicates(clientData) {
     const {
       businessName,
       businessAddress,
-      businessPhone,
+      primaryContactNumber,
       businessEmail,
       PAN,
       GST,
@@ -134,9 +134,9 @@ async function detectDuplicates(clientData) {
       exactMatchQuery.$or.push({ CIN: CIN.toUpperCase().trim() });
     }
     
-    // Exact match on phone (if provided)
-    if (businessPhone && businessPhone.trim()) {
-      exactMatchQuery.$or.push({ businessPhone: businessPhone.trim() });
+    // Exact match on primary contact number (if provided)
+    if (primaryContactNumber && primaryContactNumber.trim()) {
+      exactMatchQuery.$or.push({ primaryContactNumber: primaryContactNumber.trim() });
     }
     
     // Exact match on email (if provided)
@@ -163,8 +163,8 @@ async function detectDuplicates(clientData) {
       if (CIN && client.CIN === CIN.toUpperCase().trim()) {
         matchedFields.push('CIN');
       }
-      if (businessPhone && client.businessPhone === businessPhone.trim()) {
-        matchedFields.push('Phone');
+      if (primaryContactNumber && client.primaryContactNumber === primaryContactNumber.trim()) {
+        matchedFields.push('Primary Contact Number');
       }
       if (businessEmail && client.businessEmail === businessEmail.toLowerCase().trim()) {
         matchedFields.push('Email');

@@ -111,10 +111,11 @@ const seedDefaultClient = async () => {
       clientId: 'C000001',
       businessName: 'Default Client',
       businessAddress: 'System Default Address',
-      businessPhone: '0000000000',
+      primaryContactNumber: '0000000000',
       businessEmail: 'default@system.local',
       isSystemClient: true,
       isActive: true,
+      status: 'ACTIVE',
       createdByXid: 'SYSTEM', // CANONICAL - system-generated identifier
       createdBy: 'system@system.local', // DEPRECATED - backward compatibility only
     });
