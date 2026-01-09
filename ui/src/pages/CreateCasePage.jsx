@@ -13,6 +13,7 @@ import { Button } from '../components/common/Button';
 import { caseService } from '../services/caseService';
 import { categoryService } from '../services/categoryService';
 import { DEFAULT_CLIENT_ID, API_BASE_URL } from '../utils/constants';
+import { formatClientDisplay } from '../utils/formatters';
 import './CreateCasePage.css';
 
 export const CreateCasePage = () => {
@@ -109,7 +110,7 @@ export const CreateCasePage = () => {
     { value: DEFAULT_CLIENT_ID, label: 'Organization (Default)' },
     ...clients.map(client => ({
       value: client.clientId,
-      label: `${client.businessName} (${client.clientId})`,
+      label: formatClientDisplay(client), // Use standardized format: C000002 – Business Name
     })),
   ];
 

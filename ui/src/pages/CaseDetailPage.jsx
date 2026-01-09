@@ -15,7 +15,7 @@ import { Input } from '../components/common/Input';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
 import { caseService } from '../services/caseService';
-import { formatDateTime } from '../utils/formatters';
+import { formatDateTime, formatClientDisplay } from '../utils/formatters';
 import './CaseDetailPage.css';
 
 /**
@@ -148,14 +148,10 @@ export const CaseDetailPage = () => {
               <span className="case-detail__label">Case Name:</span>
               <span>{caseInfo.caseName}</span>
             </div>
-            <div className="case-detail__field">
-              <span className="case-detail__label">Client ID:</span>
-              <span>{caseInfo.clientId || 'N/A'}</span>
-            </div>
             {caseData.client && (
               <div className="case-detail__field">
-                <span className="case-detail__label">Client Name:</span>
-                <span>{caseData.client.businessName}</span>
+                <span className="case-detail__label">Client:</span>
+                <span>{formatClientDisplay(caseData.client, true)}</span>
               </div>
             )}
             <div className="case-detail__field">
