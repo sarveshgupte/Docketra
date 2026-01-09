@@ -19,6 +19,7 @@ import { ProfilePage } from './pages/ProfilePage';
 import { AdminPage } from './pages/AdminPage';
 import { ReportsDashboard } from './pages/reports/ReportsDashboard';
 import { DetailedReports } from './pages/reports/DetailedReports';
+import { FilteredCasesPage } from './pages/FilteredCasesPage';
 
 export const Router = () => {
   return (
@@ -49,6 +50,15 @@ export const Router = () => {
         />
         
         <Route
+          path="/my-worklist"
+          element={
+            <ProtectedRoute>
+              <WorklistPage />
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
           path="/global-worklist"
           element={
             <ProtectedRoute>
@@ -62,6 +72,15 @@ export const Router = () => {
           element={
             <ProtectedRoute>
               <CaseDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/cases"
+          element={
+            <ProtectedRoute requireAdmin>
+              <FilteredCasesPage />
             </ProtectedRoute>
           }
         />
