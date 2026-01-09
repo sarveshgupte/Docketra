@@ -209,11 +209,12 @@ export const caseService = {
    * Opens attachment in new tab
    */
   viewAttachment: (caseId, attachmentId) => {
-    const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
-    const url = `/api/cases/${caseId}/attachments/${attachmentId}/view`;
+    const xID = localStorage.getItem(STORAGE_KEYS.X_ID);
+    const apiBaseUrl = window.location.origin;
+    const url = `${apiBaseUrl}/api/cases/${caseId}/attachments/${attachmentId}/view?xID=${encodeURIComponent(xID)}`;
     
-    // Open in new tab with auth header
-    window.open(`${url}?token=${token}`, '_blank');
+    // Open in new tab
+    window.open(url, '_blank');
   },
 
   /**
