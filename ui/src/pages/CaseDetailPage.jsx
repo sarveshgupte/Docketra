@@ -318,8 +318,8 @@ export const CaseDetailPage = () => {
                           caseInfo.queueType === 'GLOBAL' &&
                           caseInfo.status === 'UNASSIGNED';
 
-  // Move to Global button: show only for admin users
-  const showMoveToGlobalButton = isAdmin;
+  // Move to Global button: show only for admin users AND case is currently assigned
+  const showMoveToGlobalButton = isAdmin && caseInfo.assignedToXID;
 
   // Case action buttons (File, Pend, Resolve)
   // Show only when case is in a non-terminal state

@@ -45,6 +45,7 @@ const caseAuditSchema = new mongoose.Schema({
    * - CASE_CLOSED_VIEWED: User closed view mode
    * - CASE_EDITED: Case details modified
    * - CASE_ASSIGNED: Case assigned to user
+   * - CASE_UNASSIGNED: Case moved to global worklist (unassigned)
    * - CASE_STATUS_CHANGED: Case status updated
    * - CASE_LIST_VIEWED: User viewed a filtered case list
    * - ADMIN_FILED_CASES_VIEWED: Admin viewed filed cases list
@@ -61,6 +62,7 @@ const caseAuditSchema = new mongoose.Schema({
       'CASE_CLOSED_VIEWED',
       'CASE_EDITED',
       'CASE_ASSIGNED',
+      'CASE_UNASSIGNED',
       'CASE_STATUS_CHANGED',
       'CASE_LIST_VIEWED',
       'ADMIN_FILED_CASES_VIEWED',
