@@ -1,5 +1,6 @@
 const Client = require('../models/Client.model');
 const Case = require('../models/Case.model');
+const { generateNextClientId } = require('../services/clientIdGenerator');
 
 /**
  * Client Controller for Direct Client Management
@@ -175,8 +176,13 @@ const createClient = async (req, res) => {
       });
     }
     
-    // STEP 7: Create new client with explicit field mapping
+    // STEP 7: Generate clientId server-side
+    const clientId = await generateNextClientId();
+    
+    // STEP 8: Create new client with explicit field mapping
     const client = new Client({
+      // System-generated ID (NEVER from client)
+      clientId,
       // Business fields from sanitized request
       businessName: businessName.trim(),
       businessAddress: businessAddress.trim(),
