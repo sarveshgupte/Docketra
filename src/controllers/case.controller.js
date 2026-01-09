@@ -5,6 +5,7 @@ const CaseHistory = require('../models/CaseHistory.model');
 const Client = require('../models/Client.model');
 const { detectDuplicates, generateDuplicateOverrideComment } = require('../services/clientDuplicateDetector');
 const { CASE_CATEGORIES, CASE_LOCK_CONFIG, CASE_STATUS, COMMENT_PREVIEW_LENGTH } = require('../config/constants');
+const { isProduction } = require('../config/config');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -12,6 +13,7 @@ const path = require('path');
  * Case Controller for Core Case APIs
  * Handles case creation, comments, attachments, cloning, unpending, and status updates
  * PART F - Duplicate client detection for "Client – New" cases
+ * PR #44 - xID ownership guardrails
  */
 
 /**
@@ -704,6 +706,7 @@ const updateCaseStatus = async (req, res) => {
  * Get case by caseId
  * GET /api/cases/:caseId
  * PR #41: Add CASE_VIEWED audit log
+ * PR #44: Runtime assertion for xID context
  */
 const getCaseByCaseId = async (req, res) => {
   try {
@@ -728,12 +731,19 @@ const getCaseByCaseId = async (req, res) => {
     const client = await Client.findOne({ clientId: caseData.clientId, isActive: true });
     
     // PR #41: Add CASE_VIEWED audit log
-    // Require authenticated user for audit logging
+    // PR #44: Require authenticated user with xID for audit logging
     if (!req.user?.email) {
       return res.status(401).json({
         success: false,
         message: 'Authentication required',
       });
+    }
+    
+    // PR #44: Runtime assertion - warn if xID is missing from auth context
+    if (!req.user.xID && !isProduction()) {
+      console.warn(`[xID Guardrail] Case accessed without xID in auth context`);
+      console.warn(`[xID Guardrail] Case: ${caseId}, User email: ${req.user.email}`);
+      console.warn(`[xID Guardrail] This should not happen - auth middleware should always provide xID`);
     }
     
     await CaseHistory.create({
@@ -771,6 +781,7 @@ const getCaseByCaseId = async (req, res) => {
  * Get all cases with filtering
  * GET /api/cases
  * PR #42: Handle assignedTo as xID (or email for backward compatibility)
+ * PR #44: Added runtime assertions for xID ownership guardrails
  */
 const getCases = async (req, res) => {
   try {
@@ -791,6 +802,7 @@ const getCases = async (req, res) => {
     if (priority) query.priority = priority;
     
     // PR #42: Handle assignedTo as xID (uppercase) for canonical queries
+    // PR #44: Log warning if email-based queries are attempted
     if (assignedTo) {
       // If it looks like an xID (starts with X and has digits), treat as xID
       // Otherwise, treat as email for backward compatibility
@@ -798,12 +810,26 @@ const getCases = async (req, res) => {
       if (/^X\d{6}$/i.test(trimmedAssignedTo)) {
         query.assignedTo = trimmedAssignedTo.toUpperCase();
       } else {
+        // PR #44: Log warning for email-based ownership query
+        if (!isProduction()) {
+          console.warn(`[xID Guardrail] Email-based ownership query detected: assignedTo="${trimmedAssignedTo}"`);
+          console.warn(`[xID Guardrail] This is deprecated. Please use xID (format: X123456) for ownership queries.`);
+          console.warn(`[xID Guardrail] Request from user: ${req.user?.xID || 'Unknown'}`);
+        }
         // Backward compatibility: might be email, but with new system should be rare
         query.assignedTo = trimmedAssignedTo.toLowerCase();
       }
     }
     
-    if (createdBy) query.createdBy = createdBy.toLowerCase();
+    // PR #44: Log warning if createdBy query is used (deprecated)
+    if (createdBy) {
+      if (!isProduction()) {
+        console.warn(`[xID Guardrail] Email-based creator query detected: createdBy="${createdBy}"`);
+        console.warn(`[xID Guardrail] This is deprecated. Please use createdByXID for ownership queries.`);
+      }
+      query.createdBy = createdBy.toLowerCase();
+    }
+    
     if (clientId) query.clientId = clientId;
     
     const cases = await Case.find(query)
