@@ -1,7 +1,7 @@
 const Case = require('../models/Case.model');
 const Comment = require('../models/Comment.model');
 const Attachment = require('../models/Attachment.model');
-const User = require('../models/User.model');
+const { CASE_STATUS } = require('../config/constants');
 
 /**
  * Search Controller for Global Search and Worklists
