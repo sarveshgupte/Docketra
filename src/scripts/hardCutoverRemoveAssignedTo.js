@@ -148,7 +148,7 @@ async function finalMigration() {
     console.log('🔍 DRY RUN MODE - Showing first 10 examples:\n');
     casesToMigrate.slice(0, 10).forEach((caseData, idx) => {
       console.log(`${idx + 1}. Case ${caseData.caseId}:`);
-      console.log(`   assignedTo: ${caseData.assignedTo} → assignedToXID: ${caseData.assignedTo}`);
+      console.log(`   assignedTo: ${caseData.assignedTo} → assignedToXID: ${caseData.assignedTo.toUpperCase()}`);
     });
     return casesToMigrate.length;
   }

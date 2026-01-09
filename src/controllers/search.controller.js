@@ -6,6 +6,9 @@ const { CASE_STATUS } = require('../config/constants');
 /**
  * Search Controller for Global Search and Worklists
  * PART A - READ-ONLY operations for finding cases and viewing worklists
+ * 
+ * PR: Hard Cutover to xID - Removed User model import (no longer needed),
+ * added CASE_STATUS import for canonical status constants
  */
 
 /**

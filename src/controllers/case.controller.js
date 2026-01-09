@@ -1247,7 +1247,6 @@ const updateCaseActivity = async (req, res) => {
  * 🚫 REJECTED payloads:
  * - Contains userEmail
  * - Contains userXID (must come from req.user only)
- * - Contains legacy CASE- IDs (wait, these are actually valid!)
  * 
  * Authentication: User identity is obtained from req.user (set by auth middleware)
  * Authorization: Cases are assigned to the authenticated user's xID
