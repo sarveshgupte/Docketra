@@ -1438,8 +1438,8 @@ const unassignCase = async (req, res) => {
       caseId,
       actionType: 'CASE_UNASSIGNED',
       description: `Case moved to Global Worklist by ${user.email}${previousAssignedToXID ? ` (was assigned to ${previousAssignedToXID})` : ''}`,
-      performedBy: user.email.toLowerCase(),
-      performedByXID: user.xID.toUpperCase(),
+      performedBy: user.email,
+      performedByXID: user.xID,
     });
     
     res.json({
