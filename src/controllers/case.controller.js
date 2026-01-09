@@ -319,6 +319,8 @@ const addComment = async (req, res) => {
       caseId,
       text,
       createdBy: createdBy.toLowerCase(),
+      createdByXID: req.user.xID,
+      createdByName: req.user.name,
       note,
     });
     
@@ -681,6 +683,8 @@ const unpendCase = async (req, res) => {
       caseId,
       text: comment,
       createdBy: performedBy.toLowerCase(),
+      createdByXID: req.user?.xID || null,
+      createdByName: req.user?.name || null,
     });
     
     // Create history entry
