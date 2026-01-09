@@ -770,6 +770,7 @@ const getCaseByCaseId = async (req, res) => {
 /**
  * Get all cases with filtering
  * GET /api/cases
+ * PR #42: Handle assignedTo as xID (or email for backward compatibility)
  */
 const getCases = async (req, res) => {
   try {
@@ -788,7 +789,20 @@ const getCases = async (req, res) => {
     if (status) query.status = status;
     if (category) query.category = category;
     if (priority) query.priority = priority;
-    if (assignedTo) query.assignedTo = assignedTo.toLowerCase();
+    
+    // PR #42: Handle assignedTo as xID (uppercase) for canonical queries
+    if (assignedTo) {
+      // If it looks like an xID (starts with X and has digits), treat as xID
+      // Otherwise, treat as email for backward compatibility
+      const trimmedAssignedTo = assignedTo.trim();
+      if (/^X\d{6}$/i.test(trimmedAssignedTo)) {
+        query.assignedTo = trimmedAssignedTo.toUpperCase();
+      } else {
+        // Backward compatibility: might be email, but with new system should be rare
+        query.assignedTo = trimmedAssignedTo.toLowerCase();
+      }
+    }
+    
     if (createdBy) query.createdBy = createdBy.toLowerCase();
     if (clientId) query.clientId = clientId;
     
