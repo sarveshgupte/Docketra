@@ -158,7 +158,7 @@ const createCase = async (req, res) => {
       const dataToCheck = clientData || (payload && payload.clientData) || {
         businessName: client.businessName,
         businessAddress: client.businessAddress,
-        businessPhone: client.businessPhone,
+        primaryContactNumber: client.primaryContactNumber,
         businessEmail: client.businessEmail,
         PAN: client.PAN,
         GST: client.GST,
@@ -830,7 +830,7 @@ const getCaseByCaseId = async (req, res) => {
         client: client ? {
           clientId: client.clientId,
           businessName: client.businessName,
-          businessPhone: client.businessPhone,
+          primaryContactNumber: client.primaryContactNumber,
           businessEmail: client.businessEmail,
         } : null,
         comments,
@@ -927,7 +927,7 @@ const getCases = async (req, res) => {
           client: client ? {
             clientId: client.clientId,
             businessName: client.businessName,
-            businessPhone: client.businessPhone,
+            primaryContactNumber: client.primaryContactNumber,
             businessEmail: client.businessEmail,
           } : null,
         };
