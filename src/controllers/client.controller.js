@@ -86,21 +86,55 @@ const getClientById = async (req, res) => {
  */
 const createClient = async (req, res) => {
   try {
+    // STEP 1: Sanitize input - Remove empty, null, undefined values
+    const sanitizedBody = Object.fromEntries(
+      Object.entries(req.body).filter(
+        ([key, value]) => value !== '' && value !== null && value !== undefined
+      )
+    );
+    
+    // STEP 2: Unconditionally strip forbidden/deprecated fields
+    ['latitude', 'longitude', 'businessPhone'].forEach(field => {
+      delete sanitizedBody[field];
+    });
+    
+    // STEP 3: Define allowed fields (whitelist approach)
+    const allowedFields = [
+      'businessName',
+      'businessAddress',
+      'businessEmail',
+      'primaryContactNumber',
+      'secondaryContactNumber',
+      'PAN',
+      'TAN',
+      'GST',
+      'CIN'
+    ];
+    
+    // STEP 4: Reject unexpected fields
+    const unexpectedFields = Object.keys(sanitizedBody).filter(
+      key => !allowedFields.includes(key)
+    );
+    
+    if (unexpectedFields.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Unexpected field(s) in client payload: ${unexpectedFields.join(', ')}`,
+      });
+    }
+    
+    // STEP 5: Extract and validate required business fields
     const {
       businessName,
       businessAddress,
       primaryContactNumber,
-      secondaryContactNumber,
       businessEmail,
+      secondaryContactNumber,
       PAN,
       GST,
       TAN,
       CIN,
-      latitude,
-      longitude,
-      // Legacy field for backward compatibility
-      businessPhone,
-    } = req.body;
+    } = sanitizedBody;
     
     // Validate required business fields
     if (!businessName || !businessName.trim()) {
@@ -117,10 +151,7 @@ const createClient = async (req, res) => {
       });
     }
     
-    // Support both new and legacy phone field names for backward compatibility
-    // Priority: primaryContactNumber (new) > businessPhone (legacy)
-    const primaryPhone = primaryContactNumber || businessPhone;
-    if (!primaryPhone || !primaryPhone.trim()) {
+    if (!primaryContactNumber || !primaryContactNumber.trim()) {
       return res.status(400).json({
         success: false,
         message: 'Primary contact number is required',
@@ -134,7 +165,7 @@ const createClient = async (req, res) => {
       });
     }
     
-    // Get creator xID from authenticated user (server-side only)
+    // STEP 6: Get creator xID from authenticated user (server-side only)
     const createdByXid = req.user?.xID;
     
     if (!createdByXid) {
@@ -144,28 +175,21 @@ const createClient = async (req, res) => {
       });
     }
     
-    // Optional: get email for backward compatibility (deprecated field)
-    const createdBy = req.user?.email;
-    
-    // Create new client with system-owned fields set server-side
+    // STEP 7: Create new client with explicit field mapping
     const client = new Client({
-      // Business fields from request
+      // Business fields from sanitized request
       businessName: businessName.trim(),
       businessAddress: businessAddress.trim(),
-      primaryContactNumber: primaryPhone.trim(),
+      primaryContactNumber: primaryContactNumber.trim(),
       secondaryContactNumber: secondaryContactNumber ? secondaryContactNumber.trim() : undefined,
       businessEmail: businessEmail.trim().toLowerCase(),
       PAN: PAN ? PAN.trim().toUpperCase() : undefined,
       GST: GST ? GST.trim().toUpperCase() : undefined,
       TAN: TAN ? TAN.trim().toUpperCase() : undefined,
       CIN: CIN ? CIN.trim().toUpperCase() : undefined,
-      latitude: latitude ? parseFloat(latitude) : undefined,
-      longitude: longitude ? parseFloat(longitude) : undefined,
-      // Legacy backward compatibility - sync businessPhone with primaryContactNumber
-      businessPhone: primaryPhone.trim(),
-      // System-owned fields (set server-side only)
+      // System-owned fields (injected server-side only, NEVER from client)
       createdByXid, // CANONICAL - set from auth context
-      createdBy: createdBy ? createdBy.trim().toLowerCase() : undefined, // DEPRECATED - backward compatibility only
+      createdBy: req.user?.email ? req.user.email.trim().toLowerCase() : undefined, // DEPRECATED - backward compatibility only
       isSystemClient: false,
       isActive: true, // Legacy field
       status: 'ACTIVE', // New field
@@ -180,10 +204,18 @@ const createClient = async (req, res) => {
       message: 'Client created successfully',
     });
   } catch (error) {
+    // Enhanced error logging for debugging
+    // NOTE: In production, consider using structured logging with appropriate log levels
+    console.error('❌ Client creation failed');
+    console.error('Error message:', error.message);
+    if (error.errors) {
+      console.error('Validation errors:', error.errors);
+    }
+    
     res.status(400).json({
       success: false,
-      message: 'Error creating client',
-      error: error.message,
+      message: error.message || 'Error creating client',
+      ...(error.errors && { validationErrors: error.errors }),
     });
   }
 };
