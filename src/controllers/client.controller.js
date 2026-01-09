@@ -28,7 +28,7 @@ const getClients = async (req, res) => {
     const filter = activeOnly === 'true' ? { status: CLIENT_STATUS.ACTIVE } : {};
     
     const clients = await Client.find(filter)
-      .select('clientId businessName status isActive') // Include necessary fields
+      .select('clientId businessName status') // Select necessary fields (status is canonical)
       .sort({ clientId: 1 }); // Sort by clientId for consistency
     
     res.json({
