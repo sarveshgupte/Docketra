@@ -55,7 +55,7 @@ const initializeTransport = () => {
   try {
     // PR #43: Explicit Gmail SMTP configuration
     const transportConfig = {
-      host: host,
+      host,
       port: parseInt(port, 10),
       secure: false, // PR #43: Required for Gmail port 587 (STARTTLS)
     };
@@ -63,8 +63,8 @@ const initializeTransport = () => {
     // Add authentication if credentials provided
     if (user && pass) {
       transportConfig.auth = {
-        user: user,
-        pass: pass,
+        user,
+        pass,
       };
     }
     

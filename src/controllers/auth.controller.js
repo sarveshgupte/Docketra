@@ -460,8 +460,8 @@ const resetPassword = async (req, res) => {
         xID: user.xID,
         actionType: 'PasswordSetupEmailSent',
         description: emailResult.success 
-          ? `Password reset email sent to ${user.email}` 
-          : `Password reset email failed to send to ${user.email}: ${emailResult.error}`,
+          ? `Password reset email sent to ${emailService.maskEmail(user.email)}` 
+          : `Password reset email failed to send to ${emailService.maskEmail(user.email)}: ${emailResult.error}`,
         performedBy: admin.xID,
         ipAddress: req.ip,
       });
@@ -767,8 +767,8 @@ const createUser = async (req, res) => {
         xID: newUser.xID,
         actionType: 'InviteEmailSent',
         description: emailResult.success 
-          ? `Invite email sent to ${newUser.email}` 
-          : `Invite email failed to send to ${newUser.email}: ${emailResult.error}`,
+          ? `Invite email sent to ${emailService.maskEmail(newUser.email)}` 
+          : `Invite email failed to send to ${emailService.maskEmail(newUser.email)}: ${emailResult.error}`,
         performedBy: admin.xID,
         ipAddress: req.ip,
       });
@@ -779,7 +779,7 @@ const createUser = async (req, res) => {
         await AuthAudit.create({
           xID: newUser.xID,
           actionType: 'InviteEmailFailed',
-          description: `Failed to send invite email to ${newUser.email}: ${emailError.message}`,
+          description: `Failed to send invite email to ${emailService.maskEmail(newUser.email)}: ${emailError.message}`,
           performedBy: admin.xID,
           ipAddress: req.ip,
         });
@@ -1217,7 +1217,7 @@ const resendSetupEmail = async (req, res) => {
       await AuthAudit.create({
         xID: user.xID,
         actionType: 'InviteEmailResent',
-        description: `Invite reminder email sent to ${user.email}`,
+        description: `Invite reminder email sent to ${emailService.maskEmail(user.email)}`,
         performedBy: admin.xID,
         ipAddress: req.ip,
       });
@@ -1423,8 +1423,8 @@ const forgotPassword = async (req, res) => {
         xID: user.xID,
         actionType: 'ForgotPasswordRequested',
         description: emailResult.success 
-          ? `Password reset link sent to ${user.email}` 
-          : `Password reset link failed to send to ${user.email}: ${emailResult.error}`,
+          ? `Password reset link sent to ${emailService.maskEmail(user.email)}` 
+          : `Password reset link failed to send to ${emailService.maskEmail(user.email)}: ${emailResult.error}`,
         performedBy: user.xID,
         ipAddress: req.ip,
       });
