@@ -44,7 +44,6 @@ const caseSchema = new mongoose.Schema({
   firmId: {
     type: String,
     required: [true, 'Firm ID is required'],
-    default: 'FIRM001',
     index: true,
   },
   

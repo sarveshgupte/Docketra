@@ -82,10 +82,16 @@ const logCaseHistory = async ({
       return null; // Don't throw - audit failures shouldn't block operations
     }
     
+    // Validate firmId is provided
+    if (!firmId) {
+      console.error('[AUDIT] firmId is required for case history');
+      return null; // Don't throw - audit failures shouldn't block operations
+    }
+    
     // Build history entry
     const historyEntry = {
       caseId,
-      firmId: firmId || 'FIRM001', // Default if not provided
+      firmId,
       actionType,
       actionLabel: actionLabel || description,
       description,

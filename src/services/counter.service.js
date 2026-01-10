@@ -16,7 +16,7 @@ const Counter = require('../models/Counter.model');
  * - No time-based logic
  * 
  * Usage:
- *   const nextSeq = await getNextSequence('case', 'FIRM001');
+ *   const nextSeq = await getNextSequence('case', firmId);
  */
 
 /**
