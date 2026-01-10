@@ -12,6 +12,7 @@ const { isProduction } = require('../config/config');
 const { logCaseListViewed, logAdminAction } = require('../services/auditLog.service');
 const caseActionService = require('../services/caseAction.service');
 const { getMimeType, sanitizeFilename } = require('../utils/fileUtils');
+const { resolveCaseIdentifier, resolveCaseDocument } = require('../utils/caseIdentifier');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -350,6 +351,7 @@ const createCase = async (req, res) => {
  * POST /api/cases/:caseId/comments
  * PR #41: Allow comments in view mode (no assignment check)
  * PR #45: Add CaseAudit logging with xID attribution
+ * PR: Case Identifier Semantics - Uses internal ID resolution
  */
 const addComment = async (req, res) => {
   try {
@@ -379,9 +381,17 @@ const addComment = async (req, res) => {
       });
     }
     
-    // Check if case exists - with firmId scoping
-    const query = buildCaseQuery(req, caseId);
-    const caseData = await Case.findOne(query);
+    // PR: Case Identifier Semantics - Resolve identifier to internal ID
+    // This handles both ObjectId and CASE-YYYYMMDD-XXXXX formats
+    try {
+      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId);
+      var caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId);
+    } catch (error) {
+      return res.status(404).json({
+        success: false,
+        message: 'Case not found',
+      });
+    }
     
     if (!caseData) {
       return res.status(404).json({
@@ -400,9 +410,9 @@ const addComment = async (req, res) => {
       });
     }
     
-    // Create comment
+    // Create comment - use caseId from database (caseNumber for display)
     const comment = await Comment.create({
-      caseId,
+      caseId: caseData.caseId,
       text,
       createdBy: createdBy.toLowerCase(),
       createdByXID: req.user.xID,
@@ -414,7 +424,7 @@ const addComment = async (req, res) => {
     // Sanitize comment text for logging to prevent log injection
     const sanitizedText = sanitizeForLog(text, COMMENT_PREVIEW_LENGTH);
     await CaseAudit.create({
-      caseId,
+      caseId: caseData.caseId,
       actionType: 'CASE_COMMENT_ADDED',
       description: `Comment added by ${req.user.xID}: ${sanitizedText}${text.length > COMMENT_PREVIEW_LENGTH ? '...' : ''}`,
       performedByXID: req.user.xID,
@@ -426,7 +436,7 @@ const addComment = async (req, res) => {
     
     // Also add to CaseHistory for backward compatibility
     await CaseHistory.create({
-      caseId,
+      caseId: caseData.caseId,
       actionType: 'CASE_COMMENT_ADDED',
       description: `Comment added by ${req.user.email}: ${text.substring(0, COMMENT_PREVIEW_LENGTH)}${text.length > COMMENT_PREVIEW_LENGTH ? '...' : ''}`,
       performedBy: req.user.email.toLowerCase(),
@@ -453,6 +463,7 @@ const addComment = async (req, res) => {
  * Uses multer middleware for file upload
  * PR #41: Allow attachments in view mode (no assignment check)
  * PR #45: Add CaseAudit logging with xID attribution
+ * PR: Case Identifier Semantics - Uses internal ID resolution
  */
 const addAttachment = async (req, res) => {
   try {
@@ -490,8 +501,16 @@ const addAttachment = async (req, res) => {
       });
     }
     
-    // Check if case exists - with firm scoping
-    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
+    // PR: Case Identifier Semantics - Resolve identifier to internal ID
+    try {
+      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId);
+      var caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId);
+    } catch (error) {
+      return res.status(404).json({
+        success: false,
+        message: 'Case not found',
+      });
+    }
     
     if (!caseData) {
       return res.status(404).json({
@@ -510,9 +529,9 @@ const addAttachment = async (req, res) => {
       });
     }
     
-    // Create attachment record
+    // Create attachment record - use caseId from database (caseNumber for display)
     const attachment = await Attachment.create({
-      caseId,
+      caseId: caseData.caseId,
       fileName: req.file.originalname,
       filePath: req.file.path,
       description,
@@ -526,7 +545,7 @@ const addAttachment = async (req, res) => {
     // Sanitize filename for logging to prevent log injection
     const sanitizedFilename = sanitizeForLog(req.file.originalname, 100);
     await CaseAudit.create({
-      caseId,
+      caseId: caseData.caseId,
       actionType: 'CASE_FILE_ATTACHED',
       description: `File attached by ${req.user.xID}: ${sanitizedFilename}`,
       performedByXID: req.user.xID,
@@ -540,7 +559,7 @@ const addAttachment = async (req, res) => {
     
     // Also add to CaseHistory for backward compatibility
     await CaseHistory.create({
-      caseId,
+      caseId: caseData.caseId,
       actionType: 'CASE_ATTACHMENT_ADDED',
       description: `Attachment uploaded by ${req.user.email}: ${sanitizedFilename}`,
       performedBy: req.user.email.toLowerCase(),
@@ -585,8 +604,17 @@ const cloneCase = async (req, res) => {
       });
     }
     
-    // Find original case - with firm scoping
-    const originalCase = await CaseRepository.findByCaseId(req.user.firmId, caseId);
+    // PR: Case Identifier Semantics - Resolve identifier to internal ID
+    let originalCase;
+    try {
+      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId);
+      originalCase = await CaseRepository.findByInternalId(req.user.firmId, internalId);
+    } catch (error) {
+      return res.status(404).json({
+        success: false,
+        message: 'Original case not found',
+      });
+    }
     
     if (!originalCase) {
       return res.status(404).json({
@@ -785,6 +813,7 @@ const unpendCase = async (req, res) => {
 /**
  * Update case status
  * PUT /api/cases/:caseId/status
+ * PR: Case Identifier Semantics - Uses internal ID resolution
  */
 const updateCaseStatus = async (req, res) => {
   try {
@@ -806,8 +835,17 @@ const updateCaseStatus = async (req, res) => {
       });
     }
     
-    // Find case - with firm scoping
-    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
+    // PR: Case Identifier Semantics - Resolve identifier to internal ID
+    let caseData;
+    try {
+      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId);
+      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId);
+    } catch (error) {
+      return res.status(404).json({
+        success: false,
+        message: 'Case not found',
+      });
+    }
     
     if (!caseData) {
       return res.status(404).json({
@@ -864,15 +902,24 @@ const updateCaseStatus = async (req, res) => {
  * PR #44: Runtime assertion for xID context
  * PR #45: Enhanced audit logging with CaseAudit and view mode detection
  * PR: Fix Case Visibility - Added authorization logic (Admin/Creator/Assignee)
+ * PR: Case Identifier Semantics - Uses internal ID resolution
  */
 const getCaseByCaseId = async (req, res) => {
   try {
     const { caseId } = req.params;
     
-    // Step 1: Fetch case without assignment restriction
-    // Only check firmId scoping for multi-tenancy (if user has firmId)
-    const query = buildCaseQuery(req, caseId);
-    const caseData = await Case.findOne(query);
+    // PR: Case Identifier Semantics - Resolve identifier to internal ID
+    // This handles both ObjectId and CASE-YYYYMMDD-XXXXX formats
+    let caseData;
+    try {
+      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId);
+      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId);
+    } catch (error) {
+      return res.status(404).json({
+        success: false,
+        message: 'Case not found',
+      });
+    }
     
     if (!caseData) {
       return res.status(404).json({
@@ -894,15 +941,16 @@ const getCaseByCaseId = async (req, res) => {
       });
     }
     
-    // Get related data
-    const comments = await Comment.find({ caseId }).sort({ createdAt: 1 });
-    const attachments = await Attachment.find({ caseId }).sort({ createdAt: 1 });
-    const history = await CaseHistory.find({ caseId }).sort({ timestamp: -1 });
+    // Get related data - use caseId from database (display number)
+    const displayCaseId = caseData.caseId;
+    const comments = await Comment.find({ caseId: displayCaseId }).sort({ createdAt: 1 });
+    const attachments = await Attachment.find({ caseId: displayCaseId }).sort({ createdAt: 1 });
+    const history = await CaseHistory.find({ caseId: displayCaseId }).sort({ timestamp: -1 });
     
     // PR #45: Also fetch CaseAudit entries for view-mode tracking
     // Use aggregation to lookup user names from performedByXID
     const auditLog = await CaseAudit.aggregate([
-      { $match: { caseId } },
+      { $match: { caseId: displayCaseId } },
       { $sort: { timestamp: -1 } },
       { $limit: 50 },
       {
@@ -941,7 +989,7 @@ const getCaseByCaseId = async (req, res) => {
     // PR #44: Runtime assertion - warn if xID is missing from auth context
     if (!req.user.xID && !isProduction()) {
       console.warn(`[xID Guardrail] Case accessed without xID in auth context`);
-      console.warn(`[xID Guardrail] Case: ${caseId}, User email: ${req.user.email}`);
+      console.warn(`[xID Guardrail] Case: ${displayCaseId}, User email: ${req.user.email}`);
       console.warn(`[xID Guardrail] This should not happen - auth middleware should always provide xID`);
     }
     
@@ -952,7 +1000,7 @@ const getCaseByCaseId = async (req, res) => {
     
     // PR #45: Add CaseAudit entry with xID attribution
     await CaseAudit.create({
-      caseId,
+      caseId: displayCaseId,
       actionType: 'CASE_VIEWED',
       description: `Case viewed by ${req.user.xID}${isViewOnlyMode ? ' (view-only mode)' : ' (assigned mode)'}`,
       performedByXID: req.user.xID,
@@ -965,7 +1013,7 @@ const getCaseByCaseId = async (req, res) => {
     
     // Also add to CaseHistory for backward compatibility
     await CaseHistory.create({
-      caseId,
+      caseId: displayCaseId,
       actionType: 'CASE_VIEWED',
       description: `Case viewed by ${req.user.email}`,
       performedBy: req.user.email.toLowerCase(),
@@ -1151,6 +1199,7 @@ const getCases = async (req, res) => {
  * POST /api/cases/:caseId/lock
  * 
  * Implements soft locking with 2-hour inactivity auto-unlock
+ * PR: Case Identifier Semantics - Uses internal ID resolution
  */
 const lockCaseEndpoint = async (req, res) => {
   try {
@@ -1164,9 +1213,17 @@ const lockCaseEndpoint = async (req, res) => {
       });
     }
     
-    // Build query with firmId scoping
-    const query = buildCaseQuery(req, caseId);
-    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
+    // PR: Case Identifier Semantics - Resolve identifier to internal ID
+    let caseData;
+    try {
+      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId);
+      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId);
+    } catch (error) {
+      return res.status(404).json({
+        success: false,
+        message: 'Case not found',
+      });
+    }
     
     if (!caseData) {
       return res.status(404).json({
@@ -1238,6 +1295,11 @@ const lockCaseEndpoint = async (req, res) => {
  * Unlock a case
  * POST /api/cases/:caseId/unlock
  */
+/**
+ * Unlock a case
+ * POST /api/cases/:caseId/unlock
+ * PR: Case Identifier Semantics - Uses internal ID resolution
+ */
 const unlockCaseEndpoint = async (req, res) => {
   try {
     const { caseId } = req.params;
@@ -1250,7 +1312,17 @@ const unlockCaseEndpoint = async (req, res) => {
       });
     }
     
-    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
+    // PR: Case Identifier Semantics - Resolve identifier to internal ID
+    let caseData;
+    try {
+      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId);
+      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId);
+    } catch (error) {
+      return res.status(404).json({
+        success: false,
+        message: 'Case not found',
+      });
+    }
     
     if (!caseData) {
       return res.status(404).json({
@@ -1297,6 +1369,7 @@ const unlockCaseEndpoint = async (req, res) => {
  * POST /api/cases/:caseId/activity
  * 
  * Updates lastActivityAt to prevent auto-unlock
+ * PR: Case Identifier Semantics - Uses internal ID resolution
  */
 const updateCaseActivity = async (req, res) => {
   try {
@@ -1310,7 +1383,17 @@ const updateCaseActivity = async (req, res) => {
       });
     }
     
-    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
+    // PR: Case Identifier Semantics - Resolve identifier to internal ID
+    let caseData;
+    try {
+      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId);
+      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId);
+    } catch (error) {
+      return res.status(404).json({
+        success: false,
+        message: 'Case not found',
+      });
+    }
     
     if (!caseData) {
       return res.status(404).json({
@@ -1497,6 +1580,8 @@ const pullCases = async (req, res) => {
  * - Sets queueType = GLOBAL
  * - Sets status = UNASSIGNED
  * - Creates audit log entry
+ * 
+ * PR: Case Identifier Semantics - Uses internal ID resolution
  */
 const unassignCase = async (req, res) => {
   try {
@@ -1512,8 +1597,17 @@ const unassignCase = async (req, res) => {
       });
     }
     
-    // Find the case - with firm scoping
-    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
+    // PR: Case Identifier Semantics - Resolve identifier to internal ID
+    let caseData;
+    try {
+      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId);
+      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId);
+    } catch (error) {
+      return res.status(404).json({
+        success: false,
+        message: 'Case not found',
+      });
+    }
     
     if (!caseData) {
       return res.status(404).json({
@@ -1525,10 +1619,11 @@ const unassignCase = async (req, res) => {
     // Store previous assignment for audit log
     const previousAssignedToXID = caseData.assignedToXID;
     const previousStatus = caseData.status;
+    const displayCaseId = caseData.caseId;
     
     // Prepare audit log entry (validate before mutating case)
     const auditEntry = {
-      caseId,
+      caseId: displayCaseId,
       actionType: CASE_ACTION_TYPES.CASE_MOVED_TO_WORKBASKET,
       description: `Case moved to Global Worklist by admin ${user.xID}${previousAssignedToXID ? ` (was assigned to ${previousAssignedToXID})` : ''}`,
       performedByXID: user.xID,
@@ -1560,7 +1655,7 @@ const unassignCase = async (req, res) => {
     const { CASE_ACTION_TYPES } = require('../config/constants');
     
     await logCaseHistory({
-      caseId,
+      caseId: displayCaseId,
       firmId: caseData.firmId,
       actionType: CASE_ACTION_TYPES.CASE_MOVED_TO_WORKBASKET,
       actionLabel: `Case moved to workbasket by ${user.name || user.xID}`,
@@ -1598,6 +1693,8 @@ const unassignCase = async (req, res) => {
  * Security:
  * - Validates authenticated user
  * - Validates case exists and user has access to it
+ * 
+ * PR: Case Identifier Semantics - Uses internal ID resolution
  */
 const viewAttachment = async (req, res) => {
   try {
@@ -1611,8 +1708,17 @@ const viewAttachment = async (req, res) => {
       });
     }
     
-    // Verify case exists and user has access - with firm scoping
-    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
+    // PR: Case Identifier Semantics - Resolve identifier to internal ID
+    let caseData;
+    try {
+      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId);
+      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId);
+    } catch (error) {
+      return res.status(404).json({
+        success: false,
+        message: 'Case not found',
+      });
+    }
     
     if (!caseData) {
       return res.status(404).json({
@@ -1631,8 +1737,9 @@ const viewAttachment = async (req, res) => {
       });
     }
     
-    // Verify attachment belongs to this case
-    if (attachment.caseId !== caseId) {
+    // Verify attachment belongs to this case - use display ID for comparison
+    const displayCaseId = caseData.caseId;
+    if (attachment.caseId !== displayCaseId) {
       return res.status(403).json({
         success: false,
         message: 'Attachment does not belong to this case',
@@ -1676,6 +1783,8 @@ const viewAttachment = async (req, res) => {
  * Security:
  * - Validates authenticated user
  * - Validates case exists and user has access to it
+ * 
+ * PR: Case Identifier Semantics - Uses internal ID resolution
  */
 const downloadAttachment = async (req, res) => {
   try {
@@ -1689,8 +1798,17 @@ const downloadAttachment = async (req, res) => {
       });
     }
     
-    // Verify case exists and user has access - with firm scoping
-    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
+    // PR: Case Identifier Semantics - Resolve identifier to internal ID
+    let caseData;
+    try {
+      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId);
+      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId);
+    } catch (error) {
+      return res.status(404).json({
+        success: false,
+        message: 'Case not found',
+      });
+    }
     
     if (!caseData) {
       return res.status(404).json({
@@ -1709,8 +1827,9 @@ const downloadAttachment = async (req, res) => {
       });
     }
     
-    // Verify attachment belongs to this case
-    if (attachment.caseId !== caseId) {
+    // Verify attachment belongs to this case - use display ID for comparison
+    const displayCaseId = caseData.caseId;
+    if (attachment.caseId !== displayCaseId) {
       return res.status(403).json({
         success: false,
         message: 'Attachment does not belong to this case',
