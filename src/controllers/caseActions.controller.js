@@ -41,8 +41,8 @@ const resolveCase = async (req, res) => {
       });
     }
     
-    // Call service to resolve case
-    const caseData = await caseActionService.resolveCase(caseId, comment, req.user);
+    // Call service to resolve case - with firm scoping
+    const caseData = await caseActionService.resolveCase(req.user.firmId, caseId, comment, req.user);
     
     res.json({
       success: true,
@@ -107,8 +107,8 @@ const pendCase = async (req, res) => {
       });
     }
     
-    // Call service to pend case
-    const caseData = await caseActionService.pendCase(caseId, comment, reopenDate, req.user);
+    // Call service to pend case - with firm scoping
+    const caseData = await caseActionService.pendCase(req.user.firmId, caseId, comment, reopenDate, req.user);
     
     res.json({
       success: true,
@@ -174,8 +174,8 @@ const fileCase = async (req, res) => {
       });
     }
     
-    // Call service to file case
-    const caseData = await caseActionService.fileCase(caseId, comment, req.user);
+    // Call service to file case - with firm scoping
+    const caseData = await caseActionService.fileCase(req.user.firmId, caseId, comment, req.user);
     
     res.json({
       success: true,
