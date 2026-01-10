@@ -235,12 +235,41 @@ const login = async (req, res) => {
           message: 'Account configuration error. Please contact administrator.',
         });
       }
+      
+      // PR-2: Backward compatibility - Auto-assign defaultClientId if missing
       if (!user.defaultClientId) {
-        console.error(`[AUTH] Admin user ${user.xID} missing defaultClientId - data integrity violation`);
-        return res.status(500).json({
-          success: false,
-          message: 'Account configuration error. Please contact administrator.',
-        });
+        console.warn(`[AUTH] Admin user ${user.xID} missing defaultClientId - attempting auto-repair`);
+        
+        try {
+          // Find firm and get its defaultClientId
+          const firm = await Firm.findById(user.firmId);
+          
+          if (firm && firm.defaultClientId && firm.bootstrapStatus === 'COMPLETED') {
+            // Auto-assign firm's defaultClientId to admin
+            await User.updateOne(
+              { _id: user._id },
+              { $set: { defaultClientId: firm.defaultClientId } }
+            );
+            
+            // Reload user with updated defaultClientId
+            user.defaultClientId = firm.defaultClientId;
+            
+            console.log(`[AUTH] ✓ Auto-assigned defaultClientId to admin ${user.xID}`);
+            console.log(`[AUTH]   This is a backward compatibility fix for legacy data`);
+          } else {
+            console.error(`[AUTH] Admin user ${user.xID} missing defaultClientId - cannot auto-repair (firm not ready)`);
+            return res.status(500).json({
+              success: false,
+              message: 'Account configuration error. Please contact administrator.',
+            });
+          }
+        } catch (autoRepairError) {
+          console.error(`[AUTH] Failed to auto-repair defaultClientId for ${user.xID}:`, autoRepairError.message);
+          return res.status(500).json({
+            success: false,
+            message: 'Account configuration error. Please contact administrator.',
+          });
+        }
       }
     }
     
