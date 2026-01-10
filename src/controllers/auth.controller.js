@@ -207,6 +207,25 @@ const login = async (req, res) => {
       }
     }
     
+    // PR-2: Check firm bootstrap status for Admin users
+    // Block login if firm bootstrap is not completed
+    if (user.role === 'Admin' && user.firmId) {
+      try {
+        const firm = await Firm.findById(user.firmId);
+        if (firm && firm.bootstrapStatus !== 'COMPLETED') {
+          console.warn(`[AUTH] Login blocked for ${user.xID} - firm bootstrap not completed (status: ${firm.bootstrapStatus})`);
+          return res.status(403).json({
+            success: false,
+            message: 'Firm setup incomplete. Please contact support.',
+            bootstrapStatus: firm.bootstrapStatus,
+          });
+        }
+      } catch (firmError) {
+        console.error(`[AUTH] Error checking firm bootstrap status:`, firmError.message);
+        // Continue - don't block login on lookup failure
+      }
+    }
+    
     // Validate Admin user has required fields (firmId and defaultClientId)
     if (user.role === 'Admin') {
       if (!user.firmId) {
@@ -216,12 +235,41 @@ const login = async (req, res) => {
           message: 'Account configuration error. Please contact administrator.',
         });
       }
+      
+      // PR-2: Backward compatibility - Auto-assign defaultClientId if missing
       if (!user.defaultClientId) {
-        console.error(`[AUTH] Admin user ${user.xID} missing defaultClientId - data integrity violation`);
-        return res.status(500).json({
-          success: false,
-          message: 'Account configuration error. Please contact administrator.',
-        });
+        console.warn(`[AUTH] Admin user ${user.xID} missing defaultClientId - attempting auto-repair`);
+        
+        try {
+          // Find firm and get its defaultClientId
+          const firm = await Firm.findById(user.firmId);
+          
+          if (firm && firm.defaultClientId && firm.bootstrapStatus === 'COMPLETED') {
+            // Auto-assign firm's defaultClientId to admin
+            await User.updateOne(
+              { _id: user._id },
+              { $set: { defaultClientId: firm.defaultClientId } }
+            );
+            
+            // Reload user with updated defaultClientId
+            user.defaultClientId = firm.defaultClientId;
+            
+            console.log(`[AUTH] ✓ Auto-assigned defaultClientId to admin ${user.xID}`);
+            console.log(`[AUTH]   This is a backward compatibility fix for legacy data`);
+          } else {
+            console.error(`[AUTH] Admin user ${user.xID} missing defaultClientId - cannot auto-repair (firm not ready)`);
+            return res.status(500).json({
+              success: false,
+              message: 'Account configuration error. Please contact administrator.',
+            });
+          }
+        } catch (autoRepairError) {
+          console.error(`[AUTH] Failed to auto-repair defaultClientId for ${user.xID}:`, autoRepairError.message);
+          return res.status(500).json({
+            success: false,
+            message: 'Account configuration error. Please contact administrator.',
+          });
+        }
       }
     }
     
