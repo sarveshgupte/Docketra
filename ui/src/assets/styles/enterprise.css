@@ -3,16 +3,53 @@
  * Docketra Enterprise UI
  */
 
-/* Tailwind CSS */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* Enterprise Design Tokens */
-@import './tokens.css';
+/* Tailwind CSS v4 */
+@import "tailwindcss";
 
 /* Import Inter font from Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+/* Enterprise Design Tokens - Custom Theme */
+@theme {
+  /* Colors */
+  --color-primary-600: #0F172A;
+  --color-primary-500: #334155;
+  --color-surface-base: #F8FAFC;
+  --color-surface-card: #FFFFFF;
+  --color-border-subtle: #E2E8F0;
+  --color-border-strong: #CBD5E1;
+  --color-text-main: #0F172A;
+  --color-text-body: #475569;
+  --color-text-muted: #94A3B8;
+  --color-success: #059669;
+  --color-warning: #D97706;
+  --color-danger: #DC2626;
+  --color-info: #2563EB;
+  
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+  
+  /* Font Family */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  
+  /* Font Sizes */
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 14px;
+  --text-lg: 18px;
+  --text-xl: 24px;
+  
+  /* Border Radius */
+  --radius: 6px;
+  --radius-sm: 4px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+}
 
 /* Base Layer Customizations */
 @layer base {
@@ -25,7 +62,9 @@
   }
   
   body {
-    @apply bg-surface-base text-text-main font-sans;
+    background-color: theme(--color-surface-base);
+    color: theme(--color-text-main);
+    font-family: theme(--font-sans);
     margin: 0;
     padding: 0;
     -webkit-font-smoothing: antialiased;
@@ -37,17 +76,23 @@
   }
   
   h1 {
-    @apply text-xl font-semibold text-text-main;
+    font-size: theme(--text-xl);
+    font-weight: 600;
+    color: theme(--color-text-main);
     line-height: 1.2;
   }
   
   h2 {
-    @apply text-lg font-medium text-text-main;
+    font-size: theme(--text-lg);
+    font-weight: 500;
+    color: theme(--color-text-main);
     line-height: 1.2;
   }
   
   a {
-    @apply text-info no-underline transition-colors duration-150;
+    color: theme(--color-info);
+    text-decoration: none;
+    transition: opacity 150ms ease-in-out;
   }
   
   a:hover {
@@ -69,98 +114,186 @@
 @layer components {
   /* Enterprise Button Styles */
   .btn {
-    @apply inline-flex items-center justify-center px-md py-sm rounded-md font-medium transition-all duration-150;
-    @apply min-h-button min-w-button;
-    @apply focus:outline-none focus:ring-2 focus:ring-info focus:ring-offset-2;
-    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: theme(--spacing-sm) theme(--spacing-md);
+    border-radius: theme(--radius);
+    font-weight: 500;
+    transition: all 150ms ease-in-out;
+    min-height: 36px;
+    min-width: 80px;
+    cursor: pointer;
+    border: none;
+  }
+  
+  .btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px theme(--color-info), 0 0 0 4px rgba(37, 99, 235, 0.2);
+  }
+  
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
   
   .btn-primary {
-    @apply bg-primary-600 text-white hover:bg-primary-500;
+    background-color: theme(--color-primary-600);
+    color: white;
+  }
+  
+  .btn-primary:hover:not(:disabled) {
+    background-color: theme(--color-primary-500);
   }
   
   .btn-secondary {
-    @apply bg-white text-primary-600 border border-border-strong hover:bg-surface-base;
+    background-color: white;
+    color: theme(--color-primary-600);
+    border: 1px solid theme(--color-border-strong);
+  }
+  
+  .btn-secondary:hover:not(:disabled) {
+    background-color: theme(--color-surface-base);
   }
   
   .btn-danger {
-    @apply bg-danger text-white hover:opacity-90;
+    background-color: theme(--color-danger);
+    color: white;
+  }
+  
+  .btn-danger:hover:not(:disabled) {
+    opacity: 0.9;
   }
   
   /* Enterprise Input Styles */
   .input {
-    @apply w-full px-3 py-2 rounded-md border border-border-subtle;
-    @apply bg-white text-text-main placeholder-text-muted;
-    @apply focus:outline-none focus:ring-2 focus:ring-info focus:border-transparent;
-    @apply disabled:bg-surface-base disabled:cursor-not-allowed disabled:opacity-70;
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: theme(--radius);
+    border: 1px solid theme(--color-border-subtle);
+    background-color: white;
+    color: theme(--color-text-main);
     min-height: 40px;
   }
   
+  .input::placeholder {
+    color: theme(--color-text-muted);
+  }
+  
+  .input:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px theme(--color-info);
+    border-color: transparent;
+  }
+  
+  .input:disabled {
+    background-color: theme(--color-surface-base);
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+  
   .input-error {
-    @apply border-danger focus:ring-danger;
+    border-color: theme(--color-danger);
+  }
+  
+  .input-error:focus {
+    box-shadow: 0 0 0 2px theme(--color-danger);
   }
   
   /* Enterprise Card Styles */
   .card {
-    @apply bg-white rounded-lg border border-border-subtle p-md;
+    background-color: white;
+    border-radius: theme(--radius-lg);
+    border: 1px solid theme(--color-border-subtle);
+    padding: theme(--spacing-md);
   }
   
   .card-header {
-    @apply flex items-center justify-between mb-md pb-md border-b border-border-subtle;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: theme(--spacing-md);
+    padding-bottom: theme(--spacing-md);
+    border-bottom: 1px solid theme(--color-border-subtle);
   }
   
   .card-title {
-    @apply text-lg font-medium text-text-main;
+    font-size: theme(--text-lg);
+    font-weight: 500;
+    color: theme(--color-text-main);
   }
   
   /* Enterprise Badge Styles */
   .badge {
-    @apply inline-flex items-center px-3 py-1 rounded-xl text-xs font-medium;
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: theme(--radius-xl);
+    font-size: theme(--text-xs);
+    font-weight: 500;
   }
   
   .badge-success {
-    @apply bg-green-50 text-success;
+    background-color: rgb(220 252 231);
+    color: theme(--color-success);
   }
   
   .badge-warning {
-    @apply bg-orange-50 text-warning;
+    background-color: rgb(254 243 199);
+    color: theme(--color-warning);
   }
   
   .badge-danger {
-    @apply bg-red-50 text-danger;
+    background-color: rgb(254 226 226);
+    color: theme(--color-danger);
   }
   
   .badge-info {
-    @apply bg-blue-50 text-info;
+    background-color: rgb(219 234 254);
+    color: theme(--color-info);
   }
   
   .badge-neutral {
-    @apply bg-gray-100 text-text-body;
+    background-color: rgb(243 244 246);
+    color: theme(--color-text-body);
   }
   
   /* Enterprise Table Styles */
   .table-container {
-    @apply bg-white rounded-lg border border-border-subtle overflow-hidden;
+    background-color: white;
+    border-radius: theme(--radius-lg);
+    border: 1px solid theme(--color-border-subtle);
+    overflow: hidden;
   }
   
   .table {
-    @apply w-full border-collapse;
+    width: 100%;
+    border-collapse: collapse;
   }
   
   .table thead {
-    @apply bg-surface-base;
+    background-color: theme(--color-surface-base);
   }
   
   .table th {
-    @apply text-left px-md py-3 text-xs font-semibold text-text-main uppercase tracking-wide;
+    text-align: left;
+    padding: 12px theme(--spacing-md);
+    font-size: theme(--text-xs);
+    font-weight: 600;
+    color: theme(--color-text-main);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
   
   .table td {
-    @apply px-md py-3 text-sm text-text-body border-t border-border-subtle;
+    padding: 12px theme(--spacing-md);
+    font-size: theme(--text-sm);
+    color: theme(--color-text-body);
+    border-top: 1px solid theme(--color-border-subtle);
   }
   
   .table tbody tr:hover {
-    @apply bg-surface-base;
+    background-color: theme(--color-surface-base);
   }
   
   .table tbody tr:nth-child(even) {
@@ -169,49 +302,57 @@
   
   /* Form Groups */
   .form-group {
-    @apply mb-md;
+    margin-bottom: theme(--spacing-md);
   }
   
   .form-label {
-    @apply block text-sm font-medium text-text-main mb-1;
+    display: block;
+    font-size: theme(--text-sm);
+    font-weight: 500;
+    color: theme(--color-text-main);
+    margin-bottom: 4px;
   }
   
   .form-error {
-    @apply text-danger text-xs mt-1;
+    color: theme(--color-danger);
+    font-size: theme(--text-xs);
+    margin-top: 4px;
   }
   
   .form-help {
-    @apply text-text-muted text-xs mt-1;
+    color: theme(--color-text-muted);
+    font-size: theme(--text-xs);
+    margin-top: 4px;
   }
 }
 
 /* Utility Layer */
 @layer utilities {
   .text-main {
-    color: var(--text-main);
+    color: theme(--color-text-main);
   }
   
   .text-body {
-    color: var(--text-body);
+    color: theme(--color-text-body);
   }
   
   .text-muted {
-    color: var(--text-muted);
+    color: theme(--color-text-muted);
   }
   
   .bg-surface-base {
-    background-color: var(--surface-base);
+    background-color: theme(--color-surface-base);
   }
   
   .bg-surface-card {
-    background-color: var(--surface-card);
+    background-color: theme(--color-surface-card);
   }
   
   .border-subtle {
-    border-color: var(--border-subtle);
+    border-color: theme(--color-border-subtle);
   }
   
   .border-strong {
-    border-color: var(--border-strong);
+    border-color: theme(--color-border-strong);
   }
 }
