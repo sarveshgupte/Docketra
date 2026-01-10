@@ -48,7 +48,7 @@ const approveNewClient = async (req, res) => {
     }
     
     // Find the case
-    const caseData = await Case.findOne({ caseId });
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
     
     if (!caseData) {
       return res.status(404).json({
@@ -211,7 +211,7 @@ const approveClientEdit = async (req, res) => {
     }
     
     // Find the case
-    const caseData = await Case.findOne({ caseId });
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
     
     if (!caseData) {
       return res.status(404).json({
@@ -414,7 +414,7 @@ const rejectClientCase = async (req, res) => {
     }
     
     // Find the case
-    const caseData = await Case.findOne({ caseId });
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
     
     if (!caseData) {
       return res.status(404).json({
