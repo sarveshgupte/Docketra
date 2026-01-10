@@ -1,6 +1,7 @@
 const { logCaseHistory } = require('../services/auditLog.service');
 const { CASE_ACTION_TYPES } = require('../config/constants');
 const Case = require('../models/Case.model');
+const CaseHistory = require('../models/CaseHistory.model');
 
 /**
  * Case Tracking Controller
@@ -249,7 +250,6 @@ const getCaseHistory = async (req, res) => {
     }
     
     // Fetch history entries
-    const CaseHistory = require('../models/CaseHistory.model');
     const history = await CaseHistory.find({ caseId })
       .sort({ timestamp: -1 }) // Most recent first
       .limit(200) // Reasonable limit

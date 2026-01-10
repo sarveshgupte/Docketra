@@ -72,6 +72,9 @@ export const CaseDetailPage = () => {
   // Track case view session
   // PR: Comprehensive CaseHistory & Audit Trail
   const [viewTracked, setViewTracked] = useState(false);
+  
+  // Configuration for view tracking
+  const VIEW_TRACKING_DEBOUNCE_MS = 2000; // 2 seconds
 
   useEffect(() => {
     loadCase();
@@ -92,22 +95,24 @@ export const CaseDetailPage = () => {
       const timer = setTimeout(() => {
         caseService.trackCaseView(caseId);
         setViewTracked(true);
-      }, 2000); // 2 second debounce
+      }, VIEW_TRACKING_DEBOUNCE_MS);
       
       return () => clearTimeout(timer);
     }
   }, [caseData, viewTracked, caseId]);
 
   // Track exit on beforeunload (best-effort for tab close)
+  // Note: sendBeacon doesn't support custom headers, so we rely on cookie-based auth
   useEffect(() => {
     const handleBeforeUnload = () => {
       // Use sendBeacon for better reliability on page unload
+      // Note: This is best-effort and may not work in all browsers/scenarios
       if (navigator.sendBeacon) {
         const apiBaseUrl = window.location.origin;
-        const token = localStorage.getItem('token');
         const url = `${apiBaseUrl}/api/cases/${caseId}/track-exit`;
         
-        // Send beacon with credentials
+        // Send beacon - note that sendBeacon doesn't support custom headers
+        // The backend must handle authentication via cookies or accept the request
         const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
         navigator.sendBeacon(url, blob);
       }
