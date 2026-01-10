@@ -30,17 +30,16 @@ const mongoose = require('mongoose');
 const clientSchema = new mongoose.Schema({
   /**
    * Auto-generated immutable client identifier
-   * Format: C123456 (e.g., C123456, C123457)
+   * Format: C000001, C000002, etc. (firm-scoped)
    * Generated via pre-save hook by finding highest existing number and incrementing
    * IMMUTABLE - Cannot be changed after creation
+   * FIRM-SCOPED - Each firm starts with C000001
    */
   clientId: {
     type: String,
-    unique: true,
     required: true,
     trim: true,
     immutable: true, // Schema-level immutability enforcement
-    index: true, // Explicit index for uniqueness enforcement
   },
   
   // Firm/Organization ID for multi-tenancy
@@ -402,13 +401,20 @@ clientSchema.pre('save', async function() {
 /**
  * Performance Indexes
  * 
- * - clientId: Unique index (automatic from schema definition)
+ * CRITICAL: Firm-scoped unique index on (firmId, clientId)
+ * - Each firm has its own C000001, C000002, etc.
+ * - clientId is unique WITHIN a firm, not globally
+ * 
+ * Other indexes:
  * - businessName: For lookups and searches
  * - isActive: For filtering active vs inactive clients
  * - isSystemClient: For identifying system clients
  * - createdByXid: For ownership queries (canonical identifier)
  * - firmId: For multi-tenancy queries
  */
+// MANDATORY: Firm-scoped unique index on (firmId, clientId)
+clientSchema.index({ firmId: 1, clientId: 1 }, { unique: true });
+
 clientSchema.index({ isActive: 1 });
 clientSchema.index({ isSystemClient: 1 });
 clientSchema.index({ businessName: 1 });
