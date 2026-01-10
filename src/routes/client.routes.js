@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth.middleware');
 const { requireAdmin, blockSuperadmin } = require('../middleware/permission.middleware');
+const { authorize } = require('../middleware/authorize');
+const ClientPolicy = require('../policies/client.policy');
 const {
   getClients,
   getClientById,
@@ -29,13 +31,13 @@ router.use(authenticate);
 router.use(blockSuperadmin);
 
 // Public/authenticated endpoints
-router.get('/', getClients);
-router.get('/:clientId', getClientById);
+router.get('/', authorize(ClientPolicy.canView), getClients);
+router.get('/:clientId', authorize(ClientPolicy.canView), getClientById);
 
 // Admin-only endpoints
-router.post('/', authenticate, requireAdmin, createClient);
-router.put('/:clientId', authenticate, requireAdmin, updateClient);
-router.patch('/:clientId/status', authenticate, requireAdmin, toggleClientStatus);
-router.post('/:clientId/change-name', authenticate, requireAdmin, changeLegalName);
+router.post('/', authenticate, authorize(ClientPolicy.canCreate), createClient);
+router.put('/:clientId', authenticate, authorize(ClientPolicy.canUpdate), updateClient);
+router.patch('/:clientId/status', authenticate, authorize(ClientPolicy.canManageStatus), toggleClientStatus);
+router.post('/:clientId/change-name', authenticate, authorize(ClientPolicy.canUpdate), changeLegalName);
 
 module.exports = router;
