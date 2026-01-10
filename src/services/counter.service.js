@@ -67,21 +67,26 @@ async function getNextSequence(name, firmId) {
     // If this is a duplicate key error during upsert, retry once
     // This can happen in rare concurrent initialization scenarios
     if (error.code === 11000) {
-      // Retry the operation once
-      const counter = await Counter.findOneAndUpdate(
-        { name, firmId },
-        { $inc: { seq: 1 } },
-        { new: true }
-      );
-      
-      if (!counter || typeof counter.seq !== 'number') {
-        throw new Error('Counter operation failed after retry - invalid response');
+      try {
+        // Retry the operation once
+        const counter = await Counter.findOneAndUpdate(
+          { name, firmId },
+          { $inc: { seq: 1 } },
+          { new: true }
+        );
+        
+        if (!counter || typeof counter.seq !== 'number') {
+          throw new Error('Counter operation failed after retry - invalid response');
+        }
+        
+        return counter.seq;
+      } catch (retryError) {
+        // If retry also fails, throw formatted error
+        throw new Error(`Error getting next sequence for ${name}/${firmId} after retry: ${retryError.message}`);
       }
-      
-      return counter.seq;
     }
     
-    // Re-throw other errors
+    // Re-throw other errors with context
     throw new Error(`Error getting next sequence for ${name}/${firmId}: ${error.message}`);
   }
 }
@@ -106,6 +111,7 @@ async function getCurrentSequence(name, firmId) {
 /**
  * Initialize counter with a specific starting value
  * WARNING: Only use during system initialization or migration
+ * This will NOT update an existing counter - only sets value on first insert
  * 
  * @param {string} name - Counter name
  * @param {string} firmId - Firm ID
@@ -121,6 +127,14 @@ async function initializeCounter(name, firmId, startValue) {
     throw new Error('Start value must be a non-negative number');
   }
   
+  // Check if counter already exists
+  const existingCounter = await Counter.findOne({ name, firmId });
+  
+  if (existingCounter) {
+    throw new Error(`Counter ${name}/${firmId} already exists with seq=${existingCounter.seq}. Cannot re-initialize.`);
+  }
+  
+  // Only set on insert - will not update existing counters
   await Counter.findOneAndUpdate(
     { name, firmId },
     { $setOnInsert: { seq: startValue } },

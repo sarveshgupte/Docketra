@@ -46,7 +46,7 @@ async function generateCaseName(firmId) {
     const casePrefix = `case${datePrefix}`;
     
     // Counter name includes date for daily reset
-    // Format: caseName-YYYYMMDD (e.g., caseName-20260108)
+    // Format: caseName-YYYYMMDD (e.g., caseName-20260110)
     const counterName = `caseName-${datePrefix}`;
     
     // Get next sequence atomically - this is thread-safe and eliminates race conditions
