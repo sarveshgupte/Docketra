@@ -64,6 +64,32 @@ const sanitizeForLog = (text, maxLength = 100) => {
 };
 
 /**
+ * Check if user has access to a case
+ * PR: Fix Case Visibility - Unified access control logic
+ * 
+ * Returns true if user can access the case:
+ * - Admin or SuperAdmin: Can access any case in their firm
+ * - Creator: Can access cases they created
+ * - Assignee: Can access cases assigned to them
+ * 
+ * @param {Object} caseData - Case document from database
+ * @param {Object} user - Authenticated user from req.user
+ * @returns {boolean} - True if user has access, false otherwise
+ */
+const checkCaseAccess = (caseData, user) => {
+  if (!caseData || !user) {
+    return false;
+  }
+  
+  const isAdmin = user.role === 'Admin';
+  const isSuperAdmin = user.role === 'SUPER_ADMIN';
+  const isCreator = caseData.createdByXID === user.xID;
+  const isAssignee = caseData.assignedToXID === user.xID;
+  
+  return isAdmin || isSuperAdmin || isCreator || isAssignee;
+};
+
+/**
  * Create a new case
  * POST /api/cases
  * PART F - Duplicate detection for "Client – New" category
@@ -836,17 +862,34 @@ const updateCaseStatus = async (req, res) => {
  * PR #41: Add CASE_VIEWED audit log
  * PR #44: Runtime assertion for xID context
  * PR #45: Enhanced audit logging with CaseAudit and view mode detection
+ * PR: Fix Case Visibility - Added authorization logic (Admin/Creator/Assignee)
  */
 const getCaseByCaseId = async (req, res) => {
   try {
     const { caseId } = req.params;
     
-    const caseData = await Case.findOne({ caseId });
+    // Step 1: Fetch case without assignment restriction
+    // Only check firmId scoping for multi-tenancy (if user has firmId)
+    const query = buildCaseQuery(req, caseId);
+    const caseData = await Case.findOne(query);
     
     if (!caseData) {
       return res.status(404).json({
         success: false,
         message: 'Case not found',
+      });
+    }
+    
+    // Step 2: Apply authorization AFTER fetch
+    // Allow access if user is:
+    // - Admin or SuperAdmin
+    // - Case creator (createdByXID matches user xID)
+    // - Assigned employee (assignedToXID matches user xID)
+    if (!checkCaseAccess(caseData, req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: You do not have permission to view this case',
+        code: 'CASE_ACCESS_DENIED',
       });
     }
     
