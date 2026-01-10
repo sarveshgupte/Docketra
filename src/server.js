@@ -31,6 +31,7 @@ const adminRoutes = require('./routes/admin.routes');  // Admin routes (PR #41)
 const superadminRoutes = require('./routes/superadmin.routes');  // Superadmin routes
 const debugRoutes = require('./routes/debug.routes');  // Debug routes (PR #43)
 const inboundRoutes = require('./routes/inbound.routes');  // Inbound email routes
+const publicRoutes = require('./routes/public.routes');  // Public routes (firm lookup)
 
 /**
  * Docketra - Task & Case Management System
@@ -161,6 +162,9 @@ app.get('/api', (req, res) => {
 
 // Authentication routes (public - no authentication required for login)
 app.use('/api/auth', authRoutes);
+
+// Public routes (no authentication required)
+app.use('/api/public', publicRoutes);
 
 // Category routes (public GET for active categories, admin-only for modifications)
 app.use('/api/categories', categoryRoutes);

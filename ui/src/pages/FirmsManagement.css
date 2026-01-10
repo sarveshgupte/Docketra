@@ -173,6 +173,29 @@
   color: #718096;
 }
 
+.firm-login-url {
+  color: var(--primary);
+  text-decoration: none;
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  background-color: #f7fafc;
+  display: inline-block;
+  transition: background-color 0.2s ease;
+}
+
+.firm-login-url:hover {
+  background-color: #e2e8f0;
+  text-decoration: underline;
+}
+
+.firm-login-url::after {
+  content: ' ↗';
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
 .status-badge {
   display: inline-block;
   padding: 0.375rem 0.75rem;
