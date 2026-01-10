@@ -94,8 +94,15 @@ export const LoginPage = () => {
             required
             placeholder="X123456"
             autoFocus
-            helperText="Use your xID (case-insensitive)"
           />
+          <p style={{ 
+            fontSize: '0.875rem', 
+            color: 'var(--text-secondary)', 
+            marginTop: '-0.5rem', 
+            marginBottom: '1rem' 
+          }}>
+            Use your xID (case-insensitive, e.g., x123456 or X123456)
+          </p>
 
           <Input
             label="Password"
