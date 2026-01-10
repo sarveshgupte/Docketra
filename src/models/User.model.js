@@ -14,12 +14,12 @@ const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
   // Enterprise employee number - PRIMARY identifier
-  // Format: X followed by 6 digits (e.g., X123456)
+  // Format: X followed by 6 digits (e.g., X000001, X000002)
   // IMMUTABLE - Cannot be changed after creation
+  // FIRM-SCOPED - Each firm starts with X000001
   xID: {
     type: String,
     required: [true, 'xID is required'],
-    unique: true,
     uppercase: true,
     match: [/^X\d{6}$/, 'xID must be in format X123456'],
     immutable: true,
@@ -300,7 +300,12 @@ userSchema.pre('save', async function() {
 });
 
 // Indexes for performance
-// Note: xID and email already have unique indexes from schema definition (unique: true)
+// CRITICAL: Firm-scoped unique index on (firmId, xID)
+// - Each firm has its own X000001, X000002, etc.
+// - xID is unique WITHIN a firm, not globally
+// - Email remains globally unique for login purposes
+userSchema.index({ firmId: 1, xID: 1 }, { unique: true });
+userSchema.index({ email: 1 }, { unique: true }); // Email is globally unique
 userSchema.index({ isActive: 1 });
 userSchema.index({ role: 1 });
 userSchema.index({ status: 1 });

@@ -23,6 +23,7 @@ const caseSchema = new mongoose.Schema({
    * Generated via pre-save hook with daily sequence reset
    * 
    * MANDATORY - Never editable
+   * FIRM-SCOPED - Case numbers reset per firm
    * 
    * ⚠️ CRITICAL: This is the ONLY identifier for:
    * - URLs: /cases/:caseId
@@ -34,7 +35,6 @@ const caseSchema = new mongoose.Schema({
    */
   caseId: {
     type: String,
-    unique: true,
     required: true,
     trim: true,
     immutable: true,
@@ -51,7 +51,8 @@ const caseSchema = new mongoose.Schema({
    * Deterministic case name - DISPLAY ONLY
    * Format: caseYYYYMMDDxxxxx (e.g., case2026010700001)
    * Generated automatically at case creation
-   * Unique, immutable, resets daily
+   * Unique within firm, immutable, resets daily
+   * FIRM-SCOPED - Case names reset per firm
    * 
    * ⚠️ DISPLAY ONLY: Use only for human-readable display in tables/lists
    * 🚫 NEVER use for URLs, routes, queries, or navigation
@@ -60,7 +61,6 @@ const caseSchema = new mongoose.Schema({
    */
   caseName: {
     type: String,
-    unique: true,
     required: true,
     trim: true,
     immutable: true,
@@ -621,8 +621,11 @@ caseSchema.pre('validate', async function() {
 /**
  * Performance Indexes
  * 
- * - caseId: Unique index (automatic from schema definition with unique: true)
- * - caseName: Unique index (automatic from schema definition with unique: true)
+ * CRITICAL: Firm-scoped unique indexes
+ * - (firmId, caseId): Case numbers reset per firm
+ * - (firmId, caseName): Case names reset per firm
+ * 
+ * Other indexes:
  * - status + priority: Common filter combination for listing cases
  * - category: Access control and filtering by case type
  * - createdBy: DEPRECATED - kept for backward compatibility only
@@ -641,8 +644,13 @@ caseSchema.pre('validate', async function() {
  * PR #44: Added createdByXID index for xID-based ownership queries
  * PR: Case Lifecycle - Added queueType, pendedByXID, pendingUntil indexes
  * PR: xID Canonicalization - Migrated from assignedTo to assignedToXID
+ * PR: Firm-Scoped Identity - Added firm-scoped unique indexes
  * Note: Email-based ownership queries are not supported
  */
+// MANDATORY: Firm-scoped unique indexes
+caseSchema.index({ firmId: 1, caseId: 1 }, { unique: true });
+caseSchema.index({ firmId: 1, caseName: 1 }, { unique: true });
+
 caseSchema.index({ status: 1, priority: 1 });
 caseSchema.index({ category: 1 });
 caseSchema.index({ createdBy: 1 }); // DEPRECATED - kept for backward compatibility
