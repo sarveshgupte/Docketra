@@ -811,6 +811,14 @@ const createUser = async (req, res) => {
   try {
     const { name, role, allowedCategories, email } = req.body;
     
+    // Prevent creation of SUPER_ADMIN users
+    if (role === 'SUPER_ADMIN') {
+      return res.status(403).json({
+        success: false,
+        message: 'Cannot create Superadmin users',
+      });
+    }
+    
     // xID is NOT accepted from request - it will be auto-generated
     if (!name || !email) {
       return res.status(400).json({
