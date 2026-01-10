@@ -54,7 +54,6 @@ async function getNextSequence(name, firmId) {
       { 
         new: true,        // Return updated document
         upsert: true,     // Create if doesn't exist
-        setDefaultsOnInsert: true  // Apply schema defaults on insert
       }
     );
     
@@ -111,12 +110,15 @@ async function getCurrentSequence(name, firmId) {
 /**
  * Initialize counter with a specific starting value
  * WARNING: Only use during system initialization or migration
- * This will NOT update an existing counter - only sets value on first insert
+ * 
+ * This function attempts to create a counter with a specific starting value.
+ * If the counter already exists, it will fail with an error.
  * 
  * @param {string} name - Counter name
  * @param {string} firmId - Firm ID
  * @param {number} startValue - Starting sequence value
  * @returns {Promise<void>}
+ * @throws {Error} If counter already exists or parameters are invalid
  */
 async function initializeCounter(name, firmId, startValue) {
   if (!name || !firmId) {
@@ -127,19 +129,22 @@ async function initializeCounter(name, firmId, startValue) {
     throw new Error('Start value must be a non-negative number');
   }
   
-  // Check if counter already exists
-  const existingCounter = await Counter.findOne({ name, firmId });
-  
-  if (existingCounter) {
-    throw new Error(`Counter ${name}/${firmId} already exists with seq=${existingCounter.seq}. Cannot re-initialize.`);
+  try {
+    // Attempt to create counter atomically
+    // This will fail with duplicate key error if counter already exists
+    await Counter.create({
+      name,
+      firmId,
+      seq: startValue,
+    });
+  } catch (error) {
+    // If duplicate key error, counter already exists
+    if (error.code === 11000) {
+      throw new Error(`Counter ${name}/${firmId} already exists. Cannot re-initialize.`);
+    }
+    // Re-throw other errors
+    throw error;
   }
-  
-  // Only set on insert - will not update existing counters
-  await Counter.findOneAndUpdate(
-    { name, firmId },
-    { $setOnInsert: { seq: startValue } },
-    { upsert: true }
-  );
 }
 
 module.exports = {
