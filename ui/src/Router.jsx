@@ -4,7 +4,6 @@
 
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { FirmProvider } from './contexts/FirmContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { FirmLayout } from './components/routing/FirmLayout';
 import { DefaultRoute } from './components/routing/DefaultRoute';
@@ -31,8 +30,7 @@ import { FilteredCasesPage } from './pages/FilteredCasesPage';
 export const Router = () => {
   return (
     <BrowserRouter>
-      <FirmProvider>
-        <Routes>
+      <Routes>
           {/* Public Login Routes */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/f/:firmSlug/login" element={<FirmLoginPage />} />
@@ -165,7 +163,6 @@ export const Router = () => {
           <Route path="/" element={<DefaultRoute />} />
           <Route path="*" element={<DefaultRoute />} />
         </Routes>
-      </FirmProvider>
     </BrowserRouter>
   );
 };

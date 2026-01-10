@@ -1369,11 +1369,19 @@ const setPassword = async (req, res) => {
       }
     }
     
+    // Fail fast if firmSlug cannot be resolved
+    if (!firmSlug) {
+      return res.status(400).json({
+        success: false,
+        message: 'Firm context missing. Cannot complete password setup. Please contact support.',
+      });
+    }
+    
     res.json({
       success: true,
       message: 'Password set successfully. You can now log in.',
       firmSlug: firmSlug,
-      redirectUrl: firmSlug ? `/${firmSlug}/dashboard` : '/dashboard',
+      redirectUrl: `/${firmSlug}/dashboard`,
     });
   } catch (error) {
     res.status(500).json({

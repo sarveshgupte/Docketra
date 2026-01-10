@@ -76,8 +76,7 @@ export const FilteredCasesPage = () => {
   };
 
   const handleCaseClick = (caseId) => {
-    const slug = firmSlug || user?.firmSlug;
-    navigate(slug ? `/${slug}/cases/${caseId}` : `/cases/${caseId}`);
+    navigate(`/${firmSlug}/cases/${caseId}`);
   };
   
   // Get page title and description

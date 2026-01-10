@@ -140,8 +140,7 @@ export const AdminPage = () => {
   };
 
   const handleCaseClick = (caseId) => {
-    const slug = firmSlug || user?.firmSlug;
-    navigate(slug ? `/${slug}/cases/${caseId}` : `/cases/${caseId}`);
+    navigate(`/${firmSlug}/cases/${caseId}`);
   };
 
   const handleCreateUser = async (e) => {
@@ -633,10 +632,7 @@ export const AdminPage = () => {
           </Button>
           <Button
             variant={activeTab === 'reports' ? 'primary' : 'default'}
-            onClick={() => {
-              const slug = firmSlug || user?.firmSlug;
-              navigate(slug ? `/${slug}/admin/reports` : '/admin/reports');
-            }}
+            onClick={() => navigate(`/${firmSlug}/admin/reports`)}
           >
             Reports & MIS
           </Button>
