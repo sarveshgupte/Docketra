@@ -2,6 +2,7 @@ const Case = require('../models/Case.model');
 const Comment = require('../models/Comment.model');
 const Client = require('../models/Client.model');
 const CaseHistory = require('../models/CaseHistory.model');
+const { CaseRepository, ClientRepository } = require('../repositories');
 const { CASE_CATEGORIES, CASE_STATUS, CLIENT_STATUS } = require('../config/constants');
 
 /**
@@ -264,7 +265,7 @@ const approveClientEdit = async (req, res) => {
     }
     
     // Find the client to edit
-    const client = await Client.findOne({ clientId: editData.clientId });
+    const client = await ClientRepository.findByClientId(req.user.firmId, editData.clientId);
     
     if (!client) {
       return res.status(404).json({

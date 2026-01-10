@@ -2,6 +2,7 @@ const Case = require('../models/Case.model');
 const Attachment = require('../models/Attachment.model');
 const EmailMetadata = require('../models/EmailMetadata.model');
 const User = require('../models/User.model');
+const { CaseRepository } = require('../repositories');
 const { getMimeType } = require('../utils/fileUtils');
 const path = require('path');
 const fs = require('fs').promises;
@@ -60,7 +61,7 @@ const handleInboundEmail = async (req, res) => {
     }
     
     // Verify case exists
-    const caseData = await Case.findOne({ caseId });
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
     
     if (!caseData) {
       return res.status(404).json({
