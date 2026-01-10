@@ -41,6 +41,23 @@ const firmSchema = new mongoose.Schema({
   },
   
   /**
+   * Default Client ID - represents the firm itself
+   * Every firm MUST have exactly one default client
+   * This client is created automatically when the firm is created
+   * REQUIRED - A firm cannot exist without its default client
+   */
+  defaultClientId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Client',
+    required: function() {
+      // Required for all firms except during initial creation
+      // Will be set in the same transaction as firm creation
+      return false; // Allow creation without defaultClientId initially, will be set in transaction
+    },
+    index: true,
+  },
+  
+  /**
    * Firm status for lifecycle management
    * ACTIVE - Firm is operational
    * SUSPENDED - Firm is temporarily blocked from login (Superadmin action)
