@@ -2,6 +2,7 @@ const { logCaseHistory } = require('../services/auditLog.service');
 const { CASE_ACTION_TYPES } = require('../config/constants');
 const Case = require('../models/Case.model');
 const CaseHistory = require('../models/CaseHistory.model');
+const { CaseRepository } = require('../repositories');
 
 /**
  * Case Tracking Controller
@@ -61,7 +62,7 @@ const trackCaseOpen = async (req, res) => {
     if (user.firmId) {
       query.firmId = user.firmId;
     }
-    const caseData = await Case.findOne(query);
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
     if (!caseData) {
       return res.status(404).json({
         success: false,
@@ -140,7 +141,7 @@ const trackCaseView = async (req, res) => {
     if (user.firmId) {
       query.firmId = user.firmId;
     }
-    const caseData = await Case.findOne(query);
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
     if (!caseData) {
       return res.status(404).json({
         success: false,
@@ -306,7 +307,7 @@ const getCaseHistory = async (req, res) => {
     if (user.firmId) {
       query.firmId = user.firmId;
     }
-    const caseData = await Case.findOne(query);
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
     if (!caseData) {
       return res.status(404).json({
         success: false,

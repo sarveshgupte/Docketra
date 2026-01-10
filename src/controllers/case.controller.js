@@ -5,6 +5,7 @@ const CaseHistory = require('../models/CaseHistory.model');
 const CaseAudit = require('../models/CaseAudit.model');
 const Client = require('../models/Client.model');
 const User = require('../models/User.model');
+const { CaseRepository, ClientRepository } = require('../repositories');
 const { detectDuplicates, generateDuplicateOverrideComment } = require('../services/clientDuplicateDetector');
 const { CASE_CATEGORIES, CASE_LOCK_CONFIG, CASE_STATUS, COMMENT_PREVIEW_LENGTH, CLIENT_STATUS } = require('../config/constants');
 const { isProduction } = require('../config/config');
@@ -193,9 +194,9 @@ const createCase = async (req, res) => {
     // Default clientId to C000001 if not provided
     const finalClientId = clientId || 'C000001';
     
-    // Verify client exists and validate status
+    // Verify client exists and validate status - with firm scoping
     // PR: Client Lifecycle Enforcement - only ACTIVE clients can be used for new cases
-    const client = await Client.findOne({ clientId: finalClientId });
+    const client = await ClientRepository.findByClientId(req.user.firmId, finalClientId);
     
     if (!client) {
       return res.status(404).json({
@@ -489,8 +490,8 @@ const addAttachment = async (req, res) => {
       });
     }
     
-    // Check if case exists
-    const caseData = await Case.findOne({ caseId });
+    // Check if case exists - with firm scoping
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
     
     if (!caseData) {
       return res.status(404).json({
@@ -584,8 +585,8 @@ const cloneCase = async (req, res) => {
       });
     }
     
-    // Find original case
-    const originalCase = await Case.findOne({ caseId });
+    // Find original case - with firm scoping
+    const originalCase = await CaseRepository.findByCaseId(req.user.firmId, caseId);
     
     if (!originalCase) {
       return res.status(404).json({
@@ -603,7 +604,7 @@ const cloneCase = async (req, res) => {
     }
     
     // PR: Client Lifecycle Enforcement - validate client is ACTIVE before cloning
-    const client = await Client.findOne({ clientId: originalCase.clientId });
+    const client = await ClientRepository.findByClientId(req.user.firmId, originalCase.clientId);
     
     if (!client) {
       return res.status(404).json({
@@ -742,8 +743,8 @@ const unpendCase = async (req, res) => {
       });
     }
     
-    // Call service to unpend case
-    const caseData = await caseActionService.unpendCase(caseId, comment, req.user);
+    // Call service to unpend case - with firm scoping
+    const caseData = await caseActionService.unpendCase(req.user.firmId, caseId, comment, req.user);
     
     res.json({
       success: true,
@@ -805,8 +806,8 @@ const updateCaseStatus = async (req, res) => {
       });
     }
     
-    // Find case
-    const caseData = await Case.findOne({ caseId });
+    // Find case - with firm scoping
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
     
     if (!caseData) {
       return res.status(404).json({
@@ -924,10 +925,10 @@ const getCaseByCaseId = async (req, res) => {
       }
     ]);
     
-    // Fetch current client details
+    // Fetch current client details - with firm scoping
     // TODO: Consider using aggregation pipeline with $lookup for better performance
     // PR: Client Lifecycle - fetch client regardless of status to display existing cases with inactive clients
-    const client = await Client.findOne({ clientId: caseData.clientId });
+    const client = await ClientRepository.findByClientId(req.user.firmId, caseData.clientId);
     
     // PR #45: Require authenticated user with xID for audit logging
     if (!req.user?.email || !req.user?.xID) {
@@ -1079,7 +1080,7 @@ const getCases = async (req, res) => {
     // PR: Client Lifecycle - fetch clients regardless of status to display existing cases with inactive clients
     const casesWithClients = await Promise.all(
       cases.map(async (caseItem) => {
-        const client = await Client.findOne({ clientId: caseItem.clientId });
+        const client = await ClientRepository.findByClientId(req.user.firmId, caseItem.clientId);
         return {
           ...caseItem.toObject(),
           client: client ? {
@@ -1165,7 +1166,7 @@ const lockCaseEndpoint = async (req, res) => {
     
     // Build query with firmId scoping
     const query = buildCaseQuery(req, caseId);
-    const caseData = await Case.findOne(query);
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
     
     if (!caseData) {
       return res.status(404).json({
@@ -1249,7 +1250,7 @@ const unlockCaseEndpoint = async (req, res) => {
       });
     }
     
-    const caseData = await Case.findOne({ caseId });
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
     
     if (!caseData) {
       return res.status(404).json({
@@ -1309,7 +1310,7 @@ const updateCaseActivity = async (req, res) => {
       });
     }
     
-    const caseData = await Case.findOne({ caseId });
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
     
     if (!caseData) {
       return res.status(404).json({
@@ -1416,8 +1417,8 @@ const pullCases = async (req, res) => {
     
     // Handle single case pull vs bulk pull
     if (caseIds.length === 1) {
-      // Single case pull
-      const result = await caseAssignmentService.assignCaseToUser(caseIds[0], user);
+      // Single case pull - with firm scoping
+      const result = await caseAssignmentService.assignCaseToUser(req.user.firmId, caseIds[0], user);
       
       if (!result.success) {
         return res.status(409).json({
@@ -1434,8 +1435,8 @@ const pullCases = async (req, res) => {
         message: 'Case pulled successfully',
       });
     } else {
-      // Bulk case pull
-      const result = await caseAssignmentService.bulkAssignCasesToUser(caseIds, user);
+      // Bulk case pull - with firm scoping
+      const result = await caseAssignmentService.bulkAssignCasesToUser(req.user.firmId, caseIds, user);
       
       const successCount = result.assigned;
       const requestedCount = result.requested;
@@ -1517,8 +1518,8 @@ const unassignCase = async (req, res) => {
       });
     }
     
-    // Find the case
-    const caseData = await Case.findOne({ caseId });
+    // Find the case - with firm scoping
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
     
     if (!caseData) {
       return res.status(404).json({
@@ -1616,8 +1617,8 @@ const viewAttachment = async (req, res) => {
       });
     }
     
-    // Verify case exists and user has access
-    const caseData = await Case.findOne({ caseId });
+    // Verify case exists and user has access - with firm scoping
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
     
     if (!caseData) {
       return res.status(404).json({
@@ -1694,8 +1695,8 @@ const downloadAttachment = async (req, res) => {
       });
     }
     
-    // Verify case exists and user has access
-    const caseData = await Case.findOne({ caseId });
+    // Verify case exists and user has access - with firm scoping
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
     
     if (!caseData) {
       return res.status(404).json({

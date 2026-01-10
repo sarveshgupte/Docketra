@@ -1,5 +1,6 @@
 const Case = require('../models/Case.model');
 const Task = require('../models/Task');
+const { CaseRepository } = require('../repositories');
 
 /**
  * Case Controller
