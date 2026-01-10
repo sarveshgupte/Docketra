@@ -29,11 +29,9 @@ export const LoginPage = () => {
     e.preventDefault();
     setError('');
 
-    // Validation - accept email or xID
-    const isEmail = identifier.includes('@');
-    
-    if (!isEmail && !validateXID(identifier)) {
-      setError('Please enter a valid xID or email');
+    // Validation - xID only (no email)
+    if (!validateXID(identifier)) {
+      setError('Please enter a valid xID (e.g., X123456)');
       return;
     }
 
@@ -89,14 +87,22 @@ export const LoginPage = () => {
 
         <form onSubmit={handleLogin}>
           <Input
-            label="xID or Email"
+            label="xID"
             type="text"
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
             required
-            placeholder="Enter your xID or email"
+            placeholder="X123456"
             autoFocus
           />
+          <p style={{ 
+            fontSize: '0.875rem', 
+            color: 'var(--text-secondary)', 
+            marginTop: '-0.5rem', 
+            marginBottom: '1rem' 
+          }}>
+            Use your xID (case-insensitive, e.g., x123456 or X123456)
+          </p>
 
           <Input
             label="Password"

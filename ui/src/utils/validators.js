@@ -8,8 +8,22 @@ export const validateEmail = (email) => {
 };
 
 export const validateXID = (xid) => {
-  // xID should be alphanumeric
-  return xid && xid.trim().length > 0;
+  // xID should not be empty and should not contain '@' (reject email format)
+  // Format: X followed by 6 digits (e.g., X123456 or x123456)
+  if (!xid || xid.trim().length === 0) {
+    return false;
+  }
+  
+  const trimmedXID = xid.trim();
+  
+  // Reject email format
+  if (trimmedXID.includes('@')) {
+    return false;
+  }
+  
+  // Basic xID format validation (case-insensitive)
+  const xidRegex = /^[xX]\d{6}$/;
+  return xidRegex.test(trimmedXID);
 };
 
 export const validatePassword = (password) => {

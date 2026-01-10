@@ -31,48 +31,37 @@ const DEFAULT_XID = 'SUPERADMIN'; // Default xID for SUPER_ADMIN in audit logs
 const login = async (req, res) => {
   try {
     // Accept both xID and XID from request payload, normalize internally
-    // Also accept email for Superadmin login
-    const { xID, XID, email, password } = req.body;
+    const { xID, XID, password } = req.body;
     
     // Normalize xID: accept either xID or XID, trim whitespace, convert to uppercase
     const normalizedXID = (xID || XID)?.trim().toUpperCase();
-    const normalizedEmail = email?.trim().toLowerCase();
     
-    // Must have either xID or email
-    if ((!normalizedXID && !normalizedEmail) || !password) {
+    // xID and password are required
+    if (!normalizedXID || !password) {
       console.warn('[AUTH] Missing credentials in login attempt', {
-        hasXID: !!normalizedXID,
-        hasEmail: !!normalizedEmail,
+        hasXID: !!(xID || XID),
         hasPassword: !!password,
         ip: req.ip,
       });
       
       return res.status(400).json({
         success: false,
-        message: 'xID/email and password are required',
+        message: 'xID and password are required',
       });
     }
     
-    // Find user by xID or email
-    let user;
-    if (normalizedEmail) {
-      // Email-based login (for Superadmin)
-      user = await User.findOne({ email: normalizedEmail });
-    } else {
-      // xID-based login (for Admin/Employee)
-      user = await User.findOne({ xID: normalizedXID });
-    }
+    // Find user by xID only
+    const user = await User.findOne({ xID: normalizedXID });
     
     if (!user) {
       // Log failed login attempt (no firmId available as user doesn't exist)
-      const identifier = normalizedEmail || normalizedXID;
       try {
         await AuthAudit.create({
           xID: normalizedXID || 'UNKNOWN',
           firmId: 'UNKNOWN', // User not found, so firmId unknown
           actionType: 'LoginFailed',
-          description: `Login failed: User not found (attempted with: ${normalizedEmail ? 'email' : 'xID'})`,
-          performedBy: identifier,
+          description: `Login failed: User not found (attempted with xID: ${normalizedXID})`,
+          performedBy: normalizedXID,
           ipAddress: req.ip,
           userAgent: req.get('user-agent'),
         });
@@ -82,7 +71,7 @@ const login = async (req, res) => {
       
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials',
+        message: 'Invalid xID or password',
       });
     }
     
@@ -323,7 +312,7 @@ const login = async (req, res) => {
         userId: user._id,
         actionType: 'Login',
         description: `User logged in successfully`,
-        performedBy: user.xID || user.email,
+        performedBy: user.xID,
         ipAddress: req.ip,
         userAgent: req.get('user-agent'),
       });
