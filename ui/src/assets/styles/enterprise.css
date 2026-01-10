@@ -35,7 +35,7 @@
   --spacing-2xl: 48px;
   
   /* Font Family */
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-sans: 'Inter', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
   
   /* Font Sizes */
   --text-xs: 12px;

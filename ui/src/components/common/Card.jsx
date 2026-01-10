@@ -34,7 +34,7 @@ export const CardBody = ({ children, className = '' }) => {
 
 export const CardFooter = ({ children, className = '' }) => {
   return (
-    <div className={`card-footer border-t border-border-subtle pt-md mt-md ${className}`}>
+    <div className={`card-footer border-t border-border-subtle ${className}`} style={{ paddingTop: 'var(--spacing-md)', marginTop: 'var(--spacing-md)' }}>
       {children}
     </div>
   );
