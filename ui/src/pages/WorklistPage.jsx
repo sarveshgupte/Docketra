@@ -12,7 +12,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
@@ -28,6 +28,7 @@ export const WorklistPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { firmSlug } = useParams();
   
   const [loading, setLoading] = useState(true);
   const [cases, setCases] = useState([]);
@@ -73,7 +74,7 @@ export const WorklistPage = () => {
   };
 
   const handleCaseClick = (caseId) => {
-    navigate(`/cases/${caseId}`);
+    navigate(`/${firmSlug}/cases/${caseId}`);
   };
   
   // Get page title and description

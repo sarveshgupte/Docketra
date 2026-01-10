@@ -463,6 +463,15 @@ const login = async (req, res) => {
       userAgent: req.get('user-agent'),
     });
     
+    // Fetch firmSlug for firm-scoped routing
+    let firmSlug = null;
+    if (user.firmId) {
+      const firm = await Firm.findOne({ _id: user.firmId });
+      if (firm) {
+        firmSlug = firm.firmSlug;
+      }
+    }
+    
     // Return user info with tokens (exclude sensitive fields)
     const response = {
       success: true,
@@ -476,6 +485,7 @@ const login = async (req, res) => {
         email: user.email,
         role: user.role,
         firmId: user.firmId ? user.firmId.toString() : null,
+        firmSlug: firmSlug,
         allowedCategories: user.allowedCategories,
         isActive: user.isActive,
       },
@@ -1350,9 +1360,28 @@ const setPassword = async (req, res) => {
       userAgent: req.get('user-agent'),
     });
     
+    // Fetch firmSlug for firm-scoped redirect
+    let firmSlug = null;
+    if (user.firmId) {
+      const firm = await Firm.findOne({ _id: user.firmId });
+      if (firm) {
+        firmSlug = firm.firmSlug;
+      }
+    }
+    
+    // Fail fast if firmSlug cannot be resolved
+    if (!firmSlug) {
+      return res.status(400).json({
+        success: false,
+        message: 'Firm context missing. Cannot complete password setup. Please contact support.',
+      });
+    }
+    
     res.json({
       success: true,
       message: 'Password set successfully. You can now log in.',
+      firmSlug: firmSlug,
+      redirectUrl: `/${firmSlug}/dashboard`,
     });
   } catch (error) {
     res.status(500).json({
