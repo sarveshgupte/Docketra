@@ -21,6 +21,7 @@ const LOCK_TIME = 15 * 60 * 1000; // 15 minutes in milliseconds
 const INVITE_TOKEN_EXPIRY_HOURS = 48; // 48 hours for invite tokens (per PR 32 requirements)
 const PASSWORD_SETUP_TOKEN_EXPIRY_HOURS = 24; // 24 hours for password reset tokens
 const FORGOT_PASSWORD_TOKEN_EXPIRY_MINUTES = 30; // 30 minutes for forgot password tokens
+const DEFAULT_FIRM_ID = 'PLATFORM'; // Default firmId for SUPER_ADMIN and audit logging
 
 /**
  * Login with xID and password
@@ -92,6 +93,20 @@ const login = async (req, res) => {
       });
     }
     
+    // Defensive validation: Ensure user has firmId (except for SUPER_ADMIN)
+    // Check early to prevent state changes for misconfigured accounts
+    if (user.role !== 'SUPER_ADMIN' && !user.firmId) {
+      console.error('[AUTH] CRITICAL: User resolved without firm context', {
+        xID: user.xID,
+        userId: user._id,
+        role: user.role,
+      });
+      return res.status(500).json({
+        success: false,
+        message: 'User account configuration error. Please contact support.',
+      });
+    }
+    
     // Check if user's firm is suspended (skip for SUPER_ADMIN)
     if (user.role !== 'SUPER_ADMIN' && user.firmId) {
       const Firm = require('../models/Firm.model');
@@ -159,7 +174,7 @@ const login = async (req, res) => {
         try {
           await AuthAudit.create({
             xID: user.xID,
-            firmId: user.firmId || 'PLATFORM',
+            firmId: user.firmId || DEFAULT_FIRM_ID,
             userId: user._id,
             actionType: 'AccountLocked',
             description: `Account locked due to ${MAX_FAILED_ATTEMPTS} failed login attempts`,
@@ -184,7 +199,7 @@ const login = async (req, res) => {
       try {
         await AuthAudit.create({
           xID: user.xID,
-          firmId: user.firmId || 'PLATFORM',
+          firmId: user.firmId || DEFAULT_FIRM_ID,
           userId: user._id,
           actionType: 'LoginFailed',
           description: `Login failed: Invalid password (attempt ${user.failedLoginAttempts})`,
@@ -210,19 +225,6 @@ const login = async (req, res) => {
       await user.save();
     }
     
-    // Defensive validation: Ensure user has firmId (except for SUPER_ADMIN)
-    if (user.role !== 'SUPER_ADMIN' && !user.firmId) {
-      console.error('[AUTH] CRITICAL: User resolved without firm context', {
-        xID: user.xID,
-        userId: user._id,
-        role: user.role,
-      });
-      return res.status(500).json({
-        success: false,
-        message: 'User account configuration error. Please contact support.',
-      });
-    }
-    
     // Check if password has expired (skip if passwordExpiresAt is null)
     const now = new Date();
     if (user.passwordExpiresAt && user.passwordExpiresAt < now) {
@@ -230,7 +232,7 @@ const login = async (req, res) => {
       try {
         await AuthAudit.create({
           xID: user.xID,
-          firmId: user.firmId || 'PLATFORM',
+          firmId: user.firmId || DEFAULT_FIRM_ID,
           userId: user._id,
           actionType: 'PasswordExpired',
           description: `Login attempt with expired password`,
@@ -297,7 +299,7 @@ const login = async (req, res) => {
       try {
         await AuthAudit.create({
           xID: user.xID,
-          firmId: user.firmId || 'PLATFORM',
+          firmId: user.firmId || DEFAULT_FIRM_ID,
           userId: user._id,
           actionType: 'PasswordResetEmailSent',
           description: emailSent 
@@ -316,7 +318,7 @@ const login = async (req, res) => {
     try {
       await AuthAudit.create({
         xID: user.xID || 'SUPERADMIN',
-        firmId: user.firmId || 'PLATFORM',
+        firmId: user.firmId || DEFAULT_FIRM_ID,
         userId: user._id,
         actionType: 'Login',
         description: `User logged in successfully`,
