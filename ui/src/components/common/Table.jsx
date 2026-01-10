@@ -46,7 +46,14 @@ export const TableFooter = ({ children, colSpan }) => {
   return (
     <tfoot>
       <tr>
-        <td colSpan={colSpan} className="px-md py-3 text-sm text-text-body border-t border-border-subtle">
+        <td 
+          colSpan={colSpan} 
+          className="text-sm border-t border-border-subtle"
+          style={{ 
+            padding: '12px var(--spacing-md)', 
+            color: 'var(--text-body)' 
+          }}
+        >
           {children}
         </td>
       </tr>

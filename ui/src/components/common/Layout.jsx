@@ -48,7 +48,7 @@ export const Layout = ({ children }) => {
         .toUpperCase()
         .substring(0, 2);
     }
-    return user?.xID?.substring(0, 2).toUpperCase() || 'U';
+    return user?.xID?.substring(0, 2)?.toUpperCase() || 'U';
   };
 
   // Simple breadcrumbs from pathname
@@ -115,9 +115,13 @@ export const Layout = ({ children }) => {
           <Link to={`/${currentFirmSlug}/profile`} className="enterprise-sidebar__footer-link">
             Settings
           </Link>
-          <a href="#" className="enterprise-sidebar__footer-link">
+          <button 
+            onClick={() => navigate(`/${currentFirmSlug}/help`)}
+            className="enterprise-sidebar__footer-link"
+            style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer' }}
+          >
             Help
-          </a>
+          </button>
         </div>
       </aside>
 
