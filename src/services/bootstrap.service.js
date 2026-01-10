@@ -1,186 +1,43 @@
 /**
  * Bootstrap Service for Docketra
  * 
- * Automatically ensures required system entities exist on startup:
- * 1. Default Firm (FIRM001)
- * 2. Default Client for Firm (represents the firm itself)
- * 3. System Admin (X000001) - assigned to default firm and client
+ * Performs startup validation and integrity checks.
  * 
- * NOTE: SuperAdmin is NOT stored in MongoDB - it exists ONLY in .env
- * SuperAdmin authentication is handled directly via environment variables.
+ * IMPORTANT: This service does NOT auto-create firms or users.
+ * - Firms are created ONLY by SuperAdmin via POST /api/superadmin/firms
+ * - Empty database is a valid and supported state
+ * - SuperAdmin is NOT stored in MongoDB - exists ONLY in .env
  * 
  * Features:
  * - Runs automatically on server startup (after MongoDB connection)
- * - Idempotent - safe to run multiple times
- * - Does NOT overwrite existing entities
- * - Preserves audit trail
- * - No manual MongoDB setup required
+ * - Validates data integrity for existing firms
+ * - Logs warnings for inconsistencies (does not auto-heal)
  * - NEVER crashes the application
  * 
- * Hierarchy enforced:
+ * Hierarchy validated (not enforced through auto-creation):
  * Firm → Default Client (isSystemClient=true) → Admin Users
  */
 
-const User = require('../models/User.model');
-const Client = require('../models/Client.model');
 const Firm = require('../models/Firm.model');
-const bcrypt = require('bcrypt');
-
-const SALT_ROUNDS = 10;
-
-/**
- * Seed System Admin (X000001) and ensure Firm → Default Client → Admin hierarchy
- * 
- * Creates the system admin user if none exists.
- * Checks for existing user with xID = "X000001" OR role = "Admin"
- * 
- * Enforces hierarchy:
- * 1. Create/Get Default Firm (FIRM001)
- * 2. Create/Get Default Client for Firm (C000001, isSystemClient=true)
- * 3. Link Firm.defaultClientId to Default Client
- * 4. Create System Admin with firmId and defaultClientId
- * 
- * System Admin properties:
- * - xID: X000001
- * - name: System Admin
- * - email: admin@system.local
- * - role: Admin
- * - status: ACTIVE
- * - password: Default password (ChangeMe@123) - should be changed after first login
- * - passwordSet: true (allows immediate login)
- * - mustChangePassword: false (allows full system access without forced password change)
- * - passwordExpiresAt: far future (2099)
- * - isActive: true
- * - firmId: Links to FIRM001
- * - defaultClientId: Links to firm's default client
- */
-const seedSystemAdmin = async () => {
-  try {
-    const DEFAULT_PASSWORD = 'ChangeMe@123';
-    
-    // Check if admin already exists (by xID or by role)
-    const existingAdmin = await User.findOne({
-      $or: [
-        { xID: 'X000001' },
-        { role: 'Admin' }
-      ]
-    });
-
-    if (existingAdmin) {
-      console.log('✓ System Admin already exists (xID: ' + existingAdmin.xID + ')');
-      
-      // Check if existing admin has required fields
-      if (!existingAdmin.firmId) {
-        console.warn('⚠️  WARNING: Existing admin missing firmId - data migration needed');
-      }
-      if (!existingAdmin.defaultClientId) {
-        console.warn('⚠️  WARNING: Existing admin missing defaultClientId - data migration needed');
-      }
-      
-      return;
-    }
-    
-    // STEP 1: Get or create default firm (FIRM001)
-    let defaultFirm = await Firm.findOne({ firmId: 'FIRM001' });
-    
-    if (!defaultFirm) {
-      console.log('Creating Default Firm (FIRM001)...');
-      defaultFirm = new Firm({
-        firmId: 'FIRM001',
-        name: 'Default Firm',
-        status: 'ACTIVE',
-      });
-      await defaultFirm.save();
-      console.log('✓ Default Firm created (firmId: FIRM001)');
-    } else {
-      console.log('✓ Default Firm exists (firmId: FIRM001)');
-    }
-    
-    // STEP 2: Get or create default client for firm (C000001)
-    let defaultClient = await Client.findOne({ clientId: 'C000001' });
-    
-    if (!defaultClient) {
-      console.log('Creating Default Client (C000001)...');
-      defaultClient = new Client({
-        clientId: 'C000001',
-        businessName: defaultFirm.name,
-        businessAddress: 'System Default Address',
-        primaryContactNumber: '0000000000',
-        businessEmail: 'default@system.local',
-        firmId: defaultFirm._id, // Link to firm
-        isSystemClient: true,
-        isActive: true,
-        status: 'ACTIVE',
-        createdByXid: 'SYSTEM', // CANONICAL - system-generated identifier
-        createdBy: 'system@system.local', // DEPRECATED - backward compatibility only
-      });
-      await defaultClient.save();
-      console.log('✓ Default Client created (clientId: C000001)');
-    } else {
-      console.log('✓ Default Client exists (clientId: C000001)');
-      
-      // Update client's firmId if not set
-      if (!defaultClient.firmId) {
-        console.log('Updating Default Client with firmId...');
-        defaultClient.firmId = defaultFirm._id;
-        await defaultClient.save();
-        console.log('✓ Default Client updated with firmId');
-      }
-    }
-    
-    // STEP 3: Update firm with defaultClientId if not set
-    if (!defaultFirm.defaultClientId) {
-      console.log('Linking Firm to Default Client...');
-      defaultFirm.defaultClientId = defaultClient._id;
-      await defaultFirm.save();
-      console.log('✓ Firm.defaultClientId set to Default Client');
-    }
-
-    // STEP 4: Hash the default password
-    const passwordHash = await bcrypt.hash(DEFAULT_PASSWORD, SALT_ROUNDS);
-
-    // STEP 5: Create System Admin with proper hierarchy
-    const systemAdmin = new User({
-      xID: 'X000001',
-      name: 'System Admin',
-      email: 'admin@system.local',
-      role: 'Admin',
-      firmId: defaultFirm._id, // Link to firm
-      defaultClientId: defaultClient._id, // Link to firm's default client
-      status: 'ACTIVE',
-      passwordHash,
-      passwordSet: true, // Allow immediate login
-      mustChangePassword: false, // Allow full system access - admin can change password later
-      passwordLastChangedAt: new Date(),
-      passwordExpiresAt: new Date('2099-12-31T23:59:59.999Z'), // Far future date
-      isActive: true,
-    });
-
-    await systemAdmin.save();
-    console.log('✓ System Admin created successfully (xID: X000001)');
-    console.log('  Default Password: ' + DEFAULT_PASSWORD);
-    console.log('  Firm: ' + defaultFirm.firmId);
-    console.log('  Default Client: ' + defaultClient.clientId);
-    console.log('  ⚠️  Please change the default password after first login');
-  } catch (error) {
-    console.error('✗ Error seeding System Admin:', error.message);
-    // Don't throw - log warning but continue bootstrap
-    console.warn('⚠️  Bootstrap will continue despite System Admin creation failure');
-  }
-};
+const Client = require('../models/Client.model');
+const User = require('../models/User.model');
 
 /**
- * Seed Default Client (C000001)
+ * REMOVED: seedSystemAdmin
  * 
- * DEPRECATED: This function is now integrated into seedSystemAdmin
- * to ensure proper Firm → Default Client → Admin hierarchy.
- * Kept for backward compatibility but does nothing.
+ * This function previously auto-created FIRM001, a default client, and system admin.
+ * 
+ * NEW BEHAVIOR:
+ * - Firms are created ONLY by SuperAdmin via POST /api/superadmin/firms
+ * - Empty database is a valid and supported state
+ * - Bootstrap does NOT auto-create any firms or users
  */
-const seedDefaultClient = async () => {
-  // No-op: Default client creation is now handled in seedSystemAdmin
-  // This ensures the proper hierarchy is always maintained
-  console.log('✓ Default Client creation integrated into System Admin bootstrap');
-};
+
+/**
+ * REMOVED: seedDefaultClient
+ * 
+ * This function is no longer needed as firms are created by SuperAdmin only.
+ */
 
 /**
  * Run preflight data validation checks
@@ -192,6 +49,12 @@ const seedDefaultClient = async () => {
  * 
  * Sends ONE email to SuperAdmin if violations exist (rate-limited per process start).
  * Does NOT block startup, only logs warnings.
+ * Does NOT auto-heal or mutate data.
+ * 
+ * EMPTY DATABASE HANDLING:
+ * - If no firms exist, logs informational message (not a warning)
+ * - Empty database is a valid and supported state
+ * - Does NOT send email for empty database
  */
 const runPreflightChecks = async () => {
   try {
@@ -199,6 +62,17 @@ const runPreflightChecks = async () => {
     
     const violations = {};
     let hasViolations = false;
+    
+    // Check if any firms exist
+    const totalFirms = await Firm.countDocuments();
+    
+    if (totalFirms === 0) {
+      console.log('ℹ️  No firms exist yet. This is expected - firms are created by SuperAdmin.');
+      console.log('✓ All preflight checks passed (empty database is valid)');
+      return;
+    }
+    
+    console.log(`ℹ️  Found ${totalFirms} firm(s) in database. Validating integrity...`);
     
     // Check for firms without defaultClientId
     const firmsWithoutDefaultClient = await Firm.find({ 
@@ -303,11 +177,16 @@ const runPreflightChecks = async () => {
  * Run all bootstrap operations
  * 
  * This function is called on server startup after MongoDB connection.
- * It ensures all required system entities exist.
+ * It validates data integrity but does NOT auto-create firms or users.
  * 
- * Order matters:
- * 1. System Admin (creates Firm → Default Client → Admin hierarchy)
- * 2. Preflight checks (validates data consistency and sends email if violations exist)
+ * IMPORTANT CHANGES (This PR):
+ * - Does NOT seed System Admin
+ * - Does NOT create FIRM001
+ * - Empty database is a valid and supported state
+ * - Firms are created ONLY by SuperAdmin via POST /api/superadmin/firms
+ * 
+ * Operations:
+ * 1. Preflight checks (validates data consistency for existing firms)
  * 
  * NOTE: SuperAdmin is NOT seeded in MongoDB - it exists ONLY in .env
  * 
@@ -319,12 +198,10 @@ const runBootstrap = async () => {
     console.log('║  Running Bootstrap Checks...               ║');
     console.log('╚════════════════════════════════════════════╝\n');
 
-    // Seed System Admin (includes Firm and Default Client creation)
-    // This creates the default firm hierarchy if none exists
-    await seedSystemAdmin();
-
     // Run preflight data validation checks
-    // Sends email to SuperAdmin if violations are found
+    // Validates existing firms for integrity violations
+    // Does NOT auto-create firms or auto-heal data
+    // Supports empty database (no firms) as a valid state
     await runPreflightChecks();
 
     console.log('\n✓ Bootstrap completed successfully\n');
@@ -339,6 +216,4 @@ const runBootstrap = async () => {
 
 module.exports = {
   runBootstrap,
-  seedSystemAdmin,
-  seedDefaultClient,
 };
