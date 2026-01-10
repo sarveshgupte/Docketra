@@ -13,7 +13,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
@@ -30,6 +30,7 @@ export const DashboardPage = () => {
   const { user } = useAuth();
   const { isAdmin } = usePermissions();
   const navigate = useNavigate();
+  const { firmSlug } = useParams();
   
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -161,76 +162,36 @@ export const DashboardPage = () => {
   };
 
   const handleCaseClick = (caseId) => {
-    const firmSlug = user?.firmSlug;
-    if (firmSlug) {
-      navigate(`/${firmSlug}/cases/${caseId}`);
-    } else {
-      navigate(`/cases/${caseId}`);
-    }
+    navigate(`/${firmSlug}/cases/${caseId}`);
   };
   
   // Navigation handlers for KPI cards
   const handleMyOpenCasesClick = () => {
-    const firmSlug = user?.firmSlug;
-    if (firmSlug) {
-      navigate(`/${firmSlug}/my-worklist?status=OPEN`);
-    } else {
-      navigate('/my-worklist?status=OPEN');
-    }
+    navigate(`/${firmSlug}/my-worklist?status=OPEN`);
   };
   
   const handleMyPendingCasesClick = () => {
-    const firmSlug = user?.firmSlug;
-    if (firmSlug) {
-      navigate(`/${firmSlug}/my-worklist?status=PENDED`);
-    } else {
-      navigate('/my-worklist?status=PENDED');
-    }
+    navigate(`/${firmSlug}/my-worklist?status=PENDED`);
   };
   
   const handleMyResolvedCasesClick = () => {
-    const firmSlug = user?.firmSlug;
-    if (firmSlug) {
-      navigate(`/${firmSlug}/my-worklist?status=RESOLVED`);
-    } else {
-      navigate('/my-worklist?status=RESOLVED');
-    }
+    navigate(`/${firmSlug}/my-worklist?status=RESOLVED`);
   };
   
   const handleMyUnassignedCreatedCasesClick = () => {
-    const firmSlug = user?.firmSlug;
-    if (firmSlug) {
-      navigate(`/${firmSlug}/worklists/global?createdBy=me&status=UNASSIGNED`);
-    } else {
-      navigate('/worklists/global?createdBy=me&status=UNASSIGNED');
-    }
+    navigate(`/${firmSlug}/worklists/global?createdBy=me&status=UNASSIGNED`);
   };
   
   const handlePendingApprovalsClick = () => {
-    const firmSlug = user?.firmSlug;
-    if (firmSlug) {
-      navigate(`/${firmSlug}/cases?approvalStatus=PENDING`);
-    } else {
-      navigate('/cases?approvalStatus=PENDING');
-    }
+    navigate(`/${firmSlug}/cases?approvalStatus=PENDING`);
   };
   
   const handleFiledCasesClick = () => {
-    const firmSlug = user?.firmSlug;
-    if (firmSlug) {
-      navigate(`/${firmSlug}/cases?status=FILED`);
-    } else {
-      navigate('/cases?status=FILED');
-    }
+    navigate(`/${firmSlug}/cases?status=FILED`);
   };
   
   const handleAdminResolvedCasesClick = () => {
-    const firmSlug = user?.firmSlug;
-    if (firmSlug) {
-      navigate(`/${firmSlug}/cases?status=RESOLVED`);
-    } else {
-      navigate('/cases?status=RESOLVED');
-    }
+    navigate(`/${firmSlug}/cases?status=RESOLVED`);
   };
 
   if (loading) {

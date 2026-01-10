@@ -353,10 +353,7 @@ export const WorkbasketPage = () => {
                           <Button
                             variant="default"
                             size="small"
-                            onClick={() => {
-                              const slug = firmSlug || user?.firmSlug;
-                              navigate(slug ? `/${slug}/cases/${caseItem.caseId}` : `/cases/${caseItem.caseId}`);
-                            }}
+                            onClick={() => navigate(`/${firmSlug}/cases/${caseItem.caseId}`)}
                           >
                             View
                           </Button>

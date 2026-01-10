@@ -112,8 +112,7 @@ export const DetailedReports = () => {
   };
 
   const handleCaseClick = (caseId) => {
-    const slug = firmSlug || user?.firmSlug;
-    navigate(slug ? `/${slug}/cases/${caseId}` : `/cases/${caseId}`);
+    navigate(`/${firmSlug}/cases/${caseId}`);
   };
 
   const handleExport = (type) => {

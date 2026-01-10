@@ -1,6 +1,7 @@
 /**
  * Firm Layout Component
  * Wrapper for all firm-scoped routes
+ * Validates firm context and prevents cross-firm access
  */
 
 import React, { useEffect } from 'react';
@@ -29,6 +30,7 @@ export const FirmLayout = () => {
   }
 
   // Validate that user's firmSlug matches URL firmSlug
+  // This is the ONLY place where firm validation happens
   if (user?.firmSlug && user.firmSlug !== firmSlug) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center' }}>
