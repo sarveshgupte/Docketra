@@ -86,6 +86,7 @@ const {
   fileCase,
   getMyPendingCases,
   getMyResolvedCases,
+  getMyUnassignedCreatedCases,
   triggerAutoReopen,
 } = require('../controllers/caseActions.controller');
 
@@ -96,6 +97,11 @@ router.get('/my-pending', applyClientAccessFilter, getMyPendingCases);
 // GET /api/cases/my-resolved - Get my resolved cases
 // IMPORTANT: Must come BEFORE /:caseId routes to avoid matching "my-resolved" as a caseId
 router.get('/my-resolved', applyClientAccessFilter, getMyResolvedCases);
+
+// GET /api/cases/my-unassigned-created - Get unassigned cases created by me
+// IMPORTANT: Must come BEFORE /:caseId routes to avoid matching as a caseId
+// PR: Fix Case Visibility - New endpoint for dashboard accuracy
+router.get('/my-unassigned-created', applyClientAccessFilter, getMyUnassignedCreatedCases);
 
 // POST /api/cases/auto-reopen-pended - Trigger auto-reopen for pended cases (Admin/System)
 router.post('/auto-reopen-pended', triggerAutoReopen);
