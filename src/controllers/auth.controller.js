@@ -39,7 +39,7 @@ const login = async (req, res) => {
     // xID and password are required
     if (!normalizedXID || !password) {
       console.warn('[AUTH] Missing credentials in login attempt', {
-        hasXID: !!normalizedXID,
+        hasXID: !!(xID || XID),
         hasPassword: !!password,
         ip: req.ip,
       });

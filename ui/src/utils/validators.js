@@ -14,14 +14,16 @@ export const validateXID = (xid) => {
     return false;
   }
   
+  const trimmedXID = xid.trim();
+  
   // Reject email format
-  if (xid.includes('@')) {
+  if (trimmedXID.includes('@')) {
     return false;
   }
   
   // Basic xID format validation (case-insensitive)
   const xidRegex = /^[xX]\d{6}$/;
-  return xidRegex.test(xid.trim());
+  return xidRegex.test(trimmedXID);
 };
 
 export const validatePassword = (password) => {
