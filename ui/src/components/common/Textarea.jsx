@@ -1,5 +1,5 @@
 /**
- * Textarea Component
+ * Enterprise Textarea Component
  */
 
 import React from 'react';
@@ -7,27 +7,32 @@ import React from 'react';
 export const Textarea = ({
   label,
   error,
+  helpText,
   disabled = false,
   readOnly = false,
   required = false,
   className = '',
+  rows = 4,
   ...props
 }) => {
   return (
-    <div className={`neo-form-group ${className}`}>
+    <div className={`form-group ${className}`}>
       {label && (
-        <label className="neo-form-label">
+        <label className="form-label">
           {label}
-          {required && <span style={{ color: 'var(--accent-danger)' }}> *</span>}
+          {required && <span className="text-danger"> *</span>}
         </label>
       )}
       <textarea
-        className="neo-textarea"
+        className={`input ${error ? 'input-error' : ''}`}
         disabled={disabled}
         readOnly={readOnly}
+        rows={rows}
+        style={{ minHeight: '100px', resize: 'vertical' }}
         {...props}
       />
-      {error && <div className="neo-form-error">{error}</div>}
+      {error && <div className="form-error">{error}</div>}
+      {!error && helpText && <div className="form-help">{helpText}</div>}
     </div>
   );
 };

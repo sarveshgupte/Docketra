@@ -1,0 +1,217 @@
+/**
+ * Main Styles Entry Point
+ * Docketra Enterprise UI
+ */
+
+/* Tailwind CSS */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Enterprise Design Tokens */
+@import './tokens.css';
+
+/* Import Inter font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+/* Base Layer Customizations */
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  
+  html {
+    font-size: 14px;
+  }
+  
+  body {
+    @apply bg-surface-base text-text-main font-sans;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  #root {
+    min-height: 100vh;
+  }
+  
+  h1 {
+    @apply text-xl font-semibold text-text-main;
+    line-height: 1.2;
+  }
+  
+  h2 {
+    @apply text-lg font-medium text-text-main;
+    line-height: 1.2;
+  }
+  
+  a {
+    @apply text-info no-underline transition-colors duration-150;
+  }
+  
+  a:hover {
+    opacity: 0.8;
+  }
+  
+  button {
+    font-family: inherit;
+  }
+  
+  input,
+  textarea,
+  select {
+    font-family: inherit;
+  }
+}
+
+/* Component Layer - Enterprise Components */
+@layer components {
+  /* Enterprise Button Styles */
+  .btn {
+    @apply inline-flex items-center justify-center px-md py-sm rounded-md font-medium transition-all duration-150;
+    @apply min-h-button min-w-button;
+    @apply focus:outline-none focus:ring-2 focus:ring-info focus:ring-offset-2;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .btn-primary {
+    @apply bg-primary-600 text-white hover:bg-primary-500;
+  }
+  
+  .btn-secondary {
+    @apply bg-white text-primary-600 border border-border-strong hover:bg-surface-base;
+  }
+  
+  .btn-danger {
+    @apply bg-danger text-white hover:opacity-90;
+  }
+  
+  /* Enterprise Input Styles */
+  .input {
+    @apply w-full px-3 py-2 rounded-md border border-border-subtle;
+    @apply bg-white text-text-main placeholder-text-muted;
+    @apply focus:outline-none focus:ring-2 focus:ring-info focus:border-transparent;
+    @apply disabled:bg-surface-base disabled:cursor-not-allowed disabled:opacity-70;
+    min-height: 40px;
+  }
+  
+  .input-error {
+    @apply border-danger focus:ring-danger;
+  }
+  
+  /* Enterprise Card Styles */
+  .card {
+    @apply bg-white rounded-lg border border-border-subtle p-md;
+  }
+  
+  .card-header {
+    @apply flex items-center justify-between mb-md pb-md border-b border-border-subtle;
+  }
+  
+  .card-title {
+    @apply text-lg font-medium text-text-main;
+  }
+  
+  /* Enterprise Badge Styles */
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-xl text-xs font-medium;
+  }
+  
+  .badge-success {
+    @apply bg-green-50 text-success;
+  }
+  
+  .badge-warning {
+    @apply bg-orange-50 text-warning;
+  }
+  
+  .badge-danger {
+    @apply bg-red-50 text-danger;
+  }
+  
+  .badge-info {
+    @apply bg-blue-50 text-info;
+  }
+  
+  .badge-neutral {
+    @apply bg-gray-100 text-text-body;
+  }
+  
+  /* Enterprise Table Styles */
+  .table-container {
+    @apply bg-white rounded-lg border border-border-subtle overflow-hidden;
+  }
+  
+  .table {
+    @apply w-full border-collapse;
+  }
+  
+  .table thead {
+    @apply bg-surface-base;
+  }
+  
+  .table th {
+    @apply text-left px-md py-3 text-xs font-semibold text-text-main uppercase tracking-wide;
+  }
+  
+  .table td {
+    @apply px-md py-3 text-sm text-text-body border-t border-border-subtle;
+  }
+  
+  .table tbody tr:hover {
+    @apply bg-surface-base;
+  }
+  
+  .table tbody tr:nth-child(even) {
+    background-color: rgba(248, 250, 252, 0.4);
+  }
+  
+  /* Form Groups */
+  .form-group {
+    @apply mb-md;
+  }
+  
+  .form-label {
+    @apply block text-sm font-medium text-text-main mb-1;
+  }
+  
+  .form-error {
+    @apply text-danger text-xs mt-1;
+  }
+  
+  .form-help {
+    @apply text-text-muted text-xs mt-1;
+  }
+}
+
+/* Utility Layer */
+@layer utilities {
+  .text-main {
+    color: var(--text-main);
+  }
+  
+  .text-body {
+    color: var(--text-body);
+  }
+  
+  .text-muted {
+    color: var(--text-muted);
+  }
+  
+  .bg-surface-base {
+    background-color: var(--surface-base);
+  }
+  
+  .bg-surface-card {
+    background-color: var(--surface-card);
+  }
+  
+  .border-subtle {
+    border-color: var(--border-subtle);
+  }
+  
+  .border-strong {
+    border-color: var(--border-strong);
+  }
+}
