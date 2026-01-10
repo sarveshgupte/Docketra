@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth.middleware');
 const { requireSuperadmin } = require('../middleware/permission.middleware');
+const { authorize } = require('../middleware/authorize');
+const SuperAdminPolicy = require('../policies/superadmin.policy');
+const FirmPolicy = require('../policies/firm.policy');
 const {
   createFirm,
   listFirms,
@@ -28,14 +31,14 @@ const {
  */
 
 // Platform statistics
-router.get('/stats', authenticate, requireSuperadmin, getPlatformStats);
+router.get('/stats', authenticate, authorize(SuperAdminPolicy.canViewPlatformStats), getPlatformStats);
 
 // Firm management
-router.post('/firms', authenticate, requireSuperadmin, createFirm);
-router.get('/firms', authenticate, requireSuperadmin, listFirms);
-router.patch('/firms/:id', authenticate, requireSuperadmin, updateFirmStatus);
+router.post('/firms', authenticate, authorize(FirmPolicy.canCreate), createFirm);
+router.get('/firms', authenticate, authorize(FirmPolicy.canView), listFirms);
+router.patch('/firms/:id', authenticate, authorize(FirmPolicy.canManageStatus), updateFirmStatus);
 
 // Firm admin creation
-router.post('/firms/:firmId/admin', authenticate, requireSuperadmin, createFirmAdmin);
+router.post('/firms/:firmId/admin', authenticate, authorize(FirmPolicy.canCreateAdmin), createFirmAdmin);
 
 module.exports = router;
