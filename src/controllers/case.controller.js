@@ -234,7 +234,15 @@ const createCase = async (req, res) => {
     }
     
     // Get firmId from authenticated user (PR 1: Multi-tenancy from auth context)
-    const firmId = req.user.firmId || 'FIRM001'; // Default to FIRM001 for single-tenant deployments
+    // firmId is required - user must be assigned to a firm
+    const firmId = req.user.firmId;
+    
+    if (!firmId) {
+      return res.status(403).json({
+        success: false,
+        message: 'User must be assigned to a firm to create cases',
+      });
+    }
     
     // Create new case with defaults
     const newCase = new Case({
