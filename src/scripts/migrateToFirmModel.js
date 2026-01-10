@@ -61,10 +61,7 @@ async function runMigration() {
         // Update using updateOne to bypass immutability for migration
         await User.updateOne(
           { _id: user._id },
-          { 
-            $set: { firmId: defaultFirm._id },
-            $unset: { restrictedClientIds: '' }, // Initialize if doesn't exist
-          }
+          { $set: { firmId: defaultFirm._id } }
         );
         
         // Add restrictedClientIds if it doesn't exist

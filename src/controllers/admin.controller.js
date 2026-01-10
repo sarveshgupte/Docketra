@@ -487,6 +487,9 @@ const updateRestrictedClients = async (req, res) => {
       });
     }
     
+    // Capture previous value before update for accurate audit (after validation)
+    const previousRestrictedClientIds = user.restrictedClientIds || [];
+    
     // Update restricted clients list
     user.restrictedClientIds = restrictedClientIds;
     await user.save();
@@ -497,8 +500,9 @@ const updateRestrictedClients = async (req, res) => {
       actionType: 'USER_CLIENT_ACCESS_UPDATED',
       targetXID: user.xID,
       metadata: {
+        previousClientIds: previousRestrictedClientIds,
         restrictedClientIds,
-        previousCount: user.restrictedClientIds?.length || 0,
+        previousCount: previousRestrictedClientIds.length,
         newCount: restrictedClientIds.length,
       },
     });
