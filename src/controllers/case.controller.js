@@ -12,6 +12,7 @@ const { isProduction } = require('../config/config');
 const { logCaseListViewed, logAdminAction } = require('../services/auditLog.service');
 const caseActionService = require('../services/caseAction.service');
 const { getMimeType, sanitizeFilename } = require('../utils/fileUtils');
+const { resolveCaseIdentifier, resolveCaseDocument } = require('../utils/caseIdentifier');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -350,6 +351,7 @@ const createCase = async (req, res) => {
  * POST /api/cases/:caseId/comments
  * PR #41: Allow comments in view mode (no assignment check)
  * PR #45: Add CaseAudit logging with xID attribution
+ * PR: Case Identifier Semantics - Uses internal ID resolution
  */
 const addComment = async (req, res) => {
   try {
@@ -379,9 +381,17 @@ const addComment = async (req, res) => {
       });
     }
     
-    // Check if case exists - with firmId scoping
-    const query = buildCaseQuery(req, caseId);
-    const caseData = await Case.findOne(query);
+    // PR: Case Identifier Semantics - Resolve identifier to internal ID
+    // This handles both ObjectId and CASE-YYYYMMDD-XXXXX formats
+    try {
+      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId);
+      var caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId);
+    } catch (error) {
+      return res.status(404).json({
+        success: false,
+        message: 'Case not found',
+      });
+    }
     
     if (!caseData) {
       return res.status(404).json({
@@ -400,9 +410,9 @@ const addComment = async (req, res) => {
       });
     }
     
-    // Create comment
+    // Create comment - use caseId from database (caseNumber for display)
     const comment = await Comment.create({
-      caseId,
+      caseId: caseData.caseId,
       text,
       createdBy: createdBy.toLowerCase(),
       createdByXID: req.user.xID,
@@ -414,7 +424,7 @@ const addComment = async (req, res) => {
     // Sanitize comment text for logging to prevent log injection
     const sanitizedText = sanitizeForLog(text, COMMENT_PREVIEW_LENGTH);
     await CaseAudit.create({
-      caseId,
+      caseId: caseData.caseId,
       actionType: 'CASE_COMMENT_ADDED',
       description: `Comment added by ${req.user.xID}: ${sanitizedText}${text.length > COMMENT_PREVIEW_LENGTH ? '...' : ''}`,
       performedByXID: req.user.xID,
@@ -426,7 +436,7 @@ const addComment = async (req, res) => {
     
     // Also add to CaseHistory for backward compatibility
     await CaseHistory.create({
-      caseId,
+      caseId: caseData.caseId,
       actionType: 'CASE_COMMENT_ADDED',
       description: `Comment added by ${req.user.email}: ${text.substring(0, COMMENT_PREVIEW_LENGTH)}${text.length > COMMENT_PREVIEW_LENGTH ? '...' : ''}`,
       performedBy: req.user.email.toLowerCase(),
@@ -453,6 +463,7 @@ const addComment = async (req, res) => {
  * Uses multer middleware for file upload
  * PR #41: Allow attachments in view mode (no assignment check)
  * PR #45: Add CaseAudit logging with xID attribution
+ * PR: Case Identifier Semantics - Uses internal ID resolution
  */
 const addAttachment = async (req, res) => {
   try {
@@ -490,8 +501,16 @@ const addAttachment = async (req, res) => {
       });
     }
     
-    // Check if case exists - with firm scoping
-    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
+    // PR: Case Identifier Semantics - Resolve identifier to internal ID
+    try {
+      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId);
+      var caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId);
+    } catch (error) {
+      return res.status(404).json({
+        success: false,
+        message: 'Case not found',
+      });
+    }
     
     if (!caseData) {
       return res.status(404).json({
@@ -510,9 +529,9 @@ const addAttachment = async (req, res) => {
       });
     }
     
-    // Create attachment record
+    // Create attachment record - use caseId from database (caseNumber for display)
     const attachment = await Attachment.create({
-      caseId,
+      caseId: caseData.caseId,
       fileName: req.file.originalname,
       filePath: req.file.path,
       description,
@@ -526,7 +545,7 @@ const addAttachment = async (req, res) => {
     // Sanitize filename for logging to prevent log injection
     const sanitizedFilename = sanitizeForLog(req.file.originalname, 100);
     await CaseAudit.create({
-      caseId,
+      caseId: caseData.caseId,
       actionType: 'CASE_FILE_ATTACHED',
       description: `File attached by ${req.user.xID}: ${sanitizedFilename}`,
       performedByXID: req.user.xID,
@@ -540,7 +559,7 @@ const addAttachment = async (req, res) => {
     
     // Also add to CaseHistory for backward compatibility
     await CaseHistory.create({
-      caseId,
+      caseId: caseData.caseId,
       actionType: 'CASE_ATTACHMENT_ADDED',
       description: `Attachment uploaded by ${req.user.email}: ${sanitizedFilename}`,
       performedBy: req.user.email.toLowerCase(),
