@@ -111,6 +111,59 @@ const caseHistorySchema = new mongoose.Schema({
   },
   
   /**
+   * Role of the actor performing the action
+   * 
+   * PR: Comprehensive CaseHistory & Audit Trail
+   * Tracks the role for compliance and audit purposes
+   */
+  actorRole: {
+    type: String,
+    enum: ['SUPER_ADMIN', 'ADMIN', 'USER', 'SYSTEM'],
+    default: 'USER',
+  },
+  
+  /**
+   * Human-readable label for the action
+   * 
+   * PR: Comprehensive CaseHistory & Audit Trail
+   * Provides a user-friendly summary of what happened
+   */
+  actionLabel: {
+    type: String,
+  },
+  
+  /**
+   * Structured metadata about the action
+   * 
+   * PR: Comprehensive CaseHistory & Audit Trail
+   * JSON-safe details about the action (must not contain sensitive data)
+   */
+  metadata: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {},
+  },
+  
+  /**
+   * IP address of the actor
+   * 
+   * PR: Comprehensive CaseHistory & Audit Trail
+   * Captures IP for forensic and security purposes
+   */
+  ipAddress: {
+    type: String,
+  },
+  
+  /**
+   * User agent string of the actor
+   * 
+   * PR: Comprehensive CaseHistory & Audit Trail
+   * Captures browser/client information for audit trail
+   */
+  userAgent: {
+    type: String,
+  },
+  
+  /**
    * When the action occurred
    * Immutable to prevent tampering with audit timeline
    * Auto-set to current time, but can be overridden if needed
@@ -180,12 +233,16 @@ caseHistorySchema.pre('findOneAndDelete', function(next) {
  * - performedByXID: Secondary index for user activity tracking (xID-based, canonical)
  *   Used for queries like "show all actions by user X"
  * - firmId: Multi-tenancy queries
+ * - actionType: For filtering by specific action types (PR: Audit Trail)
+ * - actorRole: For role-based audit queries (PR: Audit Trail)
  */
 caseHistorySchema.index({ caseId: 1, timestamp: -1 });
 caseHistorySchema.index({ performedBy: 1 }); // Legacy
 caseHistorySchema.index({ performedByXID: 1 }); // Canonical
 caseHistorySchema.index({ firmId: 1, timestamp: -1 }); // Firm-scoped audit queries
 caseHistorySchema.index({ firmId: 1, caseId: 1 }); // Firm-scoped case history
+caseHistorySchema.index({ actionType: 1 }); // Action type filtering
+caseHistorySchema.index({ actorRole: 1 }); // Role-based queries
 
 /**
  * Export the CaseHistory model

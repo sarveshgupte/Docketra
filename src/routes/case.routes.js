@@ -100,6 +100,27 @@ router.get('/my-resolved', applyClientAccessFilter, getMyResolvedCases);
 // POST /api/cases/auto-reopen-pended - Trigger auto-reopen for pended cases (Admin/System)
 router.post('/auto-reopen-pended', triggerAutoReopen);
 
+// Case tracking routes - PR: Comprehensive CaseHistory & Audit Trail
+// IMPORTANT: Must come BEFORE /:caseId routes to avoid matching as caseId
+const {
+  trackCaseOpen,
+  trackCaseView,
+  trackCaseExit,
+  getCaseHistory,
+} = require('../controllers/caseTracking.controller');
+
+// POST /api/cases/:caseId/track-open - Track case opened
+router.post('/:caseId/track-open', checkCaseClientAccess, trackCaseOpen);
+
+// POST /api/cases/:caseId/track-view - Track case viewed
+router.post('/:caseId/track-view', checkCaseClientAccess, trackCaseView);
+
+// POST /api/cases/:caseId/track-exit - Track case exited
+router.post('/:caseId/track-exit', checkCaseClientAccess, trackCaseExit);
+
+// GET /api/cases/:caseId/history - Get case audit history
+router.get('/:caseId/history', checkCaseClientAccess, getCaseHistory);
+
 // GET /api/cases/:caseId - Get case by caseId with comments, attachments, and history
 // Check if user can access this case's client
 router.get('/:caseId', checkCaseClientAccess, getCaseByCaseId);
