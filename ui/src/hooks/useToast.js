@@ -27,5 +27,7 @@ export const useToast = () => {
     showError: context.showError,
     showWarning: context.showWarning,
     showInfo: context.showInfo,
+    success: context.showSuccess,
+    error: context.showError,
   };
 };
