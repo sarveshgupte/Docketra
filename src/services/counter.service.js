@@ -47,7 +47,10 @@ async function getNextSequence(name, firmId) {
     // Atomic increment operation
     // $inc: { seq: 1 } - atomically increments the sequence by 1
     // upsert: true - creates counter with seq: 1 if it doesn't exist
+    //                (MongoDB's $inc with upsert initializes at 0, then increments to 1)
     // new: true - returns the document after update (with incremented value)
+    // 
+    // NOTE: First sequence will be 1 (not 0) due to $inc behavior with upsert
     const counter = await Counter.findOneAndUpdate(
       { name, firmId },
       { $inc: { seq: 1 } },
