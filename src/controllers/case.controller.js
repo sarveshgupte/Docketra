@@ -883,15 +883,24 @@ const updateCaseStatus = async (req, res) => {
  * PR #44: Runtime assertion for xID context
  * PR #45: Enhanced audit logging with CaseAudit and view mode detection
  * PR: Fix Case Visibility - Added authorization logic (Admin/Creator/Assignee)
+ * PR: Case Identifier Semantics - Uses internal ID resolution
  */
 const getCaseByCaseId = async (req, res) => {
   try {
     const { caseId } = req.params;
     
-    // Step 1: Fetch case without assignment restriction
-    // Only check firmId scoping for multi-tenancy (if user has firmId)
-    const query = buildCaseQuery(req, caseId);
-    const caseData = await Case.findOne(query);
+    // PR: Case Identifier Semantics - Resolve identifier to internal ID
+    // This handles both ObjectId and CASE-YYYYMMDD-XXXXX formats
+    let caseData;
+    try {
+      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId);
+      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId);
+    } catch (error) {
+      return res.status(404).json({
+        success: false,
+        message: 'Case not found',
+      });
+    }
     
     if (!caseData) {
       return res.status(404).json({
@@ -913,15 +922,16 @@ const getCaseByCaseId = async (req, res) => {
       });
     }
     
-    // Get related data
-    const comments = await Comment.find({ caseId }).sort({ createdAt: 1 });
-    const attachments = await Attachment.find({ caseId }).sort({ createdAt: 1 });
-    const history = await CaseHistory.find({ caseId }).sort({ timestamp: -1 });
+    // Get related data - use caseId from database (display number)
+    const displayCaseId = caseData.caseId;
+    const comments = await Comment.find({ caseId: displayCaseId }).sort({ createdAt: 1 });
+    const attachments = await Attachment.find({ caseId: displayCaseId }).sort({ createdAt: 1 });
+    const history = await CaseHistory.find({ caseId: displayCaseId }).sort({ timestamp: -1 });
     
     // PR #45: Also fetch CaseAudit entries for view-mode tracking
     // Use aggregation to lookup user names from performedByXID
     const auditLog = await CaseAudit.aggregate([
-      { $match: { caseId } },
+      { $match: { caseId: displayCaseId } },
       { $sort: { timestamp: -1 } },
       { $limit: 50 },
       {
@@ -960,7 +970,7 @@ const getCaseByCaseId = async (req, res) => {
     // PR #44: Runtime assertion - warn if xID is missing from auth context
     if (!req.user.xID && !isProduction()) {
       console.warn(`[xID Guardrail] Case accessed without xID in auth context`);
-      console.warn(`[xID Guardrail] Case: ${caseId}, User email: ${req.user.email}`);
+      console.warn(`[xID Guardrail] Case: ${displayCaseId}, User email: ${req.user.email}`);
       console.warn(`[xID Guardrail] This should not happen - auth middleware should always provide xID`);
     }
     
@@ -971,7 +981,7 @@ const getCaseByCaseId = async (req, res) => {
     
     // PR #45: Add CaseAudit entry with xID attribution
     await CaseAudit.create({
-      caseId,
+      caseId: displayCaseId,
       actionType: 'CASE_VIEWED',
       description: `Case viewed by ${req.user.xID}${isViewOnlyMode ? ' (view-only mode)' : ' (assigned mode)'}`,
       performedByXID: req.user.xID,
@@ -984,7 +994,7 @@ const getCaseByCaseId = async (req, res) => {
     
     // Also add to CaseHistory for backward compatibility
     await CaseHistory.create({
-      caseId,
+      caseId: displayCaseId,
       actionType: 'CASE_VIEWED',
       description: `Case viewed by ${req.user.email}`,
       performedBy: req.user.email.toLowerCase(),
