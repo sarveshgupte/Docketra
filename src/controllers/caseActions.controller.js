@@ -399,11 +399,86 @@ const triggerAutoReopen = async (req, res) => {
   }
 };
 
+/**
+ * Get unassigned cases created by current user
+ * GET /api/cases/my-unassigned-created
+ * 
+ * Returns all cases that:
+ * - Were created by current user (createdByXID = userXID)
+ * - Have status = UNASSIGNED
+ * - Are still in the global worklist (not yet assigned)
+ * 
+ * This is the "Cases Created by Me (Unassigned)" dashboard query.
+ * PR: Fix Case Visibility - New endpoint for dashboard accuracy
+ * 
+ * @param {object} req - Express request
+ * @param {object} res - Express response
+ */
+const getMyUnassignedCreatedCases = async (req, res) => {
+  try {
+    // Validate user authentication
+    if (!req.user || !req.user.xID) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+      });
+    }
+    
+    // CANONICAL QUERY for "Cases Created by Me (Unassigned)"
+    // Cases that were created by this user and are still unassigned
+    const query = {
+      status: CASE_STATUS.UNASSIGNED,
+      createdByXID: req.user.xID,
+    };
+    
+    // Apply client access filter from middleware (restrictedClientIds)
+    if (req.clientAccessFilter) {
+      Object.assign(query, req.clientAccessFilter);
+    }
+    
+    const cases = await Case.find(query)
+      .select('caseId caseName category createdAt updatedAt status clientId clientName slaDueDate')
+      .sort({ createdAt: -1 }) // Sort by creation date (most recent first)
+      .lean();
+    
+    // Log case list view for audit
+    await logCaseListViewed({
+      viewerXID: req.user.xID,
+      filters: { status: CASE_STATUS.UNASSIGNED, createdByXID: req.user.xID },
+      listType: 'MY_UNASSIGNED_CREATED_CASES',
+      resultCount: cases.length,
+    });
+    
+    res.json({
+      success: true,
+      data: cases.map(c => ({
+        _id: c._id,
+        caseId: c.caseId,
+        caseName: c.caseName,
+        category: c.category,
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
+        status: c.status,
+        clientId: c.clientId || null,
+        clientName: c.clientName,
+        slaDueDate: c.slaDueDate,
+      })),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching unassigned created cases',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   resolveCase,
   pendCase,
   fileCase,
   getMyPendingCases,
   getMyResolvedCases,
+  getMyUnassignedCreatedCases,
   triggerAutoReopen,
 };

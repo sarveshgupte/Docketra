@@ -8,13 +8,41 @@ const CaseHistory = require('../models/CaseHistory.model');
  * 
  * PR: Comprehensive CaseHistory & Audit Trail
  * Handles tracking of case views, opens, and exits for audit purposes
+ * PR: Fix Case Visibility - Added authorization checks to tracking endpoints
  */
+
+/**
+ * Check if user has access to a case
+ * PR: Fix Case Visibility - Unified access control logic
+ * 
+ * Returns true if user can access the case:
+ * - Admin or SuperAdmin: Can access any case in their firm
+ * - Creator: Can access cases they created
+ * - Assignee: Can access cases assigned to them
+ * 
+ * @param {Object} caseData - Case document from database
+ * @param {Object} user - Authenticated user from req.user
+ * @returns {boolean} - True if user has access, false otherwise
+ */
+const checkCaseAccess = (caseData, user) => {
+  if (!caseData || !user) {
+    return false;
+  }
+  
+  const isAdmin = user.role === 'Admin';
+  const isSuperAdmin = user.role === 'SUPER_ADMIN';
+  const isCreator = caseData.createdByXID === user.xID;
+  const isAssignee = caseData.assignedToXID === user.xID;
+  
+  return isAdmin || isSuperAdmin || isCreator || isAssignee;
+};
 
 /**
  * Track case opened
  * POST /api/cases/:caseId/track-open
  * 
  * Logs when a user opens a case detail page
+ * PR: Fix Case Visibility - Added authorization check
  */
 const trackCaseOpen = async (req, res) => {
   try {
@@ -34,6 +62,15 @@ const trackCaseOpen = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Case not found',
+      });
+    }
+    
+    // Check authorization - user must have access to track
+    if (!checkCaseAccess(caseData, user)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: You do not have permission to access this case',
+        code: 'CASE_ACCESS_DENIED',
       });
     }
     
@@ -80,6 +117,7 @@ const trackCaseOpen = async (req, res) => {
  * POST /api/cases/:caseId/track-view
  * 
  * Logs when a user actively views a case (debounced, once per session)
+ * PR: Fix Case Visibility - Added authorization check
  */
 const trackCaseView = async (req, res) => {
   try {
@@ -99,6 +137,15 @@ const trackCaseView = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Case not found',
+      });
+    }
+    
+    // Check authorization - user must have access to track
+    if (!checkCaseAccess(caseData, user)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: You do not have permission to access this case',
+        code: 'CASE_ACCESS_DENIED',
       });
     }
     
@@ -145,6 +192,7 @@ const trackCaseView = async (req, res) => {
  * POST /api/cases/:caseId/track-exit
  * 
  * Logs when a user exits/closes a case detail page
+ * PR: Fix Case Visibility - Added authorization check (lenient for deleted cases)
  */
 const trackCaseExit = async (req, res) => {
   try {
@@ -159,10 +207,19 @@ const trackCaseExit = async (req, res) => {
     }
     
     // Verify case exists (lighter check, don't fail if case not found during exit)
-    const caseData = await Case.findOne({ caseId }).select('caseId firmId');
+    const caseData = await Case.findOne({ caseId }).select('caseId firmId createdByXID assignedToXID');
     if (!caseData) {
       // Case might have been deleted, but still log the exit attempt
       console.warn(`[TRACKING] Case ${caseId} not found during exit tracking`);
+    } else {
+      // Check authorization if case exists
+      if (!checkCaseAccess(caseData, user)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: You do not have permission to access this case',
+          code: 'CASE_ACCESS_DENIED',
+        });
+      }
     }
     
     // Log to CaseHistory (async, non-blocking)
@@ -209,6 +266,7 @@ const trackCaseExit = async (req, res) => {
  * 
  * Returns chronological audit trail for a case
  * Role-based access: Admin (full), User (read-only)
+ * PR: Fix Case Visibility - Added authorization check
  */
 const getCaseHistory = async (req, res) => {
   try {
@@ -239,7 +297,16 @@ const getCaseHistory = async (req, res) => {
       });
     }
     
-    // Verify firm access
+    // Check authorization - user must have access to view history
+    if (!checkCaseAccess(caseData, user)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: You do not have permission to view this case history',
+        code: 'CASE_ACCESS_DENIED',
+      });
+    }
+    
+    // Verify firm access (additional check for non-superadmin)
     if (user.role !== 'SUPER_ADMIN' && caseData.firmId && user.firmId) {
       if (caseData.firmId.toString() !== user.firmId.toString()) {
         return res.status(403).json({
