@@ -2,6 +2,7 @@ const Case = require('../models/Case.model');
 const Comment = require('../models/Comment.model');
 const CaseHistory = require('../models/CaseHistory.model');
 const CaseAudit = require('../models/CaseAudit.model');
+const { CaseRepository } = require('../repositories');
 const { CASE_STATUS, CASE_ACTION_TYPES } = require('../config/constants');
 const { DateTime } = require('luxon');
 const { logCaseHistory } = require('./auditLog.service');
@@ -118,16 +119,17 @@ const recordAction = async (caseId, firmId, actionType, description, performedBy
  * 
  * Changes case status to RESOLVED with mandatory comment.
  * 
+ * @param {string} firmId - Firm ID from req.user.firmId (SECURITY: MUST be from authenticated user)
  * @param {string} caseId - Case identifier
  * @param {string} comment - Mandatory resolution comment
  * @param {object} user - User object with xID and email
  * @returns {object} Updated case
  * @throws {Error} If comment is missing or case not found
  */
-const resolveCase = async (caseId, comment, user) => {
+const resolveCase = async (firmId, caseId, comment, user) => {
   validateComment(comment);
   
-  const caseData = await Case.findOne({ caseId });
+  const caseData = await CaseRepository.findByCaseId(firmId, caseId);
   
   if (!caseData) {
     throw new Error('Case not found');
@@ -184,6 +186,7 @@ const resolveCase = async (caseId, comment, user) => {
  * 
  * Backend normalizes reopenDate to 8:00 AM IST regardless of input time.
  * 
+ * @param {string} firmId - Firm ID from req.user.firmId (SECURITY: MUST be from authenticated user)
  * @param {string} caseId - Case identifier
  * @param {string} comment - Mandatory pending comment
  * @param {string} reopenDate - Date (YYYY-MM-DD format) when case should auto-reopen
@@ -191,14 +194,14 @@ const resolveCase = async (caseId, comment, user) => {
  * @returns {object} Updated case
  * @throws {Error} If comment or reopenDate is missing, or case not found
  */
-const pendCase = async (caseId, comment, reopenDate, user) => {
+const pendCase = async (firmId, caseId, comment, reopenDate, user) => {
   validateComment(comment);
   
   if (!reopenDate) {
     throw new Error('Reopen date is required');
   }
   
-  const caseData = await Case.findOne({ caseId });
+  const caseData = await CaseRepository.findByCaseId(firmId, caseId);
   
   if (!caseData) {
     throw new Error('Case not found');
@@ -263,16 +266,17 @@ const pendCase = async (caseId, comment, reopenDate, user) => {
  * Case becomes read-only and is hidden from employee dashboards/worklists.
  * Only admins can see filed cases.
  * 
+ * @param {string} firmId - Firm ID from req.user.firmId (SECURITY: MUST be from authenticated user)
  * @param {string} caseId - Case identifier
  * @param {string} comment - Mandatory filing comment
  * @param {object} user - User object with xID and email
  * @returns {object} Updated case
  * @throws {Error} If comment is missing or case not found
  */
-const fileCase = async (caseId, comment, user) => {
+const fileCase = async (firmId, caseId, comment, user) => {
   validateComment(comment);
   
-  const caseData = await Case.findOne({ caseId });
+  const caseData = await CaseRepository.findByCaseId(firmId, caseId);
   
   if (!caseData) {
     throw new Error('Case not found');
@@ -327,16 +331,17 @@ const fileCase = async (caseId, comment, user) => {
  * Changes case status from PENDED/PENDING back to OPEN with mandatory comment.
  * Allows users to manually unpend a case before the auto-reopen date.
  * 
+ * @param {string} firmId - Firm ID from req.user.firmId (SECURITY: MUST be from authenticated user)
  * @param {string} caseId - Case identifier
  * @param {string} comment - Mandatory unpend comment
  * @param {object} user - User object with xID and email
  * @returns {object} Updated case
  * @throws {Error} If comment is missing or case not found
  */
-const unpendCase = async (caseId, comment, user) => {
+const unpendCase = async (firmId, caseId, comment, user) => {
   validateComment(comment);
   
-  const caseData = await Case.findOne({ caseId });
+  const caseData = await CaseRepository.findByCaseId(firmId, caseId);
   
   if (!caseData) {
     throw new Error('Case not found');
