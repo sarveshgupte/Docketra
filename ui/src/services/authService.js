@@ -7,22 +7,15 @@ import { STORAGE_KEYS } from '../utils/constants';
 
 export const authService = {
   /**
-   * Login with xID and password (or email for Superadmin)
-   * Backend expects payload key as 'xID' (uppercase 'D') or 'email'
+   * Login with xID and password
+   * Backend expects payload key as 'xID' (uppercase 'D')
    */
   login: async (identifier, password) => {
-    // Ensure password is always included in the request, even if empty
-    // Detect if identifier is email (for Superadmin) or xID
-    const isEmail = identifier.includes('@');
+    // Send xID only (no email login supported)
     const payload = {
+      xID: identifier,
       password: password || ''
     };
-    
-    if (isEmail) {
-      payload.email = identifier;
-    } else {
-      payload.xID = identifier;
-    }
     
     const response = await api.post('/auth/login', payload);
     
