@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
@@ -16,6 +16,7 @@ import './WorkbasketPage.css';
 export const WorkbasketPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { firmSlug } = useParams();
   
   const [loading, setLoading] = useState(true);
   const [cases, setCases] = useState([]);
@@ -352,7 +353,7 @@ export const WorkbasketPage = () => {
                           <Button
                             variant="default"
                             size="small"
-                            onClick={() => navigate(`/cases/${caseItem.caseId}`)}
+                            onClick={() => navigate(`/${firmSlug}/cases/${caseItem.caseId}`)}
                           >
                             View
                           </Button>

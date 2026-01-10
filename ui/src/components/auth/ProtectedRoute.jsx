@@ -1,9 +1,10 @@
 /**
  * Protected Route Component
+ * Handles authentication and role-based access
  */
 
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 import { usePermissions } from '../../hooks/usePermissions.js';
 import { Loading } from '../common/Loading';
@@ -11,18 +12,27 @@ import { Loading } from '../common/Loading';
 export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadmin = false }) => {
   const { isAuthenticated, loading } = useAuth();
   const { isAdmin, isSuperadmin } = usePermissions();
+  const { firmSlug } = useParams();
 
   if (loading) {
     return <Loading message="Loading..." />;
   }
 
   if (!isAuthenticated) {
+    // Redirect to firm login if firmSlug is in URL, otherwise generic login
+    if (firmSlug) {
+      return <Navigate to={`/f/${firmSlug}/login`} replace />;
+    }
     return <Navigate to="/login" replace />;
   }
 
   // SuperAdmin trying to access superadmin routes
   if (requireSuperadmin && !isSuperadmin) {
-    return <Navigate to="/dashboard" replace />;
+    // Redirect authenticated users to their firm dashboard
+    if (firmSlug) {
+      return <Navigate to={`/${firmSlug}/dashboard`} replace />;
+    }
+    return <Navigate to="/login" replace />;
   }
 
   // SuperAdmin trying to access regular/admin routes (block them)
@@ -32,7 +42,8 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
 
   // Admin-only routes
   if (requireAdmin && !isAdmin) {
-    return <Navigate to="/dashboard" replace />;
+    // Redirect to dashboard (firmSlug will be in URL already via FirmLayout)
+    return <Navigate to={`/${firmSlug}/dashboard`} replace />;
   }
 
   return children;

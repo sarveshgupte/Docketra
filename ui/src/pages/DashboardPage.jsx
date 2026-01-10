@@ -13,7 +13,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
@@ -30,6 +30,7 @@ export const DashboardPage = () => {
   const { user } = useAuth();
   const { isAdmin } = usePermissions();
   const navigate = useNavigate();
+  const { firmSlug } = useParams();
   
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -161,36 +162,36 @@ export const DashboardPage = () => {
   };
 
   const handleCaseClick = (caseId) => {
-    navigate(`/cases/${caseId}`);
+    navigate(`/${firmSlug}/cases/${caseId}`);
   };
   
   // Navigation handlers for KPI cards
   const handleMyOpenCasesClick = () => {
-    navigate('/my-worklist?status=OPEN');
+    navigate(`/${firmSlug}/my-worklist?status=OPEN`);
   };
   
   const handleMyPendingCasesClick = () => {
-    navigate('/my-worklist?status=PENDED');
+    navigate(`/${firmSlug}/my-worklist?status=PENDED`);
   };
   
   const handleMyResolvedCasesClick = () => {
-    navigate('/my-worklist?status=RESOLVED');
+    navigate(`/${firmSlug}/my-worklist?status=RESOLVED`);
   };
   
   const handleMyUnassignedCreatedCasesClick = () => {
-    navigate('/worklists/global?createdBy=me&status=UNASSIGNED');
+    navigate(`/${firmSlug}/global-worklist?createdBy=me&status=UNASSIGNED`);
   };
   
   const handlePendingApprovalsClick = () => {
-    navigate('/cases?approvalStatus=PENDING');
+    navigate(`/${firmSlug}/cases?approvalStatus=PENDING`);
   };
   
   const handleFiledCasesClick = () => {
-    navigate('/cases?status=FILED');
+    navigate(`/${firmSlug}/cases?status=FILED`);
   };
   
   const handleAdminResolvedCasesClick = () => {
-    navigate('/cases?status=RESOLVED');
+    navigate(`/${firmSlug}/cases?status=RESOLVED`);
   };
 
   if (loading) {
