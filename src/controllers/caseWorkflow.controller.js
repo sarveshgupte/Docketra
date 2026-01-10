@@ -1,6 +1,7 @@
 const Case = require('../models/Case.model');
 const CaseHistory = require('../models/CaseHistory.model');
 const Comment = require('../models/Comment.model');
+const { CaseRepository } = require('../repositories');
 const { CASE_STATUS } = require('../config/constants');
 
 /**
@@ -31,11 +32,7 @@ const submitCase = async (req, res) => {
     }
     
     // Fetch case with firmId scoping for multi-tenancy
-    const query = { caseId };
-    if (req.user?.firmId) {
-      query.firmId = req.user.firmId;
-    }
-    const caseData = await Case.findOne(query);
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
     
     if (!caseData) {
       return res.status(404).json({
@@ -107,11 +104,7 @@ const moveToUnderReview = async (req, res) => {
     }
     
     // Fetch case with firmId scoping for multi-tenancy
-    const query = { caseId };
-    if (req.user?.firmId) {
-      query.firmId = req.user.firmId;
-    }
-    const caseData = await Case.findOne(query);
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
     
     if (!caseData) {
       return res.status(404).json({
@@ -173,11 +166,7 @@ const closeCase = async (req, res) => {
     }
     
     // Fetch case with firmId scoping for multi-tenancy
-    const query = { caseId };
-    if (req.user?.firmId) {
-      query.firmId = req.user.firmId;
-    }
-    const caseData = await Case.findOne(query);
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
     
     if (!caseData) {
       return res.status(404).json({
@@ -251,11 +240,7 @@ const reopenCase = async (req, res) => {
     }
     
     // Fetch case with firmId scoping for multi-tenancy
-    const query = { caseId };
-    if (req.user?.firmId) {
-      query.firmId = req.user.firmId;
-    }
-    const caseData = await Case.findOne(query);
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
     
     if (!caseData) {
       return res.status(404).json({
