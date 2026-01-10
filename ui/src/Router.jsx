@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { DefaultRoute } from './components/routing/DefaultRoute';
 import { LoginPage } from './pages/LoginPage';
+import { FirmLoginPage } from './pages/FirmLoginPage';
 import { ChangePasswordPage } from './pages/ChangePasswordPage';
 import { SetPasswordPage } from './pages/SetPasswordPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
@@ -29,7 +30,9 @@ export const Router = () => {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public Login Routes */}
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/f/:firmSlug/login" element={<FirmLoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/change-password" element={<ChangePasswordPage />} />

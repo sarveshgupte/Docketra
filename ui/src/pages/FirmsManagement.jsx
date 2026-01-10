@@ -201,6 +201,7 @@ export const FirmsManagement = () => {
                   <tr>
                     <th>Firm Name</th>
                     <th>Status</th>
+                    <th>Firm Login URL</th>
                     <th>Clients</th>
                     <th>Users</th>
                     <th>Created On</th>
@@ -208,43 +209,57 @@ export const FirmsManagement = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {firms.map(firm => (
-                    <tr key={firm._id}>
-                      <td>
-                        <div className="firm-name">
-                          <div className="firm-name__primary">{firm.name}</div>
-                          <div className="firm-name__secondary">{firm.firmId}</div>
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`status-badge status-badge--${firm.status.toLowerCase()}`}>
-                          {firm.status}
-                        </span>
-                      </td>
-                      <td>{firm.clientCount}</td>
-                      <td>{firm.userCount}</td>
-                      <td>{new Date(firm.createdAt).toLocaleDateString()}</td>
-                      <td>
-                        {firm.status === 'ACTIVE' ? (
-                          <Button
-                            size="small"
-                            variant="danger"
-                            onClick={() => handleToggleFirmStatus(firm._id, firm.status)}
+                  {firms.map(firm => {
+                    const loginUrl = `${window.location.origin}/f/${firm.firmSlug}/login`;
+                    return (
+                      <tr key={firm._id}>
+                        <td>
+                          <div className="firm-name">
+                            <div className="firm-name__primary">{firm.name}</div>
+                            <div className="firm-name__secondary">{firm.firmId}</div>
+                          </div>
+                        </td>
+                        <td>
+                          <span className={`status-badge status-badge--${firm.status.toLowerCase()}`}>
+                            {firm.status}
+                          </span>
+                        </td>
+                        <td>
+                          <a 
+                            href={loginUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="firm-login-url"
+                            title="Open firm login page in new tab"
                           >
-                            Deactivate
-                          </Button>
-                        ) : (
-                          <Button
-                            size="small"
-                            variant="success"
-                            onClick={() => handleToggleFirmStatus(firm._id, firm.status)}
-                          >
-                            Activate
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                            /f/{firm.firmSlug}/login
+                          </a>
+                        </td>
+                        <td>{firm.clientCount}</td>
+                        <td>{firm.userCount}</td>
+                        <td>{new Date(firm.createdAt).toLocaleDateString()}</td>
+                        <td>
+                          {firm.status === 'ACTIVE' ? (
+                            <Button
+                              size="small"
+                              variant="danger"
+                              onClick={() => handleToggleFirmStatus(firm._id, firm.status)}
+                            >
+                              Deactivate
+                            </Button>
+                          ) : (
+                            <Button
+                              size="small"
+                              variant="success"
+                              onClick={() => handleToggleFirmStatus(firm._id, firm.status)}
+                            >
+                              Activate
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

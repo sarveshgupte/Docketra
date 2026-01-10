@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const emailService = require('../services/email.service');
 const mongoose = require('mongoose');
 const { generateNextClientId } = require('../services/clientIdGenerator');
+const { slugify } = require('../utils/slugify');
 
 const SALT_ROUNDS = 10;
 
@@ -111,7 +112,7 @@ const createFirm = async (req, res) => {
     console.log(`[FIRM_CREATE] Starting atomic transaction for firm: ${name}`);
     
     // ============================================================
-    // STEP 1: Generate Firm ID and Create Firm
+    // STEP 1: Generate Firm ID, Firm Slug, and Create Firm
     // ============================================================
     // Query latest firm within transaction to generate next ID
     // Bootstrap-safe: returns FIRM001 when no firms exist
@@ -125,11 +126,25 @@ const createFirm = async (req, res) => {
     }
     const firmId = `FIRM${firmNumber.toString().padStart(3, '0')}`;
     
+    // Generate unique firmSlug from firm name
+    let firmSlug = slugify(name.trim());
+    
+    // Ensure firmSlug is unique - append number if needed
+    let slugSuffix = 1;
+    let originalSlug = firmSlug;
+    while (await Firm.findOne({ firmSlug }).session(session)) {
+      firmSlug = `${originalSlug}-${slugSuffix}`;
+      slugSuffix++;
+    }
+    
     const firm = new Firm({
       firmId,
       name: name.trim(),
+      firmSlug,
       status: 'ACTIVE',
     });
+    
+    console.log(`[FIRM_CREATE] Generated firmSlug: ${firmSlug}`);
     
     // ============================================================
     // STEP 2: Generate Client ID and Create Default Client
@@ -265,13 +280,14 @@ const createFirm = async (req, res) => {
     // Log action (outside transaction)
     await logSuperadminAction({
       actionType: 'FirmCreated',
-      description: `Firm created: ${name} (${firmId}) with default client (${clientId}) and admin (${adminXID})`,
+      description: `Firm created: ${name} (${firmId}, ${firmSlug}) with default client (${clientId}) and admin (${adminXID})`,
       performedBy: req.user.email,
       performedById: req.user._id,
       targetEntityType: 'Firm',
       targetEntityId: firm._id.toString(),
       metadata: { 
         firmId, 
+        firmSlug,
         name, 
         defaultClientId: clientId,
         adminXID,
@@ -287,6 +303,7 @@ const createFirm = async (req, res) => {
         firm: {
           _id: firm._id,
           firmId: firm.firmId,
+          firmSlug: firm.firmSlug,
           name: firm.name,
           status: firm.status,
           defaultClientId: firm.defaultClientId,
@@ -393,7 +410,7 @@ const getPlatformStats = async (req, res) => {
 const listFirms = async (req, res) => {
   try {
     const firms = await Firm.find()
-      .select('firmId name status createdAt')
+      .select('firmId firmSlug name status createdAt')
       .sort({ createdAt: -1 });
     
     // Get counts for each firm
@@ -405,6 +422,7 @@ const listFirms = async (req, res) => {
         return {
           _id: firm._id,
           firmId: firm.firmId,
+          firmSlug: firm.firmSlug,
           name: firm.name,
           status: firm.status,
           isActive: firm.status === 'ACTIVE',
@@ -633,10 +651,58 @@ const createFirmAdmin = async (req, res) => {
   }
 };
 
+/**
+ * Get firm metadata by slug (PUBLIC endpoint for login page)
+ * GET /api/public/firms/:firmSlug
+ */
+const getFirmBySlug = async (req, res) => {
+  try {
+    const { firmSlug } = req.params;
+    
+    if (!firmSlug) {
+      return res.status(400).json({
+        success: false,
+        message: 'Firm slug is required',
+      });
+    }
+    
+    const normalizedSlug = firmSlug.toLowerCase().trim();
+    
+    const firm = await Firm.findOne({ firmSlug: normalizedSlug })
+      .select('firmId firmSlug name status');
+    
+    if (!firm) {
+      return res.status(404).json({
+        success: false,
+        message: 'Firm not found',
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        firmId: firm.firmId,
+        firmSlug: firm.firmSlug,
+        name: firm.name,
+        status: firm.status,
+        isActive: firm.status === 'ACTIVE',
+      },
+    });
+  } catch (error) {
+    console.error('[SUPERADMIN] Error getting firm by slug:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get firm',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createFirm,
   listFirms,
   updateFirmStatus,
   createFirmAdmin,
   getPlatformStats,
+  getFirmBySlug,
 };
