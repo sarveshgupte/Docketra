@@ -7,6 +7,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { Router } from './Router';
 import './assets/styles/enterprise.css';
+import './assets/styles/neomorphic.css';
 import './assets/styles/global.css';
 
 function App() {
