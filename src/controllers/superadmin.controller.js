@@ -651,10 +651,58 @@ const createFirmAdmin = async (req, res) => {
   }
 };
 
+/**
+ * Get firm metadata by slug (PUBLIC endpoint for login page)
+ * GET /api/public/firms/:firmSlug
+ */
+const getFirmBySlug = async (req, res) => {
+  try {
+    const { firmSlug } = req.params;
+    
+    if (!firmSlug) {
+      return res.status(400).json({
+        success: false,
+        message: 'Firm slug is required',
+      });
+    }
+    
+    const normalizedSlug = firmSlug.toLowerCase().trim();
+    
+    const firm = await Firm.findOne({ firmSlug: normalizedSlug })
+      .select('firmId firmSlug name status');
+    
+    if (!firm) {
+      return res.status(404).json({
+        success: false,
+        message: 'Firm not found',
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        firmId: firm.firmId,
+        firmSlug: firm.firmSlug,
+        name: firm.name,
+        status: firm.status,
+        isActive: firm.status === 'ACTIVE',
+      },
+    });
+  } catch (error) {
+    console.error('[SUPERADMIN] Error getting firm by slug:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get firm',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createFirm,
   listFirms,
   updateFirmStatus,
   createFirmAdmin,
   getPlatformStats,
+  getFirmBySlug,
 };
