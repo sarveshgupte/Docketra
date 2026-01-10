@@ -22,6 +22,7 @@ const INVITE_TOKEN_EXPIRY_HOURS = 48; // 48 hours for invite tokens (per PR 32 r
 const PASSWORD_SETUP_TOKEN_EXPIRY_HOURS = 24; // 24 hours for password reset tokens
 const FORGOT_PASSWORD_TOKEN_EXPIRY_MINUTES = 30; // 30 minutes for forgot password tokens
 const DEFAULT_FIRM_ID = 'PLATFORM'; // Default firmId for SUPER_ADMIN and audit logging
+const DEFAULT_XID = 'SUPERADMIN'; // Default xID for SUPER_ADMIN in audit logs
 
 /**
  * Login with xID and password
@@ -317,7 +318,7 @@ const login = async (req, res) => {
     // Log successful login (non-blocking)
     try {
       await AuthAudit.create({
-        xID: user.xID || 'SUPERADMIN',
+        xID: user.xID || DEFAULT_XID,
         firmId: user.firmId || DEFAULT_FIRM_ID,
         userId: user._id,
         actionType: 'Login',
