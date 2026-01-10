@@ -2,8 +2,9 @@ const Case = require('../models/Case.model');
 const Comment = require('../models/Comment.model');
 const CaseHistory = require('../models/CaseHistory.model');
 const CaseAudit = require('../models/CaseAudit.model');
-const { CASE_STATUS } = require('../config/constants');
+const { CASE_STATUS, CASE_ACTION_TYPES } = require('../config/constants');
 const { DateTime } = require('luxon');
+const { logCaseHistory } = require('./auditLog.service');
 
 /**
  * Case Action Service
@@ -73,17 +74,22 @@ const validateComment = (comment) => {
 
 /**
  * Record case action in audit trail
- * Creates entries in both CaseHistory (legacy) and CaseAudit (new)
+ * Creates entries in both CaseHistory (enhanced) and CaseAudit (xID-based)
+ * 
+ * PR: Comprehensive CaseHistory & Audit Trail - Enhanced with full audit fields
  * 
  * @param {string} caseId - Case identifier
- * @param {string} actionType - Type of action (RESOLVED, PENDED, FILED, etc.)
+ * @param {string} firmId - Firm identifier (for tenant scoping)
+ * @param {string} actionType - Type of action (from CASE_ACTION_TYPES)
  * @param {string} description - Action description
  * @param {string} performedByXID - xID of user performing action
- * @param {string} performedByEmail - Email of user (for legacy CaseHistory)
+ * @param {string} performedByEmail - Email of user
+ * @param {string} actorRole - Role of actor (ADMIN, USER, SYSTEM)
  * @param {object} metadata - Additional metadata for audit log
+ * @param {object} req - Express request object (optional, for IP/user agent)
  */
-const recordAction = async (caseId, actionType, description, performedByXID, performedByEmail, metadata = {}) => {
-  // Create CaseAudit entry (new, xID-based)
+const recordAction = async (caseId, firmId, actionType, description, performedByXID, performedByEmail, actorRole = 'USER', metadata = {}, req = null) => {
+  // Create CaseAudit entry (xID-based)
   await CaseAudit.create({
     caseId,
     actionType,
@@ -92,13 +98,18 @@ const recordAction = async (caseId, actionType, description, performedByXID, per
     metadata,
   });
   
-  // Create CaseHistory entry (legacy, email-based, now with xID too)
-  await CaseHistory.create({
+  // Create CaseHistory entry with enhanced fields
+  await logCaseHistory({
     caseId,
+    firmId,
     actionType,
+    actionLabel: description,
     description,
-    performedBy: performedByEmail.toLowerCase(),
-    performedByXID: performedByXID.toUpperCase(), // Canonical identifier (uppercase)
+    performedBy: performedByEmail,
+    performedByXID,
+    actorRole,
+    metadata,
+    req,
   });
 };
 
@@ -149,10 +160,12 @@ const resolveCase = async (caseId, comment, user) => {
   // Record action in audit trail
   await recordAction(
     caseId,
-    'CASE_RESOLVED',
+    caseData.firmId,
+    CASE_ACTION_TYPES.CASE_RESOLVED,
     `Case resolved by ${user.xID}. Previous status: ${previousStatus}`,
     user.xID,
     user.email,
+    user.role === 'Admin' ? 'ADMIN' : 'USER',
     {
       previousStatus,
       newStatus: CASE_STATUS.RESOLVED,
@@ -226,10 +239,12 @@ const pendCase = async (caseId, comment, reopenDate, user) => {
   // Record action in audit trail
   await recordAction(
     caseId,
-    'CASE_PENDED',
+    caseData.firmId,
+    CASE_ACTION_TYPES.CASE_PENDED,
     `Case pended by ${user.xID} until ${pendingUntil}. Previous status: ${previousStatus}`,
     user.xID,
     user.email,
+    user.role === 'Admin' ? 'ADMIN' : 'USER',
     {
       previousStatus,
       newStatus: CASE_STATUS.PENDED,
@@ -290,10 +305,12 @@ const fileCase = async (caseId, comment, user) => {
   // Record action in audit trail
   await recordAction(
     caseId,
-    'CASE_FILED',
+    caseData.firmId,
+    CASE_ACTION_TYPES.CASE_FILED,
     `Case filed by ${user.xID}. Previous status: ${previousStatus}`,
     user.xID,
     user.email,
+    user.role === 'Admin' ? 'ADMIN' : 'USER',
     {
       previousStatus,
       newStatus: CASE_STATUS.FILED,
@@ -354,10 +371,12 @@ const unpendCase = async (caseId, comment, user) => {
   // Record action in audit trail
   await recordAction(
     caseId,
-    'CASE_UNPENDED',
+    caseData.firmId,
+    CASE_ACTION_TYPES.CASE_UNPENDED,
     `Case manually unpended by ${user.xID}. Previous status: ${previousStatus}. Was pended until: ${previousPendingUntil || 'N/A'}`,
     user.xID,
     user.email,
+    user.role === 'Admin' ? 'ADMIN' : 'USER',
     {
       previousStatus,
       newStatus: CASE_STATUS.OPEN,
@@ -401,10 +420,12 @@ const performAutoReopen = async (caseData) => {
   // Record action in audit trail
   await recordAction(
     caseData.caseId,
-    'CASE_AUTO_REOPENED', // Consistent with CaseAudit model
+    caseData.firmId,
+    CASE_ACTION_TYPES.CASE_AUTO_REOPENED,
     `Case automatically reopened by system. Previous status: ${previousStatus}. Was pended until: ${previousPendingUntil}`,
     'SYSTEM',
-    'SYSTEM', // Use uppercase for consistency
+    'SYSTEM',
+    'SYSTEM',
     {
       previousStatus,
       newStatus: CASE_STATUS.OPEN,

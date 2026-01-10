@@ -1,6 +1,7 @@
 /**
  * Case Detail Page
  * PR #45: Added view-only mode indicator and audit log display
+ * PR: Comprehensive CaseHistory & Audit Trail - Added view tracking and history display
  */
 
 import React, { useState, useEffect } from 'react';
@@ -13,6 +14,7 @@ import { Button } from '../components/common/Button';
 import { Textarea } from '../components/common/Textarea';
 import { Input } from '../components/common/Input';
 import { Modal } from '../components/common/Modal';
+import { CaseHistory } from '../components/common/CaseHistory';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
 import { useToast } from '../hooks/useToast';
@@ -67,8 +69,60 @@ export const CaseDetailPage = () => {
   const [unpendComment, setUnpendComment] = useState('');
   const [unpendingCase, setUnpendingCase] = useState(false);
 
+  // Track case view session
+  // PR: Comprehensive CaseHistory & Audit Trail
+  const [viewTracked, setViewTracked] = useState(false);
+  
+  // Configuration for view tracking
+  const VIEW_TRACKING_DEBOUNCE_MS = 2000; // 2 seconds
+
   useEffect(() => {
     loadCase();
+    
+    // Track case opened
+    caseService.trackCaseOpen(caseId);
+    
+    // Cleanup: track case exit on unmount
+    return () => {
+      caseService.trackCaseExit(caseId);
+    };
+  }, [caseId]);
+
+  // Track case viewed after successful load (debounced, once per session)
+  useEffect(() => {
+    if (caseData && !viewTracked) {
+      // Delay slightly to ensure page is fully rendered
+      const timer = setTimeout(() => {
+        caseService.trackCaseView(caseId);
+        setViewTracked(true);
+      }, VIEW_TRACKING_DEBOUNCE_MS);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [caseData, viewTracked, caseId]);
+
+  // Track exit on beforeunload (best-effort for tab close)
+  // Note: sendBeacon doesn't support custom headers, so we rely on cookie-based auth
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Use sendBeacon for better reliability on page unload
+      // Note: This is best-effort and may not work in all browsers/scenarios
+      if (navigator.sendBeacon) {
+        const apiBaseUrl = window.location.origin;
+        const url = `${apiBaseUrl}/api/cases/${caseId}/track-exit`;
+        
+        // Send beacon - note that sendBeacon doesn't support custom headers
+        // The backend must handle authentication via cookies or accept the request
+        const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
+        navigator.sendBeacon(url, blob);
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
   }, [caseId]);
 
   const loadCase = async () => {
@@ -903,6 +957,11 @@ export const CaseDetailPage = () => {
             />
           </div>
         </Modal>
+        
+        {/* Case History - PR: Comprehensive CaseHistory & Audit Trail */}
+        {user && user.role !== 'SUPER_ADMIN' && (
+          <CaseHistory caseId={caseId} />
+        )}
       </div>
     </Layout>
   );

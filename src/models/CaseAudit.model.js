@@ -56,6 +56,16 @@ const caseAuditSchema = new mongoose.Schema({
    * - CASE_RESOLVED: Case resolved (status changed to RESOLVED)
    * - CASE_FILED: Case filed (status changed to FILED)
    * - CASE_AUTO_REOPENED: Case automatically reopened after pending period expired
+   * - CASE_CREATED: Case was created (PR: Audit Trail)
+   * - CASE_UPDATED: Case details were updated (PR: Audit Trail)
+   * - CASE_OPENED: User opened case detail page (PR: Audit Trail)
+   * - CASE_EXITED: User left case detail page (PR: Audit Trail)
+   * - CASE_MOVED_TO_WORKBASKET: Case moved to workbasket (PR: Audit Trail)
+   * - CASE_REOPENED: Case reopened (PR: Audit Trail)
+   * - CASE_VIEWED_BY_ADMIN: Admin viewed case (PR: Audit Trail)
+   * - CASE_ACCESSED_BY_SUPERADMIN: Superadmin accessed case (PR: Audit Trail)
+   * - CASE_AUTO_UPDATED: System auto-updated case (PR: Audit Trail)
+   * - CASE_SYSTEM_EVENT: System event occurred (PR: Audit Trail)
    */
   actionType: {
     type: String,
@@ -78,6 +88,17 @@ const caseAuditSchema = new mongoose.Schema({
       'CASE_RESOLVED',
       'CASE_FILED',
       'CASE_AUTO_REOPENED',
+      'CASE_CREATED',
+      'CASE_UPDATED',
+      'CASE_OPENED',
+      'CASE_EXITED',
+      'CASE_MOVED_TO_WORKBASKET',
+      'CASE_REOPENED',
+      'CASE_VIEWED_BY_ADMIN',
+      'CASE_ACCESSED_BY_SUPERADMIN',
+      'CASE_AUTO_UPDATED',
+      'CASE_SYSTEM_EVENT',
+      'ADMIN_RESOLVED_CASES_VIEWED',
     ],
   },
   
