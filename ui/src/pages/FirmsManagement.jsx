@@ -24,6 +24,7 @@ export const FirmsManagement = () => {
   const [loading, setLoading] = useState(true);
   const [firms, setFirms] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     adminName: '',
@@ -66,6 +67,7 @@ export const FirmsManagement = () => {
     }
     
     try {
+      setIsSubmitting(true);
       const response = await superadminService.createFirm(
         formData.name.trim(),
         formData.adminName.trim(),
@@ -76,10 +78,12 @@ export const FirmsManagement = () => {
         toast.success('Firm created successfully. Admin credentials have been emailed.');
         setFormData({ name: '', adminName: '', adminEmail: '' });
         setShowCreateModal(false);
-        loadFirms();
+        await loadFirms();
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to create firm');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -129,6 +133,7 @@ export const FirmsManagement = () => {
                   onClick={() => {
                     setShowCreateModal(false);
                     setFormData({ name: '', adminName: '', adminEmail: '' });
+                    setIsSubmitting(false);
                   }}
                 >
                   ×
@@ -158,13 +163,16 @@ export const FirmsManagement = () => {
                   placeholder="admin@example.com"
                 />
                 <div className="modal-actions">
-                  <Button type="submit">Create Firm</Button>
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? 'Creating...' : 'Create Firm'}
+                  </Button>
                   <Button
                     type="button"
                     variant="secondary"
                     onClick={() => {
                       setShowCreateModal(false);
                       setFormData({ name: '', adminName: '', adminEmail: '' });
+                      setIsSubmitting(false);
                     }}
                   >
                     Cancel
