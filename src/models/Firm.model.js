@@ -99,6 +99,5 @@ const firmSchema = new mongoose.Schema({
 // Indexes for performance
 // Note: firmId and firmSlug already have unique indexes from schema definition
 firmSchema.index({ status: 1 });
-firmSchema.index({ firmSlug: 1 }); // For fast firm resolution during login
 
 module.exports = mongoose.model('Firm', firmSchema);
