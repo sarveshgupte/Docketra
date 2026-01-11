@@ -33,6 +33,7 @@ const GOOGLE_STATE_TTL_SECONDS = 10 * 60; // 10 minutes
 const ROLE_SUPER_ADMIN = 'SUPER_ADMIN';
 const ROLE_ADMIN = 'Admin';
 const ROLE_EMPLOYEE = 'Employee';
+const isSuperAdminRole = (role) => role === 'SuperAdmin' || role === ROLE_SUPER_ADMIN || role === 'SUPERADMIN';
 
 /**
  * Google OAuth client factory (Authorization Code Flow)
@@ -666,8 +667,7 @@ const logout = async (req, res) => {
     // Get user from authenticated request
     const user = req.user;
     const userId = user?._id;
-    const roleValue = user?.role;
-    const isSuperAdmin = roleValue === 'SuperAdmin' || roleValue === 'SUPER_ADMIN' || roleValue === 'SUPERADMIN';
+    const isSuperAdmin = isSuperAdminRole(user?.role);
     const isValidUserId = mongoose.Types.ObjectId.isValid(userId);
     const shouldBypassUserDbUpdates = isSuperAdmin || !isValidUserId;
     
