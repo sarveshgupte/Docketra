@@ -23,6 +23,10 @@ class OneDriveProvider {
   async createFolder() {
     throw new Error('OneDriveProvider.createFolder not implemented');
   }
+
+  async getOrCreateFolder() {
+    throw new Error('OneDriveProvider.getOrCreateFolder not implemented');
+  }
 }
 
 module.exports = OneDriveProvider;

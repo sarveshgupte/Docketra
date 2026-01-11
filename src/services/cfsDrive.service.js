@@ -62,9 +62,7 @@ class CFSDriveService {
 
     const provider = providerInstance || await StorageProviderFactory.getProvider();
     const folderName = `firm_${firmId}`;
-    const folderId = typeof provider.getOrCreateFolder === 'function'
-      ? await provider.getOrCreateFolder(folderName)
-      : await provider.createFolder(folderName, null);
+    const folderId = await provider.getOrCreateFolder(folderName, null);
     
     return folderId;
   }
@@ -102,25 +100,15 @@ class CFSDriveService {
 
       // Step 2: Create CFS root folder for this case
       const cfsRootName = `cfs_${caseId}`;
-      const cfsRootFolderId = typeof provider.getOrCreateFolder === 'function'
-        ? await provider.getOrCreateFolder(cfsRootName, firmFolderId)
-        : await provider.createFolder(cfsRootName, firmFolderId);
+      const cfsRootFolderId = await provider.getOrCreateFolder(cfsRootName, firmFolderId);
 
       // Step 3: Create all subfolders in parallel
       const [attachmentsFolderId, documentsFolderId, evidenceFolderId, internalFolderId] = 
         await Promise.all([
-          typeof provider.getOrCreateFolder === 'function'
-            ? provider.getOrCreateFolder(CFSDriveService.CFS_SUBFOLDERS.ATTACHMENTS, cfsRootFolderId)
-            : provider.createFolder(CFSDriveService.CFS_SUBFOLDERS.ATTACHMENTS, cfsRootFolderId),
-          typeof provider.getOrCreateFolder === 'function'
-            ? provider.getOrCreateFolder(CFSDriveService.CFS_SUBFOLDERS.DOCUMENTS, cfsRootFolderId)
-            : provider.createFolder(CFSDriveService.CFS_SUBFOLDERS.DOCUMENTS, cfsRootFolderId),
-          typeof provider.getOrCreateFolder === 'function'
-            ? provider.getOrCreateFolder(CFSDriveService.CFS_SUBFOLDERS.EVIDENCE, cfsRootFolderId)
-            : provider.createFolder(CFSDriveService.CFS_SUBFOLDERS.EVIDENCE, cfsRootFolderId),
-          typeof provider.getOrCreateFolder === 'function'
-            ? provider.getOrCreateFolder(CFSDriveService.CFS_SUBFOLDERS.INTERNAL, cfsRootFolderId)
-            : provider.createFolder(CFSDriveService.CFS_SUBFOLDERS.INTERNAL, cfsRootFolderId),
+          provider.getOrCreateFolder(CFSDriveService.CFS_SUBFOLDERS.ATTACHMENTS, cfsRootFolderId),
+          provider.getOrCreateFolder(CFSDriveService.CFS_SUBFOLDERS.DOCUMENTS, cfsRootFolderId),
+          provider.getOrCreateFolder(CFSDriveService.CFS_SUBFOLDERS.EVIDENCE, cfsRootFolderId),
+          provider.getOrCreateFolder(CFSDriveService.CFS_SUBFOLDERS.INTERNAL, cfsRootFolderId),
         ]);
 
       const folderIds = {
@@ -242,33 +230,19 @@ class CFSDriveService {
 
       // Step 2: Create client root folder
       const clientRootName = `client_${clientId}`;
-      const clientRootFolderId = typeof provider.getOrCreateFolder === 'function'
-        ? await provider.getOrCreateFolder(clientRootName, firmFolderId)
-        : await provider.createFolder(clientRootName, firmFolderId);
+      const clientRootFolderId = await provider.getOrCreateFolder(clientRootName, firmFolderId);
 
       // Step 3: Create CFS root folder for this client
-      const cfsRootFolderId = typeof provider.getOrCreateFolder === 'function'
-        ? await provider.getOrCreateFolder('cfs', clientRootFolderId)
-        : await provider.createFolder('cfs', clientRootFolderId);
+      const cfsRootFolderId = await provider.getOrCreateFolder('cfs', clientRootFolderId);
 
       // Step 4: Create all subfolders in parallel
       const [documentsFolderId, contractsFolderId, identityFolderId, financialsFolderId, internalFolderId] = 
         await Promise.all([
-          typeof provider.getOrCreateFolder === 'function'
-            ? provider.getOrCreateFolder(CFSDriveService.CLIENT_CFS_SUBFOLDERS.DOCUMENTS, cfsRootFolderId)
-            : provider.createFolder(CFSDriveService.CLIENT_CFS_SUBFOLDERS.DOCUMENTS, cfsRootFolderId),
-          typeof provider.getOrCreateFolder === 'function'
-            ? provider.getOrCreateFolder(CFSDriveService.CLIENT_CFS_SUBFOLDERS.CONTRACTS, cfsRootFolderId)
-            : provider.createFolder(CFSDriveService.CLIENT_CFS_SUBFOLDERS.CONTRACTS, cfsRootFolderId),
-          typeof provider.getOrCreateFolder === 'function'
-            ? provider.getOrCreateFolder(CFSDriveService.CLIENT_CFS_SUBFOLDERS.IDENTITY, cfsRootFolderId)
-            : provider.createFolder(CFSDriveService.CLIENT_CFS_SUBFOLDERS.IDENTITY, cfsRootFolderId),
-          typeof provider.getOrCreateFolder === 'function'
-            ? provider.getOrCreateFolder(CFSDriveService.CLIENT_CFS_SUBFOLDERS.FINANCIALS, cfsRootFolderId)
-            : provider.createFolder(CFSDriveService.CLIENT_CFS_SUBFOLDERS.FINANCIALS, cfsRootFolderId),
-          typeof provider.getOrCreateFolder === 'function'
-            ? provider.getOrCreateFolder(CFSDriveService.CLIENT_CFS_SUBFOLDERS.INTERNAL, cfsRootFolderId)
-            : provider.createFolder(CFSDriveService.CLIENT_CFS_SUBFOLDERS.INTERNAL, cfsRootFolderId),
+          provider.getOrCreateFolder(CFSDriveService.CLIENT_CFS_SUBFOLDERS.DOCUMENTS, cfsRootFolderId),
+          provider.getOrCreateFolder(CFSDriveService.CLIENT_CFS_SUBFOLDERS.CONTRACTS, cfsRootFolderId),
+          provider.getOrCreateFolder(CFSDriveService.CLIENT_CFS_SUBFOLDERS.IDENTITY, cfsRootFolderId),
+          provider.getOrCreateFolder(CFSDriveService.CLIENT_CFS_SUBFOLDERS.FINANCIALS, cfsRootFolderId),
+          provider.getOrCreateFolder(CFSDriveService.CLIENT_CFS_SUBFOLDERS.INTERNAL, cfsRootFolderId),
         ]);
 
       const folderIds = {
