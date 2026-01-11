@@ -15,10 +15,10 @@ class StorageProviderFactory {
     if (!firmOrId) {
       firm = null;
     } else if (typeof firmOrId === 'string') {
-      if (mongoose.Types.ObjectId.isValid(firmOrId)) {
+      const isObjectId = mongoose.Types.ObjectId.isValid(firmOrId);
+      if (isObjectId) {
         firm = await Firm.findById(firmOrId);
-      }
-      if (!firm && !mongoose.Types.ObjectId.isValid(firmOrId)) {
+      } else {
         firm = await Firm.findOne({ firmId: firmOrId });
       }
     }

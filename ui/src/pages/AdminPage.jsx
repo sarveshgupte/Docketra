@@ -1129,7 +1129,7 @@ export const AdminPage = () => {
                     Files will be stored securely in Docketra-managed Google Drive using the service account.
                   </p>
 
-                  <label className="neo-radio" style={{ marginTop: '16px' }}>
+                  <label className="neo-radio storage-radio-spaced">
                     <input
                       type="radio"
                       name="storageMode"
@@ -1156,7 +1156,7 @@ export const AdminPage = () => {
                     <option value="google_drive">Google Drive</option>
                     <option value="onedrive">OneDrive</option>
                   </select>
-                  <div className="neo-info-text" style={{ marginTop: '8px' }}>
+                  <div className="neo-info-text storage-info">
                     Provider connection will be enabled in a future release. Settings here prepare for the upcoming OAuth flow.
                   </div>
                 </div>
@@ -1174,7 +1174,7 @@ export const AdminPage = () => {
                   variant="default"
                   onClick={handleStorageDisconnect}
                   disabled={savingStorage || storageConfig.mode === 'docketra_managed'}
-                  style={{ marginLeft: '12px' }}
+                  className="storage-disconnect"
                 >
                   Disconnect
                 </Button>
