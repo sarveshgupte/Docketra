@@ -729,23 +729,16 @@ caseSchema.pre('validate', async function() {
   // Create Google Drive CFS folder structure for new cases
   // This must happen after case identifiers are generated
   if (this.isNew && !this.drive?.cfsRootFolderId) {
-    try {
-      const cfsDriveService = require('../services/cfsDrive.service');
-      const folderIds = await cfsDriveService.createCFSFolderStructure(
-        this.firmId,
-        this.caseNumber // Use human-readable case number for folder name
-      );
-      
-      // Persist folder IDs in the case document
-      this.drive = folderIds;
-      
-      console.log(`[Case] Created CFS folder structure for case ${this.caseNumber}`);
-    } catch (error) {
-      console.error(`[Case] Failed to create CFS folder structure:`, error);
-      // Log error but don't fail case creation - folders can be created later if needed
-      // In production, you might want to fail the case creation instead
-      console.warn('[Case] Proceeding with case creation without Drive folders');
-    }
+    const cfsDriveService = require('../services/cfsDrive.service');
+    const folderIds = await cfsDriveService.createCFSFolderStructure(
+      this.firmId,
+      this.caseNumber // Use human-readable case number for folder name
+    );
+    
+    // Persist folder IDs in the case document
+    this.drive = folderIds;
+    
+    console.log(`[Case] Created CFS folder structure for case ${this.caseNumber}`);
   }
 });
 

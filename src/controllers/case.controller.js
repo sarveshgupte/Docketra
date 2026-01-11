@@ -12,6 +12,7 @@ const { isProduction } = require('../config/config');
 const { logCaseListViewed, logAdminAction } = require('../services/auditLog.service');
 const caseActionService = require('../services/caseAction.service');
 const { getMimeType, sanitizeFilename } = require('../utils/fileUtils');
+const { cleanupTempFile } = require('../utils/tempFile');
 const { resolveCaseIdentifier, resolveCaseDocument } = require('../utils/caseIdentifier');
 const fs = require('fs').promises;
 const path = require('path');
@@ -567,16 +568,12 @@ const addAttachment = async (req, res) => {
       fileMimeType = driveFile.mimeType || fileMimeType;
       
       // Clean up temporary file
-      await fs.unlink(req.file.path);
+      await cleanupTempFile(req.file.path);
     } catch (error) {
       console.error('[addAttachment] Error uploading to Google Drive:', error);
       
       // Clean up temporary file on error
-      try {
-        await fs.unlink(req.file.path);
-      } catch (unlinkError) {
-        console.error('[addAttachment] Error deleting temp file:', unlinkError);
-      }
+      await cleanupTempFile(req.file.path);
       
       return res.status(500).json({
         success: false,
@@ -757,6 +754,15 @@ const cloneCase = async (req, res) => {
           
           const driveService = require('../services/drive.service');
           const cfsDriveService = require('../services/cfsDrive.service');
+          
+          // Note: This loads the entire file into memory
+          // For very large files (>100MB), consider implementing streaming or skipping clone
+          const MAX_CLONE_SIZE = 100 * 1024 * 1024; // 100MB limit
+          
+          if (attachment.size && attachment.size > MAX_CLONE_SIZE) {
+            console.warn(`[cloneCase] Skipping large file ${attachment.fileName} (${attachment.size} bytes)`);
+            continue;
+          }
           
           // Download file from original location
           const fileStream = await driveService.downloadFile(attachment.driveFileId);

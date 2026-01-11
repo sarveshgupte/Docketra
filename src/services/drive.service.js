@@ -85,7 +85,6 @@ class DriveService {
     this._initialized = true;
 
     console.log('[DriveService] Initialized successfully');
-    console.log(`[DriveService] Root folder ID: ${this.rootFolderId}`);
   }
 
   /**
@@ -144,8 +143,11 @@ class DriveService {
     const parent = parentFolderId || this.rootFolderId;
 
     try {
+      // Escape single quotes in folder name to prevent query injection
+      const escapedFolderName = folderName.replace(/'/g, "\\'");
+      
       const response = await this.drive.files.list({
-        q: `name='${folderName}' and '${parent}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+        q: `name='${escapedFolderName}' and '${parent}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
         fields: 'files(id, name)',
         pageSize: 1,
       });

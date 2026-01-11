@@ -124,7 +124,7 @@ ${bodyHtml || '(no HTML body)'}
     try {
       // Ensure case has Drive folder structure
       if (!caseData.drive?.attachmentsFolderId) {
-        throw new Error('Case Drive folder structure not initialized');
+        throw new Error('Case Drive folder structure not initialized. Please ensure the case was properly created with Google Drive integration enabled.');
       }
       
       const driveService = require('../services/drive.service');
