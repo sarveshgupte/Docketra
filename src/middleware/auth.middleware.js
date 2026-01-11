@@ -126,13 +126,19 @@ const authenticate = async (req, res, next) => {
     }
 
     // Hard guard: block all authenticated routes until password is set
-    const path = req.originalUrl || req.path || '';
-    const isPasswordSetupAllowed = MUST_SET_ALLOWED_PATHS.some(p => path.endsWith(p));
+    const rawPath = (req.originalUrl || req.path || '').split('?')[0];
+    const normalizedCandidates = [
+      rawPath,
+      req.path,
+      `${req.baseUrl || ''}${req.path || ''}`,
+    ].filter(Boolean);
+    const isPasswordSetupAllowed = normalizedCandidates.some(p => MUST_SET_ALLOWED_PATHS.includes(p));
     if (user.mustSetPassword && !isPasswordSetupAllowed) {
       return res.status(403).json({
         success: false,
         code: 'PASSWORD_SETUP_REQUIRED',
         mustSetPassword: true,
+        message: 'You must set your password before accessing this resource.',
         redirectPath: '/auth/set-password',
       });
     }
@@ -163,8 +169,9 @@ const authenticate = async (req, res, next) => {
     
     // Special case: allow change-password and profile endpoints even if mustChangePassword is true
     // Check if this is the change-password or profile endpoint
-    const isChangePasswordEndpoint = path.endsWith('/change-password');
-    const isRefreshEndpoint = path.endsWith('/refresh');
+    const isChangePasswordEndpoint = rawPath.endsWith('/change-password') || (req.path || '').endsWith('/change-password');
+    const isRefreshEndpoint = rawPath.endsWith('/refresh') || (req.path || '').endsWith('/refresh');
+    const isProfileEndpoint = rawPath.endsWith('/profile') || (req.path || '').endsWith('/profile');
     
     // Block access to other routes if password change is required
     // IMPORTANT: Admin users are exempt from this restriction to allow user management operations
