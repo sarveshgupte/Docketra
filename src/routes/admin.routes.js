@@ -13,6 +13,9 @@ const {
   getAllFiledCases,
   getAllResolvedCases,
   updateRestrictedClients,
+  getStorageConfig,
+  updateStorageConfig,
+  disconnectStorage,
 } = require('../controllers/admin.controller');
 
 /**
@@ -48,5 +51,10 @@ router.get('/cases/filed', authenticate, blockSuperadmin, authorize(AdminPolicy.
 
 // GET /api/admin/cases/resolved - Get all resolved cases (admin view)
 router.get('/cases/resolved', authenticate, blockSuperadmin, authorize(AdminPolicy.canViewAllCases), userReadLimiter, getAllResolvedCases);
+
+// Storage configuration endpoints (Admin only)
+router.get('/storage', authenticate, blockSuperadmin, authorize(AdminPolicy.canManageStorage), userReadLimiter, getStorageConfig);
+router.put('/storage', authenticate, blockSuperadmin, authorize(AdminPolicy.canManageStorage), userWriteLimiter, updateStorageConfig);
+router.post('/storage/disconnect', authenticate, blockSuperadmin, authorize(AdminPolicy.canManageStorage), userWriteLimiter, disconnectStorage);
 
 module.exports = router;

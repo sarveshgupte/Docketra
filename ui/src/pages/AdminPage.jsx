@@ -42,6 +42,12 @@ export const AdminPage = () => {
   const [selectedClient, setSelectedClient] = useState(null);
   const [creatingUser, setCreatingUser] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [storageConfig, setStorageConfig] = useState({
+    mode: 'docketra_managed',
+    provider: null,
+  });
+  const [savingStorage, setSavingStorage] = useState(false);
+  const [storageLoaded, setStorageLoaded] = useState(false);
   
   // Admin stats (PR #41)
   const [adminStats, setAdminStats] = useState({
@@ -116,6 +122,24 @@ export const AdminPage = () => {
     }
   };
 
+  const loadStorageConfig = async () => {
+    try {
+      const response = await adminService.getStorageConfig();
+      if (response.success) {
+        setStorageConfig({
+          mode: response.data?.mode || 'docketra_managed',
+          provider: response.data?.provider || null,
+          google: response.data?.google || {},
+          onedrive: response.data?.onedrive || {},
+        });
+        setStorageLoaded(true);
+      }
+    } catch (error) {
+      console.error('Failed to load storage config:', error);
+      showToast('Failed to load storage settings', 'error');
+    }
+  };
+
   const loadAdminData = async () => {
     setLoading(true);
     try {
@@ -139,12 +163,85 @@ export const AdminPage = () => {
         if (response.success) {
           setClients(response.data || []);
         }
+      } else if (activeTab === 'storage') {
+        if (!storageLoaded) {
+          await loadStorageConfig();
+        }
       }
     } catch (error) {
       console.error('Failed to load admin data:', error);
       showToast('Failed to load data', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleStorageModeChange = (mode) => {
+    setStorageConfig((prev) => ({
+      ...prev,
+      mode,
+      provider: mode === 'docketra_managed' ? null : prev.provider,
+    }));
+  };
+
+  const handleStorageProviderChange = (provider) => {
+    setStorageConfig((prev) => ({
+      ...prev,
+      provider,
+    }));
+  };
+
+  const handleStorageSave = async () => {
+    if (storageConfig.mode === 'firm_connected' && !storageConfig.provider) {
+      showToast('Please select a provider', 'error');
+      return;
+    }
+
+    setSavingStorage(true);
+    try {
+      const payload = {
+        mode: storageConfig.mode,
+        provider: storageConfig.provider,
+      };
+
+      const response = await adminService.updateStorageConfig(payload);
+      if (response.success) {
+        setStorageConfig((prev) => ({
+          ...prev,
+          ...response.data,
+        }));
+        showToast('Storage settings updated', 'success');
+      } else {
+        showToast(response.message || 'Failed to update storage settings', 'error');
+      }
+    } catch (error) {
+      console.error('Failed to update storage settings:', error);
+      showToast(error.response?.data?.message || 'Failed to update storage settings', 'error');
+    } finally {
+      setSavingStorage(false);
+    }
+  };
+
+  const handleStorageDisconnect = async () => {
+    setSavingStorage(true);
+    try {
+      const response = await adminService.disconnectStorage();
+      if (response.success) {
+        setStorageConfig({
+          mode: 'docketra_managed',
+          provider: null,
+          google: {},
+          onedrive: {},
+        });
+        showToast('Disconnected from firm storage', 'success');
+      } else {
+        showToast(response.message || 'Failed to disconnect storage', 'error');
+      }
+    } catch (error) {
+      console.error('Failed to disconnect storage:', error);
+      showToast(error.response?.data?.message || 'Failed to disconnect storage', 'error');
+    } finally {
+      setSavingStorage(false);
     }
   };
 
@@ -700,6 +797,12 @@ export const AdminPage = () => {
             Categories ({adminStats.totalCategories})
           </Button>
           <Button
+            variant={activeTab === 'storage' ? 'primary' : 'default'}
+            onClick={() => setActiveTab('storage')}
+          >
+            Storage Settings
+          </Button>
+          <Button
             variant={activeTab === 'approvals' ? 'primary' : 'default'}
             onClick={() => setActiveTab('approvals')}
           >
@@ -1000,6 +1103,83 @@ export const AdminPage = () => {
                 ))}
               </div>
             )}
+          </Card>
+        )}
+
+        {activeTab === 'storage' && (
+          <Card>
+            <div className="admin__section-header">
+              <h2 className="neo-section__header">Storage Settings</h2>
+            </div>
+
+            <div className="storage-settings">
+              <div className="neo-form-group">
+                <label className="neo-label">Storage Mode</label>
+                <div className="storage-options">
+                  <label className="neo-radio">
+                    <input
+                      type="radio"
+                      name="storageMode"
+                      checked={storageConfig.mode === 'docketra_managed'}
+                      onChange={() => handleStorageModeChange('docketra_managed')}
+                    />
+                    <span>Use Docketra Storage (Recommended)</span>
+                  </label>
+                  <p className="text-secondary">
+                    Files will be stored securely in Docketra-managed Google Drive using the service account.
+                  </p>
+
+                  <label className="neo-radio storage-radio-spaced">
+                    <input
+                      type="radio"
+                      name="storageMode"
+                      checked={storageConfig.mode === 'firm_connected'}
+                      onChange={() => handleStorageModeChange('firm_connected')}
+                    />
+                    <span>Connect My Storage</span>
+                  </label>
+                  <p className="text-secondary">
+                    Files will be stored in your own cloud provider. Docketra will only access the selected folder.
+                  </p>
+                </div>
+              </div>
+
+              {storageConfig.mode === 'firm_connected' && (
+                <div className="neo-form-group">
+                  <label className="neo-label">Provider</label>
+                  <select
+                    className="neo-input"
+                    value={storageConfig.provider || ''}
+                    onChange={(e) => handleStorageProviderChange(e.target.value)}
+                  >
+                    <option value="">Select provider</option>
+                    <option value="google_drive">Google Drive</option>
+                    <option value="onedrive">OneDrive</option>
+                  </select>
+                  <div className="neo-info-text storage-info">
+                    Provider connection will be enabled in a future release. Settings here prepare for the upcoming OAuth flow.
+                  </div>
+                </div>
+              )}
+
+              <div className="storage-actions">
+                <Button
+                  variant="primary"
+                  onClick={handleStorageSave}
+                  disabled={savingStorage}
+                >
+                  {savingStorage ? 'Saving...' : 'Save Settings'}
+                </Button>
+                <Button
+                  variant="default"
+                  onClick={handleStorageDisconnect}
+                  disabled={savingStorage || storageConfig.mode === 'docketra_managed'}
+                  className="storage-disconnect"
+                >
+                  Disconnect
+                </Button>
+              </div>
+            </div>
           </Card>
         )}
 

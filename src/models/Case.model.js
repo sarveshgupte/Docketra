@@ -728,9 +728,12 @@ caseSchema.pre('validate', async function() {
   // This must happen after case identifiers are generated
   if (this.isNew && !this.drive?.cfsRootFolderId) {
     const cfsDriveService = require('../services/cfsDrive.service');
+    const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
+    const provider = await StorageProviderFactory.getProvider(this.firmId);
     const folderIds = await cfsDriveService.createCFSFolderStructure(
       this.firmId,
-      this.caseNumber // Use human-readable case number for folder name
+      this.caseNumber, // Use human-readable case number for folder name
+      provider
     );
     
     // Persist folder IDs in the case document

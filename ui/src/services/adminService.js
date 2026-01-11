@@ -142,4 +142,22 @@ export const adminService = {
     const response = await api.get(`/admin/cases/resolved${queryParams ? '?' + queryParams : ''}`);
     return response.data;
   },
+
+  /**
+   * Storage configuration endpoints
+   */
+  getStorageConfig: async () => {
+    const response = await api.get('/admin/storage');
+    return response.data;
+  },
+
+  updateStorageConfig: async (payload) => {
+    const response = await api.put('/admin/storage', payload);
+    return response.data;
+  },
+
+  disconnectStorage: async () => {
+    const response = await api.post('/admin/storage/disconnect');
+    return response.data;
+  },
 };

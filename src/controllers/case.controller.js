@@ -14,6 +14,7 @@ const caseActionService = require('../services/caseAction.service');
 const { getMimeType, sanitizeFilename } = require('../utils/fileUtils');
 const { cleanupTempFile } = require('../utils/tempFile');
 const { resolveCaseIdentifier, resolveCaseDocument } = require('../utils/caseIdentifier');
+const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -536,6 +537,7 @@ const addAttachment = async (req, res) => {
     let fileMimeType = req.file.mimetype || getMimeType(req.file.originalname);
     
     try {
+      const provider = await StorageProviderFactory.getProvider(req.user.firmId);
       // Ensure case has Drive folder structure
       if (!caseData.drive?.attachmentsFolderId) {
         return res.status(500).json({
@@ -547,8 +549,6 @@ const addAttachment = async (req, res) => {
       // Read file content from multer's temporary location
       const fileBuffer = await fs.readFile(req.file.path);
       
-      // Upload to Google Drive
-      const driveService = require('../services/drive.service');
       const cfsDriveService = require('../services/cfsDrive.service');
       
       const targetFolderId = cfsDriveService.getFolderIdForFileType(
@@ -556,7 +556,7 @@ const addAttachment = async (req, res) => {
         'attachment'
       );
       
-      const driveFile = await driveService.uploadFile(
+      const driveFile = await provider.uploadFile(
         fileBuffer,
         req.file.originalname,
         fileMimeType,
@@ -738,6 +738,7 @@ const cloneCase = async (req, res) => {
     // Copy attachments (including actual files)
     const originalAttachments = await Attachment.find({ caseId: originalCase.caseId });
     const copiedAttachments = [];
+    const provider = await StorageProviderFactory.getProvider(req.user.firmId);
     
     for (const attachment of originalAttachments) {
       try {
@@ -752,7 +753,6 @@ const cloneCase = async (req, res) => {
             throw new Error('New case Drive folder structure not initialized');
           }
           
-          const driveService = require('../services/drive.service');
           const cfsDriveService = require('../services/cfsDrive.service');
           
           // Note: This loads the entire file into memory
@@ -765,7 +765,7 @@ const cloneCase = async (req, res) => {
           }
           
           // Download file from original location
-          const fileStream = await driveService.downloadFile(attachment.driveFileId);
+          const fileStream = await provider.downloadFile(attachment.driveFileId);
           
           // Convert stream to buffer
           const chunks = [];
@@ -780,7 +780,7 @@ const cloneCase = async (req, res) => {
             'attachment'
           );
           
-          const driveFile = await driveService.uploadFile(
+          const driveFile = await provider.uploadFile(
             fileBuffer,
             attachment.fileName,
             fileMimeType || getMimeType(attachment.fileName),
@@ -1999,10 +1999,10 @@ const downloadAttachment = async (req, res) => {
     // Download from Google Drive if driveFileId exists, otherwise fallback to local file
     if (attachment.driveFileId) {
       try {
-        const driveService = require('../services/drive.service');
-        
+        const provider = await StorageProviderFactory.getProvider(req.user.firmId);
+
         // Get file stream from Google Drive
-        const fileStream = await driveService.downloadFile(attachment.driveFileId);
+        const fileStream = await provider.downloadFile(attachment.driveFileId);
         
         // Set headers for download
         res.setHeader('Content-Type', mimeType);
@@ -2414,8 +2414,8 @@ const downloadClientCFSFileForCase = async (req, res) => {
       });
     }
 
-    const driveService = require('../services/drive.service');
-    const fileStream = await driveService.downloadFile(attachment.driveFileId);
+    const provider = await StorageProviderFactory.getProvider(userFirmId);
+    const fileStream = await provider.downloadFile(attachment.driveFileId);
 
     // Set response headers
     res.setHeader('Content-Type', attachment.mimeType || 'application/octet-stream');
