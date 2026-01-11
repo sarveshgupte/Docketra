@@ -143,8 +143,11 @@ class DriveService {
     const parent = parentFolderId || this.rootFolderId;
 
     try {
-      // Escape single quotes in folder name to prevent query injection
-      const escapedFolderName = folderName.replace(/'/g, "\\'");
+      // Escape special characters in folder name to prevent query injection
+      // Escape backslashes first, then single quotes
+      const escapedFolderName = folderName
+        .replace(/\\/g, '\\\\')  // Escape backslashes
+        .replace(/'/g, "\\'");    // Escape single quotes
       
       const response = await this.drive.files.list({
         q: `name='${escapedFolderName}' and '${parent}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
