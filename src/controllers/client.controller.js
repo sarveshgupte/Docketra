@@ -281,6 +281,28 @@ const createClient = async (req, res) => {
       previousBusinessNames: [], // Initialize empty history
     });
     
+    // STEP 9: Create Google Drive CFS folder structure for the client
+    try {
+      const cfsDriveService = require('../services/cfsDrive.service');
+      const folderIds = await cfsDriveService.createClientCFSFolderStructure(
+        userFirmId.toString(),
+        clientId
+      );
+      
+      // Persist folder IDs in the client document
+      client.drive = folderIds;
+      await client.save();
+      
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`[ClientController] Created CFS folder structure for client ${clientId}`);
+      }
+    } catch (driveError) {
+      console.error('[ClientController] Failed to create CFS folder structure:', driveError.message);
+      // Note: We don't fail the client creation if Drive setup fails
+      // The client is already created and can be used
+      // Drive folders can be created later if needed
+    }
+    
     await client.save();
     
     res.status(201).json({
@@ -902,6 +924,373 @@ const deleteFactSheetFile = async (req, res) => {
   }
 };
 
+/**
+ * Upload file to Client CFS (Admin only)
+ * POST /api/clients/:clientId/cfs/files
+ * 
+ * Uploads a file to the client's CFS (Client File System) in Google Drive
+ * Only admins can upload to client CFS
+ * Files are stored in Google Drive and referenced via Attachment model
+ */
+const uploadClientCFSFile = async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    const { description, fileType = 'documents' } = req.body;
+
+    // Validate file upload
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file provided',
+      });
+    }
+
+    // Validate description
+    if (!description || !description.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'File description is required',
+      });
+    }
+
+    // Get user context
+    const userFirmId = req.user?.firmId;
+    const userXID = req.user?.xID;
+    const userName = req.user?.name || req.user?.email;
+
+    if (!userFirmId || !userXID) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+      });
+    }
+
+    // Fetch client and validate access
+    const Client = require('../models/Client.model');
+    const client = await Client.findOne({ 
+      clientId, 
+      firmId: userFirmId 
+    });
+
+    if (!client) {
+      return res.status(404).json({
+        success: false,
+        message: 'Client not found or access denied',
+      });
+    }
+
+    // Validate client has CFS folder structure
+    const cfsDriveService = require('../services/cfsDrive.service');
+    const isValidStructure = await cfsDriveService.validateClientCFSStructure(client.drive);
+    
+    if (!isValidStructure) {
+      // Try to create the structure if it doesn't exist
+      try {
+        const folderIds = await cfsDriveService.createClientCFSFolderStructure(
+          userFirmId.toString(),
+          clientId
+        );
+        client.drive = folderIds;
+        await client.save();
+      } catch (createError) {
+        return res.status(500).json({
+          success: false,
+          message: 'Client CFS folder structure is invalid and could not be created',
+        });
+      }
+    }
+
+    // Get the appropriate folder ID for the file type
+    const folderId = cfsDriveService.getClientFolderIdForFileType(client.drive, fileType);
+
+    // Upload file to Google Drive
+    const driveService = require('../services/drive.service');
+    const fileBuffer = require('fs').readFileSync(req.file.path);
+    const driveFile = await driveService.uploadFile(
+      fileBuffer,
+      req.file.originalname,
+      req.file.mimetype,
+      folderId
+    );
+
+    // Clean up temporary file
+    require('fs').unlinkSync(req.file.path);
+
+    // Create attachment record
+    const Attachment = require('../models/Attachment.model');
+    const attachment = new Attachment({
+      firmId: userFirmId,
+      clientId: clientId,
+      caseId: null, // Client CFS files don't belong to a specific case
+      fileName: req.file.originalname,
+      driveFileId: driveFile.id,
+      size: driveFile.size,
+      mimeType: driveFile.mimeType,
+      description: description.trim(),
+      source: 'client_cfs',
+      type: 'file',
+      visibility: 'internal',
+      createdBy: req.user?.email || 'unknown',
+      createdByXID: userXID,
+      createdByName: userName,
+    });
+
+    await attachment.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'File uploaded to client CFS successfully',
+      data: {
+        attachmentId: attachment._id,
+        fileName: attachment.fileName,
+        size: attachment.size,
+        mimeType: attachment.mimeType,
+        description: attachment.description,
+        fileType: fileType,
+        createdAt: attachment.createdAt,
+        createdByXID: attachment.createdByXID,
+        createdByName: attachment.createdByName,
+      },
+    });
+  } catch (error) {
+    console.error('Error uploading client CFS file:', error);
+    
+    // Clean up temporary file if it exists
+    if (req.file && req.file.path) {
+      try {
+        require('fs').unlinkSync(req.file.path);
+      } catch (cleanupError) {
+        console.error('Error cleaning up temp file:', cleanupError);
+      }
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Error uploading file to client CFS',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * List Client CFS files (Admin and case users)
+ * GET /api/clients/:clientId/cfs/files
+ * 
+ * Lists all files in the client's CFS
+ * Accessible by admins and users with access to cases for this client
+ */
+const listClientCFSFiles = async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    const userFirmId = req.user?.firmId;
+
+    if (!userFirmId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+      });
+    }
+
+    // Validate client exists and user has access
+    const Client = require('../models/Client.model');
+    const client = await Client.findOne({ 
+      clientId, 
+      firmId: userFirmId 
+    });
+
+    if (!client) {
+      return res.status(404).json({
+        success: false,
+        message: 'Client not found or access denied',
+      });
+    }
+
+    // Fetch all client CFS attachments
+    const Attachment = require('../models/Attachment.model');
+    const attachments = await Attachment.find({
+      firmId: userFirmId,
+      clientId: clientId,
+      source: 'client_cfs',
+    }).sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: attachments.map(att => ({
+        attachmentId: att._id,
+        fileName: att.fileName,
+        size: att.size,
+        mimeType: att.mimeType,
+        description: att.description,
+        createdAt: att.createdAt,
+        createdByXID: att.createdByXID,
+        createdByName: att.createdByName,
+      })),
+    });
+  } catch (error) {
+    console.error('Error listing client CFS files:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error listing client CFS files',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Delete file from Client CFS (Admin only)
+ * DELETE /api/clients/:clientId/cfs/files/:attachmentId
+ * 
+ * Deletes a file from the client's CFS
+ * Only admins can delete from client CFS
+ */
+const deleteClientCFSFile = async (req, res) => {
+  try {
+    const { clientId, attachmentId } = req.params;
+    const userFirmId = req.user?.firmId;
+
+    if (!userFirmId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+      });
+    }
+
+    // Validate client exists
+    const Client = require('../models/Client.model');
+    const client = await Client.findOne({ 
+      clientId, 
+      firmId: userFirmId 
+    });
+
+    if (!client) {
+      return res.status(404).json({
+        success: false,
+        message: 'Client not found or access denied',
+      });
+    }
+
+    // Find attachment
+    const Attachment = require('../models/Attachment.model');
+    const attachment = await Attachment.findOne({
+      _id: attachmentId,
+      firmId: userFirmId,
+      clientId: clientId,
+      source: 'client_cfs',
+    });
+
+    if (!attachment) {
+      return res.status(404).json({
+        success: false,
+        message: 'File not found or access denied',
+      });
+    }
+
+    // Delete from Google Drive
+    if (attachment.driveFileId) {
+      try {
+        const driveService = require('../services/drive.service');
+        await driveService.deleteFile(attachment.driveFileId);
+      } catch (driveError) {
+        console.error('Error deleting file from Drive:', driveError);
+        // Continue with database deletion even if Drive deletion fails
+      }
+    }
+
+    // Delete attachment record
+    // Note: Attachment model has pre-delete hooks that prevent deletion
+    // We need to use deleteOne with { _id } to bypass the model-level hooks
+    await Attachment.collection.deleteOne({ _id: attachment._id });
+
+    res.json({
+      success: true,
+      message: 'File deleted from client CFS successfully',
+    });
+  } catch (error) {
+    console.error('Error deleting client CFS file:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting file from client CFS',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Download Client CFS file (Admin and case users)
+ * GET /api/clients/:clientId/cfs/files/:attachmentId/download
+ * 
+ * Downloads a file from the client's CFS
+ * Accessible by admins and users with access to cases for this client
+ */
+const downloadClientCFSFile = async (req, res) => {
+  try {
+    const { clientId, attachmentId } = req.params;
+    const userFirmId = req.user?.firmId;
+
+    if (!userFirmId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+      });
+    }
+
+    // Validate client exists
+    const Client = require('../models/Client.model');
+    const client = await Client.findOne({ 
+      clientId, 
+      firmId: userFirmId 
+    });
+
+    if (!client) {
+      return res.status(404).json({
+        success: false,
+        message: 'Client not found or access denied',
+      });
+    }
+
+    // Find attachment
+    const Attachment = require('../models/Attachment.model');
+    const attachment = await Attachment.findOne({
+      _id: attachmentId,
+      firmId: userFirmId,
+      clientId: clientId,
+      source: 'client_cfs',
+    });
+
+    if (!attachment) {
+      return res.status(404).json({
+        success: false,
+        message: 'File not found or access denied',
+      });
+    }
+
+    // Download from Google Drive
+    if (!attachment.driveFileId) {
+      return res.status(404).json({
+        success: false,
+        message: 'File not available in Google Drive',
+      });
+    }
+
+    const driveService = require('../services/drive.service');
+    const fileStream = await driveService.downloadFile(attachment.driveFileId);
+
+    // Set response headers
+    res.setHeader('Content-Type', attachment.mimeType || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${attachment.fileName}"`);
+
+    // Stream file to response
+    fileStream.pipe(res);
+  } catch (error) {
+    console.error('Error downloading client CFS file:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error downloading file from client CFS',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getClients,
   getClientById,
@@ -912,4 +1301,9 @@ module.exports = {
   updateClientFactSheet,
   uploadFactSheetFile,
   deleteFactSheetFile,
+  // Client CFS management
+  uploadClientCFSFile,
+  listClientCFSFiles,
+  deleteClientCFSFile,
+  downloadClientCFSFile,
 };

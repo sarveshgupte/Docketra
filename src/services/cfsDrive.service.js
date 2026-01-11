@@ -38,6 +38,18 @@ class CFSDriveService {
   };
 
   /**
+   * Client CFS subfolder names
+   * These are the standard subfolders created for each client
+   */
+  static CLIENT_CFS_SUBFOLDERS = {
+    DOCUMENTS: 'documents',
+    CONTRACTS: 'contracts',
+    IDENTITY: 'identity',
+    FINANCIALS: 'financials',
+    INTERNAL: 'internal',
+  };
+
+  /**
    * Ensure firm folder exists under root
    * 
    * @param {string} firmId - Firm identifier
@@ -74,7 +86,11 @@ class CFSDriveService {
       throw new Error('Firm ID and Case ID are required');
     }
 
-    console.log(`[CFSDriveService] Creating CFS folder structure for firm=${firmId}, case=${caseId}`);
+    // Guard folder ID logging in production
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+    if (isDevelopment) {
+      console.log(`[CFSDriveService] Creating CFS folder structure for firm=${firmId}, case=${caseId}`);
+    }
 
     try {
       // Step 1: Ensure firm folder exists
@@ -102,11 +118,13 @@ class CFSDriveService {
         internalFolderId: internalFolderId,
       };
 
-      console.log(`[CFSDriveService] Successfully created CFS structure:`, folderIds);
+      if (isDevelopment) {
+        console.log(`[CFSDriveService] Successfully created CFS structure for case ${caseId}`);
+      }
 
       return folderIds;
     } catch (error) {
-      console.error(`[CFSDriveService] Error creating CFS structure:`, error);
+      console.error(`[CFSDriveService] Error creating CFS structure:`, error.message);
       throw new Error(`Failed to create CFS folder structure: ${error.message}`);
     }
   }
@@ -165,6 +183,137 @@ class CFSDriveService {
     for (const folderKey of requiredFolders) {
       if (!folderIds[folderKey]) {
         console.error(`[CFSDriveService] Missing folder ID: ${folderKey}`);
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Create complete Client CFS folder structure
+   * 
+   * Creates the following structure:
+   * - firm_<firmId>/client_<clientId>/cfs/
+   *   - documents/
+   *   - contracts/
+   *   - identity/
+   *   - financials/
+   *   - internal/
+   * 
+   * @param {string} firmId - Firm identifier
+   * @param {string} clientId - Client identifier (e.g., C000001)
+   * @returns {Promise<Object>} Folder IDs
+   * @throws {Error} If folder creation fails
+   */
+  async createClientCFSFolderStructure(firmId, clientId) {
+    if (!firmId || !clientId) {
+      throw new Error('Firm ID and Client ID are required');
+    }
+
+    // Guard folder ID logging in production
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+    if (isDevelopment) {
+      console.log(`[CFSDriveService] Creating Client CFS folder structure for firm=${firmId}, client=${clientId}`);
+    }
+
+    try {
+      // Step 1: Ensure firm folder exists
+      const firmFolderId = await this.ensureFirmFolder(firmId);
+
+      // Step 2: Create client root folder
+      const clientRootName = `client_${clientId}`;
+      const clientRootFolderId = await driveService.getOrCreateFolder(clientRootName, firmFolderId);
+
+      // Step 3: Create CFS root folder for this client
+      const cfsRootFolderId = await driveService.getOrCreateFolder('cfs', clientRootFolderId);
+
+      // Step 4: Create all subfolders in parallel
+      const [documentsFolderId, contractsFolderId, identityFolderId, financialsFolderId, internalFolderId] = 
+        await Promise.all([
+          driveService.getOrCreateFolder(CFSDriveService.CLIENT_CFS_SUBFOLDERS.DOCUMENTS, cfsRootFolderId),
+          driveService.getOrCreateFolder(CFSDriveService.CLIENT_CFS_SUBFOLDERS.CONTRACTS, cfsRootFolderId),
+          driveService.getOrCreateFolder(CFSDriveService.CLIENT_CFS_SUBFOLDERS.IDENTITY, cfsRootFolderId),
+          driveService.getOrCreateFolder(CFSDriveService.CLIENT_CFS_SUBFOLDERS.FINANCIALS, cfsRootFolderId),
+          driveService.getOrCreateFolder(CFSDriveService.CLIENT_CFS_SUBFOLDERS.INTERNAL, cfsRootFolderId),
+        ]);
+
+      const folderIds = {
+        clientRootFolderId: clientRootFolderId,
+        cfsRootFolderId: cfsRootFolderId,
+        documentsFolderId: documentsFolderId,
+        contractsFolderId: contractsFolderId,
+        identityFolderId: identityFolderId,
+        financialsFolderId: financialsFolderId,
+        internalFolderId: internalFolderId,
+      };
+
+      if (isDevelopment) {
+        console.log(`[CFSDriveService] Successfully created Client CFS structure for ${clientId}`);
+      }
+
+      return folderIds;
+    } catch (error) {
+      console.error(`[CFSDriveService] Error creating Client CFS structure:`, error.message);
+      throw new Error(`Failed to create Client CFS folder structure: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get the appropriate folder ID for a client file type
+   * 
+   * @param {Object} folderIds - Client CFS folder IDs object
+   * @param {string} fileType - Type of file ('documents', 'contracts', 'identity', 'financials', 'internal')
+   * @returns {string} Folder ID for the file type
+   */
+  getClientFolderIdForFileType(folderIds, fileType = 'documents') {
+    if (!folderIds) {
+      throw new Error('Folder IDs object is required');
+    }
+
+    // Default to documents folder
+    const folderMap = {
+      'documents': folderIds.documentsFolderId,
+      'contracts': folderIds.contractsFolderId,
+      'identity': folderIds.identityFolderId,
+      'financials': folderIds.financialsFolderId,
+      'internal': folderIds.internalFolderId,
+    };
+
+    const folderId = folderMap[fileType.toLowerCase()] || folderIds.documentsFolderId;
+
+    if (!folderId) {
+      throw new Error(`No folder ID found for file type: ${fileType}`);
+    }
+
+    return folderId;
+  }
+
+  /**
+   * Validate Client CFS folder structure exists
+   * 
+   * @param {Object} folderIds - Client CFS folder IDs object
+   * @returns {Promise<boolean>} True if all folders are valid
+   */
+  async validateClientCFSStructure(folderIds) {
+    if (!folderIds) {
+      return false;
+    }
+
+    const requiredFolders = [
+      'clientRootFolderId',
+      'cfsRootFolderId',
+      'documentsFolderId',
+      'contractsFolderId',
+      'identityFolderId',
+      'financialsFolderId',
+      'internalFolderId',
+    ];
+
+    // Check all required folder IDs are present
+    for (const folderKey of requiredFolders) {
+      if (!folderIds[folderKey]) {
+        console.error(`[CFSDriveService] Missing client folder ID: ${folderKey}`);
         return false;
       }
     }

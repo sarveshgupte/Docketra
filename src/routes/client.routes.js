@@ -17,6 +17,10 @@ const {
   updateClientFactSheet,
   uploadFactSheetFile,
   deleteFactSheetFile,
+  uploadClientCFSFile,
+  listClientCFSFiles,
+  deleteClientCFSFile,
+  downloadClientCFSFile,
 } = require('../controllers/client.controller');
 
 /**
@@ -80,5 +84,13 @@ router.post('/:clientId/change-name', authenticate, authorize(ClientPolicy.canUp
 router.put('/:clientId/fact-sheet', authenticate, requireAdmin, authorize(ClientPolicy.canUpdate), updateClientFactSheet);
 router.post('/:clientId/fact-sheet/files', authenticate, requireAdmin, authorize(ClientPolicy.canUpdate), upload.single('file'), uploadFactSheetFile);
 router.delete('/:clientId/fact-sheet/files/:fileId', authenticate, requireAdmin, authorize(ClientPolicy.canUpdate), deleteFactSheetFile);
+
+// Client CFS endpoints
+// Admin-only: Upload and delete
+router.post('/:clientId/cfs/files', authenticate, requireAdmin, authorize(ClientPolicy.canUpdate), upload.single('file'), uploadClientCFSFile);
+router.delete('/:clientId/cfs/files/:attachmentId', authenticate, requireAdmin, authorize(ClientPolicy.canUpdate), deleteClientCFSFile);
+// All authenticated users: List and download (read-only)
+router.get('/:clientId/cfs/files', authenticate, authorize(ClientPolicy.canView), listClientCFSFiles);
+router.get('/:clientId/cfs/files/:attachmentId/download', authenticate, authorize(ClientPolicy.canView), downloadClientCFSFile);
 
 module.exports = router;

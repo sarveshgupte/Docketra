@@ -30,6 +30,8 @@ const {
   downloadAttachment,
   getClientFactSheetForCase,
   viewClientFactSheetFile,
+  listClientCFSFilesForCase,
+  downloadClientCFSFileForCase,
 } = require('../controllers/case.controller');
 
 // PR #44: Import xID ownership validation middleware
@@ -212,5 +214,12 @@ router.get('/:caseId/client-fact-sheet', authorize(CasePolicy.canView), userRead
 
 // GET /api/cases/:caseId/client-fact-sheet/files/:fileId/view - View client fact sheet file (view-only, no download)
 router.get('/:caseId/client-fact-sheet/files/:fileId/view', authenticate, authorize(CasePolicy.canView), attachmentLimiter, checkCaseClientAccess, viewClientFactSheetFile);
+
+// Client CFS access from case context (read-only)
+// GET /api/cases/:caseId/client-cfs/files - List client CFS files for this case's client
+router.get('/:caseId/client-cfs/files', authenticate, authorize(CasePolicy.canView), userReadLimiter, checkCaseClientAccess, listClientCFSFilesForCase);
+
+// GET /api/cases/:caseId/client-cfs/files/:attachmentId/download - Download client CFS file
+router.get('/:caseId/client-cfs/files/:attachmentId/download', authenticate, authorize(CasePolicy.canView), attachmentLimiter, checkCaseClientAccess, downloadClientCFSFileForCase);
 
 module.exports = router;
