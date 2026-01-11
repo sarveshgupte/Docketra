@@ -762,13 +762,13 @@ const resetPassword = async (req, res) => {
     
     // Send password setup email with xID
     try {
-      const emailResult = await emailService.sendPasswordSetupEmail(
-        user.email,
-        user.name,
-        token,
-        user.xID,
-        firmSlug // Pass firmSlug for firm-specific URL in email
-      );
+      const emailResult = await emailService.sendPasswordSetupEmail({
+        email: user.email,
+        name: user.name,
+        token: token,
+        xID: user.xID,
+        firmSlug: firmSlug // Pass firmSlug for firm-specific URL in email
+      });
       
       // Log password setup email sent
       await AuthAudit.create({
@@ -1129,13 +1129,13 @@ const createUser = async (req, res) => {
     
     // Send invite email with xID included (per PR 32 requirements)
     try {
-      const emailResult = await emailService.sendPasswordSetupEmail(
-        newUser.email,
-        newUser.name,
-        token,
-        newUser.xID,
-        firmSlug // Pass firmSlug for firm-specific URL in email
-      );
+      const emailResult = await emailService.sendPasswordSetupEmail({
+        email: newUser.email,
+        name: newUser.name,
+        token: token,
+        xID: newUser.xID,
+        firmSlug: firmSlug // Pass firmSlug for firm-specific URL in email
+      });
       
       // Log invite email sent
       await AuthAudit.create({
@@ -1650,13 +1650,13 @@ const resendSetupEmail = async (req, res) => {
     
     // Send invite reminder email with xID
     try {
-      const emailResult = await emailService.sendPasswordSetupReminderEmail(
-        user.email,
-        user.name,
-        token,
-        user.xID,
-        firmSlug // Pass firmSlug for firm-specific URL in email
-      );
+      const emailResult = await emailService.sendPasswordSetupReminderEmail({
+        email: user.email,
+        name: user.name,
+        token: token,
+        xID: user.xID,
+        firmSlug: firmSlug // Pass firmSlug for firm-specific URL in email
+      });
       
       if (!emailResult.success) {
         console.error('[AUTH] Failed to send invite reminder email:', emailResult.error);

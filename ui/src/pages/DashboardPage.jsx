@@ -48,6 +48,12 @@ export const DashboardPage = () => {
 
   useEffect(() => {
     loadDashboardData();
+  }, []);
+
+  // Show bookmark prompt only after dashboard loading completes
+  useEffect(() => {
+    // Only check after loading is complete
+    if (loading) return;
     
     // Check if this is the first login and user should see bookmark prompt
     // Only show if user data is loaded, user is admin, and has firmSlug
@@ -57,7 +63,7 @@ export const DashboardPage = () => {
         setShowBookmarkPrompt(true);
       }
     }
-  }, [user, isAdmin, firmSlug]);
+  }, [loading, user, isAdmin, firmSlug]);
 
   const handleDismissBookmarkPrompt = () => {
     setShowBookmarkPrompt(false);
@@ -365,7 +371,7 @@ export const DashboardPage = () => {
             boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
           }}>
             <h2 style={{ marginTop: 0, marginBottom: '1rem', color: '#1976D2' }}>
-              📌 Bookmark Your Firm Dashboard
+              Bookmark Your Firm Dashboard
             </h2>
             <p style={{ marginBottom: '1rem', color: '#666' }}>
               For quick access in the future, we recommend bookmarking this page:
