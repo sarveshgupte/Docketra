@@ -185,6 +185,59 @@ const clientSchema = new mongoose.Schema({
   }],
   
   /**
+   * Google Drive folder structure for Client CFS (Client File System)
+   * 
+   * Stores the Google Drive folder IDs for this client's file structure.
+   * Created automatically during client creation.
+   * 
+   * Structure:
+   * - clientRootFolderId: client_<clientId> folder
+   * - cfsRootFolderId: cfs/ subfolder
+   * - documentsFolderId: documents/ subfolder
+   * - contractsFolderId: contracts/ subfolder
+   * - identityFolderId: identity/ subfolder
+   * - financialsFolderId: financials/ subfolder
+   * - internalFolderId: internal/ subfolder
+   * 
+   * Security:
+   * - Folder IDs are authoritative for file access
+   * - Never rely on folder names for authorization
+   * - All file operations must use these IDs
+   * - Only Admin users can add/remove documents
+   * - Cases can reference these documents (read-only)
+   */
+  drive: {
+    clientRootFolderId: {
+      type: String,
+      trim: true,
+    },
+    cfsRootFolderId: {
+      type: String,
+      trim: true,
+    },
+    documentsFolderId: {
+      type: String,
+      trim: true,
+    },
+    contractsFolderId: {
+      type: String,
+      trim: true,
+    },
+    identityFolderId: {
+      type: String,
+      trim: true,
+    },
+    financialsFolderId: {
+      type: String,
+      trim: true,
+    },
+    internalFolderId: {
+      type: String,
+      trim: true,
+    },
+  },
+  
+  /**
    * Previous business names history
    * Tracks all legal name changes for audit compliance
    * Each entry captures: old name, change date, who changed it, and reason

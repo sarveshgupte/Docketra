@@ -2275,6 +2275,164 @@ const viewClientFactSheetFile = async (req, res) => {
   }
 };
 
+/**
+ * List Client CFS files for a case (Read-only)
+ * GET /api/cases/:caseId/client-cfs/files
+ * 
+ * Lists all files in the case's client CFS
+ * Accessible by users with access to the case (read-only)
+ */
+const listClientCFSFilesForCase = async (req, res) => {
+  try {
+    const { caseId } = req.params;
+    const userFirmId = req.user?.firmId;
+
+    if (!userFirmId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+      });
+    }
+
+    // Fetch case and validate access
+    const Case = require('../models/Case.model');
+    const caseDoc = await Case.findOne({ 
+      caseNumber: caseId, 
+      firmId: userFirmId 
+    });
+
+    if (!caseDoc) {
+      return res.status(404).json({
+        success: false,
+        message: 'Case not found or access denied',
+      });
+    }
+
+    // Get client ID from case
+    const clientId = caseDoc.clientId;
+    if (!clientId) {
+      return res.status(404).json({
+        success: false,
+        message: 'Case does not have an associated client',
+      });
+    }
+
+    // Fetch all client CFS attachments
+    const Attachment = require('../models/Attachment.model');
+    const attachments = await Attachment.find({
+      firmId: userFirmId,
+      clientId: clientId,
+      source: 'client_cfs',
+    }).sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: attachments.map(att => ({
+        attachmentId: att._id,
+        fileName: att.fileName,
+        size: att.size,
+        mimeType: att.mimeType,
+        description: att.description,
+        createdAt: att.createdAt,
+        createdByXID: att.createdByXID,
+        createdByName: att.createdByName,
+      })),
+    });
+  } catch (error) {
+    console.error('Error listing client CFS files for case:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error listing client CFS files',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Download Client CFS file from case context (Read-only)
+ * GET /api/cases/:caseId/client-cfs/files/:attachmentId/download
+ * 
+ * Downloads a file from the case's client CFS
+ * Accessible by users with access to the case
+ */
+const downloadClientCFSFileForCase = async (req, res) => {
+  try {
+    const { caseId, attachmentId } = req.params;
+    const userFirmId = req.user?.firmId;
+
+    if (!userFirmId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+      });
+    }
+
+    // Fetch case and validate access
+    const Case = require('../models/Case.model');
+    const caseDoc = await Case.findOne({ 
+      caseNumber: caseId, 
+      firmId: userFirmId 
+    });
+
+    if (!caseDoc) {
+      return res.status(404).json({
+        success: false,
+        message: 'Case not found or access denied',
+      });
+    }
+
+    // Get client ID from case
+    const clientId = caseDoc.clientId;
+    if (!clientId) {
+      return res.status(404).json({
+        success: false,
+        message: 'Case does not have an associated client',
+      });
+    }
+
+    // Find attachment
+    const Attachment = require('../models/Attachment.model');
+    const attachment = await Attachment.findOne({
+      _id: attachmentId,
+      firmId: userFirmId,
+      clientId: clientId,
+      source: 'client_cfs',
+    });
+
+    if (!attachment) {
+      return res.status(404).json({
+        success: false,
+        message: 'File not found or access denied',
+      });
+    }
+
+    // Download from Google Drive
+    if (!attachment.driveFileId) {
+      return res.status(404).json({
+        success: false,
+        message: 'File not available in Google Drive',
+      });
+    }
+
+    const driveService = require('../services/drive.service');
+    const fileStream = await driveService.downloadFile(attachment.driveFileId);
+
+    // Set response headers
+    res.setHeader('Content-Type', attachment.mimeType || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${attachment.fileName}"`);
+
+    // Stream file to response
+    fileStream.pipe(res);
+  } catch (error) {
+    console.error('Error downloading client CFS file for case:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error downloading file from client CFS',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createCase,
   addComment,
@@ -2293,4 +2451,6 @@ module.exports = {
   downloadAttachment,
   getClientFactSheetForCase,
   viewClientFactSheetFile,
+  listClientCFSFilesForCase,
+  downloadClientCFSFileForCase,
 };
