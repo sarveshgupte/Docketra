@@ -11,7 +11,7 @@
  */
 
 const PAN_REGEX = /([A-Z]{5})(\d{4})([A-Z])/i;
-const AADHAAR_REGEX = /(\d{0,8})(\d{4})$/;
+const AADHAAR_REGEX = /(\d{8})(\d{4})$/;
 
 const maskEmail = (value) => {
   if (typeof value !== 'string' || !value.includes('@')) return value;
@@ -47,7 +47,8 @@ const maskAadhaar = (value) => {
   const match = cleaned.match(AADHAAR_REGEX);
   if (!match) return value;
   const [, prefix, suffix] = match;
-  return `${'*'.repeat(prefix.length).replace(/(.{4})/g, '$1 ').trim()}${prefix.length ? ' ' : ''}${suffix}`;
+  const maskedPrefix = `${'**** '.repeat(Math.floor(prefix.length / 4))}${'*'.repeat(prefix.length % 4)}`.trim();
+  return `${maskedPrefix}${maskedPrefix ? ' ' : ''}${suffix}`;
 };
 
 const maskToken = (value) => {
@@ -85,7 +86,7 @@ const maskSensitiveObject = (input) => {
   return Object.entries(input).reduce((acc, [key, value]) => {
     acc[key] = maskValue(key, value);
     return acc;
-  }, Array.isArray(input) ? [] : {});
+  }, {});
 };
 
 module.exports = {
