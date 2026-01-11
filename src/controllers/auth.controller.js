@@ -61,7 +61,7 @@ const createOAuthState = (payload = {}) => {
       ...payload,
     },
     process.env.JWT_SECRET,
-    { expiresIn: GOOGLE_STATE_TTL_SECONDS }
+    { expiresIn: `${GOOGLE_STATE_TTL_SECONDS}s` }
   );
 };
 
