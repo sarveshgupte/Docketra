@@ -1,9 +1,9 @@
 /**
- * Dashboard Page Styles
+ * Enterprise Dashboard Page Styles
  */
 
 .dashboard {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -12,53 +12,57 @@
 }
 
 .dashboard__header h1 {
-  color: var(--text-primary);
-  font-size: var(--font-size-2xl);
+  color: var(--text-main);
+  font-size: var(--font-size-xl);
   margin-bottom: var(--spacing-sm);
+  font-weight: 600;
 }
 
 .dashboard__stats {
   display: grid;
   gap: var(--spacing-lg);
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   margin-bottom: var(--spacing-2xl);
 }
 
 .dashboard__stat-card {
-  padding: var(--spacing-xl);
+  padding: var(--spacing-lg);
   text-align: center;
+  transition: transform 0.15s ease, border-color 0.15s ease;
 }
 
 .dashboard__stat-card--clickable {
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .dashboard__stat-card--clickable:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-color: var(--border-strong);
 }
 
 .dashboard__stat-card--admin {
-  border-left: 4px solid var(--accent-warning);
+  border-left: 3px solid var(--warning);
+  padding-left: calc(var(--spacing-lg) - 3px);
 }
 
 .dashboard__stat-value {
-  color: var(--text-primary);
-  font-size: 48px;
-  font-weight: 700;
+  color: var(--primary-600);
+  font-size: 40px;
+  font-weight: 600;
   margin-bottom: var(--spacing-sm);
+  line-height: 1;
 }
 
 .dashboard__stat-label {
-  color: var(--text-secondary);
-  font-size: var(--font-size-md);
+  color: var(--text-main);
+  font-size: var(--font-size-sm);
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  margin-bottom: var(--spacing-xs);
 }
 
 .dashboard__stat-description {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
   margin-top: var(--spacing-xs);
 }
 
@@ -67,7 +71,18 @@
 }
 
 .dashboard__section-title {
-  color: var(--text-primary);
-  font-size: var(--font-size-xl);
-  margin-bottom: var(--spacing-lg);
+  color: var(--text-main);
+  font-size: var(--font-size-lg);
+  font-weight: 500;
+  margin-bottom: var(--spacing-md);
+}
+
+@media (max-width: 768px) {
+  .dashboard__stats {
+    grid-template-columns: 1fr;
+  }
+  
+  .dashboard__stat-value {
+    font-size: 32px;
+  }
 }
