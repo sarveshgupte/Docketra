@@ -138,6 +138,19 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+
+  // Onboarding guard: blocks access until password is explicitly set
+  mustSetPassword: {
+    type: Boolean,
+    default: false,
+    index: true,
+  },
+
+  // Timestamp when password was set for the first time
+  passwordSetAt: {
+    type: Date,
+    default: null,
+  },
   
   // Secure token hash for password setup / invite (stored as hash, never plain text)
   // Also serves as invite token for new user onboarding
@@ -367,6 +380,7 @@ userSchema.index({ email: 1 }, { unique: true }); // Email is globally unique
 userSchema.index({ isActive: 1 });
 userSchema.index({ role: 1 });
 userSchema.index({ status: 1 });
+userSchema.index({ mustSetPassword: 1 });
 // REMOVED: { firmId: 1 } - redundant with compound index (firmId, xID) above
 userSchema.index({ firmId: 1, role: 1 }); // Firm-scoped role queries
 userSchema.index({ 'authProviders.google.googleId': 1 }, { unique: true, sparse: true }); // One Google account -> one user
