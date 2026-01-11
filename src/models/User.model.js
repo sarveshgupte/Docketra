@@ -372,9 +372,7 @@ userSchema.pre('save', async function() {
   // Keep onboarding flags in sync: mustSetPassword is authoritative
   if (this.mustSetPassword) {
     this.passwordSet = false;
-    if (this.passwordSetAt) {
-      this.passwordSetAt = null;
-    }
+    this.passwordSetAt = null;
   } else if (this.passwordSetAt) {
     this.passwordSet = true;
   }
