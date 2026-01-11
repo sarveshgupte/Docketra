@@ -3,15 +3,11 @@
  * Centralized error handling for the application
  */
 
-const { maskSensitiveObject } = require('../utils/pii');
+const { sanitizeErrorForLog } = require('../utils/pii');
 
 const errorHandler = (err, req, res, next) => {
   // Always mask error objects before logging to prevent PII leakage (tokens, emails, phone numbers, auth headers).
-  const sanitizedError = maskSensitiveObject({
-    message: err?.message,
-    stack: err?.stack,
-    ...(err && typeof err === 'object' ? err : {}),
-  });
+  const sanitizedError = sanitizeErrorForLog(err);
   console.error('Error:', sanitizedError);
   
   // Mongoose validation error
