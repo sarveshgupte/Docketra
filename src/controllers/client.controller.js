@@ -612,6 +612,12 @@ const changeLegalName = async (req, res) => {
         reason: reason.trim(),
       },
     });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: 'Error changing client legal name',
+      error: error.message,
+    });
   }
 };
 
