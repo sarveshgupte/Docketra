@@ -46,6 +46,15 @@ const canManageUsers = (user) => {
 };
 
 /**
+ * Check if user can manage storage configuration
+ * @param {Object} user
+ * @returns {boolean}
+ */
+const canManageStorage = (user) => {
+  return isAdmin(user);
+};
+
+/**
  * Check if user can view all cases (admin visibility)
  * @param {Object} user - Authenticated user from req.user
  * @returns {boolean} - True if allowed, false otherwise
@@ -67,6 +76,7 @@ module.exports = {
   isAdmin,
   canViewStats,
   canManageUsers,
+  canManageStorage,
   canViewAllCases,
   canManageCategories,
 };
