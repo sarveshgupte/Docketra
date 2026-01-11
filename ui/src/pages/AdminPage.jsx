@@ -1157,7 +1157,7 @@ export const AdminPage = () => {
                     <option value="onedrive">OneDrive</option>
                   </select>
                   <div className="neo-info-text" style={{ marginTop: '8px' }}>
-                    OAuth connection is not yet available. The connect flow will be enabled in a future update.
+                    Provider connection will be enabled in a future release. Settings here prepare for the upcoming OAuth flow.
                   </div>
                 </div>
               )}
