@@ -1,5 +1,9 @@
 /**
- * Toast Context for notifications
+ * Enterprise Toast Context for notifications
+ * Success: Auto-dismiss after 3 seconds
+ * Error: Persistent until dismissed
+ * Warning: Auto-dismiss after 5 seconds
+ * Info: Auto-dismiss after 4 seconds
  */
 
 import React, { createContext, useState, useCallback } from 'react';
@@ -9,16 +13,32 @@ export const ToastContext = createContext(null);
 export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
 
-  const addToast = useCallback((message, type = 'info') => {
+  const addToast = useCallback((message, type = 'info', persistent = false) => {
     const id = Date.now();
     const toast = { id, message, type };
     
-    setToasts((prev) => [...prev, toast]);
+    setToasts((prev) => {
+      // Limit to 3 toasts at a time
+      const newToasts = [...prev, toast];
+      return newToasts.slice(-3);
+    });
     
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-      removeToast(id);
-    }, 5000);
+    // Auto remove based on type
+    if (!persistent) {
+      const timeoutMap = {
+        success: 3000,
+        warning: 5000,
+        info: 4000,
+        danger: 0,
+      };
+      const timeout = timeoutMap[type] ?? 0;
+      
+      if (timeout > 0) {
+        setTimeout(() => {
+          removeToast(id);
+        }, timeout);
+      }
+    }
     
     return id;
   }, []);
@@ -28,19 +48,19 @@ export const ToastProvider = ({ children }) => {
   }, []);
 
   const showSuccess = useCallback((message) => {
-    return addToast(message, 'success');
+    return addToast(message, 'success', false);
   }, [addToast]);
 
   const showError = useCallback((message) => {
-    return addToast(message, 'danger');
+    return addToast(message, 'danger', true); // Errors are persistent
   }, [addToast]);
 
   const showWarning = useCallback((message) => {
-    return addToast(message, 'warning');
+    return addToast(message, 'warning', false);
   }, [addToast]);
 
   const showInfo = useCallback((message) => {
-    return addToast(message, 'info');
+    return addToast(message, 'info', false);
   }, [addToast]);
 
   const value = {
@@ -68,12 +88,13 @@ const ToastContainer = ({ toasts, removeToast }) => {
     <div
       style={{
         position: 'fixed',
-        top: '20px',
-        right: '20px',
+        top: '80px',
+        right: '24px',
         zIndex: 9999,
         display: 'flex',
         flexDirection: 'column',
-        gap: 'var(--spacing-sm)',
+        gap: '8px',
+        maxWidth: '420px',
       }}
     >
       {toasts.map((toast) => (
@@ -81,31 +102,37 @@ const ToastContainer = ({ toasts, removeToast }) => {
           key={toast.id}
           className={`neo-alert neo-alert--${toast.type}`}
           style={{
-            minWidth: '300px',
+            minWidth: '320px',
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center',
-            animation: 'slideIn 0.3s ease-out',
+            alignItems: 'flex-start',
+            animation: 'toastSlideIn 0.2s ease-out',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
           }}
         >
-          <span>{toast.message}</span>
+          <span style={{ flex: 1, paddingRight: '12px' }}>{toast.message}</span>
           <button
             onClick={() => removeToast(toast.id)}
-            className="neo-button"
             style={{
-              padding: '4px 8px',
-              fontSize: 'var(--font-size-sm)',
-              marginLeft: 'var(--spacing-md)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '20px',
+              lineHeight: '1',
+              padding: '0 4px',
+              color: 'inherit',
+              opacity: 0.6,
             }}
+            aria-label="Close notification"
           >
             ×
           </button>
         </div>
       ))}
       <style>{`
-        @keyframes slideIn {
+        @keyframes toastSlideIn {
           from {
-            transform: translateX(100%);
+            transform: translateX(400px);
             opacity: 0;
           }
           to {
