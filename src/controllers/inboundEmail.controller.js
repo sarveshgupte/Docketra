@@ -4,6 +4,7 @@ const EmailMetadata = require('../models/EmailMetadata.model');
 const User = require('../models/User.model');
 const { CaseRepository } = require('../repositories');
 const { getMimeType } = require('../utils/fileUtils');
+const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
 const path = require('path');
 const fs = require('fs').promises;
 
@@ -122,12 +123,12 @@ ${bodyHtml || '(no HTML body)'}
     let fileSize = Buffer.byteLength(emailContent, 'utf8');
     
     try {
+      const provider = await StorageProviderFactory.getProvider(caseData.firmId);
       // Ensure case has Drive folder structure
       if (!caseData.drive?.attachmentsFolderId) {
         throw new Error('Case Drive folder structure not initialized. Please ensure the case was properly created with Google Drive integration enabled.');
       }
       
-      const driveService = require('../services/drive.service');
       const cfsDriveService = require('../services/cfsDrive.service');
       
       const targetFolderId = cfsDriveService.getFolderIdForFileType(
@@ -135,7 +136,7 @@ ${bodyHtml || '(no HTML body)'}
         'attachment'
       );
       
-      const driveFile = await driveService.uploadFile(
+      const driveFile = await provider.uploadFile(
         Buffer.from(emailContent, 'utf8'),
         emailFileName,
         mimeType,

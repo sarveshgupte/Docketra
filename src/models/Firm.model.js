@@ -84,6 +84,42 @@ const firmSchema = new mongoose.Schema({
     enum: ['ACTIVE', 'SUSPENDED', 'INACTIVE'],
     default: 'ACTIVE',
   },
+
+  /**
+   * Firm-level storage configuration
+   * Defaults to Docketra-managed Google Drive (service account)
+   */
+  storage: {
+    mode: {
+      type: String,
+      enum: ['docketra_managed', 'firm_connected'],
+      default: 'docketra_managed',
+    },
+    provider: {
+      type: String,
+      enum: ['google_drive', 'onedrive', null],
+      default: null,
+      validate: {
+        validator: function(value) {
+          if (this.storage?.mode === 'firm_connected') {
+            return !!value;
+          }
+          return true;
+        },
+        message: 'Storage provider is required when storage mode is firm_connected',
+      },
+    },
+    google: {
+      rootFolderId: { type: String, trim: true },
+      encryptedRefreshToken: { type: String, trim: true },
+      scopes: [{ type: String }],
+    },
+    onedrive: {
+      driveId: { type: String, trim: true },
+      encryptedRefreshToken: { type: String, trim: true },
+      scopes: [{ type: String }],
+    },
+  },
   
   /**
    * Bootstrap status for firm onboarding lifecycle
