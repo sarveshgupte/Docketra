@@ -12,6 +12,7 @@
 
 const PAN_REGEX = /([A-Z]{5})(\d{4})([A-Z])/i;
 const AADHAAR_REGEX = /(\d{8})(\d{4})$/;
+const JWT_REGEX = /[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+/;
 
 const maskEmail = (value) => {
   if (typeof value !== 'string' || !value.includes('@')) return value;
@@ -47,8 +48,8 @@ const maskAadhaar = (value) => {
   const match = cleaned.match(AADHAAR_REGEX);
   if (!match) return value;
   const [, prefix, suffix] = match;
-  const maskedPrefix = `${'**** '.repeat(Math.floor(prefix.length / 4))}${'*'.repeat(prefix.length % 4)}`.trim();
-  return `${maskedPrefix}${maskedPrefix ? ' ' : ''}${suffix}`;
+  const maskedPrefix = `${'*'.repeat(4)} ${'*'.repeat(4)}`;
+  return `${maskedPrefix} ${suffix}`;
 };
 
 const maskToken = (value) => {
@@ -70,7 +71,7 @@ const maskValue = (key, value) => {
   if (['authorization', 'token', 'refreshtoken', 'accesstoken', 'idtoken'].includes(lowerKey)) return maskToken(value);
 
   // Heuristic masking for strings that look like tokens
-  if (typeof value === 'string' && value.length > 20 && /[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+/.test(value)) {
+  if (typeof value === 'string' && value.length > 20 && JWT_REGEX.test(value)) {
     // Likely JWT
     return maskToken(value);
   }
