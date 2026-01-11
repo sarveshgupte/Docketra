@@ -309,20 +309,28 @@ async function validate() {
     // Display summary
     const allPassed = displaySummary(results);
     
-    // Close connection
-    await mongoose.connection.close();
-    console.log('[VALIDATION] Database connection closed.\n');
-    
     // Exit with appropriate code
-    process.exit(allPassed ? 0 : 1);
+    return allPassed ? 0 : 1;
     
   } catch (error) {
     console.error('[VALIDATION] ✗ Validation failed:', error.message);
     console.error(error.stack);
-    await mongoose.connection.close();
-    process.exit(1);
+    return 1;
+  } finally {
+    // Always close connection
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.connection.close();
+      console.log('[VALIDATION] Database connection closed.\n');
+    }
   }
 }
 
 // Run validation
-validate();
+validate()
+  .then((exitCode) => {
+    process.exit(exitCode);
+  })
+  .catch((error) => {
+    console.error('[VALIDATION] Script failed:', error);
+    process.exit(1);
+  });

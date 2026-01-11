@@ -262,7 +262,7 @@ async function fixFirm(firm, session) {
         isActive: true,
         status: 'ACTIVE',
         createdByXid: 'SUPERADMIN',
-        createdBy: process.env.SUPERADMIN_EMAIL || 'superadmin@system.local',
+        createdBy: process.env.SUPERADMIN_EMAIL || 'system@docketra.local',
       });
       
       await defaultClient.save({ session });
@@ -507,10 +507,11 @@ async function migrate() {
     
     // Step 3: Prompt for confirmation
     const answer = await question(
-      `[MIGRATION] Proceed with fixing ${report.firmsToFix} firm(s) and ${report.adminsToFix} admin(s)? (yes/no): `
+      `[MIGRATION] Proceed with fixing ${report.firmsToFix} firm(s) and ${report.adminsToFix} admin(s)? (yes/y/no): `
     );
     
-    if (answer.toLowerCase() !== 'yes') {
+    const confirmed = ['yes', 'y'].includes(answer.toLowerCase().trim());
+    if (!confirmed) {
       console.log('[MIGRATION] Migration cancelled by user.\n');
       return;
     }
