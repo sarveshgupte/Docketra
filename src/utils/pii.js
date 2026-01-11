@@ -13,16 +13,16 @@
 const PAN_REGEX = /([A-Z]{5})(\d{4})([A-Z])/i;
 const AADHAAR_REGEX = /(\d{8})(\d{4})$/;
 const JWT_REGEX = /[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+/;
+const MASK_SEGMENT_LENGTH = 4;
+const MIN_JWT_LENGTH = 20;
+const MIN_TOKEN_MASK_LENGTH = 6;
 
 const maskEmail = (value) => {
   if (typeof value !== 'string' || !value.includes('@')) return value;
   const [local, domain] = value.split('@');
-  const maskedLocal =
-    local.length <= 2 ? `${local[0] || ''}*` : `${local[0]}${'*'.repeat(local.length - 2)}${local.slice(-1)}`;
-  const [domainName, tld = ''] = domain.split('.');
-  const maskedDomain =
-    domainName.length <= 2 ? `${domainName[0] || ''}*` : `${domainName[0]}${'*'.repeat(domainName.length - 1)}`;
-  return `${maskedLocal}@${maskedDomain}${tld ? `.${tld}` : ''}`;
+  const prefix = local.slice(0, 2);
+  const maskedLocal = local.length > 2 ? `${prefix}***` : '***';
+  return `${maskedLocal}@${domain}`;
 };
 
 const maskPhone = (value) => {
@@ -48,19 +48,19 @@ const maskAadhaar = (value) => {
   const match = cleaned.match(AADHAAR_REGEX);
   if (!match) return value;
   const [, prefix, suffix] = match;
-  const maskedPrefix = `${'*'.repeat(4)} ${'*'.repeat(4)}`;
+  const maskedPrefix = `${'*'.repeat(MASK_SEGMENT_LENGTH)} ${'*'.repeat(MASK_SEGMENT_LENGTH)}`;
   return `${maskedPrefix} ${suffix}`;
 };
 
 const maskToken = (value) => {
   if (typeof value !== 'string') return value;
-  if (value.length <= 6) return '*'.repeat(value.length);
-  return `${value.slice(0, 4)}***${value.slice(-2)}`;
+  if (value.length <= MIN_TOKEN_MASK_LENGTH) return '*'.repeat(value.length);
+  return `${value.slice(0, MASK_SEGMENT_LENGTH)}***${value.slice(-2)}`;
 };
 
-const maskValue = (key, value) => {
+const maskValue = (key, value, seen = new WeakSet()) => {
   if (value === null || value === undefined) return value;
-  if (typeof value === 'object') return maskSensitiveObject(value);
+  if (typeof value === 'object') return maskSensitiveObject(value, seen);
 
   const lowerKey = (key || '').toLowerCase();
 
@@ -71,7 +71,7 @@ const maskValue = (key, value) => {
   if (['authorization', 'token', 'refreshtoken', 'accesstoken', 'idtoken'].includes(lowerKey)) return maskToken(value);
 
   // Heuristic masking for strings that look like tokens
-  if (typeof value === 'string' && value.length > 20 && JWT_REGEX.test(value)) {
+  if (typeof value === 'string' && value.length > MIN_JWT_LENGTH && JWT_REGEX.test(value)) {
     // Likely JWT
     return maskToken(value);
   }
@@ -79,13 +79,17 @@ const maskValue = (key, value) => {
   return value;
 };
 
-const maskSensitiveObject = (input) => {
+const maskSensitiveObject = (input, seen = new WeakSet()) => {
   if (input === null || input === undefined) return input;
-  if (Array.isArray(input)) return input.map((item) => maskSensitiveObject(item));
+  if (typeof input === 'object') {
+    if (seen.has(input)) return '[Circular]';
+    seen.add(input);
+  }
+  if (Array.isArray(input)) return input.map((item) => maskSensitiveObject(item, seen));
   if (typeof input !== 'object') return input;
 
   return Object.entries(input).reduce((acc, [key, value]) => {
-    acc[key] = maskValue(key, value);
+    acc[key] = maskValue(key, value, seen);
     return acc;
   }, {});
 };
