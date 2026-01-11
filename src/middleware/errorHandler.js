@@ -3,12 +3,9 @@
  * Centralized error handling for the application
  */
 
-const { sanitizeErrorForLog } = require('../utils/pii');
-
 const errorHandler = (err, req, res, next) => {
-  // Always mask error objects before logging to prevent PII leakage (tokens, emails, phone numbers, auth headers).
-  const sanitizedError = sanitizeErrorForLog(err);
-  console.error('Error:', sanitizedError);
+  // Logging sanitization is handled centrally by the global console.error override to avoid double-masking.
+  console.error('Error:', err);
   
   // Mongoose validation error
   if (err.name === 'ValidationError') {
