@@ -602,8 +602,8 @@ const updateStorageConfig = async (req, res) => {
       });
     }
 
-    const nextStorage = firm.storage || {};
-    const newMode = mode || nextStorage.mode || 'docketra_managed';
+    const storageConfig = firm.storage || {};
+    const newMode = mode || storageConfig.mode || 'docketra_managed';
 
     if (newMode === 'firm_connected') {
       if (!provider) {
@@ -613,26 +613,26 @@ const updateStorageConfig = async (req, res) => {
         });
       }
 
-      nextStorage.mode = 'firm_connected';
-      nextStorage.provider = provider;
+      storageConfig.mode = 'firm_connected';
+      storageConfig.provider = provider;
 
       if (provider === 'google_drive') {
-        nextStorage.google = {
-          ...(nextStorage.google || {}),
+        storageConfig.google = {
+          ...(storageConfig.google || {}),
           ...google,
         };
       } else if (provider === 'onedrive') {
-        nextStorage.onedrive = {
-          ...(nextStorage.onedrive || {}),
+        storageConfig.onedrive = {
+          ...(storageConfig.onedrive || {}),
           ...onedrive,
         };
       }
     } else {
-      nextStorage.mode = 'docketra_managed';
-      nextStorage.provider = null;
+      storageConfig.mode = 'docketra_managed';
+      storageConfig.provider = null;
     }
 
-    firm.storage = nextStorage;
+    firm.storage = storageConfig;
     await firm.save();
 
     await logAdminAction({

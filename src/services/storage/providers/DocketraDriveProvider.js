@@ -26,10 +26,7 @@ class DocketraDriveProvider {
   }
 
   async getOrCreateFolder(name, parentRef) {
-    if (typeof driveService.getOrCreateFolder === 'function') {
-      return driveService.getOrCreateFolder(name, parentRef);
-    }
-    return this.createFolder(name, parentRef);
+    return driveService.getOrCreateFolder(name, parentRef);
   }
 }
 

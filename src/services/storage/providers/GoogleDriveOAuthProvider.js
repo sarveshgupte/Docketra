@@ -24,6 +24,10 @@ class GoogleDriveOAuthProvider {
   async createFolder() {
     throw new Error('GoogleDriveOAuthProvider.createFolder not implemented');
   }
+
+  async getOrCreateFolder() {
+    throw new Error('GoogleDriveOAuthProvider.getOrCreateFolder not implemented');
+  }
 }
 
 module.exports = GoogleDriveOAuthProvider;
