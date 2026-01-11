@@ -44,10 +44,24 @@ export const DashboardPage = () => {
     adminResolvedCases: 0,
   });
   const [recentCases, setRecentCases] = useState([]);
+  const [showBookmarkPrompt, setShowBookmarkPrompt] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
+    
+    // Check if this is the first login and user should see bookmark prompt
+    const hasSeenBookmarkPrompt = localStorage.getItem(`bookmarkPrompt_${user?.xID}`);
+    if (!hasSeenBookmarkPrompt && isAdmin && firmSlug) {
+      setShowBookmarkPrompt(true);
+    }
   }, []);
+
+  const handleDismissBookmarkPrompt = () => {
+    setShowBookmarkPrompt(false);
+    if (user?.xID) {
+      localStorage.setItem(`bookmarkPrompt_${user.xID}`, 'true');
+    }
+  };
 
   const loadDashboardData = async () => {
     setLoading(true);
@@ -324,6 +338,65 @@ export const DashboardPage = () => {
           </div>
         )}
       </div>
+
+      {/* Bookmark Prompt Modal */}
+      {showBookmarkPrompt && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '90%',
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+          }}>
+            <h2 style={{ marginTop: 0, marginBottom: '1rem', color: '#1976D2' }}>
+              📌 Bookmark Your Firm Dashboard
+            </h2>
+            <p style={{ marginBottom: '1rem', color: '#666' }}>
+              For quick access in the future, we recommend bookmarking this page:
+            </p>
+            <div style={{
+              padding: '1rem',
+              backgroundColor: '#f5f5f5',
+              borderRadius: '4px',
+              marginBottom: '1.5rem',
+              wordBreak: 'break-all',
+              fontSize: '0.875rem',
+              fontFamily: 'monospace'
+            }}>
+              {window.location.origin}/f/{firmSlug}
+            </div>
+            <button
+              onClick={handleDismissBookmarkPrompt}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                backgroundColor: '#1976D2',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '1rem',
+                fontWeight: '500',
+                cursor: 'pointer'
+              }}
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 };
