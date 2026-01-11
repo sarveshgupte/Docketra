@@ -744,22 +744,93 @@ const cloneCase = async (req, res) => {
     
     for (const attachment of originalAttachments) {
       try {
-        // Create new file path for cloned attachment
-        const originalPath = attachment.filePath;
-        const fileExt = path.extname(attachment.fileName);
-        const newFileName = `${Date.now()}-${Math.random().toString(36).substring(7)}${fileExt}`;
-        const newFilePath = path.join(__dirname, '../../uploads', newFileName);
+        let newDriveFileId = null;
+        let fileSize = attachment.size;
+        let fileMimeType = attachment.mimeType;
         
-        // Copy the actual file
-        await fs.copyFile(originalPath, newFilePath);
+        // Handle Google Drive attachments
+        if (attachment.driveFileId) {
+          // Ensure new case has Drive folder structure
+          if (!newCase.drive?.attachmentsFolderId) {
+            throw new Error('New case Drive folder structure not initialized');
+          }
+          
+          const driveService = require('../services/drive.service');
+          const cfsDriveService = require('../services/cfsDrive.service');
+          
+          // Download file from original location
+          const fileStream = await driveService.downloadFile(attachment.driveFileId);
+          
+          // Convert stream to buffer
+          const chunks = [];
+          for await (const chunk of fileStream) {
+            chunks.push(chunk);
+          }
+          const fileBuffer = Buffer.concat(chunks);
+          
+          // Upload to new case's folder
+          const targetFolderId = cfsDriveService.getFolderIdForFileType(
+            newCase.drive,
+            'attachment'
+          );
+          
+          const driveFile = await driveService.uploadFile(
+            fileBuffer,
+            attachment.fileName,
+            fileMimeType || getMimeType(attachment.fileName),
+            targetFolderId
+          );
+          
+          newDriveFileId = driveFile.id;
+          fileSize = driveFile.size || fileSize;
+          fileMimeType = driveFile.mimeType || fileMimeType;
+        } else if (attachment.filePath) {
+          // Legacy: Handle old attachments stored locally
+          const fileExt = path.extname(attachment.fileName);
+          const newFileName = `${Date.now()}-${Math.random().toString(36).substring(7)}${fileExt}`;
+          const newFilePath = path.join(__dirname, '../../uploads', newFileName);
+          
+          // Copy the actual file
+          await fs.copyFile(attachment.filePath, newFilePath);
+          
+          // Create new attachment record with local path (legacy)
+          const newAttachment = await Attachment.create({
+            caseId: newCase.caseId,
+            firmId: newCase.firmId,
+            fileName: attachment.fileName,
+            filePath: newFilePath,
+            description: attachment.description,
+            createdBy: attachment.createdBy,
+            createdByXID: attachment.createdByXID,
+            createdByName: attachment.createdByName,
+            type: attachment.type,
+            source: attachment.source,
+            visibility: attachment.visibility,
+            mimeType: attachment.mimeType,
+            note: `Cloned from Case ID: ${originalCase.caseId}`,
+          });
+          copiedAttachments.push(newAttachment);
+          continue;
+        } else {
+          console.error(`Attachment ${attachment._id} has no file location`);
+          continue;
+        }
         
-        // Create new attachment record
+        // Create new attachment record with Google Drive metadata
         const newAttachment = await Attachment.create({
           caseId: newCase.caseId,
+          firmId: newCase.firmId,
           fileName: attachment.fileName,
-          filePath: newFilePath,
+          driveFileId: newDriveFileId,
+          size: fileSize,
+          mimeType: fileMimeType,
           description: attachment.description,
           createdBy: attachment.createdBy,
+          createdByXID: attachment.createdByXID,
+          createdByName: attachment.createdByName,
+          type: attachment.type,
+          source: attachment.source,
+          visibility: attachment.visibility,
           note: `Cloned from Case ID: ${originalCase.caseId}`,
         });
         copiedAttachments.push(newAttachment);
