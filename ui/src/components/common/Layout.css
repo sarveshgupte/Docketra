@@ -331,8 +331,9 @@
   width: 100%;
 }
 
-/* Responsive - Mobile & Tablet */
-@media (max-width: 1024px) {
+/* Responsive - Mobile Only */
+/* Primary actions must never be hidden on desktop or tablet breakpoints */
+@media (max-width: 768px) {
   .enterprise-top-header__nav {
     display: none;
   }
@@ -364,9 +365,7 @@
   .enterprise-top-header__logo {
     margin-right: 0;
   }
-}
 
-@media (max-width: 768px) {
   .enterprise-top-header__container {
     padding: 0 var(--spacing-md);
   }

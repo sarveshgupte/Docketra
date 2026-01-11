@@ -16,11 +16,9 @@ export const Layout = ({ children }) => {
   const location = useLocation();
   const { firmSlug } = useParams();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [adminDropdownOpen, setAdminDropdownOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   
-  // Refs for dropdown outside click detection
-  const adminDropdownRef = useRef(null);
+  // Ref for dropdown outside click detection
   const profileDropdownRef = useRef(null);
 
   // Get firmSlug from URL params or user data
@@ -60,12 +58,9 @@ export const Layout = ({ children }) => {
   // Check if user has admin access (Admin or SuperAdmin)
   const hasAdminAccess = isAdmin || isSuperadmin;
 
-  // Close dropdowns on outside click
+  // Close profile dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (adminDropdownRef.current && !adminDropdownRef.current.contains(event.target)) {
-        setAdminDropdownOpen(false);
-      }
       if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
         setProfileDropdownOpen(false);
       }
@@ -79,23 +74,9 @@ export const Layout = ({ children }) => {
 
   // Close dropdowns on route change
   useEffect(() => {
-    setAdminDropdownOpen(false);
     setProfileDropdownOpen(false);
     setMobileMenuOpen(false);
   }, [location.pathname]);
-
-  // Close other dropdown when one opens
-  useEffect(() => {
-    if (adminDropdownOpen) {
-      setProfileDropdownOpen(false);
-    }
-  }, [adminDropdownOpen]);
-
-  useEffect(() => {
-    if (profileDropdownOpen) {
-      setAdminDropdownOpen(false);
-    }
-  }, [profileDropdownOpen]);
 
   // Reusable chevron icon
   const ChevronIcon = () => (
@@ -151,44 +132,15 @@ export const Layout = ({ children }) => {
             </button>
           </div>
 
-          {/* Admin Dropdown (conditional) */}
+          {/* Admin Link (conditional) */}
           {hasAdminAccess && (
             <div className="enterprise-top-header__admin">
-              <div className="dropdown" ref={adminDropdownRef}>
-                <button
-                  className="enterprise-top-header__nav-link dropdown-toggle"
-                  onClick={() => setAdminDropdownOpen(!adminDropdownOpen)}
-                  aria-expanded={adminDropdownOpen}
-                >
-                  Admin
-                  <ChevronIcon />
-                </button>
-                {adminDropdownOpen && (
-                  <div className="dropdown-menu">
-                    <Link
-                      to={`/${currentFirmSlug}/admin`}
-                      className="dropdown-item"
-                      onClick={() => setAdminDropdownOpen(false)}
-                    >
-                      Admin Dashboard
-                    </Link>
-                    <Link
-                      to={`/${currentFirmSlug}/admin/users`}
-                      className="dropdown-item"
-                      onClick={() => setAdminDropdownOpen(false)}
-                    >
-                      User Management
-                    </Link>
-                    <Link
-                      to={`/${currentFirmSlug}/admin/clients`}
-                      className="dropdown-item"
-                      onClick={() => setAdminDropdownOpen(false)}
-                    >
-                      Client Management
-                    </Link>
-                  </div>
-                )}
-              </div>
+              <Link
+                to={`/${currentFirmSlug}/admin`}
+                className={`enterprise-top-header__nav-link ${location.pathname.startsWith(`/${currentFirmSlug}/admin`) ? 'active' : ''}`}
+              >
+                Admin
+              </Link>
             </div>
           )}
           
@@ -295,29 +247,13 @@ export const Layout = ({ children }) => {
               Create Case
             </button>
             {hasAdminAccess && (
-              <>
-                <Link
-                  to={`/${currentFirmSlug}/admin`}
-                  className={`enterprise-top-header__mobile-link ${isActive(`/${currentFirmSlug}/admin`) ? 'active' : ''}`}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Admin Dashboard
-                </Link>
-                <Link
-                  to={`/${currentFirmSlug}/admin/users`}
-                  className="enterprise-top-header__mobile-link"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  User Management
-                </Link>
-                <Link
-                  to={`/${currentFirmSlug}/admin/clients`}
-                  className="enterprise-top-header__mobile-link"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Client Management
-                </Link>
-              </>
+              <Link
+                to={`/${currentFirmSlug}/admin`}
+                className={`enterprise-top-header__mobile-link ${location.pathname.startsWith(`/${currentFirmSlug}/admin`) ? 'active' : ''}`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Admin
+              </Link>
             )}
           </div>
         )}
