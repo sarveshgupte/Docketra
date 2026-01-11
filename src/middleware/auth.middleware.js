@@ -1,6 +1,17 @@
 const User = require('../models/User.model');
 const jwtService = require('../services/jwt.service');
 
+const MUST_SET_ALLOWED_PATHS = [
+  '/auth/profile',
+  '/api/auth/profile',
+  '/auth/set-password',
+  '/api/auth/set-password',
+  '/auth/reset-password',
+  '/api/auth/reset-password',
+  '/auth/reset-password-with-token',
+  '/api/auth/reset-password-with-token',
+];
+
 const getTokenFromCookies = (cookieHeader, name) => {
   if (!cookieHeader || !name) return null;
   return cookieHeader
@@ -116,18 +127,8 @@ const authenticate = async (req, res, next) => {
 
     // Hard guard: block all authenticated routes until password is set
     const path = req.originalUrl || req.path || '';
-    const mustSetAllowed = [
-      '/auth/profile',
-      '/api/auth/profile',
-      '/auth/set-password',
-      '/api/auth/set-password',
-      '/auth/reset-password',
-      '/api/auth/reset-password',
-      '/auth/reset-password-with-token',
-      '/api/auth/reset-password-with-token',
-    ];
     const isProfileEndpoint = path.endsWith('/profile');
-    const isPasswordSetupAllowed = mustSetAllowed.some(p => path.endsWith(p));
+    const isPasswordSetupAllowed = MUST_SET_ALLOWED_PATHS.some(p => path.endsWith(p));
     if (user.mustSetPassword && !isPasswordSetupAllowed) {
       return res.status(403).json({
         success: false,
