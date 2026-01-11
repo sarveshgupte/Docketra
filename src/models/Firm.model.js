@@ -101,15 +101,15 @@ const firmSchema = new mongoose.Schema({
       validate: {
         validator: function(value) {
           const allowedProviders = ['google_drive', 'onedrive'];
-          if (this.storage?.mode === 'firm_connected') {
-            return value && allowedProviders.includes(value);
-          }
-          if (value === null || value === undefined) {
-            return true;
-          }
-          return allowedProviders.includes(value);
+        if (this.storage?.mode === 'firm_connected') {
+          return value && allowedProviders.includes(value);
+        }
+        if (value === null || value === undefined) {
+          return true;
+        }
+        return allowedProviders.includes(value);
         },
-        message: 'Storage provider is required when storage mode is firm_connected',
+        message: 'Storage provider must be google_drive or onedrive (required when storage mode is firm_connected)',
       },
     },
     google: {

@@ -9,23 +9,23 @@ class OneDriveProvider {
   }
 
   async uploadFile() {
-    throw new Error('OneDriveProvider uploadFile is not implemented in this release');
+    throw new Error('OneDriveProvider.uploadFile not implemented in this release');
   }
 
   async downloadFile() {
-    throw new Error('OneDriveProvider downloadFile is not implemented in this release');
+    throw new Error('OneDriveProvider.downloadFile not implemented in this release');
   }
 
   async deleteFile() {
-    throw new Error('OneDriveProvider deleteFile is not implemented in this release');
+    throw new Error('OneDriveProvider.deleteFile not implemented in this release');
   }
 
   async createFolder() {
-    throw new Error('OneDriveProvider createFolder is not implemented in this release');
+    throw new Error('OneDriveProvider.createFolder not implemented in this release');
   }
 
   async getOrCreateFolder() {
-    throw new Error('OneDriveProvider getOrCreateFolder is not implemented in this release');
+    throw new Error('OneDriveProvider.getOrCreateFolder not implemented in this release');
   }
 }
 

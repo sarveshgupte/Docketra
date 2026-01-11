@@ -119,6 +119,18 @@
   gap: var(--spacing-lg);
 }
 
+.storage-info {
+  margin-top: var(--spacing-xs);
+}
+
+.storage-radio-spaced {
+  margin-top: var(--spacing-md);
+}
+
+.storage-disconnect {
+  margin-left: var(--spacing-sm);
+}
+
 .category-card {
   padding: var(--spacing-lg);
   border: 1px solid var(--border-color);
