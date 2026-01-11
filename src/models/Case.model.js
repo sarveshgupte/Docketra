@@ -574,6 +574,52 @@ const caseSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
+  
+  /**
+   * Google Drive folder structure for CFS (Case File System)
+   * 
+   * Stores the Google Drive folder IDs for this case's file structure.
+   * Created automatically during case creation via pre-save hook.
+   * 
+   * Structure:
+   * - firmRootFolderId: firm_<firmId> folder
+   * - cfsRootFolderId: cfs_<caseId> folder
+   * - attachmentsFolderId: attachments/ subfolder
+   * - documentsFolderId: documents/ subfolder
+   * - evidenceFolderId: evidence/ subfolder
+   * - internalFolderId: internal/ subfolder
+   * 
+   * Security:
+   * - Folder IDs are authoritative for file access
+   * - Never rely on folder names for authorization
+   * - All file operations must use these IDs
+   */
+  drive: {
+    firmRootFolderId: {
+      type: String,
+      trim: true,
+    },
+    cfsRootFolderId: {
+      type: String,
+      trim: true,
+    },
+    attachmentsFolderId: {
+      type: String,
+      trim: true,
+    },
+    documentsFolderId: {
+      type: String,
+      trim: true,
+    },
+    evidenceFolderId: {
+      type: String,
+      trim: true,
+    },
+    internalFolderId: {
+      type: String,
+      trim: true,
+    },
+  },
 }, {
   // Automatic timestamp management for audit trail
   timestamps: true,
@@ -677,6 +723,28 @@ caseSchema.pre('validate', async function() {
         GST: client.GST,
         CIN: client.CIN,
       };
+    }
+  }
+  
+  // Create Google Drive CFS folder structure for new cases
+  // This must happen after case identifiers are generated
+  if (this.isNew && !this.drive?.cfsRootFolderId) {
+    try {
+      const cfsDriveService = require('../services/cfsDrive.service');
+      const folderIds = await cfsDriveService.createCFSFolderStructure(
+        this.firmId,
+        this.caseNumber // Use human-readable case number for folder name
+      );
+      
+      // Persist folder IDs in the case document
+      this.drive = folderIds;
+      
+      console.log(`[Case] Created CFS folder structure for case ${this.caseNumber}`);
+    } catch (error) {
+      console.error(`[Case] Failed to create CFS folder structure:`, error);
+      // Log error but don't fail case creation - folders can be created later if needed
+      // In production, you might want to fail the case creation instead
+      console.warn('[Case] Proceeding with case creation without Drive folders');
     }
   }
 });
