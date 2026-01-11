@@ -3,6 +3,7 @@ const Client = require('../models/Client.model');
 const Category = require('../models/Category.model');
 const Case = require('../models/Case.model');
 const AuthAudit = require('../models/AuthAudit.model');
+const Firm = require('../models/Firm.model');
 const emailService = require('../services/email.service');
 const { CASE_STATUS } = require('../config/constants');
 const { logAdminAction, logCaseListViewed } = require('../services/auditLog.service');
@@ -15,6 +16,7 @@ const { logAdminAction, logCaseListViewed } = require('../services/auditLog.serv
  */
 
 const INVITE_TOKEN_EXPIRY_HOURS = 48; // 48 hours for invite tokens
+const DEFAULT_STORAGE_MODE = 'docketra_managed';
 
 /**
  * Helper function to safely log audit events without throwing
@@ -539,6 +541,179 @@ const updateRestrictedClients = async (req, res) => {
   }
 };
 
+/**
+ * Get firm storage configuration (Admin only)
+ * GET /api/admin/storage
+ */
+const getStorageConfig = async (req, res) => {
+  try {
+    const firmId = req.user?.firmId;
+
+    if (!firmId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Firm context is required',
+      });
+    }
+
+    const firm = await Firm.findById(firmId).select('storage firmId name');
+
+    if (!firm) {
+      return res.status(404).json({
+        success: false,
+        message: 'Firm not found',
+      });
+    }
+
+    res.json({
+      success: true,
+      data: firm.storage || { mode: 'docketra_managed', provider: null },
+    });
+  } catch (error) {
+    console.error('[ADMIN] Error fetching storage config:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching storage configuration',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Update firm storage configuration (Admin only)
+ * PUT /api/admin/storage
+ */
+const updateStorageConfig = async (req, res) => {
+  try {
+    const firmId = req.user?.firmId;
+    const { mode, provider, google = {}, onedrive = {} } = req.body || {};
+
+    if (!firmId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Firm context is required',
+      });
+    }
+
+    const firm = await Firm.findById(firmId);
+    if (!firm) {
+      return res.status(404).json({
+        success: false,
+        message: 'Firm not found',
+      });
+    }
+
+    const storageConfig = firm.storage || {};
+    const newMode = mode || storageConfig.mode || DEFAULT_STORAGE_MODE;
+
+    if (newMode === 'firm_connected') {
+      if (!provider) {
+        return res.status(400).json({
+          success: false,
+          message: 'Provider is required when storage mode is firm_connected',
+        });
+      }
+
+      storageConfig.mode = 'firm_connected';
+      storageConfig.provider = provider;
+
+      if (provider === 'google_drive') {
+        storageConfig.google = {
+          ...(storageConfig.google || {}),
+          ...google,
+        };
+      } else if (provider === 'onedrive') {
+        storageConfig.onedrive = {
+          ...(storageConfig.onedrive || {}),
+          ...onedrive,
+        };
+      }
+    } else {
+      storageConfig.mode = DEFAULT_STORAGE_MODE;
+      storageConfig.provider = null;
+    }
+
+    firm.storage = storageConfig;
+    await firm.save();
+
+    await logAdminAction({
+      adminXID: req.user?.xID,
+      actionType: 'STORAGE_CONFIGURATION_UPDATED',
+      targetFirmId: firm.firmId,
+      metadata: {
+        mode: firm.storage.mode,
+        provider: firm.storage.provider,
+      },
+    });
+
+    res.json({
+      success: true,
+      message: 'Storage configuration updated',
+      data: firm.storage,
+    });
+  } catch (error) {
+    console.error('[ADMIN] Error updating storage config:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating storage configuration',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Disconnect firm storage (revert to Docketra-managed)
+ * POST /api/admin/storage/disconnect
+ */
+const disconnectStorage = async (req, res) => {
+  try {
+    const firmId = req.user?.firmId;
+
+    if (!firmId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Firm context is required',
+      });
+    }
+
+    const firm = await Firm.findById(firmId);
+    if (!firm) {
+      return res.status(404).json({
+        success: false,
+        message: 'Firm not found',
+      });
+    }
+
+    firm.storage = {
+      mode: 'docketra_managed',
+      provider: null,
+      google: {},
+      onedrive: {},
+    };
+
+    await firm.save();
+
+    await logAdminAction({
+      adminXID: req.user?.xID,
+      actionType: 'STORAGE_CONFIGURATION_DISCONNECTED',
+      targetFirmId: firm.firmId,
+    });
+
+    res.json({
+      success: true,
+      message: 'Storage disconnected. Docketra-managed storage is now active.',
+      data: firm.storage,
+    });
+  } catch (error) {
+    console.error('[ADMIN] Error disconnecting storage:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error disconnecting storage',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getAdminStats,
   resendInviteEmail,
@@ -547,4 +722,7 @@ module.exports = {
   getAllFiledCases,
   getAllResolvedCases,
   updateRestrictedClients,
+  getStorageConfig,
+  updateStorageConfig,
+  disconnectStorage,
 };

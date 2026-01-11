@@ -9,6 +9,7 @@ const {
   logFactSheetFileRemoved 
 } = require('../services/clientFactSheetAudit.service');
 const { getMimeType } = require('../utils/fileUtils');
+const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
 const path = require('path');
 const fs = require('fs').promises;
 
@@ -287,9 +288,11 @@ const createClient = async (req, res) => {
     // STEP 10: Create Google Drive CFS folder structure for the client
     try {
       const cfsDriveService = require('../services/cfsDrive.service');
+      const provider = await StorageProviderFactory.getProvider(userFirmId);
       const folderIds = await cfsDriveService.createClientCFSFolderStructure(
         userFirmId.toString(),
-        clientId
+        clientId,
+        provider
       );
       
       // Persist folder IDs in the client document
@@ -980,6 +983,8 @@ const uploadClientCFSFile = async (req, res) => {
       });
     }
 
+    const provider = await StorageProviderFactory.getProvider(userFirmId);
+
     // Validate client has CFS folder structure metadata
     const cfsDriveService = require('../services/cfsDrive.service');
     const isValidStructure = await cfsDriveService.validateClientCFSMetadata(client.drive);
@@ -989,7 +994,8 @@ const uploadClientCFSFile = async (req, res) => {
       try {
         const folderIds = await cfsDriveService.createClientCFSFolderStructure(
           userFirmId.toString(),
-          clientId
+          clientId,
+          provider
         );
         client.drive = folderIds;
         await client.save();
@@ -1005,8 +1011,7 @@ const uploadClientCFSFile = async (req, res) => {
     const folderId = cfsDriveService.getClientFolderIdForFileType(client.drive, fileType);
 
     // Upload file to Google Drive (from memory buffer)
-    const driveService = require('../services/drive.service');
-    const driveFile = await driveService.uploadFile(
+    const driveFile = await provider.uploadFile(
       req.file.buffer,
       req.file.originalname,
       req.file.mimetype,
@@ -1157,6 +1162,8 @@ const deleteClientCFSFile = async (req, res) => {
       });
     }
 
+    const provider = await StorageProviderFactory.getProvider(userFirmId);
+
     // Find attachment
     const Attachment = require('../models/Attachment.model');
     const attachment = await Attachment.findOne({
@@ -1176,8 +1183,7 @@ const deleteClientCFSFile = async (req, res) => {
     // Delete from Google Drive
     if (attachment.driveFileId) {
       try {
-        const driveService = require('../services/drive.service');
-        await driveService.deleteFile(attachment.driveFileId);
+        await provider.deleteFile(attachment.driveFileId);
       } catch (driveError) {
         console.error('Error deleting file from Drive:', driveError);
         // Continue with database deletion even if Drive deletion fails
@@ -1259,6 +1265,8 @@ const downloadClientCFSFile = async (req, res) => {
       });
     }
 
+    const provider = await StorageProviderFactory.getProvider(userFirmId);
+
     // Download from Google Drive
     if (!attachment.driveFileId) {
       return res.status(404).json({
@@ -1267,8 +1275,7 @@ const downloadClientCFSFile = async (req, res) => {
       });
     }
 
-    const driveService = require('../services/drive.service');
-    const fileStream = await driveService.downloadFile(attachment.driveFileId);
+    const fileStream = await provider.downloadFile(attachment.driveFileId);
 
     // Set response headers
     res.setHeader('Content-Type', attachment.mimeType || 'application/octet-stream');
