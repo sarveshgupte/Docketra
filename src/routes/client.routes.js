@@ -8,6 +8,11 @@ const { requireAdmin, blockSuperadmin } = require('../middleware/permission.midd
 const { authorize } = require('../middleware/authorize');
 const ClientPolicy = require('../policies/client.policy');
 const {
+  userReadLimiter,
+  userWriteLimiter,
+  attachmentLimiter,
+} = require('../middleware/rateLimiters');
+const {
   getClients,
   getClientById,
   createClient,
@@ -17,29 +22,19 @@ const {
   updateClientFactSheet,
   uploadFactSheetFile,
   deleteFactSheetFile,
+  uploadClientCFSFile,
+  listClientCFSFiles,
+  deleteClientCFSFile,
+  downloadClientCFSFile,
 } = require('../controllers/client.controller');
 
 /**
- * Configure multer for client fact sheet file uploads
- * Store files in uploads/client-fact-sheets directory
+ * Configure multer for client fact sheet and CFS file uploads
+ * Uses memory storage for compatibility with ephemeral filesystems (e.g., Render)
+ * Files are streamed directly to Google Drive without disk I/O
  */
-const uploadDir = path.join(__dirname, '../../uploads/client-fact-sheets');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.random().toString(36).substring(7);
-    cb(null, 'cfs-' + uniqueSuffix + path.extname(file.originalname));
-  },
-});
-
 const upload = multer({ 
-  storage: storage,
+  storage: multer.memoryStorage(),
   limits: {
     fileSize: 25 * 1024 * 1024, // 25MB limit
   },
@@ -80,5 +75,13 @@ router.post('/:clientId/change-name', authenticate, authorize(ClientPolicy.canUp
 router.put('/:clientId/fact-sheet', authenticate, requireAdmin, authorize(ClientPolicy.canUpdate), updateClientFactSheet);
 router.post('/:clientId/fact-sheet/files', authenticate, requireAdmin, authorize(ClientPolicy.canUpdate), upload.single('file'), uploadFactSheetFile);
 router.delete('/:clientId/fact-sheet/files/:fileId', authenticate, requireAdmin, authorize(ClientPolicy.canUpdate), deleteFactSheetFile);
+
+// Client CFS endpoints
+// Admin-only: Upload and delete
+router.post('/:clientId/cfs/files', authenticate, requireAdmin, authorize(ClientPolicy.canUpdate), attachmentLimiter, upload.single('file'), uploadClientCFSFile);
+router.delete('/:clientId/cfs/files/:attachmentId', authenticate, requireAdmin, authorize(ClientPolicy.canUpdate), userWriteLimiter, deleteClientCFSFile);
+// All authenticated users: List and download (read-only)
+router.get('/:clientId/cfs/files', authenticate, authorize(ClientPolicy.canView), userReadLimiter, listClientCFSFiles);
+router.get('/:clientId/cfs/files/:attachmentId/download', authenticate, authorize(ClientPolicy.canView), attachmentLimiter, downloadClientCFSFile);
 
 module.exports = router;
