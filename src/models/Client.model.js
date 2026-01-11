@@ -122,10 +122,11 @@ const clientSchema = new mongoose.Schema({
         required: true,
         trim: true,
       },
-      uploadedBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
+      uploadedByXID: {
+        type: String,
         required: true,
+        uppercase: true,
+        trim: true,
       },
       uploadedAt: {
         type: Date,

@@ -730,9 +730,8 @@ const uploadFactSheetFile = async (req, res) => {
     // Get firmId and xID from authenticated user
     const userFirmId = req.user?.firmId;
     const performedByXID = req.user?.xID;
-    const userId = req.user?._id;
     
-    if (!userFirmId || !performedByXID || !userId) {
+    if (!userFirmId || !performedByXID) {
       return res.status(403).json({
         success: false,
         message: 'Authentication required',
@@ -773,7 +772,7 @@ const uploadFactSheetFile = async (req, res) => {
       fileName: req.file.originalname,
       mimeType,
       storagePath: req.file.path,
-      uploadedBy: userId,
+      uploadedByXID: performedByXID,
       uploadedAt: new Date(),
     };
     
