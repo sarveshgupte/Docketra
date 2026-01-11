@@ -313,6 +313,19 @@ userSchema.pre('save', async function() {
       console.warn('[User Validation] Could not verify Admin defaultClientId constraint:', error.message);
     }
   }
+  
+  // GUARDRAIL: Prevent saving Admin users without defaultClientId
+  // Exception: Allow during firm bootstrap (when isNew and defaultClientId will be set in transaction)
+  // This prevents accidental creation of admins without proper scoping
+  if (this.role === 'Admin' && !this.isNew && !this.defaultClientId) {
+    const error = new Error(
+      'Cannot save Admin user without defaultClientId. ' +
+      'Admin users must be scoped to their firm\'s default client. ' +
+      'Firm hierarchy requires: Firm → Default Client → Admins'
+    );
+    error.name = 'ValidationError';
+    throw error;
+  }
 });
 
 // Indexes for performance
