@@ -113,6 +113,17 @@ const authenticate = async (req, res, next) => {
         message: 'Account is deactivated. Please contact administrator.',
       });
     }
+
+    // Hard guard: block all authenticated routes until password is set
+    const isProfileEndpoint = req.path.endsWith('/profile');
+    if (user.mustSetPassword && !isProfileEndpoint) {
+      return res.status(403).json({
+        success: false,
+        message: 'You must set your password before accessing this resource.',
+        mustSetPassword: true,
+        redirectPath: '/auth/set-password',
+      });
+    }
     
     // Verify firmId matches (multi-tenancy check)
     // Skip this check for SUPER_ADMIN (they have no firmId)
@@ -141,7 +152,6 @@ const authenticate = async (req, res, next) => {
     // Special case: allow change-password and profile endpoints even if mustChangePassword is true
     // Check if this is the change-password or profile endpoint
     const isChangePasswordEndpoint = req.path.endsWith('/change-password');
-    const isProfileEndpoint = req.path.endsWith('/profile');
     const isRefreshEndpoint = req.path.endsWith('/refresh');
     
     // Block access to other routes if password change is required
