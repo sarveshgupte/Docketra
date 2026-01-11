@@ -3,6 +3,12 @@
  * Top navigation header - Desktop-first layout
  */
 
+/* Z-Index Scale
+   Header: 100
+   Dropdowns: 200
+   Modals: 1000+
+*/
+
 /* Main Layout Container */
 .enterprise-layout-top {
   display: flex;
@@ -39,7 +45,7 @@
   margin: 0;
   font-size: var(--font-size-lg);
   font-weight: 700;
-  color: var(--primary-600);
+  color: var(--text-main);
   letter-spacing: -0.5px;
 }
 
@@ -111,6 +117,12 @@
 
 .btn-primary-cta:active {
   transform: translateY(1px);
+}
+
+/* Mobile CTA Button */
+.btn-primary-cta--mobile {
+  width: 100%;
+  margin-top: var(--spacing-sm);
 }
 
 /* Admin Section */

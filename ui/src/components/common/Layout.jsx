@@ -3,7 +3,7 @@
  * Top navigation header layout - Desktop-first, persistent navigation
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -18,6 +18,10 @@ export const Layout = ({ children }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [adminDropdownOpen, setAdminDropdownOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  
+  // Refs for dropdown outside click detection
+  const adminDropdownRef = useRef(null);
+  const profileDropdownRef = useRef(null);
 
   // Get firmSlug from URL params or user data
   const currentFirmSlug = firmSlug || user?.firmSlug;
@@ -55,6 +59,43 @@ export const Layout = ({ children }) => {
 
   // Check if user has admin access (Admin or SuperAdmin)
   const hasAdminAccess = isAdmin || isSuperadmin;
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (adminDropdownRef.current && !adminDropdownRef.current.contains(event.target)) {
+        setAdminDropdownOpen(false);
+      }
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
+        setProfileDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Close dropdowns on route change
+  useEffect(() => {
+    setAdminDropdownOpen(false);
+    setProfileDropdownOpen(false);
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  // Close other dropdown when one opens
+  useEffect(() => {
+    if (adminDropdownOpen) {
+      setProfileDropdownOpen(false);
+    }
+  }, [adminDropdownOpen]);
+
+  useEffect(() => {
+    if (profileDropdownOpen) {
+      setAdminDropdownOpen(false);
+    }
+  }, [profileDropdownOpen]);
 
   // Reusable chevron icon
   const ChevronIcon = () => (
@@ -113,7 +154,7 @@ export const Layout = ({ children }) => {
           {/* Admin Dropdown (conditional) */}
           {hasAdminAccess && (
             <div className="enterprise-top-header__admin">
-              <div className="dropdown">
+              <div className="dropdown" ref={adminDropdownRef}>
                 <button
                   className="enterprise-top-header__nav-link dropdown-toggle"
                   onClick={() => setAdminDropdownOpen(!adminDropdownOpen)}
@@ -174,7 +215,7 @@ export const Layout = ({ children }) => {
             </button>
             
             {/* User Profile Menu */}
-            <div className="dropdown">
+            <div className="dropdown" ref={profileDropdownRef}>
               <button
                 className="enterprise-top-header__profile"
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
@@ -249,8 +290,7 @@ export const Layout = ({ children }) => {
                 navigate(`/${currentFirmSlug}/cases/create`);
                 setMobileMenuOpen(false);
               }}
-              className="btn-primary-cta"
-              style={{ width: '100%', marginTop: '8px' }}
+              className="btn-primary-cta btn-primary-cta--mobile"
             >
               Create Case
             </button>
