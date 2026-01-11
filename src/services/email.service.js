@@ -215,15 +215,23 @@ const hashToken = (token) => {
 
 /**
  * Send password setup email (Invite email for new users)
- * @param {string} email - Recipient email
- * @param {string} name - User's name
- * @param {string} token - Password setup token (plain text)
- * @param {string} xID - User's xID (for reference)
- * @param {string} firmSlug - Firm slug for firm-specific URL (optional for backward compatibility)
- * @param {string} frontendUrl - Base URL of frontend application
+ * @param {Object} options - Email options
+ * @param {string} options.email - Recipient email
+ * @param {string} options.name - User's name
+ * @param {string} options.token - Password setup token (plain text)
+ * @param {string} options.xID - User's xID (for reference)
+ * @param {string} [options.firmSlug] - Firm slug for firm-specific URL (optional)
+ * @param {string} [options.frontendUrl] - Base URL of frontend application
  * @returns {Promise<Object>} Result object with success status
  */
-const sendPasswordSetupEmail = async (email, name, token, xID, firmSlug = null, frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000') => {
+const sendPasswordSetupEmail = async ({ 
+  email, 
+  name, 
+  token, 
+  xID, 
+  firmSlug = null, 
+  frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000' 
+}) => {
   const setupLink = `${frontendUrl}/set-password?token=${token}`;
   
   // Construct firm-specific login URL if firmSlug is provided
@@ -301,15 +309,23 @@ Docketra Team
 
 /**
  * Send password setup reminder email (for resend functionality)
- * @param {string} email - Recipient email
- * @param {string} name - User's name
- * @param {string} token - Password setup token (plain text)
- * @param {string} xID - User's xID (for reference)
- * @param {string} firmSlug - Firm slug for firm-specific URL (optional for backward compatibility)
- * @param {string} frontendUrl - Base URL of frontend application
+ * @param {Object} options - Email options
+ * @param {string} options.email - Recipient email
+ * @param {string} options.name - User's name
+ * @param {string} options.token - Password setup token (plain text)
+ * @param {string} options.xID - User's xID (for reference)
+ * @param {string} [options.firmSlug] - Firm slug for firm-specific URL (optional)
+ * @param {string} [options.frontendUrl] - Base URL of frontend application
  * @returns {Promise<Object>} Result object with success status
  */
-const sendPasswordSetupReminderEmail = async (email, name, token, xID, firmSlug = null, frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000') => {
+const sendPasswordSetupReminderEmail = async ({ 
+  email, 
+  name, 
+  token, 
+  xID, 
+  firmSlug = null, 
+  frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000' 
+}) => {
   const setupLink = `${frontendUrl}/set-password?token=${token}`;
   
   // Construct firm-specific login URL if firmSlug is provided
