@@ -666,7 +666,10 @@ const logout = async (req, res) => {
     // Get user from authenticated request
     const user = req.user;
     const userId = user?._id;
-    const isSuperAdmin = typeof user?.role === 'string' && user.role.toUpperCase() === 'SUPERADMIN';
+    const normalizedRole = typeof user?.role === 'string'
+      ? user.role.replace(/_/g, '').toUpperCase()
+      : '';
+    const isSuperAdmin = normalizedRole === 'SUPERADMIN';
     const isValidUserId = mongoose.Types.ObjectId.isValid(userId);
     const shouldBypassUserDbUpdates = isSuperAdmin || !isValidUserId;
     
