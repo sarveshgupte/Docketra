@@ -36,7 +36,7 @@ async function testSuperadminLogoutBypassesDbWrites() {
   };
 
   const req = {
-    user: { _id: 'SUPERADMIN', role: 'SuperAdmin', xID: 'SUPERADMIN' },
+    user: { _id: 'SUPERADMIN', role: 'SUPER_ADMIN', xID: 'SUPERADMIN' },
     ip: '127.0.0.1',
     get: () => 'test-agent',
   };
