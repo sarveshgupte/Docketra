@@ -122,7 +122,12 @@ class DriveService {
         fields: 'id, name',
       });
 
-      console.log(`[DriveService] Created folder: ${folderName} (ID: ${response.data.id})`);
+      // Guard folder ID logging in production
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`[DriveService] Created folder: ${folderName} (ID: ${response.data.id})`);
+      } else {
+        console.log(`[DriveService] Created folder: ${folderName}`);
+      }
       return response.data.id;
     } catch (error) {
       console.error(`[DriveService] Error creating folder ${folderName}:`, error.message);
@@ -181,7 +186,12 @@ class DriveService {
     // Try to find existing folder first
     const existingId = await this.findFolderByName(folderName, parent);
     if (existingId) {
-      console.log(`[DriveService] Found existing folder: ${folderName} (ID: ${existingId})`);
+      // Guard folder ID logging in production
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`[DriveService] Found existing folder: ${folderName} (ID: ${existingId})`);
+      } else {
+        console.log(`[DriveService] Found existing folder: ${folderName}`);
+      }
       return existingId;
     }
 
@@ -219,7 +229,12 @@ class DriveService {
         fields: 'id, name, mimeType, size',
       });
 
-      console.log(`[DriveService] Uploaded file: ${fileName} (ID: ${response.data.id})`);
+      // Guard file ID logging in production
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`[DriveService] Uploaded file: ${fileName} (ID: ${response.data.id})`);
+      } else {
+        console.log(`[DriveService] Uploaded file: ${fileName}`);
+      }
       return {
         id: response.data.id,
         name: response.data.name,
