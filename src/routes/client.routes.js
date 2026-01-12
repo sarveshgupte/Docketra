@@ -4,9 +4,8 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { authenticate } = require('../middleware/auth.middleware');
-const { requireAdmin, blockSuperadmin } = require('../middleware/permission.middleware');
-const { authorize } = require('../middleware/authorize');
-const ClientPolicy = require('../policies/client.policy');
+const { attachFirmContext } = require('../middleware/firmContext.middleware');
+const { authorizeFirmPermission } = require('../middleware/permission.middleware');
 const {
   userReadLimiter,
   userWriteLimiter,
@@ -59,29 +58,29 @@ const upload = multer({
 
 // Block SuperAdmin from accessing client routes
 router.use(authenticate);
-router.use(blockSuperadmin);
+router.use(attachFirmContext);
 
 // Public/authenticated endpoints
-router.get('/', authorize(ClientPolicy.canView), getClients);
-router.get('/:clientId', authorize(ClientPolicy.canView), getClientById);
+router.get('/', authorizeFirmPermission('CLIENT_VIEW'), getClients);
+router.get('/:clientId', authorizeFirmPermission('CLIENT_VIEW'), getClientById);
 
 // Admin-only endpoints
-router.post('/', authenticate, authorize(ClientPolicy.canCreate), createClient);
-router.put('/:clientId', authenticate, authorize(ClientPolicy.canUpdate), updateClient);
-router.patch('/:clientId/status', authenticate, authorize(ClientPolicy.canManageStatus), toggleClientStatus);
-router.post('/:clientId/change-name', authenticate, authorize(ClientPolicy.canUpdate), changeLegalName);
+router.post('/', authorizeFirmPermission('CLIENT_MANAGE'), createClient);
+router.put('/:clientId', authorizeFirmPermission('CLIENT_MANAGE'), updateClient);
+router.patch('/:clientId/status', authorizeFirmPermission('CLIENT_MANAGE'), toggleClientStatus);
+router.post('/:clientId/change-name', authorizeFirmPermission('CLIENT_MANAGE'), changeLegalName);
 
 // Client Fact Sheet endpoints (Admin-only)
-router.put('/:clientId/fact-sheet', authenticate, requireAdmin, authorize(ClientPolicy.canUpdate), updateClientFactSheet);
-router.post('/:clientId/fact-sheet/files', authenticate, requireAdmin, authorize(ClientPolicy.canUpdate), upload.single('file'), uploadFactSheetFile);
-router.delete('/:clientId/fact-sheet/files/:fileId', authenticate, requireAdmin, authorize(ClientPolicy.canUpdate), deleteFactSheetFile);
+router.put('/:clientId/fact-sheet', authorizeFirmPermission('CLIENT_MANAGE'), updateClientFactSheet);
+router.post('/:clientId/fact-sheet/files', authorizeFirmPermission('CLIENT_MANAGE'), upload.single('file'), uploadFactSheetFile);
+router.delete('/:clientId/fact-sheet/files/:fileId', authorizeFirmPermission('CLIENT_MANAGE'), deleteFactSheetFile);
 
 // Client CFS endpoints
 // Admin-only: Upload and delete
-router.post('/:clientId/cfs/files', authenticate, requireAdmin, authorize(ClientPolicy.canUpdate), attachmentLimiter, upload.single('file'), uploadClientCFSFile);
-router.delete('/:clientId/cfs/files/:attachmentId', authenticate, requireAdmin, authorize(ClientPolicy.canUpdate), userWriteLimiter, deleteClientCFSFile);
+router.post('/:clientId/cfs/files', authorizeFirmPermission('CLIENT_MANAGE'), attachmentLimiter, upload.single('file'), uploadClientCFSFile);
+router.delete('/:clientId/cfs/files/:attachmentId', authorizeFirmPermission('CLIENT_MANAGE'), userWriteLimiter, deleteClientCFSFile);
 // All authenticated users: List and download (read-only)
-router.get('/:clientId/cfs/files', authenticate, authorize(ClientPolicy.canView), userReadLimiter, listClientCFSFiles);
-router.get('/:clientId/cfs/files/:attachmentId/download', authenticate, authorize(ClientPolicy.canView), attachmentLimiter, downloadClientCFSFile);
+router.get('/:clientId/cfs/files', authorizeFirmPermission('CLIENT_VIEW'), userReadLimiter, listClientCFSFiles);
+router.get('/:clientId/cfs/files/:attachmentId/download', authorizeFirmPermission('CLIENT_VIEW'), attachmentLimiter, downloadClientCFSFile);
 
 module.exports = router;
