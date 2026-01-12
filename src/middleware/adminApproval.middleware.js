@@ -52,8 +52,7 @@ const checkClientApprovalPermission = async (req, res, next) => {
     // Store user data for use in controller and align approverEmail with authenticated user
     const approverEmail = (user?.email || '').toLowerCase();
     req.approverUser = user;
-    req.body.approverEmail = approverEmail;
-    req.body.userEmail = approverEmail;
+    req.approverEmail = approverEmail;
     
     next();
   } catch (error) {
