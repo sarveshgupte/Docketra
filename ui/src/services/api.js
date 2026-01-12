@@ -13,6 +13,11 @@ const api = axios.create({
   },
 });
 
+let redirecting = false;
+const REDIRECT_TIMEOUT_MS = 5000;
+const INITIAL_BACKOFF_MS = 1000;
+const MAX_BACKOFF_MS = 4000;
+
 // Request interceptor - Add JWT Bearer token
 api.interceptors.request.use(
   (config) => {
@@ -34,13 +39,19 @@ api.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
+    if (redirecting) {
+      return Promise.reject(error);
+    }
+    const hasResponse = !!error.response;
+    const status = error.response?.status;
     const firmSlug = localStorage.getItem(STORAGE_KEYS.FIRM_SLUG);
     const redirectToLogin = () => {
-      if (firmSlug) {
-        window.location.href = `/f/${firmSlug}/login`;
-      } else {
-        window.location.href = '/login';
-      }
+      if (redirecting) return;
+      redirecting = true;
+      const destination = firmSlug ? `/f/${firmSlug}/login` : '/login';
+      window.location.assign(destination);
+      // Fallback reset in case navigation is blocked
+      setTimeout(() => { redirecting = false; }, REDIRECT_TIMEOUT_MS);
     };
     const clearAuthStorage = () => {
       localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
@@ -49,9 +60,22 @@ api.interceptors.response.use(
       localStorage.removeItem(STORAGE_KEYS.USER);
       localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
     };
+    const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    // Network errors (no response) - retry with bounded exponential backoff
+    if (!hasResponse) {
+      const retries = originalRequest?._networkRetryCount || 0;
+      if (retries < 2) {
+        const backoffMs = Math.min(INITIAL_BACKOFF_MS * 2 ** retries, MAX_BACKOFF_MS);
+        originalRequest._networkRetryCount = retries + 1;
+        await delay(backoffMs);
+        return api(originalRequest);
+      }
+      return Promise.reject(error);
+    }
     
     // Handle token expiry
-    if (error.response?.status === 401 && error.response?.data?.code === 'TOKEN_EXPIRED' && !originalRequest._retry) {
+    if (status === 401 && error.response?.data?.code === 'TOKEN_EXPIRED' && !originalRequest._retry) {
       originalRequest._retry = true;
       
       try {
@@ -85,10 +109,18 @@ api.interceptors.response.use(
     }
     
     // Handle other 401 errors (invalid token, etc.)
-    if (error.response?.status === 401) {
-      // Unauthorized - clear storage and redirect to login
+    if (status === 401) {
       clearAuthStorage();
       redirectToLogin();
+      return Promise.reject(error);
+    }
+
+    // Handle authorization failures explicitly (stop silent polling)
+    if (status === 403) {
+      // Forbidden - clear storage and redirect to login
+      clearAuthStorage();
+      redirectToLogin();
+      return Promise.reject(error);
     }
     
     return Promise.reject(error);
