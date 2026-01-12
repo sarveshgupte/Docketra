@@ -50,7 +50,7 @@ const attachFirmContext = async (req, res, next) => {
       });
     }
 
-    const firm = await Firm.findOne(lookup.length > 1 ? { $or: lookup } : lookup[0]);
+    const firm = await Firm.findOne({ $or: lookup });
 
     if (!firm) {
       return res.status(404).json({

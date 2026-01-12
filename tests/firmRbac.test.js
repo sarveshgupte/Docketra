@@ -89,7 +89,9 @@ async function shouldBlockSuperadminFromFirmRoutes() {
 
 async function shouldDenyCrossFirmMembership() {
   const originalFindOne = User.findOne;
+  let requestedFirmId = null;
   User.findOne = async (filter) => {
+    requestedFirmId = filter.firmId;
     if (filter.firmId === FIRM_KEY_A) {
       return { _id: filter._id, role: 'Admin', isActive: true, firmId: FIRM_KEY_A };
     }
@@ -104,6 +106,7 @@ async function shouldDenyCrossFirmMembership() {
   };
 
   const { res, nextCalled } = await runMiddleware(guard, req);
+  assert.strictEqual(requestedFirmId, FIRM_KEY_B, 'Permission check must enforce the requested firm');
   assert.strictEqual(res.statusCode, 403, 'User should not access another firm');
   assert.strictEqual(nextCalled, false);
   console.log('✓ User cannot access another firm’s cases');
