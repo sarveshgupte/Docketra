@@ -73,7 +73,8 @@ const logCaseHistory = async ({
   performedByXID,
   actorRole,
   metadata = {},
-  req
+  req,
+  session
 }) => {
   try {
     // Validate required fields
@@ -107,8 +108,12 @@ const logCaseHistory = async ({
       historyEntry.userAgent = getUserAgent(req);
     }
 
-    const entry = await CaseHistory.create(historyEntry);
-    return entry;
+    if (session) {
+      const [entry] = await CaseHistory.create([historyEntry], { session });
+      return entry;
+    }
+
+    return await CaseHistory.create(historyEntry);
   } catch (error) {
     console.error('[AUDIT] Failed to create case history entry:', error.message);
     // Don't throw - history logging is supplementary and must not block operations
