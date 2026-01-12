@@ -14,6 +14,9 @@ const api = axios.create({
 });
 
 let redirecting = false;
+const REDIRECT_TIMEOUT_MS = 5000;
+const INITIAL_BACKOFF_MS = 1000;
+const MAX_BACKOFF_MS = 4000;
 
 // Request interceptor - Add JWT Bearer token
 api.interceptors.request.use(
@@ -43,12 +46,12 @@ api.interceptors.response.use(
     const status = error.response?.status;
     const firmSlug = localStorage.getItem(STORAGE_KEYS.FIRM_SLUG);
     const redirectToLogin = () => {
-      if (redirecting === true) return;
+      if (redirecting) return;
       redirecting = true;
       const destination = firmSlug ? `/f/${firmSlug}/login` : '/login';
       window.location.assign(destination);
       // Fallback reset in case navigation is blocked
-      setTimeout(() => { redirecting = false; }, 5000);
+      setTimeout(() => { redirecting = false; }, REDIRECT_TIMEOUT_MS);
     };
     const clearAuthStorage = () => {
       localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
@@ -63,7 +66,7 @@ api.interceptors.response.use(
     if (!hasResponse) {
       const retries = originalRequest?._networkRetryCount || 0;
       if (retries < 2) {
-        const backoffMs = Math.min(1000 * 2 ** retries, 4000);
+        const backoffMs = Math.min(INITIAL_BACKOFF_MS * 2 ** retries, MAX_BACKOFF_MS);
         originalRequest._networkRetryCount = retries + 1;
         await delay(backoffMs);
         return api(originalRequest);
