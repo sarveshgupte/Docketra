@@ -46,7 +46,7 @@ const requestLogger = require('./middleware/requestLogger');
 const errorHandler = require('./middleware/errorHandler');
 const notFound = require('./middleware/notFound');
 const { authenticate } = require('./middleware/auth.middleware');
-const { blockSuperadmin, requireFirmContext } = require('./middleware/permission.middleware');
+const { attachFirmContext } = require('./middleware/firmContext.middleware');
 
 // Routes
 const userRoutes = require('./routes/users');
@@ -225,15 +225,15 @@ app.use('/api/debug', debugRoutes);
 app.use('/api/inbound', inboundRoutes);
 
 // Protected routes - require authentication
-// Block SuperAdmin from firm-specific operations and require firm context
-app.use('/api/users', authenticate, blockSuperadmin, requireFirmContext, userRoutes);
-app.use('/api/tasks', authenticate, blockSuperadmin, requireFirmContext, taskRoutes);
-app.use('/api/cases', authenticate, blockSuperadmin, requireFirmContext, newCaseRoutes);
-app.use('/api/search', authenticate, blockSuperadmin, requireFirmContext, searchRoutes);
-app.use('/api/worklists', authenticate, blockSuperadmin, requireFirmContext, searchRoutes);
-app.use('/api/client-approval', authenticate, blockSuperadmin, requireFirmContext, clientApprovalRoutes);
-app.use('/api/clients', clientRoutes);  // Client management (PR #39) - authentication handled in routes
-app.use('/api/reports', reportsRoutes);  // Reports routes (authentication handled in routes file)
+// Firm context must be attached for all tenant-scoped operations
+app.use('/api/users', authenticate, attachFirmContext, userRoutes);
+app.use('/api/tasks', authenticate, attachFirmContext, taskRoutes);
+app.use('/api/cases', authenticate, attachFirmContext, newCaseRoutes);
+app.use('/api/search', authenticate, attachFirmContext, searchRoutes);
+app.use('/api/worklists', authenticate, attachFirmContext, searchRoutes);
+app.use('/api/client-approval', authenticate, attachFirmContext, clientApprovalRoutes);
+app.use('/api/clients', authenticate, attachFirmContext, clientRoutes);  // Client management (PR #39)
+app.use('/api/reports', authenticate, attachFirmContext, reportsRoutes);  // Reports routes
 
 // Root route - API status
 app.get('/', (req, res) => {

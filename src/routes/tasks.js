@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { authorizeFirmPermission } = require('../middleware/permission.middleware');
 const {
   getTasks,
   getTaskById,
@@ -15,21 +16,21 @@ const {
  */
 
 // GET /api/tasks/stats - Get task statistics
-router.get('/stats', getTaskStats);
+router.get('/stats', authorizeFirmPermission('TASK_VIEW'), getTaskStats);
 
 // GET /api/tasks - Get all tasks
-router.get('/', getTasks);
+router.get('/', authorizeFirmPermission('TASK_VIEW'), getTasks);
 
 // GET /api/tasks/:id - Get task by ID
-router.get('/:id', getTaskById);
+router.get('/:id', authorizeFirmPermission('TASK_VIEW'), getTaskById);
 
 // POST /api/tasks - Create new task
-router.post('/', createTask);
+router.post('/', authorizeFirmPermission('TASK_MANAGE'), createTask);
 
 // PUT /api/tasks/:id - Update task
-router.put('/:id', updateTask);
+router.put('/:id', authorizeFirmPermission('TASK_MANAGE'), updateTask);
 
 // DELETE /api/tasks/:id - Delete task
-router.delete('/:id', deleteTask);
+router.delete('/:id', authorizeFirmPermission('TASK_MANAGE'), deleteTask);
 
 module.exports = router;

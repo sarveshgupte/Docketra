@@ -1,9 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth.middleware');
-const { requireAdmin, blockSuperadmin } = require('../middleware/permission.middleware');
-const { authorize } = require('../middleware/authorize');
-const CategoryPolicy = require('../policies/category.policy');
+const { attachFirmContext } = require('../middleware/firmContext.middleware');
+const { authorizeFirmPermission } = require('../middleware/permission.middleware');
 const {
   getCategories,
   getCategoryById,
@@ -32,18 +31,18 @@ const {
 router.get('/', getCategories);
 
 // Get category by ID - require auth and block SuperAdmin
-router.get('/:id', authenticate, blockSuperadmin, authorize(CategoryPolicy.canView), getCategoryById);
+router.get('/:id', authenticate, attachFirmContext, authorizeFirmPermission('CATEGORY_VIEW'), getCategoryById);
 
 // Admin-only endpoints - require authentication, block SuperAdmin, and require admin role
-router.post('/', authenticate, blockSuperadmin, authorize(CategoryPolicy.canCreate), createCategory);
-router.put('/:id', authenticate, blockSuperadmin, authorize(CategoryPolicy.canUpdate), updateCategory);
-router.patch('/:id/status', authenticate, blockSuperadmin, authorize(CategoryPolicy.canUpdate), toggleCategoryStatus);
-router.delete('/:id', authenticate, blockSuperadmin, authorize(CategoryPolicy.canDelete), deleteCategory);
+router.post('/', authenticate, attachFirmContext, authorizeFirmPermission('CATEGORY_MANAGE'), createCategory);
+router.put('/:id', authenticate, attachFirmContext, authorizeFirmPermission('CATEGORY_MANAGE'), updateCategory);
+router.patch('/:id/status', authenticate, attachFirmContext, authorizeFirmPermission('CATEGORY_MANAGE'), toggleCategoryStatus);
+router.delete('/:id', authenticate, attachFirmContext, authorizeFirmPermission('CATEGORY_MANAGE'), deleteCategory);
 
 // Subcategory management (Admin only)
-router.post('/:id/subcategories', authenticate, blockSuperadmin, authorize(CategoryPolicy.canCreate), addSubcategory);
-router.put('/:id/subcategories/:subcategoryId', authenticate, blockSuperadmin, authorize(CategoryPolicy.canUpdate), updateSubcategory);
-router.patch('/:id/subcategories/:subcategoryId/status', authenticate, blockSuperadmin, authorize(CategoryPolicy.canUpdate), toggleSubcategoryStatus);
-router.delete('/:id/subcategories/:subcategoryId', authenticate, blockSuperadmin, authorize(CategoryPolicy.canDelete), deleteSubcategory);
+router.post('/:id/subcategories', authenticate, attachFirmContext, authorizeFirmPermission('CATEGORY_MANAGE'), addSubcategory);
+router.put('/:id/subcategories/:subcategoryId', authenticate, attachFirmContext, authorizeFirmPermission('CATEGORY_MANAGE'), updateSubcategory);
+router.patch('/:id/subcategories/:subcategoryId/status', authenticate, attachFirmContext, authorizeFirmPermission('CATEGORY_MANAGE'), toggleSubcategoryStatus);
+router.delete('/:id/subcategories/:subcategoryId', authenticate, attachFirmContext, authorizeFirmPermission('CATEGORY_MANAGE'), deleteSubcategory);
 
 module.exports = router;
