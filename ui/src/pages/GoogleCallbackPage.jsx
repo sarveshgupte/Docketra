@@ -34,7 +34,20 @@ export const GoogleCallbackPage = () => {
           localStorage.setItem(STORAGE_KEYS.X_ID, profile.xID || 'UNKNOWN');
           localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(profile));
 
-          navigate(firmSlug ? `/${firmSlug}/dashboard` : '/login', { replace: true });
+          // Determine redirect path based on user role and firm context
+          // NEVER redirect firm users to /login (SuperAdmin-only page)
+          const effectiveFirmSlug = firmSlug || profile.firmSlug;
+          
+          if (profile.role === 'SuperAdmin' || profile.role === 'SUPER_ADMIN') {
+            // SuperAdmin goes to SuperAdmin dashboard
+            navigate('/superadmin', { replace: true });
+          } else if (effectiveFirmSlug) {
+            // Firm users go to their firm dashboard
+            navigate(`/${effectiveFirmSlug}/dashboard`, { replace: true });
+          } else {
+            // Edge case: firm user without firm context - show error
+            setError('Firm context missing. Please use your firm-specific login URL.');
+          }
           return;
         }
         setError('Login session not found. Please sign in again.');
