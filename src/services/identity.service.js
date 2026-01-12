@@ -41,7 +41,7 @@ const resolveUserIdentity = async ({
 
       if (googleId && allowLink) {
         const alreadyLinked = await User.findOne({ 'authProviders.google.googleId': googleId }, null, withSession);
-        if (alreadyLinked && alreadyLinked._id.toString() !== candidate._id.toString()) {
+        if (alreadyLinked && !alreadyLinked._id.equals(candidate._id)) {
           throw new Error('Google account is already linked to another user');
         }
 
