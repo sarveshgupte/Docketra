@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * Focused regression test for ENV-backed SuperAdmin authentication.
  * Verifies:
@@ -63,7 +62,7 @@ async function shouldShortCircuitSuperadminLogin() {
 
   try {
     await login(
-      { body: { xID: 'satest', password: plainPassword }, ip: '127.0.0.1', get: () => 'test-agent' },
+      { body: { xID: 'SATEST', password: plainPassword }, ip: '127.0.0.1', get: () => 'test-agent' },
       res
     );
   } finally {
