@@ -8,7 +8,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Card } from '../components/common/Card';
 import { Loading } from '../components/common/Loading';
 import { STORAGE_KEYS, USER_ROLES } from '../utils/constants';
-import { authService } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
 import './LoginPage.css';
 
@@ -16,7 +15,9 @@ export const GoogleCallbackPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [error, setError] = useState('');
-  const { setAuthFromProfile } = useAuth();
+  const [firmSlugFromQuery, setFirmSlugFromQuery] = useState(null);
+  const { user, loading, isAuthenticated, setAuthFromProfile } = useAuth();
+  const handledRef = React.useRef(false);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -30,44 +31,38 @@ export const GoogleCallbackPage = () => {
 
     if (firmSlug) {
       localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, firmSlug);
+      setFirmSlugFromQuery(firmSlug);
+    }
+  }, [location.search]);
+
+  useEffect(() => {
+    if (handledRef.current || error) return;
+    if (loading) return;
+
+    if (!isAuthenticated || !user) {
+      setError('Login session not found. Please sign in again.');
+      return;
     }
 
-    const bootstrapSession = async () => {
-      try {
-        const response = await authService.getProfile();
-        if (response?.success && response.data) {
-          const profile = response.data;
-          localStorage.setItem(STORAGE_KEYS.X_ID, profile.xID || 'UNKNOWN');
-          localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(profile));
-          if (profile.firmSlug) {
-            localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, profile.firmSlug);
-          }
-          setAuthFromProfile(profile);
+    handledRef.current = true;
+    setAuthFromProfile(user);
 
-          // Determine redirect path based on user role and firm context
-          // NEVER redirect firm users to /login (SuperAdmin-only page)
-          const effectiveFirmSlug = firmSlug || profile.firmSlug;
-          
-          if (profile.role === USER_ROLES.SUPER_ADMIN) {
-            // SuperAdmin goes to SuperAdmin dashboard
-            navigate('/superadmin', { replace: true });
-          } else if (effectiveFirmSlug) {
-            // Firm users go to their firm dashboard
-            navigate(`/f/${effectiveFirmSlug}/dashboard`, { replace: true });
-          } else {
-            // Edge case: firm user without firm context - show error
-            setError('Firm context missing. Please use your firm-specific login URL.');
-          }
-          return;
-        }
-        setError('Login session not found. Please sign in again.');
-      } catch (err) {
-        setError('Login session not found. Please sign in again.');
-      }
-    };
+    const effectiveFirmSlug =
+      firmSlugFromQuery ||
+      user.firmSlug ||
+      localStorage.getItem(STORAGE_KEYS.FIRM_SLUG);
 
-    bootstrapSession();
-  }, [location.search, navigate]);
+    if (user.role === USER_ROLES.SUPER_ADMIN) {
+      navigate('/superadmin', { replace: true });
+      return;
+    }
+
+    if (effectiveFirmSlug) {
+      navigate(`/f/${effectiveFirmSlug}/dashboard`, { replace: true });
+    } else {
+      setError('Firm context missing. Please use your firm-specific login URL.');
+    }
+  }, [error, loading, isAuthenticated, user, firmSlugFromQuery, navigate, setAuthFromProfile]);
 
   return (
     <div className="login-page">
