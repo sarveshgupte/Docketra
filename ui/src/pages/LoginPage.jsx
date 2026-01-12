@@ -11,6 +11,7 @@ import { Card } from '../components/common/Card';
 import { validateXID, validatePassword } from '../utils/validators';
 import { STORAGE_KEYS, USER_ROLES } from '../utils/constants';
 import { usePermissions } from '../hooks/usePermissions';
+import { useToast } from '../hooks/useToast';
 import './LoginPage.css';
 
 export const LoginPage = () => {
@@ -21,6 +22,7 @@ export const LoginPage = () => {
 
   const { login, user, isAuthenticated } = useAuth();
   const { isSuperadmin } = usePermissions();
+  const { showSuccess } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -62,6 +64,7 @@ export const LoginPage = () => {
       const response = await login(identifier, password);
 
       if (response.success) {
+        showSuccess('Signed in successfully.');
         // Check if user is Superadmin - redirect to superadmin dashboard
         if (response.data.role === USER_ROLES.SUPER_ADMIN) {
           navigate('/superadmin');
