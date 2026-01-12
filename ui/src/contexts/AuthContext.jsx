@@ -70,7 +70,16 @@ export const AuthProvider = ({ children }) => {
           setAuthFromProfile(response.data);
         }
       } catch (err) {
-        // Not authenticated is a valid state - do not retry
+        // Fail fast on auth errors (401/403) to avoid hidden polling loops
+        const status = err?.response?.status;
+        if (status === 401 || status === 403) {
+          localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+          localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+          localStorage.removeItem(STORAGE_KEYS.X_ID);
+          localStorage.removeItem(STORAGE_KEYS.USER);
+          setUser(null);
+          setIsAuthenticated(false);
+        }
       } finally {
         setLoading(false);
       }

@@ -99,6 +99,12 @@ const authenticate = async (req, res, next) => {
         role: 'SuperAdmin',
         firmId: null,
       };
+      req.userId = 'SUPERADMIN';
+      req.identity = {
+        userId: 'SUPERADMIN',
+        firmId: null,
+        role: 'SuperAdmin',
+      };
       
       return next();
     }
@@ -203,6 +209,13 @@ const authenticate = async (req, res, next) => {
       firmSlug: decoded.firmSlug || null, // NEW: Make firmSlug available from token
       defaultClientId: decoded.defaultClientId || null, // NEW: Make defaultClientId available from token
       role: decoded.role,
+    };
+    // Canonical identity attachment: use Mongo _id as the single source of truth
+    req.userId = user?._id ? user._id.toString() : decoded.userId;
+    req.identity = {
+      userId: req.userId,
+      firmId: req.jwt.firmId || (user?.firmId ? user.firmId.toString() : null),
+      role: req.jwt.role || user?.role || null,
     };
     
     next();
