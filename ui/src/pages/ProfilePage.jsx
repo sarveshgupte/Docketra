@@ -32,31 +32,22 @@ export const ProfilePage = () => {
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    loadProfile();
-  }, []);
-
-  const loadProfile = async () => {
-    setLoading(true);
-    try {
-      const response = await authService.getProfile();
-      
-      if (response.success) {
-        setProfileData(response.data);
-        setFormData({
-          dateOfBirth: response.data.dateOfBirth || '',
-          gender: response.data.gender || '',
-          phone: response.data.phone || '',
-          address: response.data.address || '',
-          panMasked: response.data.panMasked || '',
-          aadhaarMasked: response.data.aadhaarMasked || '',
-        });
-      }
-    } catch (err) {
-      setError('Failed to load profile');
-    } finally {
+    if (!user) {
       setLoading(false);
+      return;
     }
-  };
+
+    setProfileData(user);
+    setFormData({
+      dateOfBirth: user.dateOfBirth || '',
+      gender: user.gender || '',
+      phone: user.phone || '',
+      address: user.address || '',
+      panMasked: user.panMasked || '',
+      aadhaarMasked: user.aadhaarMasked || '',
+    });
+    setLoading(false);
+  }, [user]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -76,7 +67,6 @@ export const ProfilePage = () => {
         setSuccess('Profile updated successfully');
         setEditing(false);
         updateUser(response.data);
-        await loadProfile();
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update profile');
