@@ -156,6 +156,8 @@ const authenticate = async (req, res, next) => {
     }
     
     // Check if user's firm is suspended (Superadmin exempt)
+    // NOTE: This DB lookup is for runtime state check (SUSPENDED status), not authorization
+    // Authorization decisions use JWT claims (req.jwt.firmId, req.jwt.firmSlug)
     if (user.role !== 'SUPER_ADMIN' && user.firmId) {
       const Firm = require('../models/Firm.model');
       const firm = await Firm.findById(user.firmId);
