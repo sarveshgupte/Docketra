@@ -31,7 +31,8 @@ export const AuthProvider = ({ children }) => {
         if (response?.success && response.data) {
           const userData = response.data;
           // Store user data to localStorage to prevent re-fetching on subsequent renders
-          localStorage.setItem(STORAGE_KEYS.X_ID, userData.xID || 'SUPERADMIN');
+          // Note: xID should always be present from backend; if missing, it indicates a backend issue
+          localStorage.setItem(STORAGE_KEYS.X_ID, userData.xID);
           localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
           setUser(userData);
           setIsAuthenticated(true);
