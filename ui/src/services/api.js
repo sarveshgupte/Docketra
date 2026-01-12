@@ -43,8 +43,7 @@ api.interceptors.response.use(
       if (redirecting === true) return;
       redirecting = true;
       const destination = firmSlug ? `/f/${firmSlug}/login` : '/login';
-      // Ensure the flag is set before navigation to prevent duplicate redirects
-      setTimeout(() => window.location.assign(destination), 0);
+      window.location.assign(destination);
       // Fallback reset in case navigation is blocked
       setTimeout(() => { redirecting = false; }, 5000);
     };

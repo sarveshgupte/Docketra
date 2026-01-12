@@ -26,6 +26,7 @@ const resolveUserIdentity = async ({
   let user = null;
   let linkedDuringRequest = false;
   const withSession = session ? { session } : undefined;
+  const updateOptions = { new: true, ...(withSession || {}) };
 
   if (googleId) {
     user = await User.findOne({ 'authProviders.google.googleId': googleId }, null, withSession);
@@ -53,7 +54,7 @@ const resolveUserIdentity = async ({
               'authProviders.google.linkedAt': new Date(),
             },
           },
-          { new: true, session }
+          updateOptions
         );
         if (updated) {
           linkedDuringRequest = true;

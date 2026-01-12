@@ -2399,7 +2399,8 @@ const handleGoogleCallback = async (req, res) => {
       if (refreshed) {
         user = refreshed;
       } else {
-        Object.assign(user, update);
+        console.error('[AUTH] Failed to refresh user after Google identity link', { userId: user._id });
+        throw new Error('Failed to persist Google identity link');
       }
     }
 
