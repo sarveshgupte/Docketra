@@ -21,6 +21,14 @@ export const AuthProvider = ({ children }) => {
     }
     profileLoadAttempted.current = true;
 
+    // Only proceed if we have a valid access token
+    const accessToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+    if (!accessToken) {
+      // No token, no user - just mark as done
+      setLoading(false);
+      return;
+    }
+
     // Check if user is already logged in from localStorage
     const currentUser = authService.getCurrentUser();
     const xID = authService.getCurrentXID();
@@ -32,14 +40,7 @@ export const AuthProvider = ({ children }) => {
       return;
     }
 
-    // Only fetch from backend if we have a valid token
-    const accessToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-    if (!accessToken) {
-      // No token, no user - just mark as done
-      setLoading(false);
-      return;
-    }
-
+    // If we have a token but no cached user, fetch from backend
     const bootstrapFromCookie = async () => {
       try {
         const response = await authService.getProfile();
