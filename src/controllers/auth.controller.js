@@ -401,12 +401,14 @@ const login = async (req, res) => {
       });
     }
     
-    // Check if password has been set
-    if (!user.passwordSet || !user.passwordHash) {
+    // Check if password has been set (mustSetPassword is the only gate)
+    if (user.mustSetPassword || !user.passwordHash) {
       return res.status(403).json({
         success: false,
+        code: 'PASSWORD_SETUP_REQUIRED',
         message: 'Please set your password using the link sent to your email',
-        passwordSetupRequired: true,
+        mustSetPassword: true,
+        redirectPath: '/auth/set-password',
       });
     }
     
@@ -738,6 +740,7 @@ const changePassword = async (req, res) => {
     const user = req.user;
 
     // Onboarding guard: changePassword is for onboarded users only
+    // DO NOT gate on passwordSet; mustSetPassword is authoritative.
     if (user.mustSetPassword) {
       return res.status(403).json({
         success: false,

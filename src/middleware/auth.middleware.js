@@ -132,6 +132,7 @@ const authenticate = async (req, res, next) => {
       req.path,
       `${req.baseUrl || ''}${req.path || ''}`,
     ].filter(Boolean);
+    // DO NOT use passwordSet here; mustSetPassword is the only onboarding gate.
     const isPasswordSetupAllowed = normalizedCandidates.some(p => MUST_SET_ALLOWED_PATHS.includes(p));
     if (user.mustSetPassword && !isPasswordSetupAllowed) {
       return res.status(403).json({

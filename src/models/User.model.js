@@ -151,6 +151,9 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: null,
   },
+  // NOTE:
+  // mustSetPassword is the authoritative onboarding guard.
+  // passwordSet is legacy and MUST NOT be used for auth decisions.
   
   // Secure token hash for password setup / invite (stored as hash, never plain text)
   // Also serves as invite token for new user onboarding
