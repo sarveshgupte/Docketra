@@ -2356,7 +2356,7 @@ const handleGoogleCallback = async (req, res) => {
       });
     }
 
-    const { user, linkedDuringRequest } = await resolveUserIdentity({
+    const identityResult = await resolveUserIdentity({
       googleProfile: { sub: googleId },
       email,
       canLinkGoogle: (candidate) => {
@@ -2368,6 +2368,8 @@ const handleGoogleCallback = async (req, res) => {
       },
       linkGoogleIfFound: true,
     });
+    let user = identityResult.user;
+    const linkedDuringRequest = identityResult.linkedDuringRequest;
 
     // Reject external / non-invited users
     if (!user) {
@@ -2389,8 +2391,16 @@ const handleGoogleCallback = async (req, res) => {
       if (flow === 'activation') {
         update.status = 'ACTIVE';
       }
-      await User.updateOne({ _id: user._id }, { $set: update });
-      Object.assign(user, update);
+      const refreshed = await User.findOneAndUpdate(
+        { _id: user._id },
+        { $set: update },
+        { new: true }
+      );
+      if (refreshed) {
+        user = refreshed;
+      } else {
+        Object.assign(user, update);
+      }
     }
 
     // Guardrails: SuperAdmin cannot use Google auth
