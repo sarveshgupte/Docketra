@@ -3,7 +3,7 @@
  * Stores tokens from backend redirect and routes user appropriately.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Card } from '../components/common/Card';
 import { Loading } from '../components/common/Loading';
@@ -17,7 +17,7 @@ export const GoogleCallbackPage = () => {
   const [error, setError] = useState('');
   const [firmSlugFromQuery, setFirmSlugFromQuery] = useState(null);
   const { user, loading, isAuthenticated, setAuthFromProfile } = useAuth();
-  const handledRef = React.useRef(false);
+  const handledRef = useRef(false);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
