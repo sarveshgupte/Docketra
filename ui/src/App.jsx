@@ -16,7 +16,9 @@ const AppBootstrap = () => {
   const { fetchProfile } = useAuth();
 
   useEffect(() => {
-    bootstrapAuth(fetchProfile).catch(() => {});
+    bootstrapAuth(fetchProfile).catch((error) => {
+      console.error('[AUTH] bootstrap failed', error);
+    });
   }, [fetchProfile]);
 
   return (

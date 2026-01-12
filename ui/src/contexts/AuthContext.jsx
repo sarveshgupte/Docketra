@@ -63,7 +63,7 @@ export const AuthProvider = ({ children }) => {
 
           if (hasValidXID && parsedUser.xID === cachedXID && isValidRole) {
             setAuthFromProfile(parsedUser);
-            return parsedUser;
+            return { success: true, data: parsedUser };
           }
         } catch (parseError) {
           // Invalid cached user - fall back to server bootstrap
@@ -74,10 +74,10 @@ export const AuthProvider = ({ children }) => {
 
       if (response?.success && response.data) {
         setAuthFromProfile(response.data);
-        return response.data;
+        return { success: true, data: response.data };
       }
 
-      return null;
+      return { success: false, data: null };
     } catch (err) {
       // Fail fast on auth errors (401/403) to avoid hidden polling loops
       const status = err?.response?.status;
@@ -86,7 +86,7 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
         setIsAuthenticated(false);
       }
-      throw err;
+      return { success: false, data: null, error: err };
     } finally {
       setLoading(false);
     }
