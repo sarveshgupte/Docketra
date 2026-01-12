@@ -13,6 +13,7 @@ import { Loading } from '../components/common/Loading';
 import { validateXID, validatePassword } from '../utils/validators';
 import { API_BASE_URL, USER_ROLES, ERROR_CODES, STORAGE_KEYS } from '../utils/constants';
 import api from '../services/api';
+import { useToast } from '../hooks/useToast';
 import './LoginPage.css';
 
 export const FirmLoginPage = () => {
@@ -25,6 +26,7 @@ export const FirmLoginPage = () => {
   const [firmData, setFirmData] = useState(null);
 
   const { setAuthFromProfile } = useAuth();
+  const { showSuccess } = useToast();
   const navigate = useNavigate();
 
   // Load firm metadata
@@ -105,6 +107,7 @@ export const FirmLoginPage = () => {
         if (userData.role === USER_ROLES.SUPER_ADMIN) {
           localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
           setAuthFromProfile(userData);
+          showSuccess('Signed in successfully.');
           navigate('/superadmin');
         } else {
           // Regular users go to firm-scoped dashboard
@@ -114,6 +117,7 @@ export const FirmLoginPage = () => {
             localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, userFirmSlug);
           }
           setAuthFromProfile(userData);
+          showSuccess('Signed in successfully.');
           
           // Immediately navigate - do NOT poll profile or retry
           navigate(`/f/${userFirmSlug}/dashboard`);

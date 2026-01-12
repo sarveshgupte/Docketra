@@ -26,10 +26,17 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
   }
 
   if (loading) {
-    return <Loading message="Loading..." />;
+    return <Loading message="Checking access..." />;
   }
 
   if (!isAuthenticated) {
+    const hadSession = !!localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+    if (hadSession) {
+      sessionStorage.setItem('GLOBAL_TOAST', JSON.stringify({
+        message: 'Your session expired. Please sign in again.',
+        type: 'info'
+      }));
+    }
     // Redirect to firm login if firmSlug is in URL, otherwise generic login
     if (effectiveFirmSlug) {
       return <Navigate to={`/f/${effectiveFirmSlug}/login`} replace />;

@@ -12,12 +12,14 @@ import { Loading } from '../components/common/Loading';
 import { useAuth } from '../hooks/useAuth';
 import { worklistService } from '../services/worklistService';
 import { formatDate } from '../utils/formatters';
+import { useToast } from '../hooks/useToast';
 import './WorkbasketPage.css';
 
 export const WorkbasketPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { firmSlug } = useParams();
+  const { showSuccess, showError, showInfo } = useToast();
   
   const [loading, setLoading] = useState(true);
   const [cases, setCases] = useState([]);
@@ -76,12 +78,12 @@ export const WorkbasketPage = () => {
 
   const handleBulkPull = async () => {
     if (!user?.xID) {
-      alert('Authenticated userXID is required to pull cases. Please log in again.');
+      showError('Authenticated userXID is required to pull cases. Please log in again.');
       return;
     }
 
     if (selectedCases.length === 0) {
-      alert('Please select at least one case to pull.');
+      showInfo('Please select at least one case to pull.');
       return;
     }
 
@@ -98,12 +100,12 @@ export const WorkbasketPage = () => {
         const message = response.pulled < response.requested
           ? `${response.pulled} of ${response.requested} cases pulled. Some were already assigned.`
           : `All ${response.pulled} cases pulled successfully!`;
-        alert(message);
+        showInfo(message);
         // Refresh the worklist
         loadGlobalWorklist();
       }
     } catch (error) {
-      alert(`Failed to pull cases: ${error.response?.data?.message || error.message}`);
+      showError(error.response?.data?.message || error.message || 'Failed to pull cases');
     } finally {
       setBulkPulling(false);
     }
@@ -111,7 +113,7 @@ export const WorkbasketPage = () => {
 
   const handlePullCase = async (caseId) => {
     if (!user?.xID) {
-      alert('Authenticated userXID is required to pull cases. Please log in again.');
+      showError('Authenticated userXID is required to pull cases. Please log in again.');
       return;
     }
 
@@ -125,16 +127,16 @@ export const WorkbasketPage = () => {
       const response = await worklistService.pullCases([caseId]);
       
       if (response.success) {
-        alert('Case pulled successfully!');
+        showSuccess('Case pulled successfully.');
         // Refresh the worklist
         loadGlobalWorklist();
       }
     } catch (error) {
       if (error.response?.status === 409) {
-        alert('Case is no longer available (already assigned)');
+        showInfo('Case is no longer available (already assigned).');
         loadGlobalWorklist(); // Refresh to remove it
       } else {
-        alert(`Failed to pull case: ${error.response?.data?.message || error.message}`);
+        showError(error.response?.data?.message || error.message || 'Failed to pull case');
       }
     } finally {
       setPullingCase(null);
@@ -320,7 +322,7 @@ export const WorkbasketPage = () => {
                 {cases.length === 0 ? (
                   <tr>
                     <td colSpan="8" style={{ textAlign: 'center', padding: '2rem' }}>
-                      No unassigned cases found
+                      No unassigned cases found. Adjust filters or check back soon.
                     </td>
                   </tr>
                 ) : (
