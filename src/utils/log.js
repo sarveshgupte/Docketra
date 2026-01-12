@@ -25,10 +25,9 @@ const buildContext = (level, event, meta = {}) => {
 
 const logAtLevel = (level, event, meta = {}) => {
   const context = buildContext(level, event, meta);
-  const { req, ...safeContext } = context;
-  const prefix = `[${safeContext.severity}][${safeContext.requestId || 'no-req'}][${safeContext.firmId || 'no-firm'}][${safeContext.route || 'n/a'}]`;
+  const prefix = `[${context.severity}][${context.requestId || 'no-req'}][${context.firmId || 'no-firm'}][${context.route || 'n/a'}]`;
   const logger = level === 'error' ? console.error : level === 'warn' ? console.warn : console.log;
-  logger(`${prefix} ${event}`, safeContext);
+  logger(`${prefix} ${event}`, context);
 };
 
 module.exports = {

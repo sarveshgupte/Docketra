@@ -45,12 +45,11 @@ const logAbuseEvent = (req, limiterName) => {
   req.requestId = req.requestId || randomUUID();
   const endpoint = `${req.method} ${req.originalUrl || req.url}`;
   recordRateLimitHit(req, endpoint);
-  const message = `[RATE_LIMIT][${req.requestId || 'no-req'}][${req.firmId || 'no-firm'}][${req.originalUrl || req.url}]`;
   log.warn('RATE_LIMIT_HIT', {
     req,
     limiterName,
     endpoint,
-    message,
+    rateLimitTag: `[RATE_LIMIT][${req.requestId || 'no-req'}][${req.firmId || 'no-firm'}][${req.originalUrl || req.url}]`,
   });
 };
 

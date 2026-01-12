@@ -6,14 +6,29 @@ const metrics = {
 };
 
 const firmKey = (firmId) => firmId || 'none';
+const MAX_FIRM_TRACKING = 500;
+
+const pruneIfNeeded = (key) => {
+  if (metrics.requests[key]) return;
+  const trackedFirms = Object.keys(metrics.requests);
+  if (trackedFirms.length >= MAX_FIRM_TRACKING) {
+    const oldest = trackedFirms[0];
+    delete metrics.requests[oldest];
+    delete metrics.lastError[oldest];
+    delete metrics.lastInvariant[oldest];
+    delete metrics.lastRateLimit[oldest];
+  }
+};
 
 const recordRequest = (req) => {
   const key = firmKey(req?.firmId);
+  pruneIfNeeded(key);
   metrics.requests[key] = (metrics.requests[key] || 0) + 1;
 };
 
 const recordError = (req, error) => {
   const key = firmKey(req?.firmId);
+  pruneIfNeeded(key);
   metrics.lastError[key] = {
     at: new Date().toISOString(),
     route: req?.originalUrl || req?.url || null,
@@ -24,6 +39,7 @@ const recordError = (req, error) => {
 
 const recordInvariantViolation = (req, reason) => {
   const key = firmKey(req?.firmId);
+  pruneIfNeeded(key);
   metrics.lastInvariant[key] = {
     at: new Date().toISOString(),
     route: req?.originalUrl || req?.url || null,
@@ -34,6 +50,7 @@ const recordInvariantViolation = (req, reason) => {
 
 const recordRateLimitHit = (req, endpoint) => {
   const key = firmKey(req?.firmId);
+  pruneIfNeeded(key);
   metrics.lastRateLimit[key] = {
     at: new Date().toISOString(),
     route: endpoint || req?.originalUrl || req?.url || null,
