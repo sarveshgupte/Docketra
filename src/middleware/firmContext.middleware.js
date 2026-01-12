@@ -30,6 +30,7 @@ const attachFirmContext = async (req, res, next) => {
     }
 
     if (paramFirmId) {
+      // Accept canonical firm code format (e.g., FIRM001)
       if (/^FIRM\d{3,}$/i.test(paramFirmId)) {
         lookup.push({ firmId: paramFirmId.toUpperCase() });
       }
