@@ -45,8 +45,15 @@ export const AuthProvider = ({ children }) => {
         const cachedXID = localStorage.getItem(STORAGE_KEYS.X_ID);
 
         if (cachedUser && cachedXID) {
-          setAuthFromProfile(JSON.parse(cachedUser));
-          return;
+          try {
+            const parsedUser = JSON.parse(cachedUser);
+            if (parsedUser?.xID) {
+              setAuthFromProfile(parsedUser);
+              return;
+            }
+          } catch (parseError) {
+            // Invalid cached user - fall back to server bootstrap
+          }
         }
 
         const response = await authService.getProfile();

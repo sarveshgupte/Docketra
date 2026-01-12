@@ -3,7 +3,7 @@
  * Stores tokens from backend redirect and routes user appropriately.
  */
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Card } from '../components/common/Card';
 import { Loading } from '../components/common/Loading';
@@ -15,25 +15,22 @@ export const GoogleCallbackPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [error, setError] = useState('');
-  const [firmSlugFromQuery, setFirmSlugFromQuery] = useState(null);
   const { user, loading, isAuthenticated, setAuthFromProfile } = useAuth();
   const handledRef = useRef(false);
+  const params = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const firmSlugFromQuery = params.get('firmSlug');
+  const errorParam = params.get('error');
 
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const firmSlug = params.get('firmSlug');
-    const errorParam = params.get('error');
-
     if (errorParam) {
       setError(errorParam);
       return;
     }
 
-    if (firmSlug) {
-      localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, firmSlug);
-      setFirmSlugFromQuery(firmSlug);
+    if (firmSlugFromQuery) {
+      localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, firmSlugFromQuery);
     }
-  }, [location.search]);
+  }, [firmSlugFromQuery, errorParam]);
 
   useEffect(() => {
     if (handledRef.current || error) return;
