@@ -120,7 +120,21 @@ export const AuthProvider = ({ children }) => {
   };
 
   const updateUser = (userData) => {
-    setUser((prev) => ({ ...prev, ...userData }));
+    setUser((prev) => {
+      const mergedUser = { ...prev, ...userData };
+
+      if (mergedUser.firmSlug) {
+        localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, mergedUser.firmSlug);
+      }
+
+      if (mergedUser.xID) {
+        localStorage.setItem(STORAGE_KEYS.X_ID, mergedUser.xID);
+      }
+
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(mergedUser));
+      setIsAuthenticated(true);
+      return mergedUser;
+    });
   };
 
   const value = {
