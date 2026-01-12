@@ -3,6 +3,7 @@
  * Centralized helpers to mask sensitive values before logging.
  *
  * Covered fields:
+ * - Passwords (all variations) -> ***REDACTED***
  * - PAN (e.g., ABCDE1234F) -> AB***1234F
  * - Aadhaar (12 digits) -> **** **** 1234
  * - Email -> j***@d***.com
