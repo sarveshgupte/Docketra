@@ -45,6 +45,8 @@ api.interceptors.response.use(
       const destination = firmSlug ? `/f/${firmSlug}/login` : '/login';
       // Ensure the flag is set before navigation to prevent duplicate redirects
       setTimeout(() => window.location.assign(destination), 0);
+      // Fallback reset in case navigation is blocked
+      setTimeout(() => { redirecting = false; }, 5000);
     };
     const clearAuthStorage = () => {
       localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
@@ -110,7 +112,7 @@ api.interceptors.response.use(
 
     // Handle authorization failures explicitly (stop silent polling)
     if (status === 403) {
-      // Unauthorized - clear storage and redirect to login
+      // Forbidden - clear storage and redirect to login
       clearAuthStorage();
       redirectToLogin();
       return Promise.reject(error);

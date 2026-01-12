@@ -40,7 +40,13 @@ const resolveUserIdentity = async ({
 
       if (googleId && allowLink) {
         const updated = await User.findOneAndUpdate(
-          { _id: candidate._id, 'authProviders.google.googleId': { $in: [null, undefined] } },
+          { 
+            _id: candidate._id, 
+            $or: [
+              { 'authProviders.google.googleId': { $exists: false } },
+              { 'authProviders.google.googleId': null },
+            ],
+          },
           {
             $set: {
               'authProviders.google.googleId': googleId,
