@@ -133,45 +133,45 @@ const createCase = async (req, res) => {
     } = req.body;
     
     // Validate required fields
-      if (!title || !title.trim()) {
-        return res.status(400).json({
-          success: false,
-          message: 'Case title is required',
-          ...responseMeta,
-        });
-      }
+    if (!title || !title.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Case title is required',
+        ...responseMeta,
+      });
+    }
     
-      if (!description || !description.trim()) {
-        return res.status(400).json({
-          success: false,
-          message: 'Case description is required',
-          ...responseMeta,
-        });
-      }
+    if (!description || !description.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Case description is required',
+        ...responseMeta,
+      });
+    }
     
-      if (!categoryId) {
-        return res.status(400).json({
-          success: false,
-          message: 'Category is required',
-          ...responseMeta,
-        });
-      }
+    if (!categoryId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Category is required',
+        ...responseMeta,
+      });
+    }
     
-      if (!subcategoryId) {
-        return res.status(400).json({
-          success: false,
-          message: 'Subcategory is required',
-          ...responseMeta,
-        });
-      }
+    if (!subcategoryId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Subcategory is required',
+        ...responseMeta,
+      });
+    }
     
-      if (!slaDueDate) {
-        return res.status(400).json({
-          success: false,
-          message: 'SLA Due Date is required',
-          ...responseMeta,
-        });
-      }
+    if (!slaDueDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'SLA Due Date is required',
+        ...responseMeta,
+      });
+    }
     
     // Get creator xID from authenticated user (req.user is set by auth middleware)
     const createdByXID = req.user.xID;
@@ -377,9 +377,8 @@ const createCase = async (req, res) => {
       }
 
       await session.commitTransaction();
-      session.endSession();
       
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         data: newCase,
         message: 'Case created successfully',
@@ -391,12 +390,11 @@ const createCase = async (req, res) => {
       });
     } catch (error) {
       await session.abortTransaction();
-      session.endSession();
 
       if (error?.code === 11000) {
         console.error(`[CASE_CREATE][${requestId}] Duplicate key detected during case creation`, { firmId, error: error.message });
         if (idempotencyKey) {
-          const existingCase = await Case.findOne({ firmId, idempotencyKey });
+          const existingCase = await Case.findOne({ firmId, idempotencyKey }).session(session);
           if (existingCase) {
             return res.status(200).json({
               success: true,
@@ -414,12 +412,14 @@ const createCase = async (req, res) => {
         });
       }
 
-      res.status(400).json({
+      return res.status(400).json({
         success: false,
         message: 'Error creating case',
         error: error.message,
         ...responseMeta,
       });
+    } finally {
+      session.endSession();
     }
   } catch (error) {
     res.status(400).json({
