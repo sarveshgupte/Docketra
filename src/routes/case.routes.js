@@ -4,9 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { authenticate } = require('../middleware/auth.middleware');
-const { authorize } = require('../middleware/authorize');
-const CasePolicy = require('../policies/case.policy');
-const AdminPolicy = require('../policies/admin.policy');
+const { authorizeFirmPermission } = require('../middleware/permission.middleware');
 const {
   userReadLimiter,
   userWriteLimiter,
@@ -77,19 +75,19 @@ const upload = multer({ storage: storage });
 
 // GET /api/cases - Get all cases with filtering
 // Apply client access filter to exclude restricted clients
-router.get('/', authorize(CasePolicy.canView), userReadLimiter, applyClientAccessFilter, getCases);
+router.get('/', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, applyClientAccessFilter, getCases);
 
 // POST /api/cases - Create new case
 // PR #44: Apply xID ownership validation guardrails
 // Apply client access check to prevent creating cases with restricted clients
-router.post('/', authorize(CasePolicy.canCreate), userWriteLimiter, checkClientAccess, validateCaseCreation, createCase);
+router.post('/', authorizeFirmPermission('CASE_CREATE'), userWriteLimiter, checkClientAccess, validateCaseCreation, createCase);
 
 // POST /api/cases/pull - Unified pull endpoint for single or multiple cases
 // IMPORTANT: Must come BEFORE /:caseId routes to avoid matching "pull" as a caseId
 // Accepts: { caseIds: ["CASE-20260109-00001"] } or { caseIds: ["CASE-...", "CASE-..."] }
 // User identity obtained from req.user (auth middleware), NOT from request body
 // PR: Hard Cutover to xID - Removed legacy /cases/:caseId/pull endpoint
-router.post('/pull', authorize(CasePolicy.canUpdate), userWriteLimiter, pullCases);
+router.post('/pull', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, pullCases);
 
 // Case action routes (RESOLVE, PEND, FILE) - PR: Case Lifecycle
 const {
@@ -104,19 +102,19 @@ const {
 
 // GET /api/cases/my-pending - Get my pending cases
 // IMPORTANT: Must come BEFORE /:caseId routes to avoid matching "my-pending" as a caseId
-router.get('/my-pending', authorize(CasePolicy.canView), userReadLimiter, applyClientAccessFilter, getMyPendingCases);
+router.get('/my-pending', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, applyClientAccessFilter, getMyPendingCases);
 
 // GET /api/cases/my-resolved - Get my resolved cases
 // IMPORTANT: Must come BEFORE /:caseId routes to avoid matching "my-resolved" as a caseId
-router.get('/my-resolved', authorize(CasePolicy.canView), userReadLimiter, applyClientAccessFilter, getMyResolvedCases);
+router.get('/my-resolved', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, applyClientAccessFilter, getMyResolvedCases);
 
 // GET /api/cases/my-unassigned-created - Get unassigned cases created by me
 // IMPORTANT: Must come BEFORE /:caseId routes to avoid matching as a caseId
 // PR: Fix Case Visibility - New endpoint for dashboard accuracy
-router.get('/my-unassigned-created', authorize(CasePolicy.canView), userReadLimiter, applyClientAccessFilter, getMyUnassignedCreatedCases);
+router.get('/my-unassigned-created', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, applyClientAccessFilter, getMyUnassignedCreatedCases);
 
 // POST /api/cases/auto-reopen-pended - Trigger auto-reopen for pended cases (Admin/System)
-router.post('/auto-reopen-pended', authorize(AdminPolicy.isAdmin), triggerAutoReopen);
+router.post('/auto-reopen-pended', authorizeFirmPermission('CASE_ADMIN_VIEW'), triggerAutoReopen);
 
 // Case tracking routes - PR: Comprehensive CaseHistory & Audit Trail
 // IMPORTANT: Must come BEFORE /:caseId routes to avoid matching as caseId
@@ -128,53 +126,53 @@ const {
 } = require('../controllers/caseTracking.controller');
 
 // POST /api/cases/:caseId/track-open - Track case opened
-router.post('/:caseId/track-open', authorize(CasePolicy.canView), userWriteLimiter, checkCaseClientAccess, trackCaseOpen);
+router.post('/:caseId/track-open', authorizeFirmPermission('CASE_VIEW'), userWriteLimiter, checkCaseClientAccess, trackCaseOpen);
 
 // POST /api/cases/:caseId/track-view - Track case viewed
-router.post('/:caseId/track-view', authorize(CasePolicy.canView), userWriteLimiter, checkCaseClientAccess, trackCaseView);
+router.post('/:caseId/track-view', authorizeFirmPermission('CASE_VIEW'), userWriteLimiter, checkCaseClientAccess, trackCaseView);
 
 // POST /api/cases/:caseId/track-exit - Track case exited
-router.post('/:caseId/track-exit', authorize(CasePolicy.canView), userWriteLimiter, checkCaseClientAccess, trackCaseExit);
+router.post('/:caseId/track-exit', authorizeFirmPermission('CASE_VIEW'), userWriteLimiter, checkCaseClientAccess, trackCaseExit);
 
 // GET /api/cases/:caseId/history - Get case audit history
-router.get('/:caseId/history', authorize(CasePolicy.canView), userReadLimiter, checkCaseClientAccess, getCaseHistory);
+router.get('/:caseId/history', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, getCaseHistory);
 
 // GET /api/cases/:caseId - Get case by caseId with comments, attachments, and history
 // Check if user can access this case's client
-router.get('/:caseId', authorize(CasePolicy.canView), userReadLimiter, checkCaseClientAccess, getCaseByCaseId);
+router.get('/:caseId', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, getCaseByCaseId);
 
 // POST /api/cases/:caseId/comments - Add comment to case
-router.post('/:caseId/comments', authorize(CasePolicy.canUpdate), userWriteLimiter, checkCaseClientAccess, addComment);
+router.post('/:caseId/comments', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, addComment);
 
 // POST /api/cases/:caseId/attachments - Upload attachment to case
-router.post('/:caseId/attachments', upload.single('file'), authorize(CasePolicy.canUpdate), attachmentLimiter, checkCaseClientAccess, addAttachment);
+router.post('/:caseId/attachments', upload.single('file'), authorizeFirmPermission('CASE_UPDATE'), attachmentLimiter, checkCaseClientAccess, addAttachment);
 
 // GET /api/cases/:caseId/attachments/:attachmentId/view - View attachment inline
 // Note: authenticate middleware accepts xID from query params (req.query.xID)
-router.get('/:caseId/attachments/:attachmentId/view', authenticate, authorize(CasePolicy.canView), attachmentLimiter, checkCaseClientAccess, viewAttachment);
+router.get('/:caseId/attachments/:attachmentId/view', authenticate, authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, viewAttachment);
 
 // GET /api/cases/:caseId/attachments/:attachmentId/download - Download attachment
 // Note: authenticate middleware accepts xID from query params (req.query.xID)
-router.get('/:caseId/attachments/:attachmentId/download', authenticate, authorize(CasePolicy.canView), attachmentLimiter, checkCaseClientAccess, downloadAttachment);
+router.get('/:caseId/attachments/:attachmentId/download', authenticate, authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, downloadAttachment);
 
 // POST /api/cases/:caseId/clone - Clone case with comments and attachments
 // PR #44: Apply xID validation for assignment fields
-router.post('/:caseId/clone', authorize(CasePolicy.canCreate), userWriteLimiter, checkCaseClientAccess, validateCaseAssignment, cloneCase);
+router.post('/:caseId/clone', authorizeFirmPermission('CASE_CREATE'), userWriteLimiter, checkCaseClientAccess, validateCaseAssignment, cloneCase);
 
 // POST /api/cases/:caseId/unpend - Unpend a case
-router.post('/:caseId/unpend', authorize(CasePolicy.canPerformActions), userWriteLimiter, checkCaseClientAccess, unpendCase);
+router.post('/:caseId/unpend', authorizeFirmPermission('CASE_ACTION'), userWriteLimiter, checkCaseClientAccess, unpendCase);
 
 // PUT /api/cases/:caseId/status - Update case status
-router.put('/:caseId/status', authorize(CasePolicy.canUpdate), userWriteLimiter, checkCaseClientAccess, updateCaseStatus);
+router.put('/:caseId/status', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, updateCaseStatus);
 
 // POST /api/cases/:caseId/lock - Lock a case
-router.post('/:caseId/lock', authorize(CasePolicy.canUpdate), userWriteLimiter, checkCaseClientAccess, lockCaseEndpoint);
+router.post('/:caseId/lock', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, lockCaseEndpoint);
 
 // POST /api/cases/:caseId/unlock - Unlock a case
-router.post('/:caseId/unlock', authorize(CasePolicy.canUpdate), userWriteLimiter, checkCaseClientAccess, unlockCaseEndpoint);
+router.post('/:caseId/unlock', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, unlockCaseEndpoint);
 
 // POST /api/cases/:caseId/activity - Update case activity (heartbeat)
-router.post('/:caseId/activity', authorize(CasePolicy.canUpdate), userWriteLimiter, checkCaseClientAccess, updateCaseActivity);
+router.post('/:caseId/activity', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, updateCaseActivity);
 
 // Workflow state transition routes
 const {
@@ -185,41 +183,41 @@ const {
 } = require('../controllers/caseWorkflow.controller');
 
 // POST /api/cases/:caseId/submit - Submit case for review
-router.post('/:caseId/submit', authorize(CasePolicy.canPerformActions), userWriteLimiter, submitCase);
+router.post('/:caseId/submit', authorizeFirmPermission('CASE_ACTION'), userWriteLimiter, submitCase);
 
 // POST /api/cases/:caseId/review - Move case to under review
-router.post('/:caseId/review', authorize(CasePolicy.canPerformActions), userWriteLimiter, moveToUnderReview);
+router.post('/:caseId/review', authorizeFirmPermission('CASE_ACTION'), userWriteLimiter, moveToUnderReview);
 
 // POST /api/cases/:caseId/close - Close a case
-router.post('/:caseId/close', authorize(CasePolicy.canPerformActions), userWriteLimiter, closeCase);
+router.post('/:caseId/close', authorizeFirmPermission('CASE_ACTION'), userWriteLimiter, closeCase);
 
 // POST /api/cases/:caseId/reopen - Reopen a case
-router.post('/:caseId/reopen', authorize(CasePolicy.canPerformActions), userWriteLimiter, reopenCase);
+router.post('/:caseId/reopen', authorizeFirmPermission('CASE_ACTION'), userWriteLimiter, reopenCase);
 
 // POST /api/cases/:caseId/resolve - Resolve a case with mandatory comment
-router.post('/:caseId/resolve', authorize(CasePolicy.canPerformActions), userWriteLimiter, resolveCase);
+router.post('/:caseId/resolve', authorizeFirmPermission('CASE_ACTION'), userWriteLimiter, resolveCase);
 
 // POST /api/cases/:caseId/pend - Pend a case with mandatory comment and pendingUntil
-router.post('/:caseId/pend', authorize(CasePolicy.canPerformActions), userWriteLimiter, pendCase);
+router.post('/:caseId/pend', authorizeFirmPermission('CASE_ACTION'), userWriteLimiter, pendCase);
 
 // POST /api/cases/:caseId/file - File a case with mandatory comment
-router.post('/:caseId/file', authorize(CasePolicy.canPerformActions), userWriteLimiter, fileCase);
+router.post('/:caseId/file', authorizeFirmPermission('CASE_ACTION'), userWriteLimiter, fileCase);
 
 // POST /api/cases/:caseId/unassign - Move case to global worklist (Admin only)
-router.post('/:caseId/unassign', authorize(CasePolicy.canAssign), userWriteLimiter, unassignCase);
+router.post('/:caseId/unassign', authorizeFirmPermission('CASE_ASSIGN'), userWriteLimiter, unassignCase);
 
 // Client Fact Sheet routes (Read-Only from Case view)
 // GET /api/cases/:caseId/client-fact-sheet - Get client fact sheet for a case (read-only)
-router.get('/:caseId/client-fact-sheet', authorize(CasePolicy.canView), userReadLimiter, checkCaseClientAccess, getClientFactSheetForCase);
+router.get('/:caseId/client-fact-sheet', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, getClientFactSheetForCase);
 
 // GET /api/cases/:caseId/client-fact-sheet/files/:fileId/view - View client fact sheet file (view-only, no download)
-router.get('/:caseId/client-fact-sheet/files/:fileId/view', authenticate, authorize(CasePolicy.canView), attachmentLimiter, checkCaseClientAccess, viewClientFactSheetFile);
+router.get('/:caseId/client-fact-sheet/files/:fileId/view', authenticate, authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, viewClientFactSheetFile);
 
 // Client CFS access from case context (read-only)
 // GET /api/cases/:caseId/client-cfs/files - List client CFS files for this case's client
-router.get('/:caseId/client-cfs/files', authenticate, authorize(CasePolicy.canView), userReadLimiter, checkCaseClientAccess, listClientCFSFilesForCase);
+router.get('/:caseId/client-cfs/files', authenticate, authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, listClientCFSFilesForCase);
 
 // GET /api/cases/:caseId/client-cfs/files/:attachmentId/download - Download client CFS file
-router.get('/:caseId/client-cfs/files/:attachmentId/download', authenticate, authorize(CasePolicy.canView), attachmentLimiter, checkCaseClientAccess, downloadClientCFSFileForCase);
+router.get('/:caseId/client-cfs/files/:attachmentId/download', authenticate, authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, downloadClientCFSFileForCase);
 
 module.exports = router;

@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { authorizeFirmPermission } = require('../middleware/permission.middleware');
 const {
   approveNewClient,
   approveClientEdit,
@@ -19,13 +20,13 @@ const { checkClientApprovalPermission } = require('../middleware/adminApproval.m
  */
 
 // Read-only endpoints (no mutations)
-router.get('/clients', listClients);
-router.get('/clients/:clientId', getClientById);
+router.get('/clients', authorizeFirmPermission('CLIENT_VIEW'), listClients);
+router.get('/clients/:clientId', authorizeFirmPermission('CLIENT_VIEW'), getClientById);
 
 // Admin approval endpoints (mutations only through case workflow)
 // Apply hierarchy check middleware to enforce top-most admin or canApproveClients permission
-router.post('/:caseId/approve-new', checkClientApprovalPermission, approveNewClient);
-router.post('/:caseId/approve-edit', checkClientApprovalPermission, approveClientEdit);
-router.post('/:caseId/reject', checkClientApprovalPermission, rejectClientCase);
+router.post('/:caseId/approve-new', authorizeFirmPermission('CLIENT_APPROVE'), checkClientApprovalPermission, approveNewClient);
+router.post('/:caseId/approve-edit', authorizeFirmPermission('CLIENT_APPROVE'), checkClientApprovalPermission, approveClientEdit);
+router.post('/:caseId/reject', authorizeFirmPermission('CLIENT_APPROVE'), checkClientApprovalPermission, rejectClientCase);
 
 module.exports = router;

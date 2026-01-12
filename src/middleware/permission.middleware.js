@@ -1,4 +1,5 @@
 const User = require('../models/User.model');
+const { resolveFirmRole } = require('../services/authorization.service');
 
 /**
  * Permission Middleware for Docketra Case Management System
@@ -126,9 +127,60 @@ const requireFirmContext = async (req, res, next) => {
   }
 };
 
+/**
+ * Firm-scoped permission guard.
+ * Resolves role via firm membership and enforces capability-based access.
+ * Explicit SuperAdmin bypass (non-firm data) while blocking missing firm context.
+ */
+const authorizeFirmPermission = (requiredPermission) => {
+  return async (req, res, next) => {
+    try {
+      if (req.user && (req.user.role === 'SuperAdmin' || req.user.role === 'SUPER_ADMIN')) {
+        return next();
+      }
+
+      if (!req.firm || !req.firm.id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Firm context is required for this operation',
+        });
+      }
+
+      const userId = req.userId || req.user?._id?.toString();
+      const membership = await resolveFirmRole(userId, req.firm.id);
+
+      if (!membership) {
+        return res.status(403).json({
+          success: false,
+          message: 'You are not authorized for this firm',
+        });
+      }
+
+      if (requiredPermission && !membership.permissions.includes(requiredPermission)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Insufficient firm permissions',
+        });
+      }
+
+      req.firmRole = membership.role;
+      req.firmPermissions = membership.permissions;
+      return next();
+    } catch (error) {
+      console.error('[PERMISSION] Firm permission check failed:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Error checking permissions',
+        error: error.message,
+      });
+    }
+  };
+};
+
 module.exports = { 
   requireAdmin, 
   requireSuperadmin, 
   blockSuperadmin,
   requireFirmContext,
+  authorizeFirmPermission,
 };

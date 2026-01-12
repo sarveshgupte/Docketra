@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { searchLimiter } = require('../middleware/rateLimiters');
+const { authorizeFirmPermission } = require('../middleware/permission.middleware');
 const {
   globalSearch,
   categoryWorklist,
@@ -15,15 +16,15 @@ const {
  */
 
 // GET /api/search?q=term - Global search
-router.get('/', searchLimiter, globalSearch);
+router.get('/', authorizeFirmPermission('CASE_VIEW'), searchLimiter, globalSearch);
 
 // GET /api/worklists/global - Global worklist (unassigned cases)
-router.get('/global', searchLimiter, globalWorklist);
+router.get('/global', authorizeFirmPermission('CASE_VIEW'), searchLimiter, globalWorklist);
 
 // GET /api/worklists/category/:categoryId - Category worklist
-router.get('/category/:categoryId', searchLimiter, categoryWorklist);
+router.get('/category/:categoryId', authorizeFirmPermission('CASE_VIEW'), searchLimiter, categoryWorklist);
 
 // GET /api/worklists/employee/me - Employee worklist
-router.get('/employee/me', searchLimiter, employeeWorklist);
+router.get('/employee/me', authorizeFirmPermission('CASE_VIEW'), searchLimiter, employeeWorklist);
 
 module.exports = router;
