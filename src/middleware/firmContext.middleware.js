@@ -30,7 +30,7 @@ const attachFirmContext = async (req, res, next) => {
     }
 
     if (paramFirmId) {
-      if (/^FIRM\d+/i.test(paramFirmId)) {
+      if (/^FIRM\d{3,}$/i.test(paramFirmId)) {
         lookup.push({ firmId: paramFirmId.toUpperCase() });
       }
       if (mongoose.Types.ObjectId.isValid(paramFirmId)) {
