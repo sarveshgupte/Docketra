@@ -1,4 +1,5 @@
 const User = require('../models/User.model');
+const { isSuperAdminRole } = require('../utils/role.utils');
 
 const ROLE_PERMISSIONS = {
   Admin: [
@@ -54,7 +55,7 @@ const resolveFirmRole = async (userId, firmId) => {
     return null;
   }
 
-  if (membership.role === 'SUPER_ADMIN' || membership.role === 'SuperAdmin') {
+  if (isSuperAdminRole(membership.role)) {
     // Superadmin is firm-agnostic; do not resolve through firm membership
     return null;
   }
