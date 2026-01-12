@@ -14,6 +14,17 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const bootstrapOnceRef = useRef(false);
+  const clearAuthStorage = (firmSlugToPreserve = null) => {
+    localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.X_ID);
+    localStorage.removeItem(STORAGE_KEYS.USER);
+    if (firmSlugToPreserve) {
+      localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, firmSlugToPreserve);
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
+    }
+  };
 
   /**
    * WARNING:
@@ -70,7 +81,13 @@ export const AuthProvider = ({ children }) => {
           setAuthFromProfile(response.data);
         }
       } catch (err) {
-        // Not authenticated is a valid state - do not retry
+        // Fail fast on auth errors (401/403) to avoid hidden polling loops
+        const status = err?.response?.status;
+        if (status === 401 || status === 403) {
+          clearAuthStorage();
+          setUser(null);
+          setIsAuthenticated(false);
+        }
       } finally {
         setLoading(false);
       }
@@ -110,17 +127,7 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(false);
       bootstrapOnceRef.current = false;
       
-      // Force clear localStorage in case service didn't
-      localStorage.removeItem(STORAGE_KEYS.X_ID);
-      localStorage.removeItem(STORAGE_KEYS.USER);
-      localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
-      localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
-
-      if (firmSlugToPreserve) {
-        localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, firmSlugToPreserve);
-      } else {
-        localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
-      }
+      clearAuthStorage(firmSlugToPreserve);
     }
   };
 
