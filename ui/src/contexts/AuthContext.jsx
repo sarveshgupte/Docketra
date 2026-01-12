@@ -4,7 +4,7 @@
 
 import React, { createContext, useState, useEffect, useRef } from 'react';
 import { authService } from '../services/authService';
-import { STORAGE_KEYS } from '../utils/constants';
+import { STORAGE_KEYS, USER_ROLES } from '../utils/constants';
 
 export const AuthContext = createContext(null);
 
@@ -13,35 +13,26 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  /**
-   * Execution guard to prevent infinite /api/auth/profile request loops.
-   * 
-   * This ref ensures profile fetching happens EXACTLY ONCE per component lifecycle.
-   * 
-   * WITHOUT this guard, the following issues occur:
-   * - React StrictMode double-invokes effects in development, causing duplicate API calls
-   * - Component remounts during auth state changes trigger redundant profile fetches
-   * - Google OAuth multi-step authentication flows create cascading request loops
-   * - Auth state updates cause useEffect re-evaluation, leading to infinite recursion
-   * 
-   * CRITICAL: DO NOT REMOVE this guard. Removing it will immediately reintroduce
-   * the infinite loop bug that was fixed in PR #127.
-   * 
-   * The guard is reset to false in logout() to allow fresh profile loads after re-authentication.
-   */
-  const profileFetchAttemptedRef = useRef(false);
+  const bootstrapOnceRef = useRef(false);
 
+  /**
+   * WARNING:
+   * This function MUST NOT be called outside AuthContext.
+   * Calling it elsewhere will cause auth bootstrap loops.
+   */
   const setAuthFromProfile = (userData) => {
     if (!userData) return;
 
-    if (userData.firmSlug) {
-      localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, userData.firmSlug);
+    const { firmSlug, xID } = userData;
+
+    if (firmSlug) {
+      localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, firmSlug);
     } else {
       localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
     }
 
-    if (userData.xID) {
-      localStorage.setItem(STORAGE_KEYS.X_ID, userData.xID);
+    if (xID) {
+      localStorage.setItem(STORAGE_KEYS.X_ID, xID);
     }
 
     localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
@@ -50,52 +41,43 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    // ============================================================================
-    // GUARD: Prevent duplicate profile fetch attempts
-    // ============================================================================
-    // This guard ensures we only attempt to load the user profile ONCE per
-    // component lifecycle. Without it, React StrictMode and component remounts
-    // during auth state changes will trigger infinite /api/auth/profile loops.
-    if (profileFetchAttemptedRef.current) {
-      return;
-    }
-    profileFetchAttemptedRef.current = true;
+    if (bootstrapOnceRef.current) return;
+    bootstrapOnceRef.current = true;
 
-    // ============================================================================
-    // EARLY EXIT: User data already cached in localStorage
-    // ============================================================================
-    // Check if user is already logged in from localStorage
-    const currentUser = authService.getCurrentUser();
-    const xID = authService.getCurrentXID();
-    
-    if (currentUser && xID) {
-      setAuthFromProfile(currentUser);
-      setLoading(false);
-      return;
-    }
-
-    // ============================================================================
-    // PROFILE FETCH: Token exists but no cached user data
-    // ============================================================================
-    // If we have a token but no cached user, fetch from backend
-    const bootstrapFromCookie = async () => {
+    const bootstrapAuth = async () => {
       try {
+        const cachedUser = localStorage.getItem(STORAGE_KEYS.USER);
+        const cachedXID = localStorage.getItem(STORAGE_KEYS.X_ID);
+
+        if (cachedUser && cachedXID) {
+          try {
+            const parsedUser = JSON.parse(cachedUser);
+            const hasValidXID = typeof parsedUser?.xID === 'string' && parsedUser.xID.trim().length > 0;
+            const isValidRole = Object.values(USER_ROLES).includes(parsedUser?.role);
+
+            if (hasValidXID && parsedUser.xID === cachedXID && isValidRole) {
+              setAuthFromProfile(parsedUser);
+              return;
+            }
+          } catch (parseError) {
+            // Invalid cached user - fall back to server bootstrap
+          }
+        }
+
         const response = await authService.getProfile();
+
         if (response?.success && response.data) {
-          const userData = response.data;
-          // Store user data to localStorage to prevent re-fetching on subsequent renders
-          // Note: xID should always be present from backend; if missing, it indicates a backend issue
-          setAuthFromProfile(userData);
+          setAuthFromProfile(response.data);
         }
       } catch (err) {
-        // ignore - user not authenticated
+        // Not authenticated is a valid state - do not retry
       } finally {
         setLoading(false);
       }
     };
 
-    bootstrapFromCookie();
-  }, []); // Empty dependency array: runs once on mount. The ref guard prevents re-execution.
+    bootstrapAuth();
+  }, []);
 
   const login = async (xID, password) => {
     const response = await authService.login(xID, password);
@@ -126,9 +108,7 @@ export const AuthProvider = ({ children }) => {
       // Always clear client-side state
       setUser(null);
       setIsAuthenticated(false);
-      
-      // Reset the profile fetch guard to allow fresh profile load after re-authentication
-      profileFetchAttemptedRef.current = false;
+      bootstrapOnceRef.current = false;
       
       // Force clear localStorage in case service didn't
       localStorage.removeItem(STORAGE_KEYS.X_ID);
@@ -145,7 +125,21 @@ export const AuthProvider = ({ children }) => {
   };
 
   const updateUser = (userData) => {
-    setUser((prev) => ({ ...prev, ...userData }));
+    setUser((prev) => {
+      const mergedUser = { ...prev, ...userData };
+
+      if (mergedUser.firmSlug) {
+        localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, mergedUser.firmSlug);
+      }
+
+      if (mergedUser.xID) {
+        localStorage.setItem(STORAGE_KEYS.X_ID, mergedUser.xID);
+      }
+
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(mergedUser));
+      setIsAuthenticated(true);
+      return mergedUser;
+    });
   };
 
   const value = {
