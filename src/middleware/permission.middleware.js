@@ -1,5 +1,6 @@
 const User = require('../models/User.model');
 const { resolveFirmRole } = require('../services/authorization.service');
+const { isSuperAdminRole } = require('../utils/role.utils');
 
 /**
  * Permission Middleware for Docketra Case Management System
@@ -48,7 +49,7 @@ const requireAdmin = async (req, res, next) => {
  */
 const requireSuperadmin = async (req, res, next) => {
   try {
-    if (!req.user || req.user.role !== 'SuperAdmin') {
+    if (!req.user || !isSuperAdminRole(req.user.role)) {
       return res.status(403).json({
         success: false,
         message: 'Superadmin access required',
@@ -72,7 +73,7 @@ const requireSuperadmin = async (req, res, next) => {
  */
 const blockSuperadmin = async (req, res, next) => {
   try {
-    if (req.user && req.user.role === 'SuperAdmin') {
+    if (req.user && isSuperAdminRole(req.user.role)) {
       return res.status(403).json({
         success: false,
         message: 'Superadmin cannot access firm data',
@@ -98,7 +99,7 @@ const blockSuperadmin = async (req, res, next) => {
 const requireFirmContext = async (req, res, next) => {
   try {
     // SuperAdmin doesn't have firmId - that's expected
-    if (req.user && req.user.role === 'SuperAdmin') {
+    if (req.user && isSuperAdminRole(req.user.role)) {
       return next();
     }
     
@@ -135,7 +136,7 @@ const requireFirmContext = async (req, res, next) => {
 const authorizeFirmPermission = (requiredPermission) => {
   return async (req, res, next) => {
     try {
-      if (req.user && (req.user.role === 'SuperAdmin' || req.user.role === 'SUPER_ADMIN')) {
+      if (req.user && isSuperAdminRole(req.user.role)) {
         return next();
       }
 

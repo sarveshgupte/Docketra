@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Firm = require('../models/Firm.model');
+const { isSuperAdminRole } = require('../utils/role.utils');
 
 /**
  * Attach firm context to the request.
@@ -10,7 +11,7 @@ const Firm = require('../models/Firm.model');
 const attachFirmContext = async (req, res, next) => {
   try {
     // Explicitly block SuperAdmin from firm-scoped routes
-    if (req.user && (req.user.role === 'SuperAdmin' || req.user.role === 'SUPER_ADMIN')) {
+    if (req.user && isSuperAdminRole(req.user.role)) {
       return res.status(403).json({
         success: false,
         message: 'Superadmin cannot access firm-scoped routes',

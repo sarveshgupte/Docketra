@@ -10,6 +10,9 @@ const User = require('../src/models/User.model');
 const { attachFirmContext } = require('../src/middleware/firmContext.middleware');
 const { authorizeFirmPermission } = require('../src/middleware/permission.middleware');
 
+const OBJECT_ID_A = '507f1f77bcf86cd799439011';
+const OBJECT_ID_B = '507f1f77bcf86cd799439012';
+
 const createRes = () => {
   return {
     statusCode: null,
@@ -36,11 +39,11 @@ const runMiddleware = async (mw, req) => {
 
 async function shouldRejectJwtFirmMismatch() {
   const originalFindOne = Firm.findOne;
-  Firm.findOne = async () => ({ _id: '507f1f77bcf86cd799439011', firmSlug: 'firm-a', status: 'ACTIVE' });
+  Firm.findOne = async () => ({ _id: OBJECT_ID_A, firmSlug: 'firm-a', status: 'ACTIVE' });
 
   const req = {
-    params: { firmId: '507f1f77bcf86cd799439011' },
-    jwt: { firmId: '507f1f77bcf86cd799439012' },
+    params: { firmId: OBJECT_ID_A },
+    jwt: { firmId: OBJECT_ID_B },
     user: { role: 'Admin' },
   };
 
@@ -54,11 +57,11 @@ async function shouldRejectJwtFirmMismatch() {
 
 async function shouldBlockDisabledFirm() {
   const originalFindOne = Firm.findOne;
-  Firm.findOne = async () => ({ _id: '507f1f77bcf86cd799439011', firmSlug: 'firm-a', status: 'SUSPENDED' });
+  Firm.findOne = async () => ({ _id: OBJECT_ID_A, firmSlug: 'firm-a', status: 'SUSPENDED' });
 
   const req = {
-    params: { firmId: '507f1f77bcf86cd799439011' },
-    jwt: { firmId: '507f1f77bcf86cd799439011' },
+    params: { firmId: OBJECT_ID_A },
+    jwt: { firmId: OBJECT_ID_A },
     user: { role: 'Admin' },
   };
 
@@ -71,7 +74,7 @@ async function shouldBlockDisabledFirm() {
 
 async function shouldBlockSuperadminFromFirmRoutes() {
   const req = {
-    params: { firmId: '507f1f77bcf86cd799439011' },
+    params: { firmId: OBJECT_ID_A },
     jwt: {},
     user: { role: 'SuperAdmin' },
   };
