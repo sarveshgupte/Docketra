@@ -12,6 +12,8 @@ const { authorizeFirmPermission } = require('../src/middleware/permission.middle
 
 const OBJECT_ID_A = '507f1f77bcf86cd799439011';
 const OBJECT_ID_B = '507f1f77bcf86cd799439012';
+const FIRM_KEY_A = 'firm-a';
+const FIRM_KEY_B = 'firm-b';
 
 const createRes = () => {
   return {
@@ -88,15 +90,15 @@ async function shouldBlockSuperadminFromFirmRoutes() {
 async function shouldDenyCrossFirmMembership() {
   const originalFindOne = User.findOne;
   User.findOne = async (filter) => {
-    if (filter.firmId === 'firm-a') {
-      return { _id: filter._id, role: 'Admin', isActive: true, firmId: 'firm-a' };
+    if (filter.firmId === FIRM_KEY_A) {
+      return { _id: filter._id, role: 'Admin', isActive: true, firmId: FIRM_KEY_A };
     }
     return null;
   };
 
   const guard = authorizeFirmPermission('CASE_VIEW');
   const req = {
-    firm: { id: 'firm-b' },
+    firm: { id: FIRM_KEY_B },
     userId: 'user-123',
     user: { _id: 'user-123', role: 'Admin' },
   };

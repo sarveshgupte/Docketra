@@ -21,6 +21,7 @@ const attachFirmContext = async (req, res, next) => {
     const paramFirmId = req.params?.firmId;
     const paramFirmSlug = req.params?.firmSlug ? req.params.firmSlug.toLowerCase().trim() : null;
     const jwtFirmId = req.jwt?.firmId;
+    const jwtFirmIdValid = jwtFirmId && mongoose.Types.ObjectId.isValid(jwtFirmId);
 
     const lookup = [];
 
@@ -37,7 +38,7 @@ const attachFirmContext = async (req, res, next) => {
       }
     }
 
-    if (jwtFirmId && mongoose.Types.ObjectId.isValid(jwtFirmId)) {
+    if (jwtFirmIdValid) {
       lookup.push({ _id: jwtFirmId });
     }
 
@@ -64,7 +65,7 @@ const attachFirmContext = async (req, res, next) => {
       });
     }
 
-    if (jwtFirmId && mongoose.Types.ObjectId.isValid(jwtFirmId) && firm._id.toString() !== jwtFirmId.toString()) {
+    if (jwtFirmIdValid && firm._id.toString() !== jwtFirmId.toString()) {
       return res.status(403).json({
         success: false,
         message: 'Firm mismatch detected for authenticated user',

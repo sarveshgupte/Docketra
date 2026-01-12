@@ -30,7 +30,8 @@ const { CASE_CATEGORIES, CASE_STATUS, CLIENT_STATUS } = require('../config/const
 const approveNewClient = async (req, res) => {
   try {
     const { caseId } = req.params;
-    const { approverEmail, comment } = req.body;
+    const { comment } = req.body;
+    const approverEmail = (req.approverEmail || req.body.approverEmail || req.body.userEmail || '').toLowerCase();
     
     // Validate required fields
     if (!approverEmail) {
@@ -193,7 +194,8 @@ const approveNewClient = async (req, res) => {
 const approveClientEdit = async (req, res) => {
   try {
     const { caseId } = req.params;
-    const { approverEmail, comment } = req.body;
+    const { comment } = req.body;
+    const approverEmail = (req.approverEmail || req.body.approverEmail || req.body.userEmail || '').toLowerCase();
     
     // Validate required fields
     if (!approverEmail) {
@@ -396,7 +398,8 @@ const approveClientEdit = async (req, res) => {
 const rejectClientCase = async (req, res) => {
   try {
     const { caseId } = req.params;
-    const { approverEmail, comment } = req.body;
+    const { comment } = req.body;
+    const approverEmail = (req.approverEmail || req.body.approverEmail || req.body.userEmail || '').toLowerCase();
     
     // Validate required fields
     if (!approverEmail) {

@@ -137,7 +137,10 @@ const authorizeFirmPermission = (requiredPermission) => {
   return async (req, res, next) => {
     try {
       if (req.user && isSuperAdminRole(req.user.role)) {
-        return next();
+        return res.status(403).json({
+          success: false,
+          message: 'Superadmin cannot access firm-scoped permissions',
+        });
       }
 
       if (!req.firm || !req.firm.id) {

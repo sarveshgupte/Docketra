@@ -56,7 +56,7 @@ const resolveFirmRole = async (userId, firmId) => {
   }
 
   if (isSuperAdminRole(membership.role)) {
-    // Superadmin is firm-agnostic; do not resolve through firm membership
+    // Defensive: firm membership must never authorize SuperAdmin (platform-scoped)
     return null;
   }
 
