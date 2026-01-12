@@ -4,7 +4,7 @@
 
 import React, { createContext, useState, useEffect, useRef } from 'react';
 import { authService } from '../services/authService';
-import { STORAGE_KEYS } from '../utils/constants';
+import { STORAGE_KEYS, USER_ROLES } from '../utils/constants';
 
 export const AuthContext = createContext(null);
 
@@ -47,7 +47,10 @@ export const AuthProvider = ({ children }) => {
         if (cachedUser && cachedXID) {
           try {
             const parsedUser = JSON.parse(cachedUser);
-            if (parsedUser?.xID && parsedUser.xID === cachedXID && parsedUser.role) {
+            const hasValidXID = typeof parsedUser?.xID === 'string' && parsedUser.xID.trim().length > 0;
+            const isValidRole = Object.values(USER_ROLES).includes(parsedUser?.role);
+
+            if (hasValidXID && parsedUser.xID === cachedXID && isValidRole) {
               setAuthFromProfile(parsedUser);
               return;
             }

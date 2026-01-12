@@ -3,7 +3,7 @@
  * Stores tokens from backend redirect and routes user appropriately.
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Card } from '../components/common/Card';
 import { Loading } from '../components/common/Loading';
@@ -16,7 +16,7 @@ export const GoogleCallbackPage = () => {
   const navigate = useNavigate();
   const [error, setError] = useState('');
   const { user, loading, isAuthenticated, setAuthFromProfile } = useAuth();
-  const params = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const params = new URLSearchParams(location.search);
   const firmSlugFromQuery = params.get('firmSlug');
   const errorParam = params.get('error');
 
@@ -47,8 +47,7 @@ export const GoogleCallbackPage = () => {
 
     const effectiveFirmSlug =
       firmSlugFromQuery ||
-      user.firmSlug ||
-      localStorage.getItem(STORAGE_KEYS.FIRM_SLUG);
+      user.firmSlug;
 
     if (user.role === USER_ROLES.SUPER_ADMIN) {
       navigate('/superadmin', { replace: true });
