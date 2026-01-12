@@ -1,4 +1,5 @@
 const User = require('../models/User.model');
+const { resolveFirmRole } = require('../services/authorization.service');
 
 /**
  * Admin Approval Middleware
@@ -17,49 +18,42 @@ const User = require('../models/User.model');
  */
 const checkClientApprovalPermission = async (req, res, next) => {
   try {
-    const approverEmail = req.body.approverEmail || req.body.userEmail;
-    
-    if (!approverEmail) {
+    const firmId = req.firm?.id || req.user?.firmId?.toString();
+    const userId = req.userId || req.user?._id?.toString();
+
+    if (!firmId || !userId) {
       return res.status(400).json({
         success: false,
-        message: 'Approver email is required',
+        message: 'Firm context and user identity are required',
       });
     }
-    
-    // Find the user by email
-    const user = await User.findOne({ 
-      email: approverEmail.toLowerCase(),
-      isActive: true 
-    });
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found or inactive',
-      });
-    }
-    
-    // Check if user is Admin
-    if (user.role !== 'Admin') {
+
+    const membership = await resolveFirmRole(userId, firmId);
+
+    if (!membership || membership.role !== 'Admin') {
       return res.status(403).json({
         success: false,
-        message: 'Only Admin users can approve client cases',
+        message: 'Only firm Admin users can approve client cases',
       });
     }
-    
-    // Check hierarchy: top-most admin (managerId = null) OR explicit permission
-    const isTopMostAdmin = user.managerId === null || user.managerId === undefined;
-    const hasExplicitPermission = user.canApproveClients === true;
-    
+
+    // Reload user to inspect hierarchy flags (managerId/canApproveClients)
+    const user = await User.findById(userId);
+    const isTopMostAdmin = user?.managerId === null || user?.managerId === undefined;
+    const hasExplicitPermission = user?.canApproveClients === true;
+
     if (!isTopMostAdmin && !hasExplicitPermission) {
       return res.status(403).json({
         success: false,
         message: 'Only top-most admins or users with explicit client approval permissions can approve client cases',
       });
     }
-    
-    // Store user data for use in controller
+
+    // Store user data for use in controller and align approverEmail with authenticated user
+    const approverEmail = (user?.email || '').toLowerCase();
     req.approverUser = user;
+    req.body.approverEmail = approverEmail;
+    req.body.userEmail = approverEmail;
     
     next();
   } catch (error) {

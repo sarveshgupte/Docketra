@@ -1,8 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { requireAdmin } = require('../middleware/permission.middleware');
-const { authorize } = require('../middleware/authorize');
-const UserPolicy = require('../policies/user.policy');
+const { authorizeFirmPermission } = require('../middleware/permission.middleware');
 const { updateUserStatus } = require('../controllers/auth.controller');
 const {
   getUsers,
@@ -18,21 +16,21 @@ const {
  */
 
 // GET /api/users - Get all users
-router.get('/', authorize(UserPolicy.canView), getUsers);
+router.get('/', authorizeFirmPermission('USER_VIEW'), getUsers);
 
 // GET /api/users/:id - Get user by ID
-router.get('/:id', authorize(UserPolicy.canView), getUserById);
+router.get('/:id', authorizeFirmPermission('USER_VIEW'), getUserById);
 
 // POST /api/users - Create new user
-router.post('/', authorize(UserPolicy.canCreate), createUser);
+router.post('/', authorizeFirmPermission('USER_MANAGE'), createUser);
 
 // PUT /api/users/:id - Update user
-router.put('/:id', authorize(UserPolicy.canUpdate), updateUser);
+router.put('/:id', authorizeFirmPermission('USER_MANAGE'), updateUser);
 
 // PATCH /api/users/:xID/status - Update user status (Admin only)
-router.patch('/:xID/status', authorize(UserPolicy.canUpdate), updateUserStatus);
+router.patch('/:xID/status', authorizeFirmPermission('USER_MANAGE'), updateUserStatus);
 
 // DELETE /api/users/:id - Deactivate user
-router.delete('/:id', authorize(UserPolicy.canDelete), deleteUser);
+router.delete('/:id', authorizeFirmPermission('USER_MANAGE'), deleteUser);
 
 module.exports = router;

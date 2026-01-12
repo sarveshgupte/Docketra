@@ -1,9 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth.middleware');
-const { requireAdmin, blockSuperadmin } = require('../middleware/permission.middleware');
-const { authorize } = require('../middleware/authorize');
-const ReportsPolicy = require('../policies/reports.policy');
+const { attachFirmContext } = require('../middleware/firmContext.middleware');
+const { authorizeFirmPermission } = require('../middleware/permission.middleware');
 const { userReadLimiter } = require('../middleware/rateLimiters');
 const {
   getCaseMetrics,
@@ -24,8 +23,8 @@ const {
 
 // All report routes require authentication and admin role
 router.use(authenticate);
-router.use(blockSuperadmin);
-router.use(authorize(ReportsPolicy.canGenerate));
+router.use(attachFirmContext);
+router.use(authorizeFirmPermission('REPORT_VIEW'));
 router.use(userReadLimiter);
 
 // Case metrics aggregation
