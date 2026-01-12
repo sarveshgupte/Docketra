@@ -64,8 +64,6 @@ export const ProfilePage = () => {
         setSuccess('Profile updated successfully');
         setEditing(false);
         updateUser(response.data);
-        setProfileData((prev) => ({ ...prev, ...response.data }));
-        setFormData((prev) => ({ ...prev, ...response.data }));
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update profile');
