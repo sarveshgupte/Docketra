@@ -39,16 +39,24 @@ const resolveUserIdentity = async ({
         : linkGoogleIfFound;
 
       if (googleId && allowLink) {
-        candidate.authProviders = candidate.authProviders || {};
-        candidate.authProviders.google = candidate.authProviders.google || {};
-        if (!candidate.authProviders.google.googleId) {
-          candidate.authProviders.google.googleId = googleId;
-          candidate.authProviders.google.linkedAt = new Date();
-          await candidate.save({ session });
+        const updated = await User.findOneAndUpdate(
+          { _id: candidate._id, 'authProviders.google.googleId': { $in: [null, undefined] } },
+          {
+            $set: {
+              'authProviders.google.googleId': googleId,
+              'authProviders.google.linkedAt': new Date(),
+            },
+          },
+          { new: true, session }
+        );
+        if (updated) {
           linkedDuringRequest = true;
+          user = updated;
         }
       }
-      user = candidate;
+      if (!user) {
+        user = candidate;
+      }
     }
   }
 

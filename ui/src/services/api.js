@@ -40,10 +40,11 @@ api.interceptors.response.use(
     const status = error.response?.status;
     const firmSlug = localStorage.getItem(STORAGE_KEYS.FIRM_SLUG);
     const redirectToLogin = () => {
-      if (redirecting) return;
+      if (redirecting === true) return;
       redirecting = true;
       const destination = firmSlug ? `/f/${firmSlug}/login` : '/login';
-      window.location.href = destination;
+      // Ensure the flag is set before navigation to prevent duplicate redirects
+      setTimeout(() => window.location.assign(destination), 0);
     };
     const clearAuthStorage = () => {
       localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);

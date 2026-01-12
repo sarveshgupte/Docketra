@@ -2382,9 +2382,15 @@ const handleGoogleCallback = async (req, res) => {
       user.status = 'ACTIVE';
     }
     if (linkedDuringRequest) {
-      user.mustChangePassword = false;
-      user.forcePasswordReset = false;
-      await user.save();
+      const update = {
+        mustChangePassword: false,
+        forcePasswordReset: false,
+      };
+      if (flow === 'activation') {
+        update.status = 'ACTIVE';
+      }
+      await User.updateOne({ _id: user._id }, { $set: update });
+      Object.assign(user, update);
     }
 
     // Guardrails: SuperAdmin cannot use Google auth
