@@ -1,4 +1,5 @@
 const { randomUUID } = require('crypto');
+const { isSuperAdminRole } = require('./role.utils');
 
 /**
  * Structured logging helper to standardize log shape
@@ -26,7 +27,7 @@ const buildContext = (level, event, meta = {}) => {
 const logAtLevel = (level, event, meta = {}) => {
   const context = buildContext(level, event, meta);
   const role = meta.userRole || meta.role || meta.user?.role || meta.req?.user?.role;
-  const isSuperAdmin = role === 'SuperAdmin' || role === 'SUPER_ADMIN' || role === 'SUPERADMIN';
+  const isSuperAdmin = isSuperAdminRole(role);
   const firmLabel = isSuperAdmin ? 'superadmin' : (context.firmId || 'no-firm');
   const prefix = `[${context.severity}][${context.requestId || 'no-req'}][${firmLabel}][${context.route || 'n/a'}]`;
   const logger = level === 'error' ? console.error : level === 'warn' ? console.warn : console.log;
