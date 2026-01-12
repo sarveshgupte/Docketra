@@ -12,6 +12,7 @@ const emailService = require('../services/email.service');
 const xIDGenerator = require('../services/xIDGenerator');
 const jwtService = require('../services/jwt.service');
 const { ensureDefaultClientForFirm } = require('../services/defaultClient.service');
+const { resolveUserIdentity } = require('../services/identity.service');
 
 /**
  * Authentication Controller for JWT-based Enterprise Authentication
@@ -2355,47 +2356,35 @@ const handleGoogleCallback = async (req, res) => {
       });
     }
 
-    // Resolution step 1: existing linked Google account
-    let user = await User.findOne({ 'authProviders.google.googleId': googleId });
-    let linkedDuringRequest = false;
+    const { user, linkedDuringRequest } = await resolveUserIdentity({
+      googleProfile: { sub: googleId },
+      email,
+      canLinkGoogle: (candidate) => {
+        const isActivation = flow === 'activation';
+        if (![ROLE_ADMIN, ROLE_EMPLOYEE].includes(candidate.role)) return false;
+        if (candidate.isActive === false || candidate.status === 'DISABLED') return false;
+        if (!isActivation && candidate.status !== 'ACTIVE') return false;
+        return true;
+      },
+      linkGoogleIfFound: true,
+    });
 
-    // Resolution step 2: match by email (invite-only, role limited)
-    if (!user) {
-      const candidate = await User.findOne({ email });
-      const isActivation = flow === 'activation';
-      if (
-        candidate &&
-        [ROLE_ADMIN, ROLE_EMPLOYEE].includes(candidate.role) &&
-        candidate.isActive !== false &&
-        candidate.status !== 'DISABLED'
-      ) {
-        if (!isActivation && candidate.status !== 'ACTIVE') {
-          return res.status(403).json({
-            success: false,
-            message: 'Account is not activated. Use your invite link to activate with Google.',
-          });
-        }
-        candidate.authProviders = candidate.authProviders || {};
-        candidate.authProviders.google = candidate.authProviders.google || {};
-        candidate.authProviders.google.googleId = googleId;
-        candidate.authProviders.google.linkedAt = new Date();
-        if (isActivation && candidate.status !== 'ACTIVE') {
-          candidate.status = 'ACTIVE';
-        }
-        candidate.mustChangePassword = false;
-        candidate.forcePasswordReset = false;
-        await candidate.save();
-        user = candidate;
-        linkedDuringRequest = true;
-      }
-    }
-
-    // Resolution step 3: reject external users
+    // Reject external / non-invited users
     if (!user) {
       return res.status(403).json({
         success: false,
         message: 'Access denied. Account is not invited.',
       });
+    }
+
+    // Activation flow: elevate invited users to ACTIVE once linked
+    if (flow === 'activation' && user.status !== 'ACTIVE') {
+      user.status = 'ACTIVE';
+    }
+    if (linkedDuringRequest) {
+      user.mustChangePassword = false;
+      user.forcePasswordReset = false;
+      await user.save();
     }
 
     // Guardrails: SuperAdmin cannot use Google auth
