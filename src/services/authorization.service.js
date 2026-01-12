@@ -60,9 +60,14 @@ const resolveFirmRole = async (userId, firmId) => {
     return null;
   }
 
+  const permissions = ROLE_PERMISSIONS[membership.role];
+  if (!permissions) {
+    return null;
+  }
+
   return {
     role: membership.role,
-    permissions: ROLE_PERMISSIONS[membership.role] || [],
+    permissions,
   };
 };
 

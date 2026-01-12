@@ -31,7 +31,7 @@ const approveNewClient = async (req, res) => {
   try {
     const { caseId } = req.params;
     const { comment } = req.body;
-    const approverEmail = (req.approverEmail || req.body.approverEmail || req.body.userEmail || '').toLowerCase();
+    const approverEmail = (req.approverEmail || req.body?.approverEmail || '').toLowerCase();
     
     // Validate required fields
     if (!approverEmail) {
@@ -195,7 +195,7 @@ const approveClientEdit = async (req, res) => {
   try {
     const { caseId } = req.params;
     const { comment } = req.body;
-    const approverEmail = (req.approverEmail || req.body.approverEmail || req.body.userEmail || '').toLowerCase();
+    const approverEmail = (req.approverEmail || req.body?.approverEmail || '').toLowerCase();
     
     // Validate required fields
     if (!approverEmail) {
@@ -399,7 +399,7 @@ const rejectClientCase = async (req, res) => {
   try {
     const { caseId } = req.params;
     const { comment } = req.body;
-    const approverEmail = (req.approverEmail || req.body.approverEmail || req.body.userEmail || '').toLowerCase();
+    const approverEmail = (req.approverEmail || req.body?.approverEmail || '').toLowerCase();
     
     // Validate required fields
     if (!approverEmail) {
