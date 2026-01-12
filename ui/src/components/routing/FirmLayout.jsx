@@ -29,9 +29,9 @@ export const FirmLayout = () => {
       <div style={{ padding: '2rem', textAlign: 'center' }}>
         <h1>Access Denied</h1>
         <p>You don't have access to this firm.</p>
-          <button onClick={() => navigate(`/f/${user.firmSlug}/dashboard`, { replace: true })}>
-            Go to Your Dashboard
-          </button>
+        <button onClick={() => navigate(`/f/${user.firmSlug}/dashboard`, { replace: true })}>
+          Go to Your Dashboard
+        </button>
       </div>
     );
   }
