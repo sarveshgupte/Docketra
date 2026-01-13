@@ -15,7 +15,7 @@ export const FirmLayout = () => {
   const { user, loading, isAuthenticated } = useAuth();
 
   if (loading) {
-    return <Loading message="Loading..." />;
+    return <Loading message="Checking firm access..." />;
   }
 
   if (!isAuthenticated) {
@@ -27,10 +27,13 @@ export const FirmLayout = () => {
   if (user?.firmSlug && user.firmSlug !== firmSlug) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <h1>Access Denied</h1>
-        <p>You don't have access to this firm.</p>
+        <h1>Access denied</h1>
+        <p>You tried to open firm "{firmSlug}", but your session is scoped to "{user.firmSlug}".</p>
+        <p style={{ marginTop: '0.5rem', color: '#4b5563' }}>
+          Switch back to your firm dashboard to continue safely.
+        </p>
         <button onClick={() => navigate(`/f/${user.firmSlug}/dashboard`, { replace: true })}>
-          Go to Your Dashboard
+          Go to your dashboard
         </button>
       </div>
     );

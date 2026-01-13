@@ -6,7 +6,7 @@
  * Info: Auto-dismiss after 4 seconds
  */
 
-import React, { createContext, useState, useCallback } from 'react';
+import React, { createContext, useState, useCallback, useEffect } from 'react';
 
 export const ToastContext = createContext(null);
 
@@ -72,6 +72,29 @@ export const ToastProvider = ({ children }) => {
     showWarning,
     showInfo,
   };
+
+  useEffect(() => {
+    const stored = sessionStorage.getItem('GLOBAL_TOAST');
+    if (stored) {
+      try {
+        const { message, type = 'info' } = JSON.parse(stored);
+        addToast(message, type);
+      } catch {
+        // Ignore malformed payload
+      } finally {
+        sessionStorage.removeItem('GLOBAL_TOAST');
+      }
+    }
+
+    const handleIdempotent = () => {
+      addToast('This action was already completed earlier.', 'info');
+    };
+
+    window.addEventListener('app:idempotent', handleIdempotent);
+    return () => {
+      window.removeEventListener('app:idempotent', handleIdempotent);
+    };
+  }, [addToast]);
 
   return (
     <ToastContext.Provider value={value}>
