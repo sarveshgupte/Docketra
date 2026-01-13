@@ -9,7 +9,11 @@ const executeWrite = async ({ req, fn }) => {
     throw error;
   }
 
-  return req.transactionSession.withTransaction(async () => fn(req.transactionSession.session));
+  req.transactionCommitted = false;
+
+  const result = await req.transactionSession.withTransaction(async () => fn(req.transactionSession.session));
+  req.transactionCommitted = true;
+  return result;
 };
 
 module.exports = { executeWrite };

@@ -69,6 +69,7 @@ async function testIdempotentReplay() {
   const resA = createMockRes();
   await runMiddleware(idempotencyMiddleware, reqA, resA);
   handlerInvocations += 1;
+  reqA.transactionCommitted = true;
   resA.json({ ok: true });
 
   const reqB = buildRequest({ headers: { 'Idempotency-Key': 'k1' } });
@@ -85,6 +86,7 @@ async function testConcurrentFingerprintConflict() {
   const reqA = buildRequest({ headers: { 'Idempotency-Key': 'k2' }, body: { title: 'A' } });
   const resA = createMockRes();
   await runMiddleware(idempotencyMiddleware, reqA, resA);
+  reqA.transactionCommitted = true;
   resA.json({ ok: true });
 
   const reqB = buildRequest({ headers: { 'Idempotency-Key': 'k2' }, body: { title: 'B' } });
@@ -99,6 +101,7 @@ async function testRetryAfterDelay() {
   const res = createMockRes();
   await runMiddleware(idempotencyMiddleware, req, res);
   await new Promise((resolve) => setTimeout(resolve, 10));
+  req.transactionCommitted = true;
   res.json({ ok: true });
 
   const resRetry = createMockRes();
@@ -141,6 +144,61 @@ async function testExecuteWriteEnforcesTransaction() {
   assert.strictEqual(result, 'ok');
 }
 
+async function testIdempotencySkipsCacheOnRollback() {
+  resetIdempotencyCache();
+  let handlerRuns = 0;
+
+  const makeReq = (opts = {}) => buildRequest({
+    headers: { 'Idempotency-Key': 'k4' },
+    transactionActive: true,
+    transactionSession: opts.transactionSession,
+    transactionCommitted: false,
+  });
+
+  const failingReq = makeReq({
+    transactionSession: {
+      withTransaction: async (fn) => {
+        const result = await fn('session');
+        throw new Error('fail-before-commit');
+      },
+    },
+  });
+  const res1 = createMockRes();
+  await runMiddleware(idempotencyMiddleware, failingReq, res1);
+  try {
+    await executeWrite({
+      req: failingReq,
+      fn: async () => {
+        handlerRuns += 1;
+        res1.json({ ok: true });
+        throw new Error('fail-after-json');
+      },
+    });
+  } catch (err) {
+    // expected
+  }
+  assert.strictEqual(failingReq.transactionCommitted, false, 'Commit flag should remain false on rollback');
+
+  const successReq = makeReq({
+    transactionSession: {
+      withTransaction: async (fn) => fn('session'),
+    },
+  });
+  const res2 = createMockRes();
+  await runMiddleware(idempotencyMiddleware, successReq, res2);
+  await executeWrite({
+    req: successReq,
+    fn: async () => {
+      handlerRuns += 1;
+      res2.json({ ok: true });
+    },
+  });
+
+  assert.strictEqual(handlerRuns, 2, 'Handler should run again after rollback');
+  assert.strictEqual(res2.headers['Idempotent-Replay'], undefined, 'Replay header should not be set after rollback');
+  assert.strictEqual(successReq.transactionCommitted, true, 'Commit flag should be true after successful transaction');
+}
+
 async function run() {
   try {
     await testIdempotentReplay();
@@ -149,6 +207,7 @@ async function run() {
     await testCrossFirmGuard();
     await testInvalidStateGuard();
     await testExecuteWriteEnforcesTransaction();
+    await testIdempotencySkipsCacheOnRollback();
     console.log('Write safety tests passed.');
   } catch (err) {
     console.error('Write safety tests failed:', err);
