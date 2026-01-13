@@ -11,6 +11,7 @@ const transactionMiddleware = async (req, res, next) => {
   try {
     session = await mongoose.startSession();
   } catch (err) {
+    console.warn('[transactionMiddleware] Unable to start MongoDB session:', err.message);
     session = null;
   }
 

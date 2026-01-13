@@ -132,6 +132,10 @@ const clientSchema = new mongoose.Schema({
         required: true,
         trim: true,
       },
+      checksum: {
+        type: String,
+        trim: true,
+      },
       uploadedByXID: {
         type: String,
         required: true,
