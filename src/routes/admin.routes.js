@@ -15,6 +15,7 @@ const {
   getStorageConfig,
   updateStorageConfig,
   disconnectStorage,
+  getSystemDiagnostics,
 } = require('../controllers/admin.controller');
 
 /**
@@ -30,6 +31,9 @@ const {
 
 // GET /api/admin/stats - Get admin dashboard statistics
 router.get('/stats', authenticate, attachFirmContext, authorizeFirmPermission('ADMIN_STATS'), superadminLimiter, getAdminStats);
+
+// GET /api/admin/system-diagnostics - Operational diagnostics (cached)
+router.get('/system-diagnostics', authenticate, attachFirmContext, authorizeFirmPermission('ADMIN_STATS'), userReadLimiter, getSystemDiagnostics);
 
 // POST /api/admin/users/:xID/resend-invite - Resend invite email for user
 // PR #48: Admin-only endpoint that bypasses password enforcement
