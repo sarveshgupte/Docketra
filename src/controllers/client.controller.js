@@ -1,3 +1,4 @@
+const { createHash } = require('crypto');
 const Client = require('../models/Client.model');
 const Case = require('../models/Case.model');
 const { generateNextClientId } = require('../services/clientIdGenerator');
@@ -803,6 +804,14 @@ const uploadFactSheetFile = async (req, res) => {
     
     // Get MIME type
     const mimeType = getMimeType(req.file.originalname) || req.file.mimetype || 'application/octet-stream';
+    const checksum = createHash('sha256').update(req.file.buffer || req.file.path || '').digest('hex');
+    const existingFile = client.clientFactSheet.files.find((file) => file.checksum && file.checksum === checksum);
+    if (existingFile) {
+      return res.status(409).json({
+        success: false,
+        message: 'Duplicate upload detected',
+      });
+    }
     
     // Add file to client fact sheet
     const newFile = {
@@ -811,6 +820,7 @@ const uploadFactSheetFile = async (req, res) => {
       storagePath: req.file.path,
       uploadedByXID: performedByXID,
       uploadedAt: new Date(),
+      checksum,
     };
     
     client.clientFactSheet.files.push(newFile);
