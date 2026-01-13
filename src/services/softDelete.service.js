@@ -48,7 +48,7 @@ const applyDocumentDeleteMarkers = async (doc, { actorXID, reason, session }) =>
 const restoreMany = async ({ model, filter, req, session }) => {
   const query = model.find({ ...filter });
   if (session && query.session) query.session(session);
-  if (query.includeDeleted) query.includeDeleted();
+  query.includeDeleted();
   const docs = await query.exec();
   const restoredBy = getActorXID(req);
   for (const doc of docs) {
@@ -66,7 +66,7 @@ const restoreMany = async ({ model, filter, req, session }) => {
 const softDeleteMany = async ({ model, filter, req, reason, session }) => {
   const query = model.find({ ...filter });
   if (session && query.session) query.session(session);
-  if (query.includeDeleted) query.includeDeleted();
+  query.includeDeleted();
   const docs = await query.exec();
   const actorXID = getActorXID(req);
   for (const doc of docs) {
@@ -78,7 +78,7 @@ const softDeleteMany = async ({ model, filter, req, reason, session }) => {
 const ensureCategoryNotInUse = async (categoryDoc, session) => {
   const countQuery = Case.countDocuments({ categoryId: categoryDoc._id });
   if (session && countQuery.session) countQuery.session(session);
-  if (countQuery.includeDeleted) countQuery.includeDeleted();
+  countQuery.includeDeleted();
   const inUseCount = await countQuery.exec();
   if (inUseCount > 0) {
     const err = new Error('Category is in use by existing cases and cannot be deleted');
@@ -113,7 +113,7 @@ const softDelete = async ({ model, filter, req, reason }) => {
   if (model.modelName === 'Category') {
     const categoryQuery = model.findOne({ ...filter });
     if (session && categoryQuery.session) categoryQuery.session(session);
-    if (categoryQuery.includeDeleted) categoryQuery.includeDeleted();
+    categoryQuery.includeDeleted();
     const categoryDoc = await categoryQuery.exec();
     if (!categoryDoc) return null;
     await ensureCategoryNotInUse(categoryDoc, session);
@@ -121,7 +121,7 @@ const softDelete = async ({ model, filter, req, reason }) => {
 
   const query = model.findOne({ ...filter });
   if (session && query.session) query.session(session);
-  if (query.includeDeleted) query.includeDeleted();
+  query.includeDeleted();
   const doc = await query.exec();
   if (!doc) return null;
 
@@ -141,7 +141,7 @@ const ensureParentsActive = async (modelName, doc, session) => {
   if (modelName === 'Case' && doc.clientId) {
     const parentClientQuery = Client.findOne({ clientId: doc.clientId });
     if (session && parentClientQuery.session) parentClientQuery.session(session);
-    if (parentClientQuery.includeDeleted) parentClientQuery.includeDeleted();
+    parentClientQuery.includeDeleted();
     const parentClient = await parentClientQuery.exec();
     if (parentClient?.deletedAt) {
       const err = new Error('Cannot restore case while client is deleted');
@@ -152,7 +152,7 @@ const ensureParentsActive = async (modelName, doc, session) => {
   if (modelName === 'Task' && doc.case) {
     const parentCaseQuery = Case.findOne({ _id: doc.case });
     if (session && parentCaseQuery.session) parentCaseQuery.session(session);
-    if (parentCaseQuery.includeDeleted) parentCaseQuery.includeDeleted();
+    parentCaseQuery.includeDeleted();
     const parentCase = await parentCaseQuery.exec();
     if (parentCase?.deletedAt) {
       const err = new Error('Cannot restore task while parent case is deleted');
@@ -163,7 +163,7 @@ const ensureParentsActive = async (modelName, doc, session) => {
   if ((modelName === 'Attachment' || modelName === 'Comment') && doc.caseId) {
     const parentCaseQuery = Case.findOne({ $or: [{ caseId: doc.caseId }, { caseNumber: doc.caseId }] });
     if (session && parentCaseQuery.session) parentCaseQuery.session(session);
-    if (parentCaseQuery.includeDeleted) parentCaseQuery.includeDeleted();
+    parentCaseQuery.includeDeleted();
     const parentCase = await parentCaseQuery.exec();
     if (parentCase?.deletedAt) {
       const err = new Error('Cannot restore child while parent case is deleted');
@@ -177,7 +177,7 @@ const restoreDocument = async ({ model, filter, req }) => {
   const session = getSession(req);
   const query = model.findOne({ ...filter });
   if (session && query.session) query.session(session);
-  if (query.includeDeleted) query.includeDeleted();
+  query.includeDeleted();
   const doc = await query.exec();
   if (!doc || !doc.deletedAt) return doc;
 
@@ -243,15 +243,15 @@ const buildDiagnostics = async () => {
 
   const summary = await Promise.all(models.map(async ({ name, model }) => {
     const deletedCountQuery = model.countDocuments({ deletedAt: { $ne: null } });
-    if (deletedCountQuery.includeDeleted) deletedCountQuery.includeDeleted();
+    deletedCountQuery.includeDeleted();
     const oldestQuery = model.findOne({ deletedAt: { $ne: null } })
       .sort({ deletedAt: 1 })
       .select({ deletedAt: 1 });
-    if (oldestQuery.includeDeleted) oldestQuery.includeDeleted();
+    oldestQuery.includeDeleted();
     const eligibleQuery = model.countDocuments({
       deletedAt: { $lte: cutoff },
     });
-    if (eligibleQuery.includeDeleted) eligibleQuery.includeDeleted();
+    eligibleQuery.includeDeleted();
     const [deletedCount, oldest, eligibleForPurge] = await Promise.all([
       deletedCountQuery.exec(),
       oldestQuery.lean().exec(),

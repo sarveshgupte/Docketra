@@ -6,6 +6,9 @@ const buildStubQuery = (doc) => ({
   session() {
     return this;
   },
+  includeDeleted() {
+    return this;
+  },
   exec: async () => doc,
 });
 
