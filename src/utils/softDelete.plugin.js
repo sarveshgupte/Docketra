@@ -51,7 +51,7 @@ const softDeletePlugin = (schema) => {
   schema.pre('aggregate', function softDeleteAggregateHook() {
     const pipeline = this.pipeline();
     const includeDeleted = shouldIncludeDeleted(pipeline, this.options);
-    if (includeDeleted && pipeline[0]?.$match?.includeDeleted !== undefined) {
+    if (includeDeleted && pipeline[0]?.$match) {
       const { includeDeleted: _removed, ...rest } = pipeline[0].$match;
       // eslint-disable-next-line no-param-reassign
       pipeline[0].$match = rest;
