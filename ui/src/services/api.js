@@ -23,11 +23,18 @@ const generateIdempotencyKey = () => {
     return crypto.randomUUID();
   }
   if (typeof crypto?.getRandomValues === 'function') {
-    const buffer = new Uint32Array(4);
+    const buffer = new Uint8Array(16);
     crypto.getRandomValues(buffer);
-    return Array.from(buffer)
-      .map((value) => value.toString(16).padStart(8, '0'))
-      .join('-');
+    buffer[6] = (buffer[6] & 0x0f) | 0x40;
+    buffer[8] = (buffer[8] & 0x3f) | 0x80;
+    const segments = [
+      Array.from(buffer.slice(0, 4)),
+      Array.from(buffer.slice(4, 6)),
+      Array.from(buffer.slice(6, 8)),
+      Array.from(buffer.slice(8, 10)),
+      Array.from(buffer.slice(10)),
+    ].map((segment) => segment.map((b) => b.toString(16).padStart(2, '0')).join(''));
+    return segments.join('-');
   }
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };

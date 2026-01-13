@@ -12,7 +12,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const clearAuthStorage = (firmSlugToPreserve = null) => {
+  const clearAuthStorage = useCallback((firmSlugToPreserve = null) => {
     localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.X_ID);
@@ -22,7 +22,7 @@ export const AuthProvider = ({ children }) => {
     } else {
       localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
     }
-  };
+  }, []);
 
   const resetAuthState = useCallback(() => {
     clearAuthStorage();
