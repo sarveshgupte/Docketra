@@ -52,11 +52,13 @@ const { authenticate } = require('./middleware/auth.middleware');
 const degradedGuard = require('./middleware/degradedGuard');
 const { firmContext } = require('./middleware/firmContext.middleware');
 const { requireAdmin, requireSuperadmin } = require('./middleware/permission.middleware');
+const responseContract = require('./middleware/responseContract.middleware');
 const invariantGuard = require('./middleware/invariantGuard');
 const domainInvariantGuard = require('./middleware/domainInvariantGuard');
 const { idempotencyMiddleware } = require('./middleware/idempotency.middleware');
 const transactionMiddleware = require('./middleware/transaction.middleware');
 const metricsService = require('./services/metrics.service');
+const { adminAuditTrail } = require('./middleware/adminAudit.middleware');
 
 // Routes
 const userRoutes = require('./routes/users');
@@ -198,6 +200,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(requestLogger);
+app.use(responseContract);
 app.use(degradedGuard);
 
 // Health check endpoint
@@ -257,11 +260,11 @@ app.use('/api/public', writeGuardChain, publicRoutes);
 app.use('/api/categories', writeGuardChain, categoryRoutes);
 
 // Admin routes (firm-scoped) - enforce auth + firm context + admin role boundary
-app.use('/api/admin', authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, requireAdmin, adminRoutes);
+app.use('/api/admin', authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, requireAdmin, adminAuditTrail('admin'), adminRoutes);
 
 // Superadmin routes - platform scope only (no firm context)
-app.use('/api/sa', authenticate, writeGuardChain, requireSuperadmin, superadminRoutes);
-app.use('/api/superadmin', authenticate, writeGuardChain, requireSuperadmin, superadminRoutes);
+app.use('/api/sa', authenticate, writeGuardChain, requireSuperadmin, adminAuditTrail('superadmin'), superadminRoutes);
+app.use('/api/superadmin', authenticate, writeGuardChain, requireSuperadmin, adminAuditTrail('superadmin'), superadminRoutes);
 
 // Debug routes (PR #43) - require authentication and admin role
 app.use('/api/debug', authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, requireAdmin, debugRoutes);

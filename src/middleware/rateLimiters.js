@@ -65,13 +65,15 @@ const createRateLimitHandler = (limiterName) => {
   return (req, res) => {
     logAbuseEvent(req, limiterName);
     metricsService.recordRateLimitHit(limiterName);
+    const retryAfter = res.getHeader('Retry-After');
     
     res.status(429).json({
       success: false,
       message: 'Too many requests. Please slow down.',
-      error: 'RATE_LIMIT_EXCEEDED',
+      code: 'RATE_LIMIT_EXCEEDED',
       limiter: limiterName,
-      retryAfter: res.getHeader('Retry-After'),
+      retryAfter,
+      action: retryAfter ? `retry_after_${retryAfter}s` : 'retry_after',
     });
   };
 };
