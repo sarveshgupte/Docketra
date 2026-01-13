@@ -2,6 +2,7 @@ const Case = require('../models/Case.model');
 const Task = require('../models/Task');
 const { CaseRepository } = require('../repositories');
 const { wrapWriteHandler } = require('../utils/transactionGuards');
+const { softDelete } = require('../services/softDelete.service');
 
 /**
  * Case Controller
@@ -233,8 +234,12 @@ const updateCase = async (req, res) => {
  */
 const deleteCase = async (req, res) => {
   try {
-    const caseData = await Case.findById(req.params.id);
-    
+    const caseData = await softDelete({
+      model: Case,
+      filter: { _id: req.params.id, ...(req.firmId ? { firmId: req.firmId } : {}) },
+      req,
+      reason: req.body?.reason || 'Case deleted',
+    });
     if (!caseData) {
       return res.status(404).json({
         success: false,
@@ -242,20 +247,9 @@ const deleteCase = async (req, res) => {
       });
     }
     
-    // Check if case has tasks
-    const taskCount = await Task.countDocuments({ case: req.params.id });
-    if (taskCount > 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'Cannot delete case with existing tasks',
-      });
-    }
-    
-    await Case.findByIdAndDelete(req.params.id);
-    
     res.json({
       success: true,
-      message: 'Case deleted successfully',
+      message: 'Case soft deleted successfully',
     });
   } catch (error) {
     res.status(500).json({

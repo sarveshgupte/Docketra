@@ -7,6 +7,7 @@ const metricsService = require('./metrics.service');
 const { getTransactionMetrics } = require('./transactionMonitor.service');
 const { getQueueDepth, getFailed } = require('./sideEffectQueue.service');
 const { getSnapshot: getBreakerSnapshot, isAnyOpen } = require('./circuitBreaker.service');
+const { buildDiagnostics: buildSoftDeleteDiagnostics } = require('./softDelete.service');
 
 const CACHE_TTL_MS = 30 * 1000;
 const MAX_DEGRADED_REASONS = 10;
@@ -46,6 +47,7 @@ const getDiagnosticsSnapshot = async () => {
 
   const state = getState();
   const dbLatencyMs = await measureDbLatency();
+  const softDeleteDiagnostics = await buildSoftDeleteDiagnostics();
 
   cached = {
     systemState: state.state,
@@ -67,6 +69,7 @@ const getDiagnosticsSnapshot = async () => {
     },
     requestLatency: metricsService.getLatencyPercentiles(),
     circuitOpen: isAnyOpen(),
+    softDelete: softDeleteDiagnostics,
     generatedAt: new Date().toISOString(),
   };
 

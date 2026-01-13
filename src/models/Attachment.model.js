@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const softDeletePlugin = require('../utils/softDelete.plugin');
 
 /**
  * Attachment Model for Docketra Case Management System
@@ -282,5 +283,7 @@ attachmentSchema.index({ firmId: 1, caseId: 1 }); // Firm-scoped case attachment
 attachmentSchema.index({ firmId: 1, clientId: 1 }); // Firm-scoped client attachments
 attachmentSchema.index({ firmId: 1, caseId: 1, checksum: 1 }, { unique: true, sparse: true });
 attachmentSchema.index({ firmId: 1, clientId: 1, checksum: 1 }, { unique: true, sparse: true });
+
+attachmentSchema.plugin(softDeletePlugin);
 
 module.exports = mongoose.model('Attachment', attachmentSchema);
