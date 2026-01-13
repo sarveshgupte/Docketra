@@ -804,7 +804,11 @@ const uploadFactSheetFile = async (req, res) => {
     
     // Get MIME type
     const mimeType = getMimeType(req.file.originalname) || req.file.mimetype || 'application/octet-stream';
-    const checksum = createHash('sha256').update(req.file.buffer || req.file.path || '').digest('hex');
+    let checksumSource = req.file.buffer;
+    if (!checksumSource && req.file.path) {
+      checksumSource = await fs.readFile(req.file.path);
+    }
+    const checksum = createHash('sha256').update(checksumSource || '').digest('hex');
     const existingFile = client.clientFactSheet.files.find((file) => file.checksum && file.checksum === checksum);
     if (existingFile) {
       return res.status(409).json({
