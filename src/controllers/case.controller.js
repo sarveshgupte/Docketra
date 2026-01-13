@@ -17,6 +17,7 @@ const { getMimeType, sanitizeFilename } = require('../utils/fileUtils');
 const { cleanupTempFile } = require('../utils/tempFile');
 const { resolveCaseIdentifier, resolveCaseDocument } = require('../utils/caseIdentifier');
 const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
+const { areFileUploadsDisabled } = require('../services/featureFlags.service');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -554,6 +555,12 @@ const addComment = async (req, res) => {
  */
 const addAttachment = async (req, res) => {
   try {
+    if (areFileUploadsDisabled()) {
+      return res.status(503).json({
+        success: false,
+        message: 'File uploads are temporarily disabled',
+      });
+    }
     const { caseId } = req.params;
     const { description, createdBy, note } = req.body;
     

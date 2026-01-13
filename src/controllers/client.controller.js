@@ -10,6 +10,7 @@ const {
 } = require('../services/clientFactSheetAudit.service');
 const { getMimeType } = require('../utils/fileUtils');
 const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
+const { areFileUploadsDisabled } = require('../services/featureFlags.service');
 const path = require('path');
 const fs = require('fs').promises;
 
@@ -755,6 +756,12 @@ const updateClientFactSheet = async (req, res) => {
  */
 const uploadFactSheetFile = async (req, res) => {
   try {
+    if (areFileUploadsDisabled()) {
+      return res.status(503).json({
+        success: false,
+        message: 'File uploads are temporarily disabled',
+      });
+    }
     const { clientId } = req.params;
     
     // Get firmId and xID from authenticated user
@@ -938,6 +945,12 @@ const deleteFactSheetFile = async (req, res) => {
  */
 const uploadClientCFSFile = async (req, res) => {
   try {
+    if (areFileUploadsDisabled()) {
+      return res.status(503).json({
+        success: false,
+        message: 'File uploads are temporarily disabled',
+      });
+    }
     const { clientId } = req.params;
     const { description, fileType = 'documents' } = req.body;
 
