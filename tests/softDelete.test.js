@@ -9,7 +9,9 @@ const buildStubQuery = (doc) => ({
   includeDeleted() {
     return this;
   },
-  exec: async () => doc,
+  async exec() {
+    return doc;
+  },
 });
 
 const buildStubModel = (doc) => ({
