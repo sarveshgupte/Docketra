@@ -7,6 +7,8 @@ const Category = require('../models/Category.model');
 const User = require('../models/User.model');
 const { recordAdminAudit } = require('./adminAudit.service');
 
+const getCaseKey = (caseDoc) => caseDoc?.caseId || caseDoc?.caseNumber;
+
 const getActorXID = (req) => req?.user?.xID || req?.user?.xid || req?.actorXID || null;
 const getFirmId = (req, fallbackDoc) => req?.firmId || req?.user?.firmId || fallbackDoc?.firmId || null;
 const getSession = (req, explicitSession) => explicitSession || req?.transactionSession?.session || req?.mongoSession || null;
@@ -85,16 +87,22 @@ const ensureCategoryNotInUse = async (categoryDoc, session) => {
 
 const cascadeDeletes = async (modelName, doc, req, session, reason) => {
   if (modelName === 'Client') {
-    await softDeleteMany({ model: Case, filter: { clientId: doc.clientId, firmId: doc.firmId }, req, reason, session });
-    const relatedCases = await Case.find({ clientId: doc.clientId, firmId: doc.firmId, includeDeleted: true }).session(session);
+    const relatedCases = await softDeleteMany({
+      model: Case,
+      filter: { clientId: doc.clientId, firmId: doc.firmId },
+      req,
+      reason,
+      session,
+    });
     for (const caseDoc of relatedCases) {
       await cascadeDeletes('Case', caseDoc, req, session, reason);
     }
   }
   if (modelName === 'Case') {
     await softDeleteMany({ model: Task, filter: { case: doc._id, firmId: doc.firmId }, req, reason, session });
-    await softDeleteMany({ model: Attachment, filter: { caseId: doc.caseId || doc.caseNumber }, req, reason, session });
-    await softDeleteMany({ model: Comment, filter: { caseId: doc.caseId || doc.caseNumber }, req, reason, session });
+    const caseKey = getCaseKey(doc);
+    await softDeleteMany({ model: Attachment, filter: { caseId: caseKey }, req, reason, session });
+    await softDeleteMany({ model: Comment, filter: { caseId: caseKey }, req, reason, session });
   }
 };
 
@@ -177,6 +185,7 @@ const restoreDocument = async ({ model, filter, req }) => {
 
   // Restore children that were soft-deleted with the parent
   if (model.modelName === 'Case') {
+    const caseKey = getCaseKey(doc);
     await restoreMany({
       model: Task,
       filter: { case: doc._id, firmId: doc.firmId, deletedAt: { $ne: null } },
@@ -185,13 +194,13 @@ const restoreDocument = async ({ model, filter, req }) => {
     });
     await restoreMany({
       model: Attachment,
-      filter: { caseId: doc.caseId || doc.caseNumber, deletedAt: { $ne: null } },
+      filter: { caseId: caseKey, deletedAt: { $ne: null } },
       req,
       session,
     });
     await restoreMany({
       model: Comment,
-      filter: { caseId: doc.caseId || doc.caseNumber, deletedAt: { $ne: null } },
+      filter: { caseId: caseKey, deletedAt: { $ne: null } },
       req,
       session,
     });
@@ -215,24 +224,25 @@ const buildDiagnostics = async () => {
   const retentionDays = parseInt(process.env.SOFT_DELETE_RETENTION_DAYS || '90', 10);
   const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
 
-  const summary = [];
-  for (const { name, model } of models) {
-    const deletedCount = await model.countDocuments({ deletedAt: { $ne: null }, includeDeleted: true });
-    const oldest = await model.findOne({ deletedAt: { $ne: null }, includeDeleted: true })
-      .sort({ deletedAt: 1 })
-      .select({ deletedAt: 1 })
-      .lean();
-    const eligibleForPurge = await model.countDocuments({
-      deletedAt: { $lte: cutoff },
-      includeDeleted: true,
-    });
-    summary.push({
+  const summary = await Promise.all(models.map(async ({ name, model }) => {
+    const [deletedCount, oldest, eligibleForPurge] = await Promise.all([
+      model.countDocuments({ deletedAt: { $ne: null }, includeDeleted: true }),
+      model.findOne({ deletedAt: { $ne: null }, includeDeleted: true })
+        .sort({ deletedAt: 1 })
+        .select({ deletedAt: 1 })
+        .lean(),
+      model.countDocuments({
+        deletedAt: { $lte: cutoff },
+        includeDeleted: true,
+      }),
+    ]);
+    return {
       entity: name,
       deletedCount,
       oldestDeletedAt: oldest?.deletedAt || null,
       eligibleForPurge,
-    });
-  }
+    };
+  }));
 
   return {
     retentionDays,

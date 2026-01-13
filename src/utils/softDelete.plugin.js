@@ -12,6 +12,9 @@ const applyDefaultDeletedFilter = function(query) {
   return { ...query, deletedAt: null };
 };
 
+const shouldIncludeDeleted = (pipeline, options) =>
+  options?.includeDeleted || (pipeline[0] && pipeline[0].$match && pipeline[0].$match.includeDeleted);
+
 /**
  * Global soft-delete plugin.
  * - Adds deletedAt/deletedByXID/deleteReason/restoreHistory fields
@@ -45,8 +48,7 @@ const softDeletePlugin = (schema) => {
 
   schema.pre('aggregate', function softDeleteAggregateHook() {
     const pipeline = this.pipeline();
-    const includeDeleted = this.options?.includeDeleted
-      || (pipeline[0] && pipeline[0].$match && pipeline[0].$match.includeDeleted);
+    const includeDeleted = shouldIncludeDeleted(pipeline, this.options);
     if (includeDeleted && pipeline[0]?.$match?.includeDeleted !== undefined) {
       // Clean up includeDeleted flag from match
       // eslint-disable-next-line no-param-reassign
