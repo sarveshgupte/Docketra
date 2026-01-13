@@ -10,7 +10,8 @@ const { generateNextClientId } = require('../services/clientIdGenerator');
 const { slugify } = require('../utils/slugify');
 const { getDashboardSnapshot } = require('../utils/operationalMetrics');
 
-const SALT_ROUNDS = 10;
+const { createFirmHierarchy, FirmBootstrapError } = require('../services/firmBootstrap.service');
+const { isFirmCreationDisabled } = require('../services/featureFlags.service');
 
 /**
  * Log Superadmin action to audit log
@@ -78,387 +79,108 @@ const logSuperadminAction = async ({ actionType, description, performedBy, perfo
  * - Firm Creation FAILED to SuperAdmin (on error)
  */
 const createFirm = async (req, res) => {
-  // Start a session for transaction
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  
   const requestId = req.requestId || crypto.randomUUID();
-  req.requestId = requestId;
-  let responseMeta = { requestId };
-
   try {
-    const { name, adminName, adminEmail } = req.body;
-    
-    // Validate required fields
-    if (!name || !name.trim()) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({
+    if (isFirmCreationDisabled()) {
+      return res.status(503).json({
         success: false,
-        message: 'Firm name is required',
-        ...responseMeta,
-      });
-    }
-    
-    if (!adminName || !adminName.trim()) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({
-        success: false,
-        message: 'Admin name is required',
-        ...responseMeta,
-      });
-    }
-    
-    if (!adminEmail || !adminEmail.trim()) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({
-        success: false,
-        message: 'Admin email is required',
-        ...responseMeta,
-      });
-    }
-    
-    // Validate email format
-    const emailRegex = /^\S+@\S+\.\S+$/;
-    if (!emailRegex.test(adminEmail)) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid admin email format',
-        ...responseMeta,
+        message: 'Firm creation is temporarily disabled',
+        requestId,
       });
     }
 
-    const normalizedName = name.trim();
-    const firmSlugCandidate = slugify(normalizedName);
-    const existingFirm = await Firm.findOne({
-      $or: [
-        { firmSlug: firmSlugCandidate },
-        { name: normalizedName },
-      ],
-    }).session(session);
+    const result = await createFirmHierarchy({
+      payload: req.body,
+      performedBy: req.user,
+      requestId,
+    });
 
-    if (existingFirm) {
-      responseMeta = { requestId, firmId: existingFirm._id.toString() };
-      await session.abortTransaction();
-      session.endSession();
-      console.warn(`[FIRM_CREATE][${requestId}] Idempotent replay for firm creation`, {
-        firmId: existingFirm.firmId,
-        firmSlug: existingFirm.firmSlug,
-      });
+    await logSuperadminAction({
+      actionType: 'FirmCreated',
+      description: `Firm created: ${result.firm.name} (${result.firm.firmId}, ${result.firm.firmSlug})`,
+      performedBy: req.user.email,
+      performedById: req.user._id,
+      targetEntityType: 'Firm',
+      targetEntityId: result.firm._id.toString(),
+      metadata: {
+        firmId: result.firm.firmId,
+        firmSlug: result.firm.firmSlug,
+        defaultClientId: result.defaultClient._id,
+        adminXID: result.adminUser.xID,
+      },
+      req,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Firm created successfully with default client and admin. Admin credentials sent by email.',
+      data: {
+        firm: {
+          _id: result.firm._id,
+          firmId: result.firm.firmId,
+          firmSlug: result.firm.firmSlug,
+          name: result.firm.name,
+          status: result.firm.status,
+          bootstrapStatus: result.firm.bootstrapStatus,
+          defaultClientId: result.firm.defaultClientId,
+          createdAt: result.firm.createdAt,
+        },
+        defaultClient: {
+          _id: result.defaultClient._id,
+          clientId: result.defaultClient.clientId,
+          businessName: result.defaultClient.businessName,
+          isSystemClient: result.defaultClient.isSystemClient,
+        },
+        defaultAdmin: {
+          _id: result.adminUser._id,
+          xID: result.adminUser.xID,
+          name: result.adminUser.name,
+          email: result.adminUser.email,
+          role: result.adminUser.role,
+          status: result.adminUser.status,
+          defaultClientId: result.adminUser.defaultClientId,
+        },
+      },
+      requestId,
+    });
+  } catch (error) {
+    if (error instanceof FirmBootstrapError && error.statusCode === 200 && error.meta?.idempotent) {
+      const firm = error.meta.firm;
       return res.status(200).json({
         success: true,
         message: 'Firm already exists',
         data: {
           firm: {
-            _id: existingFirm._id,
-            firmId: existingFirm.firmId,
-            firmSlug: existingFirm.firmSlug,
-            name: existingFirm.name,
-            status: existingFirm.status,
-            bootstrapStatus: existingFirm.bootstrapStatus,
-            defaultClientId: existingFirm.defaultClientId,
-            createdAt: existingFirm.createdAt,
+            _id: firm._id,
+            firmId: firm.firmId,
+            firmSlug: firm.firmSlug,
+            name: firm.name,
+            status: firm.status,
+            bootstrapStatus: firm.bootstrapStatus,
+            defaultClientId: firm.defaultClientId,
+            createdAt: firm.createdAt,
           },
         },
         idempotent: true,
-        ...responseMeta,
+        requestId,
       });
     }
-    
-    // Check if admin email already exists
-    const existingUser = await User.findOne({ email: adminEmail.toLowerCase() }).session(session);
-    if (existingUser) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(409).json({
+
+    if (error instanceof FirmBootstrapError) {
+      return res.status(error.statusCode || 500).json({
         success: false,
-        message: 'User with this email already exists',
-        ...responseMeta,
+        message: error.message,
+        requestId,
+        ...(error.meta || {}),
       });
     }
-    
-    console.log(`[FIRM_CREATE] Starting atomic transaction for firm: ${name}`);
-    
-    // ============================================================
-    // STEP 1: Generate Firm ID, Firm Slug, and Create Firm (bootstrapStatus=PENDING)
-    // ============================================================
-    // Query latest firm within transaction to generate next ID
-    // Bootstrap-safe: returns FIRM001 when no firms exist
-    const lastFirm = await Firm.findOne({}, {}, { session }).sort({ createdAt: -1 });
-    let firmNumber = 1;
-    if (lastFirm && lastFirm.firmId) {
-      const match = lastFirm.firmId.match(/FIRM(\d+)/);
-      if (match) {
-        firmNumber = parseInt(match[1], 10) + 1;
-      }
-    }
-    const firmId = `FIRM${firmNumber.toString().padStart(3, '0')}`;
-    
-    // Generate unique firmSlug from firm name
-    let firmSlug = slugify(name.trim());
-    
-    // Ensure firmSlug is unique - append number if needed
-    let slugSuffix = 1;
-    let originalSlug = firmSlug;
-    while (await Firm.findOne({ firmSlug }).session(session)) {
-      firmSlug = `${originalSlug}-${slugSuffix}`;
-      slugSuffix++;
-    }
-    
-    const firm = new Firm({
-      firmId,
-      name: name.trim(),
-      firmSlug,
-      status: 'ACTIVE',
-      bootstrapStatus: 'PENDING', // PR-2: Start in PENDING state
-    });
-    
-    // Save firm first (without defaultClientId - will be set later)
-    await firm.save({ session });
-    responseMeta = { requestId, firmId: firm._id.toString() };
-    console.log(`[FIRM_CREATE] ✓ Firm created in PENDING state: ${firmId}`);
-    console.log(`[FIRM_CREATE] Generated firmSlug: ${firmSlug}`);
-    
-    // ============================================================
-    // STEP 2: Generate Client ID and Create Default Client
-    // ============================================================
-    // Pass firm ObjectId for transactional ID generation
-    // Bootstrap-safe: returns C000001 when no clients exist
-    
-    // GUARDRAIL: Check if firm already has an internal client
-    const existingInternalClient = await Client.findOne({ 
-      firmId: firm._id, 
-      isInternal: true 
-    }).session(session);
-    
-    if (existingInternalClient) {
-      await session.abortTransaction();
-      session.endSession();
-      console.error(`[FIRM_CREATE] Firm ${firmId} already has an internal client: ${existingInternalClient.clientId}`);
-      return res.status(409).json({
-        success: false,
-        message: 'Firm already has an internal client',
-        existingClientId: existingInternalClient.clientId,
-        ...responseMeta,
-      });
-    }
-    
-    const clientId = await generateNextClientId(firm._id, session);
-    
-    const defaultClient = new Client({
-      clientId,
-      businessName: name.trim(), // Use firm name as business name
-      businessAddress: 'Default Address',
-      primaryContactNumber: '0000000000',
-      businessEmail: `${firmId.toLowerCase()}@system.local`,
-      firmId: firm._id, // Link to firm
-      isSystemClient: true, // Mark as system client
-      isInternal: true,
-      createdBySystem: true,
-      isActive: true,
-      status: 'ACTIVE',
-      createdByXid: 'SUPERADMIN', // System-generated by SuperAdmin
-      createdBy: process.env.SUPERADMIN_EMAIL || 'superadmin@system.local',
-    });
-    
-    await defaultClient.save({ session });
-    console.log(`[FIRM_CREATE] Internal client created for firm ${firm._id}`);
-    console.log(`[FIRM_CREATE] ✓ Default client created: ${clientId}`);
-    
-    // ============================================================
-    // STEP 3: Link Firm → defaultClientId
-    // ============================================================
-    firm.defaultClientId = defaultClient._id;
-    await firm.save({ session });
-    console.log(`[FIRM_CREATE] ✓ Firm defaultClientId linked: ${defaultClient._id}`);
-    
-    // ============================================================
-// STEP 4: Create Admin User (linked to default client)
-// ============================================================
-const xIDGenerator = require('../services/xIDGenerator');
-const adminXID = await xIDGenerator.generateNextXID(firm._id, session);
 
-// Generate password setup token
-const setupToken = crypto.randomBytes(32).toString('hex');
-const setupTokenHash = crypto
-  .createHash('sha256')
-  .update(setupToken)
-  .digest('hex');
-const setupExpires = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours
-
-const adminUser = new User({
-  xID: adminXID,
-  name: adminName.trim(),
-  email: adminEmail.toLowerCase(),
-  firmId: firm._id,
-  defaultClientId: defaultClient._id, // MUST align with firm default client
-  role: 'Admin',
-  status: 'INVITED',
-  isActive: true,
-  isSystem: true,
-  passwordSet: false,
-
-  // 🔒 First-login enforcement
-  mustSetPassword: true,
-  passwordSetAt: null,
-
-  mustChangePassword: true,
-  passwordSetupTokenHash: setupTokenHash,
-  passwordSetupExpires: setupExpires,
-  inviteSentAt: new Date(),
-});
-
-await adminUser.save({ session });
-console.log(
-  `[FIRM_CREATE] ✓ Admin user created and linked to default client: ${adminXID}`
-);
-
-    // ============================================================
-    // STEP 5: Mark Firm bootstrapStatus = COMPLETED
-    // ============================================================
-    // PR-2: Bootstrap complete - firm is now fully operational
-    firm.bootstrapStatus = 'COMPLETED';
-    await firm.save({ session });
-    console.log(`[FIRM_CREATE] ✓ Firm bootstrap completed: ${firmId}`);
-    
-    // ============================================================
-    // COMMIT TRANSACTION
-    // ============================================================
-    await session.commitTransaction();
-    session.endSession();
-    
-    console.log(`[FIRM_CREATE] ✓✓✓ Transaction committed successfully for ${firmId}`);
-    
-    // ============================================================
-    // SEND TIER-1 EMAILS (OUTSIDE TRANSACTION)
-    // ============================================================
-    
-    // Email 1: Firm Created SUCCESS to SuperAdmin
-    try {
-      const superadminEmail = process.env.SUPERADMIN_EMAIL;
-      if (superadminEmail) {
-        await emailService.sendFirmCreatedEmail(superadminEmail, {
-          firmId,
-          firmName: name.trim(),
-          defaultClientId: clientId,
-          adminXID,
-          adminEmail: adminEmail.toLowerCase(),
-        });
-        console.log(`[FIRM_CREATE] ✓ Firm created email sent to SuperAdmin`);
-      }
-    } catch (emailError) {
-      console.error('[FIRM_CREATE] Failed to send firm created email:', emailError.message);
-      // Continue - email failure should not block the operation
-    }
-    
-    // Email 2: Default Admin Created to Admin
-    try {
-      await emailService.sendPasswordSetupEmail({
-        email: adminEmail.toLowerCase(),
-        name: adminName.trim(),
-        token: setupToken,
-        xID: adminXID,
-        firmSlug // Pass firmSlug for firm-specific URL in email
-      });
-      console.log(`[FIRM_CREATE] ✓ Admin invite email sent to ${adminEmail}`);
-    } catch (emailError) {
-      console.error('[FIRM_CREATE] Failed to send admin invite email:', emailError.message);
-      // Continue - email failure should not block the operation
-    }
-    
-    // Log action (outside transaction)
-    await logSuperadminAction({
-      actionType: 'FirmCreated',
-      description: `Firm created: ${name} (${firmId}, ${firmSlug}) with default client (${clientId}) and admin (${adminXID})`,
-      performedBy: req.user.email,
-      performedById: req.user._id,
-      targetEntityType: 'Firm',
-      targetEntityId: firm._id.toString(),
-      metadata: { 
-        firmId, 
-        firmSlug,
-        name, 
-        defaultClientId: clientId,
-        adminXID,
-        adminEmail: adminEmail.toLowerCase(),
-      },
-      req,
-    });
-    
-    res.status(201).json({
-      success: true,
-      message: 'Firm created successfully with default client and admin. Admin credentials sent by email.',
-      data: {
-        firm: {
-          _id: firm._id,
-          firmId: firm.firmId,
-          firmSlug: firm.firmSlug,
-          name: firm.name,
-          status: firm.status,
-          bootstrapStatus: firm.bootstrapStatus, // PR-2: Include bootstrap status
-          defaultClientId: firm.defaultClientId,
-          createdAt: firm.createdAt,
-        },
-        defaultClient: {
-          _id: defaultClient._id,
-          clientId: defaultClient.clientId,
-          businessName: defaultClient.businessName,
-          isSystemClient: defaultClient.isSystemClient,
-        },
-          defaultAdmin: {
-            _id: adminUser._id,
-            xID: adminUser.xID,
-            name: adminUser.name,
-            email: adminUser.email,
-            role: adminUser.role,
-            status: adminUser.status,
-            defaultClientId: adminUser.defaultClientId, // PR-2: Include linked defaultClientId
-        },
-      },
-    });
-  } catch (error) {
-    // Rollback transaction on error
-    await session.abortTransaction();
-    session.endSession();
-    
     console.error('[SUPERADMIN] Error creating firm:', error);
-    console.error('[SUPERADMIN] Transaction rolled back');
-    
-    // Determine failure step for detailed error reporting
-    let failureStep = 'Unknown';
-    if (error.message.includes('firmId') || error.message.includes('Firm')) {
-      failureStep = 'Firm ID Generation or Creation';
-    } else if (error.message.includes('clientId') || error.message.includes('Client')) {
-      failureStep = 'Client ID Generation or Creation';
-    } else if (error.message.includes('xID') || error.message.includes('User')) {
-      failureStep = 'Admin User ID Generation or Creation';
-    }
-    
-    // Send Tier-1 email: Firm Creation FAILED to SuperAdmin
-    try {
-      const superadminEmail = process.env.SUPERADMIN_EMAIL;
-      if (superadminEmail) {
-        await emailService.sendFirmCreationFailedEmail(superadminEmail, {
-          firmName: req.body.name || 'Unknown',
-          failureStep,
-          errorMessage: error.message,
-        });
-        console.log(`[FIRM_CREATE] ✓ Firm creation failure email sent to SuperAdmin`);
-      }
-    } catch (emailError) {
-      console.error('[FIRM_CREATE] Failed to send failure email:', emailError.message);
-    }
-    
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Failed to create firm - transaction rolled back',
       error: error.message,
-      failureStep,
-      ...responseMeta,
+      requestId,
     });
   }
 };

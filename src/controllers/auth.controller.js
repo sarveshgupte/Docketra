@@ -14,6 +14,7 @@ const jwtService = require('../services/jwt.service');
 const { isSuperAdminRole } = require('../utils/role.utils');
 const { ensureDefaultClientForFirm } = require('../services/defaultClient.service');
 const { resolveUserIdentity } = require('../services/identity.service');
+const { isGoogleAuthDisabled } = require('../services/featureFlags.service');
 
 /**
  * Authentication Controller for JWT-based Enterprise Authentication
@@ -2371,6 +2372,12 @@ const refreshAccessToken = async (req, res) => {
  */
 const initiateGoogleAuth = (req, res) => {
   try {
+    if (isGoogleAuthDisabled()) {
+      return res.status(503).json({
+        success: false,
+        message: 'Google authentication is temporarily disabled',
+      });
+    }
     const oauthClient = getGoogleOAuthClient();
     const { firmSlug, flow } = req.query;
 
@@ -2408,6 +2415,12 @@ const initiateGoogleAuth = (req, res) => {
  */
 const handleGoogleCallback = async (req, res) => {
   try {
+    if (isGoogleAuthDisabled()) {
+      return res.status(503).json({
+        success: false,
+        message: 'Google authentication is temporarily disabled',
+      });
+    }
     const { code, state } = req.query;
 
     if (!code || !state) {

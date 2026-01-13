@@ -9,6 +9,7 @@ const connectDB = require('./config/database');
 const config = require('./config/config');
 const { runBootstrap } = require('./services/bootstrap.service');
 const { maskSensitiveObject, sanitizeErrorForLog } = require('./utils/pii');
+const { validateEnv } = require('./config/validateEnv');
 
 // Global error log sanitizer: ensure every console.error invocation masks PII (tokens, emails, phone numbers, auth headers).
 // This preserves existing logging behavior/verbosity while enforcing centralized masking via maskSensitiveObject.
@@ -66,6 +67,7 @@ const superadminRoutes = require('./routes/superadmin.routes');  // Superadmin r
 const debugRoutes = require('./routes/debug.routes');  // Debug routes (PR #43)
 const inboundRoutes = require('./routes/inbound.routes');  // Inbound email routes
 const publicRoutes = require('./routes/public.routes');  // Public routes (firm lookup)
+const healthRoutes = require('./routes/health.routes');  // Health endpoints
 
 /**
  * Docketra - Task & Case Management System
@@ -77,6 +79,8 @@ console.log(`[ENV] NODE_ENV = ${process.env.NODE_ENV || 'undefined'}`);
 
 // Detect production mode
 const isProduction = process.env.NODE_ENV === 'production';
+
+validateEnv();
 
 // Environment variable validation
 const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET', 'GOOGLE_SERVICE_ACCOUNT_JSON', 'DRIVE_ROOT_FOLDER_ID'];
@@ -178,6 +182,7 @@ app.get('/health', (req, res) => {
     environment: config.env,
   });
 });
+app.use('/health', healthRoutes);
 
 // API routes
 app.get('/api', (req, res) => {
