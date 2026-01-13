@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { recordTransactionFailure } = require('../services/transactionMonitor.service');
 
 const mutatingMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
@@ -12,11 +13,13 @@ const transactionMiddleware = async (req, res, next) => {
     session = await mongoose.startSession();
   } catch (err) {
     console.warn('[transactionMiddleware] Unable to start MongoDB session:', err.message);
+    recordTransactionFailure('start');
     session = null;
     req.transactionStartFailed = true;
   }
   if (!session) {
-    return res.status(503).json({ error: 'transaction_unavailable' });
+    recordTransactionFailure('unavailable');
+    return res.status(503).json({ code: 'TRANSACTION_UNAVAILABLE', message: 'Transactional writes are temporarily unavailable.', action: 'retry' });
   }
 
   const transactionSession = {

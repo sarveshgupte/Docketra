@@ -2,6 +2,14 @@ const Case = require('../models/Case.model');
 const { CaseRepository } = require('../repositories');
 const { CASE_LOCK_CONFIG } = require('../config/constants');
 
+const maskEmail = (email) => {
+  if (!email || typeof email !== 'string') return null;
+  const [user, domain] = email.split('@');
+  if (!domain) return email;
+  const visible = user.slice(0, 2);
+  return `${visible}***@${domain}`;
+};
+
 /**
  * Case Lock Middleware
  * 
@@ -78,10 +86,12 @@ const checkCaseLock = async (req, res, next) => {
         // Still within 2-hour window, deny access
         return res.status(409).json({
           success: false,
-          message: `Case is currently locked by ${caseData.lockStatus.activeUserEmail}. Please try again later.`,
-          lockedBy: caseData.lockStatus.activeUserEmail,
+          code: 'CASE_LOCKED',
+          message: 'This case is currently locked by another user.',
+          lockedBy: maskEmail(caseData.lockStatus.activeUserEmail),
           lockedAt: caseData.lockStatus.lockedAt,
           lastActivityAt: lastActivity,
+          action: 'retry',
         });
       }
     }

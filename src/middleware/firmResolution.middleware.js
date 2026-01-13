@@ -25,7 +25,9 @@ const resolveFirmSlug = async (req, res, next) => {
     if (!firmSlug) {
       return res.status(400).json({
         success: false,
+        code: 'FIRM_CONTEXT_REQUIRED',
         message: 'Firm context is required. Please use a firm-specific login URL.',
+        action: 'retry',
       });
     }
     
@@ -38,7 +40,9 @@ const resolveFirmSlug = async (req, res, next) => {
     if (!firm) {
       return res.status(404).json({
         success: false,
+        code: 'FIRM_NOT_FOUND',
         message: 'Firm not found. Please check your login URL.',
+        action: 'contact_support',
       });
     }
     
@@ -46,7 +50,9 @@ const resolveFirmSlug = async (req, res, next) => {
     if (firm.status !== 'ACTIVE') {
       return res.status(403).json({
         success: false,
-        message: 'This firm is currently inactive. Please contact support.',
+        code: 'FIRM_SUSPENDED',
+        message: `This firm is currently ${firm.status.toLowerCase()}. Please contact support.`,
+        action: 'contact_support',
       });
     }
     
@@ -61,8 +67,9 @@ const resolveFirmSlug = async (req, res, next) => {
     console.error('[FIRM_RESOLUTION] Error resolving firmSlug:', error);
     res.status(500).json({
       success: false,
+      code: 'FIRM_RESOLUTION_FAILED',
       message: 'Failed to resolve firm context',
-      error: error.message,
+      action: 'retry',
     });
   }
 };

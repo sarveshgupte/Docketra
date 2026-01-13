@@ -8,6 +8,7 @@ const emailService = require('../services/email.service');
 const { CASE_STATUS } = require('../config/constants');
 const { logAdminAction, logCaseListViewed } = require('../services/auditLog.service');
 const { wrapWriteHandler } = require('../utils/transactionGuards');
+const { getDiagnosticsSnapshot } = require('../services/diagnostics.service');
 
 /**
  * Admin Controller for Admin Panel Operations
@@ -723,6 +724,23 @@ const disconnectStorage = async (req, res) => {
   }
 };
 
+const getSystemDiagnostics = async (req, res) => {
+  try {
+    const diagnostics = await getDiagnosticsSnapshot();
+    return res.json({
+      success: true,
+      data: diagnostics,
+    });
+  } catch (error) {
+    console.error('[ADMIN] Failed to load system diagnostics:', error);
+    return res.status(500).json({
+      success: false,
+      code: 'DIAGNOSTICS_FAILED',
+      message: 'Failed to load system diagnostics',
+    });
+  }
+};
+
 module.exports = {
   getAdminStats,
   resendInviteEmail: wrapWriteHandler(resendInviteEmail),
@@ -734,4 +752,5 @@ module.exports = {
   getStorageConfig,
   updateStorageConfig: wrapWriteHandler(updateStorageConfig),
   disconnectStorage: wrapWriteHandler(disconnectStorage),
+  getSystemDiagnostics,
 };

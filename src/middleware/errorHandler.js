@@ -7,6 +7,18 @@ const log = require('../utils/log');
 const { recordError } = require('../utils/operationalMetrics');
 const metricsService = require('../services/metrics.service');
 
+const sendError = (res, status, payload) => {
+  const { code, message, action, details } = payload;
+  const body = {
+    success: false,
+    code,
+    message,
+    ...(action && { action }),
+    ...(details && { details }),
+  };
+  return res.status(status).json(body);
+};
+
 const errorHandler = (err, req, res, next) => {
   recordError(req, err);
   metricsService.recordError(err.statusCode || 500);
@@ -16,37 +28,39 @@ const errorHandler = (err, req, res, next) => {
   // Mongoose validation error
   if (err.name === 'ValidationError') {
     const errors = Object.values(err.errors).map(e => e.message);
-    return res.status(400).json({
-      success: false,
-      error: 'Validation Error',
-      messages: errors,
+    return sendError(res, 400, {
+      code: 'VALIDATION_ERROR',
+      message: errors.join('; '),
+      action: 'fix_request',
+      details: errors,
     });
   }
   
   // Mongoose duplicate key error
   if (err.code === 11000) {
     const field = Object.keys(err.keyPattern)[0];
-    return res.status(400).json({
-      success: false,
-      error: 'Duplicate Error',
+    return sendError(res, 400, {
+      code: 'DUPLICATE',
       message: `${field} already exists`,
+      action: 'contact_admin',
+      details: { field },
     });
   }
   
   // Mongoose CastError (invalid ObjectId)
   if (err.name === 'CastError') {
-    return res.status(400).json({
-      success: false,
-      error: 'Invalid ID',
+    return sendError(res, 400, {
+      code: 'INVALID_ID',
       message: 'Invalid resource ID format',
+      action: 'fix_request',
     });
   }
   
   // Default error
-  res.status(err.statusCode || 500).json({
-    success: false,
-    error: err.message || 'Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+  sendError(res, err.statusCode || 500, {
+    code: err.code || err.name || 'SERVER_ERROR',
+    message: err.message || 'Server Error',
+    action: err.action || (err.statusCode && err.statusCode < 500 ? 'retry' : 'contact_admin'),
   });
 };
 
