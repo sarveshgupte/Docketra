@@ -79,6 +79,14 @@ const attachmentSchema = new mongoose.Schema({
   },
   
   /**
+   * Content checksum (SHA256) for retry-safe deduplication
+   */
+  checksum: {
+    type: String,
+    trim: true,
+  },
+  
+  /**
    * File size in bytes
    * Stored for display and validation purposes
    */
@@ -272,5 +280,7 @@ attachmentSchema.index({ fileName: 'text' });
 // REMOVED: { firmId: 1 } - redundant with compound indexes below
 attachmentSchema.index({ firmId: 1, caseId: 1 }); // Firm-scoped case attachments
 attachmentSchema.index({ firmId: 1, clientId: 1 }); // Firm-scoped client attachments
+attachmentSchema.index({ firmId: 1, caseId: 1, checksum: 1 }, { unique: true, sparse: true });
+attachmentSchema.index({ firmId: 1, clientId: 1, checksum: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('Attachment', attachmentSchema);
