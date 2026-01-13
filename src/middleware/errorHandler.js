@@ -31,7 +31,7 @@ const errorHandler = (err, req, res, next) => {
     return sendError(res, 400, {
       code: 'VALIDATION_ERROR',
       message: errors.join('; '),
-      action: 'fix_request',
+      action: 'retry',
       details: errors,
     });
   }
@@ -52,7 +52,7 @@ const errorHandler = (err, req, res, next) => {
     return sendError(res, 400, {
       code: 'INVALID_ID',
       message: 'Invalid resource ID format',
-      action: 'fix_request',
+      action: 'retry',
     });
   }
   

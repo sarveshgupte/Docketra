@@ -2,11 +2,12 @@ const mongoose = require('mongoose');
 const { getState } = require('./systemState.service');
 const { isFirmCreationDisabled, isGoogleAuthDisabled, areFileUploadsDisabled } = require('./featureFlags.service');
 const { getRedisClient } = require('../config/redis');
-const { _idempotencyCache } = require('../middleware/idempotency.middleware');
+const { getIdempotencyCacheSize } = require('../middleware/idempotency.middleware');
 const metricsService = require('./metrics.service');
 const { getTransactionMetrics } = require('./transactionMonitor.service');
 
 const CACHE_TTL_MS = 30 * 1000;
+const MAX_DEGRADED_REASONS = 10;
 let cached = null;
 let cachedAt = 0;
 
@@ -15,10 +16,11 @@ const getRedisStatus = () => {
   if (!client) {
     return { available: false, status: 'unavailable' };
   }
+  const lazy = client && client.options && client.options.lazyConnect;
   return {
     available: true,
     status: client.status,
-    mode: client.options?.lazyConnect ? 'lazy' : 'eager',
+    mode: lazy ? 'lazy' : 'eager',
   };
 };
 
@@ -43,7 +45,7 @@ const getDiagnosticsSnapshot = async () => {
 
   cached = {
     systemState: state.state,
-    degradedReasons: (state.reasons || []).slice(-10),
+    degradedReasons: (state.reasons || []).slice(-MAX_DEGRADED_REASONS),
     featureFlags: [
       { name: 'firmCreation', enabled: !isFirmCreationDisabled() },
       { name: 'googleAuth', enabled: !isGoogleAuthDisabled() },
@@ -51,7 +53,7 @@ const getDiagnosticsSnapshot = async () => {
     ],
     redis: getRedisStatus(),
     dbLatencyMs,
-    idempotencyCacheSize: _idempotencyCache?.size || 0,
+    idempotencyCacheSize: getIdempotencyCacheSize(),
     transactionFailures: getTransactionMetrics(),
     metrics: metricsService.getSnapshot(),
     generatedAt: new Date().toISOString(),

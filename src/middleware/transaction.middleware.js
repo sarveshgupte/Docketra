@@ -19,7 +19,7 @@ const transactionMiddleware = async (req, res, next) => {
   }
   if (!session) {
     recordTransactionFailure('unavailable');
-    return res.status(503).json({ code: 'TRANSACTION_UNAVAILABLE', message: 'Transactional writes are temporarily unavailable.', action: 'retry' });
+    return res.status(503).json({ success: false, code: 'TRANSACTION_UNAVAILABLE', message: 'Transactional writes are temporarily unavailable.', action: 'retry' });
   }
 
   const transactionSession = {

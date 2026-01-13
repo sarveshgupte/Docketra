@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 const assert = require('assert');
 const EventEmitter = require('events');
 
@@ -10,9 +9,6 @@ const buildRes = () => {
   res.statusCode = 200;
   res.status = (code) => { res.statusCode = code; return res; };
   res.json = () => res;
-  // align with Express response API
-  res.once = res.once.bind(res);
-  res.on = res.on.bind(res);
   return res;
 };
 
@@ -56,5 +52,5 @@ async function run() {
 
 run().catch((err) => {
   console.error('Admin audit coverage test failed:', err);
-  process.exit(1);
+  throw err;
 });

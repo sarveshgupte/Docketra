@@ -17,8 +17,20 @@ const adminAuditTrail = (scope = 'admin') => (req, res, next) => {
 
   const start = Date.now();
   const target = resolveTarget(req);
+  let finalized = false;
+
+  if (!req.user?.xID || !(req.firm?.id || req.user?.firmId)) {
+    return res.status(401).json({
+      success: false,
+      code: 'AUDIT_ACTOR_REQUIRED',
+      message: 'Authenticated admin identity is required for audit logging.',
+      action: 'contact_admin',
+    });
+  }
 
   const finalize = () => {
+    if (finalized) return;
+    finalized = true;
     recordAdminAudit({
       actor: req.user?.xID || 'UNKNOWN',
       firmId: req.firm?.id || req.user?.firmId || null,
@@ -31,7 +43,7 @@ const adminAuditTrail = (scope = 'admin') => (req, res, next) => {
       ipAddress: req.ip,
       userAgent: req.headers?.['user-agent'],
       durationMs: Date.now() - start,
-    });
+    }).catch((err) => console.error('[ADMIN_AUDIT] Failed to record audit:', err));
   };
 
   res.once('finish', finalize);
