@@ -5,9 +5,11 @@
 
 const log = require('../utils/log');
 const { recordError } = require('../utils/operationalMetrics');
+const metricsService = require('../services/metrics.service');
 
 const errorHandler = (err, req, res, next) => {
   recordError(req, err);
+  metricsService.recordError(err.statusCode || 500);
   // Logging sanitization is handled centrally by the global console.error override to avoid double-masking.
   log.error('REQUEST_FAILED', { req, error: err.message, stack: err.stack });
   

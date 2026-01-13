@@ -10,6 +10,7 @@ const config = require('./config/config');
 const { runBootstrap } = require('./services/bootstrap.service');
 const { maskSensitiveObject, sanitizeErrorForLog } = require('./utils/pii');
 const { validateEnv } = require('./config/validateEnv');
+const { logBuildMetadata } = require('./services/buildInfo.service');
 
 // Global error log sanitizer: ensure every console.error invocation masks PII (tokens, emails, phone numbers, auth headers).
 // This preserves existing logging behavior/verbosity while enforcing centralized masking via maskSensitiveObject.
@@ -47,9 +48,11 @@ const requestLogger = require('./middleware/requestLogger');
 const errorHandler = require('./middleware/errorHandler');
 const notFound = require('./middleware/notFound');
 const { authenticate } = require('./middleware/auth.middleware');
+const degradedGuard = require('./middleware/degradedGuard');
 const { firmContext } = require('./middleware/firmContext.middleware');
 const { requireAdmin, requireSuperadmin } = require('./middleware/permission.middleware');
 const invariantGuard = require('./middleware/invariantGuard');
+const metricsService = require('./services/metrics.service');
 
 // Routes
 const userRoutes = require('./routes/users');
@@ -81,6 +84,7 @@ console.log(`[ENV] NODE_ENV = ${process.env.NODE_ENV || 'undefined'}`);
 const isProduction = process.env.NODE_ENV === 'production';
 
 validateEnv();
+logBuildMetadata();
 
 // Environment variable validation
 const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET', 'GOOGLE_SERVICE_ACCOUNT_JSON', 'DRIVE_ROOT_FOLDER_ID'];
@@ -172,6 +176,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(requestLogger);
+app.use(degradedGuard);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -183,6 +188,9 @@ app.get('/health', (req, res) => {
   });
 });
 app.use('/health', healthRoutes);
+app.get('/metrics', (req, res) => {
+  res.json(metricsService.getSnapshot());
+});
 
 // API routes
 app.get('/api', (req, res) => {
