@@ -12,7 +12,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const clearAuthStorage = (firmSlugToPreserve = null) => {
+  const clearAuthStorage = useCallback((firmSlugToPreserve = null) => {
     localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.X_ID);
@@ -22,7 +22,13 @@ export const AuthProvider = ({ children }) => {
     } else {
       localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
     }
-  };
+  }, []);
+
+  const resetAuthState = useCallback(() => {
+    clearAuthStorage();
+    setUser(null);
+    setIsAuthenticated(false);
+  }, [clearAuthStorage]);
 
   /**
    * WARNING:
@@ -52,6 +58,12 @@ export const AuthProvider = ({ children }) => {
   const fetchProfile = useCallback(async () => {
     setLoading(true);
     try {
+      const accessToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+      if (!accessToken) {
+        resetAuthState();
+        return { success: false, data: null };
+      }
+
       const cachedUser = localStorage.getItem(STORAGE_KEYS.USER);
       const cachedXID = localStorage.getItem(STORAGE_KEYS.X_ID);
 
@@ -82,27 +94,29 @@ export const AuthProvider = ({ children }) => {
       // Fail fast on auth errors (401/403) to avoid hidden polling loops
       const status = err?.response?.status;
       if (status === 401 || status === 403) {
-        clearAuthStorage();
-        setUser(null);
-        setIsAuthenticated(false);
+        resetAuthState();
       }
       return { success: false, data: null, error: err };
     } finally {
       setLoading(false);
     }
-  }, [setAuthFromProfile]);
+  }, [resetAuthState, setAuthFromProfile]);
 
   const login = async (xID, password) => {
-    const response = await authService.login(xID, password);
-    
-    if (response.success) {
-      const userData = response.data;
-      setAuthFromProfile(userData);
-      return response;
-    } else {
-      // Login failed or requires password change - don't set auth state
+    try {
+      const response = await authService.login(xID, password);
+      
+      if (response.success) {
+        const userData = response.data;
+        setAuthFromProfile(userData);
+        return response;
+      }
+
       const errorMessage = response.message || 'Login failed';
       throw new Error(errorMessage);
+    } catch (error) {
+      resetAuthState();
+      throw error;
     }
   };
 
