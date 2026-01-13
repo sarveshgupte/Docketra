@@ -24,6 +24,12 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const resetAuthState = useCallback(() => {
+    clearAuthStorage();
+    setUser(null);
+    setIsAuthenticated(false);
+  }, [clearAuthStorage]);
+
   /**
    * WARNING:
    * This function MUST NOT be called outside AuthContext.
@@ -54,9 +60,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const accessToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
       if (!accessToken) {
-        clearAuthStorage();
-        setUser(null);
-        setIsAuthenticated(false);
+        resetAuthState();
         return { success: false, data: null };
       }
 
@@ -98,7 +102,7 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [setAuthFromProfile]);
+  }, [resetAuthState, setAuthFromProfile]);
 
   const login = async (xID, password) => {
     try {
@@ -110,15 +114,11 @@ export const AuthProvider = ({ children }) => {
         return response;
       }
 
-      clearAuthStorage();
-      setUser(null);
-      setIsAuthenticated(false);
+      resetAuthState();
       const errorMessage = response.message || 'Login failed';
       throw new Error(errorMessage);
     } catch (error) {
-      clearAuthStorage();
-      setUser(null);
-      setIsAuthenticated(false);
+      resetAuthState();
       throw error;
     }
   };

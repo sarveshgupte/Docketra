@@ -18,16 +18,27 @@ const REDIRECT_TIMEOUT_MS = 5000;
 const INITIAL_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 4000;
 
+const generateIdempotencyKey = () => {
+  if (typeof crypto?.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  if (typeof crypto?.getRandomValues === 'function') {
+    const buffer = new Uint32Array(4);
+    crypto.getRandomValues(buffer);
+    return Array.from(buffer)
+      .map((value) => value.toString(16).padStart(8, '0'))
+      .join('-');
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
 // Request interceptor - Add JWT Bearer token
 api.interceptors.request.use(
   (config) => {
     const method = (config.method || '').toLowerCase();
     if (['post', 'put', 'patch', 'delete'].includes(method)) {
       if (!config.headers['Idempotency-Key']) {
-        const idempotencyKey = typeof crypto?.randomUUID === 'function'
-          ? crypto.randomUUID()
-          : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-        config.headers['Idempotency-Key'] = idempotencyKey;
+        config.headers['Idempotency-Key'] = generateIdempotencyKey();
       }
     }
 
