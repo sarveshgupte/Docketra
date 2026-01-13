@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const softDeletePlugin = require('../utils/softDelete.plugin');
 
 /**
  * Client Model for Docketra Case Management System
@@ -557,5 +558,7 @@ clientSchema.index({ firmId: 1, isInternal: 1 }, {
   partialFilterExpression: { isInternal: true },
   name: 'firm_internal_client_unique'
 });
+
+clientSchema.plugin(softDeletePlugin);
 
 module.exports = mongoose.model('Client', clientSchema);

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const softDeletePlugin = require('../utils/softDelete.plugin');
 
 /**
  * Task Model
@@ -118,5 +119,7 @@ taskSchema.pre('save', async function() {
     this.completedAt = new Date();
   }
 });
+
+taskSchema.plugin(softDeletePlugin);
 
 module.exports = mongoose.model('Task', taskSchema);

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const softDeletePlugin = require('../utils/softDelete.plugin');
 
 /**
  * Category Model for Docketra Case Management System
@@ -87,5 +88,7 @@ const categorySchema = new mongoose.Schema({
  * - isActive: For filtering active vs inactive categories
  */
 categorySchema.index({ isActive: 1 });
+
+categorySchema.plugin(softDeletePlugin);
 
 module.exports = mongoose.model('Category', categorySchema);

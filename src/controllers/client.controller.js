@@ -13,6 +13,7 @@ const { getMimeType } = require('../utils/fileUtils');
 const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
 const { areFileUploadsDisabled } = require('../services/featureFlags.service');
 const { wrapWriteHandler } = require('../utils/transactionGuards');
+const { softDelete } = require('../services/softDelete.service');
 const path = require('path');
 const fs = require('fs');
 
@@ -1232,17 +1233,13 @@ const deleteClientCFSFile = async (req, res) => {
       }
     }
 
-    // Delete attachment record
-    // ADMIN OVERRIDE: Client CFS file deletion is an admin-only operation
-    // The Attachment model has pre-delete hooks that prevent all deletions to maintain immutability
-    // However, for client CFS files, admins need the ability to delete files
-    // We bypass the model hooks by using collection.deleteOne directly
-    // This is intentional and secure because:
-    // 1. Only admins (verified by requireAdmin middleware) can reach this endpoint
-    // 2. Firm isolation is enforced (attachment must belong to user's firm)
-    // 3. Only client_cfs source attachments can be deleted
-    // 4. Audit trail is maintained through application logs
-    await Attachment.collection.deleteOne({ _id: attachment._id });
+    // Soft delete attachment record instead of hard delete
+    await softDelete({
+      model: Attachment,
+      filter: { _id: attachment._id },
+      req,
+      reason: req.body?.reason || 'Client CFS delete',
+    });
 
     res.json({
       success: true,
