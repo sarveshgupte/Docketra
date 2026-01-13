@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const softDeletePlugin = require('../utils/softDelete.plugin');
 
 /**
  * Case Model for Docketra Case Management System
@@ -814,5 +815,7 @@ caseSchema.index({ pendingUntil: 1 }); // Auto-reopen scheduler queries
 // REMOVED: { firmId: 1 } - redundant with compound indexes above (firmId, caseInternalId), (firmId, caseNumber), etc.
 caseSchema.index({ firmId: 1, status: 1 }); // Firm-scoped status queries
 caseSchema.index({ firmId: 1, assignedToXID: 1 }); // Firm-scoped assignment queries
+
+caseSchema.plugin(softDeletePlugin);
 
 module.exports = mongoose.model('Case', caseSchema);

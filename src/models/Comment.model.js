@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const softDeletePlugin = require('../utils/softDelete.plugin');
 
 /**
  * Comment Model for Docketra Case Management System
@@ -135,5 +136,7 @@ commentSchema.pre('findOneAndDelete', function(next) {
  */
 commentSchema.index({ caseId: 1, createdAt: -1 });
 commentSchema.index({ text: 'text' });
+
+commentSchema.plugin(softDeletePlugin);
 
 module.exports = mongoose.model('Comment', commentSchema);

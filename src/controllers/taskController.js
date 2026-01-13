@@ -1,5 +1,6 @@
 const Task = require('../models/Task');
 const { wrapWriteHandler } = require('../utils/transactionGuards');
+const { softDelete } = require('../services/softDelete.service');
 
 /**
  * Task Controller
@@ -194,7 +195,12 @@ const updateTask = async (req, res) => {
  */
 const deleteTask = async (req, res) => {
   try {
-    const task = await Task.findByIdAndDelete(req.params.id);
+    const task = await softDelete({
+      model: Task,
+      filter: { _id: req.params.id },
+      req,
+      reason: req.body?.reason || 'Task deleted',
+    });
     
     if (!task) {
       return res.status(404).json({
@@ -205,7 +211,7 @@ const deleteTask = async (req, res) => {
     
     res.json({
       success: true,
-      message: 'Task deleted successfully',
+      message: 'Task soft deleted successfully',
     });
   } catch (error) {
     res.status(500).json({

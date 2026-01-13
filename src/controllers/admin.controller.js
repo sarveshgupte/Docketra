@@ -2,6 +2,7 @@ const User = require('../models/User.model');
 const Client = require('../models/Client.model');
 const Category = require('../models/Category.model');
 const Case = require('../models/Case.model');
+const Task = require('../models/Task');
 const AuthAudit = require('../models/AuthAudit.model');
 const Firm = require('../models/Firm.model');
 const emailService = require('../services/email.service');
@@ -9,6 +10,7 @@ const { CASE_STATUS } = require('../config/constants');
 const { logAdminAction, logCaseListViewed } = require('../services/auditLog.service');
 const { wrapWriteHandler } = require('../utils/transactionGuards');
 const { getDiagnosticsSnapshot } = require('../services/diagnostics.service');
+const { restoreDocument, buildDiagnostics } = require('../services/softDelete.service');
 
 /**
  * Admin Controller for Admin Panel Operations
@@ -742,6 +744,103 @@ const getSystemDiagnostics = async (req, res) => {
   }
 };
 
+const restoreUser = async (req, res) => {
+  try {
+    const restored = await restoreDocument({
+      model: User,
+      filter: { firmId: req.firmId, $or: [{ _id: req.params.id }, { xID: req.params.id }] },
+      req,
+    });
+    if (!restored) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    return res.json({ success: true, data: restored, message: 'User restored' });
+  } catch (error) {
+    console.error('[ADMIN] Failed to restore user', error);
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Failed to restore user',
+    });
+  }
+};
+
+const restoreClient = async (req, res) => {
+  try {
+    const restored = await restoreDocument({
+      model: Client,
+      filter: { firmId: req.firmId, $or: [{ _id: req.params.id }, { clientId: req.params.id }] },
+      req,
+    });
+    if (!restored) {
+      return res.status(404).json({ success: false, message: 'Client not found' });
+    }
+    return res.json({ success: true, data: restored, message: 'Client restored' });
+  } catch (error) {
+    console.error('[ADMIN] Failed to restore client', error);
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Failed to restore client',
+    });
+  }
+};
+
+const restoreCase = async (req, res) => {
+  try {
+    const restored = await restoreDocument({
+      model: Case,
+      filter: {
+        firmId: req.firmId,
+        $or: [{ _id: req.params.id }, { caseNumber: req.params.id }, { caseId: req.params.id }],
+      },
+      req,
+    });
+    if (!restored) {
+      return res.status(404).json({ success: false, message: 'Case not found' });
+    }
+    return res.json({ success: true, data: restored, message: 'Case restored' });
+  } catch (error) {
+    console.error('[ADMIN] Failed to restore case', error);
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Failed to restore case',
+    });
+  }
+};
+
+const restoreTask = async (req, res) => {
+  try {
+    const restored = await restoreDocument({
+      model: Task,
+      filter: { _id: req.params.id },
+      req,
+    });
+    if (!restored) {
+      return res.status(404).json({ success: false, message: 'Task not found' });
+    }
+    return res.json({ success: true, data: restored, message: 'Task restored' });
+  } catch (error) {
+    console.error('[ADMIN] Failed to restore task', error);
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Failed to restore task',
+    });
+  }
+};
+
+const getRetentionPreview = async (req, res) => {
+  try {
+    const data = await buildDiagnostics();
+    return res.json({ success: true, data });
+  } catch (error) {
+    console.error('[ADMIN] Failed to build retention preview', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to build retention preview',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getAdminStats,
   resendInviteEmail: wrapWriteHandler(resendInviteEmail),
@@ -754,4 +853,9 @@ module.exports = {
   updateStorageConfig: wrapWriteHandler(updateStorageConfig),
   disconnectStorage: wrapWriteHandler(disconnectStorage),
   getSystemDiagnostics,
+  restoreUser: wrapWriteHandler(restoreUser),
+  restoreClient: wrapWriteHandler(restoreClient),
+  restoreCase: wrapWriteHandler(restoreCase),
+  restoreTask: wrapWriteHandler(restoreTask),
+  getRetentionPreview,
 };
