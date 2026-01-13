@@ -23,7 +23,7 @@ const createMockRes = () => {
 
 async function shouldPreferHashWhenAvailable() {
   const password = 'Candidate#123';
-  const hash = await bcrypt.hash('HashedSecret#456', 10);
+  const hash = await bcrypt.hash(password, 10);
 
   process.env.SUPERADMIN_PASSWORD_HASH = hash;
   process.env.SUPERADMIN_PASSWORD = 'plaintext-should-not-be-used';
@@ -35,7 +35,7 @@ async function shouldPreferHashWhenAvailable() {
   const originalCompare = bcrypt.compare;
   bcrypt.compare = async (candidate, stored) => {
     compareCalledWith = { candidate, stored };
-    return true;
+    return originalCompare(candidate, stored);
   };
 
   const originalRefreshCreate = RefreshToken.create;
