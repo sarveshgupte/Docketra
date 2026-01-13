@@ -19,13 +19,11 @@ const transactionMiddleware = async (req, res, next) => {
     return res.status(503).json({ error: 'transaction_unavailable' });
   }
 
-  const transactionSession = session
-    ? {
-        session,
-        withTransaction: (fn) => session.withTransaction(fn),
-        endSession: () => session.endSession(),
-      }
-    : null;
+  const transactionSession = {
+    session,
+    withTransaction: (fn) => session.withTransaction(fn),
+    endSession: () => session.endSession(),
+  };
 
   req.mongoSession = session;
   req.transactionSession = transactionSession;

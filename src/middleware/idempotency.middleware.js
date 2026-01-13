@@ -7,6 +7,13 @@ let inMemoryWarningLogged = false;
 
 const hash = (value) => crypto.createHash('sha256').update(value || '').digest('hex');
 
+const resolveKey = (req) => {
+  const headerVal = req.get?.('Idempotency-Key');
+  if (headerVal) return headerVal;
+  const headers = req.headers || {};
+  return headers['idempotency-key'] || headers['Idempotency-Key'];
+};
+
 const buildFingerprint = (req) => {
   const bodyHash = hash(JSON.stringify(req.body || {}));
   const route = req.originalUrl || req.path || '';
@@ -20,8 +27,7 @@ const idempotencyMiddleware = (req, res, next) => {
     return next();
   }
 
-  const headerKey = req.get?.('Idempotency-Key') || req.get?.('idempotency-key');
-  const key = headerKey || req.headers?.['idempotency-key'] || req.headers?.['Idempotency-Key'];
+  const key = resolveKey(req);
   if (!key) {
     return res.status(400).json({ error: 'idempotency_key_required' });
   }
