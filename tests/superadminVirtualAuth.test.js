@@ -62,7 +62,16 @@ async function shouldShortCircuitSuperadminLogin() {
 
   try {
     await login(
-      { body: { xID: 'SATEST', password: plainPassword }, ip: '127.0.0.1', get: () => 'test-agent' },
+      {
+        body: { xID: 'SATEST', password: plainPassword },
+        ip: '127.0.0.1',
+        get: () => 'test-agent',
+        transactionActive: true,
+        transactionSession: {
+          session: {},
+          withTransaction: async (fn) => fn(),
+        },
+      },
       res
     );
   } finally {
