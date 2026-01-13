@@ -1,5 +1,8 @@
 const applyDefaultDeletedFilter = function(query) {
   if (!query) return { deletedAt: null };
+  if (query.deletedAt !== undefined && query.includeDeleted !== true) {
+    throw new Error('Manual deletedAt filters are forbidden. Use includeDeleted().');
+  }
   if (query.includeDeleted) {
     // Allow opt-in override while keeping filter object clean
     const { includeDeleted: _removed, ...cleanQuery } = query;
@@ -79,3 +82,4 @@ const softDeletePlugin = (schema) => {
 };
 
 module.exports = softDeletePlugin;
+module.exports._test = { applyDefaultDeletedFilter };

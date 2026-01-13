@@ -314,6 +314,13 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+
+  // Snapshot of auth state captured at first soft delete for safe restoration
+  deletedAuthSnapshot: {
+    status: { type: String },
+    isActive: { type: Boolean },
+    lockUntil: { type: Date },
+  },
 }, {
   // Enable virtuals in JSON output
   toJSON: { virtuals: true, getters: true },
