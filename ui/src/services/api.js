@@ -35,6 +35,9 @@ api.interceptors.request.use(
 // Response interceptor - Handle token expiry and refresh
 api.interceptors.response.use(
   (response) => {
+    if (response?.data?.idempotent === true) {
+      window.dispatchEvent(new CustomEvent('app:idempotent'));
+    }
     return response;
   },
   async (error) => {
@@ -103,6 +106,10 @@ api.interceptors.response.use(
       } catch (refreshError) {
         // Refresh failed - clear storage and redirect to login
         clearAuthStorage();
+        sessionStorage.setItem('GLOBAL_TOAST', JSON.stringify({
+          message: 'Your session expired. Please sign in again.',
+          type: 'info'
+        }));
         redirectToLogin();
         return Promise.reject(refreshError);
       }
@@ -111,6 +118,10 @@ api.interceptors.response.use(
     // Handle other 401 errors (invalid token, etc.)
     if (status === 401) {
       clearAuthStorage();
+      sessionStorage.setItem('GLOBAL_TOAST', JSON.stringify({
+        message: 'Your session expired. Please sign in again.',
+        type: 'info'
+      }));
       redirectToLogin();
       return Promise.reject(error);
     }
@@ -119,6 +130,10 @@ api.interceptors.response.use(
     if (status === 403) {
       // Forbidden - clear storage and redirect to login
       clearAuthStorage();
+      sessionStorage.setItem('GLOBAL_TOAST', JSON.stringify({
+        message: 'Access denied for this action. Please sign in again.',
+        type: 'warning'
+      }));
       redirectToLogin();
       return Promise.reject(error);
     }

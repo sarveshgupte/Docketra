@@ -6,15 +6,18 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { useToast } from '../../hooks/useToast';
 import './SuperAdminLayout.css';
 
 export const SuperAdminLayout = ({ children }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { showSuccess } = useToast();
 
   const handleLogout = async () => {
     await logout();
+    showSuccess('You have been signed out safely.');
     navigate('/login');
   };
 

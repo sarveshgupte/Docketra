@@ -7,11 +7,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useToast } from '../../hooks/useToast';
 import './Layout.css';
 
 export const Layout = ({ children }) => {
   const { user, logout } = useAuth();
   const { isAdmin, isSuperadmin } = usePermissions();
+  const { showSuccess } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
   const { firmSlug } = useParams();
@@ -26,6 +28,7 @@ export const Layout = ({ children }) => {
 
   const handleLogout = async () => {
     await logout({ preserveFirmSlug: !!currentFirmSlug });
+    showSuccess('You have been signed out safely.');
     // Redirect to firm login if firmSlug is available
     if (currentFirmSlug) {
       navigate(`/f/${currentFirmSlug}/login`);
@@ -57,6 +60,9 @@ export const Layout = ({ children }) => {
 
   // Check if user has admin access (Admin or SuperAdmin)
   const hasAdminAccess = isAdmin || isSuperadmin;
+
+  const firmLabel = user?.firm?.name || currentFirmSlug || 'Firm not set';
+  const roleLabel = user?.role || 'Role not set';
 
   // Close profile dropdown on outside click
   useEffect(() => {
@@ -98,6 +104,16 @@ export const Layout = ({ children }) => {
             >
               <h1>Docketra</h1>
             </Link>
+            <div className="enterprise-top-header__context">
+              <div className="enterprise-top-header__context-item">
+                <span className="enterprise-top-header__context-label">Firm</span>
+                <span className="enterprise-top-header__context-value" title={firmLabel}>{firmLabel}</span>
+              </div>
+              <div className="enterprise-top-header__context-item">
+                <span className="enterprise-top-header__context-label">Role</span>
+                <span className="enterprise-top-header__context-value">{roleLabel}</span>
+              </div>
+            </div>
           </div>
           
           {/* Center: Primary Navigation */}
@@ -216,6 +232,16 @@ export const Layout = ({ children }) => {
         {/* Mobile Menu */}
         {mobileMenuOpen && (
           <div className="enterprise-top-header__mobile-menu">
+            <div className="enterprise-top-header__mobile-context">
+              <div>
+                <p className="enterprise-top-header__context-label">Firm</p>
+                <p className="enterprise-top-header__context-value">{firmLabel}</p>
+              </div>
+              <div>
+                <p className="enterprise-top-header__context-label">Role</p>
+                <p className="enterprise-top-header__context-value">{roleLabel}</p>
+              </div>
+            </div>
             <Link
               to={`/f/${currentFirmSlug}/dashboard`}
               className={`enterprise-top-header__mobile-link ${isActive(`/f/${currentFirmSlug}/dashboard`) ? 'active' : ''}`}
