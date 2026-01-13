@@ -15,6 +15,7 @@ const { isSuperAdminRole } = require('../utils/role.utils');
 const { ensureDefaultClientForFirm } = require('../services/defaultClient.service');
 const { resolveUserIdentity } = require('../services/identity.service');
 const { isGoogleAuthDisabled } = require('../services/featureFlags.service');
+const { BCRYPT_HASH_REGEX } = require('../constants/security.constants');
 
 /**
  * Authentication Controller for JWT-based Enterprise Authentication
@@ -38,7 +39,6 @@ const SUPERADMIN_ROLE = 'SUPERADMIN';
 const ROLE_SUPER_ADMIN = 'SUPER_ADMIN';
 const ROLE_ADMIN = 'Admin';
 const ROLE_EMPLOYEE = 'Employee';
-const BCRYPT_HASH_REGEX = /^\$2[abxy]?\$\d{2}\$.+/;
 
 const getSuperadminEnv = () => {
   const rawXID = process.env.SUPERADMIN_XID ? process.env.SUPERADMIN_XID.trim() : null;

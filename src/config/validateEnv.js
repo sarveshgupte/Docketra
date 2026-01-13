@@ -1,11 +1,11 @@
 const config = require('./config');
 const { isGoogleAuthDisabled } = require('../services/featureFlags.service');
+const { BCRYPT_HASH_REGEX } = require('../constants/security.constants');
 
 const XID_DIGITS = 6;
 const SUPERADMIN_XID_REGEX = new RegExp(`^X\\d{${XID_DIGITS}}$`, 'i');
 const MIN_JWT_SECRET_LENGTH = 12;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const BCRYPT_HASH_REGEX = /^\$2[abxy]?\$\d{2}\$.+/;
 
 const logError = (logFn, details) => {
   (logFn || console.error)({ severity: 'ERROR', scope: 'env', ...details });
