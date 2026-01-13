@@ -1,3 +1,4 @@
+const { createHash } = require('crypto');
 const Client = require('../models/Client.model');
 const Case = require('../models/Case.model');
 const { generateNextClientId } = require('../services/clientIdGenerator');
@@ -12,7 +13,7 @@ const { getMimeType } = require('../utils/fileUtils');
 const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
 const { areFileUploadsDisabled } = require('../services/featureFlags.service');
 const path = require('path');
-const fs = require('fs').promises;
+const fs = require('fs');
 
 /**
  * Client Controller for Direct Client Management
@@ -803,6 +804,32 @@ const uploadFactSheetFile = async (req, res) => {
     
     // Get MIME type
     const mimeType = getMimeType(req.file.originalname) || req.file.mimetype || 'application/octet-stream';
+    let checksumSource = req.file.buffer;
+    if (!checksumSource && req.file.path) {
+      try {
+        checksumSource = await fs.promises.readFile(req.file.path);
+      } catch (err) {
+        console.warn('[uploadFactSheetFile] Unable to read uploaded file for checksum:', err.message);
+        return res.status(500).json({
+          success: false,
+          message: 'Unable to read uploaded file for checksum',
+        });
+      }
+    }
+    if (!checksumSource) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing upload content for checksum',
+      });
+    }
+    const checksum = createHash('sha256').update(checksumSource).digest('hex');
+    const existingFile = client.clientFactSheet.files.find((file) => file.checksum && file.checksum === checksum);
+    if (existingFile) {
+      return res.status(409).json({
+        success: false,
+        message: 'Duplicate upload detected',
+      });
+    }
     
     // Add file to client fact sheet
     const newFile = {
@@ -811,6 +838,7 @@ const uploadFactSheetFile = async (req, res) => {
       storagePath: req.file.path,
       uploadedByXID: performedByXID,
       uploadedAt: new Date(),
+      checksum,
     };
     
     client.clientFactSheet.files.push(newFile);
