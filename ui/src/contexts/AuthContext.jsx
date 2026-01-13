@@ -94,9 +94,7 @@ export const AuthProvider = ({ children }) => {
       // Fail fast on auth errors (401/403) to avoid hidden polling loops
       const status = err?.response?.status;
       if (status === 401 || status === 403) {
-        clearAuthStorage();
-        setUser(null);
-        setIsAuthenticated(false);
+        resetAuthState();
       }
       return { success: false, data: null, error: err };
     } finally {
@@ -114,7 +112,6 @@ export const AuthProvider = ({ children }) => {
         return response;
       }
 
-      resetAuthState();
       const errorMessage = response.message || 'Login failed';
       throw new Error(errorMessage);
     } catch (error) {
