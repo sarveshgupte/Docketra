@@ -827,7 +827,7 @@ const restoreTask = async (req, res) => {
     }
     const restored = await restoreDocument({
       model: Task,
-      filter: { _id: req.params.id },
+      filter: { _id: req.params.id, firmId: req.firmId },
       req,
     });
     if (!restored) {

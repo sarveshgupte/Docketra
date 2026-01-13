@@ -44,7 +44,7 @@ const softDeletePlugin = (schema) => {
   schema.pre('countDocuments', function softDeleteCountHook() {
     const filtered = applyDefaultDeletedFilter(this.getFilter());
     if (filtered) {
-      this.setQuery(filtered);
+      this.setFilter(filtered);
     }
   });
 
