@@ -194,16 +194,22 @@ const login = async (req, res) => {
       
       // Authenticate against .env ONLY (do NOT query MongoDB)
       const superadminPasswordHash = process.env.SUPERADMIN_PASSWORD_HASH;
-      
-      if (!superadminPasswordHash) {
-        console.error('[AUTH][superadmin] SUPERADMIN_PASSWORD_HASH not configured in environment');
+      const superadminPasswordPlain = process.env.SUPERADMIN_PASSWORD;
+      let isSuperadminPasswordValid = false;
+
+      if (superadminPasswordHash) {
+        isSuperadminPasswordValid = await bcrypt.compare(password, superadminPasswordHash);
+      } else if (superadminPasswordPlain) {
+        // TEMPORARY: Plaintext SuperAdmin password support.
+        // Must be removed once SUPERADMIN_PASSWORD_HASH is deployed.
+        isSuperadminPasswordValid = password === superadminPasswordPlain;
+      } else {
+        console.error('[AUTH][superadmin] SUPERADMIN_PASSWORD_HASH or SUPERADMIN_PASSWORD not configured in environment');
         return res.status(500).json({
           success: false,
           message: 'SuperAdmin authentication not configured',
         });
       }
-      
-      const isSuperadminPasswordValid = await bcrypt.compare(password, superadminPasswordHash);
       
       if (!isSuperadminPasswordValid) {
         console.warn('[AUTH][superadmin] SuperAdmin login failed - invalid credentials');
@@ -214,6 +220,9 @@ const login = async (req, res) => {
       }
       
       console.log('[AUTH][superadmin] SuperAdmin login successful');
+      if (!superadminPasswordHash && superadminPasswordPlain) {
+        console.warn('[SECURITY] SuperAdmin authenticated using plaintext password');
+      }
       
       const accessToken = jwtService.generateAccessToken({
         userId: SUPERADMIN_USER_ID, // Special identifier (not a MongoDB _id)
