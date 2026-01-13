@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { randomUUID } = require('crypto');
+const { randomUUID, createHash } = require('crypto');
 const Case = require('../models/Case.model');
 const Comment = require('../models/Comment.model');
 const Attachment = require('../models/Attachment.model');
@@ -628,6 +628,7 @@ const addAttachment = async (req, res) => {
     let fileSize = req.file.size;
     let fileMimeType = req.file.mimetype || getMimeType(req.file.originalname);
     
+    let uploadChecksum = null;
     try {
       const provider = await StorageProviderFactory.getProvider(req.user.firmId);
       // Ensure case has Drive folder structure
@@ -640,6 +641,21 @@ const addAttachment = async (req, res) => {
       
       // Read file content from multer's temporary location
       const fileBuffer = await fs.readFile(req.file.path);
+      const checksum = createHash('sha256').update(fileBuffer).digest('hex');
+      uploadChecksum = checksum;
+
+      const duplicate = await Attachment.findOne({
+        caseId: caseData.caseId,
+        firmId: req.user.firmId,
+        checksum,
+      });
+      if (duplicate) {
+        await cleanupTempFile(req.file.path);
+        return res.status(409).json({
+          success: false,
+          message: 'Duplicate upload detected',
+        });
+      }
       
       const cfsDriveService = require('../services/cfsDrive.service');
       
@@ -661,6 +677,8 @@ const addAttachment = async (req, res) => {
       
       // Clean up temporary file
       await cleanupTempFile(req.file.path);
+
+      // Persist checksum for deduplication
     } catch (error) {
       console.error('[addAttachment] Error uploading to Google Drive:', error);
       
@@ -687,6 +705,7 @@ const addAttachment = async (req, res) => {
       createdByXID: req.user.xID,
       createdByName: req.user.name,
       note,
+      checksum: uploadChecksum,
     });
     
     // PR #45: Add CaseAudit entry with xID attribution
