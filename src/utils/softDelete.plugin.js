@@ -12,8 +12,11 @@ const applyDefaultDeletedFilter = function(query) {
   return { ...query, deletedAt: null };
 };
 
-const shouldIncludeDeleted = (pipeline, options) =>
-  options?.includeDeleted || (pipeline[0] && pipeline[0].$match && pipeline[0].$match.includeDeleted);
+const shouldIncludeDeleted = (pipeline = [], options) => {
+  const hasPipeline = Array.isArray(pipeline) && pipeline.length > 0;
+  const pipelineFlag = hasPipeline && pipeline[0]?.$match && pipeline[0].$match.includeDeleted;
+  return !!(options?.includeDeleted || pipelineFlag);
+};
 
 /**
  * Global soft-delete plugin.

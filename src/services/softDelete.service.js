@@ -75,7 +75,7 @@ const softDeleteMany = async ({ model, filter, req, reason, session }) => {
 
 const ensureCategoryNotInUse = async (categoryDoc, session) => {
   const inUseCount = await Case.countDocuments(
-    { categoryId: categoryDoc._id },
+    { categoryId: categoryDoc._id, includeDeleted: true },
     { session }
   );
   if (inUseCount > 0) {
@@ -194,13 +194,13 @@ const restoreDocument = async ({ model, filter, req }) => {
     });
     await restoreMany({
       model: Attachment,
-      filter: { caseId: caseKey, deletedAt: { $ne: null } },
+      filter: { caseId: caseKey, firmId: doc.firmId, deletedAt: { $ne: null } },
       req,
       session,
     });
     await restoreMany({
       model: Comment,
-      filter: { caseId: caseKey, deletedAt: { $ne: null } },
+      filter: { caseId: caseKey, firmId: doc.firmId, deletedAt: { $ne: null } },
       req,
       session,
     });
