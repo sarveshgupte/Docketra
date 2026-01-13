@@ -37,6 +37,7 @@ async function shouldPreferHashWhenAvailable() {
   const hash = await bcrypt.hash(password, 10);
 
   process.env.SUPERADMIN_PASSWORD_HASH = hash;
+  process.env.SUPERADMIN_PASSWORD = 'plaintext-should-not-be-used';
   process.env.SUPERADMIN_XID = 'XHASH01';
   process.env.SUPERADMIN_EMAIL = 'sa@hash.test';
   process.env.JWT_SECRET = 'test-secret-hash-path';
@@ -136,7 +137,7 @@ async function run() {
     await shouldPreferHashWhenAvailable();
     await shouldReturn401WhenHashMismatch();
     shouldFailValidationWhenNoSuperadminPassword();
-    console.log('\nAll SuperAdmin plaintext password tests passed.');
+    console.log('\nAll SuperAdmin bcrypt authentication tests passed.');
   } catch (err) {
     console.error('SuperAdmin plaintext password tests failed:', err.message);
     process.exit(1);
