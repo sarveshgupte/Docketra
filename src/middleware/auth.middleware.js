@@ -1,6 +1,7 @@
 const User = require('../models/User.model');
 const jwtService = require('../services/jwt.service');
 const { isSuperAdminRole } = require('../utils/role.utils');
+const metricsService = require('../services/metrics.service');
 
 const MUST_SET_ALLOWED_PATHS = [
   '/auth/profile',
@@ -40,6 +41,7 @@ const getTokenFromCookies = (cookieHeader, name) => {
  */
 const authenticate = async (req, res, next) => {
   try {
+    const noteAuthFailure = () => metricsService.recordAuthFailure(req.originalUrl || req.url);
     // Extract token from Authorization header
     const authHeader = req.headers.authorization;
     let token = jwtService.extractTokenFromHeader(authHeader);
@@ -51,6 +53,7 @@ const authenticate = async (req, res, next) => {
     }
     
     if (!token) {
+      noteAuthFailure();
       return res.status(401).json({
         success: false,
         message: 'Authentication required. Please provide a valid token.',
@@ -63,12 +66,14 @@ const authenticate = async (req, res, next) => {
       decoded = jwtService.verifyAccessToken(token);
     } catch (error) {
       if (error.message === 'Token expired') {
+        noteAuthFailure();
         return res.status(401).json({
           success: false,
           message: 'Token expired. Please refresh your token.',
           code: 'TOKEN_EXPIRED',
         });
       }
+      noteAuthFailure();
       return res.status(401).json({
         success: false,
         message: 'Invalid token. Please log in again.',
@@ -126,6 +131,7 @@ const authenticate = async (req, res, next) => {
     const user = await User.findById(decoded.userId);
     
     if (!user) {
+      noteAuthFailure();
       return res.status(401).json({
         success: false,
         message: 'Invalid authentication credentials.',
@@ -134,6 +140,7 @@ const authenticate = async (req, res, next) => {
     
     // Check if user is active
     if (!user.isActive) {
+      noteAuthFailure();
       return res.status(403).json({
         success: false,
         message: 'Account is deactivated. Please contact administrator.',
@@ -150,6 +157,7 @@ const authenticate = async (req, res, next) => {
     // DO NOT use passwordSet here; mustSetPassword is the only onboarding gate.
     const isPasswordSetupAllowed = normalizedCandidates.some(p => MUST_SET_ALLOWED_PATHS.includes(p));
     if (user.mustSetPassword && !isPasswordSetupAllowed) {
+      noteAuthFailure();
       return res.status(403).json({
         success: false,
         code: 'PASSWORD_SETUP_REQUIRED',
@@ -163,6 +171,7 @@ const authenticate = async (req, res, next) => {
     // Skip this check for SUPER_ADMIN (they have no firmId)
     if (user.role !== 'SUPER_ADMIN') {
       if (user.firmId && decoded.firmId && user.firmId.toString() !== decoded.firmId.toString()) {
+        noteAuthFailure();
         return res.status(403).json({
           success: false,
           message: 'Firm access violation detected.',
@@ -177,6 +186,7 @@ const authenticate = async (req, res, next) => {
       const Firm = require('../models/Firm.model');
       const firm = await Firm.findById(user.firmId);
       if (firm && firm.status === 'SUSPENDED') {
+        noteAuthFailure();
         return res.status(403).json({
           success: false,
           message: 'Your firm has been suspended. Please contact support.',
@@ -199,6 +209,7 @@ const authenticate = async (req, res, next) => {
         // Log admin exemption for audit purposes
         console.log(`[AUTH] Admin user ${user.xID} accessing ${req.method} ${req.path} with mustChangePassword=true (exempted from password enforcement)`);
       } else {
+        noteAuthFailure();
         return res.status(403).json({
           success: false,
           message: 'You must change your password before accessing other resources.',
