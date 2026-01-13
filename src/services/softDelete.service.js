@@ -6,6 +6,7 @@ const Comment = require('../models/Comment.model');
 const Category = require('../models/Category.model');
 const User = require('../models/User.model');
 const { recordAdminAudit } = require('./adminAudit.service');
+const { enqueueAfterCommit } = require('./sideEffectQueue.service');
 
 const getCaseKey = (caseDoc) => caseDoc?.caseId || caseDoc?.caseNumber;
 
@@ -127,13 +128,23 @@ const softDelete = async ({ model, filter, req, reason }) => {
 
   // User deletes disable login rather than removing data
   if (model.modelName === 'User') {
+    if (!doc.deletedAuthSnapshot) {
+      doc.deletedAuthSnapshot = {
+        status: doc.status,
+        isActive: doc.isActive,
+        lockUntil: doc.lockUntil,
+      };
+    }
     doc.status = 'DISABLED';
     doc.isActive = false;
   }
 
   await applyDocumentDeleteMarkers(doc, { actorXID: getActorXID(req), reason, session });
   await cascadeDeletes(model.modelName, doc, req, session, reason);
-  await emitAudit({ action: 'SOFT_DELETE', modelName: model.modelName, doc, req, reason });
+  enqueueAfterCommit(req, {
+    type: 'SOFT_DELETE_AUDIT',
+    execute: async () => emitAudit({ action: 'SOFT_DELETE', modelName: model.modelName, doc, req, reason }),
+  });
   return doc;
 };
 
@@ -192,9 +203,11 @@ const restoreDocument = async ({ model, filter, req }) => {
   doc.deletedByXID = null;
   doc.deleteReason = null;
   if (model.modelName === 'User') {
-    doc.isActive = true;
-    if (doc.status === 'DISABLED') {
-      doc.status = 'ACTIVE';
+    if (doc.deletedAuthSnapshot) {
+      doc.status = doc.deletedAuthSnapshot.status;
+      doc.isActive = doc.deletedAuthSnapshot.isActive;
+      doc.lockUntil = doc.deletedAuthSnapshot.lockUntil;
+      doc.deletedAuthSnapshot = undefined;
     }
   }
   await doc.save({ session });
@@ -222,7 +235,10 @@ const restoreDocument = async ({ model, filter, req }) => {
     });
   }
 
-  await emitAudit({ action: 'RESTORE', modelName: model.modelName, doc, req });
+  enqueueAfterCommit(req, {
+    type: 'SOFT_DELETE_AUDIT',
+    execute: async () => emitAudit({ action: 'RESTORE', modelName: model.modelName, doc, req }),
+  });
   return doc;
 };
 
