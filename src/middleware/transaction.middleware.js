@@ -28,6 +28,7 @@ const transactionMiddleware = async (req, res, next) => {
   req.mongoSession = session;
   req.transactionSession = transactionSession;
   req.transactionActive = !!session;
+  req.transactionCommitted = false;
 
   if (transactionSession) {
     const cleanup = () => transactionSession.endSession();

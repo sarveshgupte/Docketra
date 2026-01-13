@@ -62,11 +62,13 @@ const idempotencyMiddleware = (req, res, next) => {
 
   const originalJson = res.json.bind(res);
   res.json = (payload) => {
-    record.response = {
-      status: res.statusCode || 200,
-      body: payload,
-    };
-    idempotencyCache.set(key, record);
+    if (req.transactionCommitted === true) {
+      record.response = {
+        status: res.statusCode || 200,
+        body: payload,
+      };
+      idempotencyCache.set(key, record);
+    }
     return originalJson(payload);
   };
 
