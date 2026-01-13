@@ -806,7 +806,12 @@ const uploadFactSheetFile = async (req, res) => {
     const mimeType = getMimeType(req.file.originalname) || req.file.mimetype || 'application/octet-stream';
     let checksumSource = req.file.buffer;
     if (!checksumSource && req.file.path) {
-      checksumSource = await fs.readFile(req.file.path);
+      try {
+        checksumSource = await fs.readFile(req.file.path);
+      } catch (err) {
+        console.warn('[uploadFactSheetFile] Unable to read uploaded file for checksum:', err.message);
+        checksumSource = '';
+      }
     }
     const checksum = createHash('sha256').update(checksumSource || '').digest('hex');
     const existingFile = client.clientFactSheet.files.find((file) => file.checksum && file.checksum === checksum);

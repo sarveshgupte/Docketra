@@ -13,6 +13,7 @@ const transactionMiddleware = async (req, res, next) => {
   } catch (err) {
     console.warn('[transactionMiddleware] Unable to start MongoDB session:', err.message);
     session = null;
+    req.transactionStartFailed = true;
   }
 
   const transactionSession = session
