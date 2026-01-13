@@ -628,6 +628,7 @@ const addAttachment = async (req, res) => {
     let fileSize = req.file.size;
     let fileMimeType = req.file.mimetype || getMimeType(req.file.originalname);
     
+    let uploadChecksum = null;
     try {
       const provider = await StorageProviderFactory.getProvider(req.user.firmId);
       // Ensure case has Drive folder structure
@@ -641,6 +642,7 @@ const addAttachment = async (req, res) => {
       // Read file content from multer's temporary location
       const fileBuffer = await fs.readFile(req.file.path);
       const checksum = createHash('sha256').update(fileBuffer).digest('hex');
+      uploadChecksum = checksum;
 
       const duplicate = await Attachment.findOne({
         caseId: caseData.caseId,
@@ -677,7 +679,6 @@ const addAttachment = async (req, res) => {
       await cleanupTempFile(req.file.path);
 
       // Persist checksum for deduplication
-      req.uploadChecksum = checksum;
     } catch (error) {
       console.error('[addAttachment] Error uploading to Google Drive:', error);
       
@@ -704,7 +705,7 @@ const addAttachment = async (req, res) => {
       createdByXID: req.user.xID,
       createdByName: req.user.name,
       note,
-      checksum: req.uploadChecksum,
+      checksum: uploadChecksum,
     });
     
     // PR #45: Add CaseAudit entry with xID attribution

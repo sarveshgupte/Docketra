@@ -38,16 +38,36 @@ const runMiddleware = (middleware, req, res) => new Promise((resolve, reject) =>
   });
 });
 
+const buildRequest = (overrides = {}) => {
+  const headers = { 'Idempotency-Key': 'k', ...(overrides.headers || {}) };
+  const req = {
+    method: 'POST',
+    originalUrl: '/api/cases',
+    body: { title: 'A' },
+    firmId: 'FIRM001',
+    user: { _id: 'u1' },
+    headers,
+    get: (key) => {
+      if (typeof key === 'string' && key.toLowerCase() === 'idempotency-key') {
+        return headers['Idempotency-Key'] || headers['idempotency-key'];
+      }
+      return undefined;
+    },
+    ...overrides,
+  };
+  return req;
+};
+
 async function testIdempotentReplay() {
   resetIdempotencyCache();
   let handlerInvocations = 0;
-  const reqA = { method: 'POST', originalUrl: '/api/cases', body: { title: 'A' }, firmId: 'FIRM001', user: { _id: 'u1' }, headers: { 'Idempotency-Key': 'k1' }, get: (k) => (k === 'Idempotency-Key' ? 'k1' : undefined) };
+  const reqA = buildRequest({ headers: { 'Idempotency-Key': 'k1' } });
   const resA = createMockRes();
   await runMiddleware(idempotencyMiddleware, reqA, resA);
   handlerInvocations += 1;
   resA.json({ ok: true });
 
-  const reqB = { ...reqA };
+  const reqB = buildRequest({ headers: { 'Idempotency-Key': 'k1' } });
   const resB = createMockRes();
   await runMiddleware(idempotencyMiddleware, reqB, resB);
 
@@ -58,12 +78,12 @@ async function testIdempotentReplay() {
 
 async function testConcurrentFingerprintConflict() {
   resetIdempotencyCache();
-  const reqA = { method: 'POST', originalUrl: '/api/cases', body: { title: 'A' }, firmId: 'FIRM001', user: { _id: 'u1' }, headers: { 'Idempotency-Key': 'k2' }, get: (k) => (k === 'Idempotency-Key' ? 'k2' : undefined) };
+  const reqA = buildRequest({ headers: { 'Idempotency-Key': 'k2' }, body: { title: 'A' } });
   const resA = createMockRes();
   await runMiddleware(idempotencyMiddleware, reqA, resA);
   resA.json({ ok: true });
 
-  const reqB = { ...reqA, body: { title: 'B' } };
+  const reqB = buildRequest({ headers: { 'Idempotency-Key': 'k2' }, body: { title: 'B' } });
   const resB = createMockRes();
   await runMiddleware(idempotencyMiddleware, reqB, resB);
   assert.strictEqual(resB.statusCode, 409, 'Conflicting fingerprint should be rejected');
@@ -71,7 +91,7 @@ async function testConcurrentFingerprintConflict() {
 
 async function testRetryAfterDelay() {
   resetIdempotencyCache();
-  const req = { method: 'PATCH', originalUrl: '/api/clients/1', body: { name: 'X' }, firmId: 'FIRM001', user: { _id: 'u1' }, headers: { 'Idempotency-Key': 'k3' }, get: (k) => (k === 'Idempotency-Key' ? 'k3' : undefined) };
+  const req = buildRequest({ method: 'PATCH', originalUrl: '/api/clients/1', body: { name: 'X' }, headers: { 'Idempotency-Key': 'k3' } });
   const res = createMockRes();
   await runMiddleware(idempotencyMiddleware, req, res);
   await new Promise((resolve) => setTimeout(resolve, 10));
