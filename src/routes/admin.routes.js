@@ -16,6 +16,11 @@ const {
   updateStorageConfig,
   disconnectStorage,
   getSystemDiagnostics,
+  restoreUser,
+  restoreClient,
+  restoreCase,
+  restoreTask,
+  getRetentionPreview,
 } = require('../controllers/admin.controller');
 
 /**
@@ -43,6 +48,9 @@ router.post('/users/:xID/resend-invite', authenticate, attachFirmContext, author
 // Admin-only endpoint to manage client deny-list per user
 router.patch('/users/:xID/restrict-clients', authenticate, attachFirmContext, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateRestrictedClients);
 
+// POST /api/admin/users/:id/restore - Restore soft-deleted user
+router.post('/users/:id/restore', authenticate, attachFirmContext, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, restoreUser);
+
 // GET /api/admin/cases/open - Get all open cases (admin view)
 router.get('/cases/open', authenticate, attachFirmContext, authorizeFirmPermission('CASE_ADMIN_VIEW'), userReadLimiter, getAllOpenCases);
 
@@ -55,9 +63,21 @@ router.get('/cases/filed', authenticate, attachFirmContext, authorizeFirmPermiss
 // GET /api/admin/cases/resolved - Get all resolved cases (admin view)
 router.get('/cases/resolved', authenticate, attachFirmContext, authorizeFirmPermission('CASE_ADMIN_VIEW'), userReadLimiter, getAllResolvedCases);
 
+// POST /api/admin/cases/:id/restore - Restore a soft-deleted case
+router.post('/cases/:id/restore', authenticate, attachFirmContext, authorizeFirmPermission('CASE_ADMIN_VIEW'), userWriteLimiter, restoreCase);
+
 // Storage configuration endpoints (Admin only)
 router.get('/storage', authenticate, attachFirmContext, authorizeFirmPermission('STORAGE_MANAGE'), userReadLimiter, getStorageConfig);
 router.put('/storage', authenticate, attachFirmContext, authorizeFirmPermission('STORAGE_MANAGE'), userWriteLimiter, updateStorageConfig);
 router.post('/storage/disconnect', authenticate, attachFirmContext, authorizeFirmPermission('STORAGE_MANAGE'), userWriteLimiter, disconnectStorage);
+
+// Client restore endpoint
+router.post('/clients/:id/restore', authenticate, attachFirmContext, authorizeFirmPermission('CLIENT_MANAGE'), userWriteLimiter, restoreClient);
+
+// Task restore endpoint
+router.post('/tasks/:id/restore', authenticate, attachFirmContext, authorizeFirmPermission('TASK_MANAGE'), userWriteLimiter, restoreTask);
+
+// Retention preview endpoint
+router.get('/retention-preview', authenticate, attachFirmContext, authorizeFirmPermission('ADMIN_STATS'), userReadLimiter, getRetentionPreview);
 
 module.exports = router;

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const softDeletePlugin = require('../utils/softDelete.plugin');
 
 /**
  * User Model for Docketra Case Management System
@@ -313,6 +314,13 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+
+  // Snapshot of auth state captured at first soft delete for safe restoration
+  deletedAuthSnapshot: {
+    status: { type: String },
+    isActive: { type: Boolean },
+    lockUntil: { type: Date },
+  },
 }, {
   // Enable virtuals in JSON output
   toJSON: { virtuals: true, getters: true },
@@ -412,5 +420,7 @@ userSchema.virtual('isLocked').get(function() {
   // Check if lockUntil exists and is in the future
   return !!(this.lockUntil && this.lockUntil > Date.now());
 });
+
+userSchema.plugin(softDeletePlugin);
 
 module.exports = mongoose.model('User', userSchema);

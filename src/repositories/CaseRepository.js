@@ -1,5 +1,6 @@
 const Case = require('../models/Case.model');
 const mongoose = require('mongoose');
+const { softDelete } = require('../services/softDelete.service');
 
 /**
  * ⚠️ SECURITY: Case Repository - Firm-Scoped Data Access Layer ⚠️
@@ -210,7 +211,7 @@ const CaseRepository = {
    */
   deleteByInternalId(firmId, caseInternalId) {
     if (!firmId || !caseInternalId) {
-      return Promise.resolve({ deletedCount: 0 });
+      return Promise.resolve(null);
     }
     
     const internalId = mongoose.Types.ObjectId.isValid(caseInternalId) 
@@ -218,10 +219,14 @@ const CaseRepository = {
       : null;
     
     if (!internalId) {
-      return Promise.resolve({ deletedCount: 0 });
+      return Promise.resolve(null);
     }
     
-    return Case.deleteOne({ firmId, caseInternalId: internalId });
+    return softDelete({
+      model: Case,
+      filter: { firmId, caseInternalId: internalId },
+      reason: 'Repository deleteByInternalId',
+    });
   },
 
   /**
@@ -234,9 +239,13 @@ const CaseRepository = {
    */
   deleteByCaseId(firmId, caseId) {
     if (!firmId || !caseId) {
-      return Promise.resolve({ deletedCount: 0 });
+      return Promise.resolve(null);
     }
-    return Case.deleteOne({ firmId, caseId });
+    return softDelete({
+      model: Case,
+      filter: { firmId, caseId },
+      reason: 'Repository deleteByCaseId',
+    });
   },
 
   /**
