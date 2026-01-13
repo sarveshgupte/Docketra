@@ -3,6 +3,7 @@ const { RedisStore } = require('rate-limit-redis');
 const { getRedisClient } = require('../config/redis');
 const log = require('../utils/log');
 const { recordRateLimitHit } = require('../utils/operationalMetrics');
+const metricsService = require('../services/metrics.service');
 const { randomUUID } = require('crypto');
 
 /**
@@ -63,6 +64,7 @@ const logAbuseEvent = (req, limiterName) => {
 const createRateLimitHandler = (limiterName) => {
   return (req, res) => {
     logAbuseEvent(req, limiterName);
+    metricsService.recordRateLimitHit(limiterName);
     
     res.status(429).json({
       success: false,

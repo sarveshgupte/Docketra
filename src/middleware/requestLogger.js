@@ -7,6 +7,7 @@ const { randomUUID } = require('crypto');
 const { maskSensitiveObject } = require('../utils/pii');
 const log = require('../utils/log');
 const { recordRequest } = require('../utils/operationalMetrics');
+const metricsService = require('../services/metrics.service');
 
 const requestLogger = (req, res, next) => {
   const timestamp = new Date().toISOString();
@@ -16,6 +17,7 @@ const requestLogger = (req, res, next) => {
   res.setHeader('X-Request-ID', req.requestId);
   const { method, originalUrl, ip } = req;
   recordRequest(req);
+  metricsService.recordRequest(originalUrl || req.url);
   log.info('REQUEST_RECEIVED', { req, timestamp, ip });
   
   // Log request body for POST/PUT/PATCH requests (excluding sensitive data).
