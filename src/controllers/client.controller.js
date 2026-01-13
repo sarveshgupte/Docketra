@@ -816,6 +816,12 @@ const uploadFactSheetFile = async (req, res) => {
         });
       }
     }
+    if (!checksumSource) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing upload content for checksum',
+      });
+    }
     const checksum = createHash('sha256').update(checksumSource || '').digest('hex');
     const existingFile = client.clientFactSheet.files.find((file) => file.checksum && file.checksum === checksum);
     if (existingFile) {

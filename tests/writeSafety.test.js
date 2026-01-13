@@ -48,10 +48,9 @@ const buildRequest = (overrides = {}) => {
     user: { _id: 'u1' },
     headers,
     get: (key) => {
-      if (typeof key === 'string' && key.toLowerCase() === 'idempotency-key') {
-        return headers['Idempotency-Key'] || headers['idempotency-key'];
-      }
-      return undefined;
+      if (typeof key !== 'string') return undefined;
+      const normalized = key.toLowerCase();
+      return headers[key] || headers[normalized] || headers['Idempotency-Key'] || headers['idempotency-key'];
     },
     ...overrides,
   };
