@@ -11,6 +11,7 @@ const RefreshToken = require('../models/RefreshToken.model');
 const emailService = require('../services/email.service');
 const xIDGenerator = require('../services/xIDGenerator');
 const jwtService = require('../services/jwt.service');
+const { isSuperAdminRole } = require('../utils/role.utils');
 const { ensureDefaultClientForFirm } = require('../services/defaultClient.service');
 const { resolveUserIdentity } = require('../services/identity.service');
 
@@ -31,10 +32,20 @@ const DEFAULT_FIRM_ID = 'PLATFORM'; // Default firmId for SUPER_ADMIN and audit 
 const DEFAULT_XID = 'SUPERADMIN'; // Default xID for SUPER_ADMIN in audit logs
 const GOOGLE_SCOPES = ['openid', 'email'];
 const GOOGLE_STATE_TTL_SECONDS = 10 * 60; // 10 minutes
+const SUPERADMIN_USER_ID = 'SUPERADMIN';
+const SUPERADMIN_ROLE = 'SUPERADMIN';
 const ROLE_SUPER_ADMIN = 'SUPER_ADMIN';
 const ROLE_ADMIN = 'Admin';
 const ROLE_EMPLOYEE = 'Employee';
-const isSuperAdminRole = (role) => role === 'SuperAdmin' || role === ROLE_SUPER_ADMIN || role === 'SUPERADMIN';
+
+const getSuperadminEnv = () => {
+  const rawXID = process.env.SUPERADMIN_XID ? process.env.SUPERADMIN_XID.trim() : null;
+  return {
+    rawXID,
+    normalizedXID: rawXID ? rawXID.toUpperCase() : null,
+    email: process.env.SUPERADMIN_EMAIL || 'superadmin@system.local',
+  };
+};
 
 /**
  * Google OAuth client factory (Authorization Code Flow)
@@ -175,46 +186,46 @@ const login = async (req, res) => {
     // ============================================================
     // SuperAdmin credentials are ONLY in .env, never in database
     // This is the authoritative authentication path for SuperAdmin
-    const superadminXID = process.env.SUPERADMIN_XID;
+    const { rawXID: superadminXIDRaw, normalizedXID: superadminXID, email: superadminEmail } = getSuperadminEnv();
     
-    if (normalizedXID === superadminXID) {
-      console.log('[AUTH] SuperAdmin login attempt detected');
+    if (superadminXID && normalizedXID === superadminXID) {
+      console.log('[AUTH][superadmin] SuperAdmin login attempt detected');
       
       // Authenticate against .env ONLY (do NOT query MongoDB)
-      const superadminPassword = process.env.SUPERADMIN_PASSWORD;
+      const superadminPasswordHash = process.env.SUPERADMIN_PASSWORD_HASH;
       
-      if (!superadminPassword) {
-        console.error('[AUTH] SUPERADMIN_PASSWORD not configured in environment');
+      if (!superadminPasswordHash) {
+        console.error('[AUTH][superadmin] SUPERADMIN_PASSWORD_HASH not configured in environment');
         return res.status(500).json({
           success: false,
           message: 'SuperAdmin authentication not configured',
         });
       }
       
-      // Verify password (plain text comparison for SuperAdmin from .env)
-      if (password !== superadminPassword) {
-        console.warn('[AUTH] SuperAdmin login failed - invalid password');
+      const isSuperadminPasswordValid = await bcrypt.compare(password, superadminPasswordHash);
+      
+      if (!isSuperadminPasswordValid) {
+        console.warn('[AUTH][superadmin] SuperAdmin login failed - invalid credentials');
         return res.status(401).json({
           success: false,
           message: 'Invalid xID or password',
         });
       }
       
-      console.log('[AUTH] SuperAdmin login successful');
+      console.log('[AUTH][superadmin] SuperAdmin login successful');
       
-      // Generate JWT with NO firmId, NO defaultClientId
       const accessToken = jwtService.generateAccessToken({
-        userId: 'SUPERADMIN', // Special identifier (not a MongoDB _id)
-        role: 'SuperAdmin',
-        // NO firmId
-        // NO defaultClientId
+        userId: SUPERADMIN_USER_ID, // Special identifier (not a MongoDB _id)
+        role: SUPERADMIN_ROLE,
+        firmId: null,
+        firmSlug: null,
+        defaultClientId: null,
+        isSuperAdmin: true,
       });
       
-      // Generate refresh token
       const refreshToken = jwtService.generateRefreshToken();
       const refreshTokenHash = jwtService.hashRefreshToken(refreshToken);
       
-      // Store refresh token (with null userId for SuperAdmin)
       await RefreshToken.create({
         tokenHash: refreshTokenHash,
         userId: null, // SuperAdmin has no MongoDB user document
@@ -224,17 +235,18 @@ const login = async (req, res) => {
         userAgent: req.get('user-agent'),
       });
       
-      // Return successful login response
       return res.json({
         success: true,
         message: 'Login successful',
         accessToken,
         refreshToken,
         data: {
-          xID: superadminXID,
-          role: 'SuperAdmin',
-          // NO firmId
-          // NO defaultClientId
+          id: 'superadmin',
+          xID: superadminXIDRaw || 'SUPERADMIN',
+          email: superadminEmail,
+          role: SUPERADMIN_ROLE,
+          firmId: null,
+          isSuperAdmin: true,
         },
       });
     }
@@ -969,6 +981,26 @@ const getProfile = async (req, res) => {
   try {
     // Get user from authenticated request
     const user = req.user;
+    const isSuperAdmin = isSuperAdminRole(user?.role) || req.jwt?.isSuperAdmin;
+    
+    if (isSuperAdmin) {
+      const { rawXID: superadminXIDRaw, email: superadminEmail } = getSuperadminEnv();
+      return res.json({
+        success: true,
+        data: {
+          id: 'superadmin',
+          xID: superadminXIDRaw || 'SUPERADMIN',
+          name: 'SuperAdmin',
+          email: superadminEmail,
+          role: req.jwt?.role || SUPERADMIN_ROLE,
+          firm: null,
+          firmId: null,
+          firmSlug: null,
+          defaultClientId: null,
+          isSuperAdmin: true,
+        },
+      });
+    }
     
     // Populate firm metadata for display ONLY (not for authorization)
     // Authorization uses JWT claims (req.jwt.firmId, req.jwt.firmSlug)
@@ -2169,6 +2201,76 @@ const refreshAccessToken = async (req, res) => {
       return res.status(401).json({
         success: false,
         message: 'Invalid or expired refresh token',
+      });
+    }
+    
+    // Handle SuperAdmin refresh tokens (userId is null by design)
+    if (!storedToken.userId) {
+      if (oldTokenClaims && (!isSuperAdminRole(oldTokenClaims.role) || oldTokenClaims.userId !== SUPERADMIN_USER_ID)) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid superadmin refresh token',
+        });
+      }
+      
+      storedToken.isRevoked = true;
+      await storedToken.save();
+      
+      const newAccessToken = jwtService.generateAccessToken({
+        userId: SUPERADMIN_USER_ID,
+        role: SUPERADMIN_ROLE,
+        firmId: null,
+        firmSlug: null,
+        defaultClientId: null,
+        isSuperAdmin: true,
+      });
+      
+      const newRefreshToken = jwtService.generateRefreshToken();
+      const newTokenHash = jwtService.hashRefreshToken(newRefreshToken);
+      
+      await RefreshToken.create({
+        tokenHash: newTokenHash,
+        userId: null,
+        firmId: null,
+        expiresAt: jwtService.getRefreshTokenExpiry(),
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+      });
+      
+      const secureCookies = process.env.NODE_ENV === 'production';
+      const fifteenMinutesMs = 15 * 60 * 1000;
+      const refreshMs = (jwtService.REFRESH_TOKEN_EXPIRY_DAYS || 7) * 24 * 60 * 60 * 1000;
+      
+      res.cookie('accessToken', newAccessToken, {
+        httpOnly: true,
+        secure: secureCookies,
+        sameSite: 'lax',
+        maxAge: fifteenMinutesMs,
+        path: '/',
+      });
+      
+      res.cookie('refreshToken', newRefreshToken, {
+        httpOnly: true,
+        secure: secureCookies,
+        sameSite: 'lax',
+        maxAge: refreshMs,
+        path: '/',
+      });
+      
+      const superadminEnv = getSuperadminEnv();
+      return res.json({
+        success: true,
+        message: 'Token refreshed successfully',
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+        data: {
+          id: 'superadmin',
+          xID: superadminEnv.rawXID || 'SUPERADMIN',
+          email: superadminEnv.email,
+          role: SUPERADMIN_ROLE,
+          firmId: null,
+          isSuperAdmin: true,
+        },
       });
     }
     
