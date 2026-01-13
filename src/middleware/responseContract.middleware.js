@@ -37,8 +37,8 @@ const responseContract = (req, res, next) => {
   const originalJson = res.json.bind(res);
 
   res.json = (payload) => {
-    const statusCode = res.statusCode || 200;
-    const isError = (statusCode >= 400) || (payload && payload.success === false);
+    const statusCode = Number.isInteger(res.statusCode) ? res.statusCode : 200;
+    const isError = (statusCode >= 400) || (payload && payload.forceErrorContract);
 
     if (payload && typeof payload === 'object' && isError) {
       const response = {
@@ -52,10 +52,15 @@ const responseContract = (req, res, next) => {
       if (payload.details) response.details = payload.details;
       if (payload.retryAfter || payload.retry_after) response.retryAfter = payload.retryAfter || payload.retry_after;
       if (payload.systemState) response.systemState = payload.systemState;
-      if (payload.lockedBy) response.lockedBy = payload.lockedBy;
-      if (payload.target) response.target = payload.target;
+        if (payload.lockedBy) response.lockedBy = payload.lockedBy;
+        if (payload.target) response.target = payload.target;
 
-      return originalJson(response);
+      try {
+        return originalJson(response);
+      } catch (err) {
+        console.error('[responseContract] Failed to send response:', err);
+        throw err;
+      }
     }
 
     return originalJson(payload);

@@ -42,7 +42,7 @@ const resolveFirmSlug = async (req, res, next) => {
         success: false,
         code: 'FIRM_NOT_FOUND',
         message: 'Firm not found. Please check your login URL.',
-        action: 'contact_support',
+        action: 'contact_admin',
       });
     }
     
@@ -52,7 +52,7 @@ const resolveFirmSlug = async (req, res, next) => {
         success: false,
         code: 'FIRM_SUSPENDED',
         message: `This firm is currently ${firm.status.toLowerCase()}. Please contact support.`,
-        action: 'contact_support',
+        action: 'contact_admin',
       });
     }
     

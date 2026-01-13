@@ -5,9 +5,8 @@ const { CASE_LOCK_CONFIG } = require('../config/constants');
 const maskEmail = (email) => {
   if (!email || typeof email !== 'string') return null;
   const [user, domain] = email.split('@');
-  if (!domain) return email;
-  const visible = user.slice(0, 2);
-  return `${visible}***@${domain}`;
+  if (!domain) return '***';
+  return `***@${domain}`;
 };
 
 /**

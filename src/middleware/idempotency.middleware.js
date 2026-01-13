@@ -76,9 +76,11 @@ const idempotencyMiddleware = (req, res, next) => {
 };
 
 const resetIdempotencyCache = () => idempotencyCache.clear();
+const getIdempotencyCacheSize = () => idempotencyCache.size;
 
 module.exports = {
   idempotencyMiddleware,
   resetIdempotencyCache,
+  getIdempotencyCacheSize,
   _idempotencyCache: idempotencyCache,
 };
