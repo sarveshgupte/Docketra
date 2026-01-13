@@ -202,10 +202,15 @@ const login = async (req, res) => {
       } else if (superadminPasswordPlain) {
         // TEMPORARY: Plaintext SuperAdmin password support.
         // Must be removed once SUPERADMIN_PASSWORD_HASH is deployed.
-        const incoming = Buffer.from(password, 'utf8');
-        const configured = Buffer.from(superadminPasswordPlain, 'utf8');
-        isSuperadminPasswordValid =
-          incoming.length === configured.length && crypto.timingSafeEqual(incoming, configured);
+        try {
+          const incoming = Buffer.from(password, 'utf8');
+          const configured = Buffer.from(superadminPasswordPlain, 'utf8');
+          isSuperadminPasswordValid =
+            incoming.length === configured.length && crypto.timingSafeEqual(incoming, configured);
+        } catch (encodingError) {
+          console.error('[AUTH][superadmin] Failed to encode plaintext password for comparison', encodingError);
+          isSuperadminPasswordValid = false;
+        }
       } else {
         console.error('[AUTH][superadmin] SUPERADMIN_PASSWORD_HASH or SUPERADMIN_PASSWORD not configured in environment');
         return res.status(500).json({
