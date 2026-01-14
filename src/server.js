@@ -173,10 +173,24 @@ if (isProduction) {
 // Initialize Express app
 const app = express();
 
+const defaultFrontendOrigin = process.env.DEFAULT_FRONTEND_ORIGIN || 'https://caseflow-1-tm8i.onrender.com';
+const envFrontendUrl = process.env.FRONTEND_URL;
+let parsedFrontendOrigin = null;
+
+if (envFrontendUrl) {
+  try {
+    parsedFrontendOrigin = new URL(envFrontendUrl).origin;
+  } catch (err) {
+    console.warn(`[CORS] Ignoring invalid FRONTEND_URL: ${envFrontendUrl}`);
+  }
+}
+
 const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  'https://caseflow-1-tm8i.onrender.com',
+  parsedFrontendOrigin,
+  defaultFrontendOrigin,
 ].filter(Boolean);
+const uniqueAllowedOrigins = [...new Set(allowedOrigins)];
+console.log('[CORS] Allowed origins:', uniqueAllowedOrigins);
 
 // Connect to MongoDB and run bootstrap
 connectDB()
@@ -201,10 +215,13 @@ const corsOptions = {
       return callback(null, true);
     }
 
-    if (allowedOrigins.includes(origin)) {
+    if (uniqueAllowedOrigins.includes(origin)) {
       return callback(null, true);
     }
 
+    if (!isProduction) {
+      console.warn(`[CORS] Blocked request from disallowed origin: ${origin}`);
+    }
     return callback(new Error('CORS origin not allowed'), false);
   },
   credentials: true,
