@@ -116,7 +116,7 @@ const getFirmSlug = async (firmId) => {
  * @param {string|null} params.userId
  * @param {string|null} params.firmId
  * @param {Object} params.req
- * @returns {Promise<{refreshToken: string, expiresAt: Date}>}
+ * @returns {Promise<{refreshToken: string, expiresAt: Date}>} Raw refresh token (unhashed) and its expiry timestamp
  */
 const generateAndStoreRefreshToken = async ({ userId = null, firmId = null, req }) => {
   if (!req) {
@@ -124,9 +124,6 @@ const generateAndStoreRefreshToken = async ({ userId = null, firmId = null, req 
   }
 
   const refreshToken = jwtService.generateRefreshToken();
-  if (!refreshToken) {
-    throw new Error('Failed to generate refresh token value');
-  }
 
   const refreshTokenHash = jwtService.hashRefreshToken(refreshToken);
   const expiresAt = jwtService.getRefreshTokenExpiry();
