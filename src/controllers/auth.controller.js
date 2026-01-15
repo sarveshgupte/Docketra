@@ -111,6 +111,37 @@ const getFirmSlug = async (firmId) => {
 };
 
 /**
+ * Generate a refresh token, hash it for storage, persist with expiry, and return the raw token.
+ * @param {Object} params
+ * @param {Object} params.req
+ * @param {string|null} params.userId User id or null for SuperAdmin
+ * @param {string|null} params.firmId Firm id or null for platform scope
+ * @returns {Promise<{refreshToken: string, expiresAt: Date}>} Raw refresh token (unhashed) and its expiry timestamp
+ * @throws {Error} When request context is missing or refresh token persistence fails
+ */
+const generateAndStoreRefreshToken = async ({ req, userId = null, firmId = null }) => {
+  if (!req) {
+    throw new Error('Request object is required to capture client IP and user agent for refresh token security');
+  }
+
+  const refreshToken = jwtService.generateRefreshToken();
+
+  const refreshTokenHash = jwtService.hashRefreshToken(refreshToken);
+  const expiresAt = jwtService.getRefreshTokenExpiry();
+
+  await RefreshToken.create({
+    tokenHash: refreshTokenHash,
+    userId,
+    firmId,
+    expiresAt,
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
+
+  return { refreshToken, expiresAt };
+};
+
+/**
  * Build tokens + audit entry for successful login
  * OBJECTIVE 2: Ensure firm context (firmId, firmSlug, defaultClientId) is always in JWT
  */
@@ -127,16 +158,10 @@ const buildTokenResponse = async (user, req, authMethod = 'Password') => {
     role: user.role,
   });
 
-  const refreshToken = jwtService.generateRefreshToken();
-  const refreshTokenHash = jwtService.hashRefreshToken(refreshToken);
-
-  await RefreshToken.create({
-    tokenHash: refreshTokenHash,
+  const { refreshToken } = await generateAndStoreRefreshToken({
     userId: user._id,
     firmId: user.firmId || null,
-    expiresAt: jwtService.getRefreshTokenExpiry(),
-    ipAddress: req.ip,
-    userAgent: req.get('user-agent'),
+    req,
   });
 
   try {
@@ -237,16 +262,10 @@ const login = async (req, res) => {
         isSuperAdmin: true,
       });
       
-      const refreshToken = jwtService.generateRefreshToken();
-      const refreshTokenHash = jwtService.hashRefreshToken(refreshToken);
-      
-      await RefreshToken.create({
-        tokenHash: refreshTokenHash,
-        userId: null, // SuperAdmin has no MongoDB user document
-        firmId: null, // SuperAdmin has no firm
-        expiresAt: jwtService.getRefreshTokenExpiry(),
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent'),
+      const { refreshToken } = await generateAndStoreRefreshToken({
+        userId: null,
+        firmId: null,
+        req,
       });
       
       return res.json({
@@ -641,18 +660,10 @@ const login = async (req, res) => {
       role: user.role,
     });
     
-    // Generate refresh token
-    const refreshToken = jwtService.generateRefreshToken();
-    const refreshTokenHash = jwtService.hashRefreshToken(refreshToken);
-    
-    // Store refresh token in database
-    await RefreshToken.create({
-      tokenHash: refreshTokenHash,
+    const { refreshToken } = await generateAndStoreRefreshToken({
       userId: user._id,
       firmId: user.firmId || null,
-      expiresAt: jwtService.getRefreshTokenExpiry(),
-      ipAddress: req.ip,
-      userAgent: req.get('user-agent'),
+      req,
     });
     
     // Return user info with tokens (exclude sensitive fields)
@@ -2242,21 +2253,15 @@ const refreshAccessToken = async (req, res) => {
         isSuperAdmin: true,
       });
       
-      const newRefreshToken = jwtService.generateRefreshToken();
-      const newTokenHash = jwtService.hashRefreshToken(newRefreshToken);
-      
-      await RefreshToken.create({
-        tokenHash: newTokenHash,
+      const { refreshToken: newRefreshToken } = await generateAndStoreRefreshToken({
+        req,
         userId: null,
         firmId: null,
-        expiresAt: jwtService.getRefreshTokenExpiry(),
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent'),
       });
       
       const secureCookies = process.env.NODE_ENV === 'production';
       const fifteenMinutesMs = 15 * 60 * 1000;
-      const refreshMs = (jwtService.REFRESH_TOKEN_EXPIRY_DAYS || 7) * 24 * 60 * 60 * 1000;
+      const refreshMs = jwtService.getRefreshTokenExpiryMs();
       
       res.cookie('accessToken', newAccessToken, {
         httpOnly: true,
@@ -2321,22 +2326,15 @@ const refreshAccessToken = async (req, res) => {
     });
     
     // Generate new refresh token
-    const newRefreshToken = jwtService.generateRefreshToken();
-    const newTokenHash = jwtService.hashRefreshToken(newRefreshToken);
-    
-    // Store new refresh token
-    await RefreshToken.create({
-      tokenHash: newTokenHash,
+    const { refreshToken: newRefreshToken } = await generateAndStoreRefreshToken({
+      req,
       userId: user._id,
       firmId: user.firmId,
-      expiresAt: jwtService.getRefreshTokenExpiry(),
-      ipAddress: req.ip,
-      userAgent: req.get('user-agent'),
     });
 
     const secureCookies = process.env.NODE_ENV === 'production';
     const fifteenMinutesMs = 15 * 60 * 1000;
-    const refreshMs = (jwtService.REFRESH_TOKEN_EXPIRY_DAYS || 7) * 24 * 60 * 60 * 1000;
+    const refreshMs = jwtService.getRefreshTokenExpiryMs();
 
     res.cookie('accessToken', newAccessToken, {
       httpOnly: true,
@@ -2703,4 +2701,5 @@ module.exports = {
   refreshAccessToken: wrapWriteHandler(refreshAccessToken), // NEW: JWT token refresh
   initiateGoogleAuth,
   handleGoogleCallback: wrapWriteHandler(handleGoogleCallback),
+  generateAndStoreRefreshToken,
 };
