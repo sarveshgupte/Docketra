@@ -12,6 +12,34 @@ const crypto = require('crypto');
 const ACCESS_TOKEN_EXPIRY = '15m'; // 15 minutes
 const REFRESH_TOKEN_EXPIRY_DAYS = 7; // 7 days
 
+const parseRefreshExpiryMs = () => {
+  const raw = process.env.JWT_REFRESH_EXPIRES_IN;
+  if (!raw) {
+    return REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+  }
+
+  const trimmed = raw.trim();
+  const match = /^(\d+)\s*([smhd])?$/i.exec(trimmed);
+  if (!match) {
+    return REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+  }
+
+  const value = parseInt(match[1], 10);
+  const unit = (match[2] || 'd').toLowerCase();
+  const unitMs = {
+    s: 1000,
+    m: 60 * 1000,
+    h: 60 * 60 * 1000,
+    d: 24 * 60 * 60 * 1000,
+  }[unit];
+
+  if (!value || !unitMs) {
+    return REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+  }
+
+  return value * unitMs;
+};
+
 /**
  * Generate access token (JWT)
  * @param {Object} payload - Token payload
@@ -92,7 +120,7 @@ const hashRefreshToken = (token) => {
  * @returns {Date} Expiry timestamp
  */
 const getRefreshTokenExpiry = () => {
-  const expiryMs = REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+  const expiryMs = parseRefreshExpiryMs();
   return new Date(Date.now() + expiryMs);
 };
 
