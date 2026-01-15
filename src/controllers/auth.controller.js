@@ -119,9 +119,13 @@ const getFirmSlug = async (firmId) => {
  * @returns {Promise<{refreshToken: string, expiresAt: Date}>}
  */
 const generateAndStoreRefreshToken = async ({ userId = null, firmId = null, req }) => {
+  if (!req) {
+    throw new Error('Request context is required to issue a refresh token');
+  }
+
   const refreshToken = jwtService.generateRefreshToken();
   if (!refreshToken) {
-    throw new Error('Failed to generate refresh token');
+    throw new Error('Failed to generate refresh token value');
   }
 
   const refreshTokenHash = jwtService.hashRefreshToken(refreshToken);

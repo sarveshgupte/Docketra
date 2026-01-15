@@ -19,7 +19,7 @@ const parseRefreshExpiryMs = () => {
   }
 
   const trimmed = raw.trim();
-  const match = /^(\d+)\s*([smhd])?$/i.exec(trimmed);
+  const match = /^(\d+)\s*([smhd])?$/.exec(trimmed);
   if (!match) {
     return REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
   }
