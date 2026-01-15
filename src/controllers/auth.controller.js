@@ -111,6 +111,30 @@ const getFirmSlug = async (firmId) => {
 };
 
 /**
+ * Generate a refresh token, hash it for storage, persist with expiry, and return the raw token.
+ */
+const generateAndStoreRefreshToken = async ({ userId = null, firmId = null, req }) => {
+  const refreshToken = jwtService.generateRefreshToken();
+  if (!refreshToken) {
+    throw new Error('Failed to generate refresh token');
+  }
+
+  const refreshTokenHash = jwtService.hashRefreshToken(refreshToken);
+  const expiresAt = jwtService.getRefreshTokenExpiry();
+
+  await RefreshToken.create({
+    tokenHash: refreshTokenHash,
+    userId,
+    firmId,
+    expiresAt,
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
+
+  return { refreshToken, expiresAt };
+};
+
+/**
  * Build tokens + audit entry for successful login
  * OBJECTIVE 2: Ensure firm context (firmId, firmSlug, defaultClientId) is always in JWT
  */
@@ -127,16 +151,10 @@ const buildTokenResponse = async (user, req, authMethod = 'Password') => {
     role: user.role,
   });
 
-  const refreshToken = jwtService.generateRefreshToken();
-  const refreshTokenHash = jwtService.hashRefreshToken(refreshToken);
-
-  await RefreshToken.create({
-    tokenHash: refreshTokenHash,
+  const { refreshToken } = await generateAndStoreRefreshToken({
     userId: user._id,
     firmId: user.firmId || null,
-    expiresAt: jwtService.getRefreshTokenExpiry(),
-    ipAddress: req.ip,
-    userAgent: req.get('user-agent'),
+    req,
   });
 
   try {
@@ -237,16 +255,10 @@ const login = async (req, res) => {
         isSuperAdmin: true,
       });
       
-      const refreshToken = jwtService.generateRefreshToken();
-      const refreshTokenHash = jwtService.hashRefreshToken(refreshToken);
-      
-      await RefreshToken.create({
-        tokenHash: refreshTokenHash,
-        userId: null, // SuperAdmin has no MongoDB user document
-        firmId: null, // SuperAdmin has no firm
-        expiresAt: jwtService.getRefreshTokenExpiry(),
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent'),
+      const { refreshToken } = await generateAndStoreRefreshToken({
+        userId: null,
+        firmId: null,
+        req,
       });
       
       return res.json({
@@ -641,18 +653,10 @@ const login = async (req, res) => {
       role: user.role,
     });
     
-    // Generate refresh token
-    const refreshToken = jwtService.generateRefreshToken();
-    const refreshTokenHash = jwtService.hashRefreshToken(refreshToken);
-    
-    // Store refresh token in database
-    await RefreshToken.create({
-      tokenHash: refreshTokenHash,
+    const { refreshToken } = await generateAndStoreRefreshToken({
       userId: user._id,
       firmId: user.firmId || null,
-      expiresAt: jwtService.getRefreshTokenExpiry(),
-      ipAddress: req.ip,
-      userAgent: req.get('user-agent'),
+      req,
     });
     
     // Return user info with tokens (exclude sensitive fields)
