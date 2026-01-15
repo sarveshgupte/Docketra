@@ -13,7 +13,7 @@ const ACCESS_TOKEN_EXPIRY = '15m'; // 15 minutes
 const REFRESH_TOKEN_EXPIRY_DAYS = 7; // 7 days
 const DEFAULT_REFRESH_UNIT = 'd'; // days
 // Supported refresh token expiry units (case-insensitive): seconds (s), minutes (m), hours (h), days (d)
-const TIME_UNIT_REGEX = /^(\d+)\s*([smhd])?$/;
+const TIME_UNIT_REGEX = /^(\d+)\s*([smhd])?$/i;
 const TIME_UNIT_MS = {
   s: 1000,
   m: 60 * 1000,
