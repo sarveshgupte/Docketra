@@ -11,6 +11,38 @@ const crypto = require('crypto');
 // Token expiry durations
 const ACCESS_TOKEN_EXPIRY = '15m'; // 15 minutes
 const REFRESH_TOKEN_EXPIRY_DAYS = 7; // 7 days
+const DEFAULT_REFRESH_UNIT = 'd'; // days
+// Supported refresh token expiry units (case-insensitive): seconds (s), minutes (m), hours (h), days (d)
+const TIME_UNIT_REGEX = /^(\d+)\s*([smhd])?$/i;
+const TIME_UNIT_MS = {
+  s: 1000,
+  m: 60 * 1000,
+  h: 60 * 60 * 1000,
+  d: 24 * 60 * 60 * 1000,
+};
+
+const parseRefreshExpiryMs = () => {
+  const raw = process.env.JWT_REFRESH_EXPIRES_IN;
+  if (!raw) {
+    return REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+  }
+
+  const trimmed = raw.trim();
+  const match = TIME_UNIT_REGEX.exec(trimmed);
+  if (!match) {
+    return REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+  }
+
+  const value = parseInt(match[1], 10);
+  const unitKey = (match[2] || DEFAULT_REFRESH_UNIT).toLowerCase();
+  const unitMs = TIME_UNIT_MS[unitKey];
+
+  if (!Number.isFinite(value) || value <= 0 || !unitMs) {
+    return REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+  }
+
+  return value * unitMs;
+};
 
 /**
  * Generate access token (JWT)
@@ -92,9 +124,11 @@ const hashRefreshToken = (token) => {
  * @returns {Date} Expiry timestamp
  */
 const getRefreshTokenExpiry = () => {
-  const expiryMs = REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+  const expiryMs = parseRefreshExpiryMs();
   return new Date(Date.now() + expiryMs);
 };
+
+const getRefreshTokenExpiryMs = () => parseRefreshExpiryMs();
 
 /**
  * Verify and decode access token
@@ -155,6 +189,7 @@ module.exports = {
   generateRefreshToken,
   hashRefreshToken,
   getRefreshTokenExpiry,
+  getRefreshTokenExpiryMs,
   verifyAccessToken,
   extractTokenFromHeader,
   ACCESS_TOKEN_EXPIRY,
