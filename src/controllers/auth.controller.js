@@ -112,6 +112,11 @@ const getFirmSlug = async (firmId) => {
 
 /**
  * Generate a refresh token, hash it for storage, persist with expiry, and return the raw token.
+ * @param {Object} params
+ * @param {string|null} params.userId
+ * @param {string|null} params.firmId
+ * @param {Object} params.req
+ * @returns {Promise<{refreshToken: string, expiresAt: Date}>}
  */
 const generateAndStoreRefreshToken = async ({ userId = null, firmId = null, req }) => {
   const refreshToken = jwtService.generateRefreshToken();

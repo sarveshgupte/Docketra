@@ -33,7 +33,7 @@ const parseRefreshExpiryMs = () => {
     d: 24 * 60 * 60 * 1000,
   }[unit];
 
-  if (!value || !unitMs) {
+  if (!Number.isFinite(value) || value < 0 || !unitMs) {
     return REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
   }
 
