@@ -145,7 +145,7 @@ api.interceptors.response.use(
       } catch (refreshError) {
         // Refresh failed - clear storage and redirect to login
         clearAuthStorage();
-        const refreshCode = refreshError?.response?.data?.code;
+        const refreshCode = refreshError?.code || refreshError?.response?.data?.code;
         sessionStorage.setItem('GLOBAL_TOAST', JSON.stringify({
           message: refreshCode === ERROR_CODES.REFRESH_NOT_SUPPORTED
             ? 'Your admin session has expired. Please log in again.'

@@ -192,6 +192,7 @@ export const authService = {
     if (accessTokenOnly) {
       const error = new Error('Refresh not supported for this session');
       error.code = ERROR_CODES.REFRESH_NOT_SUPPORTED;
+      error.response = { data: { code: ERROR_CODES.REFRESH_NOT_SUPPORTED } };
       throw error;
     }
     const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
