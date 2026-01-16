@@ -145,11 +145,7 @@ const generateAndStoreRefreshToken = async ({ req, userId = null, firmId = null 
     userAgent: req.get('user-agent'),
   };
 
-  if (session) {
-    await RefreshToken.create([refreshTokenDoc], { session });
-  } else {
-    await RefreshToken.create(refreshTokenDoc);
-  }
+  await RefreshToken.create([refreshTokenDoc], session ? { session } : undefined);
 
   return { refreshToken, expiresAt };
 };
