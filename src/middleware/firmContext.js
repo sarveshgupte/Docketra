@@ -18,7 +18,14 @@ const firmContext = async (req, res, next) => {
     if (req.skipFirmContext) {
       return next();
     }
-    const isSuperAdmin = req.user && isSuperAdminRole(req.user.role);
+    
+    // 3️⃣ Detect SuperAdmin using multiple signals (defensive)
+    const isSuperAdmin = 
+      (req.user && isSuperAdminRole(req.user.role)) ||
+      req.jwt?.isSuperAdmin === true ||
+      req.isSuperAdmin === true ||
+      req.user?.firmId === null && req.user?.role;
+    
     req.isSuperAdmin = isSuperAdmin;
 
     if (isSuperAdmin) {

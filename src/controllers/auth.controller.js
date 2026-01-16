@@ -1012,13 +1012,27 @@ const resetPassword = async (req, res) => {
  * 
  * PR 32: Returns immutable fields (xID, name, email) from User model
  * and editable personal info from UserProfile model
+ * 
+ * SUPERADMIN HANDLING: Short-circuits for SuperAdmin before any DB operations
+ * SuperAdmin has no firm and no DB-backed user record.
  */
 const getProfile = async (req, res) => {
   try {
     // Get user from authenticated request
     const user = req.user;
-    const isSuperAdmin = isSuperAdminRole(user?.role) || req.jwt?.isSuperAdmin;
     
+    // 1️⃣ IDENTIFY SUPERADMIN (defensive - check all signals)
+    // Check multiple signals to ensure SuperAdmin is detected in all cases
+    const isSuperAdmin = 
+      isSuperAdminRole(user?.role) ||           // Check user role
+      req.jwt?.isSuperAdmin === true ||          // Check JWT flag
+      req.jwt?.role === 'SUPERADMIN' ||          // Check JWT role
+      req.jwt?.role === 'SuperAdmin' ||          // Check JWT role variant
+      req.jwt?.role === 'SUPER_ADMIN' ||         // Check JWT role variant
+      user?.isSuperAdmin === true ||             // Check user flag
+      user?.firmId === null && isSuperAdminRole(user?.role); // Check firmId + role
+    
+    // 2️⃣ SHORT-CIRCUIT before any firm logic, DB operations, or transactions
     if (isSuperAdmin) {
       const { rawXID: superadminXIDRaw, email: superadminEmail } = getSuperadminEnv();
       return res.json({
@@ -1034,6 +1048,8 @@ const getProfile = async (req, res) => {
           firmSlug: null,
           defaultClientId: null,
           isSuperAdmin: true,
+          refreshEnabled: false,
+          permissions: ['*'],
         },
       });
     }
