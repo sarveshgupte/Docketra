@@ -12,6 +12,7 @@ import { Card } from '../components/common/Card';
 import { Loading } from '../components/common/Loading';
 import { validateXID, validatePassword } from '../utils/validators';
 import { API_BASE_URL, USER_ROLES, ERROR_CODES, STORAGE_KEYS } from '../utils/constants';
+import { isAccessTokenOnlyUser } from '../utils/authUtils';
 import api from '../services/api';
 import { useToast } from '../hooks/useToast';
 import './LoginPage.css';
@@ -102,7 +103,11 @@ export const FirmLoginPage = () => {
           isSuperAdmin,
           refreshEnabled,
         } = response.data;
-        const accessTokenOnly = isSuperAdmin === true || refreshEnabled === false || userData?.isSuperAdmin === true;
+        const accessTokenOnly = isAccessTokenOnlyUser({
+          ...userData,
+          isSuperAdmin,
+          refreshEnabled,
+        });
         
         // Store tokens and user data in localStorage
         localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
