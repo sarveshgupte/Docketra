@@ -3,8 +3,8 @@
  */
 
 import api from './api';
-import { STORAGE_KEYS } from '../utils/constants';
-import { buildStoredUser, getStoredUser, isAccessTokenOnlyUser } from '../utils/authUtils';
+import { ERROR_CODES, STORAGE_KEYS } from '../utils/constants';
+import { buildStoredUser, getStoredUser, isAccessTokenOnlyUser, mergeAuthUser } from '../utils/authUtils';
 
 export const authService = {
   /**
@@ -28,11 +28,8 @@ export const authService = {
         isSuperAdmin,
         refreshEnabled,
       } = response.data;
-      const accessTokenOnly = isAccessTokenOnlyUser({
-        ...userData,
-        isSuperAdmin,
-        refreshEnabled,
-      });
+      const authUser = mergeAuthUser(userData, { isSuperAdmin, refreshEnabled });
+      const accessTokenOnly = isAccessTokenOnlyUser(authUser);
       
       // Store JWT tokens
       localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
@@ -43,7 +40,7 @@ export const authService = {
       }
       
       // Store user data
-      const storedUser = buildStoredUser(userData, refreshEnabled);
+      const storedUser = buildStoredUser(authUser, refreshEnabled);
       if (storedUser) {
         localStorage.setItem(STORAGE_KEYS.X_ID, storedUser.xID || 'SUPERADMIN');
         if (storedUser.firmSlug) {
@@ -194,7 +191,7 @@ export const authService = {
     const accessTokenOnly = isAccessTokenOnlyUser(storedUser);
     if (accessTokenOnly) {
       const error = new Error('Refresh not supported for this session');
-      error.code = 'REFRESH_NOT_SUPPORTED';
+      error.code = ERROR_CODES.REFRESH_NOT_SUPPORTED;
       throw error;
     }
     const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);

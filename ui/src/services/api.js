@@ -4,7 +4,7 @@
  */
 
 import axios from 'axios';
-import { API_BASE_URL, STORAGE_KEYS } from '../utils/constants';
+import { API_BASE_URL, ERROR_CODES, STORAGE_KEYS } from '../utils/constants';
 import { isAccessTokenOnlySession } from '../utils/authUtils';
 
 const api = axios.create({
@@ -147,7 +147,7 @@ api.interceptors.response.use(
         clearAuthStorage();
         const refreshCode = refreshError?.response?.data?.code;
         sessionStorage.setItem('GLOBAL_TOAST', JSON.stringify({
-          message: refreshCode === 'REFRESH_NOT_SUPPORTED'
+          message: refreshCode === ERROR_CODES.REFRESH_NOT_SUPPORTED
             ? 'Your admin session has expired. Please log in again.'
             : 'Your session expired. Please log in again.',
           type: 'info'

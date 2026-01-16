@@ -2242,6 +2242,7 @@ const refreshAccessToken = async (req, res) => {
       });
     }
     
+    // SuperAdmin refresh tokens use null userId because SuperAdmin is not stored in MongoDB.
     const isSuperAdminToken = !storedToken.userId;
     const isTokenMissingFirmContext = !storedToken.firmId;
     if (isSuperAdminToken || isTokenMissingFirmContext) {

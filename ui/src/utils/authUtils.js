@@ -1,6 +1,9 @@
 import { STORAGE_KEYS, USER_ROLES } from './constants';
 
-const SUPERADMIN_ROLES = new Set(['SUPERADMIN', USER_ROLES.SUPER_ADMIN]);
+const SUPERADMIN_ROLES = new Set([
+  USER_ROLES.SUPER_ADMIN,
+  USER_ROLES.SUPER_ADMIN.toUpperCase(),
+]);
 
 export const isSuperAdminRole = (role) => SUPERADMIN_ROLES.has(role);
 
@@ -30,8 +33,20 @@ export const isAccessTokenOnlyUser = (user) => {
 
 export const isAccessTokenOnlySession = () => isAccessTokenOnlyUser(getStoredUser());
 
+export const mergeAuthUser = (userData, flags = {}) => {
+  if (!userData) return userData;
+  const nextUser = { ...userData };
+  if (flags.isSuperAdmin !== undefined) {
+    nextUser.isSuperAdmin = flags.isSuperAdmin;
+  }
+  if (flags.refreshEnabled !== undefined) {
+    nextUser.refreshEnabled = flags.refreshEnabled;
+  }
+  return nextUser;
+};
+
 export const buildStoredUser = (userData, refreshEnabled) => {
   if (!userData) return userData;
   if (refreshEnabled === undefined) return userData;
-  return { ...userData, refreshEnabled };
+  return mergeAuthUser(userData, { refreshEnabled });
 };
