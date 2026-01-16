@@ -44,13 +44,17 @@ export const authService = {
       
       // Store user data
       const storedUser = buildStoredUser(userData, refreshEnabled);
-      localStorage.setItem(STORAGE_KEYS.X_ID, userData?.xID || 'SUPERADMIN');
-      if (userData.firmSlug) {
-        localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, userData.firmSlug);
+      if (storedUser) {
+        localStorage.setItem(STORAGE_KEYS.X_ID, storedUser.xID || 'SUPERADMIN');
+        if (storedUser.firmSlug) {
+          localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, storedUser.firmSlug);
+        } else {
+          localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
+        }
+        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(storedUser));
       } else {
-        localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
+        localStorage.removeItem(STORAGE_KEYS.USER);
       }
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(storedUser));
     }
     // Don't store anything if login fails or requires password change
     
