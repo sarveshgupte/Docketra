@@ -60,6 +60,7 @@ const transactionMiddleware = require('./middleware/transaction.middleware');
 const metricsService = require('./services/metrics.service');
 const { adminAuditTrail } = require('./middleware/adminAudit.middleware');
 const requestLifecycle = require('./middleware/requestLifecycle.middleware');
+const { noFirmNoTransaction } = require('./middleware/noFirmNoTransaction.middleware');
 
 // Routes
 const userRoutes = require('./routes/users');
@@ -286,6 +287,7 @@ app.get('/api', (req, res) => {
 });
 
 // Authentication routes (public - no authentication required for login)
+app.post('/api/auth/login', noFirmNoTransaction);
 app.use('/api/auth', writeGuardChain, authRoutes);
 
 // Public routes (no authentication required)

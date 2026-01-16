@@ -5,6 +5,10 @@
 const { runWithSession } = require('./transactionContext');
 
 const executeWrite = async ({ req, fn }) => {
+  if (req?.skipTransaction) {
+    req.transactionCommitted = true;
+    return runWithSession({ skipTransaction: true }, () => fn());
+  }
   if (!req || !req.transactionActive || !req.transactionSession?.withTransaction) {
     const error = new Error('Mutation attempted without active transaction');
     error.statusCode = 500;
