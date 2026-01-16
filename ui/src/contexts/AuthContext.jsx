@@ -5,6 +5,7 @@
 import React, { createContext, useState, useCallback } from 'react';
 import { authService } from '../services/authService';
 import { STORAGE_KEYS, USER_ROLES } from '../utils/constants';
+import { buildStoredUser, getStoredUser } from '../utils/authUtils';
 
 export const AuthContext = createContext(null);
 
@@ -37,6 +38,11 @@ export const AuthProvider = ({ children }) => {
    */
   const setAuthFromProfile = useCallback((userData) => {
     if (!userData) return;
+    let refreshEnabled = userData.refreshEnabled;
+    if (refreshEnabled === undefined) {
+      const cachedUser = getStoredUser();
+      refreshEnabled = cachedUser?.refreshEnabled;
+    }
 
     const { firmSlug, xID } = userData;
 
@@ -50,8 +56,9 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem(STORAGE_KEYS.X_ID, xID);
     }
 
-    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
-    setUser(userData);
+    const nextUser = buildStoredUser(userData, refreshEnabled);
+    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(nextUser));
+    setUser(nextUser);
     setIsAuthenticated(true);
   }, []);
 

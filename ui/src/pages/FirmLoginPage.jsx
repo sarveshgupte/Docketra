@@ -12,6 +12,7 @@ import { Card } from '../components/common/Card';
 import { Loading } from '../components/common/Loading';
 import { validateXID, validatePassword } from '../utils/validators';
 import { API_BASE_URL, USER_ROLES, ERROR_CODES, STORAGE_KEYS } from '../utils/constants';
+import { buildStoredUser, isAccessTokenOnlyUser, mergeAuthUser } from '../utils/authUtils';
 import api from '../services/api';
 import { useToast } from '../hooks/useToast';
 import './LoginPage.css';
@@ -80,7 +81,7 @@ export const FirmLoginPage = () => {
     }
 
     if (!firmData) {
-      setError('Firm context not available. Please refresh the page.');
+      setError('Firm details are still loading. Please refresh the page.');
       return;
     }
 
@@ -95,13 +96,30 @@ export const FirmLoginPage = () => {
       });
 
       if (response.data.success) {
-        const { accessToken, refreshToken, data: userData } = response.data;
+        const {
+          accessToken,
+          refreshToken,
+          data: userData,
+          isSuperAdmin,
+          refreshEnabled,
+        } = response.data;
+        const authUser = mergeAuthUser(userData, { isSuperAdmin, refreshEnabled });
+        const accessTokenOnly = isAccessTokenOnlyUser(authUser);
         
         // Store tokens and user data in localStorage
         localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
-        localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+        if (!accessTokenOnly && refreshToken) {
+          localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+        } else {
+          localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+        }
         localStorage.setItem(STORAGE_KEYS.X_ID, userData.xID || 'UNKNOWN');
-        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
+        const storedUser = buildStoredUser(authUser, refreshEnabled);
+        if (storedUser) {
+          localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(storedUser));
+        } else {
+          localStorage.removeItem(STORAGE_KEYS.USER);
+        }
 
         // Check if user is Superadmin (shouldn't happen via firm login, but check anyway)
         if (userData.role === USER_ROLES.SUPER_ADMIN) {
