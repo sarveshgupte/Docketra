@@ -271,22 +271,13 @@ const login = async (req, res) => {
         isSuperAdmin: true,
       });
       
-      let refreshToken = null;
-      try {
-        ({ refreshToken } = await generateAndStoreRefreshToken({
-          userId: null,
-          firmId: null,
-          req,
-        }));
-      } catch (tokenError) {
-        console.error('[AUTH] Refresh token persistence failed', tokenError);
-      }
-      
       return res.json({
         success: true,
         message: 'Login successful',
         accessToken,
-        refreshToken,
+        refreshToken: null,
+        isSuperAdmin: true,
+        refreshEnabled: false,
         data: {
           id: 'superadmin',
           xID: superadminXIDRaw || 'SUPERADMIN',
@@ -2251,67 +2242,12 @@ const refreshAccessToken = async (req, res) => {
       });
     }
     
-    // Handle SuperAdmin refresh tokens (userId is null by design)
-    if (!storedToken.userId) {
-      if (oldTokenClaims && (!isSuperAdminRole(oldTokenClaims.role) || oldTokenClaims.userId !== SUPERADMIN_USER_ID)) {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid superadmin refresh token',
-        });
-      }
-      
-      storedToken.isRevoked = true;
-      await storedToken.save();
-      
-      const newAccessToken = jwtService.generateAccessToken({
-        userId: SUPERADMIN_USER_ID,
-        role: SUPERADMIN_ROLE,
-        firmId: null,
-        firmSlug: null,
-        defaultClientId: null,
-        isSuperAdmin: true,
-      });
-      
-      const { refreshToken: newRefreshToken } = await generateAndStoreRefreshToken({
-        req,
-        userId: null,
-        firmId: null,
-      });
-      
-      const secureCookies = process.env.NODE_ENV === 'production';
-      const fifteenMinutesMs = 15 * 60 * 1000;
-      const refreshMs = jwtService.getRefreshTokenExpiryMs();
-      
-      res.cookie('accessToken', newAccessToken, {
-        httpOnly: true,
-        secure: secureCookies,
-        sameSite: 'lax',
-        maxAge: fifteenMinutesMs,
-        path: '/',
-      });
-      
-      res.cookie('refreshToken', newRefreshToken, {
-        httpOnly: true,
-        secure: secureCookies,
-        sameSite: 'lax',
-        maxAge: refreshMs,
-        path: '/',
-      });
-      
-      const superadminEnv = getSuperadminEnv();
-      return res.json({
-        success: true,
-        message: 'Token refreshed successfully',
-        accessToken: newAccessToken,
-        refreshToken: newRefreshToken,
-        data: {
-          id: 'superadmin',
-          xID: superadminEnv.rawXID || 'SUPERADMIN',
-          email: superadminEnv.email,
-          role: SUPERADMIN_ROLE,
-          firmId: null,
-          isSuperAdmin: true,
-        },
+    const refreshUnsupported = !storedToken.userId || !storedToken.firmId;
+    if (refreshUnsupported) {
+      return res.status(401).json({
+        success: false,
+        code: 'REFRESH_NOT_SUPPORTED',
+        message: 'Session refresh is not supported for SuperAdmin accounts',
       });
     }
     
