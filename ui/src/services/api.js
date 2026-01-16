@@ -5,6 +5,7 @@
 
 import axios from 'axios';
 import { API_BASE_URL, STORAGE_KEYS } from '../utils/constants';
+import { isAccessTokenOnlySession } from '../utils/authUtils';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -37,25 +38,6 @@ const generateIdempotencyKey = () => {
     return segments.join('-');
   }
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-};
-
-const getStoredUser = () => {
-  const storedUser = localStorage.getItem(STORAGE_KEYS.USER);
-  if (!storedUser) return null;
-  try {
-    return JSON.parse(storedUser);
-  } catch (error) {
-    return null;
-  }
-};
-
-const isAccessTokenOnlySession = () => {
-  const storedUser = getStoredUser();
-  if (!storedUser) return false;
-  return storedUser.refreshEnabled === false
-    || storedUser.isSuperAdmin === true
-    || storedUser.role === 'SUPERADMIN'
-    || storedUser.role === 'SuperAdmin';
 };
 
 // Request interceptor - Add JWT Bearer token

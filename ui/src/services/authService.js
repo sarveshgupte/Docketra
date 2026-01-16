@@ -4,6 +4,7 @@
 
 import api from './api';
 import { STORAGE_KEYS } from '../utils/constants';
+import { getStoredUser, isAccessTokenOnlyUser } from '../utils/authUtils';
 
 export const authService = {
   /**
@@ -27,7 +28,11 @@ export const authService = {
         isSuperAdmin,
         refreshEnabled,
       } = response.data;
-      const accessTokenOnly = isSuperAdmin === true || refreshEnabled === false || userData?.isSuperAdmin === true;
+      const accessTokenOnly = isAccessTokenOnlyUser({
+        ...userData,
+        isSuperAdmin,
+        refreshEnabled,
+      });
       
       // Store JWT tokens
       localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
@@ -181,11 +186,8 @@ export const authService = {
    * Refresh access token
    */
   refreshToken: async () => {
-    const storedUser = JSON.parse(localStorage.getItem(STORAGE_KEYS.USER) || 'null');
-    const accessTokenOnly = storedUser?.refreshEnabled === false
-      || storedUser?.isSuperAdmin === true
-      || storedUser?.role === 'SUPERADMIN'
-      || storedUser?.role === 'SuperAdmin';
+    const storedUser = getStoredUser();
+    const accessTokenOnly = isAccessTokenOnlyUser(storedUser);
     if (accessTokenOnly) {
       const error = new Error('Refresh not supported for this session');
       error.code = 'REFRESH_NOT_SUPPORTED';
