@@ -83,6 +83,8 @@ export const STORAGE_KEYS = {
 export const ERROR_CODES = {
   /** User must set initial password via email link before they can login */
   PASSWORD_SETUP_REQUIRED: 'PASSWORD_SETUP_REQUIRED',
+  /** Refresh token flow is not supported for this session */
+  REFRESH_NOT_SUPPORTED: 'REFRESH_NOT_SUPPORTED',
 };
 
 export const HTTP_STATUS = {

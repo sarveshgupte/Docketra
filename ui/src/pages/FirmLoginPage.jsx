@@ -12,7 +12,7 @@ import { Card } from '../components/common/Card';
 import { Loading } from '../components/common/Loading';
 import { validateXID, validatePassword } from '../utils/validators';
 import { API_BASE_URL, USER_ROLES, ERROR_CODES, STORAGE_KEYS } from '../utils/constants';
-import { buildStoredUser, isAccessTokenOnlyUser } from '../utils/authUtils';
+import { buildStoredUser, isAccessTokenOnlyUser, mergeAuthUser } from '../utils/authUtils';
 import api from '../services/api';
 import { useToast } from '../hooks/useToast';
 import './LoginPage.css';
@@ -103,11 +103,8 @@ export const FirmLoginPage = () => {
           isSuperAdmin,
           refreshEnabled,
         } = response.data;
-        const accessTokenOnly = isAccessTokenOnlyUser({
-          ...userData,
-          isSuperAdmin,
-          refreshEnabled,
-        });
+        const authUser = mergeAuthUser(userData, { isSuperAdmin, refreshEnabled });
+        const accessTokenOnly = isAccessTokenOnlyUser(authUser);
         
         // Store tokens and user data in localStorage
         localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
@@ -117,7 +114,7 @@ export const FirmLoginPage = () => {
           localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
         }
         localStorage.setItem(STORAGE_KEYS.X_ID, userData.xID || 'UNKNOWN');
-        const storedUser = buildStoredUser(userData, refreshEnabled);
+        const storedUser = buildStoredUser(authUser, refreshEnabled);
         localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(storedUser));
 
         // Check if user is Superadmin (shouldn't happen via firm login, but check anyway)
