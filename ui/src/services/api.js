@@ -149,7 +149,7 @@ api.interceptors.response.use(
         sessionStorage.setItem('GLOBAL_TOAST', JSON.stringify({
           message: refreshCode === 'REFRESH_NOT_SUPPORTED'
             ? 'Your admin session has expired. Please log in again.'
-            : 'Your session expired. Please sign in again.',
+            : 'Your session expired. Please log in again.',
           type: 'info'
         }));
         redirectToLogin();
@@ -161,7 +161,7 @@ api.interceptors.response.use(
     if (status === 401) {
       clearAuthStorage();
       sessionStorage.setItem('GLOBAL_TOAST', JSON.stringify({
-        message: 'Your session expired. Please sign in again.',
+        message: 'Your session expired. Please log in again.',
         type: 'info'
       }));
       redirectToLogin();
@@ -173,7 +173,7 @@ api.interceptors.response.use(
       // Forbidden - clear storage and redirect to login
       clearAuthStorage();
       sessionStorage.setItem('GLOBAL_TOAST', JSON.stringify({
-        message: 'Access denied for this action. Please sign in again.',
+        message: 'Access denied for this action. Please log in again.',
         type: 'warning'
       }));
       redirectToLogin();

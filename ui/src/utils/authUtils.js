@@ -16,9 +16,16 @@ export const getStoredUser = () => {
 
 export const isAccessTokenOnlyUser = (user) => {
   if (!user) return false;
-  return user.refreshEnabled === false
-    || user.isSuperAdmin === true
-    || isSuperAdminRole(user.role);
+  if (user.refreshEnabled === false) {
+    return true;
+  }
+  if (user.isSuperAdmin === true) {
+    return true;
+  }
+  if (user.refreshEnabled !== undefined) {
+    return false;
+  }
+  return isSuperAdminRole(user.role);
 };
 
 export const isAccessTokenOnlySession = () => isAccessTokenOnlyUser(getStoredUser());

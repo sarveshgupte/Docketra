@@ -2242,8 +2242,9 @@ const refreshAccessToken = async (req, res) => {
       });
     }
     
-    const refreshUnsupported = !storedToken.userId || !storedToken.firmId;
-    if (refreshUnsupported) {
+    const isSuperAdminToken = !storedToken.userId;
+    const isTokenMissingFirmContext = !storedToken.firmId;
+    if (isSuperAdminToken || isTokenMissingFirmContext) {
       return res.status(401).json({
         success: false,
         code: 'REFRESH_NOT_SUPPORTED',
