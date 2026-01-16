@@ -80,7 +80,7 @@ export const FirmLoginPage = () => {
     }
 
     if (!firmData) {
-      setError('Firm context not available. Please refresh the page.');
+      setError('Firm details are still loading. Please refresh the page.');
       return;
     }
 
@@ -95,13 +95,25 @@ export const FirmLoginPage = () => {
       });
 
       if (response.data.success) {
-        const { accessToken, refreshToken, data: userData } = response.data;
+        const {
+          accessToken,
+          refreshToken,
+          data: userData,
+          isSuperAdmin,
+          refreshEnabled,
+        } = response.data;
+        const accessTokenOnly = isSuperAdmin === true || refreshEnabled === false || userData?.isSuperAdmin === true;
         
         // Store tokens and user data in localStorage
         localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
-        localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+        if (!accessTokenOnly && refreshToken) {
+          localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+        } else {
+          localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+        }
         localStorage.setItem(STORAGE_KEYS.X_ID, userData.xID || 'UNKNOWN');
-        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
+        const storedUser = userData ? { ...userData, refreshEnabled } : userData;
+        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(storedUser));
 
         // Check if user is Superadmin (shouldn't happen via firm login, but check anyway)
         if (userData.role === USER_ROLES.SUPER_ADMIN) {

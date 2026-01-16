@@ -39,6 +39,25 @@ const generateIdempotencyKey = () => {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
+const getStoredUser = () => {
+  const storedUser = localStorage.getItem(STORAGE_KEYS.USER);
+  if (!storedUser) return null;
+  try {
+    return JSON.parse(storedUser);
+  } catch (error) {
+    return null;
+  }
+};
+
+const isAccessTokenOnlySession = () => {
+  const storedUser = getStoredUser();
+  if (!storedUser) return false;
+  return storedUser.refreshEnabled === false
+    || storedUser.isSuperAdmin === true
+    || storedUser.role === 'SUPERADMIN'
+    || storedUser.role === 'SuperAdmin';
+};
+
 // Request interceptor - Add JWT Bearer token
 api.interceptors.request.use(
   (config) => {
@@ -108,6 +127,16 @@ api.interceptors.response.use(
     // Handle token expiry
     if (status === 401 && error.response?.data?.code === 'TOKEN_EXPIRED' && !originalRequest._retry) {
       originalRequest._retry = true;
+
+      if (isAccessTokenOnlySession()) {
+        clearAuthStorage();
+        sessionStorage.setItem('GLOBAL_TOAST', JSON.stringify({
+          message: 'Your admin session has expired. Please log in again.',
+          type: 'info'
+        }));
+        redirectToLogin();
+        return Promise.reject(error);
+      }
       
       try {
         // Attempt to refresh token
@@ -134,8 +163,11 @@ api.interceptors.response.use(
       } catch (refreshError) {
         // Refresh failed - clear storage and redirect to login
         clearAuthStorage();
+        const refreshCode = refreshError?.response?.data?.code;
         sessionStorage.setItem('GLOBAL_TOAST', JSON.stringify({
-          message: 'Your session expired. Please sign in again.',
+          message: refreshCode === 'REFRESH_NOT_SUPPORTED'
+            ? 'Your admin session has expired. Please log in again.'
+            : 'Your session expired. Please sign in again.',
           type: 'info'
         }));
         redirectToLogin();

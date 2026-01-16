@@ -20,20 +20,32 @@ export const authService = {
     const response = await api.post('/auth/login', payload);
     
     if (response.data.success) {
-      const { accessToken, refreshToken, data: userData } = response.data;
+      const {
+        accessToken,
+        refreshToken,
+        data: userData,
+        isSuperAdmin,
+        refreshEnabled,
+      } = response.data;
+      const accessTokenOnly = isSuperAdmin === true || refreshEnabled === false || userData?.isSuperAdmin === true;
       
       // Store JWT tokens
       localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
-      localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+      if (!accessTokenOnly && refreshToken) {
+        localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+      }
       
       // Store user data
-      localStorage.setItem(STORAGE_KEYS.X_ID, userData.xID || 'SUPERADMIN');
+      const storedUser = userData ? { ...userData, refreshEnabled } : userData;
+      localStorage.setItem(STORAGE_KEYS.X_ID, userData?.xID || 'SUPERADMIN');
       if (userData.firmSlug) {
         localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, userData.firmSlug);
       } else {
         localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
       }
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(storedUser));
     }
     // Don't store anything if login fails or requires password change
     
@@ -169,6 +181,16 @@ export const authService = {
    * Refresh access token
    */
   refreshToken: async () => {
+    const storedUser = JSON.parse(localStorage.getItem(STORAGE_KEYS.USER) || 'null');
+    const accessTokenOnly = storedUser?.refreshEnabled === false
+      || storedUser?.isSuperAdmin === true
+      || storedUser?.role === 'SUPERADMIN'
+      || storedUser?.role === 'SuperAdmin';
+    if (accessTokenOnly) {
+      const error = new Error('Refresh not supported for this session');
+      error.code = 'REFRESH_NOT_SUPPORTED';
+      throw error;
+    }
     const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
     if (!refreshToken) {
       throw new Error('No refresh token available');
