@@ -1026,11 +1026,8 @@ const getProfile = async (req, res) => {
     const isSuperAdmin = 
       isSuperAdminRole(user?.role) ||           // Check user role
       req.jwt?.isSuperAdmin === true ||          // Check JWT flag
-      req.jwt?.role === 'SUPERADMIN' ||          // Check JWT role
-      req.jwt?.role === 'SuperAdmin' ||          // Check JWT role variant
-      req.jwt?.role === 'SUPER_ADMIN' ||         // Check JWT role variant
-      user?.isSuperAdmin === true ||             // Check user flag
-      user?.firmId === null && isSuperAdminRole(user?.role); // Check firmId + role
+      isSuperAdminRole(req.jwt?.role) ||         // Check JWT role (handles all variants)
+      user?.isSuperAdmin === true;               // Check user flag
     
     // 2️⃣ SHORT-CIRCUIT before any firm logic, DB operations, or transactions
     if (isSuperAdmin) {

@@ -23,8 +23,7 @@ const firmContext = async (req, res, next) => {
     const isSuperAdmin = 
       (req.user && isSuperAdminRole(req.user.role)) ||
       req.jwt?.isSuperAdmin === true ||
-      req.isSuperAdmin === true ||
-      req.user?.firmId === null && req.user?.role;
+      req.isSuperAdmin === true;
     
     req.isSuperAdmin = isSuperAdmin;
 
