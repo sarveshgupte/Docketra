@@ -3,7 +3,8 @@
  */
 
 import api from './api';
-import { STORAGE_KEYS } from '../utils/constants';
+import { ERROR_CODES, STORAGE_KEYS } from '../utils/constants';
+import { buildStoredUser, getStoredUser, isAccessTokenOnlyUser, mergeAuthUser } from '../utils/authUtils';
 
 export const authService = {
   /**
@@ -20,20 +21,37 @@ export const authService = {
     const response = await api.post('/auth/login', payload);
     
     if (response.data.success) {
-      const { accessToken, refreshToken, data: userData } = response.data;
+      const {
+        accessToken,
+        refreshToken,
+        data: userData,
+        isSuperAdmin,
+        refreshEnabled,
+      } = response.data;
+      const authUser = mergeAuthUser(userData, { isSuperAdmin, refreshEnabled });
+      const accessTokenOnly = isAccessTokenOnlyUser(authUser);
       
       // Store JWT tokens
       localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
-      localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+      if (!accessTokenOnly && refreshToken) {
+        localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+      }
       
       // Store user data
-      localStorage.setItem(STORAGE_KEYS.X_ID, userData.xID || 'SUPERADMIN');
-      if (userData.firmSlug) {
-        localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, userData.firmSlug);
+      const storedUser = buildStoredUser(authUser, refreshEnabled);
+      if (storedUser) {
+        localStorage.setItem(STORAGE_KEYS.X_ID, storedUser.xID || 'SUPERADMIN');
+        if (storedUser.firmSlug) {
+          localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, storedUser.firmSlug);
+        } else {
+          localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
+        }
+        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(storedUser));
       } else {
-        localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
+        localStorage.removeItem(STORAGE_KEYS.USER);
       }
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
     }
     // Don't store anything if login fails or requires password change
     
@@ -169,6 +187,14 @@ export const authService = {
    * Refresh access token
    */
   refreshToken: async () => {
+    const storedUser = getStoredUser();
+    const accessTokenOnly = isAccessTokenOnlyUser(storedUser);
+    if (accessTokenOnly) {
+      const error = new Error('Refresh not supported for this session');
+      error.code = ERROR_CODES.REFRESH_NOT_SUPPORTED;
+      error.response = { data: { code: ERROR_CODES.REFRESH_NOT_SUPPORTED } };
+      throw error;
+    }
     const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
     if (!refreshToken) {
       throw new Error('No refresh token available');

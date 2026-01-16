@@ -90,9 +90,10 @@ async function shouldShortCircuitSuperadminLogin() {
   assert.strictEqual(payload.firmId, null, 'Token must carry firmId: null');
   assert.strictEqual(payload.isSuperAdmin, true, 'Token must carry isSuperAdmin: true');
 
-  assert(refreshCreatePayload, 'Refresh token should be persisted');
-  assert.strictEqual(refreshCreatePayload.userId, null, 'SuperAdmin refresh token userId must be null');
-  assert.strictEqual(refreshCreatePayload.firmId, null, 'SuperAdmin refresh token firmId must be null');
+  assert.strictEqual(resBody.isSuperAdmin, true, 'Login response must flag SuperAdmin');
+  assert.strictEqual(resBody.refreshEnabled, false, 'SuperAdmin login must disable refresh');
+  assert.strictEqual(resBody.refreshToken, null, 'SuperAdmin login should not return refresh token');
+  assert.strictEqual(refreshCreatePayload, null, 'SuperAdmin refresh token should not be persisted');
 
   console.log('✓ SuperAdmin login short-circuits DB and issues correct token payload');
 }

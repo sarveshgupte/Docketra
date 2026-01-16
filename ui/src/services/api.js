@@ -4,7 +4,8 @@
  */
 
 import axios from 'axios';
-import { API_BASE_URL, STORAGE_KEYS } from '../utils/constants';
+import { API_BASE_URL, ERROR_CODES, STORAGE_KEYS } from '../utils/constants';
+import { isAccessTokenOnlySession } from '../utils/authUtils';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -108,6 +109,16 @@ api.interceptors.response.use(
     // Handle token expiry
     if (status === 401 && error.response?.data?.code === 'TOKEN_EXPIRED' && !originalRequest._retry) {
       originalRequest._retry = true;
+
+      if (isAccessTokenOnlySession()) {
+        clearAuthStorage();
+        sessionStorage.setItem('GLOBAL_TOAST', JSON.stringify({
+          message: 'Your admin session has expired. Please log in again.',
+          type: 'info'
+        }));
+        redirectToLogin();
+        return Promise.reject(error);
+      }
       
       try {
         // Attempt to refresh token
@@ -134,8 +145,11 @@ api.interceptors.response.use(
       } catch (refreshError) {
         // Refresh failed - clear storage and redirect to login
         clearAuthStorage();
+        const refreshCode = refreshError?.code || refreshError?.response?.data?.code;
         sessionStorage.setItem('GLOBAL_TOAST', JSON.stringify({
-          message: 'Your session expired. Please sign in again.',
+          message: refreshCode === ERROR_CODES.REFRESH_NOT_SUPPORTED
+            ? 'Your admin session has expired. Please log in again.'
+            : 'Your session expired. Please log in again.',
           type: 'info'
         }));
         redirectToLogin();
@@ -147,7 +161,7 @@ api.interceptors.response.use(
     if (status === 401) {
       clearAuthStorage();
       sessionStorage.setItem('GLOBAL_TOAST', JSON.stringify({
-        message: 'Your session expired. Please sign in again.',
+        message: 'Your session expired. Please log in again.',
         type: 'info'
       }));
       redirectToLogin();
@@ -159,7 +173,7 @@ api.interceptors.response.use(
       // Forbidden - clear storage and redirect to login
       clearAuthStorage();
       sessionStorage.setItem('GLOBAL_TOAST', JSON.stringify({
-        message: 'Access denied for this action. Please sign in again.',
+        message: 'Access denied for this action. Please log in again.',
         type: 'warning'
       }));
       redirectToLogin();

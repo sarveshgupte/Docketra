@@ -76,7 +76,7 @@ export const LoginPage = () => {
             navigate(`/f/${firmSlug}/dashboard`);
           } else {
             // Fallback if firmSlug not available
-            setError('Firm context not available. Please use your firm-specific login URL.');
+            setError('Unable to resolve your firm. Please contact your administrator.');
           }
         }
       }
