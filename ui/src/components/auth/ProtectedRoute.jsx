@@ -17,6 +17,12 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
   const storedFirmSlug = localStorage.getItem(STORAGE_KEYS.FIRM_SLUG);
   const effectiveFirmSlug = firmSlug || storedFirmSlug;
   const isSuperAdminUser = user?.isSuperAdmin === true || isSuperadmin;
+  const setAccessToast = (message) => {
+    sessionStorage.setItem('GLOBAL_TOAST', JSON.stringify({
+      message,
+      type: 'warning'
+    }));
+  };
 
   if (firmSlug && storedFirmSlug && firmSlug !== storedFirmSlug) {
     console.warn(`[TENANCY] Firm slug mismatch detected. URL firm="${firmSlug}", session firm="${storedFirmSlug}"`);
@@ -50,8 +56,10 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
   if (requireSuperadmin && !isSuperAdminUser) {
     // Redirect authenticated users to their firm dashboard
     if (effectiveFirmSlug) {
+      setAccessToast('SuperAdmin access is required to view that page.');
       return <Navigate to={`/f/${effectiveFirmSlug}/dashboard`} replace />;
     }
+    setAccessToast('SuperAdmin access is required to view that page.');
     return <Navigate to="/login" replace />;
   }
 
@@ -63,6 +71,7 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
   // Admin-only routes
   if (requireAdmin && !isAdmin) {
     // Redirect to dashboard (firmSlug will be in URL already via FirmLayout)
+    setAccessToast('Admin access is required to view that page.');
     return <Navigate to={`/f/${effectiveFirmSlug}/dashboard`} replace />;
   }
 
