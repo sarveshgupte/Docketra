@@ -7,8 +7,16 @@ import React from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 import { usePermissions } from '../../hooks/usePermissions.js';
-import { STORAGE_KEYS } from '../../utils/constants.js';
+import { SESSION_KEYS, STORAGE_KEYS } from '../../utils/constants.js';
 import { Loading } from '../common/Loading';
+
+// Use sessionStorage to persist toasts across redirects in auth guard flows.
+const setAccessToast = (message) => {
+  sessionStorage.setItem(SESSION_KEYS.GLOBAL_TOAST, JSON.stringify({
+    message,
+    type: 'warning'
+  }));
+};
 
 export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadmin = false }) => {
   const { isAuthenticated, loading, user } = useAuth();
@@ -33,7 +41,7 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
   if (!isAuthenticated) {
     const hadSession = !!localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
     if (hadSession) {
-      sessionStorage.setItem('GLOBAL_TOAST', JSON.stringify({
+      sessionStorage.setItem(SESSION_KEYS.GLOBAL_TOAST, JSON.stringify({
         message: 'Your session expired. Please sign in again.',
         type: 'info'
       }));
@@ -50,8 +58,10 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
   if (requireSuperadmin && !isSuperAdminUser) {
     // Redirect authenticated users to their firm dashboard
     if (effectiveFirmSlug) {
+      setAccessToast('SuperAdmin access is required to view that page.');
       return <Navigate to={`/f/${effectiveFirmSlug}/dashboard`} replace />;
     }
+    setAccessToast('SuperAdmin access is required to view that page.');
     return <Navigate to="/login" replace />;
   }
 
@@ -63,6 +73,7 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
   // Admin-only routes
   if (requireAdmin && !isAdmin) {
     // Redirect to dashboard (firmSlug will be in URL already via FirmLayout)
+    setAccessToast('Admin access is required to view that page.');
     return <Navigate to={`/f/${effectiveFirmSlug}/dashboard`} replace />;
   }
 

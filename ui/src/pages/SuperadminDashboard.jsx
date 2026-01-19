@@ -11,8 +11,8 @@ import { Button } from '../components/common/Button';
 import { Card } from '../components/common/Card';
 import { Input } from '../components/common/Input';
 import { useToast } from '../hooks/useToast';
-import { USER_ROLES } from '../utils/constants';
-import { formatDate } from '../utils/formatters';
+import { STORAGE_KEYS, USER_ROLES } from '../utils/constants';
+import { formatDate, getFirmStatusInfo } from '../utils/formatters';
 import './SuperadminDashboard.css';
 
 export const SuperadminDashboard = () => {
@@ -34,8 +34,12 @@ export const SuperadminDashboard = () => {
 
   // Verify user is Superadmin
   useEffect(() => {
-    if (!user || user.role !== USER_ROLES.SUPER_ADMIN) {
-      navigate('/dashboard');
+    if (!user) {
+      return;
+    }
+    if (user.role !== USER_ROLES.SUPER_ADMIN) {
+      const fallbackSlug = user.firmSlug || localStorage.getItem(STORAGE_KEYS.FIRM_SLUG);
+      navigate(fallbackSlug ? `/f/${fallbackSlug}/dashboard` : '/login', { replace: true });
     }
   }, [user, navigate]);
 
@@ -48,8 +52,14 @@ export const SuperadminDashboard = () => {
     try {
       setLoading(true);
       const response = await superadminService.listFirms();
-      if (response.success) {
-        setFirms(response.data);
+      if (response?.status === 304) {
+        // 304 keeps the cached firms list; loading resets in finally.
+        return;
+      }
+      if (response?.success) {
+        setFirms(Array.isArray(response.data) ? response.data : []);
+      } else {
+        toast.error('Failed to load firms');
       }
     } catch (error) {
       toast.error('Failed to load firms');
@@ -267,37 +277,40 @@ export const SuperadminDashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {firms.map(firm => (
-                    <tr key={firm._id}>
-                      <td>{firm.firmId}</td>
-                      <td>{firm.name}</td>
-                      <td>
-                        <span className={`status-badge status-${firm.status.toLowerCase()}`}>
-                          {firm.status}
-                        </span>
-                      </td>
-                      <td>{formatDate(firm.createdAt)}</td>
-                      <td>
-                        {firm.status === 'ACTIVE' ? (
-                          <Button
-                            size="small"
-                            variant="danger"
-                            onClick={() => handleUpdateFirmStatus(firm._id, 'SUSPENDED')}
-                          >
-                            Suspend
-                          </Button>
-                        ) : (
-                          <Button
-                            size="small"
-                            variant="success"
-                            onClick={() => handleUpdateFirmStatus(firm._id, 'ACTIVE')}
-                          >
-                            Activate
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {firms.map(firm => {
+                    const { label: statusLabel, key: statusKey, isActive } = getFirmStatusInfo(firm.status);
+                    return (
+                      <tr key={firm._id}>
+                        <td>{firm.firmId}</td>
+                        <td>{firm.name}</td>
+                        <td>
+                          <span className={`status-badge status-${statusKey}`}>
+                            {statusLabel}
+                          </span>
+                        </td>
+                        <td>{formatDate(firm.createdAt)}</td>
+                        <td>
+                          {isActive ? (
+                            <Button
+                              size="small"
+                              variant="danger"
+                              onClick={() => handleUpdateFirmStatus(firm._id, 'SUSPENDED')}
+                            >
+                              Suspend
+                            </Button>
+                          ) : (
+                            <Button
+                              size="small"
+                              variant="success"
+                              onClick={() => handleUpdateFirmStatus(firm._id, 'ACTIVE')}
+                            >
+                              Activate
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
