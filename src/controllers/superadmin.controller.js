@@ -219,7 +219,7 @@ const getPlatformStats = async (req, res) => {
   } catch (error) {
     console.error('[SUPERADMIN] Error getting platform stats:', error);
     res.status(200).json({
-      success: true,
+      success: false,
       degraded: true,
       message: 'Platform statistics unavailable; returning empty totals.',
       data: {
