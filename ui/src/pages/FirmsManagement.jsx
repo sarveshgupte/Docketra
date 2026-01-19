@@ -52,12 +52,14 @@ export const FirmsManagement = () => {
     try {
       setLoading(true);
       const response = await superadminService.listFirms();
-      if (response?.status !== 304) {
-        if (response?.success) {
-          setFirms(Array.isArray(response.data) ? response.data : []);
-        } else {
-          toast.error('Failed to load firms');
-        }
+      if (response?.status === 304) {
+        // 304 keeps the cached firms list; loading resets in finally.
+        return;
+      }
+      if (response?.success) {
+        setFirms(Array.isArray(response.data) ? response.data : []);
+      } else {
+        toast.error('Failed to load firms');
       }
     } catch (error) {
       toast.error('Failed to load firms');
@@ -221,7 +223,11 @@ export const FirmsManagement = () => {
                   {firms.map(firm => {
                     const statusLabel = firm.status || 'UNKNOWN';
                     const normalizedStatus = statusLabel.toUpperCase();
-                    const statusKey = normalizedStatus === 'ACTIVE' ? 'active' : 'suspended';
+                    const statusKey = normalizedStatus === 'ACTIVE'
+                      ? 'active'
+                      : normalizedStatus === 'SUSPENDED'
+                        ? 'suspended'
+                        : 'unknown';
                     const loginUrl = firm.firmSlug
                       ? `${window.location.origin}/f/${firm.firmSlug}/login`
                       : null;
