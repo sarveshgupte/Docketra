@@ -28,8 +28,14 @@ export const authService = {
         refreshEnabled,
       } = response.data;
       
-      // Determine if this is an access-token-only session
-      const accessTokenOnly = refreshEnabled === false || userData?.isSuperAdmin === true;
+      // Merge backend flags with user data for access-token-only determination
+      const userWithFlags = {
+        ...userData,
+        refreshEnabled: refreshEnabled !== undefined ? refreshEnabled : userData.refreshEnabled,
+        isSuperAdmin: response.data.isSuperAdmin !== undefined ? response.data.isSuperAdmin : userData.isSuperAdmin,
+      };
+      
+      const accessTokenOnly = isAccessTokenOnlyUser(userWithFlags);
       
       // Store JWT tokens only
       localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);

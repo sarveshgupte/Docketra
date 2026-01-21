@@ -12,6 +12,7 @@ import { Card } from '../components/common/Card';
 import { Loading } from '../components/common/Loading';
 import { validateXID, validatePassword } from '../utils/validators';
 import { API_BASE_URL, USER_ROLES, ERROR_CODES, STORAGE_KEYS } from '../utils/constants';
+import { isAccessTokenOnlyUser } from '../utils/authUtils';
 import api from '../services/api';
 import { useToast } from '../hooks/useToast';
 import './LoginPage.css';
@@ -102,8 +103,14 @@ export const FirmLoginPage = () => {
           refreshEnabled,
         } = response.data;
         
-        // Determine if this is an access-token-only session
-        const accessTokenOnly = refreshEnabled === false || userData?.isSuperAdmin === true;
+        // Merge backend flags with user data for access-token-only determination
+        const userWithFlags = {
+          ...userData,
+          refreshEnabled: refreshEnabled !== undefined ? refreshEnabled : userData.refreshEnabled,
+          isSuperAdmin: response.data.isSuperAdmin !== undefined ? response.data.isSuperAdmin : userData.isSuperAdmin,
+        };
+        
+        const accessTokenOnly = isAccessTokenOnlyUser(userWithFlags);
         
         // Store tokens only (no user object)
         localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
