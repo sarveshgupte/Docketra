@@ -8,6 +8,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { Loading } from './Loading';
+import { USER_ROLES } from '../../utils/constants';
 import './SuperAdminLayout.css';
 
 export const SuperAdminLayout = ({ children }) => {
@@ -27,7 +28,7 @@ export const SuperAdminLayout = ({ children }) => {
   };
 
   // Guard: Only render children if user is loaded and is SuperAdmin
-  if (user === null || user?.isSuperAdmin !== true) {
+  if (user === null || (user?.isSuperAdmin !== true && user?.role !== USER_ROLES.SUPER_ADMIN)) {
     return <Loading message="Preparing platform dashboard..." />;
   }
 
