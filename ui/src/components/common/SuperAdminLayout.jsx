@@ -7,6 +7,7 @@ import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
+import { Loading } from './Loading';
 import './SuperAdminLayout.css';
 
 export const SuperAdminLayout = ({ children }) => {
@@ -24,6 +25,11 @@ export const SuperAdminLayout = ({ children }) => {
   const isActive = (path) => {
     return location.pathname === path;
   };
+
+  // Guard: Only render children if user is loaded and is SuperAdmin
+  if (user === null || user?.isSuperAdmin !== true) {
+    return <Loading message="Preparing platform dashboard..." />;
+  }
 
   return (
     <div className="superadmin-layout">

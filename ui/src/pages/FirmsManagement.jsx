@@ -52,16 +52,17 @@ export const FirmsManagement = () => {
     try {
       setLoading(true);
       const response = await superadminService.listFirms();
-      if (response?.status === 304) {
-        // 304 keeps the cached firms list; loading resets in finally.
-        return;
-      }
-      if (response?.success) {
+      // Treat HTTP 304 as success (cached data)
+      if (response?.success || response?.status === 304) {
         setFirms(Array.isArray(response.data) ? response.data : []);
       } else {
+        // Never block navigation - use empty array
+        setFirms([]);
         toast.error('Failed to load firms');
       }
     } catch (error) {
+      // Never block navigation - use empty array
+      setFirms([]);
       toast.error('Failed to load firms');
       console.error('Error loading firms:', error);
     } finally {
@@ -198,8 +199,8 @@ export const FirmsManagement = () => {
         {firms.length === 0 ? (
           <Card className="empty-state">
             <div className="empty-state__icon">🏢</div>
-            <h2>No firms yet</h2>
-            <p>Create your first firm to begin using Docketra.</p>
+            <h2>No firms exist yet</h2>
+            <p>This is expected for a new platform. Create your first firm to begin.</p>
             <Button onClick={() => setShowCreateModal(true)}>
               + Create Firm
             </Button>
