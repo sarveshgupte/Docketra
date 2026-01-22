@@ -62,8 +62,9 @@ export const PlatformDashboard = () => {
     try {
       setLoading(true);
       const response = await superadminService.getPlatformStats();
-      if (response?.success) {
-        setStats(response.data);
+      // Treat HTTP 304 as success (cached data)
+      if (response?.success || response?.status === 304) {
+        setStats(response.data || emptyStats);
       } else if (response?.degraded) {
         setStats(response?.data || emptyStats);
       } else if (!hasShownErrorRef.current) {
@@ -71,6 +72,8 @@ export const PlatformDashboard = () => {
         hasShownErrorRef.current = true;
       }
     } catch (error) {
+      // Never block UI on stats fetch failure - use empty stats
+      setStats(emptyStats);
       if (!hasShownErrorRef.current) {
         toast.error('Failed to load platform statistics');
         hasShownErrorRef.current = true;
@@ -107,7 +110,9 @@ export const PlatformDashboard = () => {
             <div className="platform-metric-card__value">{stats.totalFirms}</div>
             <div className="platform-metric-card__label">Total Firms</div>
             <div className="platform-metric-card__subtext">
-              {stats.activeFirms} Active • {stats.inactiveFirms} Inactive
+              {stats.totalFirms === 0 
+                ? 'No firms exist yet. This is expected.' 
+                : `${stats.activeFirms} Active • ${stats.inactiveFirms} Inactive`}
             </div>
           </Card>
 
@@ -116,7 +121,9 @@ export const PlatformDashboard = () => {
             <div className="platform-metric-card__value">{stats.totalClients}</div>
             <div className="platform-metric-card__label">Total Clients</div>
             <div className="platform-metric-card__subtext">
-              Across all firms
+              {stats.totalClients === 0 
+                ? 'No clients yet. Create a firm to begin.' 
+                : 'Across all firms'}
             </div>
           </Card>
 
@@ -125,7 +132,9 @@ export const PlatformDashboard = () => {
             <div className="platform-metric-card__value">{stats.totalUsers}</div>
             <div className="platform-metric-card__label">Total Users</div>
             <div className="platform-metric-card__subtext">
-              Across all firms
+              {stats.totalUsers === 0 
+                ? 'No users yet. Create a firm to begin.' 
+                : 'Across all firms'}
             </div>
           </Card>
         </div>
