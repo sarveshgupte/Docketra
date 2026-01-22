@@ -8,6 +8,7 @@ import { Navigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 import { usePermissions } from '../../hooks/usePermissions.js';
 import { SESSION_KEYS, STORAGE_KEYS } from '../../utils/constants.js';
+import { isSuperAdmin } from '../../utils/authUtils.js';
 import { Loading } from '../common/Loading';
 
 // Use sessionStorage to persist toasts across redirects in auth guard flows.
@@ -20,12 +21,13 @@ const setAccessToast = (message) => {
 
 export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadmin = false }) => {
   const { isAuthenticated, loading, user, isHydrating } = useAuth();
-  const { isAdmin, isSuperadmin } = usePermissions();
+  const { isAdmin } = usePermissions();
   const { firmSlug } = useParams();
   const storedFirmSlug = localStorage.getItem(STORAGE_KEYS.FIRM_SLUG);
   const effectiveFirmSlug = firmSlug || storedFirmSlug;
-  const isSuperAdminUser = user?.isSuperAdmin === true || isSuperadmin;
+  const isSuperAdminUser = isSuperAdmin(user);
 
+  // Multi-tenancy guard: Detect firm slug mismatches
   if (firmSlug && storedFirmSlug && firmSlug !== storedFirmSlug) {
     console.warn(`[TENANCY] Firm slug mismatch detected. URL firm="${firmSlug}", session firm="${storedFirmSlug}"`);
   }
@@ -34,21 +36,13 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
     console.warn(`[TENANCY] Attempted cross-firm access blocked in UI. User firm="${user.firmSlug}", requested firm="${firmSlug}"`);
   }
 
+  // Wait for auth hydration to complete
   if (loading || isHydrating) {
     return <Loading message="Checking access..." />;
   }
 
-  console.log('[ProtectedRoute] Auth check:', {
-    isAuthenticated,
-    role: user?.role,
-    isSuperAdmin: isSuperAdminUser,
-    firmSlug: effectiveFirmSlug,
-    requireSuperadmin,
-    requireAdmin
-  });
-
+  // 1. Authentication check: User must be authenticated
   if (!isAuthenticated) {
-    console.log('[ProtectedRoute] Not authenticated - redirecting to login');
     const hadSession = !!localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
     if (hadSession) {
       sessionStorage.setItem(SESSION_KEYS.GLOBAL_TOAST, JSON.stringify({
@@ -59,15 +53,15 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
     return <Navigate to="/login" replace />;
   }
 
-  // Authenticated users must have firm context unless they are SuperAdmin.
+  // 2. Firm context check: Non-SuperAdmin users must have firm context
+  // SuperAdmin users operate without firm context and access all system data
   if (!effectiveFirmSlug && !isSuperAdminUser) {
-    console.log('[ProtectedRoute] No firm context and not SuperAdmin - redirecting to login');
     return <Navigate to="/login" replace />;
   }
 
-  // SuperAdmin trying to access superadmin routes
+  // 3. SuperAdmin route authorization
   if (requireSuperadmin && !isSuperAdminUser) {
-    // Redirect authenticated users to their firm dashboard
+    // Non-SuperAdmin users trying to access SuperAdmin routes
     if (effectiveFirmSlug) {
       setAccessToast('SuperAdmin access is required to view that page.');
       return <Navigate to={`/f/${effectiveFirmSlug}/dashboard`} replace />;
@@ -76,14 +70,14 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
     return <Navigate to="/login" replace />;
   }
 
-  // SuperAdmin trying to access regular/admin routes (block them)
+  // 4. Firm route authorization: SuperAdmin users cannot access firm routes
+  // They use a separate routing namespace (/superadmin)
   if (!requireSuperadmin && isSuperAdminUser) {
     return <Navigate to="/superadmin" replace />;
   }
 
-  // Admin-only routes
+  // 5. Admin-only route authorization
   if (requireAdmin && !isAdmin) {
-    // Redirect to dashboard (firmSlug will be in URL already via FirmLayout)
     setAccessToast('Admin access is required to view that page.');
     return <Navigate to={`/f/${effectiveFirmSlug}/dashboard`} replace />;
   }
