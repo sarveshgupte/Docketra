@@ -62,16 +62,17 @@ export const PlatformDashboard = () => {
     try {
       setLoading(true);
       const response = await superadminService.getPlatformStats();
-      // HTTP 304 means cached data is still valid - keep current state
-      if (response?.status === 304) return;
       
-      if (response?.success) {
-        setStats(response.data || emptyStats);
-      } else if (response?.degraded) {
-        setStats(response?.data || emptyStats);
-      } else if (!hasShownErrorRef.current) {
-        toast.error('Failed to load platform statistics');
-        hasShownErrorRef.current = true;
+      // HTTP 304 means cached data is still valid - keep current state
+      if (response?.status !== 304) {
+        if (response?.success) {
+          setStats(response.data || emptyStats);
+        } else if (response?.degraded) {
+          setStats(response?.data || emptyStats);
+        } else if (!hasShownErrorRef.current) {
+          toast.error('Failed to load platform statistics');
+          hasShownErrorRef.current = true;
+        }
       }
     } catch (error) {
       // Don't reset stats on error - preserve existing data
