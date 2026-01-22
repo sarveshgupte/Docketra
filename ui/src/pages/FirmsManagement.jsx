@@ -63,8 +63,7 @@ export const FirmsManagement = () => {
         toast.error('Failed to load firms');
       }
     } catch (error) {
-      // Never block navigation - use empty array
-      setFirms([]);
+      // Don't reset firms on error - preserve existing data
       toast.error('Failed to load firms');
       console.error('Error loading firms:', error);
     } finally {
