@@ -74,8 +74,7 @@ export const PlatformDashboard = () => {
         hasShownErrorRef.current = true;
       }
     } catch (error) {
-      // Never block UI on stats fetch failure - use empty stats
-      setStats(emptyStats);
+      // Don't reset stats on error - preserve existing data
       if (!hasShownErrorRef.current) {
         toast.error('Failed to load platform statistics');
         hasShownErrorRef.current = true;
