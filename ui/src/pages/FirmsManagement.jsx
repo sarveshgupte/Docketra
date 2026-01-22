@@ -58,7 +58,7 @@ export const FirmsManagement = () => {
         if (response?.success) {
           setFirms(Array.isArray(response.data) ? response.data : []);
         } else {
-          // Never block navigation - use empty array
+          // Ensure UI can render with safe defaults even on API failure
           setFirms([]);
           toast.error('Failed to load firms');
         }

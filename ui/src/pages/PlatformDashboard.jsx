@@ -66,9 +66,17 @@ export const PlatformDashboard = () => {
       // HTTP 304 means cached data is still valid - keep current state
       if (response?.status !== 304) {
         if (response?.success) {
-          setStats(response.data || emptyStats);
+          const data = response.data || emptyStats;
+          if (!response.data) {
+            console.warn('PlatformDashboard: API returned success but no data, using emptyStats');
+          }
+          setStats(data);
         } else if (response?.degraded) {
-          setStats(response?.data || emptyStats);
+          const data = response?.data || emptyStats;
+          if (!response.data) {
+            console.warn('PlatformDashboard: API returned degraded but no data, using emptyStats');
+          }
+          setStats(data);
         } else if (!hasShownErrorRef.current) {
           toast.error('Failed to load platform statistics');
           hasShownErrorRef.current = true;
