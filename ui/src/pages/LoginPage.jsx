@@ -10,6 +10,7 @@ import { Input } from '../components/common/Input';
 import { Card } from '../components/common/Card';
 import { validateXID, validatePassword } from '../utils/validators';
 import { STORAGE_KEYS, USER_ROLES } from '../utils/constants';
+import { isSuperAdmin } from '../utils/authUtils';
 import { usePermissions } from '../hooks/usePermissions';
 import { useToast } from '../hooks/useToast';
 import './LoginPage.css';
@@ -76,31 +77,24 @@ export const LoginPage = () => {
         }
         
         const userData = profileResult.data;
-        const isSuperAdmin = userData?.isSuperAdmin === true
-          || userData?.role === USER_ROLES.SUPER_ADMIN;
+        const isSuperAdminUser = isSuperAdmin(userData);
         
-        console.log('[LoginPage] Post-login redirect decision:', {
-          role: userData?.role,
-          isSuperAdmin,
-          firmSlug: userData?.firmSlug
-        });
-        
-        // Check if user is Superadmin - redirect to superadmin dashboard only
-        if (isSuperAdmin) {
-          console.log('[LoginPage] Redirecting SuperAdmin to /superadmin');
+        // Route user to appropriate dashboard based on role
+        if (isSuperAdminUser) {
+          // SuperAdmin users access system-wide data
           navigate('/superadmin', { replace: true });
           return;
         }
         
-        // Regular users go to firm-scoped dashboard
+        // Firm users go to firm-scoped dashboard
         const firmSlug = userData?.firmSlug;
         if (firmSlug) {
-          console.log(`[LoginPage] Redirecting to firm dashboard: /f/${firmSlug}/dashboard`);
           localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, firmSlug);
           navigate(`/f/${firmSlug}/dashboard`, { replace: true });
         } else {
-          // Fallback if firmSlug not available
+          // Safe fallback: Redirect to login if role is unrecognized or missing firm context
           setError('Unable to resolve your firm. Please contact your administrator.');
+          navigate('/login', { replace: true });
         }
       }
     } catch (err) {

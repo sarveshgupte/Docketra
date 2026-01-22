@@ -35,3 +35,17 @@ export const isAccessTokenOnlyUser = (user) => {
 export const isAccessTokenOnlySession = () => {
   return !localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
 };
+
+/**
+ * Determines if a user has SuperAdmin privileges.
+ * 
+ * SuperAdmin users:
+ * - Have no firm context (firmSlug is undefined)
+ * - Can access all system data across firms
+ * - Use a separate routing namespace (/superadmin)
+ * 
+ * @param {Object} user - User object from AuthContext
+ * @returns {boolean} True if user is a SuperAdmin
+ */
+export const isSuperAdmin = (user) =>
+  user?.role === USER_ROLES.SUPER_ADMIN || user?.isSuperAdmin === true;

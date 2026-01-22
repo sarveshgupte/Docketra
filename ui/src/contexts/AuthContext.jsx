@@ -59,14 +59,10 @@ export const AuthProvider = ({ children }) => {
 
     // Set user state from API data only (never from localStorage)
     setUser(userData);
-    // SuperAdmin users don't have firmSlug, so check for user existence and role
+    
+    // Authentication = valid user identity + role
+    // SuperAdmin users don't have firmSlug, so role is the source of truth
     const isAuth = !!userData && !!userData.role;
-    console.log('[AuthContext] setAuthFromProfile:', {
-      role: userData?.role,
-      isSuperAdmin: userData?.isSuperAdmin,
-      firmSlug: userData?.firmSlug,
-      isAuthenticated: isAuth
-    });
     setIsAuthenticated(isAuth);
   }, []);
 
@@ -149,14 +145,9 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, mergedUser.firmSlug);
       }
 
-      // SuperAdmin users don't have firmSlug, so check for user existence and role
+      // Authentication = valid user identity + role
+      // SuperAdmin users don't have firmSlug, so role is the source of truth
       const isAuth = !!mergedUser && !!mergedUser.role;
-      console.log('[AuthContext] updateUser:', {
-        role: mergedUser?.role,
-        isSuperAdmin: mergedUser?.isSuperAdmin,
-        firmSlug: mergedUser?.firmSlug,
-        isAuthenticated: isAuth
-      });
       setIsAuthenticated(isAuth);
       return mergedUser;
     });
