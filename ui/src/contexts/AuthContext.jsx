@@ -13,7 +13,7 @@
  * The API is the single source of truth for user identity.
  */
 
-import React, { createContext, useState, useCallback, useEffect, useRef } from 'react';
+import React, { createContext, useState, useCallback, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authService } from '../services/authService';
 import { STORAGE_KEYS } from '../utils/constants';
@@ -31,7 +31,6 @@ export const AuthProvider = ({ children }) => {
   const [isHydrating, setIsHydrating] = useState(true); // Start true, boot effect will resolve it
   const navigate = useNavigate();
   const location = useLocation();
-  const hasHydratedRef = useRef(false); // Track if boot hydration has been attempted
 
   /**
    * Post-login redirect logic - runs only after auth hydration completes.
@@ -75,17 +74,15 @@ export const AuthProvider = ({ children }) => {
 
   /**
    * Boot-time hydration effect.
-   * Runs once on mount to auto-hydrate auth state when a valid token exists.
+   * Runs ONCE on mount to auto-hydrate auth state when a valid token exists.
    * This ensures isHydrating always eventually becomes false.
+   * 
+   * Intentionally uses empty dependency array to run only once on mount:
+   * - `user` is always `null` on initial mount (checked in condition)
+   * - `fetchProfile` is stable (useCallback) and doesn't need to trigger re-runs
+   * - We specifically want boot-time hydration only, not reactive hydration
    */
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    // Only run once on mount
-    if (hasHydratedRef.current) {
-      return;
-    }
-    hasHydratedRef.current = true;
-
     const token = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
 
     // If token exists and user is not loaded, trigger hydration
@@ -96,7 +93,8 @@ export const AuthProvider = ({ children }) => {
 
     // No token → mark hydration complete immediately
     setIsHydrating(false);
-  }, [user, fetchProfile]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const clearAuthStorage = useCallback((firmSlugToPreserve = null) => {
     localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
