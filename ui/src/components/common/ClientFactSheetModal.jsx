@@ -17,8 +17,9 @@ export const ClientFactSheetModal = ({ isOpen, onClose, factSheet, caseId }) => 
 
   const handleViewFile = (fileId) => {
     // Open file in new tab for viewing (no download)
+    // Use VITE_API_URL if set, otherwise use relative path '/api'
     const apiUrl = import.meta.env.VITE_API_URL || '';
-    const viewUrl = `${apiUrl}/api/cases/${caseId}/client-fact-sheet/files/${fileId}/view`;
+    const viewUrl = apiUrl ? `${apiUrl}/api/cases/${caseId}/client-fact-sheet/files/${fileId}/view` : `/api/cases/${caseId}/client-fact-sheet/files/${fileId}/view`;
     window.open(viewUrl, '_blank');
   };
 
