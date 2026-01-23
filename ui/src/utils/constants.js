@@ -24,13 +24,15 @@ const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 
 // Runtime validation: Fail fast if API base URL is missing or empty
 if (!rawApiBaseUrl || rawApiBaseUrl.trim() === '') {
-  const errorMessage = 
-    '❌ DEPLOYMENT ERROR: VITE_API_BASE_URL environment variable is not defined or empty.\n\n' +
-    'This is a deployment misconfiguration.\n\n' +
-    'ACTION REQUIRED:\n' +
-    '1. Set VITE_API_BASE_URL in your deployment platform (e.g., Render)\n' +
-    '2. Rebuild and redeploy the application\n\n' +
-    'Example: VITE_API_BASE_URL=https://api.example.com/api';
+  const errorMessage = `❌ DEPLOYMENT ERROR: VITE_API_BASE_URL environment variable is not defined or empty.
+
+This is a deployment misconfiguration.
+
+ACTION REQUIRED:
+1. Set VITE_API_BASE_URL in your deployment platform (e.g., Render)
+2. Rebuild and redeploy the application
+
+Example: VITE_API_BASE_URL=https://api.example.com/api`;
   
   // Log to console for debugging
   console.error(errorMessage);
