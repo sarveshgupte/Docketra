@@ -116,9 +116,12 @@ export const AuthProvider = ({ children }) => {
     }
 
     // If token exists and user is not loaded, trigger hydration
-    void fetchProfile()
+    const hydrationPromise = fetchProfile();
+    hydrationPromise
       .catch((error) => {
         console.error('[AUTH] Profile hydration failed.', error);
+        setUser(null);
+        setIsAuthenticated(false);
       })
       .finally(() => {
         setLoading(false);
