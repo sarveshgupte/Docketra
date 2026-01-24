@@ -102,15 +102,17 @@ export const AuthProvider = ({ children }) => {
       return;
     }
 
-    // If token exists and user is not loaded, trigger hydration
-    if (token && !user) {
-      fetchProfile();
+    if (!token) {
+      // No token → mark hydration complete immediately
+      setLoading(false);
+      setIsHydrating(false);
       return;
     }
 
-    // No token → mark hydration complete immediately
-    setLoading(false);
-    setIsHydrating(false);
+    // If token exists and user is not loaded, trigger hydration
+    if (!user) {
+      fetchProfile();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
