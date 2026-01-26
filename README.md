@@ -72,7 +72,7 @@ docketra/
    ```
    PORT=3000
    NODE_ENV=development
-   MONGODB_URI=mongodb://localhost:27017/caseflow
+   MONGODB_URI=mongodb://localhost:27017/docketra
    APP_NAME=Docketra
    ```
 

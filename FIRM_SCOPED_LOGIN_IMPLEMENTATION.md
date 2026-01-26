@@ -252,14 +252,14 @@ const loginUrl = `${window.location.origin}/f/${firm.firmSlug}/login`;
 ## Canonical Firm Login URL Format
 
 ```
-https://caseflow-1-tm8i.onrender.com/f/<firmSlug>/login
+https://docketra.onrender.com/f/<firmSlug>/login
 ```
 
 **Examples:**
 ```
-https://caseflow-1-tm8i.onrender.com/f/docketra/login
-https://caseflow-1-tm8i.onrender.com/f/teekeet-store/login
-https://caseflow-1-tm8i.onrender.com/f/abc-law-firm/login
+https://docketra.onrender.com/f/docketra/login
+https://docketra.onrender.com/f/teekeet-store/login
+https://docketra.onrender.com/f/abc-law-firm/login
 ```
 
 ## Acceptance Criteria - Status

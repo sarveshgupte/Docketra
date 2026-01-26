@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide covers testing and deploying the Caseflow Neomorphic UI.
+This guide covers testing and deploying the Docketra Neomorphic UI.
 
 ## Prerequisites
 
@@ -18,7 +18,7 @@ This guide covers testing and deploying the Caseflow Neomorphic UI.
 **Option A: Using Docker**
 ```bash
 docker run -d \
-  --name caseflow-mongo \
+  --name docketra-mongo \
   -p 27017:27017 \
   -e MONGO_INITDB_ROOT_USERNAME=admin \
   -e MONGO_INITDB_ROOT_PASSWORD=password \
@@ -36,7 +36,7 @@ brew services start mongodb-community
 
 1. Create backend `.env` file:
 ```bash
-cd /path/to/caseflow
+cd /path/to/docketra
 cp .env.example .env
 ```
 
@@ -44,15 +44,15 @@ cp .env.example .env
 ```env
 PORT=3000
 NODE_ENV=development
-MONGODB_URI=mongodb://localhost:27017/caseflow
-APP_NAME=Caseflow
+MONGODB_URI=mongodb://localhost:27017/docketra
+APP_NAME=Docketra
 JWT_SECRET=your_secure_secret_here_change_in_production
 ```
 
 ### Step 3: Start Backend
 
 ```bash
-cd /path/to/caseflow
+cd /path/to/docketra
 npm install
 npm run dev
 ```
@@ -66,7 +66,7 @@ curl http://localhost:3000/health
 
 1. Create UI `.env` file:
 ```bash
-cd /path/to/caseflow/ui
+cd /path/to/docketra/ui
 cp .env.example .env
 ```
 
@@ -78,7 +78,7 @@ VITE_API_BASE_URL=http://localhost:3000/api
 ### Step 5: Start UI Development Server
 
 ```bash
-cd /path/to/caseflow/ui
+cd /path/to/docketra/ui
 npm install
 npm run dev
 ```
@@ -207,7 +207,7 @@ Navigate to "Admin":
 ### Build for Production
 
 ```bash
-cd /path/to/caseflow/ui
+cd /path/to/docketra/ui
 npm run build
 ```
 
@@ -320,8 +320,8 @@ server {
 
 Build and run:
 ```bash
-docker build -t caseflow-ui .
-docker run -p 80:80 caseflow-ui
+docker build -t docketra-ui .
+docker run -p 80:80 docketra-ui
 ```
 
 ## Common Issues & Troubleshooting
@@ -427,4 +427,4 @@ For issues or questions:
 
 ## Conclusion
 
-The Caseflow Neomorphic UI is production-ready and follows all specified requirements. The UI strictly respects backend authority, handles errors gracefully, and provides a professional neomorphic design for internal use.
+The Docketra Neomorphic UI is production-ready and follows all specified requirements. The UI strictly respects backend authority, handles errors gracefully, and provides a professional neomorphic design for internal use.

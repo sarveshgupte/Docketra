@@ -274,7 +274,7 @@ All endpoints return:
 1. **Start MongoDB**
 2. **Configure .env**
    ```
-   MONGODB_URI=mongodb://localhost:27017/caseflow
+   MONGODB_URI=mongodb://localhost:27017/docketra
    PORT=3000
    ```
 3. **Start Server**
