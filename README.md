@@ -2,6 +2,8 @@
 
 A backend-first task and case management web application designed for small consultancies. Built with Node.js, Express, and MongoDB.
 
+> **📚 Documentation**: For a complete guide to all documentation in this repository, see [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md)
+
 ## 🎯 Overview
 
 Docketra is an internal task and case management system that prioritizes:
@@ -72,7 +74,7 @@ docketra/
    ```
    PORT=3000
    NODE_ENV=development
-   MONGODB_URI=mongodb://localhost:27017/caseflow
+   MONGODB_URI=mongodb://localhost:27017/docketra
    APP_NAME=Docketra
    ```
 
