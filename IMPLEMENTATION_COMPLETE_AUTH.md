@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-Successfully implemented **enterprise-grade access control** for the Caseflow system with:
+Successfully implemented **enterprise-grade access control** for the Docketra system with:
 - ✅ Email-based password setup (no default passwords)
 - ✅ Admin-only user provisioning
 - ✅ Comprehensive audit logging
@@ -72,7 +72,7 @@ All requirements from the problem statement have been implemented:
 - `SECURITY.md` - Updated security status
 - `SECURITY_ANALYSIS.md` - CodeQL findings and mitigations
 
-**Repository**: sarveshgupte/caseflow  
+**Repository**: sarveshgupte/Docketra  
 **Branch**: copilot/admin-user-management-auth  
 
 ---

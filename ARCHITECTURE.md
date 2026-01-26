@@ -1,8 +1,8 @@
-# Caseflow Architecture Document
+# Docketra Architecture Document
 
 ## Overview
 
-Caseflow is a backend-first task and case management system designed for small consultancies. This document explains the architectural decisions and design patterns used.
+Docketra is a backend-first task and case management system designed for small consultancies. This document explains the architectural decisions and design patterns used.
 
 ## Architecture Principles
 

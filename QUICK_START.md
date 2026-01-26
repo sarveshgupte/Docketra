@@ -1,6 +1,6 @@
 # Quick Start Guide
 
-Get Caseflow up and running in 5 minutes.
+Get Docketra up and running in 5 minutes.
 
 ## Prerequisites
 
@@ -14,7 +14,7 @@ Get Caseflow up and running in 5 minutes.
 
 ```bash
 git clone <repository-url>
-cd caseflow
+cd docketra
 npm install
 ```
 
@@ -28,8 +28,8 @@ Edit `.env` if needed:
 ```
 PORT=3000
 NODE_ENV=development
-MONGODB_URI=mongodb://localhost:27017/caseflow
-APP_NAME=Caseflow
+MONGODB_URI=mongodb://localhost:27017/docketra
+APP_NAME=Docketra
 ```
 
 ### 3. Start MongoDB
@@ -68,7 +68,7 @@ Expected response:
 ```json
 {
   "success": true,
-  "message": "Caseflow API is running",
+  "message": "Docketra API is running",
   "timestamp": "2024-01-07T12:00:00.000Z",
   "environment": "development"
 }
@@ -135,7 +135,7 @@ curl -X POST http://localhost:3000/api/tasks \
 
 3. **View the Data**
    - Use MongoDB Compass to view the database
-   - Or use mongo shell: `mongo caseflow`
+   - Or use mongo shell: `mongo docketra`
 
 ## Common Issues
 
@@ -146,7 +146,7 @@ curl -X POST http://localhost:3000/api/tasks \
 **Solutions:**
 - Check if MongoDB is running: `sudo service mongod status`
 - Verify connection string in `.env`
-- Try: `mongodb://127.0.0.1:27017/caseflow` instead of `localhost`
+- Try: `mongodb://127.0.0.1:27017/docketra` instead of `localhost`
 
 ### Port Already in Use
 
@@ -190,7 +190,7 @@ npm run dev  # Uses nodemon
 ## Project Structure
 
 ```
-caseflow/
+docketra/
 ├── src/
 │   ├── config/       # Database and app configuration
 │   ├── models/       # Mongoose schemas

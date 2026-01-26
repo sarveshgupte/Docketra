@@ -2,7 +2,7 @@
 
 ## ✅ Implementation Status: COMPLETE
 
-All 7 parts (A-G) of the professional neomorphic web UI for Caseflow backend have been successfully implemented.
+All 7 parts (A-G) of the professional neomorphic web UI for Docketra backend have been successfully implemented.
 
 ## 📸 Screenshots
 
@@ -320,7 +320,7 @@ For questions or issues:
 
 ## 🎉 Conclusion
 
-The Caseflow Neomorphic UI is **production-ready** and fully implements all specified requirements. The implementation:
+The Docketra Neomorphic UI is **production-ready** and fully implements all specified requirements. The implementation:
 
 ✅ Strictly respects backend as single source of truth  
 ✅ Implements professional neomorphic design system  

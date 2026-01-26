@@ -1,6 +1,6 @@
 # API Testing Guide
 
-This guide provides practical examples for testing the Caseflow API using curl.
+This guide provides practical examples for testing the Docketra API using curl.
 
 ## Prerequisites
 
