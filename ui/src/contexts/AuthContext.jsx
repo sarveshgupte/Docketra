@@ -217,11 +217,14 @@ export const AuthProvider = ({ children }) => {
       // Fail fast on auth errors (401/403) to avoid hidden polling loops
       const status = err?.response?.status;
       if (status === 429) {
+        profileFetchAttemptedRef.current = null;
         console.warn('[AUTH] Profile rate-limited; skipping retry.');
         return { success: false, data: null, error: err };
       }
       if (status === 401 || status === 403) {
         resetAuthState();
+      } else if (!status || status >= 500) {
+        profileFetchAttemptedRef.current = null;
       }
       // For network errors or other failures, still allow the app to continue
       // The app will render login page since user state is null
