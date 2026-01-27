@@ -1,19 +1,36 @@
-const optionsPreflight = (req, res, next) => {
-  if (req.method === 'OPTIONS') {
-    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header(
-      'Access-Control-Allow-Headers',
-      'Content-Type, Authorization, X-Requested-With, Idempotency-Key'
-    );
-    res.header(
-      'Access-Control-Allow-Methods',
-      'GET, POST, PUT, PATCH, DELETE, OPTIONS'
-    );
-    res.header('Vary', 'Origin');
-    return res.sendStatus(204);
+const optionsPreflight = (allowedOrigins = [], allowedHeaders = [], allowedMethods = []) => {
+  const originAllowlist = new Set(allowedOrigins.filter(Boolean));
+  if (originAllowlist.size === 0) {
+    console.warn('[CORS] OPTIONS preflight allowlist is empty; preflight responses will omit Access-Control-Allow-Origin.');
   }
-  return next();
+  const headerList = allowedHeaders.length > 0
+    ? allowedHeaders.join(', ')
+    : 'Content-Type, Authorization, X-Requested-With, Idempotency-Key';
+  const methodList = allowedMethods.length > 0
+    ? allowedMethods.join(', ')
+    : 'GET, POST, PUT, PATCH, DELETE, OPTIONS';
+
+  return (req, res, next) => {
+    if (req.method === 'OPTIONS') {
+      const origin = req.headers.origin;
+      const allowOrigin = origin && originAllowlist.has(origin);
+      if (allowOrigin) {
+        res.header('Access-Control-Allow-Origin', origin);
+        res.header('Vary', 'Origin');
+      }
+      res.header('Access-Control-Allow-Credentials', 'true');
+      res.header(
+        'Access-Control-Allow-Headers',
+        headerList
+      );
+      res.header(
+        'Access-Control-Allow-Methods',
+        methodList
+      );
+      return res.sendStatus(204);
+    }
+    return next();
+  };
 };
 
 module.exports = optionsPreflight;

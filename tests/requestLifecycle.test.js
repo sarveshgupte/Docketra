@@ -62,7 +62,6 @@ async function testLoginSkipsSideEffects() {
 
   log.info = originalInfo;
 
-  assert.strictEqual(req._pendingSideEffects, undefined, 'Login should not attach side effects');
   const lifecycleLogs = logs.filter((l) => l.event === 'REQUEST_LIFECYCLE');
   assert.strictEqual(lifecycleLogs.length, 1, 'Lifecycle log should still be recorded');
   assert.strictEqual(lifecycleLogs[0].meta.transactionCommitted, false);

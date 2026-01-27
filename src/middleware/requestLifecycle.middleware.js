@@ -3,10 +3,12 @@ const log = require('../utils/log');
 const metricsService = require('../services/metrics.service');
 const { enqueueAfterCommit, attachRecorder, flushRequestEffects } = require('../services/sideEffectQueue.service');
 
+const LOGIN_PATHS = new Set(['/auth/login', '/api/auth/login']);
+
 const requestLifecycle = (req, res, next) => {
   const startTime = Date.now();
   const rawPath = (req.originalUrl || req.url || '').split('?')[0];
-  const skipSideEffects = req.method === 'OPTIONS' || rawPath === '/auth/login' || rawPath === '/api/auth/login';
+  const skipSideEffects = req.method === 'OPTIONS' || LOGIN_PATHS.has(rawPath);
   if (!req.requestId) {
     req.requestId = randomUUID();
   }
