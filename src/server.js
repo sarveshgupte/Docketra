@@ -62,6 +62,7 @@ const metricsService = require('./services/metrics.service');
 const { adminAuditTrail } = require('./middleware/adminAudit.middleware');
 const requestLifecycle = require('./middleware/requestLifecycle.middleware');
 const { noFirmNoTransaction } = require('./middleware/noFirmNoTransaction.middleware');
+const optionsPreflight = require('./middleware/optionsPreflight.middleware');
 
 // Routes
 const userRoutes = require('./routes/users');
@@ -216,6 +217,9 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
+const CORS_ALLOWED_HEADERS = ['Content-Type', 'Authorization', 'X-Requested-With', 'Idempotency-Key'];
+const CORS_ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'];
+
 // CORS Configuration
 const corsOptions = {
   origin: function (origin, callback) {
@@ -234,11 +238,13 @@ const corsOptions = {
     return callback(new Error('CORS origin not allowed'), false);
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key']
+  methods: CORS_ALLOWED_METHODS,
+  allowedHeaders: CORS_ALLOWED_HEADERS
 };
 
 // Middleware
+// Handle CORS preflight requests before auth/transaction middleware
+app.use(optionsPreflight(uniqueAllowedOrigins, CORS_ALLOWED_HEADERS, CORS_ALLOWED_METHODS));
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
