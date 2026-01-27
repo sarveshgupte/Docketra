@@ -50,11 +50,16 @@ export const LoginPage = () => {
       if (response.success) {
         showSuccess('Signed in successfully.');
         
-        // Trigger profile hydration - AuthContext will handle post-login routing
-        // after hydration completes
-        await fetchProfile();
+        // Trigger profile hydration to set auth state
+        const profileResult = await fetchProfile();
         
-        // Do not navigate here - let AuthContext handle routing after hydration
+        // Explicit post-login navigation (SuperAdmin only)
+        // Note: fetchProfile() returns user data, which we use to determine routing
+        if (profileResult?.success && profileResult?.data) {
+          const userData = profileResult.data;
+          // SuperAdmin users go to /superadmin
+          navigate('/superadmin', { replace: true });
+        }
       }
     } catch (err) {
       const errorData = err.response?.data;
