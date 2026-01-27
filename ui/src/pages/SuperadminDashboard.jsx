@@ -23,7 +23,11 @@ export const SuperadminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [showCreateFirm, setShowCreateFirm] = useState(false);
   const [showCreateAdmin, setShowCreateAdmin] = useState(false);
-  const [newFirmName, setNewFirmName] = useState('');
+  const [newFirmData, setNewFirmData] = useState({
+    name: '',
+    adminName: '',
+    adminEmail: '',
+  });
   const [selectedFirm, setSelectedFirm] = useState(null);
   const [adminData, setAdminData] = useState({
     name: '',
@@ -60,16 +64,28 @@ export const SuperadminDashboard = () => {
   const handleCreateFirm = async (e) => {
     e.preventDefault();
     
-    if (!newFirmName.trim()) {
+    if (!newFirmData.name.trim()) {
       toast.error('Firm name is required');
+      return;
+    }
+    if (!newFirmData.adminName.trim()) {
+      toast.error('Admin name is required');
+      return;
+    }
+    if (!newFirmData.adminEmail.trim()) {
+      toast.error('Admin email is required');
       return;
     }
     
     try {
-      const response = await superadminService.createFirm(newFirmName.trim());
+      const response = await superadminService.createFirm(
+        newFirmData.name.trim(),
+        newFirmData.adminName.trim(),
+        newFirmData.adminEmail.trim()
+      );
       if (response.success) {
-        toast.success('Firm created successfully');
-        setNewFirmName('');
+        toast.success('Firm created successfully. Admin will receive a setup email.');
+        setNewFirmData({ name: '', adminName: '', adminEmail: '' });
         setShowCreateFirm(false);
         loadFirms();
       }
@@ -160,19 +176,34 @@ export const SuperadminDashboard = () => {
             <form onSubmit={handleCreateFirm}>
               <Input
                 label="Firm Name"
-                value={newFirmName}
-                onChange={(e) => setNewFirmName(e.target.value)}
+                value={newFirmData.name}
+                onChange={(e) => setNewFirmData({ ...newFirmData, name: e.target.value })}
                 required
                 placeholder="Enter firm name"
               />
+              <Input
+                label="Admin Name"
+                value={newFirmData.adminName}
+                onChange={(e) => setNewFirmData({ ...newFirmData, adminName: e.target.value })}
+                required
+                placeholder="Enter admin name"
+              />
+              <Input
+                label="Admin Email"
+                type="email"
+                value={newFirmData.adminEmail}
+                onChange={(e) => setNewFirmData({ ...newFirmData, adminEmail: e.target.value })}
+                required
+                placeholder="Enter admin email"
+              />
               <div className="modal-actions">
-                <Button type="submit">Create</Button>
+                <Button type="submit">Create Firm</Button>
                 <Button
                   type="button"
                   variant="secondary"
                   onClick={() => {
                     setShowCreateFirm(false);
-                    setNewFirmName('');
+                    setNewFirmData({ name: '', adminName: '', adminEmail: '' });
                   }}
                 >
                   Cancel

@@ -82,7 +82,7 @@ const buildIds = async (deps, session, name) => {
   return { firmId: `FIRM${firmNumber.toString().padStart(3, '0')}`, firmSlug };
 };
 
-const createFirmHierarchy = async ({ payload, performedBy, requestId, deps = defaultDeps }) => {
+const createFirmHierarchy = async ({ payload, performedBy, requestId, req = null, deps = defaultDeps }) => {
   if (isFirmCreationDisabled()) {
     throw new FirmBootstrapError('Firm creation is temporarily disabled', 503);
   }
@@ -180,22 +180,26 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, deps = def
           defaultClientId: defaultClient.clientId,
           adminXID,
           adminEmail: adminUser.email,
-        });
+        }, req);
       }
     } catch (emailError) {
       console.error('[FIRM_BOOTSTRAP] Failed to send firm created email:', emailError.message);
     }
 
     try {
+      console.log(`[FIRM_BOOTSTRAP] Sending password setup email to ${adminUser.email} (xID: ${adminXID})`);
       await deps.emailService.sendPasswordSetupEmail({
         email: adminUser.email,
         name: adminUser.name,
         token: setupToken,
         xID: adminXID,
         firmSlug,
+        req,
       });
+      console.log('[FIRM_BOOTSTRAP] Password setup email queued successfully');
     } catch (emailError) {
-      console.error('[FIRM_BOOTSTRAP] Failed to send admin invite email:', emailError.message);
+      console.error('[FIRM_BOOTSTRAP] CRITICAL: Failed to send admin invite email:', emailError.message);
+      // Log but don't fail firm creation - email issues shouldn't block business logic
     }
 
     return {
