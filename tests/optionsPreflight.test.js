@@ -3,6 +3,10 @@ const assert = require('assert');
 const optionsPreflight = require('../src/middleware/optionsPreflight.middleware');
 const { authenticate } = require('../src/middleware/auth.middleware');
 
+const ALLOWED_ORIGINS = ['https://example.com', 'https://app.example.org'];
+const ALLOWED_HEADERS = ['Content-Type', 'Authorization', 'X-Requested-With', 'Idempotency-Key'];
+const ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'];
+
 const createRes = () => ({
   headers: {},
   statusCode: null,
@@ -19,7 +23,8 @@ async function testOptionsReturns204() {
   const req = { method: 'OPTIONS', headers: { origin: 'https://example.com' } };
   const res = createRes();
   let nextCalled = false;
-  optionsPreflight(req, res, () => {
+  const middleware = optionsPreflight(ALLOWED_ORIGINS, ALLOWED_HEADERS, ALLOWED_METHODS);
+  middleware(req, res, () => {
     nextCalled = true;
   });
 
@@ -31,11 +36,23 @@ async function testOptionsReturns204() {
   assert.ok(res.headers['Access-Control-Allow-Methods'].includes('OPTIONS'));
 }
 
+async function testOptionsRejectsUnknownOrigin() {
+  const req = { method: 'OPTIONS', headers: { origin: 'https://unknown.com' } };
+  const res = createRes();
+  const middleware = optionsPreflight(ALLOWED_ORIGINS, ALLOWED_HEADERS, ALLOWED_METHODS);
+
+  middleware(req, res, () => {});
+
+  assert.strictEqual(res.statusCode, 204);
+  assert.strictEqual(res.headers['Access-Control-Allow-Origin'], undefined);
+}
+
 async function testOptionsFallsThrough() {
   const req = { method: 'GET', headers: {} };
   const res = createRes();
   let nextCalled = false;
-  optionsPreflight(req, res, () => {
+  const middleware = optionsPreflight(ALLOWED_ORIGINS, ALLOWED_HEADERS, ALLOWED_METHODS);
+  middleware(req, res, () => {
     nextCalled = true;
   });
 
@@ -57,6 +74,7 @@ async function testAuthSkipsOptions() {
 async function run() {
   try {
     await testOptionsReturns204();
+    await testOptionsRejectsUnknownOrigin();
     await testOptionsFallsThrough();
     await testAuthSkipsOptions();
     console.log('OPTIONS preflight tests passed.');

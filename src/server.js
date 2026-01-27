@@ -217,8 +217,8 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
-// Handle CORS preflight requests before auth/transaction middleware
-app.use(optionsPreflight);
+const CORS_ALLOWED_HEADERS = ['Content-Type', 'Authorization', 'X-Requested-With', 'Idempotency-Key'];
+const CORS_ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'];
 
 // CORS Configuration
 const corsOptions = {
@@ -238,11 +238,13 @@ const corsOptions = {
     return callback(new Error('CORS origin not allowed'), false);
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key']
+  methods: CORS_ALLOWED_METHODS,
+  allowedHeaders: CORS_ALLOWED_HEADERS
 };
 
 // Middleware
+// Handle CORS preflight requests before auth/transaction middleware
+app.use(optionsPreflight(uniqueAllowedOrigins, CORS_ALLOWED_HEADERS, CORS_ALLOWED_METHODS));
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
