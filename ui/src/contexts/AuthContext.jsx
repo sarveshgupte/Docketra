@@ -27,6 +27,7 @@ export const AuthProvider = ({ children }) => {
   const [isHydrating, setIsHydrating] = useState(true); // Start true, boot effect will resolve it
   const bootHydratedRef = useRef(false);
   const profileFetchAttemptedRef = useRef(null); // Token-based guard for profile hydration
+  const profileFetchInFlightRef = useRef(false);
   const authTokenRef = useRef(null); // Ensure auth is set once per access token
 
   useEffect(() => {
@@ -78,6 +79,7 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setIsAuthenticated(false);
     profileFetchAttemptedRef.current = null;
+    profileFetchInFlightRef.current = false;
     authTokenRef.current = null;
   }, [clearAuthStorage]);
 
@@ -121,11 +123,16 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const fetchProfile = useCallback(async () => {
+    if (profileFetchInFlightRef.current) {
+      return { success: false, data: null };
+    }
+
     let accessToken = null;
     try {
       accessToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
     } catch (error) {
       console.warn('[AUTH] Unable to access storage while fetching profile.', error);
+      return { success: false, data: null };
     }
     if (!accessToken) {
       resetAuthState();
@@ -136,6 +143,7 @@ export const AuthProvider = ({ children }) => {
       return { success: false, data: null };
     }
     profileFetchAttemptedRef.current = accessToken;
+    profileFetchInFlightRef.current = true;
 
     try {
       // Always fetch from API - no cached user fallback
@@ -160,6 +168,7 @@ export const AuthProvider = ({ children }) => {
       return { success: false, data: null, error: err };
     } finally {
       // Hydration completion is handled by the boot-time effect.
+      profileFetchInFlightRef.current = false;
     }
   }, [resetAuthState, setAuthFromProfile]);
 
@@ -201,6 +210,7 @@ export const AuthProvider = ({ children }) => {
       // Always clear client-side state
       setUser(null);
       setIsAuthenticated(false);
+      profileFetchInFlightRef.current = false;
       
       clearAuthStorage(firmSlugToPreserve);
     }
