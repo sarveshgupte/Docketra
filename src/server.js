@@ -307,6 +307,7 @@ app.use('/api/admin', authenticate, firmContext, invariantGuard({ requireFirm: t
 // Superadmin routes - platform scope only (no firm context)
 app.use('/api/sa', authenticate, writeGuardChain, requireSuperadmin, adminAuditTrail('superadmin'), superadminRoutes);
 app.use('/api/superadmin', authenticate, writeGuardChain, requireSuperadmin, adminAuditTrail('superadmin'), superadminRoutes);
+app.use('/superadmin', authenticate, writeGuardChain, requireSuperadmin, adminAuditTrail('superadmin'), superadminRoutes);
 
 // Debug routes (PR #43) - require authentication and admin role
 app.use('/api/debug', authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, requireAdmin, debugRoutes);
