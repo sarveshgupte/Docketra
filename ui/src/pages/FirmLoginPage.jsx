@@ -120,13 +120,16 @@ export const FirmLoginPage = () => {
           localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
         }
 
-        // Trigger profile hydration - AuthContext will handle post-login routing
-        // after hydration completes
-        await fetchProfile();
+        // Trigger profile hydration to set auth state
+        const profileResult = await fetchProfile();
         
         showSuccess('Signed in successfully.');
         
-        // Do not navigate here - let AuthContext handle routing after hydration
+        // Explicit post-login navigation (firm users only)
+        // Navigate to firm dashboard after successful hydration
+        if (profileResult?.success) {
+          navigate(`/f/${firmSlug}/dashboard`, { replace: true });
+        }
       }
     } catch (err) {
       const errorData = err.response?.data;
