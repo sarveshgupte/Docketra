@@ -98,8 +98,8 @@ const createFirm = async (req, res) => {
       ip: req.ip,
       // Side-effect queue properties (transferred from req)
       _pendingSideEffects: req._pendingSideEffects || [],
-      transactionActive: req.transactionActive,
-      transactionCommitted: req.transactionCommitted,
+      transactionActive: req.transactionActive || false,
+      transactionCommitted: req.transactionCommitted || false,
     };
 
     const result = await createFirmHierarchy({
@@ -109,9 +109,13 @@ const createFirm = async (req, res) => {
       context: requestContext, // Pass context instead of req
     });
 
+    // Transaction has completed successfully if we reach here
+    // Mark as committed so side-effect queue will flush emails
+    requestContext.transactionCommitted = true;
+    
     // Transfer side effects back to req for proper lifecycle management
     req._pendingSideEffects = requestContext._pendingSideEffects;
-    req.transactionCommitted = true; // Mark as committed for email flush
+    req.transactionCommitted = true;
 
     await logSuperadminAction({
       actionType: 'FirmCreated',
