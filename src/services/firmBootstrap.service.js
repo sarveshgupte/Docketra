@@ -88,11 +88,12 @@ const buildIds = async (deps, session, name) => {
  * @param {Object} params.payload - Firm creation data (name, adminName, adminEmail)
  * @param {Object} params.performedBy - User performing the action
  * @param {string} params.requestId - Request ID for tracking
- * @param {Object} params.context - Request context for side-effect queueing (optional):
- *   - requestId: string
- *   - _pendingSideEffects: Array
- *   - transactionActive: boolean
- *   - transactionCommitted: boolean
+ * @param {Object} [params.context] - Request context for side-effect queueing (optional):
+ *   - requestId: string (for logging)
+ *   - _pendingSideEffects: Array (required for email queueing)
+ *   - transactionActive: boolean (optional, default false)
+ *   - transactionCommitted: boolean (optional, default false)
+ *   If null, emails will be enqueued immediately without waiting for transaction commit
  * @param {Object} params.deps - Dependencies (for testing)
  * @returns {Promise<Object>} Created entities (firm, defaultClient, adminUser)
  */
