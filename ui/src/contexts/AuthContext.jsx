@@ -25,10 +25,14 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isHydrating, setIsHydrating] = useState(true); // Start true, boot effect will resolve it
+  const bootHydratedRef = useRef(false);
   const profileFetchAttemptedRef = useRef(null); // Token-based guard for profile hydration
   const authTokenRef = useRef(null); // Ensure auth is set once per access token
 
   useEffect(() => {
+    if (bootHydratedRef.current) return;
+    bootHydratedRef.current = true;
+
     let token = null;
     try {
       token = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
@@ -53,7 +57,7 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
         setIsHydrating(false);
       });
-  }, [fetchProfile]);
+  }, []);
 
   const clearAuthStorage = useCallback((firmSlugToPreserve = null) => {
     try {
