@@ -54,10 +54,7 @@ export const LoginPage = () => {
         const profileResult = await fetchProfile();
         
         // Explicit post-login navigation (SuperAdmin only)
-        // Note: fetchProfile() returns user data, which we use to determine routing
-        if (profileResult?.success && profileResult?.data) {
-          const userData = profileResult.data;
-          // SuperAdmin users go to /superadmin
+        if (profileResult?.success) {
           navigate('/superadmin', { replace: true });
         }
       }
