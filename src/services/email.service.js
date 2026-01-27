@@ -585,7 +585,7 @@ const sendOnce = async (key, fn) => {
  * @param {Object} data - Firm creation data
  * @returns {Promise<Object>} Result object
  */
-const sendFirmCreatedEmail = async (superadminEmail, data) => {
+const sendFirmCreatedEmail = async (superadminEmail, data, req = null) => {
   const key = `firm-created-${data.firmId}`;
   return await sendOnce(key, async () => {
     const subject = `Firm Created: ${data.firmName}`;
@@ -639,7 +639,7 @@ Docketra Platform
       subject,
       html: htmlContent,
       text: textContent,
-    });
+    }, req);
   });
 };
 

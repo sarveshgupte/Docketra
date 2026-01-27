@@ -92,6 +92,7 @@ const createFirm = async (req, res) => {
       payload: req.body,
       performedBy: req.user,
       requestId,
+      req, // Pass req for email queueing
     });
 
     await logSuperadminAction({
