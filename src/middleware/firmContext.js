@@ -33,6 +33,7 @@ const firmContext = async (req, res, next) => {
     // NEW: Check if SuperAdmin is impersonating a firm
     const impersonatedFirmId = req.headers['x-impersonated-firm-id'];
     const impersonationSessionId = req.headers['x-impersonation-session-id'];
+    const impersonationMode = req.headers['x-impersonation-mode'] || 'READ_ONLY';
     
     if (isSuperAdmin) {
       // If SuperAdmin is NOT impersonating, block access to firm-scoped routes
@@ -144,14 +145,33 @@ const firmContext = async (req, res, next) => {
         isGlobalContext: false,
         impersonatedFirmId: firm._id.toString(),
         impersonationSessionId,
+        impersonationMode,
       };
     }
 
     console.log(`[FIRM_CONTEXT][${requestId}] Firm context resolved`, { 
       firmId: req.firmId, 
       firmSlug: req.firmSlug,
-      impersonating: !!(isSuperAdmin && impersonatedFirmId)
+      impersonating: !!(isSuperAdmin && impersonatedFirmId),
+      mode: impersonationMode
     });
+    
+    // CRITICAL: Enforce read-only mode AFTER firm context is attached
+    // Block mutations when SuperAdmin is in READ_ONLY mode
+    const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+    
+    if (
+      req.context?.isSuperAdmin &&
+      req.context?.impersonationMode === 'READ_ONLY' &&
+      MUTATING_METHODS.has(req.method)
+    ) {
+      console.warn(`[FIRM_CONTEXT][${requestId}] Read-only impersonation: blocked ${req.method} ${req.originalUrl}`);
+      return res.status(403).json({
+        success: false,
+        message: 'Read-only impersonation: write operations are not allowed',
+      });
+    }
+    
     return next();
   } catch (error) {
     const statusCode = error.statusCode || 500;

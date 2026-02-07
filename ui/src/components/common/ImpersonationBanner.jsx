@@ -7,15 +7,19 @@ import React from 'react';
 import { Button } from './Button';
 import './ImpersonationBanner.css';
 
-export const ImpersonationBanner = ({ firmName, onExit }) => {
+export const ImpersonationBanner = ({ firmName, mode, onExit }) => {
   if (!firmName) return null;
 
+  const isReadOnly = mode === 'READ_ONLY';
+  const modeLabel = isReadOnly ? 'Read-Only' : 'Full Access';
+  const modeIcon = isReadOnly ? '👁️' : '✏️';
+
   return (
-    <div className="impersonation-banner">
+    <div className={`impersonation-banner ${isReadOnly ? 'impersonation-banner--read-only' : 'impersonation-banner--full-access'}`}>
       <div className="impersonation-banner__content">
-        <span className="impersonation-banner__icon">🔒</span>
+        <span className="impersonation-banner__icon">{modeIcon}</span>
         <span className="impersonation-banner__text">
-          You are impersonating <strong>{firmName}</strong>
+          You are impersonating <strong>{firmName}</strong> ({modeLabel})
         </span>
         <Button
           variant="secondary"

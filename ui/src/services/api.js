@@ -66,6 +66,9 @@ api.interceptors.request.use(
         if (firmData?.sessionId) {
           config.headers['X-Impersonation-Session-Id'] = firmData.sessionId;
         }
+        if (firmData?.impersonationMode) {
+          config.headers['X-Impersonation-Mode'] = firmData.impersonationMode;
+        }
       } catch (error) {
         console.error('[API] Failed to parse impersonated firm data from localStorage. Data may be corrupted. Please clear impersonation state and try again.', error);
         // Clear corrupted data

@@ -657,15 +657,27 @@ const getOperationalHealth = async (req, res) => {
  * Allows SuperAdmin to enter firm context for debugging, support, or setup.
  * Does NOT mutate user identity or firm ownership.
  * Attaches impersonatedFirmId to request context.
+ * 
+ * Supports two impersonation modes:
+ * - READ_ONLY (default): View data only, mutations blocked
+ * - FULL_ACCESS: Full access including write operations
  */
 const switchFirm = async (req, res) => {
   try {
-    const { firmId } = req.body;
+    const { firmId, mode = 'READ_ONLY' } = req.body;
     
     if (!firmId) {
       return res.status(400).json({
         success: false,
         message: 'firmId is required',
+      });
+    }
+    
+    // Validate impersonation mode
+    if (!['READ_ONLY', 'FULL_ACCESS'].includes(mode)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid impersonation mode. Must be READ_ONLY or FULL_ACCESS.',
       });
     }
     
@@ -695,7 +707,7 @@ const switchFirm = async (req, res) => {
     // Log impersonation action
     await logSuperadminAction({
       actionType: 'SwitchFirm',
-      description: `SuperAdmin switched into firm context: ${firm.name} (${firm.firmId})`,
+      description: `SuperAdmin switched into firm context: ${firm.name} (${firm.firmId}) [${mode}]`,
       performedBy: req.user.email,
       performedById: req.user._id,
       targetEntityType: 'Firm',
@@ -706,6 +718,7 @@ const switchFirm = async (req, res) => {
         fromContext: 'GLOBAL',
         toContext: 'FIRM',
         sessionId,
+        mode,
       },
       req,
     });
@@ -722,6 +735,7 @@ const switchFirm = async (req, res) => {
         firmName: firm.name,
         firmStatus: firm.status,
         sessionId,
+        impersonationMode: mode,
       },
     });
   } catch (error) {

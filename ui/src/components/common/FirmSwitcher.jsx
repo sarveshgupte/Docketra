@@ -13,6 +13,7 @@ export const FirmSwitcher = ({ onFirmSwitch }) => {
   const [firms, setFirms] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedMode, setSelectedMode] = useState('READ_ONLY');
   const { showSuccess, showError } = useToast();
 
   useEffect(() => {
@@ -39,7 +40,7 @@ export const FirmSwitcher = ({ onFirmSwitch }) => {
   const handleSwitchFirm = async (firmId) => {
     try {
       setLoading(true);
-      const response = await superadminService.switchFirm(firmId);
+      const response = await superadminService.switchFirm(firmId, selectedMode);
       if (response.success) {
         showSuccess(response.message);
         setShowDropdown(false);
@@ -81,6 +82,28 @@ export const FirmSwitcher = ({ onFirmSwitch }) => {
               >
                 ×
               </button>
+            </div>
+            <div className="firm-switcher__mode-selector">
+              <label className="firm-switcher__mode-label">
+                <input
+                  type="radio"
+                  name="impersonation-mode"
+                  value="READ_ONLY"
+                  checked={selectedMode === 'READ_ONLY'}
+                  onChange={(e) => setSelectedMode(e.target.value)}
+                />
+                <span>Read-Only (Safe Mode)</span>
+              </label>
+              <label className="firm-switcher__mode-label">
+                <input
+                  type="radio"
+                  name="impersonation-mode"
+                  value="FULL_ACCESS"
+                  checked={selectedMode === 'FULL_ACCESS'}
+                  onChange={(e) => setSelectedMode(e.target.value)}
+                />
+                <span>Full Access</span>
+              </label>
             </div>
             <div className="firm-switcher__list">
               {firms.length === 0 ? (
