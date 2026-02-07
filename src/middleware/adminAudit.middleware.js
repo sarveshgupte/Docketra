@@ -41,11 +41,17 @@ const adminAuditTrail = (scope = 'admin') => (req, res, next) => {
     });
   }
 
-  // Attach global context flag for SuperAdmin
+  // Store SuperAdmin flag and attach global context flag for SuperAdmin
   if (isSuperAdmin && !req.firm?.id && !req.user?.firmId) {
     req.context = {
       ...req.context,
       isGlobalContext: true,
+      isSuperAdmin: true,
+    };
+  } else {
+    req.context = {
+      ...req.context,
+      isSuperAdmin,
     };
   }
 
@@ -53,9 +59,8 @@ const adminAuditTrail = (scope = 'admin') => (req, res, next) => {
     if (finalized) return;
     finalized = true;
     const { enqueueAfterCommit } = require('../services/sideEffectQueue.service');
-    const isSuperAdmin = req.isSuperAdmin || isSuperAdminRole(req.user?.role);
     const firmId = req.firm?.id || req.user?.firmId || null;
-    const auditScope = isSuperAdmin && !firmId ? 'GLOBAL' : scope;
+    const auditScope = req.context?.isSuperAdmin && !firmId ? 'GLOBAL' : scope;
     
     enqueueAfterCommit(req, {
       type: 'ADMIN_AUDIT',
