@@ -31,9 +31,9 @@ const firmContext = async (req, res, next) => {
     req.isSuperAdmin = isSuperAdmin;
 
     // NEW: Check if SuperAdmin is impersonating a firm
-    const impersonatedFirmId = req.headers['x-impersonated-firm-id'];
-    const impersonationSessionId = req.headers['x-impersonation-session-id'];
-    const impersonationMode = req.headers['x-impersonation-mode'] || 'READ_ONLY';
+    const impersonatedFirmId = req.headers?.['x-impersonated-firm-id'];
+    const impersonationSessionId = req.headers?.['x-impersonation-session-id'];
+    const impersonationMode = req.headers?.['x-impersonation-mode'] || 'READ_ONLY';
     
     if (isSuperAdmin) {
       // If SuperAdmin is NOT impersonating, block access to firm-scoped routes
