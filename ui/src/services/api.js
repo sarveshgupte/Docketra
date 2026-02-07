@@ -166,15 +166,13 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Handle authorization failures explicitly (stop silent polling)
+    // Handle authorization failures - show error but DO NOT logout
     if (status === 403) {
-      // Forbidden - clear storage and redirect to login
-      clearAuthStorage();
+      // Forbidden - user is authenticated but not authorized for this action
       sessionStorage.setItem(SESSION_KEYS.GLOBAL_TOAST, JSON.stringify({
-        message: 'Access denied for this action. Please log in again.',
-        type: 'warning'
+        message: 'You do not have permission to perform this action.',
+        type: 'error'
       }));
-      redirectToLogin();
       return Promise.reject(error);
     }
     
