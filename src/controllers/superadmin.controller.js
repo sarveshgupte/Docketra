@@ -647,6 +647,126 @@ const getOperationalHealth = async (req, res) => {
   }
 };
 
+/**
+ * Switch SuperAdmin into a firm context (impersonation mode)
+ * POST /api/superadmin/switch-firm
+ * 
+ * Allows SuperAdmin to enter firm context for debugging, support, or setup.
+ * Does NOT mutate user identity or firm ownership.
+ * Attaches impersonatedFirmId to request context.
+ */
+const switchFirm = async (req, res) => {
+  try {
+    const { firmId } = req.body;
+    
+    if (!firmId) {
+      return res.status(400).json({
+        success: false,
+        message: 'firmId is required',
+      });
+    }
+    
+    // Find firm by MongoDB _id or firmId (FIRM001 format)
+    let firm;
+    if (mongoose.Types.ObjectId.isValid(firmId)) {
+      firm = await Firm.findById(firmId);
+    } else if (/^FIRM\d{3,}$/i.test(firmId)) {
+      firm = await Firm.findOne({ firmId: firmId.toUpperCase() });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid firmId format',
+      });
+    }
+    
+    if (!firm) {
+      return res.status(404).json({
+        success: false,
+        message: 'Firm not found',
+      });
+    }
+    
+    // Log impersonation action
+    await logSuperadminAction({
+      actionType: 'SwitchFirm',
+      description: `SuperAdmin switched into firm context: ${firm.name} (${firm.firmId})`,
+      performedBy: req.user.email,
+      performedById: req.user._id,
+      targetEntityType: 'Firm',
+      targetEntityId: firm._id.toString(),
+      metadata: {
+        firmId: firm.firmId,
+        firmSlug: firm.firmSlug,
+        fromContext: 'GLOBAL',
+        toContext: 'FIRM',
+      },
+      req,
+    });
+    
+    // Return firm context information
+    // The actual context will be managed on frontend via session/state
+    res.json({
+      success: true,
+      message: `Switched to firm context: ${firm.name}`,
+      data: {
+        impersonatedFirmId: firm._id.toString(),
+        firmId: firm.firmId,
+        firmSlug: firm.firmSlug,
+        firmName: firm.name,
+        firmStatus: firm.status,
+      },
+    });
+  } catch (error) {
+    console.error('[SUPERADMIN] Error switching firm context:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to switch firm context',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Exit firm context and return to GLOBAL scope
+ * POST /api/superadmin/exit-firm
+ * 
+ * Clears impersonation and returns SuperAdmin to GLOBAL context.
+ */
+const exitFirm = async (req, res) => {
+  try {
+    // Log exit action
+    await logSuperadminAction({
+      actionType: 'ExitFirm',
+      description: 'SuperAdmin exited firm context, returned to GLOBAL scope',
+      performedBy: req.user.email,
+      performedById: req.user._id,
+      targetEntityType: 'Firm',
+      targetEntityId: null,
+      metadata: {
+        fromContext: 'FIRM',
+        toContext: 'GLOBAL',
+      },
+      req,
+    });
+    
+    res.json({
+      success: true,
+      message: 'Returned to GLOBAL context',
+      data: {
+        impersonatedFirmId: null,
+        scope: 'GLOBAL',
+      },
+    });
+  } catch (error) {
+    console.error('[SUPERADMIN] Error exiting firm context:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to exit firm context',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createFirm: wrapWriteHandler(createFirm),
   listFirms,
@@ -656,4 +776,6 @@ module.exports = {
   getPlatformStats,
   getFirmBySlug,
   getOperationalHealth,
+  switchFirm,
+  exitFirm,
 };

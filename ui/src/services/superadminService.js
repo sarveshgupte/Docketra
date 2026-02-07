@@ -58,4 +58,20 @@ export const superadminService = {
     const response = await api.post(`/superadmin/firms/${firmId}/admin`, adminData);
     return response.data;
   },
+
+  /**
+   * Switch into a firm context (impersonation)
+   */
+  switchFirm: async (firmId) => {
+    const response = await api.post('/superadmin/switch-firm', { firmId });
+    return response.data;
+  },
+
+  /**
+   * Exit firm context and return to GLOBAL scope
+   */
+  exitFirm: async () => {
+    const response = await api.post('/superadmin/exit-firm');
+    return response.data;
+  },
 };
