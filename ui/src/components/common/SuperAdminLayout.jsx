@@ -52,7 +52,8 @@ export const SuperAdminLayout = ({ children }) => {
 
   const handleExitFirm = async () => {
     try {
-      const response = await superadminService.exitFirm();
+      const sessionId = impersonatedFirm?.sessionId;
+      const response = await superadminService.exitFirm(sessionId);
       if (response.success) {
         // Clear impersonation state
         localStorage.removeItem(STORAGE_KEYS.IMPERSONATED_FIRM);

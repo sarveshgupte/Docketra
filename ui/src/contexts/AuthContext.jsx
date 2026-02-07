@@ -64,6 +64,7 @@ export const AuthProvider = ({ children }) => {
     try {
       localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
       localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+      localStorage.removeItem(STORAGE_KEYS.IMPERSONATED_FIRM);
       if (firmSlugToPreserve) {
         localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, firmSlugToPreserve);
       } else {

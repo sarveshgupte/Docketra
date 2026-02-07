@@ -689,6 +689,9 @@ const switchFirm = async (req, res) => {
       });
     }
     
+    // Generate a unique session ID for this impersonation session
+    const sessionId = crypto.randomUUID();
+    
     // Log impersonation action
     await logSuperadminAction({
       actionType: 'SwitchFirm',
@@ -702,6 +705,7 @@ const switchFirm = async (req, res) => {
         firmSlug: firm.firmSlug,
         fromContext: 'GLOBAL',
         toContext: 'FIRM',
+        sessionId,
       },
       req,
     });
@@ -717,6 +721,7 @@ const switchFirm = async (req, res) => {
         firmSlug: firm.firmSlug,
         firmName: firm.name,
         firmStatus: firm.status,
+        sessionId,
       },
     });
   } catch (error) {
@@ -737,7 +742,9 @@ const switchFirm = async (req, res) => {
  */
 const exitFirm = async (req, res) => {
   try {
-    // Log exit action
+    const { sessionId } = req.body;
+    
+    // Log exit action with sessionId for audit trail linkage
     await logSuperadminAction({
       actionType: 'ExitFirm',
       description: 'SuperAdmin exited firm context, returned to GLOBAL scope',
@@ -748,6 +755,7 @@ const exitFirm = async (req, res) => {
       metadata: {
         fromContext: 'FIRM',
         toContext: 'GLOBAL',
+        sessionId: sessionId || null,
       },
       req,
     });
