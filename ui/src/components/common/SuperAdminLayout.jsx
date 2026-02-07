@@ -79,6 +79,7 @@ export const SuperAdminLayout = ({ children }) => {
     <div className="superadmin-layout">
       <ImpersonationBanner 
         firmName={impersonatedFirm?.firmName}
+        mode={impersonatedFirm?.impersonationMode}
         onExit={handleExitFirm}
       />
       <nav className="superadmin-layout__nav">
