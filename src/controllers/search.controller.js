@@ -192,6 +192,7 @@ const globalSearch = async (req, res) => {
       filters: { searchQuery: searchTerm },
       listType: 'GLOBAL_SEARCH',
       resultCount: uniqueCases.length,
+      req,
     });
     
     res.json({
@@ -282,6 +283,7 @@ const categoryWorklist = async (req, res) => {
       filters: { category: categoryId },
       listType: 'CATEGORY_WORKLIST',
       resultCount: cases.length,
+      req,
     });
     
     res.json({
@@ -373,6 +375,7 @@ const employeeWorklist = async (req, res) => {
       filters: { status: CASE_STATUS.OPEN },
       listType: 'MY_WORKLIST',
       resultCount: cases.length,
+      req,
     });
     
     res.json({
@@ -582,6 +585,7 @@ const globalWorklist = async (req, res) => {
         },
         listType: 'GLOBAL_WORKLIST',
         resultCount: casesWithSLAInfo.length,
+        req,
       });
     }
     
