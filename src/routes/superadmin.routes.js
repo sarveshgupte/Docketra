@@ -14,6 +14,8 @@ const {
   getPlatformStats,
   disableFirmImmediately,
   getOperationalHealth,
+  switchFirm,
+  exitFirm,
 } = require('../controllers/superadmin.controller');
 
 /**
@@ -46,5 +48,9 @@ router.post('/firms/:id/disable', authenticate, authorize(FirmPolicy.canManageSt
 
 // Firm admin creation
 router.post('/firms/:firmId/admin', authenticate, authorize(FirmPolicy.canCreateAdmin), superadminLimiter, createFirmAdmin);
+
+// Firm context switching (impersonation)
+router.post('/switch-firm', authenticate, requireSuperadmin, superadminLimiter, switchFirm);
+router.post('/exit-firm', authenticate, requireSuperadmin, superadminLimiter, exitFirm);
 
 module.exports = router;

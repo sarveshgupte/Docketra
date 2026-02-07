@@ -22,6 +22,8 @@ const superadminAuditSchema = new mongoose.Schema({
       'FirmAdminCreated',
       'SuperadminLogin',
       'SuperadminLogout',
+      'SwitchFirm',
+      'ExitFirm',
     ],
     index: true,
   },

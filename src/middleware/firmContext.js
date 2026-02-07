@@ -3,10 +3,13 @@ const mongoose = require('mongoose');
 const Firm = require('../models/Firm.model');
 const { isSuperAdminRole } = require('../utils/role.utils');
 
+// Constants
+const FIRM_ID_PATTERN = /^FIRM\d{3,}$/i;
+
 /**
  * Firm Context Middleware (single source of truth)
  * - Extracts firmId/firmSlug from JWT, session, or path params
- * - Blocks SuperAdmin from firm-scoped routes
+ * - Blocks SuperAdmin from firm-scoped routes UNLESS impersonating
  * - Asserts firmId presence for non-superadmin requests
  * - Attaches req.firmId and req.firmSlug
  */
@@ -27,12 +30,21 @@ const firmContext = async (req, res, next) => {
     
     req.isSuperAdmin = isSuperAdmin;
 
+    // NEW: Check if SuperAdmin is impersonating a firm
+    const impersonatedFirmId = req.headers['x-impersonated-firm-id'];
+    
     if (isSuperAdmin) {
-      console.warn(`[FIRM_CONTEXT][${requestId}] SuperAdmin boundary violation on ${req.method} ${req.originalUrl}`);
-      return res.status(403).json({
-        success: false,
-        message: 'Superadmin cannot access firm-scoped routes',
-      });
+      // If SuperAdmin is NOT impersonating, block access to firm-scoped routes
+      if (!impersonatedFirmId) {
+        console.warn(`[FIRM_CONTEXT][${requestId}] SuperAdmin boundary violation on ${req.method} ${req.originalUrl}`);
+        return res.status(403).json({
+          success: false,
+          message: 'Superadmin cannot access firm-scoped routes',
+        });
+      }
+      
+      // SuperAdmin IS impersonating - validate and allow access
+      console.log(`[FIRM_CONTEXT][${requestId}] SuperAdmin impersonating firm: ${impersonatedFirmId}`);
     }
 
     const normalizeSlug = (slug) => (slug ? slug.toLowerCase().trim() : null);
@@ -44,12 +56,19 @@ const firmContext = async (req, res, next) => {
 
     const lookup = [];
 
+    // If SuperAdmin is impersonating, prioritize the impersonated firm ID
+    if (isSuperAdmin && impersonatedFirmId) {
+      if (mongoose.Types.ObjectId.isValid(impersonatedFirmId)) {
+        lookup.push({ _id: impersonatedFirmId });
+      }
+    }
+
     if (paramFirmSlug) {
       lookup.push({ firmSlug: paramFirmSlug });
     }
 
     if (paramFirmId) {
-      if (/^FIRM\d{3,}$/i.test(paramFirmId)) {
+      if (FIRM_ID_PATTERN.test(paramFirmId)) {
         lookup.push({ firmId: paramFirmId.toUpperCase() });
       }
       if (mongoose.Types.ObjectId.isValid(paramFirmId)) {
@@ -73,6 +92,7 @@ const firmContext = async (req, res, next) => {
         jwtFirmId: jwtFirmId || null,
         paramFirmId: paramFirmId || null,
         paramFirmSlug: paramFirmSlug || null,
+        impersonatedFirmId: impersonatedFirmId || null,
       });
       const error = new Error('Firm context missing');
       error.statusCode = 400;
@@ -87,7 +107,8 @@ const firmContext = async (req, res, next) => {
       });
     }
 
-    if (jwtFirmId && firm._id.toString() !== jwtFirmId.toString()) {
+    // For non-SuperAdmin users, validate firm ownership
+    if (!isSuperAdmin && jwtFirmId && firm._id.toString() !== jwtFirmId.toString()) {
       console.error(`[FIRM_CONTEXT][${requestId}] Firm mismatch detected`, {
         tokenFirmId: jwtFirmId,
         resolvedFirmId: firm._id.toString(),
@@ -105,8 +126,21 @@ const firmContext = async (req, res, next) => {
     };
     req.firmId = firm._id.toString();
     req.firmSlug = firm.firmSlug;
+    
+    // Attach impersonation context for auditing
+    if (isSuperAdmin && impersonatedFirmId) {
+      req.context = {
+        isSuperAdmin: true,
+        isGlobalContext: false,
+        impersonatedFirmId: firm._id.toString(),
+      };
+    }
 
-    console.log(`[FIRM_CONTEXT][${requestId}] Firm context resolved`, { firmId: req.firmId, firmSlug: req.firmSlug });
+    console.log(`[FIRM_CONTEXT][${requestId}] Firm context resolved`, { 
+      firmId: req.firmId, 
+      firmSlug: req.firmSlug,
+      impersonating: !!(isSuperAdmin && impersonatedFirmId)
+    });
     return next();
   } catch (error) {
     const statusCode = error.statusCode || 500;
