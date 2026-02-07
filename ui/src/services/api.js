@@ -64,7 +64,9 @@ api.interceptors.request.use(
           config.headers['X-Impersonated-Firm-Id'] = firmData.impersonatedFirmId;
         }
       } catch (error) {
-        console.error('[API] Failed to parse impersonated firm data:', error);
+        console.error('[API] Failed to parse impersonated firm data from localStorage. Data may be corrupted. Please clear impersonation state and try again.', error);
+        // Clear corrupted data
+        localStorage.removeItem(STORAGE_KEYS.IMPERSONATED_FIRM);
       }
     }
     
