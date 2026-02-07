@@ -1415,6 +1415,7 @@ const getCases = async (req, res) => {
             resultCount: casesWithClients.length,
             total,
           },
+          req,
         });
       } else {
         // Log regular case list view
@@ -1423,6 +1424,7 @@ const getCases = async (req, res) => {
           filters: { status, category, priority, assignedTo, clientId },
           listType: 'FILTERED_CASES',
           resultCount: casesWithClients.length,
+          req,
         });
       }
     }
