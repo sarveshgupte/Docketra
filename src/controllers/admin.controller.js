@@ -717,6 +717,7 @@ const disconnectStorage = async (req, res) => {
       adminXID: req.user?.xID,
       actionType: 'STORAGE_CONFIGURATION_DISCONNECTED',
       targetFirmId: firm.firmId,
+      metadata: {},
       req,
     });
 
