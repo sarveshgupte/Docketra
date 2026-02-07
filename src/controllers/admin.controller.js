@@ -279,6 +279,7 @@ const getAllOpenCases = async (req, res) => {
       filters: { status: CASE_STATUS.OPEN },
       listType: 'ADMIN_ALL_OPEN_CASES',
       resultCount: cases.length,
+      req,
     });
     
     res.json({
@@ -330,6 +331,7 @@ const getAllPendingCases = async (req, res) => {
       filters: { status: CASE_STATUS.PENDED },
       listType: 'ADMIN_ALL_PENDING_CASES',
       resultCount: cases.length,
+      req,
     });
     
     res.json({
@@ -385,6 +387,7 @@ const getAllFiledCases = async (req, res) => {
         resultCount: cases.length,
         total,
       },
+      req,
     });
     
     res.json({
@@ -440,6 +443,7 @@ const getAllResolvedCases = async (req, res) => {
         resultCount: cases.length,
         total,
       },
+      req,
     });
     
     res.json({
@@ -535,6 +539,7 @@ const updateRestrictedClients = async (req, res) => {
         previousCount: previousRestrictedClientIds.length,
         newCount: restrictedClientIds.length,
       },
+      req,
     });
     
     res.json({
@@ -658,6 +663,7 @@ const updateStorageConfig = async (req, res) => {
         mode: firm.storage.mode,
         provider: firm.storage.provider,
       },
+      req,
     });
 
     res.json({
@@ -711,6 +717,8 @@ const disconnectStorage = async (req, res) => {
       adminXID: req.user?.xID,
       actionType: 'STORAGE_CONFIGURATION_DISCONNECTED',
       targetFirmId: firm.firmId,
+      metadata: {},
+      req,
     });
 
     res.json({
