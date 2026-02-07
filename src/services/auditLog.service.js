@@ -105,7 +105,10 @@ const logCaseHistory = async ({
       performedBy: performedBy ? performedBy.toLowerCase() : 'SYSTEM',
       performedByXID: performedByXID ? performedByXID.toUpperCase() : 'SYSTEM',
       actorRole: mapActorRole(actorRole),
-      metadata,
+      metadata: {
+        ...metadata,
+        impersonationMode: req?.context?.impersonationMode || null,
+      },
     };
     
     // Add IP and user agent if request object provided
@@ -153,6 +156,7 @@ const logCaseAction = async ({ caseId, actionType, description, performedByXID, 
     // Extract impersonation context if available
     const impersonationActive = req?.context?.isSuperAdmin && req?.context?.impersonationSessionId ? true : false;
     const impersonationSessionId = req?.context?.impersonationSessionId || null;
+    const impersonationMode = req?.context?.impersonationMode || null;
 
     // Create audit entry
     const auditEntry = await CaseAudit.create({
@@ -160,7 +164,10 @@ const logCaseAction = async ({ caseId, actionType, description, performedByXID, 
       actionType,
       description,
       performedByXID: performedByXID.toUpperCase(),
-      metadata,
+      metadata: {
+        ...metadata,
+        impersonationMode,
+      },
       impersonationActive,
       impersonationSessionId,
     });
@@ -199,6 +206,7 @@ const logCaseListViewed = async ({ viewerXID, filters = {}, listType, resultCoun
     // Extract impersonation context if available
     const impersonationActive = req?.context?.isSuperAdmin && req?.context?.impersonationSessionId ? true : false;
     const impersonationSessionId = req?.context?.impersonationSessionId || null;
+    const impersonationMode = req?.context?.impersonationMode || null;
 
     // For list views, we create a single audit entry without a specific caseId
     // Use a special marker to indicate this is a list view
@@ -212,6 +220,7 @@ const logCaseListViewed = async ({ viewerXID, filters = {}, listType, resultCoun
         filters,
         resultCount,
         timestamp: new Date(),
+        impersonationMode,
       },
       impersonationActive,
       impersonationSessionId,
