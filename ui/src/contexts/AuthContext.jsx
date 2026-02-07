@@ -158,9 +158,10 @@ export const AuthProvider = ({ children }) => {
       resetAuthState();
       return { success: false, data: null };
     } catch (err) {
-      // Fail fast on auth errors (401/403) to avoid hidden polling loops
+      // Fail fast on auth errors (401) to avoid hidden polling loops
+      // 403 means user is authenticated but profile endpoint denied access (shouldn't happen normally)
       const status = err?.response?.status;
-      if (status === 401 || status === 403) {
+      if (status === 401) {
         resetAuthState();
       }
       // For network errors or other failures, still allow the app to continue
