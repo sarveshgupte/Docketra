@@ -13,11 +13,12 @@ export const ImpersonationBanner = ({ firmName, mode, onExit }) => {
   const isReadOnly = mode === 'READ_ONLY';
   const modeLabel = isReadOnly ? 'Read-Only' : 'Full Access';
   const modeIcon = isReadOnly ? '👁️' : '✏️';
+  const ariaLabel = isReadOnly ? 'Read-only mode - view only, no changes allowed' : 'Full access mode - changes allowed';
 
   return (
     <div className={`impersonation-banner ${isReadOnly ? 'impersonation-banner--read-only' : 'impersonation-banner--full-access'}`}>
       <div className="impersonation-banner__content">
-        <span className="impersonation-banner__icon">{modeIcon}</span>
+        <span className="impersonation-banner__icon" role="img" aria-label={ariaLabel}>{modeIcon}</span>
         <span className="impersonation-banner__text">
           You are impersonating <strong>{firmName}</strong> ({modeLabel})
         </span>

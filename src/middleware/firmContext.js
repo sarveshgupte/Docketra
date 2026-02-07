@@ -168,7 +168,7 @@ const firmContext = async (req, res, next) => {
       console.warn(`[FIRM_CONTEXT][${requestId}] Read-only impersonation: blocked ${req.method} ${req.originalUrl}`);
       return res.status(403).json({
         success: false,
-        message: 'Read-only impersonation: write operations are not allowed',
+        message: 'Write operations are blocked in READ_ONLY impersonation mode. Switch to FULL_ACCESS mode to enable mutations.',
       });
     }
     
