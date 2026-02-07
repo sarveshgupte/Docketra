@@ -70,8 +70,8 @@ export const superadminService = {
   /**
    * Exit firm context and return to GLOBAL scope
    */
-  exitFirm: async () => {
-    const response = await api.post('/superadmin/exit-firm');
+  exitFirm: async (sessionId) => {
+    const response = await api.post('/superadmin/exit-firm', { sessionId });
     return response.data;
   },
 };

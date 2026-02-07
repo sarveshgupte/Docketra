@@ -267,6 +267,7 @@ const getMyPendingCases = async (req, res) => {
       filters: { status: CASE_STATUS.PENDED },
       listType: 'MY_PENDING_CASES',
       resultCount: cases.length,
+      req,
     });
     
     res.json({
@@ -340,6 +341,7 @@ const getMyResolvedCases = async (req, res) => {
       filters: { status: CASE_STATUS.RESOLVED, lastActionByXID: req.user.xID },
       listType: 'MY_RESOLVED_CASES',
       resultCount: cases.length,
+      req,
     });
     
     res.json({
@@ -445,6 +447,7 @@ const getMyUnassignedCreatedCases = async (req, res) => {
       filters: { status: CASE_STATUS.UNASSIGNED, createdByXID: req.user.xID },
       listType: 'MY_UNASSIGNED_CREATED_CASES',
       resultCount: cases.length,
+      req,
     });
     
     res.json({

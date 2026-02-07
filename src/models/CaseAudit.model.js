@@ -141,6 +141,25 @@ const caseAuditSchema = new mongoose.Schema({
   metadata: {
     type: mongoose.Schema.Types.Mixed,
   },
+  
+  /**
+   * Indicates if this action was performed during SuperAdmin impersonation
+   * Used to track and audit impersonated actions separately
+   */
+  impersonationActive: {
+    type: Boolean,
+    default: false,
+  },
+  
+  /**
+   * Session ID for the impersonation session (if impersonationActive=true)
+   * Links all actions performed during a single impersonation session
+   * Allows tracing all activities within a specific impersonation context
+   */
+  impersonationSessionId: {
+    type: String,
+    default: null,
+  },
 }, {
   // Strict mode: Prevents adding arbitrary fields not defined in schema
   strict: true,
@@ -195,9 +214,11 @@ caseAuditSchema.pre('remove', function(next) {
  * - Compound Index (caseId + timestamp): Primary query pattern
  * - performedByXID: Secondary index for user activity tracking
  * - actionType: For filtering by specific action types
+ * - impersonationSessionId: For tracing all actions in an impersonation session
  */
 caseAuditSchema.index({ caseId: 1, timestamp: -1 });
 caseAuditSchema.index({ performedByXID: 1 });
 caseAuditSchema.index({ actionType: 1 });
+caseAuditSchema.index({ impersonationSessionId: 1 });
 
 module.exports = mongoose.model('CaseAudit', caseAuditSchema);
