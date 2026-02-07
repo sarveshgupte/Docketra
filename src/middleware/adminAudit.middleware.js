@@ -1,4 +1,5 @@
 const { recordAdminAudit } = require('../services/adminAudit.service');
+const { isSuperAdminRole } = require('../utils/role.utils');
 
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
@@ -27,7 +28,11 @@ const adminAuditTrail = (scope = 'admin') => (req, res, next) => {
       action: 'contact_admin',
     });
   }
-  if (!(req.firm?.id || req.user?.firmId)) {
+
+  // SuperAdmin can operate without firm context
+  const isSuperAdmin = req.isSuperAdmin || isSuperAdminRole(req.user?.role);
+  
+  if (!isSuperAdmin && !(req.firm?.id || req.user?.firmId)) {
     return res.status(403).json({
       success: false,
       code: 'AUDIT_FIRM_CONTEXT_REQUIRED',
@@ -36,20 +41,32 @@ const adminAuditTrail = (scope = 'admin') => (req, res, next) => {
     });
   }
 
+  // Attach global context flag for SuperAdmin
+  if (isSuperAdmin && !req.firm?.id && !req.user?.firmId) {
+    req.context = {
+      ...req.context,
+      isGlobalContext: true,
+    };
+  }
+
   const finalize = () => {
     if (finalized) return;
     finalized = true;
     const { enqueueAfterCommit } = require('../services/sideEffectQueue.service');
+    const isSuperAdmin = req.isSuperAdmin || isSuperAdminRole(req.user?.role);
+    const firmId = req.firm?.id || req.user?.firmId || null;
+    const auditScope = isSuperAdmin && !firmId ? 'GLOBAL' : scope;
+    
     enqueueAfterCommit(req, {
       type: 'ADMIN_AUDIT',
       payload: { action: `${req.method} ${req.originalUrl || req.url}`, target },
       execute: async () => recordAdminAudit({
         actor: req.user?.xID || 'UNKNOWN',
-        firmId: req.firm?.id || req.user?.firmId || null,
+        firmId,
         userId: req.user?._id,
         action: `${req.method} ${req.originalUrl || req.url}`,
         target,
-        scope,
+        scope: auditScope,
         requestId: req.requestId,
         status: res.statusCode,
         ipAddress: req.ip,
