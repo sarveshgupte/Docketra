@@ -281,7 +281,7 @@ async function testReadOnlyModeBlocksMutations() {
     
     assert.strictEqual(statusCode, 403, `${method} should return 403 Forbidden`);
     assert.strictEqual(responseBody.success, false, 'Response should be unsuccessful');
-    assert.ok(responseBody.message.includes('Read-only impersonation'), 'Should return read-only error message');
+    assert.ok(responseBody.message.includes('READ_ONLY impersonation mode'), 'Should return read-only error message');
     assert.strictEqual(nextCalled, false, 'next() should not be called');
     
     console.log(`✓ ${method} blocked in READ_ONLY mode`);
