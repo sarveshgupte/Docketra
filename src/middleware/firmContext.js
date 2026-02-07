@@ -3,6 +3,9 @@ const mongoose = require('mongoose');
 const Firm = require('../models/Firm.model');
 const { isSuperAdminRole } = require('../utils/role.utils');
 
+// Constants
+const FIRM_ID_PATTERN = /^FIRM\d{3,}$/i;
+
 /**
  * Firm Context Middleware (single source of truth)
  * - Extracts firmId/firmSlug from JWT, session, or path params
@@ -65,7 +68,7 @@ const firmContext = async (req, res, next) => {
     }
 
     if (paramFirmId) {
-      if (/^FIRM\d{3,}$/i.test(paramFirmId)) {
+      if (FIRM_ID_PATTERN.test(paramFirmId)) {
         lookup.push({ firmId: paramFirmId.toUpperCase() });
       }
       if (mongoose.Types.ObjectId.isValid(paramFirmId)) {

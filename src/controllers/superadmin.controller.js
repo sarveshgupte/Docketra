@@ -14,6 +14,9 @@ const { wrapWriteHandler } = require('../utils/transactionGuards');
 const { createFirmHierarchy, FirmBootstrapError } = require('../services/firmBootstrap.service');
 const { isFirmCreationDisabled } = require('../services/featureFlags.service');
 
+// Constants
+const FIRM_ID_PATTERN = /^FIRM\d{3,}$/i;
+
 /**
  * Log Superadmin action to audit log
  * 
@@ -670,7 +673,7 @@ const switchFirm = async (req, res) => {
     let firm;
     if (mongoose.Types.ObjectId.isValid(firmId)) {
       firm = await Firm.findById(firmId);
-    } else if (/^FIRM\d{3,}$/i.test(firmId)) {
+    } else if (FIRM_ID_PATTERN.test(firmId)) {
       firm = await Firm.findOne({ firmId: firmId.toUpperCase() });
     } else {
       return res.status(400).json({

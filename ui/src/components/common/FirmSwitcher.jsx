@@ -13,7 +13,7 @@ export const FirmSwitcher = ({ onFirmSwitch }) => {
   const [firms, setFirms] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
-  const toast = useToast();
+  const { showSuccess, showError } = useToast();
 
   useEffect(() => {
     loadFirms();
@@ -30,7 +30,7 @@ export const FirmSwitcher = ({ onFirmSwitch }) => {
       }
     } catch (error) {
       console.error('Error loading firms:', error);
-      toast.error('Failed to load firms');
+      showError('Failed to load active firms. Please try again or contact support if the problem persists.');
     } finally {
       setLoading(false);
     }
@@ -41,7 +41,7 @@ export const FirmSwitcher = ({ onFirmSwitch }) => {
       setLoading(true);
       const response = await superadminService.switchFirm(firmId);
       if (response.success) {
-        toast.success(response.message);
+        showSuccess(response.message);
         setShowDropdown(false);
         if (onFirmSwitch) {
           onFirmSwitch(response.data);
@@ -49,7 +49,7 @@ export const FirmSwitcher = ({ onFirmSwitch }) => {
       }
     } catch (error) {
       console.error('Error switching firm:', error);
-      toast.error(error.response?.data?.message || 'Failed to switch firm context');
+      showError(error.response?.data?.message || 'Failed to switch firm context. Please try again.');
     } finally {
       setLoading(false);
     }
