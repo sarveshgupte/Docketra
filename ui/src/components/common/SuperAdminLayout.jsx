@@ -3,24 +3,66 @@
  * Minimal layout for platform-level management
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { Loading } from './Loading';
-import { USER_ROLES } from '../../utils/constants';
+import { FirmSwitcher } from './FirmSwitcher';
+import { ImpersonationBanner } from './ImpersonationBanner';
+import { superadminService } from '../../services/superadminService';
+import { USER_ROLES, STORAGE_KEYS } from '../../utils/constants';
 import './SuperAdminLayout.css';
 
 export const SuperAdminLayout = ({ children }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const { showSuccess } = useToast();
+  const { showSuccess, showError } = useToast();
+  
+  // State for firm impersonation - hydrate from localStorage on mount
+  const [impersonatedFirm, setImpersonatedFirm] = useState(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.IMPERSONATED_FIRM);
+      return stored ? JSON.parse(stored) : null;
+    } catch (error) {
+      console.error('[SuperAdminLayout] Failed to parse impersonated firm:', error);
+      return null;
+    }
+  });
 
   const handleLogout = async () => {
+    // Clear impersonation state on logout
+    localStorage.removeItem(STORAGE_KEYS.IMPERSONATED_FIRM);
     await logout();
     showSuccess('You have been signed out safely.');
     navigate('/login');
+  };
+
+  const handleFirmSwitch = (firmData) => {
+    // Store impersonation state in localStorage
+    try {
+      localStorage.setItem(STORAGE_KEYS.IMPERSONATED_FIRM, JSON.stringify(firmData));
+      setImpersonatedFirm(firmData);
+    } catch (error) {
+      console.error('[SuperAdminLayout] Failed to store impersonated firm:', error);
+      showError('Failed to save impersonation state');
+    }
+  };
+
+  const handleExitFirm = async () => {
+    try {
+      const response = await superadminService.exitFirm();
+      if (response.success) {
+        // Clear impersonation state
+        localStorage.removeItem(STORAGE_KEYS.IMPERSONATED_FIRM);
+        setImpersonatedFirm(null);
+        showSuccess(response.message);
+      }
+    } catch (error) {
+      console.error('Error exiting firm:', error);
+      showError('Failed to exit firm context');
+    }
   };
 
   const isActive = (path) => {
@@ -34,6 +76,10 @@ export const SuperAdminLayout = ({ children }) => {
 
   return (
     <div className="superadmin-layout">
+      <ImpersonationBanner 
+        firmName={impersonatedFirm?.firmName}
+        onExit={handleExitFirm}
+      />
       <nav className="superadmin-layout__nav">
         <div className="superadmin-layout__nav-container">
           <div className="superadmin-layout__brand">
@@ -55,6 +101,7 @@ export const SuperAdminLayout = ({ children }) => {
             </Link>
           </div>
           <div className="superadmin-layout__nav-user">
+            <FirmSwitcher onFirmSwitch={handleFirmSwitch} />
             <span className="superadmin-layout__user-info">
               {(user?.xID || user?.email || 'SuperAdmin')} (SuperAdmin)
             </span>

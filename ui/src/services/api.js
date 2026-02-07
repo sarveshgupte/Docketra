@@ -54,6 +54,22 @@ api.interceptors.request.use(
     if (accessToken) {
       config.headers['Authorization'] = `Bearer ${accessToken}`;
     }
+    
+    // Add impersonation header if SuperAdmin is impersonating a firm
+    const impersonatedFirm = localStorage.getItem(STORAGE_KEYS.IMPERSONATED_FIRM);
+    if (impersonatedFirm) {
+      try {
+        const firmData = JSON.parse(impersonatedFirm);
+        if (firmData?.impersonatedFirmId) {
+          config.headers['X-Impersonated-Firm-Id'] = firmData.impersonatedFirmId;
+        }
+      } catch (error) {
+        console.error('[API] Failed to parse impersonated firm data from localStorage. Data may be corrupted. Please clear impersonation state and try again.', error);
+        // Clear corrupted data
+        localStorage.removeItem(STORAGE_KEYS.IMPERSONATED_FIRM);
+      }
+    }
+    
     return config;
   },
   (error) => {
