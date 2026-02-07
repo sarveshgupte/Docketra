@@ -3,7 +3,7 @@
  * Minimal layout for platform-level management
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
@@ -11,7 +11,7 @@ import { Loading } from './Loading';
 import { FirmSwitcher } from './FirmSwitcher';
 import { ImpersonationBanner } from './ImpersonationBanner';
 import { superadminService } from '../../services/superadminService';
-import { USER_ROLES } from '../../utils/constants';
+import { USER_ROLES, STORAGE_KEYS } from '../../utils/constants';
 import './SuperAdminLayout.css';
 
 export const SuperAdminLayout = ({ children }) => {
@@ -20,23 +20,42 @@ export const SuperAdminLayout = ({ children }) => {
   const location = useLocation();
   const { showSuccess, showError } = useToast();
   
-  // State for firm impersonation
-  const [impersonatedFirm, setImpersonatedFirm] = useState(null);
+  // State for firm impersonation - hydrate from localStorage on mount
+  const [impersonatedFirm, setImpersonatedFirm] = useState(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.IMPERSONATED_FIRM);
+      return stored ? JSON.parse(stored) : null;
+    } catch (error) {
+      console.error('[SuperAdminLayout] Failed to parse impersonated firm:', error);
+      return null;
+    }
+  });
 
   const handleLogout = async () => {
+    // Clear impersonation state on logout
+    localStorage.removeItem(STORAGE_KEYS.IMPERSONATED_FIRM);
     await logout();
     showSuccess('You have been signed out safely.');
     navigate('/login');
   };
 
   const handleFirmSwitch = (firmData) => {
-    setImpersonatedFirm(firmData);
+    // Store impersonation state in localStorage
+    try {
+      localStorage.setItem(STORAGE_KEYS.IMPERSONATED_FIRM, JSON.stringify(firmData));
+      setImpersonatedFirm(firmData);
+    } catch (error) {
+      console.error('[SuperAdminLayout] Failed to store impersonated firm:', error);
+      showError('Failed to save impersonation state');
+    }
   };
 
   const handleExitFirm = async () => {
     try {
       const response = await superadminService.exitFirm();
       if (response.success) {
+        // Clear impersonation state
+        localStorage.removeItem(STORAGE_KEYS.IMPERSONATED_FIRM);
         setImpersonatedFirm(null);
         showSuccess(response.message);
       }
