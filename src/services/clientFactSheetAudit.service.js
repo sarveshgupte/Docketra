@@ -18,6 +18,7 @@ const { CLIENT_FACT_SHEET_ACTION_TYPES } = require('../config/constants');
  * @param {string} options.description - Human-readable description
  * @param {string} options.performedByXID - xID of user performing action
  * @param {Object} options.metadata - Additional context (optional)
+ * @param {Object} options.req - Express request object (optional, for impersonation context)
  * @returns {Promise<Object>} Created audit entry
  */
 const logClientFactSheetAction = async ({ 
@@ -26,7 +27,8 @@ const logClientFactSheetAction = async ({
   actionType, 
   description, 
   performedByXID, 
-  metadata = {} 
+  metadata = {},
+  req
 }) => {
   try {
     // Validate required fields
@@ -40,6 +42,10 @@ const logClientFactSheetAction = async ({
       throw new Error('Missing required fields for client audit log');
     }
 
+    // Extract impersonation context if available
+    const impersonationActive = req?.context?.isSuperAdmin && req?.context?.impersonationSessionId ? true : false;
+    const impersonationSessionId = req?.context?.impersonationSessionId || null;
+
     // Create audit entry
     const auditEntry = await ClientAudit.create({
       clientId,
@@ -48,6 +54,8 @@ const logClientFactSheetAction = async ({
       description,
       performedByXID: performedByXID.toUpperCase(),
       metadata,
+      impersonationActive,
+      impersonationSessionId,
     });
 
     return auditEntry;
@@ -60,7 +68,7 @@ const logClientFactSheetAction = async ({
 /**
  * Log fact sheet creation
  */
-const logFactSheetCreated = async ({ clientId, firmId, performedByXID, metadata = {} }) => {
+const logFactSheetCreated = async ({ clientId, firmId, performedByXID, metadata = {}, req }) => {
   return logClientFactSheetAction({
     clientId,
     firmId,
@@ -68,13 +76,14 @@ const logFactSheetCreated = async ({ clientId, firmId, performedByXID, metadata 
     description: `Client Fact Sheet created for client ${clientId}`,
     performedByXID,
     metadata,
+    req,
   });
 };
 
 /**
  * Log fact sheet update
  */
-const logFactSheetUpdated = async ({ clientId, firmId, performedByXID, metadata = {} }) => {
+const logFactSheetUpdated = async ({ clientId, firmId, performedByXID, metadata = {}, req }) => {
   return logClientFactSheetAction({
     clientId,
     firmId,
@@ -82,13 +91,14 @@ const logFactSheetUpdated = async ({ clientId, firmId, performedByXID, metadata 
     description: `Client Fact Sheet updated for client ${clientId}`,
     performedByXID,
     metadata,
+    req,
   });
 };
 
 /**
  * Log file added to fact sheet
  */
-const logFactSheetFileAdded = async ({ clientId, firmId, performedByXID, fileName, metadata = {} }) => {
+const logFactSheetFileAdded = async ({ clientId, firmId, performedByXID, fileName, metadata = {}, req }) => {
   return logClientFactSheetAction({
     clientId,
     firmId,
@@ -96,13 +106,14 @@ const logFactSheetFileAdded = async ({ clientId, firmId, performedByXID, fileNam
     description: `File "${fileName}" added to Client Fact Sheet for client ${clientId}`,
     performedByXID,
     metadata: { ...metadata, fileName },
+    req,
   });
 };
 
 /**
  * Log file removed from fact sheet
  */
-const logFactSheetFileRemoved = async ({ clientId, firmId, performedByXID, fileName, metadata = {} }) => {
+const logFactSheetFileRemoved = async ({ clientId, firmId, performedByXID, fileName, metadata = {}, req }) => {
   return logClientFactSheetAction({
     clientId,
     firmId,
@@ -110,13 +121,14 @@ const logFactSheetFileRemoved = async ({ clientId, firmId, performedByXID, fileN
     description: `File "${fileName}" removed from Client Fact Sheet for client ${clientId}`,
     performedByXID,
     metadata: { ...metadata, fileName },
+    req,
   });
 };
 
 /**
  * Log fact sheet viewed
  */
-const logFactSheetViewed = async ({ clientId, firmId, performedByXID, caseId, metadata = {} }) => {
+const logFactSheetViewed = async ({ clientId, firmId, performedByXID, caseId, metadata = {}, req }) => {
   return logClientFactSheetAction({
     clientId,
     firmId,
@@ -124,6 +136,7 @@ const logFactSheetViewed = async ({ clientId, firmId, performedByXID, caseId, me
     description: `Client Fact Sheet viewed for client ${clientId} from case ${caseId}`,
     performedByXID,
     metadata: { ...metadata, caseId },
+    req,
   });
 };
 

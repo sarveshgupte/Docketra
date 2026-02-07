@@ -139,15 +139,20 @@ const logCaseHistory = async ({
  * @param {string} options.description - Human-readable description
  * @param {string} options.performedByXID - xID of user performing action
  * @param {Object} options.metadata - Additional context (optional)
+ * @param {Object} options.req - Express request object (optional, for impersonation context)
  * @returns {Promise<Object>} Created audit entry
  */
-const logCaseAction = async ({ caseId, actionType, description, performedByXID, metadata = {} }) => {
+const logCaseAction = async ({ caseId, actionType, description, performedByXID, metadata = {}, req }) => {
   try {
     // Validate required fields
     if (!caseId || !actionType || !description || !performedByXID) {
       console.error('[AUDIT] Missing required fields for audit log:', { caseId, actionType, performedByXID });
       throw new Error('Missing required fields for audit log');
     }
+
+    // Extract impersonation context if available
+    const impersonationActive = req?.context?.isSuperAdmin && req?.context?.impersonationSessionId ? true : false;
+    const impersonationSessionId = req?.context?.impersonationSessionId || null;
 
     // Create audit entry
     const auditEntry = await CaseAudit.create({
@@ -156,6 +161,8 @@ const logCaseAction = async ({ caseId, actionType, description, performedByXID, 
       description,
       performedByXID: performedByXID.toUpperCase(),
       metadata,
+      impersonationActive,
+      impersonationSessionId,
     });
 
     return auditEntry;
@@ -173,9 +180,10 @@ const logCaseAction = async ({ caseId, actionType, description, performedByXID, 
  * @param {Object} options.filters - Filters applied (status, category, etc.)
  * @param {string} options.listType - Type of list (MY_WORKLIST, GLOBAL_WORKLIST, ADMIN_FILED, etc.)
  * @param {number} options.resultCount - Number of cases in the list
+ * @param {Object} options.req - Express request object (optional, for impersonation context)
  * @returns {Promise<void>}
  */
-const logCaseListViewed = async ({ viewerXID, filters = {}, listType, resultCount = 0 }) => {
+const logCaseListViewed = async ({ viewerXID, filters = {}, listType, resultCount = 0, req }) => {
   try {
     if (!viewerXID || !listType) {
       console.error('[AUDIT] Missing required fields for list view audit');
@@ -187,6 +195,10 @@ const logCaseListViewed = async ({ viewerXID, filters = {}, listType, resultCoun
       ? ` with filters: ${JSON.stringify(filters)}`
       : '';
     const description = `Case list viewed (${listType})${filterDesc} - ${resultCount} result(s)`;
+
+    // Extract impersonation context if available
+    const impersonationActive = req?.context?.isSuperAdmin && req?.context?.impersonationSessionId ? true : false;
+    const impersonationSessionId = req?.context?.impersonationSessionId || null;
 
     // For list views, we create a single audit entry without a specific caseId
     // Use a special marker to indicate this is a list view
@@ -201,6 +213,8 @@ const logCaseListViewed = async ({ viewerXID, filters = {}, listType, resultCoun
         resultCount,
         timestamp: new Date(),
       },
+      impersonationActive,
+      impersonationSessionId,
     });
   } catch (error) {
     console.error('[AUDIT] Failed to log case list view:', error.message);
@@ -222,9 +236,10 @@ const logCaseListViewed = async ({ viewerXID, filters = {}, listType, resultCoun
  * @param {string} options.actionType - Type of admin action
  * @param {string} [options.targetXID] - Optional xID of user being acted upon
  * @param {Object} options.metadata - Additional context
+ * @param {Object} options.req - Express request object (optional, for impersonation context)
  * @returns {Promise<void>}
  */
-const logAdminAction = async ({ adminXID, actionType, targetXID, metadata = {} }) => {
+const logAdminAction = async ({ adminXID, actionType, targetXID, metadata = {}, req }) => {
   try {
     if (!adminXID || !actionType) {
       console.error('[AUDIT] Missing required fields for admin action audit');
@@ -245,6 +260,10 @@ const logAdminAction = async ({ adminXID, actionType, targetXID, metadata = {} }
       description = `Admin ${adminXID} performed action: ${actionType}`;
     }
 
+    // Extract impersonation context if available
+    const impersonationActive = req?.context?.isSuperAdmin && req?.context?.impersonationSessionId ? true : false;
+    const impersonationSessionId = req?.context?.impersonationSessionId || null;
+
     await CaseAudit.create({
       caseId: `ADMIN_ACTION:${actionType}`,
       actionType,
@@ -255,6 +274,8 @@ const logAdminAction = async ({ adminXID, actionType, targetXID, metadata = {} }
         targetXID,
         timestamp: new Date(),
       },
+      impersonationActive,
+      impersonationSessionId,
     });
   } catch (error) {
     console.error('[AUDIT] Failed to log admin action:', error.message);

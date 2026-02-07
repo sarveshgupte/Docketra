@@ -106,6 +106,25 @@ const clientAuditSchema = new mongoose.Schema({
   metadata: {
     type: mongoose.Schema.Types.Mixed,
   },
+  
+  /**
+   * Indicates if this action was performed during SuperAdmin impersonation
+   * Used to track and audit impersonated actions separately
+   */
+  impersonationActive: {
+    type: Boolean,
+    default: false,
+  },
+  
+  /**
+   * Session ID for the impersonation session (if impersonationActive=true)
+   * Links all actions performed during a single impersonation session
+   * Allows tracing all activities within a specific impersonation context
+   */
+  impersonationSessionId: {
+    type: String,
+    default: null,
+  },
 }, {
   // Strict mode: Prevents adding arbitrary fields not defined in schema
   strict: true,
@@ -155,11 +174,13 @@ clientAuditSchema.pre('findOneAndDelete', function(next) {
  * - performedByXID: Secondary index for user activity tracking
  * - actionType: For filtering by specific action types
  * - firmId: Multi-tenancy queries
+ * - impersonationSessionId: For tracing all actions in an impersonation session
  */
 clientAuditSchema.index({ clientId: 1, timestamp: -1 });
 clientAuditSchema.index({ performedByXID: 1 });
 clientAuditSchema.index({ actionType: 1 });
 // REMOVED: { firmId: 1 } - redundant with compound index (firmId, clientId) below
 clientAuditSchema.index({ firmId: 1, clientId: 1 }); // Firm-scoped client audits
+clientAuditSchema.index({ impersonationSessionId: 1 });
 
 module.exports = mongoose.model('ClientAudit', clientAuditSchema);

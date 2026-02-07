@@ -32,6 +32,7 @@ const firmContext = async (req, res, next) => {
 
     // NEW: Check if SuperAdmin is impersonating a firm
     const impersonatedFirmId = req.headers['x-impersonated-firm-id'];
+    const impersonationSessionId = req.headers['x-impersonation-session-id'];
     
     if (isSuperAdmin) {
       // If SuperAdmin is NOT impersonating, block access to firm-scoped routes
@@ -43,8 +44,17 @@ const firmContext = async (req, res, next) => {
         });
       }
       
-      // SuperAdmin IS impersonating - validate and allow access
-      console.log(`[FIRM_CONTEXT][${requestId}] SuperAdmin impersonating firm: ${impersonatedFirmId}`);
+      // If SuperAdmin IS impersonating, require session ID
+      if (!impersonationSessionId) {
+        console.warn(`[FIRM_CONTEXT][${requestId}] SuperAdmin impersonation missing session ID on ${req.method} ${req.originalUrl}`);
+        return res.status(403).json({
+          success: false,
+          message: 'Impersonation session ID is required',
+        });
+      }
+      
+      // SuperAdmin IS impersonating with valid session - validate and allow access
+      console.log(`[FIRM_CONTEXT][${requestId}] SuperAdmin impersonating firm: ${impersonatedFirmId}, session: ${impersonationSessionId}`);
     }
 
     const normalizeSlug = (slug) => (slug ? slug.toLowerCase().trim() : null);
@@ -133,6 +143,7 @@ const firmContext = async (req, res, next) => {
         isSuperAdmin: true,
         isGlobalContext: false,
         impersonatedFirmId: firm._id.toString(),
+        impersonationSessionId,
       };
     }
 
