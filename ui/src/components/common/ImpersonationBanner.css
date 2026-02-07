@@ -10,6 +10,18 @@
   animation: slideDown 0.3s ease-out;
 }
 
+/* Read-Only mode - Blue/Teal gradient (safer, view-only) */
+.impersonation-banner--read-only {
+  background: linear-gradient(135deg, #4a90e2 0%, #56ccf2 100%);
+  border-bottom: 2px solid #357abd;
+}
+
+/* Full Access mode - Orange/Red gradient (warning, write access) */
+.impersonation-banner--full-access {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+  border-bottom: 2px solid #ff5252;
+}
+
 @keyframes slideDown {
   from {
     transform: translateY(-100%);

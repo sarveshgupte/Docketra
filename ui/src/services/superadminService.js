@@ -61,9 +61,11 @@ export const superadminService = {
 
   /**
    * Switch into a firm context (impersonation)
+   * @param {string} firmId - Firm ID to impersonate
+   * @param {string} mode - Impersonation mode: 'READ_ONLY' or 'FULL_ACCESS' (default: 'READ_ONLY')
    */
-  switchFirm: async (firmId) => {
-    const response = await api.post('/superadmin/switch-firm', { firmId });
+  switchFirm: async (firmId, mode = 'READ_ONLY') => {
+    const response = await api.post('/superadmin/switch-firm', { firmId, mode });
     return response.data;
   },
 
