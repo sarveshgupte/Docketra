@@ -29,8 +29,8 @@ const {
 
 const resolveOAuthFirmContext = async (req, res, next) => {
   try {
-    const { state } = req.query;
-    if (!state) {
+    const { state, code } = req.query;
+    if (!state || !code) {
       return res.status(400).json({
         success: false,
         message: 'Missing authorization code or state',
