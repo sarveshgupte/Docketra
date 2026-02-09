@@ -1635,21 +1635,9 @@ const setPassword = async (req, res) => {
     const tokenHash = emailService.hashToken(token);
 
     const now = new Date();
-    const firmScopedUser = await User.findOne({ 
-      passwordSetupTokenHash: tokenHash,
-      passwordSetupExpires: { $gt: now },
-      firmId,
-    });
+    const tokenOwner = await User.findOne({ passwordSetupTokenHash: tokenHash });
 
-    if (!firmScopedUser) {
-      const tokenOwner = await User.findOne({ passwordSetupTokenHash: tokenHash });
-      if (tokenOwner && tokenOwner.firmId && tokenOwner.firmId.toString() !== firmId.toString()) {
-        return res.status(403).json({
-          success: false,
-          code: 'ACTIVATION_TOKEN_FIRM_MISMATCH',
-          message: 'Activation token does not belong to this firm.',
-        });
-      }
+    if (!tokenOwner) {
       return res.status(400).json({
         success: false,
         code: 'ACTIVATION_TOKEN_INVALID',
@@ -1657,7 +1645,23 @@ const setPassword = async (req, res) => {
       });
     }
 
-    if (!firmScopedUser.mustSetPassword || firmScopedUser.status === 'ACTIVE') {
+    if (tokenOwner.firmId && tokenOwner.firmId.toString() !== firmId.toString()) {
+      return res.status(403).json({
+        success: false,
+        code: 'ACTIVATION_TOKEN_FIRM_MISMATCH',
+        message: 'Activation token does not belong to this firm.',
+      });
+    }
+
+    if (!tokenOwner.passwordSetupExpires || tokenOwner.passwordSetupExpires <= now) {
+      return res.status(400).json({
+        success: false,
+        code: 'ACTIVATION_TOKEN_INVALID',
+        message: 'Activation token is invalid or expired.',
+      });
+    }
+
+    if (!tokenOwner.mustSetPassword || tokenOwner.status === 'ACTIVE') {
       return res.status(409).json({
         success: false,
         code: 'ACCOUNT_ALREADY_ACTIVATED',
@@ -1669,37 +1673,37 @@ const setPassword = async (req, res) => {
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
     
     // Set password and clear token
-    firmScopedUser.passwordHash = passwordHash;
-    firmScopedUser.passwordSet = true;
-    firmScopedUser.mustSetPassword = false;
-    firmScopedUser.passwordSetupTokenHash = null;
-    firmScopedUser.passwordSetupExpires = null;
-    firmScopedUser.passwordLastChangedAt = new Date();
-    firmScopedUser.passwordSetAt = new Date();
-    firmScopedUser.passwordExpiresAt = new Date(Date.now() + PASSWORD_EXPIRY_DAYS * 24 * 60 * 60 * 1000); // Set expiry when password is created
-    firmScopedUser.mustChangePassword = false;
-    firmScopedUser.status = 'ACTIVE'; // User becomes active after setting password
-    firmScopedUser.failedLoginAttempts = 0;
-    firmScopedUser.lockUntil = null;
+    tokenOwner.passwordHash = passwordHash;
+    tokenOwner.passwordSet = true;
+    tokenOwner.mustSetPassword = false;
+    tokenOwner.passwordSetupTokenHash = null;
+    tokenOwner.passwordSetupExpires = null;
+    tokenOwner.passwordLastChangedAt = new Date();
+    tokenOwner.passwordSetAt = new Date();
+    tokenOwner.passwordExpiresAt = new Date(Date.now() + PASSWORD_EXPIRY_DAYS * 24 * 60 * 60 * 1000); // Set expiry when password is created
+    tokenOwner.mustChangePassword = false;
+    tokenOwner.status = 'ACTIVE'; // User becomes active after setting password
+    tokenOwner.failedLoginAttempts = 0;
+    tokenOwner.lockUntil = null;
     
-    await firmScopedUser.save();
+    await tokenOwner.save();
     
     // Log password setup
     await AuthAudit.create({
-      xID: firmScopedUser.xID,
-      firmId: firmScopedUser.firmId,
-      userId: firmScopedUser._id,
+      xID: tokenOwner.xID,
+      firmId: tokenOwner.firmId,
+      userId: tokenOwner._id,
       actionType: 'PasswordSetup',
       description: `User set password via email link`,
-      performedBy: firmScopedUser.xID,
+      performedBy: tokenOwner.xID,
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
     });
     
     // Fetch firmSlug for firm-scoped redirect
     let firmSlug = null;
-    if (firmScopedUser.firmId) {
-      const firm = await Firm.findOne({ _id: firmScopedUser.firmId });
+    if (tokenOwner.firmId) {
+      const firm = await Firm.findOne({ _id: tokenOwner.firmId });
       if (firm) {
         firmSlug = firm.firmSlug;
       }
@@ -2523,10 +2527,10 @@ const handleGoogleCallback = async (req, res) => {
       firmId: firmIdFromContext,
       canLinkGoogle: (candidate) => {
         const isActivation = flow === 'activation';
+        if (candidate.firmId && candidate.firmId.toString() !== firmIdFromContext.toString()) return false;
         if (![ROLE_ADMIN, ROLE_EMPLOYEE].includes(candidate.role)) return false;
         if (candidate.isActive === false || candidate.status === 'DISABLED') return false;
         if (!isActivation && candidate.status !== 'ACTIVE') return false;
-        if (candidate.firmId && candidate.firmId.toString() !== firmIdFromContext.toString()) return false;
         return true;
       },
       linkGoogleIfFound: true,

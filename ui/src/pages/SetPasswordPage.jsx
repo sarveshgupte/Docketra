@@ -179,7 +179,7 @@ export const SetPasswordPage = () => {
       <div className="set-password-page">
         <Card className="set-password-card">
           <div className="set-password-header">
-            <h1>Docketra</h1>
+            <h1>{APP_NAME}</h1>
             <p className="text-secondary">Account Activation</p>
           </div>
           <div className="alert alert-error" style={{ textAlign: 'center', padding: '1.5rem' }}>
