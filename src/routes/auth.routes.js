@@ -123,7 +123,7 @@ const detectProfileLoop = (req, res, next) => {
 // Login supports optional firm resolution for firm-scoped login
 // Rate limited to prevent brute-force attacks
 router.post('/login', authLimiter, optionalFirmResolution, login);
-router.post('/set-password', resolveFirmSlug, authLimiter, setPassword);
+router.post('/set-password', authLimiter, resolveFirmSlug, setPassword);
 router.post('/reset-password-with-token', authLimiter, resetPasswordWithToken);
 router.post('/forgot-password', authLimiter, forgotPassword);
 router.post('/refresh', refreshAccessToken); // NEW: JWT token refresh
