@@ -256,10 +256,17 @@ const sendPasswordSetupEmail = async ({
   frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000',
   context = null,
 }) => {
-  const setupLink = `${frontendUrl}/set-password?token=${token}`;
+  if (!firmSlug) {
+    return {
+      success: false,
+      error: 'Firm context is required for activation links.',
+    };
+  }
+  const normalizedFirmSlug = firmSlug.toLowerCase().trim();
+  const setupLink = `${frontendUrl}/f/${normalizedFirmSlug}/set-password?token=${token}`;
   
   // Construct firm-specific login URL if firmSlug is provided
-  const firmLoginUrl = firmSlug ? `${frontendUrl}/f/${firmSlug}/login` : null;
+  const firmLoginUrl = normalizedFirmSlug ? `${frontendUrl}/f/${normalizedFirmSlug}/login` : null;
   
   const subject = 'Set up your Docketra Admin Account';
   const htmlContent = `
@@ -351,10 +358,17 @@ const sendPasswordSetupReminderEmail = async ({
   frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000',
   req = null,
 }) => {
-  const setupLink = `${frontendUrl}/set-password?token=${token}`;
+  if (!firmSlug) {
+    return {
+      success: false,
+      error: 'Firm context is required for activation links.',
+    };
+  }
+  const normalizedFirmSlug = firmSlug.toLowerCase().trim();
+  const setupLink = `${frontendUrl}/f/${normalizedFirmSlug}/set-password?token=${token}`;
   
   // Construct firm-specific login URL if firmSlug is provided
-  const firmLoginUrl = firmSlug ? `${frontendUrl}/f/${firmSlug}/login` : null;
+  const firmLoginUrl = normalizedFirmSlug ? `${frontendUrl}/f/${normalizedFirmSlug}/login` : null;
   
   const subject = 'Reminder: Set up your Docketra account';
   const htmlContent = `

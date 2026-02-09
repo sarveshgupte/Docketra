@@ -1613,6 +1613,7 @@ const deactivateUser = async (req, res) => {
 const setPassword = async (req, res) => {
   try {
     const { token, password } = req.body;
+    const firmId = req.firmId || req.firm?.id || null;
     
     if (!token || !password) {
       return res.status(400).json({
@@ -1620,20 +1621,47 @@ const setPassword = async (req, res) => {
         message: 'Token and password are required',
       });
     }
+
+    if (!firmId) {
+      return res.status(404).json({
+        success: false,
+        code: 'FIRM_NOT_FOUND',
+        message: 'Firm not found. Please check your login URL.',
+        action: 'contact_admin',
+      });
+    }
     
     // Hash the token to compare with stored hash
     const tokenHash = emailService.hashToken(token);
-    
-    // Find user with matching token hash
-    const user = await User.findOne({ 
+
+    const now = new Date();
+    const firmScopedUser = await User.findOne({ 
       passwordSetupTokenHash: tokenHash,
-      passwordSetupExpires: { $gt: new Date() }
+      passwordSetupExpires: { $gt: now },
+      firmId,
     });
-    
-    if (!user) {
+
+    if (!firmScopedUser) {
+      const tokenOwner = await User.findOne({ passwordSetupTokenHash: tokenHash });
+      if (tokenOwner && tokenOwner.firmId && tokenOwner.firmId.toString() !== firmId.toString()) {
+        return res.status(403).json({
+          success: false,
+          code: 'ACTIVATION_TOKEN_FIRM_MISMATCH',
+          message: 'Activation token does not belong to this firm.',
+        });
+      }
       return res.status(400).json({
         success: false,
-        message: 'Invalid or expired password setup token',
+        code: 'ACTIVATION_TOKEN_INVALID',
+        message: 'Activation token is invalid or expired.',
+      });
+    }
+
+    if (!firmScopedUser.mustSetPassword || firmScopedUser.status === 'ACTIVE') {
+      return res.status(409).json({
+        success: false,
+        code: 'ACCOUNT_ALREADY_ACTIVATED',
+        message: 'Account already activated. Please log in.',
       });
     }
     
@@ -1641,37 +1669,37 @@ const setPassword = async (req, res) => {
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
     
     // Set password and clear token
-    user.passwordHash = passwordHash;
-    user.passwordSet = true;
-    user.mustSetPassword = false;
-    user.passwordSetupTokenHash = null;
-    user.passwordSetupExpires = null;
-    user.passwordLastChangedAt = new Date();
-    user.passwordSetAt = new Date();
-    user.passwordExpiresAt = new Date(Date.now() + PASSWORD_EXPIRY_DAYS * 24 * 60 * 60 * 1000); // Set expiry when password is created
-    user.mustChangePassword = false;
-    user.status = 'ACTIVE'; // User becomes active after setting password
-    user.failedLoginAttempts = 0;
-    user.lockUntil = null;
+    firmScopedUser.passwordHash = passwordHash;
+    firmScopedUser.passwordSet = true;
+    firmScopedUser.mustSetPassword = false;
+    firmScopedUser.passwordSetupTokenHash = null;
+    firmScopedUser.passwordSetupExpires = null;
+    firmScopedUser.passwordLastChangedAt = new Date();
+    firmScopedUser.passwordSetAt = new Date();
+    firmScopedUser.passwordExpiresAt = new Date(Date.now() + PASSWORD_EXPIRY_DAYS * 24 * 60 * 60 * 1000); // Set expiry when password is created
+    firmScopedUser.mustChangePassword = false;
+    firmScopedUser.status = 'ACTIVE'; // User becomes active after setting password
+    firmScopedUser.failedLoginAttempts = 0;
+    firmScopedUser.lockUntil = null;
     
-    await user.save();
+    await firmScopedUser.save();
     
     // Log password setup
     await AuthAudit.create({
-      xID: user.xID,
-      firmId: user.firmId,
-      userId: user._id,
+      xID: firmScopedUser.xID,
+      firmId: firmScopedUser.firmId,
+      userId: firmScopedUser._id,
       actionType: 'PasswordSetup',
       description: `User set password via email link`,
-      performedBy: user.xID,
+      performedBy: firmScopedUser.xID,
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
     });
     
     // Fetch firmSlug for firm-scoped redirect
     let firmSlug = null;
-    if (user.firmId) {
-      const firm = await Firm.findOne({ _id: user.firmId });
+    if (firmScopedUser.firmId) {
+      const firm = await Firm.findOne({ _id: firmScopedUser.firmId });
       if (firm) {
         firmSlug = firm.firmSlug;
       }
@@ -2364,16 +2392,38 @@ const initiateGoogleAuth = (req, res) => {
     }
     const oauthClient = getGoogleOAuthClient();
     const { firmSlug, flow } = req.query;
+    const normalizedFirmSlug = firmSlug ? firmSlug.toLowerCase().trim() : null;
 
-    if (!firmSlug && flow !== 'activation') {
+    if (!normalizedFirmSlug) {
+      return res.status(404).json({
+        success: false,
+        code: 'FIRM_NOT_FOUND',
+        message: 'Firm not found. Please check your login URL.',
+        action: 'contact_admin',
+      });
+    }
+
+    const firm = await Firm.findOne({ firmSlug: normalizedFirmSlug });
+    if (!firm) {
+      return res.status(404).json({
+        success: false,
+        code: 'FIRM_NOT_FOUND',
+        message: 'Firm not found. Please check your login URL.',
+        action: 'contact_admin',
+      });
+    }
+
+    if (firm.status !== 'ACTIVE') {
       return res.status(403).json({
         success: false,
-        message: 'Google login not allowed',
+        code: 'FIRM_SUSPENDED',
+        message: `This firm is currently ${firm.status.toLowerCase()}. Please contact support.`,
+        action: 'contact_admin',
       });
     }
 
     const state = createOAuthState({
-      firmSlug: firmSlug || null,
+      firmSlug: normalizedFirmSlug,
       flow: flow || 'login',
     });
 
@@ -2414,17 +2464,29 @@ const handleGoogleCallback = async (req, res) => {
       });
     }
 
-    let statePayload;
+    let statePayload = req.oauthState || null;
     let flow = 'login';
     let firmSlugFromState = null;
-    try {
-      statePayload = verifyOAuthState(state);
-      flow = statePayload?.flow || 'login';
-      firmSlugFromState = statePayload?.firmSlug || null;
-    } catch (stateError) {
-      return res.status(400).json({
+    if (!statePayload) {
+      try {
+        statePayload = verifyOAuthState(state);
+      } catch (stateError) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid or expired OAuth state',
+        });
+      }
+    }
+    flow = statePayload?.flow || 'login';
+    firmSlugFromState = statePayload?.firmSlug || null;
+
+    const firmIdFromContext = req.firmId || req.firm?.id || null;
+    if (!firmSlugFromState || !firmIdFromContext) {
+      return res.status(404).json({
         success: false,
-        message: 'Invalid or expired OAuth state',
+        code: 'FIRM_NOT_FOUND',
+        message: 'Firm not found. Please check your login URL.',
+        action: 'contact_admin',
       });
     }
 
@@ -2458,11 +2520,13 @@ const handleGoogleCallback = async (req, res) => {
     const identityResult = await resolveUserIdentity({
       googleProfile: { sub: googleId },
       email,
+      firmId: firmIdFromContext,
       canLinkGoogle: (candidate) => {
         const isActivation = flow === 'activation';
         if (![ROLE_ADMIN, ROLE_EMPLOYEE].includes(candidate.role)) return false;
         if (candidate.isActive === false || candidate.status === 'DISABLED') return false;
         if (!isActivation && candidate.status !== 'ACTIVE') return false;
+        if (candidate.firmId && candidate.firmId.toString() !== firmIdFromContext.toString()) return false;
         return true;
       },
       linkGoogleIfFound: true,
@@ -2475,6 +2539,14 @@ const handleGoogleCallback = async (req, res) => {
       return res.status(403).json({
         success: false,
         message: 'Access denied. Account is not invited.',
+      });
+    }
+
+    if (user?.firmId && user.firmId.toString() !== firmIdFromContext.toString()) {
+      return res.status(403).json({
+        success: false,
+        code: 'FIRM_MISMATCH',
+        message: 'Firm mismatch detected for Google activation.',
       });
     }
 
@@ -2672,4 +2744,5 @@ module.exports = {
   initiateGoogleAuth,
   handleGoogleCallback: wrapWriteHandler(handleGoogleCallback),
   generateAndStoreRefreshToken,
+  verifyOAuthState,
 };
