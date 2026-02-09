@@ -21,7 +21,7 @@ Modified the login flow to detect the `mustChangePassword` scenario and automati
 3. System generates cryptographically secure token (32 bytes, hex)
 4. Token is hashed with SHA-256 and stored in `passwordSetupTokenHash`
 5. Expiry set to 24 hours from now in `passwordSetupExpires`
-6. Password setup email sent to user with link: `${FRONTEND_URL}/set-password?token=<raw_token>`
+6. Password setup email sent to user with link: `${FRONTEND_URL}/f/{firmSlug}/set-password?token=<raw_token>`
 7. Audit log created (even if email fails)
 8. Returns 403 with message: "Password setup required. Check your email."
 9. User clicks link → SetPasswordPage (already implemented)
@@ -60,7 +60,7 @@ Modified the login flow to detect the `mustChangePassword` scenario and automati
    - Redirects to login after success
 
 5. **Router** (`Router.jsx`):
-   - `/set-password` route already configured
+   - `/f/:firmSlug/set-password` route configured for firm-scoped activation
 
 ## Testing Checklist
 

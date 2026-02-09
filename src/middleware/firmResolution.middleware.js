@@ -23,11 +23,11 @@ const resolveFirmSlug = async (req, res, next) => {
     const firmSlug = req.body.firmSlug || req.query.firmSlug || req.params.firmSlug;
     
     if (!firmSlug) {
-      return res.status(400).json({
+      return res.status(404).json({
         success: false,
-        code: 'FIRM_CONTEXT_REQUIRED',
-        message: 'Firm context is required. Please use a firm-specific login URL.',
-        action: 'retry',
+        code: 'FIRM_NOT_FOUND',
+        message: 'Firm not found. Please check your login URL.',
+        action: 'contact_admin',
       });
     }
     
@@ -58,9 +58,19 @@ const resolveFirmSlug = async (req, res, next) => {
     
     // Attach firm context to request
     req.firmSlug = normalizedSlug;
-    req.firmId = firm._id;
+    req.firmId = firm._id.toString();
     req.firmIdString = firm.firmId; // String format (e.g., FIRM001)
     req.firmName = firm.name;
+    req.firm = {
+      id: firm._id.toString(),
+      slug: firm.firmSlug,
+      status: firm.status,
+    };
+    req.context = {
+      ...req.context,
+      firmId: firm._id.toString(),
+      firmSlug: firm.firmSlug,
+    };
     
     next();
   } catch (error) {
