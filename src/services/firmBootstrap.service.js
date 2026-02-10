@@ -206,7 +206,7 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
 
     try {
       console.log(`[FIRM_BOOTSTRAP] Sending password setup email to ${adminUser.email} (xID: ${adminXID})`);
-      await deps.emailService.sendPasswordSetupEmail({
+      const emailResult = await deps.emailService.sendPasswordSetupEmail({
         email: adminUser.email,
         name: adminUser.name,
         token: setupToken,
@@ -214,9 +214,13 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
         firmSlug,
         context,
       });
-      console.log('[FIRM_BOOTSTRAP] Password setup email queued successfully');
+      if (!emailResult.success) {
+        console.warn('[FIRM_BOOTSTRAP] Password setup email not sent:', emailResult.error);
+      } else {
+        console.log('[FIRM_BOOTSTRAP] Password setup email queued successfully');
+      }
     } catch (emailError) {
-      console.error('[FIRM_BOOTSTRAP] Failed to send admin invite email:', emailError.message);
+      console.warn('[FIRM_BOOTSTRAP] Failed to send admin invite email:', emailError.message);
       // Email issues are logged but don't block firm creation - admin can be invited manually if needed
     }
 

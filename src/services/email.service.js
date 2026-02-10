@@ -15,6 +15,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 // Constants
 const BREVO_MESSAGE_ID_FALLBACK = 'brevo-email-sent';
+const { normalizeFirmSlug } = require('../utils/slugify');
 
 /**
  * Parse MAIL_FROM format "Name <email@domain>" into structured sender object
@@ -245,7 +246,9 @@ const hashToken = (token) => {
  * @param {string} [options.firmSlug] - Firm slug for firm-specific URL (optional)
  * @param {string} [options.frontendUrl] - Base URL of frontend application
  * @param {Object} [options.context] - Request context for side-effect queueing
- * @returns {Promise<Object>} Result object with success status
+ * @returns {Promise<Object>} Result object with success status.
+ * NOTE: Callers must check the return value. This helper returns { success: false, error }
+ * without throwing when firm context is missing. Callers should log a warning and continue.
  */
 const sendPasswordSetupEmail = async ({ 
   email, 
@@ -256,13 +259,13 @@ const sendPasswordSetupEmail = async ({
   frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000',
   context = null,
 }) => {
-  if (!firmSlug) {
+  const normalizedFirmSlug = normalizeFirmSlug(firmSlug);
+  if (!normalizedFirmSlug) {
     return {
       success: false,
       error: 'Firm context is required for activation links.',
     };
   }
-  const normalizedFirmSlug = firmSlug.toLowerCase().trim();
   const setupLink = `${frontendUrl}/f/${normalizedFirmSlug}/set-password?token=${token}`;
   
   // Construct firm-specific login URL if firmSlug is provided
@@ -347,7 +350,9 @@ Docketra Team
  * @param {string} options.xID - User's xID (for reference)
  * @param {string} [options.firmSlug] - Firm slug for firm-specific URL (optional)
  * @param {string} [options.frontendUrl] - Base URL of frontend application
- * @returns {Promise<Object>} Result object with success status
+ * @returns {Promise<Object>} Result object with success status.
+ * NOTE: Callers must check the return value. This helper returns { success: false, error }
+ * without throwing when firm context is missing. Callers should log a warning and continue.
  */
 const sendPasswordSetupReminderEmail = async ({ 
   email, 
@@ -358,13 +363,13 @@ const sendPasswordSetupReminderEmail = async ({
   frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000',
   req = null,
 }) => {
-  if (!firmSlug) {
+  const normalizedFirmSlug = normalizeFirmSlug(firmSlug);
+  if (!normalizedFirmSlug) {
     return {
       success: false,
       error: 'Firm context is required for activation links.',
     };
   }
-  const normalizedFirmSlug = firmSlug.toLowerCase().trim();
   const setupLink = `${frontendUrl}/f/${normalizedFirmSlug}/set-password?token=${token}`;
   
   // Construct firm-specific login URL if firmSlug is provided

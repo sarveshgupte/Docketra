@@ -20,4 +20,14 @@ function slugify(text) {
     .replace(/-+$/, '');            // Trim - from end of text
 }
 
-module.exports = { slugify };
+/**
+ * Normalize firm slug for comparisons and lookups.
+ * @param {string} firmSlug
+ * @returns {string|null}
+ */
+function normalizeFirmSlug(firmSlug) {
+  if (!firmSlug || typeof firmSlug !== 'string') return null;
+  return firmSlug.toLowerCase().trim();
+}
+
+module.exports = { slugify, normalizeFirmSlug };

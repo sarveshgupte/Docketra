@@ -4,6 +4,7 @@ const { authenticate } = require('../middleware/auth.middleware');
 const { requireAdmin } = require('../middleware/permission.middleware');
 const { optionalFirmResolution, resolveFirmSlug } = require('../middleware/firmResolution.middleware');
 const Firm = require('../models/Firm.model');
+const { normalizeFirmSlug } = require('../utils/slugify');
 const { authLimiter, profileLimiter } = require('../middleware/rateLimiters');
 const {
   login,
@@ -33,6 +34,7 @@ const resolveOAuthFirmContext = async (req, res, next) => {
     if (!state || !code) {
       return res.status(400).json({
         success: false,
+        code: 'FIRM_RESOLUTION_FAILED',
         message: 'Missing authorization code or state',
       });
     }
@@ -43,11 +45,12 @@ const resolveOAuthFirmContext = async (req, res, next) => {
     } catch (error) {
       return res.status(400).json({
         success: false,
+        code: 'FIRM_RESOLUTION_FAILED',
         message: 'Invalid or expired OAuth state',
       });
     }
 
-    const firmSlug = statePayload?.firmSlug ? statePayload.firmSlug.toLowerCase().trim() : null;
+    const firmSlug = normalizeFirmSlug(statePayload?.firmSlug);
     if (!firmSlug) {
       return res.status(404).json({
         success: false,
