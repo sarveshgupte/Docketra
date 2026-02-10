@@ -1733,7 +1733,7 @@ const setPassword = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      code: 'ACTIVATION_TOKEN_INVALID',
+      code: 'FIRM_RESOLUTION_FAILED',
       message: 'Error setting password',
       error: error.message,
     });
@@ -1951,7 +1951,7 @@ const resendSetupEmail = async (req, res) => {
         });
         return res.status(500).json({
           success: false,
-          code: 'ACTIVATION_TOKEN_INVALID',
+          code: 'FIRM_RESOLUTION_FAILED',
           message: 'Failed to send email',
           error: emailResult.error,
         });
@@ -1972,7 +1972,7 @@ const resendSetupEmail = async (req, res) => {
       console.warn('[AUTH] Failed to send invite email:', emailError.message);
       return res.status(500).json({
         success: false,
-        code: 'ACTIVATION_TOKEN_INVALID',
+        code: 'FIRM_RESOLUTION_FAILED',
         message: 'Failed to send email',
         error: emailError.message,
       });
