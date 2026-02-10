@@ -192,7 +192,7 @@ const resendInviteEmail = async (req, res) => {
       });
       
       if (!emailResult.success) {
-        console.error('[ADMIN] Failed to send invite reminder email');
+        console.warn('[ADMIN] Failed to send invite reminder email:', emailResult.error);
         
         // Log failure but continue - token was updated
         await safeAuditLog({
