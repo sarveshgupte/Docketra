@@ -597,7 +597,7 @@ const getFirmBySlug = async (req, res) => {
     if (!normalizedSlug) {
       return res.status(400).json({
         success: false,
-        code: 'FIRM_NOT_FOUND',
+        code: 'FIRM_RESOLUTION_FAILED',
         message: 'Firm slug is required',
       });
     }
