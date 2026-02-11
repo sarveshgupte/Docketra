@@ -7,7 +7,7 @@ const crypto = require('crypto');
 const emailService = require('../services/email.service');
 const mongoose = require('mongoose');
 const { generateNextClientId } = require('../services/clientIdGenerator');
-const { slugify } = require('../utils/slugify');
+const { slugify, normalizeFirmSlug } = require('../utils/slugify');
 const { getDashboardSnapshot } = require('../utils/operationalMetrics');
 const { wrapWriteHandler } = require('../utils/transactionGuards');
 
@@ -332,6 +332,7 @@ const updateFirmStatus = async (req, res) => {
     if (!firm) {
       return res.status(404).json({
         success: false,
+        code: 'FIRM_NOT_FOUND',
         message: 'Firm not found',
       });
     }
@@ -522,7 +523,7 @@ const createFirmAdmin = async (req, res) => {
     
     // Send password setup email
     try {
-      await emailService.sendPasswordSetupEmail({
+      const emailResult = await emailService.sendPasswordSetupEmail({
         email: adminUser.email,
         name: adminUser.name,
         token: setupToken,
@@ -530,8 +531,11 @@ const createFirmAdmin = async (req, res) => {
         firmSlug: firm.firmSlug, // Pass firmSlug for firm-specific URL in email
         req,
       });
+      if (!emailResult.success) {
+        console.warn('[SUPERADMIN] Password setup email not sent:', emailResult.error);
+      }
     } catch (emailError) {
-      console.error('[SUPERADMIN] Failed to send password setup email:', emailError);
+      console.warn('[SUPERADMIN] Failed to send password setup email:', emailError.message);
       // Don't fail the request - admin was created successfully
     }
     
@@ -589,7 +593,14 @@ const getFirmBySlug = async (req, res) => {
       });
     }
     
-    const normalizedSlug = firmSlug.toLowerCase().trim();
+    const normalizedSlug = normalizeFirmSlug(firmSlug);
+    if (!normalizedSlug) {
+      return res.status(400).json({
+        success: false,
+        code: 'FIRM_RESOLUTION_FAILED',
+        message: 'Firm slug is required',
+      });
+    }
     
     const firm = await Firm.findOne({ firmSlug: normalizedSlug })
       .select('firmId firmSlug name status');

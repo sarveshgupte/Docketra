@@ -12,6 +12,7 @@ const emailService = require('../services/email.service');
 const xIDGenerator = require('../services/xIDGenerator');
 const jwtService = require('../services/jwt.service');
 const { isSuperAdminRole } = require('../utils/role.utils');
+const { normalizeFirmSlug } = require('../utils/slugify');
 const { ensureDefaultClientForFirm } = require('../services/defaultClient.service');
 const { resolveUserIdentity } = require('../services/identity.service');
 const { isGoogleAuthDisabled } = require('../services/featureFlags.service');
@@ -958,6 +959,10 @@ const resetPassword = async (req, res) => {
         firmSlug: firmSlug, // Pass firmSlug for firm-specific URL in email
         req,
       });
+
+      if (!emailResult.success) {
+        console.warn('[AUTH] Password setup email not sent:', emailResult.error);
+      }
       
       // Log password setup email sent
       await AuthAudit.create({
@@ -973,7 +978,7 @@ const resetPassword = async (req, res) => {
         userAgent: req.get('user-agent'),
       });
     } catch (emailError) {
-      console.error('[AUTH] Failed to send password setup email:', emailError.message);
+      console.warn('[AUTH] Failed to send password setup email:', emailError.message);
       // Continue even if email fails
     }
     
@@ -1370,6 +1375,10 @@ const createUser = async (req, res) => {
         firmSlug: firmSlug, // Pass firmSlug for firm-specific URL in email
         req,
       });
+
+      if (!emailResult.success) {
+        console.warn('[AUTH] Invite email not sent:', emailResult.error);
+      }
       
       // Log invite email sent
       await AuthAudit.create({
@@ -1385,7 +1394,7 @@ const createUser = async (req, res) => {
         userAgent: req.get('user-agent'),
       });
     } catch (emailError) {
-      console.error('[AUTH] Failed to send invite email:', emailError.message);
+      console.warn('[AUTH] Failed to send invite email:', emailError.message);
       // Don't fail user creation if email fails - log and continue
       try {
         await AuthAudit.create({
@@ -1613,27 +1622,56 @@ const deactivateUser = async (req, res) => {
 const setPassword = async (req, res) => {
   try {
     const { token, password } = req.body;
+    // Canonical firm context for auth flows: req.context.firmId
+    const firmId = req.context?.firmId || null;
     
     if (!token || !password) {
       return res.status(400).json({
         success: false,
+        code: 'ACTIVATION_TOKEN_INVALID',
         message: 'Token and password are required',
+      });
+    }
+
+    if (!firmId) {
+      return res.status(404).json({
+        success: false,
+        code: 'FIRM_NOT_FOUND',
+        message: 'Firm not found. Please check your login URL.',
+        action: 'contact_admin',
       });
     }
     
     // Hash the token to compare with stored hash
     const tokenHash = emailService.hashToken(token);
-    
-    // Find user with matching token hash
-    const user = await User.findOne({ 
+
+    const now = new Date();
+    const tokenOwner = await User.findOne({
       passwordSetupTokenHash: tokenHash,
-      passwordSetupExpires: { $gt: new Date() }
+      passwordSetupExpires: { $gt: now },
     });
-    
-    if (!user) {
+
+    if (!tokenOwner) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid or expired password setup token',
+        code: 'ACTIVATION_TOKEN_INVALID',
+        message: 'Activation token is invalid or expired.',
+      });
+    }
+
+    if (tokenOwner.firmId && tokenOwner.firmId.toString() !== firmId) {
+      return res.status(403).json({
+        success: false,
+        code: 'ACTIVATION_TOKEN_FIRM_MISMATCH',
+        message: 'Activation token does not belong to this firm.',
+      });
+    }
+
+    if (!tokenOwner.mustSetPassword || tokenOwner.status === 'ACTIVE') {
+      return res.status(409).json({
+        success: false,
+        code: 'ACCOUNT_ALREADY_ACTIVATED',
+        message: 'Account already activated. Please log in.',
       });
     }
     
@@ -1641,37 +1679,37 @@ const setPassword = async (req, res) => {
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
     
     // Set password and clear token
-    user.passwordHash = passwordHash;
-    user.passwordSet = true;
-    user.mustSetPassword = false;
-    user.passwordSetupTokenHash = null;
-    user.passwordSetupExpires = null;
-    user.passwordLastChangedAt = new Date();
-    user.passwordSetAt = new Date();
-    user.passwordExpiresAt = new Date(Date.now() + PASSWORD_EXPIRY_DAYS * 24 * 60 * 60 * 1000); // Set expiry when password is created
-    user.mustChangePassword = false;
-    user.status = 'ACTIVE'; // User becomes active after setting password
-    user.failedLoginAttempts = 0;
-    user.lockUntil = null;
+    tokenOwner.passwordHash = passwordHash;
+    tokenOwner.passwordSet = true;
+    tokenOwner.mustSetPassword = false;
+    tokenOwner.passwordSetupTokenHash = null;
+    tokenOwner.passwordSetupExpires = null;
+    tokenOwner.passwordLastChangedAt = now;
+    tokenOwner.passwordSetAt = now;
+    tokenOwner.passwordExpiresAt = new Date(now.getTime() + PASSWORD_EXPIRY_DAYS * 24 * 60 * 60 * 1000); // Set expiry when password is created
+    tokenOwner.mustChangePassword = false;
+    tokenOwner.status = 'ACTIVE'; // User becomes active after setting password
+    tokenOwner.failedLoginAttempts = 0;
+    tokenOwner.lockUntil = null;
     
-    await user.save();
+    await tokenOwner.save();
     
     // Log password setup
     await AuthAudit.create({
-      xID: user.xID,
-      firmId: user.firmId,
-      userId: user._id,
+      xID: tokenOwner.xID,
+      firmId: tokenOwner.firmId,
+      userId: tokenOwner._id,
       actionType: 'PasswordSetup',
       description: `User set password via email link`,
-      performedBy: user.xID,
+      performedBy: tokenOwner.xID,
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
     });
     
     // Fetch firmSlug for firm-scoped redirect
     let firmSlug = null;
-    if (user.firmId) {
-      const firm = await Firm.findOne({ _id: user.firmId });
+    if (tokenOwner.firmId) {
+      const firm = await Firm.findOne({ _id: tokenOwner.firmId });
       if (firm) {
         firmSlug = firm.firmSlug;
       }
@@ -1681,6 +1719,7 @@ const setPassword = async (req, res) => {
     if (!firmSlug) {
       return res.status(400).json({
         success: false,
+        code: 'FIRM_NOT_FOUND',
         message: 'Firm context missing. Cannot complete password setup. Please contact support.',
       });
     }
@@ -1694,6 +1733,7 @@ const setPassword = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
+      code: 'FIRM_RESOLUTION_FAILED',
       message: 'Error setting password',
       error: error.message,
     });
@@ -1898,9 +1938,20 @@ const resendSetupEmail = async (req, res) => {
       });
       
       if (!emailResult.success) {
-        console.error('[AUTH] Failed to send invite reminder email:', emailResult.error);
+        console.warn('[AUTH] Failed to send invite reminder email:', emailResult.error);
+        await AuthAudit.create({
+          xID: user.xID,
+          firmId: user.firmId,
+          userId: user._id,
+          actionType: 'InviteEmailResendFailed',
+          description: `Invite reminder email failed to send: ${emailResult.error}`,
+          performedBy: admin.xID,
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent'),
+        });
         return res.status(500).json({
           success: false,
+          code: 'FIRM_RESOLUTION_FAILED',
           message: 'Failed to send email',
           error: emailResult.error,
         });
@@ -1918,9 +1969,10 @@ const resendSetupEmail = async (req, res) => {
         userAgent: req.get('user-agent'),
       });
     } catch (emailError) {
-      console.error('[AUTH] Failed to send invite email:', emailError.message);
+      console.warn('[AUTH] Failed to send invite email:', emailError.message);
       return res.status(500).json({
         success: false,
+        code: 'FIRM_RESOLUTION_FAILED',
         message: 'Failed to send email',
         error: emailError.message,
       });
@@ -2359,21 +2411,44 @@ const initiateGoogleAuth = (req, res) => {
     if (isGoogleAuthDisabled()) {
       return res.status(503).json({
         success: false,
+        code: 'FIRM_RESOLUTION_FAILED',
         message: 'Google authentication is temporarily disabled',
       });
     }
     const oauthClient = getGoogleOAuthClient();
     const { firmSlug, flow } = req.query;
+    const normalizedFirmSlug = normalizeFirmSlug(firmSlug);
 
-    if (!firmSlug && flow !== 'activation') {
+    if (!normalizedFirmSlug) {
+      return res.status(404).json({
+        success: false,
+        code: 'FIRM_NOT_FOUND',
+        message: 'Firm not found. Please check your login URL.',
+        action: 'contact_admin',
+      });
+    }
+
+    const firm = await Firm.findOne({ firmSlug: normalizedFirmSlug });
+    if (!firm) {
+      return res.status(404).json({
+        success: false,
+        code: 'FIRM_NOT_FOUND',
+        message: 'Firm not found. Please check your login URL.',
+        action: 'contact_admin',
+      });
+    }
+
+    if (firm.status !== 'ACTIVE') {
       return res.status(403).json({
         success: false,
-        message: 'Google login not allowed',
+        code: 'FIRM_SUSPENDED',
+        message: `This firm is currently ${firm.status.toLowerCase()}. Please contact support.`,
+        action: 'contact_admin',
       });
     }
 
     const state = createOAuthState({
-      firmSlug: firmSlug || null,
+      firmSlug: normalizedFirmSlug,
       flow: flow || 'login',
     });
 
@@ -2388,6 +2463,7 @@ const initiateGoogleAuth = (req, res) => {
     console.error('[AUTH] Google OAuth initiation failed:', error.message);
     return res.status(500).json({
       success: false,
+      code: 'FIRM_RESOLUTION_FAILED',
       message: 'Google OAuth is not configured. Please use password login.',
     });
   }
@@ -2402,6 +2478,7 @@ const handleGoogleCallback = async (req, res) => {
     if (isGoogleAuthDisabled()) {
       return res.status(503).json({
         success: false,
+        code: 'FIRM_RESOLUTION_FAILED',
         message: 'Google authentication is temporarily disabled',
       });
     }
@@ -2410,21 +2487,36 @@ const handleGoogleCallback = async (req, res) => {
     if (!code || !state) {
       return res.status(400).json({
         success: false,
+        code: 'FIRM_RESOLUTION_FAILED',
         message: 'Missing authorization code or state',
       });
     }
 
-    let statePayload;
+    let statePayload = req.oauthState || null;
     let flow = 'login';
     let firmSlugFromState = null;
-    try {
-      statePayload = verifyOAuthState(state);
-      flow = statePayload?.flow || 'login';
-      firmSlugFromState = statePayload?.firmSlug || null;
-    } catch (stateError) {
-      return res.status(400).json({
+    if (!statePayload) {
+      try {
+        statePayload = verifyOAuthState(state);
+      } catch (stateError) {
+        return res.status(400).json({
+          success: false,
+          code: 'FIRM_RESOLUTION_FAILED',
+          message: 'Invalid or expired OAuth state',
+        });
+      }
+    }
+    flow = statePayload?.flow || 'login';
+    firmSlugFromState = normalizeFirmSlug(statePayload?.firmSlug);
+
+    // Canonical firm context for auth flows: req.context.firmId
+    const firmIdFromContext = req.context?.firmId || null;
+    if (!firmSlugFromState || !firmIdFromContext) {
+      return res.status(404).json({
         success: false,
-        message: 'Invalid or expired OAuth state',
+        code: 'FIRM_NOT_FOUND',
+        message: 'Firm not found. Please check your login URL.',
+        action: 'contact_admin',
       });
     }
 
@@ -2434,6 +2526,7 @@ const handleGoogleCallback = async (req, res) => {
     if (!tokens?.id_token) {
       return res.status(400).json({
         success: false,
+        code: 'FIRM_RESOLUTION_FAILED',
         message: 'Failed to exchange authorization code',
       });
     }
@@ -2451,6 +2544,7 @@ const handleGoogleCallback = async (req, res) => {
     if (!email || !googleId || !emailVerified) {
       return res.status(403).json({
         success: false,
+        code: 'FIRM_RESOLUTION_FAILED',
         message: 'Google account not eligible for login',
       });
     }
@@ -2458,8 +2552,10 @@ const handleGoogleCallback = async (req, res) => {
     const identityResult = await resolveUserIdentity({
       googleProfile: { sub: googleId },
       email,
+      firmId: firmIdFromContext,
       canLinkGoogle: (candidate) => {
         const isActivation = flow === 'activation';
+        if (candidate.firmId && candidate.firmId.toString() !== firmIdFromContext.toString()) return false;
         if (![ROLE_ADMIN, ROLE_EMPLOYEE].includes(candidate.role)) return false;
         if (candidate.isActive === false || candidate.status === 'DISABLED') return false;
         if (!isActivation && candidate.status !== 'ACTIVE') return false;
@@ -2474,7 +2570,16 @@ const handleGoogleCallback = async (req, res) => {
     if (!user) {
       return res.status(403).json({
         success: false,
+        code: 'FIRM_RESOLUTION_FAILED',
         message: 'Access denied. Account is not invited.',
+      });
+    }
+
+    if (user?.firmId && user.firmId.toString() !== firmIdFromContext.toString()) {
+      return res.status(403).json({
+        success: false,
+        code: 'FIRM_MISMATCH',
+        message: 'Firm mismatch detected for Google activation.',
       });
     }
 
@@ -2505,6 +2610,7 @@ const handleGoogleCallback = async (req, res) => {
     if (user.role === ROLE_SUPER_ADMIN || user.xID === process.env.SUPERADMIN_XID) {
       return res.status(403).json({
         success: false,
+        code: 'FIRM_RESOLUTION_FAILED',
         message: 'SuperAdmin accounts must use password login',
       });
     }
@@ -2513,6 +2619,7 @@ const handleGoogleCallback = async (req, res) => {
     if (!user.isActive || user.status === 'DISABLED') {
       return res.status(403).json({
         success: false,
+        code: 'FIRM_RESOLUTION_FAILED',
         message: 'Account is not active. Contact your administrator.',
       });
     }
@@ -2520,6 +2627,7 @@ const handleGoogleCallback = async (req, res) => {
     if (user.status && user.status !== 'ACTIVE') {
       return res.status(403).json({
         success: false,
+        code: 'FIRM_RESOLUTION_FAILED',
         message: 'Please activate your account before using Google login.',
       });
     }
@@ -2527,6 +2635,7 @@ const handleGoogleCallback = async (req, res) => {
     if (user.isLocked) {
       return res.status(403).json({
         success: false,
+        code: 'FIRM_RESOLUTION_FAILED',
         message: 'Account is locked. Please try again later or contact an administrator.',
         lockedUntil: user.lockUntil,
       });
@@ -2646,6 +2755,7 @@ const handleGoogleCallback = async (req, res) => {
     console.error('[AUTH] Google OAuth callback error:', error);
     return res.status(500).json({
       success: false,
+      code: 'FIRM_RESOLUTION_FAILED',
       message: 'Google login failed',
     });
   }
@@ -2672,4 +2782,5 @@ module.exports = {
   initiateGoogleAuth,
   handleGoogleCallback: wrapWriteHandler(handleGoogleCallback),
   generateAndStoreRefreshToken,
+  verifyOAuthState,
 };

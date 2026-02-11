@@ -44,6 +44,7 @@ export const Router = () => {
           {/* Public Login Routes */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/f/:firmSlug/login" element={<FirmLoginPage />} />
+          <Route path="/f/:firmSlug/set-password" element={<SetPasswordPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/change-password" element={<ChangePasswordPage />} />

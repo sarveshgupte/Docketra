@@ -5,6 +5,7 @@
  */
 
 const Firm = require('../models/Firm.model');
+const { normalizeFirmSlug } = require('../utils/slugify');
 
 /**
  * Resolve firmSlug to firmId and attach to request
@@ -23,16 +24,24 @@ const resolveFirmSlug = async (req, res, next) => {
     const firmSlug = req.body.firmSlug || req.query.firmSlug || req.params.firmSlug;
     
     if (!firmSlug) {
-      return res.status(400).json({
+      return res.status(404).json({
         success: false,
-        code: 'FIRM_CONTEXT_REQUIRED',
-        message: 'Firm context is required. Please use a firm-specific login URL.',
-        action: 'retry',
+        code: 'FIRM_NOT_FOUND',
+        message: 'Firm not found. Please check your login URL.',
+        action: 'contact_admin',
       });
     }
     
     // Normalize firmSlug (lowercase, trim)
-    const normalizedSlug = firmSlug.toLowerCase().trim();
+    const normalizedSlug = normalizeFirmSlug(firmSlug);
+    if (!normalizedSlug) {
+      return res.status(404).json({
+        success: false,
+        code: 'FIRM_NOT_FOUND',
+        message: 'Firm not found. Please check your login URL.',
+        action: 'contact_admin',
+      });
+    }
     
     // Resolve firmSlug to firm
     const firm = await Firm.findOne({ firmSlug: normalizedSlug });
@@ -58,9 +67,20 @@ const resolveFirmSlug = async (req, res, next) => {
     
     // Attach firm context to request
     req.firmSlug = normalizedSlug;
-    req.firmId = firm._id;
+    req.firmId = firm._id.toString();
     req.firmIdString = firm.firmId; // String format (e.g., FIRM001)
     req.firmName = firm.name;
+    req.firm = {
+      id: firm._id.toString(),
+      slug: firm.firmSlug,
+      status: firm.status,
+    };
+    // Canonical firm context for downstream auth controllers.
+    req.context = {
+      ...req.context,
+      firmId: firm._id.toString(),
+      firmSlug: firm.firmSlug,
+    };
     
     next();
   } catch (error) {
@@ -87,14 +107,22 @@ const optionalFirmResolution = async (req, res, next) => {
       return next();
     }
     
-    const normalizedSlug = firmSlug.toLowerCase().trim();
+    const normalizedSlug = normalizeFirmSlug(firmSlug);
+    if (!normalizedSlug) {
+      return next();
+    }
     const firm = await Firm.findOne({ firmSlug: normalizedSlug });
     
     if (firm && firm.status === 'ACTIVE') {
       req.firmSlug = normalizedSlug;
-      req.firmId = firm._id;
+      req.firmId = firm._id.toString();
       req.firmIdString = firm.firmId;
       req.firmName = firm.name;
+      req.context = {
+        ...req.context,
+        firmId: firm._id.toString(),
+        firmSlug: firm.firmSlug,
+      };
     }
     
     next();

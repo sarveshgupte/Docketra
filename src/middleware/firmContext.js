@@ -2,6 +2,7 @@ const { randomUUID } = require('crypto');
 const mongoose = require('mongoose');
 const Firm = require('../models/Firm.model');
 const { isSuperAdminRole } = require('../utils/role.utils');
+const { normalizeFirmSlug } = require('../utils/slugify');
 
 // Constants
 const FIRM_ID_PATTERN = /^FIRM\d{3,}$/i;
@@ -58,10 +59,8 @@ const firmContext = async (req, res, next) => {
       console.log(`[FIRM_CONTEXT][${requestId}] SuperAdmin impersonating firm: ${impersonatedFirmId}, session: ${impersonationSessionId}`);
     }
 
-    const normalizeSlug = (slug) => (slug ? slug.toLowerCase().trim() : null);
-
     const paramFirmId = req.params?.firmId;
-    const paramFirmSlug = normalizeSlug(req.params?.firmSlug);
+    const paramFirmSlug = normalizeFirmSlug(req.params?.firmSlug);
     const jwtFirmId = req.jwt?.firmId;
     const sessionFirmId = req.user?.firmId;
 
@@ -137,6 +136,11 @@ const firmContext = async (req, res, next) => {
     };
     req.firmId = firm._id.toString();
     req.firmSlug = firm.firmSlug;
+    req.context = {
+      ...req.context,
+      firmId: firm._id.toString(),
+      firmSlug: firm.firmSlug,
+    };
     
     // Attach impersonation context for auditing
     if (isSuperAdmin && impersonatedFirmId) {

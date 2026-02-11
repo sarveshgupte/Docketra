@@ -152,7 +152,11 @@ export const FirmLoginPage = () => {
   };
 
   const handleGoogleLogin = () => {
-    const url = `${API_BASE_URL}/auth/google${firmSlug ? `?firmSlug=${encodeURIComponent(firmSlug)}` : ''}`;
+    if (!firmSlug) {
+      setError('Firm not found. Please check your login URL.');
+      return;
+    }
+    const url = `${API_BASE_URL}/auth/google?firmSlug=${encodeURIComponent(firmSlug)}`;
     window.location.href = url;
   };
 

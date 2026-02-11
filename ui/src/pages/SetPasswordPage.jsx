@@ -4,22 +4,27 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { Card } from '../components/common/Card';
 import { Input } from '../components/common/Input';
 import { Button } from '../components/common/Button';
+import { Loading } from '../components/common/Loading';
 import { authService } from '../services/authService';
-import { API_BASE_URL, APP_NAME } from '../utils/constants';
+import api from '../services/api';
+import { API_BASE_URL, APP_NAME, STORAGE_KEYS } from '../utils/constants';
 import './SetPasswordPage.css';
 
 export const SetPasswordPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { firmSlug } = useParams();
   const token = searchParams.get('token');
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [firmLoading, setFirmLoading] = useState(true);
+  const [firmData, setFirmData] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
@@ -28,6 +33,42 @@ export const SetPasswordPage = () => {
       setError('Invalid or missing password setup token');
     }
   }, [token]);
+
+  useEffect(() => {
+    const loadFirmData = async () => {
+      if (!firmSlug) {
+        setError('Firm not found. Please check your activation link.');
+        setFirmLoading(false);
+        return;
+      }
+
+      try {
+        setFirmLoading(true);
+        const response = await api.get(`/public/firms/${firmSlug}`);
+
+        if (response.data.success) {
+          const firm = response.data.data;
+          if (firm.status !== 'ACTIVE') {
+            setError('This firm is currently inactive. Please contact support.');
+            setFirmData(null);
+            localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
+          } else {
+            setFirmData(firm);
+            localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, firmSlug);
+          }
+        }
+      } catch (err) {
+        console.error('Error loading firm:', err);
+        setError('Firm not found. Please check your activation link.');
+        setFirmData(null);
+        localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
+      } finally {
+        setFirmLoading(false);
+      }
+    };
+
+    loadFirmData();
+  }, [firmSlug]);
 
   const validatePassword = (pwd) => {
     if (pwd.length < 8) {
@@ -57,6 +98,11 @@ export const SetPasswordPage = () => {
       return;
     }
 
+    if (!firmData || !firmSlug) {
+      setError('Firm not found. Please check your activation link.');
+      return;
+    }
+
     if (!password || !confirmPassword) {
       setError('Please fill in all fields');
       return;
@@ -76,7 +122,7 @@ export const SetPasswordPage = () => {
     setLoading(true);
 
     try {
-      const response = await authService.setPassword(token, password);
+      const response = await authService.setPassword(token, password, firmSlug);
 
       if (response.success) {
         setSuccess(true);
@@ -92,15 +138,57 @@ export const SetPasswordPage = () => {
         setError(response.message || 'Failed to set password');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to set password. The link may be invalid or expired.');
+      const errorData = err.response?.data;
+      const errorCode = errorData?.code;
+      if (errorCode === 'FIRM_NOT_FOUND') {
+        setError('Firm not found. Please check your activation link.');
+      } else if (errorCode === 'ACTIVATION_TOKEN_INVALID') {
+        setError('Activation token invalid or expired.');
+      } else if (errorCode === 'ACCOUNT_ALREADY_ACTIVATED') {
+        setError('Account already activated. Please log in.');
+      } else if (errorCode === 'ACTIVATION_TOKEN_FIRM_MISMATCH') {
+        setError('Activation token does not belong to this firm.');
+      } else {
+        setError(errorData?.message || 'Failed to set password.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = `${API_BASE_URL}/auth/google?flow=activation`;
+    if (!firmSlug) {
+      setError('Firm not found. Please check your activation link.');
+      return;
+    }
+    window.location.href = `${API_BASE_URL}/auth/google?flow=activation&firmSlug=${encodeURIComponent(firmSlug)}`;
   };
+
+  if (firmLoading) {
+    return (
+      <div className="set-password-page">
+        <Card className="set-password-card">
+          <Loading message="Loading firm information..." />
+        </Card>
+      </div>
+    );
+  }
+
+  if (!firmData) {
+    return (
+      <div className="set-password-page">
+        <Card className="set-password-card">
+          <div className="set-password-header">
+            <h1>{APP_NAME}</h1>
+            <p className="text-secondary">Account Activation</p>
+          </div>
+          <div className="alert alert-error" style={{ textAlign: 'center', padding: '1.5rem' }}>
+            {error || 'Firm not found. Please check your activation link.'}
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   if (success) {
     return (
