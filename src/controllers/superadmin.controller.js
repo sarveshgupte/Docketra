@@ -50,6 +50,10 @@ const runInTransaction = async (work) => {
     return mongoose.connection.transaction(work);
   }
 
+  if (mongoose.connection.readyState !== 1) {
+    throw new Error('DATABASE_NOT_CONNECTED');
+  }
+
   const session = await mongoose.startSession();
   try {
     let result;
@@ -1016,6 +1020,14 @@ const updateFirmAdminStatus = async (req, res) => {
     });
   }
 
+  if (admin.status === 'INVITED' && status === 'DISABLED') {
+    return res.status(422).json({
+      success: false,
+      code: 'ADMIN_INVALID_STATUS_TRANSITION',
+      message: 'Cannot disable an invited admin before activation',
+    });
+  }
+
   if (status === 'ACTIVE' && admin.mustSetPassword) {
     return res.status(422).json({
       success: false,
@@ -1036,6 +1048,10 @@ const updateFirmAdminStatus = async (req, res) => {
         const activeAdminsCount = await resolveSessionQuery(activeAdminsCountQuery, session);
 
         if (activeAdminsCount <= 1) {
+          console.warn('[SUPERADMIN] Blocked disable: last active admin protection', {
+            firmId: firm.firmId,
+            adminXID: admin.xID,
+          });
           throw new Error('LAST_ACTIVE_ADMIN');
         }
 
@@ -1043,6 +1059,7 @@ const updateFirmAdminStatus = async (req, res) => {
           _id: admin._id,
           firmId: firm._id,
           role: 'Admin',
+          status: { $ne: 'DELETED' },
         });
         const adminForUpdate = await resolveSessionQuery(adminForUpdateQuery, session);
 
@@ -1158,6 +1175,8 @@ const forceResetFirmAdmin = async (req, res) => {
 
   admin.passwordSetupTokenHash = null;
   admin.passwordSetupExpires = null;
+  admin.passwordResetTokenHash = null;
+  admin.passwordResetExpires = null;
   admin.passwordResetTokenHash = newTokenHash;
   admin.passwordResetExpires = tokenExpires;
   admin.mustChangePassword = true;
@@ -1253,6 +1272,7 @@ const deleteFirmAdmin = async (req, res) => {
         _id: admin._id,
         firmId: firm._id,
         role: 'Admin',
+        status: { $ne: 'DELETED' },
       });
       const adminForDelete = await resolveSessionQuery(adminForDeleteQuery, session);
 
@@ -1275,6 +1295,10 @@ const deleteFirmAdmin = async (req, res) => {
         const activeAdminsCount = await resolveSessionQuery(activeAdminsCountQuery, session);
 
         if (activeAdminsCount <= 1) {
+          console.warn('[SUPERADMIN] Blocked delete: last active admin protection', {
+            firmId: firm.firmId,
+            adminXID: admin.xID,
+          });
           throw new Error('LAST_ACTIVE_ADMIN');
         }
       }
@@ -1392,21 +1416,20 @@ const resendAdminAccess = async (req, res) => {
   const newTokenHash = crypto.createHash('sha256').update(newToken).digest('hex');
   const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
+  admin.passwordSetupTokenHash = null;
+  admin.passwordSetupExpires = null;
+  admin.passwordResetTokenHash = null;
+  admin.passwordResetExpires = null;
+
   // Invalidate old tokens and set new ones
   if (isInvited) {
     admin.passwordSetupTokenHash = newTokenHash;
     admin.passwordSetupExpires = tokenExpires;
     admin.inviteSentAt = new Date();
-    // Clear any stale reset token
-    admin.passwordResetTokenHash = null;
-    admin.passwordResetExpires = null;
   } else {
     // ACTIVE
     admin.passwordResetTokenHash = newTokenHash;
     admin.passwordResetExpires = tokenExpires;
-    // Clear any stale setup token
-    admin.passwordSetupTokenHash = null;
-    admin.passwordSetupExpires = null;
   }
 
   await admin.save();

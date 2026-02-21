@@ -303,17 +303,18 @@ const login = async (req, res) => {
       console.log(`[AUTH] Firm-scoped login attempt: firmSlug=${req.firmSlug}, xID=${normalizedXID}`);
       user = await User.findOne({ 
         firmId: req.firmId, 
-        xID: normalizedXID 
+        xID: normalizedXID,
+        status: { $ne: 'DELETED' },
       });
     } else {
       // Legacy login without firm context - query by xID only
       // This supports existing users who don't have firmSlug yet
       console.log(`[AUTH] Legacy login attempt (no firm context): xID=${normalizedXID}`);
-      user = await User.findOne({ xID: normalizedXID });
+      user = await User.findOne({ xID: normalizedXID, status: { $ne: 'DELETED' } });
       
       // If multiple users with same xID exist, reject login
       if (user) {
-        const duplicateCount = await User.countDocuments({ xID: normalizedXID });
+        const duplicateCount = await User.countDocuments({ xID: normalizedXID, status: { $ne: 'DELETED' } });
         if (duplicateCount > 1) {
           console.warn(`[AUTH] Multiple users with xID ${normalizedXID} found. Firm-scoped login required.`);
           return res.status(400).json({

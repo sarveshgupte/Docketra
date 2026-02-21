@@ -224,9 +224,17 @@ const getPendingCasesReport = async (req, res) => {
     const byEmployee = [];
     for (const assignedToValue of Object.keys(byEmployeeMap)) {
       // Try to find user by xID first, fallback to email for backward compatibility
-      let user = await User.findOne({ xID: assignedToValue }).lean();
+      let user = await User.findOne({
+        firmId: req.user?.firmId,
+        xID: assignedToValue,
+        status: { $ne: 'DELETED' },
+      }).lean();
       if (!user) {
-        user = await User.findOne({ email: assignedToValue }).lean();
+        user = await User.findOne({
+          firmId: req.user?.firmId,
+          email: String(assignedToValue).trim().toLowerCase(),
+          status: { $ne: 'DELETED' },
+        }).lean();
       }
       byEmployee.push({
         xID: user ? user.xID : assignedToValue,
