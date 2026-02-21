@@ -2389,7 +2389,6 @@ const refreshAccessToken = async (req, res) => {
  * Initiate Google OAuth (invite-only, DB-backed users only)
  * GET /api/auth/google
  */
-// Hotfix PR 206: Fixed invalid await usage causing production deploy failure
 const initiateGoogleAuth = async (req, res) => {
   try {
     if (isGoogleAuthDisabled()) {
