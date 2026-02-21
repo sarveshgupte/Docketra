@@ -2389,7 +2389,7 @@ const refreshAccessToken = async (req, res) => {
  * Initiate Google OAuth (invite-only, DB-backed users only)
  * GET /api/auth/google
  */
-const initiateGoogleAuth = (req, res) => {
+const initiateGoogleAuth = async (req, res) => {
   try {
     if (isGoogleAuthDisabled()) {
       return res.status(503).json({
