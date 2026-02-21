@@ -256,10 +256,9 @@ app.use(degradedGuard);
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({
-    success: true,
-    message: 'Docketra API is running',
+    status: 'ok',
+    service: 'docketra-api',
     timestamp: new Date().toISOString(),
-    environment: config.env,
   });
 });
 app.use('/health', healthRoutes);
