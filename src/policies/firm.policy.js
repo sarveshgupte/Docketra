@@ -69,10 +69,23 @@ const canCreateAdmin = (user) => {
   return user.role === 'SuperAdmin' || user.role === 'SUPER_ADMIN';
 };
 
+/**
+ * Check if user can resend admin access (invite / password reset)
+ * @param {Object} user - Authenticated user from req.user
+ * @returns {boolean} - True if allowed, false otherwise
+ */
+const canResendAdminAccess = (user) => {
+  if (!user) return false;
+
+  // Only SuperAdmin can resend admin access
+  return user.role === 'SuperAdmin' || user.role === 'SUPER_ADMIN';
+};
+
 module.exports = {
   canView,
   canCreate,
   canUpdate,
   canManageStatus,
   canCreateAdmin,
+  canResendAdminAccess,
 };

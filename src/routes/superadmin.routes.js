@@ -5,12 +5,13 @@ const { requireSuperadmin } = require('../middleware/permission.middleware');
 const { authorize } = require('../middleware/authorize');
 const SuperAdminPolicy = require('../policies/superadmin.policy');
 const FirmPolicy = require('../policies/firm.policy');
-const { superadminLimiter } = require('../middleware/rateLimiters');
+const { superadminLimiter, superadminAdminResendLimiter } = require('../middleware/rateLimiters');
 const {
   createFirm,
   listFirms,
   updateFirmStatus,
   createFirmAdmin,
+  resendAdminAccess,
   getPlatformStats,
   disableFirmImmediately,
   getOperationalHealth,
@@ -48,6 +49,9 @@ router.post('/firms/:id/disable', authenticate, authorize(FirmPolicy.canManageSt
 
 // Firm admin creation
 router.post('/firms/:firmId/admin', authenticate, authorize(FirmPolicy.canCreateAdmin), superadminLimiter, createFirmAdmin);
+
+// Resend admin access (invite or password reset)
+router.post('/firms/:firmId/admin/resend-access', authenticate, authorize(FirmPolicy.canResendAdminAccess), superadminAdminResendLimiter, resendAdminAccess);
 
 // Firm context switching (impersonation)
 router.post('/switch-firm', authenticate, requireSuperadmin, superadminLimiter, switchFirm);

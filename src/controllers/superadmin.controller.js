@@ -803,12 +803,141 @@ const exitFirm = async (req, res) => {
   }
 };
 
+/**
+ * Resend Admin Access (Invite or Password Reset)
+ * POST /api/superadmin/firms/:firmId/admin/resend-access
+ *
+ * Handles:
+ * - INVITED: Regenerates passwordSetupToken and sends setup email
+ * - ACTIVE: Regenerates passwordResetToken and sends reset email
+ * - DISABLED: Rejects request
+ *
+ * Invalidates old unused tokens before generating new ones.
+ * Always logs audit entry. Returns 200 even if email fails.
+ */
+const resendAdminAccess = async (req, res) => {
+  const { firmId } = req.params;
+
+  // Validate firm exists
+  const firm = await Firm.findById(firmId);
+  if (!firm) {
+    return res.status(404).json({
+      success: false,
+      code: 'FIRM_NOT_FOUND',
+      message: 'Firm not found',
+    });
+  }
+
+  // Find the default admin for this firm (isSystem=true, role=Admin)
+  const admin = await User.findOne({ firmId: firm._id, isSystem: true, role: 'Admin' });
+  if (!admin) {
+    return res.status(404).json({
+      success: false,
+      code: 'ADMIN_NOT_FOUND',
+      message: 'Default admin for this firm not found',
+    });
+  }
+
+  // Reject disabled admins
+  if (admin.status === 'DISABLED') {
+    return res.status(422).json({
+      success: false,
+      code: 'ADMIN_DISABLED',
+      message: 'Admin account is disabled. Cannot resend access.',
+    });
+  }
+
+  const isInvited = admin.status === 'INVITED';
+  const newToken = crypto.randomBytes(32).toString('hex');
+  const newTokenHash = crypto.createHash('sha256').update(newToken).digest('hex');
+  const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+  // Invalidate old tokens and set new ones
+  if (isInvited) {
+    admin.passwordSetupTokenHash = newTokenHash;
+    admin.passwordSetupExpires = tokenExpires;
+    admin.inviteSentAt = new Date();
+    // Clear any stale reset token
+    admin.passwordResetTokenHash = null;
+    admin.passwordResetExpires = null;
+  } else {
+    // ACTIVE
+    admin.passwordResetTokenHash = newTokenHash;
+    admin.passwordResetExpires = tokenExpires;
+    // Clear any stale setup token
+    admin.passwordSetupTokenHash = null;
+    admin.passwordSetupExpires = null;
+  }
+
+  await admin.save();
+
+  const maskedEmail = emailService.maskEmail(admin.email);
+  const action = isInvited ? 'INVITE_RESENT' : 'PASSWORD_RESET_SENT';
+
+  // Send email
+  let emailSuccess = true;
+  try {
+    let emailResult;
+    if (isInvited) {
+      emailResult = await emailService.sendPasswordSetupEmail({
+        email: admin.email,
+        name: admin.name,
+        token: newToken,
+        xID: admin.xID,
+        firmSlug: firm.firmSlug,
+        req,
+      });
+    } else {
+      emailResult = await emailService.sendAdminPasswordResetEmail({
+        email: admin.email,
+        name: admin.name,
+        token: newToken,
+        xID: admin.xID,
+        firmSlug: firm.firmSlug,
+        req,
+      });
+    }
+    if (emailResult && emailResult.success === false) {
+      emailSuccess = false;
+      console.warn('[SUPERADMIN] Admin access resend email not sent:', emailResult.error);
+    }
+  } catch (emailError) {
+    emailSuccess = false;
+    console.warn('[SUPERADMIN] Failed to send admin access resend email:', emailError.message);
+  }
+
+  // Log audit entry
+  await logSuperadminAction({
+    actionType: emailSuccess ? 'AdminAccessResent' : 'AdminAccessResendEmailFailed',
+    description: `Admin access resent (${action}) for firm ${firm.name} (${firm.firmId}), admin ${admin.xID}`,
+    performedBy: req.user.email,
+    performedById: req.user._id,
+    targetEntityType: 'User',
+    targetEntityId: admin._id.toString(),
+    metadata: {
+      firmId: firm.firmId,
+      firmName: firm.name,
+      adminXID: admin.xID,
+      action,
+      emailSuccess,
+    },
+    req,
+  });
+
+  return res.status(200).json({
+    success: true,
+    action,
+    emailMasked: maskedEmail,
+  });
+};
+
 module.exports = {
   createFirm: wrapWriteHandler(createFirm),
   listFirms,
   updateFirmStatus: wrapWriteHandler(updateFirmStatus),
   disableFirmImmediately: wrapWriteHandler(disableFirmImmediately),
   createFirmAdmin: wrapWriteHandler(createFirmAdmin),
+  resendAdminAccess: wrapWriteHandler(resendAdminAccess),
   getPlatformStats,
   getFirmBySlug,
   getOperationalHealth,
