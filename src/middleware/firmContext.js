@@ -10,7 +10,7 @@ const FIRM_ID_PATTERN = /^FIRM\d{3,}$/i;
 /**
  * Firm Context Middleware (single source of truth)
  * - Extracts firmId/firmSlug from JWT, session, or path params
- * - Blocks SuperAdmin from firm-scoped routes UNLESS impersonating
+ * - Blocks SuperAdmin from firm-scoped routes (no impersonation allowed)
  * - Asserts firmId presence for non-superadmin requests
  * - Attaches req.firmId and req.firmSlug
  */
@@ -31,32 +31,13 @@ const firmContext = async (req, res, next) => {
     
     req.isSuperAdmin = isSuperAdmin;
 
-    // NEW: Check if SuperAdmin is impersonating a firm
-    const impersonatedFirmId = req.headers?.['x-impersonated-firm-id'];
-    const impersonationSessionId = req.headers?.['x-impersonation-session-id'];
-    const impersonationMode = req.headers?.['x-impersonation-mode'] || 'READ_ONLY';
-    
+    // SuperAdmin is never allowed on firm-scoped routes
     if (isSuperAdmin) {
-      // If SuperAdmin is NOT impersonating, block access to firm-scoped routes
-      if (!impersonatedFirmId) {
-        console.warn(`[FIRM_CONTEXT][${requestId}] SuperAdmin boundary violation on ${req.method} ${req.originalUrl}`);
-        return res.status(403).json({
-          success: false,
-          message: 'Superadmin cannot access firm-scoped routes',
-        });
-      }
-      
-      // If SuperAdmin IS impersonating, require session ID
-      if (!impersonationSessionId) {
-        console.warn(`[FIRM_CONTEXT][${requestId}] SuperAdmin impersonation missing session ID on ${req.method} ${req.originalUrl}`);
-        return res.status(403).json({
-          success: false,
-          message: 'Impersonation session ID is required',
-        });
-      }
-      
-      // SuperAdmin IS impersonating with valid session - validate and allow access
-      console.log(`[FIRM_CONTEXT][${requestId}] SuperAdmin impersonating firm: ${impersonatedFirmId}, session: ${impersonationSessionId}`);
+      console.warn(`[FIRM_CONTEXT][${requestId}] SuperAdmin boundary violation on ${req.method} ${req.originalUrl}`);
+      return res.status(403).json({
+        success: false,
+        message: 'Superadmin cannot access firm-scoped routes',
+      });
     }
 
     const paramFirmId = req.params?.firmId;
@@ -65,13 +46,6 @@ const firmContext = async (req, res, next) => {
     const sessionFirmId = req.user?.firmId;
 
     const lookup = [];
-
-    // If SuperAdmin is impersonating, prioritize the impersonated firm ID
-    if (isSuperAdmin && impersonatedFirmId) {
-      if (mongoose.Types.ObjectId.isValid(impersonatedFirmId)) {
-        lookup.push({ _id: impersonatedFirmId });
-      }
-    }
 
     if (paramFirmSlug) {
       lookup.push({ firmSlug: paramFirmSlug });
@@ -102,7 +76,6 @@ const firmContext = async (req, res, next) => {
         jwtFirmId: jwtFirmId || null,
         paramFirmId: paramFirmId || null,
         paramFirmSlug: paramFirmSlug || null,
-        impersonatedFirmId: impersonatedFirmId || null,
       });
       const error = new Error('Firm context missing');
       error.statusCode = 400;
@@ -117,8 +90,8 @@ const firmContext = async (req, res, next) => {
       });
     }
 
-    // For non-SuperAdmin users, validate firm ownership
-    if (!isSuperAdmin && jwtFirmId && firm._id.toString() !== jwtFirmId.toString()) {
+    // Validate firm ownership against JWT claim
+    if (jwtFirmId && firm._id.toString() !== jwtFirmId.toString()) {
       console.error(`[FIRM_CONTEXT][${requestId}] Firm mismatch detected`, {
         tokenFirmId: jwtFirmId,
         resolvedFirmId: firm._id.toString(),
@@ -141,41 +114,12 @@ const firmContext = async (req, res, next) => {
       firmId: firm._id.toString(),
       firmSlug: firm.firmSlug,
     };
-    
-    // Attach impersonation context for auditing
-    if (isSuperAdmin && impersonatedFirmId) {
-      req.context = {
-        isSuperAdmin: true,
-        isGlobalContext: false,
-        impersonatedFirmId: firm._id.toString(),
-        impersonationSessionId,
-        impersonationMode,
-      };
-    }
 
     console.log(`[FIRM_CONTEXT][${requestId}] Firm context resolved`, { 
       firmId: req.firmId, 
       firmSlug: req.firmSlug,
-      impersonating: !!(isSuperAdmin && impersonatedFirmId),
-      mode: impersonationMode
     });
-    
-    // CRITICAL: Enforce read-only mode AFTER firm context is attached
-    // Block mutations when SuperAdmin is in READ_ONLY mode
-    const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
-    
-    if (
-      req.context?.isSuperAdmin &&
-      req.context?.impersonationMode === 'READ_ONLY' &&
-      MUTATING_METHODS.has(req.method)
-    ) {
-      console.warn(`[FIRM_CONTEXT][${requestId}] Read-only impersonation: blocked ${req.method} ${req.originalUrl}`);
-      return res.status(403).json({
-        success: false,
-        message: 'Write operations are blocked in READ_ONLY impersonation mode. Switch to FULL_ACCESS mode to enable mutations.',
-      });
-    }
-    
+
     return next();
   } catch (error) {
     const statusCode = error.statusCode || 500;
