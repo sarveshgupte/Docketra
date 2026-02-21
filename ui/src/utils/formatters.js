@@ -39,6 +39,7 @@ export const getFirmStatusInfo = (status) => {
   const statusKeyMap = {
     ACTIVE: 'active',
     SUSPENDED: 'suspended',
+    INACTIVE: 'inactive',
   };
   const key = statusKeyMap[normalizedStatus] || 'unknown';
   return {

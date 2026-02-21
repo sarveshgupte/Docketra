@@ -727,89 +727,11 @@ const getOperationalHealth = async (req, res) => {
  * - FULL_ACCESS: Full access including write operations
  */
 const switchFirm = async (req, res) => {
-  try {
-    const { firmId, mode = 'READ_ONLY' } = req.body;
-    
-    if (!firmId) {
-      return res.status(400).json({
-        success: false,
-        message: 'firmId is required',
-      });
-    }
-    
-    // Validate impersonation mode
-    if (!['READ_ONLY', 'FULL_ACCESS'].includes(mode)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid impersonation mode. Must be READ_ONLY or FULL_ACCESS.',
-      });
-    }
-    
-    // Find firm by MongoDB _id or firmId (FIRM001 format)
-    let firm;
-    if (mongoose.Types.ObjectId.isValid(firmId)) {
-      firm = await Firm.findById(firmId);
-    } else if (FIRM_ID_PATTERN.test(firmId)) {
-      firm = await Firm.findOne({ firmId: firmId.toUpperCase() });
-    } else {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid firmId format',
-      });
-    }
-    
-    if (!firm) {
-      return res.status(404).json({
-        success: false,
-        message: 'Firm not found',
-      });
-    }
-    
-    // Generate a unique session ID for this impersonation session
-    const sessionId = crypto.randomUUID();
-    
-    // Log impersonation action
-    await logSuperadminAction({
-      actionType: 'SwitchFirm',
-      description: `SuperAdmin switched into firm context: ${firm.name} (${firm.firmId}) [${mode}]`,
-      performedBy: req.user.email,
-      performedById: req.user._id,
-      targetEntityType: 'Firm',
-      targetEntityId: firm._id.toString(),
-      metadata: {
-        firmId: firm.firmId,
-        firmSlug: firm.firmSlug,
-        fromContext: 'GLOBAL',
-        toContext: 'FIRM',
-        sessionId,
-        mode,
-      },
-      req,
-    });
-    
-    // Return firm context information
-    // The actual context will be managed on frontend via session/state
-    res.json({
-      success: true,
-      message: `Switched to firm context: ${firm.name}`,
-      data: {
-        impersonatedFirmId: firm._id.toString(),
-        firmId: firm.firmId,
-        firmSlug: firm.firmSlug,
-        firmName: firm.name,
-        firmStatus: firm.status,
-        sessionId,
-        impersonationMode: mode,
-      },
-    });
-  } catch (error) {
-    console.error('[SUPERADMIN] Error switching firm context:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to switch firm context',
-      error: error.message,
-    });
-  }
+  // Hard guard: SuperAdmin must never access firm-scoped data via impersonation
+  return res.status(403).json({
+    success: false,
+    message: 'SuperAdmin cannot access firm data.',
+  });
 };
 
 /**
@@ -1535,6 +1457,72 @@ const resendAdminAccess = async (req, res) => {
   });
 };
 
+/**
+ * Deactivate a firm (set status to INACTIVE)
+ * PATCH /api/superadmin/firms/:id/deactivate
+ */
+const deactivateFirm = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const firm = await Firm.findById(id);
+    if (!firm) {
+      return res.status(404).json({ success: false, message: 'Firm not found' });
+    }
+    if (firm.status !== 'ACTIVE') {
+      return res.status(400).json({ success: false, message: 'Firm must be ACTIVE to deactivate' });
+    }
+    firm.status = 'INACTIVE';
+    await firm.save();
+    await logSuperadminAction({
+      actionType: 'FirmDeactivated',
+      description: `Firm deactivated: ${firm.name} (${firm.firmId})`,
+      performedBy: req.user.email,
+      performedById: req.user._id,
+      targetEntityType: 'Firm',
+      targetEntityId: firm._id.toString(),
+      metadata: { firmId: firm.firmId, name: firm.name, oldStatus: 'ACTIVE', newStatus: 'INACTIVE' },
+      req,
+    });
+    return res.json({ success: true, data: { _id: firm._id, firmId: firm.firmId, name: firm.name, status: firm.status } });
+  } catch (error) {
+    console.error('[SUPERADMIN] Error deactivating firm:', error);
+    return res.status(500).json({ success: false, message: 'Failed to deactivate firm' });
+  }
+};
+
+/**
+ * Activate a firm (set status to ACTIVE)
+ * PATCH /api/superadmin/firms/:id/activate
+ */
+const activateFirm = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const firm = await Firm.findById(id);
+    if (!firm) {
+      return res.status(404).json({ success: false, message: 'Firm not found' });
+    }
+    if (firm.status !== 'INACTIVE') {
+      return res.status(400).json({ success: false, message: 'Firm must be INACTIVE to activate' });
+    }
+    firm.status = 'ACTIVE';
+    await firm.save();
+    await logSuperadminAction({
+      actionType: 'FirmActivated',
+      description: `Firm activated: ${firm.name} (${firm.firmId})`,
+      performedBy: req.user.email,
+      performedById: req.user._id,
+      targetEntityType: 'Firm',
+      targetEntityId: firm._id.toString(),
+      metadata: { firmId: firm.firmId, name: firm.name, oldStatus: 'INACTIVE', newStatus: 'ACTIVE' },
+      req,
+    });
+    return res.json({ success: true, data: { _id: firm._id, firmId: firm.firmId, name: firm.name, status: firm.status } });
+  } catch (error) {
+    console.error('[SUPERADMIN] Error activating firm:', error);
+    return res.status(500).json({ success: false, message: 'Failed to activate firm' });
+  }
+};
+
 module.exports = {
   createFirm: wrapWriteHandler(createFirm),
   listFirms,
@@ -1552,4 +1540,6 @@ module.exports = {
   getOperationalHealth,
   switchFirm,
   exitFirm,
+  activateFirm: wrapWriteHandler(activateFirm),
+  deactivateFirm: wrapWriteHandler(deactivateFirm),
 };

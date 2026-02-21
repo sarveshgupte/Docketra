@@ -116,13 +116,17 @@ export const FirmsManagement = () => {
   };
 
   const handleToggleFirmStatus = async (firmId, currentStatus) => {
-    const newStatus = currentStatus === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
-    
     try {
-      const response = await superadminService.updateFirmStatus(firmId, newStatus);
+      let response;
+      if (currentStatus === 'ACTIVE') {
+        response = await superadminService.deactivateFirm(firmId);
+      } else {
+        response = await superadminService.activateFirm(firmId);
+      }
       if (response.success) {
-        toast.success(`Firm ${newStatus === 'ACTIVE' ? 'activated' : 'deactivated'} successfully`);
-        loadFirms();
+        const updatedFirm = response.data;
+        toast.success(`Firm ${updatedFirm.status === 'ACTIVE' ? 'activated' : 'deactivated'} successfully`);
+        setFirms(prev => prev.map(f => f._id === updatedFirm._id ? { ...f, ...updatedFirm } : f));
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to update firm status');
