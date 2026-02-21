@@ -329,6 +329,27 @@ const superadminAdminResendLimiter = createLimiter({
   name: 'superadminAdminResendLimiter',
 });
 
+/**
+ * SuperAdmin Admin Lifecycle Limiter (firmId-based)
+ * Protects superadmin admin lifecycle endpoints from abuse.
+ *
+ * Applied to:
+ * - GET /api/superadmin/firms/:firmId/admin
+ * - PATCH /api/superadmin/firms/:firmId/admin/status
+ * - POST /api/superadmin/firms/:firmId/admin/force-reset
+ *
+ * Limit: 10 requests per hour per firmId
+ */
+const superadminAdminLifecycleLimiter = createLimiter({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10,
+  keyGenerator: (req) => {
+    const firmId = req.params?.firmId || 'unknown';
+    return `admin-lifecycle:${firmId}`;
+  },
+  name: 'superadminAdminLifecycleLimiter',
+});
+
 module.exports = {
   authLimiter,
   userReadLimiter,
@@ -338,4 +359,5 @@ module.exports = {
   superadminLimiter,
   profileLimiter,
   superadminAdminResendLimiter,
+  superadminAdminLifecycleLimiter,
 };
