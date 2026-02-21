@@ -70,6 +70,15 @@ export const superadminService = {
   },
 
   /**
+   * Resend admin access email (invite or password reset)
+   * @param {string} firmId - Firm MongoDB _id
+   */
+  resendAdminAccess: async (firmId) => {
+    const response = await api.post(`/superadmin/firms/${firmId}/admin/resend-access`);
+    return response.data;
+  },
+
+  /**
    * Exit firm context and return to GLOBAL scope
    */
   exitFirm: async (sessionId) => {
