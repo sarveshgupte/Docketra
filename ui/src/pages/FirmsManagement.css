@@ -221,6 +221,31 @@
   color: #4a5568;
 }
 
+.status-badge--admin-invited {
+  background: #feebc8;
+  color: #7b341e;
+}
+
+.status-badge--admin-active {
+  background: #c6f6d5;
+  color: #22543d;
+}
+
+.status-badge--admin-disabled {
+  background: #fed7d7;
+  color: #742a2a;
+}
+
+.admin-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.admin-details__row {
+  color: #2d3748;
+}
+
 /* Firm Actions Dropdown */
 .firm-actions {
   display: flex;
