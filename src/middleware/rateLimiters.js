@@ -289,17 +289,26 @@ const superadminLimiter = createLimiter({
 /**
  * Profile limiter (user scoped)
  * Protects profile endpoint from noisy callers
- * Limit: 5 requests per minute per user
+ * Only applies to authenticated requests - unauthenticated requests are passed
+ * through so they receive a 401 from auth middleware rather than a 429.
+ * Limit: 60 requests per minute per authenticated user
  */
-const profileLimiter = createLimiter({
+const _profileLimiterInner = createLimiter({
   windowMs: 60 * 1000, // 1 minute
-  max: 5,
+  max: 60,
   keyGenerator: (req) => {
     if (!req.user) return req.ip || 'unknown';
     return req.user.xID || req.user._id || 'unknown';
   },
   name: 'profileLimiter',
 });
+
+const profileLimiter = (req, res, next) => {
+  if (!req.user) {
+    return next();
+  }
+  return _profileLimiterInner(req, res, next);
+};
 
 module.exports = {
   authLimiter,
