@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 const assert = require('assert');
+const mongoose = require('mongoose');
 
 const Firm = require('../src/models/Firm.model');
 const User = require('../src/models/User.model');
@@ -84,16 +85,20 @@ async function shouldListFirmAdminsMaskedWithoutTokens() {
   const originalFirmFindById = Firm.findById;
   const originalUserFind = User.find;
   const originalAuthAuditFind = AuthAudit.find;
+  let listFilter = null;
 
   Firm.findById = () => ({ select: async () => ({ _id: 'firm-1', firmId: 'FIRM001', name: 'Acme' }) });
-  User.find = () => ({
+  User.find = (filter) => {
+    listFilter = filter;
+    return ({
     select: () => ({
       sort: async () => ([
         { _id: 'admin-1', name: 'System Admin', email: 'system@acme.com', xID: 'X000001', status: 'ACTIVE', isSystem: true, lockUntil: null, passwordSetupTokenHash: 'x' },
         { _id: 'admin-2', name: 'Ops Admin', email: 'ops@acme.com', xID: 'X000002', status: 'INVITED', isSystem: false, lockUntil: new Date(Date.now() + 60000), passwordResetTokenHash: 'y' },
       ]),
     }),
-  });
+    });
+  };
   AuthAudit.find = () => ({
     select: () => ({
       sort: async () => ([
@@ -111,6 +116,7 @@ async function shouldListFirmAdminsMaskedWithoutTokens() {
   assert.strictEqual(res.body.data.length, 2);
   assert.strictEqual(res.body.data[0].emailMasked, 'sy***@acme.com');
   assert.strictEqual(res.body.data[1].emailMasked, 'op***@acme.com');
+  assert.deepStrictEqual(listFilter.status, { $ne: 'DELETED' });
   assert.strictEqual(Object.prototype.hasOwnProperty.call(res.body.data[0], 'passwordSetupTokenHash'), false);
   assert.strictEqual(Object.prototype.hasOwnProperty.call(res.body.data[1], 'passwordResetTokenHash'), false);
   console.log('✓ GET firm admins returns masked fields and no token leakage');
@@ -149,7 +155,7 @@ async function shouldCreateAdditionalAdmin() {
   };
 
   const req = baseReq();
-  req.body = { name: 'John Doe', email: 'john@acme.com' };
+  req.body = { name: 'John Doe', email: ' john@acme.com ' };
   const res = createRes();
   await createFirmAdmin(req, res);
 
@@ -207,6 +213,7 @@ async function shouldRejectDisableForLastActiveAdmin() {
   const originalFirmFindById = Firm.findById;
   const originalUserFindOne = User.findOne;
   const originalCountDocuments = User.countDocuments;
+  const originalTransaction = mongoose.connection.transaction;
 
   Firm.findById = () => ({ select: async () => ({ _id: 'firm-1', firmId: 'FIRM001', name: 'Acme' }) });
   User.findOne = async () => ({
@@ -218,6 +225,7 @@ async function shouldRejectDisableForLastActiveAdmin() {
     save: async () => {},
   });
   User.countDocuments = async () => 1;
+  mongoose.connection.transaction = async (work) => work({ id: 'session-1' });
 
   const req = baseReq();
   req.body = { status: 'DISABLED' };
@@ -230,6 +238,7 @@ async function shouldRejectDisableForLastActiveAdmin() {
   Firm.findById = originalFirmFindById;
   User.findOne = originalUserFindOne;
   User.countDocuments = originalCountDocuments;
+  mongoose.connection.transaction = originalTransaction;
 }
 
 async function shouldForceResetOnlyForActiveAdminAndAudit() {
@@ -294,14 +303,36 @@ async function shouldForceResetOnlyForActiveAdminAndAudit() {
   SuperadminAudit.create = originalSuperadminAuditCreate;
 }
 
+async function shouldRejectForceResetForDeletedAdmin() {
+  const originalFirmFindById = Firm.findById;
+  const originalUserFindOne = User.findOne;
+
+  Firm.findById = async () => ({ _id: 'firm-1', firmId: 'FIRM001', name: 'Acme', firmSlug: 'acme' });
+  User.findOne = async () => ({
+    _id: 'admin-1',
+    status: 'DELETED',
+  });
+
+  const req = baseReq();
+  const res = createRes();
+  await forceResetFirmAdmin(req, res);
+  assert.strictEqual(res.statusCode, 422);
+  assert.strictEqual(res.body.code, 'ADMIN_DELETED');
+  console.log('✓ POST force-reset rejects deleted admin');
+
+  Firm.findById = originalFirmFindById;
+  User.findOne = originalUserFindOne;
+}
+
 async function shouldDeleteAdminWithGuards() {
   const originalFirmFindById = Firm.findById;
   const originalUserFindOne = User.findOne;
   const originalCountDocuments = User.countDocuments;
-  const originalDeleteOne = User.deleteOne;
+  const originalTransaction = mongoose.connection.transaction;
   const originalSuperadminAuditCreate = SuperadminAudit.create;
 
-  let deletedQuery = null;
+  let deletedStatus = null;
+  let deletedAtSet = false;
   let auditAction = null;
   let callIndex = 0;
 
@@ -311,13 +342,22 @@ async function shouldDeleteAdminWithGuards() {
     if (callIndex === 1) {
       return { _id: 'admin-system', xID: 'X000001', status: 'ACTIVE', isSystem: true };
     }
-    return { _id: 'admin-2', xID: 'X000002', status: 'ACTIVE', isSystem: false, email: 'ops@acme.com' };
+    return {
+      _id: 'admin-2',
+      xID: 'X000002',
+      status: 'ACTIVE',
+      isSystem: false,
+      email: 'ops@acme.com',
+      isActive: true,
+      save: async function save() {
+        deletedStatus = this.status;
+        deletedAtSet = this.deletedAt instanceof Date;
+        return this;
+      },
+    };
   };
   User.countDocuments = async () => 2;
-  User.deleteOne = async (query) => {
-    deletedQuery = query;
-    return { deletedCount: 1 };
-  };
+  mongoose.connection.transaction = async (work) => work({ id: 'session-1' });
   SuperadminAudit.create = async (entry) => {
     auditAction = entry.actionType;
     return entry;
@@ -336,14 +376,15 @@ async function shouldDeleteAdminWithGuards() {
   await deleteFirmAdmin(deleteReq, deleteRes);
   assert.strictEqual(deleteRes.statusCode, 200);
   assert.strictEqual(deleteRes.body.success, true);
-  assert.deepStrictEqual(deletedQuery, { _id: 'admin-2' });
+  assert.strictEqual(deletedStatus, 'DELETED');
+  assert.strictEqual(deletedAtSet, true);
   assert.strictEqual(auditAction, 'AdminDeleted');
-  console.log('✓ DELETE admin blocks system admin and allows deleting non-system admin');
+  console.log('✓ DELETE admin blocks system admin and soft-deletes non-system admin');
 
   Firm.findById = originalFirmFindById;
   User.findOne = originalUserFindOne;
   User.countDocuments = originalCountDocuments;
-  User.deleteOne = originalDeleteOne;
+  mongoose.connection.transaction = originalTransaction;
   SuperadminAudit.create = originalSuperadminAuditCreate;
 }
 
@@ -355,6 +396,7 @@ async function run() {
     await shouldRejectInvalidAdminStatusTransitions();
     await shouldRejectDisableForLastActiveAdmin();
     await shouldForceResetOnlyForActiveAdminAndAudit();
+    await shouldRejectForceResetForDeletedAdmin();
     await shouldDeleteAdminWithGuards();
     console.log('\n✅ SuperAdmin admin lifecycle tests passed.');
     process.exit(0);

@@ -25,7 +25,7 @@ const FIRM_ID_PATTERN = /^FIRM\d{3,}$/i;
  * @returns {Promise<Object|null>}
  */
 const findFirmAdmin = async (firmObjectId) => {
-  return User.findOne({ firmId: firmObjectId, isSystem: true, role: 'Admin' });
+  return User.findOne({ firmId: firmObjectId, isSystem: true, role: 'Admin', status: { $ne: 'DELETED' } });
 };
 
 const findFirmAdminById = async (firmObjectId, adminId) => {
@@ -35,7 +35,37 @@ const findFirmAdminById = async (firmObjectId, adminId) => {
   return User.findOne({ _id: adminId, firmId: firmObjectId, role: 'Admin' });
 };
 
-const isAdminCurrentlyLocked = (admin) => Boolean(admin?.lockUntil && admin.lockUntil > new Date());
+const isAdminCurrentlyLocked = (admin) => {
+  if (!admin?.lockUntil) return false;
+  return admin.lockUntil instanceof Date && admin.lockUntil > new Date();
+};
+
+const runInTransaction = async (work) => {
+  if (typeof mongoose.connection.transaction === 'function') {
+    return mongoose.connection.transaction(work);
+  }
+
+  const session = await mongoose.startSession();
+  try {
+    let result;
+    await session.withTransaction(async () => {
+      result = await work(session);
+    });
+    return result;
+  } finally {
+    await session.endSession();
+  }
+};
+
+const resolveSessionQuery = (query, session) => {
+  if (session && query && typeof query.session === 'function') {
+    query = query.session(session);
+  }
+  if (query && typeof query.exec === 'function') {
+    return query.exec();
+  }
+  return Promise.resolve(query);
+};
 
 /**
  * Log Superadmin action to audit log
@@ -468,7 +498,7 @@ const createFirmAdmin = async (req, res) => {
       });
     }
 
-    const normalizedEmail = email.toLowerCase();
+    const normalizedEmail = email.trim().toLowerCase();
     
     // Find firm by MongoDB _id and populate defaultClientId
     const firm = await Firm.findById(firmId);
@@ -489,7 +519,11 @@ const createFirmAdmin = async (req, res) => {
     }
     
     // Check if user with this email already exists within firm
-    const existingEmail = await User.findOne({ firmId: firm._id, email: normalizedEmail });
+    const existingEmail = await User.findOne({
+      firmId: firm._id,
+      email: normalizedEmail,
+      status: { $ne: 'DELETED' },
+    });
     if (existingEmail) {
       return res.status(400).json({
         success: false,
@@ -838,6 +872,14 @@ const getFirmAdminDetails = async (req, res) => {
     });
   }
 
+  if (admin.status === 'DELETED') {
+    return res.status(422).json({
+      success: false,
+      code: 'ADMIN_DELETED',
+      message: 'Cannot update a deleted admin',
+    });
+  }
+
   let lastLoginAt = null;
   try {
     const lastLoginAudit = await AuthAudit.findOne({
@@ -881,7 +923,7 @@ const listFirmAdmins = async (req, res) => {
     });
   }
 
-  const admins = await User.find({ firmId: firm._id, role: 'Admin' })
+  const admins = await User.find({ firmId: firm._id, role: 'Admin', status: { $ne: 'DELETED' } })
     .select('name email xID status isSystem lockUntil passwordSetAt inviteSentAt')
     .sort({ isSystem: -1, createdAt: 1 });
 
@@ -953,6 +995,14 @@ const updateFirmAdminStatus = async (req, res) => {
     });
   }
 
+  if (admin.status === 'DELETED') {
+    return res.status(422).json({
+      success: false,
+      code: 'ADMIN_DELETED',
+      message: 'Cannot update a deleted admin',
+    });
+  }
+
   if (admin.status === status) {
     return res.status(422).json({
       success: false,
@@ -969,25 +1019,61 @@ const updateFirmAdminStatus = async (req, res) => {
     });
   }
 
-  if (status === 'DISABLED' && admin.status === 'ACTIVE') {
-    const activeAdminsCount = await User.countDocuments({
-      firmId: firm._id,
-      role: 'Admin',
-      status: 'ACTIVE',
-    });
-    if (activeAdminsCount <= 1) {
-      return res.status(422).json({
-        success: false,
-        code: 'LAST_ACTIVE_ADMIN',
-        message: 'Cannot disable the last active admin for this firm',
-      });
-    }
-  }
-
   const oldStatus = admin.status;
-  admin.status = status;
-  admin.isActive = status === 'ACTIVE';
-  await admin.save();
+  if (status === 'DISABLED' && admin.status === 'ACTIVE') {
+    try {
+      await runInTransaction(async (session) => {
+        const activeAdminsCountQuery = User.countDocuments({
+          firmId: firm._id,
+          role: 'Admin',
+          status: 'ACTIVE',
+        });
+        const activeAdminsCount = await resolveSessionQuery(activeAdminsCountQuery, session);
+
+        if (activeAdminsCount <= 1) {
+          throw new Error('LAST_ACTIVE_ADMIN');
+        }
+
+        const adminForUpdateQuery = User.findOne({
+          _id: admin._id,
+          firmId: firm._id,
+          role: 'Admin',
+        });
+        const adminForUpdate = await resolveSessionQuery(adminForUpdateQuery, session);
+
+        if (!adminForUpdate) {
+          throw new Error('ADMIN_NOT_FOUND');
+        }
+
+        adminForUpdate.status = 'DISABLED';
+        adminForUpdate.isActive = false;
+        await adminForUpdate.save({ session });
+
+        admin.status = adminForUpdate.status;
+        admin.isActive = adminForUpdate.isActive;
+      });
+    } catch (error) {
+      if (error?.message === 'LAST_ACTIVE_ADMIN') {
+        return res.status(422).json({
+          success: false,
+          code: 'LAST_ACTIVE_ADMIN',
+          message: 'Cannot disable the last active admin for this firm',
+        });
+      }
+      if (error?.message === 'ADMIN_NOT_FOUND') {
+        return res.status(404).json({
+          success: false,
+          code: 'ADMIN_NOT_FOUND',
+          message: 'Admin not found',
+        });
+      }
+      throw error;
+    }
+  } else {
+    admin.status = status;
+    admin.isActive = status === 'ACTIVE';
+    await admin.save();
+  }
 
   await logSuperadminAction({
     actionType: 'AdminStatusChanged',
@@ -1042,6 +1128,14 @@ const forceResetFirmAdmin = async (req, res) => {
       success: false,
       code: 'ADMIN_NOT_FOUND',
       message: 'Default admin for this firm not found',
+    });
+  }
+
+  if (admin.status === 'DELETED') {
+    return res.status(422).json({
+      success: false,
+      code: 'ADMIN_DELETED',
+      message: 'Cannot reset password for deleted admin',
     });
   }
 
@@ -1140,22 +1234,86 @@ const deleteFirmAdmin = async (req, res) => {
     });
   }
 
-  if (admin.status === 'ACTIVE') {
-    const activeAdminsCount = await User.countDocuments({
-      firmId: firm._id,
-      role: 'Admin',
-      status: 'ACTIVE',
+  if (admin.status === 'DELETED') {
+    return res.status(422).json({
+      success: false,
+      code: 'ADMIN_DELETED',
+      message: 'Admin is already deleted',
     });
-    if (activeAdminsCount <= 1) {
+  }
+
+  try {
+    await runInTransaction(async (session) => {
+      const adminForDeleteQuery = User.findOne({
+        _id: admin._id,
+        firmId: firm._id,
+        role: 'Admin',
+      });
+      const adminForDelete = await resolveSessionQuery(adminForDeleteQuery, session);
+
+      if (!adminForDelete) {
+        throw new Error('ADMIN_NOT_FOUND');
+      }
+      if (adminForDelete.isSystem) {
+        throw new Error('SYSTEM_ADMIN_DELETE_FORBIDDEN');
+      }
+      if (adminForDelete.status === 'DELETED') {
+        throw new Error('ADMIN_DELETED');
+      }
+
+      if (adminForDelete.status === 'ACTIVE') {
+        const activeAdminsCountQuery = User.countDocuments({
+          firmId: firm._id,
+          role: 'Admin',
+          status: 'ACTIVE',
+        });
+        const activeAdminsCount = await resolveSessionQuery(activeAdminsCountQuery, session);
+
+        if (activeAdminsCount <= 1) {
+          throw new Error('LAST_ACTIVE_ADMIN');
+        }
+      }
+
+      adminForDelete.status = 'DELETED';
+      adminForDelete.isActive = false;
+      adminForDelete.deletedAt = new Date();
+      await adminForDelete.save({ session });
+
+      admin.status = adminForDelete.status;
+      admin.isActive = adminForDelete.isActive;
+      admin.deletedAt = adminForDelete.deletedAt;
+    });
+  } catch (error) {
+    if (error?.message === 'LAST_ACTIVE_ADMIN') {
       return res.status(422).json({
         success: false,
         code: 'LAST_ACTIVE_ADMIN',
         message: 'Cannot delete the last active admin for this firm',
       });
     }
+    if (error?.message === 'SYSTEM_ADMIN_DELETE_FORBIDDEN') {
+      return res.status(422).json({
+        success: false,
+        code: 'SYSTEM_ADMIN_DELETE_FORBIDDEN',
+        message: 'System admin cannot be deleted',
+      });
+    }
+    if (error?.message === 'ADMIN_DELETED') {
+      return res.status(422).json({
+        success: false,
+        code: 'ADMIN_DELETED',
+        message: 'Admin is already deleted',
+      });
+    }
+    if (error?.message === 'ADMIN_NOT_FOUND') {
+      return res.status(404).json({
+        success: false,
+        code: 'ADMIN_NOT_FOUND',
+        message: 'Admin not found',
+      });
+    }
+    throw error;
   }
-
-  await User.deleteOne({ _id: admin._id });
 
   await logSuperadminAction({
     actionType: 'AdminDeleted',
@@ -1206,7 +1364,7 @@ const resendAdminAccess = async (req, res) => {
   }
 
   // Find the default admin for this firm (isSystem=true, role=Admin)
-  const admin = await User.findOne({ firmId: firm._id, isSystem: true, role: 'Admin' });
+  const admin = await User.findOne({ firmId: firm._id, isSystem: true, role: 'Admin', status: { $ne: 'DELETED' } });
   if (!admin) {
     return res.status(404).json({
       success: false,
