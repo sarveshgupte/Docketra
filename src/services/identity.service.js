@@ -4,7 +4,7 @@ const User = require('../models/User.model');
  * Resolve a single canonical user identity.
  * Priority:
  * 1. Linked Google account (authProviders.google.googleId)
- * 2. Email address (globally unique)
+  * 2. Email address (firm-scoped where firmId is known)
  * 3. xID (optionally firm-scoped)
  *
  * Always returns the MongoDB _id as the canonical identity.
@@ -19,7 +19,7 @@ const resolveUserIdentity = async ({
   canLinkGoogle,
   linkGoogleIfFound = false,
 } = {}) => {
-  const normalizedEmail = email ? email.toLowerCase().trim() : null;
+  const normalizedEmail = email ? email.trim().toLowerCase() : null;
   const normalizedXid = xid ? xid.trim().toUpperCase() : null;
   const googleId = googleProfile?.sub || googleProfile?.googleId || null;
 
@@ -33,7 +33,26 @@ const resolveUserIdentity = async ({
   }
 
   if (!user && normalizedEmail) {
-    const candidate = await User.findOne({ email: normalizedEmail }, null, withSession);
+    let candidate = null;
+    if (firmId) {
+      candidate = await User.findOne({
+        firmId,
+        email: normalizedEmail,
+        status: { $ne: 'DELETED' },
+      }, null, withSession);
+    } else {
+      const candidates = await User.find({
+        email: normalizedEmail,
+        status: { $ne: 'DELETED' },
+      }, null, withSession).limit(2);
+      if (candidates.length > 1) {
+        const maskedEmail = normalizedEmail.includes('@')
+          ? normalizedEmail.replace(/(^.).*(@.*$)/, '$1***$2')
+          : `${normalizedEmail.slice(0, 1) || '*'}***`;
+        console.warn(`[IDENTITY] Ambiguous email match across firms: ${maskedEmail}`);
+      }
+      candidate = candidates.length === 1 ? candidates[0] : null;
+    }
     if (candidate) {
       const allowLink = typeof canLinkGoogle === 'function'
         ? canLinkGoogle(candidate)

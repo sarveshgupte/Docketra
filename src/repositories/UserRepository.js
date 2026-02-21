@@ -60,7 +60,11 @@ const UserRepository = {
     if (!firmId || !email) {
       return null;
     }
-    return User.findOne({ firmId, email: email.toLowerCase() });
+    return User.findOne({
+      firmId,
+      email: email.trim().toLowerCase(),
+      status: { $ne: 'DELETED' },
+    });
   },
 
   /**
@@ -166,7 +170,14 @@ const UserRepository = {
    * @returns {Promise<Object|null>} User document or null
    */
   findByEmailUnsafe(email) {
-    return User.findOne({ email: email.toLowerCase() });
+    const normalizedEmail = email?.trim().toLowerCase();
+    if (typeof email === 'string' && email.length > 0 && !normalizedEmail) {
+      console.warn('[UserRepository] Ignoring empty normalized email in findByEmailUnsafe');
+    }
+    if (!normalizedEmail) {
+      return null;
+    }
+    return User.findOne({ email: normalizedEmail, status: { $ne: 'DELETED' } });
   },
 };
 

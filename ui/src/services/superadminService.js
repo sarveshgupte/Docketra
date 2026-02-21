@@ -55,7 +55,12 @@ export const superadminService = {
    * Create firm admin
    */
   createFirmAdmin: async (firmId, adminData) => {
-    const response = await api.post(`/superadmin/firms/${firmId}/admin`, adminData);
+    const response = await api.post(`/superadmin/firms/${firmId}/admins`, adminData);
+    return response.data;
+  },
+
+  listFirmAdmins: async (firmId) => {
+    const response = await api.get(`/superadmin/firms/${firmId}/admins`);
     return response.data;
   },
 
@@ -92,8 +97,11 @@ export const superadminService = {
    * @param {string} firmId - Firm MongoDB _id
    * @param {string} status - ACTIVE | DISABLED
    */
-  updateFirmAdminStatus: async (firmId, status) => {
-    const response = await api.patch(`/superadmin/firms/${firmId}/admin/status`, { status });
+  updateFirmAdminStatus: async (firmId, status, adminId) => {
+    const path = adminId
+      ? `/superadmin/firms/${firmId}/admins/${adminId}/status`
+      : `/superadmin/firms/${firmId}/admin/status`;
+    const response = await api.patch(path, { status });
     return response.data;
   },
 
@@ -101,8 +109,16 @@ export const superadminService = {
    * Force reset firm default admin password
    * @param {string} firmId - Firm MongoDB _id
    */
-  forceResetFirmAdmin: async (firmId) => {
-    const response = await api.post(`/superadmin/firms/${firmId}/admin/force-reset`);
+  forceResetFirmAdmin: async (firmId, adminId) => {
+    const path = adminId
+      ? `/superadmin/firms/${firmId}/admins/${adminId}/force-reset`
+      : `/superadmin/firms/${firmId}/admin/force-reset`;
+    const response = await api.post(path);
+    return response.data;
+  },
+
+  deleteFirmAdmin: async (firmId, adminId) => {
+    const response = await api.delete(`/superadmin/firms/${firmId}/admins/${adminId}`);
     return response.data;
   },
 
