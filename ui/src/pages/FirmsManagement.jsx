@@ -167,10 +167,10 @@ export const FirmsManagement = () => {
     }
   };
 
-  const handleForceReset = async (firm) => {
+  const handleForceReset = async (targetFirm) => {
     try {
       setIsForcingReset(true);
-      const response = await superadminService.forceResetFirmAdmin(firm._id);
+      const response = await superadminService.forceResetFirmAdmin(targetFirm._id);
       if (response.success) {
         toast.success(`Password reset forced for ${response.emailMasked}`);
       }
@@ -181,8 +181,7 @@ export const FirmsManagement = () => {
     }
   };
 
-  const handleAdminStatusChange = async (firm, currentStatus) => {
-    const nextStatus = currentStatus === 'DISABLED' ? 'ACTIVE' : 'DISABLED';
+  const handleSetAdminStatus = async (firm, nextStatus) => {
     try {
       setIsUpdatingAdminStatus(true);
       const response = await superadminService.updateFirmAdminStatus(firm._id, nextStatus);
@@ -200,6 +199,11 @@ export const FirmsManagement = () => {
     }
   };
 
+  const handleAdminStatusChange = async (firm, currentStatus) => {
+    const nextStatus = currentStatus === 'DISABLED' ? 'ACTIVE' : 'DISABLED';
+    return handleSetAdminStatus(firm, nextStatus);
+  };
+
   if (loading) {
     return (
       <SuperAdminLayout>
@@ -207,6 +211,9 @@ export const FirmsManagement = () => {
       </SuperAdminLayout>
     );
   }
+
+  const adminDetails = adminModal.details;
+  const isAdminDisabled = adminDetails?.status === 'DISABLED';
 
   return (
     <SuperAdminLayout>
@@ -309,30 +316,30 @@ export const FirmsManagement = () => {
               </div>
               {adminModal.loading ? (
                 <Loading message="Loading admin details..." />
-              ) : adminModal.details ? (
+              ) : adminDetails ? (
                 <div className="admin-details">
-                  <div className="admin-details__row"><strong>Admin Name:</strong> {adminModal.details.name}</div>
-                  <div className="admin-details__row"><strong>Masked Email:</strong> {adminModal.details.emailMasked}</div>
-                  <div className="admin-details__row"><strong>xID:</strong> {adminModal.details.xID}</div>
+                  <div className="admin-details__row"><strong>Admin Name:</strong> {adminDetails.name}</div>
+                  <div className="admin-details__row"><strong>Masked Email:</strong> {adminDetails.emailMasked}</div>
+                  <div className="admin-details__row"><strong>xID:</strong> {adminDetails.xID}</div>
                   <div className="admin-details__row">
                     <strong>Status:</strong>{' '}
-                    <span className={`status-badge status-badge--admin-${String(adminModal.details.status || '').toLowerCase()}`}>
-                      {adminModal.details.status}
+                    <span className={`status-badge status-badge--admin-${String(adminDetails.status || '').toLowerCase()}`}>
+                      {adminDetails.status}
                     </span>
                   </div>
-                  <div className="admin-details__row"><strong>Last Login:</strong> {formatDate(adminModal.details.lastLoginAt)}</div>
-                  <div className="admin-details__row"><strong>Invite Sent:</strong> {formatDate(adminModal.details.inviteSentAt)}</div>
-                  <div className="admin-details__row"><strong>Password Set:</strong> {formatDate(adminModal.details.passwordSetAt)}</div>
-                  <div className="admin-details__row"><strong>Lock Status:</strong> {adminModal.details.isLocked ? 'Locked' : 'Not Locked'}</div>
+                  <div className="admin-details__row"><strong>Last Login:</strong> {formatDate(adminDetails.lastLoginAt)}</div>
+                  <div className="admin-details__row"><strong>Invite Sent:</strong> {formatDate(adminDetails.inviteSentAt)}</div>
+                  <div className="admin-details__row"><strong>Password Set:</strong> {formatDate(adminDetails.passwordSetAt)}</div>
+                  <div className="admin-details__row"><strong>Lock Status:</strong> {adminDetails.isLocked ? 'Locked' : 'Not Locked'}</div>
                   <div className="modal-actions">
                     <Button
-                      variant={adminModal.details.status === 'DISABLED' ? 'primary' : 'danger'}
-                      onClick={() => handleAdminStatusChange(adminModal.firm, adminModal.details.status)}
+                      variant={isAdminDisabled ? 'primary' : 'danger'}
+                      onClick={() => handleAdminStatusChange(adminModal.firm, adminDetails.status)}
                       disabled={isUpdatingAdminStatus}
                     >
                       {isUpdatingAdminStatus
                         ? 'Updating...'
-                        : (adminModal.details.status === 'DISABLED' ? 'Enable Admin' : 'Disable Admin')}
+                        : (isAdminDisabled ? 'Enable Admin' : 'Disable Admin')}
                     </Button>
                     <Button
                       variant="secondary"
@@ -473,7 +480,7 @@ export const FirmsManagement = () => {
                                     className="firm-actions__dropdown-item"
                                     onClick={async () => {
                                       setOpenDropdownId(null);
-                                      await handleAdminStatusChange(firm, 'ACTIVE');
+                                      await handleSetAdminStatus(firm, 'DISABLED');
                                     }}
                                   >
                                     ⛔ Disable Admin

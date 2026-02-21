@@ -18,6 +18,11 @@ const { isFirmCreationDisabled } = require('../services/featureFlags.service');
 // Constants
 const FIRM_ID_PATTERN = /^FIRM\d{3,}$/i;
 
+/**
+ * Resolve the default system admin for a firm.
+ * @param {string|Object} firmObjectId
+ * @returns {Promise<Object|null>}
+ */
 const findFirmAdmin = async (firmObjectId) => {
   return User.findOne({ firmId: firmObjectId, isSystem: true, role: 'Admin' });
 };
@@ -984,7 +989,6 @@ const forceResetFirmAdmin = async (req, res) => {
   admin.passwordResetTokenHash = newTokenHash;
   admin.passwordResetExpires = tokenExpires;
   admin.forcePasswordReset = true;
-  admin.mustChangePassword = true;
   await admin.save();
 
   let emailSuccess = true;
