@@ -22,6 +22,8 @@ const {
   getOperationalHealth,
   switchFirm,
   exitFirm,
+  activateFirm,
+  deactivateFirm,
 } = require('../controllers/superadmin.controller');
 
 /**
@@ -50,6 +52,8 @@ router.get('/health', authenticate, requireSuperadmin, superadminLimiter, getOpe
 router.post('/firms', authenticate, authorize(FirmPolicy.canCreate), superadminLimiter, createFirm);
 router.get('/firms', authenticate, authorize(FirmPolicy.canView), superadminLimiter, listFirms);
 router.patch('/firms/:id', authenticate, authorize(FirmPolicy.canManageStatus), superadminLimiter, updateFirmStatus);
+router.patch('/firms/:id/activate', authenticate, authorize(FirmPolicy.canManageStatus), superadminLimiter, activateFirm);
+router.patch('/firms/:id/deactivate', authenticate, authorize(FirmPolicy.canManageStatus), superadminLimiter, deactivateFirm);
 router.post('/firms/:id/disable', authenticate, authorize(FirmPolicy.canManageStatus), superadminLimiter, disableFirmImmediately);
 
 // Firm admin creation

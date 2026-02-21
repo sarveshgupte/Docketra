@@ -183,10 +183,42 @@ const authorizeFirmPermission = (requiredPermission) => {
   };
 };
 
+/**
+ * Require Platform SuperAdmin role
+ * Must be used after authenticate middleware
+ * Only PLATFORM_SUPERADMIN (SuperAdmin) can proceed; all others get 403
+ */
+const requirePlatformSuperAdmin = (req, res, next) => {
+  if (!req.user || !isSuperAdminRole(req.user.role)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied.',
+    });
+  }
+  return next();
+};
+
+/**
+ * Require Firm User role (Admin or Employee)
+ * Must be used after authenticate middleware
+ * Explicitly denies PLATFORM_SUPERADMIN; only firm-scoped roles are allowed
+ */
+const requireFirmUser = (req, res, next) => {
+  if (!req.user || isSuperAdminRole(req.user.role)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Firm access denied.',
+    });
+  }
+  return next();
+};
+
 module.exports = { 
   requireAdmin, 
   requireSuperadmin, 
   blockSuperadmin,
   requireFirmContext,
   authorizeFirmPermission,
+  requirePlatformSuperAdmin,
+  requireFirmUser,
 };
