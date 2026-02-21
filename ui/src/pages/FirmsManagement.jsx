@@ -10,6 +10,7 @@ import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
+import { ConfirmDialog } from '../components/common/ConfirmDialog';
 import { useToast } from '../hooks/useToast';
 import { formatDate, getFirmStatusInfo } from '../utils/formatters';
 import './FirmsManagement.css';
@@ -27,9 +28,27 @@ export const FirmsManagement = () => {
     adminEmail: '',
   });
 
+  // Resend admin access state
+  const [resendConfirm, setResendConfirm] = useState({ open: false, firm: null });
+  const [isResending, setIsResending] = useState(false);
+
+  // Actions dropdown state
+  const [openDropdownId, setOpenDropdownId] = useState(null);
+
   // Load firms
   useEffect(() => {
     loadFirms();
+  }, []);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.firm-actions__dropdown-wrap')) {
+        setOpenDropdownId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const loadFirms = async () => {
@@ -96,6 +115,25 @@ export const FirmsManagement = () => {
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to update firm status');
+    }
+  };
+
+  const handleResendAdminAccess = async () => {
+    const firm = resendConfirm.firm;
+    if (!firm) return;
+
+    try {
+      setIsResending(true);
+      const response = await superadminService.resendAdminAccess(firm._id);
+      if (response.success) {
+        const actionLabel = response.action === 'INVITE_RESENT' ? 'Invite resent' : 'Password reset sent';
+        toast.success(`${actionLabel} to ${response.emailMasked}`);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to resend admin access');
+    } finally {
+      setIsResending(false);
+      setResendConfirm({ open: false, firm: null });
     }
   };
 
@@ -181,6 +219,18 @@ export const FirmsManagement = () => {
           </div>
         )}
 
+        {/* Resend Admin Access Confirmation */}
+        <ConfirmDialog
+          isOpen={resendConfirm.open}
+          title="Resend Admin Access Email"
+          message={`Send a new access email to the admin of "${resendConfirm.firm?.name}"? This will invalidate any previously sent links.`}
+          confirmText="Resend"
+          cancelText="Cancel"
+          loading={isResending}
+          onConfirm={handleResendAdminAccess}
+          onCancel={() => setResendConfirm({ open: false, firm: null })}
+        />
+
         {/* Firms Table */}
         {firms.length === 0 ? (
           <Card className="empty-state">
@@ -244,23 +294,48 @@ export const FirmsManagement = () => {
                         <td>{firm.userCount ?? 0}</td>
                         <td>{formatDate(firm.createdAt)}</td>
                         <td>
-                          {isActive ? (
-                            <Button
-                              size="small"
-                              variant="danger"
-                              onClick={() => handleToggleFirmStatus(firm._id, firm.status)}
-                            >
-                              Deactivate
-                            </Button>
-                          ) : (
-                            <Button
-                              size="small"
-                              variant="success"
-                              onClick={() => handleToggleFirmStatus(firm._id, firm.status)}
-                            >
-                              Activate
-                            </Button>
-                          )}
+                          <div className="firm-actions">
+                            {isActive ? (
+                              <Button
+                                size="small"
+                                variant="danger"
+                                onClick={() => handleToggleFirmStatus(firm._id, firm.status)}
+                              >
+                                Deactivate
+                              </Button>
+                            ) : (
+                              <Button
+                                size="small"
+                                variant="success"
+                                onClick={() => handleToggleFirmStatus(firm._id, firm.status)}
+                              >
+                                Activate
+                              </Button>
+                            )}
+                            <div className="firm-actions__dropdown-wrap">
+                              <button
+                                className="firm-actions__menu-btn"
+                                title="More actions"
+                                aria-label="More actions"
+                                onClick={() => setOpenDropdownId(openDropdownId === firm._id ? null : firm._id)}
+                              >
+                                ⋮
+                              </button>
+                              {openDropdownId === firm._id && (
+                                <div className="firm-actions__dropdown">
+                                  <button
+                                    className="firm-actions__dropdown-item"
+                                    onClick={() => {
+                                      setOpenDropdownId(null);
+                                      setResendConfirm({ open: true, firm });
+                                    }}
+                                  >
+                                    ✉ Resend Admin Access Email
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         </td>
                       </tr>
                     );

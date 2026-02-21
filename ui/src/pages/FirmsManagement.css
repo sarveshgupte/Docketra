@@ -221,6 +221,63 @@
   color: #4a5568;
 }
 
+/* Firm Actions Dropdown */
+.firm-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.firm-actions__dropdown-wrap {
+  position: relative;
+}
+
+.firm-actions__menu-btn {
+  background: none;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 1.2rem;
+  color: #4a5568;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  line-height: 1;
+  transition: background 0.2s ease;
+}
+
+.firm-actions__menu-btn:hover {
+  background: #f7fafc;
+}
+
+.firm-actions__dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  min-width: 220px;
+  z-index: 100;
+}
+
+.firm-actions__dropdown-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  color: #2d3748;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  border-radius: 8px;
+}
+
+.firm-actions__dropdown-item:hover {
+  background: #f7fafc;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .firms-management__header {
