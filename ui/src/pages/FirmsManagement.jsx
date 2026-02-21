@@ -215,6 +215,10 @@ export const FirmsManagement = () => {
       toast.error('Name and email are required');
       return;
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminModal.addForm.email.trim())) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
     try {
       setIsCreatingAdmin(true);
       const response = await superadminService.createFirmAdmin(adminModal.firm._id, {

@@ -285,6 +285,7 @@ async function shouldForceResetOnlyForActiveAdminAndAudit() {
   assert.ok(adminSaved.passwordResetTokenHash, 'password reset hash should be set');
   assert.ok(adminSaved.passwordResetExpires, 'password reset expiry should be set');
   assert.strictEqual(adminSaved.mustChangePassword, true);
+  assert.strictEqual(adminSaved.forcePasswordReset, true);
   console.log('✓ POST force-reset updates token lifecycle, emails admin, and audits action');
 
   Firm.findById = originalFirmFindById;
