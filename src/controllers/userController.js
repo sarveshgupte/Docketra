@@ -106,8 +106,12 @@ const createUser = async (req, res) => {
     }
 
     // Check if user already exists
-    const normalizedEmail = email.toLowerCase();
-    const existingUser = await User.findOne({ email: normalizedEmail });
+    const normalizedEmail = email.trim().toLowerCase();
+    const existingUser = await User.findOne({
+      firmId: req.user?.firmId,
+      email: normalizedEmail,
+      status: { $ne: 'DELETED' },
+    });
     if (existingUser) {
       if (role && existingUser.role !== role) {
         return res.status(409).json({
