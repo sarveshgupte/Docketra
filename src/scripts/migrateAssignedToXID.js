@@ -49,11 +49,11 @@ async function migrateAssignedToXID() {
     
     // Process each case
     for (const caseData of casesWithEmail) {
-      const email = caseData.assignedTo.toLowerCase();
+      const email = caseData.assignedTo.trim().toLowerCase();
       
       try {
         // Find user by email
-        const user = await User.findOne({ email: email }).lean();
+        const user = await User.findOne({ email, status: { $ne: 'DELETED' } }).lean();
         
         if (!user) {
           console.log(`⚠️  Case ${caseData.caseId}: User not found for email ${email}`);

@@ -293,58 +293,29 @@ const login = async (req, res) => {
     // ============================================================
     // NORMAL USER AUTHENTICATION (FROM MONGODB)
     // ============================================================
-    
-    // If firmSlug is provided, use firm-scoped lookup
-    // This prevents ambiguity when multiple firms have the same xID (e.g., X000001)
-    let user;
-    
-    if (req.firmId) {
-      // Firm-scoped login - query by firmId AND xID
-      console.log(`[AUTH] Firm-scoped login attempt: firmSlug=${req.firmSlug}, xID=${normalizedXID}`);
-      user = await User.findOne({ 
-        firmId: req.firmId, 
-        xID: normalizedXID,
-        status: { $ne: 'DELETED' },
+    if (!req.firmId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Firm context is required for login.',
       });
-    } else {
-      // Legacy login without firm context - query by xID only
-      // This supports existing users who don't have firmSlug yet
-      console.log(`[AUTH] Legacy login attempt (no firm context): xID=${normalizedXID}`);
-      user = await User.findOne({ xID: normalizedXID, status: { $ne: 'DELETED' } });
-      
-      // If multiple users with same xID exist, reject login
-      if (user) {
-        const duplicateCount = await User.countDocuments({ xID: normalizedXID, status: { $ne: 'DELETED' } });
-        if (duplicateCount > 1) {
-          console.warn(`[AUTH] Multiple users with xID ${normalizedXID} found. Firm-scoped login required.`);
-          return res.status(400).json({
-            success: false,
-            message: 'Multiple accounts found. Please use your firm-specific login URL.',
-          });
-        }
-      }
     }
+
+    // Firm-scoped login - query by firmId AND xID
+    console.log(`[AUTH] Firm-scoped login attempt: firmSlug=${req.firmSlug}, xID=${normalizedXID}`);
+    const user = await User.findOne({
+      firmId: req.firmId,
+      xID: normalizedXID,
+      status: { $ne: 'DELETED' },
+    });
     
-    if (!user) {
-      // Check if system has been initialized (any users exist)
-      const userCount = await User.countDocuments();
-      
-      if (userCount === 0) {
-        // System not initialized - no users exist
-        console.warn('[AUTH] Login attempt but system not initialized (no users exist)');
-        return res.status(503).json({
-          success: false,
-          message: 'System not initialized. Please contact SuperAdmin.',
-        });
-      }
-      
-      // Log failed login attempt (no firmId available as user doesn't exist)
+    if (!user || user.status !== 'ACTIVE') {
+      console.warn(`[AUTH] Invalid login attempt for xID=${normalizedXID} in firm context ${req.firmSlug || req.firmId}`);
       try {
         await AuthAudit.create({
           xID: normalizedXID || 'UNKNOWN',
-          firmId: req.firmIdString || 'UNKNOWN', // Use resolved firmId if available
+          firmId: req.firmIdString || req.firmId || 'UNKNOWN',
           actionType: 'LoginFailed',
-          description: `Login failed: User not found (attempted with xID: ${normalizedXID}, firmSlug: ${req.firmSlug || 'none'})`,
+          description: `Login failed: invalid credentials (xID: ${normalizedXID}, firmSlug: ${req.firmSlug || 'none'})`,
           performedBy: normalizedXID,
           ipAddress: req.ip,
           userAgent: req.get('user-agent'),
@@ -352,13 +323,12 @@ const login = async (req, res) => {
       } catch (auditError) {
         console.error('[AUTH AUDIT] Failed to record login failure event', auditError);
       }
-      
       return res.status(401).json({
         success: false,
-        message: 'Invalid xID or password',
+        message: 'Invalid credentials',
       });
     }
-    
+
     // ============================================================
     // PART 3: PREVENT ADMIN LOGIN BEFORE FIRM INITIALIZATION
     // ============================================================
@@ -461,23 +431,14 @@ const login = async (req, res) => {
     }
     
     // Check if password has been set (mustSetPassword is the only gate)
-    if (user.mustSetPassword || !user.passwordHash) {
+    const passwordSetupRequired = user.mustChangePassword || user.mustSetPassword;
+    if (passwordSetupRequired || !user.passwordHash) {
       return res.status(403).json({
         success: false,
         code: 'PASSWORD_SETUP_REQUIRED',
         message: 'Please set your password using the link sent to your email',
         mustSetPassword: true,
         redirectPath: '/auth/set-password',
-      });
-    }
-    
-    // PR 32: Check if user must change password (invite not completed)
-    // Block login until password is set via invite link
-    if (user.mustChangePassword) {
-      return res.status(403).json({
-        success: false,
-        message: 'Please complete your account setup using the invite link sent to your email',
-        mustChangePassword: true,
       });
     }
     
@@ -931,8 +892,8 @@ const resetPassword = async (req, res) => {
     user.passwordSet = false;
     user.passwordSetupTokenHash = tokenHash;
     user.passwordSetupExpires = tokenExpiry;
-    user.mustChangePassword = false;
-    user.mustSetPassword = true;
+    user.mustChangePassword = true;
+    user.mustSetPassword = false;
     user.passwordExpiresAt = null; // Clear expiry until password is set
     user.status = 'INVITED'; // User must set password to become active again
     user.failedLoginAttempts = 0;
@@ -1314,7 +1275,7 @@ const createUser = async (req, res) => {
     
     // Check if email already exists (enforce uniqueness)
     const existingUser = await User.findOne({ 
-      email: email.toLowerCase() 
+      email: email.trim().toLowerCase() 
     });
     
     if (existingUser) {
@@ -1342,7 +1303,7 @@ const createUser = async (req, res) => {
     const newUser = new User({
       xID: xID, // Auto-generated, immutable
       name,
-      email: email.toLowerCase(),
+      email: email.trim().toLowerCase(),
       firmId: admin.firmId, // Inherit firmId from admin
       defaultClientId: firm.defaultClientId,
       role: role || 'Employee',
@@ -1350,7 +1311,7 @@ const createUser = async (req, res) => {
       isActive: true,
       passwordHash: null, // No password until user sets it
       passwordSet: false, // Password not set yet
-      mustSetPassword: true,
+      mustSetPassword: false,
       inviteTokenHash: tokenHash, // Using alias for invite token
       inviteTokenExpiry: tokenExpiry, // 48 hours
       mustChangePassword: true, // Enforce password setup on first login
@@ -2559,7 +2520,7 @@ const handleGoogleCallback = async (req, res) => {
     });
 
     const payload = ticket.getPayload() || {};
-    const email = payload.email ? payload.email.toLowerCase() : null;
+    const email = payload.email ? payload.email.trim().toLowerCase() : null;
     const googleId = payload.sub;
     const emailVerified = payload.email_verified !== false; // treat undefined as true
 

@@ -424,6 +424,7 @@ userSchema.index(
 userSchema.index({ isActive: 1 });
 userSchema.index({ role: 1 });
 userSchema.index({ status: 1 });
+userSchema.index({ firmId: 1, status: 1 });
 userSchema.index({ mustSetPassword: 1 });
 // REMOVED: { firmId: 1 } - redundant with compound index (firmId, xID) above
 userSchema.index({ firmId: 1, role: 1 }); // Firm-scoped role queries
