@@ -35,6 +35,8 @@ const findFirmAdminById = async (firmObjectId, adminId) => {
   return User.findOne({ _id: adminId, firmId: firmObjectId, role: 'Admin' });
 };
 
+const isAdminCurrentlyLocked = (admin) => Boolean(admin?.lockUntil && admin.lockUntil > new Date());
+
 /**
  * Log Superadmin action to audit log
  * 
@@ -858,7 +860,7 @@ const getFirmAdminDetails = async (req, res) => {
       passwordSetAt: admin.passwordSetAt || null,
       inviteSentAt: admin.inviteSentAt || null,
       failedLoginAttempts: admin.failedLoginAttempts || 0,
-      isLocked: Boolean(admin.lockUntil && admin.lockUntil > new Date()),
+      isLocked: isAdminCurrentlyLocked(admin),
     },
   });
 };
@@ -910,7 +912,7 @@ const listFirmAdmins = async (req, res) => {
       lastLoginAt: lastLoginMap.get(String(admin._id)) || null,
       passwordSetAt: admin.passwordSetAt || null,
       inviteSentAt: admin.inviteSentAt || null,
-      isLocked: Boolean(admin.lockUntil && admin.lockUntil > new Date()),
+      isLocked: isAdminCurrentlyLocked(admin),
     })),
   });
 };
@@ -1060,7 +1062,8 @@ const forceResetFirmAdmin = async (req, res) => {
   admin.passwordResetTokenHash = newTokenHash;
   admin.passwordResetExpires = tokenExpires;
   admin.mustChangePassword = true;
-  admin.forcePasswordReset = false;
+  // Deprecated flag retained for backward compatibility during rollout.
+  admin.forcePasswordReset = true;
   await admin.save();
 
   let emailSuccess = true;
