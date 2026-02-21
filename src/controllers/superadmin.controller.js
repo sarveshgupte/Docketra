@@ -2,6 +2,7 @@ const User = require('../models/User.model');
 const Firm = require('../models/Firm.model');
 const Client = require('../models/Client.model');
 const SuperadminAudit = require('../models/SuperadminAudit.model');
+const AuthAudit = require('../models/AuthAudit.model');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const emailService = require('../services/email.service');
@@ -16,6 +17,15 @@ const { isFirmCreationDisabled } = require('../services/featureFlags.service');
 
 // Constants
 const FIRM_ID_PATTERN = /^FIRM\d{3,}$/i;
+
+/**
+ * Resolve the default system admin for a firm.
+ * @param {string|Object} firmObjectId
+ * @returns {Promise<Object|null>}
+ */
+const findFirmAdmin = async (firmObjectId) => {
+  return User.findOne({ firmId: firmObjectId, isSystem: true, role: 'Admin' });
+};
 
 /**
  * Log Superadmin action to audit log
@@ -804,6 +814,225 @@ const exitFirm = async (req, res) => {
 };
 
 /**
+ * Get firm default admin details for SuperAdmin visibility
+ * GET /api/superadmin/firms/:firmId/admin
+ */
+const getFirmAdminDetails = async (req, res) => {
+  const { firmId } = req.params;
+
+  const firm = await Firm.findById(firmId).select('firmId name');
+  if (!firm) {
+    return res.status(404).json({
+      success: false,
+      code: 'FIRM_NOT_FOUND',
+      message: 'Firm not found',
+    });
+  }
+
+  const admin = await findFirmAdmin(firm._id);
+  if (!admin) {
+    return res.status(404).json({
+      success: false,
+      code: 'ADMIN_NOT_FOUND',
+      message: 'Default admin for this firm not found',
+    });
+  }
+
+  let lastLoginAt = null;
+  try {
+    const lastLoginAudit = await AuthAudit.findOne({
+      userId: admin._id,
+      actionType: 'Login',
+    }).select('timestamp').sort({ timestamp: -1 });
+    lastLoginAt = lastLoginAudit?.timestamp || null;
+  } catch (error) {
+    console.warn('[SUPERADMIN] Failed to fetch admin last login audit:', error.message);
+  }
+
+  return res.status(200).json({
+    success: true,
+    data: {
+      name: admin.name,
+      emailMasked: emailService.maskEmail(admin.email),
+      xID: admin.xID,
+      status: admin.status,
+      lastLoginAt,
+      passwordSetAt: admin.passwordSetAt || null,
+      inviteSentAt: admin.inviteSentAt || null,
+      failedLoginAttempts: admin.failedLoginAttempts || 0,
+      isLocked: Boolean(admin.isLocked),
+    },
+  });
+};
+
+/**
+ * Update firm default admin status (ACTIVE / DISABLED)
+ * PATCH /api/superadmin/firms/:firmId/admin/status
+ */
+const updateFirmAdminStatus = async (req, res) => {
+  const { firmId } = req.params;
+  const { status } = req.body || {};
+
+  if (!['ACTIVE', 'DISABLED'].includes(status)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Status must be ACTIVE or DISABLED',
+    });
+  }
+
+  const firm = await Firm.findById(firmId).select('firmId name');
+  if (!firm) {
+    return res.status(404).json({
+      success: false,
+      code: 'FIRM_NOT_FOUND',
+      message: 'Firm not found',
+    });
+  }
+
+  const admin = await findFirmAdmin(firm._id);
+  if (!admin) {
+    return res.status(404).json({
+      success: false,
+      code: 'ADMIN_NOT_FOUND',
+      message: 'Default admin for this firm not found',
+    });
+  }
+
+  if (admin.status === status) {
+    return res.status(422).json({
+      success: false,
+      code: 'ADMIN_STATUS_UNCHANGED',
+      message: `Admin is already ${status}`,
+    });
+  }
+
+  if (status === 'ACTIVE' && admin.mustSetPassword) {
+    return res.status(422).json({
+      success: false,
+      code: 'ADMIN_PASSWORD_NOT_SET',
+      message: 'Cannot activate admin before password is set',
+    });
+  }
+
+  const oldStatus = admin.status;
+  admin.status = status;
+  admin.isActive = status === 'ACTIVE';
+  await admin.save();
+
+  await logSuperadminAction({
+    actionType: 'AdminStatusChanged',
+    description: `Admin status changed for firm ${firm.name} (${firm.firmId}): ${admin.xID} ${oldStatus} → ${status}`,
+    performedBy: req.user.email,
+    performedById: req.user._id,
+    targetEntityType: 'User',
+    targetEntityId: admin._id.toString(),
+    metadata: {
+      firmId: firm.firmId,
+      firmName: firm.name,
+      adminXID: admin.xID,
+      oldStatus,
+      newStatus: status,
+    },
+    req,
+  });
+
+  return res.status(200).json({
+    success: true,
+    message: `Admin ${status === 'ACTIVE' ? 'enabled' : 'disabled'} successfully`,
+    data: {
+      xID: admin.xID,
+      status: admin.status,
+      isActive: admin.isActive,
+    },
+  });
+};
+
+/**
+ * Force password reset for ACTIVE firm admin
+ * POST /api/superadmin/firms/:firmId/admin/force-reset
+ */
+const forceResetFirmAdmin = async (req, res) => {
+  const { firmId } = req.params;
+
+  const firm = await Firm.findById(firmId);
+  if (!firm) {
+    return res.status(404).json({
+      success: false,
+      code: 'FIRM_NOT_FOUND',
+      message: 'Firm not found',
+    });
+  }
+
+  const admin = await findFirmAdmin(firm._id);
+  if (!admin) {
+    return res.status(404).json({
+      success: false,
+      code: 'ADMIN_NOT_FOUND',
+      message: 'Default admin for this firm not found',
+    });
+  }
+
+  if (admin.status !== 'ACTIVE') {
+    return res.status(422).json({
+      success: false,
+      code: 'ADMIN_NOT_ACTIVE',
+      message: 'Force password reset is only available for ACTIVE admins',
+    });
+  }
+
+  const newToken = crypto.randomBytes(32).toString('hex');
+  const newTokenHash = crypto.createHash('sha256').update(newToken).digest('hex');
+  const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+  admin.passwordSetupTokenHash = null;
+  admin.passwordSetupExpires = null;
+  admin.passwordResetTokenHash = newTokenHash;
+  admin.passwordResetExpires = tokenExpires;
+  admin.forcePasswordReset = true;
+  await admin.save();
+
+  let emailSuccess = true;
+  try {
+    const emailResult = await emailService.sendAdminPasswordResetEmail({
+      email: admin.email,
+      name: admin.name,
+      token: newToken,
+      xID: admin.xID,
+      firmSlug: firm.firmSlug,
+      req,
+    });
+    if (emailResult && emailResult.success === false) {
+      emailSuccess = false;
+      console.warn('[SUPERADMIN] Admin force-reset email not sent:', emailResult.error);
+    }
+  } catch (emailError) {
+    emailSuccess = false;
+    console.warn('[SUPERADMIN] Failed to send admin force-reset email:', emailError.message);
+  }
+
+  await logSuperadminAction({
+    actionType: emailSuccess ? 'AdminForcePasswordReset' : 'AdminForcePasswordResetEmailFailed',
+    description: `Admin force password reset for firm ${firm.name} (${firm.firmId}), admin ${admin.xID}`,
+    performedBy: req.user.email,
+    performedById: req.user._id,
+    targetEntityType: 'User',
+    targetEntityId: admin._id.toString(),
+    metadata: {
+      firmId: firm.firmId,
+      firmName: firm.name,
+      adminXID: admin.xID,
+      emailSuccess,
+    },
+    req,
+  });
+
+  return res.status(200).json({
+    success: true,
+    emailMasked: emailService.maskEmail(admin.email),
+  });
+};
+
+/**
  * Resend Admin Access (Invite or Password Reset)
  * POST /api/superadmin/firms/:firmId/admin/resend-access
  *
@@ -937,6 +1166,9 @@ module.exports = {
   updateFirmStatus: wrapWriteHandler(updateFirmStatus),
   disableFirmImmediately: wrapWriteHandler(disableFirmImmediately),
   createFirmAdmin: wrapWriteHandler(createFirmAdmin),
+  getFirmAdminDetails,
+  updateFirmAdminStatus: wrapWriteHandler(updateFirmAdminStatus),
+  forceResetFirmAdmin: wrapWriteHandler(forceResetFirmAdmin),
   resendAdminAccess: wrapWriteHandler(resendAdminAccess),
   getPlatformStats,
   getFirmBySlug,

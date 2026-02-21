@@ -31,6 +31,14 @@ export const FirmsManagement = () => {
   // Resend admin access state
   const [resendConfirm, setResendConfirm] = useState({ open: false, firm: null });
   const [isResending, setIsResending] = useState(false);
+  const [isForcingReset, setIsForcingReset] = useState(false);
+  const [isUpdatingAdminStatus, setIsUpdatingAdminStatus] = useState(false);
+  const [adminModal, setAdminModal] = useState({
+    open: false,
+    loading: false,
+    firm: null,
+    details: null,
+  });
 
   // Actions dropdown state
   const [openDropdownId, setOpenDropdownId] = useState(null);
@@ -137,6 +145,65 @@ export const FirmsManagement = () => {
     }
   };
 
+  const openAdminModal = async (firm) => {
+    setAdminModal({
+      open: true,
+      loading: true,
+      firm,
+      details: null,
+    });
+    try {
+      const response = await superadminService.getFirmAdmin(firm._id);
+      if (response.success) {
+        setAdminModal((prev) => ({
+          ...prev,
+          loading: false,
+          details: response.data,
+        }));
+      }
+    } catch (error) {
+      setAdminModal((prev) => ({ ...prev, loading: false }));
+      toast.error(error.response?.data?.message || 'Failed to load admin details');
+    }
+  };
+
+  const handleForceReset = async (targetFirm) => {
+    try {
+      setIsForcingReset(true);
+      const response = await superadminService.forceResetFirmAdmin(targetFirm._id);
+      if (response.success) {
+        toast.success(`Password reset forced for ${response.emailMasked}`);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to force password reset');
+    } finally {
+      setIsForcingReset(false);
+    }
+  };
+
+  const handleSetAdminStatus = async (firm, nextStatus) => {
+    try {
+      setIsUpdatingAdminStatus(true);
+      const response = await superadminService.updateFirmAdminStatus(firm._id, nextStatus);
+      if (response.success) {
+        toast.success(`Admin ${nextStatus === 'ACTIVE' ? 'enabled' : 'disabled'} successfully`);
+        setAdminModal((prev) => ({
+          ...prev,
+          details: prev.details ? { ...prev.details, status: nextStatus } : prev.details,
+        }));
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update admin status');
+    } finally {
+      setIsUpdatingAdminStatus(false);
+    }
+  };
+
+  const handleAdminStatusChange = async (firm, currentStatus) => {
+    const nextStatus = currentStatus === 'DISABLED' ? 'ACTIVE' : 'DISABLED';
+    return handleSetAdminStatus(firm, nextStatus);
+  };
+
   if (loading) {
     return (
       <SuperAdminLayout>
@@ -144,6 +211,9 @@ export const FirmsManagement = () => {
       </SuperAdminLayout>
     );
   }
+
+  const adminDetails = adminModal.details;
+  const isAdminDisabled = adminDetails?.status === 'DISABLED';
 
   return (
     <SuperAdminLayout>
@@ -230,6 +300,62 @@ export const FirmsManagement = () => {
           onConfirm={handleResendAdminAccess}
           onCancel={() => setResendConfirm({ open: false, firm: null })}
         />
+
+        {/* View Admin Modal */}
+        {adminModal.open && (
+          <div className="modal-overlay">
+            <Card className="modal-card">
+              <div className="modal-header">
+                <h2>Firm Admin Details</h2>
+                <button
+                  className="modal-close"
+                  onClick={() => setAdminModal({ open: false, loading: false, firm: null, details: null })}
+                >
+                  ×
+                </button>
+              </div>
+              {adminModal.loading ? (
+                <Loading message="Loading admin details..." />
+              ) : adminDetails ? (
+                <div className="admin-details">
+                  <div className="admin-details__row"><strong>Admin Name:</strong> {adminDetails.name}</div>
+                  <div className="admin-details__row"><strong>Masked Email:</strong> {adminDetails.emailMasked}</div>
+                  <div className="admin-details__row"><strong>xID:</strong> {adminDetails.xID}</div>
+                  <div className="admin-details__row">
+                    <strong>Status:</strong>{' '}
+                    <span className={`status-badge status-badge--admin-${String(adminDetails.status || '').toLowerCase()}`}>
+                      {adminDetails.status}
+                    </span>
+                  </div>
+                  <div className="admin-details__row"><strong>Last Login:</strong> {formatDate(adminDetails.lastLoginAt)}</div>
+                  <div className="admin-details__row"><strong>Invite Sent:</strong> {formatDate(adminDetails.inviteSentAt)}</div>
+                  <div className="admin-details__row"><strong>Password Set:</strong> {formatDate(adminDetails.passwordSetAt)}</div>
+                  <div className="admin-details__row"><strong>Lock Status:</strong> {adminDetails.isLocked ? 'Locked' : 'Not Locked'}</div>
+                  <div className="modal-actions">
+                    <Button
+                      variant={isAdminDisabled ? 'primary' : 'danger'}
+                      onClick={() => handleAdminStatusChange(adminModal.firm, adminDetails.status)}
+                      disabled={isUpdatingAdminStatus}
+                    >
+                      {isUpdatingAdminStatus
+                        ? 'Updating...'
+                        : (isAdminDisabled ? 'Enable Admin' : 'Disable Admin')}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => handleForceReset(adminModal.firm)}
+                      disabled={isForcingReset}
+                    >
+                      {isForcingReset ? 'Forcing Reset...' : 'Force Reset'}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p>Admin details unavailable.</p>
+              )}
+            </Card>
+          </div>
+        )}
 
         {/* Firms Table */}
         {firms.length === 0 ? (
@@ -327,10 +453,37 @@ export const FirmsManagement = () => {
                                     className="firm-actions__dropdown-item"
                                     onClick={() => {
                                       setOpenDropdownId(null);
+                                      openAdminModal(firm);
+                                    }}
+                                  >
+                                    👤 View Admin
+                                  </button>
+                                  <button
+                                    className="firm-actions__dropdown-item"
+                                    onClick={() => {
+                                      setOpenDropdownId(null);
                                       setResendConfirm({ open: true, firm });
                                     }}
                                   >
                                     ✉ Resend Admin Access Email
+                                  </button>
+                                  <button
+                                    className="firm-actions__dropdown-item"
+                                    onClick={async () => {
+                                      setOpenDropdownId(null);
+                                      await handleForceReset(firm);
+                                    }}
+                                  >
+                                    🔒 Force Password Reset
+                                  </button>
+                                  <button
+                                    className="firm-actions__dropdown-item"
+                                    onClick={async () => {
+                                      setOpenDropdownId(null);
+                                      await handleSetAdminStatus(firm, 'DISABLED');
+                                    }}
+                                  >
+                                    ⛔ Disable Admin
                                   </button>
                                 </div>
                               )}
