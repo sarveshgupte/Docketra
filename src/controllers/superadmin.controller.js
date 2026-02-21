@@ -32,7 +32,12 @@ const findFirmAdminById = async (firmObjectId, adminId) => {
   if (!adminId || !mongoose.Types.ObjectId.isValid(adminId)) {
     return null;
   }
-  return User.findOne({ _id: adminId, firmId: firmObjectId, role: 'Admin' });
+  return User.findOne({
+    _id: adminId,
+    firmId: firmObjectId,
+    role: 'Admin',
+    status: { $ne: 'DELETED' },
+  });
 };
 
 const isAdminCurrentlyLocked = (admin) => {

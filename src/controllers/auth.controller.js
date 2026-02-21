@@ -2151,8 +2151,29 @@ const forgotPassword = async (req, res) => {
       });
     }
     
-    // Find user by email (normalize to lowercase)
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const normalizedEmail = email.trim().toLowerCase();
+    const resolvedFirmId = req.firmId || null;
+
+    // Find user by firm-scoped email where possible (exclude soft-deleted users)
+    // Falls back to non-firm context for legacy callers.
+    let user;
+    if (resolvedFirmId) {
+      user = await User.findOne({
+        firmId: resolvedFirmId,
+        email: normalizedEmail,
+        status: { $ne: 'DELETED' },
+      });
+    } else {
+      const candidateUsers = await User.find({
+        email: normalizedEmail,
+        status: { $ne: 'DELETED' },
+      })
+        .limit(2);
+      if (candidateUsers.length > 1) {
+        console.warn(`[AUTH] Forgot password email is ambiguous across firms: ${emailService.maskEmail(normalizedEmail)}`);
+      }
+      user = candidateUsers.length === 1 ? candidateUsers[0] : null;
+    }
     
     // Always return success to prevent email enumeration attacks
     // This is a security best practice - don't reveal if email exists
