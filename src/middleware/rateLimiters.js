@@ -310,6 +310,25 @@ const profileLimiter = (req, res, next) => {
   return _profileLimiterInner(req, res, next);
 };
 
+/**
+ * SuperAdmin Admin Resend Limiter (firmId-based)
+ * Protects the resend admin access endpoint from abuse
+ * 
+ * Applied to:
+ * - POST /api/superadmin/firms/:firmId/admin/resend-access
+ * 
+ * Limit: 5 requests per hour per firmId
+ */
+const superadminAdminResendLimiter = createLimiter({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5,
+  keyGenerator: (req) => {
+    const firmId = req.params?.firmId || 'unknown';
+    return `resend:${firmId}`;
+  },
+  name: 'superadminAdminResendLimiter',
+});
+
 module.exports = {
   authLimiter,
   userReadLimiter,
@@ -318,4 +337,5 @@ module.exports = {
   searchLimiter,
   superadminLimiter,
   profileLimiter,
+  superadminAdminResendLimiter,
 };

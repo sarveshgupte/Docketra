@@ -24,6 +24,8 @@ const superadminAuditSchema = new mongoose.Schema({
       'SuperadminLogout',
       'SwitchFirm',
       'ExitFirm',
+      'AdminAccessResent',
+      'AdminAccessResendEmailFailed',
     ],
     index: true,
   },
