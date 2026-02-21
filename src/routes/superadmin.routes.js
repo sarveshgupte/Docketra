@@ -5,13 +5,16 @@ const { requireSuperadmin } = require('../middleware/permission.middleware');
 const { authorize } = require('../middleware/authorize');
 const SuperAdminPolicy = require('../policies/superadmin.policy');
 const FirmPolicy = require('../policies/firm.policy');
-const { superadminLimiter, superadminAdminResendLimiter } = require('../middleware/rateLimiters');
+const { superadminLimiter, superadminAdminResendLimiter, superadminAdminLifecycleLimiter } = require('../middleware/rateLimiters');
 const {
   createFirm,
   listFirms,
   updateFirmStatus,
   createFirmAdmin,
   resendAdminAccess,
+  getFirmAdminDetails,
+  updateFirmAdminStatus,
+  forceResetFirmAdmin,
   getPlatformStats,
   disableFirmImmediately,
   getOperationalHealth,
@@ -52,6 +55,9 @@ router.post('/firms/:firmId/admin', authenticate, authorize(FirmPolicy.canCreate
 
 // Resend admin access (invite or password reset)
 router.post('/firms/:firmId/admin/resend-access', authenticate, authorize(FirmPolicy.canResendAdminAccess), superadminAdminResendLimiter, resendAdminAccess);
+router.get('/firms/:firmId/admin', authenticate, authorize(FirmPolicy.canResendAdminAccess), superadminAdminLifecycleLimiter, getFirmAdminDetails);
+router.patch('/firms/:firmId/admin/status', authenticate, authorize(FirmPolicy.canResendAdminAccess), superadminAdminLifecycleLimiter, updateFirmAdminStatus);
+router.post('/firms/:firmId/admin/force-reset', authenticate, authorize(FirmPolicy.canResendAdminAccess), superadminAdminLifecycleLimiter, forceResetFirmAdmin);
 
 // Firm context switching (impersonation)
 router.post('/switch-firm', authenticate, requireSuperadmin, superadminLimiter, switchFirm);

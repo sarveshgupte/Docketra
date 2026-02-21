@@ -79,6 +79,34 @@ export const superadminService = {
   },
 
   /**
+   * Get firm default admin details
+   * @param {string} firmId - Firm MongoDB _id
+   */
+  getFirmAdmin: async (firmId) => {
+    const response = await api.get(`/superadmin/firms/${firmId}/admin`);
+    return response.data;
+  },
+
+  /**
+   * Update firm default admin status
+   * @param {string} firmId - Firm MongoDB _id
+   * @param {string} status - ACTIVE | DISABLED
+   */
+  updateFirmAdminStatus: async (firmId, status) => {
+    const response = await api.patch(`/superadmin/firms/${firmId}/admin/status`, { status });
+    return response.data;
+  },
+
+  /**
+   * Force reset firm default admin password
+   * @param {string} firmId - Firm MongoDB _id
+   */
+  forceResetFirmAdmin: async (firmId) => {
+    const response = await api.post(`/superadmin/firms/${firmId}/admin/force-reset`);
+    return response.data;
+  },
+
+  /**
    * Exit firm context and return to GLOBAL scope
    */
   exitFirm: async (sessionId) => {
