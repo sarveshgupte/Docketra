@@ -20,6 +20,8 @@ const superadminAuditSchema = new mongoose.Schema({
       'FirmActivated',
       'FirmSuspended',
       'FirmAdminCreated',
+      'AdminCreated',
+      'AdminDeleted',
       'SuperadminLogin',
       'SuperadminLogout',
       'SwitchFirm',

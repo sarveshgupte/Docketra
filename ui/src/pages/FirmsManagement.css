@@ -45,7 +45,7 @@
   background: white;
   border-radius: 20px;
   padding: 2rem;
-  max-width: 500px;
+  max-width: 1100px;
   width: 90%;
   max-height: 90vh;
   overflow-y: auto;
@@ -244,6 +244,19 @@
 
 .admin-details__row {
   color: #2d3748;
+}
+
+.admin-table__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.admin-add-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 1rem;
+  align-items: end;
 }
 
 /* Firm Actions Dropdown */

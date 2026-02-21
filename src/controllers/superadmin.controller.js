@@ -14,6 +14,7 @@ const { wrapWriteHandler } = require('../utils/transactionGuards');
 
 const { createFirmHierarchy, FirmBootstrapError } = require('../services/firmBootstrap.service');
 const { isFirmCreationDisabled } = require('../services/featureFlags.service');
+const xIDGenerator = require('../services/xIDGenerator');
 
 // Constants
 const FIRM_ID_PATTERN = /^FIRM\d{3,}$/i;
@@ -25,6 +26,13 @@ const FIRM_ID_PATTERN = /^FIRM\d{3,}$/i;
  */
 const findFirmAdmin = async (firmObjectId) => {
   return User.findOne({ firmId: firmObjectId, isSystem: true, role: 'Admin' });
+};
+
+const findFirmAdminById = async (firmObjectId, adminId) => {
+  if (!adminId || !mongoose.Types.ObjectId.isValid(adminId)) {
+    return null;
+  }
+  return User.findOne({ _id: adminId, firmId: firmObjectId, role: 'Admin' });
 };
 
 /**
@@ -448,26 +456,17 @@ const disableFirmImmediately = async (req, res) => {
 const createFirmAdmin = async (req, res) => {
   try {
     const { firmId } = req.params;
-    const { name, email, xID } = req.body;
+    const { name, email } = req.body;
     
     // Validate required fields
-    if (!name || !email || !xID) {
+    if (!name || !email) {
       return res.status(400).json({
         success: false,
-        message: 'Name, email, and xID are required',
+        message: 'Name and email are required',
       });
     }
-    
-    // Normalize xID to uppercase
-    const normalizedXID = xID.toUpperCase();
-    
-    // Validate xID format
-    if (!/^X\d{6}$/.test(normalizedXID)) {
-      return res.status(400).json({
-        success: false,
-        message: 'xID must be in format X123456',
-      });
-    }
+
+    const normalizedEmail = email.toLowerCase();
     
     // Find firm by MongoDB _id and populate defaultClientId
     const firm = await Firm.findById(firmId);
@@ -487,23 +486,16 @@ const createFirmAdmin = async (req, res) => {
       });
     }
     
-    // Check if user with this xID already exists
-    const existingUser = await User.findOne({ xID: normalizedXID });
-    if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: 'User with this xID already exists',
-      });
-    }
-    
-    // Check if user with this email already exists
-    const existingEmail = await User.findOne({ email: email.toLowerCase() });
+    // Check if user with this email already exists within firm
+    const existingEmail = await User.findOne({ firmId: firm._id, email: normalizedEmail });
     if (existingEmail) {
       return res.status(400).json({
         success: false,
-        message: 'User with this email already exists',
+        message: 'Admin with this email already exists for this firm',
       });
     }
+
+    const normalizedXID = await xIDGenerator.generateNextXID(firm._id);
     
     // Generate password setup token
     const setupToken = crypto.randomBytes(32).toString('hex');
@@ -514,7 +506,7 @@ const createFirmAdmin = async (req, res) => {
     const adminUser = new User({
       xID: normalizedXID,
       name,
-      email: email.toLowerCase(),
+      email: normalizedEmail,
       firmId: firm._id,
       defaultClientId: firm.defaultClientId, // Set to firm's default client
       role: 'Admin',
@@ -551,13 +543,13 @@ const createFirmAdmin = async (req, res) => {
     
     // Log action
     await logSuperadminAction({
-      actionType: 'FirmAdminCreated',
-      description: `Firm admin created: ${name} (${xID}) for firm ${firm.name} (${firm.firmId})`,
+      actionType: 'AdminCreated',
+      description: `Firm admin created: ${name} (${normalizedXID}) for firm ${firm.name} (${firm.firmId})`,
       performedBy: req.user.email,
       performedById: req.user._id,
       targetEntityType: 'User',
       targetEntityId: adminUser._id.toString(),
-      metadata: { firmId: firm.firmId, firmName: firm.name, adminXID: xID, adminEmail: email },
+      metadata: { firmId: firm.firmId, firmName: firm.name, adminXID: normalizedXID, adminEmail: normalizedEmail },
       req,
     });
     
@@ -579,6 +571,12 @@ const createFirmAdmin = async (req, res) => {
       },
     });
   } catch (error) {
+    if (error?.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Admin with this email already exists',
+      });
+    }
     console.error('[SUPERADMIN] Error creating firm admin:', error);
     res.status(500).json({
       success: false,
@@ -860,8 +858,60 @@ const getFirmAdminDetails = async (req, res) => {
       passwordSetAt: admin.passwordSetAt || null,
       inviteSentAt: admin.inviteSentAt || null,
       failedLoginAttempts: admin.failedLoginAttempts || 0,
-      isLocked: Boolean(admin.isLocked),
+      isLocked: Boolean(admin.lockUntil && admin.lockUntil > new Date()),
     },
+  });
+};
+
+/**
+ * List firm admins for SuperAdmin visibility
+ * GET /api/superadmin/firms/:firmId/admins
+ */
+const listFirmAdmins = async (req, res) => {
+  const { firmId } = req.params;
+
+  const firm = await Firm.findById(firmId).select('firmId name');
+  if (!firm) {
+    return res.status(404).json({
+      success: false,
+      code: 'FIRM_NOT_FOUND',
+      message: 'Firm not found',
+    });
+  }
+
+  const admins = await User.find({ firmId: firm._id, role: 'Admin' })
+    .select('name email xID status isSystem lockUntil passwordSetAt inviteSentAt')
+    .sort({ isSystem: -1, createdAt: 1 });
+
+  const lastLoginAudits = await AuthAudit.find({
+    userId: { $in: admins.map((admin) => admin._id) },
+    actionType: 'Login',
+  })
+    .select('userId timestamp')
+    .sort({ timestamp: -1 });
+
+  const lastLoginMap = new Map();
+  for (const audit of lastLoginAudits) {
+    const key = String(audit.userId);
+    if (!lastLoginMap.has(key)) {
+      lastLoginMap.set(key, audit.timestamp);
+    }
+  }
+
+  return res.status(200).json({
+    success: true,
+    data: admins.map((admin) => ({
+      _id: admin._id,
+      name: admin.name,
+      emailMasked: emailService.maskEmail(admin.email),
+      xID: admin.xID,
+      status: admin.status,
+      isSystem: Boolean(admin.isSystem),
+      lastLoginAt: lastLoginMap.get(String(admin._id)) || null,
+      passwordSetAt: admin.passwordSetAt || null,
+      inviteSentAt: admin.inviteSentAt || null,
+      isLocked: Boolean(admin.lockUntil && admin.lockUntil > new Date()),
+    })),
   });
 };
 
@@ -871,6 +921,7 @@ const getFirmAdminDetails = async (req, res) => {
  */
 const updateFirmAdminStatus = async (req, res) => {
   const { firmId } = req.params;
+  const targetAdminId = req.params.adminId;
   const { status } = req.body || {};
 
   if (!['ACTIVE', 'DISABLED'].includes(status)) {
@@ -889,7 +940,9 @@ const updateFirmAdminStatus = async (req, res) => {
     });
   }
 
-  const admin = await findFirmAdmin(firm._id);
+  const admin = targetAdminId
+    ? await findFirmAdminById(firm._id, targetAdminId)
+    : await findFirmAdmin(firm._id);
   if (!admin) {
     return res.status(404).json({
       success: false,
@@ -912,6 +965,21 @@ const updateFirmAdminStatus = async (req, res) => {
       code: 'ADMIN_PASSWORD_NOT_SET',
       message: 'Cannot activate admin before password is set',
     });
+  }
+
+  if (status === 'DISABLED' && admin.status === 'ACTIVE') {
+    const activeAdminsCount = await User.countDocuments({
+      firmId: firm._id,
+      role: 'Admin',
+      status: 'ACTIVE',
+    });
+    if (activeAdminsCount <= 1) {
+      return res.status(422).json({
+        success: false,
+        code: 'LAST_ACTIVE_ADMIN',
+        message: 'Cannot disable the last active admin for this firm',
+      });
+    }
   }
 
   const oldStatus = admin.status;
@@ -953,6 +1021,7 @@ const updateFirmAdminStatus = async (req, res) => {
  */
 const forceResetFirmAdmin = async (req, res) => {
   const { firmId } = req.params;
+  const targetAdminId = req.params.adminId;
 
   const firm = await Firm.findById(firmId);
   if (!firm) {
@@ -963,7 +1032,9 @@ const forceResetFirmAdmin = async (req, res) => {
     });
   }
 
-  const admin = await findFirmAdmin(firm._id);
+  const admin = targetAdminId
+    ? await findFirmAdminById(firm._id, targetAdminId)
+    : await findFirmAdmin(firm._id);
   if (!admin) {
     return res.status(404).json({
       success: false,
@@ -988,7 +1059,8 @@ const forceResetFirmAdmin = async (req, res) => {
   admin.passwordSetupExpires = null;
   admin.passwordResetTokenHash = newTokenHash;
   admin.passwordResetExpires = tokenExpires;
-  admin.forcePasswordReset = true;
+  admin.mustChangePassword = true;
+  admin.forcePasswordReset = false;
   await admin.save();
 
   let emailSuccess = true;
@@ -1029,6 +1101,79 @@ const forceResetFirmAdmin = async (req, res) => {
   return res.status(200).json({
     success: true,
     emailMasked: emailService.maskEmail(admin.email),
+  });
+};
+
+/**
+ * Delete firm admin (non-system only)
+ * DELETE /api/superadmin/firms/:firmId/admins/:adminId
+ */
+const deleteFirmAdmin = async (req, res) => {
+  const { firmId, adminId } = req.params;
+
+  const firm = await Firm.findById(firmId).select('firmId name');
+  if (!firm) {
+    return res.status(404).json({
+      success: false,
+      code: 'FIRM_NOT_FOUND',
+      message: 'Firm not found',
+    });
+  }
+
+  const admin = await findFirmAdminById(firm._id, adminId);
+  if (!admin) {
+    return res.status(404).json({
+      success: false,
+      code: 'ADMIN_NOT_FOUND',
+      message: 'Admin not found',
+    });
+  }
+
+  if (admin.isSystem) {
+    return res.status(422).json({
+      success: false,
+      code: 'SYSTEM_ADMIN_DELETE_FORBIDDEN',
+      message: 'System admin cannot be deleted',
+    });
+  }
+
+  if (admin.status === 'ACTIVE') {
+    const activeAdminsCount = await User.countDocuments({
+      firmId: firm._id,
+      role: 'Admin',
+      status: 'ACTIVE',
+    });
+    if (activeAdminsCount <= 1) {
+      return res.status(422).json({
+        success: false,
+        code: 'LAST_ACTIVE_ADMIN',
+        message: 'Cannot delete the last active admin for this firm',
+      });
+    }
+  }
+
+  await User.deleteOne({ _id: admin._id });
+
+  await logSuperadminAction({
+    actionType: 'AdminDeleted',
+    description: `Firm admin deleted for firm ${firm.name} (${firm.firmId}): ${admin.xID}`,
+    performedBy: req.user.email,
+    performedById: req.user._id,
+    targetEntityType: 'User',
+    targetEntityId: admin._id.toString(),
+    metadata: {
+      firmId: firm.firmId,
+      firmName: firm.name,
+      adminXID: admin.xID,
+      adminEmail: admin.email,
+      isSystem: Boolean(admin.isSystem),
+    },
+    req,
+  });
+
+  return res.status(200).json({
+    success: true,
+    message: 'Admin deleted successfully',
   });
 };
 
@@ -1166,7 +1311,9 @@ module.exports = {
   updateFirmStatus: wrapWriteHandler(updateFirmStatus),
   disableFirmImmediately: wrapWriteHandler(disableFirmImmediately),
   createFirmAdmin: wrapWriteHandler(createFirmAdmin),
+  listFirmAdmins,
   getFirmAdminDetails,
+  deleteFirmAdmin: wrapWriteHandler(deleteFirmAdmin),
   updateFirmAdminStatus: wrapWriteHandler(updateFirmAdminStatus),
   forceResetFirmAdmin: wrapWriteHandler(forceResetFirmAdmin),
   resendAdminAccess: wrapWriteHandler(resendAdminAccess),
