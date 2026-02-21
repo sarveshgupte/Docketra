@@ -163,7 +163,8 @@ async function shouldCreateAdditionalAdmin() {
   assert.strictEqual(res.body.success, true);
   assert.strictEqual(savedAdmin.email, 'john@acme.com');
   assert.strictEqual(savedAdmin.status, 'INVITED');
-  assert.strictEqual(savedAdmin.mustSetPassword, true);
+  assert.strictEqual(savedAdmin.mustSetPassword, false);
+  assert.strictEqual(savedAdmin.mustChangePassword, true);
   assert.strictEqual(savedAdmin.xID, generatedXID);
   assert.strictEqual(auditAction, 'AdminCreated');
   console.log('✓ POST create admin supports additional admins with invite lifecycle defaults');
@@ -214,6 +215,7 @@ async function shouldRejectDisableForLastActiveAdmin() {
   const originalUserFindOne = User.findOne;
   const originalCountDocuments = User.countDocuments;
   const originalTransaction = mongoose.connection.transaction;
+  const originalReadyState = mongoose.connection.readyState;
 
   Firm.findById = () => ({ select: async () => ({ _id: 'firm-1', firmId: 'FIRM001', name: 'Acme' }) });
   User.findOne = async () => ({
@@ -225,6 +227,7 @@ async function shouldRejectDisableForLastActiveAdmin() {
     save: async () => {},
   });
   User.countDocuments = async () => 1;
+  Object.defineProperty(mongoose.connection, 'readyState', { value: 1, writable: true, configurable: true });
   mongoose.connection.transaction = async (work) => work({ id: 'session-1' });
 
   const req = baseReq();
@@ -239,6 +242,7 @@ async function shouldRejectDisableForLastActiveAdmin() {
   User.findOne = originalUserFindOne;
   User.countDocuments = originalCountDocuments;
   mongoose.connection.transaction = originalTransaction;
+  Object.defineProperty(mongoose.connection, 'readyState', { value: originalReadyState, writable: true, configurable: true });
 }
 
 async function shouldForceResetOnlyForActiveAdminAndAudit() {
@@ -329,6 +333,8 @@ async function shouldDeleteAdminWithGuards() {
   const originalUserFindOne = User.findOne;
   const originalCountDocuments = User.countDocuments;
   const originalTransaction = mongoose.connection.transaction;
+  const originalReadyState = mongoose.connection.readyState;
+  const originalFindById = User.findById;
   const originalSuperadminAuditCreate = SuperadminAudit.create;
 
   let deletedStatus = null;
@@ -357,6 +363,10 @@ async function shouldDeleteAdminWithGuards() {
     };
   };
   User.countDocuments = async () => 2;
+  User.findById = () => ({
+    select: async () => ({ xID: 'X000002', email: 'ops@acme.com', isSystem: false }),
+  });
+  Object.defineProperty(mongoose.connection, 'readyState', { value: 1, writable: true, configurable: true });
   mongoose.connection.transaction = async (work) => work({ id: 'session-1' });
   SuperadminAudit.create = async (entry) => {
     auditAction = entry.actionType;
@@ -384,7 +394,9 @@ async function shouldDeleteAdminWithGuards() {
   Firm.findById = originalFirmFindById;
   User.findOne = originalUserFindOne;
   User.countDocuments = originalCountDocuments;
+  User.findById = originalFindById;
   mongoose.connection.transaction = originalTransaction;
+  Object.defineProperty(mongoose.connection, 'readyState', { value: originalReadyState, writable: true, configurable: true });
   SuperadminAudit.create = originalSuperadminAuditCreate;
 }
 

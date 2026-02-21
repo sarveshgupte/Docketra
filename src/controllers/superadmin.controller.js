@@ -46,12 +46,12 @@ const isAdminCurrentlyLocked = (admin) => {
 };
 
 const runInTransaction = async (work) => {
-  if (typeof mongoose.connection.transaction === 'function') {
-    return mongoose.connection.transaction(work);
-  }
-
   if (mongoose.connection.readyState !== 1) {
     throw new Error('DATABASE_NOT_CONNECTED');
+  }
+
+  if (typeof mongoose.connection.transaction === 'function') {
+    return mongoose.connection.transaction(work);
   }
 
   const session = await mongoose.startSession();
@@ -558,7 +558,7 @@ const createFirmAdmin = async (req, res) => {
       status: 'INVITED',
       isActive: true,
       passwordSet: false,
-      mustSetPassword: true,
+      mustSetPassword: false,
       mustChangePassword: true,
       passwordSetupTokenHash: setupTokenHash,
       passwordSetupExpires: setupExpires,
@@ -922,6 +922,12 @@ const getFirmAdminDetails = async (req, res) => {
  */
 const listFirmAdmins = async (req, res) => {
   const { firmId } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(firmId)) {
+    return res.status(404).json({
+      success: false,
+      message: 'Firm not found',
+    });
+  }
 
   const firm = await Firm.findById(firmId).select('firmId name');
   if (!firm) {
@@ -976,6 +982,18 @@ const updateFirmAdminStatus = async (req, res) => {
   const { firmId } = req.params;
   const targetAdminId = req.params.adminId;
   const { status } = req.body || {};
+  if (!mongoose.Types.ObjectId.isValid(firmId)) {
+    return res.status(404).json({
+      success: false,
+      message: 'Firm not found',
+    });
+  }
+  if (targetAdminId && !mongoose.Types.ObjectId.isValid(targetAdminId)) {
+    return res.status(404).json({
+      success: false,
+      message: 'Admin not found',
+    });
+  }
 
   if (!['ACTIVE', 'DISABLED'].includes(status)) {
     return res.status(400).json({
@@ -1028,7 +1046,7 @@ const updateFirmAdminStatus = async (req, res) => {
     });
   }
 
-  if (status === 'ACTIVE' && admin.mustSetPassword) {
+  if (status === 'ACTIVE' && (admin.mustChangePassword || admin.mustSetPassword)) {
     return res.status(422).json({
       success: false,
       code: 'ADMIN_PASSWORD_NOT_SET',
@@ -1132,6 +1150,18 @@ const updateFirmAdminStatus = async (req, res) => {
 const forceResetFirmAdmin = async (req, res) => {
   const { firmId } = req.params;
   const targetAdminId = req.params.adminId;
+  if (!mongoose.Types.ObjectId.isValid(firmId)) {
+    return res.status(404).json({
+      success: false,
+      message: 'Firm not found',
+    });
+  }
+  if (targetAdminId && !mongoose.Types.ObjectId.isValid(targetAdminId)) {
+    return res.status(404).json({
+      success: false,
+      message: 'Admin not found',
+    });
+  }
 
   const firm = await Firm.findById(firmId);
   if (!firm) {
@@ -1231,6 +1261,18 @@ const forceResetFirmAdmin = async (req, res) => {
  */
 const deleteFirmAdmin = async (req, res) => {
   const { firmId, adminId } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(firmId)) {
+    return res.status(404).json({
+      success: false,
+      message: 'Firm not found',
+    });
+  }
+  if (!mongoose.Types.ObjectId.isValid(adminId)) {
+    return res.status(404).json({
+      success: false,
+      message: 'Admin not found',
+    });
+  }
 
   const firm = await Firm.findById(firmId).select('firmId name');
   if (!firm) {
@@ -1307,10 +1349,6 @@ const deleteFirmAdmin = async (req, res) => {
       adminForDelete.isActive = false;
       adminForDelete.deletedAt = new Date();
       await adminForDelete.save({ session });
-
-      admin.status = adminForDelete.status;
-      admin.isActive = adminForDelete.isActive;
-      admin.deletedAt = adminForDelete.deletedAt;
     });
   } catch (error) {
     if (error?.message === 'LAST_ACTIVE_ADMIN') {
@@ -1344,19 +1382,22 @@ const deleteFirmAdmin = async (req, res) => {
     throw error;
   }
 
+  // Re-read after commit to ensure audit metadata reflects persisted state, not mutable pre-transaction object references.
+  const deletedAdmin = await User.findById(adminId).select('xID email isSystem');
+
   await logSuperadminAction({
     actionType: 'AdminDeleted',
-    description: `Firm admin deleted for firm ${firm.name} (${firm.firmId}): ${admin.xID}`,
+    description: `Firm admin deleted for firm ${firm.name} (${firm.firmId}): ${deletedAdmin?.xID || admin.xID}`,
     performedBy: req.user.email,
     performedById: req.user._id,
     targetEntityType: 'User',
-    targetEntityId: admin._id.toString(),
+    targetEntityId: String(adminId),
     metadata: {
       firmId: firm.firmId,
       firmName: firm.name,
-      adminXID: admin.xID,
-      adminEmail: admin.email,
-      isSystem: Boolean(admin.isSystem),
+      adminXID: deletedAdmin?.xID || admin.xID,
+      adminEmail: deletedAdmin?.email || admin.email,
+      isSystem: Boolean(deletedAdmin?.isSystem),
     },
     req,
   });

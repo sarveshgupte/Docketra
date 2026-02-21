@@ -19,7 +19,7 @@ const resolveUserIdentity = async ({
   canLinkGoogle,
   linkGoogleIfFound = false,
 } = {}) => {
-  const normalizedEmail = email ? email.toLowerCase().trim() : null;
+  const normalizedEmail = email ? email.trim().toLowerCase() : null;
   const normalizedXid = xid ? xid.trim().toUpperCase() : null;
   const googleId = googleProfile?.sub || googleProfile?.googleId || null;
 
