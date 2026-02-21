@@ -65,12 +65,20 @@ export const superadminService = {
   },
 
   /**
-   * Switch into a firm context (impersonation)
-   * @param {string} firmId - Firm ID to impersonate
-   * @param {string} mode - Impersonation mode: 'READ_ONLY' or 'FULL_ACCESS' (default: 'READ_ONLY')
+   * Activate a firm (set status to ACTIVE)
+   * @param {string} firmId - Firm MongoDB _id
    */
-  switchFirm: async (firmId, mode = 'READ_ONLY') => {
-    const response = await api.post('/superadmin/switch-firm', { firmId, mode });
+  activateFirm: async (firmId) => {
+    const response = await api.patch(`/superadmin/firms/${firmId}/activate`);
+    return response.data;
+  },
+
+  /**
+   * Deactivate a firm (set status to INACTIVE)
+   * @param {string} firmId - Firm MongoDB _id
+   */
+  deactivateFirm: async (firmId) => {
+    const response = await api.patch(`/superadmin/firms/${firmId}/deactivate`);
     return response.data;
   },
 
@@ -119,14 +127,6 @@ export const superadminService = {
 
   deleteFirmAdmin: async (firmId, adminId) => {
     const response = await api.delete(`/superadmin/firms/${firmId}/admins/${adminId}`);
-    return response.data;
-  },
-
-  /**
-   * Exit firm context and return to GLOBAL scope
-   */
-  exitFirm: async (sessionId) => {
-    const response = await api.post('/superadmin/exit-firm', { sessionId });
     return response.data;
   },
 };
