@@ -114,11 +114,6 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
       const { firmId, firmSlug } = await buildIds(deps, session, normalizedName);
       await ensureNotDuplicate({ deps, name: normalizedName, firmSlug, session });
 
-      const existingUser = await deps.User.findOne({ email: adminEmail.toLowerCase() }).session(session);
-      if (existingUser) {
-        throw new FirmBootstrapError('User with this email already exists', 409);
-      }
-
       const firm = new deps.Firm({
         firmId,
         name: normalizedName,
@@ -157,7 +152,7 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
       const adminUser = new deps.User({
         xID: adminXID,
         name: adminName.trim(),
-        email: adminEmail.toLowerCase(),
+        email: adminEmail.trim().toLowerCase(),
         firmId: firm._id,
         defaultClientId: defaultClient._id,
         role: 'Admin',
@@ -168,7 +163,7 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
         isActive: true,
         isSystem: true,
         passwordSet: false,
-        mustSetPassword: true,
+        mustSetPassword: false,
         passwordSetAt: null,
         mustChangePassword: true,
         passwordSetupTokenHash: setupTokenHash,

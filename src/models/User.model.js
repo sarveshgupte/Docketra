@@ -1,5 +1,8 @@
 const mongoose = require('mongoose');
 const softDeletePlugin = require('../utils/softDelete.plugin');
+// NOTE: If upgrading from previous version,
+// ensure MongoDB global unique index on { email: 1 } is dropped:
+// db.users.dropIndex("email_1")
 
 /**
  * User Model for Docketra Case Management System
@@ -256,10 +259,11 @@ const userSchema = new mongoose.Schema({
    * INVITED - User created by admin, hasn't set password yet
    * ACTIVE - User has set password and can login
    * DISABLED - User account disabled by admin
+   * DELETED - User soft-deleted from lifecycle operations
    */
   status: {
     type: String,
-    enum: ['INVITED', 'ACTIVE', 'DISABLED'],
+    enum: ['INVITED', 'ACTIVE', 'DISABLED', 'DELETED'],
     default: 'INVITED',
     required: true,
   },
@@ -313,6 +317,11 @@ const userSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now,
+  },
+
+  deletedAt: {
+    type: Date,
+    default: null,
   },
 
   // Snapshot of auth state captured at first soft delete for safe restoration
@@ -404,12 +413,18 @@ userSchema.pre('save', async function() {
 // CRITICAL: Firm-scoped unique index on (firmId, xID)
 // - Each firm has its own X000001, X000002, etc.
 // - xID is unique WITHIN a firm, not globally
-// - Email remains globally unique for login purposes
+// - Email uniqueness is enforced per firm for active lifecycle users
 userSchema.index({ firmId: 1, xID: 1 }, { unique: true });
-userSchema.index({ email: 1 }, { unique: true }); // Email is globally unique
+// Email uniqueness is enforced per firm (multi-tenant model).
+// Global uniqueness is intentionally NOT enforced.
+userSchema.index(
+  { firmId: 1, email: 1 },
+  { unique: true, partialFilterExpression: { status: { $ne: 'DELETED' } } }
+);
 userSchema.index({ isActive: 1 });
 userSchema.index({ role: 1 });
 userSchema.index({ status: 1 });
+userSchema.index({ firmId: 1, status: 1 });
 userSchema.index({ mustSetPassword: 1 });
 // REMOVED: { firmId: 1 } - redundant with compound index (firmId, xID) above
 userSchema.index({ firmId: 1, role: 1 }); // Firm-scoped role queries
