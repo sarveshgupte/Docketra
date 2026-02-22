@@ -132,7 +132,7 @@ validateEnv();
 logBuildMetadata();
 
 // Environment variable validation
-const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET', 'GOOGLE_SERVICE_ACCOUNT_JSON', 'DRIVE_ROOT_FOLDER_ID'];
+const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET'];
 const missingEnvVars = requiredEnvVars.filter(key => !process.env[key]);
 if (missingEnvVars.length > 0) {
   console.error(`❌ Error: Missing required environment variables: ${missingEnvVars.join(', ')}`);
@@ -148,16 +148,7 @@ if (missingByosVars.length > 0) {
   console.warn(`⚠️  BYOS Google OAuth variables not set: ${missingByosVars.join(', ')}. Storage connect endpoints will be unavailable until these are configured.`);
 }
 
-// Google Drive initialization
-try {
-  const driveService = require('./services/drive.service');
-  driveService.initialize();
-  console.log('[DRIVE] Google Drive service initialized successfully');
-} catch (error) {
-  console.error('❌ Error: Failed to initialize Google Drive service');
-  console.error(error.message);
-  process.exit(1);
-}
+// Google Drive initialization block removed — legacy service-account storage eliminated.
 
 // SMTP environment variable validation (production only)
 if (isProduction) {

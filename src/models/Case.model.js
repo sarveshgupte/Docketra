@@ -735,22 +735,15 @@ caseSchema.pre('validate', async function() {
     }
   }
   
-  // Create Google Drive CFS folder structure for new cases
-  // This must happen after case identifiers are generated
+  // Enqueue async storage job to create CFS folder structure for new cases.
+  // Folder creation is handled by the storage worker via BYOS queue.
   if (this.isNew && !this.drive?.cfsRootFolderId) {
-    const cfsDriveService = require('../services/cfsDrive.service');
-    const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
-    const provider = await StorageProviderFactory.getProvider(this.firmId);
-    const folderIds = await cfsDriveService.createCFSFolderStructure(
-      this.firmId,
-      this.caseNumber, // Use human-readable case number for folder name
-      provider
-    );
-    
-    // Persist folder IDs in the case document
-    this.drive = folderIds;
-    
-    console.log(`[Case] Created CFS folder structure for case ${this.caseNumber}`);
+    const { enqueueStorageJob } = require('../queues/storage.queue');
+    await enqueueStorageJob('CREATE_CASE_FOLDER', {
+      firmId: this.firmId,
+      provider: 'google',
+      caseId: this.caseNumber,
+    });
   }
 });
 
