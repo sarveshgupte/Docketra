@@ -1,12 +1,12 @@
 const mongoose = require('mongoose');
 const Firm = require('../../models/Firm.model');
-const DocketraDriveProvider = require('./providers/DocketraDriveProvider');
 const GoogleDriveOAuthProvider = require('./providers/GoogleDriveOAuthProvider');
 const OneDriveProvider = require('./providers/OneDriveProvider');
 
 /**
  * Storage Provider Factory
  * Resolves the correct provider based on firm storage configuration.
+ * Storage only operates when a firm has connected their own storage (firm_connected mode).
  */
 class StorageProviderFactory {
   static async getProvider(firmOrId) {
@@ -26,11 +26,7 @@ class StorageProviderFactory {
     }
 
     const storage = firm?.storage || {};
-    const mode = storage.mode || 'docketra_managed';
-
-    if (mode === 'docketra_managed') {
-      return new DocketraDriveProvider();
-    }
+    const mode = storage.mode;
 
     if (mode === 'firm_connected') {
       switch (storage.provider) {
@@ -43,7 +39,7 @@ class StorageProviderFactory {
       }
     }
 
-    throw new Error(`Unsupported storage mode: ${mode}`);
+    throw new Error('Storage is only available when a firm has connected their own storage (firm_connected mode)');
   }
 }
 
