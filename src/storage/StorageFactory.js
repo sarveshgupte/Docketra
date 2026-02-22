@@ -9,17 +9,18 @@
 const GoogleDriveProvider = require('./providers/GoogleDriveProvider');
 
 const PROVIDERS = {
-  google: () => new GoogleDriveProvider(),
+  google: (oauthClient) => new GoogleDriveProvider(oauthClient || null),
 };
 
 /**
  * Return an instantiated StorageProvider for the requested backend.
  *
  * @param {string} providerName  - e.g. "google"
+ * @param {object} [oauthClient] - Optional authenticated OAuth2 client (used by Google provider)
  * @returns {import('./StorageProvider.interface').StorageProvider}
  * @throws {Error} if the provider name is not recognised
  */
-function getStorageProvider(providerName) {
+function getStorageProvider(providerName, oauthClient) {
   const factory = PROVIDERS[providerName];
   if (!factory) {
     throw new Error(
@@ -27,7 +28,7 @@ function getStorageProvider(providerName) {
       `Supported providers: ${Object.keys(PROVIDERS).join(', ')}`
     );
   }
-  return factory();
+  return factory(oauthClient);
 }
 
 module.exports = { getStorageProvider };
