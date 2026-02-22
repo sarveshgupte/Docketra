@@ -41,6 +41,18 @@ const ROLE_SUPER_ADMIN = 'SUPER_ADMIN';
 const ROLE_ADMIN = 'Admin';
 const ROLE_EMPLOYEE = 'Employee';
 
+/**
+ * Non-fatal auth audit logger. Audit failures must never break primary business
+ * logic or change a successful HTTP response to 500.
+ */
+const logAuthAudit = async (params) => {
+  try {
+    await AuthAudit.create(params);
+  } catch (auditErr) {
+    console.error('[AUTH_AUDIT] Non-fatal audit failure', auditErr.message);
+  }
+};
+
 const getSuperadminEnv = () => {
   const rawXID = process.env.SUPERADMIN_XID ? process.env.SUPERADMIN_XID.trim() : null;
   return {
@@ -829,7 +841,7 @@ const changePassword = async (req, res) => {
     );
     
     // Log password change
-    await AuthAudit.create({
+    await logAuthAudit({
       xID: user.xID,
       firmId: user.firmId,
       userId: user._id,
@@ -927,7 +939,7 @@ const resetPassword = async (req, res) => {
       }
       
       // Log password setup email sent
-      await AuthAudit.create({
+      await logAuthAudit({
         xID: user.xID,
         firmId: user.firmId,
         userId: user._id,
@@ -945,7 +957,7 @@ const resetPassword = async (req, res) => {
     }
     
     // Log password reset
-    await AuthAudit.create({
+    await logAuthAudit({
       xID: user.xID,
       firmId: user.firmId,
       userId: user._id,
@@ -1190,7 +1202,7 @@ const updateProfile = async (req, res) => {
       changes.aadhaarMasked = { old: oldProfile.aadhaar, new: profile.aadhaar };
     }
     
-    await AuthAudit.create({
+    await logAuthAudit({
       xID: user.xID,
       firmId: user.firmId,
       userId: user._id,
@@ -1343,7 +1355,7 @@ const createUser = async (req, res) => {
       }
       
       // Log invite email sent
-      await AuthAudit.create({
+      await logAuthAudit({
         xID: newUser.xID,
         firmId: newUser.firmId,
         userId: newUser._id,
@@ -1358,24 +1370,20 @@ const createUser = async (req, res) => {
     } catch (emailError) {
       console.warn('[AUTH] Failed to send invite email:', emailError.message);
       // Don't fail user creation if email fails - log and continue
-      try {
-        await AuthAudit.create({
-          xID: newUser.xID,
-          firmId: newUser.firmId,
-          userId: newUser._id,
-          actionType: 'InviteEmailFailed',
-          description: `Failed to send invite email to ${emailService.maskEmail(newUser.email)}: ${emailError.message}`,
-          performedBy: admin.xID,
-          ipAddress: req.ip,
-          userAgent: req.get('user-agent'),
-        });
-      } catch (auditError) {
-        console.error('[AUTH] Failed to log email error:', auditError.message);
-      }
+      await logAuthAudit({
+        xID: newUser.xID,
+        firmId: newUser.firmId,
+        userId: newUser._id,
+        actionType: 'InviteEmailFailed',
+        description: `Failed to send invite email to ${emailService.maskEmail(newUser.email)}: ${emailError.message}`,
+        performedBy: admin.xID,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+      });
     }
     
     // Log user creation
-    await AuthAudit.create({
+    await logAuthAudit({
       xID: newUser.xID,
       firmId: newUser.firmId,
       userId: newUser._id,
@@ -1472,7 +1480,7 @@ const activateUser = async (req, res) => {
     await user.save();
     
     // Log activation
-    await AuthAudit.create({
+    await logAuthAudit({
       xID: user.xID,
       firmId: user.firmId,
       userId: user._id,
@@ -1528,7 +1536,7 @@ const deactivateUser = async (req, res) => {
     // PROTECTION: Prevent deactivation of system users (default admin)
     if (user.isSystem === true) {
       // Log the attempt for audit
-      await AuthAudit.create({
+      await logAuthAudit({
         xID: user.xID,
         firmId: user.firmId,
         userId: user._id,
@@ -1550,7 +1558,7 @@ const deactivateUser = async (req, res) => {
     await user.save();
     
     // Log deactivation
-    await AuthAudit.create({
+    await logAuthAudit({
       xID: user.xID,
       firmId: user.firmId,
       userId: user._id,
@@ -1657,7 +1665,7 @@ const setPassword = async (req, res) => {
     await tokenOwner.save();
     
     // Log password setup
-    await AuthAudit.create({
+    await logAuthAudit({
       xID: tokenOwner.xID,
       firmId: tokenOwner.firmId,
       userId: tokenOwner._id,
@@ -1805,7 +1813,7 @@ const resetPasswordWithToken = async (req, res) => {
     await user.save();
     
     // Log password reset
-    await AuthAudit.create({
+    await logAuthAudit({
       xID: user.xID,
       firmId: user.firmId,
       userId: user._id,
@@ -1901,7 +1909,7 @@ const resendSetupEmail = async (req, res) => {
       
       if (!emailResult.success) {
         console.warn('[AUTH] Failed to send invite reminder email:', emailResult.error);
-        await AuthAudit.create({
+        await logAuthAudit({
           xID: user.xID,
           firmId: user.firmId,
           userId: user._id,
@@ -1920,7 +1928,7 @@ const resendSetupEmail = async (req, res) => {
       }
       
       // Log invite email sent
-      await AuthAudit.create({
+      await logAuthAudit({
         xID: user.xID,
         firmId: user.firmId,
         userId: user._id,
@@ -1993,7 +2001,7 @@ const updateUserStatus = async (req, res) => {
     // PROTECTION: Prevent deactivation of system users (default admin)
     if (user.isSystem === true && !active) {
       // Log the attempt for audit
-      await AuthAudit.create({
+      await logAuthAudit({
         xID: user.xID,
         firmId: user.firmId,
         userId: user._id,
@@ -2015,7 +2023,7 @@ const updateUserStatus = async (req, res) => {
     await user.save();
     
     // Log status change
-    await AuthAudit.create({
+    await logAuthAudit({
       xID: user.xID,
       firmId: user.firmId,
       userId: user._id,
@@ -2073,7 +2081,7 @@ const unlockAccount = async (req, res) => {
     await user.save();
     
     // Log unlock
-    await AuthAudit.create({
+    await logAuthAudit({
       xID: user.xID,
       firmId: user.firmId,
       userId: user._id,
@@ -2176,7 +2184,7 @@ const forgotPassword = async (req, res) => {
       const emailResult = await emailService.sendForgotPasswordEmail(user.email, user.name, token);
       
       // Log password reset request
-      await AuthAudit.create({
+      await logAuthAudit({
         xID: user.xID,
         firmId: user.firmId,
         userId: user._id,
@@ -2358,7 +2366,7 @@ const refreshAccessToken = async (req, res) => {
     });
     
     // Log token refresh
-    await AuthAudit.create({
+    await logAuthAudit({
       xID: user.xID,
       firmId: user.firmId,
       userId: user._id,

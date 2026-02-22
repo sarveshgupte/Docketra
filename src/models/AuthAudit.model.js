@@ -68,6 +68,9 @@ const authAuditSchema = new mongoose.Schema({
       'TokenRefreshed',
       'RefreshTokenRevoked',
       'AdminMutation',
+
+      // Admin guard events
+      'DeactivationAttemptBlocked',
     ],
   },
   
