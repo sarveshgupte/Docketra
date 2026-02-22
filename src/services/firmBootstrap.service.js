@@ -156,6 +156,10 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
       bootstrapStatus: 'PENDING',
     }], { session });
 
+    if (!firm || !firm._id) {
+      throw new FirmBootstrapError('Firm creation failed — no _id returned', 500);
+    }
+
     // TODO: replace console logs with structured logger
     console.log('Firm created:', firm?._id);
 
@@ -184,6 +188,10 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
     const existingKey = await deps.TenantKey.findOne({ tenantId: firm._id.toString() }).session(session);
     if (existingKey) {
       throw new FirmBootstrapError('Tenant key already exists for this firm', 409);
+    }
+
+    if (!encryptedDek) {
+      throw new FirmBootstrapError('Encryption provider returned invalid DEK', 500);
     }
 
     try {
