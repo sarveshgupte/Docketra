@@ -1,6 +1,7 @@
 const Case = require('../models/Case.model');
 const mongoose = require('mongoose');
 const { softDelete } = require('../services/softDelete.service');
+const { ensureTenantKey } = require('../security/encryption.service');
 
 /**
  * ⚠️ SECURITY: Case Repository - Firm-Scoped Data Access Layer ⚠️
@@ -264,13 +265,18 @@ const CaseRepository = {
   /**
    * Create a new case
    * NOTE: firmId MUST be included in caseData
+   * Sensitive fields (description) are encrypted transparently by the Case model
+   * pre-save hook.  Call ensureTenantKey() before bulk creates to pre-generate
+   * the per-tenant DEK if it does not yet exist.
    * @param {Object} caseData - Case data including firmId
    * @returns {Promise<Object>} Created case document
    */
-  create(caseData) {
+  async create(caseData) {
     if (!caseData.firmId) {
       throw new Error('firmId is required to create a case');
     }
+    // Ensure the per-tenant DEK exists before the model pre-save hook needs it.
+    await ensureTenantKey(String(caseData.firmId));
     return Case.create(caseData);
   },
 };

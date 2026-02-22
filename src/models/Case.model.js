@@ -811,4 +811,85 @@ caseSchema.index({ firmId: 1, assignedToXID: 1 }); // Firm-scoped assignment que
 
 caseSchema.plugin(softDeletePlugin);
 
+// ============================================================
+// TRANSPARENT FIELD ENCRYPTION — AES-256-GCM envelope model
+// ============================================================
+// Sensitive Case fields are encrypted at rest.  The encryption service
+// is loaded lazily so that tests that do not set MASTER_ENCRYPTION_KEY
+// continue to work (encryption is skipped when the key is absent).
+//
+// Encrypted fields:
+//   - description
+//
+// Encryption is applied in pre('save') and decryption in post(['find', …]).
+// The pre-save hook calls ensureTenantKey() which auto-generates the
+// per-tenant DEK on first use (envelope encryption — see encryption.service.js).
+//
+// TODO: Write migration script to encrypt existing plaintext fields.
+
+/** True when a string matches our iv:authTag:ciphertext (base64) format. */
+function _caseIsEncryptedValue(value) {
+  if (typeof value !== 'string') return false;
+  const parts = value.split(':');
+  return parts.length === 3 && parts.every(p => p.length > 0 && /^[A-Za-z0-9+/=]+$/.test(p));
+}
+
+/** Fields that must be encrypted before persisting. */
+const _CASE_SENSITIVE_FIELDS = ['description'];
+
+/**
+ * Lazy-cached reference to the encryption service.
+ * Using a lazy require avoids potential circular-dependency issues during
+ * module initialisation while still benefiting from Node's module cache
+ * (the require() call after the first load is a simple hash-map lookup).
+ */
+let _caseEncService;
+function _getCaseEncService() {
+  if (!_caseEncService) _caseEncService = require('../security/encryption.service');
+  return _caseEncService;
+}
+
+/**
+ * Encrypt sensitive fields on a Case document before saving.
+ * No-op when MASTER_ENCRYPTION_KEY is not configured.
+ */
+caseSchema.pre('save', async function () {
+  if (!process.env.MASTER_ENCRYPTION_KEY || !this.firmId) return;
+  const { encrypt: _enc, ensureTenantKey: _ensure } = _getCaseEncService();
+  const tenantId = String(this.firmId);
+  await _ensure(tenantId);
+  for (const field of _CASE_SENSITIVE_FIELDS) {
+    if (this[field] != null && !_caseIsEncryptedValue(this[field])) {
+      this[field] = await _enc(String(this[field]), tenantId);
+    }
+  }
+});
+
+/**
+ * Decrypt sensitive fields after any find / findById / findOneAndUpdate query.
+ * Works for both regular documents and lean plain-object results.
+ * No-op when MASTER_ENCRYPTION_KEY is not configured.
+ *
+ * Temporary compatibility mode: if decryption fails (plaintext record),
+ * the original value is returned unchanged.
+ */
+caseSchema.post(['find', 'findOne', 'findById', 'findOneAndUpdate'], async function (result) {
+  if (!process.env.MASTER_ENCRYPTION_KEY || !result) return;
+  const { decrypt: _dec } = _getCaseEncService();
+  const docs = Array.isArray(result) ? result : [result];
+  await Promise.all(docs.map(async (doc) => {
+    if (!doc || !doc.firmId) return;
+    const tenantId = String(doc.firmId);
+    for (const field of _CASE_SENSITIVE_FIELDS) {
+      if (doc[field] != null && _caseIsEncryptedValue(doc[field])) {
+        try {
+          doc[field] = await _dec(doc[field], tenantId);
+        } catch (_e) {
+          // Plaintext compatibility: leave value unchanged if decryption fails
+        }
+      }
+    }
+  }));
+});
+
 module.exports = mongoose.model('Case', caseSchema);

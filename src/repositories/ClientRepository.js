@@ -1,4 +1,5 @@
 const Client = require('../models/Client.model');
+const { ensureTenantKey } = require('../security/encryption.service');
 
 /**
  * ⚠️ SECURITY: Client Repository - Firm-Scoped Data Access Layer ⚠️
@@ -116,13 +117,17 @@ const ClientRepository = {
   /**
    * Create a new client
    * NOTE: firmId MUST be included in clientData
+   * Sensitive fields (primaryContactNumber, businessEmail) are encrypted
+   * transparently by the Client model pre-save hook.
    * @param {Object} clientData - Client data including firmId
    * @returns {Promise<Object>} Created client document
    */
-  create(clientData) {
+  async create(clientData) {
     if (!clientData.firmId) {
       throw new Error('firmId is required to create a client');
     }
+    // Ensure the per-tenant DEK exists before the model pre-save hook needs it.
+    await ensureTenantKey(String(clientData.firmId));
     return Client.create(clientData);
   },
 };
