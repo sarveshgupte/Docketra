@@ -73,10 +73,9 @@ const { noFirmNoTransaction } = require('./middleware/noFirmNoTransaction.middle
 const optionsPreflight = require('./middleware/optionsPreflight.middleware');
 
 // Routes
-const userRoutes = require('./routes/users');
-const taskRoutes = require('./routes/tasks');
-const caseRoutes = require('./routes/cases');
-const newCaseRoutes = require('./routes/case.routes');  // New case routes
+const userRoutes = require('./routes/user.routes');
+const taskRoutes = require('./routes/task.routes');
+const caseRoutes = require('./routes/case.routes');
 const searchRoutes = require('./routes/search.routes');  // Search and worklist routes
 const authRoutes = require('./routes/auth.routes');  // Authentication routes
 const clientApprovalRoutes = require('./routes/clientApproval.routes');  // Client approval routes
@@ -343,7 +342,7 @@ app.use('/api/inbound', writeGuardChain, inboundRoutes);
 // Firm context must be attached for all tenant-scoped operations
 app.use('/api/users', authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, userRoutes);
 app.use('/api/tasks', authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, taskRoutes);
-app.use('/api/cases', authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, newCaseRoutes);
+app.use('/api/cases', authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, caseRoutes);
 app.use('/api/search', authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, searchRoutes);
 app.use('/api/worklists', authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, searchRoutes);
 app.use('/api/client-approval', authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, clientApprovalRoutes);
