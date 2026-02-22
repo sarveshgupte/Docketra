@@ -86,10 +86,18 @@ mongoose.Model.create = function (docs, options, callback) {
   } else if (!finalOptions.session) {
     finalOptions = { ...finalOptions, session };
   }
+  // Mongoose 9+ requires array syntax when passing a session to Model.create().
+  // Wrap single-document calls in an array so the session is applied correctly,
+  // then unwrap the result to preserve the original single-document return type.
+  const wasArray = Array.isArray(docs);
+  const docsArg = wasArray ? docs : [docs];
   if (cb) {
-    return originalCreate.call(this, docs, finalOptions, cb);
+    return originalCreate.call(this, docsArg, finalOptions, cb);
   }
-  return originalCreate.call(this, docs, finalOptions);
+  if (!wasArray) {
+    return originalCreate.call(this, docsArg, finalOptions).then((results) => results[0]);
+  }
+  return originalCreate.call(this, docsArg, finalOptions);
 };
 
 wrapStaticMethod('insertMany', 1);
