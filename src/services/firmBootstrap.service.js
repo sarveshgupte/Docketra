@@ -5,6 +5,7 @@ const Client = require('../models/Client.model');
 const User = require('../models/User.model');
 const TenantKey = require('../security/tenantKey.model');
 const { generateEncryptedDek } = require('../security/encryption.service');
+const { looksEncrypted } = require('../security/encryption.utils');
 const emailService = require('./email.service');
 const { generateNextClientId } = require('./clientIdGenerator');
 const { generateNextXID } = require('./xIDGenerator');
@@ -53,6 +54,7 @@ const validatePayload = ({ name, adminName, adminEmail }) => {
 };
 
 const ensureNotDuplicate = async ({ deps, name, firmSlug, session }) => {
+  // IMPORTANT: This function must use the provided session for transaction safety.
   const existingFirm = await deps.Firm.findOne({
     $or: [{ firmSlug }, { name: name.trim() }],
   }).session(session);
@@ -62,6 +64,7 @@ const ensureNotDuplicate = async ({ deps, name, firmSlug, session }) => {
 };
 
 const buildIds = async (deps, session, name) => {
+  // IMPORTANT: This function must use the provided session for transaction safety.
   const lastFirm = await deps.Firm.findOne({}, {}, { session }).sort({ createdAt: -1 });
   let firmNumber = 1;
   if (lastFirm && lastFirm.firmId) {
@@ -108,10 +111,14 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
 
   validatePayload(payload);
 
-  // Warn if MongoDB topology may not support transactions
-  const topologyType = mongoose.connection.client?.topology?.description?.type;
-  if (topologyType && !topologyType.includes('ReplicaSet')) {
-    console.warn('[FIRM_BOOTSTRAP] MongoDB is not a replica set. Transactions may not work.');
+  // Warn if MongoDB topology may not support transactions (item 4: safe wrapper)
+  try {
+    const topologyType = mongoose.connection.client?.topology?.description?.type;
+    if (topologyType && !topologyType.includes('ReplicaSet')) {
+      console.warn('[FIRM_BOOTSTRAP] MongoDB is not a replica set. Transactions may not work.');
+    }
+  } catch (_topologyErr) {
+    // Never block firm creation due to topology detection failure
   }
 
   // Fail fast: validate encryption provider before starting the transaction
@@ -123,12 +130,19 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
     throw new FirmBootstrapError('Failed to generate encrypted DEK', 500);
   }
 
+  // Validate DEK format: must be iv:authTag:ciphertext (three base64 segments)
+  if (!looksEncrypted(encryptedDek)) {
+    throw new FirmBootstrapError('Invalid encrypted DEK format', 500);
+  }
+
   const session = await deps.startSession();
   session.startTransaction();
 
   let createdEntities = null;
 
   try {
+    // CRITICAL: All DB operations below must use the same Mongo session.
+    // Any missing session usage will break atomicity guarantees.
     const { name, adminName, adminEmail } = payload;
     const normalizedName = name.trim();
     const { firmId, firmSlug } = await buildIds(deps, session, normalizedName);
@@ -142,8 +156,10 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
       bootstrapStatus: 'PENDING',
     }], { session });
 
+    // TODO: replace console logs with structured logger
     console.log('Firm created:', firm?._id);
 
+    // IMPORTANT: generateNextClientId must use the provided session for transaction safety.
     const clientId = await deps.generateNextClientId(firm._id, session);
     const [defaultClient] = await deps.Client.create([{
       clientId,
@@ -164,13 +180,29 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
     firm.defaultClientId = defaultClient._id;
     await firm.save({ session });
 
-    await deps.TenantKey.create([{
-      tenantId: firm._id.toString(),
-      encryptedDek,
-    }], { session });
+    // Race condition safety: check for existing TenantKey even though unique index exists
+    const existingKey = await deps.TenantKey.findOne({ tenantId: firm._id.toString() }).session(session);
+    if (existingKey) {
+      throw new FirmBootstrapError('Tenant key already exists for this firm', 409);
+    }
 
+    try {
+      await deps.TenantKey.create([{
+        tenantId: firm._id.toString(),
+        encryptedDek,
+      }], { session });
+    } catch (tenantKeyErr) {
+      // Handle duplicate key errors from the unique index
+      if (tenantKeyErr.code === 11000) {
+        throw new FirmBootstrapError('Tenant key already exists for this firm', 409);
+      }
+      throw tenantKeyErr;
+    }
+
+    // TODO: replace console logs with structured logger
     console.log('TenantKey created');
 
+    // IMPORTANT: generateNextXID must use the provided session for transaction safety.
     const adminXID = await deps.generateNextXID(firm._id, session);
     const setupToken = crypto.randomBytes(32).toString('hex');
     const setupTokenHash = crypto.createHash('sha256').update(setupToken).digest('hex');
