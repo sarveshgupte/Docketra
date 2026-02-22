@@ -271,14 +271,14 @@ app.get('/health', (req, res) => {
 });
 app.use('/health', healthRoutes);
 const metricsAuthEnabled = !!process.env.METRICS_TOKEN;
-app.get('/metrics', (req, res) => {
+app.get('/metrics', async (req, res) => {
   if (metricsAuthEnabled) {
     const token = (req.headers.authorization || '').replace('Bearer ', '');
     if (!token || token !== process.env.METRICS_TOKEN) {
       return res.status(401).json({ error: 'unauthorized' });
     }
   }
-  res.json(metricsService.getSnapshot());
+  res.json(await metricsService.getSnapshot());
 });
 
 // API routes

@@ -61,7 +61,7 @@ const getDiagnosticsSnapshot = async () => {
     dbLatencyMs,
     idempotencyCacheSize: getIdempotencyCacheSize(),
     transactionFailures: getTransactionMetrics(),
-    metrics: metricsService.getSnapshot(),
+    metrics: await metricsService.getSnapshot(),
     circuitBreakers: getBreakerSnapshot(),
     sideEffectQueue: {
       depth: getQueueDepth(),
