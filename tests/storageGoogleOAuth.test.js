@@ -94,6 +94,19 @@ Module._load = function (request, parent, isMain) {
   if (request === 'mongoose') {
     return mockMongoose;
   }
+  // Stub the storage queue to avoid Redis connections during tests
+  if (request === 'bullmq') {
+    return {
+      Queue: class {
+        constructor() {}
+        add() { return Promise.resolve({}); }
+      },
+      Worker: class {
+        constructor() {}
+        on() {}
+      },
+    };
+  }
   return originalLoad.apply(this, arguments);
 };
 

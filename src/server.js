@@ -14,6 +14,14 @@ const { validateEnv } = require('./config/validateEnv');
 const { logBuildMetadata } = require('./services/buildInfo.service');
 require('./utils/transactionSessionEnforcer');
 
+// Bootstrap storage worker in-process (non-blocking — failures do not prevent startup)
+try {
+  require('./workers/storage.worker');
+  console.log('[StorageWorker] Storage worker started');
+} catch (err) {
+  console.warn('[StorageWorker] Failed to start storage worker (non-fatal):', err.message);
+}
+
 // Global error log sanitizer: ensure every console.error invocation masks PII (tokens, emails, phone numbers, auth headers).
 // This preserves existing logging behavior/verbosity while enforcing centralized masking via maskSensitiveObject.
 // The original logger is retained at console.error.original for debugging tools that need raw access.
