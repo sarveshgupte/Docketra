@@ -4,6 +4,13 @@ const metrics = {
   authFailures: 0,
   rateLimitHits: {},
   latencies: [],
+  storageJobs: {
+    started: 0,
+    success: 0,
+    failure: 0,
+    retry: 0,
+    dlqSize: 0,
+  },
 };
 
 const normalizeRoute = (route) => {
@@ -38,6 +45,7 @@ const getSnapshot = () => ({
   authFailures: metrics.authFailures,
   rateLimitHits: { ...metrics.rateLimitHits },
   latency: getLatencyPercentiles(),
+  storageJobs: { ...metrics.storageJobs },
 });
 
 const recordLatency = (durationMs) => {
@@ -69,4 +77,9 @@ module.exports = {
   getSnapshot,
   recordLatency,
   getLatencyPercentiles,
+  recordStorageJobStarted: () => { metrics.storageJobs.started += 1; },
+  recordStorageJobSuccess: () => { metrics.storageJobs.success += 1; },
+  recordStorageJobFailure: () => { metrics.storageJobs.failure += 1; },
+  recordStorageJobRetry: () => { metrics.storageJobs.retry += 1; },
+  recordStorageDLQEntry: () => { metrics.storageJobs.dlqSize += 1; },
 };
