@@ -47,6 +47,16 @@ class EncryptionProvider {
   async decrypt(ciphertext, tenantId) {
     throw new Error('EncryptionProvider.decrypt() must be implemented');
   }
+
+  /**
+   * Generate a new encrypted DEK without persisting it.
+   * Used for atomic tenant key creation inside a MongoDB transaction.
+   *
+   * @returns {Promise<string>}  Encrypted DEK as iv:authTag:ciphertext (base64)
+   */
+  async generateEncryptedDek() {
+    throw new Error('EncryptionProvider.generateEncryptedDek() must be implemented');
+  }
 }
 
 module.exports = EncryptionProvider;

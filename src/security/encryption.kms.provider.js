@@ -20,6 +20,10 @@ class KmsEncryptionProvider extends EncryptionProvider {
   async decrypt(_ciphertext, _tenantId) {
     throw new Error('KMS provider not implemented');
   }
+
+  async generateEncryptedDek() {
+    throw new Error('KMS provider not implemented');
+  }
 }
 
 module.exports = KmsEncryptionProvider;
