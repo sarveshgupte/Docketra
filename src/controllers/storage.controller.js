@@ -1,7 +1,8 @@
 const crypto = require('crypto');
-const { google } = require('googleapis');
 const FirmStorage = require('../models/FirmStorage.model');
 const { encrypt } = require('../storage/services/TokenEncryption.service');
+const { getStorageProvider } = require('../storage/StorageFactory');
+const { google } = require('googleapis');
 
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const STATE_COOKIE_NAME = 'storage_oauth_state';
@@ -88,6 +89,25 @@ function parseCookie(cookieHeader, name) {
 }
 
 /**
+ * Build a Set-Cookie header value for the state cookie.
+ * @param {string} value   - cookie value (empty string to clear)
+ * @param {number} maxAge  - Max-Age in seconds (0 to delete)
+ */
+function buildStateCookie(value, maxAge) {
+  const parts = [
+    `${STATE_COOKIE_NAME}=${value}`,
+    'HttpOnly',
+    'SameSite=Lax',
+    `Max-Age=${maxAge}`,
+    'Path=/',
+  ];
+  if (process.env.NODE_ENV === 'production') {
+    parts.push('Secure');
+  }
+  return parts.join('; ');
+}
+
+/**
  * GET /api/storage/status
  *
  * Returns the BYOS storage connection state for the requesting firm.
@@ -137,18 +157,7 @@ const googleConnect = (req, res) => {
       state: stateToken,
     });
 
-    const cookieParts = [
-      `${STATE_COOKIE_NAME}=${stateToken}`,
-      'HttpOnly',
-      'SameSite=Lax',
-      `Max-Age=${STATE_TTL_SECONDS}`,
-      'Path=/',
-    ];
-    if (process.env.NODE_ENV === 'production') {
-      cookieParts.push('Secure');
-    }
-    res.setHeader('Set-Cookie', cookieParts.join('; '));
-
+    res.setHeader('Set-Cookie', buildStateCookie(stateToken, STATE_TTL_SECONDS));
     return res.redirect(authUrl);
   } catch (err) {
     console.error('[Storage][GoogleConnect] Configuration error:', err.message);
@@ -160,9 +169,9 @@ const googleConnect = (req, res) => {
  * GET /api/storage/google/callback
  *
  * Receives the authorization code from Google, exchanges it for tokens,
- * creates the /Docketra root folder in the firm's Drive, and persists an
- * encrypted FirmStorage record.  Redirects to the frontend on both success
- * and failure.
+ * creates the /Docketra root folder in the firm's Drive via the storage
+ * provider abstraction, and persists an encrypted FirmStorage record.
+ * Redirects to the frontend on both success and failure.
  */
 const googleCallback = async (req, res) => {
   const frontendUrl = (process.env.FRONTEND_URL || '').replace(/\/$/, '');
@@ -207,30 +216,30 @@ const googleCallback = async (req, res) => {
       return res.redirect(`${errorUrl}&reason=no_access_token`);
     }
 
-    // Create /Docketra root folder in the firm's Drive using the new tokens
+    // Require a refresh token — without it we cannot refresh access later
+    if (!tokens.refresh_token) {
+      console.warn('[Storage][GoogleCallback] No refresh_token in response', { firmId: req.firmId });
+      return res.redirect(`${errorUrl}&reason=no_refresh_token`);
+    }
+
+    // Create /Docketra root folder via the storage provider abstraction
     oauthClient.setCredentials(tokens);
-    const drive = google.drive({ version: 'v3', auth: oauthClient });
+    const provider = getStorageProvider('google', oauthClient);
 
     let rootFolderId;
     try {
-      const folderRes = await drive.files.create({
-        requestBody: {
-          name: 'Docketra',
-          mimeType: 'application/vnd.google-apps.folder',
-        },
-        fields: 'id',
-      });
-      rootFolderId = folderRes.data.id;
+      const { folderId } = await provider.createRootFolder(req.firmId);
+      rootFolderId = folderId;
     } catch (folderErr) {
       console.error('[Storage][GoogleCallback] Root folder creation failed:', folderErr.message);
       return res.redirect(`${errorUrl}&reason=folder_creation_failed`);
     }
 
-    // Encrypt tokens before persisting — raw tokens must never be stored
+    // Encrypt tokens before persisting — raw tokens must never be stored.
+    // At this point tokens.refresh_token is guaranteed present (checked above at the
+    // no_refresh_token guard); encrypting directly is safe.
     const encryptedAccessToken = encrypt(tokens.access_token);
-    const encryptedRefreshToken = tokens.refresh_token
-      ? encrypt(tokens.refresh_token)
-      : undefined;
+    const encryptedRefreshToken = encrypt(tokens.refresh_token);
     const tokenExpiry = tokens.expiry_date ? new Date(tokens.expiry_date) : undefined;
 
     // Upsert FirmStorage record (one record per firm, idempotent)
@@ -240,7 +249,7 @@ const googleCallback = async (req, res) => {
         firmId: req.firmId,
         provider: 'google',
         encryptedAccessToken,
-        ...(encryptedRefreshToken !== undefined && { encryptedRefreshToken }),
+        encryptedRefreshToken,
         ...(tokenExpiry !== undefined && { tokenExpiry }),
         rootFolderId,
         status: 'active',
@@ -248,11 +257,8 @@ const googleCallback = async (req, res) => {
       { upsert: true, new: true }
     );
 
-    // Clear the state cookie
-    res.setHeader(
-      'Set-Cookie',
-      `${STATE_COOKIE_NAME}=; HttpOnly; SameSite=Lax; Max-Age=0; Path=/`
-    );
+    // Clear the state cookie with the same flags used when setting it
+    res.setHeader('Set-Cookie', buildStateCookie('', 0));
 
     console.info('[Storage][GoogleCallback] Drive connected successfully', { firmId: req.firmId });
     return res.redirect(successUrl);
@@ -262,4 +268,4 @@ const googleCallback = async (req, res) => {
   }
 };
 
-module.exports = { getStorageStatus, googleConnect, googleCallback };
+module.exports = { getStorageStatus, googleConnect, googleCallback, buildStateCookie };

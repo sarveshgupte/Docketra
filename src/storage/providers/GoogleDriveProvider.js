@@ -1,23 +1,55 @@
 /**
- * GoogleDriveProvider — Placeholder
+ * GoogleDriveProvider
  *
- * Scaffolding for BYOS Google Drive integration.
- * Real OAuth and Drive API calls will be added in a future PR.
+ * BYOS Google Drive storage provider.
+ * Accepts an authenticated OAuth2 client at construction time so that
+ * OAuth-specific operations (e.g. root folder creation during connect flow)
+ * can use the firm's own credentials.
  *
  * DO NOT log tokens or sensitive credential data in this file.
  */
 
+const { google } = require('googleapis');
 const { StorageProvider } = require('../StorageProvider.interface');
 
 class GoogleDriveProvider extends StorageProvider {
-  constructor() {
+  /**
+   * @param {object|null} oauthClient  - An authenticated google.auth.OAuth2 instance.
+   *                                     Optional; only required for methods that call
+   *                                     the Drive API on behalf of the firm owner.
+   */
+  constructor(oauthClient = null) {
     super();
     this.providerName = 'google';
+    this.oauthClient = oauthClient;
   }
 
+  /**
+   * Create the /Docketra root folder in the firm's Google Drive.
+   *
+   * Requires an authenticated OAuth2 client (passed via constructor).
+   *
+   * @param {string} firmId
+   * @returns {Promise<{folderId: string}>}
+   */
   async createRootFolder(firmId) {
-    console.info(`[Storage][GoogleDrive] createRootFolder called for firm: ${firmId}`);
-    return { folderId: null };
+    if (!this.oauthClient) {
+      throw new Error(
+        '[GoogleDriveProvider] oauthClient is required for createRootFolder. ' +
+        'Pass an authenticated OAuth2 client to the constructor.'
+      );
+    }
+    const drive = google.drive({ version: 'v3', auth: this.oauthClient });
+    const res = await drive.files.create({
+      requestBody: {
+        name: 'Docketra',
+        mimeType: 'application/vnd.google-apps.folder',
+      },
+      fields: 'id',
+    });
+    const folderId = res.data.id;
+    console.info(`[Storage][GoogleDrive] Root folder created for firm: ${firmId}, folderId: ${folderId}`);
+    return { folderId };
   }
 
   async createCaseFolder(firmId, caseId) {
