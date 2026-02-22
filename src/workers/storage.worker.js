@@ -75,7 +75,10 @@ const storageWorker = new Worker(
 
       case 'CREATE_CASE_FOLDER': {
         const { caseId } = job.data;
-        await provider.createCaseFolder(firmId, caseId);
+        if (!record.rootFolderId) {
+          throw new Error('Firm rootFolderId missing for case folder creation');
+        }
+        await provider.createCaseFolder(firmId, caseId, record.rootFolderId);
         console.info(`[StorageWorker] Case folder created`, { firmId, caseId });
         break;
       }
