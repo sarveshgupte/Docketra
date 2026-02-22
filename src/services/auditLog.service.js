@@ -118,7 +118,7 @@ const logCaseHistory = async ({
     }
 
     if (session) {
-      const entry = await CaseHistory.create(historyEntry, { session });
+      const [entry] = await CaseHistory.create([historyEntry], { session });
       return entry || null;
     }
 

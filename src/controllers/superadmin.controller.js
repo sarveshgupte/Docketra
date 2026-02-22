@@ -179,21 +179,25 @@ const createFirm = async (req, res) => {
     req._pendingSideEffects = requestContext._pendingSideEffects;
     req.transactionCommitted = true;
 
-    await logSuperadminAction({
-      actionType: 'FirmCreated',
-      description: `Firm created: ${result.firm.name} (${result.firm.firmId}, ${result.firm.firmSlug})`,
-      performedBy: req.user.email,
-      performedById: req.user._id,
-      targetEntityType: 'Firm',
-      targetEntityId: result.firm._id.toString(),
-      metadata: {
-        firmId: result.firm.firmId,
-        firmSlug: result.firm.firmSlug,
-        defaultClientId: result.defaultClient._id,
-        adminXID: result.adminUser.xID,
-      },
-      req,
-    });
+    try {
+      await logSuperadminAction({
+        actionType: 'FirmCreated',
+        description: `Firm created: ${result.firm.name} (${result.firm.firmId}, ${result.firm.firmSlug})`,
+        performedBy: req.user.email,
+        performedById: req.user._id,
+        targetEntityType: 'Firm',
+        targetEntityId: result.firm._id.toString(),
+        metadata: {
+          firmId: result.firm.firmId,
+          firmSlug: result.firm.firmSlug,
+          defaultClientId: result.defaultClient._id,
+          adminXID: result.adminUser.xID,
+        },
+        req,
+      });
+    } catch (auditErr) {
+      console.error('[ADMIN_AUDIT] Persistence failure', auditErr);
+    }
 
     // Return 201 Created (SUCCESS case)
     // Note: This endpoint must NEVER return 401 after successful authentication
