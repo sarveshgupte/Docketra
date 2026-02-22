@@ -73,13 +73,10 @@ async function testSuperadminBlockAtRepositoryLevel() {
   // This test does NOT require MongoDB.
   // The superadmin guard is checked BEFORE the DB query is attempted, so
   // ForbiddenError is thrown even when no connection is available.
+  // The guard is active regardless of MASTER_ENCRYPTION_KEY configuration.
   const CaseRepository = require('../src/repositories/CaseRepository');
   const ClientRepository = require('../src/repositories/ClientRepository');
   const { ForbiddenError } = require('../src/security/encryption.service');
-
-  // Enable encryption so the guard is active
-  const originalKey = process.env.MASTER_ENCRYPTION_KEY;
-  process.env.MASTER_ENCRYPTION_KEY = crypto.randomBytes(32).toString('base64');
 
   const firmId = 'FIRM-TEST-001';
 
@@ -96,6 +93,10 @@ async function testSuperadminBlockAtRepositoryLevel() {
     ['ClientRepository.findByClientId', () => ClientRepository.findByClientId(firmId, 'C000001', 'SUPER_ADMIN')],
   ];
 
+  // Test with encryption key absent — guard must still fire
+  const originalKey = process.env.MASTER_ENCRYPTION_KEY;
+  delete process.env.MASTER_ENCRYPTION_KEY;
+
   for (const [name, call] of repositoryTestCases) {
     let threw = false;
     try {
@@ -111,13 +112,50 @@ async function testSuperadminBlockAtRepositoryLevel() {
   }
 
   // Restore original key
-  if (originalKey === undefined) {
-    delete process.env.MASTER_ENCRYPTION_KEY;
-  } else {
+  if (originalKey !== undefined) {
     process.env.MASTER_ENCRYPTION_KEY = originalKey;
   }
 
-  console.log('✓ Superadmin blocked at repository level (ForbiddenError) for all fetch methods');
+  console.log('✓ Superadmin blocked at repository level (ForbiddenError) for all fetch methods — regardless of encryption key');
+}
+
+async function testRepositoryThrowsWithoutRole() {
+  const CaseRepository = require('../src/repositories/CaseRepository');
+  const ClientRepository = require('../src/repositories/ClientRepository');
+
+  const firmId = 'FIRM-ROLE-TEST-001';
+  const expectedMsg = 'SECURITY: role is required for repository access';
+
+  const caseTestCases = [
+    ['CaseRepository.find', () => CaseRepository.find(firmId, {})],
+    ['CaseRepository.findOne', () => CaseRepository.findOne(firmId, {})],
+    ['CaseRepository.findById', () => CaseRepository.findById(firmId, 'some-id')],
+    ['CaseRepository.findByCaseId', () => CaseRepository.findByCaseId(firmId, 'CASE-001')],
+    ['CaseRepository.findByCaseNumber', () => CaseRepository.findByCaseNumber(firmId, 'CASE-20260101-00001')],
+    ['CaseRepository.findByInternalId', () => CaseRepository.findByInternalId(firmId, 'some-internal-id')],
+    ['ClientRepository.find', () => ClientRepository.find(firmId, {})],
+    ['ClientRepository.findOne', () => ClientRepository.findOne(firmId, {})],
+    ['ClientRepository.findById', () => ClientRepository.findById(firmId, 'some-id')],
+    ['ClientRepository.findByClientId', () => ClientRepository.findByClientId(firmId, 'C000001')],
+  ];
+
+  for (const [name, call] of caseTestCases) {
+    let threw = false;
+    let thrownMessage = '';
+    try {
+      await call();
+    } catch (err) {
+      threw = true;
+      thrownMessage = err.message;
+    }
+    assert(threw, `${name}: expected error to be thrown when role is missing`);
+    assert(
+      thrownMessage === expectedMsg,
+      `${name}: expected message "${expectedMsg}", got "${thrownMessage}"`
+    );
+  }
+
+  console.log('✓ Repository throws when role is missing (SECURITY: role is required)');
 }
 
 async function testRepositoryThrowsWithoutFirmId() {
@@ -275,6 +313,7 @@ async function run() {
   await testKmsProviderThrows();
   await testPlaintextCompatibilityMode();
   await testSuperadminBlockAtRepositoryLevel();
+  await testRepositoryThrowsWithoutRole();
   await testRepositoryThrowsWithoutFirmId();
 
   // Tests that DO need MongoDB

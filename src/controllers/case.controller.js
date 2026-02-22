@@ -218,7 +218,7 @@ const createCase = async (req, res) => {
     
     // Verify client exists and validate status - with firm scoping
     // PR: Client Lifecycle Enforcement - only ACTIVE clients can be used for new cases
-    const client = await ClientRepository.findByClientId(req.user.firmId, finalClientId);
+    const client = await ClientRepository.findByClientId(req.user.firmId, finalClientId, req.user.role);
     
     if (!client) {
       return res.status(404).json({
@@ -468,8 +468,8 @@ const addComment = async (req, res) => {
     // PR: Case Identifier Semantics - Resolve identifier to internal ID
     // This handles both ObjectId and CASE-YYYYMMDD-XXXXX formats
     try {
-      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId);
-      var caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId);
+      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
+      var caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
     } catch (error) {
       return res.status(404).json({
         success: false,
@@ -593,8 +593,8 @@ const addAttachment = async (req, res) => {
     
     // PR: Case Identifier Semantics - Resolve identifier to internal ID
     try {
-      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId);
-      var caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId);
+      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
+      var caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
     } catch (error) {
       return res.status(404).json({
         success: false,
@@ -734,8 +734,8 @@ const cloneCase = async (req, res) => {
     // PR: Case Identifier Semantics - Resolve identifier to internal ID
     let originalCase;
     try {
-      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId);
-      originalCase = await CaseRepository.findByInternalId(req.user.firmId, internalId);
+      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
+      originalCase = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
     } catch (error) {
       return res.status(404).json({
         success: false,
@@ -759,7 +759,7 @@ const cloneCase = async (req, res) => {
     }
     
     // PR: Client Lifecycle Enforcement - validate client is ACTIVE before cloning
-    const client = await ClientRepository.findByClientId(req.user.firmId, originalCase.clientId);
+    const client = await ClientRepository.findByClientId(req.user.firmId, originalCase.clientId, req.user.role);
     
     if (!client) {
       return res.status(404).json({
@@ -1045,8 +1045,8 @@ const updateCaseStatus = async (req, res) => {
     // PR: Case Identifier Semantics - Resolve identifier to internal ID
     let caseData;
     try {
-      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId);
-      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId);
+      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
+      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
     } catch (error) {
       return res.status(404).json({
         success: false,
@@ -1122,9 +1122,9 @@ const getCaseByCaseId = async (req, res) => {
     // This handles both ObjectId and CASE-YYYYMMDD-XXXXX formats
     let caseData;
     try {
-      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId);
+      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
       console.log(`[GET_CASE] Resolved identifier: ${caseId} -> ${internalId}`);
-      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId);
+      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
     } catch (error) {
       console.error(`[GET_CASE] Case not found or identifier resolution failed: caseId=${caseId}, error=${error.message}`);
       return res.status(404).json({
@@ -1194,7 +1194,7 @@ const getCaseByCaseId = async (req, res) => {
     // Fetch current client details - with firm scoping
     // TODO: Consider using aggregation pipeline with $lookup for better performance
     // PR: Client Lifecycle - fetch client regardless of status to display existing cases with inactive clients
-    const client = await ClientRepository.findByClientId(req.user.firmId, caseData.clientId);
+    const client = await ClientRepository.findByClientId(req.user.firmId, caseData.clientId, req.user.role);
     
     // PR #45: Require authenticated user with xID for audit logging
     if (!req.user?.email || !req.user?.xID) {
@@ -1346,7 +1346,7 @@ const getCases = async (req, res) => {
     // PR: Client Lifecycle - fetch clients regardless of status to display existing cases with inactive clients
     const casesWithClients = await Promise.all(
       cases.map(async (caseItem) => {
-        const client = await ClientRepository.findByClientId(req.user.firmId, caseItem.clientId);
+        const client = await ClientRepository.findByClientId(req.user.firmId, caseItem.clientId, req.user.role);
         return {
           ...caseItem.toObject(),
           client: client ? {
@@ -1436,8 +1436,8 @@ const lockCaseEndpoint = async (req, res) => {
     // PR: Case Identifier Semantics - Resolve identifier to internal ID
     let caseData;
     try {
-      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId);
-      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId);
+      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
+      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
     } catch (error) {
       return res.status(404).json({
         success: false,
@@ -1535,8 +1535,8 @@ const unlockCaseEndpoint = async (req, res) => {
     // PR: Case Identifier Semantics - Resolve identifier to internal ID
     let caseData;
     try {
-      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId);
-      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId);
+      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
+      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
     } catch (error) {
       return res.status(404).json({
         success: false,
@@ -1606,8 +1606,8 @@ const updateCaseActivity = async (req, res) => {
     // PR: Case Identifier Semantics - Resolve identifier to internal ID
     let caseData;
     try {
-      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId);
-      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId);
+      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
+      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
     } catch (error) {
       return res.status(404).json({
         success: false,
@@ -1820,8 +1820,8 @@ const unassignCase = async (req, res) => {
     // PR: Case Identifier Semantics - Resolve identifier to internal ID
     let caseData;
     try {
-      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId);
-      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId);
+      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
+      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
     } catch (error) {
       return res.status(404).json({
         success: false,
@@ -1931,8 +1931,8 @@ const viewAttachment = async (req, res) => {
     // PR: Case Identifier Semantics - Resolve identifier to internal ID
     let caseData;
     try {
-      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId);
-      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId);
+      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
+      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
     } catch (error) {
       return res.status(404).json({
         success: false,
@@ -2021,8 +2021,8 @@ const downloadAttachment = async (req, res) => {
     // PR: Case Identifier Semantics - Resolve identifier to internal ID
     let caseData;
     try {
-      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId);
-      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId);
+      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
+      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
     } catch (error) {
       return res.status(404).json({
         success: false,
@@ -2148,8 +2148,8 @@ const getClientFactSheetForCase = async (req, res) => {
     // PR: Case Identifier Semantics - Resolve identifier to internal ID
     let caseData;
     try {
-      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId);
-      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId);
+      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
+      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
     } catch (error) {
       return res.status(404).json({
         success: false,
@@ -2265,8 +2265,8 @@ const viewClientFactSheetFile = async (req, res) => {
     // PR: Case Identifier Semantics - Resolve identifier to internal ID
     let caseData;
     try {
-      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId);
-      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId);
+      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
+      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
     } catch (error) {
       return res.status(404).json({
         success: false,

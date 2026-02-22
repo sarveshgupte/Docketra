@@ -71,7 +71,7 @@ const assignCaseToUser = async (firmId, caseId, user) => {
   
   if (!caseData) {
     // Either case doesn't exist or is not UNASSIGNED anymore
-    const existingCase = await CaseRepository.findByCaseId(firmId, caseId);
+    const existingCase = await CaseRepository.findByCaseId(firmId, caseId, user.role);
     
     if (!existingCase) {
       throw new Error('Case not found');
@@ -225,7 +225,7 @@ const reassignCase = async (firmId, caseId, newUserXID, performedBy) => {
     throw new Error('Valid xID is required for reassignment (format: X123456)');
   }
   
-  const caseData = await CaseRepository.findByCaseId(firmId, caseId);
+  const caseData = await CaseRepository.findByCaseId(firmId, caseId, performedBy.role);
   
   if (!caseData) {
     throw new Error('Case not found');

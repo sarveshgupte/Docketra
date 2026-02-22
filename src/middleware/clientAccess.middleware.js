@@ -91,10 +91,10 @@ const checkCaseClientAccess = async (req, res, next) => {
     let caseData;
     try {
       // Resolve identifier (handles both caseNumber and caseInternalId)
-      const internalId = await resolveCaseIdentifier(user.firmId, caseId);
+      const internalId = await resolveCaseIdentifier(user.firmId, caseId, user.role);
       
       // Fetch case with firm scoping via repository
-      caseData = await CaseRepository.findByInternalId(user.firmId, internalId);
+      caseData = await CaseRepository.findByInternalId(user.firmId, internalId, user.role);
     } catch (error) {
       // Case not found or invalid identifier - let the controller handle it
       // This ensures consistent error handling between middleware and controller
