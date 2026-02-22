@@ -14,6 +14,8 @@ const { StorageProviderFactory } = require('../services/storage/StorageProviderF
 const { areFileUploadsDisabled } = require('../services/featureFlags.service');
 const { wrapWriteHandler } = require('../utils/transactionGuards');
 const { softDelete } = require('../services/softDelete.service');
+const { enqueueStorageJob, JOB_TYPES } = require('../queues/storage.queue');
+const CaseFile = require('../models/CaseFile.model');
 const path = require('path');
 const fs = require('fs');
 
@@ -1026,15 +1028,13 @@ const uploadClientCFSFile = async (req, res) => {
       });
     }
 
-    const provider = await StorageProviderFactory.getProvider(userFirmId);
-
-    // Validate client has CFS folder structure metadata
+    // Validate client has CFS folder structure metadata; resolve folderId synchronously
+    // so we can pass it to the worker (folder creation still happens here, not in worker)
     const cfsDriveService = require('../services/cfsDrive.service');
     const isValidStructure = await cfsDriveService.validateClientCFSMetadata(client.drive);
-    
     if (!isValidStructure) {
-      // Try to create the structure if it doesn't exist
       try {
+        const provider = await StorageProviderFactory.getProvider(userFirmId);
         const folderIds = await cfsDriveService.createClientCFSFolderStructure(
           userFirmId.toString(),
           clientId,
@@ -1050,52 +1050,43 @@ const uploadClientCFSFile = async (req, res) => {
       }
     }
 
-    // Get the appropriate folder ID for the file type
     const folderId = cfsDriveService.getClientFolderIdForFileType(client.drive, fileType);
+    const fileMimeType = getMimeType(req.file.originalname) || req.file.mimetype || 'application/octet-stream';
 
-    // Upload file to Google Drive (from memory buffer)
-    const driveFile = await provider.uploadFile(
-      req.file.buffer,
-      req.file.originalname,
-      req.file.mimetype,
-      folderId
-    );
+    // Move file to firm-scoped temp directory
+    const firmIdStr = userFirmId.toString();
+    const tmpDir = path.join(__dirname, '../../uploads/tmp', firmIdStr);
+    await fs.promises.mkdir(tmpDir, { recursive: true });
+    const destPath = path.join(tmpDir, path.basename(req.file.path));
+    await fs.promises.rename(req.file.path, destPath);
 
-    // Create attachment record
-    const Attachment = require('../models/Attachment.model');
-    const attachment = new Attachment({
+    // Create staging record — Drive upload is processed asynchronously
+    const caseFile = await CaseFile.create({
       firmId: userFirmId,
-      clientId: clientId,
-      caseId: null, // Client CFS files don't belong to a specific case
-      fileName: req.file.originalname,
-      driveFileId: driveFile.id,
-      size: driveFile.size,
-      mimeType: driveFile.mimeType,
+      clientId,
+      localPath: destPath,
+      originalName: req.file.originalname,
+      mimeType: fileMimeType,
+      size: req.file.size,
+      uploadStatus: 'pending',
       description: description.trim(),
-      source: 'client_cfs',
-      type: 'file',
-      visibility: 'internal',
       createdBy: req.user?.email || 'unknown',
       createdByXID: userXID,
       createdByName: userName,
+      source: 'client_cfs',
     });
 
-    await attachment.save();
+    await enqueueStorageJob(JOB_TYPES.UPLOAD_FILE, {
+      firmId: firmIdStr,
+      provider: 'google',
+      folderId,
+      fileId: caseFile._id,
+    });
 
-    res.status(201).json({
+    return res.status(202).json({
       success: true,
-      message: 'File uploaded to client CFS successfully',
-      data: {
-        attachmentId: attachment._id,
-        fileName: attachment.fileName,
-        size: attachment.size,
-        mimeType: attachment.mimeType,
-        description: attachment.description,
-        fileType: fileType,
-        createdAt: attachment.createdAt,
-        createdByXID: attachment.createdByXID,
-        createdByName: attachment.createdByName,
-      },
+      data: caseFile,
+      message: 'File upload queued for processing',
     });
   } catch (error) {
     console.error('Error uploading client CFS file:', error);
