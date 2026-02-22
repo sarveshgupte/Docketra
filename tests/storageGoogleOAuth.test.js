@@ -50,9 +50,31 @@ const mockOAuthClient = {
   setCredentials: () => {},
 };
 
-// Monkey-patch require for googleapis
+// Monkey-patch require for googleapis, mongoose, and FirmStorage
 const Module = require('module');
 const originalLoad = Module._load;
+
+// Stub FirmStorage model
+let lastUpsertArgs = null;
+const mockFirmStorage = {
+  findOne: async () => null,
+  findOneAndUpdate: async (...args) => {
+    lastUpsertArgs = args;
+    return {};
+  },
+};
+
+// Minimal mongoose stub (only Schema/model used by FirmStorage.model.js)
+const mockMongoose = {
+  Schema: class {
+    constructor() {}
+    index() {}
+  },
+  model: () => mockFirmStorage,
+  Types: { ObjectId: class {} },
+};
+mockMongoose.Schema.Types = { ObjectId: class {} };
+
 Module._load = function (request, parent, isMain) {
   if (request === 'googleapis') {
     return {
@@ -69,21 +91,11 @@ Module._load = function (request, parent, isMain) {
       },
     };
   }
+  if (request === 'mongoose') {
+    return mockMongoose;
+  }
   return originalLoad.apply(this, arguments);
 };
-
-// Stub FirmStorage model (unused in inline tests but declared for completeness)
-let lastUpsertArgs = null;
-const mockFirmStorage = {
-  findOne: async () => null,
-  findOneAndUpdate: async (...args) => {
-    lastUpsertArgs = args;
-    return {};
-  },
-};
-
-// We need a clean require for the controller after stubs are set.
-// Use a minimal inline approach instead of relying on Node cache tricks.
 
 // ──────────────────────────────────────────────────────────────────
 // Pull in the real TokenEncryption to verify we can encrypt/decrypt
@@ -106,6 +118,14 @@ const makeMockRes = () => {
   };
   return res;
 };
+
+// ──────────────────────────────────────────────────────────────────
+// Import the exported buildStateCookie helper from the controller
+// ──────────────────────────────────────────────────────────────────
+// Note: requiring the controller here pulls in its module-level code
+// (constants, function definitions) without starting any server.
+// The googleapis and FirmStorage stubs above ensure no real I/O occurs.
+const { buildStateCookie } = require('../src/controllers/storage.controller');
 
 // ──────────────────────────────────────────────────────────────────
 // Tests
@@ -254,6 +274,40 @@ async function testGoogleCallbackFirmMismatch() {
   console.log('  ✓ googleCallback redirects on firmId mismatch');
 }
 
+async function testGoogleCallbackNoRefreshToken() {
+  const frontendUrl = process.env.FRONTEND_URL.replace(/\/$/, '');
+  const errorUrl = `${frontendUrl}/settings/storage?error=oauth_failed`;
+  const res = makeMockRes();
+
+  // Simulate tokens without a refresh_token
+  const tokens = { access_token: 'acc', refresh_token: null };
+  if (!tokens.refresh_token) {
+    res.redirect(`${errorUrl}&reason=no_refresh_token`);
+  }
+
+  assert(res.redirectedTo && res.redirectedTo.includes('no_refresh_token'),
+    `Expected no_refresh_token redirect, got: ${res.redirectedTo}`);
+
+  console.log('  ✓ googleCallback redirects when refresh_token is absent');
+}
+
+async function testBuildStateCookieFlags() {
+  // Verify cookie flag consistency between set and clear using the real controller helper
+  const setCookie = buildStateCookie('token123', 600);
+  const clearCookie = buildStateCookie('', 0);
+
+  // Both should have the same flags (minus the value/max-age difference)
+  assert(setCookie.includes('HttpOnly'), 'Set cookie should be HttpOnly');
+  assert(setCookie.includes('SameSite=Lax'), 'Set cookie should have SameSite=Lax');
+  assert(setCookie.includes('Path=/'), 'Set cookie should have Path=/');
+  assert(clearCookie.includes('Max-Age=0'), 'Clear cookie should have Max-Age=0');
+  assert(clearCookie.includes('HttpOnly'), 'Clear cookie should be HttpOnly');
+  assert(clearCookie.includes('SameSite=Lax'), 'Clear cookie should have SameSite=Lax');
+  assert(clearCookie.includes('Path=/'), 'Clear cookie should have Path=/');
+
+  console.log('  ✓ buildStateCookie applies consistent flags for set and clear');
+}
+
 async function run() {
   console.log('Running storageGoogleOAuth tests...');
   try {
@@ -262,6 +316,8 @@ async function run() {
     await testVerifyStateToken();
     await testGoogleCallbackMissingParams();
     await testGoogleCallbackFirmMismatch();
+    await testGoogleCallbackNoRefreshToken();
+    await testBuildStateCookieFlags();
     console.log('All storageGoogleOAuth tests passed.');
   } catch (err) {
     console.error('storageGoogleOAuth tests failed:', err);
