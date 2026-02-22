@@ -342,7 +342,7 @@ app.use('/api/worklists', authenticate, firmContext, invariantGuard({ requireFir
 app.use('/api/client-approval', authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, clientApprovalRoutes);
 app.use('/api/clients', authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, clientRoutes);  // Client management (PR #39)
 app.use('/api/reports', authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, reportsRoutes);  // Reports routes
-app.use('/api/storage', authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, storageRoutes);  // BYOS storage routes
+app.use('/api/storage', authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), storageRoutes);  // BYOS storage routes (read-only, no writeGuardChain needed)
 
 // Firm-scoped routes — /f/:firmSlug/* (tenant resolver applied inside firm.routes.js)
 // POST /f/:firmSlug/login is the primary path-based login endpoint.
