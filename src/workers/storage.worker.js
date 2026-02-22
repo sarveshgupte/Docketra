@@ -97,20 +97,17 @@ const storageWorker = new Worker(
           throw new Error(`[StorageWorker] CaseFile not found: ${fileId}`);
         }
 
-        // Determine target Drive folder
-        let targetFolderId = jobFolderId;
-        if (!targetFolderId) {
-          // Derive folder from case structure using firmStorage rootFolderId
-          if (!record.rootFolderId) {
-            throw new Error('[StorageWorker] Firm rootFolderId missing for file upload');
-          }
-          const { folderId: caseFolderId } = await provider.createCaseFolder(
-            firmId,
-            caseId,
-            record.rootFolderId
-          );
-          targetFolderId = caseFolderId;
+        // Idempotency: skip if already uploaded (e.g. on job retry after partial success)
+        if (caseFile.uploadStatus === 'uploaded') {
+          console.info('[StorageWorker] Skipping already uploaded file', { fileId });
+          return;
         }
+
+        // folderId must always be resolved and passed by the controller
+        if (!jobFolderId) {
+          throw new Error('[StorageWorker] folderId is required for case uploads');
+        }
+        const targetFolderId = jobFolderId;
 
         // Read file buffer from local disk — buffer never passed via Redis
         let fileBuffer;

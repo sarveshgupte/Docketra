@@ -22,6 +22,7 @@ const { areFileUploadsDisabled } = require('../services/featureFlags.service');
 const { enqueueStorageJob, JOB_TYPES } = require('../queues/storage.queue');
 const CaseFile = require('../models/CaseFile.model');
 const fs = require('fs').promises;
+const fsSync = require('fs');
 const path = require('path');
 
 /**
@@ -629,9 +630,14 @@ const addAttachment = async (req, res) => {
     const destPath = path.join(tmpDir, path.basename(req.file.path));
     await fs.rename(req.file.path, destPath);
 
-    // Compute checksum for dedup before creating the staging record
-    const fileBuffer = await fs.readFile(destPath);
-    const checksum = createHash('sha256').update(fileBuffer).digest('hex');
+    // Compute checksum via streaming to avoid loading the full file into memory
+    const checksum = await new Promise((resolve, reject) => {
+      const hash = createHash('sha256');
+      const stream = fsSync.createReadStream(destPath);
+      stream.on('data', chunk => hash.update(chunk));
+      stream.on('end', () => resolve(hash.digest('hex')));
+      stream.on('error', reject);
+    });
 
     const duplicate = await Attachment.findOne({
       caseId: caseData.caseId,
@@ -645,6 +651,13 @@ const addAttachment = async (req, res) => {
         message: 'Duplicate upload detected',
       });
     }
+
+    // Resolve the Drive folder for this case's attachments
+    const cfsDriveService = require('../services/cfsDrive.service');
+    const targetFolderId = cfsDriveService.getFolderIdForFileType(
+      caseData.drive,
+      'attachment'
+    );
 
     // Create staging record — upload is processed asynchronously by the worker
     const caseFile = await CaseFile.create({
@@ -668,6 +681,7 @@ const addAttachment = async (req, res) => {
       firmId,
       provider: 'google',
       caseId: caseData.caseId,
+      folderId: targetFolderId,
       fileId: caseFile._id,
     });
 
