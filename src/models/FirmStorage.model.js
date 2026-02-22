@@ -32,7 +32,7 @@ const firmStorageSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['active', 'revoked'],
+      enum: ['pending', 'active', 'revoked', 'error'],
       default: 'active',
     },
   },
