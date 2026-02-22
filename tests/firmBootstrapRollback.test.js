@@ -286,6 +286,53 @@ async function shouldRejectFirmCreateWithoutId() {
   console.log('✓ Missing firm _id is rejected before TenantKey creation');
 }
 
+async function shouldUseTenantIdFieldForTenantKeyCreate() {
+  const session = makeSession();
+  const firmStore = { rows: [] };
+  const allRows = { rows: [] };
+  let tenantKeyCreateChecked = false;
+
+  const tenantKeyStub = {
+    findOne: () => ({ session: () => Promise.resolve(null) }),
+    create: async (docs) => {
+      const payload = docs[0] || {};
+      tenantKeyCreateChecked = true;
+      assert.ok(payload.tenantId, 'TenantKey payload must include tenantId');
+      assert.strictEqual(payload.firmId, undefined, 'TenantKey payload must not include firmId');
+      return [{ ...payload, _id: 'tenant-key-1' }];
+    },
+  };
+
+  const result = await createFirmHierarchy({
+    payload: { name: 'Tenant Field Firm', adminName: 'Tenant Admin', adminEmail: 'tenant@field.test' },
+    performedBy: null,
+    requestId: 'test-tenant-field',
+    context: null,
+    deps: {
+      Firm: makeFirmStub(firmStore),
+      Client: makeClientStub(allRows),
+      User: makeUserStub(allRows),
+      TenantKey: tenantKeyStub,
+      generateEncryptedDek: async () => 'aGVsbG8=:d29ybGQ=:dGVzdA==',
+      emailService: {
+        sendFirmCreatedEmail: async () => {},
+        sendPasswordSetupEmail: async () => ({ success: true }),
+      },
+      generateNextClientId: async () => 'C000001',
+      generateNextXID: async () => 'X000001',
+      startSession: () => {
+        session.startTransaction();
+        return Promise.resolve(session);
+      },
+    },
+  });
+
+  assert.ok(result?.firm?._id, 'Firm should be created successfully');
+  assert.strictEqual(session.committed, true, 'Transaction should commit on successful TenantKey create');
+  assert.strictEqual(tenantKeyCreateChecked, true, 'TenantKey.create payload should be validated');
+  console.log('✓ TenantKey creation uses tenantId field (not firmId)');
+}
+
 async function run() {
   console.log('='.repeat(60));
   console.log('FirmBootstrap Rollback & Hardening Tests');
@@ -296,6 +343,7 @@ async function run() {
     await shouldRollbackWhenTenantKeyDuplicate();
     await shouldRejectInvalidDekFormat();
     await shouldRejectFirmCreateWithoutId();
+    await shouldUseTenantIdFieldForTenantKeyCreate();
     console.log('\n✓ All firmBootstrap rollback tests passed.');
   } catch (err) {
     console.error('\nfirmBootstrap rollback test FAILED:', err);

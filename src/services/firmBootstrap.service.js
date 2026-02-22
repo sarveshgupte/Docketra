@@ -122,12 +122,13 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
   }
 
   // Fail fast: validate encryption provider before starting the transaction
-  const encryptedDek = await deps.generateEncryptedDek().catch((err) => {
+  const generatedDek = await deps.generateEncryptedDek().catch((err) => {
     throw new FirmBootstrapError(`Encryption provider error: ${err.message}`, 500);
   });
+  const encryptedDek = typeof generatedDek === 'string' ? generatedDek : generatedDek?.encryptedDek;
 
-  if (!encryptedDek) {
-    throw new FirmBootstrapError('Failed to generate encrypted DEK', 500);
+  if (!encryptedDek || typeof encryptedDek !== 'string') {
+    throw new FirmBootstrapError('Invalid encryptedDek generated', 500);
   }
 
   // Validate DEK format: must be iv:authTag:ciphertext (three base64 segments)
@@ -196,7 +197,7 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
 
     try {
       await deps.TenantKey.create([{
-        tenantId: firm._id.toString(),
+        tenantId: String(firm._id),
         encryptedDek,
       }], { session });
     } catch (tenantKeyErr) {
