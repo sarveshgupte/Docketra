@@ -80,6 +80,7 @@ const superadminRoutes = require('./routes/superadmin.routes');  // Superadmin r
 const debugRoutes = require('./routes/debug.routes');  // Debug routes (PR #43)
 const inboundRoutes = require('./routes/inbound.routes');  // Inbound email routes
 const publicRoutes = require('./routes/public.routes');  // Public routes (firm lookup)
+const firmRoutes = require('./routes/firm.routes');  // Firm-scoped routes (/f/:firmSlug/*)
 const healthRoutes = require('./routes/health.routes');  // Health endpoints
 const mutatingMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const superadminRouteLimiter = rateLimit({
@@ -340,6 +341,14 @@ app.use('/api/worklists', authenticate, firmContext, invariantGuard({ requireFir
 app.use('/api/client-approval', authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, clientApprovalRoutes);
 app.use('/api/clients', authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, clientRoutes);  // Client management (PR #39)
 app.use('/api/reports', authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, reportsRoutes);  // Reports routes
+
+// Firm-scoped routes — /f/:firmSlug/* (tenant resolver applied inside firm.routes.js)
+// POST /f/:firmSlug/login is the primary path-based login endpoint.
+// GET  /f/:firmSlug/login returns firm metadata for the login page.
+// These must be registered before the SPA static fallback so the POST
+// action is handled server-side; the SPA fallback still serves index.html
+// for direct browser GET navigation to /f/:firmSlug/login in production.
+app.use('/f/:firmSlug', firmRoutes);
 
 // Root route - API status
 app.get('/', (req, res) => {
