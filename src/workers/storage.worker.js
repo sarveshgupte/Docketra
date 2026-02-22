@@ -27,9 +27,15 @@ const {
   recordStorageJobSuccess,
   recordStorageJobFailure,
   recordStorageJobRetry,
-  recordStorageDLQEntry,
+  setDLQSizeProvider,
+  setQueueDepthProvider,
 } = require('../services/metrics.service');
-const { moveToDLQ } = require('../queues/storage.dlq');
+const { moveToDLQ, getDLQSize } = require('../queues/storage.dlq');
+const { getQueueDepth } = require('../queues/storage.queue');
+
+// Wire up dynamic metric providers so getSnapshot() reflects live queue state
+setDLQSizeProvider(getDLQSize);
+setQueueDepthProvider(getQueueDepth);
 
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
 
@@ -52,18 +58,25 @@ function buildGoogleOAuthClient(accessToken, refreshToken, tokenExpiry) {
 }
 
 /**
- * Determine if an error is retryable (network/server-side) or not (validation/4xx).
- * Non-retryable errors are wrapped in UnrecoverableError to prevent further retries.
+ * Determine if an error is retryable.
+ *
+ * Only two categories are retryable:
+ *   1. Provider 5xx responses — transient server-side failures
+ *   2. Network-level errors   — connectivity or DNS issues
+ *
+ * Everything else (4xx, validation, missing DB records, unsupported provider,
+ * bad payloads) is non-retryable and will be wrapped in UnrecoverableError.
  */
+const RETRYABLE_NETWORK_CODES = new Set(['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND', 'ECONNREFUSED']);
+
 function isRetryable(err) {
-  if (!err) return true;
-  const msg = err.message || '';
-  // Google API 4xx errors are not retryable
-  if (err.status >= 400 && err.status < 500) return false;
-  if (err.code === 400 || err.code === 401 || err.code === 403 || err.code === 404) return false;
-  // BullMQ/validation guards that indicate a bad payload — not retryable
-  if (msg.includes('No FirmStorage record') || msg.includes('folderId is required')) return false;
-  return true;
+  if (!err) return false;
+  // Provider 5xx responses are transient — worth retrying
+  if (err.status >= 500) return true;
+  // Network-level errors are transient — worth retrying
+  if (err.code && RETRYABLE_NETWORK_CODES.has(err.code)) return true;
+  // Everything else is non-retryable
+  return false;
 }
 
 /**
@@ -110,9 +123,9 @@ const storageWorker = new Worker(
     // Phase 6 — Observability: track job started
     recordStorageJobStarted();
 
-    console.info(`[StorageWorker] Processing job`, { type: job.name, firmId, attempt: job.attemptsMade + 1 });
+    console.info('[StorageWorker]', { event: 'job_started', jobType: job.name, firmId, attempt: job.attemptsMade + 1 });
 
-    // Phase 2 — track retries beyond first attempt
+    // Track retries beyond the first attempt
     if (job.attemptsMade > 0) {
       recordStorageJobRetry();
     }
@@ -157,7 +170,7 @@ const storageWorker = new Worker(
             { firmId },
             { rootFolderId: folderId, status: 'active' }
           );
-          console.info(`[StorageWorker] Root folder created`, { firmId });
+          console.info('[StorageWorker]', { event: 'root_folder_created', jobType: job.name, firmId });
           break;
         }
 
@@ -167,7 +180,7 @@ const storageWorker = new Worker(
             throw new Error('Firm rootFolderId missing for case folder creation');
           }
           await provider.createCaseFolder(firmId, caseId, record.rootFolderId);
-          console.info(`[StorageWorker] Case folder created`, { firmId, caseId });
+          console.info('[StorageWorker]', { event: 'case_folder_created', jobType: job.name, firmId, caseId });
           break;
         }
 
@@ -187,15 +200,15 @@ const storageWorker = new Worker(
           // succeeded but before the status update was committed. Reconcile by updating
           // the status — no re-upload is needed because the file is already in Drive.
           if (caseFile.storageFileId && caseFile.uploadStatus !== 'uploaded') {
-            console.info('[StorageWorker] Reconciling partial upload state', { fileId });
+            console.info('[StorageWorker]', { event: 'partial_state_reconcile', jobType: job.name, firmId, fileId });
             await CaseFile.findByIdAndUpdate(fileId, { uploadStatus: 'uploaded' });
-            console.info('[StorageWorker] Reconciliation complete — skipping re-upload', { fileId });
+            console.info('[StorageWorker]', { event: 'reconcile_complete', jobType: job.name, firmId, fileId });
             break;
           }
 
           // Phase 1 — Idempotency: skip if already uploaded
           if (caseFile.uploadStatus === 'uploaded') {
-            console.info('[StorageWorker] Skipping already processed file', { fileId });
+            console.info('[StorageWorker]', { event: 'idempotent_skip', jobType: job.name, firmId, fileId });
             break;
           }
 
@@ -254,7 +267,7 @@ const storageWorker = new Worker(
                 clientId: caseFile.clientId || undefined,
               });
               if (existing) {
-                console.info('[StorageWorker] Attachment already exists, skipping creation', { firmId });
+                console.info('[StorageWorker]', { event: 'attachment_exists_skip', jobType: job.name, firmId });
               } else {
                 await Attachment.create({
                   firmId: caseFile.firmId,
@@ -275,7 +288,9 @@ const storageWorker = new Worker(
               }
             } catch (attachErr) {
               // Attachment creation failure is non-fatal for the upload itself
-              console.error(`[StorageWorker] Failed to create Attachment record`, {
+              console.error('[StorageWorker]', {
+                event: 'attachment_create_failed',
+                jobType: job.name,
                 firmId,
                 message: attachErr.message,
               });
@@ -306,7 +321,9 @@ const storageWorker = new Worker(
               });
             } catch (auditErr) {
               // Audit failure is non-fatal
-              console.error(`[StorageWorker] Failed to create audit records`, {
+              console.error('[StorageWorker]', {
+                event: 'audit_create_failed',
+                jobType: job.name,
                 firmId,
                 message: auditErr.message,
               });
@@ -318,20 +335,22 @@ const storageWorker = new Worker(
             await fs.unlink(caseFile.localPath);
           } catch (unlinkErr) {
             // Non-fatal: log and continue
-            console.warn(`[StorageWorker] Could not delete local file`, {
+            console.warn('[StorageWorker]', {
+              event: 'local_file_delete_failed',
+              jobType: job.name,
               path: caseFile.localPath,
               message: unlinkErr.message,
             });
           }
 
-          console.info(`[StorageWorker] File uploaded`, { firmId, folderId: targetFolderId });
+          console.info('[StorageWorker]', { event: 'file_uploaded', jobType: job.name, firmId, folderId: targetFolderId });
           break;
         }
 
         case 'DELETE_FILE': {
           const { folderId } = job.data;
           await provider.deleteFile(firmId, folderId);
-          console.info(`[StorageWorker] File deleted`, { firmId });
+          console.info('[StorageWorker]', { event: 'file_deleted', jobType: job.name, firmId });
           break;
         }
 
@@ -339,22 +358,18 @@ const storageWorker = new Worker(
           throw new UnrecoverableError(`[StorageWorker] Unknown job type: ${job.name}`);
       }
 
-      // Phase 5 — Circuit Breaker: record success
+      // Circuit Breaker: record success
       circuitSuccess(circuitKey);
-      // Phase 6 — Observability: track success
+      // Observability: track success
       recordStorageJobSuccess();
 
     } catch (err) {
-      // Phase 5 — Circuit Breaker: record failure only for actual provider/network errors,
-      // not for local validation errors (UnrecoverableError) or missing DB records.
-      // An error is treated as provider-related when it carries an HTTP status code or
-      // a well-known network error code from the provider SDK.
-      const isProviderError = (err.status != null && !(err instanceof UnrecoverableError)) ||
-        err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT' || err.code === 'ENOTFOUND';
-      if (isProviderError) {
+      // Circuit Breaker: record failure only for retryable (provider/network) errors.
+      // `isRetryable` already identifies these — reuse the same classification.
+      if (isRetryable(err)) {
         circuitFailure(circuitKey);
       }
-      // Phase 2 — Reclassify non-retryable errors so BullMQ stops retrying
+      // Reclassify non-retryable errors so BullMQ stops retrying immediately
       if (!isRetryable(err) && !(err instanceof UnrecoverableError)) {
         throw new UnrecoverableError(err.message);
       }
@@ -364,45 +379,60 @@ const storageWorker = new Worker(
   { connection: { url: redisUrl } }
 );
 
-// On permanent failure (after all retries), mark storage as errored and route to DLQ
+// On permanent failure (after all retries OR UnrecoverableError), mark storage as errored and route to DLQ.
+// Phase 5: recordStorageJobFailure is called ONLY here (permanent failure), never on transient retries.
 storageWorker.on('failed', async (job, err) => {
-  // Phase 6 — Observability: track failure
+  const isUnrecoverable = err instanceof UnrecoverableError;
+  const isExhausted = job && job.attemptsMade >= (job.opts.attempts || 5);
+
+  if (!isUnrecoverable && !isExhausted) {
+    // Transient failure that will be retried — do not count as permanent failure
+    return;
+  }
+
+  // Permanent failure — record and route to DLQ
   recordStorageJobFailure();
 
-  if (job && job.attemptsMade >= (job.opts.attempts || 5)) {
-    const { firmId, caseId, provider: providerName, idempotencyKey } = job.data || {};
-    console.error(`[StorageWorker] Job permanently failed`, { type: job.name, firmId, message: err.message });
+  const { firmId, caseId, provider: providerName, idempotencyKey } = job.data || {};
+  console.error('[StorageWorker]', {
+    event: 'job_permanently_failed',
+    jobType: job.name,
+    firmId,
+    attempt: job.attemptsMade,
+    message: err.message,
+  });
 
-    if (firmId) {
-      try {
-        await FirmStorage.findOneAndUpdate({ firmId }, { status: 'error' });
-      } catch (updateErr) {
-        console.error(`[StorageWorker] Failed to update storage status to error`, { firmId });
-      }
-    }
-
-    // Phase 3 — Dead Letter Queue: move to DLQ for manual recovery
+  if (firmId) {
     try {
-      await moveToDLQ({
-        firmId,
-        caseId,
-        jobType: job.name,
-        provider: providerName,
-        errorCode: err.message,
-        retryCount: job.attemptsMade,
-        idempotencyKey,
-      });
-      recordStorageDLQEntry();
-      console.info(`[StorageWorker] Job moved to DLQ`, { type: job.name, firmId });
-    } catch (dlqErr) {
-      console.error(`[StorageWorker] Failed to move job to DLQ`, { firmId, message: dlqErr.message });
+      await FirmStorage.findOneAndUpdate({ firmId }, { status: 'error' });
+    } catch (updateErr) {
+      console.error('[StorageWorker]', { event: 'status_update_failed', firmId });
     }
+  }
+
+  // Dead Letter Queue: move to DLQ for manual recovery
+  try {
+    await moveToDLQ({
+      firmId,
+      caseId,
+      jobType: job.name,
+      provider: providerName,
+      errorCode: err.message,
+      retryCount: job.attemptsMade,
+      idempotencyKey,
+    });
+    console.info('[StorageWorker]', { event: 'job_moved_to_dlq', jobType: job.name, firmId });
+  } catch (dlqErr) {
+    console.error('[StorageWorker]', { event: 'dlq_move_failed', firmId, message: dlqErr.message });
   }
 });
 
 storageWorker.on('error', (err) => {
   // Prevent unhandled error from crashing the process
-  console.error(`[StorageWorker] Worker error:`, { message: err.message });
+  console.error('[StorageWorker]', { event: 'worker_error', message: err.message });
 });
 
 module.exports = storageWorker;
+// Export for testing only — allows unit tests to verify retry classification
+// without duplicating the logic.
+module.exports.isRetryable = isRetryable;

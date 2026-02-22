@@ -48,4 +48,15 @@ async function moveToDLQ({ firmId, caseId, jobType, provider, errorCode, retryCo
   });
 }
 
-module.exports = { storageDLQ, moveToDLQ };
+/**
+ * Return the number of jobs currently waiting in the dead letter queue.
+ * Uses the BullMQ waiting count as the authoritative measure — more accurate
+ * than a cumulative in-memory counter.
+ *
+ * @returns {Promise<number>}
+ */
+async function getDLQSize() {
+  return storageDLQ.getWaitingCount();
+}
+
+module.exports = { storageDLQ, moveToDLQ, getDLQSize };
