@@ -3,6 +3,8 @@ const crypto = require('crypto');
 const Firm = require('../models/Firm.model');
 const Client = require('../models/Client.model');
 const User = require('../models/User.model');
+const TenantKey = require('../security/tenantKey.model');
+const { generateEncryptedDek } = require('../security/encryption.service');
 const emailService = require('./email.service');
 const { generateNextClientId } = require('./clientIdGenerator');
 const { generateNextXID } = require('./xIDGenerator');
@@ -27,6 +29,8 @@ const defaultDeps = {
   Firm,
   Client,
   User,
+  TenantKey,
+  generateEncryptedDek,
   emailService,
   generateNextClientId,
   generateNextXID,
@@ -104,135 +108,159 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
 
   validatePayload(payload);
 
+  // Warn if MongoDB topology may not support transactions
+  const topologyType = mongoose.connection.client?.topology?.description?.type;
+  if (topologyType && !topologyType.includes('ReplicaSet')) {
+    console.warn('[FIRM_BOOTSTRAP] MongoDB is not a replica set. Transactions may not work.');
+  }
+
+  // Fail fast: validate encryption provider before starting the transaction
+  const encryptedDek = await deps.generateEncryptedDek().catch((err) => {
+    throw new FirmBootstrapError(`Encryption provider error: ${err.message}`, 500);
+  });
+
+  if (!encryptedDek) {
+    throw new FirmBootstrapError('Failed to generate encrypted DEK', 500);
+  }
+
   const session = await deps.startSession();
+  session.startTransaction();
+
   let createdEntities = null;
 
   try {
-    await session.withTransaction(async () => {
-      const { name, adminName, adminEmail } = payload;
-      const normalizedName = name.trim();
-      const { firmId, firmSlug } = await buildIds(deps, session, normalizedName);
-      await ensureNotDuplicate({ deps, name: normalizedName, firmSlug, session });
+    const { name, adminName, adminEmail } = payload;
+    const normalizedName = name.trim();
+    const { firmId, firmSlug } = await buildIds(deps, session, normalizedName);
+    await ensureNotDuplicate({ deps, name: normalizedName, firmSlug, session });
 
-      const firm = new deps.Firm({
-        firmId,
-        name: normalizedName,
-        firmSlug,
-        status: 'ACTIVE',
-        bootstrapStatus: 'PENDING',
-      });
-      await firm.save({ session });
+    const [firm] = await deps.Firm.create([{
+      firmId,
+      name: normalizedName,
+      firmSlug,
+      status: 'ACTIVE',
+      bootstrapStatus: 'PENDING',
+    }], { session });
 
-      const clientId = await deps.generateNextClientId(firm._id, session);
-      const defaultClient = new deps.Client({
-        clientId,
-        businessName: normalizedName,
-        businessAddress: DEFAULT_BUSINESS_ADDRESS,
-        primaryContactNumber: DEFAULT_CONTACT_NUMBER,
-        businessEmail: `${firmId.toLowerCase()}@${SYSTEM_EMAIL_DOMAIN}`,
-        firmId: firm._id,
-        isSystemClient: true,
-        isInternal: true,
-        createdBySystem: true,
-        isActive: true,
-        status: 'ACTIVE',
-        createdByXid: 'SUPERADMIN',
-        createdBy: process.env.SUPERADMIN_EMAIL || `superadmin@${SYSTEM_EMAIL_DOMAIN}`,
-      });
-      await defaultClient.save({ session });
+    console.log('Firm created:', firm?._id);
 
-      firm.defaultClientId = defaultClient._id;
-      await firm.save({ session });
+    const clientId = await deps.generateNextClientId(firm._id, session);
+    const [defaultClient] = await deps.Client.create([{
+      clientId,
+      businessName: normalizedName,
+      businessAddress: DEFAULT_BUSINESS_ADDRESS,
+      primaryContactNumber: DEFAULT_CONTACT_NUMBER,
+      businessEmail: `${firmId.toLowerCase()}@${SYSTEM_EMAIL_DOMAIN}`,
+      firmId: firm._id,
+      isSystemClient: true,
+      isInternal: true,
+      createdBySystem: true,
+      isActive: true,
+      status: 'ACTIVE',
+      createdByXid: 'SUPERADMIN',
+      createdBy: process.env.SUPERADMIN_EMAIL || `superadmin@${SYSTEM_EMAIL_DOMAIN}`,
+    }], { session });
 
-      const adminXID = await deps.generateNextXID(firm._id, session);
-      const setupToken = crypto.randomBytes(32).toString('hex');
-      const setupTokenHash = crypto.createHash('sha256').update(setupToken).digest('hex');
-      const setupExpires = new Date(Date.now() + SETUP_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000);
+    firm.defaultClientId = defaultClient._id;
+    await firm.save({ session });
 
-      const adminUser = new deps.User({
-        xID: adminXID,
-        name: adminName.trim(),
-        email: adminEmail.trim().toLowerCase(),
-        firmId: firm._id,
-        defaultClientId: defaultClient._id,
-        role: 'Admin',
-        // Admin onboarding state: INVITED (equivalent to PENDING_SETUP)
-        // User cannot login until they set password via email link
-        // Status will transition to ACTIVE after password is set
-        status: 'INVITED',
-        isActive: true,
-        isSystem: true,
-        passwordSet: false,
-        mustSetPassword: false,
-        passwordSetAt: null,
-        mustChangePassword: true,
-        passwordSetupTokenHash: setupTokenHash,
-        passwordSetupExpires: setupExpires,
-        inviteSentAt: new Date(),
-      });
-      await adminUser.save({ session });
+    await deps.TenantKey.create([{
+      tenantId: firm._id.toString(),
+      encryptedDek,
+    }], { session });
 
-      firm.bootstrapStatus = 'COMPLETED';
-      await firm.save({ session });
+    console.log('TenantKey created');
 
-      createdEntities = { firm, defaultClient, adminUser, adminXID, setupToken, firmSlug };
-    });
+    const adminXID = await deps.generateNextXID(firm._id, session);
+    const setupToken = crypto.randomBytes(32).toString('hex');
+    const setupTokenHash = crypto.createHash('sha256').update(setupToken).digest('hex');
+    const setupExpires = new Date(Date.now() + SETUP_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000);
 
-    if (!createdEntities) {
-      throw new FirmBootstrapError('Transaction aborted', 500);
+    const [adminUser] = await deps.User.create([{
+      xID: adminXID,
+      name: adminName.trim(),
+      email: adminEmail.trim().toLowerCase(),
+      firmId: firm._id,
+      defaultClientId: defaultClient._id,
+      role: 'Admin',
+      // Admin onboarding state: INVITED (equivalent to PENDING_SETUP)
+      // User cannot login until they set password via email link
+      // Status will transition to ACTIVE after password is set
+      status: 'INVITED',
+      isActive: true,
+      isSystem: true,
+      passwordSet: false,
+      mustSetPassword: false,
+      passwordSetAt: null,
+      mustChangePassword: true,
+      passwordSetupTokenHash: setupTokenHash,
+      passwordSetupExpires: setupExpires,
+      inviteSentAt: new Date(),
+    }], { session });
+
+    firm.bootstrapStatus = 'COMPLETED';
+    await firm.save({ session });
+
+    createdEntities = { firm, defaultClient, adminUser, adminXID, setupToken, firmSlug };
+
+    await session.commitTransaction();
+  } catch (err) {
+    await session.abortTransaction();
+    if (err instanceof FirmBootstrapError) {
+      throw err;
     }
-
-    const { firm, defaultClient, adminUser, adminXID, setupToken, firmSlug } = createdEntities;
-
-    try {
-      const superadminEmail = process.env.SUPERADMIN_EMAIL;
-      if (superadminEmail) {
-        await deps.emailService.sendFirmCreatedEmail(superadminEmail, {
-          firmId: firm.firmId,
-          firmName: firm.name,
-          defaultClientId: defaultClient.clientId,
-          adminXID,
-          adminEmail: adminUser.email,
-        }, context);
-      }
-    } catch (emailError) {
-      console.error('[FIRM_BOOTSTRAP] Failed to send firm created email:', emailError.message);
-    }
-
-    try {
-      console.log(`[FIRM_BOOTSTRAP] Sending password setup email to ${adminUser.email} (xID: ${adminXID})`);
-      const emailResult = await deps.emailService.sendPasswordSetupEmail({
-        email: adminUser.email,
-        name: adminUser.name,
-        token: setupToken,
-        xID: adminXID,
-        firmSlug,
-        context,
-      });
-      if (!emailResult.success) {
-        console.warn('[FIRM_BOOTSTRAP] Password setup email not sent:', emailResult.error);
-      } else {
-        console.log('[FIRM_BOOTSTRAP] Password setup email queued successfully');
-      }
-    } catch (emailError) {
-      console.warn('[FIRM_BOOTSTRAP] Failed to send admin invite email:', emailError.message);
-      // Email issues are logged but don't block firm creation - admin can be invited manually if needed
-    }
-
-    return {
-      firm,
-      defaultClient,
-      adminUser,
-      requestId,
-    };
-  } catch (error) {
-    if (error instanceof FirmBootstrapError) {
-      throw error;
-    }
-    throw new FirmBootstrapError(error.message || 'Failed to create firm', 500);
+    throw new FirmBootstrapError(err.message || 'Failed to create firm', 500);
   } finally {
     await session.endSession();
   }
+
+  if (!createdEntities) {
+    throw new FirmBootstrapError('Transaction aborted', 500);
+  }
+
+  const { firm, defaultClient, adminUser, adminXID, setupToken, firmSlug } = createdEntities;
+
+  try {
+    const superadminEmail = process.env.SUPERADMIN_EMAIL;
+    if (superadminEmail) {
+      await deps.emailService.sendFirmCreatedEmail(superadminEmail, {
+        firmId: firm.firmId,
+        firmName: firm.name,
+        defaultClientId: defaultClient.clientId,
+        adminXID,
+        adminEmail: adminUser.email,
+      }, context);
+    }
+  } catch (emailError) {
+    console.error('[FIRM_BOOTSTRAP] Failed to send firm created email:', emailError.message);
+  }
+
+  try {
+    console.log(`[FIRM_BOOTSTRAP] Sending password setup email to ${adminUser.email} (xID: ${adminXID})`);
+    const emailResult = await deps.emailService.sendPasswordSetupEmail({
+      email: adminUser.email,
+      name: adminUser.name,
+      token: setupToken,
+      xID: adminXID,
+      firmSlug,
+      context,
+    });
+    if (!emailResult.success) {
+      console.warn('[FIRM_BOOTSTRAP] Password setup email not sent:', emailResult.error);
+    } else {
+      console.log('[FIRM_BOOTSTRAP] Password setup email queued successfully');
+    }
+  } catch (emailError) {
+    console.warn('[FIRM_BOOTSTRAP] Failed to send admin invite email:', emailError.message);
+    // Email issues are logged but don't block firm creation - admin can be invited manually if needed
+  }
+
+  return {
+    firm,
+    defaultClient,
+    adminUser,
+    requestId,
+  };
 };
 
 module.exports = {

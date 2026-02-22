@@ -34,7 +34,8 @@ const recordAdminAudit = async ({
   if (!actor) {
     throw new Error('[ADMIN_AUDIT] actor is required to record audit');
   }
-  if (!firmId) {
+  // firmId may be null for SUPER_ADMIN global-scope actions (scope === 'GLOBAL')
+  if (!firmId && scope !== 'GLOBAL') {
     throw new Error('[ADMIN_AUDIT] firmId is required to record audit');
   }
   const entry = {

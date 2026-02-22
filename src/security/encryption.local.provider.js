@@ -142,6 +142,24 @@ function zeroBuffer(buf) {
 
 class LocalEncryptionProvider extends EncryptionProvider {
   /**
+   * Generate a new encrypted DEK without persisting it.
+   * Used for atomic tenant key creation inside a MongoDB transaction.
+   *
+   * @returns {Promise<string>}  Encrypted DEK as iv:authTag:ciphertext (base64)
+   */
+  async generateEncryptedDek() {
+    const masterKey = loadMasterKey();
+    const dek = crypto.randomBytes(KEY_LENGTH);
+    try {
+      const { iv, authTag, ciphertext } = aesgcmEncrypt(dek, masterKey);
+      return encodePayload(iv, authTag, ciphertext);
+    } finally {
+      zeroBuffer(dek);
+      zeroBuffer(masterKey);
+    }
+  }
+
+  /**
    * Generate a new DEK for `tenantId`, encrypt it with the KEK, and persist
    * the encrypted DEK.  A no-op if the tenant already has a key.
    *

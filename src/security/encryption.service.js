@@ -137,10 +137,33 @@ async function decrypt(value, tenantId, role) {
   }
 }
 
+/**
+ * Generate a new encrypted DEK without persisting it to the database.
+ * Call this before a transaction to validate the encryption provider is
+ * functional and to obtain the encryptedDek for atomic TenantKey creation
+ * inside the transaction.
+ *
+ * Fails fast if MASTER_ENCRYPTION_KEY is missing (local provider) or the
+ * provider is otherwise misconfigured.
+ *
+ * @returns {Promise<string>}  Encrypted DEK as iv:authTag:ciphertext (base64)
+ */
+async function generateEncryptedDek() {
+  const providerName = (process.env.ENCRYPTION_PROVIDER || 'local').toLowerCase();
+  if (providerName === 'local') {
+    const masterKey = process.env.MASTER_ENCRYPTION_KEY || process.env.MASTER_KEY;
+    if (!masterKey) {
+      throw new Error('Master encryption key missing for local provider. Set MASTER_ENCRYPTION_KEY.');
+    }
+  }
+  return getProvider().generateEncryptedDek();
+}
+
 module.exports = {
   encrypt,
   decrypt,
   ensureTenantKey,
+  generateEncryptedDek,
   ForbiddenError,
   looksEncrypted,
   // Exposed for testing only
