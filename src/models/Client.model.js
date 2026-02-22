@@ -561,4 +561,53 @@ clientSchema.index({ firmId: 1, isInternal: 1 }, {
 
 clientSchema.plugin(softDeletePlugin);
 
+// ============================================================
+// TRANSPARENT FIELD ENCRYPTION — AES-256-GCM envelope model
+// ============================================================
+// Sensitive Client contact fields are encrypted at rest.  Encryption happens
+// at the model layer (pre-save hook).  DECRYPTION happens at the repository
+// layer (ClientRepository.js) so that role-based restrictions can be enforced
+// before any plaintext is returned to callers.
+//
+// Encrypted fields:
+//   - primaryContactNumber
+//   - businessEmail
+//
+// Note: businessName is NOT encrypted because it is indexed and used for
+// display queries where the plaintext must be searchable.
+//
+// TODO: Write migration script to encrypt existing plaintext fields.
+
+const { looksEncrypted: _clientIsEncryptedValue } = require('../security/encryption.utils');
+
+/** Client fields that must be encrypted before persisting. */
+const _CLIENT_SENSITIVE_FIELDS = ['primaryContactNumber', 'businessEmail'];
+
+/**
+ * Lazy-cached reference to the encryption service.
+ * Using a lazy require avoids potential circular-dependency issues during
+ * module initialisation while still benefiting from Node's module cache.
+ */
+let _clientEncService;
+function _getClientEncService() {
+  if (!_clientEncService) _clientEncService = require('../security/encryption.service');
+  return _clientEncService;
+}
+
+/**
+ * Encrypt sensitive fields on a Client document before saving.
+ * No-op when MASTER_ENCRYPTION_KEY is not configured.
+ */
+clientSchema.pre('save', async function () {
+  if (!process.env.MASTER_ENCRYPTION_KEY || !this.firmId) return;
+  const { encrypt: _enc, ensureTenantKey: _ensure } = _getClientEncService();
+  const tenantId = String(this.firmId);
+  await _ensure(tenantId);
+  for (const field of _CLIENT_SENSITIVE_FIELDS) {
+    if (this[field] != null && !_clientIsEncryptedValue(this[field])) {
+      this[field] = await _enc(String(this[field]), tenantId);
+    }
+  }
+});
+
 module.exports = mongoose.model('Client', clientSchema);

@@ -811,4 +811,53 @@ caseSchema.index({ firmId: 1, assignedToXID: 1 }); // Firm-scoped assignment que
 
 caseSchema.plugin(softDeletePlugin);
 
+// ============================================================
+// TRANSPARENT FIELD ENCRYPTION — AES-256-GCM envelope model
+// ============================================================
+// Sensitive Case fields are encrypted at rest.  Encryption happens at the
+// model layer (pre-save hook).  DECRYPTION happens at the repository layer
+// (CaseRepository.js) so that role-based restrictions can be enforced before
+// any plaintext is returned to callers.
+//
+// Encrypted fields:
+//   - description
+//
+// The pre-save hook calls ensureTenantKey() which auto-generates the
+// per-tenant DEK on first use (envelope encryption — see encryption.service.js).
+//
+// TODO: Write migration script to encrypt existing plaintext fields.
+
+const { looksEncrypted: _caseIsEncryptedValue } = require('../security/encryption.utils');
+
+/** Fields that must be encrypted before persisting. */
+const _CASE_SENSITIVE_FIELDS = ['description'];
+
+/**
+ * Lazy-cached reference to the encryption service.
+ * Using a lazy require avoids potential circular-dependency issues during
+ * module initialisation while still benefiting from Node's module cache
+ * (the require() call after the first load is a simple hash-map lookup).
+ */
+let _caseEncService;
+function _getCaseEncService() {
+  if (!_caseEncService) _caseEncService = require('../security/encryption.service');
+  return _caseEncService;
+}
+
+/**
+ * Encrypt sensitive fields on a Case document before saving.
+ * No-op when MASTER_ENCRYPTION_KEY is not configured.
+ */
+caseSchema.pre('save', async function () {
+  if (!process.env.MASTER_ENCRYPTION_KEY || !this.firmId) return;
+  const { encrypt: _enc, ensureTenantKey: _ensure } = _getCaseEncService();
+  const tenantId = String(this.firmId);
+  await _ensure(tenantId);
+  for (const field of _CASE_SENSITIVE_FIELDS) {
+    if (this[field] != null && !_caseIsEncryptedValue(this[field])) {
+      this[field] = await _enc(String(this[field]), tenantId);
+    }
+  }
+});
+
 module.exports = mongoose.model('Case', caseSchema);

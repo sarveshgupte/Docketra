@@ -144,10 +144,12 @@ function shouldPassValidationWithPlaintextPassword() {
   process.env.SUPERADMIN_EMAIL = 'sa@plaintext.test';
   process.env.SUPERADMIN_OBJECT_ID = '000000000000000000000001';
   process.env.DISABLE_GOOGLE_AUTH = 'true';
+  process.env.ENCRYPTION_PROVIDER = 'disabled'; // opt out of encryption for this test
 
   const silentLogger = { error: () => {}, warn: () => {}, log: () => {} };
   const result = validateEnv({ exitOnError: false, logger: silentLogger });
   assert.strictEqual(result.valid, true, 'Env validation should pass when SUPERADMIN_PASSWORD is provided');
+  delete process.env.ENCRYPTION_PROVIDER;
 }
 
 async function run() {
