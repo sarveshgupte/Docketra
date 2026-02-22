@@ -385,6 +385,13 @@ app.use(errorHandler);
 // Start server
 const PORT = config.port;
 const server = app.listen(PORT, () => {
+  // Schedule stale temp-upload cleanup every 6 hours (no external cron dependency)
+  const { cleanupStaleTmpUploads } = require('./utils/cleanupTmpUploads');
+  setInterval(() => {
+    cleanupStaleTmpUploads().catch(err =>
+      console.error('[cleanupTmpUploads] failed', { message: err.message })
+    );
+  }, 6 * 60 * 60 * 1000); // 6 hours
   console.log(`
 ╔════════════════════════════════════════════╗
 ║         Docketra API Server                ║
