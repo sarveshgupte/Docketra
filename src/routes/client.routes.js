@@ -40,6 +40,30 @@ const upload = multer({
 });
 
 /**
+ * Disk-storage multer for CFS uploads.
+ * Files are saved locally so the async worker can read them without
+ * passing buffers through Redis.
+ */
+const uploadTmpDir = path.join(__dirname, '../../uploads/tmp');
+if (!fs.existsSync(uploadTmpDir)) {
+  fs.mkdirSync(uploadTmpDir, { recursive: true });
+}
+const uploadCFS = multer({
+  storage: multer.diskStorage({
+    destination: function (req, file, cb) {
+      cb(null, uploadTmpDir);
+    },
+    filename: function (req, file, cb) {
+      const uniqueSuffix = Date.now() + '-' + Math.random().toString(36).substring(7);
+      cb(null, uniqueSuffix + path.extname(file.originalname));
+    },
+  }),
+  limits: {
+    fileSize: 25 * 1024 * 1024, // 25MB limit
+  },
+});
+
+/**
  * Client Management Routes
  * 
  * PR #39: Direct client management for Admin users
@@ -77,7 +101,7 @@ router.delete('/:clientId/fact-sheet/files/:fileId', authorizeFirmPermission('CL
 
 // Client CFS endpoints
 // Admin-only: Upload and delete
-router.post('/:clientId/cfs/files', authorizeFirmPermission('CLIENT_MANAGE'), attachmentLimiter, upload.single('file'), uploadClientCFSFile);
+router.post('/:clientId/cfs/files', authorizeFirmPermission('CLIENT_MANAGE'), attachmentLimiter, uploadCFS.single('file'), uploadClientCFSFile);
 router.delete('/:clientId/cfs/files/:attachmentId', authorizeFirmPermission('CLIENT_MANAGE'), userWriteLimiter, deleteClientCFSFile);
 // All authenticated users: List and download (read-only)
 router.get('/:clientId/cfs/files', authorizeFirmPermission('CLIENT_VIEW'), userReadLimiter, listClientCFSFiles);

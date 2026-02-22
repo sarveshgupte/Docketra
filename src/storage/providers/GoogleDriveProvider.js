@@ -10,6 +10,7 @@
  */
 
 const { google } = require('googleapis');
+const { Readable } = require('stream');
 const { StorageProvider } = require('../StorageProvider.interface');
 
 class GoogleDriveProvider extends StorageProvider {
@@ -104,9 +105,39 @@ class GoogleDriveProvider extends StorageProvider {
     return { folderId };
   }
 
+  /**
+   * Upload a file to a Google Drive folder.
+   *
+   * @param {string} firmId
+   * @param {string} folderId - Google Drive folder ID to upload into
+   * @param {Buffer} fileBuffer - File content
+   * @param {{ name: string, mimeType: string }} metadata
+   * @returns {Promise<{ fileId: string }>}
+   */
   async uploadFile(firmId, folderId, fileBuffer, metadata) {
-    console.info(`[Storage][GoogleDrive] uploadFile called for firm: ${firmId}, folder: ${folderId}, file: ${metadata && metadata.name}`);
-    return { fileId: null };
+    if (!this.oauthClient) {
+      throw new Error(
+        '[GoogleDriveProvider] oauthClient is required for uploadFile. ' +
+        'Pass an authenticated OAuth2 client to the constructor.'
+      );
+    }
+    const drive = google.drive({ version: 'v3', auth: this.oauthClient });
+    const bodyStream = Readable.from(fileBuffer);
+    const res = await drive.files.create({
+      requestBody: {
+        name: metadata.name,
+        parents: [folderId],
+      },
+      media: {
+        mimeType: metadata.mimeType,
+        body: bodyStream,
+      },
+      fields: 'id',
+    });
+    const fileId = res.data.id;
+    // fileId intentionally not logged (security: no storage IDs in logs)
+    console.info(`[Storage][GoogleDrive] File uploaded`, { firmId, folderId });
+    return { fileId };
   }
 
   async deleteFile(firmId, fileId) {

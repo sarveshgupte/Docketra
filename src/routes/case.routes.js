@@ -47,11 +47,11 @@ const {
 
 /**
  * Configure multer for file uploads
- * Store files in uploads/ directory with unique names
+ * Store files in uploads/tmp/ directory with unique names
  */
 
-// Ensure uploads directory exists
-const uploadDir = path.join(__dirname, '../../uploads');
+// Ensure uploads/tmp directory exists
+const uploadDir = path.join(__dirname, '../../uploads/tmp');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }

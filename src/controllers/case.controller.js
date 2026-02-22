@@ -19,6 +19,8 @@ const { cleanupTempFile } = require('../utils/tempFile');
 const { resolveCaseIdentifier, resolveCaseDocument } = require('../utils/caseIdentifier');
 const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
 const { areFileUploadsDisabled } = require('../services/featureFlags.service');
+const { enqueueStorageJob, JOB_TYPES } = require('../queues/storage.queue');
+const CaseFile = require('../models/CaseFile.model');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -616,121 +618,63 @@ const addAttachment = async (req, res) => {
       });
     }
     
-    // Upload file to Google Drive
-    let driveFileId = null;
-    let fileSize = req.file.size;
-    let fileMimeType = req.file.mimetype || getMimeType(req.file.originalname);
-    
-    let uploadChecksum = null;
-    try {
-      const provider = await StorageProviderFactory.getProvider(req.user.firmId);
-      // Ensure case has Drive folder structure
-      if (!caseData.drive?.attachmentsFolderId) {
-        return res.status(500).json({
-          success: false,
-          message: 'Case Drive folder structure not initialized',
-        });
-      }
-      
-      // Read file content from multer's temporary location
-      const fileBuffer = await fs.readFile(req.file.path);
-      const checksum = createHash('sha256').update(fileBuffer).digest('hex');
-      uploadChecksum = checksum;
+    // Queue file upload to Google Drive asynchronously
+    const firmId = req.user.firmId.toString();
+    const fileMimeType = req.file.mimetype || getMimeType(req.file.originalname);
+    const fileSize = req.file.size;
 
-      const duplicate = await Attachment.findOne({
-        caseId: caseData.caseId,
-        firmId: req.user.firmId,
-        checksum,
-      });
-      if (duplicate) {
-        await cleanupTempFile(req.file.path);
-        return res.status(409).json({
-          success: false,
-          message: 'Duplicate upload detected',
-        });
-      }
-      
-      const cfsDriveService = require('../services/cfsDrive.service');
-      
-      const targetFolderId = cfsDriveService.getFolderIdForFileType(
-        caseData.drive,
-        'attachment'
-      );
-      
-      const driveFile = await provider.uploadFile(
-        fileBuffer,
-        req.file.originalname,
-        fileMimeType,
-        targetFolderId
-      );
-      
-      driveFileId = driveFile.id;
-      fileSize = driveFile.size || fileSize;
-      fileMimeType = driveFile.mimeType || fileMimeType;
-      
-      // Clean up temporary file
-      await cleanupTempFile(req.file.path);
+    // Move uploaded file to a firm-scoped temp directory so the worker can read it
+    const tmpDir = path.join(__dirname, '../../uploads/tmp', firmId);
+    await fs.mkdir(tmpDir, { recursive: true });
+    const destPath = path.join(tmpDir, path.basename(req.file.path));
+    await fs.rename(req.file.path, destPath);
 
-      // Persist checksum for deduplication
-    } catch (error) {
-      console.error('[addAttachment] Error uploading to Google Drive:', error);
-      
-      // Clean up temporary file on error
-      await cleanupTempFile(req.file.path);
-      
-      return res.status(500).json({
-        success: false,
-        message: 'Error uploading file to Google Drive',
-        error: error.message,
-      });
-    }
-    
-    // Create attachment record with Google Drive metadata
-    const attachment = await Attachment.create({
+    // Compute checksum for dedup before creating the staging record
+    const fileBuffer = await fs.readFile(destPath);
+    const checksum = createHash('sha256').update(fileBuffer).digest('hex');
+
+    const duplicate = await Attachment.findOne({
       caseId: caseData.caseId,
       firmId: req.user.firmId,
-      fileName: req.file.originalname,
-      driveFileId: driveFileId,
-      size: fileSize,
+      checksum,
+    });
+    if (duplicate) {
+      await cleanupTempFile(destPath);
+      return res.status(409).json({
+        success: false,
+        message: 'Duplicate upload detected',
+      });
+    }
+
+    // Create staging record — upload is processed asynchronously by the worker
+    const caseFile = await CaseFile.create({
+      firmId: req.user.firmId,
+      caseId: caseData.caseId,
+      localPath: destPath,
+      originalName: req.file.originalname,
       mimeType: fileMimeType,
+      size: fileSize,
+      uploadStatus: 'pending',
       description,
+      checksum,
       createdBy: createdBy.toLowerCase(),
       createdByXID: req.user.xID,
       createdByName: req.user.name,
       note,
-      checksum: uploadChecksum,
+      source: 'upload',
     });
-    
-    // PR #45: Add CaseAudit entry with xID attribution
-    // Sanitize filename for logging to prevent log injection
-    const sanitizedFilename = sanitizeForLog(req.file.originalname, 100);
-    await CaseAudit.create({
+
+    await enqueueStorageJob(JOB_TYPES.UPLOAD_FILE, {
+      firmId,
+      provider: 'google',
       caseId: caseData.caseId,
-      actionType: 'CASE_FILE_ATTACHED',
-      description: `File attached by ${req.user.xID}: ${sanitizedFilename}`,
-      performedByXID: req.user.xID,
-      metadata: {
-        fileName: req.file.originalname,
-        fileSize: fileSize,
-        mimeType: fileMimeType,
-        description: description,
-        driveFileId: driveFileId,
-      },
+      fileId: caseFile._id,
     });
-    
-    // Also add to CaseHistory for backward compatibility
-    await CaseHistory.create({
-      caseId: caseData.caseId,
-      actionType: 'CASE_ATTACHMENT_ADDED',
-      description: `Attachment uploaded by ${req.user.email}: ${sanitizedFilename}`,
-      performedBy: req.user.email.toLowerCase(),
-      performedByXID: req.user.xID.toUpperCase(), // Canonical identifier (uppercase)
-    });
-    
-    res.status(201).json({
+
+    return res.status(202).json({
       success: true,
-      data: attachment,
-      message: 'Attachment uploaded successfully',
+      data: caseFile,
+      message: 'File upload queued for processing',
     });
   } catch (error) {
     res.status(400).json({
