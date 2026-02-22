@@ -25,6 +25,7 @@
 
 const LocalEncryptionProvider = require('./encryption.local.provider');
 const KmsEncryptionProvider = require('./encryption.kms.provider');
+const { looksEncrypted } = require('./encryption.utils');
 
 /** Lazy-initialised singleton provider instance. */
 let _provider = null;
@@ -136,26 +137,12 @@ async function decrypt(value, tenantId, role) {
   }
 }
 
-/**
- * Heuristic check: does `value` look like an encrypted payload?
- * Encrypted payloads have exactly 3 ':'-separated base64 segments.
- *
- * @param {string} value
- * @returns {boolean}
- */
-function looksEncrypted(value) {
-  if (typeof value !== 'string') return false;
-  const parts = value.split(':');
-  if (parts.length !== 3) return false;
-  // Each segment should be non-empty base64
-  return parts.every(p => p.length > 0 && /^[A-Za-z0-9+/=]+$/.test(p));
-}
-
 module.exports = {
   encrypt,
   decrypt,
   ensureTenantKey,
   ForbiddenError,
+  looksEncrypted,
   // Exposed for testing only
   _resetProvider: () => { _provider = null; },
 };

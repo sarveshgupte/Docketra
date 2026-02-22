@@ -814,25 +814,20 @@ caseSchema.plugin(softDeletePlugin);
 // ============================================================
 // TRANSPARENT FIELD ENCRYPTION — AES-256-GCM envelope model
 // ============================================================
-// Sensitive Case fields are encrypted at rest.  The encryption service
-// is loaded lazily so that tests that do not set MASTER_ENCRYPTION_KEY
-// continue to work (encryption is skipped when the key is absent).
+// Sensitive Case fields are encrypted at rest.  Encryption happens at the
+// model layer (pre-save hook).  DECRYPTION happens at the repository layer
+// (CaseRepository.js) so that role-based restrictions can be enforced before
+// any plaintext is returned to callers.
 //
 // Encrypted fields:
 //   - description
 //
-// Encryption is applied in pre('save') and decryption in post(['find', …]).
 // The pre-save hook calls ensureTenantKey() which auto-generates the
 // per-tenant DEK on first use (envelope encryption — see encryption.service.js).
 //
 // TODO: Write migration script to encrypt existing plaintext fields.
 
-/** True when a string matches our iv:authTag:ciphertext (base64) format. */
-function _caseIsEncryptedValue(value) {
-  if (typeof value !== 'string') return false;
-  const parts = value.split(':');
-  return parts.length === 3 && parts.every(p => p.length > 0 && /^[A-Za-z0-9+/=]+$/.test(p));
-}
+const { looksEncrypted: _caseIsEncryptedValue } = require('../security/encryption.utils');
 
 /** Fields that must be encrypted before persisting. */
 const _CASE_SENSITIVE_FIELDS = ['description'];
@@ -863,33 +858,6 @@ caseSchema.pre('save', async function () {
       this[field] = await _enc(String(this[field]), tenantId);
     }
   }
-});
-
-/**
- * Decrypt sensitive fields after any find / findById / findOneAndUpdate query.
- * Works for both regular documents and lean plain-object results.
- * No-op when MASTER_ENCRYPTION_KEY is not configured.
- *
- * Temporary compatibility mode: if decryption fails (plaintext record),
- * the original value is returned unchanged.
- */
-caseSchema.post(['find', 'findOne', 'findById', 'findOneAndUpdate'], async function (result) {
-  if (!process.env.MASTER_ENCRYPTION_KEY || !result) return;
-  const { decrypt: _dec } = _getCaseEncService();
-  const docs = Array.isArray(result) ? result : [result];
-  await Promise.all(docs.map(async (doc) => {
-    if (!doc || !doc.firmId) return;
-    const tenantId = String(doc.firmId);
-    for (const field of _CASE_SENSITIVE_FIELDS) {
-      if (doc[field] != null && _caseIsEncryptedValue(doc[field])) {
-        try {
-          doc[field] = await _dec(doc[field], tenantId);
-        } catch (_e) {
-          // Plaintext compatibility: leave value unchanged if decryption fails
-        }
-      }
-    }
-  }));
 });
 
 module.exports = mongoose.model('Case', caseSchema);
