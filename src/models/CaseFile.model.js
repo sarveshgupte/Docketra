@@ -82,5 +82,6 @@ const caseFileSchema = new mongoose.Schema(
 );
 
 caseFileSchema.index({ firmId: 1, caseId: 1 });
+caseFileSchema.index({ firmId: 1, checksum: 1 });
 
 module.exports = mongoose.model('CaseFile', caseFileSchema);
