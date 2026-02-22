@@ -52,9 +52,56 @@ class GoogleDriveProvider extends StorageProvider {
     return { folderId };
   }
 
-  async createCaseFolder(firmId, caseId) {
-    console.info(`[Storage][GoogleDrive] createCaseFolder called for firm: ${firmId}, case: ${caseId}`);
-    return { folderId: null };
+  /**
+   * Create (or retrieve existing) case folder inside the firm's root Drive folder.
+   *
+   * Idempotent: if the folder already exists it is returned without creating a duplicate.
+   *
+   * @param {string} firmId
+   * @param {string} caseId
+   * @param {string} rootFolderId - Google Drive folder ID of the firm's /Docketra root.
+   * @returns {Promise<{folderId: string}>}
+   */
+  async createCaseFolder(firmId, caseId, rootFolderId) {
+    if (!this.oauthClient) {
+      throw new Error(
+        '[GoogleDriveProvider] oauthClient is required for createCaseFolder. ' +
+        'Pass an authenticated OAuth2 client to the constructor.'
+      );
+    }
+
+    const drive = google.drive({ version: 'v3', auth: this.oauthClient });
+
+    // Escape single quotes for the Drive query language (apostrophe → \')
+    const safeCaseId = caseId.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const safeRootFolderId = rootFolderId.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+    // Check whether the folder already exists (idempotency)
+    const listRes = await drive.files.list({
+      q: `name = '${safeCaseId}' and '${safeRootFolderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+      fields: 'files(id)',
+      spaces: 'drive',
+    });
+
+    if (listRes.data.files && listRes.data.files.length > 0) {
+      const folderId = listRes.data.files[0].id;
+      console.info(`[Storage][GoogleDrive] Case folder ready`, { firmId, caseId });
+      return { folderId };
+    }
+
+    // Folder does not exist — create it
+    const createRes = await drive.files.create({
+      requestBody: {
+        name: caseId,
+        mimeType: 'application/vnd.google-apps.folder',
+        parents: [rootFolderId],
+      },
+      fields: 'id',
+    });
+
+    const folderId = createRes.data.id;
+    console.info(`[Storage][GoogleDrive] Case folder ready`, { firmId, caseId });
+    return { folderId };
   }
 
   async uploadFile(firmId, folderId, fileBuffer, metadata) {
