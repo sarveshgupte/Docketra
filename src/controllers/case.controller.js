@@ -659,6 +659,14 @@ const addAttachment = async (req, res) => {
       'attachment'
     );
 
+    if (!targetFolderId) {
+      await cleanupTempFile(destPath);
+      return res.status(500).json({
+        success: false,
+        message: 'Case Drive folder structure not initialized',
+      });
+    }
+
     // Create staging record — upload is processed asynchronously by the worker
     const caseFile = await CaseFile.create({
       firmId: req.user.firmId,

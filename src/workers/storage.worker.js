@@ -97,9 +97,9 @@ const storageWorker = new Worker(
           throw new Error(`[StorageWorker] CaseFile not found: ${fileId}`);
         }
 
-        // Idempotency: skip if already uploaded (e.g. on job retry after partial success)
-        if (caseFile.uploadStatus === 'uploaded') {
-          console.info('[StorageWorker] Skipping already uploaded file', { fileId });
+        // Idempotency: skip if already uploaded or storageFileId already set (partial state protection)
+        if (caseFile.uploadStatus === 'uploaded' || caseFile.storageFileId) {
+          console.info('[StorageWorker] Skipping already processed file', { fileId });
           return;
         }
 
@@ -148,22 +148,32 @@ const storageWorker = new Worker(
         // Create the immutable Attachment record now that we have a Drive file ID
         if (caseFile.caseId || caseFile.clientId) {
           try {
-            await Attachment.create({
+            const existing = await Attachment.findOne({
               firmId: caseFile.firmId,
+              checksum: caseFile.checksum,
               caseId: caseFile.caseId || undefined,
               clientId: caseFile.clientId || undefined,
-              fileName: caseFile.originalName,
-              driveFileId,
-              size: caseFile.size,
-              mimeType: caseFile.mimeType,
-              description: caseFile.description,
-              checksum: caseFile.checksum,
-              createdBy: caseFile.createdBy,
-              createdByXID: caseFile.createdByXID,
-              createdByName: caseFile.createdByName,
-              note: caseFile.note,
-              source: caseFile.source || 'upload',
             });
+            if (existing) {
+              console.info('[StorageWorker] Attachment already exists, skipping creation', { firmId });
+            } else {
+              await Attachment.create({
+                firmId: caseFile.firmId,
+                caseId: caseFile.caseId || undefined,
+                clientId: caseFile.clientId || undefined,
+                fileName: caseFile.originalName,
+                driveFileId,
+                size: caseFile.size,
+                mimeType: caseFile.mimeType,
+                description: caseFile.description,
+                checksum: caseFile.checksum,
+                createdBy: caseFile.createdBy,
+                createdByXID: caseFile.createdByXID,
+                createdByName: caseFile.createdByName,
+                note: caseFile.note,
+                source: caseFile.source || 'upload',
+              });
+            }
           } catch (attachErr) {
             // Attachment creation failure is non-fatal for the upload itself
             console.error(`[StorageWorker] Failed to create Attachment record`, {
