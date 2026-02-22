@@ -86,10 +86,18 @@ mongoose.Model.create = function (docs, options, callback) {
   } else if (!finalOptions.session) {
     finalOptions = { ...finalOptions, session };
   }
+  // Mongoose 9+ emits a warning and ignores the session when Model.create() is called
+  // with a non-array first argument and a session option. Wrapping is only needed when
+  // a session is actually being injected — non-session creates are left completely unchanged.
+  const shouldWrap = finalOptions?.session && !Array.isArray(docs);
+  const docsArg = shouldWrap ? [docs] : docs;
   if (cb) {
-    return originalCreate.call(this, docs, finalOptions, cb);
+    return originalCreate.call(this, docsArg, finalOptions, cb);
   }
-  return originalCreate.call(this, docs, finalOptions);
+  if (shouldWrap) {
+    return originalCreate.call(this, docsArg, finalOptions).then((results) => results[0]);
+  }
+  return originalCreate.call(this, docsArg, finalOptions);
 };
 
 wrapStaticMethod('insertMany', 1);
