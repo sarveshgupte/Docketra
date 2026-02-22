@@ -12,7 +12,6 @@ const firmStorageSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Firm',
       required: true,
-      unique: true,
     },
     provider: {
       type: String,
@@ -41,5 +40,7 @@ const firmStorageSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+firmStorageSchema.index({ firmId: 1 }, { unique: true });
 
 module.exports = mongoose.model('FirmStorage', firmStorageSchema);

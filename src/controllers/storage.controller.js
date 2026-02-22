@@ -19,6 +19,8 @@ const getStorageStatus = async (req, res) => {
     }
 
     return res.json({
+      // TODO (future PR): also validate tokenExpiry and rootFolderId presence
+      // before marking a provider as truly "connected".
       connected: record.status === 'active',
       provider: record.provider,
       status: record.status,
