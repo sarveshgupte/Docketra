@@ -60,6 +60,25 @@ const validateEnv = ({ exitOnError = true, logger = console } = {}) => {
     }
   }
 
+  // MASTER_ENCRYPTION_KEY is required unless encryption is explicitly disabled.
+  // Use ENCRYPTION_PROVIDER=disabled to opt out of encryption (e.g. in legacy
+  // development environments that have not yet been migrated).
+  //
+  // NEVER silently disable encryption — misconfiguration must be visible at startup.
+  const encProvider = (process.env.ENCRYPTION_PROVIDER || 'local').toLowerCase();
+  if (encProvider !== 'disabled') {
+    const masterKey = process.env.MASTER_ENCRYPTION_KEY;
+    if (!masterKey) {
+      errors.push({
+        field: 'MASTER_ENCRYPTION_KEY',
+        reason:
+          'missing — generate one with: ' +
+          "node -e \"console.log(require('crypto').randomBytes(32).toString('base64'))\"" +
+          ' — set ENCRYPTION_PROVIDER=disabled to explicitly opt out of encryption',
+      });
+    }
+  }
+
   if (errors.length > 0) {
     logError(logger.error || logger.log, { message: 'Environment validation failed', errors });
     if (exitOnError) {
