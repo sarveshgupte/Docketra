@@ -561,4 +561,84 @@ clientSchema.index({ firmId: 1, isInternal: 1 }, {
 
 clientSchema.plugin(softDeletePlugin);
 
+// ============================================================
+// TRANSPARENT FIELD ENCRYPTION — AES-256-GCM envelope model
+// ============================================================
+// Sensitive Client contact fields are encrypted at rest.
+// Encryption is skipped when MASTER_ENCRYPTION_KEY is absent so that
+// existing tests (which do not configure the key) continue to pass.
+//
+// Encrypted fields:
+//   - primaryContactNumber
+//   - businessEmail
+//
+// Note: businessName is NOT encrypted because it is indexed and used for
+// display queries where the plaintext must be searchable.
+//
+// TODO: Write migration script to encrypt existing plaintext fields.
+
+/** True when a string matches our iv:authTag:ciphertext (base64) format. */
+function _clientIsEncryptedValue(value) {
+  if (typeof value !== 'string') return false;
+  const parts = value.split(':');
+  return parts.length === 3 && parts.every(p => p.length > 0 && /^[A-Za-z0-9+/=]+$/.test(p));
+}
+
+/** Client fields that must be encrypted before persisting. */
+const _CLIENT_SENSITIVE_FIELDS = ['primaryContactNumber', 'businessEmail'];
+
+/**
+ * Lazy-cached reference to the encryption service.
+ * Using a lazy require avoids potential circular-dependency issues during
+ * module initialisation while still benefiting from Node's module cache.
+ */
+let _clientEncService;
+function _getClientEncService() {
+  if (!_clientEncService) _clientEncService = require('../security/encryption.service');
+  return _clientEncService;
+}
+
+/**
+ * Encrypt sensitive fields on a Client document before saving.
+ * No-op when MASTER_ENCRYPTION_KEY is not configured.
+ */
+clientSchema.pre('save', async function () {
+  if (!process.env.MASTER_ENCRYPTION_KEY || !this.firmId) return;
+  const { encrypt: _enc, ensureTenantKey: _ensure } = _getClientEncService();
+  const tenantId = String(this.firmId);
+  await _ensure(tenantId);
+  for (const field of _CLIENT_SENSITIVE_FIELDS) {
+    if (this[field] != null && !_clientIsEncryptedValue(this[field])) {
+      this[field] = await _enc(String(this[field]), tenantId);
+    }
+  }
+});
+
+/**
+ * Decrypt sensitive fields after any find / findById / findOneAndUpdate query.
+ * Works for both regular documents and lean plain-object results.
+ * No-op when MASTER_ENCRYPTION_KEY is not configured.
+ *
+ * Temporary compatibility mode: if decryption fails (plaintext record),
+ * the original value is returned unchanged.
+ */
+clientSchema.post(['find', 'findOne', 'findById', 'findOneAndUpdate'], async function (result) {
+  if (!process.env.MASTER_ENCRYPTION_KEY || !result) return;
+  const { decrypt: _dec } = _getClientEncService();
+  const docs = Array.isArray(result) ? result : [result];
+  await Promise.all(docs.map(async (doc) => {
+    if (!doc || !doc.firmId) return;
+    const tenantId = String(doc.firmId);
+    for (const field of _CLIENT_SENSITIVE_FIELDS) {
+      if (doc[field] != null && _clientIsEncryptedValue(doc[field])) {
+        try {
+          doc[field] = await _dec(doc[field], tenantId);
+        } catch (_e) {
+          // Plaintext compatibility: leave value unchanged if decryption fails
+        }
+      }
+    }
+  }));
+});
+
 module.exports = mongoose.model('Client', clientSchema);

@@ -60,6 +60,28 @@ const validateEnv = ({ exitOnError = true, logger = console } = {}) => {
     }
   }
 
+  // MASTER_ENCRYPTION_KEY is required when the local encryption provider is active.
+  // In production the app will refuse to start without it; in other environments a
+  // warning is emitted so that development/test flows are not broken.
+  const encProvider = (process.env.ENCRYPTION_PROVIDER || 'local').toLowerCase();
+  if (encProvider !== 'disabled') {
+    const masterKey = process.env.MASTER_ENCRYPTION_KEY;
+    if (!masterKey) {
+      const reason =
+        'missing — generate one with: ' +
+        "node -e \"console.log(require('crypto').randomBytes(32).toString('base64'))\"";
+      if (process.env.NODE_ENV === 'production') {
+        errors.push({ field: 'MASTER_ENCRYPTION_KEY', reason });
+      } else {
+        (logger.warn || logger.log)({
+          severity: 'WARN',
+          scope: 'env',
+          message: 'MASTER_ENCRYPTION_KEY not set — field encryption is disabled',
+        });
+      }
+    }
+  }
+
   if (errors.length > 0) {
     logError(logger.error || logger.log, { message: 'Environment validation failed', errors });
     if (exitOnError) {
