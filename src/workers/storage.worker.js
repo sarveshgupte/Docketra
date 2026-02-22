@@ -10,7 +10,12 @@
 'use strict';
 
 const { Worker } = require('bullmq');
+const fs = require('fs').promises;
 const FirmStorage = require('../models/FirmStorage.model');
+const CaseFile = require('../models/CaseFile.model');
+const Attachment = require('../models/Attachment.model');
+const CaseAudit = require('../models/CaseAudit.model');
+const CaseHistory = require('../models/CaseHistory.model');
 const { decrypt } = require('../storage/services/TokenEncryption.service');
 const { getStorageProvider } = require('../storage/StorageFactory');
 const { google } = require('googleapis');
@@ -84,11 +89,136 @@ const storageWorker = new Worker(
       }
 
       case 'UPLOAD_FILE': {
-        const { folderId, fileMetadata } = job.data;
-        // Note: file buffer is not transmitted via Redis — provider.uploadFile
-        // must fetch the file content internally using fileMetadata identifiers.
-        await provider.uploadFile(firmId, folderId, null, fileMetadata);
-        console.info(`[StorageWorker] File uploaded`, { firmId, folderId });
+        const { fileId, caseId, folderId: jobFolderId } = job.data;
+
+        // Fetch the CaseFile staging record
+        const caseFile = await CaseFile.findById(fileId);
+        if (!caseFile) {
+          throw new Error(`[StorageWorker] CaseFile not found: ${fileId}`);
+        }
+
+        // Determine target Drive folder
+        let targetFolderId = jobFolderId;
+        if (!targetFolderId) {
+          // Derive folder from case structure using firmStorage rootFolderId
+          if (!record.rootFolderId) {
+            throw new Error('[StorageWorker] Firm rootFolderId missing for file upload');
+          }
+          const { folderId: caseFolderId } = await provider.createCaseFolder(
+            firmId,
+            caseId,
+            record.rootFolderId
+          );
+          targetFolderId = caseFolderId;
+        }
+
+        // Read file buffer from local disk — buffer never passed via Redis
+        let fileBuffer;
+        try {
+          fileBuffer = await fs.readFile(caseFile.localPath);
+        } catch (readErr) {
+          await CaseFile.findByIdAndUpdate(fileId, {
+            uploadStatus: 'error',
+            errorMessage: `Failed to read local file: ${readErr.message}`,
+          });
+          throw readErr;
+        }
+
+        // Upload to Google Drive
+        let driveFileId;
+        try {
+          const { fileId: uploadedFileId } = await provider.uploadFile(
+            firmId,
+            targetFolderId,
+            fileBuffer,
+            { name: caseFile.originalName, mimeType: caseFile.mimeType }
+          );
+          driveFileId = uploadedFileId;
+        } catch (uploadErr) {
+          await CaseFile.findByIdAndUpdate(fileId, {
+            uploadStatus: 'error',
+            errorMessage: uploadErr.message,
+          });
+          throw uploadErr;
+        }
+
+        // Mark CaseFile as uploaded
+        await CaseFile.findByIdAndUpdate(fileId, {
+          storageFileId: driveFileId,
+          uploadStatus: 'uploaded',
+        });
+
+        // Create the immutable Attachment record now that we have a Drive file ID
+        if (caseFile.caseId || caseFile.clientId) {
+          try {
+            await Attachment.create({
+              firmId: caseFile.firmId,
+              caseId: caseFile.caseId || undefined,
+              clientId: caseFile.clientId || undefined,
+              fileName: caseFile.originalName,
+              driveFileId,
+              size: caseFile.size,
+              mimeType: caseFile.mimeType,
+              description: caseFile.description,
+              checksum: caseFile.checksum,
+              createdBy: caseFile.createdBy,
+              createdByXID: caseFile.createdByXID,
+              createdByName: caseFile.createdByName,
+              note: caseFile.note,
+              source: caseFile.source || 'upload',
+            });
+          } catch (attachErr) {
+            // Attachment creation failure is non-fatal for the upload itself
+            console.error(`[StorageWorker] Failed to create Attachment record`, {
+              firmId,
+              message: attachErr.message,
+            });
+          }
+        }
+
+        // Create audit records for case-level uploads
+        if (caseFile.caseId && caseFile.createdByXID) {
+          try {
+            await CaseAudit.create({
+              caseId: caseFile.caseId,
+              actionType: 'CASE_FILE_ATTACHED',
+              description: `File attached by ${caseFile.createdByXID}: ${caseFile.originalName}`,
+              performedByXID: caseFile.createdByXID,
+              metadata: {
+                fileName: caseFile.originalName,
+                fileSize: caseFile.size,
+                mimeType: caseFile.mimeType,
+                description: caseFile.description,
+              },
+            });
+            await CaseHistory.create({
+              caseId: caseFile.caseId,
+              actionType: 'CASE_ATTACHMENT_ADDED',
+              description: `Attachment uploaded by ${caseFile.createdBy}: ${caseFile.originalName}`,
+              performedBy: caseFile.createdBy,
+              performedByXID: caseFile.createdByXID?.toUpperCase(),
+            });
+          } catch (auditErr) {
+            // Audit failure is non-fatal
+            console.error(`[StorageWorker] Failed to create audit records`, {
+              firmId,
+              message: auditErr.message,
+            });
+          }
+        }
+
+        // Remove the local temp file
+        try {
+          await fs.unlink(caseFile.localPath);
+        } catch (unlinkErr) {
+          // Non-fatal: log and continue
+          console.warn(`[StorageWorker] Could not delete local file`, {
+            path: caseFile.localPath,
+            message: unlinkErr.message,
+          });
+        }
+
+        console.info(`[StorageWorker] File uploaded`, { firmId, folderId: targetFolderId });
         break;
       }
 
