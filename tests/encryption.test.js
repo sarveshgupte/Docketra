@@ -69,40 +69,55 @@ async function testPlaintextCompatibilityMode() {
   console.log('✓ Plaintext compatibility mode: non-encrypted values returned as-is');
 }
 
-async function testSuperadminCannotDecryptService() {
-  const { encrypt, decrypt, ForbiddenError, _resetProvider } = require('../src/security/encryption.service');
-  _resetProvider();
+async function testSuperadminBlockAtRepositoryLevel() {
+  // This test does NOT require MongoDB.
+  // The superadmin guard is checked BEFORE the DB query is attempted, so
+  // ForbiddenError is thrown even when no connection is available.
+  const CaseRepository = require('../src/repositories/CaseRepository');
+  const ClientRepository = require('../src/repositories/ClientRepository');
+  const { ForbiddenError } = require('../src/security/encryption.service');
 
-  const tenantId = `tenant-sa-${Date.now()}`;
-  const plaintext = 'confidential tenant data';
+  // Enable encryption so the guard is active
+  const originalKey = process.env.MASTER_ENCRYPTION_KEY;
+  process.env.MASTER_ENCRYPTION_KEY = crypto.randomBytes(32).toString('base64');
 
-  // We need a valid ciphertext to test the guard — looksEncrypted() must return true.
-  // encrypt will auto-generate the tenant key via the DB so do this only in DB tests.
-  // For the no-DB path we can fabricate a fake "looks encrypted" string.
-  const fakeCiphertext = crypto.randomBytes(12).toString('base64') + ':' +
-    crypto.randomBytes(16).toString('base64') + ':' +
-    crypto.randomBytes(32).toString('base64');
+  const firmId = 'FIRM-TEST-001';
 
-  let threw = false;
-  try {
-    await decrypt(fakeCiphertext, tenantId, 'SUPER_ADMIN');
-  } catch (err) {
-    threw = true;
-    assert(err instanceof ForbiddenError, 'Error must be a ForbiddenError');
-    assert.strictEqual(err.statusCode, 403);
+  const repositoryTestCases = [
+    ['CaseRepository.find', () => CaseRepository.find(firmId, {}, 'SUPER_ADMIN')],
+    ['CaseRepository.find (lowercase)', () => CaseRepository.find(firmId, {}, 'superadmin')],
+    ['CaseRepository.findOne', () => CaseRepository.findOne(firmId, {}, 'SUPER_ADMIN')],
+    ['CaseRepository.findById', () => CaseRepository.findById(firmId, 'some-id', 'SUPER_ADMIN')],
+    ['CaseRepository.findByCaseId', () => CaseRepository.findByCaseId(firmId, 'CASE-001', 'SUPER_ADMIN')],
+    ['CaseRepository.findByCaseNumber', () => CaseRepository.findByCaseNumber(firmId, 'CASE-20260101-00001', 'SUPER_ADMIN')],
+    ['ClientRepository.find', () => ClientRepository.find(firmId, {}, 'SUPER_ADMIN')],
+    ['ClientRepository.findOne', () => ClientRepository.findOne(firmId, {}, 'SUPER_ADMIN')],
+    ['ClientRepository.findById', () => ClientRepository.findById(firmId, 'some-id', 'SUPER_ADMIN')],
+    ['ClientRepository.findByClientId', () => ClientRepository.findByClientId(firmId, 'C000001', 'SUPER_ADMIN')],
+  ];
+
+  for (const [name, call] of repositoryTestCases) {
+    let threw = false;
+    try {
+      await call();
+    } catch (err) {
+      threw = true;
+      assert(
+        err instanceof ForbiddenError,
+        `${name}: expected ForbiddenError, got ${err.constructor.name}: ${err.message}`
+      );
+    }
+    assert(threw, `${name}: expected ForbiddenError to be thrown`);
   }
-  assert(threw, 'decrypt with role=SUPER_ADMIN must throw ForbiddenError');
 
-  // Also check legacy lowercase variant
-  let threw2 = false;
-  try {
-    await decrypt(fakeCiphertext, tenantId, 'superadmin');
-  } catch (_e) {
-    threw2 = true;
+  // Restore original key
+  if (originalKey === undefined) {
+    delete process.env.MASTER_ENCRYPTION_KEY;
+  } else {
+    process.env.MASTER_ENCRYPTION_KEY = originalKey;
   }
-  assert(threw2, 'decrypt with role=superadmin must throw ForbiddenError');
 
-  console.log('✓ Superadmin cannot decrypt tenant data (ForbiddenError)');
+  console.log('✓ Superadmin blocked at repository level (ForbiddenError) for all fetch methods');
 }
 
 async function testRepositoryThrowsWithoutFirmId() {
@@ -208,6 +223,35 @@ async function testDifferentTenantsProduceDifferentCiphertext(provider) {
   console.log('✓ Different tenants produce different ciphertext');
 }
 
+async function testServiceSuperadminGuard() {
+  // The service-level guard is defense-in-depth — the repository guard fires first.
+  const { decrypt, ForbiddenError, _resetProvider } = require('../src/security/encryption.service');
+  _resetProvider();
+
+  const tenantId = `tenant-sa-svc-${Date.now()}`;
+  const { looksEncrypted } = require('../src/security/encryption.utils');
+
+  // Build a fake-but-valid looking ciphertext so looksEncrypted() returns true
+  const fakeCiphertext = [
+    crypto.randomBytes(12).toString('base64'),
+    crypto.randomBytes(16).toString('base64'),
+    crypto.randomBytes(32).toString('base64'),
+  ].join(':');
+  assert(looksEncrypted(fakeCiphertext), 'Fake ciphertext must pass looksEncrypted check');
+
+  let threw = false;
+  try {
+    await decrypt(fakeCiphertext, tenantId, 'SUPER_ADMIN');
+  } catch (err) {
+    threw = true;
+    assert(err instanceof ForbiddenError, 'Service must throw ForbiddenError for SUPER_ADMIN');
+    assert.strictEqual(err.statusCode, 403);
+  }
+  assert(threw, 'Service decrypt must throw ForbiddenError for SUPER_ADMIN');
+
+  console.log('✓ EncryptionService.decrypt blocks superadmin (defense-in-depth)');
+}
+
 async function testEncryptionServiceWithDb() {
   const { encrypt, decrypt, _resetProvider } = require('../src/security/encryption.service');
   _resetProvider();
@@ -230,7 +274,7 @@ async function run() {
   // Tests that do NOT need MongoDB
   await testKmsProviderThrows();
   await testPlaintextCompatibilityMode();
-  await testSuperadminCannotDecryptService();
+  await testSuperadminBlockAtRepositoryLevel();
   await testRepositoryThrowsWithoutFirmId();
 
   // Tests that DO need MongoDB
@@ -255,6 +299,7 @@ async function run() {
     await testGenerateTenantKey(provider);
     await testEncryptDecryptRoundtrip(provider);
     await testDifferentTenantsProduceDifferentCiphertext(provider);
+    await testServiceSuperadminGuard();
     await testEncryptionServiceWithDb();
   } catch (err) {
     console.warn('⚠️  Skipping DB-dependent encryption tests (Mongo binary unavailable):', err.message);
