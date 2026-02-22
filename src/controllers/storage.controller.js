@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const FirmStorage = require('../models/FirmStorage.model');
 const { encrypt } = require('../storage/services/TokenEncryption.service');
-const { getStorageProvider } = require('../storage/StorageFactory');
+const { enqueueStorageJob } = require('../queues/storage.queue');
 const { google } = require('googleapis');
 
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
@@ -222,19 +222,6 @@ const googleCallback = async (req, res) => {
       return res.redirect(`${errorUrl}&reason=no_refresh_token`);
     }
 
-    // Create /Docketra root folder via the storage provider abstraction
-    oauthClient.setCredentials(tokens);
-    const provider = getStorageProvider('google', oauthClient);
-
-    let rootFolderId;
-    try {
-      const { folderId } = await provider.createRootFolder(req.firmId);
-      rootFolderId = folderId;
-    } catch (folderErr) {
-      console.error('[Storage][GoogleCallback] Root folder creation failed:', folderErr.message);
-      return res.redirect(`${errorUrl}&reason=folder_creation_failed`);
-    }
-
     // Encrypt tokens before persisting — raw tokens must never be stored.
     // At this point tokens.refresh_token is guaranteed present (checked above at the
     // no_refresh_token guard); encrypting directly is safe.
@@ -242,7 +229,8 @@ const googleCallback = async (req, res) => {
     const encryptedRefreshToken = encrypt(tokens.refresh_token);
     const tokenExpiry = tokens.expiry_date ? new Date(tokens.expiry_date) : undefined;
 
-    // Upsert FirmStorage record (one record per firm, idempotent)
+    // Upsert FirmStorage record with pending status — root folder creation
+    // happens asynchronously via the storage worker.
     await FirmStorage.findOneAndUpdate(
       { firmId: req.firmId },
       {
@@ -251,16 +239,28 @@ const googleCallback = async (req, res) => {
         encryptedAccessToken,
         encryptedRefreshToken,
         ...(tokenExpiry !== undefined && { tokenExpiry }),
-        rootFolderId,
-        status: 'active',
+        status: 'pending',
       },
       { upsert: true, new: true }
     );
 
+    // Enqueue root folder creation — do not block the request
+    try {
+      await enqueueStorageJob('CREATE_ROOT_FOLDER', {
+        firmId: req.firmId,
+        provider: 'google',
+      });
+    } catch (queueErr) {
+      // If enqueueing fails, mark storage as errored so the UI can surface the issue
+      console.error('[Storage][GoogleCallback] Failed to enqueue root folder job:', queueErr.message);
+      await FirmStorage.findOneAndUpdate({ firmId: req.firmId }, { status: 'error' }).catch(() => {});
+      return res.redirect(`${errorUrl}&reason=queue_unavailable`);
+    }
+
     // Clear the state cookie with the same flags used when setting it
     res.setHeader('Set-Cookie', buildStateCookie('', 0));
 
-    console.info('[Storage][GoogleCallback] Drive connected successfully', { firmId: req.firmId });
+    console.info('[Storage][GoogleCallback] Drive connection saved, root folder creation enqueued', { firmId: req.firmId });
     return res.redirect(successUrl);
   } catch (err) {
     console.error('[Storage][GoogleCallback] Unexpected error:', err.message);
