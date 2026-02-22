@@ -132,6 +132,15 @@ if (missingEnvVars.length > 0) {
   process.exit(1);
 }
 
+// BYOS Google OAuth env validation (fail fast — token encryption and redirect both need these)
+const requiredStorageOAuthVars = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_OAUTH_REDIRECT_URI', 'STORAGE_TOKEN_SECRET', 'FRONTEND_URL'];
+const missingByosVars = requiredStorageOAuthVars.filter(key => !process.env[key]);
+if (missingByosVars.length > 0) {
+  console.error(`❌ Error: Missing required BYOS Google OAuth variables: ${missingByosVars.join(', ')}`);
+  console.error('Please ensure these variables are set in your .env file or environment.');
+  process.exit(1);
+}
+
 // Google Drive initialization
 try {
   const driveService = require('./services/drive.service');
