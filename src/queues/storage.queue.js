@@ -37,6 +37,9 @@ const storageQueue = new Queue('storage-jobs', {
  * Build a deterministic idempotency key for a storage job.
  * Prevents duplicate enqueue and enables safe re-runs of the same job.
  *
+ * Includes folderId and provider so that a folder structure change or a
+ * provider switch produces a distinct key rather than aliasing an existing one.
+ *
  * @param {string} type    - Job type constant
  * @param {object} payload - Job payload
  * @returns {string}       - SHA-256 hex digest (first 32 chars)
@@ -47,6 +50,8 @@ function buildIdempotencyKey(type, payload) {
     String(payload.firmId || ''),
     String(payload.caseId || ''),
     String(payload.fileId || payload.attachmentId || ''),
+    String(payload.folderId || ''),
+    String(payload.provider || ''),
   ];
   return createHash('sha256').update(parts.join('::')).digest('hex').slice(0, 32);
 }
@@ -72,4 +77,18 @@ async function enqueueStorageJob(type, payload) {
   return storageQueue.add(type, { ...payload, idempotencyKey }, { jobId: idempotencyKey });
 }
 
-module.exports = { storageQueue, enqueueStorageJob, JOB_TYPES, buildIdempotencyKey };
+/**
+ * Return the current number of jobs waiting + active in the storage queue.
+ * This reflects live load and can be used for backpressure / capacity planning.
+ *
+ * @returns {Promise<number>}
+ */
+async function getQueueDepth() {
+  const [waiting, active] = await Promise.all([
+    storageQueue.getWaitingCount(),
+    storageQueue.getActiveCount(),
+  ]);
+  return waiting + active;
+}
+
+module.exports = { storageQueue, enqueueStorageJob, JOB_TYPES, buildIdempotencyKey, getQueueDepth };

@@ -1,13 +1,17 @@
 #!/usr/bin/env node
 /**
  * Tests for PR 216 — Storage Worker Stability & Idempotency Hardening
+ * Refined per operational review.
  *
  * Covers:
- *  - Idempotency key generation (deterministic, job-type scoped)
- *  - Dead Letter Queue module exports
- *  - Metrics service storage counters
- *  - Circuit breaker integration with storage worker path
- *  - isRetryable classification (private logic tested via UnrecoverableError wrapping)
+ *  - Idempotency key generation (deterministic, includes folderId + provider)
+ *  - Dead Letter Queue module exports and field recording
+ *  - getDLQSize returns a numeric value
+ *  - getQueueDepth returns a numeric value
+ *  - Metrics service storage counters (dynamic DLQ + queueDepth via providers)
+ *  - Retry classification: 500 → retryable, 404 → non-retryable
+ *  - Phase 5: recordStorageJobFailure increments only on permanent failure
+ *  - Circuit breaker threshold
  */
 
 'use strict';
@@ -23,6 +27,9 @@ const originalLoad = Module._load;
 const queueAddCalls = [];
 const dlqAddCalls = [];
 
+// Simulated waiting counts for BullMQ Queue stubs
+const queueWaitingCount = { 'storage-jobs': 3, 'storage-jobs-dlq': 2 };
+
 Module._load = function (request, parent, isMain) {
   if (request === 'bullmq') {
     return {
@@ -36,6 +43,8 @@ Module._load = function (request, parent, isMain) {
           }
           return Promise.resolve({ id: opts?.jobId || 'job-1' });
         }
+        getWaitingCount() { return Promise.resolve(queueWaitingCount[this._name] || 0); }
+        getActiveCount() { return Promise.resolve(1); }
       },
       Worker: class {
         constructor() {}
@@ -52,43 +61,61 @@ Module._load = function (request, parent, isMain) {
 // ──────────────────────────────────────────────────────────────────
 // Import modules under test AFTER stubs are in place
 // ──────────────────────────────────────────────────────────────────
-const { buildIdempotencyKey, enqueueStorageJob, JOB_TYPES } = require('../src/queues/storage.queue');
-const { moveToDLQ } = require('../src/queues/storage.dlq');
+const { buildIdempotencyKey, enqueueStorageJob, getQueueDepth } = require('../src/queues/storage.queue');
+const { moveToDLQ, getDLQSize } = require('../src/queues/storage.dlq');
 const metricsService = require('../src/services/metrics.service');
 
+// Wire up dynamic providers so the snapshot includes live values
+metricsService.setDLQSizeProvider(getDLQSize);
+metricsService.setQueueDepthProvider(getQueueDepth);
+
 // ──────────────────────────────────────────────────────────────────
-// Phase 1 — Idempotency key tests
+// Phase 3 — Idempotency key now includes folderId and provider
 // ──────────────────────────────────────────────────────────────────
 
 async function testIdempotencyKeyIsDeterministic() {
-  const key1 = buildIdempotencyKey('UPLOAD_FILE', { firmId: 'f1', caseId: 'c1', fileId: 'file1' });
-  const key2 = buildIdempotencyKey('UPLOAD_FILE', { firmId: 'f1', caseId: 'c1', fileId: 'file1' });
+  const key1 = buildIdempotencyKey('UPLOAD_FILE', { firmId: 'f1', caseId: 'c1', fileId: 'file1', folderId: 'folder1', provider: 'google' });
+  const key2 = buildIdempotencyKey('UPLOAD_FILE', { firmId: 'f1', caseId: 'c1', fileId: 'file1', folderId: 'folder1', provider: 'google' });
   assert.strictEqual(key1, key2, 'Same inputs must produce the same idempotency key');
   console.log('  ✓ idempotencyKey is deterministic for same inputs');
 }
 
 async function testIdempotencyKeyDiffersForDifferentJobs() {
-  const key1 = buildIdempotencyKey('UPLOAD_FILE', { firmId: 'f1', caseId: 'c1', fileId: 'file1' });
-  const key2 = buildIdempotencyKey('UPLOAD_FILE', { firmId: 'f1', caseId: 'c1', fileId: 'file2' });
+  const key1 = buildIdempotencyKey('UPLOAD_FILE', { firmId: 'f1', caseId: 'c1', fileId: 'file1', provider: 'google' });
+  const key2 = buildIdempotencyKey('UPLOAD_FILE', { firmId: 'f1', caseId: 'c1', fileId: 'file2', provider: 'google' });
   assert.notStrictEqual(key1, key2, 'Different fileId must produce different idempotency key');
   console.log('  ✓ idempotencyKey differs for different fileIds');
 }
 
 async function testIdempotencyKeyDiffersAcrossJobTypes() {
-  const key1 = buildIdempotencyKey('UPLOAD_FILE', { firmId: 'f1', caseId: 'c1' });
-  const key2 = buildIdempotencyKey('CREATE_CASE_FOLDER', { firmId: 'f1', caseId: 'c1' });
+  const key1 = buildIdempotencyKey('UPLOAD_FILE', { firmId: 'f1', caseId: 'c1', provider: 'google' });
+  const key2 = buildIdempotencyKey('CREATE_CASE_FOLDER', { firmId: 'f1', caseId: 'c1', provider: 'google' });
   assert.notStrictEqual(key1, key2, 'Different job types must produce different idempotency key');
   console.log('  ✓ idempotencyKey differs across job types');
 }
 
+async function testIdempotencyKeyIncludesFolderId() {
+  const key1 = buildIdempotencyKey('UPLOAD_FILE', { firmId: 'f1', caseId: 'c1', fileId: 'f1', folderId: 'folder-A', provider: 'google' });
+  const key2 = buildIdempotencyKey('UPLOAD_FILE', { firmId: 'f1', caseId: 'c1', fileId: 'f1', folderId: 'folder-B', provider: 'google' });
+  assert.notStrictEqual(key1, key2, 'Different folderId must produce different idempotency key');
+  console.log('  ✓ idempotencyKey includes folderId');
+}
+
+async function testIdempotencyKeyIncludesProvider() {
+  const key1 = buildIdempotencyKey('UPLOAD_FILE', { firmId: 'f1', caseId: 'c1', fileId: 'f1', provider: 'google' });
+  const key2 = buildIdempotencyKey('UPLOAD_FILE', { firmId: 'f1', caseId: 'c1', fileId: 'f1', provider: 'onedrive' });
+  assert.notStrictEqual(key1, key2, 'Different provider must produce different idempotency key');
+  console.log('  ✓ idempotencyKey includes provider');
+}
+
 async function testIdempotencyKeyIsHexString() {
-  const key = buildIdempotencyKey('UPLOAD_FILE', { firmId: 'f1', caseId: 'c1', fileId: 'f1' });
+  const key = buildIdempotencyKey('UPLOAD_FILE', { firmId: 'f1', caseId: 'c1', fileId: 'f1', provider: 'google' });
   assert(/^[0-9a-f]{32}$/.test(key), `Key should be 32 hex chars (first 32 of SHA-256), got: ${key}`);
   console.log('  ✓ idempotencyKey is a 32-char hex string');
 }
 
 // ──────────────────────────────────────────────────────────────────
-// Phase 1+2 — enqueueStorageJob uses jobId for BullMQ deduplication
+// Idempotency + BullMQ deduplication via jobId
 // ──────────────────────────────────────────────────────────────────
 
 async function testEnqueueStorageJobPassesJobId() {
@@ -112,7 +139,7 @@ async function testEnqueueStorageJobDeduplication() {
 }
 
 // ──────────────────────────────────────────────────────────────────
-// Phase 3 — Dead Letter Queue
+// Phase 1 — DLQ field recording
 // ──────────────────────────────────────────────────────────────────
 
 async function testMoveToDLQRecordsFields() {
@@ -150,26 +177,89 @@ async function testMoveToDLQHandlesMissingFields() {
 }
 
 // ──────────────────────────────────────────────────────────────────
-// Phase 6 — Metrics service storage counters
+// Phase 1 — getDLQSize returns a numeric value from BullMQ
+// ──────────────────────────────────────────────────────────────────
+
+async function testGetDLQSizeReturnsNumeric() {
+  const size = await getDLQSize();
+  assert(typeof size === 'number', `getDLQSize should return a number, got ${typeof size}`);
+  assert(size >= 0, `getDLQSize should be non-negative, got ${size}`);
+  console.log(`  ✓ getDLQSize returns a numeric value (${size})`);
+}
+
+// ──────────────────────────────────────────────────────────────────
+// Phase 4 — getQueueDepth returns waiting + active count
+// ──────────────────────────────────────────────────────────────────
+
+async function testGetQueueDepthReturnsNumeric() {
+  const depth = await getQueueDepth();
+  assert(typeof depth === 'number', `getQueueDepth should return a number, got ${typeof depth}`);
+  assert(depth >= 0, `getQueueDepth should be non-negative, got ${depth}`);
+  // Stub returns waiting=3 + active=1 = 4
+  assert.strictEqual(depth, 4, `getQueueDepth should be waiting(3)+active(1)=4, got ${depth}`);
+  console.log(`  ✓ getQueueDepth returns waiting + active count (${depth})`);
+}
+
+// ──────────────────────────────────────────────────────────────────
+// Phase 6 — Metrics service with dynamic DLQ + queueDepth providers
 // ──────────────────────────────────────────────────────────────────
 
 async function testStorageMetricsCounters() {
-  // Record a variety of events
   metricsService.recordStorageJobStarted();
   metricsService.recordStorageJobStarted();
   metricsService.recordStorageJobSuccess();
   metricsService.recordStorageJobFailure();
   metricsService.recordStorageJobRetry();
-  metricsService.recordStorageDLQEntry();
 
-  const snap = metricsService.getSnapshot();
+  const snap = await metricsService.getSnapshot();
   assert(snap.storageJobs, 'Snapshot should include storageJobs');
   assert(snap.storageJobs.started >= 2, `started should be >= 2, got ${snap.storageJobs.started}`);
   assert(snap.storageJobs.success >= 1, `success should be >= 1, got ${snap.storageJobs.success}`);
   assert(snap.storageJobs.failure >= 1, `failure should be >= 1, got ${snap.storageJobs.failure}`);
   assert(snap.storageJobs.retry >= 1, `retry should be >= 1, got ${snap.storageJobs.retry}`);
-  assert(snap.storageJobs.dlqSize >= 1, `dlqSize should be >= 1, got ${snap.storageJobs.dlqSize}`);
-  console.log('  ✓ Metrics service exposes storageJobs counters in snapshot');
+  // dlqSize should be the actual BullMQ waiting count (2) not a cumulative counter
+  assert(typeof snap.storageJobs.dlqSize === 'number', `dlqSize should be a number, got ${typeof snap.storageJobs.dlqSize}`);
+  // queueDepth should be waiting(3)+active(1)=4
+  assert(typeof snap.storageJobs.queueDepth === 'number', `queueDepth should be a number, got ${typeof snap.storageJobs.queueDepth}`);
+  assert.strictEqual(snap.storageJobs.queueDepth, 4, `queueDepth should be 4 (waiting+active), got ${snap.storageJobs.queueDepth}`);
+  console.log('  ✓ Metrics service exposes storageJobs counters including dynamic dlqSize and queueDepth');
+}
+
+// ──────────────────────────────────────────────────────────────────
+// Phase 2 — Retry classification: 500 retryable, 404 non-retryable
+// ──────────────────────────────────────────────────────────────────
+
+// isRetryable is also exported from storage.worker.js (module.exports.isRetryable),
+// but importing the worker here would require stubbing mongoose, googleapis, and
+// ioredis to avoid connection errors. We mirror the logic inline for test isolation;
+// if the worker's implementation changes, this copy must be updated accordingly.
+function isRetryable(err) {
+  if (!err) return false;
+  if (err.status >= 500) return true;
+  const RETRYABLE_NETWORK_CODES = new Set(['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND', 'ECONNREFUSED']);
+  if (err.code && RETRYABLE_NETWORK_CODES.has(err.code)) return true;
+  return false;
+}
+
+async function testRetryClassification500() {
+  const err500 = Object.assign(new Error('Service Unavailable'), { status: 500 });
+  assert.strictEqual(isRetryable(err500), true, '500 error should be retryable');
+  console.log('  ✓ 500 error is classified as retryable');
+}
+
+async function testRetryClassification404() {
+  const err404 = Object.assign(new Error('Not Found'), { status: 404 });
+  assert.strictEqual(isRetryable(err404), false, '404 error should NOT be retryable');
+  console.log('  ✓ 404 error is classified as non-retryable');
+}
+
+async function testRetryClassificationNetworkErrors() {
+  assert.strictEqual(isRetryable(Object.assign(new Error(), { code: 'ECONNRESET' })), true, 'ECONNRESET should be retryable');
+  assert.strictEqual(isRetryable(Object.assign(new Error(), { code: 'ETIMEDOUT' })), true, 'ETIMEDOUT should be retryable');
+  assert.strictEqual(isRetryable(Object.assign(new Error(), { code: 'ENOTFOUND' })), true, 'ENOTFOUND should be retryable');
+  assert.strictEqual(isRetryable(Object.assign(new Error(), { code: 'ECONNREFUSED' })), true, 'ECONNREFUSED should be retryable');
+  assert.strictEqual(isRetryable(new Error('validation error')), false, 'Generic error should NOT be retryable');
+  console.log('  ✓ Network errors are retryable, generic errors are not');
 }
 
 // ──────────────────────────────────────────────────────────────────
@@ -180,7 +270,6 @@ async function testCircuitBreakerBlocksAfterThreshold() {
   const { allow, recordFailure, configureBreaker } = require('../src/services/circuitBreaker.service');
   configureBreaker('storage:google-test', { failureThreshold: 2, cooldownMs: 60000 });
 
-  // Initially open
   assert.strictEqual(allow('storage:google-test'), true, 'Circuit should allow initially');
   recordFailure('storage:google-test');
   assert.strictEqual(allow('storage:google-test'), true, 'Circuit should allow after first failure');
@@ -190,14 +279,11 @@ async function testCircuitBreakerBlocksAfterThreshold() {
 }
 
 // ──────────────────────────────────────────────────────────────────
-// Phase 2 — Retry strategy: attempts=5 in queue config
+// enqueueStorageJob integration check
 // ──────────────────────────────────────────────────────────────────
 
 async function testQueueMaxAttempts() {
-  // Import the queue module (already loaded; check the defaultJobOptions via a fresh require)
-  // We can't inspect the Queue constructor args from outside, but we can test the exported constant
   queueAddCalls.length = 0;
-  // Just verify enqueueStorageJob works end-to-end (Queue is already stubbed)
   await enqueueStorageJob('CREATE_ROOT_FOLDER', { firmId: 'f3', provider: 'google' });
   assert.strictEqual(queueAddCalls.length, 1, 'enqueueStorageJob should produce a queue add call');
   console.log('  ✓ enqueueStorageJob invokes queue.add (attempt config set to 5 in queue options)');
@@ -208,17 +294,24 @@ async function testQueueMaxAttempts() {
 // ──────────────────────────────────────────────────────────────────
 
 async function run() {
-  console.log('Running storageWorkerStability tests (PR 216)...');
+  console.log('Running storageWorkerStability tests (PR 216 — refined)...');
   try {
     await testIdempotencyKeyIsDeterministic();
     await testIdempotencyKeyDiffersForDifferentJobs();
     await testIdempotencyKeyDiffersAcrossJobTypes();
+    await testIdempotencyKeyIncludesFolderId();
+    await testIdempotencyKeyIncludesProvider();
     await testIdempotencyKeyIsHexString();
     await testEnqueueStorageJobPassesJobId();
     await testEnqueueStorageJobDeduplication();
     await testMoveToDLQRecordsFields();
     await testMoveToDLQHandlesMissingFields();
+    await testGetDLQSizeReturnsNumeric();
+    await testGetQueueDepthReturnsNumeric();
     await testStorageMetricsCounters();
+    await testRetryClassification500();
+    await testRetryClassification404();
+    await testRetryClassificationNetworkErrors();
     await testCircuitBreakerBlocksAfterThreshold();
     await testQueueMaxAttempts();
     console.log('All storageWorkerStability tests passed.');
@@ -229,3 +322,4 @@ async function run() {
 }
 
 run();
+
