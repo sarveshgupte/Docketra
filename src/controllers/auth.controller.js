@@ -41,15 +41,22 @@ const ROLE_SUPER_ADMIN = 'SUPER_ADMIN';
 const ROLE_ADMIN = 'Admin';
 const ROLE_EMPLOYEE = 'Employee';
 
+const log = require('../utils/log');
+
 /**
  * Non-fatal auth audit logger. Audit failures must never break primary business
  * logic or change a successful HTTP response to 500.
+ * Always uses explicit array syntax so no implicit wrapping is required.
  */
 const logAuthAudit = async (params) => {
   try {
-    await AuthAudit.create(params);
+    await AuthAudit.create([params]);
   } catch (auditErr) {
-    console.error('[AUTH_AUDIT] Non-fatal audit failure', auditErr.message);
+    log.error('AUTH_AUDIT_FAILURE', {
+      error: auditErr.message,
+      stack: auditErr.stack,
+      context: 'auth.controller',
+    });
   }
 };
 
