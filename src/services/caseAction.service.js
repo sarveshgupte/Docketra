@@ -129,7 +129,7 @@ const recordAction = async (caseId, firmId, actionType, description, performedBy
 const resolveCase = async (firmId, caseId, comment, user) => {
   validateComment(comment);
   
-  const caseData = await CaseRepository.findByCaseId(firmId, caseId);
+  const caseData = await CaseRepository.findByCaseId(firmId, caseId, user.role);
   
   if (!caseData) {
     throw new Error('Case not found');
@@ -201,7 +201,7 @@ const pendCase = async (firmId, caseId, comment, reopenDate, user) => {
     throw new Error('Reopen date is required');
   }
   
-  const caseData = await CaseRepository.findByCaseId(firmId, caseId);
+  const caseData = await CaseRepository.findByCaseId(firmId, caseId, user.role);
   
   if (!caseData) {
     throw new Error('Case not found');
@@ -276,7 +276,7 @@ const pendCase = async (firmId, caseId, comment, reopenDate, user) => {
 const fileCase = async (firmId, caseId, comment, user) => {
   validateComment(comment);
   
-  const caseData = await CaseRepository.findByCaseId(firmId, caseId);
+  const caseData = await CaseRepository.findByCaseId(firmId, caseId, user.role);
   
   if (!caseData) {
     throw new Error('Case not found');
@@ -341,7 +341,7 @@ const fileCase = async (firmId, caseId, comment, user) => {
 const unpendCase = async (firmId, caseId, comment, user) => {
   validateComment(comment);
   
-  const caseData = await CaseRepository.findByCaseId(firmId, caseId);
+  const caseData = await CaseRepository.findByCaseId(firmId, caseId, user.role);
   
   if (!caseData) {
     throw new Error('Case not found');

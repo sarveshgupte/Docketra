@@ -33,7 +33,7 @@ const submitCase = async (req, res) => {
     }
     
     // Fetch case with firmId scoping for multi-tenancy
-    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
     
     if (!caseData) {
       return res.status(404).json({
@@ -105,7 +105,7 @@ const moveToUnderReview = async (req, res) => {
     }
     
     // Fetch case with firmId scoping for multi-tenancy
-    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
     
     if (!caseData) {
       return res.status(404).json({
@@ -167,7 +167,7 @@ const closeCase = async (req, res) => {
     }
     
     // Fetch case with firmId scoping for multi-tenancy
-    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
     
     if (!caseData) {
       return res.status(404).json({
@@ -241,7 +241,7 @@ const reopenCase = async (req, res) => {
     }
     
     // Fetch case with firmId scoping for multi-tenancy
-    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
     
     if (!caseData) {
       return res.status(404).json({

@@ -38,7 +38,7 @@ const checkCaseLock = async (req, res, next) => {
     }
     
     // Find case by caseId (not MongoDB _id) - with firm scoping
-    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
     
     if (!caseData) {
       return res.status(404).json({
@@ -114,10 +114,11 @@ const checkCaseLock = async (req, res, next) => {
  * @param {string} firmId - Firm ID from authenticated user
  * @param {string} caseId - Case identifier
  * @param {string} userEmail - User email
+ * @param {string} role - Caller's role (required)
  */
-const lockCase = async (firmId, caseId, userEmail) => {
+const lockCase = async (firmId, caseId, userEmail, role) => {
   try {
-    const caseData = await CaseRepository.findByCaseId(firmId, caseId);
+    const caseData = await CaseRepository.findByCaseId(firmId, caseId, role);
     
     if (!caseData) {
       throw new Error('Case not found');
@@ -140,10 +141,11 @@ const lockCase = async (firmId, caseId, userEmail) => {
  * Unlock a case
  * @param {string} firmId - Firm ID from authenticated user
  * @param {string} caseId - Case identifier
+ * @param {string} role - Caller's role (required)
  */
-const unlockCase = async (firmId, caseId) => {
+const unlockCase = async (firmId, caseId, role) => {
   try {
-    const caseData = await CaseRepository.findByCaseId(firmId, caseId);
+    const caseData = await CaseRepository.findByCaseId(firmId, caseId, role);
     
     if (!caseData) {
       throw new Error('Case not found');

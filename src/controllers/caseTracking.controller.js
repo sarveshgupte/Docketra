@@ -63,7 +63,7 @@ const trackCaseOpen = async (req, res) => {
     if (user.firmId) {
       query.firmId = user.firmId;
     }
-    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
     if (!caseData) {
       return res.status(404).json({
         success: false,
@@ -142,7 +142,7 @@ const trackCaseView = async (req, res) => {
     if (user.firmId) {
       query.firmId = user.firmId;
     }
-    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
     if (!caseData) {
       return res.status(404).json({
         success: false,
@@ -308,7 +308,7 @@ const getCaseHistory = async (req, res) => {
     if (user.firmId) {
       query.firmId = user.firmId;
     }
-    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
     if (!caseData) {
       return res.status(404).json({
         success: false,

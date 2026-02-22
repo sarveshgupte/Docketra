@@ -48,10 +48,11 @@ const isValidCaseNumberFormat = (id) => {
  * 
  * @param {string|ObjectId} firmId - Firm ID from req.user.firmId
  * @param {string} identifier - Case identifier from URL or request
+ * @param {string} role - Caller's role (required)
  * @returns {Promise<string>} Internal case ID (ObjectId as string)
  * @throws {Error} If case not found or identifier invalid
  */
-const resolveCaseIdentifier = async (firmId, identifier) => {
+const resolveCaseIdentifier = async (firmId, identifier, role) => {
   if (!firmId) {
     throw new Error('Firm ID is required for case resolution');
   }
@@ -63,7 +64,7 @@ const resolveCaseIdentifier = async (firmId, identifier) => {
   // Case 1: Already an internal ID (ObjectId)
   if (isValidObjectId(identifier)) {
     // Verify case exists with this internal ID
-    const caseDoc = await CaseRepository.findByInternalId(firmId, identifier);
+    const caseDoc = await CaseRepository.findByInternalId(firmId, identifier, role);
     if (!caseDoc) {
       throw new Error('Case not found');
     }
@@ -72,7 +73,7 @@ const resolveCaseIdentifier = async (firmId, identifier) => {
   
   // Case 2: Case number (CASE-YYYYMMDD-XXXXX) - resolve to internal ID
   if (isValidCaseNumberFormat(identifier)) {
-    const caseDoc = await CaseRepository.findByCaseNumber(firmId, identifier);
+    const caseDoc = await CaseRepository.findByCaseNumber(firmId, identifier, role);
     if (!caseDoc) {
       throw new Error('Case not found');
     }
@@ -90,12 +91,13 @@ const resolveCaseIdentifier = async (firmId, identifier) => {
  * 
  * @param {string|ObjectId} firmId - Firm ID from req.user.firmId
  * @param {string} identifier - Case identifier from URL or request
+ * @param {string} role - Caller's role (required)
  * @returns {Promise<Object>} Case document
  * @throws {Error} If case not found or identifier invalid
  */
-const resolveCaseDocument = async (firmId, identifier) => {
-  const internalId = await resolveCaseIdentifier(firmId, identifier);
-  const caseDoc = await CaseRepository.findByInternalId(firmId, internalId);
+const resolveCaseDocument = async (firmId, identifier, role) => {
+  const internalId = await resolveCaseIdentifier(firmId, identifier, role);
+  const caseDoc = await CaseRepository.findByInternalId(firmId, internalId, role);
   
   if (!caseDoc) {
     throw new Error('Case not found');
