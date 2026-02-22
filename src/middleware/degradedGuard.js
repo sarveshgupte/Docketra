@@ -12,6 +12,7 @@ const degradedGuard = (req, res, next) => {
   metricsService.recordError(503);
   return res.status(503).json({
     success: false,
+    error: 'system_degraded',
     code: 'SYSTEM_DEGRADED',
     message: 'System is in degraded mode. Write operations are temporarily blocked.',
     systemState: getState(),

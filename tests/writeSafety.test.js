@@ -205,7 +205,7 @@ async function testIdempotencySkipsCacheOnRollback() {
 }
 
 async function testControllerGuardWithoutTransaction() {
-  const { createUser } = require('../src/controllers/userController');
+  const { createUser } = require('../src/controllers/user.controller');
   const req = { transactionActive: false };
   const res = {};
   let threw = false;
