@@ -245,7 +245,7 @@ async function shouldRejectFirmCreateWithoutId() {
   const firmWithoutIdStub = {
     findOne: () => ({ session: () => Promise.resolve(null), sort: () => Promise.resolve(null) }),
     find: () => ({ session: () => ({ select: () => Promise.resolve([]) }) }),
-    create: async (docs) => docs.map((d) => ({ ...d, save: async () => {} })),
+    create: async (docs) => [{ ...docs[0], _id: undefined, save: async () => {} }],
   };
 
   let threw = false;
