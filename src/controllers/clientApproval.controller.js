@@ -50,7 +50,7 @@ const approveNewClient = async (req, res) => {
     }
     
     // Find the case
-    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
     
     if (!caseData) {
       return res.status(404).json({
@@ -214,7 +214,7 @@ const approveClientEdit = async (req, res) => {
     }
     
     // Find the case
-    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
     
     if (!caseData) {
       return res.status(404).json({
@@ -268,7 +268,7 @@ const approveClientEdit = async (req, res) => {
     }
     
     // Find the client to edit
-    const client = await ClientRepository.findByClientId(req.user.firmId, editData.clientId);
+    const client = await ClientRepository.findByClientId(req.user.firmId, editData.clientId, req.user.role);
     
     if (!client) {
       return res.status(404).json({
@@ -418,7 +418,7 @@ const rejectClientCase = async (req, res) => {
     }
     
     // Find the case
-    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
     
     if (!caseData) {
       return res.status(404).json({

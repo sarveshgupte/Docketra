@@ -32,16 +32,18 @@ const { looksEncrypted } = require('../security/encryption.utils');
 const CLIENT_ENCRYPTED_FIELDS = ['primaryContactNumber', 'businessEmail'];
 
 /**
- * Throw ForbiddenError when the caller is a superadmin AND encryption is active.
- * Superadmin must never receive decrypted tenant data.
- *
- * Guard is a no-op when MASTER_ENCRYPTION_KEY is not configured (encryption off).
+ * Enforce role presence and block superadmin from accessing tenant data.
+ * Superadmin must never receive decrypted tenant data, regardless of
+ * whether encryption is currently configured.
  *
  * @param {string|undefined} role
- * @throws {ForbiddenError}
+ * @throws {Error} If role is not provided
+ * @throws {ForbiddenError} If the caller is a superadmin
  */
 function _guardSuperadmin(role) {
-  if (!role || !process.env.MASTER_ENCRYPTION_KEY) return;
+  if (!role) {
+    throw new Error('SECURITY: role is required for repository access');
+  }
   const normalizedRole = role.toLowerCase().replace('_', '');
   if (normalizedRole === 'superadmin') {
     throw new ForbiddenError('Superadmin cannot access decrypted tenant data');
@@ -96,7 +98,7 @@ const ClientRepository = {
    * Find client by clientId with firm scoping
    * @param {string|ObjectId} firmId - Firm ID from req.user.firmId
    * @param {string} clientId - Client identifier (C000001, etc.)
-   * @param {string} [role] - Caller's role; superadmin triggers ForbiddenError
+   * @param {string} role - Caller's role (required); superadmin triggers ForbiddenError
    * @returns {Promise<Object|null>} Client document or null
    */
   async findByClientId(firmId, clientId, role) {
@@ -112,7 +114,7 @@ const ClientRepository = {
    * Find client by MongoDB _id with firm scoping
    * @param {string|ObjectId} firmId - Firm ID from req.user.firmId
    * @param {string|ObjectId} _id - MongoDB document ID
-   * @param {string} [role] - Caller's role; superadmin triggers ForbiddenError
+   * @param {string} role - Caller's role (required); superadmin triggers ForbiddenError
    * @returns {Promise<Object|null>} Client document or null
    */
   async findById(firmId, _id, role) {
@@ -128,7 +130,7 @@ const ClientRepository = {
    * Find clients with query and firm scoping
    * @param {string|ObjectId} firmId - Firm ID from req.user.firmId
    * @param {Object} query - Additional query filters
-   * @param {string} [role] - Caller's role; superadmin triggers ForbiddenError
+   * @param {string} role - Caller's role (required); superadmin triggers ForbiddenError
    * @returns {Promise<Array>} Array of client documents
    */
   async find(firmId, query = {}, role) {
@@ -144,7 +146,7 @@ const ClientRepository = {
    * Find one client with query and firm scoping
    * @param {string|ObjectId} firmId - Firm ID from req.user.firmId
    * @param {Object} query - Additional query filters
-   * @param {string} [role] - Caller's role; superadmin triggers ForbiddenError
+   * @param {string} role - Caller's role (required); superadmin triggers ForbiddenError
    * @returns {Promise<Object|null>} Client document or null
    */
   async findOne(firmId, query = {}, role) {
@@ -205,7 +207,7 @@ const ClientRepository = {
    * document so callers receive plaintext.
    * Superadmin is blocked from creating (and receiving) tenant client data.
    * @param {Object} clientData - Client data including firmId
-   * @param {string} [role] - Caller's role; superadmin triggers ForbiddenError
+   * @param {string} role - Caller's role (required); superadmin triggers ForbiddenError
    * @returns {Promise<Object>} Created client document (decrypted)
    */
   async create(clientData, role) {
@@ -220,5 +222,7 @@ const ClientRepository = {
     return _decryptClientDoc(doc, clientData.firmId);
   },
 };
+
+Object.freeze(ClientRepository);
 
 module.exports = ClientRepository;

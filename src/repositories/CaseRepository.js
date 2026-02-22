@@ -37,16 +37,18 @@ const { looksEncrypted } = require('../security/encryption.utils');
 const CASE_ENCRYPTED_FIELDS = ['description'];
 
 /**
- * Throw ForbiddenError when the caller is a superadmin AND encryption is active.
- * Superadmin must never receive decrypted tenant data.
- *
- * Guard is a no-op when MASTER_ENCRYPTION_KEY is not configured (encryption off).
+ * Enforce role presence and block superadmin from accessing tenant data.
+ * Superadmin must never receive decrypted tenant data, regardless of
+ * whether encryption is currently configured.
  *
  * @param {string|undefined} role
- * @throws {ForbiddenError}
+ * @throws {Error} If role is not provided
+ * @throws {ForbiddenError} If the caller is a superadmin
  */
 function _guardSuperadmin(role) {
-  if (!role || !process.env.MASTER_ENCRYPTION_KEY) return;
+  if (!role) {
+    throw new Error('SECURITY: role is required for repository access');
+  }
   const normalizedRole = role.toLowerCase().replace('_', '');
   if (normalizedRole === 'superadmin') {
     throw new ForbiddenError('Superadmin cannot access decrypted tenant data');
@@ -121,7 +123,7 @@ const CaseRepository = {
    *
    * @param {string|ObjectId} firmId - Firm ID from req.user.firmId
    * @param {string|ObjectId} caseInternalId - Internal case identifier (ObjectId)
-   * @param {string} [role] - Caller's role; superadmin triggers ForbiddenError
+   * @param {string} role - Caller's role (required); superadmin triggers ForbiddenError
    * @returns {Promise<Object|null>} Case document or null
    */
   async findByInternalId(firmId, caseInternalId, role) {
@@ -154,7 +156,7 @@ const CaseRepository = {
    *
    * @param {string|ObjectId} firmId - Firm ID from req.user.firmId
    * @param {string} caseNumber - Human-readable case number (CASE-YYYYMMDD-XXXXX)
-   * @param {string} [role] - Caller's role; superadmin triggers ForbiddenError
+   * @param {string} role - Caller's role (required); superadmin triggers ForbiddenError
    * @returns {Promise<Object|null>} Case document or null
    */
   async findByCaseNumber(firmId, caseNumber, role) {
@@ -170,7 +172,7 @@ const CaseRepository = {
    * Find case by caseId (DEPRECATED - BACKWARD COMPATIBILITY ONLY)
    * @param {string|ObjectId} firmId - Firm ID from req.user.firmId
    * @param {string} caseId - Case identifier (legacy field)
-   * @param {string} [role] - Caller's role; superadmin triggers ForbiddenError
+   * @param {string} role - Caller's role (required); superadmin triggers ForbiddenError
    * @returns {Promise<Object|null>} Case document or null
    * @deprecated Use findByInternalId or findByCaseNumber instead
    */
@@ -188,7 +190,7 @@ const CaseRepository = {
    * Find case by MongoDB _id with firm scoping
    * @param {string|ObjectId} firmId - Firm ID from req.user.firmId
    * @param {string|ObjectId} _id - MongoDB document ID
-   * @param {string} [role] - Caller's role; superadmin triggers ForbiddenError
+   * @param {string} role - Caller's role (required); superadmin triggers ForbiddenError
    * @returns {Promise<Object|null>} Case document or null
    */
   async findById(firmId, _id, role) {
@@ -204,7 +206,7 @@ const CaseRepository = {
    * Find cases with query and firm scoping
    * @param {string|ObjectId} firmId - Firm ID from req.user.firmId
    * @param {Object} query - Additional query filters
-   * @param {string} [role] - Caller's role; superadmin triggers ForbiddenError
+   * @param {string} role - Caller's role (required); superadmin triggers ForbiddenError
    * @returns {Promise<Array>} Array of case documents
    */
   async find(firmId, query = {}, role) {
@@ -224,7 +226,7 @@ const CaseRepository = {
    * Find one case with query and firm scoping
    * @param {string|ObjectId} firmId - Firm ID from req.user.firmId
    * @param {Object} query - Additional query filters
-   * @param {string} [role] - Caller's role; superadmin triggers ForbiddenError
+   * @param {string} role - Caller's role (required); superadmin triggers ForbiddenError
    * @returns {Promise<Object|null>} Case document or null
    */
   async findOne(firmId, query = {}, role) {
@@ -358,7 +360,7 @@ const CaseRepository = {
    * The repository decrypts the returned document so callers receive plaintext.
    * Superadmin is blocked from creating (and receiving) tenant case data.
    * @param {Object} caseData - Case data including firmId
-   * @param {string} [role] - Caller's role; superadmin triggers ForbiddenError
+   * @param {string} role - Caller's role (required); superadmin triggers ForbiddenError
    * @returns {Promise<Object>} Created case document (decrypted)
    */
   async create(caseData, role) {
@@ -373,5 +375,7 @@ const CaseRepository = {
     return _decryptCaseDoc(doc, caseData.firmId);
   },
 };
+
+Object.freeze(CaseRepository);
 
 module.exports = CaseRepository;

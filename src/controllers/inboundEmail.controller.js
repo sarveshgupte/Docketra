@@ -63,7 +63,7 @@ const handleInboundEmail = async (req, res) => {
     }
     
     // Verify case exists
-    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId);
+    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
     
     if (!caseData) {
       return res.status(404).json({
