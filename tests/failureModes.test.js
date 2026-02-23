@@ -39,15 +39,20 @@ async function testTransactionalRollback() {
   }
   const uri = replset.getUri();
   process.env.MONGODB_URI = uri;
+  let session;
   try {
     await mongoose.connect(uri);
+    session = await mongoose.startSession();
 
     let failed = false;
     try {
-      await createFirmHierarchy({
-        payload: { name: 'Rollback Co', adminName: 'Alice', adminEmail: 'alice@rollback.test' },
-        deps: { ...defaultDeps, generateNextClientId: async () => { throw new Error('forced failure'); } },
-        requestId: 'rollback-test',
+      await session.withTransaction(async () => {
+        await createFirmHierarchy({
+          payload: { name: 'Rollback Co', adminName: 'Alice', adminEmail: 'alice@rollback.test' },
+          session,
+          deps: { ...defaultDeps, generateNextClientId: async () => { throw new Error('forced failure'); } },
+          requestId: 'rollback-test',
+        });
       });
     } catch (error) {
       failed = true;
@@ -64,6 +69,7 @@ async function testTransactionalRollback() {
 
     console.log('✓ Transaction rollback leaves no partial data');
   } finally {
+    if (session) await session.endSession();
     if (mongoose.connection.readyState !== 0) {
       await mongoose.disconnect();
     }

@@ -169,6 +169,7 @@ const createFirm = async (req, res) => {
       performedBy: req.user,
       requestId,
       context: requestContext, // Pass context instead of req
+      session: req.transactionSession.session,
     });
 
     // Transaction has completed successfully if we reach here
