@@ -1,4 +1,5 @@
 const { executeWrite } = require('./executeWrite');
+const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 
 const guardTransaction = (req) => {
   if (req?.skipTransaction) {
@@ -9,15 +10,6 @@ const guardTransaction = (req) => {
     err.statusCode = 500;
     throw err;
   }
-};
-
-const wrapWriteHandler = (handler) => async (...args) => {
-  const [req] = args;
-  guardTransaction(req);
-  return executeWrite({
-    req,
-    fn: async () => handler(...args),
-  });
 };
 
 module.exports = {
