@@ -35,7 +35,6 @@ const defaultDeps = {
   emailService,
   generateNextClientId,
   generateNextXID,
-  startSession: () => mongoose.startSession(),
 };
 
 const validatePayload = ({ name, adminName, adminEmail }) => {
@@ -101,10 +100,11 @@ const buildIds = async (deps, session, name) => {
  *   - transactionActive: boolean (optional, default false)
  *   - transactionCommitted: boolean (optional, default false)
  *   If null, emails will be enqueued immediately without waiting for transaction commit
+ * @param {Object} [params.session] - MongoDB session injected by the controller (via executeWrite)
  * @param {Object} params.deps - Dependencies (for testing)
  * @returns {Promise<Object>} Created entities (firm, defaultClient, adminUser)
  */
-const createFirmHierarchy = async ({ payload, performedBy, requestId, context = null, deps = defaultDeps }) => {
+const createFirmHierarchy = async ({ payload, performedBy, requestId, context = null, session, deps = defaultDeps }) => {
   if (isFirmCreationDisabled()) {
     throw new FirmBootstrapError('Firm creation is temporarily disabled', 503);
   }
@@ -136,10 +136,10 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
     throw new FirmBootstrapError('Invalid encrypted DEK format', 500);
   }
 
-  const session = await deps.startSession();
-  session.startTransaction();
+  // session is injected by the controller via executeWrite / wrapWriteHandler.
+  // No session lifecycle management here — that is owned by executeWrite.
 
-  let createdEntities = null;
+  let createdEntities;
 
   try {
     // CRITICAL: All DB operations below must use the same Mongo session.
@@ -189,24 +189,14 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
     firm.defaultClientId = defaultClient._id;
     await firm.save({ session });
 
-    // Race condition safety: check for existing TenantKey even though unique index exists
-    const existingKey = await deps.TenantKey.findOne({ tenantId: firm._id.toString() }).session(session);
-    if (existingKey) {
-      throw new FirmBootstrapError('Tenant key already exists for this firm', 409);
-    }
-
-    try {
-      await deps.TenantKey.create([{
-        tenantId: String(firm._id),
-        encryptedDek,
-      }], { session });
-    } catch (tenantKeyErr) {
-      // Handle duplicate key errors from the unique index
-      if (tenantKeyErr.code === 11000) {
-        throw new FirmBootstrapError('Tenant key already exists for this firm', 409);
-      }
-      throw tenantKeyErr;
-    }
+    // Atomic upsert: insert only if no TenantKey exists for this firm.
+    // If a TenantKey already exists for this tenantId, $setOnInsert is a no-op
+    // and the existing DEK is preserved — enabling safe retries without errors.
+    await deps.TenantKey.updateOne(
+      { tenantId: String(firm._id) },
+      { $setOnInsert: { tenantId: String(firm._id), encryptedDek } },
+      { upsert: true, session }
+    );
 
     // TODO: replace console logs with structured logger
     console.log('TenantKey created');
@@ -242,21 +232,13 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
     firm.bootstrapStatus = 'COMPLETED';
     await firm.save({ session });
 
+    // Transaction commit is handled by executeWrite / withTransaction.
     createdEntities = { firm, defaultClient, adminUser, adminXID, setupToken, firmSlug };
-
-    await session.commitTransaction();
   } catch (err) {
-    await session.abortTransaction();
     if (err instanceof FirmBootstrapError) {
       throw err;
     }
     throw new FirmBootstrapError(err.message || 'Failed to create firm', 500);
-  } finally {
-    await session.endSession();
-  }
-
-  if (!createdEntities) {
-    throw new FirmBootstrapError('Transaction aborted', 500);
   }
 
   const { firm, defaultClient, adminUser, adminXID, setupToken, firmSlug } = createdEntities;

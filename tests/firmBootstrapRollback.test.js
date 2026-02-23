@@ -4,6 +4,13 @@
  *
  * Verifies that if TenantKey creation fails, the entire transaction is rolled
  * back — no Firm, Client, User, or TenantKey document must be persisted.
+ *
+ * After the transaction architecture refactor, session lifecycle (commit/abort)
+ * is owned by executeWrite / wrapWriteHandler, not by the service layer.
+ * These tests verify that:
+ *   - errors propagate correctly so withTransaction can abort
+ *   - DB writes use the injected session
+ *   - TenantKey is created via atomic upsert (updateOne + $setOnInsert)
  */
 
 const assert = require('assert');
@@ -34,17 +41,7 @@ const makeStore = () => {
 // ── session stub ──────────────────────────────────────────────────────────────
 
 const makeSession = () => {
-  let active = false;
-  let committed = false;
-  let aborted = false;
-  return {
-    get committed() { return committed; },
-    get aborted() { return aborted; },
-    startTransaction() { active = true; },
-    async commitTransaction() { committed = true; active = false; },
-    async abortTransaction() { aborted = true; active = false; },
-    async endSession() {},
-  };
+  return {};
 };
 
 // ── Firm stub ─────────────────────────────────────────────────────────────────
@@ -88,12 +85,11 @@ const makeUserStub = (store) => ({
   },
 });
 
-// ── TenantKey stub that throws on create ──────────────────────────────────────
+// ── TenantKey stub that throws on updateOne ───────────────────────────────────
 
 const makeTenantKeyFailStub = () => ({
-  findOne: () => ({ session: () => Promise.resolve(null) }),
-  create: async () => {
-    const err = new Error('TenantKey create failed (simulated)');
+  updateOne: async () => {
+    const err = new Error('TenantKey updateOne failed (simulated)');
     throw err;
   },
 });
@@ -117,6 +113,7 @@ async function shouldRollbackWhenTenantKeyFails() {
       performedBy: null,
       requestId: 'test-rollback-001',
       context: null,
+      session,
       deps: {
         Firm: firmStub,
         Client: clientStub,
@@ -129,40 +126,29 @@ async function shouldRollbackWhenTenantKeyFails() {
         },
         generateNextClientId: async () => 'C000001',
         generateNextXID: async () => 'X000001',
-        startSession: () => {
-          session.startTransaction();
-          return Promise.resolve(session);
-        },
       },
     });
   } catch (err) {
     threw = true;
-    // Verify transaction was aborted
-    assert.strictEqual(session.aborted, true, 'Transaction must be aborted on TenantKey failure');
-    assert.strictEqual(session.committed, false, 'Transaction must NOT be committed');
-    // Verify no Client or User rows were committed (aborted means they were not persisted)
-    // In production with a real replica set, the abort would undo DB writes.
-    // In this stub-based test we verify the error was re-thrown and commit was not called.
+    // Verify error propagates so executeWrite / withTransaction can abort.
+    // Session lifecycle (abort) is now owned externally — not by the service.
     assert.ok(err instanceof FirmBootstrapError || err instanceof Error,
       'Error must be thrown');
-    console.log('✓ Transaction aborted correctly on TenantKey failure');
-    console.log('✓ commitTransaction was NOT called — no partial state persisted');
+    console.log('✓ Error propagates correctly on TenantKey failure (caller aborts the transaction)');
   }
 
   assert.strictEqual(threw, true, 'createFirmHierarchy must throw when TenantKey creation fails');
 }
 
-async function shouldRollbackWhenTenantKeyDuplicate() {
+async function shouldRollbackWhenTenantKeyUpdateOneFails() {
   const session = makeSession();
   const firmStore = { rows: [] };
   const allRows = { rows: [] };
 
-  // TenantKey stub that simulates duplicate key (code 11000)
-  const duplicateKeyTenantKeyStub = {
-    findOne: () => ({ session: () => Promise.resolve(null) }),
-    create: async () => {
-      const err = new Error('duplicate key error');
-      err.code = 11000;
+  // TenantKey stub that simulates an unexpected error during upsert
+  const failingUpsertStub = {
+    updateOne: async () => {
+      const err = new Error('unexpected updateOne error');
       throw err;
     },
   };
@@ -171,15 +157,16 @@ async function shouldRollbackWhenTenantKeyDuplicate() {
   let thrownError = null;
   try {
     await createFirmHierarchy({
-      payload: { name: 'Dup Firm', adminName: 'Dup Admin', adminEmail: 'dup@dup.test' },
+      payload: { name: 'Upsert Fail Firm', adminName: 'Fail Admin', adminEmail: 'fail@upsert.test' },
       performedBy: null,
-      requestId: 'test-dup-001',
+      requestId: 'test-upsert-fail-001',
       context: null,
+      session,
       deps: {
         Firm: makeFirmStub(firmStore),
         Client: makeClientStub(allRows),
         User: makeUserStub(allRows),
-        TenantKey: duplicateKeyTenantKeyStub,
+        TenantKey: failingUpsertStub,
         generateEncryptedDek: async () => 'aGVsbG8=:d29ybGQ=:dGVzdA==',
         emailService: {
           sendFirmCreatedEmail: async () => {},
@@ -187,23 +174,17 @@ async function shouldRollbackWhenTenantKeyDuplicate() {
         },
         generateNextClientId: async () => 'C000001',
         generateNextXID: async () => 'X000001',
-        startSession: () => {
-          session.startTransaction();
-          return Promise.resolve(session);
-        },
       },
     });
   } catch (err) {
     threw = true;
     thrownError = err;
-    assert.strictEqual(session.aborted, true, 'Transaction must be aborted on duplicate TenantKey');
-    assert.strictEqual(session.committed, false, 'Transaction must NOT be committed');
   }
 
-  assert.strictEqual(threw, true, 'createFirmHierarchy must throw on duplicate TenantKey');
+  assert.strictEqual(threw, true, 'createFirmHierarchy must throw when TenantKey upsert fails');
   assert.ok(thrownError instanceof FirmBootstrapError, 'Must throw FirmBootstrapError');
-  assert.strictEqual(thrownError.statusCode, 409, 'Duplicate TenantKey must return 409');
-  console.log('✓ Duplicate TenantKey (code 11000) correctly throws FirmBootstrapError 409');
+  assert.strictEqual(thrownError.statusCode, 500, 'Unexpected upsert error must return 500');
+  console.log('✓ TenantKey upsert failure correctly throws FirmBootstrapError');
 }
 
 async function shouldRejectInvalidDekFormat() {
@@ -215,6 +196,7 @@ async function shouldRejectInvalidDekFormat() {
       performedBy: null,
       requestId: 'test-invalid-dek',
       context: null,
+      session: null,
       deps: {
         Firm: null,
         Client: null,
@@ -225,7 +207,6 @@ async function shouldRejectInvalidDekFormat() {
         emailService: null,
         generateNextClientId: null,
         generateNextXID: null,
-        startSession: () => { throw new Error('Should not reach startSession'); },
       },
     });
   } catch (err) {
@@ -256,11 +237,12 @@ async function shouldRejectFirmCreateWithoutId() {
       performedBy: null,
       requestId: 'test-no-id',
       context: null,
+      session,
       deps: {
         Firm: firmWithoutIdStub,
         Client: makeClientStub({ rows: [] }),
         User: makeUserStub({ rows: [] }),
-        TenantKey: { findOne: () => ({ session: () => Promise.resolve(null) }), create: async () => [] },
+        TenantKey: { updateOne: async () => {} },
         generateEncryptedDek: async () => 'aGVsbG8=:d29ybGQ=:dGVzdA==',
         emailService: {
           sendFirmCreatedEmail: async () => {},
@@ -268,16 +250,11 @@ async function shouldRejectFirmCreateWithoutId() {
         },
         generateNextClientId: async () => 'C000001',
         generateNextXID: async () => 'X000001',
-        startSession: () => {
-          session.startTransaction();
-          return Promise.resolve(session);
-        },
       },
     });
   } catch (err) {
     threw = true;
     thrownError = err;
-    assert.strictEqual(session.aborted, true, 'Transaction must be aborted when firm _id is missing');
   }
 
   assert.strictEqual(threw, true, 'Should throw when firm _id is missing');
@@ -286,20 +263,20 @@ async function shouldRejectFirmCreateWithoutId() {
   console.log('✓ Missing firm _id is rejected before TenantKey creation');
 }
 
-async function shouldUseTenantIdFieldForTenantKeyCreate() {
+async function shouldUseTenantIdFieldForTenantKeyUpsert() {
   const session = makeSession();
   const firmStore = { rows: [] };
   const allRows = { rows: [] };
-  let tenantKeyCreateChecked = false;
+  let tenantKeyUpsertChecked = false;
 
   const tenantKeyStub = {
-    findOne: () => ({ session: () => Promise.resolve(null) }),
-    create: async (docs) => {
-      const payload = docs[0] || {};
-      tenantKeyCreateChecked = true;
-      assert.ok(payload.tenantId, 'TenantKey payload must include tenantId');
-      assert.strictEqual(payload.firmId, undefined, 'TenantKey payload must not include firmId');
-      return [{ ...payload, _id: 'tenant-key-1' }];
+    updateOne: async (filter, update, _opts) => {
+      tenantKeyUpsertChecked = true;
+      assert.ok(filter.tenantId, 'TenantKey upsert filter must include tenantId');
+      assert.ok(update.$setOnInsert, 'TenantKey upsert must use $setOnInsert');
+      assert.ok(update.$setOnInsert.tenantId, 'TenantKey $setOnInsert must include tenantId');
+      assert.strictEqual(update.$setOnInsert.firmId, undefined, 'TenantKey $setOnInsert must not include firmId');
+      return { upsertedCount: 1 };
     },
   };
 
@@ -308,6 +285,7 @@ async function shouldUseTenantIdFieldForTenantKeyCreate() {
     performedBy: null,
     requestId: 'test-tenant-field',
     context: null,
+    session,
     deps: {
       Firm: makeFirmStub(firmStore),
       Client: makeClientStub(allRows),
@@ -320,17 +298,58 @@ async function shouldUseTenantIdFieldForTenantKeyCreate() {
       },
       generateNextClientId: async () => 'C000001',
       generateNextXID: async () => 'X000001',
-      startSession: () => {
-        session.startTransaction();
-        return Promise.resolve(session);
-      },
     },
   });
 
   assert.ok(result?.firm?._id, 'Firm should be created successfully');
-  assert.strictEqual(session.committed, true, 'Transaction should commit on successful TenantKey create');
-  assert.strictEqual(tenantKeyCreateChecked, true, 'TenantKey.create payload should be validated');
-  console.log('✓ TenantKey creation uses tenantId field (not firmId)');
+  assert.strictEqual(tenantKeyUpsertChecked, true, 'TenantKey.updateOne upsert payload should be validated');
+  console.log('✓ TenantKey creation uses atomic upsert with tenantId field (not firmId)');
+}
+
+async function shouldSucceedWhenTenantKeyAlreadyExists() {
+  const session = makeSession();
+  const firmStore = { rows: [] };
+  const allRows = { rows: [] };
+
+  // TenantKey stub that simulates an existing key (upsert no-op, no error)
+  const idempotentTenantKeyStub = {
+    updateOne: async (filter, update, opts) => {
+      assert.ok(opts && opts.upsert, 'TenantKey updateOne must use upsert:true');
+      // Simulate: key already exists, $setOnInsert is a no-op, no error thrown
+      return { upsertedCount: 0, matchedCount: 1, modifiedCount: 0 };
+    },
+  };
+
+  let threw = false;
+  let result = null;
+  try {
+    result = await createFirmHierarchy({
+      payload: { name: 'Idempotent Firm', adminName: 'Idem Admin', adminEmail: 'idem@test.test' },
+      performedBy: null,
+      requestId: 'test-idempotent-001',
+      context: null,
+      session,
+      deps: {
+        Firm: makeFirmStub(firmStore),
+        Client: makeClientStub(allRows),
+        User: makeUserStub(allRows),
+        TenantKey: idempotentTenantKeyStub,
+        generateEncryptedDek: async () => 'aGVsbG8=:d29ybGQ=:dGVzdA==',
+        emailService: {
+          sendFirmCreatedEmail: async () => {},
+          sendPasswordSetupEmail: async () => ({ success: true }),
+        },
+        generateNextClientId: async () => 'C000001',
+        generateNextXID: async () => 'X000001',
+      },
+    });
+  } catch (err) {
+    threw = true;
+  }
+
+  assert.strictEqual(threw, false, 'Must NOT throw when TenantKey already exists (idempotent upsert)');
+  assert.ok(result?.firm?._id, 'Firm should be returned even when TenantKey upsert was a no-op');
+  console.log('✓ Duplicate TenantKey is handled idempotently — no error thrown');
 }
 
 async function run() {
@@ -340,10 +359,11 @@ async function run() {
 
   try {
     await shouldRollbackWhenTenantKeyFails();
-    await shouldRollbackWhenTenantKeyDuplicate();
+    await shouldRollbackWhenTenantKeyUpdateOneFails();
     await shouldRejectInvalidDekFormat();
     await shouldRejectFirmCreateWithoutId();
-    await shouldUseTenantIdFieldForTenantKeyCreate();
+    await shouldUseTenantIdFieldForTenantKeyUpsert();
+    await shouldSucceedWhenTenantKeyAlreadyExists();
     console.log('\n✓ All firmBootstrap rollback tests passed.');
   } catch (err) {
     console.error('\nfirmBootstrap rollback test FAILED:', err);
@@ -352,3 +372,4 @@ async function run() {
 }
 
 run();
+
