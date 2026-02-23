@@ -37,6 +37,7 @@ const responseContract = (req, res, next) => {
   const originalJson = res.json.bind(res);
 
   res.json = (payload) => {
+    if (res.headersSent) return;
     const statusCode = Number.isInteger(res.statusCode) ? res.statusCode : 200;
     const isError = (statusCode >= 400) || (payload && payload.forceErrorContract);
 

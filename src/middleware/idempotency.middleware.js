@@ -62,6 +62,7 @@ const idempotencyMiddleware = (req, res, next) => {
 
   const originalJson = res.json.bind(res);
   res.json = (payload) => {
+    if (res.headersSent) return;
     if (req.transactionCommitted === true || req.transactionSkipped === true) {
       record.response = {
         status: res.statusCode || 200,
