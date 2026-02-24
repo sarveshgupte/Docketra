@@ -2,7 +2,7 @@
 /**
  * Unit test: firm bootstrap transaction rollback
  *
- * Verifies that if TenantKey creation fails, the entire transaction is rolled
+ * Verifies that if tenant key ensure fails, the entire transaction is rolled
  * back — no Firm, Client, User, or TenantKey document must be persisted.
  *
  * After the transaction architecture refactor, session lifecycle (commit/abort)
@@ -10,7 +10,7 @@
  * These tests verify that:
  *   - errors propagate correctly so withTransaction can abort
  *   - DB writes use the injected session
- *   - TenantKey is created via atomic upsert (updateOne + $setOnInsert)
+ *   - TenantKey lifecycle is owned by ensureTenantKey in encryption layer
  */
 
 const assert = require('assert');
@@ -85,11 +85,11 @@ const makeUserStub = (store) => ({
   },
 });
 
-// ── TenantKey stub that throws on updateOne ───────────────────────────────────
+// ── ensureTenantKey stub that throws ──────────────────────────────────────────
 
-const makeTenantKeyFailStub = () => ({
-  updateOne: async () => {
-    const err = new Error('TenantKey updateOne failed (simulated)');
+const makeEnsureTenantKeyFailStub = () => ({
+  ensureTenantKey: async () => {
+    const err = new Error('ensureTenantKey failed (simulated)');
     throw err;
   },
 });
@@ -104,7 +104,7 @@ async function shouldRollbackWhenTenantKeyFails() {
   const firmStub = makeFirmStub(firmStore);
   const clientStub = makeClientStub(allRows);
   const userStub = makeUserStub(allRows);
-  const tenantKeyStub = makeTenantKeyFailStub();
+  const ensureTenantKeyStub = makeEnsureTenantKeyFailStub();
 
   let threw = false;
   try {
@@ -118,8 +118,7 @@ async function shouldRollbackWhenTenantKeyFails() {
         Firm: firmStub,
         Client: clientStub,
         User: userStub,
-        TenantKey: tenantKeyStub,
-        generateEncryptedDek: async () => 'aGVsbG8=:d29ybGQ=:dGVzdA==',
+        ensureTenantKey: ensureTenantKeyStub.ensureTenantKey,
         emailService: {
           sendFirmCreatedEmail: async () => {},
           sendPasswordSetupEmail: async () => ({ success: false, error: 'skipped' }),
@@ -134,21 +133,21 @@ async function shouldRollbackWhenTenantKeyFails() {
     // Session lifecycle (abort) is now owned externally — not by the service.
     assert.ok(err instanceof FirmBootstrapError || err instanceof Error,
       'Error must be thrown');
-    console.log('✓ Error propagates correctly on TenantKey failure (caller aborts the transaction)');
+    console.log('✓ Error propagates correctly on ensureTenantKey failure (caller aborts the transaction)');
   }
 
-  assert.strictEqual(threw, true, 'createFirmHierarchy must throw when TenantKey creation fails');
+  assert.strictEqual(threw, true, 'createFirmHierarchy must throw when ensureTenantKey fails');
 }
 
-async function shouldRollbackWhenTenantKeyUpdateOneFails() {
+async function shouldRollbackWhenEnsureTenantKeyFails() {
   const session = makeSession();
   const firmStore = { rows: [] };
   const allRows = { rows: [] };
 
-  // TenantKey stub that simulates an unexpected error during upsert
-  const failingUpsertStub = {
-    updateOne: async () => {
-      const err = new Error('unexpected updateOne error');
+  // ensureTenantKey stub that simulates an unexpected error
+  const failingEnsureTenantKeyStub = {
+    ensureTenantKey: async () => {
+      const err = new Error('unexpected ensureTenantKey error');
       throw err;
     },
   };
@@ -166,8 +165,7 @@ async function shouldRollbackWhenTenantKeyUpdateOneFails() {
         Firm: makeFirmStub(firmStore),
         Client: makeClientStub(allRows),
         User: makeUserStub(allRows),
-        TenantKey: failingUpsertStub,
-        generateEncryptedDek: async () => 'aGVsbG8=:d29ybGQ=:dGVzdA==',
+        ensureTenantKey: failingEnsureTenantKeyStub.ensureTenantKey,
         emailService: {
           sendFirmCreatedEmail: async () => {},
           sendPasswordSetupEmail: async () => ({ success: false }),
@@ -181,44 +179,10 @@ async function shouldRollbackWhenTenantKeyUpdateOneFails() {
     thrownError = err;
   }
 
-  assert.strictEqual(threw, true, 'createFirmHierarchy must throw when TenantKey upsert fails');
+  assert.strictEqual(threw, true, 'createFirmHierarchy must throw when ensureTenantKey fails');
   assert.ok(thrownError instanceof FirmBootstrapError, 'Must throw FirmBootstrapError');
-  assert.strictEqual(thrownError.statusCode, 500, 'Unexpected upsert error must return 500');
-  console.log('✓ TenantKey upsert failure correctly throws FirmBootstrapError');
-}
-
-async function shouldRejectInvalidDekFormat() {
-  let threw = false;
-  let thrownError = null;
-  try {
-    await createFirmHierarchy({
-      payload: { name: 'Invalid DEK Firm', adminName: 'Test', adminEmail: 'test@dek.test' },
-      performedBy: null,
-      requestId: 'test-invalid-dek',
-      context: null,
-      session: null,
-      deps: {
-        Firm: null,
-        Client: null,
-        User: null,
-        TenantKey: null,
-        // Returns a DEK that does NOT pass looksEncrypted()
-        generateEncryptedDek: async () => 'not-a-valid-dek',
-        emailService: null,
-        generateNextClientId: null,
-        generateNextXID: null,
-      },
-    });
-  } catch (err) {
-    threw = true;
-    thrownError = err;
-  }
-  assert.strictEqual(threw, true, 'Should throw on invalid DEK format');
-  assert.ok(thrownError instanceof FirmBootstrapError, 'Must throw FirmBootstrapError');
-  assert.strictEqual(thrownError.statusCode, 500, 'Invalid DEK format must return 500');
-  assert.ok(thrownError.message.includes('Invalid encrypted DEK format'),
-    'Error message must reference DEK format');
-  console.log('✓ Invalid DEK format rejected before transaction starts');
+  assert.strictEqual(thrownError.statusCode, 500, 'Unexpected ensureTenantKey error must return 500');
+  console.log('✓ ensureTenantKey failure correctly throws FirmBootstrapError');
 }
 
 async function shouldRejectFirmCreateWithoutId() {
@@ -242,8 +206,7 @@ async function shouldRejectFirmCreateWithoutId() {
         Firm: firmWithoutIdStub,
         Client: makeClientStub({ rows: [] }),
         User: makeUserStub({ rows: [] }),
-        TenantKey: { updateOne: async () => {} },
-        generateEncryptedDek: async () => 'aGVsbG8=:d29ybGQ=:dGVzdA==',
+        ensureTenantKey: async () => {},
         emailService: {
           sendFirmCreatedEmail: async () => {},
           sendPasswordSetupEmail: async () => ({ success: false }),
@@ -263,20 +226,16 @@ async function shouldRejectFirmCreateWithoutId() {
   console.log('✓ Missing firm _id is rejected before TenantKey creation');
 }
 
-async function shouldUseTenantIdFieldForTenantKeyUpsert() {
+async function shouldCallEnsureTenantKeyWithFirmId() {
   const session = makeSession();
   const firmStore = { rows: [] };
   const allRows = { rows: [] };
-  let tenantKeyUpsertChecked = false;
+  let ensureTenantKeyChecked = false;
 
-  const tenantKeyStub = {
-    updateOne: async (filter, update, _opts) => {
-      tenantKeyUpsertChecked = true;
-      assert.ok(filter.tenantId, 'TenantKey upsert filter must include tenantId');
-      assert.ok(update.$setOnInsert, 'TenantKey upsert must use $setOnInsert');
-      assert.ok(update.$setOnInsert.tenantId, 'TenantKey $setOnInsert must include tenantId');
-      assert.strictEqual(update.$setOnInsert.firmId, undefined, 'TenantKey $setOnInsert must not include firmId');
-      return { upsertedCount: 1 };
+  const ensureTenantKeyStub = {
+    ensureTenantKey: async (tenantId) => {
+      ensureTenantKeyChecked = true;
+      assert.ok(tenantId, 'ensureTenantKey must be called with tenantId');
     },
   };
 
@@ -290,8 +249,7 @@ async function shouldUseTenantIdFieldForTenantKeyUpsert() {
       Firm: makeFirmStub(firmStore),
       Client: makeClientStub(allRows),
       User: makeUserStub(allRows),
-      TenantKey: tenantKeyStub,
-      generateEncryptedDek: async () => 'aGVsbG8=:d29ybGQ=:dGVzdA==',
+      ensureTenantKey: ensureTenantKeyStub.ensureTenantKey,
       emailService: {
         sendFirmCreatedEmail: async () => {},
         sendPasswordSetupEmail: async () => ({ success: true }),
@@ -302,23 +260,16 @@ async function shouldUseTenantIdFieldForTenantKeyUpsert() {
   });
 
   assert.ok(result?.firm?._id, 'Firm should be created successfully');
-  assert.strictEqual(tenantKeyUpsertChecked, true, 'TenantKey.updateOne upsert payload should be validated');
-  console.log('✓ TenantKey creation uses atomic upsert with tenantId field (not firmId)');
+  assert.strictEqual(ensureTenantKeyChecked, true, 'ensureTenantKey should be invoked');
+  console.log('✓ TenantKey lifecycle is delegated to ensureTenantKey');
 }
 
-async function shouldSucceedWhenTenantKeyAlreadyExists() {
+async function shouldSucceedWhenEnsureTenantKeyNoOps() {
   const session = makeSession();
   const firmStore = { rows: [] };
   const allRows = { rows: [] };
 
-  // TenantKey stub that simulates an existing key (upsert no-op, no error)
-  const idempotentTenantKeyStub = {
-    updateOne: async (filter, update, opts) => {
-      assert.ok(opts && opts.upsert, 'TenantKey updateOne must use upsert:true');
-      // Simulate: key already exists, $setOnInsert is a no-op, no error thrown
-      return { upsertedCount: 0, matchedCount: 1, modifiedCount: 0 };
-    },
-  };
+  const idempotentEnsureTenantKeyStub = { ensureTenantKey: async () => {} };
 
   let threw = false;
   let result = null;
@@ -333,8 +284,7 @@ async function shouldSucceedWhenTenantKeyAlreadyExists() {
         Firm: makeFirmStub(firmStore),
         Client: makeClientStub(allRows),
         User: makeUserStub(allRows),
-        TenantKey: idempotentTenantKeyStub,
-        generateEncryptedDek: async () => 'aGVsbG8=:d29ybGQ=:dGVzdA==',
+        ensureTenantKey: idempotentEnsureTenantKeyStub.ensureTenantKey,
         emailService: {
           sendFirmCreatedEmail: async () => {},
           sendPasswordSetupEmail: async () => ({ success: true }),
@@ -347,9 +297,9 @@ async function shouldSucceedWhenTenantKeyAlreadyExists() {
     threw = true;
   }
 
-  assert.strictEqual(threw, false, 'Must NOT throw when TenantKey already exists (idempotent upsert)');
-  assert.ok(result?.firm?._id, 'Firm should be returned even when TenantKey upsert was a no-op');
-  console.log('✓ Duplicate TenantKey is handled idempotently — no error thrown');
+  assert.strictEqual(threw, false, 'Must NOT throw when ensureTenantKey no-ops');
+  assert.ok(result?.firm?._id, 'Firm should be returned even when ensureTenantKey no-ops');
+  console.log('✓ ensureTenantKey no-op does not block firm creation');
 }
 
 async function run() {
@@ -359,11 +309,10 @@ async function run() {
 
   try {
     await shouldRollbackWhenTenantKeyFails();
-    await shouldRollbackWhenTenantKeyUpdateOneFails();
-    await shouldRejectInvalidDekFormat();
+    await shouldRollbackWhenEnsureTenantKeyFails();
     await shouldRejectFirmCreateWithoutId();
-    await shouldUseTenantIdFieldForTenantKeyUpsert();
-    await shouldSucceedWhenTenantKeyAlreadyExists();
+    await shouldCallEnsureTenantKeyWithFirmId();
+    await shouldSucceedWhenEnsureTenantKeyNoOps();
     console.log('\n✓ All firmBootstrap rollback tests passed.');
   } catch (err) {
     console.error('\nfirmBootstrap rollback test FAILED:', err);
@@ -372,4 +321,3 @@ async function run() {
 }
 
 run();
-
