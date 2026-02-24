@@ -50,15 +50,19 @@ require.cache[require.resolve('../src/models/SuperadminAudit.model')] = { export
 // ── Load modules under test ──────────────────────────────────────────────────
 
 // wrapWriteHandler needs to be transparent in tests (no transaction)
-const transactionGuards = require('../src/utils/transactionGuards');
-const originalWrap = transactionGuards.wrapWriteHandler;
-transactionGuards.wrapWriteHandler = (fn) => fn; // bypass transaction wrapper
+const wrapWriteHandlerPath = require.resolve('../src/middleware/wrapWriteHandler');
+const originalWrapModule = require.cache[wrapWriteHandlerPath];
+require.cache[wrapWriteHandlerPath] = { exports: (fn) => fn };
 
 const { switchFirm, activateFirm, deactivateFirm } = require('../src/controllers/superadmin.controller');
 const { requirePlatformSuperAdmin, requireFirmUser } = require('../src/middleware/permission.middleware');
 
 // Restore after loading
-transactionGuards.wrapWriteHandler = originalWrap;
+if (originalWrapModule) {
+  require.cache[wrapWriteHandlerPath] = originalWrapModule;
+} else {
+  delete require.cache[wrapWriteHandlerPath];
+}
 
 const superAdminUser = {
   _id: new mongoose.Types.ObjectId().toString(),

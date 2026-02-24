@@ -3,6 +3,7 @@ const assert = require('assert');
 const { idempotencyMiddleware, resetIdempotencyCache } = require('../src/middleware/idempotency.middleware');
 const domainInvariantGuard = require('../src/middleware/domainInvariantGuard');
 const { executeWrite } = require('../src/utils/executeWrite');
+const wrapWriteHandler = require('../src/middleware/wrapWriteHandler');
 
 const createMockRes = () => {
   const res = {
@@ -217,6 +218,18 @@ async function testControllerGuardWithoutTransaction() {
   assert.ok(nextError, 'Mutating controller should pass error to next when DB is unavailable');
 }
 
+async function testNestedWrapperGuard() {
+  let nextError = null;
+  const handler = wrapWriteHandler(async () => ({ success: true }));
+  const req = { transactionSession: { session: {} } };
+  const res = createMockRes();
+  const next = (err) => { nextError = err; };
+
+  await handler(req, res, next);
+  assert.ok(nextError, 'Nested wrapper should forward an error');
+  assert.strictEqual(nextError.message, 'Nested transaction wrapper detected');
+}
+
 async function run() {
   try {
     await testIdempotentReplay();
@@ -227,6 +240,7 @@ async function run() {
     await testExecuteWriteEnforcesTransaction();
     await testIdempotencySkipsCacheOnRollback();
     await testControllerGuardWithoutTransaction();
+    await testNestedWrapperGuard();
     console.log('Write safety tests passed.');
   } catch (err) {
     console.error('Write safety tests failed:', err);

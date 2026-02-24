@@ -11,9 +11,14 @@ const { executeWrite } = require('../utils/executeWrite');
  */
 const wrapWriteHandler = (controllerFn) => {
   return async (req, res, next) => {
+    let sessionAttached = false;
     try {
+      if (req.transactionSession) {
+        throw new Error('Nested transaction wrapper detected');
+      }
       const result = await executeWrite(req, async (session) => {
         req.transactionSession = { session };
+        sessionAttached = true;
         return await controllerFn(req, res, next);
       });
 
@@ -22,6 +27,10 @@ const wrapWriteHandler = (controllerFn) => {
       }
     } catch (error) {
       next(error);
+    } finally {
+      if (sessionAttached) {
+        delete req.transactionSession;
+      }
     }
   };
 };

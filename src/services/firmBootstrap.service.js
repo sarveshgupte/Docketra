@@ -105,6 +105,7 @@ const buildIds = async (deps, session, name) => {
  * @returns {Promise<Object>} Created entities (firm, defaultClient, adminUser)
  */
 const createFirmHierarchy = async ({ payload, performedBy, requestId, context = null, session, deps = defaultDeps }) => {
+  console.log('createFirmHierarchy invoked', requestId);
   if (isFirmCreationDisabled()) {
     throw new FirmBootstrapError('Firm creation is temporarily disabled', 503);
   }

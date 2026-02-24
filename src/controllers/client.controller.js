@@ -12,7 +12,7 @@ const {
 const { getMimeType } = require('../utils/fileUtils');
 const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
 const { areFileUploadsDisabled } = require('../services/featureFlags.service');
-const { wrapWriteHandler } = require('../utils/transactionGuards');
+const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { softDelete } = require('../services/softDelete.service');
 const { enqueueStorageJob, JOB_TYPES } = require('../queues/storage.queue');
 const CaseFile = require('../models/CaseFile.model');
