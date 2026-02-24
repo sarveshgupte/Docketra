@@ -9,7 +9,7 @@ const Firm = require('../models/Firm.model');
 const emailService = require('../services/email.service');
 const { CASE_STATUS } = require('../config/constants');
 const { logAdminAction, logCaseListViewed } = require('../services/auditLog.service');
-const { wrapWriteHandler } = require('../utils/transactionGuards');
+const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { getDiagnosticsSnapshot } = require('../services/diagnostics.service');
 const { restoreDocument, buildDiagnostics } = require('../services/softDelete.service');
 

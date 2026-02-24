@@ -1,6 +1,6 @@
 const { randomUUID } = require('crypto');
 const User = require('../models/User.model');
-const { wrapWriteHandler } = require('../utils/transactionGuards');
+const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 
 /**
  * User Controller

@@ -16,7 +16,7 @@ const { normalizeFirmSlug } = require('../utils/slugify');
 const { ensureDefaultClientForFirm } = require('../services/defaultClient.service');
 const { resolveUserIdentity } = require('../services/identity.service');
 const { isGoogleAuthDisabled } = require('../services/featureFlags.service');
-const { wrapWriteHandler } = require('../utils/transactionGuards');
+const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 
 /**
  * Authentication Controller for JWT-based Enterprise Authentication

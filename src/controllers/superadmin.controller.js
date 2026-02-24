@@ -10,7 +10,7 @@ const mongoose = require('mongoose');
 const { generateNextClientId } = require('../services/clientIdGenerator');
 const { slugify, normalizeFirmSlug } = require('../utils/slugify');
 const { getDashboardSnapshot } = require('../utils/operationalMetrics');
-const { wrapWriteHandler } = require('../utils/transactionGuards');
+const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 
 const { createFirmHierarchy, FirmBootstrapError } = require('../services/firmBootstrap.service');
 const { isFirmCreationDisabled } = require('../services/featureFlags.service');

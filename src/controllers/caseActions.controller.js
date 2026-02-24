@@ -2,7 +2,7 @@ const Case = require('../models/Case.model');
 const caseActionService = require('../services/caseAction.service');
 const { CASE_STATUS } = require('../config/constants');
 const { logCaseListViewed } = require('../services/auditLog.service');
-const { wrapWriteHandler } = require('../utils/transactionGuards');
+const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 
 /**
  * Case Actions Controller
