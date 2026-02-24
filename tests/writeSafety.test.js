@@ -126,78 +126,77 @@ async function testInvalidStateGuard() {
 }
 
 async function testExecuteWriteEnforcesTransaction() {
-  let threw = false;
-  try {
-    await executeWrite({ req: {}, fn: async () => {} });
-  } catch (err) {
-    threw = true;
-  }
-  assert.strictEqual(threw, true, 'executeWrite should throw without transaction');
+  const mongoose = require('mongoose');
 
+  // Test skipTransaction path — no DB needed
   const skipReq = { skipTransaction: true };
-  const skipResult = await executeWrite({ req: skipReq, fn: async () => 'skip' });
+  const skipResult = await executeWrite(skipReq, async () => 'skip');
   assert.strictEqual(skipResult, 'skip');
   assert.strictEqual(skipReq.transactionSkipped, true, 'Skip transactions should mark skipped for idempotency');
 
-  const req = {
-    transactionActive: true,
-    transactionSession: {
-      withTransaction: (fn) => fn(),
-    },
-  };
-  const result = await executeWrite({ req, fn: async () => 'ok' });
-  assert.strictEqual(result, 'ok');
+  // Test successful transaction with a mocked session
+  const originalStartSession = mongoose.startSession;
+  mongoose.startSession = async () => ({
+    withTransaction: async (fn) => fn(),
+    endSession: async () => {},
+  });
+  try {
+    const req = {};
+    const result = await executeWrite(req, async () => 'ok');
+    assert.strictEqual(result, 'ok');
+    assert.strictEqual(req.transactionCommitted, true, 'Commit flag should be set after successful transaction');
+  } finally {
+    mongoose.startSession = originalStartSession;
+  }
 }
 
 async function testIdempotencySkipsCacheOnRollback() {
   resetIdempotencyCache();
   let handlerRuns = 0;
+  const mongoose = require('mongoose');
+  const originalStartSession = mongoose.startSession;
 
-  const makeReq = (opts = {}) => buildRequest({
+  const makeReq = () => buildRequest({
     headers: { 'Idempotency-Key': 'k4' },
-    transactionActive: true,
-    transactionSession: opts.transactionSession,
     transactionCommitted: false,
   });
 
-  const failingReq = makeReq({
-    transactionSession: {
-      withTransaction: async (fn) => {
-        const result = await fn('session');
-        throw new Error('fail-before-commit');
-      },
+  // Simulate a failing transaction: withTransaction throws after the handler runs
+  mongoose.startSession = async () => ({
+    withTransaction: async (fn) => {
+      await fn();
+      throw new Error('fail-before-commit');
     },
+    endSession: async () => {},
   });
+  const failingReq = makeReq();
   const res1 = createMockRes();
   await runMiddleware(idempotencyMiddleware, failingReq, res1);
   try {
-    await executeWrite({
-      req: failingReq,
-      fn: async () => {
-        handlerRuns += 1;
-        res1.json({ ok: true });
-        throw new Error('fail-after-json');
-      },
+    await executeWrite(failingReq, async () => {
+      handlerRuns += 1;
+      res1.json({ ok: true });
+      throw new Error('fail-after-json');
     });
   } catch (err) {
     // expected
   }
   assert.strictEqual(failingReq.transactionCommitted, false, 'Commit flag should remain false on rollback');
 
-  const successReq = makeReq({
-    transactionSession: {
-      withTransaction: async (fn) => fn('session'),
-    },
+  // Simulate a successful transaction
+  mongoose.startSession = async () => ({
+    withTransaction: async (fn) => fn(),
+    endSession: async () => {},
   });
+  const successReq = makeReq();
   const res2 = createMockRes();
   await runMiddleware(idempotencyMiddleware, successReq, res2);
-  await executeWrite({
-    req: successReq,
-    fn: async () => {
-      handlerRuns += 1;
-      res2.json({ ok: true });
-    },
+  await executeWrite(successReq, async () => {
+    handlerRuns += 1;
+    res2.json({ ok: true });
   });
+
+  mongoose.startSession = originalStartSession;
 
   assert.strictEqual(handlerRuns, 2, 'Handler should run again after rollback');
   assert.strictEqual(res2.headers['Idempotent-Replay'], undefined, 'Replay header should not be set after rollback');
@@ -206,19 +205,16 @@ async function testIdempotencySkipsCacheOnRollback() {
 
 async function testControllerGuardWithoutTransaction() {
   const { createUser } = require('../src/controllers/user.controller');
-  const req = { transactionActive: false };
-  const res = {};
-  let threw = false;
+  let nextError = null;
+  const req = {};
+  const res = createMockRes();
+  const next = (err) => { nextError = err; };
 
-  try {
-    await createUser(req, res);
-  } catch (err) {
-    threw = true;
-    assert.strictEqual(err.statusCode, 500);
-    assert.match(err.message, /transaction/i);
-  }
+  // With no DB connection, executeWrite (called by wrapWriteHandler) will fail
+  // and wrapWriteHandler must pass the error to next() — never throw unhandled.
+  await createUser(req, res, next);
 
-  assert.strictEqual(threw, true, 'Mutating controller should throw when no transaction is active');
+  assert.ok(nextError, 'Mutating controller should pass error to next when DB is unavailable');
 }
 
 async function run() {

@@ -1,30 +1,30 @@
 /**
- * Execute a mutating handler inside an active transaction session.
- * Throws when no transaction was established by upstream middleware.
+ * Execute a mutating handler inside a managed transaction session.
+ * Owns the full MongoDB session lifecycle: start → withTransaction → end.
+ * Never sends HTTP responses; returns handler result to the caller.
  */
+const mongoose = require('mongoose');
 const { runWithSession, runWithoutTransaction } = require('./transactionContext');
 
-const executeWrite = async ({ req, fn }) => {
+const executeWrite = async (req, handler) => {
   if (req?.skipTransaction) {
     req.transactionSkipped = true;
-    return runWithoutTransaction(() => fn());
-  }
-  if (!req || !req.transactionActive || !req.transactionSession?.withTransaction) {
-    const error = new Error('Mutation attempted without active transaction');
-    error.statusCode = 500;
-    throw error;
+    return runWithoutTransaction(() => handler(null));
   }
 
-  req.transactionCommitted = false;
+  const session = await mongoose.startSession();
+  let result;
 
-  const result = await runWithSession(
-    req.transactionSession.session,
-    async () => {
-      const writeResult = await req.transactionSession.withTransaction(async () => fn(req.transactionSession.session));
-      req.transactionCommitted = true;
-      return writeResult;
-    }
-  );
+  try {
+    await session.withTransaction(async () => {
+      result = await runWithSession(session, () => handler(session));
+    });
+
+    req.transactionCommitted = true;
+  } finally {
+    await session.endSession();
+  }
+
   return result;
 };
 

@@ -45,27 +45,6 @@ const isAdminCurrentlyLocked = (admin) => {
   return admin.lockUntil instanceof Date && admin.lockUntil > new Date();
 };
 
-const runInTransaction = async (work) => {
-  if (mongoose.connection.readyState !== 1) {
-    throw new Error('DATABASE_NOT_CONNECTED');
-  }
-
-  if (typeof mongoose.connection.transaction === 'function') {
-    return mongoose.connection.transaction(work);
-  }
-
-  const session = await mongoose.startSession();
-  try {
-    let result;
-    await session.withTransaction(async () => {
-      result = await work(session);
-    });
-    return result;
-  } finally {
-    await session.endSession();
-  }
-};
-
 const resolveSessionQuery = (query, session) => {
   if (session && query && typeof query.session === 'function') {
     query = query.session(session);
@@ -141,109 +120,43 @@ const logSuperadminAction = async ({ actionType, description, performedBy, perfo
  */
 const createFirm = async (req, res) => {
   const requestId = req.requestId || crypto.randomUUID();
+
+  if (isFirmCreationDisabled()) {
+    const err = new Error('Firm creation is temporarily disabled');
+    err.statusCode = 503;
+    err.code = 'FIRM_CREATION_DISABLED';
+    throw err;
+  }
+
+  // Create a plain request context (no Express API leakage)
+  // This context is safe to pass to services and background jobs
+  const requestContext = {
+    requestId,
+    actorXID: req.user?.xID,
+    actorEmail: req.user?.email,
+    actorId: req.user?._id,
+    ip: req.ip,
+    // Side-effect queue properties (transferred from req)
+    _pendingSideEffects: req._pendingSideEffects || [],
+    transactionActive: req.transactionActive || false,
+    transactionCommitted: req.transactionCommitted || false,
+  };
+
+  let result;
   try {
-    if (isFirmCreationDisabled()) {
-      return res.status(503).json({
-        success: false,
-        message: 'Firm creation is temporarily disabled',
-        requestId,
-      });
-    }
-
-    // Create a plain request context (no Express API leakage)
-    // This context is safe to pass to services and background jobs
-    const requestContext = {
-      requestId,
-      actorXID: req.user?.xID,
-      actorEmail: req.user?.email,
-      actorId: req.user?._id,
-      ip: req.ip,
-      // Side-effect queue properties (transferred from req)
-      _pendingSideEffects: req._pendingSideEffects || [],
-      transactionActive: req.transactionActive || false,
-      transactionCommitted: req.transactionCommitted || false,
-    };
-
-    const result = await createFirmHierarchy({
+    result = await createFirmHierarchy({
       payload: req.body,
       performedBy: req.user,
       requestId,
-      context: requestContext, // Pass context instead of req
+      context: requestContext,
       session: req.transactionSession.session,
     });
-
-    // Transaction has completed successfully if we reach here
-    // Mark as committed so side-effect queue will flush emails
-    requestContext.transactionCommitted = true;
-    
-    // Transfer side effects back to req for proper lifecycle management
-    req._pendingSideEffects = requestContext._pendingSideEffects;
-    req.transactionCommitted = true;
-
-    try {
-      await logSuperadminAction({
-        actionType: 'FirmCreated',
-        description: `Firm created: ${result.firm.name} (${result.firm.firmId}, ${result.firm.firmSlug})`,
-        performedBy: req.user.email,
-        performedById: req.user._id,
-        targetEntityType: 'Firm',
-        targetEntityId: result.firm._id.toString(),
-        metadata: {
-          firmId: result.firm.firmId,
-          firmSlug: result.firm.firmSlug,
-          defaultClientId: result.defaultClient._id,
-          adminXID: result.adminUser.xID,
-        },
-        req,
-      });
-    } catch (auditErr) {
-      console.error('[ADMIN_AUDIT] Persistence failure', auditErr);
-    }
-
-    // Return 201 Created (SUCCESS case)
-    // Note: This endpoint must NEVER return 401 after successful authentication
-    // 401 is reserved for authentication failures only (missing/invalid token)
-    // Business logic errors use 400 (validation), 403 (authorization), 422 (semantic), or 500 (server error)
-    return res.status(201).json({
-      success: true,
-      message: 'Firm created successfully with default client and admin. Admin credentials sent by email.',
-      data: {
-        firm: {
-          _id: result.firm._id,
-          firmId: result.firm.firmId,
-          firmSlug: result.firm.firmSlug,
-          name: result.firm.name,
-          status: result.firm.status,
-          bootstrapStatus: result.firm.bootstrapStatus,
-          defaultClientId: result.firm.defaultClientId,
-          createdAt: result.firm.createdAt,
-        },
-        defaultClient: {
-          _id: result.defaultClient._id,
-          clientId: result.defaultClient.clientId,
-          businessName: result.defaultClient.businessName,
-          isSystemClient: result.defaultClient.isSystemClient,
-        },
-        defaultAdmin: {
-          _id: result.adminUser._id,
-          xID: result.adminUser.xID,
-          name: result.adminUser.name,
-          email: result.adminUser.email,
-          role: result.adminUser.role,
-          status: result.adminUser.status,
-          defaultClientId: result.adminUser.defaultClientId,
-        },
-      },
-      requestId,
-    });
   } catch (error) {
-    // Error handling: Never return 401 here - authentication already succeeded
-    // 401 is only for auth failures (handled by authenticate middleware)
-    // Business errors use: 400 (validation), 403 (forbidden), 409 (conflict), 422 (semantic), 500 (server)
-    
     if (error instanceof FirmBootstrapError && error.statusCode === 200 && error.meta?.idempotent) {
+      // Idempotent: firm already exists, detected via read-only check before any writes.
+      // Safe to respond directly — no writes were made, no session abort occurred.
       const firm = error.meta.firm;
-      return res.status(200).json({
+      res.status(200).json({
         success: true,
         message: 'Firm already exists',
         data: {
@@ -261,26 +174,72 @@ const createFirm = async (req, res) => {
         idempotent: true,
         requestId,
       });
+      return;
     }
-
-    if (error instanceof FirmBootstrapError) {
-      // Use appropriate status code from error (400, 403, 409, 422, 500, 503)
-      return res.status(error.statusCode || 500).json({
-        success: false,
-        message: error.message,
-        requestId,
-        ...(error.meta || {}),
-      });
-    }
-
-    console.error('[SUPERADMIN] Error creating firm:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to create firm - transaction rolled back',
-      error: error.message,
-      requestId,
-    });
+    // All other errors: rethrow so wrapWriteHandler aborts the transaction
+    // and passes the error to the Express error handler via next(error).
+    throw error;
   }
+
+  // Transfer side effects back to req for proper lifecycle management
+  req._pendingSideEffects = requestContext._pendingSideEffects;
+
+  try {
+    await logSuperadminAction({
+      actionType: 'FirmCreated',
+      description: `Firm created: ${result.firm.name} (${result.firm.firmId}, ${result.firm.firmSlug})`,
+      performedBy: req.user.email,
+      performedById: req.user._id,
+      targetEntityType: 'Firm',
+      targetEntityId: result.firm._id.toString(),
+      metadata: {
+        firmId: result.firm.firmId,
+        firmSlug: result.firm.firmSlug,
+        defaultClientId: result.defaultClient._id,
+        adminXID: result.adminUser.xID,
+      },
+      req,
+    });
+  } catch (auditErr) {
+    console.error('[ADMIN_AUDIT] Persistence failure', auditErr);
+  }
+
+  // Return data — wrapWriteHandler sends the 201 response after the transaction commits.
+  // Note: This endpoint must NEVER return 401 after successful authentication.
+  // 401 is reserved for authentication failures only (missing/invalid token).
+  // Business logic errors use 400 (validation), 403 (authorization), 422 (semantic), or 500 (server error).
+  return {
+    success: true,
+    message: 'Firm created successfully with default client and admin. Admin credentials sent by email.',
+    data: {
+      firm: {
+        _id: result.firm._id,
+        firmId: result.firm.firmId,
+        firmSlug: result.firm.firmSlug,
+        name: result.firm.name,
+        status: result.firm.status,
+        bootstrapStatus: result.firm.bootstrapStatus,
+        defaultClientId: result.firm.defaultClientId,
+        createdAt: result.firm.createdAt,
+      },
+      defaultClient: {
+        _id: result.defaultClient._id,
+        clientId: result.defaultClient.clientId,
+        businessName: result.defaultClient.businessName,
+        isSystemClient: result.defaultClient.isSystemClient,
+      },
+      defaultAdmin: {
+        _id: result.adminUser._id,
+        xID: result.adminUser.xID,
+        name: result.adminUser.name,
+        email: result.adminUser.email,
+        role: result.adminUser.role,
+        status: result.adminUser.status,
+        defaultClientId: result.adminUser.defaultClientId,
+      },
+    },
+    requestId,
+  };
 };
 
 /**
@@ -983,59 +942,46 @@ const updateFirmAdminStatus = async (req, res) => {
 
   const oldStatus = admin.status;
   if (status === 'DISABLED' && admin.status === 'ACTIVE') {
-    try {
-      await runInTransaction(async (session) => {
-        const activeAdminsCountQuery = User.countDocuments({
-          firmId: firm._id,
-          role: 'Admin',
-          status: 'ACTIVE',
-        });
-        const activeAdminsCount = await resolveSessionQuery(activeAdminsCountQuery, session);
+    const session = req.transactionSession?.session;
+    const activeAdminsCountQuery = User.countDocuments({
+      firmId: firm._id,
+      role: 'Admin',
+      status: 'ACTIVE',
+    });
+    const activeAdminsCount = await resolveSessionQuery(activeAdminsCountQuery, session);
 
-        if (activeAdminsCount <= 1) {
-          console.warn('[SUPERADMIN] Blocked disable: last active admin protection', {
-            firmId: firm.firmId,
-            adminXID: admin.xID,
-          });
-          throw new Error('LAST_ACTIVE_ADMIN');
-        }
-
-        const adminForUpdateQuery = User.findOne({
-          _id: admin._id,
-          firmId: firm._id,
-          role: 'Admin',
-          status: { $ne: 'DELETED' },
-        });
-        const adminForUpdate = await resolveSessionQuery(adminForUpdateQuery, session);
-
-        if (!adminForUpdate) {
-          throw new Error('ADMIN_NOT_FOUND');
-        }
-
-        adminForUpdate.status = 'DISABLED';
-        adminForUpdate.isActive = false;
-        await adminForUpdate.save({ session });
-
-        admin.status = adminForUpdate.status;
-        admin.isActive = adminForUpdate.isActive;
+    if (activeAdminsCount <= 1) {
+      console.warn('[SUPERADMIN] Blocked disable: last active admin protection', {
+        firmId: firm.firmId,
+        adminXID: admin.xID,
       });
-    } catch (error) {
-      if (error?.message === 'LAST_ACTIVE_ADMIN') {
-        return res.status(422).json({
-          success: false,
-          code: 'LAST_ACTIVE_ADMIN',
-          message: 'Cannot disable the last active admin for this firm',
-        });
-      }
-      if (error?.message === 'ADMIN_NOT_FOUND') {
-        return res.status(404).json({
-          success: false,
-          code: 'ADMIN_NOT_FOUND',
-          message: 'Admin not found',
-        });
-      }
-      throw error;
+      const err = new Error('Cannot disable the last active admin for this firm');
+      err.statusCode = 422;
+      err.code = 'LAST_ACTIVE_ADMIN';
+      throw err;
     }
+
+    const adminForUpdateQuery = User.findOne({
+      _id: admin._id,
+      firmId: firm._id,
+      role: 'Admin',
+      status: { $ne: 'DELETED' },
+    });
+    const adminForUpdate = await resolveSessionQuery(adminForUpdateQuery, session);
+
+    if (!adminForUpdate) {
+      const err = new Error('Admin not found');
+      err.statusCode = 404;
+      err.code = 'ADMIN_NOT_FOUND';
+      throw err;
+    }
+
+    adminForUpdate.status = 'DISABLED';
+    adminForUpdate.isActive = false;
+    await adminForUpdate.save({ session });
+
+    admin.status = adminForUpdate.status;
+    admin.isActive = adminForUpdate.isActive;
   } else {
     admin.status = status;
     admin.isActive = status === 'ACTIVE';
@@ -1235,79 +1181,58 @@ const deleteFirmAdmin = async (req, res) => {
     });
   }
 
-  try {
-    await runInTransaction(async (session) => {
-      const adminForDeleteQuery = User.findOne({
-        _id: admin._id,
-        firmId: firm._id,
-        role: 'Admin',
-        status: { $ne: 'DELETED' },
-      });
-      const adminForDelete = await resolveSessionQuery(adminForDeleteQuery, session);
+  const session = req.transactionSession?.session;
+  const adminForDeleteQuery = User.findOne({
+    _id: admin._id,
+    firmId: firm._id,
+    role: 'Admin',
+    status: { $ne: 'DELETED' },
+  });
+  const adminForDelete = await resolveSessionQuery(adminForDeleteQuery, session);
 
-      if (!adminForDelete) {
-        throw new Error('ADMIN_NOT_FOUND');
-      }
-      if (adminForDelete.isSystem) {
-        throw new Error('SYSTEM_ADMIN_DELETE_FORBIDDEN');
-      }
-      if (adminForDelete.status === 'DELETED') {
-        throw new Error('ADMIN_DELETED');
-      }
-
-      if (adminForDelete.status === 'ACTIVE') {
-        const activeAdminsCountQuery = User.countDocuments({
-          firmId: firm._id,
-          role: 'Admin',
-          status: 'ACTIVE',
-        });
-        const activeAdminsCount = await resolveSessionQuery(activeAdminsCountQuery, session);
-
-        if (activeAdminsCount <= 1) {
-          console.warn('[SUPERADMIN] Blocked delete: last active admin protection', {
-            firmId: firm.firmId,
-            adminXID: admin.xID,
-          });
-          throw new Error('LAST_ACTIVE_ADMIN');
-        }
-      }
-
-      adminForDelete.status = 'DELETED';
-      adminForDelete.isActive = false;
-      adminForDelete.deletedAt = new Date();
-      await adminForDelete.save({ session });
-    });
-  } catch (error) {
-    if (error?.message === 'LAST_ACTIVE_ADMIN') {
-      return res.status(422).json({
-        success: false,
-        code: 'LAST_ACTIVE_ADMIN',
-        message: 'Cannot delete the last active admin for this firm',
-      });
-    }
-    if (error?.message === 'SYSTEM_ADMIN_DELETE_FORBIDDEN') {
-      return res.status(422).json({
-        success: false,
-        code: 'SYSTEM_ADMIN_DELETE_FORBIDDEN',
-        message: 'System admin cannot be deleted',
-      });
-    }
-    if (error?.message === 'ADMIN_DELETED') {
-      return res.status(422).json({
-        success: false,
-        code: 'ADMIN_DELETED',
-        message: 'Admin is already deleted',
-      });
-    }
-    if (error?.message === 'ADMIN_NOT_FOUND') {
-      return res.status(404).json({
-        success: false,
-        code: 'ADMIN_NOT_FOUND',
-        message: 'Admin not found',
-      });
-    }
-    throw error;
+  if (!adminForDelete) {
+    const err = new Error('Admin not found');
+    err.statusCode = 404;
+    err.code = 'ADMIN_NOT_FOUND';
+    throw err;
   }
+  if (adminForDelete.isSystem) {
+    const err = new Error('System admin cannot be deleted');
+    err.statusCode = 422;
+    err.code = 'SYSTEM_ADMIN_DELETE_FORBIDDEN';
+    throw err;
+  }
+  if (adminForDelete.status === 'DELETED') {
+    const err = new Error('Admin is already deleted');
+    err.statusCode = 422;
+    err.code = 'ADMIN_DELETED';
+    throw err;
+  }
+
+  if (adminForDelete.status === 'ACTIVE') {
+    const activeAdminsCountQuery = User.countDocuments({
+      firmId: firm._id,
+      role: 'Admin',
+      status: 'ACTIVE',
+    });
+    const activeAdminsCount = await resolveSessionQuery(activeAdminsCountQuery, session);
+
+    if (activeAdminsCount <= 1) {
+      console.warn('[SUPERADMIN] Blocked delete: last active admin protection', {
+        firmId: firm.firmId,
+        adminXID: admin.xID,
+      });
+      const err = new Error('Cannot delete the last active admin for this firm');
+      err.statusCode = 422;
+      err.code = 'LAST_ACTIVE_ADMIN';
+      throw err;
+    }
+  }
+
+  adminForDelete.status = 'DELETED';
+  adminForDelete.isActive = false;
+  adminForDelete.deletedAt = new Date();
+  await adminForDelete.save({ session });
 
   // Re-read after commit to ensure audit metadata reflects persisted state, not mutable pre-transaction object references.
   const deletedAdmin = await User.findById(adminId).select('xID email isSystem');
