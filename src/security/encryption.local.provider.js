@@ -171,11 +171,6 @@ class LocalEncryptionProvider extends EncryptionProvider {
       throw new Error('tenantId is required to generate a tenant key');
     }
 
-    const existing = await TenantKey.findOne({ tenantId }).lean();
-    if (existing) {
-      return; // Key already exists — nothing to do
-    }
-
     const masterKey = loadMasterKey();
     const dek = crypto.randomBytes(KEY_LENGTH);
 
@@ -183,7 +178,11 @@ class LocalEncryptionProvider extends EncryptionProvider {
       const { iv, authTag, ciphertext } = aesgcmEncrypt(dek, masterKey);
       const encryptedDek = encodePayload(iv, authTag, ciphertext);
 
-      await TenantKey.create({ tenantId, encryptedDek });
+      await TenantKey.updateOne(
+        { tenantId },
+        { $setOnInsert: { tenantId, encryptedDek } },
+        { upsert: true }
+      );
     } finally {
       // Zero sensitive buffers immediately after use
       zeroBuffer(dek);
