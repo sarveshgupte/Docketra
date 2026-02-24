@@ -65,7 +65,6 @@ const responseContract = require('./middleware/responseContract.middleware');
 const invariantGuard = require('./middleware/invariantGuard');
 const domainInvariantGuard = require('./middleware/domainInvariantGuard');
 const { idempotencyMiddleware } = require('./middleware/idempotency.middleware');
-const transactionMiddleware = require('./middleware/transaction.middleware');
 const metricsService = require('./services/metrics.service');
 const { adminAuditTrail } = require('./middleware/adminAudit.middleware');
 const requestLifecycle = require('./middleware/requestLifecycle.middleware');
@@ -107,12 +106,9 @@ const writeGuardChain = (req, res, next) => {
   if (shouldForceTransaction) {
     req.forceTransaction = true;
   }
-  return transactionMiddleware(req, res, (err) => {
-    if (err) return next(err);
-    return idempotencyMiddleware(req, res, (idempotencyErr) => {
-      if (idempotencyErr) return next(idempotencyErr);
-      return domainInvariantGuard(req, res, next);
-    });
+  return idempotencyMiddleware(req, res, (idempotencyErr) => {
+    if (idempotencyErr) return next(idempotencyErr);
+    return domainInvariantGuard(req, res, next);
   });
 };
 

@@ -1,7 +1,7 @@
 const Category = require('../models/Category.model');
 const Case = require('../models/Case.model');
 const mongoose = require('mongoose');
-const { wrapWriteHandler } = require('../utils/transactionGuards');
+const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 
 /**
  * Category Controller for Admin-Managed Categories

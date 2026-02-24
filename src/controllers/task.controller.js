@@ -1,5 +1,5 @@
 const Task = require('../models/Task');
-const { wrapWriteHandler } = require('../utils/transactionGuards');
+const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { softDelete } = require('../services/softDelete.service');
 
 /**

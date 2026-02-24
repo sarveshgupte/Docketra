@@ -1,6 +1,3 @@
-const { executeWrite } = require('./executeWrite');
-const wrapWriteHandler = require('../middleware/wrapWriteHandler');
-
 const guardTransaction = (req) => {
   if (req?.skipTransaction) {
     return;
@@ -14,5 +11,4 @@ const guardTransaction = (req) => {
 
 module.exports = {
   guardTransaction,
-  wrapWriteHandler,
 };
