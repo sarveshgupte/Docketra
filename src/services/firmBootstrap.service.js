@@ -3,9 +3,7 @@ const crypto = require('crypto');
 const Firm = require('../models/Firm.model');
 const Client = require('../models/Client.model');
 const User = require('../models/User.model');
-const TenantKey = require('../security/tenantKey.model');
-const { generateEncryptedDek } = require('../security/encryption.service');
-const { looksEncrypted } = require('../security/encryption.utils');
+const { ensureTenantKey } = require('../security/encryption.service');
 const emailService = require('./email.service');
 const { generateNextClientId } = require('./clientIdGenerator');
 const { generateNextXID } = require('./xIDGenerator');
@@ -30,8 +28,7 @@ const defaultDeps = {
   Firm,
   Client,
   User,
-  TenantKey,
-  generateEncryptedDek,
+  ensureTenantKey,
   emailService,
   generateNextClientId,
   generateNextXID,
@@ -122,21 +119,6 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
     // Never block firm creation due to topology detection failure
   }
 
-  // Fail fast: validate encryption provider before starting the transaction
-  const generatedDek = await deps.generateEncryptedDek().catch((err) => {
-    throw new FirmBootstrapError(`Encryption provider error: ${err.message}`, 500);
-  });
-  const encryptedDek = typeof generatedDek === 'string' ? generatedDek : generatedDek?.encryptedDek;
-
-  if (!encryptedDek || typeof encryptedDek !== 'string') {
-    throw new FirmBootstrapError('Invalid encryptedDek generated', 500);
-  }
-
-  // Validate DEK format: must be iv:authTag:ciphertext (three base64 segments)
-  if (!looksEncrypted(encryptedDek)) {
-    throw new FirmBootstrapError('Invalid encrypted DEK format', 500);
-  }
-
   // session is injected by the controller via executeWrite / wrapWriteHandler.
   // No session lifecycle management here — that is owned by executeWrite.
 
@@ -160,10 +142,6 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
 
     if (!firm || !firm._id) {
       throw new FirmBootstrapError('Firm creation failed - no _id returned', 500);
-    }
-
-    if (!encryptedDek) {
-      throw new FirmBootstrapError('Encryption provider returned invalid DEK', 500);
     }
 
     // TODO: replace console logs with structured logger
@@ -190,17 +168,10 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
     firm.defaultClientId = defaultClient._id;
     await firm.save({ session });
 
-    // Atomic upsert: insert only if no TenantKey exists for this firm.
-    // If a TenantKey already exists for this tenantId, $setOnInsert is a no-op
-    // and the existing DEK is preserved — enabling safe retries without errors.
-    await deps.TenantKey.updateOne(
-      { tenantId: String(firm._id) },
-      { $setOnInsert: { tenantId: String(firm._id), encryptedDek } },
-      { upsert: true, session }
-    );
+    await deps.ensureTenantKey(String(firm._id));
 
     // TODO: replace console logs with structured logger
-    console.log('TenantKey created');
+    console.log('TenantKey ensured');
 
     // IMPORTANT: generateNextXID must use the provided session for transaction safety.
     const adminXID = await deps.generateNextXID(firm._id, session);
