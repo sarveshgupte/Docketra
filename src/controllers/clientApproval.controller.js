@@ -4,7 +4,7 @@ const Client = require('../models/Client.model');
 const CaseHistory = require('../models/CaseHistory.model');
 const { CaseRepository, ClientRepository } = require('../repositories');
 const { CASE_CATEGORIES, CASE_STATUS, CLIENT_STATUS } = require('../config/constants');
-const { wrapWriteHandler } = require('../utils/transactionGuards');
+const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 
 /**
  * Client Approval Controller

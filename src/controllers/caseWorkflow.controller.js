@@ -3,7 +3,7 @@ const CaseHistory = require('../models/CaseHistory.model');
 const Comment = require('../models/Comment.model');
 const { CaseRepository } = require('../repositories');
 const { CASE_STATUS } = require('../config/constants');
-const { wrapWriteHandler } = require('../utils/transactionGuards');
+const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 
 /**
  * Case Workflow Controller
