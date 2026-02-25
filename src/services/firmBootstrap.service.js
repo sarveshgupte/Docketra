@@ -147,6 +147,11 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
     // TODO: replace console logs with structured logger
     console.log('Firm created:', firm?._id);
 
+    await deps.ensureTenantKey(String(firm._id), { session });
+
+    // TODO: replace console logs with structured logger
+    console.log('TenantKey ensured');
+
     // IMPORTANT: generateNextClientId must use the provided session for transaction safety.
     const clientId = await deps.generateNextClientId(firm._id, session);
     const [defaultClient] = await deps.Client.create([{
@@ -167,11 +172,6 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
 
     firm.defaultClientId = defaultClient._id;
     await firm.save({ session });
-
-    await deps.ensureTenantKey(String(firm._id));
-
-    // TODO: replace console logs with structured logger
-    console.log('TenantKey ensured');
 
     // IMPORTANT: generateNextXID must use the provided session for transaction safety.
     const adminXID = await deps.generateNextXID(firm._id, session);

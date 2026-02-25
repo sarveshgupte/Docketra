@@ -6,7 +6,7 @@
  *  2. Expose encrypt / decrypt / ensureTenantKey helpers.
  *  3. Enforce security guards:
  *     - superadmin cannot decrypt tenant data.
- *     - Missing tenant key triggers auto-generation (fail-safe).
+ *     - Missing tenant key fails fast (explicit bootstrap requirement).
  *     - Decryption failures surface as errors (fail-secure).
  *
  * Provider selection:
@@ -64,29 +64,27 @@ class ForbiddenError extends Error {
  * @param {string} tenantId
  * @returns {Promise<void>}
  */
-async function ensureTenantKey(tenantId) {
+async function ensureTenantKey(tenantId, { session } = {}) {
   if (!tenantId) {
     throw new Error('tenantId is required for ensureTenantKey');
   }
-  await getProvider().generateTenantKey(tenantId);
+  await getProvider().generateTenantKey(tenantId, { session });
 }
 
 /**
  * Encrypt a plaintext field value for the given tenant.
  *
- * Auto-generates the tenant key if missing.
- *
  * @param {string} value    - Plaintext to encrypt
  * @param {string} tenantId - Tenant (firm) identifier
+ * @param {{ session?: import('mongoose').ClientSession }} [options]
  * @returns {Promise<string>}
  */
-async function encrypt(value, tenantId) {
+async function encrypt(value, tenantId, { session } = {}) {
   if (value == null) return value;          // Preserve null / undefined
   if (!tenantId) {
     throw new Error('tenantId is required for encryption');
   }
-  await ensureTenantKey(tenantId);
-  return getProvider().encrypt(String(value), tenantId);
+  return getProvider().encrypt(String(value), tenantId, { session });
 }
 
 /**
@@ -105,9 +103,10 @@ async function encrypt(value, tenantId) {
  * @param {string} value    - Ciphertext (iv:authTag:ciphertext) or plaintext (legacy)
  * @param {string} tenantId - Tenant (firm) identifier
  * @param {string} [role]   - Caller's role (from req.user.role)
+ * @param {{ session?: import('mongoose').ClientSession }} [options]
  * @returns {Promise<string>}
  */
-async function decrypt(value, tenantId, role) {
+async function decrypt(value, tenantId, role, { session } = {}) {
   if (value == null) return value;
 
   // Guard: superadmin must not access tenant-encrypted data.
@@ -130,7 +129,7 @@ async function decrypt(value, tenantId, role) {
   }
 
   try {
-    return await getProvider().decrypt(value, tenantId);
+    return await getProvider().decrypt(value, tenantId, { session });
   } catch (err) {
     // Re-throw — never silently swallow decryption failures for encrypted data
     throw new Error(`Decryption failed for tenant ${tenantId}: ${err.message}`);
