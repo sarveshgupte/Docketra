@@ -48,6 +48,7 @@ export const Router = () => {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/change-password" element={<ChangePasswordPage />} />
+          <Route path="/auth/setup-password" element={<SetPasswordPage />} />
           <Route path="/set-password" element={<SetPasswordPage />} />
           <Route path="/google-callback" element={<GoogleCallbackPage />} />
           

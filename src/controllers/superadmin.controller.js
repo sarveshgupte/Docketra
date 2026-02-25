@@ -5,6 +5,7 @@ const SuperadminAudit = require('../models/SuperadminAudit.model');
 const AuthAudit = require('../models/AuthAudit.model');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 const emailService = require('../services/email.service');
 const mongoose = require('mongoose');
 const { generateNextClientId } = require('../services/clientIdGenerator');
@@ -18,6 +19,7 @@ const xIDGenerator = require('../services/xIDGenerator');
 
 // Constants
 const FIRM_ID_PATTERN = /^FIRM\d{3,}$/i;
+const PASSWORD_SETUP_TOKEN_EXPIRY = '24h';
 
 /**
  * Resolve the default system admin for a firm.
@@ -506,10 +508,10 @@ const createFirmAdmin = async (req, res) => {
 
     const normalizedXID = await xIDGenerator.generateNextXID(firm._id);
     
-    // Generate password setup token
-    const setupToken = crypto.randomBytes(32).toString('hex');
-    const setupTokenHash = crypto.createHash('sha256').update(setupToken).digest('hex');
-    const setupExpires = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours
+    const passwordSetupSecret = process.env.JWT_PASSWORD_SETUP_SECRET || process.env.JWT_SECRET;
+    const legacySetupToken = !passwordSetupSecret ? crypto.randomBytes(32).toString('hex') : null;
+    const legacySetupTokenHash = legacySetupToken ? crypto.createHash('sha256').update(legacySetupToken).digest('hex') : null;
+    const legacySetupExpiry = legacySetupToken ? new Date(Date.now() + 24 * 60 * 60 * 1000) : null;
     
     // Create admin user with firmId and defaultClientId
     const adminUser = new User({
@@ -524,8 +526,8 @@ const createFirmAdmin = async (req, res) => {
       passwordSet: false,
       mustSetPassword: false,
       mustChangePassword: true,
-      passwordSetupTokenHash: setupTokenHash,
-      passwordSetupExpires: setupExpires,
+      passwordSetupTokenHash: legacySetupTokenHash,
+      passwordSetupExpires: legacySetupExpiry,
       inviteSentAt: new Date(),
       passwordSetAt: null,
     });
@@ -534,6 +536,18 @@ const createFirmAdmin = async (req, res) => {
     
     // Send password setup email
     try {
+      const setupToken = passwordSetupSecret
+        ? jwt.sign(
+          {
+            userId: adminUser._id,
+            firmId: firm._id,
+            type: 'PASSWORD_SETUP',
+          },
+          passwordSetupSecret,
+          { expiresIn: PASSWORD_SETUP_TOKEN_EXPIRY }
+        )
+        : legacySetupToken;
+
       const emailResult = await emailService.sendPasswordSetupEmail({
         email: adminUser.email,
         name: adminUser.name,
@@ -1305,22 +1319,37 @@ const resendAdminAccess = async (req, res) => {
   }
 
   const isInvited = admin.status === 'INVITED';
-  const newToken = crypto.randomBytes(32).toString('hex');
-  const newTokenHash = crypto.createHash('sha256').update(newToken).digest('hex');
   const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+  const passwordSetupSecret = process.env.JWT_PASSWORD_SETUP_SECRET || process.env.JWT_SECRET;
 
   admin.passwordSetupTokenHash = null;
   admin.passwordSetupExpires = null;
   admin.passwordResetTokenHash = null;
   admin.passwordResetExpires = null;
 
+  let newToken;
   // Invalidate old tokens and set new ones
   if (isInvited) {
-    admin.passwordSetupTokenHash = newTokenHash;
-    admin.passwordSetupExpires = tokenExpires;
+    newToken = passwordSetupSecret
+      ? jwt.sign(
+        {
+          userId: admin._id,
+          firmId: firm._id,
+          type: 'PASSWORD_SETUP',
+        },
+        passwordSetupSecret,
+        { expiresIn: PASSWORD_SETUP_TOKEN_EXPIRY }
+      )
+      : crypto.randomBytes(32).toString('hex');
+    if (!passwordSetupSecret) {
+      admin.passwordSetupTokenHash = crypto.createHash('sha256').update(newToken).digest('hex');
+      admin.passwordSetupExpires = tokenExpires;
+    }
     admin.inviteSentAt = new Date();
   } else {
     // ACTIVE
+    newToken = crypto.randomBytes(32).toString('hex');
+    const newTokenHash = crypto.createHash('sha256').update(newToken).digest('hex');
     admin.passwordResetTokenHash = newTokenHash;
     admin.passwordResetExpires = tokenExpires;
   }

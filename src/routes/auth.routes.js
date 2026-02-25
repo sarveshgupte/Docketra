@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth.middleware');
 const { requireAdmin } = require('../middleware/permission.middleware');
-const { optionalFirmResolution, resolveFirmSlug } = require('../middleware/firmResolution.middleware');
+const { optionalFirmResolution } = require('../middleware/firmResolution.middleware');
 const Firm = require('../models/Firm.model');
 const { normalizeFirmSlug } = require('../utils/slugify');
 const { authLimiter, profileLimiter } = require('../middleware/rateLimiters');
@@ -126,7 +126,8 @@ const detectProfileLoop = (req, res, next) => {
 // Login supports optional firm resolution for firm-scoped login
 // Rate limited to prevent brute-force attacks
 router.post('/login', authLimiter, optionalFirmResolution, login);
-router.post('/set-password', authLimiter, resolveFirmSlug, setPassword);
+router.post('/setup-password', setPassword);
+router.post('/set-password', setPassword);
 router.post('/reset-password-with-token', authLimiter, resetPasswordWithToken);
 router.post('/forgot-password', authLimiter, forgotPassword);
 router.post('/refresh', refreshAccessToken); // NEW: JWT token refresh
