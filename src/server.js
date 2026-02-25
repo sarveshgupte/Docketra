@@ -5,7 +5,6 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const path = require('path');
 const connectDB = require('./config/database');
 const config = require('./config/config');
 const { runBootstrap } = require('./services/bootstrap.service');
@@ -187,24 +186,8 @@ if (isProduction) {
 // Initialize Express app
 const app = express();
 
-const defaultFrontendOrigin = process.env.DEFAULT_FRONTEND_ORIGIN || 'https://caseflow-1-tm8i.onrender.com';
-const envFrontendUrl = process.env.FRONTEND_URL;
-let parsedFrontendOrigin = null;
-
-if (envFrontendUrl) {
-  try {
-    parsedFrontendOrigin = new URL(envFrontendUrl).origin;
-  } catch (err) {
-    console.warn(`[CORS] Ignoring invalid FRONTEND_URL: ${envFrontendUrl}`);
-  }
-}
-
-const allowedOrigins = [
-  parsedFrontendOrigin,
-  defaultFrontendOrigin,
-].filter(Boolean);
-const uniqueAllowedOrigins = [...new Set(allowedOrigins)];
-console.log('[CORS] Allowed origins:', uniqueAllowedOrigins);
+const frontendOrigin = process.env.FRONTEND_URL;
+console.log('[CORS] Allowed origin:', frontendOrigin || '(not set)');
 
 // Connect to MongoDB and run bootstrap
 connectDB()
@@ -226,21 +209,7 @@ const CORS_ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'
 
 // CORS Configuration
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow non-browser requests (health checks, server-to-server)
-    if (!origin) {
-      return callback(null, true);
-    }
-
-    if (uniqueAllowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    if (!isProduction) {
-      console.warn(`[CORS] Blocked request from disallowed origin: ${origin}`);
-    }
-    return callback(new Error('CORS origin not allowed'), false);
-  },
+  origin: frontendOrigin,
   credentials: true,
   methods: CORS_ALLOWED_METHODS,
   allowedHeaders: CORS_ALLOWED_HEADERS
@@ -248,7 +217,7 @@ const corsOptions = {
 
 // Middleware
 // Handle CORS preflight requests before auth/transaction middleware
-app.use(optionsPreflight(uniqueAllowedOrigins, CORS_ALLOWED_HEADERS, CORS_ALLOWED_METHODS));
+app.use(optionsPreflight([frontendOrigin], CORS_ALLOWED_HEADERS, CORS_ALLOWED_METHODS));
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -349,29 +318,12 @@ app.use('/api/storage', authenticate, firmContext, invariantGuard({ requireFirm:
 // Firm-scoped routes — /f/:firmSlug/* (tenant resolver applied inside firm.routes.js)
 // POST /f/:firmSlug/login is the primary path-based login endpoint.
 // GET  /f/:firmSlug/login returns firm metadata for the login page.
-// These must be registered before the SPA static fallback so the POST
-// action is handled server-side; the SPA fallback still serves index.html
-// for direct browser GET navigation to /f/:firmSlug/login in production.
 app.use('/f/:firmSlug', firmRoutes);
 
 // Root route - API status
 app.get('/', (req, res) => {
   res.json({ status: 'Docketra API running' });
 });
-
-// Serve static files in production
-if (isProduction) {
-  const uiBuildPath = path.join(__dirname, '..', 'ui', 'dist');
-  
-  // Serve static files from UI build directory
-  app.use(express.static(uiBuildPath));
-  
-  // SPA fallback - serve index.html for all non-API routes (excluding root)
-  // Use a regex pattern that's compatible with Express 5
-  app.get(/^(?!\/api|\/$).*$/, (req, res) => {
-    res.sendFile(path.join(uiBuildPath, 'index.html'));
-  });
-}
 
 // Error handling
 app.use(notFound);
