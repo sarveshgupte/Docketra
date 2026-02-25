@@ -28,19 +28,14 @@ router.use(tenantResolver);
 /**
  * GET /f/:firmSlug/login
  * Returns public firm metadata so the login page can display firm details.
- * In production the SPA serves the page; in development this returns JSON
- * for easier API testing.
+ * Returns JSON in all environments for easier API testing and
+ * API-only backend deployments.
  * Does NOT require authentication.
  */
-router.get('/login', (req, res, next) => {
+router.get('/login', (req, res) => {
   // Debug log: confirms route resolution with firmSlug params (Step 1 requirement)
   if (process.env.NODE_ENV !== 'production') {
     console.log('Firm login route hit:', req.params);
-  }
-  // In production the SPA fallback handles browser navigation.
-  // Fall through so index.html is served for direct browser visits.
-  if (process.env.NODE_ENV === 'production') {
-    return next();
   }
   return res.json({
     success: true,
