@@ -81,6 +81,7 @@ async function testGenerateTenantKeyUsesAtomicUpsert() {
   const originalCreate = TenantKey.create;
 
   let updateOneCall = null;
+  const fakeSession = { id: 'session-atomic-upsert' };
   process.env.MASTER_ENCRYPTION_KEY = makeTestKey();
   TenantKey.findOne = async () => {
     throw new Error('findOne must not be called by generateTenantKey');
@@ -94,10 +95,10 @@ async function testGenerateTenantKeyUsesAtomicUpsert() {
   };
 
   try {
-    await provider.generateTenantKey(tenantId);
+    await provider.generateTenantKey(tenantId, { session: fakeSession });
     assert(updateOneCall, 'generateTenantKey must call TenantKey.updateOne');
     assert.deepStrictEqual(updateOneCall[0], { tenantId });
-    assert.deepStrictEqual(updateOneCall[2], { upsert: true });
+    assert.deepStrictEqual(updateOneCall[2], { upsert: true, session: fakeSession });
     assert.strictEqual(updateOneCall[1].$setOnInsert.tenantId, tenantId);
     assert.match(updateOneCall[1].$setOnInsert.encryptedDek, /^[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]+$/,
       'encryptedDek must be iv:authTag:ciphertext format');
@@ -113,6 +114,46 @@ async function testGenerateTenantKeyUsesAtomicUpsert() {
   }
 
   console.log('✓ generateTenantKey uses atomic upsert with $setOnInsert');
+}
+
+async function testUnwrapDekUsesSessionWhenProvided() {
+  const LocalEncryptionProvider = require('../src/security/encryption.local.provider');
+  const TenantKey = require('../src/security/tenantKey.model');
+  const provider = new LocalEncryptionProvider();
+  const tenantId = `tenant-unwrap-session-${Date.now()}`;
+  const originalKey = process.env.MASTER_ENCRYPTION_KEY;
+  const originalFindOne = TenantKey.findOne;
+  const fakeSession = { id: 'session-unwrap' };
+  let observedSession = null;
+
+  process.env.MASTER_ENCRYPTION_KEY = makeTestKey();
+  try {
+    const encryptedDek = await provider.generateEncryptedDek();
+    TenantKey.findOne = () => {
+      const query = {
+        session: (session) => {
+          observedSession = session;
+          return query;
+        },
+        lean: async () => ({ tenantId, encryptedDek }),
+      };
+      return query;
+    };
+
+    const dek = await provider._unwrapDek(tenantId, fakeSession);
+    assert(Buffer.isBuffer(dek), '_unwrapDek must return a buffer');
+    assert.strictEqual(observedSession, fakeSession, '_unwrapDek must apply provided session to query');
+    dek.fill(0);
+  } finally {
+    TenantKey.findOne = originalFindOne;
+    if (originalKey !== undefined) {
+      process.env.MASTER_ENCRYPTION_KEY = originalKey;
+    } else {
+      delete process.env.MASTER_ENCRYPTION_KEY;
+    }
+  }
+
+  console.log('✓ _unwrapDek applies session to tenant key lookup');
 }
 
 async function testSuperadminBlockAtRepositoryLevel() {
@@ -337,11 +378,12 @@ async function testServiceSuperadminGuard() {
 }
 
 async function testEncryptionServiceWithDb() {
-  const { encrypt, decrypt, _resetProvider } = require('../src/security/encryption.service');
+  const { ensureTenantKey, encrypt, decrypt, _resetProvider } = require('../src/security/encryption.service');
   _resetProvider();
 
   const tenantId = `tenant-svc-${Date.now()}`;
   const plaintext = 'service-layer encryption test';
+  await ensureTenantKey(tenantId);
 
   const ciphertext = await encrypt(plaintext, tenantId);
   assert.notStrictEqual(ciphertext, plaintext);
@@ -359,6 +401,7 @@ async function run() {
   await testKmsProviderThrows();
   await testPlaintextCompatibilityMode();
   await testGenerateTenantKeyUsesAtomicUpsert();
+  await testUnwrapDekUsesSessionWhenProvided();
   await testSuperadminBlockAtRepositoryLevel();
   await testRepositoryThrowsWithoutRole();
   await testRepositoryThrowsWithoutFirmId();
