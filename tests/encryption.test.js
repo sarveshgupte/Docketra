@@ -69,6 +69,52 @@ async function testPlaintextCompatibilityMode() {
   console.log('✓ Plaintext compatibility mode: non-encrypted values returned as-is');
 }
 
+async function testGenerateTenantKeyUsesAtomicUpsert() {
+  const LocalEncryptionProvider = require('../src/security/encryption.local.provider');
+  const TenantKey = require('../src/security/tenantKey.model');
+
+  const tenantId = `tenant-upsert-${Date.now()}`;
+  const provider = new LocalEncryptionProvider();
+  const originalKey = process.env.MASTER_ENCRYPTION_KEY;
+  const originalUpdateOne = TenantKey.updateOne;
+  const originalFindOne = TenantKey.findOne;
+  const originalCreate = TenantKey.create;
+
+  let updateOneCall = null;
+  process.env.MASTER_ENCRYPTION_KEY = makeTestKey();
+  TenantKey.findOne = async () => {
+    throw new Error('findOne must not be called by generateTenantKey');
+  };
+  TenantKey.create = async () => {
+    throw new Error('create must not be called by generateTenantKey');
+  };
+  TenantKey.updateOne = async (...args) => {
+    updateOneCall = args;
+    return { acknowledged: true, upsertedCount: 1 };
+  };
+
+  try {
+    await provider.generateTenantKey(tenantId);
+    assert(updateOneCall, 'generateTenantKey must call TenantKey.updateOne');
+    assert.deepStrictEqual(updateOneCall[0], { tenantId });
+    assert.deepStrictEqual(updateOneCall[2], { upsert: true });
+    assert.strictEqual(updateOneCall[1].$setOnInsert.tenantId, tenantId);
+    assert.match(updateOneCall[1].$setOnInsert.encryptedDek, /^[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]+$/,
+      'encryptedDek must be iv:authTag:ciphertext format');
+  } finally {
+    TenantKey.updateOne = originalUpdateOne;
+    TenantKey.findOne = originalFindOne;
+    TenantKey.create = originalCreate;
+    if (originalKey !== undefined) {
+      process.env.MASTER_ENCRYPTION_KEY = originalKey;
+    } else {
+      delete process.env.MASTER_ENCRYPTION_KEY;
+    }
+  }
+
+  console.log('✓ generateTenantKey uses atomic upsert with $setOnInsert');
+}
+
 async function testSuperadminBlockAtRepositoryLevel() {
   // This test does NOT require MongoDB.
   // The superadmin guard is checked BEFORE the DB query is attempted, so
@@ -312,6 +358,7 @@ async function run() {
   // Tests that do NOT need MongoDB
   await testKmsProviderThrows();
   await testPlaintextCompatibilityMode();
+  await testGenerateTenantKeyUsesAtomicUpsert();
   await testSuperadminBlockAtRepositoryLevel();
   await testRepositoryThrowsWithoutRole();
   await testRepositoryThrowsWithoutFirmId();
@@ -359,4 +406,3 @@ run().catch((err) => {
   console.error('Encryption tests failed:', err);
   process.exit(1);
 });
-
