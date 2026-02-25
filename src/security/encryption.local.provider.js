@@ -166,7 +166,7 @@ class LocalEncryptionProvider extends EncryptionProvider {
    * @param {string} tenantId
    * @returns {Promise<void>}
    */
-  async generateTenantKey(tenantId) {
+  async generateTenantKey(tenantId, { session } = {}) {
     if (!tenantId) {
       throw new Error('tenantId is required to generate a tenant key');
     }
@@ -181,7 +181,7 @@ class LocalEncryptionProvider extends EncryptionProvider {
       await TenantKey.updateOne(
         { tenantId },
         { $setOnInsert: { tenantId, encryptedDek } },
-        { upsert: true }
+        { upsert: true, session }
       );
     } finally {
       // Zero sensitive buffers immediately after use
@@ -197,12 +197,12 @@ class LocalEncryptionProvider extends EncryptionProvider {
    * @param {string} tenantId
    * @returns {Promise<string>}  iv:authTag:ciphertext (base64)
    */
-  async encrypt(plaintext, tenantId) {
+  async encrypt(plaintext, tenantId, { session } = {}) {
     if (!tenantId) {
       throw new Error('tenantId is required for encryption');
     }
 
-    const dek = await this._unwrapDek(tenantId);
+    const dek = await this._unwrapDek(tenantId, session);
     try {
       const plainBuf = Buffer.from(String(plaintext), 'utf8');
       const { iv, authTag, ciphertext } = aesgcmEncrypt(plainBuf, dek);
@@ -219,12 +219,12 @@ class LocalEncryptionProvider extends EncryptionProvider {
    * @param {string} tenantId
    * @returns {Promise<string>}  Plaintext
    */
-  async decrypt(ciphertext, tenantId) {
+  async decrypt(ciphertext, tenantId, { session } = {}) {
     if (!tenantId) {
       throw new Error('tenantId is required for decryption');
     }
 
-    const dek = await this._unwrapDek(tenantId);
+    const dek = await this._unwrapDek(tenantId, session);
     try {
       const { iv, authTag, ciphertext: ctBuf } = decodePayload(ciphertext);
       const plainBuf = aesgcmDecrypt(iv, authTag, ctBuf, dek);
@@ -244,8 +244,13 @@ class LocalEncryptionProvider extends EncryptionProvider {
    * @returns {Promise<Buffer>}  32-byte plaintext DEK
    * @private
    */
-  async _unwrapDek(tenantId) {
-    const record = await TenantKey.findOne({ tenantId }).lean();
+  async _unwrapDek(tenantId, session) {
+    const query = TenantKey.findOne({ tenantId });
+    if (session) {
+      query.session(session);
+    }
+
+    const record = await query.lean();
     if (!record) {
       throw new Error(`No encryption key found for tenant ${tenantId}. Call ensureTenantKey() first.`);
     }
