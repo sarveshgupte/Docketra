@@ -260,13 +260,7 @@ const sendPasswordSetupEmail = async ({
   context = null,
 }) => {
   const normalizedFirmSlug = normalizeFirmSlug(firmSlug);
-  if (!normalizedFirmSlug) {
-    return {
-      success: false,
-      error: 'Firm context is required for activation links.',
-    };
-  }
-  const setupLink = `${frontendUrl}/f/${normalizedFirmSlug}/set-password?token=${token}`;
+  const setupLink = `${frontendUrl}/auth/setup-password?token=${token}`;
   
   // Construct firm-specific login URL if firmSlug is provided
   const firmLoginUrl = normalizedFirmSlug ? `${frontendUrl}/f/${normalizedFirmSlug}/login` : null;
@@ -364,13 +358,7 @@ const sendPasswordSetupReminderEmail = async ({
   req = null,
 }) => {
   const normalizedFirmSlug = normalizeFirmSlug(firmSlug);
-  if (!normalizedFirmSlug) {
-    return {
-      success: false,
-      error: 'Firm context is required for activation links.',
-    };
-  }
-  const setupLink = `${frontendUrl}/f/${normalizedFirmSlug}/set-password?token=${token}`;
+  const setupLink = `${frontendUrl}/auth/setup-password?token=${token}`;
   
   // Construct firm-specific login URL if firmSlug is provided
   const firmLoginUrl = normalizedFirmSlug ? `${frontendUrl}/f/${normalizedFirmSlug}/login` : null;

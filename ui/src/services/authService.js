@@ -105,11 +105,10 @@ export const authService = {
   /**
    * Set password using token from email
    */
-  setPassword: async (token, password, firmSlug) => {
-    const response = await api.post('/auth/set-password', {
+  setPassword: async (token, password) => {
+    const response = await api.post('/auth/setup-password', {
       token,
       password,
-      firmSlug,
     });
     return response.data;
   },
