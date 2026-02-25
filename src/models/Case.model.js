@@ -852,10 +852,11 @@ caseSchema.pre('save', async function () {
   if (!process.env.MASTER_ENCRYPTION_KEY || !this.firmId) return;
   const { encrypt: _enc, ensureTenantKey: _ensure } = _getCaseEncService();
   const tenantId = String(this.firmId);
-  await _ensure(tenantId);
+  const session = typeof this.$session === 'function' ? this.$session() : undefined;
+  await _ensure(tenantId, { session });
   for (const field of _CASE_SENSITIVE_FIELDS) {
     if (this[field] != null && !_caseIsEncryptedValue(this[field])) {
-      this[field] = await _enc(String(this[field]), tenantId);
+      this[field] = await _enc(String(this[field]), tenantId, { session });
     }
   }
 });

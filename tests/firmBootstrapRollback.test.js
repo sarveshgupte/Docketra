@@ -231,11 +231,14 @@ async function shouldCallEnsureTenantKeyWithFirmId() {
   const firmStore = { rows: [] };
   const allRows = { rows: [] };
   let ensureTenantKeyChecked = false;
+  const callOrder = [];
 
   const ensureTenantKeyStub = {
-    ensureTenantKey: async (tenantId) => {
+    ensureTenantKey: async (tenantId, options = {}) => {
       ensureTenantKeyChecked = true;
+      callOrder.push('ensureTenantKey');
       assert.ok(tenantId, 'ensureTenantKey must be called with tenantId');
+      assert.strictEqual(options.session, session, 'ensureTenantKey must receive transaction session');
     },
   };
 
@@ -254,7 +257,15 @@ async function shouldCallEnsureTenantKeyWithFirmId() {
         sendFirmCreatedEmail: async () => {},
         sendPasswordSetupEmail: async () => ({ success: true }),
       },
-      generateNextClientId: async () => 'C000001',
+      generateNextClientId: async () => {
+        callOrder.push('generateNextClientId');
+        assert.strictEqual(
+          callOrder[0],
+          'ensureTenantKey',
+          'ensureTenantKey must run before generateNextClientId'
+        );
+        return 'C000001';
+      },
       generateNextXID: async () => 'X000001',
     },
   });
