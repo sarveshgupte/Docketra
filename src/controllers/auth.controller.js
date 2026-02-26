@@ -1599,61 +1599,66 @@ const deactivateUser = async (req, res) => {
 const setPassword = async (req, res) => {
   try {
     const { token, password } = req.body;
-    // Canonical firm context for auth flows: req.context.firmId
-    const firmId = req.context?.firmId || null;
     
     if (!token || !password) {
       return res.status(400).json({
         success: false,
         code: 'ACTIVATION_TOKEN_INVALID',
-        message: 'Token and password are required',
+        message: 'Token and password required',
       });
     }
-
-    if (!firmId) {
-      return res.status(404).json({
-        success: false,
-        code: 'FIRM_NOT_FOUND',
-        message: 'Firm not found. Please check your login URL.',
-        action: 'contact_admin',
-      });
-    }
-    
-    // Hash the token to compare with stored hash
-    const tokenHash = emailService.hashToken(token);
 
     const now = new Date();
-    const tokenOwner = await User.findOne({
-      passwordSetupTokenHash: tokenHash,
-      passwordSetupExpires: { $gt: now },
-    });
+    let tokenOwner = null;
+    const passwordSetupSecret = process.env.JWT_PASSWORD_SETUP_SECRET || process.env.JWT_SECRET;
+
+    if (passwordSetupSecret) {
+      try {
+        const decoded = jwt.verify(token, passwordSetupSecret);
+
+        if (decoded.type !== 'PASSWORD_SETUP') {
+          return res.status(400).json({
+            success: false,
+            code: 'ACTIVATION_TOKEN_INVALID',
+            message: 'Invalid token type',
+          });
+        }
+
+        tokenOwner = await User.findOne({
+          _id: decoded.userId,
+          firmId: decoded.firmId,
+        });
+      } catch (jwtError) {
+        tokenOwner = null;
+      }
+    }
+
+    if (!tokenOwner) {
+      const tokenHash = emailService.hashToken(token);
+      tokenOwner = await User.findOne({
+        passwordSetupTokenHash: tokenHash,
+        passwordSetupExpires: { $gt: now },
+      });
+    }
 
     if (!tokenOwner) {
       return res.status(400).json({
         success: false,
         code: 'ACTIVATION_TOKEN_INVALID',
-        message: 'Activation token is invalid or expired.',
+        message: 'Invalid or expired token',
       });
     }
 
-    if (tokenOwner.firmId && tokenOwner.firmId.toString() !== firmId) {
-      return res.status(403).json({
-        success: false,
-        code: 'ACTIVATION_TOKEN_FIRM_MISMATCH',
-        message: 'Activation token does not belong to this firm.',
-      });
-    }
-
-    if (!tokenOwner.mustSetPassword || tokenOwner.status === 'ACTIVE') {
+    if (tokenOwner.passwordHash || tokenOwner.status === 'ACTIVE') {
       return res.status(409).json({
         success: false,
         code: 'ACCOUNT_ALREADY_ACTIVATED',
-        message: 'Account already activated. Please log in.',
+        message: 'Password already set',
       });
     }
     
     // Hash new password
-    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    const passwordHash = await bcrypt.hash(password, 12);
     
     // Set password and clear token
     tokenOwner.passwordHash = passwordHash;
@@ -1703,7 +1708,7 @@ const setPassword = async (req, res) => {
     
     res.json({
       success: true,
-      message: 'Password set successfully. You can now log in.',
+      message: 'Password set successfully',
       firmSlug: firmSlug,
       redirectUrl: `/f/${firmSlug}/login`,
     });
