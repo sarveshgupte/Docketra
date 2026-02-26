@@ -1,5 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { HomePage } from './HomePage';
+
+export const MarketingHomePage = HomePage;
 
 const MarketingPage = ({ title, description }) => (
   <section>
@@ -9,13 +12,6 @@ const MarketingPage = ({ title, description }) => (
       <Link to="/login">Go to Login</Link>
     </p>
   </section>
-);
-
-export const MarketingHomePage = () => (
-  <MarketingPage
-    title="Welcome to Docketra"
-    description="Case and workflow operations for modern legal teams."
-  />
 );
 
 export const MarketingFeaturesPage = () => (
