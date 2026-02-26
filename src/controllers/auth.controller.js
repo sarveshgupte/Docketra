@@ -1612,7 +1612,7 @@ const setPassword = async (req, res) => {
     if (!passwordSetupSecret) {
       return res.status(500).json({
         success: false,
-        message: 'Password setup is not configured',
+        message: 'JWT_PASSWORD_SETUP_SECRET environment variable is not configured',
       });
     }
 
@@ -1641,10 +1641,10 @@ const setPassword = async (req, res) => {
     });
 
     if (!tokenOwner) {
-      return res.status(404).json({
+      return res.status(400).json({
         success: false,
         code: 'ACTIVATION_TOKEN_INVALID',
-        message: 'User not found',
+        message: 'Invalid or expired token',
       });
     }
 
