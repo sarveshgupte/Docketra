@@ -177,7 +177,7 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
     const adminXID = await deps.generateNextXID(firm._id, session);
     const passwordSetupSecret = process.env.JWT_PASSWORD_SETUP_SECRET;
     if (!passwordSetupSecret) {
-      throw new FirmBootstrapError('Password setup is not configured', 500);
+      throw new FirmBootstrapError('JWT_PASSWORD_SETUP_SECRET environment variable is not configured', 500);
     }
 
     const [adminUser] = await deps.User.create([{

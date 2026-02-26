@@ -512,7 +512,7 @@ const createFirmAdmin = async (req, res) => {
     if (!passwordSetupSecret) {
       return res.status(500).json({
         success: false,
-        message: 'Password setup is not configured',
+        message: 'JWT_PASSWORD_SETUP_SECRET environment variable is not configured',
       });
     }
     
@@ -1323,7 +1323,7 @@ const resendAdminAccess = async (req, res) => {
   if (!passwordSetupSecret) {
     return res.status(500).json({
       success: false,
-      message: 'Password setup is not configured',
+      message: 'JWT_PASSWORD_SETUP_SECRET environment variable is not configured',
     });
   }
 
