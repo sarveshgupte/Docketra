@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const Firm = require('../models/Firm.model');
 const Client = require('../models/Client.model');
@@ -176,10 +175,10 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
 
     // IMPORTANT: generateNextXID must use the provided session for transaction safety.
     const adminXID = await deps.generateNextXID(firm._id, session);
-    const passwordSetupSecret = process.env.JWT_PASSWORD_SETUP_SECRET || process.env.JWT_SECRET;
-    const legacySetupToken = !passwordSetupSecret ? crypto.randomBytes(32).toString('hex') : null;
-    const legacySetupTokenHash = legacySetupToken ? crypto.createHash('sha256').update(legacySetupToken).digest('hex') : null;
-    const legacySetupExpiry = legacySetupToken ? new Date(Date.now() + 24 * 60 * 60 * 1000) : null;
+    const passwordSetupSecret = process.env.JWT_PASSWORD_SETUP_SECRET;
+    if (!passwordSetupSecret) {
+      throw new FirmBootstrapError('JWT_PASSWORD_SETUP_SECRET environment variable is not configured', 500);
+    }
 
     const [adminUser] = await deps.User.create([{
       xID: adminXID,
@@ -198,22 +197,18 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
       mustSetPassword: false,
       passwordSetAt: null,
       mustChangePassword: true,
-      passwordSetupTokenHash: legacySetupTokenHash,
-      passwordSetupExpires: legacySetupExpiry,
       inviteSentAt: new Date(),
     }], { session });
 
-    const setupToken = passwordSetupSecret
-      ? jwt.sign(
-        {
-          userId: adminUser._id,
-          firmId: firm._id,
-          type: 'PASSWORD_SETUP',
-        },
-        passwordSetupSecret,
-        { expiresIn: PASSWORD_SETUP_TOKEN_EXPIRY }
-      )
-      : legacySetupToken;
+    const setupToken = jwt.sign(
+      {
+        userId: adminUser._id,
+        firmId: firm._id,
+        type: 'PASSWORD_SETUP',
+      },
+      passwordSetupSecret,
+      { expiresIn: PASSWORD_SETUP_TOKEN_EXPIRY }
+    );
 
     firm.bootstrapStatus = 'COMPLETED';
     await firm.save({ session });
