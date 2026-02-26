@@ -30,6 +30,7 @@ import { FilteredCasesPage } from './pages/FilteredCasesPage';
 import { CasesPage } from './pages/CasesPage';
 import { GoogleCallbackPage } from './pages/GoogleCallbackPage';
 import { MarketingHomePage, MarketingFeaturesPage, MarketingPricingPage } from './pages/marketing/MarketingPages';
+import { NotFoundPage } from './pages/NotFoundPage';
 
 const LegacyFirmScopedRedirect = () => {
   const { firmSlug } = useParams();
@@ -50,14 +51,6 @@ const LegacyFirmRedirect = () => {
   const location = useLocation();
   const suffix = location.pathname.replace('/firm', '');
   const target = `/app/firm${suffix}${location.search || ''}`;
-  return <Navigate to={target} replace />;
-};
-
-const LegacySlugRedirect = () => {
-  const { firmSlug } = useParams();
-  const location = useLocation();
-  const suffix = location.pathname.replace(`/${firmSlug}`, '') || '/dashboard';
-  const target = `/app/firm/${firmSlug}${suffix}${location.search || ''}`;
   return <Navigate to={target} replace />;
 };
 
@@ -200,13 +193,13 @@ export const Router = () => {
                 </ProtectedRoute>
               }
             />
+            <Route path="*" element={<NotFoundPage />} />
           </Route>
           <Route path="/superadmin/*" element={<LegacySuperadminRedirect />} />
           <Route path="/firm/*" element={<LegacyFirmRedirect />} />
           <Route path="/f/:firmSlug/*" element={<LegacyFirmScopedRedirect />} />
-          <Route path="/:firmSlug/*" element={<LegacySlugRedirect />} />
           <Route path="/app/firm" element={<DefaultRoute />} />
-          <Route path="*" element={<DefaultRoute />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
   );
 };
