@@ -1608,44 +1608,43 @@ const setPassword = async (req, res) => {
       });
     }
 
-    const now = new Date();
-    let tokenOwner = null;
-    const passwordSetupSecret = process.env.JWT_PASSWORD_SETUP_SECRET || process.env.JWT_SECRET;
-
-    if (passwordSetupSecret) {
-      try {
-        const decoded = jwt.verify(token, passwordSetupSecret);
-
-        if (decoded.type !== 'PASSWORD_SETUP') {
-          return res.status(400).json({
-            success: false,
-            code: 'ACTIVATION_TOKEN_INVALID',
-            message: 'Invalid token type',
-          });
-        }
-
-        tokenOwner = await User.findOne({
-          _id: decoded.userId,
-          firmId: decoded.firmId,
-        });
-      } catch (jwtError) {
-        tokenOwner = null;
-      }
-    }
-
-    if (!tokenOwner) {
-      const tokenHash = emailService.hashToken(token);
-      tokenOwner = await User.findOne({
-        passwordSetupTokenHash: tokenHash,
-        passwordSetupExpires: { $gt: now },
+    const passwordSetupSecret = process.env.JWT_PASSWORD_SETUP_SECRET;
+    if (!passwordSetupSecret) {
+      return res.status(500).json({
+        success: false,
+        message: 'Password setup is not configured',
       });
     }
 
-    if (!tokenOwner) {
+    let decoded;
+    try {
+      decoded = jwt.verify(token, passwordSetupSecret);
+    } catch (jwtError) {
       return res.status(400).json({
         success: false,
         code: 'ACTIVATION_TOKEN_INVALID',
         message: 'Invalid or expired token',
+      });
+    }
+
+    if (decoded.type !== 'PASSWORD_SETUP') {
+      return res.status(400).json({
+        success: false,
+        code: 'ACTIVATION_TOKEN_INVALID',
+        message: 'Invalid token type',
+      });
+    }
+
+    const tokenOwner = await User.findOne({
+      _id: decoded.userId,
+      firmId: decoded.firmId,
+    });
+
+    if (!tokenOwner) {
+      return res.status(404).json({
+        success: false,
+        code: 'ACTIVATION_TOKEN_INVALID',
+        message: 'User not found',
       });
     }
 
@@ -1658,6 +1657,7 @@ const setPassword = async (req, res) => {
     }
     
     // Hash new password
+    const now = new Date();
     const passwordHash = await bcrypt.hash(password, 12);
     
     // Set password and clear token
@@ -1671,6 +1671,7 @@ const setPassword = async (req, res) => {
     tokenOwner.passwordExpiresAt = new Date(now.getTime() + PASSWORD_EXPIRY_DAYS * 24 * 60 * 60 * 1000); // Set expiry when password is created
     tokenOwner.mustChangePassword = false;
     tokenOwner.status = 'ACTIVE'; // User becomes active after setting password
+    tokenOwner.isActive = true;
     tokenOwner.failedLoginAttempts = 0;
     tokenOwner.lockUntil = null;
     
