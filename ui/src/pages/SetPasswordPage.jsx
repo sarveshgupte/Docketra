@@ -37,7 +37,7 @@ export const SetPasswordPage = () => {
   useEffect(() => {
     const loadFirmData = async () => {
       if (!firmSlug) {
-        setError('Firm not found. Please check your activation link.');
+        setFirmData({});
         setFirmLoading(false);
         return;
       }
@@ -98,7 +98,7 @@ export const SetPasswordPage = () => {
       return;
     }
 
-    if (!firmData || !firmSlug) {
+    if (!firmData) {
       setError('Firm not found. Please check your activation link.');
       return;
     }
@@ -122,7 +122,7 @@ export const SetPasswordPage = () => {
     setLoading(true);
 
     try {
-      const response = await authService.setPassword(token, password, firmSlug);
+      const response = await authService.setPassword(token, password);
 
       if (response.success) {
         setSuccess(true);
