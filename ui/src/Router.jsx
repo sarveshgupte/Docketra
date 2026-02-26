@@ -5,8 +5,8 @@
 import React from 'react';
 import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import { RootRedirect } from './components/auth/RootRedirect';
 import { FirmLayout } from './components/routing/FirmLayout';
+import { MarketingLayout } from './components/routing/MarketingLayout';
 import { DefaultRoute } from './components/routing/DefaultRoute';
 import { LoginPage } from './pages/LoginPage';
 import { FirmLoginPage } from './pages/FirmLoginPage';
@@ -29,20 +29,49 @@ import { DetailedReports } from './pages/reports/DetailedReports';
 import { FilteredCasesPage } from './pages/FilteredCasesPage';
 import { CasesPage } from './pages/CasesPage';
 import { GoogleCallbackPage } from './pages/GoogleCallbackPage';
+import { MarketingHomePage, MarketingFeaturesPage, MarketingPricingPage } from './pages/marketing/MarketingPages';
+
+const LegacyFirmScopedRedirect = () => {
+  const { firmSlug } = useParams();
+  const location = useLocation();
+  const suffix = location.pathname.replace(`/f/${firmSlug}`, '') || '/dashboard';
+  const target = `/app/firm/${firmSlug}${suffix}${location.search || ''}`;
+  return <Navigate to={target} replace />;
+};
+
+const LegacySuperadminRedirect = () => {
+  const location = useLocation();
+  const suffix = location.pathname.replace('/superadmin', '');
+  const target = `/app/superadmin${suffix}${location.search || ''}`;
+  return <Navigate to={target} replace />;
+};
 
 const LegacyFirmRedirect = () => {
+  const location = useLocation();
+  const suffix = location.pathname.replace('/firm', '');
+  const target = `/app/firm${suffix}${location.search || ''}`;
+  return <Navigate to={target} replace />;
+};
+
+const LegacySlugRedirect = () => {
   const { firmSlug } = useParams();
   const location = useLocation();
   const suffix = location.pathname.replace(`/${firmSlug}`, '') || '/dashboard';
-  const target = `/f/${firmSlug}${suffix}${location.search || ''}`;
+  const target = `/app/firm/${firmSlug}${suffix}${location.search || ''}`;
   return <Navigate to={target} replace />;
 };
 
 export const Router = () => {
   return (
       <Routes>
-          {/* Public Login Routes */}
-          <Route path="/login" element={<LoginPage />} />
+          <Route element={<MarketingLayout />}>
+            <Route path="/" element={<MarketingHomePage />} />
+            <Route path="/features" element={<MarketingFeaturesPage />} />
+            <Route path="/pricing" element={<MarketingPricingPage />} />
+            <Route path="/login" element={<LoginPage />} />
+          </Route>
+
+          {/* Public Auth Routes */}
           <Route path="/f/:firmSlug/login" element={<FirmLoginPage />} />
           <Route path="/f/:firmSlug/set-password" element={<SetPasswordPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -54,7 +83,7 @@ export const Router = () => {
           
           {/* SuperAdmin Routes - NOT firm-scoped */}
           <Route
-            path="/superadmin"
+            path="/app/superadmin"
             element={
               <ProtectedRoute requireSuperadmin>
                 <PlatformDashboard />
@@ -63,7 +92,7 @@ export const Router = () => {
           />
           
           <Route
-            path="/superadmin/firms"
+            path="/app/superadmin/firms"
             element={
               <ProtectedRoute requireSuperadmin>
                 <FirmsManagement />
@@ -72,7 +101,7 @@ export const Router = () => {
           />
           
           {/* Firm-Scoped Routes for Regular Users */}
-          <Route path="/f/:firmSlug" element={<FirmLayout />}>
+          <Route path="/app/firm/:firmSlug" element={<FirmLayout />}>
             <Route
               path="dashboard"
               element={
@@ -172,8 +201,11 @@ export const Router = () => {
               }
             />
           </Route>
-          <Route path="/" element={<RootRedirect />} />
-          <Route path="/:firmSlug/*" element={<LegacyFirmRedirect />} />
+          <Route path="/superadmin/*" element={<LegacySuperadminRedirect />} />
+          <Route path="/firm/*" element={<LegacyFirmRedirect />} />
+          <Route path="/f/:firmSlug/*" element={<LegacyFirmScopedRedirect />} />
+          <Route path="/:firmSlug/*" element={<LegacySlugRedirect />} />
+          <Route path="/app/firm" element={<DefaultRoute />} />
           <Route path="*" element={<DefaultRoute />} />
         </Routes>
   );

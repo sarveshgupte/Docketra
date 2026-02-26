@@ -97,7 +97,7 @@ export const PlatformDashboard = () => {
         </div>
 
         <div className="platform-dashboard__metrics">
-          <Card className="platform-metric-card" onClick={() => navigate('/superadmin/firms')}>
+          <Card className="platform-metric-card" onClick={() => navigate('/app/superadmin/firms')}>
             <div className="platform-metric-card__icon">🏢</div>
             <div className="platform-metric-card__value">{stats.totalFirms}</div>
             <div className="platform-metric-card__label">Total Firms</div>
@@ -137,7 +137,7 @@ export const PlatformDashboard = () => {
             <p>Create new firms, activate or deactivate existing ones, and manage firm administrators.</p>
             <button 
               className="neo-button neo-button--primary"
-              onClick={() => navigate('/superadmin/firms')}
+              onClick={() => navigate('/app/superadmin/firms')}
             >
               Go to Firms Management
             </button>
