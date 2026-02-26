@@ -42,14 +42,14 @@ export const SuperAdminLayout = ({ children }) => {
           </div>
           <div className="superadmin-layout__nav-links">
             <Link
-              to="/superadmin"
-              className={`superadmin-layout__nav-link ${isActive('/superadmin') ? 'active' : ''}`}
+              to="/app/superadmin"
+              className={`superadmin-layout__nav-link ${isActive('/app/superadmin') ? 'active' : ''}`}
             >
               Platform Dashboard
             </Link>
             <Link
-              to="/superadmin/firms"
-              className={`superadmin-layout__nav-link ${isActive('/superadmin/firms') ? 'active' : ''}`}
+              to="/app/superadmin/firms"
+              className={`superadmin-layout__nav-link ${isActive('/app/superadmin/firms') ? 'active' : ''}`}
             >
               Firms
             </Link>
