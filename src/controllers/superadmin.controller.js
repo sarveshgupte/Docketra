@@ -508,10 +508,13 @@ const createFirmAdmin = async (req, res) => {
 
     const normalizedXID = await xIDGenerator.generateNextXID(firm._id);
     
-    const passwordSetupSecret = process.env.JWT_PASSWORD_SETUP_SECRET || process.env.JWT_SECRET;
-    const legacySetupToken = !passwordSetupSecret ? crypto.randomBytes(32).toString('hex') : null;
-    const legacySetupTokenHash = legacySetupToken ? crypto.createHash('sha256').update(legacySetupToken).digest('hex') : null;
-    const legacySetupExpiry = legacySetupToken ? new Date(Date.now() + 24 * 60 * 60 * 1000) : null;
+    const passwordSetupSecret = process.env.JWT_PASSWORD_SETUP_SECRET;
+    if (!passwordSetupSecret) {
+      return res.status(500).json({
+        success: false,
+        message: 'JWT_PASSWORD_SETUP_SECRET environment variable is not configured',
+      });
+    }
     
     // Create admin user with firmId and defaultClientId
     const adminUser = new User({
@@ -526,8 +529,6 @@ const createFirmAdmin = async (req, res) => {
       passwordSet: false,
       mustSetPassword: false,
       mustChangePassword: true,
-      passwordSetupTokenHash: legacySetupTokenHash,
-      passwordSetupExpires: legacySetupExpiry,
       inviteSentAt: new Date(),
       passwordSetAt: null,
     });
@@ -536,17 +537,15 @@ const createFirmAdmin = async (req, res) => {
     
     // Send password setup email
     try {
-      const setupToken = passwordSetupSecret
-        ? jwt.sign(
-          {
-            userId: adminUser._id,
-            firmId: firm._id,
-            type: 'PASSWORD_SETUP',
-          },
-          passwordSetupSecret,
-          { expiresIn: PASSWORD_SETUP_TOKEN_EXPIRY }
-        )
-        : legacySetupToken;
+      const setupToken = jwt.sign(
+        {
+          userId: adminUser._id,
+          firmId: firm._id,
+          type: 'PASSWORD_SETUP',
+        },
+        passwordSetupSecret,
+        { expiresIn: PASSWORD_SETUP_TOKEN_EXPIRY }
+      );
 
       const emailResult = await emailService.sendPasswordSetupEmail({
         email: adminUser.email,
@@ -1320,7 +1319,13 @@ const resendAdminAccess = async (req, res) => {
 
   const isInvited = admin.status === 'INVITED';
   const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-  const passwordSetupSecret = process.env.JWT_PASSWORD_SETUP_SECRET || process.env.JWT_SECRET;
+  const passwordSetupSecret = process.env.JWT_PASSWORD_SETUP_SECRET;
+  if (!passwordSetupSecret) {
+    return res.status(500).json({
+      success: false,
+      message: 'JWT_PASSWORD_SETUP_SECRET environment variable is not configured',
+    });
+  }
 
   admin.passwordSetupTokenHash = null;
   admin.passwordSetupExpires = null;
@@ -1330,21 +1335,15 @@ const resendAdminAccess = async (req, res) => {
   let newToken;
   // Invalidate old tokens and set new ones
   if (isInvited) {
-    newToken = passwordSetupSecret
-      ? jwt.sign(
-        {
-          userId: admin._id,
-          firmId: firm._id,
-          type: 'PASSWORD_SETUP',
-        },
-        passwordSetupSecret,
-        { expiresIn: PASSWORD_SETUP_TOKEN_EXPIRY }
-      )
-      : crypto.randomBytes(32).toString('hex');
-    if (!passwordSetupSecret) {
-      admin.passwordSetupTokenHash = crypto.createHash('sha256').update(newToken).digest('hex');
-      admin.passwordSetupExpires = tokenExpires;
-    }
+    newToken = jwt.sign(
+      {
+        userId: admin._id,
+        firmId: firm._id,
+        type: 'PASSWORD_SETUP',
+      },
+      passwordSetupSecret,
+      { expiresIn: PASSWORD_SETUP_TOKEN_EXPIRY }
+    );
     admin.inviteSentAt = new Date();
   } else {
     // ACTIVE
