@@ -10,10 +10,10 @@ export const NotFoundPage = () => {
         The page you requested does not exist or may have moved.
       </p>
       <div className="mt-6 flex gap-3">
-        <Link to="/" className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white">
+        <Link to="/" aria-label="Navigate to home page" className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white">
           Go to Home
         </Link>
-        <Link to="/login" className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700">
+        <Link to="/login" aria-label="Navigate to login page" className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700">
           Go to Login
         </Link>
       </div>
