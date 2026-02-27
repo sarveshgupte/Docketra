@@ -47,7 +47,21 @@ const mockStorageFactory = {
         downloadProviderCalls += 1;
         return 'https://download.example/signed';
       },
+      async getFileMetadata() {
+        return { id: 'remote-file' };
+      },
     };
+  },
+};
+
+const mockTenantStorageConfig = {
+  findOne() {
+    return {
+      select: async () => ({ status: 'ACTIVE' }),
+    };
+  },
+  async updateMany() {
+    return { acknowledged: true };
   },
 };
 
@@ -55,7 +69,9 @@ const originalLoad = Module._load;
 Module._load = function (request, parent, isMain) {
   if (request === '../models/Case.model') return mockCaseModel;
   if (request === '../models/File.model') return mockFileModel;
+  if (request === '../models/TenantStorageConfig.model') return mockTenantStorageConfig;
   if (request === '../storage/StorageProviderFactory') return mockStorageFactory;
+  if (request === './storage.controller') return { mapProviderErrorToStatus: () => 'ERROR' };
   return originalLoad.apply(this, arguments);
 };
 

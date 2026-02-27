@@ -2,7 +2,15 @@ const express = require('express');
 const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
 const routeSchemas = require('../schemas/storage.routes.schema');
 const { userReadLimiter, authLimiter } = require('../middleware/rateLimiters');
-const { getStorageStatus, googleConnect, googleCallback } = require('../controllers/storage.controller');
+const {
+  getStorageStatus,
+  googleConnect,
+  googleCallback,
+  googleConfirmDrive,
+  onedriveConnect,
+  onedriveCallback,
+  onedriveConfirmDrive,
+} = require('../controllers/storage.controller');
 
 const router = applyRouteValidation(express.Router(), routeSchemas);
 
@@ -13,5 +21,9 @@ router.get('/status', userReadLimiter, getStorageStatus);
 // applied at the /api/storage mount point in server.js.
 router.get('/google/connect', authLimiter, googleConnect);
 router.get('/google/callback', authLimiter, googleCallback);
+router.post('/google/confirm-drive', authLimiter, googleConfirmDrive);
+router.get('/onedrive/connect', authLimiter, onedriveConnect);
+router.get('/onedrive/callback', authLimiter, onedriveCallback);
+router.post('/onedrive/confirm-drive', authLimiter, onedriveConfirmDrive);
 
 module.exports = router;

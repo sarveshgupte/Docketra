@@ -17,6 +17,22 @@ class NotImplementedError extends Error {
 }
 
 class StorageProvider {
+  getClient() {
+    throw new NotImplementedError('getClient');
+  }
+
+  async testConnection() {
+    throw new NotImplementedError('testConnection');
+  }
+
+  async createFolder(name, parentId) { // eslint-disable-line no-unused-vars
+    throw new NotImplementedError('createFolder');
+  }
+
+  async uploadFileStream({ folderId, filename, mimeType, stream }) { // eslint-disable-line no-unused-vars
+    throw new NotImplementedError('uploadFileStream');
+  }
+
   /**
    * Create the root folder for a firm in the storage backend.
    * @param {string} firmId
