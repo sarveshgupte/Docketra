@@ -1,5 +1,7 @@
 const express = require('express');
-const router = express.Router();
+const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
+const routeSchemas = require('../schemas/public.routes.schema.js');
+const router = applyRouteValidation(express.Router(), routeSchemas);
 const { getFirmBySlug } = require('../controllers/superadmin.controller');
 
 /**
