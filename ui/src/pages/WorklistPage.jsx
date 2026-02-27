@@ -106,58 +106,87 @@ export const WorklistPage = () => {
     <Layout>
       <div className="worklist">
         <div className="worklist__header">
-          <h1>{pageInfo.title}</h1>
-          <p className="text-secondary">
-            {pageInfo.description}
-          </p>
+          <div className="worklist__header-left">
+            <h1 className="worklist__title">{pageInfo.title}</h1>
+            <p className="worklist__description">{pageInfo.description}</p>
+          </div>
+          <button
+            className="btn btn-primary worklist__create-btn"
+            onClick={() => navigate(`/f/${firmSlug}/cases/create`)}
+          >
+            + New Case
+          </button>
         </div>
 
-        <div className="worklist__filters">
+        <div className="worklist__toolbar">
           <span className="worklist__count">
-            Total: {cases.length} case{cases.length !== 1 ? 's' : ''}
+            {cases.length} case{cases.length !== 1 ? 's' : ''}
           </span>
         </div>
 
         <Card>
           {cases.length === 0 ? (
             <div className="worklist__empty">
-              <p className="text-secondary">
-                {isPendingView ? 'No pending cases found' : 'No open cases assigned to you'}
+              <div className="worklist__empty-icon" aria-hidden="true">
+                {isPendingView ? '⏸' : '✅'}
+              </div>
+              <h3 className="worklist__empty-title">
+                {isPendingView ? 'No pending cases' : 'All clear!'}
+              </h3>
+              <p className="worklist__empty-desc">
+                {isPendingView
+                  ? 'No cases are currently on hold.'
+                  : 'No open cases assigned to you right now.'}
               </p>
+              {!isPendingView && (
+                <button
+                  className="btn btn-primary worklist__empty-cta"
+                  onClick={() => navigate(`/f/${firmSlug}/cases/create`)}
+                >
+                  Create a Case
+                </button>
+              )}
             </div>
           ) : (
-            <table className="neo-table">
-              <thead>
-                <tr>
-                  <th>Case Name</th>
-                  <th>Category</th>
-                  <th>Client ID</th>
-                  <th>Status</th>
-                  {isPendingView && <th>Pending Until</th>}
-                  <th>Created</th>
-                  <th>Last Updated</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cases.map((caseItem) => (
-                  <tr key={caseItem._id} onClick={() => handleCaseClick(caseItem.caseId)}>
-                    <td>{caseItem.caseName}</td>
-                    <td>{caseItem.category}</td>
-                    <td>{caseItem.clientId || 'N/A'}</td>
-                    <td>
-                      <Badge status={caseItem.status}>{caseItem.status}</Badge>
-                    </td>
-                    {isPendingView && (
-                      <td>
-                        {formatDate(caseItem.pendingUntil)}
-                      </td>
-                    )}
-                    <td>{formatDate(caseItem.createdAt)}</td>
-                    <td>{formatDate(caseItem.updatedAt)}</td>
+            <div className="worklist__table-wrap">
+              <table className="neo-table" role="grid" aria-label={pageInfo.title}>
+                <thead>
+                  <tr>
+                    <th scope="col">Case Name</th>
+                    <th scope="col">Category</th>
+                    <th scope="col">Client ID</th>
+                    <th scope="col">Status</th>
+                    {isPendingView && <th scope="col">Pending Until</th>}
+                    <th scope="col">Created</th>
+                    <th scope="col">Last Updated</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {cases.map((caseItem) => (
+                    <tr
+                      key={caseItem._id}
+                      onClick={() => handleCaseClick(caseItem.caseId)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleCaseClick(caseItem.caseId)}
+                      tabIndex={0}
+                      role="row"
+                      aria-label={`Case: ${caseItem.caseName}, status ${caseItem.status}`}
+                    >
+                      <td>{caseItem.caseName}</td>
+                      <td>{caseItem.category}</td>
+                      <td>{caseItem.clientId || '—'}</td>
+                      <td>
+                        <Badge status={caseItem.status}>{caseItem.status}</Badge>
+                      </td>
+                      {isPendingView && (
+                        <td>{formatDate(caseItem.pendingUntil)}</td>
+                      )}
+                      <td>{formatDate(caseItem.createdAt)}</td>
+                      <td>{formatDate(caseItem.updatedAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </Card>
       </div>
