@@ -39,6 +39,12 @@ const fileSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    status: {
+      type: String,
+      enum: ['PENDING', 'AVAILABLE', 'MISSING', 'FAILED', 'DELETED_BY_SYSTEM'],
+      default: 'PENDING',
+      index: true,
+    },
   },
   {
     timestamps: { createdAt: true, updatedAt: false },

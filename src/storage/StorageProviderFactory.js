@@ -1,22 +1,19 @@
 const TenantStorageConfig = require('../models/TenantStorageConfig.model');
 const { decrypt } = require('./services/TokenEncryption.service');
-const { S3Provider } = require('./providers/S3Provider');
+const { google } = require('googleapis');
+const GoogleDriveProvider = require('./providers/GoogleDriveProvider');
+const OneDriveProvider = require('./providers/OneDriveProvider');
 const {
   StorageConfigMissingError,
   StorageAccessError,
   UnsupportedProviderError,
 } = require('./errors');
 
-function parseCredentials(encryptedCredentials, tenantId) {
+function parseRefreshToken(encryptedRefreshToken, tenantId) {
   try {
-    const decrypted = decrypt(encryptedCredentials);
-    const credentials = JSON.parse(decrypted);
-    if (!credentials?.accessKeyId || !credentials?.secretAccessKey) {
-      throw new Error('Credential fields missing');
-    }
-    return credentials;
+    return decrypt(encryptedRefreshToken);
   } catch (error) {
-    throw new StorageAccessError('Failed to decrypt storage credentials', tenantId, error);
+    throw new StorageAccessError('Failed to decrypt storage refresh token', tenantId, error);
   }
 }
 
@@ -25,21 +22,25 @@ async function getProviderForTenant(tenantId) {
   if (!config) {
     throw new StorageConfigMissingError(tenantId);
   }
+  if (config.status !== 'ACTIVE') {
+    throw new StorageConfigMissingError(tenantId);
+  }
 
-  const credentials = parseCredentials(config.encryptedCredentials, tenantId);
+  const refreshToken = parseRefreshToken(config.encryptedRefreshToken, tenantId);
 
   switch (config.provider) {
-    case 'aws_s3':
-      return new S3Provider({
-        tenantId,
-        bucket: config.bucket,
-        region: config.region,
-        prefix: config.prefix,
-        credentials,
-      });
-    case 'azure_blob':
-    case 'gcs':
-      throw new UnsupportedProviderError(config.provider, tenantId);
+    case 'google_drive': {
+      const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_OAUTH_REDIRECT_URI } = process.env;
+      const oauthClient = new google.auth.OAuth2(
+        GOOGLE_CLIENT_ID,
+        GOOGLE_CLIENT_SECRET,
+        GOOGLE_OAUTH_REDIRECT_URI
+      );
+      oauthClient.setCredentials({ refresh_token: refreshToken });
+      return new GoogleDriveProvider({ oauthClient, driveId: config.driveId });
+    }
+    case 'onedrive':
+      return new OneDriveProvider({ refreshToken, driveId: config.driveId });
     default:
       throw new UnsupportedProviderError(config.provider, tenantId);
   }

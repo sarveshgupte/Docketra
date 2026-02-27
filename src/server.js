@@ -344,6 +344,12 @@ const server = app.listen(PORT, () => {
       console.error('[cleanupTmpUploads] failed', { message: err.message })
     );
   }, 6 * 60 * 60 * 1000); // 6 hours
+  const { runStorageHealthCheck } = require('./jobs/storageHealthCheck.job');
+  setInterval(() => {
+    runStorageHealthCheck().catch((err) =>
+      console.error('[storageHealthCheck] failed', { message: err.message })
+    );
+  }, 8 * 60 * 60 * 1000); // 8 hours
   console.log(`
 ╔════════════════════════════════════════════╗
 ║         Docketra API Server                ║
