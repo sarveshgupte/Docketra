@@ -1,38 +1,76 @@
 /**
  * Enterprise Design Tokens
- * Docketra B2B SaaS Design System - Structured Professionalism
+ * Docketra B2B SaaS Design System — 2026 Edition
  * Indian professional firm edition (CS, CA, Legal, Compliance)
  */
 
 :root {
   /* === 2026 Design Token System === */
 
-  /* App & Surface Colors (app shell background, card surfaces) */
-  --color-bg-app: #F7F9FC;
+  /* App & Surface Colors */
+  --color-bg-app: #F3F6FB;
   --color-surface: #FFFFFF;
-  --color-border: #E5E7EB;
+  --color-surface-raised: #FAFBFD;
+  --color-border: #E2E8F0;
 
   /* Brand Colors */
   --color-primary-dark: #0B1F3A;   /* sidebar background */
   --color-primary: #1E3A8A;         /* primary buttons, avatars, active states */
   --color-accent: #D97706;          /* saffron – active sidebar border indicator */
 
-  /* Semantic Status Colors */
-  --color-success: #15803D;
-  --color-warning: #B45309;
-  --color-error: #B91C1C;
+  /* Semantic Status Colors (muted-neon palette) */
+  --color-success: #059669;
+  --color-warning: #D97706;
+  --color-error: #DC2626;
+  --color-info: #2563EB;
+
+  /* Muted-neon semantic badge tokens */
+  --badge-open-bg: rgba(37, 99, 235, 0.10);
+  --badge-open-color: #1D4ED8;
+  --badge-open-border: rgba(37, 99, 235, 0.20);
+
+  --badge-resolved-bg: rgba(5, 150, 105, 0.10);
+  --badge-resolved-color: #047857;
+  --badge-resolved-border: rgba(5, 150, 105, 0.20);
+
+  --badge-pended-bg: rgba(217, 119, 6, 0.10);
+  --badge-pended-color: #B45309;
+  --badge-pended-border: rgba(217, 119, 6, 0.20);
+
+  --badge-filed-bg: rgba(100, 116, 139, 0.10);
+  --badge-filed-color: #475569;
+  --badge-filed-border: rgba(100, 116, 139, 0.20);
+
+  --badge-unassigned-bg: rgba(220, 38, 38, 0.08);
+  --badge-unassigned-color: #B91C1C;
+  --badge-unassigned-border: rgba(220, 38, 38, 0.18);
 
   /* Border Radius Scale */
+  --radius-xs: 4px;
   --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-pill: 999px;
 
   /* Elevation / Shadow Scale */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-xs: 0 1px 2px rgba(11, 31, 58, 0.04);
+  --shadow-sm: 0 1px 3px rgba(11, 31, 58, 0.06), 0 1px 2px rgba(11, 31, 58, 0.04);
+  --shadow-md: 0 4px 12px rgba(11, 31, 58, 0.08), 0 2px 4px rgba(11, 31, 58, 0.04);
+  --shadow-lg: 0 10px 28px rgba(11, 31, 58, 0.10), 0 4px 8px rgba(11, 31, 58, 0.05);
+
+  /* Glass / Glassmorphism tokens */
+  --glass-bg: rgba(255, 255, 255, 0.75);
+  --glass-bg-strong: rgba(255, 255, 255, 0.92);
+  --glass-border: rgba(255, 255, 255, 0.15);
+  --glass-border-subtle: rgba(255, 255, 255, 0.08);
+  --glass-blur: blur(14px);
+  --glass-blur-sm: blur(8px);
+  --glass-shadow: 0 8px 32px rgba(11, 31, 58, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.20);
 
   /* Hover and state backgrounds */
-  --color-primary-hover-bg: rgba(30, 58, 138, 0.04);
+  --color-primary-hover-bg: rgba(30, 58, 138, 0.05);
+  --color-row-hover: rgba(30, 58, 138, 0.04);
 
   /* Spacing Scale (4px base grid) */
   --space-1: 4px;
@@ -42,6 +80,8 @@
   --space-5: 20px;
   --space-6: 24px;
   --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
 
   /* === Legacy Token Aliases (backward compatibility) === */
 
@@ -60,9 +100,9 @@
   --text-muted: #94A3B8;
 
   --success: var(--color-success);
-  --warning: #D97706;
+  --warning: var(--color-warning);
   --danger: var(--color-error);
-  --info: #2563EB;
+  --info: var(--color-info);
 
   /* Legacy aliases */
   --text-primary: var(--text-main);
@@ -74,11 +114,12 @@
   --accent-danger: var(--danger);
 
   /* Focus States */
-  --focus-ring: 0 0 0 2px var(--info);
+  --focus-ring: 0 0 0 2px rgba(37, 99, 235, 0.50);
+  --focus-ring-offset: 0 0 0 2px #fff, 0 0 0 4px rgba(37, 99, 235, 0.50);
 
   /* Borders (legacy names) */
   --border-radius: var(--radius-sm);
-  --border-radius-sm: 4px;
+  --border-radius-sm: var(--radius-xs);
   --border-radius-lg: var(--radius-md);
   --border-radius-xl: var(--radius-lg);
 
@@ -88,20 +129,57 @@
   --spacing-md: var(--space-4);
   --spacing-lg: var(--space-6);
   --spacing-xl: var(--space-8);
-  --spacing-2xl: 48px;
+  --spacing-2xl: var(--space-12);
 
   /* Typography */
   --font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-size-xs: 12px;
-  --font-size-sm: 14px;
+  --font-size-xs: 11px;
+  --font-size-sm: 13px;
   --font-size-md: 14px;
-  --font-size-lg: 18px;
-  --font-size-xl: 24px;
+  --font-size-lg: 16px;
+  --font-size-xl: 22px;
+  --font-size-2xl: 28px;
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --letter-spacing-wide: 0.05em;
+  --letter-spacing-wider: 0.08em;
 
   /* Transitions */
   --transition-fast: 150ms ease-in-out;
   --transition-normal: 250ms ease-in-out;
+  --transition-slow: 350ms ease-in-out;
 
-  /* Shadow (legacy names) */
-  --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.1);
+  /* Impersonation banner tokens */
+  --impersonation-read-only-bg: rgba(239, 68, 68, 0.92);
+  --impersonation-full-access-bg: rgba(234, 179, 8, 0.95);
+}
+
+/* ─── Dark Mode ─────────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg-app: #0A0E1A;
+    --color-surface: #111827;
+    --color-surface-raised: #1A2236;
+    --color-border: #1F2D42;
+
+    --glass-bg: rgba(17, 24, 39, 0.80);
+    --glass-bg-strong: rgba(17, 24, 39, 0.95);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-border-subtle: rgba(255, 255, 255, 0.04);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.50), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+    --text-main: #F1F5F9;
+    --text-body: #94A3B8;
+    --text-muted: #475569;
+
+    --border-subtle: #1F2D42;
+    --border-strong: #2D3F58;
+
+    --color-primary-hover-bg: rgba(30, 58, 138, 0.15);
+    --color-row-hover: rgba(255, 255, 255, 0.03);
+
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.30);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.40);
+    --shadow-lg: 0 10px 28px rgba(0, 0, 0, 0.50);
+  }
 }

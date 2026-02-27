@@ -447,33 +447,27 @@ export const CaseDetailPage = () => {
   return (
     <Layout>
       <div className="case-detail">
+        {/* ─── Page Header ──────────────────────────────────────────── */}
         <div className="case-detail__header">
-          <div>
-            <h1>{caseInfo.caseName}</h1>
-            <p className="text-secondary">{caseInfo.category}</p>
+          <div className="case-detail__header-left">
+            <h1 className="case-detail__title">{caseInfo.caseName}</h1>
+            <p className="case-detail__subtitle">{caseInfo.category}</p>
           </div>
-          <div style={{ display: 'flex', gap: 'var(--spacing-sm)', alignItems: 'center' }}>
-            {/* Client Fact Sheet Button - PR: Client Fact Sheet Foundation */}
+          <div className="case-detail__header-actions">
+            {/* Client Fact Sheet Button */}
             <Button
               variant="default"
               onClick={handleShowClientFactSheet}
               disabled={loadingFactSheet}
               title="View Client Fact Sheet"
-              style={{ 
-                padding: '0.5rem 1rem',
-                fontSize: '0.9rem'
-              }}
+              className="case-detail__fact-sheet-btn"
             >
-              ⓘ Client Fact Sheet
+              ⓘ Fact Sheet
             </Button>
             {/* Contextual Action Buttons */}
             {showPullButton && (
-              <Button
-                variant="primary"
-                onClick={handlePullCase}
-                disabled={pullingCase}
-              >
-                {pullingCase ? 'Pulling...' : 'Pull Case'}
+              <Button variant="primary" onClick={handlePullCase} disabled={pullingCase}>
+                {pullingCase ? 'Pulling…' : 'Pull Case'}
               </Button>
             )}
             {showMoveToWorkbasketButton && (
@@ -481,349 +475,315 @@ export const CaseDetailPage = () => {
                 variant="default"
                 onClick={handleMoveToGlobal}
                 disabled={movingToGlobal}
-                style={{ 
-                  borderColor: 'var(--warning-color)',
-                  color: 'var(--warning-color)'
-                }}
+                className="case-detail__btn-warning"
               >
-                {movingToGlobal ? 'Moving...' : 'Move to Workbasket'}
+                {movingToGlobal ? 'Moving…' : 'Move to Workbasket'}
               </Button>
             )}
-            {/* Case Action Buttons: File, Pend, Resolve (for OPEN status only) */}
             {canPerformLifecycleActions && (
               <>
                 <Button
                   variant="default"
                   onClick={() => setShowFileModal(true)}
-                  style={{ 
-                    borderColor: 'var(--text-secondary)',
-                    color: 'var(--text-secondary)'
-                  }}
+                  className="case-detail__btn-muted"
                 >
                   File
                 </Button>
                 <Button
                   variant="default"
                   onClick={() => setShowPendModal(true)}
-                  style={{ 
-                    borderColor: 'var(--warning-color)',
-                    color: 'var(--warning-color)'
-                  }}
+                  className="case-detail__btn-warning"
                 >
                   Pend
                 </Button>
-                <Button
-                  variant="success"
-                  onClick={() => setShowResolveModal(true)}
-                >
+                <Button variant="success" onClick={() => setShowResolveModal(true)}>
                   Resolve
                 </Button>
               </>
             )}
-            {/* Unpend Button (for PENDING/PENDED status only) */}
             {canUnpend && (
-              <Button
-                variant="primary"
-                onClick={() => setShowUnpendModal(true)}
-              >
+              <Button variant="primary" onClick={() => setShowUnpendModal(true)}>
                 Unpend
               </Button>
             )}
-            {/* PR #45: View-Only Mode Indicator */}
-            {isViewOnlyMode && (
-              <Badge variant="warning">View-Only Mode</Badge>
-            )}
-            <Badge status={caseInfo.status}>
-              {caseInfo.status}
-            </Badge>
+            {isViewOnlyMode && <Badge variant="warning">View-Only</Badge>}
+            <Badge status={caseInfo.status}>{caseInfo.status}</Badge>
           </div>
         </div>
 
-        {/* PR #45: View-Only Mode Alert */}
+        {/* Alerts */}
         {isViewOnlyMode && (
-          <div className="neo-alert neo-alert--info" style={{ marginBottom: 'var(--spacing-lg)' }}>
-            <h3>🔍 Viewing Case in Read-Only Mode</h3>
-            <p>
-              This case is not assigned to you. You can view all details, add comments, and attach files,
-              but you cannot edit case details, change status, or reassign the case.
-            </p>
+          <div className="neo-alert neo-alert--info case-detail__alert">
+            <strong>🔍 Read-Only Mode</strong> — You can view all details and add comments,
+            but cannot edit case details or change status.
+          </div>
+        )}
+        {caseInfo.lockStatus?.isLocked &&
+          caseInfo.lockStatus.activeUserEmail !== user?.email?.toLowerCase() && (
+          <div className="neo-alert neo-alert--warning case-detail__alert">
+            <strong>Case is Currently Locked</strong> — Being worked on by another user since{' '}
+            {formatDateTime(caseInfo.lockStatus.lastActivityAt || caseInfo.lockStatus.lockedAt)}.
           </div>
         )}
 
-        {/* Lock Status Warning */}
-        {caseInfo.lockStatus?.isLocked && 
-         caseInfo.lockStatus.activeUserEmail !== user?.email?.toLowerCase() && (
-          <div className="neo-alert neo-alert--warning" style={{ marginBottom: 'var(--spacing-lg)' }}>
-            <h3>Case is Currently Locked</h3>
-            <p>
-              This case is currently being worked on by another user since{' '}
-              {formatDateTime(caseInfo.lockStatus.lastActivityAt || caseInfo.lockStatus.lockedAt)}.
-            </p>
-            <p>You can view the case in read-only mode.</p>
-          </div>
-        )}
+        {/* ─── Split-Pane Body ────────────────────────────────────── */}
+        <div className="case-detail__split">
 
-        <div className="case-detail__grid">
-          <Card className="case-detail__section">
-            <h2 className="neo-section__header">Case Information</h2>
-            <div className="case-detail__field">
-              <span className="case-detail__label">Case Name:</span>
-              <span>{caseInfo.caseName}</span>
-            </div>
-            {caseData.client && (
-              <div className="case-detail__field">
-                <span className="case-detail__label">Client:</span>
-                <span>{formatClientDisplay(caseData.client, true)}</span>
-              </div>
-            )}
-            <div className="case-detail__field">
-              <span className="case-detail__label">Category:</span>
-              <span>{caseInfo.category}</span>
-            </div>
-            <div className="case-detail__field">
-              <span className="case-detail__label">Status:</span>
-              <Badge status={caseInfo.status}>
-                {caseInfo.status}
-              </Badge>
-            </div>
-            <div className="case-detail__field">
-              <span className="case-detail__label">Location:</span>
-              <span>{caseInfo.assignedToXID ? 'My Worklist' : 'Workbasket'}</span>
-            </div>
-            <div className="case-detail__field">
-              <span className="case-detail__label">Created:</span>
-              <span>{formatDateTime(caseInfo.createdAt)}</span>
-            </div>
-            <div className="case-detail__field">
-              <span className="case-detail__label">Last Updated:</span>
-              <span>{formatDateTime(caseInfo.updatedAt)}</span>
-            </div>
-          </Card>
+          {/* Left pane — 60% — main case content */}
+          <div className="case-detail__split-main">
 
-          {caseInfo.description && (
-            <Card className="case-detail__section">
-              <h2 className="neo-section__header">Description</h2>
-              <p>{caseInfo.description}</p>
-            </Card>
-          )}
-        </div>
-
-        {/* Attachments Section - Placed above Comments */}
-        <Card className="case-detail__section">
-          <h2 className="neo-section__header">Attachments</h2>
-          <div className="case-detail__attachments">
-            {caseData.attachments && caseData.attachments.length > 0 ? (
-              caseData.attachments.map((attachment, index) => (
-                <div key={index} className="neo-inset" style={{ marginBottom: 'var(--spacing-md)' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xs)' }}>
-                    <div style={{ fontWeight: '500', fontSize: '1rem' }}>
-                      📄 {attachment.fileName || attachment.filename}
-                    </div>
-                    <div className="text-secondary text-sm">
-                      {attachment.visibility === 'external' ? (
-                        <>
-                          <strong>External Email</strong>
-                          <br />
-                          From: {attachment.createdBy}
-                        </>
-                      ) : (
-                        <>
-                          Attached by {attachment.createdByName && attachment.createdByXID
-                            ? `${attachment.createdByName} (${attachment.createdByXID})`
-                            : 'System (Unknown)'}
-                        </>
-                      )}
-                    </div>
-                    <div className="text-secondary text-sm">
-                      {attachment.visibility === 'external' ? 'Received on: ' : 'Attached on: '}
-                      {formatDateTime(attachment.createdAt)}
-                    </div>
-                    {attachment.description && (
-                      <div className="text-secondary text-sm" style={{ marginTop: 'var(--spacing-xs)' }}>
-                        {attachment.description}
-                      </div>
-                    )}
-                    {/* View and Download buttons */}
-                    <div style={{ display: 'flex', gap: 'var(--spacing-sm)', marginTop: 'var(--spacing-sm)' }}>
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => caseService.viewAttachment(caseId, attachment._id)}
-                      >
-                        View
-                      </Button>
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => caseService.downloadAttachment(caseId, attachment._id, attachment.fileName || attachment.filename)}
-                      >
-                        Download
-                      </Button>
-                    </div>
-                  </div>
+            {/* Case Info + Description */}
+            <div className="case-detail__info-grid">
+              <Card className="case-detail__section">
+                <h2 className="neo-section__header">Case Information</h2>
+                <div className="case-detail__field">
+                  <span className="case-detail__label">Case Name</span>
+                  <span>{caseInfo.caseName}</span>
                 </div>
-              ))
-            ) : (
-              <p className="text-secondary">No attachments yet</p>
+                {caseData.client && (
+                  <div className="case-detail__field">
+                    <span className="case-detail__label">Client</span>
+                    <span>{formatClientDisplay(caseData.client, true)}</span>
+                  </div>
+                )}
+                <div className="case-detail__field">
+                  <span className="case-detail__label">Category</span>
+                  <span>{caseInfo.category}</span>
+                </div>
+                <div className="case-detail__field">
+                  <span className="case-detail__label">Status</span>
+                  <Badge status={caseInfo.status}>{caseInfo.status}</Badge>
+                </div>
+                <div className="case-detail__field">
+                  <span className="case-detail__label">Location</span>
+                  <span>{caseInfo.assignedToXID ? 'My Worklist' : 'Workbasket'}</span>
+                </div>
+                <div className="case-detail__field">
+                  <span className="case-detail__label">Created</span>
+                  <span>{formatDateTime(caseInfo.createdAt)}</span>
+                </div>
+                <div className="case-detail__field">
+                  <span className="case-detail__label">Last Updated</span>
+                  <span>{formatDateTime(caseInfo.updatedAt)}</span>
+                </div>
+              </Card>
+
+              {caseInfo.description && (
+                <Card className="case-detail__section">
+                  <h2 className="neo-section__header">Description</h2>
+                  <p className="case-detail__description-text">{caseInfo.description}</p>
+                </Card>
+              )}
+            </div>
+
+            {/* Comments */}
+            <Card className="case-detail__section">
+              <h2 className="neo-section__header">Comments</h2>
+              <div className="case-detail__comments">
+                {caseData.comments && caseData.comments.length > 0 ? (
+                  caseData.comments.map((comment, index) => (
+                    <div key={index} className="neo-inset case-detail__comment-item">
+                      <div className="case-detail__comment-header">
+                        <span className="case-detail__comment-author">
+                          {comment.createdByName && comment.createdByXID
+                            ? `${comment.createdByName} (${comment.createdByXID})`
+                            : 'System (Unknown)'}
+                        </span>
+                        <span className="case-detail__comment-time">{formatDateTime(comment.createdAt)}</span>
+                      </div>
+                      <p className="case-detail__comment-text">{comment.text}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="case-detail__empty-note">No comments yet</p>
+                )}
+              </div>
+              {(accessMode.canComment || permissions.canAddComment(caseData)) && (
+                <div className="case-detail__add-comment">
+                  <Textarea
+                    label="Add Comment"
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Enter your comment…"
+                    rows={3}
+                  />
+                  <Button
+                    variant="primary"
+                    onClick={handleAddComment}
+                    disabled={!newComment.trim() || submitting}
+                  >
+                    {submitting ? 'Adding…' : 'Add Comment'}
+                  </Button>
+                </div>
+              )}
+            </Card>
+
+            {/* Activity Timeline (new audit log) */}
+            {caseData.auditLog && caseData.auditLog.length > 0 && (
+              <Card className="case-detail__section">
+                <h2 className="neo-section__header">Activity Timeline</h2>
+                <div className="case-detail__audit">
+                  {caseData.auditLog.map((entry, index) => (
+                    <div key={index} className="neo-inset case-detail__audit-item">
+                      <div className="case-detail__audit-entry">
+                        <span className="case-detail__audit-time">{formatDateTime(entry.timestamp)}</span>
+                        <span className="case-detail__audit-action">{entry.actionType}</span>
+                        <span className="case-detail__audit-actor">
+                          {entry.performedByName && entry.performedByXID
+                            ? `${entry.performedByName} (${entry.performedByXID})`
+                            : 'System (Unknown)'}
+                        </span>
+                      </div>
+                      <p className="case-detail__audit-desc">{entry.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {/* Fallback: old audit history */}
+            {(!caseData.auditLog || caseData.auditLog.length === 0) &&
+              caseData.history && caseData.history.length > 0 && (
+              <Card className="case-detail__section">
+                <h2 className="neo-section__header">Audit History</h2>
+                <div className="case-detail__audit">
+                  {caseData.history.map((entry, index) => (
+                    <div key={index} className="neo-inset case-detail__audit-item">
+                      <div className="case-detail__audit-entry">
+                        <span className="case-detail__audit-time">{formatDateTime(entry.timestamp)}</span>
+                        <span className="case-detail__audit-action">{entry.actionType}</span>
+                        <span className="case-detail__audit-actor">
+                          {entry.performedByXID
+                            ? `System (${entry.performedByXID})`
+                            : 'System (Unknown)'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
             )}
           </div>
 
-          {/* File upload UI - Always visible when user can attach */}
-          {(accessMode.canAttach || permissions.canAddAttachment(caseData)) && (
-            <div className="case-detail__add-attachment" style={{ marginTop: 'var(--spacing-lg)' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-                <div className="neo-form-group">
-                  <label className="neo-form-label">Attach File</label>
+          {/* Right pane — 40% sticky context panel */}
+          <aside className="case-detail__split-context" aria-label="Case context panel">
+
+            {/* Attachments + Dropzone */}
+            <Card className="case-detail__context-card">
+              <h2 className="neo-section__header">Attachments</h2>
+              <div className="case-detail__attachments">
+                {caseData.attachments && caseData.attachments.length > 0 ? (
+                  caseData.attachments.map((attachment, index) => (
+                    <div key={index} className="neo-inset case-detail__attachment-item">
+                      <div className="case-detail__attachment-name">
+                        📄 {attachment.fileName || attachment.filename}
+                      </div>
+                      <div className="case-detail__attachment-meta">
+                        {attachment.visibility === 'external' ? (
+                          <><strong>External Email</strong> · From: {attachment.createdBy}</>
+                        ) : (
+                          <>Attached by {attachment.createdByName && attachment.createdByXID
+                            ? `${attachment.createdByName} (${attachment.createdByXID})`
+                            : 'System (Unknown)'}</>
+                        )}
+                      </div>
+                      <div className="case-detail__attachment-date">
+                        {attachment.visibility === 'external' ? 'Received: ' : 'Attached: '}
+                        {formatDateTime(attachment.createdAt)}
+                      </div>
+                      {attachment.description && (
+                        <div className="case-detail__attachment-desc">{attachment.description}</div>
+                      )}
+                      <div className="case-detail__attachment-actions">
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => caseService.viewAttachment(caseId, attachment._id)}
+                        >
+                          View
+                        </Button>
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => caseService.downloadAttachment(caseId, attachment._id, attachment.fileName || attachment.filename)}
+                        >
+                          Download
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="case-detail__empty-note">No attachments yet</p>
+                )}
+              </div>
+
+              {/* File Upload Dropzone */}
+              {(accessMode.canAttach || permissions.canAddAttachment(caseData)) && (
+                <div className="case-detail__upload">
+                  <div className="neo-dropzone" onClick={() => fileInputRef.current?.click()} role="button" tabIndex={0}
+                    onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
+                    aria-label="Click to upload attachment">
+                    <div className="neo-dropzone__icon" aria-hidden="true">📎</div>
+                    <div className="neo-dropzone__label">
+                      {selectedFile ? selectedFile.name : 'Click to attach a file'}
+                    </div>
+                    <div className="neo-dropzone__sub">PDF, DOCX, XLSX, images up to 25MB</div>
+                  </div>
                   <input
                     ref={fileInputRef}
                     type="file"
-                    className="neo-input"
+                    style={{ display: 'none' }}
                     onChange={handleFileSelect}
                     disabled={uploadingFile}
+                    aria-hidden="true"
                   />
+                  {selectedFile && (
+                    <Textarea
+                      label="File Description"
+                      value={fileDescription}
+                      onChange={(e) => setFileDescription(e.target.value)}
+                      placeholder="Describe this attachment…"
+                      rows={2}
+                      disabled={uploadingFile}
+                    />
+                  )}
+                  {selectedFile && (
+                    <Button
+                      variant="primary"
+                      onClick={handleUploadFile}
+                      disabled={!selectedFile || !fileDescription.trim() || uploadingFile}
+                      style={{ width: '100%' }}
+                    >
+                      {uploadingFile ? 'Uploading…' : 'Upload File'}
+                    </Button>
+                  )}
                 </div>
-                {selectedFile && (
-                  <div className="text-sm text-secondary">
-                    Selected: {selectedFile.name}
-                  </div>
-                )}
-                <Textarea
-                  label="File Description"
-                  value={fileDescription}
-                  onChange={(e) => setFileDescription(e.target.value)}
-                  placeholder="Describe this attachment..."
-                  rows={3}
-                  disabled={uploadingFile}
-                />
-                <Button
-                  variant="primary"
-                  onClick={handleUploadFile}
-                  disabled={!selectedFile || !fileDescription.trim() || uploadingFile}
-                >
-                  {uploadingFile ? 'Uploading...' : 'Upload File'}
-                </Button>
+              )}
+            </Card>
+
+            {/* Case History (audit trail) */}
+            {user && user.role !== USER_ROLES.SUPER_ADMIN && (
+              <div className="case-detail__context-history">
+                <CaseHistory caseId={caseId} />
               </div>
-            </div>
-          )}
-        </Card>
-
-        <Card className="case-detail__section">
-          <h2 className="neo-section__header">Comments</h2>
-          <div className="case-detail__comments">
-            {caseData.comments && caseData.comments.length > 0 ? (
-              caseData.comments.map((comment, index) => (
-                <div key={index} className="neo-inset" style={{ marginBottom: 'var(--spacing-md)' }}>
-                  <div className="case-detail__comment-header">
-                    <span className="case-detail__comment-author">
-                      {comment.createdByName && comment.createdByXID 
-                        ? `${comment.createdByName} (${comment.createdByXID})`
-                        : 'System (Unknown)'}
-                    </span>
-                    <span className="text-secondary text-sm">{formatDateTime(comment.createdAt)}</span>
-                  </div>
-                  <p className="case-detail__comment-text">{comment.text}</p>
-                </div>
-              ))
-            ) : (
-              <p className="text-secondary">No comments yet</p>
             )}
-          </div>
+          </aside>
+        </div>
 
-          {/* PR #45: Always allow comments (in both view-only and assigned modes) */}
-          {(accessMode.canComment || permissions.canAddComment(caseData)) && (
-            <div className="case-detail__add-comment">
-              <Textarea
-                label="Add Comment"
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Enter your comment..."
-                rows={4}
-              />
-              <Button
-                variant="primary"
-                onClick={handleAddComment}
-                disabled={!newComment.trim() || submitting}
-              >
-                {submitting ? 'Adding...' : 'Add Comment'}
-              </Button>
-            </div>
-          )}
-        </Card>
-
-        {/* PR #45: Display audit log from CaseAudit collection */}
-        {caseData.auditLog && caseData.auditLog.length > 0 && (
-          <Card className="case-detail__section">
-            <h2 className="neo-section__header">Activity Timeline</h2>
-            <div className="case-detail__audit">
-              {caseData.auditLog.map((entry, index) => (
-                <div key={index} className="neo-inset" style={{ marginBottom: 'var(--spacing-sm)' }}>
-                  <div className="case-detail__audit-entry">
-                    <span className="text-sm">{formatDateTime(entry.timestamp)}</span>
-                    <span>{entry.actionType}</span>
-                    <span className="text-secondary text-sm">
-                      {entry.performedByName && entry.performedByXID
-                        ? `${entry.performedByName} (${entry.performedByXID})`
-                        : 'System (Unknown)'}
-                    </span>
-                  </div>
-                  <p className="text-sm text-secondary" style={{ marginTop: 'var(--spacing-xs)' }}>
-                    {entry.description}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
-
-        {/* Fallback to old audit history if new audit log not available */}
-        {(!caseData.auditLog || caseData.auditLog.length === 0) && 
-         caseData.history && caseData.history.length > 0 && (
-          <Card className="case-detail__section">
-            <h2 className="neo-section__header">Audit History</h2>
-            <div className="case-detail__audit">
-              {caseData.history.map((entry, index) => (
-                <div key={index} className="neo-inset" style={{ marginBottom: 'var(--spacing-sm)' }}>
-                  <div className="case-detail__audit-entry">
-                    <span className="text-sm">{formatDateTime(entry.timestamp)}</span>
-                    <span>{entry.actionType}</span>
-                    <span className="text-secondary text-sm">
-                      {entry.performedByXID 
-                        ? `System (${entry.performedByXID})`
-                        : 'System (Unknown)'}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
+        {/* ─── Modals (positioned outside split pane) ─────────────── */}
 
         {/* File Case Modal */}
         <Modal
           isOpen={showFileModal}
-          onClose={() => {
-            setShowFileModal(false);
-            setFileComment('');
-          }}
+          onClose={() => { setShowFileModal(false); setFileComment(''); }}
           title="File Case"
           actions={
             <>
-              <Button
-                variant="default"
-                onClick={() => {
-                  setShowFileModal(false);
-                  setFileComment('');
-                }}
-                disabled={filingCase}
-              >
+              <Button variant="default" onClick={() => { setShowFileModal(false); setFileComment(''); }} disabled={filingCase}>
                 Cancel
               </Button>
-              <Button
-                variant="primary"
-                onClick={handleFileCase}
-                disabled={!fileComment.trim() || filingCase}
-              >
-                {filingCase ? 'Filing...' : 'File Case'}
+              <Button variant="primary" onClick={handleFileCase} disabled={!fileComment.trim() || filingCase}>
+                {filingCase ? 'Filing…' : 'File Case'}
               </Button>
             </>
           }
@@ -837,7 +797,7 @@ export const CaseDetailPage = () => {
               label="Comment (Required)"
               value={fileComment}
               onChange={(e) => setFileComment(e.target.value)}
-              placeholder="Explain why this case is being filed..."
+              placeholder="Explain why this case is being filed…"
               rows={4}
               required
               disabled={filingCase}
@@ -848,31 +808,15 @@ export const CaseDetailPage = () => {
         {/* Pend Case Modal */}
         <Modal
           isOpen={showPendModal}
-          onClose={() => {
-            setShowPendModal(false);
-            setPendComment('');
-            setPendingUntil('');
-          }}
+          onClose={() => { setShowPendModal(false); setPendComment(''); setPendingUntil(''); }}
           title="Pend Case"
           actions={
             <>
-              <Button
-                variant="default"
-                onClick={() => {
-                  setShowPendModal(false);
-                  setPendComment('');
-                  setPendingUntil('');
-                }}
-                disabled={pendingCase}
-              >
+              <Button variant="default" onClick={() => { setShowPendModal(false); setPendComment(''); setPendingUntil(''); }} disabled={pendingCase}>
                 Cancel
               </Button>
-              <Button
-                variant="primary"
-                onClick={handlePendCase}
-                disabled={!pendComment.trim() || !pendingUntil || pendingCase}
-              >
-                {pendingCase ? 'Pending...' : 'Pend Case'}
+              <Button variant="primary" onClick={handlePendCase} disabled={!pendComment.trim() || !pendingUntil || pendingCase}>
+                {pendingCase ? 'Pending…' : 'Pend Case'}
               </Button>
             </>
           }
@@ -886,7 +830,7 @@ export const CaseDetailPage = () => {
               label="Comment (Required)"
               value={pendComment}
               onChange={(e) => setPendComment(e.target.value)}
-              placeholder="Explain why this case is being pended..."
+              placeholder="Explain why this case is being pended…"
               rows={4}
               required
               disabled={pendingCase}
@@ -908,29 +852,15 @@ export const CaseDetailPage = () => {
         {/* Resolve Case Modal */}
         <Modal
           isOpen={showResolveModal}
-          onClose={() => {
-            setShowResolveModal(false);
-            setResolveComment('');
-          }}
+          onClose={() => { setShowResolveModal(false); setResolveComment(''); }}
           title="Resolve Case"
           actions={
             <>
-              <Button
-                variant="default"
-                onClick={() => {
-                  setShowResolveModal(false);
-                  setResolveComment('');
-                }}
-                disabled={resolvingCase}
-              >
+              <Button variant="default" onClick={() => { setShowResolveModal(false); setResolveComment(''); }} disabled={resolvingCase}>
                 Cancel
               </Button>
-              <Button
-                variant="success"
-                onClick={handleResolveCase}
-                disabled={!resolveComment.trim() || resolvingCase}
-              >
-                {resolvingCase ? 'Resolving...' : 'Resolve Case'}
+              <Button variant="success" onClick={handleResolveCase} disabled={!resolveComment.trim() || resolvingCase}>
+                {resolvingCase ? 'Resolving…' : 'Resolve Case'}
               </Button>
             </>
           }
@@ -944,7 +874,7 @@ export const CaseDetailPage = () => {
               label="Comment (Required)"
               value={resolveComment}
               onChange={(e) => setResolveComment(e.target.value)}
-              placeholder="Describe how this case was resolved..."
+              placeholder="Describe how this case was resolved…"
               rows={4}
               required
               disabled={resolvingCase}
@@ -955,29 +885,15 @@ export const CaseDetailPage = () => {
         {/* Unpend Case Modal */}
         <Modal
           isOpen={showUnpendModal}
-          onClose={() => {
-            setShowUnpendModal(false);
-            setUnpendComment('');
-          }}
+          onClose={() => { setShowUnpendModal(false); setUnpendComment(''); }}
           title="Unpend Case"
           actions={
             <>
-              <Button
-                variant="default"
-                onClick={() => {
-                  setShowUnpendModal(false);
-                  setUnpendComment('');
-                }}
-                disabled={unpendingCase}
-              >
+              <Button variant="default" onClick={() => { setShowUnpendModal(false); setUnpendComment(''); }} disabled={unpendingCase}>
                 Cancel
               </Button>
-              <Button
-                variant="primary"
-                onClick={handleUnpendCase}
-                disabled={!unpendComment.trim() || unpendingCase}
-              >
-                {unpendingCase ? 'Unpending...' : 'Unpend Case'}
+              <Button variant="primary" onClick={handleUnpendCase} disabled={!unpendComment.trim() || unpendingCase}>
+                {unpendingCase ? 'Unpending…' : 'Unpend Case'}
               </Button>
             </>
           }
@@ -991,30 +907,22 @@ export const CaseDetailPage = () => {
               label="Comment (Required)"
               value={unpendComment}
               onChange={(e) => setUnpendComment(e.target.value)}
-              placeholder="Explain why this case is being unpended..."
+              placeholder="Explain why this case is being unpended…"
               rows={4}
               required
               disabled={unpendingCase}
             />
           </div>
         </Modal>
-        
-        {/* Client Fact Sheet Modal - PR: Client Fact Sheet Foundation */}
+
+        {/* Client Fact Sheet Modal */}
         {showClientFactSheet && (
           <ClientFactSheetModal
             isOpen={showClientFactSheet}
-            onClose={() => {
-              setShowClientFactSheet(false);
-              setClientFactSheet(null);
-            }}
+            onClose={() => { setShowClientFactSheet(false); setClientFactSheet(null); }}
             factSheet={clientFactSheet}
             caseId={caseId}
           />
-        )}
-        
-        {/* Case History - PR: Comprehensive CaseHistory & Audit Trail */}
-        {user && user.role !== USER_ROLES.SUPER_ADMIN && (
-          <CaseHistory caseId={caseId} />
         )}
       </div>
     </Layout>
