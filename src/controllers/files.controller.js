@@ -47,6 +47,14 @@ function handleStorageError(error, tenantId, res) {
   return null;
 }
 
+function shouldUpdateStorageStatus(error) {
+  const message = (error?.message || '').toLowerCase();
+  if (error?.status === 401 || message.includes('invalid_grant')) return true;
+  if (error?.status === 403 && message.includes('quota')) return true;
+  if (typeof error?.status === 'number' && error.status >= 500) return true;
+  return false;
+}
+
 async function getActiveStorageConfig(tenantId) {
   return TenantStorageConfig.findOne({ tenantId, isActive: true }).select('status');
 }
@@ -171,15 +179,17 @@ async function downloadFile(req, res) {
       },
     });
   } catch (error) {
-    await TenantStorageConfig.updateMany(
-      { tenantId, isActive: true },
-      { status: mapProviderErrorToStatus(error) }
-    ).catch((statusUpdateError) => {
-      console.error('[downloadFile] Failed to update storage status', {
-        tenantId,
-        message: statusUpdateError.message,
+    if (shouldUpdateStorageStatus(error)) {
+      await TenantStorageConfig.updateMany(
+        { tenantId, isActive: true },
+        { status: mapProviderErrorToStatus(error) }
+      ).catch((statusUpdateError) => {
+        console.error('[downloadFile] Failed to update storage status', {
+          tenantId,
+          message: statusUpdateError.message,
+        });
       });
-    });
+    }
     const handled = handleStorageError(error, tenantId, res);
     if (handled) return handled;
 

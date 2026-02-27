@@ -36,9 +36,28 @@ class GoogleDriveProvider extends StorageProvider {
     return google.drive({ version: 'v3', auth: this.oauthClient });
   }
 
-  async testConnection() {
+  async testConnection(rootFolderId) {
     const drive = this.getClient();
-    await drive.about.get({ fields: 'user' });
+
+    if (!this.driveId) {
+      const error = new Error('Missing driveId');
+      error.status = 500;
+      throw error;
+    }
+
+    await drive.drives.get({
+      driveId: this.driveId,
+      fields: 'id,name',
+    });
+
+    if (rootFolderId) {
+      await drive.files.get({
+        fileId: rootFolderId,
+        fields: 'id',
+        supportsAllDrives: true,
+      });
+    }
+
     return { healthy: true };
   }
 

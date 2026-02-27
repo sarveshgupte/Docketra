@@ -15,7 +15,9 @@ class OneDriveProvider extends StorageProvider {
     // "common" supports multi-tenant AAD apps; set ONEDRIVE_TENANT_ID to a specific tenant for single-tenant deployments.
     const { ONEDRIVE_CLIENT_ID, ONEDRIVE_CLIENT_SECRET, ONEDRIVE_TENANT_ID = 'common' } = process.env;
     if (!ONEDRIVE_CLIENT_ID || !ONEDRIVE_CLIENT_SECRET || !this.refreshToken) {
-      throw new Error('[OneDriveProvider] OAuth configuration is incomplete');
+      const error = new Error('[OneDriveProvider] OAuth configuration is incomplete');
+      error.status = 500;
+      throw error;
     }
     const body = new URLSearchParams({
       client_id: ONEDRIVE_CLIENT_ID,
@@ -30,7 +32,7 @@ class OneDriveProvider extends StorageProvider {
     });
     if (!tokenRes.ok) {
       const error = new Error('[OneDriveProvider] Token refresh failed');
-      error.status = tokenRes.status;
+      error.status = Number(tokenRes.status) || 500;
       throw error;
     }
     const tokenData = await tokenRes.json();
@@ -44,7 +46,7 @@ class OneDriveProvider extends StorageProvider {
       });
       if (!response.ok) {
         const error = new Error('[OneDriveProvider] Graph request failed');
-        error.status = response.status;
+        error.status = Number(response.status) || 500;
         throw error;
       }
       return response;
