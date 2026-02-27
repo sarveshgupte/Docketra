@@ -10,27 +10,30 @@ const tenantStorageConfigSchema = new mongoose.Schema(
     },
     provider: {
       type: String,
-      enum: ['aws_s3', 'azure_blob', 'gcs'],
+      enum: ['google_drive', 'onedrive'],
       required: true,
     },
-    encryptedCredentials: {
+    encryptedRefreshToken: {
       type: String,
       required: true,
     },
-    bucket: {
+    driveId: {
       type: String,
-      required: true,
       trim: true,
     },
-    region: {
+    rootFolderId: {
       type: String,
-      required: true,
       trim: true,
     },
-    prefix: {
+    connectedByUserId: {
       type: String,
-      default: '',
       trim: true,
+    },
+    status: {
+      type: String,
+      enum: ['ACTIVE', 'DEGRADED', 'DISCONNECTED', 'QUOTA_EXCEEDED', 'ERROR'],
+      default: 'ACTIVE',
+      index: true,
     },
     isActive: {
       type: Boolean,
@@ -43,6 +46,9 @@ const tenantStorageConfigSchema = new mongoose.Schema(
   }
 );
 
-tenantStorageConfigSchema.index({ tenantId: 1, isActive: 1 });
+tenantStorageConfigSchema.index(
+  { tenantId: 1, isActive: 1 },
+  { unique: true, partialFilterExpression: { isActive: true } }
+);
 
 module.exports = mongoose.model('TenantStorageConfig', tenantStorageConfigSchema);

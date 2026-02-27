@@ -1,19 +1,16 @@
 const TenantStorageConfig = require('../models/TenantStorageConfig.model');
 const { encrypt } = require('../storage/services/TokenEncryption.service');
-const { S3Provider } = require('../storage/providers/S3Provider');
 const { UnsupportedProviderError } = require('../storage/errors');
 
 function maskCredentialLog(tenantId, provider) {
   return { tenantId, provider };
 }
 
-function buildProviderForValidation({ tenantId, provider, bucket, region, prefix, credentials }) {
+function buildProviderForValidation({ tenantId, provider }) {
   switch (provider) {
-    case 'aws_s3':
-      return new S3Provider({ tenantId, bucket, region, prefix, credentials });
-    case 'azure_blob':
-    case 'gcs':
-      throw new UnsupportedProviderError(provider, tenantId);
+    case 'google_drive':
+    case 'onedrive':
+      return true;
     default:
       throw new UnsupportedProviderError(provider, tenantId);
   }
@@ -25,26 +22,12 @@ async function updateTenantStorage(req, res) {
   try {
     const {
       provider,
-      bucket,
-      region,
-      prefix = '',
-      accessKeyId,
-      secretAccessKey,
+      driveId,
+      rootFolderId,
+      refreshToken,
     } = req.body;
-
-    const credentials = { accessKeyId, secretAccessKey };
-    const providerInstance = buildProviderForValidation({
-      tenantId,
-      provider,
-      bucket,
-      region,
-      prefix,
-      credentials,
-    });
-
-    await providerInstance.testConnection();
-
-    const encryptedCredentials = encrypt(JSON.stringify(credentials));
+    buildProviderForValidation({ tenantId, provider });
+    const encryptedRefreshToken = encrypt(refreshToken);
 
     await TenantStorageConfig.updateMany({ tenantId, isActive: true }, { isActive: false });
 
@@ -53,10 +36,11 @@ async function updateTenantStorage(req, res) {
       {
         tenantId,
         provider,
-        encryptedCredentials,
-        bucket,
-        region,
-        prefix,
+        encryptedRefreshToken,
+        driveId,
+        rootFolderId,
+        connectedByUserId: req.user?._id?.toString() || req.user?.xID || 'system',
+        status: 'ACTIVE',
         isActive: true,
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }
@@ -70,9 +54,8 @@ async function updateTenantStorage(req, res) {
         id: config._id,
         tenantId,
         provider,
-        bucket,
-        region,
-        prefix,
+        driveId,
+        rootFolderId,
         isActive: true,
       },
     });

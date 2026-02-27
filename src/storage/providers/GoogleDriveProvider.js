@@ -19,10 +19,59 @@ class GoogleDriveProvider extends StorageProvider {
    *                                     Optional; only required for methods that call
    *                                     the Drive API on behalf of the firm owner.
    */
-  constructor(oauthClient = null) {
+  constructor({ oauthClient = null, driveId = null } = {}) {
     super();
-    this.providerName = 'google';
+    this.providerName = 'google_drive';
     this.oauthClient = oauthClient;
+    this.driveId = driveId;
+  }
+
+  getClient() {
+    if (!this.oauthClient) {
+      throw new Error('[GoogleDriveProvider] oauthClient is required');
+    }
+    return google.drive({ version: 'v3', auth: this.oauthClient });
+  }
+
+  async testConnection() {
+    const drive = this.getClient();
+    await drive.about.get({ fields: 'user' });
+    return { healthy: true };
+  }
+
+  async createFolder(name, parentId) {
+    const drive = this.getClient();
+    const requestBody = {
+      name,
+      mimeType: 'application/vnd.google-apps.folder',
+      ...(parentId ? { parents: [parentId] } : {}),
+    };
+    if (this.driveId) {
+      requestBody.driveId = this.driveId;
+    }
+    const res = await drive.files.create({
+      requestBody,
+      supportsAllDrives: true,
+      fields: 'id',
+    });
+    return { folderId: res.data.id };
+  }
+
+  async uploadFileStream({ folderId, filename, mimeType, stream }) {
+    const drive = this.getClient();
+    const res = await drive.files.create({
+      requestBody: {
+        name: filename,
+        parents: [folderId],
+      },
+      media: {
+        mimeType,
+        body: stream,
+      },
+      supportsAllDrives: true,
+      fields: 'id',
+    });
+    return { fileId: res.data.id };
   }
 
   /**
@@ -34,21 +83,7 @@ class GoogleDriveProvider extends StorageProvider {
    * @returns {Promise<{folderId: string}>}
    */
   async createRootFolder(firmId) {
-    if (!this.oauthClient) {
-      throw new Error(
-        '[GoogleDriveProvider] oauthClient is required for createRootFolder. ' +
-        'Pass an authenticated OAuth2 client to the constructor.'
-      );
-    }
-    const drive = google.drive({ version: 'v3', auth: this.oauthClient });
-    const res = await drive.files.create({
-      requestBody: {
-        name: 'Docketra',
-        mimeType: 'application/vnd.google-apps.folder',
-      },
-      fields: 'id',
-    });
-    const folderId = res.data.id;
+    const { folderId } = await this.createFolder('Docketra');
     console.info(`[Storage][GoogleDrive] Root folder created for firm: ${firmId}, folderId: ${folderId}`);
     return { folderId };
   }
@@ -64,14 +99,7 @@ class GoogleDriveProvider extends StorageProvider {
    * @returns {Promise<{folderId: string}>}
    */
   async createCaseFolder(firmId, caseId, rootFolderId) {
-    if (!this.oauthClient) {
-      throw new Error(
-        '[GoogleDriveProvider] oauthClient is required for createCaseFolder. ' +
-        'Pass an authenticated OAuth2 client to the constructor.'
-      );
-    }
-
-    const drive = google.drive({ version: 'v3', auth: this.oauthClient });
+    const drive = this.getClient();
 
     // Escape single quotes for the Drive query language (apostrophe → \')
     const safeCaseId = caseId.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
@@ -82,6 +110,8 @@ class GoogleDriveProvider extends StorageProvider {
       q: `name = '${safeCaseId}' and '${safeRootFolderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
       fields: 'files(id)',
       spaces: 'drive',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
     });
 
     if (listRes.data.files && listRes.data.files.length > 0) {
@@ -91,16 +121,7 @@ class GoogleDriveProvider extends StorageProvider {
     }
 
     // Folder does not exist — create it
-    const createRes = await drive.files.create({
-      requestBody: {
-        name: caseId,
-        mimeType: 'application/vnd.google-apps.folder',
-        parents: [rootFolderId],
-      },
-      fields: 'id',
-    });
-
-    const folderId = createRes.data.id;
+    const { folderId } = await this.createFolder(caseId, rootFolderId);
     console.info(`[Storage][GoogleDrive] Case folder ready`, { firmId, caseId });
     return { folderId };
   }
@@ -115,43 +136,39 @@ class GoogleDriveProvider extends StorageProvider {
    * @returns {Promise<{ fileId: string }>}
    */
   async uploadFile(firmId, folderId, fileBuffer, metadata) {
-    if (!this.oauthClient) {
-      throw new Error(
-        '[GoogleDriveProvider] oauthClient is required for uploadFile. ' +
-        'Pass an authenticated OAuth2 client to the constructor.'
-      );
-    }
-    const drive = google.drive({ version: 'v3', auth: this.oauthClient });
     const bodyStream = Readable.from(fileBuffer);
-    const res = await drive.files.create({
-      requestBody: {
-        name: metadata.name,
-        parents: [folderId],
-      },
-      media: {
-        mimeType: metadata.mimeType,
-        body: bodyStream,
-      },
-      fields: 'id',
+    const { fileId } = await this.uploadFileStream({
+      folderId,
+      filename: metadata.name,
+      mimeType: metadata.mimeType,
+      stream: bodyStream,
     });
-    const fileId = res.data.id;
     // fileId intentionally not logged (security: no storage IDs in logs)
     console.info(`[Storage][GoogleDrive] File uploaded`, { firmId, folderId });
     return { fileId };
   }
 
   async deleteFile(firmId, fileId) {
-    console.info(`[Storage][GoogleDrive] deleteFile called for firm: ${firmId}, file: ${fileId}`);
+    const drive = this.getClient();
+    await drive.files.delete({ fileId, supportsAllDrives: true });
+    console.info(`[Storage][GoogleDrive] deleteFile called for firm: ${firmId}`);
   }
 
   async getFileMetadata(firmId, fileId) {
-    console.info(`[Storage][GoogleDrive] getFileMetadata called for firm: ${firmId}, file: ${fileId}`);
-    return {};
+    const drive = this.getClient();
+    const res = await drive.files.get({
+      fileId,
+      fields: 'id,name,mimeType,size,modifiedTime,trashed',
+      supportsAllDrives: true,
+    });
+    console.info(`[Storage][GoogleDrive] getFileMetadata called for firm: ${firmId}`);
+    return res.data || {};
   }
 
   async healthCheck(firmId) {
+    const healthy = await this.testConnection();
     console.info(`[Storage][GoogleDrive] healthCheck called for firm: ${firmId}`);
-    return { healthy: true };
+    return healthy;
   }
 }
 
