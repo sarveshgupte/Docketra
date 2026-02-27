@@ -18,8 +18,11 @@ function parseRefreshToken(encryptedRefreshToken, tenantId) {
 }
 
 async function getProviderForTenant(tenantId) {
-  const config = await TenantStorageConfig.findOne({ tenantId, isActive: true, status: 'ACTIVE' });
+  const config = await TenantStorageConfig.findOne({ tenantId, isActive: true });
   if (!config) {
+    throw new StorageConfigMissingError(tenantId);
+  }
+  if (config.status !== 'ACTIVE') {
     throw new StorageConfigMissingError(tenantId);
   }
 

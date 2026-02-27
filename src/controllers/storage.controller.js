@@ -107,11 +107,8 @@ function buildStateCookie(value, maxAge) {
 
 function mapProviderErrorToStatus(error) {
   const message = (error?.message || '').toLowerCase();
-  if (error?.status === 401 || message.includes('invalid_grant') || message.includes('token')) {
+  if (error?.status === 401 || message.includes('invalid_grant')) {
     return 'DISCONNECTED';
-  }
-  if (error?.status === 404 || message.includes('root') || message.includes('not found')) {
-    return 'DEGRADED';
   }
   if (error?.status === 403 && message.includes('quota')) {
     return 'QUOTA_EXCEEDED';
