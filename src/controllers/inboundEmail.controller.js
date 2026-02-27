@@ -26,7 +26,12 @@ const wrapWriteHandler = require('../middleware/wrapWriteHandler');
  * Handle inbound email webhook
  * POST /api/inbound/email
  */
-const resolveCaseNumberFromRecipient = (toAddress) => {
+/**
+ * Parse case number from recipient format: [CASE-YYYYMMDD-XXXXX]@docketra.com
+ * @param {string} toAddress inbound recipient address
+ * @returns {string} normalized case number token
+ */
+const parseCaseNumberFromRecipient = (toAddress) => {
   const recipient = String(toAddress || '').trim().toLowerCase();
   const localPart = recipient.split('@')[0] || '';
   return localPart.replace(/^\[/, '').replace(/\]$/, '').toUpperCase();
@@ -55,7 +60,7 @@ const handleInboundEmail = async (req, res) => {
       });
     }
     
-    const parsedCaseNumber = resolveCaseNumberFromRecipient(to);
+    const parsedCaseNumber = parseCaseNumberFromRecipient(to);
     if (!parsedCaseNumber) {
       return res.status(400).json({
         success: false,
@@ -100,8 +105,8 @@ const handleInboundEmail = async (req, res) => {
     }
     
     const resolvedCaseId = caseData.caseId || caseData.caseNumber;
-    const hasAttachments = Array.isArray(attachments) && attachments.length > 0;
-    if (!hasAttachments) {
+    const shouldCreateAttachment = Array.isArray(attachments) && attachments.length > 0;
+    if (!shouldCreateAttachment) {
       const comment = await Comment.create({
         caseId: resolvedCaseId,
         text: bodyText || subject || '(empty email body)',

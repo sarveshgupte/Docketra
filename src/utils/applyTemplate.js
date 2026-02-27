@@ -31,7 +31,7 @@ const applyTemplate = async (caseId, templateId) => {
     tags: task.tags || [],
     createdBy: task.createdBy,
     updatedBy: task.updatedBy || task.createdBy,
-    statusHistory: Array.isArray(task.statusHistory) ? task.statusHistory : [],
+    statusHistory: [],
   }));
 
   return Task.insertMany(clonedTasks);
