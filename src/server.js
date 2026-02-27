@@ -69,6 +69,7 @@ const { adminAuditTrail } = require('./middleware/adminAudit.middleware');
 const requestLifecycle = require('./middleware/requestLifecycle.middleware');
 const { noFirmNoTransaction } = require('./middleware/noFirmNoTransaction.middleware');
 const optionsPreflight = require('./middleware/optionsPreflight.middleware');
+const { authLimiter } = require('./middleware/rateLimiters');
 
 // Routes
 const userRoutes = require('./routes/user.routes');
@@ -316,8 +317,8 @@ app.use('/api/client-approval', authenticate, firmContext, invariantGuard({ requ
 app.use('/api/clients', authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, clientRoutes);  // Client management (PR #39)
 app.use('/api/reports', authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, reportsRoutes);  // Reports routes
 app.use('/api/storage', authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), storageRoutes);  // BYOS storage routes (read-only, no writeGuardChain needed)
-app.use('/api/files', authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, filesRoutes);
-app.use('/api/tenant', authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, tenantRoutes);
+app.use('/api/files', authLimiter, authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, filesRoutes);
+app.use('/api/tenant', authLimiter, authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, tenantRoutes);
 
 // Firm-scoped routes — /f/:firmSlug/* (tenant resolver applied inside firm.routes.js)
 // POST /f/:firmSlug/login is the primary path-based login endpoint.
