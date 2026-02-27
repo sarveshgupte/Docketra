@@ -2435,6 +2435,7 @@ const verifyTotp = async (req, res) => {
       secret: user.twoFactorSecret,
       encoding: 'base32',
       token,
+      // Allow adjacent 30s time step to tolerate small clock drift without over-broad acceptance
       window: 1,
     });
 

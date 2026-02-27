@@ -26,7 +26,7 @@ import './DashboardPage.css';
 export const DashboardPage = () => {
   const { user } = useAuth();
   const { isAdmin } = usePermissions();
-  const isConsultant = user?.role === 'Employee';
+  const isEmployee = user?.role === 'Employee';
   const navigate = useNavigate();
   const { firmSlug } = useParams();
   
@@ -206,7 +206,7 @@ export const DashboardPage = () => {
         <div className="dashboard__header">
           <h1 className="dashboard__title">Dashboard</h1>
           <p className="dashboard__subtitle">
-            {isAdmin ? 'Admin Dashboard' : isConsultant ? 'Consultant Dashboard' : 'Dashboard'} · Welcome back, {user?.name || user?.xID}
+            {isAdmin ? 'Admin Dashboard' : isEmployee ? 'Consultant Dashboard' : 'Dashboard'} · Welcome back, {user?.name || user?.xID}
           </p>
         </div>
 

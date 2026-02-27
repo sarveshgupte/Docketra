@@ -4,7 +4,7 @@
  * Minimalist collapsible sidebar + glass Omnibar header
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -142,42 +142,45 @@ export const Layout = ({ children }) => {
     setMobileSidebarOpen(false);
   }, [location.pathname]);
 
+  const runGlobalSearch = useCallback(async (term) => {
+    try {
+      setSearching(true);
+      const [casesRes, usersRes, tasksRes] = await Promise.allSettled([
+        api.get('/search', { params: { q: term } }),
+        hasAdminAccess ? api.get('/auth/admin/users') : Promise.resolve({ data: { data: [] } }),
+        api.get('/tasks'),
+      ]);
+
+      const cases = casesRes.status === 'fulfilled' ? (casesRes.value.data?.data || []) : [];
+      const usersRaw = usersRes.status === 'fulfilled' ? (usersRes.value.data?.data || []) : [];
+      const tasksRaw = tasksRes.status === 'fulfilled' ? (tasksRes.value.data?.data || []) : [];
+
+      const needle = term.toLowerCase();
+      const users = usersRaw.filter((u) =>
+        [u.name, u.email, u.xID].filter(Boolean).some((value) => String(value).toLowerCase().includes(needle))
+      );
+      const tasks = tasksRaw.filter((t) =>
+        [t.title, t.description].filter(Boolean).some((value) => String(value).toLowerCase().includes(needle))
+      );
+
+      setSearchResults({ cases, users, tasks });
+    } finally {
+      setSearching(false);
+    }
+  }, [hasAdminAccess]);
+
   useEffect(() => {
     if (!searchQuery || searchQuery.trim().length < 2) {
       setSearchResults({ cases: [], users: [], tasks: [] });
       return;
     }
 
-    const timer = setTimeout(async () => {
-      try {
-        setSearching(true);
-        const term = searchQuery.trim();
-        const [casesRes, usersRes, tasksRes] = await Promise.allSettled([
-          api.get('/search', { params: { q: term } }),
-          hasAdminAccess ? api.get('/auth/admin/users') : Promise.resolve({ data: { data: [] } }),
-          api.get('/tasks'),
-        ]);
-
-        const cases = casesRes.status === 'fulfilled' ? (casesRes.value.data?.data || []) : [];
-        const usersRaw = usersRes.status === 'fulfilled' ? (usersRes.value.data?.data || []) : [];
-        const tasksRaw = tasksRes.status === 'fulfilled' ? (tasksRes.value.data?.data || []) : [];
-
-        const needle = term.toLowerCase();
-        const users = usersRaw.filter((u) =>
-          [u.name, u.email, u.xID].filter(Boolean).some((value) => String(value).toLowerCase().includes(needle))
-        );
-        const tasks = tasksRaw.filter((t) =>
-          [t.title, t.description].filter(Boolean).some((value) => String(value).toLowerCase().includes(needle))
-        );
-
-        setSearchResults({ cases, users, tasks });
-      } finally {
-        setSearching(false);
-      }
+    const timer = setTimeout(() => {
+      runGlobalSearch(searchQuery.trim());
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, hasAdminAccess]);
+  }, [searchQuery, runGlobalSearch]);
 
   const navLinks = [
     {

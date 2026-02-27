@@ -8,6 +8,9 @@ const { Parser } = require('json2csv');
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 
+const DEFAULT_AUDIT_LOG_LIMIT = 100;
+const MAX_AUDIT_LOG_LIMIT = 250;
+
 /**
  * Reports Controller for Docketra Case Management System
  * 
@@ -607,8 +610,11 @@ const exportCasesExcel = async (req, res) => {
  */
 const getAuditLogs = async (req, res) => {
   try {
-    const { xID, action, timestamp, limit = 100 } = req.query;
-    const cappedLimit = Math.min(Math.max(parseInt(limit, 10) || 100, 1), 250);
+    const { xID, action, timestamp, limit = DEFAULT_AUDIT_LOG_LIMIT } = req.query;
+    const cappedLimit = Math.min(
+      Math.max(parseInt(limit, 10) || DEFAULT_AUDIT_LOG_LIMIT, 1),
+      MAX_AUDIT_LOG_LIMIT
+    );
     const since = timestamp ? new Date(timestamp) : null;
 
     const firmId = String(req.firmId || req.user?.firmId || '');
@@ -666,6 +672,9 @@ const getAuditLogs = async (req, res) => {
 const generateClientFactSheetPdf = async (req, res) => {
   try {
     const { clientId } = req.params;
+    if (!/^[A-Za-z0-9_-]+$/.test(String(clientId || ''))) {
+      return res.status(400).json({ success: false, message: 'Invalid clientId format' });
+    }
     const firmId = req.firmId || req.user?.firmId;
     const client = await Client.findOne({ clientId, firmId }).lean();
 
@@ -681,18 +690,14 @@ const generateClientFactSheetPdf = async (req, res) => {
       .select('caseId caseNumber title status')
       .lean();
 
+    const clientCaseIds = await Case.find({ firmId, clientId }).distinct('_id');
     const pendingTasks = await Task.find({
       firmId,
+      case: { $in: clientCaseIds },
       status: { $in: ['pending', 'in_progress', 'review', 'blocked'] },
     })
-      .populate('case', 'caseId caseNumber clientId')
+      .populate('case', 'caseId caseNumber')
       .lean();
-
-    const clientPendingTasks = pendingTasks.filter((task) => {
-      const taskCase = task.case;
-      if (!taskCase) return false;
-      return taskCase.clientId === clientId;
-    });
 
     const doc = new PDFDocument({ margin: 50 });
     const safeClientId = String(clientId).replace(/[^a-zA-Z0-9_-]/g, '');
@@ -717,10 +722,10 @@ const generateClientFactSheetPdf = async (req, res) => {
     }
     doc.moveDown();
     doc.fontSize(14).text('Pending Tasks');
-    if (!clientPendingTasks.length) {
+    if (!pendingTasks.length) {
       doc.fontSize(11).text('No pending tasks.');
     } else {
-      clientPendingTasks.forEach((task) => {
+      pendingTasks.forEach((task) => {
         doc.fontSize(11).text(`• ${task.title} (${task.status})`);
       });
     }

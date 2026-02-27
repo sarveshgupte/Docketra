@@ -1,14 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { reportsService } from '../../services/reports.service';
 
 export const AuditLogView = () => {
   const [filters, setFilters] = useState({ xID: '', action: '', timestamp: '' });
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const loadLogs = async () => {
+  const loadLogs = useCallback(async () => {
     setLoading(true);
     try {
+      setError('');
       const params = {};
       if (filters.xID) params.xID = filters.xID;
       if (filters.action) params.action = filters.action;
@@ -17,14 +19,16 @@ export const AuditLogView = () => {
       if (response.data?.success) {
         setLogs(response.data.data || []);
       }
+    } catch (err) {
+      setError('Failed to load audit logs');
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters.xID, filters.action, filters.timestamp]);
 
   useEffect(() => {
     loadLogs();
-  }, []);
+  }, [loadLogs]);
 
   return (
     <div className="reports-dashboard__card">
@@ -51,6 +55,13 @@ export const AuditLogView = () => {
       </div>
       <div style={{ maxHeight: 320, overflow: 'auto' }}>
         <table className="reports-dashboard__table">
+          <thead>
+            <tr>
+              <th>xID</th>
+              <th>Action</th>
+              <th>Timestamp</th>
+            </tr>
+          </thead>
           <tbody>
             {logs.map((item, idx) => (
               <tr key={`${item.source}-${item.timestamp}-${idx}`}>
@@ -67,6 +78,7 @@ export const AuditLogView = () => {
           </tbody>
         </table>
       </div>
+      {error && <p className="text-secondary">{error}</p>}
     </div>
   );
 };
