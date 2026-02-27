@@ -7,9 +7,12 @@
  */
 
 const GoogleDriveProvider = require('./providers/GoogleDriveProvider');
+const OneDriveProvider = require('./providers/OneDriveProvider');
 
 const PROVIDERS = {
-  google: (oauthClient) => new GoogleDriveProvider(oauthClient || null),
+  google: (oauthClient, options = {}) => new GoogleDriveProvider({ oauthClient: oauthClient || null, driveId: options.driveId || null }),
+  google_drive: (oauthClient, options = {}) => new GoogleDriveProvider({ oauthClient: oauthClient || null, driveId: options.driveId || null }),
+  onedrive: (_oauthClient, options = {}) => new OneDriveProvider({ refreshToken: options.refreshToken, driveId: options.driveId }),
 };
 
 /**
@@ -20,7 +23,7 @@ const PROVIDERS = {
  * @returns {import('./StorageProvider.interface').StorageProvider}
  * @throws {Error} if the provider name is not recognised
  */
-function getStorageProvider(providerName, oauthClient) {
+function getStorageProvider(providerName, oauthClient, options = {}) {
   const factory = PROVIDERS[providerName];
   if (!factory) {
     throw new Error(
@@ -28,7 +31,7 @@ function getStorageProvider(providerName, oauthClient) {
       `Supported providers: ${Object.keys(PROVIDERS).join(', ')}`
     );
   }
-  return factory(oauthClient);
+  return factory(oauthClient, options);
 }
 
 module.exports = { getStorageProvider };

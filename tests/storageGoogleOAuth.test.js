@@ -63,6 +63,15 @@ const mockFirmStorage = {
     return {};
   },
 };
+const mockTenantStorageConfig = {
+  findOne: async () => null,
+  findOneAndUpdate: async () => ({}),
+  findByIdAndUpdate: async () => ({}),
+  updateMany: async () => ({}),
+};
+const mockFirmModel = {
+  findById: () => ({ select: async () => ({ name: 'Test Firm' }) }),
+};
 
 // Minimal mongoose stub (only Schema/model used by FirmStorage.model.js)
 const mockMongoose = {
@@ -93,6 +102,17 @@ Module._load = function (request, parent, isMain) {
   }
   if (request === 'mongoose') {
     return mockMongoose;
+  }
+  if (request === '../models/TenantStorageConfig.model') {
+    return mockTenantStorageConfig;
+  }
+  if (request === '../models/Firm.model') {
+    return mockFirmModel;
+  }
+  if (request === '../storage/providers/GoogleDriveProvider' || request === '../storage/providers/OneDriveProvider') {
+    return class {
+      async createFolder() { return { folderId: 'folder-123' }; }
+    };
   }
   // Stub the storage queue to avoid Redis connections during tests
   if (request === 'bullmq') {
