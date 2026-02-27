@@ -30,11 +30,29 @@ import { FilteredCasesPage } from './pages/FilteredCasesPage';
 import { CasesPage } from './pages/CasesPage';
 import { GoogleCallbackPage } from './pages/GoogleCallbackPage';
 import { MarketingHomePage, MarketingFeaturesPage, MarketingPricingPage } from './pages/marketing/MarketingPages';
+import { NotFoundPage } from './pages/NotFoundPage';
+
+const LEGACY_SLUG_BLOCKLIST = new Set([
+  'app',
+  'auth',
+  'change-password',
+  'f',
+  'features',
+  'forgot-password',
+  'google-callback',
+  'login',
+  'pricing',
+  'reset-password',
+  'set-password',
+  'superadmin',
+]);
+const FIRM_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const DEFAULT_FIRM_SUFFIX = '/dashboard';
 
 const LegacyFirmScopedRedirect = () => {
   const { firmSlug } = useParams();
   const location = useLocation();
-  const suffix = location.pathname.replace(`/f/${firmSlug}`, '') || '/dashboard';
+  const suffix = location.pathname.replace(`/f/${firmSlug}`, '') || DEFAULT_FIRM_SUFFIX;
   const target = `/app/firm/${firmSlug}${suffix}${location.search || ''}`;
   return <Navigate to={target} replace />;
 };
@@ -48,22 +66,35 @@ const LegacySuperadminRedirect = () => {
 
 const LegacyFirmRedirect = () => {
   const location = useLocation();
-  const suffix = location.pathname.replace('/firm', '');
+  const suffix = location.pathname.startsWith('/firm') ? location.pathname.slice('/firm'.length) : '';
   const target = `/app/firm${suffix}${location.search || ''}`;
   return <Navigate to={target} replace />;
 };
 
 const LegacySlugRedirect = () => {
-  const { firmSlug } = useParams();
+  const { firmSlug, '*': legacyPath = '' } = useParams();
   const location = useLocation();
-  const suffix = location.pathname.replace(`/${firmSlug}`, '') || '/dashboard';
-  const target = `/app/firm/${firmSlug}${suffix}${location.search || ''}`;
+  const normalizedFirmSlug = (firmSlug || '').toLowerCase();
+
+  if (!FIRM_SLUG_PATTERN.test(normalizedFirmSlug) || LEGACY_SLUG_BLOCKLIST.has(normalizedFirmSlug)) {
+    return <NotFoundPage />;
+  }
+
+  const suffix = legacyPath ? `/${legacyPath}` : DEFAULT_FIRM_SUFFIX;
+  const target = `/app/firm/${normalizedFirmSlug}${suffix}${location.search || ''}`;
   return <Navigate to={target} replace />;
 };
 
 export const Router = () => {
   return (
       <Routes>
+          {/* 
+            Routing policy:
+            1) Public marketing/auth pages are outside /app/*
+            2) Protected application pages live under /app/*
+            3) Legacy redirects are retained for /superadmin/*, /firm/*, /f/:firmSlug/* and /:firmSlug/* (safe subset) for backward compatibility
+            4) Unknown routes resolve to NotFoundPage (404 policy), including unknown nested firm routes
+          */}
           <Route element={<MarketingLayout />}>
             <Route path="/" element={<MarketingHomePage />} />
             <Route path="/features" element={<MarketingFeaturesPage />} />
@@ -200,13 +231,16 @@ export const Router = () => {
                 </ProtectedRoute>
               }
             />
+            <Route path="*" element={<NotFoundPage />} />
           </Route>
           <Route path="/superadmin/*" element={<LegacySuperadminRedirect />} />
           <Route path="/firm/*" element={<LegacyFirmRedirect />} />
           <Route path="/f/:firmSlug/*" element={<LegacyFirmScopedRedirect />} />
-          <Route path="/:firmSlug/*" element={<LegacySlugRedirect />} />
           <Route path="/app/firm" element={<DefaultRoute />} />
-          <Route path="*" element={<DefaultRoute />} />
+          {/* Legacy /:firmSlug/* is retained for backwards-compatible deep links and safely blocked for reserved app/auth prefixes. */}
+          <Route path="/:firmSlug/*" element={<LegacySlugRedirect />} />
+          {/* Final catch-all: any route not matched by public/protected/legacy rules renders 404. */}
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
   );
 };
