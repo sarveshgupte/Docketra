@@ -133,6 +133,12 @@ const userSchema = new mongoose.Schema({
       linkedAt: { type: Date, default: null },
     }
   },
+
+  // TOTP secret for MFA (stored per user when enabled)
+  twoFactorSecret: {
+    type: String,
+    default: null,
+  },
   
   // Bcrypt hashed password - null until user sets password via email link
   passwordHash: {
