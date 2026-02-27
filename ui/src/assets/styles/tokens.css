@@ -7,15 +7,15 @@
 :root {
   /* === 2026 Design Token System === */
 
-  /* App & Surface Colors */
+  /* App & Surface Colors (app shell background, card surfaces) */
   --color-bg-app: #F7F9FC;
   --color-surface: #FFFFFF;
   --color-border: #E5E7EB;
 
   /* Brand Colors */
-  --color-primary-dark: #0B1F3A;
-  --color-primary: #1E3A8A;
-  --color-accent: #D97706;
+  --color-primary-dark: #0B1F3A;   /* sidebar background */
+  --color-primary: #1E3A8A;         /* primary buttons, avatars, active states */
+  --color-accent: #D97706;          /* saffron – active sidebar border indicator */
 
   /* Semantic Status Colors */
   --color-success: #15803D;
@@ -30,6 +30,9 @@
   /* Elevation / Shadow Scale */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+
+  /* Hover and state backgrounds */
+  --color-primary-hover-bg: rgba(30, 58, 138, 0.04);
 
   /* Spacing Scale (4px base grid) */
   --space-1: 4px;

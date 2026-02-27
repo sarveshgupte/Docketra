@@ -192,7 +192,7 @@ export const DashboardPage = () => {
 
   // Workflow status pipeline data
   const workflowStatuses = [
-    { label: 'Open', count: stats.myOpenCases, color: 'var(--info)' },
+    { label: 'Open', count: stats.myOpenCases, color: 'var(--color-primary)' },
     { label: 'Pending', count: stats.myPendingCases, color: 'var(--warning)' },
     { label: 'Resolved', count: stats.myResolvedCases, color: 'var(--color-success)' },
     { label: 'Unassigned', count: stats.myUnassignedCreatedCases, color: 'var(--text-muted)' },
