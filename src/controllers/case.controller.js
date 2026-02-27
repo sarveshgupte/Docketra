@@ -136,47 +136,6 @@ const createCase = async (req, res) => {
       payload, // Payload for client governance cases
     } = req.body;
     
-    // Validate required fields
-    if (!title || !title.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Case title is required',
-        ...responseMeta,
-      });
-    }
-    
-    if (!description || !description.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Case description is required',
-        ...responseMeta,
-      });
-    }
-    
-    if (!categoryId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Category is required',
-        ...responseMeta,
-      });
-    }
-    
-    if (!subcategoryId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Subcategory is required',
-        ...responseMeta,
-      });
-    }
-    
-    if (!slaDueDate) {
-      return res.status(400).json({
-        success: false,
-        message: 'SLA Due Date is required',
-        ...responseMeta,
-      });
-    }
-    
     // Get creator xID from authenticated user (req.user is set by auth middleware)
     const createdByXID = req.user.xID;
     

@@ -1,8 +1,10 @@
 const express = require('express');
+const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
+const routeSchemas = require('../schemas/storage.routes.schema');
 const { userReadLimiter, authLimiter } = require('../middleware/rateLimiters');
 const { getStorageStatus, googleConnect, googleCallback } = require('../controllers/storage.controller');
 
-const router = express.Router();
+const router = applyRouteValidation(express.Router(), routeSchemas);
 
 router.get('/status', userReadLimiter, getStorageStatus);
 
