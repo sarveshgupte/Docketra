@@ -226,13 +226,13 @@
 
 /* Hover highlight */
 .neo-table tbody tr:hover td {
-  background-color: rgba(30, 58, 138, 0.04);
+  background-color: var(--color-primary-hover-bg);
   cursor: pointer;
 }
 
 /* Ensure hover overrides zebra */
 .neo-table tbody tr:nth-child(even):hover td {
-  background-color: rgba(30, 58, 138, 0.04);
+  background-color: var(--color-primary-hover-bg);
 }
 
 /* Status pills inside tables */

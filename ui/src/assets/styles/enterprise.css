@@ -335,7 +335,7 @@
   }
   
   .table tbody tr:hover td {
-    background-color: rgba(30, 58, 138, 0.04);
+    background-color: var(--color-primary-hover-bg);
     cursor: pointer;
   }
   
@@ -344,7 +344,7 @@
   }
   
   .table tbody tr:nth-child(even):hover td {
-    background-color: rgba(30, 58, 138, 0.04);
+    background-color: var(--color-primary-hover-bg);
   }
 
   /* Table empty state */
