@@ -10,6 +10,7 @@ const GoogleDriveProvider = require('./providers/GoogleDriveProvider');
 const OneDriveProvider = require('./providers/OneDriveProvider');
 
 const PROVIDERS = {
+  // Keep legacy "google" alias for existing worker job payload compatibility.
   google: (oauthClient, options = {}) => new GoogleDriveProvider({ oauthClient: oauthClient || null, driveId: options.driveId || null }),
   google_drive: (oauthClient, options = {}) => new GoogleDriveProvider({ oauthClient: oauthClient || null, driveId: options.driveId || null }),
   onedrive: (_oauthClient, options = {}) => new OneDriveProvider({ refreshToken: options.refreshToken, driveId: options.driveId }),

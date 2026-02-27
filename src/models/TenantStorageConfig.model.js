@@ -46,6 +46,8 @@ const tenantStorageConfigSchema = new mongoose.Schema(
   }
 );
 
+// Enforces exactly one ACTIVE storage config per tenant while allowing
+// historical/inactive configurations for reconnect and audit flows.
 tenantStorageConfigSchema.index(
   { tenantId: 1, isActive: 1 },
   { unique: true, partialFilterExpression: { isActive: true } }

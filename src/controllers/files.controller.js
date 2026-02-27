@@ -174,7 +174,12 @@ async function downloadFile(req, res) {
     await TenantStorageConfig.updateMany(
       { tenantId, isActive: true },
       { status: mapProviderErrorToStatus(error) }
-    ).catch(() => {});
+    ).catch((statusUpdateError) => {
+      console.error('[downloadFile] Failed to update storage status', {
+        tenantId,
+        message: statusUpdateError.message,
+      });
+    });
     const handled = handleStorageError(error, tenantId, res);
     if (handled) return handled;
 

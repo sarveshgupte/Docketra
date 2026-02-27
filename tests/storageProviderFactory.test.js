@@ -48,7 +48,10 @@ async function testGoogleProviderResolution() {
 
 async function testInactiveStorageRejected() {
   mockedConfig = null;
-  await assert.rejects(() => getProviderForTenant('tenant-1'));
+  await assert.rejects(
+    () => getProviderForTenant('tenant-1'),
+    (error) => error && error.code === 'STORAGE_CONFIG_MISSING'
+  );
   console.log('  ✓ rejects when no active storage config exists');
 }
 
