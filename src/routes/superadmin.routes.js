@@ -1,5 +1,7 @@
 const express = require('express');
-const router = express.Router();
+const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
+const routeSchemas = require('../schemas/superadmin.routes.schema.js');
+const router = applyRouteValidation(express.Router(), routeSchemas);
 const { authenticate } = require('../middleware/auth.middleware');
 const { requireSuperadmin } = require('../middleware/permission.middleware');
 const { authorize } = require('../middleware/authorize');

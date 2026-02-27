@@ -1,5 +1,7 @@
 const express = require('express');
-const router = express.Router();
+const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
+const routeSchemas = require('../schemas/auth.routes.schema.js');
+const router = applyRouteValidation(express.Router(), routeSchemas);
 const { authenticate } = require('../middleware/auth.middleware');
 const { requireAdmin } = require('../middleware/permission.middleware');
 const { optionalFirmResolution } = require('../middleware/firmResolution.middleware');
@@ -31,13 +33,6 @@ const {
 const resolveOAuthFirmContext = async (req, res, next) => {
   try {
     const { state, code } = req.query;
-    if (!state || !code) {
-      return res.status(400).json({
-        success: false,
-        code: 'FIRM_RESOLUTION_FAILED',
-        message: 'Missing authorization code or state',
-      });
-    }
 
     let statePayload;
     try {

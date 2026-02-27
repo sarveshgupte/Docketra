@@ -1,5 +1,7 @@
 const express = require('express');
-const router = express.Router();
+const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
+const routeSchemas = require('../schemas/search.routes.schema.js');
+const router = applyRouteValidation(express.Router(), routeSchemas);
 const { searchLimiter } = require('../middleware/rateLimiters');
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
 const {
