@@ -1,6 +1,7 @@
 /**
- * Enterprise Layout Component
- * Top navigation header layout - Desktop-first, persistent navigation
+ * Enterprise Sidebar Layout Component
+ * Docketra B2B SaaS Platform - Indian Professional Firms
+ * Sidebar + top header architecture
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -10,6 +11,70 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { useToast } from '../../hooks/useToast';
 import './Layout.css';
 
+/* SVG icon helpers */
+const IconDashboard = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+    <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+  </svg>
+);
+
+const IconWorkbasket = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+  </svg>
+);
+
+const IconWorklist = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+    <line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/>
+    <line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+  </svg>
+);
+
+const IconAdmin = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/>
+  </svg>
+);
+
+const IconBell = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/>
+  </svg>
+);
+
+const IconChevronLeft = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="15 18 9 12 15 6"/>
+  </svg>
+);
+
+const IconChevronRight = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="9 18 15 12 9 6"/>
+  </svg>
+);
+
+const IconChevronDown = () => (
+  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+const IconMenu = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+  </svg>
+);
+
+const IconPlus = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+  </svg>
+);
+
 export const Layout = ({ children }) => {
   const { user, logout } = useAuth();
   const { isAdmin, isSuperadmin } = usePermissions();
@@ -17,19 +82,22 @@ export const Layout = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { firmSlug } = useParams();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  
-  // Ref for dropdown outside click detection
+
   const profileDropdownRef = useRef(null);
 
-  // Get firmSlug from URL params or user data
   const currentFirmSlug = firmSlug || user?.firmSlug;
+  const hasAdminAccess = isAdmin || isSuperadmin;
+  const firmLabel = user?.firm?.name || currentFirmSlug || 'Firm';
+  const firmInitials = firmLabel.substring(0, 2).toUpperCase();
 
   const handleLogout = async () => {
+    setProfileDropdownOpen(false);
     await logout({ preserveFirmSlug: !!currentFirmSlug });
     showSuccess('You have been signed out safely.');
-    // Redirect to firm login if firmSlug is available
     if (currentFirmSlug) {
       navigate(`/f/${currentFirmSlug}/login`);
     } else {
@@ -37,32 +105,15 @@ export const Layout = ({ children }) => {
     }
   };
 
-  const isActive = (path) => {
-    return location.pathname === path;
-  };
+  const isActive = (path) => location.pathname === path;
+  const isActivePrefix = (prefix) => location.pathname.startsWith(prefix);
 
-  const toggleMobileMenu = () => {
-    setMobileMenuOpen(!mobileMenuOpen);
-  };
-
-  // Get user initials for avatar
   const getUserInitials = () => {
     if (user?.name) {
-      return user.name
-        .split(' ')
-        .map(n => n[0])
-        .join('')
-        .toUpperCase()
-        .substring(0, 2);
+      return user.name.split(' ').map((n) => n[0]).join('').toUpperCase().substring(0, 2);
     }
     return user?.xID?.substring(0, 2)?.toUpperCase() || 'U';
   };
-
-  // Check if user has admin access (Admin or SuperAdmin)
-  const hasAdminAccess = isAdmin || isSuperadmin;
-
-  const firmLabel = user?.firm?.name || currentFirmSlug || 'Firm not set';
-  const roleLabel = user?.role || 'Role not set';
 
   // Close profile dropdown on outside click
   useEffect(() => {
@@ -71,131 +122,157 @@ export const Layout = ({ children }) => {
         setProfileDropdownOpen(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   // Close dropdowns on route change
   useEffect(() => {
     setProfileDropdownOpen(false);
-    setMobileMenuOpen(false);
+    setMobileSidebarOpen(false);
   }, [location.pathname]);
 
-  // Reusable chevron icon
-  const ChevronIcon = () => (
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  );
+  const navLinks = [
+    {
+      to: `/f/${currentFirmSlug}/dashboard`,
+      label: 'Dashboard',
+      icon: <IconDashboard />,
+      active: isActive(`/f/${currentFirmSlug}/dashboard`),
+    },
+    {
+      to: `/f/${currentFirmSlug}/global-worklist`,
+      label: 'Workbasket',
+      icon: <IconWorkbasket />,
+      active: isActive(`/f/${currentFirmSlug}/global-worklist`),
+    },
+    {
+      to: `/f/${currentFirmSlug}/worklist`,
+      label: 'My Worklist',
+      icon: <IconWorklist />,
+      active: isActive(`/f/${currentFirmSlug}/worklist`),
+    },
+    ...(hasAdminAccess
+      ? [
+          {
+            to: `/f/${currentFirmSlug}/admin`,
+            label: 'Admin',
+            icon: <IconAdmin />,
+            active: isActivePrefix(`/f/${currentFirmSlug}/admin`),
+          },
+        ]
+      : []),
+  ];
 
   return (
-    <div className="enterprise-layout-top">
-      {/* Top Navigation Header */}
-      <header className="enterprise-top-header">
-        <div className="enterprise-top-header__container">
-          {/* Left: Logo */}
-          <div className="enterprise-top-header__left">
-            <Link 
-              to={`/f/${currentFirmSlug}/dashboard`}
-              className="enterprise-top-header__logo"
-            >
-              <h1>Docketra</h1>
-            </Link>
-            <div className="enterprise-top-header__context">
-              <div className="enterprise-top-header__context-item">
-                <span className="enterprise-top-header__context-label">Firm</span>
-                <span className="enterprise-top-header__context-value" title={firmLabel}>{firmLabel}</span>
-              </div>
-              <div className="enterprise-top-header__context-item">
-                <span className="enterprise-top-header__context-label">Role</span>
-                <span className="enterprise-top-header__context-value">{roleLabel}</span>
-              </div>
+    <div className="enterprise-layout">
+      {/* Sidebar */}
+      <aside
+        className={[
+          'enterprise-sidebar',
+          sidebarCollapsed ? 'enterprise-sidebar--collapsed' : '',
+          mobileSidebarOpen ? 'enterprise-sidebar--mobile-open' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
+        {/* Collapse toggle (desktop) */}
+        <button
+          className="enterprise-sidebar__toggle"
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {sidebarCollapsed ? <IconChevronRight /> : <IconChevronLeft />}
+        </button>
+
+        {/* Firm Badge */}
+        <div className="enterprise-sidebar__firm">
+          <div className="enterprise-sidebar__firm-icon">{firmInitials}</div>
+          <div className="enterprise-sidebar__firm-info">
+            <div className="enterprise-sidebar__firm-name" title={firmLabel}>
+              {firmLabel}
             </div>
+            <div className="enterprise-sidebar__firm-label">Professional Firm</div>
           </div>
-          
-          {/* Center: Primary Navigation */}
-          <nav className="enterprise-top-header__nav">
-            <Link
-              to={`/f/${currentFirmSlug}/dashboard`}
-              className={`enterprise-top-header__nav-link ${isActive(`/f/${currentFirmSlug}/dashboard`) ? 'active' : ''}`}
-            >
-              Dashboard
-            </Link>
-            <Link
-              to={`/f/${currentFirmSlug}/global-worklist`}
-              className={`enterprise-top-header__nav-link ${isActive(`/f/${currentFirmSlug}/global-worklist`) ? 'active' : ''}`}
-            >
-              Workbasket
-            </Link>
-            <Link
-              to={`/f/${currentFirmSlug}/worklist`}
-              className={`enterprise-top-header__nav-link ${isActive(`/f/${currentFirmSlug}/worklist`) ? 'active' : ''}`}
-            >
-              My Worklist
-            </Link>
-          </nav>
+        </div>
 
-          {/* Primary Action */}
-          <div className="enterprise-top-header__action">
-            <button
-              onClick={() => navigate(`/f/${currentFirmSlug}/cases/create`)}
-              className="btn-primary-cta"
-            >
-              Create Case
-            </button>
-          </div>
-
-          {/* Admin Link (conditional) */}
-          {hasAdminAccess && (
-            <div className="enterprise-top-header__admin">
+        {/* Navigation */}
+        <nav className="enterprise-sidebar__nav">
+          <div className="enterprise-sidebar__nav-section">
+            <div className="enterprise-sidebar__nav-label">Workspace</div>
+            {navLinks.map((link) => (
               <Link
-                to={`/f/${currentFirmSlug}/admin`}
-                className={`enterprise-top-header__nav-link ${location.pathname.startsWith(`/f/${currentFirmSlug}/admin`) ? 'active' : ''}`}
+                key={link.to}
+                to={link.to}
+                className={`enterprise-sidebar__nav-link ${link.active ? 'active' : ''}`}
               >
-                Admin
+                <span className="enterprise-sidebar__nav-icon">{link.icon}</span>
+                <span className="enterprise-sidebar__nav-text">{link.label}</span>
               </Link>
-            </div>
-          )}
-          
-          {/* Right: Search, Notifications, Profile */}
-          <div className="enterprise-top-header__right">
-            {/* Global Search */}
-            <div className="enterprise-top-header__search">
-              <input 
-                type="text"
-                placeholder="Search..."
-                className="enterprise-top-header__search-input"
-              />
-            </div>
-            
+            ))}
+          </div>
+        </nav>
+
+        {/* Footer */}
+        <div className="enterprise-sidebar__footer">
+          <div className="enterprise-sidebar__version">Docketra v1.0</div>
+        </div>
+      </aside>
+
+      {/* Mobile sidebar overlay */}
+      {mobileSidebarOpen && (
+        <div
+          className="enterprise-sidebar-overlay enterprise-sidebar-overlay--visible"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+
+      {/* Main content area */}
+      <div
+        className={`enterprise-main ${sidebarCollapsed ? 'enterprise-main--sidebar-collapsed' : ''}`}
+      >
+        {/* Top Header */}
+        <header className="enterprise-header">
+          {/* Mobile sidebar toggle */}
+          <button
+            className="enterprise-header__sidebar-toggle"
+            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+            aria-label="Toggle sidebar"
+          >
+            <IconMenu />
+          </button>
+
+          {/* Page context / breadcrumb area */}
+          <div className="enterprise-header__title">
+            {firmLabel}
+          </div>
+
+          {/* Create Case CTA */}
+          <button
+            className="btn btn-primary"
+            onClick={() => navigate(`/f/${currentFirmSlug}/cases/create`)}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <IconPlus />
+            <span>New Case</span>
+          </button>
+
+          {/* Right actions */}
+          <div className="enterprise-header__right">
             {/* Notification Bell */}
-            <button 
-              className="enterprise-top-header__icon-btn" 
-              aria-label="Notifications"
-            >
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M10 2C7.23858 2 5 4.23858 5 7V10L3 12V13H17V12L15 10V7C15 4.23858 12.7614 2 10 2Z" stroke="currentColor" strokeWidth="1.5"/>
-                <path d="M8.5 17C8.5 18.1046 9.39543 19 10.5 19C11.6046 19 12.5 18.1046 12.5 17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
+            <button className="enterprise-header__icon-btn" aria-label="Notifications">
+              <IconBell />
             </button>
-            
-            {/* User Profile Menu */}
+
+            {/* User Profile Dropdown */}
             <div className="dropdown" ref={profileDropdownRef}>
               <button
-                className="enterprise-top-header__profile"
+                className="enterprise-header__profile"
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                 aria-expanded={profileDropdownOpen}
               >
-                <div className="enterprise-top-header__user-avatar">
-                  {getUserInitials()}
-                </div>
-                <span className="enterprise-top-header__user-name">
-                  {user?.name || user?.xID}
-                </span>
-                <ChevronIcon />
+                <div className="enterprise-header__user-avatar">{getUserInitials()}</div>
+                <span className="enterprise-header__user-name">{user?.name || user?.xID}</span>
+                <IconChevronDown />
               </button>
               {profileDropdownOpen && (
                 <div className="dropdown-menu dropdown-menu-right">
@@ -206,89 +283,18 @@ export const Layout = ({ children }) => {
                   >
                     Profile
                   </Link>
-                  <button
-                    className="dropdown-item"
-                    onClick={handleLogout}
-                  >
+                  <button className="dropdown-item" onClick={handleLogout}>
                     Logout
                   </button>
                 </div>
               )}
             </div>
           </div>
+        </header>
 
-          {/* Mobile Hamburger Menu */}
-          <button 
-            className="enterprise-top-header__mobile-toggle"
-            onClick={toggleMobileMenu}
-            aria-label="Toggle mobile menu"
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 12H21M3 6H21M3 18H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-          </button>
-        </div>
-
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className="enterprise-top-header__mobile-menu">
-            <div className="enterprise-top-header__mobile-context">
-              <div>
-                <p className="enterprise-top-header__context-label">Firm</p>
-                <p className="enterprise-top-header__context-value">{firmLabel}</p>
-              </div>
-              <div>
-                <p className="enterprise-top-header__context-label">Role</p>
-                <p className="enterprise-top-header__context-value">{roleLabel}</p>
-              </div>
-            </div>
-            <Link
-              to={`/f/${currentFirmSlug}/dashboard`}
-              className={`enterprise-top-header__mobile-link ${isActive(`/f/${currentFirmSlug}/dashboard`) ? 'active' : ''}`}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Dashboard
-            </Link>
-            <Link
-              to={`/f/${currentFirmSlug}/global-worklist`}
-              className={`enterprise-top-header__mobile-link ${isActive(`/f/${currentFirmSlug}/global-worklist`) ? 'active' : ''}`}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Workbasket
-            </Link>
-            <Link
-              to={`/f/${currentFirmSlug}/worklist`}
-              className={`enterprise-top-header__mobile-link ${isActive(`/f/${currentFirmSlug}/worklist`) ? 'active' : ''}`}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              My Worklist
-            </Link>
-            <button
-              onClick={() => {
-                navigate(`/f/${currentFirmSlug}/cases/create`);
-                setMobileMenuOpen(false);
-              }}
-              className="btn-primary-cta btn-primary-cta--mobile"
-            >
-              Create Case
-            </button>
-            {hasAdminAccess && (
-              <Link
-                to={`/f/${currentFirmSlug}/admin`}
-                className={`enterprise-top-header__mobile-link ${location.pathname.startsWith(`/f/${currentFirmSlug}/admin`) ? 'active' : ''}`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Admin
-              </Link>
-            )}
-          </div>
-        )}
-      </header>
-
-      {/* Content Area */}
-      <main className="enterprise-top-content">
-        {children}
-      </main>
+        {/* Page Content */}
+        <main className="enterprise-content">{children}</main>
+      </div>
     </div>
   );
 };
