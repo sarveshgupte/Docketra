@@ -88,6 +88,8 @@ const publicRoutes = require('./routes/public.routes');  // Public routes (firm 
 const firmRoutes = require('./routes/firm.routes');  // Firm-scoped routes (/f/:firmSlug/*)
 const healthRoutes = require('./routes/health.routes');  // Health endpoints
 const storageRoutes = require('./routes/storage.routes');  // Storage BYOS routes
+const filesRoutes = require('./routes/files.routes');  // Tenant BYOS signed URL routes
+const tenantRoutes = require('./routes/tenant.routes');  // Tenant storage settings routes
 const mutatingMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const superadminRouteLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -314,6 +316,8 @@ app.use('/api/client-approval', authenticate, firmContext, invariantGuard({ requ
 app.use('/api/clients', authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, clientRoutes);  // Client management (PR #39)
 app.use('/api/reports', authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, reportsRoutes);  // Reports routes
 app.use('/api/storage', authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), storageRoutes);  // BYOS storage routes (read-only, no writeGuardChain needed)
+app.use('/api/files', authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, filesRoutes);
+app.use('/api/tenant', authenticate, firmContext, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, tenantRoutes);
 
 // Firm-scoped routes — /f/:firmSlug/* (tenant resolver applied inside firm.routes.js)
 // POST /f/:firmSlug/login is the primary path-based login endpoint.
