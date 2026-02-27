@@ -462,7 +462,7 @@ export const CaseDetailPage = () => {
               title="View Client Fact Sheet"
               className="case-detail__fact-sheet-btn"
             >
-              ⓘ Client Info
+              ⓘ Fact Sheet
             </Button>
             {/* Contextual Action Buttons */}
             {showPullButton && (
@@ -901,6 +901,7 @@ export const CaseDetailPage = () => {
           <div style={{ padding: 'var(--spacing-md)' }}>
             <p style={{ marginBottom: 'var(--spacing-md)', color: 'var(--text-secondary)' }}>
               Unpending a case will move it back to OPEN status and return it to your worklist.
+              Use this when you no longer need to wait for external input.
             </p>
             <Textarea
               label="Comment (Required)"
