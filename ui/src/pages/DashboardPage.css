@@ -1,5 +1,6 @@
 /**
  * Enterprise Dashboard Page Styles
+ * 2026 B2B SaaS Design - Indian Professional Firms
  */
 
 .dashboard {
@@ -7,28 +8,194 @@
   margin: 0 auto;
 }
 
+/* ── Header ─────────────────────────────── */
+
 .dashboard__header {
+  margin-bottom: var(--spacing-lg);
+}
+
+.dashboard__title {
+  color: var(--text-main);
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  margin: 0 0 var(--spacing-xs);
+}
+
+.dashboard__subtitle {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  margin: 0;
+}
+
+/* ── KPI Strip ───────────────────────────── */
+
+.dashboard__kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-md);
   margin-bottom: var(--spacing-xl);
 }
 
-.dashboard__header h1 {
-  color: var(--text-main);
-  font-size: var(--font-size-xl);
-  margin-bottom: var(--spacing-sm);
-  font-weight: 600;
+.dashboard__kpi-card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+  position: relative;
+  overflow: hidden;
 }
 
-.dashboard__stats {
+.dashboard__kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background-color: var(--color-primary);
+  opacity: 0.5;
+}
+
+.dashboard__kpi-card--accent::before {
+  background-color: var(--color-accent);
+  opacity: 1;
+}
+
+.dashboard__kpi-card--warning::before {
+  background-color: var(--color-warning);
+  opacity: 1;
+}
+
+.dashboard__kpi-card--success::before {
+  background-color: var(--color-success);
+  opacity: 1;
+}
+
+.dashboard__kpi-card--clickable {
+  cursor: pointer;
+}
+
+.dashboard__kpi-card--clickable:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.dashboard__kpi-number {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-primary-dark);
+  line-height: 1;
+  margin-bottom: var(--space-1);
+}
+
+.dashboard__kpi-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.dashboard__kpi-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ── Workflow Summary ───────────────────── */
+
+.dashboard__workflow {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: var(--spacing-lg);
+  overflow-x: auto;
+}
+
+.dashboard__workflow-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 80px;
+}
+
+.dashboard__workflow-count {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  background-color: var(--color-bg-app);
+}
+
+.dashboard__workflow-label {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-body);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.dashboard__workflow-arrow {
+  font-size: 22px;
+  color: var(--color-border);
+  flex-shrink: 0;
+}
+
+/* ── Section ─────────────────────────────── */
+
+.dashboard__section {
+  margin-bottom: var(--spacing-xl);
+}
+
+.dashboard__section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-md);
+}
+
+.dashboard__section-title {
+  color: var(--text-main);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  margin: 0 0 var(--spacing-md);
+}
+
+.dashboard__section-header .dashboard__section-title {
+  margin-bottom: 0;
+}
+
+/* ── Admin Stats ─────────────────────────── */
+
+.dashboard__admin-stats {
   display: grid;
-  gap: var(--spacing-lg);
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  margin-bottom: var(--spacing-2xl);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-md);
 }
 
 .dashboard__stat-card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
   padding: var(--spacing-lg);
   text-align: center;
-  transition: transform 0.15s ease, border-color 0.15s ease;
+  transition: box-shadow 0.15s ease;
 }
 
 .dashboard__stat-card--clickable {
@@ -36,46 +203,30 @@
 }
 
 .dashboard__stat-card--clickable:hover {
-  transform: translateY(-2px);
-  border-color: var(--border-strong);
-}
-
-.dashboard__stat-card--admin {
-  border-left: 3px solid var(--warning);
-  padding-left: calc(var(--spacing-lg) - 3px);
+  box-shadow: var(--shadow-md);
 }
 
 .dashboard__stat-value {
-  color: var(--primary-600);
-  font-size: 40px;
-  font-weight: 600;
-  margin-bottom: var(--spacing-sm);
+  color: var(--color-primary-dark);
+  font-size: 32px;
+  font-weight: 700;
   line-height: 1;
+  margin-bottom: var(--space-2);
 }
 
 .dashboard__stat-label {
   color: var(--text-main);
   font-size: var(--font-size-sm);
-  font-weight: 500;
-  margin-bottom: var(--spacing-xs);
+  font-weight: 600;
+  margin-bottom: var(--space-1);
 }
 
 .dashboard__stat-description {
   color: var(--text-muted);
   font-size: var(--font-size-xs);
-  margin-top: var(--spacing-xs);
 }
 
-.dashboard__section {
-  margin-bottom: var(--spacing-xl);
-}
-
-.dashboard__section-title {
-  color: var(--text-main);
-  font-size: var(--font-size-lg);
-  font-weight: 500;
-  margin-bottom: var(--spacing-md);
-}
+/* ── Empty State ─────────────────────────── */
 
 .dashboard__empty {
   text-align: center;
@@ -83,33 +234,92 @@
 }
 
 .dashboard__empty-icon {
-  font-size: 64px;
+  font-size: 56px;
   margin-bottom: var(--spacing-md);
-  opacity: 0.5;
+  opacity: 0.45;
 }
 
 .dashboard__empty-title {
   color: var(--text-main);
   font-size: var(--font-size-lg);
-  font-weight: 500;
-  margin-bottom: var(--spacing-sm);
+  font-weight: 600;
+  margin: 0 0 var(--spacing-sm);
 }
 
 .dashboard__empty-description {
-  font-size: var(--font-size-base);
-  margin-bottom: var(--spacing-md);
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  margin: 0 0 var(--spacing-md);
 }
 
 .dashboard__empty-cta {
   margin-top: var(--spacing-md);
 }
 
-@media (max-width: 768px) {
-  .dashboard__stats {
+/* ── Bookmark Modal ──────────────────────── */
+
+.dashboard__modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.dashboard__modal {
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-xl);
+  max-width: 480px;
+  width: 90%;
+  box-shadow: var(--shadow-md);
+}
+
+.dashboard__modal-title {
+  margin: 0 0 var(--spacing-md);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.dashboard__modal-text {
+  color: var(--text-body);
+  font-size: var(--font-size-sm);
+  margin: 0 0 var(--spacing-md);
+}
+
+.dashboard__modal-url {
+  padding: var(--spacing-md);
+  background-color: var(--color-bg-app);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--spacing-lg);
+  word-break: break-all;
+  font-size: var(--font-size-xs);
+  font-family: monospace;
+  color: var(--text-main);
+}
+
+/* ── Responsive ─────────────────────────── */
+
+@media (max-width: 1024px) {
+  .dashboard__kpi-strip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard__kpi-strip {
     grid-template-columns: 1fr;
   }
-  
-  .dashboard__stat-value {
-    font-size: 32px;
+
+  .dashboard__kpi-number {
+    font-size: 24px;
+  }
+
+  .dashboard__workflow {
+    gap: var(--spacing-sm);
   }
 }

@@ -17,10 +17,11 @@
 }
 
 /* Neomorphic Button - Migrated to enterprise style */
-.neo-button {
+.neo-button,
+.neo-btn {
   background: white;
   border: 1px solid var(--border-strong);
-  border-radius: var(--border-radius);
+  border-radius: var(--radius-sm);
   color: var(--text-main);
   cursor: pointer;
   font-family: var(--font-family);
@@ -30,34 +31,43 @@
   transition: all var(--transition-fast);
   outline: none;
   min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.neo-button:hover:not(:disabled) {
-  background: var(--surface-base);
+.neo-button:hover:not(:disabled),
+.neo-btn:hover:not(:disabled) {
+  background: var(--color-bg-app);
 }
 
-.neo-button:active:not(:disabled) {
-  background: var(--border-subtle);
+.neo-button:active:not(:disabled),
+.neo-btn:active:not(:disabled) {
+  background: var(--color-border);
 }
 
-.neo-button:focus-visible {
+.neo-button:focus-visible,
+.neo-btn:focus-visible {
   box-shadow: var(--focus-ring);
 }
 
-.neo-button:disabled {
+.neo-button:disabled,
+.neo-btn:disabled {
   color: var(--text-muted);
   cursor: not-allowed;
   opacity: 0.6;
 }
 
-.neo-button--primary {
-  background: var(--primary-600);
+.neo-button--primary,
+.neo-btn--primary {
+  background: var(--color-primary);
   color: white;
   border: none;
 }
 
-.neo-button--primary:hover:not(:disabled) {
-  background: var(--primary-500);
+.neo-button--primary:hover:not(:disabled),
+.neo-btn--primary:hover:not(:disabled) {
+  background: var(--color-primary-dark);
 }
 
 .neo-button--danger {
@@ -176,8 +186,14 @@
   width: 100%;
 }
 
+.neo-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
 .neo-table th {
-  background: var(--surface-base);
+  background: var(--color-bg-app);
   color: var(--text-main);
   font-size: var(--font-size-xs);
   font-weight: 600;
@@ -185,26 +201,49 @@
   text-align: left;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .neo-table th:first-child {
-  border-top-left-radius: var(--border-radius);
+  border-top-left-radius: var(--radius-sm);
 }
 
 .neo-table th:last-child {
-  border-top-right-radius: var(--border-radius);
+  border-top-right-radius: var(--radius-sm);
 }
 
 .neo-table td {
-  border-top: 1px solid var(--border-subtle);
+  border-top: 1px solid var(--color-border);
   color: var(--text-body);
   font-size: var(--font-size-sm);
   padding: 12px var(--spacing-md);
 }
 
-.neo-table tr:hover td {
-  background: var(--surface-base);
+/* Zebra striping */
+.neo-table tbody tr:nth-child(even) td {
+  background-color: rgba(247, 249, 252, 0.7);
+}
+
+/* Hover highlight */
+.neo-table tbody tr:hover td {
+  background-color: rgba(30, 58, 138, 0.04);
   cursor: pointer;
+}
+
+/* Ensure hover overrides zebra */
+.neo-table tbody tr:nth-child(even):hover td {
+  background-color: rgba(30, 58, 138, 0.04);
+}
+
+/* Status pills inside tables */
+.neo-table .badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--radius-lg);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 /* Form Group */

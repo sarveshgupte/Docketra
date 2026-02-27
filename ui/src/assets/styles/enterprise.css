@@ -9,6 +9,9 @@
 /* Import Inter font from Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
+/* Design Tokens */
+@import "./tokens.css";
+
 /* Enterprise Design Tokens - Custom Theme */
 @theme {
   /* Colors */
@@ -62,9 +65,9 @@
   }
   
   body {
-    background-color: theme(--color-surface-base);
-    color: theme(--color-text-main);
-    font-family: theme(--font-sans);
+    background-color: var(--color-bg-app);
+    color: var(--text-main);
+    font-family: var(--font-family);
     margin: 0;
     padding: 0;
     -webkit-font-smoothing: antialiased;
@@ -138,12 +141,12 @@
   }
   
   .btn-primary {
-    background-color: theme(--color-primary-600);
+    background-color: var(--color-primary);
     color: white;
   }
   
   .btn-primary:hover:not(:disabled) {
-    background-color: theme(--color-primary-500);
+    background-color: var(--color-primary-dark);
   }
   
   .btn-secondary {
@@ -235,10 +238,11 @@
   
   /* Enterprise Card Styles */
   .card {
-    background-color: white;
-    border-radius: theme(--radius-lg);
-    border: 1px solid theme(--color-border-subtle);
-    padding: theme(--spacing-md);
+    background-color: var(--color-surface);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    padding: var(--spacing-md);
+    box-shadow: var(--shadow-sm);
   }
   
   .card-header {
@@ -293,10 +297,11 @@
   
   /* Enterprise Table Styles */
   .table-container {
-    background-color: white;
-    border-radius: theme(--radius-lg);
-    border: 1px solid theme(--color-border-subtle);
-    overflow: hidden;
+    background-color: var(--color-surface);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    overflow: auto;
+    box-shadow: var(--shadow-sm);
   }
   
   .table {
@@ -305,32 +310,49 @@
   }
   
   .table thead {
-    background-color: theme(--color-surface-base);
+    background-color: var(--color-bg-app);
+    position: sticky;
+    top: 0;
+    z-index: 1;
   }
   
   .table th {
     text-align: left;
-    padding: 12px theme(--spacing-md);
-    font-size: theme(--text-xs);
+    padding: 12px var(--spacing-md);
+    font-size: var(--font-size-xs);
     font-weight: 600;
-    color: theme(--color-text-main);
+    color: var(--text-main);
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--color-border);
   }
   
   .table td {
-    padding: 12px theme(--spacing-md);
-    font-size: theme(--text-sm);
-    color: theme(--color-text-body);
-    border-top: 1px solid theme(--color-border-subtle);
+    padding: 12px var(--spacing-md);
+    font-size: var(--font-size-sm);
+    color: var(--text-body);
+    border-top: 1px solid var(--color-border);
   }
   
-  .table tbody tr:hover {
-    background-color: theme(--color-surface-base);
+  .table tbody tr:hover td {
+    background-color: rgba(30, 58, 138, 0.04);
+    cursor: pointer;
   }
   
-  .table tbody tr:nth-child(even) {
-    background-color: rgba(248, 250, 252, 0.4);
+  .table tbody tr:nth-child(even) td {
+    background-color: rgba(247, 249, 252, 0.6);
+  }
+  
+  .table tbody tr:nth-child(even):hover td {
+    background-color: rgba(30, 58, 138, 0.04);
+  }
+
+  /* Table empty state */
+  .table-empty {
+    text-align: center;
+    padding: var(--spacing-2xl) var(--spacing-lg);
+    color: var(--text-muted);
+    font-size: var(--font-size-sm);
   }
   
   /* Form Groups */
