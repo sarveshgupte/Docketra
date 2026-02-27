@@ -44,7 +44,9 @@
     "mongoose": "^9.1.2",
     "multer": "^2.0.2",
     "nodemailer": "^7.0.12",
+    "pdfkit": "^0.17.2",
     "rate-limit-redis": "^4.3.1",
+    "speakeasy": "^2.0.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {

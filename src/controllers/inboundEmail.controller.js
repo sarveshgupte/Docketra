@@ -1,13 +1,11 @@
 const Case = require('../models/Case.model');
+const Comment = require('../models/Comment.model');
 const Attachment = require('../models/Attachment.model');
 const EmailMetadata = require('../models/EmailMetadata.model');
 const User = require('../models/User.model');
-const { CaseRepository } = require('../repositories');
 const { getMimeType } = require('../utils/fileUtils');
 const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
-const path = require('path');
-const fs = require('fs').promises;
 
 /**
  * Inbound Email Controller
@@ -28,6 +26,12 @@ const fs = require('fs').promises;
  * Handle inbound email webhook
  * POST /api/inbound/email
  */
+const resolveCaseNumberFromRecipient = (toAddress) => {
+  const recipient = String(toAddress || '').trim().toLowerCase();
+  const localPart = recipient.split('@')[0] || '';
+  return localPart.replace(/^\[/, '').replace(/\]$/, '').toUpperCase();
+};
+
 const handleInboundEmail = async (req, res) => {
   try {
     const {
@@ -51,19 +55,18 @@ const handleInboundEmail = async (req, res) => {
       });
     }
     
-    // TODO: Resolve 'to' address to caseId
-    // For now, we'll expect caseId in the request body for testing
-    const { caseId } = req.body;
-    
-    if (!caseId) {
+    const parsedCaseNumber = resolveCaseNumberFromRecipient(to);
+    if (!parsedCaseNumber) {
       return res.status(400).json({
         success: false,
-        message: 'Unable to resolve email to case. Case ID is required.',
+        message: 'Unable to resolve email to case from recipient address.',
       });
     }
-    
-    // Verify case exists
-    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
+
+    // Resolve case using [caseNumber]@docketra.com recipient pattern
+    const caseData = await Case.findOne({
+      $or: [{ caseNumber: parsedCaseNumber }, { caseId: parsedCaseNumber }],
+    }).lean();
     
     if (!caseData) {
       return res.status(404).json({
@@ -77,8 +80,9 @@ const handleInboundEmail = async (req, res) => {
     
     // Classify sender as internal or external
     // Look up user by email where status is ACTIVE
-    const user = await User.findOne({ 
+    const user = await User.findOne({
       email: normalizedFromEmail,
+      firmId: caseData.firmId,
       isActive: true 
     });
     
@@ -95,8 +99,30 @@ const handleInboundEmail = async (req, res) => {
       createdByName = user.name;
     }
     
-    // Upload email to Google Drive
-    // Store as a text file with email metadata and content
+    const resolvedCaseId = caseData.caseId || caseData.caseNumber;
+    const hasAttachments = Array.isArray(attachments) && attachments.length > 0;
+    if (!hasAttachments) {
+      const comment = await Comment.create({
+        caseId: resolvedCaseId,
+        text: bodyText || subject || '(empty email body)',
+        createdBy: createdByEmail,
+        createdByXID,
+        createdByName,
+        note: `Inbound email received at ${receivedAt || new Date().toISOString()}`,
+      });
+
+      return res.status(201).json({
+        success: true,
+        data: {
+          commentId: comment._id,
+          caseId: resolvedCaseId,
+          classification: visibility,
+        },
+        message: 'Email received and added as comment successfully',
+      });
+    }
+
+    // Upload email body to Google Drive as attachment
     const timestamp = Date.now();
     const randomSuffix = Math.random().toString(36).substring(7);
     const emailFileName = `email-${timestamp}-${randomSuffix}.txt`;
@@ -157,7 +183,7 @@ ${bodyHtml || '(no HTML body)'}
     
     // Create attachment record with Google Drive metadata
     const attachment = await Attachment.create({
-      caseId,
+      caseId: resolvedCaseId,
       firmId: caseData.firmId,
       fileName: `Email from ${from} - ${subject || 'No Subject'}`,
       driveFileId: driveFileId,
@@ -194,7 +220,7 @@ ${bodyHtml || '(no HTML body)'}
       success: true,
       data: {
         attachmentId: attachment._id,
-        caseId: caseId,
+        caseId: resolvedCaseId,
         classification: visibility,
         sender: {
           email: normalizedFromEmail,

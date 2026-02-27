@@ -9,6 +9,7 @@ import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useToast } from '../../hooks/useToast';
+import api from '../../services/api';
 import './Layout.css';
 
 /* SVG icon helpers */
@@ -92,6 +93,9 @@ export const Layout = ({ children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searching, setSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState({ cases: [], users: [], tasks: [] });
 
   const profileDropdownRef = useRef(null);
 
@@ -137,6 +141,43 @@ export const Layout = ({ children }) => {
     setProfileDropdownOpen(false);
     setMobileSidebarOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!searchQuery || searchQuery.trim().length < 2) {
+      setSearchResults({ cases: [], users: [], tasks: [] });
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        setSearching(true);
+        const term = searchQuery.trim();
+        const [casesRes, usersRes, tasksRes] = await Promise.allSettled([
+          api.get('/search', { params: { q: term } }),
+          hasAdminAccess ? api.get('/auth/admin/users') : Promise.resolve({ data: { data: [] } }),
+          api.get('/tasks'),
+        ]);
+
+        const cases = casesRes.status === 'fulfilled' ? (casesRes.value.data?.data || []) : [];
+        const usersRaw = usersRes.status === 'fulfilled' ? (usersRes.value.data?.data || []) : [];
+        const tasksRaw = tasksRes.status === 'fulfilled' ? (tasksRes.value.data?.data || []) : [];
+
+        const needle = term.toLowerCase();
+        const users = usersRaw.filter((u) =>
+          [u.name, u.email, u.xID].filter(Boolean).some((value) => String(value).toLowerCase().includes(needle))
+        );
+        const tasks = tasksRaw.filter((t) =>
+          [t.title, t.description].filter(Boolean).some((value) => String(value).toLowerCase().includes(needle))
+        );
+
+        setSearchResults({ cases, users, tasks });
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, hasAdminAccess]);
 
   const navLinks = [
     {
@@ -263,8 +304,26 @@ export const Layout = ({ children }) => {
               type="search"
               placeholder="Search cases, clients…"
               aria-label="Search cases and clients"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
             <kbd className="enterprise-header__omnibar-shortcut" aria-hidden="true">⌘K</kbd>
+            {(searchQuery.trim().length >= 2 || searching) && (
+              <div className="dropdown-menu" style={{ display: 'block', top: 'calc(100% + 8px)', width: '100%' }}>
+                <div className="dropdown-item" style={{ pointerEvents: 'none', opacity: 0.7 }}>
+                  {searching ? 'Searching…' : `Cases ${searchResults.cases.length} · Users ${searchResults.users.length} · Tasks ${searchResults.tasks.length}`}
+                </div>
+                {searchResults.cases.slice(0, 3).map((item) => (
+                  <button
+                    key={`case-${item.caseId}`}
+                    className="dropdown-item"
+                    onClick={() => navigate(`/f/${currentFirmSlug}/cases/${item.caseId}`)}
+                  >
+                    Case: {item.caseId} — {item.title}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Create Case CTA */}
