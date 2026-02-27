@@ -1,30 +1,134 @@
 /**
- * Worklist Page Styles
+ * Worklist Page Styles — 2026 Edition
+ * High-density data table, keyboard-navigable rows, semantic empty state
  */
 
 .worklist {
-  max-width: 1400px;
+  max-width: 1440px;
   margin: 0 auto;
 }
 
+/* ── Header ─────────────────────────────── */
+
 .worklist__header {
-  margin-bottom: var(--spacing-xl);
-}
-
-.worklist__header h1 {
-  color: var(--text-primary);
-  font-size: var(--font-size-2xl);
-  margin-bottom: var(--spacing-sm);
-}
-
-.worklist__filters {
   display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
   flex-wrap: wrap;
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-lg);
 }
+
+.worklist__header-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.worklist__title {
+  color: var(--text-main);
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  margin: 0 0 var(--space-1);
+  letter-spacing: -0.02em;
+  line-height: var(--line-height-tight);
+}
+
+.worklist__description {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  margin: 0;
+}
+
+.worklist__create-btn {
+  flex-shrink: 0;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  height: 34px;
+  padding: 0 var(--space-4);
+}
+
+/* ── Toolbar ─────────────────────────────── */
+
+.worklist__toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.worklist__count {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+/* ── Table wrapper ───────────────────────── */
+
+.worklist__table-wrap {
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-subtle) transparent;
+}
+
+.worklist__table-wrap::-webkit-scrollbar {
+  height: 4px;
+}
+
+.worklist__table-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.worklist__table-wrap::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: var(--radius-pill);
+}
+
+/* ── Empty State ─────────────────────────── */
 
 .worklist__empty {
-  padding: var(--spacing-2xl);
+  padding: var(--space-12) var(--space-6);
   text-align: center;
+}
+
+.worklist__empty-icon {
+  font-size: 44px;
+  margin-bottom: var(--space-4);
+  opacity: 0.40;
+}
+
+.worklist__empty-title {
+  color: var(--text-main);
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  margin: 0 0 var(--space-2);
+}
+
+.worklist__empty-desc {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  margin: 0 0 var(--space-5);
+}
+
+.worklist__empty-cta {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  height: 36px;
+  padding: 0 var(--space-5);
+}
+
+/* ── Responsive ──────────────────────────── */
+
+@media (max-width: 640px) {
+  .worklist__header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .worklist__create-btn {
+    width: 100%;
+    justify-content: center;
+  }
 }
