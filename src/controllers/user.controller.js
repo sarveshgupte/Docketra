@@ -96,14 +96,6 @@ const createUser = async (req, res) => {
 
   try {
     const { name, email, role } = req.body;
-    
-    if (!email || !email.trim()) {
-      return res.status(400).json({
-        success: false,
-        error: 'Email is required',
-        ...responseMeta,
-      });
-    }
 
     // Check if user already exists
     const normalizedEmail = email.trim().toLowerCase();
@@ -161,15 +153,7 @@ const createUser = async (req, res) => {
  */
 const updateUser = async (req, res) => {
   try {
-    const { name, role, isActive, firmId, xID } = req.body;
-    
-    // Block attempts to modify immutable fields
-    if (firmId !== undefined || xID !== undefined) {
-      return res.status(403).json({
-        success: false,
-        error: 'Forbidden: Cannot modify immutable fields (firmId, xID)',
-      });
-    }
+    const { name, role, isActive } = req.body;
     
     const user = await User.findById(req.params.id);
     

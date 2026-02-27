@@ -1,5 +1,7 @@
 const express = require('express');
-const router = express.Router();
+const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
+const routeSchemas = require('../schemas/client.routes.schema.js');
+const router = applyRouteValidation(express.Router(), routeSchemas);
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');

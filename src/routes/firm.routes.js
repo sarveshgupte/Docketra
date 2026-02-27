@@ -11,7 +11,9 @@
  */
 
 const express = require('express');
-const router = express.Router({ mergeParams: true });
+const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
+const routeSchemas = require('../schemas/firm.routes.schema');
+const router = applyRouteValidation(express.Router({ mergeParams: true }), routeSchemas);
 
 const tenantResolver = require('../middleware/tenantResolver');
 const { authLimiter } = require('../middleware/rateLimiters');
