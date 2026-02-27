@@ -2,13 +2,6 @@ const { z } = require('zod');
 
 const emptyObjectSchema = z.object({}).passthrough();
 
-const formatValidationErrors = (issues = []) => issues.map((issue) => ({
-  location: issue.location,
-  path: issue.path,
-  code: issue.code,
-  message: issue.message,
-}));
-
 const validateRequest = (schema = {}) => (req, res, next) => {
   const errors = [];
   const sections = ['body', 'params', 'query'];
@@ -36,7 +29,7 @@ const validateRequest = (schema = {}) => (req, res, next) => {
       success: false,
       error: {
         code: 'VALIDATION_ERROR',
-        details: formatValidationErrors(errors),
+        details: errors,
       },
     });
   }
