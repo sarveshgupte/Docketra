@@ -21,6 +21,9 @@ class GoogleDriveProvider extends StorageProvider {
    */
   constructor({ oauthClient = null, driveId = null } = {}) {
     super();
+    if (!oauthClient) {
+      throw new Error('[GoogleDriveProvider] oauthClient is required');
+    }
     this.providerName = 'google_drive';
     this.oauthClient = oauthClient;
     this.driveId = driveId;

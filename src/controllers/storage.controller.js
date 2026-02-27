@@ -65,8 +65,7 @@ function verifyStateToken(cookieValue, stateParam) {
     .update(payload)
     .digest('hex');
 
-  let sigBuffer;
-  let expectedBuffer;
+  let sigBuffer, expectedBuffer;
   try {
     sigBuffer = Buffer.from(sig, 'hex');
     expectedBuffer = Buffer.from(expectedSig, 'hex');
@@ -324,7 +323,7 @@ async function confirmDrive(req, res, providerName) {
   try {
     const refreshToken = decrypt(pending.encryptedRefreshToken);
     const firm = await Firm.findById(tenantId).select('name');
-    const tenantName = firm?.name || 'Tenant';
+    const tenantName = firm?.name || `Unknown-Tenant-${tenantId}`;
 
     let provider;
     if (providerName === 'google_drive') {

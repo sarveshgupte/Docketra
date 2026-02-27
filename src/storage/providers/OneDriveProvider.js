@@ -3,12 +3,16 @@ const { StorageProvider } = require('../StorageProvider.interface');
 class OneDriveProvider extends StorageProvider {
   constructor({ refreshToken, driveId }) {
     super();
+    if (!refreshToken) {
+      throw new Error('[OneDriveProvider] refreshToken is required');
+    }
     this.providerName = 'onedrive';
     this.refreshToken = refreshToken;
     this.driveId = driveId;
   }
 
   async getClient() {
+    // "common" supports multi-tenant AAD apps; set ONEDRIVE_TENANT_ID to a specific tenant for single-tenant deployments.
     const { ONEDRIVE_CLIENT_ID, ONEDRIVE_CLIENT_SECRET, ONEDRIVE_TENANT_ID = 'common' } = process.env;
     if (!ONEDRIVE_CLIENT_ID || !ONEDRIVE_CLIENT_SECRET || !this.refreshToken) {
       throw new Error('[OneDriveProvider] OAuth configuration is incomplete');
