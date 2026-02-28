@@ -235,11 +235,10 @@ caseHistorySchema.pre('findOneAndDelete', function(next) {
  * - actionType: For filtering by specific action types (PR: Audit Trail)
  * - actorRole: For role-based audit queries (PR: Audit Trail)
  */
-caseHistorySchema.index({ caseId: 1, timestamp: -1 });
+caseHistorySchema.index({ firmId: 1, caseId: 1, timestamp: -1 });
 caseHistorySchema.index({ performedBy: 1 }); // Legacy
 caseHistorySchema.index({ performedByXID: 1 }); // Canonical
 caseHistorySchema.index({ firmId: 1, timestamp: -1 }); // Firm-scoped audit queries
-caseHistorySchema.index({ firmId: 1, caseId: 1 }); // Firm-scoped case history
 caseHistorySchema.index({ actionType: 1 }); // Action type filtering
 caseHistorySchema.index({ actorRole: 1 }); // Role-based queries
 

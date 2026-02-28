@@ -1128,7 +1128,7 @@ const getCaseByCaseId = async (req, res) => {
     const displayCaseId = caseData.caseId;
     const comments = await Comment.find({ caseId: displayCaseId }).sort({ createdAt: 1 });
     const attachments = await Attachment.find({ caseId: displayCaseId }).sort({ createdAt: 1 });
-    const history = await CaseHistory.find({ caseId: displayCaseId }).sort({ timestamp: -1 });
+    const history = await CaseHistory.find({ caseId: displayCaseId, firmId: req.firmId }).sort({ timestamp: -1 });
     
     // PR #45: Also fetch CaseAudit entries for view-mode tracking
     // Use aggregation to lookup user names from performedByXID
