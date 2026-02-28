@@ -44,13 +44,14 @@ const ROLE_ADMIN = 'Admin';
 const ROLE_EMPLOYEE = 'Employee';
 
 const log = require('../utils/log');
+const { safeLogForensicAudit, getRequestIp, getRequestUserAgent, PLATFORM_TENANT } = require('../services/forensicAudit.service');
 
 /**
  * Non-fatal auth audit logger. Audit failures must never break primary business
  * logic or change a successful HTTP response to 500.
  * Always uses explicit array syntax so no implicit wrapping is required.
  */
-const logAuthAudit = async (params) => {
+const logAuthAudit = async (params, req = null) => {
   try {
     await AuthAudit.create([params]);
   } catch (auditErr) {
@@ -60,6 +61,23 @@ const logAuthAudit = async (params) => {
       context: 'auth.controller',
     });
   }
+
+  await safeLogForensicAudit({
+    tenantId: params?.firmId || PLATFORM_TENANT,
+    entityType: 'AUTH',
+    entityId: params?.userId || params?.xID || 'UNKNOWN',
+    action: params?.actionType || 'AUTH_EVENT',
+    performedBy: params?.performedBy || params?.xID || 'SYSTEM',
+    performedByRole: params?.metadata?.performedByRole || null,
+    impersonatedBy: params?.metadata?.impersonatedBy || null,
+    ipAddress: params?.ipAddress || getRequestIp(req),
+    userAgent: params?.userAgent || getRequestUserAgent(req),
+    metadata: {
+      description: params?.description || null,
+      source: 'auth.controller.logAuthAudit',
+      metadata: params?.metadata || null,
+    },
+  });
 };
 
 const getSuperadminEnv = () => {
@@ -203,20 +221,16 @@ const buildTokenResponse = async (user, req, authMethod = 'Password') => {
     req,
   });
 
-  try {
-    await AuthAudit.create({
-      xID: user.xID || DEFAULT_XID,
-      firmId: user.firmId || DEFAULT_FIRM_ID,
-      userId: user._id,
-      actionType: 'Login',
-      description: `User logged in via ${authMethod}`,
-      performedBy: user.xID,
-      ipAddress: req.ip,
-      userAgent: req.get('user-agent'),
-    });
-  } catch (auditError) {
-    console.error('[AUTH AUDIT] Failed to record login event', auditError);
-  }
+  await logAuthAudit({
+    xID: user.xID || DEFAULT_XID,
+    firmId: user.firmId || DEFAULT_FIRM_ID,
+    userId: user._id,
+    actionType: 'Login',
+    description: `User logged in via ${authMethod}`,
+    performedBy: user.xID,
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  }, req);
 
   return { accessToken, refreshToken, firmSlug };
 };
