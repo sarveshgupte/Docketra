@@ -73,9 +73,9 @@ export const DashboardPage = () => {
       
       if (isAdmin) {
         try {
-          const casesResponse = await caseService.getCases({ limit: 5 });
+          const casesResponse = await caseService.getCases();
           if (casesResponse.success) {
-            casesToDisplay = (casesResponse.data || []).slice(0, 5);
+            casesToDisplay = casesResponse.data || [];
           }
         } catch (error) {
           console.error('Failed to load firm cases:', error);
@@ -84,14 +84,14 @@ export const DashboardPage = () => {
         try {
           const worklistResponse = await worklistService.getEmployeeWorklist();
           if (worklistResponse.success) {
-            casesToDisplay = (worklistResponse.data || []).slice(0, 5);
+            casesToDisplay = worklistResponse.data || [];
           }
         } catch (error) {
           console.error('Failed to load worklist:', error);
         }
       }
       
-      setRecentCases(casesToDisplay);
+      setRecentCases(casesToDisplay.slice(0, 5));
       
       // My Open Cases
       try {
@@ -191,6 +191,17 @@ export const DashboardPage = () => {
     );
   }
 
+  const allCases = recentCases;
+  const now = Date.now();
+  const overdueComplianceItems = allCases.filter((item) => item?.dueDate && new Date(item.dueDate).getTime() < now).length;
+  const dueInSevenDays = allCases.filter((item) => {
+    if (!item?.dueDate) return false;
+    const dueAt = new Date(item.dueDate).getTime();
+    const sevenDays = now + (7 * 24 * 60 * 60 * 1000);
+    return dueAt >= now && dueAt <= sevenDays;
+  }).length;
+  const awaitingPartnerReview = isAdmin ? stats.adminPendingApprovals : stats.myPendingCases;
+
   // Workflow status pipeline data
   const workflowStatuses = [
     { label: 'Open', count: stats.myOpenCases, color: 'var(--color-primary)' },
@@ -204,9 +215,9 @@ export const DashboardPage = () => {
       <div className="dashboard">
         {/* Header */}
         <div className="dashboard__header">
-          <h1 className="dashboard__title">Dashboard</h1>
+          <h1 className="dashboard__title">Partner Control Dashboard</h1>
           <p className="dashboard__subtitle">
-            {isAdmin ? 'Admin Dashboard' : isEmployee ? 'Consultant Dashboard' : 'Dashboard'} · Welcome back, {user?.name || user?.xID}
+            Where is the compliance risk in my firm today?
           </p>
         </div>
 
@@ -217,10 +228,10 @@ export const DashboardPage = () => {
             className="dashboard__kpi-card dashboard__kpi-card--clickable"
             onClick={() => navigate(`/app/firm/${firmSlug}/my-worklist?status=OPEN`)}
           >
-            <div className="dashboard__kpi-number">{stats.myOpenCases}</div>
-            <div className="dashboard__kpi-label">Open Cases</div>
-            <div className="dashboard__kpi-sub">In My Worklist</div>
-          </div>
+             <div className="dashboard__kpi-number">{overdueComplianceItems}</div>
+             <div className="dashboard__kpi-label">Overdue Compliance Items</div>
+             <div className="dashboard__kpi-sub" style={{ color: 'var(--danger)' }}>Red Risk Band</div>
+           </div>
 
           {/* Pending Approvals */}
           <div
@@ -228,21 +239,21 @@ export const DashboardPage = () => {
             onClick={() => navigate(`/app/firm/${firmSlug}/cases?approvalStatus=PENDING`)}
           >
             <div className="dashboard__kpi-number">
-              {isAdmin ? stats.adminPendingApprovals : stats.myPendingCases}
-            </div>
-            <div className="dashboard__kpi-label">Pending Approvals</div>
-            <div className="dashboard__kpi-sub">Awaiting review</div>
-          </div>
+               {dueInSevenDays}
+             </div>
+             <div className="dashboard__kpi-label">Due in 7 Days</div>
+             <div className="dashboard__kpi-sub" style={{ color: 'var(--warning)' }}>Amber Risk Band</div>
+           </div>
 
           {/* SLA Breaches (cases on hold / pended) */}
           <div
             className="dashboard__kpi-card dashboard__kpi-card--clickable dashboard__kpi-card--warning"
             onClick={() => navigate(`/app/firm/${firmSlug}/my-worklist?status=PENDED`)}
           >
-            <div className="dashboard__kpi-number">{stats.myPendingCases}</div>
-            <div className="dashboard__kpi-label">SLA Risk</div>
-            <div className="dashboard__kpi-sub">Cases on hold</div>
-          </div>
+             <div className="dashboard__kpi-number">{awaitingPartnerReview}</div>
+             <div className="dashboard__kpi-label">Awaiting Partner Review</div>
+             <div className="dashboard__kpi-sub">Approval queue</div>
+           </div>
 
           {/* Active Clients (admin) / Resolved Cases (regular user) */}
           {isAdmin ? (
@@ -250,25 +261,25 @@ export const DashboardPage = () => {
               className="dashboard__kpi-card dashboard__kpi-card--clickable dashboard__kpi-card--success"
               onClick={() => navigate(`/app/firm/${firmSlug}/admin`)}
             >
-              <div className="dashboard__kpi-number">{stats.activeClients}</div>
-              <div className="dashboard__kpi-label">Active Clients</div>
-              <div className="dashboard__kpi-sub">Registered clients</div>
-            </div>
+               <div className="dashboard__kpi-number">{stats.activeClients}</div>
+               <div className="dashboard__kpi-label">Risk Summary Panel</div>
+               <div className="dashboard__kpi-sub">Active reporting entities</div>
+             </div>
           ) : (
             <div
               className="dashboard__kpi-card dashboard__kpi-card--clickable dashboard__kpi-card--success"
               onClick={() => navigate(`/app/firm/${firmSlug}/my-worklist?status=RESOLVED`)}
             >
-              <div className="dashboard__kpi-number">{stats.myResolvedCases}</div>
-              <div className="dashboard__kpi-label">Resolved Cases</div>
-              <div className="dashboard__kpi-sub">Successfully completed</div>
-            </div>
+               <div className="dashboard__kpi-number">{stats.myResolvedCases}</div>
+               <div className="dashboard__kpi-label">Risk Summary Panel</div>
+               <div className="dashboard__kpi-sub">Executed compliance items</div>
+             </div>
           )}
         </div>
 
         {/* Section 2: Case Workflow Summary */}
         <div className="dashboard__section">
-          <h2 className="dashboard__section-title">Case Workflow</h2>
+          <h2 className="dashboard__section-title">Case Lifecycle Distribution</h2>
           <div className="dashboard__workflow">
             {workflowStatuses.map((item, idx) => (
               <React.Fragment key={item.label}>
@@ -293,32 +304,31 @@ export const DashboardPage = () => {
         <div className="dashboard__section">
           <div className="dashboard__section-header">
             <h2 className="dashboard__section-title">
-              {isAdmin ? 'Recent Firm Cases' : 'My Recent Cases'}
+               {isAdmin ? 'Recent Audit Records' : 'Recent Audit Records'}
             </h2>
             <button
               className="btn btn-secondary"
               onClick={() => navigate(`/app/firm/${firmSlug}/cases/create`)}
               style={{ fontSize: 'var(--font-size-sm)' }}
             >
-              + Create Case
+               + Register Case
             </button>
           </div>
           <Card>
             {recentCases.length === 0 ? (
               <div className="dashboard__empty">
-                <div className="dashboard__empty-icon" role="img" aria-label="No cases">📋</div>
-                <h3 className="dashboard__empty-title">No cases yet</h3>
-                <p className="dashboard__empty-description text-secondary">
-                  {isAdmin
-                    ? 'Your firm has no cases yet. Create the first one to get started.'
-                    : 'You have no assigned cases yet. Check the global worklist or create a new case.'}
-                </p>
+                 <h3 className="dashboard__empty-title">No compliance records available</h3>
+                 <p className="dashboard__empty-description text-secondary">
+                   {isAdmin
+                     ? 'No audit records are available for this firm yet.'
+                     : 'No audit records are available for your assigned compliance items.'}
+                 </p>
                 <button
                   className="btn btn-primary dashboard__empty-cta"
                   onClick={() => navigate(`/app/firm/${firmSlug}/cases/create`)}
                 >
-                  {isAdmin ? 'Create Your First Case' : 'Create a Case'}
-                </button>
+                   {isAdmin ? 'Register First Case' : 'Register Case'}
+                 </button>
               </div>
             ) : (
               <table className="neo-table">
@@ -327,7 +337,7 @@ export const DashboardPage = () => {
                     <th>Case Name</th>
                     <th>Category</th>
                     <th>Status</th>
-                    <th>Last Updated</th>
+                     <th>Last Action Timestamp</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -350,7 +360,7 @@ export const DashboardPage = () => {
         {/* Admin extended stats */}
         {isAdmin && (
           <div className="dashboard__section">
-            <h2 className="dashboard__section-title">Firm Overview</h2>
+            <h2 className="dashboard__section-title">Execution Status by Team Member</h2>
             <div className="dashboard__admin-stats">
               <div
                 className="dashboard__stat-card dashboard__stat-card--clickable"
@@ -366,7 +376,7 @@ export const DashboardPage = () => {
               >
                 <div className="dashboard__stat-value">{stats.adminResolvedCases}</div>
                 <div className="dashboard__stat-label">All Resolved</div>
-                <div className="dashboard__stat-description">All completed cases</div>
+                <div className="dashboard__stat-description">All executed cases</div>
               </div>
               <div
                 className="dashboard__stat-card dashboard__stat-card--clickable"

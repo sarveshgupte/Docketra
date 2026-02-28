@@ -3,7 +3,6 @@ const { applyRouteValidation } = require('../middleware/requestValidation.middle
 const routeSchemas = require('../schemas/public.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { getFirmBySlug } = require('../controllers/superadmin.controller');
-const { createStarterWorkspace } = require('../modules/onboarding/onboarding.service');
 
 /**
  * Public API Routes
@@ -13,11 +12,9 @@ router.get('/firms/:firmSlug', getFirmBySlug);
 
 router.post('/signup', async (req, res, next) => {
   try {
-    const { fullName, email, phoneNumber, companyName } = req.body;
-    await createStarterWorkspace({ fullName, email, phoneNumber, companyName });
-    return res.status(201).json({
+    return res.status(202).json({
       success: true,
-      message: 'Workspace created. Please check your email to set up your admin account.',
+      message: 'Thank you. Our team will review your request and schedule a walkthrough.',
     });
   } catch (error) {
     return next(error);
