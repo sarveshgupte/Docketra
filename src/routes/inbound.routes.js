@@ -4,6 +4,7 @@ const { applyRouteValidation } = require('../middleware/requestValidation.middle
 const routeSchemas = require('../schemas/inbound.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { handleInboundEmail } = require('../controllers/inboundEmail.controller');
+const { inboundStorageHealthGuard } = require('../middleware/storageHealthGuard');
 const inboundEmailRateLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 60,
@@ -17,6 +18,6 @@ const inboundEmailRateLimiter = rateLimit({
  */
 
 // POST /api/inbound/email - Receive inbound email
-router.post('/email', inboundEmailRateLimiter, handleInboundEmail);
+router.post('/email', inboundEmailRateLimiter, inboundStorageHealthGuard, handleInboundEmail);
 
 module.exports = router;

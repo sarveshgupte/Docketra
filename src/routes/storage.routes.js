@@ -4,6 +4,7 @@ const routeSchemas = require('../schemas/storage.routes.schema');
 const { userReadLimiter, authLimiter } = require('../middleware/rateLimiters');
 const {
   getStorageStatus,
+  getStorageHealth,
   googleConnect,
   googleCallback,
   googleConfirmDrive,
@@ -15,6 +16,7 @@ const {
 const router = applyRouteValidation(express.Router(), routeSchemas);
 
 router.get('/status', userReadLimiter, getStorageStatus);
+router.get('/health', userReadLimiter, getStorageHealth);
 
 // Google OAuth connect flow for BYOS
 // Both endpoints are already protected by authenticate + firmContext + invariantGuard
