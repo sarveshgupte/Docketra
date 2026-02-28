@@ -15,6 +15,7 @@ const { isProduction } = require('../config/config');
 const { logCaseListViewed, logAdminAction } = require('../services/auditLog.service');
 const caseActionService = require('../services/caseAction.service');
 const CaseService = require('../services/case.service');
+const caseSlaService = require('../services/caseSla.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { getMimeType, sanitizeFilename } = require('../utils/fileUtils');
 const { cleanupTempFile } = require('../utils/tempFile');
@@ -279,6 +280,12 @@ const createCase = async (req, res) => {
     const session = req.transactionSession?.session;
     try {
       // Create new case with defaults
+      const slaState = await caseSlaService.initializeCaseSla({
+        tenantId: firmId,
+        caseType: actualCategory,
+        now: new Date(),
+      });
+
       const newCase = new Case({
         title: title.trim(),
         description: description.trim(),
@@ -294,7 +301,12 @@ const createCase = async (req, res) => {
         priority: priority || 'Medium',
         status: 'UNASSIGNED', // New cases default to UNASSIGNED for global worklist
         assignedToXID: assignedTo ? assignedTo.toUpperCase() : null, // PR: xID Canonicalization - Store in assignedToXID
-        slaDueDate: new Date(slaDueDate), // Store SLA due date - MANDATORY
+        slaDueDate: slaState.slaDueAt, // Backward-compatible SLA due field
+        slaDueAt: slaState.slaDueAt,
+        tatPaused: slaState.tatPaused,
+        tatLastStartedAt: slaState.tatLastStartedAt,
+        tatAccumulatedMinutes: slaState.tatAccumulatedMinutes,
+        tatTotalMinutes: slaState.tatTotalMinutes,
         payload, // Store client case payload if provided
         idempotencyKey: idempotencyKey || undefined,
       });
@@ -315,13 +327,13 @@ const createCase = async (req, res) => {
         performedByXID: createdByXID,
         actorRole: req.user.role === 'Admin' ? 'ADMIN' : 'USER',
         metadata: {
-          category: actualCategory,
-          clientId: finalClientId,
-          priority: priority || 'Medium',
-          slaDueDate: newCase.slaDueDate,
-          assignedToXID: newCase.assignedToXID,
-          duplicateOverridden: !!systemComment,
-        },
+            category: actualCategory,
+            clientId: finalClientId,
+            priority: priority || 'Medium',
+            slaDueAt: newCase.slaDueAt,
+            assignedToXID: newCase.assignedToXID,
+            duplicateOverridden: !!systemComment,
+          },
         req,
         session,
       });

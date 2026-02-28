@@ -4,6 +4,7 @@ const { CASE_ACTION_TYPES } = require('../config/constants');
 const { logCaseHistory } = require('./auditLog.service');
 const { canTransition, normalizeStatus } = require('../domain/case/caseStateMachine');
 const CaseStatus = require('../domain/case/caseStatus');
+const caseSlaService = require('./caseSla.service');
 
 async function updateStatus(caseId, newStatus, context = {}) {
   const tenantId = context.tenantId || context.firmId;
@@ -24,6 +25,7 @@ async function updateStatus(caseId, newStatus, context = {}) {
   }
 
   const fromStatus = normalizedCurrentStatus || normalizeStatus(existingCase.status);
+  const expectedCurrentStatus = context.currentStatus || existingCase.status;
 
   if (fromStatus === normalizedNewStatus) {
     throw new Error(`Self-transition not allowed: ${fromStatus}`);
@@ -44,12 +46,19 @@ async function updateStatus(caseId, newStatus, context = {}) {
     throw new Error(`Illegal transition: ${fromStatus} → ${normalizedNewStatus}`);
   }
 
+  const session = context.session || context.req?.transactionSession?.session || null;
+  const slaTransition = caseSlaService.handleStatusTransition(existingCase, normalizedNewStatus, {
+    now: new Date(),
+    userId: context.userId || context.performedByXID || null,
+  });
+
   await CaseRepository.updateStatus(
     caseId,
     tenantId,
     normalizedNewStatus,
-    context.statusPatch || {},
-    context.session || null
+    { ...(context.statusPatch || {}), ...(slaTransition.patch || {}) },
+    session,
+    expectedCurrentStatus
   );
 
   const metadata = {
@@ -62,14 +71,14 @@ async function updateStatus(caseId, newStatus, context = {}) {
     ...(context.auditMetadata || {}),
   };
 
-  if (context.session) {
+  if (session) {
     await CaseAudit.create([{
       caseId: existingCase.caseId || caseId,
       actionType: CASE_ACTION_TYPES.CASE_STATUS_CHANGED,
       description: `Status changed from ${fromStatus} to ${normalizedNewStatus}`,
       performedByXID: context.userId || context.performedByXID || 'SYSTEM',
       metadata,
-    }], { session: context.session });
+    }], { session });
   } else {
     await CaseAudit.create({
       caseId: existingCase.caseId || caseId,
@@ -91,8 +100,34 @@ async function updateStatus(caseId, newStatus, context = {}) {
     actorRole: context.actorRole || 'USER',
     metadata,
     req: context.req,
-    session: context.session || null,
+    session,
   });
+
+  if (slaTransition.auditEvent) {
+    const slaMetadata = {
+      ...slaTransition.auditEvent,
+      statusFrom: fromStatus,
+      statusTo: normalizedNewStatus,
+    };
+
+    if (session) {
+      await CaseAudit.create([{
+        caseId: existingCase.caseId || caseId,
+        actionType: CASE_ACTION_TYPES.CASE_SYSTEM_EVENT,
+        description: `SLA event ${slaTransition.auditEvent.event}`,
+        performedByXID: context.userId || context.performedByXID || 'SYSTEM',
+        metadata: slaMetadata,
+      }], { session });
+    } else {
+      await CaseAudit.create({
+        caseId: existingCase.caseId || caseId,
+        actionType: CASE_ACTION_TYPES.CASE_SYSTEM_EVENT,
+        description: `SLA event ${slaTransition.auditEvent.event}`,
+        performedByXID: context.userId || context.performedByXID || 'SYSTEM',
+        metadata: slaMetadata,
+      });
+    }
+  }
 }
 
 module.exports = {

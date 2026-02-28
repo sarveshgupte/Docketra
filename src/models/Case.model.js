@@ -306,6 +306,26 @@ const caseSchema = new mongoose.Schema({
     type: Date,
     required: [true, 'SLA Due Date is required'],
   },
+  slaDueAt: {
+    type: Date,
+  },
+  tatTotalMinutes: {
+    type: Number,
+    min: 0,
+    default: 0,
+  },
+  tatPaused: {
+    type: Boolean,
+    default: false,
+  },
+  tatLastStartedAt: {
+    type: Date,
+  },
+  tatAccumulatedMinutes: {
+    type: Number,
+    min: 0,
+    default: 0,
+  },
   
   /**
    * xID of user who created the case
@@ -836,6 +856,7 @@ caseSchema.index({ firmId: 1, caseId: 1, status: 1, assignedToXID: 1, assignedTo
 caseSchema.index({ queueType: 1, status: 1 }); // Queue-based worklist queries
 caseSchema.index({ pendedByXID: 1, status: 1 }); // Pending cases dashboard queries
 caseSchema.index({ pendingUntil: 1 }); // Auto-reopen scheduler queries
+caseSchema.index({ firmId: 1, slaDueAt: 1 }); // Firm-scoped SLA due lookups
 // REMOVED: { firmId: 1 } - redundant with compound indexes above (firmId, caseInternalId), (firmId, caseNumber), etc.
 caseSchema.index({ firmId: 1, status: 1 }); // Firm-scoped status queries
 caseSchema.index({ firmId: 1, assignedToXID: 1 }); // Firm-scoped assignment queries
