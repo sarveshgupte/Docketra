@@ -2,6 +2,7 @@ const CaseAudit = require('../models/CaseAudit.model');
 const { CaseRepository } = require('../repositories');
 const { CASE_ACTION_TYPES } = require('../config/constants');
 const { logCaseHistory } = require('./auditLog.service');
+const { safeLogForensicAudit, computeChangedFields, getRequestIp, getRequestUserAgent } = require('./forensicAudit.service');
 const { canTransition, normalizeStatus } = require('../domain/case/caseStateMachine');
 const CaseStatus = require('../domain/case/caseStatus');
 const caseSlaService = require('./caseSla.service');
@@ -96,6 +97,29 @@ async function updateStatus(caseId, newStatus, context = {}) {
     metadata,
     req: context.req,
     session,
+  });
+
+  const diff = computeChangedFields(
+    { status: fromStatus },
+    { status: normalizedNewStatus }
+  );
+
+  await safeLogForensicAudit({
+    tenantId,
+    entityType: 'CASE',
+    entityId: existingCase.caseId || caseId,
+    action: 'CASE_STATUS_CHANGED',
+    oldValue: diff.oldValue,
+    newValue: diff.newValue,
+    performedBy: context.userId || context.performedByXID || 'SYSTEM',
+    performedByRole: context.actorRole || context.role || null,
+    impersonatedBy: context.req?.context?.isSuperAdmin ? context.req?.user?.xID || null : null,
+    ipAddress: context.ipAddress || getRequestIp(context.req),
+    userAgent: context.userAgent || getRequestUserAgent(context.req),
+    metadata: {
+      source: 'case.service.updateStatus',
+      caseInternalId: existingCase.caseInternalId || null,
+    },
   });
 
   if (slaTransition.auditEvent) {
