@@ -336,7 +336,7 @@ const getCaseHistory = async (req, res) => {
     }
     
     // Fetch history entries
-    const history = await CaseHistory.find({ caseId })
+    const history = await CaseHistory.find({ caseId, firmId: req.firmId })
       .sort({ timestamp: -1 }) // Most recent first
       .limit(200) // Reasonable limit
       .lean();
