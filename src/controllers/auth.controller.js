@@ -1850,7 +1850,10 @@ const setupAccount = async (req, res) => {
   user.passwordSetAt = now;
   await user.save();
 
-  await Firm.updateOne({ _id: user.firmId }, { $set: { status: 'active' } });
+  await Firm.updateOne(
+    { _id: user.firmId, status: 'pending_setup' },
+    { $set: { status: 'active' } }
+  );
 
   return res.json({ success: true, message: 'Account setup completed' });
 };

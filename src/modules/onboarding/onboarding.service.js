@@ -28,6 +28,7 @@ const createFirmWithAdmin = async (payload = {}) => {
   const session = await mongoose.startSession();
   try {
     let result;
+    let setupToken;
     await session.withTransaction(async () => {
       const plan = await Plan.findById(planId).session(session);
       if (!plan) {
@@ -58,7 +59,7 @@ const createFirmWithAdmin = async (payload = {}) => {
         planId: plan._id,
       }], { session }).then((docs) => docs[0]);
 
-      const setupToken = crypto.randomBytes(32).toString('hex');
+      setupToken = crypto.randomBytes(32).toString('hex');
       const setupTokenHash = emailService.hashToken(setupToken);
       const setupTokenExpiresAt = new Date(Date.now() + SETUP_EXPIRY_HOURS * 60 * 60 * 1000);
 
@@ -75,16 +76,17 @@ const createFirmWithAdmin = async (payload = {}) => {
         isActive: false,
       }], { session }).then((docs) => docs[0]);
 
-      await emailService.sendPasswordSetupEmail({
-        email: user.email,
-        name: user.name,
-        token: setupToken,
-        xID: user.xID,
-        firmSlug: firm.firmSlug,
-      });
-
       result = { firm, admin: user };
     });
+
+    await emailService.sendPasswordSetupEmail({
+      email: result.admin.email,
+      name: result.admin.name,
+      token: setupToken,
+      xID: result.admin.xID,
+      firmSlug: result.firm.firmSlug,
+    });
+
     return result;
   } finally {
     session.endSession();
