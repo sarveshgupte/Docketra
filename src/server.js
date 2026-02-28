@@ -28,6 +28,13 @@ try {
   console.warn('[InboundEmailWorker] Failed to start inbound email worker (non-fatal):', err.message);
 }
 
+try {
+  require('./workers/storageIntegrity.worker');
+  console.log('[StorageIntegrityWorker] Storage integrity worker started');
+} catch (err) {
+  console.warn('[StorageIntegrityWorker] Failed to start storage integrity worker (non-fatal):', err.message);
+}
+
 // Global error log sanitizer: ensure every console.error invocation masks PII (tokens, emails, phone numbers, auth headers).
 // This preserves existing logging behavior/verbosity while enforcing centralized masking via maskSensitiveObject.
 // The original logger is retained at console.error.original for debugging tools that need raw access.
@@ -353,11 +360,20 @@ const server = app.listen(PORT, () => {
     );
   }, 6 * 60 * 60 * 1000); // 6 hours
   const { runStorageHealthCheck } = require('./jobs/storageHealthCheck.job');
+  const { enqueueDailyStorageIntegrityJob } = require('./queues/storageIntegrity.queue');
   setInterval(() => {
     runStorageHealthCheck().catch((err) =>
       console.error('[storageHealthCheck] failed', { message: err.message })
     );
   }, 8 * 60 * 60 * 1000); // 8 hours
+  setInterval(() => {
+    enqueueDailyStorageIntegrityJob().catch((err) =>
+      console.error('[storageIntegritySchedule] failed', { message: err.message })
+    );
+  }, 24 * 60 * 60 * 1000); // daily
+  enqueueDailyStorageIntegrityJob().catch((err) =>
+    console.error('[storageIntegritySchedule] initial enqueue failed', { message: err.message })
+  );
   console.log(`
 ╔════════════════════════════════════════════╗
 ║         Docketra API Server                ║

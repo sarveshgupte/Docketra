@@ -96,6 +96,7 @@ export const Layout = ({ children }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState({ cases: [], users: [], tasks: [] });
+  const [storageHealthStatus, setStorageHealthStatus] = useState('HEALTHY');
 
   const profileDropdownRef = useRef(null);
 
@@ -181,6 +182,26 @@ export const Layout = ({ children }) => {
 
     return () => clearTimeout(timer);
   }, [searchQuery, runGlobalSearch]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchStorageHealth = async () => {
+      try {
+        const response = await api.get('/storage/health');
+        if (!cancelled) {
+          setStorageHealthStatus(response?.data?.status || 'HEALTHY');
+        }
+      } catch (_) {
+        if (!cancelled) {
+          setStorageHealthStatus('HEALTHY');
+        }
+      }
+    };
+    fetchStorageHealth();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const navLinks = [
     {
@@ -285,6 +306,11 @@ export const Layout = ({ children }) => {
       <div
         className={`enterprise-main ${sidebarCollapsed ? 'enterprise-main--sidebar-collapsed' : ''}`}
       >
+        {storageHealthStatus !== 'HEALTHY' && (
+          <div className="enterprise-storage-health-banner" role="alert" aria-live="polite">
+            Storage issue detected. Some files may be inaccessible.
+          </div>
+        )}
         {/* Omnibar Header */}
         <header className="enterprise-header" role="banner">
           {/* Mobile sidebar toggle */}
