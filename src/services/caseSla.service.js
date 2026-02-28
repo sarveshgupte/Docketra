@@ -11,6 +11,7 @@ const DEFAULT_SLA_CONFIG = Object.freeze({
 
 const MINUTES_IN_DAY = 24 * 60;
 const MS_PER_MINUTE = 60 * 1000;
+const MAX_CALENDAR_DAYS_LOOKAHEAD = 370; // Protects calendar loops from runaway iteration for malformed configs.
 
 const parseTimeToMinutes = (value, fallback) => {
   if (typeof value !== 'string' || !/^\d{2}:\d{2}$/.test(value)) return fallback;
@@ -90,7 +91,7 @@ const moveToNextWorkingDayStart = (date, config) => {
 const alignToBusinessTime = (inputDate, config) => {
   let current = new Date(inputDate);
   let attempts = 0;
-  while (attempts < 370) {
+  while (attempts < MAX_CALENDAR_DAYS_LOOKAHEAD) {
     const day = toIsoDay(current);
     if (!config.workingDays.includes(day)) {
       current = moveToNextWorkingDayStart(current, config);
@@ -120,7 +121,7 @@ const calculateDueDate = (startTime, durationMinutes, configInput = DEFAULT_SLA_
   if (remainingMinutes === 0) return current;
 
   const minutesPerBusinessDay = Math.max(1, config.businessEndMinute - config.businessStartMinute);
-  let safetyCounter = Math.ceil(remainingMinutes / minutesPerBusinessDay) + 370;
+  let safetyCounter = Math.ceil(remainingMinutes / minutesPerBusinessDay) + MAX_CALENDAR_DAYS_LOOKAHEAD;
 
   while (remainingMinutes > 0 && safetyCounter > 0) {
     const currentMinute = (current.getUTCHours() * 60) + current.getUTCMinutes();
