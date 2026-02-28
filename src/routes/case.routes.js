@@ -2,16 +2,15 @@ const express = require('express');
 const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
 const routeSchemas = require('../schemas/case.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 const { authenticate } = require('../middleware/auth.middleware');
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
 const {
   userReadLimiter,
   userWriteLimiter,
   attachmentLimiter,
+  sensitiveLimiter,
 } = require('../middleware/rateLimiters');
+const { createSecureUpload, enforceUploadSecurity } = require('../middleware/uploadProtection.middleware');
 const {
   createCase,
   addComment,
@@ -47,28 +46,7 @@ const {
   applyClientAccessFilter,
 } = require('../middleware/clientAccess.middleware');
 
-/**
- * Configure multer for file uploads
- * Store files in uploads/tmp/ directory with unique names
- */
-
-// Ensure uploads/tmp directory exists
-const uploadDir = path.join(__dirname, '../../uploads/tmp');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.random().toString(36).substring(7);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  },
-});
-
-const upload = multer({ storage: storage, limits: { fileSize: 25 * 1024 * 1024 } });
+const upload = createSecureUpload();
 
 /**
  * Case Routes
@@ -89,7 +67,7 @@ router.post('/', authorizeFirmPermission('CASE_CREATE'), userWriteLimiter, check
 // Accepts: { caseIds: ["CASE-20260109-00001"] } or { caseIds: ["CASE-...", "CASE-..."] }
 // User identity obtained from req.user (auth middleware), NOT from request body
 // PR: Hard Cutover to xID - Removed legacy /cases/:caseId/pull endpoint
-router.post('/pull', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, pullCases);
+router.post('/pull', authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, userWriteLimiter, pullCases);
 
 // Case action routes (RESOLVE, PEND, FILE) - PR: Case Lifecycle
 const {
@@ -147,7 +125,7 @@ router.get('/:caseId', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, ch
 router.post('/:caseId/comments', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, addComment);
 
 // POST /api/cases/:caseId/attachments - Upload attachment to case
-router.post('/:caseId/attachments', upload.single('file'), authorizeFirmPermission('CASE_UPDATE'), attachmentLimiter, checkCaseClientAccess, addAttachment);
+router.post('/:caseId/attachments', upload.single('file'), enforceUploadSecurity, authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, attachmentLimiter, checkCaseClientAccess, addAttachment);
 
 // GET /api/cases/:caseId/attachments/:attachmentId/view - View attachment inline
 // Note: authenticate middleware accepts xID from query params (req.query.xID)
@@ -206,7 +184,7 @@ router.post('/:caseId/pend', authorizeFirmPermission('CASE_ACTION'), userWriteLi
 router.post('/:caseId/file', authorizeFirmPermission('CASE_ACTION'), userWriteLimiter, fileCase);
 
 // POST /api/cases/:caseId/unassign - Move case to global worklist (Admin only)
-router.post('/:caseId/unassign', authorizeFirmPermission('CASE_ASSIGN'), userWriteLimiter, unassignCase);
+router.post('/:caseId/unassign', authorizeFirmPermission('CASE_ASSIGN'), sensitiveLimiter, userWriteLimiter, unassignCase);
 
 // Client Fact Sheet routes (Read-Only from Case view)
 // GET /api/cases/:caseId/client-fact-sheet - Get client fact sheet for a case (read-only)

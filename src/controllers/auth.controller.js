@@ -18,6 +18,8 @@ const { ensureDefaultClientForFirm } = require('../services/defaultClient.servic
 const { resolveUserIdentity } = require('../services/identity.service');
 const { isGoogleAuthDisabled } = require('../services/featureFlags.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
+const config = require('../config/config');
+const { recordFailedLoginAttempt, clearFailedLoginAttempts } = require('../middleware/accountLockout.middleware');
 
 /**
  * Authentication Controller for JWT-based Enterprise Authentication
@@ -27,8 +29,8 @@ const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const SALT_ROUNDS = 10;
 const PASSWORD_EXPIRY_DAYS = 60;
 const PASSWORD_HISTORY_LIMIT = 5;
-const MAX_FAILED_ATTEMPTS = 5;
-const LOCK_TIME = 15 * 60 * 1000; // 15 minutes in milliseconds
+const MAX_FAILED_ATTEMPTS = config.security.rateLimit.accountLockAttempts;
+const LOCK_TIME = config.security.rateLimit.accountLockSeconds * 1000;
 const INVITE_TOKEN_EXPIRY_HOURS = 48; // 48 hours for invite tokens (per PR 32 requirements)
 const PASSWORD_SETUP_TOKEN_EXPIRY_HOURS = 24; // 24 hours for password reset tokens
 const FORGOT_PASSWORD_TOKEN_EXPIRY_MINUTES = 30; // 30 minutes for forgot password tokens
@@ -297,6 +299,7 @@ const login = async (req, res) => {
       }
       
       if (!isSuperadminPasswordValid) {
+        await recordFailedLoginAttempt(req);
         console.warn('[AUTH][superadmin] SuperAdmin login failed - invalid credentials');
         return res.status(401).json({
           success: false,
@@ -305,6 +308,7 @@ const login = async (req, res) => {
       }
       
       console.log('[AUTH][superadmin] SuperAdmin login successful');
+      await clearFailedLoginAttempts(req);
       
       const accessToken = jwtService.generateAccessToken({
         userId: SUPERADMIN_USER_ID(),
@@ -352,6 +356,7 @@ const login = async (req, res) => {
     });
     
     if (!user || user.status !== 'ACTIVE') {
+      await recordFailedLoginAttempt(req);
       console.warn(`[AUTH] Invalid login attempt for xID=${normalizedXID} in firm context ${req.firmSlug || req.firmId}`);
       try {
         await AuthAudit.create({
@@ -368,7 +373,7 @@ const login = async (req, res) => {
       }
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials',
+        message: 'Invalid xID or password',
       });
     }
 
@@ -466,10 +471,12 @@ const login = async (req, res) => {
     
     // Check if account is locked
     if (user.isLocked) {
+      const retryAfter = Math.max(1, Math.ceil((new Date(user.lockUntil).getTime() - Date.now()) / 1000));
+      res.setHeader('Retry-After', String(retryAfter));
       return res.status(403).json({
         success: false,
-        message: 'Account is locked due to too many failed login attempts. Please try again later or contact an administrator.',
-        lockedUntil: user.lockUntil,
+        error: 'ACCOUNT_TEMP_LOCKED',
+        retryAfter,
       });
     }
     
@@ -489,6 +496,7 @@ const login = async (req, res) => {
     const isValidPassword = await bcrypt.compare(password, user.passwordHash);
     
     if (!isValidPassword) {
+      await recordFailedLoginAttempt(req);
       // Increment failed login attempts
       user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
       
@@ -515,8 +523,8 @@ const login = async (req, res) => {
         
         return res.status(403).json({
           success: false,
-          message: 'Account locked due to too many failed login attempts. Please try again in 15 minutes or contact an administrator.',
-          lockedUntil: user.lockUntil,
+          error: 'ACCOUNT_TEMP_LOCKED',
+          retryAfter: config.security.rateLimit.accountLockSeconds,
         });
       }
       
@@ -551,6 +559,7 @@ const login = async (req, res) => {
       user.lockUntil = null;
       await user.save();
     }
+    await clearFailedLoginAttempts(req);
     
     // Check if password has expired (skip if passwordExpiresAt is null)
     const now = new Date();
