@@ -13,8 +13,8 @@ async function shouldRequireTenantIdInRepositories() {
     () => ClientRepository.find(null, {}, 'Admin'),
     /TenantId required/
   );
-  assert.throws(
-    () => UserRepository.findById(null, '507f1f77bcf86cd799439011'),
+  await assert.rejects(
+    Promise.resolve().then(() => UserRepository.findById(null, '507f1f77bcf86cd799439011')),
     /TenantId required/
   );
   console.log('✓ Repository methods reject missing tenantId');
