@@ -1,19 +1,13 @@
-/**
- * Cases Page
- * 
- * Full list of cases with role-based visibility:
- * - Firm Admin: All firm cases
- * - Regular User: Only assigned cases
- * 
- * PR 177: Core Case Management - Firm Cases List
- */
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
-import { Card } from '../components/common/Card';
-import { Badge } from '../components/common/Badge';
+import { Button } from '../components/common/Button';
 import { Loading } from '../components/common/Loading';
+import { PageHeader } from '../components/layout/PageHeader';
+import { SectionCard } from '../components/layout/SectionCard';
+import { DataTable } from '../components/layout/DataTable';
+import { StatusBadge } from '../components/layout/StatusBadge';
+import { EmptyState } from '../components/layout/EmptyState';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
 import { caseService } from '../services/caseService';
@@ -27,18 +21,17 @@ export const CasesPage = () => {
   const { isAdmin } = usePermissions();
   const navigate = useNavigate();
   const { firmSlug } = useParams();
-  
+
   const [loading, setLoading] = useState(true);
   const [cases, setCases] = useState([]);
   const [filteredCases, setFilteredCases] = useState([]);
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [error, setError] = useState(null);
 
-  // Helper to normalize case identifiers
-  const normalizeCases = (cases = []) =>
-    cases.map(c => ({
-      ...c,
-      caseId: c.caseId || c._id
+  const normalizeCases = (records = []) =>
+    records.map((record) => ({
+      ...record,
+      caseId: record.caseId || record._id,
     }));
 
   useEffect(() => {
@@ -48,12 +41,11 @@ export const CasesPage = () => {
   }, [user, isAdmin]);
 
   useEffect(() => {
-    // Apply client-side filtering
     if (statusFilter === 'ALL') {
       setFilteredCases(cases);
-    } else {
-      setFilteredCases(cases.filter(c => c.status === statusFilter));
+      return;
     }
+    setFilteredCases(cases.filter((item) => item.status === statusFilter));
   }, [statusFilter, cases]);
 
   const loadCases = async () => {
@@ -61,36 +53,31 @@ export const CasesPage = () => {
     setError(null);
     try {
       let casesData = [];
-      
       if (isAdmin) {
-        // Admin: Get all firm cases
         const response = await caseService.getCases();
         if (response.success) {
           casesData = response.data || [];
         }
       } else {
-        // Regular user: Get assigned cases from worklist
         const response = await worklistService.getEmployeeWorklist();
         if (response.success) {
           casesData = response.data || [];
         }
       }
-      
       setCases(normalizeCases(casesData));
     } catch (err) {
       console.error('Failed to load cases:', err);
       setError(err);
-      // Never crash - show empty state instead
       setCases([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCaseClick = (caseId) => {
-    navigate(`/app/firm/${firmSlug}/cases/${caseId}`);
+  const handleCaseClick = (caseRecord) => {
+    navigate(`/app/firm/${firmSlug}/cases/${caseRecord.caseId}`);
   };
-  
+
   const handleCreateCase = () => {
     navigate(`/app/firm/${firmSlug}/cases/create`);
   };
@@ -103,104 +90,74 @@ export const CasesPage = () => {
     );
   }
 
+  const columns = [
+    { key: 'caseName', header: 'Case Name' },
+    { key: 'category', header: 'Category' },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (row) => <StatusBadge status={row.status} />,
+    },
+    {
+      key: 'assignedToName',
+      header: 'Assigned To',
+      render: (row) => row.assignedToName || row.assignedTo || 'Unassigned',
+    },
+    {
+      key: 'updatedAt',
+      header: 'Last Updated',
+      align: 'right',
+      render: (row) => formatDate(row.updatedAt),
+    },
+  ];
+
   return (
     <Layout>
       <div className="cases-page">
-        <div className="cases-page__header">
-          <h1>Cases</h1>
-          <p className="text-secondary">
-            {isAdmin ? 'All cases in your firm' : 'Cases assigned to you'}
-          </p>
-        </div>
+        <PageHeader
+          title="Cases"
+          description="Manage lifecycle, assignments, and status transitions."
+          actions={isAdmin ? <Button variant="primary" onClick={handleCreateCase}>New Case</Button> : null}
+        />
 
-        {/* Filters */}
-        <div className="cases-page__filters">
-          <div className="cases-page__filter-group">
-            <label className="cases-page__filter-label">Status:</label>
-            <select 
-              className="cases-page__filter-select"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="ALL">All</option>
-              <option value={CASE_STATUS.OPEN}>OPEN</option>
-              <option value={CASE_STATUS.RESOLVED}>RESOLVED</option>
-            </select>
-          </div>
-        </div>
+        <SectionCard className="cases-page__filters" title="Filters" subtitle="Narrow down the case list by workflow status.">
+          <label className="cases-page__filter-label" htmlFor="status-filter">Status</label>
+          <select
+            id="status-filter"
+            className="cases-page__filter-select"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="ALL">All statuses</option>
+            <option value={CASE_STATUS.OPEN}>Open</option>
+            <option value={CASE_STATUS.PENDED}>In Review</option>
+            <option value={CASE_STATUS.RESOLVED}>Resolved</option>
+            <option value={CASE_STATUS.FILED}>Filed</option>
+          </select>
+        </SectionCard>
 
-        {/* Error Message */}
-        {error && (
+        {error ? (
           <div className="cases-page__error" role="alert">
-            <p>⚠️ Failed to load cases. Please try refreshing the page.</p>
+            Failed to load cases. Refresh the page or try again in a moment.
           </div>
-        )}
+        ) : null}
 
-        {/* Cases Table */}
-        <Card>
-          {filteredCases.length === 0 ? (
-            <div className="cases-page__empty">
-              <div className="cases-page__empty-icon" role="img" aria-label="Document icon">
-                📋
-              </div>
-              {isAdmin ? (
-                <>
-                  <h3 className="cases-page__empty-title">No cases yet</h3>
-                  <p className="cases-page__empty-description text-secondary">
-                    Your firm has no cases yet. Create the first one to get started.
-                  </p>
-                  <button 
-                    className="neo-btn neo-btn--primary cases-page__empty-cta"
-                    onClick={handleCreateCase}
-                  >
-                    Create Case
-                  </button>
-                </>
-              ) : (
-                <>
-                  <h3 className="cases-page__empty-title">No cases assigned to you</h3>
-                  <p className="cases-page__empty-description text-secondary">
-                    You currently have no assigned cases.
-                  </p>
-                </>
-              )}
-            </div>
-          ) : (
-            <table className="neo-table">
-              <thead>
-                <tr>
-                  <th>Case Name</th>
-                  <th>Category</th>
-                  <th>Status</th>
-                  <th>Assigned To</th>
-                  <th>Last Updated</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredCases.map((caseItem) => (
-                  <tr 
-                    key={caseItem.caseId} 
-                    onClick={() => handleCaseClick(caseItem.caseId)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleCaseClick(caseItem.caseId);
-                    }}
-                    tabIndex={0}
-                  >
-                    <td>{caseItem.caseName}</td>
-                    <td>{caseItem.category}</td>
-                    <td>
-                      <Badge status={caseItem.status}>{caseItem.status}</Badge>
-                    </td>
-                    <td>
-                      {caseItem.assignedToName || caseItem.assignedTo || 'Unassigned'}
-                    </td>
-                    <td>{formatDate(caseItem.updatedAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </Card>
+        <SectionCard title="Case Registry" subtitle={`${filteredCases.length} records`}>
+          <DataTable
+            columns={columns}
+            data={filteredCases}
+            rowKey="caseId"
+            onRowClick={handleCaseClick}
+            emptyContent={
+              <EmptyState
+                title={isAdmin ? 'No cases yet' : 'No assigned cases'}
+                description={isAdmin ? 'Create your first case to start managing firm workflows.' : 'You do not have assigned cases right now.'}
+                actionLabel={isAdmin ? 'Create Case' : undefined}
+                onAction={isAdmin ? handleCreateCase : undefined}
+              />
+            }
+          />
+        </SectionCard>
       </div>
     </Layout>
   );
