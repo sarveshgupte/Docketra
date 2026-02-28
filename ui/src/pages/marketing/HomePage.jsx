@@ -66,44 +66,75 @@ const GOVERNANCE_HIGHLIGHTS = [
 ];
 
 export const HomePage = () => (
-  <div className="bg-white text-slate-900">
-    {/* Hero Section */}
-    <section className="border-b border-slate-200 py-20 text-center">
-      <h1 className="mx-auto max-w-3xl text-4xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-5xl">
-        Enterprise-Ready Work &amp; Case Management
-      </h1>
-      <p className="mx-auto mt-5 max-w-2xl text-lg text-slate-600">
-        Structured workflows, role-based governance, and secure document-backed case management.
-      </p>
-      <div className="mt-8 flex flex-wrap justify-center gap-4">
-        <Link
-          to="/signup"
-          className="rounded-md bg-slate-900 px-6 py-3 text-sm font-medium text-white hover:bg-slate-700"
-        >
-          Create Free Workspace
-        </Link>
-        <a
-          href="mailto:demo@docketra.com"
-          className="rounded-md border border-slate-300 bg-white px-6 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
-        >
-          Request Demo
-        </a>
+  <div className="w-full">
+    <section className="w-full py-24 px-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <h1 className="text-5xl font-semibold tracking-tight leading-tight">
+              Enterprise-Ready Work &amp; Case Management
+            </h1>
+            <p className="mt-6 text-lg text-gray-600 leading-relaxed max-w-xl">
+              Structured workflows, role-based governance, and secure document-backed case
+              management.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-4">
+              <Link
+                to="/signup"
+                className="rounded-xl bg-gray-900 px-6 py-3 text-sm font-medium text-white transition-all duration-200 hover:scale-[1.02] hover:bg-black active:scale-[0.98]"
+              >
+                Create Free Workspace
+              </Link>
+              <a
+                href="mailto:demo@docketra.com"
+                className="rounded-xl border border-gray-300 bg-white px-6 py-3 text-sm font-medium text-gray-800 transition-all duration-200 hover:scale-[1.02] hover:bg-gray-50 active:scale-[0.98]"
+              >
+                Request Demo
+              </a>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-gray-200 bg-gradient-to-br from-white to-gray-100 p-8 shadow-md hover:shadow-xl transition-shadow duration-300">
+            <p className="text-sm font-semibold text-gray-700">Platform Preview</p>
+            <div className="mt-6 grid grid-cols-2 gap-4">
+              <div className="rounded-xl border border-gray-200 bg-white p-4">
+                <p className="text-xs text-gray-500">Open Cases</p>
+                <p className="mt-2 text-2xl font-semibold tracking-tight">124</p>
+              </div>
+              <div className="rounded-xl border border-gray-200 bg-white p-4">
+                <p className="text-xs text-gray-500">SLA Compliance</p>
+                <p className="mt-2 text-2xl font-semibold tracking-tight">98.6%</p>
+              </div>
+              <div className="col-span-2 rounded-xl border border-gray-200 bg-white p-4">
+                <p className="text-xs text-gray-500">Live Workstreams</p>
+                <div className="mt-3 space-y-2">
+                  <div className="h-2 rounded bg-gray-200">
+                    <div className="h-2 w-4/5 rounded bg-gray-900" />
+                  </div>
+                  <div className="h-2 rounded bg-gray-200">
+                    <div className="h-2 w-2/3 rounded bg-gray-700" />
+                  </div>
+                  <div className="h-2 rounded bg-gray-200">
+                    <div className="h-2 w-1/2 rounded bg-gray-500" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
-    {/* Who It's For Section */}
-    <section className="bg-slate-50 py-16">
-      <div className="mx-auto max-w-5xl px-4">
-        <h2 className="mb-10 text-center text-2xl font-semibold text-slate-800">
-          Who It&apos;s For
-        </h2>
-        <div className="flex flex-wrap justify-center gap-4">
+    <section className="w-full py-24 px-6 bg-gray-50">
+      <div className="max-w-6xl mx-auto">
+        <h2 className="text-3xl font-semibold tracking-tight leading-tight">Who It&apos;s For</h2>
+        <div className="mt-8 flex flex-wrap gap-4">
           {WHO_ITS_FOR.map(({ label, icon }) => (
             <div
               key={label}
-              className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-700 shadow-sm"
+              className="rounded-2xl border border-gray-200 bg-white px-5 py-3 text-sm font-medium text-gray-700 shadow-md hover:shadow-xl transition-shadow duration-300"
             >
-              <span aria-hidden="true">{icon}</span>
+              <span className="mr-2" aria-hidden="true">{icon}</span>
               {label}
             </div>
           ))}
@@ -111,75 +142,39 @@ export const HomePage = () => (
       </div>
     </section>
 
-    {/* Core Features Grid */}
-    <section className="border-t border-slate-200 py-16">
-      <div className="mx-auto max-w-5xl px-4">
-        <h2 className="mb-10 text-center text-2xl font-semibold text-slate-800">
-          Core Features
-        </h2>
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <section className="w-full py-24 px-6">
+      <div className="max-w-6xl mx-auto">
+        <h2 className="text-3xl font-semibold tracking-tight leading-tight">Core Features</h2>
+        <div className="mt-8 grid gap-12 md:grid-cols-2 lg:grid-cols-3">
           {CORE_FEATURES.map(({ title, description }) => (
             <div
               key={title}
-              className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm"
+              className="rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 border border-gray-200 bg-white p-8"
             >
-              <h3 className="mb-2 text-base font-semibold text-slate-800">{title}</h3>
-              <p className="text-sm leading-relaxed text-slate-600">{description}</p>
+              <h3 className="text-lg font-semibold tracking-tight leading-tight">{title}</h3>
+              <p className="mt-6 text-gray-600 leading-relaxed">{description}</p>
             </div>
           ))}
         </div>
       </div>
     </section>
 
-    {/* Security & Governance Section */}
-    <section className="border-t border-slate-200 bg-slate-50 py-16">
-      <div className="mx-auto max-w-5xl px-4">
-        <h2 className="mb-3 text-center text-2xl font-semibold text-slate-800">
-          Security &amp; Governance
-        </h2>
-        <p className="mb-10 text-center text-sm text-slate-500">
+    <section className="w-full py-24 px-6 bg-gray-50">
+      <div className="max-w-6xl mx-auto">
+        <h2 className="text-3xl font-semibold tracking-tight leading-tight">Security &amp; Governance</h2>
+        <p className="mt-6 text-gray-600 leading-relaxed max-w-xl">
           Built for teams that operate under strict compliance and accountability requirements.
         </p>
-        <div className="grid gap-6 sm:grid-cols-2">
+        <div className="mt-8 grid gap-12 md:grid-cols-2">
           {GOVERNANCE_HIGHLIGHTS.map(({ title, description }) => (
-            <div key={title} className="flex gap-4 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="mt-0.5 flex-shrink-0 text-slate-400">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fillRule="evenodd" d="M10 1a9 9 0 100 18A9 9 0 0010 1zm3.707 6.293a1 1 0 00-1.414 0L9 11.586 7.707 10.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4a1 1 0 000-1.414z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="mb-1 text-sm font-semibold text-slate-800">{title}</h3>
-                <p className="text-sm leading-relaxed text-slate-600">{description}</p>
-              </div>
+            <div
+              key={title}
+              className="rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 border border-gray-200 bg-white p-8"
+            >
+              <h3 className="text-lg font-semibold tracking-tight leading-tight">{title}</h3>
+              <p className="mt-6 text-gray-600 leading-relaxed">{description}</p>
             </div>
           ))}
-        </div>
-      </div>
-    </section>
-
-    {/* Final CTA Section */}
-    <section className="border-t border-slate-200 py-16 text-center">
-      <div className="mx-auto max-w-xl px-4">
-        <h2 className="text-2xl font-semibold text-slate-800">
-          Ready to streamline your operations?
-        </h2>
-        <p className="mt-3 text-sm text-slate-500">
-          Create a free Starter workspace or speak with our team to see how Docketra fits your workflow.
-        </p>
-        <div className="mt-7 flex flex-wrap justify-center gap-4">
-          <Link
-            to="/signup"
-            className="rounded-md bg-slate-900 px-6 py-3 text-sm font-medium text-white hover:bg-slate-700"
-          >
-            Create Free Workspace
-          </Link>
-          <a
-            href="mailto:demo@docketra.com"
-            className="rounded-md border border-slate-300 bg-white px-6 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            Request Demo
-          </a>
         </div>
       </div>
     </section>

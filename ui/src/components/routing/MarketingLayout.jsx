@@ -2,63 +2,71 @@ import React from 'react';
 import { Link, Outlet } from 'react-router-dom';
 import { COMPANY_NAME, COMPANY_CIN } from '../../lib/legalVersion';
 
+const navLinkClass = 'text-gray-600 hover:text-black transition-colors';
+
 export const MarketingLayout = () => {
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
-      <header className="border-b border-slate-200 bg-white">
-        <nav className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-4">
-          <Link to="/" className="text-lg font-semibold text-slate-900">
+    <div className="min-h-screen bg-white text-gray-900">
+      <header className="sticky top-0 z-40 border-b border-gray-200 backdrop-blur bg-white/80">
+        <nav className="mx-auto flex h-20 w-full max-w-7xl items-center justify-between px-6">
+          <Link to="/" className="text-xl font-semibold tracking-tight">
             Docketra
           </Link>
-          <div className="flex items-center gap-6 text-sm text-slate-600">
-            <Link to="/features" className="hover:text-slate-900">Features</Link>
-            <Link to="/pricing" className="hover:text-slate-900">Pricing</Link>
-            <Link to="/security" className="hover:text-slate-900">Security</Link>
-            <Link to="/about" className="hover:text-slate-900">About</Link>
-                        <Link
+
+          <div className="flex items-center gap-6 text-sm font-medium">
+            <Link to="/features" className={navLinkClass}>Features</Link>
+            <Link to="/pricing" className={navLinkClass}>Pricing</Link>
+            <Link to="/security" className={navLinkClass}>Security</Link>
+            <Link to="/about" className={navLinkClass}>About</Link>
+            <Link
               to="/signup"
-              className="rounded-md bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-700"
+              className="rounded-xl bg-gray-900 px-5 py-2.5 text-white transition-all duration-200 hover:scale-[1.02] hover:bg-black active:scale-[0.98]"
             >
               Create Free Workspace
             </Link>
           </div>
         </nav>
       </header>
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">
+
+      <main className="max-w-7xl mx-auto px-6">
         <Outlet />
       </main>
-      <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto w-full max-w-5xl px-4 py-10">
-          <div className="grid gap-8 sm:grid-cols-3">
-            <div>
-              <p className="text-sm font-semibold text-slate-700">Product</p>
-              <ul className="mt-3 space-y-2 text-sm text-slate-500">
-                <li><Link to="/features" className="hover:text-slate-800">Features</Link></li>
-                <li><Link to="/pricing" className="hover:text-slate-800">Pricing</Link></li>
-                <li><Link to="/security" className="hover:text-slate-800">Security</Link></li>
-              </ul>
+
+      <footer className="border-t border-gray-200 bg-white">
+        <section className="w-full py-24 px-6">
+          <div className="max-w-6xl mx-auto">
+            <div className="grid gap-8 sm:grid-cols-3">
+              <div>
+                <p className="text-sm font-semibold text-gray-700">Product</p>
+                <ul className="mt-4 space-y-2 text-sm text-gray-600">
+                  <li><Link to="/features" className={navLinkClass}>Features</Link></li>
+                  <li><Link to="/pricing" className={navLinkClass}>Pricing</Link></li>
+                  <li><Link to="/security" className={navLinkClass}>Security</Link></li>
+                </ul>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-700">Company</p>
+                <ul className="mt-4 space-y-2 text-sm text-gray-600">
+                  <li><Link to="/about" className={navLinkClass}>About</Link></li>
+                  <li><Link to="/contact" className={navLinkClass}>Contact</Link></li>
+                </ul>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-700">Legal</p>
+                <ul className="mt-4 space-y-2 text-sm text-gray-600">
+                  <li><Link to="/terms" className={navLinkClass}>Terms</Link></li>
+                  <li><Link to="/privacy" className={navLinkClass}>Privacy</Link></li>
+                </ul>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-700">Company</p>
-              <ul className="mt-3 space-y-2 text-sm text-slate-500">
-                <li><Link to="/about" className="hover:text-slate-800">About</Link></li>
-                <li><Link to="/contact" className="hover:text-slate-800">Contact</Link></li>
-              </ul>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-700">Legal</p>
-              <ul className="mt-3 space-y-2 text-sm text-slate-500">
-                <li><Link to="/terms" className="hover:text-slate-800">Terms</Link></li>
-                <li><Link to="/privacy" className="hover:text-slate-800">Privacy</Link></li>
-              </ul>
+
+            <div className="mt-8 border-t border-gray-200 pt-6 text-xs text-gray-500">
+              <p>© {new Date().getFullYear()} Docketra</p>
+              <p className="mt-1">Operated by {COMPANY_NAME}</p>
+              <p className="mt-1">CIN: {COMPANY_CIN}</p>
             </div>
           </div>
-          <div className="mt-8 border-t border-slate-200 pt-6 text-xs text-slate-400">
-            <p>© {new Date().getFullYear()} Docketra</p>
-            <p className="mt-1">Operated by {COMPANY_NAME}</p>
-            <p className="mt-0.5">CIN: {COMPANY_CIN}</p>
-          </div>
-        </div>
+        </section>
       </footer>
     </div>
   );
