@@ -7,6 +7,8 @@ module.exports = {
       driveId: nonEmptyString,
       rootFolderId: nonEmptyString,
       refreshToken: nonEmptyString,
+      compressionEnabled: z.boolean().optional(),
+      compressionLevel: z.number().int().min(1).max(9).optional(),
     }).strict(),
   },
 };

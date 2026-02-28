@@ -229,6 +229,7 @@ const corsOptions = {
 // Handle CORS preflight requests before auth/transaction middleware
 app.use(optionsPreflight([frontendOrigin], CORS_ALLOWED_HEADERS, CORS_ALLOWED_METHODS));
 app.use(cors(corsOptions));
+app.use('/api/inbound/email', express.raw({ type: '*/*', limit: '30mb' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(requestLifecycle);

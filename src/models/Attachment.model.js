@@ -187,6 +187,27 @@ const attachmentSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
+
+  emailThreadId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'EmailThread',
+    index: true,
+  },
+
+  compressed: {
+    type: Boolean,
+    default: false,
+  },
+
+  // Size before optional compression (or original size when compression is skipped).
+  originalSize: {
+    type: Number,
+  },
+
+  // Size persisted to storage after optional compression.
+  finalSize: {
+    type: Number,
+  },
   
   /**
    * When the attachment was uploaded
