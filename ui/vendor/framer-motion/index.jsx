@@ -4,7 +4,7 @@ const EASING_MAP = {
   easeOut: 'cubic-bezier(0, 0, 0.2, 1)',
 };
 
-const toTransform = (value = {}) => `translateY(${value.y ?? 0}px)`;
+const toTransform = (value = {}) => `translateY(${value.y ?? 0}px) scale(${value.scale ?? 1})`;
 
 const MotionDiv = ({
   children,
@@ -20,6 +20,11 @@ const MotionDiv = ({
     ? `cubic-bezier(${transition.ease.join(',')})`
     : EASING_MAP[transition.ease] || 'ease';
   const duration = transition.duration ?? 0.25;
+  const delay = transition.delay ?? 0;
+  const prefersReducedMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 
   const stateStyles = {
     initial: {
@@ -43,8 +48,10 @@ const MotionDiv = ({
       {...props}
       style={{
         ...style,
-        ...resolved,
-        transition: `opacity ${duration}s ${easing}, transform ${duration}s ${easing}`,
+        ...(prefersReducedMotion ? { opacity: 1, transform: 'none' } : resolved),
+        transition: prefersReducedMotion
+          ? 'none'
+          : `opacity ${duration}s ${easing} ${delay}s, transform ${duration}s ${easing} ${delay}s`,
       }}
     >
       {children}
