@@ -13,6 +13,7 @@ const { CASE_CATEGORIES, CASE_LOCK_CONFIG, CASE_STATUS, COMMENT_PREVIEW_LENGTH, 
 const { isProduction } = require('../config/config');
 const { logCaseListViewed, logAdminAction } = require('../services/auditLog.service');
 const caseActionService = require('../services/caseAction.service');
+const CaseService = require('../services/case.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { getMimeType, sanitizeFilename } = require('../utils/fileUtils');
 const { cleanupTempFile } = require('../utils/tempFile');
@@ -925,7 +926,7 @@ const unpendCase = async (req, res) => {
     }
     
     // Call service to unpend case - with firm scoping
-    const caseData = await caseActionService.unpendCase(req.user.firmId, caseId, comment, req.user);
+    const caseData = await caseActionService.unpendCase(req.user.firmId, caseId, comment, req.user, req);
     
     res.json({
       success: true,
@@ -1008,29 +1009,38 @@ const updateCaseStatus = async (req, res) => {
     }
     
     const oldStatus = caseData.status;
-    
-    // Update status
-    caseData.status = status;
-    
-    // Handle Pending status - require pendingUntil
-    if (status === 'Pending' && !pendingUntil) {
+    const normalizedStatus = status === 'Pending' ? CASE_STATUS.PENDED : status;
+
+    // Handle Pending/PENDED status - require pendingUntil
+    if (normalizedStatus === CASE_STATUS.PENDED && !pendingUntil) {
       return res.status(400).json({
         success: false,
-        message: 'pendingUntil date is required when status is Pending',
+        message: 'pendingUntil date is required when status is Pending or PENDED',
       });
     }
-    
-    if (status === 'Pending') {
-      caseData.pendingUntil = pendingUntil;
-    }
-    
-    await caseData.save();
+
+    await CaseService.updateStatus(caseData.caseId, normalizedStatus, {
+      tenantId: req.user.firmId,
+      role: req.user.role,
+      userId: req.user.xID,
+      performedByXID: req.user.xID,
+      performedBy: performedBy.toLowerCase(),
+      actorRole: req.user.role === 'Admin' ? 'ADMIN' : 'USER',
+      ipAddress: req.ip || null,
+      userAgent: req.get('user-agent'),
+      req,
+      statusPatch: normalizedStatus === CASE_STATUS.PENDED
+        ? { pendingUntil }
+        : { pendingUntil: null },
+    });
+
+    caseData = await CaseRepository.findByInternalId(req.user.firmId, caseData.caseInternalId, req.user.role);
     
     // Create history entry
     await CaseHistory.create({
       caseId,
       actionType: 'StatusChanged',
-      description: `Status changed from ${oldStatus} to ${status}`,
+      description: `Status changed from ${oldStatus} to ${normalizedStatus}`,
       performedBy: performedBy.toLowerCase(),
     });
     
