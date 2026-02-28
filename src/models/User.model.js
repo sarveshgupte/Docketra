@@ -46,6 +46,13 @@ const userSchema = new mongoose.Schema({
     trim: true,
     match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email address'],
   },
+
+
+  phoneNumber: {
+    type: String,
+    default: null,
+    trim: true,
+  },
   
   // Firm/Organization ID for multi-tenancy
   // All users belong to a firm - enforces data isolation
