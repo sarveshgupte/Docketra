@@ -72,7 +72,7 @@ const UserRepository = {
     return User.findOne({
       firmId,
       email: email.trim().toLowerCase(),
-      status: { $ne: 'DELETED' },
+      status: { $ne: 'deleted' },
     });
   },
 
@@ -182,7 +182,7 @@ const UserRepository = {
     if (!normalizedEmail) {
       return null;
     }
-    return User.findOne({ email: normalizedEmail, status: { $ne: 'DELETED' } });
+    return User.findOne({ email: normalizedEmail, status: { $ne: 'deleted' } });
   },
 };
 

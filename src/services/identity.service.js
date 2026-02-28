@@ -38,12 +38,12 @@ const resolveUserIdentity = async ({
       candidate = await User.findOne({
         firmId,
         email: normalizedEmail,
-        status: { $ne: 'DELETED' },
+        status: { $ne: 'deleted' },
       }, null, withSession);
     } else {
       const candidates = await User.find({
         email: normalizedEmail,
-        status: { $ne: 'DELETED' },
+        status: { $ne: 'deleted' },
       }, null, withSession).limit(2);
       if (candidates.length > 1) {
         const maskedEmail = normalizedEmail.includes('@')

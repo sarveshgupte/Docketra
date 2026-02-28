@@ -53,7 +53,7 @@ async function migrateAssignedToXID() {
       
       try {
         // Find user by email
-        const user = await User.findOne({ email, status: { $ne: 'DELETED' } }).lean();
+        const user = await User.findOne({ email, status: { $ne: 'deleted' } }).lean();
         
         if (!user) {
           console.log(`⚠️  Case ${caseData.caseId}: User not found for email ${email}`);

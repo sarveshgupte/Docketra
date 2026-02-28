@@ -147,7 +147,7 @@ const authenticate = async (req, res, next) => {
     }
     
     // Check if user is active
-    if (!user.isActive) {
+    if (user.status !== 'active') {
       noteAuthFailure();
       return res.status(403).json({
         success: false,
