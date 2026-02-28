@@ -170,6 +170,7 @@ export const WorklistPage = () => {
                       tabIndex={0}
                       role="row"
                       aria-label={`Case: ${caseItem.caseName}, status ${caseItem.status}`}
+                      className="worklist__row"
                     >
                       <td>{caseItem.caseName}</td>
                       <td>{caseItem.category}</td>

@@ -9,7 +9,6 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { FirmLayout } from './components/routing/FirmLayout';
 import { MarketingLayout } from './components/routing/MarketingLayout';
 import { DefaultRoute } from './components/routing/DefaultRoute';
-import { PageWrapper } from './components/layout/PageWrapper';
 import { LoginPage } from './pages/LoginPage';
 import { FirmLoginPage } from './pages/FirmLoginPage';
 import { ChangePasswordPage } from './pages/ChangePasswordPage';
@@ -65,8 +64,6 @@ const LEGACY_SLUG_BLOCKLIST = new Set([
 const FIRM_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const DEFAULT_FIRM_SUFFIX = '/dashboard';
 
-const withPageTransition = (component) => <PageWrapper>{component}</PageWrapper>;
-
 const LegacyFirmScopedRedirect = () => {
   const { firmSlug } = useParams();
   const location = useLocation();
@@ -109,143 +106,143 @@ export const Router = () => {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-      <Route element={<MarketingLayout />}>
-        <Route path="/" element={withPageTransition(<MarketingHomePage />)} />
-        <Route path="/features" element={withPageTransition(<MarketingFeaturesPage />)} />
-        <Route path="/pricing" element={withPageTransition(<MarketingPricingPage />)} />
-        <Route path="/terms" element={withPageTransition(<MarketingTermsPage />)} />
-        <Route path="/privacy" element={withPageTransition(<MarketingPrivacyPage />)} />
-        <Route path="/security" element={withPageTransition(<MarketingSecurityPage />)} />
-        <Route path="/about" element={withPageTransition(<MarketingAboutPage />)} />
-        <Route path="/contact" element={withPageTransition(<MarketingContactPage />)} />
-        <Route path="/signup" element={withPageTransition(<MarketingSignupPage />)} />
-        <Route path="/superadmin" element={withPageTransition(<LoginPage />)} />
-        <Route path="/superadmin/login" element={withPageTransition(<LoginPage />)} />
-      </Route>
+        <Route element={<MarketingLayout />}>
+          <Route path="/" element={<MarketingHomePage />} />
+          <Route path="/features" element={<MarketingFeaturesPage />} />
+          <Route path="/pricing" element={<MarketingPricingPage />} />
+          <Route path="/terms" element={<MarketingTermsPage />} />
+          <Route path="/privacy" element={<MarketingPrivacyPage />} />
+          <Route path="/security" element={<MarketingSecurityPage />} />
+          <Route path="/about" element={<MarketingAboutPage />} />
+          <Route path="/contact" element={<MarketingContactPage />} />
+          <Route path="/signup" element={<MarketingSignupPage />} />
+          <Route path="/superadmin" element={<LoginPage />} />
+          <Route path="/superadmin/login" element={<LoginPage />} />
+        </Route>
 
-      <Route path="/:firmSlug/login" element={withPageTransition(<FirmLoginPage />)} />
-      <Route path="/forgot-password" element={withPageTransition(<ForgotPasswordPage />)} />
-      <Route path="/reset-password" element={withPageTransition(<ResetPasswordPage />)} />
-      <Route path="/change-password" element={withPageTransition(<ChangePasswordPage />)} />
-      <Route path="/auth/setup-account" element={withPageTransition(<SetPasswordPage />)} />
-      <Route path="/setup-password" element={withPageTransition(<SetPasswordPage />)} />
-      <Route path="/google-callback" element={withPageTransition(<GoogleCallbackPage />)} />
+        <Route path="/:firmSlug/login" element={<FirmLoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/change-password" element={<ChangePasswordPage />} />
+        <Route path="/auth/setup-account" element={<SetPasswordPage />} />
+        <Route path="/setup-password" element={<SetPasswordPage />} />
+        <Route path="/google-callback" element={<GoogleCallbackPage />} />
 
-      <Route
-        path="/app/superadmin"
-        element={withPageTransition(
-          <ProtectedRoute requireSuperadmin>
-            <PlatformDashboard />
-          </ProtectedRoute>
-        )}
-      />
+        <Route
+          path="/app/superadmin"
+          element={(
+            <ProtectedRoute requireSuperadmin>
+              <PlatformDashboard />
+            </ProtectedRoute>
+          )}
+        />
 
-      <Route
-        path="/app/superadmin/firms"
-        element={withPageTransition(
-          <ProtectedRoute requireSuperadmin>
-            <FirmsManagement />
-          </ProtectedRoute>
-        )}
-      />
+        <Route
+          path="/app/superadmin/firms"
+          element={(
+            <ProtectedRoute requireSuperadmin>
+              <FirmsManagement />
+            </ProtectedRoute>
+          )}
+        />
 
-      <Route path="/app/firm/:firmSlug" element={<FirmLayout />}>
-        <Route
-          path="dashboard"
-          element={withPageTransition(
-            <ProtectedRoute>
-              <DashboardPage />
-            </ProtectedRoute>
-          )}
-        />
-        <Route
-          path="worklist"
-          element={withPageTransition(
-            <ProtectedRoute>
-              <WorklistPage />
-            </ProtectedRoute>
-          )}
-        />
-        <Route
-          path="my-worklist"
-          element={withPageTransition(
-            <ProtectedRoute>
-              <WorklistPage />
-            </ProtectedRoute>
-          )}
-        />
-        <Route
-          path="global-worklist"
-          element={withPageTransition(
-            <ProtectedRoute>
-              <WorkbasketPage />
-            </ProtectedRoute>
-          )}
-        />
-        <Route
-          path="cases/:caseId"
-          element={withPageTransition(
-            <ProtectedRoute>
-              <CaseDetailPage />
-            </ProtectedRoute>
-          )}
-        />
-        <Route
-          path="cases"
-          element={withPageTransition(
-            <ProtectedRoute>
-              <CasesPage />
-            </ProtectedRoute>
-          )}
-        />
-        <Route
-          path="cases/create"
-          element={withPageTransition(
-            <ProtectedRoute>
-              <CreateCasePage />
-            </ProtectedRoute>
-          )}
-        />
-        <Route
-          path="profile"
-          element={withPageTransition(
-            <ProtectedRoute>
-              <ProfilePage />
-            </ProtectedRoute>
-          )}
-        />
-        <Route
-          path="admin"
-          element={withPageTransition(
-            <ProtectedRoute requireAdmin>
-              <AdminPage />
-            </ProtectedRoute>
-          )}
-        />
-        <Route
-          path="admin/reports"
-          element={withPageTransition(
-            <ProtectedRoute requireAdmin>
-              <ReportsDashboard />
-            </ProtectedRoute>
-          )}
-        />
-        <Route
-          path="admin/reports/detailed"
-          element={withPageTransition(
-            <ProtectedRoute requireAdmin>
-              <DetailedReports />
-            </ProtectedRoute>
-          )}
-        />
-        <Route path="*" element={withPageTransition(<NotFoundPage />)} />
-      </Route>
-      <Route path="/superadmin/*" element={<LegacySuperadminRedirect />} />
-      <Route path="/firm/*" element={<LegacyFirmRedirect />} />
-      <Route path="/f/:firmSlug/*" element={<LegacyFirmScopedRedirect />} />
-      <Route path="/app/firm" element={<DefaultRoute />} />
-      <Route path="/:firmSlug/*" element={<LegacySlugRedirect />} />
-      <Route path="*" element={withPageTransition(<NotFoundPage />)} />
+        <Route path="/app/firm/:firmSlug" element={<FirmLayout />}>
+          <Route
+            path="dashboard"
+            element={(
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="worklist"
+            element={(
+              <ProtectedRoute>
+                <WorklistPage />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="my-worklist"
+            element={(
+              <ProtectedRoute>
+                <WorklistPage />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="global-worklist"
+            element={(
+              <ProtectedRoute>
+                <WorkbasketPage />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="cases/:caseId"
+            element={(
+              <ProtectedRoute>
+                <CaseDetailPage />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="cases"
+            element={(
+              <ProtectedRoute>
+                <CasesPage />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="cases/create"
+            element={(
+              <ProtectedRoute>
+                <CreateCasePage />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="profile"
+            element={(
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="admin"
+            element={(
+              <ProtectedRoute requireAdmin>
+                <AdminPage />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="admin/reports"
+            element={(
+              <ProtectedRoute requireAdmin>
+                <ReportsDashboard />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="admin/reports/detailed"
+            element={(
+              <ProtectedRoute requireAdmin>
+                <DetailedReports />
+              </ProtectedRoute>
+            )}
+          />
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
+        <Route path="/superadmin/*" element={<LegacySuperadminRedirect />} />
+        <Route path="/firm/*" element={<LegacyFirmRedirect />} />
+        <Route path="/f/:firmSlug/*" element={<LegacyFirmScopedRedirect />} />
+        <Route path="/app/firm" element={<DefaultRoute />} />
+        <Route path="/:firmSlug/*" element={<LegacySlugRedirect />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </AnimatePresence>
   );
