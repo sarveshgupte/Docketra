@@ -15,15 +15,15 @@
 /* Enterprise Design Tokens - Custom Theme */
 @theme {
   /* Colors */
-  --color-primary-600: #0F172A;
-  --color-primary-500: #334155;
-  --color-surface-base: #F8FAFC;
+  --color-primary-600: #111827;
+  --color-primary-500: #374151;
+  --color-surface-base: #F9FAFB;
   --color-surface-card: #FFFFFF;
-  --color-border-subtle: #E2E8F0;
-  --color-border-strong: #CBD5E1;
-  --color-text-main: #0F172A;
-  --color-text-body: #475569;
-  --color-text-muted: #94A3B8;
+  --color-border-subtle: #E5E7EB;
+  --color-border-strong: #D1D5DB;
+  --color-text-main: #111827;
+  --color-text-body: #374151;
+  --color-text-muted: #6B7280;
   --color-success: #059669;
   --color-warning: #D97706;
   --color-danger: #DC2626;

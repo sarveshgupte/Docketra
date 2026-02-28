@@ -8,15 +8,20 @@
   /* === 2026 Design Token System === */
 
   /* App & Surface Colors */
-  --color-bg-app: #F3F6FB;
+  --color-bg-app: #F9FAFB;
   --color-surface: #FFFFFF;
-  --color-surface-raised: #FAFBFD;
-  --color-border: #E2E8F0;
+  --color-surface-raised: #FFFFFF;
+  --color-border: #E5E7EB;
+
+  /* Semantic aliases requested by design system */
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F9FAFB;
+  --border-focus: 1px solid #3B82F6;
 
   /* Brand Colors */
-  --color-primary-dark: #0B1F3A;   /* sidebar background */
+  --color-primary-dark: #0B1F3A;   /* primary dark – used for button hover */
   --color-primary: #1E3A8A;         /* primary buttons, avatars, active states */
-  --color-accent: #D97706;          /* saffron – active sidebar border indicator */
+  --color-accent: #3B82F6;          /* blue – active sidebar border indicator */
 
   /* Semantic Status Colors (muted-neon palette) */
   --color-success: #059669;
@@ -53,20 +58,20 @@
   --radius-xl: 20px;
   --radius-pill: 999px;
 
-  /* Elevation / Shadow Scale */
-  --shadow-xs: 0 1px 2px rgba(11, 31, 58, 0.04);
-  --shadow-sm: 0 1px 3px rgba(11, 31, 58, 0.06), 0 1px 2px rgba(11, 31, 58, 0.04);
-  --shadow-md: 0 4px 12px rgba(11, 31, 58, 0.08), 0 2px 4px rgba(11, 31, 58, 0.04);
-  --shadow-lg: 0 10px 28px rgba(11, 31, 58, 0.10), 0 4px 8px rgba(11, 31, 58, 0.05);
+  /* Elevation / Shadow Scale — soft, multi-layered */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.10), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.10), 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 28px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.06);
 
-  /* Glass / Glassmorphism tokens */
+  /* Glass / Glassmorphism tokens — light frosted glass */
   --glass-bg: rgba(255, 255, 255, 0.75);
-  --glass-bg-strong: rgba(255, 255, 255, 0.92);
-  --glass-border: rgba(255, 255, 255, 0.15);
-  --glass-border-subtle: rgba(255, 255, 255, 0.08);
-  --glass-blur: blur(14px);
+  --glass-bg-strong: rgba(255, 255, 255, 0.80);
+  --glass-border: rgba(229, 231, 235, 0.80);
+  --glass-border-subtle: rgba(229, 231, 235, 0.50);
+  --glass-blur: blur(8px);
   --glass-blur-sm: blur(8px);
-  --glass-shadow: 0 8px 32px rgba(11, 31, 58, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.20);
+  --glass-shadow: 0 1px 3px rgba(0, 0, 0, 0.10), 0 1px 2px rgba(0, 0, 0, 0.06);
 
   /* Hover and state backgrounds */
   --color-primary-hover-bg: rgba(30, 58, 138, 0.05);
@@ -91,13 +96,15 @@
 
   --surface-base: var(--color-bg-app);
   --surface-card: var(--color-surface);
+  --surface-raised: var(--color-surface);
+  --surface-inset: var(--color-bg-app);
 
   --border-subtle: var(--color-border);
   --border-strong: #CBD5E1;
 
-  --text-main: #0F172A;
-  --text-body: #475569;
-  --text-muted: #94A3B8;
+  --text-main: #111827;
+  --text-body: #374151;
+  --text-muted: #6B7280;
 
   --success: var(--color-success);
   --warning: var(--color-warning);
@@ -152,34 +159,4 @@
   /* Impersonation banner tokens */
   --impersonation-read-only-bg: rgba(239, 68, 68, 0.92);
   --impersonation-full-access-bg: rgba(234, 179, 8, 0.95);
-}
-
-/* ─── Dark Mode ─────────────────────────────────────────────────── */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg-app: #0A0E1A;
-    --color-surface: #111827;
-    --color-surface-raised: #1A2236;
-    --color-border: #1F2D42;
-
-    --glass-bg: rgba(17, 24, 39, 0.80);
-    --glass-bg-strong: rgba(17, 24, 39, 0.95);
-    --glass-border: rgba(255, 255, 255, 0.08);
-    --glass-border-subtle: rgba(255, 255, 255, 0.04);
-    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.50), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-
-    --text-main: #F1F5F9;
-    --text-body: #94A3B8;
-    --text-muted: #475569;
-
-    --border-subtle: #1F2D42;
-    --border-strong: #2D3F58;
-
-    --color-primary-hover-bg: rgba(30, 58, 138, 0.15);
-    --color-row-hover: rgba(255, 255, 255, 0.03);
-
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.30);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.40);
-    --shadow-lg: 0 10px 28px rgba(0, 0, 0, 0.50);
-  }
 }
