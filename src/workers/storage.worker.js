@@ -236,6 +236,7 @@ const storageWorker = new Worker(
           }
 
           const contentHash = createHash('sha256').update(fileBuffer).digest('hex');
+          const finalSize = Number(caseFile.size) || 0;
           let driveFileId;
           let isDuplicate = false;
           const existing = await Attachment.findOne({
@@ -263,7 +264,7 @@ const storageWorker = new Worker(
               });
               throw uploadErr;
             }
-            await updateTenantStorageUsage(caseFile.firmId, caseFile.size);
+            await updateTenantStorageUsage(caseFile.firmId, finalSize);
           }
 
           console.info('[AttachmentDedup]', {
@@ -289,15 +290,15 @@ const storageWorker = new Worker(
                 clientId: caseFile.clientId || undefined,
                 fileName: caseFile.originalName,
                 driveFileId,
-                size: caseFile.size,
+                size: finalSize,
                 mimeType: caseFile.mimeType,
                 description: caseFile.description,
                 checksum: contentHash,
                 contentHash,
                 isDuplicate,
                 compressed: false,
-                originalSize: caseFile.size,
-                finalSize: caseFile.size,
+                originalSize: finalSize,
+                finalSize,
                 createdBy: caseFile.createdBy,
                 createdByXID: caseFile.createdByXID,
                 createdByName: caseFile.createdByName,
