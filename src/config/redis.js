@@ -33,6 +33,9 @@ const getRedisClient = () => {
   
   // No Redis URL configured - use in-memory store
   if (!redisUrl) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('REDIS_URL is required in production for security controls');
+    }
     console.log('[REDIS] No REDIS_URL configured - using in-memory rate limiting (single instance only)');
     console.log('[REDIS] For production, set REDIS_URL for distributed rate limiting');
     return null;

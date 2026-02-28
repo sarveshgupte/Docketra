@@ -2,9 +2,6 @@ const express = require('express');
 const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
 const routeSchemas = require('../schemas/client.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 const { authenticate } = require('../middleware/auth.middleware');
 const { attachFirmContext } = require('../middleware/firmContext.middleware');
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
@@ -12,7 +9,9 @@ const {
   userReadLimiter,
   userWriteLimiter,
   attachmentLimiter,
+  sensitiveLimiter,
 } = require('../middleware/rateLimiters');
+const { createSecureUpload, enforceUploadSecurity } = require('../middleware/uploadProtection.middleware');
 const {
   getClients,
   getClientById,
@@ -29,41 +28,8 @@ const {
   downloadClientCFSFile,
 } = require('../controllers/client.controller');
 
-/**
- * Configure multer for client fact sheet and CFS file uploads
- * Uses memory storage for compatibility with ephemeral filesystems (e.g., Render)
- * Files are streamed directly to Google Drive without disk I/O
- */
-const upload = multer({ 
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 25 * 1024 * 1024, // 25MB limit
-  },
-});
-
-/**
- * Disk-storage multer for CFS uploads.
- * Files are saved locally so the async worker can read them without
- * passing buffers through Redis.
- */
-const uploadTmpDir = path.join(__dirname, '../../uploads/tmp');
-if (!fs.existsSync(uploadTmpDir)) {
-  fs.mkdirSync(uploadTmpDir, { recursive: true });
-}
-const uploadCFS = multer({
-  storage: multer.diskStorage({
-    destination: function (req, file, cb) {
-      cb(null, uploadTmpDir);
-    },
-    filename: function (req, file, cb) {
-      const uniqueSuffix = Date.now() + '-' + Math.random().toString(36).substring(7);
-      cb(null, uniqueSuffix + path.extname(file.originalname));
-    },
-  }),
-  limits: {
-    fileSize: 25 * 1024 * 1024, // 25MB limit
-  },
-});
+const upload = createSecureUpload({ memory: true });
+const uploadCFS = createSecureUpload();
 
 /**
  * Client Management Routes
@@ -98,12 +64,12 @@ router.post('/:clientId/change-name', authorizeFirmPermission('CLIENT_MANAGE'), 
 
 // Client Fact Sheet endpoints (Admin-only)
 router.put('/:clientId/fact-sheet', authorizeFirmPermission('CLIENT_MANAGE'), updateClientFactSheet);
-router.post('/:clientId/fact-sheet/files', authorizeFirmPermission('CLIENT_MANAGE'), upload.single('file'), uploadFactSheetFile);
+router.post('/:clientId/fact-sheet/files', authorizeFirmPermission('CLIENT_MANAGE'), sensitiveLimiter, upload.single('file'), enforceUploadSecurity, uploadFactSheetFile);
 router.delete('/:clientId/fact-sheet/files/:fileId', authorizeFirmPermission('CLIENT_MANAGE'), deleteFactSheetFile);
 
 // Client CFS endpoints
 // Admin-only: Upload and delete
-router.post('/:clientId/cfs/files', authorizeFirmPermission('CLIENT_MANAGE'), attachmentLimiter, uploadCFS.single('file'), uploadClientCFSFile);
+router.post('/:clientId/cfs/files', authorizeFirmPermission('CLIENT_MANAGE'), sensitiveLimiter, attachmentLimiter, uploadCFS.single('file'), enforceUploadSecurity, uploadClientCFSFile);
 router.delete('/:clientId/cfs/files/:attachmentId', authorizeFirmPermission('CLIENT_MANAGE'), userWriteLimiter, deleteClientCFSFile);
 // All authenticated users: List and download (read-only)
 router.get('/:clientId/cfs/files', authorizeFirmPermission('CLIENT_VIEW'), userReadLimiter, listClientCFSFiles);
