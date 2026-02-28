@@ -12,6 +12,7 @@ const { logAdminAction, logCaseListViewed } = require('../services/auditLog.serv
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { getDiagnosticsSnapshot } = require('../services/diagnostics.service');
 const { restoreDocument, buildDiagnostics } = require('../services/softDelete.service');
+const { getLatestTenantMetrics } = require('../services/tenantCaseMetrics.service');
 
 /**
  * Admin Controller for Admin Panel Operations
@@ -54,55 +55,34 @@ const safeAuditLog = async (auditData) => {
  */
 const getAdminStats = async (req, res) => {
   try {
-    // Fetch all counts in parallel for performance
+    const tenantId = req.user?.firmId;
+
     const [
       totalUsers,
       totalClients,
       totalCategories,
-      pendingApprovals,
-      allOpenCases,
-      allPendingCases,
-      filedCases,
-      resolvedCases,
+      latestMetrics,
     ] = await Promise.all([
-      // Total users (all, regardless of status)
-      User.countDocuments({}),
-      
-      // Total clients (active + inactive)
-      Client.countDocuments({}),
-      
-      // Total categories (including soft-deleted via isActive: false)
-      Category.countDocuments({}),
-      
-      // Pending approvals - cases with status 'Reviewed' or 'UNDER_REVIEW'
-      Case.countDocuments({
-        status: { $in: [CaseStatus.REVIEWED, CaseStatus.UNDER_REVIEW] }
-      }),
-      
-      // All open cases across all users (for admin visibility)
-      Case.countDocuments({ status: CaseStatus.OPEN }),
-      
-      // All pending cases across all users (for admin visibility)
-      Case.countDocuments({ status: CaseStatus.PENDED }),
-      
-      // All filed cases (for admin visibility)
-      Case.countDocuments({ status: CaseStatus.FILED }),
-      
-      // All resolved cases (for admin visibility)
-      Case.countDocuments({ status: CaseStatus.RESOLVED }),
+      User.countDocuments({ firmId: tenantId }),
+      Client.countDocuments({ firmId: tenantId }),
+      Category.countDocuments({ firmId: tenantId }),
+      getLatestTenantMetrics(tenantId),
     ]);
-    
+
     res.json({
       success: true,
       data: {
         totalUsers,
         totalClients,
         totalCategories,
-        pendingApprovals,
-        allOpenCases,
-        allPendingCases,
-        filedCases,
-        resolvedCases,
+        pendingApprovals: latestMetrics?.pendingApprovals || 0,
+        allOpenCases: latestMetrics?.openCases || 0,
+        allPendingCases: latestMetrics?.pendedCases || 0,
+        filedCases: latestMetrics?.filedCases || 0,
+        resolvedCases: latestMetrics?.resolvedCases || 0,
+        overdueCases: latestMetrics?.overdueCases || 0,
+        avgResolutionTimeSeconds: latestMetrics?.avgResolutionTimeSeconds || 0,
+        metricsDate: latestMetrics?.date || null,
       },
     });
   } catch (error) {
