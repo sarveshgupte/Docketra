@@ -3,6 +3,7 @@ const CaseHistory = require('../models/CaseHistory.model');
 const Comment = require('../models/Comment.model');
 const { CaseRepository } = require('../repositories');
 const CaseStatus = require('../domain/case/caseStatus');
+const CaseService = require('../services/case.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 
 /**
@@ -33,7 +34,7 @@ const submitCase = async (req, res) => {
     }
     
     // Fetch case with firmId scoping for multi-tenancy
-    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
+    let caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
     
     if (!caseData) {
       return res.status(404).json({
@@ -58,11 +59,21 @@ const submitCase = async (req, res) => {
       });
     }
     
-    // Update status to SUBMITTED
-    caseData.status = CaseStatus.SUBMITTED;
-    caseData.submittedAt = new Date();
-    caseData.submittedBy = userEmail.toLowerCase();
-    await caseData.save();
+    // Update status to SUBMITTED via centralized service
+    await CaseService.updateStatus(caseId, CaseStatus.SUBMITTED, {
+      tenantId: req.user.firmId,
+      role: req.user.role,
+      userId: req.user.xID,
+      performedBy: userEmail.toLowerCase(),
+      actorRole: req.user.role === 'Admin' ? 'ADMIN' : 'USER',
+      req,
+      currentStatus: caseData.status,
+      statusPatch: {
+        submittedAt: new Date(),
+        submittedBy: userEmail.toLowerCase(),
+      },
+    });
+    caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
     
     // Create history entry
     await CaseHistory.create({
@@ -105,7 +116,7 @@ const moveToUnderReview = async (req, res) => {
     }
     
     // Fetch case with firmId scoping for multi-tenancy
-    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
+    let caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
     
     if (!caseData) {
       return res.status(404).json({
@@ -122,9 +133,17 @@ const moveToUnderReview = async (req, res) => {
       });
     }
     
-    // Update status to UNDER_REVIEW
-    caseData.status = CaseStatus.UNDER_REVIEW;
-    await caseData.save();
+    // Update status to UNDER_REVIEW via centralized service
+    await CaseService.updateStatus(caseId, CaseStatus.UNDER_REVIEW, {
+      tenantId: req.user.firmId,
+      role: req.user.role,
+      userId: req.user.xID,
+      performedBy: userEmail.toLowerCase(),
+      actorRole: req.user.role === 'Admin' ? 'ADMIN' : 'USER',
+      req,
+      currentStatus: oldStatus,
+    });
+    caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
     
     // Create history entry
     await CaseHistory.create({
@@ -167,7 +186,7 @@ const closeCase = async (req, res) => {
     }
     
     // Fetch case with firmId scoping for multi-tenancy
-    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
+    let caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
     
     if (!caseData) {
       return res.status(404).json({
@@ -183,12 +202,20 @@ const closeCase = async (req, res) => {
         message: 'Case is already closed',
       });
     }
-    
+
     const oldStatus = caseData.status;
     
-    // Update status to CLOSED
-    caseData.status = CaseStatus.CLOSED;
-    await caseData.save();
+    // Update status to CLOSED via centralized service
+    await CaseService.updateStatus(caseId, CaseStatus.CLOSED, {
+      tenantId: req.user.firmId,
+      role: req.user.role,
+      userId: req.user.xID,
+      performedBy: userEmail.toLowerCase(),
+      actorRole: req.user.role === 'Admin' ? 'ADMIN' : 'USER',
+      req,
+      currentStatus: oldStatus,
+    });
+    caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
     
     // Add comment if provided
     if (comment) {
@@ -241,7 +268,7 @@ const reopenCase = async (req, res) => {
     }
     
     // Fetch case with firmId scoping for multi-tenancy
-    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
+    let caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
     
     if (!caseData) {
       return res.status(404).json({
@@ -250,20 +277,28 @@ const reopenCase = async (req, res) => {
       });
     }
     
-    // Can only reopen closed or rejected cases
-    const validStatuses = [CaseStatus.CLOSED, CaseStatus.REJECTED];
+    // Can only reopen rejected cases
+    const validStatuses = [CaseStatus.REJECTED];
     if (!validStatuses.includes(caseData.status)) {
       return res.status(400).json({
         success: false,
-        message: 'Only CLOSED or REJECTED cases can be reopened',
+        message: 'Only REJECTED cases can be reopened',
       });
     }
     
     const oldStatus = caseData.status;
     
-    // Update status to DRAFT
-    caseData.status = CaseStatus.DRAFT;
-    await caseData.save();
+    // Update status to DRAFT via centralized service
+    await CaseService.updateStatus(caseId, CaseStatus.DRAFT, {
+      tenantId: req.user.firmId,
+      role: req.user.role,
+      userId: req.user.xID,
+      performedBy: userEmail.toLowerCase(),
+      actorRole: req.user.role === 'Admin' ? 'ADMIN' : 'USER',
+      req,
+      currentStatus: caseData.status,
+    });
+    caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
     
     // Add comment if provided
     if (comment) {

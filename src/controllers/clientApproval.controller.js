@@ -5,6 +5,7 @@ const CaseHistory = require('../models/CaseHistory.model');
 const { CaseRepository, ClientRepository } = require('../repositories');
 const { CASE_CATEGORIES, CLIENT_STATUS } = require('../config/constants');
 const CaseStatus = require('../domain/case/caseStatus');
+const CaseService = require('../services/case.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 
 /**
@@ -51,7 +52,7 @@ const approveNewClient = async (req, res) => {
     }
     
     // Find the case
-    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
+    let caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
     
     if (!caseData) {
       return res.status(404).json({
@@ -137,12 +138,22 @@ const approveNewClient = async (req, res) => {
     
     await newClient.save();
     
-    // Update case with approval metadata
-    caseData.status = CaseStatus.APPROVED;
-    caseData.approvedAt = new Date();
-    caseData.approvedBy = approverEmail.toLowerCase();
-    caseData.decisionComments = comment;
-    await caseData.save();
+    // Update case with approval metadata through centralized service
+    await CaseService.updateStatus(caseId, CaseStatus.APPROVED, {
+      tenantId: req.user.firmId,
+      role: req.user.role,
+      userId: approverXid,
+      performedBy: approverEmail.toLowerCase(),
+      actorRole: req.user.role === 'Admin' ? 'ADMIN' : 'USER',
+      req,
+      currentStatus: caseData.status,
+      statusPatch: {
+        approvedAt: new Date(),
+        approvedBy: approverEmail.toLowerCase(),
+        decisionComments: comment,
+      },
+    });
+    caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
     
     // Add approval comment
     await Comment.create({
@@ -213,9 +224,10 @@ const approveClientEdit = async (req, res) => {
         message: 'Comment is mandatory for approval',
       });
     }
+    const approverXid = req.approverUser?.xID || req.user?.xID;
     
     // Find the case
-    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
+    let caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
     
     if (!caseData) {
       return res.status(404).json({
@@ -329,12 +341,22 @@ const approveClientEdit = async (req, res) => {
     
     await client.save();
     
-    // Update case with approval metadata
-    caseData.status = CaseStatus.APPROVED;
-    caseData.approvedAt = new Date();
-    caseData.approvedBy = approverEmail.toLowerCase();
-    caseData.decisionComments = comment;
-    await caseData.save();
+    // Update case with approval metadata through centralized service
+    await CaseService.updateStatus(caseId, CaseStatus.APPROVED, {
+      tenantId: req.user.firmId,
+      role: req.user.role,
+      userId: approverXid,
+      performedBy: approverEmail.toLowerCase(),
+      actorRole: req.user.role === 'Admin' ? 'ADMIN' : 'USER',
+      req,
+      currentStatus: caseData.status,
+      statusPatch: {
+        approvedAt: new Date(),
+        approvedBy: approverEmail.toLowerCase(),
+        decisionComments: comment,
+      },
+    });
+    caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
     
     // Add approval comment
     await Comment.create({
@@ -417,9 +439,10 @@ const rejectClientCase = async (req, res) => {
         message: 'Comment is mandatory for rejection',
       });
     }
+    const approverXid = req.approverUser?.xID || req.user?.xID;
     
     // Find the case
-    const caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
+    let caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
     
     if (!caseData) {
       return res.status(404).json({
@@ -447,12 +470,22 @@ const rejectClientCase = async (req, res) => {
       });
     }
     
-    // Update case with rejection metadata
-    caseData.status = CaseStatus.REJECTED;
-    caseData.approvedAt = new Date();
-    caseData.approvedBy = approverEmail.toLowerCase();
-    caseData.decisionComments = comment;
-    await caseData.save();
+    // Update case with rejection metadata through centralized service
+    await CaseService.updateStatus(caseId, CaseStatus.REJECTED, {
+      tenantId: req.user.firmId,
+      role: req.user.role,
+      userId: approverXid,
+      performedBy: approverEmail.toLowerCase(),
+      actorRole: req.user.role === 'Admin' ? 'ADMIN' : 'USER',
+      req,
+      currentStatus: caseData.status,
+      statusPatch: {
+        approvedAt: new Date(),
+        approvedBy: approverEmail.toLowerCase(),
+        decisionComments: comment,
+      },
+    });
+    caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
     
     // Add rejection comment
     await Comment.create({

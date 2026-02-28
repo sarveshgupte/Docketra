@@ -4,6 +4,11 @@ const { canTransition, normalizeStatus } = require('../src/domain/case/caseState
 const CaseStatus = require('../src/domain/case/caseStatus');
 
 function testValidTransitions() {
+  assert.strictEqual(canTransition(CaseStatus.DRAFT, CaseStatus.SUBMITTED), true);
+  assert.strictEqual(canTransition(CaseStatus.SUBMITTED, CaseStatus.UNDER_REVIEW), true);
+  assert.strictEqual(canTransition(CaseStatus.UNDER_REVIEW, CaseStatus.APPROVED), true);
+  assert.strictEqual(canTransition(CaseStatus.APPROVED, CaseStatus.OPEN), true);
+  assert.strictEqual(canTransition(CaseStatus.REJECTED, CaseStatus.DRAFT), true);
   assert.strictEqual(canTransition(CaseStatus.OPEN, CaseStatus.FILED), true);
   assert.strictEqual(canTransition(CaseStatus.OPEN, CaseStatus.PENDED), true);
   assert.strictEqual(canTransition(CaseStatus.OPEN, CaseStatus.RESOLVED), true);
@@ -16,6 +21,7 @@ function testValidTransitions() {
 function testInvalidTransitions() {
   assert.strictEqual(canTransition(CaseStatus.RESOLVED, CaseStatus.OPEN), false);
   assert.strictEqual(canTransition(CaseStatus.RESOLVED, CaseStatus.FILED), false);
+  assert.strictEqual(canTransition(CaseStatus.CLOSED, CaseStatus.DRAFT), false);
   assert.strictEqual(canTransition(CaseStatus.FILED, CaseStatus.OPEN), false);
   assert.strictEqual(canTransition(CaseStatus.PENDED, CaseStatus.RESOLVED), false);
   assert.strictEqual(canTransition(CaseStatus.OPEN, CaseStatus.OPEN), false);

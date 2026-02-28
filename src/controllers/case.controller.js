@@ -1807,14 +1807,23 @@ const unassignCase = async (req, res) => {
     const auditDoc = new CaseAudit(auditEntry);
     await auditDoc.validate();
     
-    // Update case to move to global worklist
-    caseData.assignedToXID = null;
-    caseData.assignedTo = null; // Also clear legacy field
-    caseData.queueType = 'GLOBAL';
-    caseData.status = 'UNASSIGNED';
-    caseData.assignedAt = null;
-    
-    await caseData.save();
+    // Update case to move to global worklist through centralized status service
+    await CaseService.updateStatus(displayCaseId, CaseStatus.UNASSIGNED, {
+      tenantId: req.user.firmId,
+      role: req.user.role,
+      userId: user.xID,
+      performedBy: user.email,
+      actorRole: 'ADMIN',
+      req,
+      currentStatus: previousStatus,
+      statusPatch: {
+        assignedToXID: null,
+        assignedTo: null,
+        queueType: 'GLOBAL',
+        assignedAt: null,
+      },
+    });
+    caseData = await CaseRepository.findByInternalId(req.user.firmId, caseData.caseInternalId, req.user.role);
     
     // Now create the audit log entry (validation already passed)
     await auditDoc.save();

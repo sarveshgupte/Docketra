@@ -5,6 +5,8 @@ const STATUS_ALIASES = Object.freeze({
   [CaseStatus.PENDING_LEGACY]: CaseStatus.PENDED,
   [CaseStatus.OPEN_LEGACY]: CaseStatus.OPEN,
   [CaseStatus.FILED_LEGACY]: CaseStatus.FILED,
+  [CaseStatus.REVIEWED]: CaseStatus.UNDER_REVIEW,
+  [CaseStatus.ARCHIVED]: CaseStatus.CLOSED,
 });
 
 function normalizeStatus(status) {
@@ -14,9 +16,25 @@ function normalizeStatus(status) {
 const transitions = Object.freeze({
   [CaseStatus.UNASSIGNED]: Object.freeze([
     CaseStatus.OPEN,
-    CaseStatus.PENDED,
-    CaseStatus.FILED,
-    CaseStatus.RESOLVED,
+    CaseStatus.DRAFT,
+  ]),
+  [CaseStatus.DRAFT]: Object.freeze([
+    CaseStatus.SUBMITTED,
+  ]),
+  [CaseStatus.SUBMITTED]: Object.freeze([
+    CaseStatus.UNDER_REVIEW,
+    CaseStatus.REJECTED,
+  ]),
+  [CaseStatus.UNDER_REVIEW]: Object.freeze([
+    CaseStatus.APPROVED,
+    CaseStatus.REJECTED,
+  ]),
+  [CaseStatus.REJECTED]: Object.freeze([
+    CaseStatus.DRAFT,
+    CaseStatus.CLOSED,
+  ]),
+  [CaseStatus.APPROVED]: Object.freeze([
+    CaseStatus.OPEN,
   ]),
   [CaseStatus.OPEN]: Object.freeze([
     CaseStatus.PENDED,
@@ -31,6 +49,7 @@ const transitions = Object.freeze({
     CaseStatus.RESOLVED,
   ]),
   [CaseStatus.RESOLVED]: Object.freeze([]),
+  [CaseStatus.CLOSED]: Object.freeze([]),
 });
 
 function canTransition(from, to, _role = null) {

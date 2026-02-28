@@ -5,6 +5,7 @@ const { CaseRepository } = require('../repositories');
 const { CASE_ACTION_TYPES } = require('../config/constants');
 const CaseStatus = require('../domain/case/caseStatus');
 const { logCaseHistory } = require('./auditLog.service');
+const CaseService = require('./case.service');
 
 /**
  * Case Assignment Service
@@ -49,6 +50,7 @@ const assignCaseToUser = async (firmId, caseId, user) => {
   }
   
   // Use findOneAndUpdate for atomic operation to prevent double assignment
+  const assignedAt = new Date();
   const caseData = await Case.findOneAndUpdate(
     {
       firmId,
@@ -59,10 +61,7 @@ const assignCaseToUser = async (firmId, caseId, user) => {
       $set: {
         assignedToXID: user.xID.toUpperCase(), // CANONICAL: Store xID in assignedToXID
         queueType: 'PERSONAL', // Move from GLOBAL to PERSONAL queue
-        status: CaseStatus.OPEN, // Change status to OPEN
-        assignedAt: new Date(),
-        lastActionByXID: user.xID.toUpperCase(), // Track last action performer
-        lastActionAt: new Date(), // Track last action timestamp
+        assignedAt,
       },
     },
     {
@@ -87,6 +86,20 @@ const assignCaseToUser = async (firmId, caseId, user) => {
       };
     }
   }
+
+  await CaseService.updateStatus(caseId, CaseStatus.OPEN, {
+    tenantId: firmId,
+    role: user.role,
+    userId: user.xID,
+    performedBy: user.email?.toLowerCase() || 'SYSTEM',
+    actorRole: user.role === 'Admin' ? 'ADMIN' : 'USER',
+    currentStatus: caseData.status,
+    statusPatch: {
+      lastActionByXID: user.xID.toUpperCase(),
+      lastActionAt: assignedAt,
+    },
+  });
+  const updatedCaseData = await CaseRepository.findByCaseId(firmId, caseId, user.role);
   
   // Create CaseAudit entry (xID-based)
   await CaseAudit.create({
@@ -120,7 +133,7 @@ const assignCaseToUser = async (firmId, caseId, user) => {
   
   return {
     success: true,
-    data: caseData,
+    data: updatedCaseData,
   };
 };
 
@@ -144,6 +157,7 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user) => {
   }
   
   // Atomic bulk update - only updates cases that are still UNASSIGNED
+  const assignedAt = new Date();
   const result = await Case.updateMany(
     {
       firmId,
@@ -154,10 +168,7 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user) => {
       $set: {
         assignedToXID: user.xID.toUpperCase(), // CANONICAL: Store xID in assignedToXID
         queueType: 'PERSONAL', // Move from GLOBAL to PERSONAL queue
-        status: CaseStatus.OPEN, // Change status to OPEN
-        assignedAt: new Date(),
-        lastActionByXID: user.xID.toUpperCase(), // Track last action performer
-        lastActionAt: new Date(), // Track last action timestamp
+        assignedAt,
       },
     }
   );
@@ -168,10 +179,31 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user) => {
     caseId: { $in: caseIds },
     assignedToXID: user.xID.toUpperCase(),
     queueType: 'PERSONAL',
+    assignedAt,
+  });
+
+  await Promise.all(updatedCases.map((caseData) =>
+    CaseService.updateStatus(caseData.caseId, CaseStatus.OPEN, {
+      tenantId: firmId,
+      role: user.role,
+      userId: user.xID,
+      performedBy: user.email?.toLowerCase() || 'SYSTEM',
+      actorRole: user.role === 'Admin' ? 'ADMIN' : 'USER',
+      currentStatus: caseData.status,
+      statusPatch: {
+        lastActionByXID: user.xID.toUpperCase(),
+        lastActionAt: assignedAt,
+      },
+    })
+  ));
+
+  const transitionedCases = await Case.find({
+    firmId,
+    caseId: { $in: updatedCases.map((caseData) => caseData.caseId) },
   });
   
   // Create audit entries for successfully assigned cases
-  const auditEntries = updatedCases.map(caseData => ({
+  const auditEntries = transitionedCases.map(caseData => ({
     caseId: caseData.caseId,
     actionType: 'CASE_ASSIGNED',
     description: `Case bulk-assigned to ${user.xID}`,
@@ -188,7 +220,7 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user) => {
   }
   
   // Create history entries for backward compatibility
-  const historyEntries = updatedCases.map(caseData => ({
+  const historyEntries = transitionedCases.map(caseData => ({
     caseId: caseData.caseId,
     actionType: 'CASE_ASSIGNED',
     description: `Case bulk-assigned to ${user.xID}`,
@@ -204,7 +236,7 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user) => {
     success: true,
     assigned: result.modifiedCount,
     requested: caseIds.length,
-    cases: updatedCases,
+    cases: transitionedCases,
   };
 };
 
