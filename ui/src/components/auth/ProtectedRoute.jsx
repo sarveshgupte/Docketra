@@ -64,7 +64,7 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
     // Non-SuperAdmin users trying to access SuperAdmin routes
     if (effectiveFirmSlug) {
       setAccessToast('SuperAdmin access is required to view that page.');
-      return <Navigate to={`/f/${effectiveFirmSlug}/dashboard`} replace />;
+      return <Navigate to={`/app/firm/${effectiveFirmSlug}/dashboard`} replace />;
     }
     setAccessToast('SuperAdmin access is required to view that page.');
     return <Navigate to="/superadmin" replace />;
@@ -79,7 +79,7 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
   // 5. Admin-only route authorization
   if (requireAdmin && !isAdmin) {
     setAccessToast('Admin access is required to view that page.');
-    return <Navigate to={`/f/${effectiveFirmSlug}/dashboard`} replace />;
+    return <Navigate to={`/app/firm/${effectiveFirmSlug}/dashboard`} replace />;
   }
 
   return children;

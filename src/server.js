@@ -319,6 +319,17 @@ app.get('/api', (req, res) => {
   });
 });
 
+
+// Explicitly reject removed legacy auth login endpoint
+app.all('/auth/login', (_req, res) => {
+  return res.status(404).json({ success: false, code: 'ROUTE_NOT_FOUND', message: 'Route not found' });
+});
+
+// Legacy tenant login redirect
+app.get('/f/:firmSlug/login', (req, res) => {
+  return res.redirect(301, `/${req.params.firmSlug}/login`);
+});
+
 // Auth routes (excluding login endpoints)
 ['/api/auth', '/auth'].forEach((basePath) => {
   app.use(basePath, writeGuardChain, authRoutes);
