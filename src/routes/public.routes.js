@@ -6,6 +6,27 @@ const { getFirmBySlug } = require('../controllers/superadmin.controller');
 const EarlyAccessRequest = require('../models/EarlyAccessRequest.model');
 const log = require('../utils/log');
 
+const LOG_LENGTHS = {
+  FIRM_NAME: 120,
+  PRACTICE_TYPE: 20,
+  WORKFLOW_SYSTEM: 200,
+  PAIN_POINT: 200,
+  TIMELINE: 80,
+};
+
+/**
+ * Sanitize user-provided strings for structured logging.
+ * - replace(/[\r\n\t]+/g, ' '): neutralizes line breaks and tabs to prevent log-forging
+ * - replace(/[\u0000-\u001F\u007F]/g, ''): strips remaining control characters while preserving Unicode text
+ * - trim() + slice(...): keeps logs concise and bounded for downstream sinks
+ */
+const sanitizeLogValue = (value, maxLength = 160) =>
+  String(value || '')
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/[\u0000-\u001F\u007F]/g, '')
+    .trim()
+    .slice(0, maxLength);
+
 /**
  * Public API Routes
  */
@@ -34,12 +55,12 @@ router.post('/signup', async (req, res, next) => {
 
     log.info('early_access_request_created', {
       req,
-      firmName: request.firmName,
-      practiceType: request.practiceType,
+      firmName: sanitizeLogValue(request.firmName, LOG_LENGTHS.FIRM_NAME),
+      practiceType: sanitizeLogValue(request.practiceType, LOG_LENGTHS.PRACTICE_TYPE),
       teamMembers: request.teamMembers,
-      currentWorkflowSystem: request.currentWorkflowSystem,
-      compliancePainPoint: request.compliancePainPoint,
-      goLiveTimeline: request.goLiveTimeline,
+      currentWorkflowSystem: sanitizeLogValue(request.currentWorkflowSystem, LOG_LENGTHS.WORKFLOW_SYSTEM),
+      compliancePainPoint: sanitizeLogValue(request.compliancePainPoint, LOG_LENGTHS.PAIN_POINT),
+      goLiveTimeline: sanitizeLogValue(request.goLiveTimeline, LOG_LENGTHS.TIMELINE),
       status: request.status,
       requestCreatedAt: request.createdAt,
     });
