@@ -17,7 +17,7 @@ export const Button = ({
   ...props
 }) => {
   const baseClasses =
-    'btn transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900';
+    'btn transition-all duration-150 hover:scale-[1.01] hover:-translate-y-0.5 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900';
 
   const variantClasses = {
     primary: 'btn-primary',

@@ -1,10 +1,13 @@
 import React from 'react';
-import { Link, Outlet } from 'react-router-dom';
+import { Link, Outlet, useLocation } from 'react-router-dom';
 import { COMPANY_NAME, COMPANY_CIN } from '../../lib/legalVersion';
+import { PageWrapper } from '../layout/PageWrapper';
 
 const navLinkClass = 'text-gray-600 hover:text-black transition-colors';
 
 export const MarketingLayout = () => {
+  const location = useLocation();
+
   return (
     <div className="min-h-screen bg-white text-gray-900">
       <header className="sticky top-0 z-40 border-b border-gray-200 backdrop-blur bg-white/80">
@@ -20,7 +23,7 @@ export const MarketingLayout = () => {
             <Link to="/about" className={navLinkClass}>About</Link>
             <Link
               to="/signup"
-              className="rounded-xl bg-gray-900 px-5 py-2.5 text-white transition-all duration-200 hover:scale-[1.02] hover:bg-black active:scale-[0.98]"
+              className="rounded-xl bg-gray-900 px-5 py-2.5 text-white transition-all duration-150 hover:scale-[1.01] hover:-translate-y-0.5 hover:bg-black active:scale-[0.98]"
             >
               Create Free Workspace
             </Link>
@@ -28,8 +31,10 @@ export const MarketingLayout = () => {
         </nav>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6">
-        <Outlet />
+      <main className="w-full">
+        <PageWrapper key={location.pathname}>
+          <Outlet />
+        </PageWrapper>
       </main>
 
       <footer className="border-t border-gray-200 bg-white">

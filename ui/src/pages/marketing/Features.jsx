@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { Section } from '../../components/layout/Section';
 
 const FEATURES = [
@@ -44,11 +45,17 @@ export const FeaturesPage = () => (
       </p>
     </div>
     <div className="mt-8 grid gap-12 sm:grid-cols-2">
-      {FEATURES.map(({ title, description }) => (
-        <div key={title} className="rounded-2xl border border-gray-200 bg-white p-8 shadow-md hover:shadow-xl transition-shadow duration-300">
+      {FEATURES.map(({ title, description }, index) => (
+        <motion.div
+          key={title}
+          className="rounded-2xl border border-gray-200 bg-white p-8 shadow-md hover:shadow-xl transition-shadow duration-300"
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2, delay: Math.min(index * 0.04, 0.2) }}
+        >
           <h2 className="type-card-title">{title}</h2>
           <p className="mt-6 type-body">{description}</p>
-        </div>
+        </motion.div>
       ))}
     </div>
   </Section>

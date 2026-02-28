@@ -7,6 +7,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { Router } from './Router';
+import { ScrollToTop } from './components/routing/ScrollToTop';
 import { useAuth } from './hooks/useAuth';
 import { bootstrapAuth } from './auth/authBootstrap';
 import './assets/styles/enterprise.css';
@@ -25,6 +26,7 @@ const AppBootstrap = () => {
 
   return (
     <ToastProvider>
+      <ScrollToTop />
       <Router />
     </ToastProvider>
   );

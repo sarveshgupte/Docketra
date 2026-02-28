@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { Section } from '../../components/layout/Section';
 
 const WHO_ITS_FOR = [
@@ -81,13 +82,13 @@ export const HomePage = () => (
             <div className="mt-8 flex flex-wrap gap-4">
               <Link
                 to="/signup"
-                className="rounded-xl bg-gray-900 px-6 py-3 text-sm font-medium text-white transition-all duration-200 hover:scale-[1.02] hover:bg-black active:scale-[0.98]"
+                className="rounded-xl bg-gray-900 px-6 py-3 text-sm font-medium text-white transition-all duration-150 hover:scale-[1.01] hover:-translate-y-0.5 hover:bg-black active:scale-[0.98]"
               >
                 Create Free Workspace
               </Link>
               <a
                 href="mailto:demo@docketra.com"
-                className="rounded-xl border border-gray-300 bg-white px-6 py-3 text-sm font-medium text-gray-800 transition-all duration-200 hover:scale-[1.02] hover:bg-gray-50 active:scale-[0.98]"
+                className="rounded-xl border border-gray-300 bg-white px-6 py-3 text-sm font-medium text-gray-800 transition-all duration-150 hover:scale-[1.01] hover:-translate-y-0.5 hover:bg-gray-50 active:scale-[0.98]"
               >
                 Request Demo
               </a>
@@ -127,14 +128,17 @@ export const HomePage = () => (
     <Section muted>
         <h2 className="type-section">Who It&apos;s For</h2>
         <div className="mt-8 flex flex-wrap gap-4">
-          {WHO_ITS_FOR.map(({ label, icon }) => (
-            <div
+          {WHO_ITS_FOR.map(({ label, icon }, index) => (
+            <motion.div
               key={label}
               className="rounded-2xl border border-gray-200 bg-white px-5 py-3 text-sm font-medium text-gray-700 shadow-md hover:shadow-xl transition-shadow duration-300"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2, delay: Math.min(index * 0.04, 0.2) }}
             >
               <span className="mr-2" aria-hidden="true">{icon}</span>
               {label}
-            </div>
+            </motion.div>
           ))}
         </div>
     </Section>
@@ -142,14 +146,17 @@ export const HomePage = () => (
     <Section>
         <h2 className="type-section">Core Features</h2>
         <div className="mt-8 grid gap-12 md:grid-cols-2 lg:grid-cols-3">
-          {CORE_FEATURES.map(({ title, description }) => (
-            <div
+          {CORE_FEATURES.map(({ title, description }, index) => (
+            <motion.div
               key={title}
               className="rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 border border-gray-200 bg-white p-8"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2, delay: Math.min(index * 0.04, 0.2) }}
             >
               <h3 className="type-card-title">{title}</h3>
               <p className="mt-6 type-body">{description}</p>
-            </div>
+            </motion.div>
           ))}
         </div>
     </Section>
@@ -160,14 +167,17 @@ export const HomePage = () => (
           Built for teams that operate under strict compliance and accountability requirements.
         </p>
         <div className="mt-8 grid gap-12 md:grid-cols-2">
-          {GOVERNANCE_HIGHLIGHTS.map(({ title, description }) => (
-            <div
+          {GOVERNANCE_HIGHLIGHTS.map(({ title, description }, index) => (
+            <motion.div
               key={title}
               className="rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 border border-gray-200 bg-white p-8"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2, delay: Math.min(index * 0.04, 0.2) }}
             >
               <h3 className="type-card-title">{title}</h3>
               <p className="mt-6 type-body">{description}</p>
-            </div>
+            </motion.div>
           ))}
         </div>
     </Section>

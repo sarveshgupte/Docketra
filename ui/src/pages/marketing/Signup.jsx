@@ -72,7 +72,7 @@ export const SignupPage = () => {
             value={form.companyName}
             onChange={onChange}
             placeholder="Firm Name"
-            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none transition-colors focus:border-gray-900"
+            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none transition-all duration-150 focus:border-gray-900 focus:shadow-[0_0_0_3px_rgba(17,24,39,0.08)]"
             required
           />
           <input
@@ -81,7 +81,7 @@ export const SignupPage = () => {
             value={form.email}
             onChange={onChange}
             placeholder="Admin Email"
-            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none transition-colors focus:border-gray-900"
+            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none transition-all duration-150 focus:border-gray-900 focus:shadow-[0_0_0_3px_rgba(17,24,39,0.08)]"
             required
           />
           <input
@@ -90,14 +90,14 @@ export const SignupPage = () => {
             value={form.password}
             onChange={onChange}
             placeholder="Password"
-            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none transition-colors focus:border-gray-900"
+            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none transition-all duration-150 focus:border-gray-900 focus:shadow-[0_0_0_3px_rgba(17,24,39,0.08)]"
             required
           />
 
           <button
             type="submit"
             disabled={status === 'submitting'}
-            className="w-full mt-4 rounded-xl bg-gray-900 px-4 py-3 text-sm font-medium text-white transition-all duration-200 hover:scale-[1.02] hover:bg-black active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full mt-4 rounded-xl bg-gray-900 px-4 py-3 text-sm font-medium text-white transition-all duration-150 hover:scale-[1.01] hover:-translate-y-0.5 hover:bg-black active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {status === 'submitting' ? 'Creating...' : 'Create Workspace'}
           </button>
