@@ -28,6 +28,8 @@ const createMockRes = () => {
 };
 
 async function shouldRequireMfaBeforeIssuingTokens() {
+  const originalSuperadminXid = process.env.SUPERADMIN_XID;
+  const originalJwtSecret = process.env.JWT_SECRET;
   process.env.SUPERADMIN_XID = 'DIFFERENT_SUPERADMIN';
   process.env.JWT_SECRET = 'mfa-test-secret';
 
@@ -80,6 +82,8 @@ async function shouldRequireMfaBeforeIssuingTokens() {
       () => {}
     );
   } finally {
+    process.env.SUPERADMIN_XID = originalSuperadminXid;
+    process.env.JWT_SECRET = originalJwtSecret;
     User.findOne = originalUserFindOne;
     bcrypt.compare = originalBcryptCompare;
     jwtService.generateAccessToken = originalAccessToken;
