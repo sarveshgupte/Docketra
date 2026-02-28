@@ -9,6 +9,7 @@ const {
   StorageAccessError,
   UnsupportedProviderError,
 } = require('../storage/errors');
+const { safeLogForensicAudit, getRequestIp, getRequestUserAgent } = require('../services/forensicAudit.service');
 
 const URL_EXPIRY_SECONDS = 10 * 60;
 
@@ -105,6 +106,25 @@ async function requestUpload(req, res) {
 
     logFileAction({ tenantId, userId, caseId: resolvedCaseId, objectKey, action: 'UPLOAD_REQUEST' });
 
+    await safeLogForensicAudit({
+      tenantId,
+      entityType: 'FILE',
+      entityId: file._id.toString(),
+      action: 'FILE_UPLOAD',
+      performedBy: userId,
+      performedByRole: req.user?.role || null,
+      impersonatedBy: req.context?.isSuperAdmin ? req.user?.xID || null : null,
+      ipAddress: getRequestIp(req),
+      userAgent: getRequestUserAgent(req),
+      metadata: {
+        caseId: resolvedCaseId,
+        objectKey,
+        originalName,
+        mimeType,
+        size,
+      },
+    });
+
     return res.status(201).json({
       success: true,
       data: {
@@ -169,6 +189,22 @@ async function downloadFile(req, res) {
     const downloadUrl = await provider.generateDownloadUrl(file.objectKey, URL_EXPIRY_SECONDS);
 
     logFileAction({ tenantId, userId, caseId: file.caseId, objectKey: file.objectKey, action: 'DOWNLOAD' });
+
+    await safeLogForensicAudit({
+      tenantId,
+      entityType: 'FILE',
+      entityId: file._id.toString(),
+      action: 'FILE_DOWNLOAD',
+      performedBy: userId,
+      performedByRole: req.user?.role || null,
+      impersonatedBy: req.context?.isSuperAdmin ? req.user?.xID || null : null,
+      ipAddress: getRequestIp(req),
+      userAgent: getRequestUserAgent(req),
+      metadata: {
+        caseId: file.caseId,
+        objectKey: file.objectKey,
+      },
+    });
 
     return res.json({
       success: true,
