@@ -269,9 +269,24 @@ const userSchema = new mongoose.Schema({
    */
   status: {
     type: String,
-    enum: ['INVITED', 'ACTIVE', 'DISABLED', 'DELETED'],
-    default: 'INVITED',
+    enum: ['invited', 'active', 'suspended', 'deleted'],
+    default: 'invited',
     required: true,
+  },
+
+  setupTokenHash: {
+    type: String,
+    default: null,
+  },
+
+  setupTokenExpiresAt: {
+    type: Date,
+    default: null,
+  },
+
+  setupTokenUsedAt: {
+    type: Date,
+    default: null,
   },
   
   /**
@@ -388,6 +403,12 @@ userSchema.pre('save', async function() {
     }
   }
 
+
+  // Single source of truth: status drives activation state.
+  if (this.isModified('status') || this.isNew) {
+    this.isActive = this.status === 'active';
+  }
+
   // Keep authProviders.local in sync with legacy password fields
   if (!this.authProviders) {
     this.authProviders = { local: {}, google: {} };
@@ -425,7 +446,7 @@ userSchema.index({ firmId: 1, xID: 1 }, { unique: true });
 // Global uniqueness is intentionally NOT enforced.
 userSchema.index(
   { firmId: 1, email: 1 },
-  { unique: true, partialFilterExpression: { status: { $ne: 'DELETED' } } }
+  { unique: true, partialFilterExpression: { status: { $ne: 'deleted' } } }
 );
 userSchema.index({ isActive: 1 });
 userSchema.index({ role: 1 });

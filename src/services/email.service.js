@@ -260,10 +260,10 @@ const sendPasswordSetupEmail = async ({
   context = null,
 }) => {
   const normalizedFirmSlug = normalizeFirmSlug(firmSlug);
-  const setupLink = `${frontendUrl}/auth/setup-password?token=${token}`;
+  const setupLink = `${frontendUrl}/auth/setup-account?token=${token}`;
   
   // Construct firm-specific login URL if firmSlug is provided
-  const firmLoginUrl = normalizedFirmSlug ? `${frontendUrl}/f/${normalizedFirmSlug}/login` : null;
+  const firmLoginUrl = normalizedFirmSlug ? `${frontendUrl}/${normalizedFirmSlug}/login` : null;
   
   const subject = 'Set up your Docketra Admin Account';
   const htmlContent = `
@@ -358,10 +358,10 @@ const sendPasswordSetupReminderEmail = async ({
   req = null,
 }) => {
   const normalizedFirmSlug = normalizeFirmSlug(firmSlug);
-  const setupLink = `${frontendUrl}/auth/setup-password?token=${token}`;
+  const setupLink = `${frontendUrl}/auth/setup-account?token=${token}`;
   
   // Construct firm-specific login URL if firmSlug is provided
-  const firmLoginUrl = normalizedFirmSlug ? `${frontendUrl}/f/${normalizedFirmSlug}/login` : null;
+  const firmLoginUrl = normalizedFirmSlug ? `${frontendUrl}/${normalizedFirmSlug}/login` : null;
   
   const subject = 'Reminder: Set up your Docketra account';
   const htmlContent = `
@@ -806,7 +806,7 @@ Docketra Platform
 
 /**
  * Send admin password reset email (for ACTIVE admins - SuperAdmin-triggered)
- * Uses firm-scoped URL: /f/:firmSlug/set-password?token=...
+ * Uses unified setup URL: /auth/setup-account?token=...
  * @param {Object} options - Email options
  * @param {string} options.email - Recipient email
  * @param {string} options.name - User's name
@@ -834,8 +834,8 @@ const sendAdminPasswordResetEmail = async ({
       error: 'Firm context is required for password reset links.',
     };
   }
-  const resetLink = `${frontendUrl}/f/${normalizedFirmSlug}/set-password?token=${token}`;
-  const firmLoginUrl = `${frontendUrl}/f/${normalizedFirmSlug}/login`;
+  const resetLink = `${frontendUrl}/auth/setup-account?token=${token}`;
+  const firmLoginUrl = `${frontendUrl}/${normalizedFirmSlug}/login`;
 
   const subject = 'Reset your Docketra Admin Account Password';
   const htmlContent = `

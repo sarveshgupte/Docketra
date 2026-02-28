@@ -112,11 +112,12 @@ const debugRoutes = require('./routes/debug.routes');  // Debug routes (PR #43)
 const inboundRoutes = require('./routes/inbound.routes');  // Inbound email routes
 const contactRoutes = require('./routes/contact.routes');  // Public contact form route
 const publicRoutes = require('./routes/public.routes');  // Public routes (firm lookup)
-const firmRoutes = require('./routes/firm.routes');  // Firm-scoped routes (/f/:firmSlug/*)
 const healthRoutes = require('./routes/health.routes');  // Health endpoints
 const storageRoutes = require('./routes/storage.routes');  // Storage BYOS routes
 const filesRoutes = require('./routes/files.routes');  // Tenant BYOS signed URL routes
 const tenantRoutes = require('./routes/tenant.routes');  // Tenant storage settings routes
+const tenantResolver = require('./middleware/tenantResolver');
+const { login } = require('./controllers/auth.controller');
 const mutatingMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const superadminRouteLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -318,16 +319,35 @@ app.get('/api', (req, res) => {
   });
 });
 
-// Authentication routes (public - login skips firm/transaction guards before write chain)
-// Keep legacy /api/auth first for backward compatibility
-const authBasePaths = ['/api/auth', '/auth'];
-authBasePaths.forEach((basePath) => {
-  app.post(`${basePath}/login`, noFirmNoTransaction);
+
+// Explicitly reject removed legacy auth login endpoint
+app.all('/auth/login', (_req, res) => {
+  return res.status(404).json({ success: false, code: 'ROUTE_NOT_FOUND', message: 'Route not found' });
+});
+
+// Legacy tenant login redirect
+app.get('/f/:firmSlug/login', (req, res) => {
+  return res.redirect(301, `/${req.params.firmSlug}/login`);
+});
+
+// Auth routes (excluding login endpoints)
+['/api/auth', '/auth'].forEach((basePath) => {
   app.use(basePath, writeGuardChain, authRoutes);
 });
 
+// Isolated superadmin login (platform only)
+const superadminLoginChain = [authLimiter, noFirmNoTransaction, (req, _res, next) => { req.loginScope = 'superadmin'; next(); }, login];
+app.post('/superadmin/login', ...superadminLoginChain);
+
+// Tenant login must be slug-scoped only
+app.get('/:firmSlug/login', authLimiter, tenantResolver, (req, res) => {
+  res.json({ success: true, data: { firmId: req.firmIdString, firmSlug: req.firmSlug, name: req.firmName, status: req.firm.status } });
+});
+app.post('/:firmSlug/login', authLimiter, tenantResolver, noFirmNoTransaction, (req, res, next) => { req.loginScope = 'tenant'; next(); }, login);
+
 // Public routes (no authentication required)
 app.use('/api/public', writeGuardChain, publicRoutes);
+app.use('/public', writeGuardChain, publicRoutes);
 
 // Contact form route (public, no authentication required)
 app.use('/api/contact', contactLimiter, contactRoutes);
@@ -364,10 +384,7 @@ app.use('/api/storage', authenticate, firmContext, requireTenant, tenantThrottle
 app.use('/api/files', authLimiter, authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, filesRoutes);
 app.use('/api/tenant', authLimiter, authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, tenantRoutes);
 
-// Firm-scoped routes — /f/:firmSlug/* (tenant resolver applied inside firm.routes.js)
-// POST /f/:firmSlug/login is the primary path-based login endpoint.
-// GET  /f/:firmSlug/login returns firm metadata for the login page.
-app.use('/f/:firmSlug', firmRoutes);
+// Legacy /f routes removed: tenant login is available only on /:firmSlug/login
 
 // Root route - API status
 app.get('/', (req, res) => {

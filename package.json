@@ -13,7 +13,8 @@
     "test:security": "node tests/securityHardening.test.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "migration:add_multi_tenant_indexes": "node scripts/migrations/add_multi_tenant_indexes.js up",
-    "migration:rollback_multi_tenant_indexes": "node scripts/migrations/add_multi_tenant_indexes.js down"
+    "migration:rollback_multi_tenant_indexes": "node scripts/migrations/add_multi_tenant_indexes.js down",
+    "migration:status_to_lowercase": "node src/scripts/migrateStatusToLowercase.js"
   },
   "keywords": [
     "task-management",

@@ -55,7 +55,7 @@ export const ReportsDashboard = () => {
   };
 
   const handleViewDetailedReports = () => {
-    navigate(`/f/${firmSlug}/admin/reports/detailed`);
+    navigate(`/app/firm/${firmSlug}/admin/reports/detailed`);
   };
 
   if (loading) {

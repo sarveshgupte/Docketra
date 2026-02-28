@@ -21,6 +21,7 @@
 const Firm = require('../models/Firm.model');
 const Client = require('../models/Client.model');
 const User = require('../models/User.model');
+const Plan = require('../models/Plan.model');
 const { runAdminHierarchyBackfill } = require('../scripts/fixAdminHierarchy');
 
 /**
@@ -58,6 +59,18 @@ const { runAdminHierarchyBackfill } = require('../scripts/fixAdminHierarchy');
  * - Does NOT send email for empty database
  */
 let adminBackfillRan = false;
+
+const seedPlans = async () => {
+  const seedData = [
+    { name: 'Free', maxUsers: 2, billingType: 'FREE', pricePerUser: null, isEnterprise: false },
+    { name: 'Growth', maxUsers: null, billingType: 'PER_USER', pricePerUser: 199, isEnterprise: false },
+    { name: 'Enterprise', maxUsers: null, billingType: 'ENTERPRISE', pricePerUser: null, isEnterprise: true },
+  ];
+
+  for (const plan of seedData) {
+    await Plan.updateOne({ name: plan.name }, { $set: plan }, { upsert: true });
+  }
+};
 
 const runPreflightChecks = async () => {
   try {
@@ -481,6 +494,7 @@ const runBootstrap = async () => {
     // Does NOT auto-create firms or auto-heal data
     // Supports empty database (no firms) as a valid state
     await runPreflightChecks();
+    await seedPlans();
 
     console.log('\n✓ Bootstrap completed successfully\n');
   } catch (error) {

@@ -21,9 +21,9 @@ export const DefaultRoute = () => {
 
   if (!isAuthenticated) {
     if (storedFirmSlug) {
-      return <Navigate to={`/f/${storedFirmSlug}/login`} replace />;
+      return <Navigate to={`/${storedFirmSlug}/login`} replace />;
     }
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/superadmin" replace />;
   }
 
   // Redirect SuperAdmin to platform dashboard
@@ -33,13 +33,13 @@ export const DefaultRoute = () => {
 
   // Redirect regular users to their firm dashboard
   if (user?.firmSlug) {
-    return <Navigate to={`/f/${user.firmSlug}/dashboard`} replace />;
+    return <Navigate to={`/app/firm/${user.firmSlug}/dashboard`} replace />;
   }
 
   if (storedFirmSlug) {
-    return <Navigate to={`/f/${storedFirmSlug}/dashboard`} replace />;
+    return <Navigate to={`/app/firm/${storedFirmSlug}/dashboard`} replace />;
   }
 
   // Fallback to generic login if no firm context
-  return <Navigate to="/login" replace />;
+  return <Navigate to="/superadmin" replace />;
 };

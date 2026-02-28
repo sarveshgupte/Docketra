@@ -102,7 +102,7 @@ api.interceptors.response.use(
     const redirectToLogin = () => {
       if (redirecting) return;
       redirecting = true;
-      const destination = firmSlug ? `/f/${firmSlug}/login` : '/login';
+      const destination = firmSlug ? `/${firmSlug}/login` : '/superadmin';
       window.location.assign(destination);
       // Fallback reset in case navigation is blocked
       setTimeout(() => { redirecting = false; }, REDIRECT_TIMEOUT_MS);

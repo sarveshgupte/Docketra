@@ -13,7 +13,7 @@ export const RootRedirect = () => {
 
   // Unauthenticated users go to login
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/superadmin" replace />;
   }
 
   // SuperAdmin users go to SuperAdmin dashboard
@@ -23,9 +23,9 @@ export const RootRedirect = () => {
 
   // Firm users go to firm dashboard
   if (user?.firmSlug) {
-    return <Navigate to={`/f/${user.firmSlug}/dashboard`} replace />;
+    return <Navigate to={`/app/firm/${user.firmSlug}/dashboard`} replace />;
   }
 
   // Fallback safety
-  return <Navigate to="/login" replace />;
+  return <Navigate to="/superadmin" replace />;
 };

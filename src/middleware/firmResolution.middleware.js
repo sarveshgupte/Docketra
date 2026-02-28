@@ -62,26 +62,7 @@ const resolveFirmSlug = async (req, res, next) => {
       });
     }
     
-    // Check if firm is active; treat INACTIVE and SUSPENDED separately
-    if (firm.status === 'INACTIVE') {
-      return res.status(403).json({
-        success: false,
-        code: 'FIRM_INACTIVE',
-        message: 'This firm is inactive. Please contact support.',
-        action: 'contact_admin',
-      });
-    }
-
-    if (firm.status === 'SUSPENDED') {
-      return res.status(403).json({
-        success: false,
-        code: 'FIRM_SUSPENDED',
-        message: `This firm is currently ${firm.status.toLowerCase()}. Please contact support.`,
-        action: 'contact_admin',
-      });
-    }
-
-    if (firm.status !== 'ACTIVE') {
+    if (firm.status !== 'active') {
       return res.status(403).json({
         success: false,
         code: 'FIRM_SUSPENDED',
@@ -138,7 +119,7 @@ const optionalFirmResolution = async (req, res, next) => {
     }
     const firm = await Firm.findOne({ firmSlug: normalizedSlug });
     
-    if (firm && firm.status === 'ACTIVE') {
+    if (firm && firm.status === 'active') {
       req.firmSlug = normalizedSlug;
       req.firmId = firm._id.toString();
       req.firmIdString = firm.firmId;

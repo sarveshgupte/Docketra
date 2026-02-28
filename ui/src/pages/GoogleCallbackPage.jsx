@@ -46,7 +46,7 @@ export const GoogleCallbackPage = () => {
     }
 
     if (effectiveFirmSlug) {
-      navigate(`/f/${effectiveFirmSlug}/dashboard`, { replace: true });
+      navigate(`/app/firm/${effectiveFirmSlug}/dashboard`, { replace: true });
       return;
     }
 

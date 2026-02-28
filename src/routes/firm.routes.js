@@ -46,7 +46,7 @@ router.get('/login', (req, res) => {
       firmSlug: req.firmSlug,
       name: req.firmName,
       status: req.firm.status,
-      isActive: req.firm.status === 'ACTIVE',
+      isActive: req.firm.status === 'active',
     },
   });
 });

@@ -45,7 +45,7 @@ export const ForgotPasswordPage = () => {
         setEmail('');
         // Redirect to login after 3 seconds
         setTimeout(() => {
-          navigate('/login', {
+          navigate('/superadmin', {
             state: {
               message: 'If your email is registered, you will receive a password reset link.',
               messageType: 'success'
@@ -100,7 +100,7 @@ export const ForgotPasswordPage = () => {
           </Button>
 
           <div className="forgot-password-footer">
-            <Link to="/login" className="forgot-password-link">
+            <Link to="/superadmin" className="forgot-password-link">
               Back to Login
             </Link>
           </div>
