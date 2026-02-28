@@ -176,7 +176,7 @@ export const FirmLoginPage = () => {
         <Card className="login-card">
           <div className="login-header">
             <h1>Docketra</h1>
-            <p className="text-secondary">Case Management System</p>
+            <p className="text-secondary">Compliance Workflow Infrastructure</p>
           </div>
           <div className="error-message" style={{ textAlign: 'center', padding: '2rem' }}>
             <p style={{ color: '#e53e3e', marginBottom: '1rem' }}>{error}</p>
@@ -272,7 +272,7 @@ export const FirmLoginPage = () => {
           color: '#718096',
           textAlign: 'center'
         }}>
-          🔒 Secure firm-scoped login
+          Secure firm-scoped login
         </div>
       </Card>
     </div>

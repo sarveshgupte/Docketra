@@ -34,6 +34,13 @@ const normalizeCase = (data) => {
   return data.case || data;
 };
 
+const toLifecycleStage = (status) => {
+  if (status === 'OPEN') return 'Under Execution';
+  if (status === 'RESOLVED') return 'Executed';
+  if (status === 'FILED') return 'Marked as Executed';
+  return status || 'Under Execution';
+};
+
 export const CaseDetailPage = () => {
   const { caseId } = useParams();
   const { user } = useAuth();
@@ -277,12 +284,19 @@ export const CaseDetailPage = () => {
       return;
     }
 
+    const confirmationTimestamp = new Date().toISOString();
+    const responsibleExecutive = caseData?.case?.assignedToName || caseData?.case?.assignedToXID || user?.name || user?.xID || 'Unassigned';
+    const fileConfirmed = window.confirm(
+      `Stage change: ${toLifecycleStage(caseInfo.status)} → Marked as Executed\nResponsible party: ${responsibleExecutive}\nTimestamp: ${confirmationTimestamp}\nAudit record creation: This transition will create an audit record.`
+    );
+    if (!fileConfirmed) return;
+
     setFilingCase(true);
     try {
       const response = await caseService.fileCase(caseId, fileComment);
       
       if (response.success) {
-        showSuccess('Case filed successfully');
+        showSuccess('Lifecycle stage updated. Audit record created.');
         setShowFileModal(false);
         setFileComment('');
         await loadCase(); // Reload to update UI
@@ -322,12 +336,19 @@ export const CaseDetailPage = () => {
       return;
     }
 
+    const confirmationTimestamp = new Date().toISOString();
+    const responsibleExecutive = caseData?.case?.assignedToName || caseData?.case?.assignedToXID || user?.name || user?.xID || 'Unassigned';
+    const pendConfirmed = window.confirm(
+      `Stage change: ${toLifecycleStage(caseInfo.status)} → Awaiting Partner Approval\nResponsible party: ${responsibleExecutive}\nTimestamp: ${confirmationTimestamp}\nAudit record creation: This transition will create an audit record.`
+    );
+    if (!pendConfirmed) return;
+
     setPendingCase(true);
     try {
       const response = await caseService.pendCase(caseId, pendComment, pendingUntil);
       
       if (response.success) {
-        showSuccess('Case pended successfully');
+        showSuccess('Lifecycle stage updated. Audit record created.');
         setShowPendModal(false);
         setPendComment('');
         setPendingUntil('');
@@ -351,12 +372,19 @@ export const CaseDetailPage = () => {
       return;
     }
 
+    const confirmationTimestamp = new Date().toISOString();
+    const responsibleExecutive = caseData?.case?.assignedToName || caseData?.case?.assignedToXID || user?.name || user?.xID || 'Unassigned';
+    const resolveConfirmed = window.confirm(
+      `Stage change: ${toLifecycleStage(caseInfo.status)} → Executed\nResponsible party: ${responsibleExecutive}\nTimestamp: ${confirmationTimestamp}\nAudit record creation: This transition will create an audit record.`
+    );
+    if (!resolveConfirmed) return;
+
     setResolvingCase(true);
     try {
       const response = await caseService.resolveCase(caseId, resolveComment);
       
       if (response.success) {
-        showSuccess('Case resolved successfully');
+        showSuccess('Execution recorded. Audit record created.');
         setShowResolveModal(false);
         setResolveComment('');
         await loadCase(); // Reload to update UI
@@ -379,12 +407,19 @@ export const CaseDetailPage = () => {
       return;
     }
 
+    const confirmationTimestamp = new Date().toISOString();
+    const responsibleExecutive = caseData?.case?.assignedToName || caseData?.case?.assignedToXID || user?.name || user?.xID || 'Unassigned';
+    const unpendConfirmed = window.confirm(
+      `Stage change: Awaiting Partner Approval → Under Execution\nResponsible party: ${responsibleExecutive}\nTimestamp: ${confirmationTimestamp}\nAudit record creation: This transition will create an audit record.`
+    );
+    if (!unpendConfirmed) return;
+
     setUnpendingCase(true);
     try {
       const response = await caseService.unpendCase(caseId, unpendComment);
       
       if (response.success) {
-        showSuccess('Case unpended successfully');
+        showSuccess('Lifecycle stage updated. Audit record created.');
         setShowUnpendModal(false);
         setUnpendComment('');
         await loadCase(); // Reload to update UI
@@ -530,16 +565,17 @@ export const CaseDetailPage = () => {
                 Unpend
               </Button>
             )}
-            {isViewOnlyMode && <Badge variant="warning">View-Only</Badge>}
-            <Badge status={caseInfo.status}>{caseInfo.status}</Badge>
+            {caseInfo.approvalStatus === 'PENDING' && <Badge variant="warning">Awaiting Partner Approval</Badge>}
+            {caseInfo.lockStatus?.isLocked && <Badge variant="warning">Lifecycle Locked</Badge>}
+            {isViewOnlyMode && <Badge variant="warning">Role Restricted Action</Badge>}
+            <Badge status={caseInfo.status}>{toLifecycleStage(caseInfo.status)}</Badge>
           </div>
         </div>
 
         {/* Alerts */}
         {isViewOnlyMode && (
           <div className="neo-alert neo-alert--info case-detail__alert">
-            <strong>🔍 Read-Only Mode</strong> — You can view all details and add comments,
-            but cannot edit case details or change status.
+            <strong>Role Restricted Action</strong> — Action restricted: Only Partners can approve this lifecycle stage.
           </div>
         )}
         {caseInfo.lockStatus?.isLocked &&
@@ -575,8 +611,20 @@ export const CaseDetailPage = () => {
                   <span>{caseInfo.category}</span>
                 </div>
                 <div className="case-detail__field">
-                  <span className="case-detail__label">Status</span>
-                  <Badge status={caseInfo.status}>{caseInfo.status}</Badge>
+                  <span className="case-detail__label">Current Lifecycle Stage</span>
+                  <Badge status={caseInfo.status}>{toLifecycleStage(caseInfo.status)}</Badge>
+                </div>
+                <div className="case-detail__field">
+                  <span className="case-detail__label">Responsible Executive</span>
+                  <span>{caseInfo.assignedToName || caseInfo.assignedToXID || 'Unassigned'}</span>
+                </div>
+                <div className="case-detail__field">
+                  <span className="case-detail__label">Assigned By</span>
+                  <span>{caseInfo.assignedByName || caseInfo.assignedByXID || caseInfo.createdByName || caseInfo.createdByXID || 'System'}</span>
+                </div>
+                <div className="case-detail__field">
+                  <span className="case-detail__label">Due Date</span>
+                  <span>{caseInfo.dueDate ? formatDateTime(caseInfo.dueDate) : 'Not configured'}</span>
                 </div>
                 <div className="case-detail__field">
                   <span className="case-detail__label">Location</span>
@@ -587,8 +635,13 @@ export const CaseDetailPage = () => {
                   <span>{formatDateTime(caseInfo.createdAt)}</span>
                 </div>
                 <div className="case-detail__field">
-                  <span className="case-detail__label">Last Updated</span>
+                  <span className="case-detail__label">Last Action Timestamp</span>
                   <span>{formatDateTime(caseInfo.updatedAt)}</span>
+                </div>
+                <div className="case-detail__field">
+                  <Button variant="default" size="sm" onClick={() => document.getElementById('audit-history-section')?.scrollIntoView({ behavior: 'smooth' })}>
+                    Audit History
+                  </Button>
                 </div>
               </Card>
 
@@ -644,8 +697,8 @@ export const CaseDetailPage = () => {
 
             {/* Activity Timeline (new audit log) */}
             {caseData.auditLog && caseData.auditLog.length > 0 && (
-              <Card className="case-detail__section">
-                <h2 className="neo-section__header">Activity Timeline</h2>
+               <Card className="case-detail__section" id="audit-history-section">
+                 <h2 className="neo-section__header">Recent Audit Records</h2>
                 <div className="case-detail__audit">
                   {caseData.auditLog.map((entry, index) => (
                     <div key={index} className="neo-inset case-detail__audit-item">
@@ -668,8 +721,8 @@ export const CaseDetailPage = () => {
             {/* Fallback: old audit history */}
             {(!caseData.auditLog || caseData.auditLog.length === 0) &&
               caseData.history && caseData.history.length > 0 && (
-              <Card className="case-detail__section">
-                <h2 className="neo-section__header">Audit History</h2>
+               <Card className="case-detail__section" id="audit-history-section">
+                 <h2 className="neo-section__header">Audit History</h2>
                 <div className="case-detail__audit">
                   {caseData.history.map((entry, index) => (
                     <div key={index} className="neo-inset case-detail__audit-item">
@@ -900,7 +953,7 @@ export const CaseDetailPage = () => {
         >
           <div style={{ padding: 'var(--spacing-md)' }}>
             <p style={{ marginBottom: 'var(--spacing-md)', color: 'var(--text-secondary)' }}>
-              Resolving a case marks it as fully completed with no further action required.
+              Resolving a case marks it as executed with no further action required.
               The case will become read-only after resolution.
             </p>
             <Textarea
