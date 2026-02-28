@@ -7,6 +7,7 @@ const AuthAudit = require('../models/AuthAudit.model');
 const { Parser } = require('json2csv');
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
+const { getLatestTenantMetrics, getTenantMetricsByRange } = require('../services/tenantCaseMetrics.service');
 
 const DEFAULT_AUDIT_LOG_LIMIT = 100;
 const MAX_AUDIT_LOG_LIMIT = 250;
@@ -33,132 +34,89 @@ const MAX_AUDIT_LOG_LIMIT = 250;
  */
 const getCaseMetrics = async (req, res) => {
   try {
-    const { fromDate, toDate, status, category, clientId, assignedTo } = req.query;
-    
-    // Build match stage for filtering
-    const matchStage = {};
-    
-    if (fromDate || toDate) {
-      matchStage.createdAt = {};
-      if (fromDate) matchStage.createdAt.$gte = new Date(fromDate);
-      if (toDate) matchStage.createdAt.$lte = new Date(toDate);
-    }
-    
-    if (status) matchStage.status = status;
-    if (category) matchStage.category = category;
-    if (clientId) matchStage.clientId = clientId;
-    if (assignedTo) matchStage.assignedToXID = assignedTo; // Use assignedToXID for canonical queries
-    
-    // Get total count
-    const totalCases = await Case.countDocuments(matchStage);
-    
-    // Aggregate by status
-    const byStatusResult = await Case.aggregate([
-      { $match: matchStage },
-      { $group: { _id: '$status', count: { $sum: 1 } } },
-      { $sort: { _id: 1 } },
-    ]);
-    
-    const byStatus = {};
-    byStatusResult.forEach(item => {
-      byStatus[item._id] = item.count;
-    });
-    
-    // Aggregate by category
-    const byCategoryResult = await Case.aggregate([
-      { $match: matchStage },
-      { $group: { _id: '$category', count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-    ]);
-    
-    const byCategory = {};
-    byCategoryResult.forEach(item => {
-      byCategory[item._id] = item.count;
-    });
-    
-    // Aggregate by client
-    const byClientResult = await Case.aggregate([
-      { $match: matchStage },
-      { $group: { _id: '$clientId', count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 10 },
-    ]);
-    
-    // Populate client names
-    const byClient = [];
-    for (const item of byClientResult) {
-      const client = await Client.findOne({ clientId: item._id }).lean();
-      byClient.push({
-        clientId: item._id,
-        clientName: client ? client.businessName : 'Unknown',
-        count: item.count,
-      });
-    }
-    
-    // Aggregate by employee
-    // PR: xID Canonicalization - Use assignedToXID for queries
-    const byEmployeeResult = await Case.aggregate([
-      { $match: { ...matchStage, assignedToXID: { $ne: null, $ne: '' } } },
-      { $group: { _id: '$assignedToXID', count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 10 },
-    ]);
-    
-    // Populate employee names
-    // assignedToXID contains xID, resolve to user for display
-    const byEmployee = [];
-    for (const item of byEmployeeResult) {
-      const user = await User.findOne({ xID: item._id }).lean();
-      byEmployee.push({
-        xID: item._id,
-        email: user ? user.email : 'Unknown',
-        name: user ? user.name : 'Unknown',
-        count: item.count,
-      });
-    }
+    const tenantId = req.user?.firmId;
+    const { fromDate, toDate, allowLongRange } = req.query;
 
-    // Profitability variance across active cases
-    const profitability = await Case.aggregate([
-      {
-        $match: {
-          ...matchStage,
-          status: { $in: ['UNASSIGNED', 'OPEN', 'PENDED', 'UNDER_REVIEW', 'SUBMITTED', 'APPROVED'] },
+    let payload;
+
+    if (fromDate || toDate) {
+      if (!fromDate || !toDate) {
+        return res.status(400).json({
+          success: false,
+          message: 'Both fromDate and toDate are required for range reporting',
+        });
+      }
+
+      const rangeData = await getTenantMetricsByRange(
+        tenantId,
+        fromDate,
+        toDate,
+        { allowLongRange: String(allowLongRange).toLowerCase() === 'true' }
+      );
+
+      payload = {
+        totalCases: rangeData.aggregate.totalCases,
+        byStatus: {
+          OPEN: rangeData.aggregate.openCases,
+          PENDED: rangeData.aggregate.pendedCases,
+          FILED: rangeData.aggregate.filedCases,
+          RESOLVED: rangeData.aggregate.resolvedCases,
         },
-      },
-      {
-        $group: {
-          _id: null,
-          totalEstimatedBudget: { $sum: { $ifNull: ['$estimatedBudget', 0] } },
-          totalActualCost: { $sum: { $ifNull: ['$actualCost', 0] } },
-        },
-      },
-      {
-        $project: {
-          _id: 0,
-          totalEstimatedBudget: 1,
-          totalActualCost: 1,
-          variance: { $subtract: ['$totalEstimatedBudget', '$totalActualCost'] },
-        },
-      },
-    ]);
-    
-    res.json({
-      success: true,
-      data: {
-        totalCases,
-        byStatus,
-        byCategory,
-        byClient,
-        byEmployee,
-        profitability: profitability[0] || {
+        overdueCases: rangeData.aggregate.overdueCases,
+        avgResolutionTimeSeconds: rangeData.aggregate.avgResolutionTimeSeconds,
+        casesCreatedToday: rangeData.aggregate.casesCreatedToday,
+        casesResolvedToday: rangeData.aggregate.casesResolvedToday,
+        pendingApprovals: rangeData.aggregate.pendingApprovals,
+        range: rangeData.range,
+        rowsCount: rangeData.rowsCount,
+        byCategory: {},
+        byClient: [],
+        byEmployee: [],
+        profitability: {
           totalEstimatedBudget: 0,
           totalActualCost: 0,
           variance: 0,
         },
-      },
+      };
+    } else {
+      const latest = await getLatestTenantMetrics(tenantId);
+      payload = {
+        totalCases: latest?.totalCases || 0,
+        byStatus: {
+          OPEN: latest?.openCases || 0,
+          PENDED: latest?.pendedCases || 0,
+          FILED: latest?.filedCases || 0,
+          RESOLVED: latest?.resolvedCases || 0,
+        },
+        overdueCases: latest?.overdueCases || 0,
+        avgResolutionTimeSeconds: latest?.avgResolutionTimeSeconds || 0,
+        casesCreatedToday: latest?.casesCreatedToday || 0,
+        casesResolvedToday: latest?.casesResolvedToday || 0,
+        pendingApprovals: latest?.pendingApprovals || 0,
+        metricsDate: latest?.date || null,
+        byCategory: {},
+        byClient: [],
+        byEmployee: [],
+        profitability: {
+          totalEstimatedBudget: 0,
+          totalActualCost: 0,
+          variance: 0,
+        },
+      };
+    }
+
+    res.json({
+      success: true,
+      data: payload,
     });
   } catch (error) {
     console.error('Error in getCaseMetrics:', error);
+    if (error.message?.includes('Date range exceeds')) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
     res.status(500).json({
       success: false,
       message: 'Failed to fetch case metrics',

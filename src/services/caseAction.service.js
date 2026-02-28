@@ -124,6 +124,7 @@ const resolveCase = async (firmId, caseId, comment, user, req = null) => {
     req,
     statusPatch: {
       pendingUntil: null,
+      resolvedAt: new Date(),
       lastActionByXID: user.xID,
       lastActionAt: new Date(),
     },
