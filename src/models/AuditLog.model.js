@@ -67,16 +67,6 @@ const auditLogSchema = new mongoose.Schema({
     default: null,
     immutable: true,
   },
-  previousHash: {
-    type: String,
-    default: null,
-    immutable: true,
-  },
-  currentHash: {
-    type: String,
-    default: null,
-    immutable: true,
-  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -86,6 +76,7 @@ const auditLogSchema = new mongoose.Schema({
 }, {
   strict: true,
   timestamps: false,
+  versionKey: false,
 });
 
 auditLogSchema.pre('updateOne', function (next) {

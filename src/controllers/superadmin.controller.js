@@ -706,7 +706,7 @@ const getOperationalHealth = async (req, res) => {
  */
 const switchFirm = async (req, res) => {
   await safeLogForensicAudit({
-    tenantId: req.body?.firmId || PLATFORM_TENANT,
+    tenantId: req.body?.firmId,
     entityType: 'IMPERSONATION',
     entityId: req.body?.sessionId || req.user?._id?.toString() || 'NO_SESSION',
     action: 'IMPERSONATION_START',
@@ -740,7 +740,7 @@ const exitFirm = async (req, res) => {
     const { sessionId } = req.body;
     
     await safeLogForensicAudit({
-      tenantId: req.body?.firmId || PLATFORM_TENANT,
+      tenantId: PLATFORM_TENANT,
       entityType: 'IMPERSONATION',
       entityId: sessionId || req.user?._id?.toString() || 'NO_SESSION',
       action: 'IMPERSONATION_END',

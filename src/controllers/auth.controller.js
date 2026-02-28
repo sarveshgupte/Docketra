@@ -44,7 +44,7 @@ const ROLE_ADMIN = 'Admin';
 const ROLE_EMPLOYEE = 'Employee';
 
 const log = require('../utils/log');
-const { safeLogForensicAudit, getRequestIp, getRequestUserAgent, PLATFORM_TENANT } = require('../services/forensicAudit.service');
+const { safeLogForensicAudit, getRequestIp, getRequestUserAgent } = require('../services/forensicAudit.service');
 
 /**
  * Non-fatal auth audit logger. Audit failures must never break primary business
@@ -63,7 +63,7 @@ const logAuthAudit = async (params, req = null) => {
   }
 
   await safeLogForensicAudit({
-    tenantId: params?.firmId || PLATFORM_TENANT,
+    tenantId: params?.firmId,
     entityType: 'AUTH',
     entityId: params?.userId || params?.xID || 'UNKNOWN',
     action: params?.actionType || 'AUTH_EVENT',
