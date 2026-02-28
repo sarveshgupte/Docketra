@@ -1,0 +1,4 @@
+export const LEGAL_VERSION = '1.0';
+export const LAST_UPDATED = '28 February 2026';
+export const COMPANY_NAME = 'GUPTE ENTERPRISES (OPC) PRIVATE LIMITED';
+export const COMPANY_CIN = 'U47912MH2024OPC421579';

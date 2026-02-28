@@ -2,7 +2,17 @@ import React from 'react';
 import { HomePage } from './HomePage';
 import { FeaturesPage } from './Features';
 import { PricingPage } from './Pricing';
+import { TermsPage } from './Terms';
+import { PrivacyPage } from './Privacy';
+import { SecurityPage } from './Security';
+import { AboutPage } from './About';
+import { ContactPage } from './Contact';
 
 export const MarketingHomePage = HomePage;
 export const MarketingFeaturesPage = FeaturesPage;
 export const MarketingPricingPage = PricingPage;
+export const MarketingTermsPage = TermsPage;
+export const MarketingPrivacyPage = PrivacyPage;
+export const MarketingSecurityPage = SecurityPage;
+export const MarketingAboutPage = AboutPage;
+export const MarketingContactPage = ContactPage;
