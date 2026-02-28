@@ -276,7 +276,7 @@ const login = async (req, res) => {
       if (loginScope !== 'superadmin') {
         return res.status(401).json({ success: false, message: 'Invalid xID or password' });
       }
-      console.log('[AUTH][superadmin] SuperAdmin login attempt detected');
+      console.log('[AUTH][superadmin] login attempt', { xID: normalizedXID });
       
       /**
        * ⚠️ TEMPORARY BOOTSTRAP AUTH
@@ -357,7 +357,7 @@ const login = async (req, res) => {
     }
 
     // Firm-scoped login - query by firmId AND xID
-    console.log(`[AUTH] Firm-scoped login attempt: firmSlug=${req.firmSlug}, xID=${normalizedXID}`);
+    console.log('[AUTH][tenant] login attempt', { firmSlug: req.firmSlug, xID: normalizedXID });
     const user = await User.findOne({
       firmId: req.firmId,
       xID: normalizedXID,
@@ -749,8 +749,8 @@ const login = async (req, res) => {
     console.error('[AUTH] Login error:', error);
     return res.status(500).json({
       success: false,
+      code: 'AUTH_LOGIN_FAILED',
       message: 'Error during login',
-      error: error.message,
     });
   }
 };
@@ -1484,9 +1484,13 @@ const createUser = async (req, res) => {
     });
   } catch (error) {
     if (error instanceof PlanLimitExceededError) {
+      console.warn('[PLAN_LIMIT] createUser blocked', { firmId: admin?.firmId?.toString?.() || admin?.firmId, message: error.message });
       return res.status(403).json({
+        success: false,
         error: error.code,
         message: error.message,
+        upgradeRequired: true,
+        redirectTo: '/pricing',
       });
     }
     // Handle duplicate key errors from MongoDB (E11000)
@@ -1578,9 +1582,13 @@ const activateUser = async (req, res) => {
     });
   } catch (error) {
     if (error instanceof PlanLimitExceededError) {
+      console.warn('[PLAN_LIMIT] createUser blocked', { firmId: admin?.firmId?.toString?.() || admin?.firmId, message: error.message });
       return res.status(403).json({
+        success: false,
         error: error.code,
         message: error.message,
+        upgradeRequired: true,
+        redirectTo: '/pricing',
       });
     }
 
@@ -1820,12 +1828,13 @@ const setupAccount = async (req, res) => {
   });
 
   if (!user) {
-    return res.status(400).json({ success: false, message: 'Invalid setup token' });
+    return res.status(400).json({ success: false, code: 'SETUP_TOKEN_INVALID', message: 'Invalid setup token' });
   }
 
   const tokenExpiresAt = user.setupTokenExpiresAt || user.passwordSetupExpires || null;
   if (!tokenExpiresAt || tokenExpiresAt < now) {
-    return res.status(400).json({ success: false, message: 'Setup token expired. This link is valid for 48 hours only.' });
+    console.warn('[AUTH][setup] setup token expired', { userId: user._id.toString() });
+    return res.status(400).json({ success: false, code: 'SETUP_TOKEN_EXPIRED', message: 'Setup token expired. This link is valid for 48 hours only.' });
   }
 
   if (password) {
@@ -1860,11 +1869,11 @@ const setupAccount = async (req, res) => {
 
 const resendSetup = async (req, res) => {
   const { email } = req.body;
-  if (!email) return res.status(400).json({ success: false, message: 'email is required' });
+  if (!email) return res.status(400).json({ success: false, code: 'EMAIL_REQUIRED', message: 'email is required' });
 
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
   const user = await User.findOne({ email: email.toLowerCase().trim() });
-  if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+  if (!user) return res.status(404).json({ success: false, code: 'USER_NOT_FOUND', message: 'User not found' });
 
   const recentCount = await AuthAudit.countDocuments({
     userId: user._id,
@@ -1872,7 +1881,7 @@ const resendSetup = async (req, res) => {
     createdAt: { $gte: oneHourAgo },
   });
   if (recentCount >= 3) {
-    return res.status(429).json({ success: false, message: 'Rate limit exceeded. Max 3 setup links per hour.' });
+    return res.status(429).json({ success: false, code: 'SETUP_RESEND_RATE_LIMITED', message: 'Rate limit exceeded. Max 3 setup links per hour.' });
   }
 
   const token = emailService.generateSecureToken();
@@ -1894,6 +1903,7 @@ const resendSetup = async (req, res) => {
   });
 
   await AuthAudit.create({ userId: user._id, xID: user.xID, firmId: user.firmId, actionType: 'SetupLinkResent', description: 'Setup link resent', performedBy: user.xID });
+  console.log('[AUTH][setup] setup link resent', { userId: user._id.toString(), firmId: user.firmId?.toString?.() || user.firmId });
   return res.json({ success: true, message: 'Setup link resent' });
 };
 

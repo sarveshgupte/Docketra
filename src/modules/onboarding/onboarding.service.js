@@ -6,6 +6,7 @@ const User = require('../../models/User.model');
 const emailService = require('../../services/email.service');
 const xIDGenerator = require('../../services/xIDGenerator');
 const { slugify } = require('../../utils/slugify');
+const { assertFirmPlanCapacity } = require('../../services/user.service');
 
 const SETUP_EXPIRY_HOURS = 48;
 const RESERVED_SLUGS = [
@@ -17,6 +18,7 @@ const RESERVED_SLUGS = [
   'contact',
   'about',
   'security',
+  'app',
 ];
 
 const createFirmWithAdmin = async (payload = {}) => {
@@ -24,6 +26,8 @@ const createFirmWithAdmin = async (payload = {}) => {
   if (!adminName || !adminEmail || !firmName || !planId) {
     throw new Error('adminName, adminEmail, firmName and planId are required');
   }
+
+  console.log('[ONBOARDING] createFirmWithAdmin started', { adminEmail, firmName });
 
   const session = await mongoose.startSession();
   try {
@@ -63,6 +67,8 @@ const createFirmWithAdmin = async (payload = {}) => {
       const setupTokenHash = emailService.hashToken(setupToken);
       const setupTokenExpiresAt = new Date(Date.now() + SETUP_EXPIRY_HOURS * 60 * 60 * 1000);
 
+      await assertFirmPlanCapacity({ firmId: firm._id, session });
+
       const xID = await xIDGenerator.generateNextXID(firm._id, session);
       const user = await User.create([{
         xID,
@@ -87,6 +93,7 @@ const createFirmWithAdmin = async (payload = {}) => {
       firmSlug: result.firm.firmSlug,
     });
 
+    console.log('[ONBOARDING] createFirmWithAdmin completed', { firmId: result.firm._id.toString(), adminId: result.admin._id.toString() });
     return result;
   } finally {
     session.endSession();
