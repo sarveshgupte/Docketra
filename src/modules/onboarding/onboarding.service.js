@@ -1,14 +1,13 @@
 const mongoose = require('mongoose');
-const crypto = require('crypto');
-const Plan = require('../../models/Plan.model');
 const Firm = require('../../models/Firm.model');
 const User = require('../../models/User.model');
 const emailService = require('../../services/email.service');
 const xIDGenerator = require('../../services/xIDGenerator');
 const { slugify } = require('../../utils/slugify');
 const { assertFirmPlanCapacity } = require('../../services/user.service');
+const { ensureDefaultClientForFirm } = require('../../services/defaultClient.service');
+const { generatePasswordSetupToken } = require('../../services/passwordSetupToken.service');
 
-const SETUP_EXPIRY_HOURS = 48;
 const RESERVED_SLUGS = [
   'superadmin',
   'api',
@@ -21,62 +20,73 @@ const RESERVED_SLUGS = [
   'app',
 ];
 
-const createFirmWithAdmin = async (payload = {}) => {
-  const { adminName, adminEmail, firmName, planId } = payload;
-  if (!adminName || !adminEmail || !firmName) {
-    throw new Error('adminName, adminEmail and firmName are required');
+const generateUniqueFirmSlug = async (companyName, session) => {
+  const baseSlug = slugify(companyName);
+  if (!baseSlug) {
+    const err = new Error('Invalid companyName. Please provide a valid company name.');
+    err.statusCode = 400;
+    throw err;
   }
 
-  console.log('[ONBOARDING] createFirmWithAdmin started', { adminEmail, firmName });
+  if (RESERVED_SLUGS.includes(baseSlug)) {
+    const err = new Error('Invalid company name. Please choose a different name.');
+    err.statusCode = 409;
+    throw err;
+  }
+
+  for (let index = 0; index < 20; index += 1) {
+    const candidate = index === 0 ? baseSlug : `${baseSlug}-${index + 1}`;
+    const existingFirm = await Firm.findOne({ firmSlug: candidate }).session(session);
+    if (!existingFirm) {
+      return candidate;
+    }
+  }
+
+  const err = new Error('Unable to generate a unique workspace slug. Please retry.');
+  err.statusCode = 409;
+  throw err;
+};
+
+const createStarterWorkspace = async (payload = {}) => {
+  const {
+    fullName,
+    email,
+    phoneNumber,
+    companyName,
+  } = payload;
+
+  if (!fullName || !email || !phoneNumber || !companyName) {
+    const err = new Error('fullName, email, phoneNumber and companyName are required');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  console.log('[ONBOARDING] createStarterWorkspace started', { email, companyName });
 
   const session = await mongoose.startSession();
   try {
     let result;
-    let setupToken;
+    let setupToken = null;
+
     await session.withTransaction(async () => {
-      let plan = null;
-      if (planId) {
-        plan = await Plan.findById(planId).session(session);
-      } else {
-        plan = await Plan.findOne({ name: 'Free' }).session(session);
-      }
-
-      if (!plan) {
-        const err = new Error('Plan not found');
-        err.statusCode = 404;
-        throw err;
-      }
-
-      const firmSlug = slugify(firmName);
-      if (RESERVED_SLUGS.includes(firmSlug)) {
-        const err = new Error('Invalid firm name. Please choose a different name.');
-        err.statusCode = 409;
-        throw err;
-      }
-
-      const existingFirm = await Firm.findOne({ firmSlug }).session(session);
-      if (existingFirm) {
-        const err = new Error('Firm already exists with this name. Please choose a different name.');
-        err.statusCode = 409;
-        throw err;
-      }
+      const firmSlug = await generateUniqueFirmSlug(companyName, session);
 
       const firm = await Firm.create([{
         firmId: `FIRM${Date.now()}`,
-        name: firmName,
+        name: companyName.trim(),
         firmSlug,
-        status: 'pending_setup',
-        planId: plan._id,
+        status: 'active',
+        plan: 'STARTER',
+        maxUsers: 2,
+        billingStatus: null,
+        bootstrapStatus: 'COMPLETED',
       }], { session }).then((docs) => docs[0]);
 
-      setupToken = crypto.randomBytes(32).toString('hex');
-      const setupTokenHash = emailService.hashToken(setupToken);
-      const setupTokenExpiresAt = new Date(Date.now() + SETUP_EXPIRY_HOURS * 60 * 60 * 1000);
+      await ensureDefaultClientForFirm(firm, session);
 
       await assertFirmPlanCapacity({ firmId: firm._id, session });
 
-
-      const normalizedAdminEmail = adminEmail.toLowerCase().trim();
+      const normalizedAdminEmail = email.toLowerCase().trim();
       const existingAdmin = await User.findOne({ firmId: firm._id, email: normalizedAdminEmail }).session(session);
       if (existingAdmin) {
         const err = new Error('Admin email already exists for this firm.');
@@ -87,15 +97,19 @@ const createFirmWithAdmin = async (payload = {}) => {
       const xID = await xIDGenerator.generateNextXID(firm._id, session);
       const user = await User.create([{
         xID,
-        name: adminName,
+        name: fullName.trim(),
         email: normalizedAdminEmail,
+        phoneNumber: phoneNumber.trim(),
         firmId: firm._id,
+        defaultClientId: firm.defaultClientId,
         role: 'Admin',
         status: 'invited',
-        setupTokenHash,
-        setupTokenExpiresAt,
+        mustSetPassword: false,
+        mustChangePassword: true,
         isActive: false,
       }], { session }).then((docs) => docs[0]);
+
+      setupToken = generatePasswordSetupToken({ userId: user._id.toString(), firmId: firm._id.toString() });
 
       result = { firm, admin: user };
     });
@@ -108,7 +122,7 @@ const createFirmWithAdmin = async (payload = {}) => {
       firmSlug: result.firm.firmSlug,
     });
 
-    console.log('[ONBOARDING] createFirmWithAdmin completed', { firmId: result.firm._id.toString(), adminId: result.admin._id.toString() });
+    console.log('[ONBOARDING] createStarterWorkspace completed', { firmId: result.firm._id.toString(), adminId: result.admin._id.toString() });
     return result;
   } catch (error) {
     if (error?.code === 11000) {
@@ -122,7 +136,18 @@ const createFirmWithAdmin = async (payload = {}) => {
   }
 };
 
+const createFirmWithAdmin = async (payload = {}) => {
+  const { adminName, adminEmail, firmName, phoneNumber = 'NA' } = payload;
+  return createStarterWorkspace({
+    fullName: adminName,
+    email: adminEmail,
+    phoneNumber,
+    companyName: firmName,
+  });
+};
+
 module.exports = {
+  createStarterWorkspace,
   createFirmWithAdmin,
   RESERVED_SLUGS,
 };

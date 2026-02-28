@@ -97,6 +97,24 @@ const firmSchema = new mongoose.Schema({
     default: null,
   },
 
+
+  plan: {
+    type: String,
+    enum: ['STARTER', 'PROFESSIONAL', 'ENTERPRISE'],
+    default: 'STARTER',
+    index: true,
+  },
+
+  maxUsers: {
+    type: Number,
+    default: 2,
+  },
+
+  billingStatus: {
+    type: String,
+    default: null,
+  },
+
   /**
    * Firm-level storage configuration
    * Defaults to Docketra-managed Google Drive (service account)

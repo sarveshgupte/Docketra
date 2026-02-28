@@ -16,10 +16,10 @@ export const MarketingLayout = () => {
             <Link to="/security" className="hover:text-slate-900">Security</Link>
             <Link to="/about" className="hover:text-slate-900">About</Link>
                         <Link
-              to="/contact"
+              to="/signup"
               className="rounded-md bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-700"
             >
-              Start Free Trial
+              Create Free Workspace
             </Link>
           </div>
         </nav>

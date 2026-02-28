@@ -4,7 +4,7 @@ const User = require('../models/User.model');
 
 class PlanLimitExceededError extends Error {
   constructor(limit) {
-    super(`Your current plan allows only ${limit} users. Please upgrade to add more users.`);
+    super(`Starter plan allows maximum ${limit} users. Upgrade required.`);
     this.name = 'PlanLimitExceededError';
     this.code = 'PLAN_LIMIT_EXCEEDED';
     this.statusCode = 403;
@@ -19,15 +19,29 @@ const assertFirmPlanCapacity = async ({ firmId, session, incrementBy = 1 }) => {
     throw new Error('Firm not found');
   }
 
-  if (!firm.planId) return;
-
-  const plan = await attachSession(Plan.findById(firm.planId));
-  if (!plan || plan.maxUsers == null) return;
-
   const count = await attachSession(User.countDocuments({
     firmId,
     status: { $in: ['active', 'invited'] },
   }));
+
+  if (firm.plan === 'STARTER') {
+    const maxUsers = firm.maxUsers || 2;
+    if ((count + incrementBy) > maxUsers) {
+      console.warn('[PLAN_LIMIT] starter capacity exceeded', {
+        firmId: firmId?.toString?.() || firmId,
+        maxUsers,
+        currentCount: count,
+        incrementBy,
+      });
+      throw new PlanLimitExceededError(maxUsers);
+    }
+    return;
+  }
+
+  if (!firm.planId) return;
+
+  const plan = await attachSession(Plan.findById(firm.planId));
+  if (!plan || plan.maxUsers == null) return;
 
   if ((count + incrementBy) > plan.maxUsers) {
     console.warn('[PLAN_LIMIT] capacity exceeded', { firmId: firmId?.toString?.() || firmId, planId: plan._id?.toString?.() || plan._id, maxUsers: plan.maxUsers, currentCount: count, incrementBy });
