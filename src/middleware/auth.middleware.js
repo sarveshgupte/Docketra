@@ -19,7 +19,11 @@ const getTokenFromCookies = (cookieHeader, name) => {
   return cookieHeader
     .split(';')
     .map(c => c.trim())
-    .map(c => c.split('='))
+    .map((cookie) => {
+      const separatorIndex = cookie.indexOf('=');
+      if (separatorIndex === -1) return [cookie, ''];
+      return [cookie.slice(0, separatorIndex), cookie.slice(separatorIndex + 1)];
+    })
     .find(([key]) => key === name)?.[1] || null;
 };
 

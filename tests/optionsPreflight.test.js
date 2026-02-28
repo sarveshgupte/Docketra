@@ -34,6 +34,7 @@ async function testOptionsReturns204() {
   assert.strictEqual(res.headers['Access-Control-Allow-Credentials'], 'true');
   assert.ok(res.headers['Access-Control-Allow-Headers'].includes('Authorization'));
   assert.ok(res.headers['Access-Control-Allow-Methods'].includes('OPTIONS'));
+  assert.strictEqual(res.headers.Vary, 'Origin');
 }
 
 async function testOptionsRejectsUnknownOrigin() {
@@ -45,6 +46,7 @@ async function testOptionsRejectsUnknownOrigin() {
 
   assert.strictEqual(res.statusCode, 204);
   assert.strictEqual(res.headers['Access-Control-Allow-Origin'], undefined);
+  assert.strictEqual(res.headers.Vary, undefined);
 }
 
 async function testOptionsFallsThrough() {
