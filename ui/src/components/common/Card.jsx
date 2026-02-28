@@ -4,15 +4,33 @@
  */
 
 import React from 'react';
+import { motion } from 'framer-motion';
 
-export const Card = ({ children, className = '', onClick, interactive = false, ...props }) => {
+export const Card = ({ children, className = '', onClick, interactive = false, animateOnMount = false, ...props }) => {
   const interactiveClass = interactive || onClick
     ? 'shadow-md hover:shadow-xl transition-shadow duration-300 cursor-pointer'
     : 'shadow-md';
 
+  const cardClasses = `card rounded-2xl border border-gray-200 p-6 ${interactiveClass} ${className}`;
+
+  if (animateOnMount) {
+    return (
+      <motion.div
+        className={cardClasses}
+        onClick={onClick}
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2 }}
+        {...props}
+      >
+        {children}
+      </motion.div>
+    );
+  }
+
   return (
     <div
-      className={`card rounded-2xl border border-gray-200 p-6 ${interactiveClass} ${className}`}
+      className={cardClasses}
       onClick={onClick}
       {...props}
     >
