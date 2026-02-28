@@ -1,24 +1,24 @@
-# Neomorphic UI Implementation - Complete
+# Neumorphic UI Implementation - Complete
 
 ## ✅ Implementation Status: COMPLETE
 
-All 7 parts (A-G) of the professional neomorphic web UI for Docketra backend have been successfully implemented.
+All 7 parts (A-G) of the professional neumorphic web UI for Docketra backend have been successfully implemented.
 
 ## 📸 Screenshots
 
 ### Login Page
 ![Login Page](https://github.com/user-attachments/assets/600b935c-3a9a-4c12-8c37-8b68ba1c428c)
 
-The login page demonstrates the neomorphic design system with:
+The login page demonstrates the neumorphic design system with:
 - Soft shadows creating depth perception
 - Muted color palette (#5c7cfa for primary actions)
 - Clean, centered card layout
-- Inset input fields with neomorphic styling
+- Inset input fields with neumorphic styling
 - Raised button with gradient overlay
 
 ## 🎨 Design System Implementation
 
-### Neomorphic Principles Applied
+### Neumorphic Principles Applied
 
 1. **Soft Shadows**: All elements use dual light/dark shadows
    - Light shadow: `-8px -8px 16px rgba(255, 255, 255, 0.8)`
@@ -56,7 +56,7 @@ The login page demonstrates the neomorphic design system with:
 - [x] My Pending Cases count
 - [x] Admin pending approvals (role-aware)
 - [x] Recently accessed cases table
-- [x] Neomorphic card design
+- [x] Neumorphic card design
 
 ### Part C — Worklists ✅
 - [x] Employee worklist
@@ -101,7 +101,7 @@ The login page demonstrates the neomorphic design system with:
 
 ### Common Components ✅
 - [x] Button (default, primary, danger, success variants)
-- [x] Card (neomorphic container)
+- [x] Card (neumorphic container)
 - [x] Input (with validation and read-only states)
 - [x] Select (dropdown)
 - [x] Textarea (multi-line input)
@@ -143,7 +143,7 @@ The login page demonstrates the neomorphic design system with:
 ```
 ui/
 ├── src/
-│   ├── assets/styles/       # Design tokens and neomorphic styles
+│   ├── assets/styles/       # Design tokens and neumorphic styles
 │   ├── components/          # Reusable UI components
 │   │   ├── auth/           # Authentication components
 │   │   └── common/         # Shared components
@@ -240,7 +240,7 @@ VITE_API_BASE_URL=http://localhost:3000/api
 ## ✨ Key Highlights
 
 ### Design Excellence
-- **Professional neomorphic design** throughout
+- **Professional neumorphic design** throughout
 - **Consistent visual language** across all pages
 - **Clear depth hierarchy** for UI elements
 - **Accessible** with keyboard navigation and focus states
@@ -278,7 +278,7 @@ All requirements from the problem statement have been fully implemented:
 | G | Admin-Only UI | ✅ Complete |
 
 ### Additional Features Implemented
-- Neomorphic design system with CSS variables
+- Neumorphic design system with CSS variables
 - Toast notification system
 - Loading states for all async operations
 - Comprehensive error handling
@@ -320,10 +320,10 @@ For questions or issues:
 
 ## 🎉 Conclusion
 
-The Docketra Neomorphic UI is **production-ready** and fully implements all specified requirements. The implementation:
+The Docketra Neumorphic UI is **production-ready** and fully implements all specified requirements. The implementation:
 
 ✅ Strictly respects backend as single source of truth  
-✅ Implements professional neomorphic design system  
+✅ Implements professional neumorphic design system  
 ✅ Handles all error cases gracefully  
 ✅ Provides role-aware, permission-gated interface  
 ✅ Maintains audit trail integrity  
