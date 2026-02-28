@@ -29,8 +29,9 @@
 }
 
 .create-case__matched-fields {
-  background: var(--surface-inset);
-  border-radius: var(--border-radius);
+  background: var(--color-bg-app);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
   margin-top: var(--spacing-md);
   padding: var(--spacing-md);
 }
