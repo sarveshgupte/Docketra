@@ -11,7 +11,7 @@ const CaseStatus = Object.freeze({
   REJECTED: 'REJECTED',
   CLOSED: 'CLOSED',
   REVIEWED: 'Reviewed',
-  PENDING: 'PENDING',
+  PENDING_ALIAS: 'PENDING',
   OPEN_LEGACY: 'Open',
   PENDING_LEGACY: 'Pending',
   FILED_LEGACY: 'Filed',

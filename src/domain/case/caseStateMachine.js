@@ -1,7 +1,7 @@
 const CaseStatus = require('./caseStatus');
 
 const STATUS_ALIASES = Object.freeze({
-  [CaseStatus.PENDING]: CaseStatus.PENDED,
+  [CaseStatus.PENDING_ALIAS]: CaseStatus.PENDED,
   [CaseStatus.PENDING_LEGACY]: CaseStatus.PENDED,
   [CaseStatus.OPEN_LEGACY]: CaseStatus.OPEN,
   [CaseStatus.FILED_LEGACY]: CaseStatus.FILED,
@@ -33,8 +33,7 @@ const transitions = Object.freeze({
   [CaseStatus.RESOLVED]: Object.freeze([]),
 });
 
-function canTransition(from, to, role = null) {
-  void role;
+function canTransition(from, to, _role = null) {
   const normalizedFrom = normalizeStatus(from);
   const normalizedTo = normalizeStatus(to);
   if (!transitions[normalizedFrom]) return false;
