@@ -1,5 +1,6 @@
 const assert = require('assert');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const speakeasy = require('speakeasy');
 
 const User = require('../src/models/User.model');
@@ -92,12 +93,20 @@ async function shouldRequireMfaBeforeIssuingTokens() {
 
   assert.strictEqual(body.success, true, 'Login should return success when MFA is required');
   assert.strictEqual(body.mfaRequired, true, 'Login must indicate MFA is required');
-  assert.strictEqual(body.xID, 'XMFA001', 'Response must include xID for MFA completion');
+  assert(body.preAuthToken, 'Response must include preAuthToken for MFA completion');
+  assert.strictEqual(body.xID, undefined, 'Response must not include xID in MFA challenge');
+  const decodedPreAuthToken = jwt.verify(body.preAuthToken, 'mfa-test-secret');
+  assert.strictEqual(decodedPreAuthToken.userId, '507f1f77bcf86cd799439011', 'preAuthToken must include userId');
+  assert.strictEqual(decodedPreAuthToken.firmId, '507f1f77bcf86cd799439022', 'preAuthToken must include firmId');
+  assert.strictEqual(decodedPreAuthToken.role, 'SUPER_ADMIN', 'preAuthToken must include role');
+  assert.strictEqual(decodedPreAuthToken.mfaStage, true, 'preAuthToken must include MFA stage marker');
   assert.strictEqual(accessTokenCalled, false, 'Access token must not be issued before MFA completion');
   assert.strictEqual(refreshTokenPersisted, false, 'Refresh token must not be persisted before MFA completion');
 }
 
 async function shouldCompleteMfaLoginAndIssueTokens() {
+  const originalJwtSecret = process.env.JWT_SECRET;
+  process.env.JWT_SECRET = 'mfa-test-secret';
   const originalUserFindOne = User.findOne;
   const originalFirmFindOne = Firm.findOne;
   const originalTotpVerify = speakeasy.totp.verify;
@@ -142,11 +151,21 @@ async function shouldCompleteMfaLoginAndIssueTokens() {
   };
 
   const { res, body } = createMockRes();
+  const preAuthToken = jwt.sign(
+    {
+      userId: '507f1f77bcf86cd799439011',
+      firmId: '507f1f77bcf86cd799439022',
+      role: 'ADMIN',
+      mfaStage: true,
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: '5m' }
+  );
 
   try {
     await completeMfaLogin(
       {
-        body: { xID: 'XMFA001', token: '123456' },
+        body: { token: '123456', preAuthToken },
         skipTransaction: true,
         ip: '127.0.0.1',
         get: () => 'agent',
@@ -164,6 +183,7 @@ async function shouldCompleteMfaLoginAndIssueTokens() {
     jwtService.getRefreshTokenExpiry = originalGetRefreshTokenExpiry;
     RefreshToken.create = originalRefreshCreate;
     AuthAudit.create = originalAuthAuditCreate;
+    process.env.JWT_SECRET = originalJwtSecret;
   }
 
   assert.strictEqual(body.success, true, 'MFA completion should succeed');
@@ -176,6 +196,8 @@ async function shouldCompleteMfaLoginAndIssueTokens() {
 }
 
 async function shouldRejectInvalidMfaToken() {
+  const originalJwtSecret = process.env.JWT_SECRET;
+  process.env.JWT_SECRET = 'mfa-test-secret';
   const originalUserFindOne = User.findOne;
   const originalTotpVerify = speakeasy.totp.verify;
   const originalAccessToken = jwtService.generateAccessToken;
@@ -196,11 +218,21 @@ async function shouldRejectInvalidMfaToken() {
   };
 
   const { res, body } = createMockRes();
+  const preAuthToken = jwt.sign(
+    {
+      userId: '507f1f77bcf86cd799439011',
+      firmId: '507f1f77bcf86cd799439022',
+      role: 'ADMIN',
+      mfaStage: true,
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: '5m' }
+  );
 
   try {
     await completeMfaLogin(
       {
-        body: { xID: 'XMFA001', token: '000000' },
+        body: { token: '000000', preAuthToken },
         skipTransaction: true,
         ip: '127.0.0.1',
         get: () => 'agent',
@@ -212,6 +244,7 @@ async function shouldRejectInvalidMfaToken() {
     User.findOne = originalUserFindOne;
     speakeasy.totp.verify = originalTotpVerify;
     jwtService.generateAccessToken = originalAccessToken;
+    process.env.JWT_SECRET = originalJwtSecret;
   }
 
   assert.strictEqual(res.statusCode, 401, 'Invalid MFA token should return 401');
@@ -219,13 +252,47 @@ async function shouldRejectInvalidMfaToken() {
   assert.strictEqual(accessTokenCalled, false, 'Invalid MFA token must not issue JWT');
 }
 
+async function shouldRejectMissingPreAuthToken() {
+  const originalUserFindOne = User.findOne;
+  const originalTotpVerify = speakeasy.totp.verify;
+
+  let userLookupCalled = false;
+  User.findOne = async () => {
+    userLookupCalled = true;
+    return null;
+  };
+  speakeasy.totp.verify = () => true;
+
+  const { res, body } = createMockRes();
+
+  try {
+    await completeMfaLogin(
+      {
+        body: { token: '123456' },
+        skipTransaction: true,
+        ip: '127.0.0.1',
+        get: () => 'agent',
+      },
+      res,
+      () => {}
+    );
+  } finally {
+    User.findOne = originalUserFindOne;
+    speakeasy.totp.verify = originalTotpVerify;
+  }
+
+  assert.strictEqual(res.statusCode, 401, 'Missing preAuthToken should return 401');
+  assert.strictEqual(body.success, false, 'Missing preAuthToken should fail');
+  assert.strictEqual(userLookupCalled, false, 'Missing preAuthToken must fail before user lookup');
+}
+
 function shouldValidateCompleteMfaLoginSchema() {
   const schema = routeSchemas['POST /complete-mfa-login'].body;
-  const valid = schema.safeParse({ xID: 'XMFA001', token: '123456' });
-  const invalid = schema.safeParse({ xID: 'XMFA001' });
+  const valid = schema.safeParse({ token: '123456', preAuthToken: 'pre-auth-jwt' });
+  const invalid = schema.safeParse({ token: '123456' });
 
-  assert.strictEqual(valid.success, true, 'Schema should accept xID and token');
-  assert.strictEqual(invalid.success, false, 'Schema should reject missing token');
+  assert.strictEqual(valid.success, true, 'Schema should accept token and preAuthToken');
+  assert.strictEqual(invalid.success, false, 'Schema should reject missing preAuthToken');
 }
 
 async function run() {
@@ -233,6 +300,7 @@ async function run() {
     await shouldRequireMfaBeforeIssuingTokens();
     await shouldCompleteMfaLoginAndIssueTokens();
     await shouldRejectInvalidMfaToken();
+    await shouldRejectMissingPreAuthToken();
     shouldValidateCompleteMfaLoginSchema();
     console.log('\nMFA login flow tests passed.');
   } catch (error) {

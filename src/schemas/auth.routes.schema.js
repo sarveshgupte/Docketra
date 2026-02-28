@@ -28,8 +28,8 @@ module.exports = {
   },
   'POST /complete-mfa-login': {
     body: z.object({
-      xID: nonEmptyString,
       token: nonEmptyString,
+      preAuthToken: nonEmptyString,
     }).passthrough(),
   },
   'GET /google': {

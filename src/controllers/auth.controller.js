@@ -32,6 +32,7 @@ const LOCK_TIME = 15 * 60 * 1000; // 15 minutes in milliseconds
 const INVITE_TOKEN_EXPIRY_HOURS = 48; // 48 hours for invite tokens (per PR 32 requirements)
 const PASSWORD_SETUP_TOKEN_EXPIRY_HOURS = 24; // 24 hours for password reset tokens
 const FORGOT_PASSWORD_TOKEN_EXPIRY_MINUTES = 30; // 30 minutes for forgot password tokens
+const PRE_AUTH_TOKEN_EXPIRY = '5m';
 const DEFAULT_FIRM_ID = 'PLATFORM'; // Default firmId for SUPER_ADMIN and audit logging
 const DEFAULT_XID = 'SUPERADMIN'; // Default xID for SUPER_ADMIN in audit logs
 const GOOGLE_SCOPES = ['openid', 'email'];
@@ -113,6 +114,14 @@ const verifyOAuthState = (stateToken) => {
   }
 
   return jwt.verify(stateToken, process.env.JWT_SECRET);
+};
+
+const createMfaPreAuthToken = (payload) => {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is not configured for MFA pre-auth token signing');
+  }
+
+  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: PRE_AUTH_TOKEN_EXPIRY });
 };
 
 /**
@@ -619,10 +628,17 @@ const login = async (req, res) => {
     }
     
     if (user.twoFactorSecret) {
+      const preAuthToken = createMfaPreAuthToken({
+        userId: user._id.toString(),
+        firmId: user.firmId ? user.firmId.toString() : undefined,
+        role: user.role,
+        mfaStage: true,
+      });
+
       return res.json({
         success: true,
         mfaRequired: true,
-        xID: user.xID,
+        preAuthToken,
       });
     }
 
@@ -2473,18 +2489,49 @@ const verifyTotp = async (req, res) => {
  */
 const completeMfaLogin = async (req, res) => {
   try {
-    const xID = String(req.body?.xID || '').trim().toUpperCase();
     const token = String(req.body?.token || '').trim();
+    const preAuthToken = String(req.body?.preAuthToken || '').trim();
 
-    if (!xID || !token) {
+    if (!preAuthToken) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired pre-authentication token',
+      });
+    }
+
+    if (!token) {
       return res.status(400).json({
         success: false,
-        message: 'xID and token are required',
+        message: 'token is required',
+      });
+    }
+
+    let decodedPreAuthToken;
+    try {
+      decodedPreAuthToken = jwt.verify(preAuthToken, process.env.JWT_SECRET);
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired pre-authentication token',
+      });
+    }
+
+    if (!decodedPreAuthToken?.mfaStage || !decodedPreAuthToken?.userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired pre-authentication token',
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(decodedPreAuthToken.userId)) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired pre-authentication token',
       });
     }
 
     const user = await User.findOne({
-      xID,
+      _id: decodedPreAuthToken.userId,
       isActive: true,
       status: 'ACTIVE',
     });
@@ -2492,7 +2539,7 @@ const completeMfaLogin = async (req, res) => {
     if (!user || !user.twoFactorSecret) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid xID or token',
+        message: 'Invalid authentication token',
       });
     }
 
@@ -2506,7 +2553,7 @@ const completeMfaLogin = async (req, res) => {
     if (!verified) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid xID or token',
+        message: 'Invalid authentication token',
       });
     }
 
