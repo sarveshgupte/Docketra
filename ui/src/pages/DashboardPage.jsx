@@ -101,7 +101,7 @@ export const DashboardPage = () => {
       
       setRecentCases(casesToDisplay.slice(0, 5));
 
-      const userFirmId = user?.firmId || user?.firm?._id || user?.firm?.id;
+      const userFirmId = user?.firmId || user?.firm?.id;
       if (userFirmId) {
         try {
           const metricsResponse = await metricsService.getFirmMetrics(userFirmId);
@@ -214,7 +214,7 @@ export const DashboardPage = () => {
     );
   }
 
-  const awaitingPartnerReview = stats.awaitingPartnerReview || (isAdmin ? stats.adminPendingApprovals : stats.myPendingCases);
+  const awaitingPartnerReview = stats.awaitingPartnerReview;
 
   // Workflow status pipeline data
   const workflowStatuses = [
@@ -275,9 +275,9 @@ export const DashboardPage = () => {
               className="dashboard__kpi-card dashboard__kpi-card--clickable dashboard__kpi-card--success"
               onClick={() => navigate(`/app/firm/${firmSlug}/admin`)}
             >
-               <div className="dashboard__kpi-number">{stats.activeClients}</div>
+                <div className="dashboard__kpi-number">{stats.activeClients}</div>
                 <div className="dashboard__kpi-label">Active Reporting Entities</div>
-                <div className="dashboard__kpi-sub">Active reporting entities</div>
+                <div className="dashboard__kpi-sub">Total active reporting entities</div>
               </div>
           ) : (
             <div

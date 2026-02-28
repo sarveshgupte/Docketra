@@ -1,7 +1,7 @@
 const Case = require('../models/Case.model');
 
-const TERMINAL_STATUSES = ['RESOLVED', 'FILED', 'CLOSED', 'ARCHIVED'];
 const EXECUTED_STATUSES = ['RESOLVED', 'FILED'];
+const TERMINAL_STATUSES = [...EXECUTED_STATUSES, 'CLOSED', 'ARCHIVED'];
 const PARTNER_REVIEW_STATUSES = ['SUBMITTED', 'UNDER_REVIEW', 'REVIEWED'];
 
 const getFirmMetrics = async (req, res) => {
