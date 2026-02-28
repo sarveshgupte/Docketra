@@ -199,10 +199,12 @@ const attachmentSchema = new mongoose.Schema({
     default: false,
   },
 
+  // Size before optional compression (or original size when compression is skipped).
   originalSize: {
     type: Number,
   },
 
+  // Size persisted to storage after optional compression.
   finalSize: {
     type: Number,
   },
