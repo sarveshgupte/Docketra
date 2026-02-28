@@ -1,8 +1,15 @@
 const Case = require('../models/Case.model');
 const Client = require('../models/Client.model');
 const User = require('../models/User.model');
+const Task = require('../models/Task');
+const CaseAudit = require('../models/CaseAudit.model');
+const AuthAudit = require('../models/AuthAudit.model');
 const { Parser } = require('json2csv');
 const ExcelJS = require('exceljs');
+const PDFDocument = require('pdfkit');
+
+const DEFAULT_AUDIT_LOG_LIMIT = 100;
+const MAX_AUDIT_LOG_LIMIT = 250;
 
 /**
  * Reports Controller for Docketra Case Management System
@@ -109,6 +116,31 @@ const getCaseMetrics = async (req, res) => {
         count: item.count,
       });
     }
+
+    // Profitability variance across active cases
+    const profitability = await Case.aggregate([
+      {
+        $match: {
+          ...matchStage,
+          status: { $in: ['UNASSIGNED', 'OPEN', 'PENDED', 'UNDER_REVIEW', 'SUBMITTED', 'APPROVED'] },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalEstimatedBudget: { $sum: { $ifNull: ['$estimatedBudget', 0] } },
+          totalActualCost: { $sum: { $ifNull: ['$actualCost', 0] } },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          totalEstimatedBudget: 1,
+          totalActualCost: 1,
+          variance: { $subtract: ['$totalEstimatedBudget', '$totalActualCost'] },
+        },
+      },
+    ]);
     
     res.json({
       success: true,
@@ -118,6 +150,11 @@ const getCaseMetrics = async (req, res) => {
         byCategory,
         byClient,
         byEmployee,
+        profitability: profitability[0] || {
+          totalEstimatedBudget: 0,
+          totalActualCost: 0,
+          variance: 0,
+        },
       },
     });
   } catch (error) {
@@ -567,10 +604,147 @@ const exportCasesExcel = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/reports/audit-logs
+ * Unified audit feed from CaseAudit + AuthAudit with filters
+ */
+const getAuditLogs = async (req, res) => {
+  try {
+    const { xID, action, timestamp, limit = DEFAULT_AUDIT_LOG_LIMIT } = req.query;
+    const cappedLimit = Math.min(
+      Math.max(parseInt(limit, 10) || DEFAULT_AUDIT_LOG_LIMIT, 1),
+      MAX_AUDIT_LOG_LIMIT
+    );
+    const since = timestamp ? new Date(timestamp) : null;
+
+    const firmId = String(req.firmId || req.user?.firmId || '');
+    const caseIdsForFirm = await Case.find({ firmId }).distinct('caseId');
+    const caseAuditFilter = { caseId: { $in: caseIdsForFirm } };
+    if (xID) caseAuditFilter.performedByXID = xID;
+    if (action) caseAuditFilter.actionType = action;
+    if (since) caseAuditFilter.timestamp = { $gte: since };
+
+    const authAuditFilter = { firmId };
+    if (xID) authAuditFilter.xID = xID;
+    if (action) authAuditFilter.actionType = action;
+    if (since) authAuditFilter.timestamp = { $gte: since };
+
+    const [caseLogs, authLogs] = await Promise.all([
+      CaseAudit.find(caseAuditFilter).sort({ timestamp: -1 }).limit(cappedLimit).lean(),
+      AuthAudit.find(authAuditFilter).sort({ timestamp: -1 }).limit(cappedLimit).lean(),
+    ]);
+
+    const combined = [
+      ...caseLogs.map((item) => ({
+        source: 'CaseAudit',
+        xID: item.performedByXID,
+        action: item.actionType,
+        timestamp: item.timestamp,
+        description: item.description,
+        metadata: item.metadata || null,
+      })),
+      ...authLogs.map((item) => ({
+        source: 'AuthAudit',
+        xID: item.xID,
+        action: item.actionType,
+        timestamp: item.timestamp,
+        description: item.description,
+        metadata: item.metadata || null,
+      })),
+    ]
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .slice(0, cappedLimit);
+
+    return res.json({ success: true, data: combined });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch audit logs',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * GET /api/reports/client-fact-sheet/:clientId/pdf
+ * Generate PDF client fact sheet with active cases and pending tasks
+ */
+const generateClientFactSheetPdf = async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    if (!/^[A-Za-z0-9_-]+$/.test(String(clientId || ''))) {
+      return res.status(400).json({ success: false, message: 'Invalid clientId format' });
+    }
+    const firmId = req.firmId || req.user?.firmId;
+    const client = await Client.findOne({ clientId, firmId }).lean();
+
+    if (!client) {
+      return res.status(404).json({ success: false, message: 'Client not found' });
+    }
+
+    const activeCases = await Case.find({
+      firmId,
+      clientId,
+      status: { $in: ['UNASSIGNED', 'OPEN', 'PENDED', 'UNDER_REVIEW', 'SUBMITTED', 'APPROVED'] },
+    })
+      .select('caseId caseNumber title status')
+      .lean();
+
+    const clientCaseIds = await Case.find({ firmId, clientId }).distinct('_id');
+    const pendingTasks = await Task.find({
+      firmId,
+      case: { $in: clientCaseIds },
+      status: { $in: ['pending', 'in_progress', 'review', 'blocked'] },
+    })
+      .populate('case', 'caseId caseNumber')
+      .lean();
+
+    const doc = new PDFDocument({ margin: 50 });
+    const safeClientId = String(clientId).replace(/[^a-zA-Z0-9_-]/g, '');
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="client-fact-sheet-${safeClientId}.pdf"`);
+    doc.pipe(res);
+
+    doc.fontSize(20).text('Docketra Client Fact Sheet', { align: 'center' });
+    doc.moveDown();
+    doc.fontSize(12).text(`Client ID: ${client.clientId}`);
+    doc.text(`Business Name: ${client.businessName || '-'}`);
+    doc.text(`Primary Contact: ${client.primaryContactNumber || '-'}`);
+    doc.text(`Business Email: ${client.businessEmail || '-'}`);
+    doc.moveDown();
+    doc.fontSize(14).text('Active Cases');
+    if (!activeCases.length) {
+      doc.fontSize(11).text('No active cases.');
+    } else {
+      activeCases.forEach((item) => {
+        doc.fontSize(11).text(`• ${item.caseNumber || item.caseId} — ${item.title} [${item.status}]`);
+      });
+    }
+    doc.moveDown();
+    doc.fontSize(14).text('Pending Tasks');
+    if (!pendingTasks.length) {
+      doc.fontSize(11).text('No pending tasks.');
+    } else {
+      pendingTasks.forEach((task) => {
+        doc.fontSize(11).text(`• ${task.title} (${task.status})`);
+      });
+    }
+    doc.end();
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate client fact sheet',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getCaseMetrics,
   getPendingCasesReport,
   getCasesByDateRange,
   exportCasesCSV,
   exportCasesExcel,
+  getAuditLogs,
+  generateClientFactSheetPdf,
 };

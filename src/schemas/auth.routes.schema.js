@@ -23,6 +23,9 @@ module.exports = {
   'POST /refresh': {
     body: z.object({}).passthrough(),
   },
+  'POST /verify-totp': {
+    body: z.object({}).passthrough(),
+  },
   'GET /google': {
     query: z.object({}).passthrough(),
   },

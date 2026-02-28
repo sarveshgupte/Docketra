@@ -12,6 +12,8 @@ const {
   getCasesByDateRange,
   exportCasesCSV,
   exportCasesExcel,
+  getAuditLogs,
+  generateClientFactSheetPdf,
 } = require('../controllers/reports.controller');
 
 /**
@@ -41,5 +43,7 @@ router.get('/cases-by-date', getCasesByDateRange);
 // Export routes
 router.get('/export/csv', exportCasesCSV);
 router.get('/export/excel', exportCasesExcel);
+router.get('/audit-logs', getAuditLogs);
+router.get('/client-fact-sheet/:clientId/pdf', generateClientFactSheetPdf);
 
 module.exports = router;

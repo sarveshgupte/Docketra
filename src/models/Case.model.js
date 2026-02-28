@@ -124,6 +124,13 @@ const caseSchema = new mongoose.Schema({
     trim: true,
     lowercase: true,
   },
+
+  // Marks a case as a reusable template for blueprint automation
+  isTemplate: {
+    type: Boolean,
+    default: false,
+    index: true,
+  },
   
   /**
    * Brief description of the case/matter
@@ -261,6 +268,18 @@ const caseSchema = new mongoose.Schema({
    */
   dueDate: {
     type: Date,
+  },
+
+  // Budget estimates used for reporting variance
+  estimatedBudget: {
+    type: Number,
+    min: 0,
+    default: 0,
+  },
+  actualCost: {
+    type: Number,
+    min: 0,
+    default: 0,
   },
   
   /**

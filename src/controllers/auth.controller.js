@@ -2,6 +2,7 @@ const bcrypt = require('bcrypt');
 const mongoose = require('mongoose');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
+const speakeasy = require('speakeasy');
 const { google } = require('googleapis');
 const User = require('../models/User.model');
 const Firm = require('../models/Firm.model');
@@ -2407,6 +2408,58 @@ const refreshAccessToken = async (req, res) => {
 };
 
 /**
+ * Verify TOTP code for MFA
+ * POST /api/auth/verify-totp
+ */
+const verifyTotp = async (req, res) => {
+  try {
+    const xID = String(req.body?.xID || '').trim().toUpperCase();
+    const token = String(req.body?.token || '').trim();
+
+    if (!xID || !token) {
+      return res.status(400).json({
+        success: false,
+        message: 'xID and token are required',
+      });
+    }
+
+    const user = await User.findOne({ xID, isActive: true }).select('xID twoFactorSecret');
+    if (!user || !user.twoFactorSecret) {
+      return res.status(404).json({
+        success: false,
+        message: 'MFA is not configured for this user',
+      });
+    }
+
+    const verified = speakeasy.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: 'base32',
+      token,
+      // Allow adjacent 30s time step to tolerate small clock drift without over-broad acceptance
+      window: 1,
+    });
+
+    if (!verified) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid TOTP token',
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: 'TOTP verified successfully',
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Error verifying TOTP',
+      error: error.message,
+    });
+  }
+};
+
+/**
  * Initiate Google OAuth (invite-only, DB-backed users only)
  * GET /api/auth/google
  */
@@ -2783,6 +2836,7 @@ module.exports = {
   forgotPassword: wrapWriteHandler(forgotPassword),
   getAllUsers,
   refreshAccessToken: wrapWriteHandler(refreshAccessToken), // NEW: JWT token refresh
+  verifyTotp: wrapWriteHandler(verifyTotp),
   initiateGoogleAuth,
   handleGoogleCallback: wrapWriteHandler(handleGoogleCallback),
   generateAndStoreRefreshToken,
