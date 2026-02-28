@@ -25,6 +25,7 @@ const {
    forgotPassword,
    getAllUsers,
   refreshAccessToken, // NEW: JWT token refresh
+  verifyTotp,
   initiateGoogleAuth,
   handleGoogleCallback,
   verifyOAuthState,
@@ -126,6 +127,7 @@ router.post('/set-password', setPassword);
 router.post('/reset-password-with-token', authLimiter, resetPasswordWithToken);
 router.post('/forgot-password', authLimiter, forgotPassword);
 router.post('/refresh', refreshAccessToken); // NEW: JWT token refresh
+router.post('/verify-totp', authLimiter, verifyTotp);
 router.get('/google', authLimiter, initiateGoogleAuth);
 router.get('/google/callback', authLimiter, resolveOAuthFirmContext, handleGoogleCallback);
 

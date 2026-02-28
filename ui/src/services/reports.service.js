@@ -51,4 +51,14 @@ export const reportsService = {
       responseType: 'blob',
     });
   },
+
+  getAuditLogs: (filters = {}) => {
+    return api.get('/reports/audit-logs', { params: filters });
+  },
+
+  downloadClientFactSheet: (clientId) => {
+    return api.get(`/reports/client-fact-sheet/${clientId}/pdf`, {
+      responseType: 'blob',
+    });
+  },
 };

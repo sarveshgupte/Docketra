@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../../components/common/Layout';
 import { MetricCard } from '../../components/reports/MetricCard';
+import { AuditLogView } from '../../components/reports/AuditLogView';
 import { Loading } from '../../components/common/Loading';
 import { useAuth } from '../../hooks/useAuth';
 import { reportsService } from '../../services/reports.service';
@@ -189,6 +190,8 @@ export const ReportsDashboard = () => {
               <p className="text-secondary">No data available</p>
             )}
           </div>
+
+          <AuditLogView />
         </div>
 
         <div className="reports-dashboard__actions">
