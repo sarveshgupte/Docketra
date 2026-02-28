@@ -832,6 +832,7 @@ caseSchema.index({ clientId: 1 });
 caseSchema.index({ status: 1 });
 caseSchema.index({ createdAt: -1 });
 caseSchema.index({ assignedToXID: 1, status: 1 }); // CANONICAL - xID-based worklist queries
+caseSchema.index({ firmId: 1, assignedTo: 1 }); // Legacy workbasket atomic pull filter support
 caseSchema.index({ queueType: 1, status: 1 }); // Queue-based worklist queries
 caseSchema.index({ pendedByXID: 1, status: 1 }); // Pending cases dashboard queries
 caseSchema.index({ pendingUntil: 1 }); // Auto-reopen scheduler queries

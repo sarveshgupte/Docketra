@@ -22,6 +22,66 @@ const CaseService = require('./case.service');
  * PR: Case Lifecycle & Dashboard Logic
  */
 
+const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId }) => {
+  if (!caseId || !tenantId || !userId) {
+    throw new Error('caseId, tenantId, and userId are required');
+  }
+
+  const assignedAt = new Date();
+  const normalizedUserId = userId.toUpperCase();
+  const result = await Case.updateOne(
+    {
+      caseId,
+      firmId: tenantId,
+      assignedToXID: null,
+      assignedTo: null,
+      status: CaseStatus.UNASSIGNED,
+    },
+    {
+      $set: {
+        assignedToXID: normalizedUserId,
+        assignedTo: normalizedUserId,
+        assignedAt,
+        queueType: 'PERSONAL',
+        status: CaseStatus.OPEN,
+        lastActionByXID: normalizedUserId,
+        lastActionAt: assignedAt,
+      },
+    }
+  );
+
+  if (result.modifiedCount !== 1) {
+    return {
+      success: false,
+      status: 'CONFLICT',
+      error: 'Case already assigned',
+    };
+  }
+
+  setImmediate(() => {
+    CaseAudit.create({
+      caseId,
+      actionType: 'CASE_ASSIGNED',
+      description: `Case assigned to ${normalizedUserId} via workbasket pull`,
+      performedByXID: normalizedUserId,
+      metadata: {
+        previousValue: null,
+        newValue: normalizedUserId,
+        tenantId,
+        timestamp: assignedAt,
+      },
+    }).catch(() => {});
+  });
+
+  return {
+    success: true,
+    status: 'ASSIGNED',
+    caseId,
+    assignedTo: normalizedUserId,
+    assignedAt,
+  };
+};
+
 /**
  * Assign a case to a user (Pull from Global Worklist)
  * 
@@ -47,61 +107,26 @@ const assignCaseToUser = async (firmId, caseId, user) => {
   if (!user || !user.xID) {
     throw new Error('Valid user with xID is required for case assignment');
   }
-  
-  // Use findOneAndUpdate for atomic operation to prevent double assignment
-  const assignedAt = new Date();
-  const caseData = await Case.findOneAndUpdate(
-    {
-      firmId,
-      caseId,
-      status: CaseStatus.UNASSIGNED, // Only assign if still unassigned
-    },
-    {
-      $set: {
-        assignedToXID: user.xID.toUpperCase(), // CANONICAL: Store xID in assignedToXID
-        queueType: 'PERSONAL', // Move from GLOBAL to PERSONAL queue
-        assignedAt,
-      },
-    },
-    {
-      new: true, // Return updated document
-    }
-  );
-  
-  if (!caseData) {
-    // Either case doesn't exist or is not UNASSIGNED anymore
-    const existingCase = await CaseRepository.findByCaseId(firmId, caseId, user.role);
-    
-    if (!existingCase) {
-      throw new Error('Case not found');
-    }
-    
-    if (existingCase.status !== CaseStatus.UNASSIGNED) {
-      return {
-        success: false,
-        message: 'Case is no longer available (already assigned)',
-        currentStatus: existingCase.status,
-        assignedToXID: existingCase.assignedToXID,
-      };
-    }
-  }
 
-  await CaseService.updateStatus(caseId, CaseStatus.OPEN, {
+  const assignmentResult = await pullCaseFromWorkbasket({
+    caseId,
     tenantId: firmId,
-    role: user.role,
     userId: user.xID,
-    performedBy: user.email?.toLowerCase() || 'SYSTEM',
-    actorRole: user.role === 'Admin' ? 'ADMIN' : 'USER',
-    currentStatus: caseData.status,
-    statusPatch: {
-      lastActionByXID: user.xID.toUpperCase(),
-      lastActionAt: assignedAt,
-    },
   });
+
+  if (!assignmentResult.success) {
+    return {
+      success: false,
+      message: assignmentResult.error,
+    };
+  }
   const updatedCaseData = await CaseRepository.findByCaseId(firmId, caseId, user.role);
   
   return {
     success: true,
+    status: assignmentResult.status,
+    caseId: assignmentResult.caseId,
+    assignedTo: assignmentResult.assignedTo,
     data: updatedCaseData,
   };
 };
@@ -268,6 +293,7 @@ const reassignCase = async (firmId, caseId, newUserXID, performedBy) => {
 };
 
 module.exports = {
+  pullCaseFromWorkbasket,
   assignCaseToUser,
   bulkAssignCasesToUser,
   reassignCase,
