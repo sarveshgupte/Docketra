@@ -21,6 +21,13 @@ try {
   console.warn('[StorageWorker] Failed to start storage worker (non-fatal):', err.message);
 }
 
+try {
+  require('./workers/inboundEmail.worker');
+  console.log('[InboundEmailWorker] Inbound email worker started');
+} catch (err) {
+  console.warn('[InboundEmailWorker] Failed to start inbound email worker (non-fatal):', err.message);
+}
+
 // Global error log sanitizer: ensure every console.error invocation masks PII (tokens, emails, phone numbers, auth headers).
 // This preserves existing logging behavior/verbosity while enforcing centralized masking via maskSensitiveObject.
 // The original logger is retained at console.error.original for debugging tools that need raw access.

@@ -1,10 +1,15 @@
+const { createHmac, randomUUID, timingSafeEqual } = require('crypto');
+const path = require('path');
 const Case = require('../models/Case.model');
 const Comment = require('../models/Comment.model');
 const Attachment = require('../models/Attachment.model');
 const EmailMetadata = require('../models/EmailMetadata.model');
 const User = require('../models/User.model');
 const { getMimeType } = require('../utils/fileUtils');
-const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
+const { getProviderForTenant } = require('../storage/StorageProviderFactory');
+const { sendEmail } = require('../services/email.service');
+const { enqueueInboundEmailJob } = require('../queues/inboundEmail.queue');
+const cfsDriveService = require('../services/cfsDrive.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 
 /**
@@ -27,87 +32,132 @@ const wrapWriteHandler = require('../middleware/wrapWriteHandler');
  * POST /api/inbound/email
  */
 /**
- * Parse case number from recipient format: [CASE-YYYYMMDD-XXXXX]@docketra.com
+ * Parse case token from recipient format: case-{publicEmailToken}@inbound.docketra.com
  * @param {string} toAddress inbound recipient address
- * @returns {string} normalized case number token
+ * @returns {string|null} normalized public email token
  */
-const parseCaseNumberFromRecipient = (toAddress) => {
+const parsePublicEmailTokenFromRecipient = (toAddress) => {
   const recipient = String(toAddress || '').trim().toLowerCase();
   const localPart = recipient.split('@')[0] || '';
-  return localPart.replace(/^\[/, '').replace(/\]$/, '').toUpperCase();
+  const match = localPart.match(/^case-([a-z0-9-]+)$/i);
+  return match ? match[1].toLowerCase() : null;
 };
 
-const handleInboundEmail = async (req, res) => {
+const BLOCKED_EXTENSIONS = new Set(['.exe', '.bat', '.cmd', '.com', '.scr', '.js', '.jar', '.msi', '.sh']);
+const MAX_ATTACHMENT_SIZE_BYTES = 25 * 1024 * 1024;
+const EMAIL_ATTACHMENT_PREFIX = 'email';
+
+const verifyInboundSignature = (req) => {
+  const secret = process.env.INBOUND_EMAIL_WEBHOOK_SECRET;
+  if (!secret) return true;
+
+  const providedSignature = String(req.headers['x-inbound-signature'] || '').trim();
+  if (!providedSignature) return false;
+
+  const expectedSignature = createHmac('sha256', secret)
+    .update(JSON.stringify(req.body || {}))
+    .digest('hex');
+
+  const providedBuffer = Buffer.from(providedSignature, 'hex');
+  const expectedBuffer = Buffer.from(expectedSignature, 'hex');
+  if (providedBuffer.length !== expectedBuffer.length) return false;
+  return timingSafeEqual(providedBuffer, expectedBuffer);
+};
+
+const decodeAttachmentBuffer = (attachment) => {
+  if (Buffer.isBuffer(attachment?.content)) return attachment.content;
+  if (attachment?.content?.type === 'Buffer' && Array.isArray(attachment.content.data)) {
+    return Buffer.from(attachment.content.data);
+  }
+  if (typeof attachment?.contentBase64 === 'string') {
+    return Buffer.from(attachment.contentBase64, 'base64');
+  }
+  if (typeof attachment?.content === 'string') {
+    return Buffer.from(attachment.content, 'base64');
+  }
+  return null;
+};
+
+const sendInboundFailureEmail = async ({ to, reason }) => {
+  if (!to) return;
+  const safeReason = String(reason || 'Unknown error')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/`/g, '&#96;');
+  await sendEmail({
+    to,
+    subject: 'Email could not be attached to your case',
+    text: `Your inbound email could not be attached.\nReason: ${safeReason}`,
+    html: `<p>Your inbound email could not be attached.</p><p><strong>Reason:</strong> ${safeReason}</p>`,
+  });
+};
+
+const processInboundEmailPayload = async (payload) => {
+  const {
+    to,
+    from,
+    fromName,
+    subject,
+    messageId,
+    headers,
+    bodyText,
+    bodyHtml,
+    attachments,
+    receivedAt,
+  } = payload;
+
   try {
-    const {
-      to,          // Recipient email (case-specific address)
-      from,        // Sender email
-      fromName,    // Sender display name (optional)
-      subject,     // Email subject
-      messageId,   // Unique message ID
-      headers,     // Raw headers (optional)
-      bodyText,    // Plain text body (optional)
-      bodyHtml,    // HTML body (optional)
-      attachments, // Array of attachments (optional)
-      receivedAt,  // When email was received (optional, defaults to now)
-    } = req.body;
-    
-    // Validate required fields
     if (!to || !from) {
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required fields: to, from',
-      });
-    }
-    
-    const parsedCaseNumber = parseCaseNumberFromRecipient(to);
-    if (!parsedCaseNumber) {
-      return res.status(400).json({
-        success: false,
-        message: 'Unable to resolve email to case from recipient address.',
-      });
+      throw new Error('Missing required fields: to, from');
     }
 
-    // Resolve case using [caseNumber]@docketra.com recipient pattern
-    const caseData = await Case.findOne({
-      $or: [{ caseNumber: parsedCaseNumber }, { caseId: parsedCaseNumber }],
-    }).lean();
-    
-    if (!caseData) {
-      return res.status(404).json({
-        success: false,
-        message: 'Case not found',
-      });
+    const publicEmailToken = parsePublicEmailTokenFromRecipient(to);
+    if (!publicEmailToken) {
+      await sendInboundFailureEmail({ to: from, reason: 'Case not found' });
+      throw new Error('Unable to resolve case token from recipient address');
     }
-    
-    // Normalize sender email
+
+    const caseData = await Case.findOne({
+      publicEmailToken,
+    }).lean();
+
+    if (!caseData) {
+      await sendInboundFailureEmail({ to: from, reason: 'Case not found' });
+      throw new Error('Case not found');
+    }
+
+    if (['FILED', 'Filed', 'Archived'].includes(caseData.status)) {
+      await sendInboundFailureEmail({ to: from, reason: 'Case archived' });
+      throw new Error('Case archived');
+    }
+
     const normalizedFromEmail = from.toLowerCase().trim();
-    
-    // Classify sender as internal or external
-    // Look up user by email where status is ACTIVE
     const user = await User.findOne({
       email: normalizedFromEmail,
       firmId: caseData.firmId,
-      isActive: true 
+      isActive: true,
     });
-    
+
     const isInternal = !!user;
     const visibility = isInternal ? 'internal' : 'external';
-    
-    // Prepare attribution
     let createdByEmail = normalizedFromEmail;
     let createdByXID = null;
     let createdByName = fromName || null;
-    
     if (isInternal) {
       createdByXID = user.xID;
       createdByName = user.name;
     }
-    
+
     const resolvedCaseId = caseData.caseId || caseData.caseNumber;
     const shouldCreateAttachment = Array.isArray(attachments) && attachments.length > 0;
+
+    let metadataAttachmentId = null;
+
     if (!shouldCreateAttachment) {
-      const comment = await Comment.create({
+      await Comment.create({
         caseId: resolvedCaseId,
         text: bodyText || subject || '(empty email body)',
         createdBy: createdByEmail,
@@ -115,136 +165,130 @@ const handleInboundEmail = async (req, res) => {
         createdByName,
         note: `Inbound email received at ${receivedAt || new Date().toISOString()}`,
       });
-
-      return res.status(201).json({
-        success: true,
-        data: {
-          commentId: comment._id,
-          caseId: resolvedCaseId,
-          classification: visibility,
-        },
-        message: 'Email received and added as comment successfully',
-      });
-    }
-
-    // Upload email body to Google Drive as attachment
-    const timestamp = Date.now();
-    const randomSuffix = Math.random().toString(36).substring(7);
-    const emailFileName = `email-${timestamp}-${randomSuffix}.txt`;
-    
-    // Create email content file
-    const emailContent = `
-From: ${from}${fromName ? ` (${fromName})` : ''}
-To: ${to}
-Subject: ${subject || '(no subject)'}
-Message-ID: ${messageId || '(none)'}
-Date: ${receivedAt || new Date().toISOString()}
-
-${bodyText || '(no text body)'}
-
----
-HTML Body:
-${bodyHtml || '(no HTML body)'}
-`.trim();
-    
-    // Use getMimeType utility for consistency
-    const mimeType = getMimeType(emailFileName);
-    
-    // Upload to Google Drive
-    let driveFileId = null;
-    let fileSize = Buffer.byteLength(emailContent, 'utf8');
-    
-    try {
-      const provider = await StorageProviderFactory.getProvider(caseData.firmId);
-      // Ensure case has Drive folder structure
+    } else {
       if (!caseData.drive?.attachmentsFolderId) {
-        throw new Error('Case Drive folder structure not initialized. Please ensure the case was properly created with Google Drive integration enabled.');
+        await sendInboundFailureEmail({ to: from, reason: 'Storage misconfiguration' });
+        throw new Error('Case Drive folder structure not initialized');
       }
-      
-      const cfsDriveService = require('../services/cfsDrive.service');
-      
-      const targetFolderId = cfsDriveService.getFolderIdForFileType(
-        caseData.drive,
-        'attachment'
-      );
-      
-      const driveFile = await provider.uploadFile(
-        Buffer.from(emailContent, 'utf8'),
-        emailFileName,
-        mimeType,
-        targetFolderId
-      );
-      
-      driveFileId = driveFile.id;
-      fileSize = driveFile.size || fileSize;
-    } catch (error) {
-      console.error('[handleInboundEmail] Error uploading to Google Drive:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Error uploading email to Google Drive',
-        error: error.message,
+
+      const provider = await getProviderForTenant(caseData.firmId);
+      const targetFolderId = cfsDriveService.getFolderIdForFileType(caseData.drive, 'attachment');
+
+      if (!targetFolderId) {
+        await sendInboundFailureEmail({ to: from, reason: 'Storage misconfiguration' });
+        throw new Error('Storage folder not found for inbound attachment');
+      }
+
+      for (const attachmentInput of attachments) {
+        const rawName = attachmentInput?.filename || attachmentInput?.name || 'attachment.bin';
+        const safeName = path.basename(rawName);
+        const ext = path.extname(safeName).toLowerCase();
+        const buffer = decodeAttachmentBuffer(attachmentInput);
+        const size = Number(attachmentInput?.size) || (buffer ? buffer.length : 0);
+
+        if (BLOCKED_EXTENSIONS.has(ext)) {
+          console.warn('[InboundEmail] Suspicious attachment blocked', { filename: safeName, from: normalizedFromEmail });
+          await sendInboundFailureEmail({ to: from, reason: 'Unsupported file type' });
+          throw new Error(`Blocked executable attachment: ${safeName}`);
+        }
+
+        if (!buffer || !size) {
+          console.warn('[InboundEmail] Skipping attachment with missing content', { filename: safeName, from: normalizedFromEmail });
+          continue;
+        }
+
+        if (size > MAX_ATTACHMENT_SIZE_BYTES) {
+          await sendInboundFailureEmail({ to: from, reason: 'Attachment too large' });
+          throw new Error(`Attachment too large: ${safeName}`);
+        }
+
+        const storedName = `${randomUUID()}-${safeName}`;
+        const mimeType = getMimeType(safeName);
+        const uploadResult = await provider.uploadFile(
+          caseData.firmId,
+          targetFolderId,
+          buffer,
+          { name: `${EMAIL_ATTACHMENT_PREFIX}/${storedName}`, mimeType }
+        );
+
+        const attachmentRecord = await Attachment.create({
+          caseId: resolvedCaseId,
+          firmId: caseData.firmId,
+          fileName: safeName,
+          driveFileId: uploadResult.fileId || uploadResult.id,
+          size,
+          mimeType,
+          description: 'Inbound email attachment',
+          createdBy: createdByEmail,
+          createdByXID,
+          createdByName,
+          type: 'email_native',
+          source: 'email',
+          visibility,
+          note: `Email attachment received at ${receivedAt || new Date().toISOString()}`,
+        });
+        if (!metadataAttachmentId) {
+          metadataAttachmentId = attachmentRecord._id;
+        }
+      }
+    }
+
+    if (metadataAttachmentId) {
+      await EmailMetadata.create({
+        attachmentId: metadataAttachmentId,
+        fromEmail: normalizedFromEmail,
+        fromName: fromName || null,
+        subject: subject || null,
+        messageId: messageId || null,
+        receivedAt: receivedAt ? new Date(receivedAt) : new Date(),
+        headers: headers || null,
+        bodyText: bodyText || null,
+        bodyHtml: bodyHtml || null,
       });
     }
-    
-    // Create attachment record with Google Drive metadata
-    const attachment = await Attachment.create({
-      caseId: resolvedCaseId,
-      firmId: caseData.firmId,
-      fileName: `Email from ${from} - ${subject || 'No Subject'}`,
-      driveFileId: driveFileId,
-      size: fileSize,
-      mimeType: mimeType,
-      description: `Inbound email from ${isInternal ? 'internal' : 'external'} sender`,
-      createdBy: createdByEmail,
-      createdByXID: createdByXID,
-      createdByName: createdByName,
-      type: 'email_native',
-      source: 'email',
-      visibility: visibility,
-      note: `Email received at ${receivedAt || new Date().toISOString()}`,
+
+    await sendEmail({
+      to: normalizedFromEmail,
+      subject: `Email successfully attached to Case ${caseData.caseNumber || caseData.caseId}`,
+      text: `Your email and attachments were successfully added to:\nCase: ${caseData.title}\nReference: ${caseData.caseNumber || caseData.caseId}\nTime: ${new Date().toISOString()}`,
+      html: `<p>Your email and attachments were successfully added to:</p><p><strong>Case:</strong> ${caseData.title}<br /><strong>Reference:</strong> ${caseData.caseNumber || caseData.caseId}<br /><strong>Time:</strong> ${new Date().toISOString()}</p>`,
     });
-    
-    // Create email metadata record
-    await EmailMetadata.create({
-      attachmentId: attachment._id,
-      fromEmail: normalizedFromEmail,
-      fromName: fromName || null,
-      subject: subject || null,
-      messageId: messageId || null,
-      receivedAt: receivedAt ? new Date(receivedAt) : new Date(),
-      headers: headers || null,
-      bodyText: bodyText || null,
-      bodyHtml: bodyHtml || null,
-    });
-    
-    // TODO: Trigger async email-to-PDF conversion
-    // This should be done in a background job to avoid blocking
-    // For now, we'll skip this step
-    
-    res.status(201).json({
+
+    return {
       success: true,
-      data: {
-        attachmentId: attachment._id,
-        caseId: resolvedCaseId,
-        classification: visibility,
-        sender: {
-          email: normalizedFromEmail,
-          name: createdByName,
-          xID: createdByXID,
-        },
-      },
-      message: 'Email received and attached to case successfully',
-    });
+      caseId: resolvedCaseId,
+      classification: visibility,
+    };
   } catch (error) {
-    console.error('[handleInboundEmail] Error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error processing inbound email',
-      error: error.message,
-    });
+    console.error('[processInboundEmailPayload] Error:', error);
+    throw error;
   }
 };
 
+const handleInboundEmail = async (req, res) => {
+  if (!verifyInboundSignature(req)) {
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid inbound signature',
+    });
+  }
+
+  if (!req.body?.to || !req.body?.from) {
+    return res.status(400).json({
+      success: false,
+      message: 'Missing required fields: to, from',
+    });
+  }
+
+  await enqueueInboundEmailJob(req.body);
+  return res.status(200).json({
+    success: true,
+    message: 'Inbound email accepted for processing',
+  });
+};
+
 module.exports = {
+  parsePublicEmailTokenFromRecipient,
+  processInboundEmailPayload,
   handleInboundEmail: wrapWriteHandler(handleInboundEmail),
 };
