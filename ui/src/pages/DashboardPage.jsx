@@ -19,6 +19,7 @@ import { caseService } from '../services/caseService';
 import { worklistService } from '../services/worklistService';
 import { adminService } from '../services/adminService';
 import { clientService } from '../services/clientService';
+import { metricsService } from '../services/metricsService';
 import { formatDate } from '../utils/formatters';
 import api from '../services/api';
 import './DashboardPage.css';
@@ -40,13 +41,20 @@ export const DashboardPage = () => {
     adminFiledCases: 0,
     adminResolvedCases: 0,
     activeClients: 0,
+    overdueComplianceItems: 0,
+    dueInSevenDays: 0,
+    awaitingPartnerReview: 0,
+    totalOpenCases: 0,
+    totalExecutedCases: 0,
   });
   const [recentCases, setRecentCases] = useState([]);
   const [showBookmarkPrompt, setShowBookmarkPrompt] = useState(false);
 
   useEffect(() => {
-    loadDashboardData();
-  }, []);
+    if (user) {
+      loadDashboardData();
+    }
+  }, [user, isAdmin]);
 
   // Show bookmark prompt only after dashboard loading completes
   useEffect(() => {
@@ -73,7 +81,7 @@ export const DashboardPage = () => {
       
       if (isAdmin) {
         try {
-          const casesResponse = await caseService.getCases();
+          const casesResponse = await caseService.getCases({ limit: 5 });
           if (casesResponse.success) {
             casesToDisplay = casesResponse.data || [];
           }
@@ -92,6 +100,21 @@ export const DashboardPage = () => {
       }
       
       setRecentCases(casesToDisplay.slice(0, 5));
+
+      const userFirmId = user?.firmId || user?.firm?._id || user?.firm?.id;
+      if (userFirmId) {
+        try {
+          const metricsResponse = await metricsService.getFirmMetrics(userFirmId);
+          if (metricsResponse.success) {
+            setStats((prev) => ({
+              ...prev,
+              ...metricsResponse.data,
+            }));
+          }
+        } catch (error) {
+          console.error('Failed to load firm metrics:', error);
+        }
+      }
       
       // My Open Cases
       try {
@@ -191,17 +214,7 @@ export const DashboardPage = () => {
     );
   }
 
-  const casesForMetrics = recentCases;
-  const now = Date.now();
-  const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-  const overdueComplianceItems = casesForMetrics.filter((item) => item?.dueDate && new Date(item.dueDate).getTime() < now).length;
-  const dueInSevenDays = casesForMetrics.filter((item) => {
-    if (!item?.dueDate) return false;
-    const dueAt = new Date(item.dueDate).getTime();
-    const sevenDays = now + SEVEN_DAYS_MS;
-    return dueAt >= now && dueAt <= sevenDays;
-  }).length;
-  const awaitingPartnerReview = isAdmin ? stats.adminPendingApprovals : stats.myPendingCases;
+  const awaitingPartnerReview = stats.awaitingPartnerReview || (isAdmin ? stats.adminPendingApprovals : stats.myPendingCases);
 
   // Workflow status pipeline data
   const workflowStatuses = [
@@ -229,7 +242,7 @@ export const DashboardPage = () => {
             className="dashboard__kpi-card dashboard__kpi-card--clickable"
             onClick={() => navigate(`/app/firm/${firmSlug}/my-worklist?status=OPEN`)}
           >
-             <div className="dashboard__kpi-number">{overdueComplianceItems}</div>
+             <div className="dashboard__kpi-number">{stats.overdueComplianceItems}</div>
              <div className="dashboard__kpi-label">Overdue Compliance Items</div>
              <div className="dashboard__kpi-sub" style={{ color: 'var(--danger)' }}>Red Risk Band</div>
            </div>
@@ -240,7 +253,7 @@ export const DashboardPage = () => {
             onClick={() => navigate(`/app/firm/${firmSlug}/cases?approvalStatus=PENDING`)}
           >
             <div className="dashboard__kpi-number">
-               {dueInSevenDays}
+               {stats.dueInSevenDays}
              </div>
              <div className="dashboard__kpi-label">Due in 7 Days</div>
              <div className="dashboard__kpi-sub" style={{ color: 'var(--warning)' }}>Amber Risk Band</div>
@@ -263,9 +276,9 @@ export const DashboardPage = () => {
               onClick={() => navigate(`/app/firm/${firmSlug}/admin`)}
             >
                <div className="dashboard__kpi-number">{stats.activeClients}</div>
-               <div className="dashboard__kpi-label">Risk Summary Panel</div>
-               <div className="dashboard__kpi-sub">Active reporting entities</div>
-             </div>
+                <div className="dashboard__kpi-label">Active Reporting Entities</div>
+                <div className="dashboard__kpi-sub">Active reporting entities</div>
+              </div>
           ) : (
             <div
               className="dashboard__kpi-card dashboard__kpi-card--clickable dashboard__kpi-card--success"
