@@ -47,6 +47,7 @@ async function testAtomicUpdateFilterAndSuccessResponse() {
     assert.strictEqual(capturedUpdate.$set.assignedToXID, 'X123456');
     assert.strictEqual(capturedUpdate.$set.assignedTo, 'X123456');
     assert.strictEqual(capturedUpdate.$set.status, CaseStatus.OPEN);
+    await new Promise((resolve) => setImmediate(resolve));
     console.log('✓ Atomic single-case pull updates with tenant and unassigned filter');
   } finally {
     Case.updateOne = originalUpdateOne;
@@ -109,6 +110,7 @@ async function testConcurrentPullsYieldSingleWinner() {
     const conflictCount = attempts.filter((item) => item.status === 'CONFLICT').length;
     assert.strictEqual(successCount, 1);
     assert.strictEqual(conflictCount, 9);
+    await new Promise((resolve) => setImmediate(resolve));
     console.log('✓ Concurrent pulls allow exactly one assignment and reject the rest');
   } finally {
     Case.updateOne = originalUpdateOne;
