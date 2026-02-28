@@ -29,22 +29,27 @@ import { DetailedReports } from './pages/reports/DetailedReports';
 import { FilteredCasesPage } from './pages/FilteredCasesPage';
 import { CasesPage } from './pages/CasesPage';
 import { GoogleCallbackPage } from './pages/GoogleCallbackPage';
-import { MarketingHomePage, MarketingFeaturesPage, MarketingPricingPage } from './pages/marketing/MarketingPages';
+import { MarketingHomePage, MarketingFeaturesPage, MarketingPricingPage, MarketingTermsPage, MarketingPrivacyPage, MarketingSecurityPage, MarketingAboutPage, MarketingContactPage } from './pages/marketing/MarketingPages';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 const LEGACY_SLUG_BLOCKLIST = new Set([
+  'about',
   'app',
   'auth',
   'change-password',
+  'contact',
   'f',
   'features',
   'forgot-password',
   'google-callback',
   'login',
   'pricing',
+  'privacy',
   'reset-password',
+  'security',
   'set-password',
   'superadmin',
+  'terms',
 ]);
 const FIRM_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const DEFAULT_FIRM_SUFFIX = '/dashboard';
@@ -99,6 +104,11 @@ export const Router = () => {
             <Route path="/" element={<MarketingHomePage />} />
             <Route path="/features" element={<MarketingFeaturesPage />} />
             <Route path="/pricing" element={<MarketingPricingPage />} />
+            <Route path="/terms" element={<MarketingTermsPage />} />
+            <Route path="/privacy" element={<MarketingPrivacyPage />} />
+            <Route path="/security" element={<MarketingSecurityPage />} />
+            <Route path="/about" element={<MarketingAboutPage />} />
+            <Route path="/contact" element={<MarketingContactPage />} />
             <Route path="/login" element={<LoginPage />} />
           </Route>
 

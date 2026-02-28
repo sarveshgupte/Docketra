@@ -100,6 +100,7 @@ const adminRoutes = require('./routes/admin.routes');  // Admin routes (PR #41)
 const superadminRoutes = require('./routes/superadmin.routes');  // Superadmin routes
 const debugRoutes = require('./routes/debug.routes');  // Debug routes (PR #43)
 const inboundRoutes = require('./routes/inbound.routes');  // Inbound email routes
+const contactRoutes = require('./routes/contact.routes');  // Public contact form route
 const publicRoutes = require('./routes/public.routes');  // Public routes (firm lookup)
 const firmRoutes = require('./routes/firm.routes');  // Firm-scoped routes (/f/:firmSlug/*)
 const healthRoutes = require('./routes/health.routes');  // Health endpoints
@@ -303,6 +304,9 @@ authBasePaths.forEach((basePath) => {
 
 // Public routes (no authentication required)
 app.use('/api/public', writeGuardChain, publicRoutes);
+
+// Contact form route (public, no authentication required)
+app.use('/api/contact', contactRoutes);
 
 // Category routes (public GET for active categories, admin-only for modifications)
 app.use('/api/categories', writeGuardChain, categoryRoutes);
