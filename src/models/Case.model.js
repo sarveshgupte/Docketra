@@ -296,6 +296,11 @@ const caseSchema = new mongoose.Schema({
   pendingUntil: {
     type: Date,
   },
+
+  // Timestamp when case was transitioned to RESOLVED
+  resolvedAt: {
+    type: Date,
+  },
   
   slaDueAt: {
     type: Date,
@@ -862,6 +867,9 @@ caseSchema.index({ firmId: 1, slaDueAt: 1 }); // Firm-scoped SLA due lookups
 // REMOVED: { firmId: 1 } - redundant with compound indexes above (firmId, caseInternalId), (firmId, caseNumber), etc.
 caseSchema.index({ firmId: 1, status: 1 }); // Firm-scoped status queries
 caseSchema.index({ firmId: 1, assignedToXID: 1 }); // Firm-scoped assignment queries
+caseSchema.index({ firmId: 1, dueDate: 1, status: 1 }); // Firm-scoped overdue metrics queries
+caseSchema.index({ firmId: 1, resolvedAt: 1 }); // Firm-scoped resolution metrics queries
+caseSchema.index({ firmId: 1, createdAt: 1 }); // Firm-scoped daily creation metrics queries
 
 caseSchema.plugin(softDeletePlugin);
 
