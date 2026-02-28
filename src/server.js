@@ -84,7 +84,9 @@ const { adminAuditTrail } = require('./middleware/adminAudit.middleware');
 const requestLifecycle = require('./middleware/requestLifecycle.middleware');
 const { noFirmNoTransaction } = require('./middleware/noFirmNoTransaction.middleware');
 const optionsPreflight = require('./middleware/optionsPreflight.middleware');
-const { authLimiter } = require('./middleware/rateLimiters');
+const { authLimiter, globalApiLimiter, sensitiveLimiter } = require('./middleware/rateLimiters');
+const { tenantThrottle } = require('./middleware/tenantThrottle.middleware');
+const { uploadErrorHandler } = require('./middleware/uploadProtection.middleware');
 
 // Routes
 const userRoutes = require('./routes/user.routes');
@@ -211,6 +213,7 @@ if (isProduction) {
 
 // Initialize Express app
 const app = express();
+app.set('trust proxy', 1);
 
 const frontendOrigin = process.env.FRONTEND_URL;
 console.log('[CORS] Allowed origin:', frontendOrigin || '(not set)');
@@ -227,7 +230,12 @@ connectDB()
 // Disable CSP and COEP since we're serving a React SPA
 app.use(helmet({
   contentSecurityPolicy: false,
-  crossOriginEmbedderPolicy: false
+  crossOriginEmbedderPolicy: false,
+  frameguard: { action: 'deny' },
+  noSniff: true,
+  referrerPolicy: { policy: 'no-referrer' },
+  dnsPrefetchControl: { allow: false },
+  hsts: isProduction ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
 }));
 
 const CORS_ALLOWED_HEADERS = ['Content-Type', 'Authorization', 'X-Requested-With', 'Idempotency-Key'];
@@ -252,6 +260,7 @@ app.use(requestLifecycle);
 app.use(requestLogger);
 app.use(responseContract);
 app.use(degradedGuard);
+app.use('/api', globalApiLimiter);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -319,7 +328,7 @@ app.use('/api/contact', contactLimiter, contactRoutes);
 app.use('/api/categories', writeGuardChain, categoryRoutes);
 
 // Admin routes (firm-scoped) - enforce auth + firm context + admin role boundary
-app.use('/api/admin', authenticate, firmContext, requireTenant, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, requireAdmin, adminAuditTrail('admin'), adminRoutes);
+app.use('/api/admin', authenticate, firmContext, requireTenant, tenantThrottle, sensitiveLimiter, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, requireAdmin, adminAuditTrail('admin'), adminRoutes);
 
 // Superadmin routes - platform scope only (no firm context)
 // Include legacy /superadmin to prevent SPA fallback when UI calls API without /api prefix.
@@ -335,17 +344,17 @@ app.use('/api/inbound', writeGuardChain, inboundRoutes);
 
 // Protected routes - require authentication
 // Firm context must be attached for all tenant-scoped operations
-app.use('/api/users', authenticate, firmContext, requireTenant, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, userRoutes);
-app.use('/api/tasks', authenticate, firmContext, requireTenant, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, taskRoutes);
-app.use('/api/cases', authenticate, firmContext, requireTenant, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, caseRoutes);
-app.use('/api/search', authenticate, firmContext, requireTenant, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, searchRoutes);
-app.use('/api/worklists', authenticate, firmContext, requireTenant, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, searchRoutes);
-app.use('/api/client-approval', authenticate, firmContext, requireTenant, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, clientApprovalRoutes);
-app.use('/api/clients', authenticate, firmContext, requireTenant, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, clientRoutes);  // Client management (PR #39)
-app.use('/api/reports', authenticate, firmContext, requireTenant, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, reportsRoutes);  // Reports routes
-app.use('/api/storage', authenticate, firmContext, requireTenant, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), storageRoutes);  // BYOS storage routes (read-only, no writeGuardChain needed)
-app.use('/api/files', authLimiter, authenticate, firmContext, requireTenant, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, filesRoutes);
-app.use('/api/tenant', authLimiter, authenticate, firmContext, requireTenant, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, tenantRoutes);
+app.use('/api/users', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, userRoutes);
+app.use('/api/tasks', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, taskRoutes);
+app.use('/api/cases', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, caseRoutes);
+app.use('/api/search', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, searchRoutes);
+app.use('/api/worklists', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, searchRoutes);
+app.use('/api/client-approval', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, clientApprovalRoutes);
+app.use('/api/clients', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, clientRoutes);  // Client management (PR #39)
+app.use('/api/reports', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, reportsRoutes);  // Reports routes
+app.use('/api/storage', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), storageRoutes);  // BYOS storage routes (read-only, no writeGuardChain needed)
+app.use('/api/files', authLimiter, authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, filesRoutes);
+app.use('/api/tenant', authLimiter, authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, tenantRoutes);
 
 // Firm-scoped routes — /f/:firmSlug/* (tenant resolver applied inside firm.routes.js)
 // POST /f/:firmSlug/login is the primary path-based login endpoint.
@@ -359,6 +368,7 @@ app.get('/', (req, res) => {
 
 // Error handling
 app.use(notFound);
+app.use(uploadErrorHandler);
 app.use(errorHandler);
 
 // Start server

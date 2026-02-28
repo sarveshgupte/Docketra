@@ -10,6 +10,10 @@ const metrics = {
     failure: 0,
     retry: 0,
   },
+  prometheusCounters: {
+    api_rate_limit_exceeded_total: 0,
+    tenant_throttle_exceeded_total: 0,
+  },
 };
 
 // Dynamic providers injected at startup so the snapshot reflects live queue state
@@ -69,6 +73,7 @@ const getSnapshot = async () => {
     rateLimitHits: { ...metrics.rateLimitHits },
     latency: getLatencyPercentiles(),
     storageJobs: { ...metrics.storageJobs, dlqSize, queueDepth },
+    prometheus: { ...metrics.prometheusCounters },
   };
 };
 
@@ -107,4 +112,6 @@ module.exports = {
   recordStorageJobSuccess: () => { metrics.storageJobs.success += 1; },
   recordStorageJobFailure: () => { metrics.storageJobs.failure += 1; },
   recordStorageJobRetry: () => { metrics.storageJobs.retry += 1; },
+  recordApiRateLimitExceeded: () => { metrics.prometheusCounters.api_rate_limit_exceeded_total += 1; },
+  recordTenantThrottleExceeded: () => { metrics.prometheusCounters.tenant_throttle_exceeded_total += 1; },
 };
