@@ -269,7 +269,7 @@ const userSchema = new mongoose.Schema({
    */
   status: {
     type: String,
-    enum: ['INVITED', 'ACTIVE', 'DISABLED', 'DELETED', 'invited', 'active', 'suspended'],
+    enum: ['invited', 'active', 'suspended', 'deleted'],
     default: 'invited',
     required: true,
   },
@@ -440,7 +440,7 @@ userSchema.index({ firmId: 1, xID: 1 }, { unique: true });
 // Global uniqueness is intentionally NOT enforced.
 userSchema.index(
   { firmId: 1, email: 1 },
-  { unique: true, partialFilterExpression: { status: { $ne: 'DELETED' } } }
+  { unique: true, partialFilterExpression: { status: { $ne: 'deleted' } } }
 );
 userSchema.index({ isActive: 1 });
 userSchema.index({ role: 1 });

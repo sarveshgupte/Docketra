@@ -6,8 +6,8 @@ const metricsService = require('../services/metrics.service');
 const MUST_SET_ALLOWED_PATHS = [
   '/auth/profile',
   '/api/auth/profile',
-  '/auth/set-password',
-  '/api/auth/set-password',
+  '/auth/setup-account',
+  '/api/auth/setup-account',
   '/auth/reset-password',
   '/api/auth/reset-password',
   '/auth/reset-password-with-token',
@@ -171,7 +171,7 @@ const authenticate = async (req, res, next) => {
         code: 'PASSWORD_SETUP_REQUIRED',
         mustSetPassword: true,
         message: 'You must set your password before accessing this resource.',
-        redirectPath: '/auth/set-password',
+        redirectPath: '/auth/setup-account',
       });
     }
     
@@ -193,7 +193,7 @@ const authenticate = async (req, res, next) => {
     if (user.role !== 'SUPER_ADMIN' && user.firmId) {
       const Firm = require('../models/Firm.model');
       const firm = await Firm.findById(user.firmId);
-      if (firm && (firm.status === 'SUSPENDED' || firm.status === 'INACTIVE')) {
+      if (firm && (firm.status === 'suspended' || firm.status === 'suspended')) {
         noteAuthFailure();
         return res.status(403).json({
           success: false,

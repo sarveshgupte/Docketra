@@ -8,6 +8,16 @@ const xIDGenerator = require('../../services/xIDGenerator');
 const { slugify } = require('../../utils/slugify');
 
 const SETUP_EXPIRY_HOURS = 48;
+const RESERVED_SLUGS = [
+  'superadmin',
+  'api',
+  'auth',
+  'public',
+  'pricing',
+  'contact',
+  'about',
+  'security',
+];
 
 const createFirmWithAdmin = async (payload = {}) => {
   const { adminName, adminEmail, firmName, planId } = payload;
@@ -27,6 +37,19 @@ const createFirmWithAdmin = async (payload = {}) => {
       }
 
       const firmSlug = slugify(firmName);
+      if (RESERVED_SLUGS.includes(firmSlug)) {
+        const err = new Error('Invalid firm name. Please choose a different name.');
+        err.statusCode = 400;
+        throw err;
+      }
+
+      const existingFirm = await Firm.findOne({ firmSlug }).session(session);
+      if (existingFirm) {
+        const err = new Error('Firm already exists with this name. Please choose a different name.');
+        err.statusCode = 409;
+        throw err;
+      }
+
       const firm = await Firm.create([{
         firmId: `FIRM${Date.now()}`,
         name: firmName,
@@ -49,7 +72,7 @@ const createFirmWithAdmin = async (payload = {}) => {
         status: 'invited',
         setupTokenHash,
         setupTokenExpiresAt,
-        isActive: true,
+        isActive: false,
       }], { session }).then((docs) => docs[0]);
 
       await emailService.sendPasswordSetupEmail({
@@ -58,7 +81,6 @@ const createFirmWithAdmin = async (payload = {}) => {
         token: setupToken,
         xID: user.xID,
         firmSlug: firm.firmSlug,
-        customMessage: 'This link will expire in 48 hours.',
       });
 
       result = { firm, admin: user };
@@ -71,4 +93,5 @@ const createFirmWithAdmin = async (payload = {}) => {
 
 module.exports = {
   createFirmWithAdmin,
+  RESERVED_SLUGS,
 };

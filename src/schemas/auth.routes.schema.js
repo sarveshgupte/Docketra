@@ -1,17 +1,10 @@
 const { z, nonEmptyString } = require('./common');
 
 module.exports = {
-  'POST /login': {
-    body: z.object({
-      email: z.string().trim().email().optional(),
-      xID: nonEmptyString.optional(),
-      password: nonEmptyString.optional(),
-    }).passthrough(),
-  },
-  'POST /setup-password': {
+  'POST /setup-account': {
     body: z.object({}).passthrough(),
   },
-  'POST /set-password': {
+  'POST /resend-setup': {
     body: z.object({}).passthrough(),
   },
   'POST /reset-password-with-token': {

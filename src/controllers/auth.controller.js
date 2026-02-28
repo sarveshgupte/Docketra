@@ -361,10 +361,10 @@ const login = async (req, res) => {
     const user = await User.findOne({
       firmId: req.firmId,
       xID: normalizedXID,
-      status: { $ne: 'DELETED' },
+      status: { $ne: 'deleted' },
     });
     
-    if (!user || !['active', 'ACTIVE'].includes(user.status)) {
+    if (!user || user.status !== 'active') {
       await recordFailedLoginAttempt(req);
       console.warn(`[AUTH] Invalid login attempt for xID=${normalizedXID} in firm context ${req.firmSlug || req.firmId}`);
       try {
@@ -470,7 +470,7 @@ const login = async (req, res) => {
     }
     
     // Check if user status is ACTIVE (invited users cannot login)
-    if (user.status && !['active', 'ACTIVE'].includes(user.status)) {
+    if (user.status && user.status !== 'active') {
       return res.status(403).json({
         success: false,
         message: 'Please complete your account setup using the invite link sent to your email',
@@ -497,7 +497,7 @@ const login = async (req, res) => {
         code: 'PASSWORD_SETUP_REQUIRED',
         message: 'Please set your password using the link sent to your email',
         mustSetPassword: true,
-        redirectPath: '/auth/set-password',
+        redirectPath: '/auth/setup-account',
       });
     }
     
@@ -838,7 +838,7 @@ const changePassword = async (req, res) => {
         success: false,
         code: 'PASSWORD_SETUP_REQUIRED',
         mustSetPassword: true,
-        redirectPath: '/auth/set-password',
+        redirectPath: '/auth/setup-account',
       });
     }
     
@@ -971,7 +971,8 @@ const resetPassword = async (req, res) => {
     user.mustChangePassword = true;
     user.mustSetPassword = false;
     user.passwordExpiresAt = null; // Clear expiry until password is set
-    user.status = 'INVITED'; // User must set password to become active again
+    user.status = 'invited'; // User must set password to become active again
+    user.isActive = false;
     user.failedLoginAttempts = 0;
     user.lockUntil = null;
     user.passwordSetAt = null;
@@ -1362,8 +1363,10 @@ const createUser = async (req, res) => {
       });
     }
     
+    const session = req.transactionSession?.session || null;
+
     // Generate next xID automatically (server-side only)
-    const xID = await xIDGenerator.generateNextXID(admin.firmId);
+    const xID = await xIDGenerator.generateNextXID(admin.firmId, session);
     
     // Mask email for logging (show first 2 and domain only)
     const emailParts = email.split('@');
@@ -1375,7 +1378,6 @@ const createUser = async (req, res) => {
     const tokenHash = emailService.hashToken(token);
     const tokenExpiry = new Date(Date.now() + INVITE_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000);
     
-    const session = req.transactionSession?.session || null;
     await assertFirmPlanCapacity({ firmId: admin.firmId, session });
 
     // Create user without password (invite-based onboarding)
@@ -1387,12 +1389,14 @@ const createUser = async (req, res) => {
       defaultClientId: firm.defaultClientId,
       role: role || 'Employee',
       allowedCategories: allowedCategories || [],
-      isActive: true,
+      isActive: false,
       passwordHash: null, // No password until user sets it
       passwordSet: false, // Password not set yet
       mustSetPassword: false,
       inviteTokenHash: tokenHash, // Using alias for invite token
       inviteTokenExpiry: tokenExpiry, // 48 hours
+      setupTokenHash: tokenHash,
+      setupTokenExpiresAt: tokenExpiry,
       mustChangePassword: true, // Enforce password setup on first login
       passwordExpiresAt: null, // Not set until password is created
       status: 'invited', // User is invited, not yet active
@@ -1554,7 +1558,7 @@ const activateUser = async (req, res) => {
     // Activate user
     user.isActive = true;
     user.status = 'active';
-    await user.save();
+    await user.save(session ? { session } : undefined);
     
     // Log activation
     await logAuthAudit({
@@ -1573,6 +1577,13 @@ const activateUser = async (req, res) => {
       message: 'User activated successfully',
     });
   } catch (error) {
+    if (error instanceof PlanLimitExceededError) {
+      return res.status(403).json({
+        error: error.code,
+        message: error.message,
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: 'Error activating user',
@@ -1718,7 +1729,7 @@ const setPassword = async (req, res) => {
       });
     }
 
-    if (tokenOwner.passwordHash || tokenOwner.status === 'ACTIVE') {
+    if (tokenOwner.passwordHash || tokenOwner.status === 'active') {
       return res.status(409).json({
         success: false,
         code: 'ACCOUNT_ALREADY_ACTIVATED',
@@ -1740,7 +1751,7 @@ const setPassword = async (req, res) => {
     tokenOwner.passwordSetAt = now;
     tokenOwner.passwordExpiresAt = new Date(now.getTime() + PASSWORD_EXPIRY_DAYS * 24 * 60 * 60 * 1000); // Set expiry when password is created
     tokenOwner.mustChangePassword = false;
-    tokenOwner.status = 'ACTIVE'; // User becomes active after setting password
+    tokenOwner.status = 'active'; // User becomes active after setting password
     tokenOwner.isActive = true;
     tokenOwner.failedLoginAttempts = 0;
     tokenOwner.lockUntil = null;
@@ -1799,12 +1810,21 @@ const setupAccount = async (req, res) => {
     return res.status(400).json({ success: false, message: 'token and password or googleId are required' });
   }
 
+  const now = new Date();
   const setupTokenHash = emailService.hashToken(token);
-  const user = await User.findOne({ setupTokenHash });
+  const user = await User.findOne({
+    $or: [
+      { setupTokenHash },
+      { passwordSetupTokenHash: setupTokenHash },
+    ],
+  });
+
   if (!user) {
     return res.status(400).json({ success: false, message: 'Invalid setup token' });
   }
-  if (!user.setupTokenExpiresAt || user.setupTokenExpiresAt < new Date()) {
+
+  const tokenExpiresAt = user.setupTokenExpiresAt || user.passwordSetupExpires || null;
+  if (!tokenExpiresAt || tokenExpiresAt < now) {
     return res.status(400).json({ success: false, message: 'Setup token expired. This link is valid for 48 hours only.' });
   }
 
@@ -1812,16 +1832,22 @@ const setupAccount = async (req, res) => {
     user.passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
     user.passwordSet = true;
   }
+
   if (googleId) {
     user.authProviders = user.authProviders || {};
-    user.authProviders.google = { ...(user.authProviders.google || {}), googleId, linkedAt: new Date() };
+    user.authProviders.google = { ...(user.authProviders.google || {}), googleId, linkedAt: now };
   }
 
   user.status = 'active';
   user.isActive = true;
-  user.setupTokenUsedAt = new Date();
+  user.setupTokenUsedAt = now;
   user.setupTokenHash = null;
   user.setupTokenExpiresAt = null;
+  user.passwordSetupTokenHash = null;
+  user.passwordSetupExpires = null;
+  user.mustSetPassword = false;
+  user.mustChangePassword = false;
+  user.passwordSetAt = now;
   await user.save();
 
   await Firm.updateOne({ _id: user.firmId }, { $set: { status: 'active' } });
@@ -1847,8 +1873,12 @@ const resendSetup = async (req, res) => {
   }
 
   const token = emailService.generateSecureToken();
-  user.setupTokenHash = emailService.hashToken(token);
-  user.setupTokenExpiresAt = new Date(Date.now() + INVITE_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000);
+  const tokenHash = emailService.hashToken(token);
+  const tokenExpiry = new Date(Date.now() + INVITE_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000);
+  user.setupTokenHash = tokenHash;
+  user.setupTokenExpiresAt = tokenExpiry;
+  user.passwordSetupTokenHash = tokenHash;
+  user.passwordSetupExpires = tokenExpiry;
   user.setupTokenUsedAt = null;
   await user.save();
 
@@ -1960,7 +1990,7 @@ const resetPasswordWithToken = async (req, res) => {
     user.passwordExpiresAt = new Date(Date.now() + PASSWORD_EXPIRY_DAYS * 24 * 60 * 60 * 1000); // Set expiry when password is reset
     user.mustChangePassword = false;
     user.forcePasswordReset = false;
-    user.status = 'ACTIVE'; // Ensure user is active after password reset
+    user.status = 'active'; // Ensure user is active after password reset
     user.failedLoginAttempts = 0;
     user.lockUntil = null;
     
@@ -2285,12 +2315,12 @@ const forgotPassword = async (req, res) => {
       user = await User.findOne({
         firmId: resolvedFirmId,
         email: normalizedEmail,
-        status: { $ne: 'DELETED' },
+        status: { $ne: 'deleted' },
       });
     } else {
       const candidateUsers = await User.find({
         email: normalizedEmail,
-        status: { $ne: 'DELETED' },
+        status: { $ne: 'deleted' },
       })
         .limit(2);
       if (candidateUsers.length > 1) {
@@ -2649,7 +2679,7 @@ const completeMfaLogin = async (req, res) => {
     const user = await User.findOne({
       _id: decodedPreAuthToken.userId,
       isActive: true,
-      status: 'ACTIVE',
+      status: 'active',
     });
 
     if (!user || !user.twoFactorSecret) {
@@ -2779,7 +2809,7 @@ const initiateGoogleAuth = async (req, res) => {
       });
     }
 
-    if (firm.status !== 'ACTIVE') {
+    if (firm.status !== 'active') {
       return res.status(403).json({
         success: false,
         code: 'FIRM_SUSPENDED',
@@ -2898,8 +2928,8 @@ const handleGoogleCallback = async (req, res) => {
         const isActivation = flow === 'activation';
         if (candidate.firmId && candidate.firmId.toString() !== firmIdFromContext.toString()) return false;
         if (![ROLE_ADMIN, ROLE_EMPLOYEE].includes(candidate.role)) return false;
-        if (candidate.isActive === false || candidate.status === 'DISABLED') return false;
-        if (!isActivation && candidate.status !== 'ACTIVE') return false;
+        if (candidate.isActive === false || candidate.status === 'suspended') return false;
+        if (!isActivation && candidate.status !== 'active') return false;
         return true;
       },
       linkGoogleIfFound: true,
@@ -2925,8 +2955,8 @@ const handleGoogleCallback = async (req, res) => {
     }
 
     // Activation flow: elevate invited users to ACTIVE once linked
-    if (flow === 'activation' && user.status !== 'ACTIVE') {
-      user.status = 'ACTIVE';
+    if (flow === 'activation' && user.status !== 'active') {
+      user.status = 'active';
     }
     if (linkedDuringRequest) {
       const update = {
@@ -2934,7 +2964,7 @@ const handleGoogleCallback = async (req, res) => {
         forcePasswordReset: false,
       };
       if (flow === 'activation') {
-        update.status = 'ACTIVE';
+        update.status = 'active';
       }
       const refreshed = await User.findOneAndUpdate(
         { _id: user._id },
@@ -2957,7 +2987,7 @@ const handleGoogleCallback = async (req, res) => {
     }
 
     // Account state checks
-    if (!user.isActive || user.status === 'DISABLED') {
+    if (!user.isActive || user.status === 'suspended') {
       return res.status(403).json({
         success: false,
         code: 'FIRM_RESOLUTION_FAILED',
@@ -2965,7 +2995,7 @@ const handleGoogleCallback = async (req, res) => {
       });
     }
 
-    if (user.status && user.status !== 'ACTIVE') {
+    if (user.status && user.status !== 'active') {
       return res.status(403).json({
         success: false,
         code: 'FIRM_RESOLUTION_FAILED',
@@ -3112,7 +3142,6 @@ module.exports = {
   createUser: wrapWriteHandler(createUser),
   activateUser: wrapWriteHandler(activateUser),
   deactivateUser: wrapWriteHandler(deactivateUser),
-  setPassword: wrapWriteHandler(setPassword),
   setupAccount: wrapWriteHandler(setupAccount),
   resendSetup: wrapWriteHandler(resendSetup),
   resetPasswordWithToken: wrapWriteHandler(resetPasswordWithToken),

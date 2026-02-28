@@ -16,7 +16,6 @@ const {
   createUser,
   activateUser,
   deactivateUser,
-  setPassword,
   resetPasswordWithToken,
   updateUserStatus,
    unlockAccount,
@@ -67,7 +66,7 @@ const resolveOAuthFirmContext = async (req, res, next) => {
       });
     }
 
-    if (firm.status !== 'ACTIVE') {
+    if (firm.status !== 'active') {
       return res.status(403).json({
         success: false,
         code: 'FIRM_SUSPENDED',
@@ -122,8 +121,6 @@ const detectProfileLoop = (req, res, next) => {
 // Public authentication endpoints - NO authentication required
 // Login supports optional firm resolution for firm-scoped login
 // Rate limited to prevent brute-force attacks
-router.post('/setup-password', setPassword);
-router.post('/set-password', setPassword);
 router.post('/setup-account', authBlockEnforcer, authLimiter, setupAccount);
 router.post('/resend-setup', authBlockEnforcer, authLimiter, resendSetup);
 router.post('/reset-password-with-token', authBlockEnforcer, authLimiter, sensitiveLimiter, resetPasswordWithToken);

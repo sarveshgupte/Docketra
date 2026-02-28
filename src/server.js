@@ -326,7 +326,6 @@ app.get('/api', (req, res) => {
 
 // Isolated superadmin login (platform only)
 const superadminLoginChain = [noFirmNoTransaction, (req, _res, next) => { req.loginScope = 'superadmin'; next(); }, login];
-app.post('/superadmin', ...superadminLoginChain);
 app.post('/superadmin/login', ...superadminLoginChain);
 
 // Tenant login must be slug-scoped only

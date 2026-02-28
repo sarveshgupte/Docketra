@@ -38,7 +38,7 @@ async function runMigration() {
       defaultFirm = await Firm.create({
         firmId: DEFAULT_FIRM_ID,
         name: DEFAULT_FIRM_NAME,
-        status: 'ACTIVE',
+        status: 'active',
       });
       console.log(`[MIGRATION] ✓ Default firm created: ${defaultFirm._id}`);
     } else {

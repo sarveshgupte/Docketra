@@ -115,13 +115,11 @@ export const Router = () => {
 
           {/* Public Auth Routes */}
           <Route path="/:firmSlug/login" element={<FirmLoginPage />} />
-          <Route path="/f/:firmSlug/set-password" element={<SetPasswordPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/change-password" element={<ChangePasswordPage />} />
-          <Route path="/auth/setup-password" element={<SetPasswordPage />} />
-          <Route path="/set-password" element={<SetPasswordPage />} />
-          <Route path="/google-callback" element={<GoogleCallbackPage />} />
+          <Route path="/auth/setup-account" element={<SetPasswordPage />} />
+                    <Route path="/google-callback" element={<GoogleCallbackPage />} />
           
           {/* SuperAdmin Routes - NOT firm-scoped */}
           <Route

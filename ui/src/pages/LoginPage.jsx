@@ -45,7 +45,7 @@ export const LoginPage = () => {
     setLoading(true);
 
     try {
-      const response = await login(identifier, password, '/superadmin');
+      const response = await login(identifier, password, '/superadmin/login');
 
       if (response.success) {
         showSuccess('Signed in successfully.');
