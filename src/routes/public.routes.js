@@ -3,23 +3,22 @@ const { applyRouteValidation } = require('../middleware/requestValidation.middle
 const routeSchemas = require('../schemas/public.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { getFirmBySlug } = require('../controllers/superadmin.controller');
-const { createFirmWithAdmin } = require('../modules/onboarding/onboarding.service');
+const { createStarterWorkspace } = require('../modules/onboarding/onboarding.service');
 
 /**
  * Public API Routes
- * 
- * These routes are publicly accessible (no authentication required)
- * Used for login page and other public-facing functionality
  */
 
-// Get firm metadata by slug (for firm-scoped login page)
 router.get('/firms/:firmSlug', getFirmBySlug);
 
 router.post('/signup', async (req, res, next) => {
   try {
-    const { adminName, adminEmail, firmName, planId } = req.body;
-    await createFirmWithAdmin({ adminName, adminEmail, firmName, planId });
-    return res.json({ success: true, message: 'Signup received. Please check your email for setup instructions.' });
+    const { fullName, email, phoneNumber, companyName } = req.body;
+    await createStarterWorkspace({ fullName, email, phoneNumber, companyName });
+    return res.status(201).json({
+      success: true,
+      message: 'Workspace created. Please check your email to set up your admin account.',
+    });
   } catch (error) {
     return next(error);
   }

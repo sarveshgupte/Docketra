@@ -77,10 +77,10 @@ export const HomePage = () => (
       </p>
       <div className="mt-8 flex flex-wrap justify-center gap-4">
         <Link
-          to="/contact"
+          to="/signup"
           className="rounded-md bg-slate-900 px-6 py-3 text-sm font-medium text-white hover:bg-slate-700"
         >
-          Start Free Trial
+          Create Free Workspace
         </Link>
         <a
           href="mailto:demo@docketra.com"
@@ -165,14 +165,14 @@ export const HomePage = () => (
           Ready to streamline your operations?
         </h2>
         <p className="mt-3 text-sm text-slate-500">
-          Get started with a free trial or speak with our team to see how Docketra fits your workflow.
+          Create a free Starter workspace or speak with our team to see how Docketra fits your workflow.
         </p>
         <div className="mt-7 flex flex-wrap justify-center gap-4">
           <Link
-            to="/contact"
+            to="/signup"
             className="rounded-md bg-slate-900 px-6 py-3 text-sm font-medium text-white hover:bg-slate-700"
           >
-            Start Free Trial
+            Create Free Workspace
           </Link>
           <a
             href="mailto:demo@docketra.com"
