@@ -2,6 +2,7 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const Case = require('../src/models/Case.model');
+const CaseStatus = require('../src/domain/case/caseStatus');
 
 async function run() {
   if (!process.env.MONGODB_URI) {
@@ -11,9 +12,11 @@ async function run() {
   await mongoose.connect(process.env.MONGODB_URI);
 
   const statuses = await Case.distinct('status');
-  const legacyStatuses = statuses.filter((status) =>
-    ['PENDING', 'Pending', 'UNASSIGNED'].includes(status)
-  );
+  const legacyStatusValues = [
+    CaseStatus.PENDING_ALIAS,
+    CaseStatus.PENDING_LEGACY,
+  ];
+  const legacyStatuses = statuses.filter((status) => legacyStatusValues.includes(status));
 
   console.log('Distinct case statuses:', statuses.sort());
   console.log('Legacy statuses detected:', legacyStatuses.sort());

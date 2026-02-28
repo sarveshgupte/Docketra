@@ -1315,7 +1315,7 @@ const getCases = async (req, res) => {
     if (req.user?.xID) {
       // Determine if this is an admin viewing pending approvals
       const isPendingApprovalView = 
-        status === CaseStatus.PENDING ||
+        status === CaseStatus.PENDING_ALIAS ||
         status === CaseStatus.PENDING_LEGACY ||
         status === CaseStatus.REVIEWED ||
         status === CaseStatus.UNDER_REVIEW;

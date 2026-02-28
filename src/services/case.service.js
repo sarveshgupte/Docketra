@@ -8,7 +8,7 @@ const CaseStatus = require('../domain/case/caseStatus');
 async function updateStatus(caseId, newStatus, context = {}) {
   const tenantId = context.tenantId || context.firmId;
   const normalizedNewStatus = normalizeStatus(newStatus);
-  const normalizedCurrentStatus = normalizeStatus(context.currentStatus);
+  const normalizedCurrentStatus = context.currentStatus ? normalizeStatus(context.currentStatus) : null;
 
   if (!tenantId) {
     throw new Error('Tenant context required');
@@ -23,7 +23,7 @@ async function updateStatus(caseId, newStatus, context = {}) {
     throw new Error('Case not found');
   }
 
-  const fromStatus = normalizeStatus(normalizedCurrentStatus || existingCase.status);
+  const fromStatus = normalizedCurrentStatus || normalizeStatus(existingCase.status);
 
   if (fromStatus === CaseStatus.RESOLVED) {
     throw new Error('Resolved cases cannot be modified');

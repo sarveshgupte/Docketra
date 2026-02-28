@@ -10,7 +10,7 @@ function testValidTransitions() {
   assert.strictEqual(canTransition(CaseStatus.PENDED, CaseStatus.OPEN), true);
   assert.strictEqual(canTransition(CaseStatus.FILED, CaseStatus.RESOLVED), true);
   assert.strictEqual(canTransition(CaseStatus.UNASSIGNED, CaseStatus.OPEN), true);
-  assert.strictEqual(canTransition(CaseStatus.PENDING, CaseStatus.OPEN), true);
+  assert.strictEqual(canTransition(CaseStatus.PENDING_ALIAS, CaseStatus.OPEN), true);
 }
 
 function testInvalidTransitions() {
@@ -20,6 +20,9 @@ function testInvalidTransitions() {
   assert.strictEqual(canTransition(CaseStatus.PENDED, CaseStatus.RESOLVED), false);
   assert.strictEqual(canTransition(CaseStatus.OPEN, CaseStatus.OPEN), false);
   assert.strictEqual(canTransition('INVALID_STATUS', CaseStatus.OPEN), false);
+}
+
+function testStatusNormalization() {
   assert.strictEqual(normalizeStatus('Pending'), CaseStatus.PENDED);
 }
 
@@ -27,6 +30,7 @@ function run() {
   try {
     testValidTransitions();
     testInvalidTransitions();
+    testStatusNormalization();
     console.log('Case state machine transition tests passed.');
   } catch (err) {
     console.error('Case state machine transition tests failed:', err);
