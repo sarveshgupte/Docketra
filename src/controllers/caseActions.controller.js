@@ -43,7 +43,7 @@ const resolveCase = async (req, res) => {
     }
     
     // Call service to resolve case - with firm scoping
-    const caseData = await caseActionService.resolveCase(req.user.firmId, caseId, comment, req.user);
+    const caseData = await caseActionService.resolveCase(req.user.firmId, caseId, comment, req.user, req);
     
     res.json({
       success: true,
@@ -66,7 +66,8 @@ const resolveCase = async (req, res) => {
       });
     }
     
-    if (error.message.startsWith('Cannot change case from')) {
+    if (error.message.startsWith('Illegal transition:') ||
+        error.message === 'Resolved cases cannot be modified') {
       return res.status(400).json({
         success: false,
         message: error.message,
@@ -109,7 +110,7 @@ const pendCase = async (req, res) => {
     }
     
     // Call service to pend case - with firm scoping
-    const caseData = await caseActionService.pendCase(req.user.firmId, caseId, comment, reopenDate, req.user);
+    const caseData = await caseActionService.pendCase(req.user.firmId, caseId, comment, reopenDate, req.user, req);
     
     res.json({
       success: true,
@@ -133,7 +134,8 @@ const pendCase = async (req, res) => {
       });
     }
     
-    if (error.message.startsWith('Cannot change case from')) {
+    if (error.message.startsWith('Illegal transition:') ||
+        error.message === 'Resolved cases cannot be modified') {
       return res.status(400).json({
         success: false,
         message: error.message,
@@ -176,7 +178,7 @@ const fileCase = async (req, res) => {
     }
     
     // Call service to file case - with firm scoping
-    const caseData = await caseActionService.fileCase(req.user.firmId, caseId, comment, req.user);
+    const caseData = await caseActionService.fileCase(req.user.firmId, caseId, comment, req.user, req);
     
     res.json({
       success: true,
@@ -199,7 +201,8 @@ const fileCase = async (req, res) => {
       });
     }
     
-    if (error.message.startsWith('Cannot change case from')) {
+    if (error.message.startsWith('Illegal transition:') ||
+        error.message === 'Resolved cases cannot be modified') {
       return res.status(400).json({
         success: false,
         message: error.message,
