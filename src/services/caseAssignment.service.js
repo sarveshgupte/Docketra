@@ -3,9 +3,7 @@ const CaseHistory = require('../models/CaseHistory.model');
 const CaseAudit = require('../models/CaseAudit.model');
 const mongoose = require('mongoose');
 const { CaseRepository } = require('../repositories');
-const { CASE_ACTION_TYPES } = require('../config/constants');
 const CaseStatus = require('../domain/case/caseStatus');
-const { logCaseHistory } = require('./auditLog.service');
 const CaseService = require('./case.service');
 
 /**
@@ -101,36 +99,6 @@ const assignCaseToUser = async (firmId, caseId, user) => {
     },
   });
   const updatedCaseData = await CaseRepository.findByCaseId(firmId, caseId, user.role);
-  
-  // Create CaseAudit entry (xID-based)
-  await CaseAudit.create({
-    caseId,
-    actionType: CASE_ACTION_TYPES.CASE_ASSIGNED,
-    description: `Case pulled from global worklist and assigned to ${user.xID}`,
-    performedByXID: user.xID,
-    metadata: {
-      queueType: 'PERSONAL',
-      status: CaseStatus.OPEN,
-      assignedTo: user.xID,
-    },
-  });
-  
-  // Create CaseHistory entry with enhanced audit logging
-  await logCaseHistory({
-    caseId,
-    firmId: caseData.firmId,
-    actionType: CASE_ACTION_TYPES.CASE_ASSIGNED,
-    actionLabel: `Case assigned to ${user.name || user.xID}`,
-    description: `Case pulled from global worklist and assigned to ${user.xID}`,
-    performedBy: user.email,
-    performedByXID: user.xID,
-    actorRole: user.role === 'Admin' ? 'ADMIN' : 'USER',
-    metadata: {
-      queueType: 'PERSONAL',
-      status: CaseStatus.OPEN,
-      assignedTo: user.xID,
-    },
-  });
   
   return {
     success: true,
