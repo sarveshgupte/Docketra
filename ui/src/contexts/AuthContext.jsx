@@ -174,9 +174,9 @@ export const AuthProvider = ({ children }) => {
     }
   }, [resetAuthState, setAuthFromProfile]);
 
-  const login = async (xID, password) => {
+  const login = async (xID, password, endpoint) => {
     try {
-      const response = await authService.login(xID, password);
+      const response = await authService.login(xID, password, endpoint);
       
       if (response.success) {
         // Login successful - tokens are stored by authService

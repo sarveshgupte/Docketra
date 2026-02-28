@@ -48,7 +48,7 @@ export const SetPasswordPage = () => {
 
         if (response.data.success) {
           const firm = response.data.data;
-          if (firm.status !== 'ACTIVE') {
+          if (firm.status !== 'active') {
             setError('This firm is currently inactive. Please contact support.');
             setFirmData(null);
             localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
@@ -127,10 +127,10 @@ export const SetPasswordPage = () => {
       if (response.success) {
         setSuccess(true);
         // Use redirectUrl from backend (firm-scoped login)
-        // Backend returns /f/{firmSlug}/login for admin users
+        // Backend returns /{firmSlug}/login for admin users
         const redirectPath = response.redirectUrl || (response.firmSlug 
-          ? `/f/${response.firmSlug}/login` 
-          : '/login');
+          ? `/${response.firmSlug}/login` 
+          : '/superadmin');
         setTimeout(() => {
           navigate(redirectPath);
         }, 2000);

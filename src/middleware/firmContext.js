@@ -82,7 +82,7 @@ const firmContext = async (req, res, next) => {
       throw error;
     }
 
-    if (firm.status !== 'ACTIVE') {
+    if (firm.status !== 'active') {
       console.warn(`[FIRM_CONTEXT][${requestId}] Firm disabled`, { firmId: firm._id.toString(), status: firm.status });
       return res.status(403).json({
         success: false,

@@ -222,13 +222,13 @@ const getPendingCasesReport = async (req, res) => {
       let user = await User.findOne({
         firmId: req.user?.firmId,
         xID: assignedToValue,
-        status: { $ne: 'DELETED' },
+        status: { $ne: 'deleted' },
       }).lean();
       if (!user) {
         user = await User.findOne({
           firmId: req.user?.firmId,
           email: String(assignedToValue).trim().toLowerCase(),
-          status: { $ne: 'DELETED' },
+          status: { $ne: 'deleted' },
         }).lean();
       }
       byEmployee.push({

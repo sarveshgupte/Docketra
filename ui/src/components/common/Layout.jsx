@@ -110,9 +110,9 @@ export const Layout = ({ children }) => {
     await logout({ preserveFirmSlug: !!currentFirmSlug });
     showSuccess('You have been signed out safely.');
     if (currentFirmSlug) {
-      navigate(`/f/${currentFirmSlug}/login`);
+      navigate(`/${currentFirmSlug}/login`);
     } else {
-      navigate('/login');
+      navigate('/superadmin');
     }
   };
 
@@ -206,30 +206,30 @@ export const Layout = ({ children }) => {
 
   const navLinks = [
     {
-      to: `/f/${currentFirmSlug}/dashboard`,
+      to: `/app/firm/${currentFirmSlug}/dashboard`,
       label: 'Dashboard',
       icon: <IconDashboard />,
-      active: isActive(`/f/${currentFirmSlug}/dashboard`),
+      active: isActive(`/app/firm/${currentFirmSlug}/dashboard`),
     },
     {
-      to: `/f/${currentFirmSlug}/global-worklist`,
+      to: `/app/firm/${currentFirmSlug}/global-worklist`,
       label: 'Workbasket',
       icon: <IconWorkbasket />,
-      active: isActive(`/f/${currentFirmSlug}/global-worklist`),
+      active: isActive(`/app/firm/${currentFirmSlug}/global-worklist`),
     },
     {
-      to: `/f/${currentFirmSlug}/worklist`,
+      to: `/app/firm/${currentFirmSlug}/worklist`,
       label: 'My Worklist',
       icon: <IconWorklist />,
-      active: isActive(`/f/${currentFirmSlug}/worklist`),
+      active: isActive(`/app/firm/${currentFirmSlug}/worklist`),
     },
     ...(hasAdminAccess
       ? [
           {
-            to: `/f/${currentFirmSlug}/admin`,
+            to: `/app/firm/${currentFirmSlug}/admin`,
             label: 'Admin',
             icon: <IconAdmin />,
-            active: isActivePrefix(`/f/${currentFirmSlug}/admin`),
+            active: isActivePrefix(`/app/firm/${currentFirmSlug}/admin`),
           },
         ]
       : []),
@@ -347,7 +347,7 @@ export const Layout = ({ children }) => {
                   <button
                     key={`case-${item.caseId}`}
                     className="dropdown-item"
-                    onClick={() => navigate(`/f/${currentFirmSlug}/cases/${item.caseId}`)}
+                    onClick={() => navigate(`/app/firm/${currentFirmSlug}/cases/${item.caseId}`)}
                   >
                     Case: {item.caseId} — {item.title}
                   </button>
@@ -359,7 +359,7 @@ export const Layout = ({ children }) => {
           {/* Create Case CTA */}
           <button
             className="btn btn-primary enterprise-header__new-case"
-            onClick={() => navigate(`/f/${currentFirmSlug}/cases/create`)}
+            onClick={() => navigate(`/app/firm/${currentFirmSlug}/cases/create`)}
             aria-label="Create new case"
           >
             <IconPlus />
@@ -388,7 +388,7 @@ export const Layout = ({ children }) => {
               {profileDropdownOpen && (
                 <div className="dropdown-menu dropdown-menu-right" role="menu">
                   <Link
-                    to={`/f/${currentFirmSlug}/profile`}
+                    to={`/app/firm/${currentFirmSlug}/profile`}
                     className="dropdown-item"
                     role="menuitem"
                     onClick={() => setProfileDropdownOpen(false)}

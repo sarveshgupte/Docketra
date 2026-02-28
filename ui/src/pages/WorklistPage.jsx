@@ -75,7 +75,7 @@ export const WorklistPage = () => {
   };
 
   const handleCaseClick = (caseId) => {
-    navigate(`/f/${firmSlug}/cases/${caseId}`);
+    navigate(`/app/firm/${firmSlug}/cases/${caseId}`);
   };
   
   // Get page title and description
@@ -112,7 +112,7 @@ export const WorklistPage = () => {
           </div>
           <button
             className="btn btn-primary worklist__create-btn"
-            onClick={() => navigate(`/f/${firmSlug}/cases/create`)}
+            onClick={() => navigate(`/app/firm/${firmSlug}/cases/create`)}
           >
             + New Case
           </button>
@@ -141,7 +141,7 @@ export const WorklistPage = () => {
               {!isPendingView && (
                 <button
                   className="btn btn-primary worklist__empty-cta"
-                  onClick={() => navigate(`/f/${firmSlug}/cases/create`)}
+                  onClick={() => navigate(`/app/firm/${firmSlug}/cases/create`)}
                 >
                   Create a Case
                 </button>

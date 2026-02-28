@@ -28,7 +28,7 @@ export const ChangePasswordPage = () => {
   // Redirect to login if xID is missing
   React.useEffect(() => {
     if (!xID) {
-      navigate('/login', {
+      navigate('/superadmin', {
         state: {
           message: 'Session expired. Please log in again.',
           messageType: 'warning'
@@ -70,7 +70,7 @@ export const ChangePasswordPage = () => {
 
       if (response.success) {
         // Redirect to login with success message in state
-        navigate('/login', { 
+        navigate('/superadmin', { 
           state: { 
             message: 'Password changed successfully! Please log in with your new password.',
             messageType: 'success'

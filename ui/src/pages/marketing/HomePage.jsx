@@ -77,7 +77,7 @@ export const HomePage = () => (
       </p>
       <div className="mt-8 flex flex-wrap justify-center gap-4">
         <Link
-          to="/login"
+          to="/contact"
           className="rounded-md bg-slate-900 px-6 py-3 text-sm font-medium text-white hover:bg-slate-700"
         >
           Start Free Trial
@@ -169,7 +169,7 @@ export const HomePage = () => (
         </p>
         <div className="mt-7 flex flex-wrap justify-center gap-4">
           <Link
-            to="/login"
+            to="/contact"
             className="rounded-md bg-slate-900 px-6 py-3 text-sm font-medium text-white hover:bg-slate-700"
           >
             Start Free Trial

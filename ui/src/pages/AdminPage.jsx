@@ -246,7 +246,7 @@ export const AdminPage = () => {
   };
 
   const handleCaseClick = (caseId) => {
-    navigate(`/f/${firmSlug}/cases/${caseId}`);
+    navigate(`/app/firm/${firmSlug}/cases/${caseId}`);
   };
 
   const handleCreateUser = async (e) => {
@@ -279,7 +279,7 @@ export const AdminPage = () => {
   };
 
   const handleToggleUserStatus = async (user) => {
-    const newStatus = !user.isActive;
+    const newStatus = user.status !== 'active';
     const action = newStatus ? 'activate' : 'deactivate';
 
     try {
@@ -810,7 +810,7 @@ export const AdminPage = () => {
           </Button>
           <Button
             variant={activeTab === 'reports' ? 'primary' : 'default'}
-            onClick={() => navigate(`/f/${firmSlug}/admin/reports`)}
+            onClick={() => navigate(`/app/firm/${firmSlug}/admin/reports`)}
           >
             Reports & MIS
           </Button>

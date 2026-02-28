@@ -130,10 +130,10 @@ export const SuperadminDashboard = () => {
   const handleLogout = async () => {
     try {
       await logout();
-      navigate('/login');
+      navigate('/superadmin');
     } catch (error) {
       console.error('Logout error:', error);
-      navigate('/login');
+      navigate('/superadmin');
     }
   };
 

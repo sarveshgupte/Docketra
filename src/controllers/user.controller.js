@@ -102,7 +102,7 @@ const createUser = async (req, res) => {
     const existingUser = await User.findOne({
       firmId: req.user?.firmId,
       email: normalizedEmail,
-      status: { $ne: 'DELETED' },
+      status: { $ne: 'deleted' },
     });
     if (existingUser) {
       if (role && existingUser.role !== role) {
