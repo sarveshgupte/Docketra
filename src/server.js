@@ -35,6 +35,14 @@ try {
   console.warn('[StorageIntegrityWorker] Failed to start storage integrity worker (non-fatal):', err.message);
 }
 
+
+try {
+  require('./workers/tenantCaseMetrics.worker');
+  console.log('[TenantCaseMetricsWorker] Worker started');
+} catch (err) {
+  console.warn('[TenantCaseMetricsWorker] Failed to start worker (non-fatal):', err.message);
+}
+
 // Global error log sanitizer: ensure every console.error invocation masks PII (tokens, emails, phone numbers, auth headers).
 // This preserves existing logging behavior/verbosity while enforcing centralized masking via maskSensitiveObject.
 // The original logger is retained at console.error.original for debugging tools that need raw access.
