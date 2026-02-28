@@ -191,13 +191,14 @@ export const DashboardPage = () => {
     );
   }
 
-  const allCases = recentCases;
+  const casesForMetrics = recentCases;
   const now = Date.now();
-  const overdueComplianceItems = allCases.filter((item) => item?.dueDate && new Date(item.dueDate).getTime() < now).length;
-  const dueInSevenDays = allCases.filter((item) => {
+  const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+  const overdueComplianceItems = casesForMetrics.filter((item) => item?.dueDate && new Date(item.dueDate).getTime() < now).length;
+  const dueInSevenDays = casesForMetrics.filter((item) => {
     if (!item?.dueDate) return false;
     const dueAt = new Date(item.dueDate).getTime();
-    const sevenDays = now + (7 * 24 * 60 * 60 * 1000);
+    const sevenDays = now + SEVEN_DAYS_MS;
     return dueAt >= now && dueAt <= sevenDays;
   }).length;
   const awaitingPartnerReview = isAdmin ? stats.adminPendingApprovals : stats.myPendingCases;
