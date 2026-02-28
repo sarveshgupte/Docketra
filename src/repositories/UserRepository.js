@@ -1,5 +1,11 @@
 const User = require('../models/User.model');
 
+const assertTenantId = (firmId) => {
+  if (!firmId) {
+    throw new Error('TenantId required');
+  }
+};
+
 /**
  * ⚠️ SECURITY: User Repository - Firm-Scoped Data Access Layer ⚠️
  * 
@@ -31,7 +37,8 @@ const UserRepository = {
    * @returns {Promise<Object|null>} User document or null
    */
   findByXID(firmId, xID) {
-    if (!firmId || !xID) {
+    assertTenantId(firmId);
+    if (!xID) {
       return null;
     }
     return User.findOne({ firmId, xID });
@@ -44,7 +51,8 @@ const UserRepository = {
    * @returns {Promise<Object|null>} User document or null
    */
   findById(firmId, _id) {
-    if (!firmId || !_id) {
+    assertTenantId(firmId);
+    if (!_id) {
       return null;
     }
     return User.findOne({ firmId, _id });
@@ -57,7 +65,8 @@ const UserRepository = {
    * @returns {Promise<Object|null>} User document or null
    */
   findByEmail(firmId, email) {
-    if (!firmId || !email) {
+    assertTenantId(firmId);
+    if (!email) {
       return null;
     }
     return User.findOne({
@@ -74,9 +83,7 @@ const UserRepository = {
    * @returns {Promise<Array>} Array of user documents
    */
   find(firmId, query = {}) {
-    if (!firmId) {
-      return Promise.resolve([]);
-    }
+    assertTenantId(firmId);
     return User.find({ firmId, ...query });
   },
 
@@ -87,9 +94,7 @@ const UserRepository = {
    * @returns {Promise<Object|null>} User document or null
    */
   findOne(firmId, query = {}) {
-    if (!firmId) {
-      return null;
-    }
+    assertTenantId(firmId);
     return User.findOne({ firmId, ...query });
   },
 
@@ -101,7 +106,8 @@ const UserRepository = {
    * @returns {Promise<Object|null>} Updated user document or null
    */
   updateByXID(firmId, xID, update) {
-    if (!firmId || !xID) {
+    assertTenantId(firmId);
+    if (!xID) {
       return null;
     }
     return User.updateOne({ firmId, xID }, update);
@@ -115,7 +121,8 @@ const UserRepository = {
    * @returns {Promise<Object|null>} Updated user document or null
    */
   updateById(firmId, _id, update) {
-    if (!firmId || !_id) {
+    assertTenantId(firmId);
+    if (!_id) {
       return null;
     }
     return User.updateOne({ firmId, _id }, update);
@@ -128,9 +135,7 @@ const UserRepository = {
    * @returns {Promise<number>} Count of users
    */
   count(firmId, query = {}) {
-    if (!firmId) {
-      return Promise.resolve(0);
-    }
+    assertTenantId(firmId);
     return User.countDocuments({ firmId, ...query });
   },
 
