@@ -25,6 +25,8 @@ async function updateTenantStorage(req, res) {
       driveId,
       rootFolderId,
       refreshToken,
+      compressionEnabled,
+      compressionLevel,
     } = req.body;
     buildProviderForValidation({ tenantId, provider });
     const encryptedRefreshToken = encrypt(refreshToken);
@@ -42,6 +44,8 @@ async function updateTenantStorage(req, res) {
         connectedByUserId: req.user?._id?.toString() || req.user?.xID || 'system',
         status: 'ACTIVE',
         isActive: true,
+        compressionEnabled: compressionEnabled ?? true,
+        compressionLevel: compressionLevel ?? 6,
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
@@ -57,6 +61,8 @@ async function updateTenantStorage(req, res) {
         driveId,
         rootFolderId,
         isActive: true,
+        compressionEnabled: config.compressionEnabled,
+        compressionLevel: config.compressionLevel,
       },
     });
   } catch (error) {
