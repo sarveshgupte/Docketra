@@ -25,6 +25,10 @@ async function updateStatus(caseId, newStatus, context = {}) {
 
   const fromStatus = normalizedCurrentStatus || normalizeStatus(existingCase.status);
 
+  if (fromStatus === normalizedNewStatus) {
+    throw new Error(`Self-transition not allowed: ${fromStatus}`);
+  }
+
   if (fromStatus === CaseStatus.RESOLVED) {
     throw new Error('Resolved cases cannot be modified');
   }
