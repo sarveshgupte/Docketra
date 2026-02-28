@@ -4,8 +4,12 @@ import { LEGAL_VERSION, LAST_UPDATED, COMPANY_NAME, COMPANY_CIN } from '../../li
 export const LegalLayout = ({ title, description, sections, children }) => {
   const [activeId, setActiveId] = useState('');
   const observerRef = useRef(null);
+  const containerRef = useRef(null);
 
   useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
     observerRef.current = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -17,7 +21,7 @@ export const LegalLayout = ({ title, description, sections, children }) => {
       { rootMargin: '-20% 0px -70% 0px' }
     );
 
-    const headings = document.querySelectorAll('section[id]');
+    const headings = container.querySelectorAll('section[id]');
     headings.forEach((el) => observerRef.current.observe(el));
 
     return () => {
@@ -26,7 +30,7 @@ export const LegalLayout = ({ title, description, sections, children }) => {
   }, []);
 
   return (
-    <article className="relative mx-auto max-w-5xl px-4 py-10">
+    <article ref={containerRef} className="relative mx-auto max-w-5xl px-4 py-10">
       <div className="mb-8 border-b border-slate-200 pb-6">
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">{title}</h1>
         {description && (
