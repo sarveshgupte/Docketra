@@ -116,6 +116,12 @@ const validateQuery = (query) => {
   }
 };
 
+const assertTenantId = (firmId) => {
+  if (!firmId) {
+    throw new Error('TenantId required');
+  }
+};
+
 const CaseRepository = {
   /**
    * Find case by internal ID (PREFERRED METHOD)
@@ -127,7 +133,8 @@ const CaseRepository = {
    * @returns {Promise<Object|null>} Case document or null
    */
   async findByInternalId(firmId, caseInternalId, role) {
-    if (!firmId || !caseInternalId) {
+    assertTenantId(firmId);
+    if (!caseInternalId) {
       return null;
     }
     _guardSuperadmin(role);
@@ -160,7 +167,8 @@ const CaseRepository = {
    * @returns {Promise<Object|null>} Case document or null
    */
   async findByCaseNumber(firmId, caseNumber, role) {
-    if (!firmId || !caseNumber) {
+    assertTenantId(firmId);
+    if (!caseNumber) {
       return null;
     }
     _guardSuperadmin(role);
@@ -177,7 +185,8 @@ const CaseRepository = {
    * @deprecated Use findByInternalId or findByCaseNumber instead
    */
   async findByCaseId(firmId, caseId, role) {
-    if (!firmId || !caseId) {
+    assertTenantId(firmId);
+    if (!caseId) {
       return null;
     }
     _guardSuperadmin(role);
@@ -194,7 +203,8 @@ const CaseRepository = {
    * @returns {Promise<Object|null>} Case document or null
    */
   async findById(firmId, _id, role) {
-    if (!firmId || !_id) {
+    assertTenantId(firmId);
+    if (!_id) {
       return null;
     }
     _guardSuperadmin(role);
@@ -210,9 +220,7 @@ const CaseRepository = {
    * @returns {Promise<Array>} Array of case documents
    */
   async find(firmId, query = {}, role) {
-    if (!firmId) {
-      return [];
-    }
+    assertTenantId(firmId);
     _guardSuperadmin(role);
 
     // Validate query doesn't misuse display identifiers
@@ -230,9 +238,7 @@ const CaseRepository = {
    * @returns {Promise<Object|null>} Case document or null
    */
   async findOne(firmId, query = {}, role) {
-    if (!firmId) {
-      return null;
-    }
+    assertTenantId(firmId);
     _guardSuperadmin(role);
 
     // Validate query doesn't misuse display identifiers
@@ -250,7 +256,8 @@ const CaseRepository = {
    * @returns {Promise<Object|null>} Updated case document or null
    */
   updateByInternalId(firmId, caseInternalId, update) {
-    if (!firmId || !caseInternalId) {
+    assertTenantId(firmId);
+    if (!caseInternalId) {
       return null;
     }
     
@@ -274,7 +281,8 @@ const CaseRepository = {
    * @deprecated Use updateByInternalId instead
    */
   updateByCaseId(firmId, caseId, update) {
-    if (!firmId || !caseId) {
+    assertTenantId(firmId);
+    if (!caseId) {
       return null;
     }
     return Case.updateOne({ firmId, caseId }, update);
@@ -288,7 +296,8 @@ const CaseRepository = {
    * @returns {Promise<Object|null>} Updated case document or null
    */
   updateById(firmId, _id, update) {
-    if (!firmId || !_id) {
+    assertTenantId(firmId);
+    if (!_id) {
       return null;
     }
     return Case.updateOne({ firmId, _id }, update);
@@ -302,7 +311,8 @@ const CaseRepository = {
    * @returns {Promise<Object>} Delete result
    */
   deleteByInternalId(firmId, caseInternalId) {
-    if (!firmId || !caseInternalId) {
+    assertTenantId(firmId);
+    if (!caseInternalId) {
       return Promise.resolve(null);
     }
     
@@ -330,7 +340,8 @@ const CaseRepository = {
    * @deprecated Use deleteByInternalId instead
    */
   deleteByCaseId(firmId, caseId) {
-    if (!firmId || !caseId) {
+    assertTenantId(firmId);
+    if (!caseId) {
       return Promise.resolve(null);
     }
     return softDelete({
@@ -347,9 +358,7 @@ const CaseRepository = {
    * @returns {Promise<number>} Count of cases
    */
   count(firmId, query = {}) {
-    if (!firmId) {
-      return Promise.resolve(0);
-    }
+    assertTenantId(firmId);
     return Case.countDocuments({ firmId, ...query });
   },
 
