@@ -11,7 +11,7 @@ class PlanLimitExceededError extends Error {
   }
 }
 
-const assertFirmPlanCapacity = async ({ firmId, session }) => {
+const assertFirmPlanCapacity = async ({ firmId, session, incrementBy = 1 }) => {
   const attachSession = (query) => (session ? query.session(session) : query);
 
   const firm = await attachSession(Firm.findById(firmId));
@@ -29,7 +29,8 @@ const assertFirmPlanCapacity = async ({ firmId, session }) => {
     status: { $in: ['active', 'invited'] },
   }));
 
-  if (count >= plan.maxUsers) {
+  if ((count + incrementBy) > plan.maxUsers) {
+    console.warn('[PLAN_LIMIT] capacity exceeded', { firmId: firmId?.toString?.() || firmId, planId: plan._id?.toString?.() || plan._id, maxUsers: plan.maxUsers, currentCount: count, incrementBy });
     throw new PlanLimitExceededError(plan.maxUsers);
   }
 };

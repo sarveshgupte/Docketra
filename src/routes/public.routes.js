@@ -17,9 +17,6 @@ router.get('/firms/:firmSlug', getFirmBySlug);
 
 router.post('/signup', async (req, res, next) => {
   try {
-    if (!req.is('application/x-www-form-urlencoded') && !req.is('multipart/form-data')) {
-      return res.status(415).json({ success: false, message: 'Form data is required' });
-    }
     const { adminName, adminEmail, firmName, planId } = req.body;
     await createFirmWithAdmin({ adminName, adminEmail, firmName, planId });
     return res.json({ success: true, message: 'Signup received. Please check your email for setup instructions.' });

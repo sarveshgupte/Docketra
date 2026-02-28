@@ -251,8 +251,8 @@ const authenticate = async (req, res, next) => {
     console.error('[AUTH] Authentication error:', error);
     res.status(500).json({
       success: false,
+      code: 'AUTH_MIDDLEWARE_ERROR',
       message: 'Authentication error',
-      error: error.message,
     });
   }
 };

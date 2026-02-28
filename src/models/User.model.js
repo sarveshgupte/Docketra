@@ -403,6 +403,12 @@ userSchema.pre('save', async function() {
     }
   }
 
+
+  // Single source of truth: status drives activation state.
+  if (this.isModified('status') || this.isNew) {
+    this.isActive = this.status === 'active';
+  }
+
   // Keep authProviders.local in sync with legacy password fields
   if (!this.authProviders) {
     this.authProviders = { local: {}, google: {} };
