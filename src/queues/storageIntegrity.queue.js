@@ -13,7 +13,14 @@ const storageIntegrityQueue = new Queue('storage-integrity-jobs', {
 });
 
 async function enqueueDailyStorageIntegrityJob() {
-  return storageIntegrityQueue.add('VERIFY_ALL_TENANTS', { scheduledAt: new Date().toISOString() });
+  return storageIntegrityQueue.add(
+    'VERIFY_ALL_TENANTS',
+    { scheduledAt: new Date().toISOString() },
+    {
+      jobId: 'storage-integrity-daily',
+      repeat: { pattern: '0 2 * * *' },
+    }
+  );
 }
 
 module.exports = {

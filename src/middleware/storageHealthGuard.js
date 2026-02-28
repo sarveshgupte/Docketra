@@ -55,7 +55,8 @@ module.exports = {
 
       req.storageTenantId = caseRecord.firmId;
       return storageHealthGuard(req, res, next);
-    } catch (_) {
+    } catch (error) {
+      console.warn('[StorageHealthGuard] Inbound health pre-check skipped due to parsing or lookup error', { message: error.message });
       return next();
     }
   },

@@ -366,13 +366,8 @@ const server = app.listen(PORT, () => {
       console.error('[storageHealthCheck] failed', { message: err.message })
     );
   }, 8 * 60 * 60 * 1000); // 8 hours
-  setInterval(() => {
-    enqueueDailyStorageIntegrityJob().catch((err) =>
-      console.error('[storageIntegritySchedule] failed', { message: err.message })
-    );
-  }, 24 * 60 * 60 * 1000); // daily
   enqueueDailyStorageIntegrityJob().catch((err) =>
-    console.error('[storageIntegritySchedule] initial enqueue failed', { message: err.message })
+    console.error('[storageIntegritySchedule] registration failed', { message: err.message })
   );
   console.log(`
 ╔════════════════════════════════════════════╗

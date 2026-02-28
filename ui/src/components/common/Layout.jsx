@@ -191,7 +191,8 @@ export const Layout = ({ children }) => {
         if (!cancelled) {
           setStorageHealthStatus(response?.data?.status || 'HEALTHY');
         }
-      } catch (_) {
+      } catch (error) {
+        console.warn('[StorageHealthBanner] Failed to fetch storage health', { message: error.message });
         if (!cancelled) {
           setStorageHealthStatus('HEALTHY');
         }

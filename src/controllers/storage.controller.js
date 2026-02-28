@@ -153,8 +153,8 @@ const getStorageHealth = async (req, res) => {
     return res.json({
       status: record?.status || 'HEALTHY',
       lastVerifiedAt: record?.lastVerifiedAt || null,
-      missingFilesCount: Number(record?.missingFilesCount || 0),
-      sampleSize: Number(record?.sampleSize || 0),
+      missingFilesCount: record?.missingFilesCount || 0,
+      sampleSize: record?.sampleSize || 0,
       lastError: record?.lastError || null,
     });
   } catch (error) {
