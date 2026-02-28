@@ -3,11 +3,12 @@
  */
 
 .filter-panel {
-  background: var(--surface-inset);
-  border-radius: var(--border-radius);
+  background: var(--color-bg-app);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
   padding: var(--spacing-lg);
   margin-bottom: var(--spacing-xl);
-  box-shadow: var(--shadow-inset-light), var(--shadow-inset-dark);
+  box-shadow: var(--shadow-xs);
 }
 
 .filter-panel__header h3 {

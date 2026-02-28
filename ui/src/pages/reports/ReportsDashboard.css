@@ -35,10 +35,11 @@
 }
 
 .reports-dashboard__card {
-  background: var(--surface-raised);
-  border-radius: var(--border-radius);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
   padding: var(--spacing-xl);
-  box-shadow: var(--shadow-light), var(--shadow-dark);
+  box-shadow: var(--shadow-sm);
 }
 
 .reports-dashboard__card h3 {
