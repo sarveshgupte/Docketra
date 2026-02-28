@@ -32,6 +32,7 @@ const LOCK_TIME = 15 * 60 * 1000; // 15 minutes in milliseconds
 const INVITE_TOKEN_EXPIRY_HOURS = 48; // 48 hours for invite tokens (per PR 32 requirements)
 const PASSWORD_SETUP_TOKEN_EXPIRY_HOURS = 24; // 24 hours for password reset tokens
 const FORGOT_PASSWORD_TOKEN_EXPIRY_MINUTES = 30; // 30 minutes for forgot password tokens
+const PRE_AUTH_TOKEN_EXPIRY = '5m';
 const DEFAULT_FIRM_ID = 'PLATFORM'; // Default firmId for SUPER_ADMIN and audit logging
 const DEFAULT_XID = 'SUPERADMIN'; // Default xID for SUPER_ADMIN in audit logs
 const GOOGLE_SCOPES = ['openid', 'email'];
@@ -113,6 +114,14 @@ const verifyOAuthState = (stateToken) => {
   }
 
   return jwt.verify(stateToken, process.env.JWT_SECRET);
+};
+
+const createMfaPreAuthToken = (payload) => {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is not configured for MFA pre-auth token signing');
+  }
+
+  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: PRE_AUTH_TOKEN_EXPIRY });
 };
 
 /**
@@ -618,6 +627,21 @@ const login = async (req, res) => {
       }
     }
     
+    if (user.twoFactorSecret) {
+      const preAuthToken = createMfaPreAuthToken({
+        userId: user._id.toString(),
+        firmId: user.firmId ? user.firmId.toString() : undefined,
+        role: user.role,
+        mfaStage: true,
+      });
+
+      return res.json({
+        success: true,
+        mfaRequired: true,
+        preAuthToken,
+      });
+    }
+
     // Log successful login (non-blocking)
     try {
       await AuthAudit.create({
@@ -2460,6 +2484,150 @@ const verifyTotp = async (req, res) => {
 };
 
 /**
+ * Complete MFA login and issue JWT tokens
+ * POST /api/auth/complete-mfa-login
+ */
+const completeMfaLogin = async (req, res) => {
+  try {
+    const token = String(req.body?.token || '').trim();
+    const preAuthToken = String(req.body?.preAuthToken || '').trim();
+
+    if (!preAuthToken) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired pre-authentication token',
+      });
+    }
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: 'token is required',
+      });
+    }
+
+    let decodedPreAuthToken;
+    try {
+      decodedPreAuthToken = jwt.verify(preAuthToken, process.env.JWT_SECRET);
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired pre-authentication token',
+      });
+    }
+
+    if (!decodedPreAuthToken?.mfaStage || !decodedPreAuthToken?.userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired pre-authentication token',
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(decodedPreAuthToken.userId)) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired pre-authentication token',
+      });
+    }
+
+    const user = await User.findOne({
+      _id: decodedPreAuthToken.userId,
+      isActive: true,
+      status: 'ACTIVE',
+    });
+
+    if (!user || !user.twoFactorSecret) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid authentication token',
+      });
+    }
+
+    const verified = speakeasy.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: 'base32',
+      token,
+      window: 1,
+    });
+
+    if (!verified) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid authentication token',
+      });
+    }
+
+    const firmSlug = await getFirmSlug(user.firmId);
+    const accessToken = jwtService.generateAccessToken({
+      userId: user._id.toString(),
+      firmId: user.firmId ? user.firmId.toString() : undefined,
+      firmSlug: firmSlug || undefined,
+      defaultClientId: user.defaultClientId ? user.defaultClientId.toString() : undefined,
+      role: user.role,
+    });
+
+    let refreshToken = null;
+    try {
+      ({ refreshToken } = await generateAndStoreRefreshToken({
+        userId: user._id,
+        firmId: user.firmId || null,
+        req,
+      }));
+    } catch (tokenError) {
+      console.error('[AUTH] Refresh token persistence failed', tokenError);
+    }
+
+    try {
+      await AuthAudit.create({
+        xID: user.xID || DEFAULT_XID,
+        firmId: user.firmId || DEFAULT_FIRM_ID,
+        userId: user._id,
+        actionType: 'MFA_LOGIN_SUCCESS',
+        description: 'User completed MFA login successfully',
+        performedBy: user.xID,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+      });
+    } catch (auditError) {
+      console.error('[AUTH AUDIT] Failed to record MFA login success event', auditError);
+    }
+
+    const response = {
+      success: true,
+      message: user.forcePasswordReset ? 'Password reset required' : 'Login successful',
+      accessToken,
+      refreshToken,
+      data: {
+        id: user._id.toString(),
+        xID: user.xID,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        firmId: user.firmId ? user.firmId.toString() : null,
+        firmSlug,
+        allowedCategories: user.allowedCategories,
+        isActive: user.isActive,
+        mustSetPassword: !!user.mustSetPassword,
+        passwordSetAt: user.passwordSetAt,
+      },
+    };
+
+    if (user.forcePasswordReset) {
+      response.mustChangePassword = true;
+      response.forcePasswordReset = true;
+    }
+
+    return res.json(response);
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Error completing MFA login',
+      error: error.message,
+    });
+  }
+};
+
+/**
  * Initiate Google OAuth (invite-only, DB-backed users only)
  * GET /api/auth/google
  */
@@ -2837,6 +3005,7 @@ module.exports = {
   getAllUsers,
   refreshAccessToken: wrapWriteHandler(refreshAccessToken), // NEW: JWT token refresh
   verifyTotp: wrapWriteHandler(verifyTotp),
+  completeMfaLogin: wrapWriteHandler(completeMfaLogin),
   initiateGoogleAuth,
   handleGoogleCallback: wrapWriteHandler(handleGoogleCallback),
   generateAndStoreRefreshToken,
