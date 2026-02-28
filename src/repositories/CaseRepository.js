@@ -289,6 +289,34 @@ const CaseRepository = {
   },
 
   /**
+   * Update only case status with tenant boundary enforcement
+   * @param {string} caseId - Case identifier
+   * @param {string|ObjectId} firmId - Firm ID from tenant context
+   * @param {string} status - New status value
+   * @param {Object} extraFields - Additional fields to set with status update
+   * @returns {Promise<Object>} Mongoose update result
+   */
+   async updateStatus(caseId, firmId, status, extraFields = {}, session = null) {
+    assertTenantId(firmId);
+    if (!caseId) {
+      throw new Error('Case ID required');
+    }
+
+    const result = await Case.updateOne(
+      { caseId, firmId },
+      { $set: { status, ...extraFields } },
+      session ? { session } : {}
+    );
+
+    const matched = result?.matchedCount ?? result?.n ?? 0;
+    if (matched === 0) {
+      throw new Error('Case not found');
+    }
+
+    return result;
+  },
+
+  /**
    * Update case by MongoDB _id with firm scoping
    * @param {string|ObjectId} firmId - Firm ID from req.user.firmId
    * @param {string|ObjectId} _id - MongoDB document ID

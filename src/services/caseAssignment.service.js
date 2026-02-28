@@ -1,9 +1,10 @@
 const Case = require('../models/Case.model');
 const CaseHistory = require('../models/CaseHistory.model');
 const CaseAudit = require('../models/CaseAudit.model');
+const mongoose = require('mongoose');
 const { CaseRepository } = require('../repositories');
-const { CASE_STATUS, CASE_ACTION_TYPES } = require('../config/constants');
-const { logCaseHistory } = require('./auditLog.service');
+const CaseStatus = require('../domain/case/caseStatus');
+const CaseService = require('./case.service');
 
 /**
  * Case Assignment Service
@@ -48,20 +49,18 @@ const assignCaseToUser = async (firmId, caseId, user) => {
   }
   
   // Use findOneAndUpdate for atomic operation to prevent double assignment
+  const assignedAt = new Date();
   const caseData = await Case.findOneAndUpdate(
     {
       firmId,
       caseId,
-      status: CASE_STATUS.UNASSIGNED, // Only assign if still unassigned
+      status: CaseStatus.UNASSIGNED, // Only assign if still unassigned
     },
     {
       $set: {
         assignedToXID: user.xID.toUpperCase(), // CANONICAL: Store xID in assignedToXID
         queueType: 'PERSONAL', // Move from GLOBAL to PERSONAL queue
-        status: CASE_STATUS.OPEN, // Change status to OPEN
-        assignedAt: new Date(),
-        lastActionByXID: user.xID.toUpperCase(), // Track last action performer
-        lastActionAt: new Date(), // Track last action timestamp
+        assignedAt,
       },
     },
     {
@@ -77,7 +76,7 @@ const assignCaseToUser = async (firmId, caseId, user) => {
       throw new Error('Case not found');
     }
     
-    if (existingCase.status !== CASE_STATUS.UNASSIGNED) {
+    if (existingCase.status !== CaseStatus.UNASSIGNED) {
       return {
         success: false,
         message: 'Case is no longer available (already assigned)',
@@ -86,40 +85,24 @@ const assignCaseToUser = async (firmId, caseId, user) => {
       };
     }
   }
-  
-  // Create CaseAudit entry (xID-based)
-  await CaseAudit.create({
-    caseId,
-    actionType: CASE_ACTION_TYPES.CASE_ASSIGNED,
-    description: `Case pulled from global worklist and assigned to ${user.xID}`,
-    performedByXID: user.xID,
-    metadata: {
-      queueType: 'PERSONAL',
-      status: CASE_STATUS.OPEN,
-      assignedTo: user.xID,
-    },
-  });
-  
-  // Create CaseHistory entry with enhanced audit logging
-  await logCaseHistory({
-    caseId,
-    firmId: caseData.firmId,
-    actionType: CASE_ACTION_TYPES.CASE_ASSIGNED,
-    actionLabel: `Case assigned to ${user.name || user.xID}`,
-    description: `Case pulled from global worklist and assigned to ${user.xID}`,
-    performedBy: user.email,
-    performedByXID: user.xID,
+
+  await CaseService.updateStatus(caseId, CaseStatus.OPEN, {
+    tenantId: firmId,
+    role: user.role,
+    userId: user.xID,
+    performedBy: user.email?.toLowerCase() || 'SYSTEM',
     actorRole: user.role === 'Admin' ? 'ADMIN' : 'USER',
-    metadata: {
-      queueType: 'PERSONAL',
-      status: CASE_STATUS.OPEN,
-      assignedTo: user.xID,
+    currentStatus: caseData.status,
+    statusPatch: {
+      lastActionByXID: user.xID.toUpperCase(),
+      lastActionAt: assignedAt,
     },
   });
+  const updatedCaseData = await CaseRepository.findByCaseId(firmId, caseId, user.role);
   
   return {
     success: true,
-    data: caseData,
+    data: updatedCaseData,
   };
 };
 
@@ -142,69 +125,80 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user) => {
     throw new Error('Case IDs array is required and must not be empty');
   }
   
-  // Atomic bulk update - only updates cases that are still UNASSIGNED
-  const result = await Case.updateMany(
-    {
+  const assignedAt = new Date();
+  const session = await mongoose.startSession();
+  try {
+    session.startTransaction();
+
+    const result = await Case.updateMany(
+      {
+        firmId,
+        caseId: { $in: caseIds },
+        status: CaseStatus.UNASSIGNED,
+      },
+      {
+        $set: {
+          assignedToXID: user.xID.toUpperCase(), // CANONICAL: Store xID in assignedToXID
+          queueType: 'PERSONAL', // Move from GLOBAL to PERSONAL queue
+          assignedAt,
+        },
+      },
+      { session }
+    );
+
+    const updatedCases = await Case.find({
       firmId,
       caseId: { $in: caseIds },
-      status: CASE_STATUS.UNASSIGNED,
-    },
-    {
-      $set: {
-        assignedToXID: user.xID.toUpperCase(), // CANONICAL: Store xID in assignedToXID
-        queueType: 'PERSONAL', // Move from GLOBAL to PERSONAL queue
-        status: CASE_STATUS.OPEN, // Change status to OPEN
-        assignedAt: new Date(),
-        lastActionByXID: user.xID.toUpperCase(), // Track last action performer
-        lastActionAt: new Date(), // Track last action timestamp
-      },
-    }
-  );
-  
-  // Get the actual cases that were updated
-  const updatedCases = await Case.find({
-    firmId,
-    caseId: { $in: caseIds },
-    assignedToXID: user.xID.toUpperCase(),
-    queueType: 'PERSONAL',
-  });
-  
-  // Create audit entries for successfully assigned cases
-  const auditEntries = updatedCases.map(caseData => ({
-    caseId: caseData.caseId,
-    actionType: 'CASE_ASSIGNED',
-    description: `Case bulk-assigned to ${user.xID}`,
-    performedByXID: user.xID,
-    metadata: {
+      assignedToXID: user.xID.toUpperCase(),
       queueType: 'PERSONAL',
-      status: CASE_STATUS.OPEN,
-      bulkAssignment: true,
-    },
-  }));
-  
-  if (auditEntries.length > 0) {
-    await CaseAudit.insertMany(auditEntries);
+      assignedAt,
+    }, null, { session });
+
+    await Promise.all(updatedCases.map((caseData) =>
+      CaseService.updateStatus(caseData.caseId, CaseStatus.OPEN, {
+        tenantId: firmId,
+        role: user.role,
+        userId: user.xID,
+        performedBy: user.email?.toLowerCase() || 'SYSTEM',
+        actorRole: user.role === 'Admin' ? 'ADMIN' : 'USER',
+        currentStatus: CaseStatus.UNASSIGNED,
+        session,
+        statusPatch: {
+          lastActionByXID: user.xID.toUpperCase(),
+          lastActionAt: assignedAt,
+        },
+      })
+    ));
+
+    const transitionedCases = await Case.find({
+      firmId,
+      caseId: { $in: updatedCases.map((caseData) => caseData.caseId) },
+    }, null, { session });
+
+    await session.commitTransaction();
+    return {
+      success: true,
+      assigned: result.modifiedCount,
+      requested: caseIds.length,
+      cases: transitionedCases,
+    };
+  } catch (error) {
+    try {
+      await session.abortTransaction();
+    } catch (_) {
+      // noop
+    }
+    const message = error?.message || '';
+    if (
+      message.includes('Transaction numbers are only allowed on a replica set member or mongos') ||
+      message.toLowerCase().includes('replica set')
+    ) {
+      throw new Error('MongoDB transactions require replica set');
+    }
+    throw error;
+  } finally {
+    await session.endSession();
   }
-  
-  // Create history entries for backward compatibility
-  const historyEntries = updatedCases.map(caseData => ({
-    caseId: caseData.caseId,
-    actionType: 'CASE_ASSIGNED',
-    description: `Case bulk-assigned to ${user.xID}`,
-    performedBy: user.email.toLowerCase(),
-    performedByXID: user.xID.toUpperCase(), // Canonical identifier (uppercase)
-  }));
-  
-  if (historyEntries.length > 0) {
-    await CaseHistory.insertMany(historyEntries);
-  }
-  
-  return {
-    success: true,
-    assigned: result.modifiedCount,
-    requested: caseIds.length,
-    cases: updatedCases,
-  };
 };
 
 /**
@@ -232,12 +226,12 @@ const reassignCase = async (firmId, caseId, newUserXID, performedBy) => {
   }
   
   // Cannot reassign unassigned cases
-  if (caseData.status === CASE_STATUS.UNASSIGNED) {
+  if (caseData.status === CaseStatus.UNASSIGNED) {
     throw new Error('Cannot reassign unassigned cases. Use assignment instead.');
   }
   
   // Cannot reassign filed cases
-  if (caseData.status === CASE_STATUS.FILED) {
+  if (caseData.status === CaseStatus.FILED) {
     throw new Error('Cannot reassign filed cases');
   }
   

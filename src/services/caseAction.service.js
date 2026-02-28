@@ -3,7 +3,9 @@ const Comment = require('../models/Comment.model');
 const CaseHistory = require('../models/CaseHistory.model');
 const CaseAudit = require('../models/CaseAudit.model');
 const { CaseRepository } = require('../repositories');
-const { CASE_STATUS, CASE_ACTION_TYPES } = require('../config/constants');
+const { CASE_ACTION_TYPES } = require('../config/constants');
+const CaseStatus = require('../domain/case/caseStatus');
+const CaseService = require('./case.service');
 const { DateTime } = require('luxon');
 const { logCaseHistory } = require('./auditLog.service');
 
@@ -21,46 +23,6 @@ const { logCaseHistory } = require('./auditLog.service');
  * 
  * PR: Case Lifecycle & Dashboard Logic
  */
-
-  /**
-   * Central state transition map
-   * Defines which status transitions are allowed
-   * 
-   * CANONICAL CASE LIFECYCLE (PR: Fix Case Lifecycle Errors)
-   * 
-   * Allowed Transitions:
-   * - OPEN → PENDED, RESOLVED, FILED
-   * - PENDING → OPEN (manual unpend), RESOLVED, FILED
-   * - PENDED → OPEN (manual unpend), RESOLVED, FILED
-   * - UNASSIGNED → OPEN, PENDED, RESOLVED, FILED
-   * - FILED → (none - terminal)
-   * - RESOLVED → (none - terminal)
-   * 
-   * Note: Both PENDING and PENDED are mapped because the codebase uses PENDED
-   * as the canonical status, but PENDING may exist for legacy compatibility
-   */
-  const CASE_TRANSITIONS = {
-  OPEN: ['PENDED', 'FILED', 'RESOLVED'],
-  PENDING: ['OPEN', 'RESOLVED', 'FILED'], // Can unpend to OPEN, or directly resolve/file
-  PENDED: ['OPEN', 'RESOLVED', 'FILED'], // Can unpend to OPEN, or directly resolve/file  
-  FILED: [], // Terminal state
-  RESOLVED: [], // Terminal state
-  UNASSIGNED: ['OPEN', 'PENDED', 'FILED', 'RESOLVED'], // Allow actions from unassigned state
-};
-
-/**
- * Assert that a case state transition is valid
- * @param {string} currentStatus - Current case status
- * @param {string} targetStatus - Desired target status
- * @throws {Error} If transition is not allowed
- */
-const assertCaseTransition = (currentStatus, targetStatus) => {
-  const allowedTransitions = CASE_TRANSITIONS[currentStatus];
-  
-  if (!allowedTransitions || !allowedTransitions.includes(targetStatus)) {
-    throw new Error(`Cannot change case from ${currentStatus} to ${targetStatus}`);
-  }
-};
 
 /**
  * Validate that a comment is provided and not empty
@@ -126,28 +88,39 @@ const recordAction = async (caseId, firmId, actionType, description, performedBy
  * @returns {object} Updated case
  * @throws {Error} If comment is missing or case not found
  */
-const resolveCase = async (firmId, caseId, comment, user) => {
+const resolveCase = async (firmId, caseId, comment, user, req = null) => {
   validateComment(comment);
   
-  const caseData = await CaseRepository.findByCaseId(firmId, caseId, user.role);
+  let caseData = await CaseRepository.findByCaseId(firmId, caseId, user.role);
   
   if (!caseData) {
     throw new Error('Case not found');
   }
   
-  // Validate state transition
-  assertCaseTransition(caseData.status, CASE_STATUS.RESOLVED);
-  
   // Store previous status for audit
   const previousStatus = caseData.status;
-  
-  // Update case status and metadata
-  caseData.status = CASE_STATUS.RESOLVED;
-  caseData.pendingUntil = null; // Clear pending date
-  caseData.lastActionByXID = user.xID;
-  caseData.lastActionAt = new Date();
-  
-  await caseData.save();
+
+  await CaseService.updateStatus(caseId, CaseStatus.RESOLVED, {
+    tenantId: firmId,
+    role: user.role,
+    userId: user.xID,
+    performedByXID: user.xID,
+    performedBy: user.email,
+    actorRole: user.role === 'Admin' ? 'ADMIN' : 'USER',
+    ipAddress: req?.ip || null,
+    userAgent: req?.get?.('user-agent') || null,
+    req,
+    statusPatch: {
+      pendingUntil: null,
+      lastActionByXID: user.xID,
+      lastActionAt: new Date(),
+    },
+    auditMetadata: {
+      commentLength: comment.length,
+    },
+  });
+
+  caseData = await CaseRepository.findByCaseId(firmId, caseId, user.role);
   
   // Add comment
   await Comment.create({
@@ -170,7 +143,7 @@ const resolveCase = async (firmId, caseId, comment, user) => {
     user.role === 'Admin' ? 'ADMIN' : 'USER',
     {
       previousStatus,
-      newStatus: CASE_STATUS.RESOLVED,
+      newStatus: CaseStatus.RESOLVED,
       commentLength: comment.length,
     }
   );
@@ -194,21 +167,18 @@ const resolveCase = async (firmId, caseId, comment, user) => {
  * @returns {object} Updated case
  * @throws {Error} If comment or reopenDate is missing, or case not found
  */
-const pendCase = async (firmId, caseId, comment, reopenDate, user) => {
+const pendCase = async (firmId, caseId, comment, reopenDate, user, req = null) => {
   validateComment(comment);
   
   if (!reopenDate) {
     throw new Error('Reopen date is required');
   }
   
-  const caseData = await CaseRepository.findByCaseId(firmId, caseId, user.role);
+  let caseData = await CaseRepository.findByCaseId(firmId, caseId, user.role);
   
   if (!caseData) {
     throw new Error('Case not found');
   }
-  
-  // Validate state transition
-  assertCaseTransition(caseData.status, CASE_STATUS.PENDED);
   
   // Store previous status for audit
   const previousStatus = caseData.status;
@@ -220,14 +190,29 @@ const pendCase = async (firmId, caseId, comment, reopenDate, user) => {
     .toUTC()
     .toJSDate();
   
-  // Update case status and metadata
-  caseData.status = CASE_STATUS.PENDED;
-  caseData.pendedByXID = user.xID;
-  caseData.pendingUntil = pendingUntil;
-  caseData.lastActionByXID = user.xID;
-  caseData.lastActionAt = new Date();
-  
-  await caseData.save();
+  await CaseService.updateStatus(caseId, CaseStatus.PENDED, {
+    tenantId: firmId,
+    role: user.role,
+    userId: user.xID,
+    performedByXID: user.xID,
+    performedBy: user.email,
+    actorRole: user.role === 'Admin' ? 'ADMIN' : 'USER',
+    ipAddress: req?.ip || null,
+    userAgent: req?.get?.('user-agent') || null,
+    req,
+    statusPatch: {
+      pendedByXID: user.xID,
+      pendingUntil,
+      lastActionByXID: user.xID,
+      lastActionAt: new Date(),
+    },
+    auditMetadata: {
+      pendingUntil,
+      commentLength: comment.length,
+    },
+  });
+
+  caseData = await CaseRepository.findByCaseId(firmId, caseId, user.role);
   
   // Add comment
   await Comment.create({
@@ -250,7 +235,7 @@ const pendCase = async (firmId, caseId, comment, reopenDate, user) => {
     user.role === 'Admin' ? 'ADMIN' : 'USER',
     {
       previousStatus,
-      newStatus: CASE_STATUS.PENDED,
+      newStatus: CaseStatus.PENDED,
       pendingUntil,
       commentLength: comment.length,
     }
@@ -273,28 +258,39 @@ const pendCase = async (firmId, caseId, comment, reopenDate, user) => {
  * @returns {object} Updated case
  * @throws {Error} If comment is missing or case not found
  */
-const fileCase = async (firmId, caseId, comment, user) => {
+const fileCase = async (firmId, caseId, comment, user, req = null) => {
   validateComment(comment);
   
-  const caseData = await CaseRepository.findByCaseId(firmId, caseId, user.role);
+  let caseData = await CaseRepository.findByCaseId(firmId, caseId, user.role);
   
   if (!caseData) {
     throw new Error('Case not found');
   }
   
-  // Validate state transition
-  assertCaseTransition(caseData.status, CASE_STATUS.FILED);
-  
   // Store previous status for audit
   const previousStatus = caseData.status;
-  
-  // Update case status and metadata
-  caseData.status = CASE_STATUS.FILED;
-  caseData.pendingUntil = null; // Clear pending date
-  caseData.lastActionByXID = user.xID;
-  caseData.lastActionAt = new Date();
-  
-  await caseData.save();
+
+  await CaseService.updateStatus(caseId, CaseStatus.FILED, {
+    tenantId: firmId,
+    role: user.role,
+    userId: user.xID,
+    performedByXID: user.xID,
+    performedBy: user.email,
+    actorRole: user.role === 'Admin' ? 'ADMIN' : 'USER',
+    ipAddress: req?.ip || null,
+    userAgent: req?.get?.('user-agent') || null,
+    req,
+    statusPatch: {
+      pendingUntil: null,
+      lastActionByXID: user.xID,
+      lastActionAt: new Date(),
+    },
+    auditMetadata: {
+      commentLength: comment.length,
+    },
+  });
+
+  caseData = await CaseRepository.findByCaseId(firmId, caseId, user.role);
   
   // Add comment
   await Comment.create({
@@ -317,7 +313,7 @@ const fileCase = async (firmId, caseId, comment, user) => {
     user.role === 'Admin' ? 'ADMIN' : 'USER',
     {
       previousStatus,
-      newStatus: CASE_STATUS.FILED,
+      newStatus: CaseStatus.FILED,
       commentLength: comment.length,
     }
   );
@@ -338,30 +334,43 @@ const fileCase = async (firmId, caseId, comment, user) => {
  * @returns {object} Updated case
  * @throws {Error} If comment is missing or case not found
  */
-const unpendCase = async (firmId, caseId, comment, user) => {
+const unpendCase = async (firmId, caseId, comment, user, req = null) => {
   validateComment(comment);
   
-  const caseData = await CaseRepository.findByCaseId(firmId, caseId, user.role);
+  let caseData = await CaseRepository.findByCaseId(firmId, caseId, user.role);
   
   if (!caseData) {
     throw new Error('Case not found');
   }
   
-  // Validate state transition (from PENDED or PENDING to OPEN)
-  assertCaseTransition(caseData.status, CASE_STATUS.OPEN);
-  
   // Store previous status for audit
   const previousStatus = caseData.status;
   const previousPendingUntil = caseData.pendingUntil;
-  
-  // Update case status and metadata
-  caseData.status = CASE_STATUS.OPEN;
-  caseData.pendingUntil = null; // Clear pending date
-  caseData.pendedByXID = null; // Clear who pended it
-  caseData.lastActionByXID = user.xID;
-  caseData.lastActionAt = new Date();
-  
-  await caseData.save();
+
+  await CaseService.updateStatus(caseId, CaseStatus.OPEN, {
+    tenantId: firmId,
+    role: user.role,
+    userId: user.xID,
+    performedByXID: user.xID,
+    performedBy: user.email,
+    actorRole: user.role === 'Admin' ? 'ADMIN' : 'USER',
+    ipAddress: req?.ip || null,
+    userAgent: req?.get?.('user-agent') || null,
+    req,
+    statusPatch: {
+      pendingUntil: null,
+      pendedByXID: null,
+      lastActionByXID: user.xID,
+      lastActionAt: new Date(),
+    },
+    auditMetadata: {
+      previousPendingUntil,
+      manualUnpend: true,
+      commentLength: comment.length,
+    },
+  });
+
+  caseData = await CaseRepository.findByCaseId(firmId, caseId, user.role);
   
   // Add comment
   await Comment.create({
@@ -384,7 +393,7 @@ const unpendCase = async (firmId, caseId, comment, user) => {
     user.role === 'Admin' ? 'ADMIN' : 'USER',
     {
       previousStatus,
-      newStatus: CASE_STATUS.OPEN,
+      newStatus: CaseStatus.OPEN,
       previousPendingUntil,
       manualUnpend: true,
       commentLength: comment.length,
@@ -405,13 +414,25 @@ const performAutoReopen = async (caseData) => {
   const previousPendingUntil = caseData.pendingUntil;
   const now = new Date();
   
-  // Update status back to OPEN
-  caseData.status = CASE_STATUS.OPEN;
-  caseData.pendingUntil = null; // Clear pending date
-  caseData.lastActionByXID = 'SYSTEM'; // System auto-reopen
-  caseData.lastActionAt = now;
-  
-  await caseData.save();
+  await CaseService.updateStatus(caseData.caseId, CaseStatus.OPEN, {
+    tenantId: caseData.firmId,
+    role: 'Admin',
+    userId: 'SYSTEM',
+    performedByXID: 'SYSTEM',
+    performedBy: 'SYSTEM',
+    actorRole: 'SYSTEM',
+    statusPatch: {
+      pendingUntil: null,
+      lastActionByXID: 'SYSTEM',
+      lastActionAt: now,
+    },
+    auditMetadata: {
+      pendingUntil: previousPendingUntil,
+      autoReopened: true,
+      reason: 'pending_until elapsed',
+      reopened_at: now.toISOString(),
+    },
+  });
   
   // Add system comment
   await Comment.create({
@@ -433,7 +454,7 @@ const performAutoReopen = async (caseData) => {
     'SYSTEM',
     {
       previousStatus,
-      newStatus: CASE_STATUS.OPEN,
+      newStatus: CaseStatus.OPEN,
       pendingUntil: previousPendingUntil,
       autoReopened: true,
       reason: 'pending_until elapsed',
@@ -459,7 +480,7 @@ const autoReopenExpiredPendingCases = async (userXid, firmId = null) => {
   
   // Find all pended cases for this user where pendingUntil has passed
   const pendedCases = await Case.find({
-    status: CASE_STATUS.PENDED,
+    status: CaseStatus.PENDED,
     pendingUntil: { $lte: now },
     assignedToXID: userXid,
     ...(firmId ? { firmId } : {}),
@@ -494,7 +515,7 @@ const autoReopenPendedCases = async (firmId = null) => {
   
   // Find all pended cases where pendingUntil has passed
   const pendedCases = await Case.find({
-    status: CASE_STATUS.PENDED,
+    status: CaseStatus.PENDED,
     pendingUntil: { $lte: now },
     ...(firmId ? { firmId } : {}),
   });

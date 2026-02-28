@@ -7,7 +7,7 @@ const Task = require('../models/Task');
 const AuthAudit = require('../models/AuthAudit.model');
 const Firm = require('../models/Firm.model');
 const emailService = require('../services/email.service');
-const { CASE_STATUS } = require('../config/constants');
+const CaseStatus = require('../domain/case/caseStatus');
 const { logAdminAction, logCaseListViewed } = require('../services/auditLog.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { getDiagnosticsSnapshot } = require('../services/diagnostics.service');
@@ -76,20 +76,20 @@ const getAdminStats = async (req, res) => {
       
       // Pending approvals - cases with status 'Reviewed' or 'UNDER_REVIEW'
       Case.countDocuments({
-        status: { $in: [CASE_STATUS.REVIEWED, CASE_STATUS.UNDER_REVIEW] }
+        status: { $in: [CaseStatus.REVIEWED, CaseStatus.UNDER_REVIEW] }
       }),
       
       // All open cases across all users (for admin visibility)
-      Case.countDocuments({ status: CASE_STATUS.OPEN }),
+      Case.countDocuments({ status: CaseStatus.OPEN }),
       
       // All pending cases across all users (for admin visibility)
-      Case.countDocuments({ status: CASE_STATUS.PENDED }),
+      Case.countDocuments({ status: CaseStatus.PENDED }),
       
       // All filed cases (for admin visibility)
-      Case.countDocuments({ status: CASE_STATUS.FILED }),
+      Case.countDocuments({ status: CaseStatus.FILED }),
       
       // All resolved cases (for admin visibility)
-      Case.countDocuments({ status: CASE_STATUS.RESOLVED }),
+      Case.countDocuments({ status: CaseStatus.RESOLVED }),
     ]);
     
     res.json({
@@ -264,19 +264,19 @@ const getAllOpenCases = async (req, res) => {
     
     const firmScope = { firmId: req.firmId };
 
-    const cases = await Case.find({ ...firmScope, status: CASE_STATUS.OPEN })
+    const cases = await Case.find({ ...firmScope, status: CaseStatus.OPEN })
       .select('caseId caseName category createdAt updatedAt status clientId assignedTo')
       .sort({ createdAt: -1 })
       .limit(parseInt(limit))
       .skip((parseInt(page) - 1) * parseInt(limit))
       .lean();
     
-    const total = await Case.countDocuments({ ...firmScope, status: CASE_STATUS.OPEN });
+    const total = await Case.countDocuments({ ...firmScope, status: CaseStatus.OPEN });
     
     // Log admin action for audit
     await logCaseListViewed({
       viewerXID: req.user.xID,
-      filters: { status: CASE_STATUS.OPEN },
+      filters: { status: CaseStatus.OPEN },
       listType: 'ADMIN_ALL_OPEN_CASES',
       resultCount: cases.length,
       req,
@@ -316,19 +316,19 @@ const getAllPendingCases = async (req, res) => {
     
     const firmScope = { firmId: req.firmId };
 
-    const cases = await Case.find({ ...firmScope, status: CASE_STATUS.PENDED })
+    const cases = await Case.find({ ...firmScope, status: CaseStatus.PENDED })
       .select('caseId caseName category createdAt updatedAt status clientId assignedTo pendedByXID pendingUntil')
       .sort({ pendingUntil: 1 }) // Sort by pending deadline (earliest first)
       .limit(parseInt(limit))
       .skip((parseInt(page) - 1) * parseInt(limit))
       .lean();
     
-    const total = await Case.countDocuments({ ...firmScope, status: CASE_STATUS.PENDED });
+    const total = await Case.countDocuments({ ...firmScope, status: CaseStatus.PENDED });
     
     // Log admin action for audit
     await logCaseListViewed({
       viewerXID: req.user.xID,
-      filters: { status: CASE_STATUS.PENDED },
+      filters: { status: CaseStatus.PENDED },
       listType: 'ADMIN_ALL_PENDING_CASES',
       resultCount: cases.length,
       req,
@@ -368,14 +368,14 @@ const getAllFiledCases = async (req, res) => {
     
     const firmScope = { firmId: req.firmId };
 
-    const cases = await Case.find({ ...firmScope, status: CASE_STATUS.FILED })
+    const cases = await Case.find({ ...firmScope, status: CaseStatus.FILED })
       .select('caseId caseName category createdAt updatedAt status clientId assignedTo lastActionByXID lastActionAt')
       .sort({ lastActionAt: -1 }) // Sort by last action (most recently filed first)
       .limit(parseInt(limit))
       .skip((parseInt(page) - 1) * parseInt(limit))
       .lean();
     
-    const total = await Case.countDocuments({ ...firmScope, status: CASE_STATUS.FILED });
+    const total = await Case.countDocuments({ ...firmScope, status: CaseStatus.FILED });
     
     // MANDATORY: Log admin filed cases access for audit
     await logAdminAction({
@@ -424,14 +424,14 @@ const getAllResolvedCases = async (req, res) => {
     
     const firmScope = { firmId: req.firmId };
 
-    const cases = await Case.find({ ...firmScope, status: CASE_STATUS.RESOLVED })
+    const cases = await Case.find({ ...firmScope, status: CaseStatus.RESOLVED })
       .select('caseId caseName category createdAt updatedAt status clientId assignedTo lastActionByXID lastActionAt')
       .sort({ lastActionAt: -1 }) // Sort by last action (most recently resolved first)
       .limit(parseInt(limit))
       .skip((parseInt(page) - 1) * parseInt(limit))
       .lean();
     
-    const total = await Case.countDocuments({ ...firmScope, status: CASE_STATUS.RESOLVED });
+    const total = await Case.countDocuments({ ...firmScope, status: CaseStatus.RESOLVED });
     
     // Log admin action for audit
     await logAdminAction({

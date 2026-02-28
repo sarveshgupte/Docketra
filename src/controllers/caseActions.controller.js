@@ -1,6 +1,6 @@
 const Case = require('../models/Case.model');
 const caseActionService = require('../services/caseAction.service');
-const { CASE_STATUS } = require('../config/constants');
+const CaseStatus = require('../domain/case/caseStatus');
 const { logCaseListViewed } = require('../services/auditLog.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 
@@ -43,7 +43,7 @@ const resolveCase = async (req, res) => {
     }
     
     // Call service to resolve case - with firm scoping
-    const caseData = await caseActionService.resolveCase(req.user.firmId, caseId, comment, req.user);
+    const caseData = await caseActionService.resolveCase(req.user.firmId, caseId, comment, req.user, req);
     
     res.json({
       success: true,
@@ -66,7 +66,8 @@ const resolveCase = async (req, res) => {
       });
     }
     
-    if (error.message.startsWith('Cannot change case from')) {
+    if (error.message.startsWith('Illegal transition:') ||
+        error.message === 'Resolved cases cannot be modified') {
       return res.status(400).json({
         success: false,
         message: error.message,
@@ -109,7 +110,7 @@ const pendCase = async (req, res) => {
     }
     
     // Call service to pend case - with firm scoping
-    const caseData = await caseActionService.pendCase(req.user.firmId, caseId, comment, reopenDate, req.user);
+    const caseData = await caseActionService.pendCase(req.user.firmId, caseId, comment, reopenDate, req.user, req);
     
     res.json({
       success: true,
@@ -133,7 +134,8 @@ const pendCase = async (req, res) => {
       });
     }
     
-    if (error.message.startsWith('Cannot change case from')) {
+    if (error.message.startsWith('Illegal transition:') ||
+        error.message === 'Resolved cases cannot be modified') {
       return res.status(400).json({
         success: false,
         message: error.message,
@@ -176,7 +178,7 @@ const fileCase = async (req, res) => {
     }
     
     // Call service to file case - with firm scoping
-    const caseData = await caseActionService.fileCase(req.user.firmId, caseId, comment, req.user);
+    const caseData = await caseActionService.fileCase(req.user.firmId, caseId, comment, req.user, req);
     
     res.json({
       success: true,
@@ -199,7 +201,8 @@ const fileCase = async (req, res) => {
       });
     }
     
-    if (error.message.startsWith('Cannot change case from')) {
+    if (error.message.startsWith('Illegal transition:') ||
+        error.message === 'Resolved cases cannot be modified') {
       return res.status(400).json({
         success: false,
         message: error.message,
@@ -248,7 +251,7 @@ const getMyPendingCases = async (req, res) => {
     const query = {
       firmId: req.firmId,
       assignedToXID: req.user.xID,
-      status: CASE_STATUS.PENDED,
+      status: CaseStatus.PENDED,
     };
     
     // Apply client access filter from middleware (restrictedClientIds)
@@ -264,7 +267,7 @@ const getMyPendingCases = async (req, res) => {
     // Log case list view for audit
     await logCaseListViewed({
       viewerXID: req.user.xID,
-      filters: { status: CASE_STATUS.PENDED },
+      filters: { status: CaseStatus.PENDED },
       listType: 'MY_PENDING_CASES',
       resultCount: cases.length,
       req,
@@ -321,7 +324,7 @@ const getMyResolvedCases = async (req, res) => {
     // Cases that were resolved by this user
     const query = {
       firmId: req.firmId,
-      status: CASE_STATUS.RESOLVED,
+      status: CaseStatus.RESOLVED,
       lastActionByXID: req.user.xID,
     };
     
@@ -338,7 +341,7 @@ const getMyResolvedCases = async (req, res) => {
     // Log case list view for audit
     await logCaseListViewed({
       viewerXID: req.user.xID,
-      filters: { status: CASE_STATUS.RESOLVED, lastActionByXID: req.user.xID },
+      filters: { status: CaseStatus.RESOLVED, lastActionByXID: req.user.xID },
       listType: 'MY_RESOLVED_CASES',
       resultCount: cases.length,
       req,
@@ -427,7 +430,7 @@ const getMyUnassignedCreatedCases = async (req, res) => {
     // Cases that were created by this user and are still unassigned
     const query = {
       firmId: req.firmId,
-      status: CASE_STATUS.UNASSIGNED,
+      status: CaseStatus.UNASSIGNED,
       createdByXID: req.user.xID,
     };
     
@@ -444,7 +447,7 @@ const getMyUnassignedCreatedCases = async (req, res) => {
     // Log case list view for audit
     await logCaseListViewed({
       viewerXID: req.user.xID,
-      filters: { status: CASE_STATUS.UNASSIGNED, createdByXID: req.user.xID },
+      filters: { status: CaseStatus.UNASSIGNED, createdByXID: req.user.xID },
       listType: 'MY_UNASSIGNED_CREATED_CASES',
       resultCount: cases.length,
       req,

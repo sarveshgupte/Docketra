@@ -9,10 +9,12 @@ const Client = require('../models/Client.model');
 const User = require('../models/User.model');
 const { CaseRepository, ClientRepository } = require('../repositories');
 const { detectDuplicates, generateDuplicateOverrideComment } = require('../services/clientDuplicateDetector');
-const { CASE_CATEGORIES, CASE_LOCK_CONFIG, CASE_STATUS, COMMENT_PREVIEW_LENGTH, CLIENT_STATUS } = require('../config/constants');
+const { CASE_CATEGORIES, CASE_LOCK_CONFIG, COMMENT_PREVIEW_LENGTH, CLIENT_STATUS } = require('../config/constants');
+const CaseStatus = require('../domain/case/caseStatus');
 const { isProduction } = require('../config/config');
 const { logCaseListViewed, logAdminAction } = require('../services/auditLog.service');
 const caseActionService = require('../services/caseAction.service');
+const CaseService = require('../services/case.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { getMimeType, sanitizeFilename } = require('../utils/fileUtils');
 const { cleanupTempFile } = require('../utils/tempFile');
@@ -925,7 +927,7 @@ const unpendCase = async (req, res) => {
     }
     
     // Call service to unpend case - with firm scoping
-    const caseData = await caseActionService.unpendCase(req.user.firmId, caseId, comment, req.user);
+    const caseData = await caseActionService.unpendCase(req.user.firmId, caseId, comment, req.user, req);
     
     res.json({
       success: true,
@@ -1007,32 +1009,32 @@ const updateCaseStatus = async (req, res) => {
       });
     }
     
-    const oldStatus = caseData.status;
-    
-    // Update status
-    caseData.status = status;
-    
-    // Handle Pending status - require pendingUntil
-    if (status === 'Pending' && !pendingUntil) {
+    const normalizedStatus = status === 'Pending' ? CaseStatus.PENDED : status;
+
+    // Handle Pending/PENDED status - require pendingUntil
+    if (normalizedStatus === CaseStatus.PENDED && !pendingUntil) {
       return res.status(400).json({
         success: false,
-        message: 'pendingUntil date is required when status is Pending',
+        message: 'pendingUntil date is required when status is Pending or PENDED',
       });
     }
-    
-    if (status === 'Pending') {
-      caseData.pendingUntil = pendingUntil;
-    }
-    
-    await caseData.save();
-    
-    // Create history entry
-    await CaseHistory.create({
-      caseId,
-      actionType: 'StatusChanged',
-      description: `Status changed from ${oldStatus} to ${status}`,
+
+    await CaseService.updateStatus(caseData.caseId, normalizedStatus, {
+      tenantId: req.user.firmId,
+      role: req.user.role,
+      userId: req.user.xID,
+      performedByXID: req.user.xID,
       performedBy: performedBy.toLowerCase(),
+      actorRole: req.user.role === 'Admin' ? 'ADMIN' : 'USER',
+      ipAddress: req.ip || null,
+      userAgent: req.get('user-agent'),
+      req,
+      statusPatch: normalizedStatus === CaseStatus.PENDED
+        ? { pendingUntil }
+        : { pendingUntil: null },
     });
+
+    caseData = await CaseRepository.findByInternalId(req.user.firmId, caseData.caseInternalId, req.user.role);
     
     res.json({
       success: true,
@@ -1313,9 +1315,10 @@ const getCases = async (req, res) => {
     if (req.user?.xID) {
       // Determine if this is an admin viewing pending approvals
       const isPendingApprovalView = 
-        status === CASE_STATUS.PENDING || 
-        status === CASE_STATUS.REVIEWED || 
-        status === CASE_STATUS.UNDER_REVIEW;
+        status === CaseStatus.PENDING_ALIAS ||
+        status === CaseStatus.PENDING_LEGACY ||
+        status === CaseStatus.REVIEWED ||
+        status === CaseStatus.UNDER_REVIEW;
       
       if (isPendingApprovalView && req.user.role === 'Admin') {
         // Log admin approval queue access
@@ -1804,14 +1807,23 @@ const unassignCase = async (req, res) => {
     const auditDoc = new CaseAudit(auditEntry);
     await auditDoc.validate();
     
-    // Update case to move to global worklist
-    caseData.assignedToXID = null;
-    caseData.assignedTo = null; // Also clear legacy field
-    caseData.queueType = 'GLOBAL';
-    caseData.status = 'UNASSIGNED';
-    caseData.assignedAt = null;
-    
-    await caseData.save();
+    // Update case to move to global worklist through centralized status service
+    await CaseService.updateStatus(displayCaseId, CaseStatus.UNASSIGNED, {
+      tenantId: req.user.firmId,
+      role: req.user.role,
+      userId: user.xID,
+      performedBy: user.email,
+      actorRole: 'ADMIN',
+      req,
+      currentStatus: previousStatus,
+      statusPatch: {
+        assignedToXID: null,
+        assignedTo: null,
+        queueType: 'GLOBAL',
+        assignedAt: null,
+      },
+    });
+    caseData = await CaseRepository.findByInternalId(req.user.firmId, caseData.caseInternalId, req.user.role);
     
     // Now create the audit log entry (validation already passed)
     await auditDoc.save();
