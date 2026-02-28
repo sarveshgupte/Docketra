@@ -618,6 +618,14 @@ const login = async (req, res) => {
       }
     }
     
+    if (user.twoFactorSecret) {
+      return res.json({
+        success: true,
+        mfaRequired: true,
+        xID: user.xID,
+      });
+    }
+
     // Log successful login (non-blocking)
     try {
       await AuthAudit.create({
@@ -2460,6 +2468,119 @@ const verifyTotp = async (req, res) => {
 };
 
 /**
+ * Complete MFA login and issue JWT tokens
+ * POST /api/auth/complete-mfa-login
+ */
+const completeMfaLogin = async (req, res) => {
+  try {
+    const xID = String(req.body?.xID || '').trim().toUpperCase();
+    const token = String(req.body?.token || '').trim();
+
+    if (!xID || !token) {
+      return res.status(400).json({
+        success: false,
+        message: 'xID and token are required',
+      });
+    }
+
+    const user = await User.findOne({
+      xID,
+      isActive: true,
+      status: 'ACTIVE',
+    });
+
+    if (!user || !user.twoFactorSecret) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid xID or token',
+      });
+    }
+
+    const verified = speakeasy.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: 'base32',
+      token,
+      window: 1,
+    });
+
+    if (!verified) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid xID or token',
+      });
+    }
+
+    const firmSlug = await getFirmSlug(user.firmId);
+    const accessToken = jwtService.generateAccessToken({
+      userId: user._id.toString(),
+      firmId: user.firmId ? user.firmId.toString() : undefined,
+      firmSlug: firmSlug || undefined,
+      defaultClientId: user.defaultClientId ? user.defaultClientId.toString() : undefined,
+      role: user.role,
+    });
+
+    let refreshToken = null;
+    try {
+      ({ refreshToken } = await generateAndStoreRefreshToken({
+        userId: user._id,
+        firmId: user.firmId || null,
+        req,
+      }));
+    } catch (tokenError) {
+      console.error('[AUTH] Refresh token persistence failed', tokenError);
+    }
+
+    try {
+      await AuthAudit.create({
+        xID: user.xID || DEFAULT_XID,
+        firmId: user.firmId || DEFAULT_FIRM_ID,
+        userId: user._id,
+        actionType: 'MFA_LOGIN_SUCCESS',
+        description: 'User completed MFA login successfully',
+        performedBy: user.xID,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+      });
+    } catch (auditError) {
+      console.error('[AUTH AUDIT] Failed to record MFA login success event', auditError);
+    }
+
+    const response = {
+      success: true,
+      message: user.forcePasswordReset ? 'Password reset required' : 'Login successful',
+      accessToken,
+      refreshToken,
+      data: {
+        id: user._id.toString(),
+        xID: user.xID,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        firmId: user.firmId ? user.firmId.toString() : null,
+        firmSlug,
+        allowedCategories: user.allowedCategories,
+        isActive: user.isActive,
+        mustSetPassword: !!user.mustSetPassword,
+        passwordSetAt: user.passwordSetAt,
+      },
+    };
+
+    if (user.forcePasswordReset) {
+      response.mustChangePassword = true;
+      response.forcePasswordReset = true;
+    }
+
+    return res.json(response);
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Error completing MFA login',
+      error: error.message,
+    });
+  }
+};
+
+/**
  * Initiate Google OAuth (invite-only, DB-backed users only)
  * GET /api/auth/google
  */
@@ -2837,6 +2958,7 @@ module.exports = {
   getAllUsers,
   refreshAccessToken: wrapWriteHandler(refreshAccessToken), // NEW: JWT token refresh
   verifyTotp: wrapWriteHandler(verifyTotp),
+  completeMfaLogin: wrapWriteHandler(completeMfaLogin),
   initiateGoogleAuth,
   handleGoogleCallback: wrapWriteHandler(handleGoogleCallback),
   generateAndStoreRefreshToken,
