@@ -296,21 +296,39 @@ const CaseRepository = {
    * @param {Object} extraFields - Additional fields to set with status update
    * @returns {Promise<Object>} Mongoose update result
    */
-   async updateStatus(caseId, firmId, status, extraFields = {}, session = null) {
+   async updateStatus(
+    caseId,
+    firmId,
+    status,
+    extraFields = {},
+    session = null,
+    expectedCurrentStatus = null,
+    expectedTatLastStartedAt = undefined
+  ) {
     assertTenantId(firmId);
     if (!caseId) {
       throw new Error('Case ID required');
     }
 
+    const filter = { caseId, firmId };
+    if (expectedCurrentStatus) {
+      filter.status = expectedCurrentStatus;
+    }
+    if (expectedTatLastStartedAt !== undefined) {
+      filter.tatLastStartedAt = expectedTatLastStartedAt;
+    }
+
     const result = await Case.updateOne(
-      { caseId, firmId },
+      filter,
       { $set: { status, ...extraFields } },
       session ? { session } : {}
     );
 
     const matched = result?.matchedCount ?? result?.n ?? 0;
     if (matched === 0) {
-      throw new Error('Case not found');
+      throw (expectedCurrentStatus || expectedTatLastStartedAt !== undefined)
+        ? new Error('Case state changed concurrently')
+        : new Error('Case not found');
     }
 
     return result;
