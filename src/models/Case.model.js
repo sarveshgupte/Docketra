@@ -322,7 +322,7 @@ const caseSchema = new mongoose.Schema({
     tatDurationMinutes: { type: Number, min: 0 },
     businessStartTime: { type: String, trim: true },
     businessEndTime: { type: String, trim: true },
-    workingDays: { type: [Number], default: undefined },
+    workingDays: { type: [Number] },
     timezone: { type: String, trim: true },
   },
   
@@ -677,6 +677,8 @@ const caseSchema = new mongoose.Schema({
   // Automatic timestamp management for audit trail
   timestamps: true,
 });
+// Use Mongoose __v optimistic locking for document-save flows; status transitions
+// also include explicit expected status/tat guards at repository update filter level.
 caseSchema.set('optimisticConcurrency', true);
 
 /**

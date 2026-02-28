@@ -46,7 +46,8 @@ const normalizeConfig = (config = {}) => {
   const safeEnd = (end.hour * 60) + end.minute > (start.hour * 60) + start.minute
     ? end
     : parseTime(DEFAULT_SLA_CONFIG.businessEndTime, DEFAULT_SLA_CONFIG.businessEndTime);
-  const timezone = typeof config.timezone === 'string' && DateTime.now().setZone(config.timezone).isValid
+  const timezone = typeof config.timezone === 'string'
+    && DateTime.local().setZone(config.timezone).invalidReason === null
     ? config.timezone
     : DEFAULT_SLA_CONFIG.timezone;
 
@@ -194,6 +195,7 @@ const handleStatusTransition = (caseDoc, newStatus, options = {}) => {
 
   if (toStatus === CaseStatus.PENDED && !caseDoc?.tatPaused) {
     const elapsed = computeElapsedMinutes(caseDoc.tatLastStartedAt, now);
+    // Defensive invariant: never allow negative TAT even under clock anomalies.
     const newTat = Math.max(previousTat + elapsed, 0);
     return {
       patch: {
@@ -233,6 +235,7 @@ const handleStatusTransition = (caseDoc, newStatus, options = {}) => {
 
   if (toStatus === CaseStatus.RESOLVED) {
     const elapsed = caseDoc?.tatPaused ? 0 : computeElapsedMinutes(caseDoc?.tatLastStartedAt, now);
+    // Defensive invariant: never allow negative TAT even under clock anomalies.
     const newTat = Math.max(previousTat + elapsed, 0);
     return {
       patch: {

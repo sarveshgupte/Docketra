@@ -8,18 +8,16 @@ const CaseHistory = require('../src/models/CaseHistory.model');
 const auditLogService = require('../src/services/auditLog.service');
 
 async function testStatusTransitionRequiresSession() {
-  try {
-    await assert.rejects(
-      () => CaseService.updateStatus('CASE-20260301-00001', 'PENDED', {
-        tenantId: 'firm-a',
-        role: 'Admin',
-        currentStatus: 'OPEN',
-        userId: 'X123456',
-      }),
-      /Transaction session required/
-    );
-    console.log('✓ Status transition enforces transaction session');
-  } finally {}
+  await assert.rejects(
+    () => CaseService.updateStatus('CASE-20260301-00001', 'PENDED', {
+      tenantId: 'firm-a',
+      role: 'Admin',
+      currentStatus: 'OPEN',
+      userId: 'X123456',
+    }),
+    /Transaction session required/
+  );
+  console.log('✓ Status transition enforces transaction session');
 }
 
 async function testConcurrentPauseConflictIsRejected() {
