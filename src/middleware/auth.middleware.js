@@ -193,7 +193,7 @@ const authenticate = async (req, res, next) => {
     if (user.role !== 'SUPER_ADMIN' && user.firmId) {
       const Firm = require('../models/Firm.model');
       const firm = await Firm.findById(user.firmId);
-      if (firm && (firm.status === 'suspended' || firm.status === 'suspended')) {
+      if (firm && firm.status !== 'active') {
         noteAuthFailure();
         return res.status(403).json({
           success: false,
