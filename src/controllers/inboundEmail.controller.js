@@ -1,4 +1,4 @@
-const { createHmac, randomUUID, timingSafeEqual } = require('crypto');
+const { createHash, createHmac, randomUUID, timingSafeEqual } = require('crypto');
 const path = require('path');
 const Case = require('../models/Case.model');
 const Comment = require('../models/Comment.model');
@@ -13,6 +13,7 @@ const { enqueueInboundEmailJob } = require('../queues/inboundEmail.queue');
 const cfsDriveService = require('../services/cfsDrive.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { compressBuffer } = require('../utils/compressBuffer');
+const { updateTenantStorageUsage } = require('../utils/updateTenantStorageUsage');
 
 /**
  * Inbound Email Controller
@@ -283,19 +284,44 @@ const processInboundEmailPayload = async (payload) => {
           originalSize = compressionResult.originalSize;
           finalSize = compressionResult.compressedSize;
         }
+        const contentHash = createHash('sha256').update(uploadBuffer).digest('hex');
+        let uploadFileId = null;
+        let isDuplicate = false;
+        const existing = await Attachment.findOne({
+          firmId: caseData.firmId,
+          contentHash,
+          isDuplicate: false,
+        }).lean();
 
-        const uploadResult = await provider.uploadFile(
-          caseData.firmId,
-          targetFolderId,
-          uploadBuffer,
-          { name: `${EMAIL_ATTACHMENT_PREFIX}/${storedName}`, mimeType }
-        );
+        if (existing?.driveFileId) {
+          uploadFileId = existing.driveFileId;
+          isDuplicate = true;
+          compressed = false;
+          originalSize = finalSize;
+        } else {
+          const uploadResult = await provider.uploadFile(
+            caseData.firmId,
+            targetFolderId,
+            uploadBuffer,
+            { name: `${EMAIL_ATTACHMENT_PREFIX}/${storedName}`, mimeType }
+          );
+          uploadFileId = uploadResult.fileId || uploadResult.id;
+          await updateTenantStorageUsage(caseData.firmId, finalSize);
+        }
+
+        console.info('[AttachmentDedup]', {
+          firmId: caseData.firmId,
+          caseId: resolvedCaseId,
+          contentHash,
+          isDuplicate,
+        });
+        // TODO: In future, support reference counting if deleting duplicate attachments.
 
         await Attachment.create({
           caseId: resolvedCaseId,
           firmId: caseData.firmId,
           fileName: safeName,
-          driveFileId: uploadResult.fileId || uploadResult.id,
+          driveFileId: uploadFileId,
           size: finalSize,
           mimeType,
           description: 'Inbound email attachment',
@@ -306,6 +332,9 @@ const processInboundEmailPayload = async (payload) => {
           source: 'email',
           visibility,
           emailThreadId: emailThread._id,
+          checksum: contentHash,
+          contentHash,
+          isDuplicate,
           compressed,
           originalSize,
           finalSize,

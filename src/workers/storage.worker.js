@@ -11,6 +11,7 @@
 
 const { Worker, UnrecoverableError } = require('bullmq');
 const fs = require('fs').promises;
+const { createHash } = require('crypto');
 const FirmStorage = require('../models/FirmStorage.model');
 const CaseFile = require('../models/CaseFile.model');
 const Attachment = require('../models/Attachment.model');
@@ -32,6 +33,7 @@ const {
 } = require('../services/metrics.service');
 const { moveToDLQ, getDLQSize } = require('../queues/storage.dlq');
 const { getQueueDepth } = require('../queues/storage.queue');
+const { updateTenantStorageUsage } = require('../utils/updateTenantStorageUsage');
 
 // Wire up dynamic metric providers so getSnapshot() reflects live queue state
 setDLQSizeProvider(getDLQSize);
@@ -233,23 +235,45 @@ const storageWorker = new Worker(
             throw readErr;
           }
 
-          // Upload to Google Drive
+          const contentHash = createHash('sha256').update(fileBuffer).digest('hex');
+          const finalSize = Number(caseFile.size) || 0;
           let driveFileId;
-          try {
-            const { fileId: uploadedFileId } = await provider.uploadFile(
-              firmId,
-              targetFolderId,
-              fileBuffer,
-              { name: caseFile.originalName, mimeType: caseFile.mimeType }
-            );
-            driveFileId = uploadedFileId;
-          } catch (uploadErr) {
-            await CaseFile.findByIdAndUpdate(fileId, {
-              uploadStatus: 'error',
-              errorMessage: uploadErr.message,
-            });
-            throw uploadErr;
+          let isDuplicate = false;
+          const existing = await Attachment.findOne({
+            firmId: String(caseFile.firmId),
+            contentHash,
+            isDuplicate: false,
+          }).lean();
+
+          if (existing?.driveFileId) {
+            driveFileId = existing.driveFileId;
+            isDuplicate = true;
+          } else {
+            try {
+              const { fileId: uploadedFileId } = await provider.uploadFile(
+                firmId,
+                targetFolderId,
+                fileBuffer,
+                { name: caseFile.originalName, mimeType: caseFile.mimeType }
+              );
+              driveFileId = uploadedFileId;
+            } catch (uploadErr) {
+              await CaseFile.findByIdAndUpdate(fileId, {
+                uploadStatus: 'error',
+                errorMessage: uploadErr.message,
+              });
+              throw uploadErr;
+            }
+            await updateTenantStorageUsage(caseFile.firmId, finalSize);
           }
+
+          console.info('[AttachmentDedup]', {
+            firmId: caseFile.firmId,
+            caseId: caseFile.caseId || caseId,
+            contentHash,
+            isDuplicate,
+          });
+          // TODO: In future, support reference counting if deleting duplicate attachments.
 
           // Mark CaseFile as uploaded
           await CaseFile.findByIdAndUpdate(fileId, {
@@ -260,32 +284,27 @@ const storageWorker = new Worker(
           // Create the immutable Attachment record now that we have a Drive file ID
           if (caseFile.caseId || caseFile.clientId) {
             try {
-              const existing = await Attachment.findOne({
+              await Attachment.create({
                 firmId: caseFile.firmId,
-                checksum: caseFile.checksum,
                 caseId: caseFile.caseId || undefined,
                 clientId: caseFile.clientId || undefined,
+                fileName: caseFile.originalName,
+                driveFileId,
+                size: finalSize,
+                mimeType: caseFile.mimeType,
+                description: caseFile.description,
+                checksum: contentHash,
+                contentHash,
+                isDuplicate,
+                compressed: false,
+                originalSize: finalSize,
+                finalSize,
+                createdBy: caseFile.createdBy,
+                createdByXID: caseFile.createdByXID,
+                createdByName: caseFile.createdByName,
+                note: caseFile.note,
+                source: caseFile.source || 'upload',
               });
-              if (existing) {
-                console.info('[StorageWorker]', { event: 'attachment_exists_skip', jobType: job.name, firmId });
-              } else {
-                await Attachment.create({
-                  firmId: caseFile.firmId,
-                  caseId: caseFile.caseId || undefined,
-                  clientId: caseFile.clientId || undefined,
-                  fileName: caseFile.originalName,
-                  driveFileId,
-                  size: caseFile.size,
-                  mimeType: caseFile.mimeType,
-                  description: caseFile.description,
-                  checksum: caseFile.checksum,
-                  createdBy: caseFile.createdBy,
-                  createdByXID: caseFile.createdByXID,
-                  createdByName: caseFile.createdByName,
-                  note: caseFile.note,
-                  source: caseFile.source || 'upload',
-                });
-              }
             } catch (attachErr) {
               // Attachment creation failure is non-fatal for the upload itself
               console.error('[StorageWorker]', {

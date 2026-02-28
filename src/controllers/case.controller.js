@@ -598,19 +598,6 @@ const addAttachment = async (req, res) => {
       stream.on('error', reject);
     });
 
-    const duplicate = await Attachment.findOne({
-      caseId: caseData.caseId,
-      firmId: req.user.firmId,
-      checksum,
-    });
-    if (duplicate) {
-      await cleanupTempFile(destPath);
-      return res.status(409).json({
-        success: false,
-        message: 'Duplicate upload detected',
-      });
-    }
-
     // Resolve the Drive folder for this case's attachments
     const cfsDriveService = require('../services/cfsDrive.service');
     const targetFolderId = cfsDriveService.getFolderIdForFileType(
