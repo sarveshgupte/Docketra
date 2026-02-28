@@ -100,6 +100,7 @@ const adminRoutes = require('./routes/admin.routes');  // Admin routes (PR #41)
 const superadminRoutes = require('./routes/superadmin.routes');  // Superadmin routes
 const debugRoutes = require('./routes/debug.routes');  // Debug routes (PR #43)
 const inboundRoutes = require('./routes/inbound.routes');  // Inbound email routes
+const contactRoutes = require('./routes/contact.routes');  // Public contact form route
 const publicRoutes = require('./routes/public.routes');  // Public routes (firm lookup)
 const firmRoutes = require('./routes/firm.routes');  // Firm-scoped routes (/f/:firmSlug/*)
 const healthRoutes = require('./routes/health.routes');  // Health endpoints
@@ -113,6 +114,13 @@ const superadminRouteLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => req.user?.xID || req.user?._id || req.ip || 'unknown',
+});
+const contactLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many contact requests. Please try again later.' },
 });
 const forceTransactionPaths = ['/google/callback', '/my-pending'];
 const writeGuardChain = (req, res, next) => {
@@ -238,7 +246,7 @@ const corsOptions = {
 app.use(optionsPreflight([frontendOrigin], CORS_ALLOWED_HEADERS, CORS_ALLOWED_METHODS));
 app.use(cors(corsOptions));
 app.use('/api/inbound/email', express.raw({ type: '*/*', limit: '30mb' }));
-app.use(express.json());
+app.use(express.json({ limit: '100kb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(requestLifecycle);
 app.use(requestLogger);
@@ -303,6 +311,9 @@ authBasePaths.forEach((basePath) => {
 
 // Public routes (no authentication required)
 app.use('/api/public', writeGuardChain, publicRoutes);
+
+// Contact form route (public, no authentication required)
+app.use('/api/contact', contactLimiter, contactRoutes);
 
 // Category routes (public GET for active categories, admin-only for modifications)
 app.use('/api/categories', writeGuardChain, categoryRoutes);
