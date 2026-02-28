@@ -1670,21 +1670,22 @@ const pullCases = async (req, res) => {
     // Handle single case pull vs bulk pull
     if (caseIds.length === 1) {
       // Single case pull - with firm scoping
-      const result = await caseAssignmentService.assignCaseToUser(req.user.firmId, caseIds[0], user);
+      const result = await caseAssignmentService.pullCaseFromWorkbasket({
+        caseId: caseIds[0],
+        tenantId: req.user.firmId,
+        userId: user.xID,
+      });
       
       if (!result.success) {
         return res.status(409).json({
-          success: false,
-          message: result.message,
-          currentStatus: result.currentStatus,
-          assignedToXID: result.assignedToXID,
+          error: result.error || 'Case already assigned',
         });
       }
       
-      return res.json({
-        success: true,
-        data: result.data,
-        message: 'Case pulled successfully',
+      return res.status(200).json({
+        status: result.status,
+        caseId: result.caseId,
+        assignedTo: result.assignedTo,
       });
     } else {
       // Bulk case pull - with firm scoping
