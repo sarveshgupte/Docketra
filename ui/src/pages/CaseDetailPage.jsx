@@ -60,6 +60,11 @@ export const CaseDetailPage = () => {
   const [showPendModal, setShowPendModal] = useState(false);
   const [pendComment, setPendComment] = useState('');
   const [pendingUntil, setPendingUntil] = useState('');
+  const [isDragActive, setIsDragActive] = useState(false);
+  const inboundEmailDomain = import.meta.env.VITE_INBOUND_EMAIL_DOMAIN || 'inbound.docketra.com';
+  const inboundAddress = caseData?.publicEmailToken
+    ? `case-${caseData.publicEmailToken}@${inboundEmailDomain}`
+    : '';
   const [pendingCase, setPendingCase] = useState(false);
 
   // State for Resolve action modal
@@ -220,6 +225,25 @@ export const CaseDetailPage = () => {
     const file = event.target.files[0];
     if (file) {
       setSelectedFile(file);
+    }
+  };
+
+  const handleDropFiles = (event) => {
+    event.preventDefault();
+    setIsDragActive(false);
+    const file = event.dataTransfer?.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+    }
+  };
+
+  const handleCopyInboundAddress = async () => {
+    if (!inboundAddress || !navigator?.clipboard) return;
+    try {
+      await navigator.clipboard.writeText(inboundAddress);
+      showSuccess('Inbound email address copied');
+    } catch (error) {
+      showError('Unable to copy inbound email address');
     }
   };
 
@@ -680,9 +704,9 @@ export const CaseDetailPage = () => {
                       </div>
                       <div className="case-detail__attachment-meta">
                         {attachment.visibility === 'external' ? (
-                          <><strong>External Email</strong> · From: {attachment.createdBy}</>
+                          <><strong>📧 External Email</strong> · From: {attachment.createdBy}</>
                         ) : (
-                          <>Attached by {attachment.createdByName && attachment.createdByXID
+                          <>{attachment.source === 'email' ? '📧' : '📤'} Attached by {attachment.createdByName && attachment.createdByXID
                             ? `${attachment.createdByName} (${attachment.createdByXID})`
                             : 'System (Unknown)'}</>
                         )}
@@ -720,15 +744,24 @@ export const CaseDetailPage = () => {
               {/* File Upload Dropzone */}
               {(accessMode.canAttach || permissions.canAddAttachment(caseData)) && (
                 <div className="case-detail__upload">
-                  <div className="neo-dropzone" onClick={() => fileInputRef.current?.click()} role="button" tabIndex={0}
+                  <div className={`neo-dropzone${isDragActive ? ' neo-dropzone--active' : ''}`} onClick={() => fileInputRef.current?.click()} role="button" tabIndex={0}
                     onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
+                    onDragOver={(e) => { e.preventDefault(); setIsDragActive(true); }}
+                    onDragLeave={() => setIsDragActive(false)}
+                    onDrop={handleDropFiles}
                     aria-label="Click to upload attachment">
                     <div className="neo-dropzone__icon" aria-hidden="true">📎</div>
                     <div className="neo-dropzone__label">
-                      {selectedFile ? selectedFile.name : 'Click to attach a file'}
+                      {selectedFile ? selectedFile.name : 'Drag files here or click to attach'}
                     </div>
                     <div className="neo-dropzone__sub">PDF, DOCX, XLSX, images up to 25MB</div>
                   </div>
+                  {inboundAddress && (
+                    <div className="neo-dropzone__sub" style={{ marginTop: '8px' }}>
+                      Forward emails to: <strong>{inboundAddress}</strong>{' '}
+                      <button type="button" className="neo-btn neo-btn--ghost neo-btn--sm" onClick={handleCopyInboundAddress}>Copy</button>
+                    </div>
+                  )}
                   <input
                     ref={fileInputRef}
                     type="file"
