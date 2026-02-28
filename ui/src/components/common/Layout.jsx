@@ -213,23 +213,41 @@ export const Layout = ({ children }) => {
     },
     {
       to: `/app/firm/${currentFirmSlug}/global-worklist`,
-      label: 'Workbasket',
+      label: 'Compliance Workflow',
       icon: <IconWorkbasket />,
       active: isActive(`/app/firm/${currentFirmSlug}/global-worklist`),
     },
     {
       to: `/app/firm/${currentFirmSlug}/worklist`,
-      label: 'My Worklist',
+      label: 'Team Accountability',
       icon: <IconWorklist />,
       active: isActive(`/app/firm/${currentFirmSlug}/worklist`),
+    },
+    {
+      to: `/app/firm/${currentFirmSlug}/cases`,
+      label: 'Cases',
+      icon: <IconWorklist />,
+      active: isActivePrefix(`/app/firm/${currentFirmSlug}/cases`),
+    },
+    {
+      to: `/app/firm/${currentFirmSlug}/cases?view=audit`,
+      label: 'Audit Trail',
+      icon: <IconWorklist />,
+      active: isActive(`/app/firm/${currentFirmSlug}/cases`) && location.search.includes('view=audit'),
     },
     ...(hasAdminAccess
       ? [
           {
-            to: `/app/firm/${currentFirmSlug}/admin`,
-            label: 'Admin',
+            to: `/app/firm/${currentFirmSlug}/admin/reports`,
+            label: 'Reports',
             icon: <IconAdmin />,
-            active: isActivePrefix(`/app/firm/${currentFirmSlug}/admin`),
+            active: isActivePrefix(`/app/firm/${currentFirmSlug}/admin/reports`),
+          },
+          {
+            to: `/app/firm/${currentFirmSlug}/admin`,
+            label: 'Firm Settings',
+            icon: <IconAdmin />,
+            active: isActivePrefix(`/app/firm/${currentFirmSlug}/admin`) && !isActivePrefix(`/app/firm/${currentFirmSlug}/admin/reports`),
           },
         ]
       : []),
@@ -270,9 +288,9 @@ export const Layout = ({ children }) => {
         </div>
 
         {/* Navigation */}
-        <nav className="enterprise-sidebar__nav" aria-label="Workspace navigation">
+        <nav className="enterprise-sidebar__nav" aria-label="Firm operations navigation">
           <div className="enterprise-sidebar__nav-section">
-            <div className="enterprise-sidebar__nav-label" aria-hidden="true">Workspace</div>
+            <div className="enterprise-sidebar__nav-label" aria-hidden="true">Firm Operations</div>
             {navLinks.map((link) => (
               <Link
                 key={link.to}
@@ -341,7 +359,7 @@ export const Layout = ({ children }) => {
             {(searchQuery.trim().length >= 2 || searching) && (
               <div className="dropdown-menu" style={{ display: 'block', top: 'calc(100% + 8px)', width: '100%' }}>
                 <div className="dropdown-item" style={{ pointerEvents: 'none', opacity: 0.7 }}>
-                  {searching ? 'Searching…' : `Cases ${searchResults.cases.length} · Users ${searchResults.users.length} · Tasks ${searchResults.tasks.length}`}
+                  {searching ? 'Searching…' : `Cases ${searchResults.cases.length} · Users ${searchResults.users.length} · Compliance Items ${searchResults.tasks.length}`}
                 </div>
                 {searchResults.cases.slice(0, 3).map((item) => (
                   <button

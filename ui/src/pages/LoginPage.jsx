@@ -83,7 +83,7 @@ export const LoginPage = () => {
       <Card className="login-card">
         <div className="login-header">
           <h1>Docketra</h1>
-          <p className="text-secondary">Case Management System</p>
+          <p className="text-secondary">Compliance Workflow Infrastructure</p>
         </div>
 
         <form onSubmit={handleLogin}>

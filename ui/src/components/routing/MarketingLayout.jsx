@@ -25,7 +25,7 @@ export const MarketingLayout = () => {
               to="/signup"
               className="rounded-xl bg-gray-900 px-5 py-2.5 text-white transition-all duration-150 hover:scale-[1.01] hover:-translate-y-0.5 hover:bg-black active:scale-[0.98]"
             >
-              Create Free Workspace
+              Request Early Access
             </Link>
           </div>
         </nav>

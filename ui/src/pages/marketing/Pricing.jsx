@@ -7,7 +7,7 @@ const PRICING_TIERS = [
     name: 'Starter',
     price: 'Free',
     description: 'For small teams. Includes up to 2 users (1 admin + 1 user).',
-    ctaLabel: 'Create Free Workspace',
+    ctaLabel: 'Request Early Access',
     ctaTo: '/signup',
     disabled: false,
   },

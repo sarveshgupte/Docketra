@@ -3,7 +3,29 @@ const { applyRouteValidation } = require('../middleware/requestValidation.middle
 const routeSchemas = require('../schemas/public.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { getFirmBySlug } = require('../controllers/superadmin.controller');
-const { createStarterWorkspace } = require('../modules/onboarding/onboarding.service');
+const EarlyAccessRequest = require('../models/EarlyAccessRequest.model');
+const log = require('../utils/log');
+
+const LOG_LENGTHS = {
+  FIRM_NAME: 120,
+  PRACTICE_TYPE: 20,
+  WORKFLOW_SYSTEM: 200,
+  PAIN_POINT: 200,
+  TIMELINE: 80,
+};
+
+/**
+ * Sanitize user-provided strings for structured logging.
+ * - replace(/[\r\n\t]+/g, ' '): neutralizes line breaks and tabs to prevent log-forging
+ * - replace(/[\u0000-\u001F\u007F]/g, ''): strips remaining control characters while preserving Unicode text
+ * - trim() + slice(...): keeps logs concise and bounded for downstream sinks
+ */
+const sanitizeLogValue = (value, maxLength = 160) =>
+  String(value || '')
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/[\u0000-\u001F\u007F]/g, '')
+    .trim()
+    .slice(0, maxLength);
 
 /**
  * Public API Routes
@@ -13,11 +35,39 @@ router.get('/firms/:firmSlug', getFirmBySlug);
 
 router.post('/signup', async (req, res, next) => {
   try {
-    const { fullName, email, phoneNumber, companyName } = req.body;
-    await createStarterWorkspace({ fullName, email, phoneNumber, companyName });
-    return res.status(201).json({
+    const {
+      firmName,
+      practiceType,
+      teamMembers,
+      currentWorkflowSystem,
+      compliancePainPoint,
+      goLiveTimeline,
+    } = req.body;
+
+    const request = await EarlyAccessRequest.create({
+      firmName,
+      practiceType,
+      teamMembers,
+      currentWorkflowSystem,
+      compliancePainPoint,
+      goLiveTimeline,
+    });
+
+    log.info('early_access_request_created', {
+      req,
+      firmName: sanitizeLogValue(request.firmName, LOG_LENGTHS.FIRM_NAME),
+      practiceType: sanitizeLogValue(request.practiceType, LOG_LENGTHS.PRACTICE_TYPE),
+      teamMembers: request.teamMembers,
+      currentWorkflowSystem: sanitizeLogValue(request.currentWorkflowSystem, LOG_LENGTHS.WORKFLOW_SYSTEM),
+      compliancePainPoint: sanitizeLogValue(request.compliancePainPoint, LOG_LENGTHS.PAIN_POINT),
+      goLiveTimeline: sanitizeLogValue(request.goLiveTimeline, LOG_LENGTHS.TIMELINE),
+      status: request.status,
+      requestCreatedAt: request.createdAt,
+    });
+
+    return res.status(202).json({
       success: true,
-      message: 'Workspace created. Please check your email to set up your admin account.',
+      message: 'Thank you. Our team will review your request and schedule a walkthrough.',
     });
   } catch (error) {
     return next(error);
