@@ -207,34 +207,6 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user) => {
       caseId: { $in: updatedCases.map((caseData) => caseData.caseId) },
     }, null, { session });
 
-    const auditEntries = transitionedCases.map(caseData => ({
-      caseId: caseData.caseId,
-      actionType: 'CASE_ASSIGNED',
-      description: `Case bulk-assigned to ${user.xID}`,
-      performedByXID: user.xID,
-      metadata: {
-        queueType: 'PERSONAL',
-        status: CaseStatus.OPEN,
-        bulkAssignment: true,
-      },
-    }));
-
-    if (auditEntries.length > 0) {
-      await CaseAudit.create(auditEntries, { session });
-    }
-
-    if (transitionedCases.length > 0) {
-      await Promise.all(transitionedCases.map((caseData) => logCaseHistory({
-        caseId: caseData.caseId,
-        firmId: caseData.firmId,
-        actionType: 'CASE_ASSIGNED',
-        description: `Case bulk-assigned to ${user.xID}`,
-        performedBy: user.email.toLowerCase(),
-        performedByXID: user.xID.toUpperCase(), // Canonical identifier (uppercase)
-        session,
-      })));
-    }
-
     await session.commitTransaction();
     return {
       success: true,
