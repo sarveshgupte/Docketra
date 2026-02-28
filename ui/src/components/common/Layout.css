@@ -251,6 +251,15 @@
   margin-left: 52px;
 }
 
+.enterprise-storage-health-banner {
+  background: #fff7ed;
+  border-bottom: 1px solid #fed7aa;
+  color: #9a3412;
+  padding: 10px 16px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
 /* =====================================================
    OMNIBAR HEADER
    ===================================================== */
