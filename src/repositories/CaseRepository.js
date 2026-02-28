@@ -296,7 +296,7 @@ const CaseRepository = {
    * @param {Object} extraFields - Additional fields to set with status update
    * @returns {Promise<Object>} Mongoose update result
    */
-  async updateStatus(caseId, firmId, status, extraFields = {}) {
+   async updateStatus(caseId, firmId, status, extraFields = {}, session = null) {
     assertTenantId(firmId);
     if (!caseId) {
       throw new Error('Case ID required');
@@ -304,7 +304,8 @@ const CaseRepository = {
 
     const result = await Case.updateOne(
       { caseId, firmId },
-      { $set: { status, ...extraFields } }
+      { $set: { status, ...extraFields } },
+      session ? { session } : {}
     );
 
     const matched = result?.matchedCount ?? result?.n ?? 0;
