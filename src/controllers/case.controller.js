@@ -133,7 +133,6 @@ const createCase = async (req, res) => {
       clientId,
       priority,
       assignedTo,
-      slaDueDate, // SLA due date for case completion - MANDATORY
       forceCreate, // Flag to override duplicate warning
       clientData, // Client data for duplicate detection (for "Client – New" cases)
       payload, // Payload for client governance cases
@@ -301,12 +300,12 @@ const createCase = async (req, res) => {
         priority: priority || 'Medium',
         status: 'UNASSIGNED', // New cases default to UNASSIGNED for global worklist
         assignedToXID: assignedTo ? assignedTo.toUpperCase() : null, // PR: xID Canonicalization - Store in assignedToXID
-        slaDueDate: slaState.slaDueAt, // Backward-compatible SLA due field
         slaDueAt: slaState.slaDueAt,
         tatPaused: slaState.tatPaused,
         tatLastStartedAt: slaState.tatLastStartedAt,
         tatAccumulatedMinutes: slaState.tatAccumulatedMinutes,
         tatTotalMinutes: slaState.tatTotalMinutes,
+        slaConfigSnapshot: slaState.slaConfigSnapshot,
         payload, // Store client case payload if provided
         idempotencyKey: idempotencyKey || undefined,
       });
@@ -745,6 +744,12 @@ const cloneCase = async (req, res) => {
       priority: originalCase.priority,
       status: 'Open',
       pendingUntil: null,
+      slaDueAt: originalCase.slaDueAt || new Date(),
+      tatPaused: originalCase.tatPaused || false,
+      tatLastStartedAt: originalCase.tatLastStartedAt || new Date(),
+      tatAccumulatedMinutes: originalCase.tatAccumulatedMinutes || 0,
+      tatTotalMinutes: originalCase.tatTotalMinutes || 0,
+      slaConfigSnapshot: originalCase.slaConfigSnapshot || undefined,
       createdBy: clonedBy.toLowerCase(),
       assignedToXID: assignedTo ? assignedTo.toUpperCase() : null, // PR: xID Canonicalization - Store in assignedToXID
     });
@@ -1686,6 +1691,7 @@ const pullCases = async (req, res) => {
         caseId: caseIds[0],
         tenantId: req.user.firmId,
         userId: user.xID,
+        session: req.transactionSession?.session || null,
       });
       
       if (!result.success) {

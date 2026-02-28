@@ -415,12 +415,12 @@ const employeeWorklist = async (req, res) => {
  * - createdAtFrom: Filter by creation date (start)
  * - createdAtTo: Filter by creation date (end)
  * - slaStatus: Filter by SLA status (overdue, due_soon, on_track)
- * - sortBy: Field to sort by (clientId, category, slaDueDate, createdAt)
+ * - sortBy: Field to sort by (clientId, category, slaDueAt, createdAt)
  * - sortOrder: Sort order (asc, desc)
  * - page: Page number for pagination
  * - limit: Results per page
  * 
- * Default sort: slaDueDate ASC
+ * Default sort: slaDueAt ASC
  */
 const globalWorklist = async (req, res) => {
   try {
@@ -430,7 +430,7 @@ const globalWorklist = async (req, res) => {
       createdAtFrom,
       createdAtTo,
       slaStatus,
-      sortBy = 'slaDueDate',
+      sortBy = 'slaDueAt',
       sortOrder = 'asc',
       page = 1,
       limit = 20,
@@ -467,22 +467,22 @@ const globalWorklist = async (req, res) => {
       }
     }
     
-    // SLA status filter (computed based on slaDueDate)
+    // SLA status filter (computed based on slaDueAt)
     if (slaStatus) {
       const now = new Date();
       const twoDaysFromNow = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
       
       if (slaStatus === 'overdue') {
-        // Cases where slaDueDate < now
-        query.slaDueDate = { $lt: now };
+        // Cases where slaDueAt < now
+        query.slaDueAt = { $lt: now };
       } else if (slaStatus === 'due_soon') {
-        // Cases where slaDueDate is between now and 2 days from now
-        query.slaDueDate = { $gte: now, $lte: twoDaysFromNow };
+        // Cases where slaDueAt is between now and 2 days from now
+        query.slaDueAt = { $gte: now, $lte: twoDaysFromNow };
       } else if (slaStatus === 'on_track') {
-        // Cases where slaDueDate > 2 days from now OR no slaDueDate
+        // Cases where slaDueAt > 2 days from now OR no slaDueAt
         query.$or = [
-          { slaDueDate: { $gt: twoDaysFromNow } },
-          { slaDueDate: null },
+          { slaDueAt: { $gt: twoDaysFromNow } },
+          { slaDueAt: null },
         ];
       }
     }
@@ -491,42 +491,42 @@ const globalWorklist = async (req, res) => {
     const sortFields = {
       clientId: 'clientId',
       category: 'category',
-      slaDueDate: 'slaDueDate',
+      slaDueAt: 'slaDueAt',
       createdAt: 'createdAt',
     };
     
-    const sortField = sortFields[sortBy] || 'slaDueDate';
+    const sortField = sortFields[sortBy] || 'slaDueAt';
     const sortDirection = sortOrder === 'desc' ? -1 : 1;
     const sort = { [sortField]: sortDirection };
     
-    // Build the base query without slaDueDate modifications for separation
+    // Build the base query without slaDueAt modifications for separation
     const baseQuery = { ...query };
     
-    // Handle null slaDueDate - put them at the end
+    // Handle null slaDueAt - put them at the end
     let casesWithSLA = [];
     let casesWithoutSLA = [];
     
-    if (sortBy === 'slaDueDate') {
-      // Query for cases WITH slaDueDate (not null)
+    if (sortBy === 'slaDueAt') {
+      // Query for cases WITH slaDueAt (not null)
       const queryWithSLA = { ...baseQuery };
       // Don't modify if slaStatus filter is already applied
       if (!slaStatus) {
-        queryWithSLA.slaDueDate = { $ne: null };
+        queryWithSLA.slaDueAt = { $ne: null };
       }
       
       casesWithSLA = await Case.find(queryWithSLA)
-        .select('caseId caseName clientId category slaDueDate createdAt createdBy')
+        .select('caseId caseName clientId category slaDueAt createdAt createdBy')
         .sort(sort)
         .limit(parseInt(limit))
         .skip((parseInt(page) - 1) * parseInt(limit))
         .lean();
       
-      // Query for cases WITHOUT slaDueDate (null) - only if no slaStatus filter
+      // Query for cases WITHOUT slaDueAt (null) - only if no slaStatus filter
       if (!slaStatus && casesWithSLA.length < parseInt(limit)) {
-        const queryWithoutSLA = { ...baseQuery, slaDueDate: null };
+        const queryWithoutSLA = { ...baseQuery, slaDueAt: null };
         
         casesWithoutSLA = await Case.find(queryWithoutSLA)
-          .select('caseId caseName clientId category slaDueDate createdAt createdBy')
+          .select('caseId caseName clientId category slaDueAt createdAt createdBy')
           .sort({ createdAt: sortDirection })
           .limit(parseInt(limit) - casesWithSLA.length)
           .skip(Math.max(0, (parseInt(page) - 1) * parseInt(limit) - casesWithSLA.length))
@@ -535,7 +535,7 @@ const globalWorklist = async (req, res) => {
     } else {
       // For other sort fields, just execute the query normally
       casesWithSLA = await Case.find(baseQuery)
-        .select('caseId caseName clientId category slaDueDate createdAt createdBy')
+        .select('caseId caseName clientId category slaDueAt createdAt createdBy')
         .sort(sort)
         .limit(parseInt(limit))
         .skip((parseInt(page) - 1) * parseInt(limit))
@@ -549,8 +549,8 @@ const globalWorklist = async (req, res) => {
     const now = new Date();
     const casesWithSLAInfo = allCases.map(c => {
       let slaDaysRemaining = null;
-      if (c.slaDueDate) {
-        const dueDate = new Date(c.slaDueDate);
+      if (c.slaDueAt) {
+        const dueDate = new Date(c.slaDueAt);
         const diffTime = dueDate - now;
         slaDaysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       }
@@ -560,7 +560,7 @@ const globalWorklist = async (req, res) => {
         caseName: c.caseName,
         clientId: c.clientId,
         category: c.category,
-        slaDueDate: c.slaDueDate,
+        slaDueAt: c.slaDueAt,
         slaDaysRemaining,
         createdAt: c.createdAt,
         createdBy: c.createdBy,
@@ -569,7 +569,7 @@ const globalWorklist = async (req, res) => {
     
     // Count total for pagination
     const totalQuery = { ...baseQuery };
-    // Don't exclude null slaDueDate from count unless slaStatus filter is applied
+    // Don't exclude null slaDueAt from count unless slaStatus filter is applied
     const total = await Case.countDocuments(totalQuery);
     
     // Log case list view for audit (if user is authenticated)

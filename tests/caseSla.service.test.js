@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const assert = require('assert');
 
+const Case = require('../src/models/Case.model');
 const TenantSlaConfig = require('../src/models/TenantSlaConfig.model');
 const caseSlaService = require('../src/services/caseSla.service');
 
@@ -40,6 +41,19 @@ function testWeekendRollover() {
   assert.strictEqual(due.toISOString(), '2026-03-09T11:00:00.000Z'); // Monday
 }
 
+function testTenantTimezoneCalendar() {
+  const config = {
+    tatDurationMinutes: 120,
+    businessStartTime: '10:00',
+    businessEndTime: '18:00',
+    workingDays: [1, 2, 3, 4, 5],
+    timezone: 'Asia/Kolkata',
+  };
+  const start = new Date('2026-03-02T11:30:00.000Z'); // 17:00 IST
+  const due = caseSlaService.calculateDueDate(start, config.tatDurationMinutes, config);
+  assert.strictEqual(due.toISOString(), '2026-03-03T05:30:00.000Z'); // 11:00 IST next day
+}
+
 function testMultiPauseScenario() {
   const initialCase = {
     status: 'OPEN',
@@ -72,6 +86,11 @@ function testMultiPauseScenario() {
   assert.strictEqual(pausedTwice.patch.tatAccumulatedMinutes, 90);
 }
 
+function testSingleSlaFieldContract() {
+  assert.strictEqual(Boolean(Case.schema.path('slaDueDate')), false);
+  assert.strictEqual(Boolean(Case.schema.path('slaDueAt')), true);
+}
+
 function testBreachDetection() {
   const breached = caseSlaService.isBreached({
     status: 'OPEN',
@@ -100,6 +119,7 @@ async function testCrossTenantIsolation() {
           businessStartTime: '10:00',
           businessEndTime: '18:00',
           workingDays: [1, 2, 3, 4, 5],
+          timezone: 'Asia/Kolkata',
         };
       }
       return null;
@@ -125,8 +145,10 @@ async function run() {
     testCreationInsideBusinessHours();
     testCreationOutsideBusinessHours();
     testWeekendRollover();
+    testTenantTimezoneCalendar();
     testMultiPauseScenario();
     testBreachDetection();
+    testSingleSlaFieldContract();
     await testCrossTenantIsolation();
     console.log('Case SLA service tests passed.');
   } catch (error) {

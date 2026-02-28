@@ -31,6 +31,12 @@ const tenantSlaConfigSchema = new mongoose.Schema({
     required: true,
     default: [1, 2, 3, 4, 5],
   },
+  timezone: {
+    type: String,
+    required: true,
+    default: 'UTC',
+    trim: true,
+  },
 }, {
   timestamps: true,
 });

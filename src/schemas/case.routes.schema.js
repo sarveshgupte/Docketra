@@ -11,7 +11,6 @@ module.exports = {
       description: nonEmptyString,
       categoryId: nonEmptyString,
       subcategoryId: nonEmptyString,
-      slaDueDate: nonEmptyString.optional(),
     }).passthrough(),
   },
   'POST /pull': { body: z.object({}).passthrough() },

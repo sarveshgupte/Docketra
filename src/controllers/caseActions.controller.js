@@ -440,7 +440,7 @@ const getMyUnassignedCreatedCases = async (req, res) => {
     }
     
     const cases = await Case.find(query)
-      .select('caseId caseName category createdAt updatedAt status clientId clientName slaDueDate')
+      .select('caseId caseName category createdAt updatedAt status clientId clientName slaDueAt')
       .sort({ createdAt: -1 }) // Sort by creation date (most recent first)
       .lean();
     
@@ -465,7 +465,7 @@ const getMyUnassignedCreatedCases = async (req, res) => {
         status: c.status,
         clientId: c.clientId || null,
         clientName: c.clientName,
-        slaDueDate: c.slaDueDate,
+        slaDueAt: c.slaDueAt,
       })),
     });
   } catch (error) {
