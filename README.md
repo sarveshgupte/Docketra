@@ -133,10 +133,10 @@ The API uses xID-based authentication. To access protected endpoints:
      }'
    ```
 
-2. Use the returned user data for subsequent requests. Protected endpoints require the `x-user-id` header:
+2. Use the returned `accessToken` for subsequent requests. Protected endpoints require the `Authorization: Bearer <token>` header:
    ```bash
    curl http://localhost:3000/api/users \
-     -H "x-user-id: X000001"
+     -H "Authorization: Bearer <accessToken>"
    ```
 
 ### Endpoints Overview
@@ -330,4 +330,3 @@ This is an internal project for a small consultancy. For questions or suggestion
 ## 📄 License
 
 ISC
-
