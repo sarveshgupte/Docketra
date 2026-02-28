@@ -11,25 +11,31 @@ import { Loading } from '../common/Loading';
 
 export const FirmLayout = () => {
   const { firmSlug } = useParams();
-  const { user, loading, isAuthenticated } = useAuth();
+  const { user, loading } = useAuth();
 
   if (loading) {
     return <Loading message="Checking firm access..." />;
   }
 
-  // Validate that user's firmSlug matches URL firmSlug
-  // This is the ONLY place where firm validation happens
   if (user?.firmSlug && user.firmSlug !== firmSlug) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <h1>Access denied</h1>
-        <p>You tried to open firm "{firmSlug}", but your session is scoped to "{user.firmSlug}".</p>
-        <p style={{ marginTop: '0.5rem', color: '#4b5563' }}>
-          Switch back to your firm dashboard to continue safely.
-        </p>
+      <div className="min-h-screen bg-white text-gray-900">
+        <main className="max-w-7xl mx-auto px-6 py-24 text-center">
+          <h1 className="type-section">Access denied</h1>
+          <p className="mt-6 type-body">
+            You tried to open firm "{firmSlug}", but your session is scoped to "{user.firmSlug}".
+          </p>
+          <p className="mt-6 type-body">Switch back to your firm dashboard to continue safely.</p>
+        </main>
       </div>
     );
   }
 
-  return <Outlet />;
+  return (
+    <div className="min-h-screen bg-white text-gray-900">
+      <main className="max-w-7xl mx-auto px-6">
+        <Outlet />
+      </main>
+    </div>
+  );
 };

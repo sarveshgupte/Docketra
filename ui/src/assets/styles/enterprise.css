@@ -167,6 +167,16 @@
   .btn-danger:hover:not(:disabled) {
     opacity: 0.9;
   }
+
+  .btn-outline {
+    background-color: transparent;
+    color: theme(--color-primary-600);
+    border: 1px solid theme(--color-border-strong);
+  }
+
+  .btn-outline:hover:not(:disabled) {
+    background-color: theme(--color-surface-base);
+  }
   
   /* Enterprise Input Styles */
   .input {

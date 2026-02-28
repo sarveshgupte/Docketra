@@ -1,4 +1,5 @@
 import React from 'react';
+import { Section } from '../../components/layout/Section';
 
 const FEATURES = [
   {
@@ -34,20 +35,21 @@ const FEATURES = [
 ];
 
 export const FeaturesPage = () => (
-  <section className="space-y-8">
-    <div className="space-y-3">
-      <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Features</h1>
-      <p className="max-w-3xl text-sm leading-relaxed text-slate-600">
-        Built for modern service organizations that need multi-tenant, role-scoped, and governance-ready operations without sacrificing usability.
+  <Section>
+    <div>
+      <h1 className="type-section">Features</h1>
+      <p className="mt-6 max-w-3xl type-body">
+        Built for modern service organizations that need multi-tenant, role-scoped, and
+        governance-ready operations without sacrificing usability.
       </p>
     </div>
-    <div className="grid gap-4 sm:grid-cols-2">
+    <div className="mt-8 grid gap-12 sm:grid-cols-2">
       {FEATURES.map(({ title, description }) => (
-        <div key={title} className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-base font-semibold text-slate-800">{title}</h2>
-          <p className="mt-2 text-sm leading-relaxed text-slate-600">{description}</p>
+        <div key={title} className="rounded-2xl border border-gray-200 bg-white p-8 shadow-md hover:shadow-xl transition-shadow duration-300">
+          <h2 className="type-card-title">{title}</h2>
+          <p className="mt-6 type-body">{description}</p>
         </div>
       ))}
     </div>
-  </section>
+  </Section>
 );
