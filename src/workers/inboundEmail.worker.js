@@ -12,7 +12,14 @@ const inboundEmailWorker = new Worker(
       throw new UnrecoverableError(`Unknown inbound job type: ${job.name}`);
     }
 
-    await processInboundEmailPayload(job.data);
+    try {
+      await processInboundEmailPayload(job.data);
+    } catch (error) {
+      if (error?.unrecoverable) {
+        throw new UnrecoverableError(error.message);
+      }
+      throw error;
+    }
   },
   { connection: { url: redisUrl } }
 );

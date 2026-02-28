@@ -40,6 +40,16 @@ const tenantStorageConfigSchema = new mongoose.Schema(
       default: true,
       index: true,
     },
+    compressionEnabled: {
+      type: Boolean,
+      default: true,
+    },
+    compressionLevel: {
+      type: Number,
+      min: 1,
+      max: 9,
+      default: 6,
+    },
   },
   {
     timestamps: true,

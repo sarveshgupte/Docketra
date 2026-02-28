@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const { randomUUID } = require('crypto');
 const softDeletePlugin = require('../utils/softDelete.plugin');
+const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
  * Case Model for Docketra Case Management System
@@ -119,9 +120,11 @@ const caseSchema = new mongoose.Schema({
   publicEmailToken: {
     type: String,
     trim: true,
-    unique: true,
-    sparse: true,
     immutable: true,
+    validate: {
+      validator: (value) => !value || UUID_V4_REGEX.test(value),
+      message: 'publicEmailToken must be a valid UUID v4',
+    },
   },
   
   /**
@@ -820,6 +823,7 @@ caseSchema.index({ firmId: 1, caseInternalId: 1 });
 caseSchema.index({ firmId: 1, caseNumber: 1 }, { unique: true });
 caseSchema.index({ firmId: 1, caseName: 1 }, { unique: true });
 caseSchema.index({ firmId: 1, idempotencyKey: 1 }, { unique: true, sparse: true });
+caseSchema.index({ publicEmailToken: 1 }, { unique: true, sparse: true });
 
 // DEPRECATED: Backward compatibility - will be removed after transition
 caseSchema.index({ firmId: 1, caseId: 1 }, { sparse: true });
