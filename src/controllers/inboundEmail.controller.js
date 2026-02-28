@@ -39,6 +39,12 @@ const parsePublicEmailTokenFromRecipient = (toAddress) => {
 const BLOCKED_EXTENSIONS = new Set(['.exe', '.bat', '.cmd', '.com', '.scr', '.js', '.jar', '.msi', '.sh']);
 const MAX_ATTACHMENT_SIZE_BYTES = 25 * 1024 * 1024;
 const EMAIL_ATTACHMENT_PREFIX = 'email';
+const escapeHtml = (value) => String(value || '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
 
 function createInboundError(message, { unrecoverable = false, reason = null } = {}) {
   const error = new Error(message);
@@ -318,11 +324,13 @@ const processInboundEmailPayload = async (payload) => {
     });
 
     const timestamp = new Date().toISOString();
+    const caseTitle = String(caseData.title || '').replace(/[\r\n]/g, ' ').trim();
+    const safeCaseTitleHtml = escapeHtml(caseTitle);
     await sendEmail({
       to: normalizedFromEmail,
       subject: `Email successfully attached to Case ${caseData.caseNumber || caseData.caseId}`,
-      text: `Your email was successfully processed.\nCase: ${caseData.title}\nReference: ${caseData.caseNumber || caseData.caseId}\nAttachments processed: ${processedAttachments}\nSkipped files: ${skippedFiles.length ? skippedFiles.join(', ') : 'None'}\nTime: ${timestamp}`,
-      html: `<p>Your email was successfully processed.</p><p><strong>Case:</strong> ${caseData.title}<br /><strong>Reference:</strong> ${caseData.caseNumber || caseData.caseId}<br /><strong>Attachments processed:</strong> ${processedAttachments}<br /><strong>Skipped files:</strong> ${skippedFiles.length ? skippedFiles.join(', ') : 'None'}<br /><strong>Time:</strong> ${timestamp}</p>`,
+      text: `Your email was successfully processed.\nCase: ${caseTitle}\nReference: ${caseData.caseNumber || caseData.caseId}\nAttachments processed: ${processedAttachments}\nSkipped files: ${skippedFiles.length ? skippedFiles.join(', ') : 'None'}\nTime: ${timestamp}`,
+      html: `<p>Your email was successfully processed.</p><p><strong>Case:</strong> ${safeCaseTitleHtml}<br /><strong>Reference:</strong> ${caseData.caseNumber || caseData.caseId}<br /><strong>Attachments processed:</strong> ${processedAttachments}<br /><strong>Skipped files:</strong> ${skippedFiles.length ? skippedFiles.join(', ') : 'None'}<br /><strong>Time:</strong> ${timestamp}</p>`,
     });
 
     return {
