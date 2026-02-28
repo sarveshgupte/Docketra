@@ -1,10 +1,12 @@
 const crypto = require('crypto');
 const { google } = require('googleapis');
 const TenantStorageConfig = require('../models/TenantStorageConfig.model');
+const TenantStorageHealth = require('../models/TenantStorageHealth.model');
 const Firm = require('../models/Firm.model');
 const { encrypt, decrypt } = require('../storage/services/TokenEncryption.service');
 const GoogleDriveProvider = require('../storage/providers/GoogleDriveProvider');
 const OneDriveProvider = require('../storage/providers/OneDriveProvider');
+const { verifyTenantStorage } = require('../utils/verifyTenantStorage');
 
 const GOOGLE_SCOPE = 'https://www.googleapis.com/auth/drive';
 const ONEDRIVE_SCOPES = ['Files.ReadWrite.All', 'Sites.ReadWrite.All', 'offline_access'];
@@ -134,6 +136,30 @@ const getStorageStatus = async (req, res) => {
   } catch (err) {
     console.error('[Storage] Failed to query TenantStorageConfig:', { tenantId, message: err.message });
     return res.status(500).json({ error: 'Failed to retrieve storage status' });
+  }
+};
+
+const getStorageHealth = async (req, res) => {
+  const tenantId = req.firmId;
+  try {
+    let record = await TenantStorageHealth.findOne({ tenantId })
+      .select('status lastVerifiedAt missingFilesCount sampleSize lastError -_id')
+      .lean();
+
+    if (!record) {
+      record = await verifyTenantStorage(tenantId);
+    }
+
+    return res.json({
+      status: record?.status || 'HEALTHY',
+      lastVerifiedAt: record?.lastVerifiedAt || null,
+      missingFilesCount: Number(record?.missingFilesCount || 0),
+      sampleSize: Number(record?.sampleSize || 0),
+      lastError: record?.lastError || null,
+    });
+  } catch (error) {
+    console.error('[Storage] Failed to query TenantStorageHealth:', { tenantId, message: error.message });
+    return res.status(500).json({ error: 'Failed to retrieve storage health' });
   }
 };
 
@@ -358,6 +384,7 @@ const onedriveConfirmDrive = (req, res) => confirmDrive(req, res, 'onedrive');
 
 module.exports = {
   getStorageStatus,
+  getStorageHealth,
   googleConnect,
   googleCallback,
   googleConfirmDrive,
