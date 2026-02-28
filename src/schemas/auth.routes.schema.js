@@ -26,6 +26,12 @@ module.exports = {
   'POST /verify-totp': {
     body: z.object({}).passthrough(),
   },
+  'POST /complete-mfa-login': {
+    body: z.object({
+      token: nonEmptyString,
+      preAuthToken: nonEmptyString,
+    }).passthrough(),
+  },
   'GET /google': {
     query: z.object({}).passthrough(),
   },
