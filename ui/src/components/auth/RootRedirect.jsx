@@ -23,7 +23,7 @@ export const RootRedirect = () => {
 
   // Firm users go to firm dashboard
   if (user?.firmSlug) {
-    return <Navigate to={`/f/${user.firmSlug}/dashboard`} replace />;
+    return <Navigate to={`/app/firm/${user.firmSlug}/dashboard`} replace />;
   }
 
   // Fallback safety

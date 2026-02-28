@@ -88,11 +88,11 @@ export const CasesPage = () => {
   };
 
   const handleCaseClick = (caseId) => {
-    navigate(`/f/${firmSlug}/cases/${caseId}`);
+    navigate(`/app/firm/${firmSlug}/cases/${caseId}`);
   };
   
   const handleCreateCase = () => {
-    navigate(`/f/${firmSlug}/cases/create`);
+    navigate(`/app/firm/${firmSlug}/cases/create`);
   };
 
   if (loading) {

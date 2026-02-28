@@ -350,7 +350,7 @@ export const WorkbasketPage = () => {
                           <Button
                             variant="default"
                             size="small"
-                            onClick={() => navigate(`/f/${firmSlug}/cases/${caseItem.caseId}`)}
+                            onClick={() => navigate(`/app/firm/${firmSlug}/cases/${caseItem.caseId}`)}
                           >
                             View
                           </Button>

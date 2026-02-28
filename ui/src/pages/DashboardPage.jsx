@@ -180,7 +180,7 @@ export const DashboardPage = () => {
   };
 
   const handleCaseClick = (caseId) => {
-    navigate(`/f/${firmSlug}/cases/${caseId}`);
+    navigate(`/app/firm/${firmSlug}/cases/${caseId}`);
   };
 
   if (loading) {
@@ -215,7 +215,7 @@ export const DashboardPage = () => {
           {/* Open Cases */}
           <div
             className="dashboard__kpi-card dashboard__kpi-card--clickable"
-            onClick={() => navigate(`/f/${firmSlug}/my-worklist?status=OPEN`)}
+            onClick={() => navigate(`/app/firm/${firmSlug}/my-worklist?status=OPEN`)}
           >
             <div className="dashboard__kpi-number">{stats.myOpenCases}</div>
             <div className="dashboard__kpi-label">Open Cases</div>
@@ -225,7 +225,7 @@ export const DashboardPage = () => {
           {/* Pending Approvals */}
           <div
             className="dashboard__kpi-card dashboard__kpi-card--clickable dashboard__kpi-card--accent"
-            onClick={() => navigate(`/f/${firmSlug}/cases?approvalStatus=PENDING`)}
+            onClick={() => navigate(`/app/firm/${firmSlug}/cases?approvalStatus=PENDING`)}
           >
             <div className="dashboard__kpi-number">
               {isAdmin ? stats.adminPendingApprovals : stats.myPendingCases}
@@ -237,7 +237,7 @@ export const DashboardPage = () => {
           {/* SLA Breaches (cases on hold / pended) */}
           <div
             className="dashboard__kpi-card dashboard__kpi-card--clickable dashboard__kpi-card--warning"
-            onClick={() => navigate(`/f/${firmSlug}/my-worklist?status=PENDED`)}
+            onClick={() => navigate(`/app/firm/${firmSlug}/my-worklist?status=PENDED`)}
           >
             <div className="dashboard__kpi-number">{stats.myPendingCases}</div>
             <div className="dashboard__kpi-label">SLA Risk</div>
@@ -248,7 +248,7 @@ export const DashboardPage = () => {
           {isAdmin ? (
             <div
               className="dashboard__kpi-card dashboard__kpi-card--clickable dashboard__kpi-card--success"
-              onClick={() => navigate(`/f/${firmSlug}/admin`)}
+              onClick={() => navigate(`/app/firm/${firmSlug}/admin`)}
             >
               <div className="dashboard__kpi-number">{stats.activeClients}</div>
               <div className="dashboard__kpi-label">Active Clients</div>
@@ -257,7 +257,7 @@ export const DashboardPage = () => {
           ) : (
             <div
               className="dashboard__kpi-card dashboard__kpi-card--clickable dashboard__kpi-card--success"
-              onClick={() => navigate(`/f/${firmSlug}/my-worklist?status=RESOLVED`)}
+              onClick={() => navigate(`/app/firm/${firmSlug}/my-worklist?status=RESOLVED`)}
             >
               <div className="dashboard__kpi-number">{stats.myResolvedCases}</div>
               <div className="dashboard__kpi-label">Resolved Cases</div>
@@ -297,7 +297,7 @@ export const DashboardPage = () => {
             </h2>
             <button
               className="btn btn-secondary"
-              onClick={() => navigate(`/f/${firmSlug}/cases/create`)}
+              onClick={() => navigate(`/app/firm/${firmSlug}/cases/create`)}
               style={{ fontSize: 'var(--font-size-sm)' }}
             >
               + Create Case
@@ -315,7 +315,7 @@ export const DashboardPage = () => {
                 </p>
                 <button
                   className="btn btn-primary dashboard__empty-cta"
-                  onClick={() => navigate(`/f/${firmSlug}/cases/create`)}
+                  onClick={() => navigate(`/app/firm/${firmSlug}/cases/create`)}
                 >
                   {isAdmin ? 'Create Your First Case' : 'Create a Case'}
                 </button>
@@ -354,7 +354,7 @@ export const DashboardPage = () => {
             <div className="dashboard__admin-stats">
               <div
                 className="dashboard__stat-card dashboard__stat-card--clickable"
-                onClick={() => navigate(`/f/${firmSlug}/cases?status=FILED`)}
+                onClick={() => navigate(`/app/firm/${firmSlug}/cases?status=FILED`)}
               >
                 <div className="dashboard__stat-value">{stats.adminFiledCases}</div>
                 <div className="dashboard__stat-label">Filed Cases</div>
@@ -362,7 +362,7 @@ export const DashboardPage = () => {
               </div>
               <div
                 className="dashboard__stat-card dashboard__stat-card--clickable"
-                onClick={() => navigate(`/f/${firmSlug}/cases?status=RESOLVED`)}
+                onClick={() => navigate(`/app/firm/${firmSlug}/cases?status=RESOLVED`)}
               >
                 <div className="dashboard__stat-value">{stats.adminResolvedCases}</div>
                 <div className="dashboard__stat-label">All Resolved</div>
@@ -370,7 +370,7 @@ export const DashboardPage = () => {
               </div>
               <div
                 className="dashboard__stat-card dashboard__stat-card--clickable"
-                onClick={() => navigate(`/f/${firmSlug}/global-worklist?createdBy=me&status=UNASSIGNED`)}
+                onClick={() => navigate(`/app/firm/${firmSlug}/global-worklist?createdBy=me&status=UNASSIGNED`)}
               >
                 <div className="dashboard__stat-value">{stats.myUnassignedCreatedCases}</div>
                 <div className="dashboard__stat-label">Unassigned</div>
@@ -390,7 +390,7 @@ export const DashboardPage = () => {
               For quick access in the future, we recommend bookmarking this page:
             </p>
             <div className="dashboard__modal-url">
-              {window.location.origin}/f/{firmSlug}
+              {window.location.origin}/app/firm/{firmSlug}
             </div>
             <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleDismissBookmarkPrompt}>
               Got it

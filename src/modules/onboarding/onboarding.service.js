@@ -23,8 +23,8 @@ const RESERVED_SLUGS = [
 
 const createFirmWithAdmin = async (payload = {}) => {
   const { adminName, adminEmail, firmName, planId } = payload;
-  if (!adminName || !adminEmail || !firmName || !planId) {
-    throw new Error('adminName, adminEmail, firmName and planId are required');
+  if (!adminName || !adminEmail || !firmName) {
+    throw new Error('adminName, adminEmail and firmName are required');
   }
 
   console.log('[ONBOARDING] createFirmWithAdmin started', { adminEmail, firmName });
@@ -34,7 +34,13 @@ const createFirmWithAdmin = async (payload = {}) => {
     let result;
     let setupToken;
     await session.withTransaction(async () => {
-      const plan = await Plan.findById(planId).session(session);
+      let plan = null;
+      if (planId) {
+        plan = await Plan.findById(planId).session(session);
+      } else {
+        plan = await Plan.findOne({ name: 'Free' }).session(session);
+      }
+
       if (!plan) {
         const err = new Error('Plan not found');
         err.statusCode = 404;
@@ -44,7 +50,7 @@ const createFirmWithAdmin = async (payload = {}) => {
       const firmSlug = slugify(firmName);
       if (RESERVED_SLUGS.includes(firmSlug)) {
         const err = new Error('Invalid firm name. Please choose a different name.');
-        err.statusCode = 400;
+        err.statusCode = 409;
         throw err;
       }
 
@@ -69,11 +75,20 @@ const createFirmWithAdmin = async (payload = {}) => {
 
       await assertFirmPlanCapacity({ firmId: firm._id, session });
 
+
+      const normalizedAdminEmail = adminEmail.toLowerCase().trim();
+      const existingAdmin = await User.findOne({ firmId: firm._id, email: normalizedAdminEmail }).session(session);
+      if (existingAdmin) {
+        const err = new Error('Admin email already exists for this firm.');
+        err.statusCode = 409;
+        throw err;
+      }
+
       const xID = await xIDGenerator.generateNextXID(firm._id, session);
       const user = await User.create([{
         xID,
         name: adminName,
-        email: adminEmail.toLowerCase().trim(),
+        email: normalizedAdminEmail,
         firmId: firm._id,
         role: 'Admin',
         status: 'invited',
@@ -95,6 +110,13 @@ const createFirmWithAdmin = async (payload = {}) => {
 
     console.log('[ONBOARDING] createFirmWithAdmin completed', { firmId: result.firm._id.toString(), adminId: result.admin._id.toString() });
     return result;
+  } catch (error) {
+    if (error?.code === 11000) {
+      const conflict = new Error('Firm or admin already exists.');
+      conflict.statusCode = 409;
+      throw conflict;
+    }
+    throw error;
   } finally {
     session.endSession();
   }

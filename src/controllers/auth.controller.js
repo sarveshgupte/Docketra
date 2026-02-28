@@ -240,7 +240,7 @@ const buildTokenResponse = async (user, req, authMethod = 'Password') => {
 
 /**
  * Login with xID and password
- * POST /api/auth/login
+ * POST /superadmin/login or POST /:firmSlug/login
  */
 const login = async (req, res) => {
   try {
@@ -462,15 +462,7 @@ const login = async (req, res) => {
     }
     
     // Check if user is active
-    if (!user.isActive) {
-      return res.status(403).json({
-        success: false,
-        message: 'Account is deactivated',
-      });
-    }
-    
-    // Check if user status is ACTIVE (invited users cannot login)
-    if (user.status && user.status !== 'active') {
+    if (user.status !== 'active') {
       return res.status(403).json({
         success: false,
         message: 'Please complete your account setup using the invite link sent to your email',
@@ -808,7 +800,6 @@ const logout = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error during logout',
-      error: error.message,
     });
   }
 };
@@ -925,7 +916,6 @@ const changePassword = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error changing password',
-      error: error.message,
     });
   }
 };
@@ -1044,7 +1034,6 @@ const resetPassword = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error resetting password',
-      error: error.message,
     });
   }
 };
@@ -1155,7 +1144,6 @@ const getProfile = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching profile',
-      error: error.message,
     });
   }
 };
@@ -1290,7 +1278,6 @@ const updateProfile = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating profile',
-      error: error.message,
     });
   }
 };
@@ -1530,7 +1517,6 @@ const createUser = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error creating user',
-      error: error.message,
     });
   }
 };
@@ -1595,7 +1581,6 @@ const activateUser = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error activating user',
-      error: error.message,
     });
   }
 };
@@ -1673,7 +1658,6 @@ const deactivateUser = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error deactivating user',
-      error: error.message,
     });
   }
 };
@@ -1807,7 +1791,6 @@ const setPassword = async (req, res) => {
       success: false,
       code: 'FIRM_RESOLUTION_FAILED',
       message: 'Error setting password',
-      error: error.message,
     });
   }
 };
@@ -1815,49 +1798,70 @@ const setPassword = async (req, res) => {
 const setupAccount = async (req, res) => {
   const { token, password, googleId } = req.body;
   if (!token || (!password && !googleId)) {
-    return res.status(400).json({ success: false, message: 'token and password or googleId are required' });
+    return res.status(400).json({ success: false, code: 'SETUP_PAYLOAD_INVALID', message: 'token and password or googleId are required' });
   }
 
   const now = new Date();
   const setupTokenHash = emailService.hashToken(token);
-  const user = await User.findOne({
+  const existingUser = await User.findOne({
     $or: [
       { setupTokenHash },
       { passwordSetupTokenHash: setupTokenHash },
     ],
   });
 
-  if (!user) {
+  if (!existingUser) {
     return res.status(400).json({ success: false, code: 'SETUP_TOKEN_INVALID', message: 'Invalid setup token' });
   }
 
-  const tokenExpiresAt = user.setupTokenExpiresAt || user.passwordSetupExpires || null;
-  if (!tokenExpiresAt || tokenExpiresAt < now) {
-    console.warn('[AUTH][setup] setup token expired', { userId: user._id.toString() });
-    return res.status(400).json({ success: false, code: 'SETUP_TOKEN_EXPIRED', message: 'Setup token expired. This link is valid for 48 hours only.' });
+  if (existingUser.setupTokenUsedAt) {
+    return res.status(400).json({ success: false, code: 'SETUP_TOKEN_INVALID', message: 'This setup link has already been used.' });
   }
 
+  const tokenExpiresAt = existingUser.setupTokenExpiresAt || existingUser.passwordSetupExpires || null;
+  if (!tokenExpiresAt || tokenExpiresAt < now) {
+    console.warn('[AUTH][setup] setup token expired', { userId: existingUser._id.toString() });
+    return res.status(400).json({ success: false, code: 'SETUP_TOKEN_EXPIRED', message: 'Setup token expired. This link will expire in 48 hours.' });
+  }
+
+  const update = {
+    status: 'active',
+    isActive: true,
+    setupTokenUsedAt: now,
+    setupTokenHash: null,
+    setupTokenExpiresAt: null,
+    passwordSetupTokenHash: null,
+    passwordSetupExpires: null,
+    mustSetPassword: false,
+    mustChangePassword: false,
+    passwordSetAt: now,
+  };
+
   if (password) {
-    user.passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
-    user.passwordSet = true;
+    update.passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    update.passwordSet = true;
   }
 
   if (googleId) {
-    user.authProviders = user.authProviders || {};
-    user.authProviders.google = { ...(user.authProviders.google || {}), googleId, linkedAt: now };
+    update.authProviders = {
+      ...(existingUser.authProviders || {}),
+      google: { ...((existingUser.authProviders || {}).google || {}), googleId, linkedAt: now },
+    };
   }
 
-  user.status = 'active';
-  user.isActive = true;
-  user.setupTokenUsedAt = now;
-  user.setupTokenHash = null;
-  user.setupTokenExpiresAt = null;
-  user.passwordSetupTokenHash = null;
-  user.passwordSetupExpires = null;
-  user.mustSetPassword = false;
-  user.mustChangePassword = false;
-  user.passwordSetAt = now;
-  await user.save();
+  const user = await User.findOneAndUpdate(
+    {
+      _id: existingUser._id,
+      setupTokenUsedAt: null,
+      $or: [{ setupTokenHash }, { passwordSetupTokenHash: setupTokenHash }],
+    },
+    { $set: update },
+    { new: true }
+  );
+
+  if (!user) {
+    return res.status(400).json({ success: false, code: 'SETUP_TOKEN_INVALID', message: 'Invalid setup token' });
+  }
 
   await Firm.updateOne(
     { _id: user.firmId, status: 'pending_setup' },
@@ -2030,7 +2034,6 @@ const resetPasswordWithToken = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error resetting password',
-      error: error.message,
     });
   }
 };
@@ -2153,7 +2156,6 @@ const resendSetupEmail = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error resending setup email',
-      error: error.message,
     });
   }
 };
@@ -2239,7 +2241,6 @@ const updateUserStatus = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating user status',
-      error: error.message,
     });
   }
 };
@@ -2297,7 +2298,6 @@ const unlockAccount = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error unlocking account',
-      error: error.message,
     });
   }
 };
@@ -2357,7 +2357,7 @@ const forgotPassword = async (req, res) => {
     }
     
     // Check if user is active
-    if (!user.isActive) {
+    if (user.status !== 'active') {
       console.log(`[AUTH] Forgot password requested for inactive user (xID: ${user.xID})`);
       
       return res.json({
@@ -2407,7 +2407,6 @@ const forgotPassword = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error processing password reset request',
-      error: error.message,
     });
   }
 };
@@ -2436,7 +2435,6 @@ const getAllUsers = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching users',
-      error: error.message,
     });
   }
 };
@@ -2509,7 +2507,7 @@ const refreshAccessToken = async (req, res) => {
     // Get the user
     const user = await User.findById(storedToken.userId);
     
-    if (!user || !user.isActive) {
+    if (!user || user.status !== 'active') {
       return res.status(401).json({
         success: false,
         message: 'User not found or inactive',
@@ -2585,7 +2583,6 @@ const refreshAccessToken = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error refreshing token',
-      error: error.message,
     });
   }
 };
@@ -2606,7 +2603,7 @@ const verifyTotp = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ xID, isActive: true }).select('xID twoFactorSecret');
+    const user = await User.findOne({ xID, status: 'active' }).select('xID twoFactorSecret');
     if (!user || !user.twoFactorSecret) {
       return res.status(404).json({
         success: false,
@@ -2637,7 +2634,6 @@ const verifyTotp = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error verifying TOTP',
-      error: error.message,
     });
   }
 };
@@ -2781,7 +2777,6 @@ const completeMfaLogin = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error completing MFA login',
-      error: error.message,
     });
   }
 };
@@ -2941,7 +2936,7 @@ const handleGoogleCallback = async (req, res) => {
         const isActivation = flow === 'activation';
         if (candidate.firmId && candidate.firmId.toString() !== firmIdFromContext.toString()) return false;
         if (![ROLE_ADMIN, ROLE_EMPLOYEE].includes(candidate.role)) return false;
-        if (candidate.isActive === false || candidate.status === 'suspended') return false;
+        if (candidate.status === 'suspended') return false;
         if (!isActivation && candidate.status !== 'active') return false;
         return true;
       },
@@ -3000,7 +2995,7 @@ const handleGoogleCallback = async (req, res) => {
     }
 
     // Account state checks
-    if (!user.isActive || user.status === 'suspended') {
+    if (user.status !== 'active') {
       return res.status(403).json({
         success: false,
         code: 'FIRM_RESOLUTION_FAILED',
@@ -3008,13 +3003,6 @@ const handleGoogleCallback = async (req, res) => {
       });
     }
 
-    if (user.status && user.status !== 'active') {
-      return res.status(403).json({
-        success: false,
-        code: 'FIRM_RESOLUTION_FAILED',
-        message: 'Please activate your account before using Google login.',
-      });
-    }
 
     if (user.isLocked) {
       return res.status(403).json({
