@@ -29,7 +29,7 @@ import { DetailedReports } from './pages/reports/DetailedReports';
 import { FilteredCasesPage } from './pages/FilteredCasesPage';
 import { CasesPage } from './pages/CasesPage';
 import { GoogleCallbackPage } from './pages/GoogleCallbackPage';
-import { MarketingHomePage, MarketingFeaturesPage, MarketingPricingPage, MarketingTermsPage, MarketingPrivacyPage, MarketingSecurityPage, MarketingAboutPage, MarketingContactPage } from './pages/marketing/MarketingPages';
+import { MarketingHomePage, MarketingFeaturesPage, MarketingPricingPage, MarketingTermsPage, MarketingPrivacyPage, MarketingSecurityPage, MarketingAboutPage, MarketingContactPage, MarketingSignupPage } from './pages/marketing/MarketingPages';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 const LEGACY_SLUG_BLOCKLIST = new Set([
@@ -47,6 +47,7 @@ const LEGACY_SLUG_BLOCKLIST = new Set([
   'privacy',
   'reset-password',
   'security',
+  'signup',
   'set-password',
   'superadmin',
   'terms',
@@ -109,6 +110,7 @@ export const Router = () => {
             <Route path="/security" element={<MarketingSecurityPage />} />
             <Route path="/about" element={<MarketingAboutPage />} />
             <Route path="/contact" element={<MarketingContactPage />} />
+            <Route path="/signup" element={<MarketingSignupPage />} />
             <Route path="/superadmin" element={<LoginPage />} />
             <Route path="/superadmin/login" element={<LoginPage />} />
           </Route>
@@ -119,6 +121,7 @@ export const Router = () => {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/change-password" element={<ChangePasswordPage />} />
           <Route path="/auth/setup-account" element={<SetPasswordPage />} />
+          <Route path="/setup-password" element={<SetPasswordPage />} />
                     <Route path="/google-callback" element={<GoogleCallbackPage />} />
           
           {/* SuperAdmin Routes - NOT firm-scoped */}

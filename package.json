@@ -14,7 +14,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "migration:add_multi_tenant_indexes": "node scripts/migrations/add_multi_tenant_indexes.js up",
     "migration:rollback_multi_tenant_indexes": "node scripts/migrations/add_multi_tenant_indexes.js down",
-    "migration:status_to_lowercase": "node src/scripts/migrateStatusToLowercase.js"
+    "migration:status_to_lowercase": "node src/scripts/migrateStatusToLowercase.js",
+    "migration:add_starter_plan_fields": "node scripts/migrations/add_starter_plan_fields.js up",
+    "migration:rollback_starter_plan_fields": "node scripts/migrations/add_starter_plan_fields.js down"
   },
   "keywords": [
     "task-management",

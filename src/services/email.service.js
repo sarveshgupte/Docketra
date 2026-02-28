@@ -260,7 +260,7 @@ const sendPasswordSetupEmail = async ({
   context = null,
 }) => {
   const normalizedFirmSlug = normalizeFirmSlug(firmSlug);
-  const setupLink = `${frontendUrl}/auth/setup-account?token=${token}`;
+  const setupLink = `${frontendUrl}/setup-password?token=${token}`;
   
   // Construct firm-specific login URL if firmSlug is provided
   const firmLoginUrl = normalizedFirmSlug ? `${frontendUrl}/${normalizedFirmSlug}/login` : null;
@@ -358,7 +358,7 @@ const sendPasswordSetupReminderEmail = async ({
   req = null,
 }) => {
   const normalizedFirmSlug = normalizeFirmSlug(firmSlug);
-  const setupLink = `${frontendUrl}/auth/setup-account?token=${token}`;
+  const setupLink = `${frontendUrl}/setup-password?token=${token}`;
   
   // Construct firm-specific login URL if firmSlug is provided
   const firmLoginUrl = normalizedFirmSlug ? `${frontendUrl}/${normalizedFirmSlug}/login` : null;
@@ -834,7 +834,7 @@ const sendAdminPasswordResetEmail = async ({
       error: 'Firm context is required for password reset links.',
     };
   }
-  const resetLink = `${frontendUrl}/auth/setup-account?token=${token}`;
+  const resetLink = `${frontendUrl}/setup-password?token=${token}`;
   const firmLoginUrl = `${frontendUrl}/${normalizedFirmSlug}/login`;
 
   const subject = 'Reset your Docketra Admin Account Password';
@@ -889,6 +889,46 @@ Docketra Team
   }, context);
 };
 
+
+const sendEnterpriseInquiryNotification = async ({
+  name,
+  email,
+  firmName,
+  numberOfUsers,
+  phone,
+  requirements,
+  context = null,
+}) => {
+  const to = process.env.ENTERPRISE_CONTACT_EMAIL || process.env.SUPPORT_EMAIL || 'support@docketra.com';
+  const subject = `New Enterprise Inquiry: ${firmName}`;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
+      <h2>New Enterprise Inquiry</h2>
+      <p><strong>Name:</strong> ${name}</p>
+      <p><strong>Email:</strong> ${email}</p>
+      <p><strong>Firm:</strong> ${firmName}</p>
+      <p><strong>Number of Users:</strong> ${numberOfUsers}</p>
+      <p><strong>Phone:</strong> ${phone}</p>
+      <p><strong>Requirements:</strong></p>
+      <pre style="white-space: pre-wrap; font-family: inherit; background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px;">${requirements}</pre>
+    </div>
+  `;
+
+  const text = `New Enterprise Inquiry
+
+Name: ${name}
+Email: ${email}
+Firm: ${firmName}
+Number of Users: ${numberOfUsers}
+Phone: ${phone}
+
+Requirements:
+${requirements}`;
+
+  return sendEmail({ to, subject, html, text }, context);
+};
+
 module.exports = {
   generateSecureToken,
   hashToken,
@@ -897,6 +937,7 @@ module.exports = {
   sendPasswordResetEmail,
   sendForgotPasswordEmail,
   sendAdminPasswordResetEmail,
+  sendEnterpriseInquiryNotification,
   sendTestEmail,
   maskEmail,
   parseSender,
