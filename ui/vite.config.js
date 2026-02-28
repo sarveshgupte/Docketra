@@ -3,6 +3,11 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      'framer-motion': '/src/lib/framerMotionShim.jsx',
+    },
+  },
   root: '.',
   publicDir: 'public',
   server: {
