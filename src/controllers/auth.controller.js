@@ -20,6 +20,7 @@ const { isGoogleAuthDisabled } = require('../services/featureFlags.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const config = require('../config/config');
 const { recordFailedLoginAttempt, clearFailedLoginAttempts } = require('../middleware/accountLockout.middleware');
+const { assertFirmPlanCapacity, PlanLimitExceededError } = require('../services/user.service');
 
 /**
  * Authentication Controller for JWT-based Enterprise Authentication
@@ -243,6 +244,7 @@ const buildTokenResponse = async (user, req, authMethod = 'Password') => {
  */
 const login = async (req, res) => {
   try {
+    const loginScope = req.loginScope || 'tenant';
     // Accept both xID and XID from request payload, normalize internally
     const { xID, XID, password } = req.body;
     
@@ -271,6 +273,9 @@ const login = async (req, res) => {
     const { rawXID: superadminXIDRaw, normalizedXID: superadminXID, email: superadminEmail } = getSuperadminEnv();
     
     if (superadminXID && normalizedXID === superadminXID) {
+      if (loginScope !== 'superadmin') {
+        return res.status(401).json({ success: false, message: 'Invalid xID or password' });
+      }
       console.log('[AUTH][superadmin] SuperAdmin login attempt detected');
       
       /**
@@ -340,6 +345,10 @@ const login = async (req, res) => {
     // ============================================================
     // NORMAL USER AUTHENTICATION (FROM MONGODB)
     // ============================================================
+    if (loginScope === 'superadmin') {
+      return res.status(401).json({ success: false, message: 'Invalid xID or password' });
+    }
+
     if (!req.firmId) {
       return res.status(400).json({
         success: false,
@@ -355,7 +364,7 @@ const login = async (req, res) => {
       status: { $ne: 'DELETED' },
     });
     
-    if (!user || user.status !== 'ACTIVE') {
+    if (!user || !['active', 'ACTIVE'].includes(user.status)) {
       await recordFailedLoginAttempt(req);
       console.warn(`[AUTH] Invalid login attempt for xID=${normalizedXID} in firm context ${req.firmSlug || req.firmId}`);
       try {
@@ -461,7 +470,7 @@ const login = async (req, res) => {
     }
     
     // Check if user status is ACTIVE (invited users cannot login)
-    if (user.status && user.status !== 'ACTIVE') {
+    if (user.status && !['active', 'ACTIVE'].includes(user.status)) {
       return res.status(403).json({
         success: false,
         message: 'Please complete your account setup using the invite link sent to your email',
@@ -1366,6 +1375,9 @@ const createUser = async (req, res) => {
     const tokenHash = emailService.hashToken(token);
     const tokenExpiry = new Date(Date.now() + INVITE_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000);
     
+    const session = req.transactionSession?.session || null;
+    await assertFirmPlanCapacity({ firmId: admin.firmId, session });
+
     // Create user without password (invite-based onboarding)
     const newUser = new User({
       xID: xID, // Auto-generated, immutable
@@ -1383,12 +1395,12 @@ const createUser = async (req, res) => {
       inviteTokenExpiry: tokenExpiry, // 48 hours
       mustChangePassword: true, // Enforce password setup on first login
       passwordExpiresAt: null, // Not set until password is created
-      status: 'INVITED', // User is invited, not yet active
+      status: 'invited', // User is invited, not yet active
       passwordHistory: [],
       passwordSetAt: null,
     });
     
-    await newUser.save();
+    await newUser.save(session ? { session } : undefined);
     console.log(`[AUTH] User inherited defaultClientId from firm ${firm._id}`);
     
     // Fetch firmSlug for email
@@ -1467,6 +1479,12 @@ const createUser = async (req, res) => {
       },
     });
   } catch (error) {
+    if (error instanceof PlanLimitExceededError) {
+      return res.status(403).json({
+        error: error.code,
+        message: error.message,
+      });
+    }
     // Handle duplicate key errors from MongoDB (E11000)
     if (error.code === 11000) {
       // Check which field caused the duplicate
@@ -1530,8 +1548,12 @@ const activateUser = async (req, res) => {
       });
     }
     
+    const session = req.transactionSession?.session || null;
+    await assertFirmPlanCapacity({ firmId: admin.firmId, session });
+
     // Activate user
     user.isActive = true;
+    user.status = 'active';
     await user.save();
     
     // Log activation
@@ -1759,7 +1781,7 @@ const setPassword = async (req, res) => {
       success: true,
       message: 'Password set successfully',
       firmSlug: firmSlug,
-      redirectUrl: `/f/${firmSlug}/login`,
+      redirectUrl: `/${firmSlug}/login`,
     });
   } catch (error) {
     res.status(500).json({
@@ -1769,6 +1791,77 @@ const setPassword = async (req, res) => {
       error: error.message,
     });
   }
+};
+
+const setupAccount = async (req, res) => {
+  const { token, password, googleId } = req.body;
+  if (!token || (!password && !googleId)) {
+    return res.status(400).json({ success: false, message: 'token and password or googleId are required' });
+  }
+
+  const setupTokenHash = emailService.hashToken(token);
+  const user = await User.findOne({ setupTokenHash });
+  if (!user) {
+    return res.status(400).json({ success: false, message: 'Invalid setup token' });
+  }
+  if (!user.setupTokenExpiresAt || user.setupTokenExpiresAt < new Date()) {
+    return res.status(400).json({ success: false, message: 'Setup token expired. This link is valid for 48 hours only.' });
+  }
+
+  if (password) {
+    user.passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    user.passwordSet = true;
+  }
+  if (googleId) {
+    user.authProviders = user.authProviders || {};
+    user.authProviders.google = { ...(user.authProviders.google || {}), googleId, linkedAt: new Date() };
+  }
+
+  user.status = 'active';
+  user.isActive = true;
+  user.setupTokenUsedAt = new Date();
+  user.setupTokenHash = null;
+  user.setupTokenExpiresAt = null;
+  await user.save();
+
+  await Firm.updateOne({ _id: user.firmId }, { $set: { status: 'active' } });
+
+  return res.json({ success: true, message: 'Account setup completed' });
+};
+
+const resendSetup = async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ success: false, message: 'email is required' });
+
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+  const user = await User.findOne({ email: email.toLowerCase().trim() });
+  if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+  const recentCount = await AuthAudit.countDocuments({
+    userId: user._id,
+    actionType: 'SetupLinkResent',
+    createdAt: { $gte: oneHourAgo },
+  });
+  if (recentCount >= 3) {
+    return res.status(429).json({ success: false, message: 'Rate limit exceeded. Max 3 setup links per hour.' });
+  }
+
+  const token = emailService.generateSecureToken();
+  user.setupTokenHash = emailService.hashToken(token);
+  user.setupTokenExpiresAt = new Date(Date.now() + INVITE_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000);
+  user.setupTokenUsedAt = null;
+  await user.save();
+
+  await emailService.sendPasswordSetupEmail({
+    email: user.email,
+    name: user.name,
+    token,
+    xID: user.xID,
+    customMessage: 'This link will expire in 48 hours.',
+  });
+
+  await AuthAudit.create({ userId: user._id, xID: user.xID, firmId: user.firmId, actionType: 'SetupLinkResent', description: 'Setup link resent', performedBy: user.xID });
+  return res.json({ success: true, message: 'Setup link resent' });
 };
 
 /**
@@ -3020,6 +3113,8 @@ module.exports = {
   activateUser: wrapWriteHandler(activateUser),
   deactivateUser: wrapWriteHandler(deactivateUser),
   setPassword: wrapWriteHandler(setPassword),
+  setupAccount: wrapWriteHandler(setupAccount),
+  resendSetup: wrapWriteHandler(resendSetup),
   resetPasswordWithToken: wrapWriteHandler(resetPasswordWithToken),
   // resendSetupEmail - REMOVED: Deprecated in PR #48, use admin.controller.resendInviteEmail instead
   updateUserStatus: wrapWriteHandler(updateUserStatus),

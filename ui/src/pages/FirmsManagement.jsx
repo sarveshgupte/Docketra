@@ -497,7 +497,7 @@ export const FirmsManagement = () => {
                   {firms.map(firm => {
                     const { label: statusLabel, key: statusKey, isActive } = getFirmStatusInfo(firm.status);
                     const loginUrl = firm.firmSlug
-                      ? `${window.location.origin}/f/${firm.firmSlug}/login`
+                      ? `${window.location.origin}/${firm.firmSlug}/login`
                       : null;
                     return (
                       <tr key={firm._id}>
@@ -521,7 +521,7 @@ export const FirmsManagement = () => {
                               className="firm-login-url"
                               title="Open firm login page in new tab"
                             >
-                              /f/{firm.firmSlug}/login
+                              /{firm.firmSlug}/login
                             </a>
                           ) : (
                             <span className="text-secondary">N/A</span>

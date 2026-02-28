@@ -263,7 +263,7 @@ const sendPasswordSetupEmail = async ({
   const setupLink = `${frontendUrl}/auth/setup-password?token=${token}`;
   
   // Construct firm-specific login URL if firmSlug is provided
-  const firmLoginUrl = normalizedFirmSlug ? `${frontendUrl}/f/${normalizedFirmSlug}/login` : null;
+  const firmLoginUrl = normalizedFirmSlug ? `${frontendUrl}/${normalizedFirmSlug}/login` : null;
   
   const subject = 'Set up your Docketra Admin Account';
   const htmlContent = `
@@ -361,7 +361,7 @@ const sendPasswordSetupReminderEmail = async ({
   const setupLink = `${frontendUrl}/auth/setup-password?token=${token}`;
   
   // Construct firm-specific login URL if firmSlug is provided
-  const firmLoginUrl = normalizedFirmSlug ? `${frontendUrl}/f/${normalizedFirmSlug}/login` : null;
+  const firmLoginUrl = normalizedFirmSlug ? `${frontendUrl}/${normalizedFirmSlug}/login` : null;
   
   const subject = 'Reminder: Set up your Docketra account';
   const htmlContent = `
@@ -835,7 +835,7 @@ const sendAdminPasswordResetEmail = async ({
     };
   }
   const resetLink = `${frontendUrl}/f/${normalizedFirmSlug}/set-password?token=${token}`;
-  const firmLoginUrl = `${frontendUrl}/f/${normalizedFirmSlug}/login`;
+  const firmLoginUrl = `${frontendUrl}/${normalizedFirmSlug}/login`;
 
   const subject = 'Reset your Docketra Admin Account Password';
   const htmlContent = `

@@ -17,6 +17,7 @@ const { createFirmHierarchy, FirmBootstrapError } = require('../services/firmBoo
 const { isFirmCreationDisabled } = require('../services/featureFlags.service');
 const xIDGenerator = require('../services/xIDGenerator');
 const { safeLogForensicAudit, getRequestIp, getRequestUserAgent, PLATFORM_TENANT } = require('../services/forensicAudit.service');
+const { createFirmWithAdmin } = require('../modules/onboarding/onboarding.service');
 
 // Constants
 const FIRM_ID_PATTERN = /^FIRM\d{3,}$/i;
@@ -122,126 +123,16 @@ const logSuperadminAction = async ({ actionType, description, performedBy, perfo
  * - Firm Creation FAILED to SuperAdmin (on error)
  */
 const createFirm = async (req, res) => {
-  const requestId = req.requestId || crypto.randomUUID();
-
-  if (isFirmCreationDisabled()) {
-    const err = new Error('Firm creation is temporarily disabled');
-    err.statusCode = 503;
-    err.code = 'FIRM_CREATION_DISABLED';
-    throw err;
-  }
-
-  // Create a plain request context (no Express API leakage)
-  // This context is safe to pass to services and background jobs
-  const requestContext = {
-    requestId,
-    actorXID: req.user?.xID,
-    actorEmail: req.user?.email,
-    actorId: req.user?._id,
-    ip: req.ip,
-    // Side-effect queue properties (transferred from req)
-    _pendingSideEffects: req._pendingSideEffects || [],
-    transactionActive: req.transactionActive || false,
-    transactionCommitted: req.transactionCommitted || false,
-  };
-
-  let result;
-  try {
-    result = await createFirmHierarchy({
-      payload: req.body,
-      performedBy: req.user,
-      requestId,
-      context: requestContext,
-      session: req.transactionSession.session,
-    });
-  } catch (error) {
-    if (error instanceof FirmBootstrapError && error.statusCode === 200 && error.meta?.idempotent) {
-      // Idempotent: firm already exists, detected via read-only check before any writes.
-      // Safe to respond directly — no writes were made, no session abort occurred.
-      const firm = error.meta.firm;
-      res.status(200).json({
-        success: true,
-        message: 'Firm already exists',
-        data: {
-          firm: {
-            _id: firm._id,
-            firmId: firm.firmId,
-            firmSlug: firm.firmSlug,
-            name: firm.name,
-            status: firm.status,
-            bootstrapStatus: firm.bootstrapStatus,
-            defaultClientId: firm.defaultClientId,
-            createdAt: firm.createdAt,
-          },
-        },
-        idempotent: true,
-        requestId,
-      });
-      return;
-    }
-    // All other errors: rethrow so wrapWriteHandler aborts the transaction
-    // and passes the error to the Express error handler via next(error).
-    throw error;
-  }
-
-  // Transfer side effects back to req for proper lifecycle management
-  req._pendingSideEffects = requestContext._pendingSideEffects;
-
-  try {
-    await logSuperadminAction({
-      actionType: 'FirmCreated',
-      description: `Firm created: ${result.firm.name} (${result.firm.firmId}, ${result.firm.firmSlug})`,
-      performedBy: req.user.email,
-      performedById: req.user._id,
-      targetEntityType: 'Firm',
-      targetEntityId: result.firm._id.toString(),
-      metadata: {
-        firmId: result.firm.firmId,
-        firmSlug: result.firm.firmSlug,
-        defaultClientId: result.defaultClient._id,
-        adminXID: result.adminUser.xID,
-      },
-      req,
-    });
-  } catch (auditErr) {
-    console.error('[ADMIN_AUDIT] Persistence failure', auditErr);
-  }
-
-  // Return data — wrapWriteHandler sends the 201 response after the transaction commits.
-  // Note: This endpoint must NEVER return 401 after successful authentication.
-  // 401 is reserved for authentication failures only (missing/invalid token).
-  // Business logic errors use 400 (validation), 403 (authorization), 422 (semantic), or 500 (server error).
+  const result = await createFirmWithAdmin(req.body);
   return {
     success: true,
-    message: 'Firm created successfully with default client and admin. Admin credentials sent by email.',
+    message: 'Firm onboarding started.',
     data: {
-      firm: {
-        _id: result.firm._id,
-        firmId: result.firm.firmId,
-        firmSlug: result.firm.firmSlug,
-        name: result.firm.name,
-        status: result.firm.status,
-        bootstrapStatus: result.firm.bootstrapStatus,
-        defaultClientId: result.firm.defaultClientId,
-        createdAt: result.firm.createdAt,
-      },
-      defaultClient: {
-        _id: result.defaultClient._id,
-        clientId: result.defaultClient.clientId,
-        businessName: result.defaultClient.businessName,
-        isSystemClient: result.defaultClient.isSystemClient,
-      },
-      defaultAdmin: {
-        _id: result.adminUser._id,
-        xID: result.adminUser.xID,
-        name: result.adminUser.name,
-        email: result.adminUser.email,
-        role: result.adminUser.role,
-        status: result.adminUser.status,
-        defaultClientId: result.adminUser.defaultClientId,
-      },
+      firmId: result.firm._id,
+      adminId: result.admin._id,
+      firmStatus: result.firm.status,
+      adminStatus: result.admin.status,
     },
-    requestId,
   };
 };
 

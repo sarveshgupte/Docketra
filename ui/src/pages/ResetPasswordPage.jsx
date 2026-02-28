@@ -53,7 +53,7 @@ export const ResetPasswordPage = () => {
       
       if (response.success) {
         // Navigate to login with success message
-        navigate('/login', {
+        navigate('/superadmin', {
           state: {
             message: 'Password reset successfully. You can now log in with your new password.',
             messageType: 'success'

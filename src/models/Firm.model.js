@@ -81,8 +81,20 @@ const firmSchema = new mongoose.Schema({
    */
   status: {
     type: String,
-    enum: ['ACTIVE', 'SUSPENDED', 'INACTIVE'],
-    default: 'ACTIVE',
+    enum: ['pending_setup', 'active', 'suspended', 'ACTIVE', 'SUSPENDED', 'INACTIVE'],
+    default: 'pending_setup',
+  },
+
+  planId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Plan',
+    default: null,
+    index: true,
+  },
+
+  subscriptionStatus: {
+    type: String,
+    default: null,
   },
 
   /**
