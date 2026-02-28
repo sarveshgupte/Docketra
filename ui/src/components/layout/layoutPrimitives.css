@@ -1,0 +1,118 @@
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.page-header__title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.page-header__description {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+}
+
+.section-card {
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.section-card__header {
+  margin-bottom: 12px;
+}
+
+.section-card__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.section-card__subtitle {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.data-table__wrapper {
+  overflow: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.data-table th {
+  position: sticky;
+  top: 0;
+  text-align: left;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--color-border);
+  padding: 12px 10px;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.03em;
+}
+
+.data-table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid #eef2f7;
+  color: var(--text-body);
+}
+
+.data-table tbody tr {
+  transition: background-color 150ms ease;
+  cursor: pointer;
+}
+
+.data-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.data-table__cell--right {
+  text-align: right;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.status-badge--draft { background: #f3f4f6; color: #4b5563; border-color: #e5e7eb; }
+.status-badge--open { background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; }
+.status-badge--review { background: #fef3c7; color: #b45309; border-color: #fde68a; }
+.status-badge--escalated { background: #ffe4e6; color: #be123c; border-color: #fecdd3; }
+.status-badge--closed { background: #d1fae5; color: #047857; border-color: #a7f3d0; }
+
+.empty-state {
+  text-align: center;
+  padding: 32px 16px;
+}
+
+.empty-state__icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 12px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  display: grid;
+  place-items: center;
+  color: #475569;
+}
+
+.empty-state h3 { margin: 0 0 8px; font-size: 18px; }
+.empty-state p { margin: 0 0 16px; color: var(--text-muted); }
