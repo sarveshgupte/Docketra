@@ -8,11 +8,17 @@ const updateTenantStorageUsage = async (tenantId, bytesDelta) => {
 
   return TenantStorageUsage.findOneAndUpdate(
     { tenantId: String(tenantId) },
-    {
-      $inc: { totalBytes: delta },
-      $set: { lastUpdatedAt: new Date() },
-      $setOnInsert: { tenantId: String(tenantId) },
-    },
+    [
+      {
+        $set: {
+          tenantId: { $ifNull: ['$tenantId', String(tenantId)] },
+          totalBytes: {
+            $max: [0, { $add: [{ $ifNull: ['$totalBytes', 0] }, delta] }],
+          },
+          lastUpdatedAt: new Date(),
+        },
+      },
+    ],
     { upsert: true, new: true }
   );
 };
