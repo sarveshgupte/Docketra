@@ -74,19 +74,26 @@ module.exports = async function tenantResolver(req, res, next) {
     }
 
     // Attach canonical tenant context for downstream controllers
+    const tenantId = firm._id.toString();
     req.firm = {
-      id: firm._id.toString(),
+      id: tenantId,
       slug: firm.firmSlug,
       status: firm.status,
     };
-    req.firmId = firm._id.toString();
+    req.tenant = {
+      id: tenantId,
+      slug: firm.firmSlug,
+    };
+    req.firmId = tenantId;
     req.firmSlug = firm.firmSlug;
     req.firmIdString = firm.firmId; // String format e.g. FIRM001
     req.firmName = firm.name;
     req.context = {
       ...req.context,
-      firmId: firm._id.toString(),
+      firmId: tenantId,
       firmSlug: firm.firmSlug,
+      tenantId,
+      tenantSlug: firm.firmSlug,
     };
 
     return next();

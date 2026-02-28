@@ -62,6 +62,8 @@ async function shouldResolveFirmContext() {
   assert.strictEqual(res.sent, false, 'No error response should be sent');
   assert.strictEqual(req.firmSlug, 'test-firm', 'req.firmSlug should be set');
   assert.ok(req.firmId, 'req.firmId should be set');
+  assert.strictEqual(req.tenant.id, req.firmId, 'req.tenant.id should mirror req.firmId');
+  assert.strictEqual(req.tenant.slug, 'test-firm', 'req.tenant.slug should be set');
   assert.strictEqual(req.firm.status, 'ACTIVE', 'req.firm.status should be ACTIVE');
   console.log('✓ Active firm resolves correctly');
 

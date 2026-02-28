@@ -91,6 +91,12 @@ async function _decryptClientDocs(docs, firmId) {
   return docs;
 }
 
+const assertTenantId = (firmId) => {
+  if (!firmId) {
+    throw new Error('TenantId required');
+  }
+};
+
 // ── Repository ──────────────────────────────────────────────────────────────
 
 const ClientRepository = {
@@ -102,7 +108,8 @@ const ClientRepository = {
    * @returns {Promise<Object|null>} Client document or null
    */
   async findByClientId(firmId, clientId, role) {
-    if (!firmId || !clientId) {
+    assertTenantId(firmId);
+    if (!clientId) {
       return null;
     }
     _guardSuperadmin(role);
@@ -118,7 +125,8 @@ const ClientRepository = {
    * @returns {Promise<Object|null>} Client document or null
    */
   async findById(firmId, _id, role) {
-    if (!firmId || !_id) {
+    assertTenantId(firmId);
+    if (!_id) {
       return null;
     }
     _guardSuperadmin(role);
@@ -134,9 +142,7 @@ const ClientRepository = {
    * @returns {Promise<Array>} Array of client documents
    */
   async find(firmId, query = {}, role) {
-    if (!firmId) {
-      return [];
-    }
+    assertTenantId(firmId);
     _guardSuperadmin(role);
     const docs = await Client.find({ firmId, ...query });
     return _decryptClientDocs(docs, firmId);
@@ -150,9 +156,7 @@ const ClientRepository = {
    * @returns {Promise<Object|null>} Client document or null
    */
   async findOne(firmId, query = {}, role) {
-    if (!firmId) {
-      return null;
-    }
+    assertTenantId(firmId);
     _guardSuperadmin(role);
     const doc = await Client.findOne({ firmId, ...query });
     return _decryptClientDoc(doc, firmId);
@@ -166,7 +170,8 @@ const ClientRepository = {
    * @returns {Promise<Object|null>} Updated client document or null
    */
   updateByClientId(firmId, clientId, update) {
-    if (!firmId || !clientId) {
+    assertTenantId(firmId);
+    if (!clientId) {
       return null;
     }
     return Client.updateOne({ firmId, clientId }, update);
@@ -180,7 +185,8 @@ const ClientRepository = {
    * @returns {Promise<Object|null>} Updated client document or null
    */
   updateById(firmId, _id, update) {
-    if (!firmId || !_id) {
+    assertTenantId(firmId);
+    if (!_id) {
       return null;
     }
     return Client.updateOne({ firmId, _id }, update);
@@ -193,9 +199,7 @@ const ClientRepository = {
    * @returns {Promise<number>} Count of clients
    */
   count(firmId, query = {}) {
-    if (!firmId) {
-      return Promise.resolve(0);
-    }
+    assertTenantId(firmId);
     return Client.countDocuments({ firmId, ...query });
   },
 

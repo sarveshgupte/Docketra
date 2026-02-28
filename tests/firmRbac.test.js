@@ -9,6 +9,7 @@ const Firm = require('../src/models/Firm.model');
 const User = require('../src/models/User.model');
 const { attachFirmContext } = require('../src/middleware/firmContext.middleware');
 const { authorizeFirmPermission } = require('../src/middleware/permission.middleware');
+const requireTenant = require('../src/middleware/requireTenant');
 
 const OBJECT_ID_A = '507f1f77bcf86cd799439011';
 const OBJECT_ID_B = '507f1f77bcf86cd799439012';
@@ -135,12 +136,22 @@ async function shouldNotAllowAdminToEscalateToSuperadmin() {
   User.findOne = originalFindOne;
 }
 
+async function shouldRejectMissingTenantContext() {
+  const req = { user: { role: 'Admin' } };
+  const { res, nextCalled } = await runMiddleware(requireTenant, req);
+  assert.strictEqual(res.statusCode, 400, 'Missing tenant context should return 400');
+  assert.strictEqual(res.body.error, 'Tenant context missing. Request rejected.');
+  assert.strictEqual(nextCalled, false, 'Middleware should block request without tenant');
+  console.log('✓ Missing tenant context is rejected');
+}
+
 async function run() {
   await shouldRejectJwtFirmMismatch();
   await shouldBlockDisabledFirm();
   await shouldBlockSuperadminFromFirmRoutes();
   await shouldDenyCrossFirmMembership();
   await shouldNotAllowAdminToEscalateToSuperadmin();
+  await shouldRejectMissingTenantContext();
   console.log('\nFirm-scoped RBAC middleware tests completed.');
 }
 

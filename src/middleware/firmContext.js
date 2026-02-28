@@ -102,17 +102,24 @@ const firmContext = async (req, res, next) => {
       });
     }
 
+    const tenantId = firm._id.toString();
     req.firm = {
-      id: firm._id.toString(),
+      id: tenantId,
       slug: firm.firmSlug,
       status: firm.status,
     };
-    req.firmId = firm._id.toString();
+    req.tenant = {
+      id: tenantId,
+      slug: firm.firmSlug,
+    };
+    req.firmId = tenantId;
     req.firmSlug = firm.firmSlug;
     req.context = {
       ...req.context,
-      firmId: firm._id.toString(),
+      firmId: tenantId,
       firmSlug: firm.firmSlug,
+      tenantId,
+      tenantSlug: firm.firmSlug,
     };
 
     console.log(`[FIRM_CONTEXT][${requestId}] Firm context resolved`, { 
