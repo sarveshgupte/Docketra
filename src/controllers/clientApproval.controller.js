@@ -3,7 +3,8 @@ const Comment = require('../models/Comment.model');
 const Client = require('../models/Client.model');
 const CaseHistory = require('../models/CaseHistory.model');
 const { CaseRepository, ClientRepository } = require('../repositories');
-const { CASE_CATEGORIES, CASE_STATUS, CLIENT_STATUS } = require('../config/constants');
+const { CASE_CATEGORIES, CLIENT_STATUS } = require('../config/constants');
+const CaseStatus = require('../domain/case/caseStatus');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 
 /**
@@ -69,7 +70,7 @@ const approveNewClient = async (req, res) => {
     }
     
     // Verify case is in SUBMITTED or UNDER_REVIEW status
-    const validStatuses = [CASE_STATUS.SUBMITTED, CASE_STATUS.UNDER_REVIEW, CASE_STATUS.REVIEWED];
+    const validStatuses = [CaseStatus.SUBMITTED, CaseStatus.UNDER_REVIEW, CaseStatus.REVIEWED];
     if (!validStatuses.includes(caseData.status)) {
       return res.status(400).json({
         success: false,
@@ -137,7 +138,7 @@ const approveNewClient = async (req, res) => {
     await newClient.save();
     
     // Update case with approval metadata
-    caseData.status = CASE_STATUS.APPROVED;
+    caseData.status = CaseStatus.APPROVED;
     caseData.approvedAt = new Date();
     caseData.approvedBy = approverEmail.toLowerCase();
     caseData.decisionComments = comment;
@@ -233,7 +234,7 @@ const approveClientEdit = async (req, res) => {
     }
     
     // Verify case is in SUBMITTED or UNDER_REVIEW status
-    const validStatuses = [CASE_STATUS.SUBMITTED, CASE_STATUS.UNDER_REVIEW, CASE_STATUS.REVIEWED];
+    const validStatuses = [CaseStatus.SUBMITTED, CaseStatus.UNDER_REVIEW, CaseStatus.REVIEWED];
     if (!validStatuses.includes(caseData.status)) {
       return res.status(400).json({
         success: false,
@@ -329,7 +330,7 @@ const approveClientEdit = async (req, res) => {
     await client.save();
     
     // Update case with approval metadata
-    caseData.status = CASE_STATUS.APPROVED;
+    caseData.status = CaseStatus.APPROVED;
     caseData.approvedAt = new Date();
     caseData.approvedBy = approverEmail.toLowerCase();
     caseData.decisionComments = comment;
@@ -438,7 +439,7 @@ const rejectClientCase = async (req, res) => {
     }
     
     // Verify case is in SUBMITTED or UNDER_REVIEW status
-    const validStatuses = [CASE_STATUS.SUBMITTED, CASE_STATUS.UNDER_REVIEW, CASE_STATUS.REVIEWED];
+    const validStatuses = [CaseStatus.SUBMITTED, CaseStatus.UNDER_REVIEW, CaseStatus.REVIEWED];
     if (!validStatuses.includes(caseData.status)) {
       return res.status(400).json({
         success: false,
@@ -447,7 +448,7 @@ const rejectClientCase = async (req, res) => {
     }
     
     // Update case with rejection metadata
-    caseData.status = CASE_STATUS.REJECTED;
+    caseData.status = CaseStatus.REJECTED;
     caseData.approvedAt = new Date();
     caseData.approvedBy = approverEmail.toLowerCase();
     caseData.decisionComments = comment;

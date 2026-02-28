@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { randomUUID } = require('crypto');
+const CaseStatus = require('../domain/case/caseStatus');
 const softDeletePlugin = require('../utils/softDelete.plugin');
 const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -247,14 +248,7 @@ const caseSchema = new mongoose.Schema({
   status: {
     type: String,
     enum: {
-      values: [
-        // Canonical lifecycle states (NEW - use these)
-        'UNASSIGNED', 'OPEN', 'PENDED', 'RESOLVED', 'FILED',
-        // Additional workflow states
-        'DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'CLOSED',
-        // Legacy states (for backward compatibility - do NOT use for new code)
-        'Open', 'Reviewed', 'Pending', 'Filed', 'Archived'
-      ],
+      values: Object.values(CaseStatus),
       message: '{VALUE} is not a valid status',
     },
     default: 'UNASSIGNED',

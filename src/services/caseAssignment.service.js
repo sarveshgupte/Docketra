@@ -2,7 +2,8 @@ const Case = require('../models/Case.model');
 const CaseHistory = require('../models/CaseHistory.model');
 const CaseAudit = require('../models/CaseAudit.model');
 const { CaseRepository } = require('../repositories');
-const { CASE_STATUS, CASE_ACTION_TYPES } = require('../config/constants');
+const { CASE_ACTION_TYPES } = require('../config/constants');
+const CaseStatus = require('../domain/case/caseStatus');
 const { logCaseHistory } = require('./auditLog.service');
 
 /**
@@ -52,13 +53,13 @@ const assignCaseToUser = async (firmId, caseId, user) => {
     {
       firmId,
       caseId,
-      status: CASE_STATUS.UNASSIGNED, // Only assign if still unassigned
+      status: CaseStatus.UNASSIGNED, // Only assign if still unassigned
     },
     {
       $set: {
         assignedToXID: user.xID.toUpperCase(), // CANONICAL: Store xID in assignedToXID
         queueType: 'PERSONAL', // Move from GLOBAL to PERSONAL queue
-        status: CASE_STATUS.OPEN, // Change status to OPEN
+        status: CaseStatus.OPEN, // Change status to OPEN
         assignedAt: new Date(),
         lastActionByXID: user.xID.toUpperCase(), // Track last action performer
         lastActionAt: new Date(), // Track last action timestamp
@@ -77,7 +78,7 @@ const assignCaseToUser = async (firmId, caseId, user) => {
       throw new Error('Case not found');
     }
     
-    if (existingCase.status !== CASE_STATUS.UNASSIGNED) {
+    if (existingCase.status !== CaseStatus.UNASSIGNED) {
       return {
         success: false,
         message: 'Case is no longer available (already assigned)',
@@ -95,7 +96,7 @@ const assignCaseToUser = async (firmId, caseId, user) => {
     performedByXID: user.xID,
     metadata: {
       queueType: 'PERSONAL',
-      status: CASE_STATUS.OPEN,
+      status: CaseStatus.OPEN,
       assignedTo: user.xID,
     },
   });
@@ -112,7 +113,7 @@ const assignCaseToUser = async (firmId, caseId, user) => {
     actorRole: user.role === 'Admin' ? 'ADMIN' : 'USER',
     metadata: {
       queueType: 'PERSONAL',
-      status: CASE_STATUS.OPEN,
+      status: CaseStatus.OPEN,
       assignedTo: user.xID,
     },
   });
@@ -147,13 +148,13 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user) => {
     {
       firmId,
       caseId: { $in: caseIds },
-      status: CASE_STATUS.UNASSIGNED,
+      status: CaseStatus.UNASSIGNED,
     },
     {
       $set: {
         assignedToXID: user.xID.toUpperCase(), // CANONICAL: Store xID in assignedToXID
         queueType: 'PERSONAL', // Move from GLOBAL to PERSONAL queue
-        status: CASE_STATUS.OPEN, // Change status to OPEN
+        status: CaseStatus.OPEN, // Change status to OPEN
         assignedAt: new Date(),
         lastActionByXID: user.xID.toUpperCase(), // Track last action performer
         lastActionAt: new Date(), // Track last action timestamp
@@ -177,7 +178,7 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user) => {
     performedByXID: user.xID,
     metadata: {
       queueType: 'PERSONAL',
-      status: CASE_STATUS.OPEN,
+      status: CaseStatus.OPEN,
       bulkAssignment: true,
     },
   }));
@@ -232,12 +233,12 @@ const reassignCase = async (firmId, caseId, newUserXID, performedBy) => {
   }
   
   // Cannot reassign unassigned cases
-  if (caseData.status === CASE_STATUS.UNASSIGNED) {
+  if (caseData.status === CaseStatus.UNASSIGNED) {
     throw new Error('Cannot reassign unassigned cases. Use assignment instead.');
   }
   
   // Cannot reassign filed cases
-  if (caseData.status === CASE_STATUS.FILED) {
+  if (caseData.status === CaseStatus.FILED) {
     throw new Error('Cannot reassign filed cases');
   }
   
