@@ -297,14 +297,33 @@ const caseSchema = new mongoose.Schema({
     type: Date,
   },
   
-  /**
-   * SLA Due Date - absolute datetime for case completion
-   * MANDATORY field - used for global worklist prioritization and SLA tracking
-   * Stored as absolute date/time value (not duration)
-   */
-  slaDueDate: {
+  slaDueAt: {
     type: Date,
-    required: [true, 'SLA Due Date is required'],
+    required: [true, 'SLA Due At is required'],
+  },
+  tatTotalMinutes: {
+    type: Number,
+    min: 0,
+    default: 0,
+  },
+  tatPaused: {
+    type: Boolean,
+    default: false,
+  },
+  tatLastStartedAt: {
+    type: Date,
+  },
+  tatAccumulatedMinutes: {
+    type: Number,
+    min: 0,
+    default: 0,
+  },
+  slaConfigSnapshot: {
+    tatDurationMinutes: { type: Number, min: 0 },
+    businessStartTime: { type: String, trim: true },
+    businessEndTime: { type: String, trim: true },
+    workingDays: { type: [Number] },
+    timezone: { type: String, trim: true },
   },
   
   /**
@@ -658,6 +677,9 @@ const caseSchema = new mongoose.Schema({
   // Automatic timestamp management for audit trail
   timestamps: true,
 });
+// Use Mongoose __v optimistic locking for document-save flows; status transitions
+// also include explicit expected status/tat guards at repository update filter level.
+caseSchema.set('optimisticConcurrency', true);
 
 /**
  * Custom Validator: Pending/PENDED status requires pendingUntil date
@@ -836,6 +858,7 @@ caseSchema.index({ firmId: 1, caseId: 1, status: 1, assignedToXID: 1, assignedTo
 caseSchema.index({ queueType: 1, status: 1 }); // Queue-based worklist queries
 caseSchema.index({ pendedByXID: 1, status: 1 }); // Pending cases dashboard queries
 caseSchema.index({ pendingUntil: 1 }); // Auto-reopen scheduler queries
+caseSchema.index({ firmId: 1, slaDueAt: 1 }); // Firm-scoped SLA due lookups
 // REMOVED: { firmId: 1 } - redundant with compound indexes above (firmId, caseInternalId), (firmId, caseNumber), etc.
 caseSchema.index({ firmId: 1, status: 1 }); // Firm-scoped status queries
 caseSchema.index({ firmId: 1, assignedToXID: 1 }); // Firm-scoped assignment queries
