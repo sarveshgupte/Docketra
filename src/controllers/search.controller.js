@@ -1,7 +1,7 @@
 const Case = require('../models/Case.model');
 const Comment = require('../models/Comment.model');
 const Attachment = require('../models/Attachment.model');
-const { CASE_STATUS } = require('../config/constants');
+const CaseStatus = require('../domain/case/caseStatus');
 const { logCaseListViewed } = require('../services/auditLog.service');
 const caseActionService = require('../services/caseAction.service');
 
@@ -10,7 +10,7 @@ const caseActionService = require('../services/caseAction.service');
  * PART A - READ-ONLY operations for finding cases and viewing worklists
  * 
  * PR: Hard Cutover to xID - Removed User model import (no longer needed),
- * added CASE_STATUS import for canonical status constants
+ * added CaseStatus import for canonical status constants
  * PR: Fix Pended Case Visibility - Added caseActionService import for auto-reopen
  */
 
@@ -361,7 +361,7 @@ const employeeWorklist = async (req, res) => {
     const query = {
       firmId,
       assignedToXID: user.xID, // CANONICAL: Query by xID in assignedToXID field
-      status: CASE_STATUS.OPEN, // Only OPEN cases, not PENDED, not legacy 'Open'
+      status: CaseStatus.OPEN, // Only OPEN cases, not PENDED, not legacy 'Open'
     };
     
     const cases = await Case.find(query)
@@ -372,7 +372,7 @@ const employeeWorklist = async (req, res) => {
     // Log case list view for audit
     await logCaseListViewed({
       viewerXID: user.xID,
-      filters: { status: CASE_STATUS.OPEN },
+      filters: { status: CaseStatus.OPEN },
       listType: 'MY_WORKLIST',
       resultCount: cases.length,
       req,
