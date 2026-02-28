@@ -145,6 +145,15 @@ async function shouldRejectMissingTenantContext() {
   console.log('✓ Missing tenant context is rejected');
 }
 
+async function shouldRejectLegacyFirmIdFallback() {
+  const req = { firmId: 'legacy-firm-id-only' };
+  const { res, nextCalled } = await runMiddleware(requireTenant, req);
+  assert.strictEqual(res.statusCode, 400, 'Legacy firmId-only context should be rejected');
+  assert.strictEqual(res.body.error, 'Tenant context missing. Request rejected.');
+  assert.strictEqual(nextCalled, false, 'Middleware should not fall back to req.firmId');
+  console.log('✓ Legacy req.firmId fallback is rejected');
+}
+
 async function run() {
   await shouldRejectJwtFirmMismatch();
   await shouldBlockDisabledFirm();
@@ -152,6 +161,7 @@ async function run() {
   await shouldDenyCrossFirmMembership();
   await shouldNotAllowAdminToEscalateToSuperadmin();
   await shouldRejectMissingTenantContext();
+  await shouldRejectLegacyFirmIdFallback();
   console.log('\nFirm-scoped RBAC middleware tests completed.');
 }
 
