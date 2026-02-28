@@ -1678,7 +1678,7 @@ const pullCases = async (req, res) => {
       
       if (!result.success) {
         return res.status(409).json({
-          error: result.error || 'Case already assigned',
+          error: result.error,
         });
       }
       

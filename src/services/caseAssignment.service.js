@@ -33,6 +33,7 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId }) => {
     {
       caseId,
       firmId: tenantId,
+      // Dual check keeps atomic pull safe across legacy assignedTo and canonical assignedToXID migration states.
       assignedToXID: null,
       assignedTo: null,
       status: CaseStatus.UNASSIGNED,
@@ -70,7 +71,9 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId }) => {
         tenantId,
         timestamp: assignedAt,
       },
-    }).catch(() => {});
+    }).catch((error) => {
+      console.error('[pullCaseFromWorkbasket] Non-blocking audit write failed:', error?.message || error);
+    });
   });
 
   return {
