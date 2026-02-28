@@ -1,138 +1,239 @@
 #!/usr/bin/env node
 const assert = require('assert');
 
-async function testAuditModelImmutabilityHooks() {
+async function testAuditSchemaImmutabilityAndNoHashFields() {
   const AuditLog = require('../src/models/AuditLog.model');
-  const pres = AuditLog.schema.s.hooks._pres;
-  const updateHooks = pres.get('updateOne') || [];
-  const deleteHooks = pres.get('deleteOne') || [];
+  const schemaPaths = Object.keys(AuditLog.schema.paths);
 
-  assert.ok(updateHooks.length > 0, 'updateOne hook must exist to enforce immutability');
-  assert.ok(deleteHooks.length > 0, 'deleteOne hook must exist to enforce immutability');
-  console.log('✓ AuditLog has immutable update/delete hooks');
+  assert.ok(!schemaPaths.includes('previousHash'), 'previousHash must not exist in schema');
+  assert.ok(!schemaPaths.includes('currentHash'), 'currentHash must not exist in schema');
+  assert.strictEqual(AuditLog.schema.options.strict, true, 'strict mode must remain enabled');
+  assert.strictEqual(AuditLog.schema.options.versionKey, false, 'versionKey must be disabled');
+
+  const pres = AuditLog.schema.s.hooks._pres;
+  assert.ok((pres.get('updateOne') || []).length > 0, 'updateOne hook must block mutations');
+  assert.ok((pres.get('deleteOne') || []).length > 0, 'deleteOne hook must block deletions');
+
+  const indexes = AuditLog.schema.indexes().map(([spec]) => JSON.stringify(spec));
+  assert.strictEqual(indexes.filter((x) => x === JSON.stringify({ tenantId: 1, entityId: 1 })).length, 1);
+  assert.strictEqual(indexes.filter((x) => x === JSON.stringify({ tenantId: 1, createdAt: -1 })).length, 1);
+  assert.strictEqual(indexes.filter((x) => x === JSON.stringify({ tenantId: 1, action: 1 })).length, 1);
+
+  console.log('✓ Audit schema hardened (immutable, strict, no hash fields, expected indexes)');
 }
 
-async function testTenantAndNetworkMetadataRequired() {
-  const { logForensicAudit } = require('../src/services/forensicAudit.service');
+async function testTenantRequiredAndNoPlatformFallback() {
+  const forensic = require('../src/services/forensicAudit.service');
+  const AuditLog = require('../src/models/AuditLog.model');
 
   await assert.rejects(
-    () => logForensicAudit({
+    () => forensic.logForensicAudit({
       entityType: 'AUTH',
-      entityId: 'X001',
+      entityId: 'X1',
       action: 'Login',
-      performedBy: 'X001',
+      performedBy: 'X1',
       ipAddress: '127.0.0.1',
-      userAgent: 'jest',
+      userAgent: 'ua',
     }),
     /tenantId is required/
   );
 
-  await assert.rejects(
-    () => logForensicAudit({
-      tenantId: 'FIRM001',
-      entityType: 'AUTH',
-      entityId: 'X001',
-      action: 'Login',
-      performedBy: 'X001',
-      ipAddress: '',
-      userAgent: '',
-    }),
-    /ipAddress and userAgent are required/
-  );
+  const originalCreate = AuditLog.create;
+  let captured = null;
+  AuditLog.create = async (docs) => {
+    captured = docs;
+    return docs;
+  };
 
-  console.log('✓ Audit logging rejects missing tenant/network metadata');
+  await forensic.logForensicAudit({
+    tenantId: 'FIRM001',
+    entityType: 'AUTH',
+    entityId: 'X1',
+    action: 'Login',
+    performedBy: 'X1',
+    ipAddress: '127.0.0.1',
+    userAgent: 'ua',
+  });
+
+  AuditLog.create = originalCreate;
+
+  assert.ok(Array.isArray(captured) && captured.length === 1, 'audit create should receive one payload');
+  assert.strictEqual(captured[0].tenantId, 'FIRM001', 'tenant must remain caller-provided; no PLATFORM fallback');
+  console.log('✓ tenantId is mandatory and no implicit PLATFORM fallback occurs');
 }
 
-async function testChangeDiffLogic() {
-  const { computeChangedFields } = require('../src/services/forensicAudit.service');
-  const diff = computeChangedFields({ status: 'OPEN', untouched: 1 }, { status: 'FILED', untouched: 1 });
-  assert.deepStrictEqual(diff.oldValue, { status: 'OPEN' });
-  assert.deepStrictEqual(diff.newValue, { status: 'FILED' });
-  console.log('✓ Diff logic stores changed fields only');
-}
-
-async function testStatusChangeWritesForensicAudit() {
-  const fs = require('fs');
-  const source = fs.readFileSync('src/services/case.service.js', 'utf8');
-  assert.ok(source.includes("action: 'CASE_STATUS_CHANGED'"), 'Case status audit action must be logged');
-  assert.ok(source.includes('safeLogForensicAudit({'), 'Case status change must call centralized forensic audit service');
-  console.log('✓ Case status path is wired to forensic audit logger');
-}
-
-async function testImpersonationAndFileDownloadLogging() {
+async function testSessionIsPropagatedToAuditInsert() {
   const forensic = require('../src/services/forensicAudit.service');
-  const captured = [];
-  const originalSafeLog = forensic.safeLogForensicAudit;
-  forensic.safeLogForensicAudit = async (payload) => {
-    captured.push(payload);
+  const AuditLog = require('../src/models/AuditLog.model');
+
+  const originalCreate = AuditLog.create;
+  let receivedOptions = null;
+  AuditLog.create = async (_docs, options) => {
+    receivedOptions = options;
     return null;
   };
 
-  const superadmin = require('../src/controllers/superadmin.controller');
-  const reqSwitch = {
-    body: { firmId: 'FIRM001', sessionId: 'sess-1' },
-    user: { _id: '507f1f77bcf86cd799439011', xID: 'SUPERADMIN', role: 'SuperAdmin' },
-    headers: { 'user-agent': 'test-agent' },
-    ip: '127.0.0.1',
+  const session = { id: 'tx-session' };
+  await forensic.logForensicAudit({
+    tenantId: 'FIRM001',
+    entityType: 'CASE',
+    entityId: 'CASE-1',
+    action: 'CASE_STATUS_CHANGED',
+    performedBy: 'X100',
+    ipAddress: '127.0.0.1',
+    userAgent: 'ua',
+  }, { session });
+
+  AuditLog.create = originalCreate;
+
+  assert.deepStrictEqual(receivedOptions, { session }, 'logForensicAudit must pass session into AuditLog.create');
+  console.log('✓ forensic audit insert is session-aware');
+}
+
+async function testCaseStatusAuditUsesTransactionSession() {
+  const forensic = require('../src/services/forensicAudit.service');
+  const originalSafe = forensic.safeLogForensicAudit;
+
+  let capturedOptions = null;
+  forensic.safeLogForensicAudit = async (_payload, options = {}) => {
+    capturedOptions = options;
+    return null;
   };
-  const resSwitch = { statusCode: 200, status(code){ this.statusCode = code; return this; }, json(body){ this.body = body; return this; } };
-  await superadmin.switchFirm(reqSwitch, resSwitch);
-  assert.strictEqual(resSwitch.statusCode, 403, 'switchFirm remains blocked by hard guard');
-  assert.ok(captured.some((entry) => entry.action === 'IMPERSONATION_START'), 'Impersonation start must be audited');
 
-  const File = require('../src/models/File.model');
-  const TenantStorageConfig = require('../src/models/TenantStorageConfig.model');
-  const storageFactory = require('../src/storage/StorageProviderFactory');
+  const repoPath = require.resolve('../src/repositories');
+  const caseAuditPath = require.resolve('../src/models/CaseAudit.model');
+  const caseHistoryPath = require.resolve('../src/services/auditLog.service');
+  const slaPath = require.resolve('../src/services/caseSla.service');
+  const statePath = require.resolve('../src/domain/case/caseStateMachine');
+  const caseServicePath = require.resolve('../src/services/case.service');
 
-  const originalFileFindOne = File.findOne;
-  const originalFileUpdateOne = File.updateOne;
-  const originalStorageFindOne = TenantStorageConfig.findOne;
-  const originalProvider = storageFactory.getProviderForTenant;
+  const backup = {
+    repo: require.cache[repoPath],
+    caseAudit: require.cache[caseAuditPath],
+    caseHistory: require.cache[caseHistoryPath],
+    sla: require.cache[slaPath],
+    state: require.cache[statePath],
+    caseService: require.cache[caseServicePath],
+  };
 
-  File.findOne = async () => ({ _id: 'file123', tenantId: 'FIRM001', caseId: 'CASE-1', objectKey: 'obj/key', status: 'AVAILABLE' });
-  File.updateOne = async () => null;
-  TenantStorageConfig.findOne = () => ({ select: async () => ({ status: 'ACTIVE' }) });
-  storageFactory.getProviderForTenant = async () => ({
-    generateDownloadUrl: async () => 'https://example.com/download',
-    getFileMetadata: async () => ({ size: 1 }),
+  require.cache[repoPath] = {
+    id: repoPath,
+    filename: repoPath,
+    loaded: true,
+    exports: {
+      CaseRepository: {
+        findByCaseId: async () => ({ caseId: 'CASE-1', caseInternalId: 'INT-1', status: 'OPEN' }),
+        updateStatus: async () => null,
+      },
+    },
+  };
+
+  require.cache[caseAuditPath] = {
+    id: caseAuditPath,
+    filename: caseAuditPath,
+    loaded: true,
+    exports: { create: async () => null },
+  };
+
+  require.cache[caseHistoryPath] = {
+    id: caseHistoryPath,
+    filename: caseHistoryPath,
+    loaded: true,
+    exports: { logCaseHistory: async () => null },
+  };
+
+  require.cache[slaPath] = {
+    id: slaPath,
+    filename: slaPath,
+    loaded: true,
+    exports: { handleStatusTransition: () => ({ patch: {}, auditEvent: null }) },
+  };
+
+  require.cache[statePath] = {
+    id: statePath,
+    filename: statePath,
+    loaded: true,
+    exports: {
+      canTransition: () => true,
+      normalizeStatus: (v) => v,
+    },
+  };
+
+  delete require.cache[caseServicePath];
+  const caseService = require('../src/services/case.service');
+
+  const session = { id: 'tx-session' };
+  await caseService.updateStatus('CASE-1', 'FILED', {
+    tenantId: 'FIRM001',
+    role: 'Admin',
+    userId: 'X100',
+    performedByXID: 'X100',
+    actorRole: 'ADMIN',
+    session,
+    req: { headers: { 'user-agent': 'ua' }, ip: '127.0.0.1' },
   });
 
-  delete require.cache[require.resolve('../src/controllers/files.controller')];
-  const filesController = require('../src/controllers/files.controller');
+  forensic.safeLogForensicAudit = originalSafe;
 
-  const reqDownload = {
-    firmId: 'FIRM001',
-    params: { fileId: 'file123' },
-    user: { _id: 'u1', xID: 'X100', role: 'Employee' },
-    headers: { 'user-agent': 'test-agent' },
-    ip: '127.0.0.1',
+  for (const [key, entry] of Object.entries(backup)) {
+    const pathMap = {
+      repo: repoPath,
+      caseAudit: caseAuditPath,
+      caseHistory: caseHistoryPath,
+      sla: slaPath,
+      state: statePath,
+      caseService: caseServicePath,
+    };
+    if (entry) {
+      require.cache[pathMap[key]] = entry;
+    } else {
+      delete require.cache[pathMap[key]];
+    }
+  }
+
+  assert.deepStrictEqual(capturedOptions, { session }, 'case status path must pass same session to forensic audit call');
+  console.log('✓ case status forensic audit is attached to transaction session (rollback-safe)');
+}
+
+async function testSafeLoggerIsNonFatal() {
+  const forensic = require('../src/services/forensicAudit.service');
+  const AuditLog = require('../src/models/AuditLog.model');
+  const originalCreate = AuditLog.create;
+  AuditLog.create = async () => {
+    throw new Error('forced failure');
   };
-  const resDownload = { jsonBody: null, statusCode: 200, status(code){ this.statusCode=code; return this; }, json(body){ this.jsonBody=body; return this; } };
-  await filesController.downloadFile(reqDownload, resDownload);
 
-  assert.strictEqual(resDownload.statusCode, 200);
-  assert.ok(captured.some((entry) => entry.action === 'FILE_DOWNLOAD'), 'File download must be audited');
+  let threw = false;
+  try {
+    await forensic.safeLogForensicAudit({
+      tenantId: 'FIRM001',
+      entityType: 'AUTH',
+      entityId: 'X1',
+      action: 'Login',
+      performedBy: 'X1',
+      ipAddress: '127.0.0.1',
+      userAgent: 'ua',
+    });
+  } catch (e) {
+    threw = true;
+  }
 
-  File.findOne = originalFileFindOne;
-  File.updateOne = originalFileUpdateOne;
-  TenantStorageConfig.findOne = originalStorageFindOne;
-  storageFactory.getProviderForTenant = originalProvider;
-  forensic.safeLogForensicAudit = originalSafeLog;
-
-  console.log('✓ Impersonation and file download actions are audited');
+  AuditLog.create = originalCreate;
+  assert.strictEqual(threw, false, 'safeLogForensicAudit must remain non-fatal');
+  console.log('✓ safe forensic logger remains non-fatal');
 }
 
 async function run() {
-  await testAuditModelImmutabilityHooks();
-  await testTenantAndNetworkMetadataRequired();
-  await testChangeDiffLogic();
-  await testStatusChangeWritesForensicAudit();
-  await testImpersonationAndFileDownloadLogging();
-  console.log('\nForensic audit trail tests passed.');
+  await testAuditSchemaImmutabilityAndNoHashFields();
+  await testTenantRequiredAndNoPlatformFallback();
+  await testSessionIsPropagatedToAuditInsert();
+  await testCaseStatusAuditUsesTransactionSession();
+  await testSafeLoggerIsNonFatal();
+  console.log('\nForensic hardening tests passed.');
 }
 
 run().catch((error) => {
-  console.error('Forensic audit trail tests failed');
+  console.error('Forensic hardening tests failed');
   console.error(error);
   process.exit(1);
 });

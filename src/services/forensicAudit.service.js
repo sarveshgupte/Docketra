@@ -1,4 +1,3 @@
-const crypto = require('crypto');
 const AuditLog = require('../models/AuditLog.model');
 const log = require('../utils/log');
 
@@ -37,11 +36,6 @@ const computeChangedFields = (oldValue = {}, newValue = {}) => {
   return { oldValue: oldDiff, newValue: newDiff };
 };
 
-const buildHash = (payload, previousHash = '') => {
-  const normalized = JSON.stringify(payload);
-  return crypto.createHash('sha256').update(`${normalized}|${previousHash || ''}`).digest('hex');
-};
-
 const logForensicAudit = async ({
   tenantId,
   entityType,
@@ -55,8 +49,7 @@ const logForensicAudit = async ({
   ipAddress,
   userAgent,
   metadata = null,
-  hashChain = false,
-}) => {
+}, options = {}) => {
   if (!tenantId) {
     throw new Error('tenantId is required for audit logging');
   }
@@ -70,7 +63,7 @@ const logForensicAudit = async ({
   }
 
   const payload = {
-    tenantId: String(tenantId || PLATFORM_TENANT),
+    tenantId: String(tenantId),
     entityType,
     entityId: String(entityId),
     action,
@@ -84,18 +77,12 @@ const logForensicAudit = async ({
     metadata: sanitize(metadata),
   };
 
-  if (hashChain) {
-    const previousRecord = await AuditLog.findOne({ tenantId: payload.tenantId }).sort({ createdAt: -1 }).select('currentHash').lean();
-    payload.previousHash = previousRecord?.currentHash || null;
-    payload.currentHash = buildHash(payload, payload.previousHash);
-  }
-
-  return AuditLog.create(payload);
+  return AuditLog.create([payload], options?.session ? { session: options.session } : undefined);
 };
 
-const safeLogForensicAudit = async (params) => {
+const safeLogForensicAudit = async (params, options = {}) => {
   try {
-    return await logForensicAudit(params);
+    return await logForensicAudit(params, options);
   } catch (error) {
     log.error('FORENSIC_AUDIT_FAILURE', {
       error: error.message,

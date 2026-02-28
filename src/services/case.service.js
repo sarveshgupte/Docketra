@@ -120,7 +120,7 @@ async function updateStatus(caseId, newStatus, context = {}) {
       source: 'case.service.updateStatus',
       caseInternalId: existingCase.caseInternalId || null,
     },
-  });
+  }, { session });
 
   if (slaTransition.auditEvent) {
     const slaMetadata = {
