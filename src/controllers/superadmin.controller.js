@@ -16,6 +16,7 @@ const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { createFirmHierarchy, FirmBootstrapError } = require('../services/firmBootstrap.service');
 const { isFirmCreationDisabled } = require('../services/featureFlags.service');
 const xIDGenerator = require('../services/xIDGenerator');
+const { safeLogForensicAudit, getRequestIp, getRequestUserAgent, PLATFORM_TENANT } = require('../services/forensicAudit.service');
 
 // Constants
 const FIRM_ID_PATTERN = /^FIRM\d{3,}$/i;
@@ -704,6 +705,23 @@ const getOperationalHealth = async (req, res) => {
  * - FULL_ACCESS: Full access including write operations
  */
 const switchFirm = async (req, res) => {
+  await safeLogForensicAudit({
+    tenantId: req.body?.firmId,
+    entityType: 'IMPERSONATION',
+    entityId: req.body?.sessionId || req.user?._id?.toString() || 'NO_SESSION',
+    action: 'IMPERSONATION_START',
+    performedBy: req.user?.xID || req.user?.email || 'SUPERADMIN',
+    performedByRole: req.user?.role || 'SuperAdmin',
+    impersonatedBy: req.user?.xID || req.user?._id?.toString() || null,
+    ipAddress: getRequestIp(req),
+    userAgent: getRequestUserAgent(req),
+    metadata: {
+      allowed: false,
+      reason: 'SuperAdmin firm impersonation is disabled by hard guard',
+      requestedFirmId: req.body?.firmId || null,
+    },
+  });
+
   // Hard guard: SuperAdmin must never access firm-scoped data via impersonation
   return res.status(403).json({
     success: false,
@@ -721,6 +739,22 @@ const exitFirm = async (req, res) => {
   try {
     const { sessionId } = req.body;
     
+    await safeLogForensicAudit({
+      tenantId: PLATFORM_TENANT,
+      entityType: 'IMPERSONATION',
+      entityId: sessionId || req.user?._id?.toString() || 'NO_SESSION',
+      action: 'IMPERSONATION_END',
+      performedBy: req.user?.xID || req.user?.email || 'SUPERADMIN',
+      performedByRole: req.user?.role || 'SuperAdmin',
+      impersonatedBy: req.user?.xID || req.user?._id?.toString() || null,
+      ipAddress: getRequestIp(req),
+      userAgent: getRequestUserAgent(req),
+      metadata: {
+        fromContext: 'FIRM',
+        toContext: 'GLOBAL',
+      },
+    });
+
     // Log exit action with sessionId for audit trail linkage
     await logSuperadminAction({
       actionType: 'ExitFirm',
