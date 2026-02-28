@@ -31,8 +31,9 @@ const createMockRes = () => {
 async function shouldRequireMfaBeforeIssuingTokens() {
   const originalSuperadminXid = process.env.SUPERADMIN_XID;
   const originalJwtSecret = process.env.JWT_SECRET;
+  const testJwtSecret = 'mfa-test-secret';
   process.env.SUPERADMIN_XID = 'DIFFERENT_SUPERADMIN';
-  process.env.JWT_SECRET = 'mfa-test-secret';
+  process.env.JWT_SECRET = testJwtSecret;
 
   const originalUserFindOne = User.findOne;
   const originalBcryptCompare = bcrypt.compare;
@@ -95,7 +96,7 @@ async function shouldRequireMfaBeforeIssuingTokens() {
   assert.strictEqual(body.mfaRequired, true, 'Login must indicate MFA is required');
   assert(body.preAuthToken, 'Response must include preAuthToken for MFA completion');
   assert.strictEqual(body.xID, undefined, 'Response must not include xID in MFA challenge');
-  const decodedPreAuthToken = jwt.verify(body.preAuthToken, 'mfa-test-secret');
+  const decodedPreAuthToken = jwt.verify(body.preAuthToken, testJwtSecret);
   assert.strictEqual(decodedPreAuthToken.userId, '507f1f77bcf86cd799439011', 'preAuthToken must include userId');
   assert.strictEqual(decodedPreAuthToken.firmId, '507f1f77bcf86cd799439022', 'preAuthToken must include firmId');
   assert.strictEqual(decodedPreAuthToken.role, 'SUPER_ADMIN', 'preAuthToken must include role');
