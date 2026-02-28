@@ -86,6 +86,16 @@ const attachmentSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
+
+  contentHash: {
+    type: String,
+    index: true,
+  },
+
+  isDuplicate: {
+    type: Boolean,
+    default: false,
+  },
   
   /**
    * File size in bytes
@@ -302,8 +312,9 @@ attachmentSchema.index({ fileName: 'text' });
 // REMOVED: { firmId: 1 } - redundant with compound indexes below
 attachmentSchema.index({ firmId: 1, caseId: 1 }); // Firm-scoped case attachments
 attachmentSchema.index({ firmId: 1, clientId: 1 }); // Firm-scoped client attachments
-attachmentSchema.index({ firmId: 1, caseId: 1, checksum: 1 }, { unique: true, sparse: true });
-attachmentSchema.index({ firmId: 1, clientId: 1, checksum: 1 }, { unique: true, sparse: true });
+attachmentSchema.index({ firmId: 1, caseId: 1, checksum: 1 }, { sparse: true });
+attachmentSchema.index({ firmId: 1, clientId: 1, checksum: 1 }, { sparse: true });
+attachmentSchema.index({ firmId: 1, contentHash: 1 });
 
 attachmentSchema.plugin(softDeletePlugin);
 
