@@ -819,8 +819,8 @@ caseSchema.index({ firmId: 1, caseName: 1 }, { unique: true });
 caseSchema.index({ firmId: 1, idempotencyKey: 1 }, { unique: true, sparse: true });
 caseSchema.index({ publicEmailToken: 1 }, { unique: true, sparse: true });
 
-// DEPRECATED: Backward compatibility - will be removed after transition
-caseSchema.index({ firmId: 1, caseId: 1 }, { sparse: true });
+// DEPRECATED DISPLAY ID FIELD, but tenant-scoped uniqueness is still required for safety.
+caseSchema.index({ firmId: 1, caseId: 1 }, { unique: true });
 
 caseSchema.index({ status: 1, priority: 1 });
 caseSchema.index({ category: 1 });
@@ -832,7 +832,7 @@ caseSchema.index({ clientId: 1 });
 caseSchema.index({ status: 1 });
 caseSchema.index({ createdAt: -1 });
 caseSchema.index({ assignedToXID: 1, status: 1 }); // CANONICAL - xID-based worklist queries
-caseSchema.index({ firmId: 1, assignedTo: 1 }); // Legacy workbasket atomic pull filter support
+caseSchema.index({ firmId: 1, caseId: 1, status: 1, assignedToXID: 1, assignedTo: 1 }); // Atomic workbasket pull filter index
 caseSchema.index({ queueType: 1, status: 1 }); // Queue-based worklist queries
 caseSchema.index({ pendedByXID: 1, status: 1 }); // Pending cases dashboard queries
 caseSchema.index({ pendingUntil: 1 }); // Auto-reopen scheduler queries
