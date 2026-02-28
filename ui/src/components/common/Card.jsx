@@ -5,12 +5,15 @@
 
 import React from 'react';
 
-export const Card = ({ children, className = '', onClick, ...props }) => {
+export const Card = ({ children, className = '', onClick, interactive = false, ...props }) => {
+  const interactiveClass = interactive || onClick
+    ? 'shadow-md hover:shadow-xl transition-shadow duration-300 cursor-pointer'
+    : 'shadow-md';
+
   return (
     <div
-      className={`card ${className}`}
+      className={`card rounded-2xl border border-gray-200 p-6 ${interactiveClass} ${className}`}
       onClick={onClick}
-      style={{ cursor: onClick ? 'pointer' : 'default' }}
       {...props}
     >
       {children}
@@ -33,9 +36,5 @@ export const CardBody = ({ children, className = '' }) => {
 };
 
 export const CardFooter = ({ children, className = '' }) => {
-  return (
-    <div className={`card-footer border-t border-border-subtle ${className}`} style={{ paddingTop: 'var(--spacing-md)', marginTop: 'var(--spacing-md)' }}>
-      {children}
-    </div>
-  );
+  return <div className={`card-footer border-t border-gray-200 pt-4 mt-4 ${className}`}>{children}</div>;
 };
