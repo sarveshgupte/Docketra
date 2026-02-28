@@ -28,7 +28,7 @@
 .enterprise-sidebar {
   width: 228px;
   min-height: 100vh;
-  background-color: var(--color-primary-dark);
+  background-color: #FFFFFF;
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -38,8 +38,7 @@
   z-index: 50;
   transition: width var(--transition-normal), transform var(--transition-normal);
   overflow: hidden;
-  /* Micro-border glass edge */
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  border-right: 1px solid var(--color-border);
 }
 
 .enterprise-sidebar--collapsed {
@@ -49,7 +48,7 @@
 /* Firm Badge (top of sidebar) */
 .enterprise-sidebar__firm {
   padding: var(--space-5) var(--space-4) var(--space-3);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid var(--color-border);
   min-height: 68px;
   display: flex;
   align-items: center;
@@ -78,7 +77,7 @@
 }
 
 .enterprise-sidebar__firm-name {
-  color: white;
+  color: var(--text-main);
   font-size: var(--font-size-sm);
   font-weight: 600;
   line-height: 1.25;
@@ -90,7 +89,7 @@
 }
 
 .enterprise-sidebar__firm-label {
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--text-muted);
   font-size: var(--font-size-xs);
   margin-top: 2px;
   white-space: nowrap;
@@ -114,7 +113,7 @@
 }
 
 .enterprise-sidebar__nav-label {
-  color: rgba(255, 255, 255, 0.25);
+  color: var(--text-muted);
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
@@ -129,7 +128,7 @@
   align-items: center;
   gap: var(--space-3);
   padding: 9px var(--space-4);
-  color: rgba(255, 255, 255, 0.60);
+  color: var(--text-body);
   text-decoration: none;
   font-size: var(--font-size-sm);
   font-weight: 500;
@@ -141,20 +140,20 @@
 }
 
 .enterprise-sidebar__nav-link:hover {
-  color: rgba(255, 255, 255, 0.90);
-  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
+  background-color: var(--color-bg-app);
   opacity: 1;
 }
 
 .enterprise-sidebar__nav-link:focus-visible {
   outline: none;
-  color: white;
-  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  background-color: var(--color-bg-app);
 }
 
 .enterprise-sidebar__nav-link.active {
-  color: white;
-  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--color-primary);
+  background-color: rgba(59, 130, 246, 0.06);
   border-left-color: var(--color-accent);
 }
 
@@ -165,7 +164,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0.85;
+  opacity: 0.70;
 }
 
 .enterprise-sidebar__nav-link.active .enterprise-sidebar__nav-icon {
@@ -189,13 +188,13 @@
 /* Footer (version) */
 .enterprise-sidebar__footer {
   padding: var(--space-4);
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--color-border);
   overflow: hidden;
   white-space: nowrap;
 }
 
 .enterprise-sidebar__version {
-  color: rgba(255, 255, 255, 0.18);
+  color: var(--text-muted);
   font-size: 10px;
   letter-spacing: 0.04em;
 }
@@ -212,10 +211,10 @@
   transform: translateY(-50%);
   width: 22px;
   height: 22px;
-  background-color: var(--color-primary-dark);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background-color: #FFFFFF;
+  border: 1px solid var(--color-border);
   border-radius: 50%;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--text-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -225,9 +224,9 @@
 }
 
 .enterprise-sidebar__toggle:hover {
-  background-color: var(--color-primary);
-  border-color: rgba(255, 255, 255, 0.30);
-  color: white;
+  background-color: var(--color-bg-app);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .enterprise-sidebar__toggle:focus-visible {
@@ -260,10 +259,10 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  /* Glassmorphic header */
-  background: var(--glass-bg-strong);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
+  /* Light frosted glass header */
+  background: rgba(255, 255, 255, 0.80);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--color-border);
   height: 52px;
   display: flex;
@@ -541,7 +540,7 @@
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(11, 31, 58, 0.50);
+    background: rgba(0, 0, 0, 0.30);
     backdrop-filter: var(--glass-blur-sm);
     -webkit-backdrop-filter: var(--glass-blur-sm);
     z-index: 299;
