@@ -1,6 +1,7 @@
 const Case = require('../models/Case.model');
 const CaseHistory = require('../models/CaseHistory.model');
 const CaseAudit = require('../models/CaseAudit.model');
+const mongoose = require('mongoose');
 const { CaseRepository } = require('../repositories');
 const { CASE_ACTION_TYPES } = require('../config/constants');
 const CaseStatus = require('../domain/case/caseStatus');
@@ -156,88 +157,108 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user) => {
     throw new Error('Case IDs array is required and must not be empty');
   }
   
-  // Atomic bulk update - only updates cases that are still UNASSIGNED
   const assignedAt = new Date();
-  const result = await Case.updateMany(
-    {
+  const session = await mongoose.startSession();
+  try {
+    session.startTransaction();
+
+    const result = await Case.updateMany(
+      {
+        firmId,
+        caseId: { $in: caseIds },
+        status: CaseStatus.UNASSIGNED,
+      },
+      {
+        $set: {
+          assignedToXID: user.xID.toUpperCase(), // CANONICAL: Store xID in assignedToXID
+          queueType: 'PERSONAL', // Move from GLOBAL to PERSONAL queue
+          assignedAt,
+        },
+      },
+      { session }
+    );
+
+    const updatedCases = await Case.find({
       firmId,
       caseId: { $in: caseIds },
-      status: CaseStatus.UNASSIGNED,
-    },
-    {
-      $set: {
-        assignedToXID: user.xID.toUpperCase(), // CANONICAL: Store xID in assignedToXID
-        queueType: 'PERSONAL', // Move from GLOBAL to PERSONAL queue
-        assignedAt,
-      },
-    }
-  );
-  
-  // Get the actual cases that were updated
-  const updatedCases = await Case.find({
-    firmId,
-    caseId: { $in: caseIds },
-    assignedToXID: user.xID.toUpperCase(),
-    queueType: 'PERSONAL',
-    assignedAt,
-  });
-
-  await Promise.all(updatedCases.map((caseData) =>
-    CaseService.updateStatus(caseData.caseId, CaseStatus.OPEN, {
-      tenantId: firmId,
-      role: user.role,
-      userId: user.xID,
-      performedBy: user.email?.toLowerCase() || 'SYSTEM',
-      actorRole: user.role === 'Admin' ? 'ADMIN' : 'USER',
-      currentStatus: caseData.status,
-      statusPatch: {
-        lastActionByXID: user.xID.toUpperCase(),
-        lastActionAt: assignedAt,
-      },
-    })
-  ));
-
-  const transitionedCases = await Case.find({
-    firmId,
-    caseId: { $in: updatedCases.map((caseData) => caseData.caseId) },
-  });
-  
-  // Create audit entries for successfully assigned cases
-  const auditEntries = transitionedCases.map(caseData => ({
-    caseId: caseData.caseId,
-    actionType: 'CASE_ASSIGNED',
-    description: `Case bulk-assigned to ${user.xID}`,
-    performedByXID: user.xID,
-    metadata: {
+      assignedToXID: user.xID.toUpperCase(),
       queueType: 'PERSONAL',
-      status: CaseStatus.OPEN,
-      bulkAssignment: true,
-    },
-  }));
-  
-  if (auditEntries.length > 0) {
-    await CaseAudit.insertMany(auditEntries);
+      assignedAt,
+    }, null, { session });
+
+    await Promise.all(updatedCases.map((caseData) =>
+      CaseService.updateStatus(caseData.caseId, CaseStatus.OPEN, {
+        tenantId: firmId,
+        role: user.role,
+        userId: user.xID,
+        performedBy: user.email?.toLowerCase() || 'SYSTEM',
+        actorRole: user.role === 'Admin' ? 'ADMIN' : 'USER',
+        currentStatus: CaseStatus.UNASSIGNED,
+        session,
+        statusPatch: {
+          lastActionByXID: user.xID.toUpperCase(),
+          lastActionAt: assignedAt,
+        },
+      })
+    ));
+
+    const transitionedCases = await Case.find({
+      firmId,
+      caseId: { $in: updatedCases.map((caseData) => caseData.caseId) },
+    }, null, { session });
+
+    const auditEntries = transitionedCases.map(caseData => ({
+      caseId: caseData.caseId,
+      actionType: 'CASE_ASSIGNED',
+      description: `Case bulk-assigned to ${user.xID}`,
+      performedByXID: user.xID,
+      metadata: {
+        queueType: 'PERSONAL',
+        status: CaseStatus.OPEN,
+        bulkAssignment: true,
+      },
+    }));
+
+    if (auditEntries.length > 0) {
+      await CaseAudit.create(auditEntries, { session });
+    }
+
+    if (transitionedCases.length > 0) {
+      await Promise.all(transitionedCases.map((caseData) => logCaseHistory({
+        caseId: caseData.caseId,
+        firmId: caseData.firmId,
+        actionType: 'CASE_ASSIGNED',
+        description: `Case bulk-assigned to ${user.xID}`,
+        performedBy: user.email.toLowerCase(),
+        performedByXID: user.xID.toUpperCase(), // Canonical identifier (uppercase)
+        session,
+      })));
+    }
+
+    await session.commitTransaction();
+    return {
+      success: true,
+      assigned: result.modifiedCount,
+      requested: caseIds.length,
+      cases: transitionedCases,
+    };
+  } catch (error) {
+    try {
+      await session.abortTransaction();
+    } catch (_) {
+      // noop
+    }
+    const message = error?.message || '';
+    if (
+      message.includes('Transaction numbers are only allowed on a replica set member or mongos') ||
+      message.toLowerCase().includes('replica set')
+    ) {
+      throw new Error('MongoDB transactions require replica set');
+    }
+    throw error;
+  } finally {
+    await session.endSession();
   }
-  
-  // Create history entries for backward compatibility
-  const historyEntries = transitionedCases.map(caseData => ({
-    caseId: caseData.caseId,
-    actionType: 'CASE_ASSIGNED',
-    description: `Case bulk-assigned to ${user.xID}`,
-    performedBy: user.email.toLowerCase(),
-    performedByXID: user.xID.toUpperCase(), // Canonical identifier (uppercase)
-  }));
-  
-  if (historyEntries.length > 0) {
-    await CaseHistory.insertMany(historyEntries);
-  }
-  
-  return {
-    success: true,
-    assigned: result.modifiedCount,
-    requested: caseIds.length,
-    cases: transitionedCases,
-  };
 };
 
 /**

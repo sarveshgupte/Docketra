@@ -44,7 +44,13 @@ async function updateStatus(caseId, newStatus, context = {}) {
     throw new Error(`Illegal transition: ${fromStatus} → ${normalizedNewStatus}`);
   }
 
-  await CaseRepository.updateStatus(caseId, tenantId, normalizedNewStatus, context.statusPatch || {});
+  await CaseRepository.updateStatus(
+    caseId,
+    tenantId,
+    normalizedNewStatus,
+    context.statusPatch || {},
+    context.session || null
+  );
 
   const metadata = {
     oldStatus: fromStatus,
@@ -56,13 +62,23 @@ async function updateStatus(caseId, newStatus, context = {}) {
     ...(context.auditMetadata || {}),
   };
 
-  await CaseAudit.create({
-    caseId: existingCase.caseId || caseId,
-    actionType: CASE_ACTION_TYPES.CASE_STATUS_CHANGED,
-    description: `Status changed from ${fromStatus} to ${normalizedNewStatus}`,
-    performedByXID: context.userId || context.performedByXID || 'SYSTEM',
-    metadata,
-  });
+  if (context.session) {
+    await CaseAudit.create([{
+      caseId: existingCase.caseId || caseId,
+      actionType: CASE_ACTION_TYPES.CASE_STATUS_CHANGED,
+      description: `Status changed from ${fromStatus} to ${normalizedNewStatus}`,
+      performedByXID: context.userId || context.performedByXID || 'SYSTEM',
+      metadata,
+    }], { session: context.session });
+  } else {
+    await CaseAudit.create({
+      caseId: existingCase.caseId || caseId,
+      actionType: CASE_ACTION_TYPES.CASE_STATUS_CHANGED,
+      description: `Status changed from ${fromStatus} to ${normalizedNewStatus}`,
+      performedByXID: context.userId || context.performedByXID || 'SYSTEM',
+      metadata,
+    });
+  }
 
   await logCaseHistory({
     caseId: existingCase.caseId || caseId,
@@ -75,6 +91,7 @@ async function updateStatus(caseId, newStatus, context = {}) {
     actorRole: context.actorRole || 'USER',
     metadata,
     req: context.req,
+    session: context.session || null,
   });
 }
 
