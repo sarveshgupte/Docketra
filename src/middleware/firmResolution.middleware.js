@@ -62,25 +62,6 @@ const resolveFirmSlug = async (req, res, next) => {
       });
     }
     
-    // Check if firm is active; treat INACTIVE and SUSPENDED separately
-    if (firm.status === 'suspended') {
-      return res.status(403).json({
-        success: false,
-        code: 'FIRM_INACTIVE',
-        message: 'This firm is inactive. Please contact support.',
-        action: 'contact_admin',
-      });
-    }
-
-    if (firm.status === 'suspended') {
-      return res.status(403).json({
-        success: false,
-        code: 'FIRM_SUSPENDED',
-        message: `This firm is currently ${firm.status.toLowerCase()}. Please contact support.`,
-        action: 'contact_admin',
-      });
-    }
-
     if (firm.status !== 'active') {
       return res.status(403).json({
         success: false,

@@ -135,7 +135,7 @@ const softDelete = async ({ model, filter, req, reason }) => {
         lockUntil: doc.lockUntil,
       };
     }
-    doc.status = 'DISABLED';
+    doc.status = 'suspended';
     doc.isActive = false;
   }
 
