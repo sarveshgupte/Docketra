@@ -61,7 +61,7 @@ ON cases (tenantId, status, createdAt DESC);
 -- Optional active-only partial index
 CREATE INDEX IF NOT EXISTS idx_cases_active
 ON cases (tenantId, dueDate)
-WHERE status != 'RESOLVED';
+WHERE status NOT IN ('RESOLVED', 'CLOSED');
 
 -- AUDIT (entity history)
 CREATE INDEX IF NOT EXISTS idx_audit_tenant_entity_created_desc
@@ -84,7 +84,7 @@ ON case_audits (tenantId, createdAt DESC);
 { firmId: 1, status: 1, dueDate: 1 }                    // idx_cases_tenant_status_due
 { firmId: 1, assignedToXID: 1, status: 1 }              // idx_cases_tenant_assigned_status
 { firmId: 1, status: 1, createdAt: -1 }                 // idx_cases_tenant_status_created_desc
-{ firmId: 1, dueDate: 1 }, partial(status != RESOLVED)  // idx_cases_active_due
+{ firmId: 1, dueDate: 1 }, partial(status NOT IN [RESOLVED, CLOSED])  // idx_cases_active_due
 
 // casehistories (audit/history stream)
 { firmId: 1, caseId: 1, timestamp: -1 }                 // idx_case_history_tenant_entity_created_desc
@@ -102,7 +102,7 @@ ON case_audits (tenantId, createdAt DESC);
 - `firmId + status + dueDate`: status filter + due-date ordering.
 - `firmId + assignedToXID + status`: employee worklist filters.
 - `firmId + status + createdAt DESC`: admin/dashboard recency lists.
-- Partial `firmId + dueDate WHERE status != RESOLVED`: hot-path active SLA scans.
+- Partial `firmId + dueDate WHERE status NOT IN (RESOLVED, CLOSED)`: hot-path active SLA scans using canonical status values.
 - `firmId + caseId + timestamp DESC`: per-case audit trail retrieval.
 - `firmId + timestamp DESC`: tenant-wide audit feed by time.
 

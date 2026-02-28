@@ -13,6 +13,7 @@
 
 require('dotenv').config();
 const mongoose = require('mongoose');
+const CaseStatus = require('../../src/domain/case/caseStatus');
 
 const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
 const direction = (process.argv[2] || 'up').toLowerCase();
@@ -34,7 +35,7 @@ const INDEX_DEFINITIONS = {
     {
       key: { firmId: 1, dueDate: 1 },
       name: 'idx_cases_active_due',
-      partialFilterExpression: { status: { $ne: 'RESOLVED' } },
+      partialFilterExpression: { status: { $nin: [CaseStatus.RESOLVED, CaseStatus.CLOSED] } },
     },
   ],
   casehistories: [
