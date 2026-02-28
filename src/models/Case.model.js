@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { randomUUID } = require('crypto');
 const softDeletePlugin = require('../utils/softDelete.plugin');
 
 /**
@@ -112,6 +113,14 @@ const caseSchema = new mongoose.Schema({
     type: String,
     required: true,
     trim: true,
+    immutable: true,
+  },
+
+  publicEmailToken: {
+    type: String,
+    trim: true,
+    unique: true,
+    sparse: true,
     immutable: true,
   },
   
@@ -733,6 +742,10 @@ caseSchema.pre('validate', async function() {
   // Populate deprecated caseId field with caseNumber for backward compatibility
   if (!this.caseId && this.caseNumber) {
     this.caseId = this.caseNumber;
+  }
+
+  if (!this.publicEmailToken) {
+    this.publicEmailToken = randomUUID();
   }
   
   // If this is a new case and clientId is provided, fetch and snapshot the client
