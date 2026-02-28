@@ -9,7 +9,8 @@ const Client = require('../models/Client.model');
 const User = require('../models/User.model');
 const { CaseRepository, ClientRepository } = require('../repositories');
 const { detectDuplicates, generateDuplicateOverrideComment } = require('../services/clientDuplicateDetector');
-const { CASE_CATEGORIES, CASE_LOCK_CONFIG, CASE_STATUS, COMMENT_PREVIEW_LENGTH, CLIENT_STATUS } = require('../config/constants');
+const { CASE_CATEGORIES, CASE_LOCK_CONFIG, COMMENT_PREVIEW_LENGTH, CLIENT_STATUS } = require('../config/constants');
+const CaseStatus = require('../domain/case/caseStatus');
 const { isProduction } = require('../config/config');
 const { logCaseListViewed, logAdminAction } = require('../services/auditLog.service');
 const caseActionService = require('../services/caseAction.service');
@@ -1008,11 +1009,10 @@ const updateCaseStatus = async (req, res) => {
       });
     }
     
-    const oldStatus = caseData.status;
-    const normalizedStatus = status === 'Pending' ? CASE_STATUS.PENDED : status;
+    const normalizedStatus = status === 'Pending' ? CaseStatus.PENDED : status;
 
     // Handle Pending/PENDED status - require pendingUntil
-    if (normalizedStatus === CASE_STATUS.PENDED && !pendingUntil) {
+    if (normalizedStatus === CaseStatus.PENDED && !pendingUntil) {
       return res.status(400).json({
         success: false,
         message: 'pendingUntil date is required when status is Pending or PENDED',
@@ -1029,20 +1029,12 @@ const updateCaseStatus = async (req, res) => {
       ipAddress: req.ip || null,
       userAgent: req.get('user-agent'),
       req,
-      statusPatch: normalizedStatus === CASE_STATUS.PENDED
+      statusPatch: normalizedStatus === CaseStatus.PENDED
         ? { pendingUntil }
         : { pendingUntil: null },
     });
 
     caseData = await CaseRepository.findByInternalId(req.user.firmId, caseData.caseInternalId, req.user.role);
-    
-    // Create history entry
-    await CaseHistory.create({
-      caseId,
-      actionType: 'StatusChanged',
-      description: `Status changed from ${oldStatus} to ${normalizedStatus}`,
-      performedBy: performedBy.toLowerCase(),
-    });
     
     res.json({
       success: true,
@@ -1323,9 +1315,10 @@ const getCases = async (req, res) => {
     if (req.user?.xID) {
       // Determine if this is an admin viewing pending approvals
       const isPendingApprovalView = 
-        status === CASE_STATUS.PENDING || 
-        status === CASE_STATUS.REVIEWED || 
-        status === CASE_STATUS.UNDER_REVIEW;
+        status === CaseStatus.PENDING ||
+        status === CaseStatus.PENDING_LEGACY ||
+        status === CaseStatus.REVIEWED ||
+        status === CaseStatus.UNDER_REVIEW;
       
       if (isPendingApprovalView && req.user.role === 'Admin') {
         // Log admin approval queue access

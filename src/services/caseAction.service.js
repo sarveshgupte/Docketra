@@ -3,7 +3,8 @@ const Comment = require('../models/Comment.model');
 const CaseHistory = require('../models/CaseHistory.model');
 const CaseAudit = require('../models/CaseAudit.model');
 const { CaseRepository } = require('../repositories');
-const { CASE_STATUS, CASE_ACTION_TYPES } = require('../config/constants');
+const { CASE_ACTION_TYPES } = require('../config/constants');
+const CaseStatus = require('../domain/case/caseStatus');
 const CaseService = require('./case.service');
 const { DateTime } = require('luxon');
 const { logCaseHistory } = require('./auditLog.service');
@@ -99,7 +100,7 @@ const resolveCase = async (firmId, caseId, comment, user, req = null) => {
   // Store previous status for audit
   const previousStatus = caseData.status;
 
-  await CaseService.updateStatus(caseId, CASE_STATUS.RESOLVED, {
+  await CaseService.updateStatus(caseId, CaseStatus.RESOLVED, {
     tenantId: firmId,
     role: user.role,
     userId: user.xID,
@@ -142,7 +143,7 @@ const resolveCase = async (firmId, caseId, comment, user, req = null) => {
     user.role === 'Admin' ? 'ADMIN' : 'USER',
     {
       previousStatus,
-      newStatus: CASE_STATUS.RESOLVED,
+      newStatus: CaseStatus.RESOLVED,
       commentLength: comment.length,
     }
   );
@@ -189,7 +190,7 @@ const pendCase = async (firmId, caseId, comment, reopenDate, user, req = null) =
     .toUTC()
     .toJSDate();
   
-  await CaseService.updateStatus(caseId, CASE_STATUS.PENDED, {
+  await CaseService.updateStatus(caseId, CaseStatus.PENDED, {
     tenantId: firmId,
     role: user.role,
     userId: user.xID,
@@ -234,7 +235,7 @@ const pendCase = async (firmId, caseId, comment, reopenDate, user, req = null) =
     user.role === 'Admin' ? 'ADMIN' : 'USER',
     {
       previousStatus,
-      newStatus: CASE_STATUS.PENDED,
+      newStatus: CaseStatus.PENDED,
       pendingUntil,
       commentLength: comment.length,
     }
@@ -269,7 +270,7 @@ const fileCase = async (firmId, caseId, comment, user, req = null) => {
   // Store previous status for audit
   const previousStatus = caseData.status;
 
-  await CaseService.updateStatus(caseId, CASE_STATUS.FILED, {
+  await CaseService.updateStatus(caseId, CaseStatus.FILED, {
     tenantId: firmId,
     role: user.role,
     userId: user.xID,
@@ -312,7 +313,7 @@ const fileCase = async (firmId, caseId, comment, user, req = null) => {
     user.role === 'Admin' ? 'ADMIN' : 'USER',
     {
       previousStatus,
-      newStatus: CASE_STATUS.FILED,
+      newStatus: CaseStatus.FILED,
       commentLength: comment.length,
     }
   );
@@ -346,7 +347,7 @@ const unpendCase = async (firmId, caseId, comment, user, req = null) => {
   const previousStatus = caseData.status;
   const previousPendingUntil = caseData.pendingUntil;
 
-  await CaseService.updateStatus(caseId, CASE_STATUS.OPEN, {
+  await CaseService.updateStatus(caseId, CaseStatus.OPEN, {
     tenantId: firmId,
     role: user.role,
     userId: user.xID,
@@ -392,7 +393,7 @@ const unpendCase = async (firmId, caseId, comment, user, req = null) => {
     user.role === 'Admin' ? 'ADMIN' : 'USER',
     {
       previousStatus,
-      newStatus: CASE_STATUS.OPEN,
+      newStatus: CaseStatus.OPEN,
       previousPendingUntil,
       manualUnpend: true,
       commentLength: comment.length,
@@ -413,7 +414,7 @@ const performAutoReopen = async (caseData) => {
   const previousPendingUntil = caseData.pendingUntil;
   const now = new Date();
   
-  await CaseService.updateStatus(caseData.caseId, CASE_STATUS.OPEN, {
+  await CaseService.updateStatus(caseData.caseId, CaseStatus.OPEN, {
     tenantId: caseData.firmId,
     role: 'Admin',
     userId: 'SYSTEM',
@@ -453,7 +454,7 @@ const performAutoReopen = async (caseData) => {
     'SYSTEM',
     {
       previousStatus,
-      newStatus: CASE_STATUS.OPEN,
+      newStatus: CaseStatus.OPEN,
       pendingUntil: previousPendingUntil,
       autoReopened: true,
       reason: 'pending_until elapsed',
@@ -479,7 +480,7 @@ const autoReopenExpiredPendingCases = async (userXid, firmId = null) => {
   
   // Find all pended cases for this user where pendingUntil has passed
   const pendedCases = await Case.find({
-    status: CASE_STATUS.PENDED,
+    status: CaseStatus.PENDED,
     pendingUntil: { $lte: now },
     assignedToXID: userXid,
     ...(firmId ? { firmId } : {}),
@@ -514,7 +515,7 @@ const autoReopenPendedCases = async (firmId = null) => {
   
   // Find all pended cases where pendingUntil has passed
   const pendedCases = await Case.find({
-    status: CASE_STATUS.PENDED,
+    status: CaseStatus.PENDED,
     pendingUntil: { $lte: now },
     ...(firmId ? { firmId } : {}),
   });

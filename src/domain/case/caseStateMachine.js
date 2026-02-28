@@ -1,27 +1,48 @@
 const CaseStatus = require('./caseStatus');
 
-const transitions = {
-  [CaseStatus.OPEN]: [
+const STATUS_ALIASES = Object.freeze({
+  [CaseStatus.PENDING]: CaseStatus.PENDED,
+  [CaseStatus.PENDING_LEGACY]: CaseStatus.PENDED,
+  [CaseStatus.OPEN_LEGACY]: CaseStatus.OPEN,
+  [CaseStatus.FILED_LEGACY]: CaseStatus.FILED,
+});
+
+function normalizeStatus(status) {
+  return STATUS_ALIASES[status] || status;
+}
+
+const transitions = Object.freeze({
+  [CaseStatus.UNASSIGNED]: Object.freeze([
+    CaseStatus.OPEN,
     CaseStatus.PENDED,
     CaseStatus.FILED,
     CaseStatus.RESOLVED,
-  ],
-  [CaseStatus.PENDED]: [
+  ]),
+  [CaseStatus.OPEN]: Object.freeze([
+    CaseStatus.PENDED,
+    CaseStatus.FILED,
+    CaseStatus.RESOLVED,
+  ]),
+  [CaseStatus.PENDED]: Object.freeze([
     CaseStatus.OPEN,
     CaseStatus.FILED,
-  ],
-  [CaseStatus.FILED]: [
+  ]),
+  [CaseStatus.FILED]: Object.freeze([
     CaseStatus.RESOLVED,
-  ],
-  [CaseStatus.RESOLVED]: [],
-};
+  ]),
+  [CaseStatus.RESOLVED]: Object.freeze([]),
+});
 
-function canTransition(from, to) {
-  if (!transitions[from]) return false;
-  return transitions[from].includes(to);
+function canTransition(from, to, role = null) {
+  void role;
+  const normalizedFrom = normalizeStatus(from);
+  const normalizedTo = normalizeStatus(to);
+  if (!transitions[normalizedFrom]) return false;
+  return transitions[normalizedFrom].includes(normalizedTo);
 }
 
 module.exports = {
   transitions,
+  normalizeStatus,
   canTransition,
 };

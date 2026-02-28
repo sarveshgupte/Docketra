@@ -24,37 +24,6 @@ const CASE_CATEGORIES = {
 };
 
 /**
- * Case workflow status constants
- * New workflow states
- * 
- * PR: Case Lifecycle & Dashboard Logic
- * Added OPEN, PENDED, RESOLVED, FILED as canonical statuses
- */
-const CASE_STATUS = {
-  // Canonical lifecycle states (NEW - use these)
-  UNASSIGNED: 'UNASSIGNED',
-  OPEN: 'OPEN',
-  PENDED: 'PENDED',
-  RESOLVED: 'RESOLVED',
-  FILED: 'FILED',
-  
-  // Workflow states
-  DRAFT: 'DRAFT',
-  SUBMITTED: 'SUBMITTED',
-  UNDER_REVIEW: 'UNDER_REVIEW',
-  APPROVED: 'APPROVED',
-  REJECTED: 'REJECTED',
-  CLOSED: 'CLOSED',
-  
-  // Legacy states (for backward compatibility - do NOT use for new code)
-  OPEN_LEGACY: 'Open',
-  REVIEWED: 'Reviewed',
-  PENDING_LEGACY: 'Pending',
-  FILED_LEGACY: 'Filed',
-  ARCHIVED: 'Archived',
-};
-
-/**
  * Comment preview length for audit logs
  */
 const COMMENT_PREVIEW_LENGTH = 50;
@@ -131,7 +100,6 @@ const CLIENT_FACT_SHEET_ACTION_TYPES = {
 module.exports = {
   CASE_LOCK_CONFIG,
   CASE_CATEGORIES,
-  CASE_STATUS,
   COMMENT_PREVIEW_LENGTH,
   CLIENT_STATUS,
   CASE_ACTION_TYPES,

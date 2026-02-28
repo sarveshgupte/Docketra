@@ -307,7 +307,8 @@ const CaseRepository = {
       { $set: { status, ...extraFields } }
     );
 
-    if (!result || result.matchedCount === 0) {
+    const matched = result?.matchedCount ?? result?.n ?? 0;
+    if (matched === 0) {
       throw new Error('Case not found');
     }
 
