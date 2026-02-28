@@ -64,7 +64,7 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId }) => {
   await CaseService.updateStatus(caseId, CaseStatus.OPEN, {
     tenantId,
     userId: normalizedUserId,
-    performedBy: 'SYSTEM',
+    performedBy: normalizedUserId,
     performedByXID: normalizedUserId,
     actorRole: 'USER',
     currentStatus: CaseStatus.UNASSIGNED,
