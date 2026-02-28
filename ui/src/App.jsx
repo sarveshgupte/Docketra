@@ -12,6 +12,7 @@ import { bootstrapAuth } from './auth/authBootstrap';
 import './assets/styles/enterprise.css';
 import './assets/styles/neomorphic.css';
 import './assets/styles/global.css';
+import './styles/typography.css';
 
 const AppBootstrap = () => {
   const { fetchProfile } = useAuth();

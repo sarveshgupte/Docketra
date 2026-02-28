@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { Section } from '../../components/layout/Section';
 
 const WHO_ITS_FOR = [
   { label: 'Law Firms', icon: '⚖️' },
@@ -67,14 +68,13 @@ const GOVERNANCE_HIGHLIGHTS = [
 
 export const HomePage = () => (
   <div className="w-full">
-    <section className="w-full py-24 px-6">
-      <div className="max-w-6xl mx-auto">
+    <Section>
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div>
-            <h1 className="text-5xl font-semibold tracking-tight leading-tight">
+            <h1 className="type-hero">
               Enterprise-Ready Work &amp; Case Management
             </h1>
-            <p className="mt-6 text-lg text-gray-600 leading-relaxed max-w-xl">
+            <p className="mt-6 text-lg type-body max-w-xl">
               Structured workflows, role-based governance, and secure document-backed case
               management.
             </p>
@@ -122,12 +122,10 @@ export const HomePage = () => (
             </div>
           </div>
         </div>
-      </div>
-    </section>
+    </Section>
 
-    <section className="w-full py-24 px-6 bg-gray-50">
-      <div className="max-w-6xl mx-auto">
-        <h2 className="text-3xl font-semibold tracking-tight leading-tight">Who It&apos;s For</h2>
+    <Section muted>
+        <h2 className="type-section">Who It&apos;s For</h2>
         <div className="mt-8 flex flex-wrap gap-4">
           {WHO_ITS_FOR.map(({ label, icon }) => (
             <div
@@ -139,30 +137,26 @@ export const HomePage = () => (
             </div>
           ))}
         </div>
-      </div>
-    </section>
+    </Section>
 
-    <section className="w-full py-24 px-6">
-      <div className="max-w-6xl mx-auto">
-        <h2 className="text-3xl font-semibold tracking-tight leading-tight">Core Features</h2>
+    <Section>
+        <h2 className="type-section">Core Features</h2>
         <div className="mt-8 grid gap-12 md:grid-cols-2 lg:grid-cols-3">
           {CORE_FEATURES.map(({ title, description }) => (
             <div
               key={title}
               className="rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 border border-gray-200 bg-white p-8"
             >
-              <h3 className="text-lg font-semibold tracking-tight leading-tight">{title}</h3>
-              <p className="mt-6 text-gray-600 leading-relaxed">{description}</p>
+              <h3 className="type-card-title">{title}</h3>
+              <p className="mt-6 type-body">{description}</p>
             </div>
           ))}
         </div>
-      </div>
-    </section>
+    </Section>
 
-    <section className="w-full py-24 px-6 bg-gray-50">
-      <div className="max-w-6xl mx-auto">
-        <h2 className="text-3xl font-semibold tracking-tight leading-tight">Security &amp; Governance</h2>
-        <p className="mt-6 text-gray-600 leading-relaxed max-w-xl">
+    <Section muted>
+        <h2 className="type-section">Security &amp; Governance</h2>
+        <p className="mt-6 type-body max-w-xl">
           Built for teams that operate under strict compliance and accountability requirements.
         </p>
         <div className="mt-8 grid gap-12 md:grid-cols-2">
@@ -171,12 +165,11 @@ export const HomePage = () => (
               key={title}
               className="rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 border border-gray-200 bg-white p-8"
             >
-              <h3 className="text-lg font-semibold tracking-tight leading-tight">{title}</h3>
-              <p className="mt-6 text-gray-600 leading-relaxed">{description}</p>
+              <h3 className="type-card-title">{title}</h3>
+              <p className="mt-6 type-body">{description}</p>
             </div>
           ))}
         </div>
-      </div>
-    </section>
+    </Section>
   </div>
 );

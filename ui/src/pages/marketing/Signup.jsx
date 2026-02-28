@@ -51,8 +51,8 @@ export const SignupPage = () => {
   return (
     <div className="min-h-screen flex items-center justify-center px-6 bg-gray-50">
       <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-lg border border-gray-200">
-        <h2 className="text-2xl font-semibold tracking-tight leading-tight">Create Free Workspace</h2>
-        <p className="mt-6 text-gray-600 leading-relaxed">Starter plan includes up to 2 users.</p>
+        <h2 className="type-card-title">Create Free Workspace</h2>
+        <p className="mt-6 type-body">Starter plan includes up to 2 users.</p>
 
         {status === 'success' && (
           <div className="mt-6 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">

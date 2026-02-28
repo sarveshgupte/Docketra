@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { FirmLayout } from './components/routing/FirmLayout';
 import { MarketingLayout } from './components/routing/MarketingLayout';
@@ -103,8 +104,11 @@ const LegacySlugRedirect = () => {
 };
 
 export const Router = () => {
+  const location = useLocation();
+
   return (
-    <Routes>
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
       <Route element={<MarketingLayout />}>
         <Route path="/" element={withPageTransition(<MarketingHomePage />)} />
         <Route path="/features" element={withPageTransition(<MarketingFeaturesPage />)} />
@@ -242,6 +246,7 @@ export const Router = () => {
       <Route path="/app/firm" element={<DefaultRoute />} />
       <Route path="/:firmSlug/*" element={<LegacySlugRedirect />} />
       <Route path="*" element={withPageTransition(<NotFoundPage />)} />
-    </Routes>
+      </Routes>
+    </AnimatePresence>
   );
 };
