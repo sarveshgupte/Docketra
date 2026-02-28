@@ -50,6 +50,36 @@
   --badge-unassigned-color: #B91C1C;
   --badge-unassigned-border: rgba(220, 38, 38, 0.18);
 
+
+  /* Layout primitives semantic tokens */
+  --layout-surface: var(--color-surface);
+  --layout-surface-muted: #F8FAFC;
+  --layout-border-subtle: #EEF2F7;
+
+  --status-draft-bg: #F3F4F6;
+  --status-draft-color: #4B5563;
+  --status-draft-border: #E5E7EB;
+
+  --status-open-bg: #DBEAFE;
+  --status-open-color: #1D4ED8;
+  --status-open-border: #BFDBFE;
+
+  --status-review-bg: #FEF3C7;
+  --status-review-color: #B45309;
+  --status-review-border: #FDE68A;
+
+  --status-escalated-bg: #FFE4E6;
+  --status-escalated-color: #BE123C;
+  --status-escalated-border: #FECDD3;
+
+  --status-closed-bg: #D1FAE5;
+  --status-closed-color: #047857;
+  --status-closed-border: #A7F3D0;
+
+  --status-neutral-bg: #F8FAFC;
+  --status-neutral-color: #475569;
+  --status-neutral-border: #CBD5E1;
+
   /* Border Radius Scale */
   --radius-xs: 4px;
   --radius-sm: 6px;
