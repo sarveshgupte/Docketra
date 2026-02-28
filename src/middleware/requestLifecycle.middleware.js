@@ -3,7 +3,7 @@ const log = require('../utils/log');
 const metricsService = require('../services/metrics.service');
 const { enqueueAfterCommit, attachRecorder, flushRequestEffects } = require('../services/sideEffectQueue.service');
 
-const LOGIN_PATHS = new Set(['/auth/login', '/api/auth/login']);
+const LOGIN_PATHS = new Set(['/superadmin', '/superadmin/login']);
 
 const requestLifecycle = (req, res, next) => {
   const startTime = Date.now();

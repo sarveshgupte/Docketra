@@ -110,9 +110,9 @@ export const Layout = ({ children }) => {
     await logout({ preserveFirmSlug: !!currentFirmSlug });
     showSuccess('You have been signed out safely.');
     if (currentFirmSlug) {
-      navigate(`/f/${currentFirmSlug}/login`);
+      navigate(`/${currentFirmSlug}/login`);
     } else {
-      navigate('/login');
+      navigate('/superadmin');
     }
   };
 

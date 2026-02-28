@@ -1,6 +1,6 @@
 /**
  * Firm Login Page
- * Firm-scoped login using path-based URL: /f/:firmSlug/login
+ * Firm-scoped login using path-based URL: /:firmSlug/login
  */
 
 import React, { useState, useEffect } from 'react';
@@ -41,7 +41,7 @@ export const FirmLoginPage = () => {
           const firm = response.data.data;
           
           // Check if firm is active
-          if (firm.status !== 'ACTIVE') {
+          if (!['active', 'ACTIVE'].includes(firm.status)) {
             setError('This firm is currently inactive. Please contact support.');
             setFirmData(null);
             localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
@@ -89,7 +89,7 @@ export const FirmLoginPage = () => {
 
     try {
       // Login with firm context via API (not authService to include firmSlug)
-      const response = await api.post('/auth/login', {
+      const response = await api.post(`/${firmSlug}/login`, {
         xID: identifier,
         password: password,
         firmSlug: firmSlug, // Include firm context
@@ -128,7 +128,7 @@ export const FirmLoginPage = () => {
         // Explicit post-login navigation (firm users only)
         // Navigate to firm dashboard after successful hydration
         if (profileResult?.success) {
-          navigate(`/f/${firmSlug}/dashboard`, { replace: true });
+          navigate(`/app/firm/${firmSlug}/dashboard`, { replace: true });
         }
       }
     } catch (err) {

@@ -20,7 +20,7 @@ export const SuperAdminLayout = ({ children }) => {
   const handleLogout = async () => {
     await logout();
     showSuccess('You have been signed out safely.');
-    navigate('/login');
+    navigate('/superadmin');
   };
 
   const isActive = (path) => {

@@ -4,13 +4,10 @@ const routeSchemas = require('../schemas/auth.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { authenticate } = require('../middleware/auth.middleware');
 const { requireAdmin } = require('../middleware/permission.middleware');
-const { optionalFirmResolution } = require('../middleware/firmResolution.middleware');
 const Firm = require('../models/Firm.model');
 const { normalizeFirmSlug } = require('../utils/slugify');
 const { authLimiter, authBlockEnforcer, profileLimiter, sensitiveLimiter } = require('../middleware/rateLimiters');
-const { enforceAccountLockout } = require('../middleware/accountLockout.middleware');
 const {
-  login,
   logout,
   changePassword,
   resetPassword,
@@ -31,6 +28,8 @@ const {
   initiateGoogleAuth,
   handleGoogleCallback,
   verifyOAuthState,
+  setupAccount,
+  resendSetup,
   } = require('../controllers/auth.controller');
 
 const resolveOAuthFirmContext = async (req, res, next) => {
@@ -123,9 +122,10 @@ const detectProfileLoop = (req, res, next) => {
 // Public authentication endpoints - NO authentication required
 // Login supports optional firm resolution for firm-scoped login
 // Rate limited to prevent brute-force attacks
-router.post('/login', authBlockEnforcer, authLimiter, enforceAccountLockout, optionalFirmResolution, login);
 router.post('/setup-password', setPassword);
 router.post('/set-password', setPassword);
+router.post('/setup-account', authBlockEnforcer, authLimiter, setupAccount);
+router.post('/resend-setup', authBlockEnforcer, authLimiter, resendSetup);
 router.post('/reset-password-with-token', authBlockEnforcer, authLimiter, sensitiveLimiter, resetPasswordWithToken);
 router.post('/forgot-password', authBlockEnforcer, authLimiter, sensitiveLimiter, forgotPassword);
 router.post('/refresh', refreshAccessToken); // NEW: JWT token refresh

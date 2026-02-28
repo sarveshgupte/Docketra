@@ -50,13 +50,13 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
         type: 'info'
       }));
     }
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/superadmin" replace />;
   }
 
   // 2. Firm context check: Non-SuperAdmin users must have firm context
   // SuperAdmin users operate without firm context and access all system data
   if (!effectiveFirmSlug && !isSuperAdminUser) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/superadmin" replace />;
   }
 
   // 3. SuperAdmin route authorization
@@ -67,7 +67,7 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
       return <Navigate to={`/f/${effectiveFirmSlug}/dashboard`} replace />;
     }
     setAccessToast('SuperAdmin access is required to view that page.');
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/superadmin" replace />;
   }
 
   // 4. Firm route authorization: SuperAdmin users cannot access firm routes

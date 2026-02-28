@@ -7,7 +7,7 @@ const PRICING_TIERS = [
     price: 'Custom',
     description: 'For early-stage teams getting started with structured case operations.',
     ctaLabel: 'Start Free Trial',
-    ctaTo: '/login',
+    ctaTo: '/contact',
   },
   {
     name: 'Professional',

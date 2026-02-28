@@ -13,7 +13,7 @@ export const NotFoundPage = () => {
         <Link to="/" aria-label="Navigate to home page" className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white">
           Go to Home
         </Link>
-        <Link to="/login" aria-label="Navigate to login page" className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700">
+        <Link to="/superadmin" aria-label="Navigate to login page" className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700">
           Go to Login
         </Link>
       </div>

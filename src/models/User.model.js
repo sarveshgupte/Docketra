@@ -269,9 +269,24 @@ const userSchema = new mongoose.Schema({
    */
   status: {
     type: String,
-    enum: ['INVITED', 'ACTIVE', 'DISABLED', 'DELETED'],
-    default: 'INVITED',
+    enum: ['INVITED', 'ACTIVE', 'DISABLED', 'DELETED', 'invited', 'active', 'suspended'],
+    default: 'invited',
     required: true,
+  },
+
+  setupTokenHash: {
+    type: String,
+    default: null,
+  },
+
+  setupTokenExpiresAt: {
+    type: Date,
+    default: null,
+  },
+
+  setupTokenUsedAt: {
+    type: Date,
+    default: null,
   },
   
   /**

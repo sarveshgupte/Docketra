@@ -45,7 +45,7 @@ export const LoginPage = () => {
     setLoading(true);
 
     try {
-      const response = await login(identifier, password);
+      const response = await login(identifier, password, '/superadmin');
 
       if (response.success) {
         showSuccess('Signed in successfully.');
@@ -55,7 +55,7 @@ export const LoginPage = () => {
         
         // Explicit post-login navigation (SuperAdmin only)
         if (profileResult?.success) {
-          navigate('/superadmin', { replace: true });
+          navigate('/app/superadmin', { replace: true });
         }
       }
     } catch (err) {
@@ -84,21 +84,6 @@ export const LoginPage = () => {
         <div className="login-header">
           <h1>Docketra</h1>
           <p className="text-secondary">Case Management System</p>
-          <div style={{
-            marginTop: '1rem',
-            padding: '0.75rem 1rem',
-            backgroundColor: '#fff3cd',
-            border: '1px solid #ffc107',
-            borderRadius: '4px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}>
-            <span style={{ fontSize: '1.25rem' }}>⚠️</span>
-            <span style={{ color: '#856404', fontSize: '0.875rem', fontWeight: '500' }}>
-              This login is for SuperAdmins only
-            </span>
-          </div>
         </div>
 
         <form onSubmit={handleLogin}>

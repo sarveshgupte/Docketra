@@ -109,11 +109,12 @@ export const Router = () => {
             <Route path="/security" element={<MarketingSecurityPage />} />
             <Route path="/about" element={<MarketingAboutPage />} />
             <Route path="/contact" element={<MarketingContactPage />} />
-            <Route path="/login" element={<LoginPage />} />
+            <Route path="/superadmin" element={<LoginPage />} />
+            <Route path="/superadmin/login" element={<LoginPage />} />
           </Route>
 
           {/* Public Auth Routes */}
-          <Route path="/f/:firmSlug/login" element={<FirmLoginPage />} />
+          <Route path="/:firmSlug/login" element={<FirmLoginPage />} />
           <Route path="/f/:firmSlug/set-password" element={<SetPasswordPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
