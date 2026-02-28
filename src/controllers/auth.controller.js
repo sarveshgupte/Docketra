@@ -1471,7 +1471,7 @@ const createUser = async (req, res) => {
     });
   } catch (error) {
     if (error instanceof PlanLimitExceededError) {
-      console.warn('[PLAN_LIMIT] createUser blocked', { firmId: admin?.firmId?.toString?.() || admin?.firmId, message: error.message });
+      console.warn('[PLAN_LIMIT] createUser blocked', { firmId: req.user?.firmId?.toString?.() || req.user?.firmId, message: error.message });
       return res.status(403).json({
         success: false,
         error: error.code,
@@ -1543,7 +1543,9 @@ const activateUser = async (req, res) => {
     }
     
     const session = req.transactionSession?.session || null;
-    await assertFirmPlanCapacity({ firmId: admin.firmId, session });
+    const currentlyCounted = ['active', 'invited'].includes(user.status);
+    const incrementBy = currentlyCounted ? 0 : 1;
+    await assertFirmPlanCapacity({ firmId: admin.firmId, session, incrementBy });
 
     // Activate user
     user.isActive = true;
@@ -1568,7 +1570,7 @@ const activateUser = async (req, res) => {
     });
   } catch (error) {
     if (error instanceof PlanLimitExceededError) {
-      console.warn('[PLAN_LIMIT] createUser blocked', { firmId: admin?.firmId?.toString?.() || admin?.firmId, message: error.message });
+      console.warn('[PLAN_LIMIT] activateUser blocked', { firmId: req.user?.firmId?.toString?.() || req.user?.firmId, message: error.message });
       return res.status(403).json({
         success: false,
         error: error.code,
@@ -1815,7 +1817,7 @@ const setupAccount = async (req, res) => {
   }
 
   if (existingUser.setupTokenUsedAt) {
-    return res.status(400).json({ success: false, code: 'SETUP_TOKEN_INVALID', message: 'This setup link has already been used.' });
+    return res.status(400).json({ success: false, code: 'SETUP_TOKEN_ALREADY_USED', message: 'This setup link has already been used.' });
   }
 
   const tokenExpiresAt = existingUser.setupTokenExpiresAt || existingUser.passwordSetupExpires || null;
@@ -1853,6 +1855,7 @@ const setupAccount = async (req, res) => {
     {
       _id: existingUser._id,
       setupTokenUsedAt: null,
+      setupTokenExpiresAt: { $gt: now },
       $or: [{ setupTokenHash }, { passwordSetupTokenHash: setupTokenHash }],
     },
     { $set: update },
@@ -1860,6 +1863,13 @@ const setupAccount = async (req, res) => {
   );
 
   if (!user) {
+    const raceUser = await User.findById(existingUser._id).select('setupTokenUsedAt setupTokenExpiresAt');
+    if (raceUser?.setupTokenUsedAt) {
+      return res.status(400).json({ success: false, code: 'SETUP_TOKEN_ALREADY_USED', message: 'This setup link has already been used.' });
+    }
+    if (raceUser?.setupTokenExpiresAt && raceUser.setupTokenExpiresAt <= now) {
+      return res.status(400).json({ success: false, code: 'SETUP_TOKEN_EXPIRED', message: 'Setup token expired. This link will expire in 48 hours.' });
+    }
     return res.status(400).json({ success: false, code: 'SETUP_TOKEN_INVALID', message: 'Invalid setup token' });
   }
 
