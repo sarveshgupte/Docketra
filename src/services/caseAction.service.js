@@ -2,6 +2,7 @@ const Case = require('../models/Case.model');
 const Comment = require('../models/Comment.model');
 const CaseHistory = require('../models/CaseHistory.model');
 const CaseAudit = require('../models/CaseAudit.model');
+const mongoose = require('mongoose');
 const { CaseRepository } = require('../repositories');
 const { CASE_ACTION_TYPES } = require('../config/constants');
 const CaseStatus = require('../domain/case/caseStatus');
@@ -51,15 +52,25 @@ const validateComment = (comment) => {
  * @param {object} metadata - Additional metadata for audit log
  * @param {object} req - Express request object (optional, for IP/user agent)
  */
-const recordAction = async (caseId, firmId, actionType, description, performedByXID, performedByEmail, actorRole = 'USER', metadata = {}, req = null) => {
+const recordAction = async (caseId, firmId, actionType, description, performedByXID, performedByEmail, actorRole = 'USER', metadata = {}, req = null, session = null) => {
   // Create CaseAudit entry (xID-based)
-  await CaseAudit.create({
-    caseId,
-    actionType,
-    description,
-    performedByXID,
-    metadata,
-  });
+  if (session) {
+    await CaseAudit.create([{
+      caseId,
+      actionType,
+      description,
+      performedByXID,
+      metadata,
+    }], { session });
+  } else {
+    await CaseAudit.create({
+      caseId,
+      actionType,
+      description,
+      performedByXID,
+      metadata,
+    });
+  }
   
   // Create CaseHistory entry with enhanced fields
   await logCaseHistory({
@@ -73,6 +84,7 @@ const recordAction = async (caseId, firmId, actionType, description, performedBy
     actorRole,
     metadata,
     req,
+    session,
   });
 };
 
@@ -413,54 +425,63 @@ const performAutoReopen = async (caseData) => {
   const previousStatus = caseData.status;
   const previousPendingUntil = caseData.pendingUntil;
   const now = new Date();
-  
-  await CaseService.updateStatus(caseData.caseId, CaseStatus.OPEN, {
-    tenantId: caseData.firmId,
-    role: 'Admin',
-    userId: 'SYSTEM',
-    performedByXID: 'SYSTEM',
-    performedBy: 'SYSTEM',
-    actorRole: 'SYSTEM',
-    statusPatch: {
-      pendingUntil: null,
-      lastActionByXID: 'SYSTEM',
-      lastActionAt: now,
-    },
-    auditMetadata: {
-      pendingUntil: previousPendingUntil,
-      autoReopened: true,
-      reason: 'pending_until elapsed',
-      reopened_at: now.toISOString(),
-    },
-  });
-  
-  // Add system comment
-  await Comment.create({
-    caseId: caseData.caseId,
-    text: `Case automatically reopened after pending period expired (was pended until: ${previousPendingUntil})`,
-    createdBy: 'SYSTEM', // Use uppercase for consistency
-    createdByXID: 'SYSTEM',
-    note: 'Auto-reopen system action',
-  });
-  
-  // Record action in audit trail
-  await recordAction(
-    caseData.caseId,
-    caseData.firmId,
-    CASE_ACTION_TYPES.CASE_AUTO_REOPENED,
-    `Case automatically reopened by system. Previous status: ${previousStatus}. Was pended until: ${previousPendingUntil}`,
-    'SYSTEM',
-    'SYSTEM',
-    'SYSTEM',
-    {
-      previousStatus,
-      newStatus: CaseStatus.OPEN,
-      pendingUntil: previousPendingUntil,
-      autoReopened: true,
-      reason: 'pending_until elapsed',
-      reopened_at: now.toISOString(),
-    }
-  );
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      await CaseService.updateStatus(caseData.caseId, CaseStatus.OPEN, {
+        tenantId: caseData.firmId,
+        role: 'Admin',
+        userId: 'SYSTEM',
+        performedByXID: 'SYSTEM',
+        performedBy: 'SYSTEM',
+        actorRole: 'SYSTEM',
+        session,
+        statusPatch: {
+          pendingUntil: null,
+          lastActionByXID: 'SYSTEM',
+          lastActionAt: now,
+        },
+        auditMetadata: {
+          pendingUntil: previousPendingUntil,
+          autoReopened: true,
+          reason: 'pending_until elapsed',
+          reopened_at: now.toISOString(),
+        },
+      });
+
+      // Add system comment
+      await Comment.create([{
+        caseId: caseData.caseId,
+        text: `Case automatically reopened after pending period expired (was pended until: ${previousPendingUntil})`,
+        createdBy: 'SYSTEM', // Use uppercase for consistency
+        createdByXID: 'SYSTEM',
+        note: 'Auto-reopen system action',
+      }], { session });
+
+      // Record action in audit trail
+      await recordAction(
+        caseData.caseId,
+        caseData.firmId,
+        CASE_ACTION_TYPES.CASE_AUTO_REOPENED,
+        `Case automatically reopened by system. Previous status: ${previousStatus}. Was pended until: ${previousPendingUntil}`,
+        'SYSTEM',
+        'SYSTEM',
+        'SYSTEM',
+        {
+          previousStatus,
+          newStatus: CaseStatus.OPEN,
+          pendingUntil: previousPendingUntil,
+          autoReopened: true,
+          reason: 'pending_until elapsed',
+          reopened_at: now.toISOString(),
+        },
+        null,
+        session
+      );
+    });
+  } finally {
+    await session.endSession();
+  }
 };
 
 /**

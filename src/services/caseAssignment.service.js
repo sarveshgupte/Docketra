@@ -22,7 +22,7 @@ const CaseService = require('./case.service');
  * PR: Case Lifecycle & Dashboard Logic
  */
 
-const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId }) => {
+const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, session = null }) => {
   if (!caseId || !tenantId || !userId) {
     throw new Error('caseId, tenantId, and userId are required');
   }
@@ -45,7 +45,8 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId }) => {
         assignedAt,
         queueType: 'PERSONAL',
       },
-    }
+    },
+    session ? { session } : {}
   );
 
   if (result.modifiedCount !== 1) {
@@ -68,6 +69,7 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId }) => {
     performedByXID: normalizedUserId,
     actorRole: 'USER',
     currentStatus: CaseStatus.UNASSIGNED,
+    session,
     auditMetadata: {
       reason: 'WORKBASKET_PULL',
     },
@@ -124,7 +126,7 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId }) => {
  * @returns {object} Updated case or null if already assigned
  * @throws {Error} If case not found or user invalid
  */
-const assignCaseToUser = async (firmId, caseId, user) => {
+const assignCaseToUser = async (firmId, caseId, user, session = null) => {
   if (!user || !user.xID) {
     throw new Error('Valid user with xID is required for case assignment');
   }
@@ -133,6 +135,7 @@ const assignCaseToUser = async (firmId, caseId, user) => {
     caseId,
     tenantId: firmId,
     userId: user.xID,
+    session,
   });
 
   if (!assignmentResult.success) {

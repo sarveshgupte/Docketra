@@ -297,17 +297,9 @@ const caseSchema = new mongoose.Schema({
     type: Date,
   },
   
-  /**
-   * SLA Due Date - absolute datetime for case completion
-   * MANDATORY field - used for global worklist prioritization and SLA tracking
-   * Stored as absolute date/time value (not duration)
-   */
-  slaDueDate: {
-    type: Date,
-    required: [true, 'SLA Due Date is required'],
-  },
   slaDueAt: {
     type: Date,
+    required: [true, 'SLA Due At is required'],
   },
   tatTotalMinutes: {
     type: Number,
@@ -325,6 +317,13 @@ const caseSchema = new mongoose.Schema({
     type: Number,
     min: 0,
     default: 0,
+  },
+  slaConfigSnapshot: {
+    tatDurationMinutes: { type: Number, min: 0 },
+    businessStartTime: { type: String, trim: true },
+    businessEndTime: { type: String, trim: true },
+    workingDays: { type: [Number], default: undefined },
+    timezone: { type: String, trim: true },
   },
   
   /**
@@ -678,6 +677,7 @@ const caseSchema = new mongoose.Schema({
   // Automatic timestamp management for audit trail
   timestamps: true,
 });
+caseSchema.set('optimisticConcurrency', true);
 
 /**
  * Custom Validator: Pending/PENDED status requires pendingUntil date

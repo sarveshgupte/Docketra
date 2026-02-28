@@ -1,3 +1,4 @@
+const { DateTime } = require('luxon');
 const CaseStatus = require('../domain/case/caseStatus');
 const { normalizeStatus } = require('../domain/case/caseStateMachine');
 const TenantSlaConfig = require('../models/TenantSlaConfig.model');
@@ -7,19 +8,11 @@ const DEFAULT_SLA_CONFIG = Object.freeze({
   businessStartTime: '10:00',
   businessEndTime: '18:00',
   workingDays: [1, 2, 3, 4, 5],
+  timezone: 'UTC',
 });
 
-const MINUTES_IN_DAY = 24 * 60;
+const MAX_CALENDAR_DAYS_LOOKAHEAD = 370;
 const MS_PER_MINUTE = 60 * 1000;
-const MAX_CALENDAR_DAYS_LOOKAHEAD = 370; // Protects calendar loops from runaway iteration for malformed configs.
-
-const parseTimeToMinutes = (value, fallback) => {
-  if (typeof value !== 'string' || !/^\d{2}:\d{2}$/.test(value)) return fallback;
-  const [hours, minutes] = value.split(':').map(Number);
-  if (!Number.isInteger(hours) || !Number.isInteger(minutes)) return fallback;
-  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return fallback;
-  return (hours * 60) + minutes;
-};
 
 const clampMinutes = (value) => {
   const parsed = Number(value);
@@ -27,32 +20,16 @@ const clampMinutes = (value) => {
   return Math.floor(parsed);
 };
 
-const toIsoDay = (date) => {
-  const utcDay = date.getUTCDay();
-  return utcDay === 0 ? 7 : utcDay;
-};
-
-const startOfUtcDay = (date) => new Date(Date.UTC(
-  date.getUTCFullYear(),
-  date.getUTCMonth(),
-  date.getUTCDate(),
-  0,
-  0,
-  0,
-  0
-));
-
-const addUtcDays = (date, days) => {
-  const base = startOfUtcDay(date);
-  base.setUTCDate(base.getUTCDate() + days);
-  return base;
-};
-
-const setUtcMinutesInDay = (date, minuteOfDay) => {
-  const minutes = Math.min(Math.max(minuteOfDay, 0), MINUTES_IN_DAY - 1);
-  const next = startOfUtcDay(date);
-  next.setUTCHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
-  return next;
+const parseTime = (value, fallback) => {
+  const safe = typeof value === 'string' && /^\d{2}:\d{2}$/.test(value) ? value : fallback;
+  const [hourStr, minuteStr] = safe.split(':');
+  const hour = Number(hourStr);
+  const minute = Number(minuteStr);
+  if (!Number.isInteger(hour) || !Number.isInteger(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+    const [fHour, fMinute] = fallback.split(':').map(Number);
+    return { hour: fHour, minute: fMinute };
+  }
+  return { hour, minute };
 };
 
 const normalizeWorkingDays = (days) => {
@@ -64,85 +41,99 @@ const normalizeWorkingDays = (days) => {
 };
 
 const normalizeConfig = (config = {}) => {
-  const businessStartMinute = parseTimeToMinutes(config.businessStartTime, parseTimeToMinutes(DEFAULT_SLA_CONFIG.businessStartTime, 600));
-  const businessEndMinute = parseTimeToMinutes(config.businessEndTime, parseTimeToMinutes(DEFAULT_SLA_CONFIG.businessEndTime, 1080));
-  const safeEndMinute = businessEndMinute > businessStartMinute
-    ? businessEndMinute
-    : parseTimeToMinutes(DEFAULT_SLA_CONFIG.businessEndTime, 1080);
+  const start = parseTime(config.businessStartTime, DEFAULT_SLA_CONFIG.businessStartTime);
+  const end = parseTime(config.businessEndTime, DEFAULT_SLA_CONFIG.businessEndTime);
+  const safeEnd = (end.hour * 60) + end.minute > (start.hour * 60) + start.minute
+    ? end
+    : parseTime(DEFAULT_SLA_CONFIG.businessEndTime, DEFAULT_SLA_CONFIG.businessEndTime);
+  const timezone = typeof config.timezone === 'string' && DateTime.now().setZone(config.timezone).isValid
+    ? config.timezone
+    : DEFAULT_SLA_CONFIG.timezone;
 
   return {
     tatDurationMinutes: clampMinutes(config.tatDurationMinutes || DEFAULT_SLA_CONFIG.tatDurationMinutes),
-    businessStartMinute,
-    businessEndMinute: safeEndMinute,
+    businessStartTime: `${String(start.hour).padStart(2, '0')}:${String(start.minute).padStart(2, '0')}`,
+    businessEndTime: `${String(safeEnd.hour).padStart(2, '0')}:${String(safeEnd.minute).padStart(2, '0')}`,
+    businessStart: start,
+    businessEnd: safeEnd,
     workingDays: normalizeWorkingDays(config.workingDays),
+    timezone,
   };
 };
 
-const moveToNextWorkingDayStart = (date, config) => {
-  let nextDay = addUtcDays(date, 1);
+const atBusinessStart = (dateTime, config) => dateTime
+  .set({
+    hour: config.businessStart.hour,
+    minute: config.businessStart.minute,
+    second: 0,
+    millisecond: 0,
+  });
+
+const atBusinessEnd = (dateTime, config) => dateTime
+  .set({
+    hour: config.businessEnd.hour,
+    minute: config.businessEnd.minute,
+    second: 0,
+    millisecond: 0,
+  });
+
+const moveToNextWorkingDayStart = (dateTime, config) => {
+  let next = atBusinessStart(dateTime.plus({ days: 1 }).startOf('day'), config);
   let attempts = 0;
-  while (!config.workingDays.includes(toIsoDay(nextDay)) && attempts < 14) {
-    nextDay = addUtcDays(nextDay, 1);
+  while (!config.workingDays.includes(next.weekday) && attempts < 14) {
+    next = atBusinessStart(next.plus({ days: 1 }).startOf('day'), config);
     attempts += 1;
   }
-  return setUtcMinutesInDay(nextDay, config.businessStartMinute);
+  return next;
 };
 
-const alignToBusinessTime = (inputDate, config) => {
-  let current = new Date(inputDate);
+const alignToBusinessTime = (jsDate, config) => {
+  let current = DateTime.fromJSDate(new Date(jsDate), { zone: config.timezone });
   let attempts = 0;
   while (attempts < MAX_CALENDAR_DAYS_LOOKAHEAD) {
-    const day = toIsoDay(current);
-    if (!config.workingDays.includes(day)) {
+    if (!config.workingDays.includes(current.weekday)) {
       current = moveToNextWorkingDayStart(current, config);
       attempts += 1;
       continue;
     }
-
-    const currentMinute = (current.getUTCHours() * 60) + current.getUTCMinutes();
-    if (currentMinute < config.businessStartMinute) {
-      return setUtcMinutesInDay(current, config.businessStartMinute);
-    }
-    if (currentMinute >= config.businessEndMinute) {
+    const dayStart = atBusinessStart(current, config);
+    const dayEnd = atBusinessEnd(current, config);
+    if (current < dayStart) return dayStart;
+    if (current >= dayEnd) {
       current = moveToNextWorkingDayStart(current, config);
       attempts += 1;
       continue;
     }
     return current;
   }
-  return setUtcMinutesInDay(current, config.businessStartMinute);
+  return atBusinessStart(current, config);
 };
 
 const calculateDueDate = (startTime, durationMinutes, configInput = DEFAULT_SLA_CONFIG) => {
   const config = normalizeConfig(configInput);
   let remainingMinutes = clampMinutes(durationMinutes);
   let current = alignToBusinessTime(startTime, config);
+  if (remainingMinutes === 0) return current.toUTC().toJSDate();
 
-  if (remainingMinutes === 0) return current;
-
-  const minutesPerBusinessDay = Math.max(1, config.businessEndMinute - config.businessStartMinute);
-  let safetyCounter = Math.ceil(remainingMinutes / minutesPerBusinessDay) + MAX_CALENDAR_DAYS_LOOKAHEAD;
-
+  let safetyCounter = MAX_CALENDAR_DAYS_LOOKAHEAD + Math.ceil(remainingMinutes / Math.max(1, ((config.businessEnd.hour * 60) + config.businessEnd.minute) - ((config.businessStart.hour * 60) + config.businessStart.minute)));
   while (remainingMinutes > 0 && safetyCounter > 0) {
-    const currentMinute = (current.getUTCHours() * 60) + current.getUTCMinutes();
-    const availableToday = Math.max(0, config.businessEndMinute - currentMinute);
-    if (availableToday === 0) {
+    const dayEnd = atBusinessEnd(current, config);
+    const available = Math.max(0, Math.floor(dayEnd.diff(current, 'minutes').minutes));
+    if (available === 0) {
       current = moveToNextWorkingDayStart(current, config);
       safetyCounter -= 1;
       continue;
     }
-
-    const consumed = Math.min(remainingMinutes, availableToday);
-    current = new Date(current.getTime() + (consumed * MS_PER_MINUTE));
+    const consumed = Math.min(remainingMinutes, available);
+    current = current.plus({ minutes: consumed });
     remainingMinutes -= consumed;
-
     if (remainingMinutes > 0) {
       current = moveToNextWorkingDayStart(current, config);
     }
     safetyCounter -= 1;
   }
 
-  return current;
+  return current.toUTC().toJSDate();
 };
 
 const computeElapsedMinutes = (startedAt, now = new Date()) => {
@@ -178,13 +169,19 @@ const initializeCaseSla = async ({ tenantId, caseType, now = new Date() }) => {
   const config = normalizeConfig(dbConfig || DEFAULT_SLA_CONFIG);
   const startedAt = new Date(now);
   const slaDueAt = calculateDueDate(startedAt, config.tatDurationMinutes, config);
-
   return {
     slaDueAt,
     tatPaused: false,
     tatLastStartedAt: startedAt,
     tatAccumulatedMinutes: 0,
     tatTotalMinutes: 0,
+    slaConfigSnapshot: {
+      tatDurationMinutes: config.tatDurationMinutes,
+      businessStartTime: config.businessStartTime,
+      businessEndTime: config.businessEndTime,
+      workingDays: [...config.workingDays],
+      timezone: config.timezone,
+    },
     config,
   };
 };
@@ -197,7 +194,7 @@ const handleStatusTransition = (caseDoc, newStatus, options = {}) => {
 
   if (toStatus === CaseStatus.PENDED && !caseDoc?.tatPaused) {
     const elapsed = computeElapsedMinutes(caseDoc.tatLastStartedAt, now);
-    const newTat = previousTat + elapsed;
+    const newTat = Math.max(previousTat + elapsed, 0);
     return {
       patch: {
         tatAccumulatedMinutes: newTat,
@@ -215,7 +212,10 @@ const handleStatusTransition = (caseDoc, newStatus, options = {}) => {
     };
   }
 
-  if (toStatus === CaseStatus.OPEN && (fromStatus === CaseStatus.PENDED || caseDoc?.tatPaused)) {
+  if (toStatus === CaseStatus.OPEN) {
+    if (!(fromStatus === CaseStatus.PENDED || caseDoc?.tatPaused)) {
+      return { patch: {}, auditEvent: null };
+    }
     return {
       patch: {
         tatPaused: false,
@@ -233,7 +233,7 @@ const handleStatusTransition = (caseDoc, newStatus, options = {}) => {
 
   if (toStatus === CaseStatus.RESOLVED) {
     const elapsed = caseDoc?.tatPaused ? 0 : computeElapsedMinutes(caseDoc?.tatLastStartedAt, now);
-    const newTat = previousTat + elapsed;
+    const newTat = Math.max(previousTat + elapsed, 0);
     return {
       patch: {
         tatAccumulatedMinutes: newTat,
