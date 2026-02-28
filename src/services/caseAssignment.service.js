@@ -44,20 +44,38 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId }) => {
         assignedTo: normalizedUserId,
         assignedAt,
         queueType: 'PERSONAL',
-        status: CaseStatus.OPEN,
-        lastActionByXID: normalizedUserId,
-        lastActionAt: assignedAt,
       },
     }
   );
 
   if (result.modifiedCount !== 1) {
+    console.warn('[AtomicPullConflict]', {
+      caseId,
+      tenantId,
+      reason: 'No row modified',
+    });
     return {
       success: false,
       status: 'CONFLICT',
       error: 'Case already assigned',
     };
   }
+
+  await CaseService.updateStatus(caseId, CaseStatus.OPEN, {
+    tenantId,
+    userId: normalizedUserId,
+    performedBy: 'SYSTEM',
+    performedByXID: normalizedUserId,
+    actorRole: 'USER',
+    currentStatus: CaseStatus.UNASSIGNED,
+    auditMetadata: {
+      reason: 'WORKBASKET_PULL',
+    },
+    statusPatch: {
+      lastActionByXID: normalizedUserId,
+      lastActionAt: assignedAt,
+    },
+  });
 
   setImmediate(() => {
     CaseAudit.create({

@@ -4,6 +4,7 @@ const assert = require('assert');
 const Case = require('../src/models/Case.model');
 const CaseAudit = require('../src/models/CaseAudit.model');
 const CaseStatus = require('../src/domain/case/caseStatus');
+const CaseService = require('../src/services/case.service');
 
 const servicePath = require.resolve('../src/services/caseAssignment.service');
 
@@ -15,8 +16,10 @@ function freshService() {
 async function testAtomicUpdateFilterAndSuccessResponse() {
   const originalUpdateOne = Case.updateOne;
   const originalAuditCreate = CaseAudit.create;
+  const originalUpdateStatus = CaseService.updateStatus;
   let capturedFilter;
   let capturedUpdate;
+  let transitionCalled = false;
 
   Case.updateOne = async (filter, update) => {
     capturedFilter = filter;
@@ -24,6 +27,13 @@ async function testAtomicUpdateFilterAndSuccessResponse() {
     return { modifiedCount: 1 };
   };
   CaseAudit.create = async () => ({});
+  CaseService.updateStatus = async (caseId, newStatus, context) => {
+    transitionCalled = true;
+    assert.strictEqual(caseId, 'CASE-20260101-00001');
+    assert.strictEqual(newStatus, CaseStatus.OPEN);
+    assert.strictEqual(context.currentStatus, CaseStatus.UNASSIGNED);
+    assert.strictEqual(context.auditMetadata.reason, 'WORKBASKET_PULL');
+  };
 
   try {
     const service = freshService();
@@ -46,12 +56,14 @@ async function testAtomicUpdateFilterAndSuccessResponse() {
     });
     assert.strictEqual(capturedUpdate.$set.assignedToXID, 'X123456');
     assert.strictEqual(capturedUpdate.$set.assignedTo, 'X123456');
-    assert.strictEqual(capturedUpdate.$set.status, CaseStatus.OPEN);
+    assert.strictEqual(capturedUpdate.$set.status, undefined);
+    assert.strictEqual(transitionCalled, true);
     await new Promise((resolve) => setImmediate(resolve));
     console.log('✓ Atomic single-case pull updates with tenant and unassigned filter');
   } finally {
     Case.updateOne = originalUpdateOne;
     CaseAudit.create = originalAuditCreate;
+    CaseService.updateStatus = originalUpdateStatus;
     delete require.cache[servicePath];
   }
 }
@@ -59,8 +71,11 @@ async function testAtomicUpdateFilterAndSuccessResponse() {
 async function testConflictWhenNoRowsUpdated() {
   const originalUpdateOne = Case.updateOne;
   const originalAuditCreate = CaseAudit.create;
+  const originalUpdateStatus = CaseService.updateStatus;
+  let transitionCalled = false;
   Case.updateOne = async () => ({ modifiedCount: 0 });
   CaseAudit.create = async () => ({});
+  CaseService.updateStatus = async () => { transitionCalled = true; };
 
   try {
     const service = freshService();
@@ -74,10 +89,12 @@ async function testConflictWhenNoRowsUpdated() {
       status: 'CONFLICT',
       error: 'Case already assigned',
     });
+    assert.strictEqual(transitionCalled, false);
     console.log('✓ Atomic pull returns deterministic conflict when no row is updated');
   } finally {
     Case.updateOne = originalUpdateOne;
     CaseAudit.create = originalAuditCreate;
+    CaseService.updateStatus = originalUpdateStatus;
     delete require.cache[servicePath];
   }
 }
@@ -85,6 +102,7 @@ async function testConflictWhenNoRowsUpdated() {
 async function testConcurrentPullsYieldSingleWinner() {
   const originalUpdateOne = Case.updateOne;
   const originalAuditCreate = CaseAudit.create;
+  const originalUpdateStatus = CaseService.updateStatus;
   let assigned = false;
   Case.updateOne = async () => {
     if (assigned) {
@@ -94,6 +112,7 @@ async function testConcurrentPullsYieldSingleWinner() {
     return { modifiedCount: 1 };
   };
   CaseAudit.create = async () => ({});
+  CaseService.updateStatus = async () => ({});
 
   try {
     const service = freshService();
@@ -115,6 +134,7 @@ async function testConcurrentPullsYieldSingleWinner() {
   } finally {
     Case.updateOne = originalUpdateOne;
     CaseAudit.create = originalAuditCreate;
+    CaseService.updateStatus = originalUpdateStatus;
     delete require.cache[servicePath];
   }
 }
@@ -122,12 +142,14 @@ async function testConcurrentPullsYieldSingleWinner() {
 async function testTenantScopedFilterPreventsCrossTenantAccess() {
   const originalUpdateOne = Case.updateOne;
   const originalAuditCreate = CaseAudit.create;
+  const originalUpdateStatus = CaseService.updateStatus;
   let seenTenant;
   Case.updateOne = async (filter) => {
     seenTenant = filter.firmId;
     return { modifiedCount: 0 };
   };
   CaseAudit.create = async () => ({});
+  CaseService.updateStatus = async () => ({});
 
   try {
     const service = freshService();
@@ -143,6 +165,7 @@ async function testTenantScopedFilterPreventsCrossTenantAccess() {
   } finally {
     Case.updateOne = originalUpdateOne;
     CaseAudit.create = originalAuditCreate;
+    CaseService.updateStatus = originalUpdateStatus;
     delete require.cache[servicePath];
   }
 }
