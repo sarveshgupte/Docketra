@@ -11,7 +11,7 @@ export const authService = {
    * Login with xID and password
    * Backend expects payload key as 'xID' (uppercase 'D')
    */
-  login: async (identifier, password, endpoint = '/superadmin') => {
+  login: async (identifier, password, endpoint = '/superadmin/login') => {
     // Send xID only (no email login supported)
     const payload = {
       xID: identifier,
@@ -106,7 +106,7 @@ export const authService = {
    * Set password using token from email
    */
   setPassword: async (token, password) => {
-    const response = await api.post('/auth/setup-password', {
+    const response = await api.post('/auth/setup-account', {
       token,
       password,
     });

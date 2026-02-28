@@ -41,7 +41,7 @@ export const FirmLoginPage = () => {
           const firm = response.data.data;
           
           // Check if firm is active
-          if (!['active', 'ACTIVE'].includes(firm.status)) {
+          if (firm.status !== 'active') {
             setError('This firm is currently inactive. Please contact support.');
             setFirmData(null);
             localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);

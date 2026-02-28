@@ -29,7 +29,7 @@ const PASSWORD_SETUP_TOKEN_EXPIRY = '24h';
  * @returns {Promise<Object|null>}
  */
 const findFirmAdmin = async (firmObjectId) => {
-  return User.findOne({ firmId: firmObjectId, isSystem: true, role: 'Admin', status: { $ne: 'DELETED' } });
+  return User.findOne({ firmId: firmObjectId, isSystem: true, role: 'Admin', status: { $ne: 'deleted' } });
 };
 
 const findFirmAdminById = async (firmObjectId, adminId) => {
@@ -40,7 +40,7 @@ const findFirmAdminById = async (firmObjectId, adminId) => {
     _id: adminId,
     firmId: firmObjectId,
     role: 'Admin',
-    status: { $ne: 'DELETED' },
+    status: { $ne: 'deleted' },
   });
 };
 
@@ -148,7 +148,7 @@ const getPlatformStats = async (req, res) => {
 
     // Get total firms
     const totalFirms = await Firm.countDocuments(firmFilter);
-    const activeFirms = await Firm.countDocuments({ ...firmFilter, status: 'ACTIVE' });
+    const activeFirms = await Firm.countDocuments({ ...firmFilter, status: 'active' });
     
     // Get total clients across all firms
     const totalClients = await Client.countDocuments(firmScope);
@@ -205,7 +205,7 @@ const listFirms = async (req, res) => {
           firmSlug: firm.firmSlug,
           name: firm.name,
           status: firm.status,
-          isActive: firm.status === 'ACTIVE',
+          isActive: firm.status === 'active',
           clientCount,
           userCount,
           createdAt: firm.createdAt,
@@ -237,7 +237,7 @@ const updateFirmStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
     
-    if (!status || !['ACTIVE', 'SUSPENDED'].includes(status)) {
+    if (!status || !['active', 'suspended'].includes(status)) {
       return res.status(400).json({
         success: false,
         message: 'Status must be ACTIVE or SUSPENDED',
@@ -259,10 +259,10 @@ const updateFirmStatus = async (req, res) => {
     await firm.save();
     
     // Log action
-    const actionType = status === 'ACTIVE' ? 'FirmActivated' : 'FirmSuspended';
+    const actionType = status === 'active' ? 'FirmActivated' : 'FirmSuspended';
     await logSuperadminAction({
       actionType,
-      description: `Firm ${status === 'ACTIVE' ? 'activated' : 'suspended'}: ${firm.name} (${firm.firmId})`,
+      description: `Firm ${status === 'active' ? 'activated' : 'suspended'}: ${firm.name} (${firm.firmId})`,
       performedBy: req.user.email,
       performedById: req.user._id,
       targetEntityType: 'Firm',
@@ -273,7 +273,7 @@ const updateFirmStatus = async (req, res) => {
     
     res.json({
       success: true,
-      message: `Firm ${status === 'ACTIVE' ? 'activated' : 'suspended'} successfully`,
+      message: `Firm ${status === 'active' ? 'activated' : 'suspended'} successfully`,
       data: {
         _id: firm._id,
         firmId: firm.firmId,
@@ -308,7 +308,7 @@ const disableFirmImmediately = async (req, res) => {
     }
 
     const oldStatus = firm.status;
-    firm.status = 'SUSPENDED';
+    firm.status = 'suspended';
     await firm.save();
 
     await logSuperadminAction({
@@ -318,7 +318,7 @@ const disableFirmImmediately = async (req, res) => {
       performedById: req.user._id,
       targetEntityType: 'Firm',
       targetEntityId: firm._id.toString(),
-      metadata: { firmId: firm.firmId, name: firm.name, oldStatus, newStatus: 'SUSPENDED' },
+      metadata: { firmId: firm.firmId, name: firm.name, oldStatus, newStatus: 'suspended' },
       req,
     });
 
@@ -389,7 +389,7 @@ const createFirmAdmin = async (req, res) => {
     const existingEmail = await User.findOne({
       firmId: firm._id,
       email: normalizedEmail,
-      status: { $ne: 'DELETED' },
+      status: { $ne: 'deleted' },
     });
     if (existingEmail) {
       return res.status(400).json({
@@ -416,7 +416,7 @@ const createFirmAdmin = async (req, res) => {
       firmId: firm._id,
       defaultClientId: firm.defaultClientId, // Set to firm's default client
       role: 'Admin',
-      status: 'INVITED',
+      status: 'invited',
       isActive: true,
       passwordSet: false,
       mustSetPassword: false,
@@ -541,7 +541,7 @@ const getFirmBySlug = async (req, res) => {
         firmSlug: firm.firmSlug,
         name: firm.name,
         status: firm.status,
-        isActive: firm.status === 'ACTIVE',
+        isActive: firm.status === 'active',
       },
     });
   } catch (error) {
@@ -705,7 +705,7 @@ const getFirmAdminDetails = async (req, res) => {
     });
   }
 
-  if (admin.status === 'DELETED') {
+  if (admin.status === 'deleted') {
     return res.status(422).json({
       success: false,
       code: 'ADMIN_DELETED',
@@ -762,7 +762,7 @@ const listFirmAdmins = async (req, res) => {
     });
   }
 
-  const admins = await User.find({ firmId: firm._id, role: 'Admin', status: { $ne: 'DELETED' } })
+  const admins = await User.find({ firmId: firm._id, role: 'Admin', status: { $ne: 'deleted' } })
     .select('name email xID status isSystem lockUntil passwordSetAt inviteSentAt')
     .sort({ isSystem: -1, createdAt: 1 });
 
@@ -819,7 +819,7 @@ const updateFirmAdminStatus = async (req, res) => {
     });
   }
 
-  if (!['ACTIVE', 'DISABLED'].includes(status)) {
+  if (!['active', 'suspended'].includes(status)) {
     return res.status(400).json({
       success: false,
       message: 'Status must be ACTIVE or DISABLED',
@@ -846,7 +846,7 @@ const updateFirmAdminStatus = async (req, res) => {
     });
   }
 
-  if (admin.status === 'DELETED') {
+  if (admin.status === 'deleted') {
     return res.status(422).json({
       success: false,
       code: 'ADMIN_DELETED',
@@ -862,7 +862,7 @@ const updateFirmAdminStatus = async (req, res) => {
     });
   }
 
-  if (admin.status === 'INVITED' && status === 'DISABLED') {
+  if (admin.status === 'invited' && status === 'suspended') {
     return res.status(422).json({
       success: false,
       code: 'ADMIN_INVALID_STATUS_TRANSITION',
@@ -870,7 +870,7 @@ const updateFirmAdminStatus = async (req, res) => {
     });
   }
 
-  if (status === 'ACTIVE' && (admin.mustChangePassword || admin.mustSetPassword)) {
+  if (status === 'active' && (admin.mustChangePassword || admin.mustSetPassword)) {
     return res.status(422).json({
       success: false,
       code: 'ADMIN_PASSWORD_NOT_SET',
@@ -879,12 +879,12 @@ const updateFirmAdminStatus = async (req, res) => {
   }
 
   const oldStatus = admin.status;
-  if (status === 'DISABLED' && admin.status === 'ACTIVE') {
+  if (status === 'suspended' && admin.status === 'active') {
     const session = req.transactionSession?.session;
     const activeAdminsCountQuery = User.countDocuments({
       firmId: firm._id,
       role: 'Admin',
-      status: 'ACTIVE',
+      status: 'active',
     });
     const activeAdminsCount = await resolveSessionQuery(activeAdminsCountQuery, session);
 
@@ -903,7 +903,7 @@ const updateFirmAdminStatus = async (req, res) => {
       _id: admin._id,
       firmId: firm._id,
       role: 'Admin',
-      status: { $ne: 'DELETED' },
+      status: { $ne: 'deleted' },
     });
     const adminForUpdate = await resolveSessionQuery(adminForUpdateQuery, session);
 
@@ -914,7 +914,7 @@ const updateFirmAdminStatus = async (req, res) => {
       throw err;
     }
 
-    adminForUpdate.status = 'DISABLED';
+    adminForUpdate.status = 'suspended';
     adminForUpdate.isActive = false;
     await adminForUpdate.save({ session });
 
@@ -922,7 +922,7 @@ const updateFirmAdminStatus = async (req, res) => {
     admin.isActive = adminForUpdate.isActive;
   } else {
     admin.status = status;
-    admin.isActive = status === 'ACTIVE';
+    admin.isActive = status === 'active';
     await admin.save();
   }
 
@@ -945,7 +945,7 @@ const updateFirmAdminStatus = async (req, res) => {
 
   return res.status(200).json({
     success: true,
-    message: `Admin ${status === 'ACTIVE' ? 'enabled' : 'disabled'} successfully`,
+    message: `Admin ${status === 'active' ? 'enabled' : 'disabled'} successfully`,
     data: {
       xID: admin.xID,
       status: admin.status,
@@ -994,7 +994,7 @@ const forceResetFirmAdmin = async (req, res) => {
     });
   }
 
-  if (admin.status === 'DELETED') {
+  if (admin.status === 'deleted') {
     return res.status(422).json({
       success: false,
       code: 'ADMIN_DELETED',
@@ -1002,7 +1002,7 @@ const forceResetFirmAdmin = async (req, res) => {
     });
   }
 
-  if (admin.status !== 'ACTIVE') {
+  if (admin.status !== 'active') {
     return res.status(422).json({
       success: false,
       code: 'ADMIN_NOT_ACTIVE',
@@ -1111,7 +1111,7 @@ const deleteFirmAdmin = async (req, res) => {
     });
   }
 
-  if (admin.status === 'DELETED') {
+  if (admin.status === 'deleted') {
     return res.status(422).json({
       success: false,
       code: 'ADMIN_DELETED',
@@ -1124,7 +1124,7 @@ const deleteFirmAdmin = async (req, res) => {
     _id: admin._id,
     firmId: firm._id,
     role: 'Admin',
-    status: { $ne: 'DELETED' },
+    status: { $ne: 'deleted' },
   });
   const adminForDelete = await resolveSessionQuery(adminForDeleteQuery, session);
 
@@ -1140,18 +1140,18 @@ const deleteFirmAdmin = async (req, res) => {
     err.code = 'SYSTEM_ADMIN_DELETE_FORBIDDEN';
     throw err;
   }
-  if (adminForDelete.status === 'DELETED') {
+  if (adminForDelete.status === 'deleted') {
     const err = new Error('Admin is already deleted');
     err.statusCode = 422;
     err.code = 'ADMIN_DELETED';
     throw err;
   }
 
-  if (adminForDelete.status === 'ACTIVE') {
+  if (adminForDelete.status === 'active') {
     const activeAdminsCountQuery = User.countDocuments({
       firmId: firm._id,
       role: 'Admin',
-      status: 'ACTIVE',
+      status: 'active',
     });
     const activeAdminsCount = await resolveSessionQuery(activeAdminsCountQuery, session);
 
@@ -1167,7 +1167,7 @@ const deleteFirmAdmin = async (req, res) => {
     }
   }
 
-  adminForDelete.status = 'DELETED';
+  adminForDelete.status = 'deleted';
   adminForDelete.isActive = false;
   adminForDelete.deletedAt = new Date();
   await adminForDelete.save({ session });
@@ -1224,7 +1224,7 @@ const resendAdminAccess = async (req, res) => {
   }
 
   // Find the default admin for this firm (isSystem=true, role=Admin)
-  const admin = await User.findOne({ firmId: firm._id, isSystem: true, role: 'Admin', status: { $ne: 'DELETED' } });
+  const admin = await User.findOne({ firmId: firm._id, isSystem: true, role: 'Admin', status: { $ne: 'deleted' } });
   if (!admin) {
     return res.status(404).json({
       success: false,
@@ -1234,7 +1234,7 @@ const resendAdminAccess = async (req, res) => {
   }
 
   // Reject disabled admins
-  if (admin.status === 'DISABLED') {
+  if (admin.status === 'suspended') {
     return res.status(422).json({
       success: false,
       code: 'ADMIN_DISABLED',
@@ -1242,7 +1242,7 @@ const resendAdminAccess = async (req, res) => {
     });
   }
 
-  const isInvited = admin.status === 'INVITED';
+  const isInvited = admin.status === 'invited';
   const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
   const passwordSetupSecret = process.env.JWT_PASSWORD_SETUP_SECRET;
   if (!passwordSetupSecret) {
@@ -1351,10 +1351,10 @@ const deactivateFirm = async (req, res) => {
     if (!firm) {
       return res.status(404).json({ success: false, message: 'Firm not found' });
     }
-    if (firm.status !== 'ACTIVE') {
+    if (firm.status !== 'active') {
       return res.status(400).json({ success: false, message: 'Firm must be ACTIVE to deactivate' });
     }
-    firm.status = 'INACTIVE';
+    firm.status = 'suspended';
     await firm.save();
     await logSuperadminAction({
       actionType: 'FirmDeactivated',
@@ -1363,7 +1363,7 @@ const deactivateFirm = async (req, res) => {
       performedById: req.user._id,
       targetEntityType: 'Firm',
       targetEntityId: firm._id.toString(),
-      metadata: { firmId: firm.firmId, name: firm.name, oldStatus: 'ACTIVE', newStatus: 'INACTIVE' },
+      metadata: { firmId: firm.firmId, name: firm.name, oldStatus: 'active', newStatus: 'suspended' },
       req,
     });
     return res.json({ success: true, data: { _id: firm._id, firmId: firm.firmId, name: firm.name, status: firm.status } });
@@ -1384,10 +1384,10 @@ const activateFirm = async (req, res) => {
     if (!firm) {
       return res.status(404).json({ success: false, message: 'Firm not found' });
     }
-    if (firm.status !== 'INACTIVE') {
+    if (firm.status !== 'suspended') {
       return res.status(400).json({ success: false, message: 'Firm must be INACTIVE to activate' });
     }
-    firm.status = 'ACTIVE';
+    firm.status = 'active';
     await firm.save();
     await logSuperadminAction({
       actionType: 'FirmActivated',
@@ -1396,7 +1396,7 @@ const activateFirm = async (req, res) => {
       performedById: req.user._id,
       targetEntityType: 'Firm',
       targetEntityId: firm._id.toString(),
-      metadata: { firmId: firm.firmId, name: firm.name, oldStatus: 'INACTIVE', newStatus: 'ACTIVE' },
+      metadata: { firmId: firm.firmId, name: firm.name, oldStatus: 'suspended', newStatus: 'active' },
       req,
     });
     return res.json({ success: true, data: { _id: firm._id, firmId: firm.firmId, name: firm.name, status: firm.status } });

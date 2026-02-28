@@ -81,7 +81,7 @@ const firmSchema = new mongoose.Schema({
    */
   status: {
     type: String,
-    enum: ['pending_setup', 'active', 'suspended', 'ACTIVE', 'SUSPENDED', 'INACTIVE'],
+    enum: ['pending_setup', 'active', 'suspended'],
     default: 'pending_setup',
   },
 

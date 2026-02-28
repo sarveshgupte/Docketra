@@ -55,7 +55,7 @@ module.exports = async function tenantResolver(req, res, next) {
       return res.status(404).json(FIRM_NOT_FOUND_RESPONSE);
     }
 
-    if (!['active', 'ACTIVE'].includes(firm.status)) {
+    if (firm.status !== 'active') {
       return res.status(403).json({
         success: false,
         code: 'FIRM_NOT_ACTIVE',

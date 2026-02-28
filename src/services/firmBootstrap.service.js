@@ -136,7 +136,7 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
       firmId,
       name: normalizedName,
       firmSlug,
-      status: 'ACTIVE',
+      status: 'active',
       bootstrapStatus: 'PENDING',
     }], { session });
 
@@ -165,7 +165,7 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
       isInternal: true,
       createdBySystem: true,
       isActive: true,
-      status: 'ACTIVE',
+      status: 'active',
       createdByXid: 'SUPERADMIN',
       createdBy: process.env.SUPERADMIN_EMAIL || `superadmin@${SYSTEM_EMAIL_DOMAIN}`,
     }], { session });
@@ -190,8 +190,8 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
       // Admin onboarding state: INVITED (equivalent to PENDING_SETUP)
       // User cannot login until they set password via email link
       // Status will transition to ACTIVE after password is set
-      status: 'INVITED',
-      isActive: true,
+      status: 'invited',
+      isActive: false,
       isSystem: true,
       passwordSet: false,
       mustSetPassword: false,

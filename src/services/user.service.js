@@ -12,28 +12,23 @@ class PlanLimitExceededError extends Error {
 }
 
 const assertFirmPlanCapacity = async ({ firmId, session }) => {
-  const firm = await Firm.findOneAndUpdate(
-    { _id: firmId },
-    { $set: { subscriptionStatus: null } },
-    { new: true, session }
-  );
+  if (!session) {
+    throw new Error('Transaction session is required for plan capacity enforcement');
+  }
 
+  const firm = await Firm.findById(firmId).session(session);
   if (!firm) {
     throw new Error('Firm not found');
   }
 
-  if (!firm.planId) {
-    return;
-  }
+  if (!firm.planId) return;
 
   const plan = await Plan.findById(firm.planId).session(session);
-  if (!plan || plan.maxUsers == null) {
-    return;
-  }
+  if (!plan || plan.maxUsers == null) return;
 
   const count = await User.countDocuments({
     firmId,
-    status: { $in: ['active', 'invited', 'ACTIVE', 'INVITED'] },
+    status: { $in: ['active', 'invited'] },
   }).session(session);
 
   if (count >= plan.maxUsers) {
