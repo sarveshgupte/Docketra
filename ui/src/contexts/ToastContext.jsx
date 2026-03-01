@@ -112,13 +112,13 @@ const ToastContainer = ({ toasts, removeToast }) => {
     <div
       style={{
         position: 'fixed',
-        top: '80px',
+        top: '24px',
         right: '24px',
         zIndex: 9999,
         display: 'flex',
         flexDirection: 'column',
-        gap: '8px',
-        maxWidth: '420px',
+        gap: '12px',
+        alignItems: 'flex-end',
       }}
     >
       {toasts.map((toast) => (
@@ -127,6 +127,8 @@ const ToastContainer = ({ toasts, removeToast }) => {
           className={`neo-alert neo-alert--${toast.type}`}
           style={{
             minWidth: '320px',
+            maxWidth: '420px',
+            wordBreak: 'break-word',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'flex-start',

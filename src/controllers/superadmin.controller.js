@@ -67,7 +67,7 @@ const resolveSessionQuery = (query, session) => {
  * - For system actions: performedById can be null,
  *   and performedBySystem will be set to true automatically
  */
-const logSuperadminAction = async ({ actionType, description, performedBy, performedById, targetEntityType, targetEntityId, metadata = {}, req }) => {
+const logSuperadminAction = async ({ actionType, description, performedBy, performedById, targetEntityType, targetEntityId, metadata = {}, req, session = null }) => {
   try {
     // Determine if this is a system-triggered action
     // System actions are identified by:
@@ -97,7 +97,11 @@ const logSuperadminAction = async ({ actionType, description, performedBy, perfo
       auditEntry.performedBySystem = false;
     }
     
-    await SuperadminAudit.create(auditEntry);
+    if (session) {
+      await SuperadminAudit.create([auditEntry], { session });
+    } else {
+      await SuperadminAudit.create(auditEntry);
+    }
   } catch (error) {
     console.error('[SUPERADMIN_AUDIT] Failed to log action:', error.message);
     // Don't throw - audit failures shouldn't block the request
@@ -223,7 +227,6 @@ const listFirms = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to list firms',
-      error: error.message,
     });
   }
 };
@@ -286,7 +289,6 @@ const updateFirmStatus = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to update firm status',
-      error: error.message,
     });
   }
 };
@@ -1377,32 +1379,73 @@ const deactivateFirm = async (req, res) => {
  * Activate a firm (set status to ACTIVE)
  * PATCH /api/superadmin/firms/:id/activate
  */
-const activateFirm = async (req, res) => {
+const activateFirm = async (req, res, next) => {
+  let session;
   try {
+    session = await mongoose.startSession();
+    let activatedFirm = null;
     const { id } = req.params;
-    const firm = await Firm.findById(id);
-    if (!firm) {
-      return res.status(404).json({ success: false, message: 'Firm not found' });
-    }
-    if (firm.status !== 'suspended') {
-      return res.status(400).json({ success: false, message: 'Firm must be INACTIVE to activate' });
-    }
-    firm.status = 'active';
-    await firm.save();
-    await logSuperadminAction({
-      actionType: 'FirmActivated',
-      description: `Firm activated: ${firm.name} (${firm.firmId})`,
-      performedBy: req.user.email,
-      performedById: req.user._id,
-      targetEntityType: 'Firm',
-      targetEntityId: firm._id.toString(),
-      metadata: { firmId: firm.firmId, name: firm.name, oldStatus: 'suspended', newStatus: 'active' },
-      req,
+    await session.withTransaction(async () => {
+      const firm = await Firm.findById(id).session(session);
+      if (!firm) {
+        const error = new Error('Firm not found');
+        error.statusCode = 404;
+        throw error;
+      }
+      if (!['suspended', 'INACTIVE'].includes(firm.status)) {
+        const error = new Error('Firm must be INACTIVE (suspended) to activate');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      const oldStatus = firm.status;
+      firm.status = 'active';
+      await firm.save({ session });
+
+      await AuthAudit.create([{
+        xID: req.user?.xID || 'UNKNOWN_ACTOR',
+        firmId: firm.firmId || 'UNKNOWN_FIRM',
+        userId: req.user?._id,
+        actionType: 'AdminMutation',
+        description: `PATCH ${req.originalUrl || req.url || `/api/superadmin/firms/${id}/activate`}`,
+        performedBy: req.user?.xID || req.user?.email || 'UNKNOWN',
+        ipAddress: req.ip,
+        userAgent: req.headers?.['user-agent'],
+        metadata: {
+          target: firm._id.toString(),
+          scope: 'GLOBAL',
+          requestId: req.requestId,
+          oldStatus,
+          newStatus: 'active',
+        },
+        timestamp: new Date(),
+      }], { session });
+
+      await logSuperadminAction({
+        actionType: 'FirmActivated',
+        description: `Firm activated: ${firm.name} (${firm.firmId})`,
+        performedBy: req.user.email,
+        performedById: req.user._id,
+        targetEntityType: 'Firm',
+        targetEntityId: firm._id.toString(),
+        metadata: { firmId: firm.firmId, name: firm.name, oldStatus, newStatus: 'active' },
+        req,
+        session,
+      });
+
+      activatedFirm = { _id: firm._id, firmId: firm.firmId, name: firm.name, status: firm.status };
     });
-    return res.json({ success: true, data: { _id: firm._id, firmId: firm.firmId, name: firm.name, status: firm.status } });
+    return res.status(200).json({
+      success: true,
+      message: 'Firm activated successfully',
+      data: activatedFirm,
+    });
   } catch (error) {
-    console.error('[SUPERADMIN] Error activating firm:', error);
-    return res.status(500).json({ success: false, message: 'Failed to activate firm' });
+    return next(error);
+  } finally {
+    if (session) {
+      await session.endSession();
+    }
   }
 };
 
@@ -1423,6 +1466,7 @@ module.exports = {
   getOperationalHealth,
   switchFirm,
   exitFirm,
-  activateFirm: wrapWriteHandler(activateFirm),
+  // Intentionally not wrapped: activateFirm owns its explicit session.withTransaction lifecycle.
+  activateFirm,
   deactivateFirm: wrapWriteHandler(deactivateFirm),
 };

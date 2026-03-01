@@ -20,6 +20,7 @@ const inputClass =
   'w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition-colors duration-150 focus:border-gray-900 focus:shadow-[0_0_0_3px_rgba(17,24,39,0.08)] bg-white';
 
 const labelClass = 'block text-xs font-medium text-gray-700 mb-1.5';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
 export const SignupPage = () => {
   const [form, setForm] = useState(initialForm);
@@ -47,12 +48,17 @@ export const SignupPage = () => {
         goLiveTimeline: form.goLiveTimeline,
       };
 
-      const response = await fetch('/api/public/signup', {
+      const response = await fetch(`${API_BASE}/api/public/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error('Server returned an invalid response');
+      }
 
       if (!response.ok) {
         throw new Error(data.message || 'Unable to submit early access request. Please try again.');
