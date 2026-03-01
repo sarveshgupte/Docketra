@@ -57,6 +57,7 @@ export const SignupPage = () => {
         submitError?.response?.data?.message
           || submitError?.response?.data?.error
           || submitError.message
+          || 'Unable to submit early access request. Please try again.'
       );
     }
   };
