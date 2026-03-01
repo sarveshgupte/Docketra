@@ -129,7 +129,7 @@ export const FirmsManagement = () => {
         setFirms(prev => prev.map(f => f._id === updatedFirm._id ? { ...f, ...updatedFirm } : f));
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to update firm status');
+      toast.error(error?.response?.data?.message || error?.message || 'Activation failed');
     }
   };
 
@@ -495,7 +495,9 @@ export const FirmsManagement = () => {
                 </thead>
                 <tbody>
                   {firms.map(firm => {
-                    const { label: statusLabel, key: statusKey, isActive } = getFirmStatusInfo(firm.status);
+                    const statusInfo = getFirmStatusInfo(firm.status);
+                    const { label: statusLabel, key: statusKey, isActive } = statusInfo;
+                    const canActivate = statusInfo.normalizedStatus === 'INACTIVE' || statusInfo.normalizedStatus === 'SUSPENDED';
                     const loginUrl = firm.firmSlug
                       ? `${window.location.origin}/${firm.firmSlug}/login`
                       : null;
@@ -544,6 +546,7 @@ export const FirmsManagement = () => {
                               <Button
                                 size="small"
                                 variant="success"
+                                disabled={!canActivate}
                                 onClick={() => handleToggleFirmStatus(firm._id, firm.status)}
                               >
                                 Activate

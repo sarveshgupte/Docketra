@@ -2,7 +2,6 @@ const express = require('express');
 const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
 const routeSchemas = require('../schemas/superadmin.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
-const { authenticate } = require('../middleware/auth.middleware');
 const { requireSuperadmin } = require('../middleware/permission.middleware');
 const { authorize } = require('../middleware/authorize');
 const SuperAdminPolicy = require('../policies/superadmin.policy');
@@ -47,33 +46,33 @@ const {
  */
 
 // Platform statistics
-router.get('/stats', authenticate, authorize(SuperAdminPolicy.canViewPlatformStats), superadminLimiter, getPlatformStats);
-router.get('/health', authenticate, requireSuperadmin, superadminLimiter, getOperationalHealth);
+router.get('/stats', authorize(SuperAdminPolicy.canViewPlatformStats), superadminLimiter, getPlatformStats);
+router.get('/health', requireSuperadmin, superadminLimiter, getOperationalHealth);
 
 // Firm management
-router.post('/firms', authenticate, authorize(FirmPolicy.canCreate), superadminLimiter, createFirm);
-router.get('/firms', authenticate, authorize(FirmPolicy.canView), superadminLimiter, listFirms);
-router.patch('/firms/:id', authenticate, authorize(FirmPolicy.canManageStatus), superadminLimiter, updateFirmStatus);
-router.patch('/firms/:id/activate', authenticate, authorize(FirmPolicy.canManageStatus), superadminLimiter, activateFirm);
-router.patch('/firms/:id/deactivate', authenticate, authorize(FirmPolicy.canManageStatus), superadminLimiter, deactivateFirm);
-router.post('/firms/:id/disable', authenticate, authorize(FirmPolicy.canManageStatus), superadminLimiter, disableFirmImmediately);
+router.post('/firms', authorize(FirmPolicy.canCreate), superadminLimiter, createFirm);
+router.get('/firms', authorize(FirmPolicy.canView), superadminLimiter, listFirms);
+router.patch('/firms/:id', authorize(FirmPolicy.canManageStatus), superadminLimiter, updateFirmStatus);
+router.patch('/firms/:id/activate', authorize(FirmPolicy.canManageStatus), superadminLimiter, activateFirm);
+router.patch('/firms/:id/deactivate', authorize(FirmPolicy.canManageStatus), superadminLimiter, deactivateFirm);
+router.post('/firms/:id/disable', authorize(FirmPolicy.canManageStatus), superadminLimiter, disableFirmImmediately);
 
 // Firm admin creation
-router.post('/firms/:firmId/admin', authenticate, authorize(FirmPolicy.canCreateAdmin), superadminAdminManagementLimiter, createFirmAdmin);
-router.post('/firms/:firmId/admins', authenticate, authorize(FirmPolicy.canCreateAdmin), superadminAdminManagementLimiter, createFirmAdmin);
+router.post('/firms/:firmId/admin', authorize(FirmPolicy.canCreateAdmin), superadminAdminManagementLimiter, createFirmAdmin);
+router.post('/firms/:firmId/admins', authorize(FirmPolicy.canCreateAdmin), superadminAdminManagementLimiter, createFirmAdmin);
 
 // Resend admin access (invite or password reset)
-router.post('/firms/:firmId/admin/resend-access', authenticate, authorize(FirmPolicy.canResendAdminAccess), superadminAdminResendLimiter, resendAdminAccess);
-router.get('/firms/:firmId/admin', authenticate, authorize(FirmPolicy.canResendAdminAccess), superadminAdminLifecycleLimiter, getFirmAdminDetails);
-router.get('/firms/:firmId/admins', authenticate, authorize(FirmPolicy.canResendAdminAccess), superadminAdminLifecycleLimiter, listFirmAdmins);
-router.patch('/firms/:firmId/admin/status', authenticate, authorize(FirmPolicy.canResendAdminAccess), superadminAdminManagementLimiter, updateFirmAdminStatus);
-router.patch('/firms/:firmId/admins/:adminId/status', authenticate, authorize(FirmPolicy.canResendAdminAccess), superadminAdminManagementLimiter, updateFirmAdminStatus);
-router.post('/firms/:firmId/admin/force-reset', authenticate, authorize(FirmPolicy.canResendAdminAccess), superadminAdminManagementLimiter, forceResetFirmAdmin);
-router.post('/firms/:firmId/admins/:adminId/force-reset', authenticate, authorize(FirmPolicy.canResendAdminAccess), superadminAdminManagementLimiter, forceResetFirmAdmin);
-router.delete('/firms/:firmId/admins/:adminId', authenticate, authorize(FirmPolicy.canResendAdminAccess), superadminAdminManagementLimiter, deleteFirmAdmin);
+router.post('/firms/:firmId/admin/resend-access', authorize(FirmPolicy.canResendAdminAccess), superadminAdminResendLimiter, resendAdminAccess);
+router.get('/firms/:firmId/admin', authorize(FirmPolicy.canResendAdminAccess), superadminAdminLifecycleLimiter, getFirmAdminDetails);
+router.get('/firms/:firmId/admins', authorize(FirmPolicy.canResendAdminAccess), superadminAdminLifecycleLimiter, listFirmAdmins);
+router.patch('/firms/:firmId/admin/status', authorize(FirmPolicy.canResendAdminAccess), superadminAdminManagementLimiter, updateFirmAdminStatus);
+router.patch('/firms/:firmId/admins/:adminId/status', authorize(FirmPolicy.canResendAdminAccess), superadminAdminManagementLimiter, updateFirmAdminStatus);
+router.post('/firms/:firmId/admin/force-reset', authorize(FirmPolicy.canResendAdminAccess), superadminAdminManagementLimiter, forceResetFirmAdmin);
+router.post('/firms/:firmId/admins/:adminId/force-reset', authorize(FirmPolicy.canResendAdminAccess), superadminAdminManagementLimiter, forceResetFirmAdmin);
+router.delete('/firms/:firmId/admins/:adminId', authorize(FirmPolicy.canResendAdminAccess), superadminAdminManagementLimiter, deleteFirmAdmin);
 
 // Firm context switching (impersonation)
-router.post('/switch-firm', authenticate, requireSuperadmin, superadminLimiter, switchFirm);
-router.post('/exit-firm', authenticate, requireSuperadmin, superadminLimiter, exitFirm);
+router.post('/switch-firm', requireSuperadmin, superadminLimiter, switchFirm);
+router.post('/exit-firm', requireSuperadmin, superadminLimiter, exitFirm);
 
 module.exports = router;
