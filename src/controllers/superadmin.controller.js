@@ -16,6 +16,7 @@ const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { createFirmHierarchy, FirmBootstrapError } = require('../services/firmBootstrap.service');
 const { isFirmCreationDisabled } = require('../services/featureFlags.service');
 const xIDGenerator = require('../services/xIDGenerator');
+const { assertFirmPlanCapacity, PlanLimitExceededError, PlanAdminLimitExceededError } = require('../services/user.service');
 const { safeLogForensicAudit, getRequestIp, getRequestUserAgent, PLATFORM_TENANT } = require('../services/forensicAudit.service');
 const { createFirmWithAdmin } = require('../modules/onboarding/onboarding.service');
 
@@ -400,6 +401,8 @@ const createFirmAdmin = async (req, res) => {
       });
     }
 
+    await assertFirmPlanCapacity({ firmId: firm._id, role: 'Admin' });
+
     const normalizedXID = await xIDGenerator.generateNextXID(firm._id);
     
     const passwordSetupSecret = process.env.JWT_PASSWORD_SETUP_SECRET;
@@ -487,6 +490,13 @@ const createFirmAdmin = async (req, res) => {
       },
     });
   } catch (error) {
+    if (error instanceof PlanLimitExceededError || error instanceof PlanAdminLimitExceededError) {
+      return res.status(403).json({
+        success: false,
+        error: error.code,
+        message: error.message,
+      });
+    }
     if (error?.code === 11000) {
       return res.status(400).json({
         success: false,
