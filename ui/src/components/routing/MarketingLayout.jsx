@@ -6,7 +6,6 @@ import { PageWrapper } from '../layout/PageWrapper';
 
 const navLinkClass = ({ isActive }) =>
   `marketing-nav-item text-sm font-medium${isActive ? ' marketing-nav-item--active' : ''}`;
-const footerLinkClass = 'marketing-nav-item text-sm';
 const SCROLL_THRESHOLD_PX = 6;
 
 export const MarketingLayout = () => {
@@ -19,6 +18,10 @@ export const MarketingLayout = () => {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [location.pathname]);
 
   return (
     <div className="marketing-shell min-h-screen bg-white text-gray-900">
@@ -37,12 +40,12 @@ export const MarketingLayout = () => {
             <NavLink to="/pricing" className={navLinkClass}>Pricing</NavLink>
             <NavLink to="/security" className={navLinkClass}>Security</NavLink>
             <NavLink to="/about" className={navLinkClass}>About</NavLink>
-            <NavLink
+            <Link
               to="/signup"
               className="marketing-btn-primary px-5 py-2.5 text-sm font-medium"
             >
               Request Early Access
-            </NavLink>
+            </Link>
           </div>
         </nav>
       </header>
@@ -56,29 +59,29 @@ export const MarketingLayout = () => {
       </main>
 
       <footer className="border-t border-gray-200 bg-white">
-        <section className="w-full" style={{ paddingTop: 'var(--space-2xl)', paddingBottom: 'var(--space-2xl)' }}>
+        <section className="w-full marketing-section">
           <div className="marketing-container">
             <div className="grid gap-8 sm:grid-cols-3">
               <div>
                 <p className="text-sm font-semibold text-gray-700">Product</p>
-                <ul className="mt-4 space-y-2 text-sm text-gray-600">
-                  <li><Link to="/features" className={footerLinkClass}>Features</Link></li>
-                  <li><Link to="/pricing" className={footerLinkClass}>Pricing</Link></li>
-                  <li><Link to="/security" className={footerLinkClass}>Security</Link></li>
+                <ul className="mt-4 space-y-2">
+                  <li><Link to="/features" className="marketing-footer-link">Features</Link></li>
+                  <li><Link to="/pricing" className="marketing-footer-link">Pricing</Link></li>
+                  <li><Link to="/security" className="marketing-footer-link">Security</Link></li>
                 </ul>
               </div>
               <div>
                 <p className="text-sm font-semibold text-gray-700">Company</p>
-                <ul className="mt-4 space-y-2 text-sm text-gray-600">
-                  <li><Link to="/about" className={footerLinkClass}>About</Link></li>
-                  <li><Link to="/contact" className={footerLinkClass}>Contact</Link></li>
+                <ul className="mt-4 space-y-2">
+                  <li><Link to="/about" className="marketing-footer-link">About</Link></li>
+                  <li><Link to="/contact" className="marketing-footer-link">Contact</Link></li>
                 </ul>
               </div>
               <div>
                 <p className="text-sm font-semibold text-gray-700">Legal</p>
-                <ul className="mt-4 space-y-2 text-sm text-gray-600">
-                  <li><Link to="/terms" className={footerLinkClass}>Terms</Link></li>
-                  <li><Link to="/privacy" className={footerLinkClass}>Privacy</Link></li>
+                <ul className="mt-4 space-y-2">
+                  <li><Link to="/terms" className="marketing-footer-link">Terms</Link></li>
+                  <li><Link to="/privacy" className="marketing-footer-link">Privacy</Link></li>
                 </ul>
               </div>
             </div>
