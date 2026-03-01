@@ -76,7 +76,7 @@ const createStarterWorkspace = async (payload = {}) => {
         name: companyName.trim(),
         firmSlug,
         status: 'active',
-        plan: 'STARTER',
+        plan: 'starter',
         maxUsers: 2,
         billingStatus: null,
         bootstrapStatus: 'COMPLETED',

@@ -7,7 +7,6 @@ import { PrivacyPage } from './Privacy';
 import { SecurityPage } from './Security';
 import { AboutPage } from './About';
 import { ContactPage } from './Contact';
-import { SignupPage } from './Signup';
 
 export const MarketingHomePage = HomePage;
 export const MarketingFeaturesPage = FeaturesPage;
@@ -17,5 +16,3 @@ export const MarketingPrivacyPage = PrivacyPage;
 export const MarketingSecurityPage = SecurityPage;
 export const MarketingAboutPage = AboutPage;
 export const MarketingContactPage = ContactPage;
-
-export const MarketingSignupPage = SignupPage;
