@@ -9,7 +9,7 @@ const PRICING_TIERS = [
     price: 'Free',
     description: 'Free for lifetime. Includes up to 2 users total (1 admin + 1 user).',
     ctaLabel: 'Sign Up Now',
-    ctaTo: '/superadmin/login',
+    ctaTo: '/signup',
     disabled: false,
     badge: null,
   },
