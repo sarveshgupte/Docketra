@@ -1,6 +1,5 @@
-const Task = require('../models/Task');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
-const { softDelete } = require('../services/softDelete.service');
+const taskService = require('../services/task.service');
 
 /**
  * Task Controller
@@ -12,40 +11,13 @@ const { softDelete } = require('../services/softDelete.service');
  */
 const getTasks = async (req, res) => {
   try {
-    const {
-      page = 1,
-      limit = 20,
-      status,
-      priority,
-      assignedTo,
-      case: caseId,
-    } = req.query;
-    
-    const query = {};
-    if (status) query.status = status;
-    if (priority) query.priority = priority;
-    if (assignedTo) query.assignedTo = assignedTo;
-    if (caseId) query.case = caseId;
-    
-    const tasks = await Task.find(query)
-      .populate('assignedTo', 'name email')
-      .populate('case', 'caseNumber title')
-      .populate('createdBy', 'name email')
-      .limit(parseInt(limit))
-      .skip((parseInt(page) - 1) * parseInt(limit))
-      .sort({ priority: -1, dueDate: 1, createdAt: -1 });
-    
-    const total = await Task.countDocuments(query);
+    const firmId = req.firmId || req.user?.firmId;
+    const { tasks, pagination } = await taskService.getTasks(firmId, req.query);
     
     res.json({
       success: true,
       data: tasks,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / parseInt(limit)),
-      },
+      pagination,
     });
   } catch (error) {
     res.status(500).json({
@@ -61,11 +33,8 @@ const getTasks = async (req, res) => {
  */
 const getTaskById = async (req, res) => {
   try {
-    const task = await Task.findById(req.params.id)
-      .populate('assignedTo', 'name email role')
-      .populate('case', 'caseNumber title status')
-      .populate('createdBy', 'name email')
-      .populate('statusHistory.changedBy', 'name email');
+    const firmId = req.firmId || req.user?.firmId;
+    const task = await taskService.getTaskById(firmId, req.params.id);
     
     if (!task) {
       return res.status(404).json({
@@ -92,34 +61,8 @@ const getTaskById = async (req, res) => {
  */
 const createTask = async (req, res) => {
   try {
-    const {
-      title,
-      description,
-      status,
-      priority,
-      assignedTo,
-      case: caseId,
-      dueDate,
-      estimatedHours,
-      tags,
-      createdBy,
-    } = req.body;
-    
-    const task = new Task({
-      title,
-      description,
-      status,
-      priority,
-      assignedTo,
-      case: caseId,
-      dueDate,
-      estimatedHours,
-      tags,
-      createdBy, // In real app, this comes from auth
-    });
-    
-    await task.save();
-    await task.populate('assignedTo', 'name email');
+    const firmId = req.firmId || req.user?.firmId;
+    const task = await taskService.createTask(firmId, req.body);
     
     res.status(201).json({
       success: true,
@@ -140,20 +83,8 @@ const createTask = async (req, res) => {
  */
 const updateTask = async (req, res) => {
   try {
-    const {
-      title,
-      description,
-      status,
-      priority,
-      assignedTo,
-      dueDate,
-      estimatedHours,
-      actualHours,
-      tags,
-      updatedBy,
-    } = req.body;
-    
-    const task = await Task.findById(req.params.id);
+    const firmId = req.firmId || req.user?.firmId;
+    const task = await taskService.updateTask(firmId, req.params.id, req.body);
     
     if (!task) {
       return res.status(404).json({
@@ -161,20 +92,6 @@ const updateTask = async (req, res) => {
         error: 'Task not found',
       });
     }
-    
-    if (title) task.title = title;
-    if (description !== undefined) task.description = description;
-    if (status) task.status = status;
-    if (priority) task.priority = priority;
-    if (assignedTo !== undefined) task.assignedTo = assignedTo;
-    if (dueDate !== undefined) task.dueDate = dueDate;
-    if (estimatedHours !== undefined) task.estimatedHours = estimatedHours;
-    if (actualHours !== undefined) task.actualHours = actualHours;
-    if (tags) task.tags = tags;
-    task.updatedBy = updatedBy; // In real app, this comes from auth
-    
-    await task.save();
-    await task.populate('assignedTo', 'name email');
     
     res.json({
       success: true,
@@ -195,12 +112,8 @@ const updateTask = async (req, res) => {
  */
 const deleteTask = async (req, res) => {
   try {
-    const task = await softDelete({
-      model: Task,
-      filter: { _id: req.params.id },
-      req,
-      reason: req.body?.reason || 'Task deleted',
-    });
+    const firmId = req.firmId || req.user?.firmId;
+    const task = await taskService.deleteTask(firmId, req.params.id, req, req.body?.reason || 'Task deleted');
     
     if (!task) {
       return res.status(404).json({
@@ -227,29 +140,14 @@ const deleteTask = async (req, res) => {
  */
 const getTaskStats = async (req, res) => {
   try {
-    const stats = await Task.aggregate([
-      {
-        $group: {
-          _id: '$status',
-          count: { $sum: 1 },
-        },
-      },
-    ]);
-    
-    const priorityStats = await Task.aggregate([
-      {
-        $group: {
-          _id: '$priority',
-          count: { $sum: 1 },
-        },
-      },
-    ]);
+    const firmId = req.firmId || req.user?.firmId;
+    const stats = await taskService.getTaskStats(firmId);
     
     res.json({
       success: true,
       data: {
-        byStatus: stats,
-        byPriority: priorityStats,
+        byStatus: stats.byStatus,
+        byPriority: stats.byPriority,
       },
     });
   } catch (error) {

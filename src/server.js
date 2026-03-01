@@ -164,8 +164,11 @@ validateEnv();
 logBuildMetadata();
 
 // Environment variable validation
-const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET'];
+const requiredEnvVars = ['JWT_SECRET', 'NODE_ENV'];
 const missingEnvVars = requiredEnvVars.filter(key => !process.env[key]);
+if (!process.env.MONGO_URI && !process.env.MONGODB_URI) {
+  missingEnvVars.push('MONGO_URI or MONGODB_URI');
+}
 if (missingEnvVars.length > 0) {
   console.error(`❌ Error: Missing required environment variables: ${missingEnvVars.join(', ')}`);
   console.error('Please ensure these variables are set in your .env file or environment.');
