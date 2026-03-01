@@ -16,7 +16,7 @@ router.post('/resend-otp', authLimiter, resendOtp);
 router.post('/google-auth', authLimiter, googleAuth);
 
 // Non-rate-limited routes (protected by OTP attempts/verification logic)
-router.post('/verify-otp', verifyOtp);
+router.post('/verify-otp', authLimiter, verifyOtp);
 router.post('/complete-signup', authLimiter, completeSignup);
 
 module.exports = router;
