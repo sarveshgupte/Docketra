@@ -40,7 +40,6 @@ const MarketingPrivacyPage = lazyPage(() => import('./pages/marketing/Privacy'),
 const MarketingSecurityPage = lazyPage(() => import('./pages/marketing/Security'), 'SecurityPage');
 const MarketingAboutPage = lazyPage(() => import('./pages/marketing/About'), 'AboutPage');
 const MarketingContactPage = lazyPage(() => import('./pages/marketing/Contact'), 'ContactPage');
-const MarketingSignupPage = lazyPage(() => import('./pages/marketing/Signup'), 'SignupPage');
 const NotFoundPage = lazyPage(() => import('./pages/NotFoundPage'), 'NotFoundPage');
 
 const RouteLoadingFallback = () => <div className="sr-only" role="status">Loading page…</div>;
@@ -127,7 +126,6 @@ export const Router = () => {
             <Route path="/security" element={<MarketingSecurityPage />} />
             <Route path="/about" element={<MarketingAboutPage />} />
             <Route path="/contact" element={<MarketingContactPage />} />
-            <Route path="/signup" element={<MarketingSignupPage />} />
             <Route path="/superadmin" element={<LoginPage />} />
             <Route path="/superadmin/login" element={<LoginPage />} />
           </Route>

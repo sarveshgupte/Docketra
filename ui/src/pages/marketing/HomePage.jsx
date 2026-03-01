@@ -47,10 +47,10 @@ export const HomePage = () => (
                 Book a Demo
               </a>
               <Link
-                to="/signup"
+                to="/superadmin/login"
                 className="marketing-btn-secondary px-6 py-3 text-sm font-medium"
               >
-                Request Early Access
+                Sign Up Now
               </Link>
             </div>
           </div>

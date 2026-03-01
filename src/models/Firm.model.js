@@ -100,8 +100,9 @@ const firmSchema = new mongoose.Schema({
 
   plan: {
     type: String,
-    enum: ['STARTER', 'PROFESSIONAL', 'ENTERPRISE'],
-    default: 'STARTER',
+    lowercase: true,
+    enum: ['starter', 'professional', 'enterprise', 'STARTER', 'PROFESSIONAL', 'ENTERPRISE'],
+    default: 'starter',
     index: true,
   },
 
