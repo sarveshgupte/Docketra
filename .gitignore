@@ -34,6 +34,7 @@ dist/
 build/
 ui/dist/
 ui/build/
+ui/stats.html
 
 # IDE
 .vscode/
