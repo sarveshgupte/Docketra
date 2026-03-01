@@ -4,7 +4,6 @@
 
 import React, { Suspense } from 'react';
 import { Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { FirmLayout } from './components/routing/FirmLayout';
 import { MarketingLayout } from './components/routing/MarketingLayout';
@@ -117,8 +116,7 @@ export const Router = () => {
   const location = useLocation();
 
   return (
-    <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
+    <Routes location={location} key={location.pathname}>
         <Route element={<MarketingLayout />}>
           <Route element={<RouteSuspenseOutlet />}>
             <Route path="/" element={<MarketingHomePage />} />
@@ -265,6 +263,5 @@ export const Router = () => {
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
-    </AnimatePresence>
   );
 };
