@@ -38,6 +38,29 @@
   box-shadow: 0 4px 16px rgba(15, 23, 42, 0.07);
 }
 
+.page-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px 24px;
+}
+
+.doc-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 48px;
+}
+
+.doc-content {
+  max-width: 760px;
+}
+
+@media (max-width: 1024px) {
+  .doc-layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+}
+
 @keyframes marketing-fade-in {
   from { opacity: 0; }
   to   { opacity: 1; }

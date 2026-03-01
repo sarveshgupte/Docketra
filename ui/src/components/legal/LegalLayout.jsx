@@ -30,7 +30,7 @@ export const LegalLayout = ({ title, description, sections, children }) => {
   }, []);
 
   return (
-    <article ref={containerRef} className="relative mx-auto max-w-5xl px-4 py-10">
+    <article ref={containerRef} className="page-container relative">
       <div className="mb-8 border-b border-slate-200 pb-6">
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">{title}</h1>
         {description && (
@@ -41,7 +41,7 @@ export const LegalLayout = ({ title, description, sections, children }) => {
         </p>
       </div>
 
-      <div className="lg:flex lg:gap-12">
+      <div className="doc-layout">
         {sections && sections.length > 0 && (
           <nav
             aria-label="Table of contents"
@@ -69,7 +69,7 @@ export const LegalLayout = ({ title, description, sections, children }) => {
           </nav>
         )}
 
-        <main className="min-w-0 flex-1 max-w-[800px] space-y-10 text-slate-700">
+        <main className="doc-content min-w-0 flex-1 space-y-10 text-slate-700">
           {children}
 
           <footer className="mt-12 border-t border-slate-200 pt-6 text-xs text-slate-400">
