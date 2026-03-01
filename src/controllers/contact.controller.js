@@ -33,7 +33,10 @@ const submitEnterpriseInquiry = async (req, res) => {
   });
 
   const timestamp = new Date().toISOString();
-  const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.connection?.remoteAddress || 'unknown';
+  const rawIpAddress = req.socket?.remoteAddress || req.connection?.remoteAddress || req.ip || 'unknown';
+  const ipAddress = Array.isArray(rawIpAddress)
+    ? rawIpAddress[0]
+    : String(rawIpAddress).split(',')[0].trim();
   let emailFailed = false;
 
   try {
@@ -44,7 +47,7 @@ const submitEnterpriseInquiry = async (req, res) => {
       phone: inquiry.phone,
       message: inquiry.requirements,
       timestamp,
-      ipAddress: Array.isArray(ipAddress) ? ipAddress[0] : String(ipAddress).split(',')[0].trim(),
+      ipAddress,
     });
   } catch (error) {
     console.warn('[CONTACT] Failed to send enterprise inquiry notification:', error.message);

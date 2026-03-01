@@ -904,6 +904,9 @@ const sendEnterpriseInquiryNotification = async ({
   context = null,
 }) => {
   const to = process.env.SUPERADMIN_EMAIL;
+  if (!to) {
+    throw new Error('Cannot send enterprise inquiry notification: SUPERADMIN_EMAIL environment variable is not configured');
+  }
   const subject = 'New Enterprise Inquiry - Docketra';
   const resolvedContactPerson = contactPerson || name || 'N/A';
   const resolvedMessage = message || requirements || 'N/A';
