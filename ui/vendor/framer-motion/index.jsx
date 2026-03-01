@@ -54,7 +54,7 @@ const MotionElement = ({
     return () => observer.disconnect();
   }, [once, viewport?.amount, whileInView]);
 
-  const animateTarget = whileInView ?? animate;
+  const animateTarget = whileInView !== undefined ? whileInView : animate;
 
   const stateStyles = {
     initial: {
