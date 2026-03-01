@@ -178,12 +178,13 @@ export default function Signup() {
   const resendOtp = async () => {
     setApiError('');
     setApiMessage('');
+    setErrors((prev) => ({ ...prev, otp: '' }));
     setLoading(true);
     try {
       const response = await api.post('/public/resend-otp', { email: signupEmail });
       setApiMessage(response?.data?.message || 'OTP resent successfully.');
     } catch (error) {
-      setApiMessage(getErrorMessage(error, 'Unable to resend OTP right now.'));
+      setApiError(getErrorMessage(error, 'Unable to resend OTP right now.'));
     } finally {
       setLoading(false);
     }
@@ -201,9 +202,12 @@ export default function Signup() {
     setLoading(true);
     try {
       const idToken = await requestGoogleIdToken();
-      await api.post('/public/google-auth', { idToken });
-      const payload = JSON.parse(atob(idToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-      setSignupEmail(payload?.email || '');
+      const response = await api.post('/public/google-auth', { idToken });
+      const email = response?.data?.email;
+      if (!email) {
+        throw new Error('Unable to verify Google account email.');
+      }
+      setSignupEmail(email);
       setStep('firm');
     } catch (error) {
       setApiError(getErrorMessage(error, 'Unable to continue with Google.'));
@@ -244,7 +248,7 @@ export default function Signup() {
   return (
     <section className="w-full marketing-section">
       <div className="marketing-container flex justify-center">
-        <div className="signup-form-card w-full max-w-xl p-8" style={{ maxWidth: '36rem' }}>
+        <div className="signup-form-card w-full max-w-xl p-8">
           <h1 className="type-section text-gray-900">Starter Signup</h1>
           <p className="mt-2 text-sm text-gray-600">Create your free Starter workspace in minutes.</p>
 
