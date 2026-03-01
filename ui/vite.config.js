@@ -1,8 +1,22 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { visualizer } from 'rollup-plugin-visualizer';
 
-export default defineConfig({
-  plugins: [react()],
+export default defineConfig(({ command }) => ({
+  plugins: [
+    react(),
+    ...(command === 'build'
+      ? [
+          // Run `npm run build` and open `stats.html` to inspect bundle composition.
+          visualizer({
+            open: true,
+            filename: 'stats.html',
+            gzipSize: true,
+            brotliSize: true,
+          }),
+        ]
+      : []),
+  ],
   root: '.',
   publicDir: 'public',
   server: {
@@ -18,4 +32,4 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true,
   },
-});
+}));
