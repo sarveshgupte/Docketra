@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Link, Outlet, useLocation } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
 import { COMPANY_NAME, COMPANY_CIN } from '../../lib/legalVersion';
 import { PageWrapper } from '../layout/PageWrapper';
 
-const navLinkClass = 'marketing-nav-item text-sm font-medium';
+const navLinkClass = ({ isActive }) =>
+  `marketing-nav-item text-sm font-medium${isActive ? ' marketing-nav-item--active' : ''}`;
+const footerLinkClass = 'marketing-nav-item text-sm';
 const SCROLL_THRESHOLD_PX = 6;
 
 export const MarketingLayout = () => {
@@ -25,29 +28,31 @@ export const MarketingLayout = () => {
         }`}
       >
         <nav className={`marketing-container flex w-full items-center justify-between transition-[height] duration-300 ${isScrolled ? 'h-16' : 'h-20'}`}>
-          <Link to="/" className="text-xl font-semibold tracking-tight">
+          <Link to="/" className="text-xl font-semibold tracking-tight text-gray-900">
             Docketra
           </Link>
 
           <div className="flex items-center gap-6">
-            <Link to="/features" className={navLinkClass}>Features</Link>
-            <Link to="/pricing" className={navLinkClass}>Pricing</Link>
-            <Link to="/security" className={navLinkClass}>Security</Link>
-            <Link to="/about" className={navLinkClass}>About</Link>
-            <Link
+            <NavLink to="/features" className={navLinkClass}>Features</NavLink>
+            <NavLink to="/pricing" className={navLinkClass}>Pricing</NavLink>
+            <NavLink to="/security" className={navLinkClass}>Security</NavLink>
+            <NavLink to="/about" className={navLinkClass}>About</NavLink>
+            <NavLink
               to="/signup"
               className="marketing-btn-primary px-5 py-2.5 text-sm font-medium"
             >
               Request Early Access
-            </Link>
+            </NavLink>
           </div>
         </nav>
       </header>
 
       <main className="w-full">
-        <PageWrapper key={location.pathname}>
-          <Outlet />
-        </PageWrapper>
+        <AnimatePresence mode="wait" initial={false}>
+          <PageWrapper key={location.pathname}>
+            <Outlet />
+          </PageWrapper>
+        </AnimatePresence>
       </main>
 
       <footer className="border-t border-gray-200 bg-white">
@@ -57,23 +62,23 @@ export const MarketingLayout = () => {
               <div>
                 <p className="text-sm font-semibold text-gray-700">Product</p>
                 <ul className="mt-4 space-y-2 text-sm text-gray-600">
-                  <li><Link to="/features" className={navLinkClass}>Features</Link></li>
-                  <li><Link to="/pricing" className={navLinkClass}>Pricing</Link></li>
-                  <li><Link to="/security" className={navLinkClass}>Security</Link></li>
+                  <li><Link to="/features" className={footerLinkClass}>Features</Link></li>
+                  <li><Link to="/pricing" className={footerLinkClass}>Pricing</Link></li>
+                  <li><Link to="/security" className={footerLinkClass}>Security</Link></li>
                 </ul>
               </div>
               <div>
                 <p className="text-sm font-semibold text-gray-700">Company</p>
                 <ul className="mt-4 space-y-2 text-sm text-gray-600">
-                  <li><Link to="/about" className={navLinkClass}>About</Link></li>
-                  <li><Link to="/contact" className={navLinkClass}>Contact</Link></li>
+                  <li><Link to="/about" className={footerLinkClass}>About</Link></li>
+                  <li><Link to="/contact" className={footerLinkClass}>Contact</Link></li>
                 </ul>
               </div>
               <div>
                 <p className="text-sm font-semibold text-gray-700">Legal</p>
                 <ul className="mt-4 space-y-2 text-sm text-gray-600">
-                  <li><Link to="/terms" className={navLinkClass}>Terms</Link></li>
-                  <li><Link to="/privacy" className={navLinkClass}>Privacy</Link></li>
+                  <li><Link to="/terms" className={footerLinkClass}>Terms</Link></li>
+                  <li><Link to="/privacy" className={footerLinkClass}>Privacy</Link></li>
                 </ul>
               </div>
             </div>
