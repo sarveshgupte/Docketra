@@ -2,44 +2,57 @@
  * Router Configuration
  */
 
-import React from 'react';
-import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
+import React, { Suspense } from 'react';
+import { Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { FirmLayout } from './components/routing/FirmLayout';
 import { MarketingLayout } from './components/routing/MarketingLayout';
 import { DefaultRoute } from './components/routing/DefaultRoute';
-import { LoginPage } from './pages/LoginPage';
-import { FirmLoginPage } from './pages/FirmLoginPage';
-import { ChangePasswordPage } from './pages/ChangePasswordPage';
-import { SetPasswordPage } from './pages/SetPasswordPage';
-import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
-import { ResetPasswordPage } from './pages/ResetPasswordPage';
-import { DashboardPage } from './pages/DashboardPage';
-import { WorklistPage } from './pages/WorklistPage';
-import { WorkbasketPage } from './pages/WorkbasketPage';
-import { CaseDetailPage } from './pages/CaseDetailPage';
-import { CreateCasePage } from './pages/CreateCasePage';
-import { ProfilePage } from './pages/ProfilePage';
-import { AdminPage } from './pages/AdminPage';
-import { PlatformDashboard } from './pages/PlatformDashboard';
-import { FirmsManagement } from './pages/FirmsManagement';
-import { ReportsDashboard } from './pages/reports/ReportsDashboard';
-import { DetailedReports } from './pages/reports/DetailedReports';
-import { CasesPage } from './pages/CasesPage';
-import { GoogleCallbackPage } from './pages/GoogleCallbackPage';
-import {
-  MarketingHomePage,
-  MarketingFeaturesPage,
-  MarketingPricingPage,
-  MarketingTermsPage,
-  MarketingPrivacyPage,
-  MarketingSecurityPage,
-  MarketingAboutPage,
-  MarketingContactPage,
-  MarketingSignupPage,
-} from './pages/marketing/MarketingPages';
-import { NotFoundPage } from './pages/NotFoundPage';
+
+const lazyPage = (importer, exportName) => React.lazy(
+  () => importer().then((module) => ({ default: module[exportName] }))
+);
+
+const LoginPage = lazyPage(() => import('./pages/LoginPage'), 'LoginPage');
+const FirmLoginPage = lazyPage(() => import('./pages/FirmLoginPage'), 'FirmLoginPage');
+const ChangePasswordPage = lazyPage(() => import('./pages/ChangePasswordPage'), 'ChangePasswordPage');
+const SetPasswordPage = lazyPage(() => import('./pages/SetPasswordPage'), 'SetPasswordPage');
+const ForgotPasswordPage = lazyPage(() => import('./pages/ForgotPasswordPage'), 'ForgotPasswordPage');
+const ResetPasswordPage = lazyPage(() => import('./pages/ResetPasswordPage'), 'ResetPasswordPage');
+const DashboardPage = lazyPage(() => import('./pages/DashboardPage'), 'DashboardPage');
+const WorklistPage = lazyPage(() => import('./pages/WorklistPage'), 'WorklistPage');
+const WorkbasketPage = lazyPage(() => import('./pages/WorkbasketPage'), 'WorkbasketPage');
+const CaseDetailPage = lazyPage(() => import('./pages/CaseDetailPage'), 'CaseDetailPage');
+const CreateCasePage = lazyPage(() => import('./pages/CreateCasePage'), 'CreateCasePage');
+const ProfilePage = lazyPage(() => import('./pages/ProfilePage'), 'ProfilePage');
+const AdminPage = lazyPage(() => import('./pages/AdminPage'), 'AdminPage');
+const PlatformDashboard = lazyPage(() => import('./pages/PlatformDashboard'), 'PlatformDashboard');
+const FirmsManagement = lazyPage(() => import('./pages/FirmsManagement'), 'FirmsManagement');
+const ReportsDashboard = lazyPage(() => import('./pages/reports/ReportsDashboard'), 'ReportsDashboard');
+const DetailedReports = lazyPage(() => import('./pages/reports/DetailedReports'), 'DetailedReports');
+const CasesPage = lazyPage(() => import('./pages/CasesPage'), 'CasesPage');
+const GoogleCallbackPage = lazyPage(() => import('./pages/GoogleCallbackPage'), 'GoogleCallbackPage');
+const MarketingHomePage = lazyPage(() => import('./pages/marketing/HomePage'), 'HomePage');
+const MarketingFeaturesPage = lazyPage(() => import('./pages/marketing/Features'), 'FeaturesPage');
+const MarketingPricingPage = lazyPage(() => import('./pages/marketing/Pricing'), 'PricingPage');
+const MarketingTermsPage = lazyPage(() => import('./pages/marketing/Terms'), 'TermsPage');
+const MarketingPrivacyPage = lazyPage(() => import('./pages/marketing/Privacy'), 'PrivacyPage');
+const MarketingSecurityPage = lazyPage(() => import('./pages/marketing/Security'), 'SecurityPage');
+const MarketingAboutPage = lazyPage(() => import('./pages/marketing/About'), 'AboutPage');
+const MarketingContactPage = lazyPage(() => import('./pages/marketing/Contact'), 'ContactPage');
+const MarketingSignupPage = lazyPage(() => import('./pages/marketing/Signup'), 'SignupPage');
+const NotFoundPage = lazyPage(() => import('./pages/NotFoundPage'), 'NotFoundPage');
+
+const RouteLoadingFallback = () => <div className="sr-only" role="status">Loading page…</div>;
+
+const RouteSuspenseOutlet = () => (
+  // Keep suspense at the route-group level so layout shells render immediately.
+  // Chunk load failures are still caught by the root ErrorBoundary in index.jsx.
+  <Suspense fallback={<RouteLoadingFallback />}>
+    <Outlet />
+  </Suspense>
+);
 
 const LEGACY_SLUG_BLOCKLIST = new Set([
   'about',
@@ -107,142 +120,150 @@ export const Router = () => {
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
         <Route element={<MarketingLayout />}>
-          <Route path="/" element={<MarketingHomePage />} />
-          <Route path="/features" element={<MarketingFeaturesPage />} />
-          <Route path="/pricing" element={<MarketingPricingPage />} />
-          <Route path="/terms" element={<MarketingTermsPage />} />
-          <Route path="/privacy" element={<MarketingPrivacyPage />} />
-          <Route path="/security" element={<MarketingSecurityPage />} />
-          <Route path="/about" element={<MarketingAboutPage />} />
-          <Route path="/contact" element={<MarketingContactPage />} />
-          <Route path="/signup" element={<MarketingSignupPage />} />
-          <Route path="/superadmin" element={<LoginPage />} />
-          <Route path="/superadmin/login" element={<LoginPage />} />
+          <Route element={<RouteSuspenseOutlet />}>
+            <Route path="/" element={<MarketingHomePage />} />
+            <Route path="/features" element={<MarketingFeaturesPage />} />
+            <Route path="/pricing" element={<MarketingPricingPage />} />
+            <Route path="/terms" element={<MarketingTermsPage />} />
+            <Route path="/privacy" element={<MarketingPrivacyPage />} />
+            <Route path="/security" element={<MarketingSecurityPage />} />
+            <Route path="/about" element={<MarketingAboutPage />} />
+            <Route path="/contact" element={<MarketingContactPage />} />
+            <Route path="/signup" element={<MarketingSignupPage />} />
+            <Route path="/superadmin" element={<LoginPage />} />
+            <Route path="/superadmin/login" element={<LoginPage />} />
+          </Route>
         </Route>
 
-        <Route path="/:firmSlug/login" element={<FirmLoginPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/change-password" element={<ChangePasswordPage />} />
-        <Route path="/auth/setup-account" element={<SetPasswordPage />} />
-        <Route path="/setup-password" element={<SetPasswordPage />} />
-        <Route path="/google-callback" element={<GoogleCallbackPage />} />
+        <Route element={<RouteSuspenseOutlet />}>
+          <Route path="/:firmSlug/login" element={<FirmLoginPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/change-password" element={<ChangePasswordPage />} />
+          <Route path="/auth/setup-account" element={<SetPasswordPage />} />
+          <Route path="/setup-password" element={<SetPasswordPage />} />
+          <Route path="/google-callback" element={<GoogleCallbackPage />} />
 
-        <Route
-          path="/app/superadmin"
-          element={(
-            <ProtectedRoute requireSuperadmin>
-              <PlatformDashboard />
-            </ProtectedRoute>
-          )}
-        />
+          <Route
+            path="/app/superadmin"
+            element={(
+              <ProtectedRoute requireSuperadmin>
+                <PlatformDashboard />
+              </ProtectedRoute>
+            )}
+          />
 
-        <Route
-          path="/app/superadmin/firms"
-          element={(
-            <ProtectedRoute requireSuperadmin>
-              <FirmsManagement />
-            </ProtectedRoute>
-          )}
-        />
+          <Route
+            path="/app/superadmin/firms"
+            element={(
+              <ProtectedRoute requireSuperadmin>
+                <FirmsManagement />
+              </ProtectedRoute>
+            )}
+          />
+        </Route>
 
         <Route path="/app/firm/:firmSlug" element={<FirmLayout />}>
-          <Route
-            path="dashboard"
-            element={(
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
-            )}
-          />
-          <Route
-            path="worklist"
-            element={(
-              <ProtectedRoute>
-                <WorklistPage />
-              </ProtectedRoute>
-            )}
-          />
-          <Route
-            path="my-worklist"
-            element={(
-              <ProtectedRoute>
-                <WorklistPage />
-              </ProtectedRoute>
-            )}
-          />
-          <Route
-            path="global-worklist"
-            element={(
-              <ProtectedRoute>
-                <WorkbasketPage />
-              </ProtectedRoute>
-            )}
-          />
-          <Route
-            path="cases/:caseId"
-            element={(
-              <ProtectedRoute>
-                <CaseDetailPage />
-              </ProtectedRoute>
-            )}
-          />
-          <Route
-            path="cases"
-            element={(
-              <ProtectedRoute>
-                <CasesPage />
-              </ProtectedRoute>
-            )}
-          />
-          <Route
-            path="cases/create"
-            element={(
-              <ProtectedRoute>
-                <CreateCasePage />
-              </ProtectedRoute>
-            )}
-          />
-          <Route
-            path="profile"
-            element={(
-              <ProtectedRoute>
-                <ProfilePage />
-              </ProtectedRoute>
-            )}
-          />
-          <Route
-            path="admin"
-            element={(
-              <ProtectedRoute requireAdmin>
-                <AdminPage />
-              </ProtectedRoute>
-            )}
-          />
-          <Route
-            path="admin/reports"
-            element={(
-              <ProtectedRoute requireAdmin>
-                <ReportsDashboard />
-              </ProtectedRoute>
-            )}
-          />
-          <Route
-            path="admin/reports/detailed"
-            element={(
-              <ProtectedRoute requireAdmin>
-                <DetailedReports />
-              </ProtectedRoute>
-            )}
-          />
+          <Route element={<RouteSuspenseOutlet />}>
+            <Route
+              path="dashboard"
+              element={(
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="worklist"
+              element={(
+                <ProtectedRoute>
+                  <WorklistPage />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="my-worklist"
+              element={(
+                <ProtectedRoute>
+                  <WorklistPage />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="global-worklist"
+              element={(
+                <ProtectedRoute>
+                  <WorkbasketPage />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="cases/:caseId"
+              element={(
+                <ProtectedRoute>
+                  <CaseDetailPage />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="cases"
+              element={(
+                <ProtectedRoute>
+                  <CasesPage />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="cases/create"
+              element={(
+                <ProtectedRoute>
+                  <CreateCasePage />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="profile"
+              element={(
+                <ProtectedRoute>
+                  <ProfilePage />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="admin"
+              element={(
+                <ProtectedRoute requireAdmin>
+                  <AdminPage />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="admin/reports"
+              element={(
+                <ProtectedRoute requireAdmin>
+                  <ReportsDashboard />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="admin/reports/detailed"
+              element={(
+                <ProtectedRoute requireAdmin>
+                  <DetailedReports />
+                </ProtectedRoute>
+              )}
+            />
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
+        </Route>
+        <Route element={<RouteSuspenseOutlet />}>
+          <Route path="/superadmin/*" element={<LegacySuperadminRedirect />} />
+          <Route path="/firm/*" element={<LegacyFirmRedirect />} />
+          <Route path="/f/:firmSlug/*" element={<LegacyFirmScopedRedirect />} />
+          <Route path="/app/firm" element={<DefaultRoute />} />
+          <Route path="/:firmSlug/*" element={<LegacySlugRedirect />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
-        <Route path="/superadmin/*" element={<LegacySuperadminRedirect />} />
-        <Route path="/firm/*" element={<LegacyFirmRedirect />} />
-        <Route path="/f/:firmSlug/*" element={<LegacyFirmScopedRedirect />} />
-        <Route path="/app/firm" element={<DefaultRoute />} />
-        <Route path="/:firmSlug/*" element={<LegacySlugRedirect />} />
-        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </AnimatePresence>
   );
