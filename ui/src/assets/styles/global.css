@@ -133,13 +133,7 @@
 }
 
 
-.marketing-shell :where(a, button, input, textarea, select) {
-  transition-property: background-color, border-color, color, box-shadow, transform;
-  transition-duration: var(--transition-normal);
-  transition-timing-function: var(--ease-standard);
-}
-
-.marketing-shell :where(.card, .marketing-card, .marketing-nav-item) {
+.marketing-shell :where(a, button, input, textarea, select, .card, .marketing-card, .marketing-nav-item) {
   transition-property: background-color, border-color, color, box-shadow, transform;
   transition-duration: var(--transition-normal);
   transition-timing-function: var(--ease-standard);

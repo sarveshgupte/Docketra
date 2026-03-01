@@ -4,13 +4,14 @@ import { COMPANY_NAME, COMPANY_CIN } from '../../lib/legalVersion';
 import { PageWrapper } from '../layout/PageWrapper';
 
 const navLinkClass = 'marketing-nav-item text-sm font-medium';
+const SCROLL_THRESHOLD_PX = 6;
 
 export const MarketingLayout = () => {
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setIsScrolled(window.scrollY > 6);
+    const onScroll = () => setIsScrolled(window.scrollY > SCROLL_THRESHOLD_PX);
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
