@@ -47,7 +47,7 @@ export const HomePage = () => (
                 Book a Demo
               </a>
               <Link
-                to="/superadmin/login"
+                to="/signup"
                 className="marketing-btn-secondary px-6 py-3 text-sm font-medium"
               >
                 Sign Up Now
