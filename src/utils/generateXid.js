@@ -11,10 +11,14 @@ const crypto = require('crypto');
  */
 const generateXid = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  const bytes = crypto.randomBytes(8);
+  const charsLen = chars.length;
   let result = '';
-  for (let i = 0; i < 8; i++) {
-    result += chars[bytes[i] % chars.length];
+  while (result.length < 8) {
+    const byte = crypto.randomBytes(1)[0];
+    // Rejection sampling: discard values that would cause modulo bias
+    if (byte < Math.floor(256 / charsLen) * charsLen) {
+      result += chars[byte % charsLen];
+    }
   }
   return `DX-${result}`;
 };
