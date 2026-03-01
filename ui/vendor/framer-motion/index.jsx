@@ -6,16 +6,22 @@ const EASING_MAP = {
 
 const toTransform = (value = {}) => `translateY(${value.y ?? 0}px) scale(${value.scale ?? 1})`;
 
-const MotionDiv = ({
+const MotionElement = ({
+  as: Component = 'div',
   children,
   initial = {},
   animate = {},
+  whileInView,
+  viewport = {},
   exit = {},
   transition = {},
   __motionState = 'animate',
   style,
   ...props
 }) => {
+  const elementRef = useRef(null);
+  const [inView, setInView] = useState(!whileInView);
+  const once = viewport?.once ?? false;
   const easing = Array.isArray(transition.ease)
     ? `cubic-bezier(${transition.ease.join(',')})`
     : EASING_MAP[transition.ease] || 'ease';
@@ -26,14 +32,38 @@ const MotionDiv = ({
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 
+  useEffect(() => {
+    if (!whileInView || !elementRef.current || typeof IntersectionObserver === 'undefined') {
+      setInView(true);
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          if (once) observer.disconnect();
+        } else if (!once) {
+          setInView(false);
+        }
+      },
+      { threshold: viewport?.amount ?? 0.1 }
+    );
+
+    observer.observe(elementRef.current);
+    return () => observer.disconnect();
+  }, [once, viewport?.amount, whileInView]);
+
+  const animateTarget = whileInView !== undefined ? whileInView : animate;
+
   const stateStyles = {
     initial: {
       opacity: initial.opacity ?? 1,
       transform: toTransform(initial),
     },
     animate: {
-      opacity: animate.opacity ?? 1,
-      transform: toTransform(animate),
+      opacity: animateTarget.opacity ?? 1,
+      transform: toTransform(animateTarget),
     },
     exit: {
       opacity: exit.opacity ?? 0,
@@ -41,10 +71,13 @@ const MotionDiv = ({
     },
   };
 
-  const resolved = stateStyles[__motionState] || stateStyles.animate;
+  const resolved = whileInView && __motionState !== 'exit'
+    ? (inView ? stateStyles.animate : stateStyles.initial)
+    : (stateStyles[__motionState] || stateStyles.animate);
 
   return (
-    <div
+    <Component
+      ref={elementRef}
       {...props}
       style={{
         ...style,
@@ -55,11 +88,23 @@ const MotionDiv = ({
       }}
     >
       {children}
-    </div>
+    </Component>
   );
 };
 
-export const motion = { div: MotionDiv };
+const motionFactoryCache = new Map();
+
+export const motion = new Proxy(
+  {},
+  {
+    get: (_, tagName) => {
+      if (!motionFactoryCache.has(tagName)) {
+        motionFactoryCache.set(tagName, (props) => <MotionElement as={tagName} {...props} />);
+      }
+      return motionFactoryCache.get(tagName);
+    },
+  }
+);
 
 export const AnimatePresence = ({ children, mode = 'sync' }) => {
   const current = React.Children.only(children);

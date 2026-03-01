@@ -117,6 +117,12 @@
   --space-8: 32px;
   --space-10: 40px;
   --space-12: 48px;
+  --space-xs: 8px;
+  --space-sm: 16px;
+  --space-md: 24px;
+  --space-lg: 40px;
+  --space-xl: 64px;
+  --space-2xl: 96px;
 
   /* === Legacy Token Aliases (backward compatibility) === */
 
@@ -182,9 +188,10 @@
   --letter-spacing-wider: 0.08em;
 
   /* Transitions */
-  --transition-fast: 150ms ease-in-out;
-  --transition-normal: 250ms ease-in-out;
-  --transition-slow: 350ms ease-in-out;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: 0.2s var(--ease-standard);
+  --transition-normal: 0.35s var(--ease-standard);
+  --transition-slow: 0.6s var(--ease-standard);
 
   /* Impersonation banner tokens */
   --impersonation-read-only-bg: rgba(239, 68, 68, 0.92);
