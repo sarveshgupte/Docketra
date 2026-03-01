@@ -1,6 +1,7 @@
 const { randomUUID } = require('crypto');
 const User = require('../models/User.model');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
+const { assertFirmPlanCapacity, PlanLimitExceededError, PlanAdminLimitExceededError } = require('../services/user.service');
 
 /**
  * User Controller
@@ -122,6 +123,8 @@ const createUser = async (req, res) => {
         ...responseMeta,
       });
     }
+
+    await assertFirmPlanCapacity({ firmId: req.user?.firmId, role: role || 'Employee' });
     
     const user = new User({
       name,
@@ -139,6 +142,14 @@ const createUser = async (req, res) => {
       ...responseMeta,
     });
   } catch (error) {
+    if (error instanceof PlanLimitExceededError || error instanceof PlanAdminLimitExceededError) {
+      return res.status(403).json({
+        success: false,
+        error: error.code,
+        message: error.message,
+        ...responseMeta,
+      });
+    }
     res.status(400).json({
       success: false,
       error: 'Error creating user',

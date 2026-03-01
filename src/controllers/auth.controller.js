@@ -20,7 +20,7 @@ const { isGoogleAuthDisabled } = require('../services/featureFlags.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const config = require('../config/config');
 const { recordFailedLoginAttempt, clearFailedLoginAttempts } = require('../middleware/accountLockout.middleware');
-const { assertFirmPlanCapacity, PlanLimitExceededError } = require('../services/user.service');
+const { assertFirmPlanCapacity, PlanLimitExceededError, PlanAdminLimitExceededError } = require('../services/user.service');
 
 /**
  * Authentication Controller for JWT-based Enterprise Authentication
@@ -1365,7 +1365,7 @@ const createUser = async (req, res) => {
     const tokenHash = emailService.hashToken(token);
     const tokenExpiry = new Date(Date.now() + INVITE_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000);
     
-    await assertFirmPlanCapacity({ firmId: admin.firmId, session });
+    await assertFirmPlanCapacity({ firmId: admin.firmId, session, role: role || 'Employee' });
 
     // Create user without password (invite-based onboarding)
     const newUser = new User({
@@ -1470,7 +1470,7 @@ const createUser = async (req, res) => {
       },
     });
   } catch (error) {
-    if (error instanceof PlanLimitExceededError) {
+    if (error instanceof PlanLimitExceededError || error instanceof PlanAdminLimitExceededError) {
       console.warn('[PLAN_LIMIT] createUser blocked', { firmId: req.user?.firmId?.toString?.() || req.user?.firmId, message: error.message });
       return res.status(403).json({
         success: false,
@@ -1545,7 +1545,7 @@ const activateUser = async (req, res) => {
     const session = req.transactionSession?.session || null;
     const currentlyCounted = ['active', 'invited'].includes(user.status);
     const incrementBy = currentlyCounted ? 0 : 1;
-    await assertFirmPlanCapacity({ firmId: admin.firmId, session, incrementBy });
+    await assertFirmPlanCapacity({ firmId: admin.firmId, session, incrementBy, role: user.role });
 
     // Activate user
     user.isActive = true;
@@ -1569,7 +1569,7 @@ const activateUser = async (req, res) => {
       message: 'User activated successfully',
     });
   } catch (error) {
-    if (error instanceof PlanLimitExceededError) {
+    if (error instanceof PlanLimitExceededError || error instanceof PlanAdminLimitExceededError) {
       console.warn('[PLAN_LIMIT] activateUser blocked', { firmId: req.user?.firmId?.toString?.() || req.user?.firmId, message: error.message });
       return res.status(403).json({
         success: false,

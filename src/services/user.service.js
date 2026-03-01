@@ -11,7 +11,16 @@ class PlanLimitExceededError extends Error {
   }
 }
 
-const assertFirmPlanCapacity = async ({ firmId, session, incrementBy = 1 }) => {
+class PlanAdminLimitExceededError extends Error {
+  constructor(limit) {
+    super(`Starter plan allows only ${limit} Admin user.`);
+    this.name = 'PlanAdminLimitExceededError';
+    this.code = 'PLAN_ADMIN_LIMIT_EXCEEDED';
+    this.statusCode = 403;
+  }
+}
+
+const assertFirmPlanCapacity = async ({ firmId, session, incrementBy = 1, role = null }) => {
   const attachSession = (query) => (session ? query.session(session) : query);
 
   const firm = await attachSession(Firm.findById(firmId));
@@ -24,7 +33,8 @@ const assertFirmPlanCapacity = async ({ firmId, session, incrementBy = 1 }) => {
     status: { $in: ['active', 'invited'] },
   }));
 
-  if (firm.plan === 'STARTER') {
+  const normalizedPlan = String(firm.plan || 'starter').toLowerCase();
+  if (normalizedPlan === 'starter') {
     const maxUsers = firm.maxUsers || 2;
     if ((count + incrementBy) > maxUsers) {
       console.warn('[PLAN_LIMIT] starter capacity exceeded', {
@@ -34,6 +44,24 @@ const assertFirmPlanCapacity = async ({ firmId, session, incrementBy = 1 }) => {
         incrementBy,
       });
       throw new PlanLimitExceededError(maxUsers);
+    }
+
+    if (String(role || '').toLowerCase() === 'admin' && incrementBy > 0) {
+      const adminCount = await attachSession(User.countDocuments({
+        firmId,
+        role: 'Admin',
+        status: { $in: ['active', 'invited'] },
+      }));
+
+      if ((adminCount + incrementBy) > 1) {
+        console.warn('[PLAN_LIMIT] starter admin capacity exceeded', {
+          firmId: firmId?.toString?.() || firmId,
+          adminLimit: 1,
+          currentCount: adminCount,
+          incrementBy,
+        });
+        throw new PlanAdminLimitExceededError(1);
+      }
     }
     return;
   }
@@ -51,5 +79,6 @@ const assertFirmPlanCapacity = async ({ firmId, session, incrementBy = 1 }) => {
 
 module.exports = {
   PlanLimitExceededError,
+  PlanAdminLimitExceededError,
   assertFirmPlanCapacity,
 };

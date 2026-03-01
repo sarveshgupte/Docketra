@@ -32,20 +32,26 @@ const submitEnterpriseInquiry = async (req, res) => {
     requirements: requirements.trim(),
   });
 
+  const timestamp = new Date().toISOString();
+  const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.connection?.remoteAddress || 'unknown';
+  let emailFailed = false;
+
   try {
     await emailService.sendEnterpriseInquiryNotification({
-      name: inquiry.name,
+      contactPerson: inquiry.name,
       email: inquiry.email,
       firmName: inquiry.firmName,
-      numberOfUsers: inquiry.numberOfUsers,
       phone: inquiry.phone,
-      requirements: inquiry.requirements,
+      message: inquiry.requirements,
+      timestamp,
+      ipAddress: Array.isArray(ipAddress) ? ipAddress[0] : String(ipAddress).split(',')[0].trim(),
     });
   } catch (error) {
     console.warn('[CONTACT] Failed to send enterprise inquiry notification:', error.message);
+    emailFailed = true;
   }
 
-  return res.status(201).json({ success: true, message: 'Inquiry received. Our enterprise team will contact you soon.' });
+  return res.status(emailFailed ? 202 : 201).json({ success: true, message: 'Inquiry received. Our enterprise team will contact you soon.' });
 };
 
 module.exports = {

@@ -3,6 +3,7 @@ const { applyRouteValidation } = require('../middleware/requestValidation.middle
 const routeSchemas = require('../schemas/public.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { getFirmBySlug } = require('../controllers/superadmin.controller');
+const { submitEnterpriseInquiry } = require('../controllers/contact.controller');
 const EarlyAccessRequest = require('../models/EarlyAccessRequest.model');
 const log = require('../utils/log');
 
@@ -73,5 +74,7 @@ router.post('/signup', async (req, res, next) => {
     return next(error);
   }
 });
+
+router.post('/contact', submitEnterpriseInquiry);
 
 module.exports = router;

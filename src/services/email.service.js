@@ -892,39 +892,52 @@ Docketra Team
 
 const sendEnterpriseInquiryNotification = async ({
   name,
+  contactPerson,
   email,
   firmName,
   numberOfUsers,
   phone,
   requirements,
+  message,
+  timestamp,
+  ipAddress,
   context = null,
 }) => {
-  const to = process.env.ENTERPRISE_CONTACT_EMAIL || process.env.SUPPORT_EMAIL || 'support@docketra.com';
-  const subject = `New Enterprise Inquiry: ${firmName}`;
+  const to = process.env.SUPERADMIN_EMAIL;
+  const subject = 'New Enterprise Inquiry - Docketra';
+  const resolvedContactPerson = contactPerson || name || 'N/A';
+  const resolvedMessage = message || requirements || 'N/A';
+  const resolvedTimestamp = timestamp || new Date().toISOString();
+  const resolvedIpAddress = ipAddress || 'unknown';
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
       <h2>New Enterprise Inquiry</h2>
-      <p><strong>Name:</strong> ${name}</p>
+      <p><strong>Firm Name:</strong> ${firmName}</p>
+      <p><strong>Contact Person:</strong> ${resolvedContactPerson}</p>
       <p><strong>Email:</strong> ${email}</p>
-      <p><strong>Firm:</strong> ${firmName}</p>
-      <p><strong>Number of Users:</strong> ${numberOfUsers}</p>
       <p><strong>Phone:</strong> ${phone}</p>
-      <p><strong>Requirements:</strong></p>
-      <pre style="white-space: pre-wrap; font-family: inherit; background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px;">${requirements}</pre>
+      <p><strong>Message:</strong></p>
+      <pre style="white-space: pre-wrap; font-family: inherit; background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px;">${resolvedMessage}</pre>
+      <p><strong>Timestamp (ISO):</strong> ${resolvedTimestamp}</p>
+      <p><strong>IP Address:</strong> ${resolvedIpAddress}</p>
+      ${numberOfUsers ? `<p><strong>Number of Users:</strong> ${numberOfUsers}</p>` : ''}
     </div>
   `;
 
   const text = `New Enterprise Inquiry
 
-Name: ${name}
+Firm Name: ${firmName}
+Contact Person: ${resolvedContactPerson}
 Email: ${email}
-Firm: ${firmName}
-Number of Users: ${numberOfUsers}
 Phone: ${phone}
+Message:
+${resolvedMessage}
+Timestamp (ISO): ${resolvedTimestamp}
+IP Address: ${resolvedIpAddress}
+${numberOfUsers ? `Number of Users: ${numberOfUsers}` : ''}
 
-Requirements:
-${requirements}`;
+`;
 
   return sendEmail({ to, subject, html, text }, context);
 };

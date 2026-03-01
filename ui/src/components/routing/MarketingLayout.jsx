@@ -39,12 +39,6 @@ export const MarketingLayout = () => {
             <NavLink to="/pricing" className={navLinkClass}>Pricing</NavLink>
             <NavLink to="/security" className={navLinkClass}>Security</NavLink>
             <NavLink to="/about" className={navLinkClass}>About</NavLink>
-            <Link
-              to="/signup"
-              className="marketing-btn-primary px-5 py-2.5 text-sm font-medium"
-            >
-              Request Early Access
-            </Link>
           </div>
         </nav>
       </header>
