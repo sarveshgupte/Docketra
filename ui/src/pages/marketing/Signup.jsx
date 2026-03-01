@@ -67,19 +67,16 @@ export const SignupPage = () => {
   };
 
   return (
-    <section
-      className="w-full"
-      style={{ paddingTop: 'var(--space-2xl)', paddingBottom: 'var(--space-2xl)' }}
-    >
+    <section className="w-full marketing-section">
       <div className="marketing-container">
         <div className="grid gap-16 lg:grid-cols-[1fr_480px]">
 
           {/* Left column — explanation */}
           <div className="flex flex-col justify-center">
-            <h1 className="type-section" style={{ color: '#111827' }}>
+            <h1 className="type-section text-gray-900">
               Request Early Access
             </h1>
-            <p className="mt-4 type-body" style={{ maxWidth: '480px' }}>
+            <p className="mt-4 type-body max-w-[480px]">
               Docketra is in controlled early access for professional service firms.
               Share your operational profile for a qualification review.
             </p>
@@ -94,26 +91,26 @@ export const SignupPage = () => {
           </div>
 
           {/* Right column — form card */}
-          <div
-            className="rounded-2xl bg-white p-8"
-            style={{
-              border: '1px solid #e5e7eb',
-              boxShadow: '0 4px 16px rgba(15,23,42,0.07)',
-            }}
-          >
-            <h2 className="type-card-title text-base">Qualification Form</h2>
-            <p className="mt-1.5 text-sm" style={{ color: '#6b7280' }}>
+          <div className="signup-form-card p-8">
+            <h2 className="type-card-title text-base text-gray-900">Qualification Form</h2>
+            <p className="mt-1.5 text-sm text-gray-500">
               Review typically takes 2–3 business days.
             </p>
 
             {status === 'success' && (
-              <div className="mt-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-700">
+              <div
+                role="alert"
+                className="mt-6 marketing-fade-in rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-700"
+              >
                 Thank you. Our team will review your request and schedule a walkthrough.
               </div>
             )}
 
             {error && (
-              <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              <div
+                role="alert"
+                className="mt-6 marketing-fade-in rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+              >
                 {error}
               </div>
             )}
@@ -157,6 +154,7 @@ export const SignupPage = () => {
                   min="1"
                   value={form.teamMembers}
                   onChange={onChange}
+                  onWheel={(e) => e.currentTarget.blur()}
                   placeholder="e.g. 25"
                   className={inputClass}
                   required
