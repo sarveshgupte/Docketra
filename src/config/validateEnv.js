@@ -3,7 +3,7 @@ const { isGoogleAuthDisabled } = require('../services/featureFlags.service');
 
 const XID_DIGITS = 6;
 const SUPERADMIN_XID_REGEX = new RegExp(`^X\\d{${XID_DIGITS}}$`, 'i');
-const MIN_JWT_SECRET_LENGTH = 12;
+const MIN_JWT_SECRET_LENGTH = 32;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const BCRYPT_HASH_REGEX = /^\$2[abxy]?\$\d{2}\$.+/;
 const MONGODB_OBJECTID_REGEX = /^[a-f0-9]{24}$/i;
@@ -17,6 +17,10 @@ const validateEnv = ({ exitOnError = true, logger = console } = {}) => {
 
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < MIN_JWT_SECRET_LENGTH) {
     errors.push({ field: 'JWT_SECRET', reason: 'missing or too short' });
+  }
+
+  if (!process.env.NODE_ENV) {
+    errors.push({ field: 'NODE_ENV', reason: 'missing' });
   }
 
   const superadminPassword = process.env.SUPERADMIN_PASSWORD;
@@ -48,7 +52,7 @@ const validateEnv = ({ exitOnError = true, logger = console } = {}) => {
   }
 
   if (!config.mongodbUri || !config.mongodbUri.startsWith('mongodb')) {
-    errors.push({ field: 'MONGODB_URI', reason: 'missing or invalid mongodb connection string' });
+    errors.push({ field: 'MONGO_URI', reason: 'missing or invalid mongodb connection string (MONGO_URI or MONGODB_URI)' });
   }
 
   if (!isGoogleAuthDisabled()) {
