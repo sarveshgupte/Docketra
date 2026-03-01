@@ -54,7 +54,7 @@ const MotionElement = ({
     return () => observer.disconnect();
   }, [once, viewport?.amount, whileInView]);
 
-  const animateTarget = whileInView || animate;
+  const animateTarget = whileInView ?? animate;
 
   const stateStyles = {
     initial: {
@@ -92,10 +92,17 @@ const MotionElement = ({
   );
 };
 
+const motionFactoryCache = new Map();
+
 export const motion = new Proxy(
   {},
   {
-    get: (_, tagName) => (props) => <MotionElement as={tagName} {...props} />,
+    get: (_, tagName) => {
+      if (!motionFactoryCache.has(tagName)) {
+        motionFactoryCache.set(tagName, (props) => <MotionElement as={tagName} {...props} />);
+      }
+      return motionFactoryCache.get(tagName);
+    },
   }
 );
 
