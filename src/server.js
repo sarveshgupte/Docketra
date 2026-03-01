@@ -113,6 +113,7 @@ const debugRoutes = require('./routes/debug.routes');  // Debug routes (PR #43)
 const inboundRoutes = require('./routes/inbound.routes');  // Inbound email routes
 const contactRoutes = require('./routes/contact.routes');  // Public contact form route
 const publicRoutes = require('./routes/public.routes');  // Public routes (firm lookup)
+const publicSignupRoutes = require('./routes/publicSignup.routes');  // Public self-serve signup routes
 const healthRoutes = require('./routes/health.routes');  // Health endpoints
 const storageRoutes = require('./routes/storage.routes');  // Storage BYOS routes
 const filesRoutes = require('./routes/files.routes');  // Tenant BYOS signed URL routes
@@ -352,6 +353,9 @@ app.post('/:firmSlug/login', authLimiter, tenantResolver, noFirmNoTransaction, (
 // Public routes (no authentication required)
 app.use('/api/public', writeGuardChain, publicRoutes);
 app.use('/public', writeGuardChain, publicRoutes);
+
+// Public self-serve signup routes (no authentication required)
+app.use('/public', publicSignupRoutes);
 
 // Contact form route (public, no authentication required)
 app.use('/api/contact', contactLimiter, contactRoutes);
