@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import api from '../../services/api';
 
 const BENEFITS = [
   'Structured case lifecycle with governance checkpoints',
@@ -20,8 +21,6 @@ const inputClass =
   'w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition-colors duration-150 focus:border-gray-900 focus:shadow-[0_0_0_3px_rgba(17,24,39,0.08)] bg-white';
 
 const labelClass = 'block text-xs font-medium text-gray-700 mb-1.5';
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
-
 export const SignupPage = () => {
   const [form, setForm] = useState(initialForm);
   const [status, setStatus] = useState('idle');
@@ -48,27 +47,18 @@ export const SignupPage = () => {
         goLiveTimeline: form.goLiveTimeline,
       };
 
-      const response = await fetch(`${API_BASE}/api/public/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      let data;
-      try {
-        data = await response.json();
-      } catch {
-        throw new Error('Server returned an invalid response');
-      }
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Unable to submit early access request. Please try again.');
-      }
+      await api.post('/public/signup', payload);
 
       setStatus('success');
       setForm(initialForm);
     } catch (submitError) {
       setStatus('error');
-      setError(submitError.message);
+      setError(
+        submitError?.response?.data?.message
+          || submitError?.response?.data?.error
+          || submitError.message
+          || 'Unable to submit early access request. Please try again.'
+      );
     }
   };
 
