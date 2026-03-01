@@ -28,7 +28,7 @@ const initiateSignup = async (req, res) => {
       return res.status(result.status || 400).json({ success: false, message: result.message });
     }
 
-    return res.status(200).json({ success: true, message: result.message });
+    return res.status(200).json({ success: true, message: result.message, email });
   } catch (error) {
     console.error('[PUBLIC_SIGNUP] initiateSignup error:', error.message);
     return res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
