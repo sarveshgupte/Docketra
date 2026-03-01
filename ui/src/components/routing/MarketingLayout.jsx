@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Link, Outlet, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
-import { COMPANY_NAME, COMPANY_CIN } from '../../lib/legalVersion';
 import { PageWrapper } from '../layout/PageWrapper';
 
 const navLinkClass = ({ isActive }) =>
@@ -61,35 +60,17 @@ export const MarketingLayout = () => {
       <footer className="border-t border-gray-200 bg-white">
         <section className="w-full marketing-section">
           <div className="marketing-container">
-            <div className="grid gap-8 sm:grid-cols-3">
-              <div>
-                <p className="text-sm font-semibold text-gray-700">Product</p>
-                <ul className="mt-4 space-y-2">
-                  <li><Link to="/features" className="marketing-footer-link">Features</Link></li>
-                  <li><Link to="/pricing" className="marketing-footer-link">Pricing</Link></li>
-                  <li><Link to="/security" className="marketing-footer-link">Security</Link></li>
-                </ul>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-700">Company</p>
-                <ul className="mt-4 space-y-2">
-                  <li><Link to="/about" className="marketing-footer-link">About</Link></li>
-                  <li><Link to="/contact" className="marketing-footer-link">Contact</Link></li>
-                </ul>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-700">Legal</p>
-                <ul className="mt-4 space-y-2">
-                  <li><Link to="/terms" className="marketing-footer-link">Terms</Link></li>
-                  <li><Link to="/privacy" className="marketing-footer-link">Privacy</Link></li>
-                </ul>
-              </div>
+            <div className="flex flex-wrap items-center gap-6">
+              <Link to="/features" className="marketing-footer-link">Features</Link>
+              <Link to="/pricing" className="marketing-footer-link">Pricing</Link>
+              <Link to="/security" className="marketing-footer-link">Security</Link>
+              <Link to="/privacy" className="marketing-footer-link">Privacy</Link>
+              <Link to="/terms" className="marketing-footer-link">Terms</Link>
+              <Link to="/contact" className="marketing-footer-link">Contact</Link>
             </div>
 
             <div className="mt-8 border-t border-gray-200 pt-6 text-xs text-gray-500">
-              <p>© {new Date().getFullYear()} Docketra</p>
-              <p className="mt-1">Operated by {COMPANY_NAME}</p>
-              <p className="mt-1">CIN: {COMPANY_CIN}</p>
+              <p>© 2026 GUPTE ENTERPRISES (OPC) PRIVATE LIMITED</p>
             </div>
           </div>
         </section>
