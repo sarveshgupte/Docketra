@@ -20,35 +20,45 @@ const SOLUTION_POINTS = [
   'Risk monitoring for overdue and escalation-prone compliance items',
 ];
 
+const SECTION_REVEAL = {
+  initial: { opacity: 0, y: 40 },
+  whileInView: { opacity: 1, y: 0 },
+  transition: { duration: 0.6, ease: [0.4, 0, 0.2, 1] },
+  viewport: { once: true, amount: 0.2 },
+};
+
 export const HomePage = () => (
   <div className="w-full">
     <Section>
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          <div>
+        <div className="grid items-center gap-12 lg:grid-cols-[1.1fr_1fr]">
+          <div className="text-left">
             <h1 className="type-hero">
               Prevent Compliance Delays Before They Happen.
             </h1>
-            <p className="mt-6 text-lg type-body max-w-xl">
+            <p className="type-body text-lg max-w-[520px]">
               Docketra enforces structured, accountable workflows and gives partners real-time
               visibility into their firm&apos;s operations.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
               <a
                 href="mailto:demo@docketra.com"
-                className="rounded-xl bg-gray-900 px-6 py-3 text-sm font-medium text-white transition-all duration-150 hover:scale-[1.01] hover:-translate-y-0.5 hover:bg-black active:scale-[0.98]"
+                className="marketing-btn-primary px-6 py-3 text-sm font-medium"
               >
                 Book a Demo
               </a>
               <Link
                 to="/signup"
-                className="rounded-xl border border-gray-300 bg-white px-6 py-3 text-sm font-medium text-gray-800 transition-all duration-150 hover:scale-[1.01] hover:-translate-y-0.5 hover:bg-gray-50 active:scale-[0.98]"
+                className="marketing-btn-secondary px-6 py-3 text-sm font-medium"
               >
                 Request Early Access
               </Link>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-gray-200 bg-gradient-to-br from-white to-gray-100 p-8 shadow-md hover:shadow-xl transition-shadow duration-300">
+          <motion.div
+            {...SECTION_REVEAL}
+            className="marketing-card bg-gradient-to-br from-white to-gray-50 p-8"
+          >
             <p className="text-sm font-semibold text-gray-700">Demo Firm: Agarwal &amp; Co. Chartered Accountants</p>
             <div className="mt-6 grid grid-cols-2 gap-4">
               <div className="rounded-xl border border-gray-200 bg-white p-4">
@@ -69,42 +79,52 @@ export const HomePage = () => (
                 </ul>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
     </Section>
 
     <Section muted>
         <h2 className="type-section">Why Professional Firms Lose Control</h2>
-        <div className="mt-8 grid gap-4 md:grid-cols-2">
+        <motion.div
+          {...SECTION_REVEAL}
+          className="grid gap-x-8 gap-y-6 md:grid-cols-2"
+          style={{ marginTop: 'var(--space-md)' }}
+        >
           {PROBLEM_POINTS.map((point, index) => (
             <motion.div
               key={point}
-              className="rounded-2xl border border-gray-200 bg-white px-5 py-3 text-sm font-medium text-gray-700 shadow-md hover:shadow-xl transition-shadow duration-300"
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2, delay: Math.min(index * 0.04, 0.2) }}
+              className="marketing-card px-5 py-4 text-sm font-medium text-gray-700"
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: Math.min(index * 0.05, 0.2), ease: [0.4, 0, 0.2, 1] }}
+              viewport={{ once: true, amount: 0.2 }}
             >
               {point}
             </motion.div>
           ))}
-        </div>
+        </motion.div>
     </Section>
 
     <Section>
         <h2 className="type-section">Enforced Workflow. Not Just Task Tracking.</h2>
-        <div className="mt-8 grid gap-12 md:grid-cols-2">
+        <motion.div
+          {...SECTION_REVEAL}
+          className="grid gap-8 md:grid-cols-2"
+          style={{ marginTop: 'var(--space-md)' }}
+        >
           {SOLUTION_POINTS.map((point, index) => (
             <motion.div
               key={point}
-              className="rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 border border-gray-200 bg-white p-8"
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2, delay: Math.min(index * 0.04, 0.2) }}
+              className="marketing-card p-8"
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: Math.min(index * 0.05, 0.2), ease: [0.4, 0, 0.2, 1] }}
+              viewport={{ once: true, amount: 0.2 }}
             >
               <p className="type-body">{point}</p>
             </motion.div>
           ))}
-        </div>
+        </motion.div>
     </Section>
   </div>
 );

@@ -1,7 +1,10 @@
 import React from 'react';
 
 export const Section = ({ children, className = '', muted = false }) => (
-  <section className={`w-full py-24 px-6 ${muted ? 'bg-gray-50' : ''} ${className}`}>
-    <div className="max-w-6xl mx-auto">{children}</div>
+  <section
+    className={`w-full ${muted ? 'bg-gray-50' : ''} ${className}`}
+    style={{ paddingTop: 'var(--space-2xl)', paddingBottom: 'var(--space-2xl)' }}
+  >
+    <div className="marketing-container">{children}</div>
   </section>
 );

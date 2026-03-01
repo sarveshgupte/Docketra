@@ -1,29 +1,41 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { COMPANY_NAME, COMPANY_CIN } from '../../lib/legalVersion';
 import { PageWrapper } from '../layout/PageWrapper';
 
-const navLinkClass = 'text-gray-600 hover:text-black transition-colors';
+const navLinkClass = 'marketing-nav-item text-sm font-medium';
 
 export const MarketingLayout = () => {
   const location = useLocation();
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setIsScrolled(window.scrollY > 6);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-white text-gray-900">
-      <header className="sticky top-0 z-40 border-b border-gray-200 backdrop-blur bg-white/80">
-        <nav className="mx-auto flex h-20 w-full max-w-7xl items-center justify-between px-6">
+    <div className="marketing-shell min-h-screen bg-white text-gray-900">
+      <header
+        className={`sticky top-0 z-40 border-b backdrop-blur-md transition-[background-color,border-color,box-shadow] duration-300 ${
+          isScrolled ? 'border-gray-200 bg-white/95 shadow-sm' : 'border-gray-100 bg-white/80'
+        }`}
+      >
+        <nav className={`marketing-container flex w-full items-center justify-between transition-[height] duration-300 ${isScrolled ? 'h-16' : 'h-20'}`}>
           <Link to="/" className="text-xl font-semibold tracking-tight">
             Docketra
           </Link>
 
-          <div className="flex items-center gap-6 text-sm font-medium">
+          <div className="flex items-center gap-6">
             <Link to="/features" className={navLinkClass}>Features</Link>
             <Link to="/pricing" className={navLinkClass}>Pricing</Link>
             <Link to="/security" className={navLinkClass}>Security</Link>
             <Link to="/about" className={navLinkClass}>About</Link>
             <Link
               to="/signup"
-              className="rounded-xl bg-gray-900 px-5 py-2.5 text-white transition-all duration-150 hover:scale-[1.01] hover:-translate-y-0.5 hover:bg-black active:scale-[0.98]"
+              className="marketing-btn-primary px-5 py-2.5 text-sm font-medium"
             >
               Request Early Access
             </Link>
@@ -38,8 +50,8 @@ export const MarketingLayout = () => {
       </main>
 
       <footer className="border-t border-gray-200 bg-white">
-        <section className="w-full py-24 px-6">
-          <div className="max-w-6xl mx-auto">
+        <section className="w-full" style={{ paddingTop: 'var(--space-2xl)', paddingBottom: 'var(--space-2xl)' }}>
+          <div className="marketing-container">
             <div className="grid gap-8 sm:grid-cols-3">
               <div>
                 <p className="text-sm font-semibold text-gray-700">Product</p>
