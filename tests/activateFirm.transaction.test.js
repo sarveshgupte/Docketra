@@ -125,7 +125,7 @@ async function testActivateFirmPropagatesValidationErrors() {
 
   assert(nextError instanceof Error, 'next should receive an error');
   assert.strictEqual(nextError.statusCode, 400);
-  assert.strictEqual(nextError.message, 'Firm must be INACTIVE to activate');
+  assert.strictEqual(nextError.message, 'Firm must be INACTIVE (suspended) to activate');
   const sessionStats = getSessionStats();
   assert.strictEqual(sessionStats.ended, 1, 'session should be ended even on error');
 }

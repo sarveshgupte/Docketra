@@ -1392,12 +1392,13 @@ const activateFirm = async (req, res, next) => {
         error.statusCode = 404;
         throw error;
       }
-      if (firm.status !== 'suspended') {
-        const error = new Error('Firm must be INACTIVE to activate');
+      if (!['suspended', 'INACTIVE'].includes(firm.status)) {
+        const error = new Error('Firm must be INACTIVE (suspended) to activate');
         error.statusCode = 400;
         throw error;
       }
 
+      const oldStatus = firm.status;
       firm.status = 'active';
       await firm.save({ session });
 
@@ -1414,7 +1415,7 @@ const activateFirm = async (req, res, next) => {
           target: firm._id.toString(),
           scope: 'GLOBAL',
           requestId: req.requestId,
-          oldStatus: 'suspended',
+          oldStatus,
           newStatus: 'active',
         },
         timestamp: new Date(),
@@ -1427,7 +1428,7 @@ const activateFirm = async (req, res, next) => {
         performedById: req.user._id,
         targetEntityType: 'Firm',
         targetEntityId: firm._id.toString(),
-        metadata: { firmId: firm.firmId, name: firm.name, oldStatus: 'suspended', newStatus: 'active' },
+        metadata: { firmId: firm.firmId, name: firm.name, oldStatus, newStatus: 'active' },
         req,
         session,
       });
@@ -1465,6 +1466,7 @@ module.exports = {
   getOperationalHealth,
   switchFirm,
   exitFirm,
+  // Intentionally not wrapped: activateFirm owns its explicit session.withTransaction lifecycle.
   activateFirm,
   deactivateFirm: wrapWriteHandler(deactivateFirm),
 };
