@@ -7,10 +7,12 @@
 
 const CaseRepository = require('./CaseRepository');
 const ClientRepository = require('./ClientRepository');
+const TaskRepository = require('./TaskRepository');
 const UserRepository = require('./UserRepository');
 
 module.exports = {
   CaseRepository,
   ClientRepository,
+  TaskRepository,
   UserRepository,
 };
