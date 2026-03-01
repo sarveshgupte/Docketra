@@ -9,7 +9,6 @@ const { generateNextClientId } = require('./clientIdGenerator');
 const { generateNextXID } = require('./xIDGenerator');
 const { ensureTenantKey } = require('../security/encryption.service');
 const { slugify } = require('../utils/slugify');
-const { generateXid } = require('../utils/generateXid');
 const emailService = require('./email.service');
 
 const SALT_ROUNDS = 10;
@@ -323,7 +322,6 @@ const completeSignup = async ({ email, firmName }) => {
     await firm.save({ session });
 
     const adminXID = await generateNextXID(firm._id, session);
-    const xid = generateXid();
 
     const userFields = {
       xID: adminXID,
