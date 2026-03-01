@@ -21,13 +21,19 @@ const DEFAULT_BUSINESS_ADDRESS = 'Default Address';
 const DEFAULT_CONTACT_NUMBER = '0000000000';
 
 /**
- * Generate a 6-digit numeric OTP
+ * Generate a 6-digit numeric OTP using rejection sampling to avoid modulo bias.
  * @returns {string} 6-digit OTP string
  */
 const generateOtp = () => {
-  const bytes = crypto.randomBytes(3);
-  const num = bytes.readUIntBE(0, 3) % 1000000;
-  return String(num).padStart(6, '0');
+  const max = 999999;
+  const limit = max + 1; // 1000000
+  // 3 bytes = 16777216 possible values; largest unbiased multiple of 1000000 is 16000000
+  const threshold = Math.floor(16777216 / limit) * limit;
+  let num;
+  do {
+    num = crypto.randomBytes(3).readUIntBE(0, 3);
+  } while (num >= threshold);
+  return String(num % limit).padStart(6, '0');
 };
 
 /**
