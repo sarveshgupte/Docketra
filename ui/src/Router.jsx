@@ -127,13 +127,13 @@ export const Router = () => {
             <Route path="/security" element={<MarketingSecurityPage />} />
             <Route path="/about" element={<MarketingAboutPage />} />
             <Route path="/contact" element={<MarketingContactPage />} />
-            <Route path="/signup" element={<MarketingSignupPage />} />
             <Route path="/superadmin" element={<LoginPage />} />
             <Route path="/superadmin/login" element={<LoginPage />} />
           </Route>
         </Route>
 
         <Route element={<RouteSuspenseOutlet />}>
+          <Route path="/signup" element={<MarketingSignupPage />} />
           <Route path="/:firmSlug/login" element={<FirmLoginPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
