@@ -47,6 +47,7 @@ const ROLE_ADMIN = 'Admin';
 const ROLE_EMPLOYEE = 'Employee';
 
 const log = require('../utils/log');
+const logger = log;
 const { safeLogForensicAudit, getRequestIp, getRequestUserAgent } = require('../services/forensicAudit.service');
 
 /**
@@ -65,22 +66,27 @@ const logAuthAudit = async (params, req = null) => {
     });
   }
 
-  await safeLogForensicAudit({
-    tenantId: params?.firmId,
-    entityType: 'AUTH',
-    entityId: params?.userId || params?.xID || 'UNKNOWN',
-    action: params?.actionType || 'AUTH_EVENT',
-    performedBy: params?.performedBy || params?.xID || 'SYSTEM',
-    performedByRole: params?.metadata?.performedByRole || null,
-    impersonatedBy: params?.metadata?.impersonatedBy || null,
-    ipAddress: params?.ipAddress || getRequestIp(req),
-    userAgent: params?.userAgent || getRequestUserAgent(req),
-    metadata: {
-      description: params?.description || null,
-      source: 'auth.controller.logAuthAudit',
-      metadata: params?.metadata || null,
-    },
-  });
+  // SECURITY: Audit logging isolated to prevent auth outage
+  try {
+    await safeLogForensicAudit({
+      tenantId: params?.firmId,
+      entityType: 'AUTH',
+      entityId: params?.userId || params?.xID || 'UNKNOWN',
+      action: params?.actionType || 'AUTH_EVENT',
+      performedBy: params?.performedBy || params?.xID || 'SYSTEM',
+      performedByRole: params?.metadata?.performedByRole || null,
+      impersonatedBy: params?.metadata?.impersonatedBy || null,
+      ipAddress: params?.ipAddress || getRequestIp(req),
+      userAgent: params?.userAgent || getRequestUserAgent(req),
+      metadata: {
+        description: params?.description || null,
+        source: 'auth.controller.logAuthAudit',
+        metadata: params?.metadata || null,
+      },
+    });
+  } catch (err) {
+    logger.warn('Forensic audit logging failed (non-fatal)', { error: err.message });
+  }
 };
 
 const getSuperadminEnv = () => {
@@ -122,7 +128,11 @@ const createOAuthState = (payload = {}) => {
       ...payload,
     },
     process.env.JWT_SECRET,
-    { expiresIn: `${GOOGLE_STATE_TTL_SECONDS}s` }
+    {
+      expiresIn: `${GOOGLE_STATE_TTL_SECONDS}s`,
+      // SECURITY: Explicit JWT algorithm allowlist
+      algorithm: 'HS256',
+    }
   );
 };
 
@@ -134,7 +144,10 @@ const verifyOAuthState = (stateToken) => {
     throw new Error('JWT_SECRET is not configured for OAuth state verification');
   }
 
-  return jwt.verify(stateToken, process.env.JWT_SECRET);
+  // SECURITY: Explicit JWT algorithm allowlist
+  return jwt.verify(stateToken, process.env.JWT_SECRET, {
+    algorithms: ['HS256'],
+  });
 };
 
 const createMfaPreAuthToken = (payload) => {
@@ -142,7 +155,11 @@ const createMfaPreAuthToken = (payload) => {
     throw new Error('JWT_SECRET is not configured for MFA pre-auth token signing');
   }
 
-  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: PRE_AUTH_TOKEN_EXPIRY });
+  return jwt.sign(payload, process.env.JWT_SECRET, {
+    expiresIn: PRE_AUTH_TOKEN_EXPIRY,
+    // SECURITY: Explicit JWT algorithm allowlist
+    algorithm: 'HS256',
+  });
 };
 
 /**
@@ -485,14 +502,51 @@ const login = async (req, res) => {
     
     if (!isValidPassword) {
       await recordFailedLoginAttempt(req);
-      // Increment failed login attempts
-      user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
-      
+      const lockUntilAt = new Date(Date.now() + LOCK_TIME);
+
+      // SECURITY: Atomic login lockout update to prevent race conditions
+      const updatedUser = await User.findOneAndUpdate(
+        { _id: user._id },
+        [
+          {
+            $set: {
+              failedLoginAttempts: {
+                $add: [{ $ifNull: ['$failedLoginAttempts', 0] }, 1],
+              },
+              lockUntil: {
+                $let: {
+                  vars: {
+                    nextFailedAttempts: {
+                      $add: [{ $ifNull: ['$failedLoginAttempts', 0] }, 1],
+                    },
+                  },
+                  in: {
+                    $cond: [
+                      { $gte: ['$$nextFailedAttempts', MAX_FAILED_ATTEMPTS] },
+                      { $ifNull: ['$lockUntil', lockUntilAt] },
+                      '$lockUntil',
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        ],
+        { new: true }
+      );
+
+      if (!updatedUser) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid xID or password',
+        });
+      }
+
+      const currentFailedAttempts = updatedUser.failedLoginAttempts || 0;
+      const isNowLocked = updatedUser.lockUntil && new Date(updatedUser.lockUntil) > new Date();
+
       // Lock account if max attempts reached
-      if (user.failedLoginAttempts >= MAX_FAILED_ATTEMPTS) {
-        user.lockUntil = new Date(Date.now() + LOCK_TIME);
-        await user.save();
-        
+      if (isNowLocked && currentFailedAttempts >= MAX_FAILED_ATTEMPTS) {
         // Log account lock
         try {
           await AuthAudit.create({
@@ -508,16 +562,14 @@ const login = async (req, res) => {
         } catch (auditError) {
           console.error('[AUTH AUDIT] Failed to record account lock event', auditError);
         }
-        
+
         return res.status(403).json({
           success: false,
           error: 'ACCOUNT_TEMP_LOCKED',
           retryAfter: config.security.rateLimit.accountLockSeconds,
         });
       }
-      
-      await user.save();
-      
+
       // Log failed login attempt
       try {
         await AuthAudit.create({
@@ -525,7 +577,7 @@ const login = async (req, res) => {
           firmId: user.firmId || DEFAULT_FIRM_ID,
           userId: user._id,
           actionType: 'LoginFailed',
-          description: `Login failed: Invalid password (attempt ${user.failedLoginAttempts})`,
+          description: `Login failed: Invalid password (attempt ${currentFailedAttempts})`,
           performedBy: user.xID,
           ipAddress: req.ip,
           userAgent: req.get('user-agent'),
@@ -533,11 +585,11 @@ const login = async (req, res) => {
       } catch (auditError) {
         console.error('[AUTH AUDIT] Failed to record login failure event', auditError);
       }
-      
+
       return res.status(401).json({
         success: false,
         message: 'Invalid xID or password',
-        remainingAttempts: MAX_FAILED_ATTEMPTS - user.failedLoginAttempts,
+        remainingAttempts: Math.max(0, MAX_FAILED_ATTEMPTS - currentFailedAttempts),
       });
     }
     
@@ -1680,7 +1732,10 @@ const setPassword = async (req, res) => {
 
     let decoded;
     try {
-      decoded = jwt.verify(token, passwordSetupSecret);
+      // SECURITY: Explicit JWT algorithm allowlist
+      decoded = jwt.verify(token, passwordSetupSecret, {
+        algorithms: ['HS256'],
+      });
     } catch (jwtError) {
       return res.status(400).json({
         success: false,
@@ -2660,7 +2715,10 @@ const completeMfaLogin = async (req, res) => {
 
     let decodedPreAuthToken;
     try {
-      decodedPreAuthToken = jwt.verify(preAuthToken, process.env.JWT_SECRET);
+      // SECURITY: Explicit JWT algorithm allowlist
+      decodedPreAuthToken = jwt.verify(preAuthToken, process.env.JWT_SECRET, {
+        algorithms: ['HS256'],
+      });
     } catch (error) {
       return res.status(401).json({
         success: false,
