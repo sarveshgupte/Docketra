@@ -12,6 +12,16 @@ const { getLatestTenantMetrics, getTenantMetricsByRange } = require('../services
 const DEFAULT_AUDIT_LOG_LIMIT = 100;
 const MAX_AUDIT_LOG_LIMIT = 250;
 
+const resolveFirmIdFromAuthContext = (req, res) => {
+  const firmId = req.firmId || req.user?.firmId;
+  if (!firmId) {
+    res.status(403).json({ success: false, message: 'Forbidden: firm context required' });
+    return null;
+  }
+  return firmId;
+};
+
+
 /**
  * Reports Controller for Docketra Case Management System
  * 
@@ -34,7 +44,8 @@ const MAX_AUDIT_LOG_LIMIT = 250;
  */
 const getCaseMetrics = async (req, res) => {
   try {
-    const tenantId = req.user?.firmId;
+    const tenantId = resolveFirmIdFromAuthContext(req, res);
+    if (!tenantId) return;
     const { fromDate, toDate, allowLongRange } = req.query;
 
     let payload;
@@ -133,15 +144,19 @@ const getCaseMetrics = async (req, res) => {
  */
 const getPendingCasesReport = async (req, res) => {
   try {
+    const firmId = resolveFirmIdFromAuthContext(req, res);
+    if (!firmId) return;
     const { category, assignedTo, ageingBucket } = req.query;
     
     // Build match stage for pending cases
-    const matchStage = { status: 'Pending' };
+    // SECURITY: Enforcing tenant isolation (firm-scoped query)
+    const matchStage = { firmId, status: 'Pending' };
     
     if (category) matchStage.category = category;
     if (assignedTo) matchStage.assignedToXID = assignedTo; // Use assignedToXID for canonical queries
     
     // Fetch all pending cases
+    // SECURITY: Enforcing tenant isolation (firm-scoped query)
     const cases = await Case.find(matchStage).lean();
     
     // Calculate ageing for each case
@@ -175,12 +190,14 @@ const getPendingCasesReport = async (req, res) => {
     // Populate client names and resolve assignedTo xID to user info
     const casesWithClientNames = [];
     for (const caseItem of filteredCases) {
-      const client = await Client.findOne({ clientId: caseItem.clientId }).lean();
+      // SECURITY: Enforcing tenant isolation (firm-scoped query)
+      const client = await Client.findOne({ firmId, clientId: caseItem.clientId }).lean();
       
       // PR: xID Canonicalization - Resolve assignedToXID to user info for display
       let assignedToDisplay = caseItem.assignedToXID || '';
       if (caseItem.assignedToXID) {
-        const assignedUser = await User.findOne({ xID: caseItem.assignedToXID }).lean();
+        // SECURITY: Enforcing tenant isolation (firm-scoped query)
+        const assignedUser = await User.findOne({ firmId, xID: caseItem.assignedToXID }).lean();
         assignedToDisplay = assignedUser ? assignedUser.email : caseItem.assignedToXID;
       }
       
@@ -219,14 +236,16 @@ const getPendingCasesReport = async (req, res) => {
     const byEmployee = [];
     for (const assignedToValue of Object.keys(byEmployeeMap)) {
       // Try to find user by xID first, fallback to email for backward compatibility
+      // SECURITY: Enforcing tenant isolation (firm-scoped query)
       let user = await User.findOne({
-        firmId: req.user?.firmId,
+        firmId,
         xID: assignedToValue,
         status: { $ne: 'deleted' },
       }).lean();
       if (!user) {
+        // SECURITY: Enforcing tenant isolation (firm-scoped query)
         user = await User.findOne({
-          firmId: req.user?.firmId,
+          firmId,
           email: String(assignedToValue).trim().toLowerCase(),
           status: { $ne: 'deleted' },
         }).lean();
@@ -274,6 +293,8 @@ const getPendingCasesReport = async (req, res) => {
  */
 const getCasesByDateRange = async (req, res) => {
   try {
+    const firmId = resolveFirmIdFromAuthContext(req, res);
+    if (!firmId) return;
     const { fromDate, toDate, status, category, page = 1, limit = 50 } = req.query;
     
     // Validate required parameters
@@ -285,7 +306,9 @@ const getCasesByDateRange = async (req, res) => {
     }
     
     // Build match stage
+    // SECURITY: Enforcing tenant isolation (firm-scoped query)
     const matchStage = {
+      firmId,
       createdAt: {
         $gte: new Date(fromDate),
         $lte: new Date(toDate),
@@ -296,10 +319,12 @@ const getCasesByDateRange = async (req, res) => {
     if (category) matchStage.category = category;
     
     // Get total count
+    // SECURITY: Enforcing tenant isolation (firm-scoped query)
     const total = await Case.countDocuments(matchStage);
     
     // Get paginated cases
     const skip = (parseInt(page) - 1) * parseInt(limit);
+    // SECURITY: Enforcing tenant isolation (firm-scoped query)
     const cases = await Case.find(matchStage)
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -309,13 +334,15 @@ const getCasesByDateRange = async (req, res) => {
     // Populate client names and resolve assignedTo xID to user info
     const casesWithClientNames = [];
     for (const caseItem of cases) {
-      const client = await Client.findOne({ clientId: caseItem.clientId }).lean();
+      // SECURITY: Enforcing tenant isolation (firm-scoped query)
+      const client = await Client.findOne({ firmId, clientId: caseItem.clientId }).lean();
       
       // PR #42: Resolve assignedTo xID to user info for display
       let assignedToDisplay = caseItem.assignedToXID || '';
       if (caseItem.assignedToXID) {
         // Try to find user by xID first, fallback to email for backward compatibility
-        let assignedUser = await User.findOne({ xID: caseItem.assignedToXID }).lean();
+        // SECURITY: Enforcing tenant isolation (firm-scoped query)
+        let assignedUser = await User.findOne({ firmId, xID: caseItem.assignedToXID }).lean();
         assignedToDisplay = assignedUser ? assignedUser.email : caseItem.assignedToXID;
       }
       
@@ -362,6 +389,8 @@ const getCasesByDateRange = async (req, res) => {
  */
 const exportCasesCSV = async (req, res) => {
   try {
+    const firmId = resolveFirmIdFromAuthContext(req, res);
+    if (!firmId) return;
     const { fromDate, toDate, status, category } = req.query;
     
     // Validate required parameters
@@ -373,7 +402,9 @@ const exportCasesCSV = async (req, res) => {
     }
     
     // Build match stage
+    // SECURITY: Enforcing tenant isolation (firm-scoped query)
     const matchStage = {
+      firmId,
       createdAt: {
         $gte: new Date(fromDate),
         $lte: new Date(toDate),
@@ -384,6 +415,8 @@ const exportCasesCSV = async (req, res) => {
     if (category) matchStage.category = category;
     
     // Get all matching cases (no pagination for export)
+    // SECURITY: Enforcing tenant isolation (firm-scoped query)
+    // SECURITY: Enforcing tenant isolation (firm-scoped query)
     const cases = await Case.find(matchStage)
       .sort({ createdAt: -1 })
       .lean();
@@ -391,13 +424,15 @@ const exportCasesCSV = async (req, res) => {
     // Populate client names and resolve assignedTo xID to user info
     const casesWithClientNames = [];
     for (const caseItem of cases) {
-      const client = await Client.findOne({ clientId: caseItem.clientId }).lean();
+      // SECURITY: Enforcing tenant isolation (firm-scoped query)
+      const client = await Client.findOne({ firmId, clientId: caseItem.clientId }).lean();
       
       // PR #42: Resolve assignedTo xID to user info for display
       let assignedToDisplay = caseItem.assignedToXID || '';
       if (caseItem.assignedToXID) {
         // Try to find user by xID first, fallback to email for backward compatibility
-        let assignedUser = await User.findOne({ xID: caseItem.assignedToXID }).lean();
+        // SECURITY: Enforcing tenant isolation (firm-scoped query)
+        let assignedUser = await User.findOne({ firmId, xID: caseItem.assignedToXID }).lean();
         assignedToDisplay = assignedUser ? assignedUser.email : caseItem.assignedToXID;
       }
       
@@ -446,6 +481,8 @@ const exportCasesCSV = async (req, res) => {
  */
 const exportCasesExcel = async (req, res) => {
   try {
+    const firmId = resolveFirmIdFromAuthContext(req, res);
+    if (!firmId) return;
     const { fromDate, toDate, status, category } = req.query;
     
     // Validate required parameters
@@ -457,7 +494,9 @@ const exportCasesExcel = async (req, res) => {
     }
     
     // Build match stage
+    // SECURITY: Enforcing tenant isolation (firm-scoped query)
     const matchStage = {
+      firmId,
       createdAt: {
         $gte: new Date(fromDate),
         $lte: new Date(toDate),
@@ -475,13 +514,15 @@ const exportCasesExcel = async (req, res) => {
     // Populate client names and resolve assignedTo xID to user info
     const casesWithClientNames = [];
     for (const caseItem of cases) {
-      const client = await Client.findOne({ clientId: caseItem.clientId }).lean();
+      // SECURITY: Enforcing tenant isolation (firm-scoped query)
+      const client = await Client.findOne({ firmId, clientId: caseItem.clientId }).lean();
       
       // PR #42: Resolve assignedTo xID to user info for display
       let assignedToDisplay = caseItem.assignedToXID || '';
       if (caseItem.assignedToXID) {
         // Try to find user by xID first, fallback to email for backward compatibility
-        let assignedUser = await User.findOne({ xID: caseItem.assignedToXID }).lean();
+        // SECURITY: Enforcing tenant isolation (firm-scoped query)
+        let assignedUser = await User.findOne({ firmId, xID: caseItem.assignedToXID }).lean();
         assignedToDisplay = assignedUser ? assignedUser.email : caseItem.assignedToXID;
       }
       
@@ -575,20 +616,27 @@ const getAuditLogs = async (req, res) => {
     );
     const since = timestamp ? new Date(timestamp) : null;
 
-    const firmId = String(req.firmId || req.user?.firmId || '');
+    const resolvedFirmId = resolveFirmIdFromAuthContext(req, res);
+    if (!resolvedFirmId) return;
+    const firmId = String(resolvedFirmId);
+    // SECURITY: Enforcing tenant isolation (firm-scoped query)
     const caseIdsForFirm = await Case.find({ firmId }).distinct('caseId');
+    // SECURITY: Enforcing tenant isolation (firm-scoped query)
     const caseAuditFilter = { caseId: { $in: caseIdsForFirm } };
     if (xID) caseAuditFilter.performedByXID = xID;
     if (action) caseAuditFilter.actionType = action;
     if (since) caseAuditFilter.timestamp = { $gte: since };
 
+    // SECURITY: Enforcing tenant isolation (firm-scoped query)
     const authAuditFilter = { firmId };
     if (xID) authAuditFilter.xID = xID;
     if (action) authAuditFilter.actionType = action;
     if (since) authAuditFilter.timestamp = { $gte: since };
 
     const [caseLogs, authLogs] = await Promise.all([
+      // SECURITY: Enforcing tenant isolation (firm-scoped query)
       CaseAudit.find(caseAuditFilter).sort({ timestamp: -1 }).limit(cappedLimit).lean(),
+      // SECURITY: Enforcing tenant isolation (firm-scoped query)
       AuthAudit.find(authAuditFilter).sort({ timestamp: -1 }).limit(cappedLimit).lean(),
     ]);
 
@@ -629,17 +677,20 @@ const getAuditLogs = async (req, res) => {
  */
 const generateClientFactSheetPdf = async (req, res) => {
   try {
+    const firmId = resolveFirmIdFromAuthContext(req, res);
+    if (!firmId) return;
     const { clientId } = req.params;
     if (!/^[A-Za-z0-9_-]+$/.test(String(clientId || ''))) {
       return res.status(400).json({ success: false, message: 'Invalid clientId format' });
     }
-    const firmId = req.firmId || req.user?.firmId;
+    // SECURITY: Enforcing tenant isolation (firm-scoped query)
     const client = await Client.findOne({ clientId, firmId }).lean();
 
     if (!client) {
       return res.status(404).json({ success: false, message: 'Client not found' });
     }
 
+    // SECURITY: Enforcing tenant isolation (firm-scoped query)
     const activeCases = await Case.find({
       firmId,
       clientId,
@@ -648,7 +699,9 @@ const generateClientFactSheetPdf = async (req, res) => {
       .select('caseId caseNumber title status')
       .lean();
 
+    // SECURITY: Enforcing tenant isolation (firm-scoped query)
     const clientCaseIds = await Case.find({ firmId, clientId }).distinct('_id');
+    // SECURITY: Enforcing tenant isolation (firm-scoped query)
     const pendingTasks = await Task.find({
       firmId,
       case: { $in: clientCaseIds },
