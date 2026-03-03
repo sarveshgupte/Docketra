@@ -56,7 +56,7 @@ const isEmailFirmOwner = async (email) => {
  * @param {Object} params - { name, email, password, phone }
  * @returns {Promise<Object>} result
  */
-const initiateManualSignup = async ({ name, email, password, phone }) => {
+const initiateManualSignup = async ({ name, email, password, phone, session = null }) => {
   const normalizedEmail = email.toLowerCase().trim();
 
   if (await isEmailFirmOwner(normalizedEmail)) {
@@ -64,7 +64,7 @@ const initiateManualSignup = async ({ name, email, password, phone }) => {
   }
 
   // Remove any existing temporary signup for this email
-  await TemporarySignup.deleteMany({ email: normalizedEmail });
+  await TemporarySignup.deleteMany({ email: normalizedEmail }, { session });
 
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
   const otp = generateOtp();
@@ -82,7 +82,7 @@ const initiateManualSignup = async ({ name, email, password, phone }) => {
     resendCount: 0,
     lastOtpSentAt: new Date(),
     isVerified: false,
-  });
+  }, { session });
 
   // Send OTP email
   await emailService.sendEmail({

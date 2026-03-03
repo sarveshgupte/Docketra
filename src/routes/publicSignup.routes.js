@@ -1,5 +1,6 @@
 const express = require('express');
 const { authLimiter } = require('../middleware/rateLimiters');
+const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const {
   initiateSignup,
   verifyOtp,
@@ -11,7 +12,7 @@ const {
 const router = express.Router();
 
 // Rate-limited routes
-router.post('/initiate-signup', authLimiter, initiateSignup);
+router.post('/initiate-signup', authLimiter, wrapWriteHandler(initiateSignup));
 router.post('/resend-otp', authLimiter, resendOtp);
 router.post('/google-auth', authLimiter, googleAuth);
 

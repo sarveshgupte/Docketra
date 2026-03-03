@@ -8,30 +8,31 @@ const signupService = require('../services/signup.service');
 const initiateSignup = async (req, res) => {
   try {
     const { name, email, password, phone } = req.body;
+    const session = req.transactionSession?.session || null;
 
     if (!name || !name.trim()) {
-      return res.status(400).json({ success: false, message: 'Name is required' });
+      return { success: false, statusCode: 400, message: 'Name is required' };
     }
     if (!email || !email.trim()) {
-      return res.status(400).json({ success: false, message: 'Email is required' });
+      return { success: false, statusCode: 400, message: 'Email is required' };
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      return res.status(400).json({ success: false, message: 'Invalid email format' });
+      return { success: false, statusCode: 400, message: 'Invalid email format' };
     }
     if (!password || password.length < 8) {
-      return res.status(400).json({ success: false, message: 'Password must be at least 8 characters' });
+      return { success: false, statusCode: 400, message: 'Password must be at least 8 characters' };
     }
 
-    const result = await signupService.initiateManualSignup({ name, email, password, phone });
+    const result = await signupService.initiateManualSignup({ name, email, password, phone, session });
 
     if (!result.success) {
-      return res.status(result.status || 400).json({ success: false, message: result.message });
+      return { success: false, statusCode: result.status || 400, message: result.message };
     }
 
-    return res.status(200).json({ success: true, message: result.message, email });
+    return { success: true, statusCode: 200, message: result.message, email };
   } catch (error) {
     console.error('[PUBLIC_SIGNUP] initiateSignup error:', error.message);
-    return res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
+    return { success: false, statusCode: 500, message: 'An error occurred. Please try again.' };
   }
 };
 
