@@ -13,6 +13,13 @@ const initialForm = {
 };
 
 export const ContactPage = () => {
+  const API_BASE = import.meta.env.VITE_API_BASE_URL;
+  if (!API_BASE && import.meta.env.DEV) {
+    console.error('VITE_API_BASE_URL is not defined');
+  }
+  const endpoint = API_BASE
+    ? `${API_BASE.replace(/\/+$/, '')}/api/public/contact`
+    : '/api/public/contact';
   const [form, setForm] = useState(initialForm);
   const [status, setStatus] = useState('idle');
 
@@ -24,7 +31,7 @@ export const ContactPage = () => {
     e.preventDefault();
     setStatus('submitting');
     try {
-      const res = await fetch('/api/public/contact', {
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
