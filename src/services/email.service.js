@@ -209,14 +209,17 @@ const sendEmail = async (mailOptions, context = null) => {
     }
   };
 
-  enqueueAfterCommit(context, {
-    type: 'SEND_EMAIL',
-    payload: { to: maskedEmail, subject: mailOptions.subject },
-    execute,
-    maxRetries: 3,
-  });
+  if (context) {
+    enqueueAfterCommit(context, {
+      type: 'SEND_EMAIL',
+      payload: { to: maskedEmail, subject: mailOptions.subject },
+      execute,
+      maxRetries: 3,
+    });
+    return { success: true, queued: true, messageId: null };
+  }
 
-  return { success: true, queued: true, messageId: null };
+  return await execute();
 };
 
 /**
