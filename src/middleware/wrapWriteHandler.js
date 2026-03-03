@@ -23,7 +23,7 @@ const wrapWriteHandler = (controllerFn) => {
       });
 
       if (!res.headersSent) {
-        const hasExplicitStatusCode = !!(result && typeof result === 'object' && Object.prototype.hasOwnProperty.call(result, 'statusCode'));
+        const hasExplicitStatusCode = result && typeof result === 'object' && Object.prototype.hasOwnProperty.call(result, 'statusCode');
         const statusCode = hasExplicitStatusCode && Number.isInteger(result.statusCode) ? result.statusCode : 201;
         if (hasExplicitStatusCode) {
           const { statusCode: _statusCode, ...payload } = result;
