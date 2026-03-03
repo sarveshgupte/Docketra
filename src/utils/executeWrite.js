@@ -12,15 +12,18 @@ const executeWrite = async (req, handler) => {
     return runWithoutTransaction(() => handler(null));
   }
 
+  const routeLabel = `${req?.method || 'UNKNOWN'} ${req?.originalUrl || req?.url || 'unknown-route'}`;
   const session = await mongoose.startSession();
   let result;
 
   try {
+    console.info(`[TXN] start ${routeLabel}`);
     await session.withTransaction(async () => {
       result = await runWithSession(session, () => handler(session));
     });
 
     req.transactionCommitted = true;
+    console.info(`[TXN] commit ${routeLabel}`);
   } finally {
     await session.endSession();
   }
