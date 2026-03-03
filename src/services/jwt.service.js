@@ -144,9 +144,11 @@ const verifyAccessToken = (token) => {
   }
   
   try {
+    // SECURITY: Explicit JWT algorithm allowlist
     const decoded = jwt.verify(token, secret, {
       issuer: 'docketra',
       audience: 'docketra-api',
+      algorithms: ['HS256'],
     });
     
     // Verify token type
