@@ -5,6 +5,7 @@ const router = applyRouteValidation(express.Router(), routeSchemas);
 const { getFirmBySlug } = require('../controllers/superadmin.controller');
 const { submitEnterpriseInquiry } = require('../controllers/contact.controller');
 const EarlyAccessRequest = require('../models/EarlyAccessRequest.model');
+const { executeWrite } = require('../utils/executeWrite');
 const log = require('../utils/log');
 
 const LOG_LENGTHS = {
@@ -45,13 +46,19 @@ router.post('/signup', async (req, res, next) => {
       goLiveTimeline,
     } = req.body;
 
-    const request = await EarlyAccessRequest.create({
-      firmName,
-      practiceType,
-      teamMembers,
-      currentWorkflowSystem,
-      compliancePainPoint,
-      goLiveTimeline,
+    req.transactionActive = true;
+
+    const request = await executeWrite(req, async (session) => {
+      const [createdRequest] = await EarlyAccessRequest.create([{
+        firmName,
+        practiceType,
+        teamMembers,
+        currentWorkflowSystem,
+        compliancePainPoint,
+        goLiveTimeline,
+      }], { session });
+
+      return createdRequest;
     });
 
     log.info('early_access_request_created', {
