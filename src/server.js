@@ -161,6 +161,10 @@ console.log(`[ENV] NODE_ENV = ${process.env.NODE_ENV || 'undefined'}`);
 // Detect production mode
 const isProduction = process.env.NODE_ENV === 'production';
 
+if (isProduction && !process.env.SUPERADMIN_PASSWORD_HASH) {
+  throw new Error('SECURITY: SUPERADMIN_PASSWORD_HASH is required in production');
+}
+
 validateEnv();
 logBuildMetadata();
 

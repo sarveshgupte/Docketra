@@ -278,30 +278,17 @@ const login = async (req, res) => {
       }
       console.log('[AUTH][superadmin] login attempt', { xID: normalizedXID });
       
-      /**
-       * ⚠️ TEMPORARY BOOTSTRAP AUTH
-       * Plaintext SuperAdmin password via env to unblock development.
-       * MUST be removed before production hardening.
-       * TODO: Remove bootstrap plaintext path during security hardening.
-       */
-      let isSuperadminPasswordValid = false;
-
-      if (process.env.SUPERADMIN_PASSWORD) {
-        // Bootstrap-only plaintext comparison
-        isSuperadminPasswordValid = password === process.env.SUPERADMIN_PASSWORD;
-      } else {
-        // Hardened path (bcrypt)
-        const superadminPasswordHash = process.env.SUPERADMIN_PASSWORD_HASH;
-        if (!superadminPasswordHash) {
-          console.error('[AUTH][superadmin] SUPERADMIN_PASSWORD_HASH not configured in environment');
-          return res.status(500).json({
-            success: false,
-            message: 'SuperAdmin authentication not configured',
-          });
-        }
-
-        isSuperadminPasswordValid = await bcrypt.compare(password, superadminPasswordHash);
+      // SECURITY: Plaintext superadmin password path removed. Hash-only auth enforced.
+      const superadminPasswordHash = process.env.SUPERADMIN_PASSWORD_HASH;
+      if (!superadminPasswordHash) {
+        console.error('[AUTH][superadmin] SUPERADMIN_PASSWORD_HASH not configured in environment');
+        return res.status(500).json({
+          success: false,
+          message: 'SuperAdmin authentication not configured',
+        });
       }
+
+      const isSuperadminPasswordValid = await bcrypt.compare(password, superadminPasswordHash);
       
       if (!isSuperadminPasswordValid) {
         await recordFailedLoginAttempt(req);
