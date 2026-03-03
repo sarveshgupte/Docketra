@@ -246,9 +246,8 @@ export default function Signup() {
   };
 
   return (
-    <section className="w-full bg-white py-20">
-      <div className="mx-auto w-full max-w-lg px-6">
-        <div className="signup-form-card p-8">
+    <section className="flex min-h-screen w-full items-center justify-center bg-white px-6 py-10">
+      <div className="signup-form-card w-full max-w-[420px] p-8">
           <h1 className="type-section text-gray-900">Starter Signup</h1>
           <p className="mt-2 text-sm text-gray-600">Create your free Starter workspace in minutes.</p>
 
@@ -443,7 +442,6 @@ export default function Signup() {
               )}
             </div>
           )}
-        </div>
       </div>
     </section>
   );
