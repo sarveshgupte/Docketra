@@ -8,7 +8,7 @@ const signupService = require('../services/signup.service');
 const initiateSignup = async (req, res) => {
   try {
     const { name, email, password, phone } = req.body;
-    const session = req.transactionSession?.session || null;
+    const session = req.transactionSession?.session;
 
     if (!name || !name.trim()) {
       return { success: false, statusCode: 400, message: 'Name is required' };
