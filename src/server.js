@@ -165,6 +165,11 @@ if (isProduction && !process.env.SUPERADMIN_PASSWORD_HASH) {
   throw new Error('SECURITY: SUPERADMIN_PASSWORD_HASH is required in production');
 }
 
+// SECURITY: Metrics endpoint fail-closed enforcement
+if (isProduction && !process.env.METRICS_TOKEN) {
+  throw new Error('SECURITY: METRICS_TOKEN is required in production');
+}
+
 validateEnv();
 logBuildMetadata();
 
@@ -289,14 +294,16 @@ app.get('/health', (req, res) => {
   });
 });
 app.use('/health', healthRoutes);
-const metricsAuthEnabled = !!process.env.METRICS_TOKEN;
 app.get('/metrics', async (req, res) => {
-  if (metricsAuthEnabled) {
-    const token = (req.headers.authorization || '').replace('Bearer ', '');
-    if (!token || token !== process.env.METRICS_TOKEN) {
-      return res.status(401).json({ error: 'unauthorized' });
-    }
+  // SECURITY: Metrics endpoint fail-closed enforcement
+  const configuredMetricsToken = process.env.METRICS_TOKEN;
+  const authHeader = req.headers.authorization || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
+
+  if (!configuredMetricsToken || !token || token !== configuredMetricsToken) {
+    return res.status(401).json({ error: 'unauthorized' });
   }
+
   res.json(await metricsService.getSnapshot());
 });
 
