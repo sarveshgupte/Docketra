@@ -23,15 +23,12 @@ const validateEnv = ({ exitOnError = true, logger = console } = {}) => {
     errors.push({ field: 'NODE_ENV', reason: 'missing' });
   }
 
-  const superadminPassword = process.env.SUPERADMIN_PASSWORD;
   const superadminPasswordHash = process.env.SUPERADMIN_PASSWORD_HASH;
 
-  if (!superadminPassword) {
-    if (!superadminPasswordHash) {
-      errors.push({ field: 'SUPERADMIN_PASSWORD_HASH', reason: 'missing (configure SUPERADMIN_PASSWORD for bootstrap or SUPERADMIN_PASSWORD_HASH with bcrypt hash)' });
-    } else if (!BCRYPT_HASH_REGEX.test(superadminPasswordHash)) {
-      errors.push({ field: 'SUPERADMIN_PASSWORD_HASH', reason: 'not bcrypt hash' });
-    }
+  if (!superadminPasswordHash) {
+    errors.push({ field: 'SUPERADMIN_PASSWORD_HASH', reason: 'missing (hash-only superadmin authentication required)' });
+  } else if (!BCRYPT_HASH_REGEX.test(superadminPasswordHash)) {
+    errors.push({ field: 'SUPERADMIN_PASSWORD_HASH', reason: 'not bcrypt hash' });
   }
 
   const superadminXid = process.env.SUPERADMIN_XID;
