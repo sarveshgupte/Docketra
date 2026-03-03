@@ -23,7 +23,14 @@ const wrapWriteHandler = (controllerFn) => {
       });
 
       if (!res.headersSent) {
-        res.status(201).json(result);
+        const hasExplicitStatusCode = result && typeof result === 'object' && Object.prototype.hasOwnProperty.call(result, 'statusCode');
+        const statusCode = hasExplicitStatusCode && Number.isInteger(result.statusCode) ? result.statusCode : 201;
+        if (hasExplicitStatusCode) {
+          const { statusCode: _statusCode, ...payload } = result;
+          res.status(statusCode).json(payload);
+        } else {
+          res.status(statusCode).json(result);
+        }
       }
     } catch (error) {
       next(error);
