@@ -8,6 +8,7 @@
 .case-detail {
   max-width: 1440px;
   margin: 0 auto;
+  padding: 1.25rem 1.5rem;
 }
 
 /* ── Page Header ─────────────────────────── */
@@ -41,6 +42,12 @@
   margin: 0;
 }
 
+.case-detail__meta-line {
+  margin: var(--space-2) 0 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
 .case-detail__header-actions {
   display: flex;
   align-items: center;
@@ -69,6 +76,22 @@
 .case-detail__alert {
   margin-bottom: var(--space-5);
   font-size: var(--font-size-sm);
+}
+
+.case-detail__confirmation {
+  margin-bottom: var(--space-3);
+  font-size: var(--font-size-xs);
+  color: #15803d;
+}
+
+.case-detail__retry {
+  border: none;
+  background: transparent;
+  color: #9f1239;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  font-size: var(--font-size-xs);
 }
 
 /* ── Split-Pane Layout ───────────────────── */

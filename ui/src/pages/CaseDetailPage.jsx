@@ -21,8 +21,10 @@ import { usePermissions } from '../hooks/usePermissions';
 import { useToast } from '../hooks/useToast';
 import { caseService } from '../services/caseService';
 import { clientService } from '../services/clientService';
-import { formatDateTime, formatClientDisplay } from '../utils/formatters';
+import { formatDateTime, formatAuditStamp } from '../utils/formatDateTime';
+import { formatClientDisplay } from '../utils/formatters';
 import { USER_ROLES } from '../utils/constants';
+import { AuditTimelineDrawer } from '../components/common/AuditTimelineDrawer';
 import './CaseDetailPage.css';
 
 /**
@@ -56,6 +58,9 @@ export const CaseDetailPage = () => {
   const [uploadingFile, setUploadingFile] = useState(false);
   const [pullingCase, setPullingCase] = useState(false);
   const [movingToGlobal, setMovingToGlobal] = useState(false);
+  const [actionConfirmation, setActionConfirmation] = useState('');
+  const [actionError, setActionError] = useState(null);
+  const [timelineOpen, setTimelineOpen] = useState(false);
   const fileInputRef = React.useRef(null);
 
   // State for File action modal
@@ -171,7 +176,10 @@ export const CaseDetailPage = () => {
       const response = await caseService.pullCase(caseId);
       
       if (response.success) {
-        showSuccess('Case pulled and assigned to you');
+        const message = `Case ${caseId} assigned • ${formatDateTime(new Date())}`;
+        showSuccess(message);
+        setActionConfirmation(message);
+        setActionError(null);
         await loadCase(); // Reload to update UI
       }
     } catch (error) {
@@ -182,6 +190,7 @@ export const CaseDetailPage = () => {
         ? serverMessage.substring(0, 200) // Limit length
         : 'Failed to pull case. Please try again.';
       showError(errorMessage);
+      setActionError({ message: errorMessage, retry: handlePullCase });
     } finally {
       setPullingCase(false);
     }
@@ -197,7 +206,10 @@ export const CaseDetailPage = () => {
       const response = await caseService.moveCaseToGlobal(caseId);
       
       if (response.success) {
-        showSuccess('Case moved to Workbasket');
+        const message = `Case ${caseId} moved to Workbasket • ${formatDateTime(new Date())}`;
+        showSuccess(message);
+        setActionConfirmation(message);
+        setActionError(null);
         await loadCase(); // Reload to update UI
       }
     } catch (error) {
@@ -208,6 +220,7 @@ export const CaseDetailPage = () => {
         ? serverMessage.substring(0, 200) // Limit length
         : 'Failed to move case. Please try again.';
       showError(errorMessage);
+      setActionError({ message: errorMessage, retry: handleMoveToGlobal });
     } finally {
       setMovingToGlobal(false);
     }
@@ -220,9 +233,14 @@ export const CaseDetailPage = () => {
     try {
       await caseService.addComment(caseId, newComment, user?.email);
       setNewComment('');
+      const message = `Comment added to ${caseId} • ${formatDateTime(new Date())}`;
+      showSuccess(message);
+      setActionConfirmation(message);
+      setActionError(null);
       await loadCase(); // Reload to show new comment
     } catch (error) {
       console.error('Failed to add comment:', error);
+      setActionError({ message: 'Failed to add comment. Please retry.', retry: handleAddComment });
     } finally {
       setSubmitting(false);
     }
@@ -269,10 +287,15 @@ export const CaseDetailPage = () => {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+      const message = `Attachment added to ${caseId} • ${formatDateTime(new Date())}`;
+      showSuccess(message);
+      setActionConfirmation(message);
+      setActionError(null);
       await loadCase(); // Reload to show new attachment
     } catch (error) {
       console.error('Failed to upload file:', error);
       showError('Failed to upload file. Please try again.');
+      setActionError({ message: 'Failed to upload file. Please retry.', retry: handleUploadFile });
     } finally {
       setUploadingFile(false);
     }
@@ -296,7 +319,10 @@ export const CaseDetailPage = () => {
       const response = await caseService.fileCase(caseId, fileComment);
       
       if (response.success) {
-        showSuccess('Lifecycle stage updated. Audit record created.');
+        const message = `Case ${caseId} filed • ${formatDateTime(new Date())}`;
+        showSuccess(message);
+        setActionConfirmation(message);
+        setActionError(null);
         setShowFileModal(false);
         setFileComment('');
         await loadCase(); // Reload to update UI
@@ -308,6 +334,7 @@ export const CaseDetailPage = () => {
         ? serverMessage.substring(0, 200)
         : 'Failed to file case. Please try again.';
       showError(errorMessage);
+      setActionError({ message: errorMessage, retry: handleFileCase });
     } finally {
       setFilingCase(false);
     }
@@ -348,7 +375,10 @@ export const CaseDetailPage = () => {
       const response = await caseService.pendCase(caseId, pendComment, pendingUntil);
       
       if (response.success) {
-        showSuccess('Lifecycle stage updated. Audit record created.');
+        const message = `Case ${caseId} pended • ${formatDateTime(new Date())}`;
+        showSuccess(message);
+        setActionConfirmation(message);
+        setActionError(null);
         setShowPendModal(false);
         setPendComment('');
         setPendingUntil('');
@@ -361,6 +391,7 @@ export const CaseDetailPage = () => {
         ? serverMessage.substring(0, 200)
         : 'Failed to pend case. Please try again.';
       showError(errorMessage);
+      setActionError({ message: errorMessage, retry: handlePendCase });
     } finally {
       setPendingCase(false);
     }
@@ -384,7 +415,10 @@ export const CaseDetailPage = () => {
       const response = await caseService.resolveCase(caseId, resolveComment);
       
       if (response.success) {
-        showSuccess('Execution recorded. Audit record created.');
+        const message = `Case ${caseId} resolved • ${formatDateTime(new Date())}`;
+        showSuccess(message);
+        setActionConfirmation(message);
+        setActionError(null);
         setShowResolveModal(false);
         setResolveComment('');
         await loadCase(); // Reload to update UI
@@ -396,6 +430,7 @@ export const CaseDetailPage = () => {
         ? serverMessage.substring(0, 200)
         : 'Failed to resolve case. Please try again.';
       showError(errorMessage);
+      setActionError({ message: errorMessage, retry: handleResolveCase });
     } finally {
       setResolvingCase(false);
     }
@@ -419,7 +454,10 @@ export const CaseDetailPage = () => {
       const response = await caseService.unpendCase(caseId, unpendComment);
       
       if (response.success) {
-        showSuccess('Lifecycle stage updated. Audit record created.');
+        const message = `Case ${caseId} unpended • ${formatDateTime(new Date())}`;
+        showSuccess(message);
+        setActionConfirmation(message);
+        setActionError(null);
         setShowUnpendModal(false);
         setUnpendComment('');
         await loadCase(); // Reload to update UI
@@ -431,6 +469,7 @@ export const CaseDetailPage = () => {
         ? serverMessage.substring(0, 200)
         : 'Failed to unpend case. Please try again.';
       showError(errorMessage);
+      setActionError({ message: errorMessage, retry: handleUnpendCase });
     } finally {
       setUnpendingCase(false);
     }
@@ -511,11 +550,17 @@ export const CaseDetailPage = () => {
           <div className="case-detail__header-left">
             <h1 className="case-detail__title">{caseInfo.caseName}</h1>
             <p className="case-detail__subtitle">{caseInfo.category}</p>
+            <p className="case-detail__meta-line">
+              {formatAuditStamp({
+                actor: caseInfo.updatedByName || caseInfo.assignedToName || 'System',
+                timestamp: caseInfo.updatedAt,
+              })}
+            </p>
           </div>
           <div className="case-detail__header-actions">
             {/* Client Fact Sheet Button */}
             <Button
-              variant="default"
+              variant="outline"
               onClick={handleShowClientFactSheet}
               disabled={loadingFactSheet}
               title="View Client Fact Sheet"
@@ -531,7 +576,7 @@ export const CaseDetailPage = () => {
             )}
             {showMoveToWorkbasketButton && (
               <Button
-                variant="default"
+                variant="outline"
                 onClick={handleMoveToGlobal}
                 disabled={movingToGlobal}
                 className="case-detail__btn-warning"
@@ -542,20 +587,20 @@ export const CaseDetailPage = () => {
             {canPerformLifecycleActions && (
               <>
                 <Button
-                  variant="default"
+                  variant="outline"
                   onClick={() => setShowFileModal(true)}
                   className="case-detail__btn-muted"
                 >
                   File
                 </Button>
                 <Button
-                  variant="default"
+                  variant="outline"
                   onClick={() => setShowPendModal(true)}
                   className="case-detail__btn-warning"
                 >
                   Pend
                 </Button>
-                <Button variant="success" onClick={() => setShowResolveModal(true)}>
+                <Button variant="primary" onClick={() => setShowResolveModal(true)}>
                   Resolve
                 </Button>
               </>
@@ -565,12 +610,26 @@ export const CaseDetailPage = () => {
                 Unpend
               </Button>
             )}
+            <Button variant="outline" onClick={() => setTimelineOpen(true)}>
+              View Timeline
+            </Button>
             {caseInfo.approvalStatus === 'PENDING' && <Badge variant="warning">Awaiting Partner Approval</Badge>}
             {caseInfo.lockStatus?.isLocked && <Badge variant="warning">Lifecycle Locked</Badge>}
             {isViewOnlyMode && <Badge variant="warning">Role Restricted Action</Badge>}
             <Badge status={caseInfo.status}>{toLifecycleStage(caseInfo.status)}</Badge>
           </div>
         </div>
+        {actionConfirmation ? <div className="case-detail__confirmation">{actionConfirmation}</div> : null}
+        {actionError ? (
+          <div className="neo-alert neo-alert--danger case-detail__alert">
+            {actionError.message}{' '}
+            {actionError.retry ? (
+              <button type="button" className="case-detail__retry" onClick={actionError.retry}>
+                Retry
+              </button>
+            ) : null}
+          </div>
+        ) : null}
 
         {/* Alerts */}
         {isViewOnlyMode && (
@@ -639,7 +698,7 @@ export const CaseDetailPage = () => {
                   <span>{formatDateTime(caseInfo.updatedAt)}</span>
                 </div>
                 <div className="case-detail__field">
-                  <Button variant="default" size="sm" onClick={() => document.getElementById('audit-history-section')?.scrollIntoView({ behavior: 'smooth' })}>
+                  <Button variant="outline" size="sm" onClick={() => setTimelineOpen(true)}>
                     Audit History
                   </Button>
                 </div>
@@ -773,14 +832,14 @@ export const CaseDetailPage = () => {
                       )}
                       <div className="case-detail__attachment-actions">
                         <Button
-                          variant="default"
+                          variant="outline"
                           size="sm"
                           onClick={() => caseService.viewAttachment(caseId, attachment._id)}
                         >
                           View
                         </Button>
                         <Button
-                          variant="default"
+                          variant="outline"
                           size="sm"
                           onClick={() => caseService.downloadAttachment(caseId, attachment._id, attachment.fileName || attachment.filename)}
                         >
@@ -865,7 +924,7 @@ export const CaseDetailPage = () => {
           title="File Case"
           actions={
             <>
-              <Button variant="default" onClick={() => { setShowFileModal(false); setFileComment(''); }} disabled={filingCase}>
+              <Button variant="outline" onClick={() => { setShowFileModal(false); setFileComment(''); }} disabled={filingCase}>
                 Cancel
               </Button>
               <Button variant="primary" onClick={handleFileCase} disabled={!fileComment.trim() || filingCase}>
@@ -898,7 +957,7 @@ export const CaseDetailPage = () => {
           title="Pend Case"
           actions={
             <>
-              <Button variant="default" onClick={() => { setShowPendModal(false); setPendComment(''); setPendingUntil(''); }} disabled={pendingCase}>
+              <Button variant="outline" onClick={() => { setShowPendModal(false); setPendComment(''); setPendingUntil(''); }} disabled={pendingCase}>
                 Cancel
               </Button>
               <Button variant="primary" onClick={handlePendCase} disabled={!pendComment.trim() || !pendingUntil || pendingCase}>
@@ -942,10 +1001,10 @@ export const CaseDetailPage = () => {
           title="Resolve Case"
           actions={
             <>
-              <Button variant="default" onClick={() => { setShowResolveModal(false); setResolveComment(''); }} disabled={resolvingCase}>
+              <Button variant="outline" onClick={() => { setShowResolveModal(false); setResolveComment(''); }} disabled={resolvingCase}>
                 Cancel
               </Button>
-              <Button variant="success" onClick={handleResolveCase} disabled={!resolveComment.trim() || resolvingCase}>
+              <Button variant="primary" onClick={handleResolveCase} disabled={!resolveComment.trim() || resolvingCase}>
                 {resolvingCase ? 'Resolving…' : 'Resolve Case'}
               </Button>
             </>
@@ -975,7 +1034,7 @@ export const CaseDetailPage = () => {
           title="Unpend Case"
           actions={
             <>
-              <Button variant="default" onClick={() => { setShowUnpendModal(false); setUnpendComment(''); }} disabled={unpendingCase}>
+              <Button variant="outline" onClick={() => { setShowUnpendModal(false); setUnpendComment(''); }} disabled={unpendingCase}>
                 Cancel
               </Button>
               <Button variant="primary" onClick={handleUnpendCase} disabled={!unpendComment.trim() || unpendingCase}>
@@ -1010,6 +1069,22 @@ export const CaseDetailPage = () => {
             caseId={caseId}
           />
         )}
+        <AuditTimelineDrawer
+          isOpen={timelineOpen}
+          onClose={() => setTimelineOpen(false)}
+          caseId={caseId}
+          events={(caseData.auditLog || caseData.history || []).map((entry) => ({
+            id: entry._id || entry.id || `${entry.timestamp}-${entry.actionType}`,
+            action: entry.actionType || entry.action || 'Updated',
+            actor:
+              entry.performedByName ||
+              entry.actorXID ||
+              entry.performedByXID ||
+              entry.createdByName ||
+              'System',
+            timestamp: entry.timestamp || entry.createdAt,
+          }))}
+        />
       </div>
     </Layout>
   );

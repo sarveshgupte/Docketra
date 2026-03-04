@@ -1,6 +1,9 @@
 .cases-page {
   width: 100%;
-  padding-top: 2rem;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 .cases-page__filters {
@@ -40,4 +43,52 @@
   background: #fff1f2;
   color: #9f1239;
   font-size: 13px;
+}
+
+.cases-page__name-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cases-page__case-title {
+  font-weight: 600;
+}
+
+.cases-page__case-meta {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.cases-page__toolbar-copy {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.cases-page__row-menu {
+  position: relative;
+}
+
+.cases-page__row-menu summary {
+  cursor: pointer;
+  list-style: none;
+  font-size: 16px;
+}
+
+.cases-page__row-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.cases-page__row-menu[open] button {
+  position: absolute;
+  right: 0;
+  top: 20px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  font-size: 12px;
+  color: #334155;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
 }
