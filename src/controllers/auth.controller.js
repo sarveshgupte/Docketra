@@ -152,7 +152,7 @@ const verifyOAuthState = (stateToken) => {
 
 const buildSessionCookieOptions = (req, maxAge) => {
   const secureCookies = process.env.NODE_ENV === 'production';
-  const frontendBase = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const frontendBase = process.env.FRONTEND_URL || 'http://localhost:5173';
 
   let sameSite = 'lax';
   if (secureCookies) {
@@ -170,13 +170,16 @@ const buildSessionCookieOptions = (req, maxAge) => {
     }
   }
 
-  return {
+  const cookieOptions = {
     httpOnly: true,
     secure: secureCookies,
     sameSite,
-    maxAge,
     path: '/',
   };
+  if (typeof maxAge === 'number') {
+    cookieOptions.maxAge = maxAge;
+  }
+  return cookieOptions;
 };
 
 const createMfaPreAuthToken = (payload) => {
@@ -837,10 +840,8 @@ const logout = async (req, res) => {
       );
     }
 
-    const { maxAge: _accessMaxAge, ...accessCookieOptions } = buildSessionCookieOptions(req, 0);
-    const { maxAge: _refreshMaxAge, ...refreshCookieOptions } = buildSessionCookieOptions(req, 0);
-    res.clearCookie('accessToken', accessCookieOptions);
-    res.clearCookie('refreshToken', refreshCookieOptions);
+    res.clearCookie('accessToken', buildSessionCookieOptions(req));
+    res.clearCookie('refreshToken', buildSessionCookieOptions(req));
     
     // Log logout (non-blocking)
     try {

@@ -57,7 +57,7 @@ export const GoogleCallbackPage = () => {
         setError('Google sign-in session could not be established. Please sign in again.');
         return;
       }
-      setError('Google sign-in session could not be established. Please try again.');
+      setError('Google sign-in failed due to a temporary server/network issue. Please try again.');
     };
 
     hydrate();
