@@ -19,6 +19,7 @@ import { CASE_STATUS, USER_ROLES } from '../utils/constants';
 import { getFirmConfig } from '../utils/firmConfig';
 import { useFeatureFlag } from '../hooks/useFeatureFlag';
 import { formatDateTime, formatAuditStamp } from '../utils/formatDateTime';
+import { buildCsv } from '../utils/csv';
 import './CasesPage.css';
 
 // Keep date-sort keys explicit so additional date columns can be added safely.
@@ -88,7 +89,7 @@ export const CasesPage = () => {
   const [selectedCaseIds, setSelectedCaseIds] = useState(new Set());
   const [bulkActionInProgress, setBulkActionInProgress] = useState(false);
   const [categoryCount, setCategoryCount] = useState(0);
-  const onboardingStorageKey = `docketraOnboardingDismissed_${firmSlug || 'firm'}`;
+  const onboardingStorageKey = `docketra_onboarding_dismissed_${firmSlug || 'firm'}`;
   const [onboardingDismissed, setOnboardingDismissed] = useState(
     () => localStorage.getItem(onboardingStorageKey) === 'true'
   );
@@ -99,10 +100,6 @@ export const CasesPage = () => {
       if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     };
   }, []);
-
-  useEffect(() => {
-    setOnboardingDismissed(localStorage.getItem(onboardingStorageKey) === 'true');
-  }, [onboardingStorageKey]);
 
   const normalizeCases = (records = []) =>
     records.map((record) => ({
@@ -164,7 +161,6 @@ export const CasesPage = () => {
     setOnboardingDismissed(true);
   };
 
-  const toCsvCell = (value) => `"${String(value ?? '').replaceAll('"', '""')}"`;
   const handleExportCsv = () => {
     const headers = [
       'Case ID',
@@ -186,7 +182,7 @@ export const CasesPage = () => {
       row.updatedAt ? formatDateTime(row.updatedAt) : '',
       isEscalatedCase(row, firmConfig.escalationInactivityThresholdHours) ? 'Yes' : 'No',
     ]);
-    const csv = [headers, ...rows].map((line) => line.map(toCsvCell).join(',')).join('\n');
+    const csv = buildCsv([headers, ...rows]);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

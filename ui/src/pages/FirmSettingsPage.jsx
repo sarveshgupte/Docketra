@@ -25,7 +25,6 @@ export const FirmSettingsPage = () => {
             const auditLog = record.auditLog || [];
             if (auditLog.length) {
               return auditLog
-                .filter((entry) => String(entry.actionType || entry.action || '').toUpperCase().includes('LOGIN'))
                 .map((entry) => ({
                   id: entry._id || `${entry.timestamp}-${entry.performedByXID || entry.actorXID || 'user'}`,
                   actor: entry.performedByName || entry.actorXID || entry.performedByXID || 'User',
@@ -111,7 +110,7 @@ export const FirmSettingsPage = () => {
           </div>
         </SectionCard>
 
-        <SectionCard title="Recent User Activity" subtitle="Last 10 login events (mocked from available audit activity)">
+        <SectionCard title="Recent User Activity" subtitle="Last 10 activity records (mocked from available audit activity)">
           {activity.length ? (
             <ul className="firm-settings__activity-list">
               {activity.map((entry) => (
@@ -132,4 +131,3 @@ export const FirmSettingsPage = () => {
     </Layout>
   );
 };
-

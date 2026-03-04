@@ -543,11 +543,13 @@ export const CaseDetailPage = () => {
             <thead><tr><th>Action</th><th>Actor</th><th>Timestamp</th><th>Description</th></tr></thead>
             <tbody>${timelineRows || '<tr><td colspan="4">No timeline records</td></tr>'}</tbody>
           </table>
-          <script>window.print()</script>
         </body>
       </html>
     `);
     printWindow.document.close();
+    printWindow.onload = () => {
+      printWindow.print();
+    };
   };
 
   if (loading) {
