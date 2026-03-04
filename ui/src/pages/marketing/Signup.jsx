@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../services/api';
+import { STORAGE_KEYS } from '../../utils/constants';
 
 const GOOGLE_SCRIPT_SRC = 'https://accounts.google.com/gsi/client';
 
@@ -26,6 +27,7 @@ export default function Signup() {
   const [form, setForm] = useState({
     name: '',
     email: '',
+    firmName: '',
     password: '',
     phone: '',
   });
@@ -119,6 +121,7 @@ export default function Signup() {
     } else if (!emailPattern.test(form.email.trim())) {
       nextErrors.email = 'Enter a valid email address';
     }
+    if (!form.firmName.trim()) nextErrors.firmName = 'Firm name is required';
     if (!form.password) {
       nextErrors.password = 'Password is required';
     } else if (form.password.length < 8) {
@@ -133,16 +136,23 @@ export default function Signup() {
     setErrors({});
     setLoading(true);
     try {
-      await api.post('/public/initiate-signup', {
+      const response = await api.post('/public/initiate-signup', {
         name: form.name.trim(),
         email: form.email.trim(),
+        firmName: form.firmName.trim(),
         password: form.password,
         phone: form.phone.trim() || undefined,
       });
-      setSignupEmail(form.email.trim());
-      setStep('otp');
-      setOtp('');
-      setApiMessage('OTP sent to your email.');
+      if (response?.data?.accessToken) {
+        localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, response.data.accessToken);
+      }
+      if (response?.data?.refreshToken) {
+        localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, response.data.refreshToken);
+      }
+      if (response?.data?.firmSlug) {
+        localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, response.data.firmSlug);
+      }
+      window.location.assign(response?.data?.redirectPath || `/app/firm/${response?.data?.firmSlug}/dashboard`);
     } catch (error) {
       setApiError(getErrorMessage(error, 'Unable to start signup. Please try again.'));
     } finally {
@@ -199,16 +209,28 @@ export default function Signup() {
       return;
     }
 
+    if (!form.firmName.trim()) {
+      setErrors({ firmName: 'Firm name is required' });
+      return;
+    }
+
     setLoading(true);
     try {
       const idToken = await requestGoogleIdToken();
-      const response = await api.post('/public/google-auth', { idToken });
-      const email = response?.data?.email;
-      if (!email) {
-        throw new Error('Unable to verify Google account email.');
+      const response = await api.post('/public/google-auth', {
+        idToken,
+        firmName: form.firmName.trim(),
+      });
+      if (response?.data?.accessToken) {
+        localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, response.data.accessToken);
       }
-      setSignupEmail(email);
-      setStep('firm');
+      if (response?.data?.refreshToken) {
+        localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, response.data.refreshToken);
+      }
+      if (response?.data?.firmSlug) {
+        localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, response.data.firmSlug);
+      }
+      window.location.assign(response?.data?.redirectPath || `/app/firm/${response?.data?.firmSlug}/dashboard`);
     } catch (error) {
       setApiError(getErrorMessage(error, 'Unable to continue with Google.'));
     } finally {
@@ -292,6 +314,19 @@ export default function Signup() {
                   required
                 />
                 {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email}</p>}
+              </div>
+              <div>
+                <label htmlFor="signup-firm-name" className={labelClass}>Firm Name</label>
+                <input
+                  id="signup-firm-name"
+                  name="firmName"
+                  value={form.firmName}
+                  onChange={onFormChange}
+                  className={inputClass}
+                  disabled={loading}
+                  required
+                />
+                {errors.firmName && <p className="mt-1 text-xs text-red-600">{errors.firmName}</p>}
               </div>
               <div>
                 <label htmlFor="signup-password" className={labelClass}>Password</label>

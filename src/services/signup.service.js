@@ -1,4 +1,3 @@
-const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const Firm = require('../models/Firm.model');
@@ -10,6 +9,8 @@ const { generateNextXID } = require('./xIDGenerator');
 const { ensureTenantKey } = require('../security/encryption.service');
 const { slugify } = require('../utils/slugify');
 const emailService = require('./email.service');
+const jwtService = require('./jwt.service');
+const RefreshToken = require('../models/RefreshToken.model');
 
 const SALT_ROUNDS = 10;
 const OTP_EXPIRY_MINUTES = 10;
@@ -271,12 +272,220 @@ const buildFirmUrl = (firmSlug) => {
   return `${frontendUrl}/${firmSlug}/login`;
 };
 
+const generateAndStoreRefreshToken = async ({ req, userId, firmId, session }) => {
+  const refreshToken = jwtService.generateRefreshToken();
+  const tokenHash = jwtService.hashRefreshToken(refreshToken);
+  const expiresAt = jwtService.getRefreshTokenExpiry();
+
+  await RefreshToken.create([{
+    tokenHash,
+    userId,
+    firmId: firmId ? String(firmId) : null,
+    expiresAt,
+    ipAddress: req?.ip,
+    userAgent: req?.get?.('user-agent'),
+  }], session ? { session } : undefined);
+
+  return refreshToken;
+};
+
+const createFirmAndAdmin = async ({
+  name,
+  email,
+  firmName,
+  passwordHash = null,
+  phone = null,
+  authProvider,
+  googleSubject = null,
+  session = null,
+  req = null,
+}) => {
+  if (!session) {
+    throw new Error('Transaction session is required');
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+  const normalizedFirmName = firmName.trim();
+  const firmSlug = await generateUniqueSlug(normalizedFirmName, session);
+  const firmId = await generateFirmId(session);
+
+  const [firm] = await Firm.create([{
+    firmId,
+    name: normalizedFirmName,
+    firmSlug,
+    plan: 'starter',
+    maxUsers: 2,
+    status: 'active',
+    bootstrapStatus: 'PENDING',
+  }], { session });
+
+  await ensureTenantKey(String(firm._id), { session });
+
+  const clientId = await generateNextClientId(firm._id, session);
+  const [defaultClient] = await Client.create([{
+    clientId,
+    businessName: normalizedFirmName,
+    businessAddress: DEFAULT_BUSINESS_ADDRESS,
+    primaryContactNumber: DEFAULT_CONTACT_NUMBER,
+    businessEmail: `${firmId.toLowerCase()}@${SYSTEM_EMAIL_DOMAIN}`,
+    firmId: firm._id,
+    isSystemClient: true,
+    isInternal: true,
+    createdBySystem: true,
+    isActive: true,
+    status: 'active',
+    createdByXid: 'SELF_SIGNUP',
+    createdBy: normalizedEmail,
+  }], { session });
+
+  firm.defaultClientId = defaultClient._id;
+  await firm.save({ session });
+
+  const adminXID = await generateNextXID(firm._id, session);
+  const [adminUser] = await User.create([{
+    xID: adminXID,
+    name: name.trim(),
+    email: normalizedEmail,
+    phoneNumber: phone || null,
+    firmId: firm._id,
+    defaultClientId: defaultClient._id,
+    role: 'Admin',
+    status: 'active',
+    isActive: true,
+    isSystem: true,
+    passwordSet: authProvider === 'password',
+    passwordHash: passwordHash || null,
+    mustSetPassword: authProvider !== 'password',
+    mustChangePassword: false,
+    inviteSentAt: new Date(),
+    authProviders: {
+      local: {
+        passwordHash: passwordHash || null,
+        passwordSet: authProvider === 'password',
+      },
+      google: {
+        googleId: authProvider === 'google' ? googleSubject : null,
+        linkedAt: authProvider === 'google' ? new Date() : null,
+      },
+    },
+  }], { session });
+
+  firm.bootstrapStatus = 'COMPLETED';
+  await firm.save({ session });
+
+  const accessToken = jwtService.generateAccessToken({
+    userId: adminUser._id.toString(),
+    firmId: firm._id.toString(),
+    firmSlug,
+    defaultClientId: defaultClient._id.toString(),
+    role: adminUser.role,
+  });
+  const refreshToken = await generateAndStoreRefreshToken({
+    req,
+    userId: adminUser._id,
+    firmId: firm._id,
+    session,
+  });
+
+  const firmUrl = buildFirmUrl(firmSlug);
+
+  return {
+    adminXID,
+    firmSlug,
+    firmUrl,
+    accessToken,
+    refreshToken,
+  };
+};
+
+const signupWithPassword = async ({ name, email, password, firmName, phone, session, req }) => {
+  const normalizedEmail = email.toLowerCase().trim();
+  if (await isEmailFirmOwner(normalizedEmail)) {
+    return { success: false, status: 409, message: 'Email is already associated with a firm' };
+  }
+
+  const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+  const result = await createFirmAndAdmin({
+    name,
+    email: normalizedEmail,
+    firmName,
+    passwordHash,
+    phone: phone || null,
+    authProvider: 'password',
+    session,
+    req,
+  });
+
+  try {
+    await emailService.sendFirmSetupEmail({
+      email: normalizedEmail,
+      name: name.trim(),
+      xid: result.adminXID,
+      firmName: firmName.trim(),
+      workspaceUrl: result.firmUrl,
+    });
+  } catch (emailError) {
+    console.error('[PUBLIC_SIGNUP] Failed to send setup email:', emailError.message);
+  }
+
+  return {
+    success: true,
+    message: 'Signup successful',
+    xid: result.adminXID,
+    firmUrl: result.firmUrl,
+    firmSlug: result.firmSlug,
+    accessToken: result.accessToken,
+    refreshToken: result.refreshToken,
+    redirectPath: `/app/firm/${result.firmSlug}/dashboard`,
+  };
+};
+
+const signupWithGoogle = async ({ name, email, firmName, googleSubject, session, req }) => {
+  const normalizedEmail = email.toLowerCase().trim();
+  if (await isEmailFirmOwner(normalizedEmail)) {
+    return { success: false, status: 409, message: 'Email is already associated with a firm' };
+  }
+
+  const result = await createFirmAndAdmin({
+    name,
+    email: normalizedEmail,
+    firmName,
+    authProvider: 'google',
+    googleSubject,
+    session,
+    req,
+  });
+
+  try {
+    await emailService.sendFirmSetupEmail({
+      email: normalizedEmail,
+      name: name.trim(),
+      xid: result.adminXID,
+      firmName: firmName.trim(),
+      workspaceUrl: result.firmUrl,
+    });
+  } catch (emailError) {
+    console.error('[PUBLIC_SIGNUP] Failed to send setup email:', emailError.message);
+  }
+
+  return {
+    success: true,
+    message: 'Signup successful',
+    xid: result.adminXID,
+    firmUrl: result.firmUrl,
+    firmSlug: result.firmSlug,
+    accessToken: result.accessToken,
+    refreshToken: result.refreshToken,
+    redirectPath: `/app/firm/${result.firmSlug}/dashboard`,
+  };
+};
+
 /**
  * Complete signup — transactional firm + admin creation
  * @param {Object} params - { email, firmName }
  * @returns {Promise<Object>} result with xid and firmUrl
  */
-const completeSignup = async ({ email, firmName }) => {
+const completeSignup = async ({ email, firmName, session, req }) => {
   const normalizedEmail = email.toLowerCase().trim();
   const record = await TemporarySignup.findOne({ email: normalizedEmail, isVerified: true });
 
@@ -288,87 +497,26 @@ const completeSignup = async ({ email, firmName }) => {
     return { success: false, status: 400, message: 'Firm name is required' };
   }
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
-    const firmSlug = await generateUniqueSlug(firmName, session);
-    const firmId = await generateFirmId(session);
-
-    const [firm] = await Firm.create([{
-      firmId,
-      name: firmName.trim(),
-      firmSlug,
-      plan: 'starter',
-      maxUsers: 2,
-      status: 'active',
-      bootstrapStatus: 'PENDING',
-    }], { session });
-
-    await ensureTenantKey(String(firm._id), { session });
-
-    const clientId = await generateNextClientId(firm._id, session);
-    const [defaultClient] = await Client.create([{
-      clientId,
-      businessName: firmName.trim(),
-      businessAddress: DEFAULT_BUSINESS_ADDRESS,
-      primaryContactNumber: DEFAULT_CONTACT_NUMBER,
-      businessEmail: `${firmId.toLowerCase()}@${SYSTEM_EMAIL_DOMAIN}`,
-      firmId: firm._id,
-      isSystemClient: true,
-      isInternal: true,
-      createdBySystem: true,
-      isActive: true,
-      status: 'active',
-      createdByXid: 'SELF_SIGNUP',
-      createdBy: normalizedEmail,
-    }], { session });
-
-    firm.defaultClientId = defaultClient._id;
-    await firm.save({ session });
-
-    const adminXID = await generateNextXID(firm._id, session);
-
-    const userFields = {
-      xID: adminXID,
+    const result = await createFirmAndAdmin({
       name: record.name,
       email: normalizedEmail,
-      firmId: firm._id,
-      defaultClientId: defaultClient._id,
-      role: 'Admin',
-      status: 'active',
-      isActive: true,
-      isSystem: true,
-      passwordSet: record.provider === 'manual',
+      firmName,
       passwordHash: record.passwordHash || null,
-      mustSetPassword: record.provider !== 'manual',
-      mustChangePassword: false,
-      inviteSentAt: new Date(),
-    };
-
-    if (record.phone) {
-      userFields.phoneNumber = record.phone;
-    }
-
-    const [adminUser] = await User.create([userFields], { session });
-
-    firm.bootstrapStatus = 'COMPLETED';
-    await firm.save({ session });
-
+      phone: record.phone || null,
+      authProvider: record.provider === 'manual' ? 'password' : 'google',
+      session,
+      req,
+    });
     await TemporarySignup.deleteOne({ _id: record._id }).session(session);
-
-    await session.commitTransaction();
-    session.endSession();
-
-    const firmUrl = buildFirmUrl(firmSlug);
 
     // Send welcome email (non-blocking — failure does not affect signup result)
     try {
-      await sendWelcomeEmail({
+      await emailService.sendFirmSetupEmail({
         name: record.name,
         email: normalizedEmail,
-        xid: adminXID,
-        firmUrl,
+        xid: result.adminXID,
+        workspaceUrl: result.firmUrl,
         firmName: firmName.trim(),
       });
     } catch (emailError) {
@@ -378,88 +526,26 @@ const completeSignup = async ({ email, firmName }) => {
     return {
       success: true,
       message: 'Signup successful',
-      xid: adminXID,
-      firmUrl,
+      xid: result.adminXID,
+      firmUrl: result.firmUrl,
+      firmSlug: result.firmSlug,
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      redirectPath: `/app/firm/${result.firmSlug}/dashboard`,
     };
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
     console.error('[PUBLIC_SIGNUP] Complete signup failed:', error.message);
     return { success: false, status: 500, message: 'Signup failed. Please try again.' };
   }
-};
-
-/**
- * Send welcome email after successful signup
- * @param {Object} params - { name, email, xid, firmUrl, firmName }
- */
-const sendWelcomeEmail = async ({ name, email, xid, firmUrl, firmName }) => {
-  const subject = 'Welcome to Docketra – Your Starter Workspace is Ready';
-  const htmlContent = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2>Welcome to Docketra, ${name}!</h2>
-      <p>Your Starter workspace has been created successfully.</p>
-      
-      <div style="margin: 20px 0; padding: 20px; background-color: #f0f9ff; border-left: 4px solid #2196F3; border-radius: 4px;">
-        <p style="margin: 0 0 10px 0;"><strong>Firm:</strong> ${firmName}</p>
-        <p style="margin: 0 0 10px 0;"><strong>Your Employee ID (xID):</strong> ${xid}</p>
-        <p style="margin: 0 0 10px 0;"><strong>Plan:</strong> Starter</p>
-        <p style="margin: 0 0 10px 0;"><strong>User Limit:</strong> 2 users</p>
-        <p style="margin: 0;">
-          <strong>Your Firm URL:</strong>
-          <a href="${firmUrl}" style="color: #2196F3;">${firmUrl}</a>
-        </p>
-      </div>
-      
-      <h3>Getting Started:</h3>
-      <ol>
-        <li>Visit your firm URL above</li>
-        <li>Login using your xID: <strong>${xid}</strong></li>
-        <li>Start managing your cases and tasks</li>
-      </ol>
-      
-      <p style="color: #666; font-size: 14px;">
-        Your Starter plan includes up to 2 users. Need more? Contact us to upgrade.
-      </p>
-      
-      <p>Best regards,<br>Docketra Team</p>
-    </div>
-  `;
-
-  const textContent = `
-Welcome to Docketra, ${name}!
-
-Your Starter workspace has been created successfully.
-
-Firm: ${firmName}
-Your Employee ID (xID): ${xid}
-Plan: Starter
-User Limit: 2 users
-Your Firm URL: ${firmUrl}
-
-Getting Started:
-1. Visit your firm URL above
-2. Login using your xID: ${xid}
-3. Start managing your cases and tasks
-
-Your Starter plan includes up to 2 users. Need more? Contact us to upgrade.
-
-Best regards,
-Docketra Team
-  `.trim();
-
-  return await emailService.sendEmail({
-    to: email,
-    subject,
-    html: htmlContent,
-    text: textContent,
-  });
 };
 
 module.exports = {
   initiateManualSignup,
   verifySignupOtp,
   resendSignupOtp,
+  signupWithPassword,
+  signupWithGoogle,
+  createFirmAndAdmin,
   googleSignup,
   completeSignup,
   generateOtp,
