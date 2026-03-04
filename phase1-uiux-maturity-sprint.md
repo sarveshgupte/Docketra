@@ -21,8 +21,9 @@
 - **Supporting actions:** `Back`, `Print`, `View Timeline` as secondary/ghost.
 
 #### Form pages
-- **Sticky footer action bar (desktop):**
-  - Left: context status (`Draft autosaved 12:42 IST`).
+- **Context-aware footer action bar (desktop):**
+  - Sticky only when page content exceeds viewport height; otherwise render as static footer.
+  - Left: persisted status (`● Draft saved • 12:42 IST`).
   - Right: `Cancel` (ghost), `Save Draft` (secondary), `Save & Continue` or `Submit` (primary).
 - Only one filled primary at any time.
 
@@ -50,9 +51,15 @@
 ```
 
 ```jsx
-<div className="sticky bottom-0 border-t bg-white px-6 py-3">
+<div className={cn(
+  "border-t bg-white px-6 py-3",
+  isScrollablePage && "sticky bottom-0"
+)}>
   <div className="flex items-center justify-between">
-    <p className="text-xs text-slate-500">Draft autosaved at 12:42 IST</p>
+    <p className={cn("text-xs", isRecentlySaved ? "text-emerald-600" : "text-slate-500")}>
+      <span className={cn("mr-1 inline-block h-1.5 w-1.5 rounded-full", isRecentlySaved ? "bg-emerald-500" : "bg-slate-400")} />
+      Draft saved • 12:42 IST
+    </p>
     <div className="flex items-center gap-2">
       <Button variant="ghost">Cancel</Button>
       <Button variant="outline">Save Draft</Button>
@@ -87,7 +94,7 @@ type SortDirection = 'asc' | 'desc';
 type SortState = {
   key: string;
   direction: SortDirection;
-} | null;
+};
 
 type ActiveFilter = {
   key: string;
@@ -110,11 +117,22 @@ type DataTableProps<T> = {
 ```
 
 ### Sort state pattern
-- Click cycle for sortable column: `null -> asc -> desc -> null`.
+- Default sort is always pre-applied (recommended: `updatedAt desc` on legal operational lists).
+- Click cycle for sortable column: `asc <-> desc` (no null/unsorted state).
 - Show inline icon state:
-  - neutral: muted `↕`
-  - asc: `↑`
-  - desc: `↓`
+  - active asc: `↑`
+  - active desc: `↓`
+  - inactive sortable column: muted `↕` only before first activation on non-default columns.
+- Date columns should initialize as `desc` to match legal recency workflows.
+- Keep unsorted state disabled unless a module has a regulatory requirement to preserve backend order.
+
+### Example logic
+
+```ts
+const nextSortDirection = (current: SortDirection): SortDirection =>
+  current === 'asc' ? 'desc' : 'asc';
+```
+
 - Persist sort in URL query when possible (`?sort=updatedAt&dir=desc`) for deterministic revisit behavior.
 
 ### Compact toolbar pattern
@@ -156,13 +174,14 @@ type DataTableProps<T> = {
 ### UI state flow (for every mutating action)
 1. **Idle:** Button enabled, explicit label (`Save Changes`).
 2. **Processing:** Button disabled + spinner + verb in-progress (`Saving...`).
-3. **Success:** Toast + inline timestamp/meta update (`Saved at 14:32 IST`).
+3. **Success:** Toast + inline persisted indicator (`● Draft saved • 14:32 IST`) in success accent for 4–6 seconds, then fade to neutral metadata.
 4. **Error:** Inline field/global message + retry affordance.
 5. **Next Step:** Provide deterministic continuation (`View Matter`, `Continue Editing`).
 
 ### Toast + inline feedback pattern
 - **Toast:** short-lived confirmation (2.5–4s), top-right desktop.
 - **Inline persistent feedback:** near section header or form footer for audit confidence.
+- **Persisted signal behavior:** green dot + success tone immediately after save, transitions to neutral text state without disappearing.
 - For critical actions (filing, closure), include immutable reference ID in success copy.
 
 ### Example button loading state
@@ -240,7 +259,10 @@ export const formatAuditStamp = ({ user, timestamp }: { user?: string; timestamp
 ### Mini audit metadata in case list rows
 - Add a muted second line under each matter title:
   - `Last action: Stage updated • by Priya S. • 06 Feb 2026, 02:35 PM IST`.
-- Keep this line truncated with tooltip expansion for dense layouts.
+- Density guardrail for high-volume tables:
+  - Default table view: show compact/truncated audit snippet.
+  - Show full audit line on row hover or explicit expanded row state.
+  - Keep full detail always visible in row drawer/modal (`View Timeline`).
 
 ### Quick “View Timeline” action
 - Add tertiary action in row overflow and detail header.
