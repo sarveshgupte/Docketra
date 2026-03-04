@@ -10,6 +10,11 @@
   margin-bottom: 16px;
 }
 
+.cases-page__control-section {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
 .cases-page__filter-label {
   display: block;
   margin-bottom: 8px;
