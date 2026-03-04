@@ -338,6 +338,61 @@
   font-style: italic;
 }
 
+/* ── Lifecycle Status Panel (Task 4) ─────── */
+
+.case-detail__lifecycle-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4, 16px);
+  padding: var(--space-4, 16px);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  background: #f8fafc;
+  margin-bottom: var(--space-5, 20px);
+}
+
+.case-detail__lifecycle-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4, 16px) var(--space-6, 24px);
+}
+
+.case-detail__lifecycle-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 120px;
+}
+
+.case-detail__lifecycle-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted, #64748b);
+}
+
+.case-detail__lifecycle-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-main, #0f172a);
+}
+
+.case-detail__lifecycle-value--danger {
+  color: #be123c;
+  font-weight: 600;
+}
+
+.case-detail__lifecycle-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  flex-wrap: wrap;
+  align-self: center;
+}
+
 /* ── Responsive ──────────────────────────── */
 
 @media (max-width: 1100px) {
@@ -360,5 +415,9 @@
 
   .case-detail__header-actions {
     flex-wrap: wrap;
+  }
+
+  .case-detail__lifecycle-panel {
+    flex-direction: column;
   }
 }
