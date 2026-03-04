@@ -20,6 +20,7 @@ import { clientService } from '../services/clientService';
 import { getFirmConfig } from '../utils/firmConfig';
 import { formatClientDisplay } from '../utils/formatters';
 import { formatDateTime } from '../utils/formatDateTime';
+import { UX_COPY } from '../constants/uxCopy';
 import './CreateCasePage.css';
 
 /** Returns a simple completion fraction for a section given field names and formData. */
@@ -350,7 +351,7 @@ export const CreateCasePage = () => {
     <Layout>
       <div className="create-case">
         <div className="create-case__header">
-          <h1>Create New Case</h1>
+          <h1>{UX_COPY.actions.CREATE_CASE}</h1>
           <p className="text-secondary">All fields marked with * are required</p>
           {/* Task 7: Draft auto-save indicator */}
           {draftSaved && (
@@ -538,7 +539,7 @@ export const CreateCasePage = () => {
                     Cancel
                     </Button>
                     <Button type="submit" variant="primary" disabled={submitting}>
-                      {submitting ? 'Saving...' : 'Create Case'}
+                      {submitting ? 'Saving...' : UX_COPY.actions.CREATE_CASE}
                     </Button>
                   </div>
                 </div>
