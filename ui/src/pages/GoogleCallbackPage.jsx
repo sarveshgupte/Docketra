@@ -3,7 +3,7 @@
  * Stores tokens from backend redirect and routes user appropriately.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Card } from '../components/common/Card';
 import { Loading } from '../components/common/Loading';
@@ -15,7 +15,8 @@ export const GoogleCallbackPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [error, setError] = useState('');
-  const { user, loading, isAuthenticated } = useAuth();
+  const { user, loading, isAuthenticated, fetchProfile } = useAuth();
+  const profileFetchAttempted = useRef(false);
   const params = new URLSearchParams(location.search);
   const firmSlugFromQuery = params.get('firmSlug');
   const errorParam = params.get('error');
@@ -31,6 +32,16 @@ export const GoogleCallbackPage = () => {
     }
   }, [firmSlugFromQuery, errorParam]);
 
+
+  useEffect(() => {
+    if (error || loading || isAuthenticated || profileFetchAttempted.current) return;
+
+    profileFetchAttempted.current = true;
+    fetchProfile().catch(() => {
+      setError('Google sign-in session could not be established. Please try again.');
+    });
+  }, [error, loading, isAuthenticated, fetchProfile]);
+
   useEffect(() => {
     if (error || loading) return;
 
@@ -41,7 +52,7 @@ export const GoogleCallbackPage = () => {
       user.firmSlug;
 
     if (user.role === USER_ROLES.SUPER_ADMIN) {
-      navigate('/superadmin', { replace: true });
+      navigate('/app/superadmin', { replace: true });
       return;
     }
 

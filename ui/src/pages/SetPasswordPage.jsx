@@ -19,6 +19,8 @@ export const SetPasswordPage = () => {
   const [searchParams] = useSearchParams();
   const { firmSlug } = useParams();
   const token = searchParams.get('token');
+  const firmSlugFromQuery = searchParams.get('firmSlug');
+  const effectiveFirmSlug = firmSlug || firmSlugFromQuery;
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -36,7 +38,7 @@ export const SetPasswordPage = () => {
 
   useEffect(() => {
     const loadFirmData = async () => {
-      if (!firmSlug) {
+      if (!effectiveFirmSlug) {
         setFirmData({});
         setFirmLoading(false);
         return;
@@ -44,7 +46,7 @@ export const SetPasswordPage = () => {
 
       try {
         setFirmLoading(true);
-        const response = await api.get(`/public/firms/${firmSlug}`);
+        const response = await api.get(`/public/firms/${effectiveFirmSlug}`);
 
         if (response.data.success) {
           const firm = response.data.data;
@@ -54,7 +56,7 @@ export const SetPasswordPage = () => {
             localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
           } else {
             setFirmData(firm);
-            localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, firmSlug);
+            localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, effectiveFirmSlug);
           }
         }
       } catch (err) {
@@ -68,7 +70,7 @@ export const SetPasswordPage = () => {
     };
 
     loadFirmData();
-  }, [firmSlug]);
+  }, [effectiveFirmSlug]);
 
   const validatePassword = (pwd) => {
     if (pwd.length < 8) {
@@ -157,11 +159,11 @@ export const SetPasswordPage = () => {
   };
 
   const handleGoogleLogin = () => {
-    if (!firmSlug) {
+    if (!effectiveFirmSlug) {
       setError('Firm not found. Please check your activation link.');
       return;
     }
-    window.location.href = `${API_BASE_URL}/auth/google?flow=activation&firmSlug=${encodeURIComponent(firmSlug)}`;
+    window.location.href = `${API_BASE_URL}/auth/google?flow=activation&firmSlug=${encodeURIComponent(effectiveFirmSlug)}`;
   };
 
   if (firmLoading) {
