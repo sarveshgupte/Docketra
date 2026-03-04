@@ -5,6 +5,7 @@
 .create-case {
   max-width: 800px;
   margin: 0 auto;
+  padding: 1.25rem 1.5rem;
 }
 
 .create-case__header {
@@ -20,8 +21,22 @@
 .create-case__actions {
   display: flex;
   gap: var(--spacing-md);
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   margin-top: var(--spacing-lg);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--spacing-md);
+  background: #fff;
+}
+
+.create-case__actions-right {
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+.create-case__status {
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .create-case__duplicate-warning {
@@ -47,4 +62,12 @@
   gap: var(--spacing-md);
   justify-content: flex-end;
   margin-top: var(--spacing-lg);
+}
+
+@media (min-width: 1024px) {
+  .create-case__actions {
+    position: sticky;
+    bottom: 0;
+    padding-bottom: var(--spacing-md);
+  }
 }

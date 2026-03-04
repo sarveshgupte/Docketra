@@ -11,16 +11,21 @@ import { Select } from '../components/common/Select';
 import { Textarea } from '../components/common/Textarea';
 import { Button } from '../components/common/Button';
 import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../hooks/useToast';
+import { useAsyncAction } from '../hooks/useAsyncAction';
 import { caseService } from '../services/caseService';
 import { categoryService } from '../services/categoryService';
 import { clientService } from '../services/clientService';
 import { formatClientDisplay } from '../utils/formatters';
+import { formatDateTime } from '../utils/formatDateTime';
 import './CreateCasePage.css';
 
 export const CreateCasePage = () => {
   const navigate = useNavigate();
   const { firmSlug } = useParams();
   const { user } = useAuth();
+  const { showSuccess } = useToast();
+  const { loading: submitting, error: submitError, run: runSubmit, clearError } = useAsyncAction();
   
   const [formData, setFormData] = useState({
     clientId: '', // Will be populated from active clients
@@ -36,10 +41,10 @@ export const CreateCasePage = () => {
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [loadingClients, setLoadingClients] = useState(true);
   const [duplicateWarning, setDuplicateWarning] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [successMessage, setSuccessMessage] = useState(null);
+  const [footerConfirmation, setFooterConfirmation] = useState('');
 
   // Fetch categories for dropdown
   useEffect(() => {
@@ -223,22 +228,26 @@ export const CreateCasePage = () => {
     e.preventDefault();
     setDuplicateWarning(null);
     setSuccessMessage(null);
+    clearError();
 
     if (!validateForm()) {
       return;
     }
 
-    setSubmitting(true);
-
     try {
-      const response = await caseService.createCase(formData, forceCreate);
+      const response = await runSubmit(() => caseService.createCase(formData, forceCreate));
       
       if (response.success) {
+        const confirmationTime = formatDateTime(new Date());
+        const successCopy = `Case ${response.data.caseId} created • ${confirmationTime}`;
+        showSuccess(successCopy);
+        setFooterConfirmation(successCopy);
         // DO NOT redirect to case detail - show success message instead
         // Per PR requirements: show success and options to go to Workbasket or create another
         setSuccessMessage({
           caseId: response.data.caseId,
           caseName: response.data.caseName,
+          timestamp: confirmationTime,
         });
         // Reset form for creating another case
         setFormData({
@@ -258,11 +267,8 @@ export const CreateCasePage = () => {
         // Duplicate client warning
         setDuplicateWarning(err.response.data);
       } else {
-        const errorMsg = err.response?.data?.message || 'Failed to create case';
-        setErrors(prev => ({ ...prev, submit: errorMsg }));
+        setErrors(prev => ({ ...prev, submit: submitError || 'Failed to create case' }));
       }
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -289,14 +295,15 @@ export const CreateCasePage = () => {
             <p>
               Case <strong>{successMessage.caseId}</strong> has been created and moved to the Workbasket.
             </p>
+            <p className="text-secondary">{successMessage.timestamp}</p>
             <div style={{ display: 'flex', gap: 'var(--spacing-md)', marginTop: 'var(--spacing-md)' }}>
               <Button variant="primary" onClick={() => navigate(`/app/firm/${firmSlug}/cases/${successMessage.caseId}`)}>
                 View Case
               </Button>
-              <Button variant="default" onClick={() => navigate(`/app/firm/${firmSlug}/global-worklist`)}>
+              <Button variant="outline" onClick={() => navigate(`/app/firm/${firmSlug}/global-worklist`)}>
                 Go to Workbasket
               </Button>
-              <Button variant="default" onClick={() => setSuccessMessage(null)}>
+              <Button variant="outline" onClick={() => setSuccessMessage(null)}>
                 Create Another Case
               </Button>
             </div>
@@ -330,8 +337,8 @@ export const CreateCasePage = () => {
                 <Button onClick={handleCancelDuplicate}>
                   Cancel
                 </Button>
-                <Button variant="warning" onClick={handleForceCreate} disabled={submitting}>
-                  {submitting ? 'Creating...' : 'Continue Anyway'}
+                <Button variant="danger" onClick={handleForceCreate} disabled={submitting}>
+                  {submitting ? 'Saving...' : 'Continue Anyway'}
                 </Button>
               </div>
             </div>
@@ -407,19 +414,24 @@ export const CreateCasePage = () => {
                 error={touched.slaDueDate && errors.slaDueDate}
               />
 
-              {errors.submit && (
+              {(errors.submit || submitError) && (
                 <div className="neo-alert neo-alert--danger">
-                  {errors.submit}
+                  {(errors.submit || submitError)} Retry by submitting again.
                 </div>
               )}
 
               <div className="create-case__actions">
-                <Button type="button" onClick={() => navigate(-1)}>
+                <div className="create-case__status" aria-live="polite">
+                  {footerConfirmation || 'Draft not saved yet'}
+                </div>
+                <div className="create-case__actions-right">
+                  <Button type="button" variant="outline" onClick={() => navigate(-1)}>
                   Cancel
-                </Button>
-                <Button type="submit" variant="primary" disabled={submitting}>
-                  {submitting ? 'Creating...' : 'Create Case'}
-                </Button>
+                  </Button>
+                  <Button type="submit" variant="primary" disabled={submitting}>
+                    {submitting ? 'Saving...' : 'Create Case'}
+                  </Button>
+                </div>
               </div>
             </form>
           )}

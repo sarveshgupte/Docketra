@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Button } from '../components/common/Button';
@@ -8,12 +8,13 @@ import { SectionCard } from '../components/layout/SectionCard';
 import { DataTable } from '../components/layout/DataTable';
 import { StatusBadge } from '../components/layout/StatusBadge';
 import { EmptyState } from '../components/layout/EmptyState';
+import { AuditTimelineDrawer } from '../components/common/AuditTimelineDrawer';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
 import { caseService } from '../services/caseService';
 import { worklistService } from '../services/worklistService';
 import { CASE_STATUS } from '../utils/constants';
-import { formatDate } from '../utils/formatters';
+import { formatDateTime, formatAuditStamp } from '../utils/formatDateTime';
 import './CasesPage.css';
 
 export const CasesPage = () => {
@@ -26,6 +27,8 @@ export const CasesPage = () => {
   const [cases, setCases] = useState([]);
   const [filteredCases, setFilteredCases] = useState([]);
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [sortState, setSortState] = useState({ key: 'updatedAt', direction: 'desc' });
+  const [timelineCaseId, setTimelineCaseId] = useState(null);
   const [error, setError] = useState(null);
 
   const normalizeCases = (records = []) =>
@@ -82,6 +85,29 @@ export const CasesPage = () => {
     navigate(`/app/firm/${firmSlug}/cases/create`);
   };
 
+  const sortedCases = useMemo(() => {
+    const list = [...filteredCases];
+    list.sort((a, b) => {
+      const current = a?.[sortState.key];
+      const next = b?.[sortState.key];
+      if (current == null && next == null) return 0;
+      if (current == null) return 1;
+      if (next == null) return -1;
+
+      if (sortState.key.toLowerCase().includes('date') || sortState.key.toLowerCase().includes('at')) {
+        const aTime = new Date(current).getTime();
+        const bTime = new Date(next).getTime();
+        return sortState.direction === 'asc' ? aTime - bTime : bTime - aTime;
+      }
+
+      const comparison = String(current).localeCompare(String(next));
+      return sortState.direction === 'asc' ? comparison : -comparison;
+    });
+    return list;
+  }, [filteredCases, sortState]);
+
+  const activeFilters = statusFilter === 'ALL' ? [] : [{ key: 'status', label: 'Status', value: statusFilter }];
+
   if (loading) {
     return (
       <Layout>
@@ -91,23 +117,61 @@ export const CasesPage = () => {
   }
 
   const columns = [
-    { key: 'caseName', header: 'Case Name' },
-    { key: 'category', header: 'Category' },
+    {
+      key: 'caseName',
+      header: 'Case Name',
+      sortable: true,
+      render: (row) => (
+        <div className="cases-page__name-cell">
+          <span className="cases-page__case-title">{row.caseName}</span>
+          <span className="cases-page__case-meta">
+            {formatAuditStamp({
+              actor: row.updatedByName || row.updatedByXID || row.assignedToName || 'System',
+              timestamp: row.updatedAt,
+            })}
+          </span>
+        </div>
+      ),
+    },
+    { key: 'category', header: 'Category', sortable: true },
     {
       key: 'status',
       header: 'Status',
+      sortable: true,
       render: (row) => <StatusBadge status={row.status} />,
     },
     {
       key: 'assignedToName',
       header: 'Assigned To',
+      sortable: true,
       render: (row) => row.assignedToName || row.assignedTo || 'Unassigned',
     },
     {
       key: 'updatedAt',
       header: 'Last Updated',
       align: 'right',
-      render: (row) => formatDate(row.updatedAt),
+      tabular: true,
+      sortable: true,
+      render: (row) => formatDateTime(row.updatedAt),
+    },
+    {
+      key: 'rowActions',
+      header: '',
+      align: 'right',
+      render: (row) => (
+        <details className="cases-page__row-menu" onClick={(event) => event.stopPropagation()}>
+          <summary aria-label={`Row actions for ${row.caseName}`}>⋯</summary>
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              setTimelineCaseId(row.caseId);
+            }}
+          >
+            View Timeline
+          </button>
+        </details>
+      ),
     },
   ];
 
@@ -145,9 +209,20 @@ export const CasesPage = () => {
         <SectionCard title="Case Registry" subtitle={`${filteredCases.length} records`}>
           <DataTable
             columns={columns}
-            data={filteredCases}
+            data={sortedCases}
             rowKey="caseId"
             onRowClick={handleCaseClick}
+            sortState={sortState}
+            onSortChange={setSortState}
+            activeFilters={activeFilters}
+            onRemoveFilter={(key) => {
+              if (key === 'status') {
+                setStatusFilter('ALL');
+              }
+            }}
+            onResetFilters={() => setStatusFilter('ALL')}
+            toolbarLeft={<span className="cases-page__toolbar-copy">{sortedCases.length} records</span>}
+            dense
             emptyContent={
               <EmptyState
                 title={isAdmin ? 'No cases yet' : 'No assigned cases'}
@@ -159,6 +234,7 @@ export const CasesPage = () => {
           />
         </SectionCard>
       </div>
+      <AuditTimelineDrawer isOpen={Boolean(timelineCaseId)} caseId={timelineCaseId} onClose={() => setTimelineCaseId(null)} />
     </Layout>
   );
 };
