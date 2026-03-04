@@ -14,8 +14,12 @@ import { usePermissions } from '../hooks/usePermissions';
 import { useCaseView, CASE_VIEWS, isEscalatedCase } from '../hooks/useCaseView';
 import { caseService } from '../services/caseService';
 import { worklistService } from '../services/worklistService';
-import { CASE_STATUS, USER_ROLES, WORKLOAD_THRESHOLD } from '../utils/constants';
+import { categoryService } from '../services/categoryService';
+import { CASE_STATUS, USER_ROLES } from '../utils/constants';
+import { getFirmConfig } from '../utils/firmConfig';
+import { useFeatureFlag } from '../hooks/useFeatureFlag';
 import { formatDateTime, formatAuditStamp } from '../utils/formatDateTime';
+import { buildCsv } from '../utils/csv';
 import './CasesPage.css';
 
 // Keep date-sort keys explicit so additional date columns can be added safely.
@@ -57,7 +61,16 @@ export const CasesPage = () => {
   const { firmSlug } = useParams();
   const isPartner = user?.role === USER_ROLES.PARTNER;
 
-  const { activeView, setActiveView, applyView, availableViews, applySmartDefault } = useCaseView(isAdmin, user);
+  const firmConfig = getFirmConfig();
+  const enableBulkActions = useFeatureFlag('BULK_ACTIONS');
+  const enablePerformanceView = useFeatureFlag('PERFORMANCE_VIEW');
+  const enableEscalationView = useFeatureFlag('ESCALATION_VIEW');
+
+  const { activeView, setActiveView, applyView, availableViews, applySmartDefault } = useCaseView(
+    isAdmin,
+    user,
+    { enableEscalationView }
+  );
 
   const [loading, setLoading] = useState(true);
   const [cases, setCases] = useState([]);
@@ -75,6 +88,11 @@ export const CasesPage = () => {
   // Task 6: Bulk selection state
   const [selectedCaseIds, setSelectedCaseIds] = useState(new Set());
   const [bulkActionInProgress, setBulkActionInProgress] = useState(false);
+  const [categoryCount, setCategoryCount] = useState(0);
+  const onboardingStorageKey = `docketra_onboarding_dismissed_${firmSlug || 'firm'}`;
+  const [onboardingDismissed, setOnboardingDismissed] = useState(
+    () => localStorage.getItem(onboardingStorageKey) === 'true'
+  );
 
   // Cleanup debounce timer on unmount (Task 6)
   useEffect(() => {
@@ -119,8 +137,14 @@ export const CasesPage = () => {
           casesData = response.data || [];
         }
       }
+      let resolvedCategoryCount = 0;
+      if (isAdmin) {
+        const categoriesResponse = await categoryService.getCategories(false);
+        resolvedCategoryCount = categoriesResponse?.data?.length || 0;
+      }
       const normalized = normalizeCases(casesData);
       setCases(normalized);
+      setCategoryCount(resolvedCategoryCount);
       // Task 5: apply smart default view if no manual selection stored
       applySmartDefault(normalized);
     } catch (err) {
@@ -130,6 +154,45 @@ export const CasesPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const dismissOnboarding = () => {
+    localStorage.setItem(onboardingStorageKey, 'true');
+    setOnboardingDismissed(true);
+  };
+
+  const handleExportCsv = () => {
+    const headers = [
+      'Case ID',
+      'Case Name',
+      'Client',
+      'Status',
+      'SLA Due',
+      'Assigned To',
+      'Updated At',
+      'Escalated',
+    ];
+    const rows = sortedCases.map((row) => [
+      row.caseId || '',
+      row.caseName || '',
+      row.clientName || row.client?.name || '',
+      row.status || '',
+      row.slaDueDate ? formatDateTime(row.slaDueDate) : '',
+      row.assignedToName || row.assignedTo || '',
+      row.updatedAt ? formatDateTime(row.updatedAt) : '',
+      isEscalatedCase(row, firmConfig.escalationInactivityThresholdHours) ? 'Yes' : 'No',
+    ]);
+    const csv = buildCsv([headers, ...rows]);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0, 10).replaceAll('-', '');
+    link.href = url;
+    link.download = `cases_export_${stamp}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
   };
 
   const handleCaseClick = (caseRecord) => {
@@ -291,12 +354,12 @@ export const CasesPage = () => {
       totalOpen: cases.filter((c) => c.status === CASE_STATUS.OPEN || c.status === CASE_STATUS.PENDED).length,
       dueToday: cases.filter(isDueToday).length,
       overdue: cases.filter(isSlaBreached).length,
-      escalated: cases.filter(isEscalatedCase).length,
+      escalated: cases.filter((row) => isEscalatedCase(row, firmConfig.escalationInactivityThresholdHours)).length,
       filedLast7: cases.filter(
         (c) => c.status === CASE_STATUS.FILED && c.updatedAt && new Date(c.updatedAt) >= sevenDaysAgo
       ).length,
     };
-  }, [cases]);
+  }, [cases, firmConfig.escalationInactivityThresholdHours]);
 
   // Task 4: Assignment load indicator
   const openAssignedCount = useMemo(
@@ -310,7 +373,7 @@ export const CasesPage = () => {
       ).length,
     [cases, user]
   );
-  const isHighWorkload = openAssignedCount > WORKLOAD_THRESHOLD;
+  const isHighWorkload = openAssignedCount > Number(firmConfig.workloadThreshold || 15);
 
   // Task 7: Performance metrics (computed from all cases)
   const performanceMetrics = useMemo(() => {
@@ -354,12 +417,13 @@ export const CasesPage = () => {
 
   // Memoize select-all state to avoid repeated inline filtering (Task 6)
   const allVisibleSelected = useMemo(() => {
+    if (!enableBulkActions) return false;
     const selectable = sortedCases.filter((c) => !c.lockStatus?.isLocked);
     return selectable.length > 0 && selectable.every((c) => selectedCaseIds.has(c.caseId));
-  }, [sortedCases, selectedCaseIds]);
+  }, [sortedCases, selectedCaseIds, enableBulkActions]);
 
   const columns = [
-    {
+    ...(enableBulkActions ? [{
       key: '__select',
       header: (
         <input
@@ -382,14 +446,14 @@ export const CasesPage = () => {
           />
         );
       },
-    },
+    }] : []),
     {
       key: 'caseName',
       header: 'Case Name',
       sortable: true,
       render: (row) => {
         const breached = isSlaBreached(row);
-        const escalated = isEscalatedCase(row);
+        const escalated = isEscalatedCase(row, firmConfig.escalationInactivityThresholdHours);
         const dueToday = !breached && isDueToday(row);
         const recency = getRecencyLabel(row.updatedAt);
         return (
@@ -515,6 +579,7 @@ export const CasesPage = () => {
                   ⚠ High workload ({openAssignedCount} open)
                 </span>
               )}
+              <Button variant="outline" onClick={handleExportCsv}>Export CSV</Button>
               {isAdmin && <Button variant="primary" onClick={handleCreateCase}>New Case</Button>}
             </div>
           }
@@ -551,15 +616,17 @@ export const CasesPage = () => {
               <span className="cases-page__sla-tile-label">Overdue</span>
             </button>
             {/* Task 1: Escalated metric */}
-            <button
-              type="button"
-              className={`cases-page__sla-tile${slaSummary.escalated > 0 ? ' cases-page__sla-tile--escalated' : ''}`}
-              onClick={() => { setStatusFilter('ALL'); setActiveView('ESCALATED'); }}
-              aria-label={`Escalated: ${slaSummary.escalated}`}
-            >
-              <span className="cases-page__sla-tile-value">{slaSummary.escalated}</span>
-              <span className="cases-page__sla-tile-label">Escalated</span>
-            </button>
+            {enableEscalationView && (
+              <button
+                type="button"
+                className={`cases-page__sla-tile${slaSummary.escalated > 0 ? ' cases-page__sla-tile--escalated' : ''}`}
+                onClick={() => { setStatusFilter('ALL'); setActiveView('ESCALATED'); }}
+                aria-label={`Escalated: ${slaSummary.escalated}`}
+              >
+                <span className="cases-page__sla-tile-value">{slaSummary.escalated}</span>
+                <span className="cases-page__sla-tile-label">Escalated</span>
+              </button>
+            )}
             <button
               type="button"
               className="cases-page__sla-tile"
@@ -601,7 +668,7 @@ export const CasesPage = () => {
         </div>
 
         {/* Task 6: Bulk action bar */}
-        {selectedCaseIds.size > 0 && (
+        {enableBulkActions && selectedCaseIds.size > 0 && (
           <div className="cases-page__bulk-bar" role="toolbar" aria-label="Bulk actions">
             <span className="cases-page__bulk-count">{selectedCaseIds.size} selected</span>
             <Button
@@ -647,7 +714,7 @@ export const CasesPage = () => {
         </SectionCard>
 
         {/* Task 7: Performance Insight — hidden for Partner (Task 8) */}
-        {!isPartner && (
+        {!isPartner && enablePerformanceView && (
           <>
             <div className="cases-page__perf-toggle">
               <button
@@ -704,6 +771,21 @@ export const CasesPage = () => {
           </div>
         ) : null}
 
+        {isAdmin && !onboardingDismissed && cases.length === 0 && categoryCount === 0 && (
+          <SectionCard title="Welcome to Docketra" subtitle="Start with these three steps to set up your firm operations.">
+            <ol className="cases-page__onboarding-list">
+              <li>Configure your SLA and operational thresholds.</li>
+              <li>Create categories for your firm workflow.</li>
+              <li>Create your first case and assign ownership.</li>
+            </ol>
+            <div className="cases-page__onboarding-actions">
+              <Button variant="primary" onClick={handleCreateCase}>Create First Case</Button>
+              <Button variant="outline" onClick={() => navigate(`/app/firm/${firmSlug}/settings/firm`)}>Configure SLA Policy</Button>
+              <Button variant="outline" onClick={dismissOnboarding}>Dismiss</Button>
+            </div>
+          </SectionCard>
+        )}
+
         <SectionCard title="Case Registry" subtitle={`${searchedCases.length} records`}>
           <DataTable
             columns={columns}
@@ -723,7 +805,15 @@ export const CasesPage = () => {
             dense
             emptyContent={
               <EmptyState
-                title={isAdmin ? 'No cases yet' : 'No assigned cases'}
+                title={
+                  activeView === CASE_VIEWS.OVERDUE.id
+                    ? 'No overdue cases. Good job.'
+                    : activeView === CASE_VIEWS.ESCALATED.id
+                      ? 'No escalations. System is stable.'
+                      : activeView === CASE_VIEWS.MY_OPEN.id
+                        ? 'You have no active cases assigned.'
+                        : isAdmin ? 'No cases yet' : 'No assigned cases'
+                }
                 description={isAdmin ? 'Create your first case to start managing firm workflows.' : 'You do not have assigned cases right now.'}
                 actionLabel={isAdmin ? 'Create Case' : undefined}
                 onAction={isAdmin ? handleCreateCase : undefined}
