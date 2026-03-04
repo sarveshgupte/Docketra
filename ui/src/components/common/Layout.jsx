@@ -249,6 +249,12 @@ export const Layout = ({ children }) => {
             icon: <IconAdmin />,
             active: isActivePrefix(`/app/firm/${currentFirmSlug}/admin`) && !isActivePrefix(`/app/firm/${currentFirmSlug}/admin/reports`),
           },
+          {
+            to: `/app/firm/${currentFirmSlug}/settings/firm`,
+            label: 'Firm Config',
+            icon: <IconAdmin />,
+            active: isActivePrefix(`/app/firm/${currentFirmSlug}/settings/firm`),
+          },
         ]
       : []),
   ];

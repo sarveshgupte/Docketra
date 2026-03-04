@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from './Button';
 import { caseService } from '../../services/caseService';
 import { formatDateTime } from '../../utils/formatDateTime';
+import { buildCsv } from '../../utils/csv';
 import './AuditTimelineDrawer.css';
 
 // Keep drawer compact while surfacing recent immutable audit activity.
@@ -89,15 +90,41 @@ export const AuditTimelineDrawer = ({ isOpen, onClose, caseId, events }) => {
 
   const timelineItems = useMemo(() => resolvedEvents.slice(0, MAX_TIMELINE_EVENTS), [resolvedEvents]);
 
+  const handleDownloadCsv = () => {
+    if (!timelineItems.length) return;
+    const rows = timelineItems.map((entry) => [
+      entry.action || '',
+      entry.actor || '',
+      entry.timestamp ? formatDateTime(entry.timestamp) : '',
+      entry.description || '',
+    ]);
+    const csv = buildCsv([['Action', 'Actor', 'Timestamp', 'Description'], ...rows]);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0, 10).replaceAll('-', '');
+    link.href = url;
+    link.download = `timeline_export_${stamp}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className={`audit-drawer${isOpen ? ' audit-drawer--open' : ''}`} aria-hidden={!isOpen}>
       <div className="audit-drawer__backdrop" onClick={onClose} />
       <aside className="audit-drawer__panel" role="dialog" aria-label="Case timeline">
         <div className="audit-drawer__header">
           <h3>Timeline</h3>
-          <Button variant="outline" onClick={onClose}>
-            Close
-          </Button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <Button variant="outline" onClick={handleDownloadCsv} disabled={!timelineItems.length}>
+              Download Timeline (CSV)
+            </Button>
+            <Button variant="outline" onClick={onClose}>
+              Close
+            </Button>
+          </div>
         </div>
         <p className="audit-drawer__meta">Audit log is system-recorded</p>
         {loading ? <p className="audit-drawer__meta">Loading timeline…</p> : null}

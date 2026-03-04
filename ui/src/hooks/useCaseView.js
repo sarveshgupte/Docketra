@@ -7,6 +7,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { CASE_STATUS } from '../utils/constants';
+import { getFirmConfig } from '../utils/firmConfig';
 
 const STORAGE_KEY = 'caseViewPreset';
 
@@ -14,14 +15,17 @@ const STORAGE_KEY = 'caseViewPreset';
  * Returns true when a case is "escalated":
  * SLA breached AND still Open/Pended AND not updated in 24h.
  */
-export const isEscalatedCase = (record) => {
+export const isEscalatedCase = (record, inactivityThresholdHours) => {
   if (!record.slaDueDate) return false;
   if (record.status === CASE_STATUS.RESOLVED || record.status === CASE_STATUS.FILED) return false;
   if (new Date(record.slaDueDate) >= new Date()) return false;
   if (record.status !== CASE_STATUS.OPEN && record.status !== CASE_STATUS.PENDED) return false;
   if (!record.updatedAt) return false; // require updatedAt to exist before comparison
-  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  return new Date(record.updatedAt) < twentyFourHoursAgo;
+  const thresholdHours = Number(
+    inactivityThresholdHours ?? getFirmConfig().escalationInactivityThresholdHours ?? 24
+  );
+  const thresholdDate = new Date(Date.now() - thresholdHours * 60 * 60 * 1000);
+  return new Date(record.updatedAt) < thresholdDate;
 };
 
 export const CASE_VIEWS = {
@@ -112,8 +116,11 @@ export const CASE_VIEWS = {
  * @param {boolean} isAdmin
  * @returns {Array}
  */
-export const getAvailableViews = (isAdmin) =>
-  Object.values(CASE_VIEWS).filter((v) => !v.requiresAdmin || isAdmin);
+export const getAvailableViews = (isAdmin, options = {}) =>
+  Object.values(CASE_VIEWS).filter((v) => {
+    if (v.id === 'ESCALATED' && options.enableEscalationView === false) return false;
+    return !v.requiresAdmin || isAdmin;
+  });
 
 /**
  * Hook that manages the active preset view, applies it to a list of cases,
@@ -123,8 +130,12 @@ export const getAvailableViews = (isAdmin) =>
  * @param {object} user
  * @returns {{ activeView, setActiveView, applyView, availableViews, hasStoredView, applySmartDefault }}
  */
-export const useCaseView = (isAdmin, user) => {
-  const availableViews = useMemo(() => getAvailableViews(isAdmin), [isAdmin]);
+export const useCaseView = (isAdmin, user, options = {}) => {
+  const { enableEscalationView } = options;
+  const availableViews = useMemo(
+    () => getAvailableViews(isAdmin, { enableEscalationView }),
+    [isAdmin, enableEscalationView]
+  );
 
   // Track whether the initial view came from localStorage (manual selection).
   // If false, we allow smart default selection after cases are loaded.
@@ -142,6 +153,9 @@ export const useCaseView = (isAdmin, user) => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored && CASE_VIEWS[stored]) {
+        if (stored === 'ESCALATED' && enableEscalationView === false) {
+          return 'MY_OPEN';
+        }
         // Non-admin cannot use admin-only views
         if (CASE_VIEWS[stored].requiresAdmin && !isAdmin) {
           return 'MY_OPEN';
@@ -151,7 +165,8 @@ export const useCaseView = (isAdmin, user) => {
     } catch {
       // ignore localStorage errors
     }
-    return isAdmin ? 'UNASSIGNED' : 'MY_OPEN';
+    if (isAdmin && availableViews.some((view) => view.id === 'UNASSIGNED')) return 'UNASSIGNED';
+    return 'MY_OPEN';
   });
 
   const setActiveView = useCallback(

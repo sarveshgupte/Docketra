@@ -434,3 +434,17 @@
 .cases-page__bulk-clear:hover {
   color: var(--text-main);
 }
+
+.cases-page__onboarding-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+}
+
+.cases-page__onboarding-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
