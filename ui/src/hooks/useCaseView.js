@@ -19,8 +19,9 @@ export const isEscalatedCase = (record) => {
   if (record.status === CASE_STATUS.RESOLVED || record.status === CASE_STATUS.FILED) return false;
   if (new Date(record.slaDueDate) >= new Date()) return false;
   if (record.status !== CASE_STATUS.OPEN && record.status !== CASE_STATUS.PENDED) return false;
+  if (!record.updatedAt) return false; // require updatedAt to exist before comparison
   const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  return !record.updatedAt || new Date(record.updatedAt) < twentyFourHoursAgo;
+  return new Date(record.updatedAt) < twentyFourHoursAgo;
 };
 
 export const CASE_VIEWS = {
