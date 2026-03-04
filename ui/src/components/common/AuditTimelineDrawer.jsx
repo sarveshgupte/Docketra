@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from './Button';
 import { caseService } from '../../services/caseService';
 import { formatDateTime } from '../../utils/formatDateTime';
+import { buildCsv } from '../../utils/csv';
 import './AuditTimelineDrawer.css';
 
 // Keep drawer compact while surfacing recent immutable audit activity.
@@ -91,16 +92,13 @@ export const AuditTimelineDrawer = ({ isOpen, onClose, caseId, events }) => {
 
   const handleDownloadCsv = () => {
     if (!timelineItems.length) return;
-    const toCell = (value) => `"${String(value ?? '').replaceAll('"', '""')}"`;
     const rows = timelineItems.map((entry) => [
       entry.action || '',
       entry.actor || '',
       entry.timestamp ? formatDateTime(entry.timestamp) : '',
       entry.description || '',
     ]);
-    const csv = [['Action', 'Actor', 'Timestamp', 'Description'], ...rows]
-      .map((line) => line.map(toCell).join(','))
-      .join('\n');
+    const csv = buildCsv([['Action', 'Actor', 'Timestamp', 'Description'], ...rows]);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
