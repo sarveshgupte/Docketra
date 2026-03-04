@@ -150,6 +150,38 @@ const verifyOAuthState = (stateToken) => {
   });
 };
 
+const buildSessionCookieOptions = (req, maxAge) => {
+  const secureCookies = process.env.NODE_ENV === 'production';
+  const frontendBase = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+  let sameSite = 'lax';
+  if (secureCookies) {
+    try {
+      const frontendUrl = new URL(frontendBase);
+      const backendUrl = new URL(`${req.protocol}://${req.get('host')}`);
+      const isCrossSite =
+        frontendUrl.protocol !== backendUrl.protocol ||
+        frontendUrl.hostname !== backendUrl.hostname;
+      if (isCrossSite) {
+        sameSite = 'none';
+      }
+    } catch {
+      sameSite = 'lax';
+    }
+  }
+
+  const cookieOptions = {
+    httpOnly: true,
+    secure: secureCookies,
+    sameSite,
+    path: '/',
+  };
+  if (typeof maxAge === 'number') {
+    cookieOptions.maxAge = maxAge;
+  }
+  return cookieOptions;
+};
+
 const createMfaPreAuthToken = (payload) => {
   if (!process.env.JWT_SECRET) {
     throw new Error('JWT_SECRET is not configured for MFA pre-auth token signing');
@@ -808,9 +840,8 @@ const logout = async (req, res) => {
       );
     }
 
-    const secureCookies = process.env.NODE_ENV === 'production';
-    res.clearCookie('accessToken', { httpOnly: true, secure: secureCookies, sameSite: 'lax', path: '/' });
-    res.clearCookie('refreshToken', { httpOnly: true, secure: secureCookies, sameSite: 'lax', path: '/' });
+    res.clearCookie('accessToken', buildSessionCookieOptions(req));
+    res.clearCookie('refreshToken', buildSessionCookieOptions(req));
     
     // Log logout (non-blocking)
     try {
@@ -2592,25 +2623,10 @@ const refreshAccessToken = async (req, res) => {
       firmId: user.firmId,
     });
 
-    const secureCookies = process.env.NODE_ENV === 'production';
     const fifteenMinutesMs = 15 * 60 * 1000;
     const refreshMs = jwtService.getRefreshTokenExpiryMs();
-
-    res.cookie('accessToken', newAccessToken, {
-      httpOnly: true,
-      secure: secureCookies,
-      sameSite: 'lax',
-      maxAge: fifteenMinutesMs,
-      path: '/',
-    });
-
-    res.cookie('refreshToken', newRefreshToken, {
-      httpOnly: true,
-      secure: secureCookies,
-      sameSite: 'lax',
-      maxAge: refreshMs,
-      path: '/',
-    });
+    res.cookie('accessToken', newAccessToken, buildSessionCookieOptions(req, fifteenMinutesMs));
+    res.cookie('refreshToken', newRefreshToken, buildSessionCookieOptions(req, refreshMs));
     
     // Log token refresh
     await logAuthAudit({
@@ -3157,25 +3173,10 @@ const handleGoogleCallback = async (req, res) => {
       redirectUrl.searchParams.set('firmSlug', finalFirmSlug);
     }
 
-    const secureCookies = process.env.NODE_ENV === 'production';
     const fifteenMinutesMs = 15 * 60 * 1000;
     const refreshMs = (jwtService.REFRESH_TOKEN_EXPIRY_DAYS || 7) * 24 * 60 * 60 * 1000;
-
-    res.cookie('accessToken', accessToken, {
-      httpOnly: true,
-      secure: secureCookies,
-      sameSite: 'lax',
-      maxAge: fifteenMinutesMs,
-      path: '/',
-    });
-
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: secureCookies,
-      sameSite: 'lax',
-      maxAge: refreshMs,
-      path: '/',
-    });
+    res.cookie('accessToken', accessToken, buildSessionCookieOptions(req, fifteenMinutesMs));
+    res.cookie('refreshToken', refreshToken, buildSessionCookieOptions(req, refreshMs));
 
     return res.redirect(redirectUrl.toString());
   } catch (error) {

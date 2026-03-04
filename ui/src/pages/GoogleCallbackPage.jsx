@@ -3,7 +3,7 @@
  * Stores tokens from backend redirect and routes user appropriately.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Card } from '../components/common/Card';
 import { Loading } from '../components/common/Loading';
@@ -15,8 +15,7 @@ export const GoogleCallbackPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [error, setError] = useState('');
-  const { user, loading, isAuthenticated, fetchProfile } = useAuth();
-  const profileFetchAttempted = useRef(false);
+  const { fetchProfile } = useAuth();
   const params = new URLSearchParams(location.search);
   const firmSlugFromQuery = params.get('firmSlug');
   const errorParam = params.get('error');
@@ -32,37 +31,40 @@ export const GoogleCallbackPage = () => {
     }
   }, [firmSlugFromQuery, errorParam]);
 
-
   useEffect(() => {
-    if (error || loading || isAuthenticated || profileFetchAttempted.current) return;
+    if (errorParam) return;
 
-    profileFetchAttempted.current = true;
-    fetchProfile().catch(() => {
-      setError('Google sign-in session could not be established. Please try again.');
-    });
-  }, [error, loading, isAuthenticated, fetchProfile]);
+    let isMounted = true;
+    const hydrate = async () => {
+      const result = await fetchProfile();
+      if (!isMounted) return;
 
-  useEffect(() => {
-    if (error || loading) return;
+      if (result?.success && result.data) {
+        const effectiveFirmSlug = firmSlugFromQuery || result.data.firmSlug;
+        if (result.data.role === USER_ROLES.SUPER_ADMIN) {
+          navigate('/app/superadmin', { replace: true });
+          return;
+        }
+        if (effectiveFirmSlug) {
+          navigate(`/app/firm/${effectiveFirmSlug}/dashboard`, { replace: true });
+          return;
+        }
+        setError('Firm context missing.');
+        return;
+      }
 
-    if (!isAuthenticated || !user) return;
+      if (result?.error?.response?.status === 401) {
+        setError('Google sign-in session could not be established. Please sign in again.');
+        return;
+      }
+      setError('Google sign-in failed due to a temporary server/network issue. Please try again.');
+    };
 
-    const effectiveFirmSlug =
-      firmSlugFromQuery ||
-      user.firmSlug;
-
-    if (user.role === USER_ROLES.SUPER_ADMIN) {
-      navigate('/app/superadmin', { replace: true });
-      return;
-    }
-
-    if (effectiveFirmSlug) {
-      navigate(`/app/firm/${effectiveFirmSlug}/dashboard`, { replace: true });
-      return;
-    }
-
-    setError('Firm context missing.');
-  }, [error, loading, isAuthenticated, user, firmSlugFromQuery, navigate]);
+    hydrate();
+    return () => {
+      isMounted = false;
+    };
+  }, [errorParam, fetchProfile, firmSlugFromQuery, navigate]);
 
   return (
     <div className="login-page">

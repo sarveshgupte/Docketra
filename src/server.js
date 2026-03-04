@@ -246,6 +246,9 @@ const configuredOrigins = (process.env.FRONTEND_ORIGINS || process.env.FRONTEND_
 if (isProduction && configuredOrigins.some((origin) => origin === '*')) {
   throw new Error('SECURITY: Wildcard CORS is forbidden in production');
 }
+if (isProduction && configuredOrigins.length === 0) {
+  throw new Error('SECURITY: FRONTEND_ORIGINS or FRONTEND_URL must be explicitly configured in production');
+}
 const allowedOrigins = configuredOrigins.length > 0 ? configuredOrigins : (!isProduction ? ['http://localhost:5173'] : []);
 log.info('CORS_ALLOWED_ORIGINS', { allowedOrigins });
 
