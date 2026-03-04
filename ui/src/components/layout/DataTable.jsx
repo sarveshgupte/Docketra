@@ -100,7 +100,12 @@ export const DataTable = ({
               {columns.map((column) => (
                 <td
                   key={`${row[rowKey]}-${column.key}`}
-                  className={`${column.align === 'right' ? 'data-table__cell--right' : ''}${column.tabular ? ' data-table__cell--tabular' : ''}`}
+                  className={[
+                    column.align === 'right' && 'data-table__cell--right',
+                    column.tabular && 'data-table__cell--tabular',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
                 >
                   {column.render ? column.render(row) : row[column.key]}
                 </td>

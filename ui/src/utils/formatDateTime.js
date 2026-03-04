@@ -20,7 +20,8 @@ export const formatDateTime = (input) => {
   const date = toDate(input);
   if (!date) return 'N/A';
 
-  return `${DATE_TIME_FORMATTER.format(date).replace('am', 'AM').replace('pm', 'PM')} IST`;
+  const formatted = DATE_TIME_FORMATTER.format(date).replace(/\b(am|pm)\b/i, (token) => token.toUpperCase());
+  return `${formatted} IST`;
 };
 
 export const formatRelativeTime = (input) => {
