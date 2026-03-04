@@ -11,6 +11,7 @@ import { EmptyState } from '../components/layout/EmptyState';
 import { AuditTimelineDrawer } from '../components/common/AuditTimelineDrawer';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
+import { useCaseView, CASE_VIEWS } from '../hooks/useCaseView';
 import { caseService } from '../services/caseService';
 import { worklistService } from '../services/worklistService';
 import { CASE_STATUS } from '../utils/constants';
@@ -18,7 +19,26 @@ import { formatDateTime, formatAuditStamp } from '../utils/formatDateTime';
 import './CasesPage.css';
 
 // Keep date-sort keys explicit so additional date columns can be added safely.
-const DATE_SORT_KEYS = new Set(['updatedAt']);
+const DATE_SORT_KEYS = new Set(['updatedAt', 'slaDueDate']);
+
+/** Returns true when a case's SLA due date has passed and it is not yet resolved/filed. */
+const isSlaBreached = (row) => {
+  if (!row.slaDueDate) return false;
+  if (row.status === CASE_STATUS.RESOLVED || row.status === CASE_STATUS.FILED) return false;
+  return new Date(row.slaDueDate) < new Date();
+};
+
+/** Returns true when the SLA due date is today (any time). */
+const isDueToday = (row) => {
+  if (!row.slaDueDate) return false;
+  const due = new Date(row.slaDueDate);
+  const now = new Date();
+  return (
+    due.getFullYear() === now.getFullYear() &&
+    due.getMonth() === now.getMonth() &&
+    due.getDate() === now.getDate()
+  );
+};
 
 export const CasesPage = () => {
   const { user } = useAuth();
@@ -26,13 +46,15 @@ export const CasesPage = () => {
   const navigate = useNavigate();
   const { firmSlug } = useParams();
 
+  const { activeView, setActiveView, applyView, availableViews } = useCaseView(isAdmin, user);
+
   const [loading, setLoading] = useState(true);
   const [cases, setCases] = useState([]);
-  const [filteredCases, setFilteredCases] = useState([]);
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [sortState, setSortState] = useState({ key: 'updatedAt', direction: 'desc' });
   const [timelineCaseId, setTimelineCaseId] = useState(null);
   const [error, setError] = useState(null);
+  const [assigningCaseId, setAssigningCaseId] = useState(null);
 
   const normalizeCases = (records = []) =>
     records.map((record) => ({
@@ -46,13 +68,13 @@ export const CasesPage = () => {
     }
   }, [user, isAdmin]);
 
+  // When the preset view changes, apply its default sort.
   useEffect(() => {
-    if (statusFilter === 'ALL') {
-      setFilteredCases(cases);
-      return;
+    const viewDef = CASE_VIEWS[activeView];
+    if (viewDef?.defaultSort) {
+      setSortState(viewDef.defaultSort);
     }
-    setFilteredCases(cases.filter((item) => item.status === statusFilter));
-  }, [statusFilter, cases]);
+  }, [activeView]);
 
   const loadCases = async () => {
     setLoading(true);
@@ -88,8 +110,34 @@ export const CasesPage = () => {
     navigate(`/app/firm/${firmSlug}/cases/create`);
   };
 
+  const handleAssignToMe = async (caseRecord, event) => {
+    event.stopPropagation();
+    setAssigningCaseId(caseRecord.caseId);
+    try {
+      const response = await caseService.pullCase(caseRecord.caseId);
+      if (response.success) {
+        await loadCases();
+      }
+    } catch (err) {
+      console.error('Failed to assign case:', err);
+    } finally {
+      setAssigningCaseId(null);
+    }
+  };
+
+  // Step 1: apply status filter (manual), then step 2: apply preset view predicate.
+  const manuallyFilteredCases = useMemo(() => {
+    if (statusFilter === 'ALL') return cases;
+    return cases.filter((item) => item.status === statusFilter);
+  }, [statusFilter, cases]);
+
+  const viewFilteredCases = useMemo(
+    () => applyView(manuallyFilteredCases, activeView),
+    [manuallyFilteredCases, activeView, applyView]
+  );
+
   const sortedCases = useMemo(() => {
-    const list = [...filteredCases];
+    const list = [...viewFilteredCases];
     list.sort((a, b) => {
       const current = a?.[sortState.key];
       const next = b?.[sortState.key];
@@ -107,7 +155,7 @@ export const CasesPage = () => {
       return sortState.direction === 'asc' ? comparison : -comparison;
     });
     return list;
-  }, [filteredCases, sortState]);
+  }, [viewFilteredCases, sortState]);
 
   const activeFilters = statusFilter === 'ALL' ? [] : [{ key: 'status', label: 'Status', value: statusFilter }];
 
@@ -124,17 +172,31 @@ export const CasesPage = () => {
       key: 'caseName',
       header: 'Case Name',
       sortable: true,
-      render: (row) => (
-        <div className="cases-page__name-cell">
-          <span className="cases-page__case-title">{row.caseName}</span>
-          <span className="cases-page__case-meta">
-            {formatAuditStamp({
-              actor: row.updatedByName || row.updatedByXID || row.assignedToName || 'System',
-              timestamp: row.updatedAt,
-            })}
-          </span>
-        </div>
-      ),
+      render: (row) => {
+        const breached = isSlaBreached(row);
+        const dueToday = !breached && isDueToday(row);
+        return (
+          <div className={`cases-page__name-cell${breached ? ' cases-page__name-cell--sla-breach' : ''}`}>
+            <span className="cases-page__case-title">{row.caseName}</span>
+            <span className="cases-page__case-meta">
+              {formatAuditStamp({
+                actor: row.updatedByName || row.updatedByXID || row.assignedToName || 'System',
+                timestamp: row.updatedAt,
+              })}
+            </span>
+            {breached && (
+              <span className="cases-page__sla-badge cases-page__sla-badge--breach" aria-label="SLA breached">
+                ⚠ SLA Overdue
+              </span>
+            )}
+            {dueToday && (
+              <span className="cases-page__sla-badge cases-page__sla-badge--today" aria-label="Due today">
+                🕐 Due Today
+              </span>
+            )}
+          </div>
+        );
+      },
     },
     { key: 'category', header: 'Category', sortable: true },
     {
@@ -161,20 +223,45 @@ export const CasesPage = () => {
       key: 'rowActions',
       header: '',
       align: 'right',
-      render: (row) => (
-        <details className="cases-page__row-menu" onClick={(event) => event.stopPropagation()}>
-          <summary aria-label={`Row actions for ${row.caseName}`}>⋯</summary>
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              setTimelineCaseId(row.caseId);
-            }}
-          >
-            View Timeline
-          </button>
-        </details>
-      ),
+      render: (row) => {
+        const canAssign =
+          !isAdmin &&
+          (!row.assignedTo || row.status === CASE_STATUS.UNASSIGNED);
+        return (
+          <details className="cases-page__row-menu" onClick={(event) => event.stopPropagation()}>
+            <summary aria-label={`Row actions for ${row.caseName}`}>⋯</summary>
+            <div className="cases-page__row-menu-panel">
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  navigate(`/app/firm/${firmSlug}/cases/${row.caseId}`);
+                }}
+              >
+                View Case
+              </button>
+              {canAssign && (
+                <button
+                  type="button"
+                  disabled={assigningCaseId === row.caseId}
+                  onClick={(event) => handleAssignToMe(row, event)}
+                >
+                  {assigningCaseId === row.caseId ? 'Assigning…' : 'Assign to Me'}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setTimelineCaseId(row.caseId);
+                }}
+              >
+                View Timeline
+              </button>
+            </div>
+          </details>
+        );
+      },
     },
   ];
 
@@ -186,6 +273,22 @@ export const CasesPage = () => {
           description="Manage lifecycle, assignments, and status transitions."
           actions={isAdmin ? <Button variant="primary" onClick={handleCreateCase}>New Case</Button> : null}
         />
+
+        {/* Preset operational view tabs (TASK 1 / TASK 5) */}
+        <div className="cases-page__views" role="tablist" aria-label="Case views">
+          {availableViews.map((view) => (
+            <button
+              key={view.id}
+              role="tab"
+              aria-selected={activeView === view.id}
+              className={`cases-page__view-tab${activeView === view.id ? ' cases-page__view-tab--active' : ''}`}
+              onClick={() => setActiveView(view.id)}
+              type="button"
+            >
+              {view.label}
+            </button>
+          ))}
+        </div>
 
         <SectionCard className="cases-page__filters" title="Filters" subtitle="Narrow down the case list by workflow status.">
           <label className="cases-page__filter-label" htmlFor="status-filter">Status</label>
@@ -209,7 +312,7 @@ export const CasesPage = () => {
           </div>
         ) : null}
 
-        <SectionCard title="Case Registry" subtitle={`${filteredCases.length} records`}>
+        <SectionCard title="Case Registry" subtitle={`${viewFilteredCases.length} records`}>
           <DataTable
             columns={columns}
             data={sortedCases}
