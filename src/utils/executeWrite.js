@@ -13,6 +13,7 @@ const executeWrite = async (req, handler) => {
   }
 
   const routeLabel = `${req?.method || 'UNKNOWN'} ${req?.originalUrl || req?.url || 'unknown-route'}`;
+  // DATA INTEGRITY: Transactional multi-document write
   const session = await mongoose.startSession();
   let result;
 

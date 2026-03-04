@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const log = require('../utils/log');
 
 /**
  * Database connection configuration
@@ -7,27 +8,29 @@ const mongoose = require('mongoose');
 
 const connectDB = async () => {
   try {
+    // VALIDATION: Strict schema enforcement
+    mongoose.set('strict', true);
+    mongoose.set('strictQuery', true);
+
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
       autoIndex: process.env.NODE_ENV !== 'production',
     });
 
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
-    
-    // Log connection status for audit
+    log.info('MONGODB_CONNECTED', { host: conn.connection.host });
+
     mongoose.connection.on('connected', () => {
-      console.log('Mongoose connected to MongoDB');
+      log.info('MONGOOSE_CONNECTED');
     });
 
     mongoose.connection.on('error', (err) => {
-      console.error('Mongoose connection error:', err);
+      log.error('MONGOOSE_CONNECTION_ERROR', { error: err.message });
     });
 
     mongoose.connection.on('disconnected', () => {
-      console.log('Mongoose disconnected from MongoDB');
+      log.warn('MONGOOSE_DISCONNECTED');
     });
-
   } catch (error) {
-    console.error('Error connecting to MongoDB:', error.message);
+    log.error('MONGODB_CONNECT_FAILED', { error: error.message });
     process.exit(1);
   }
 };
