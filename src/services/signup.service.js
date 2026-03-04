@@ -284,7 +284,7 @@ const generateAndStoreRefreshToken = async ({ req, userId, firmId, session }) =>
     expiresAt,
     ipAddress: req?.ip,
     userAgent: req?.get?.('user-agent'),
-  }], session ? { session } : undefined);
+  }], { session });
 
   return refreshToken;
 };
@@ -498,17 +498,26 @@ const completeSignup = async ({ email, firmName, session, req }) => {
   }
 
   try {
+    let authProvider = null;
+    if (record.provider === 'manual') {
+      authProvider = 'password';
+    } else if (record.provider === 'google') {
+      authProvider = 'google';
+    } else {
+      return { success: false, status: 400, message: 'Unsupported signup provider' };
+    }
+
     const result = await createFirmAndAdmin({
       name: record.name,
       email: normalizedEmail,
       firmName,
       passwordHash: record.passwordHash || null,
       phone: record.phone || null,
-      authProvider: record.provider === 'manual' ? 'password' : 'google',
+      authProvider,
       session,
       req,
     });
-    await TemporarySignup.deleteOne({ _id: record._id }).session(session);
+    await TemporarySignup.deleteOne({ _id: record._id }, { session });
 
     // Send welcome email (non-blocking — failure does not affect signup result)
     try {

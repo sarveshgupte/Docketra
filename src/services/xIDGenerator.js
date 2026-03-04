@@ -21,11 +21,11 @@ const User = require('../models/User.model');
 /**
  * Generate the next available xID using an atomic global counter.
  * 
- * @param {string|Object} firmId - Legacy parameter (unused for global xID sequence)
+ * @param {string|Object} _firmId - Legacy parameter (unused for global xID sequence)
  * @param {object} session - MongoDB session for transactional reads (required for atomicity)
  * @returns {Promise<string>} Next xID in format X000001
  */
-const generateNextXID = async (firmId, session = null) => {
+const generateNextXID = async (_firmId = null, session = null) => {
   try {
     const counter = await Counter.findOneAndUpdate(
       { name: 'user_xid', firmId: 'GLOBAL' },
