@@ -34,6 +34,12 @@ const caseAuditSchema = new mongoose.Schema({
     required: [true, 'Case ID is required'],
     index: true,
   },
+
+  // Firm/Organization ID for multi-tenancy
+  firmId: {
+    type: String,
+    index: true,
+  },
   
   /**
    * Type of action performed on the case
@@ -217,6 +223,8 @@ caseAuditSchema.pre('remove', function(next) {
  * - impersonationSessionId: For tracing all actions in an impersonation session
  */
 caseAuditSchema.index({ caseId: 1, timestamp: -1 });
+caseAuditSchema.index({ firmId: 1 });
+caseAuditSchema.index({ firmId: 1, timestamp: -1 });
 caseAuditSchema.index({ performedByXID: 1 });
 caseAuditSchema.index({ actionType: 1 });
 caseAuditSchema.index({ impersonationSessionId: 1 });
