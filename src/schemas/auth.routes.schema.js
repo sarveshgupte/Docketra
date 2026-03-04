@@ -1,4 +1,4 @@
-const { z, nonEmptyString } = require('./common');
+const { z, nonEmptyString, xidString } = require('./common');
 
 module.exports = {
   'POST /setup-account': {
@@ -59,9 +59,9 @@ module.exports = {
     body: z.object({}).passthrough(),
   },
   'PUT /admin/users/:xID/activate': {
-    params: z.object({ xID: nonEmptyString }),
+    params: z.object({ xID: xidString }),
   },
   'PUT /admin/users/:xID/deactivate': {
-    params: z.object({ xID: nonEmptyString }),
+    params: z.object({ xID: xidString }),
   },
 };

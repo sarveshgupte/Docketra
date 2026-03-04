@@ -7,6 +7,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/database');
 const config = require('./config/config');
+const log = require('./utils/log');
 const { runBootstrap } = require('./services/bootstrap.service');
 const { maskSensitiveObject, sanitizeErrorForLog } = require('./utils/pii');
 const { validateEnv } = require('./config/validateEnv');
@@ -16,31 +17,31 @@ require('./utils/transactionSessionEnforcer');
 // Bootstrap storage worker in-process (non-blocking — failures do not prevent startup)
 try {
   require('./workers/storage.worker');
-  console.log('[StorageWorker] Storage worker started');
+  log.info('STORAGE_WORKER_STARTED');
 } catch (err) {
-  console.warn('[StorageWorker] Failed to start storage worker (non-fatal):', err.message);
+  log.warn('STORAGE_WORKER_START_FAILED', { error: err.message });
 }
 
 try {
   require('./workers/inboundEmail.worker');
-  console.log('[InboundEmailWorker] Inbound email worker started');
+  log.info('INBOUND_EMAIL_WORKER_STARTED');
 } catch (err) {
-  console.warn('[InboundEmailWorker] Failed to start inbound email worker (non-fatal):', err.message);
+  log.warn('INBOUND_EMAIL_WORKER_START_FAILED', { error: err.message });
 }
 
 try {
   require('./workers/storageIntegrity.worker');
-  console.log('[StorageIntegrityWorker] Storage integrity worker started');
+  log.info('STORAGE_INTEGRITY_WORKER_STARTED');
 } catch (err) {
-  console.warn('[StorageIntegrityWorker] Failed to start storage integrity worker (non-fatal):', err.message);
+  log.warn('STORAGE_INTEGRITY_WORKER_START_FAILED', { error: err.message });
 }
 
 
 try {
   require('./workers/tenantCaseMetrics.worker');
-  console.log('[TenantCaseMetricsWorker] Worker started');
+  log.info('TENANT_CASE_METRICS_WORKER_STARTED');
 } catch (err) {
-  console.warn('[TenantCaseMetricsWorker] Failed to start worker (non-fatal):', err.message);
+  log.warn('TENANT_CASE_METRICS_WORKER_START_FAILED', { error: err.message });
 }
 
 // Global error log sanitizer: ensure every console.error invocation masks PII (tokens, emails, phone numbers, auth headers).
@@ -156,7 +157,7 @@ const writeGuardChain = (req, res, next) => {
  */
 
 // Log NODE_ENV for debugging
-console.log(`[ENV] NODE_ENV = ${process.env.NODE_ENV || 'undefined'}`);
+log.info('SERVER_ENV', { nodeEnv: process.env.NODE_ENV || 'undefined' });
 
 // Detect production mode
 const isProduction = process.env.NODE_ENV === 'production';
@@ -238,8 +239,15 @@ if (isProduction) {
 const app = express();
 app.set('trust proxy', 1);
 
-const frontendOrigin = process.env.FRONTEND_URL;
-console.log('[CORS] Allowed origin:', frontendOrigin || '(not set)');
+const configuredOrigins = (process.env.FRONTEND_ORIGINS || process.env.FRONTEND_URL || '')
+  .split(',')
+  .map((value) => value.trim())
+  .filter(Boolean);
+if (isProduction && configuredOrigins.some((origin) => origin === '*')) {
+  throw new Error('SECURITY: Wildcard CORS is forbidden in production');
+}
+const allowedOrigins = configuredOrigins.length > 0 ? configuredOrigins : (!isProduction ? ['http://localhost:5173'] : []);
+log.info('CORS_ALLOWED_ORIGINS', { allowedOrigins });
 
 // Connect to MongoDB and run bootstrap
 connectDB()
@@ -249,6 +257,7 @@ connectDB()
     process.exit(1);
   });
 
+// SECURITY: Defense-in-depth middleware
 // Security Headers - Helmet
 // Disable CSP and COEP since we're serving a React SPA
 app.use(helmet({
@@ -266,7 +275,11 @@ const CORS_ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'
 
 // CORS Configuration
 const corsOptions = {
-  origin: frontendOrigin,
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: CORS_ALLOWED_METHODS,
   allowedHeaders: CORS_ALLOWED_HEADERS
@@ -274,10 +287,10 @@ const corsOptions = {
 
 // Middleware
 // Handle CORS preflight requests before auth/transaction middleware
-app.use(optionsPreflight([frontendOrigin], CORS_ALLOWED_HEADERS, CORS_ALLOWED_METHODS));
+app.use(optionsPreflight(allowedOrigins, CORS_ALLOWED_HEADERS, CORS_ALLOWED_METHODS));
 app.use(cors(corsOptions));
 app.use('/api/inbound/email', express.raw({ type: '*/*', limit: '30mb' }));
-app.use(express.json({ limit: '100kb' }));
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '100kb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(requestLifecycle);
 app.use(requestLogger);
