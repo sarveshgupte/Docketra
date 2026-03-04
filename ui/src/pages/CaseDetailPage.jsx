@@ -43,6 +43,14 @@ const toLifecycleStage = (status) => {
   return status || 'Under Execution';
 };
 
+const escapeHtml = (value = '') =>
+  String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+
 export const CaseDetailPage = () => {
   const { caseId } = useParams();
   const { user } = useAuth();
@@ -494,6 +502,54 @@ export const CaseDetailPage = () => {
     }
   };
 
+  const handlePrintSummary = () => {
+    const caseInfo = normalizeCase(caseData);
+    const timeline = (caseData.auditLog || caseData.history || []).slice(0, 10);
+    const printWindow = window.open('', '_blank', 'noopener,noreferrer');
+    if (!printWindow) return;
+    const timelineRows = timeline
+      .map((entry) => `
+        <tr>
+          <td>${escapeHtml(entry.actionType || entry.action || 'Updated')}</td>
+          <td>${escapeHtml(entry.performedByName || entry.performedByXID || entry.actorXID || 'System')}</td>
+          <td>${escapeHtml(formatDateTime(entry.timestamp || entry.createdAt))}</td>
+          <td>${escapeHtml(entry.description || entry.comment || '')}</td>
+        </tr>
+      `)
+      .join('');
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Case Summary - ${escapeHtml(caseInfo.caseId || caseId)}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 24px; color: #111827; }
+            h1 { font-size: 20px; margin-bottom: 4px; }
+            h2 { font-size: 14px; margin-top: 20px; }
+            .meta { color: #4b5563; margin-bottom: 12px; }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; }
+            th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; vertical-align: top; }
+            @media print { body { margin: 0; } button { display: none; } }
+          </style>
+        </head>
+        <body>
+          <h1>${escapeHtml(caseInfo.caseName || caseInfo.title || 'Case')}</h1>
+          <div class="meta">Case ID: ${escapeHtml(caseInfo.caseId || caseId)}</div>
+          <div><strong>Status:</strong> ${escapeHtml(toLifecycleStage(caseInfo.status))}</div>
+          <div><strong>SLA Due:</strong> ${escapeHtml(caseInfo.slaDueDate ? formatDateTime(caseInfo.slaDueDate) : 'Not configured')}</div>
+          <div><strong>Assigned To:</strong> ${escapeHtml(caseInfo.assignedToName || caseInfo.assignedToXID || 'Unassigned')}</div>
+          <div><strong>Client:</strong> ${escapeHtml(formatClientDisplay(caseData.client, true))}</div>
+          <h2>Timeline (Last 10 entries)</h2>
+          <table>
+            <thead><tr><th>Action</th><th>Actor</th><th>Timestamp</th><th>Description</th></tr></thead>
+            <tbody>${timelineRows || '<tr><td colspan="4">No timeline records</td></tr>'}</tbody>
+          </table>
+          <script>window.print()</script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -643,6 +699,9 @@ export const CaseDetailPage = () => {
             )}
             <Button variant="outline" onClick={() => setTimelineOpen(true)}>
               View Timeline
+            </Button>
+            <Button variant="outline" onClick={handlePrintSummary}>
+              Print Summary
             </Button>
             {caseInfo.approvalStatus === 'PENDING' && <Badge variant="warning">Awaiting Partner Approval</Badge>}
             {caseInfo.lockStatus?.isLocked && <Badge variant="warning">Lifecycle Locked</Badge>}

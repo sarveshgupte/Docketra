@@ -17,6 +17,7 @@ import { useAsyncAction } from '../hooks/useAsyncAction';
 import { caseService } from '../services/caseService';
 import { categoryService } from '../services/categoryService';
 import { clientService } from '../services/clientService';
+import { getFirmConfig } from '../utils/firmConfig';
 import { formatClientDisplay } from '../utils/formatters';
 import { formatDateTime } from '../utils/formatDateTime';
 import './CreateCasePage.css';
@@ -33,6 +34,13 @@ const CompletionDot = ({ complete }) =>
     <span className="create-case__section-done" aria-label="Section complete">✓</span>
   ) : null;
 
+const getDefaultSlaDueDate = () => {
+  const { slaDefaultDays = 3 } = getFirmConfig();
+  const due = new Date(Date.now() + Number(slaDefaultDays || 3) * 24 * 60 * 60 * 1000);
+  due.setMinutes(due.getMinutes() - due.getTimezoneOffset());
+  return due.toISOString().slice(0, 16);
+};
+
 export const CreateCasePage = () => {
   const navigate = useNavigate();
   const { firmSlug } = useParams();
@@ -46,7 +54,7 @@ export const CreateCasePage = () => {
     subcategoryId: '',
     title: '', // MANDATORY
     description: '', // MANDATORY
-    slaDueDate: '', // MANDATORY
+    slaDueDate: getDefaultSlaDueDate(), // MANDATORY
   });
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
@@ -298,7 +306,7 @@ export const CreateCasePage = () => {
           subcategoryId: '',
           title: '',
           description: '',
-          slaDueDate: '',
+          slaDueDate: getDefaultSlaDueDate(),
         });
         setErrors({});
         setTouched({});

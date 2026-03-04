@@ -26,6 +26,7 @@ const CaseDetailPage = lazyPage(() => import('./pages/CaseDetailPage'), 'CaseDet
 const CreateCasePage = lazyPage(() => import('./pages/CreateCasePage'), 'CreateCasePage');
 const ProfilePage = lazyPage(() => import('./pages/ProfilePage'), 'ProfilePage');
 const AdminPage = lazyPage(() => import('./pages/AdminPage'), 'AdminPage');
+const FirmSettingsPage = lazyPage(() => import('./pages/FirmSettingsPage'), 'FirmSettingsPage');
 const PlatformDashboard = lazyPage(() => import('./pages/PlatformDashboard'), 'PlatformDashboard');
 const FirmsManagement = lazyPage(() => import('./pages/FirmsManagement'), 'FirmsManagement');
 const ReportsDashboard = lazyPage(() => import('./pages/reports/ReportsDashboard'), 'ReportsDashboard');
@@ -224,6 +225,14 @@ export const Router = () => {
               element={(
                 <ProtectedRoute>
                   <ProfilePage />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="settings/firm"
+              element={(
+                <ProtectedRoute requireAdmin>
+                  <FirmSettingsPage />
                 </ProtectedRoute>
               )}
             />
