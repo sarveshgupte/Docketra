@@ -188,3 +188,17 @@
   }
 }
 
+
+/* Task 7: Draft auto-save indicator */
+.create-case__draft-saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #15803d;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 6px;
+  padding: 4px 10px;
+  margin-top: 8px;
+}
