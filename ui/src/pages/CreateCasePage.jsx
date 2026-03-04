@@ -58,8 +58,9 @@ export const CreateCasePage = () => {
   const [touched, setTouched] = useState({});
   const [successMessage, setSuccessMessage] = useState(null);
   const [footerConfirmation, setFooterConfirmation] = useState('');
-  // Task 7: Soft auto-save state
-  const DRAFT_STORAGE_KEY = `createCaseDraft_${user?._id || user?.id || 'anon'}`;
+  // Task 7: Soft auto-save state — only enabled when user is authenticated
+  const userId = user?._id || user?.id;
+  const DRAFT_STORAGE_KEY = userId ? `createCaseDraft_${userId}` : null;
   const AUTO_SAVE_DELAY_MS = 5000;
   const autoSaveTimerRef = useRef(null);
   const [draftSaved, setDraftSaved] = useState(false);
@@ -129,8 +130,9 @@ export const CreateCasePage = () => {
     }
   }, [formData.categoryId, categories]);
 
-  // Task 7: Auto-save draft to localStorage after 5s of inactivity
+  // Task 7: Auto-save draft to localStorage after 5s of inactivity (only when authenticated)
   useEffect(() => {
+    if (!DRAFT_STORAGE_KEY) return; // no-op if user not authenticated
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     // Only save if there's meaningful content (not just default clientId)
     const hasContent = formData.title || formData.description || formData.categoryId;
@@ -147,7 +149,7 @@ export const CreateCasePage = () => {
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
-  // DRAFT_STORAGE_KEY and AUTO_SAVE_DELAY_MS are stable constants
+  // DRAFT_STORAGE_KEY and AUTO_SAVE_DELAY_MS are stable per render
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData]);
 
@@ -302,7 +304,9 @@ export const CreateCasePage = () => {
         setTouched({});
         setDuplicateWarning(null);
         // Task 7: Clear draft on successful submit
-        try { localStorage.removeItem(DRAFT_STORAGE_KEY); } catch { /* ignore */ }
+        if (DRAFT_STORAGE_KEY) {
+          try { localStorage.removeItem(DRAFT_STORAGE_KEY); } catch { /* ignore */ }
+        }
         setDraftSaved(false);
       }
     } catch (err) {

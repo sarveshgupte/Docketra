@@ -352,6 +352,12 @@ export const CasesPage = () => {
     );
   }
 
+  // Memoize select-all state to avoid repeated inline filtering (Task 6)
+  const allVisibleSelected = useMemo(() => {
+    const selectable = sortedCases.filter((c) => !c.lockStatus?.isLocked);
+    return selectable.length > 0 && selectable.every((c) => selectedCaseIds.has(c.caseId));
+  }, [sortedCases, selectedCaseIds]);
+
   const columns = [
     {
       key: '__select',
@@ -359,7 +365,7 @@ export const CasesPage = () => {
         <input
           type="checkbox"
           aria-label="Select all"
-          checked={sortedCases.length > 0 && sortedCases.filter((c) => !c.lockStatus?.isLocked).every((c) => selectedCaseIds.has(c.caseId))}
+          checked={allVisibleSelected}
           onChange={() => handleSelectAll(sortedCases)}
         />
       ),
@@ -520,7 +526,7 @@ export const CasesPage = () => {
             <button
               type="button"
               className="cases-page__sla-tile"
-              onClick={() => { setStatusFilter(CASE_STATUS.OPEN); setActiveView('MY_OPEN'); }}
+              onClick={() => { setStatusFilter('ALL'); setActiveView('MY_OPEN'); }}
               aria-label={`Total open cases: ${slaSummary.totalOpen}`}
             >
               <span className="cases-page__sla-tile-value">{slaSummary.totalOpen}</span>
@@ -529,7 +535,7 @@ export const CasesPage = () => {
             <button
               type="button"
               className="cases-page__sla-tile cases-page__sla-tile--warning"
-              onClick={() => setActiveView('DUE_TODAY')}
+              onClick={() => { setStatusFilter('ALL'); setActiveView('DUE_TODAY'); }}
               aria-label={`Due today: ${slaSummary.dueToday}`}
             >
               <span className="cases-page__sla-tile-value">{slaSummary.dueToday}</span>
@@ -557,7 +563,7 @@ export const CasesPage = () => {
             <button
               type="button"
               className="cases-page__sla-tile"
-              onClick={() => { setStatusFilter(CASE_STATUS.FILED); setActiveView('FILED'); }}
+              onClick={() => { setStatusFilter('ALL'); setActiveView('FILED'); }}
               aria-label={`Filed last 7 days: ${slaSummary.filedLast7}`}
             >
               <span className="cases-page__sla-tile-value">{slaSummary.filedLast7}</span>
