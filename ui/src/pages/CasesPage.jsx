@@ -10,9 +10,13 @@ import { StatusBadge } from '../components/layout/StatusBadge';
 import { EmptyState } from '../components/layout/EmptyState';
 import { AuditTimelineDrawer } from '../components/common/AuditTimelineDrawer';
 import { PriorityPill } from '../components/common/PriorityPill';
+import { ActionConfirmModal } from '../components/common/ActionConfirmModal';
+import { SmartViewIndicator } from '../components/common/SmartViewIndicator';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
+import { useToast } from '../hooks/useToast';
 import { useCaseView, CASE_VIEWS, isEscalatedCase } from '../hooks/useCaseView';
+import { useSavedViews } from '../hooks/useSavedViews';
 import { caseService } from '../services/caseService';
 import { worklistService } from '../services/worklistService';
 import { categoryService } from '../services/categoryService';
@@ -68,11 +72,14 @@ export const CasesPage = () => {
   const enablePerformanceView = useFeatureFlag('PERFORMANCE_VIEW');
   const enableEscalationView = useFeatureFlag('ESCALATION_VIEW');
 
-  const { activeView, setActiveView, applyView, availableViews, applySmartDefault } = useCaseView(
+  const { activeView, setActiveView, applyView, availableViews, hasStoredView, applySmartDefault } = useCaseView(
     isAdmin,
     user,
     { enableEscalationView }
   );
+
+  const { showSuccess } = useToast();
+  const { savedViews, saveView, removeView, applySavedView } = useSavedViews(user?._id || user?.id || user?.email);
 
   const [loading, setLoading] = useState(true);
   const [cases, setCases] = useState([]);
@@ -95,6 +102,11 @@ export const CasesPage = () => {
   const [onboardingDismissed, setOnboardingDismissed] = useState(
     () => localStorage.getItem(onboardingStorageKey) === 'true'
   );
+  // Confirm modal state (replaces window.confirm)
+  const [confirmModal, setConfirmModal] = useState(null); // { title, description, onConfirm, danger }
+  // Saved views UI state
+  const [savedViewsOpen, setSavedViewsOpen] = useState(false);
+  const [saveViewName, setSaveViewName] = useState('');
 
   // Cleanup debounce timer on unmount (Task 6)
   useEffect(() => {
@@ -198,7 +210,10 @@ export const CasesPage = () => {
   };
 
   const handleCaseClick = (caseRecord) => {
-    navigate(`/app/firm/${firmSlug}/cases/${caseRecord.caseId}`);
+    const index = sortedCases.findIndex((c) => c.caseId === caseRecord.caseId);
+    navigate(`/app/firm/${firmSlug}/cases/${caseRecord.caseId}`, {
+      state: { sourceList: sortedCases.map((c) => c.caseId), index },
+    });
   };
 
   const handleCreateCase = () => {
@@ -209,20 +224,42 @@ export const CasesPage = () => {
     event.stopPropagation();
     // Task 3: Block reassignment if case is locked
     if (caseRecord.lockStatus?.isLocked) {
-      window.alert('This case is locked and cannot be reassigned right now.');
+      setConfirmModal({
+        title: 'Case Locked',
+        description: 'This case is locked and cannot be reassigned right now.',
+        confirmText: 'OK',
+        onConfirm: () => setConfirmModal(null),
+      });
       return;
     }
     // Task 3: Confirm before reassigning if already assigned to someone else
     if (caseRecord.assignedTo && caseRecord.status !== CASE_STATUS.UNASSIGNED) {
-      const confirmed = window.confirm(
-        `This case is currently assigned to ${caseRecord.assignedToName || caseRecord.assignedTo}. Reassign to yourself?`
-      );
-      if (!confirmed) return;
+      setConfirmModal({
+        title: 'Reassign Case',
+        description: `This case is currently assigned to ${caseRecord.assignedToName || caseRecord.assignedTo}. Reassign to yourself?`,
+        onConfirm: async () => {
+          setConfirmModal(null);
+          setAssigningCaseId(caseRecord.caseId);
+          try {
+            const response = await caseService.pullCase(caseRecord.caseId);
+            if (response.success) {
+              showSuccess(`Case assigned to you`);
+              await loadCases();
+            }
+          } catch (err) {
+            console.error('Failed to assign case:', err);
+          } finally {
+            setAssigningCaseId(null);
+          }
+        },
+      });
+      return;
     }
     setAssigningCaseId(caseRecord.caseId);
     try {
       const response = await caseService.pullCase(caseRecord.caseId);
       if (response.success) {
+        showSuccess(`Case assigned to you`);
         await loadCases();
       }
     } catch (err) {
@@ -257,22 +294,28 @@ export const CasesPage = () => {
     const selectedList = cases.filter((c) => selectedCaseIds.has(c.caseId));
     if (!selectedList.length) return;
     const mixedStates = new Set(selectedList.map((c) => c.status)).size > 1;
+    const doAssign = async () => {
+      setBulkActionInProgress(true);
+      try {
+        await Promise.all(selectedList.map((c) => caseService.pullCase(c.caseId)));
+        setSelectedCaseIds(new Set());
+        showSuccess(`${selectedList.length} case${selectedList.length !== 1 ? 's' : ''} assigned to you`);
+        await loadCases();
+      } catch (err) {
+        console.error('Bulk assign failed:', err);
+      } finally {
+        setBulkActionInProgress(false);
+      }
+    };
     if (mixedStates) {
-      const ok = window.confirm(
-        `Selected cases have mixed lifecycle states. Assign all ${selectedList.length} case(s) to yourself?`
-      );
-      if (!ok) return;
+      setConfirmModal({
+        title: 'Assign Cases',
+        description: `Selected cases have mixed lifecycle states. Assign all ${selectedList.length} case(s) to yourself?`,
+        onConfirm: () => { setConfirmModal(null); doAssign(); },
+      });
+      return;
     }
-    setBulkActionInProgress(true);
-    try {
-      await Promise.all(selectedList.map((c) => caseService.pullCase(c.caseId)));
-      setSelectedCaseIds(new Set());
-      await loadCases();
-    } catch (err) {
-      console.error('Bulk assign failed:', err);
-    } finally {
-      setBulkActionInProgress(false);
-    }
+    doAssign();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCaseIds, cases]);
 
@@ -280,20 +323,24 @@ export const CasesPage = () => {
     if (!isAdmin) return;
     const selectedList = cases.filter((c) => selectedCaseIds.has(c.caseId));
     if (!selectedList.length) return;
-    const ok = window.confirm(
-      `Move ${selectedList.length} case(s) to Workbasket?`
-    );
-    if (!ok) return;
-    setBulkActionInProgress(true);
-    try {
-      await Promise.all(selectedList.map((c) => caseService.moveCaseToGlobal(c.caseId)));
-      setSelectedCaseIds(new Set());
-      await loadCases();
-    } catch (err) {
-      console.error('Bulk move failed:', err);
-    } finally {
-      setBulkActionInProgress(false);
-    }
+    setConfirmModal({
+      title: 'Move to Workbasket',
+      description: `Move ${selectedList.length} case(s) to Workbasket?`,
+      onConfirm: async () => {
+        setConfirmModal(null);
+        setBulkActionInProgress(true);
+        try {
+          await Promise.all(selectedList.map((c) => caseService.moveCaseToGlobal(c.caseId)));
+          setSelectedCaseIds(new Set());
+          showSuccess(`${selectedList.length} case${selectedList.length !== 1 ? 's' : ''} moved to Workbasket`);
+          await loadCases();
+        } catch (err) {
+          console.error('Bulk move failed:', err);
+        } finally {
+          setBulkActionInProgress(false);
+        }
+      },
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCaseIds, cases, isAdmin]);
 
@@ -307,6 +354,31 @@ export const CasesPage = () => {
     () => applyView(manuallyFilteredCases, activeView),
     [manuallyFilteredCases, activeView, applyView]
   );
+
+  // Handler: load a saved preset by name and apply its filters
+  const handleLoadSavedView = useCallback(
+    (name) => {
+      const filters = applySavedView(name);
+      if (!filters) return;
+      if (filters.viewId) setActiveView(filters.viewId);
+      if (filters.statusFilter) setStatusFilter(filters.statusFilter);
+      if (filters.searchQuery != null) {
+        setSearchInput(filters.searchQuery);
+        setSearchQuery(filters.searchQuery.trim().toLowerCase());
+      }
+      setSavedViewsOpen(false);
+    },
+    [applySavedView, setActiveView]
+  );
+
+  // Handler: save the current filter state as a preset
+  const handleSaveCurrentView = useCallback(() => {
+    const name = saveViewName.trim();
+    if (!name) return;
+    saveView(name, { viewId: activeView, statusFilter, searchQuery });
+    setSaveViewName('');
+    setSavedViewsOpen(false);
+  }, [saveViewName, saveView, activeView, statusFilter, searchQuery]);
 
   // Task 6: debounced search filter (250ms, no external library)
   const handleSearchChange = (e) => {
@@ -521,7 +593,10 @@ export const CasesPage = () => {
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation();
-                  navigate(`/app/firm/${firmSlug}/cases/${row.caseId}`);
+                  const index = sortedCases.findIndex((c) => c.caseId === row.caseId);
+                  navigate(`/app/firm/${firmSlug}/cases/${row.caseId}`, {
+                    state: { sourceList: sortedCases.map((c) => c.caseId), index },
+                  });
                 }}
               >
                 View Case
@@ -642,6 +717,61 @@ export const CasesPage = () => {
           />
         </div>
 
+        {/* Saved Views (user presets) */}
+        <div className="cases-page__saved-views cases-page__control-section">
+          <div className="cases-page__saved-views-row">
+            <button
+              type="button"
+              className="cases-page__saved-views-toggle"
+              onClick={() => setSavedViewsOpen((v) => !v)}
+              aria-expanded={savedViewsOpen}
+            >
+              ⭐ Saved Views {savedViews.length > 0 && `(${savedViews.length})`}
+            </button>
+            {savedViews.map((sv) => (
+              <span key={sv.name} className="cases-page__saved-view-chip">
+                <button
+                  type="button"
+                  className="cases-page__saved-view-load"
+                  onClick={() => handleLoadSavedView(sv.name)}
+                  title={`Load: ${sv.name}`}
+                >
+                  {sv.name}
+                </button>
+                <button
+                  type="button"
+                  className="cases-page__saved-view-remove"
+                  onClick={() => removeView(sv.name)}
+                  aria-label={`Remove saved view: ${sv.name}`}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+          {savedViewsOpen && (
+            <div className="cases-page__saved-views-form">
+              <input
+                type="text"
+                className="cases-page__saved-views-input"
+                placeholder="Preset name (e.g. My Overdue Cases)"
+                value={saveViewName}
+                onChange={(e) => setSaveViewName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSaveCurrentView()}
+                maxLength={60}
+                aria-label="Saved view name"
+              />
+              <Button
+                variant="outline"
+                onClick={handleSaveCurrentView}
+                disabled={!saveViewName.trim()}
+              >
+                Save current filters
+              </Button>
+            </div>
+          )}
+        </div>
+
         {/* Preset operational view tabs */}
         <div className="cases-page__views cases-page__control-section" role="tablist" aria-label="Case views">
           {availableViews.map((view) => (
@@ -657,6 +787,13 @@ export const CasesPage = () => {
             </button>
           ))}
         </div>
+
+        {/* Smart default view indicator */}
+        <SmartViewIndicator
+          hasStoredView={hasStoredView}
+          activeView={activeView}
+          caseCount={viewFilteredCases.length}
+        />
 
         {/* Task 6: Bulk action bar */}
         {enableBulkActions && selectedCaseIds.size > 0 && (
@@ -804,6 +941,18 @@ export const CasesPage = () => {
         </SectionCard>
       </div>
       <AuditTimelineDrawer isOpen={Boolean(timelineCaseId)} caseId={timelineCaseId} onClose={() => setTimelineCaseId(null)} />
+      {confirmModal && (
+        <ActionConfirmModal
+          isOpen={true}
+          title={confirmModal.title}
+          description={confirmModal.description}
+          confirmText={confirmModal.confirmText || 'Confirm'}
+          cancelText="Cancel"
+          danger={confirmModal.danger}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={() => setConfirmModal(null)}
+        />
+      )}
     </Layout>
   );
 };
