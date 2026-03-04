@@ -1,5 +1,6 @@
 import React from 'react';
 import { caseStatusAppearance } from '../../lib/designTokens';
+import { getStatusLabel } from '../../utils/statusDisplay';
 import './layoutPrimitives.css';
 
 export const StatusBadge = ({ status }) => {
@@ -8,7 +9,7 @@ export const StatusBadge = ({ status }) => {
     .toUpperCase();
 
   const appearance = caseStatusAppearance[normalizedStatus] || {
-    label: normalizedStatus ? normalizedStatus.replaceAll('_', ' ') : 'Unknown',
+    label: getStatusLabel(normalizedStatus),
     tone: 'neutral',
   };
 

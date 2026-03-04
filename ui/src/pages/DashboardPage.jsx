@@ -13,6 +13,10 @@ import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { Loading } from '../components/common/Loading';
+import { Button } from '../components/common/Button';
+import { PageHeader } from '../components/layout/PageHeader';
+import { EmptyState } from '../components/layout/EmptyState';
+import { PriorityPill } from '../components/common/PriorityPill';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
 import { caseService } from '../services/caseService';
@@ -21,6 +25,8 @@ import { adminService } from '../services/adminService';
 import { clientService } from '../services/clientService';
 import { metricsService } from '../services/metricsService';
 import { formatDate } from '../utils/formatters';
+import { getStatusLabel } from '../utils/statusDisplay';
+import { UX_COPY } from '../constants/uxCopy';
 import api from '../services/api';
 import './DashboardPage.css';
 
@@ -218,9 +224,9 @@ export const DashboardPage = () => {
 
   // Workflow status pipeline data
   const workflowStatuses = [
-    { label: 'Open', count: stats.myOpenCases, color: 'var(--color-primary)' },
-    { label: 'Pending', count: stats.myPendingCases, color: 'var(--warning)' },
-    { label: 'Resolved', count: stats.myResolvedCases, color: 'var(--color-success)' },
+    { label: UX_COPY.statusLabels.OPEN, count: stats.myOpenCases, color: 'var(--color-primary)' },
+    { label: UX_COPY.statusLabels.PENDED, count: stats.myPendingCases, color: 'var(--warning)' },
+    { label: UX_COPY.statusLabels.RESOLVED, count: stats.myResolvedCases, color: 'var(--color-success)' },
     { label: 'Unassigned', count: stats.myUnassignedCreatedCases, color: 'var(--text-muted)' },
   ];
 
@@ -228,12 +234,15 @@ export const DashboardPage = () => {
     <Layout>
       <div className="dashboard">
         {/* Header */}
-        <div className="dashboard__header">
-          <h1 className="dashboard__title">Partner Control Dashboard</h1>
-          <p className="dashboard__subtitle">
-            Where is the compliance risk in my firm today?
-          </p>
-        </div>
+        <PageHeader
+          title="Partner Control Dashboard"
+          description="Where is the compliance risk in my firm today?"
+          actions={(
+            <Button variant="primary" onClick={() => navigate(`/app/firm/${firmSlug}/cases/create`)}>
+              {UX_COPY.actions.CREATE_CASE}
+            </Button>
+          )}
+        />
 
         {/* Section 1: KPI Strip */}
         <div className="dashboard__kpi-strip">
@@ -320,30 +329,22 @@ export const DashboardPage = () => {
             <h2 className="dashboard__section-title">
                {isAdmin ? 'Recent Audit Records' : 'Recent Audit Records'}
             </h2>
-            <button
-              className="btn btn-secondary"
-              onClick={() => navigate(`/app/firm/${firmSlug}/cases/create`)}
+            <Button
+              variant="outline"
+              onClick={() => navigate(`/app/firm/${firmSlug}/cases`)}
               style={{ fontSize: 'var(--font-size-sm)' }}
             >
-               + Register Case
-            </button>
+              View All Cases
+            </Button>
           </div>
           <Card>
             {recentCases.length === 0 ? (
-              <div className="dashboard__empty">
-                 <h3 className="dashboard__empty-title">No compliance records available</h3>
-                 <p className="dashboard__empty-description text-secondary">
-                   {isAdmin
-                     ? 'No audit records are available for this firm yet.'
-                     : 'No audit records are available for your assigned compliance items.'}
-                 </p>
-                <button
-                  className="btn btn-primary dashboard__empty-cta"
-                  onClick={() => navigate(`/app/firm/${firmSlug}/cases/create`)}
-                >
-                   {isAdmin ? 'Register First Case' : 'Register Case'}
-                 </button>
-              </div>
+              <EmptyState
+                title="No compliance records available."
+                description={isAdmin ? 'No audit records are available for this firm yet.' : 'No audit records are available for your assigned compliance items.'}
+                actionLabel={UX_COPY.actions.CREATE_CASE}
+                onAction={() => navigate(`/app/firm/${firmSlug}/cases/create`)}
+              />
             ) : (
               <table className="neo-table">
                 <thead>
@@ -351,7 +352,8 @@ export const DashboardPage = () => {
                     <th>Case Name</th>
                     <th>Category</th>
                     <th>Status</th>
-                     <th>Last Action Timestamp</th>
+                    <th>Priority</th>
+                    <th>Last Action Timestamp</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -360,8 +362,9 @@ export const DashboardPage = () => {
                       <td>{caseItem.caseName}</td>
                       <td>{caseItem.category}</td>
                       <td>
-                        <Badge status={caseItem.status}>{caseItem.status}</Badge>
+                        <Badge status={caseItem.status}>{getStatusLabel(caseItem.status)}</Badge>
                       </td>
+                      <td><PriorityPill caseRecord={caseItem} /></td>
                       <td>{formatDate(caseItem.updatedAt)}</td>
                     </tr>
                   ))}
