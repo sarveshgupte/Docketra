@@ -11,6 +11,26 @@
   padding: 1.25rem 1.5rem;
 }
 
+/* ── Next/Previous Navigation Bar ───────── */
+
+.case-detail__nav-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: var(--space-4, 1rem);
+  padding: 8px 0;
+}
+
+.case-detail__nav-btn {
+  min-width: 140px;
+}
+
+.case-detail__nav-pos {
+  font-size: 13px;
+  color: var(--text-muted, #64748b);
+  white-space: nowrap;
+}
+
 /* ── Page Header ─────────────────────────── */
 
 .case-detail__header {

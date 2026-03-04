@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
 import { Loading } from '../components/common/Loading';
@@ -16,6 +16,7 @@ import { Input } from '../components/common/Input';
 import { Modal } from '../components/common/Modal';
 import { CaseHistory } from '../components/common/CaseHistory';
 import { ClientFactSheetModal } from '../components/common/ClientFactSheetModal';
+import { ActionConfirmModal } from '../components/common/ActionConfirmModal';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
 import { useToast } from '../hooks/useToast';
@@ -53,10 +54,34 @@ const escapeHtml = (value = '') =>
 
 export const CaseDetailPage = () => {
   const { caseId } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const permissions = usePermissions();
   const { showSuccess, showError, showWarning } = useToast();
-  
+
+  // Next/Previous navigation: read list context passed from CasesPage
+  const sourceList = location.state?.sourceList || null; // array of caseIds
+  const sourceIndex = location.state?.index ?? -1;
+  const hasPrev = sourceList && sourceIndex > 0;
+  const hasNext = sourceList && sourceIndex < sourceList.length - 1;
+
+  const handlePrevCase = () => {
+    if (!hasPrev) return;
+    const prevId = sourceList[sourceIndex - 1];
+    navigate(location.pathname.replace(caseId, prevId), {
+      state: { sourceList, index: sourceIndex - 1 },
+    });
+  };
+
+  const handleNextCase = () => {
+    if (!hasNext) return;
+    const nextId = sourceList[sourceIndex + 1];
+    navigate(location.pathname.replace(caseId, nextId), {
+      state: { sourceList, index: sourceIndex + 1 },
+    });
+  };
+
   const [loading, setLoading] = useState(true);
   const [caseData, setCaseData] = useState(null);
   const [newComment, setNewComment] = useState('');
@@ -70,6 +95,8 @@ export const CaseDetailPage = () => {
   const [actionError, setActionError] = useState(null);
   const [timelineOpen, setTimelineOpen] = useState(false);
   const fileInputRef = React.useRef(null);
+  // Confirm modal state (replaces window.confirm)
+  const [confirmModal, setConfirmModal] = useState(null);
 
   // State for File action modal
   const [showFileModal, setShowFileModal] = useState(false);
@@ -174,64 +201,68 @@ export const CaseDetailPage = () => {
     }
   };
 
-  const handlePullCase = async () => {
-    if (!window.confirm('Pull this case? This will assign it to you.')) {
-      return;
-    }
-
-    setPullingCase(true);
-    try {
-      const response = await caseService.pullCase(caseId);
-      
-      if (response.success) {
-        const message = `Case ${caseId} assigned • ${formatDateTime(new Date())}`;
-        showSuccess(message);
-        setActionConfirmation(message);
-        setActionError(null);
-        await loadCase(); // Reload to update UI
-      }
-    } catch (error) {
-      console.error('Failed to pull case:', error);
-      // Sanitize error message: only show if it's from server response, otherwise use generic message
-      const serverMessage = error.response?.data?.message;
-      const errorMessage = serverMessage && typeof serverMessage === 'string' 
-        ? serverMessage.substring(0, 200) // Limit length
-        : 'Failed to pull case. Please try again.';
-      showError(errorMessage);
-      setActionError({ message: errorMessage, retry: handlePullCase });
-    } finally {
-      setPullingCase(false);
-    }
+  const handlePullCase = () => {
+    setConfirmModal({
+      title: 'Pull Case',
+      description: 'Pull this case? This will assign it to you.',
+      confirmText: 'Pull Case',
+      onConfirm: async () => {
+        setConfirmModal(null);
+        setPullingCase(true);
+        try {
+          const response = await caseService.pullCase(caseId);
+          if (response.success) {
+            const message = `Case ${caseId} assigned • ${formatDateTime(new Date())}`;
+            showSuccess(message);
+            setActionConfirmation(message);
+            setActionError(null);
+            await loadCase();
+          }
+        } catch (error) {
+          console.error('Failed to pull case:', error);
+          const serverMessage = error.response?.data?.message;
+          const errorMessage = serverMessage && typeof serverMessage === 'string'
+            ? serverMessage.substring(0, 200)
+            : 'Failed to pull case. Please try again.';
+          showError(errorMessage);
+          setActionError({ message: errorMessage, retry: handlePullCase });
+        } finally {
+          setPullingCase(false);
+        }
+      },
+    });
   };
 
-  const handleMoveToGlobal = async () => {
-    if (!window.confirm('This will remove the current assignment and move the case to the Workbasket. Continue?')) {
-      return;
-    }
-
-    setMovingToGlobal(true);
-    try {
-      const response = await caseService.moveCaseToGlobal(caseId);
-      
-      if (response.success) {
-        const message = `Case ${caseId} moved to Workbasket • ${formatDateTime(new Date())}`;
-        showSuccess(message);
-        setActionConfirmation(message);
-        setActionError(null);
-        await loadCase(); // Reload to update UI
-      }
-    } catch (error) {
-      console.error('Failed to move case to workbasket:', error);
-      // Sanitize error message: only show if it's from server response, otherwise use generic message
-      const serverMessage = error.response?.data?.message;
-      const errorMessage = serverMessage && typeof serverMessage === 'string'
-        ? serverMessage.substring(0, 200) // Limit length
-        : 'Failed to move case. Please try again.';
-      showError(errorMessage);
-      setActionError({ message: errorMessage, retry: handleMoveToGlobal });
-    } finally {
-      setMovingToGlobal(false);
-    }
+  const handleMoveToGlobal = () => {
+    setConfirmModal({
+      title: 'Move to Workbasket',
+      description: 'This will remove the current assignment and move the case to the Workbasket. Continue?',
+      confirmText: 'Move to Workbasket',
+      onConfirm: async () => {
+        setConfirmModal(null);
+        setMovingToGlobal(true);
+        try {
+          const response = await caseService.moveCaseToGlobal(caseId);
+          if (response.success) {
+            const message = `Case ${caseId} moved to Workbasket • ${formatDateTime(new Date())}`;
+            showSuccess(message);
+            setActionConfirmation(message);
+            setActionError(null);
+            await loadCase();
+          }
+        } catch (error) {
+          console.error('Failed to move case to workbasket:', error);
+          const serverMessage = error.response?.data?.message;
+          const errorMessage = serverMessage && typeof serverMessage === 'string'
+            ? serverMessage.substring(0, 200)
+            : 'Failed to move case. Please try again.';
+          showError(errorMessage);
+          setActionError({ message: errorMessage, retry: handleMoveToGlobal });
+        } finally {
+          setMovingToGlobal(false);
+        }
+      },
+    });
   };
 
   const handleAddComment = async () => {
@@ -317,35 +348,37 @@ export const CaseDetailPage = () => {
 
     const confirmationTimestamp = new Date().toISOString();
     const responsibleExecutive = caseData?.case?.assignedToName || caseData?.case?.assignedToXID || user?.name || user?.xID || 'Unassigned';
-    const fileConfirmed = window.confirm(
-      `Stage change: ${toLifecycleStage(caseInfo.status)} → Marked as Executed\nResponsible party: ${responsibleExecutive}\nTimestamp: ${confirmationTimestamp}\nAudit record creation: This transition will create an audit record.`
-    );
-    if (!fileConfirmed) return;
-
-    setFilingCase(true);
-    try {
-      const response = await caseService.fileCase(caseId, fileComment);
-      
-      if (response.success) {
-        const message = `Case ${caseId} filed • ${formatDateTime(new Date())}`;
-        showSuccess(message);
-        setActionConfirmation(message);
-        setActionError(null);
-        setShowFileModal(false);
-        setFileComment('');
-        await loadCase(); // Reload to update UI
-      }
-    } catch (error) {
-      console.error('Failed to file case:', error);
-      const serverMessage = error.response?.data?.message;
-      const errorMessage = serverMessage && typeof serverMessage === 'string'
-        ? serverMessage.substring(0, 200)
-        : 'Failed to file case. Please try again.';
-      showError(errorMessage);
-      setActionError({ message: errorMessage, retry: handleFileCase });
-    } finally {
-      setFilingCase(false);
-    }
+    setConfirmModal({
+      title: 'File Case',
+      description: `Stage change: ${toLifecycleStage(caseInfo.status)} → Marked as Executed\nResponsible party: ${responsibleExecutive}\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
+      confirmText: 'File Case',
+      onConfirm: async () => {
+        setConfirmModal(null);
+        setFilingCase(true);
+        try {
+          const response = await caseService.fileCase(caseId, fileComment);
+          if (response.success) {
+            const message = `Case ${caseId} filed • ${formatDateTime(new Date())}`;
+            showSuccess(message);
+            setActionConfirmation(message);
+            setActionError(null);
+            setShowFileModal(false);
+            setFileComment('');
+            await loadCase();
+          }
+        } catch (error) {
+          console.error('Failed to file case:', error);
+          const serverMessage = error.response?.data?.message;
+          const errorMessage = serverMessage && typeof serverMessage === 'string'
+            ? serverMessage.substring(0, 200)
+            : 'Failed to file case. Please try again.';
+          showError(errorMessage);
+          setActionError({ message: errorMessage, retry: handleFileCase });
+        } finally {
+          setFilingCase(false);
+        }
+      },
+    });
   };
 
   const handlePendCase = async () => {
@@ -373,36 +406,38 @@ export const CaseDetailPage = () => {
 
     const confirmationTimestamp = new Date().toISOString();
     const responsibleExecutive = caseData?.case?.assignedToName || caseData?.case?.assignedToXID || user?.name || user?.xID || 'Unassigned';
-    const pendConfirmed = window.confirm(
-      `Stage change: ${toLifecycleStage(caseInfo.status)} → Awaiting Partner Approval\nResponsible party: ${responsibleExecutive}\nTimestamp: ${confirmationTimestamp}\nAudit record creation: This transition will create an audit record.`
-    );
-    if (!pendConfirmed) return;
-
-    setPendingCase(true);
-    try {
-      const response = await caseService.pendCase(caseId, pendComment, pendingUntil);
-      
-      if (response.success) {
-        const message = `Case ${caseId} pended • ${formatDateTime(new Date())}`;
-        showSuccess(message);
-        setActionConfirmation(message);
-        setActionError(null);
-        setShowPendModal(false);
-        setPendComment('');
-        setPendingUntil('');
-        await loadCase(); // Reload to update UI
-      }
-    } catch (error) {
-      console.error('Failed to pend case:', error);
-      const serverMessage = error.response?.data?.message;
-      const errorMessage = serverMessage && typeof serverMessage === 'string'
-        ? serverMessage.substring(0, 200)
-        : 'Failed to pend case. Please try again.';
-      showError(errorMessage);
-      setActionError({ message: errorMessage, retry: handlePendCase });
-    } finally {
-      setPendingCase(false);
-    }
+    setConfirmModal({
+      title: 'Pend Case',
+      description: `Stage change: ${toLifecycleStage(caseInfo.status)} → Awaiting Partner Approval\nResponsible party: ${responsibleExecutive}\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
+      confirmText: 'Pend Case',
+      onConfirm: async () => {
+        setConfirmModal(null);
+        setPendingCase(true);
+        try {
+          const response = await caseService.pendCase(caseId, pendComment, pendingUntil);
+          if (response.success) {
+            const message = `Case ${caseId} pended • ${formatDateTime(new Date())}`;
+            showSuccess(message);
+            setActionConfirmation(message);
+            setActionError(null);
+            setShowPendModal(false);
+            setPendComment('');
+            setPendingUntil('');
+            await loadCase();
+          }
+        } catch (error) {
+          console.error('Failed to pend case:', error);
+          const serverMessage = error.response?.data?.message;
+          const errorMessage = serverMessage && typeof serverMessage === 'string'
+            ? serverMessage.substring(0, 200)
+            : 'Failed to pend case. Please try again.';
+          showError(errorMessage);
+          setActionError({ message: errorMessage, retry: handlePendCase });
+        } finally {
+          setPendingCase(false);
+        }
+      },
+    });
   };
 
   const handleResolveCase = async () => {
@@ -413,35 +448,37 @@ export const CaseDetailPage = () => {
 
     const confirmationTimestamp = new Date().toISOString();
     const responsibleExecutive = caseData?.case?.assignedToName || caseData?.case?.assignedToXID || user?.name || user?.xID || 'Unassigned';
-    const resolveConfirmed = window.confirm(
-      `Stage change: ${toLifecycleStage(caseInfo.status)} → Executed\nResponsible party: ${responsibleExecutive}\nTimestamp: ${confirmationTimestamp}\nAudit record creation: This transition will create an audit record.`
-    );
-    if (!resolveConfirmed) return;
-
-    setResolvingCase(true);
-    try {
-      const response = await caseService.resolveCase(caseId, resolveComment);
-      
-      if (response.success) {
-        const message = `Case ${caseId} resolved • ${formatDateTime(new Date())}`;
-        showSuccess(message);
-        setActionConfirmation(message);
-        setActionError(null);
-        setShowResolveModal(false);
-        setResolveComment('');
-        await loadCase(); // Reload to update UI
-      }
-    } catch (error) {
-      console.error('Failed to resolve case:', error);
-      const serverMessage = error.response?.data?.message;
-      const errorMessage = serverMessage && typeof serverMessage === 'string'
-        ? serverMessage.substring(0, 200)
-        : 'Failed to resolve case. Please try again.';
-      showError(errorMessage);
-      setActionError({ message: errorMessage, retry: handleResolveCase });
-    } finally {
-      setResolvingCase(false);
-    }
+    setConfirmModal({
+      title: 'Resolve Case',
+      description: `Stage change: ${toLifecycleStage(caseInfo.status)} → Executed\nResponsible party: ${responsibleExecutive}\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
+      confirmText: 'Resolve Case',
+      onConfirm: async () => {
+        setConfirmModal(null);
+        setResolvingCase(true);
+        try {
+          const response = await caseService.resolveCase(caseId, resolveComment);
+          if (response.success) {
+            const message = `Case ${caseId} resolved • ${formatDateTime(new Date())}`;
+            showSuccess(message);
+            setActionConfirmation(message);
+            setActionError(null);
+            setShowResolveModal(false);
+            setResolveComment('');
+            await loadCase();
+          }
+        } catch (error) {
+          console.error('Failed to resolve case:', error);
+          const serverMessage = error.response?.data?.message;
+          const errorMessage = serverMessage && typeof serverMessage === 'string'
+            ? serverMessage.substring(0, 200)
+            : 'Failed to resolve case. Please try again.';
+          showError(errorMessage);
+          setActionError({ message: errorMessage, retry: handleResolveCase });
+        } finally {
+          setResolvingCase(false);
+        }
+      },
+    });
   };
 
   const handleUnpendCase = async () => {
@@ -452,35 +489,37 @@ export const CaseDetailPage = () => {
 
     const confirmationTimestamp = new Date().toISOString();
     const responsibleExecutive = caseData?.case?.assignedToName || caseData?.case?.assignedToXID || user?.name || user?.xID || 'Unassigned';
-    const unpendConfirmed = window.confirm(
-      `Stage change: Awaiting Partner Approval → Under Execution\nResponsible party: ${responsibleExecutive}\nTimestamp: ${confirmationTimestamp}\nAudit record creation: This transition will create an audit record.`
-    );
-    if (!unpendConfirmed) return;
-
-    setUnpendingCase(true);
-    try {
-      const response = await caseService.unpendCase(caseId, unpendComment);
-      
-      if (response.success) {
-        const message = `Case ${caseId} unpended • ${formatDateTime(new Date())}`;
-        showSuccess(message);
-        setActionConfirmation(message);
-        setActionError(null);
-        setShowUnpendModal(false);
-        setUnpendComment('');
-        await loadCase(); // Reload to update UI
-      }
-    } catch (error) {
-      console.error('Failed to unpend case:', error);
-      const serverMessage = error.response?.data?.message;
-      const errorMessage = serverMessage && typeof serverMessage === 'string'
-        ? serverMessage.substring(0, 200)
-        : 'Failed to unpend case. Please try again.';
-      showError(errorMessage);
-      setActionError({ message: errorMessage, retry: handleUnpendCase });
-    } finally {
-      setUnpendingCase(false);
-    }
+    setConfirmModal({
+      title: 'Unpend Case',
+      description: `Stage change: Awaiting Partner Approval → Under Execution\nResponsible party: ${responsibleExecutive}\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
+      confirmText: 'Unpend Case',
+      onConfirm: async () => {
+        setConfirmModal(null);
+        setUnpendingCase(true);
+        try {
+          const response = await caseService.unpendCase(caseId, unpendComment);
+          if (response.success) {
+            const message = `Case ${caseId} unpended • ${formatDateTime(new Date())}`;
+            showSuccess(message);
+            setActionConfirmation(message);
+            setActionError(null);
+            setShowUnpendModal(false);
+            setUnpendComment('');
+            await loadCase();
+          }
+        } catch (error) {
+          console.error('Failed to unpend case:', error);
+          const serverMessage = error.response?.data?.message;
+          const errorMessage = serverMessage && typeof serverMessage === 'string'
+            ? serverMessage.substring(0, 200)
+            : 'Failed to unpend case. Please try again.';
+          showError(errorMessage);
+          setActionError({ message: errorMessage, retry: handleUnpendCase });
+        } finally {
+          setUnpendingCase(false);
+        }
+      },
+    });
   };
 
   // Handle Client Fact Sheet
@@ -634,6 +673,32 @@ export const CaseDetailPage = () => {
   return (
     <Layout>
       <div className="case-detail">
+        {/* ─── Next/Previous Case Navigation ────────────────────────── */}
+        {sourceList && (
+          <div className="case-detail__nav-bar">
+            <Button
+              variant="outline"
+              onClick={handlePrevCase}
+              disabled={!hasPrev}
+              className="case-detail__nav-btn"
+              aria-label="Previous case"
+            >
+              ← Previous Case
+            </Button>
+            <span className="case-detail__nav-pos">
+              {sourceIndex + 1} / {sourceList.length}
+            </span>
+            <Button
+              variant="outline"
+              onClick={handleNextCase}
+              disabled={!hasNext}
+              className="case-detail__nav-btn"
+              aria-label="Next case"
+            >
+              Next Case →
+            </Button>
+          </div>
+        )}
         {/* ─── Page Header ──────────────────────────────────────────── */}
         <div className="case-detail__header">
           <div className="case-detail__header-left">
@@ -1255,6 +1320,18 @@ export const CaseDetailPage = () => {
             timestamp: entry.timestamp || entry.createdAt,
           }))}
         />
+        {confirmModal && (
+          <ActionConfirmModal
+            isOpen={true}
+            title={confirmModal.title}
+            description={confirmModal.description}
+            confirmText={confirmModal.confirmText || 'Confirm'}
+            cancelText="Cancel"
+            danger={confirmModal.danger}
+            onConfirm={confirmModal.onConfirm}
+            onCancel={() => setConfirmModal(null)}
+          />
+        )}
       </div>
     </Layout>
   );
