@@ -462,6 +462,8 @@ userSchema.index({ firmId: 1, status: 1 });
 userSchema.index({ mustSetPassword: 1 });
 // REMOVED: { firmId: 1 } - redundant with compound index (firmId, xID) above
 userSchema.index({ firmId: 1, role: 1 }); // Firm-scoped role queries
+userSchema.index({ firmId: 1 });
+userSchema.index({ firmId: 1, createdAt: -1 });
 userSchema.index({ 'authProviders.google.googleId': 1 }, { unique: true, sparse: true }); // One Google account -> one user
 
 // Virtual property to check if account is locked
