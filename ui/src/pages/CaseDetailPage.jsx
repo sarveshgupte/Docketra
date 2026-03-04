@@ -4,7 +4,7 @@
  * PR: Comprehensive CaseHistory & Audit Trail - Added view tracking and history display
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
@@ -524,6 +524,37 @@ export const CaseDetailPage = () => {
   // Determine if user is admin
   const isAdmin = user?.role === 'Admin';
 
+  // Task 2: Inactivity warning — OPEN case not updated in 3+ days (not pended)
+  const isInactiveWarning = useMemo(() => {
+    if (!caseInfo) return false;
+    if (caseInfo.status !== 'OPEN') return false;
+    if (!caseInfo.updatedAt) return false;
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+    return new Date(caseInfo.updatedAt) < threeDaysAgo;
+  }, [caseInfo]);
+
+  // Task 3: Smart lifecycle warnings for File/Resolve modals
+  const lifecycleWarnings = useMemo(() => {
+    if (!caseInfo) return [];
+    const warnings = [];
+    const unresolvedComments = (caseData?.comments || []).filter((c) => !c.resolved).length;
+    if (unresolvedComments > 0) {
+      warnings.push(`${unresolvedComments} unresolved comment(s) on this case.`);
+    }
+    if (caseInfo.approvalStatus === 'PENDING') {
+      warnings.push('Pending approval is outstanding.');
+    }
+    const isSlaBreach =
+      caseInfo.slaDueDate &&
+      new Date(caseInfo.slaDueDate) < new Date() &&
+      caseInfo.status !== 'RESOLVED' &&
+      caseInfo.status !== 'FILED';
+    if (isSlaBreach) {
+      warnings.push('SLA has been breached for this case.');
+    }
+    return warnings;
+  }, [caseInfo, caseData]);
+
   // Determine button visibility
   // Pull Case button: show only if view-only mode, unassigned, and in GLOBAL queue
   const showPullButton = isViewOnlyMode && 
@@ -642,6 +673,12 @@ export const CaseDetailPage = () => {
           <div className="neo-alert neo-alert--warning case-detail__alert">
             <strong>Case is Currently Locked</strong> — Being worked on by another user since{' '}
             {formatDateTime(caseInfo.lockStatus.lastActivityAt || caseInfo.lockStatus.lockedAt)}.
+          </div>
+        )}
+        {/* Task 2: Inactivity warning */}
+        {isInactiveWarning && (
+          <div className="case-detail__inactivity-warning case-detail__alert" role="status">
+            ⚠ No activity in 3 days
           </div>
         )}
 
@@ -988,6 +1025,15 @@ export const CaseDetailPage = () => {
           }
         >
           <div style={{ padding: 'var(--spacing-md)' }}>
+            {/* Task 3: Smart lifecycle warnings */}
+            {lifecycleWarnings.length > 0 && (
+              <div className="case-detail__lifecycle-warnings" role="note">
+                <strong>⚠ Heads up before filing:</strong>
+                <ul className="case-detail__lifecycle-warnings-list">
+                  {lifecycleWarnings.map((w, i) => <li key={i}>{w}</li>)}
+                </ul>
+              </div>
+            )}
             <p style={{ marginBottom: 'var(--spacing-md)', color: 'var(--text-secondary)' }}>
               Filing a case indicates it was opened in error, is a duplicate, or was incorrectly created.
               The case will become read-only after filing.
@@ -1065,6 +1111,15 @@ export const CaseDetailPage = () => {
           }
         >
           <div style={{ padding: 'var(--spacing-md)' }}>
+            {/* Task 3: Smart lifecycle warnings */}
+            {lifecycleWarnings.length > 0 && (
+              <div className="case-detail__lifecycle-warnings" role="note">
+                <strong>⚠ Heads up before resolving:</strong>
+                <ul className="case-detail__lifecycle-warnings-list">
+                  {lifecycleWarnings.map((w, i) => <li key={i}>{w}</li>)}
+                </ul>
+              </div>
+            )}
             <p style={{ marginBottom: 'var(--spacing-md)', color: 'var(--text-secondary)' }}>
               Resolving a case marks it as executed with no further action required.
               The case will become read-only after resolution.

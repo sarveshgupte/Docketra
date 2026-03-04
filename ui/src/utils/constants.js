@@ -98,7 +98,11 @@ export const USER_ROLES = {
   SUPER_ADMIN: 'SuperAdmin',
   ADMIN: 'Admin',
   EMPLOYEE: 'Employee',
+  PARTNER: 'Partner',
 };
+
+/** Configurable threshold for high workload indicator (Task 4) */
+export const WORKLOAD_THRESHOLD = 15;
 
 export const STORAGE_KEYS = {
   ACCESS_TOKEN: 'accessToken',

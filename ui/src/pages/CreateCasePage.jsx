@@ -2,7 +2,7 @@
  * Create Case Page
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
@@ -58,6 +58,12 @@ export const CreateCasePage = () => {
   const [touched, setTouched] = useState({});
   const [successMessage, setSuccessMessage] = useState(null);
   const [footerConfirmation, setFooterConfirmation] = useState('');
+  // Task 7: Soft auto-save state — only enabled when user is authenticated
+  const userId = user?._id || user?.id;
+  const DRAFT_STORAGE_KEY = userId ? `createCaseDraft_${userId}` : null;
+  const AUTO_SAVE_DELAY_MS = 5000;
+  const autoSaveTimerRef = useRef(null);
+  const [draftSaved, setDraftSaved] = useState(false);
 
   // Fetch categories for dropdown
   useEffect(() => {
@@ -123,6 +129,29 @@ export const CreateCasePage = () => {
       setSubcategories([]);
     }
   }, [formData.categoryId, categories]);
+
+  // Task 7: Auto-save draft to localStorage after 5s of inactivity (only when authenticated)
+  useEffect(() => {
+    if (!DRAFT_STORAGE_KEY) return; // no-op if user not authenticated
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    // Only save if there's meaningful content (not just default clientId)
+    const hasContent = formData.title || formData.description || formData.categoryId;
+    if (!hasContent) return;
+    autoSaveTimerRef.current = setTimeout(() => {
+      try {
+        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(formData));
+        setDraftSaved(true);
+        setTimeout(() => setDraftSaved(false), 3000); // hide indicator after 3s
+      } catch {
+        // ignore storage errors
+      }
+    }, AUTO_SAVE_DELAY_MS);
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  // DRAFT_STORAGE_KEY and AUTO_SAVE_DELAY_MS are stable per render
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData]);
 
   const categoryOptions = [
     { value: '', label: 'Select Category *', disabled: true },
@@ -274,6 +303,11 @@ export const CreateCasePage = () => {
         setErrors({});
         setTouched({});
         setDuplicateWarning(null);
+        // Task 7: Clear draft on successful submit
+        if (DRAFT_STORAGE_KEY) {
+          try { localStorage.removeItem(DRAFT_STORAGE_KEY); } catch { /* ignore */ }
+        }
+        setDraftSaved(false);
       }
     } catch (err) {
       if (err.response?.status === 409) {
@@ -310,6 +344,12 @@ export const CreateCasePage = () => {
         <div className="create-case__header">
           <h1>Create New Case</h1>
           <p className="text-secondary">All fields marked with * are required</p>
+          {/* Task 7: Draft auto-save indicator */}
+          {draftSaved && (
+            <span className="create-case__draft-saved" role="status" aria-live="polite">
+              💾 Draft locally saved
+            </span>
+          )}
         </div>
 
         {/* Success Message */}

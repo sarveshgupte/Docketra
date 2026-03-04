@@ -10,6 +10,20 @@ import { CASE_STATUS } from '../utils/constants';
 
 const STORAGE_KEY = 'caseViewPreset';
 
+/**
+ * Returns true when a case is "escalated":
+ * SLA breached AND still Open/Pended AND not updated in 24h.
+ */
+export const isEscalatedCase = (record) => {
+  if (!record.slaDueDate) return false;
+  if (record.status === CASE_STATUS.RESOLVED || record.status === CASE_STATUS.FILED) return false;
+  if (new Date(record.slaDueDate) >= new Date()) return false;
+  if (record.status !== CASE_STATUS.OPEN && record.status !== CASE_STATUS.PENDED) return false;
+  if (!record.updatedAt) return false; // require updatedAt to exist before comparison
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  return new Date(record.updatedAt) < twentyFourHoursAgo;
+};
+
 export const CASE_VIEWS = {
   MY_OPEN: {
     id: 'MY_OPEN',
@@ -40,6 +54,26 @@ export const CASE_VIEWS = {
         due.getDate() === now.getDate()
       );
     },
+  },
+  OVERDUE: {
+    id: 'OVERDUE',
+    label: 'Overdue',
+    filters: {},
+    defaultSort: { key: 'slaDueDate', direction: 'asc' },
+    requiresAdmin: false,
+    predicate: (record) => {
+      if (!record.slaDueDate) return false;
+      if (record.status === CASE_STATUS.RESOLVED || record.status === CASE_STATUS.FILED) return false;
+      return new Date(record.slaDueDate) < new Date();
+    },
+  },
+  ESCALATED: {
+    id: 'ESCALATED',
+    label: 'Escalated',
+    filters: {},
+    defaultSort: { key: 'slaDueDate', direction: 'asc' },
+    requiresAdmin: false,
+    predicate: (record) => isEscalatedCase(record),
   },
   UNASSIGNED: {
     id: 'UNASSIGNED',
@@ -87,10 +121,22 @@ export const getAvailableViews = (isAdmin) =>
  *
  * @param {boolean} isAdmin
  * @param {object} user
- * @returns {{ activeView, setActiveView, applyView, availableViews }}
+ * @returns {{ activeView, setActiveView, applyView, availableViews, hasStoredView, applySmartDefault }}
  */
 export const useCaseView = (isAdmin, user) => {
   const availableViews = useMemo(() => getAvailableViews(isAdmin), [isAdmin]);
+
+  // Track whether the initial view came from localStorage (manual selection).
+  // If false, we allow smart default selection after cases are loaded.
+  const hasStoredView = useMemo(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      return !!(stored && CASE_VIEWS[stored] && !(CASE_VIEWS[stored].requiresAdmin && !isAdmin));
+    } catch {
+      return false;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [activeView, setActiveViewState] = useState(() => {
     try {
@@ -121,6 +167,31 @@ export const useCaseView = (isAdmin, user) => {
   );
 
   /**
+   * Selects the best default view based on loaded cases.
+   * Only has effect when no stored preference exists.
+   * Priority: Overdue → Due Today → MY_OPEN
+   *
+   * @param {Array} allCases
+   */
+  const applySmartDefault = useCallback(
+    (allCases) => {
+      if (hasStoredView) return; // respect manual selection
+      const hasOverdue = allCases.some((c) => CASE_VIEWS.OVERDUE.predicate(c));
+      if (hasOverdue) {
+        setActiveViewState('OVERDUE');
+        return;
+      }
+      const hasDueToday = allCases.some((c) => CASE_VIEWS.DUE_TODAY.predicate(c));
+      if (hasDueToday) {
+        setActiveViewState('DUE_TODAY');
+        return;
+      }
+      setActiveViewState('MY_OPEN');
+    },
+    [hasStoredView]
+  );
+
+  /**
    * Applies the active preset view's predicate to the full case list.
    * If viewId is null/undefined the full list is returned.
    *
@@ -143,6 +214,8 @@ export const useCaseView = (isAdmin, user) => {
     setActiveView,
     applyView,
     availableViews,
+    hasStoredView,
+    applySmartDefault,
     currentViewDef: CASE_VIEWS[activeView] || null,
   };
 };
