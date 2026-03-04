@@ -2,7 +2,7 @@
  * Create Case Page
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
@@ -10,6 +10,7 @@ import { Input } from '../components/common/Input';
 import { Select } from '../components/common/Select';
 import { Textarea } from '../components/common/Textarea';
 import { Button } from '../components/common/Button';
+import { SectionCard } from '../components/layout/SectionCard';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
 import { useAsyncAction } from '../hooks/useAsyncAction';
@@ -19,6 +20,18 @@ import { clientService } from '../services/clientService';
 import { formatClientDisplay } from '../utils/formatters';
 import { formatDateTime } from '../utils/formatDateTime';
 import './CreateCasePage.css';
+
+/** Returns a simple completion fraction for a section given field names and formData. */
+const sectionCompletion = (fields, formData) => {
+  const filled = fields.filter((f) => formData[f] && String(formData[f]).trim() !== '').length;
+  return { filled, total: fields.length, complete: filled === fields.length };
+};
+
+/** Small badge that shows when a section is complete. */
+const CompletionDot = ({ complete }) =>
+  complete ? (
+    <span className="create-case__section-done" aria-label="Section complete">✓</span>
+  ) : null;
 
 export const CreateCasePage = () => {
   const navigate = useNavigate();
@@ -280,6 +293,17 @@ export const CreateCasePage = () => {
     setDuplicateWarning(null);
   };
 
+  // Computed section completion state
+  const sec1 = useMemo(() => sectionCompletion(['clientId'], formData), [formData]);
+  const sec2 = useMemo(() => sectionCompletion(['categoryId', 'subcategoryId', 'title', 'description'], formData), [formData]);
+  const sec3 = useMemo(() => sectionCompletion(['slaDueDate'], formData), [formData]);
+
+  // Summary panel derived values
+  const selectedClient = clients.find((c) => c.clientId === formData.clientId);
+  const selectedCategory = categories.find((c) => c._id === formData.categoryId);
+  const selectedSubcategory = subcategories.find((s) => s.id === formData.subcategoryId);
+  const allSectionsValid = sec1.complete && sec2.complete && sec3.complete;
+
   return (
     <Layout>
       <div className="create-case">
@@ -310,132 +334,215 @@ export const CreateCasePage = () => {
           </div>
         )}
 
-        <Card>
-          {duplicateWarning ? (
-            <div className="create-case__duplicate-warning">
-              <div className="neo-alert neo-alert--warning">
-                <h3>Duplicate Client Detected</h3>
-                <p>{duplicateWarning.message}</p>
-                
-                {duplicateWarning.matchedFields && (
-                  <div className="create-case__matched-fields">
-                    <p><strong>Matched Fields:</strong></p>
-                    <ul>
-                      {duplicateWarning.matchedFields.map((field, index) => (
-                        <li key={index}>{field}</li>
-                      ))}
-                    </ul>
+        <div className="create-case__layout">
+          {/* Main form area */}
+          <div className="create-case__form-area">
+            {duplicateWarning ? (
+              <Card>
+                <div className="create-case__duplicate-warning">
+                  <div className="neo-alert neo-alert--warning">
+                    <h3>Duplicate Client Detected</h3>
+                    <p>{duplicateWarning.message}</p>
+                    
+                    {duplicateWarning.matchedFields && (
+                      <div className="create-case__matched-fields">
+                        <p><strong>Matched Fields:</strong></p>
+                        <ul>
+                          {duplicateWarning.matchedFields.map((field, index) => (
+                            <li key={index}>{field}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    
+                    <p className="mt-md">
+                      Do you want to continue creating this case?
+                    </p>
+                  </div>
+
+                  <div className="create-case__duplicate-actions">
+                    <Button onClick={handleCancelDuplicate}>
+                      Cancel
+                    </Button>
+                    <Button variant="danger" onClick={handleForceCreate} disabled={submitting}>
+                      {submitting ? 'Saving...' : 'Continue Anyway'}
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ) : (
+              <form onSubmit={handleSubmit}>
+                {/* Section 1 – Client Context */}
+                <SectionCard
+                  title={
+                    <span className="create-case__section-heading">
+                      Client Context <CompletionDot complete={sec1.complete} />
+                    </span>
+                  }
+                  subtitle="Who is this case for?"
+                  className="create-case__section"
+                >
+                  <Select
+                    label="Client *"
+                    name="clientId"
+                    value={formData.clientId}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    options={clientOptions}
+                    required
+                    disabled={loadingClients}
+                    error={touched.clientId && errors.clientId}
+                  />
+                </SectionCard>
+
+                {/* Section 2 – Case Classification */}
+                <SectionCard
+                  title={
+                    <span className="create-case__section-heading">
+                      Case Classification <CompletionDot complete={sec2.complete} />
+                    </span>
+                  }
+                  subtitle="Define the case type and details."
+                  className="create-case__section"
+                >
+                  <Select
+                    label="Category *"
+                    name="categoryId"
+                    value={formData.categoryId}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    options={categoryOptions}
+                    required
+                    disabled={loadingCategories}
+                    error={touched.categoryId && errors.categoryId}
+                  />
+
+                  <Select
+                    label="Subcategory *"
+                    name="subcategoryId"
+                    value={formData.subcategoryId}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    options={subcategoryOptions}
+                    required
+                    disabled={!formData.categoryId || subcategories.length === 0}
+                    error={touched.subcategoryId && errors.subcategoryId}
+                  />
+
+                  <Input
+                    label="Title *"
+                    name="title"
+                    value={formData.title}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    placeholder="Enter case title"
+                    required
+                    error={touched.title && errors.title}
+                  />
+
+                  <Textarea
+                    label="Description *"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    placeholder="Provide detailed case description"
+                    rows={6}
+                    required
+                    error={touched.description && errors.description}
+                  />
+                </SectionCard>
+
+                {/* Section 3 – Execution & SLA */}
+                <SectionCard
+                  title={
+                    <span className="create-case__section-heading">
+                      Execution &amp; SLA <CompletionDot complete={sec3.complete} />
+                    </span>
+                  }
+                  subtitle="Set delivery expectations."
+                  className="create-case__section"
+                >
+                  <Input
+                    label="SLA Due Date *"
+                    name="slaDueDate"
+                    type="datetime-local"
+                    value={formData.slaDueDate}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    required
+                    error={touched.slaDueDate && errors.slaDueDate}
+                  />
+                </SectionCard>
+
+                {(errors.submit || submitError) && (
+                  <div className="neo-alert neo-alert--danger">
+                    {(errors.submit || submitError)} Retry by submitting again.
                   </div>
                 )}
-                
-                <p className="mt-md">
-                  Do you want to continue creating this case?
-                </p>
+
+                <div className="create-case__actions">
+                  <div className="create-case__status" aria-live="polite">
+                    {footerConfirmation || 'Draft not saved yet'}
+                  </div>
+                  <div className="create-case__actions-right">
+                    <Button type="button" variant="outline" onClick={() => navigate(-1)}>
+                    Cancel
+                    </Button>
+                    <Button type="submit" variant="primary" disabled={submitting}>
+                      {submitting ? 'Saving...' : 'Create Case'}
+                    </Button>
+                  </div>
+                </div>
+              </form>
+            )}
+          </div>
+
+          {/* Right summary panel (desktop only) */}
+          <aside className="create-case__summary">
+            <div className="create-case__summary-inner">
+              <h3 className="create-case__summary-title">Summary</h3>
+
+              <div className="create-case__summary-row">
+                <span className="create-case__summary-label">Client</span>
+                <span className="create-case__summary-value">
+                  {selectedClient ? formatClientDisplay(selectedClient) : <em className="create-case__summary-empty">Not selected</em>}
+                </span>
               </div>
 
-              <div className="create-case__duplicate-actions">
-                <Button onClick={handleCancelDuplicate}>
-                  Cancel
-                </Button>
-                <Button variant="danger" onClick={handleForceCreate} disabled={submitting}>
-                  {submitting ? 'Saving...' : 'Continue Anyway'}
-                </Button>
+              <div className="create-case__summary-row">
+                <span className="create-case__summary-label">Category</span>
+                <span className="create-case__summary-value">
+                  {selectedCategory ? selectedCategory.name : <em className="create-case__summary-empty">Not selected</em>}
+                </span>
               </div>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit}>
-              <Select
-                label="Client *"
-                name="clientId"
-                value={formData.clientId}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                options={clientOptions}
-                required
-                disabled={loadingClients}
-                error={touched.clientId && errors.clientId}
-              />
 
-              <Select
-                label="Category *"
-                name="categoryId"
-                value={formData.categoryId}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                options={categoryOptions}
-                required
-                disabled={loadingCategories}
-                error={touched.categoryId && errors.categoryId}
-              />
-
-              <Select
-                label="Subcategory *"
-                name="subcategoryId"
-                value={formData.subcategoryId}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                options={subcategoryOptions}
-                required
-                disabled={!formData.categoryId || subcategories.length === 0}
-                error={touched.subcategoryId && errors.subcategoryId}
-              />
-
-              <Input
-                label="Title *"
-                name="title"
-                value={formData.title}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                placeholder="Enter case title"
-                required
-                error={touched.title && errors.title}
-              />
-
-              <Textarea
-                label="Description *"
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                placeholder="Provide detailed case description"
-                rows={6}
-                required
-                error={touched.description && errors.description}
-              />
-
-              <Input
-                label="SLA Due Date *"
-                name="slaDueDate"
-                type="datetime-local"
-                value={formData.slaDueDate}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                required
-                error={touched.slaDueDate && errors.slaDueDate}
-              />
-
-              {(errors.submit || submitError) && (
-                <div className="neo-alert neo-alert--danger">
-                  {(errors.submit || submitError)} Retry by submitting again.
+              {selectedSubcategory && (
+                <div className="create-case__summary-row">
+                  <span className="create-case__summary-label">Subcategory</span>
+                  <span className="create-case__summary-value">{selectedSubcategory.name}</span>
                 </div>
               )}
 
-              <div className="create-case__actions">
-                <div className="create-case__status" aria-live="polite">
-                  {footerConfirmation || 'Draft not saved yet'}
-                </div>
-                <div className="create-case__actions-right">
-                  <Button type="button" variant="outline" onClick={() => navigate(-1)}>
-                  Cancel
-                  </Button>
-                  <Button type="submit" variant="primary" disabled={submitting}>
-                    {submitting ? 'Saving...' : 'Create Case'}
-                  </Button>
-                </div>
+              <div className="create-case__summary-row">
+                <span className="create-case__summary-label">SLA Due</span>
+                <span className="create-case__summary-value">
+                  {formData.slaDueDate
+                    ? formatDateTime(new Date(formData.slaDueDate))
+                    : <em className="create-case__summary-empty">Not set</em>}
+                </span>
               </div>
-            </form>
-          )}
-        </Card>
+
+              <div className="create-case__summary-status">
+                <span
+                  className={`create-case__summary-validity${allSectionsValid ? ' create-case__summary-validity--ok' : ''}`}
+                >
+                  {allSectionsValid ? '✓ Ready to submit' : 'Complete all required fields'}
+                </span>
+              </div>
+            </div>
+          </aside>
+        </div>
       </div>
     </Layout>
   );
