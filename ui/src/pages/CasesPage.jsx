@@ -17,6 +17,9 @@ import { CASE_STATUS } from '../utils/constants';
 import { formatDateTime, formatAuditStamp } from '../utils/formatDateTime';
 import './CasesPage.css';
 
+// Keep date-sort keys explicit so additional date columns can be added safely.
+const DATE_SORT_KEYS = new Set(['updatedAt']);
+
 export const CasesPage = () => {
   const { user } = useAuth();
   const { isAdmin } = usePermissions();
@@ -94,7 +97,7 @@ export const CasesPage = () => {
       if (current == null) return 1;
       if (next == null) return -1;
 
-      if (sortState.key.toLowerCase().includes('date') || sortState.key.toLowerCase().includes('at')) {
+      if (DATE_SORT_KEYS.has(sortState.key)) {
         const aTime = new Date(current).getTime();
         const bTime = new Date(next).getTime();
         return sortState.direction === 'asc' ? aTime - bTime : bTime - aTime;

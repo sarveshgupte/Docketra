@@ -4,6 +4,9 @@ import { caseService } from '../../services/caseService';
 import { formatDateTime } from '../../utils/formatDateTime';
 import './AuditTimelineDrawer.css';
 
+// Keep drawer compact while surfacing recent immutable audit activity.
+const MAX_TIMELINE_EVENTS = 10;
+
 const normalizeEvents = (data = {}) => {
   const source = data.auditLog?.length ? data.auditLog : data.history || [];
   return source
@@ -18,7 +21,7 @@ const normalizeEvents = (data = {}) => {
         'System',
       timestamp: event.timestamp || event.createdAt,
     }))
-    .slice(0, 10);
+    .slice(0, MAX_TIMELINE_EVENTS);
 };
 
 export const AuditTimelineDrawer = ({ isOpen, onClose, caseId, events }) => {
@@ -28,7 +31,7 @@ export const AuditTimelineDrawer = ({ isOpen, onClose, caseId, events }) => {
   useEffect(() => {
     if (!isOpen) return;
     if (events?.length) {
-      setResolvedEvents(events.slice(0, 10));
+      setResolvedEvents(events.slice(0, MAX_TIMELINE_EVENTS));
       return;
     }
     if (!caseId) return;
@@ -54,7 +57,7 @@ export const AuditTimelineDrawer = ({ isOpen, onClose, caseId, events }) => {
     };
   }, [caseId, events, isOpen]);
 
-  const timelineItems = useMemo(() => resolvedEvents.slice(0, 10), [resolvedEvents]);
+  const timelineItems = useMemo(() => resolvedEvents.slice(0, MAX_TIMELINE_EVENTS), [resolvedEvents]);
 
   return (
     <div className={`audit-drawer${isOpen ? ' audit-drawer--open' : ''}`} aria-hidden={!isOpen}>
