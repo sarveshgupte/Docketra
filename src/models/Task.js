@@ -124,4 +124,7 @@ taskSchema.pre('save', async function() {
 
 taskSchema.plugin(softDeletePlugin);
 
+// VALIDATION: Strict schema enforcement
+taskSchema.set('strict', true);
+
 module.exports = mongoose.model('Task', taskSchema);

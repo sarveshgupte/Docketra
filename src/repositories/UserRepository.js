@@ -1,10 +1,5 @@
 const User = require('../models/User.model');
-
-const assertTenantId = (firmId) => {
-  if (!firmId) {
-    throw new Error('TenantId required');
-  }
-};
+const { requireFirmScopedQuery } = require('../utils/firmScope');
 
 /**
  * ⚠️ SECURITY: User Repository - Firm-Scoped Data Access Layer ⚠️
@@ -37,11 +32,10 @@ const UserRepository = {
    * @returns {Promise<Object|null>} User document or null
    */
   findByXID(firmId, xID) {
-    assertTenantId(firmId);
     if (!xID) {
       return null;
     }
-    return User.findOne({ firmId, xID });
+    return User.findOne(requireFirmScopedQuery({ xID }, firmId));
   },
 
   /**
@@ -51,11 +45,10 @@ const UserRepository = {
    * @returns {Promise<Object|null>} User document or null
    */
   findById(firmId, _id) {
-    assertTenantId(firmId);
     if (!_id) {
       return null;
     }
-    return User.findOne({ firmId, _id });
+    return User.findOne(requireFirmScopedQuery({ _id }, firmId));
   },
 
   /**
@@ -65,15 +58,13 @@ const UserRepository = {
    * @returns {Promise<Object|null>} User document or null
    */
   findByEmail(firmId, email) {
-    assertTenantId(firmId);
     if (!email) {
       return null;
     }
-    return User.findOne({
-      firmId,
+    return User.findOne(requireFirmScopedQuery({
       email: email.trim().toLowerCase(),
       status: { $ne: 'deleted' },
-    });
+    }, firmId));
   },
 
   /**
@@ -83,8 +74,7 @@ const UserRepository = {
    * @returns {Promise<Array>} Array of user documents
    */
   find(firmId, query = {}) {
-    assertTenantId(firmId);
-    return User.find({ firmId, ...query });
+    return User.find(requireFirmScopedQuery(query, firmId));
   },
 
   /**
@@ -94,8 +84,7 @@ const UserRepository = {
    * @returns {Promise<Object|null>} User document or null
    */
   findOne(firmId, query = {}) {
-    assertTenantId(firmId);
-    return User.findOne({ firmId, ...query });
+    return User.findOne(requireFirmScopedQuery(query, firmId));
   },
 
   /**
@@ -106,11 +95,10 @@ const UserRepository = {
    * @returns {Promise<Object|null>} Updated user document or null
    */
   updateByXID(firmId, xID, update) {
-    assertTenantId(firmId);
     if (!xID) {
       return null;
     }
-    return User.updateOne({ firmId, xID }, update);
+    return User.updateOne(requireFirmScopedQuery({ xID }, firmId), update);
   },
 
   /**
@@ -121,11 +109,10 @@ const UserRepository = {
    * @returns {Promise<Object|null>} Updated user document or null
    */
   updateById(firmId, _id, update) {
-    assertTenantId(firmId);
     if (!_id) {
       return null;
     }
-    return User.updateOne({ firmId, _id }, update);
+    return User.updateOne(requireFirmScopedQuery({ _id }, firmId), update);
   },
 
   /**
@@ -135,8 +122,7 @@ const UserRepository = {
    * @returns {Promise<number>} Count of users
    */
   count(firmId, query = {}) {
-    assertTenantId(firmId);
-    return User.countDocuments({ firmId, ...query });
+    return User.countDocuments(requireFirmScopedQuery(query, firmId));
   },
 
   /**

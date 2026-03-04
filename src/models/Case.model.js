@@ -929,4 +929,7 @@ caseSchema.pre('save', async function () {
   }
 });
 
+// VALIDATION: Strict schema enforcement
+caseSchema.set('strict', true);
+
 module.exports = mongoose.model('Case', caseSchema);
