@@ -53,7 +53,7 @@ const escapeHtml = (value = '') =>
     .replaceAll("'", '&#39;');
 
 export const CaseDetailPage = () => {
-  const { caseId } = useParams();
+  const { caseId, firmSlug } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
@@ -69,7 +69,7 @@ export const CaseDetailPage = () => {
   const handlePrevCase = () => {
     if (!hasPrev) return;
     const prevId = sourceList[sourceIndex - 1];
-    navigate(location.pathname.replace(caseId, prevId), {
+    navigate(`/app/firm/${firmSlug}/cases/${prevId}`, {
       state: { sourceList, index: sourceIndex - 1 },
     });
   };
@@ -77,7 +77,7 @@ export const CaseDetailPage = () => {
   const handleNextCase = () => {
     if (!hasNext) return;
     const nextId = sourceList[sourceIndex + 1];
-    navigate(location.pathname.replace(caseId, nextId), {
+    navigate(`/app/firm/${firmSlug}/cases/${nextId}`, {
       state: { sourceList, index: sourceIndex + 1 },
     });
   };

@@ -41,7 +41,7 @@ export const ActionConfirmModal = ({
         <div className="neo-modal__header" id="action-confirm-title">{title}</div>
         {description && (
           <div style={{ marginBottom: 'var(--spacing-lg)' }}>
-            <p className="text-body">{description}</p>
+            <p className="text-body" style={{ whiteSpace: 'pre-line' }}>{description}</p>
           </div>
         )}
         <div className="neo-modal__actions">

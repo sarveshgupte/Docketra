@@ -4,13 +4,17 @@
  * Persists saved views per user in localStorage.
  *
  * Storage key: docketra_saved_views_<userId>
+ *
+ * Note: requires a valid userId – returns empty/no-op API when userId is absent
+ * to prevent data leakage between unauthenticated sessions.
  */
 
 import { useState, useCallback } from 'react';
 
-const getStorageKey = (userId) => `docketra_saved_views_${userId || 'anonymous'}`;
+const getStorageKey = (userId) => `docketra_saved_views_${userId}`;
 
 const loadFromStorage = (userId) => {
+  if (!userId) return [];
   try {
     const stored = localStorage.getItem(getStorageKey(userId));
     return stored ? JSON.parse(stored) : [];
@@ -20,6 +24,7 @@ const loadFromStorage = (userId) => {
 };
 
 const saveToStorage = (userId, views) => {
+  if (!userId) return;
   try {
     localStorage.setItem(getStorageKey(userId), JSON.stringify(views));
   } catch {

@@ -79,7 +79,10 @@ export const CasesPage = () => {
   );
 
   const { showSuccess } = useToast();
-  const { savedViews, saveView, removeView, applySavedView } = useSavedViews(user?._id || user?.id || user?.email);
+  // Use a stable, unique identifier per user for saved-views storage.
+  // _id is the MongoDB ObjectId; id is an alias used in some API responses.
+  const savedViewsUserId = user?._id || user?.id || user?.email || null;
+  const { savedViews, saveView, removeView, applySavedView } = useSavedViews(savedViewsUserId);
 
   const [loading, setLoading] = useState(true);
   const [cases, setCases] = useState([]);
@@ -311,7 +314,7 @@ export const CasesPage = () => {
       setConfirmModal({
         title: 'Assign Cases',
         description: `Selected cases have mixed lifecycle states. Assign all ${selectedList.length} case(s) to yourself?`,
-        onConfirm: () => { setConfirmModal(null); doAssign(); },
+        onConfirm: async () => { setConfirmModal(null); await doAssign(); },
       });
       return;
     }
