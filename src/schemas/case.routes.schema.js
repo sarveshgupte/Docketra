@@ -1,7 +1,7 @@
-const { z, nonEmptyString } = require('./common');
+const { z, nonEmptyString, caseIdString } = require('./common');
 
-const caseIdParams = z.object({ caseId: nonEmptyString });
-const caseAndAttachmentParams = z.object({ caseId: nonEmptyString, attachmentId: nonEmptyString });
+const caseIdParams = z.object({ caseId: caseIdString });
+const caseAndAttachmentParams = z.object({ caseId: caseIdString, attachmentId: nonEmptyString });
 
 module.exports = {
   'GET /': { query: z.object({}).passthrough() },
@@ -43,7 +43,7 @@ module.exports = {
   'POST /:caseId/unassign': { params: caseIdParams, body: z.object({}).passthrough() },
   'GET /:caseId/client-fact-sheet': { params: caseIdParams, query: z.object({}).passthrough() },
   'GET /:caseId/client-fact-sheet/files/:fileId/view': {
-    params: z.object({ caseId: nonEmptyString, fileId: nonEmptyString }),
+    params: z.object({ caseId: caseIdString, fileId: nonEmptyString }),
     query: z.object({}).passthrough(),
   },
   'GET /:caseId/client-cfs/files': { params: caseIdParams, query: z.object({}).passthrough() },

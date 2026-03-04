@@ -474,4 +474,7 @@ userSchema.virtual('isLocked').get(function() {
 
 userSchema.plugin(softDeletePlugin);
 
+// VALIDATION: Strict schema enforcement
+userSchema.set('strict', true);
+
 module.exports = mongoose.model('User', userSchema);

@@ -613,4 +613,7 @@ clientSchema.pre('save', async function () {
   }
 });
 
+// VALIDATION: Strict schema enforcement
+clientSchema.set('strict', true);
+
 module.exports = mongoose.model('Client', clientSchema);

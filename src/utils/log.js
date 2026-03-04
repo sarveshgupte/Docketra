@@ -1,9 +1,7 @@
 const { randomUUID } = require('crypto');
-const { isSuperAdminRole } = require('./role.utils');
 
 /**
- * Structured logging helper to standardize log shape
- * All logs include: requestId, firmId (optional), userXID (optional), route, severity
+ * OBSERVABILITY: Structured logging & request tracing
  */
 const buildContext = (level, event, meta = {}) => {
   const { req = null, severity, ...rest } = meta || {};
@@ -11,27 +9,30 @@ const buildContext = (level, event, meta = {}) => {
   if (req && !req.requestId) {
     req.requestId = resolvedRequestId;
   }
-  const base = {
+
+  return {
     timestamp: new Date().toISOString(),
     severity: (severity || level).toUpperCase(),
     event,
     requestId: resolvedRequestId,
-    firmId: meta.firmId || req?.firmId || req?.firm?.id || null,
-    userXID: meta.userXID || req?.user?.xID || req?.user?.id || null,
+    firmId: meta.firmId || req?.firmId || req?.firm?.id || req?.user?.firmId || null,
+    userId: meta.userId || req?.user?._id || req?.user?.id || null,
+    userXID: meta.userXID || req?.user?.xID || null,
     route: meta.route || req?.originalUrl || req?.url || null,
     ...rest,
   };
-  return base;
 };
 
 const logAtLevel = (level, event, meta = {}) => {
   const context = buildContext(level, event, meta);
-  const role = meta.userRole || meta.role || meta.user?.role || meta.req?.user?.role;
-  const isSuperAdmin = isSuperAdminRole(role);
-  const firmLabel = isSuperAdmin ? 'superadmin' : (context.firmId || 'no-firm');
-  const prefix = `[${context.severity}][${context.requestId || 'no-req'}][${firmLabel}][${context.route || 'n/a'}]`;
   const logger = level === 'error' ? console.error : level === 'warn' ? console.warn : console.log;
-  logger(`${prefix} ${event}`, context);
+
+  if (process.env.NODE_ENV === 'production') {
+    logger(JSON.stringify(context));
+    return;
+  }
+
+  logger(`[${context.severity}][${context.requestId}] ${event}`, context);
 };
 
 module.exports = {
