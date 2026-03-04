@@ -365,3 +365,72 @@
   }
 }
 
+
+/* Task 1: Escalated SLA badge */
+.cases-page__sla-badge--escalated {
+  background: #fdf4ff;
+  color: #7e22ce;
+  border: 1px solid #e9d5ff;
+}
+
+/* Task 1: Escalated SLA tile */
+.cases-page__sla-tile--escalated {
+  border-color: #e9d5ff;
+  background: #fdf4ff;
+  color: #7e22ce;
+}
+
+/* Task 4: High workload indicator */
+.cases-page__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.cases-page__workload-warning {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  padding: 4px 10px;
+}
+
+/* Task 6: Bulk action bar */
+.cases-page__bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 8px 12px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+
+.cases-page__bulk-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0369a1;
+  margin-right: 4px;
+}
+
+.cases-page__bulk-clear {
+  background: transparent;
+  border: none;
+  font-size: 12px;
+  color: var(--text-muted, #64748b);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  padding: 0;
+}
+
+.cases-page__bulk-clear:hover {
+  color: var(--text-main);
+}

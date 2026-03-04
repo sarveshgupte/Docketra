@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Button } from '../components/common/Button';
@@ -11,10 +11,10 @@ import { EmptyState } from '../components/layout/EmptyState';
 import { AuditTimelineDrawer } from '../components/common/AuditTimelineDrawer';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
-import { useCaseView, CASE_VIEWS } from '../hooks/useCaseView';
+import { useCaseView, CASE_VIEWS, isEscalatedCase } from '../hooks/useCaseView';
 import { caseService } from '../services/caseService';
 import { worklistService } from '../services/worklistService';
-import { CASE_STATUS } from '../utils/constants';
+import { CASE_STATUS, USER_ROLES, WORKLOAD_THRESHOLD } from '../utils/constants';
 import { formatDateTime, formatAuditStamp } from '../utils/formatDateTime';
 import './CasesPage.css';
 
@@ -55,8 +55,9 @@ export const CasesPage = () => {
   const { isAdmin } = usePermissions();
   const navigate = useNavigate();
   const { firmSlug } = useParams();
+  const isPartner = user?.role === USER_ROLES.PARTNER;
 
-  const { activeView, setActiveView, applyView, availableViews } = useCaseView(isAdmin, user);
+  const { activeView, setActiveView, applyView, availableViews, applySmartDefault } = useCaseView(isAdmin, user);
 
   const [loading, setLoading] = useState(true);
   const [cases, setCases] = useState([]);
@@ -69,8 +70,11 @@ export const CasesPage = () => {
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const searchDebounceRef = useRef(null);
-  // Task 7: Performance Insight toggle
+  // Task 7: Performance Insight toggle (hidden for Partner role)
   const [showPerformance, setShowPerformance] = useState(false);
+  // Task 6: Bulk selection state
+  const [selectedCaseIds, setSelectedCaseIds] = useState(new Set());
+  const [bulkActionInProgress, setBulkActionInProgress] = useState(false);
 
   // Cleanup debounce timer on unmount (Task 6)
   useEffect(() => {
@@ -115,7 +119,10 @@ export const CasesPage = () => {
           casesData = response.data || [];
         }
       }
-      setCases(normalizeCases(casesData));
+      const normalized = normalizeCases(casesData);
+      setCases(normalized);
+      // Task 5: apply smart default view if no manual selection stored
+      applySmartDefault(normalized);
     } catch (err) {
       console.error('Failed to load cases:', err);
       setError(err);
@@ -159,6 +166,71 @@ export const CasesPage = () => {
       setAssigningCaseId(null);
     }
   };
+
+  // Task 6: Bulk action handlers
+  const handleToggleSelectCase = useCallback((caseId, isLocked) => {
+    if (isLocked) return;
+    setSelectedCaseIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(caseId)) next.delete(caseId);
+      else next.add(caseId);
+      return next;
+    });
+  }, []);
+
+  const handleSelectAll = useCallback((visibleCases) => {
+    setSelectedCaseIds((prev) => {
+      const selectableCases = visibleCases.filter((c) => !c.lockStatus?.isLocked);
+      if (selectableCases.every((c) => prev.has(c.caseId))) {
+        return new Set(); // deselect all
+      }
+      return new Set(selectableCases.map((c) => c.caseId));
+    });
+  }, []);
+
+  const handleBulkAssignToMe = useCallback(async () => {
+    const selectedList = cases.filter((c) => selectedCaseIds.has(c.caseId));
+    if (!selectedList.length) return;
+    const mixedStates = new Set(selectedList.map((c) => c.status)).size > 1;
+    if (mixedStates) {
+      const ok = window.confirm(
+        `Selected cases have mixed lifecycle states. Assign all ${selectedList.length} case(s) to yourself?`
+      );
+      if (!ok) return;
+    }
+    setBulkActionInProgress(true);
+    try {
+      await Promise.all(selectedList.map((c) => caseService.pullCase(c.caseId)));
+      setSelectedCaseIds(new Set());
+      await loadCases();
+    } catch (err) {
+      console.error('Bulk assign failed:', err);
+    } finally {
+      setBulkActionInProgress(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCaseIds, cases]);
+
+  const handleBulkMoveToWorkbasket = useCallback(async () => {
+    if (!isAdmin) return;
+    const selectedList = cases.filter((c) => selectedCaseIds.has(c.caseId));
+    if (!selectedList.length) return;
+    const ok = window.confirm(
+      `Move ${selectedList.length} case(s) to Workbasket?`
+    );
+    if (!ok) return;
+    setBulkActionInProgress(true);
+    try {
+      await Promise.all(selectedList.map((c) => caseService.moveCaseToGlobal(c.caseId)));
+      setSelectedCaseIds(new Set());
+      await loadCases();
+    } catch (err) {
+      console.error('Bulk move failed:', err);
+    } finally {
+      setBulkActionInProgress(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCaseIds, cases, isAdmin]);
 
   // Step 1: apply status filter (manual), then step 2: apply preset view predicate.
   const manuallyFilteredCases = useMemo(() => {
@@ -219,11 +291,26 @@ export const CasesPage = () => {
       totalOpen: cases.filter((c) => c.status === CASE_STATUS.OPEN || c.status === CASE_STATUS.PENDED).length,
       dueToday: cases.filter(isDueToday).length,
       overdue: cases.filter(isSlaBreached).length,
+      escalated: cases.filter(isEscalatedCase).length,
       filedLast7: cases.filter(
         (c) => c.status === CASE_STATUS.FILED && c.updatedAt && new Date(c.updatedAt) >= sevenDaysAgo
       ).length,
     };
   }, [cases]);
+
+  // Task 4: Assignment load indicator
+  const openAssignedCount = useMemo(
+    () =>
+      cases.filter(
+        (c) =>
+          c.status === CASE_STATUS.OPEN &&
+          (c.assignedTo === user?._id ||
+            c.assignedTo === user?.id ||
+            c.assignedToEmail === user?.email)
+      ).length,
+    [cases, user]
+  );
+  const isHighWorkload = openAssignedCount > WORKLOAD_THRESHOLD;
 
   // Task 7: Performance metrics (computed from all cases)
   const performanceMetrics = useMemo(() => {
@@ -267,11 +354,36 @@ export const CasesPage = () => {
 
   const columns = [
     {
+      key: '__select',
+      header: (
+        <input
+          type="checkbox"
+          aria-label="Select all"
+          checked={sortedCases.length > 0 && sortedCases.filter((c) => !c.lockStatus?.isLocked).every((c) => selectedCaseIds.has(c.caseId))}
+          onChange={() => handleSelectAll(sortedCases)}
+        />
+      ),
+      render: (row) => {
+        const isLocked = Boolean(row.lockStatus?.isLocked);
+        return (
+          <input
+            type="checkbox"
+            aria-label={`Select ${row.caseName}`}
+            checked={selectedCaseIds.has(row.caseId)}
+            disabled={isLocked}
+            onChange={() => handleToggleSelectCase(row.caseId, isLocked)}
+            onClick={(e) => e.stopPropagation()}
+          />
+        );
+      },
+    },
+    {
       key: 'caseName',
       header: 'Case Name',
       sortable: true,
       render: (row) => {
         const breached = isSlaBreached(row);
+        const escalated = isEscalatedCase(row);
         const dueToday = !breached && isDueToday(row);
         const recency = getRecencyLabel(row.updatedAt);
         return (
@@ -286,7 +398,12 @@ export const CasesPage = () => {
             {recency && (
               <span className="cases-page__recency" aria-label={recency}>{recency}</span>
             )}
-            {breached && (
+            {escalated && (
+              <span className="cases-page__sla-badge cases-page__sla-badge--escalated" aria-label="Escalated">
+                🔺 Escalated
+              </span>
+            )}
+            {breached && !escalated && (
               <span className="cases-page__sla-badge cases-page__sla-badge--breach" aria-label="SLA breached">
                 ⚠ SLA Overdue
               </span>
@@ -384,48 +501,70 @@ export const CasesPage = () => {
         <PageHeader
           title="Cases"
           description="Manage lifecycle, assignments, and status transitions."
-          actions={isAdmin ? <Button variant="primary" onClick={handleCreateCase}>New Case</Button> : null}
+          actions={
+            <div className="cases-page__header-actions">
+              {/* Task 4: High workload indicator */}
+              {isHighWorkload && (
+                <span className="cases-page__workload-warning" role="status" aria-live="polite">
+                  ⚠ High workload ({openAssignedCount} open)
+                </span>
+              )}
+              {isAdmin && <Button variant="primary" onClick={handleCreateCase}>New Case</Button>}
+            </div>
+          }
         />
 
-        {/* Task 1: SLA Summary Bar */}
-        <div className="cases-page__sla-bar" role="region" aria-label="SLA Summary">
-          <button
-            type="button"
-            className="cases-page__sla-tile"
-            onClick={() => { setStatusFilter(CASE_STATUS.OPEN); setActiveView('MY_OPEN'); }}
-            aria-label={`Total open cases: ${slaSummary.totalOpen}`}
-          >
-            <span className="cases-page__sla-tile-value">{slaSummary.totalOpen}</span>
-            <span className="cases-page__sla-tile-label">Open Cases</span>
-          </button>
-          <button
-            type="button"
-            className="cases-page__sla-tile cases-page__sla-tile--warning"
-            onClick={() => setActiveView('DUE_TODAY')}
-            aria-label={`Due today: ${slaSummary.dueToday}`}
-          >
-            <span className="cases-page__sla-tile-value">{slaSummary.dueToday}</span>
-            <span className="cases-page__sla-tile-label">Due Today</span>
-          </button>
-          <button
-            type="button"
-            className={`cases-page__sla-tile${slaSummary.overdue > 0 ? ' cases-page__sla-tile--danger' : ''}`}
-            onClick={() => { setStatusFilter('ALL'); setActiveView('MY_OPEN'); }}
-            aria-label={`Overdue: ${slaSummary.overdue}`}
-          >
-            <span className="cases-page__sla-tile-value">{slaSummary.overdue}</span>
-            <span className="cases-page__sla-tile-label">Overdue</span>
-          </button>
-          <button
-            type="button"
-            className="cases-page__sla-tile"
-            onClick={() => { setStatusFilter(CASE_STATUS.FILED); setActiveView('FILED'); }}
-            aria-label={`Filed last 7 days: ${slaSummary.filedLast7}`}
-          >
-            <span className="cases-page__sla-tile-value">{slaSummary.filedLast7}</span>
-            <span className="cases-page__sla-tile-label">Filed (7d)</span>
-          </button>
-        </div>
+        {/* Task 1: SLA Summary Bar — hidden for Partner (Task 8) */}
+        {!isPartner && (
+          <div className="cases-page__sla-bar" role="region" aria-label="SLA Summary">
+            <button
+              type="button"
+              className="cases-page__sla-tile"
+              onClick={() => { setStatusFilter(CASE_STATUS.OPEN); setActiveView('MY_OPEN'); }}
+              aria-label={`Total open cases: ${slaSummary.totalOpen}`}
+            >
+              <span className="cases-page__sla-tile-value">{slaSummary.totalOpen}</span>
+              <span className="cases-page__sla-tile-label">Open Cases</span>
+            </button>
+            <button
+              type="button"
+              className="cases-page__sla-tile cases-page__sla-tile--warning"
+              onClick={() => setActiveView('DUE_TODAY')}
+              aria-label={`Due today: ${slaSummary.dueToday}`}
+            >
+              <span className="cases-page__sla-tile-value">{slaSummary.dueToday}</span>
+              <span className="cases-page__sla-tile-label">Due Today</span>
+            </button>
+            <button
+              type="button"
+              className={`cases-page__sla-tile${slaSummary.overdue > 0 ? ' cases-page__sla-tile--danger' : ''}`}
+              onClick={() => { setStatusFilter('ALL'); setActiveView('OVERDUE'); }}
+              aria-label={`Overdue: ${slaSummary.overdue}`}
+            >
+              <span className="cases-page__sla-tile-value">{slaSummary.overdue}</span>
+              <span className="cases-page__sla-tile-label">Overdue</span>
+            </button>
+            {/* Task 1: Escalated metric */}
+            <button
+              type="button"
+              className={`cases-page__sla-tile${slaSummary.escalated > 0 ? ' cases-page__sla-tile--escalated' : ''}`}
+              onClick={() => { setStatusFilter('ALL'); setActiveView('ESCALATED'); }}
+              aria-label={`Escalated: ${slaSummary.escalated}`}
+            >
+              <span className="cases-page__sla-tile-value">{slaSummary.escalated}</span>
+              <span className="cases-page__sla-tile-label">Escalated</span>
+            </button>
+            <button
+              type="button"
+              className="cases-page__sla-tile"
+              onClick={() => { setStatusFilter(CASE_STATUS.FILED); setActiveView('FILED'); }}
+              aria-label={`Filed last 7 days: ${slaSummary.filedLast7}`}
+            >
+              <span className="cases-page__sla-tile-value">{slaSummary.filedLast7}</span>
+              <span className="cases-page__sla-tile-label">Filed (7d)</span>
+            </button>
+          </div>
+        )}
 
         {/* Task 6: Search & Quick Jump */}
         <div className="cases-page__search-bar">
@@ -455,6 +594,36 @@ export const CasesPage = () => {
           ))}
         </div>
 
+        {/* Task 6: Bulk action bar */}
+        {selectedCaseIds.size > 0 && (
+          <div className="cases-page__bulk-bar" role="toolbar" aria-label="Bulk actions">
+            <span className="cases-page__bulk-count">{selectedCaseIds.size} selected</span>
+            <Button
+              variant="outline"
+              onClick={handleBulkAssignToMe}
+              disabled={bulkActionInProgress}
+            >
+              Assign to Me
+            </Button>
+            {isAdmin && (
+              <Button
+                variant="outline"
+                onClick={handleBulkMoveToWorkbasket}
+                disabled={bulkActionInProgress}
+              >
+                Move to Workbasket
+              </Button>
+            )}
+            <button
+              type="button"
+              className="cases-page__bulk-clear"
+              onClick={() => setSelectedCaseIds(new Set())}
+            >
+              Clear
+            </button>
+          </div>
+        )}
+
         <SectionCard className="cases-page__filters" title="Filters" subtitle="Narrow down the case list by workflow status.">
           <label className="cases-page__filter-label" htmlFor="status-filter">Status</label>
           <select
@@ -471,52 +640,56 @@ export const CasesPage = () => {
           </select>
         </SectionCard>
 
-        {/* Task 7: Performance Insight */}
-        <div className="cases-page__perf-toggle">
-          <button
-            type="button"
-            className="cases-page__perf-toggle-btn"
-            onClick={() => setShowPerformance((v) => !v)}
-            aria-expanded={showPerformance}
-          >
-            {showPerformance ? '▲' : '▼'} Performance View
-          </button>
-        </div>
-        {showPerformance && (
-          <div className="cases-page__perf-panel" role="region" aria-label="Performance metrics">
-            {performanceMetrics ? (
-              <>
-                {performanceMetrics.avgDays !== null && (
-                  <div className="cases-page__perf-metric">
-                    <span className="cases-page__perf-metric-label">Avg. Time to Resolve</span>
-                    <span className="cases-page__perf-metric-value">{performanceMetrics.avgDays} days</span>
-                  </div>
+        {/* Task 7: Performance Insight — hidden for Partner (Task 8) */}
+        {!isPartner && (
+          <>
+            <div className="cases-page__perf-toggle">
+              <button
+                type="button"
+                className="cases-page__perf-toggle-btn"
+                onClick={() => setShowPerformance((v) => !v)}
+                aria-expanded={showPerformance}
+              >
+                {showPerformance ? '▲' : '▼'} Performance View
+              </button>
+            </div>
+            {showPerformance && (
+              <div className="cases-page__perf-panel" role="region" aria-label="Performance metrics">
+                {performanceMetrics ? (
+                  <>
+                    {performanceMetrics.avgDays !== null && (
+                      <div className="cases-page__perf-metric">
+                        <span className="cases-page__perf-metric-label">Avg. Time to Resolve</span>
+                        <span className="cases-page__perf-metric-value">{performanceMetrics.avgDays} days</span>
+                      </div>
+                    )}
+                    {performanceMetrics.pctBreach !== null && (
+                      <div className="cases-page__perf-metric">
+                        <span className="cases-page__perf-metric-label">Cases Breaching SLA</span>
+                        <span className={`cases-page__perf-metric-value${performanceMetrics.pctBreach > 20 ? ' cases-page__perf-metric-value--danger' : ''}`}>
+                          {performanceMetrics.pctBreach}%
+                        </span>
+                      </div>
+                    )}
+                    {performanceMetrics.pctWithinSla !== null && (
+                      <div className="cases-page__perf-metric">
+                        <span className="cases-page__perf-metric-label">Resolved Within SLA</span>
+                        <span className="cases-page__perf-metric-value cases-page__perf-metric-value--good">
+                          {performanceMetrics.pctWithinSla}%
+                        </span>
+                      </div>
+                    )}
+                    <div className="cases-page__perf-metric">
+                      <span className="cases-page__perf-metric-label">Total Resolved/Filed</span>
+                      <span className="cases-page__perf-metric-value">{performanceMetrics.resolvedCount}</span>
+                    </div>
+                  </>
+                ) : (
+                  <p className="cases-page__perf-empty">No resolved cases to compute metrics.</p>
                 )}
-                {performanceMetrics.pctBreach !== null && (
-                  <div className="cases-page__perf-metric">
-                    <span className="cases-page__perf-metric-label">Cases Breaching SLA</span>
-                    <span className={`cases-page__perf-metric-value${performanceMetrics.pctBreach > 20 ? ' cases-page__perf-metric-value--danger' : ''}`}>
-                      {performanceMetrics.pctBreach}%
-                    </span>
-                  </div>
-                )}
-                {performanceMetrics.pctWithinSla !== null && (
-                  <div className="cases-page__perf-metric">
-                    <span className="cases-page__perf-metric-label">Resolved Within SLA</span>
-                    <span className="cases-page__perf-metric-value cases-page__perf-metric-value--good">
-                      {performanceMetrics.pctWithinSla}%
-                    </span>
-                  </div>
-                )}
-                <div className="cases-page__perf-metric">
-                  <span className="cases-page__perf-metric-label">Total Resolved/Filed</span>
-                  <span className="cases-page__perf-metric-value">{performanceMetrics.resolvedCount}</span>
-                </div>
-              </>
-            ) : (
-              <p className="cases-page__perf-empty">No resolved cases to compute metrics.</p>
+              </div>
             )}
-          </div>
+          </>
         )}
 
         {error ? (
