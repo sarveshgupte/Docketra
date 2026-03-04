@@ -11,6 +11,69 @@ const { getLatestTenantMetrics, getTenantMetricsByRange } = require('../services
 
 const DEFAULT_AUDIT_LOG_LIMIT = 100;
 const MAX_AUDIT_LOG_LIMIT = 250;
+const MAX_EXPORT_ROWS = 5000;
+const MAX_REPORT_PAGE_LIMIT = 250;
+const MAX_REPORT_RANGE_DAYS = 366;
+
+const isValidDate = (value) => {
+  const date = new Date(value);
+  return !Number.isNaN(date.getTime());
+};
+
+const validateDateRangeWindow = (fromDate, toDate) => {
+  if (!isValidDate(fromDate) || !isValidDate(toDate)) {
+    return { valid: false, message: 'Invalid fromDate or toDate' };
+  }
+
+  const start = new Date(fromDate);
+  const end = new Date(toDate);
+  if (start > end) {
+    return { valid: false, message: 'fromDate must be before or equal to toDate' };
+  }
+
+  const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  if (days > MAX_REPORT_RANGE_DAYS) {
+    // PERFORMANCE: Hard cap enforced to prevent memory exhaustion
+    return { valid: false, message: `Date range cannot exceed ${MAX_REPORT_RANGE_DAYS} days` };
+  }
+
+  return { valid: true, start, end };
+};
+
+const hydrateCasesForReport = async (firmId, cases) => {
+  const clientIds = [...new Set(cases.map((item) => item.clientId).filter(Boolean))];
+  const assignedToXids = [...new Set(cases.map((item) => item.assignedToXID).filter(Boolean))];
+
+  // PERFORMANCE: Eliminated N+1 query pattern
+  const [clients, users] = await Promise.all([
+    Client.find({ firmId, clientId: { $in: clientIds } }).select('clientId businessName').lean(),
+    User.find({ firmId, xID: { $in: assignedToXids } }).select('xID email').lean(),
+  ]);
+
+  const clientMap = new Map(clients.map((item) => [item.clientId, item]));
+  const userMap = new Map(users.map((item) => [item.xID, item]));
+
+  return cases.map((caseItem) => {
+    const client = clientMap.get(caseItem.clientId);
+    const assignedUser = caseItem.assignedToXID ? userMap.get(caseItem.assignedToXID) : null;
+
+    return {
+      caseId: caseItem.caseId,
+      caseName: caseItem.caseName,
+      title: caseItem.title,
+      status: caseItem.status,
+      category: caseItem.category,
+      clientId: caseItem.clientId,
+      clientName: client ? client.businessName : 'Unknown',
+      assignedTo: assignedUser ? assignedUser.email : (caseItem.assignedToXID || ''),
+      createdAt: caseItem.createdAt,
+      createdBy: caseItem.createdBy,
+      pendingUntil: caseItem.pendingUntil,
+      ageingDays: caseItem.ageingDays,
+      ageingBucket: caseItem.ageingBucket,
+    };
+  });
+};
 
 const resolveFirmIdFromAuthContext = (req, res) => {
   const firmId = req.firmId || req.user?.firmId;
@@ -157,8 +220,15 @@ const getPendingCasesReport = async (req, res) => {
     
     // Fetch all pending cases
     // SECURITY: Enforcing tenant isolation (firm-scoped query)
-    const cases = await Case.find(matchStage).lean();
-    
+    const cases = await Case.find(matchStage).limit(MAX_EXPORT_ROWS + 1).lean();
+    if (cases.length > MAX_EXPORT_ROWS) {
+      // PERFORMANCE: Hard cap enforced to prevent memory exhaustion
+      return res.status(400).json({
+        success: false,
+        message: `Pending cases report exceeds ${MAX_EXPORT_ROWS} rows. Narrow your filters.`,
+      });
+    }
+
     // Calculate ageing for each case
     const today = new Date();
     const casesWithAgeing = cases.map(caseItem => {
@@ -187,33 +257,7 @@ const getPendingCasesReport = async (req, res) => {
       filteredCases = casesWithAgeing.filter(c => c.ageingBucket === ageingBucket);
     }
     
-    // Populate client names and resolve assignedTo xID to user info
-    const casesWithClientNames = [];
-    for (const caseItem of filteredCases) {
-      // SECURITY: Enforcing tenant isolation (firm-scoped query)
-      const client = await Client.findOne({ firmId, clientId: caseItem.clientId }).lean();
-      
-      // PR: xID Canonicalization - Resolve assignedToXID to user info for display
-      let assignedToDisplay = caseItem.assignedToXID || '';
-      if (caseItem.assignedToXID) {
-        // SECURITY: Enforcing tenant isolation (firm-scoped query)
-        const assignedUser = await User.findOne({ firmId, xID: caseItem.assignedToXID }).lean();
-        assignedToDisplay = assignedUser ? assignedUser.email : caseItem.assignedToXID;
-      }
-      
-      casesWithClientNames.push({
-        caseId: caseItem.caseId,
-        caseName: caseItem.caseName,
-        title: caseItem.title,
-        category: caseItem.category,
-        clientId: caseItem.clientId,
-        clientName: client ? client.businessName : 'Unknown',
-        assignedTo: assignedToDisplay, // Display email, not xID
-        pendingUntil: caseItem.pendingUntil,
-        ageingDays: caseItem.ageingDays,
-        ageingBucket: caseItem.ageingBucket,
-      });
-    }
+    const casesWithClientNames = await hydrateCasesForReport(firmId, filteredCases);
     
     // Sort by ageing descending (oldest first)
     casesWithClientNames.sort((a, b) => b.ageingDays - a.ageingDays);
@@ -233,23 +277,27 @@ const getPendingCasesReport = async (req, res) => {
       }
     });
     
-    const byEmployee = [];
-    for (const assignedToValue of Object.keys(byEmployeeMap)) {
-      // Try to find user by xID first, fallback to email for backward compatibility
-      // SECURITY: Enforcing tenant isolation (firm-scoped query)
-      let user = await User.findOne({
+    const employeeLookupValues = Object.keys(byEmployeeMap);
+    const normalizedEmails = employeeLookupValues.map((value) => String(value).trim().toLowerCase());
+    // PERFORMANCE: Eliminated N+1 query pattern
+    const [employeeUsersByXid, employeeUsersByEmail] = await Promise.all([
+      User.find({
         firmId,
-        xID: assignedToValue,
+        xID: { $in: employeeLookupValues },
         status: { $ne: 'deleted' },
-      }).lean();
-      if (!user) {
-        // SECURITY: Enforcing tenant isolation (firm-scoped query)
-        user = await User.findOne({
-          firmId,
-          email: String(assignedToValue).trim().toLowerCase(),
-          status: { $ne: 'deleted' },
-        }).lean();
-      }
+      }).select('xID email name').lean(),
+      User.find({
+        firmId,
+        email: { $in: normalizedEmails },
+        status: { $ne: 'deleted' },
+      }).select('xID email name').lean(),
+    ]);
+    const byXidMap = new Map(employeeUsersByXid.map((user) => [user.xID, user]));
+    const byEmailMap = new Map(employeeUsersByEmail.map((user) => [String(user.email).trim().toLowerCase(), user]));
+
+    const byEmployee = [];
+    for (const assignedToValue of employeeLookupValues) {
+      const user = byXidMap.get(assignedToValue) || byEmailMap.get(String(assignedToValue).trim().toLowerCase());
       byEmployee.push({
         xID: user ? user.xID : assignedToValue,
         email: user ? user.email : 'Unknown',
@@ -296,7 +344,16 @@ const getCasesByDateRange = async (req, res) => {
     const firmId = resolveFirmIdFromAuthContext(req, res);
     if (!firmId) return;
     const { fromDate, toDate, status, category, page = 1, limit = 50 } = req.query;
-    
+
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    if (!Number.isInteger(pageNum) || pageNum < 1 || !Number.isInteger(limitNum) || limitNum < 1 || limitNum > MAX_REPORT_PAGE_LIMIT) {
+      return res.status(400).json({
+        success: false,
+        message: `page must be >= 1 and limit must be between 1 and ${MAX_REPORT_PAGE_LIMIT}`,
+      });
+    }
+
     // Validate required parameters
     if (!fromDate || !toDate) {
       return res.status(400).json({
@@ -305,13 +362,18 @@ const getCasesByDateRange = async (req, res) => {
       });
     }
     
+    const rangeValidation = validateDateRangeWindow(fromDate, toDate);
+    if (!rangeValidation.valid) {
+      return res.status(400).json({ success: false, message: rangeValidation.message });
+    }
+
     // Build match stage
     // SECURITY: Enforcing tenant isolation (firm-scoped query)
     const matchStage = {
       firmId,
       createdAt: {
-        $gte: new Date(fromDate),
-        $lte: new Date(toDate),
+        $gte: rangeValidation.start,
+        $lte: rangeValidation.end,
       },
     };
     
@@ -323,52 +385,25 @@ const getCasesByDateRange = async (req, res) => {
     const total = await Case.countDocuments(matchStage);
     
     // Get paginated cases
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
     // SECURITY: Enforcing tenant isolation (firm-scoped query)
     const cases = await Case.find(matchStage)
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(parseInt(limit))
+      .limit(limitNum)
       .lean();
     
-    // Populate client names and resolve assignedTo xID to user info
-    const casesWithClientNames = [];
-    for (const caseItem of cases) {
-      // SECURITY: Enforcing tenant isolation (firm-scoped query)
-      const client = await Client.findOne({ firmId, clientId: caseItem.clientId }).lean();
-      
-      // PR #42: Resolve assignedTo xID to user info for display
-      let assignedToDisplay = caseItem.assignedToXID || '';
-      if (caseItem.assignedToXID) {
-        // Try to find user by xID first, fallback to email for backward compatibility
-        // SECURITY: Enforcing tenant isolation (firm-scoped query)
-        let assignedUser = await User.findOne({ firmId, xID: caseItem.assignedToXID }).lean();
-        assignedToDisplay = assignedUser ? assignedUser.email : caseItem.assignedToXID;
-      }
-      
-      casesWithClientNames.push({
-        caseId: caseItem.caseId,
-        caseName: caseItem.caseName,
-        title: caseItem.title,
-        status: caseItem.status,
-        category: caseItem.category,
-        clientId: caseItem.clientId,
-        clientName: client ? client.businessName : 'Unknown',
-        assignedTo: assignedToDisplay, // Display email, not xID
-        createdAt: caseItem.createdAt,
-        createdBy: caseItem.createdBy,
-      });
-    }
+    const casesWithClientNames = await hydrateCasesForReport(firmId, cases);
     
     res.json({
       success: true,
       data: {
         cases: casesWithClientNames,
         pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
+          page: pageNum,
+          limit: limitNum,
           total,
-          pages: Math.ceil(total / parseInt(limit)),
+          pages: Math.ceil(total / limitNum),
         },
       },
     });
@@ -401,54 +436,42 @@ const exportCasesCSV = async (req, res) => {
       });
     }
     
+    const rangeValidation = validateDateRangeWindow(fromDate, toDate);
+    if (!rangeValidation.valid) {
+      return res.status(400).json({ success: false, message: rangeValidation.message });
+    }
+
     // Build match stage
     // SECURITY: Enforcing tenant isolation (firm-scoped query)
     const matchStage = {
       firmId,
       createdAt: {
-        $gte: new Date(fromDate),
-        $lte: new Date(toDate),
+        $gte: rangeValidation.start,
+        $lte: rangeValidation.end,
       },
     };
     
     if (status) matchStage.status = status;
     if (category) matchStage.category = category;
     
-    // Get all matching cases (no pagination for export)
-    // SECURITY: Enforcing tenant isolation (firm-scoped query)
+    const total = await Case.countDocuments(matchStage);
+    if (total > MAX_EXPORT_ROWS) {
+      // PERFORMANCE: Hard cap enforced to prevent memory exhaustion
+      return res.status(400).json({
+        success: false,
+        message: `Export exceeds maximum row limit of ${MAX_EXPORT_ROWS}. Narrow your filters.`,
+      });
+    }
+
+    // Get all matching cases (bounded for export)
     // SECURITY: Enforcing tenant isolation (firm-scoped query)
     const cases = await Case.find(matchStage)
       .sort({ createdAt: -1 })
+      .limit(MAX_EXPORT_ROWS)
       .lean();
     
-    // Populate client names and resolve assignedTo xID to user info
-    const casesWithClientNames = [];
-    for (const caseItem of cases) {
-      // SECURITY: Enforcing tenant isolation (firm-scoped query)
-      const client = await Client.findOne({ firmId, clientId: caseItem.clientId }).lean();
-      
-      // PR #42: Resolve assignedTo xID to user info for display
-      let assignedToDisplay = caseItem.assignedToXID || '';
-      if (caseItem.assignedToXID) {
-        // Try to find user by xID first, fallback to email for backward compatibility
-        // SECURITY: Enforcing tenant isolation (firm-scoped query)
-        let assignedUser = await User.findOne({ firmId, xID: caseItem.assignedToXID }).lean();
-        assignedToDisplay = assignedUser ? assignedUser.email : caseItem.assignedToXID;
-      }
-      
-      casesWithClientNames.push({
-        caseId: caseItem.caseId,
-        caseName: caseItem.caseName,
-        title: caseItem.title,
-        status: caseItem.status,
-        category: caseItem.category,
-        clientId: caseItem.clientId,
-        clientName: client ? client.businessName : 'Unknown',
-        assignedTo: assignedToDisplay, // Display email, not xID
-        createdAt: caseItem.createdAt.toISOString(),
-        createdBy: caseItem.createdBy,
-      });
-    }
+    const hydratedCases = await hydrateCasesForReport(firmId, cases);
+    const casesWithClientNames = hydratedCases.map((item) => ({ ...item, createdAt: item.createdAt.toISOString() }));
     
     // Convert to CSV
     const fields = ['caseId', 'caseName', 'title', 'status', 'category', 'clientId', 'clientName', 'assignedTo', 'createdAt', 'createdBy'];
@@ -493,52 +516,40 @@ const exportCasesExcel = async (req, res) => {
       });
     }
     
+    const rangeValidation = validateDateRangeWindow(fromDate, toDate);
+    if (!rangeValidation.valid) {
+      return res.status(400).json({ success: false, message: rangeValidation.message });
+    }
+
     // Build match stage
     // SECURITY: Enforcing tenant isolation (firm-scoped query)
     const matchStage = {
       firmId,
       createdAt: {
-        $gte: new Date(fromDate),
-        $lte: new Date(toDate),
+        $gte: rangeValidation.start,
+        $lte: rangeValidation.end,
       },
     };
     
     if (status) matchStage.status = status;
     if (category) matchStage.category = category;
     
-    // Get all matching cases (no pagination for export)
-    const cases = await Case.find(matchStage)
-      .sort({ createdAt: -1 })
-      .lean();
-    
-    // Populate client names and resolve assignedTo xID to user info
-    const casesWithClientNames = [];
-    for (const caseItem of cases) {
-      // SECURITY: Enforcing tenant isolation (firm-scoped query)
-      const client = await Client.findOne({ firmId, clientId: caseItem.clientId }).lean();
-      
-      // PR #42: Resolve assignedTo xID to user info for display
-      let assignedToDisplay = caseItem.assignedToXID || '';
-      if (caseItem.assignedToXID) {
-        // Try to find user by xID first, fallback to email for backward compatibility
-        // SECURITY: Enforcing tenant isolation (firm-scoped query)
-        let assignedUser = await User.findOne({ firmId, xID: caseItem.assignedToXID }).lean();
-        assignedToDisplay = assignedUser ? assignedUser.email : caseItem.assignedToXID;
-      }
-      
-      casesWithClientNames.push({
-        caseId: caseItem.caseId,
-        caseName: caseItem.caseName,
-        title: caseItem.title,
-        status: caseItem.status,
-        category: caseItem.category,
-        clientId: caseItem.clientId,
-        clientName: client ? client.businessName : 'Unknown',
-        assignedTo: assignedToDisplay, // Display email, not xID
-        createdAt: caseItem.createdAt,
-        createdBy: caseItem.createdBy,
+    const total = await Case.countDocuments(matchStage);
+    if (total > MAX_EXPORT_ROWS) {
+      // PERFORMANCE: Hard cap enforced to prevent memory exhaustion
+      return res.status(400).json({
+        success: false,
+        message: `Export exceeds maximum row limit of ${MAX_EXPORT_ROWS}. Narrow your filters.`,
       });
     }
+
+    // Get all matching cases (bounded for export)
+    const cases = await Case.find(matchStage)
+      .sort({ createdAt: -1 })
+      .limit(MAX_EXPORT_ROWS)
+      .lean();
+    
+    const casesWithClientNames = await hydrateCasesForReport(firmId, cases);
     
     // Create Excel workbook
     const workbook = new ExcelJS.Workbook();
@@ -568,7 +579,7 @@ const exportCasesExcel = async (req, res) => {
         category: caseItem.category,
         clientId: caseItem.clientId,
         clientName: caseItem.clientName,
-        assignedTo: caseItem.assignedToXID,
+        assignedTo: caseItem.assignedTo,
         createdAt: caseItem.createdAt.toISOString().replace('T', ' ').substring(0, 19),
         createdBy: caseItem.createdBy,
       });
@@ -610,19 +621,28 @@ const exportCasesExcel = async (req, res) => {
 const getAuditLogs = async (req, res) => {
   try {
     const { xID, action, timestamp, limit = DEFAULT_AUDIT_LOG_LIMIT } = req.query;
-    const cappedLimit = Math.min(
-      Math.max(parseInt(limit, 10) || DEFAULT_AUDIT_LOG_LIMIT, 1),
-      MAX_AUDIT_LOG_LIMIT
-    );
+    const parsedLimit = parseInt(limit, 10);
+    if (Number.isNaN(parsedLimit) || parsedLimit < 1) {
+      return res.status(400).json({ success: false, message: 'limit must be a positive integer' });
+    }
+    if (parsedLimit > MAX_AUDIT_LOG_LIMIT) {
+      // PERFORMANCE: Hard cap enforced to prevent memory exhaustion
+      return res.status(400).json({
+        success: false,
+        message: `limit cannot exceed ${MAX_AUDIT_LOG_LIMIT}`,
+      });
+    }
+    const cappedLimit = parsedLimit;
     const since = timestamp ? new Date(timestamp) : null;
 
     const resolvedFirmId = resolveFirmIdFromAuthContext(req, res);
     if (!resolvedFirmId) return;
     const firmId = String(resolvedFirmId);
-    // SECURITY: Enforcing tenant isolation (firm-scoped query)
-    const caseIdsForFirm = await Case.find({ firmId }).distinct('caseId');
-    // SECURITY: Enforcing tenant isolation (firm-scoped query)
-    const caseAuditFilter = { caseId: { $in: caseIdsForFirm } };
+    if (timestamp && Number.isNaN(since.getTime())) {
+      return res.status(400).json({ success: false, message: 'Invalid timestamp filter' });
+    }
+    // PERFORMANCE: Optimized audit query to avoid large $in arrays
+    const caseAuditFilter = { firmId };
     if (xID) caseAuditFilter.performedByXID = xID;
     if (action) caseAuditFilter.actionType = action;
     if (since) caseAuditFilter.timestamp = { $gte: since };
@@ -633,12 +653,41 @@ const getAuditLogs = async (req, res) => {
     if (action) authAuditFilter.actionType = action;
     if (since) authAuditFilter.timestamp = { $gte: since };
 
-    const [caseLogs, authLogs] = await Promise.all([
-      // SECURITY: Enforcing tenant isolation (firm-scoped query)
-      CaseAudit.find(caseAuditFilter).sort({ timestamp: -1 }).limit(cappedLimit).lean(),
-      // SECURITY: Enforcing tenant isolation (firm-scoped query)
-      AuthAudit.find(authAuditFilter).sort({ timestamp: -1 }).limit(cappedLimit).lean(),
-    ]);
+    // PERFORMANCE: Optimized audit query to avoid large $in arrays
+    const directCaseLogs = await CaseAudit.find(caseAuditFilter)
+      .sort({ timestamp: -1 })
+      .limit(cappedLimit)
+      .lean();
+
+    let caseLogs = directCaseLogs;
+    if (caseLogs.length < cappedLimit) {
+      const legacyCaseAuditPipeline = [
+        { $match: { firmId: { $exists: false } } },
+        ...(xID ? [{ $match: { performedByXID: xID } }] : []),
+        ...(action ? [{ $match: { actionType: action } }] : []),
+        ...(since ? [{ $match: { timestamp: { $gte: since } } }] : []),
+        {
+          $lookup: {
+            from: 'cases',
+            let: { auditCaseId: '$caseId' },
+            pipeline: [
+              { $match: { $expr: { $and: [{ $eq: ['$caseId', '$$auditCaseId'] }, { $eq: ['$firmId', firmId] }] } } },
+              { $project: { _id: 1 } },
+            ],
+            as: 'tenantCase',
+          },
+        },
+        { $match: { tenantCase: { $ne: [] } } },
+        { $sort: { timestamp: -1 } },
+        { $limit: cappedLimit - caseLogs.length },
+      ];
+
+      const legacyCaseLogs = await CaseAudit.aggregate(legacyCaseAuditPipeline);
+      caseLogs = [...caseLogs, ...legacyCaseLogs];
+    }
+
+    // SECURITY: Enforcing tenant isolation (firm-scoped query)
+    const authLogs = await AuthAudit.find(authAuditFilter).sort({ timestamp: -1 }).limit(cappedLimit).lean();
 
     const combined = [
       ...caseLogs.map((item) => ({
