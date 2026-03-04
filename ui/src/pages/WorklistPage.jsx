@@ -18,15 +18,17 @@ import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { Loading } from '../components/common/Loading';
 import { Button } from '../components/common/Button';
-import { useAuth } from '../hooks/useAuth';
+import { PageHeader } from '../components/layout/PageHeader';
+import { EmptyState } from '../components/layout/EmptyState';
+import { PriorityPill } from '../components/common/PriorityPill';
 import { worklistService } from '../services/worklistService';
-import { CASE_STATUS } from '../utils/constants';
 import { formatDate } from '../utils/formatters';
+import { getStatusLabel } from '../utils/statusDisplay';
+import { UX_COPY } from '../constants/uxCopy';
 import api from '../services/api';
 import './WorklistPage.css';
 
 export const WorklistPage = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { firmSlug } = useParams();
@@ -105,18 +107,15 @@ export const WorklistPage = () => {
   return (
     <Layout>
       <div className="worklist">
-        <div className="worklist__header">
-          <div className="worklist__header-left">
-            <h1 className="worklist__title">{pageInfo.title}</h1>
-            <p className="worklist__description">{pageInfo.description}</p>
-          </div>
-          <button
-            className="btn btn-primary worklist__create-btn"
-            onClick={() => navigate(`/app/firm/${firmSlug}/cases/create`)}
-          >
-            + New Case
-          </button>
-        </div>
+        <PageHeader
+          title={pageInfo.title}
+          description={pageInfo.description}
+          actions={(
+            <Button variant="primary" onClick={() => navigate(`/app/firm/${firmSlug}/cases/create`)}>
+              {UX_COPY.actions.CREATE_CASE}
+            </Button>
+          )}
+        />
 
         <div className="worklist__toolbar">
           <span className="worklist__count">
@@ -126,27 +125,12 @@ export const WorklistPage = () => {
 
         <Card>
           {cases.length === 0 ? (
-            <div className="worklist__empty">
-              <div className="worklist__empty-icon" aria-hidden="true">
-                {isPendingView ? '⏸' : '✅'}
-              </div>
-              <h3 className="worklist__empty-title">
-                {isPendingView ? 'No pending cases' : 'All clear!'}
-              </h3>
-              <p className="worklist__empty-desc">
-                {isPendingView
-                  ? 'No cases are currently on hold.'
-                  : 'No open cases assigned to you right now.'}
-              </p>
-              {!isPendingView && (
-                <button
-                  className="btn btn-primary worklist__empty-cta"
-                  onClick={() => navigate(`/app/firm/${firmSlug}/cases/create`)}
-                >
-                  Create a Case
-                </button>
-              )}
-            </div>
+            <EmptyState
+              title={isPendingView ? 'No pending cases right now.' : UX_COPY.emptyStates.NO_MY_OPEN}
+              description={isPendingView ? 'There are no cases currently in review.' : 'No open cases are assigned to you right now.'}
+              actionLabel={!isPendingView ? UX_COPY.actions.CREATE_CASE : undefined}
+              onAction={!isPendingView ? () => navigate(`/app/firm/${firmSlug}/cases/create`) : undefined}
+            />
           ) : (
             <div className="worklist__table-wrap">
               <table className="neo-table" role="grid" aria-label={pageInfo.title}>
@@ -156,6 +140,7 @@ export const WorklistPage = () => {
                     <th scope="col">Category</th>
                     <th scope="col">Client ID</th>
                     <th scope="col">Status</th>
+                    <th scope="col">Priority</th>
                     {isPendingView && <th scope="col">Pending Until</th>}
                     <th scope="col">Created</th>
                     <th scope="col">Last Updated</th>
@@ -169,15 +154,16 @@ export const WorklistPage = () => {
                       onKeyDown={(e) => e.key === 'Enter' && handleCaseClick(caseItem.caseId)}
                       tabIndex={0}
                       role="row"
-                      aria-label={`Case: ${caseItem.caseName}, status ${caseItem.status}`}
+                      aria-label={`Case: ${caseItem.caseName}, status ${getStatusLabel(caseItem.status)}`}
                       className="worklist__row"
                     >
                       <td>{caseItem.caseName}</td>
                       <td>{caseItem.category}</td>
                       <td>{caseItem.clientId || '—'}</td>
                       <td>
-                        <Badge status={caseItem.status}>{caseItem.status}</Badge>
+                        <Badge status={caseItem.status}>{getStatusLabel(caseItem.status)}</Badge>
                       </td>
+                      <td><PriorityPill caseRecord={caseItem} /></td>
                       {isPendingView && (
                         <td>{formatDate(caseItem.pendingUntil)}</td>
                       )}

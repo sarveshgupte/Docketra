@@ -9,6 +9,7 @@ import { DataTable } from '../components/layout/DataTable';
 import { StatusBadge } from '../components/layout/StatusBadge';
 import { EmptyState } from '../components/layout/EmptyState';
 import { AuditTimelineDrawer } from '../components/common/AuditTimelineDrawer';
+import { PriorityPill } from '../components/common/PriorityPill';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
 import { useCaseView, CASE_VIEWS, isEscalatedCase } from '../hooks/useCaseView';
@@ -20,6 +21,7 @@ import { getFirmConfig } from '../utils/firmConfig';
 import { useFeatureFlag } from '../hooks/useFeatureFlag';
 import { formatDateTime, formatAuditStamp } from '../utils/formatDateTime';
 import { buildCsv } from '../utils/csv';
+import { UX_COPY } from '../constants/uxCopy';
 import './CasesPage.css';
 
 // Keep date-sort keys explicit so additional date columns can be added safely.
@@ -453,8 +455,6 @@ export const CasesPage = () => {
       sortable: true,
       render: (row) => {
         const breached = isSlaBreached(row);
-        const escalated = isEscalatedCase(row, firmConfig.escalationInactivityThresholdHours);
-        const dueToday = !breached && isDueToday(row);
         const recency = getRecencyLabel(row.updatedAt);
         return (
           <div className={`cases-page__name-cell${breached ? ' cases-page__name-cell--sla-breach' : ''}`}>
@@ -468,21 +468,7 @@ export const CasesPage = () => {
             {recency && (
               <span className="cases-page__recency" aria-label={recency}>{recency}</span>
             )}
-            {escalated && (
-              <span className="cases-page__sla-badge cases-page__sla-badge--escalated" aria-label="Escalated">
-                🔺 Escalated
-              </span>
-            )}
-            {breached && !escalated && (
-              <span className="cases-page__sla-badge cases-page__sla-badge--breach" aria-label="SLA breached">
-                ⚠ SLA Overdue
-              </span>
-            )}
-            {dueToday && (
-              <span className="cases-page__sla-badge cases-page__sla-badge--today" aria-label="Due today">
-                🕐 Due Today
-              </span>
-            )}
+            <PriorityPill caseRecord={row} inactivityThresholdHours={firmConfig.escalationInactivityThresholdHours} />
           </div>
         );
       },
@@ -546,7 +532,7 @@ export const CasesPage = () => {
                   disabled={assigningCaseId === row.caseId}
                   onClick={(event) => handleAssignToMe(row, event)}
                 >
-                  {assigningCaseId === row.caseId ? 'Assigning…' : 'Assign to Me'}
+                  {assigningCaseId === row.caseId ? 'Assigning…' : UX_COPY.actions.ASSIGN_TO_ME}
                 </button>
               )}
               <button
@@ -579,15 +565,20 @@ export const CasesPage = () => {
                   ⚠ High workload ({openAssignedCount} open)
                 </span>
               )}
-              <Button variant="outline" onClick={handleExportCsv}>Export CSV</Button>
-              {isAdmin && <Button variant="primary" onClick={handleCreateCase}>New Case</Button>}
+              <Button variant="outline" onClick={handleExportCsv}>{UX_COPY.actions.EXPORT_CASES}</Button>
+              {!isPartner && enablePerformanceView && (
+                <Button variant="outline" onClick={() => setShowPerformance((v) => !v)}>
+                  {showPerformance ? 'Hide Performance View' : 'Show Performance View'}
+                </Button>
+              )}
+              {isAdmin && <Button variant="primary" onClick={handleCreateCase}>{UX_COPY.actions.CREATE_CASE}</Button>}
             </div>
           }
         />
 
         {/* Task 1: SLA Summary Bar — hidden for Partner (Task 8) */}
         {!isPartner && (
-          <div className="cases-page__sla-bar" role="region" aria-label="SLA Summary">
+          <div className="cases-page__sla-bar cases-page__control-section" role="region" aria-label="SLA Summary">
             <button
               type="button"
               className="cases-page__sla-tile"
@@ -640,7 +631,7 @@ export const CasesPage = () => {
         )}
 
         {/* Task 6: Search & Quick Jump */}
-        <div className="cases-page__search-bar">
+        <div className="cases-page__search-bar cases-page__control-section">
           <input
             type="search"
             className="cases-page__search-input"
@@ -652,7 +643,7 @@ export const CasesPage = () => {
         </div>
 
         {/* Preset operational view tabs */}
-        <div className="cases-page__views" role="tablist" aria-label="Case views">
+        <div className="cases-page__views cases-page__control-section" role="tablist" aria-label="Case views">
           {availableViews.map((view) => (
             <button
               key={view.id}
@@ -669,14 +660,14 @@ export const CasesPage = () => {
 
         {/* Task 6: Bulk action bar */}
         {enableBulkActions && selectedCaseIds.size > 0 && (
-          <div className="cases-page__bulk-bar" role="toolbar" aria-label="Bulk actions">
+          <div className="cases-page__bulk-bar cases-page__control-section" role="toolbar" aria-label="Bulk actions">
             <span className="cases-page__bulk-count">{selectedCaseIds.size} selected</span>
             <Button
               variant="outline"
               onClick={handleBulkAssignToMe}
               disabled={bulkActionInProgress}
             >
-              Assign to Me
+              {UX_COPY.actions.ASSIGN_TO_ME}
             </Button>
             {isAdmin && (
               <Button
@@ -684,7 +675,7 @@ export const CasesPage = () => {
                 onClick={handleBulkMoveToWorkbasket}
                 disabled={bulkActionInProgress}
               >
-                Move to Workbasket
+                {UX_COPY.actions.MOVE_TO_WORKBASKET}
               </Button>
             )}
             <button
@@ -697,7 +688,7 @@ export const CasesPage = () => {
           </div>
         )}
 
-        <SectionCard className="cases-page__filters" title="Filters" subtitle="Narrow down the case list by workflow status.">
+        <SectionCard className="cases-page__filters cases-page__control-section" title="Filters" subtitle="Narrow down the case list by workflow status.">
           <label className="cases-page__filter-label" htmlFor="status-filter">Status</label>
           <select
             id="status-filter"
@@ -706,26 +697,16 @@ export const CasesPage = () => {
             onChange={(e) => setStatusFilter(e.target.value)}
           >
             <option value="ALL">All statuses</option>
-            <option value={CASE_STATUS.OPEN}>Open</option>
-            <option value={CASE_STATUS.PENDED}>In Review</option>
-            <option value={CASE_STATUS.RESOLVED}>Resolved</option>
-            <option value={CASE_STATUS.FILED}>Filed</option>
+            <option value={CASE_STATUS.OPEN}>{UX_COPY.statusLabels.OPEN}</option>
+            <option value={CASE_STATUS.PENDED}>{UX_COPY.statusLabels.PENDED}</option>
+            <option value={CASE_STATUS.RESOLVED}>{UX_COPY.statusLabels.RESOLVED}</option>
+            <option value={CASE_STATUS.FILED}>{UX_COPY.statusLabels.FILED}</option>
           </select>
         </SectionCard>
 
         {/* Task 7: Performance Insight — hidden for Partner (Task 8) */}
         {!isPartner && enablePerformanceView && (
           <>
-            <div className="cases-page__perf-toggle">
-              <button
-                type="button"
-                className="cases-page__perf-toggle-btn"
-                onClick={() => setShowPerformance((v) => !v)}
-                aria-expanded={showPerformance}
-              >
-                {showPerformance ? '▲' : '▼'} Performance View
-              </button>
-            </div>
             {showPerformance && (
               <div className="cases-page__perf-panel" role="region" aria-label="Performance metrics">
                 {performanceMetrics ? (
@@ -807,15 +788,15 @@ export const CasesPage = () => {
               <EmptyState
                 title={
                   activeView === CASE_VIEWS.OVERDUE.id
-                    ? 'No overdue cases. Good job.'
+                    ? UX_COPY.emptyStates.NO_OVERDUE
                     : activeView === CASE_VIEWS.ESCALATED.id
-                      ? 'No escalations. System is stable.'
+                      ? UX_COPY.emptyStates.NO_ESCALATED
                       : activeView === CASE_VIEWS.MY_OPEN.id
-                        ? 'You have no active cases assigned.'
+                        ? UX_COPY.emptyStates.NO_MY_OPEN
                         : isAdmin ? 'No cases yet' : 'No assigned cases'
                 }
                 description={isAdmin ? 'Create your first case to start managing firm workflows.' : 'You do not have assigned cases right now.'}
-                actionLabel={isAdmin ? 'Create Case' : undefined}
+                actionLabel={isAdmin ? UX_COPY.actions.CREATE_CASE : undefined}
                 onAction={isAdmin ? handleCreateCase : undefined}
               />
             }
