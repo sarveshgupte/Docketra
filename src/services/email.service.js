@@ -948,7 +948,32 @@ ${numberOfUsers ? `Number of Users: ${numberOfUsers}` : ''}
   return sendEmail({ to, subject, html, text }, context);
 };
 
+const sendFirmSetupEmail = async ({
+  email,
+  name,
+  firmName,
+  workspaceUrl,
+  xid,
+  context = null,
+}) => {
+  const subject = 'Your Docketra workspace is ready';
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
+      <h2>Welcome to Docketra, ${name}!</h2>
+      <p>Your firm workspace has been created successfully.</p>
+      <p><strong>Firm name:</strong> ${firmName}</p>
+      <p><strong>Workspace URL:</strong> <a href="${workspaceUrl}">${workspaceUrl}</a></p>
+      <p><strong>User xID:</strong> ${xid}</p>
+      <p>Best regards,<br/>Docketra Team</p>
+    </div>
+  `;
+  const text = `Welcome to Docketra, ${name}!\n\nYour firm workspace has been created successfully.\nFirm name: ${firmName}\nWorkspace URL: ${workspaceUrl}\nUser xID: ${xid}\n\nBest regards,\nDocketra Team`;
+
+  return sendEmail({ to: email, subject, html, text }, context);
+};
+
 module.exports = {
+  sendEmail,
   generateSecureToken,
   hashToken,
   sendPasswordSetupEmail,
@@ -956,6 +981,7 @@ module.exports = {
   sendPasswordResetEmail,
   sendForgotPasswordEmail,
   sendAdminPasswordResetEmail,
+  sendFirmSetupEmail,
   sendEnterpriseInquiryNotification,
   sendTestEmail,
   maskEmail,
