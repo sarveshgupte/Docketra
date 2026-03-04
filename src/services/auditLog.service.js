@@ -145,7 +145,7 @@ const logCaseHistory = async ({
  * @param {Object} options.req - Express request object (optional, for impersonation context)
  * @returns {Promise<Object>} Created audit entry
  */
-const logCaseAction = async ({ caseId, actionType, description, performedByXID, metadata = {}, req }) => {
+const logCaseAction = async ({ caseId, firmId, actionType, description, performedByXID, metadata = {}, req }) => {
   try {
     // Validate required fields
     if (!caseId || !actionType || !description || !performedByXID) {
@@ -161,6 +161,7 @@ const logCaseAction = async ({ caseId, actionType, description, performedByXID, 
     // Create audit entry
     const auditEntry = await CaseAudit.create({
       caseId,
+      firmId: firmId || metadata?.firmId || null,
       actionType,
       description,
       performedByXID: performedByXID.toUpperCase(),
@@ -190,7 +191,7 @@ const logCaseAction = async ({ caseId, actionType, description, performedByXID, 
  * @param {Object} options.req - Express request object (optional, for impersonation context)
  * @returns {Promise<void>}
  */
-const logCaseListViewed = async ({ viewerXID, filters = {}, listType, resultCount = 0, req }) => {
+const logCaseListViewed = async ({ viewerXID, firmId, filters = {}, listType, resultCount = 0, req }) => {
   try {
     if (!viewerXID || !listType) {
       console.error('[AUDIT] Missing required fields for list view audit');
@@ -212,6 +213,7 @@ const logCaseListViewed = async ({ viewerXID, filters = {}, listType, resultCoun
     // Use a special marker to indicate this is a list view
     await CaseAudit.create({
       caseId: `LIST_VIEW:${listType}`,
+      firmId: firmId || req?.firmId || req?.user?.firmId || null,
       actionType: 'CASE_LIST_VIEWED',
       description,
       performedByXID: viewerXID.toUpperCase(),
