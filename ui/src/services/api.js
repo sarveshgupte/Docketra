@@ -1,6 +1,6 @@
 /**
  * Axios API Client Configuration
- * Updated for JWT Bearer token authentication
+ * Updated for cookie-session authentication
  */
 
 import axios from 'axios';
@@ -41,7 +41,7 @@ function generateIdempotencyKey() {
   return 'idemp-' + Math.random().toString(36).substring(2) + Date.now();
 }
 
-// Request interceptor - Add JWT Bearer token
+// Request interceptor
 api.interceptors.request.use(
   (config) => {
     const method = (config.method || '').toLowerCase();
@@ -59,11 +59,6 @@ api.interceptors.request.use(
       }
     }
 
-    const accessToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-    if (accessToken) {
-      config.headers['Authorization'] = `Bearer ${accessToken}`;
-    }
-    
     // Add impersonation header if SuperAdmin is impersonating a firm
     const impersonatedFirm = localStorage.getItem(STORAGE_KEYS.IMPERSONATED_FIRM);
     if (impersonatedFirm) {

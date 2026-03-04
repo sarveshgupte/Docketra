@@ -16,7 +16,6 @@
 import React, { createContext, useState, useCallback, useEffect, useRef } from 'react';
 import { authService } from '../services/authService';
 import { STORAGE_KEYS } from '../utils/constants';
-import { isSuperAdmin } from '../utils/authUtils';
 
 export const AuthContext = createContext(null);
 
@@ -26,25 +25,17 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isHydrating, setIsHydrating] = useState(true); // Start true, boot effect will resolve it
   const bootHydratedRef = useRef(false);
-  const profileFetchAttemptedRef = useRef(null); // Token-based guard for profile hydration
   const profileFetchInFlightRef = useRef(false);
 
   useEffect(() => {
     if (bootHydratedRef.current) return;
     bootHydratedRef.current = true;
 
-    try {
-      localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-    } catch (error) {
-      console.warn('[AUTH] Unable to access storage during hydration.', error);
-      setLoading(false);
-      setIsHydrating(false);
-      return;
-    }
-
     fetchProfile()
       .catch((error) => {
-        console.error('[AUTH] Profile hydration failed.', error);
+        if (error?.response?.status !== 401) {
+          console.error('[AUTH] Profile hydration failed.', error);
+        }
       })
       .finally(() => {
         setLoading(false);
@@ -71,7 +62,6 @@ export const AuthProvider = ({ children }) => {
     clearAuthStorage();
     setUser(null);
     setIsAuthenticated(false);
-    profileFetchAttemptedRef.current = null;
     profileFetchInFlightRef.current = false;
   }, [clearAuthStorage]);
 
@@ -110,18 +100,6 @@ export const AuthProvider = ({ children }) => {
       return { success: false, data: null };
     }
 
-    let accessToken = null;
-    try {
-      accessToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-    } catch (error) {
-      console.warn('[AUTH] Unable to access storage while fetching profile.', error);
-      return { success: false, data: null };
-    }
-    const tokenKey = accessToken || '__cookie_session__';
-    if (profileFetchAttemptedRef.current === tokenKey) {
-      return { success: false, data: null };
-    }
-    profileFetchAttemptedRef.current = tokenKey;
     profileFetchInFlightRef.current = true;
 
     try {
