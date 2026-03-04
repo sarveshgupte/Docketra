@@ -7,6 +7,34 @@ import './AuditTimelineDrawer.css';
 // Keep drawer compact while surfacing recent immutable audit activity.
 const MAX_TIMELINE_EVENTS = 10;
 
+// Actions that represent lifecycle stage transitions (not comments/attachments)
+const LIFECYCLE_ACTIONS = new Set([
+  'CREATED', 'OPENED', 'ASSIGNED', 'RESOLVED', 'FILED', 'PENDED', 'UNPENDED',
+  'UNASSIGNED', 'PULLED', 'MOVED_TO_GLOBAL', 'STAGE_CHANGE',
+]);
+const IRREVERSIBLE_ACTIONS = new Set(['RESOLVED', 'FILED']);
+
+const ACTION_ICONS = {
+  RESOLVED: '✓',
+  FILED: '📤',
+  PENDED: '⏳',
+  UNPENDED: '🔁',
+  CREATED: '📋',
+  OPENED: '📋',
+  ASSIGNED: '👤',
+  PULLED: '👤',
+  UNASSIGNED: '↩',
+  MOVED_TO_GLOBAL: '↩',
+};
+
+const getActionIcon = (action = '') => {
+  const key = action.toUpperCase();
+  return ACTION_ICONS[key] || null;
+};
+
+const isLifecycleEvent = (action = '') => LIFECYCLE_ACTIONS.has(action.toUpperCase());
+const isIrreversible = (action = '') => IRREVERSIBLE_ACTIONS.has(action.toUpperCase());
+
 const normalizeEvents = (data = {}) => {
   const source = data.auditLog?.length ? data.auditLog : data.history || [];
   return source
@@ -20,6 +48,8 @@ const normalizeEvents = (data = {}) => {
         event.createdByName ||
         'System',
       timestamp: event.timestamp || event.createdAt,
+      // description: auditLog entries provide `description`; legacy history entries may provide `comment`
+      description: event.description || event.comment || '',
     }))
     .slice(0, MAX_TIMELINE_EVENTS);
 };
@@ -73,14 +103,30 @@ export const AuditTimelineDrawer = ({ isOpen, onClose, caseId, events }) => {
         {loading ? <p className="audit-drawer__meta">Loading timeline…</p> : null}
         {!loading && !timelineItems.length ? <p className="audit-drawer__meta">No audit events available.</p> : null}
         <div className="audit-drawer__list">
-          {timelineItems.map((entry) => (
-            <div key={entry.id} className="audit-drawer__item">
-              <p className="audit-drawer__action">{entry.action}</p>
-              <p className="audit-drawer__detail">
-                {entry.actor} • {formatDateTime(entry.timestamp)}
-              </p>
-            </div>
-          ))}
+          {timelineItems.map((entry, idx) => {
+            const lifecycle = isLifecycleEvent(entry.action);
+            const irreversible = isIrreversible(entry.action);
+            const icon = getActionIcon(entry.action);
+            // Insert a separator before the first comment after lifecycle events
+            const prevLifecycle = idx > 0 && isLifecycleEvent(timelineItems[idx - 1].action);
+            const showSeparator = !lifecycle && prevLifecycle;
+            return (
+              <React.Fragment key={entry.id}>
+                {showSeparator && <div className="audit-drawer__separator" aria-hidden="true">Comments &amp; Notes</div>}
+                <div className={`audit-drawer__item${lifecycle ? ' audit-drawer__item--lifecycle' : ''}${irreversible ? ' audit-drawer__item--irreversible' : ''}`}>
+                  <div className="audit-drawer__item-row">
+                    {icon && <span className="audit-drawer__icon" aria-hidden="true">{icon}</span>}
+                    <p className="audit-drawer__action">{entry.action}</p>
+                    {irreversible && <span className="audit-drawer__irreversible-tag" title="This action is irreversible">Final</span>}
+                  </div>
+                  <p className="audit-drawer__detail">
+                    {entry.actor} • {formatDateTime(entry.timestamp)}
+                  </p>
+                  {entry.description ? <p className="audit-drawer__description">{entry.description}</p> : null}
+                </div>
+              </React.Fragment>
+            );
+          })}
         </div>
       </aside>
     </div>

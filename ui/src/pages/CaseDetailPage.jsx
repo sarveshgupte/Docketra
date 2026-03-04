@@ -645,6 +645,60 @@ export const CaseDetailPage = () => {
           </div>
         )}
 
+        {/* ─── Lifecycle Status Panel (Task 4) ──────────────────── */}
+        <div className="case-detail__lifecycle-panel">
+          <div className="case-detail__lifecycle-fields">
+            <div className="case-detail__lifecycle-field">
+              <span className="case-detail__lifecycle-label">Current Stage</span>
+              <Badge status={caseInfo.status}>{toLifecycleStage(caseInfo.status)}</Badge>
+            </div>
+            <div className="case-detail__lifecycle-field">
+              <span className="case-detail__lifecycle-label">SLA Due</span>
+              <span className={`case-detail__lifecycle-value${caseInfo.slaDueDate && new Date(caseInfo.slaDueDate) < new Date() && caseInfo.status !== 'RESOLVED' && caseInfo.status !== 'FILED' ? ' case-detail__lifecycle-value--danger' : ''}`}>
+                {caseInfo.slaDueDate ? formatDateTime(caseInfo.slaDueDate) : '—'}
+              </span>
+            </div>
+            <div className="case-detail__lifecycle-field">
+              <span className="case-detail__lifecycle-label">Lock Status</span>
+              <span className="case-detail__lifecycle-value">
+                {caseInfo.lockStatus?.isLocked ? '🔒 Locked' : '🔓 Unlocked'}
+              </span>
+            </div>
+            <div className="case-detail__lifecycle-field">
+              <span className="case-detail__lifecycle-label">Approval Status</span>
+              <span className="case-detail__lifecycle-value">
+                {caseInfo.approvalStatus === 'PENDING' ? '⏳ Awaiting Approval' : caseInfo.approvalStatus || '—'}
+              </span>
+            </div>
+            <div className="case-detail__lifecycle-field">
+              <span className="case-detail__lifecycle-label">Last Updated</span>
+              <span className="case-detail__lifecycle-value">{formatDateTime(caseInfo.updatedAt)}</span>
+            </div>
+          </div>
+          {(canPerformLifecycleActions || canUnpend) && (
+            <div className="case-detail__lifecycle-actions">
+              {canPerformLifecycleActions && (
+                <>
+                  <Button variant="outline" onClick={() => setShowFileModal(true)} className="case-detail__btn-muted">
+                    📤 File
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowPendModal(true)} className="case-detail__btn-warning">
+                    ⏳ Pend
+                  </Button>
+                  <Button variant="primary" onClick={() => setShowResolveModal(true)}>
+                    ✓ Resolve
+                  </Button>
+                </>
+              )}
+              {canUnpend && (
+                <Button variant="primary" onClick={() => setShowUnpendModal(true)}>
+                  🔁 Unpend
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* ─── Split-Pane Body ────────────────────────────────────── */}
         <div className="case-detail__split">
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Button } from '../components/common/Button';
@@ -40,6 +40,16 @@ const isDueToday = (row) => {
   );
 };
 
+/** Returns a recency label if the case was updated within 2 hours. */
+const getRecencyLabel = (updatedAt) => {
+  if (!updatedAt) return null;
+  const diffMs = Date.now() - new Date(updatedAt).getTime();
+  const diffMins = diffMs / 60000;
+  if (diffMins < 30) return 'Just updated';
+  if (diffMins < 120) return 'Recently updated';
+  return null;
+};
+
 export const CasesPage = () => {
   const { user } = useAuth();
   const { isAdmin } = usePermissions();
@@ -55,6 +65,19 @@ export const CasesPage = () => {
   const [timelineCaseId, setTimelineCaseId] = useState(null);
   const [error, setError] = useState(null);
   const [assigningCaseId, setAssigningCaseId] = useState(null);
+  // Task 6: Search & Quick Jump
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchDebounceRef = useRef(null);
+  // Task 7: Performance Insight toggle
+  const [showPerformance, setShowPerformance] = useState(false);
+
+  // Cleanup debounce timer on unmount (Task 6)
+  useEffect(() => {
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    };
+  }, []);
 
   const normalizeCases = (records = []) =>
     records.map((record) => ({
@@ -112,6 +135,18 @@ export const CasesPage = () => {
 
   const handleAssignToMe = async (caseRecord, event) => {
     event.stopPropagation();
+    // Task 3: Block reassignment if case is locked
+    if (caseRecord.lockStatus?.isLocked) {
+      window.alert('This case is locked and cannot be reassigned right now.');
+      return;
+    }
+    // Task 3: Confirm before reassigning if already assigned to someone else
+    if (caseRecord.assignedTo && caseRecord.status !== CASE_STATUS.UNASSIGNED) {
+      const confirmed = window.confirm(
+        `This case is currently assigned to ${caseRecord.assignedToName || caseRecord.assignedTo}. Reassign to yourself?`
+      );
+      if (!confirmed) return;
+    }
     setAssigningCaseId(caseRecord.caseId);
     try {
       const response = await caseService.pullCase(caseRecord.caseId);
@@ -136,8 +171,28 @@ export const CasesPage = () => {
     [manuallyFilteredCases, activeView, applyView]
   );
 
+  // Task 6: debounced search filter (250ms, no external library)
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchInput(value);
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => setSearchQuery(value.trim().toLowerCase()), 250);
+  };
+
+  const searchedCases = useMemo(() => {
+    if (!searchQuery) return viewFilteredCases;
+    return viewFilteredCases.filter((item) => {
+      const q = searchQuery;
+      return (
+        (item.caseId || '').toLowerCase().includes(q) ||
+        (item.caseName || '').toLowerCase().includes(q) ||
+        (item.clientName || item.client?.name || '').toLowerCase().includes(q)
+      );
+    });
+  }, [viewFilteredCases, searchQuery]);
+
   const sortedCases = useMemo(() => {
-    const list = [...viewFilteredCases];
+    const list = [...searchedCases];
     list.sort((a, b) => {
       const current = a?.[sortState.key];
       const next = b?.[sortState.key];
@@ -155,7 +210,50 @@ export const CasesPage = () => {
       return sortState.direction === 'asc' ? comparison : -comparison;
     });
     return list;
-  }, [viewFilteredCases, sortState]);
+  }, [searchedCases, sortState]);
+
+  // Task 1: SLA Summary Bar metrics (computed from all cases, not filtered)
+  const slaSummary = useMemo(() => {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    return {
+      totalOpen: cases.filter((c) => c.status === CASE_STATUS.OPEN || c.status === CASE_STATUS.PENDED).length,
+      dueToday: cases.filter(isDueToday).length,
+      overdue: cases.filter(isSlaBreached).length,
+      filedLast7: cases.filter(
+        (c) => c.status === CASE_STATUS.FILED && c.updatedAt && new Date(c.updatedAt) >= sevenDaysAgo
+      ).length,
+    };
+  }, [cases]);
+
+  // Task 7: Performance metrics (computed from all cases)
+  const performanceMetrics = useMemo(() => {
+    const resolved = cases.filter(
+      (c) => c.status === CASE_STATUS.RESOLVED || c.status === CASE_STATUS.FILED
+    );
+    if (!resolved.length) return null;
+
+    let totalMs = 0;
+    let countWithDuration = 0;
+    resolved.forEach((c) => {
+      if (c.createdAt && c.updatedAt) {
+        const ms = new Date(c.updatedAt).getTime() - new Date(c.createdAt).getTime();
+        if (ms > 0) { totalMs += ms; countWithDuration++; }
+      }
+    });
+    const avgDays = countWithDuration ? (totalMs / countWithDuration / (1000 * 60 * 60 * 24)).toFixed(1) : null;
+
+    const withSla = cases.filter((c) => c.slaDueDate);
+    const breachedCount = withSla.filter(isSlaBreached).length;
+    const resolvedWithinSla = resolved.filter(
+      (c) => c.slaDueDate && new Date(c.updatedAt) <= new Date(c.slaDueDate)
+    ).length;
+    const pctBreach = withSla.length ? Math.round((breachedCount / withSla.length) * 100) : null;
+    const pctWithinSla = resolved.length
+      ? Math.round((resolvedWithinSla / resolved.length) * 100)
+      : null;
+
+    return { avgDays, pctBreach, pctWithinSla, resolvedCount: resolved.length };
+  }, [cases]);
 
   const activeFilters = statusFilter === 'ALL' ? [] : [{ key: 'status', label: 'Status', value: statusFilter }];
 
@@ -175,6 +273,7 @@ export const CasesPage = () => {
       render: (row) => {
         const breached = isSlaBreached(row);
         const dueToday = !breached && isDueToday(row);
+        const recency = getRecencyLabel(row.updatedAt);
         return (
           <div className={`cases-page__name-cell${breached ? ' cases-page__name-cell--sla-breach' : ''}`}>
             <span className="cases-page__case-title">{row.caseName}</span>
@@ -184,6 +283,9 @@ export const CasesPage = () => {
                 timestamp: row.updatedAt,
               })}
             </span>
+            {recency && (
+              <span className="cases-page__recency" aria-label={recency}>{recency}</span>
+            )}
             {breached && (
               <span className="cases-page__sla-badge cases-page__sla-badge--breach" aria-label="SLA breached">
                 ⚠ SLA Overdue
@@ -224,13 +326,24 @@ export const CasesPage = () => {
       header: '',
       align: 'right',
       render: (row) => {
-        const canAssign =
-          !isAdmin &&
-          (!row.assignedTo || row.status === CASE_STATUS.UNASSIGNED);
+        const isLocked = Boolean(row.lockStatus?.isLocked);
+        // Non-admin users can assign to themselves for any unlocked case.
+        // If already assigned, handleAssignToMe will prompt confirmation before proceeding.
+        const canAssign = !isAdmin && !isLocked;
         return (
           <details className="cases-page__row-menu" onClick={(event) => event.stopPropagation()}>
             <summary aria-label={`Row actions for ${row.caseName}`}>⋯</summary>
             <div className="cases-page__row-menu-panel">
+              {(row.assignedToName || row.assignedTo) && (
+                <div className="cases-page__row-menu-info">
+                  Assigned: {row.assignedToName || row.assignedTo}
+                </div>
+              )}
+              {isLocked && (
+                <div className="cases-page__row-menu-info cases-page__row-menu-info--locked">
+                  🔒 Case Locked
+                </div>
+              )}
               <button
                 type="button"
                 onClick={(event) => {
@@ -274,7 +387,59 @@ export const CasesPage = () => {
           actions={isAdmin ? <Button variant="primary" onClick={handleCreateCase}>New Case</Button> : null}
         />
 
-        {/* Preset operational view tabs (TASK 1 / TASK 5) */}
+        {/* Task 1: SLA Summary Bar */}
+        <div className="cases-page__sla-bar" role="region" aria-label="SLA Summary">
+          <button
+            type="button"
+            className="cases-page__sla-tile"
+            onClick={() => { setStatusFilter(CASE_STATUS.OPEN); setActiveView('MY_OPEN'); }}
+            aria-label={`Total open cases: ${slaSummary.totalOpen}`}
+          >
+            <span className="cases-page__sla-tile-value">{slaSummary.totalOpen}</span>
+            <span className="cases-page__sla-tile-label">Open Cases</span>
+          </button>
+          <button
+            type="button"
+            className="cases-page__sla-tile cases-page__sla-tile--warning"
+            onClick={() => setActiveView('DUE_TODAY')}
+            aria-label={`Due today: ${slaSummary.dueToday}`}
+          >
+            <span className="cases-page__sla-tile-value">{slaSummary.dueToday}</span>
+            <span className="cases-page__sla-tile-label">Due Today</span>
+          </button>
+          <button
+            type="button"
+            className={`cases-page__sla-tile${slaSummary.overdue > 0 ? ' cases-page__sla-tile--danger' : ''}`}
+            onClick={() => { setStatusFilter('ALL'); setActiveView('MY_OPEN'); }}
+            aria-label={`Overdue: ${slaSummary.overdue}`}
+          >
+            <span className="cases-page__sla-tile-value">{slaSummary.overdue}</span>
+            <span className="cases-page__sla-tile-label">Overdue</span>
+          </button>
+          <button
+            type="button"
+            className="cases-page__sla-tile"
+            onClick={() => { setStatusFilter(CASE_STATUS.FILED); setActiveView('FILED'); }}
+            aria-label={`Filed last 7 days: ${slaSummary.filedLast7}`}
+          >
+            <span className="cases-page__sla-tile-value">{slaSummary.filedLast7}</span>
+            <span className="cases-page__sla-tile-label">Filed (7d)</span>
+          </button>
+        </div>
+
+        {/* Task 6: Search & Quick Jump */}
+        <div className="cases-page__search-bar">
+          <input
+            type="search"
+            className="cases-page__search-input"
+            placeholder="Search by case ID, title, or client…"
+            value={searchInput}
+            onChange={handleSearchChange}
+            aria-label="Search cases"
+          />
+        </div>
+
+        {/* Preset operational view tabs */}
         <div className="cases-page__views" role="tablist" aria-label="Case views">
           {availableViews.map((view) => (
             <button
@@ -306,13 +471,61 @@ export const CasesPage = () => {
           </select>
         </SectionCard>
 
+        {/* Task 7: Performance Insight */}
+        <div className="cases-page__perf-toggle">
+          <button
+            type="button"
+            className="cases-page__perf-toggle-btn"
+            onClick={() => setShowPerformance((v) => !v)}
+            aria-expanded={showPerformance}
+          >
+            {showPerformance ? '▲' : '▼'} Performance View
+          </button>
+        </div>
+        {showPerformance && (
+          <div className="cases-page__perf-panel" role="region" aria-label="Performance metrics">
+            {performanceMetrics ? (
+              <>
+                {performanceMetrics.avgDays !== null && (
+                  <div className="cases-page__perf-metric">
+                    <span className="cases-page__perf-metric-label">Avg. Time to Resolve</span>
+                    <span className="cases-page__perf-metric-value">{performanceMetrics.avgDays} days</span>
+                  </div>
+                )}
+                {performanceMetrics.pctBreach !== null && (
+                  <div className="cases-page__perf-metric">
+                    <span className="cases-page__perf-metric-label">Cases Breaching SLA</span>
+                    <span className={`cases-page__perf-metric-value${performanceMetrics.pctBreach > 20 ? ' cases-page__perf-metric-value--danger' : ''}`}>
+                      {performanceMetrics.pctBreach}%
+                    </span>
+                  </div>
+                )}
+                {performanceMetrics.pctWithinSla !== null && (
+                  <div className="cases-page__perf-metric">
+                    <span className="cases-page__perf-metric-label">Resolved Within SLA</span>
+                    <span className="cases-page__perf-metric-value cases-page__perf-metric-value--good">
+                      {performanceMetrics.pctWithinSla}%
+                    </span>
+                  </div>
+                )}
+                <div className="cases-page__perf-metric">
+                  <span className="cases-page__perf-metric-label">Total Resolved/Filed</span>
+                  <span className="cases-page__perf-metric-value">{performanceMetrics.resolvedCount}</span>
+                </div>
+              </>
+            ) : (
+              <p className="cases-page__perf-empty">No resolved cases to compute metrics.</p>
+            )}
+          </div>
+        )}
+
         {error ? (
           <div className="cases-page__error" role="alert">
             Failed to load cases. Refresh the page or try again in a moment.
           </div>
         ) : null}
 
-        <SectionCard title="Case Registry" subtitle={`${viewFilteredCases.length} records`}>
+        <SectionCard title="Case Registry" subtitle={`${searchedCases.length} records`}>
           <DataTable
             columns={columns}
             data={sortedCases}

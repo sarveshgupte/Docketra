@@ -180,3 +180,188 @@
   cursor: default;
 }
 
+/* Task 1: SLA Summary Bar */
+.cases-page__sla-bar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cases-page__sla-tile {
+  flex: 1;
+  min-width: 110px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.cases-page__sla-tile:hover {
+  border-color: var(--color-border-strong, #94a3b8);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+.cases-page__sla-tile--warning {
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+
+.cases-page__sla-tile--danger {
+  border-color: #fecdd3;
+  background: #fff1f2;
+}
+
+.cases-page__sla-tile-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-main, #0f172a);
+  line-height: 1;
+}
+
+.cases-page__sla-tile--warning .cases-page__sla-tile-value {
+  color: #b45309;
+}
+
+.cases-page__sla-tile--danger .cases-page__sla-tile-value {
+  color: #be123c;
+}
+
+.cases-page__sla-tile-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #64748b);
+}
+
+/* Task 5: Activity Recency Indicator */
+.cases-page__recency {
+  font-size: 11px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* Task 6: Search Bar */
+.cases-page__search-bar {
+  display: flex;
+}
+
+.cases-page__search-input {
+  width: 100%;
+  max-width: 420px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 6px;
+  font-size: 13px;
+  background: #fff;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.cases-page__search-input:focus {
+  outline: none;
+  border-color: var(--color-border-strong, #94a3b8);
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08);
+}
+
+/* Task 3: Row menu info row */
+.cases-page__row-menu-info {
+  padding: 6px 14px;
+  font-size: 12px;
+  color: #64748b;
+  border-bottom: 1px solid #f1f5f9;
+  white-space: nowrap;
+}
+
+.cases-page__row-menu-info--locked {
+  color: #b45309;
+}
+
+/* Task 7: Performance View */
+.cases-page__perf-toggle {
+  display: flex;
+  align-items: center;
+}
+
+.cases-page__perf-toggle-btn {
+  background: none;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted, #64748b);
+  cursor: pointer;
+  padding: 4px 0;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.cases-page__perf-toggle-btn:hover {
+  color: var(--text-body, #334155);
+}
+
+.cases-page__perf-panel {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 16px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.cases-page__perf-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 140px;
+}
+
+.cases-page__perf-metric-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #64748b);
+}
+
+.cases-page__perf-metric-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-main, #0f172a);
+}
+
+.cases-page__perf-metric-value--danger {
+  color: #be123c;
+}
+
+.cases-page__perf-metric-value--good {
+  color: #15803d;
+}
+
+.cases-page__perf-empty {
+  font-size: 13px;
+  color: var(--text-muted, #64748b);
+  margin: 0;
+}
+
+@media (max-width: 600px) {
+  .cases-page__sla-bar {
+    gap: 8px;
+  }
+  .cases-page__sla-tile {
+    min-width: calc(50% - 4px);
+  }
+  .cases-page__perf-panel {
+    gap: 8px;
+  }
+  .cases-page__search-input {
+    max-width: 100%;
+  }
+}
+
