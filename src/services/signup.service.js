@@ -331,17 +331,6 @@ const createFirmAndAdmin = async ({
   };
 };
 
-const signupWithPassword = async ({ name, email, password, firmName, phone, session }) => {
-  return initiateManualSignup({
-    name,
-    email,
-    password,
-    firmName,
-    phone,
-    session,
-  });
-};
-
 /**
  * Complete signup — transactional firm + admin creation
  * @param {Object} params - { email, firmName }
@@ -407,7 +396,6 @@ module.exports = {
   initiateManualSignup,
   verifySignupOtp,
   resendSignupOtp,
-  signupWithPassword,
   createFirmAndAdmin,
   completeSignup,
   generateOtp,
