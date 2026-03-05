@@ -1,8 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import api from '../../services/api';
-import { STORAGE_KEYS } from '../../utils/constants';
-
-const GOOGLE_SCRIPT_SRC = 'https://accounts.google.com/gsi/client';
 
 const inputClass =
   'w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition-colors duration-150 focus:border-gray-900 focus:shadow-[0_0_0_3px_rgba(17,24,39,0.08)] bg-white';
@@ -22,7 +19,6 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
   const [apiMessage, setApiMessage] = useState('');
-  const [googleReady, setGoogleReady] = useState(false);
 
   const [form, setForm] = useState({
     name: '',
@@ -33,74 +29,9 @@ export default function Signup() {
   });
   const [signupEmail, setSignupEmail] = useState('');
   const [otp, setOtp] = useState('');
-  const [firmName, setFirmName] = useState('');
-  const [result, setResult] = useState({ xid: '', firmUrl: '' });
+  const [result, setResult] = useState({ xid: '', firmUrl: '', redirectPath: '' });
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
-
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-
-  useEffect(() => {
-    if (!googleClientId) {
-      return;
-    }
-
-    if (window.google?.accounts?.id) {
-      setGoogleReady(true);
-      return;
-    }
-
-    const existingScript = document.querySelector(`script[src="${GOOGLE_SCRIPT_SRC}"]`);
-    if (existingScript) {
-      existingScript.addEventListener('load', () => setGoogleReady(true), { once: true });
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = GOOGLE_SCRIPT_SRC;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => setGoogleReady(true);
-    document.head.appendChild(script);
-  }, [googleClientId]);
-
-  const requestGoogleIdToken = () => new Promise((resolve, reject) => {
-    const googleAccounts = window.google?.accounts?.id;
-    if (!googleAccounts) {
-      reject(new Error('Google Sign-In is currently unavailable.'));
-      return;
-    }
-
-    let settled = false;
-    const timeoutId = window.setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      reject(new Error('Google Sign-In timed out. Please try again.'));
-    }, 60000);
-
-    googleAccounts.initialize({
-      client_id: googleClientId,
-      callback: (response) => {
-        if (settled) return;
-        settled = true;
-        window.clearTimeout(timeoutId);
-        if (!response?.credential) {
-          reject(new Error('Google Sign-In failed. Please try again.'));
-          return;
-        }
-        resolve(response.credential);
-      },
-    });
-
-    googleAccounts.prompt((notification) => {
-      if (settled) return;
-      if (notification.isNotDisplayed?.() || notification.isSkippedMoment?.()) {
-        settled = true;
-        window.clearTimeout(timeoutId);
-        reject(new Error('Google Sign-In was cancelled or unavailable.'));
-      }
-    });
-  });
 
   const onFormChange = (event) => {
     const { name, value } = event.target;
@@ -137,23 +68,17 @@ export default function Signup() {
     setErrors({});
     setLoading(true);
     try {
+      const email = form.email.trim();
       const response = await api.post('/public/initiate-signup', {
         name: form.name.trim(),
-        email: form.email.trim(),
+        email,
         firmName: form.firmName.trim(),
         password: form.password,
         phone: form.phone.trim() || undefined,
       });
-      if (response?.data?.accessToken) {
-        localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, response.data.accessToken);
-      }
-      if (response?.data?.refreshToken) {
-        localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, response.data.refreshToken);
-      }
-      if (response?.data?.firmSlug) {
-        localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, response.data.firmSlug);
-      }
-      window.location.assign(response?.data?.redirectPath || `/app/firm/${response?.data?.firmSlug}/dashboard`);
+      setSignupEmail(response?.data?.email || email);
+      setStep('otp');
+      setApiMessage(response?.data?.message || 'OTP sent to your email.');
     } catch (error) {
       setApiError(getErrorMessage(error, 'Unable to start signup. Please try again.'));
     } finally {
@@ -178,9 +103,19 @@ export default function Signup() {
         email: signupEmail,
         otp: otp.trim(),
       });
-      setStep('firm');
+
+      const response = await api.post('/public/complete-signup', {
+        email: signupEmail,
+      });
+      const redirectPath = response?.data?.redirectPath || `/${response?.data?.firmSlug}/login`;
+      setResult({
+        xid: response?.data?.xid || '',
+        firmUrl: response?.data?.firmUrl || '',
+        redirectPath,
+      });
+      setStep('success');
     } catch (error) {
-      setApiError(getErrorMessage(error, 'Unable to verify OTP. Please try again.'));
+      setApiError(getErrorMessage(error, 'Unable to complete signup. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -196,73 +131,6 @@ export default function Signup() {
       setApiMessage(response?.data?.message || 'OTP resent successfully.');
     } catch (error) {
       setApiError(getErrorMessage(error, 'Unable to resend OTP right now.'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const submitGoogleSignup = async () => {
-    setApiError('');
-    setApiMessage('');
-
-    if (!googleClientId) {
-      setApiError('Google Sign-In is not configured.');
-      return;
-    }
-
-    if (!form.firmName.trim()) {
-      setErrors({ firmName: 'Firm name is required' });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const idToken = await requestGoogleIdToken();
-      const response = await api.post('/public/google-auth', {
-        idToken,
-        firmName: form.firmName.trim(),
-      });
-      if (response?.data?.accessToken) {
-        localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, response.data.accessToken);
-      }
-      if (response?.data?.refreshToken) {
-        localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, response.data.refreshToken);
-      }
-      if (response?.data?.firmSlug) {
-        localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, response.data.firmSlug);
-      }
-      window.location.assign(response?.data?.redirectPath || `/app/firm/${response?.data?.firmSlug}/dashboard`);
-    } catch (error) {
-      setApiError(getErrorMessage(error, 'Unable to continue with Google.'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const submitFirm = async (event) => {
-    event.preventDefault();
-    setApiError('');
-    setApiMessage('');
-
-    if (!firmName.trim()) {
-      setErrors({ firmName: 'Firm name is required' });
-      return;
-    }
-
-    setErrors({});
-    setLoading(true);
-    try {
-      const response = await api.post('/public/complete-signup', {
-        email: signupEmail,
-        firmName: firmName.trim(),
-      });
-      setResult({
-        xid: response?.data?.xid || '',
-        firmUrl: response?.data?.firmUrl || '',
-      });
-      setStep('success');
-    } catch (error) {
-      setApiError(getErrorMessage(error, 'Unable to complete signup. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -380,15 +248,6 @@ export default function Signup() {
                 {loading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : null}
                 {loading ? 'Submitting…' : 'Sign up with Email'}
               </button>
-              <button
-                type="button"
-                onClick={submitGoogleSignup}
-                disabled={loading || !googleReady}
-                className="marketing-btn-secondary inline-flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {loading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-900 border-t-transparent" /> : null}
-                {googleReady ? 'Continue with Google' : 'Loading Google Sign-In…'}
-              </button>
             </form>
           )}
 
@@ -436,38 +295,6 @@ export default function Signup() {
             </form>
           )}
 
-          {step === 'firm' && (
-            <form className="mt-6 space-y-4" onSubmit={submitFirm}>
-              <div>
-                <label htmlFor="firm-email" className={labelClass}>Email</label>
-                <input id="firm-email" value={signupEmail} className={inputClass} readOnly />
-              </div>
-              <div>
-                <label htmlFor="firm-name" className={labelClass}>Firm Name</label>
-                <input
-                  id="firm-name"
-                  value={firmName}
-                  onChange={(event) => {
-                    setFirmName(event.target.value);
-                    setErrors((prev) => ({ ...prev, firmName: '' }));
-                  }}
-                  className={inputClass}
-                  disabled={loading}
-                  required
-                />
-                {errors.firmName && <p className="mt-1 text-xs text-red-600">{errors.firmName}</p>}
-              </div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="marketing-btn-primary inline-flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {loading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : null}
-                Complete Signup
-              </button>
-            </form>
-          )}
-
           {step === 'success' && (
             <div className="mt-6 space-y-4 rounded-lg border border-green-200 bg-green-50 p-5 text-sm text-green-800">
               <h2 className="text-lg font-semibold text-green-900">🎉 Signup successful</h2>
@@ -481,14 +308,12 @@ export default function Signup() {
                 ) : '—'}
               </p>
               <p>Details have been sent to your email.</p>
-              {result.firmUrl && (
+              {result.redirectPath && (
                 <a
-                  href={result.firmUrl}
+                  href={result.redirectPath}
                   className="marketing-btn-primary inline-flex items-center justify-center px-4 py-2 text-sm font-medium"
-                  target="_blank"
-                  rel="noreferrer"
                 >
-                  Go to Firm
+                  Go to Login
                 </a>
               )}
             </div>

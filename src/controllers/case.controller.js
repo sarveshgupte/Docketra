@@ -1364,6 +1364,7 @@ const getCases = async (req, res) => {
     res.json({
       success: true,
       data: casesWithClients,
+      count: casesWithClients.length,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
