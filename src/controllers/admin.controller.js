@@ -1,10 +1,7 @@
 const mongoose = require('mongoose');
 const User = require('../models/User.model');
-const Client = require('../models/Client.model');
-const Category = require('../models/Category.model');
 const Case = require('../models/Case.model');
 const Task = require('../models/Task');
-const AuthAudit = require('../models/AuthAudit.model');
 const Firm = require('../models/Firm.model');
 const emailService = require('../services/email.service');
 const CaseStatus = require('../domain/case/caseStatus');
@@ -13,6 +10,11 @@ const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { getDiagnosticsSnapshot } = require('../services/diagnostics.service');
 const { restoreDocument, buildDiagnostics } = require('../services/softDelete.service');
 const { getLatestTenantMetrics } = require('../services/tenantCaseMetrics.service');
+const userRepository = require('../repositories/user.repository');
+const clientRepository = require('../repositories/client.repository');
+const categoryRepository = require('../repositories/category.repository');
+const { assertFirmContext } = require('../utils/tenantGuard');
+const { logAuthEvent } = require('../services/audit.service');
 
 /**
  * Admin Controller for Admin Panel Operations
@@ -30,7 +32,20 @@ const DEFAULT_STORAGE_MODE = 'docketra_managed';
  */
 const safeAuditLog = async (auditData) => {
   try {
-    await AuthAudit.create(auditData);
+    await logAuthEvent({
+      actionType: auditData.actionType,
+      xID: auditData.xID,
+      firmId: auditData.firmId,
+      userId: auditData.userId,
+      description: auditData.description,
+      performedBy: auditData.performedBy,
+      req: {
+        ip: auditData.ipAddress,
+        get: (header) => (header?.toLowerCase() === 'user-agent' ? auditData.userAgent : undefined),
+      },
+      metadata: auditData.metadata,
+      timestamp: auditData.timestamp,
+    });
   } catch (auditError) {
     console.error('[ADMIN] Failed to log audit event:', auditError.message);
   }
@@ -55,13 +70,8 @@ const safeAuditLog = async (auditData) => {
  */
 const getAdminStats = async (req, res) => {
   try {
+    assertFirmContext(req);
     const tenantId = req.user?.firmId;
-    if (!tenantId && req.user?.role !== 'SUPER_ADMIN') {
-      return res.status(403).json({
-        success: false,
-        message: 'Forbidden: firm context required',
-      });
-    }
 
     const [
       totalUsers,
@@ -69,9 +79,9 @@ const getAdminStats = async (req, res) => {
       totalCategories,
       latestMetrics,
     ] = await Promise.all([
-      User.countDocuments({ firmId: tenantId, isActive: true }),
-      Client.countDocuments({ firmId: tenantId }),
-      Category.countDocuments({ firmId: tenantId }),
+      userRepository.countUsers(tenantId, { isActive: true }),
+      clientRepository.countClients(tenantId),
+      categoryRepository.countCategories(tenantId),
       getLatestTenantMetrics(tenantId),
     ]);
 
@@ -92,6 +102,12 @@ const getAdminStats = async (req, res) => {
       },
     });
   } catch (error) {
+    if (error.statusCode === 403) {
+      return res.status(403).json({
+        success: false,
+        message: error.message,
+      });
+    }
     res.status(500).json({
       success: false,
       message: 'Error fetching admin statistics',

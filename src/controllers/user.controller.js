@@ -1,5 +1,6 @@
 const { randomUUID } = require('crypto');
 const User = require('../models/User.model');
+const userRepository = require('../repositories/user.repository');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { assertFirmPlanCapacity, PlanLimitExceededError, PlanAdminLimitExceededError } = require('../services/user.service');
 
@@ -67,7 +68,7 @@ const getUserById = async (req, res) => {
   try {
     const firmScope = resolveUserFirmScope(req, res);
     if (!firmScope) return;
-    const user = await User.findOne({ _id: req.params.id, ...firmScope });
+    const user = await userRepository.findUserById(req.params.id, firmScope.firmId);
     
     if (!user) {
       return res.status(404).json({
@@ -183,7 +184,7 @@ const updateUser = async (req, res) => {
     const { name, role, isActive } = req.body;
     const firmScope = resolveUserFirmScope(req, res);
     if (!firmScope) return;
-    const user = await User.findOne({ _id: req.params.id, ...firmScope });
+    const user = await userRepository.findUserById(req.params.id, firmScope.firmId);
     
     if (!user) {
       return res.status(404).json({
@@ -220,7 +221,7 @@ const deleteUser = async (req, res) => {
   try {
     const firmScope = resolveUserFirmScope(req, res);
     if (!firmScope) return;
-    const user = await User.findOne({ _id: req.params.id, ...firmScope });
+    const user = await userRepository.findUserById(req.params.id, firmScope.firmId);
     
     if (!user) {
       return res.status(404).json({

@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const AuthAudit = require('../models/AuthAudit.model');
+const { logAuthEvent } = require('./audit.service');
 
 const buffer = [];
 
@@ -57,16 +57,17 @@ const recordAdminAudit = async ({
 
   if (mongoose.connection?.readyState === 1) {
     try {
-      await AuthAudit.create({
+      await logAuthEvent({
+        eventType: 'AdminMutation',
         xID: actor || 'UNKNOWN_ACTOR',
         firmId: firmId || 'UNKNOWN_FIRM',
         userId,
-        actionType: 'AdminMutation',
         description: action,
-        // kept alongside xID for legacy consumers expecting performer field
         performedBy: actor || 'UNKNOWN',
-        ipAddress,
-        userAgent,
+        req: {
+          ip: ipAddress,
+          get: (header) => (header?.toLowerCase() === 'user-agent' ? userAgent : undefined),
+        },
         metadata: {
           target,
           scope,
@@ -74,7 +75,6 @@ const recordAdminAudit = async ({
           status,
           durationMs,
         },
-        timestamp: new Date(),
       });
     } catch (err) {
       console.error('[ADMIN_AUDIT] Failed to persist audit log:', err.message);

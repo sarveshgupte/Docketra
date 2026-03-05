@@ -4,12 +4,12 @@ const Firm = require('../models/Firm.model');
 const Client = require('../models/Client.model');
 const User = require('../models/User.model');
 const TemporarySignup = require('../models/TemporarySignup');
-const AuthAudit = require('../models/AuthAudit.model');
 const { generateNextClientId } = require('./clientIdGenerator');
 const { generateNextXID } = require('./xIDGenerator');
 const { ensureTenantKey } = require('../security/encryption.service');
 const { slugify } = require('../utils/slugify');
 const emailService = require('./email.service');
+const { logAuthEvent } = require('./audit.service');
 
 const SALT_ROUNDS = 10;
 const OTP_EXPIRY_MINUTES = 10;
@@ -32,16 +32,14 @@ const logSignupAuthEvent = async ({
 }) => {
   try {
     const normalizedEmail = email ? email.toLowerCase().trim() : null;
-    await AuthAudit.create({
+    await logAuthEvent({
+      eventType,
       xID: normalizedEmail || 'UNKNOWN',
-      firmId: firmId || 'PLATFORM',
+      firmId: firmId ? String(firmId) : 'PLATFORM',
       userId: userId || null,
-      actionType: eventType,
       description: `Auth event: ${eventType}`,
       performedBy: normalizedEmail || 'SYSTEM',
-      ipAddress: req?.ip,
-      userAgent: req?.get?.('user-agent'),
-      timestamp: new Date(),
+      req,
       metadata: {
         eventType,
         email: normalizedEmail,
