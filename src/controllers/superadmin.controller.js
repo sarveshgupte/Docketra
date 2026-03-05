@@ -3,6 +3,7 @@ const Firm = require('../models/Firm.model');
 const Client = require('../models/Client.model');
 const SuperadminAudit = require('../models/SuperadminAudit.model');
 const AuthAudit = require('../models/AuthAudit.model');
+const { logAuthEvent } = require('../services/audit.service');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
@@ -1412,15 +1413,14 @@ const activateFirm = async (req, res, next) => {
       firm.status = 'active';
       await firm.save({ session });
 
-      await AuthAudit.create([{
+      await logAuthEvent({
+        eventType: 'AdminMutation',
         xID: req.user?.xID || 'UNKNOWN_ACTOR',
         firmId: firm.firmId || 'UNKNOWN_FIRM',
         userId: req.user?._id,
-        actionType: 'AdminMutation',
         description: `PATCH ${req.originalUrl || req.url || `/api/superadmin/firms/${id}/activate`}`,
         performedBy: req.user?.xID || req.user?.email || 'UNKNOWN',
-        ipAddress: req.ip,
-        userAgent: req.headers?.['user-agent'],
+        req,
         metadata: {
           target: firm._id.toString(),
           scope: 'GLOBAL',
@@ -1428,8 +1428,8 @@ const activateFirm = async (req, res, next) => {
           oldStatus,
           newStatus: 'active',
         },
-        timestamp: new Date(),
-      }], { session });
+        session,
+      });
 
       await logSuperadminAction({
         actionType: 'FirmActivated',

@@ -21,6 +21,7 @@ const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const config = require('../config/config');
 const { recordFailedLoginAttempt, clearFailedLoginAttempts } = require('../middleware/accountLockout.middleware');
 const { assertFirmPlanCapacity, PlanLimitExceededError, PlanAdminLimitExceededError } = require('../services/user.service');
+const { logAuthEvent } = require('../services/audit.service');
 
 /**
  * Authentication Controller for JWT-based Enterprise Authentication
@@ -57,7 +58,18 @@ const { safeLogForensicAudit, getRequestIp, getRequestUserAgent } = require('../
  */
 const logAuthAudit = async (params, req = null) => {
   try {
-    await AuthAudit.create([params]);
+    await logAuthEvent({
+      eventType: params?.actionType,
+      actionType: params?.actionType,
+      userId: params?.userId,
+      firmId: params?.firmId,
+      xID: params?.xID,
+      performedBy: params?.performedBy,
+      description: params?.description,
+      req,
+      metadata: params?.metadata,
+      timestamp: params?.timestamp,
+    });
   } catch (auditErr) {
     log.error('AUTH_AUDIT_FAILURE', {
       error: auditErr.message,
@@ -392,7 +404,7 @@ const login = async (req, res) => {
       await recordFailedLoginAttempt(req);
       console.warn(`[AUTH] Invalid login attempt for xID=${normalizedXID} in firm context ${req.firmSlug || req.firmId}`);
       try {
-        await AuthAudit.create({
+        await logAuthAudit({
           xID: normalizedXID || 'UNKNOWN',
           firmId: req.firmIdString || req.firmId || 'UNKNOWN',
           actionType: 'LoginFailed',
@@ -405,7 +417,7 @@ const login = async (req, res) => {
             email: null,
             timestamp: new Date().toISOString(),
           },
-        });
+        }, req);
       } catch (auditError) {
         console.error('[AUTH AUDIT] Failed to record login failure event', auditError);
       }
@@ -574,7 +586,7 @@ const login = async (req, res) => {
       if (isNowLocked && currentFailedAttempts >= MAX_FAILED_ATTEMPTS) {
         // Log account lock
         try {
-          await AuthAudit.create({
+          await logAuthAudit({
             xID: user.xID,
             firmId: user.firmId || DEFAULT_FIRM_ID,
             userId: user._id,
@@ -583,7 +595,7 @@ const login = async (req, res) => {
             performedBy: user.xID,
             ipAddress: req.ip,
             userAgent: req.get('user-agent'),
-          });
+          }, req);
         } catch (auditError) {
           console.error('[AUTH AUDIT] Failed to record account lock event', auditError);
         }
@@ -597,7 +609,7 @@ const login = async (req, res) => {
 
       // Log failed login attempt
       try {
-        await AuthAudit.create({
+        await logAuthAudit({
           xID: user.xID,
           firmId: user.firmId || DEFAULT_FIRM_ID,
           userId: user._id,
@@ -611,7 +623,7 @@ const login = async (req, res) => {
             email: user.email || null,
             timestamp: new Date().toISOString(),
           },
-        });
+        }, req);
       } catch (auditError) {
         console.error('[AUTH AUDIT] Failed to record login failure event', auditError);
       }
@@ -636,7 +648,7 @@ const login = async (req, res) => {
     if (user.passwordExpiresAt && user.passwordExpiresAt < now) {
       // Log password expiry
       try {
-        await AuthAudit.create({
+        await logAuthAudit({
           xID: user.xID,
           firmId: user.firmId || DEFAULT_FIRM_ID,
           userId: user._id,
@@ -645,7 +657,7 @@ const login = async (req, res) => {
           performedBy: user.xID,
           ipAddress: req.ip,
           userAgent: req.get('user-agent'),
-        });
+        }, req);
       } catch (auditError) {
         console.error('[AUTH AUDIT] Failed to record password expiry event', auditError);
       }
@@ -703,7 +715,7 @@ const login = async (req, res) => {
       
       // Log password reset email attempt
       try {
-        await AuthAudit.create({
+        await logAuthAudit({
           xID: user.xID,
           firmId: user.firmId || DEFAULT_FIRM_ID,
           userId: user._id,
@@ -714,7 +726,7 @@ const login = async (req, res) => {
           performedBy: user.xID,
           ipAddress: req.ip,
           userAgent: req.get('user-agent'),
-        });
+        }, req);
       } catch (auditError) {
         console.error('[AUTH AUDIT] Failed to record password reset email event', auditError);
       }
@@ -737,7 +749,7 @@ const login = async (req, res) => {
 
     // Log successful login (non-blocking)
     try {
-      await AuthAudit.create({
+      await logAuthAudit({
         xID: user.xID || DEFAULT_XID,
         firmId: user.firmId || DEFAULT_FIRM_ID,
         userId: user._id,
@@ -751,7 +763,7 @@ const login = async (req, res) => {
           email: user.email || null,
           timestamp: new Date().toISOString(),
         },
-      });
+      }, req);
     } catch (auditError) {
       console.error('[AUTH AUDIT] Failed to record login event', auditError);
     }
@@ -850,7 +862,7 @@ const logout = async (req, res) => {
     // Log logout (non-blocking)
     try {
       if (!shouldBypassUserDbUpdates) {
-        await AuthAudit.create({
+        await logAuthAudit({
           xID: user.xID,
           firmId: user.firmId || DEFAULT_FIRM_ID,
           userId: user._id,
@@ -859,7 +871,7 @@ const logout = async (req, res) => {
           performedBy: user.xID,
           ipAddress: req.ip,
           userAgent: req.get('user-agent'),
-        });
+        }, req);
       }
     } catch (auditError) {
       console.error('[AUTH AUDIT] Failed to record logout event', auditError);
@@ -1993,7 +2005,14 @@ const resendSetup = async (req, res) => {
     customMessage: 'This link will expire in 48 hours.',
   });
 
-  await AuthAudit.create({ userId: user._id, xID: user.xID, firmId: user.firmId, actionType: 'SetupLinkResent', description: 'Setup link resent', performedBy: user.xID });
+  await logAuthAudit({
+    userId: user._id,
+    xID: user.xID,
+    firmId: user.firmId,
+    actionType: 'SetupLinkResent',
+    description: 'Setup link resent',
+    performedBy: user.xID,
+  }, req);
   console.log('[AUTH][setup] setup link resent', { userId: user._id.toString(), firmId: user.firmId?.toString?.() || user.firmId });
   return res.json({ success: true, message: 'Setup link resent' });
 };
@@ -2824,7 +2843,7 @@ const completeMfaLogin = async (req, res) => {
     }
 
     try {
-      await AuthAudit.create({
+      await logAuthAudit({
         xID: user.xID || DEFAULT_XID,
         firmId: user.firmId || DEFAULT_FIRM_ID,
         userId: user._id,
@@ -2833,7 +2852,7 @@ const completeMfaLogin = async (req, res) => {
         performedBy: user.xID,
         ipAddress: req.ip,
         userAgent: req.get('user-agent'),
-      });
+      }, req);
     } catch (auditError) {
       console.error('[AUTH AUDIT] Failed to record MFA login success event', auditError);
     }

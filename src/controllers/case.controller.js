@@ -8,6 +8,7 @@ const CaseAudit = require('../models/CaseAudit.model');
 const Client = require('../models/Client.model');
 const User = require('../models/User.model');
 const { CaseRepository, ClientRepository } = require('../repositories');
+const categoryRepository = require('../repositories/category.repository');
 const { detectDuplicates, generateDuplicateOverrideComment } = require('../services/clientDuplicateDetector');
 const { CASE_CATEGORIES, CASE_LOCK_CONFIG, COMMENT_PREVIEW_LENGTH, CLIENT_STATUS } = require('../config/constants');
 const CaseStatus = require('../domain/case/caseStatus');
@@ -23,6 +24,7 @@ const { resolveCaseIdentifier, resolveCaseDocument } = require('../utils/caseIde
 const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
 const { areFileUploadsDisabled } = require('../services/featureFlags.service');
 const { enqueueStorageJob, JOB_TYPES } = require('../queues/storage.queue');
+const { assertFirmContext } = require('../utils/tenantGuard');
 const CaseFile = require('../models/CaseFile.model');
 const fs = require('fs').promises;
 const fsSync = require('fs');
@@ -122,6 +124,7 @@ const createCase = async (req, res) => {
   let responseMeta = { requestId, firmId: req.user?.firmId || null };
 
   try {
+    assertFirmContext(req);
     const {
       title,
       description,
@@ -148,13 +151,21 @@ const createCase = async (req, res) => {
         ...responseMeta,
       });
     }
+
+    const firmId = req.user.firmId;
+    responseMeta = { requestId, firmId };
+    if (!firmId) {
+      return res.status(403).json({
+        success: false,
+        message: 'User must be assigned to a firm to create cases',
+        ...responseMeta,
+      });
+    }
     
     // Verify category exists and is active
-    const Category = require('../models/Category.model');
-    const categoryScope = req.user?.role === 'SUPER_ADMIN' ? {} : { firmId: req.user?.firmId };
-    const categoryDoc = await Category.findOne({ _id: categoryId, ...categoryScope });
+    const categoryDoc = await categoryRepository.findActiveCategory(categoryId, firmId);
     
-    if (!categoryDoc || !categoryDoc.isActive) {
+    if (!categoryDoc) {
       return res.status(404).json({
         success: false,
         message: 'Category not found or inactive',
@@ -180,12 +191,20 @@ const createCase = async (req, res) => {
     
     // Verify client exists and validate status - with firm scoping
     // PR: Client Lifecycle Enforcement - only ACTIVE clients can be used for new cases
-    const client = await ClientRepository.findByClientId(req.user.firmId, finalClientId, req.user.role);
+    const client = await ClientRepository.findByClientId(firmId, finalClientId, req.user.role);
     
     if (!client) {
       return res.status(404).json({
         success: false,
         message: `Client ${finalClientId} not found`,
+        ...responseMeta,
+      });
+    }
+
+    if (String(client.firmId) !== String(firmId)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Client firm mismatch detected',
         ...responseMeta,
       });
     }
@@ -247,24 +266,11 @@ const createCase = async (req, res) => {
       }
     }
     
-    // Get firmId from authenticated user (PR 1: Multi-tenancy from auth context)
-    // firmId is required - user must be assigned to a firm
-    const firmId = req.user.firmId;
-    responseMeta = { requestId, firmId };
-    
-    if (!firmId) {
-      return res.status(403).json({
-        success: false,
-        message: 'User must be assigned to a firm to create cases',
-        ...responseMeta,
-      });
-    }
-    
     const idempotencyKeyRaw = req.headers['idempotency-key'] || req.body.idempotencyKey;
     const idempotencyKey = idempotencyKeyRaw ? idempotencyKeyRaw.toString().trim().toLowerCase() : null;
 
     if (idempotencyKey) {
-      const existingCase = await Case.findOne({ firmId, idempotencyKey });
+      const existingCase = await CaseRepository.findOne(firmId, { idempotencyKey }, req.user.role);
       if (existingCase) {
         console.warn(`[CASE_CREATE][${requestId}] Idempotent replay detected`, { firmId, caseId: existingCase.caseId });
         return res.status(200).json({
@@ -363,11 +369,11 @@ const createCase = async (req, res) => {
         console.error(`[CASE_CREATE][${requestId}] Duplicate key detected during case creation`, { firmId, error: error.message });
         let existingCase = null;
         if (idempotencyKey) {
-          existingCase = await Case.findOne({ firmId, idempotencyKey });
+          existingCase = await CaseRepository.findOne(firmId, { idempotencyKey }, req.user.role);
           if (!existingCase) {
             // Brief retry to handle concurrent commit visibility before responding idempotently
             await new Promise((resolve) => setTimeout(resolve, 25));
-            existingCase = await Case.findOne({ firmId, idempotencyKey });
+            existingCase = await CaseRepository.findOne(firmId, { idempotencyKey }, req.user.role);
           }
         }
         if (existingCase) {
@@ -394,7 +400,8 @@ const createCase = async (req, res) => {
       });
     }
   } catch (error) {
-    res.status(400).json({
+    const statusCode = error?.statusCode || 400;
+    res.status(statusCode).json({
       success: false,
       message: 'Error creating case',
       error: error.message,
