@@ -22,6 +22,7 @@ const config = require('../config/config');
 const { recordFailedLoginAttempt, clearFailedLoginAttempts } = require('../middleware/accountLockout.middleware');
 const { assertFirmPlanCapacity, PlanLimitExceededError, PlanAdminLimitExceededError } = require('../services/user.service');
 const { logAuthEvent } = require('../services/audit.service');
+const { incrementTenantMetric } = require('../services/tenantMetrics.service');
 
 /**
  * Authentication Controller for JWT-based Enterprise Authentication
@@ -1478,6 +1479,7 @@ const createUser = async (req, res) => {
     });
     
     await newUser.save(session ? { session } : undefined);
+    await incrementTenantMetric(admin.firmId, 'users').catch(() => null);
     console.log(`[AUTH] User inherited defaultClientId from firm ${firm._id}`);
     
     // Fetch firmSlug for email

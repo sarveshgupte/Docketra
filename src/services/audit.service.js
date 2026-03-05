@@ -1,4 +1,5 @@
 const AuthAudit = require('../models/AuthAudit.model');
+const { enqueueAuditJob } = require('../queues/audit.queue');
 
 const logAuthEvent = async ({
   eventType,
@@ -33,7 +34,11 @@ const logAuthEvent = async ({
 
   if (session) {
     await AuthAudit.create([entry], { session });
-  } else {
+    return entry;
+  }
+
+  const queued = await enqueueAuditJob('createAuthAudit', { entry }).catch(() => ({ queued: false }));
+  if (!queued?.queued) {
     await AuthAudit.create(entry);
   }
   return entry;

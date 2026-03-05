@@ -5,6 +5,7 @@ const caseAndAttachmentParams = z.object({ caseId: caseIdString, attachmentId: n
 
 module.exports = {
   'GET /': { query: z.object({}).passthrough() },
+  'GET /search': { query: z.object({ q: z.string().optional() }).passthrough() },
   'POST /': {
     body: z.object({
       title: nonEmptyString,

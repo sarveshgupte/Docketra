@@ -9,6 +9,7 @@
 
 const crypto = require('crypto');
 const https = require('https');
+const { enqueueEmailJob } = require('../queues/email.queue');
 
 // Detect production mode
 const isProduction = process.env.NODE_ENV === 'production';
@@ -169,44 +170,52 @@ const sendTransactionalEmail = async ({ to, subject, html, text }) => {
 const { enqueueAfterCommit } = require('./sideEffectQueue.service');
 const { allow, recordFailure, recordSuccess } = require('./circuitBreaker.service');
 
+const sendEmailNow = async (mailOptions) => {
+  const maskedEmail = maskEmail(mailOptions.to);
+  if (!allow('smtp')) {
+    throw new Error('SMTP_CIRCUIT_OPEN');
+  }
+
+  if (isProduction) {
+    try {
+      console.log(`[EMAIL] Sending email via Brevo API to ${maskedEmail}`);
+      const result = await sendTransactionalEmail({
+        to: mailOptions.to,
+        subject: mailOptions.subject,
+        html: mailOptions.html,
+        text: mailOptions.text
+      });
+      recordSuccess('smtp');
+      console.log(`[EMAIL] Email sent successfully via Brevo: ${result.messageId || 'sent'}`);
+      return result;
+    } catch (error) {
+      recordFailure('smtp');
+      console.error(`[EMAIL] Failed to send email via Brevo: ${error.message}`);
+      throw new Error('Failed to send email. Please check server logs for details.');
+    }
+  }
+
+  console.log('\n========================================');
+  console.log('📧 EMAIL (Development Mode - Console Only)');
+  console.log('========================================');
+  console.log(`To: ${maskedEmail}`);
+  console.log(`Subject: ${mailOptions.subject}`);
+  console.log('');
+  console.log('Note: Development mode active. Emails are logged to console only.');
+  console.log('Set NODE_ENV=production and configure Brevo API to enable email delivery.');
+  console.log('========================================\n');
+  recordSuccess('smtp');
+  return { success: true, console: true };
+};
+
 const sendEmail = async (mailOptions, context = null) => {
   const maskedEmail = maskEmail(mailOptions.to);
-
   const execute = async () => {
-    if (!allow('smtp')) {
-      throw new Error('SMTP_CIRCUIT_OPEN');
+    const queued = await enqueueEmailJob('sendEmail', { mailOptions });
+    if (queued.queued) {
+      return { success: true, queued: true, messageId: queued.jobId || null };
     }
-
-    if (isProduction) {
-      try {
-        console.log(`[EMAIL] Sending email via Brevo API to ${maskedEmail}`);
-        const result = await sendTransactionalEmail({
-          to: mailOptions.to,
-          subject: mailOptions.subject,
-          html: mailOptions.html,
-          text: mailOptions.text
-        });
-        recordSuccess('smtp');
-        console.log(`[EMAIL] Email sent successfully via Brevo: ${result.messageId || 'sent'}`);
-        return result;
-      } catch (error) {
-        recordFailure('smtp');
-        console.error(`[EMAIL] Failed to send email via Brevo: ${error.message}`);
-        throw new Error('Failed to send email. Please check server logs for details.');
-      }
-    } else {
-      console.log('\n========================================');
-      console.log('📧 EMAIL (Development Mode - Console Only)');
-      console.log('========================================');
-      console.log(`To: ${maskedEmail}`);
-      console.log(`Subject: ${mailOptions.subject}`);
-      console.log('');
-      console.log('Note: Development mode active. Emails are logged to console only.');
-      console.log('Set NODE_ENV=production and configure Brevo API to enable email delivery.');
-      console.log('========================================\n');
-      recordSuccess('smtp');
-      return { success: true, console: true };
-    }
+    return sendEmailNow(mailOptions);
   };
 
   if (context) {
@@ -219,7 +228,7 @@ const sendEmail = async (mailOptions, context = null) => {
     return { success: true, queued: true, messageId: null };
   }
 
-  return await execute();
+  return execute();
 };
 
 /**
@@ -974,6 +983,7 @@ const sendFirmSetupEmail = async ({
 
 module.exports = {
   sendEmail,
+  sendEmailNow,
   generateSecureToken,
   hashToken,
   sendPasswordSetupEmail,

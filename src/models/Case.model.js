@@ -848,6 +848,7 @@ caseSchema.index({ publicEmailToken: 1 }, { unique: true, sparse: true });
 
 // DEPRECATED DISPLAY ID FIELD, but tenant-scoped uniqueness is still required for safety.
 caseSchema.index({ firmId: 1, caseId: 1 }, { unique: true });
+caseSchema.index({ title: 'text', description: 'text' });
 
 caseSchema.index({ status: 1, priority: 1 });
 caseSchema.index({ category: 1 });
