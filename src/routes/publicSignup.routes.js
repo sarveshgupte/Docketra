@@ -1,5 +1,5 @@
 const express = require('express');
-const { authLimiter } = require('../middleware/rateLimiters');
+const { authLimiter, signupLimiter } = require('../middleware/rateLimiters');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const {
   initiateSignup,
@@ -11,7 +11,7 @@ const {
 const router = express.Router();
 
 // Rate-limited routes
-router.post('/initiate-signup', authLimiter, wrapWriteHandler(initiateSignup));
+router.post('/initiate-signup', authLimiter, signupLimiter, wrapWriteHandler(initiateSignup));
 router.post('/resend-otp', authLimiter, resendOtp);
 
 // Non-rate-limited routes (protected by OTP attempts/verification logic)

@@ -310,6 +310,16 @@ const login = async (req, res) => {
       if (!isSuperadminPasswordValid) {
         await recordFailedLoginAttempt(req);
         console.warn('[AUTH][superadmin] SuperAdmin login failed - invalid credentials');
+        await logAuthAudit({
+          xID: normalizedXID || DEFAULT_XID,
+          firmId: DEFAULT_FIRM_ID,
+          actionType: 'LoginFailed',
+          description: 'SuperAdmin login failed: invalid credentials',
+          performedBy: normalizedXID || DEFAULT_XID,
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent'),
+          metadata: { eventType: 'LOGIN_FAILED', email: superadminEmail || null, timestamp: new Date().toISOString() },
+        }, req);
         return res.status(401).json({
           success: false,
           message: 'Invalid xID or password',
@@ -318,6 +328,16 @@ const login = async (req, res) => {
       
       console.log('[AUTH][superadmin] SuperAdmin login successful');
       await clearFailedLoginAttempts(req);
+      await logAuthAudit({
+        xID: normalizedXID || DEFAULT_XID,
+        firmId: DEFAULT_FIRM_ID,
+        actionType: 'LOGIN_SUCCESS',
+        description: 'SuperAdmin login successful',
+        performedBy: normalizedXID || DEFAULT_XID,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+        metadata: { eventType: 'LOGIN_SUCCESS', email: superadminEmail || null, timestamp: new Date().toISOString() },
+      }, req);
       
       const accessToken = jwtService.generateAccessToken({
         userId: SUPERADMIN_USER_ID(),
@@ -380,6 +400,11 @@ const login = async (req, res) => {
           performedBy: normalizedXID,
           ipAddress: req.ip,
           userAgent: req.get('user-agent'),
+          metadata: {
+            eventType: 'LOGIN_FAILED',
+            email: null,
+            timestamp: new Date().toISOString(),
+          },
         });
       } catch (auditError) {
         console.error('[AUTH AUDIT] Failed to record login failure event', auditError);
@@ -576,11 +601,16 @@ const login = async (req, res) => {
           xID: user.xID,
           firmId: user.firmId || DEFAULT_FIRM_ID,
           userId: user._id,
-          actionType: 'LoginFailed',
+          actionType: 'LOGIN_FAILED',
           description: `Login failed: Invalid password (attempt ${currentFailedAttempts})`,
           performedBy: user.xID,
           ipAddress: req.ip,
           userAgent: req.get('user-agent'),
+          metadata: {
+            eventType: 'LOGIN_FAILED',
+            email: user.email || null,
+            timestamp: new Date().toISOString(),
+          },
         });
       } catch (auditError) {
         console.error('[AUTH AUDIT] Failed to record login failure event', auditError);
@@ -716,6 +746,11 @@ const login = async (req, res) => {
         performedBy: user.xID,
         ipAddress: req.ip,
         userAgent: req.get('user-agent'),
+        metadata: {
+          eventType: 'LOGIN_SUCCESS',
+          email: user.email || null,
+          timestamp: new Date().toISOString(),
+        },
       });
     } catch (auditError) {
       console.error('[AUTH AUDIT] Failed to record login event', auditError);

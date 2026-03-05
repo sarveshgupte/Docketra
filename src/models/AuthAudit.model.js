@@ -68,10 +68,16 @@ const authAuditSchema = new mongoose.Schema({
       'TokenRefreshed',
       'RefreshTokenRevoked',
       'AdminMutation',
-      'MFA_LOGIN_SUCCESS',
+       'MFA_LOGIN_SUCCESS',
+       'SIGNUP_INITIATED',
+       'OTP_SENT',
+       'OTP_VERIFIED',
+       'SIGNUP_COMPLETED',
+       'LOGIN_SUCCESS',
+       'LOGIN_FAILED',
 
-      // Admin guard events
-      'DeactivationAttemptBlocked',
+       // Admin guard events
+       'DeactivationAttemptBlocked',
     ],
   },
   
