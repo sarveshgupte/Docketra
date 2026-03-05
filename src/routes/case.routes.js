@@ -20,6 +20,7 @@ const {
   updateCaseStatus,
   getCaseByCaseId,
   getCases,
+  searchCases,
   lockCaseEndpoint,
   unlockCaseEndpoint,
   updateCaseActivity,
@@ -56,6 +57,10 @@ const upload = createSecureUpload();
 // GET /api/cases - Get all cases with filtering
 // Apply client access filter to exclude restricted clients
 router.get('/', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, applyClientAccessFilter, getCases);
+
+// GET /api/cases/search?q=keyword - Tenant-scoped text search
+// IMPORTANT: Must come BEFORE /:caseId routes
+router.get('/search', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, applyClientAccessFilter, searchCases);
 
 // POST /api/cases - Create new case
 // PR #44: Apply xID ownership validation guardrails

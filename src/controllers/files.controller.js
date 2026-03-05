@@ -10,6 +10,7 @@ const {
   UnsupportedProviderError,
 } = require('../storage/errors');
 const { safeLogForensicAudit, getRequestIp, getRequestUserAgent } = require('../services/forensicAudit.service');
+const { enqueueStorageJob, JOB_TYPES } = require('../queues/storage.queue');
 
 const URL_EXPIRY_SECONDS = 10 * 60;
 
@@ -105,6 +106,26 @@ async function requestUpload(req, res) {
     });
 
     logFileAction({ tenantId, userId, caseId: resolvedCaseId, objectKey, action: 'UPLOAD_REQUEST' });
+
+    const storagePayload = {
+      firmId: tenantId,
+      tenantId,
+      fileId: file._id.toString(),
+      caseId: resolvedCaseId,
+      objectKey,
+      provider: storageConfig.provider || 'unknown',
+    };
+    await Promise.all([
+      enqueueStorageJob(JOB_TYPES.FILE_SCAN, storagePayload),
+      enqueueStorageJob(JOB_TYPES.THUMBNAIL_GENERATE, storagePayload),
+      enqueueStorageJob(JOB_TYPES.FILE_METADATA, storagePayload),
+    ]).catch((queueError) => {
+      console.warn('[requestUpload] Failed to enqueue background storage jobs', {
+        tenantId,
+        fileId: file._id.toString(),
+        message: queueError.message,
+      });
+    });
 
     await safeLogForensicAudit({
       tenantId,

@@ -17,21 +17,25 @@ const JOB_TYPES = {
   CREATE_CASE_FOLDER: 'CREATE_CASE_FOLDER',
   UPLOAD_FILE: 'UPLOAD_FILE',
   DELETE_FILE: 'DELETE_FILE',
+  FILE_SCAN: 'FILE_SCAN',
+  THUMBNAIL_GENERATE: 'THUMBNAIL_GENERATE',
+  FILE_METADATA: 'FILE_METADATA',
 };
 
-const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-
-const storageQueue = new Queue('storage-jobs', {
-  connection: { url: redisUrl },
-  defaultJobOptions: {
-    // Phase 2: max 5 attempts with exponential backoff (5s, 10s, 20s, 40s)
-    attempts: 5,
-    backoff: {
-      type: 'exponential',
-      delay: 5000,
+const redisUrl = process.env.REDIS_URL;
+const storageQueue = redisUrl
+  ? new Queue('storage-jobs', {
+    connection: { url: redisUrl },
+    defaultJobOptions: {
+      // Phase 2: max 5 attempts with exponential backoff (5s, 10s, 20s, 40s)
+      attempts: 5,
+      backoff: {
+        type: 'exponential',
+        delay: 5000,
+      },
     },
-  },
-});
+  })
+  : null;
 
 /**
  * Build a deterministic idempotency key for a storage job.
@@ -73,8 +77,16 @@ function buildIdempotencyKey(type, payload) {
  * @returns {Promise<import('bullmq').Job>}
  */
 async function enqueueStorageJob(type, payload) {
-  const idempotencyKey = buildIdempotencyKey(type, payload);
-  return storageQueue.add(type, { ...payload, idempotencyKey }, { jobId: idempotencyKey });
+  if (!storageQueue) {
+    return null;
+  }
+  try {
+    const idempotencyKey = buildIdempotencyKey(type, payload);
+    return await storageQueue.add(type, { ...payload, idempotencyKey }, { jobId: idempotencyKey });
+  } catch (error) {
+    console.warn('[StorageQueue] Failed to enqueue job', { type, message: error.message });
+    return null;
+  }
 }
 
 /**
@@ -84,6 +96,7 @@ async function enqueueStorageJob(type, payload) {
  * @returns {Promise<number>}
  */
 async function getQueueDepth() {
+  if (!storageQueue) return 0;
   const [waiting, active] = await Promise.all([
     storageQueue.getWaitingCount(),
     storageQueue.getActiveCount(),

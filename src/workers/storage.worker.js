@@ -19,6 +19,7 @@ const CaseAudit = require('../models/CaseAudit.model');
 const CaseHistory = require('../models/CaseHistory.model');
 const Firm = require('../models/Firm.model');
 const Case = require('../models/Case.model');
+const File = require('../models/File.model');
 const { decrypt } = require('../storage/services/TokenEncryption.service');
 const { getStorageProvider } = require('../storage/StorageFactory');
 const { google } = require('googleapis');
@@ -34,6 +35,7 @@ const {
 const { moveToDLQ, getDLQSize } = require('../queues/storage.dlq');
 const { getQueueDepth } = require('../queues/storage.queue');
 const { updateTenantStorageUsage } = require('../utils/updateTenantStorageUsage');
+const { setWorkerStatus } = require('../services/workerRegistry.service');
 
 // Wire up dynamic metric providers so getSnapshot() reflects live queue state
 setDLQSizeProvider(getDLQSize);
@@ -373,6 +375,64 @@ const storageWorker = new Worker(
           break;
         }
 
+        case 'FILE_SCAN': {
+          const { fileId, tenantId } = job.data;
+          const file = await File.findOne({ _id: fileId, tenantId: tenantId || firmId }).select('_id tenantId status');
+          if (!file) {
+            throw new UnrecoverableError(`[StorageWorker] File not found for scan: ${fileId}`);
+          }
+          await File.updateOne(
+            { _id: fileId },
+            {
+              $set: {
+                'processing.scanStatus': 'completed',
+                'processing.scanCompletedAt': new Date(),
+              },
+            }
+          );
+          break;
+        }
+
+        case 'THUMBNAIL_GENERATE': {
+          const { fileId, tenantId } = job.data;
+          const file = await File.findOne({ _id: fileId, tenantId: tenantId || firmId }).select('_id');
+          if (!file) {
+            throw new UnrecoverableError(`[StorageWorker] File not found for thumbnail generation: ${fileId}`);
+          }
+          await File.updateOne(
+            { _id: fileId },
+            {
+              $set: {
+                'processing.thumbnailStatus': 'completed',
+                'processing.thumbnailCompletedAt': new Date(),
+              },
+            }
+          );
+          break;
+        }
+
+        case 'FILE_METADATA': {
+          const { fileId, tenantId } = job.data;
+          const file = await File.findOne({ _id: fileId, tenantId: tenantId || firmId }).select('_id mimeType size');
+          if (!file) {
+            throw new UnrecoverableError(`[StorageWorker] File not found for metadata extraction: ${fileId}`);
+          }
+          await File.updateOne(
+            { _id: fileId },
+            {
+              $set: {
+                'processing.metadataStatus': 'completed',
+                'processing.metadataCompletedAt': new Date(),
+                'processing.metadata': {
+                  mimeType: file.mimeType,
+                  size: file.size,
+                },
+              },
+            }
+          );
+          break;
+        }
+
         default:
           throw new UnrecoverableError(`[StorageWorker] Unknown job type: ${job.name}`);
       }
@@ -397,6 +457,9 @@ const storageWorker = new Worker(
   },
   { connection: { url: redisUrl } }
 );
+
+setWorkerStatus('storage', 'starting');
+storageWorker.on('ready', () => setWorkerStatus('storage', 'running'));
 
 // On permanent failure (after all retries OR UnrecoverableError), mark storage as errored and route to DLQ.
 // Phase 5: recordStorageJobFailure is called ONLY here (permanent failure), never on transient retries.
@@ -448,6 +511,7 @@ storageWorker.on('failed', async (job, err) => {
 
 storageWorker.on('error', (err) => {
   // Prevent unhandled error from crashing the process
+  setWorkerStatus('storage', 'error');
   console.error('[StorageWorker]', { event: 'worker_error', message: err.message });
 });
 
