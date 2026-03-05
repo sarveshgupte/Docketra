@@ -16,6 +16,7 @@ const OTP_EXPIRY_MINUTES = 10;
 const MAX_OTP_ATTEMPTS = 5;
 const OTP_BLOCK_MINUTES = 15;
 const MAX_RESEND_COUNT = 5;
+const MAX_SLUG_COLLISION_RETRIES = 5;
 const RESEND_COOLDOWN_SECONDS = 60;
 const SYSTEM_EMAIL_DOMAIN = 'system.local';
 const DEFAULT_BUSINESS_ADDRESS = 'Default Address';
@@ -127,6 +128,7 @@ const initiateManualSignup = async ({ name, email, password, phone, firmName, se
     provider: 'manual',
     otpHash,
     otpExpiresAt,
+    // Legacy compatibility field retained for old records/read paths.
     otpExpiry: otpExpiresAt,
     otpAttempts: 0,
     otpBlockedUntil: null,
@@ -173,12 +175,12 @@ const verifySignupOtp = async ({ email, otp, req = null }) => {
     return { success: false, status: 404, message: 'No signup request found. Please initiate signup first.' };
   }
 
-  if (record.otpBlockedUntil && record.otpBlockedUntil > Date.now()) {
+  if (record.otpBlockedUntil && record.otpBlockedUntil.getTime() > Date.now()) {
     return { success: false, status: 429, message: 'Too many attempts. Please try again later.' };
   }
 
   const otpExpiry = resolveOtpExpiry(record);
-  if (!otpExpiry || otpExpiry < Date.now()) {
+  if (!otpExpiry || otpExpiry.getTime() < Date.now()) {
     return { success: false, status: 400, message: 'OTP has expired. Please request a new OTP.' };
   }
 
@@ -332,7 +334,7 @@ const createFirmAndAdmin = async ({
   let firmSlug = null;
   let lastFirmCreateError = null;
 
-  for (let attempt = 0; attempt < 5; attempt += 1) {
+  for (let attempt = 0; attempt < MAX_SLUG_COLLISION_RETRIES; attempt += 1) {
     firmSlug = await generateUniqueSlug(normalizedFirmName, session, attempt);
     try {
       [firm] = await Firm.create([{

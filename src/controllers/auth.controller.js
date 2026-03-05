@@ -313,7 +313,7 @@ const login = async (req, res) => {
         await logAuthAudit({
           xID: normalizedXID || DEFAULT_XID,
           firmId: DEFAULT_FIRM_ID,
-          actionType: 'LOGIN_FAILED',
+          actionType: 'LoginFailed',
           description: 'SuperAdmin login failed: invalid credentials',
           performedBy: normalizedXID || DEFAULT_XID,
           ipAddress: req.ip,
@@ -391,16 +391,6 @@ const login = async (req, res) => {
     if (!user || user.status !== 'active') {
       await recordFailedLoginAttempt(req);
       console.warn(`[AUTH] Invalid login attempt for xID=${normalizedXID} in firm context ${req.firmSlug || req.firmId}`);
-      await logAuthAudit({
-        xID: normalizedXID || DEFAULT_XID,
-        firmId: req.firmIdString || req.firmId || DEFAULT_FIRM_ID,
-        actionType: 'LOGIN_FAILED',
-        description: 'Tenant login failed: invalid credentials',
-        performedBy: normalizedXID || DEFAULT_XID,
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent'),
-        metadata: { eventType: 'LOGIN_FAILED', email: null, timestamp: new Date().toISOString() },
-      }, req);
       try {
         await AuthAudit.create({
           xID: normalizedXID || 'UNKNOWN',
@@ -410,6 +400,11 @@ const login = async (req, res) => {
           performedBy: normalizedXID,
           ipAddress: req.ip,
           userAgent: req.get('user-agent'),
+          metadata: {
+            eventType: 'LOGIN_FAILED',
+            email: null,
+            timestamp: new Date().toISOString(),
+          },
         });
       } catch (auditError) {
         console.error('[AUTH AUDIT] Failed to record login failure event', auditError);
@@ -602,26 +597,20 @@ const login = async (req, res) => {
 
       // Log failed login attempt
       try {
-        await logAuthAudit({
-          xID: user.xID || DEFAULT_XID,
-          firmId: user.firmId || DEFAULT_FIRM_ID,
-          userId: user._id,
-          actionType: 'LOGIN_FAILED',
-          description: 'Tenant login failed: invalid password',
-          performedBy: user.xID || DEFAULT_XID,
-          ipAddress: req.ip,
-          userAgent: req.get('user-agent'),
-          metadata: { eventType: 'LOGIN_FAILED', email: user.email || null, timestamp: new Date().toISOString() },
-        }, req);
         await AuthAudit.create({
           xID: user.xID,
           firmId: user.firmId || DEFAULT_FIRM_ID,
           userId: user._id,
-          actionType: 'LoginFailed',
+          actionType: 'LOGIN_FAILED',
           description: `Login failed: Invalid password (attempt ${currentFailedAttempts})`,
           performedBy: user.xID,
           ipAddress: req.ip,
           userAgent: req.get('user-agent'),
+          metadata: {
+            eventType: 'LOGIN_FAILED',
+            email: user.email || null,
+            timestamp: new Date().toISOString(),
+          },
         });
       } catch (auditError) {
         console.error('[AUTH AUDIT] Failed to record login failure event', auditError);
@@ -748,17 +737,6 @@ const login = async (req, res) => {
 
     // Log successful login (non-blocking)
     try {
-      await logAuthAudit({
-        xID: user.xID || DEFAULT_XID,
-        firmId: user.firmId || DEFAULT_FIRM_ID,
-        userId: user._id,
-        actionType: 'LOGIN_SUCCESS',
-        description: 'User logged in successfully',
-        performedBy: user.xID,
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent'),
-        metadata: { eventType: 'LOGIN_SUCCESS', email: user.email || null, timestamp: new Date().toISOString() },
-      }, req);
       await AuthAudit.create({
         xID: user.xID || DEFAULT_XID,
         firmId: user.firmId || DEFAULT_FIRM_ID,
@@ -768,6 +746,11 @@ const login = async (req, res) => {
         performedBy: user.xID,
         ipAddress: req.ip,
         userAgent: req.get('user-agent'),
+        metadata: {
+          eventType: 'LOGIN_SUCCESS',
+          email: user.email || null,
+          timestamp: new Date().toISOString(),
+        },
       });
     } catch (auditError) {
       console.error('[AUTH AUDIT] Failed to record login event', auditError);
