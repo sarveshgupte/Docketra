@@ -3,6 +3,18 @@ const User = require('../models/User.model');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { assertFirmPlanCapacity, PlanLimitExceededError, PlanAdminLimitExceededError } = require('../services/user.service');
 
+const resolveUserFirmScope = (req, res) => {
+  if (req.user?.role === 'SUPER_ADMIN') return {};
+  if (!req.user?.firmId) {
+    res.status(403).json({
+      success: false,
+      message: 'Forbidden: firm context required',
+    });
+    return null;
+  }
+  return { firmId: req.user.firmId };
+};
+
 /**
  * User Controller
  * Handles all user-related business logic
@@ -14,8 +26,9 @@ const { assertFirmPlanCapacity, PlanLimitExceededError, PlanAdminLimitExceededEr
 const getUsers = async (req, res) => {
   try {
     const { page = 1, limit = 20, role, isActive } = req.query;
-    
-    const query = req.user?.role === 'SUPER_ADMIN' ? {} : { firmId: req.user?.firmId };
+    const firmScope = resolveUserFirmScope(req, res);
+    if (!firmScope) return;
+    const query = { ...firmScope };
     if (role) query.role = role;
     if (isActive !== undefined) query.isActive = isActive === 'true';
     
@@ -52,7 +65,9 @@ const getUsers = async (req, res) => {
  */
 const getUserById = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
+    const firmScope = resolveUserFirmScope(req, res);
+    if (!firmScope) return;
+    const user = await User.findOne({ _id: req.params.id, ...firmScope });
     
     if (!user) {
       return res.status(404).json({
@@ -166,8 +181,9 @@ const createUser = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const { name, role, isActive } = req.body;
-    
-    const user = await User.findById(req.params.id);
+    const firmScope = resolveUserFirmScope(req, res);
+    if (!firmScope) return;
+    const user = await User.findOne({ _id: req.params.id, ...firmScope });
     
     if (!user) {
       return res.status(404).json({
@@ -202,7 +218,9 @@ const updateUser = async (req, res) => {
  */
 const deleteUser = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
+    const firmScope = resolveUserFirmScope(req, res);
+    if (!firmScope) return;
+    const user = await User.findOne({ _id: req.params.id, ...firmScope });
     
     if (!user) {
       return res.status(404).json({

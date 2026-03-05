@@ -80,6 +80,13 @@ const authLimiter = createLimiter({
   keyGenerator: ipKeyGenerator,
 });
 
+const signupLimiter = createLimiter({
+  name: 'signupLimiter',
+  windowMs: config.security.rateLimit.signupWindowSeconds * 1000,
+  max: config.security.rateLimit.signupPerHour,
+  keyGenerator: ipKeyGenerator,
+});
+
 const authBlockEnforcer = async (req, res, next) => {
   const redis = getRedisClient();
   if (!redis) return next();
@@ -147,6 +154,7 @@ const superadminAdminManagementLimiter = superadminLimiter;
 module.exports = {
   globalApiLimiter,
   authLimiter,
+  signupLimiter,
   authBlockEnforcer,
   sensitiveLimiter,
   userReadLimiter,

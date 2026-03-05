@@ -56,6 +56,12 @@ const safeAuditLog = async (auditData) => {
 const getAdminStats = async (req, res) => {
   try {
     const tenantId = req.user?.firmId;
+    if (!tenantId && req.user?.role !== 'SUPER_ADMIN') {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden: firm context required',
+      });
+    }
 
     const [
       totalUsers,

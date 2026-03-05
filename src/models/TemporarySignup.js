@@ -54,6 +54,12 @@ const temporarySignupSchema = new mongoose.Schema({
     default: null,
   },
 
+  otpExpiresAt: {
+    type: Date,
+    default: null,
+  },
+
+  // Backward-compatibility field retained for legacy reads.
   otpExpiry: {
     type: Date,
     default: null,
@@ -64,11 +70,28 @@ const temporarySignupSchema = new mongoose.Schema({
     default: 0,
   },
 
+  otpBlockedUntil: {
+    type: Date,
+    default: null,
+  },
+
+  otpResendCount: {
+    type: Number,
+    default: 0,
+  },
+
+  // Backward-compatibility field retained for legacy reads.
   resendCount: {
     type: Number,
     default: 0,
   },
 
+  otpLastSentAt: {
+    type: Date,
+    default: null,
+  },
+
+  // Backward-compatibility field retained for legacy reads.
   lastOtpSentAt: {
     type: Date,
     default: null,
