@@ -8,7 +8,6 @@ const mongoose = require('mongoose');
  * 
  * Supports:
  * - Manual signup with email OTP verification
- * - Google OAuth signup (no OTP required)
  */
 
 const temporarySignupSchema = new mongoose.Schema({
@@ -26,6 +25,12 @@ const temporarySignupSchema = new mongoose.Schema({
     index: true,
   },
 
+  firmName: {
+    type: String,
+    required: [true, 'Firm name is required'],
+    trim: true,
+  },
+
   passwordHash: {
     type: String,
     default: null,
@@ -39,7 +44,7 @@ const temporarySignupSchema = new mongoose.Schema({
 
   provider: {
     type: String,
-    enum: ['manual', 'google'],
+    enum: ['manual'],
     required: true,
     default: 'manual',
   },

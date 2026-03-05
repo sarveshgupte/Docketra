@@ -5,7 +5,6 @@ const {
   initiateSignup,
   verifyOtp,
   resendOtp,
-  googleAuth,
   completeSignup,
 } = require('../controllers/publicSignup.controller');
 
@@ -14,7 +13,6 @@ const router = express.Router();
 // Rate-limited routes
 router.post('/initiate-signup', authLimiter, wrapWriteHandler(initiateSignup));
 router.post('/resend-otp', authLimiter, resendOtp);
-router.post('/google-auth', authLimiter, wrapWriteHandler(googleAuth));
 
 // Non-rate-limited routes (protected by OTP attempts/verification logic)
 router.post('/verify-otp', authLimiter, verifyOtp);

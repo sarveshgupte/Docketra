@@ -9,8 +9,6 @@ const { generateNextXID } = require('./xIDGenerator');
 const { ensureTenantKey } = require('../security/encryption.service');
 const { slugify } = require('../utils/slugify');
 const emailService = require('./email.service');
-const jwtService = require('./jwt.service');
-const RefreshToken = require('../models/RefreshToken.model');
 
 const SALT_ROUNDS = 10;
 const OTP_EXPIRY_MINUTES = 10;
@@ -57,7 +55,7 @@ const isEmailFirmOwner = async (email) => {
  * @param {Object} params - { name, email, password, phone }
  * @returns {Promise<Object>} result
  */
-const initiateManualSignup = async ({ name, email, password, phone, session = null }) => {
+const initiateManualSignup = async ({ name, email, password, phone, firmName, session = null }) => {
   const normalizedEmail = email.toLowerCase().trim();
 
   if (await isEmailFirmOwner(normalizedEmail)) {
@@ -74,6 +72,7 @@ const initiateManualSignup = async ({ name, email, password, phone, session = nu
   await TemporarySignup.create({
     name: name.trim(),
     email: normalizedEmail,
+    firmName: firmName.trim(),
     passwordHash,
     phone: phone || null,
     provider: 'manual',
@@ -190,38 +189,6 @@ const resendSignupOtp = async ({ email }) => {
   return { success: true, message: 'New OTP sent to your email' };
 };
 
-/**
- * Google OAuth signup flow
- * @param {Object} params - { name, email }
- * @returns {Promise<Object>} result
- */
-const googleSignup = async ({ name, email }) => {
-  const normalizedEmail = email.toLowerCase().trim();
-
-  if (await isEmailFirmOwner(normalizedEmail)) {
-    return { success: false, status: 409, message: 'Email is already associated with a firm' };
-  }
-
-  // Remove any existing temporary signup for this email
-  await TemporarySignup.deleteMany({ email: normalizedEmail });
-
-  await TemporarySignup.create({
-    name: name.trim(),
-    email: normalizedEmail,
-    passwordHash: null,
-    provider: 'google',
-    isVerified: true,
-  });
-
-  return { success: true, message: 'Google account verified. Please complete signup.' };
-};
-
-/**
- * Generate a unique firm slug, appending -1, -2, etc. if needed.
- * @param {string} firmName
- * @param {object} session - MongoDB session
- * @returns {Promise<string>} unique slug
- */
 const generateUniqueSlug = async (firmName, session) => {
   let firmSlug = slugify(firmName.trim());
   const originalSlug = firmSlug;
@@ -272,23 +239,6 @@ const buildFirmUrl = (firmSlug) => {
   return `${frontendUrl}/${firmSlug}/login`;
 };
 
-const generateAndStoreRefreshToken = async ({ req, userId, firmId, session }) => {
-  const refreshToken = jwtService.generateRefreshToken();
-  const tokenHash = jwtService.hashRefreshToken(refreshToken);
-  const expiresAt = jwtService.getRefreshTokenExpiry();
-
-  await RefreshToken.create([{
-    tokenHash,
-    userId,
-    firmId: firmId ? String(firmId) : null,
-    expiresAt,
-    ipAddress: req?.ip,
-    userAgent: req?.get?.('user-agent'),
-  }], { session });
-
-  return refreshToken;
-};
-
 const createFirmAndAdmin = async ({
   name,
   email,
@@ -298,7 +248,6 @@ const createFirmAndAdmin = async ({
   authProvider,
   googleSubject = null,
   session = null,
-  req = null,
 }) => {
   if (!session) {
     throw new Error('Transaction session is required');
@@ -373,110 +322,12 @@ const createFirmAndAdmin = async ({
   firm.bootstrapStatus = 'COMPLETED';
   await firm.save({ session });
 
-  const accessToken = jwtService.generateAccessToken({
-    userId: adminUser._id.toString(),
-    firmId: firm._id.toString(),
-    firmSlug,
-    defaultClientId: defaultClient._id.toString(),
-    role: adminUser.role,
-  });
-  const refreshToken = await generateAndStoreRefreshToken({
-    req,
-    userId: adminUser._id,
-    firmId: firm._id,
-    session,
-  });
-
   const firmUrl = buildFirmUrl(firmSlug);
 
   return {
     adminXID,
     firmSlug,
     firmUrl,
-    accessToken,
-    refreshToken,
-  };
-};
-
-const signupWithPassword = async ({ name, email, password, firmName, phone, session, req }) => {
-  const normalizedEmail = email.toLowerCase().trim();
-  if (await isEmailFirmOwner(normalizedEmail)) {
-    return { success: false, status: 409, message: 'Email is already associated with a firm' };
-  }
-
-  const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
-  const result = await createFirmAndAdmin({
-    name,
-    email: normalizedEmail,
-    firmName,
-    passwordHash,
-    phone: phone || null,
-    authProvider: 'password',
-    session,
-    req,
-  });
-
-  try {
-    await emailService.sendFirmSetupEmail({
-      email: normalizedEmail,
-      name: name.trim(),
-      xid: result.adminXID,
-      firmName: firmName.trim(),
-      workspaceUrl: result.firmUrl,
-    });
-  } catch (emailError) {
-    console.error('[PUBLIC_SIGNUP] Failed to send setup email:', emailError.message);
-  }
-
-  return {
-    success: true,
-    message: 'Signup successful',
-    xid: result.adminXID,
-    firmUrl: result.firmUrl,
-    firmSlug: result.firmSlug,
-    accessToken: result.accessToken,
-    refreshToken: result.refreshToken,
-    redirectPath: `/app/firm/${result.firmSlug}/dashboard`,
-  };
-};
-
-const signupWithGoogle = async ({ name, email, firmName, googleSubject, session, req }) => {
-  const normalizedEmail = email.toLowerCase().trim();
-  if (await isEmailFirmOwner(normalizedEmail)) {
-    return { success: false, status: 409, message: 'Email is already associated with a firm' };
-  }
-
-  const result = await createFirmAndAdmin({
-    name,
-    email: normalizedEmail,
-    firmName,
-    authProvider: 'google',
-    googleSubject,
-    session,
-    req,
-  });
-
-  try {
-    await emailService.sendFirmSetupEmail({
-      email: normalizedEmail,
-      name: name.trim(),
-      xid: result.adminXID,
-      firmName: firmName.trim(),
-      workspaceUrl: result.firmUrl,
-    });
-  } catch (emailError) {
-    console.error('[PUBLIC_SIGNUP] Failed to send setup email:', emailError.message);
-  }
-
-  return {
-    success: true,
-    message: 'Signup successful',
-    xid: result.adminXID,
-    firmUrl: result.firmUrl,
-    firmSlug: result.firmSlug,
-    accessToken: result.accessToken,
-    refreshToken: result.refreshToken,
-    redirectPath: `/app/firm/${result.firmSlug}/dashboard`,
   };
 };
 
@@ -485,7 +336,7 @@ const signupWithGoogle = async ({ name, email, firmName, googleSubject, session,
  * @param {Object} params - { email, firmName }
  * @returns {Promise<Object>} result with xid and firmUrl
  */
-const completeSignup = async ({ email, firmName, session, req }) => {
+const completeSignup = async ({ email, firmName, session }) => {
   const normalizedEmail = email.toLowerCase().trim();
   const record = await TemporarySignup.findOne({ email: normalizedEmail, isVerified: true });
 
@@ -493,29 +344,24 @@ const completeSignup = async ({ email, firmName, session, req }) => {
     return { success: false, status: 400, message: 'No verified signup found. Please complete verification first.' };
   }
 
-  if (!firmName || !firmName.trim()) {
+  const resolvedFirmName = (firmName || record.firmName || '').trim();
+  if (!resolvedFirmName) {
     return { success: false, status: 400, message: 'Firm name is required' };
   }
 
   try {
-    let authProvider = null;
-    if (record.provider === 'manual') {
-      authProvider = 'password';
-    } else if (record.provider === 'google') {
-      authProvider = 'google';
-    } else {
+    if (record.provider !== 'manual') {
       return { success: false, status: 400, message: 'Unsupported signup provider' };
     }
 
     const result = await createFirmAndAdmin({
       name: record.name,
       email: normalizedEmail,
-      firmName,
+      firmName: resolvedFirmName,
       passwordHash: record.passwordHash || null,
       phone: record.phone || null,
-      authProvider,
+      authProvider: 'password',
       session,
-      req,
     });
     await TemporarySignup.deleteOne({ _id: record._id }, { session });
 
@@ -526,7 +372,7 @@ const completeSignup = async ({ email, firmName, session, req }) => {
         email: normalizedEmail,
         xid: result.adminXID,
         workspaceUrl: result.firmUrl,
-        firmName: firmName.trim(),
+        firmName: resolvedFirmName,
       });
     } catch (emailError) {
       console.error('[PUBLIC_SIGNUP] Failed to send welcome email:', emailError.message);
@@ -538,9 +384,7 @@ const completeSignup = async ({ email, firmName, session, req }) => {
       xid: result.adminXID,
       firmUrl: result.firmUrl,
       firmSlug: result.firmSlug,
-      accessToken: result.accessToken,
-      refreshToken: result.refreshToken,
-      redirectPath: `/app/firm/${result.firmSlug}/dashboard`,
+      redirectPath: `/${result.firmSlug}/login`,
     };
   } catch (error) {
     console.error('[PUBLIC_SIGNUP] Complete signup failed:', error.message);
@@ -552,10 +396,7 @@ module.exports = {
   initiateManualSignup,
   verifySignupOtp,
   resendSignupOtp,
-  signupWithPassword,
-  signupWithGoogle,
   createFirmAndAdmin,
-  googleSignup,
   completeSignup,
   generateOtp,
   isEmailFirmOwner,

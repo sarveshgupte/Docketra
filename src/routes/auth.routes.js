@@ -4,8 +4,6 @@ const routeSchemas = require('../schemas/auth.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { authenticate } = require('../middleware/auth.middleware');
 const { requireAdmin } = require('../middleware/permission.middleware');
-const Firm = require('../models/Firm.model');
-const { normalizeFirmSlug } = require('../utils/slugify');
 const { authLimiter, authBlockEnforcer, profileLimiter, sensitiveLimiter } = require('../middleware/rateLimiters');
 const {
   logout,
@@ -24,83 +22,9 @@ const {
   refreshAccessToken, // NEW: JWT token refresh
   verifyTotp,
   completeMfaLogin,
-  initiateGoogleAuth,
-  handleGoogleCallback,
-  verifyOAuthState,
   setupAccount,
   resendSetup,
   } = require('../controllers/auth.controller');
-
-const resolveOAuthFirmContext = async (req, res, next) => {
-  try {
-    const { state, code } = req.query;
-
-    let statePayload;
-    try {
-      statePayload = verifyOAuthState(state);
-    } catch (error) {
-      return res.status(400).json({
-        success: false,
-        code: 'FIRM_RESOLUTION_FAILED',
-        message: 'Invalid or expired OAuth state',
-      });
-    }
-
-    const firmSlug = normalizeFirmSlug(statePayload?.firmSlug);
-    if (!firmSlug) {
-      return res.status(404).json({
-        success: false,
-        code: 'FIRM_NOT_FOUND',
-        message: 'Firm not found. Please check your login URL.',
-        action: 'contact_admin',
-      });
-    }
-
-    const firm = await Firm.findOne({ firmSlug });
-    if (!firm) {
-      return res.status(404).json({
-        success: false,
-        code: 'FIRM_NOT_FOUND',
-        message: 'Firm not found. Please check your login URL.',
-        action: 'contact_admin',
-      });
-    }
-
-    if (firm.status !== 'active') {
-      return res.status(403).json({
-        success: false,
-        code: 'FIRM_SUSPENDED',
-        message: `This firm is currently ${firm.status.toLowerCase()}. Please contact support.`,
-        action: 'contact_admin',
-      });
-    }
-
-    req.firmId = firm._id.toString();
-    req.firmSlug = firm.firmSlug;
-    req.firm = {
-      id: firm._id.toString(),
-      slug: firm.firmSlug,
-      status: firm.status,
-    };
-    req.context = {
-      ...req.context,
-      firmId: firm._id.toString(),
-      firmSlug: firm.firmSlug,
-    };
-    req.oauthState = {
-      ...statePayload,
-      firmSlug,
-    };
-
-    return next();
-  } catch (error) {
-    console.error('[AUTH] Failed to resolve OAuth firm context:', error.message);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to resolve firm context',
-    });
-  }
-};
 
 let profileHitCount = 0;
 const detectProfileLoop = (req, res, next) => {
@@ -128,8 +52,6 @@ router.post('/forgot-password', authBlockEnforcer, authLimiter, sensitiveLimiter
 router.post('/refresh', refreshAccessToken); // NEW: JWT token refresh
 router.post('/verify-totp', authLimiter, verifyTotp);
 router.post('/complete-mfa-login', authLimiter, completeMfaLogin);
-router.get('/google', authLimiter, initiateGoogleAuth);
-router.get('/google/callback', authLimiter, resolveOAuthFirmContext, handleGoogleCallback);
 
 // Protected authentication endpoints - require authentication
 router.post('/logout', authenticate, logout);

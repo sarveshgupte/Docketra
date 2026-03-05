@@ -710,7 +710,7 @@ const getAuditLogs = async (req, res) => {
       .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
       .slice(0, cappedLimit);
 
-    return res.json({ success: true, data: combined });
+    return res.json({ success: true, data: combined, count: combined.length });
   } catch (error) {
     return res.status(500).json({
       success: false,

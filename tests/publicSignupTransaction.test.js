@@ -26,7 +26,6 @@ async function testRouteWrapsWriteSignupHandlers() {
         initiateSignup,
         verifyOtp: async () => ({}),
         resendOtp: async () => ({}),
-        googleAuth: async () => ({}),
         completeSignup: async () => ({}),
       };
     }
@@ -47,37 +46,32 @@ async function testRouteWrapsWriteSignupHandlers() {
   const googleLayer = router.stack.find((layer) => layer.route?.path === '/google-auth');
   const completeLayer = router.stack.find((layer) => layer.route?.path === '/complete-signup');
   assert.ok(initiateLayer, 'initiate-signup route should exist');
-  assert.ok(googleLayer, 'google-auth route should exist');
+  assert.strictEqual(googleLayer, undefined, 'google-auth route should not exist');
   assert.ok(completeLayer, 'complete-signup route should exist');
 
   const initiateHandlers = initiateLayer.route.stack.map((item) => item.handle);
   assert.strictEqual(initiateHandlers[0], authLimiter, 'authLimiter should remain first middleware');
   assert.strictEqual(initiateHandlers[1].original, initiateSignup, 'initiate-signup should be wrapped with wrapWriteHandler');
 
-  const googleHandlers = googleLayer.route.stack.map((item) => item.handle);
-  assert.strictEqual(googleHandlers[0], authLimiter, 'authLimiter should remain first middleware');
-  assert.strictEqual(typeof googleHandlers[1].original, 'function', 'google-auth should be wrapped with wrapWriteHandler');
-
   const completeHandlers = completeLayer.route.stack.map((item) => item.handle);
   assert.strictEqual(completeHandlers[0], authLimiter, 'authLimiter should remain first middleware');
   assert.strictEqual(typeof completeHandlers[1].original, 'function', 'complete-signup should be wrapped with wrapWriteHandler');
 
-  assert.strictEqual(wrappedHandlers.length, 3, 'three write handlers should be wrapped');
+  assert.strictEqual(wrappedHandlers.length, 2, 'two write handlers should be wrapped');
   console.log('  ✓ wraps public signup write routes with wrapWriteHandler');
 }
 
 async function testControllerForwardsTransactionSession() {
   const captured = {};
   const mockSignupService = {
-    signupWithPassword: async (payload) => {
+    initiateManualSignup: async (payload) => {
       captured.payload = payload;
-      return { success: true, message: 'Signup successful', xid: 'X000001', firmUrl: 'http://localhost/acme/login' };
+      return { success: true, message: 'OTP sent to your email' };
     },
   };
 
   Module._load = function (request, parent, isMain) {
     if (request === '../services/signup.service') return mockSignupService;
-    if (request === 'googleapis') return { google: { auth: { OAuth2: class {} } } };
     return originalLoad.apply(this, arguments);
   };
 
@@ -92,9 +86,10 @@ async function testControllerForwardsTransactionSession() {
 
   assert.strictEqual(result.success, true);
   assert.strictEqual(result.statusCode, 201);
+  assert.strictEqual(result.requiresOtpVerification, true);
   assert.strictEqual(captured.payload.session, session, 'controller should pass active transaction session to service');
-  assert.strictEqual(captured.payload.firmName, 'Acme Legal', 'controller should pass firmName for shared onboarding');
-  console.log('  ✓ forwards req.transactionSession.session to signupWithPassword');
+  assert.strictEqual(captured.payload.firmName, 'Acme Legal', 'controller should pass firmName for temporary signup');
+  console.log('  ✓ forwards req.transactionSession.session to initiateManualSignup');
 }
 
 async function testServiceWritesUseSession() {
@@ -123,6 +118,7 @@ async function testServiceWritesUseSession() {
     name: 'Alice',
     email: 'alice@example.com',
     password: 'password123',
+    firmName: 'Acme Legal',
     phone: '9999999999',
     session,
   });

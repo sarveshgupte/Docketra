@@ -27,6 +27,7 @@ const getCategories = async (req, res) => {
     res.json({
       success: true,
       data: categories,
+      count: categories.length,
     });
   } catch (error) {
     res.status(500).json({
