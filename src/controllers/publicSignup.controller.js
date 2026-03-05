@@ -67,7 +67,7 @@ const verifyOtp = async (req, res) => {
       return res.status(400).json({ success: false, message: 'OTP is required' });
     }
 
-    const result = await signupService.verifySignupOtp({ email, otp: otp.trim() });
+    const result = await signupService.verifySignupOtp({ email, otp: otp.trim(), req });
 
     if (!result.success) {
       return res.status(result.status || 400).json({ success: false, message: result.message });
@@ -92,7 +92,7 @@ const resendOtp = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email is required' });
     }
 
-    const result = await signupService.resendSignupOtp({ email });
+    const result = await signupService.resendSignupOtp({ email, req });
 
     if (!result.success) {
       return res.status(result.status || 400).json({ success: false, message: result.message });
@@ -116,7 +116,7 @@ const completeSignup = async (req, res) => {
     if (!email || !email.trim()) {
       return { success: false, statusCode: 400, message: 'Email is required' };
     }
-    const result = await signupService.completeSignup({ email, firmName, session: req.transactionSession?.session });
+    const result = await signupService.completeSignup({ email, firmName, session: req.transactionSession?.session, req });
 
     if (!result.success) {
       return { success: false, statusCode: result.status || 400, message: result.message };

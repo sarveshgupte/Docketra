@@ -16,11 +16,12 @@ const clearModule = (modulePath) => {
 
 async function testRouteWrapsWriteSignupHandlers() {
   const authLimiter = (req, res, next) => next();
+  const signupLimiter = (req, res, next) => next();
   const initiateSignup = async () => ({ success: true });
   const wrappedHandlers = [];
 
   Module._load = function (request, parent, isMain) {
-    if (request === '../middleware/rateLimiters') return { authLimiter };
+    if (request === '../middleware/rateLimiters') return { authLimiter, signupLimiter };
     if (request === '../controllers/publicSignup.controller') {
       return {
         initiateSignup,
@@ -51,7 +52,8 @@ async function testRouteWrapsWriteSignupHandlers() {
 
   const initiateHandlers = initiateLayer.route.stack.map((item) => item.handle);
   assert.strictEqual(initiateHandlers[0], authLimiter, 'authLimiter should remain first middleware');
-  assert.strictEqual(initiateHandlers[1].original, initiateSignup, 'initiate-signup should be wrapped with wrapWriteHandler');
+  assert.strictEqual(initiateHandlers[1], signupLimiter, 'signupLimiter should be second middleware for initiate-signup');
+  assert.strictEqual(initiateHandlers[2].original, initiateSignup, 'initiate-signup should be wrapped with wrapWriteHandler');
 
   const completeHandlers = completeLayer.route.stack.map((item) => item.handle);
   assert.strictEqual(completeHandlers[0], authLimiter, 'authLimiter should remain first middleware');
@@ -107,6 +109,7 @@ async function testServiceWritesUseSession() {
   Module._load = function (request, parent, isMain) {
     if (request === '../models/User.model') return mockUser;
     if (request === '../models/TemporarySignup') return mockTemporarySignup;
+    if (request === '../models/AuthAudit.model') return { create: async () => ({}) };
     if (request === './email.service') return { sendEmail: async () => ({ success: true }) };
     return originalLoad.apply(this, arguments);
   };

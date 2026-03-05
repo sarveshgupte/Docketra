@@ -151,7 +151,8 @@ const createCase = async (req, res) => {
     
     // Verify category exists and is active
     const Category = require('../models/Category.model');
-    const categoryDoc = await Category.findById(categoryId);
+    const categoryScope = req.user?.role === 'SUPER_ADMIN' ? {} : { firmId: req.user?.firmId };
+    const categoryDoc = await Category.findOne({ _id: categoryId, ...categoryScope });
     
     if (!categoryDoc || !categoryDoc.isActive) {
       return res.status(404).json({

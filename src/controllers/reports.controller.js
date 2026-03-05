@@ -76,8 +76,8 @@ const hydrateCasesForReport = async (firmId, cases) => {
 };
 
 const resolveFirmIdFromAuthContext = (req, res) => {
-  const firmId = req.firmId || req.user?.firmId;
-  if (!firmId) {
+  const firmId = req.user?.firmId || req.firmId;
+  if (!firmId && req.user?.role !== 'SUPER_ADMIN') {
     res.status(403).json({ success: false, message: 'Forbidden: firm context required' });
     return null;
   }

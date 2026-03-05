@@ -46,6 +46,13 @@ const subcategorySchema = new mongoose.Schema({
 });
 
 const categorySchema = new mongoose.Schema({
+  firmId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Firm',
+    required: true,
+    index: true,
+  },
+
   /**
    * Category name
    * Required and unique to prevent duplicate categories
@@ -54,7 +61,6 @@ const categorySchema = new mongoose.Schema({
   name: {
     type: String,
     required: [true, 'Category name is required'],
-    unique: true,
     trim: true,
   },
   
@@ -88,6 +94,7 @@ const categorySchema = new mongoose.Schema({
  * - isActive: For filtering active vs inactive categories
  */
 categorySchema.index({ isActive: 1 });
+categorySchema.index({ firmId: 1, name: 1 }, { unique: true });
 
 categorySchema.plugin(softDeletePlugin);
 

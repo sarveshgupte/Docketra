@@ -10,6 +10,18 @@ const wrapWriteHandler = require('../middleware/wrapWriteHandler');
  * Enforces unique names and soft delete rules.
  */
 
+const resolveCategoryFirmScope = (req, res) => {
+  if (req.user?.role === 'SUPER_ADMIN') return {};
+  if (!req.user?.firmId) {
+    res.status(403).json({
+      success: false,
+      message: 'Forbidden: firm context required',
+    });
+    return null;
+  }
+  return { firmId: req.user.firmId };
+};
+
 /**
  * Get all categories (including inactive for admin)
  * GET /api/categories
@@ -18,9 +30,11 @@ const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const getCategories = async (req, res) => {
   try {
     const { activeOnly } = req.query;
+    const firmScope = resolveCategoryFirmScope(req, res);
+    if (!firmScope) return;
     
     // Filter based on activeOnly query parameter
-    const filter = activeOnly === 'true' ? { isActive: true } : {};
+    const filter = activeOnly === 'true' ? { ...firmScope, isActive: true } : { ...firmScope };
     
     const categories = await Category.find(filter).sort({ name: 1 });
     
@@ -45,8 +59,10 @@ const getCategories = async (req, res) => {
 const getCategoryById = async (req, res) => {
   try {
     const { id } = req.params;
+    const firmScope = resolveCategoryFirmScope(req, res);
+    if (!firmScope) return;
     
-    const category = await Category.findById(id);
+    const category = await Category.findOne({ _id: id, ...firmScope });
     
     if (!category) {
       return res.status(404).json({
@@ -75,6 +91,8 @@ const getCategoryById = async (req, res) => {
 const createCategory = async (req, res) => {
   try {
     const { name } = req.body;
+    const firmScope = resolveCategoryFirmScope(req, res);
+    if (!firmScope) return;
     
     if (!name) {
       return res.status(400).json({
@@ -85,6 +103,7 @@ const createCategory = async (req, res) => {
     
     // Check for duplicate name (case-insensitive)
     const existing = await Category.findOne({ 
+      ...firmScope,
       name: { $regex: new RegExp(`^${name.trim()}$`, 'i') } 
     });
     
@@ -96,6 +115,7 @@ const createCategory = async (req, res) => {
     }
     
     const category = new Category({
+      ...firmScope,
       name: name.trim(),
       subcategories: [],
       isActive: true,
@@ -125,6 +145,8 @@ const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
     const { name } = req.body;
+    const firmScope = resolveCategoryFirmScope(req, res);
+    if (!firmScope) return;
     
     if (!name) {
       return res.status(400).json({
@@ -133,7 +155,7 @@ const updateCategory = async (req, res) => {
       });
     }
     
-    const category = await Category.findById(id);
+    const category = await Category.findOne({ _id: id, ...firmScope });
     
     if (!category) {
       return res.status(404).json({
@@ -145,6 +167,7 @@ const updateCategory = async (req, res) => {
     // Check for duplicate name (case-insensitive), excluding current category
     const existing = await Category.findOne({ 
       _id: { $ne: id },
+      ...firmScope,
       name: { $regex: new RegExp(`^${name.trim()}$`, 'i') } 
     });
     
@@ -183,6 +206,8 @@ const toggleCategoryStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { isActive } = req.body;
+    const firmScope = resolveCategoryFirmScope(req, res);
+    if (!firmScope) return;
     
     if (typeof isActive !== 'boolean') {
       return res.status(400).json({
@@ -191,7 +216,7 @@ const toggleCategoryStatus = async (req, res) => {
       });
     }
     
-    const category = await Category.findById(id);
+    const category = await Category.findOne({ _id: id, ...firmScope });
     
     if (!category) {
       return res.status(404).json({
@@ -228,6 +253,8 @@ const addSubcategory = async (req, res) => {
   try {
     const { id } = req.params;
     const { name } = req.body;
+    const firmScope = resolveCategoryFirmScope(req, res);
+    if (!firmScope) return;
     
     if (!name) {
       return res.status(400).json({
@@ -236,7 +263,7 @@ const addSubcategory = async (req, res) => {
       });
     }
     
-    const category = await Category.findById(id);
+    const category = await Category.findOne({ _id: id, ...firmScope });
     
     if (!category) {
       return res.status(404).json({
@@ -290,6 +317,8 @@ const updateSubcategory = async (req, res) => {
   try {
     const { id, subcategoryId } = req.params;
     const { name } = req.body;
+    const firmScope = resolveCategoryFirmScope(req, res);
+    if (!firmScope) return;
     
     if (!name) {
       return res.status(400).json({
@@ -298,7 +327,7 @@ const updateSubcategory = async (req, res) => {
       });
     }
     
-    const category = await Category.findById(id);
+    const category = await Category.findOne({ _id: id, ...firmScope });
     
     if (!category) {
       return res.status(404).json({
@@ -353,6 +382,8 @@ const toggleSubcategoryStatus = async (req, res) => {
   try {
     const { id, subcategoryId } = req.params;
     const { isActive } = req.body;
+    const firmScope = resolveCategoryFirmScope(req, res);
+    if (!firmScope) return;
     
     if (typeof isActive !== 'boolean') {
       return res.status(400).json({
@@ -361,7 +392,7 @@ const toggleSubcategoryStatus = async (req, res) => {
       });
     }
     
-    const category = await Category.findById(id);
+    const category = await Category.findOne({ _id: id, ...firmScope });
     
     if (!category) {
       return res.status(404).json({
@@ -406,8 +437,10 @@ const toggleSubcategoryStatus = async (req, res) => {
 const deleteCategory = async (req, res) => {
   try {
     const { id } = req.params;
+    const firmScope = resolveCategoryFirmScope(req, res);
+    if (!firmScope) return;
     
-    const category = await Category.findById(id);
+    const category = await Category.findOne({ _id: id, ...firmScope });
     
     if (!category) {
       return res.status(404).json({
@@ -444,8 +477,10 @@ const deleteCategory = async (req, res) => {
 const deleteSubcategory = async (req, res) => {
   try {
     const { id, subcategoryId } = req.params;
+    const firmScope = resolveCategoryFirmScope(req, res);
+    if (!firmScope) return;
     
-    const category = await Category.findById(id);
+    const category = await Category.findOne({ _id: id, ...firmScope });
     
     if (!category) {
       return res.status(404).json({
