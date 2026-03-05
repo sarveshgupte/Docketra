@@ -8,7 +8,6 @@ const mongoose = require('mongoose');
  * 
  * Supports:
  * - Manual signup with email OTP verification
- * - Google OAuth signup (no OTP required)
  */
 
 const temporarySignupSchema = new mongoose.Schema({

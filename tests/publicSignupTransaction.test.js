@@ -43,8 +43,10 @@ async function testRouteWrapsWriteSignupHandlers() {
   clearModule('../src/routes/publicSignup.routes');
   const router = require('../src/routes/publicSignup.routes');
   const initiateLayer = router.stack.find((layer) => layer.route?.path === '/initiate-signup');
+  const googleLayer = router.stack.find((layer) => layer.route?.path === '/google-auth');
   const completeLayer = router.stack.find((layer) => layer.route?.path === '/complete-signup');
   assert.ok(initiateLayer, 'initiate-signup route should exist');
+  assert.strictEqual(googleLayer, undefined, 'google-auth route should not exist');
   assert.ok(completeLayer, 'complete-signup route should exist');
 
   const initiateHandlers = initiateLayer.route.stack.map((item) => item.handle);

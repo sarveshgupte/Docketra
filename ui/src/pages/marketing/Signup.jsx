@@ -29,7 +29,6 @@ export default function Signup() {
   });
   const [signupEmail, setSignupEmail] = useState('');
   const [otp, setOtp] = useState('');
-  const [result, setResult] = useState({ xid: '', firmUrl: '', redirectPath: '' });
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
 
@@ -107,13 +106,19 @@ export default function Signup() {
       const response = await api.post('/public/complete-signup', {
         email: signupEmail,
       });
-      const redirectPath = response?.data?.redirectPath || `/${response?.data?.firmSlug}/login`;
-      setResult({
-        xid: response?.data?.xid || '',
-        firmUrl: response?.data?.firmUrl || '',
-        redirectPath,
-      });
-      setStep('success');
+      const firmSlug = response?.data?.firmSlug;
+      const redirectPathFromApi = response?.data?.redirectPath;
+      const safeRedirectPath = typeof redirectPathFromApi === 'string'
+        && redirectPathFromApi.startsWith('/')
+        && !redirectPathFromApi.startsWith('//')
+        && !/^[a-zA-Z][a-zA-Z0-9+\-.]*:/.test(redirectPathFromApi)
+        ? redirectPathFromApi
+        : (firmSlug ? `/${firmSlug}/login` : null);
+      if (!safeRedirectPath) {
+        setApiError('Unable to resolve firm login URL. Please try signing in from your firm login page.');
+        return;
+      }
+      window.location.assign(safeRedirectPath);
     } catch (error) {
       setApiError(getErrorMessage(error, 'Unable to complete signup. Please try again.'));
     } finally {
@@ -295,29 +300,6 @@ export default function Signup() {
             </form>
           )}
 
-          {step === 'success' && (
-            <div className="mt-6 space-y-4 rounded-lg border border-green-200 bg-green-50 p-5 text-sm text-green-800">
-              <h2 className="text-lg font-semibold text-green-900">🎉 Signup successful</h2>
-              <p><span className="font-medium">XID:</span> {result.xid || '—'}</p>
-              <p>
-                <span className="font-medium">Firm URL:</span>{' '}
-                {result.firmUrl ? (
-                  <a href={result.firmUrl} className="underline" target="_blank" rel="noreferrer">
-                    {result.firmUrl}
-                  </a>
-                ) : '—'}
-              </p>
-              <p>Details have been sent to your email.</p>
-              {result.redirectPath && (
-                <a
-                  href={result.redirectPath}
-                  className="marketing-btn-primary inline-flex items-center justify-center px-4 py-2 text-sm font-medium"
-                >
-                  Go to Login
-                </a>
-              )}
-            </div>
-          )}
       </div>
     </section>
   );
