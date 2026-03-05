@@ -276,7 +276,9 @@ const userSchema = new mongoose.Schema({
    */
   status: {
     type: String,
-    enum: ['invited', 'active', 'suspended', 'deleted'],
+    // NOTE: "disabled" is the canonical API-facing term for suspended accounts.
+    // "suspended" is retained for backward compatibility with existing records.
+    enum: ['invited', 'active', 'disabled', 'suspended', 'deleted'],
     default: 'invited',
     required: true,
   },
@@ -413,6 +415,10 @@ userSchema.pre('save', async function() {
 
   // Single source of truth: status drives activation state.
   if (this.isModified('status') || this.isNew) {
+    // Backward compatibility: normalize legacy "suspended" writes to canonical "disabled".
+    if (this.status === 'suspended') {
+      this.status = 'disabled';
+    }
     this.isActive = this.status === 'active';
   }
 

@@ -665,7 +665,7 @@ const changeLegalName = async (req, res) => {
 const updateClientFactSheet = async (req, res) => {
   try {
     const { clientId } = req.params;
-    const { description, notes } = req.body;
+    const { description, notes, basicInfo } = req.body;
     
     // Get firmId from authenticated user
     const userFirmId = req.user?.firmId;
@@ -711,6 +711,22 @@ const updateClientFactSheet = async (req, res) => {
     if (notes !== undefined) {
       client.clientFactSheet.notes = notes;
     }
+
+    // Optional: capture structured client fact sheet metadata.
+    // This complements existing top-level client fields and keeps CFS case-friendly.
+    if (basicInfo && typeof basicInfo === 'object') {
+      client.clientFactSheet.basicInfo = {
+        clientName: basicInfo.clientName ?? client.clientFactSheet.basicInfo?.clientName ?? client.businessName,
+        entityType: basicInfo.entityType ?? client.clientFactSheet.basicInfo?.entityType ?? '',
+        PAN: basicInfo.PAN ?? client.clientFactSheet.basicInfo?.PAN ?? client.PAN ?? '',
+        CIN: basicInfo.CIN ?? client.clientFactSheet.basicInfo?.CIN ?? client.CIN ?? '',
+        GSTIN: basicInfo.GSTIN ?? client.clientFactSheet.basicInfo?.GSTIN ?? client.GST ?? '',
+        address: basicInfo.address ?? client.clientFactSheet.basicInfo?.address ?? client.businessAddress,
+        contactPerson: basicInfo.contactPerson ?? client.clientFactSheet.basicInfo?.contactPerson ?? '',
+        email: basicInfo.email ?? client.clientFactSheet.basicInfo?.email ?? client.businessEmail,
+        phone: basicInfo.phone ?? client.clientFactSheet.basicInfo?.phone ?? client.primaryContactNumber,
+      };
+    }
     
     // Mark as initialized
     client.clientFactSheet._initialized = true;
@@ -736,6 +752,7 @@ const updateClientFactSheet = async (req, res) => {
         metadata: {
           updatedDescription: description !== undefined,
           updatedNotes: notes !== undefined,
+          updatedBasicInfo: !!basicInfo,
         },
       });
     }
@@ -848,6 +865,13 @@ const uploadFactSheetFile = async (req, res) => {
     };
     
     client.clientFactSheet.files.push(newFile);
+    client.clientFactSheet.documents = client.clientFactSheet.documents || [];
+    client.clientFactSheet.documents.push({
+      fileName: newFile.fileName,
+      fileUrl: newFile.storagePath,
+      uploadedBy: newFile.uploadedByXID,
+      uploadedAt: newFile.uploadedAt,
+    });
     await client.save();
     
     // Get the newly added file (with generated fileId)
@@ -942,6 +966,11 @@ const deleteFactSheetFile = async (req, res) => {
     
     // Remove file from array
     client.clientFactSheet.files.splice(fileIndex, 1);
+    if (Array.isArray(client.clientFactSheet.documents)) {
+      client.clientFactSheet.documents = client.clientFactSheet.documents.filter(
+        (doc) => !(doc.fileName === fileToDelete.fileName && String(doc.uploadedAt) === String(fileToDelete.uploadedAt))
+      );
+    }
     await client.save();
     
     // Log audit event
