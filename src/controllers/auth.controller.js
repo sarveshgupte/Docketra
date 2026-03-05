@@ -1424,8 +1424,10 @@ const createUser = async (req, res) => {
     }
     
     // Check if email already exists (enforce uniqueness)
-    const existingUser = await User.findOne({ 
-      email: email.trim().toLowerCase() 
+    const existingUser = await User.findOne({
+      firmId: admin.firmId,
+      email: email.trim().toLowerCase(),
+      status: { $ne: 'deleted' },
     });
     
     if (existingUser) {
@@ -1618,8 +1620,8 @@ const activateUser = async (req, res) => {
     // Get admin from authenticated request
     const admin = req.user;
     
-    // Find user
-    const user = await User.findOne({ xID: xID.toUpperCase() });
+    // Find user in the same firm only (prevents cross-firm account control)
+    const user = await User.findOne({ xID: xID.toUpperCase(), firmId: admin.firmId });
     
     if (!user) {
       return res.status(404).json({
@@ -1634,7 +1636,6 @@ const activateUser = async (req, res) => {
     await assertFirmPlanCapacity({ firmId: admin.firmId, session, incrementBy, role: user.role });
 
     // Activate user
-    user.isActive = true;
     user.status = 'active';
     await user.save(session ? { session } : undefined);
     
@@ -1692,8 +1693,8 @@ const deactivateUser = async (req, res) => {
       });
     }
     
-    // Find user
-    const user = await User.findOne({ xID: xID.toUpperCase() });
+    // Find user in the same firm only (prevents cross-firm account control)
+    const user = await User.findOne({ xID: xID.toUpperCase(), firmId: admin.firmId });
     
     if (!user) {
       return res.status(404).json({
@@ -1722,8 +1723,8 @@ const deactivateUser = async (req, res) => {
       });
     }
     
-    // Deactivate user
-    user.isActive = false;
+    // Soft-disable user (never hard delete)
+    user.status = 'disabled';
     await user.save();
     
     // Log deactivation
@@ -2273,12 +2274,23 @@ const resendSetupEmail = async (req, res) => {
 const updateUserStatus = async (req, res) => {
   try {
     const { xID } = req.params;
-    const { active } = req.body;
+    const { active, status } = req.body;
     
-    if (active === undefined) {
+    if (active === undefined && !status) {
       return res.status(400).json({
         success: false,
-        message: 'active field is required',
+        message: 'Either active (boolean) or status is required',
+      });
+    }
+
+    const resolvedStatus = typeof active === 'boolean'
+      ? (active ? 'active' : 'disabled')
+      : String(status).toLowerCase();
+
+    if (!['active', 'disabled'].includes(resolvedStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: 'status must be either active or disabled',
       });
     }
     
@@ -2286,15 +2298,15 @@ const updateUserStatus = async (req, res) => {
     const admin = req.user;
     
     // Prevent admin from deactivating themselves
-    if (!active && admin.xID === xID.toUpperCase()) {
+    if (resolvedStatus === 'disabled' && admin.xID === xID.toUpperCase()) {
       return res.status(400).json({
         success: false,
         message: 'You cannot deactivate your own account',
       });
     }
     
-    // Find user
-    const user = await User.findOne({ xID: xID.toUpperCase() });
+    // Find user in same firm only (prevents cross-firm account takeover)
+    const user = await User.findOne({ xID: xID.toUpperCase(), firmId: admin.firmId });
     
     if (!user) {
       return res.status(404).json({
@@ -2304,7 +2316,7 @@ const updateUserStatus = async (req, res) => {
     }
     
     // PROTECTION: Prevent deactivation of system users (default admin)
-    if (user.isSystem === true && !active) {
+    if (user.isSystem === true && resolvedStatus === 'disabled') {
       // Log the attempt for audit
       await logAuthAudit({
         xID: user.xID,
@@ -2324,7 +2336,7 @@ const updateUserStatus = async (req, res) => {
     }
     
     // Update status
-    user.isActive = active;
+    user.status = resolvedStatus;
     await user.save();
     
     // Log status change
@@ -2332,8 +2344,8 @@ const updateUserStatus = async (req, res) => {
       xID: user.xID,
       firmId: user.firmId,
       userId: user._id,
-      actionType: active ? 'AccountActivated' : 'AccountDeactivated',
-      description: `User account ${active ? 'activated' : 'deactivated'} by admin`,
+      actionType: resolvedStatus === 'active' ? 'AccountActivated' : 'AccountDeactivated',
+      description: `User account ${resolvedStatus === 'active' ? 'activated' : 'deactivated'} by admin`,
       performedBy: admin.xID,
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
@@ -2341,7 +2353,7 @@ const updateUserStatus = async (req, res) => {
     
     res.json({
       success: true,
-      message: `User ${active ? 'activated' : 'deactivated'} successfully`,
+      message: `User ${resolvedStatus === 'active' ? 'activated' : 'deactivated'} successfully`,
     });
   } catch (error) {
     res.status(500).json({
@@ -3046,7 +3058,7 @@ const handleGoogleCallback = async (req, res) => {
         const isActivation = flow === 'activation';
         if (candidate.firmId && candidate.firmId.toString() !== firmIdFromContext.toString()) return false;
         if (![ROLE_ADMIN, ROLE_EMPLOYEE].includes(candidate.role)) return false;
-        if (candidate.status === 'suspended') return false;
+        if (candidate.status === 'suspended' || candidate.status === 'disabled') return false;
         if (!isActivation && candidate.status !== 'active') return false;
         return true;
       },

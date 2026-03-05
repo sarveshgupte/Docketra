@@ -7,6 +7,8 @@ const CaseHistory = require('../models/CaseHistory.model');
 const CaseAudit = require('../models/CaseAudit.model');
 const Client = require('../models/Client.model');
 const User = require('../models/User.model');
+const WorkType = require('../models/WorkType.model');
+const SubWorkType = require('../models/SubWorkType.model');
 const { CaseRepository, ClientRepository } = require('../repositories');
 const categoryRepository = require('../repositories/category.repository');
 const { detectDuplicates, generateDuplicateOverrideComment } = require('../services/clientDuplicateDetector');
@@ -79,6 +81,14 @@ const sanitizeForLog = (text, maxLength = 100) => {
     .trim();
 };
 
+const computeDeadlineFromTatDays = (tatDays) => {
+  const days = Number(tatDays);
+  if (!Number.isFinite(days) || days <= 0) return null;
+  const deadline = new Date();
+  deadline.setDate(deadline.getDate() + days);
+  return deadline;
+};
+
 /**
  * Check if user has access to a case
  * PR: Fix Case Visibility - Unified access control logic
@@ -139,6 +149,8 @@ const createCase = async (req, res) => {
       forceCreate, // Flag to override duplicate warning
       clientData, // Client data for duplicate detection (for "Client – New" cases)
       payload, // Payload for client governance cases
+      workTypeId,
+      subWorkTypeId,
     } = req.body;
     
     // Get creator xID from authenticated user (req.user is set by auth middleware)
@@ -220,6 +232,51 @@ const createCase = async (req, res) => {
     
     // Determine the actual category name to use (for backward compatibility)
     const actualCategory = caseCategory || category || categoryDoc.name;
+
+    // Optional: resolve firm-scoped work type and sub-work type.
+    // This keeps case creation backward compatible while enabling deadline auto-calculation.
+    let selectedWorkType = null;
+    let selectedSubWorkType = null;
+    let tatDaysSnapshot = 0;
+
+    if (workTypeId) {
+      selectedWorkType = await WorkType.findOne({ _id: workTypeId, firmId, isActive: true });
+      if (!selectedWorkType) {
+        return res.status(404).json({
+          success: false,
+          message: 'Work type not found or inactive',
+          ...responseMeta,
+        });
+      }
+      tatDaysSnapshot = Number(selectedWorkType.tatDays || 0);
+    }
+
+    if (subWorkTypeId) {
+      if (!selectedWorkType) {
+        return res.status(400).json({
+          success: false,
+          message: 'workTypeId is required when subWorkTypeId is provided',
+          ...responseMeta,
+        });
+      }
+
+      selectedSubWorkType = await SubWorkType.findOne({
+        _id: subWorkTypeId,
+        firmId,
+        parentWorkTypeId: selectedWorkType._id,
+        isActive: true,
+      });
+
+      if (!selectedSubWorkType) {
+        return res.status(404).json({
+          success: false,
+          message: 'Sub work type not found, inactive, or not linked to selected work type',
+          ...responseMeta,
+        });
+      }
+
+      tatDaysSnapshot = Number(selectedSubWorkType.tatDays || tatDaysSnapshot);
+    }
     
     // PART F: Duplicate detection for "Client – New" category
     let duplicateMatches = null;
@@ -315,6 +372,10 @@ const createCase = async (req, res) => {
         slaConfigSnapshot: slaState.slaConfigSnapshot,
         payload, // Store client case payload if provided
         idempotencyKey: idempotencyKey || undefined,
+        workTypeId: selectedWorkType?._id || null,
+        subWorkTypeId: selectedSubWorkType?._id || null,
+        tatDaysSnapshot,
+        dueDate: computeDeadlineFromTatDays(tatDaysSnapshot) || undefined,
       });
       
       await newCase.save({ session });
@@ -2178,9 +2239,19 @@ const getClientFactSheetForCase = async (req, res) => {
         data: {
           clientId: client.clientId,
           businessName: client.businessName,
+          basicInfo: {
+            clientName: client.businessName,
+            PAN: client.PAN || '',
+            CIN: client.CIN || '',
+            GSTIN: client.GST || '',
+            address: client.businessAddress || '',
+            email: client.businessEmail || '',
+            phone: client.primaryContactNumber || '',
+          },
           description: '',
           notes: '',
           files: [],
+          documents: [],
         },
         message: 'No fact sheet available for this client',
       });
@@ -2190,6 +2261,15 @@ const getClientFactSheetForCase = async (req, res) => {
     const factSheetData = {
       clientId: client.clientId,
       businessName: client.businessName,
+      basicInfo: client.clientFactSheet.basicInfo || {
+        clientName: client.businessName,
+        PAN: client.PAN || '',
+        CIN: client.CIN || '',
+        GSTIN: client.GST || '',
+        address: client.businessAddress || '',
+        email: client.businessEmail || '',
+        phone: client.primaryContactNumber || '',
+      },
       description: client.clientFactSheet.description || '',
       notes: client.clientFactSheet.notes || '',
       files: (client.clientFactSheet.files || []).map(file => ({
@@ -2198,6 +2278,12 @@ const getClientFactSheetForCase = async (req, res) => {
         mimeType: file.mimeType,
         uploadedAt: file.uploadedAt,
         // Note: storagePath is intentionally excluded for security
+      })),
+      documents: (client.clientFactSheet.documents || []).map((doc) => ({
+        fileName: doc.fileName,
+        fileUrl: doc.fileUrl,
+        uploadedBy: doc.uploadedBy,
+        uploadedAt: doc.uploadedAt,
       })),
     };
     

@@ -214,6 +214,35 @@ const caseSchema = new mongoose.Schema({
     required: [true, 'Subcategory is required'],
     trim: true,
   },
+
+  /**
+   * Optional work type taxonomy (firm-admin managed).
+   * If provided, this must point to a work type within the same firm.
+   */
+  workTypeId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'WorkType',
+    default: null,
+  },
+
+  /**
+   * Optional sub work type linked to workTypeId.
+   */
+  subWorkTypeId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'SubWorkType',
+    default: null,
+  },
+
+  /**
+   * TAT snapshot captured when case is created.
+   * Ensures audit-friendly deadlines even if master data changes later.
+   */
+  tatDaysSnapshot: {
+    type: Number,
+    min: 0,
+    default: 0,
+  },
   
   /**
    * Current lifecycle status of the case
