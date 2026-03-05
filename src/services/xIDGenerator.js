@@ -12,26 +12,23 @@
  * - Immutability (xID cannot be changed after creation)
  * - Race-condition safety via transaction isolation
  * 
- * IMPORTANT: Uses tenant-scoped Counter collection with atomic $inc updates.
+ * IMPORTANT: Uses global Counter collection key with atomic $inc updates.
  */
 
 const Counter = require('../models/Counter.model');
 const User = require('../models/User.model');
 
 /**
- * Generate the next available xID using an atomic tenant-scoped counter.
+ * Generate the next available xID using an atomic global counter.
  * 
- * @param {string|Object} firmId - Firm ID/ObjectId for tenant-scoped counters
+ * @param {string|Object} _firmId - Legacy parameter (unused for global xID sequence)
  * @param {object} session - MongoDB session for transactional reads (required for atomicity)
  * @returns {Promise<string>} Next xID in format X000001
  */
-const generateNextXID = async (firmId, session = null) => {
-  if (!firmId) {
-    throw new Error('firmId is required for xID generation');
-  }
+const generateNextXID = async (_firmId = null, session = null) => {
   try {
     const counter = await Counter.findOneAndUpdate(
-      { name: 'xID', firmId: String(firmId) },
+      { name: 'user_xid', firmId: 'GLOBAL' },
       { $inc: { seq: 1 } },
       {
         new: true,
@@ -43,7 +40,7 @@ const generateNextXID = async (firmId, session = null) => {
 
     const xID = `X${String(counter.seq).padStart(6, '0')}`;
     
-    console.log(`[xID Generator] Generated xID: ${xID} for firm: ${firmId}`);
+    console.log(`[xID Generator] Generated xID: ${xID}`);
     
     return xID;
   } catch (error) {
