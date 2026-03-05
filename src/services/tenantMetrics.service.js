@@ -33,7 +33,7 @@ const upsertTenantMetrics = async (firmId, metrics) => {
 };
 
 const incrementTenantMetric = async (firmId, field, amount = 1) => {
-  if (!firmId || !['users', 'clients', 'cases'].includes(field)) return null;
+  if (!firmId || !['users', 'clients', 'cases', 'categories'].includes(field)) return null;
   const result = await TenantMetrics.findOneAndUpdate(
     { firmId: String(firmId) },
     {

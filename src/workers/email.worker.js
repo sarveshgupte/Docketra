@@ -23,7 +23,6 @@ if (!redisUrl) {
 
   emailWorker.on('ready', () => setWorkerStatus('email', 'running'));
   emailWorker.on('error', () => setWorkerStatus('email', 'error'));
-  emailWorker.on('failed', () => setWorkerStatus('email', 'degraded'));
 }
 
 module.exports = emailWorker;

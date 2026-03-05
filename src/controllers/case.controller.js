@@ -2511,10 +2511,12 @@ const searchCases = async (req, res) => {
       Object.assign(filters, req.clientAccessFilter);
     }
 
-    const results = await Case.find(filters)
-      .sort({ score: { $meta: 'textScore' }, createdAt: -1 })
-      .select({ score: { $meta: 'textScore' } })
-      .limit(50);
+    const results = await Case.aggregate([
+      { $match: filters },
+      { $addFields: { score: { $meta: 'textScore' } } },
+      { $sort: { score: -1, createdAt: -1 } },
+      { $limit: 50 },
+    ]);
 
     return res.json({
       success: true,
