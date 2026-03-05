@@ -107,6 +107,7 @@ const clientApprovalRoutes = require('./routes/clientApproval.routes');  // Clie
 const clientRoutes = require('./routes/client.routes');  // Client management routes (PR #39)
 const reportsRoutes = require('./routes/reports.routes');  // Reports routes
 const categoryRoutes = require('./routes/category.routes');  // Category routes
+const workTypeRoutes = require('./routes/workType.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const firmMetricsRoutes = require('./routes/firmMetrics.routes');
 const adminRoutes = require('./routes/admin.routes');  // Admin routes (PR #41)
@@ -388,6 +389,7 @@ app.use('/api/contact', contactLimiter, contactRoutes);
 
 // Category routes (public GET for active categories, admin-only for modifications)
 app.use('/api/categories', writeGuardChain, categoryRoutes);
+app.use('/api/work-types', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, workTypeRoutes);
 
 // Admin routes (firm-scoped) - enforce auth + firm context + admin role boundary
 app.use('/api/admin', authenticate, firmContext, requireTenant, tenantThrottle, sensitiveLimiter, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, requireAdmin, adminAuditTrail('admin'), adminRoutes);

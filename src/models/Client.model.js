@@ -73,6 +73,17 @@ const clientSchema = new mongoose.Schema({
    * Rich text field for detailed client information
    */
   clientFactSheet: {
+    basicInfo: {
+      clientName: { type: String, trim: true, default: '' },
+      entityType: { type: String, trim: true, default: '' },
+      PAN: { type: String, trim: true, uppercase: true, default: '' },
+      CIN: { type: String, trim: true, uppercase: true, default: '' },
+      GSTIN: { type: String, trim: true, uppercase: true, default: '' },
+      address: { type: String, trim: true, default: '' },
+      contactPerson: { type: String, trim: true, default: '' },
+      email: { type: String, trim: true, lowercase: true, default: '' },
+      phone: { type: String, trim: true, default: '' },
+    },
     description: {
       type: String,
       trim: true,
@@ -147,6 +158,13 @@ const clientSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
       },
+    }],
+    // Compatibility view for downstream consumers expecting document object structure
+    documents: [{
+      fileName: { type: String, trim: true },
+      fileUrl: { type: String, trim: true },
+      uploadedBy: { type: String, trim: true, uppercase: true },
+      uploadedAt: { type: Date, default: Date.now },
     }],
   },
   
