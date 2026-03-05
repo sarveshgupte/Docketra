@@ -36,6 +36,7 @@ export default function Signup() {
   const [firmName, setFirmName] = useState('');
   const [result, setResult] = useState({ xid: '', firmUrl: '' });
   const [errors, setErrors] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
 
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
@@ -330,18 +331,33 @@ export default function Signup() {
               </div>
               <div>
                 <label htmlFor="signup-password" className={labelClass}>Password</label>
-                <input
-                  id="signup-password"
-                  type="password"
-                  name="password"
-                  value={form.password}
-                  onChange={onFormChange}
-                  className={inputClass}
-                  disabled={loading}
-                  autoComplete="new-password"
-                  minLength={8}
-                  required
-                />
+                <div className="relative">
+                  <input
+                    id="signup-password"
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    value={form.password}
+                    onChange={onFormChange}
+                    className={`${inputClass} pr-10`}
+                    disabled={loading}
+                    autoComplete="new-password"
+                    minLength={8}
+                    required
+                  />
+                  <button
+                    type="button"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute inset-y-0 right-0 inline-flex items-center px-3 text-gray-500 hover:text-gray-700"
+                    disabled={loading}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5" aria-hidden="true">
+                      <path d="M2.46 12C3.73 7.94 7.52 5 12 5c4.48 0 8.27 2.94 9.54 7-1.27 4.06-5.06 7-9.54 7-4.48 0-8.27-2.94-9.54-7Z" />
+                      <circle cx="12" cy="12" r="3" />
+                      {showPassword && <path d="M4 4l16 16" />}
+                    </svg>
+                  </button>
+                </div>
                 {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password}</p>}
               </div>
               <div>

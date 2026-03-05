@@ -333,7 +333,7 @@ const createFirmAndAdmin = async ({
     isInternal: true,
     createdBySystem: true,
     isActive: true,
-    status: 'active',
+    status: 'ACTIVE',
     createdByXid: 'SELF_SIGNUP',
     createdBy: normalizedEmail,
   }], { session });
