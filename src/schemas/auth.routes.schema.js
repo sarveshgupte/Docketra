@@ -25,15 +25,6 @@ module.exports = {
       preAuthToken: nonEmptyString,
     }).passthrough(),
   },
-  'GET /google': {
-    query: z.object({}).passthrough(),
-  },
-  'GET /google/callback': {
-    query: z.object({
-      state: nonEmptyString,
-      code: nonEmptyString,
-    }).passthrough(),
-  },
   'POST /logout': {
     body: z.object({}).passthrough(),
   },

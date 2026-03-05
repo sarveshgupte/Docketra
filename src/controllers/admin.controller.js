@@ -63,7 +63,7 @@ const getAdminStats = async (req, res) => {
       totalCategories,
       latestMetrics,
     ] = await Promise.all([
-      User.countDocuments({ firmId: tenantId }),
+      User.countDocuments({ firmId: tenantId, isActive: true }),
       Client.countDocuments({ firmId: tenantId }),
       Category.countDocuments({ firmId: tenantId }),
       getLatestTenantMetrics(tenantId),

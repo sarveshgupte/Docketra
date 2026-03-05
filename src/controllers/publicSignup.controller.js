@@ -1,4 +1,3 @@
-const { google } = require('googleapis');
 const signupService = require('../services/signup.service');
 
 /**
@@ -26,7 +25,7 @@ const initiateSignup = async (req, res) => {
       return { success: false, statusCode: 400, message: 'Firm name is required' };
     }
 
-    const result = await signupService.signupWithPassword({
+    const result = await signupService.initiateManualSignup({
       name,
       email,
       password,
@@ -45,12 +44,7 @@ const initiateSignup = async (req, res) => {
       statusCode: 201,
       message: result.message,
       email,
-      xid: result.xid,
-      firmUrl: result.firmUrl,
-      firmSlug: result.firmSlug,
-      accessToken: result.accessToken,
-      refreshToken: result.refreshToken,
-      redirectPath: result.redirectPath,
+      requiresOtpVerification: true,
     };
   } catch (error) {
     console.error('[PUBLIC_SIGNUP] initiateSignup error:', error.message);
@@ -112,73 +106,6 @@ const resendOtp = async (req, res) => {
 };
 
 /**
- * POST /public/google-auth
- * Google OAuth signup — verify ID token and create temporary signup
- */
-const googleAuth = async (req, res) => {
-  try {
-    const { idToken, firmName } = req.body;
-    const session = req.transactionSession?.session;
-
-    if (!idToken) {
-      return { success: false, statusCode: 400, message: 'Google ID token is required' };
-    }
-    if (!firmName || !firmName.trim()) {
-      return { success: false, statusCode: 400, message: 'Firm name is required' };
-    }
-
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    if (!clientId) {
-      return { success: false, statusCode: 500, message: 'Google OAuth is not configured' };
-    }
-
-    const oauthClient = new google.auth.OAuth2(clientId);
-    const ticket = await oauthClient.verifyIdToken({
-      idToken,
-      audience: clientId,
-    });
-
-    const payload = ticket.getPayload();
-    const email = payload?.email?.trim().toLowerCase();
-    const name = payload?.name || '';
-    const emailVerified = payload?.email_verified !== false;
-
-    if (!email || !emailVerified) {
-      return { success: false, statusCode: 403, message: 'Google account email is not verified' };
-    }
-
-    const result = await signupService.signupWithGoogle({
-      name,
-      email,
-      firmName,
-      googleSubject: payload?.sub,
-      session,
-      req,
-    });
-
-    if (!result.success) {
-      return { success: false, statusCode: result.status || 400, message: result.message };
-    }
-
-    return {
-      success: true,
-      statusCode: 201,
-      message: result.message,
-      email,
-      xid: result.xid,
-      firmUrl: result.firmUrl,
-      firmSlug: result.firmSlug,
-      accessToken: result.accessToken,
-      refreshToken: result.refreshToken,
-      redirectPath: result.redirectPath,
-    };
-  } catch (error) {
-    console.error('[PUBLIC_SIGNUP] googleAuth error:', error.message);
-    return { success: false, statusCode: 500, message: 'An error occurred. Please try again.' };
-  }
-};
-
-/**
  * POST /public/complete-signup
  * Complete signup — create firm + admin user in a transaction
  */
@@ -189,10 +116,6 @@ const completeSignup = async (req, res) => {
     if (!email || !email.trim()) {
       return { success: false, statusCode: 400, message: 'Email is required' };
     }
-    if (!firmName || !firmName.trim()) {
-      return { success: false, statusCode: 400, message: 'Firm name is required' };
-    }
-
     const result = await signupService.completeSignup({ email, firmName, session: req.transactionSession?.session, req });
 
     if (!result.success) {
@@ -206,8 +129,6 @@ const completeSignup = async (req, res) => {
       xid: result.xid,
       firmUrl: result.firmUrl,
       firmSlug: result.firmSlug,
-      accessToken: result.accessToken,
-      refreshToken: result.refreshToken,
       redirectPath: result.redirectPath,
     };
   } catch (error) {
@@ -220,6 +141,5 @@ module.exports = {
   initiateSignup,
   verifyOtp,
   resendOtp,
-  googleAuth,
   completeSignup,
 };

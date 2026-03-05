@@ -32,7 +32,6 @@ const FirmsManagement = lazyPage(() => import('./pages/FirmsManagement'), 'Firms
 const ReportsDashboard = lazyPage(() => import('./pages/reports/ReportsDashboard'), 'ReportsDashboard');
 const DetailedReports = lazyPage(() => import('./pages/reports/DetailedReports'), 'DetailedReports');
 const CasesPage = lazyPage(() => import('./pages/CasesPage'), 'CasesPage');
-const GoogleCallbackPage = lazyPage(() => import('./pages/GoogleCallbackPage'), 'GoogleCallbackPage');
 const MarketingHomePage = lazyPage(() => import('./pages/marketing/HomePage'), 'HomePage');
 const MarketingFeaturesPage = lazyPage(() => import('./pages/marketing/Features'), 'FeaturesPage');
 const MarketingPricingPage = lazyPage(() => import('./pages/marketing/Pricing'), 'PricingPage');
@@ -63,7 +62,6 @@ const LEGACY_SLUG_BLOCKLIST = new Set([
   'f',
   'features',
   'forgot-password',
-  'google-callback',
   'login',
   'pricing',
   'privacy',
@@ -141,8 +139,6 @@ export const Router = () => {
           <Route path="/change-password" element={<ChangePasswordPage />} />
           <Route path="/auth/setup-account" element={<SetPasswordPage />} />
           <Route path="/setup-password" element={<SetPasswordPage />} />
-          <Route path="/google-callback" element={<GoogleCallbackPage />} />
-
           <Route
             path="/app/superadmin"
             element={(
