@@ -107,6 +107,7 @@ const clientApprovalRoutes = require('./routes/clientApproval.routes');  // Clie
 const clientRoutes = require('./routes/client.routes');  // Client management routes (PR #39)
 const reportsRoutes = require('./routes/reports.routes');  // Reports routes
 const categoryRoutes = require('./routes/category.routes');  // Category routes
+const dashboardRoutes = require('./routes/dashboard.routes');
 const firmMetricsRoutes = require('./routes/firmMetrics.routes');
 const adminRoutes = require('./routes/admin.routes');  // Admin routes (PR #41)
 const superadminRoutes = require('./routes/superadmin.routes');  // Superadmin routes
@@ -340,6 +341,7 @@ app.get('/api', (req, res) => {
       reports: '/api/reports',
       categories: '/api/categories',
       admin: '/api/admin',
+      dashboard: '/api/dashboard',
       superadmin: '/api/superadmin',
       superadminLegacy: '/superadmin',
       debug: '/api/debug',
@@ -389,6 +391,7 @@ app.use('/api/categories', writeGuardChain, categoryRoutes);
 
 // Admin routes (firm-scoped) - enforce auth + firm context + admin role boundary
 app.use('/api/admin', authenticate, firmContext, requireTenant, tenantThrottle, sensitiveLimiter, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, requireAdmin, adminAuditTrail('admin'), adminRoutes);
+app.use('/api/dashboard', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, requireAdmin, dashboardRoutes);
 
 // Superadmin routes - platform scope only (no firm context)
 // Include legacy /superadmin to prevent SPA fallback when UI calls API without /api prefix.
