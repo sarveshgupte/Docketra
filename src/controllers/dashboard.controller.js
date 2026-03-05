@@ -41,9 +41,6 @@ const getDashboardSummary = async (req, res) => {
         categoryRepository.countCategories(firmId),
       ]);
       await upsertTenantMetrics(firmId, { users, clients, cases, categories }).catch(() => null);
-    } else if (categories === undefined || categories === null) {
-      categories = await categoryRepository.countCategories(firmId);
-      await upsertTenantMetrics(firmId, { users, clients, cases, categories }).catch(() => null);
     }
 
     const data = {

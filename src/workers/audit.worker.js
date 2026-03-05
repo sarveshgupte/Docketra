@@ -26,7 +26,6 @@ if (!redisUrl) {
 
   auditWorker.on('ready', () => setWorkerStatus('audit', 'running'));
   auditWorker.on('error', () => setWorkerStatus('audit', 'error'));
-  auditWorker.on('failed', () => setWorkerStatus('audit', 'degraded'));
 }
 
 module.exports = auditWorker;
