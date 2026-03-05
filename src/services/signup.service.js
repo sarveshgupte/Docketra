@@ -4,6 +4,7 @@ const Firm = require('../models/Firm.model');
 const Client = require('../models/Client.model');
 const User = require('../models/User.model');
 const TemporarySignup = require('../models/TemporarySignup');
+const AuthAudit = require('../models/AuthAudit.model');
 const { generateNextClientId } = require('./clientIdGenerator');
 const { generateNextXID } = require('./xIDGenerator');
 const { ensureTenantKey } = require('../security/encryption.service');
@@ -13,11 +14,51 @@ const emailService = require('./email.service');
 const SALT_ROUNDS = 10;
 const OTP_EXPIRY_MINUTES = 10;
 const MAX_OTP_ATTEMPTS = 5;
-const MAX_RESEND_COUNT = 3;
+const OTP_BLOCK_MINUTES = 15;
+const MAX_RESEND_COUNT = 5;
 const RESEND_COOLDOWN_SECONDS = 60;
 const SYSTEM_EMAIL_DOMAIN = 'system.local';
 const DEFAULT_BUSINESS_ADDRESS = 'Default Address';
 const DEFAULT_CONTACT_NUMBER = '0000000000';
+
+const logSignupAuthEvent = async ({
+  eventType,
+  email,
+  req = null,
+  userId = null,
+  firmId = null,
+  metadata = null,
+}) => {
+  try {
+    const normalizedEmail = email ? email.toLowerCase().trim() : null;
+    await AuthAudit.create({
+      xID: normalizedEmail || 'UNKNOWN',
+      firmId: firmId || 'PLATFORM',
+      userId: userId || null,
+      actionType: eventType,
+      description: `Auth event: ${eventType}`,
+      performedBy: normalizedEmail || 'SYSTEM',
+      ipAddress: req?.ip,
+      userAgent: req?.get?.('user-agent'),
+      timestamp: new Date(),
+      metadata: {
+        eventType,
+        email: normalizedEmail,
+        userId: userId ? String(userId) : null,
+        firmId: firmId ? String(firmId) : null,
+        ipAddress: req?.ip || null,
+        timestamp: new Date().toISOString(),
+        ...metadata,
+      },
+    });
+  } catch (error) {
+    console.error(`[PUBLIC_SIGNUP][AUDIT] Failed to record ${eventType}:`, error.message);
+  }
+};
+
+const resolveOtpExpiry = (record) => record.otpExpiresAt || record.otpExpiry;
+const resolveOtpLastSentAt = (record) => record.otpLastSentAt || record.lastOtpSentAt;
+const resolveOtpResendCount = (record) => record.otpResendCount ?? record.resendCount ?? 0;
 
 /**
  * Generate a 6-digit numeric OTP using rejection sampling to avoid modulo bias.
@@ -55,12 +96,19 @@ const isEmailFirmOwner = async (email) => {
  * @param {Object} params - { name, email, password, phone }
  * @returns {Promise<Object>} result
  */
-const initiateManualSignup = async ({ name, email, password, phone, firmName, session = null }) => {
+const initiateManualSignup = async ({ name, email, password, phone, firmName, session = null, req = null }) => {
   const normalizedEmail = email.toLowerCase().trim();
 
   if (await isEmailFirmOwner(normalizedEmail)) {
     return { success: false, status: 409, message: 'Email is already associated with a firm' };
   }
+
+  await TemporarySignup.deleteMany({
+    $or: [
+      { otpExpiresAt: { $lt: new Date() } },
+      { otpExpiry: { $lt: new Date() } },
+    ],
+  }, { session });
 
   // Remove any existing temporary signup for this email
   await TemporarySignup.deleteMany({ email: normalizedEmail }, { session });
@@ -69,6 +117,7 @@ const initiateManualSignup = async ({ name, email, password, phone, firmName, se
   const otp = generateOtp();
   const otpHash = await bcrypt.hash(otp, SALT_ROUNDS);
 
+  const otpExpiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
   await TemporarySignup.create({
     name: name.trim(),
     email: normalizedEmail,
@@ -77,9 +126,13 @@ const initiateManualSignup = async ({ name, email, password, phone, firmName, se
     phone: phone || null,
     provider: 'manual',
     otpHash,
-    otpExpiry: new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000),
+    otpExpiresAt,
+    otpExpiry: otpExpiresAt,
     otpAttempts: 0,
+    otpBlockedUntil: null,
+    otpResendCount: 0,
     resendCount: 0,
+    otpLastSentAt: new Date(),
     lastOtpSentAt: new Date(),
     isVerified: false,
   }, { session });
@@ -101,6 +154,9 @@ const initiateManualSignup = async ({ name, email, password, phone, firmName, se
     text: `Hello ${name.trim()},\n\nYour verification code is: ${otp}\n\nThis code expires in ${OTP_EXPIRY_MINUTES} minutes.\n\nBest regards,\nDocketra Team`,
   });
 
+  await logSignupAuthEvent({ eventType: 'SIGNUP_INITIATED', email: normalizedEmail, req });
+  await logSignupAuthEvent({ eventType: 'OTP_SENT', email: normalizedEmail, req });
+
   return { success: true, message: 'OTP sent to your email' };
 };
 
@@ -109,7 +165,7 @@ const initiateManualSignup = async ({ name, email, password, phone, firmName, se
  * @param {Object} params - { email, otp }
  * @returns {Promise<Object>} result
  */
-const verifySignupOtp = async ({ email, otp }) => {
+const verifySignupOtp = async ({ email, otp, req = null }) => {
   const normalizedEmail = email.toLowerCase().trim();
   const record = await TemporarySignup.findOne({ email: normalizedEmail, provider: 'manual' });
 
@@ -117,24 +173,31 @@ const verifySignupOtp = async ({ email, otp }) => {
     return { success: false, status: 404, message: 'No signup request found. Please initiate signup first.' };
   }
 
-  if (record.otpAttempts >= MAX_OTP_ATTEMPTS) {
-    return { success: false, status: 429, message: 'Too many OTP attempts. Please initiate signup again.' };
+  if (record.otpBlockedUntil && record.otpBlockedUntil > Date.now()) {
+    return { success: false, status: 429, message: 'Too many attempts. Please try again later.' };
   }
 
-  if (!record.otpExpiry || record.otpExpiry < new Date()) {
-    return { success: false, status: 400, message: 'OTP has expired. Please request a new one.' };
+  const otpExpiry = resolveOtpExpiry(record);
+  if (!otpExpiry || otpExpiry < Date.now()) {
+    return { success: false, status: 400, message: 'OTP has expired. Please request a new OTP.' };
   }
 
   record.otpAttempts += 1;
 
   const isValid = await bcrypt.compare(otp, record.otpHash);
   if (!isValid) {
+    if (record.otpAttempts >= MAX_OTP_ATTEMPTS) {
+      record.otpBlockedUntil = new Date(Date.now() + OTP_BLOCK_MINUTES * 60 * 1000);
+    }
     await record.save();
     return { success: false, status: 400, message: 'Invalid OTP' };
   }
 
   record.isVerified = true;
+  record.otpAttempts = 0;
+  record.otpBlockedUntil = null;
   await record.save();
+  await logSignupAuthEvent({ eventType: 'OTP_VERIFIED', email: normalizedEmail, req });
 
   return { success: true, message: 'Email verified successfully' };
 };
@@ -144,7 +207,7 @@ const verifySignupOtp = async ({ email, otp }) => {
  * @param {Object} params - { email }
  * @returns {Promise<Object>} result
  */
-const resendSignupOtp = async ({ email }) => {
+const resendSignupOtp = async ({ email, req = null }) => {
   const normalizedEmail = email.toLowerCase().trim();
   const record = await TemporarySignup.findOne({ email: normalizedEmail, provider: 'manual' });
 
@@ -152,21 +215,28 @@ const resendSignupOtp = async ({ email }) => {
     return { success: false, status: 404, message: 'No signup request found. Please initiate signup first.' };
   }
 
-  if (record.resendCount >= MAX_RESEND_COUNT) {
+  const resendCount = resolveOtpResendCount(record);
+  if (resendCount >= MAX_RESEND_COUNT) {
     return { success: false, status: 429, message: 'Maximum resend limit reached. Please initiate signup again.' };
   }
 
-  if (record.lastOtpSentAt && (Date.now() - record.lastOtpSentAt.getTime()) < RESEND_COOLDOWN_SECONDS * 1000) {
-    return { success: false, status: 429, message: `Please wait ${RESEND_COOLDOWN_SECONDS} seconds before requesting a new OTP.` };
+  const lastOtpSentAt = resolveOtpLastSentAt(record);
+  if (lastOtpSentAt && (Date.now() - lastOtpSentAt.getTime()) < RESEND_COOLDOWN_SECONDS * 1000) {
+    return { success: false, status: 429, message: 'Please wait before requesting another OTP.' };
   }
 
   const otp = generateOtp();
   const otpHash = await bcrypt.hash(otp, SALT_ROUNDS);
+  const otpExpiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
 
   record.otpHash = otpHash;
-  record.otpExpiry = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
+  record.otpExpiresAt = otpExpiresAt;
+  record.otpExpiry = otpExpiresAt;
   record.otpAttempts = 0;
-  record.resendCount += 1;
+  record.otpBlockedUntil = null;
+  record.otpResendCount = resendCount + 1;
+  record.resendCount = resendCount + 1;
+  record.otpLastSentAt = new Date();
   record.lastOtpSentAt = new Date();
   await record.save();
 
@@ -186,23 +256,25 @@ const resendSignupOtp = async ({ email }) => {
     text: `Hello ${record.name},\n\nYour new verification code is: ${otp}\n\nThis code expires in ${OTP_EXPIRY_MINUTES} minutes.\n\nBest regards,\nDocketra Team`,
   });
 
+  await logSignupAuthEvent({ eventType: 'OTP_SENT', email: normalizedEmail, req, metadata: { resend: true } });
+
   return { success: true, message: 'New OTP sent to your email' };
 };
 
-const generateUniqueSlug = async (firmName, session) => {
+const generateUniqueSlug = async (firmName, session, retryOffset = 0) => {
   let firmSlug = slugify(firmName.trim());
   const originalSlug = firmSlug;
   const existingSlugs = await Firm.find({
     firmSlug: { $regex: new RegExp(`^${originalSlug}(?:-\\d+)?$`) },
   }).session(session).select('firmSlug');
 
-  if (existingSlugs.length > 0) {
+  if (existingSlugs.length > 0 || retryOffset > 0) {
     const maxSuffix = existingSlugs.reduce((max, doc) => {
       const match = doc.firmSlug.match(/-(\d+)$/);
       const suffixNumber = match ? parseInt(match[1], 10) : 0;
       return Math.max(max, suffixNumber);
     }, 0);
-    firmSlug = `${originalSlug}-${maxSuffix + 1}`;
+    firmSlug = `${originalSlug}-${maxSuffix + retryOffset + 1}`;
   }
   return firmSlug;
 };
@@ -255,18 +327,36 @@ const createFirmAndAdmin = async ({
 
   const normalizedEmail = email.toLowerCase().trim();
   const normalizedFirmName = firmName.trim();
-  const firmSlug = await generateUniqueSlug(normalizedFirmName, session);
   const firmId = await generateFirmId(session);
+  let firm = null;
+  let firmSlug = null;
+  let lastFirmCreateError = null;
 
-  const [firm] = await Firm.create([{
-    firmId,
-    name: normalizedFirmName,
-    firmSlug,
-    plan: 'starter',
-    maxUsers: 2,
-    status: 'active',
-    bootstrapStatus: 'PENDING',
-  }], { session });
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    firmSlug = await generateUniqueSlug(normalizedFirmName, session, attempt);
+    try {
+      [firm] = await Firm.create([{
+        firmId,
+        name: normalizedFirmName,
+        firmSlug,
+        plan: 'starter',
+        maxUsers: 2,
+        status: 'active',
+        bootstrapStatus: 'PENDING',
+      }], { session });
+      break;
+    } catch (error) {
+      const duplicateSlug = error?.code === 11000 && (error?.keyPattern?.firmSlug || String(error?.message || '').includes('firmSlug'));
+      if (!duplicateSlug) {
+        throw error;
+      }
+      lastFirmCreateError = error;
+    }
+  }
+
+  if (!firm) {
+    throw lastFirmCreateError || new Error('Unable to create firm with unique slug');
+  }
 
   await ensureTenantKey(String(firm._id), { session });
 
@@ -336,7 +426,7 @@ const createFirmAndAdmin = async ({
  * @param {Object} params - { email, firmName }
  * @returns {Promise<Object>} result with xid and firmUrl
  */
-const completeSignup = async ({ email, firmName, session }) => {
+const completeSignup = async ({ email, firmName, session, req = null }) => {
   const normalizedEmail = email.toLowerCase().trim();
   const record = await TemporarySignup.findOne({ email: normalizedEmail, isVerified: true });
 
@@ -364,6 +454,12 @@ const completeSignup = async ({ email, firmName, session }) => {
       session,
     });
     await TemporarySignup.deleteOne({ _id: record._id }, { session });
+    await logSignupAuthEvent({
+      eventType: 'SIGNUP_COMPLETED',
+      email: normalizedEmail,
+      req,
+      metadata: { firmSlug: result.firmSlug },
+    });
 
     // Send welcome email (non-blocking — failure does not affect signup result)
     try {

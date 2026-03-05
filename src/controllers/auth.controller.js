@@ -310,6 +310,16 @@ const login = async (req, res) => {
       if (!isSuperadminPasswordValid) {
         await recordFailedLoginAttempt(req);
         console.warn('[AUTH][superadmin] SuperAdmin login failed - invalid credentials');
+        await logAuthAudit({
+          xID: normalizedXID || DEFAULT_XID,
+          firmId: DEFAULT_FIRM_ID,
+          actionType: 'LOGIN_FAILED',
+          description: 'SuperAdmin login failed: invalid credentials',
+          performedBy: normalizedXID || DEFAULT_XID,
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent'),
+          metadata: { eventType: 'LOGIN_FAILED', email: superadminEmail || null, timestamp: new Date().toISOString() },
+        }, req);
         return res.status(401).json({
           success: false,
           message: 'Invalid xID or password',
@@ -318,6 +328,16 @@ const login = async (req, res) => {
       
       console.log('[AUTH][superadmin] SuperAdmin login successful');
       await clearFailedLoginAttempts(req);
+      await logAuthAudit({
+        xID: normalizedXID || DEFAULT_XID,
+        firmId: DEFAULT_FIRM_ID,
+        actionType: 'LOGIN_SUCCESS',
+        description: 'SuperAdmin login successful',
+        performedBy: normalizedXID || DEFAULT_XID,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+        metadata: { eventType: 'LOGIN_SUCCESS', email: superadminEmail || null, timestamp: new Date().toISOString() },
+      }, req);
       
       const accessToken = jwtService.generateAccessToken({
         userId: SUPERADMIN_USER_ID(),
@@ -371,6 +391,16 @@ const login = async (req, res) => {
     if (!user || user.status !== 'active') {
       await recordFailedLoginAttempt(req);
       console.warn(`[AUTH] Invalid login attempt for xID=${normalizedXID} in firm context ${req.firmSlug || req.firmId}`);
+      await logAuthAudit({
+        xID: normalizedXID || DEFAULT_XID,
+        firmId: req.firmIdString || req.firmId || DEFAULT_FIRM_ID,
+        actionType: 'LOGIN_FAILED',
+        description: 'Tenant login failed: invalid credentials',
+        performedBy: normalizedXID || DEFAULT_XID,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+        metadata: { eventType: 'LOGIN_FAILED', email: null, timestamp: new Date().toISOString() },
+      }, req);
       try {
         await AuthAudit.create({
           xID: normalizedXID || 'UNKNOWN',
@@ -572,6 +602,17 @@ const login = async (req, res) => {
 
       // Log failed login attempt
       try {
+        await logAuthAudit({
+          xID: user.xID || DEFAULT_XID,
+          firmId: user.firmId || DEFAULT_FIRM_ID,
+          userId: user._id,
+          actionType: 'LOGIN_FAILED',
+          description: 'Tenant login failed: invalid password',
+          performedBy: user.xID || DEFAULT_XID,
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent'),
+          metadata: { eventType: 'LOGIN_FAILED', email: user.email || null, timestamp: new Date().toISOString() },
+        }, req);
         await AuthAudit.create({
           xID: user.xID,
           firmId: user.firmId || DEFAULT_FIRM_ID,
@@ -707,6 +748,17 @@ const login = async (req, res) => {
 
     // Log successful login (non-blocking)
     try {
+      await logAuthAudit({
+        xID: user.xID || DEFAULT_XID,
+        firmId: user.firmId || DEFAULT_FIRM_ID,
+        userId: user._id,
+        actionType: 'LOGIN_SUCCESS',
+        description: 'User logged in successfully',
+        performedBy: user.xID,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+        metadata: { eventType: 'LOGIN_SUCCESS', email: user.email || null, timestamp: new Date().toISOString() },
+      }, req);
       await AuthAudit.create({
         xID: user.xID || DEFAULT_XID,
         firmId: user.firmId || DEFAULT_FIRM_ID,

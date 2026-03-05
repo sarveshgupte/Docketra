@@ -30,6 +30,8 @@ const config = {
       authWindowSeconds: Number(process.env.SECURITY_RATE_LIMIT_AUTH_WINDOW_SECONDS || 900),
       globalWindowSeconds: Number(process.env.SECURITY_RATE_LIMIT_GLOBAL_WINDOW_SECONDS || 900),
       authBlockSeconds: Number(process.env.SECURITY_RATE_LIMIT_AUTH_BLOCK_SECONDS || 1800),
+      signupPerHour: Number(process.env.SECURITY_RATE_LIMIT_SIGNUP_PER_HOUR || 5),
+      signupWindowSeconds: Number(process.env.SECURITY_RATE_LIMIT_SIGNUP_WINDOW_SECONDS || 3600),
       accountLockAttempts: Number(process.env.SECURITY_ACCOUNT_LOCK_ATTEMPTS || 5),
       accountLockSeconds: Number(process.env.SECURITY_ACCOUNT_LOCK_SECONDS || 1800),
     },
