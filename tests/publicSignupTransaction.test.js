@@ -14,7 +14,7 @@ const clearModule = (modulePath) => {
   }
 };
 
-async function testRouteWrapsInitiateSignup() {
+async function testRouteWrapsWriteSignupHandlers() {
   const authLimiter = (req, res, next) => next();
   const initiateSignup = async () => ({ success: true });
   const wrappedHandlers = [];
@@ -43,22 +43,35 @@ async function testRouteWrapsInitiateSignup() {
 
   clearModule('../src/routes/publicSignup.routes');
   const router = require('../src/routes/publicSignup.routes');
-  const routeLayer = router.stack.find((layer) => layer.route?.path === '/initiate-signup');
-  assert.ok(routeLayer, 'initiate-signup route should exist');
-  const middlewareStack = routeLayer.route.stack.map((item) => item.handle);
-  assert.strictEqual(middlewareStack[0], authLimiter, 'authLimiter should remain first middleware');
-  assert.ok(middlewareStack[1], 'wrapped handler should exist');
-  assert.strictEqual(middlewareStack[1].original, initiateSignup, 'initiate-signup should be wrapped with wrapWriteHandler');
-  assert.strictEqual(wrappedHandlers.length, 1, 'exactly one wrapped handler should be created for this router');
-  console.log('  ✓ wraps /public/initiate-signup with wrapWriteHandler');
+  const initiateLayer = router.stack.find((layer) => layer.route?.path === '/initiate-signup');
+  const googleLayer = router.stack.find((layer) => layer.route?.path === '/google-auth');
+  const completeLayer = router.stack.find((layer) => layer.route?.path === '/complete-signup');
+  assert.ok(initiateLayer, 'initiate-signup route should exist');
+  assert.ok(googleLayer, 'google-auth route should exist');
+  assert.ok(completeLayer, 'complete-signup route should exist');
+
+  const initiateHandlers = initiateLayer.route.stack.map((item) => item.handle);
+  assert.strictEqual(initiateHandlers[0], authLimiter, 'authLimiter should remain first middleware');
+  assert.strictEqual(initiateHandlers[1].original, initiateSignup, 'initiate-signup should be wrapped with wrapWriteHandler');
+
+  const googleHandlers = googleLayer.route.stack.map((item) => item.handle);
+  assert.strictEqual(googleHandlers[0], authLimiter, 'authLimiter should remain first middleware');
+  assert.strictEqual(typeof googleHandlers[1].original, 'function', 'google-auth should be wrapped with wrapWriteHandler');
+
+  const completeHandlers = completeLayer.route.stack.map((item) => item.handle);
+  assert.strictEqual(completeHandlers[0], authLimiter, 'authLimiter should remain first middleware');
+  assert.strictEqual(typeof completeHandlers[1].original, 'function', 'complete-signup should be wrapped with wrapWriteHandler');
+
+  assert.strictEqual(wrappedHandlers.length, 3, 'three write handlers should be wrapped');
+  console.log('  ✓ wraps public signup write routes with wrapWriteHandler');
 }
 
 async function testControllerForwardsTransactionSession() {
   const captured = {};
   const mockSignupService = {
-    initiateManualSignup: async (payload) => {
+    signupWithPassword: async (payload) => {
       captured.payload = payload;
-      return { success: true, message: 'OTP sent to your email' };
+      return { success: true, message: 'Signup successful', xid: 'X000001', firmUrl: 'http://localhost/acme/login' };
     },
   };
 
@@ -72,14 +85,16 @@ async function testControllerForwardsTransactionSession() {
   const { initiateSignup } = require('../src/controllers/publicSignup.controller');
   const session = { id: 'session-1' };
   const result = await initiateSignup({
-    body: { name: 'Alice', email: 'alice@example.com', password: 'password123', phone: '9999999999' },
+    body: { name: 'Alice', email: 'alice@example.com', password: 'password123', phone: '9999999999', firmName: 'Acme Legal' },
     transactionSession: { session },
+    ip: '127.0.0.1',
   }, {});
 
   assert.strictEqual(result.success, true);
-  assert.strictEqual(result.statusCode, 200);
+  assert.strictEqual(result.statusCode, 201);
   assert.strictEqual(captured.payload.session, session, 'controller should pass active transaction session to service');
-  console.log('  ✓ forwards req.transactionSession.session to initiateManualSignup');
+  assert.strictEqual(captured.payload.firmName, 'Acme Legal', 'controller should pass firmName for shared onboarding');
+  console.log('  ✓ forwards req.transactionSession.session to signupWithPassword');
 }
 
 async function testServiceWritesUseSession() {
@@ -120,7 +135,7 @@ async function testServiceWritesUseSession() {
 async function run() {
   console.log('Running public signup transaction tests...');
   try {
-    await testRouteWrapsInitiateSignup();
+    await testRouteWrapsWriteSignupHandlers();
     await testControllerForwardsTransactionSession();
     await testServiceWritesUseSession();
     console.log('All public signup transaction tests passed.');
