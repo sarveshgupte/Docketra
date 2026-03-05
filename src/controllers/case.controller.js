@@ -165,7 +165,7 @@ const createCase = async (req, res) => {
     // Verify category exists and is active
     const categoryDoc = await categoryRepository.findActiveCategory(categoryId, firmId);
     
-    if (!categoryDoc || !categoryDoc.isActive) {
+    if (!categoryDoc) {
       return res.status(404).json({
         success: false,
         message: 'Category not found or inactive',
