@@ -116,7 +116,7 @@ const completeSignup = async (req, res) => {
     if (!email || !email.trim()) {
       return { success: false, statusCode: 400, message: 'Email is required' };
     }
-    const result = await signupService.completeSignup({ email, firmName, session: req.transactionSession?.session, req });
+    const result = await signupService.completeSignup({ email, firmName, session: req.transactionSession?.session });
 
     if (!result.success) {
       return { success: false, statusCode: result.status || 400, message: result.message };
