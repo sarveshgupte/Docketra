@@ -15,7 +15,7 @@ const getUsers = async (req, res) => {
   try {
     const { page = 1, limit = 20, role, isActive } = req.query;
     
-    const query = {};
+    const query = req.user?.role === 'SUPER_ADMIN' ? {} : { firmId: req.user?.firmId };
     if (role) query.role = role;
     if (isActive !== undefined) query.isActive = isActive === 'true';
     
@@ -30,6 +30,7 @@ const getUsers = async (req, res) => {
     res.json({
       success: true,
       data: users,
+      count: users.length,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),

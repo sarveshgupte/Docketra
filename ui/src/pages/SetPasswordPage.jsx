@@ -11,7 +11,7 @@ import { Button } from '../components/common/Button';
 import { Loading } from '../components/common/Loading';
 import { authService } from '../services/authService';
 import api from '../services/api';
-import { API_BASE_URL, APP_NAME, STORAGE_KEYS } from '../utils/constants';
+import { APP_NAME, STORAGE_KEYS } from '../utils/constants';
 import './SetPasswordPage.css';
 
 export const SetPasswordPage = () => {
@@ -156,14 +156,6 @@ export const SetPasswordPage = () => {
     }
   };
 
-  const handleGoogleLogin = () => {
-    if (!firmSlug) {
-      setError('Firm not found. Please check your activation link.');
-      return;
-    }
-    window.location.href = `${API_BASE_URL}/auth/google?flow=activation&firmSlug=${encodeURIComponent(firmSlug)}`;
-  };
-
   if (firmLoading) {
     return (
       <div className="set-password-page">
@@ -211,18 +203,6 @@ export const SetPasswordPage = () => {
           <h1>Set Your Password</h1>
           <p className="text-secondary">
             Welcome to {APP_NAME}! Please set your password to activate your account.
-          </p>
-          <Button
-            type="button"
-            variant="secondary"
-            fullWidth
-            style={{ marginTop: '1rem' }}
-            onClick={handleGoogleLogin}
-          >
-            Continue with Google
-          </Button>
-          <p className="text-secondary" style={{ marginTop: '0.5rem', fontSize: '0.875rem' }}>
-            You can use your invited email with Google Sign-In. No new accounts will be created.
           </p>
         </div>
 

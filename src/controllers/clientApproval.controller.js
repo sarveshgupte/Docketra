@@ -573,10 +573,14 @@ const getClientById = async (req, res) => {
 const listClients = async (req, res) => {
   try {
     const { page = 1, limit = 20, includeInactive = false } = req.query;
+    const adminFirmId = req.user?.firmId;
     
     // For case creation dropdown: only ACTIVE clients, unless explicitly requesting all
     // This enforces client lifecycle rules - deactivated clients cannot be used for new cases
-    const query = includeInactive === 'true' ? {} : { status: CLIENT_STATUS.ACTIVE };
+    const query = {
+      firmId: adminFirmId,
+      ...(includeInactive === 'true' ? {} : { status: CLIENT_STATUS.ACTIVE }),
+    };
     
     const clients = await Client.find(query)
       .select('clientId businessName status isActive') // Select only necessary fields
@@ -589,6 +593,7 @@ const listClients = async (req, res) => {
     res.status(200).json({
       success: true,
       data: clients,
+      count: clients.length,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
