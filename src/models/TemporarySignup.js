@@ -70,6 +70,17 @@ const temporarySignupSchema = new mongoose.Schema({
     default: 0,
   },
 
+  attemptCount: {
+    type: Number,
+    default: 0,
+  },
+
+  // Snake_case compatibility for external contracts.
+  attempt_count: {
+    type: Number,
+    default: 0,
+  },
+
   otpBlockedUntil: {
     type: Date,
     default: null,
@@ -100,6 +111,17 @@ const temporarySignupSchema = new mongoose.Schema({
   isVerified: {
     type: Boolean,
     default: false,
+  },
+
+  consumedAt: {
+    type: Date,
+    default: null,
+  },
+
+  // Snake_case compatibility for external contracts.
+  consumed_at: {
+    type: Date,
+    default: null,
   },
 
   createdAt: {
