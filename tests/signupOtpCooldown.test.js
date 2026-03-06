@@ -15,11 +15,12 @@ const clearModule = (modulePath) => {
 };
 
 async function testResendOtpReturnsWaitTimeAnd429() {
+  const SECONDS_SINCE_LAST_OTP = 18;
   const resendRecord = {
     email: 'alice@example.com',
     provider: 'manual',
     name: 'Alice',
-    otpLastSentAt: new Date(Date.now() - 18 * 1000),
+    otpLastSentAt: new Date(Date.now() - SECONDS_SINCE_LAST_OTP * 1000),
     otpResendCount: 1,
     save: async () => {},
   };
