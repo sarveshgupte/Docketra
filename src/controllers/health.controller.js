@@ -6,6 +6,7 @@ const { getRedisClient } = require('../config/redis');
 const { getBuildMetadata } = require('../services/buildInfo.service');
 const { STATES, markDegraded, getState, setState } = require('../services/systemState.service');
 const { isFirmCreationDisabled, isGoogleAuthDisabled, areFileUploadsDisabled } = require('../services/featureGate.service');
+const { getWorkerStatuses } = require('../services/workerRegistry.service');
 
 const DB_LATENCY_THRESHOLD_MS = Number(process.env.DB_LATENCY_THRESHOLD_MS || 750);
 
@@ -113,8 +114,34 @@ const readiness = async (req, res) => {
   return res.json(payload);
 };
 
+const apiHealth = async (_req, res) => {
+  const mongo = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+  let redis = 'disconnected';
+  try {
+    const redisClient = getRedisClient();
+    if (!redisClient) redis = 'not_configured';
+    else redis = redisClient.status === 'ready' ? 'connected' : 'disconnected';
+  } catch (_error) {
+    redis = 'disconnected';
+  }
+
+  const statuses = getWorkerStatuses();
+  const requiredWorkers = ['storage', 'email', 'audit'];
+  const workersRunning = requiredWorkers.every((name) => statuses?.[name]?.status === 'running');
+  const workers = workersRunning ? 'running' : 'degraded';
+
+  const healthy = mongo === 'connected' && redis === 'connected' && workersRunning;
+  return res.json({
+    status: healthy ? 'healthy' : 'degraded',
+    mongo,
+    redis,
+    workers,
+  });
+};
+
 module.exports = {
   liveness,
   readiness,
+  apiHealth,
   runReadinessChecks,
 };

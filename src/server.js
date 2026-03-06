@@ -44,6 +44,20 @@ try {
   log.warn('TENANT_CASE_METRICS_WORKER_START_FAILED', { error: err.message });
 }
 
+try {
+  require('./workers/email.worker');
+  log.info('EMAIL_WORKER_STARTED');
+} catch (err) {
+  log.warn('EMAIL_WORKER_START_FAILED', { error: err.message });
+}
+
+try {
+  require('./workers/audit.worker');
+  log.info('AUDIT_WORKER_STARTED');
+} catch (err) {
+  log.warn('AUDIT_WORKER_START_FAILED', { error: err.message });
+}
+
 // Global error log sanitizer: ensure every console.error invocation masks PII (tokens, emails, phone numbers, auth headers).
 // This preserves existing logging behavior/verbosity while enforcing centralized masking via maskSensitiveObject.
 // The original logger is retained at console.error.original for debugging tools that need raw access.
@@ -77,6 +91,7 @@ applyPIISafeConsoleError();
 
 // Middleware
 const requestLogger = require('./middleware/requestLogger');
+const requestId = require('./middleware/requestId.middleware');
 const errorHandler = require('./middleware/errorHandler');
 const notFound = require('./middleware/notFound');
 const { authenticate } = require('./middleware/auth.middleware');
@@ -118,6 +133,7 @@ const contactRoutes = require('./routes/contact.routes');  // Public contact for
 const publicRoutes = require('./routes/public.routes');  // Public routes (firm lookup)
 const publicSignupRoutes = require('./routes/publicSignup.routes');  // Public self-serve signup routes
 const healthRoutes = require('./routes/health.routes');  // Health endpoints
+const { apiHealth } = require('./controllers/health.controller');
 const storageRoutes = require('./routes/storage.routes');  // Storage BYOS routes
 const filesRoutes = require('./routes/files.routes');  // Tenant BYOS signed URL routes
 const tenantRoutes = require('./routes/tenant.routes');  // Tenant storage settings routes
@@ -294,6 +310,7 @@ app.use(cors(corsOptions));
 app.use('/api/inbound/email', express.raw({ type: '*/*', limit: '30mb' }));
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '100kb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use(requestId);
 app.use(requestLifecycle);
 app.use(requestLogger);
 app.use(responseContract);
@@ -309,6 +326,7 @@ app.get('/health', (req, res) => {
   });
 });
 app.use('/health', healthRoutes);
+app.get('/api/health', apiHealth);
 app.get('/metrics', async (req, res) => {
   // SECURITY: Metrics endpoint fail-closed enforcement
   const configuredMetricsToken = process.env.METRICS_TOKEN;
@@ -330,6 +348,7 @@ app.get('/api', (req, res) => {
     version: '1.0.0',
     endpoints: {
       health: '/health',
+      apiHealth: '/api/health',
       users: '/api/users',
       tasks: '/api/tasks',
       cases: '/api/cases',

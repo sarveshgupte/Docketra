@@ -45,6 +45,15 @@ const fileSchema = new mongoose.Schema(
       default: 'PENDING',
       index: true,
     },
+    processing: {
+      scanStatus: { type: String, enum: ['pending', 'completed', 'failed'], default: 'pending' },
+      thumbnailStatus: { type: String, enum: ['pending', 'completed', 'failed'], default: 'pending' },
+      metadataStatus: { type: String, enum: ['pending', 'completed', 'failed'], default: 'pending' },
+      scanCompletedAt: { type: Date, default: null },
+      thumbnailCompletedAt: { type: Date, default: null },
+      metadataCompletedAt: { type: Date, default: null },
+      metadata: { type: mongoose.Schema.Types.Mixed, default: null },
+    },
   },
   {
     timestamps: { createdAt: true, updatedAt: false },
