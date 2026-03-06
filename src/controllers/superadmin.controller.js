@@ -198,26 +198,61 @@ const listFirms = async (req, res) => {
     const firms = await Firm.find()
       .select('firmId firmSlug name status createdAt')
       .sort({ createdAt: -1 });
-    
-    // Get counts for each firm
-    const firmsWithCounts = await Promise.all(
-      firms.map(async (firm) => {
-        const clientCount = await Client.countDocuments({ firmId: firm._id });
-        const userCount = await User.countDocuments({ firmId: firm._id });
-        
-        return {
-          _id: firm._id,
-          firmId: firm.firmId,
-          firmSlug: firm.firmSlug,
-          name: firm.name,
-          status: firm.status,
-          isActive: firm.status === 'active',
-          clientCount,
-          userCount,
-          createdAt: firm.createdAt,
-        };
+    const firmIds = firms.map((firm) => firm._id);
+
+    const [clientCounts, userCounts, admins] = await Promise.all([
+      Client.aggregate([
+        { $match: { firmId: { $in: firmIds } } },
+        { $group: { _id: '$firmId', count: { $sum: 1 } } },
+      ]),
+      User.aggregate([
+        { $match: { firmId: { $in: firmIds }, status: { $ne: 'deleted' } } },
+        { $group: { _id: '$firmId', count: { $sum: 1 } } },
+      ]),
+      User.find({
+        firmId: { $in: firmIds },
+        isSystem: true,
+        role: 'Admin',
+        status: { $ne: 'deleted' },
       })
-    );
+        .select('firmId email emailVerified emailVerifiedAt verificationMethod termsAccepted termsAcceptedAt termsVersion signupIP signupUserAgent')
+        .lean(),
+    ]);
+
+    const clientCountMap = new Map(clientCounts.map((entry) => [String(entry._id), entry.count]));
+    const userCountMap = new Map(userCounts.map((entry) => [String(entry._id), entry.count]));
+    const adminMap = new Map();
+    for (const admin of admins) {
+      const key = String(admin.firmId);
+      if (!adminMap.has(key)) {
+        adminMap.set(key, admin);
+      }
+    }
+
+    const firmsWithCounts = firms.map((firm) => {
+      const firmKey = String(firm._id);
+      const admin = adminMap.get(firmKey);
+      return {
+        _id: firm._id,
+        firmId: firm.firmId,
+        firmSlug: firm.firmSlug,
+        name: firm.name,
+        status: firm.status,
+        isActive: firm.status === 'active',
+        clientCount: clientCountMap.get(firmKey) || 0,
+        userCount: userCountMap.get(firmKey) || 0,
+        adminEmail: admin?.email || null,
+        emailVerified: typeof admin?.emailVerified === 'boolean' ? admin.emailVerified : null,
+        emailVerifiedAt: admin?.emailVerifiedAt || null,
+        verificationMethod: admin?.verificationMethod || null,
+        termsAccepted: typeof admin?.termsAccepted === 'boolean' ? admin.termsAccepted : null,
+        termsAcceptedAt: admin?.termsAcceptedAt || null,
+        termsVersion: admin?.termsVersion || null,
+        signupIP: admin?.signupIP || null,
+        signupUserAgent: admin?.signupUserAgent || null,
+        createdAt: firm.createdAt,
+      };
+    });
     
     res.json({
       success: true,
@@ -742,6 +777,7 @@ const getFirmAdminDetails = async (req, res) => {
     data: {
       name: admin.name,
       emailMasked: emailService.maskEmail(admin.email),
+      email: admin.email,
       xID: admin.xID,
       status: admin.status,
       lastLoginAt,
@@ -749,6 +785,14 @@ const getFirmAdminDetails = async (req, res) => {
       inviteSentAt: admin.inviteSentAt || null,
       failedLoginAttempts: admin.failedLoginAttempts || 0,
       isLocked: isAdminCurrentlyLocked(admin),
+      emailVerified: typeof admin.emailVerified === 'boolean' ? admin.emailVerified : null,
+      emailVerifiedAt: admin.emailVerifiedAt || null,
+      verificationMethod: admin.verificationMethod || null,
+      termsAccepted: typeof admin.termsAccepted === 'boolean' ? admin.termsAccepted : null,
+      termsAcceptedAt: admin.termsAcceptedAt || null,
+      termsVersion: admin.termsVersion || null,
+      signupIP: admin.signupIP || null,
+      signupUserAgent: admin.signupUserAgent || null,
     },
   });
 };

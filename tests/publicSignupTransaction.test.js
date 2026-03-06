@@ -131,12 +131,117 @@ async function testServiceWritesUseSession() {
   console.log('  ✓ passes { session } to TemporarySignup write operations');
 }
 
+async function testCreateFirmAndAdminTracksVerificationAndConsent() {
+  const captured = { users: [] };
+  const session = { id: 'session-3' };
+  let firmCounter = 0;
+
+  const mockFirmModel = {
+    findOne: () => ({ sort: async () => null }),
+    find: () => ({
+      session: () => ({
+        select: async () => [],
+      }),
+    }),
+    create: async ([firmDoc]) => {
+      firmCounter += 1;
+      return [{
+        ...firmDoc,
+        _id: `firm-${firmCounter}`,
+        save: async () => {},
+      }];
+    },
+  };
+
+  Module._load = function (request, parent, isMain) {
+    if (request === '../models/Firm.model') return mockFirmModel;
+    if (request === '../models/Client.model') {
+      return {
+        create: async () => ([{ _id: 'client-1' }]),
+      };
+    }
+    if (request === '../models/User.model') {
+      return {
+        findOne: () => ({ lean: async () => null }),
+        create: async ([userDoc]) => {
+          captured.users.push(userDoc);
+          return [{ ...userDoc, _id: `user-${captured.users.length}` }];
+        },
+        updateOne: async () => ({ matchedCount: 0 }),
+      };
+    }
+    if (request === '../models/TemporarySignup') {
+      return {};
+    }
+    if (request === './clientIdGenerator') {
+      return { generateNextClientId: async () => 'C000001' };
+    }
+    if (request === './xIDGenerator') {
+      return { generateNextXID: async () => 'X000001' };
+    }
+    if (request === '../security/encryption.service') {
+      return { ensureTenantKey: async () => ({}) };
+    }
+    if (request === './email.service') {
+      return { sendEmail: async () => ({ success: true }) };
+    }
+    if (request === './audit.service') {
+      return { logAuthEvent: async () => ({}) };
+    }
+    return originalLoad.apply(this, arguments);
+  };
+
+  clearModule('../src/services/signup.service');
+  const signupService = require('../src/services/signup.service');
+
+  await signupService.createFirmAndAdmin({
+    name: 'Alice',
+    email: 'alice@example.com',
+    firmName: 'Acme Legal',
+    passwordHash: 'hash',
+    phone: '9999999999',
+    authProvider: 'password',
+    session,
+    req: {
+      ip: '203.0.113.5',
+      headers: { 'user-agent': 'Mozilla/5.0 Test Browser' },
+    },
+  });
+
+  await signupService.createFirmAndAdmin({
+    name: 'Bob',
+    email: 'bob@example.com',
+    firmName: 'Acme Legal',
+    passwordHash: null,
+    phone: null,
+    authProvider: 'google',
+    googleSubject: 'google-subject',
+    session,
+    req: {
+      ip: '198.51.100.7',
+      headers: { 'user-agent': 'Chrome Test' },
+    },
+  });
+
+  assert.strictEqual(captured.users.length, 2, 'expected two created admin users');
+  assert.strictEqual(captured.users[0].emailVerified, true, 'OTP signup should mark email verified');
+  assert.strictEqual(captured.users[0].verificationMethod, 'OTP', 'password flow should mark OTP method');
+  assert.strictEqual(captured.users[0].termsAccepted, true, 'password flow should persist legal consent');
+  assert.strictEqual(captured.users[0].termsVersion, 'v1.0', 'password flow should persist terms version');
+  assert.strictEqual(captured.users[0].signupIP, '203.0.113.5', 'password flow should persist signup IP');
+  assert.strictEqual(captured.users[0].signupUserAgent, 'Mozilla/5.0 Test Browser', 'password flow should persist user agent');
+  assert.strictEqual(captured.users[1].verificationMethod, 'GOOGLE', 'google flow should mark GOOGLE verification method');
+  assert.strictEqual(captured.users[1].authProviders.google.googleId, 'google-subject', 'google flow should persist google subject');
+  console.log('  ✓ tracks verification and legal consent metadata when creating signup admins');
+}
+
 async function run() {
   console.log('Running public signup transaction tests...');
   try {
     await testRouteWrapsWriteSignupHandlers();
     await testControllerForwardsTransactionSession();
     await testServiceWritesUseSession();
+    await testCreateFirmAndAdminTracksVerificationAndConsent();
     console.log('All public signup transaction tests passed.');
   } catch (error) {
     console.error('publicSignupTransaction tests failed:', error);
