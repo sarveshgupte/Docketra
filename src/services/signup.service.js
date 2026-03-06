@@ -169,26 +169,46 @@ const initiateManualSignup = async ({ name, email, password, phone, firmName, se
 const verifySignupOtp = async ({ email, otp, req = null }) => {
   const normalizedEmail = email.toLowerCase().trim();
   const record = await TemporarySignup.findOne({ email: normalizedEmail, provider: 'manual' });
+  const nowMs = Date.now();
 
   if (!record) {
     return { success: false, status: 404, message: 'No signup request found. Please initiate signup first.' };
   }
 
-  if (record.otpBlockedUntil && record.otpBlockedUntil.getTime() > Date.now()) {
-    return { success: false, status: 429, message: 'Too many attempts. Please try again later.' };
+  if (record.otpBlockedUntil && record.otpBlockedUntil.getTime() > nowMs) {
+    const secondsRemaining = Math.ceil((record.otpBlockedUntil.getTime() - nowMs) / 1000);
+    return {
+      success: false,
+      status: 429,
+      message: `Too many incorrect OTP attempts. Please try again in ${secondsRemaining} seconds.`,
+      retryAfterSeconds: secondsRemaining,
+    };
+  }
+
+  if (record.otpBlockedUntil && record.otpBlockedUntil.getTime() <= nowMs) {
+    record.otpAttempts = 0;
+    record.otpBlockedUntil = null;
+    await record.save();
   }
 
   const otpExpiry = resolveOtpExpiry(record);
-  if (!otpExpiry || otpExpiry.getTime() < Date.now()) {
+  if (!otpExpiry || otpExpiry.getTime() < nowMs) {
     return { success: false, status: 400, message: 'OTP has expired. Please request a new OTP.' };
   }
 
-  record.otpAttempts += 1;
-
   const isValid = await bcrypt.compare(otp, record.otpHash);
   if (!isValid) {
+    record.otpAttempts = (record.otpAttempts ?? 0) + 1;
     if (record.otpAttempts >= MAX_OTP_ATTEMPTS) {
       record.otpBlockedUntil = new Date(Date.now() + OTP_BLOCK_MINUTES * 60 * 1000);
+      const secondsRemaining = OTP_BLOCK_MINUTES * 60;
+      await record.save();
+      return {
+        success: false,
+        status: 429,
+        message: `Too many incorrect OTP attempts. Please try again in ${secondsRemaining} seconds.`,
+        retryAfterSeconds: secondsRemaining,
+      };
     }
     await record.save();
     return { success: false, status: 400, message: 'Invalid OTP' };
