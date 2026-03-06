@@ -9,6 +9,7 @@ const labelClass = 'block text-xs font-medium text-gray-700 mb-1.5';
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const OTP_RESEND_COOLDOWN = 60;
 const OTP_LENGTH = 6;
+const OTP_BLOCK_DURATION_SECONDS = 15 * 60;
 
 const getErrorMessage = (error, fallback) => (
   error?.response?.data?.message
@@ -37,8 +38,18 @@ export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [resendTimer, setResendTimer] = useState(OTP_RESEND_COOLDOWN);
   const [canResend, setCanResend] = useState(false);
+  const [otpBlockedSeconds, setOtpBlockedSeconds] = useState(0);
   const otpInputRefs = useRef([]);
   const otpValue = useMemo(() => otpDigits.join(''), [otpDigits]);
+  const isOtpBlocked = otpBlockedSeconds > 0;
+
+  const extractBlockedSeconds = (message) => {
+    const secondsMatch = message.match(/(\d+)\s*seconds?/i);
+    if (secondsMatch) return Number(secondsMatch[1]);
+    const minutesMatch = message.match(/(\d+)\s*minutes?/i);
+    if (minutesMatch) return Number(minutesMatch[1]) * 60;
+    return OTP_BLOCK_DURATION_SECONDS;
+  };
 
   const focusOtpInput = (index) => {
     const input = otpInputRefs.current[index];
@@ -49,6 +60,7 @@ export default function Signup() {
     setOtpDigits(Array(OTP_LENGTH).fill(''));
     setResendTimer(OTP_RESEND_COOLDOWN);
     setCanResend(false);
+    setOtpBlockedSeconds(0);
     setErrors((prev) => ({ ...prev, otp: '' }));
   };
 
@@ -71,6 +83,16 @@ export default function Signup() {
 
     return () => clearTimeout(timer);
   }, [resendTimer, step]);
+
+  useEffect(() => {
+    if (step !== 'otp' || otpBlockedSeconds <= 0) return undefined;
+
+    const timer = setTimeout(() => {
+      setOtpBlockedSeconds((current) => Math.max(0, current - 1));
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [otpBlockedSeconds, step]);
 
   useEffect(() => {
     if (step === 'otp') {
@@ -140,6 +162,9 @@ export default function Signup() {
       setErrors({ otp: 'Enter a valid 6-digit OTP' });
       return;
     }
+    if (isOtpBlocked) {
+      return;
+    }
 
     setErrors({});
     setLoading(true);
@@ -167,7 +192,15 @@ export default function Signup() {
       window.location.assign(safeRedirectPath);
     } catch (error) {
       const message = getErrorMessage(error, 'Unable to complete signup. Please try again.');
-      if (message === 'Invalid OTP') {
+      if (error?.response?.status === 429 && /too many incorrect otp attempts/i.test(message)) {
+        const retryAfterSeconds = Number(error?.response?.data?.retryAfterSeconds);
+        const blockedSeconds = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+          ? retryAfterSeconds
+          : extractBlockedSeconds(message);
+        setOtpBlockedSeconds(blockedSeconds);
+        setErrors((prev) => ({ ...prev, otp: '' }));
+        setApiError('');
+      } else if (message === 'Invalid OTP') {
         setApiError('Invalid OTP. Please try again.');
       } else {
         setApiError(message);
@@ -179,10 +212,10 @@ export default function Signup() {
 
   useEffect(() => {
     if (step !== 'otp') return;
-    if (otpValue.length === OTP_LENGTH && /^\d{6}$/.test(otpValue) && !loading) {
+    if (otpValue.length === OTP_LENGTH && /^\d{6}$/.test(otpValue) && !loading && !isOtpBlocked) {
       submitOtpVerification();
     }
-  }, [otpValue, loading, step]);
+  }, [otpValue, loading, step, isOtpBlocked]);
 
   const resendOtp = async () => {
     setApiError('');
@@ -194,6 +227,7 @@ export default function Signup() {
       setApiMessage(response?.data?.message || 'OTP resent successfully.');
       setResendTimer(OTP_RESEND_COOLDOWN);
       setCanResend(false);
+      setOtpBlockedSeconds(0);
     } catch (error) {
       setApiError(getErrorMessage(error, 'Unable to resend OTP right now.'));
     } finally {
@@ -393,7 +427,7 @@ export default function Signup() {
                       onChange={(event) => handleOtpChange(index, event.target.value)}
                       onKeyDown={(event) => handleOtpKeyDown(event, index)}
                       className="h-12 w-12 rounded-lg border border-gray-300 text-center text-lg font-semibold text-gray-900 outline-none transition-colors duration-150 focus:border-gray-900 focus:shadow-[0_0_0_3px_rgba(17,24,39,0.08)] bg-white"
-                      disabled={loading}
+                      disabled={loading || isOtpBlocked}
                       inputMode="numeric"
                       pattern="[0-9]*"
                       autoComplete={index === 0 ? 'one-time-code' : 'off'}
@@ -403,16 +437,21 @@ export default function Signup() {
                   ))}
                 </div>
                 {loading && <p className="mt-2 text-xs text-gray-600">Verifying OTP...</p>}
+                {isOtpBlocked && !loading && (
+                  <p className="mt-2 text-xs text-red-600">
+                    Too many incorrect OTP attempts. Please try again in {otpBlockedSeconds}s.
+                  </p>
+                )}
                 {errors.otp && <p className="mt-1 text-xs text-red-600">{errors.otp}</p>}
               </div>
               <div className="flex flex-col gap-3 sm:flex-row">
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || isOtpBlocked}
                   className="marketing-btn-primary inline-flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {loading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : null}
-                  {loading ? 'Verifying OTP...' : 'Verify OTP'}
+                  {loading ? 'Verifying OTP...' : (isOtpBlocked ? `Verify OTP (${otpBlockedSeconds}s)` : 'Verify OTP')}
                 </button>
                 <button
                   type="button"
