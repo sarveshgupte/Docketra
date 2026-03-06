@@ -100,13 +100,9 @@ export default function Signup() {
     setErrors({});
     setLoading(true);
     try {
-      await api.post('/public/verify-otp', {
+      const response = await api.post('/public/verify-otp', {
         email: signupEmail,
         otp: otp.trim(),
-      });
-
-      const response = await api.post('/public/complete-signup', {
-        email: signupEmail,
       });
       const firmSlug = response?.data?.firmSlug;
       const redirectPathFromApi = response?.data?.redirectPath;
@@ -115,14 +111,10 @@ export default function Signup() {
         && !redirectPathFromApi.startsWith('//')
         && !/^[a-zA-Z][a-zA-Z0-9+\-.]*:/.test(redirectPathFromApi)
         ? redirectPathFromApi
-        : (firmSlug ? `/${firmSlug}/login` : null);
-      if (!safeRedirectPath) {
-        setApiError('Unable to resolve firm login URL. Please try signing in from your firm login page.');
-        return;
-      }
+        : (firmSlug ? `/${firmSlug}/login` : '/login');
       window.location.assign(safeRedirectPath);
     } catch (error) {
-      setApiError(getErrorMessage(error, 'Unable to complete signup. Please try again.'));
+      setApiError(getErrorMessage(error, 'Verification failed. Please try again.'));
     } finally {
       setLoading(false);
     }
