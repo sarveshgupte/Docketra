@@ -65,7 +65,7 @@ const userSchema = new mongoose.Schema({
 
   termsAccepted: {
     type: Boolean,
-    default: true,
+    default: false,
   },
 
   termsAcceptedAt: {

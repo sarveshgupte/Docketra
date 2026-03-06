@@ -255,7 +255,7 @@ export default function Signup() {
                 {loading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : null}
                 {loading ? 'Submitting…' : 'Sign up with Email'}
               </button>
-              {isGoogleLoginEnabled ? (
+              {isGoogleLoginEnabled && (
                 <button
                   type="button"
                   disabled={loading}
@@ -263,7 +263,7 @@ export default function Signup() {
                 >
                   Continue with Google
                 </button>
-              ) : null}
+              )}
               <p className="text-center text-[12px] text-gray-500 sm:text-[13px]">
                 By signing up, you agree to our{' '}
                 <Link to="/terms" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-700">
