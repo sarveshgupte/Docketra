@@ -15,7 +15,7 @@ const resolveEntry = (key, ttlSeconds) => {
   }
   const entry = {
     count: 0,
-    expiresAt: now + (ttlSeconds * 1000),
+    expiresAt: now + ttlSeconds * 1000,
   };
   inMemoryCounters.set(key, entry);
   return entry;

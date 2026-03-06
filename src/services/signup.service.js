@@ -28,6 +28,7 @@ const DEFAULT_CONTACT_NUMBER = '0000000000';
 const EMAIL_ENUMERATION_SAFE_MESSAGE = 'If the details are valid, a verification code will be sent shortly.';
 const GENERIC_VERIFICATION_FAILURE_MESSAGE = 'Verification failed';
 const MIN_PUBLIC_RESPONSE_MS = 350;
+const DUMMY_BCRYPT_HASH = '$2b$10$7EqJtq98hPqEX7fNZaFWoOhi8sB0QYfJOLLm1Aun1vDLteA94ppI.';
 
 const logSignupAuthEvent = async ({
   eventType,
@@ -75,7 +76,7 @@ const enforceMinimumDuration = async (startedAt, minimumMs = MIN_PUBLIC_RESPONSE
 };
 
 /**
- * Generate a 6-digit numeric OTP using rejection sampling to avoid modulo bias.
+ * Generate a 6-digit numeric OTP using crypto.randomInt (CSPRNG-backed in Node crypto).
  * @returns {string} 6-digit OTP string
  */
 const generateOtp = () => {
@@ -123,6 +124,7 @@ const initiateSignup = async ({ name, email, password, phone, firmName, session 
   await TemporarySignup.deleteMany({ email: normalizedEmail }, { session });
 
   if (emailAlreadyRegistered) {
+    // Intentional dummy hash work to smooth response timing and reduce email enumeration signals.
     await bcrypt.hash(`existing:${normalizedEmail}`, SALT_ROUNDS);
     log.warn('SIGNUP_FAILED', { req, email: normalizedEmail, reason: 'EMAIL_IN_USE' });
     await enforceMinimumDuration(startedAt);
@@ -147,7 +149,6 @@ const initiateSignup = async ({ name, email, password, phone, firmName, session 
     otpExpiry: otpExpiresAt,
     otpAttempts: 0,
     attemptCount: 0,
-    attempt_count: 0,
     otpBlockedUntil: null,
     otpResendCount: 0,
     resendCount: 0,
@@ -155,7 +156,6 @@ const initiateSignup = async ({ name, email, password, phone, firmName, session 
     lastOtpSentAt: new Date(),
     isVerified: false,
     consumedAt: null,
-    consumed_at: null,
   }, { session });
 
   // Send OTP email
@@ -224,12 +224,13 @@ const verifyOtp = async ({ email, otp, session = null, req = null }) => {
     }
 
     const nextAttemptCount = (record.attemptCount ?? record.attempt_count ?? record.otpAttempts ?? 0) + 1;
+    // Canonical counter is attemptCount (attempt_count alias). otpAttempts is retained for backward compatibility.
     record.otpAttempts = nextAttemptCount;
     record.attemptCount = nextAttemptCount;
-    record.attempt_count = nextAttemptCount;
 
-    const isValid = await bcrypt.compare(otp, record.otpHash || '');
-    if (!isValid) {
+    const otpHashToCompare = record.otpHash || DUMMY_BCRYPT_HASH;
+    const isValid = await bcrypt.compare(otp, otpHashToCompare);
+    if (!record.otpHash || !isValid) {
       if (record.otpAttempts >= MAX_OTP_ATTEMPTS) {
         record.otpBlockedUntil = new Date(Date.now() + OTP_BLOCK_MINUTES * 60 * 1000);
       }
@@ -252,11 +253,9 @@ const verifyOtp = async ({ email, otp, session = null, req = null }) => {
     const consumedAt = new Date();
     record.isVerified = true;
     record.otpAttempts = 0;
-    record.attemptCount = nextAttemptCount;
-    record.attempt_count = nextAttemptCount;
+    record.attemptCount = 0;
     record.otpBlockedUntil = null;
     record.consumedAt = consumedAt;
-    record.consumed_at = consumedAt;
     await record.save({ session });
 
     await clearOtpAttempts({ email: normalizedEmail });
@@ -338,14 +337,12 @@ const resendOtp = async ({ email, req = null }) => {
   record.otpExpiry = otpExpiresAt;
   record.otpAttempts = 0;
   record.attemptCount = 0;
-  record.attempt_count = 0;
   record.otpBlockedUntil = null;
   record.otpResendCount = resendCount + 1;
   record.resendCount = resendCount + 1;
   record.otpLastSentAt = new Date();
   record.lastOtpSentAt = new Date();
   record.consumedAt = null;
-  record.consumed_at = null;
   await record.save();
 
   await emailService.sendEmail({

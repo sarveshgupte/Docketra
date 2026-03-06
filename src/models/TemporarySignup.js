@@ -73,12 +73,7 @@ const temporarySignupSchema = new mongoose.Schema({
   attemptCount: {
     type: Number,
     default: 0,
-  },
-
-  // Snake_case compatibility for external contracts.
-  attempt_count: {
-    type: Number,
-    default: 0,
+    alias: 'attempt_count',
   },
 
   otpBlockedUntil: {
@@ -116,12 +111,7 @@ const temporarySignupSchema = new mongoose.Schema({
   consumedAt: {
     type: Date,
     default: null,
-  },
-
-  // Snake_case compatibility for external contracts.
-  consumed_at: {
-    type: Date,
-    default: null,
+    alias: 'consumed_at',
   },
 
   createdAt: {

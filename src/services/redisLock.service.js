@@ -12,7 +12,7 @@ const acquireLock = async ({ key, ttlSeconds = 30 }) => {
     if (current && current.expiresAt > Date.now()) {
       return { acquired: false };
     }
-    inMemoryLocks.set(key, { token, expiresAt: Date.now() + (ttlSeconds * 1000) });
+    inMemoryLocks.set(key, { token, expiresAt: Date.now() + ttlSeconds * 1000 });
     return { acquired: true, key, token };
   }
 
