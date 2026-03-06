@@ -32,6 +32,12 @@ const formatVerificationMethod = (value) => {
   return 'Unknown';
 };
 
+const formatTermsVersion = (termsVersion, termsAccepted) => {
+  if (termsVersion) return termsVersion;
+  if (termsAccepted === null || termsAccepted === undefined) return 'Legacy User';
+  return 'Unknown';
+};
+
 export const FirmsManagement = () => {
   const toast = useToast();
   
@@ -399,7 +405,7 @@ export const FirmsManagement = () => {
                       <div className="admin-audit-card">
                         <h3>Legal Consent</h3>
                         <p><strong>Terms Accepted:</strong> {formatTermsAccepted(adminModal.firm?.termsAccepted)}</p>
-                        <p><strong>Terms Version:</strong> {adminModal.firm?.termsVersion || (adminModal.firm?.termsAccepted == null ? 'Legacy User' : 'Unknown')}</p>
+                        <p><strong>Terms Version:</strong> {formatTermsVersion(adminModal.firm?.termsVersion, adminModal.firm?.termsAccepted)}</p>
                         <p><strong>Accepted At:</strong> {formatDate(adminModal.firm?.termsAcceptedAt)}</p>
                       </div>
                       <div className="admin-audit-card">
@@ -578,7 +584,7 @@ export const FirmsManagement = () => {
                         <td>{formatVerificationMethod(firm.verificationMethod)}</td>
                         <td>{formatDate(firm.emailVerifiedAt)}</td>
                         <td>{formatTermsAccepted(firm.termsAccepted)}</td>
-                        <td>{firm.termsVersion || (firm.termsAccepted == null ? 'Legacy User' : 'Unknown')}</td>
+                        <td>{formatTermsVersion(firm.termsVersion, firm.termsAccepted)}</td>
                         <td>{formatDate(firm.termsAcceptedAt)}</td>
                         <td>{firm.clientCount ?? 0}</td>
                         <td>{firm.userCount ?? 0}</td>

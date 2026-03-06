@@ -197,6 +197,7 @@ const verifySignupOtp = async ({ email, otp, req = null }) => {
   record.otpAttempts = 0;
   record.otpBlockedUntil = null;
   await record.save();
+  const activeSession = typeof record.$session === 'function' ? record.$session() : null;
   await User.updateOne(
     { email: normalizedEmail, status: { $ne: 'deleted' } },
     {
@@ -205,7 +206,8 @@ const verifySignupOtp = async ({ email, otp, req = null }) => {
         emailVerifiedAt: new Date(),
         verificationMethod: 'OTP',
       },
-    }
+    },
+    activeSession ? { session: activeSession } : undefined
   );
   await logSignupAuthEvent({ eventType: 'OTP_VERIFIED', email: normalizedEmail, req });
 
