@@ -44,9 +44,11 @@ async function testRouteWrapsWriteSignupHandlers() {
   clearModule('../src/routes/publicSignup.routes');
   const router = require('../src/routes/publicSignup.routes');
   const initiateLayer = router.stack.find((layer) => layer.route?.path === '/initiate-signup');
+  const verifyLayer = router.stack.find((layer) => layer.route?.path === '/verify-otp');
   const googleLayer = router.stack.find((layer) => layer.route?.path === '/google-auth');
   const completeLayer = router.stack.find((layer) => layer.route?.path === '/complete-signup');
   assert.ok(initiateLayer, 'initiate-signup route should exist');
+  assert.ok(verifyLayer, 'verify-otp route should exist');
   assert.strictEqual(googleLayer, undefined, 'google-auth route should not exist');
   assert.ok(completeLayer, 'complete-signup route should exist');
 
@@ -56,19 +58,22 @@ async function testRouteWrapsWriteSignupHandlers() {
   assert.strictEqual(initiateHandlers[2].original, initiateSignup, 'initiate-signup should be wrapped with wrapWriteHandler');
 
   const completeHandlers = completeLayer.route.stack.map((item) => item.handle);
+  const verifyHandlers = verifyLayer.route.stack.map((item) => item.handle);
   assert.strictEqual(completeHandlers[0], authLimiter, 'authLimiter should remain first middleware');
+  assert.strictEqual(verifyHandlers[0], authLimiter, 'authLimiter should remain first middleware');
+  assert.strictEqual(typeof verifyHandlers[1].original, 'function', 'verify-otp should be wrapped with wrapWriteHandler');
   assert.strictEqual(typeof completeHandlers[1].original, 'function', 'complete-signup should be wrapped with wrapWriteHandler');
 
-  assert.strictEqual(wrappedHandlers.length, 2, 'two write handlers should be wrapped');
+  assert.strictEqual(wrappedHandlers.length, 3, 'three write handlers should be wrapped');
   console.log('  ✓ wraps public signup write routes with wrapWriteHandler');
 }
 
 async function testControllerForwardsTransactionSession() {
   const captured = {};
   const mockSignupService = {
-    initiateManualSignup: async (payload) => {
+    initiateSignup: async (payload) => {
       captured.payload = payload;
-      return { success: true, message: 'OTP sent to your email' };
+      return { success: true, message: 'If the details are valid, a verification code will be sent shortly.' };
     },
   };
 
@@ -92,6 +97,44 @@ async function testControllerForwardsTransactionSession() {
   assert.strictEqual(captured.payload.session, session, 'controller should pass active transaction session to service');
   assert.strictEqual(captured.payload.firmName, 'Acme Legal', 'controller should pass firmName for temporary signup');
   console.log('  ✓ forwards req.transactionSession.session to initiateManualSignup');
+}
+
+async function testVerifyControllerForwardsTransactionSession() {
+  const captured = {};
+  const mockSignupService = {
+    verifyOtp: async (payload) => {
+      captured.payload = payload;
+      return {
+        success: true,
+        message: 'Signup successful',
+        token: 'jwt-token',
+        xid: 'X000001',
+        firmSlug: 'acme-legal',
+        firmUrl: 'https://acme-legal.example.com',
+        redirectPath: '/acme-legal/login',
+      };
+    },
+  };
+
+  Module._load = function (request, parent, isMain) {
+    if (request === '../services/signup.service') return mockSignupService;
+    return originalLoad.apply(this, arguments);
+  };
+
+  clearModule('../src/controllers/publicSignup.controller');
+  const { verifyOtp } = require('../src/controllers/publicSignup.controller');
+  const session = { id: 'session-verify' };
+  const result = await verifyOtp({
+    body: { email: 'alice@example.com', otp: '123456' },
+    transactionSession: { session },
+    ip: '127.0.0.1',
+  }, {});
+
+  assert.strictEqual(result.success, true);
+  assert.strictEqual(result.statusCode, 200);
+  assert.strictEqual(result.token, 'jwt-token');
+  assert.strictEqual(captured.payload.session, session, 'verify controller should pass active transaction session to service');
+  console.log('  ✓ forwards req.transactionSession.session to verifyOtp');
 }
 
 async function testServiceWritesUseSession() {
@@ -240,6 +283,7 @@ async function run() {
   try {
     await testRouteWrapsWriteSignupHandlers();
     await testControllerForwardsTransactionSession();
+    await testVerifyControllerForwardsTransactionSession();
     await testServiceWritesUseSession();
     await testCreateFirmAndAdminTracksVerificationAndConsent();
     console.log('All public signup transaction tests passed.');

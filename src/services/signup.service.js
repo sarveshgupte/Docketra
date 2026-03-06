@@ -10,6 +10,10 @@ const { ensureTenantKey } = require('../security/encryption.service');
 const { slugify } = require('../utils/slugify');
 const emailService = require('./email.service');
 const { logAuthEvent } = require('./audit.service');
+const jwtService = require('./jwt.service');
+const log = require('../utils/log');
+const { acquireLock, releaseLock } = require('./redisLock.service');
+const { consumeSignupQuota, consumeOtpAttempt, clearOtpAttempts } = require('./signupRateLimit.service');
 
 const SALT_ROUNDS = 10;
 const OTP_EXPIRY_MINUTES = 10;
@@ -21,6 +25,10 @@ const RESEND_COOLDOWN_SECONDS = 60;
 const SYSTEM_EMAIL_DOMAIN = 'system.local';
 const DEFAULT_BUSINESS_ADDRESS = 'Default Address';
 const DEFAULT_CONTACT_NUMBER = '0000000000';
+const EMAIL_ENUMERATION_SAFE_MESSAGE = 'If the details are valid, a verification code will be sent shortly.';
+const GENERIC_VERIFICATION_FAILURE_MESSAGE = 'Verification failed';
+const MIN_PUBLIC_RESPONSE_MS = 350;
+const DUMMY_BCRYPT_HASH = '$2b$10$7EqJtq98hPqEX7fNZaFWoOhi8sB0QYfJOLLm1Aun1vDLteA94ppI.';
 
 const logSignupAuthEvent = async ({
   eventType,
@@ -58,21 +66,21 @@ const logSignupAuthEvent = async ({
 const resolveOtpExpiry = (record) => record.otpExpiresAt || record.otpExpiry;
 const resolveOtpLastSentAt = (record) => record.otpLastSentAt || record.lastOtpSentAt;
 const resolveOtpResendCount = (record) => record.otpResendCount ?? record.resendCount ?? 0;
+const resolveConsumedAt = (record) => record.consumedAt || record.consumed_at;
+
+const enforceMinimumDuration = async (startedAt, minimumMs = MIN_PUBLIC_RESPONSE_MS) => {
+  const elapsed = Date.now() - startedAt;
+  if (elapsed < minimumMs) {
+    await new Promise((resolve) => setTimeout(resolve, minimumMs - elapsed));
+  }
+};
 
 /**
- * Generate a 6-digit numeric OTP using rejection sampling to avoid modulo bias.
+ * Generate a 6-digit numeric OTP using crypto.randomInt (CSPRNG-backed in Node crypto).
  * @returns {string} 6-digit OTP string
  */
 const generateOtp = () => {
-  const max = 999999;
-  const limit = max + 1; // 1000000
-  // 3 bytes = 16777216 possible values; largest unbiased multiple of 1000000 is 16000000
-  const threshold = Math.floor(16777216 / limit) * limit;
-  let num;
-  do {
-    num = crypto.randomBytes(3).readUIntBE(0, 3);
-  } while (num >= threshold);
-  return String(num % limit).padStart(6, '0');
+  return String(crypto.randomInt(0, 1000000)).padStart(6, '0');
 };
 
 /**
@@ -95,12 +103,15 @@ const isEmailFirmOwner = async (email) => {
  * @param {Object} params - { name, email, password, phone }
  * @returns {Promise<Object>} result
  */
-const initiateManualSignup = async ({ name, email, password, phone, firmName, session = null, req = null }) => {
+const initiateSignup = async ({ name, email, password, phone, firmName, session = null, req = null }) => {
+  const startedAt = Date.now();
   const normalizedEmail = email.toLowerCase().trim();
-
-  if (await isEmailFirmOwner(normalizedEmail)) {
-    return { success: false, status: 409, message: 'Email is already associated with a firm' };
+  const quota = await consumeSignupQuota({ email: normalizedEmail, ip: req?.ip });
+  if (!quota.allowed) {
+    return { success: false, status: 429, message: 'Too many requests. Please try again later.' };
   }
+
+  const emailAlreadyRegistered = await isEmailFirmOwner(normalizedEmail);
 
   await TemporarySignup.deleteMany({
     $or: [
@@ -111,6 +122,14 @@ const initiateManualSignup = async ({ name, email, password, phone, firmName, se
 
   // Remove any existing temporary signup for this email
   await TemporarySignup.deleteMany({ email: normalizedEmail }, { session });
+
+  if (emailAlreadyRegistered) {
+    // Intentional dummy hash work to smooth response timing and reduce email enumeration signals.
+    await bcrypt.hash(`existing:${normalizedEmail}`, SALT_ROUNDS);
+    log.warn('SIGNUP_FAILED', { req, email: normalizedEmail, reason: 'EMAIL_IN_USE' });
+    await enforceMinimumDuration(startedAt);
+    return { success: true, message: EMAIL_ENUMERATION_SAFE_MESSAGE };
+  }
 
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
   const otp = generateOtp();
@@ -129,12 +148,14 @@ const initiateManualSignup = async ({ name, email, password, phone, firmName, se
     // Legacy compatibility field retained for old records/read paths.
     otpExpiry: otpExpiresAt,
     otpAttempts: 0,
+    attemptCount: 0,
     otpBlockedUntil: null,
     otpResendCount: 0,
     resendCount: 0,
     otpLastSentAt: new Date(),
     lastOtpSentAt: new Date(),
     isVerified: false,
+    consumedAt: null,
   }, { session });
 
   // Send OTP email
@@ -156,8 +177,10 @@ const initiateManualSignup = async ({ name, email, password, phone, firmName, se
 
   await logSignupAuthEvent({ eventType: 'SIGNUP_INITIATED', email: normalizedEmail, req });
   await logSignupAuthEvent({ eventType: 'OTP_SENT', email: normalizedEmail, req });
+  log.info('OTP_SENT', { req, email: normalizedEmail, event: 'OTP_SENT' });
+  await enforceMinimumDuration(startedAt);
 
-  return { success: true, message: 'OTP sent to your email' };
+  return { success: true, message: EMAIL_ENUMERATION_SAFE_MESSAGE };
 };
 
 /**
@@ -165,53 +188,115 @@ const initiateManualSignup = async ({ name, email, password, phone, firmName, se
  * @param {Object} params - { email, otp }
  * @returns {Promise<Object>} result
  */
-const verifySignupOtp = async ({ email, otp, req = null }) => {
+const verifyOtp = async ({ email, otp, session = null, req = null }) => {
+  if (!session) {
+    throw new Error('Transaction session is required');
+  }
+
+  const startedAt = Date.now();
   const normalizedEmail = email.toLowerCase().trim();
-  const record = await TemporarySignup.findOne({ email: normalizedEmail, provider: 'manual' });
-
-  if (!record) {
-    return { success: false, status: 404, message: 'No signup request found. Please initiate signup first.' };
+  const otpAttempt = await consumeOtpAttempt({ email: normalizedEmail });
+  if (!otpAttempt.allowed) {
+    return { success: false, status: 429, message: 'Too many requests. Please try again later.' };
   }
 
-  if (record.otpBlockedUntil && record.otpBlockedUntil.getTime() > Date.now()) {
-    return { success: false, status: 429, message: 'Too many attempts. Please try again later.' };
+  const lock = await acquireLock({ key: `tenant_bootstrap_lock:${normalizedEmail}`, ttlSeconds: 30 });
+  if (!lock.acquired) {
+    return { success: false, status: 409, message: 'Signup already in progress' };
   }
 
-  const otpExpiry = resolveOtpExpiry(record);
-  if (!otpExpiry || otpExpiry.getTime() < Date.now()) {
-    return { success: false, status: 400, message: 'OTP has expired. Please request a new OTP.' };
-  }
-
-  record.otpAttempts += 1;
-
-  const isValid = await bcrypt.compare(otp, record.otpHash);
-  if (!isValid) {
-    if (record.otpAttempts >= MAX_OTP_ATTEMPTS) {
-      record.otpBlockedUntil = new Date(Date.now() + OTP_BLOCK_MINUTES * 60 * 1000);
+  try {
+    const record = await TemporarySignup.findOne({ email: normalizedEmail, provider: 'manual' }).session(session);
+    if (!record) {
+      await enforceMinimumDuration(startedAt);
+      return { success: false, status: 400, message: GENERIC_VERIFICATION_FAILURE_MESSAGE };
     }
-    await record.save();
-    return { success: false, status: 400, message: 'Invalid OTP' };
+
+    if (resolveConsumedAt(record)) {
+      await enforceMinimumDuration(startedAt);
+      return { success: false, status: 400, message: GENERIC_VERIFICATION_FAILURE_MESSAGE };
+    }
+
+    const otpExpiry = resolveOtpExpiry(record);
+    if (!otpExpiry || otpExpiry.getTime() < Date.now()) {
+      await enforceMinimumDuration(startedAt);
+      return { success: false, status: 400, message: GENERIC_VERIFICATION_FAILURE_MESSAGE };
+    }
+
+    const nextAttemptCount = (record.attemptCount ?? record.attempt_count ?? record.otpAttempts ?? 0) + 1;
+    // Canonical counter is attemptCount (attempt_count alias). otpAttempts is retained for backward compatibility.
+    record.otpAttempts = nextAttemptCount;
+    record.attemptCount = nextAttemptCount;
+
+    const otpHashToCompare = record.otpHash || DUMMY_BCRYPT_HASH;
+    const isValid = await bcrypt.compare(otp, otpHashToCompare);
+    if (!record.otpHash || !isValid) {
+      if (record.otpAttempts >= MAX_OTP_ATTEMPTS) {
+        record.otpBlockedUntil = new Date(Date.now() + OTP_BLOCK_MINUTES * 60 * 1000);
+      }
+      await record.save({ session });
+      log.warn('SIGNUP_FAILED', { req, email: normalizedEmail, reason: 'INVALID_OTP' });
+      await enforceMinimumDuration(startedAt);
+      return { success: false, status: 400, message: GENERIC_VERIFICATION_FAILURE_MESSAGE };
+    }
+
+    const tenant = await createTenant({
+      name: record.name,
+      email: normalizedEmail,
+      firmName: record.firmName,
+      passwordHash: record.passwordHash || null,
+      phone: record.phone || null,
+      session,
+      req,
+    });
+
+    const consumedAt = new Date();
+    record.isVerified = true;
+    record.otpAttempts = 0;
+    record.attemptCount = 0;
+    record.otpBlockedUntil = null;
+    record.consumedAt = consumedAt;
+    await record.save({ session });
+
+    await clearOtpAttempts({ email: normalizedEmail });
+    await logSignupAuthEvent({ eventType: 'OTP_VERIFIED', email: normalizedEmail, req, userId: tenant.userId, firmId: tenant.firmId });
+    await logSignupAuthEvent({
+      eventType: 'SIGNUP_COMPLETED',
+      email: normalizedEmail,
+      req,
+      userId: tenant.userId,
+      firmId: tenant.firmId,
+      metadata: { firmSlug: tenant.firmSlug },
+    });
+    log.info('OTP_VERIFIED', { req, email: normalizedEmail, firmSlug: tenant.firmSlug });
+    log.info('SIGNUP_COMPLETED', { req, email: normalizedEmail, firmSlug: tenant.firmSlug, xid: tenant.xid });
+
+    const token = jwtService.generateAccessToken({
+      userId: String(tenant.userId),
+      role: 'Admin',
+      firmId: String(tenant.firmId),
+      firmSlug: tenant.firmSlug,
+      defaultClientId: String(tenant.defaultClientId),
+      isSuperAdmin: false,
+    });
+
+    await enforceMinimumDuration(startedAt);
+    return {
+      success: true,
+      message: 'Signup successful',
+      token,
+      xid: tenant.xid,
+      firmSlug: tenant.firmSlug,
+      firmUrl: tenant.firmUrl,
+      redirectPath: `/${tenant.firmSlug}/login`,
+    };
+  } catch (error) {
+    log.error('SIGNUP_FAILED', { req, email: normalizedEmail, reason: 'VERIFY_OTP_ERROR', error: error.message });
+    await enforceMinimumDuration(startedAt);
+    throw error;
+  } finally {
+    await releaseLock(lock);
   }
-
-  record.isVerified = true;
-  record.otpAttempts = 0;
-  record.otpBlockedUntil = null;
-  await record.save();
-  const activeSession = typeof record.$session === 'function' ? record.$session() : null;
-  await User.updateOne(
-    { email: normalizedEmail, status: { $ne: 'deleted' } },
-    {
-      $set: {
-        emailVerified: true,
-        emailVerifiedAt: new Date(),
-        verificationMethod: 'OTP',
-      },
-    },
-    activeSession ? { session: activeSession } : undefined
-  );
-  await logSignupAuthEvent({ eventType: 'OTP_VERIFIED', email: normalizedEmail, req });
-
-  return { success: true, message: 'Email verified successfully' };
 };
 
 /**
@@ -219,12 +304,18 @@ const verifySignupOtp = async ({ email, otp, req = null }) => {
  * @param {Object} params - { email }
  * @returns {Promise<Object>} result
  */
-const resendSignupOtp = async ({ email, req = null }) => {
+const resendOtp = async ({ email, req = null }) => {
+  const startedAt = Date.now();
   const normalizedEmail = email.toLowerCase().trim();
+  const quota = await consumeSignupQuota({ email: normalizedEmail, ip: req?.ip });
+  if (!quota.allowed) {
+    return { success: false, status: 429, message: 'Too many requests. Please try again later.' };
+  }
   const record = await TemporarySignup.findOne({ email: normalizedEmail, provider: 'manual' });
 
   if (!record) {
-    return { success: false, status: 404, message: 'No signup request found. Please initiate signup first.' };
+    await enforceMinimumDuration(startedAt);
+    return { success: true, message: EMAIL_ENUMERATION_SAFE_MESSAGE };
   }
 
   const resendCount = resolveOtpResendCount(record);
@@ -245,11 +336,13 @@ const resendSignupOtp = async ({ email, req = null }) => {
   record.otpExpiresAt = otpExpiresAt;
   record.otpExpiry = otpExpiresAt;
   record.otpAttempts = 0;
+  record.attemptCount = 0;
   record.otpBlockedUntil = null;
   record.otpResendCount = resendCount + 1;
   record.resendCount = resendCount + 1;
   record.otpLastSentAt = new Date();
   record.lastOtpSentAt = new Date();
+  record.consumedAt = null;
   await record.save();
 
   await emailService.sendEmail({
@@ -269,8 +362,10 @@ const resendSignupOtp = async ({ email, req = null }) => {
   });
 
   await logSignupAuthEvent({ eventType: 'OTP_SENT', email: normalizedEmail, req, metadata: { resend: true } });
+  log.info('OTP_SENT', { req, email: normalizedEmail, event: 'OTP_RESENT' });
+  await enforceMinimumDuration(startedAt);
 
-  return { success: true, message: 'New OTP sent to your email' };
+  return { success: true, message: EMAIL_ENUMERATION_SAFE_MESSAGE };
 };
 
 const generateUniqueSlug = async (firmName, session, retryOffset = 0) => {
@@ -441,6 +536,52 @@ const createFirmAndAdmin = async ({
     adminXID,
     firmSlug,
     firmUrl,
+    firmId: firm._id,
+    userId: adminUser._id,
+    defaultClientId: defaultClient._id,
+  };
+};
+
+const createTenant = async ({
+  name,
+  email,
+  firmName,
+  passwordHash,
+  phone,
+  session,
+  req = null,
+}) => {
+  const existing = await User.findOne({
+    email: email.toLowerCase().trim(),
+    isSystem: true,
+    role: 'Admin',
+    status: { $ne: 'deleted' },
+  }).session(session);
+
+  if (existing) {
+    const conflict = new Error('Admin already exists for this email');
+    conflict.statusCode = 409;
+    throw conflict;
+  }
+
+  const created = await createFirmAndAdmin({
+    name,
+    email,
+    firmName,
+    passwordHash: passwordHash || null,
+    phone: phone || null,
+    authProvider: 'password',
+    session,
+    req,
+  });
+
+  return {
+    xid: created.adminXID,
+    firmSlug: created.firmSlug,
+    firmUrl: created.firmUrl,
+    firmId: created.firmId,
+    userId: created.userId,
+    defaultClientId: created.defaultClientId,
   };
 };
 
@@ -455,6 +596,9 @@ const completeSignup = async ({ email, firmName, session, req = null }) => {
 
   if (!record) {
     return { success: false, status: 400, message: 'No verified signup found. Please complete verification first.' };
+  }
+  if (resolveConsumedAt(record)) {
+    return { success: false, status: 400, message: 'Verification failed' };
   }
 
   const resolvedFirmName = (firmName || record.firmName || '').trim();
@@ -513,12 +657,17 @@ const completeSignup = async ({ email, firmName, session, req = null }) => {
 };
 
 module.exports = {
-  initiateManualSignup,
-  verifySignupOtp,
-  resendSignupOtp,
+  initiateSignup,
+  verifyOtp,
+  resendOtp,
+  createTenant,
   createFirmAndAdmin,
   completeSignup,
   generateOtp,
   isEmailFirmOwner,
   buildFirmUrl,
+  // Backward-compatible aliases
+  initiateManualSignup: initiateSignup,
+  verifySignupOtp: verifyOtp,
+  resendSignupOtp: resendOtp,
 };

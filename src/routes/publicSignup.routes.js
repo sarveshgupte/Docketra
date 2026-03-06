@@ -15,7 +15,7 @@ router.post('/initiate-signup', authLimiter, signupLimiter, wrapWriteHandler(ini
 router.post('/resend-otp', authLimiter, resendOtp);
 
 // Non-rate-limited routes (protected by OTP attempts/verification logic)
-router.post('/verify-otp', authLimiter, verifyOtp);
+router.post('/verify-otp', authLimiter, wrapWriteHandler(verifyOtp));
 router.post('/complete-signup', authLimiter, wrapWriteHandler(completeSignup));
 
 module.exports = router;

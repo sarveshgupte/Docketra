@@ -70,6 +70,12 @@ const temporarySignupSchema = new mongoose.Schema({
     default: 0,
   },
 
+  attemptCount: {
+    type: Number,
+    default: 0,
+    alias: 'attempt_count',
+  },
+
   otpBlockedUntil: {
     type: Date,
     default: null,
@@ -100,6 +106,12 @@ const temporarySignupSchema = new mongoose.Schema({
   isVerified: {
     type: Boolean,
     default: false,
+  },
+
+  consumedAt: {
+    type: Date,
+    default: null,
+    alias: 'consumed_at',
   },
 
   createdAt: {
