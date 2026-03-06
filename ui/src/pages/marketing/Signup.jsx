@@ -162,7 +162,7 @@ export default function Signup() {
     if (autoSubmittedOtpRef.current === otp) return;
     autoSubmittedOtpRef.current = otp;
     verifyOtpCode(otp);
-  }, [otp, otpDigits, step, loading]);
+  }, [otpDigits, step, loading]);
 
   const submitOtpVerification = async (event) => {
     event.preventDefault();
@@ -218,7 +218,8 @@ export default function Signup() {
       });
       return next;
     });
-    otpInputRefs.current[Math.min(pastedValue.length, OTP_LENGTH) - 1]?.focus();
+    const nextFocusIndex = pastedValue.length < OTP_LENGTH ? pastedValue.length : OTP_LENGTH - 1;
+    otpInputRefs.current[nextFocusIndex]?.focus();
   };
 
   const resendOtp = async () => {
