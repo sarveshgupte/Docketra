@@ -266,11 +266,11 @@ export default function Signup() {
               ) : null}
               <p className="text-center text-[12px] text-gray-500 sm:text-[13px]">
                 By signing up, you agree to our{' '}
-                <Link to="/terms" className="underline hover:text-gray-700">
+                <Link to="/terms" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-700">
                   Terms &amp; Conditions
                 </Link>{' '}
                 and{' '}
-                <Link to="/privacy" className="underline hover:text-gray-700">
+                <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-700">
                   Privacy Policy
                 </Link>
                 .
