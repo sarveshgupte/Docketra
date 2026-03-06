@@ -25,7 +25,7 @@ const initiateSignup = async (req, res) => {
       return { success: false, statusCode: 400, message: 'Firm name is required' };
     }
 
-    const result = await signupService.initiateManualSignup({
+    const result = await signupService.initiateSignup({
       name,
       email,
       password,
@@ -59,24 +59,36 @@ const initiateSignup = async (req, res) => {
 const verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
+    const session = req.transactionSession?.session;
 
     if (!email || !email.trim()) {
-      return res.status(400).json({ success: false, message: 'Email is required' });
+      return { success: false, statusCode: 400, message: 'Email is required' };
     }
     if (!otp || !otp.trim()) {
-      return res.status(400).json({ success: false, message: 'OTP is required' });
+      return { success: false, statusCode: 400, message: 'OTP is required' };
     }
 
-    const result = await signupService.verifySignupOtp({ email, otp: otp.trim(), req });
+    const result = await signupService.verifyOtp({ email, otp: otp.trim(), session, req });
 
     if (!result.success) {
-      return res.status(result.status || 400).json({ success: false, message: result.message });
+      return { success: false, statusCode: result.status || 400, message: result.message };
     }
 
-    return res.status(200).json({ success: true, message: result.message });
+    return {
+      success: true,
+      statusCode: 200,
+      message: result.message,
+      token: result.token,
+      xid: result.xid,
+      firmSlug: result.firmSlug,
+      firmUrl: result.firmUrl,
+      redirectPath: result.redirectPath,
+    };
   } catch (error) {
     console.error('[PUBLIC_SIGNUP] verifyOtp error:', error.message);
-    return res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
+    const verificationError = new Error('Verification failed');
+    verificationError.statusCode = error.statusCode || 500;
+    throw verificationError;
   }
 };
 
@@ -92,7 +104,7 @@ const resendOtp = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email is required' });
     }
 
-    const result = await signupService.resendSignupOtp({ email, req });
+    const result = await signupService.resendOtp({ email, req });
 
     if (!result.success) {
       return res.status(result.status || 400).json({ success: false, message: result.message });
