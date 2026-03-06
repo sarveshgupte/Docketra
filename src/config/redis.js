@@ -1,5 +1,6 @@
 const Redis = require('ioredis');
 const { recordFailure, recordSuccess } = require('../services/circuitBreaker.service');
+const { validateRedisEvictionPolicy } = require('./redisPolicyCheck');
 
 /**
  * Redis Configuration for Rate Limiting
@@ -66,9 +67,14 @@ const getRedisClient = () => {
       recordSuccess('redis');
     });
     
-    redisClient.on('ready', () => {
+    redisClient.on('ready', async () => {
       console.log('[REDIS] Redis client ready');
       recordSuccess('redis');
+      try {
+        await validateRedisEvictionPolicy(redisClient);
+      } catch (err) {
+        console.warn(`[REDIS] Eviction policy validation failed: ${err.message}`);
+      }
     });
     
     redisClient.on('error', (err) => {
