@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
 
@@ -7,6 +7,8 @@ const inputClass =
 const labelClass = 'block text-xs font-medium text-gray-700 mb-1.5';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const OTP_LENGTH = 6;
+const OTP_RESEND_COOLDOWN = 60;
 
 const getErrorMessage = (error, fallback) => (
   error?.response?.data?.message
@@ -30,9 +32,39 @@ export default function Signup() {
     phone: '',
   });
   const [signupEmail, setSignupEmail] = useState('');
-  const [otp, setOtp] = useState('');
+  const [otpDigits, setOtpDigits] = useState(Array(OTP_LENGTH).fill(''));
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
+  const [resendTimer, setResendTimer] = useState(OTP_RESEND_COOLDOWN);
+  const [canResend, setCanResend] = useState(false);
+  const otpInputRefs = useRef([]);
+  const autoSubmittedOtpRef = useRef('');
+  const otp = useMemo(() => otpDigits.join(''), [otpDigits]);
+
+  useEffect(() => {
+    if (step !== 'otp') return;
+    setResendTimer(OTP_RESEND_COOLDOWN);
+    setCanResend(false);
+    setOtpDigits(Array(OTP_LENGTH).fill(''));
+    autoSubmittedOtpRef.current = '';
+    setTimeout(() => {
+      otpInputRefs.current[0]?.focus();
+    }, 0);
+  }, [step]);
+
+  useEffect(() => {
+    if (step !== 'otp') return;
+    if (resendTimer <= 0) {
+      setCanResend(true);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setResendTimer((prev) => prev - 1);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [step, resendTimer]);
 
   const onFormChange = (event) => {
     const { name, value } = event.target;
@@ -87,13 +119,13 @@ export default function Signup() {
     }
   };
 
-  const submitOtpVerification = async (event) => {
-    event.preventDefault();
+  const verifyOtpCode = async (otpCode) => {
     setApiError('');
-    setApiMessage('');
+    setApiMessage('Verifying OTP...');
 
-    if (!/^\d{6}$/.test(otp.trim())) {
+    if (!new RegExp(`^\\d{${OTP_LENGTH}}$`).test(otpCode.trim())) {
       setErrors({ otp: 'Enter a valid 6-digit OTP' });
+      setApiMessage('');
       return;
     }
 
@@ -102,7 +134,7 @@ export default function Signup() {
     try {
       const response = await api.post('/public/verify-otp', {
         email: signupEmail,
-        otp: otp.trim(),
+        otp: otpCode.trim(),
       });
       const firmSlug = response?.data?.firmSlug;
       const redirectPathFromApi = response?.data?.redirectPath;
@@ -114,13 +146,84 @@ export default function Signup() {
         : (firmSlug ? `/${firmSlug}/login` : '/login');
       window.location.assign(safeRedirectPath);
     } catch (error) {
-      setApiError(getErrorMessage(error, 'Verification failed. Please try again.'));
+      setApiMessage('');
+      const verificationError = error?.response?.status === 400
+        ? 'Invalid OTP. Please try again.'
+        : getErrorMessage(error, 'Verification failed. Please try again.');
+      setApiError(verificationError);
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    if (step !== 'otp' || loading) return;
+    if (otp.length !== OTP_LENGTH || otpDigits.some((digit) => digit === '')) return;
+    if (autoSubmittedOtpRef.current === otp) return;
+    autoSubmittedOtpRef.current = otp;
+    verifyOtpCode(otp);
+  }, [otpDigits, step, loading]);
+
+  const submitOtpVerification = async (event) => {
+    event.preventDefault();
+    await verifyOtpCode(otp);
+  };
+
+  const updateOtpDigits = (updater) => {
+    setApiError('');
+    setApiMessage('');
+    setErrors((prev) => ({ ...prev, otp: '' }));
+    setOtpDigits(updater);
+    autoSubmittedOtpRef.current = '';
+  };
+
+  const handleOtpChange = (index, rawValue) => {
+    const value = rawValue.replace(/\D/g, '');
+    if (!value) {
+      updateOtpDigits((prev) => {
+        const next = [...prev];
+        next[index] = '';
+        return next;
+      });
+      return;
+    }
+
+    updateOtpDigits((prev) => {
+      const next = [...prev];
+      const digits = value.slice(0, OTP_LENGTH - index).split('');
+      digits.forEach((digit, offset) => {
+        next[index + offset] = digit;
+      });
+      return next;
+    });
+
+    const nextFocusIndex = Math.min(index + value.length, OTP_LENGTH - 1);
+    otpInputRefs.current[nextFocusIndex]?.focus();
+  };
+
+  const handleOtpKeyDown = (index, event) => {
+    if (event.key === 'Backspace' && !otpDigits[index] && index > 0) {
+      otpInputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleOtpPaste = (event) => {
+    const pastedValue = event.clipboardData.getData('text').replace(/\D/g, '').slice(0, OTP_LENGTH);
+    if (!pastedValue) return;
+    event.preventDefault();
+    updateOtpDigits(() => {
+      const next = Array(OTP_LENGTH).fill('');
+      pastedValue.split('').forEach((digit, index) => {
+        next[index] = digit;
+      });
+      return next;
+    });
+    const nextFocusIndex = pastedValue.length < OTP_LENGTH ? pastedValue.length : OTP_LENGTH - 1;
+    otpInputRefs.current[nextFocusIndex]?.focus();
+  };
+
   const resendOtp = async () => {
+    if (!canResend || loading) return;
     setApiError('');
     setApiMessage('');
     setErrors((prev) => ({ ...prev, otp: '' }));
@@ -128,6 +231,8 @@ export default function Signup() {
     try {
       const response = await api.post('/public/resend-otp', { email: signupEmail });
       setApiMessage(response?.data?.message || 'OTP resent successfully.');
+      setResendTimer(OTP_RESEND_COOLDOWN);
+      setCanResend(false);
     } catch (error) {
       setApiError(getErrorMessage(error, 'Unable to resend OTP right now.'));
     } finally {
@@ -277,20 +382,28 @@ export default function Signup() {
                 <input id="otp-email" value={signupEmail} className={inputClass} readOnly />
               </div>
               <div>
-                <label htmlFor="otp-code" className={labelClass}>6-digit OTP</label>
-                <input
-                  id="otp-code"
-                  value={otp}
-                  onChange={(event) => {
-                    setOtp(event.target.value.replace(/\D/g, '').slice(0, 6));
-                    setErrors((prev) => ({ ...prev, otp: '' }));
-                  }}
-                  className={inputClass}
-                  disabled={loading}
-                  inputMode="numeric"
-                  maxLength={6}
-                  required
-                />
+                <label htmlFor="otp-code-0" className={labelClass}>6-digit OTP</label>
+                <div className="flex gap-2" onPaste={handleOtpPaste}>
+                  {otpDigits.map((digit, index) => (
+                    <input
+                      key={`otp-digit-${index}`}
+                      id={`otp-code-${index}`}
+                      ref={(element) => {
+                        otpInputRefs.current[index] = element;
+                      }}
+                      value={digit}
+                      onChange={(event) => handleOtpChange(index, event.target.value)}
+                      onKeyDown={(event) => handleOtpKeyDown(index, event)}
+                      className={`${inputClass} w-11 text-center`}
+                      disabled={loading}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      autoComplete={index === 0 ? 'one-time-code' : 'off'}
+                      maxLength={1}
+                      required
+                    />
+                  ))}
+                </div>
                 {errors.otp && <p className="mt-1 text-xs text-red-600">{errors.otp}</p>}
               </div>
               <div className="flex flex-col gap-3 sm:flex-row">
@@ -305,10 +418,10 @@ export default function Signup() {
                 <button
                   type="button"
                   onClick={resendOtp}
-                  disabled={loading}
+                  disabled={loading || !canResend}
                   className="marketing-btn-secondary inline-flex w-full items-center justify-center px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Resend OTP
+                  {canResend ? 'Resend OTP' : `Resend OTP (${resendTimer}s)`}
                 </button>
               </div>
             </form>
