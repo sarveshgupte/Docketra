@@ -3,6 +3,7 @@ const User = require('../models/User.model');
 const userRepository = require('../repositories/user.repository');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { assertFirmPlanCapacity, PlanLimitExceededError, PlanAdminLimitExceededError } = require('../services/user.service');
+const { incrementTenantMetric } = require('../services/tenantMetrics.service');
 
 const resolveUserFirmScope = (req, res) => {
   if (req.user?.role === 'SUPER_ADMIN') return {};
@@ -151,6 +152,7 @@ const createUser = async (req, res) => {
     });
     
     await user.save();
+    await incrementTenantMetric(req.user?.firmId, 'users').catch(() => null);
     
     res.status(201).json({
       success: true,

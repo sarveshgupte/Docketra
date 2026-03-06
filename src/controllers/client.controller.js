@@ -16,6 +16,7 @@ const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { softDelete } = require('../services/softDelete.service');
 const { enqueueStorageJob, JOB_TYPES } = require('../queues/storage.queue');
 const CaseFile = require('../models/CaseFile.model');
+const { incrementTenantMetric } = require('../services/tenantMetrics.service');
 const path = require('path');
 const fs = require('fs');
 
@@ -292,6 +293,7 @@ const createClient = async (req, res) => {
     
     // STEP 9: Save the client first
     await client.save();
+    await incrementTenantMetric(userFirmId, 'clients').catch(() => null);
     
     // STEP 10: Create Google Drive CFS folder structure for the client
     try {

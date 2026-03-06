@@ -28,6 +28,7 @@ const { areFileUploadsDisabled } = require('../services/featureFlags.service');
 const { enqueueStorageJob, JOB_TYPES } = require('../queues/storage.queue');
 const { assertFirmContext } = require('../utils/tenantGuard');
 const CaseFile = require('../models/CaseFile.model');
+const { incrementTenantMetric } = require('../services/tenantMetrics.service');
 const fs = require('fs').promises;
 const fsSync = require('fs');
 const path = require('path');
@@ -379,6 +380,7 @@ const createCase = async (req, res) => {
       });
       
       await newCase.save({ session });
+      await incrementTenantMetric(firmId, 'cases').catch(() => null);
       
       // Create case history entry with enhanced audit logging
       const { logCaseHistory } = require('../services/auditLog.service');
@@ -2577,6 +2579,47 @@ const downloadClientCFSFileForCase = async (req, res) => {
   }
 };
 
+const searchCases = async (req, res) => {
+  try {
+    assertFirmContext(req);
+    const firmId = req.user.firmId;
+    const query = (req.query.q || '').trim();
+
+    if (!query) {
+      return res.json({ success: true, data: [], count: 0 });
+    }
+
+    const filters = {
+      firmId,
+      $text: { $search: query },
+    };
+    if (req.clientAccessFilter) {
+      Object.assign(filters, req.clientAccessFilter);
+    }
+
+    const results = await Case.aggregate([
+      { $match: filters },
+      { $addFields: { score: { $meta: 'textScore' } } },
+      { $sort: { score: -1, createdAt: -1 } },
+      { $limit: 50 },
+    ]);
+
+    return res.json({
+      success: true,
+      data: results,
+      count: results.length,
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message || 'Error searching cases',
+      data: [],
+      count: 0,
+    });
+  }
+};
+
 module.exports = {
   createCase: wrapWriteHandler(createCase),
   addComment: wrapWriteHandler(addComment),
@@ -2586,6 +2629,7 @@ module.exports = {
   updateCaseStatus: wrapWriteHandler(updateCaseStatus),
   getCaseByCaseId,
   getCases,
+  searchCases,
   lockCaseEndpoint: wrapWriteHandler(lockCaseEndpoint),
   unlockCaseEndpoint: wrapWriteHandler(unlockCaseEndpoint),
   updateCaseActivity: wrapWriteHandler(updateCaseActivity),
