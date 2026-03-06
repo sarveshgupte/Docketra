@@ -197,6 +197,16 @@ const verifySignupOtp = async ({ email, otp, req = null }) => {
   record.otpAttempts = 0;
   record.otpBlockedUntil = null;
   await record.save();
+  await User.updateOne(
+    { email: normalizedEmail, status: { $ne: 'deleted' } },
+    {
+      $set: {
+        emailVerified: true,
+        emailVerifiedAt: new Date(),
+        verificationMethod: 'OTP',
+      },
+    }
+  );
   await logSignupAuthEvent({ eventType: 'OTP_VERIFIED', email: normalizedEmail, req });
 
   return { success: true, message: 'Email verified successfully' };
@@ -320,6 +330,7 @@ const createFirmAndAdmin = async ({
   authProvider,
   googleSubject = null,
   session = null,
+  req = null,
 }) => {
   if (!session) {
     throw new Error('Transaction session is required');
@@ -381,6 +392,8 @@ const createFirmAndAdmin = async ({
   await firm.save({ session });
 
   const adminXID = await generateNextXID(firm._id, session);
+  const isGoogleAuth = authProvider === 'google';
+  const now = new Date();
   const [adminUser] = await User.create([{
     xID: adminXID,
     name: name.trim(),
@@ -392,6 +405,14 @@ const createFirmAndAdmin = async ({
     status: 'active',
     isActive: true,
     isSystem: true,
+    emailVerified: true,
+    emailVerifiedAt: now,
+    verificationMethod: isGoogleAuth ? 'GOOGLE' : 'OTP',
+    termsAccepted: true,
+    termsAcceptedAt: now,
+    termsVersion: 'v1.0',
+    signupIP: req?.ip || null,
+    signupUserAgent: req?.headers?.['user-agent'] || null,
     passwordSet: authProvider === 'password',
     passwordHash: passwordHash || null,
     mustSetPassword: authProvider !== 'password',
@@ -404,7 +425,7 @@ const createFirmAndAdmin = async ({
       },
       google: {
         googleId: authProvider === 'google' ? googleSubject : null,
-        linkedAt: authProvider === 'google' ? new Date() : null,
+        linkedAt: authProvider === 'google' ? now : null,
       },
     },
   }], { session });
@@ -452,6 +473,7 @@ const completeSignup = async ({ email, firmName, session, req = null }) => {
       phone: record.phone || null,
       authProvider: 'password',
       session,
+      req,
     });
     await TemporarySignup.deleteOne({ _id: record._id }, { session });
     await logSignupAuthEvent({

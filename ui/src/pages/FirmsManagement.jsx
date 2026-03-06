@@ -15,6 +15,23 @@ import { useToast } from '../hooks/useToast';
 import { formatDate, getFirmStatusInfo } from '../utils/formatters';
 import './FirmsManagement.css';
 
+const formatYesNoUnknown = (value) => {
+  if (value === true) return 'Yes';
+  if (value === false) return 'No';
+  return 'Unknown';
+};
+
+const formatTermsAccepted = (value) => {
+  if (value === true) return 'Yes';
+  if (value === false) return 'No';
+  return 'Legacy User';
+};
+
+const formatVerificationMethod = (value) => {
+  if (value === 'OTP' || value === 'GOOGLE') return value;
+  return 'Unknown';
+};
+
 export const FirmsManagement = () => {
   const toast = useToast();
   
@@ -367,12 +384,32 @@ export const FirmsManagement = () => {
                    ×
                  </button>
                </div>
-               {adminModal.loading ? (
-                 <Loading message="Loading admin details..." />
-               ) : (
-                 <div className="admin-details">
-                   <div className="table-container">
-                     <table className="firms-table admin-table">
+                {adminModal.loading ? (
+                  <Loading message="Loading admin details..." />
+                ) : (
+                  <div className="admin-details">
+                    <div className="admin-audit-grid">
+                      <div className="admin-audit-card">
+                        <h3>Admin Account</h3>
+                        <p><strong>Email:</strong> {adminModal.firm?.adminEmail || 'N/A'}</p>
+                        <p><strong>Email Verified:</strong> {formatYesNoUnknown(adminModal.firm?.emailVerified)}</p>
+                        <p><strong>Verification Method:</strong> {formatVerificationMethod(adminModal.firm?.verificationMethod)}</p>
+                        <p><strong>Verified At:</strong> {formatDate(adminModal.firm?.emailVerifiedAt)}</p>
+                      </div>
+                      <div className="admin-audit-card">
+                        <h3>Legal Consent</h3>
+                        <p><strong>Terms Accepted:</strong> {formatTermsAccepted(adminModal.firm?.termsAccepted)}</p>
+                        <p><strong>Terms Version:</strong> {adminModal.firm?.termsVersion || (adminModal.firm?.termsAccepted == null ? 'Legacy User' : 'Unknown')}</p>
+                        <p><strong>Accepted At:</strong> {formatDate(adminModal.firm?.termsAcceptedAt)}</p>
+                      </div>
+                      <div className="admin-audit-card">
+                        <h3>Signup Metadata</h3>
+                        <p><strong>Signup IP:</strong> {adminModal.firm?.signupIP || 'Unknown'}</p>
+                        <p><strong>User Agent:</strong> {adminModal.firm?.signupUserAgent || 'Unknown'}</p>
+                      </div>
+                    </div>
+                    <div className="table-container">
+                      <table className="firms-table admin-table">
                        <thead>
                          <tr>
                            <th>Name</th>
@@ -484,12 +521,19 @@ export const FirmsManagement = () => {
               <table className="firms-table">
                 <thead>
                   <tr>
-                    <th>Firm Name</th>
-                    <th>Status</th>
-                    <th>Firm Login URL</th>
-                    <th>Clients</th>
-                    <th>Users</th>
-                    <th>Created On</th>
+                     <th>Firm Name</th>
+                     <th>Admin Email</th>
+                     <th>Status</th>
+                     <th>Firm Login URL</th>
+                     <th>Email Verified</th>
+                     <th>Verification Method</th>
+                     <th>Verified At</th>
+                     <th>Terms Accepted</th>
+                     <th>Terms Version</th>
+                     <th>Accepted At</th>
+                     <th>Clients</th>
+                     <th>Users</th>
+                     <th>Created On</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -509,6 +553,7 @@ export const FirmsManagement = () => {
                             <div className="firm-name__secondary">{firm.firmId}</div>
                           </div>
                         </td>
+                        <td>{firm.adminEmail || 'N/A'}</td>
                         <td>
                           <span className={`status-badge status-badge--${statusKey}`}>
                             {statusLabel}
@@ -529,6 +574,12 @@ export const FirmsManagement = () => {
                             <span className="text-secondary">N/A</span>
                           )}
                         </td>
+                        <td>{formatYesNoUnknown(firm.emailVerified)}</td>
+                        <td>{formatVerificationMethod(firm.verificationMethod)}</td>
+                        <td>{formatDate(firm.emailVerifiedAt)}</td>
+                        <td>{formatTermsAccepted(firm.termsAccepted)}</td>
+                        <td>{firm.termsVersion || (firm.termsAccepted == null ? 'Legacy User' : 'Unknown')}</td>
+                        <td>{formatDate(firm.termsAcceptedAt)}</td>
                         <td>{firm.clientCount ?? 0}</td>
                         <td>{firm.userCount ?? 0}</td>
                         <td>{formatDate(firm.createdAt)}</td>

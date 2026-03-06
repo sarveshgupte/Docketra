@@ -204,6 +204,7 @@ const listFirms = async (req, res) => {
       firms.map(async (firm) => {
         const clientCount = await Client.countDocuments({ firmId: firm._id });
         const userCount = await User.countDocuments({ firmId: firm._id });
+        const admin = await findFirmAdmin(firm._id);
         
         return {
           _id: firm._id,
@@ -214,6 +215,15 @@ const listFirms = async (req, res) => {
           isActive: firm.status === 'active',
           clientCount,
           userCount,
+          adminEmail: admin?.email || null,
+          emailVerified: typeof admin?.emailVerified === 'boolean' ? admin.emailVerified : null,
+          emailVerifiedAt: admin?.emailVerifiedAt || null,
+          verificationMethod: admin?.verificationMethod || null,
+          termsAccepted: typeof admin?.termsAccepted === 'boolean' ? admin.termsAccepted : null,
+          termsAcceptedAt: admin?.termsAcceptedAt || null,
+          termsVersion: admin?.termsVersion || null,
+          signupIP: admin?.signupIP || null,
+          signupUserAgent: admin?.signupUserAgent || null,
           createdAt: firm.createdAt,
         };
       })
@@ -742,6 +752,7 @@ const getFirmAdminDetails = async (req, res) => {
     data: {
       name: admin.name,
       emailMasked: emailService.maskEmail(admin.email),
+      email: admin.email,
       xID: admin.xID,
       status: admin.status,
       lastLoginAt,
@@ -749,6 +760,14 @@ const getFirmAdminDetails = async (req, res) => {
       inviteSentAt: admin.inviteSentAt || null,
       failedLoginAttempts: admin.failedLoginAttempts || 0,
       isLocked: isAdminCurrentlyLocked(admin),
+      emailVerified: typeof admin.emailVerified === 'boolean' ? admin.emailVerified : null,
+      emailVerifiedAt: admin.emailVerifiedAt || null,
+      verificationMethod: admin.verificationMethod || null,
+      termsAccepted: typeof admin.termsAccepted === 'boolean' ? admin.termsAccepted : null,
+      termsAcceptedAt: admin.termsAcceptedAt || null,
+      termsVersion: admin.termsVersion || null,
+      signupIP: admin.signupIP || null,
+      signupUserAgent: admin.signupUserAgent || null,
     },
   });
 };
