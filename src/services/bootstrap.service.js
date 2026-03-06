@@ -22,6 +22,7 @@ const Firm = require('../models/Firm.model');
 const Client = require('../models/Client.model');
 const User = require('../models/User.model');
 const Plan = require('../models/Plan.model');
+const mongoose = require('mongoose');
 const { runAdminHierarchyBackfill } = require('../scripts/fixAdminHierarchy');
 
 /**
@@ -60,7 +61,7 @@ const { runAdminHierarchyBackfill } = require('../scripts/fixAdminHierarchy');
  */
 let adminBackfillRan = false;
 
-const seedPlans = async () => {
+const seedPlans = async ({ session } = {}) => {
   const seedData = [
     { name: 'Free', maxUsers: 2, billingType: 'FREE', pricePerUser: null, isEnterprise: false },
     { name: 'Growth', maxUsers: null, billingType: 'PER_USER', pricePerUser: 199, isEnterprise: false },
@@ -68,11 +69,11 @@ const seedPlans = async () => {
   ];
 
   for (const plan of seedData) {
-    await Plan.updateOne({ name: plan.name }, { $set: plan }, { upsert: true });
+    await Plan.updateOne({ name: plan.name }, { $set: plan }, { upsert: true, session });
   }
 };
 
-const runPreflightChecks = async () => {
+const runPreflightChecks = async ({ session } = {}) => {
   try {
     console.log('\n🔍 Running preflight data validation checks...');
     
@@ -125,7 +126,8 @@ const runPreflightChecks = async () => {
         const status = firm.defaultClientId ? 'COMPLETED' : 'PENDING';
         await Firm.updateOne(
           { _id: firm._id },
-          { $set: { bootstrapStatus: status } }
+          { $set: { bootstrapStatus: status } },
+          { session }
         );
         console.log(`   ✓ Set ${firm.firmId} bootstrapStatus to ${status}`);
       }
@@ -437,7 +439,7 @@ const recoverFirmBootstrap = async (firmId) => {
       
       // Commit transaction
       await session.commitTransaction();
-      session.endSession();
+      session?.endSession();
       
       console.log(`[BOOTSTRAP_RECOVERY] ✓ Recovery successful for firm ${firm.firmId}`);
       
@@ -449,8 +451,10 @@ const recoverFirmBootstrap = async (firmId) => {
       };
       
     } catch (error) {
+      if (session?.inTransaction()) {
       await session.abortTransaction();
-      session.endSession();
+    }
+      session?.endSession();
       throw error;
     }
     
@@ -484,25 +488,36 @@ const recoverFirmBootstrap = async (firmId) => {
  * Bootstrap NEVER crashes the application - all errors are caught and logged.
  */
 const runBootstrap = async () => {
+  let session = null;
+
   try {
-    console.log('\n╔════════════════════════════════════════════╗');
-    console.log('║  Running Bootstrap Checks...               ║');
-    console.log('╚════════════════════════════════════════════╝\n');
+    session = await mongoose.startSession();
+    console.log('BOOTSTRAP_STARTED');
+    console.log('🔧 Running system bootstrap...');
+    session.startTransaction();
 
     // Run preflight data validation checks
     // Validates existing firms for integrity violations
     // Does NOT auto-create firms or auto-heal data
     // Supports empty database (no firms) as a valid state
-    await runPreflightChecks();
-    await seedPlans();
+    await runPreflightChecks({ session });
+    await seedPlans({ session });
 
-    console.log('\n✓ Bootstrap completed successfully\n');
+    await session.commitTransaction();
+
+    console.log('BOOTSTRAP_COMPLETED');
+    console.log('✓ Bootstrap completed successfully');
   } catch (error) {
-    console.error('\n✗ Bootstrap failed:', error.message);
+    if (session?.inTransaction()) {
+      await session.abortTransaction();
+    }
+    console.error('BOOTSTRAP_FAILED', { message: error.message });
+    console.error('✗ Bootstrap failed:', error.message);
     // Don't exit process - let server continue but log the error
     // This allows investigation without blocking startup
-    console.error('⚠️  Warning: System may not be fully functional without bootstrap data');
-    console.error('⚠️  Server will continue to run - please investigate and resolve bootstrap issues');
+    console.error('⚠ Server will continue to run but system may be partially initialized');
+  } finally {
+    session?.endSession();
   }
 };
 
