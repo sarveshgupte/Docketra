@@ -1941,6 +1941,9 @@ const setupAccount = async (req, res) => {
       ...(existingUser.authProviders || {}),
       google: { ...((existingUser.authProviders || {}).google || {}), googleId, linkedAt: now },
     };
+    update.emailVerified = true;
+    update.emailVerifiedAt = now;
+    update.verificationMethod = 'GOOGLE';
   }
 
   const user = await User.findOneAndUpdate(
@@ -3094,6 +3097,9 @@ const handleGoogleCallback = async (req, res) => {
       const update = {
         mustChangePassword: false,
         forcePasswordReset: false,
+        emailVerified: true,
+        emailVerifiedAt: new Date(),
+        verificationMethod: 'GOOGLE',
       };
       if (flow === 'activation') {
         update.status = 'active';

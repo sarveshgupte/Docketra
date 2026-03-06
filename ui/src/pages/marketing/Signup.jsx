@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../../services/api';
 
 const inputClass =
@@ -15,6 +16,7 @@ const getErrorMessage = (error, fallback) => (
 );
 
 export default function Signup() {
+  const isGoogleLoginEnabled = String(import.meta.env.VITE_ENABLE_GOOGLE_LOGIN || '').toLowerCase() === 'true';
   const [step, setStep] = useState('form');
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
@@ -253,6 +255,26 @@ export default function Signup() {
                 {loading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : null}
                 {loading ? 'Submitting…' : 'Sign up with Email'}
               </button>
+              {isGoogleLoginEnabled ? (
+                <button
+                  type="button"
+                  disabled={loading}
+                  className="marketing-btn-secondary inline-flex w-full items-center justify-center px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Continue with Google
+                </button>
+              ) : null}
+              <p className="text-center text-[12px] text-gray-500 sm:text-[13px]">
+                By signing up, you agree to our{' '}
+                <Link to="/terms" className="underline hover:text-gray-700">
+                  Terms &amp; Conditions
+                </Link>{' '}
+                and{' '}
+                <Link to="/privacy" className="underline hover:text-gray-700">
+                  Privacy Policy
+                </Link>
+                .
+              </p>
             </form>
           )}
 
