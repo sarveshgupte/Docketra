@@ -17,7 +17,7 @@ const MAX_OTP_ATTEMPTS = 5;
 const OTP_BLOCK_MINUTES = 15;
 const MAX_RESEND_COUNT = 5;
 const MAX_SLUG_COLLISION_RETRIES = 5;
-const RESEND_COOLDOWN_SECONDS = 60;
+const OTP_RESEND_COOLDOWN = 60;
 const SYSTEM_EMAIL_DOMAIN = 'system.local';
 const DEFAULT_BUSINESS_ADDRESS = 'Default Address';
 const DEFAULT_CONTACT_NUMBER = '0000000000';
@@ -115,6 +115,7 @@ const initiateManualSignup = async ({ name, email, password, phone, firmName, se
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
   const otp = generateOtp();
   const otpHash = await bcrypt.hash(otp, SALT_ROUNDS);
+  const now = new Date();
 
   const otpExpiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
   await TemporarySignup.create({
@@ -132,8 +133,8 @@ const initiateManualSignup = async ({ name, email, password, phone, firmName, se
     otpBlockedUntil: null,
     otpResendCount: 0,
     resendCount: 0,
-    otpLastSentAt: new Date(),
-    lastOtpSentAt: new Date(),
+    otpLastSentAt: now,
+    lastOtpSentAt: now,
     isVerified: false,
   }, { session });
 
@@ -233,8 +234,15 @@ const resendSignupOtp = async ({ email, req = null }) => {
   }
 
   const lastOtpSentAt = resolveOtpLastSentAt(record);
-  if (lastOtpSentAt && (Date.now() - lastOtpSentAt.getTime()) < RESEND_COOLDOWN_SECONDS * 1000) {
-    return { success: false, status: 429, message: 'Please wait before requesting another OTP.' };
+  const now = new Date();
+  const secondsSinceLastOtp = lastOtpSentAt ? (now.getTime() - lastOtpSentAt.getTime()) / 1000 : Number.POSITIVE_INFINITY;
+  if (secondsSinceLastOtp < OTP_RESEND_COOLDOWN) {
+    const secondsRemaining = Math.ceil(OTP_RESEND_COOLDOWN - secondsSinceLastOtp);
+    return {
+      success: false,
+      status: 429,
+      message: `Please wait ${secondsRemaining} seconds before requesting another OTP.`,
+    };
   }
 
   const otp = generateOtp();
@@ -248,8 +256,8 @@ const resendSignupOtp = async ({ email, req = null }) => {
   record.otpBlockedUntil = null;
   record.otpResendCount = resendCount + 1;
   record.resendCount = resendCount + 1;
-  record.otpLastSentAt = new Date();
-  record.lastOtpSentAt = new Date();
+  record.otpLastSentAt = now;
+  record.lastOtpSentAt = now;
   await record.save();
 
   await emailService.sendEmail({
