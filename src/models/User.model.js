@@ -47,6 +47,47 @@ const userSchema = new mongoose.Schema({
     match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email address'],
   },
 
+  emailVerified: {
+    type: Boolean,
+    default: false,
+  },
+
+  emailVerifiedAt: {
+    type: Date,
+    default: null,
+  },
+
+  verificationMethod: {
+    type: String,
+    enum: ['OTP', 'GOOGLE'],
+    default: 'OTP',
+  },
+
+  termsAccepted: {
+    type: Boolean,
+    default: false,
+  },
+
+  termsAcceptedAt: {
+    type: Date,
+    default: Date.now,
+  },
+
+  termsVersion: {
+    type: String,
+    default: 'v1.0',
+  },
+
+  signupIP: {
+    type: String,
+    default: null,
+  },
+
+  signupUserAgent: {
+    type: String,
+    default: null,
+  },
+
 
   phoneNumber: {
     type: String,
