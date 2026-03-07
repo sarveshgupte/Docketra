@@ -39,6 +39,17 @@
   display: flex;
   gap: var(--spacing-sm);
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.admin__primary-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-primary, #1976D2);
+  padding: 4px 8px;
+  border: 1px solid var(--color-primary, #1976D2);
+  border-radius: 4px;
+  white-space: nowrap;
 }
 
 .admin__create-form {

@@ -360,6 +360,19 @@ const userSchema = new mongoose.Schema({
     immutable: true, // Cannot change after creation
     index: true,
   },
+
+  /**
+   * Primary admin flag - marks the firm creator / first admin
+   * TRUE for the admin created during public signup (firm onboarding)
+   * Primary admin CANNOT be deactivated or deleted
+   * Distinct from isSystem to allow clearer error messaging
+   */
+  isPrimaryAdmin: {
+    type: Boolean,
+    default: false,
+    immutable: true, // Cannot change after creation
+    index: true,
+  },
   
   /**
    * Client Access Restrictions (Admin-Managed Deny-List)

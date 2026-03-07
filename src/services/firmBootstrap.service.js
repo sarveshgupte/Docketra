@@ -193,6 +193,7 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
       status: 'invited',
       isActive: false,
       isSystem: true,
+      isPrimaryAdmin: true,
       passwordSet: false,
       mustSetPassword: false,
       passwordSetAt: null,
