@@ -75,7 +75,14 @@ async function testPrometheusMetricsRendering() {
 
 async function testAdminStatusNormalization() {
   clearModule('../src/controllers/superadmin.controller');
+  Module._load = function patchedLoad(requestName, parent, isMain) {
+    if (requestName === '../middleware/wrapWriteHandler') {
+      return (fn) => fn;
+    }
+    return originalLoad.apply(this, arguments);
+  };
   const controller = require('../src/controllers/superadmin.controller');
+  Module._load = originalLoad;
   const Firm = require('../src/models/Firm.model');
   const User = require('../src/models/User.model');
   const SuperadminAudit = require('../src/models/SuperadminAudit.model');
@@ -139,8 +146,12 @@ async function testAdminStatusNormalization() {
     },
   };
 
-  await controller.updateFirmAdminStatus(req, res);
+  let nextError = null;
+  await controller.updateFirmAdminStatus(req, res, (error) => {
+    nextError = error;
+  });
 
+  assert.strictEqual(nextError, null);
   assert.strictEqual(res.statusCode, 200);
   assert.strictEqual(savedAdmin.status, 'disabled');
   assert.strictEqual(res.body.data.status, 'disabled');
