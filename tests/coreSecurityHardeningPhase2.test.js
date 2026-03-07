@@ -58,7 +58,7 @@ function testServerHardeningWiring() {
 
   assert.match(serverCode, /contentSecurityPolicy:\s*\{/);
   assert.match(serverCode, /referrerPolicy:\s*\{\s*policy:\s*'strict-origin-when-cross-origin'/);
-  assert.match(serverCode, /hsts:\s*isProduction\s*\?\s*\{\s*maxAge:\s*31536000,\s*includeSubDomains:\s*true,\s*preload:\s*true\s*\}\s*:\s*false/);
+  assert.ok(serverCode.includes('hsts: isProduction ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false'));
   assert.match(serverCode, /app\.post\('\/api\/csp-violation'/);
   assert.match(serverCode, /if\s*\(!isProduction\)\s*\{\s*app\.use\('\/api\/debug'/s);
 }
