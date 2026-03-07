@@ -279,14 +279,18 @@ const verifyOtp = async ({ email, otp, session = null, req = null }) => {
     });
     log.info('OTP_VERIFIED', { req, email: normalizedEmail, firmSlug: tenant.firmSlug });
     log.info('SIGNUP_COMPLETED', { req, email: normalizedEmail, firmSlug: tenant.firmSlug, xid: tenant.xid });
-    await sendSignupWelcomeEmail({
-      name: record.name,
-      email: normalizedEmail,
-      xid: tenant.xid,
-      firmName: record.firmName,
-      firmSlug: tenant.firmSlug,
-      req,
-    });
+    try {
+      await sendSignupWelcomeEmail({
+        name: record.name,
+        email: normalizedEmail,
+        xid: tenant.xid,
+        firmName: record.firmName,
+        firmSlug: tenant.firmSlug,
+        req,
+      });
+    } catch (emailError) {
+      console.error('[PUBLIC_SIGNUP] Failed to send welcome email after OTP verification:', emailError.message);
+    }
 
     const token = jwtService.generateAccessToken({
       userId: String(tenant.userId),
@@ -462,7 +466,7 @@ const sendSignupWelcomeEmail = async ({
       context: req,
     });
 
-    if (emailResult?.success === false) {
+    if (!emailResult?.success) {
       const failureMessage = emailResult.error || 'Unknown email error';
       console.error('[PUBLIC_SIGNUP] Failed to send welcome email:', failureMessage);
       return { success: false, error: failureMessage };
@@ -735,13 +739,12 @@ const resendCredentialsEmail = async ({ email, req = null }) => {
   const firm = await Firm.findById(adminUser.firmId).select('name firmSlug').lean();
   if (!firm || !firm.firmSlug) {
     console.error('[PUBLIC_SIGNUP] Unable to resend credentials email. Firm context missing.', {
-      email: normalizedEmail,
       firmId: adminUser.firmId ? String(adminUser.firmId) : null,
     });
     return { success: true, message: responseMessage };
   }
 
-  await sendSignupWelcomeEmail({
+  const emailResult = await sendSignupWelcomeEmail({
     name: adminUser.name,
     email: normalizedEmail,
     xid: adminUser.xID,
@@ -749,6 +752,12 @@ const resendCredentialsEmail = async ({ email, req = null }) => {
     firmSlug: firm.firmSlug,
     req,
   });
+  if (!emailResult.success) {
+    console.error('[PUBLIC_SIGNUP] resendCredentials email delivery failed', {
+      firmId: adminUser.firmId ? String(adminUser.firmId) : null,
+      reason: emailResult.error || 'Unknown email error',
+    });
+  }
 
   return { success: true, message: responseMessage };
 };

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 
 const inputClass =
@@ -18,6 +18,7 @@ const getErrorMessage = (error, fallback) => (
 );
 
 export default function Signup() {
+  const navigate = useNavigate();
   const isGoogleLoginEnabled = String(import.meta.env.VITE_ENABLE_GOOGLE_LOGIN || '').toLowerCase() === 'true';
   const [step, setStep] = useState('form');
   const [loading, setLoading] = useState(false);
@@ -147,7 +148,7 @@ export default function Signup() {
         : (firmSlug ? `/${firmSlug}/login` : '/login');
       setLoginRedirectPath(safeRedirectPath);
       setStep('success');
-      setApiMessage('🎉 Your firm account has been created successfully.');
+      setApiMessage('');
     } catch (error) {
       setApiMessage('');
       const verificationError = error?.response?.status === 400
@@ -459,7 +460,7 @@ export default function Signup() {
               <div className="flex flex-col gap-3 sm:flex-row">
                 <button
                   type="button"
-                  onClick={() => window.location.assign(loginRedirectPath)}
+                  onClick={() => navigate(loginRedirectPath)}
                   className="marketing-btn-primary inline-flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-medium"
                 >
                   Go to Login

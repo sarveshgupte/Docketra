@@ -11,6 +11,7 @@ const AuthAudit = require('../models/AuthAudit.model');
 const RefreshToken = require('../models/RefreshToken.model');
 const emailService = require('../services/email.service');
 const xIDGenerator = require('../services/xIDGenerator');
+const signupService = require('../services/signup.service');
 const jwtService = require('../services/jwt.service');
 const { isSuperAdminRole } = require('../utils/role.utils');
 const { normalizeFirmSlug } = require('../utils/slugify');
@@ -2023,6 +2024,16 @@ const resendSetup = async (req, res) => {
   return res.json({ success: true, message: 'Setup link resent' });
 };
 
+const resendCredentials = async (req, res) => {
+  const { email } = req.body;
+  if (!email || !email.trim()) {
+    return res.status(400).json({ success: false, code: 'EMAIL_REQUIRED', message: 'Email is required' });
+  }
+
+  const result = await signupService.resendCredentialsEmail({ email, req });
+  return res.status(200).json({ success: true, message: result.message || 'Credentials email sent.' });
+};
+
 /**
  * Reset password using token from first login email (for password resets)
  * POST /api/auth/reset-password-with-token
@@ -3275,6 +3286,7 @@ module.exports = {
   deactivateUser: wrapWriteHandler(deactivateUser),
   setupAccount: wrapWriteHandler(setupAccount),
   resendSetup: wrapWriteHandler(resendSetup),
+  resendCredentials: wrapWriteHandler(resendCredentials),
   resetPasswordWithToken: wrapWriteHandler(resetPasswordWithToken),
   // resendSetupEmail - REMOVED: Deprecated in PR #48, use admin.controller.resendInviteEmail instead
   updateUserStatus: wrapWriteHandler(updateUserStatus),
