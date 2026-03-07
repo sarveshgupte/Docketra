@@ -26,7 +26,6 @@ const SYSTEM_EMAIL_DOMAIN = 'system.local';
 const DEFAULT_BUSINESS_ADDRESS = 'Default Address';
 const DEFAULT_CONTACT_NUMBER = '0000000000';
 const PHONE_REGEX = /^[0-9]{10}$/;
-const STORAGE_TYPES = ['docketra', 'external'];
 const EMAIL_ENUMERATION_SAFE_MESSAGE = 'If the details are valid, a verification code will be sent shortly.';
 const GENERIC_VERIFICATION_FAILURE_MESSAGE = 'Verification failed';
 const MIN_PUBLIC_RESPONSE_MS = 350;
@@ -71,9 +70,6 @@ const resolveOtpLastSentAt = (record) => record.otpLastSentAt || record.lastOtpS
 const resolveOtpResendCount = (record) => record.otpResendCount ?? record.resendCount ?? 0;
 const resolveConsumedAt = (record) => record.consumedAt || record.consumed_at;
 const normalizePhone = (phone) => (typeof phone === 'string' ? phone.trim() : '');
-const normalizeStorageType = (storageType) => (
-  STORAGE_TYPES.includes(storageType) ? storageType : 'docketra'
-);
 
 const enforceMinimumDuration = async (startedAt, minimumMs = MIN_PUBLIC_RESPONSE_MS) => {
   const elapsed = Date.now() - startedAt;
@@ -132,14 +128,12 @@ const initiateSignup = async ({
   password,
   phone,
   firmName,
-  storageType = 'docketra',
   session = null,
   req = null,
 }) => {
   const startedAt = Date.now();
   const normalizedEmail = email.toLowerCase().trim();
   const normalizedPhone = normalizePhone(phone);
-  const normalizedStorageType = normalizeStorageType(storageType);
   const quota = await consumeSignupQuota({ email: normalizedEmail, ip: req?.ip });
   if (!quota.allowed) {
     return { success: false, status: 429, message: 'Too many requests. Please try again later.' };
@@ -182,7 +176,6 @@ const initiateSignup = async ({
     firmName: firmName.trim(),
     passwordHash,
     phone: normalizedPhone,
-    storageType: normalizedStorageType,
     provider: 'manual',
     otpHash,
     otpExpiresAt,
@@ -295,7 +288,6 @@ const verifyOtp = async ({ email, otp, session = null, req = null }) => {
       firmName: record.firmName,
       passwordHash: record.passwordHash || null,
       phone: record.phone || null,
-      storageType: record.storageType || 'docketra',
       session,
       req,
     });
@@ -533,7 +525,6 @@ const createFirmAndAdmin = async ({
   firmName,
   passwordHash = null,
   phone = null,
-  storageType = 'docketra',
   authProvider,
   googleSubject = null,
   session = null,
@@ -593,7 +584,7 @@ const createFirmAndAdmin = async ({
     status: 'ACTIVE',
     createdByXid: 'SELF_SIGNUP',
     createdBy: normalizedEmail,
-    storageType: normalizeStorageType(storageType),
+    storageType: 'docketra',
     storageProvider: null,
     storageConfig: null,
   }], { session });
@@ -662,7 +653,6 @@ const createTenant = async ({
   firmName,
   passwordHash,
   phone,
-  storageType = 'docketra',
   session,
   req = null,
 }) => {
@@ -684,7 +674,6 @@ const createTenant = async ({
     firmName,
     passwordHash: passwordHash || null,
     phone: phone || null,
-    storageType,
     authProvider: 'password',
     session,
     req,
@@ -732,7 +721,6 @@ const completeSignup = async ({ email, firmName, session, req = null }) => {
       firmName: resolvedFirmName,
       passwordHash: record.passwordHash || null,
       phone: record.phone || null,
-      storageType: record.storageType || 'docketra',
       authProvider: 'password',
       session,
       req,
