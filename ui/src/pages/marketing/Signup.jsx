@@ -12,6 +12,7 @@ const phonePattern = /^[0-9]{10}$/;
 const partialPhonePattern = /^[0-9]{0,10}$/;
 const OTP_LENGTH = 6;
 const OTP_RESEND_COOLDOWN = 60;
+const PASSWORD_HINT_ID = 'signup-password-policy-hint';
 
 const getErrorMessage = (error, fallback) => (
   error?.response?.data?.message
@@ -19,6 +20,23 @@ const getErrorMessage = (error, fallback) => (
   || error?.message
   || fallback
 );
+
+const resolveSafeLoginPath = ({ redirectPathFromApi, firmSlug, fallbackPath }) => {
+  const isSafeRedirectPath = typeof redirectPathFromApi === 'string'
+    && redirectPathFromApi.startsWith('/')
+    && !redirectPathFromApi.startsWith('//')
+    && !/^[a-zA-Z][a-zA-Z0-9+\-.]*:/.test(redirectPathFromApi);
+
+  if (isSafeRedirectPath) {
+    return redirectPathFromApi;
+  }
+
+  if (firmSlug) {
+    return `/${firmSlug}/login`;
+  }
+
+  return fallbackPath;
+};
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -149,12 +167,11 @@ export default function Signup() {
       });
       const firmSlug = response?.data?.firmSlug;
       const redirectPathFromApi = response?.data?.redirectPath;
-      const safeRedirectPath = typeof redirectPathFromApi === 'string'
-        && redirectPathFromApi.startsWith('/')
-        && !redirectPathFromApi.startsWith('//')
-        && !/^[a-zA-Z][a-zA-Z0-9+\-.]*:/.test(redirectPathFromApi)
-        ? redirectPathFromApi
-        : (firmSlug ? `/${firmSlug}/login` : (loginRedirectPath.startsWith('/') ? loginRedirectPath : '/signup'));
+      const safeRedirectPath = resolveSafeLoginPath({
+        redirectPathFromApi,
+        firmSlug,
+        fallbackPath: loginRedirectPath.startsWith('/') ? loginRedirectPath : '/signup',
+      });
       setLoginRedirectPath(safeRedirectPath);
       setStep('success');
       setApiMessage('');
@@ -337,13 +354,14 @@ export default function Signup() {
                     type={showPassword ? 'text' : 'password'}
                     name="password"
                     value={form.password}
-                    onChange={onFormChange}
-                    className={`${inputClass} pr-10`}
-                    disabled={loading}
-                    autoComplete="new-password"
-                    minLength={8}
-                    required
-                  />
+                     onChange={onFormChange}
+                     className={`${inputClass} pr-10`}
+                     disabled={loading}
+                     autoComplete="new-password"
+                     aria-describedby={PASSWORD_HINT_ID}
+                     minLength={8}
+                     required
+                   />
                   <button
                     type="button"
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
@@ -379,7 +397,7 @@ export default function Signup() {
                  <p className="mt-1 text-xs text-gray-500">Enter a 10-digit Indian mobile number</p>
                  {errors.phone && <p className="mt-1 text-xs text-red-600">{errors.phone}</p>}
                </div>
-               <p className="text-xs text-gray-500">{STRONG_PASSWORD_MESSAGE}</p>
+               <p id={PASSWORD_HINT_ID} className="text-xs text-gray-500">{STRONG_PASSWORD_MESSAGE}</p>
                <button
                 type="submit"
                 disabled={loading}
