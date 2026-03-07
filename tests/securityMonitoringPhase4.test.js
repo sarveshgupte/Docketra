@@ -3,6 +3,7 @@
 
 const assert = require('assert');
 const Module = require('module');
+const config = require('../src/config/config');
 const express = require('express');
 const request = require('supertest');
 
@@ -520,7 +521,7 @@ async function testMetricsEndpointRateLimiting() {
       res.json({ success: true });
     });
 
-    for (let i = 0; i < 60; i += 1) {
+    for (let i = 0; i < config.security.rateLimit.internalMetricsPerMinute; i += 1) {
       await request(app)
         .get('/api/metrics/security')
         .set('authorization', 'Bearer internal-secret')

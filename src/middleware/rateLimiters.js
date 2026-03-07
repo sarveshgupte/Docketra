@@ -80,7 +80,48 @@ const createLimiter = ({ name, windowMs, max, keyGenerator, skip }) => {
   });
 };
 
-const ipKeyGenerator = (req) => req.ip || req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
+const normalizeIp = (value) => String(value || '')
+  .split(',')[0]
+  .trim() || 'unknown';
+
+const hashKeyPart = (value) => createHash('sha256').update(String(value)).digest('hex');
+
+const ipKeyGenerator = (req) => normalizeIp(
+  req.ip
+  || req.ips?.[0]
+  || req.socket?.remoteAddress
+  || req.connection?.remoteAddress
+  || 'unknown',
+);
+
+const userOrIpKeyGenerator = (req) => req.user?.xID || req.user?._id || `ip:${ipKeyGenerator(req)}`;
+const otpVerifyKeyGenerator = (req) => {
+  if (req.user?.xID || req.user?._id) {
+    return userOrIpKeyGenerator(req);
+  }
+
+  if (req.body?.xID) {
+    return `xid:${req.body.xID}`;
+  }
+
+  if (req.body?.email) {
+    return `email:${hashKeyPart(String(req.body.email).toLowerCase().trim())}`;
+  }
+
+  if (req.body?.preAuthToken) {
+    return `token:${hashKeyPart(req.body.preAuthToken)}`;
+  }
+
+  return `ip:${ipKeyGenerator(req)}`;
+};
+
+const otpResendKeyGenerator = (req) => {
+  if (req.body?.email) {
+    return `email:${hashKeyPart(String(req.body.email).toLowerCase().trim())}`;
+  }
+
+  return `ip:${ipKeyGenerator(req)}`;
+};
 const parseCookieToken = (req, cookieName) => {
   const cookie = String(req.headers?.cookie || '');
   if (!cookie) return null;
@@ -129,21 +170,21 @@ const authLimiter = createLimiter({
 
 const loginLimiter = createLimiter({
   name: 'loginLimiter',
-  windowMs: 60 * 1000,
+  windowMs: config.security.rateLimit.loginWindowSeconds * 1000,
   max: config.security.rateLimit.loginPerMinute,
   keyGenerator: ipKeyGenerator,
 });
 
 const forgotPasswordLimiter = createLimiter({
   name: 'forgotPasswordLimiter',
-  windowMs: 60 * 1000,
+  windowMs: config.security.rateLimit.forgotPasswordWindowSeconds * 1000,
   max: config.security.rateLimit.forgotPasswordPerMinute,
   keyGenerator: ipKeyGenerator,
 });
 
 const publicLimiter = createLimiter({
   name: 'publicLimiter',
-  windowMs: 60 * 1000,
+  windowMs: config.security.rateLimit.publicWindowSeconds * 1000,
   max: config.security.rateLimit.publicPerMinute,
   keyGenerator: ipKeyGenerator,
 });
@@ -177,65 +218,100 @@ const sensitiveLimiter = createLimiter({
   name: 'sensitiveLimiter',
   windowMs: config.security.rateLimit.sensitiveWindowSeconds * 1000,
   max: config.security.rateLimit.sensitivePerWindow,
-  keyGenerator: ipKeyGenerator,
+  keyGenerator: userOrIpKeyGenerator,
+});
+
+const otpVerifyLimiter = createLimiter({
+  name: 'otpVerifyLimiter',
+  windowMs: config.security.rateLimit.otpVerifyWindowSeconds * 1000,
+  max: config.security.rateLimit.otpVerifyPerMinute,
+  keyGenerator: otpVerifyKeyGenerator,
+});
+
+const otpResendLimiter = createLimiter({
+  name: 'otpResendLimiter',
+  windowMs: config.security.rateLimit.otpResendWindowSeconds * 1000,
+  max: config.security.rateLimit.otpResendPerMinute,
+  keyGenerator: otpResendKeyGenerator,
 });
 
 const userReadLimiter = createLimiter({
   name: 'userReadLimiter',
-  windowMs: 60 * 1000,
-  max: 60,
-  keyGenerator: (req) => req.user?.xID || req.user?._id || ipKeyGenerator(req),
+  windowMs: config.security.rateLimit.userReadWindowSeconds * 1000,
+  max: config.security.rateLimit.userReadPerMinute,
+  keyGenerator: userOrIpKeyGenerator,
 });
 
 const userWriteLimiter = createLimiter({
   name: 'userWriteLimiter',
-  windowMs: 60 * 1000,
-  max: 30,
-  keyGenerator: (req) => req.user?.xID || req.user?._id || ipKeyGenerator(req),
+  windowMs: config.security.rateLimit.userWriteWindowSeconds * 1000,
+  max: config.security.rateLimit.userWritePerMinute,
+  keyGenerator: userOrIpKeyGenerator,
 });
 
 const attachmentLimiter = sensitiveLimiter;
 const searchLimiter = createLimiter({
   name: 'searchLimiter',
-  windowMs: 60 * 1000,
-  max: 30,
-  keyGenerator: (req) => req.user?.xID || req.user?._id || ipKeyGenerator(req),
+  windowMs: config.security.rateLimit.searchWindowSeconds * 1000,
+  max: config.security.rateLimit.searchPerMinute,
+  keyGenerator: userOrIpKeyGenerator,
 });
 
 const superadminLimiter = createLimiter({
   name: 'superadminLimiter',
-  windowMs: 60 * 1000,
-  max: 100,
-  keyGenerator: (req) => req.user?.xID || req.user?._id || ipKeyGenerator(req),
+  windowMs: config.security.rateLimit.superadminWindowSeconds * 1000,
+  max: config.security.rateLimit.superadminPerMinute,
+  keyGenerator: userOrIpKeyGenerator,
 });
 
 const profileLimiter = createLimiter({
   name: 'profileLimiter',
-  windowMs: 60 * 1000,
-  max: 60,
-  keyGenerator: (req) => req.user?.xID || req.user?._id || ipKeyGenerator(req),
+  windowMs: config.security.rateLimit.profileWindowSeconds * 1000,
+  max: config.security.rateLimit.profilePerMinute,
+  keyGenerator: userOrIpKeyGenerator,
   skip: (req) => !req.user,
 });
 
 const refreshIpLimiter = createLimiter({
   name: 'refreshIpLimiter',
-  windowMs: 60 * 1000,
-  max: Number(process.env.SECURITY_RATE_LIMIT_REFRESH_IP_PER_MINUTE || 20),
+  windowMs: config.security.rateLimit.refreshIpWindowSeconds * 1000,
+  max: config.security.rateLimit.refreshIpPerMinute,
   keyGenerator: ipKeyGenerator,
 });
 
 const refreshUserLimiter = createLimiter({
   name: 'refreshUserLimiter',
-  windowMs: 24 * 60 * 60 * 1000,
-  max: Number(process.env.SECURITY_RATE_LIMIT_REFRESH_USER_PER_DAY || 100),
+  windowMs: config.security.rateLimit.refreshUserWindowSeconds * 1000,
+  max: config.security.rateLimit.refreshUserPerWindow,
   keyGenerator: refreshUserKeyGenerator,
 });
 
 const internalMetricsLimiter = createLimiter({
   name: 'internalMetricsLimiter',
-  windowMs: 60 * 1000,
-  max: 60,
-  keyGenerator: (req) => req.user?.xID || req.user?._id || ipKeyGenerator(req),
+  windowMs: config.security.rateLimit.internalMetricsWindowSeconds * 1000,
+  max: config.security.rateLimit.internalMetricsPerMinute,
+  keyGenerator: userOrIpKeyGenerator,
+});
+
+const contactLimiter = createLimiter({
+  name: 'contactLimiter',
+  windowMs: config.security.rateLimit.contactWindowSeconds * 1000,
+  max: config.security.rateLimit.contactPerWindow,
+  keyGenerator: ipKeyGenerator,
+});
+
+const debugLimiter = createLimiter({
+  name: 'debugLimiter',
+  windowMs: config.security.rateLimit.debugWindowSeconds * 1000,
+  max: config.security.rateLimit.debugPerMinute,
+  keyGenerator: userOrIpKeyGenerator,
+});
+
+const inboundEmailLimiter = createLimiter({
+  name: 'inboundEmailLimiter',
+  windowMs: config.security.rateLimit.inboundEmailWindowSeconds * 1000,
+  max: config.security.rateLimit.inboundEmailPerMinute,
+  keyGenerator: ipKeyGenerator,
 });
 
 const superadminAdminResendLimiter = superadminLimiter;
@@ -251,6 +327,8 @@ module.exports = {
   signupLimiter,
   authBlockEnforcer,
   sensitiveLimiter,
+  otpVerifyLimiter,
+  otpResendLimiter,
   userReadLimiter,
   userWriteLimiter,
   attachmentLimiter,
@@ -260,6 +338,9 @@ module.exports = {
   refreshIpLimiter,
   refreshUserLimiter,
   internalMetricsLimiter,
+  contactLimiter,
+  debugLimiter,
+  inboundEmailLimiter,
   superadminAdminResendLimiter,
   superadminAdminLifecycleLimiter,
   superadminAdminManagementLimiter,

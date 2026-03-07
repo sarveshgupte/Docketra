@@ -8,6 +8,7 @@ const {
   authLimiter,
   authBlockEnforcer,
   forgotPasswordLimiter,
+  otpVerifyLimiter,
   profileLimiter,
   sensitiveLimiter,
   refreshIpLimiter,
@@ -60,8 +61,8 @@ router.post('/resend-credentials', authBlockEnforcer, authLimiter, sensitiveLimi
 router.post('/reset-password-with-token', authBlockEnforcer, authLimiter, sensitiveLimiter, resetPasswordWithToken);
 router.post('/forgot-password', authBlockEnforcer, forgotPasswordLimiter, sensitiveLimiter, forgotPassword);
 router.post('/refresh', refreshIpLimiter, refreshUserLimiter, refreshAccessToken); // NEW: JWT token refresh
-router.post('/verify-totp', authLimiter, verifyTotp);
-router.post('/complete-mfa-login', authLimiter, completeMfaLogin);
+router.post('/verify-totp', otpVerifyLimiter, verifyTotp);
+router.post('/complete-mfa-login', otpVerifyLimiter, completeMfaLogin);
 
 // Protected authentication endpoints - require authentication
 router.post('/logout', sensitiveLimiter, authenticate, logout);

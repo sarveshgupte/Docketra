@@ -11,6 +11,7 @@ const { slugify } = require('../utils/slugify');
 const emailService = require('./email.service');
 const { logAuthEvent } = require('./audit.service');
 const jwtService = require('./jwt.service');
+const config = require('../config/config');
 const log = require('../utils/log');
 const { acquireLock, releaseLock } = require('./redisLock.service');
 const {
@@ -22,11 +23,11 @@ const {
 
 const SALT_ROUNDS = 10;
 const OTP_EXPIRY_MINUTES = 10;
-const MAX_OTP_ATTEMPTS = 5;
-const OTP_BLOCK_MINUTES = 15;
-const MAX_RESEND_COUNT = 5;
+const MAX_OTP_ATTEMPTS = config.security.rateLimit.otpVerifyPerMinute;
+const OTP_BLOCK_MINUTES = Math.max(1, Math.ceil(config.security.rateLimit.otpVerifyBlockSeconds / 60));
+const MAX_RESEND_COUNT = config.security.rateLimit.signupOtpMaxResends;
 const MAX_SLUG_COLLISION_RETRIES = 5;
-const OTP_RESEND_COOLDOWN = 60;
+const OTP_RESEND_COOLDOWN = config.security.rateLimit.otpResendCooldownSeconds;
 const SYSTEM_EMAIL_DOMAIN = 'system.local';
 const DEFAULT_BUSINESS_ADDRESS = 'Default Address';
 const DEFAULT_CONTACT_NUMBER = '0000000000';
@@ -366,10 +367,6 @@ const verifyOtp = async ({ email, otp, session = null, req = null }) => {
 const resendOtp = async ({ email, req = null }) => {
   const startedAt = Date.now();
   const normalizedEmail = email.toLowerCase().trim();
-  const quota = await consumeSignupQuota({ email: normalizedEmail, ip: req?.ip });
-  if (!quota.allowed) {
-    return { success: false, status: 429, message: 'Too many requests. Please try again later.' };
-  }
   const resendQuota = await consumeOtpResendQuota({ email: normalizedEmail, ip: req?.ip });
   if (!resendQuota.allowed) {
     return { success: false, status: 429, message: 'Too many OTP resend requests. Please try again later.' };
