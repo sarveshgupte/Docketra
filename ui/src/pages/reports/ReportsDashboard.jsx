@@ -22,7 +22,10 @@ export const ReportsDashboard = () => {
   const [metrics, setMetrics] = useState(null);
   const [pendingReport, setPendingReport] = useState(null);
   const [error, setError] = useState(null);
-  const hasReportData = Boolean(metrics || pendingReport);
+  const hasAnyReportData = (
+    (metrics && Object.keys(metrics).length > 0) ||
+    (pendingReport && Object.keys(pendingReport).length > 0)
+  );
 
   useEffect(() => {
     loadDashboardData();
@@ -88,7 +91,7 @@ export const ReportsDashboard = () => {
     );
   }
 
-  if (!hasReportData) {
+  if (!hasAnyReportData) {
     return (
       <Layout>
         <div className="reports-dashboard">
