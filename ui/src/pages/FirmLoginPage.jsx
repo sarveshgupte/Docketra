@@ -253,7 +253,7 @@ export const FirmLoginPage = () => {
               textDecoration: 'underline',
             }}
           >
-            Didn&apos;t receive your XID? Resend credentials
+            {"Didn't receive your XID? Resend credentials"}
           </button>
           {showResendForm && (
             <div style={{ marginBottom: '1rem' }}>

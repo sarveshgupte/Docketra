@@ -967,7 +967,10 @@ const sendFirmSetupEmail = async ({
 }) => {
   const resolvedXid = String(xid || '').trim();
   const resolvedLoginUrl = String(workspaceUrl || '').trim();
-  const subject = 'Your Docketra workspace is ready';
+  if (!resolvedXid || !resolvedLoginUrl) {
+    throw new Error('Missing required signup credentials for setup email');
+  }
+  const subject = 'Your Docketra firm account is ready';
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
       <h2>Welcome to Docketra, ${name}!</h2>
@@ -975,11 +978,11 @@ const sendFirmSetupEmail = async ({
       <p><strong>Firm name:</strong> ${firmName}</p>
       <p><strong>User xID:</strong> ${resolvedXid}</p>
       <p><strong>Login URL:</strong> <a href="${resolvedLoginUrl}">${resolvedLoginUrl}</a></p>
-      <p>Use your xID and password to sign in to your firm workspace.</p>
+      <p>Use your xID and password to sign in to your firm account.</p>
       <p>Best regards,<br/>Docketra Team</p>
     </div>
   `;
-  const text = `Welcome to Docketra, ${name}!\n\nYour firm account has been created successfully.\nFirm name: ${firmName}\nUser xID: ${resolvedXid}\nLogin URL: ${resolvedLoginUrl}\nUse your xID and password to sign in to your firm workspace.\n\nBest regards,\nDocketra Team`;
+  const text = `Welcome to Docketra, ${name}!\n\nYour firm account has been created successfully.\nFirm name: ${firmName}\nUser xID: ${resolvedXid}\nLogin URL: ${resolvedLoginUrl}\nUse your xID and password to sign in to your firm account.\n\nBest regards,\nDocketra Team`;
 
   return sendEmail({ to: email, subject, html, text }, context);
 };
