@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Button } from '../components/common/Button';
-import { Loading } from '../components/common/Loading';
+import { TableSkeleton } from '../components/common/Skeleton';
 import { PageHeader } from '../components/layout/PageHeader';
 import { SectionCard } from '../components/layout/SectionCard';
 import { DataTable } from '../components/layout/DataTable';
@@ -487,7 +487,7 @@ export const CasesPage = () => {
   if (loading) {
     return (
       <Layout>
-        <Loading message="Loading cases…" />
+        <TableSkeleton rows={8} />
       </Layout>
     );
   }

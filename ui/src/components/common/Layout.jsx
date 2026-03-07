@@ -40,6 +40,30 @@ const IconAdmin = () => (
   </svg>
 );
 
+const IconCases = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 7a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2z" />
+  </svg>
+);
+
+const IconReport = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+    <line x1="8" y1="13" x2="16" y2="13" />
+    <line x1="8" y1="17" x2="13" y2="17" />
+  </svg>
+);
+
+const IconTeam = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 00-3-3.87" />
+    <path d="M16 3.13a4 4 0 010 7.75" />
+  </svg>
+);
+
 const IconBell = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/>
@@ -186,6 +210,10 @@ export const Layout = ({ children }) => {
   useEffect(() => {
     let cancelled = false;
     const fetchStorageHealth = async () => {
+      if (!user) {
+        return;
+      }
+
       try {
         const response = await api.get('/storage/health');
         if (!cancelled) {
@@ -202,62 +230,72 @@ export const Layout = ({ children }) => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [user]);
 
-  const navLinks = [
+  const navSections = [
     {
-      to: `/app/firm/${currentFirmSlug}/dashboard`,
-      label: 'Dashboard',
-      icon: <IconDashboard />,
-      active: isActive(`/app/firm/${currentFirmSlug}/dashboard`),
+      id: 'workspace',
+      label: 'Workspace',
+      links: [
+        {
+          to: `/app/firm/${currentFirmSlug}/dashboard`,
+          label: 'Dashboard',
+          icon: <IconDashboard />,
+          active: isActive(`/app/firm/${currentFirmSlug}/dashboard`),
+        },
+        {
+          to: `/app/firm/${currentFirmSlug}/cases`,
+          label: 'Cases',
+          icon: <IconCases />,
+          active: isActivePrefix(`/app/firm/${currentFirmSlug}/cases`) && !location.search.includes('view=audit'),
+        },
+        {
+          to: `/app/firm/${currentFirmSlug}/worklist`,
+          label: 'Tasks / Worklist',
+          icon: <IconWorklist />,
+          active: isActive(`/app/firm/${currentFirmSlug}/worklist`) || isActive(`/app/firm/${currentFirmSlug}/my-worklist`),
+        },
+        {
+          to: `/app/firm/${currentFirmSlug}/global-worklist`,
+          label: 'Insights',
+          icon: <IconWorkbasket />,
+          active: isActive(`/app/firm/${currentFirmSlug}/global-worklist`),
+        },
+        {
+          to: `/app/firm/${currentFirmSlug}/admin/reports`,
+          label: 'Reports',
+          icon: <IconReport />,
+          active: isActivePrefix(`/app/firm/${currentFirmSlug}/admin/reports`),
+          hidden: !hasAdminAccess,
+        },
+        {
+          to: `/app/firm/${currentFirmSlug}/cases?view=audit`,
+          label: 'Audit Logs',
+          icon: <IconReport />,
+          active: isActive(`/app/firm/${currentFirmSlug}/cases`) && location.search.includes('view=audit'),
+        },
+      ],
     },
     {
-      to: `/app/firm/${currentFirmSlug}/global-worklist`,
-      label: 'Compliance Workflow',
-      icon: <IconWorkbasket />,
-      active: isActive(`/app/firm/${currentFirmSlug}/global-worklist`),
+      id: 'administration',
+      label: 'Administration',
+      hidden: !hasAdminAccess,
+      links: [
+        {
+          to: `/app/firm/${currentFirmSlug}/admin`,
+          label: 'Team',
+          icon: <IconTeam />,
+          active: isActivePrefix(`/app/firm/${currentFirmSlug}/admin`) && !isActivePrefix(`/app/firm/${currentFirmSlug}/admin/reports`),
+        },
+        {
+          to: `/app/firm/${currentFirmSlug}/settings/firm`,
+          label: 'Firm Settings',
+          icon: <IconAdmin />,
+          active: isActivePrefix(`/app/firm/${currentFirmSlug}/settings/firm`),
+        },
+      ],
     },
-    {
-      to: `/app/firm/${currentFirmSlug}/worklist`,
-      label: 'Team Accountability',
-      icon: <IconWorklist />,
-      active: isActive(`/app/firm/${currentFirmSlug}/worklist`),
-    },
-    {
-      to: `/app/firm/${currentFirmSlug}/cases`,
-      label: 'Cases',
-      icon: <IconWorklist />,
-      active: isActivePrefix(`/app/firm/${currentFirmSlug}/cases`),
-    },
-    {
-      to: `/app/firm/${currentFirmSlug}/cases?view=audit`,
-      label: 'Audit Trail',
-      icon: <IconWorklist />,
-      active: isActive(`/app/firm/${currentFirmSlug}/cases`) && location.search.includes('view=audit'),
-    },
-    ...(hasAdminAccess
-      ? [
-          {
-            to: `/app/firm/${currentFirmSlug}/admin/reports`,
-            label: 'Reports',
-            icon: <IconAdmin />,
-            active: isActivePrefix(`/app/firm/${currentFirmSlug}/admin/reports`),
-          },
-          {
-            to: `/app/firm/${currentFirmSlug}/admin`,
-            label: 'Firm Settings',
-            icon: <IconAdmin />,
-            active: isActivePrefix(`/app/firm/${currentFirmSlug}/admin`) && !isActivePrefix(`/app/firm/${currentFirmSlug}/admin/reports`),
-          },
-          {
-            to: `/app/firm/${currentFirmSlug}/settings/firm`,
-            label: 'Firm Config',
-            icon: <IconAdmin />,
-            active: isActivePrefix(`/app/firm/${currentFirmSlug}/settings/firm`),
-          },
-        ]
-      : []),
-  ];
+  ].filter((section) => !section.hidden);
 
   return (
     <div className="enterprise-layout">
@@ -295,21 +333,23 @@ export const Layout = ({ children }) => {
 
         {/* Navigation */}
         <nav className="enterprise-sidebar__nav" aria-label="Firm operations navigation">
-          <div className="enterprise-sidebar__nav-section">
-            <div className="enterprise-sidebar__nav-label" aria-hidden="true">Firm Operations</div>
-            {navLinks.map((link) => (
-              <Link
-                key={link.to}
-                to={link.to}
-                className={`enterprise-sidebar__nav-link ${link.active ? 'active' : ''}`}
-                aria-current={link.active ? 'page' : undefined}
-                title={sidebarCollapsed ? link.label : undefined}
-              >
-                <span className="enterprise-sidebar__nav-icon" aria-hidden="true">{link.icon}</span>
-                <span className="enterprise-sidebar__nav-text">{link.label}</span>
-              </Link>
-            ))}
-          </div>
+          {navSections.map((section) => (
+            <div key={section.id} className="enterprise-sidebar__nav-section">
+              <div className="enterprise-sidebar__nav-label" aria-hidden="true">{section.label}</div>
+              {section.links.filter((link) => !link.hidden).map((link) => (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  className={`enterprise-sidebar__nav-link ${link.active ? 'active' : ''}`}
+                  aria-current={link.active ? 'page' : undefined}
+                  title={sidebarCollapsed ? link.label : undefined}
+                >
+                  <span className="enterprise-sidebar__nav-icon" aria-hidden="true">{link.icon}</span>
+                  <span className="enterprise-sidebar__nav-text">{link.label}</span>
+                </Link>
+              ))}
+            </div>
+          ))}
         </nav>
 
         {/* Footer */}
@@ -401,6 +441,7 @@ export const Layout = ({ children }) => {
             <div className="dropdown" ref={profileDropdownRef}>
               <button
                 className="enterprise-header__profile"
+                type="button"
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                 aria-expanded={profileDropdownOpen}
                 aria-haspopup="true"

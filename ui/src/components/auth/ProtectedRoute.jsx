@@ -9,7 +9,7 @@ import { useAuth } from '../../hooks/useAuth.js';
 import { usePermissions } from '../../hooks/usePermissions.js';
 import { SESSION_KEYS, STORAGE_KEYS } from '../../utils/constants.js';
 import { isSuperAdmin } from '../../utils/authUtils.js';
-import { Loading } from '../common/Loading';
+import { RouteLoadingShell } from '../routing/RouteLoadingShell';
 
 // Use sessionStorage to persist toasts across redirects in auth guard flows.
 const setAccessToast = (message) => {
@@ -38,7 +38,7 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
 
   // Wait for auth hydration to complete
   if (!isAuthResolved) {
-    return <Loading message="Checking access..." />;
+    return <RouteLoadingShell />;
   }
 
   // 1. Authentication check: User must be authenticated

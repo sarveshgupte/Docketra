@@ -12,11 +12,12 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
-import { Loading } from '../components/common/Loading';
 import { Button } from '../components/common/Button';
+import { DashboardSkeleton } from '../components/common/Skeleton';
 import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/layout/EmptyState';
 import { PriorityPill } from '../components/common/PriorityPill';
+import { SetupChecklist } from '../components/onboarding/SetupChecklist';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
 import { caseService } from '../services/caseService';
@@ -212,10 +213,31 @@ export const DashboardPage = () => {
     navigate(`/app/firm/${firmSlug}/cases/${caseId}`);
   };
 
+  const handleChecklistAction = (stepId) => {
+    if (stepId === 'create-case') {
+      navigate(`/app/firm/${firmSlug}/cases/create`);
+      return;
+    }
+
+    if (stepId === 'assign-owner') {
+      navigate(`/app/firm/${firmSlug}/cases`);
+      return;
+    }
+
+    if (stepId === 'invite-team') {
+      navigate(`/app/firm/${firmSlug}/admin`);
+      return;
+    }
+
+    if (stepId === 'configure-firm') {
+      navigate(`/app/firm/${firmSlug}/settings/firm`);
+    }
+  };
+
   if (loading) {
     return (
       <Layout>
-        <Loading message="Loading dashboard..." />
+        <DashboardSkeleton />
       </Layout>
     );
   }
@@ -243,6 +265,14 @@ export const DashboardPage = () => {
             </Button>
           )}
         />
+
+        {isAdmin && user?.xID && firmSlug ? (
+          <SetupChecklist
+            storageKey={`setupChecklist:${user.xID}:${firmSlug}`}
+            recentCases={recentCases}
+            onAction={handleChecklistAction}
+          />
+        ) : null}
 
         {/* Section 1: KPI Strip */}
         <div className="dashboard__kpi-strip">

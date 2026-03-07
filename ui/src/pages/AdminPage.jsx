@@ -13,6 +13,7 @@ import { Textarea } from '../components/common/Textarea';
 import { Select } from '../components/common/Select';
 import { Modal } from '../components/common/Modal';
 import { Loading } from '../components/common/Loading';
+import { TableSkeleton } from '../components/common/Skeleton';
 import { EmptyState } from '../components/EmptyState';
 import { useAuth } from '../hooks/useAuth';
 import { adminService } from '../services/adminService';
@@ -836,7 +837,7 @@ export const AdminPage = () => {
   if (loading) {
     return (
       <Layout>
-        <Loading message="Loading admin panel..." />
+        <TableSkeleton rows={7} />
       </Layout>
     );
   }

@@ -7,8 +7,8 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { usePermissions } from '../../hooks/usePermissions';
-import { Loading } from '../common/Loading';
 import { STORAGE_KEYS } from '../../utils/constants';
+import { RouteLoadingShell } from './RouteLoadingShell';
 
 export const DefaultRoute = () => {
   const { isAuthenticated, loading, user, isHydrating } = useAuth();
@@ -16,7 +16,7 @@ export const DefaultRoute = () => {
   const storedFirmSlug = localStorage.getItem(STORAGE_KEYS.FIRM_SLUG);
 
   if (loading || isHydrating) {
-    return <Loading message="Loading..." />;
+    return <RouteLoadingShell />;
   }
 
   if (!isAuthenticated) {
