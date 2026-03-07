@@ -615,7 +615,7 @@ const createFirmAndAdmin = async ({
     signupIP: req?.ip || null,
     signupUserAgent: req?.headers?.['user-agent'] || null,
     passwordSet: false,
-    passwordHash: requiresSetupEmail ? null : (passwordHash || null),
+    passwordHash: requiresSetupEmail ? null : passwordHash,
     mustSetPassword: requiresSetupEmail,
     mustChangePassword: false,
     inviteSentAt: new Date(),
@@ -626,7 +626,7 @@ const createFirmAndAdmin = async ({
     setupTokenUsedAt: null,
     authProviders: {
       local: {
-        passwordHash: requiresSetupEmail ? null : (passwordHash || null),
+        passwordHash: requiresSetupEmail ? null : passwordHash,
         passwordSet: false,
       },
       google: {
