@@ -379,14 +379,15 @@ export default function Signup() {
                   autoComplete="tel"
                   inputMode="numeric"
                   pattern="[0-9]{10}"
+                  title="Enter a 10-digit Indian mobile number"
                   maxLength={10}
                   required
                 />
                 <p className="mt-1 text-xs text-gray-500">Enter a 10-digit Indian mobile number</p>
                 {errors.phone && <p className="mt-1 text-xs text-red-600">{errors.phone}</p>}
               </div>
-              <div>
-                <span className={labelClass}>Document Storage</span>
+              <fieldset>
+                <legend className={labelClass}>Document Storage</legend>
                 <div className="space-y-3 rounded-lg border border-gray-200 p-4">
                   <label className="flex cursor-pointer items-start gap-3 text-sm text-gray-700">
                     <input
@@ -413,7 +414,7 @@ export default function Signup() {
                     <span>Connect My Cloud Storage</span>
                   </label>
                 </div>
-              </div>
+              </fieldset>
               <button
                 type="submit"
                 disabled={loading}
