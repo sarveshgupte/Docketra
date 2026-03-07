@@ -115,7 +115,14 @@ const { adminAuditTrail } = require('./middleware/adminAudit.middleware');
 const requestLifecycle = require('./middleware/requestLifecycle.middleware');
 const { noFirmNoTransaction } = require('./middleware/noFirmNoTransaction.middleware');
 const optionsPreflight = require('./middleware/optionsPreflight.middleware');
-const { authLimiter, loginLimiter, publicLimiter, globalApiLimiter, sensitiveLimiter } = require('./middleware/rateLimiters');
+const {
+  authLimiter,
+  loginLimiter,
+  publicLimiter,
+  globalApiLimiter,
+  sensitiveLimiter,
+  internalMetricsLimiter,
+} = require('./middleware/rateLimiters');
 const { tenantThrottle } = require('./middleware/tenantThrottle.middleware');
 const { uploadErrorHandler } = require('./middleware/uploadProtection.middleware');
 const { allowInternalTokenOrSuperadmin } = require('./middleware/internalMetricsAccess.middleware');
@@ -389,7 +396,7 @@ app.get('/metrics', async (req, res) => {
 
   res.json(await metricsService.getSnapshot());
 });
-app.get('/api/metrics/security', allowInternalTokenOrSuperadmin, getSecurityMetrics);
+app.get('/api/metrics/security', allowInternalTokenOrSuperadmin, internalMetricsLimiter, getSecurityMetrics);
 
 // API routes
 app.get('/api', (req, res) => {
