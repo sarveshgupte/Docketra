@@ -2,7 +2,7 @@ const { randomUUID } = require('crypto');
 const User = require('../models/User.model');
 const userRepository = require('../repositories/user.repository');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
-const { assertFirmPlanCapacity, PlanLimitExceededError, PlanAdminLimitExceededError } = require('../services/user.service');
+const { assertFirmPlanCapacity, PlanLimitExceededError, PlanAdminLimitExceededError, assertCanDeleteUser, PrimaryAdminActionError } = require('../services/user.service');
 const { incrementTenantMetric } = require('../services/tenantMetrics.service');
 
 const resolveUserFirmScope = (req, res) => {
@@ -232,12 +232,17 @@ const deleteUser = async (req, res) => {
       });
     }
     
-    // PROTECTION: Prevent deactivation of system users (default admin)
-    if (user.isSystem === true) {
-      return res.status(403).json({
-        success: false,
-        error: 'Cannot deactivate the default admin user. This is a protected system entity.',
-      });
+    // PROTECTION: Prevent deactivation of primary admin and system users
+    try {
+      assertCanDeleteUser(user);
+    } catch (guardError) {
+      if (guardError instanceof PrimaryAdminActionError) {
+        return res.status(403).json({
+          success: false,
+          error: guardError.message,
+        });
+      }
+      throw guardError;
     }
     
     user.isActive = false;

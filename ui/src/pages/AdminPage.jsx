@@ -69,6 +69,7 @@ export const AdminPage = () => {
   const [savingStorage, setSavingStorage] = useState(false);
   const [storageLoaded, setStorageLoaded] = useState(false);
   const [statsEmpty, setStatsEmpty] = useState(false);
+  const [statsFailed, setStatsFailed] = useState(false);
   const toastLockRef = useRef({});
   const toastTimerRef = useRef({});
   
@@ -165,12 +166,15 @@ export const AdminPage = () => {
       if (data) {
         setAdminStats(data);
         setStatsEmpty(false);
+        setStatsFailed(false);
       } else {
         setAdminStats(EMPTY_ADMIN_STATS);
         setStatsEmpty(true);
+        setStatsFailed(false);
       }
     } catch (error) {
       console.error('Failed to load admin stats:', error);
+      setStatsFailed(true);
       const errorType = notifyLoadError(error, 'admin-load');
       if (errorType === 'empty') {
         setAdminStats(EMPTY_ADMIN_STATS);
@@ -842,19 +846,19 @@ export const AdminPage = () => {
             variant={activeTab === 'users' ? 'primary' : 'default'}
             onClick={() => setActiveTab('users')}
           >
-            User Management ({adminStats.totalUsers})
+            User Management ({statsFailed ? '--' : adminStats.totalUsers})
           </Button>
           <Button
             variant={activeTab === 'clients' ? 'primary' : 'default'}
             onClick={() => setActiveTab('clients')}
           >
-            Client Management ({adminStats.totalClients})
+            Client Management ({statsFailed ? '--' : adminStats.totalClients})
           </Button>
           <Button
             variant={activeTab === 'categories' ? 'primary' : 'default'}
             onClick={() => setActiveTab('categories')}
           >
-            Categories ({adminStats.totalCategories})
+            Categories ({statsFailed ? '--' : adminStats.totalCategories})
           </Button>
           <Button
             variant={activeTab === 'storage' ? 'primary' : 'default'}
@@ -866,7 +870,7 @@ export const AdminPage = () => {
             variant={activeTab === 'approvals' ? 'primary' : 'default'}
             onClick={() => setActiveTab('approvals')}
           >
-            Pending Approvals ({adminStats.pendingApprovals})
+            Pending Approvals ({statsFailed ? '--' : adminStats.pendingApprovals})
           </Button>
           <Button
             variant={activeTab === 'reports' ? 'primary' : 'default'}
@@ -917,15 +921,21 @@ export const AdminPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user) => (
+                  {users.map((user) => {
+                    const isPrimaryOrSystemAdmin = user.isPrimaryAdmin || user.isSystem;
+                    return (
                     <tr key={user.xID}>
                       <td>{user.xID}</td>
                       <td>{user.name}</td>
                       <td>{user.email}</td>
                       <td>
-                        <Badge status={user.role === 'Admin' ? 'InProgress' : 'Pending'}>
-                          {user.role}
-                        </Badge>
+                        {isPrimaryOrSystemAdmin ? (
+                          <Badge status="InProgress">Admin (Primary)</Badge>
+                        ) : (
+                          <Badge status={user.role === 'Admin' ? 'InProgress' : 'Pending'}>
+                            {user.role}
+                          </Badge>
+                        )}
                       </td>
                       <td>{user.firmId?.name || 'N/A'}</td>
                       <td>
@@ -939,13 +949,17 @@ export const AdminPage = () => {
                         </Badge>
                       </td>
                       <td className="admin__actions">
-                        <Button
-                          size="small"
-                          variant={user.isActive ? 'danger' : 'success'}
-                          onClick={() => handleToggleUserStatus(user)}
-                        >
-                          {user.isActive ? 'Deactivate' : 'Activate'}
-                        </Button>
+                        {isPrimaryOrSystemAdmin ? (
+                          <span className="admin__primary-label">Primary Admin</span>
+                        ) : (
+                          <Button
+                            size="small"
+                            variant={user.isActive ? 'danger' : 'success'}
+                            onClick={() => handleToggleUserStatus(user)}
+                          >
+                            {user.isActive ? 'Deactivate' : 'Activate'}
+                          </Button>
+                        )}
                         {!user.passwordSet && (
                           <Button
                             size="small"
@@ -966,7 +980,8 @@ export const AdminPage = () => {
                         )}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             )}
