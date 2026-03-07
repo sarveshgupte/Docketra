@@ -26,7 +26,7 @@ const getAccountLockKey = (identifier) => `docketra:ratelimit:login:block:${hash
 
 const getAuthIdentifier = (req) => {
   const email = req.body?.email;
-  const xid = req.body?.xID || req.body?.XID;
+  const xid = req.body?.xid || req.body?.xID || req.body?.XID;
   return (email || xid || '').trim().toLowerCase();
 };
 
