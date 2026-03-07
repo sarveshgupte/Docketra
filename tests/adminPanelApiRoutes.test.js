@@ -25,6 +25,10 @@ async function testAdminRoutesExposeClientManagement() {
   const userWriteLimiter = () => {};
   const getAdminStats = () => {};
   const getClients = () => {};
+  const permissionGuards = {
+    ADMIN_STATS: adminStatsGuard,
+    CLIENT_VIEW: clientViewGuard,
+  };
 
   Module._load = function(request, parent, isMain) {
     if (request === '../middleware/requestValidation.middleware') {
@@ -41,7 +45,7 @@ async function testAdminRoutesExposeClientManagement() {
     }
     if (request === '../middleware/permission.middleware') {
       return {
-        authorizeFirmPermission: (permission) => (permission === 'CLIENT_VIEW' ? clientViewGuard : adminStatsGuard),
+        authorizeFirmPermission: (permission) => permissionGuards[permission] || (() => {}),
       };
     }
     if (request === '../middleware/rateLimiters') {
