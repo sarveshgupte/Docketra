@@ -1,9 +1,28 @@
 const config = require('../config/config');
 const { getRedisClient } = require('../config/redis');
 const { logSecurityEvent } = require('./securityAudit.middleware');
+const { hashIdentifier } = require('../utils/hashIdentifier');
 
-const getAccountKey = (identifier) => `user:${String(identifier || 'unknown').toLowerCase()}:loginAttempts`;
-const getAccountLockKey = (identifier) => `user:${String(identifier || 'unknown').toLowerCase()}:lock`;
+const rateLimitScript = `
+local key = KEYS[1]
+local limit = tonumber(ARGV[1])
+local ttl = tonumber(ARGV[2])
+
+local current = redis.call("INCR", key)
+
+if current == 1 then
+  redis.call("EXPIRE", key, ttl)
+end
+
+if current > limit then
+  return 0
+end
+
+return 1
+`;
+
+const getAccountKey = (identifier) => `docketra:ratelimit:login:attempts:${hashIdentifier(identifier)}`;
+const getAccountLockKey = (identifier) => `docketra:ratelimit:login:block:${hashIdentifier(identifier)}`;
 
 const getAuthIdentifier = (req) => {
   const email = req.body?.email;
@@ -35,13 +54,18 @@ const recordFailedLoginAttempt = async (req) => {
   const redis = getRedisClient();
   if (!redis) return;
 
-  const attempts = await redis.incr(getAccountKey(identifier));
-  if (attempts === 1) {
-    await redis.expire(getAccountKey(identifier), config.security.rateLimit.authWindowSeconds);
-  }
+  const accountKey = getAccountKey(identifier);
+  const lockKey = getAccountLockKey(identifier);
+  const allowed = Number(await redis.eval(
+    rateLimitScript,
+    1,
+    accountKey,
+    config.security.rateLimit.accountLockAttempts,
+    config.security.rateLimit.authWindowSeconds,
+  )) === 1;
 
-  if (attempts >= config.security.rateLimit.accountLockAttempts) {
-    await redis.set(getAccountLockKey(identifier), '1', 'EX', config.security.rateLimit.accountLockSeconds);
+  if (!allowed) {
+    await redis.set(lockKey, '1', 'EX', config.security.rateLimit.accountLockSeconds, 'NX');
     await logSecurityEvent(req, {
       action: 'ACCOUNT_TEMP_LOCKED',
       metadata: { identifier },
