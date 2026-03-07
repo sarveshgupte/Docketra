@@ -1,10 +1,13 @@
 const { z, nonEmptyString, xidString } = require('./common');
+const { validatePasswordStrength, PASSWORD_POLICY_MESSAGE } = require('../utils/passwordPolicy');
+
+const strongPassword = z.string().refine(validatePasswordStrength, PASSWORD_POLICY_MESSAGE);
 
 module.exports = {
   'POST /setup-account': {
     body: z.object({
       token: nonEmptyString,
-      password: z.string().min(8).optional(),
+      password: strongPassword.optional(),
       googleId: nonEmptyString.optional(),
     }).strip(),
   },
@@ -19,11 +22,14 @@ module.exports = {
   'POST /reset-password-with-token': {
     body: z.object({
       token: nonEmptyString,
-      password: z.string().min(8),
+      password: strongPassword,
     }).strip(),
   },
   'POST /forgot-password': {
-    body: z.object({ email: z.string().trim().email() }).strip(),
+    body: z.object({
+      email: z.string().trim().email(),
+      firmSlug: z.string().trim().min(1).optional(),
+    }).strip(),
   },
   'POST /refresh': {
     body: z.object({
@@ -49,7 +55,7 @@ module.exports = {
   'POST /change-password': {
     body: z.object({
       currentPassword: nonEmptyString,
-      newPassword: z.string().min(8),
+      newPassword: strongPassword,
     }).strip(),
   },
   'GET /profile': {

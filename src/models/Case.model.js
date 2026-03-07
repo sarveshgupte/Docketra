@@ -805,7 +805,7 @@ caseSchema.pre('validate', async function() {
   // This preserves client data at the time of case creation for audit trail
   if (this.isNew && this.clientId && !this.clientSnapshot) {
     const Client = mongoose.model('Client');
-    const client = await Client.findOne({ clientId: this.clientId }).lean();
+    const client = await Client.findOne({ clientId: this.clientId, firmId: this.firmId }).lean();
     if (client) {
       this.clientSnapshot = {
         clientId: client.clientId,

@@ -31,6 +31,12 @@ export const validatePassword = (password) => {
   return password && password.length >= 8;
 };
 
+export const STRONG_PASSWORD_MESSAGE = 'Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.';
+
+export const validateStrongPassword = (password) => (
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/.test(password || '')
+);
+
 export const validateRequired = (value) => {
   if (typeof value === 'string') {
     return value.trim().length > 0;

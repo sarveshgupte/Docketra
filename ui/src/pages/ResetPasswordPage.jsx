@@ -8,7 +8,7 @@ import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Card } from '../components/common/Card';
 import { authService } from '../services/authService';
-import { validatePassword } from '../utils/validators';
+import { STRONG_PASSWORD_MESSAGE, validateStrongPassword } from '../utils/validators';
 import './ResetPasswordPage.css';
 
 export const ResetPasswordPage = () => {
@@ -36,8 +36,8 @@ export const ResetPasswordPage = () => {
       return;
     }
 
-    if (!validatePassword(password)) {
-      setError('Password must be at least 8 characters');
+    if (!validateStrongPassword(password)) {
+      setError(STRONG_PASSWORD_MESSAGE);
       return;
     }
 
