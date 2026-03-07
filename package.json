@@ -10,7 +10,7 @@
     "install:ui": "cd ui && npm install",
     "heroku-postbuild": "npm run install:ui && npm run build:ui",
     "test:integrity": "node tests/adminIntegrity.test.js && node tests/firmRbac.test.js && node tests/writeSafety.test.js && node tests/requestLifecycle.test.js && node tests/sideEffectQueue.test.js && node tests/circuitBreaker.test.js && node tests/softDelete.test.js && node tests/caseStateMachine.test.js && node tests/caseSla.service.test.js && node tests/caseSlaConcurrency.test.js",
-    "test:security": "node tests/securityHardening.test.js",
+    "test:security": "node tests/securityHardening.test.js && node tests/coreSecurityHardeningPhase2.test.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "migration:add_multi_tenant_indexes": "node scripts/migrations/add_multi_tenant_indexes.js up",
     "migration:rollback_multi_tenant_indexes": "node scripts/migrations/add_multi_tenant_indexes.js down",

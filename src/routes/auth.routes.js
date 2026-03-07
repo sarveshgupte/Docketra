@@ -7,6 +7,7 @@ const { requireAdmin } = require('../middleware/permission.middleware');
 const {
   authLimiter,
   authBlockEnforcer,
+  forgotPasswordLimiter,
   profileLimiter,
   sensitiveLimiter,
   refreshIpLimiter,
@@ -57,7 +58,7 @@ router.post('/setup-account', authBlockEnforcer, authLimiter, setupAccount);
 router.post('/resend-setup', authBlockEnforcer, authLimiter, resendSetup);
 router.post('/resend-credentials', authBlockEnforcer, authLimiter, sensitiveLimiter, resendCredentials);
 router.post('/reset-password-with-token', authBlockEnforcer, authLimiter, sensitiveLimiter, resetPasswordWithToken);
-router.post('/forgot-password', authBlockEnforcer, authLimiter, sensitiveLimiter, forgotPassword);
+router.post('/forgot-password', authBlockEnforcer, forgotPasswordLimiter, sensitiveLimiter, forgotPassword);
 router.post('/refresh', refreshIpLimiter, refreshUserLimiter, refreshAccessToken); // NEW: JWT token refresh
 router.post('/verify-totp', authLimiter, verifyTotp);
 router.post('/complete-mfa-login', authLimiter, completeMfaLogin);
