@@ -21,7 +21,6 @@ const sendError = (req, res, status, payload) => {
 };
 
 const errorHandler = (err, req, res, next) => {
-  const isProduction = process.env.NODE_ENV === 'production';
   recordError(req, err);
   metricsService.recordError(err.statusCode || 500);
   // Logging sanitization is handled centrally by the global console.error override to avoid double-masking.
@@ -60,7 +59,7 @@ const errorHandler = (err, req, res, next) => {
   
   // Default error
   const statusCode = err.statusCode || 500;
-  const message = statusCode >= 500 && isProduction ? 'Internal server error' : (err.message || 'Server Error');
+  const message = statusCode >= 500 ? 'Internal server error' : (err.message || 'Server Error');
    sendError(req, res, statusCode, {
     code: err.code || err.name || 'SERVER_ERROR',
     message,

@@ -1,6 +1,6 @@
 const assert = require('assert');
 const { z } = require('zod');
-const { validateRequest } = require('../src/middleware/requestValidation.middleware');
+const { validateRequest, sanitizeInput } = require('../src/middleware/requestValidation.middleware');
 
 function createMockResponse() {
   return {
@@ -67,6 +67,47 @@ function createMockResponse() {
 
   assert.strictEqual(nextCalled, true, 'Next middleware should execute on validation success');
   assert.strictEqual(req.query.page, 2, 'Query value should be parsed and assigned');
+})();
+
+(function testValidationStripsUnknownFields() {
+  const middleware = validateRequest({
+    body: z.object({
+      email: z.string().email(),
+    }),
+  });
+
+  const req = {
+    body: { email: 'test@example.com', role: 'admin' },
+    params: {},
+    query: {},
+  };
+  const res = createMockResponse();
+  let nextCalled = false;
+
+  middleware(req, res, () => {
+    nextCalled = true;
+  });
+
+  assert.strictEqual(nextCalled, true, 'Validation should pass for valid known fields');
+  assert.deepStrictEqual(req.body, { email: 'test@example.com' }, 'Unknown keys should be removed from parsed body');
+})();
+
+(function testSanitizeInputBlocksPrototypePollutionKeys() {
+  const polluted = sanitizeInput({
+    safe: 'ok',
+    __proto__: { polluted: true },
+    nested: {
+      constructor: { injected: true },
+      prototype: { injected: true },
+      retained: 'yes',
+    },
+  });
+
+  assert.strictEqual(Object.prototype.polluted, undefined, 'Prototype must not be polluted by sanitized input');
+  assert.deepStrictEqual(polluted, {
+    safe: 'ok',
+    nested: { retained: 'yes' },
+  });
 })();
 
 console.log('Request validation middleware tests passed.');

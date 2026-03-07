@@ -2,52 +2,87 @@ const { z, nonEmptyString, xidString } = require('./common');
 
 module.exports = {
   'POST /setup-account': {
-    body: z.object({}).passthrough(),
+    body: z.object({
+      token: nonEmptyString,
+      password: z.string().min(8).optional(),
+      googleId: nonEmptyString.optional(),
+    }).strip(),
   },
   'POST /resend-setup': {
-    body: z.object({}).passthrough(),
+    body: z.object({ email: z.string().trim().email() }).strip(),
   },
   'POST /reset-password-with-token': {
-    body: z.object({}).passthrough(),
+    body: z.object({
+      token: nonEmptyString,
+      password: z.string().min(8),
+    }).strip(),
   },
   'POST /forgot-password': {
-    body: z.object({}).passthrough(),
+    body: z.object({ email: z.string().trim().email() }).strip(),
   },
   'POST /refresh': {
-    body: z.object({}).passthrough(),
+    body: z.object({
+      refreshToken: nonEmptyString.optional(),
+      accessToken: nonEmptyString.optional(),
+    }).strip(),
   },
   'POST /verify-totp': {
-    body: z.object({}).passthrough(),
+    body: z.object({
+      xID: xidString,
+      token: nonEmptyString,
+    }).strip(),
   },
   'POST /complete-mfa-login': {
     body: z.object({
       token: nonEmptyString,
       preAuthToken: nonEmptyString,
-    }).passthrough(),
+    }).strip(),
   },
   'POST /logout': {
-    body: z.object({}).passthrough(),
+    body: z.object({}).strip(),
   },
   'POST /change-password': {
-    body: z.object({}).passthrough(),
+    body: z.object({
+      currentPassword: nonEmptyString,
+      newPassword: z.string().min(8),
+    }).strip(),
   },
   'GET /profile': {
-    query: z.object({}).passthrough(),
+    query: z.object({}).strip(),
   },
   'PUT /profile': {
-    body: z.object({}).passthrough(),
+    body: z.object({
+      dateOfBirth: z.string().optional(),
+      dob: z.string().optional(),
+      gender: z.string().optional(),
+      phone: z.string().optional(),
+      address: z.string().optional(),
+      panMasked: z.string().optional(),
+      pan: z.string().optional(),
+      aadhaarMasked: z.string().optional(),
+      aadhaar: z.string().optional(),
+      name: z.string().optional(),
+      email: z.string().optional(),
+      xID: z.string().optional(),
+      firmId: z.string().optional(),
+    }).strip(),
   },
   'POST /reset-password': {
-    body: z.object({}).passthrough(),
+    body: z.object({ xID: xidString }).strip(),
   },
   'POST /unlock-account': {
-    body: z.object({}).passthrough(),
+    body: z.object({ xID: xidString }).strip(),
   },
   'GET /admin/users': {
-    query: z.object({}).passthrough(),
+    query: z.object({}).strip(),
   },
   'POST /admin/users': {
-    body: z.object({}).passthrough(),
+    body: z.object({
+      name: nonEmptyString,
+      email: z.string().trim().email(),
+      role: z.string().optional(),
+      allowedCategories: z.array(nonEmptyString).optional(),
+    }).strip(),
   },
   'PUT /admin/users/:xID/activate': {
     params: z.object({ xID: xidString }),
