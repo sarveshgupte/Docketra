@@ -116,10 +116,12 @@ export const authService = {
   /**
    * Forgot password - Request password reset email
    */
-  forgotPassword: async (email) => {
-    const response = await api.post('/auth/forgot-password', {
-      email,
-    });
+  forgotPassword: async (email, firmSlug) => {
+    const payload = { email };
+    if (firmSlug) {
+      payload.firmSlug = firmSlug;
+    }
+    const response = await api.post('/auth/forgot-password', payload);
     return response.data;
   },
 

@@ -40,7 +40,7 @@ const checkClientApprovalPermission = async (req, res, next) => {
     // Reload user to inspect hierarchy flags (managerId/canApproveClients)
     let user = req.user;
     if (!user) {
-      user = await User.findById(userId);
+      user = await User.findOne({ _id: userId, firmId });
     }
     const isTopMostAdmin = user?.managerId === null || user?.managerId === undefined;
     const hasExplicitPermission = user?.canApproveClients === true;

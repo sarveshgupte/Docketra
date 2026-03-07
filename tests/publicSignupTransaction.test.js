@@ -73,16 +73,19 @@ async function testRouteWrapsWriteSignupHandlers() {
   assert.ok(completeLayer, 'complete-signup route should exist');
 
   const initiateHandlers = initiateLayer.route.stack.map((item) => item.handle);
-  assert.strictEqual(initiateHandlers[0], authLimiter, 'authLimiter should remain first middleware');
-  assert.strictEqual(initiateHandlers[1], signupLimiter, 'signupLimiter should be second middleware for initiate-signup');
-  assert.strictEqual(initiateHandlers[2].original, initiateSignup, 'initiate-signup should be wrapped with wrapWriteHandler');
+  assert.strictEqual(typeof initiateHandlers[0], 'function', 'request validation should be registered before signup middleware');
+  assert.strictEqual(initiateHandlers[1], authLimiter, 'authLimiter should remain ahead of signup handling');
+  assert.strictEqual(initiateHandlers[2], signupLimiter, 'signupLimiter should remain ahead of signup handling');
+  assert.strictEqual(initiateHandlers[3].original, initiateSignup, 'initiate-signup should be wrapped with wrapWriteHandler');
 
   const completeHandlers = completeLayer.route.stack.map((item) => item.handle);
   const verifyHandlers = verifyLayer.route.stack.map((item) => item.handle);
-  assert.strictEqual(completeHandlers[0], authLimiter, 'authLimiter should remain first middleware');
-  assert.strictEqual(verifyHandlers[0], authLimiter, 'authLimiter should remain first middleware');
-  assert.strictEqual(typeof verifyHandlers[1].original, 'function', 'verify-otp should be wrapped with wrapWriteHandler');
-  assert.strictEqual(typeof completeHandlers[1].original, 'function', 'complete-signup should be wrapped with wrapWriteHandler');
+  assert.strictEqual(typeof completeHandlers[0], 'function', 'complete-signup should register validation middleware');
+  assert.strictEqual(typeof verifyHandlers[0], 'function', 'verify-otp should register validation middleware');
+  assert.strictEqual(completeHandlers[1], authLimiter, 'authLimiter should remain ahead of complete-signup handling');
+  assert.strictEqual(verifyHandlers[1], authLimiter, 'authLimiter should remain ahead of verify handling');
+  assert.strictEqual(typeof verifyHandlers[2].original, 'function', 'verify-otp should be wrapped with wrapWriteHandler');
+  assert.strictEqual(typeof completeHandlers[2].original, 'function', 'complete-signup should be wrapped with wrapWriteHandler');
 
   const app = express();
   app.use(express.json());
@@ -93,7 +96,7 @@ async function testRouteWrapsWriteSignupHandlers() {
     .send({
       name: 'Alice',
       email: 'alice@example.com',
-      password: 'password123',
+      password: 'Password#123',
       phone: '9999999999',
       firmName: 'Acme Legal',
     });
@@ -126,7 +129,7 @@ async function testControllerForwardsTransactionSession() {
     body: {
       name: 'Alice',
       email: 'alice@example.com',
-      password: 'password123',
+        password: 'Password#123',
       phone: '9999999999',
       firmName: 'Acme Legal',
     },
@@ -163,7 +166,7 @@ async function testControllerRejectsInvalidPhoneNumber() {
     body: {
       name: 'Alice',
       email: 'alice@example.com',
-      password: 'password123',
+        password: 'Password#123',
       phone: '+919876543210',
       firmName: 'Acme Legal',
     },
@@ -212,6 +215,34 @@ async function testVerifyControllerForwardsTransactionSession() {
   assert.strictEqual(result.token, 'jwt-token');
   assert.strictEqual(captured.payload.session, session, 'verify controller should pass active transaction session to service');
   console.log('  ✓ forwards req.transactionSession.session to verifyOtp');
+}
+
+async function testVerifyControllerRejectsInvalidOtpFormat() {
+  let serviceCalled = false;
+  const mockSignupService = {
+    verifyOtp: async () => {
+      serviceCalled = true;
+      return { success: true };
+    },
+  };
+
+  Module._load = function (request, parent, isMain) {
+    if (request === '../services/signup.service') return mockSignupService;
+    return originalLoad.apply(this, arguments);
+  };
+
+  clearModule('../src/controllers/publicSignup.controller');
+  const { verifyOtp } = require('../src/controllers/publicSignup.controller');
+  const result = await verifyOtp({
+    body: { email: 'alice@example.com', otp: '12ab56' },
+    transactionSession: { session: { id: 'session-verify-invalid' } },
+  }, {});
+
+  assert.strictEqual(result.success, false);
+  assert.strictEqual(result.statusCode, 400);
+  assert.strictEqual(result.message, 'Invalid OTP format');
+  assert.strictEqual(serviceCalled, false, 'verify controller should reject malformed OTP before calling service');
+  console.log('  ✓ rejects malformed OTP before verification service');
 }
 
 async function testResendCredentialsControllerUsesService() {
@@ -292,7 +323,7 @@ async function testServiceWritesUseSession() {
   await signupService.initiateManualSignup({
     name: 'Alice',
     email: 'alice@example.com',
-    password: 'password123',
+      password: 'Password#123',
     firmName: 'Acme Legal',
     phone: '9999999999',
     session,
@@ -348,7 +379,7 @@ async function testInitiateSignupRejectsDuplicateEmailOrPhone() {
   const result = await signupService.initiateManualSignup({
     name: 'Alice',
     email: 'alice@example.com',
-    password: 'password123',
+      password: 'Password#123',
     firmName: 'Acme Legal',
     phone: '9999999999',
   });
@@ -555,6 +586,7 @@ async function run() {
     await testControllerForwardsTransactionSession();
     await testControllerRejectsInvalidPhoneNumber();
     await testVerifyControllerForwardsTransactionSession();
+    await testVerifyControllerRejectsInvalidOtpFormat();
     await testResendCredentialsControllerUsesService();
     await testServiceWritesUseSession();
     await testInitiateSignupRejectsDuplicateEmailOrPhone();

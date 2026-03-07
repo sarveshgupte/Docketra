@@ -530,7 +530,7 @@ const getClientById = async (req, res) => {
   try {
     const { clientId } = req.params;
     
-    const client = await Client.findOne({ clientId, isActive: true });
+    const client = await Client.findOne({ clientId, firmId: req.user?.firmId, isActive: true });
     
     if (!client) {
       return res.status(404).json({

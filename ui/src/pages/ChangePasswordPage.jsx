@@ -9,7 +9,7 @@ import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Card } from '../components/common/Card';
 import { authService } from '../services/authService';
-import { validatePassword } from '../utils/validators';
+import { STRONG_PASSWORD_MESSAGE, validateStrongPassword } from '../utils/validators';
 import './ChangePasswordPage.css';
 
 export const ChangePasswordPage = () => {
@@ -47,8 +47,8 @@ export const ChangePasswordPage = () => {
       return;
     }
 
-    if (!validatePassword(newPassword)) {
-      setError('New password must be at least 8 characters');
+    if (!validateStrongPassword(newPassword)) {
+      setError(STRONG_PASSWORD_MESSAGE);
       return;
     }
 
