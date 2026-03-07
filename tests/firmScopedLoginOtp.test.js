@@ -344,7 +344,9 @@ async function shouldBlockAfterMaxInvalidOtpAttempts() {
   assert.strictEqual(res.statusCode, 429, 'Fifth invalid OTP attempt should be rate limited');
   assert.strictEqual(body.success, false, 'Invalid OTP should fail');
   assert.strictEqual(body.remainingAttempts, 0, 'No attempts should remain after the fifth invalid OTP');
-  assert.strictEqual(user.loginOtpAttempts, 5, 'OTP attempt counter should increment');
+  assert.strictEqual(user.loginOtpHash, null, 'OTP hash should be cleared after max invalid attempts');
+  assert.strictEqual(user.loginOtpExpiresAt, null, 'OTP expiry should be cleared after max invalid attempts');
+  assert.strictEqual(user.loginOtpAttempts, 0, 'OTP attempt counter should reset after max invalid attempts');
 }
 
 async function run() {

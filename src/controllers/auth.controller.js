@@ -251,7 +251,7 @@ const createLoginOtpToken = (payload) => {
   });
 };
 
-const generateLoginOtp = () => crypto.randomInt(0, 1000000).toString().padStart(6, '0');
+const generateLoginOtp = () => crypto.randomInt(100000, 1000000).toString();
 
 const clearLoginOtpState = (user) => {
   if (!user) return;
@@ -1097,6 +1097,8 @@ const verifyLoginOtp = async (req, res) => {
 
     const currentAttempts = Number(user.loginOtpAttempts || 0);
     if (currentAttempts >= LOGIN_OTP_MAX_ATTEMPTS) {
+      clearLoginOtpState(user);
+      await persistLoginOtpState(user);
       return res.status(429).json({
         success: false,
         message: 'Too many invalid OTP attempts. Please log in again.',
@@ -1106,6 +1108,10 @@ const verifyLoginOtp = async (req, res) => {
     const isValidOtp = await bcrypt.compare(otp, user.loginOtpHash);
     if (!isValidOtp) {
       user.loginOtpAttempts = currentAttempts + 1;
+      const exhaustedAttempts = user.loginOtpAttempts >= LOGIN_OTP_MAX_ATTEMPTS;
+      if (exhaustedAttempts) {
+        clearLoginOtpState(user);
+      }
       await persistLoginOtpState(user);
 
       try {
@@ -1135,13 +1141,14 @@ const verifyLoginOtp = async (req, res) => {
         console.error('[AUTH AUDIT] Failed to record login OTP failure event', auditError);
       }
 
-      const hasAttemptsRemaining = user.loginOtpAttempts < LOGIN_OTP_MAX_ATTEMPTS;
-      return res.status(hasAttemptsRemaining ? 401 : 429).json({
+      return res.status(exhaustedAttempts ? 429 : 401).json({
         success: false,
-        message: hasAttemptsRemaining
-          ? 'Invalid verification code'
-          : 'Too many invalid OTP attempts. Please log in again.',
-        remainingAttempts: Math.max(0, LOGIN_OTP_MAX_ATTEMPTS - user.loginOtpAttempts),
+        message: exhaustedAttempts
+          ? 'Too many invalid OTP attempts. Please log in again.'
+          : 'Invalid verification code',
+        remainingAttempts: exhaustedAttempts
+          ? 0
+          : Math.max(0, LOGIN_OTP_MAX_ATTEMPTS - user.loginOtpAttempts),
       });
     }
 
