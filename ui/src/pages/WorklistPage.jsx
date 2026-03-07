@@ -16,8 +16,8 @@ import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
-import { Loading } from '../components/common/Loading';
 import { Button } from '../components/common/Button';
+import { TableSkeleton } from '../components/common/Skeleton';
 import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/layout/EmptyState';
 import { PriorityPill } from '../components/common/PriorityPill';
@@ -99,7 +99,7 @@ export const WorklistPage = () => {
   if (loading) {
     return (
       <Layout>
-        <Loading message="Loading worklist..." />
+        <TableSkeleton />
       </Layout>
     );
   }

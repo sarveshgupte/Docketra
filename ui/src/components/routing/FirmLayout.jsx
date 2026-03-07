@@ -7,8 +7,8 @@
 import React from 'react';
 import { Outlet, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { Loading } from '../common/Loading';
 import { PageWrapper } from '../layout/PageWrapper';
+import { RouteLoadingShell } from './RouteLoadingShell';
 
 export const FirmLayout = () => {
   const { firmSlug } = useParams();
@@ -16,7 +16,7 @@ export const FirmLayout = () => {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <Loading message="Checking firm access..." />;
+    return <RouteLoadingShell />;
   }
 
   if (user?.firmSlug && user.firmSlug !== firmSlug) {
