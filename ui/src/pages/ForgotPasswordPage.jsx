@@ -10,6 +10,14 @@ import { Card } from '../components/common/Card';
 import { authService } from '../services/authService';
 import './ForgotPasswordPage.css';
 
+const FALLBACK_RATE_LIMIT_MESSAGE = 'Too many password reset requests. Please wait a few minutes before trying again.';
+const getForgotPasswordErrorMessage = (errorData, defaultMessage) => (
+  errorData?.message
+  || (errorData?.error === 'RATE_LIMIT_EXCEEDED' ? FALLBACK_RATE_LIMIT_MESSAGE : null)
+  || errorData?.error
+  || defaultMessage
+);
+
 export const ForgotPasswordPage = () => {
   const { firmSlug } = useParams();
   const [email, setEmail] = useState('');
@@ -55,14 +63,10 @@ export const ForgotPasswordPage = () => {
           });
         }, 3000);
       } else {
-        setError(response.message || 'Failed to send reset email');
+        setError(getForgotPasswordErrorMessage(response, 'Failed to send reset email'));
       }
     } catch (err) {
-      setError(
-        err.response?.data?.message
-        || err.response?.data?.error
-        || 'An error occurred. Please try again.'
-      );
+      setError(getForgotPasswordErrorMessage(err.response?.data, 'An error occurred. Please try again.'));
     } finally {
       setLoading(false);
     }
