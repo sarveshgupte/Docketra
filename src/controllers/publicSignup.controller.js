@@ -149,9 +149,30 @@ const completeSignup = async (req, res) => {
   }
 };
 
+/**
+ * POST /auth/resend-credentials
+ * Resend signup credentials email by registered email
+ */
+const resendCredentials = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email || !email.trim()) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    const result = await signupService.resendCredentialsEmail({ email, req });
+    return res.status(200).json({ success: true, message: result.message || 'Credentials email sent.' });
+  } catch (error) {
+    console.error('[PUBLIC_SIGNUP] resendCredentials error:', error.message);
+    return res.status(500).json({ success: false, message: 'Unable to resend credentials right now.' });
+  }
+};
+
 module.exports = {
   initiateSignup,
   verifyOtp,
   resendOtp,
   completeSignup,
+  resendCredentials,
 };

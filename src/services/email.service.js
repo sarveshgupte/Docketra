@@ -965,18 +965,21 @@ const sendFirmSetupEmail = async ({
   xid,
   context = null,
 }) => {
+  const resolvedXid = String(xid || '').trim();
+  const resolvedLoginUrl = String(workspaceUrl || '').trim();
   const subject = 'Your Docketra workspace is ready';
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
       <h2>Welcome to Docketra, ${name}!</h2>
-      <p>Your firm workspace has been created successfully.</p>
+      <p>Your firm account has been created successfully.</p>
       <p><strong>Firm name:</strong> ${firmName}</p>
-      <p><strong>Workspace URL:</strong> <a href="${workspaceUrl}">${workspaceUrl}</a></p>
-      <p><strong>User xID:</strong> ${xid}</p>
+      <p><strong>User xID:</strong> ${resolvedXid}</p>
+      <p><strong>Login URL:</strong> <a href="${resolvedLoginUrl}">${resolvedLoginUrl}</a></p>
+      <p>Use your xID and password to sign in to your firm workspace.</p>
       <p>Best regards,<br/>Docketra Team</p>
     </div>
   `;
-  const text = `Welcome to Docketra, ${name}!\n\nYour firm workspace has been created successfully.\nFirm name: ${firmName}\nWorkspace URL: ${workspaceUrl}\nUser xID: ${xid}\n\nBest regards,\nDocketra Team`;
+  const text = `Welcome to Docketra, ${name}!\n\nYour firm account has been created successfully.\nFirm name: ${firmName}\nUser xID: ${resolvedXid}\nLogin URL: ${resolvedLoginUrl}\nUse your xID and password to sign in to your firm workspace.\n\nBest regards,\nDocketra Team`;
 
   return sendEmail({ to: email, subject, html, text }, context);
 };

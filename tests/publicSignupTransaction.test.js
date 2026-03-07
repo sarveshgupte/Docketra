@@ -137,6 +137,48 @@ async function testVerifyControllerForwardsTransactionSession() {
   console.log('  ✓ forwards req.transactionSession.session to verifyOtp');
 }
 
+async function testResendCredentialsControllerUsesService() {
+  const captured = {};
+  const mockSignupService = {
+    resendCredentialsEmail: async (payload) => {
+      captured.payload = payload;
+      return { success: true, message: 'If an account exists, credentials have been sent to your email.' };
+    },
+  };
+
+  Module._load = function (request, parent, isMain) {
+    if (request === '../services/signup.service') return mockSignupService;
+    return originalLoad.apply(this, arguments);
+  };
+
+  clearModule('../src/controllers/publicSignup.controller');
+  const { resendCredentials } = require('../src/controllers/publicSignup.controller');
+  const req = {
+    body: { email: 'alice@example.com' },
+    ip: '127.0.0.1',
+  };
+  const response = {
+    statusCode: 200,
+    payload: null,
+    status(code) {
+      this.statusCode = code;
+      return this;
+    },
+    json(payload) {
+      this.payload = payload;
+      return this;
+    },
+  };
+
+  await resendCredentials(req, response);
+
+  assert.strictEqual(response.statusCode, 200);
+  assert.strictEqual(response.payload.success, true);
+  assert.strictEqual(captured.payload.email, 'alice@example.com');
+  assert.strictEqual(captured.payload.req, req);
+  console.log('  ✓ resendCredentials controller forwards email payload to service');
+}
+
 async function testServiceWritesUseSession() {
   const captured = { deleteMany: null, create: null };
   const mockUser = {
@@ -278,14 +320,71 @@ async function testCreateFirmAndAdminTracksVerificationAndConsent() {
   console.log('  ✓ tracks verification and legal consent metadata when creating signup admins');
 }
 
+async function testResendCredentialsEmailUsesStoredXid() {
+  const captured = { welcomeEmailPayload: null };
+
+  Module._load = function (request, parent, isMain) {
+    if (request === '../models/User.model') {
+      return {
+        findOne: () => ({
+          select: () => ({
+            lean: async () => ({
+              name: 'Alice',
+              email: 'alice@example.com',
+              xID: 'X000777',
+              firmId: 'firm-1',
+            }),
+          }),
+        }),
+      };
+    }
+    if (request === '../models/Firm.model') {
+      return {
+        findById: () => ({
+          select: () => ({
+            lean: async () => ({ name: 'Acme Legal', firmSlug: 'acme-legal' }),
+          }),
+        }),
+      };
+    }
+    if (request === './email.service') {
+      return {
+        sendFirmSetupEmail: async (payload) => {
+          captured.welcomeEmailPayload = payload;
+          return { success: true, queued: true };
+        },
+      };
+    }
+    if (request === './audit.service') {
+      return { logAuthEvent: async () => ({}) };
+    }
+    return originalLoad.apply(this, arguments);
+  };
+
+  clearModule('../src/services/signup.service');
+  const signupService = require('../src/services/signup.service');
+  const result = await signupService.resendCredentialsEmail({
+    email: 'alice@example.com',
+    req: { ip: '127.0.0.1' },
+  });
+
+  assert.strictEqual(result.success, true);
+  assert.strictEqual(captured.welcomeEmailPayload.xid, 'X000777', 'resend should use stored xID');
+  assert.strictEqual(captured.welcomeEmailPayload.firmName, 'Acme Legal');
+  assert.strictEqual(captured.welcomeEmailPayload.workspaceUrl, 'http://localhost:3000/acme-legal/login');
+  console.log('  ✓ resendCredentialsEmail uses stored xID and firm login URL');
+}
+
 async function run() {
   console.log('Running public signup transaction tests...');
   try {
     await testRouteWrapsWriteSignupHandlers();
     await testControllerForwardsTransactionSession();
     await testVerifyControllerForwardsTransactionSession();
+    await testResendCredentialsControllerUsesService();
     await testServiceWritesUseSession();
     await testCreateFirmAndAdminTracksVerificationAndConsent();
+    await testResendCredentialsEmailUsesStoredXid();
     console.log('All public signup transaction tests passed.');
   } catch (error) {
     console.error('publicSignupTransaction tests failed:', error);
