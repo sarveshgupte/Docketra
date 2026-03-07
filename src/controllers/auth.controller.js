@@ -407,13 +407,13 @@ const sendLoginOtpChallenge = async (req, user) => {
     xID: user.xID || DEFAULT_XID,
     firmId: user.firmId || DEFAULT_FIRM_ID,
     userId: user._id,
-    actionType: 'LOGIN_OTP_SENT',
+    actionType: 'OTP_SENT',
     description: 'Login OTP sent to user email after password verification',
     performedBy: user.xID || DEFAULT_XID,
     ipAddress: req.ip,
     userAgent: req.get('user-agent'),
     metadata: {
-      eventType: 'LOGIN_OTP_SENT',
+      eventType: 'OTP_SENT',
       firmSlug: req.params?.firmSlug || req.firmSlug || null,
       expiresInMinutes: LOGIN_OTP_EXPIRY_MINUTES,
       email: user.email || null,
@@ -991,27 +991,6 @@ const login = async (req, res) => {
     }
     
     try {
-      await logAuthAudit({
-        xID: user.xID || DEFAULT_XID,
-        firmId: user.firmId || DEFAULT_FIRM_ID,
-        userId: user._id,
-        actionType: 'LOGIN_PASSWORD_VERIFIED',
-        description: 'User password verified; email OTP challenge required',
-        performedBy: user.xID,
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent'),
-        metadata: {
-          eventType: 'LOGIN_PASSWORD_VERIFIED',
-          email: user.email || null,
-          firmSlug: requestedFirmSlug,
-          timestamp: new Date().toISOString(),
-        },
-      }, req);
-    } catch (auditError) {
-      console.error('[AUTH AUDIT] Failed to record password verification event', auditError);
-    }
-
-    try {
       const loginToken = await sendLoginOtpChallenge(req, user);
       return res.json({
         success: true,
@@ -1134,13 +1113,13 @@ const verifyLoginOtp = async (req, res) => {
           xID: user.xID || DEFAULT_XID,
           firmId: user.firmId || DEFAULT_FIRM_ID,
           userId: user._id,
-          actionType: 'LOGIN_OTP_FAILED',
+          actionType: 'LOGIN_FAILURE',
           description: `Invalid login OTP supplied (attempt ${user.loginOtpAttempts})`,
           performedBy: user.xID || DEFAULT_XID,
           ipAddress: req.ip,
           userAgent: req.get('user-agent'),
           metadata: {
-            eventType: 'LOGIN_OTP_FAILED',
+            eventType: 'LOGIN_FAILURE',
             firmSlug: requestedFirmSlug,
             attempts: user.loginOtpAttempts,
             timestamp: new Date().toISOString(),
@@ -1174,13 +1153,13 @@ const verifyLoginOtp = async (req, res) => {
         xID: user.xID || DEFAULT_XID,
         firmId: user.firmId || DEFAULT_FIRM_ID,
         userId: user._id,
-        actionType: 'LOGIN_OTP_VERIFIED',
+        actionType: 'OTP_VERIFIED',
         description: 'Login OTP verified successfully',
         performedBy: user.xID || DEFAULT_XID,
         ipAddress: req.ip,
         userAgent: req.get('user-agent'),
         metadata: {
-          eventType: 'LOGIN_OTP_VERIFIED',
+          eventType: 'OTP_VERIFIED',
           firmSlug: requestedFirmSlug,
           timestamp: new Date().toISOString(),
         },
