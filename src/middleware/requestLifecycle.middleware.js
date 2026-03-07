@@ -1,11 +1,20 @@
 const { randomUUID } = require('crypto');
 const log = require('../utils/log');
 const metricsService = require('../services/metrics.service');
-const { enqueueAfterCommit, attachRecorder, flushRequestEffects } = require('../services/sideEffectQueue.service');
+const { attachRecorder, flushRequestEffects } = require('../services/sideEffectQueue.service');
 const { noteApiActivity } = require('../services/securityTelemetry.service');
 
 const LOGIN_PATHS = new Set(['/superadmin/login']);
 const TENANT_LOGIN_PATH = /^\/[^/]+\/login$/;
+const normalizeLifecycleRoute = (req) => {
+  if (typeof req.route?.path === 'string') {
+    const baseUrl = req.baseUrl || '';
+    return `${baseUrl}${req.route.path}` || req.originalUrl || req.url || 'unknown';
+  }
+  // Global middleware can finalize before Express exposes a concrete route pattern.
+  // In that case we fall back to the raw request URL instead of dropping the label.
+  return req.originalUrl || req.url || 'unknown';
+};
 
 const requestLifecycle = (req, res, next) => {
   const startTime = Date.now();
@@ -24,13 +33,12 @@ const requestLifecycle = (req, res, next) => {
     if (res._lifecycleLogged) return;
     res._lifecycleLogged = true;
     const durationMs = Date.now() - startTime;
-    if (!skipSideEffects) {
-      enqueueAfterCommit(req, {
-        type: 'METRICS_LATENCY',
-        payload: { route: req.originalUrl || req.url, durationMs },
-        execute: async () => metricsService.recordLatency(durationMs),
-      });
-    }
+    metricsService.recordHttpRequest({
+      method: req.method,
+      route: normalizeLifecycleRoute(req),
+      status: res.statusCode,
+      durationMs,
+    });
     log.info('REQUEST_LIFECYCLE', {
       req,
       method: req.method,

@@ -1,10 +1,7 @@
-const Case = require('../models/Case.model');
-
-const findCaseById = async (caseId, firmId) => Case.findOne({ _id: caseId, firmId });
-
-const countCases = async (firmId, query = {}) => Case.countDocuments({ firmId, ...query });
+const CaseRepository = require('./CaseRepository');
 
 module.exports = {
-  findCaseById,
-  countCases,
+  ...CaseRepository,
+  findCaseById: (caseId, firmId, role = 'Admin') => CaseRepository.findById(firmId, caseId, role),
+  countCases: (firmId, query = {}) => CaseRepository.count(firmId, query),
 };

@@ -25,6 +25,12 @@ const run = async () => {
   assert.strictEqual(existingReq.requestId, 'req-fixed-id', 'existing requestId should be preserved');
   assert.strictEqual(existingHeaders['X-Request-ID'], 'req-fixed-id', 'header should use existing requestId');
 
+  const forwardedReq = { headers: { 'x-request-id': ' upstream-trace-id ' } };
+  const forwardedHeaders = {};
+  requestId(forwardedReq, { setHeader: (key, value) => { forwardedHeaders[key] = value; } }, () => {});
+  assert.strictEqual(forwardedReq.requestId, 'upstream-trace-id', 'middleware should reuse upstream request IDs');
+  assert.strictEqual(forwardedHeaders['X-Request-ID'], 'upstream-trace-id', 'header should propagate sanitized upstream request ID');
+
   console.log('✓ requestId middleware test passed');
 };
 

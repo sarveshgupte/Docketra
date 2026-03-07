@@ -51,6 +51,19 @@ const isAdminCurrentlyLocked = (admin) => {
   return admin.lockUntil instanceof Date && admin.lockUntil > new Date();
 };
 
+const normalizeAdminLifecycleStatus = (status) => {
+  const normalized = String(status || '').trim().toLowerCase();
+  if (normalized === 'disabled' || normalized === 'suspended') {
+    return 'disabled';
+  }
+  if (normalized === 'active') {
+    return 'active';
+  }
+  return null;
+};
+
+const isAdminDisabledStatus = (status) => normalizeAdminLifecycleStatus(status) === 'disabled';
+
 const resolveSessionQuery = (query, session) => {
   if (session && query && typeof query.session === 'function') {
     query = query.session(session);
@@ -862,7 +875,8 @@ const listFirmAdmins = async (req, res) => {
 const updateFirmAdminStatus = async (req, res) => {
   const { firmId } = req.params;
   const targetAdminId = req.params.adminId;
-  const { status } = req.body || {};
+  const requestedStatus = req.body?.status;
+  const status = normalizeAdminLifecycleStatus(requestedStatus);
   if (!mongoose.Types.ObjectId.isValid(firmId)) {
     return res.status(404).json({
       success: false,
@@ -876,7 +890,7 @@ const updateFirmAdminStatus = async (req, res) => {
     });
   }
 
-  if (!['active', 'suspended'].includes(status)) {
+  if (!status) {
     return res.status(400).json({
       success: false,
       message: 'Status must be ACTIVE or DISABLED',
@@ -911,7 +925,7 @@ const updateFirmAdminStatus = async (req, res) => {
     });
   }
 
-  if (admin.status === status) {
+  if (normalizeAdminLifecycleStatus(admin.status) === status) {
     return res.status(422).json({
       success: false,
       code: 'ADMIN_STATUS_UNCHANGED',
@@ -919,7 +933,7 @@ const updateFirmAdminStatus = async (req, res) => {
     });
   }
 
-  if (admin.status === 'invited' && status === 'suspended') {
+  if (admin.status === 'invited' && status === 'disabled') {
     return res.status(422).json({
       success: false,
       code: 'ADMIN_INVALID_STATUS_TRANSITION',
@@ -936,7 +950,7 @@ const updateFirmAdminStatus = async (req, res) => {
   }
 
   const oldStatus = admin.status;
-  if (status === 'suspended' && admin.status === 'active') {
+  if (status === 'disabled' && normalizeAdminLifecycleStatus(admin.status) === 'active') {
     const session = req.transactionSession?.session;
     const activeAdminsCountQuery = User.countDocuments({
       firmId: firm._id,
@@ -971,7 +985,7 @@ const updateFirmAdminStatus = async (req, res) => {
       throw err;
     }
 
-    adminForUpdate.status = 'suspended';
+    adminForUpdate.status = 'disabled';
     adminForUpdate.isActive = false;
     await adminForUpdate.save({ session });
 
@@ -995,9 +1009,9 @@ const updateFirmAdminStatus = async (req, res) => {
       firmName: firm.name,
       adminXID: admin.xID,
       oldStatus,
-      newStatus: status,
-    },
-    req,
+        newStatus: status,
+      },
+      req,
   });
 
   return res.status(200).json({
@@ -1291,7 +1305,7 @@ const resendAdminAccess = async (req, res) => {
   }
 
   // Reject disabled admins
-  if (admin.status === 'suspended') {
+  if (isAdminDisabledStatus(admin.status)) {
     return res.status(422).json({
       success: false,
       code: 'ADMIN_DISABLED',
