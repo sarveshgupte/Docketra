@@ -204,6 +204,26 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
+
+  loginOtpHash: {
+    type: String,
+    default: null,
+  },
+
+  loginOtpExpiresAt: {
+    type: Date,
+    default: null,
+  },
+
+  loginOtpAttempts: {
+    type: Number,
+    default: 0,
+  },
+
+  loginOtpLastSentAt: {
+    type: Date,
+    default: null,
+  },
   
   // Bcrypt hashed password - null until user sets password via email link
   passwordHash: {
