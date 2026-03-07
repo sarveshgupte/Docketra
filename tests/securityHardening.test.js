@@ -9,17 +9,59 @@ class FakeRedis {
   constructor() {
     this.map = new Map();
   }
+  _getEntry(key) {
+    const entry = this.map.get(key);
+    if (!entry) return null;
+    if (entry.expiresAt && entry.expiresAt <= Date.now()) {
+      this.map.delete(key);
+      return null;
+    }
+    return entry;
+  }
   async incr(key) {
-    const value = Number(this.map.get(key) || 0) + 1;
-    this.map.set(key, value);
+    const entry = this._getEntry(key);
+    const value = Number(entry ? entry.value : 0) + 1;
+    this.map.set(key, { value, expiresAt: entry ? entry.expiresAt : null });
     return value;
   }
-  async expire() { return 1; }
-  async ttl(key) {
-    return this.map.has(key) ? 120 : -1;
+  async expire(key, seconds) {
+    const entry = this._getEntry(key);
+    if (!entry) return 0;
+    entry.expiresAt = Date.now() + Number(seconds) * 1000;
+    this.map.set(key, entry);
+    return 1;
   }
-  async set(key, value) { this.map.set(key, value); return 'OK'; }
-  async del(...keys) { keys.forEach((k) => this.map.delete(k)); return 1; }
+  async ttl(key) {
+    const entry = this._getEntry(key);
+    if (!entry) return -1;
+    if (!entry.expiresAt) return -1;
+    return Math.max(1, Math.ceil((entry.expiresAt - Date.now()) / 1000));
+  }
+  async exists(key) {
+    return this._getEntry(key) ? 1 : 0;
+  }
+  async eval(_script, _numKeys, key, limit, ttl) {
+    const current = await this.incr(key);
+    if (current === 1) {
+      await this.expire(key, ttl);
+    }
+    return current > Number(limit) ? 0 : 1;
+  }
+  async set(key, value, exFlag, seconds, nxFlag) {
+    if (nxFlag === 'NX' && await this.exists(key)) {
+      return null;
+    }
+    const expiresAt = exFlag === 'EX' ? Date.now() + Number(seconds) * 1000 : null;
+    this.map.set(key, { value, expiresAt });
+    return 'OK';
+  }
+  async del(...keys) {
+    let deleted = 0;
+    keys.forEach((k) => {
+      if (this.map.delete(k)) deleted += 1;
+    });
+    return deleted;
+  }
 }
 
 async function testIpRateLimit() {

@@ -29,6 +29,7 @@ const EMAIL_ENUMERATION_SAFE_MESSAGE = 'If the details are valid, a verification
 const GENERIC_VERIFICATION_FAILURE_MESSAGE = 'Verification failed';
 const MIN_PUBLIC_RESPONSE_MS = 350;
 const DUMMY_BCRYPT_HASH = '$2b$10$7EqJtq98hPqEX7fNZaFWoOhi8sB0QYfJOLLm1Aun1vDLteA94ppI.';
+const OTP_RATE_LIMIT_MESSAGE = 'Too many OTP attempts. Try again later.';
 
 const logSignupAuthEvent = async ({
   eventType,
@@ -195,9 +196,17 @@ const verifyOtp = async ({ email, otp, session = null, req = null }) => {
 
   const startedAt = Date.now();
   const normalizedEmail = email.toLowerCase().trim();
-  const otpAttempt = await consumeOtpAttempt({ email: normalizedEmail });
+  let otpAttempt;
+  try {
+    otpAttempt = await consumeOtpAttempt({ email: normalizedEmail });
+  } catch (error) {
+    if (error.message === OTP_RATE_LIMIT_MESSAGE) {
+      return { success: false, status: 429, message: OTP_RATE_LIMIT_MESSAGE };
+    }
+    throw error;
+  }
   if (!otpAttempt.allowed) {
-    return { success: false, status: 429, message: 'Too many requests. Please try again later.' };
+    return { success: false, status: 429, message: OTP_RATE_LIMIT_MESSAGE };
   }
 
   const lock = await acquireLock({ key: `tenant_bootstrap_lock:${normalizedEmail}`, ttlSeconds: 30 });
