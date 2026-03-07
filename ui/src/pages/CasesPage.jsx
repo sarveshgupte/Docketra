@@ -21,6 +21,7 @@ import { caseService } from '../services/caseService';
 import { worklistService } from '../services/worklistService';
 import { categoryService } from '../services/categoryService';
 import { CASE_STATUS, USER_ROLES } from '../utils/constants';
+import { getCaseListRecords } from '../utils/caseResponse';
 import { getFirmConfig } from '../utils/firmConfig';
 import { useFeatureFlag } from '../hooks/useFeatureFlag';
 import { formatDateTime, formatAuditStamp } from '../utils/formatDateTime';
@@ -146,7 +147,7 @@ export const CasesPage = () => {
       if (isAdmin) {
         const response = await caseService.getCases();
         if (response.success) {
-          casesData = response.data || [];
+          casesData = getCaseListRecords(response);
         }
       } else {
         const response = await worklistService.getEmployeeWorklist();
@@ -484,6 +485,13 @@ export const CasesPage = () => {
 
   const activeFilters = statusFilter === 'ALL' ? [] : [{ key: 'status', label: 'Status', value: statusFilter }];
 
+  // Memoize select-all state to avoid repeated inline filtering (Task 6)
+  const allVisibleSelected = useMemo(() => {
+    if (!enableBulkActions) return false;
+    const selectable = sortedCases.filter((c) => !c.lockStatus?.isLocked);
+    return selectable.length > 0 && selectable.every((c) => selectedCaseIds.has(c.caseId));
+  }, [sortedCases, selectedCaseIds, enableBulkActions]);
+
   if (loading) {
     return (
       <Layout>
@@ -491,13 +499,6 @@ export const CasesPage = () => {
       </Layout>
     );
   }
-
-  // Memoize select-all state to avoid repeated inline filtering (Task 6)
-  const allVisibleSelected = useMemo(() => {
-    if (!enableBulkActions) return false;
-    const selectable = sortedCases.filter((c) => !c.lockStatus?.isLocked);
-    return selectable.length > 0 && selectable.every((c) => selectedCaseIds.has(c.caseId));
-  }, [sortedCases, selectedCaseIds, enableBulkActions]);
 
   const columns = [
     ...(enableBulkActions ? [{
