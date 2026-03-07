@@ -1,5 +1,6 @@
 'use strict';
 
+const { randomUUID } = require('crypto');
 const mongoose = require('mongoose');
 const log = require('../utils/log');
 const { logAuthEvent } = require('./audit.service');
@@ -61,9 +62,17 @@ async function logSecurityAuditEvent({
   const resolvedUserId = coerceUserId(userId || req?.user?._id || req?.user?.id);
   const resolvedXid = xID || req?.user?.xID || 'UNKNOWN';
   const resolvedPerformedBy = performedBy || req?.user?.xID || resolvedXid || 'SYSTEM';
-  const safeMetadata = sanitizeMetadata(metadata);
+  const requestId = req?.requestId || metadata?.requestId || randomUUID();
+  if (req && !req.requestId) {
+    req.requestId = requestId;
+  }
+  const safeMetadata = sanitizeMetadata({
+    ...(metadata || {}),
+    requestId,
+  });
   const entry = {
     timestamp,
+    requestId,
     userId: resolvedUserId,
     firmId: typeof resolvedFirmId?.toString === 'function' ? resolvedFirmId.toString() : String(resolvedFirmId),
     action,
@@ -88,16 +97,17 @@ async function logSecurityAuditEvent({
     userId: resolvedUserId,
     firmId: entry.firmId,
     xID: resolvedXid,
-    performedBy: resolvedPerformedBy,
-    description: description || `Security audit event: ${action}`,
-    req: {
-      ip: entry.ipAddress,
-      get: (header) => (header?.toLowerCase() === 'user-agent' ? entry.userAgent : undefined),
-    },
-    metadata: {
-      resource: entry.resource,
-      timestamp,
-      ...safeMetadata,
+      performedBy: resolvedPerformedBy,
+      description: description || `Security audit event: ${action}`,
+      req: {
+        ip: entry.ipAddress,
+        get: (header) => (header?.toLowerCase() === 'user-agent' ? entry.userAgent : undefined),
+        requestId,
+      },
+      metadata: {
+        resource: entry.resource,
+        timestamp,
+        ...safeMetadata,
     },
   });
 

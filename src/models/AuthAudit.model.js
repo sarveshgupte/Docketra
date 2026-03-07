@@ -106,7 +106,13 @@ const authAuditSchema = new mongoose.Schema({
   
   // User agent string for device/browser tracking
   userAgent: String,
-  
+
+  requestId: {
+    type: String,
+    default: null,
+    index: true,
+  },
+   
   // When the action was performed
   timestamp: {
     type: Date,

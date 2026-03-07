@@ -17,6 +17,30 @@ const JWT_REGEX = /[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+/;
 const MASK_SEGMENT_LENGTH = 4;
 const MIN_JWT_LENGTH = 20;
 const MIN_TOKEN_MASK_LENGTH = 6;
+const REDACTED = '***REDACTED***';
+const STRICT_REDACTION_KEYS = new Set([
+  'authorization',
+  'cookie',
+  'password',
+  'currentpassword',
+  'newpassword',
+  'oldpassword',
+  'passwordhash',
+  'mfasecret',
+  'totpsecret',
+  'otpsecret',
+  'secret',
+  'seed',
+  'refreshtoken',
+  'accesstoken',
+  'twofactorsecret',
+  'security_encryption_key',
+  'securityencryptionkey',
+  'jwtsecret',
+  'jwt_secret',
+  'encryptionkey',
+  'encryption_key',
+]);
 
 const maskEmail = (value) => {
   if (typeof value !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return value;
@@ -85,18 +109,13 @@ const maskValue = (key, value, seen = new WeakSet()) => {
   if (['phone', 'phonenumber', 'mobile'].includes(lowerKey)) return maskPhone(value);
   if (['pan', 'pan_number', 'pannumber'].includes(lowerKey)) return maskPAN(value);
   if (['aadhaar', 'aadhar', 'aadhaarnumber'].includes(lowerKey)) return maskAadhaar(value);
-  if (lowerKey === 'authorization') return maskAuthorizationHeader(value);
-  if (['token', 'refreshtoken', 'accesstoken', 'idtoken'].includes(lowerKey)) return maskToken(value);
+  if (STRICT_REDACTION_KEYS.has(lowerKey)) {
+    return lowerKey === 'authorization' ? maskAuthorizationHeader(value) : REDACTED;
+  }
+  if (['token', 'idtoken'].includes(lowerKey)) return maskToken(value);
   
   // CRITICAL SECURITY: Mask password fields (all variations)
   // Passwords must NEVER appear in logs under any circumstance
-  if (['password', 'currentpassword', 'newpassword', 'oldpassword', 'passwordhash'].includes(lowerKey)) {
-    return '***REDACTED***';
-  }
-  if (['mfasecret', 'totpsecret', 'otpsecret', 'secret', 'seed'].includes(lowerKey)) {
-    return '***REDACTED***';
-  }
-
   // Heuristic masking for strings that look like tokens
   if (typeof value === 'string' && value.length > MIN_JWT_LENGTH && JWT_REGEX.test(value)) {
     // Likely JWT
