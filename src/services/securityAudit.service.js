@@ -3,6 +3,7 @@
 const { randomUUID } = require('crypto');
 const mongoose = require('mongoose');
 const log = require('../utils/log');
+const { getIpRange } = require('../utils/ipRange');
 const { logAuthEvent } = require('./audit.service');
 const { getRequestIp, getRequestUserAgent } = require('./forensicAudit.service');
 
@@ -19,7 +20,7 @@ const SECURITY_AUDIT_ACTIONS = Object.freeze({
 });
 
 const REDACTED_VALUE = '[REDACTED]';
-const SENSITIVE_KEY_PATTERN = /(secret|password|token|authorization|cookie|otp|totp|passcode)/i;
+const SENSITIVE_KEY_PATTERN = /(secret|password|token|authorization|cookie|otp|totp|passcode|csrf|xsrf|session(?:id|token)?|api[_-]?key|bearer)/i;
 
 function sanitizeMetadata(value, seen = new WeakSet()) {
   if (value === null || value === undefined) return value;
@@ -40,6 +41,11 @@ function coerceUserId(userId) {
   if (!userId) return null;
   const normalized = typeof userId?.toString === 'function' ? userId.toString() : String(userId);
   return mongoose.Types.ObjectId.isValid(normalized) ? normalized : null;
+}
+
+function getRequestRoute(req) {
+  const route = req?.originalUrl || req?.url || null;
+  return typeof route === 'string' ? route.split('?')[0] : null;
 }
 
 async function logSecurityAuditEvent({
@@ -66,9 +72,15 @@ async function logSecurityAuditEvent({
   if (req && !req.requestId) {
     req.requestId = requestId;
   }
+  const ipAddress = getRequestIp(req);
+  const userAgent = getRequestUserAgent(req);
   const safeMetadata = sanitizeMetadata({
     ...(metadata || {}),
     requestId,
+    route: metadata?.route || getRequestRoute(req),
+    method: metadata?.method || req?.method || null,
+    userAgent: metadata?.userAgent || userAgent,
+    ipRange: metadata?.ipRange || getIpRange(ipAddress),
   });
   const entry = {
     timestamp,
@@ -77,8 +89,8 @@ async function logSecurityAuditEvent({
     firmId: typeof resolvedFirmId?.toString === 'function' ? resolvedFirmId.toString() : String(resolvedFirmId),
     action,
     resource: resource || req?.originalUrl || req?.url || 'unknown',
-    ipAddress: getRequestIp(req),
-    userAgent: getRequestUserAgent(req),
+    ipAddress,
+    userAgent,
     metadata: safeMetadata,
   };
 

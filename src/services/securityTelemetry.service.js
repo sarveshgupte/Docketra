@@ -1,11 +1,22 @@
 'use strict';
 
 const log = require('../utils/log');
+const { getIpRange } = require('../utils/ipRange');
 const { logSecurityAuditEvent, SECURITY_AUDIT_ACTIONS } = require('./securityAudit.service');
 const { getRequestIp } = require('./forensicAudit.service');
 
 const counters = new Map();
 const eventWindows = new Map();
+const alertCooldowns = new Map();
+const logWindows = new Map();
+
+const MAX_TELEMETRY_KEYS = 5000;
+const MAX_WINDOW_EVENTS = 200;
+const ALERT_COOLDOWN = 10 * 60 * 1000;
+const LOG_WINDOW_MS = 60 * 1000;
+const MAX_IDENTICAL_LOGS_PER_WINDOW = 50;
+const PRUNE_INTERVAL_MS = 60 * 1000;
+let lastPruneAt = 0;
 
 const ALERT_TYPES = Object.freeze({
   SUSPICIOUS_LOGIN_PATTERN: 'suspicious_login_pattern',
@@ -22,15 +33,188 @@ const SECURITY_METRIC_WINDOWS = Object.freeze({
   suspiciousTravel: 2 * 60 * 60 * 1000,
 });
 
+function getRequestRoute(req) {
+  const route = req?.originalUrl || req?.url || null;
+  return typeof route === 'string' ? route.split('?')[0] : null;
+}
+
+function getRequestUserAgent(req) {
+  const userAgent = req?.headers?.['user-agent'] || req?.get?.('user-agent') || null;
+  return typeof userAgent === 'string' && userAgent.trim() ? userAgent.trim() : null;
+}
+
+function enforceMapLimit(map, getTimestamp = (value) => value?.lastUpdatedAt || 0) {
+  if (map.size <= MAX_TELEMETRY_KEYS) return;
+
+  const overflow = map.size - MAX_TELEMETRY_KEYS;
+  const oldestEntries = [...map.entries()]
+    .sort(([, left], [, right]) => getTimestamp(left) - getTimestamp(right))
+    .slice(0, overflow);
+
+  oldestEntries.forEach(([key]) => map.delete(key));
+}
+
+function pruneCounters(now = Date.now()) {
+  for (const [key, state] of counters.entries()) {
+    if (!state || !state.windowMs || (now - state.startedAt) > state.windowMs) {
+      counters.delete(key);
+    }
+  }
+
+  enforceMapLimit(counters);
+}
+
+function pruneWindowEntries(now = Date.now()) {
+  for (const [key, state] of eventWindows.entries()) {
+    if (!state || !state.windowMs) {
+      eventWindows.delete(key);
+      continue;
+    }
+
+    const entries = (state.entries || []).filter((entry) => now - entry.timestamp <= state.windowMs);
+    if (entries.length === 0) {
+      eventWindows.delete(key);
+      continue;
+    }
+
+    state.entries = entries.slice(-MAX_WINDOW_EVENTS);
+    state.lastUpdatedAt = now;
+    eventWindows.set(key, state);
+  }
+
+  enforceMapLimit(eventWindows);
+}
+
+function pruneCooldowns(now = Date.now()) {
+  for (const [key, state] of alertCooldowns.entries()) {
+    if (!state || (now - state.timestamp) > ALERT_COOLDOWN) {
+      alertCooldowns.delete(key);
+    }
+  }
+
+  enforceMapLimit(alertCooldowns);
+}
+
+function pruneLogWindows(now = Date.now()) {
+  for (const [key, state] of logWindows.entries()) {
+    if (!state || (now - state.startedAt) > LOG_WINDOW_MS) {
+      logWindows.delete(key);
+    }
+  }
+
+  enforceMapLimit(logWindows);
+}
+
+function pruneTelemetryState(now = Date.now(), { force = false } = {}) {
+  if (!force && (now - lastPruneAt) < PRUNE_INTERVAL_MS) {
+    return;
+  }
+
+  pruneCounters(now);
+  pruneWindowEntries(now);
+  pruneCooldowns(now);
+  pruneLogWindows(now);
+  lastPruneAt = now;
+}
+
+function maybePruneTelemetryState(now = Date.now()) {
+  const overCapacity = (
+    counters.size > MAX_TELEMETRY_KEYS ||
+    eventWindows.size > MAX_TELEMETRY_KEYS ||
+    alertCooldowns.size > MAX_TELEMETRY_KEYS ||
+    logWindows.size > MAX_TELEMETRY_KEYS
+  );
+
+  pruneTelemetryState(now, { force: overCapacity || (now - lastPruneAt) >= PRUNE_INTERVAL_MS });
+}
+
+function startPruner() {
+  const timer = setInterval(() => {
+    try {
+      pruneTelemetryState(Date.now(), { force: true });
+    } catch (error) {
+      log.error('SECURITY_TELEMETRY_PRUNE_FAILED', { error: error.message });
+    }
+  }, PRUNE_INTERVAL_MS);
+
+  if (typeof timer.unref === 'function') {
+    timer.unref();
+  }
+}
+
+function buildAlertCooldownKey(alertType, userId, ipAddress) {
+  return [alertType || 'security_alert', userId ? String(userId) : 'anonymous', ipAddress || 'unknown'].join(':');
+}
+
+function shouldEmitAlert({ alertType, userId, ipAddress, now = Date.now() }) {
+  const key = buildAlertCooldownKey(alertType, userId, ipAddress);
+  const existing = alertCooldowns.get(key);
+  if (existing && (now - existing.timestamp) < ALERT_COOLDOWN) {
+    existing.lastUpdatedAt = now;
+    alertCooldowns.set(key, existing);
+    maybePruneTelemetryState(now);
+    return false;
+  }
+
+  alertCooldowns.set(key, { timestamp: now, lastUpdatedAt: now });
+  maybePruneTelemetryState(now);
+  return true;
+}
+
+function buildLogSuppressionKey(eventName, metadata) {
+  return [
+    eventName,
+    metadata?.alertType || 'unknown',
+    metadata?.userId ? String(metadata.userId) : 'anonymous',
+    metadata?.ipAddress || 'unknown',
+    metadata?.reason || metadata?.resource || 'unknown',
+  ].join(':');
+}
+
+function shouldWriteSecurityAlertLog(metadata, now = Date.now()) {
+  const key = buildLogSuppressionKey('SECURITY_ALERT', metadata);
+  let state = logWindows.get(key);
+  if (!state || (now - state.startedAt) > LOG_WINDOW_MS) {
+    state = { startedAt: now, count: 0, suppressed: false, lastUpdatedAt: now };
+  }
+
+  state.count += 1;
+  state.lastUpdatedAt = now;
+  logWindows.set(key, state);
+  maybePruneTelemetryState(now);
+
+  if (state.count <= MAX_IDENTICAL_LOGS_PER_WINDOW) {
+    return true;
+  }
+
+  if (!state.suppressed) {
+    state.suppressed = true;
+    logWindows.set(key, state);
+    log.warn('SECURITY_ALERT_SUPPRESSED', {
+      req: metadata?.req,
+      alertType: metadata?.alertType || null,
+      userId: metadata?.userId || null,
+      resource: metadata?.resource || null,
+      ipAddress: metadata?.ipAddress || null,
+      suppressedAfter: MAX_IDENTICAL_LOGS_PER_WINDOW,
+    });
+  }
+
+  return false;
+}
+
 function incrementCounter(key, { windowMs, limit }) {
   const now = Date.now();
-  const state = counters.get(key) || { count: 0, startedAt: now };
+  const state = counters.get(key) || { count: 0, startedAt: now, windowMs, lastUpdatedAt: now };
   if (now - state.startedAt > windowMs) {
     state.count = 0;
     state.startedAt = now;
   }
+  state.windowMs = windowMs;
   state.count += 1;
+  state.lastUpdatedAt = now;
   counters.set(key, state);
+  maybePruneTelemetryState(now);
 
   return {
     count: state.count,
@@ -41,18 +225,33 @@ function incrementCounter(key, { windowMs, limit }) {
 
 function pushWindowValue(key, value, windowMs) {
   const now = Date.now();
-  const existing = eventWindows.get(key) || [];
-  const trimmed = existing.filter((entry) => now - entry.timestamp <= windowMs);
+  const state = eventWindows.get(key) || { entries: [], windowMs, lastUpdatedAt: now };
+  const trimmed = (state.entries || []).filter((entry) => now - entry.timestamp <= windowMs);
   trimmed.push({ value, timestamp: now });
-  eventWindows.set(key, trimmed);
-  return trimmed;
+  state.entries = trimmed.slice(-MAX_WINDOW_EVENTS);
+  state.windowMs = windowMs;
+  state.lastUpdatedAt = now;
+  eventWindows.set(key, state);
+  maybePruneTelemetryState(now);
+  return state.entries;
 }
 
 function countRecent(key, windowMs) {
   const now = Date.now();
-  const existing = eventWindows.get(key) || [];
-  const trimmed = existing.filter((entry) => now - entry.timestamp <= windowMs);
-  eventWindows.set(key, trimmed);
+  const state = eventWindows.get(key);
+  const trimmed = (state?.entries || []).filter((entry) => now - entry.timestamp <= windowMs);
+  if (trimmed.length === 0) {
+    eventWindows.delete(key);
+    maybePruneTelemetryState(now);
+    return 0;
+  }
+
+  eventWindows.set(key, {
+    entries: trimmed.slice(-MAX_WINDOW_EVENTS),
+    windowMs,
+    lastUpdatedAt: now,
+  });
+  maybePruneTelemetryState(now);
   return trimmed.length;
 }
 
@@ -68,26 +267,6 @@ function getRequestCountry(req) {
     null;
 
   return typeof country === 'string' && country.trim() ? country.trim().toUpperCase() : null;
-}
-
-function getIpRange(ipAddress) {
-  if (!ipAddress || ipAddress === 'unknown') return 'unknown';
-
-  const normalizedIp = String(ipAddress).replace(/^::ffff:/, '');
-  if (normalizedIp.includes(':')) {
-    return normalizedIp
-      .split(':')
-      .filter(Boolean)
-      .slice(0, 4)
-      .join(':') || normalizedIp;
-  }
-
-  const octets = normalizedIp.split('.');
-  if (octets.length === 4) {
-    return octets.slice(0, 3).join('.');
-  }
-
-  return normalizedIp;
 }
 
 function isNewIpRangeDetected(lastLoginIp, previousIpRange, currentIpRange) {
@@ -111,39 +290,65 @@ async function emitSecurityAlert({
   metadata = {},
   description,
   alertType = 'security_alert',
-}) {
-  const resolvedIp = metadata.ipAddress || getRequestIp(req);
-  const enrichedMetadata = {
-    ...metadata,
-    event: alertType,
-    ipAddress: resolvedIp,
-    requestId: req?.requestId || metadata.requestId || null,
-  };
-  const entry = {
-    req,
-    action: SECURITY_AUDIT_ACTIONS.SECURITY_ALERT,
-    resource,
-    userId,
-    firmId,
-    metadata: enrichedMetadata,
-    description: description || 'Security telemetry threshold exceeded',
-  };
+} = {}) {
+  try {
+    const now = Date.now();
+    const resolvedIp = metadata.ipAddress || getRequestIp(req);
+    if (!shouldEmitAlert({ alertType, userId, ipAddress: resolvedIp, now })) {
+      // Duplicate alerts inside the cooldown window are intentionally dropped.
+      return null;
+    }
 
-  countRecent('metric:security_alerts', SECURITY_METRIC_WINDOWS.oneHour);
-  pushWindowValue('metric:security_alerts', alertType, SECURITY_METRIC_WINDOWS.oneHour);
+    const enrichedMetadata = {
+      ...metadata,
+      event: alertType,
+      ipAddress: resolvedIp,
+      requestId: req?.requestId || metadata.requestId || null,
+      route: metadata.route || getRequestRoute(req),
+      method: metadata.method || req?.method || null,
+      userAgent: metadata.userAgent || getRequestUserAgent(req),
+      ipRange: metadata.ipRange || getIpRange(resolvedIp),
+    };
+    const entry = {
+      req,
+      action: SECURITY_AUDIT_ACTIONS.SECURITY_ALERT,
+      resource,
+      userId,
+      firmId,
+      metadata: enrichedMetadata,
+      description: description || 'Security telemetry threshold exceeded',
+    };
 
-  log.warn('SECURITY_ALERT', {
-    req,
-    resource,
-    userId: userId || req?.user?._id || null,
-    firmId: firmId || req?.firmId || req?.user?.firmId || null,
-    description: entry.description,
-    alertType,
-    ...enrichedMetadata,
-  });
+    countRecent('metric:security_alerts', SECURITY_METRIC_WINDOWS.oneHour);
+    pushWindowValue('metric:security_alerts', alertType, SECURITY_METRIC_WINDOWS.oneHour);
 
-  await logSecurityAuditEvent(entry).catch((error) => {
-    log.error('SECURITY_ALERT_AUDIT_FAILURE', {
+    const logMetadata = {
+      req,
+      resource,
+      userId: userId || req?.user?._id || null,
+      firmId: firmId || req?.firmId || req?.user?.firmId || null,
+      description: entry.description,
+      alertType,
+      ...enrichedMetadata,
+    };
+
+    if (shouldWriteSecurityAlertLog(logMetadata, now)) {
+      log.warn('SECURITY_ALERT', logMetadata);
+    }
+
+    await logSecurityAuditEvent(entry).catch((error) => {
+      log.error('SECURITY_ALERT_AUDIT_FAILURE', {
+        req,
+        userId: userId || req?.user?._id || null,
+        firmId: firmId || req?.firmId || req?.user?.firmId || null,
+        resource,
+        alertType,
+        error: error.message,
+      });
+      return null;
+    });
+  } catch (error) {
+    log.error('SECURITY_ALERT_FAILURE', {
       req,
       userId: userId || req?.user?._id || null,
       firmId: firmId || req?.firmId || req?.user?.firmId || null,
@@ -151,11 +356,10 @@ async function emitSecurityAlert({
       alertType,
       error: error.message,
     });
-    return null;
-  });
+  }
 }
 
-async function noteLoginFailure({ req, xID = 'UNKNOWN', userId = null, firmId = null, reason = 'multiple_login_failures' }) {
+async function noteLoginFailure({ req, xID = 'UNKNOWN', userId = null, firmId = null, reason = 'multiple_login_failures' } = {}) {
   try {
     const ip = getRequestIp(req);
     pushWindowValue('metric:login_failures', { xID: String(xID).toUpperCase(), ip }, SECURITY_METRIC_WINDOWS.oneHour);
@@ -190,7 +394,7 @@ async function noteLoginFailure({ req, xID = 'UNKNOWN', userId = null, firmId = 
   }
 }
 
-async function noteLockedAccountAttempt({ req, userId = null, firmId = null, xID = 'UNKNOWN' }) {
+async function noteLockedAccountAttempt({ req, userId = null, firmId = null, xID = 'UNKNOWN' } = {}) {
   try {
     await emitSecurityAlert({
       req,
@@ -219,7 +423,7 @@ async function noteSuccessfulLogin({
   lastLoginCountry = null,
   resource = 'auth/login',
   mfaRequired = false,
-}) {
+} = {}) {
   try {
     const ip = getRequestIp(req);
     const currentIpRange = getIpRange(ip);
@@ -272,7 +476,7 @@ async function noteSuccessfulLogin({
   }
 }
 
-async function noteRefreshTokenFailure({ req, userId = null, firmId = null, reason = 'refresh_token_abuse' }) {
+async function noteRefreshTokenFailure({ req, userId = null, firmId = null, reason = 'refresh_token_abuse' } = {}) {
   try {
     const ip = getRequestIp(req);
     pushWindowValue('metric:refresh_failures', { userId, firmId, reason, ip }, SECURITY_METRIC_WINDOWS.oneHour);
@@ -304,7 +508,7 @@ async function noteRefreshTokenFailure({ req, userId = null, firmId = null, reas
   }
 }
 
-async function noteRefreshTokenUse({ req, userId = null, firmId = null, tokenIpAddress = null }) {
+async function noteRefreshTokenUse({ req, userId = null, firmId = null, tokenIpAddress = null } = {}) {
   try {
     if (!userId) return;
 
@@ -336,18 +540,28 @@ async function noteRefreshTokenUse({ req, userId = null, firmId = null, tokenIpA
   }
 }
 
-async function noteAdminPrivilegeChange({ req, userId = null, firmId = null, targetUserId = null, oldRole = null, newRole = null }) {
-  await emitSecurityAlert({
-    req,
-    userId,
-    firmId,
-    resource: 'admin/user-role',
-    metadata: { reason: 'admin_privilege_change', targetUserId, oldRole, newRole },
-    description: 'Administrative privilege change detected',
-  });
+async function noteAdminPrivilegeChange({ req, userId = null, firmId = null, targetUserId = null, oldRole = null, newRole = null } = {}) {
+  try {
+    await emitSecurityAlert({
+      req,
+      userId,
+      firmId,
+      resource: 'admin/user-role',
+      metadata: { reason: 'admin_privilege_change', targetUserId, oldRole, newRole },
+      description: 'Administrative privilege change detected',
+    });
+  } catch (error) {
+    log.error('SECURITY_TELEMETRY_ADMIN_PRIVILEGE_CHANGE', {
+      req,
+      error: error.message,
+      userId,
+      firmId,
+      targetUserId,
+    });
+  }
 }
 
-async function noteFileDownload({ req, userId = null, firmId = null, fileId = null }) {
+async function noteFileDownload({ req, userId = null, firmId = null, fileId = null } = {}) {
   try {
     const ip = getRequestIp(req);
     const actor = userId || req?.user?._id?.toString?.() || req?.user?.xID || 'unknown';
@@ -378,7 +592,7 @@ async function noteFileDownload({ req, userId = null, firmId = null, fileId = nu
   }
 }
 
-async function noteApiActivity({ req, statusCode = 200 }) {
+async function noteApiActivity({ req, statusCode = 200 } = {}) {
   try {
     const path = (req?.originalUrl || req?.url || '').split('?')[0];
     if (!path.startsWith('/api') || path.startsWith('/api/health') || path.startsWith('/api/metrics')) {
@@ -451,10 +665,29 @@ function getSecurityMetricsSnapshot() {
 function _resetForTests() {
   counters.clear();
   eventWindows.clear();
+  alertCooldowns.clear();
+  logWindows.clear();
+  lastPruneAt = 0;
 }
+
+function _getInternalStateForTests() {
+  return {
+    countersSize: counters.size,
+    eventWindowsSize: eventWindows.size,
+    alertCooldownsSize: alertCooldowns.size,
+    logWindowsSize: logWindows.size,
+    maxWindowEntries: [...eventWindows.values()].reduce(
+      (maxEntries, state) => Math.max(maxEntries, (state.entries || []).length),
+      0
+    ),
+  };
+}
+
+startPruner();
 
 module.exports = {
   ALERT_TYPES,
+  SECURITY_METRIC_WINDOWS,
   emitSecurityAlert,
   noteLoginFailure,
   noteLockedAccountAttempt,
@@ -467,5 +700,9 @@ module.exports = {
   getSecurityMetricsSnapshot,
   getRequestCountry,
   getIpRange,
+  MAX_TELEMETRY_KEYS,
+  MAX_WINDOW_EVENTS,
+  ALERT_COOLDOWN,
   _resetForTests,
+  _getInternalStateForTests,
 };
