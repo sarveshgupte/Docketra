@@ -2,7 +2,7 @@
  * Admin Page
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
@@ -75,8 +75,14 @@ export const AdminPage = () => {
   
   // Admin stats (PR #41)
   const [adminStats, setAdminStats] = useState(EMPTY_ADMIN_STATS);
-  const defaultClients = clients.filter((client) => client.isSystemClient || client.isInternal);
-  const hasAdditionalClients = clients.some((client) => !client.isSystemClient && !client.isInternal);
+  const defaultClients = useMemo(
+    () => clients.filter((client) => client.isSystemClient || client.isInternal),
+    [clients]
+  );
+  const hasAdditionalClients = useMemo(
+    () => clients.some((client) => !client.isSystemClient && !client.isInternal),
+    [clients]
+  );
 
   // Create user form state (PR 32: xID is auto-generated, not user-provided)
   const [newUser, setNewUser] = useState({
