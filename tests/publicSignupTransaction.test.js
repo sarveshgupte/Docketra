@@ -19,7 +19,8 @@ const clearModule = (modulePath) => {
 
 async function testRouteWrapsWriteSignupHandlers() {
   const authLimiter = (req, res, next) => next();
-  const signupLimiter = (req, res, next) => next();
+  const otpVerifyLimiter = (req, res, next) => next();
+  const otpResendLimiter = (req, res, next) => next();
   const initiateSignup = async () => ({
     success: true,
     statusCode: 201,
@@ -28,7 +29,7 @@ async function testRouteWrapsWriteSignupHandlers() {
   const wrappedHandlers = [];
 
   Module._load = function (request, parent, isMain) {
-    if (request === '../middleware/rateLimiters') return { authLimiter, signupLimiter };
+    if (request === '../middleware/rateLimiters') return { authLimiter, otpVerifyLimiter, otpResendLimiter };
     if (request === '../controllers/publicSignup.controller') {
       return {
         initiateSignup,
@@ -65,25 +66,28 @@ async function testRouteWrapsWriteSignupHandlers() {
   const router = require('../src/routes/publicSignup.routes');
   const initiateLayer = router.stack.find((layer) => layer.route?.path === '/initiate-signup');
   const verifyLayer = router.stack.find((layer) => layer.route?.path === '/verify-otp');
+  const resendLayer = router.stack.find((layer) => layer.route?.path === '/resend-otp');
   const googleLayer = router.stack.find((layer) => layer.route?.path === '/google-auth');
   const completeLayer = router.stack.find((layer) => layer.route?.path === '/complete-signup');
   assert.ok(initiateLayer, 'initiate-signup route should exist');
   assert.ok(verifyLayer, 'verify-otp route should exist');
+  assert.ok(resendLayer, 'resend-otp route should exist');
   assert.strictEqual(googleLayer, undefined, 'google-auth route should not exist');
   assert.ok(completeLayer, 'complete-signup route should exist');
 
   const initiateHandlers = initiateLayer.route.stack.map((item) => item.handle);
   assert.strictEqual(typeof initiateHandlers[0], 'function', 'request validation should be registered before signup middleware');
-  assert.strictEqual(initiateHandlers[1], authLimiter, 'authLimiter should remain ahead of signup handling');
-  assert.strictEqual(initiateHandlers[2], signupLimiter, 'signupLimiter should remain ahead of signup handling');
-  assert.strictEqual(initiateHandlers[3].original, initiateSignup, 'initiate-signup should be wrapped with wrapWriteHandler');
+  assert.strictEqual(initiateHandlers[1].original, initiateSignup, 'initiate-signup should be wrapped with wrapWriteHandler');
 
   const completeHandlers = completeLayer.route.stack.map((item) => item.handle);
   const verifyHandlers = verifyLayer.route.stack.map((item) => item.handle);
+  const resendHandlers = resendLayer.route.stack.map((item) => item.handle);
   assert.strictEqual(typeof completeHandlers[0], 'function', 'complete-signup should register validation middleware');
   assert.strictEqual(typeof verifyHandlers[0], 'function', 'verify-otp should register validation middleware');
+  assert.strictEqual(typeof resendHandlers[0], 'function', 'resend-otp should register validation middleware');
   assert.strictEqual(completeHandlers[1], authLimiter, 'authLimiter should remain ahead of complete-signup handling');
-  assert.strictEqual(verifyHandlers[1], authLimiter, 'authLimiter should remain ahead of verify handling');
+  assert.strictEqual(verifyHandlers[1], otpVerifyLimiter, 'verify-otp should use the OTP verification limiter');
+  assert.strictEqual(resendHandlers[1], otpResendLimiter, 'resend-otp should use the OTP resend limiter');
   assert.strictEqual(typeof verifyHandlers[2].original, 'function', 'verify-otp should be wrapped with wrapWriteHandler');
   assert.strictEqual(typeof completeHandlers[2].original, 'function', 'complete-signup should be wrapped with wrapWriteHandler');
 

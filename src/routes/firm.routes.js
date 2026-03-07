@@ -17,7 +17,7 @@ const routeSchemas = require('../schemas/firm.routes.schema');
 const router = applyRouteValidation(express.Router({ mergeParams: true }), routeSchemas);
 
 const tenantResolver = require('../middleware/tenantResolver');
-const { authBlockEnforcer, loginLimiter } = require('../middleware/rateLimiters');
+const { authBlockEnforcer, loginLimiter, otpVerifyLimiter, publicLimiter } = require('../middleware/rateLimiters');
 const { login, verifyLoginOtp } = require('../controllers/auth.controller');
 const { noFirmNoTransaction } = require('../middleware/noFirmNoTransaction.middleware');
 const setTenantLoginScope = (req, _res, next) => {
@@ -25,10 +25,9 @@ const setTenantLoginScope = (req, _res, next) => {
   next();
 };
 
-// Apply rate limiting to all routes before tenant resolution to prevent
-// DB enumeration attacks via slug scanning
+// Keep the temporary auth block check at the router level, but scope login and
+// OTP throttles to their POST endpoints so public firm metadata is not needlessly limited.
 router.use(authBlockEnforcer);
-router.use(loginLimiter);
 
 // Apply tenant resolver to every route in this file
 router.use(tenantResolver);
@@ -40,7 +39,7 @@ router.use(tenantResolver);
  * API-only backend deployments.
  * Does NOT require authentication.
  */
-router.get('/login', (req, res) => {
+router.get('/login', publicLimiter, (req, res) => {
   // Debug log: confirms route resolution with firmSlug params (Step 1 requirement)
   if (process.env.NODE_ENV !== 'production') {
     console.log('Firm login route hit:', req.params);
@@ -62,7 +61,7 @@ router.get('/login', (req, res) => {
  * Authenticates a firm user.  firmSlug is taken from the URL path rather
  * than the request body, giving a clean, slug-scoped login endpoint.
  */
-router.post('/login', noFirmNoTransaction, setTenantLoginScope, login);
-router.post('/verify-otp', noFirmNoTransaction, setTenantLoginScope, verifyLoginOtp);
+router.post('/login', loginLimiter, noFirmNoTransaction, setTenantLoginScope, login);
+router.post('/verify-otp', otpVerifyLimiter, noFirmNoTransaction, setTenantLoginScope, verifyLoginOtp);
 
 module.exports = router;

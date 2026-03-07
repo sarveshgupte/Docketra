@@ -1,13 +1,15 @@
 const { getRedisClient } = require('../config/redis');
+const config = require('../config/config');
 const { hashIdentifier } = require('../utils/hashIdentifier');
 
-const WINDOW_SECONDS = 60 * 60;
-const INITIATE_PER_IP_LIMIT = 5;
-const INITIATE_PER_EMAIL_LIMIT = 3;
-const VERIFY_MAX_ATTEMPTS = 5;
-const OTP_BLOCK_SECONDS = 15 * 60;
-const RESEND_PER_IP_LIMIT = 10;
-const RESEND_PER_EMAIL_LIMIT = 5;
+const WINDOW_SECONDS = config.security.rateLimit.signupWindowSeconds;
+const INITIATE_PER_IP_LIMIT = config.security.rateLimit.signupPerHour;
+const INITIATE_PER_EMAIL_LIMIT = config.security.rateLimit.signupPerEmailPerWindow;
+const OTP_VERIFY_LIMIT = config.security.rateLimit.otpVerifyPerMinute;
+const OTP_BLOCK_SECONDS = config.security.rateLimit.otpVerifyBlockSeconds;
+const RESEND_WINDOW_SECONDS = config.security.rateLimit.otpResendWindowSeconds;
+const RESEND_PER_IP_LIMIT = config.security.rateLimit.otpResendPerMinute;
+const RESEND_PER_EMAIL_LIMIT = config.security.rateLimit.otpResendPerEmailPerWindow;
 
 const rateLimitScript = `
 local key = KEYS[1]
@@ -141,7 +143,7 @@ const consumeOtpAttemptCounter = async ({ scope, identifier }) => {
 
   if (!redis) {
     const counter = await incrementMemoryCounter(key, OTP_BLOCK_SECONDS);
-    if (counter.count > VERIFY_MAX_ATTEMPTS) {
+    if (counter.count > OTP_VERIFY_LIMIT) {
       return { allowed: false, retryAfter: counter.retryAfter, attempts: counter.count };
     }
     return { allowed: true, attempts: counter.count };
@@ -152,7 +154,7 @@ const consumeOtpAttemptCounter = async ({ scope, identifier }) => {
     2,
     key,
     blockKey,
-    VERIFY_MAX_ATTEMPTS,
+    OTP_VERIFY_LIMIT,
     OTP_BLOCK_SECONDS,
   ));
 
@@ -181,8 +183,8 @@ const consumeOtpResendQuota = async ({ email, ip }) => {
   const normalizedIp = String(ip || 'unknown').trim();
 
   const [ipCounter, emailCounter] = await Promise.all([
-    applyRedisRateLimit(getOtpResendRateLimitKey('ip', normalizedIp), RESEND_PER_IP_LIMIT, WINDOW_SECONDS),
-    applyRedisRateLimit(getOtpResendRateLimitKey('email', normalizedEmail), RESEND_PER_EMAIL_LIMIT, WINDOW_SECONDS),
+    applyRedisRateLimit(getOtpResendRateLimitKey('ip', normalizedIp), RESEND_PER_IP_LIMIT, RESEND_WINDOW_SECONDS),
+    applyRedisRateLimit(getOtpResendRateLimitKey('email', normalizedEmail), RESEND_PER_EMAIL_LIMIT, RESEND_WINDOW_SECONDS),
   ]);
 
   if (!ipCounter.allowed || !emailCounter.allowed) {
@@ -218,7 +220,7 @@ module.exports = {
   clearOtpAttempts,
   INITIATE_PER_IP_LIMIT,
   INITIATE_PER_EMAIL_LIMIT,
-  VERIFY_MAX_ATTEMPTS,
+  OTP_VERIFY_LIMIT,
   OTP_BLOCK_SECONDS,
   RESEND_PER_IP_LIMIT,
   RESEND_PER_EMAIL_LIMIT,

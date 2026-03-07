@@ -99,7 +99,7 @@ router.get('/my-resolved', authorizeFirmPermission('CASE_VIEW'), userReadLimiter
 router.get('/my-unassigned-created', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, applyClientAccessFilter, getMyUnassignedCreatedCases);
 
 // POST /api/cases/auto-reopen-pended - Trigger auto-reopen for pended cases (Admin/System)
-router.post('/auto-reopen-pended', authorizeFirmPermission('CASE_ADMIN_VIEW'), triggerAutoReopen);
+router.post('/auto-reopen-pended', authorizeFirmPermission('CASE_ADMIN_VIEW'), sensitiveLimiter, triggerAutoReopen);
 
 // Case tracking routes - PR: Comprehensive CaseHistory & Audit Trail
 // IMPORTANT: Must come BEFORE /:caseId routes to avoid matching as caseId
