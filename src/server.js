@@ -461,6 +461,7 @@ app.use('/api/public', publicLimiter, writeGuardChain, publicRoutes);
 app.use('/public', publicLimiter, writeGuardChain, publicRoutes);
 
 // Public self-serve signup routes (no authentication required)
+app.use('/api/public', publicLimiter, publicSignupRoutes);
 app.use('/public', publicLimiter, publicSignupRoutes);
 
 // Contact form route (public, no authentication required)
