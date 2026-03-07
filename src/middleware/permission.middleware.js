@@ -1,6 +1,7 @@
 const User = require('../models/User.model');
 const { resolveFirmRole } = require('../services/authorization.service');
 const { isSuperAdminRole } = require('../utils/role.utils');
+const { requireAdmin: centralizedRequireAdmin } = require('./authorization.middleware');
 
 const getRequestUserId = (req) => req.userId || req.user?._id?.toString();
 
@@ -18,27 +19,7 @@ const getRequestUserId = (req) => req.userId || req.user?._id?.toString();
  * This middleware is kept for backward compatibility but should be replaced
  * with declarative policy guards in new code.
  */
-const requireAdmin = async (req, res, next) => {
-  try {
-    const user = await User.findOne({ xID: req.user.xID });
-    
-    if (!user || user.role !== 'Admin') {
-      return res.status(403).json({
-        success: false,
-        message: 'Admin access required',
-      });
-    }
-    
-    req.userDoc = user;
-    next();
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error checking permissions',
-      error: error.message,
-    });
-  }
-};
+const requireAdmin = centralizedRequireAdmin;
 
 /**
  * Require Superadmin role

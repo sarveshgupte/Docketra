@@ -2,6 +2,7 @@ const assert = require('assert');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const speakeasy = require('speakeasy');
+const { encrypt } = require('../src/utils/encryption');
 
 const User = require('../src/models/User.model');
 const Firm = require('../src/models/Firm.model');
@@ -48,7 +49,7 @@ async function shouldRequireMfaBeforeIssuingTokens() {
     xID: 'XMFA001',
     role: 'SUPER_ADMIN',
     firmId: { toString: () => '507f1f77bcf86cd799439022' },
-    status: 'ACTIVE',
+    status: 'active',
     isActive: true,
     passwordHash: 'hashed-password',
     mustSetPassword: false,
@@ -107,7 +108,9 @@ async function shouldRequireMfaBeforeIssuingTokens() {
 
 async function shouldCompleteMfaLoginAndIssueTokens() {
   const originalJwtSecret = process.env.JWT_SECRET;
+  const originalSecurityKey = process.env.SECURITY_ENCRYPTION_KEY;
   process.env.JWT_SECRET = 'mfa-test-secret';
+  process.env.SECURITY_ENCRYPTION_KEY = 'mfa-security-key';
   const originalUserFindOne = User.findOne;
   const originalFirmFindOne = Firm.findOne;
   const originalTotpVerify = speakeasy.totp.verify;
@@ -120,6 +123,7 @@ async function shouldCompleteMfaLoginAndIssueTokens() {
 
   const auditEvents = [];
   let refreshTokenPersisted = false;
+  let observedTotpSecret = null;
 
   User.findOne = async () => ({
     _id: { toString: () => '507f1f77bcf86cd799439011' },
@@ -134,10 +138,13 @@ async function shouldCompleteMfaLoginAndIssueTokens() {
     mustSetPassword: false,
     passwordSetAt: null,
     forcePasswordReset: false,
-    twoFactorSecret: 'BASE32SECRET2345',
+    twoFactorSecret: encrypt('BASE32SECRET2345'),
   });
   Firm.findOne = async () => ({ firmSlug: 'firm-a' });
-  speakeasy.totp.verify = () => true;
+  speakeasy.totp.verify = ({ secret }) => {
+    observedTotpSecret = secret;
+    return true;
+  };
   jwtService.generateAccessToken = () => 'access-token';
   jwtService.generateRefreshToken = () => 'refresh-token';
   jwtService.hashRefreshToken = () => 'hashed-refresh-token';
@@ -185,6 +192,7 @@ async function shouldCompleteMfaLoginAndIssueTokens() {
     RefreshToken.create = originalRefreshCreate;
     AuthAudit.create = originalAuthAuditCreate;
     process.env.JWT_SECRET = originalJwtSecret;
+    process.env.SECURITY_ENCRYPTION_KEY = originalSecurityKey;
   }
 
   assert.strictEqual(body.success, true, 'MFA completion should succeed');
@@ -193,12 +201,15 @@ async function shouldCompleteMfaLoginAndIssueTokens() {
   assert.strictEqual(body.refreshToken, 'refresh-token', 'MFA completion should return refresh token');
   assert.strictEqual(body.data.xID, 'XMFA001', 'MFA completion should return user payload');
   assert.strictEqual(refreshTokenPersisted, true, 'MFA completion should persist refresh token');
+  assert.strictEqual(observedTotpSecret, 'BASE32SECRET2345', 'MFA completion must decrypt stored MFA secret before TOTP validation');
   assert.strictEqual(auditEvents.some((e) => e.actionType === 'MFA_LOGIN_SUCCESS'), true, 'MFA completion should log MFA_LOGIN_SUCCESS');
 }
 
 async function shouldRejectInvalidMfaToken() {
   const originalJwtSecret = process.env.JWT_SECRET;
+  const originalSecurityKey = process.env.SECURITY_ENCRYPTION_KEY;
   process.env.JWT_SECRET = 'mfa-test-secret';
+  process.env.SECURITY_ENCRYPTION_KEY = 'mfa-security-key';
   const originalUserFindOne = User.findOne;
   const originalTotpVerify = speakeasy.totp.verify;
   const originalAccessToken = jwtService.generateAccessToken;
@@ -210,7 +221,7 @@ async function shouldRejectInvalidMfaToken() {
     xID: 'XMFA001',
     status: 'ACTIVE',
     isActive: true,
-    twoFactorSecret: 'BASE32SECRET2345',
+    twoFactorSecret: encrypt('BASE32SECRET2345'),
   });
   speakeasy.totp.verify = () => false;
   jwtService.generateAccessToken = () => {
@@ -246,6 +257,7 @@ async function shouldRejectInvalidMfaToken() {
     speakeasy.totp.verify = originalTotpVerify;
     jwtService.generateAccessToken = originalAccessToken;
     process.env.JWT_SECRET = originalJwtSecret;
+    process.env.SECURITY_ENCRYPTION_KEY = originalSecurityKey;
   }
 
   assert.strictEqual(res.statusCode, 401, 'Invalid MFA token should return 401');
@@ -297,6 +309,8 @@ function shouldValidateCompleteMfaLoginSchema() {
 }
 
 async function run() {
+  const originalNodeEnv = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'test';
   try {
     await shouldRequireMfaBeforeIssuingTokens();
     await shouldCompleteMfaLoginAndIssueTokens();
@@ -307,6 +321,8 @@ async function run() {
   } catch (error) {
     console.error('MFA login flow tests failed:', error.message);
     process.exit(1);
+  } finally {
+    process.env.NODE_ENV = originalNodeEnv;
   }
 }
 

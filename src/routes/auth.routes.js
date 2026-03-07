@@ -64,21 +64,21 @@ router.post('/verify-totp', authLimiter, verifyTotp);
 router.post('/complete-mfa-login', authLimiter, completeMfaLogin);
 
 // Protected authentication endpoints - require authentication
-router.post('/logout', authenticate, logout);
-router.post('/change-password', authenticate, changePassword);
+router.post('/logout', sensitiveLimiter, authenticate, logout);
+router.post('/change-password', sensitiveLimiter, authenticate, changePassword);
 
 // Profile endpoints - require authentication
-router.get('/profile', authenticate, profileLimiter, detectProfileLoop, getProfile);
-router.put('/profile', authenticate, profileLimiter, updateProfile);
+router.get('/profile', profileLimiter, authenticate, detectProfileLoop, getProfile);
+router.put('/profile', profileLimiter, authenticate, updateProfile);
 
 // Admin-only endpoints - require authentication and admin role
-router.post('/reset-password', authenticate, requireAdmin, resetPassword);
+router.post('/reset-password', sensitiveLimiter, authenticate, requireAdmin, resetPassword);
 // NOTE: resend-setup-email has been moved to /api/admin/users/:xID/resend-invite (PR #48)
 // This ensures admin actions bypass password enforcement middleware
-router.post('/unlock-account', authenticate, requireAdmin, unlockAccount);
-router.get('/admin/users', authenticate, requireAdmin, getAllUsers);
-router.post('/admin/users', authenticate, requireAdmin, createUser);
-router.put('/admin/users/:xID/activate', authenticate, requireAdmin, activateUser);
-router.put('/admin/users/:xID/deactivate', authenticate, requireAdmin, deactivateUser);
+router.post('/unlock-account', sensitiveLimiter, authenticate, requireAdmin, unlockAccount);
+router.get('/admin/users', profileLimiter, authenticate, requireAdmin, getAllUsers);
+router.post('/admin/users', sensitiveLimiter, authenticate, requireAdmin, createUser);
+router.put('/admin/users/:xID/activate', sensitiveLimiter, authenticate, requireAdmin, activateUser);
+router.put('/admin/users/:xID/deactivate', sensitiveLimiter, authenticate, requireAdmin, deactivateUser);
 
 module.exports = router;
