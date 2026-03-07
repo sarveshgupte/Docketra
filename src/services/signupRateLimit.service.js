@@ -1,9 +1,52 @@
 const { getRedisClient } = require('../config/redis');
+const { hashIdentifier } = require('../utils/hashIdentifier');
 
 const WINDOW_SECONDS = 60 * 60;
 const INITIATE_PER_IP_LIMIT = 5;
 const INITIATE_PER_EMAIL_LIMIT = 3;
 const VERIFY_MAX_ATTEMPTS = 5;
+const OTP_BLOCK_SECONDS = 15 * 60;
+
+const rateLimitScript = `
+local key = KEYS[1]
+local limit = tonumber(ARGV[1])
+local ttl = tonumber(ARGV[2])
+
+local current = redis.call("INCR", key)
+
+if current == 1 then
+  redis.call("EXPIRE", key, ttl)
+end
+
+if current > limit then
+  return 0
+end
+
+return 1
+`;
+
+const otpAttemptScript = `
+local key = KEYS[1]
+local maxAttempts = tonumber(ARGV[1])
+local ttl = tonumber(ARGV[2])
+
+local attempts = redis.call("INCR", key)
+
+if attempts == 1 then
+  redis.call("EXPIRE", key, ttl)
+end
+
+if attempts > maxAttempts then
+  return -1
+end
+
+return attempts
+`;
+
+const getSignupIpRateLimitKey = (ip) => `docketra:ratelimit:signup:ip:${hashIdentifier(ip)}`;
+const getSignupEmailRateLimitKey = (email) => `docketra:ratelimit:signup:email:${hashIdentifier(email)}`;
+const getOtpAttemptKey = (identifier) => `docketra:otp:attempts:${hashIdentifier(identifier)}`;
+const getOtpBlockKey = (identifier) => `docketra:otp:block:${hashIdentifier(identifier)}`;
 
 const inMemoryCounters = new Map();
 
@@ -28,19 +71,21 @@ const incrementMemoryCounter = async (key, ttlSeconds) => {
   return { count: entry.count, retryAfter };
 };
 
-const incrementRedisCounter = async (key, ttlSeconds) => {
+const applyRedisRateLimit = async (key, limit, ttlSeconds) => {
   const redis = getRedisClient();
   if (!redis) {
-    return incrementMemoryCounter(key, ttlSeconds);
+    const counter = await incrementMemoryCounter(key, ttlSeconds);
+    return {
+      allowed: counter.count <= limit,
+      retryAfter: counter.retryAfter,
+      count: counter.count,
+    };
   }
 
-  const count = await redis.incr(key);
-  if (count === 1) {
-    await redis.expire(key, ttlSeconds);
-  }
+  const allowed = Number(await redis.eval(rateLimitScript, 1, key, limit, ttlSeconds)) === 1;
   const ttl = await redis.ttl(key);
   return {
-    count,
+    allowed,
     retryAfter: ttl > 0 ? ttl : ttlSeconds,
   };
 };
@@ -50,11 +95,11 @@ const consumeSignupQuota = async ({ email, ip }) => {
   const normalizedIp = String(ip || 'unknown').trim();
 
   const [ipCounter, emailCounter] = await Promise.all([
-    incrementRedisCounter(`signup:ip:${normalizedIp}`, WINDOW_SECONDS),
-    incrementRedisCounter(`signup:email:${normalizedEmail}`, WINDOW_SECONDS),
+    applyRedisRateLimit(getSignupIpRateLimitKey(normalizedIp), INITIATE_PER_IP_LIMIT, WINDOW_SECONDS),
+    applyRedisRateLimit(getSignupEmailRateLimitKey(normalizedEmail), INITIATE_PER_EMAIL_LIMIT, WINDOW_SECONDS),
   ]);
 
-  if (ipCounter.count > INITIATE_PER_IP_LIMIT || emailCounter.count > INITIATE_PER_EMAIL_LIMIT) {
+  if (!ipCounter.allowed || !emailCounter.allowed) {
     return {
       allowed: false,
       retryAfter: Math.max(ipCounter.retryAfter, emailCounter.retryAfter),
@@ -65,22 +110,49 @@ const consumeSignupQuota = async ({ email, ip }) => {
 
 const consumeOtpAttempt = async ({ email }) => {
   const normalizedEmail = String(email || '').toLowerCase().trim();
-  const counter = await incrementRedisCounter(`otp_attempts:${normalizedEmail}`, WINDOW_SECONDS);
-  if (counter.count > VERIFY_MAX_ATTEMPTS) {
-    return { allowed: false, retryAfter: counter.retryAfter, attempts: counter.count };
+  const key = getOtpAttemptKey(normalizedEmail);
+  const blockKey = getOtpBlockKey(normalizedEmail);
+  const redis = getRedisClient();
+
+  if (!redis) {
+    const counter = await incrementMemoryCounter(key, WINDOW_SECONDS);
+    if (counter.count > VERIFY_MAX_ATTEMPTS) {
+      return { allowed: false, retryAfter: counter.retryAfter, attempts: counter.count };
+    }
+    return { allowed: true, attempts: counter.count };
   }
-  return { allowed: true, attempts: counter.count };
+
+  if (await redis.exists(blockKey)) {
+    throw new Error('Too many OTP attempts. Try again later.');
+  }
+
+  const attempts = Number(await redis.eval(
+    otpAttemptScript,
+    1,
+    key,
+    VERIFY_MAX_ATTEMPTS,
+    OTP_BLOCK_SECONDS,
+  ));
+
+  if (attempts === -1) {
+    await redis.set(blockKey, '1', 'EX', OTP_BLOCK_SECONDS);
+    throw new Error('Too many OTP attempts. Try again later.');
+  }
+
+  return { allowed: true, attempts };
 };
 
 const clearOtpAttempts = async ({ email }) => {
   const normalizedEmail = String(email || '').toLowerCase().trim();
-  const key = `otp_attempts:${normalizedEmail}`;
+  const key = getOtpAttemptKey(normalizedEmail);
+  const blockKey = getOtpBlockKey(normalizedEmail);
   const redis = getRedisClient();
   if (!redis) {
     inMemoryCounters.delete(key);
+    inMemoryCounters.delete(blockKey);
     return;
   }
-  await redis.del(key);
+  await redis.del(key, blockKey);
 };
 
 module.exports = {
