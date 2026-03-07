@@ -2,12 +2,21 @@
 'use strict';
 
 const assert = require('assert');
+const Module = require('module');
 
 const routeSchemas = require('../src/schemas/auth.routes.schema');
-const { forgotPassword } = require('../src/controllers/auth.controller');
 const User = require('../src/models/User.model');
 const Firm = require('../src/models/Firm.model');
 const emailService = require('../src/services/email.service');
+const originalLoad = Module._load;
+
+const clearModule = (modulePath) => {
+  try {
+    delete require.cache[require.resolve(modulePath)];
+  } catch (_) {
+    // ignore cache misses
+  }
+};
 
 const createMockRes = () => {
   const body = {};
@@ -27,6 +36,34 @@ const createMockRes = () => {
   return { res, body };
 };
 
+const loadForgotPasswordController = () => {
+  Module._load = function (request, parent, isMain) {
+    if (request === '../middleware/wrapWriteHandler') {
+      return (fn) => {
+        const wrapped = async (req, res, next) => fn(req, res, next);
+        wrapped.original = fn;
+        return wrapped;
+      };
+    }
+    if (request === '../services/audit.service') {
+      return { logAuthEvent: async () => ({}) };
+    }
+    if (request === '../services/forensicAudit.service') {
+      return {
+        safeLogForensicAudit: async () => ({}),
+        getRequestIp: () => '127.0.0.1',
+        getRequestUserAgent: () => 'test-agent',
+      };
+    }
+    return originalLoad.apply(this, arguments);
+  };
+
+  clearModule('../src/controllers/auth.controller');
+  const { forgotPassword } = require('../src/controllers/auth.controller');
+  Module._load = originalLoad;
+  return forgotPassword.original;
+};
+
 function shouldValidateStrongPasswordsInAuthSchemas() {
   const changePasswordSchema = routeSchemas['POST /change-password'].body;
   const weakPassword = changePasswordSchema.safeParse({
@@ -44,6 +81,7 @@ function shouldValidateStrongPasswordsInAuthSchemas() {
 }
 
 async function shouldRejectAmbiguousForgotPasswordRequests() {
+  const forgotPasswordController = loadForgotPasswordController();
   const originalUserFind = User.find;
 
   User.find = () => ({
@@ -53,7 +91,7 @@ async function shouldRejectAmbiguousForgotPasswordRequests() {
   const { res, body } = createMockRes();
 
   try {
-    await forgotPassword({
+    await forgotPasswordController({
       body: { email: 'shared@example.com' },
       ip: '127.0.0.1',
       get: () => 'test-agent',
@@ -69,6 +107,7 @@ async function shouldRejectAmbiguousForgotPasswordRequests() {
 }
 
 async function shouldScopeForgotPasswordByFirmSlug() {
+  const forgotPasswordController = loadForgotPasswordController();
   const originalFirmFindOne = Firm.findOne;
   const originalUserFindOne = User.findOne;
   const originalGenerateSecureToken = emailService.generateSecureToken;
@@ -113,7 +152,7 @@ async function shouldScopeForgotPasswordByFirmSlug() {
   const { res, body } = createMockRes();
 
   try {
-    await forgotPassword({
+    await forgotPasswordController({
       body: { email: 'alice@example.com', firmSlug: 'Acme-Legal' },
       ip: '127.0.0.1',
       get: () => 'test-agent',
@@ -146,6 +185,7 @@ async function run() {
 }
 
 run().catch((error) => {
+  Module._load = originalLoad;
   console.error('authTenantWorkflow tests failed:', error);
   process.exit(1);
 });
