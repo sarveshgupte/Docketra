@@ -75,6 +75,14 @@ const authAuditSchema = new mongoose.Schema({
        'SIGNUP_COMPLETED',
        'LOGIN_SUCCESS',
        'LOGIN_FAILED',
+       'LOGIN_FAILURE',
+       'PASSWORD_CHANGE',
+       'MFA_ENABLED',
+       'MFA_DISABLED',
+       'ROLE_CHANGED',
+       'ADMIN_ACTION',
+       'FILE_DOWNLOADED',
+       'SECURITY_ALERT',
 
        // Admin guard events
        'DeactivationAttemptBlocked',
