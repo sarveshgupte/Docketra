@@ -572,6 +572,12 @@ clientSchema.index({ createdByXid: 1 }); // CANONICAL - xID-based creator querie
 clientSchema.index({ firmId: 1, status: 1 }); // Firm-scoped status queries
 clientSchema.index({ firmId: 1 });
 clientSchema.index({ firmId: 1, createdAt: -1 });
+// Enforce one system/default client per firm
+clientSchema.index({ firmId: 1, isSystemClient: 1 }, {
+  unique: true,
+  partialFilterExpression: { isSystemClient: true },
+  name: 'firm_system_client_unique',
+});
 // Enforce one internal client per firm - critical for firm onboarding integrity
 clientSchema.index({ firmId: 1, isInternal: 1 }, { 
   unique: true, 

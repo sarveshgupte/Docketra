@@ -14,9 +14,19 @@ const ensureDefaultClientForFirm = async (firm, session = null) => {
     throw new Error('Firm is required to ensure default client');
   }
 
-  // If default client already exists, nothing to do
-  if (firm.defaultClientId) {
-    return null;
+  const existingSystemClientQuery = Client.findOne({
+    firmId: firm._id,
+    isSystemClient: true,
+  });
+  if (session) existingSystemClientQuery.session(session);
+  const existingSystemClient = await existingSystemClientQuery;
+
+  if (existingSystemClient) {
+    if (!firm.defaultClientId || String(firm.defaultClientId) !== String(existingSystemClient._id)) {
+      firm.defaultClientId = existingSystemClient._id;
+      await firm.save(session ? { session } : undefined);
+    }
+    return existingSystemClient;
   }
 
   const clientId = await generateNextClientId(firm._id, session);

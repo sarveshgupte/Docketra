@@ -16,6 +16,8 @@ const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { softDelete } = require('../services/softDelete.service');
 const { enqueueStorageJob, JOB_TYPES } = require('../queues/storage.queue');
 const CaseFile = require('../models/CaseFile.model');
+const Firm = require('../models/Firm.model');
+const { ensureDefaultClientForFirm } = require('../services/defaultClient.service');
 const { incrementTenantMetric } = require('../services/tenantMetrics.service');
 const path = require('path');
 const fs = require('fs');
@@ -54,13 +56,25 @@ const getClients = async (req, res) => {
     
     // Base filter: scope by firmId (except for SUPER_ADMIN)
     const baseFilter = req.user?.role === 'SUPER_ADMIN' ? {} : { firmId: userFirmId };
+
+    if (req.user?.role !== 'SUPER_ADMIN') {
+      const firm = await Firm.findById(userFirmId).select('_id firmId name defaultClientId');
+      if (!firm) {
+        return res.status(404).json({
+          success: false,
+          message: 'Firm not found',
+        });
+      }
+      await ensureDefaultClientForFirm(firm);
+    }
     
     // Special logic for Create Case: Always include Default Client + other active clients
     if (forCreateCase === 'true') {
       const clients = await Client.find({
         ...baseFilter,
         $or: [
-          { clientId: 'C000001' }, // Always include Default Client
+          { isSystemClient: true },
+          { isInternal: true },
           { status: CLIENT_STATUS.ACTIVE } // Include other active clients
         ]
       })
@@ -89,7 +103,7 @@ const getClients = async (req, res) => {
       ...client.toObject(),
       name: client.businessName,
       type: client.isInternal ? 'internal' : 'external',
-      is_default: client.isSystemClient || client.isInternal || client.clientId === 'C000001',
+      is_default: client.isSystemClient || client.isInternal,
     }));
     
     res.json({
@@ -482,7 +496,7 @@ const updateClient = async (req, res) => {
  * PATCH /api/clients/:clientId/status
  * 
  * Disabled clients cannot be used for new cases
- * System client (C000001) cannot be disabled
+ * System/internal default client cannot be disabled
  */
 const toggleClientStatus = async (req, res) => {
   try {
@@ -521,8 +535,7 @@ const toggleClientStatus = async (req, res) => {
     // Check multiple flags to ensure firm's operational identity is protected
     const isProtectedClient = 
       client.isSystemClient === true || 
-      client.isInternal === true || 
-      clientId === 'C000001';
+      client.isInternal === true;
     
     if (isProtectedClient && !isActive) {
       // Log the attempt for audit
