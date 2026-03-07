@@ -31,6 +31,7 @@ const {
   completeMfaLogin,
   setupAccount,
   resendSetup,
+  resendCredentials,
   } = require('../controllers/auth.controller');
 
 let profileHitCount = 0;
@@ -54,6 +55,7 @@ const detectProfileLoop = (req, res, next) => {
 // Rate limited to prevent brute-force attacks
 router.post('/setup-account', authBlockEnforcer, authLimiter, setupAccount);
 router.post('/resend-setup', authBlockEnforcer, authLimiter, resendSetup);
+router.post('/resend-credentials', authBlockEnforcer, authLimiter, sensitiveLimiter, resendCredentials);
 router.post('/reset-password-with-token', authBlockEnforcer, authLimiter, sensitiveLimiter, resetPasswordWithToken);
 router.post('/forgot-password', authBlockEnforcer, authLimiter, sensitiveLimiter, forgotPassword);
 router.post('/refresh', refreshIpLimiter, refreshUserLimiter, refreshAccessToken); // NEW: JWT token refresh

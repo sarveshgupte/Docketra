@@ -23,11 +23,14 @@ export const FirmLoginPage = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendEmail, setResendEmail] = useState('');
+  const [showResendForm, setShowResendForm] = useState(false);
   const [firmLoading, setFirmLoading] = useState(true);
   const [firmData, setFirmData] = useState(null);
 
   const { fetchProfile } = useAuth();
-  const { showSuccess } = useToast();
+  const { showSuccess, showError } = useToast();
   const navigate = useNavigate();
 
   // Load firm metadata
@@ -151,6 +154,26 @@ export const FirmLoginPage = () => {
     }
   };
 
+  const handleResendCredentials = async () => {
+    const normalizedEmail = resendEmail.trim().toLowerCase();
+    if (!normalizedEmail) {
+      showError('Please enter your registered email address.');
+      return;
+    }
+
+    setResendLoading(true);
+    try {
+      const response = await api.post('/auth/resend-credentials', { email: normalizedEmail });
+      showSuccess(response?.data?.message || 'Credentials email sent. Please check your inbox.');
+      setResendEmail('');
+      setShowResendForm(false);
+    } catch (err) {
+      showError(err?.response?.data?.message || 'Unable to resend credentials right now.');
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
   if (firmLoading) {
     return (
       <div className="login-page">
@@ -213,8 +236,45 @@ export const FirmLoginPage = () => {
             marginTop: '-0.5rem', 
             marginBottom: '1rem'
           }}>
-            Enter your user ID (e.g., X000001)
+            Enter your user ID (e.g., X000001). Your XID was sent to your email after signup.
           </p>
+          <button
+            type="button"
+            onClick={() => setShowResendForm((prev) => !prev)}
+            style={{
+              fontSize: '0.875rem',
+              color: '#3182ce',
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              marginTop: '-0.5rem',
+              marginBottom: '1rem',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+            }}
+          >
+            {"Didn't receive your XID? Resend credentials"}
+          </button>
+          {showResendForm && (
+            <div style={{ marginBottom: '1rem' }}>
+              <Input
+                label="Registered email"
+                type="email"
+                value={resendEmail}
+                onChange={(e) => setResendEmail(e.target.value)}
+                required
+                placeholder="you@firm.com"
+              />
+              <Button
+                type="button"
+                fullWidth
+                disabled={resendLoading}
+                onClick={handleResendCredentials}
+              >
+                {resendLoading ? 'Resending...' : 'Resend credentials'}
+              </Button>
+            </div>
+          )}
 
           <Input
             label="Password"

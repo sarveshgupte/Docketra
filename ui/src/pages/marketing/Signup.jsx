@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 
 const inputClass =
@@ -18,6 +18,7 @@ const getErrorMessage = (error, fallback) => (
 );
 
 export default function Signup() {
+  const navigate = useNavigate();
   const isGoogleLoginEnabled = String(import.meta.env.VITE_ENABLE_GOOGLE_LOGIN || '').toLowerCase() === 'true';
   const [step, setStep] = useState('form');
   const [loading, setLoading] = useState(false);
@@ -32,6 +33,7 @@ export default function Signup() {
     phone: '',
   });
   const [signupEmail, setSignupEmail] = useState('');
+  const [loginRedirectPath, setLoginRedirectPath] = useState('/login');
   const [otpDigits, setOtpDigits] = useState(Array(OTP_LENGTH).fill(''));
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
@@ -144,7 +146,9 @@ export default function Signup() {
         && !/^[a-zA-Z][a-zA-Z0-9+\-.]*:/.test(redirectPathFromApi)
         ? redirectPathFromApi
         : (firmSlug ? `/${firmSlug}/login` : '/login');
-      window.location.assign(safeRedirectPath);
+      setLoginRedirectPath(safeRedirectPath);
+      setStep('success');
+      setApiMessage('');
     } catch (error) {
       setApiMessage('');
       const verificationError = error?.response?.status === 400
@@ -235,6 +239,21 @@ export default function Signup() {
       setCanResend(false);
     } catch (error) {
       setApiError(getErrorMessage(error, 'Unable to resend OTP right now.'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resendCredentialsEmail = async () => {
+    if (!signupEmail || loading) return;
+    setApiError('');
+    setApiMessage('');
+    setLoading(true);
+    try {
+      const response = await api.post('/auth/resend-credentials', { email: signupEmail });
+      setApiMessage(response?.data?.message || 'Credentials email sent. Please check your inbox.');
+    } catch (error) {
+      setApiError(getErrorMessage(error, 'Unable to resend credentials email right now.'));
     } finally {
       setLoading(false);
     }
@@ -425,6 +444,37 @@ export default function Signup() {
                 </button>
               </div>
             </form>
+          )}
+
+          {step === 'success' && (
+            <div className="mt-6 space-y-4">
+              <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+                <p className="font-semibold">🎉 Your firm account has been created successfully.</p>
+                <p className="mt-2">
+                  Your login credentials have been sent to your registered email address.
+                </p>
+                <p className="mt-2">
+                  Please check your email to find your XID and login instructions.
+                </p>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() => navigate(loginRedirectPath)}
+                  className="marketing-btn-primary inline-flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-medium"
+                >
+                  Go to Login
+                </button>
+                <button
+                  type="button"
+                  onClick={resendCredentialsEmail}
+                  disabled={loading}
+                  className="marketing-btn-secondary inline-flex w-full items-center justify-center px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {loading ? 'Resending…' : 'Resend Credentials Email'}
+                </button>
+              </div>
+            </div>
           )}
 
       </div>
