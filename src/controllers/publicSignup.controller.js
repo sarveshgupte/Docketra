@@ -1,12 +1,22 @@
 const signupService = require('../services/signup.service');
 
+const phoneRegex = /^[0-9]{10}$/;
+const storageTypes = ['docketra', 'external'];
+
 /**
  * POST /public/initiate-signup
  * Start manual signup flow with OTP verification
  */
 const initiateSignup = async (req, res) => {
   try {
-    const { name, email, password, phone, firmName } = req.body;
+    const {
+      name,
+      email,
+      password,
+      phone,
+      firmName,
+      storageType = 'docketra',
+    } = req.body;
     const session = req.transactionSession?.session;
 
     if (!name || !name.trim()) {
@@ -24,6 +34,12 @@ const initiateSignup = async (req, res) => {
     if (!firmName || !firmName.trim()) {
       return { success: false, statusCode: 400, message: 'Firm name is required' };
     }
+    if (!phoneRegex.test((phone || '').trim())) {
+      return { success: false, statusCode: 400, message: 'Phone number must be 10 digits' };
+    }
+    if (!storageTypes.includes(storageType)) {
+      return { success: false, statusCode: 400, message: 'Document storage selection is required' };
+    }
 
     const result = await signupService.initiateSignup({
       name,
@@ -31,6 +47,7 @@ const initiateSignup = async (req, res) => {
       password,
       phone,
       firmName,
+      storageType,
       session,
       req,
     });

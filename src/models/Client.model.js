@@ -1,5 +1,14 @@
 const mongoose = require('mongoose');
 const softDeletePlugin = require('../utils/softDelete.plugin');
+const { encrypt: encryptProtectedValue, isEncrypted } = require('../utils/encryption');
+
+const isEncryptedStorageConfig = (value) => (
+  !!value
+  && typeof value === 'object'
+  && value.encrypted === true
+  && typeof value.value === 'string'
+  && isEncrypted(value.value)
+);
 
 /**
  * Client Model for Docketra Case Management System
@@ -418,6 +427,28 @@ const clientSchema = new mongoose.Schema({
     enum: ['ACTIVE', 'INACTIVE'],
     default: 'ACTIVE',
   },
+
+  storageType: {
+    type: String,
+    enum: ['docketra', 'external'],
+    default: 'docketra',
+  },
+
+  storageProvider: {
+    type: String,
+    default: null,
+    validate: {
+      validator: function(value) {
+        return value === null || ['google', 'aws', 'azure', 'onedrive'].includes(value);
+      },
+      message: 'Storage provider must be google, aws, azure, or onedrive',
+    },
+  },
+
+  storageConfig: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null,
+  },
   
   /**
    * Legacy soft delete flag - kept for backward compatibility
@@ -619,6 +650,15 @@ function _getClientEncService() {
  * No-op when MASTER_ENCRYPTION_KEY is not configured.
  */
 clientSchema.pre('save', async function () {
+  if (this.isModified('storageConfig') && this.storageConfig && typeof this.storageConfig === 'object') {
+    if (!isEncryptedStorageConfig(this.storageConfig)) {
+      this.storageConfig = {
+        encrypted: true,
+        value: encryptProtectedValue(JSON.stringify(this.storageConfig)),
+      };
+    }
+  }
+
   if (!process.env.MASTER_ENCRYPTION_KEY || !this.firmId) return;
   const { encrypt: _enc, ensureTenantKey: _ensure } = _getClientEncService();
   const tenantId = String(this.firmId);
