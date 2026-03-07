@@ -7,7 +7,9 @@ const { encrypt } = require('../src/utils/encryption');
 const User = require('../src/models/User.model');
 const Firm = require('../src/models/Firm.model');
 const AuthAudit = require('../src/models/AuthAudit.model');
+const AuditLog = require('../src/models/AuditLog.model');
 const RefreshToken = require('../src/models/RefreshToken.model');
+const emailService = require('../src/services/email.service');
 const jwtService = require('../src/services/jwt.service');
 const routeSchemas = require('../src/schemas/auth.routes.schema');
 const { login, completeMfaLogin } = require('../src/controllers/auth.controller');
@@ -29,7 +31,7 @@ const createMockRes = () => {
   return { res, body };
 };
 
-async function shouldRequireMfaBeforeIssuingTokens() {
+async function shouldRequireEmailOtpBeforeIssuingTokens() {
   const originalSuperadminXid = process.env.SUPERADMIN_XID;
   const originalJwtSecret = process.env.JWT_SECRET;
   const testJwtSecret = 'mfa-test-secret';
@@ -40,14 +42,20 @@ async function shouldRequireMfaBeforeIssuingTokens() {
   const originalBcryptCompare = bcrypt.compare;
   const originalAccessToken = jwtService.generateAccessToken;
   const originalRefreshCreate = RefreshToken.create;
+  const originalAuthAuditCreate = AuthAudit.create;
+  const originalAuditLogCreate = AuditLog.create;
+  const originalSendLoginOtpEmail = emailService.sendLoginOtpEmail;
 
   let accessTokenCalled = false;
   let refreshTokenPersisted = false;
+  let deliveredOtp = null;
 
   User.findOne = async () => ({
     _id: { toString: () => '507f1f77bcf86cd799439011' },
     xID: 'XMFA001',
     role: 'SUPER_ADMIN',
+    name: 'MFA User',
+    email: 'mfa@example.com',
     firmId: { toString: () => '507f1f77bcf86cd799439022' },
     status: 'active',
     isActive: true,
@@ -67,6 +75,12 @@ async function shouldRequireMfaBeforeIssuingTokens() {
   RefreshToken.create = async () => {
     refreshTokenPersisted = true;
     return {};
+  };
+  AuthAudit.create = async () => ({});
+  AuditLog.create = async () => ({});
+  emailService.sendLoginOtpEmail = async ({ otp }) => {
+    deliveredOtp = otp;
+    return { success: true };
   };
 
   const { res, body } = createMockRes();
@@ -91,17 +105,21 @@ async function shouldRequireMfaBeforeIssuingTokens() {
     bcrypt.compare = originalBcryptCompare;
     jwtService.generateAccessToken = originalAccessToken;
     RefreshToken.create = originalRefreshCreate;
+    AuthAudit.create = originalAuthAuditCreate;
+    AuditLog.create = originalAuditLogCreate;
+    emailService.sendLoginOtpEmail = originalSendLoginOtpEmail;
   }
 
-  assert.strictEqual(body.success, true, 'Login should return success when MFA is required');
-  assert.strictEqual(body.mfaRequired, true, 'Login must indicate MFA is required');
-  assert(body.preAuthToken, 'Response must include preAuthToken for MFA completion');
-  assert.strictEqual(body.xID, undefined, 'Response must not include xID in MFA challenge');
-  const decodedPreAuthToken = jwt.verify(body.preAuthToken, testJwtSecret);
-  assert.strictEqual(decodedPreAuthToken.userId, '507f1f77bcf86cd799439011', 'preAuthToken must include userId');
-  assert.strictEqual(decodedPreAuthToken.firmId, '507f1f77bcf86cd799439022', 'preAuthToken must include firmId');
-  assert.strictEqual(decodedPreAuthToken.role, 'SUPER_ADMIN', 'preAuthToken must include role');
-  assert.strictEqual(decodedPreAuthToken.mfaStage, true, 'preAuthToken must include MFA stage marker');
+  assert.strictEqual(body.success, true, 'Login should return success when OTP is required');
+  assert.strictEqual(body.otpRequired, true, 'Login must indicate OTP is required');
+  assert(body.loginToken, 'Response must include loginToken for OTP completion');
+  assert.strictEqual(body.xID, undefined, 'Response must not include xID in OTP challenge');
+  const decodedLoginToken = jwt.verify(body.loginToken, testJwtSecret);
+  assert.strictEqual(decodedLoginToken.userId, '507f1f77bcf86cd799439011', 'loginToken must include userId');
+  assert.strictEqual(decodedLoginToken.firmId, '507f1f77bcf86cd799439022', 'loginToken must include firmId');
+  assert.strictEqual(decodedLoginToken.role, 'SUPER_ADMIN', 'loginToken must include role');
+  assert.strictEqual(decodedLoginToken.loginStage, 'email-otp', 'loginToken must include OTP stage marker');
+  assert(/^\d{6}$/.test(deliveredOtp), 'Login should send a 6 digit OTP');
   assert.strictEqual(accessTokenCalled, false, 'Access token must not be issued before MFA completion');
   assert.strictEqual(refreshTokenPersisted, false, 'Refresh token must not be persisted before MFA completion');
 }
@@ -312,7 +330,7 @@ async function run() {
   const originalNodeEnv = process.env.NODE_ENV;
   process.env.NODE_ENV = 'test';
   try {
-    await shouldRequireMfaBeforeIssuingTokens();
+    await shouldRequireEmailOtpBeforeIssuingTokens();
     await shouldCompleteMfaLoginAndIssueTokens();
     await shouldRejectInvalidMfaToken();
     await shouldRejectMissingPreAuthToken();

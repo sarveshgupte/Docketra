@@ -148,6 +148,7 @@ const inboundRoutes = require('./routes/inbound.routes');  // Inbound email rout
 const contactRoutes = require('./routes/contact.routes');  // Public contact form route
 const publicRoutes = require('./routes/public.routes');  // Public routes (firm lookup)
 const publicSignupRoutes = require('./routes/publicSignup.routes');  // Public self-serve signup routes
+const firmRoutes = require('./routes/firm.routes');
 const healthRoutes = require('./routes/health.routes');  // Health endpoints
 const { apiHealth } = require('./controllers/health.controller');
 const storageRoutes = require('./routes/storage.routes');  // Storage BYOS routes
@@ -507,7 +508,10 @@ app.use('/api/storage', authenticate, firmContext, requireTenant, tenantThrottle
 app.use('/api/files', authLimiter, authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, filesRoutes);
 app.use('/api/tenant', authLimiter, authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, tenantRoutes);
 
-// Legacy /f routes removed: tenant login is available only on /:firmSlug/login
+// Firm-scoped API auth routes for tenant login and OTP verification
+app.use('/api/:firmSlug', firmRoutes);
+
+// Legacy /f routes removed: tenant login is available only on /:firmSlug/login and /api/:firmSlug/login
 
 // Root route - API status
 app.get('/', (req, res) => {
