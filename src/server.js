@@ -113,6 +113,7 @@ const { idempotencyMiddleware } = require('./middleware/idempotency.middleware')
 const metricsService = require('./services/metrics.service');
 const { adminAuditTrail } = require('./middleware/adminAudit.middleware');
 const requestLifecycle = require('./middleware/requestLifecycle.middleware');
+const { enforceTemporaryIpBlock } = require('./middleware/securityIpBlock.middleware');
 const { noFirmNoTransaction } = require('./middleware/noFirmNoTransaction.middleware');
 const optionsPreflight = require('./middleware/optionsPreflight.middleware');
 const {
@@ -367,6 +368,7 @@ if (inboundEmailEnabled) {
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '100kb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(requestId);
+app.use(enforceTemporaryIpBlock);
 app.use(requestLifecycle);
 app.use(requestLogger);
 app.use(responseContract);
