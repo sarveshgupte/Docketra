@@ -53,8 +53,25 @@ return attempts
 
 const getSignupIpRateLimitKey = (ip) => `docketra:ratelimit:signup:ip:${hashIdentifier(ip)}`;
 const getSignupEmailRateLimitKey = (email) => `docketra:ratelimit:signup:email:${hashIdentifier(email)}`;
+/**
+ * OTP verification counters are namespaced by scope so the same logic can enforce
+ * independent limits for both email identifiers and client IP addresses.
+ * @param {'email'|'ip'} scope
+ * @param {string} identifier
+ * @returns {string}
+ */
 const getOtpAttemptKey = (scope, identifier) => `docketra:otp:attempts:${scope}:${hashIdentifier(identifier)}`;
+/**
+ * @param {'email'|'ip'} scope
+ * @param {string} identifier
+ * @returns {string}
+ */
 const getOtpBlockKey = (scope, identifier) => `docketra:otp:block:${scope}:${hashIdentifier(identifier)}`;
+/**
+ * @param {'email'|'ip'} scope
+ * @param {string} identifier
+ * @returns {string}
+ */
 const getOtpResendRateLimitKey = (scope, identifier) => `docketra:otp:resend:${scope}:${hashIdentifier(identifier)}`;
 
 const inMemoryCounters = new Map();
