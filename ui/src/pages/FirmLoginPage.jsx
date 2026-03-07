@@ -13,14 +13,20 @@ import { Loading } from '../components/common/Loading';
 import { validateXID, validatePassword } from '../utils/validators';
 import { ERROR_CODES, STORAGE_KEYS } from '../utils/constants';
 import { isAccessTokenOnlyUser } from '../utils/authUtils';
+import { resolveFirmLoginResponseState } from '../utils/firmLoginResponse';
 import api from '../services/api';
 import { useToast } from '../hooks/useToast';
 import './LoginPage.css';
+
+const OTP_LENGTH = 6;
 
 export const FirmLoginPage = () => {
   const { firmSlug } = useParams();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
+  const [loginToken, setLoginToken] = useState('');
+  const [showOtpForm, setShowOtpForm] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
@@ -32,6 +38,45 @@ export const FirmLoginPage = () => {
   const { fetchProfile } = useAuth();
   const { showSuccess, showError } = useToast();
   const navigate = useNavigate();
+
+  const completeLogin = async (responseData) => {
+    const {
+      accessToken,
+      refreshToken,
+      data: userData,
+      refreshEnabled,
+    } = responseData;
+
+    const userWithFlags = {
+      ...userData,
+      refreshEnabled: refreshEnabled !== undefined ? refreshEnabled : userData?.refreshEnabled,
+      isSuperAdmin: responseData.isSuperAdmin !== undefined ? responseData.isSuperAdmin : userData?.isSuperAdmin,
+    };
+
+    const accessTokenOnly = isAccessTokenOnlyUser(userWithFlags);
+
+    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
+    if (!accessTokenOnly && refreshToken) {
+      localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+    }
+
+    const profileResult = await fetchProfile();
+
+    showSuccess('Signed in successfully.');
+
+    if (profileResult?.success) {
+      navigate(`/app/firm/${firmSlug}/dashboard`, { replace: true });
+    }
+  };
+
+  const resetOtpStep = () => {
+    setShowOtpForm(false);
+    setOtp('');
+    setLoginToken('');
+    setPassword('');
+  };
 
   // Load firm metadata
   useEffect(() => {
@@ -98,42 +143,24 @@ export const FirmLoginPage = () => {
         firmSlug: firmSlug, // Include firm context
       });
 
-      if (response.data.success) {
-        const {
-          accessToken,
-          refreshToken,
-          data: userData,
-          refreshEnabled,
-        } = response.data;
-        
-        // Merge backend flags with user data for access-token-only determination
-        const userWithFlags = {
-          ...userData,
-          refreshEnabled: refreshEnabled !== undefined ? refreshEnabled : userData.refreshEnabled,
-          isSuperAdmin: response.data.isSuperAdmin !== undefined ? response.data.isSuperAdmin : userData.isSuperAdmin,
-        };
-        
-        const accessTokenOnly = isAccessTokenOnlyUser(userWithFlags);
-        
-        // Store tokens only (no user object)
-        localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
-        if (!accessTokenOnly && refreshToken) {
-          localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
-        } else {
-          localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
-        }
+      const loginState = resolveFirmLoginResponseState(response.data);
 
-        // Trigger profile hydration to set auth state
-        const profileResult = await fetchProfile();
-        
-        showSuccess('Signed in successfully.');
-        
-        // Explicit post-login navigation (firm users only)
-        // Navigate to firm dashboard after successful hydration
-        if (profileResult?.success) {
-          navigate(`/app/firm/${firmSlug}/dashboard`, { replace: true });
-        }
+      if (loginState.nextStep === 'otp') {
+        setShowOtpForm(true);
+        setLoginToken(loginState.loginToken);
+        setOtp('');
+        setPassword('');
+        setShowResendForm(false);
+        showSuccess('Enter the OTP sent to your email to continue.');
+        return;
       }
+
+      if (loginState.nextStep === 'authenticated') {
+        await completeLogin(response.data);
+        return;
+      }
+
+      setError(loginState.error);
     } catch (err) {
       const errorData = err.response?.data;
       
@@ -149,6 +176,43 @@ export const FirmLoginPage = () => {
       } else {
         setError(errorData?.message || 'Invalid xID or password');
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    const normalizedOtp = otp.trim();
+    if (!new RegExp(`^\\d{${OTP_LENGTH}}$`).test(normalizedOtp)) {
+      setError(`Please enter a valid ${OTP_LENGTH}-digit OTP`);
+      return;
+    }
+
+    if (!loginToken) {
+      setError('Your login session has expired. Please sign in again.');
+      resetOtpStep();
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await api.post(`/${firmSlug}/verify-otp`, {
+        loginToken,
+        otp: normalizedOtp,
+      });
+
+      if (response.data.success) {
+        await completeLogin(response.data);
+        return;
+      }
+
+      setError(response.data?.message || 'OTP verification failed. Please try again.');
+    } catch (err) {
+      setError(err.response?.data?.message || 'OTP verification failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -208,7 +272,9 @@ export const FirmLoginPage = () => {
       <Card className="login-card">
         <div className="login-header">
           <h1>{firmData.name}</h1>
-          <p className="text-secondary">Login to Docketra</p>
+          <p className="text-secondary">
+            {showOtpForm ? 'Enter OTP sent to your email' : 'Login to Docketra'}
+          </p>
           <p style={{ fontSize: '0.75rem', color: '#718096', marginTop: '0.5rem' }}>
             Firm ID: {firmData.firmId}
           </p>
@@ -220,85 +286,136 @@ export const FirmLoginPage = () => {
           </div>
         )}
 
-        <form onSubmit={handleLogin}>
-          <Input
-            label="xID"
-            type="text"
-            value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)}
-            required
-            placeholder="X123456"
-            autoFocus
-          />
-          <p style={{ 
-            fontSize: '0.875rem', 
-            color: 'var(--text-secondary)', 
-            marginTop: '-0.5rem', 
-            marginBottom: '1rem'
-          }}>
-            Enter your user ID (e.g., X000001). Your XID was sent to your email after signup.
-          </p>
-          <button
-            type="button"
-            onClick={() => setShowResendForm((prev) => !prev)}
-            style={{
+        {showOtpForm ? (
+          <form onSubmit={handleVerifyOtp}>
+            <Input
+              label="xID"
+              type="text"
+              value={identifier}
+              readOnly
+            />
+            <Input
+              label="OTP"
+              type="text"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, OTP_LENGTH))}
+              required
+              placeholder="123456"
+              autoFocus
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={OTP_LENGTH}
+            />
+            <p style={{
               fontSize: '0.875rem',
-              color: '#3182ce',
-              background: 'none',
-              border: 'none',
-              padding: 0,
+              color: 'var(--text-secondary)',
               marginTop: '-0.5rem',
-              marginBottom: '1rem',
-              cursor: 'pointer',
-              textDecoration: 'underline',
-            }}
-          >
-            {"Didn't receive your XID? Resend credentials"}
-          </button>
-          {showResendForm && (
-            <div style={{ marginBottom: '1rem' }}>
+              marginBottom: '1rem'
+            }}>
+              Enter the 6-digit code sent to your registered email address.
+            </p>
+
+            <Button
+              type="submit"
+              fullWidth
+              disabled={loading}
+            >
+              {loading ? 'Verifying OTP...' : 'Verify OTP'}
+            </Button>
+
+            <Button
+              type="button"
+              fullWidth
+              disabled={loading}
+              onClick={resetOtpStep}
+              variant="secondary"
+            >
+              Back to Sign In
+            </Button>
+          </form>
+        ) : (
+          <>
+            <form onSubmit={handleLogin}>
               <Input
-                label="Registered email"
-                type="email"
-                value={resendEmail}
-                onChange={(e) => setResendEmail(e.target.value)}
+                label="xID"
+                type="text"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 required
-                placeholder="you@firm.com"
+                placeholder="X123456"
+                autoFocus
               />
-              <Button
+              <p style={{ 
+                fontSize: '0.875rem', 
+                color: 'var(--text-secondary)', 
+                marginTop: '-0.5rem', 
+                marginBottom: '1rem'
+              }}>
+                Enter your user ID (e.g., X000001). Your XID was sent to your email after signup.
+              </p>
+              <button
                 type="button"
-                fullWidth
-                disabled={resendLoading}
-                onClick={handleResendCredentials}
+                onClick={() => setShowResendForm((prev) => !prev)}
+                style={{
+                  fontSize: '0.875rem',
+                  color: '#3182ce',
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  marginTop: '-0.5rem',
+                  marginBottom: '1rem',
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                }}
               >
-                {resendLoading ? 'Resending...' : 'Resend credentials'}
+                {"Didn't receive your XID? Resend credentials"}
+              </button>
+              {showResendForm && (
+                <div style={{ marginBottom: '1rem' }}>
+                  <Input
+                    label="Registered email"
+                    type="email"
+                    value={resendEmail}
+                    onChange={(e) => setResendEmail(e.target.value)}
+                    required
+                    placeholder="you@firm.com"
+                  />
+                  <Button
+                    type="button"
+                    fullWidth
+                    disabled={resendLoading}
+                    onClick={handleResendCredentials}
+                  >
+                    {resendLoading ? 'Resending...' : 'Resend credentials'}
+                  </Button>
+                </div>
+              )}
+
+              <Input
+                label="Password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                placeholder="Enter your password"
+              />
+
+              <Button 
+                type="submit" 
+                fullWidth 
+                disabled={loading}
+              >
+                {loading ? 'Signing in...' : 'Sign In'}
               </Button>
+            </form>
+
+            <div className="login-footer">
+              <Link to={`/${firmSlug}/forgot-password`} className="link">
+                Forgot Password?
+              </Link>
             </div>
-          )}
-
-          <Input
-            label="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            placeholder="Enter your password"
-          />
-
-          <Button 
-            type="submit" 
-            fullWidth 
-            disabled={loading}
-          >
-            {loading ? 'Signing in...' : 'Sign In'}
-          </Button>
-        </form>
-
-        <div className="login-footer">
-          <Link to={`/${firmSlug}/forgot-password`} className="link">
-            Forgot Password?
-          </Link>
-        </div>
+          </>
+        )}
 
         <div style={{ 
           marginTop: '1.5rem', 
