@@ -97,6 +97,16 @@ const assertTenantId = (firmId) => {
   }
 };
 
+const applyQueryOptions = (query, options = {}) => {
+  if (options.select) query.select(options.select);
+  if (options.sort) query.sort(options.sort);
+  if (options.limit !== undefined) query.limit(options.limit);
+  if (options.skip !== undefined) query.skip(options.skip);
+  if (options.populate) query.populate(options.populate);
+  if (options.lean) query.lean();
+  return query;
+};
+
 // ── Repository ──────────────────────────────────────────────────────────────
 
 const ClientRepository = {
@@ -107,13 +117,13 @@ const ClientRepository = {
    * @param {string} role - Caller's role (required); superadmin triggers ForbiddenError
    * @returns {Promise<Object|null>} Client document or null
    */
-  async findByClientId(firmId, clientId, role) {
+  async findByClientId(firmId, clientId, role, options = {}) {
     assertTenantId(firmId);
     if (!clientId) {
       return null;
     }
     _guardSuperadmin(role);
-    const doc = await Client.findOne({ firmId, clientId });
+    const doc = await applyQueryOptions(Client.findOne({ firmId, clientId }), options);
     return _decryptClientDoc(doc, firmId);
   },
 
@@ -124,13 +134,13 @@ const ClientRepository = {
    * @param {string} role - Caller's role (required); superadmin triggers ForbiddenError
    * @returns {Promise<Object|null>} Client document or null
    */
-  async findById(firmId, _id, role) {
+  async findById(firmId, _id, role, options = {}) {
     assertTenantId(firmId);
     if (!_id) {
       return null;
     }
     _guardSuperadmin(role);
-    const doc = await Client.findOne({ firmId, _id });
+    const doc = await applyQueryOptions(Client.findOne({ firmId, _id }), options);
     return _decryptClientDoc(doc, firmId);
   },
 
@@ -141,10 +151,10 @@ const ClientRepository = {
    * @param {string} role - Caller's role (required); superadmin triggers ForbiddenError
    * @returns {Promise<Array>} Array of client documents
    */
-  async find(firmId, query = {}, role) {
+  async find(firmId, query = {}, role, options = {}) {
     assertTenantId(firmId);
     _guardSuperadmin(role);
-    const docs = await Client.find({ firmId, ...query });
+    const docs = await applyQueryOptions(Client.find({ firmId, ...query }), options);
     return _decryptClientDocs(docs, firmId);
   },
 
@@ -155,10 +165,10 @@ const ClientRepository = {
    * @param {string} role - Caller's role (required); superadmin triggers ForbiddenError
    * @returns {Promise<Object|null>} Client document or null
    */
-  async findOne(firmId, query = {}, role) {
+  async findOne(firmId, query = {}, role, options = {}) {
     assertTenantId(firmId);
     _guardSuperadmin(role);
-    const doc = await Client.findOne({ firmId, ...query });
+    const doc = await applyQueryOptions(Client.findOne({ firmId, ...query }), options);
     return _decryptClientDoc(doc, firmId);
   },
 
@@ -201,6 +211,10 @@ const ClientRepository = {
   count(firmId, query = {}) {
     assertTenantId(firmId);
     return Client.countDocuments({ firmId, ...query });
+  },
+
+  countClients(firmId, query = {}) {
+    return this.count(firmId, query);
   },
 
   /**

@@ -102,7 +102,6 @@ taskSchema.index({ case: 1 });
 taskSchema.index({ dueDate: 1 });
 // REMOVED: { firmId: 1 } - redundant with compound index (firmId, status) below
 taskSchema.index({ firmId: 1, status: 1 }); // Firm-scoped status queries
-taskSchema.index({ firmId: 1 });
 taskSchema.index({ firmId: 1, createdAt: -1 });
 
 // Pre-save middleware to track status changes

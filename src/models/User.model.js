@@ -241,7 +241,6 @@ const userSchema = new mongoose.Schema({
   mustSetPassword: {
     type: Boolean,
     default: false,
-    index: true,
   },
 
   // Timestamp when password was set for the first time
@@ -589,7 +588,6 @@ userSchema.index({ role: 1 });
 userSchema.index({ status: 1 });
 userSchema.index({ firmId: 1, status: 1 });
 userSchema.index({ firmId: 1, isActive: 1 });
-userSchema.index({ mustSetPassword: 1 });
 // REMOVED: { firmId: 1 } - redundant with compound index (firmId, xID) above
 userSchema.index({ firmId: 1, role: 1 }); // Firm-scoped role queries
 userSchema.index({ firmId: 1 });

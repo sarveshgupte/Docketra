@@ -1,6 +1,7 @@
 const { createHash } = require('crypto');
-const Client = require('../models/Client.model');
 const Case = require('../models/Case.model');
+const ClientRepository = require('../repositories/ClientRepository');
+const { mapClientResponse } = require('../mappers/client.mapper');
 const { generateNextClientId } = require('../services/clientIdGenerator');
 const { CLIENT_STATUS } = require('../config/constants');
 const { 
@@ -19,6 +20,22 @@ const CaseFile = require('../models/CaseFile.model');
 const { incrementTenantMetric } = require('../services/tenantMetrics.service');
 const path = require('path');
 const fs = require('fs');
+
+const getClientAccessContext = (req, res, message) => {
+  const firmId = req.user?.firmId;
+  if (!firmId) {
+    res.status(403).json({
+      success: false,
+      message,
+    });
+    return null;
+  }
+
+  return {
+    firmId,
+    role: req.user?.role,
+  };
+};
 
 /**
  * Client Controller for Direct Client Management
@@ -40,36 +57,29 @@ const fs = require('fs');
 const getClients = async (req, res) => {
   try {
     const { activeOnly, forCreateCase } = req.query;
-    
-    // Get firmId from authenticated user for query scoping
-    const userFirmId = req.user?.firmId;
-    
-    // Ensure user has a firmId (SUPER_ADMIN won't have firmId)
-    if (!userFirmId && req.user?.role !== 'SUPER_ADMIN') {
-      return res.status(403).json({
-        success: false,
-        message: 'User must belong to a firm to access clients',
-      });
-    }
-    
-    // Base filter: scope by firmId (except for SUPER_ADMIN)
-    const baseFilter = req.user?.role === 'SUPER_ADMIN' ? {} : { firmId: userFirmId };
+    const accessContext = getClientAccessContext(req, res, 'User must belong to a firm to access clients');
+    if (!accessContext) return;
     
     // Special logic for Create Case: Always include Default Client + other active clients
     if (forCreateCase === 'true') {
-      const clients = await Client.find({
-        ...baseFilter,
-        $or: [
-          { clientId: 'C000001' }, // Always include Default Client
-          { status: CLIENT_STATUS.ACTIVE } // Include other active clients
-        ]
-      })
-        .select('clientId businessName businessEmail primaryContactNumber status isSystemClient isInternal createdAt')
-        .sort({ clientId: 1 });
+      const clients = await ClientRepository.find(
+        accessContext.firmId,
+        {
+          $or: [
+            { clientId: 'C000001' },
+            { status: CLIENT_STATUS.ACTIVE },
+          ],
+        },
+        accessContext.role,
+        {
+          select: 'clientId businessName businessEmail primaryContactNumber status isSystemClient isInternal createdAt',
+          sort: { clientId: 1 },
+        }
+      );
       
       return res.json({
         success: true,
-        data: clients,
+        data: clients.map(mapClientResponse),
         count: clients.length,
       });
     }
@@ -77,17 +87,22 @@ const getClients = async (req, res) => {
     // Filter based on activeOnly query parameter
     // Use canonical status field (ACTIVE/INACTIVE) instead of deprecated isActive
     const filter = { 
-      ...baseFilter,
       ...(activeOnly === 'true' ? { status: CLIENT_STATUS.ACTIVE } : {})
     };
     
-    const clients = await Client.find(filter)
-      .select('clientId businessName businessEmail primaryContactNumber status isSystemClient isInternal createdAt') // Select necessary fields (status is canonical)
-      .sort({ clientId: 1 }); // Sort by clientId for consistency
+    const clients = await ClientRepository.find(
+      accessContext.firmId,
+      filter,
+      accessContext.role,
+      {
+        select: 'clientId businessName businessEmail primaryContactNumber status isSystemClient isInternal createdAt',
+        sort: { clientId: 1 },
+      }
+    );
     
     res.json({
       success: true,
-      data: clients,
+      data: clients.map(mapClientResponse),
       count: clients.length,
     });
   } catch (error) {
@@ -106,25 +121,9 @@ const getClients = async (req, res) => {
 const getClientById = async (req, res) => {
   try {
     const { clientId } = req.params;
-    
-    // Get firmId from authenticated user for query scoping
-    const userFirmId = req.user?.firmId;
-    
-    // Ensure user has a firmId (SUPER_ADMIN won't have firmId)
-    if (!userFirmId && req.user?.role !== 'SUPER_ADMIN') {
-      return res.status(403).json({
-        success: false,
-        message: 'User must belong to a firm to access clients',
-      });
-    }
-    
-    // Build query with firmId scoping (except for SUPER_ADMIN)
-    const query = { clientId };
-    if (req.user?.role !== 'SUPER_ADMIN') {
-      query.firmId = userFirmId;
-    }
-    
-    const client = await Client.findOne(query);
+    const accessContext = getClientAccessContext(req, res, 'User must belong to a firm to access clients');
+    if (!accessContext) return;
+    const client = await ClientRepository.findByClientId(accessContext.firmId, clientId, accessContext.role);
     
     if (!client) {
       return res.status(404).json({
@@ -135,7 +134,7 @@ const getClientById = async (req, res) => {
     
     res.json({
       success: true,
-      data: client,
+      data: mapClientResponse(client),
     });
   } catch (error) {
     res.status(500).json({
@@ -268,7 +267,7 @@ const createClient = async (req, res) => {
     const clientId = await generateNextClientId(userFirmId);
     
     // STEP 8: Create new client with explicit field mapping
-    const client = new Client({
+    const client = await ClientRepository.create({
       // System-generated ID (NEVER from client)
       clientId,
       // Business fields from sanitized request
@@ -289,10 +288,9 @@ const createClient = async (req, res) => {
       isActive: true, // Legacy field
       status: 'ACTIVE', // New field
       previousBusinessNames: [], // Initialize empty history
-    });
+    }, req.user?.role);
     
-    // STEP 9: Save the client first
-    await client.save();
+    // STEP 9: Persist the client first
     await incrementTenantMetric(userFirmId, 'clients').catch(() => null);
     
     // STEP 10: Create Google Drive CFS folder structure for the client
@@ -321,7 +319,7 @@ const createClient = async (req, res) => {
     
     res.status(201).json({
       success: true,
-      data: client,
+      data: mapClientResponse(client),
       message: 'Client created successfully',
     });
   } catch (error) {
@@ -376,18 +374,9 @@ const updateClient = async (req, res) => {
     } = req.body;
     
     // Get firmId from authenticated user for query scoping
-    const userFirmId = req.user?.firmId;
-    
-    // Ensure user has a firmId
-    if (!userFirmId) {
-      return res.status(403).json({
-        success: false,
-        message: 'User must belong to a firm to update clients',
-      });
-    }
-    
-    // Build query with firmId scoping
-    const client = await Client.findOne({ clientId, firmId: userFirmId });
+    const accessContext = getClientAccessContext(req, res, 'User must belong to a firm to update clients');
+    if (!accessContext) return;
+    const client = await ClientRepository.findByClientId(accessContext.firmId, clientId, accessContext.role);
     
     if (!client) {
       return res.status(404).json({
@@ -458,7 +447,7 @@ const updateClient = async (req, res) => {
     
     res.json({
       success: true,
-      data: client,
+      data: mapClientResponse(client),
       message: 'Client updated successfully',
     });
   } catch (error) {
@@ -490,18 +479,9 @@ const toggleClientStatus = async (req, res) => {
     }
     
     // Get firmId from authenticated user for query scoping
-    const userFirmId = req.user?.firmId;
-    
-    // Ensure user has a firmId
-    if (!userFirmId) {
-      return res.status(403).json({
-        success: false,
-        message: 'User must belong to a firm to update clients',
-      });
-    }
-    
-    // Build query with firmId scoping
-    const client = await Client.findOne({ clientId, firmId: userFirmId });
+    const accessContext = getClientAccessContext(req, res, 'User must belong to a firm to update clients');
+    if (!accessContext) return;
+    const client = await ClientRepository.findByClientId(accessContext.firmId, clientId, accessContext.role);
     
     if (!client) {
       return res.status(404).json({
@@ -536,7 +516,7 @@ const toggleClientStatus = async (req, res) => {
     
     res.json({
       success: true,
-      data: client,
+      data: mapClientResponse(client),
       message: `Client ${isActive ? 'activated' : 'deactivated'} successfully`,
     });
   } catch (error) {
@@ -581,18 +561,9 @@ const changeLegalName = async (req, res) => {
     }
     
     // Get firmId from authenticated user for query scoping
-    const userFirmId = req.user?.firmId;
-    
-    // Ensure user has a firmId
-    if (!userFirmId) {
-      return res.status(403).json({
-        success: false,
-        message: 'User must belong to a firm to update clients',
-      });
-    }
-    
-    // Build query with firmId scoping
-    const client = await Client.findOne({ clientId, firmId: userFirmId });
+    const accessContext = getClientAccessContext(req, res, 'User must belong to a firm to update clients');
+    if (!accessContext) return;
+    const client = await ClientRepository.findByClientId(accessContext.firmId, clientId, accessContext.role);
     
     if (!client) {
       return res.status(404).json({
@@ -638,7 +609,7 @@ const changeLegalName = async (req, res) => {
     
     res.json({
       success: true,
-      data: client,
+      data: mapClientResponse(client),
       message: 'Client legal name changed successfully',
       nameChangeHistory: {
         oldName,
@@ -688,7 +659,7 @@ const updateClientFactSheet = async (req, res) => {
     }
     
     // Find client with firmId scoping
-    const client = await Client.findOne({ clientId, firmId: userFirmId });
+    const client = await ClientRepository.findByClientId(userFirmId, clientId, req.user?.role);
     
     if (!client) {
       return res.status(404).json({
@@ -810,7 +781,7 @@ const uploadFactSheetFile = async (req, res) => {
     }
     
     // Find client with firmId scoping
-    const client = await Client.findOne({ clientId, firmId: userFirmId });
+    const client = await ClientRepository.findByClientId(userFirmId, clientId, req.user?.role);
     
     if (!client) {
       return res.status(404).json({
@@ -927,7 +898,7 @@ const deleteFactSheetFile = async (req, res) => {
     }
     
     // Find client with firmId scoping
-    const client = await Client.findOne({ clientId, firmId: userFirmId });
+    const client = await ClientRepository.findByClientId(userFirmId, clientId, req.user?.role);
     
     if (!client) {
       return res.status(404).json({
@@ -1048,11 +1019,7 @@ const uploadClientCFSFile = async (req, res) => {
     }
 
     // Fetch client and validate access
-    const Client = require('../models/Client.model');
-    const client = await Client.findOne({ 
-      clientId, 
-      firmId: userFirmId 
-    });
+    const client = await ClientRepository.findByClientId(userFirmId, clientId, req.user?.role);
 
     if (!client) {
       return res.status(404).json({
@@ -1152,11 +1119,7 @@ const listClientCFSFiles = async (req, res) => {
     }
 
     // Validate client exists and user has access
-    const Client = require('../models/Client.model');
-    const client = await Client.findOne({ 
-      clientId, 
-      firmId: userFirmId 
-    });
+    const client = await ClientRepository.findByClientId(userFirmId, clientId, req.user?.role);
 
     if (!client) {
       return res.status(404).json({
@@ -1216,11 +1179,7 @@ const deleteClientCFSFile = async (req, res) => {
     }
 
     // Validate client exists
-    const Client = require('../models/Client.model');
-    const client = await Client.findOne({ 
-      clientId, 
-      firmId: userFirmId 
-    });
+    const client = await ClientRepository.findByClientId(userFirmId, clientId, req.user?.role);
 
     if (!client) {
       return res.status(404).json({
@@ -1299,11 +1258,7 @@ const downloadClientCFSFile = async (req, res) => {
     }
 
     // Validate client exists
-    const Client = require('../models/Client.model');
-    const client = await Client.findOne({ 
-      clientId, 
-      firmId: userFirmId 
-    });
+    const client = await ClientRepository.findByClientId(userFirmId, clientId, req.user?.role);
 
     if (!client) {
       return res.status(404).json({

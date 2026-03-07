@@ -1,0 +1,214 @@
+#!/usr/bin/env node
+'use strict';
+
+const assert = require('assert');
+const Module = require('module');
+
+const originalLoad = Module._load;
+
+const clearModule = (modulePath) => {
+  try {
+    delete require.cache[require.resolve(modulePath)];
+  } catch (_) {
+    // ignore
+  }
+};
+
+function createRes() {
+  return {
+    statusCode: 200,
+    body: null,
+    status(code) {
+      this.statusCode = code;
+      return this;
+    },
+    json(payload) {
+      this.body = payload;
+      return this;
+    },
+  };
+}
+
+async function testClientReadsUseRepositoryAndReturnPlaintext() {
+  let directFindUsed = false;
+  let repositoryCalled = false;
+
+  Module._load = function(request, parent, isMain) {
+    if (request === '../models/Client.model') {
+      return {
+        find: async () => {
+          directFindUsed = true;
+          throw new Error('controller should not read Client model directly');
+        },
+      };
+    }
+    if (request === '../repositories/ClientRepository') {
+      return {
+        find: async () => {
+          repositoryCalled = true;
+          return [{
+            _id: 'client-1',
+            clientId: 'C000001',
+            businessName: 'Acme Legal',
+            businessEmail: 'ops@acme.test',
+            primaryContactNumber: '9999999999',
+            status: 'ACTIVE',
+            isSystemClient: false,
+            isInternal: false,
+          }];
+        },
+      };
+    }
+    if (request === '../mappers/client.mapper') {
+      return { mapClientResponse: (client) => client };
+    }
+    if (request === '../config/constants') {
+      return { CLIENT_STATUS: { ACTIVE: 'ACTIVE' } };
+    }
+    if (request === '../middleware/wrapWriteHandler') {
+      return (fn) => fn;
+    }
+    if (
+      request.includes('/models/')
+      || request.includes('/services/')
+      || request.includes('/queues/')
+      || request.includes('/utils/')
+      || request.includes('/config/')
+    ) {
+      return {};
+    }
+    return originalLoad.apply(this, arguments);
+  };
+
+  clearModule('../src/controllers/client.controller');
+  const { getClients } = require('../src/controllers/client.controller');
+
+  const req = {
+    query: {},
+    user: { firmId: 'firm-1', role: 'Admin' },
+  };
+  const res = createRes();
+  await getClients(req, res);
+
+  assert.strictEqual(res.statusCode, 200);
+  assert.strictEqual(repositoryCalled, true, 'client controller should read via ClientRepository');
+  assert.strictEqual(directFindUsed, false, 'client controller should not call Client.find directly');
+  assert.strictEqual(res.body.data[0].businessEmail, 'ops@acme.test');
+  assert.strictEqual(typeof res.body.data[0].primaryContactNumber, 'string');
+  assert.strictEqual(typeof res.body.data[0].businessEmail, 'string');
+  console.log('  ✓ client reads use ClientRepository and return plaintext contact fields');
+}
+
+function testUserMapperDerivesPasswordConfigured() {
+  Module._load = originalLoad;
+  clearModule('../src/mappers/user.mapper');
+  const { mapUserResponse } = require('../src/mappers/user.mapper');
+  const mapped = mapUserResponse({
+    _id: 'user-1',
+    xID: 'X000001',
+    name: 'Admin User',
+    email: 'admin@example.com',
+    role: 'Admin',
+    passwordHash: '$2b$10$hash',
+    mustSetPassword: false,
+    passwordSet: false,
+    isActive: true,
+    status: 'active',
+  });
+
+  assert.strictEqual(mapped.role, 'ADMIN');
+  assert.strictEqual(mapped.passwordConfigured, true);
+  console.log('  ✓ user mapper derives passwordConfigured from authoritative fields');
+}
+
+async function testStorageGateBlocksUnavailableProviderMode() {
+  Module._load = originalLoad;
+  Module._load = function(request, parent, isMain) {
+    if (request === '../models/Firm.model') {
+      return {
+        findById: async () => ({
+          storage: { mode: 'docketra_managed', provider: null },
+        }),
+      };
+    }
+    if (request === '../services/featureFlags.service') {
+      return { isExternalStorageEnabled: () => false };
+    }
+    if (request === '../repositories/user.repository' || request === '../repositories/client.repository' || request === '../repositories/category.repository') {
+      return {};
+    }
+    if (request === '../middleware/wrapWriteHandler') {
+      return (fn) => fn;
+    }
+    if (
+      request.includes('/models/')
+      || request.includes('/services/')
+      || request.includes('/utils/')
+    ) {
+      return {};
+    }
+    return originalLoad.apply(this, arguments);
+  };
+
+  clearModule('../src/controllers/admin.controller');
+  const { updateStorageConfig } = require('../src/controllers/admin.controller');
+  const req = {
+    user: { firmId: 'firm-1', xID: 'X000001' },
+    body: { mode: 'firm_connected', provider: 'google_drive' },
+  };
+  const res = createRes();
+  await updateStorageConfig(req, res);
+
+  assert.strictEqual(res.statusCode, 403);
+  assert.strictEqual(res.body.code, 'EXTERNAL_STORAGE_DISABLED');
+  console.log('  ✓ storage configuration rejects firm-connected mode when capability is disabled');
+}
+
+function testAuditMapperProducesForensicContract() {
+  Module._load = originalLoad;
+  clearModule('../src/mappers/audit.mapper');
+  const { mapAuditResponse } = require('../src/mappers/audit.mapper');
+  const mapped = mapAuditResponse({
+    xID: 'X000007',
+    actionType: 'ADMIN_ACTION',
+    userId: '507f1f77bcf86cd799439011',
+    firmId: 'firm-22',
+    ipAddress: '203.0.113.2',
+    timestamp: new Date('2026-03-07T00:00:00.000Z'),
+    metadata: { requestId: 'req-1' },
+  }, 'AuthAudit');
+
+  assert.deepStrictEqual(Object.keys(mapped), [
+    'xid',
+    'xID',
+    'action',
+    'userId',
+    'firmId',
+    'ipAddress',
+    'timestamp',
+    'source',
+    'metadata',
+    'description',
+  ]);
+  assert.strictEqual(mapped.xid, 'X000007');
+  assert.strictEqual(mapped.source, 'AuthAudit');
+  console.log('  ✓ audit mapper emits the standardized audit response contract');
+}
+
+async function run() {
+  try {
+    await testClientReadsUseRepositoryAndReturnPlaintext();
+    testUserMapperDerivesPasswordConfigured();
+    await testStorageGateBlocksUnavailableProviderMode();
+    testAuditMapperProducesForensicContract();
+    console.log('adminPanelStabilization tests passed.');
+  } finally {
+    Module._load = originalLoad;
+  }
+}
+
+run().catch((error) => {
+  Module._load = originalLoad;
+  console.error('adminPanelStabilization tests failed:', error);
+  process.exit(1);
+});

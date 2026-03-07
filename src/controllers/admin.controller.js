@@ -15,6 +15,7 @@ const clientRepository = require('../repositories/client.repository');
 const categoryRepository = require('../repositories/category.repository');
 const { assertFirmContext } = require('../utils/tenantGuard');
 const { logAuthEvent } = require('../services/audit.service');
+const { isExternalStorageEnabled } = require('../services/featureFlags.service');
 
 /**
  * Admin Controller for Admin Panel Operations
@@ -588,7 +589,12 @@ const getStorageConfig = async (req, res) => {
 
     res.json({
       success: true,
-      data: firm.storage || { mode: 'docketra_managed', provider: null },
+      data: {
+        ...(firm.storage || { mode: 'docketra_managed', provider: null }),
+        capabilities: {
+          externalStorageEnabled: isExternalStorageEnabled(),
+        },
+      },
     });
   } catch (error) {
     console.error('[ADMIN] Error fetching storage config:', error);
@@ -628,6 +634,14 @@ const updateStorageConfig = async (req, res) => {
     const newMode = mode || storageConfig.mode || DEFAULT_STORAGE_MODE;
 
     if (newMode === 'firm_connected') {
+      if (!isExternalStorageEnabled()) {
+        return res.status(403).json({
+          success: false,
+          message: 'Connect Your Storage is coming soon for this environment.',
+          code: 'EXTERNAL_STORAGE_DISABLED',
+        });
+      }
+
       if (!provider) {
         return res.status(400).json({
           success: false,
