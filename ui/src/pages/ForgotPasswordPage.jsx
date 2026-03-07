@@ -3,7 +3,7 @@
  */
 
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Card } from '../components/common/Card';
@@ -11,11 +11,13 @@ import { authService } from '../services/authService';
 import './ForgotPasswordPage.css';
 
 export const ForgotPasswordPage = () => {
+  const { firmSlug } = useParams();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const loginPath = firmSlug ? `/${firmSlug}/login` : '/superadmin';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -37,7 +39,7 @@ export const ForgotPasswordPage = () => {
     setLoading(true);
 
     try {
-      const response = await authService.forgotPassword(email);
+      const response = await authService.forgotPassword(email, firmSlug);
       
       if (response.success) {
         setSuccess(response.message);
@@ -45,7 +47,7 @@ export const ForgotPasswordPage = () => {
         setEmail('');
         // Redirect to login after 3 seconds
         setTimeout(() => {
-          navigate('/superadmin', {
+          navigate(loginPath, {
             state: {
               message: 'If your email is registered, you will receive a password reset link.',
               messageType: 'success'
@@ -56,7 +58,11 @@ export const ForgotPasswordPage = () => {
         setError(response.message || 'Failed to send reset email');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'An error occurred. Please try again.');
+      setError(
+        err.response?.data?.message
+        || err.response?.data?.error
+        || 'An error occurred. Please try again.'
+      );
     } finally {
       setLoading(false);
     }
@@ -69,6 +75,7 @@ export const ForgotPasswordPage = () => {
           <h1>Forgot Password</h1>
           <p className="text-secondary">
             Enter your email address and we'll send you a link to reset your password.
+            {firmSlug ? ' Reset links for firm accounts are sent only within this workspace.' : ''}
           </p>
         </div>
 
@@ -100,7 +107,7 @@ export const ForgotPasswordPage = () => {
           </Button>
 
           <div className="forgot-password-footer">
-            <Link to="/superadmin" className="forgot-password-link">
+            <Link to={loginPath} className="forgot-password-link">
               Back to Login
             </Link>
           </div>

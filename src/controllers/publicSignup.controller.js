@@ -1,6 +1,8 @@
 const signupService = require('../services/signup.service');
+const { validatePasswordStrength, PASSWORD_POLICY_MESSAGE } = require('../utils/passwordPolicy');
 
 const phoneRegex = /^[0-9]{10}$/;
+const otpRegex = /^[0-9]{6}$/;
 
 /**
  * POST /public/initiate-signup
@@ -26,8 +28,8 @@ const initiateSignup = async (req, res) => {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       return { success: false, statusCode: 400, message: 'Invalid email format' };
     }
-    if (!password || password.length < 8) {
-      return { success: false, statusCode: 400, message: 'Password must be at least 8 characters' };
+    if (!validatePasswordStrength(password)) {
+      return { success: false, statusCode: 400, message: PASSWORD_POLICY_MESSAGE };
     }
     if (!firmName || !firmName.trim()) {
       return { success: false, statusCode: 400, message: 'Firm name is required' };
@@ -76,6 +78,9 @@ const verifyOtp = async (req, res) => {
     }
     if (!otp || !otp.trim()) {
       return { success: false, statusCode: 400, message: 'OTP is required' };
+    }
+    if (!otpRegex.test(otp.trim())) {
+      return { success: false, statusCode: 400, error: 'Invalid OTP format', message: 'Invalid OTP format' };
     }
 
     const result = await signupService.verifyOtp({ email, otp: otp.trim(), session, req });

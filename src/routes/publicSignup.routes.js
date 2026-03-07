@@ -1,4 +1,6 @@
 const express = require('express');
+const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
+const routeSchemas = require('../schemas/publicSignup.routes.schema');
 const { authLimiter, signupLimiter } = require('../middleware/rateLimiters');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const {
@@ -8,7 +10,7 @@ const {
   completeSignup,
 } = require('../controllers/publicSignup.controller');
 
-const router = express.Router();
+const router = applyRouteValidation(express.Router(), routeSchemas);
 
 // Rate-limited routes
 router.post('/initiate-signup', authLimiter, signupLimiter, wrapWriteHandler(initiateSignup));
