@@ -21,7 +21,7 @@ const { isGoogleAuthDisabled } = require('../services/featureFlags.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const config = require('../config/config');
 const { recordFailedLoginAttempt, clearFailedLoginAttempts } = require('../middleware/accountLockout.middleware');
-const { assertFirmPlanCapacity, PlanLimitExceededError, PlanAdminLimitExceededError } = require('../services/user.service');
+const { assertFirmPlanCapacity, PlanLimitExceededError, PlanAdminLimitExceededError, assertCanDeactivateUser, PrimaryAdminActionError } = require('../services/user.service');
 const { logAuthEvent } = require('../services/audit.service');
 const { incrementTenantMetric } = require('../services/tenantMetrics.service');
 
@@ -1706,24 +1706,27 @@ const deactivateUser = async (req, res) => {
       });
     }
     
-    // PROTECTION: Prevent deactivation of system users (default admin)
-    if (user.isSystem === true) {
-      // Log the attempt for audit
-      await logAuthAudit({
-        xID: user.xID,
-        firmId: user.firmId,
-        userId: user._id,
-        actionType: 'DeactivationAttemptBlocked',
-        description: `Attempted to deactivate system user (default admin) - blocked`,
-        performedBy: admin.xID,
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent'),
-      });
-      
-      return res.status(403).json({
-        success: false,
-        message: 'Cannot deactivate the default admin user. This is a protected system entity.',
-      });
+    // PROTECTION: Prevent deactivation of primary admin and system users
+    try {
+      assertCanDeactivateUser(user);
+    } catch (guardError) {
+      if (guardError instanceof PrimaryAdminActionError) {
+        await logAuthAudit({
+          xID: user.xID,
+          firmId: user.firmId,
+          userId: user._id,
+          actionType: 'DeactivationAttemptBlocked',
+          description: 'Attempted to deactivate primary admin - blocked',
+          performedBy: admin.xID,
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent'),
+        });
+        return res.status(403).json({
+          success: false,
+          message: guardError.message,
+        });
+      }
+      throw guardError;
     }
     
     // Soft-disable user (never hard delete)
@@ -2331,24 +2334,29 @@ const updateUserStatus = async (req, res) => {
       });
     }
     
-    // PROTECTION: Prevent deactivation of system users (default admin)
-    if (user.isSystem === true && resolvedStatus === 'disabled') {
-      // Log the attempt for audit
-      await logAuthAudit({
-        xID: user.xID,
-        firmId: user.firmId,
-        userId: user._id,
-        actionType: 'DeactivationAttemptBlocked',
-        description: `Attempted to deactivate system user (default admin) - blocked`,
-        performedBy: admin.xID,
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent'),
-      });
-      
-      return res.status(403).json({
-        success: false,
-        message: 'Cannot deactivate the default admin user. This is a protected system entity.',
-      });
+    // PROTECTION: Prevent deactivation of primary admin and system users
+    if (resolvedStatus === 'disabled') {
+      try {
+        assertCanDeactivateUser(user);
+      } catch (guardError) {
+        if (guardError instanceof PrimaryAdminActionError) {
+          await logAuthAudit({
+            xID: user.xID,
+            firmId: user.firmId,
+            userId: user._id,
+            actionType: 'DeactivationAttemptBlocked',
+            description: 'Attempted to deactivate primary admin - blocked',
+            performedBy: admin.xID,
+            ipAddress: req.ip,
+            userAgent: req.get('user-agent'),
+          });
+          return res.status(403).json({
+            success: false,
+            message: guardError.message,
+          });
+        }
+        throw guardError;
+      }
     }
     
     // Update status

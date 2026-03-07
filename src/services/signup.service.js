@@ -570,6 +570,7 @@ const createFirmAndAdmin = async ({
     status: 'active',
     isActive: true,
     isSystem: true,
+    isPrimaryAdmin: true,
     emailVerified: true,
     emailVerifiedAt: now,
     verificationMethod: isGoogleAuth ? 'GOOGLE' : 'OTP',
