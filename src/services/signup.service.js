@@ -25,6 +25,8 @@ const OTP_RESEND_COOLDOWN = 60;
 const SYSTEM_EMAIL_DOMAIN = 'system.local';
 const DEFAULT_BUSINESS_ADDRESS = 'Default Address';
 const DEFAULT_CONTACT_NUMBER = '0000000000';
+const PHONE_REGEX = /^[0-9]{10}$/;
+const STORAGE_TYPES = ['docketra', 'external'];
 const EMAIL_ENUMERATION_SAFE_MESSAGE = 'If the details are valid, a verification code will be sent shortly.';
 const GENERIC_VERIFICATION_FAILURE_MESSAGE = 'Verification failed';
 const MIN_PUBLIC_RESPONSE_MS = 350;
@@ -68,6 +70,10 @@ const resolveOtpExpiry = (record) => record.otpExpiresAt || record.otpExpiry;
 const resolveOtpLastSentAt = (record) => record.otpLastSentAt || record.lastOtpSentAt;
 const resolveOtpResendCount = (record) => record.otpResendCount ?? record.resendCount ?? 0;
 const resolveConsumedAt = (record) => record.consumedAt || record.consumed_at;
+const normalizePhone = (phone) => (typeof phone === 'string' ? phone.trim() : '');
+const normalizeStorageType = (storageType) => (
+  STORAGE_TYPES.includes(storageType) ? storageType : 'docketra'
+);
 
 const enforceMinimumDuration = async (startedAt, minimumMs = MIN_PUBLIC_RESPONSE_MS) => {
   const elapsed = Date.now() - startedAt;
@@ -99,20 +105,55 @@ const isEmailFirmOwner = async (email) => {
   return !!existing;
 };
 
+const findExistingSignupUser = async ({ email, phone, session = null }) => {
+  const userQuery = User.findOne({
+    status: { $ne: 'deleted' },
+    $or: [
+      { email: email.toLowerCase().trim() },
+      { phoneNumber: normalizePhone(phone) },
+    ],
+  });
+
+  if (session) {
+    userQuery.session(session);
+  }
+
+  return userQuery.lean();
+};
+
 /**
  * Initiate a manual signup flow
  * @param {Object} params - { name, email, password, phone }
  * @returns {Promise<Object>} result
  */
-const initiateSignup = async ({ name, email, password, phone, firmName, session = null, req = null }) => {
+const initiateSignup = async ({
+  name,
+  email,
+  password,
+  phone,
+  firmName,
+  storageType = 'docketra',
+  session = null,
+  req = null,
+}) => {
   const startedAt = Date.now();
   const normalizedEmail = email.toLowerCase().trim();
+  const normalizedPhone = normalizePhone(phone);
+  const normalizedStorageType = normalizeStorageType(storageType);
   const quota = await consumeSignupQuota({ email: normalizedEmail, ip: req?.ip });
   if (!quota.allowed) {
     return { success: false, status: 429, message: 'Too many requests. Please try again later.' };
   }
 
-  const emailAlreadyRegistered = await isEmailFirmOwner(normalizedEmail);
+  if (!PHONE_REGEX.test(normalizedPhone)) {
+    return { success: false, status: 400, message: 'Phone number must be 10 digits' };
+  }
+
+  const existingUser = await findExistingSignupUser({
+    email: normalizedEmail,
+    phone: normalizedPhone,
+    session,
+  });
 
   await TemporarySignup.deleteMany({
     $or: [
@@ -124,12 +165,10 @@ const initiateSignup = async ({ name, email, password, phone, firmName, session 
   // Remove any existing temporary signup for this email
   await TemporarySignup.deleteMany({ email: normalizedEmail }, { session });
 
-  if (emailAlreadyRegistered) {
-    // Intentional dummy hash work to smooth response timing and reduce email enumeration signals.
-    await bcrypt.hash(`existing:${normalizedEmail}`, SALT_ROUNDS);
-    log.warn('SIGNUP_FAILED', { req, email: normalizedEmail, reason: 'EMAIL_IN_USE' });
+  if (existingUser) {
+    log.warn('SIGNUP_FAILED', { req, email: normalizedEmail, reason: 'EMAIL_OR_PHONE_IN_USE' });
     await enforceMinimumDuration(startedAt);
-    return { success: true, message: EMAIL_ENUMERATION_SAFE_MESSAGE };
+    return { success: false, status: 409, message: 'Email or phone number already registered' };
   }
 
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
@@ -142,7 +181,8 @@ const initiateSignup = async ({ name, email, password, phone, firmName, session 
     email: normalizedEmail,
     firmName: firmName.trim(),
     passwordHash,
-    phone: phone || null,
+    phone: normalizedPhone,
+    storageType: normalizedStorageType,
     provider: 'manual',
     otpHash,
     otpExpiresAt,
@@ -255,6 +295,7 @@ const verifyOtp = async ({ email, otp, session = null, req = null }) => {
       firmName: record.firmName,
       passwordHash: record.passwordHash || null,
       phone: record.phone || null,
+      storageType: record.storageType || 'docketra',
       session,
       req,
     });
@@ -492,6 +533,7 @@ const createFirmAndAdmin = async ({
   firmName,
   passwordHash = null,
   phone = null,
+  storageType = 'docketra',
   authProvider,
   googleSubject = null,
   session = null,
@@ -551,6 +593,9 @@ const createFirmAndAdmin = async ({
     status: 'ACTIVE',
     createdByXid: 'SELF_SIGNUP',
     createdBy: normalizedEmail,
+    storageType: normalizeStorageType(storageType),
+    storageProvider: null,
+    storageConfig: null,
   }], { session });
 
   firm.defaultClientId = defaultClient._id;
@@ -563,7 +608,7 @@ const createFirmAndAdmin = async ({
     xID: adminXID,
     name: name.trim(),
     email: normalizedEmail,
-    phoneNumber: phone || null,
+    phoneNumber: normalizePhone(phone) || null,
     firmId: firm._id,
     defaultClientId: defaultClient._id,
     role: 'Admin',
@@ -617,18 +662,18 @@ const createTenant = async ({
   firmName,
   passwordHash,
   phone,
+  storageType = 'docketra',
   session,
   req = null,
 }) => {
-  const existing = await User.findOne({
-    email: email.toLowerCase().trim(),
-    isSystem: true,
-    role: 'Admin',
-    status: { $ne: 'deleted' },
-  }).session(session);
+  const existing = await findExistingSignupUser({
+    email,
+    phone,
+    session,
+  });
 
   if (existing) {
-    const conflict = new Error('Admin already exists for this email');
+    const conflict = new Error('Email or phone number already registered');
     conflict.statusCode = 409;
     throw conflict;
   }
@@ -639,6 +684,7 @@ const createTenant = async ({
     firmName,
     passwordHash: passwordHash || null,
     phone: phone || null,
+    storageType,
     authProvider: 'password',
     session,
     req,
@@ -686,6 +732,7 @@ const completeSignup = async ({ email, firmName, session, req = null }) => {
       firmName: resolvedFirmName,
       passwordHash: record.passwordHash || null,
       phone: record.phone || null,
+      storageType: record.storageType || 'docketra',
       authProvider: 'password',
       session,
       req,
