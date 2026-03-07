@@ -77,6 +77,9 @@ async function requestUpload(req, res) {
       });
     }
 
+    // SECURITY: keep the controller-level tenant lookup as defense-in-depth.
+    // The route middleware should populate req.caseRecord, but direct controller
+    // callers/tests must still fail closed on the same tenant-scoped query.
     const caseRecord = req.caseRecord || await Case.findOne({
       firmId: tenantId,
       $or: [{ caseId }, { caseNumber: caseId }],

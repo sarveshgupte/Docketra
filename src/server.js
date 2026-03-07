@@ -463,7 +463,7 @@ app.use('/api/dashboard', authenticate, firmContext, requireTenant, tenantThrott
 // Superadmin routes - platform scope only (no firm context)
 // Include legacy /superadmin to prevent SPA fallback when UI calls API without /api prefix.
 ['/api/sa', '/api/superadmin', '/superadmin'].forEach((basePath) => {
-  app.use(basePath, authenticate, superadminRouteLimiter, writeGuardChain, adminAuditTrail('superadmin'), superadminRoutes);
+  app.use(basePath, superadminRouteLimiter, authenticate, writeGuardChain, adminAuditTrail('superadmin'), superadminRoutes);
 });
 
 // SECURITY: Debug routes must never be reachable in production environments.

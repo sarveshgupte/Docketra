@@ -49,7 +49,7 @@ async function testAuthorizationMiddleware() {
       };
     }
     if (request === '../utils/role.utils') {
-      return { isSuperAdminRole: (role) => String(role).toUpperCase() === 'SUPERADMIN' };
+      return { isSuperAdminRole: (role) => ['SUPERADMIN', 'SUPER_ADMIN'].includes(String(role).toUpperCase()) };
     }
     return originalLoad.apply(this, arguments);
   };
