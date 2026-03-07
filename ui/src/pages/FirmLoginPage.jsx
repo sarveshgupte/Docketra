@@ -187,7 +187,7 @@ export const FirmLoginPage = () => {
 
     const normalizedOtp = otp.trim();
     if (!new RegExp(`^\\d{${OTP_LENGTH}}$`).test(normalizedOtp)) {
-      setError('Please enter a valid 6-digit OTP');
+      setError(`Please enter a valid ${OTP_LENGTH}-digit OTP`);
       return;
     }
 
