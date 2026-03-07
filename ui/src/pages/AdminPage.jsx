@@ -66,6 +66,9 @@ export const AdminPage = () => {
   const [storageConfig, setStorageConfig] = useState({
     mode: 'docketra_managed',
     provider: null,
+    capabilities: {
+      externalStorageEnabled: false,
+    },
   });
   const [savingStorage, setSavingStorage] = useState(false);
   const [storageLoaded, setStorageLoaded] = useState(false);
@@ -73,6 +76,7 @@ export const AdminPage = () => {
   const [statsFailed, setStatsFailed] = useState(false);
   const toastLockRef = useRef({});
   const toastTimerRef = useRef({});
+  const externalStorageEnabled = Boolean(storageConfig.capabilities?.externalStorageEnabled);
   
   // Admin stats (PR #41)
   const [adminStats, setAdminStats] = useState(EMPTY_ADMIN_STATS);
@@ -201,6 +205,7 @@ export const AdminPage = () => {
           provider: response.data?.provider || null,
           google: response.data?.google || {},
           onedrive: response.data?.onedrive || {},
+          capabilities: response.data?.capabilities || { externalStorageEnabled: false },
         });
         setStorageLoaded(true);
       }
@@ -941,20 +946,20 @@ export const AdminPage = () => {
                         {isPrimaryOrSystemAdmin ? (
                           <Badge status="InProgress">Admin (Primary)</Badge>
                         ) : (
-                          <Badge status={user.role === 'Admin' ? 'InProgress' : 'Pending'}>
+                          <Badge status={user.role === 'ADMIN' ? 'InProgress' : 'Pending'}>
                             {user.role}
                           </Badge>
                         )}
                       </td>
-                      <td>{user.firmId?.name || 'N/A'}</td>
+                      <td>{user.firm?.name || 'N/A'}</td>
                       <td>
                         <Badge status={user.isActive ? 'Approved' : 'Rejected'}>
                           {user.isActive ? 'Active' : 'Inactive'}
                         </Badge>
                       </td>
                       <td>
-                        <Badge status={user.passwordSet ? 'Approved' : 'Pending'}>
-                          {user.passwordSet ? 'Yes' : 'No'}
+                        <Badge status={user.passwordConfigured ? 'Approved' : 'Pending'}>
+                          {user.passwordConfigured ? 'Yes' : 'No'}
                         </Badge>
                       </td>
                       <td className="admin__actions">
@@ -969,7 +974,7 @@ export const AdminPage = () => {
                             {user.isActive ? 'Deactivate' : 'Activate'}
                           </Button>
                         )}
-                        {!user.passwordSet && (
+                        {!user.passwordConfigured && (
                           <Button
                             size="small"
                             variant="default"
@@ -1240,16 +1245,19 @@ export const AdminPage = () => {
                       name="storageMode"
                       checked={storageConfig.mode === 'firm_connected'}
                       onChange={() => handleStorageModeChange('firm_connected')}
+                      disabled={!externalStorageEnabled}
                     />
                     <span>Connect My Storage</span>
                   </label>
                   <p className="text-secondary">
-                    Files will be stored in your own cloud provider. Docketra will only access the selected folder.
+                    {externalStorageEnabled
+                      ? 'Files will be stored in your own cloud provider. Docketra will only access the selected folder.'
+                      : 'Connect Your Storage — Coming Soon'}
                   </p>
                 </div>
               </div>
 
-              {storageConfig.mode === 'firm_connected' && (
+              {storageConfig.mode === 'firm_connected' && externalStorageEnabled && (
                 <div className="neo-form-group">
                   <label className="neo-label">Provider</label>
                   <select

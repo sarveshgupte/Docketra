@@ -1,5 +1,5 @@
 const config = require('../config/config');
-const { getRedisClient } = require('../config/redis');
+const redisConfig = require('../config/redis');
 const { logSecurityEvent } = require('./securityAudit.middleware');
 const { hashIdentifier } = require('../utils/hashIdentifier');
 
@@ -33,7 +33,7 @@ const getAuthIdentifier = (req) => {
 const enforceAccountLockout = async (req, res, next) => {
   const identifier = getAuthIdentifier(req);
   if (!identifier) return next();
-  const redis = getRedisClient();
+  const redis = redisConfig.getRedisClient();
   if (!redis) return next();
 
   const ttl = await redis.ttl(getAccountLockKey(identifier));
@@ -51,7 +51,7 @@ const enforceAccountLockout = async (req, res, next) => {
 const recordFailedLoginAttempt = async (req) => {
   const identifier = getAuthIdentifier(req);
   if (!identifier) return;
-  const redis = getRedisClient();
+  const redis = redisConfig.getRedisClient();
   if (!redis) return;
 
   const accountKey = getAccountKey(identifier);
@@ -76,7 +76,7 @@ const recordFailedLoginAttempt = async (req) => {
 const clearFailedLoginAttempts = async (req) => {
   const identifier = getAuthIdentifier(req);
   if (!identifier) return;
-  const redis = getRedisClient();
+  const redis = redisConfig.getRedisClient();
   if (!redis) return;
 
   await redis.del(getAccountKey(identifier));

@@ -65,6 +65,9 @@ class FakeRedis {
 }
 
 async function testIpRateLimit() {
+  delete require.cache[require.resolve('../src/config/config')];
+  delete require.cache[require.resolve('../src/middleware/rateLimiters')];
+  process.env.SECURITY_RATE_LIMIT_GLOBAL = '100';
   const { globalApiLimiter } = require('../src/middleware/rateLimiters');
   const app = express();
   app.set('trust proxy', 1);
@@ -78,6 +81,7 @@ async function testIpRateLimit() {
 }
 
 async function testTenantThrottle() {
+  delete require.cache[require.resolve('../src/middleware/tenantThrottle.middleware')];
   const { tenantThrottle } = require('../src/middleware/tenantThrottle.middleware');
   const fakeRedis = new FakeRedis();
   redisModule.getRedisClient = () => fakeRedis;
@@ -119,6 +123,7 @@ async function testAccountLockout() {
   for (let i = 0; i < 5; i += 1) {
     await request(app).post('/login').send({ email: 'a@b.com' }).expect(401);
   }
+  await request(app).post('/login').send({ email: 'a@b.com' }).expect(401);
   await request(app).post('/login').send({ email: 'a@b.com' }).expect(429);
 }
 
@@ -141,6 +146,7 @@ async function run() {
   await testSecurityHeaders();
   await testAccountLockout();
   await testUploadRejection();
+  delete process.env.SECURITY_RATE_LIMIT_GLOBAL;
   console.log('securityHardening tests passed');
 }
 

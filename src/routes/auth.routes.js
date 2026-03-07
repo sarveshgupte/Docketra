@@ -3,7 +3,8 @@ const { applyRouteValidation } = require('../middleware/requestValidation.middle
 const routeSchemas = require('../schemas/auth.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { authenticate } = require('../middleware/auth.middleware');
-const { requireAdmin } = require('../middleware/permission.middleware');
+const { attachFirmContext } = require('../middleware/firmContext.middleware');
+const { authorizeFirmPermission } = require('../middleware/permission.middleware');
 const {
   authLimiter,
   authBlockEnforcer,
@@ -73,13 +74,13 @@ router.get('/profile', profileLimiter, authenticate, detectProfileLoop, getProfi
 router.put('/profile', profileLimiter, authenticate, updateProfile);
 
 // Admin-only endpoints - require authentication and admin role
-router.post('/reset-password', sensitiveLimiter, authenticate, requireAdmin, resetPassword);
+router.post('/reset-password', sensitiveLimiter, authenticate, attachFirmContext, authorizeFirmPermission('USER_MANAGE'), resetPassword);
 // NOTE: resend-setup-email has been moved to /api/admin/users/:xID/resend-invite (PR #48)
 // This ensures admin actions bypass password enforcement middleware
-router.post('/unlock-account', sensitiveLimiter, authenticate, requireAdmin, unlockAccount);
-router.get('/admin/users', profileLimiter, authenticate, requireAdmin, getAllUsers);
-router.post('/admin/users', sensitiveLimiter, authenticate, requireAdmin, createUser);
-router.put('/admin/users/:xID/activate', sensitiveLimiter, authenticate, requireAdmin, activateUser);
-router.put('/admin/users/:xID/deactivate', sensitiveLimiter, authenticate, requireAdmin, deactivateUser);
+router.post('/unlock-account', sensitiveLimiter, authenticate, attachFirmContext, authorizeFirmPermission('USER_MANAGE'), unlockAccount);
+router.get('/admin/users', profileLimiter, authenticate, attachFirmContext, authorizeFirmPermission('USER_VIEW'), getAllUsers);
+router.post('/admin/users', sensitiveLimiter, authenticate, attachFirmContext, authorizeFirmPermission('USER_MANAGE'), createUser);
+router.put('/admin/users/:xID/activate', sensitiveLimiter, authenticate, attachFirmContext, authorizeFirmPermission('USER_MANAGE'), activateUser);
+router.put('/admin/users/:xID/deactivate', sensitiveLimiter, authenticate, attachFirmContext, authorizeFirmPermission('USER_MANAGE'), deactivateUser);
 
 module.exports = router;

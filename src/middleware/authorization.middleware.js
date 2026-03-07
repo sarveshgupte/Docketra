@@ -3,7 +3,7 @@
 const mongoose = require('mongoose');
 const Case = require('../models/Case.model');
 const User = require('../models/User.model');
-const { isSuperAdminRole } = require('../utils/role.utils');
+const { isSuperAdminRole, isAdminRole } = require('../utils/role.utils');
 
 const TENANT_CONTEXT_ERROR = 'Tenant context missing. Request rejected.';
 
@@ -44,7 +44,6 @@ async function requireAdmin(req, res, next) {
     const userId = req.user?._id || req.user?.id || req.userId || null;
     const query = {
       firmId: tenantId,
-      role: 'Admin',
       isActive: true,
     };
 
@@ -55,7 +54,7 @@ async function requireAdmin(req, res, next) {
     }
 
     const user = await User.findOne(query);
-    if (!user) {
+    if (!user || !isAdminRole(user.role)) {
       return res.status(403).json({
         success: false,
         message: 'Admin access required',
