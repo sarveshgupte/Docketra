@@ -8,6 +8,7 @@ const labelClass = 'block text-xs font-medium text-gray-700 mb-1.5';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phonePattern = /^[0-9]{10}$/;
+const partialPhonePattern = /^[0-9]{0,10}$/;
 const OTP_LENGTH = 6;
 const OTP_RESEND_COOLDOWN = 60;
 const storageProviders = [
@@ -79,7 +80,7 @@ export default function Signup() {
 
   const onFormChange = (event) => {
     const { name, value } = event.target;
-    if (name === 'phone' && !/^\d{0,10}$/.test(value)) {
+    if (name === 'phone' && !partialPhonePattern.test(value)) {
       return;
     }
     setForm((prev) => ({ ...prev, [name]: value }));
