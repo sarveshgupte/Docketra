@@ -7,9 +7,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../../components/common/Layout';
 import { EmptyState } from '../../components/EmptyState';
+import { DashboardSkeleton } from '../../components/common/Skeleton';
 import { MetricCard } from '../../components/reports/MetricCard';
 import { AuditLogView } from '../../components/reports/AuditLogView';
-import { Loading } from '../../components/common/Loading';
 import { useAuth } from '../../hooks/useAuth';
 import { reportsService } from '../../services/reports.service';
 import './ReportsDashboard.css';
@@ -73,7 +73,7 @@ export const ReportsDashboard = () => {
   if (loading) {
     return (
       <Layout>
-        <Loading message="Loading reports dashboard..." />
+        <DashboardSkeleton />
       </Layout>
     );
   }
@@ -82,10 +82,14 @@ export const ReportsDashboard = () => {
     return (
       <Layout>
         <div className="reports-dashboard">
-          <div className="reports-dashboard__error">
-            <h2>Access Denied</h2>
-            <p>{error}</p>
-          </div>
+          <EmptyState
+            tone="error"
+            eyebrow="Reports unavailable"
+            title="We couldn’t load your reports"
+            description={error}
+            actionLabel="Try again"
+            onAction={loadDashboardData}
+          />
         </div>
       </Layout>
     );
@@ -100,8 +104,11 @@ export const ReportsDashboard = () => {
             <p className="text-secondary">Management information system - Read-only view</p>
           </div>
           <EmptyState
+            eyebrow="No reporting data yet"
             title="No reports available yet"
-            description="Data will appear once activity begins."
+            description="Once cases and team activity start flowing, your reporting workspace will populate automatically."
+            actionLabel="Review case registry"
+            onAction={() => navigate(`/app/firm/${firmSlug}/cases`)}
           />
         </div>
       </Layout>
