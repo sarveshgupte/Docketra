@@ -53,19 +53,19 @@ router.use(authenticate);
 router.use(attachFirmContext);
 
 // Public/authenticated endpoints
-router.get('/', authorizeFirmPermission('CLIENT_VIEW'), getClients);
-router.get('/:clientId', authorizeFirmPermission('CLIENT_VIEW'), getClientById);
+router.get('/', authorizeFirmPermission('CLIENT_VIEW'), userReadLimiter, getClients);
+router.get('/:clientId', authorizeFirmPermission('CLIENT_VIEW'), userReadLimiter, getClientById);
 
 // Admin-only endpoints
-router.post('/', authorizeFirmPermission('CLIENT_MANAGE'), createClient);
-router.put('/:clientId', authorizeFirmPermission('CLIENT_MANAGE'), updateClient);
-router.patch('/:clientId/status', authorizeFirmPermission('CLIENT_MANAGE'), toggleClientStatus);
-router.post('/:clientId/change-name', authorizeFirmPermission('CLIENT_MANAGE'), changeLegalName);
+router.post('/', authorizeFirmPermission('CLIENT_MANAGE'), userWriteLimiter, createClient);
+router.put('/:clientId', authorizeFirmPermission('CLIENT_MANAGE'), userWriteLimiter, updateClient);
+router.patch('/:clientId/status', authorizeFirmPermission('CLIENT_MANAGE'), userWriteLimiter, toggleClientStatus);
+router.post('/:clientId/change-name', authorizeFirmPermission('CLIENT_MANAGE'), sensitiveLimiter, changeLegalName);
 
 // Client Fact Sheet endpoints (Admin-only)
-router.put('/:clientId/fact-sheet', authorizeFirmPermission('CLIENT_MANAGE'), updateClientFactSheet);
+router.put('/:clientId/fact-sheet', authorizeFirmPermission('CLIENT_MANAGE'), userWriteLimiter, updateClientFactSheet);
 router.post('/:clientId/fact-sheet/files', authorizeFirmPermission('CLIENT_MANAGE'), sensitiveLimiter, upload.single('file'), enforceUploadSecurity, uploadFactSheetFile);
-router.delete('/:clientId/fact-sheet/files/:fileId', authorizeFirmPermission('CLIENT_MANAGE'), deleteFactSheetFile);
+router.delete('/:clientId/fact-sheet/files/:fileId', authorizeFirmPermission('CLIENT_MANAGE'), userWriteLimiter, deleteFactSheetFile);
 
 // Client CFS endpoints
 // Admin-only: Upload and delete

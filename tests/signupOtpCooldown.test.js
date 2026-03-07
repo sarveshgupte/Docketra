@@ -40,6 +40,7 @@ async function testResendOtpReturnsWaitTimeAnd429() {
       return {
         consumeSignupQuota: async () => ({ allowed: true }),
         consumeOtpAttempt: async () => ({ allowed: true }),
+        consumeOtpResendQuota: async () => ({ allowed: true }),
         clearOtpAttempts: async () => {},
       };
     }

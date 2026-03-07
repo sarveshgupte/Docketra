@@ -4,7 +4,6 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/database');
 const config = require('./config/config');
 const log = require('./utils/log');
@@ -121,8 +120,9 @@ const {
   loginLimiter,
   publicLimiter,
   globalApiLimiter,
-  sensitiveLimiter,
   internalMetricsLimiter,
+  contactLimiter,
+  superadminLimiter,
 } = require('./middleware/rateLimiters');
 const { tenantThrottle } = require('./middleware/tenantThrottle.middleware');
 const { uploadErrorHandler } = require('./middleware/uploadProtection.middleware');
@@ -159,20 +159,6 @@ const tenantRoutes = require('./routes/tenant.routes');  // Tenant storage setti
 const tenantResolver = require('./middleware/tenantResolver');
 const { login } = require('./controllers/auth.controller');
 const mutatingMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
-const superadminRouteLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 1000,
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req) => req.user?.xID || req.user?._id || req.ip || 'unknown',
-});
-const contactLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many contact requests. Please try again later.' },
-});
 const forceTransactionPaths = ['/google/callback', '/my-pending'];
 const writeGuardChain = (req, res, next) => {
   const shouldForceTransaction = forceTransactionPaths.some((path) => req.path && req.path.startsWith(path));
@@ -452,7 +438,7 @@ const superadminLoginChain = [loginLimiter, noFirmNoTransaction, (req, _res, nex
 app.post('/superadmin/login', ...superadminLoginChain);
 
 // Tenant login must be slug-scoped only
-app.get('/:firmSlug/login', loginLimiter, tenantResolver, (req, res) => {
+app.get('/:firmSlug/login', publicLimiter, tenantResolver, (req, res) => {
   res.json({ success: true, data: { firmId: req.firmIdString, firmSlug: req.firmSlug, name: req.firmName, status: req.firm.status } });
 });
 app.post('/:firmSlug/login', loginLimiter, tenantResolver, noFirmNoTransaction, (req, res, next) => { req.loginScope = 'tenant'; next(); }, login);
@@ -473,13 +459,13 @@ app.use('/api/categories', writeGuardChain, categoryRoutes);
 app.use('/api/work-types', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, workTypeRoutes);
 
 // Admin routes (firm-scoped) - enforce auth + firm context + admin role boundary
-app.use('/api/admin', authenticate, firmContext, requireTenant, tenantThrottle, sensitiveLimiter, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, requireAdmin, adminAuditTrail('admin'), adminRoutes);
+app.use('/api/admin', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, requireAdmin, adminAuditTrail('admin'), adminRoutes);
 app.use('/api/dashboard', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, requireAdmin, dashboardRoutes);
 
 // Superadmin routes - platform scope only (no firm context)
 // Include legacy /superadmin to prevent SPA fallback when UI calls API without /api prefix.
 ['/api/sa', '/api/superadmin', '/superadmin'].forEach((basePath) => {
-  app.use(basePath, superadminRouteLimiter, authenticate, writeGuardChain, adminAuditTrail('superadmin'), superadminRoutes);
+  app.use(basePath, superadminLimiter, authenticate, writeGuardChain, adminAuditTrail('superadmin'), superadminRoutes);
 });
 app.use('/api/security', authenticate, securityRoutes);
 

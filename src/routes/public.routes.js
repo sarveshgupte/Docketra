@@ -2,6 +2,7 @@ const express = require('express');
 const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
 const routeSchemas = require('../schemas/public.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
+const { signupLimiter } = require('../middleware/rateLimiters');
 const { getFirmBySlug } = require('../controllers/superadmin.controller');
 const { submitEnterpriseInquiry } = require('../controllers/contact.controller');
 const EarlyAccessRequest = require('../models/EarlyAccessRequest.model');
@@ -35,7 +36,7 @@ const sanitizeLogValue = (value, maxLength = 160) =>
 
 router.get('/firms/:firmSlug', getFirmBySlug);
 
-router.post('/signup', async (req, res, next) => {
+router.post('/signup', signupLimiter, async (req, res, next) => {
   try {
     const {
       firmName,

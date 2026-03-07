@@ -1,7 +1,11 @@
 const express = require('express');
 const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
 const routeSchemas = require('../schemas/publicSignup.routes.schema');
-const { authLimiter, signupLimiter } = require('../middleware/rateLimiters');
+const {
+  authLimiter,
+  otpVerifyLimiter,
+  otpResendLimiter,
+} = require('../middleware/rateLimiters');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const {
   initiateSignup,
@@ -12,12 +16,11 @@ const {
 
 const router = applyRouteValidation(express.Router(), routeSchemas);
 
-// Rate-limited routes
-router.post('/initiate-signup', authLimiter, signupLimiter, wrapWriteHandler(initiateSignup));
-router.post('/resend-otp', authLimiter, resendOtp);
-
-// Non-rate-limited routes (protected by OTP attempts/verification logic)
-router.post('/verify-otp', authLimiter, wrapWriteHandler(verifyOtp));
+// Keep the coarse public/IP limiter at the mount point and use OTP-specific
+// throttles inside the signup flow to avoid generic double-throttling in development.
+router.post('/initiate-signup', wrapWriteHandler(initiateSignup));
+router.post('/resend-otp', otpResendLimiter, resendOtp);
+router.post('/verify-otp', otpVerifyLimiter, wrapWriteHandler(verifyOtp));
 router.post('/complete-signup', authLimiter, wrapWriteHandler(completeSignup));
 
 module.exports = router;
