@@ -279,6 +279,18 @@ const verifyOtp = async ({ email, otp, session = null, req = null }) => {
     });
     log.info('OTP_VERIFIED', { req, email: normalizedEmail, firmSlug: tenant.firmSlug });
     log.info('SIGNUP_COMPLETED', { req, email: normalizedEmail, firmSlug: tenant.firmSlug, xid: tenant.xid });
+    try {
+      await sendSignupWelcomeEmail({
+        name: record.name,
+        email: normalizedEmail,
+        xid: tenant.xid,
+        firmName: record.firmName,
+        firmSlug: tenant.firmSlug,
+        req,
+      });
+    } catch (emailError) {
+      console.error('[PUBLIC_SIGNUP] Failed to send welcome email after OTP verification:', emailError.message);
+    }
 
     const token = jwtService.generateAccessToken({
       userId: String(tenant.userId),
@@ -433,6 +445,45 @@ const buildFirmUrl = (firmSlug) => {
     return `https://${firmSlug}.${appRootDomain}`;
   }
   return `${frontendUrl}/${firmSlug}/login`;
+};
+
+const sendSignupWelcomeEmail = async ({
+  name,
+  email,
+  firmName,
+  xid,
+  firmSlug,
+  req = null,
+}) => {
+  const workspaceUrl = buildFirmUrl(firmSlug);
+  try {
+    const emailResult = await emailService.sendFirmSetupEmail({
+      name,
+      email,
+      xid,
+      workspaceUrl,
+      firmName,
+      context: req,
+    });
+
+    if (!emailResult?.success) {
+      const failureMessage = emailResult.error || 'Unknown email error';
+      console.error('[PUBLIC_SIGNUP] Failed to send welcome email:', failureMessage);
+      return { success: false, error: failureMessage };
+    }
+
+    console.info('[PUBLIC_SIGNUP] Welcome email sent successfully', {
+      email,
+      firmSlug,
+      xid,
+      queued: Boolean(emailResult?.queued),
+      messageId: emailResult?.messageId || null,
+    });
+    return { success: true };
+  } catch (emailError) {
+    console.error('[PUBLIC_SIGNUP] Failed to send welcome email:', emailError.message);
+    return { success: false, error: emailError.message };
+  }
 };
 
 const createFirmAndAdmin = async ({
@@ -646,18 +697,14 @@ const completeSignup = async ({ email, firmName, session, req = null }) => {
       metadata: { firmSlug: result.firmSlug },
     });
 
-    // Send welcome email (non-blocking — failure does not affect signup result)
-    try {
-      await emailService.sendFirmSetupEmail({
-        name: record.name,
-        email: normalizedEmail,
-        xid: result.adminXID,
-        workspaceUrl: result.firmUrl,
-        firmName: resolvedFirmName,
-      });
-    } catch (emailError) {
-      console.error('[PUBLIC_SIGNUP] Failed to send welcome email:', emailError.message);
-    }
+    await sendSignupWelcomeEmail({
+      name: record.name,
+      email: normalizedEmail,
+      xid: result.adminXID,
+      firmName: resolvedFirmName,
+      firmSlug: result.firmSlug,
+      req,
+    });
 
     return {
       success: true,
@@ -673,6 +720,48 @@ const completeSignup = async ({ email, firmName, session, req = null }) => {
   }
 };
 
+const resendCredentialsEmail = async ({ email, req = null }) => {
+  const normalizedEmail = email.toLowerCase().trim();
+  const responseMessage = 'If an account exists, credentials have been sent to your email.';
+
+  const adminUser = await User.findOne({
+    email: normalizedEmail,
+    isSystem: true,
+    role: 'Admin',
+    status: { $ne: 'deleted' },
+  }).select('name email xID firmId').lean();
+
+  if (!adminUser) {
+    console.warn('[PUBLIC_SIGNUP] resendCredentials requested for unknown email');
+    return { success: true, message: responseMessage };
+  }
+
+  const firm = await Firm.findById(adminUser.firmId).select('name firmSlug').lean();
+  if (!firm || !firm.firmSlug) {
+    console.error('[PUBLIC_SIGNUP] Unable to resend credentials email. Firm context missing.', {
+      firmId: adminUser.firmId ? String(adminUser.firmId) : null,
+    });
+    return { success: true, message: responseMessage };
+  }
+
+  const emailResult = await sendSignupWelcomeEmail({
+    name: adminUser.name,
+    email: normalizedEmail,
+    xid: adminUser.xID,
+    firmName: firm.name,
+    firmSlug: firm.firmSlug,
+    req,
+  });
+  if (!emailResult.success) {
+    console.error('[PUBLIC_SIGNUP] resendCredentials email delivery failed', {
+      firmId: adminUser.firmId ? String(adminUser.firmId) : null,
+      reason: emailResult.error || 'Unknown email error',
+    });
+  }
+
+  return { success: true, message: responseMessage };
+};
+
 module.exports = {
   initiateSignup,
   verifyOtp,
@@ -683,6 +772,7 @@ module.exports = {
   generateOtp,
   isEmailFirmOwner,
   buildFirmUrl,
+  resendCredentialsEmail,
   // Backward-compatible aliases
   initiateManualSignup: initiateSignup,
   verifySignupOtp: verifyOtp,

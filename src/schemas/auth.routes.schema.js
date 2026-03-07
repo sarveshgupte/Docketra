@@ -7,6 +7,11 @@ module.exports = {
   'POST /resend-setup': {
     body: z.object({}).passthrough(),
   },
+  'POST /resend-credentials': {
+    body: z.object({
+      email: z.string().trim().email(),
+    }).passthrough(),
+  },
   'POST /reset-password-with-token': {
     body: z.object({}).passthrough(),
   },
