@@ -82,13 +82,20 @@ const getClients = async (req, res) => {
     };
     
     const clients = await Client.find(filter)
-      .select('clientId businessName status') // Select necessary fields (status is canonical)
+      .select('clientId businessName businessEmail primaryContactNumber status createdAt isSystemClient isInternal firmId')
       .sort({ clientId: 1 }); // Sort by clientId for consistency
+
+    const normalizedClients = clients.map((client) => ({
+      ...client.toObject(),
+      name: client.businessName,
+      type: client.isInternal ? 'internal' : 'external',
+      is_default: client.isSystemClient || client.isInternal || client.clientId === 'C000001',
+    }));
     
     res.json({
       success: true,
-      data: clients,
-      count: clients.length,
+      data: normalizedClients,
+      count: normalizedClients.length,
     });
   } catch (error) {
     res.status(500).json({

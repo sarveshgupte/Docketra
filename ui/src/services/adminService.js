@@ -121,7 +121,7 @@ export const adminService = {
    * List all clients
    */
   listClients: async () => {
-    const response = await api.get('/client-approval/clients');
+    const response = await api.get('/admin/clients');
     return response.data;
   },
 

@@ -175,7 +175,7 @@ async function testServiceWritesUseSession() {
 }
 
 async function testCreateFirmAndAdminTracksVerificationAndConsent() {
-  const captured = { users: [] };
+  const captured = { users: [], clients: [] };
   const session = { id: 'session-3' };
   let firmCounter = 0;
 
@@ -200,7 +200,10 @@ async function testCreateFirmAndAdminTracksVerificationAndConsent() {
     if (request === '../models/Firm.model') return mockFirmModel;
     if (request === '../models/Client.model') {
       return {
-        create: async () => ([{ _id: 'client-1' }]),
+        create: async ([clientDoc]) => {
+          captured.clients.push(clientDoc);
+          return [{ _id: `client-${captured.clients.length}` }];
+        },
       };
     }
     if (request === '../models/User.model') {
@@ -275,6 +278,11 @@ async function testCreateFirmAndAdminTracksVerificationAndConsent() {
   assert.strictEqual(captured.users[0].signupUserAgent, 'Mozilla/5.0 Test Browser', 'password flow should persist user agent');
   assert.strictEqual(captured.users[1].verificationMethod, 'GOOGLE', 'google flow should mark GOOGLE verification method');
   assert.strictEqual(captured.users[1].authProviders.google.googleId, 'google-subject', 'google flow should persist google subject');
+  assert.strictEqual(captured.clients.length, 2, 'expected one default client per created firm');
+  assert.strictEqual(captured.clients[0].businessName, 'Acme Legal', 'default client name should match firm name');
+  assert.strictEqual(captured.clients[0].isInternal, true, 'default client should be internal');
+  assert.strictEqual(captured.clients[0].isSystemClient, true, 'default client should be marked as system default');
+  assert.strictEqual(captured.clients[0].firmId, 'firm-1', 'default client should be linked to created firm');
   console.log('  ✓ tracks verification and legal consent metadata when creating signup admins');
 }
 

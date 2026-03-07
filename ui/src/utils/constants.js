@@ -41,10 +41,18 @@ Example: VITE_API_BASE_URL=https://api.example.com/api`;
   throw new Error('VITE_API_BASE_URL is not defined or empty. Check console for details.');
 }
 
-// Log the resolved API base URL for verification (helpful for debugging deployments)
-console.info(`✓ Using API base URL: ${rawApiBaseUrl}`);
+const normalizeApiBaseUrl = (baseUrl) => {
+  const trimmed = baseUrl.trim().replace(/\/+$/, '');
+  if (!trimmed) {
+    return '/api';
+  }
+  return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+};
 
-export const API_BASE_URL = rawApiBaseUrl;
+export const API_BASE_URL = normalizeApiBaseUrl(rawApiBaseUrl);
+
+// Log the resolved API base URL for verification (helpful for debugging deployments)
+console.info(`✓ Using API base URL: ${API_BASE_URL}`);
 
 export const CASE_STATUS = {
   // Canonical lifecycle states (NEW - use these)

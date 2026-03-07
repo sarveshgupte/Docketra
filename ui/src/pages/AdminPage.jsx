@@ -159,7 +159,7 @@ export const AdminPage = () => {
           setCategories(response.data || []);
         }
       } else if (activeTab === 'clients') {
-        const response = await clientService.getClients(false); // Get all clients including inactive
+        const response = await adminService.listClients();
         if (response.success) {
           setClients(response.data || []);
         }
@@ -934,70 +934,77 @@ export const AdminPage = () => {
                 <p className="text-secondary">No clients found</p>
               </div>
             ) : (
-              <table className="neo-table">
-                <thead>
-                  <tr>
-                    <th>Client ID</th>
-                    <th>Business Name</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th>Status</th>
-                    <th>Created</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {clients.map((client) => (
-                    <tr key={client.clientId}>
-                      <td>
-                        {client.clientId}
-                        {client.clientId === 'C000001' && (
-                          <span style={{ marginLeft: '8px' }}>
-                            <Badge status="Approved">Default</Badge>
-                          </span>
-                        )}
-                      </td>
-                      <td>{client.businessName}</td>
-                      <td>{client.businessEmail}</td>
-                      <td>{client.primaryContactNumber}</td>
-                      <td>
-                        <Badge status={client.status === 'ACTIVE' ? 'Approved' : 'Rejected'}>
-                          {client.status === 'ACTIVE' ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </td>
-                      <td>{formatDate(client.createdAt)}</td>
-                      <td className="admin__actions">
-                        <Button
-                          size="small"
-                          variant="default"
-                          onClick={() => handleEditClient(client)}
-                          disabled={client.isSystemClient}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          size="small"
-                          variant="warning"
-                          onClick={() => handleOpenChangeNameModal(client)}
-                          disabled={client.isSystemClient}
-                        >
-                          Change Name
-                        </Button>
-                        {/* Only show Activate/Deactivate button if NOT Default Client */}
-                        {client.clientId !== 'C000001' && (
+              <>
+                <table className="neo-table">
+                  <thead>
+                    <tr>
+                      <th>Client ID</th>
+                      <th>Business Name</th>
+                      <th>Email</th>
+                      <th>Phone</th>
+                      <th>Status</th>
+                      <th>Created</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {clients.map((client) => (
+                      <tr key={client.clientId}>
+                        <td>
+                          {client.clientId}
+                          {client.is_default && (
+                            <span style={{ marginLeft: '8px' }}>
+                              <Badge status="Approved">Default</Badge>
+                            </span>
+                          )}
+                        </td>
+                        <td>{client.businessName}</td>
+                        <td>{client.businessEmail}</td>
+                        <td>{client.primaryContactNumber}</td>
+                        <td>
+                          <Badge status={client.status === 'ACTIVE' ? 'Approved' : 'Rejected'}>
+                            {client.status === 'ACTIVE' ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </td>
+                        <td>{formatDate(client.createdAt)}</td>
+                        <td className="admin__actions">
                           <Button
                             size="small"
-                            variant={client.status === 'ACTIVE' ? 'danger' : 'success'}
-                            onClick={() => handleToggleClientStatus(client)}
+                            variant="default"
+                            onClick={() => handleEditClient(client)}
+                            disabled={client.isSystemClient || client.is_default}
                           >
-                            {client.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+                            Edit
                           </Button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                          <Button
+                            size="small"
+                            variant="warning"
+                            onClick={() => handleOpenChangeNameModal(client)}
+                            disabled={client.isSystemClient || client.is_default}
+                          >
+                            Change Name
+                          </Button>
+                          {/* Only show Activate/Deactivate button if NOT Default Client */}
+                          {!client.is_default && (
+                            <Button
+                              size="small"
+                              variant={client.status === 'ACTIVE' ? 'danger' : 'success'}
+                              onClick={() => handleToggleClientStatus(client)}
+                            >
+                              {client.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {clients.filter((client) => !client.is_default).length === 0 && (
+                  <div className="admin__empty" style={{ marginTop: '16px' }}>
+                    <p className="text-secondary">No additional clients yet. Your firm is listed as the default internal client.</p>
+                  </div>
+                )}
+              </>
             )}
           </Card>
         )}
