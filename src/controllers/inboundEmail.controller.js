@@ -43,6 +43,8 @@ const MAX_ATTACHMENT_SIZE_BYTES = 25 * 1024 * 1024;
 const EMAIL_ATTACHMENT_PREFIX = 'email';
 const INBOUND_SIGNATURE_TOLERANCE_SECONDS = Number(process.env.INBOUND_EMAIL_WEBHOOK_MAX_SKEW_SECONDS || 300);
 const replayCache = new Map();
+const MAX_INBOUND_REPLAY_CACHE_ENTRIES = Number(process.env.INBOUND_EMAIL_REPLAY_CACHE_MAX || 10000);
+let insecureWebhookWarningLogged = false;
 const escapeHtml = (value) => String(value || '')
   .replace(/&/g, '&amp;')
   .replace(/</g, '&lt;')
@@ -100,12 +102,23 @@ const rememberInboundReplay = async (reqHeaders = {}) => {
   for (const [key, value] of replayCache.entries()) {
     if (value <= Date.now()) replayCache.delete(key);
   }
+  while (replayCache.size > MAX_INBOUND_REPLAY_CACHE_ENTRIES) {
+    const [oldestKey] = replayCache.keys();
+    if (!oldestKey) break;
+    replayCache.delete(oldestKey);
+  }
   return true;
 };
 
 const verifyInboundSignature = (rawBody, reqHeaders = {}) => {
   const secret = process.env.INBOUND_EMAIL_WEBHOOK_SECRET;
-  if (!secret) return process.env.NODE_ENV !== 'production';
+  if (!secret) {
+    if (process.env.NODE_ENV !== 'production' && !insecureWebhookWarningLogged) {
+      console.warn('[inboundEmail] INBOUND_EMAIL_WEBHOOK_SECRET is not configured; signature verification is disabled');
+      insecureWebhookWarningLogged = true;
+    }
+    return process.env.NODE_ENV !== 'production';
+  }
 
   const providedSignature = String(reqHeaders['x-inbound-signature'] || '').trim().replace(/^sha256=/i, '');
   if (!providedSignature) return false;

@@ -62,10 +62,10 @@ const scanBufferWithClamAv = (inputBuffer) => new Promise((resolve, reject) => {
   });
   socket.on('end', () => {
     const normalized = response.trim();
-    const infected = normalized.includes('FOUND');
     if (!normalized) {
       return finish(new Error('Virus scanner returned empty response'));
     }
+    const infected = normalized.includes('FOUND');
     return finish(null, { infected, response: normalized });
   });
   socket.on('connect', () => {
