@@ -26,17 +26,23 @@ return 1
 `;
 
 const otpAttemptScript = `
-local key = KEYS[1]
+local attemptsKey = KEYS[1]
+local blockKey = KEYS[2]
 local maxAttempts = tonumber(ARGV[1])
 local ttl = tonumber(ARGV[2])
 
-local attempts = redis.call("INCR", key)
+if redis.call("EXISTS", blockKey) == 1 then
+  return -2
+end
+
+local attempts = redis.call("INCR", attemptsKey)
 
 if attempts == 1 then
-  redis.call("EXPIRE", key, ttl)
+  redis.call("EXPIRE", attemptsKey, ttl)
 end
 
 if attempts > maxAttempts then
+  redis.call("SET", blockKey, "1", "EX", ttl, "NX")
   return -1
 end
 
@@ -122,20 +128,16 @@ const consumeOtpAttempt = async ({ email }) => {
     return { allowed: true, attempts: counter.count };
   }
 
-  if (await redis.exists(blockKey)) {
-    throw new Error('Too many OTP attempts. Try again later.');
-  }
-
   const attempts = Number(await redis.eval(
     otpAttemptScript,
-    1,
+    2,
     key,
+    blockKey,
     VERIFY_MAX_ATTEMPTS,
     OTP_BLOCK_SECONDS,
   ));
 
-  if (attempts === -1) {
-    await redis.set(blockKey, '1', 'EX', OTP_BLOCK_SECONDS);
+  if (attempts === -1 || attempts === -2) {
     throw new Error('Too many OTP attempts. Try again later.');
   }
 
