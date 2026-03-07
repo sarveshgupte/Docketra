@@ -48,9 +48,10 @@ docketra/
 
 ### Prerequisites
 
-- Node.js (v14 or higher)
+- Node.js (v18 or higher)
 - MongoDB (v4.4 or higher)
 - npm or yarn
+- Redis (required in production for distributed rate limiting and workers)
 
 ### Installation
 
@@ -70,13 +71,18 @@ docketra/
    cp .env.example .env
    ```
    
-   Edit `.env` and configure:
+   Edit `.env` and configure the production-safe minimum:
    ```
-   PORT=3000
-   NODE_ENV=development
-   MONGODB_URI=mongodb://localhost:27017/docketra
-   APP_NAME=Docketra
-   ```
+    PORT=3000
+    NODE_ENV=development
+    MONGO_URI=mongodb://127.0.0.1:27017/docketra
+    JWT_SECRET=<32+ character secret>
+    SUPERADMIN_XID=X000001
+    SUPERADMIN_EMAIL=superadmin@example.com
+    SUPERADMIN_PASSWORD_HASH=<bcrypt hash>
+    SUPERADMIN_OBJECT_ID=000000000000000000000001
+    REDIS_URL=redis://127.0.0.1:6379
+    ```
 
 4. **Start MongoDB**
    ```bash
@@ -87,30 +93,19 @@ docketra/
    docker run -d -p 27017:27017 --name mongodb mongo:latest
    ```
 
-5. **Initialize admin user**
-   ```bash
-   node src/scripts/seedAdmin.js
-   ```
-   
-   This creates the default admin account:
-   - **xID**: `X000001`
-   - **Password**: `ChangeMe@123`
-   
-   ⚠️ **IMPORTANT**: Change the default password immediately after first login!
+ 5. **Run the application**
+    ```bash
+    # API process
+    node server.js
 
-6. **Run the application**
-   ```bash
-   # Development mode with auto-restart
-   npm run dev
-   
-   # Production mode
-   npm start
-   ```
+    # Worker process (run separately in another shell/container)
+    node worker.js
+    ```
 
-7. **Verify the server is running**
-   ```bash
-   curl http://localhost:3000/health
-   ```
+ 6. **Verify the server is running**
+    ```bash
+    curl http://localhost:3000/health
+    ```
 
 ## 📚 API Documentation
 
@@ -125,12 +120,12 @@ The API uses xID-based authentication. To access protected endpoints:
 
 1. Login to get authenticated:
    ```bash
-   curl -X POST http://localhost:3000/api/auth/login \
-     -H "Content-Type: application/json" \
-     -d '{
-       "xID": "X000001",
-       "password": "ChangeMe@123"
-     }'
+    curl -X POST http://localhost:3000/<firm-slug>/login \
+      -H "Content-Type: application/json" \
+      -d '{
+        "xID": "X000001",
+        "password": "ChangeMe@123"
+      }'
    ```
 
 2. Use the returned `accessToken` for subsequent requests. Protected endpoints require the `Authorization: Bearer <token>` header:
@@ -258,6 +253,37 @@ curl "http://localhost:3000/api/tasks?case=CASE_ID"
 
 ### Automatic Tracking
 - All models include `createdAt` and `updatedAt` timestamps
+
+## 🔭 Observability
+
+- Every request carries an `X-Request-ID` header; upstream request IDs are preserved when provided.
+- `GET /metrics` exports Prometheus-compatible metrics when authorized with `Authorization: Bearer <METRICS_TOKEN>`.
+- Add `Accept: application/json` to the same endpoint if you need the legacy JSON snapshot.
+
+Example:
+
+```bash
+curl http://localhost:3000/metrics \
+  -H "Authorization: Bearer $METRICS_TOKEN"
+```
+
+## 🧪 Validation & Load Testing
+
+```bash
+npm run lint
+npm test
+npm run build:ui
+```
+
+Basic load testing is available via k6:
+
+```bash
+k6 run load-tests/core-endpoints.js \
+  -e BASE_URL=http://localhost:3000 \
+  -e TENANT_SLUG=acme \
+  -e LOGIN_XID=X000001 \
+  -e LOGIN_PASSWORD=ChangeMe@123
+```
 - User actions tracked via `createdBy` and `updatedBy` fields
 - Status changes logged with timestamp and user in `statusHistory`
 

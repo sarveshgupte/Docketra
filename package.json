@@ -2,16 +2,20 @@
   "name": "docketra",
   "version": "1.0.0",
   "description": "Task & Case Management System - Backend API",
-  "main": "src/server.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node src/server.js",
+    "start": "node server.js",
+    "start:worker": "node worker.js",
     "dev": "nodemon src/server.js",
+    "lint": "find src tests -name '*.js' -print0 | xargs -0 -n1 node --check",
     "build:ui": "cd ui && npm run build",
     "install:ui": "cd ui && npm install",
     "heroku-postbuild": "npm run install:ui && npm run build:ui",
     "test:integrity": "node tests/adminIntegrity.test.js && node tests/firmRbac.test.js && node tests/writeSafety.test.js && node tests/requestLifecycle.test.js && node tests/sideEffectQueue.test.js && node tests/circuitBreaker.test.js && node tests/softDelete.test.js && node tests/caseStateMachine.test.js && node tests/caseSla.service.test.js && node tests/caseSlaConcurrency.test.js",
     "test:security": "node tests/securityHardening.test.js && node tests/coreSecurityHardeningPhase2.test.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:hardening": "node tests/requestId.middleware.test.js && node tests/productionHardening.test.js",
+    "test": "npm run test:integrity && npm run test:security && npm run test:hardening",
+    "validate:env": "node -e \"process.env.NODE_ENV=process.env.NODE_ENV||'test'; process.env.JWT_SECRET=process.env.JWT_SECRET||'0123456789abcdef0123456789abcdef'; process.env.SUPERADMIN_PASSWORD_HASH=process.env.SUPERADMIN_PASSWORD_HASH||'$2b$10$abcdefghijklmnopqrstuu0Lz3M0RtZpmjHtkobaN6D2PfYZ7RUTy'; process.env.SUPERADMIN_XID=process.env.SUPERADMIN_XID||'X000001'; process.env.SUPERADMIN_EMAIL=process.env.SUPERADMIN_EMAIL||'superadmin@example.com'; process.env.SUPERADMIN_OBJECT_ID=process.env.SUPERADMIN_OBJECT_ID||'000000000000000000000001'; process.env.MONGO_URI=process.env.MONGO_URI||'mongodb://127.0.0.1:27017/docketra'; process.env.DISABLE_GOOGLE_AUTH=process.env.DISABLE_GOOGLE_AUTH||'true'; process.env.ENCRYPTION_PROVIDER=process.env.ENCRYPTION_PROVIDER||'disabled'; require('./src/config/validateEnv').validateEnv();\"",
     "migration:add_multi_tenant_indexes": "node scripts/migrations/add_multi_tenant_indexes.js up",
     "migration:rollback_multi_tenant_indexes": "node scripts/migrations/add_multi_tenant_indexes.js down",
     "migration:status_to_lowercase": "node src/scripts/migrateStatusToLowercase.js",
@@ -59,5 +63,8 @@
     "mongodb-memory-server": "^10.4.3",
     "nodemon": "^3.1.11",
     "supertest": "^7.1.4"
+  },
+  "overrides": {
+    "tar": "^7.5.12"
   }
 }
