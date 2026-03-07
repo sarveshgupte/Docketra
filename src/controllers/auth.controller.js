@@ -26,7 +26,14 @@ const { logAuthEvent } = require('../services/audit.service');
 const { incrementTenantMetric } = require('../services/tenantMetrics.service');
 const { decrypt: decryptProtectedValue } = require('../utils/encryption');
 const { logSecurityAuditEvent, SECURITY_AUDIT_ACTIONS } = require('../services/securityAudit.service');
-const { noteLoginFailure, noteRefreshTokenFailure } = require('../services/securityTelemetry.service');
+const {
+  noteLoginFailure,
+  noteLockedAccountAttempt,
+  noteSuccessfulLogin,
+  noteRefreshTokenFailure,
+  noteRefreshTokenUse,
+  getRequestCountry,
+} = require('../services/securityTelemetry.service');
 
 /**
  * Authentication Controller for JWT-based Enterprise Authentication
@@ -57,6 +64,55 @@ const logger = log;
 const { safeLogForensicAudit, getRequestIp, getRequestUserAgent } = require('../services/forensicAudit.service');
 
 const getTwoFactorSecret = (user) => decryptProtectedValue(user?.twoFactorSecret);
+
+const persistLastSuccessfulLogin = async (req, user) => {
+  if (!user) return;
+
+  try {
+    const loginState = {
+      lastLoginAt: new Date(),
+      lastLoginIp: getRequestIp(req),
+      lastLoginCountry: getRequestCountry(req),
+    };
+
+    user.lastLoginAt = loginState.lastLoginAt;
+    user.lastLoginIp = loginState.lastLoginIp;
+    user.lastLoginCountry = loginState.lastLoginCountry;
+
+    if (typeof user.save === 'function') {
+      await user.save();
+      return;
+    }
+
+    if (user._id && mongoose.connection?.readyState === 1) {
+      await User.updateOne({ _id: user._id }, { $set: loginState });
+    }
+  } catch (error) {
+    log.warn('AUTH_LAST_LOGIN_PERSIST_FAILED', {
+      req,
+      userId: user?._id || null,
+      firmId: user?.firmId || null,
+      error: error.message,
+    });
+  }
+};
+
+const handleSuccessfulLoginMonitoring = async (req, user, { resource = 'auth/login', mfaRequired = false } = {}) => {
+  if (!user) return;
+
+  await noteSuccessfulLogin({
+    req,
+    userId: user._id,
+    firmId: user.firmId || DEFAULT_FIRM_ID,
+    xID: user.xID || DEFAULT_XID,
+    lastLoginIp: user.lastLoginIp || null,
+    lastLoginAt: user.lastLoginAt || null,
+    lastLoginCountry: user.lastLoginCountry || null,
+    resource,
+    mfaRequired,
+  });
+  await persistLastSuccessfulLogin(req, user);
+};
 
 /**
  * Non-fatal auth audit logger. Audit failures must never break primary business
@@ -538,6 +594,12 @@ const login = async (req, res) => {
     
     // Check if account is locked
     if (user.isLocked) {
+      await noteLockedAccountAttempt({
+        req,
+        userId: user._id,
+        firmId: user.firmId || DEFAULT_FIRM_ID,
+        xID: user.xID,
+      });
       const retryAfter = Math.max(1, Math.ceil((new Date(user.lockUntil).getTime() - Date.now()) / 1000));
       res.setHeader('Retry-After', String(retryAfter));
       return res.status(403).json({
@@ -794,6 +856,10 @@ const login = async (req, res) => {
 
     // Log successful login (non-blocking)
     try {
+      await handleSuccessfulLoginMonitoring(req, user, {
+        resource: 'auth/login',
+        mfaRequired: false,
+      });
       await logAuthAudit({
         xID: user.xID || DEFAULT_XID,
         firmId: user.firmId || DEFAULT_FIRM_ID,
@@ -2688,17 +2754,31 @@ const refreshAccessToken = async (req, res) => {
     // Hash the provided refresh token
     const tokenHash = jwtService.hashRefreshToken(refreshToken);
     
-    // Find the refresh token in database
-    const storedToken = await RefreshToken.findOne({
-      tokenHash,
-      isRevoked: false,
-      expiresAt: { $gt: new Date() },
-    });
-    
-    if (!storedToken) {
+    // Find the refresh token in database, preserving revoked-token visibility for abuse monitoring.
+    // We intentionally query all matching hashes first so revoked-token reuse can be detected and
+    // alerted on before the request is rejected.
+    const storedToken = await RefreshToken.findOne({ tokenHash });
+    const now = new Date();
+
+    if (!storedToken || storedToken.expiresAt <= now) {
       await noteRefreshTokenFailure({
         req,
+        userId: storedToken?.userId || null,
+        firmId: storedToken?.firmId || null,
         reason: 'invalid_refresh_token',
+      });
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired refresh token',
+      });
+    }
+
+    if (storedToken.isRevoked) {
+      await noteRefreshTokenFailure({
+        req,
+        userId: storedToken.userId,
+        firmId: storedToken.firmId,
+        reason: 'revoked_refresh_token',
       });
       return res.status(401).json({
         success: false,
@@ -2740,9 +2820,17 @@ const refreshAccessToken = async (req, res) => {
         message: 'User not found or inactive',
       });
     }
+
+    await noteRefreshTokenUse({
+      req,
+      userId: storedToken.userId,
+      firmId: storedToken.firmId,
+      tokenIpAddress: storedToken.ipAddress || null,
+    });
     
     // Revoke the old refresh token (token rotation)
     storedToken.isRevoked = true;
+    storedToken.lastUsedAt = now;
     await storedToken.save();
     
     // CRITICAL: Use JWT claims as primary source of truth (JWT-FIRST approach)
@@ -2966,6 +3054,10 @@ const completeMfaLogin = async (req, res) => {
     }
 
     try {
+      await handleSuccessfulLoginMonitoring(req, user, {
+        resource: 'auth/complete-mfa-login',
+        mfaRequired: true,
+      });
       await logAuthAudit({
         xID: user.xID || DEFAULT_XID,
         firmId: user.firmId || DEFAULT_FIRM_ID,

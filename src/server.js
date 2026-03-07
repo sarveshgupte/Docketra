@@ -118,6 +118,7 @@ const optionsPreflight = require('./middleware/optionsPreflight.middleware');
 const { authLimiter, loginLimiter, publicLimiter, globalApiLimiter, sensitiveLimiter } = require('./middleware/rateLimiters');
 const { tenantThrottle } = require('./middleware/tenantThrottle.middleware');
 const { uploadErrorHandler } = require('./middleware/uploadProtection.middleware');
+const { allowInternalTokenOrSuperadmin } = require('./middleware/internalMetricsAccess.middleware');
 
 // Routes
 const userRoutes = require('./routes/user.routes');
@@ -143,6 +144,8 @@ const healthRoutes = require('./routes/health.routes');  // Health endpoints
 const { apiHealth } = require('./controllers/health.controller');
 const storageRoutes = require('./routes/storage.routes');  // Storage BYOS routes
 const filesRoutes = require('./routes/files.routes');  // Tenant BYOS signed URL routes
+const securityRoutes = require('./routes/security.routes');
+const { getSecurityMetrics } = require('./controllers/security.controller');
 const tenantRoutes = require('./routes/tenant.routes');  // Tenant storage settings routes
 const tenantResolver = require('./middleware/tenantResolver');
 const { login } = require('./controllers/auth.controller');
@@ -385,6 +388,7 @@ app.get('/metrics', async (req, res) => {
 
   res.json(await metricsService.getSnapshot());
 });
+app.get('/api/metrics/security', allowInternalTokenOrSuperadmin, getSecurityMetrics);
 
 // API routes
 app.get('/api', (req, res) => {
@@ -465,6 +469,7 @@ app.use('/api/dashboard', authenticate, firmContext, requireTenant, tenantThrott
 ['/api/sa', '/api/superadmin', '/superadmin'].forEach((basePath) => {
   app.use(basePath, superadminRouteLimiter, authenticate, writeGuardChain, adminAuditTrail('superadmin'), superadminRoutes);
 });
+app.use('/api/security', authenticate, securityRoutes);
 
 // SECURITY: Debug routes must never be reachable in production environments.
 if (!isProduction) {
