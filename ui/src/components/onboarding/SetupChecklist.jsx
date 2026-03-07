@@ -71,11 +71,15 @@ export const SetupChecklist = ({ storageKey, recentCases = [], onAction }) => {
     );
 
     return CHECKLIST_STEPS.map((step) => {
-      const autoComplete = step.id === 'create-case'
-        ? hasCases
-        : step.id === 'assign-owner'
-          ? hasAssignedCase
-          : step.id === 'review-insights';
+      let autoComplete = false;
+
+      if (step.id === 'create-case') {
+        autoComplete = hasCases;
+      } else if (step.id === 'assign-owner') {
+        autoComplete = hasAssignedCase;
+      } else if (step.id === 'review-insights') {
+        autoComplete = true;
+      }
 
       return {
         ...step,

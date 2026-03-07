@@ -208,12 +208,12 @@ export const Layout = ({ children }) => {
   }, [searchQuery, runGlobalSearch]);
 
   useEffect(() => {
-    if (!user) {
-      return undefined;
-    }
-
     let cancelled = false;
     const fetchStorageHealth = async () => {
+      if (!user) {
+        return;
+      }
+
       try {
         const response = await api.get('/storage/health');
         if (!cancelled) {
