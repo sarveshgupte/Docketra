@@ -215,6 +215,13 @@ const refreshUserLimiter = createLimiter({
   keyGenerator: refreshUserKeyGenerator,
 });
 
+const internalMetricsLimiter = createLimiter({
+  name: 'internalMetricsLimiter',
+  windowMs: 60 * 1000,
+  max: 60,
+  keyGenerator: (req) => req.user?.xID || req.user?._id || ipKeyGenerator(req),
+});
+
 const superadminAdminResendLimiter = superadminLimiter;
 const superadminAdminLifecycleLimiter = superadminLimiter;
 const superadminAdminManagementLimiter = superadminLimiter;
@@ -236,6 +243,7 @@ module.exports = {
   profileLimiter,
   refreshIpLimiter,
   refreshUserLimiter,
+  internalMetricsLimiter,
   superadminAdminResendLimiter,
   superadminAdminLifecycleLimiter,
   superadminAdminManagementLimiter,

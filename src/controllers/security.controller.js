@@ -7,10 +7,33 @@ const { getSecurityMetricsSnapshot } = require('../services/securityTelemetry.se
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
+const SUMMARY_WINDOW_MS = 60 * 60 * 1000;
 
 const parsePositiveInteger = (value, fallback) => {
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const countActiveSessions = async (req) => {
+  try {
+    return {
+      degraded: false,
+      count: await RefreshToken.countDocuments({
+        isRevoked: false,
+        expiresAt: { $gt: new Date() },
+        userId: { $ne: null },
+      }),
+    };
+  } catch (error) {
+    log.warn('SECURITY_METRICS_ACTIVE_SESSIONS_FAILED', {
+      req,
+      error: error.message,
+    });
+    return {
+      degraded: true,
+      count: 0,
+    };
+  }
 };
 
 const listSecurityAlerts = async (req, res) => {
@@ -61,22 +84,7 @@ const listSecurityAlerts = async (req, res) => {
 
 const getSecurityMetrics = async (req, res) => {
   const snapshot = getSecurityMetricsSnapshot();
-  let activeSessions = 0;
-  let degraded = false;
-
-  try {
-    activeSessions = await RefreshToken.countDocuments({
-      isRevoked: false,
-      expiresAt: { $gt: new Date() },
-      userId: { $ne: null },
-    });
-  } catch (error) {
-    degraded = true;
-    log.warn('SECURITY_METRICS_ACTIVE_SESSIONS_FAILED', {
-      req,
-      error: error.message,
-    });
-  }
+  const { degraded, count: activeSessions } = await countActiveSessions(req);
 
   return res.json({
     success: true,
@@ -88,7 +96,60 @@ const getSecurityMetrics = async (req, res) => {
   });
 };
 
+const getSecuritySummary = async (req, res) => {
+  const snapshot = getSecurityMetricsSnapshot();
+  const { degraded: sessionDegraded, count: activeSessions } = await countActiveSessions(req);
+  const summaryWindowStart = new Date(Date.now() - SUMMARY_WINDOW_MS);
+  let topAlertTypes = [];
+  let degraded = sessionDegraded;
+
+  try {
+    topAlertTypes = await AuthAudit.aggregate([
+      {
+        $match: {
+          actionType: 'SECURITY_ALERT',
+          timestamp: { $gte: summaryWindowStart },
+        },
+      },
+      {
+        $group: {
+          _id: { $ifNull: ['$metadata.event', '$actionType'] },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { count: -1, _id: 1 } },
+      { $limit: 5 },
+      {
+        $project: {
+          _id: 0,
+          alertType: '$_id',
+          count: 1,
+        },
+      },
+    ]);
+  } catch (error) {
+    degraded = true;
+    log.warn('SECURITY_SUMMARY_ALERT_AGGREGATION_FAILED', {
+      req,
+      error: error.message,
+    });
+  }
+
+  return res.json({
+    success: true,
+    degraded,
+    data: {
+      alerts_last_hour: snapshot.security_alerts_last_hour,
+      login_failures_last_hour: snapshot.login_failures_last_hour,
+      refresh_token_failures: snapshot.refresh_token_failures,
+      active_sessions: activeSessions,
+      top_alert_types: topAlertTypes,
+    },
+  });
+};
+
 module.exports = {
   listSecurityAlerts,
   getSecurityMetrics,
+  getSecuritySummary,
 };

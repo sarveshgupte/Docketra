@@ -40,6 +40,23 @@ const STRICT_REDACTION_KEYS = new Set([
   'jwt_secret',
   'encryptionkey',
   'encryption_key',
+  'sessionid',
+  'session_id',
+  'sessiontoken',
+  'session_token',
+  'csrf',
+  'csrftoken',
+  'csrf_token',
+  'xsrf',
+  'xsrftoken',
+  'xsrf_token',
+  'apikey',
+  'api_key',
+  'xapikey',
+  'x_api_key',
+  'bearer',
+  'bearertoken',
+  'bearer_token',
 ]);
 
 const maskEmail = (value) => {
@@ -99,6 +116,8 @@ const maskAuthorizationHeader = (value) => {
   return '*****';
 };
 
+const looksLikeBearerToken = (value) => typeof value === 'string' && /^bearer\s+\S+/i.test(value.trim());
+
 const maskValue = (key, value, seen = new WeakSet()) => {
   if (value === null || value === undefined) return value;
   if (typeof value === 'object') return maskSensitiveObject(value, seen);
@@ -112,6 +131,7 @@ const maskValue = (key, value, seen = new WeakSet()) => {
   if (STRICT_REDACTION_KEYS.has(lowerKey)) {
     return lowerKey === 'authorization' ? maskAuthorizationHeader(value) : REDACTED;
   }
+  if (looksLikeBearerToken(value)) return 'Bearer *****';
   if (['token', 'idtoken'].includes(lowerKey)) return maskToken(value);
   
   // CRITICAL SECURITY: Mask password fields (all variations)
