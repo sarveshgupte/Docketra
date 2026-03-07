@@ -1,5 +1,7 @@
 const rateLimit = require('express-rate-limit');
+const { createHash } = require('crypto');
 const { RedisStore } = require('rate-limit-redis');
+const jwt = require('jsonwebtoken');
 const config = require('../config/config');
 const { getRedisClient } = require('../config/redis');
 const metricsService = require('../services/metrics.service');
@@ -65,6 +67,37 @@ const createLimiter = ({ name, windowMs, max, keyGenerator, skip }) => {
 };
 
 const ipKeyGenerator = (req) => req.ip || req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
+const parseCookieToken = (req, cookieName) => {
+  const cookie = String(req.headers?.cookie || '');
+  if (!cookie) return null;
+  const cookiePart = cookie
+    .split(';')
+    .map((entry) => entry.trim())
+    .find((entry) => entry.startsWith(`${cookieName}=`));
+  if (!cookiePart) return null;
+  return cookiePart.slice(cookieName.length + 1) || null;
+};
+
+const refreshUserKeyGenerator = (req) => {
+  const accessToken = req.body?.accessToken || parseCookieToken(req, 'accessToken');
+  if (accessToken) {
+    try {
+      const decoded = jwt.decode(accessToken);
+      if (decoded?.userId) {
+        return `user:${decoded.userId}`;
+      }
+    } catch (_) {
+      // fallback below
+    }
+  }
+
+  const refreshToken = req.body?.refreshToken || parseCookieToken(req, 'refreshToken');
+  if (refreshToken) {
+    return `token:${createHash('sha256').update(refreshToken).digest('hex')}`;
+  }
+
+  return `ip:${ipKeyGenerator(req)}`;
+};
 
 const globalApiLimiter = createLimiter({
   name: 'globalApiLimiter',
@@ -147,6 +180,20 @@ const profileLimiter = createLimiter({
   skip: (req) => !req.user,
 });
 
+const refreshIpLimiter = createLimiter({
+  name: 'refreshIpLimiter',
+  windowMs: 60 * 1000,
+  max: Number(process.env.SECURITY_RATE_LIMIT_REFRESH_IP_PER_MINUTE || 20),
+  keyGenerator: ipKeyGenerator,
+});
+
+const refreshUserLimiter = createLimiter({
+  name: 'refreshUserLimiter',
+  windowMs: 24 * 60 * 60 * 1000,
+  max: Number(process.env.SECURITY_RATE_LIMIT_REFRESH_USER_PER_DAY || 100),
+  keyGenerator: refreshUserKeyGenerator,
+});
+
 const superadminAdminResendLimiter = superadminLimiter;
 const superadminAdminLifecycleLimiter = superadminLimiter;
 const superadminAdminManagementLimiter = superadminLimiter;
@@ -163,6 +210,8 @@ module.exports = {
   searchLimiter,
   superadminLimiter,
   profileLimiter,
+  refreshIpLimiter,
+  refreshUserLimiter,
   superadminAdminResendLimiter,
   superadminAdminLifecycleLimiter,
   superadminAdminManagementLimiter,
