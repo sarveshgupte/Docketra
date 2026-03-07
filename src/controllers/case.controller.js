@@ -90,6 +90,18 @@ const computeDeadlineFromTatDays = (tatDays) => {
   return deadline;
 };
 
+const findScopedCaseAttachment = ({ attachmentId, caseData, firmId }) => {
+  const displayCaseId = caseData?.caseId || caseData?.caseNumber;
+  if (!displayCaseId || !attachmentId || !firmId) {
+    return null;
+  }
+  return Attachment.findOne({
+    _id: attachmentId,
+    caseId: displayCaseId,
+    firmId: String(firmId),
+  });
+};
+
 /**
  * Check if user has access to a case
  * PR: Fix Case Visibility - Unified access control logic
@@ -1996,22 +2008,16 @@ const viewAttachment = async (req, res) => {
       });
     }
     
-    // Find attachment
-    const attachment = await Attachment.findById(attachmentId);
+    const attachment = await findScopedCaseAttachment({
+      attachmentId,
+      caseData,
+      firmId: req.user.firmId,
+    });
     
     if (!attachment) {
       return res.status(404).json({
         success: false,
         message: 'Attachment not found',
-      });
-    }
-    
-    // Verify attachment belongs to this case - use display ID for comparison
-    const displayCaseId = caseData.caseId;
-    if (attachment.caseId !== displayCaseId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Attachment does not belong to this case',
       });
     }
     
@@ -2086,30 +2092,16 @@ const downloadAttachment = async (req, res) => {
       });
     }
     
-    // Find attachment
-    const attachment = await Attachment.findById(attachmentId);
+    const attachment = await findScopedCaseAttachment({
+      attachmentId,
+      caseData,
+      firmId: req.user.firmId,
+    });
     
     if (!attachment) {
       return res.status(404).json({
         success: false,
         message: 'Attachment not found',
-      });
-    }
-    
-    // Verify attachment belongs to this case - use display ID for comparison
-    const displayCaseId = caseData.caseId;
-    if (attachment.caseId !== displayCaseId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Attachment does not belong to this case',
-      });
-    }
-    
-    // Verify firm isolation - attachment must belong to user's firm
-    if (attachment.firmId !== req.user.firmId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied',
       });
     }
     
