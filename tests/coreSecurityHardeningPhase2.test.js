@@ -24,19 +24,23 @@ function createMockResponse() {
 function testSensitiveLogMasking() {
   const masked = maskSensitiveObject({
     Authorization: 'Bearer very-secret-token',
+    cookie: 'refreshToken=very-secret-cookie',
     password: 'SuperSecret123!',
     accessToken: 'header.payload.signature',
     refreshToken: 'refresh-token-value',
     mfaSecret: 'ABCDEF123456',
+    twoFactorSecret: 'BASE32SECRET2345',
     totpSecret: 'OTPSECRET',
   });
 
   assert.strictEqual(masked.Authorization, 'Bearer *****');
+  assert.strictEqual(masked.cookie, '***REDACTED***');
   assert.strictEqual(masked.password, '***REDACTED***');
   assert.strictEqual(masked.mfaSecret, '***REDACTED***');
+  assert.strictEqual(masked.twoFactorSecret, '***REDACTED***');
   assert.strictEqual(masked.totpSecret, '***REDACTED***');
-  assert.notStrictEqual(masked.accessToken, 'header.payload.signature');
-  assert.notStrictEqual(masked.refreshToken, 'refresh-token-value');
+  assert.strictEqual(masked.accessToken, '***REDACTED***');
+  assert.strictEqual(masked.refreshToken, '***REDACTED***');
 }
 
 function testErrorHandlerHidesServerDetails() {

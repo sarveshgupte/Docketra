@@ -167,6 +167,22 @@ const userSchema = new mongoose.Schema({
     default: null,
   },
 
+  // Last successful login details for suspicious activity monitoring
+  lastLoginAt: {
+    type: Date,
+    default: null,
+  },
+
+  lastLoginIp: {
+    type: String,
+    default: null,
+  },
+
+  lastLoginCountry: {
+    type: String,
+    default: null,
+  },
+
   /**
    * Authentication providers
    * LOCAL: password-based auth (authoritative for SuperAdmin and platform users)

@@ -2,6 +2,7 @@ const { randomUUID } = require('crypto');
 const log = require('../utils/log');
 const metricsService = require('../services/metrics.service');
 const { enqueueAfterCommit, attachRecorder, flushRequestEffects } = require('../services/sideEffectQueue.service');
+const { noteApiActivity } = require('../services/securityTelemetry.service');
 
 const LOGIN_PATHS = new Set(['/superadmin/login']);
 const TENANT_LOGIN_PATH = /^\/[^/]+\/login$/;
@@ -43,6 +44,7 @@ const requestLifecycle = (req, res, next) => {
       lifecycleEnd: reason,
       transactionCommitted: !!req.transactionCommitted,
     });
+    Promise.resolve(noteApiActivity({ req, statusCode: res.statusCode })).catch(() => null);
     if (!skipSideEffects) {
       setImmediate(() => flushRequestEffects(req));
     }
