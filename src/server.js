@@ -373,6 +373,7 @@ app.get('/health', (req, res) => {
 });
 app.use('/health', healthRoutes);
 app.get('/api/health', apiHealth);
+app.get('/api/system/health', apiHealth);
 app.get('/metrics', async (req, res) => {
   // SECURITY: Metrics endpoint fail-closed enforcement
   const configuredMetricsToken = process.env.METRICS_TOKEN;
