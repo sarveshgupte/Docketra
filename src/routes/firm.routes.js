@@ -17,7 +17,7 @@ const routeSchemas = require('../schemas/firm.routes.schema');
 const router = applyRouteValidation(express.Router({ mergeParams: true }), routeSchemas);
 
 const tenantResolver = require('../middleware/tenantResolver');
-const { authBlockEnforcer, loginLimiter, otpVerifyLimiter } = require('../middleware/rateLimiters');
+const { authBlockEnforcer, loginLimiter, otpVerifyLimiter, publicLimiter } = require('../middleware/rateLimiters');
 const { login, verifyLoginOtp } = require('../controllers/auth.controller');
 const { noFirmNoTransaction } = require('../middleware/noFirmNoTransaction.middleware');
 const setTenantLoginScope = (req, _res, next) => {
@@ -39,7 +39,7 @@ router.use(tenantResolver);
  * API-only backend deployments.
  * Does NOT require authentication.
  */
-router.get('/login', (req, res) => {
+router.get('/login', publicLimiter, (req, res) => {
   // Debug log: confirms route resolution with firmSlug params (Step 1 requirement)
   if (process.env.NODE_ENV !== 'production') {
     console.log('Firm login route hit:', req.params);

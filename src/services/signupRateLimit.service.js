@@ -5,7 +5,7 @@ const { hashIdentifier } = require('../utils/hashIdentifier');
 const WINDOW_SECONDS = config.security.rateLimit.signupWindowSeconds;
 const INITIATE_PER_IP_LIMIT = config.security.rateLimit.signupPerHour;
 const INITIATE_PER_EMAIL_LIMIT = config.security.rateLimit.signupPerEmailPerWindow;
-const VERIFY_MAX_ATTEMPTS = config.security.rateLimit.otpVerifyPerMinute;
+const OTP_VERIFY_LIMIT = config.security.rateLimit.otpVerifyPerMinute;
 const OTP_BLOCK_SECONDS = config.security.rateLimit.otpVerifyBlockSeconds;
 const RESEND_WINDOW_SECONDS = config.security.rateLimit.otpResendWindowSeconds;
 const RESEND_PER_IP_LIMIT = config.security.rateLimit.otpResendPerMinute;
@@ -143,7 +143,7 @@ const consumeOtpAttemptCounter = async ({ scope, identifier }) => {
 
   if (!redis) {
     const counter = await incrementMemoryCounter(key, OTP_BLOCK_SECONDS);
-    if (counter.count > VERIFY_MAX_ATTEMPTS) {
+    if (counter.count > OTP_VERIFY_LIMIT) {
       return { allowed: false, retryAfter: counter.retryAfter, attempts: counter.count };
     }
     return { allowed: true, attempts: counter.count };
@@ -154,7 +154,7 @@ const consumeOtpAttemptCounter = async ({ scope, identifier }) => {
     2,
     key,
     blockKey,
-    VERIFY_MAX_ATTEMPTS,
+    OTP_VERIFY_LIMIT,
     OTP_BLOCK_SECONDS,
   ));
 
@@ -220,7 +220,7 @@ module.exports = {
   clearOtpAttempts,
   INITIATE_PER_IP_LIMIT,
   INITIATE_PER_EMAIL_LIMIT,
-  VERIFY_MAX_ATTEMPTS,
+  OTP_VERIFY_LIMIT,
   OTP_BLOCK_SECONDS,
   RESEND_PER_IP_LIMIT,
   RESEND_PER_EMAIL_LIMIT,

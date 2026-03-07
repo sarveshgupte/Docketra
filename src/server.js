@@ -122,6 +122,7 @@ const {
   globalApiLimiter,
   internalMetricsLimiter,
   contactLimiter,
+  superadminLimiter,
 } = require('./middleware/rateLimiters');
 const { tenantThrottle } = require('./middleware/tenantThrottle.middleware');
 const { uploadErrorHandler } = require('./middleware/uploadProtection.middleware');
@@ -437,7 +438,7 @@ const superadminLoginChain = [loginLimiter, noFirmNoTransaction, (req, _res, nex
 app.post('/superadmin/login', ...superadminLoginChain);
 
 // Tenant login must be slug-scoped only
-app.get('/:firmSlug/login', tenantResolver, (req, res) => {
+app.get('/:firmSlug/login', publicLimiter, tenantResolver, (req, res) => {
   res.json({ success: true, data: { firmId: req.firmIdString, firmSlug: req.firmSlug, name: req.firmName, status: req.firm.status } });
 });
 app.post('/:firmSlug/login', loginLimiter, tenantResolver, noFirmNoTransaction, (req, res, next) => { req.loginScope = 'tenant'; next(); }, login);
@@ -464,7 +465,7 @@ app.use('/api/dashboard', authenticate, firmContext, requireTenant, tenantThrott
 // Superadmin routes - platform scope only (no firm context)
 // Include legacy /superadmin to prevent SPA fallback when UI calls API without /api prefix.
 ['/api/sa', '/api/superadmin', '/superadmin'].forEach((basePath) => {
-  app.use(basePath, authenticate, writeGuardChain, adminAuditTrail('superadmin'), superadminRoutes);
+  app.use(basePath, superadminLimiter, authenticate, writeGuardChain, adminAuditTrail('superadmin'), superadminRoutes);
 });
 app.use('/api/security', authenticate, securityRoutes);
 
