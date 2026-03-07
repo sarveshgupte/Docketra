@@ -52,6 +52,8 @@ module.exports = {
   },
   'PUT /profile': {
     body: z.object({
+      // Keep both dateOfBirth and dob for backward-compatible profile update payloads.
+      // If both are sent, updateProfile applies dateOfBirth first and then dob as the final value.
       dateOfBirth: z.string().optional(),
       dob: z.string().optional(),
       gender: z.string().optional(),

@@ -284,7 +284,8 @@ const toCspSource = (origin) => {
   try {
     const parsed = new URL(origin);
     return `${parsed.protocol}//${parsed.host}`;
-  } catch (_) {
+  } catch (error) {
+    log.warn('CSP_ORIGIN_SKIPPED', { origin, error: error.message });
     return null;
   }
 };
