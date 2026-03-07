@@ -1,8 +1,11 @@
 'use strict';
 
+const log = require('../utils/log');
 const { getRequestIp } = require('../services/forensicAudit.service');
 const { getIpBlockStatus } = require('../services/securityTelemetry.service');
 
+// Superadmin login is a single explicit endpoint, while tenant logins are slug-based
+// and therefore matched with a route-shaped regex.
 const LOGIN_PATHS = new Set(['/superadmin/login']);
 const TENANT_LOGIN_PATH = /^\/[^/]+\/login$/;
 const REFRESH_PATHS = new Set(['/auth/refresh', '/api/auth/refresh']);
@@ -42,7 +45,11 @@ function enforceTemporaryIpBlock(req, res, next) {
       message: 'Too many requests',
       retryAfter: ipStatus.retryAfter,
     });
-  } catch (_error) {
+  } catch (error) {
+    log.warn('SECURITY_IP_BLOCK_CHECK_FAILED', {
+      req,
+      error: error.message,
+    });
     return next();
   }
 }
