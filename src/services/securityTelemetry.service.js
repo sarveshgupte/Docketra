@@ -18,6 +18,11 @@ const LOG_WINDOW_MS = 60 * 1000;
 const MAX_IDENTICAL_LOGS_PER_WINDOW = 50;
 const PRUNE_INTERVAL_MS = 60 * 1000;
 const HIGH_SEVERITY_ALERT_LIMIT = 3;
+const HIGH_SEVERITY_LEVELS = new Set(['high', 'critical']);
+// Alert when an IP crosses the “more than 20 unique routes” requirement.
+const API_ENUMERATION_THRESHOLD = 21;
+// Alert when a user exceeds the “more than 100 downloads” requirement.
+const DATA_EXFILTRATION_THRESHOLD = 101;
 let lastPruneAt = 0;
 
 const ALERT_TYPES = Object.freeze({
@@ -37,7 +42,7 @@ const SECURITY_METRIC_WINDOWS = Object.freeze({
   failedApi: 2 * 60 * 1000,
   rapidIp: 60 * 1000,
   downloads: 5 * 60 * 1000,
-  bulkDownloads: 10 * 60 * 1000,
+  bulkDownload: 10 * 60 * 1000,
   apiEnumeration: 2 * 60 * 1000,
   refreshTokenWindow: 10 * 60 * 1000,
   accountTakeover: 10 * 60 * 1000,
@@ -351,8 +356,20 @@ function getAlertSeverity(alertType, metadata = {}) {
   }
 }
 
+// Normalize IPv4-mapped IPv6 addresses so both temporary block enforcement and
+// block-status checks treat ::ffff:203.0.113.10 and 203.0.113.10 as the same source.
 function normalizeIpAddress(ipAddress) {
   return String(ipAddress || 'unknown').replace(/^::ffff:/, '');
+}
+
+function hasSignificantIpRangeMismatch(previousIpRange, currentIpRange) {
+  return Boolean(
+    previousIpRange &&
+    currentIpRange &&
+    previousIpRange !== 'unknown' &&
+    currentIpRange !== 'unknown' &&
+    previousIpRange !== currentIpRange
+  );
 }
 
 function blockIpAddress(ipAddress, now = Date.now()) {
@@ -489,7 +506,7 @@ async function emitSecurityAlert({
       pushWindowValue('metric:tenant_abuse_events', enrichedMetadata.tenantId || firmId || 'unknown', SECURITY_METRIC_WINDOWS.oneHour);
     }
 
-    if (['high', 'critical'].includes(severity) && resolvedIp && resolvedIp !== 'unknown') {
+    if (HIGH_SEVERITY_LEVELS.has(severity) && resolvedIp && resolvedIp !== 'unknown') {
       const highSeverityAlertCount = incrementCounter(`ip:block:${normalizeIpAddress(resolvedIp)}`, {
         windowMs: SECURITY_METRIC_WINDOWS.ipBlock,
         limit: HIGH_SEVERITY_ALERT_LIMIT,
@@ -664,13 +681,8 @@ async function noteSuccessfulLogin({
     }
 
     if (
-      recentLogin &&
-      lastLoginCountry &&
-      currentCountry &&
-      lastLoginCountry !== currentCountry &&
-      previousIpRange !== 'unknown' &&
-      currentIpRange !== 'unknown' &&
-      previousIpRange !== currentIpRange
+      isRapidGeoChangeDetected(recentLogin, lastLoginCountry, currentCountry) &&
+      hasSignificantIpRangeMismatch(previousIpRange, currentIpRange)
     ) {
       await emitSecurityAlert({
         req,
@@ -768,7 +780,7 @@ async function noteRefreshTokenUse({ req, userId = null, firmId = null, tokenIpA
 
     const recentLogin = getLatestWindowValue(`login-ip-range:${String(userId)}`, SECURITY_METRIC_WINDOWS.accountTakeover);
     const loginIpRange = recentLogin?.value?.ipRange || null;
-    if (loginIpRange && loginIpRange !== 'unknown' && currentIpRange !== 'unknown' && loginIpRange !== currentIpRange) {
+    if (hasSignificantIpRangeMismatch(loginIpRange, currentIpRange)) {
       await emitSecurityAlert({
         req,
         userId,
@@ -821,8 +833,8 @@ async function noteFileDownload({ req, userId = null, firmId = null, fileId = nu
       limit: 30,
     });
     const exfiltrationThreshold = incrementCounter(`download:bulk:${String(firmId || 'unknown')}:${String(actor)}`, {
-      windowMs: SECURITY_METRIC_WINDOWS.bulkDownloads,
-      limit: 101,
+      windowMs: SECURITY_METRIC_WINDOWS.bulkDownload,
+      limit: DATA_EXFILTRATION_THRESHOLD,
     });
 
     if (threshold.thresholdReached) {
@@ -896,7 +908,7 @@ async function noteApiActivity({ req, statusCode = 200 } = {}) {
       });
     }
 
-    if (uniqueRoutes.length === 21) {
+    if (uniqueRoutes.length >= API_ENUMERATION_THRESHOLD) {
       await emitSecurityAlert({
         req,
         userId: req?.user?._id || null,
