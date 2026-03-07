@@ -15,54 +15,7 @@ const { isInboundEmailEnabled } = require('./services/featureFlags.service');
 require('./utils/transactionSessionEnforcer');
 
 const inboundEmailEnabled = isInboundEmailEnabled();
-
-// Bootstrap storage worker in-process (non-blocking — failures do not prevent startup)
-try {
-  require('./workers/storage.worker');
-  log.info('STORAGE_WORKER_STARTED');
-} catch (err) {
-  log.warn('STORAGE_WORKER_START_FAILED', { error: err.message });
-}
-
-if (inboundEmailEnabled) {
-  try {
-    require('./workers/inboundEmail.worker');
-    log.info('INBOUND_EMAIL_WORKER_STARTED');
-  } catch (err) {
-    log.warn('INBOUND_EMAIL_WORKER_START_FAILED', { error: err.message });
-  }
-} else {
-  log.info('INBOUND_EMAIL_DISABLED');
-}
-
-try {
-  require('./workers/storageIntegrity.worker');
-  log.info('STORAGE_INTEGRITY_WORKER_STARTED');
-} catch (err) {
-  log.warn('STORAGE_INTEGRITY_WORKER_START_FAILED', { error: err.message });
-}
-
-
-try {
-  require('./workers/tenantCaseMetrics.worker');
-  log.info('TENANT_CASE_METRICS_WORKER_STARTED');
-} catch (err) {
-  log.warn('TENANT_CASE_METRICS_WORKER_START_FAILED', { error: err.message });
-}
-
-try {
-  require('./workers/email.worker');
-  log.info('EMAIL_WORKER_STARTED');
-} catch (err) {
-  log.warn('EMAIL_WORKER_START_FAILED', { error: err.message });
-}
-
-try {
-  require('./workers/audit.worker');
-  log.info('AUDIT_WORKER_STARTED');
-} catch (err) {
-  log.warn('AUDIT_WORKER_START_FAILED', { error: err.message });
-}
+log.info('API_RUNTIME_WORKERS_DISABLED');
 
 // Global error log sanitizer: ensure every console.error invocation masks PII (tokens, emails, phone numbers, auth headers).
 // This preserves existing logging behavior/verbosity while enforcing centralized masking via maskSensitiveObject.
@@ -383,7 +336,11 @@ app.get('/metrics', async (req, res) => {
     return res.status(401).json({ error: 'unauthorized' });
   }
 
-  res.json(await metricsService.getSnapshot());
+  if ((req.headers.accept || '').includes('application/json')) {
+    return res.json(await metricsService.getSnapshot());
+  }
+  res.type('text/plain; version=0.0.4; charset=utf-8');
+  return res.send(await metricsService.renderPrometheusMetrics());
 });
 app.get('/api/metrics/security', allowInternalTokenOrSuperadmin, internalMetricsLimiter, getSecurityMetrics);
 
@@ -519,16 +476,6 @@ const server = app.listen(PORT, () => {
       console.error('[cleanupTmpUploads] failed', { message: err.message })
     );
   }, 6 * 60 * 60 * 1000); // 6 hours
-  const { runStorageHealthCheck } = require('./jobs/storageHealthCheck.job');
-  const { enqueueDailyStorageIntegrityJob } = require('./queues/storageIntegrity.queue');
-  setInterval(() => {
-    runStorageHealthCheck().catch((err) =>
-      console.error('[storageHealthCheck] failed', { message: err.message })
-    );
-  }, 8 * 60 * 60 * 1000); // 8 hours
-  enqueueDailyStorageIntegrityJob().catch((err) =>
-    console.error('[storageIntegritySchedule] registration failed', { message: err.message })
-  );
   console.log(`
 ╔════════════════════════════════════════════╗
 ║         Docketra API Server                ║
