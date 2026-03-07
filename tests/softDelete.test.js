@@ -96,7 +96,7 @@ async function testUserDeleteRestorePreservesAuthState() {
     { status: 'INVITED', isActive: false, lockUntil: original.lockUntil },
     'Auth snapshot should capture original state'
   );
-  assert.strictEqual(original.status, 'DISABLED');
+  assert.strictEqual(original.status, 'disabled');
   assert.strictEqual(original.isActive, false);
 
   await restoreDocument({ model, filter: {}, req });

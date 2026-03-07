@@ -1,8 +1,8 @@
 const User = require('../models/User.model');
-const { isSuperAdminRole } = require('../utils/role.utils');
+const { isSuperAdminRole, normalizeRole } = require('../utils/role.utils');
 
 const ROLE_PERMISSIONS = {
-  Admin: [
+  ADMIN: [
     'CASE_VIEW',
     'CASE_CREATE',
     'CASE_UPDATE',
@@ -24,7 +24,7 @@ const ROLE_PERMISSIONS = {
     'ADMIN_STATS',
     'STORAGE_MANAGE',
   ],
-  Employee: [
+  STAFF: [
     'CASE_VIEW',
     'CASE_CREATE',
     'CASE_UPDATE',
@@ -63,13 +63,15 @@ const resolveFirmRole = async (userId, firmId) => {
     return null;
   }
 
-  const permissions = ROLE_PERMISSIONS[membership.role];
+  const normalizedRole = normalizeRole(membership.role);
+  const permissions = ROLE_PERMISSIONS[normalizedRole];
   if (!permissions) {
     return null;
   }
 
   return {
     role: membership.role,
+    canonicalRole: normalizedRole,
     permissions,
   };
 };
