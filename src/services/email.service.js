@@ -987,6 +987,38 @@ const sendFirmSetupEmail = async ({
   return sendEmail({ to: email, subject, html, text }, context);
 };
 
+const sendLoginOtpEmail = async ({
+  email,
+  name,
+  otp,
+  firmName,
+  firmSlug,
+  expiryMinutes = 5,
+  context = null,
+}) => {
+  const resolvedOtp = String(otp || '').trim();
+  if (!email || !resolvedOtp) {
+    throw new Error('Email and OTP are required to send login verification email');
+  }
+
+  const workspaceReference = firmName || firmSlug || 'your Docketra workspace';
+  const greetingName = String(name || '').trim() || 'there';
+  const subject = `Docketra Login Code for ${workspaceReference}`;
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
+      <h2>Hello ${greetingName},</h2>
+      <p>Use the following verification code to complete your login to <strong>${workspaceReference}</strong>:</p>
+      <p style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #1976D2; margin: 20px 0;">${resolvedOtp}</p>
+      <p>This code expires in ${expiryMinutes} minutes.</p>
+      <p>If you did not try to sign in, please ignore this email and consider changing your password.</p>
+      <p>Best regards,<br/>Docketra Team</p>
+    </div>
+  `;
+  const text = `Hello ${greetingName},\n\nUse the following verification code to complete your login to ${workspaceReference}: ${resolvedOtp}\n\nThis code expires in ${expiryMinutes} minutes.\n\nIf you did not try to sign in, please ignore this email and consider changing your password.\n\nBest regards,\nDocketra Team`;
+
+  return sendEmail({ to: email, subject, html, text }, context);
+};
+
 module.exports = {
   sendEmail,
   sendEmailNow,
@@ -998,6 +1030,7 @@ module.exports = {
   sendForgotPasswordEmail,
   sendAdminPasswordResetEmail,
   sendFirmSetupEmail,
+  sendLoginOtpEmail,
   sendEnterpriseInquiryNotification,
   sendTestEmail,
   maskEmail,

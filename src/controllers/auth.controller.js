@@ -50,6 +50,8 @@ const INVITE_TOKEN_EXPIRY_HOURS = 48; // 48 hours for invite tokens (per PR 32 r
 const PASSWORD_SETUP_TOKEN_EXPIRY_HOURS = 24; // 24 hours for password reset tokens
 const FORGOT_PASSWORD_TOKEN_EXPIRY_MINUTES = 30; // 30 minutes for forgot password tokens
 const PRE_AUTH_TOKEN_EXPIRY = '5m';
+const LOGIN_OTP_EXPIRY_MINUTES = 5;
+const LOGIN_OTP_MAX_ATTEMPTS = 5;
 const DEFAULT_FIRM_ID = 'PLATFORM'; // Default firmId for SUPER_ADMIN and audit logging
 const DEFAULT_XID = 'SUPERADMIN'; // Default xID for SUPER_ADMIN in audit logs
 const GOOGLE_SCOPES = ['openid', 'email'];
@@ -238,6 +240,50 @@ const createMfaPreAuthToken = (payload) => {
   });
 };
 
+const createLoginOtpToken = (payload) => {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is not configured for login token signing');
+  }
+
+  return jwt.sign(payload, process.env.JWT_SECRET, {
+    expiresIn: PRE_AUTH_TOKEN_EXPIRY,
+    algorithm: 'HS256',
+  });
+};
+
+const generateLoginOtp = () => crypto.randomInt(0, 1000000).toString().padStart(6, '0');
+
+const clearLoginOtpState = (user) => {
+  if (!user) return;
+  user.loginOtpHash = null;
+  user.loginOtpExpiresAt = null;
+  user.loginOtpAttempts = 0;
+  user.loginOtpLastSentAt = null;
+};
+
+const persistLoginOtpState = async (user) => {
+  if (!user) return;
+
+  if (typeof user.save === 'function') {
+    await user.save();
+    return;
+  }
+
+  if (user._id && mongoose.connection?.readyState === 1) {
+    await User.updateOne(
+      { _id: user._id },
+      {
+        $set: {
+          loginOtpHash: user.loginOtpHash || null,
+          loginOtpExpiresAt: user.loginOtpExpiresAt || null,
+          loginOtpAttempts: user.loginOtpAttempts || 0,
+          loginOtpLastSentAt: user.loginOtpLastSentAt || null,
+        },
+      }
+    );
+  }
+};
+
 /**
  * Helper: Fetch firm slug for a given firmId
  * Reduces code duplication across auth functions
@@ -331,6 +377,109 @@ const buildTokenResponse = async (user, req, authMethod = 'Password') => {
   return { accessToken, refreshToken, firmSlug };
 };
 
+const sendLoginOtpChallenge = async (req, user) => {
+  const otp = generateLoginOtp();
+  const otpHash = await bcrypt.hash(otp, SALT_ROUNDS);
+  const otpExpiresAt = new Date(Date.now() + LOGIN_OTP_EXPIRY_MINUTES * 60 * 1000);
+
+  user.loginOtpHash = otpHash;
+  user.loginOtpExpiresAt = otpExpiresAt;
+  user.loginOtpAttempts = 0;
+  user.loginOtpLastSentAt = new Date();
+  await persistLoginOtpState(user);
+
+  try {
+    await emailService.sendLoginOtpEmail({
+      email: user.email,
+      name: user.name,
+      otp,
+      firmName: req.firmName || req.firm?.name || null,
+      firmSlug: req.params?.firmSlug || req.firmSlug || null,
+      expiryMinutes: LOGIN_OTP_EXPIRY_MINUTES,
+    });
+  } catch (error) {
+    clearLoginOtpState(user);
+    await persistLoginOtpState(user);
+    throw error;
+  }
+
+  await logAuthAudit({
+    xID: user.xID || DEFAULT_XID,
+    firmId: user.firmId || DEFAULT_FIRM_ID,
+    userId: user._id,
+    actionType: 'LOGIN_OTP_SENT',
+    description: 'Login OTP sent to user email after password verification',
+    performedBy: user.xID || DEFAULT_XID,
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+    metadata: {
+      eventType: 'LOGIN_OTP_SENT',
+      firmSlug: req.params?.firmSlug || req.firmSlug || null,
+      expiresInMinutes: LOGIN_OTP_EXPIRY_MINUTES,
+      email: user.email || null,
+      timestamp: new Date().toISOString(),
+    },
+  }, req);
+
+  return createLoginOtpToken({
+    userId: user._id.toString(),
+    firmId: user.firmId ? user.firmId.toString() : undefined,
+    firmSlug: req.params?.firmSlug || req.firmSlug || undefined,
+    role: user.role,
+    loginStage: 'email-otp',
+  });
+};
+
+const buildSuccessfulLoginPayload = async (req, user, { authMethod = 'Email OTP', resource = 'auth/verify-otp', mfaRequired = true } = {}) => {
+  const { accessToken, refreshToken, firmSlug } = await buildTokenResponse(user, req, authMethod);
+
+  await handleSuccessfulLoginMonitoring(req, user, {
+    resource,
+    mfaRequired,
+  });
+  await logSecurityAuditEvent({
+    req,
+    action: SECURITY_AUDIT_ACTIONS.LOGIN_SUCCESS,
+    resource,
+    userId: user._id,
+    firmId: user.firmId || DEFAULT_FIRM_ID,
+    xID: user.xID || DEFAULT_XID,
+    performedBy: user.xID || DEFAULT_XID,
+    metadata: {
+      email: user.email || null,
+      mfaRequired,
+    },
+    description: `User login completed successfully via ${authMethod}`,
+  }).catch(() => null);
+
+  const response = {
+    success: true,
+    message: user.forcePasswordReset ? 'Password reset required' : 'Login successful',
+    accessToken,
+    refreshToken,
+    data: {
+      id: user._id.toString(),
+      xID: user.xID,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      firmId: user.firmId ? user.firmId.toString() : null,
+      firmSlug,
+      allowedCategories: user.allowedCategories,
+      isActive: user.isActive,
+      mustSetPassword: !!user.mustSetPassword,
+      passwordSetAt: user.passwordSetAt,
+    },
+  };
+
+  if (user.forcePasswordReset) {
+    response.mustChangePassword = true;
+    response.forcePasswordReset = true;
+  }
+
+  return response;
+};
+
 /**
  * Login with xID and password
  * POST /superadmin/login or POST /:firmSlug/login
@@ -338,16 +487,17 @@ const buildTokenResponse = async (user, req, authMethod = 'Password') => {
 const login = async (req, res) => {
   try {
     const loginScope = req.loginScope || 'tenant';
+    const requestedFirmSlug = req.params?.firmSlug || req.firmSlug || null;
     // Accept both xID and XID from request payload, normalize internally
-    const { xID, XID, password } = req.body;
+    const { xid, xID, XID, password } = req.body;
     
     // Normalize xID: accept either xID or XID, trim whitespace, convert to uppercase
-    const normalizedXID = (xID || XID)?.trim().toUpperCase();
+    const normalizedXID = (xid || xID || XID)?.trim().toUpperCase();
     
     // xID and password are required
     if (!normalizedXID || !password) {
       console.warn('[AUTH] Missing credentials in login attempt', {
-        hasXID: !!(xID || XID),
+        hasXID: !!(xid || xID || XID),
         hasPassword: !!password,
         ip: req.ip,
       });
@@ -457,7 +607,7 @@ const login = async (req, res) => {
     }
 
     // Firm-scoped login - query by firmId AND xID
-    console.log('[AUTH][tenant] login attempt', { firmSlug: req.firmSlug, xID: normalizedXID });
+    console.log('[AUTH][tenant] login attempt', { firmSlug: requestedFirmSlug, xID: normalizedXID });
     const user = await User.findOne({
       firmId: req.firmId,
       xID: normalizedXID,
@@ -472,7 +622,7 @@ const login = async (req, res) => {
           xID: normalizedXID || 'UNKNOWN',
           firmId: req.firmIdString || req.firmId || 'UNKNOWN',
           actionType: 'LoginFailed',
-          description: `Login failed: invalid credentials (xID: ${normalizedXID}, firmSlug: ${req.firmSlug || 'none'})`,
+          description: `Login failed: invalid credentials (xID: ${normalizedXID}, firmSlug: ${requestedFirmSlug || 'none'})`,
           performedBy: normalizedXID,
           ipAddress: req.ip,
           userAgent: req.get('user-agent'),
@@ -840,121 +990,217 @@ const login = async (req, res) => {
       }
     }
     
-    if (user.twoFactorSecret) {
-      const preAuthToken = createMfaPreAuthToken({
-        userId: user._id.toString(),
-        firmId: user.firmId ? user.firmId.toString() : undefined,
-        role: user.role,
-        mfaStage: true,
-      });
-
-      return res.json({
-        success: true,
-        mfaRequired: true,
-        preAuthToken,
-      });
-    }
-
-    // Log successful login (non-blocking)
     try {
-      await handleSuccessfulLoginMonitoring(req, user, {
-        resource: 'auth/login',
-        mfaRequired: false,
-      });
       await logAuthAudit({
         xID: user.xID || DEFAULT_XID,
         firmId: user.firmId || DEFAULT_FIRM_ID,
         userId: user._id,
-        actionType: 'Login',
-        description: `User logged in successfully`,
+        actionType: 'LOGIN_PASSWORD_VERIFIED',
+        description: 'User password verified; email OTP challenge required',
         performedBy: user.xID,
         ipAddress: req.ip,
         userAgent: req.get('user-agent'),
         metadata: {
-          eventType: 'LOGIN_SUCCESS',
+          eventType: 'LOGIN_PASSWORD_VERIFIED',
           email: user.email || null,
+          firmSlug: requestedFirmSlug,
           timestamp: new Date().toISOString(),
         },
       }, req);
-      await logSecurityAuditEvent({
-        req,
-        action: SECURITY_AUDIT_ACTIONS.LOGIN_SUCCESS,
-        resource: 'auth/login',
-        userId: user._id,
-        firmId: user.firmId || DEFAULT_FIRM_ID,
-        xID: user.xID || DEFAULT_XID,
-        performedBy: user.xID || DEFAULT_XID,
-        metadata: {
-          email: user.email || null,
-          mfaRequired: false,
-        },
-        description: 'User login completed successfully',
-      }).catch(() => null);
     } catch (auditError) {
-      console.error('[AUTH AUDIT] Failed to record login event', auditError);
+      console.error('[AUTH AUDIT] Failed to record password verification event', auditError);
     }
-    
-    // Fetch firmSlug for firm-scoped routing
-    const firmSlug = await getFirmSlug(user.firmId);
-    
-    console.log(`[AUTH] Generating tokens for user ${user.xID}, firmId: ${user.firmId}, firmSlug: ${firmSlug}`);
-    
-    // OBJECTIVE 2: Generate JWT access token with ALL firm context
-    const accessToken = jwtService.generateAccessToken({
-      userId: user._id.toString(),
-      firmId: user.firmId ? user.firmId.toString() : undefined,
-      firmSlug: firmSlug || undefined, // NEW: Include firmSlug in token
-      defaultClientId: user.defaultClientId ? user.defaultClientId.toString() : undefined, // NEW: Include defaultClientId in token
-      role: user.role,
-    });
-    
-    let refreshToken = null;
+
     try {
-      ({ refreshToken } = await generateAndStoreRefreshToken({
-        userId: user._id,
-        firmId: user.firmId || null,
-        req,
-      }));
-    } catch (tokenError) {
-      console.error('[AUTH] Refresh token persistence failed', tokenError);
+      const loginToken = await sendLoginOtpChallenge(req, user);
+      return res.json({
+        success: true,
+        otpRequired: true,
+        loginToken,
+      });
+    } catch (otpError) {
+      console.error('[AUTH] Failed to send login OTP email:', otpError.message);
+      return res.status(500).json({
+        success: false,
+        message: 'Unable to send login verification code. Please try again.',
+      });
     }
-    
-    // Return user info with tokens (exclude sensitive fields)
-    const response = {
-      success: true,
-      message: user.forcePasswordReset ? 'Password reset required' : 'Login successful',
-      accessToken,
-      refreshToken,
-      data: {
-        id: user._id.toString(),
-        xID: user.xID,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        firmId: user.firmId ? user.firmId.toString() : null,
-        firmSlug: firmSlug,
-        allowedCategories: user.allowedCategories,
-        isActive: user.isActive,
-        mustSetPassword: !!user.mustSetPassword,
-        passwordSetAt: user.passwordSetAt,
-      },
-    };
-    
-    // Add password reset flags if needed
-    if (user.forcePasswordReset) {
-      response.mustChangePassword = true;
-      response.forcePasswordReset = true;
-    }
-    
-    console.log(`[AUTH] Login successful for user ${user.xID}, sending response with user data and token references`);
-    
-    return res.json(response);
   } catch (error) {
     console.error('[AUTH] Login error:', error);
     return res.status(500).json({
       success: false,
       code: 'AUTH_LOGIN_FAILED',
       message: 'Error during login',
+    });
+  }
+};
+
+const verifyLoginOtp = async (req, res) => {
+  try {
+    const requestedFirmSlug = req.params?.firmSlug || req.firmSlug || null;
+    const otp = String(req.body?.otp || '').trim();
+    const loginToken = String(req.body?.loginToken || '').trim();
+
+    if (!loginToken) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired login token',
+      });
+    }
+
+    if (!/^\d{6}$/.test(otp)) {
+      return res.status(400).json({
+        success: false,
+        message: 'OTP must be a 6 digit code',
+      });
+    }
+
+    let decodedLoginToken;
+    try {
+      decodedLoginToken = jwt.verify(loginToken, process.env.JWT_SECRET, {
+        algorithms: ['HS256'],
+      });
+    } catch (_error) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired login token',
+      });
+    }
+
+    if (
+      decodedLoginToken?.loginStage !== 'email-otp'
+      || !decodedLoginToken?.userId
+      || !decodedLoginToken?.firmId
+      || !mongoose.Types.ObjectId.isValid(decodedLoginToken.userId)
+      || !mongoose.Types.ObjectId.isValid(decodedLoginToken.firmId)
+    ) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired login token',
+      });
+    }
+
+    const normalizedRequestedFirmSlug = normalizeFirmSlug(requestedFirmSlug);
+    const normalizedTokenFirmSlug = normalizeFirmSlug(decodedLoginToken.firmSlug);
+
+    if (
+      (req.firmId && decodedLoginToken.firmId !== String(req.firmId))
+      || (normalizedRequestedFirmSlug && normalizedTokenFirmSlug && normalizedRequestedFirmSlug !== normalizedTokenFirmSlug)
+    ) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired login token',
+      });
+    }
+
+    const user = await User.findOne({
+      _id: decodedLoginToken.userId,
+      firmId: decodedLoginToken.firmId,
+      status: 'active',
+      isActive: true,
+    });
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid authentication token',
+      });
+    }
+
+    if (!user.loginOtpHash || !user.loginOtpExpiresAt || user.loginOtpExpiresAt.getTime() < Date.now()) {
+      clearLoginOtpState(user);
+      await persistLoginOtpState(user);
+      return res.status(401).json({
+        success: false,
+        message: 'OTP has expired. Please log in again.',
+      });
+    }
+
+    const currentAttempts = Number(user.loginOtpAttempts || 0);
+    if (currentAttempts >= LOGIN_OTP_MAX_ATTEMPTS) {
+      return res.status(429).json({
+        success: false,
+        message: 'Too many invalid OTP attempts. Please log in again.',
+      });
+    }
+
+    const isValidOtp = await bcrypt.compare(otp, user.loginOtpHash);
+    if (!isValidOtp) {
+      user.loginOtpAttempts = currentAttempts + 1;
+      await persistLoginOtpState(user);
+
+      try {
+        await logAuthAudit({
+          xID: user.xID || DEFAULT_XID,
+          firmId: user.firmId || DEFAULT_FIRM_ID,
+          userId: user._id,
+          actionType: 'LOGIN_OTP_FAILED',
+          description: `Invalid login OTP supplied (attempt ${user.loginOtpAttempts})`,
+          performedBy: user.xID || DEFAULT_XID,
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent'),
+          metadata: {
+            eventType: 'LOGIN_OTP_FAILED',
+            firmSlug: requestedFirmSlug,
+            attempts: user.loginOtpAttempts,
+            timestamp: new Date().toISOString(),
+          },
+        }, req);
+        await noteLoginFailure({
+          req,
+          xID: user.xID || DEFAULT_XID,
+          userId: user._id,
+          firmId: user.firmId || DEFAULT_FIRM_ID,
+        });
+      } catch (auditError) {
+        console.error('[AUTH AUDIT] Failed to record login OTP failure event', auditError);
+      }
+
+      const hasAttemptsRemaining = user.loginOtpAttempts < LOGIN_OTP_MAX_ATTEMPTS;
+      return res.status(hasAttemptsRemaining ? 401 : 429).json({
+        success: false,
+        message: hasAttemptsRemaining
+          ? 'Invalid verification code'
+          : 'Too many invalid OTP attempts. Please log in again.',
+        remainingAttempts: Math.max(0, LOGIN_OTP_MAX_ATTEMPTS - user.loginOtpAttempts),
+      });
+    }
+
+    clearLoginOtpState(user);
+    await persistLoginOtpState(user);
+
+    try {
+      await logAuthAudit({
+        xID: user.xID || DEFAULT_XID,
+        firmId: user.firmId || DEFAULT_FIRM_ID,
+        userId: user._id,
+        actionType: 'LOGIN_OTP_VERIFIED',
+        description: 'Login OTP verified successfully',
+        performedBy: user.xID || DEFAULT_XID,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+        metadata: {
+          eventType: 'LOGIN_OTP_VERIFIED',
+          firmSlug: requestedFirmSlug,
+          timestamp: new Date().toISOString(),
+        },
+      }, req);
+    } catch (auditError) {
+      console.error('[AUTH AUDIT] Failed to record login OTP verification event', auditError);
+    }
+
+    const response = await buildSuccessfulLoginPayload(req, user, {
+      authMethod: 'Email OTP',
+      resource: 'auth/verify-otp',
+      mfaRequired: true,
+    });
+
+    return res.json(response);
+  } catch (error) {
+    console.error('[AUTH] Verify login OTP error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error verifying login OTP',
     });
   }
 };
@@ -3531,6 +3777,7 @@ module.exports = {
   getAllUsers,
   refreshAccessToken: wrapWriteHandler(refreshAccessToken), // NEW: JWT token refresh
   verifyTotp: wrapWriteHandler(verifyTotp),
+  verifyLoginOtp: wrapWriteHandler(verifyLoginOtp),
   completeMfaLogin: wrapWriteHandler(completeMfaLogin),
   initiateGoogleAuth,
   handleGoogleCallback: wrapWriteHandler(handleGoogleCallback),
