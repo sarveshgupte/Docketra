@@ -57,10 +57,13 @@ class FakeRedis {
     return this._getEntry(key) ? 1 : 0;
   }
 
-  async set(key, value, exFlag, seconds) {
+  async set(key, value, exFlag, seconds, nxFlag) {
+    if (nxFlag === 'NX' && await this.exists(key)) {
+      return null;
+    }
     const expiresAt = exFlag === 'EX' ? Date.now() + Number(seconds) * 1000 : null;
     this.map.set(key, { value, expiresAt });
-    this.setCalls.push([key, value, exFlag, seconds]);
+    this.setCalls.push([key, value, exFlag, seconds, nxFlag]);
     return 'OK';
   }
 
@@ -73,16 +76,31 @@ class FakeRedis {
     return deleted;
   }
 
-  async eval(script, _numKeys, key, limitOrMaxAttempts, ttl) {
-    this.evalCalls.push([key, Number(limitOrMaxAttempts), Number(ttl)]);
+  async eval(script, numKeys, ...args) {
+    if (script.includes('maxAttempts')) {
+      const [attemptKey, blockKey, threshold, ttl] = args;
+      this.evalCalls.push([attemptKey, Number(threshold), Number(ttl), blockKey]);
+      if (await this.exists(blockKey)) {
+        return -2;
+      }
+      const current = await this.incr(attemptKey);
+      if (current === 1) {
+        await this.expire(attemptKey, Number(ttl));
+      }
+      if (current > Number(threshold)) {
+        await this.set(blockKey, '1', 'EX', Number(ttl), 'NX');
+        return -1;
+      }
+      return current;
+    }
+
+    const [key, threshold, ttl] = args;
+    this.evalCalls.push([key, Number(threshold), Number(ttl), numKeys]);
     const current = await this.incr(key);
     if (current === 1) {
       await this.expire(key, Number(ttl));
     }
-    if (script.includes('maxAttempts')) {
-      return current > Number(limitOrMaxAttempts) ? -1 : current;
-    }
-    return current > Number(limitOrMaxAttempts) ? 0 : 1;
+    return current > Number(threshold) ? 0 : 1;
   }
 }
 
@@ -137,11 +155,7 @@ async function run() {
     () => signupRateLimitService.consumeOtpAttempt({ email }),
     /Too many OTP attempts. Try again later\./,
   );
-  assert.strictEqual(
-    fakeRedis.evalCalls.length,
-    evalCountAfterBlock,
-    'blocked OTP should be rejected via block key check before counter increment',
-  );
+  assert.strictEqual(fakeRedis.evalCalls.length, evalCountAfterBlock + 1);
 
   await signupRateLimitService.clearOtpAttempts({ email });
   assert.ok(

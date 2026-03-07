@@ -61,7 +61,7 @@ class FakeRedis {
   }
 
   async set(key, value, exFlag, seconds, nxFlag) {
-    if (nxFlag === 'NX' && this._getEntry(key)) {
+    if (nxFlag === 'NX' && await this.exists(key)) {
       return null;
     }
     const expiresAt = exFlag === 'EX' ? Date.now() + Number(seconds) * 1000 : null;
@@ -70,8 +70,15 @@ class FakeRedis {
   }
 
   async del(...keys) {
-    keys.forEach((key) => this.map.delete(key));
-    return 1;
+    let deleted = 0;
+    keys.forEach((key) => {
+      if (this.map.delete(key)) deleted += 1;
+    });
+    return deleted;
+  }
+
+  async exists(key) {
+    return this._getEntry(key) ? 1 : 0;
   }
 }
 
