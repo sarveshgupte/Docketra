@@ -13,7 +13,7 @@ const emailService = require('../services/email.service');
 const xIDGenerator = require('../services/xIDGenerator');
 const signupService = require('../services/signup.service');
 const jwtService = require('../services/jwt.service');
-const { isSuperAdminRole } = require('../utils/role.utils');
+const { isSuperAdminRole, normalizeRole, toLegacyUserRole } = require('../utils/role.utils');
 const { normalizeFirmSlug } = require('../utils/slugify');
 const { validatePasswordStrength, PASSWORD_POLICY_MESSAGE } = require('../utils/passwordPolicy');
 const { ensureDefaultClientForFirm } = require('../services/defaultClient.service');
@@ -25,6 +25,7 @@ const { recordFailedLoginAttempt, clearFailedLoginAttempts } = require('../middl
 const { assertFirmPlanCapacity, PlanLimitExceededError, PlanAdminLimitExceededError, assertCanDeactivateUser, PrimaryAdminActionError } = require('../services/user.service');
 const { logAuthEvent } = require('../services/audit.service');
 const { incrementTenantMetric } = require('../services/tenantMetrics.service');
+const { mapUserResponse } = require('../mappers/user.mapper');
 const { decrypt: decryptProtectedValue } = require('../utils/encryption');
 const { logSecurityAuditEvent, SECURITY_AUDIT_ACTIONS } = require('../services/securityAudit.service');
 const {
@@ -1757,7 +1758,10 @@ const createUser = async (req, res) => {
     const { name, role, allowedCategories, email } = req.body;
     
     // Prevent creation of SUPER_ADMIN users
-    if (role === 'SUPER_ADMIN') {
+    const normalizedRequestedRole = normalizeRole(role || ROLE_EMPLOYEE);
+    const persistedRole = toLegacyUserRole(role || ROLE_EMPLOYEE);
+
+    if (normalizedRequestedRole === 'SUPER_ADMIN') {
       return res.status(403).json({
         success: false,
         message: 'Cannot create Superadmin users',
@@ -1827,7 +1831,7 @@ const createUser = async (req, res) => {
     const tokenHash = emailService.hashToken(token);
     const tokenExpiry = new Date(Date.now() + INVITE_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000);
     
-    await assertFirmPlanCapacity({ firmId: admin.firmId, session, role: role || 'Employee' });
+    await assertFirmPlanCapacity({ firmId: admin.firmId, session, role: persistedRole });
 
     // Create user without password (invite-based onboarding)
     const newUser = new User({
@@ -1836,7 +1840,7 @@ const createUser = async (req, res) => {
       email: email.trim().toLowerCase(),
       firmId: admin.firmId, // Inherit firmId from admin
       defaultClientId: firm.defaultClientId,
-      role: role || 'Employee',
+      role: persistedRole,
       allowedCategories: allowedCategories || [],
       isActive: false,
       passwordHash: null, // No password until user sets it
@@ -2972,7 +2976,7 @@ const getAllUsers = async (req, res) => {
     
     res.json({
       success: true,
-      data: users,
+      data: users.map(mapUserResponse),
       count: users.length,
     });
   } catch (error) {

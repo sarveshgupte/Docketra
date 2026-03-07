@@ -8,6 +8,7 @@ const { Parser } = require('json2csv');
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const { getLatestTenantMetrics, getTenantMetricsByRange } = require('../services/tenantCaseMetrics.service');
+const { mapAuditResponse } = require('../mappers/audit.mapper');
 
 const DEFAULT_AUDIT_LOG_LIMIT = 100;
 const MAX_AUDIT_LOG_LIMIT = 250;
@@ -213,7 +214,8 @@ const getPendingCasesReport = async (req, res) => {
     
     // Build match stage for pending cases
     // SECURITY: Enforcing tenant isolation (firm-scoped query)
-    const matchStage = { firmId, status: 'Pending' };
+    // Support legacy records that still use "Pending" while the canonical backend enum is "PENDED".
+    const matchStage = { firmId, status: { $in: ['Pending', 'PENDED'] } };
     
     if (category) matchStage.category = category;
     if (assignedTo) matchStage.assignedToXID = assignedTo; // Use assignedToXID for canonical queries
@@ -690,22 +692,15 @@ const getAuditLogs = async (req, res) => {
     const authLogs = await AuthAudit.find(authAuditFilter).sort({ timestamp: -1 }).limit(cappedLimit).lean();
 
     const combined = [
-      ...caseLogs.map((item) => ({
-        source: 'CaseAudit',
+      ...caseLogs.map((item) => mapAuditResponse({
+        ...item,
         xID: item.performedByXID,
         action: item.actionType,
-        timestamp: item.timestamp,
-        description: item.description,
-        metadata: item.metadata || null,
-      })),
-      ...authLogs.map((item) => ({
-        source: 'AuthAudit',
-        xID: item.xID,
+      }, 'CaseAudit')),
+      ...authLogs.map((item) => mapAuditResponse({
+        ...item,
         action: item.actionType,
-        timestamp: item.timestamp,
-        description: item.description,
-        metadata: item.metadata || null,
-      })),
+      }, 'AuthAudit')),
     ]
       .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
       .slice(0, cappedLimit);

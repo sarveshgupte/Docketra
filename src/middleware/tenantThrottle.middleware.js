@@ -1,5 +1,5 @@
 const config = require('../config/config');
-const { getRedisClient } = require('../config/redis');
+const redisConfig = require('../config/redis');
 const metricsService = require('../services/metrics.service');
 const { logSecurityEvent } = require('./securityAudit.middleware');
 
@@ -15,7 +15,7 @@ const tenantThrottle = async (req, res, next) => {
     });
   }
 
-  const redis = getRedisClient();
+  const redis = redisConfig.getRedisClient();
   if (!redis) {
     return res.status(503).json({
       success: false,

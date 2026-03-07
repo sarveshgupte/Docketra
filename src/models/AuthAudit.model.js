@@ -169,7 +169,6 @@ authAuditSchema.pre('findOneAndDelete', function(next) {
 // Index for performance - query by xID and timestamp
 authAuditSchema.index({ xID: 1, timestamp: -1 });
 authAuditSchema.index({ actionType: 1 });
-authAuditSchema.index({ firmId: 1 });
 authAuditSchema.index({ firmId: 1, timestamp: -1 }); // Firm-scoped audit queries
 authAuditSchema.index({ userId: 1, timestamp: -1 }); // User-scoped audit queries
 
