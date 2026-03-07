@@ -4,7 +4,14 @@ const routeSchemas = require('../schemas/auth.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { authenticate } = require('../middleware/auth.middleware');
 const { requireAdmin } = require('../middleware/permission.middleware');
-const { authLimiter, authBlockEnforcer, profileLimiter, sensitiveLimiter } = require('../middleware/rateLimiters');
+const {
+  authLimiter,
+  authBlockEnforcer,
+  profileLimiter,
+  sensitiveLimiter,
+  refreshIpLimiter,
+  refreshUserLimiter,
+} = require('../middleware/rateLimiters');
 const {
   logout,
   changePassword,
@@ -49,7 +56,7 @@ router.post('/setup-account', authBlockEnforcer, authLimiter, setupAccount);
 router.post('/resend-setup', authBlockEnforcer, authLimiter, resendSetup);
 router.post('/reset-password-with-token', authBlockEnforcer, authLimiter, sensitiveLimiter, resetPasswordWithToken);
 router.post('/forgot-password', authBlockEnforcer, authLimiter, sensitiveLimiter, forgotPassword);
-router.post('/refresh', refreshAccessToken); // NEW: JWT token refresh
+router.post('/refresh', refreshIpLimiter, refreshUserLimiter, refreshAccessToken); // NEW: JWT token refresh
 router.post('/verify-totp', authLimiter, verifyTotp);
 router.post('/complete-mfa-login', authLimiter, completeMfaLogin);
 

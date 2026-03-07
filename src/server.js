@@ -188,6 +188,9 @@ if (isProduction && !process.env.SUPERADMIN_PASSWORD_HASH) {
 if (isProduction && !process.env.METRICS_TOKEN) {
   throw new Error('SECURITY: METRICS_TOKEN is required in production');
 }
+if (isProduction && !process.env.INBOUND_EMAIL_WEBHOOK_SECRET) {
+  throw new Error('INBOUND_EMAIL_WEBHOOK_SECRET must be configured in production');
+}
 
 validateEnv();
 logBuildMetadata();

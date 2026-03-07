@@ -1,5 +1,6 @@
 const { createHash, createHmac, randomUUID, timingSafeEqual } = require('crypto');
 const path = require('path');
+const { getRedisClient } = require('../config/redis');
 const Case = require('../models/Case.model');
 const Comment = require('../models/Comment.model');
 const Attachment = require('../models/Attachment.model');
@@ -40,6 +41,10 @@ const parsePublicEmailTokenFromRecipient = (toAddress) => {
 const BLOCKED_EXTENSIONS = new Set(['.exe', '.bat', '.cmd', '.com', '.scr', '.js', '.jar', '.msi', '.sh']);
 const MAX_ATTACHMENT_SIZE_BYTES = 25 * 1024 * 1024;
 const EMAIL_ATTACHMENT_PREFIX = 'email';
+const INBOUND_SIGNATURE_TOLERANCE_SECONDS = Number(process.env.INBOUND_EMAIL_WEBHOOK_MAX_SKEW_SECONDS || 300);
+const replayCache = new Map();
+const MAX_INBOUND_REPLAY_CACHE_ENTRIES = Number(process.env.INBOUND_EMAIL_REPLAY_CACHE_MAX || 10000);
+let insecureWebhookWarningLogged = false;
 const escapeHtml = (value) => String(value || '')
   .replace(/&/g, '&amp;')
   .replace(/</g, '&lt;')
@@ -54,14 +59,74 @@ function createInboundError(message, { unrecoverable = false, reason = null } = 
   return error;
 }
 
+const toInboundTimestamp = (headerValue) => {
+  const parsed = Number(String(headerValue || '').trim());
+  if (!Number.isFinite(parsed)) return null;
+  return parsed > 1e12 ? Math.floor(parsed / 1000) : Math.floor(parsed);
+};
+
+const hasValidInboundTimestamp = (reqHeaders = {}) => {
+  const inboundTimestamp = toInboundTimestamp(
+    reqHeaders['x-inbound-timestamp'] || reqHeaders['x-inbound-request-timestamp']
+  );
+  if (!inboundTimestamp) return false;
+  const now = Math.floor(Date.now() / 1000);
+  return Math.abs(now - inboundTimestamp) <= INBOUND_SIGNATURE_TOLERANCE_SECONDS;
+};
+
+const createReplayCacheKey = (reqHeaders = {}) => {
+  const timestamp = String(reqHeaders['x-inbound-timestamp'] || reqHeaders['x-inbound-request-timestamp'] || '').trim();
+  const signature = String(reqHeaders['x-inbound-signature'] || '').trim().toLowerCase();
+  if (!timestamp || !signature) return null;
+  return createHash('sha256').update(`${timestamp}:${signature}`).digest('hex');
+};
+
+const rememberInboundReplay = async (reqHeaders = {}) => {
+  const replayKey = createReplayCacheKey(reqHeaders);
+  if (!replayKey) return false;
+
+  const ttlSeconds = Math.max(INBOUND_SIGNATURE_TOLERANCE_SECONDS, 60);
+  const redis = getRedisClient();
+  if (redis) {
+    const redisKey = `security:inbound:replay:${replayKey}`;
+    const result = await redis.set(redisKey, '1', 'EX', ttlSeconds, 'NX');
+    return result === 'OK';
+  }
+
+  const expiresAt = Date.now() + ttlSeconds * 1000;
+  const current = replayCache.get(replayKey);
+  if (current && current > Date.now()) {
+    return false;
+  }
+  replayCache.set(replayKey, expiresAt);
+  for (const [key, value] of replayCache.entries()) {
+    if (value <= Date.now()) replayCache.delete(key);
+  }
+  while (replayCache.size > MAX_INBOUND_REPLAY_CACHE_ENTRIES) {
+    const [oldestKey] = replayCache.keys();
+    if (!oldestKey) break;
+    replayCache.delete(oldestKey);
+  }
+  return true;
+};
+
 const verifyInboundSignature = (rawBody, reqHeaders = {}) => {
   const secret = process.env.INBOUND_EMAIL_WEBHOOK_SECRET;
-  if (!secret) return true;
+  if (!secret) {
+    if (process.env.NODE_ENV !== 'production' && !insecureWebhookWarningLogged) {
+      console.warn('[inboundEmail] INBOUND_EMAIL_WEBHOOK_SECRET is not configured; signature verification is disabled');
+      insecureWebhookWarningLogged = true;
+    }
+    return process.env.NODE_ENV !== 'production';
+  }
 
   const providedSignature = String(reqHeaders['x-inbound-signature'] || '').trim().replace(/^sha256=/i, '');
   if (!providedSignature) return false;
+  if (!hasValidInboundTimestamp(reqHeaders)) return false;
 
+  const timestamp = String(reqHeaders['x-inbound-timestamp'] || reqHeaders['x-inbound-request-timestamp']).trim();
   const expectedSignature = createHmac('sha256', secret)
+    .update(`${timestamp}.`)
     .update(rawBody)
     .digest('hex');
 
@@ -400,6 +465,15 @@ const handleInboundEmail = async (req, res) => {
       success: false,
       message: 'Invalid inbound signature',
     });
+  }
+  if (process.env.INBOUND_EMAIL_WEBHOOK_SECRET) {
+    const replayAccepted = await rememberInboundReplay(req.headers || {});
+    if (!replayAccepted) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid inbound signature',
+      });
+    }
   }
 
   let parsedBody;
