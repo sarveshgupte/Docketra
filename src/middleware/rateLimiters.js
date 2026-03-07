@@ -7,10 +7,22 @@ const { getRedisClient } = require('../config/redis');
 const metricsService = require('../services/metrics.service');
 const { logSecurityEvent } = require('./securityAudit.middleware');
 
+const DEFAULT_RATE_LIMIT_MESSAGE = 'Too many requests. Please wait a moment before trying again.';
+const FORGOT_PASSWORD_RATE_LIMIT_MESSAGE = 'Too many password reset requests. Please wait a few minutes before trying again.';
+const FORGOT_PASSWORD_PATH_PATTERN = /\bforgot[-_]password\b/i;
+
 const getRetryAfterSeconds = (req, windowMs) => {
   const reset = req.rateLimit?.resetTime;
   if (!reset) return Math.ceil(windowMs / 1000);
   return Math.max(1, Math.ceil((new Date(reset).getTime() - Date.now()) / 1000));
+};
+
+const getRateLimitMessage = (req, name) => {
+  const requestPath = String(req.originalUrl || req.path || '');
+  if (name === 'forgotPasswordLimiter' || FORGOT_PASSWORD_PATH_PATTERN.test(requestPath)) {
+    return FORGOT_PASSWORD_RATE_LIMIT_MESSAGE;
+  }
+  return DEFAULT_RATE_LIMIT_MESSAGE;
 };
 
 const createRedisStore = () => {
@@ -30,6 +42,7 @@ const createRedisStore = () => {
 
 const createRateLimitHandler = (name, windowMs) => async (req, res) => {
   const retryAfter = getRetryAfterSeconds(req, windowMs);
+  const message = getRateLimitMessage(req, name);
   if (name === 'authLimiter') {
     const redis = getRedisClient();
     if (redis) {
@@ -42,11 +55,12 @@ const createRateLimitHandler = (name, windowMs) => async (req, res) => {
   metricsService.recordApiRateLimitExceeded();
   await logSecurityEvent(req, {
     action: 'RATE_LIMIT_EXCEEDED',
-    metadata: { limiter: name, retryAfter },
+    metadata: { limiter: name, retryAfter, message },
   });
   res.status(429).json({
     success: false,
     error: 'RATE_LIMIT_EXCEEDED',
+    message,
     retryAfter,
   });
 };
@@ -147,10 +161,12 @@ const authBlockEnforcer = async (req, res, next) => {
   const key = `ratelimit:auth:block:${ipKeyGenerator(req)}`;
   const ttl = await redis.ttl(key);
   if (ttl > 0) {
+    const message = getRateLimitMessage(req, 'authBlockEnforcer');
     res.setHeader('Retry-After', String(ttl));
     return res.status(429).json({
       success: false,
       error: 'RATE_LIMIT_EXCEEDED',
+      message,
       retryAfter: ttl,
     });
   }
