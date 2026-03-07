@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../../components/common/Layout';
+import { EmptyState } from '../../components/EmptyState';
 import { MetricCard } from '../../components/reports/MetricCard';
 import { AuditLogView } from '../../components/reports/AuditLogView';
 import { Loading } from '../../components/common/Loading';
@@ -21,6 +22,7 @@ export const ReportsDashboard = () => {
   const [metrics, setMetrics] = useState(null);
   const [pendingReport, setPendingReport] = useState(null);
   const [error, setError] = useState(null);
+  const hasReportData = Boolean(metrics || pendingReport);
 
   useEffect(() => {
     loadDashboardData();
@@ -44,10 +46,17 @@ export const ReportsDashboard = () => {
       }
     } catch (err) {
       console.error('Error loading dashboard data:', err);
-      if (err.response?.status === 403) {
-        setError('You do not have permission to access reports');
+      if (!err.response) {
+        setError('Unable to connect to server');
+      } else if (err.response?.status === 404) {
+        setMetrics(null);
+        setPendingReport(null);
+      } else if (err.response?.status === 401 || err.response?.status === 403) {
+        setError('You do not have permission');
+      } else if (err.response?.status >= 500) {
+        setError('Something went wrong. Please try again.');
       } else {
-        setError('Report data could not be loaded. Please try again.');
+        setError('Something went wrong. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -74,6 +83,23 @@ export const ReportsDashboard = () => {
             <h2>Access Denied</h2>
             <p>{error}</p>
           </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!hasReportData) {
+    return (
+      <Layout>
+        <div className="reports-dashboard">
+          <div className="reports-dashboard__header">
+            <h1>Reports & MIS Dashboard</h1>
+            <p className="text-secondary">Management information system - Read-only view</p>
+          </div>
+          <EmptyState
+            title="No reports available yet"
+            description="Data will appear once activity begins."
+          />
         </div>
       </Layout>
     );

@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../../components/common/Layout';
+import { EmptyState } from '../../components/EmptyState';
 import { FilterPanel } from '../../components/reports/FilterPanel';
 import { ReportsTable } from '../../components/reports/ReportsTable';
 import { ExportModal } from './ExportModal';
@@ -81,10 +82,17 @@ export const DetailedReports = () => {
       }
     } catch (err) {
       console.error('Error loading cases:', err);
-      if (err.response?.status === 403) {
-        setError('You do not have permission to access reports');
+      if (!err.response) {
+        setError('Unable to connect to server');
+      } else if (err.response?.status === 404) {
+        setCases([]);
+        setPagination(null);
+      } else if (err.response?.status === 401 || err.response?.status === 403) {
+        setError('You do not have permission');
+      } else if (err.response?.status >= 500) {
+        setError('Something went wrong. Please try again.');
       } else {
-        setError('Failed to load cases. Please try again.');
+        setError('Something went wrong. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -211,12 +219,19 @@ export const DetailedReports = () => {
         {loading ? (
           <Loading message="Loading cases..." />
         ) : (
-          <ReportsTable
-            cases={cases}
-            onCaseClick={handleCaseClick}
-            pagination={pagination}
-            onPageChange={handlePageChange}
-          />
+          cases.length === 0 && !error ? (
+            <EmptyState
+              title="No reports available yet"
+              description="Apply filters or create activity to generate report data."
+            />
+          ) : (
+            <ReportsTable
+              cases={cases}
+              onCaseClick={handleCaseClick}
+              pagination={pagination}
+              onPageChange={handlePageChange}
+            />
+          )
         )}
 
         <ExportModal

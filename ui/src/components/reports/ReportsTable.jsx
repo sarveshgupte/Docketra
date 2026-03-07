@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { Badge } from '../common/Badge';
+import { EmptyState } from '../EmptyState';
 import { formatDateTime } from '../../utils/formatters';
 import './ReportsTable.css';
 
@@ -12,9 +13,10 @@ export const ReportsTable = ({ cases, onCaseClick, pagination, onPageChange }) =
   return (
     <div className="reports-table">
       {cases.length === 0 ? (
-        <div className="reports-table__empty">
-          <p>No data available for selected filters</p>
-        </div>
+        <EmptyState
+          title="No reports available yet"
+          description="Apply filters or create activity to generate report data."
+        />
       ) : (
         <>
           <div className="reports-table__wrapper">
