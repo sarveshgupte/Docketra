@@ -46,16 +46,16 @@ const {
  */
 
 // Platform statistics
-router.get('/stats', authorize(SuperAdminPolicy.canViewPlatformStats), superadminLimiter, getPlatformStats);
-router.get('/health', requireSuperadmin, superadminLimiter, getOperationalHealth);
+router.get('/stats', authorize(SuperAdminPolicy.canViewPlatformStats), getPlatformStats);
+router.get('/health', requireSuperadmin, getOperationalHealth);
 
 // Firm management
-router.post('/firms', authorize(FirmPolicy.canCreate), superadminLimiter, createFirm);
-router.get('/firms', authorize(FirmPolicy.canView), superadminLimiter, listFirms);
-router.patch('/firms/:id', authorize(FirmPolicy.canManageStatus), superadminLimiter, updateFirmStatus);
-router.patch('/firms/:id/activate', authorize(FirmPolicy.canManageStatus), superadminLimiter, activateFirm);
-router.patch('/firms/:id/deactivate', authorize(FirmPolicy.canManageStatus), superadminLimiter, deactivateFirm);
-router.post('/firms/:id/disable', authorize(FirmPolicy.canManageStatus), superadminLimiter, disableFirmImmediately);
+router.post('/firms', authorize(FirmPolicy.canCreate), createFirm);
+router.get('/firms', authorize(FirmPolicy.canView), listFirms);
+router.patch('/firms/:id', authorize(FirmPolicy.canManageStatus), updateFirmStatus);
+router.patch('/firms/:id/activate', authorize(FirmPolicy.canManageStatus), activateFirm);
+router.patch('/firms/:id/deactivate', authorize(FirmPolicy.canManageStatus), deactivateFirm);
+router.post('/firms/:id/disable', authorize(FirmPolicy.canManageStatus), disableFirmImmediately);
 
 // Firm admin creation
 router.post('/firms/:firmId/admin', authorize(FirmPolicy.canCreateAdmin), superadminAdminManagementLimiter, createFirmAdmin);
@@ -72,7 +72,7 @@ router.post('/firms/:firmId/admins/:adminId/force-reset', authorize(FirmPolicy.c
 router.delete('/firms/:firmId/admins/:adminId', authorize(FirmPolicy.canResendAdminAccess), superadminAdminManagementLimiter, deleteFirmAdmin);
 
 // Firm context switching (impersonation)
-router.post('/switch-firm', requireSuperadmin, superadminLimiter, switchFirm);
-router.post('/exit-firm', requireSuperadmin, superadminLimiter, exitFirm);
+router.post('/switch-firm', requireSuperadmin, switchFirm);
+router.post('/exit-firm', requireSuperadmin, exitFirm);
 
 module.exports = router;

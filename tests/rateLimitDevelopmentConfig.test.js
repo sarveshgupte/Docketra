@@ -62,7 +62,7 @@ function testRouteLimiterWiring() {
   assert.ok(inboundRoutes.includes("router.post('/email', inboundEmailLimiter, inboundStorageHealthGuard, handleInboundEmail);"));
   assert.ok(publicRoutes.includes("router.post('/signup', signupLimiter, async (req, res, next) => {"));
 
-  assert.ok(serverSource.includes("app.get('/:firmSlug/login', tenantResolver, (req, res) => {"));
+  assert.ok(serverSource.includes("app.get('/:firmSlug/login', publicLimiter, tenantResolver, (req, res) => {"));
   assert.ok(!serverSource.includes('const superadminRouteLimiter = rateLimit({'));
   assert.ok(!serverSource.includes("app.use('/api/admin', authenticate, firmContext, requireTenant, tenantThrottle, sensitiveLimiter"));
   console.log('  ✓ wires updated route-level limiters and removes redundant throttles');
