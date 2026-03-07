@@ -136,7 +136,11 @@ const authenticate = async (req, res, next) => {
     // ============================================================
     
     // Find user by ID from token
-    const user = await User.findById(decoded.userId);
+    const userQuery = { _id: decoded.userId };
+    if (decoded.firmId) {
+      userQuery.firmId = decoded.firmId;
+    }
+    const user = await User.findOne(userQuery);
     
     if (!user) {
       noteAuthFailure();

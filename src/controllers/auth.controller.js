@@ -24,6 +24,9 @@ const { recordFailedLoginAttempt, clearFailedLoginAttempts } = require('../middl
 const { assertFirmPlanCapacity, PlanLimitExceededError, PlanAdminLimitExceededError, assertCanDeactivateUser, PrimaryAdminActionError } = require('../services/user.service');
 const { logAuthEvent } = require('../services/audit.service');
 const { incrementTenantMetric } = require('../services/tenantMetrics.service');
+const { decrypt: decryptProtectedValue } = require('../utils/encryption');
+const { logSecurityAuditEvent, SECURITY_AUDIT_ACTIONS } = require('../services/securityAudit.service');
+const { noteLoginFailure, noteRefreshTokenFailure } = require('../services/securityTelemetry.service');
 
 /**
  * Authentication Controller for JWT-based Enterprise Authentication
@@ -52,6 +55,8 @@ const ROLE_EMPLOYEE = 'Employee';
 const log = require('../utils/log');
 const logger = log;
 const { safeLogForensicAudit, getRequestIp, getRequestUserAgent } = require('../services/forensicAudit.service');
+
+const getTwoFactorSecret = (user) => decryptProtectedValue(user?.twoFactorSecret);
 
 /**
  * Non-fatal auth audit logger. Audit failures must never break primary business
@@ -420,6 +425,24 @@ const login = async (req, res) => {
             timestamp: new Date().toISOString(),
           },
         }, req);
+        await logSecurityAuditEvent({
+          req,
+          action: SECURITY_AUDIT_ACTIONS.LOGIN_FAILURE,
+          resource: 'auth/login',
+          firmId: req.firmIdString || req.firmId || 'UNKNOWN',
+          xID: normalizedXID || 'UNKNOWN',
+          performedBy: normalizedXID || 'UNKNOWN',
+          metadata: {
+            reason: 'invalid_credentials',
+            loginScope,
+          },
+          description: 'Login failed due to invalid credentials',
+        }).catch(() => null);
+        await noteLoginFailure({
+          req,
+          xID: normalizedXID || 'UNKNOWN',
+          firmId: req.firmIdString || req.firmId || null,
+        });
       } catch (auditError) {
         console.error('[AUTH AUDIT] Failed to record login failure event', auditError);
       }
@@ -626,6 +649,26 @@ const login = async (req, res) => {
             timestamp: new Date().toISOString(),
           },
         }, req);
+        await logSecurityAuditEvent({
+          req,
+          action: SECURITY_AUDIT_ACTIONS.LOGIN_FAILURE,
+          resource: 'auth/login',
+          userId: user._id,
+          firmId: user.firmId || DEFAULT_FIRM_ID,
+          xID: user.xID,
+          performedBy: user.xID,
+          metadata: {
+            reason: 'invalid_password',
+            failedAttempts: currentFailedAttempts,
+          },
+          description: `Login failed: invalid password (attempt ${currentFailedAttempts})`,
+        }).catch(() => null);
+        await noteLoginFailure({
+          req,
+          xID: user.xID,
+          userId: user._id,
+          firmId: user.firmId || DEFAULT_FIRM_ID,
+        });
       } catch (auditError) {
         console.error('[AUTH AUDIT] Failed to record login failure event', auditError);
       }
@@ -766,6 +809,20 @@ const login = async (req, res) => {
           timestamp: new Date().toISOString(),
         },
       }, req);
+      await logSecurityAuditEvent({
+        req,
+        action: SECURITY_AUDIT_ACTIONS.LOGIN_SUCCESS,
+        resource: 'auth/login',
+        userId: user._id,
+        firmId: user.firmId || DEFAULT_FIRM_ID,
+        xID: user.xID || DEFAULT_XID,
+        performedBy: user.xID || DEFAULT_XID,
+        metadata: {
+          email: user.email || null,
+          mfaRequired: false,
+        },
+        description: 'User login completed successfully',
+      }).catch(() => null);
     } catch (auditError) {
       console.error('[AUTH AUDIT] Failed to record login event', auditError);
     }
@@ -994,6 +1051,16 @@ const changePassword = async (req, res) => {
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
     });
+    await logSecurityAuditEvent({
+      req,
+      action: SECURITY_AUDIT_ACTIONS.PASSWORD_CHANGE,
+      resource: 'auth/change-password',
+      userId: user._id,
+      firmId: user.firmId,
+      xID: user.xID,
+      performedBy: user.xID,
+      description: 'User changed their password',
+    }).catch(() => null);
     
     res.json({
       success: true,
@@ -2629,6 +2696,10 @@ const refreshAccessToken = async (req, res) => {
     });
     
     if (!storedToken) {
+      await noteRefreshTokenFailure({
+        req,
+        reason: 'invalid_refresh_token',
+      });
       return res.status(401).json({
         success: false,
         message: 'Invalid or expired refresh token',
@@ -2640,6 +2711,10 @@ const refreshAccessToken = async (req, res) => {
     const isTokenMissingFirmContext = !storedToken.firmId;
     if (isSuperAdminToken || isTokenMissingFirmContext) {
       // Use the SuperAdmin message for missing firm context to avoid exposing tenant details.
+      await noteRefreshTokenFailure({
+        req,
+        reason: 'refresh_not_supported',
+      });
       return res.status(401).json({
         success: false,
         code: 'REFRESH_NOT_SUPPORTED',
@@ -2648,9 +2723,18 @@ const refreshAccessToken = async (req, res) => {
     }
     
     // Get the user
-    const user = await User.findById(storedToken.userId);
+    const user = await User.findOne({
+      _id: storedToken.userId,
+      firmId: storedToken.firmId,
+    });
     
     if (!user || user.status !== 'active') {
+      await noteRefreshTokenFailure({
+        req,
+        userId: storedToken.userId,
+        firmId: storedToken.firmId,
+        reason: 'refresh_user_not_found',
+      });
       return res.status(401).json({
         success: false,
         message: 'User not found or inactive',
@@ -2754,8 +2838,9 @@ const verifyTotp = async (req, res) => {
       });
     }
 
+    const decryptedSecret = getTwoFactorSecret(user);
     const verified = speakeasy.totp.verify({
-      secret: user.twoFactorSecret,
+      secret: decryptedSecret,
       encoding: 'base32',
       token,
       // Allow adjacent 30s time step to tolerate small clock drift without over-broad acceptance
@@ -2833,6 +2918,7 @@ const completeMfaLogin = async (req, res) => {
 
     const user = await User.findOne({
       _id: decodedPreAuthToken.userId,
+      ...(decodedPreAuthToken.firmId ? { firmId: decodedPreAuthToken.firmId } : {}),
       isActive: true,
       status: 'active',
     });
@@ -2844,8 +2930,9 @@ const completeMfaLogin = async (req, res) => {
       });
     }
 
+    const decryptedSecret = getTwoFactorSecret(user);
     const verified = speakeasy.totp.verify({
-      secret: user.twoFactorSecret,
+      secret: decryptedSecret,
       encoding: 'base32',
       token,
       window: 1,
@@ -2889,6 +2976,19 @@ const completeMfaLogin = async (req, res) => {
         ipAddress: req.ip,
         userAgent: req.get('user-agent'),
       }, req);
+      await logSecurityAuditEvent({
+        req,
+        action: SECURITY_AUDIT_ACTIONS.LOGIN_SUCCESS,
+        resource: 'auth/complete-mfa-login',
+        userId: user._id,
+        firmId: user.firmId || DEFAULT_FIRM_ID,
+        xID: user.xID || DEFAULT_XID,
+        performedBy: user.xID || DEFAULT_XID,
+        metadata: {
+          mfaRequired: true,
+        },
+        description: 'User completed MFA login successfully',
+      }).catch(() => null);
     } catch (auditError) {
       console.error('[AUTH AUDIT] Failed to record MFA login success event', auditError);
     }
