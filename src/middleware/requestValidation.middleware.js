@@ -1,6 +1,23 @@
 const { z } = require('zod');
 
 const emptyObjectSchema = z.object({}).passthrough();
+const POLLUTION_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
+
+const sanitizeInput = (value) => {
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeInput(item));
+  }
+  if (value && typeof value === 'object') {
+    return Object.entries(value).reduce((acc, [key, nestedValue]) => {
+      if (POLLUTION_KEYS.has(key)) {
+        return acc;
+      }
+      acc[key] = sanitizeInput(nestedValue);
+      return acc;
+    }, {});
+  }
+  return value;
+};
 
 const validateRequest = (schema = {}) => (req, res, next) => {
   const errors = [];
@@ -8,7 +25,7 @@ const validateRequest = (schema = {}) => (req, res, next) => {
 
   for (const section of sections) {
     const sectionSchema = schema[section] || emptyObjectSchema;
-    const parseResult = sectionSchema.safeParse(req[section] || {});
+    const parseResult = sectionSchema.safeParse(sanitizeInput(req[section] || {}));
 
     if (!parseResult.success) {
       errors.push(
@@ -55,4 +72,5 @@ module.exports = {
   validateRequest,
   applyRouteValidation,
   emptyObjectSchema,
+  sanitizeInput,
 };

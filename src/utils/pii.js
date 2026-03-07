@@ -66,6 +66,15 @@ const maskToken = (value) => {
   return `${value.slice(0, MASK_SEGMENT_LENGTH)}***${value.slice(-2)}`;
 };
 
+const maskAuthorizationHeader = (value) => {
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  if (/^bearer\s+/i.test(trimmed)) {
+    return 'Bearer *****';
+  }
+  return '*****';
+};
+
 const maskValue = (key, value, seen = new WeakSet()) => {
   if (value === null || value === undefined) return value;
   if (typeof value === 'object') return maskSensitiveObject(value, seen);
@@ -76,11 +85,15 @@ const maskValue = (key, value, seen = new WeakSet()) => {
   if (['phone', 'phonenumber', 'mobile'].includes(lowerKey)) return maskPhone(value);
   if (['pan', 'pan_number', 'pannumber'].includes(lowerKey)) return maskPAN(value);
   if (['aadhaar', 'aadhar', 'aadhaarnumber'].includes(lowerKey)) return maskAadhaar(value);
-  if (['authorization', 'token', 'refreshtoken', 'accesstoken', 'idtoken'].includes(lowerKey)) return maskToken(value);
+  if (lowerKey === 'authorization') return maskAuthorizationHeader(value);
+  if (['token', 'refreshtoken', 'accesstoken', 'idtoken'].includes(lowerKey)) return maskToken(value);
   
   // CRITICAL SECURITY: Mask password fields (all variations)
   // Passwords must NEVER appear in logs under any circumstance
   if (['password', 'currentpassword', 'newpassword', 'oldpassword', 'passwordhash'].includes(lowerKey)) {
+    return '***REDACTED***';
+  }
+  if (['mfasecret', 'totpsecret', 'otpsecret', 'secret', 'seed'].includes(lowerKey)) {
     return '***REDACTED***';
   }
 

@@ -113,6 +113,27 @@ const authLimiter = createLimiter({
   keyGenerator: ipKeyGenerator,
 });
 
+const loginLimiter = createLimiter({
+  name: 'loginLimiter',
+  windowMs: 60 * 1000,
+  max: config.security.rateLimit.loginPerMinute,
+  keyGenerator: ipKeyGenerator,
+});
+
+const forgotPasswordLimiter = createLimiter({
+  name: 'forgotPasswordLimiter',
+  windowMs: 60 * 1000,
+  max: config.security.rateLimit.forgotPasswordPerMinute,
+  keyGenerator: ipKeyGenerator,
+});
+
+const publicLimiter = createLimiter({
+  name: 'publicLimiter',
+  windowMs: 60 * 1000,
+  max: config.security.rateLimit.publicPerMinute,
+  keyGenerator: ipKeyGenerator,
+});
+
 const signupLimiter = createLimiter({
   name: 'signupLimiter',
   windowMs: config.security.rateLimit.signupWindowSeconds * 1000,
@@ -201,6 +222,9 @@ const superadminAdminManagementLimiter = superadminLimiter;
 module.exports = {
   globalApiLimiter,
   authLimiter,
+  loginLimiter,
+  forgotPasswordLimiter,
+  publicLimiter,
   signupLimiter,
   authBlockEnforcer,
   sensitiveLimiter,

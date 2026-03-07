@@ -108,7 +108,7 @@ const { adminAuditTrail } = require('./middleware/adminAudit.middleware');
 const requestLifecycle = require('./middleware/requestLifecycle.middleware');
 const { noFirmNoTransaction } = require('./middleware/noFirmNoTransaction.middleware');
 const optionsPreflight = require('./middleware/optionsPreflight.middleware');
-const { authLimiter, globalApiLimiter, sensitiveLimiter } = require('./middleware/rateLimiters');
+const { authLimiter, loginLimiter, publicLimiter, globalApiLimiter, sensitiveLimiter } = require('./middleware/rateLimiters');
 const { tenantThrottle } = require('./middleware/tenantThrottle.middleware');
 const { uploadErrorHandler } = require('./middleware/uploadProtection.middleware');
 
@@ -280,16 +280,49 @@ connectDB()
 
 // SECURITY: Defense-in-depth middleware
 // Security Headers - Helmet
-// Disable CSP and COEP since we're serving a React SPA
+const toCspSource = (origin) => {
+  try {
+    const parsed = new URL(origin);
+    return `${parsed.protocol}//${parsed.host}`;
+  } catch (_) {
+    return null;
+  }
+};
+const cspConnectSrc = [
+  "'self'",
+  ...allowedOrigins.map(toCspSource).filter(Boolean),
+  ...(!isProduction ? ['http://localhost:5173', 'ws://localhost:5173'] : []),
+];
+
 app.use(helmet({
-  contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false,
   frameguard: { action: 'deny' },
   noSniff: true,
-  referrerPolicy: { policy: 'no-referrer' },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   dnsPrefetchControl: { allow: false },
   hsts: isProduction ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
+  contentSecurityPolicy: {
+    useDefaults: true,
+    directives: {
+      defaultSrc: ["'self'"],
+      baseUri: ["'self'"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+      scriptSrc: isProduction ? ["'self'"] : ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'blob:'],
+      connectSrc: cspConnectSrc,
+      reportUri: ['/api/csp-violation'],
+    },
+  },
 }));
+
+// SECURITY: Capture CSP reports without exposing internals to clients.
+app.post('/api/csp-violation', express.json({ type: ['application/csp-report', 'application/reports+json', 'application/json'] }), (req, res) => {
+  const report = maskSensitiveObject(req.body || {});
+  log.warn('CSP_VIOLATION_REPORTED', { report });
+  return res.status(204).end();
+});
 
 const CORS_ALLOWED_HEADERS = ['Content-Type', 'Authorization', 'X-Requested-With', 'Idempotency-Key'];
 const CORS_ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'];
@@ -390,21 +423,21 @@ app.get('/f/:firmSlug/login', (req, res) => {
 });
 
 // Isolated superadmin login (platform only)
-const superadminLoginChain = [authLimiter, noFirmNoTransaction, (req, _res, next) => { req.loginScope = 'superadmin'; next(); }, login];
+const superadminLoginChain = [loginLimiter, noFirmNoTransaction, (req, _res, next) => { req.loginScope = 'superadmin'; next(); }, login];
 app.post('/superadmin/login', ...superadminLoginChain);
 
 // Tenant login must be slug-scoped only
-app.get('/:firmSlug/login', authLimiter, tenantResolver, (req, res) => {
+app.get('/:firmSlug/login', loginLimiter, tenantResolver, (req, res) => {
   res.json({ success: true, data: { firmId: req.firmIdString, firmSlug: req.firmSlug, name: req.firmName, status: req.firm.status } });
 });
-app.post('/:firmSlug/login', authLimiter, tenantResolver, noFirmNoTransaction, (req, res, next) => { req.loginScope = 'tenant'; next(); }, login);
+app.post('/:firmSlug/login', loginLimiter, tenantResolver, noFirmNoTransaction, (req, res, next) => { req.loginScope = 'tenant'; next(); }, login);
 
 // Public routes (no authentication required)
-app.use('/api/public', writeGuardChain, publicRoutes);
-app.use('/public', writeGuardChain, publicRoutes);
+app.use('/api/public', publicLimiter, writeGuardChain, publicRoutes);
+app.use('/public', publicLimiter, writeGuardChain, publicRoutes);
 
 // Public self-serve signup routes (no authentication required)
-app.use('/public', publicSignupRoutes);
+app.use('/public', publicLimiter, publicSignupRoutes);
 
 // Contact form route (public, no authentication required)
 app.use('/api/contact', contactLimiter, contactRoutes);
@@ -423,8 +456,10 @@ app.use('/api/dashboard', authenticate, firmContext, requireTenant, tenantThrott
   app.use(basePath, authenticate, superadminRouteLimiter, writeGuardChain, adminAuditTrail('superadmin'), superadminRoutes);
 });
 
-// Debug routes (PR #43) - require authentication and admin role
-app.use('/api/debug', authenticate, firmContext, requireTenant, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, requireAdmin, debugRoutes);
+// SECURITY: Debug routes must never be reachable in production environments.
+if (!isProduction) {
+  app.use('/api/debug', authenticate, firmContext, requireTenant, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, requireAdmin, debugRoutes);
+}
 
 // Inbound email routes (webhook - no authentication required)
 app.use('/api/inbound', writeGuardChain, inboundRoutes);
