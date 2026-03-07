@@ -42,6 +42,12 @@ const temporarySignupSchema = new mongoose.Schema({
     trim: true,
   },
 
+  storageType: {
+    type: String,
+    enum: ['docketra', 'external'],
+    default: 'docketra',
+  },
+
   provider: {
     type: String,
     enum: ['manual'],

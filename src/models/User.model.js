@@ -539,6 +539,31 @@ userSchema.index(
   { firmId: 1, email: 1 },
   { unique: true, partialFilterExpression: { status: { $ne: 'deleted' } } }
 );
+userSchema.index(
+  { email: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      isSystem: true,
+      role: 'Admin',
+      status: { $ne: 'deleted' },
+    },
+    name: 'system_admin_email_unique',
+  }
+);
+userSchema.index(
+  { phoneNumber: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      isSystem: true,
+      role: 'Admin',
+      status: { $ne: 'deleted' },
+      phoneNumber: { $type: 'string' },
+    },
+    name: 'system_admin_phone_unique',
+  }
+);
 userSchema.index({ isActive: 1 });
 userSchema.index({ role: 1 });
 userSchema.index({ status: 1 });

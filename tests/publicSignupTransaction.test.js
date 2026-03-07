@@ -86,7 +86,14 @@ async function testControllerForwardsTransactionSession() {
   const { initiateSignup } = require('../src/controllers/publicSignup.controller');
   const session = { id: 'session-1' };
   const result = await initiateSignup({
-    body: { name: 'Alice', email: 'alice@example.com', password: 'password123', phone: '9999999999', firmName: 'Acme Legal' },
+    body: {
+      name: 'Alice',
+      email: 'alice@example.com',
+      password: 'password123',
+      phone: '9999999999',
+      firmName: 'Acme Legal',
+      storageType: 'external',
+    },
     transactionSession: { session },
     ip: '127.0.0.1',
   }, {});
@@ -96,7 +103,42 @@ async function testControllerForwardsTransactionSession() {
   assert.strictEqual(result.requiresOtpVerification, true);
   assert.strictEqual(captured.payload.session, session, 'controller should pass active transaction session to service');
   assert.strictEqual(captured.payload.firmName, 'Acme Legal', 'controller should pass firmName for temporary signup');
+  assert.strictEqual(captured.payload.storageType, 'external', 'controller should pass selected storage type');
   console.log('  ✓ forwards req.transactionSession.session to initiateManualSignup');
+}
+
+async function testControllerRejectsInvalidPhoneNumber() {
+  let serviceCalled = false;
+  const mockSignupService = {
+    initiateSignup: async () => {
+      serviceCalled = true;
+      return { success: true };
+    },
+  };
+
+  Module._load = function (request, parent, isMain) {
+    if (request === '../services/signup.service') return mockSignupService;
+    return originalLoad.apply(this, arguments);
+  };
+
+  clearModule('../src/controllers/publicSignup.controller');
+  const { initiateSignup } = require('../src/controllers/publicSignup.controller');
+  const result = await initiateSignup({
+    body: {
+      name: 'Alice',
+      email: 'alice@example.com',
+      password: 'password123',
+      phone: '+919876543210',
+      firmName: 'Acme Legal',
+      storageType: 'docketra',
+    },
+  }, {});
+
+  assert.strictEqual(result.success, false);
+  assert.strictEqual(result.statusCode, 400);
+  assert.strictEqual(result.message, 'Phone number must be 10 digits');
+  assert.strictEqual(serviceCalled, false, 'controller should reject invalid phone numbers before calling service');
+  console.log('  ✓ rejects invalid phone numbers before initiating signup');
 }
 
 async function testVerifyControllerForwardsTransactionSession() {
@@ -183,6 +225,9 @@ async function testServiceWritesUseSession() {
   const captured = { deleteMany: null, create: null };
   const mockUser = {
     findOne: () => ({
+      session() {
+        return this;
+      },
       lean: async () => null,
     }),
   };
@@ -196,6 +241,13 @@ async function testServiceWritesUseSession() {
     if (request === '../models/TemporarySignup') return mockTemporarySignup;
     if (request === '../models/AuthAudit.model') return { create: async () => ({}) };
     if (request === './email.service') return { sendEmail: async () => ({ success: true }) };
+    if (request === './signupRateLimit.service') {
+      return {
+        consumeSignupQuota: async () => ({ allowed: true }),
+        consumeOtpAttempt: async () => ({ allowed: true }),
+        clearOtpAttempts: async () => ({}),
+      };
+    }
     return originalLoad.apply(this, arguments);
   };
 
@@ -208,12 +260,70 @@ async function testServiceWritesUseSession() {
     password: 'password123',
     firmName: 'Acme Legal',
     phone: '9999999999',
+    storageType: 'external',
     session,
   });
 
   assert.deepStrictEqual(captured.deleteMany[1], { session }, 'deleteMany should receive the session option');
   assert.deepStrictEqual(captured.create[1], { session }, 'create should receive the session option');
+  assert.strictEqual(captured.create[0].storageType, 'external', 'temporary signup should retain selected storage type');
   console.log('  ✓ passes { session } to TemporarySignup write operations');
+}
+
+async function testInitiateSignupRejectsDuplicateEmailOrPhone() {
+  let emailSent = false;
+  const mockUser = {
+    findOne: () => ({
+      session() {
+        return this;
+      },
+      lean: async () => ({ _id: 'user-1' }),
+    }),
+  };
+  const mockTemporarySignup = {
+    deleteMany: async () => ({}),
+    create: async () => {
+      throw new Error('Temporary signup should not be created when identity already exists');
+    },
+  };
+
+  Module._load = function (request, parent, isMain) {
+    if (request === '../models/User.model') return mockUser;
+    if (request === '../models/TemporarySignup') return mockTemporarySignup;
+    if (request === '../models/AuthAudit.model') return { create: async () => ({}) };
+    if (request === './email.service') {
+      return {
+        sendEmail: async () => {
+          emailSent = true;
+          return { success: true };
+        },
+      };
+    }
+    if (request === './signupRateLimit.service') {
+      return {
+        consumeSignupQuota: async () => ({ allowed: true }),
+        consumeOtpAttempt: async () => ({ allowed: true }),
+        clearOtpAttempts: async () => ({}),
+      };
+    }
+    return originalLoad.apply(this, arguments);
+  };
+
+  clearModule('../src/services/signup.service');
+  const signupService = require('../src/services/signup.service');
+  const result = await signupService.initiateManualSignup({
+    name: 'Alice',
+    email: 'alice@example.com',
+    password: 'password123',
+    firmName: 'Acme Legal',
+    phone: '9999999999',
+  });
+
+  assert.strictEqual(result.success, false);
+  assert.strictEqual(result.status, 409);
+  assert.strictEqual(result.message, 'Email or phone number already registered');
+  assert.strictEqual(emailSent, false, 'OTP email must not be sent when duplicate identity exists');
+  console.log('  ✓ rejects duplicate email or phone before generating OTP');
 }
 
 async function testCreateFirmAndAdminTracksVerificationAndConsent() {
@@ -289,6 +399,7 @@ async function testCreateFirmAndAdminTracksVerificationAndConsent() {
     firmName: 'Acme Legal',
     passwordHash: 'hash',
     phone: '9999999999',
+    storageType: 'external',
     authProvider: 'password',
     session,
     req: {
@@ -303,6 +414,7 @@ async function testCreateFirmAndAdminTracksVerificationAndConsent() {
     firmName: 'Acme Legal',
     passwordHash: null,
     phone: null,
+    storageType: 'docketra',
     authProvider: 'google',
     googleSubject: 'google-subject',
     session,
@@ -319,6 +431,9 @@ async function testCreateFirmAndAdminTracksVerificationAndConsent() {
   assert.strictEqual(captured.clients[0].isSystemClient, true, 'default client should be marked as system-managed');
   assert.strictEqual(captured.clients[0].createdBySystem, true, 'default client should be auto-created by the system');
   assert.strictEqual(captured.clients[0].firmId, 'firm-1', 'default client should be linked to the created firm');
+  assert.strictEqual(captured.clients[0].storageType, 'external', 'default client should retain external storage preference');
+  assert.strictEqual(captured.clients[0].storageProvider, null, 'provider should remain unset until later setup');
+  assert.strictEqual(captured.clients[0].storageConfig, null, 'storage credentials should not be created during signup');
   assert.strictEqual(captured.users[0].defaultClientId, 'client-1', 'admin should be linked to the created default client');
   assert.strictEqual(captured.users[0].emailVerified, true, 'OTP signup should mark email verified');
   assert.strictEqual(captured.users[0].verificationMethod, 'OTP', 'password flow should mark OTP method');
@@ -391,9 +506,11 @@ async function run() {
   try {
     await testRouteWrapsWriteSignupHandlers();
     await testControllerForwardsTransactionSession();
+    await testControllerRejectsInvalidPhoneNumber();
     await testVerifyControllerForwardsTransactionSession();
     await testResendCredentialsControllerUsesService();
     await testServiceWritesUseSession();
+    await testInitiateSignupRejectsDuplicateEmailOrPhone();
     await testCreateFirmAndAdminTracksVerificationAndConsent();
     await testResendCredentialsEmailUsesStoredXid();
     console.log('All public signup transaction tests passed.');
