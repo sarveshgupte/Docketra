@@ -300,7 +300,8 @@ async function testMetricsEndpointRateLimiting() {
     const { allowInternalTokenOrSuperadmin } = require('../src/middleware/internalMetricsAccess.middleware');
     const app = express();
     app.set('trust proxy', 1);
-    app.get('/api/metrics/security', allowInternalTokenOrSuperadmin, internalMetricsLimiter, (req, res) => {
+    app.use('/api/metrics/security', internalMetricsLimiter);
+    app.get('/api/metrics/security', allowInternalTokenOrSuperadmin, (req, res) => {
       res.json({ success: true });
     });
 

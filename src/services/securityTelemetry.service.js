@@ -1,6 +1,7 @@
 'use strict';
 
 const log = require('../utils/log');
+const { getIpRange } = require('../utils/ipRange');
 const { logSecurityAuditEvent, SECURITY_AUDIT_ACTIONS } = require('./securityAudit.service');
 const { getRequestIp } = require('./forensicAudit.service');
 
@@ -268,26 +269,6 @@ function getRequestCountry(req) {
   return typeof country === 'string' && country.trim() ? country.trim().toUpperCase() : null;
 }
 
-function getIpRange(ipAddress) {
-  if (!ipAddress || ipAddress === 'unknown') return 'unknown';
-
-  const normalizedIp = String(ipAddress).replace(/^::ffff:/, '');
-  if (normalizedIp.includes(':')) {
-    return normalizedIp
-      .split(':')
-      .filter(Boolean)
-      .slice(0, 4)
-      .join(':') || normalizedIp;
-  }
-
-  const octets = normalizedIp.split('.');
-  if (octets.length === 4) {
-    return octets.slice(0, 3).join('.');
-  }
-
-  return normalizedIp;
-}
-
 function isNewIpRangeDetected(lastLoginIp, previousIpRange, currentIpRange) {
   return Boolean(
     lastLoginIp &&
@@ -314,6 +295,7 @@ async function emitSecurityAlert({
     const now = Date.now();
     const resolvedIp = metadata.ipAddress || getRequestIp(req);
     if (!shouldEmitAlert({ alertType, userId, ipAddress: resolvedIp, now })) {
+      // Duplicate alerts inside the cooldown window are intentionally dropped.
       return null;
     }
 
@@ -694,7 +676,10 @@ function _getInternalStateForTests() {
     eventWindowsSize: eventWindows.size,
     alertCooldownsSize: alertCooldowns.size,
     logWindowsSize: logWindows.size,
-    maxWindowEntries: Math.max(0, ...[...eventWindows.values()].map((state) => (state.entries || []).length)),
+    maxWindowEntries: [...eventWindows.values()].reduce(
+      (maxEntries, state) => Math.max(maxEntries, (state.entries || []).length),
+      0
+    ),
   };
 }
 
@@ -702,6 +687,7 @@ startPruner();
 
 module.exports = {
   ALERT_TYPES,
+  SECURITY_METRIC_WINDOWS,
   emitSecurityAlert,
   noteLoginFailure,
   noteLockedAccountAttempt,

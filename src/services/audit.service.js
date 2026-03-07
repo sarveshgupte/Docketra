@@ -1,26 +1,11 @@
 const { randomUUID } = require('crypto');
 const AuthAudit = require('../models/AuthAudit.model');
 const { enqueueAuditJob } = require('../queues/audit.queue');
+const { getIpRange } = require('../utils/ipRange');
 
 const getRequestRoute = (req) => {
   const route = req?.originalUrl || req?.url || null;
   return typeof route === 'string' ? route.split('?')[0] : null;
-};
-
-const getIpRange = (ipAddress) => {
-  if (!ipAddress || ipAddress === 'unknown') return 'unknown';
-
-  const normalizedIp = String(ipAddress).replace(/^::ffff:/, '');
-  if (normalizedIp.includes(':')) {
-    return normalizedIp
-      .split(':')
-      .filter(Boolean)
-      .slice(0, 4)
-      .join(':') || normalizedIp;
-  }
-
-  const octets = normalizedIp.split('.');
-  return octets.length === 4 ? octets.slice(0, 3).join('.') : normalizedIp;
 };
 
 const enrichMetadataFromRequest = (metadata, req, ipAddress, userAgent, requestId) => ({
