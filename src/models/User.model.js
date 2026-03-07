@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const softDeletePlugin = require('../utils/softDelete.plugin');
+const { encrypt: encryptProtectedValue, isEncrypted } = require('../utils/encryption');
 // NOTE: If upgrading from previous version,
 // ensure MongoDB global unique index on { email: 1 } is dropped:
 // db.users.dropIndex("email_1")
@@ -412,6 +413,13 @@ const userSchema = new mongoose.Schema({
  * Ensures the hierarchy is correct: Firm → Default Client → Admin
  */
 userSchema.pre('save', async function() {
+  // SECURITY: MFA secrets must never be stored in plaintext at rest.
+  // Preserve backward compatibility by encrypting only on mutation and leaving
+  // already-encrypted values untouched.
+  if (this.isModified('twoFactorSecret') && this.twoFactorSecret && !isEncrypted(this.twoFactorSecret)) {
+    this.twoFactorSecret = encryptProtectedValue(this.twoFactorSecret);
+  }
+
   // Only validate for Admin role with both firmId and defaultClientId
   if (this.role === 'Admin' && this.firmId && this.defaultClientId) {
     try {

@@ -11,6 +11,8 @@ const {
 } = require('../storage/errors');
 const { safeLogForensicAudit, getRequestIp, getRequestUserAgent } = require('../services/forensicAudit.service');
 const { enqueueStorageJob, JOB_TYPES } = require('../queues/storage.queue');
+const { logSecurityAuditEvent, SECURITY_AUDIT_ACTIONS } = require('../services/securityAudit.service');
+const { noteFileDownload } = require('../services/securityTelemetry.service');
 
 const URL_EXPIRY_SECONDS = 10 * 60;
 
@@ -75,7 +77,7 @@ async function requestUpload(req, res) {
       });
     }
 
-    const caseRecord = await Case.findOne({
+    const caseRecord = req.caseRecord || await Case.findOne({
       firmId: tenantId,
       $or: [{ caseId }, { caseNumber: caseId }],
     }).select('caseId');
@@ -225,6 +227,27 @@ async function downloadFile(req, res) {
         caseId: file.caseId,
         objectKey: file.objectKey,
       },
+    });
+    await logSecurityAuditEvent({
+      req,
+      action: SECURITY_AUDIT_ACTIONS.FILE_DOWNLOADED,
+      resource: `files/${file._id.toString()}/download`,
+      userId: req.user?._id || null,
+      firmId: tenantId,
+      xID: req.user?.xID || null,
+      performedBy: req.user?.xID || req.user?._id?.toString?.() || 'SYSTEM',
+      metadata: {
+        fileId: file._id.toString(),
+        caseId: file.caseId,
+        objectKey: file.objectKey,
+      },
+      description: 'File download URL generated for tenant-scoped file',
+    }).catch(() => null);
+    await noteFileDownload({
+      req,
+      userId: req.user?._id?.toString?.() || null,
+      firmId: tenantId,
+      fileId: file._id.toString(),
     });
 
     return res.json({

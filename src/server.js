@@ -12,7 +12,10 @@ const { runBootstrap } = require('./services/bootstrap.service');
 const { maskSensitiveObject, sanitizeErrorForLog } = require('./utils/pii');
 const { validateEnv } = require('./config/validateEnv');
 const { logBuildMetadata } = require('./services/buildInfo.service');
+const { isInboundEmailEnabled } = require('./services/featureFlags.service');
 require('./utils/transactionSessionEnforcer');
+
+const inboundEmailEnabled = isInboundEmailEnabled();
 
 // Bootstrap storage worker in-process (non-blocking — failures do not prevent startup)
 try {
@@ -22,11 +25,15 @@ try {
   log.warn('STORAGE_WORKER_START_FAILED', { error: err.message });
 }
 
-try {
-  require('./workers/inboundEmail.worker');
-  log.info('INBOUND_EMAIL_WORKER_STARTED');
-} catch (err) {
-  log.warn('INBOUND_EMAIL_WORKER_START_FAILED', { error: err.message });
+if (inboundEmailEnabled) {
+  try {
+    require('./workers/inboundEmail.worker');
+    log.info('INBOUND_EMAIL_WORKER_STARTED');
+  } catch (err) {
+    log.warn('INBOUND_EMAIL_WORKER_START_FAILED', { error: err.message });
+  }
+} else {
+  log.info('INBOUND_EMAIL_DISABLED');
 }
 
 try {
@@ -188,7 +195,7 @@ if (isProduction && !process.env.SUPERADMIN_PASSWORD_HASH) {
 if (isProduction && !process.env.METRICS_TOKEN) {
   throw new Error('SECURITY: METRICS_TOKEN is required in production');
 }
-if (isProduction && !process.env.INBOUND_EMAIL_WEBHOOK_SECRET) {
+if (isProduction && inboundEmailEnabled && !process.env.INBOUND_EMAIL_WEBHOOK_SECRET) {
   throw new Error('INBOUND_EMAIL_WEBHOOK_SECRET must be configured in production');
 }
 
@@ -344,7 +351,9 @@ const corsOptions = {
 // Handle CORS preflight requests before auth/transaction middleware
 app.use(optionsPreflight(allowedOrigins, CORS_ALLOWED_HEADERS, CORS_ALLOWED_METHODS));
 app.use(cors(corsOptions));
-app.use('/api/inbound/email', express.raw({ type: '*/*', limit: '30mb' }));
+if (inboundEmailEnabled) {
+  app.use('/api/inbound/email', express.raw({ type: '*/*', limit: '30mb' }));
+}
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '100kb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(requestId);
@@ -402,7 +411,7 @@ app.get('/api', (req, res) => {
       superadmin: '/api/superadmin',
       superadminLegacy: '/superadmin',
       debug: '/api/debug',
-      inbound: '/api/inbound',
+      ...(inboundEmailEnabled ? { inbound: '/api/inbound' } : {}),
     },
   });
 });
@@ -463,7 +472,9 @@ if (!isProduction) {
 }
 
 // Inbound email routes (webhook - no authentication required)
-app.use('/api/inbound', writeGuardChain, inboundRoutes);
+if (inboundEmailEnabled) {
+  app.use('/api/inbound', writeGuardChain, inboundRoutes);
+}
 
 // Protected routes - require authentication
 // Firm context must be attached for all tenant-scoped operations

@@ -4,6 +4,8 @@ const userRepository = require('../repositories/user.repository');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { assertFirmPlanCapacity, PlanLimitExceededError, PlanAdminLimitExceededError } = require('../services/user.service');
 const { incrementTenantMetric } = require('../services/tenantMetrics.service');
+const { logSecurityAuditEvent, SECURITY_AUDIT_ACTIONS } = require('../services/securityAudit.service');
+const { noteAdminPrivilegeChange } = require('../services/securityTelemetry.service');
 
 const resolveUserFirmScope = (req, res) => {
   if (req.user?.role === 'SUPER_ADMIN') return {};
@@ -195,12 +197,38 @@ const updateUser = async (req, res) => {
       });
     }
     
+    const previousRole = user.role;
     if (name) user.name = name;
     if (role) user.role = role;
     if (isActive !== undefined) user.isActive = isActive;
     user.updatedBy = req.body.updatedBy; // In real app, this comes from auth
     
     await user.save();
+    if (role && role !== previousRole) {
+      await logSecurityAuditEvent({
+        req,
+        action: SECURITY_AUDIT_ACTIONS.ROLE_CHANGED,
+        resource: `users/${user._id.toString()}`,
+        userId: req.user?._id || null,
+        firmId: req.user?.firmId || null,
+        xID: req.user?.xID || null,
+        performedBy: req.user?.xID || req.user?._id?.toString?.() || 'SYSTEM',
+        metadata: {
+          targetUserId: user._id.toString(),
+          oldRole: previousRole,
+          newRole: role,
+        },
+        description: `User role changed from ${previousRole} to ${role}`,
+      }).catch(() => null);
+      await noteAdminPrivilegeChange({
+        req,
+        userId: req.user?._id?.toString?.() || null,
+        firmId: req.user?.firmId || null,
+        targetUserId: user._id.toString(),
+        oldRole: previousRole,
+        newRole: role,
+      });
+    }
     
     res.json({
       success: true,
@@ -243,6 +271,20 @@ const deleteUser = async (req, res) => {
     user.isActive = false;
     user.updatedBy = req.body.updatedBy; // In real app, this comes from auth
     await user.save();
+    await logSecurityAuditEvent({
+      req,
+      action: SECURITY_AUDIT_ACTIONS.ADMIN_ACTION,
+      resource: `users/${user._id.toString()}`,
+      userId: req.user?._id || null,
+      firmId: req.user?.firmId || null,
+      xID: req.user?.xID || null,
+      performedBy: req.user?.xID || req.user?._id?.toString?.() || 'SYSTEM',
+      metadata: {
+        targetUserId: user._id.toString(),
+        operation: 'deactivate_user',
+      },
+      description: 'Admin deactivated a user account',
+    }).catch(() => null);
     
     res.json({
       success: true,
