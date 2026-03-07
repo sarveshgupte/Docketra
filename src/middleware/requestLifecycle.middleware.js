@@ -7,11 +7,12 @@ const { noteApiActivity } = require('../services/securityTelemetry.service');
 const LOGIN_PATHS = new Set(['/superadmin/login']);
 const TENANT_LOGIN_PATH = /^\/[^/]+\/login$/;
 const normalizeLifecycleRoute = (req) => {
-  if (req.route?.path) {
+  if (typeof req.route?.path === 'string') {
     const baseUrl = req.baseUrl || '';
-    const routePath = typeof req.route.path === 'string' ? req.route.path : req.originalUrl || req.url || '';
-    return `${baseUrl}${routePath}` || req.originalUrl || req.url || 'unknown';
+    return `${baseUrl}${req.route.path}` || req.originalUrl || req.url || 'unknown';
   }
+  // Global middleware can finalize before Express exposes a concrete route pattern.
+  // In that case we fall back to the raw request URL instead of dropping the label.
   return req.originalUrl || req.url || 'unknown';
 };
 

@@ -23,6 +23,10 @@ const escapePrometheusLabel = (value) => String(value ?? 'unknown')
   .replace(/\n/g, '\\n')
   .replace(/"/g, '\\"');
 
+const serializePrometheusLabels = (labels) => Object.entries(labels)
+  .map(([key, labelValue]) => `${key}="${escapePrometheusLabel(labelValue)}"`)
+  .join(',');
+
 const buildMetricKey = (labels) => JSON.stringify(labels);
 
 const incrementLabeledMetric = (bucket, labels, increment = 1) => {
@@ -131,9 +135,7 @@ const getLatencyPercentiles = () => ({
 });
 
 const renderPrometheusMetricLines = (name, bucket) => Object.values(bucket).map(({ labels, value }) => {
-  const serializedLabels = Object.entries(labels)
-    .map(([key, labelValue]) => `${key}="${escapePrometheusLabel(labelValue)}"`)
-    .join(',');
+  const serializedLabels = serializePrometheusLabels(labels);
   return `${name}{${serializedLabels}} ${value}`;
 });
 
@@ -150,9 +152,7 @@ const renderPrometheusMetrics = async () => {
   ];
 
   Object.values(metrics.httpRequests).forEach(({ labels, value }) => {
-    const serializedLabels = Object.entries(labels)
-      .map(([key, labelValue]) => `${key}="${escapePrometheusLabel(labelValue)}"`)
-      .join(',');
+    const serializedLabels = serializePrometheusLabels(labels);
     lines.push(`docketra_http_request_duration_ms_count{${serializedLabels}} ${value}`);
   });
 
