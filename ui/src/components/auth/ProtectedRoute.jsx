@@ -4,11 +4,12 @@
  */
 
 import React from 'react';
-import { Navigate, useParams } from 'react-router-dom';
+import { Navigate, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 import { usePermissions } from '../../hooks/usePermissions.js';
 import { SESSION_KEYS, STORAGE_KEYS } from '../../utils/constants.js';
 import { isSuperAdmin } from '../../utils/authUtils.js';
+import { resolveFirmLoginPath } from '../../utils/tenantRouting.js';
 import { RouteLoadingShell } from '../routing/RouteLoadingShell';
 
 // Use sessionStorage to persist toasts across redirects in auth guard flows.
@@ -22,10 +23,15 @@ const setAccessToast = (message) => {
 export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadmin = false }) => {
   const { isAuthenticated, isAuthResolved, user } = useAuth();
   const { isAdmin } = usePermissions();
+  const location = useLocation();
   const { firmSlug } = useParams();
   const storedFirmSlug = localStorage.getItem(STORAGE_KEYS.FIRM_SLUG);
   const effectiveFirmSlug = firmSlug || storedFirmSlug;
   const isSuperAdminUser = isSuperAdmin(user);
+  const loginPath = resolveFirmLoginPath({
+    firmSlug,
+    fallbackFirmSlug: storedFirmSlug,
+  });
 
   // Multi-tenancy guard: Detect firm slug mismatches
   if (firmSlug && storedFirmSlug && firmSlug !== storedFirmSlug) {
@@ -50,13 +56,13 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
         type: 'info'
       }));
     }
-    return <Navigate to="/superadmin" replace />;
+    return <Navigate to={loginPath} replace />;
   }
 
   // 2. Firm context check: Non-SuperAdmin users must have firm context
   // SuperAdmin users operate without firm context and access all system data
   if (!effectiveFirmSlug && !isSuperAdminUser) {
-    return <Navigate to="/superadmin" replace />;
+    return <Navigate to={loginPath} replace />;
   }
 
   // 3. SuperAdmin route authorization

@@ -6,6 +6,7 @@
 import axios from 'axios';
 import { API_BASE_URL, ERROR_CODES, SESSION_KEYS, STORAGE_KEYS } from '../utils/constants';
 import { isAccessTokenOnlySession } from '../utils/authUtils';
+import { resolveFirmLoginPath } from '../utils/tenantRouting';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -110,7 +111,9 @@ api.interceptors.response.use(
     const redirectToLogin = () => {
       if (redirecting) return;
       redirecting = true;
-      const destination = firmSlug ? `/${firmSlug}/login` : '/superadmin';
+      const destination = resolveFirmLoginPath({
+        fallbackFirmSlug: firmSlug,
+      });
       window.location.assign(destination);
       // Fallback reset in case navigation is blocked
       setTimeout(() => { redirecting = false; }, REDIRECT_TIMEOUT_MS);
