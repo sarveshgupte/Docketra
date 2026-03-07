@@ -8,6 +8,7 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { FirmLayout } from './components/routing/FirmLayout';
 import { MarketingLayout } from './components/routing/MarketingLayout';
 import { DefaultRoute } from './components/routing/DefaultRoute';
+import { RouteLoadingShell } from './components/routing/RouteLoadingShell';
 
 const lazyPage = (importer, exportName) => React.lazy(
   () => importer().then((module) => ({ default: module[exportName] }))
@@ -43,7 +44,7 @@ const MarketingContactPage = lazyPage(() => import('./pages/marketing/Contact'),
 const MarketingSignupPage = React.lazy(() => import('./pages/marketing/Signup'));
 const NotFoundPage = lazyPage(() => import('./pages/NotFoundPage'), 'NotFoundPage');
 
-const RouteLoadingFallback = () => <div className="sr-only" role="status">Loading page…</div>;
+const RouteLoadingFallback = () => <RouteLoadingShell />;
 
 const RouteSuspenseOutlet = () => (
   // Keep suspense at the route-group level so layout shells render immediately.

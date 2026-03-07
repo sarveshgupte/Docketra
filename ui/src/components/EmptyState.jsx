@@ -10,16 +10,34 @@ const DefaultEmptyStateIcon = (
   </svg>
 );
 
-export const EmptyState = ({ title, description, actionLabel, onAction, icon }) => {
+export const EmptyState = ({
+  title,
+  description,
+  actionLabel,
+  onAction,
+  secondaryActionLabel,
+  onSecondaryAction,
+  icon,
+  eyebrow,
+  tone = 'default',
+}) => {
   return (
-    <div className="empty-state">
+    <div className={`empty-state empty-state--${tone}`}>
       <div className="empty-state__icon" aria-hidden="true">
         {icon || DefaultEmptyStateIcon}
       </div>
+      {eyebrow ? <p className="empty-state__eyebrow">{eyebrow}</p> : null}
       <h3>{title}</h3>
       <p>{description}</p>
-      {actionLabel && onAction ? (
-        <Button variant="primary" onClick={onAction}>{actionLabel}</Button>
+      {(actionLabel && onAction) || (secondaryActionLabel && onSecondaryAction) ? (
+        <div className="empty-state__actions">
+          {actionLabel && onAction ? (
+            <Button variant="primary" onClick={onAction}>{actionLabel}</Button>
+          ) : null}
+          {secondaryActionLabel && onSecondaryAction ? (
+            <Button variant="secondary" onClick={onSecondaryAction}>{secondaryActionLabel}</Button>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );
