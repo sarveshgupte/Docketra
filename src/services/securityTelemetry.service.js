@@ -9,6 +9,7 @@ const counters = new Map();
 const eventWindows = new Map();
 const alertCooldowns = new Map();
 const logWindows = new Map();
+const blockedIps = new Map();
 
 const MAX_TELEMETRY_KEYS = 5000;
 const MAX_WINDOW_EVENTS = 200;
@@ -16,20 +17,36 @@ const ALERT_COOLDOWN = 10 * 60 * 1000;
 const LOG_WINDOW_MS = 60 * 1000;
 const MAX_IDENTICAL_LOGS_PER_WINDOW = 50;
 const PRUNE_INTERVAL_MS = 60 * 1000;
+const HIGH_SEVERITY_ALERT_LIMIT = 3;
+const HIGH_SEVERITY_LEVELS = new Set(['high', 'critical']);
+// Alert when an IP crosses the “more than 20 unique routes” requirement.
+const API_ENUMERATION_THRESHOLD = 21;
+// Alert when a user exceeds the “more than 100 downloads” requirement.
+const DATA_EXFILTRATION_THRESHOLD = 101;
 let lastPruneAt = 0;
 
 const ALERT_TYPES = Object.freeze({
   SUSPICIOUS_LOGIN_PATTERN: 'suspicious_login_pattern',
+  IMPOSSIBLE_TRAVEL_DETECTED: 'impossible_travel_detected',
   REFRESH_TOKEN_ABUSE: 'refresh_token_abuse',
   API_ABUSE_DETECTED: 'api_abuse_detected',
+  TENANT_ABUSE_DETECTED: 'tenant_abuse_detected',
+  ACCOUNT_TAKEOVER_SUSPECTED: 'account_takeover_suspected',
+  DATA_EXFILTRATION_SUSPECTED: 'data_exfiltration_suspected',
+  API_ENUMERATION_DETECTED: 'api_enumeration_detected',
 });
 
 const SECURITY_METRIC_WINDOWS = Object.freeze({
   oneHour: 60 * 60 * 1000,
+  tenantAbuse: 10 * 60 * 1000,
   failedApi: 2 * 60 * 1000,
   rapidIp: 60 * 1000,
   downloads: 5 * 60 * 1000,
+  bulkDownload: 10 * 60 * 1000,
+  apiEnumeration: 2 * 60 * 1000,
   refreshTokenWindow: 10 * 60 * 1000,
+  accountTakeover: 10 * 60 * 1000,
+  ipBlock: 15 * 60 * 1000,
   suspiciousTravel: 2 * 60 * 60 * 1000,
 });
 
@@ -105,6 +122,16 @@ function pruneLogWindows(now = Date.now()) {
   enforceMapLimit(logWindows);
 }
 
+function pruneBlockedIps(now = Date.now()) {
+  for (const [key, state] of blockedIps.entries()) {
+    if (!state || state.expiresAt <= now) {
+      blockedIps.delete(key);
+    }
+  }
+
+  enforceMapLimit(blockedIps, (value) => value?.expiresAt || value?.lastUpdatedAt || 0);
+}
+
 function pruneTelemetryState(now = Date.now(), { force = false } = {}) {
   if (!force && (now - lastPruneAt) < PRUNE_INTERVAL_MS) {
     return;
@@ -114,6 +141,7 @@ function pruneTelemetryState(now = Date.now(), { force = false } = {}) {
   pruneWindowEntries(now);
   pruneCooldowns(now);
   pruneLogWindows(now);
+  pruneBlockedIps(now);
   lastPruneAt = now;
 }
 
@@ -122,7 +150,8 @@ function maybePruneTelemetryState(now = Date.now()) {
     counters.size > MAX_TELEMETRY_KEYS ||
     eventWindows.size > MAX_TELEMETRY_KEYS ||
     alertCooldowns.size > MAX_TELEMETRY_KEYS ||
-    logWindows.size > MAX_TELEMETRY_KEYS
+    logWindows.size > MAX_TELEMETRY_KEYS ||
+    blockedIps.size > MAX_TELEMETRY_KEYS
   );
 
   pruneTelemetryState(now, { force: overCapacity || (now - lastPruneAt) >= PRUNE_INTERVAL_MS });
@@ -142,12 +171,16 @@ function startPruner() {
   }
 }
 
-function buildAlertCooldownKey(alertType, userId, ipAddress) {
+function buildAlertCooldownKey(alertType, userId, ipAddress, cooldownKey = null) {
+  if (cooldownKey) {
+    return [alertType || 'security_alert', cooldownKey].join(':');
+  }
+
   return [alertType || 'security_alert', userId ? String(userId) : 'anonymous', ipAddress || 'unknown'].join(':');
 }
 
-function shouldEmitAlert({ alertType, userId, ipAddress, now = Date.now() }) {
-  const key = buildAlertCooldownKey(alertType, userId, ipAddress);
+function shouldEmitAlert({ alertType, userId, ipAddress, cooldownKey = null, now = Date.now() }) {
+  const key = buildAlertCooldownKey(alertType, userId, ipAddress, cooldownKey);
   const existing = alertCooldowns.get(key);
   if (existing && (now - existing.timestamp) < ALERT_COOLDOWN) {
     existing.lastUpdatedAt = now;
@@ -255,6 +288,25 @@ function countRecent(key, windowMs) {
   return trimmed.length;
 }
 
+function getLatestWindowValue(key, windowMs) {
+  const now = Date.now();
+  const state = eventWindows.get(key);
+  const trimmed = (state?.entries || []).filter((entry) => now - entry.timestamp <= windowMs);
+  if (trimmed.length === 0) {
+    eventWindows.delete(key);
+    maybePruneTelemetryState(now);
+    return null;
+  }
+
+  eventWindows.set(key, {
+    entries: trimmed.slice(-MAX_WINDOW_EVENTS),
+    windowMs,
+    lastUpdatedAt: now,
+  });
+  maybePruneTelemetryState(now);
+  return trimmed[trimmed.length - 1];
+}
+
 function getRequestCountry(req) {
   const headers = req?.headers || {};
   const country =
@@ -282,6 +334,129 @@ function isRapidGeoChangeDetected(recentLogin, lastLoginCountry, currentCountry)
   return Boolean(recentLogin && lastLoginCountry && currentCountry && lastLoginCountry !== currentCountry);
 }
 
+function getAlertSeverity(alertType, metadata = {}) {
+  if (metadata?.severity) {
+    return metadata.severity;
+  }
+
+  switch (alertType) {
+    case ALERT_TYPES.ACCOUNT_TAKEOVER_SUSPECTED:
+    case ALERT_TYPES.DATA_EXFILTRATION_SUSPECTED:
+      return 'critical';
+    case ALERT_TYPES.IMPOSSIBLE_TRAVEL_DETECTED:
+    case ALERT_TYPES.REFRESH_TOKEN_ABUSE:
+    case ALERT_TYPES.TENANT_ABUSE_DETECTED:
+    case ALERT_TYPES.API_ENUMERATION_DETECTED:
+      return 'high';
+    case ALERT_TYPES.SUSPICIOUS_LOGIN_PATTERN:
+    case ALERT_TYPES.API_ABUSE_DETECTED:
+      return 'medium';
+    default:
+      return 'low';
+  }
+}
+
+// Normalize IPv4-mapped IPv6 addresses so both temporary block enforcement and
+// block-status checks treat ::ffff:203.0.113.10 and 203.0.113.10 as the same source.
+function normalizeIpAddress(ipAddress) {
+  return String(ipAddress || 'unknown').replace(/^::ffff:/, '');
+}
+
+function hasSignificantIpRangeMismatch(previousIpRange, currentIpRange) {
+  return Boolean(
+    previousIpRange &&
+    currentIpRange &&
+    previousIpRange !== 'unknown' &&
+    currentIpRange !== 'unknown' &&
+    previousIpRange !== currentIpRange
+  );
+}
+
+function blockIpAddress(ipAddress, now = Date.now()) {
+  const normalizedIp = normalizeIpAddress(ipAddress);
+  if (!normalizedIp || normalizedIp === 'unknown') {
+    return null;
+  }
+
+  const state = {
+    blockedAt: now,
+    expiresAt: now + SECURITY_METRIC_WINDOWS.ipBlock,
+    lastUpdatedAt: now,
+  };
+  blockedIps.set(normalizedIp, state);
+  maybePruneTelemetryState(now);
+  return state;
+}
+
+function getIpBlockStatus(ipAddress, now = Date.now()) {
+  const normalizedIp = normalizeIpAddress(ipAddress);
+  const state = blockedIps.get(normalizedIp);
+  if (!state || state.expiresAt <= now) {
+    if (state) {
+      blockedIps.delete(normalizedIp);
+    }
+    maybePruneTelemetryState(now);
+    return {
+      blocked: false,
+      retryAfter: 0,
+      expiresAt: null,
+    };
+  }
+
+  state.lastUpdatedAt = now;
+  blockedIps.set(normalizedIp, state);
+  maybePruneTelemetryState(now);
+  return {
+    blocked: true,
+    retryAfter: Math.max(1, Math.ceil((state.expiresAt - now) / 1000)),
+    expiresAt: state.expiresAt,
+  };
+}
+
+async function noteTenantFailure({
+  req,
+  tenantId = null,
+  failureType,
+  threshold,
+  resource = 'security',
+} = {}) {
+  try {
+    if (!tenantId || !failureType || !Number.isFinite(threshold)) {
+      return;
+    }
+
+    const normalizedTenantId = String(tenantId);
+    const counter = incrementCounter(`tenant:${failureType}:${normalizedTenantId}`, {
+      windowMs: SECURITY_METRIC_WINDOWS.tenantAbuse,
+      limit: threshold + 1,
+    });
+
+    if (counter.thresholdReached) {
+      await emitSecurityAlert({
+        req,
+        firmId: normalizedTenantId,
+        resource,
+        alertType: ALERT_TYPES.TENANT_ABUSE_DETECTED,
+        cooldownKey: `tenant:${normalizedTenantId}:${failureType}`,
+        metadata: {
+          tenantId: normalizedTenantId,
+          failureType,
+          count: counter.count,
+          timeWindow: '10m',
+        },
+        description: 'Tenant abuse detected from repeated failures',
+      });
+    }
+  } catch (error) {
+    log.error('SECURITY_TELEMETRY_TENANT_ABUSE', {
+      req,
+      error: error.message,
+      tenantId,
+      failureType,
+    });
+  }
+}
+
 async function emitSecurityAlert({
   req,
   userId = null,
@@ -290,18 +465,21 @@ async function emitSecurityAlert({
   metadata = {},
   description,
   alertType = 'security_alert',
+  cooldownKey = null,
 } = {}) {
   try {
     const now = Date.now();
     const resolvedIp = metadata.ipAddress || getRequestIp(req);
-    if (!shouldEmitAlert({ alertType, userId, ipAddress: resolvedIp, now })) {
+    if (!shouldEmitAlert({ alertType, userId, ipAddress: resolvedIp, cooldownKey, now })) {
       // Duplicate alerts inside the cooldown window are intentionally dropped.
       return null;
     }
 
+    const severity = getAlertSeverity(alertType, metadata);
     const enrichedMetadata = {
       ...metadata,
       event: alertType,
+      severity,
       ipAddress: resolvedIp,
       requestId: req?.requestId || metadata.requestId || null,
       route: metadata.route || getRequestRoute(req),
@@ -321,6 +499,23 @@ async function emitSecurityAlert({
 
     countRecent('metric:security_alerts', SECURITY_METRIC_WINDOWS.oneHour);
     pushWindowValue('metric:security_alerts', alertType, SECURITY_METRIC_WINDOWS.oneHour);
+    if (severity === 'critical') {
+      pushWindowValue('metric:critical_alerts', alertType, SECURITY_METRIC_WINDOWS.oneHour);
+    }
+    if (alertType === ALERT_TYPES.TENANT_ABUSE_DETECTED) {
+      pushWindowValue('metric:tenant_abuse_events', enrichedMetadata.tenantId || firmId || 'unknown', SECURITY_METRIC_WINDOWS.oneHour);
+    }
+
+    if (HIGH_SEVERITY_LEVELS.has(severity) && resolvedIp && resolvedIp !== 'unknown') {
+      const highSeverityAlertCount = incrementCounter(`ip:block:${normalizeIpAddress(resolvedIp)}`, {
+        windowMs: SECURITY_METRIC_WINDOWS.ipBlock,
+        limit: HIGH_SEVERITY_ALERT_LIMIT,
+      });
+
+      if (highSeverityAlertCount.thresholdReached) {
+        blockIpAddress(resolvedIp, now);
+      }
+    }
 
     const logMetadata = {
       req,
@@ -371,6 +566,14 @@ async function noteLoginFailure({ req, xID = 'UNKNOWN', userId = null, firmId = 
     const byIp = incrementCounter(`login:ip:${ip}`, {
       windowMs: 15 * 60 * 1000,
       limit: 5,
+    });
+
+    await noteTenantFailure({
+      req,
+      tenantId: firmId || req?.firmId || req?.user?.firmId || null,
+      failureType: 'login_failures',
+      threshold: 50,
+      resource: 'auth/login',
     });
 
     if (byIdentity.thresholdReached || byIp.thresholdReached) {
@@ -450,6 +653,11 @@ async function noteSuccessfulLogin({
         },
         description: 'Login detected from a new IP range',
       });
+
+      pushWindowValue(`login-ip-range:${String(userId || xID || 'unknown')}`, {
+        ipRange: currentIpRange,
+        userId: userId ? String(userId) : null,
+      }, SECURITY_METRIC_WINDOWS.accountTakeover);
     }
 
     if (isRapidGeoChangeDetected(recentLogin, lastLoginCountry, currentCountry)) {
@@ -471,6 +679,31 @@ async function noteSuccessfulLogin({
         description: 'Login detected from a different geography within a short time window',
       });
     }
+
+    if (
+      isRapidGeoChangeDetected(recentLogin, lastLoginCountry, currentCountry) &&
+      hasSignificantIpRangeMismatch(previousIpRange, currentIpRange)
+    ) {
+      await emitSecurityAlert({
+        req,
+        userId,
+        firmId,
+        resource,
+        alertType: ALERT_TYPES.IMPOSSIBLE_TRAVEL_DETECTED,
+        metadata: {
+          reason: 'impossible_travel',
+          xID: String(xID).toUpperCase(),
+          ipAddress: ip,
+          previousCountry: lastLoginCountry,
+          currentCountry,
+          previousIpRange,
+          currentIpRange,
+          lastLoginAt,
+          mfaRequired,
+        },
+        description: 'Impossible travel detected across distant login locations',
+      });
+    }
   } catch (error) {
     log.error('SECURITY_TELEMETRY_LOGIN_SUCCESS', { req, error: error.message, xID, userId, firmId });
   }
@@ -484,6 +717,14 @@ async function noteRefreshTokenFailure({ req, userId = null, firmId = null, reas
     const failureCounter = incrementCounter(`refresh:${ip}:${reason}`, {
       windowMs: 10 * 60 * 1000,
       limit: 3,
+    });
+
+    await noteTenantFailure({
+      req,
+      tenantId: firmId || req?.firmId || req?.user?.firmId || null,
+      failureType: 'refresh_failures',
+      threshold: 30,
+      resource: 'auth/refresh',
     });
 
     if (reason === 'revoked_refresh_token' || failureCounter.thresholdReached) {
@@ -513,6 +754,7 @@ async function noteRefreshTokenUse({ req, userId = null, firmId = null, tokenIpA
     if (!userId) return;
 
     const currentIp = getRequestIp(req);
+    const currentIpRange = getIpRange(currentIp);
     const history = pushWindowValue(`refresh-usage:${String(userId)}`, currentIp, SECURITY_METRIC_WINDOWS.refreshTokenWindow);
     const distinctIps = new Set(
       [tokenIpAddress, ...history.map((entry) => entry.value)]
@@ -533,6 +775,27 @@ async function noteRefreshTokenUse({ req, userId = null, firmId = null, tokenIpA
           distinctIpCount: distinctIps.size,
         },
         description: 'Refresh token used from multiple IPs rapidly',
+      });
+    }
+
+    const recentLogin = getLatestWindowValue(`login-ip-range:${String(userId)}`, SECURITY_METRIC_WINDOWS.accountTakeover);
+    const loginIpRange = recentLogin?.value?.ipRange || null;
+    if (hasSignificantIpRangeMismatch(loginIpRange, currentIpRange)) {
+      await emitSecurityAlert({
+        req,
+        userId,
+        firmId,
+        resource: 'auth/refresh',
+        alertType: ALERT_TYPES.ACCOUNT_TAKEOVER_SUSPECTED,
+        cooldownKey: `account-takeover:${String(userId)}`,
+        metadata: {
+          reason: 'login_refresh_ip_mismatch',
+          loginIpRange,
+          refreshIpRange: currentIpRange,
+          userId: String(userId),
+          ipAddress: currentIp,
+        },
+        description: 'Potential account takeover detected from post-login refresh activity',
       });
     }
   } catch (error) {
@@ -569,6 +832,10 @@ async function noteFileDownload({ req, userId = null, firmId = null, fileId = nu
       windowMs: SECURITY_METRIC_WINDOWS.downloads,
       limit: 30,
     });
+    const exfiltrationThreshold = incrementCounter(`download:bulk:${String(firmId || 'unknown')}:${String(actor)}`, {
+      windowMs: SECURITY_METRIC_WINDOWS.bulkDownload,
+      limit: DATA_EXFILTRATION_THRESHOLD,
+    });
 
     if (threshold.thresholdReached) {
       await emitSecurityAlert({
@@ -585,6 +852,24 @@ async function noteFileDownload({ req, userId = null, firmId = null, fileId = nu
           downloadsInWindow: threshold.count,
         },
         description: 'Large file download volume detected',
+      });
+    }
+
+    if (exfiltrationThreshold.thresholdReached) {
+      await emitSecurityAlert({
+        req,
+        userId,
+        firmId,
+        resource: 'files/download',
+        alertType: ALERT_TYPES.DATA_EXFILTRATION_SUSPECTED,
+        cooldownKey: `data-exfiltration:${String(firmId || 'unknown')}:${String(actor)}`,
+        metadata: {
+          userId: userId ? String(userId) : String(actor),
+          firmId: firmId ? String(firmId) : null,
+          downloadCount: exfiltrationThreshold.count,
+          ipAddress: ip,
+        },
+        description: 'Bulk file download activity suggests potential data exfiltration',
       });
     }
   } catch (error) {
@@ -604,6 +889,8 @@ async function noteApiActivity({ req, statusCode = 200 } = {}) {
       windowMs: SECURITY_METRIC_WINDOWS.rapidIp,
       limit: 120,
     });
+    const routeEntries = pushWindowValue(`api:routes:${ip}`, path, SECURITY_METRIC_WINDOWS.apiEnumeration);
+    const uniqueRoutes = [...new Set(routeEntries.map((entry) => entry.value).filter(Boolean))];
 
     if (requestCount.thresholdReached) {
       await emitSecurityAlert({
@@ -621,10 +908,35 @@ async function noteApiActivity({ req, statusCode = 200 } = {}) {
       });
     }
 
+    if (uniqueRoutes.length >= API_ENUMERATION_THRESHOLD) {
+      await emitSecurityAlert({
+        req,
+        userId: req?.user?._id || null,
+        firmId: req?.firmId || req?.user?.firmId || null,
+        resource: path,
+        alertType: ALERT_TYPES.API_ENUMERATION_DETECTED,
+        metadata: {
+          reason: 'unique_route_scan',
+          ipAddress: ip,
+          uniqueRoutes,
+          count: uniqueRoutes.length,
+        },
+        description: 'Suspicious API endpoint enumeration detected',
+      });
+    }
+
     if (statusCode >= 400 && ![404, 405].includes(statusCode)) {
       const failureCount = incrementCounter(`api:failures:${ip}`, {
         windowMs: SECURITY_METRIC_WINDOWS.failedApi,
         limit: 20,
+      });
+
+      await noteTenantFailure({
+        req,
+        tenantId: req?.firmId || req?.user?.firmId || null,
+        failureType: 'api_failures',
+        threshold: 200,
+        resource: path,
       });
 
       if (failureCount.thresholdReached) {
@@ -655,11 +967,27 @@ async function noteApiActivity({ req, statusCode = 200 } = {}) {
 }
 
 function getSecurityMetricsSnapshot() {
-  return {
-    login_failures_last_hour: countRecent('metric:login_failures', SECURITY_METRIC_WINDOWS.oneHour),
-    refresh_token_failures: countRecent('metric:refresh_failures', SECURITY_METRIC_WINDOWS.oneHour),
-    security_alerts_last_hour: countRecent('metric:security_alerts', SECURITY_METRIC_WINDOWS.oneHour),
-  };
+  try {
+    pruneBlockedIps(Date.now());
+    return {
+      login_failures_last_hour: countRecent('metric:login_failures', SECURITY_METRIC_WINDOWS.oneHour),
+      refresh_token_failures: countRecent('metric:refresh_failures', SECURITY_METRIC_WINDOWS.oneHour),
+      security_alerts_last_hour: countRecent('metric:security_alerts', SECURITY_METRIC_WINDOWS.oneHour),
+      critical_alerts_last_hour: countRecent('metric:critical_alerts', SECURITY_METRIC_WINDOWS.oneHour),
+      blocked_ips: blockedIps.size,
+      tenant_abuse_events: countRecent('metric:tenant_abuse_events', SECURITY_METRIC_WINDOWS.oneHour),
+    };
+  } catch (error) {
+    log.error('SECURITY_TELEMETRY_METRICS_SNAPSHOT', { error: error.message });
+    return {
+      login_failures_last_hour: 0,
+      refresh_token_failures: 0,
+      security_alerts_last_hour: 0,
+      critical_alerts_last_hour: 0,
+      blocked_ips: 0,
+      tenant_abuse_events: 0,
+    };
+  }
 }
 
 function _resetForTests() {
@@ -667,6 +995,7 @@ function _resetForTests() {
   eventWindows.clear();
   alertCooldowns.clear();
   logWindows.clear();
+  blockedIps.clear();
   lastPruneAt = 0;
 }
 
@@ -676,6 +1005,7 @@ function _getInternalStateForTests() {
     eventWindowsSize: eventWindows.size,
     alertCooldownsSize: alertCooldowns.size,
     logWindowsSize: logWindows.size,
+    blockedIpsSize: blockedIps.size,
     maxWindowEntries: [...eventWindows.values()].reduce(
       (maxEntries, state) => Math.max(maxEntries, (state.entries || []).length),
       0
@@ -700,6 +1030,8 @@ module.exports = {
   getSecurityMetricsSnapshot,
   getRequestCountry,
   getIpRange,
+  getAlertSeverity,
+  getIpBlockStatus,
   MAX_TELEMETRY_KEYS,
   MAX_WINDOW_EVENTS,
   ALERT_COOLDOWN,
