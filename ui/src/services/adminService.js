@@ -120,8 +120,8 @@ export const adminService = {
   /**
    * List all clients
    */
-  listClients: async () => {
-    const response = await api.get('/client-approval/clients');
+  listClients: async (params = { activeOnly: false }) => {
+    const response = await api.get('/admin/clients', { params });
     return response.data;
   },
 

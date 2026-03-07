@@ -64,7 +64,7 @@ const getClients = async (req, res) => {
           { status: CLIENT_STATUS.ACTIVE } // Include other active clients
         ]
       })
-        .select('clientId businessName status')
+        .select('clientId businessName businessEmail primaryContactNumber status isSystemClient isInternal createdAt')
         .sort({ clientId: 1 });
       
       return res.json({
@@ -82,7 +82,7 @@ const getClients = async (req, res) => {
     };
     
     const clients = await Client.find(filter)
-      .select('clientId businessName status') // Select necessary fields (status is canonical)
+      .select('clientId businessName businessEmail primaryContactNumber status isSystemClient isInternal createdAt') // Select necessary fields (status is canonical)
       .sort({ clientId: 1 }); // Sort by clientId for consistency
     
     res.json({
