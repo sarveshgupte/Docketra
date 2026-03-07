@@ -5,7 +5,6 @@ const tenantStorageUsageSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
-    index: true,
   },
   totalBytes: {
     type: Number,

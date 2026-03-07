@@ -35,7 +35,17 @@ const createRedisStore = () => {
   }
 
   return new RedisStore({
-    sendCommand: (...args) => redis.call(...args),
+    sendCommand: (...args) => {
+      if (typeof redis.call === 'function') {
+        return redis.call(...args);
+      }
+      const [command, ...commandArgs] = args;
+      const normalizedCommand = String(command || '').toLowerCase();
+      if (normalizedCommand && typeof redis[normalizedCommand] === 'function') {
+        return redis[normalizedCommand](...commandArgs);
+      }
+      throw new Error(`Redis client does not support command: ${command}`);
+    },
     prefix: 'ratelimit:',
   });
 };
@@ -82,7 +92,8 @@ const createLimiter = ({ name, windowMs, max, keyGenerator, skip }) => {
 
 const normalizeIp = (value) => String(value || '')
   .split(',')[0]
-  .trim() || 'unknown';
+  .trim()
+  .replace(/^::ffff:/i, '') || 'unknown';
 
 const hashKeyPart = (value) => createHash('sha256').update(String(value)).digest('hex');
 

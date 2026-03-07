@@ -1,10 +1,7 @@
-const User = require('../models/User.model');
-
-const findUserById = async (userId, firmId) => User.findOne({ _id: userId, firmId });
-
-const countUsers = async (firmId, query = {}) => User.countDocuments({ firmId, ...query });
+const UserRepository = require('./UserRepository');
 
 module.exports = {
-  findUserById,
-  countUsers,
+  ...UserRepository,
+  findUserById: (userId, firmId) => UserRepository.findById(firmId, userId),
+  countUsers: (firmId, query = {}) => UserRepository.count(firmId, query),
 };

@@ -1,0 +1,48 @@
+const log = require('../utils/log');
+const { isInboundEmailEnabled } = require('./featureFlags.service');
+
+const workerModules = [
+  { name: 'STORAGE_WORKER', path: '../workers/storage.worker' },
+  { name: 'STORAGE_INTEGRITY_WORKER', path: '../workers/storageIntegrity.worker' },
+  { name: 'TENANT_CASE_METRICS_WORKER', path: '../workers/tenantCaseMetrics.worker' },
+  { name: 'EMAIL_WORKER', path: '../workers/email.worker' },
+  { name: 'AUDIT_WORKER', path: '../workers/audit.worker' },
+];
+
+const startWorkerModule = ({ name, path }) => {
+  try {
+    require(path);
+    log.info(`${name}_STARTED`);
+  } catch (err) {
+    log.warn(`${name}_START_FAILED`, { error: err.message });
+  }
+};
+
+const startBackgroundWorkers = () => {
+  workerModules.forEach(startWorkerModule);
+  if (isInboundEmailEnabled()) {
+    startWorkerModule({ name: 'INBOUND_EMAIL_WORKER', path: '../workers/inboundEmail.worker' });
+  } else {
+    log.info('INBOUND_EMAIL_DISABLED');
+  }
+};
+
+const startBackgroundSchedules = () => {
+  const { runStorageHealthCheck } = require('../jobs/storageHealthCheck.job');
+  const { enqueueDailyStorageIntegrityJob } = require('../queues/storageIntegrity.queue');
+
+  setInterval(() => {
+    runStorageHealthCheck().catch((err) =>
+      console.error('[storageHealthCheck] failed', { message: err.message })
+    );
+  }, 8 * 60 * 60 * 1000);
+
+  enqueueDailyStorageIntegrityJob().catch((err) =>
+    console.error('[storageIntegritySchedule] registration failed', { message: err.message })
+  );
+};
+
+module.exports = {
+  startBackgroundWorkers,
+  startBackgroundSchedules,
+};
