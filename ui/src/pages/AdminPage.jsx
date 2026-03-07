@@ -29,7 +29,7 @@ const EMPTY_ADMIN_STATS = {
   pendingApprovals: 0,
 };
 
-const TOAST_DEDUP_MS = 1500;
+const TOAST_DEDUPLICATION_WINDOW_MS = 1500;
 
 const getApiErrorType = (error) => {
   if (!error?.response) return 'network';
@@ -70,6 +70,7 @@ export const AdminPage = () => {
   const [storageLoaded, setStorageLoaded] = useState(false);
   const [statsEmpty, setStatsEmpty] = useState(false);
   const toastLockRef = useRef({});
+  const toastTimerRef = useRef({});
   
   // Admin stats (PR #41)
   const [adminStats, setAdminStats] = useState(EMPTY_ADMIN_STATS);
@@ -122,17 +123,29 @@ export const AdminPage = () => {
     loadAdminData();
   }, [activeTab]);
 
+  useEffect(() => {
+    return () => {
+      Object.values(toastTimerRef.current).forEach((timerId) => {
+        clearTimeout(timerId);
+      });
+    };
+  }, []);
+
   const showGroupedLoadToast = (groupKey, message) => {
     if (toastLockRef.current[groupKey]) return;
     toastLockRef.current[groupKey] = true;
     showToast(message, 'error');
-    setTimeout(() => {
+    toastTimerRef.current[groupKey] = setTimeout(() => {
       toastLockRef.current[groupKey] = false;
-    }, TOAST_DEDUP_MS);
+      delete toastTimerRef.current[groupKey];
+    }, TOAST_DEDUPLICATION_WINDOW_MS);
   };
 
   const notifyLoadError = (error, groupKey) => {
     const errorType = getApiErrorType(error);
+    if (errorType === 'empty') {
+      return errorType;
+    }
 
     if (errorType === 'permission') {
       showGroupedLoadToast(groupKey, 'You do not have permission');
