@@ -214,6 +214,7 @@ const getPendingCasesReport = async (req, res) => {
     
     // Build match stage for pending cases
     // SECURITY: Enforcing tenant isolation (firm-scoped query)
+    // Support legacy records that still use "Pending" while the canonical backend enum is "PENDED".
     const matchStage = { firmId, status: { $in: ['Pending', 'PENDED'] } };
     
     if (category) matchStage.category = category;

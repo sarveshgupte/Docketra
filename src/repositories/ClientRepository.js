@@ -213,10 +213,6 @@ const ClientRepository = {
     return Client.countDocuments({ firmId, ...query });
   },
 
-  findClientById(clientId, firmId, role = 'Admin', options = {}) {
-    return this.findByClientId(firmId, clientId, role, options);
-  },
-
   countClients(firmId, query = {}) {
     return this.count(firmId, query);
   },

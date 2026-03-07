@@ -123,6 +123,8 @@ async function testAccountLockout() {
   for (let i = 0; i < 5; i += 1) {
     await request(app).post('/login').send({ email: 'a@b.com' }).expect(401);
   }
+  // The lock key is set by the failed-attempt recorder once attempts exceed the configured threshold.
+  // That means the request that crosses the threshold still returns 401, and the next request is blocked with 429.
   await request(app).post('/login').send({ email: 'a@b.com' }).expect(401);
   await request(app).post('/login').send({ email: 'a@b.com' }).expect(429);
 }
