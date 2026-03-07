@@ -20,6 +20,37 @@ class PlanAdminLimitExceededError extends Error {
   }
 }
 
+class PrimaryAdminActionError extends Error {
+  constructor() {
+    super('Primary admin cannot be deactivated');
+    this.name = 'PrimaryAdminActionError';
+    this.code = 'PRIMARY_ADMIN_PROTECTED';
+    this.statusCode = 403;
+  }
+}
+
+/**
+ * Assert that a user can be deactivated.
+ * Throws PrimaryAdminActionError if the user is the primary admin or a system user.
+ * @param {object} user - User document
+ */
+const assertCanDeactivateUser = (user) => {
+  if (user.isPrimaryAdmin === true || user.isSystem === true) {
+    throw new PrimaryAdminActionError();
+  }
+};
+
+/**
+ * Assert that a user can be deleted.
+ * Throws PrimaryAdminActionError if the user is the primary admin or a system user.
+ * @param {object} user - User document
+ */
+const assertCanDeleteUser = (user) => {
+  if (user.isPrimaryAdmin === true || user.isSystem === true) {
+    throw new PrimaryAdminActionError();
+  }
+};
+
 const assertFirmPlanCapacity = async ({ firmId, session, incrementBy = 1, role = null }) => {
   const attachSession = (query) => (session ? query.session(session) : query);
 
@@ -80,5 +111,8 @@ const assertFirmPlanCapacity = async ({ firmId, session, incrementBy = 1, role =
 module.exports = {
   PlanLimitExceededError,
   PlanAdminLimitExceededError,
+  PrimaryAdminActionError,
+  assertCanDeactivateUser,
+  assertCanDeleteUser,
   assertFirmPlanCapacity,
 };
