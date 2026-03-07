@@ -22,6 +22,18 @@ export const APP_NAME = 'Docketra';
  */
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 
+const normalizeApiBaseUrl = (value) => {
+  const trimmedValue = value.trim();
+  if (!trimmedValue) {
+    return '';
+  }
+
+  const withoutTrailingSlashes = trimmedValue.replace(/\/+$/, '');
+  return withoutTrailingSlashes.endsWith('/api')
+    ? withoutTrailingSlashes
+    : `${withoutTrailingSlashes}/api`;
+};
+
 // Runtime validation: Fail fast if API base URL is missing or empty
 if (!rawApiBaseUrl || rawApiBaseUrl.trim() === '') {
   const errorMessage = `❌ DEPLOYMENT ERROR: VITE_API_BASE_URL environment variable is not defined or empty.
@@ -41,10 +53,9 @@ Example: VITE_API_BASE_URL=https://api.example.com/api`;
   throw new Error('VITE_API_BASE_URL is not defined or empty. Check console for details.');
 }
 
-// Log the resolved API base URL for verification (helpful for debugging deployments)
-console.info(`✓ Using API base URL: ${rawApiBaseUrl}`);
+export const API_BASE_URL = normalizeApiBaseUrl(rawApiBaseUrl);
 
-export const API_BASE_URL = rawApiBaseUrl;
+console.info(`✓ Using API base URL: ${API_BASE_URL}`);
 
 export const CASE_STATUS = {
   // Canonical lifecycle states (NEW - use these)

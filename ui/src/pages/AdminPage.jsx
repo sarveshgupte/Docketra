@@ -75,6 +75,8 @@ export const AdminPage = () => {
   
   // Admin stats (PR #41)
   const [adminStats, setAdminStats] = useState(EMPTY_ADMIN_STATS);
+  const defaultClients = clients.filter((client) => client.isSystemClient || client.isInternal);
+  const hasAdditionalClients = clients.some((client) => !client.isSystemClient && !client.isInternal);
 
   // Create user form state (PR 32: xID is auto-generated, not user-provided)
   const [newUser, setNewUser] = useState({
@@ -214,7 +216,7 @@ export const AdminPage = () => {
         const response = await categoryService.getCategories(false); // Get all categories including inactive
         setCategories(response?.success ? (response.data || []) : []);
       } else if (activeTab === 'clients') {
-        const response = await clientService.getClients(false); // Get all clients including inactive
+        const response = await adminService.listClients({ activeOnly: false });
         setClients(response?.success ? (response.data || []) : []);
       } else if (activeTab === 'storage') {
         if (!storageLoaded) {
@@ -1020,70 +1022,79 @@ export const AdminPage = () => {
                 description="Create your first client to begin managing cases."
               />
             ) : (
-              <table className="neo-table">
-                <thead>
-                  <tr>
-                    <th>Client ID</th>
-                    <th>Business Name</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th>Status</th>
-                    <th>Created</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {clients.map((client) => (
-                    <tr key={client.clientId}>
-                      <td>
-                        {client.clientId}
-                        {client.clientId === 'C000001' && (
-                          <span style={{ marginLeft: '8px' }}>
-                            <Badge status="Approved">Default</Badge>
-                          </span>
-                        )}
-                      </td>
-                      <td>{client.businessName}</td>
-                      <td>{client.businessEmail}</td>
-                      <td>{client.primaryContactNumber}</td>
-                      <td>
-                        <Badge status={client.status === 'ACTIVE' ? 'Approved' : 'Rejected'}>
-                          {client.status === 'ACTIVE' ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </td>
-                      <td>{formatDate(client.createdAt)}</td>
-                      <td className="admin__actions">
-                        <Button
-                          size="small"
-                          variant="default"
-                          onClick={() => handleEditClient(client)}
-                          disabled={client.isSystemClient}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          size="small"
-                          variant="warning"
-                          onClick={() => handleOpenChangeNameModal(client)}
-                          disabled={client.isSystemClient}
-                        >
-                          Change Name
-                        </Button>
-                        {/* Only show Activate/Deactivate button if NOT Default Client */}
-                        {client.clientId !== 'C000001' && (
-                          <Button
-                            size="small"
-                            variant={client.status === 'ACTIVE' ? 'danger' : 'success'}
-                            onClick={() => handleToggleClientStatus(client)}
-                          >
-                            {client.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
-                          </Button>
-                        )}
-                      </td>
+              <>
+                {!hasAdditionalClients && defaultClients.length > 0 && (
+                  <p className="text-secondary" style={{ marginBottom: '16px' }}>
+                    Your firm is set up as the default internal client. Add more clients when you are ready.
+                  </p>
+                )}
+                <table className="neo-table">
+                  <thead>
+                    <tr>
+                      <th>Client ID</th>
+                      <th>Business Name</th>
+                      <th>Email</th>
+                      <th>Phone</th>
+                      <th>Status</th>
+                      <th>Created</th>
+                      <th>Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {clients.map((client) => {
+                      const isDefaultClient = client.isSystemClient || client.isInternal;
+                      return (
+                        <tr key={client.clientId}>
+                          <td>
+                            {client.clientId}
+                            {isDefaultClient && (
+                              <span style={{ marginLeft: '8px' }}>
+                                <Badge status="Approved">Default</Badge>
+                              </span>
+                            )}
+                          </td>
+                          <td>{client.businessName}</td>
+                          <td>{client.businessEmail || '—'}</td>
+                          <td>{client.primaryContactNumber || '—'}</td>
+                          <td>
+                            <Badge status={client.status === 'ACTIVE' ? 'Approved' : 'Rejected'}>
+                              {client.status === 'ACTIVE' ? 'Active' : 'Inactive'}
+                            </Badge>
+                          </td>
+                          <td>{formatDate(client.createdAt)}</td>
+                          <td className="admin__actions">
+                            <Button
+                              size="small"
+                              variant="default"
+                              onClick={() => handleEditClient(client)}
+                              disabled={isDefaultClient}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="warning"
+                              onClick={() => handleOpenChangeNameModal(client)}
+                              disabled={isDefaultClient}
+                            >
+                              Change Name
+                            </Button>
+                            {!isDefaultClient && (
+                              <Button
+                                size="small"
+                                variant={client.status === 'ACTIVE' ? 'danger' : 'success'}
+                                onClick={() => handleToggleClientStatus(client)}
+                              >
+                                {client.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </>
             )}
           </Card>
         )}
