@@ -217,7 +217,7 @@ async function testServiceWritesUseSession() {
 }
 
 async function testCreateFirmAndAdminTracksVerificationAndConsent() {
-  const captured = { users: [] };
+  const captured = { users: [], clients: [], firms: [] };
   const session = { id: 'session-3' };
   let firmCounter = 0;
 
@@ -230,6 +230,7 @@ async function testCreateFirmAndAdminTracksVerificationAndConsent() {
     }),
     create: async ([firmDoc]) => {
       firmCounter += 1;
+      captured.firms.push(firmDoc);
       return [{
         ...firmDoc,
         _id: `firm-${firmCounter}`,
@@ -242,7 +243,10 @@ async function testCreateFirmAndAdminTracksVerificationAndConsent() {
     if (request === '../models/Firm.model') return mockFirmModel;
     if (request === '../models/Client.model') {
       return {
-        create: async () => ([{ _id: 'client-1' }]),
+        create: async ([clientDoc]) => {
+          captured.clients.push(clientDoc);
+          return [{ ...clientDoc, _id: `client-${captured.clients.length}` }];
+        },
       };
     }
     if (request === '../models/User.model') {
@@ -309,6 +313,13 @@ async function testCreateFirmAndAdminTracksVerificationAndConsent() {
   });
 
   assert.strictEqual(captured.users.length, 2, 'expected two created admin users');
+  assert.strictEqual(captured.clients.length, 2, 'expected one default client per created firm');
+  assert.strictEqual(captured.clients[0].businessName, 'Acme Legal', 'default client should use the firm name');
+  assert.strictEqual(captured.clients[0].isInternal, true, 'default client should be marked internal');
+  assert.strictEqual(captured.clients[0].isSystemClient, true, 'default client should be marked as system-managed');
+  assert.strictEqual(captured.clients[0].createdBySystem, true, 'default client should be auto-created by the system');
+  assert.strictEqual(captured.clients[0].firmId, 'firm-1', 'default client should be linked to the created firm');
+  assert.strictEqual(captured.users[0].defaultClientId, 'client-1', 'admin should be linked to the created default client');
   assert.strictEqual(captured.users[0].emailVerified, true, 'OTP signup should mark email verified');
   assert.strictEqual(captured.users[0].verificationMethod, 'OTP', 'password flow should mark OTP method');
   assert.strictEqual(captured.users[0].termsAccepted, true, 'password flow should persist legal consent');
