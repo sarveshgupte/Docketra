@@ -3,6 +3,7 @@
 const { randomUUID } = require('crypto');
 const mongoose = require('mongoose');
 const log = require('../utils/log');
+const { getIpRange } = require('../utils/ipRange');
 const { logAuthEvent } = require('./audit.service');
 const { getRequestIp, getRequestUserAgent } = require('./forensicAudit.service');
 
@@ -45,22 +46,6 @@ function coerceUserId(userId) {
 function getRequestRoute(req) {
   const route = req?.originalUrl || req?.url || null;
   return typeof route === 'string' ? route.split('?')[0] : null;
-}
-
-function getIpRange(ipAddress) {
-  if (!ipAddress || ipAddress === 'unknown') return 'unknown';
-
-  const normalizedIp = String(ipAddress).replace(/^::ffff:/, '');
-  if (normalizedIp.includes(':')) {
-    return normalizedIp
-      .split(':')
-      .filter(Boolean)
-      .slice(0, 4)
-      .join(':') || normalizedIp;
-  }
-
-  const octets = normalizedIp.split('.');
-  return octets.length === 4 ? octets.slice(0, 3).join('.') : normalizedIp;
 }
 
 async function logSecurityAuditEvent({

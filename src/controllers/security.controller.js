@@ -3,11 +3,10 @@
 const AuthAudit = require('../models/AuthAudit.model');
 const RefreshToken = require('../models/RefreshToken.model');
 const log = require('../utils/log');
-const { getSecurityMetricsSnapshot } = require('../services/securityTelemetry.service');
+const { getSecurityMetricsSnapshot, SECURITY_METRIC_WINDOWS } = require('../services/securityTelemetry.service');
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
-const SUMMARY_WINDOW_MS = 60 * 60 * 1000;
 
 const parsePositiveInteger = (value, fallback) => {
   const parsed = Number.parseInt(value, 10);
@@ -99,7 +98,7 @@ const getSecurityMetrics = async (req, res) => {
 const getSecuritySummary = async (req, res) => {
   const snapshot = getSecurityMetricsSnapshot();
   const { degraded: sessionDegraded, count: activeSessions } = await countActiveSessions(req);
-  const summaryWindowStart = new Date(Date.now() - SUMMARY_WINDOW_MS);
+  const summaryWindowStart = new Date(Date.now() - SECURITY_METRIC_WINDOWS.oneHour);
   let topAlertTypes = [];
   let degraded = sessionDegraded;
 
