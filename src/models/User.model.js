@@ -360,6 +360,17 @@ const userSchema = new mongoose.Schema({
     immutable: true, // Cannot change after creation
     index: true,
   },
+
+  /**
+   * Primary admin marker for firm creator/default admin.
+   * Primary admin users cannot be deactivated or deleted.
+   */
+  isPrimaryAdmin: {
+    type: Boolean,
+    default: false,
+    immutable: true,
+    index: true,
+  },
   
   /**
    * Client Access Restrictions (Admin-Managed Deny-List)

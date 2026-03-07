@@ -2,6 +2,34 @@ const Firm = require('../models/Firm.model');
 const Plan = require('../models/Plan.model');
 const User = require('../models/User.model');
 
+class PrimaryAdminActionError extends Error {
+  constructor(message, code = 'PRIMARY_ADMIN_ACTION_FORBIDDEN') {
+    super(message);
+    this.name = 'PrimaryAdminActionError';
+    this.code = code;
+    this.statusCode = 403;
+  }
+}
+
+const isPrimaryAdmin = (user) => {
+  if (!user) return false;
+  return user.isPrimaryAdmin === true
+    || user.isSystem === true
+    || (user.role === 'Admin' && String(user.xID || '').toUpperCase() === 'X000001');
+};
+
+const assertCanDeactivateUser = (user) => {
+  if (isPrimaryAdmin(user)) {
+    throw new PrimaryAdminActionError('Primary admin cannot be deactivated', 'PRIMARY_ADMIN_DEACTIVATION_FORBIDDEN');
+  }
+};
+
+const assertCanDeleteUser = (user) => {
+  if (isPrimaryAdmin(user)) {
+    throw new PrimaryAdminActionError('Primary admin cannot be deleted', 'PRIMARY_ADMIN_DELETE_FORBIDDEN');
+  }
+};
+
 class PlanLimitExceededError extends Error {
   constructor(limit) {
     super(`Starter plan allows maximum ${limit} users. Upgrade required.`);
@@ -78,6 +106,10 @@ const assertFirmPlanCapacity = async ({ firmId, session, incrementBy = 1, role =
 };
 
 module.exports = {
+  PrimaryAdminActionError,
+  isPrimaryAdmin,
+  assertCanDeactivateUser,
+  assertCanDeleteUser,
   PlanLimitExceededError,
   PlanAdminLimitExceededError,
   assertFirmPlanCapacity,

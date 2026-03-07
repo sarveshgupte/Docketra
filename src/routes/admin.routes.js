@@ -24,6 +24,8 @@ const {
   restoreTask,
   getRetentionPreview,
 } = require('../controllers/admin.controller');
+const { getAllUsers } = require('../controllers/auth.controller');
+const { getClients } = require('../controllers/client.controller');
 
 /**
  * Admin Routes
@@ -38,6 +40,12 @@ const {
 
 // GET /api/admin/stats - Get admin dashboard statistics
 router.get('/stats', authenticate, attachFirmContext, authorizeFirmPermission('ADMIN_STATS'), superadminLimiter, getAdminStats);
+
+// GET /api/admin/users - List users (admin panel alias)
+router.get('/users', authenticate, attachFirmContext, authorizeFirmPermission('USER_VIEW'), userReadLimiter, getAllUsers);
+
+// GET /api/admin/clients - List clients (admin panel alias)
+router.get('/clients', authenticate, attachFirmContext, authorizeFirmPermission('CLIENT_VIEW'), userReadLimiter, getClients);
 
 // GET /api/admin/system-diagnostics - Operational diagnostics (cached)
 router.get('/system-diagnostics', authenticate, attachFirmContext, authorizeFirmPermission('ADMIN_STATS'), userReadLimiter, getSystemDiagnostics);

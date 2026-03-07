@@ -73,25 +73,30 @@ const getAdminStats = async (req, res) => {
     assertFirmContext(req);
     const tenantId = req.user?.firmId;
 
-    const [
-      totalUsers,
-      totalClients,
-      totalCategories,
-      latestMetrics,
-    ] = await Promise.all([
-      userRepository.countUsers(tenantId, { isActive: true }),
+    const [users, clients, categories, pendingApprovals, latestMetrics] = await Promise.all([
+      userRepository.countUsers(tenantId, { status: { $ne: 'deleted' } }),
       clientRepository.countClients(tenantId),
       categoryRepository.countCategories(tenantId),
+      Case.countDocuments({
+        firmId: tenantId,
+        status: {
+          $in: [CaseStatus.PENDED, CaseStatus.PENDING_ALIAS, CaseStatus.PENDING_LEGACY],
+        },
+      }),
       getLatestTenantMetrics(tenantId),
     ]);
 
     res.json({
       success: true,
       data: {
-        totalUsers,
-        totalClients,
-        totalCategories,
-        pendingApprovals: latestMetrics?.pendingApprovals || 0,
+        users,
+        clients,
+        categories,
+        pendingApprovals,
+        // Backward-compatible aliases
+        totalUsers: users,
+        totalClients: clients,
+        totalCategories: categories,
         allOpenCases: latestMetrics?.openCases || 0,
         allPendingCases: latestMetrics?.pendedCases || 0,
         filedCases: latestMetrics?.filedCases || 0,

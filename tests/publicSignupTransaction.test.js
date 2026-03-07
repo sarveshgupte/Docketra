@@ -226,7 +226,11 @@ async function testCreateFirmAndAdminTracksVerificationAndConsent() {
       return { ensureTenantKey: async () => ({}) };
     }
     if (request === './email.service') {
-      return { sendEmail: async () => ({ success: true }) };
+      return {
+        sendEmail: async () => ({ success: true }),
+        generateSecureToken: () => 'setup-token',
+        hashToken: () => 'setup-token-hash',
+      };
     }
     if (request === './audit.service') {
       return { logAuthEvent: async () => ({}) };
@@ -273,6 +277,11 @@ async function testCreateFirmAndAdminTracksVerificationAndConsent() {
   assert.strictEqual(captured.users[0].termsVersion, 'v1.0', 'password flow should persist terms version');
   assert.strictEqual(captured.users[0].signupIP, '203.0.113.5', 'password flow should persist signup IP');
   assert.strictEqual(captured.users[0].signupUserAgent, 'Mozilla/5.0 Test Browser', 'password flow should persist user agent');
+  assert.strictEqual(captured.users[0].status, 'invited', 'password flow primary admin should be invited until setup');
+  assert.strictEqual(captured.users[0].passwordHash, null, 'password flow should not persist signup password');
+  assert.strictEqual(captured.users[0].mustSetPassword, true, 'password flow should enforce setup link completion');
+  assert.strictEqual(captured.users[0].setupTokenHash, 'setup-token-hash', 'password flow should store setup token hash');
+  assert.ok(captured.users[0].setupTokenExpiresAt instanceof Date, 'password flow should set setup token expiry');
   assert.strictEqual(captured.users[1].verificationMethod, 'GOOGLE', 'google flow should mark GOOGLE verification method');
   assert.strictEqual(captured.users[1].authProviders.google.googleId, 'google-subject', 'google flow should persist google subject');
   console.log('  ✓ tracks verification and legal consent metadata when creating signup admins');

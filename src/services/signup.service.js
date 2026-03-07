@@ -25,6 +25,9 @@ const OTP_RESEND_COOLDOWN = 60;
 const SYSTEM_EMAIL_DOMAIN = 'system.local';
 const DEFAULT_BUSINESS_ADDRESS = 'Default Address';
 const DEFAULT_CONTACT_NUMBER = '0000000000';
+const SETUP_TOKEN_EXPIRY_HOURS = 48;
+const SETUP_EMAIL_RETRY_ATTEMPTS = 2;
+const SETUP_EMAIL_RETRY_DELAY_MS = 500;
 const EMAIL_ENUMERATION_SAFE_MESSAGE = 'If the details are valid, a verification code will be sent shortly.';
 const GENERIC_VERIFICATION_FAILURE_MESSAGE = 'Verification failed';
 const MIN_PUBLIC_RESPONSE_MS = 350;
@@ -277,6 +280,30 @@ const verifyOtp = async ({ email, otp, session = null, req = null }) => {
       firmId: tenant.firmId,
       metadata: { firmSlug: tenant.firmSlug },
     });
+    if (tenant.setupToken) {
+      const setupEmailResult = await sendPrimaryAdminSetupEmailWithRetry({
+        email: normalizedEmail,
+        name: record.name,
+        xID: tenant.xid,
+        firmSlug: tenant.firmSlug,
+        token: tenant.setupToken,
+        req,
+      });
+
+      if (!setupEmailResult.success) {
+        await logSignupAuthEvent({
+          eventType: 'SIGNUP_SETUP_EMAIL_FAILED',
+          email: normalizedEmail,
+          req,
+          userId: tenant.userId,
+          firmId: tenant.firmId,
+          metadata: {
+            firmSlug: tenant.firmSlug,
+            reason: setupEmailResult.error,
+          },
+        });
+      }
+    }
     log.info('OTP_VERIFIED', { req, email: normalizedEmail, firmSlug: tenant.firmSlug });
     log.info('SIGNUP_COMPLETED', { req, email: normalizedEmail, firmSlug: tenant.firmSlug, xid: tenant.xid });
 
@@ -435,6 +462,59 @@ const buildFirmUrl = (firmSlug) => {
   return `${frontendUrl}/${firmSlug}/login`;
 };
 
+const sendPrimaryAdminSetupEmailWithRetry = async ({
+  email,
+  name,
+  xID,
+  firmSlug,
+  token,
+  req = null,
+}) => {
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= SETUP_EMAIL_RETRY_ATTEMPTS; attempt += 1) {
+    try {
+      const result = await emailService.sendPasswordSetupEmail({
+        email,
+        name,
+        token,
+        xID,
+        firmSlug,
+      });
+
+      if (result?.success) {
+        return { success: true, attempts: attempt };
+      }
+
+      lastError = result?.error || 'Unknown email delivery failure';
+      log.error('SIGNUP_SETUP_EMAIL_FAILED', {
+        req,
+        email,
+        xID,
+        firmSlug,
+        attempt,
+        reason: String(lastError),
+      });
+    } catch (error) {
+      lastError = error.message;
+      log.error('SIGNUP_SETUP_EMAIL_FAILED', {
+        req,
+        email,
+        xID,
+        firmSlug,
+        attempt,
+        reason: error.message,
+      });
+    }
+
+    if (attempt < SETUP_EMAIL_RETRY_ATTEMPTS) {
+      await new Promise((resolve) => setTimeout(resolve, SETUP_EMAIL_RETRY_DELAY_MS));
+    }
+  }
+
+  return { success: false, error: String(lastError || 'Failed to trigger setup email') };
+};
+
 const createFirmAndAdmin = async ({
   name,
   email,
@@ -507,7 +587,13 @@ const createFirmAndAdmin = async ({
 
   const adminXID = await generateNextXID(firm._id, session);
   const isGoogleAuth = authProvider === 'google';
+  const requiresSetupEmail = authProvider === 'password';
   const now = new Date();
+  const setupToken = requiresSetupEmail ? emailService.generateSecureToken() : null;
+  const setupTokenHash = setupToken ? emailService.hashToken(setupToken) : null;
+  const setupTokenExpiry = setupToken
+    ? new Date(now.getTime() + SETUP_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000)
+    : null;
   const [adminUser] = await User.create([{
     xID: adminXID,
     name: name.trim(),
@@ -516,9 +602,10 @@ const createFirmAndAdmin = async ({
     firmId: firm._id,
     defaultClientId: defaultClient._id,
     role: 'Admin',
-    status: 'active',
-    isActive: true,
+    status: requiresSetupEmail ? 'invited' : 'active',
+    isActive: !requiresSetupEmail,
     isSystem: true,
+    isPrimaryAdmin: true,
     emailVerified: true,
     emailVerifiedAt: now,
     verificationMethod: isGoogleAuth ? 'GOOGLE' : 'OTP',
@@ -527,15 +614,20 @@ const createFirmAndAdmin = async ({
     termsVersion: 'v1.0',
     signupIP: req?.ip || null,
     signupUserAgent: req?.headers?.['user-agent'] || null,
-    passwordSet: authProvider === 'password',
-    passwordHash: passwordHash || null,
-    mustSetPassword: authProvider !== 'password',
+    passwordSet: false,
+    passwordHash: requiresSetupEmail ? null : (passwordHash || null),
+    mustSetPassword: requiresSetupEmail,
     mustChangePassword: false,
     inviteSentAt: new Date(),
+    setupTokenHash,
+    setupTokenExpiresAt: setupTokenExpiry,
+    passwordSetupTokenHash: setupTokenHash,
+    passwordSetupExpires: setupTokenExpiry,
+    setupTokenUsedAt: null,
     authProviders: {
       local: {
-        passwordHash: passwordHash || null,
-        passwordSet: authProvider === 'password',
+        passwordHash: requiresSetupEmail ? null : (passwordHash || null),
+        passwordSet: false,
       },
       google: {
         googleId: authProvider === 'google' ? googleSubject : null,
@@ -556,6 +648,7 @@ const createFirmAndAdmin = async ({
     firmId: firm._id,
     userId: adminUser._id,
     defaultClientId: defaultClient._id,
+    setupToken,
   };
 };
 

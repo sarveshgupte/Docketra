@@ -20,7 +20,13 @@ const { isGoogleAuthDisabled } = require('../services/featureFlags.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const config = require('../config/config');
 const { recordFailedLoginAttempt, clearFailedLoginAttempts } = require('../middleware/accountLockout.middleware');
-const { assertFirmPlanCapacity, PlanLimitExceededError, PlanAdminLimitExceededError } = require('../services/user.service');
+const {
+  assertFirmPlanCapacity,
+  PlanLimitExceededError,
+  PlanAdminLimitExceededError,
+  PrimaryAdminActionError,
+  assertCanDeactivateUser,
+} = require('../services/user.service');
 const { logAuthEvent } = require('../services/audit.service');
 const { incrementTenantMetric } = require('../services/tenantMetrics.service');
 
@@ -1705,25 +1711,8 @@ const deactivateUser = async (req, res) => {
       });
     }
     
-    // PROTECTION: Prevent deactivation of system users (default admin)
-    if (user.isSystem === true) {
-      // Log the attempt for audit
-      await logAuthAudit({
-        xID: user.xID,
-        firmId: user.firmId,
-        userId: user._id,
-        actionType: 'DeactivationAttemptBlocked',
-        description: `Attempted to deactivate system user (default admin) - blocked`,
-        performedBy: admin.xID,
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent'),
-      });
-      
-      return res.status(403).json({
-        success: false,
-        message: 'Cannot deactivate the default admin user. This is a protected system entity.',
-      });
-    }
+    // PROTECTION: Prevent deactivation of the primary admin
+    assertCanDeactivateUser(user);
     
     // Soft-disable user (never hard delete)
     user.status = 'disabled';
@@ -1746,6 +1735,22 @@ const deactivateUser = async (req, res) => {
       message: 'User deactivated successfully',
     });
   } catch (error) {
+    if (error instanceof PrimaryAdminActionError) {
+      await logAuthAudit({
+        xID: req.params?.xID?.toUpperCase?.() || String(req.params?.xID || ''),
+        firmId: req.user?.firmId,
+        actionType: 'DeactivationAttemptBlocked',
+        description: error.message,
+        performedBy: req.user?.xID,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+      });
+      return res.status(error.statusCode || 403).json({
+        success: false,
+        message: error.message,
+        code: error.code,
+      });
+    }
     res.status(500).json({
       success: false,
       message: 'Error deactivating user',
@@ -2320,24 +2325,9 @@ const updateUserStatus = async (req, res) => {
       });
     }
     
-    // PROTECTION: Prevent deactivation of system users (default admin)
-    if (user.isSystem === true && resolvedStatus === 'disabled') {
-      // Log the attempt for audit
-      await logAuthAudit({
-        xID: user.xID,
-        firmId: user.firmId,
-        userId: user._id,
-        actionType: 'DeactivationAttemptBlocked',
-        description: `Attempted to deactivate system user (default admin) - blocked`,
-        performedBy: admin.xID,
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent'),
-      });
-      
-      return res.status(403).json({
-        success: false,
-        message: 'Cannot deactivate the default admin user. This is a protected system entity.',
-      });
+    if (resolvedStatus === 'disabled') {
+      // PROTECTION: Prevent deactivation of the primary admin
+      assertCanDeactivateUser(user);
     }
     
     // Update status
@@ -2361,6 +2351,22 @@ const updateUserStatus = async (req, res) => {
       message: `User ${resolvedStatus === 'active' ? 'activated' : 'deactivated'} successfully`,
     });
   } catch (error) {
+    if (error instanceof PrimaryAdminActionError) {
+      await logAuthAudit({
+        xID: req.params?.xID?.toUpperCase?.() || String(req.params?.xID || ''),
+        firmId: req.user?.firmId,
+        actionType: 'DeactivationAttemptBlocked',
+        description: error.message,
+        performedBy: req.user?.xID,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+      });
+      return res.status(error.statusCode || 403).json({
+        success: false,
+        message: error.message,
+        code: error.code,
+      });
+    }
     res.status(500).json({
       success: false,
       message: 'Error updating user status',

@@ -51,11 +51,13 @@ export const AdminPage = () => {
   
   // Admin stats (PR #41)
   const [adminStats, setAdminStats] = useState({
-    totalUsers: 0,
-    totalClients: 0,
-    totalCategories: 0,
-    pendingApprovals: 0,
+    users: null,
+    clients: null,
+    categories: null,
+    pendingApprovals: null,
   });
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState(false);
 
   // Create user form state (PR 32: xID is auto-generated, not user-provided)
   const [newUser, setNewUser] = useState({
@@ -106,19 +108,26 @@ export const AdminPage = () => {
   }, [activeTab]);
 
   const loadAdminStats = async () => {
+    setStatsLoading(true);
+    setStatsError(false);
     try {
       const response = await adminService.getAdminStats();
       if (response.success) {
-        setAdminStats(response.data || {
-          totalUsers: 0,
-          totalClients: 0,
-          totalCategories: 0,
-          pendingApprovals: 0,
+        const stats = response.data || {};
+        setAdminStats({
+          users: stats.users ?? stats.totalUsers ?? null,
+          clients: stats.clients ?? stats.totalClients ?? null,
+          categories: stats.categories ?? stats.totalCategories ?? null,
+          pendingApprovals: stats.pendingApprovals ?? null,
         });
+      } else {
+        setStatsError(true);
       }
     } catch (error) {
       console.error('Failed to load admin stats:', error);
-      showToast('Failed to load admin statistics', 'error');
+      setStatsError(true);
+    } finally {
+      setStatsLoading(false);
     }
   };
 
@@ -159,7 +168,7 @@ export const AdminPage = () => {
           setCategories(response.data || []);
         }
       } else if (activeTab === 'clients') {
-        const response = await clientService.getClients(false); // Get all clients including inactive
+        const response = await adminService.listClients(); // Get all clients including inactive
         if (response.success) {
           setClients(response.data || []);
         }
@@ -279,6 +288,11 @@ export const AdminPage = () => {
   };
 
   const handleToggleUserStatus = async (user) => {
+    if (isPrimaryAdminUser(user)) {
+      showToast('Primary admin cannot be deactivated', 'error');
+      return;
+    }
+
     const newStatus = user.status !== 'active';
     const action = newStatus ? 'activate' : 'deactivate';
 
@@ -287,13 +301,27 @@ export const AdminPage = () => {
       
       if (response.success) {
         showToast(`User ${action}d successfully`, 'success');
+        loadAdminStats();
         loadAdminData();
       } else {
         showToast(response.message || `Failed to ${action} user`, 'error');
       }
     } catch (error) {
+      console.error('Failed to update user status:', error);
       showToast(error.response?.data?.message || `Failed to ${action} user`, 'error');
     }
+  };
+
+  const isPrimaryAdminUser = (userRecord) => (
+    userRecord?.isPrimaryAdmin === true
+    || userRecord?.isSystem === true
+    || (userRecord?.role === 'Admin' && String(userRecord?.xID || '').toUpperCase() === 'X000001')
+  );
+
+  const renderCounter = (value) => {
+    if (statsLoading) return '...';
+    if (statsError || value === null || value === undefined) return '--';
+    return value;
   };
 
   const handleResendSetupEmail = async (xID) => {
@@ -306,6 +334,7 @@ export const AdminPage = () => {
         showToast(response.message || 'Failed to send email', 'error');
       }
     } catch (error) {
+      console.error('Failed to resend setup email:', error);
       showToast(error.response?.data?.message || 'Failed to send email', 'error');
     }
   };
@@ -782,19 +811,19 @@ export const AdminPage = () => {
             variant={activeTab === 'users' ? 'primary' : 'default'}
             onClick={() => setActiveTab('users')}
           >
-            User Management ({adminStats.totalUsers})
+            User Management ({renderCounter(adminStats.users)})
           </Button>
           <Button
             variant={activeTab === 'clients' ? 'primary' : 'default'}
             onClick={() => setActiveTab('clients')}
           >
-            Client Management ({adminStats.totalClients})
+            Client Management ({renderCounter(adminStats.clients)})
           </Button>
           <Button
             variant={activeTab === 'categories' ? 'primary' : 'default'}
             onClick={() => setActiveTab('categories')}
           >
-            Categories ({adminStats.totalCategories})
+            Categories ({renderCounter(adminStats.categories)})
           </Button>
           <Button
             variant={activeTab === 'storage' ? 'primary' : 'default'}
@@ -806,7 +835,7 @@ export const AdminPage = () => {
             variant={activeTab === 'approvals' ? 'primary' : 'default'}
             onClick={() => setActiveTab('approvals')}
           >
-            Pending Approvals ({adminStats.pendingApprovals})
+            Pending Approvals ({renderCounter(adminStats.pendingApprovals)})
           </Button>
           <Button
             variant={activeTab === 'reports' ? 'primary' : 'default'}
@@ -854,7 +883,7 @@ export const AdminPage = () => {
                       <td>{user.email}</td>
                       <td>
                         <Badge status={user.role === 'Admin' ? 'InProgress' : 'Pending'}>
-                          {user.role}
+                          {isPrimaryAdminUser(user) && user.role === 'Admin' ? 'Admin (Primary)' : user.role}
                         </Badge>
                       </td>
                       <td>{user.firmId?.name || 'N/A'}</td>
@@ -869,13 +898,17 @@ export const AdminPage = () => {
                         </Badge>
                       </td>
                       <td className="admin__actions">
-                        <Button
-                          size="small"
-                          variant={user.isActive ? 'danger' : 'success'}
-                          onClick={() => handleToggleUserStatus(user)}
-                        >
-                          {user.isActive ? 'Deactivate' : 'Activate'}
-                        </Button>
+                        {isPrimaryAdminUser(user) ? (
+                          <Badge status="Approved">Primary Admin</Badge>
+                        ) : (
+                          <Button
+                            size="small"
+                            variant={user.isActive ? 'danger' : 'success'}
+                            onClick={() => handleToggleUserStatus(user)}
+                          >
+                            {user.isActive ? 'Deactivate' : 'Activate'}
+                          </Button>
+                        )}
                         {!user.passwordSet && (
                           <Button
                             size="small"

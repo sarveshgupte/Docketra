@@ -26,7 +26,7 @@ export const adminService = {
    */
   getUsers: async (params = {}) => {
     const queryParams = new URLSearchParams(params).toString();
-    const response = await api.get(`/auth/admin/users${queryParams ? '?' + queryParams : ''}`);
+    const response = await api.get(`/admin/users${queryParams ? '?' + queryParams : ''}`);
     return response.data;
   },
 
@@ -121,7 +121,7 @@ export const adminService = {
    * List all clients
    */
   listClients: async () => {
-    const response = await api.get('/client-approval/clients');
+    const response = await api.get('/admin/clients');
     return response.data;
   },
 
