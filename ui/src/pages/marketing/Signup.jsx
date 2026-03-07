@@ -11,12 +11,6 @@ const phonePattern = /^[0-9]{10}$/;
 const partialPhonePattern = /^[0-9]{0,10}$/;
 const OTP_LENGTH = 6;
 const OTP_RESEND_COOLDOWN = 60;
-const storageProviders = [
-  { value: 'google', label: 'Google Drive' },
-  { value: 'aws', label: 'AWS S3' },
-  { value: 'azure', label: 'Azure Blob' },
-  { value: 'onedrive', label: 'OneDrive' },
-];
 
 const getErrorMessage = (error, fallback) => (
   error?.response?.data?.message
@@ -39,7 +33,6 @@ export default function Signup() {
     firmName: '',
     password: '',
     phone: '',
-    storageType: 'docketra',
   });
   const [signupEmail, setSignupEmail] = useState('');
   const [loginRedirectPath, setLoginRedirectPath] = useState('/login');
@@ -48,7 +41,6 @@ export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [resendTimer, setResendTimer] = useState(OTP_RESEND_COOLDOWN);
   const [canResend, setCanResend] = useState(false);
-  const [selectedStorageProvider, setSelectedStorageProvider] = useState('');
   const otpInputRefs = useRef([]);
   const autoSubmittedOtpRef = useRef('');
   const otp = useMemo(() => otpDigits.join(''), [otpDigits]);
@@ -126,7 +118,6 @@ export default function Signup() {
         firmName: form.firmName.trim(),
         password: form.password,
         phone: form.phone.trim(),
-        storageType: form.storageType,
       });
       setSignupEmail(response?.data?.email || email);
       setStep('otp');
@@ -164,7 +155,7 @@ export default function Signup() {
         ? redirectPathFromApi
         : (firmSlug ? `/${firmSlug}/login` : '/login');
       setLoginRedirectPath(safeRedirectPath);
-      setStep(form.storageType === 'external' ? 'storage' : 'success');
+      setStep('success');
       setApiMessage('');
     } catch (error) {
       setApiMessage('');
@@ -387,35 +378,6 @@ export default function Signup() {
                 <p className="mt-1 text-xs text-gray-500">Enter a 10-digit Indian mobile number</p>
                 {errors.phone && <p className="mt-1 text-xs text-red-600">{errors.phone}</p>}
               </div>
-              <fieldset>
-                <legend className={labelClass}>Document Storage</legend>
-                <div className="space-y-3 rounded-lg border border-gray-200 p-4">
-                  <label className="flex cursor-pointer items-start gap-3 text-sm text-gray-700">
-                    <input
-                      type="radio"
-                      name="storageType"
-                      value="docketra"
-                      checked={form.storageType === 'docketra'}
-                      onChange={onFormChange}
-                      disabled={loading}
-                      className="mt-0.5"
-                    />
-                    <span>Use Docketra Secure Cloud</span>
-                  </label>
-                  <label className="flex cursor-pointer items-start gap-3 text-sm text-gray-700">
-                    <input
-                      type="radio"
-                      name="storageType"
-                      value="external"
-                      checked={form.storageType === 'external'}
-                      onChange={onFormChange}
-                      disabled={loading}
-                      className="mt-0.5"
-                    />
-                    <span>Connect My Cloud Storage</span>
-                  </label>
-                </div>
-              </fieldset>
               <button
                 type="submit"
                 disabled={loading}
@@ -530,46 +492,7 @@ export default function Signup() {
             </div>
           )}
 
-          {step === 'storage' && (
-            <div className="mt-6 space-y-4">
-              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
-                <p className="font-semibold">Connect Your Storage</p>
-                <p className="mt-2">
-                  Your account is ready. Choose the cloud you plan to connect next, and you can finish the connection after signing in.
-                </p>
-              </div>
-              <div className="grid gap-3">
-                {storageProviders.map((provider) => (
-                  <button
-                    key={provider.value}
-                    type="button"
-                    onClick={() => setSelectedStorageProvider(provider.value)}
-                    className={`rounded-lg border px-4 py-3 text-left text-sm font-medium transition ${
-                      selectedStorageProvider === provider.value
-                        ? 'border-gray-900 bg-gray-900 text-white'
-                        : 'border-gray-300 bg-white text-gray-900 hover:border-gray-500'
-                    }`}
-                  >
-                    {provider.label}
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-gray-500">
-                {selectedStorageProvider
-                  ? 'Your preferred provider will be connected later from the workspace setup flow.'
-                  : 'You can skip this now and connect Google Drive, AWS S3, Azure Blob, or OneDrive later.'}
-              </p>
-              <button
-                type="button"
-                onClick={() => setStep('success')}
-                className="marketing-btn-primary inline-flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-medium"
-              >
-                Continue
-              </button>
-            </div>
-          )}
-
-       </div>
+      </div>
     </section>
   );
 }
