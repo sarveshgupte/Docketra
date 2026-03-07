@@ -2,6 +2,14 @@ const mongoose = require('mongoose');
 const softDeletePlugin = require('../utils/softDelete.plugin');
 const { encrypt: encryptProtectedValue, isEncrypted } = require('../utils/encryption');
 
+const isEncryptedStorageConfig = (value) => (
+  !!value
+  && typeof value === 'object'
+  && value.encrypted === true
+  && typeof value.value === 'string'
+  && isEncrypted(value.value)
+);
+
 /**
  * Client Model for Docketra Case Management System
  * 
@@ -643,8 +651,7 @@ function _getClientEncService() {
  */
 clientSchema.pre('save', async function () {
   if (this.isModified('storageConfig') && this.storageConfig && typeof this.storageConfig === 'object') {
-    const encryptedValue = this.storageConfig?.value;
-    if (!(this.storageConfig.encrypted === true && typeof encryptedValue === 'string' && isEncrypted(encryptedValue))) {
+    if (!isEncryptedStorageConfig(this.storageConfig)) {
       this.storageConfig = {
         encrypted: true,
         value: encryptProtectedValue(JSON.stringify(this.storageConfig)),
