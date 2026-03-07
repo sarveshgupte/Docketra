@@ -1446,6 +1446,7 @@ const getCases = async (req, res) => {
     
     res.json({
       success: true,
+      cases: casesWithClients || [],
       data: casesWithClients,
       count: casesWithClients.length,
       pagination: {
