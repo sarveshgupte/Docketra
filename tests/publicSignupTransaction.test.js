@@ -2,7 +2,10 @@
 'use strict';
 
 const assert = require('assert');
+const express = require('express');
+const fs = require('fs');
 const Module = require('module');
+const request = require('supertest');
 
 const originalLoad = Module._load;
 
@@ -17,7 +20,11 @@ const clearModule = (modulePath) => {
 async function testRouteWrapsWriteSignupHandlers() {
   const authLimiter = (req, res, next) => next();
   const signupLimiter = (req, res, next) => next();
-  const initiateSignup = async () => ({ success: true });
+  const initiateSignup = async () => ({
+    success: true,
+    statusCode: 201,
+    message: 'If the details are valid, a verification code will be sent shortly.',
+  });
   const wrappedHandlers = [];
 
   Module._load = function (request, parent, isMain) {
@@ -32,7 +39,20 @@ async function testRouteWrapsWriteSignupHandlers() {
     }
     if (request === '../middleware/wrapWriteHandler') {
       return (fn) => {
-        const wrapped = async (req, res, next) => fn(req, res, next);
+        const wrapped = async (req, res, next) => {
+          const result = await fn(req, res, next);
+          if (res.headersSent || typeof result === 'undefined') {
+            return undefined;
+          }
+
+          const statusCode = Number.isInteger(result?.statusCode) ? result.statusCode : 200;
+          if (result && typeof result === 'object' && Object.hasOwn(result, 'statusCode')) {
+            const { statusCode: _statusCode, ...payload } = result;
+            return res.status(statusCode).json(payload);
+          }
+
+          return res.status(statusCode).json(result);
+        };
         wrapped.original = fn;
         wrappedHandlers.push(wrapped);
         return wrapped;
@@ -64,6 +84,23 @@ async function testRouteWrapsWriteSignupHandlers() {
   assert.strictEqual(typeof verifyHandlers[1].original, 'function', 'verify-otp should be wrapped with wrapWriteHandler');
   assert.strictEqual(typeof completeHandlers[1].original, 'function', 'complete-signup should be wrapped with wrapWriteHandler');
 
+  const app = express();
+  app.use(express.json());
+  app.use('/api/public', router);
+
+  const response = await request(app)
+    .post('/api/public/initiate-signup')
+    .send({
+      name: 'Alice',
+      email: 'alice@example.com',
+      password: 'password123',
+      phone: '9999999999',
+      firmName: 'Acme Legal',
+    });
+
+  assert.strictEqual(response.status, 201, 'initiate-signup should be reachable under /api/public');
+  assert.strictEqual(response.body.success, true, 'initiate-signup should return wrapped handler response');
+
   assert.strictEqual(wrappedHandlers.length, 3, 'three write handlers should be wrapped');
   console.log('  ✓ wraps public signup write routes with wrapWriteHandler');
 }
@@ -92,7 +129,6 @@ async function testControllerForwardsTransactionSession() {
       password: 'password123',
       phone: '9999999999',
       firmName: 'Acme Legal',
-      storageType: 'external',
     },
     transactionSession: { session },
     ip: '127.0.0.1',
@@ -103,7 +139,7 @@ async function testControllerForwardsTransactionSession() {
   assert.strictEqual(result.requiresOtpVerification, true);
   assert.strictEqual(captured.payload.session, session, 'controller should pass active transaction session to service');
   assert.strictEqual(captured.payload.firmName, 'Acme Legal', 'controller should pass firmName for temporary signup');
-  assert.strictEqual(captured.payload.storageType, 'external', 'controller should pass selected storage type');
+  assert.strictEqual(Object.hasOwn(captured.payload, 'storageType'), false, 'controller should not forward storage type');
   console.log('  ✓ forwards req.transactionSession.session to initiateManualSignup');
 }
 
@@ -130,7 +166,6 @@ async function testControllerRejectsInvalidPhoneNumber() {
       password: 'password123',
       phone: '+919876543210',
       firmName: 'Acme Legal',
-      storageType: 'docketra',
     },
   }, {});
 
@@ -260,13 +295,12 @@ async function testServiceWritesUseSession() {
     password: 'password123',
     firmName: 'Acme Legal',
     phone: '9999999999',
-    storageType: 'external',
     session,
   });
 
   assert.deepStrictEqual(captured.deleteMany[1], { session }, 'deleteMany should receive the session option');
   assert.deepStrictEqual(captured.create[1], { session }, 'create should receive the session option');
-  assert.strictEqual(captured.create[0].storageType, 'external', 'temporary signup should retain selected storage type');
+  assert.strictEqual(Object.hasOwn(captured.create[0], 'storageType'), false, 'temporary signup should not persist a storage selection');
   console.log('  ✓ passes { session } to TemporarySignup write operations');
 }
 
@@ -399,7 +433,6 @@ async function testCreateFirmAndAdminTracksVerificationAndConsent() {
     firmName: 'Acme Legal',
     passwordHash: 'hash',
     phone: '9999999999',
-    storageType: 'external',
     authProvider: 'password',
     session,
     req: {
@@ -414,7 +447,6 @@ async function testCreateFirmAndAdminTracksVerificationAndConsent() {
     firmName: 'Acme Legal',
     passwordHash: null,
     phone: null,
-    storageType: 'docketra',
     authProvider: 'google',
     googleSubject: 'google-subject',
     session,
@@ -431,7 +463,7 @@ async function testCreateFirmAndAdminTracksVerificationAndConsent() {
   assert.strictEqual(captured.clients[0].isSystemClient, true, 'default client should be marked as system-managed');
   assert.strictEqual(captured.clients[0].createdBySystem, true, 'default client should be auto-created by the system');
   assert.strictEqual(captured.clients[0].firmId, 'firm-1', 'default client should be linked to the created firm');
-  assert.strictEqual(captured.clients[0].storageType, 'external', 'default client should retain external storage preference');
+  assert.strictEqual(captured.clients[0].storageType, 'docketra', 'default client should default to docketra storage during signup');
   assert.strictEqual(captured.clients[0].storageProvider, null, 'provider should remain unset until later setup');
   assert.strictEqual(captured.clients[0].storageConfig, null, 'storage credentials should not be created during signup');
   assert.strictEqual(captured.users[0].defaultClientId, 'client-1', 'admin should be linked to the created default client');
@@ -444,6 +476,21 @@ async function testCreateFirmAndAdminTracksVerificationAndConsent() {
   assert.strictEqual(captured.users[1].verificationMethod, 'GOOGLE', 'google flow should mark GOOGLE verification method');
   assert.strictEqual(captured.users[1].authProviders.google.googleId, 'google-subject', 'google flow should persist google subject');
   console.log('  ✓ tracks verification and legal consent metadata when creating signup admins');
+}
+
+function testServerRegistersApiPublicSignupRoutes() {
+  const serverSource = fs.readFileSync(require.resolve('../src/server.js'), 'utf8');
+
+  assert.ok(
+    serverSource.includes("app.use('/api/public', publicLimiter, publicSignupRoutes);"),
+    'server should mount public signup routes under /api/public'
+  );
+  assert.ok(
+    serverSource.includes("app.use('/public', publicLimiter, publicSignupRoutes);"),
+    'server should keep the legacy /public signup mount'
+  );
+
+  console.log('  ✓ mounts public signup routes on /api/public before error middleware');
 }
 
 async function testResendCredentialsEmailUsesStoredXid() {
@@ -513,6 +560,7 @@ async function run() {
     await testInitiateSignupRejectsDuplicateEmailOrPhone();
     await testCreateFirmAndAdminTracksVerificationAndConsent();
     await testResendCredentialsEmailUsesStoredXid();
+    testServerRegistersApiPublicSignupRoutes();
     console.log('All public signup transaction tests passed.');
   } catch (error) {
     console.error('publicSignupTransaction tests failed:', error);
