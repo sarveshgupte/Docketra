@@ -2,7 +2,7 @@
  * Admin Page
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
@@ -13,6 +13,7 @@ import { Textarea } from '../components/common/Textarea';
 import { Select } from '../components/common/Select';
 import { Modal } from '../components/common/Modal';
 import { Loading } from '../components/common/Loading';
+import { EmptyState } from '../components/EmptyState';
 import { useAuth } from '../hooks/useAuth';
 import { adminService } from '../services/adminService';
 import { categoryService } from '../services/categoryService';
@@ -20,6 +21,25 @@ import { clientService } from '../services/clientService';
 import { useToast } from '../hooks/useToast';
 import { formatDate } from '../utils/formatters';
 import './AdminPage.css';
+
+const EMPTY_ADMIN_STATS = {
+  totalUsers: 0,
+  totalClients: 0,
+  totalCategories: 0,
+  pendingApprovals: 0,
+};
+
+const TOAST_DEDUPLICATION_WINDOW_MS = 1500;
+
+const getApiErrorType = (error) => {
+  if (!error?.response) return 'network';
+
+  const status = error.response.status;
+  if (status === 404) return 'empty';
+  if (status === 401 || status === 403) return 'permission';
+  if (status >= 500) return 'server';
+  return 'unknown';
+};
 
 export const AdminPage = () => {
   const navigate = useNavigate();
@@ -48,14 +68,12 @@ export const AdminPage = () => {
   });
   const [savingStorage, setSavingStorage] = useState(false);
   const [storageLoaded, setStorageLoaded] = useState(false);
+  const [statsEmpty, setStatsEmpty] = useState(false);
+  const toastLockRef = useRef({});
+  const toastTimerRef = useRef({});
   
   // Admin stats (PR #41)
-  const [adminStats, setAdminStats] = useState({
-    totalUsers: 0,
-    totalClients: 0,
-    totalCategories: 0,
-    pendingApprovals: 0,
-  });
+  const [adminStats, setAdminStats] = useState(EMPTY_ADMIN_STATS);
 
   // Create user form state (PR 32: xID is auto-generated, not user-provided)
   const [newUser, setNewUser] = useState({
@@ -105,20 +123,59 @@ export const AdminPage = () => {
     loadAdminData();
   }, [activeTab]);
 
+  useEffect(() => {
+    return () => {
+      Object.values(toastTimerRef.current).forEach((timerId) => {
+        clearTimeout(timerId);
+      });
+    };
+  }, []);
+
+  const showGroupedLoadToast = (groupKey, message) => {
+    if (toastLockRef.current[groupKey]) return;
+    toastLockRef.current[groupKey] = true;
+    showToast(message, 'error');
+    toastTimerRef.current[groupKey] = setTimeout(() => {
+      toastLockRef.current[groupKey] = false;
+      delete toastTimerRef.current[groupKey];
+    }, TOAST_DEDUPLICATION_WINDOW_MS);
+  };
+
+  const notifyLoadError = (error, groupKey) => {
+    const errorType = getApiErrorType(error);
+    if (errorType === 'empty') {
+      return errorType;
+    }
+
+    if (errorType === 'permission') {
+      showGroupedLoadToast(groupKey, 'You do not have permission');
+    } else if (errorType === 'server' || errorType === 'unknown') {
+      showGroupedLoadToast(groupKey, 'Something went wrong. Please try again.');
+    } else if (errorType === 'network') {
+      showGroupedLoadToast(groupKey, 'Unable to connect to server');
+    }
+
+    return errorType;
+  };
+
   const loadAdminStats = async () => {
     try {
       const response = await adminService.getAdminStats();
-      if (response.success) {
-        setAdminStats(response.data || {
-          totalUsers: 0,
-          totalClients: 0,
-          totalCategories: 0,
-          pendingApprovals: 0,
-        });
+      const data = response?.success ? response.data : null;
+      if (data) {
+        setAdminStats(data);
+        setStatsEmpty(false);
+      } else {
+        setAdminStats(EMPTY_ADMIN_STATS);
+        setStatsEmpty(true);
       }
     } catch (error) {
       console.error('Failed to load admin stats:', error);
-      showToast('Failed to load admin statistics', 'error');
+      const errorType = notifyLoadError(error, 'admin-load');
+      if (errorType === 'empty') {
+        setAdminStats(EMPTY_ADMIN_STATS);
+        setStatsEmpty(true);
+      }
     }
   };
 
@@ -136,7 +193,7 @@ export const AdminPage = () => {
       }
     } catch (error) {
       console.error('Failed to load storage config:', error);
-      showToast('Failed to load storage settings', 'error');
+      notifyLoadError(error, 'admin-storage-load');
     }
   };
 
@@ -145,24 +202,16 @@ export const AdminPage = () => {
     try {
       if (activeTab === 'approvals') {
         const response = await adminService.getPendingApprovals();
-        if (response.success) {
-          setPendingCases(response.data || []);
-        }
+        setPendingCases(response?.success ? (response.data || []) : []);
       } else if (activeTab === 'users') {
         const response = await adminService.getUsers();
-        if (response.success) {
-          setUsers(response.data || []);
-        }
+        setUsers(response?.success ? (response.data || []) : []);
       } else if (activeTab === 'categories') {
         const response = await categoryService.getCategories(false); // Get all categories including inactive
-        if (response.success) {
-          setCategories(response.data || []);
-        }
+        setCategories(response?.success ? (response.data || []) : []);
       } else if (activeTab === 'clients') {
         const response = await clientService.getClients(false); // Get all clients including inactive
-        if (response.success) {
-          setClients(response.data || []);
-        }
+        setClients(response?.success ? (response.data || []) : []);
       } else if (activeTab === 'storage') {
         if (!storageLoaded) {
           await loadStorageConfig();
@@ -170,7 +219,18 @@ export const AdminPage = () => {
       }
     } catch (error) {
       console.error('Failed to load admin data:', error);
-      showToast('Failed to load data', 'error');
+      const errorType = notifyLoadError(error, 'admin-load');
+      if (errorType === 'empty') {
+        if (activeTab === 'approvals') {
+          setPendingCases([]);
+        } else if (activeTab === 'users') {
+          setUsers([]);
+        } else if (activeTab === 'categories') {
+          setCategories([]);
+        } else if (activeTab === 'clients') {
+          setClients([]);
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -816,6 +876,15 @@ export const AdminPage = () => {
           </Button>
         </div>
 
+        {statsEmpty && (
+          <Card>
+            <EmptyState
+              title="No statistics available yet"
+              description="Data will appear once activity begins."
+            />
+          </Card>
+        )}
+
         {activeTab === 'users' && (
           <Card>
             <div className="admin__section-header">
@@ -829,9 +898,10 @@ export const AdminPage = () => {
             </div>
             
             {users.length === 0 ? (
-              <div className="admin__empty">
-                <p className="text-secondary">No users found</p>
-              </div>
+              <EmptyState
+                title="No users added yet"
+                description="Invite your team to start collaborating."
+              />
             ) : (
               <table className="neo-table">
                 <thead>
@@ -930,9 +1000,10 @@ export const AdminPage = () => {
             </div>
             
             {clients.length === 0 ? (
-              <div className="admin__empty">
-                <p className="text-secondary">No clients found</p>
-              </div>
+              <EmptyState
+                title="No clients created yet"
+                description="Create your first client to begin managing cases."
+              />
             ) : (
               <table className="neo-table">
                 <thead>
@@ -1015,9 +1086,10 @@ export const AdminPage = () => {
             </div>
             
             {categories.length === 0 ? (
-              <div className="admin__empty">
-                <p className="text-secondary">No categories found</p>
-              </div>
+              <EmptyState
+                title="No categories created yet"
+                description="Use categories to organize your cases."
+              />
             ) : (
               <div className="categories-list">
                 {categories.map((category) => (
@@ -1188,9 +1260,10 @@ export const AdminPage = () => {
             <h2 className="neo-section__header">Pending Client Approvals</h2>
             
             {pendingCases.length === 0 ? (
-              <div className="admin__empty">
-                <p className="text-secondary">No pending approvals</p>
-              </div>
+              <EmptyState
+                title="No pending approvals yet"
+                description="New approvals will appear here when cases require review."
+              />
             ) : (
               <table className="neo-table">
                 <thead>
