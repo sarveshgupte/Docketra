@@ -90,11 +90,15 @@ const validateClientIdFormat = (clientId) => {
 /**
  * Check if clientId already exists
  * @param {string} clientId - clientId to check
+ * @param {ObjectId|string} firmId - firm scope for clientId lookup
  * @returns {Promise<boolean>} True if clientId exists
  */
-const clientIdExists = async (clientId) => {
+const clientIdExists = async (clientId, firmId) => {
+  if (!firmId) {
+    throw new Error('firmId is required to check clientId existence');
+  }
   try {
-    const client = await Client.findOne({ clientId }).lean();
+    const client = await Client.findOne({ clientId, firmId }).lean();
     return !!client;
   } catch (error) {
     console.error('[Client ID Generator] Error checking clientId existence:', error);

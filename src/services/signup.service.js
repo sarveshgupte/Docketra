@@ -13,7 +13,12 @@ const { logAuthEvent } = require('./audit.service');
 const jwtService = require('./jwt.service');
 const log = require('../utils/log');
 const { acquireLock, releaseLock } = require('./redisLock.service');
-const { consumeSignupQuota, consumeOtpAttempt, clearOtpAttempts } = require('./signupRateLimit.service');
+const {
+  consumeSignupQuota,
+  consumeOtpAttempt,
+  consumeOtpResendQuota,
+  clearOtpAttempts,
+} = require('./signupRateLimit.service');
 
 const SALT_ROUNDS = 10;
 const OTP_EXPIRY_MINUTES = 10;
@@ -231,7 +236,7 @@ const verifyOtp = async ({ email, otp, session = null, req = null }) => {
   const normalizedEmail = email.toLowerCase().trim();
   let otpAttempt;
   try {
-    otpAttempt = await consumeOtpAttempt({ email: normalizedEmail });
+    otpAttempt = await consumeOtpAttempt({ email: normalizedEmail, ip: req?.ip });
   } catch (error) {
     if (error.message === OTP_RATE_LIMIT_MESSAGE) {
       return { success: false, status: 429, message: OTP_RATE_LIMIT_MESSAGE };
@@ -300,7 +305,7 @@ const verifyOtp = async ({ email, otp, session = null, req = null }) => {
     record.consumedAt = consumedAt;
     await record.save({ session });
 
-    await clearOtpAttempts({ email: normalizedEmail });
+    await clearOtpAttempts({ email: normalizedEmail, ip: req?.ip });
     await logSignupAuthEvent({ eventType: 'OTP_VERIFIED', email: normalizedEmail, req, userId: tenant.userId, firmId: tenant.firmId });
     await logSignupAuthEvent({
       eventType: 'SIGNUP_COMPLETED',
@@ -364,6 +369,10 @@ const resendOtp = async ({ email, req = null }) => {
   const quota = await consumeSignupQuota({ email: normalizedEmail, ip: req?.ip });
   if (!quota.allowed) {
     return { success: false, status: 429, message: 'Too many requests. Please try again later.' };
+  }
+  const resendQuota = await consumeOtpResendQuota({ email: normalizedEmail, ip: req?.ip });
+  if (!resendQuota.allowed) {
+    return { success: false, status: 429, message: 'Too many OTP resend requests. Please try again later.' };
   }
   const record = await TemporarySignup.findOne({ email: normalizedEmail, provider: 'manual' });
 

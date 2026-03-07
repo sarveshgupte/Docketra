@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
+import { STRONG_PASSWORD_MESSAGE, validateStrongPassword } from '../../utils/validators';
 
 const inputClass =
   'w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition-colors duration-150 focus:border-gray-900 focus:shadow-[0_0_0_3px_rgba(17,24,39,0.08)] bg-white';
@@ -35,7 +36,7 @@ export default function Signup() {
     phone: '',
   });
   const [signupEmail, setSignupEmail] = useState('');
-  const [loginRedirectPath, setLoginRedirectPath] = useState('/login');
+  const [loginRedirectPath, setLoginRedirectPath] = useState('/signup');
   const [otpDigits, setOtpDigits] = useState(Array(OTP_LENGTH).fill(''));
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
@@ -96,8 +97,8 @@ export default function Signup() {
     if (!form.firmName.trim()) nextErrors.firmName = 'Firm name is required';
     if (!form.password) {
       nextErrors.password = 'Password is required';
-    } else if (form.password.length < 8) {
-      nextErrors.password = 'Password must be at least 8 characters';
+    } else if (!validateStrongPassword(form.password)) {
+      nextErrors.password = STRONG_PASSWORD_MESSAGE;
     }
     if (!phonePattern.test(form.phone)) {
       nextErrors.phone = 'Phone number must be 10 digits';
@@ -153,7 +154,7 @@ export default function Signup() {
         && !redirectPathFromApi.startsWith('//')
         && !/^[a-zA-Z][a-zA-Z0-9+\-.]*:/.test(redirectPathFromApi)
         ? redirectPathFromApi
-        : (firmSlug ? `/${firmSlug}/login` : '/login');
+        : (firmSlug ? `/${firmSlug}/login` : (loginRedirectPath.startsWith('/') ? loginRedirectPath : '/signup'));
       setLoginRedirectPath(safeRedirectPath);
       setStep('success');
       setApiMessage('');
@@ -375,10 +376,11 @@ export default function Signup() {
                   maxLength={10}
                   required
                 />
-                <p className="mt-1 text-xs text-gray-500">Enter a 10-digit Indian mobile number</p>
-                {errors.phone && <p className="mt-1 text-xs text-red-600">{errors.phone}</p>}
-              </div>
-              <button
+                 <p className="mt-1 text-xs text-gray-500">Enter a 10-digit Indian mobile number</p>
+                 {errors.phone && <p className="mt-1 text-xs text-red-600">{errors.phone}</p>}
+               </div>
+               <p className="text-xs text-gray-500">{STRONG_PASSWORD_MESSAGE}</p>
+               <button
                 type="submit"
                 disabled={loading}
                 className="marketing-btn-primary inline-flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"

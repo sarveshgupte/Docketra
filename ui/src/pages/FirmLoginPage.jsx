@@ -295,7 +295,7 @@ export const FirmLoginPage = () => {
         </form>
 
         <div className="login-footer">
-          <Link to="/forgot-password" className="link">
+          <Link to={`/${firmSlug}/forgot-password`} className="link">
             Forgot Password?
           </Link>
         </div>

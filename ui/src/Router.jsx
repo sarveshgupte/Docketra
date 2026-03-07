@@ -134,6 +134,7 @@ export const Router = () => {
         <Route element={<RouteSuspenseOutlet />}>
           <Route path="/signup" element={<MarketingSignupPage />} />
           <Route path="/:firmSlug/login" element={<FirmLoginPage />} />
+          <Route path="/:firmSlug/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/change-password" element={<ChangePasswordPage />} />

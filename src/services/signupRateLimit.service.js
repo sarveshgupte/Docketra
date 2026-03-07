@@ -6,6 +6,8 @@ const INITIATE_PER_IP_LIMIT = 5;
 const INITIATE_PER_EMAIL_LIMIT = 3;
 const VERIFY_MAX_ATTEMPTS = 5;
 const OTP_BLOCK_SECONDS = 15 * 60;
+const RESEND_PER_IP_LIMIT = 10;
+const RESEND_PER_EMAIL_LIMIT = 5;
 
 const rateLimitScript = `
 local key = KEYS[1]
@@ -51,8 +53,9 @@ return attempts
 
 const getSignupIpRateLimitKey = (ip) => `docketra:ratelimit:signup:ip:${hashIdentifier(ip)}`;
 const getSignupEmailRateLimitKey = (email) => `docketra:ratelimit:signup:email:${hashIdentifier(email)}`;
-const getOtpAttemptKey = (identifier) => `docketra:otp:attempts:${hashIdentifier(identifier)}`;
-const getOtpBlockKey = (identifier) => `docketra:otp:block:${hashIdentifier(identifier)}`;
+const getOtpAttemptKey = (scope, identifier) => `docketra:otp:attempts:${scope}:${hashIdentifier(identifier)}`;
+const getOtpBlockKey = (scope, identifier) => `docketra:otp:block:${scope}:${hashIdentifier(identifier)}`;
+const getOtpResendRateLimitKey = (scope, identifier) => `docketra:otp:resend:${scope}:${hashIdentifier(identifier)}`;
 
 const inMemoryCounters = new Map();
 
@@ -114,14 +117,13 @@ const consumeSignupQuota = async ({ email, ip }) => {
   return { allowed: true };
 };
 
-const consumeOtpAttempt = async ({ email }) => {
-  const normalizedEmail = String(email || '').toLowerCase().trim();
-  const key = getOtpAttemptKey(normalizedEmail);
-  const blockKey = getOtpBlockKey(normalizedEmail);
+const consumeOtpAttemptCounter = async ({ scope, identifier }) => {
+  const key = getOtpAttemptKey(scope, identifier);
+  const blockKey = getOtpBlockKey(scope, identifier);
   const redis = getRedisClient();
 
   if (!redis) {
-    const counter = await incrementMemoryCounter(key, WINDOW_SECONDS);
+    const counter = await incrementMemoryCounter(key, OTP_BLOCK_SECONDS);
     if (counter.count > VERIFY_MAX_ATTEMPTS) {
       return { allowed: false, retryAfter: counter.retryAfter, attempts: counter.count };
     }
@@ -144,24 +146,63 @@ const consumeOtpAttempt = async ({ email }) => {
   return { allowed: true, attempts };
 };
 
-const clearOtpAttempts = async ({ email }) => {
+const consumeOtpAttempt = async ({ email, ip }) => {
   const normalizedEmail = String(email || '').toLowerCase().trim();
-  const key = getOtpAttemptKey(normalizedEmail);
-  const blockKey = getOtpBlockKey(normalizedEmail);
+  const normalizedIp = String(ip || 'unknown').trim();
+  const [emailAttempt, ipAttempt] = await Promise.all([
+    consumeOtpAttemptCounter({ scope: 'email', identifier: normalizedEmail }),
+    consumeOtpAttemptCounter({ scope: 'ip', identifier: normalizedIp }),
+  ]);
+  return {
+    allowed: emailAttempt.allowed && ipAttempt.allowed,
+    attempts: Math.max(emailAttempt.attempts || 0, ipAttempt.attempts || 0),
+  };
+};
+
+const consumeOtpResendQuota = async ({ email, ip }) => {
+  const normalizedEmail = String(email || '').toLowerCase().trim();
+  const normalizedIp = String(ip || 'unknown').trim();
+
+  const [ipCounter, emailCounter] = await Promise.all([
+    applyRedisRateLimit(getOtpResendRateLimitKey('ip', normalizedIp), RESEND_PER_IP_LIMIT, WINDOW_SECONDS),
+    applyRedisRateLimit(getOtpResendRateLimitKey('email', normalizedEmail), RESEND_PER_EMAIL_LIMIT, WINDOW_SECONDS),
+  ]);
+
+  if (!ipCounter.allowed || !emailCounter.allowed) {
+    return {
+      allowed: false,
+      retryAfter: Math.max(ipCounter.retryAfter, emailCounter.retryAfter),
+    };
+  }
+  return { allowed: true };
+};
+
+const clearOtpAttempts = async ({ email, ip }) => {
+  const normalizedEmail = String(email || '').toLowerCase().trim();
+  const normalizedIp = String(ip || 'unknown').trim();
+  const keys = [
+    getOtpAttemptKey('email', normalizedEmail),
+    getOtpBlockKey('email', normalizedEmail),
+    getOtpAttemptKey('ip', normalizedIp),
+    getOtpBlockKey('ip', normalizedIp),
+  ];
   const redis = getRedisClient();
   if (!redis) {
-    inMemoryCounters.delete(key);
-    inMemoryCounters.delete(blockKey);
+    keys.forEach((key) => inMemoryCounters.delete(key));
     return;
   }
-  await redis.del(key, blockKey);
+  await redis.del(...keys);
 };
 
 module.exports = {
   consumeSignupQuota,
   consumeOtpAttempt,
+  consumeOtpResendQuota,
   clearOtpAttempts,
   INITIATE_PER_IP_LIMIT,
   INITIATE_PER_EMAIL_LIMIT,
   VERIFY_MAX_ATTEMPTS,
+  OTP_BLOCK_SECONDS,
+  RESEND_PER_IP_LIMIT,
+  RESEND_PER_EMAIL_LIMIT,
 };

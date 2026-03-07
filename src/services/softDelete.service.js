@@ -150,7 +150,7 @@ const softDelete = async ({ model, filter, req, reason }) => {
 
 const ensureParentsActive = async (modelName, doc, session) => {
   if (modelName === 'Case' && doc.clientId) {
-    const parentClientQuery = Client.findOne({ clientId: doc.clientId });
+    const parentClientQuery = Client.findOne({ clientId: doc.clientId, firmId: doc.firmId });
     parentClientQuery.includeDeleted();
     if (session && parentClientQuery.session) parentClientQuery.session(session);
     const parentClient = await parentClientQuery.exec();

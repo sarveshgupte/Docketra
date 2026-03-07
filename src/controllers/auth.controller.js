@@ -15,6 +15,7 @@ const signupService = require('../services/signup.service');
 const jwtService = require('../services/jwt.service');
 const { isSuperAdminRole } = require('../utils/role.utils');
 const { normalizeFirmSlug } = require('../utils/slugify');
+const { validatePasswordStrength, PASSWORD_POLICY_MESSAGE } = require('../utils/passwordPolicy');
 const { ensureDefaultClientForFirm } = require('../services/defaultClient.service');
 const { resolveUserIdentity } = require('../services/identity.service');
 const { isGoogleAuthDisabled } = require('../services/featureFlags.service');
@@ -1029,6 +1030,12 @@ const changePassword = async (req, res) => {
         message: 'currentPassword and newPassword are required',
       });
     }
+    if (!validatePasswordStrength(newPassword)) {
+      return res.status(400).json({
+        success: false,
+        message: PASSWORD_POLICY_MESSAGE,
+      });
+    }
     
     // Get user from authenticated request
     const user = req.user;
@@ -2031,6 +2038,9 @@ const setupAccount = async (req, res) => {
   if (!token || (!password && !googleId)) {
     return res.status(400).json({ success: false, code: 'SETUP_PAYLOAD_INVALID', message: 'token and password or googleId are required' });
   }
+  if (password && !validatePasswordStrength(password)) {
+    return res.status(400).json({ success: false, code: 'PASSWORD_POLICY_VIOLATION', message: PASSWORD_POLICY_MESSAGE });
+  }
 
   const now = new Date();
   const setupTokenHash = emailService.hashToken(token);
@@ -2186,6 +2196,12 @@ const resetPasswordWithToken = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Token and password are required',
+      });
+    }
+    if (!validatePasswordStrength(password)) {
+      return res.status(400).json({
+        success: false,
+        message: PASSWORD_POLICY_MESSAGE,
       });
     }
     
@@ -2584,7 +2600,7 @@ const unlockAccount = async (req, res) => {
  */
 const forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, firmSlug } = req.body;
     
     if (!email) {
       return res.status(400).json({
@@ -2594,7 +2610,22 @@ const forgotPassword = async (req, res) => {
     }
     
     const normalizedEmail = email.trim().toLowerCase();
-    const resolvedFirmId = req.firmId || null;
+    const normalizedFirmSlug = normalizeFirmSlug(firmSlug);
+    let resolvedFirmId = req.firmId || null;
+
+    if (!resolvedFirmId && normalizedFirmSlug) {
+      const firm = await Firm.findOne({ firmSlug: normalizedFirmSlug }).select('_id firmSlug').lean();
+      if (!firm) {
+        return res.status(404).json({
+          success: false,
+          error: 'Firm not found. Please check your firm login URL.',
+          message: 'Firm not found. Please check your firm login URL.',
+        });
+      }
+      resolvedFirmId = String(firm._id);
+      req.firmId = resolvedFirmId;
+      req.firmSlug = firm.firmSlug;
+    }
 
     // Find user by firm-scoped email where possible (exclude soft-deleted users)
     // Falls back to non-firm context for legacy callers.
@@ -2613,6 +2644,11 @@ const forgotPassword = async (req, res) => {
         .limit(2);
       if (candidateUsers.length > 1) {
         console.warn(`[AUTH] Forgot password email is ambiguous across firms: ${emailService.maskEmail(normalizedEmail)}`);
+        return res.status(400).json({
+          success: false,
+          error: 'Multiple firms found. Please use your firm login URL.',
+          message: 'Multiple firms found. Please use your firm login URL.',
+        });
       }
       user = candidateUsers.length === 1 ? candidateUsers[0] : null;
     }
