@@ -51,8 +51,6 @@ const INVITE_TOKEN_EXPIRY_HOURS = 48; // 48 hours for invite tokens (per PR 32 r
 const PASSWORD_SETUP_TOKEN_EXPIRY_HOURS = 24; // 24 hours for password reset tokens
 const FORGOT_PASSWORD_TOKEN_EXPIRY_MINUTES = 30; // 30 minutes for forgot password tokens
 const PRE_AUTH_TOKEN_EXPIRY = '5m';
-const LOGIN_OTP_EXPIRY_MINUTES = 5;
-const LOGIN_OTP_MAX_ATTEMPTS = 5;
 const DEFAULT_FIRM_ID = 'PLATFORM'; // Default firmId for SUPER_ADMIN and audit logging
 const DEFAULT_XID = 'SUPERADMIN'; // Default xID for SUPER_ADMIN in audit logs
 const GOOGLE_SCOPES = ['openid', 'email'];
@@ -67,7 +65,37 @@ const log = require('../utils/log');
 const logger = log;
 const { safeLogForensicAudit, getRequestIp, getRequestUserAgent } = require('../services/forensicAudit.service');
 
+const getLoginOtpConfig = () => (
+  process.env.NODE_ENV === 'production'
+    ? {
+        expiryMinutes: 10,
+        maxAttempts: 5,
+        lockMinutes: 10,
+        resendCooldownSeconds: 30,
+        maxResends: 5,
+      }
+    : {
+        expiryMinutes: 60,
+        maxAttempts: 50,
+        lockMinutes: 1,
+        resendCooldownSeconds: 3,
+        maxResends: 100,
+      }
+);
+
 const getTwoFactorSecret = (user) => decryptProtectedValue(user?.twoFactorSecret);
+
+const logLoginOtpEvent = (event, req, user, metadata = {}) => {
+  log.info(event, {
+    req,
+    userId: user?._id || null,
+    userXID: user?.xID || null,
+    email: user?.email || null,
+    firmId: user?.firmId || null,
+    firmSlug: req?.params?.firmSlug || req?.firmSlug || metadata.firmSlug || null,
+    ...metadata,
+  });
+};
 
 const persistLastSuccessfulLogin = async (req, user) => {
   if (!user) return;
@@ -260,6 +288,8 @@ const clearLoginOtpState = (user) => {
   user.loginOtpExpiresAt = null;
   user.loginOtpAttempts = 0;
   user.loginOtpLastSentAt = null;
+  user.loginOtpResendCount = 0;
+  user.loginOtpLockedUntil = null;
 };
 
 const persistLoginOtpState = async (user) => {
@@ -279,10 +309,41 @@ const persistLoginOtpState = async (user) => {
           loginOtpExpiresAt: user.loginOtpExpiresAt || null,
           loginOtpAttempts: user.loginOtpAttempts || 0,
           loginOtpLastSentAt: user.loginOtpLastSentAt || null,
+          loginOtpResendCount: user.loginOtpResendCount || 0,
+          loginOtpLockedUntil: user.loginOtpLockedUntil || null,
         },
       }
     );
   }
+};
+
+const getLoginOtpLockSeconds = (user) => {
+  const lockUntil = user?.loginOtpLockedUntil instanceof Date
+    ? user.loginOtpLockedUntil
+    : user?.loginOtpLockedUntil
+      ? new Date(user.loginOtpLockedUntil)
+      : null;
+
+  if (!lockUntil || Number.isNaN(lockUntil.getTime())) {
+    return 0;
+  }
+
+  return Math.max(0, Math.ceil((lockUntil.getTime() - Date.now()) / 1000));
+};
+
+const clearExpiredLoginOtpLock = async (user) => {
+  if (!user?.loginOtpLockedUntil) {
+    return;
+  }
+
+  const lockSeconds = getLoginOtpLockSeconds(user);
+  if (lockSeconds > 0) {
+    return;
+  }
+
+  user.loginOtpLockedUntil = null;
+  user.loginOtpAttempts = 0;
+  await persistLoginOtpState(user);
 };
 
 /**
@@ -378,15 +439,25 @@ const buildTokenResponse = async (user, req, authMethod = 'Password') => {
   return { accessToken, refreshToken, firmSlug };
 };
 
-const sendLoginOtpChallenge = async (req, user) => {
+const sendLoginOtpChallenge = async (req, user, { isResend = false, returnLoginToken = true } = {}) => {
+  const otpConfig = getLoginOtpConfig();
   const otp = generateLoginOtp();
+  logLoginOtpEvent('OTP_GENERATED', req, user, {
+    expiryMinutes: otpConfig.expiryMinutes,
+    resend: isResend,
+  });
+
   const otpHash = await bcrypt.hash(otp, SALT_ROUNDS);
-  const otpExpiresAt = new Date(Date.now() + LOGIN_OTP_EXPIRY_MINUTES * 60 * 1000);
+  const otpExpiresAt = new Date(Date.now() + otpConfig.expiryMinutes * 60 * 1000);
 
   user.loginOtpHash = otpHash;
   user.loginOtpExpiresAt = otpExpiresAt;
   user.loginOtpAttempts = 0;
   user.loginOtpLastSentAt = new Date();
+  user.loginOtpLockedUntil = null;
+  user.loginOtpResendCount = isResend
+    ? Number(user.loginOtpResendCount || 0) + 1
+    : 0;
   await persistLoginOtpState(user);
 
   try {
@@ -396,7 +467,12 @@ const sendLoginOtpChallenge = async (req, user) => {
       otp,
       firmName: req.firmName || req.firm?.name || null,
       firmSlug: req.params?.firmSlug || req.firmSlug || null,
-      expiryMinutes: LOGIN_OTP_EXPIRY_MINUTES,
+      expiryMinutes: otpConfig.expiryMinutes,
+    });
+    logLoginOtpEvent('OTP_EMAIL_SENT', req, user, {
+      expiryMinutes: otpConfig.expiryMinutes,
+      resend: isResend,
+      resendCount: user.loginOtpResendCount || 0,
     });
   } catch (error) {
     clearLoginOtpState(user);
@@ -416,11 +492,17 @@ const sendLoginOtpChallenge = async (req, user) => {
     metadata: {
       eventType: 'OTP_SENT',
       firmSlug: req.params?.firmSlug || req.firmSlug || null,
-      expiresInMinutes: LOGIN_OTP_EXPIRY_MINUTES,
+      expiresInMinutes: otpConfig.expiryMinutes,
       email: user.email || null,
+      resend: isResend,
+      resendCount: user.loginOtpResendCount || 0,
       timestamp: new Date().toISOString(),
     },
   }, req);
+
+  if (!returnLoginToken) {
+    return null;
+  }
 
   return createLoginOtpToken({
     userId: user._id.toString(),
@@ -429,6 +511,29 @@ const sendLoginOtpChallenge = async (req, user) => {
     role: user.role,
     loginStage: 'email-otp',
   });
+};
+
+const findTenantUserForOtp = async ({ xID, firmSlug }) => {
+  const normalizedXID = String(xID || '').trim().toUpperCase();
+  const normalizedFirmSlug = normalizeFirmSlug(firmSlug);
+
+  if (!normalizedXID || !normalizedFirmSlug) {
+    return { user: null, firm: null, normalizedXID, normalizedFirmSlug };
+  }
+
+  const firm = await Firm.findOne({ firmSlug: normalizedFirmSlug, status: 'active' });
+  if (!firm?._id) {
+    return { user: null, firm: null, normalizedXID, normalizedFirmSlug };
+  }
+
+  const user = await User.findOne({
+    firmId: firm._id,
+    xID: normalizedXID,
+    status: 'active',
+    isActive: true,
+  });
+
+  return { user, firm, normalizedXID, normalizedFirmSlug };
 };
 
 const buildSuccessfulLoginPayload = async (req, user, { authMethod = 'Email OTP', resource = 'auth/verify-otp', mfaRequired = true } = {}) => {
@@ -993,10 +1098,12 @@ const login = async (req, res) => {
     
     try {
       const loginToken = await sendLoginOtpChallenge(req, user);
+      const otpConfig = getLoginOtpConfig();
       return res.json({
         success: true,
         otpRequired: true,
         loginToken,
+        resendCooldownSeconds: otpConfig.resendCooldownSeconds,
       });
     } catch (otpError) {
       console.error('[AUTH] Failed to send login OTP email:', otpError.message);
@@ -1015,8 +1122,89 @@ const login = async (req, res) => {
   }
 };
 
+const resendLoginOtp = async (req, res) => {
+  try {
+    const otpConfig = getLoginOtpConfig();
+    const requestedFirmSlug = req.body?.firmSlug || req.params?.firmSlug || req.firmSlug || null;
+    const requestedXID = req.body?.xid || req.body?.xID || req.body?.XID || null;
+    const { user, firm, normalizedXID, normalizedFirmSlug } = await findTenantUserForOtp({
+      xID: requestedXID,
+      firmSlug: requestedFirmSlug,
+    });
+
+    log.info('OTP_RESEND_REQUESTED', {
+      req,
+      userXID: normalizedXID || null,
+      firmSlug: normalizedFirmSlug,
+    });
+
+    if (!user || !firm) {
+      return res.json({
+        success: true,
+        message: 'OTP resent successfully',
+        resendCooldownSeconds: otpConfig.resendCooldownSeconds,
+      });
+    }
+
+    req.firmId = req.firmId || firm._id;
+    req.firmSlug = req.firmSlug || firm.firmSlug;
+    req.firmName = req.firmName || firm.name || null;
+    req.firm = req.firm || firm;
+
+    await clearExpiredLoginOtpLock(user);
+
+    const activeLockSeconds = getLoginOtpLockSeconds(user);
+    if (activeLockSeconds > 0) {
+      logLoginOtpEvent('OTP_LOCKED', req, user, {
+        retryAfter: activeLockSeconds,
+        reason: 'verify_lock_active',
+      });
+      return res.status(429).json({
+        success: false,
+        error: 'Too many attempts. Try again later.',
+        message: 'Too many attempts. Try again later.',
+        retryAfter: activeLockSeconds,
+      });
+    }
+
+    const lastSentAtMs = user.loginOtpLastSentAt ? new Date(user.loginOtpLastSentAt).getTime() : 0;
+    const resendCooldownEndsAt = lastSentAtMs + (otpConfig.resendCooldownSeconds * 1000);
+    const retryAfter = Math.max(0, Math.ceil((resendCooldownEndsAt - Date.now()) / 1000));
+    if (retryAfter > 0) {
+      return res.status(429).json({
+        success: false,
+        message: `Please wait ${retryAfter} seconds before requesting another OTP.`,
+        retryAfter,
+      });
+    }
+
+    if (Number(user.loginOtpResendCount || 0) >= otpConfig.maxResends) {
+      return res.status(429).json({
+        success: false,
+        error: 'Too many attempts. Try again later.',
+        message: 'Too many attempts. Try again later.',
+      });
+    }
+
+    await sendLoginOtpChallenge(req, user, { isResend: true, returnLoginToken: false });
+
+    return res.json({
+      success: true,
+      message: 'OTP resent successfully',
+      resendCooldownSeconds: otpConfig.resendCooldownSeconds,
+    });
+  } catch (error) {
+    console.error('[AUTH] Resend OTP error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Unable to resend OTP right now. Please try again.',
+    });
+  }
+};
+
 const verifyLoginOtp = async (req, res) => {
   try {
+    const otpConfig = getLoginOtpConfig();
     const requestedFirmSlug = req.params?.firmSlug || req.firmSlug || null;
     const otp = String(req.body?.otp || '').trim();
     const loginToken = String(req.body?.loginToken || '').trim();
@@ -1087,33 +1275,68 @@ const verifyLoginOtp = async (req, res) => {
       });
     }
 
+    await clearExpiredLoginOtpLock(user);
+
+    const activeLockSeconds = getLoginOtpLockSeconds(user);
+    if (activeLockSeconds > 0) {
+      logLoginOtpEvent('OTP_LOCKED', req, user, {
+        retryAfter: activeLockSeconds,
+        reason: 'verify_lock_active',
+      });
+      return res.status(429).json({
+        success: false,
+        error: 'Too many attempts. Try again later.',
+        message: 'Too many attempts. Try again later.',
+        retryAfter: activeLockSeconds,
+      });
+    }
+
     if (!user.loginOtpHash || !user.loginOtpExpiresAt || user.loginOtpExpiresAt.getTime() < Date.now()) {
       clearLoginOtpState(user);
       await persistLoginOtpState(user);
       return res.status(401).json({
         success: false,
-        message: 'OTP has expired. Please log in again.',
+        message: 'OTP expired. Please request a new one.',
       });
     }
 
     const currentAttempts = Number(user.loginOtpAttempts || 0);
-    if (currentAttempts >= LOGIN_OTP_MAX_ATTEMPTS) {
-      clearLoginOtpState(user);
+    if (currentAttempts >= otpConfig.maxAttempts) {
+      user.loginOtpLockedUntil = new Date(Date.now() + (otpConfig.lockMinutes * 60 * 1000));
       await persistLoginOtpState(user);
+      logLoginOtpEvent('OTP_LOCKED', req, user, {
+        retryAfter: getLoginOtpLockSeconds(user),
+        reason: 'attempts_exhausted_before_verify',
+      });
       return res.status(429).json({
         success: false,
-        message: 'Too many invalid OTP attempts. Please log in again.',
+        error: 'Too many attempts. Try again later.',
+        message: 'Too many attempts. Try again later.',
+        retryAfter: getLoginOtpLockSeconds(user),
       });
     }
 
     const isValidOtp = await bcrypt.compare(otp, user.loginOtpHash);
     if (!isValidOtp) {
       user.loginOtpAttempts = currentAttempts + 1;
-      const exhaustedAttempts = user.loginOtpAttempts >= LOGIN_OTP_MAX_ATTEMPTS;
+      const exhaustedAttempts = user.loginOtpAttempts >= otpConfig.maxAttempts;
       if (exhaustedAttempts) {
-        clearLoginOtpState(user);
+        user.loginOtpLockedUntil = new Date(Date.now() + (otpConfig.lockMinutes * 60 * 1000));
       }
       await persistLoginOtpState(user);
+      logLoginOtpEvent('OTP_FAILED_ATTEMPT', req, user, {
+        attempts: user.loginOtpAttempts,
+        maxAttempts: otpConfig.maxAttempts,
+        remainingAttempts: exhaustedAttempts
+          ? 0
+          : Math.max(0, otpConfig.maxAttempts - user.loginOtpAttempts),
+      });
+      if (exhaustedAttempts) {
+        logLoginOtpEvent('OTP_LOCKED', req, user, {
+          retryAfter: getLoginOtpLockSeconds(user),
+          reason: 'attempt_limit_reached',
+        });
+      }
 
       try {
         await logAuthAudit({
@@ -1144,17 +1367,20 @@ const verifyLoginOtp = async (req, res) => {
 
       return res.status(exhaustedAttempts ? 429 : 401).json({
         success: false,
+        error: exhaustedAttempts ? 'Too many attempts. Try again later.' : undefined,
         message: exhaustedAttempts
-          ? 'Too many invalid OTP attempts. Please log in again.'
-          : 'Invalid verification code',
+          ? 'Too many attempts. Try again later.'
+          : 'Invalid OTP. Please try again.',
         remainingAttempts: exhaustedAttempts
           ? 0
-          : Math.max(0, LOGIN_OTP_MAX_ATTEMPTS - user.loginOtpAttempts),
+          : Math.max(0, otpConfig.maxAttempts - user.loginOtpAttempts),
+        retryAfter: exhaustedAttempts ? getLoginOtpLockSeconds(user) : undefined,
       });
     }
 
     clearLoginOtpState(user);
     await persistLoginOtpState(user);
+    logLoginOtpEvent('OTP_VERIFIED', req, user);
 
     try {
       await logAuthAudit({
@@ -3759,6 +3985,7 @@ module.exports = {
   setupAccount: wrapWriteHandler(setupAccount),
   resendSetup: wrapWriteHandler(resendSetup),
   resendCredentials: wrapWriteHandler(resendCredentials),
+  resendLoginOtp: wrapWriteHandler(resendLoginOtp),
   resetPasswordWithToken: wrapWriteHandler(resetPasswordWithToken),
   // resendSetupEmail - REMOVED: Deprecated in PR #48, use admin.controller.resendInviteEmail instead
   updateUserStatus: wrapWriteHandler(updateUserStatus),

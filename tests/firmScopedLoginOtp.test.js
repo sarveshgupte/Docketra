@@ -170,11 +170,14 @@ async function shouldRequireEmailOtpForFirmScopedLogin() {
   assert.strictEqual(body.success, true, 'Password login should succeed when OTP is required');
   assert.strictEqual(body.otpRequired, true, 'Password login should require OTP');
   assert(body.loginToken, 'Password login should return a temporary login token');
+  assert.strictEqual(body.resendCooldownSeconds, 3, 'Development login should expose a short OTP resend cooldown');
   assert.strictEqual(body.accessToken, undefined, 'Access token must not be issued before OTP verification');
   assert(/^\d{6}$/.test(deliveredOtp), 'A 6 digit OTP must be sent');
   assert(user.loginOtpHash && user.loginOtpHash !== deliveredOtp, 'OTP must be stored as a hash');
   assert(user.loginOtpExpiresAt instanceof Date, 'OTP expiry must be stored');
   assert.strictEqual(user.loginOtpAttempts, 0, 'OTP attempts must reset when challenge is created');
+  assert.strictEqual(user.loginOtpResendCount, 0, 'Initial OTP should reset resend count');
+  assert.strictEqual(user.loginOtpLockedUntil, null, 'Initial OTP should not be locked');
   const decodedLoginToken = jwt.verify(body.loginToken, 'firm-login-otp-secret');
   assert.strictEqual(decodedLoginToken.userId, '507f1f77bcf86cd799439011');
   assert.strictEqual(decodedLoginToken.firmId, '507f1f77bcf86cd799439022');
@@ -281,7 +284,9 @@ async function shouldVerifyEmailOtpAndIssueTokens() {
 async function shouldBlockAfterMaxInvalidOtpAttempts() {
   const { verifyLoginOtp } = require('../src/controllers/auth.controller');
   const originalJwtSecret = process.env.JWT_SECRET;
+  const originalNodeEnv = process.env.NODE_ENV;
   process.env.JWT_SECRET = 'firm-login-otp-secret';
+  process.env.NODE_ENV = 'production';
 
   const originalUserFindOne = User.findOne;
   const originalAuthAuditCreate = AuthAudit.create;
@@ -339,14 +344,94 @@ async function shouldBlockAfterMaxInvalidOtpAttempts() {
     AuthAudit.create = originalAuthAuditCreate;
     AuditLog.create = originalAuditLogCreate;
     process.env.JWT_SECRET = originalJwtSecret;
+    process.env.NODE_ENV = originalNodeEnv;
   }
 
   assert.strictEqual(res.statusCode, 429, 'Fifth invalid OTP attempt should be rate limited');
   assert.strictEqual(body.success, false, 'Invalid OTP should fail');
   assert.strictEqual(body.remainingAttempts, 0, 'No attempts should remain after the fifth invalid OTP');
-  assert.strictEqual(user.loginOtpHash, null, 'OTP hash should be cleared after max invalid attempts');
-  assert.strictEqual(user.loginOtpExpiresAt, null, 'OTP expiry should be cleared after max invalid attempts');
-  assert.strictEqual(user.loginOtpAttempts, 0, 'OTP attempt counter should reset after max invalid attempts');
+  assert.strictEqual(body.error, 'Too many attempts. Try again later.', 'Rate limit response should use the secure OTP lock message');
+  assert(user.loginOtpHash, 'OTP hash should remain present while the lock is active');
+  assert(user.loginOtpExpiresAt instanceof Date, 'OTP expiry should remain present while the lock is active');
+  assert.strictEqual(user.loginOtpAttempts, 5, 'OTP attempt counter should increment to the configured production max');
+  assert(user.loginOtpLockedUntil instanceof Date, 'OTP flow should record when the user is locked out');
+}
+
+async function shouldResendOtpWithDevelopmentCooldown() {
+  const { resendLoginOtp } = require('../src/controllers/auth.controller');
+  const originalNodeEnv = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'development';
+
+  const originalUserFindOne = User.findOne;
+  const originalFirmFindOne = Firm.findOne;
+  const originalAuthAuditCreate = AuthAudit.create;
+  const originalAuditLogCreate = AuditLog.create;
+  const originalSendLoginOtpEmail = emailService.sendLoginOtpEmail;
+
+  const user = {
+    _id: { toString: () => '507f1f77bcf86cd799439011' },
+    xID: 'X000001',
+    name: 'Tenant User',
+    email: 'tenant@example.com',
+    role: 'Admin',
+    firmId: '507f1f77bcf86cd799439022',
+    status: 'active',
+    isActive: true,
+    loginOtpHash: await bcrypt.hash('654321', 4),
+    loginOtpExpiresAt: new Date(Date.now() + 5 * 60 * 1000),
+    loginOtpAttempts: 4,
+    loginOtpResendCount: 2,
+    loginOtpLastSentAt: new Date(Date.now() - 10 * 1000),
+    loginOtpLockedUntil: new Date(Date.now() - 2 * 1000),
+    save: async () => {},
+  };
+
+  let deliveredOtp = null;
+
+  User.findOne = async () => user;
+  Firm.findOne = async () => ({
+    _id: '507f1f77bcf86cd799439022',
+    firmSlug: 'firm-a',
+    name: 'Firm A',
+    status: 'active',
+  });
+  AuthAudit.create = async () => ({});
+  AuditLog.create = async () => ({});
+  emailService.sendLoginOtpEmail = async ({ otp }) => {
+    deliveredOtp = otp;
+    return { success: true };
+  };
+
+  const { res, body } = createMockRes();
+
+  try {
+    await resendLoginOtp(
+      {
+        body: { xID: 'X000001', firmSlug: 'firm-a' },
+        skipTransaction: true,
+        ip: '127.0.0.1',
+        get: () => 'agent',
+      },
+      res,
+      () => {}
+    );
+  } finally {
+    User.findOne = originalUserFindOne;
+    Firm.findOne = originalFirmFindOne;
+    AuthAudit.create = originalAuthAuditCreate;
+    AuditLog.create = originalAuditLogCreate;
+    emailService.sendLoginOtpEmail = originalSendLoginOtpEmail;
+    process.env.NODE_ENV = originalNodeEnv;
+  }
+
+  assert.strictEqual(body.success, true, 'OTP resend should succeed for a valid tenant user');
+  assert.strictEqual(body.message, 'OTP resent successfully');
+  assert.strictEqual(body.resendCooldownSeconds, 3, 'Development resend should return the short cooldown');
+  assert(/^\d{6}$/.test(deliveredOtp), 'Resend should send a fresh 6 digit OTP');
+  assert(user.loginOtpHash && user.loginOtpHash !== deliveredOtp, 'Resent OTP must be stored hashed');
+  assert.strictEqual(user.loginOtpAttempts, 0, 'Resend should reset OTP attempts');
+  assert.strictEqual(user.loginOtpResendCount, 3, 'Resend should increment resend count');
+  assert.strictEqual(user.loginOtpLockedUntil, null, 'Resend should clear an expired OTP lock');
 }
 
 async function run() {
@@ -355,6 +440,7 @@ async function run() {
     await shouldRequireEmailOtpForFirmScopedLogin();
     await shouldVerifyEmailOtpAndIssueTokens();
     await shouldBlockAfterMaxInvalidOtpAttempts();
+    await shouldResendOtpWithDevelopmentCooldown();
     console.log('Firm-scoped login OTP tests passed.');
   } catch (error) {
     console.error('Firm-scoped login OTP tests failed:', error);
