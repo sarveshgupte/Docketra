@@ -299,6 +299,9 @@ export const Layout = ({ children }) => {
 
   return (
     <div className="enterprise-layout">
+      <a className="enterprise-skip-link" href="#main-content">
+        Skip to main content
+      </a>
       {/* Sidebar */}
       <aside
         className={[
