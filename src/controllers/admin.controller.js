@@ -53,6 +53,15 @@ const safeAuditLog = async (auditData) => {
   }
 };
 
+const resetUserToInvitedState = (user, { tokenHash, tokenExpiry, inviteSentAt }) => {
+  user.inviteTokenHash = tokenHash;
+  user.inviteTokenExpiry = tokenExpiry;
+  user.inviteSentAt = inviteSentAt || new Date();
+  user.mustSetPassword = true;
+  user.status = 'invited';
+  user.isActive = false;
+};
+
 /**
  * Get admin dashboard statistics
  * GET /api/admin/stats
@@ -194,12 +203,11 @@ const resendInviteEmail = async (req, res) => {
     const tokenExpiry = new Date(Date.now() + INVITE_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000);
     
     // Update token and inviteSentAt timestamp
-    user.inviteTokenHash = tokenHash;
-    user.inviteTokenExpiry = tokenExpiry;
-    user.inviteSentAt = new Date();
-    user.mustSetPassword = true;
-    user.status = 'invited';
-    user.isActive = false;
+    resetUserToInvitedState(user, {
+      tokenHash,
+      tokenExpiry,
+      inviteSentAt: new Date(),
+    });
     await user.save();
     log.info('ADMIN_INVITE_RECORD_UPDATED', {
       req,

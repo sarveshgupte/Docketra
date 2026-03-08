@@ -31,6 +31,7 @@ const EMPTY_ADMIN_STATS = {
 };
 
 const TOAST_DEDUPLICATION_WINDOW_MS = 1500;
+const EMPTY_FIELD_PLACEHOLDER = '—';
 
 const getApiErrorType = (error) => {
   if (!error?.response) return 'network';
@@ -390,11 +391,11 @@ export const AdminPage = () => {
 
   const handleToggleUserStatus = async (user) => {
     const isInvited = user.status === 'invited';
-    const newStatus = isInvited ? false : user.status !== 'active';
-    const action = isInvited ? 'cancel invite for' : (newStatus ? 'activate' : 'deactivate');
+    const shouldActivate = isInvited ? false : user.status !== 'active';
+    const action = isInvited ? 'cancel invite for' : (shouldActivate ? 'activate' : 'deactivate');
 
     try {
-      const response = await adminService.updateUserStatus(user.xID, newStatus);
+      const response = await adminService.updateUserStatus(user.xID, shouldActivate);
       
       if (response.success) {
         showToast(isInvited ? 'Invite cancelled successfully' : `User ${action}d successfully`, 'success');
@@ -976,7 +977,7 @@ export const AdminPage = () => {
                     return (
                     <tr key={user.xID}>
                       <td>{user.xID}</td>
-                      <td>{user.name || '—'}</td>
+                      <td>{user.name || EMPTY_FIELD_PLACEHOLDER}</td>
                       <td>{user.email}</td>
                       <td>
                         {isPrimaryOrSystemAdmin ? (
@@ -1361,7 +1362,7 @@ export const AdminPage = () => {
                     {pendingInvites.map((invite) => (
                       <tr key={invite.xID}>
                         <td>{invite.xID}</td>
-                        <td>{invite.name || '—'}</td>
+                        <td>{invite.name || EMPTY_FIELD_PLACEHOLDER}</td>
                         <td>{invite.email}</td>
                         <td>{invite.role}</td>
                         <td><Badge status="Pending">Invited</Badge></td>

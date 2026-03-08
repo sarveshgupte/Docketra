@@ -32,6 +32,7 @@ async function run() {
   let tokenCalls = 0;
   let userSaveCalls = 0;
   let nextError = null;
+  const savedSnapshots = [];
   actualMongoose.startSession = async () => ({
     withTransaction: async (handler) => {
       await handler();
@@ -49,6 +50,11 @@ async function run() {
       MockUser.findOne = async () => null;
       MockUser.prototype.save = async function save() {
         userSaveCalls += 1;
+        savedSnapshots.push({
+          xID: this.xID,
+          inviteTokenHash: this.inviteTokenHash,
+          inviteTokenExpiry: this.inviteTokenExpiry?.toISOString?.() || null,
+        });
         return this;
       };
       return MockUser;
@@ -138,6 +144,7 @@ async function run() {
   assert.strictEqual(xidCalls, 1, 'xID generation should be reused across transaction retries');
   assert.strictEqual(tokenCalls, 1, 'invite token generation should be reused across transaction retries');
   assert.strictEqual(userSaveCalls, 2, 'controller may retry the DB save inside the transaction callback');
+  assert.deepStrictEqual(savedSnapshots[0], savedSnapshots[1], 'retry attempts should reuse the same invite identity state');
   console.log('✓ admin invite flow reuses xID and token generation across transaction retries');
 
   actualMongoose.startSession = originalStartSession;

@@ -13,6 +13,7 @@ const GOOGLE_SCOPE = 'https://www.googleapis.com/auth/drive';
 const ONEDRIVE_SCOPES = ['Files.ReadWrite.All', 'Sites.ReadWrite.All', 'offline_access'];
 const STATE_COOKIE_NAME = 'storage_oauth_state';
 const STATE_TTL_SECONDS = 10 * 60;
+const MANAGED_STORAGE_MODE = 'docketra_managed';
 
 function ensureFirmAdmin(req, res) {
   if (!isAdminRole(req.user?.role)) {
@@ -145,8 +146,8 @@ const getStorageHealth = async (req, res) => {
         .select('storage -_id')
         .lean(),
     ]);
-    const storageMode = firm?.storage?.mode || 'docketra_managed';
-    const usingManagedStorage = storageMode === 'docketra_managed';
+    const storageMode = firm?.storage?.mode || MANAGED_STORAGE_MODE;
+    const usingManagedStorage = storageMode === MANAGED_STORAGE_MODE;
     const defaultStatus = usingManagedStorage || activeConfig ? 'HEALTHY' : 'DISCONNECTED';
     const defaultLastError = usingManagedStorage || activeConfig ? null : 'Active storage configuration not found';
 

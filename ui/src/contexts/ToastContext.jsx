@@ -106,6 +106,8 @@ export const ToastProvider = ({ children }) => {
   );
 };
 
+const TOAST_CONTAINER_TOP_OFFSET = '72px';
+
 const ToastContainer = ({ toasts, removeToast }) => {
   if (toasts.length === 0 || typeof document === 'undefined') return null;
 
@@ -113,7 +115,7 @@ const ToastContainer = ({ toasts, removeToast }) => {
     <div
       style={{
         position: 'fixed',
-        top: '72px',
+        top: TOAST_CONTAINER_TOP_OFFSET,
         right: '24px',
         zIndex: 9999,
         display: 'flex',
