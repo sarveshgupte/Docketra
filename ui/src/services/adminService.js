@@ -17,7 +17,7 @@ export const adminService = {
    * Create new user (Admin only)
    */
   createUser: async (userData) => {
-    const response = await api.post('/auth/admin/users', userData);
+    const response = await api.post('/admin/users', userData);
     return response.data;
   },
 
@@ -26,7 +26,7 @@ export const adminService = {
    */
   getUsers: async (params = {}) => {
     const queryParams = new URLSearchParams(params).toString();
-    const response = await api.get(`/auth/admin/users${queryParams ? '?' + queryParams : ''}`);
+    const response = await api.get(`/admin/users${queryParams ? '?' + queryParams : ''}`);
     return response.data;
   },
 
@@ -34,15 +34,16 @@ export const adminService = {
    * Update user status (Admin only)
    */
   updateUserStatus: async (xID, active) => {
-    const response = await api.patch(`/users/${xID}/status`, { active });
-    return response.data;
+    return active
+      ? adminService.activateUser(xID)
+      : adminService.deactivateUser(xID);
   },
 
   /**
    * Activate user (Admin only)
    */
   activateUser: async (xID) => {
-    const response = await api.put(`/auth/admin/users/${xID}/activate`);
+    const response = await api.put(`/admin/users/${xID}/activate`);
     return response.data;
   },
 
@@ -50,7 +51,7 @@ export const adminService = {
    * Deactivate user (Admin only)
    */
   deactivateUser: async (xID) => {
-    const response = await api.put(`/auth/admin/users/${xID}/deactivate`);
+    const response = await api.put(`/admin/users/${xID}/deactivate`);
     return response.data;
   },
 
