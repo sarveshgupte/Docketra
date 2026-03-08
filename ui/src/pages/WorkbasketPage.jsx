@@ -1,6 +1,6 @@
 /**
  * Workbasket Page (formerly Global Worklist)
- * Displays unassigned cases that can be pulled by users
+ * Displays unassigned dockets that can be pulled by users
  */
 
 import React, { useState, useEffect } from 'react';
@@ -83,11 +83,11 @@ export const WorkbasketPage = () => {
     }
 
     if (selectedCases.length === 0) {
-      showInfo('Please select at least one case to pull.');
+      showInfo('Please select at least one docket to pull.');
       return;
     }
 
-    if (!confirm(`Pull ${selectedCases.length} selected case(s)? This will assign them to you.`)) {
+    if (!confirm(`Pull ${selectedCases.length} selected docket(s)? This will assign them to you.`)) {
       return;
     }
 
@@ -98,8 +98,8 @@ export const WorkbasketPage = () => {
       
       if (response.success) {
         const message = response.pulled < response.requested
-          ? `${response.pulled} of ${response.requested} cases pulled. Some were already assigned.`
-          : `All ${response.pulled} cases pulled successfully!`;
+          ? `${response.pulled} of ${response.requested} dockets pulled. Some were already assigned.`
+          : `All ${response.pulled} dockets pulled successfully!`;
         showInfo(message);
         // Refresh the worklist
         loadGlobalWorklist();
@@ -117,7 +117,7 @@ export const WorkbasketPage = () => {
       return;
     }
 
-    if (!confirm(`Pull case ${caseId}? This will assign it to you.`)) {
+    if (!confirm(`Pull docket ${caseId}? This will assign it to you.`)) {
       return;
     }
 
@@ -127,13 +127,13 @@ export const WorkbasketPage = () => {
       const response = await worklistService.pullCases([caseId]);
       
       if (response.success) {
-        showSuccess('Case pulled successfully.');
+        showSuccess('Docket pulled successfully.');
         // Refresh the worklist
         loadGlobalWorklist();
       }
     } catch (error) {
       if (error.response?.status === 409) {
-        showInfo('Case is no longer available (already assigned).');
+        showInfo('Docket is no longer available (already assigned).');
         loadGlobalWorklist(); // Refresh to remove it
       } else {
         showError(error.response?.data?.message || error.message || 'Failed to pull case');
@@ -184,7 +184,7 @@ export const WorkbasketPage = () => {
       <div className="global-worklist">
         <div className="global-worklist__header">
           <h1>Workbasket</h1>
-          <p className="text-secondary">Pull cases from the unassigned queue</p>
+          <p className="text-secondary">Pull dockets from the unassigned queue</p>
         </div>
 
         <Card>
@@ -278,7 +278,7 @@ export const WorkbasketPage = () => {
               onClick={handleBulkPull}
               disabled={selectedCases.length === 0 || bulkPulling}
             >
-              {bulkPulling ? 'Pulling...' : `Pull Cases (${selectedCases.length})`}
+              {bulkPulling ? 'Pulling...' : `Pull Dockets (${selectedCases.length})`}
             </Button>
             <span className="text-secondary">
               {selectedCases.length} of {cases.length} selected
@@ -300,7 +300,7 @@ export const WorkbasketPage = () => {
                     />
                   </th>
                   <th onClick={() => handleSort('caseId')} style={{ cursor: 'pointer' }}>
-                    Case ID {getSortIcon('caseId')}
+                    Docket ID {getSortIcon('caseId')}
                   </th>
                   <th onClick={() => handleSort('clientId')} style={{ cursor: 'pointer' }}>
                     Client ID {getSortIcon('clientId')}
@@ -322,7 +322,7 @@ export const WorkbasketPage = () => {
                 {cases.length === 0 ? (
                   <tr>
                     <td colSpan="8" style={{ textAlign: 'center', padding: '2rem' }}>
-                      No unassigned cases found. Adjust filters or check back soon.
+                      No unassigned dockets found. Adjust filters or check back soon.
                     </td>
                   </tr>
                 ) : (

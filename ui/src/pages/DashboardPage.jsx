@@ -421,9 +421,9 @@ export const DashboardPage = () => {
           )}
         </div>
 
-        {/* Section 2: Case Workflow Summary */}
+        {/* Section 2: Docket Workflow Summary */}
         <div className="dashboard__section">
-          <h2 className="dashboard__section-title">Case Lifecycle Distribution</h2>
+          <h2 className="dashboard__section-title">Docket Lifecycle Distribution</h2>
           <div className="dashboard__workflow">
             {workflowStatuses.map((item, idx) => (
               <React.Fragment key={item.label}>
@@ -448,14 +448,14 @@ export const DashboardPage = () => {
         <div className="dashboard__section">
           <div className="dashboard__section-header">
             <h2 className="dashboard__section-title">
-               Recent Cases
+               Recent Dockets
             </h2>
             <Button
               variant="outline"
               className="dashboard__view-all-button"
               onClick={handleViewAllCases}
             >
-              View All Cases
+              View All Dockets
             </Button>
           </div>
           <Card>
@@ -473,21 +473,21 @@ export const DashboardPage = () => {
               </div>
             ) : recentCases.length === 0 ? (
               <EmptyState
-                title={isAdmin ? 'No cases yet' : 'No assigned cases yet'}
+                title={isAdmin ? 'No dockets yet' : 'No assigned dockets yet'}
                 description={
                   isAdmin
-                    ? 'Create your first case to start tracking deadlines, ownership, and firm workflow health.'
-                    : 'Once work is assigned to you, your recently updated cases will appear here for quick follow-up.'
+                    ? 'Create your first docket to start tracking deadlines, ownership, and firm workflow health.'
+                    : 'Once work is assigned to you, your recently updated dockets will appear here for quick follow-up.'
                 }
                 actionLabel={UX_COPY.actions.CREATE_CASE}
                 onAction={() => navigate(`/app/firm/${firmSlug}/cases/create`)}
               />
             ) : (
               <div className="dashboard__table-wrap">
-                <table className="neo-table dashboard__recent-cases-table" aria-label="Recent cases">
+                <table className="neo-table dashboard__recent-cases-table" aria-label="Recent dockets">
                   <thead>
                     <tr>
-                      <th>Case Name</th>
+                      <th>Docket Name</th>
                       <th>Category</th>
                       <th>Status</th>
                       <th>Priority</th>

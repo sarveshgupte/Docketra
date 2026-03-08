@@ -212,7 +212,7 @@ export const CaseDetailPage = () => {
         try {
           const response = await caseService.pullCase(caseId);
           if (response.success) {
-            const message = `Case ${caseId} assigned • ${formatDateTime(new Date())}`;
+            const message = `Docket ${caseId} assigned • ${formatDateTime(new Date())}`;
             showSuccess(message);
             setActionConfirmation(message);
             setActionError(null);
@@ -236,7 +236,7 @@ export const CaseDetailPage = () => {
   const handleMoveToGlobal = () => {
     setConfirmModal({
       title: 'Move to Workbasket',
-      description: 'This will remove the current assignment and move the case to the Workbasket. Continue?',
+      description: 'This will remove the current assignment and move the docket to the Workbasket. Continue?',
       confirmText: 'Move to Workbasket',
       onConfirm: async () => {
         setConfirmModal(null);
@@ -244,18 +244,18 @@ export const CaseDetailPage = () => {
         try {
           const response = await caseService.moveCaseToGlobal(caseId);
           if (response.success) {
-            const message = `Case ${caseId} moved to Workbasket • ${formatDateTime(new Date())}`;
+            const message = `Docket ${caseId} moved to Workbasket • ${formatDateTime(new Date())}`;
             showSuccess(message);
             setActionConfirmation(message);
             setActionError(null);
             await loadCase();
           }
         } catch (error) {
-          console.error('Failed to move case to workbasket:', error);
+          console.error('Failed to move docket to workbasket:', error);
           const serverMessage = error.response?.data?.message;
           const errorMessage = serverMessage && typeof serverMessage === 'string'
             ? serverMessage.substring(0, 200)
-            : 'Failed to move case. Please try again.';
+            : 'Failed to move docket. Please try again.';
           showError(errorMessage);
           setActionError({ message: errorMessage, retry: handleMoveToGlobal });
         } finally {
@@ -272,7 +272,7 @@ export const CaseDetailPage = () => {
     try {
       await caseService.addComment(caseId, newComment, user?.email);
       setNewComment('');
-      const message = `Comment added to ${caseId} • ${formatDateTime(new Date())}`;
+      const message = `Comment added to docket ${caseId} • ${formatDateTime(new Date())}`;
       showSuccess(message);
       setActionConfirmation(message);
       setActionError(null);
@@ -326,7 +326,7 @@ export const CaseDetailPage = () => {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-      const message = `Attachment added to ${caseId} • ${formatDateTime(new Date())}`;
+      const message = `Attachment added to docket ${caseId} • ${formatDateTime(new Date())}`;
       showSuccess(message);
       setActionConfirmation(message);
       setActionError(null);
@@ -358,7 +358,7 @@ export const CaseDetailPage = () => {
         try {
           const response = await caseService.fileCase(caseId, fileComment);
           if (response.success) {
-            const message = `Case ${caseId} filed • ${formatDateTime(new Date())}`;
+            const message = `Docket ${caseId} filed • ${formatDateTime(new Date())}`;
             showSuccess(message);
             setActionConfirmation(message);
             setActionError(null);
@@ -416,7 +416,7 @@ export const CaseDetailPage = () => {
         try {
           const response = await caseService.pendCase(caseId, pendComment, pendingUntil);
           if (response.success) {
-            const message = `Case ${caseId} pended • ${formatDateTime(new Date())}`;
+            const message = `Docket ${caseId} pended • ${formatDateTime(new Date())}`;
             showSuccess(message);
             setActionConfirmation(message);
             setActionError(null);
@@ -458,7 +458,7 @@ export const CaseDetailPage = () => {
         try {
           const response = await caseService.resolveCase(caseId, resolveComment);
           if (response.success) {
-            const message = `Case ${caseId} resolved • ${formatDateTime(new Date())}`;
+            const message = `Docket ${caseId} resolved • ${formatDateTime(new Date())}`;
             showSuccess(message);
             setActionConfirmation(message);
             setActionError(null);
@@ -499,7 +499,7 @@ export const CaseDetailPage = () => {
         try {
           const response = await caseService.unpendCase(caseId, unpendComment);
           if (response.success) {
-            const message = `Case ${caseId} unpended • ${formatDateTime(new Date())}`;
+            const message = `Docket ${caseId} unpended • ${formatDateTime(new Date())}`;
             showSuccess(message);
             setActionConfirmation(message);
             setActionError(null);
@@ -559,7 +559,7 @@ export const CaseDetailPage = () => {
     printWindow.document.write(`
       <html>
         <head>
-          <title>Case Summary - ${escapeHtml(caseInfo.caseId || caseId)}</title>
+          <title>Docket Summary - ${escapeHtml(caseInfo.caseId || caseId)}</title>
           <style>
             body { font-family: Arial, sans-serif; margin: 24px; color: #111827; }
             h1 { font-size: 20px; margin-bottom: 4px; }
@@ -572,7 +572,7 @@ export const CaseDetailPage = () => {
         </head>
         <body>
           <h1>${escapeHtml(caseInfo.caseName || caseInfo.title || 'Case')}</h1>
-          <div class="meta">Case ID: ${escapeHtml(caseInfo.caseId || caseId)}</div>
+          <div class="meta">Docket ID: ${escapeHtml(caseInfo.caseId || caseId)}</div>
           <div><strong>Status:</strong> ${escapeHtml(toLifecycleStage(caseInfo.status))}</div>
           <div><strong>SLA Due:</strong> ${escapeHtml(caseInfo.slaDueDate ? formatDateTime(caseInfo.slaDueDate) : 'Not configured')}</div>
           <div><strong>Assigned To:</strong> ${escapeHtml(caseInfo.assignedToName || caseInfo.assignedToXID || 'Unassigned')}</div>
@@ -797,7 +797,14 @@ export const CaseDetailPage = () => {
         {caseInfo.lockStatus?.isLocked &&
           caseInfo.lockStatus.activeUserEmail !== user?.email?.toLowerCase() && (
           <div className="neo-alert neo-alert--warning case-detail__alert">
-            <strong>Case is Currently Locked</strong> — Being worked on by another user since{' '}
+            <strong>Docket {caseInfo.caseId || caseId} is locked</strong>{' '}
+            {(() => {
+              const name = caseInfo.lockStatus.activeUserDisplayName;
+              const xid  = caseInfo.lockStatus.activeUserXID;
+              const who  = name && xid ? `${name} (${xid})` : name || xid || caseInfo.lockStatus.activeUserEmail;
+              return `by ${who}`;
+            })()}
+            {' '}since{' '}
             {formatDateTime(caseInfo.lockStatus.lastActivityAt || caseInfo.lockStatus.lockedAt)}.
           </div>
         )}

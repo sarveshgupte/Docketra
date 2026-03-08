@@ -560,6 +560,15 @@ const caseSchema = new mongoose.Schema({
       lowercase: true,
       trim: true,
     },
+    activeUserXID: {
+      type: String,
+      trim: true,
+      uppercase: true,
+    },
+    activeUserDisplayName: {
+      type: String,
+      trim: true,
+    },
     lockedAt: {
       type: Date,
     },
@@ -782,8 +791,23 @@ caseSchema.pre('validate', async function() {
   
   // Only generate case number if not already set (for new documents)
   if (!this.caseNumber) {
-    const { generateCaseId } = require('../services/caseIdGenerator');
-    this.caseNumber = await generateCaseId(this.firmId);
+    const { generateDocketId, generateCaseId } = require('../services/caseIdGenerator');
+
+    // If a workTypeId is set, look up its prefix and use the new docket ID format
+    if (this.workTypeId) {
+      const WorkType = mongoose.model('WorkType');
+      const wt = await WorkType.findById(this.workTypeId).lean();
+      if (wt && wt.prefix) {
+        // Generate docket ID with work-type prefix.
+        // The unique index on caseNumber enforces uniqueness; callers that encounter
+        // a duplicate-key error should retry with a fresh candidate.
+        this.caseNumber = generateDocketId(this.firmId, wt.prefix);
+      } else {
+        this.caseNumber = await generateCaseId(this.firmId);
+      }
+    } else {
+      this.caseNumber = await generateCaseId(this.firmId);
+    }
   }
   
   // Generate caseName if not set
