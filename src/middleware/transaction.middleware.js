@@ -1,13 +1,17 @@
 const mongoose = require('mongoose');
 const { recordTransactionFailure } = require('../services/transactionMonitor.service');
+const { setSession } = require('../utils/getSession');
 
 const mutatingMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 const transactionMiddleware = async (req, res, next) => {
+  req.transactionCommitted = false;
   if (req?.skipTransaction) {
+    setSession(req, null);
     return next();
   }
   if (!mutatingMethods.has(req.method) && !req.forceTransaction) {
+    setSession(req, null);
     return next();
   }
 
@@ -22,25 +26,12 @@ const transactionMiddleware = async (req, res, next) => {
   }
   if (!session) {
     recordTransactionFailure('unavailable');
-    return res.status(503).json({ success: false, code: 'TRANSACTION_UNAVAILABLE', message: 'Transactional writes are temporarily unavailable.', action: 'retry' });
+    setSession(req, null);
+    req.transactionActive = false;
+    return next();
   }
 
-  const transactionSession = {
-    session,
-    withTransaction: (fn) => session.withTransaction(fn),
-    endSession: () => session.endSession(),
-  };
-
-  req.mongoSession = session;
-  req.transactionSession = transactionSession;
-  req.transactionActive = !!session;
-  req.transactionCommitted = false;
-
-  if (transactionSession) {
-    const cleanup = () => transactionSession.endSession();
-    res.once('finish', cleanup);
-    res.once('close', cleanup);
-  }
+  setSession(req, session);
 
   return next();
 };

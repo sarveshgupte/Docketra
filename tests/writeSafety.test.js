@@ -151,6 +151,55 @@ async function testExecuteWriteEnforcesTransaction() {
   }
 }
 
+async function testExecuteWriteWithUnavailableSession() {
+  const mongoose = require('mongoose');
+  const originalStartSession = mongoose.startSession;
+  mongoose.startSession = async () => {
+    throw new Error('sessions unavailable');
+  };
+
+  try {
+    const req = {};
+    const result = await executeWrite(req, async (session) => {
+      assert.strictEqual(session, null, 'handler should receive a null session when transactions are unavailable');
+      return { ok: true };
+    });
+    assert.deepStrictEqual(result, { ok: true });
+    assert.strictEqual(req.transactionSkipped, true, 'request should continue without a transaction');
+    assert.strictEqual(req.transactionCommitted, false);
+  } finally {
+    mongoose.startSession = originalStartSession;
+  }
+}
+
+async function testExecuteWriteRollsBackErrorResponses() {
+  const mongoose = require('mongoose');
+  const originalStartSession = mongoose.startSession;
+  let ended = 0;
+  mongoose.startSession = async () => ({
+    withTransaction: async (fn) => {
+      await fn();
+    },
+    endSession: async () => {
+      ended += 1;
+    },
+  });
+
+  try {
+    const req = {
+      _transactionResponse: {
+        statusCode: 400,
+      },
+    };
+    const result = await executeWrite(req, async () => ({ success: false, statusCode: 400, message: 'bad request' }));
+    assert.strictEqual(result.success, false);
+    assert.strictEqual(req.transactionCommitted, false, 'error responses must not mark the transaction as committed');
+    assert.strictEqual(ended, 1, 'session should always be ended');
+  } finally {
+    mongoose.startSession = originalStartSession;
+  }
+}
+
 async function testIdempotencySkipsCacheOnRollback() {
   resetIdempotencyCache();
   let handlerRuns = 0;
@@ -238,6 +287,8 @@ async function run() {
     await testCrossFirmGuard();
     await testInvalidStateGuard();
     await testExecuteWriteEnforcesTransaction();
+    await testExecuteWriteWithUnavailableSession();
+    await testExecuteWriteRollsBackErrorResponses();
     await testIdempotencySkipsCacheOnRollback();
     await testControllerGuardWithoutTransaction();
     await testNestedWrapperGuard();

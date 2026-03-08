@@ -6,7 +6,6 @@ const Firm = require('../models/Firm.model');
 const { encrypt, decrypt } = require('../storage/services/TokenEncryption.service');
 const GoogleDriveProvider = require('../storage/providers/GoogleDriveProvider');
 const OneDriveProvider = require('../storage/providers/OneDriveProvider');
-const { verifyTenantStorage } = require('../utils/verifyTenantStorage');
 
 const GOOGLE_SCOPE = 'https://www.googleapis.com/auth/drive';
 const ONEDRIVE_SCOPES = ['Files.ReadWrite.All', 'Sites.ReadWrite.All', 'offline_access'];
@@ -142,20 +141,23 @@ const getStorageStatus = async (req, res) => {
 const getStorageHealth = async (req, res) => {
   const tenantId = req.firmId;
   try {
-    let record = await TenantStorageHealth.findOne({ tenantId })
-      .select('status lastVerifiedAt missingFilesCount sampleSize lastError -_id')
-      .lean();
-
-    if (!record) {
-      record = await verifyTenantStorage(tenantId);
-    }
+    const [record, activeConfig] = await Promise.all([
+      TenantStorageHealth.findOne({ tenantId })
+        .select('status lastVerifiedAt missingFilesCount sampleSize lastError -_id')
+        .lean(),
+      TenantStorageConfig.findOne({ tenantId, isActive: true })
+        .select('_id')
+        .lean(),
+    ]);
+    const defaultStatus = activeConfig ? 'HEALTHY' : 'DISCONNECTED';
+    const defaultLastError = activeConfig ? null : 'Active storage configuration not found';
 
     return res.json({
-      status: record?.status || 'HEALTHY',
+      status: record?.status || defaultStatus,
       lastVerifiedAt: record?.lastVerifiedAt || null,
       missingFilesCount: record?.missingFilesCount || 0,
       sampleSize: record?.sampleSize || 0,
-      lastError: record?.lastError || null,
+      lastError: record?.lastError || defaultLastError,
     });
   } catch (error) {
     console.error('[Storage] Failed to query TenantStorageHealth:', { tenantId, message: error.message });

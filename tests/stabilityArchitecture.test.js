@@ -22,10 +22,62 @@ async function testAttachRequestContextBuildsStructuredContext() {
     firmId: 'firm-1',
     userId: 'user-1',
     userXID: 'X000001',
+    dbSession: undefined,
     route: '/api/admin/clients',
     requestId: 'req-123',
   });
   console.log('✓ attachRequestContext adds structured request metadata');
+}
+
+async function testStorageHealthEndpointIsReadOnly() {
+  const TenantStorageHealth = require('../src/models/TenantStorageHealth.model');
+  const TenantStorageConfig = require('../src/models/TenantStorageConfig.model');
+  const { getStorageHealth } = require('../src/controllers/storage.controller');
+
+  const originalHealthFindOne = TenantStorageHealth.findOne;
+  const originalConfigFindOne = TenantStorageConfig.findOne;
+  const originalHealthWrite = TenantStorageHealth.findOneAndUpdate;
+
+  const selectChain = (result) => ({
+    select() {
+      return this;
+    },
+    lean: async () => result,
+  });
+
+  let writeAttempted = false;
+  TenantStorageHealth.findOne = () => selectChain(null);
+  TenantStorageConfig.findOne = () => selectChain(null);
+  TenantStorageHealth.findOneAndUpdate = async () => {
+    writeAttempted = true;
+    throw new Error('health endpoint must be read-only');
+  };
+
+  const res = {
+    body: null,
+    statusCode: 200,
+    status(code) {
+      this.statusCode = code;
+      return this;
+    },
+    json(payload) {
+      this.body = payload;
+      return this;
+    },
+  };
+
+  try {
+    await getStorageHealth({ firmId: 'firm-1' }, res);
+    assert.strictEqual(res.statusCode, 200);
+    assert.strictEqual(writeAttempted, false, 'read-only health endpoint must not write TenantStorageHealth');
+    assert.strictEqual(res.body.status, 'DISCONNECTED');
+  } finally {
+    TenantStorageHealth.findOne = originalHealthFindOne;
+    TenantStorageConfig.findOne = originalConfigFindOne;
+    TenantStorageHealth.findOneAndUpdate = originalHealthWrite;
+  }
+
+  console.log('✓ storage health endpoint remains read-only');
 }
 
 async function testSafeQueueEmailNeverThrows() {
@@ -75,6 +127,7 @@ async function testXidGeneratorUsesAtomicGlobalCounterWithoutSession() {
 
 async function run() {
   await testAttachRequestContextBuildsStructuredContext();
+  await testStorageHealthEndpointIsReadOnly();
   await testSafeQueueEmailNeverThrows();
   await testXidGeneratorUsesAtomicGlobalCounterWithoutSession();
   console.log('Stability architecture tests passed.');
