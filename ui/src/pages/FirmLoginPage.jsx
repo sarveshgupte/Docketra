@@ -19,10 +19,10 @@ import { useToast } from '../hooks/useToast';
 import './LoginPage.css';
 
 const OTP_LENGTH = 6;
-const DEFAULT_RESEND_COOLDOWN_SECONDS = import.meta.env.PROD ? 30 : 3;
+const RESEND_COOLDOWN_SECONDS = import.meta.env.PROD ? 30 : 3;
 const resolveResendCooldownSeconds = (value) => {
   const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_RESEND_COOLDOWN_SECONDS;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : RESEND_COOLDOWN_SECONDS;
 };
 
 export const FirmLoginPage = () => {
@@ -34,7 +34,7 @@ export const FirmLoginPage = () => {
   const [showOtpForm, setShowOtpForm] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [resendCooldownSeconds, setResendCooldownSeconds] = useState(DEFAULT_RESEND_COOLDOWN_SECONDS);
+  const [resendCooldownSeconds, setResendCooldownSeconds] = useState(RESEND_COOLDOWN_SECONDS);
   const [resendCountdown, setResendCountdown] = useState(0);
   const [resendLoading, setResendLoading] = useState(false);
   const [resendEmail, setResendEmail] = useState('');
@@ -365,7 +365,7 @@ export const FirmLoginPage = () => {
               marginTop: '-0.5rem',
               marginBottom: '0.5rem'
             }}>
-              Didn&apos;t receive OTP?{' '}
+              Didn't receive OTP?{' '}
               <button
                 type="button"
                 onClick={handleResendOtp}
