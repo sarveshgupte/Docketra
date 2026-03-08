@@ -28,7 +28,7 @@ const User = require('../models/User.model');
 const generateNextXID = async (_firmId = null, _session = null) => {
   try {
     const counter = await Counter.findOneAndUpdate(
-      { name: 'userXID', firmId: 'GLOBAL' },
+      { name: 'user_xid', firmId: 'GLOBAL' },
       { $inc: { seq: 1 } },
       {
         new: true,
