@@ -1081,7 +1081,7 @@ const sendSignupOtpEmail = async ({
       <p>Best regards,<br>Docketra Team</p>
     </div>
   `;
-  const text = `Hello ${greetingName},\n\n${introLine} ${resolvedOtp}\n\nThis code expires in ${expiryMinutes} minutes.\n\nBest regards,\nDocketra Team`;
+  const text = `Hello ${greetingName},\n\n${introLine}\n\n${resolvedOtp}\n\nThis code expires in ${expiryMinutes} minutes.\n\nBest regards,\nDocketra Team`;
 
   return sendDirectAuthEmail({
     to: email,
