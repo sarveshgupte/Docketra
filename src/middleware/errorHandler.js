@@ -24,7 +24,7 @@ const errorHandler = (err, req, res, next) => {
   recordError(req, err);
   metricsService.recordError(err.statusCode || 500);
   // Logging sanitization is handled centrally by the global console.error override to avoid double-masking.
-  log.error('REQUEST_FAILED', { req, error: err.message, stack: err.stack });
+  log.error('API_ERROR', { req, error: err.message, stack: err.stack });
   
   // Mongoose validation error
   if (err.name === 'ValidationError') {
@@ -58,9 +58,9 @@ const errorHandler = (err, req, res, next) => {
   }
   
   // Default error
-  const statusCode = err.statusCode || 500;
+  const statusCode = err.statusCode || err.status || 500;
   const message = statusCode >= 500 ? 'Internal server error' : (err.message || 'Server Error');
-   sendError(req, res, statusCode, {
+  return sendError(req, res, statusCode, {
     code: err.code || err.name || 'SERVER_ERROR',
     message,
     action: err.action || (statusCode < 500 ? 'retry' : 'contact_admin'),

@@ -8,7 +8,7 @@
  * - Server-side generation only (never client-provided)
  * - Sequential numbering for easy reference
  * - Bootstrap-safe (works when database is empty)
- * - Transactional support (works within MongoDB sessions)
+ * - Atomic counter support outside business transactions
  * - Immutability (xID cannot be changed after creation)
  * - Race-condition safety via transaction isolation
  * 
@@ -22,19 +22,18 @@ const User = require('../models/User.model');
  * Generate the next available xID using an atomic global counter.
  * 
  * @param {string|Object} _firmId - Legacy parameter (unused for global xID sequence)
- * @param {object} session - MongoDB session for transactional reads (required for atomicity)
+ * @param {object} session - Legacy parameter retained for compatibility; ignored intentionally
  * @returns {Promise<string>} Next xID in format X000001
  */
-const generateNextXID = async (_firmId = null, session = null) => {
+const generateNextXID = async (_firmId = null, _session = null) => {
   try {
     const counter = await Counter.findOneAndUpdate(
-      { name: 'user_xid', firmId: 'GLOBAL' },
+      { name: 'userXID', firmId: 'GLOBAL' },
       { $inc: { seq: 1 } },
       {
         new: true,
         upsert: true,
         setDefaultsOnInsert: true,
-        ...(session ? { session } : {}),
       }
     );
 

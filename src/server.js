@@ -51,6 +51,7 @@ applyPIISafeConsoleError();
 // Middleware
 const requestLogger = require('./middleware/requestLogger');
 const requestId = require('./middleware/requestId.middleware');
+const { attachRequestContext } = require('./middleware/attachRequestContext');
 const errorHandler = require('./middleware/errorHandler');
 const notFound = require('./middleware/notFound');
 const { authenticate } = require('./middleware/auth.middleware');
@@ -308,6 +309,7 @@ if (inboundEmailEnabled) {
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '100kb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(requestId);
+app.use(attachRequestContext);
 app.use(enforceTemporaryIpBlock);
 app.use(requestLifecycle);
 app.use(requestLogger);
