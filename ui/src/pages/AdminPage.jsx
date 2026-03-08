@@ -74,6 +74,7 @@ export const AdminPage = () => {
   const [storageLoaded, setStorageLoaded] = useState(false);
   const [statsEmpty, setStatsEmpty] = useState(false);
   const [statsFailed, setStatsFailed] = useState(false);
+  const [tabError, setTabError] = useState(null);
   const toastLockRef = useRef({});
   const toastTimerRef = useRef({});
   const externalStorageEnabled = Boolean(storageConfig.capabilities?.externalStorageEnabled);
@@ -217,6 +218,7 @@ export const AdminPage = () => {
 
   const loadAdminData = async () => {
     setLoading(true);
+    setTabError(null);
     try {
       if (activeTab === 'approvals') {
         const response = await adminService.getPendingApprovals();
@@ -238,6 +240,14 @@ export const AdminPage = () => {
     } catch (error) {
       console.error('Failed to load admin data:', error);
       const errorType = notifyLoadError(error, 'admin-load');
+      if (activeTab === 'clients' && errorType !== 'empty') {
+        setTabError({
+          tab: 'clients',
+          message: errorType === 'network'
+            ? 'Failed to load clients. Check your connection and retry.'
+            : 'Failed to load clients.',
+        });
+      }
       if (errorType === 'empty') {
         if (activeTab === 'approvals') {
           setPendingCases([]);
@@ -247,6 +257,7 @@ export const AdminPage = () => {
           setCategories([]);
         } else if (activeTab === 'clients') {
           setClients([]);
+          setTabError(null);
         }
       }
     } finally {
@@ -1028,7 +1039,14 @@ export const AdminPage = () => {
               </Button>
             </div>
             
-            {clients.length === 0 ? (
+            {tabError?.tab === 'clients' ? (
+              <EmptyState
+                title={tabError.message}
+                description="The admin panel is still available. Retry loading clients without leaving this page."
+                actionLabel="Retry"
+                onAction={loadAdminData}
+              />
+            ) : clients.length === 0 ? (
               <EmptyState
                 title="No clients created yet"
                 description="Create your first client to begin managing cases."

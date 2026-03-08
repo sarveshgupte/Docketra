@@ -26,7 +26,7 @@ async function shouldAllowSuperadminWithoutFirm() {
   console.log('✓ SUPER_ADMIN validation without firm/defaultClientId allowed');
 }
 
-async function shouldRejectAdminWithoutFirmOrClient() {
+async function shouldRejectAdminWithoutFirm() {
   const admin = new User({
     xID: 'X000123',
     name: 'Admin Missing Context',
@@ -39,14 +39,11 @@ async function shouldRejectAdminWithoutFirmOrClient() {
     await admin.validate();
   } catch (err) {
     failed = true;
-    assert(
-      err.message.includes('firmId') || err.message.includes('defaultClientId'),
-      'Validation error should mention missing firm/default client'
-    );
+    assert(err.message.includes('firmId'), 'Validation error should mention missing firmId');
   }
 
-  assert(failed, 'Admin creation without firm/default client must fail');
-  console.log('✓ Admin validation fails when firm/defaultClientId missing');
+  assert(failed, 'Admin creation without firm must fail');
+  console.log('✓ Admin validation fails when firmId is missing');
 }
 
 async function setupFirmWithClient() {
@@ -136,7 +133,7 @@ async function shouldIgnoreSuperadminInPreflight() {
 
 async function run() {
   await shouldAllowSuperadminWithoutFirm();
-  await shouldRejectAdminWithoutFirmOrClient();
+  await shouldRejectAdminWithoutFirm();
 
   let mongoServer = null;
   try {

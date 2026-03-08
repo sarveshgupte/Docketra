@@ -9,11 +9,11 @@ const { generateNextXID } = require('./xIDGenerator');
 const { ensureTenantKey } = require('../security/encryption.service');
 const { slugify } = require('../utils/slugify');
 const emailService = require('./email.service');
-const { logAuthEvent } = require('./audit.service');
 const jwtService = require('./jwt.service');
 const config = require('../config/config');
 const log = require('../utils/log');
 const { acquireLock, releaseLock } = require('./redisLock.service');
+const { safeAuditLog, safeQueueEmail } = require('./safeSideEffects.service');
 const {
   consumeSignupQuota,
   consumeOtpAttempt,
@@ -48,7 +48,7 @@ const logSignupAuthEvent = async ({
 }) => {
   try {
     const normalizedEmail = email ? email.toLowerCase().trim() : null;
-    await logAuthEvent({
+    await safeAuditLog({
       eventType,
       xID: normalizedEmail || 'UNKNOWN',
       firmId: firmId ? String(firmId) : 'PLATFORM',
@@ -199,20 +199,25 @@ const initiateSignup = async ({
   }, { session });
 
   // Send OTP email
-  await emailService.sendEmail({
-    to: normalizedEmail,
-    subject: 'Docketra Signup – Verify Your Email',
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>Hello ${name.trim()},</h2>
-        <p>Your verification code is:</p>
-        <p style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #1976D2; margin: 20px 0;">${otp}</p>
-        <p>This code expires in ${OTP_EXPIRY_MINUTES} minutes.</p>
-        <p>If you did not request this, please ignore this email.</p>
-        <p>Best regards,<br>Docketra Team</p>
-      </div>
-    `,
-    text: `Hello ${name.trim()},\n\nYour verification code is: ${otp}\n\nThis code expires in ${OTP_EXPIRY_MINUTES} minutes.\n\nBest regards,\nDocketra Team`,
+  await safeQueueEmail({
+    context: req,
+    operation: 'EMAIL_QUEUE',
+    payload: { action: 'SIGNUP_OTP_EMAIL', tenantId: null, email: normalizedEmail },
+    execute: async () => emailService.sendEmail({
+      to: normalizedEmail,
+      subject: 'Docketra Signup – Verify Your Email',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Hello ${name.trim()},</h2>
+          <p>Your verification code is:</p>
+          <p style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #1976D2; margin: 20px 0;">${otp}</p>
+          <p>This code expires in ${OTP_EXPIRY_MINUTES} minutes.</p>
+          <p>If you did not request this, please ignore this email.</p>
+          <p>Best regards,<br>Docketra Team</p>
+        </div>
+      `,
+      text: `Hello ${name.trim()},\n\nYour verification code is: ${otp}\n\nThis code expires in ${OTP_EXPIRY_MINUTES} minutes.\n\nBest regards,\nDocketra Team`,
+    }),
   });
 
   await logSignupAuthEvent({ eventType: 'SIGNUP_INITIATED', email: normalizedEmail, req });
@@ -319,16 +324,21 @@ const verifyOtp = async ({ email, otp, session = null, req = null }) => {
     log.info('OTP_VERIFIED', { req, email: normalizedEmail, firmSlug: tenant.firmSlug });
     log.info('SIGNUP_COMPLETED', { req, email: normalizedEmail, firmSlug: tenant.firmSlug, xid: tenant.xid });
     try {
-      await sendSignupWelcomeEmail({
-        name: record.name,
-        email: normalizedEmail,
-        xid: tenant.xid,
-        firmName: record.firmName,
-        firmSlug: tenant.firmSlug,
-        req,
+      await safeQueueEmail({
+        context: req,
+        operation: 'EMAIL_QUEUE',
+        payload: { action: 'SIGNUP_WELCOME_EMAIL', tenantId: String(tenant.firmId), email: normalizedEmail },
+        execute: async () => sendSignupWelcomeEmail({
+          name: record.name,
+          email: normalizedEmail,
+          xid: tenant.xid,
+          firmName: record.firmName,
+          firmSlug: tenant.firmSlug,
+          req,
+        }),
       });
     } catch (emailError) {
-      console.error('[PUBLIC_SIGNUP] Failed to send welcome email after OTP verification:', emailError.message);
+      console.error('[PUBLIC_SIGNUP] Failed to queue welcome email after OTP verification:', emailError.message);
     }
 
     const token = jwtService.generateAccessToken({
@@ -413,20 +423,25 @@ const resendOtp = async ({ email, req = null }) => {
   record.consumedAt = null;
   await record.save();
 
-  await emailService.sendEmail({
-    to: normalizedEmail,
-    subject: 'Docketra Signup – Your New Verification Code',
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>Hello ${record.name},</h2>
-        <p>Your new verification code is:</p>
-        <p style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #1976D2; margin: 20px 0;">${otp}</p>
-        <p>This code expires in ${OTP_EXPIRY_MINUTES} minutes.</p>
-        <p>If you did not request this, please ignore this email.</p>
-        <p>Best regards,<br>Docketra Team</p>
-      </div>
-    `,
-    text: `Hello ${record.name},\n\nYour new verification code is: ${otp}\n\nThis code expires in ${OTP_EXPIRY_MINUTES} minutes.\n\nBest regards,\nDocketra Team`,
+  await safeQueueEmail({
+    context: req,
+    operation: 'EMAIL_QUEUE',
+    payload: { action: 'SIGNUP_OTP_RESEND_EMAIL', tenantId: null, email: normalizedEmail },
+    execute: async () => emailService.sendEmail({
+      to: normalizedEmail,
+      subject: 'Docketra Signup – Your New Verification Code',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Hello ${record.name},</h2>
+          <p>Your new verification code is:</p>
+          <p style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #1976D2; margin: 20px 0;">${otp}</p>
+          <p>This code expires in ${OTP_EXPIRY_MINUTES} minutes.</p>
+          <p>If you did not request this, please ignore this email.</p>
+          <p>Best regards,<br>Docketra Team</p>
+        </div>
+      `,
+      text: `Hello ${record.name},\n\nYour new verification code is: ${otp}\n\nThis code expires in ${OTP_EXPIRY_MINUTES} minutes.\n\nBest regards,\nDocketra Team`,
+    }),
   });
 
   await logSignupAuthEvent({ eventType: 'OTP_SENT', email: normalizedEmail, req, metadata: { resend: true } });
@@ -739,13 +754,18 @@ const completeSignup = async ({ email, firmName, session, req = null }) => {
       metadata: { firmSlug: result.firmSlug },
     });
 
-    await sendSignupWelcomeEmail({
-      name: record.name,
-      email: normalizedEmail,
-      xid: result.adminXID,
-      firmName: resolvedFirmName,
-      firmSlug: result.firmSlug,
-      req,
+    await safeQueueEmail({
+      context: req,
+      operation: 'EMAIL_QUEUE',
+      payload: { action: 'SIGNUP_WELCOME_EMAIL', tenantId: String(result.firmId || ''), email: normalizedEmail },
+      execute: async () => sendSignupWelcomeEmail({
+        name: record.name,
+        email: normalizedEmail,
+        xid: result.adminXID,
+        firmName: resolvedFirmName,
+        firmSlug: result.firmSlug,
+        req,
+      }),
     });
 
     return {

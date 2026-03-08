@@ -4,7 +4,7 @@ const { enqueueAuditJob } = require('../queues/audit.queue');
 const { getIpRange } = require('../utils/ipRange');
 
 const getRequestRoute = (req) => {
-  const route = req?.originalUrl || req?.url || null;
+  const route = req?.context?.route || req?.originalUrl || req?.url || null;
   return typeof route === 'string' ? route.split('?')[0] : null;
 };
 
@@ -13,6 +13,9 @@ const enrichMetadataFromRequest = (metadata, req, ipAddress, userAgent, requestI
   requestId,
   route: metadata?.route || getRequestRoute(req),
   method: metadata?.method || req?.method || null,
+  firmId: metadata?.firmId || req?.context?.firmId || req?.user?.firmId || null,
+  userId: metadata?.userId || req?.context?.userId || req?.user?._id || null,
+  userXID: metadata?.userXID || req?.context?.userXID || req?.user?.xID || null,
   userAgent: metadata?.userAgent || userAgent || null,
   ipRange: metadata?.ipRange || getIpRange(ipAddress),
 });
@@ -35,7 +38,7 @@ const logAuthEvent = async ({
     throw new Error('actionType/eventType is required for auth audit logging');
   }
 
-  const requestId = req?.requestId || metadata?.requestId || randomUUID();
+  const requestId = req?.context?.requestId || req?.requestId || metadata?.requestId || randomUUID();
   if (req && !req.requestId) {
     req.requestId = requestId;
   }
@@ -46,11 +49,11 @@ const logAuthEvent = async ({
 
   const entry = {
     xID: xID || performedBy || 'UNKNOWN',
-    firmId: firmId || 'PLATFORM',
-    userId,
+    firmId: firmId || req?.context?.firmId || 'PLATFORM',
+    userId: userId || req?.context?.userId || null,
     actionType: resolvedActionType,
     description: description || `Auth event: ${resolvedActionType}`,
-    performedBy: performedBy || xID || 'SYSTEM',
+    performedBy: performedBy || xID || req?.context?.userXID || 'SYSTEM',
     ipAddress,
     userAgent,
     requestId,
