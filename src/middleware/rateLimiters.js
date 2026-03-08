@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const config = require('../config/config');
 const { getRedisClient } = require('../config/redis');
 const metricsService = require('../services/metrics.service');
+const { getCookieValue } = require('../utils/requestCookies');
 const { logSecurityEvent } = require('./securityAudit.middleware');
 
 const DEFAULT_RATE_LIMIT_MESSAGE = 'Too many requests. Please wait a moment before trying again.';
@@ -133,19 +134,8 @@ const otpResendKeyGenerator = (req) => {
 
   return `ip:${ipKeyGenerator(req)}`;
 };
-const parseCookieToken = (req, cookieName) => {
-  const cookie = String(req.headers?.cookie || '');
-  if (!cookie) return null;
-  const cookiePart = cookie
-    .split(';')
-    .map((entry) => entry.trim())
-    .find((entry) => entry.startsWith(`${cookieName}=`));
-  if (!cookiePart) return null;
-  return cookiePart.slice(cookieName.length + 1) || null;
-};
-
 const refreshUserKeyGenerator = (req) => {
-  const accessToken = req.body?.accessToken || parseCookieToken(req, 'accessToken');
+  const accessToken = req.body?.accessToken || getCookieValue(req.headers?.cookie, 'accessToken');
   if (accessToken) {
     try {
       const decoded = jwt.decode(accessToken);
@@ -157,7 +147,7 @@ const refreshUserKeyGenerator = (req) => {
     }
   }
 
-  const refreshToken = req.body?.refreshToken || parseCookieToken(req, 'refreshToken');
+  const refreshToken = req.body?.refreshToken || getCookieValue(req.headers?.cookie, 'refreshToken');
   if (refreshToken) {
     return `token:${createHash('sha256').update(refreshToken).digest('hex')}`;
   }

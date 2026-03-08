@@ -5,6 +5,8 @@ const path = require('path');
 
 const { maskSensitiveObject } = require('../src/utils/pii');
 const errorHandler = require('../src/middleware/errorHandler');
+const { getCookieValue } = require('../src/utils/requestCookies');
+const { isActiveStatus } = require('../src/utils/status.utils');
 
 function createMockResponse() {
   return {
@@ -74,11 +76,30 @@ function testRateLimiterExports() {
   assert.strictEqual(typeof rateLimiters.publicLimiter, 'function');
 }
 
+function testCookieParsingUtility() {
+  const cookieHeader = 'theme=dark; refreshToken=refresh%3Dtoken%3Dvalue; accessToken=header.payload.signature';
+  assert.strictEqual(getCookieValue(cookieHeader, 'theme'), 'dark');
+  assert.strictEqual(getCookieValue(cookieHeader, 'refreshToken'), 'refresh=token=value');
+  assert.strictEqual(getCookieValue(cookieHeader, 'accessToken'), 'header.payload.signature');
+  assert.strictEqual(getCookieValue(cookieHeader, 'missing'), null);
+}
+
+function testActiveStatusNormalization() {
+  assert.strictEqual(isActiveStatus('active'), true);
+  assert.strictEqual(isActiveStatus('ACTIVE'), true);
+  assert.strictEqual(isActiveStatus(' Active '), true);
+  assert.strictEqual(isActiveStatus('suspended'), false);
+  assert.strictEqual(isActiveStatus(null), false);
+  assert.strictEqual(isActiveStatus(undefined), false);
+}
+
 function run() {
   testSensitiveLogMasking();
   testErrorHandlerHidesServerDetails();
   testServerHardeningWiring();
   testRateLimiterExports();
+  testCookieParsingUtility();
+  testActiveStatusNormalization();
   console.log('coreSecurityHardeningPhase2 tests passed');
 }
 

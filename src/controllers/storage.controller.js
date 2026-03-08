@@ -3,6 +3,8 @@ const { google } = require('googleapis');
 const TenantStorageConfig = require('../models/TenantStorageConfig.model');
 const TenantStorageHealth = require('../models/TenantStorageHealth.model');
 const Firm = require('../models/Firm.model');
+const { getCookieValue } = require('../utils/requestCookies');
+const { isAdminRole } = require('../utils/role.utils');
 const { encrypt, decrypt } = require('../storage/services/TokenEncryption.service');
 const GoogleDriveProvider = require('../storage/providers/GoogleDriveProvider');
 const OneDriveProvider = require('../storage/providers/OneDriveProvider');
@@ -13,7 +15,7 @@ const STATE_COOKIE_NAME = 'storage_oauth_state';
 const STATE_TTL_SECONDS = 10 * 60;
 
 function ensureFirmAdmin(req, res) {
-  if (req.user?.role !== 'ADMIN') {
+  if (!isAdminRole(req.user?.role)) {
     res.status(403).json({ error: 'Only firm admin can manage storage connection' });
     return false;
   }
@@ -81,15 +83,6 @@ function verifyStateToken(cookieValue, stateParam) {
   } catch {
     return null;
   }
-}
-
-function parseCookie(cookieHeader, name) {
-  if (!cookieHeader) return null;
-  const pair = cookieHeader
-    .split(';')
-    .map(c => c.trim())
-    .find(c => c.startsWith(`${name}=`));
-  return pair ? pair.slice(name.length + 1) : null;
 }
 
 function buildStateCookie(value, maxAge) {
@@ -194,7 +187,7 @@ const googleCallback = async (req, res) => {
       return res.status(400).json({ error: 'missing_params' });
     }
 
-    const cookieValue = parseCookie(req.headers.cookie || '', STATE_COOKIE_NAME);
+    const cookieValue = getCookieValue(req.headers.cookie, STATE_COOKIE_NAME);
     const stateData = verifyStateToken(cookieValue, state);
     if (!stateData || stateData.tenantId !== req.firmId || stateData.provider !== 'google_drive') {
       return res.status(400).json({ error: 'invalid_state' });
@@ -267,7 +260,7 @@ const onedriveCallback = async (req, res) => {
       return res.status(400).json({ error: 'missing_params' });
     }
 
-    const cookieValue = parseCookie(req.headers.cookie || '', STATE_COOKIE_NAME);
+    const cookieValue = getCookieValue(req.headers.cookie, STATE_COOKIE_NAME);
     const stateData = verifyStateToken(cookieValue, state);
     if (!stateData || stateData.tenantId !== req.firmId || stateData.provider !== 'onedrive') {
       return res.status(400).json({ error: 'invalid_state' });
