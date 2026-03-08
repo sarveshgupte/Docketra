@@ -126,7 +126,7 @@ export const DashboardPage = () => {
     setLoadWarnings([]);
     try {
       const userFirmId = user?.firmId || user?.firm?.id;
-      const loadStatsPatch = async (request, mapResponse, errorMessage, warningMessage) => {
+      const fetchStatSafely = async (request, mapResponse, errorMessage, warningMessage) => {
         try {
           const response = await request();
           return mapResponse(response);
@@ -167,32 +167,32 @@ export const DashboardPage = () => {
       ] = await Promise.all([
         recentCasesPromise,
         userFirmId
-          ? loadStatsPatch(
+          ? fetchStatSafely(
             () => metricsService.getFirmMetrics(userFirmId),
             (metricsResponse) => (metricsResponse.success ? (metricsResponse.data || {}) : {}),
             'Failed to load firm metrics:',
             'Firm metrics',
           )
           : Promise.resolve({}),
-        loadStatsPatch(
+        fetchStatSafely(
           () => worklistService.getEmployeeWorklist(),
           (worklistResponse) => (worklistResponse.success ? { myOpenCases: (worklistResponse.data || []).length } : {}),
           'Failed to load open cases count:',
           'Open case counts',
         ),
-        loadStatsPatch(
+        fetchStatSafely(
           () => api.get('/cases/my-pending'),
           (pendingResponse) => (pendingResponse.data.success ? { myPendingCases: (pendingResponse.data.data || []).length } : {}),
           'Failed to load pending cases:',
           'Pending case counts',
         ),
-        loadStatsPatch(
+        fetchStatSafely(
           () => caseService.getMyResolvedCases(),
           (resolvedResponse) => (resolvedResponse.success ? { myResolvedCases: (resolvedResponse.data || []).length } : {}),
           'Failed to load resolved cases:',
           'Resolved case counts',
         ),
-        loadStatsPatch(
+        fetchStatSafely(
           () => caseService.getMyUnassignedCreatedCases(),
           (unassignedCreatedResponse) => (
             unassignedCreatedResponse.success
@@ -203,7 +203,7 @@ export const DashboardPage = () => {
           'Unassigned case counts',
         ),
         isAdmin
-          ? loadStatsPatch(
+          ? fetchStatSafely(
             () => adminService.getPendingApprovals(),
             (approvalsResponse) => (
               approvalsResponse.success ? { adminPendingApprovals: approvalsResponse.data?.length || 0 } : {}
@@ -213,7 +213,7 @@ export const DashboardPage = () => {
           )
           : Promise.resolve({}),
         isAdmin
-          ? loadStatsPatch(
+          ? fetchStatSafely(
             () => api.get('/admin/cases/filed'),
             (filedResponse) => (
               filedResponse.data.success ? { adminFiledCases: filedResponse.data.pagination?.total || 0 } : {}
@@ -223,7 +223,7 @@ export const DashboardPage = () => {
           )
           : Promise.resolve({}),
         isAdmin
-          ? loadStatsPatch(
+          ? fetchStatSafely(
             () => adminService.getAllResolvedCases(),
             (adminResolvedResponse) => (
               adminResolvedResponse.success
@@ -235,7 +235,7 @@ export const DashboardPage = () => {
           )
           : Promise.resolve({}),
         isAdmin
-          ? loadStatsPatch(
+          ? fetchStatSafely(
             () => clientService.getClients(true),
             (clientsResponse) => (clientsResponse.success ? { activeClients: (clientsResponse.data || []).length } : {}),
             'Failed to load active clients:',

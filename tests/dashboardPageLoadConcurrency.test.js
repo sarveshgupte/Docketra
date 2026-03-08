@@ -10,7 +10,7 @@ const dashboardSource = fs.readFileSync(
 );
 
 assert.ok(
-  dashboardSource.includes('const loadStatsPatch = async (request, mapResponse, errorMessage, warningMessage) => {'),
+  dashboardSource.includes('const fetchStatSafely = async (request, mapResponse, errorMessage, warningMessage) => {'),
   'dashboard loader should centralize per-request warning-preserving stat patch handling'
 );
 
