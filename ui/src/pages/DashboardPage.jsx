@@ -31,17 +31,23 @@ import { UX_COPY } from '../constants/uxCopy';
 import api from '../services/api';
 import './DashboardPage.css';
 
-const DASHBOARD_RECENT_CASES_LIMIT = 5;
+const DASHBOARD_RECENT_CASES_ROW_COUNT = 5;
 const DASHBOARD_RECENT_CASES_MAX_ROWS = 10;
+const DASHBOARD_RECENT_CASES_LIMIT = Math.min(DASHBOARD_RECENT_CASES_ROW_COUNT, DASHBOARD_RECENT_CASES_MAX_ROWS);
+
+const getCaseTimestamp = (caseItem) => {
+  const timestamp = new Date(caseItem?.updatedAt || caseItem?.createdAt || '').getTime();
+  return Number.isFinite(timestamp) ? timestamp : Number.NEGATIVE_INFINITY;
+};
 
 const getRecentCasesSnapshot = (cases = []) =>
   [...cases]
     .sort((firstCase, secondCase) => {
-      const firstTimestamp = new Date(firstCase?.updatedAt || firstCase?.createdAt || 0).getTime();
-      const secondTimestamp = new Date(secondCase?.updatedAt || secondCase?.createdAt || 0).getTime();
+      const firstTimestamp = getCaseTimestamp(firstCase);
+      const secondTimestamp = getCaseTimestamp(secondCase);
       return secondTimestamp - firstTimestamp;
     })
-    .slice(0, Math.min(DASHBOARD_RECENT_CASES_LIMIT, DASHBOARD_RECENT_CASES_MAX_ROWS));
+    .slice(0, DASHBOARD_RECENT_CASES_LIMIT);
 
 export const DashboardPage = () => {
   const { user } = useAuth();
@@ -144,7 +150,6 @@ export const DashboardPage = () => {
       }
       
       setRecentCases(getRecentCasesSnapshot(casesToDisplay));
-      setRecentCasesLoading(false);
 
       const userFirmId = user?.firmId || user?.firm?.id;
       if (userFirmId) {
