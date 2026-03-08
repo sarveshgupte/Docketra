@@ -69,10 +69,15 @@ const logger = log;
 const { safeLogForensicAudit, getRequestIp, getRequestUserAgent } = require('../services/forensicAudit.service');
 const { safeAuditLog, safeQueueEmail, safeAnalyticsEvent } = require('../services/safeSideEffects.service');
 
-const resolveInviteRequestState = async ({ req, admin, normalizedEmail, session }) => {
+const resolveInviteRequestState = async ({ req, admin, normalizedEmail, session, existingXID = null }) => {
   const cachedState = req._inviteRequestState;
 
-  if (cachedState && cachedState.firmId === String(admin.firmId) && cachedState.email === normalizedEmail) {
+  if (
+    cachedState
+    && cachedState.firmId === String(admin.firmId)
+    && cachedState.email === normalizedEmail
+    && (!existingXID || cachedState.xID === existingXID)
+  ) {
     log.info('ADMIN_INVITE_STATE_REUSED', {
       req,
       firmId: admin.firmId,
@@ -80,11 +85,12 @@ const resolveInviteRequestState = async ({ req, admin, normalizedEmail, session 
       invitedEmail: emailService.maskEmail(normalizedEmail),
       inviteXID: cachedState.xID,
       inviteExpiry: cachedState.tokenExpiry.toISOString(),
+      reuseReason: existingXID ? 'existing_invited_user' : 'transaction_retry',
     });
     return cachedState;
   }
 
-  const xID = await xIDGenerator.generateNextXID(admin.firmId, session);
+  const xID = existingXID || await xIDGenerator.generateNextXID(admin.firmId, session);
   const token = emailService.generateSecureToken();
   const tokenHash = emailService.hashToken(token);
   const tokenExpiry = new Date(Date.now() + INVITE_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000);
@@ -117,6 +123,37 @@ const resolveInviteRequestState = async ({ req, admin, normalizedEmail, session 
 
   return inviteState;
 };
+
+const applySessionToQuery = (query, session) => {
+  if (session && query && typeof query.session === 'function') {
+    return query.session(session);
+  }
+  return query;
+};
+
+const findExistingInviteUser = async ({ firmId, normalizedEmail, session }) => {
+  const query = User.findOne({
+    firmId,
+    email: normalizedEmail,
+    status: { $ne: 'deleted' },
+  });
+  return await applySessionToQuery(query, session);
+};
+
+const buildInviteResponse = (user, { statusCode, message }) => ({
+  statusCode,
+  success: true,
+  message,
+  data: {
+    xID: user.xID,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    allowedCategories: user.allowedCategories,
+    passwordSet: user.passwordSet,
+    status: user.status,
+  },
+});
 
 const getLoginOtpConfig = () => (
   process.env.NODE_ENV === 'production'
@@ -2058,6 +2095,7 @@ const createUser = async (req, res) => {
     // Get admin from authenticated request
     const admin = req.user;
     const normalizedEmail = email.trim().toLowerCase();
+    const session = getSession(req);
 
     log.info('ADMIN_INVITE_REQUEST_RECEIVED', {
       req,
@@ -2068,7 +2106,7 @@ const createUser = async (req, res) => {
     });
     
     // Resolve firm's default client to inherit for new user
-    const firm = await Firm.findById(admin.firmId);
+    const firm = await applySessionToQuery(Firm.findById(admin.firmId), session);
     if (!firm) {
       return res.status(404).json({
         success: false,
@@ -2077,22 +2115,99 @@ const createUser = async (req, res) => {
     }
     
     // Check if email already exists (enforce uniqueness)
-    const existingUser = await User.findOne({
+    const existingUser = await findExistingInviteUser({
       firmId: admin.firmId,
-      email: normalizedEmail,
-      status: { $ne: 'deleted' },
+      normalizedEmail,
+      session,
     });
     
     if (existingUser) {
-      // Return HTTP 409 Conflict for duplicate email (per PR requirements)
+      if (existingUser.status === 'invited') {
+        const shouldQueueInviteEmail = !existingUser.inviteSentAt;
+
+        log.info('ADMIN_INVITE_STATE_REUSED', {
+          req,
+          firmId: admin.firmId,
+          userXID: admin.xID,
+          invitedEmail: emailService.maskEmail(normalizedEmail),
+          inviteXID: existingUser.xID,
+          inviteExpiry: existingUser.inviteTokenExpiry?.toISOString?.() || null,
+          reuseReason: shouldQueueInviteEmail ? 'existing_invited_user_send_pending' : 'existing_invited_user',
+        });
+
+        if (shouldQueueInviteEmail) {
+          const inviteState = await resolveInviteRequestState({
+            req,
+            admin,
+            normalizedEmail,
+            session,
+            existingXID: existingUser.xID,
+          });
+
+          existingUser.inviteTokenHash = inviteState.tokenHash;
+          existingUser.inviteTokenExpiry = inviteState.tokenExpiry;
+          existingUser.setupTokenHash = inviteState.tokenHash;
+          existingUser.setupTokenExpiresAt = inviteState.tokenExpiry;
+          existingUser.mustSetPassword = true;
+          existingUser.status = 'invited';
+          existingUser.isActive = false;
+          existingUser.inviteSentAt = new Date();
+          await existingUser.save(session ? { session } : undefined);
+
+          await safeQueueEmail({
+            context: req,
+            operation: 'EMAIL_QUEUE',
+            payload: {
+              action: 'USER_INVITE_EMAIL',
+              tenantId: existingUser.firmId?.toString?.() || existingUser.firmId || null,
+              email: existingUser.email,
+            },
+            execute: async () => {
+              const emailResult = await emailService.sendPasswordSetupEmail({
+                email: existingUser.email,
+                name: existingUser.name,
+                token: inviteState.token,
+                xID: existingUser.xID,
+                firmSlug: firm.firmSlug,
+                req,
+              });
+
+              if (emailResult?.success) {
+                log.info('ADMIN_INVITE_EMAIL_SENT', {
+                  req,
+                  firmId: existingUser.firmId,
+                  userXID: admin.xID,
+                  inviteXID: existingUser.xID,
+                  invitedEmail: emailService.maskEmail(existingUser.email),
+                });
+              } else {
+                log.warn('ADMIN_INVITE_EMAIL_FAILED', {
+                  req,
+                  firmId: existingUser.firmId,
+                  userXID: admin.xID,
+                  inviteXID: existingUser.xID,
+                  invitedEmail: emailService.maskEmail(existingUser.email),
+                  error: emailResult?.error || 'Unknown email error',
+                });
+              }
+            },
+          });
+        }
+
+        return buildInviteResponse(existingUser, {
+          statusCode: 200,
+          message: shouldQueueInviteEmail
+            ? 'User already invited. Invite email queued.'
+            : 'User already invited. Existing invite remains active.',
+        });
+      }
+
       return res.status(409).json({
         success: false,
         message: 'User with this email already exists',
       });
     }
     
-    const session = getSession(req);
-
     const inviteState = await resolveInviteRequestState({
       req,
       admin,
@@ -2225,20 +2340,10 @@ const createUser = async (req, res) => {
       },
     }, req);
     
-    return {
+    return buildInviteResponse(newUser, {
       statusCode: 201,
-      success: true,
       message: 'User created successfully. Invite email queued.',
-      data: {
-        xID: newUser.xID, // Return auto-generated xID
-        name: newUser.name,
-        email: newUser.email,
-        role: newUser.role,
-        allowedCategories: newUser.allowedCategories,
-        passwordSet: newUser.passwordSet,
-        status: newUser.status,
-      },
-    };
+    });
   } catch (error) {
     if (error instanceof PlanLimitExceededError || error instanceof PlanAdminLimitExceededError) {
       console.warn('[PLAN_LIMIT] createUser blocked', { firmId: req.user?.firmId?.toString?.() || req.user?.firmId, message: error.message });
@@ -2258,6 +2363,32 @@ const createUser = async (req, res) => {
     });
     // Handle duplicate key errors from MongoDB (E11000)
     if (error.code === 11000) {
+      const admin = req.user;
+      const normalizedEmail = req.body?.email?.trim?.().toLowerCase?.();
+      if (admin?.firmId && normalizedEmail) {
+        const existingUser = await findExistingInviteUser({
+          firmId: admin.firmId,
+          normalizedEmail,
+        });
+
+        if (existingUser?.status === 'invited') {
+          log.info('ADMIN_INVITE_STATE_REUSED', {
+            req,
+            firmId: admin.firmId,
+            userXID: admin.xID,
+            invitedEmail: emailService.maskEmail(normalizedEmail),
+            inviteXID: existingUser.xID,
+            inviteExpiry: existingUser.inviteTokenExpiry?.toISOString?.() || null,
+            reuseReason: 'duplicate_key_existing_invited_user',
+          });
+
+          return buildInviteResponse(existingUser, {
+            statusCode: 200,
+            message: 'User already invited. Existing invite remains active.',
+          });
+        }
+      }
+
       // Check which field caused the duplicate
       if (error.keyPattern && error.keyPattern.email) {
         console.error('[AUTH] Duplicate email error:', error.message);
