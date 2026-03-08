@@ -16,6 +16,7 @@ export const LoginPage = () => {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
   const { login, fetchProfile } = useAuth();
@@ -27,25 +28,40 @@ export const LoginPage = () => {
   const successMessage = location.state?.message;
   const messageType = location.state?.messageType;
 
+  const handleIdentifierChange = (event) => {
+    const nextValue = event.target.value.replace(/\s+/g, '').toUpperCase();
+    setIdentifier(nextValue);
+    setError('');
+    setFieldErrors((current) => ({ ...current, identifier: '' }));
+  };
+
+  const handlePasswordChange = (event) => {
+    setPassword(event.target.value);
+    setError('');
+    setFieldErrors((current) => ({ ...current, password: '' }));
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    setFieldErrors({});
+    const normalizedIdentifier = identifier.trim().toUpperCase();
 
     // Validation - xID only (no email)
-    if (!validateXID(identifier)) {
-      setError('Please enter a valid xID (e.g., X123456)');
+    if (!validateXID(normalizedIdentifier)) {
+      setFieldErrors({ identifier: 'Please enter a valid xID (for example, X123456).' });
       return;
     }
 
     if (!validatePassword(password)) {
-      setError('Password must be at least 8 characters');
+      setFieldErrors({ password: 'Password must be at least 8 characters.' });
       return;
     }
 
     setLoading(true);
 
     try {
-      const response = await login(identifier, password, '/superadmin/login');
+      const response = await login(normalizedIdentifier, password, '/superadmin/login');
 
       if (response.success) {
         showSuccess('Signed in successfully.');
@@ -63,7 +79,7 @@ export const LoginPage = () => {
       
       if (errorData?.mustChangePassword) {
         // Redirect to change password page with identifier
-        navigate('/change-password', { state: { xID: identifier } });
+        navigate('/change-password', { state: { xID: normalizedIdentifier } });
       } else if (errorData?.passwordSetupRequired) {
         // User needs to set password via email link
         setError('Please set your password using the link sent to your email. If you haven\'t received it, contact your administrator.');
@@ -86,48 +102,57 @@ export const LoginPage = () => {
           <p className="text-secondary">Compliance Workflow Infrastructure</p>
         </div>
 
-        <form onSubmit={handleLogin}>
+        <form onSubmit={handleLogin} noValidate>
           <Input
             label="xID"
             type="text"
             value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)}
+            onChange={handleIdentifierChange}
+            error={fieldErrors.identifier}
             required
             placeholder="X123456"
+            autoComplete="username"
+            disabled={loading}
             autoFocus
+            helpText="Use your xID (case-insensitive, e.g., x123456 or X123456)."
           />
-          <p style={{ 
-            fontSize: '0.875rem', 
-            color: 'var(--text-secondary)', 
-            marginTop: '-0.5rem', 
-            marginBottom: '1rem' 
-          }}>
-            Use your xID (case-insensitive, e.g., x123456 or X123456)
-          </p>
 
           <Input
             label="Password"
             type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={handlePasswordChange}
+            error={fieldErrors.password}
             required
             placeholder="Enter your password"
+            autoComplete="current-password"
+            disabled={loading}
           />
 
-          {successMessage && messageType === 'success' && (
-            <div className="neo-alert neo-alert--success" style={{ marginBottom: 'var(--spacing-md)' }}>
+          {successMessage && (
+            <div
+              className={`neo-alert ${
+                messageType === 'warning'
+                  ? 'neo-alert--warning'
+                  : messageType === 'info'
+                    ? 'neo-alert--info'
+                    : 'neo-alert--success'
+              } auth-alert`}
+              role={messageType === 'warning' ? 'alert' : 'status'}
+              aria-live="polite"
+            >
               {successMessage}
             </div>
           )}
 
           {error && (
-            <div className="neo-alert neo-alert--danger" style={{ marginBottom: 'var(--spacing-md)' }}>
+            <div className="neo-alert neo-alert--danger auth-alert" role="alert">
               {error}
             </div>
           )}
 
-          <Button type="submit" variant="primary" className="w-full" disabled={loading}>
-            {loading ? 'Logging in...' : 'Login'}
+          <Button type="submit" variant="primary" fullWidth loading={loading}>
+            Login
           </Button>
 
           <div className="login-footer">

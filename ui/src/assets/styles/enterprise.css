@@ -124,7 +124,7 @@
     border-radius: theme(--radius);
     font-weight: 500;
     transition: all 150ms ease-in-out;
-    min-height: 36px;
+    min-height: 44px;
     min-width: 80px;
     cursor: pointer;
     border: none;
@@ -390,6 +390,60 @@
     color: theme(--color-text-muted);
     font-size: theme(--text-xs);
     margin-top: 4px;
+  }
+
+  .auth-helper-text {
+    font-size: theme(--text-sm);
+    color: theme(--color-text-muted);
+    margin-top: -4px;
+    margin-bottom: theme(--spacing-md);
+    line-height: 1.5;
+  }
+
+  .auth-alert {
+    margin-bottom: theme(--spacing-md);
+  }
+
+  .auth-inline-button {
+    background: none;
+    border: none;
+    padding: 0;
+    color: theme(--color-info);
+    cursor: pointer;
+    text-decoration: underline;
+    font: inherit;
+  }
+
+  .auth-inline-button:hover:not(:disabled) {
+    color: theme(--color-primary-600);
+  }
+
+  .auth-inline-button:focus-visible {
+    outline: 2px solid theme(--color-info);
+    outline-offset: 2px;
+    border-radius: theme(--radius-sm);
+  }
+
+  .auth-inline-button:disabled {
+    color: theme(--color-text-muted);
+    cursor: not-allowed;
+    text-decoration: none;
+  }
+
+  .auth-secondary-panel {
+    margin-top: theme(--spacing-lg);
+    padding: theme(--spacing-md);
+    background: theme(--color-surface-base);
+    border: 1px solid theme(--color-border-subtle);
+    border-radius: theme(--radius-lg);
+    text-align: center;
+    font-size: theme(--text-sm);
+    color: theme(--color-text-muted);
+  }
+
+  .auth-error-state {
+    text-align: center;
+    padding: theme(--spacing-lg);
   }
 }
 

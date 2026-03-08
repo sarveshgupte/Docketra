@@ -13,6 +13,7 @@ const partialPhonePattern = /^[0-9]{0,10}$/;
 const OTP_LENGTH = 6;
 const OTP_RESEND_COOLDOWN = 60;
 const PASSWORD_HINT_ID = 'signup-password-policy-hint';
+const OTP_HINT_ID = 'signup-otp-hint';
 
 const getErrorMessage = (error, fallback) => (
   error?.response?.data?.message
@@ -63,6 +64,13 @@ export default function Signup() {
   const otpInputRefs = useRef([]);
   const autoSubmittedOtpRef = useRef('');
   const otp = useMemo(() => otpDigits.join(''), [otpDigits]);
+  const renderRequiredLabel = (label) => (
+    <>
+      {label}
+      <span aria-hidden="true"> *</span>
+    </>
+  );
+  const getDescribedBy = (...ids) => ids.filter(Boolean).join(' ') || undefined;
 
   useEffect(() => {
     if (step !== 'otp') return;
@@ -297,15 +305,15 @@ export default function Signup() {
             </div>
           )}
           {apiMessage && (
-            <div role="status" className="mt-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700">
+            <div role="status" aria-live="polite" className="mt-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700">
               {apiMessage}
             </div>
           )}
 
           {step === 'form' && (
-            <form className="mt-6 space-y-4" onSubmit={submitManualSignup}>
+            <form className="mt-6 space-y-4" onSubmit={submitManualSignup} noValidate>
               <div>
-                <label htmlFor="signup-name" className={labelClass}>Name</label>
+                <label htmlFor="signup-name" className={labelClass}>{renderRequiredLabel('Name')}</label>
                 <input
                   id="signup-name"
                   name="name"
@@ -314,12 +322,14 @@ export default function Signup() {
                   className={inputClass}
                   disabled={loading}
                   autoComplete="name"
+                  aria-invalid={errors.name ? 'true' : undefined}
+                  aria-describedby={getDescribedBy(errors.name ? 'signup-name-error' : null)}
                   required
                 />
-                {errors.name && <p className="mt-1 text-xs text-red-600">{errors.name}</p>}
+                {errors.name && <p id="signup-name-error" className="mt-1 text-xs text-red-600">{errors.name}</p>}
               </div>
               <div>
-                <label htmlFor="signup-email" className={labelClass}>Email</label>
+                <label htmlFor="signup-email" className={labelClass}>{renderRequiredLabel('Email')}</label>
                 <input
                   id="signup-email"
                   type="email"
@@ -329,12 +339,14 @@ export default function Signup() {
                   className={inputClass}
                   disabled={loading}
                   autoComplete="email"
+                  aria-invalid={errors.email ? 'true' : undefined}
+                  aria-describedby={getDescribedBy(errors.email ? 'signup-email-error' : null)}
                   required
                 />
-                {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email}</p>}
+                {errors.email && <p id="signup-email-error" className="mt-1 text-xs text-red-600">{errors.email}</p>}
               </div>
               <div>
-                <label htmlFor="signup-firm-name" className={labelClass}>Firm Name</label>
+                <label htmlFor="signup-firm-name" className={labelClass}>{renderRequiredLabel('Firm Name')}</label>
                 <input
                   id="signup-firm-name"
                   name="firmName"
@@ -342,12 +354,15 @@ export default function Signup() {
                   onChange={onFormChange}
                   className={inputClass}
                   disabled={loading}
+                  autoComplete="organization"
+                  aria-invalid={errors.firmName ? 'true' : undefined}
+                  aria-describedby={getDescribedBy(errors.firmName ? 'signup-firm-name-error' : null)}
                   required
                 />
-                {errors.firmName && <p className="mt-1 text-xs text-red-600">{errors.firmName}</p>}
+                {errors.firmName && <p id="signup-firm-name-error" className="mt-1 text-xs text-red-600">{errors.firmName}</p>}
               </div>
               <div>
-                <label htmlFor="signup-password" className={labelClass}>Password</label>
+                <label htmlFor="signup-password" className={labelClass}>{renderRequiredLabel('Password')}</label>
                 <div className="relative">
                   <input
                     id="signup-password"
@@ -355,13 +370,14 @@ export default function Signup() {
                     name="password"
                     value={form.password}
                      onChange={onFormChange}
-                     className={`${inputClass} pr-10`}
-                     disabled={loading}
-                     autoComplete="new-password"
-                     aria-describedby={PASSWORD_HINT_ID}
-                     minLength={8}
-                     required
-                   />
+                      className={`${inputClass} pr-10`}
+                       disabled={loading}
+                       autoComplete="new-password"
+                       aria-invalid={errors.password ? 'true' : undefined}
+                       aria-describedby={getDescribedBy(errors.password ? 'signup-password-error' : null, PASSWORD_HINT_ID)}
+                       minLength={8}
+                       required
+                     />
                   <button
                     type="button"
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
@@ -376,10 +392,10 @@ export default function Signup() {
                     </svg>
                   </button>
                 </div>
-                {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password}</p>}
+                {errors.password && <p id="signup-password-error" className="mt-1 text-xs text-red-600">{errors.password}</p>}
               </div>
               <div>
-                <label htmlFor="signup-phone" className={labelClass}>Phone Number (+91)</label>
+                <label htmlFor="signup-phone" className={labelClass}>{renderRequiredLabel('Phone Number (+91)')}</label>
                 <input
                   id="signup-phone"
                   name="phone"
@@ -392,12 +408,14 @@ export default function Signup() {
                   pattern="[0-9]{10}"
                   title="Enter a 10-digit Indian mobile number"
                   maxLength={10}
+                  aria-invalid={errors.phone ? 'true' : undefined}
+                  aria-describedby={getDescribedBy(errors.phone ? 'signup-phone-error' : null, 'signup-phone-help')}
                   required
                 />
-                 <p className="mt-1 text-xs text-gray-500">Enter a 10-digit Indian mobile number</p>
-                 {errors.phone && <p className="mt-1 text-xs text-red-600">{errors.phone}</p>}
-               </div>
-               <p id={PASSWORD_HINT_ID} className="text-xs text-gray-500">{STRONG_PASSWORD_MESSAGE}</p>
+                  <p id="signup-phone-help" className="mt-1 text-xs text-gray-500">Enter a 10-digit Indian mobile number</p>
+                  {errors.phone && <p id="signup-phone-error" className="mt-1 text-xs text-red-600">{errors.phone}</p>}
+                </div>
+                <p id={PASSWORD_HINT_ID} className="text-xs text-gray-500">{STRONG_PASSWORD_MESSAGE}</p>
                <button
                 type="submit"
                 disabled={loading}
@@ -430,13 +448,14 @@ export default function Signup() {
           )}
 
           {step === 'otp' && (
-            <form className="mt-6 space-y-4" onSubmit={submitOtpVerification}>
+            <form className="mt-6 space-y-4" onSubmit={submitOtpVerification} noValidate>
               <div>
                 <label htmlFor="otp-email" className={labelClass}>Email</label>
                 <input id="otp-email" value={signupEmail} className={inputClass} readOnly />
               </div>
-              <div>
-                <label htmlFor="otp-code-0" className={labelClass}>6-digit OTP</label>
+              <fieldset>
+                <legend className={labelClass}>{renderRequiredLabel('6-digit OTP')}</legend>
+                <p id={OTP_HINT_ID} className="mt-1 text-xs text-gray-500">Enter the one-time password sent to your email.</p>
                 <div className="flex gap-2" onPaste={handleOtpPaste}>
                   {otpDigits.map((digit, index) => (
                     <input
@@ -454,12 +473,15 @@ export default function Signup() {
                       pattern="[0-9]*"
                       autoComplete={index === 0 ? 'one-time-code' : 'off'}
                       maxLength={1}
+                      aria-label={`OTP digit ${index + 1}`}
+                      aria-invalid={errors.otp ? 'true' : undefined}
+                      aria-describedby={getDescribedBy(errors.otp ? 'signup-otp-error' : null, OTP_HINT_ID)}
                       required
                     />
                   ))}
                 </div>
-                {errors.otp && <p className="mt-1 text-xs text-red-600">{errors.otp}</p>}
-              </div>
+                {errors.otp && <p id="signup-otp-error" className="mt-1 text-xs text-red-600">{errors.otp}</p>}
+              </fieldset>
               <div className="flex flex-col gap-3 sm:flex-row">
                 <button
                   type="submit"
@@ -483,7 +505,7 @@ export default function Signup() {
 
           {step === 'success' && (
             <div className="mt-6 space-y-4">
-              <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+              <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800" role="status" aria-live="polite">
                 <p className="font-semibold">🎉 Your firm account has been created successfully.</p>
                 <p className="mt-2">
                   Your login credentials have been sent to your registered email address.

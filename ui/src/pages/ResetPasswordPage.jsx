@@ -78,7 +78,7 @@ export const ResetPasswordPage = () => {
           <p className="text-secondary">Enter your new password below.</p>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <Input
             label="New Password"
             type="password"
@@ -86,6 +86,9 @@ export const ResetPasswordPage = () => {
             onChange={(e) => setPassword(e.target.value)}
             required
             placeholder="Enter new password (at least 8 characters)"
+            autoComplete="new-password"
+            disabled={loading}
+            helpText={STRONG_PASSWORD_MESSAGE}
             autoFocus
           />
 
@@ -96,16 +99,18 @@ export const ResetPasswordPage = () => {
             onChange={(e) => setConfirmPassword(e.target.value)}
             required
             placeholder="Confirm new password"
+            autoComplete="new-password"
+            disabled={loading}
           />
 
           {error && (
-            <div className="neo-alert neo-alert--danger" style={{ marginBottom: 'var(--spacing-md)' }}>
+            <div className="neo-alert neo-alert--danger auth-alert" role="alert">
               {error}
             </div>
           )}
 
-          <Button type="submit" variant="primary" className="w-full" disabled={loading || !token}>
-            {loading ? 'Resetting...' : 'Reset Password'}
+          <Button type="submit" variant="primary" fullWidth disabled={!token} loading={loading}>
+            Reset Password
           </Button>
         </form>
       </Card>
