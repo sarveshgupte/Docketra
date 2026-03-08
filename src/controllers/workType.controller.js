@@ -49,9 +49,11 @@ const createWorkType = async (req, res) => {
     return res.status(400).json({ success: false, message: 'name is required' });
   }
 
-  // Validate prefix if provided
-  if (prefix !== undefined && prefix !== null && prefix !== '') {
-    const normalizedPrefix = String(prefix).trim().toUpperCase();
+  // Validate and normalise prefix if provided
+  const hasPrefix = prefix !== undefined && prefix !== null && prefix !== '';
+  let normalizedPrefix;
+  if (hasPrefix) {
+    normalizedPrefix = String(prefix).trim().toUpperCase();
     if (!/^[A-Z]{2,4}$/.test(normalizedPrefix)) {
       return res.status(400).json({
         success: false,
@@ -76,8 +78,8 @@ const createWorkType = async (req, res) => {
     createdByXID: req.user.xID,
   };
 
-  if (prefix !== undefined && prefix !== null && prefix !== '') {
-    createData.prefix = String(prefix).trim().toUpperCase();
+  if (hasPrefix) {
+    createData.prefix = normalizedPrefix;
   }
 
   const workType = await WorkType.create(createData);
