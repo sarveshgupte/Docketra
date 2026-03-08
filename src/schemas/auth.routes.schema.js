@@ -19,6 +19,20 @@ module.exports = {
       email: z.string().trim().email(),
     }).passthrough(),
   },
+  'POST /resend-otp': {
+    body: z.object({
+      xid: xidString.optional(),
+      xID: xidString.optional(),
+      XID: xidString.optional(),
+      firmSlug: nonEmptyString,
+    }).strip().refine(
+      (value) => Boolean(value.xid || value.xID || value.XID),
+      {
+        message: 'xID is required',
+        path: ['xid'],
+      }
+    ),
+  },
   'POST /reset-password-with-token': {
     body: z.object({
       token: nonEmptyString,

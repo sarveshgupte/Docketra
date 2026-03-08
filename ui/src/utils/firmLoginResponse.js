@@ -11,6 +11,7 @@ export const resolveFirmLoginResponseState = (responseData) => {
       return {
         nextStep: 'otp',
         loginToken: responseData.loginToken,
+        resendCooldownSeconds: responseData.resendCooldownSeconds,
       };
     }
 
