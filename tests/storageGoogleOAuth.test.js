@@ -199,7 +199,7 @@ async function testGoogleConnectRedirects() {
   console.log('  ✓ buildStateToken generates correct structure');
 }
 
-async function testGoogleConnectAllowsLegacyAdminRole() {
+async function testGoogleConnectAcceptsCanonicalAdminRole() {
   const req = {
     firmId: 'firm-abc',
     user: { role: 'Admin' },
@@ -212,7 +212,7 @@ async function testGoogleConnectAllowsLegacyAdminRole() {
   assert(res.redirectedTo && res.redirectedTo.startsWith('https://accounts.google.com/o/oauth2/v2/auth?'),
     `Expected Google OAuth redirect, got: ${res.redirectedTo}`);
   assert(res.headers['Set-Cookie'], 'Expected state cookie to be set for admin user');
-  console.log('  ✓ googleConnect accepts normalized Admin role for storage management');
+  console.log('  ✓ googleConnect accepts canonical Admin role for storage management');
 }
 
 async function testVerifyStateToken() {
@@ -362,7 +362,7 @@ async function run() {
   try {
     await testTokenEncryptionRoundtrip();
     await testGoogleConnectRedirects();
-    await testGoogleConnectAllowsLegacyAdminRole();
+    await testGoogleConnectAcceptsCanonicalAdminRole();
     await testVerifyStateToken();
     await testGoogleCallbackMissingParams();
     await testGoogleCallbackFirmMismatch();
