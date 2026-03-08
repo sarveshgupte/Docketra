@@ -16,6 +16,7 @@ const categoryRepository = require('../repositories/category.repository');
 const { assertFirmContext } = require('../utils/tenantGuard');
 const { logAuthEvent } = require('../services/audit.service');
 const { isExternalStorageEnabled } = require('../services/featureFlags.service');
+const log = require('../utils/log');
 
 /**
  * Admin Controller for Admin Panel Operations
@@ -70,6 +71,20 @@ const safeAuditLog = async (auditData) => {
  * PR: Fix Case Lifecycle - Added resolved cases count
  */
 const getAdminStats = async (req, res) => {
+  const fallbackData = {
+    totalUsers: 0,
+    totalClients: 0,
+    totalCategories: 0,
+    pendingApprovals: 0,
+    allOpenCases: 0,
+    allPendingCases: 0,
+    filedCases: 0,
+    resolvedCases: 0,
+    overdueCases: 0,
+    avgResolutionTimeSeconds: 0,
+    metricsDate: null,
+  };
+
   try {
     assertFirmContext(req);
     const tenantId = req.user?.firmId;
@@ -79,11 +94,13 @@ const getAdminStats = async (req, res) => {
       totalClients,
       totalCategories,
       latestMetrics,
+      invitedUsers,
     ] = await Promise.all([
-      userRepository.countUsers(tenantId, { isActive: true }),
-      clientRepository.countClients(tenantId),
-      categoryRepository.countCategories(tenantId),
-      getLatestTenantMetrics(tenantId),
+      userRepository.countUsers(tenantId, { status: { $ne: 'deleted' } }).catch(() => 0),
+      clientRepository.countClients(tenantId).catch(() => 0),
+      categoryRepository.countCategories(tenantId).catch(() => 0),
+      getLatestTenantMetrics(tenantId).catch(() => null),
+      userRepository.countUsers(tenantId, { status: 'invited' }).catch(() => 0),
     ]);
 
     res.json({
@@ -92,7 +109,7 @@ const getAdminStats = async (req, res) => {
         totalUsers,
         totalClients,
         totalCategories,
-        pendingApprovals: latestMetrics?.pendingApprovals || 0,
+        pendingApprovals: (latestMetrics?.pendingApprovals || 0) + invitedUsers,
         allOpenCases: latestMetrics?.openCases || 0,
         allPendingCases: latestMetrics?.pendedCases || 0,
         filedCases: latestMetrics?.filedCases || 0,
@@ -109,10 +126,13 @@ const getAdminStats = async (req, res) => {
         message: error.message,
       });
     }
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching admin statistics',
+    log.warn('ADMIN_STATS_FALLBACK', {
+      req,
       error: error.message,
+    });
+    res.json({
+      success: true,
+      data: fallbackData,
     });
   }
 };
@@ -140,6 +160,12 @@ const resendInviteEmail = async (req, res) => {
     
     // Get admin from authenticated request
     const admin = req.user;
+    log.info('ADMIN_INVITE_RESEND_REQUEST_RECEIVED', {
+      req,
+      firmId: admin.firmId,
+      userXID: admin.xID,
+      inviteXID: xID.toUpperCase(),
+    });
     
     // Find target user by xID (same-firm only, prevent Superadmin access)
     const user = await User.findOne({ 
@@ -154,8 +180,8 @@ const resendInviteEmail = async (req, res) => {
       });
     }
     
-    // Check if user has already activated their account (mustSetPassword=false means completed)
-    if (!user.mustSetPassword) {
+    const invitePending = user.status === 'invited' || Boolean(user.mustSetPassword) || !user.passwordHash;
+    if (!invitePending) {
       return res.status(400).json({
         success: false,
         message: 'User already activated. Cannot resend invite email for activated users.',
@@ -171,7 +197,18 @@ const resendInviteEmail = async (req, res) => {
     user.inviteTokenHash = tokenHash;
     user.inviteTokenExpiry = tokenExpiry;
     user.inviteSentAt = new Date();
+    user.mustSetPassword = true;
+    user.status = 'invited';
+    user.isActive = false;
     await user.save();
+    log.info('ADMIN_INVITE_RECORD_UPDATED', {
+      req,
+      firmId: admin.firmId,
+      userXID: admin.xID,
+      inviteXID: user.xID,
+      invitedEmail: emailService.maskEmail(user.email),
+      inviteExpiry: tokenExpiry.toISOString(),
+    });
     
     // Fetch firmSlug for email
     let firmSlug = null;
@@ -195,7 +232,14 @@ const resendInviteEmail = async (req, res) => {
       });
       
       if (!emailResult.success) {
-        console.warn('[ADMIN] Failed to send invite reminder email:', emailResult.error);
+        log.warn('ADMIN_INVITE_EMAIL_FAILED', {
+          req,
+          firmId: admin.firmId,
+          userXID: admin.xID,
+          inviteXID: user.xID,
+          invitedEmail: emailService.maskEmail(user.email),
+          error: emailResult.error,
+        });
         
         // Log failure but continue - token was updated
         await safeAuditLog({
@@ -211,6 +255,14 @@ const resendInviteEmail = async (req, res) => {
           message: 'Failed to send email. Please check email service configuration.',
         });
       }
+
+      log.info('ADMIN_INVITE_EMAIL_SENT', {
+        req,
+        firmId: admin.firmId,
+        userXID: admin.xID,
+        inviteXID: user.xID,
+        invitedEmail: emailService.maskEmail(user.email),
+      });
       
       // Log successful email send
       await safeAuditLog({
@@ -226,7 +278,14 @@ const resendInviteEmail = async (req, res) => {
         message: 'Invite email sent successfully',
       });
     } catch (emailError) {
-      console.error('[ADMIN] Failed to send invite email:', emailError.message);
+      log.error('ADMIN_INVITE_EMAIL_FAILED', {
+        req,
+        firmId: admin.firmId,
+        userXID: admin.xID,
+        inviteXID: user.xID,
+        invitedEmail: emailService.maskEmail(user.email),
+        error: emailError.message,
+      });
       
       // Log failure
       await safeAuditLog({

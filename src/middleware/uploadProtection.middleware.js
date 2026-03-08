@@ -6,9 +6,13 @@ const { randomUUID } = require('crypto');
 const config = require('../config/config');
 
 const uploadRoot = path.join(__dirname, '../../uploads/private');
-if (!fs.existsSync(uploadRoot)) {
-  fs.mkdirSync(uploadRoot, { recursive: true });
-}
+const ensureUploadRoot = () => {
+  if (!fs.existsSync(uploadRoot)) {
+    fs.mkdirSync(uploadRoot, { recursive: true });
+  }
+  return uploadRoot;
+};
+ensureUploadRoot();
 
 const extensionMap = {
   'application/pdf': '.pdf',
@@ -174,4 +178,5 @@ module.exports = {
   createSecureUpload,
   enforceUploadSecurity,
   uploadErrorHandler,
+  ensureUploadRoot,
 };

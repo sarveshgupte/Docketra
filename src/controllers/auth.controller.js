@@ -67,7 +67,56 @@ const ROLE_EMPLOYEE = 'Employee';
 const log = require('../utils/log');
 const logger = log;
 const { safeLogForensicAudit, getRequestIp, getRequestUserAgent } = require('../services/forensicAudit.service');
-const { safeAuditLog, safeQueueEmail } = require('../services/safeSideEffects.service');
+const { safeAuditLog, safeQueueEmail, safeAnalyticsEvent } = require('../services/safeSideEffects.service');
+
+const resolveInviteRequestState = async ({ req, admin, normalizedEmail, session }) => {
+  const cachedState = req._inviteRequestState;
+
+  if (cachedState && cachedState.firmId === String(admin.firmId) && cachedState.email === normalizedEmail) {
+    log.info('ADMIN_INVITE_STATE_REUSED', {
+      req,
+      firmId: admin.firmId,
+      userXID: admin.xID,
+      invitedEmail: emailService.maskEmail(normalizedEmail),
+      inviteXID: cachedState.xID,
+      inviteExpiry: cachedState.tokenExpiry.toISOString(),
+    });
+    return cachedState;
+  }
+
+  const xID = await xIDGenerator.generateNextXID(admin.firmId, session);
+  const token = emailService.generateSecureToken();
+  const tokenHash = emailService.hashToken(token);
+  const tokenExpiry = new Date(Date.now() + INVITE_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000);
+
+  const inviteState = {
+    firmId: String(admin.firmId),
+    email: normalizedEmail,
+    xID,
+    token,
+    tokenHash,
+    tokenExpiry,
+  };
+
+  req._inviteRequestState = inviteState;
+
+  log.info('ADMIN_INVITE_XID_GENERATED', {
+    req,
+    firmId: admin.firmId,
+    userXID: admin.xID,
+    invitedEmail: emailService.maskEmail(normalizedEmail),
+    inviteXID: xID,
+  });
+  log.info('ADMIN_INVITE_TOKEN_GENERATED', {
+    req,
+    firmId: admin.firmId,
+    userXID: admin.xID,
+    inviteXID: xID,
+    inviteExpiry: tokenExpiry.toISOString(),
+  });
+
+  return inviteState;
+};
 
 const getLoginOtpConfig = () => (
   process.env.NODE_ENV === 'production'
@@ -2008,6 +2057,15 @@ const createUser = async (req, res) => {
     
     // Get admin from authenticated request
     const admin = req.user;
+    const normalizedEmail = email.trim().toLowerCase();
+
+    log.info('ADMIN_INVITE_REQUEST_RECEIVED', {
+      req,
+      firmId: admin.firmId,
+      userXID: admin.xID,
+      invitedEmail: emailService.maskEmail(normalizedEmail),
+      requestedRole: persistedRole,
+    });
     
     // Resolve firm's default client to inherit for new user
     const firm = await Firm.findById(admin.firmId);
@@ -2021,7 +2079,7 @@ const createUser = async (req, res) => {
     // Check if email already exists (enforce uniqueness)
     const existingUser = await User.findOne({
       firmId: admin.firmId,
-      email: email.trim().toLowerCase(),
+      email: normalizedEmail,
       status: { $ne: 'deleted' },
     });
     
@@ -2035,31 +2093,25 @@ const createUser = async (req, res) => {
     
     const session = getSession(req);
 
-    // Generate next xID automatically (server-side only)
-    const xID = await xIDGenerator.generateNextXID(admin.firmId, session);
-    
-    // Mask email for logging (show first 2 and domain only)
-    const emailParts = email.split('@');
-    const maskedEmail = emailParts[0].substring(0, 2) + '***@' + emailParts[1];
-    console.log(`[AUTH] Auto-generated xID: ${xID} for ${maskedEmail}`);
+    const inviteState = await resolveInviteRequestState({
+      req,
+      admin,
+      normalizedEmail,
+      session,
+    });
     
     const inheritedDefaultClientId = (
       firm.defaultClientId
       && mongoose.Types.ObjectId.isValid(firm.defaultClientId)
     ) ? firm.defaultClientId : null;
 
-    // Generate secure invite token (48-hour expiry per PR 32)
-    const token = emailService.generateSecureToken();
-    const tokenHash = emailService.hashToken(token);
-    const tokenExpiry = new Date(Date.now() + INVITE_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000);
-    
     await assertFirmPlanCapacity({ firmId: admin.firmId, session, role: persistedRole });
 
     // Create user without password (invite-based onboarding)
     const newUser = new User({
-      xID: xID, // Auto-generated, immutable
+      xID: inviteState.xID, // Auto-generated, immutable
       name,
-      email: email.trim().toLowerCase(),
+      email: normalizedEmail,
       firmId: admin.firmId, // Inherit firmId from admin
       ...(inheritedDefaultClientId ? { defaultClientId: inheritedDefaultClientId } : {}),
       role: persistedRole,
@@ -2067,25 +2119,41 @@ const createUser = async (req, res) => {
       isActive: false,
       passwordHash: null, // No password until user sets it
       passwordSet: false, // Password not set yet
-      mustSetPassword: false,
-      inviteTokenHash: tokenHash, // Using alias for invite token
-      inviteTokenExpiry: tokenExpiry, // 48 hours
-      setupTokenHash: tokenHash,
-      setupTokenExpiresAt: tokenExpiry,
+      mustSetPassword: true,
+      inviteTokenHash: inviteState.tokenHash, // Using alias for invite token
+      inviteTokenExpiry: inviteState.tokenExpiry, // 48 hours
+      setupTokenHash: inviteState.tokenHash,
+      setupTokenExpiresAt: inviteState.tokenExpiry,
       mustChangePassword: true, // Enforce password setup on first login
       passwordExpiresAt: null, // Not set until password is created
       status: 'invited', // User is invited, not yet active
       passwordHistory: [],
       passwordSetAt: null,
+      inviteSentAt: new Date(),
     });
     
     await newUser.save(session ? { session } : undefined);
-    await incrementTenantMetric(admin.firmId, 'users').catch(() => null);
-    console.log(`[AUTH] User default client inheritance resolved`, {
-      requestId: req.requestId,
-      firmId: admin.firmId?.toString?.() || admin.firmId,
+    log.info('ADMIN_INVITE_USER_CREATED', {
+      req,
+      firmId: admin.firmId,
+      userXID: admin.xID,
+      inviteXID: newUser.xID,
+      invitedEmail: emailService.maskEmail(newUser.email),
+      status: newUser.status,
+      passwordSet: newUser.passwordSet,
+      mustSetPassword: newUser.mustSetPassword,
       inheritedDefaultClientId: inheritedDefaultClientId ? inheritedDefaultClientId.toString() : null,
-      xID,
+    });
+    await safeAnalyticsEvent({
+      context: req,
+      eventName: 'TENANT_METRIC_INCREMENT',
+      payload: {
+        tenantId: admin.firmId?.toString?.() || admin.firmId || null,
+        metric: 'users',
+      },
+      execute: async () => {
+        await incrementTenantMetric(admin.firmId, 'users');
+      },
     });
     
     // Fetch firmSlug for email
@@ -2103,11 +2171,30 @@ const createUser = async (req, res) => {
         const emailResult = await emailService.sendPasswordSetupEmail({
           email: newUser.email,
           name: newUser.name,
-          token,
+          token: inviteState.token,
           xID: newUser.xID,
           firmSlug,
           req,
         });
+
+        if (emailResult?.success) {
+          log.info('ADMIN_INVITE_EMAIL_SENT', {
+            req,
+            firmId: newUser.firmId,
+            userXID: admin.xID,
+            inviteXID: newUser.xID,
+            invitedEmail: emailService.maskEmail(newUser.email),
+          });
+        } else {
+          log.warn('ADMIN_INVITE_EMAIL_FAILED', {
+            req,
+            firmId: newUser.firmId,
+            userXID: admin.xID,
+            inviteXID: newUser.xID,
+            invitedEmail: emailService.maskEmail(newUser.email),
+            error: emailResult?.error || 'Unknown email error',
+          });
+        }
 
         await safeAuditLog({
           xID: newUser.xID,
@@ -2138,9 +2225,10 @@ const createUser = async (req, res) => {
       },
     }, req);
     
-    res.status(201).json({
+    return {
+      statusCode: 201,
       success: true,
-      message: 'User created successfully. Invite email sent.',
+      message: 'User created successfully. Invite email queued.',
       data: {
         xID: newUser.xID, // Return auto-generated xID
         name: newUser.name,
@@ -2148,8 +2236,9 @@ const createUser = async (req, res) => {
         role: newUser.role,
         allowedCategories: newUser.allowedCategories,
         passwordSet: newUser.passwordSet,
+        status: newUser.status,
       },
-    });
+    };
   } catch (error) {
     if (error instanceof PlanLimitExceededError || error instanceof PlanAdminLimitExceededError) {
       console.warn('[PLAN_LIMIT] createUser blocked', { firmId: req.user?.firmId?.toString?.() || req.user?.firmId, message: error.message });
@@ -3189,7 +3278,10 @@ const getAllUsers = async (req, res) => {
     
     // Get all users in same firm, excluding password-related fields
     // Populate firm metadata for display
-    const users = await User.find({ firmId: adminFirmId })
+    const users = await User.find({
+      firmId: adminFirmId,
+      status: { $ne: 'deleted' },
+    })
       .select('-passwordHash -passwordHistory -passwordSetupTokenHash -passwordResetTokenHash')
       .populate('firmId', 'firmId name')
       .sort({ createdAt: -1 });

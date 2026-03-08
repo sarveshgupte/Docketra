@@ -79,7 +79,7 @@ const {
   superadminLimiter,
 } = require('./middleware/rateLimiters');
 const { tenantThrottle } = require('./middleware/tenantThrottle.middleware');
-const { uploadErrorHandler } = require('./middleware/uploadProtection.middleware');
+const { uploadErrorHandler, ensureUploadRoot } = require('./middleware/uploadProtection.middleware');
 const { allowInternalTokenOrSuperadmin } = require('./middleware/internalMetricsAccess.middleware');
 const { tenantScopedApiAccess, adminTenantScopedApiAccess } = require('./routes/routeGroups');
 
@@ -154,6 +154,7 @@ if (isProduction && inboundEmailEnabled && !process.env.INBOUND_EMAIL_WEBHOOK_SE
 
 validateEnv();
 logBuildMetadata();
+ensureUploadRoot();
 
 // Environment variable validation
 const requiredEnvVars = ['JWT_SECRET', 'NODE_ENV'];
