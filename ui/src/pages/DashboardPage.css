@@ -207,6 +207,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+   gap: var(--space-3);
+   flex-wrap: wrap;
   margin-bottom: var(--space-4);
 }
 
@@ -224,6 +226,46 @@
 
 .dashboard__table-wrap {
   overflow-x: auto;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+.dashboard__view-all-button {
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+}
+
+.dashboard__recent-cases-table {
+  width: 100%;
+  min-width: 720px;
+  table-layout: fixed;
+}
+
+.dashboard__case-name-cell {
+  width: 28%;
+}
+
+.dashboard__case-name {
+  display: inline-block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+.dashboard__recent-cases-skeleton {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.dashboard__recent-cases-skeleton-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 2fr) repeat(4, minmax(96px, 1fr));
+  gap: var(--space-3);
+  align-items: center;
 }
 
 /* ── Admin Stats ────────────────────────────────────────── */
@@ -388,5 +430,9 @@
   .dashboard__workflow {
     gap: var(--space-3);
     padding: var(--space-4);
+  }
+
+  .dashboard__recent-cases-skeleton-row {
+    min-width: 720px;
   }
 }
