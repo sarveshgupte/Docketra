@@ -10,6 +10,7 @@
 const crypto = require('crypto');
 const https = require('https');
 const { enqueueEmailJob } = require('../queues/email.queue');
+const logger = require('../utils/log');
 
 // Detect production mode
 const isProduction = process.env.NODE_ENV === 'production';
@@ -213,6 +214,10 @@ const sendEmail = async (mailOptions, context = null) => {
   const execute = async () => {
     const queued = await enqueueEmailJob('sendEmail', { mailOptions });
     if (queued.queued) {
+      logger.info('EMAIL_JOB_ENQUEUED', {
+        to: mailOptions.to,
+        subject: mailOptions.subject,
+      });
       return { success: true, queued: true, messageId: queued.jobId || null };
     }
     return sendEmailNow(mailOptions);
@@ -1014,6 +1019,10 @@ const sendLoginOtpEmail = async ({
     </div>
   `;
   const text = `Hello ${greetingName},\n\nYour one-time login code is:\n\n${resolvedOtp}\n\nThis code expires in ${expiryMinutes} minutes.\n\nIf you did not request this login, please ignore this email.\n\nBest regards,\nDocketra Team`;
+
+  if (process.env.NODE_ENV !== 'production') {
+    return sendEmailNow({ to: email, subject, html, text });
+  }
 
   return sendEmail({ to: email, subject, html, text }, context);
 };

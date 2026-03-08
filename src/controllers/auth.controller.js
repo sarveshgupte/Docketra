@@ -469,7 +469,7 @@ const sendLoginOtpChallenge = async (req, user, { isResend = false, returnLoginT
       firmSlug: req.params?.firmSlug || req.firmSlug || null,
       expiryMinutes: otpConfig.expiryMinutes,
     });
-    logLoginOtpEvent('OTP_EMAIL_SENT', req, user, {
+    logLoginOtpEvent('OTP_EMAIL_QUEUED', req, user, {
       expiryMinutes: otpConfig.expiryMinutes,
       resend: isResend,
       resendCount: user.loginOtpResendCount || 0,
