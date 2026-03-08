@@ -102,6 +102,8 @@ export const ChangePasswordPage = () => {
             onChange={(e) => setCurrentPassword(e.target.value)}
             required
             placeholder="Enter current password"
+            autoComplete="current-password"
+            disabled={loading}
             autoFocus
           />
 
@@ -112,6 +114,9 @@ export const ChangePasswordPage = () => {
             onChange={(e) => setNewPassword(e.target.value)}
             required
             placeholder="Enter new password (min 8 characters)"
+            autoComplete="new-password"
+            disabled={loading}
+            helpText={STRONG_PASSWORD_MESSAGE}
           />
 
           <Input
@@ -121,16 +126,18 @@ export const ChangePasswordPage = () => {
             onChange={(e) => setConfirmPassword(e.target.value)}
             required
             placeholder="Confirm new password"
+            autoComplete="new-password"
+            disabled={loading}
           />
 
           {error && (
-            <div className="neo-alert neo-alert--danger" style={{ marginBottom: 'var(--spacing-md)' }}>
+            <div className="neo-alert neo-alert--danger auth-alert" role="alert">
               {error}
             </div>
           )}
 
-          <Button type="submit" variant="primary" className="w-full" disabled={loading}>
-            {loading ? 'Changing Password...' : 'Change Password'}
+          <Button type="submit" variant="primary" fullWidth loading={loading}>
+            Change Password
           </Button>
         </form>
       </Card>

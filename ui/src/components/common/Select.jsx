@@ -2,7 +2,7 @@
  * Enterprise Select Component
  */
 
-import React from 'react';
+import React, { useId } from 'react';
 
 export const Select = ({
   label,
@@ -15,18 +15,32 @@ export const Select = ({
   children,
   ...props
 }) => {
+  const generatedId = useId();
+  const selectId = props.id || props.name || `select-${generatedId}`;
+  const errorId = `${selectId}-error`;
+  const helpId = `${selectId}-help`;
+  const describedBy = [
+    props['aria-describedby'],
+    error ? errorId : null,
+    !error && helpText ? helpId : null,
+  ].filter(Boolean).join(' ') || undefined;
+
   return (
     <div className={`form-group ${className}`}>
       {label && (
-        <label className="form-label">
+        <label className="form-label" htmlFor={selectId}>
           {label}
-          {required && <span className="text-danger"> *</span>}
+          {required && <span className="text-danger" aria-hidden="true"> *</span>}
         </label>
       )}
       <select 
+        id={selectId}
         className={`input ${error ? 'input-error' : ''}`}
         disabled={disabled} 
         required={required} 
+        aria-invalid={error ? 'true' : undefined}
+        aria-describedby={describedBy}
+        aria-required={required || undefined}
         {...props}
       >
         {children ? children : options.map((option) => (
@@ -35,8 +49,8 @@ export const Select = ({
           </option>
         ))}
       </select>
-      {error && <div className="form-error">{error}</div>}
-      {!error && helpText && <div className="form-help">{helpText}</div>}
+      {error && <div className="form-error" id={errorId}>{error}</div>}
+      {!error && helpText && <div className="form-help" id={helpId}>{helpText}</div>}
     </div>
   );
 };

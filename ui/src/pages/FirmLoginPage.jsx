@@ -10,7 +10,7 @@ import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Card } from '../components/common/Card';
 import { Loading } from '../components/common/Loading';
-import { validateXID, validatePassword } from '../utils/validators';
+import { validateEmail, validateXID, validatePassword } from '../utils/validators';
 import { ERROR_CODES, STORAGE_KEYS } from '../utils/constants';
 import { isAccessTokenOnlyUser } from '../utils/authUtils';
 import { resolveFirmLoginResponseState } from '../utils/firmLoginResponse';
@@ -20,6 +20,7 @@ import './LoginPage.css';
 
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN_SECONDS = import.meta.env.PROD ? 30 : 3;
+const RESEND_CREDENTIALS_SUCCESS_MESSAGE = 'Credentials email sent. Please check your inbox.';
 const resolveResendCooldownSeconds = (value) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : RESEND_COOLDOWN_SECONDS;
@@ -33,6 +34,8 @@ export const FirmLoginPage = () => {
   const [loginToken, setLoginToken] = useState('');
   const [showOtpForm, setShowOtpForm] = useState(false);
   const [error, setError] = useState('');
+  const [statusMessage, setStatusMessage] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [resendCooldownSeconds, setResendCooldownSeconds] = useState(RESEND_COOLDOWN_SECONDS);
   const [resendCountdown, setResendCountdown] = useState(0);
@@ -84,6 +87,37 @@ export const FirmLoginPage = () => {
     setLoginToken('');
     setPassword('');
     setResendCountdown(0);
+    setFieldErrors({});
+    setStatusMessage('');
+  };
+
+  const handleIdentifierChange = (event) => {
+    const nextValue = event.target.value.replace(/\s+/g, '').toUpperCase();
+    setIdentifier(nextValue);
+    setError('');
+    setStatusMessage('');
+    setFieldErrors((current) => ({ ...current, identifier: '' }));
+  };
+
+  const handlePasswordChange = (event) => {
+    setPassword(event.target.value);
+    setError('');
+    setStatusMessage('');
+    setFieldErrors((current) => ({ ...current, password: '' }));
+  };
+
+  const handleOtpChange = (event) => {
+    setOtp(event.target.value.replace(/\D/g, '').slice(0, OTP_LENGTH));
+    setError('');
+    setStatusMessage('');
+    setFieldErrors((current) => ({ ...current, otp: '' }));
+  };
+
+  const handleResendEmailChange = (event) => {
+    setResendEmail(event.target.value);
+    setError('');
+    setStatusMessage('');
+    setFieldErrors((current) => ({ ...current, resendEmail: '' }));
   };
 
   useEffect(() => {
@@ -136,15 +170,18 @@ export const FirmLoginPage = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    setStatusMessage('');
+    setFieldErrors({});
+    const normalizedIdentifier = identifier.trim().toUpperCase();
 
     // Validation - xID only (no email)
-    if (!validateXID(identifier)) {
-      setError('Please enter a valid xID (e.g., X123456)');
+    if (!validateXID(normalizedIdentifier)) {
+      setFieldErrors({ identifier: 'Please enter a valid xID (for example, X123456).' });
       return;
     }
 
     if (!validatePassword(password)) {
-      setError('Password must be at least 8 characters');
+      setFieldErrors({ password: 'Password must be at least 8 characters.' });
       return;
     }
 
@@ -158,7 +195,7 @@ export const FirmLoginPage = () => {
     try {
       // Login with firm context via API (not authService to include firmSlug)
       const response = await api.post(`/${firmSlug}/login`, {
-        xID: identifier,
+        xID: normalizedIdentifier,
         password: password,
         firmSlug: firmSlug, // Include firm context
       });
@@ -174,6 +211,7 @@ export const FirmLoginPage = () => {
         setOtp('');
         setPassword('');
         setShowResendForm(false);
+        setStatusMessage('Enter the OTP sent to your registered email to continue.');
         showSuccess('Enter the OTP sent to your email to continue.');
         return;
       }
@@ -189,7 +227,7 @@ export const FirmLoginPage = () => {
       
       if (errorData?.mustChangePassword) {
         // Redirect to change password page with identifier
-        navigate('/change-password', { state: { xID: identifier } });
+        navigate('/change-password', { state: { xID: normalizedIdentifier } });
       } else if (errorData?.mustSetPassword || errorData?.code === ERROR_CODES.PASSWORD_SETUP_REQUIRED) {
         // User needs to set password via email link
         setError('Please set your password using the link sent to your email. If you haven\'t received it, contact your administrator.');
@@ -207,10 +245,12 @@ export const FirmLoginPage = () => {
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     setError('');
+    setStatusMessage('');
+    setFieldErrors((current) => ({ ...current, otp: '' }));
 
     const normalizedOtp = otp.trim();
     if (!new RegExp(`^\\d{${OTP_LENGTH}}$`).test(normalizedOtp)) {
-      setError(`Please enter a valid ${OTP_LENGTH}-digit OTP`);
+      setFieldErrors({ otp: `Please enter a valid ${OTP_LENGTH}-digit OTP.` });
       return;
     }
 
@@ -247,6 +287,7 @@ export const FirmLoginPage = () => {
     }
 
     setError('');
+    setStatusMessage('');
     setResendLoading(true);
 
     try {
@@ -258,6 +299,8 @@ export const FirmLoginPage = () => {
       setResendCooldownSeconds(cooldown);
       setResendCountdown(cooldown);
       setOtp('');
+      setFieldErrors((current) => ({ ...current, otp: '' }));
+      setStatusMessage('A new OTP has been sent to your registered email.');
       showSuccess('OTP sent again to your email');
     } catch (err) {
       const serverMessage = err.response?.data?.error || err.response?.data?.message || 'Unable to resend OTP right now.';
@@ -273,15 +316,23 @@ export const FirmLoginPage = () => {
 
   const handleResendCredentials = async () => {
     const normalizedEmail = resendEmail.trim().toLowerCase();
+    setFieldErrors((current) => ({ ...current, resendEmail: '' }));
     if (!normalizedEmail) {
-      showError('Please enter your registered email address.');
+      setFieldErrors({ resendEmail: 'Please enter your registered email address.' });
+      return;
+    }
+
+    if (!validateEmail(normalizedEmail)) {
+      setFieldErrors({ resendEmail: 'Please enter a valid registered email address.' });
       return;
     }
 
     setResendLoading(true);
     try {
       const response = await api.post('/auth/resend-credentials', { email: normalizedEmail });
-      showSuccess(response?.data?.message || 'Credentials email sent. Please check your inbox.');
+      const successMessage = response?.data?.message || RESEND_CREDENTIALS_SUCCESS_MESSAGE;
+      setStatusMessage(successMessage);
+      showSuccess(successMessage);
       setResendEmail('');
       setShowResendForm(false);
     } catch (err) {
@@ -309,11 +360,16 @@ export const FirmLoginPage = () => {
             <h1>Docketra</h1>
             <p className="text-secondary">Compliance Workflow Infrastructure</p>
           </div>
-          <div className="error-message" style={{ textAlign: 'center', padding: '2rem' }}>
-            <p style={{ color: '#e53e3e', marginBottom: '1rem' }}>{error}</p>
-            <p style={{ color: '#718096', fontSize: '0.875rem' }}>
+          <div className="auth-error-state">
+            <div className="neo-alert neo-alert--danger auth-alert" role="alert">
+              {error}
+            </div>
+            <p className="auth-helper-text">
               Please contact your administrator for the correct login URL.
             </p>
+            <Button type="button" variant="secondary" fullWidth onClick={() => window.location.reload()}>
+              Retry
+            </Button>
           </div>
         </Card>
       </div>
@@ -333,14 +389,20 @@ export const FirmLoginPage = () => {
           </p>
         </div>
 
+        {statusMessage && (
+          <div className="neo-alert neo-alert--success auth-alert" role="status" aria-live="polite">
+            {statusMessage}
+          </div>
+        )}
+
         {error && (
-          <div className="error-message">
+          <div className="neo-alert neo-alert--danger auth-alert" role="alert">
             {error}
           </div>
         )}
 
         {showOtpForm ? (
-          <form onSubmit={handleVerifyOtp}>
+          <form onSubmit={handleVerifyOtp} noValidate>
             <Input
               label="xID"
               type="text"
@@ -351,34 +413,24 @@ export const FirmLoginPage = () => {
               label="OTP"
               type="text"
               value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, OTP_LENGTH))}
+              onChange={handleOtpChange}
+              error={fieldErrors.otp}
               required
               placeholder="123456"
               autoFocus
               inputMode="numeric"
               autoComplete="one-time-code"
               maxLength={OTP_LENGTH}
+              disabled={loading || resendLoading}
+              helpText="Enter the 6-digit code from your email."
             />
-            <p style={{
-              fontSize: '0.875rem',
-              color: 'var(--text-secondary)',
-              marginTop: '-0.5rem',
-              marginBottom: '0.5rem'
-            }}>
+            <p className="auth-helper-text">
               Didn't receive OTP?{' '}
               <button
                 type="button"
                 onClick={handleResendOtp}
                 disabled={resendLoading || resendCountdown > 0 || loading}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: 0,
-                  color: (resendLoading || resendCountdown > 0 || loading) ? 'var(--text-secondary)' : '#2563eb',
-                  cursor: (resendLoading || resendCountdown > 0 || loading) ? 'not-allowed' : 'pointer',
-                  textDecoration: (resendLoading || resendCountdown > 0 || loading) ? 'none' : 'underline',
-                  font: 'inherit',
-                }}
+                className="auth-inline-button"
               >
                 {resendLoading
                   ? 'Resending...'
@@ -391,9 +443,10 @@ export const FirmLoginPage = () => {
             <Button
               type="submit"
               fullWidth
-              disabled={loading || resendLoading}
+              loading={loading}
+              disabled={resendLoading}
             >
-              {loading ? 'Verifying OTP...' : 'Verify OTP'}
+              Verify OTP
             </Button>
 
             <Button
@@ -408,58 +461,49 @@ export const FirmLoginPage = () => {
           </form>
         ) : (
           <>
-            <form onSubmit={handleLogin}>
+            <form onSubmit={handleLogin} noValidate>
               <Input
                 label="xID"
                 type="text"
                 value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
+                onChange={handleIdentifierChange}
+                error={fieldErrors.identifier}
                 required
                 placeholder="X123456"
+                autoComplete="username"
+                disabled={loading || resendLoading}
                 autoFocus
+                helpText="Enter your user ID (for example, X000001). Your XID was sent to your email after signup."
               />
-              <p style={{ 
-                fontSize: '0.875rem', 
-                color: 'var(--text-secondary)', 
-                marginTop: '-0.5rem', 
-                marginBottom: '1rem'
-              }}>
-                Enter your user ID (e.g., X000001). Your XID was sent to your email after signup.
-              </p>
               <button
                 type="button"
                 onClick={() => setShowResendForm((prev) => !prev)}
-                style={{
-                  fontSize: '0.875rem',
-                  color: '#3182ce',
-                  background: 'none',
-                  border: 'none',
-                  padding: 0,
-                  marginTop: '-0.5rem',
-                  marginBottom: '1rem',
-                  cursor: 'pointer',
-                  textDecoration: 'underline',
-                }}
+                className="auth-inline-button"
+                disabled={loading || resendLoading}
               >
                 {"Didn't receive your XID? Resend credentials"}
               </button>
               {showResendForm && (
-                <div style={{ marginBottom: '1rem' }}>
+                <div>
                   <Input
                     label="Registered email"
                     type="email"
                     value={resendEmail}
-                    onChange={(e) => setResendEmail(e.target.value)}
+                    onChange={handleResendEmailChange}
+                    error={fieldErrors.resendEmail}
                     required
                     placeholder="you@firm.com"
+                    autoComplete="email"
+                    disabled={resendLoading || loading}
                   />
                   <Button
                     type="button"
                     fullWidth
-                    disabled={resendLoading}
+                    loading={resendLoading}
+                    disabled={loading}
                     onClick={handleResendCredentials}
                   >
-                    {resendLoading ? 'Resending...' : 'Resend credentials'}
+                    Resend credentials
                   </Button>
                 </div>
               )}
@@ -468,17 +512,21 @@ export const FirmLoginPage = () => {
                 label="Password"
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={handlePasswordChange}
+                error={fieldErrors.password}
                 required
                 placeholder="Enter your password"
+                autoComplete="current-password"
+                disabled={loading || resendLoading}
               />
 
               <Button 
                 type="submit" 
                 fullWidth 
-                disabled={loading}
+                loading={loading}
+                disabled={resendLoading}
               >
-                {loading ? 'Signing in...' : 'Sign In'}
+                Sign In
               </Button>
             </form>
 
@@ -490,15 +538,7 @@ export const FirmLoginPage = () => {
           </>
         )}
 
-        <div style={{ 
-          marginTop: '1.5rem', 
-          padding: '1rem', 
-          backgroundColor: '#f7fafc', 
-          borderRadius: '8px',
-          fontSize: '0.875rem',
-          color: '#718096',
-          textAlign: 'center'
-        }}>
+        <div className="auth-secondary-panel">
           Secure firm-scoped login
         </div>
       </Card>

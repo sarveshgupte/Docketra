@@ -13,6 +13,7 @@ export const Button = ({
   variant = 'secondary',
   disabled = false,
   loading = false,
+  fullWidth = false,
   className = '',
   ...props
 }) => {
@@ -33,7 +34,8 @@ export const Button = ({
       type={type}
       onClick={onClick}
       disabled={isDisabled}
-      className={`${baseClasses} ${variantClasses[variant] || variantClasses.secondary} ${className}`}
+      aria-busy={loading || undefined}
+      className={`${baseClasses} ${fullWidth ? 'w-full' : ''} ${variantClasses[variant] || variantClasses.secondary} ${className}`}
       {...props}
     >
       {loading && (
@@ -42,6 +44,7 @@ export const Button = ({
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
+          aria-hidden="true"
         >
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path
