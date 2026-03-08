@@ -81,7 +81,7 @@ async function shouldApplyEmployeeWorklistLimit() {
     assignedToXID: 'X123456',
     status: 'OPEN',
   });
-  assert.deepStrictEqual(observedSort, { updatedAt: -1, createdAt: -1 });
+  assert.deepStrictEqual(observedSort, { createdAt: -1 });
   assert.strictEqual(observedLimit, 5, 'Expected employee worklist to apply the requested limit');
   assert.strictEqual(res.statusCode, null);
   assert.strictEqual(res.body.success, true);

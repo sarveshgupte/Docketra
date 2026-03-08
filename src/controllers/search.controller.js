@@ -378,7 +378,7 @@ const employeeWorklist = async (req, res) => {
     
     const casesQuery = Case.find(query)
       .select('caseId caseName category createdAt createdBy updatedAt status clientId clientName')
-      .sort({ updatedAt: -1, createdAt: -1 });
+      .sort({ createdAt: -1 });
 
     if (normalizedLimit) {
       casesQuery.limit(normalizedLimit);
