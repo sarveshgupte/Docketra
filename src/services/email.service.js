@@ -1020,11 +1020,12 @@ const sendLoginOtpEmail = async ({
   `;
   const text = `Hello ${greetingName},\n\nYour one-time login code is:\n\n${resolvedOtp}\n\nThis code expires in ${expiryMinutes} minutes.\n\nIf you did not request this login, please ignore this email.\n\nBest regards,\nDocketra Team`;
 
-  if (process.env.NODE_ENV !== 'production') {
-    return sendEmailNow({ to: email, subject, html, text });
-  }
+  logger.info('OTP_EMAIL_DIRECT_SEND', {
+    email,
+    provider: 'brevo',
+  });
 
-  return sendEmail({ to: email, subject, html, text }, context);
+  return sendEmailNow({ to: email, subject, html, text });
 };
 
 module.exports = {
