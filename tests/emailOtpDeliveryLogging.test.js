@@ -196,6 +196,13 @@ async function shouldBypassQueueForDirectAuthEmailsInDevelopment() {
       xID: 'X000102',
       firmSlug: 'firm-a',
     });
+    const firmSetupResult = await devEmailService.sendFirmSetupEmail({
+      email: 'welcome@example.com',
+      name: 'Welcome User',
+      xid: 'X000103',
+      firmName: 'Firm A',
+      workspaceUrl: 'http://localhost:3000/firm-a/login',
+    });
 
     assert.strictEqual(loginOtpResult.success, true);
     assert.strictEqual(loginOtpResult.console, true, 'Development login OTP email should send immediately via sendEmailNow');
@@ -208,6 +215,8 @@ async function shouldBypassQueueForDirectAuthEmailsInDevelopment() {
     assert.strictEqual(passwordResetResult.success, true);
     assert.strictEqual(forgotPasswordResult.success, true);
     assert.strictEqual(adminResetResult.success, true);
+    assert.strictEqual(firmSetupResult.success, true);
+    assert.strictEqual(firmSetupResult.console, true, 'Development welcome email should send immediately via sendEmailNow');
 
     const otpDirectSendEmails = loggedEvents
       .filter(({ event }) => event === 'OTP_EMAIL_DIRECT_SEND')
@@ -227,6 +236,7 @@ async function shouldBypassQueueForDirectAuthEmailsInDevelopment() {
         'Password Reset Required for your Docketra account',
         'Reset your Docketra password',
         'Reset your Docketra Admin Account Password',
+        'Your Docketra firm account is ready',
       ],
       'Auth emails should log direct delivery with their subjects'
     );

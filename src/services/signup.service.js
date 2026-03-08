@@ -329,7 +329,7 @@ const verifyOtp = async ({ email, otp, session = null, req = null }) => {
         }),
       });
     } catch (emailError) {
-      console.error('[PUBLIC_SIGNUP] Failed to queue welcome email after OTP verification:', emailError.message);
+      console.error('[PUBLIC_SIGNUP] Failed to send welcome email after OTP verification:', emailError.message);
     }
 
     const token = jwtService.generateAccessToken({
@@ -513,10 +513,12 @@ const sendSignupWelcomeEmail = async ({
       email,
       firmSlug,
       xid,
-      queued: Boolean(emailResult?.queued),
       messageId: emailResult?.messageId || null,
     });
-    return { success: true };
+    return {
+      success: true,
+      messageId: emailResult?.messageId || null,
+    };
   } catch (emailError) {
     console.error('[PUBLIC_SIGNUP] Failed to send welcome email:', emailError.message);
     return { success: false, error: emailError.message };

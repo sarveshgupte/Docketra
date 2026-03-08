@@ -542,57 +542,76 @@ function testServerRegistersApiPublicSignupRoutes() {
 
 async function testResendCredentialsEmailUsesStoredXid() {
   const captured = { welcomeEmailPayload: null };
+  const originalConsoleInfo = console.info;
+  const infoLogs = [];
 
-  Module._load = function (request, parent, isMain) {
-    if (request === '../models/User.model') {
-      return {
-        findOne: () => ({
-          select: () => ({
-            lean: async () => ({
-              name: 'Alice',
-              email: 'alice@example.com',
-              xID: 'X000777',
-              firmId: 'firm-1',
-            }),
-          }),
-        }),
-      };
-    }
-    if (request === '../models/Firm.model') {
-      return {
-        findById: () => ({
-          select: () => ({
-            lean: async () => ({ name: 'Acme Legal', firmSlug: 'acme-legal' }),
-          }),
-        }),
-      };
-    }
-    if (request === './email.service') {
-      return {
-        sendFirmSetupEmail: async (payload) => {
-          captured.welcomeEmailPayload = payload;
-          return { success: true, queued: true };
-        },
-      };
-    }
-    if (request === './audit.service') {
-      return { logAuthEvent: async () => ({}) };
-    }
-    return originalLoad.apply(this, arguments);
+  console.info = (...args) => {
+    infoLogs.push(args);
   };
 
-  clearModule('../src/services/signup.service');
-  const signupService = require('../src/services/signup.service');
-  const result = await signupService.resendCredentialsEmail({
-    email: 'alice@example.com',
-    req: { ip: '127.0.0.1' },
-  });
+  try {
+    Module._load = function (request, parent, isMain) {
+      if (request === '../models/User.model') {
+        return {
+          findOne: () => ({
+            select: () => ({
+              lean: async () => ({
+                name: 'Alice',
+                email: 'alice@example.com',
+                xID: 'X000777',
+                firmId: 'firm-1',
+              }),
+            }),
+          }),
+        };
+      }
+      if (request === '../models/Firm.model') {
+        return {
+          findById: () => ({
+            select: () => ({
+              lean: async () => ({ name: 'Acme Legal', firmSlug: 'acme-legal' }),
+            }),
+          }),
+        };
+      }
+      if (request === './email.service') {
+        return {
+          sendFirmSetupEmail: async (payload) => {
+            captured.welcomeEmailPayload = payload;
+            return { success: true, messageId: 'brevo-msg-123' };
+          },
+        };
+      }
+      if (request === './audit.service') {
+        return { logAuthEvent: async () => ({}) };
+      }
+      return originalLoad.apply(this, arguments);
+    };
 
-  assert.strictEqual(result.success, true);
-  assert.strictEqual(captured.welcomeEmailPayload.xid, 'X000777', 'resend should use stored xID');
-  assert.strictEqual(captured.welcomeEmailPayload.firmName, 'Acme Legal');
-  assert.strictEqual(captured.welcomeEmailPayload.workspaceUrl, 'http://localhost:3000/acme-legal/login');
-  console.log('  ✓ resendCredentialsEmail uses stored xID and firm login URL');
+    clearModule('../src/services/signup.service');
+    const signupService = require('../src/services/signup.service');
+    const result = await signupService.resendCredentialsEmail({
+      email: 'alice@example.com',
+      req: { ip: '127.0.0.1' },
+    });
+
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(captured.welcomeEmailPayload.xid, 'X000777', 'resend should use stored xID');
+    assert.strictEqual(captured.welcomeEmailPayload.firmName, 'Acme Legal');
+    assert.strictEqual(captured.welcomeEmailPayload.workspaceUrl, 'http://localhost:3000/acme-legal/login');
+    assert.deepStrictEqual(infoLogs[0], [
+      '[PUBLIC_SIGNUP] Welcome email sent successfully',
+      {
+        email: 'alice@example.com',
+        firmSlug: 'acme-legal',
+        xid: 'X000777',
+        messageId: 'brevo-msg-123',
+      },
+    ], 'welcome email logging should record direct-send metadata without queue state');
+    console.log('  ✓ resendCredentialsEmail uses stored xID, direct send response, and firm login URL');
+  } finally {
+    console.info = originalConsoleInfo;
+  }
 }
 
 async function run() {
