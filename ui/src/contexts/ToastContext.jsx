@@ -7,6 +7,7 @@
  */
 
 import React, { createContext, useState, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { SESSION_KEYS } from '../utils/constants';
 
 export const ToastContext = createContext(null);
@@ -105,20 +106,24 @@ export const ToastProvider = ({ children }) => {
   );
 };
 
-const ToastContainer = ({ toasts, removeToast }) => {
-  if (toasts.length === 0) return null;
+const TOAST_CONTAINER_TOP_OFFSET = '72px';
 
-  return (
+const ToastContainer = ({ toasts, removeToast }) => {
+  if (toasts.length === 0 || typeof document === 'undefined') return null;
+
+  return createPortal((
     <div
       style={{
         position: 'fixed',
-        top: '24px',
+        top: TOAST_CONTAINER_TOP_OFFSET,
         right: '24px',
         zIndex: 9999,
         display: 'flex',
         flexDirection: 'column',
         gap: '12px',
         alignItems: 'flex-end',
+        width: 'min(320px, calc(100vw - 32px))',
+        pointerEvents: 'none',
       }}
     >
       {toasts.map((toast) => (
@@ -126,14 +131,15 @@ const ToastContainer = ({ toasts, removeToast }) => {
           key={toast.id}
           className={`neo-alert neo-alert--${toast.type}`}
           style={{
-            minWidth: '320px',
-            maxWidth: '420px',
+            width: '100%',
+            maxWidth: '320px',
             wordBreak: 'break-word',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'flex-start',
             animation: 'toastSlideIn 0.2s ease-out',
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            pointerEvents: 'auto',
           }}
         >
           <span style={{ flex: 1, paddingRight: '12px' }}>{toast.message}</span>
@@ -168,5 +174,5 @@ const ToastContainer = ({ toasts, removeToast }) => {
         }
       `}</style>
     </div>
-  );
+  ), document.body);
 };
