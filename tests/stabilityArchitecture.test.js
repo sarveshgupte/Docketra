@@ -64,7 +64,7 @@ async function testXidGeneratorUsesAtomicGlobalCounterWithoutSession() {
   try {
     const xid = await xIDGenerator.generateNextXID('firm-1', { id: 'session-1' });
     assert.strictEqual(xid, 'X000007');
-    assert.deepStrictEqual(calls[0].filter, { name: 'userXID', firmId: 'GLOBAL' });
+    assert.deepStrictEqual(calls[0].filter, { name: 'user_xid', firmId: 'GLOBAL' });
     assert.strictEqual(calls[0].options.session, undefined, 'xID generation must not join business transactions');
   } finally {
     Counter.findOneAndUpdate = originalFindOneAndUpdate;
