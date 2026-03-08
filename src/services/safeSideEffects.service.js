@@ -51,18 +51,24 @@ const runSideEffect = async ({ context = null, type, payload = {}, execute }) =>
   return true;
 };
 
-const safeAuditLog = async (auditData = {}, context = null) => runSideEffect({
-  context: resolveContext(context, auditData.req),
-  type: 'FORENSIC_AUDIT',
-  payload: {
-    action: auditData.actionType || auditData.eventType || null,
-    entityId: auditData.userId || auditData.xID || auditData.performedBy || null,
-    tenantId: auditData.firmId || null,
-  },
-  execute: async () => {
-    await logAuthEvent(auditData);
-  },
-});
+const safeAuditLog = async (auditData = {}, context = null) => {
+  const resolvedContext = resolveContext(context, auditData.req);
+  return runSideEffect({
+    context: resolvedContext,
+    type: 'FORENSIC_AUDIT',
+    payload: {
+      action: auditData.actionType || auditData.eventType || null,
+      entityId: auditData.userId || auditData.xID || auditData.performedBy || null,
+      tenantId: auditData.firmId || null,
+    },
+    execute: async () => {
+      await logAuthEvent({
+        ...auditData,
+        req: auditData.req || resolvedContext || null,
+      });
+    },
+  });
+};
 
 const safeQueueEmail = async ({ context = null, operation = 'EMAIL_QUEUE', payload = {}, execute }) => runSideEffect({
   context,

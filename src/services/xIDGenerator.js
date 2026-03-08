@@ -25,8 +25,9 @@ const User = require('../models/User.model');
  * @param {object} session - Legacy parameter retained for compatibility; ignored intentionally
  * @returns {Promise<string>} Next xID in format X000001
  */
-const generateNextXID = async (_firmId = null, _session = null) => {
+const generateNextXID = async (_firmId = null, legacySession = null) => {
   try {
+    void legacySession;
     const counter = await Counter.findOneAndUpdate(
       { name: 'user_xid', firmId: 'GLOBAL' },
       { $inc: { seq: 1 } },

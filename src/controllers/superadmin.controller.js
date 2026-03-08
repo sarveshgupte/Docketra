@@ -1480,7 +1480,6 @@ const activateFirm = async (req, res, next) => {
         userId: req.user?._id,
         description: `PATCH ${req.originalUrl || req.url || `/api/superadmin/firms/${id}/activate`}`,
         performedBy: req.user?.xID || req.user?.email || 'UNKNOWN',
-        req,
         metadata: {
           target: firm._id.toString(),
           scope: 'GLOBAL',
