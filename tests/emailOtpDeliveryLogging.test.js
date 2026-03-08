@@ -119,12 +119,14 @@ async function shouldLogOtpEmailQueuedFromAuthController() {
   assert(!loggedEvents.some(({ event }) => event === 'OTP_EMAIL_SENT'), 'Auth controller must not log OTP_EMAIL_SENT');
 }
 
-async function shouldBypassQueueForLoginOtpEmailsInDevelopment() {
+async function shouldBypassQueueForDirectAuthEmailsInDevelopment() {
   const originalNodeEnv = process.env.NODE_ENV;
   process.env.NODE_ENV = 'development';
 
   const originalEmailServiceCache = require.cache[emailServiceModulePath];
   const originalEmailQueueCache = require.cache[emailQueueModulePath];
+  const originalLogInfo = log.info;
+  const loggedEvents = [];
 
   try {
     delete require.cache[emailServiceModulePath];
@@ -139,17 +141,92 @@ async function shouldBypassQueueForLoginOtpEmailsInDevelopment() {
       },
     };
 
+    log.info = (event, meta) => {
+      loggedEvents.push({ event, meta });
+    };
+
     const devEmailService = require('../src/services/email.service');
-    const result = await devEmailService.sendLoginOtpEmail({
+    const loginOtpResult = await devEmailService.sendLoginOtpEmail({
       email: 'tenant@example.com',
       name: 'Tenant User',
       otp: '123456',
       expiryMinutes: 10,
     });
+    const signupOtpResult = await devEmailService.sendSignupOtpEmail({
+      email: 'signup@example.com',
+      name: 'Signup User',
+      otp: '654321',
+      expiryMinutes: 10,
+    });
+    const signupOtpResendResult = await devEmailService.sendSignupOtpEmail({
+      email: 'signup@example.com',
+      name: 'Signup User',
+      otp: '111222',
+      expiryMinutes: 10,
+      isResend: true,
+    });
+    const setupResult = await devEmailService.sendPasswordSetupEmail({
+      email: 'setup@example.com',
+      name: 'Setup User',
+      token: 'setup-token',
+      xID: 'X000100',
+      firmSlug: 'firm-a',
+    });
+    const setupReminderResult = await devEmailService.sendPasswordSetupReminderEmail({
+      email: 'setup-reminder@example.com',
+      name: 'Reminder User',
+      token: 'setup-reminder-token',
+      xID: 'X000101',
+      firmSlug: 'firm-a',
+    });
+    const passwordResetResult = await devEmailService.sendPasswordResetEmail(
+      'reset@example.com',
+      'Reset User',
+      'reset-token'
+    );
+    const forgotPasswordResult = await devEmailService.sendForgotPasswordEmail(
+      'forgot@example.com',
+      'Forgot User',
+      'forgot-token'
+    );
+    const adminResetResult = await devEmailService.sendAdminPasswordResetEmail({
+      email: 'admin-reset@example.com',
+      name: 'Admin Reset User',
+      token: 'admin-reset-token',
+      xID: 'X000102',
+      firmSlug: 'firm-a',
+    });
 
-    assert.strictEqual(result.success, true);
-    assert.strictEqual(result.console, true, 'Development OTP email should send immediately via sendEmailNow');
+    assert.strictEqual(loginOtpResult.success, true);
+    assert.strictEqual(loginOtpResult.console, true, 'Development login OTP email should send immediately via sendEmailNow');
+    assert.strictEqual(signupOtpResult.success, true);
+    assert.strictEqual(signupOtpResult.console, true, 'Development signup OTP email should send immediately via sendEmailNow');
+    assert.strictEqual(signupOtpResendResult.success, true);
+    assert.strictEqual(signupOtpResendResult.console, true, 'Development signup OTP resend email should send immediately via sendEmailNow');
+    assert.strictEqual(setupResult.success, true);
+    assert.strictEqual(setupReminderResult.success, true);
+    assert.strictEqual(passwordResetResult.success, true);
+    assert.strictEqual(forgotPasswordResult.success, true);
+    assert.strictEqual(adminResetResult.success, true);
+
+    assert.deepStrictEqual(
+      loggedEvents.filter(({ event }) => event === 'OTP_EMAIL_DIRECT_SEND').map(({ meta }) => meta.email),
+      ['tenant@example.com', 'signup@example.com', 'signup@example.com'],
+      'OTP emails should log direct delivery for login and signup flows'
+    );
+    assert.deepStrictEqual(
+      loggedEvents.filter(({ event }) => event === 'AUTH_EMAIL_DIRECT_SEND').map(({ meta }) => meta.subject),
+      [
+        'Set up your Docketra Admin Account',
+        'Reminder: Set up your Docketra account',
+        'Password Reset Required for your Docketra account',
+        'Reset your Docketra password',
+        'Reset your Docketra Admin Account Password',
+      ],
+      'Auth emails should log direct delivery with their subjects'
+    );
   } finally {
+    log.info = originalLogInfo;
     restoreModuleCache(emailServiceModulePath, originalEmailServiceCache);
     restoreModuleCache(emailQueueModulePath, originalEmailQueueCache);
     process.env.NODE_ENV = originalNodeEnv;
@@ -315,7 +392,7 @@ async function shouldLogWorkerOtpDeliveryAndFailures() {
 async function run() {
   try {
     await shouldLogOtpEmailQueuedFromAuthController();
-    await shouldBypassQueueForLoginOtpEmailsInDevelopment();
+    await shouldBypassQueueForDirectAuthEmailsInDevelopment();
     await shouldLogQueuedEmailJobs();
     await shouldLogWorkerOtpDeliveryAndFailures();
     console.log('OTP email delivery logging tests passed.');

@@ -310,7 +310,12 @@ async function testServiceWritesUseSession() {
     if (request === '../models/User.model') return mockUser;
     if (request === '../models/TemporarySignup') return mockTemporarySignup;
     if (request === '../models/AuthAudit.model') return { create: async () => ({}) };
-    if (request === './email.service') return { sendEmail: async () => ({ success: true }) };
+    if (request === './email.service') {
+      return {
+        sendEmail: async () => ({ success: true }),
+        sendSignupOtpEmail: async () => ({ success: true }),
+      };
+    }
     if (request === './signupRateLimit.service') {
       return {
         consumeSignupQuota: async () => ({ allowed: true }),
@@ -363,6 +368,10 @@ async function testInitiateSignupRejectsDuplicateEmailOrPhone() {
     if (request === './email.service') {
       return {
         sendEmail: async () => {
+          emailSent = true;
+          return { success: true };
+        },
+        sendSignupOtpEmail: async () => {
           emailSent = true;
           return { success: true };
         },
@@ -451,7 +460,10 @@ async function testCreateFirmAndAdminTracksVerificationAndConsent() {
       return { ensureTenantKey: async () => ({}) };
     }
     if (request === './email.service') {
-      return { sendEmail: async () => ({ success: true }) };
+      return {
+        sendEmail: async () => ({ success: true }),
+        sendSignupOtpEmail: async () => ({ success: true }),
+      };
     }
     if (request === './audit.service') {
       return { logAuthEvent: async () => ({}) };
