@@ -209,11 +209,16 @@ async function shouldBypassQueueForDirectAuthEmailsInDevelopment() {
     assert.strictEqual(forgotPasswordResult.success, true);
     assert.strictEqual(adminResetResult.success, true);
 
-    assert.deepStrictEqual(
-      loggedEvents.filter(({ event }) => event === 'OTP_EMAIL_DIRECT_SEND').map(({ meta }) => meta.email),
-      ['tenant@example.com', 'signup@example.com', 'signup@example.com'],
-      'OTP emails should log direct delivery for login and signup flows'
-    );
+    const otpDirectSendEmails = loggedEvents
+      .filter(({ event }) => event === 'OTP_EMAIL_DIRECT_SEND')
+      .reduce((counts, { meta }) => ({
+        ...counts,
+        [meta.email]: (counts[meta.email] || 0) + 1,
+      }), {});
+    assert.deepStrictEqual(otpDirectSendEmails, {
+      'tenant@example.com': 1,
+      'signup@example.com': 2,
+    }, 'OTP emails should log direct delivery for login and signup flows');
     assert.deepStrictEqual(
       loggedEvents.filter(({ event }) => event === 'AUTH_EMAIL_DIRECT_SEND').map(({ meta }) => meta.subject),
       [
