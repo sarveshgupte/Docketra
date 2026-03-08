@@ -203,20 +203,11 @@ const initiateSignup = async ({
     context: req,
     operation: 'EMAIL_QUEUE',
     payload: { action: 'SIGNUP_OTP_EMAIL', tenantId: null, email: normalizedEmail },
-    execute: async () => emailService.sendEmail({
-      to: normalizedEmail,
-      subject: 'Docketra Signup – Verify Your Email',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Hello ${name.trim()},</h2>
-          <p>Your verification code is:</p>
-          <p style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #1976D2; margin: 20px 0;">${otp}</p>
-          <p>This code expires in ${OTP_EXPIRY_MINUTES} minutes.</p>
-          <p>If you did not request this, please ignore this email.</p>
-          <p>Best regards,<br>Docketra Team</p>
-        </div>
-      `,
-      text: `Hello ${name.trim()},\n\nYour verification code is: ${otp}\n\nThis code expires in ${OTP_EXPIRY_MINUTES} minutes.\n\nBest regards,\nDocketra Team`,
+    execute: async () => emailService.sendSignupOtpEmail({
+      email: normalizedEmail,
+      name: name.trim(),
+      otp,
+      expiryMinutes: OTP_EXPIRY_MINUTES,
     }),
   });
 
@@ -427,20 +418,12 @@ const resendOtp = async ({ email, req = null }) => {
     context: req,
     operation: 'EMAIL_QUEUE',
     payload: { action: 'SIGNUP_OTP_RESEND_EMAIL', tenantId: null, email: normalizedEmail },
-    execute: async () => emailService.sendEmail({
-      to: normalizedEmail,
-      subject: 'Docketra Signup – Your New Verification Code',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Hello ${record.name},</h2>
-          <p>Your new verification code is:</p>
-          <p style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #1976D2; margin: 20px 0;">${otp}</p>
-          <p>This code expires in ${OTP_EXPIRY_MINUTES} minutes.</p>
-          <p>If you did not request this, please ignore this email.</p>
-          <p>Best regards,<br>Docketra Team</p>
-        </div>
-      `,
-      text: `Hello ${record.name},\n\nYour new verification code is: ${otp}\n\nThis code expires in ${OTP_EXPIRY_MINUTES} minutes.\n\nBest regards,\nDocketra Team`,
+    execute: async () => emailService.sendSignupOtpEmail({
+      email: normalizedEmail,
+      name: record.name,
+      otp,
+      expiryMinutes: OTP_EXPIRY_MINUTES,
+      isResend: true,
     }),
   });
 
