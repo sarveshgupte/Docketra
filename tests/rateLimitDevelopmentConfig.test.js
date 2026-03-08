@@ -43,6 +43,7 @@ function testRouteLimiterWiring() {
 
   assert.ok(authRoutes.includes("router.post('/verify-totp', otpVerifyLimiter, verifyTotp);"));
   assert.ok(authRoutes.includes("router.post('/complete-mfa-login', otpVerifyLimiter, completeMfaLogin);"));
+  assert.ok(authRoutes.includes("router.post('/resend-otp', authBlockEnforcer, authLimiter, otpResendLimiter, resendLoginOtp);"));
 
   assert.ok(publicSignupRoutes.includes("router.post('/resend-otp', otpResendLimiter, resendOtp);"));
   assert.ok(publicSignupRoutes.includes("router.post('/verify-otp', otpVerifyLimiter, wrapWriteHandler(verifyOtp));"));

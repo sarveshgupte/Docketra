@@ -13,11 +13,13 @@ async function shouldSwitchToOtpStepWhenLoginRequiresOtp() {
     success: true,
     otpRequired: true,
     loginToken: 'JWT_TOKEN',
+    resendCooldownSeconds: 3,
   });
 
   assert.deepStrictEqual(state, {
     nextStep: 'otp',
     loginToken: 'JWT_TOKEN',
+    resendCooldownSeconds: 3,
   });
 }
 
