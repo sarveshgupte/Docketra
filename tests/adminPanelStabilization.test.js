@@ -65,6 +65,9 @@ async function testClientReadsUseRepositoryAndReturnPlaintext() {
     if (request === '../config/constants') {
       return { CLIENT_STATUS: { ACTIVE: 'ACTIVE' } };
     }
+    if (request === '../utils/query.utils') {
+      return { parseBooleanQuery: (value) => value === true || value === 'true' };
+    }
     if (request === '../middleware/wrapWriteHandler') {
       return (fn) => fn;
     }
@@ -116,6 +119,9 @@ async function testClientActiveOnlyQueryParsingStaysBooleanSafe() {
     }
     if (request === '../config/constants') {
       return { CLIENT_STATUS: { ACTIVE: 'ACTIVE' } };
+    }
+    if (request === '../utils/query.utils') {
+      return { parseBooleanQuery: (value) => value === true || value === 'true' };
     }
     if (request === '../middleware/wrapWriteHandler') {
       return (fn) => fn;

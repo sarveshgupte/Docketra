@@ -20,6 +20,7 @@ const CaseFile = require('../models/CaseFile.model');
 const { incrementTenantMetric } = require('../services/tenantMetrics.service');
 const path = require('path');
 const fs = require('fs');
+const { parseBooleanQuery } = require('../utils/query.utils');
 
 const getClientAccessContext = (req, res, message) => {
   const firmId = req.user?.firmId;
@@ -36,8 +37,6 @@ const getClientAccessContext = (req, res, message) => {
     role: req.user?.role,
   };
 };
-
-const parseBooleanQuery = (value) => value === true || value === 'true';
 
 /**
  * Client Controller for Direct Client Management
