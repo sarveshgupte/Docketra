@@ -236,6 +236,29 @@ const sendEmail = async (mailOptions, context = null) => {
   return execute();
 };
 
+const sendDirectAuthEmail = async ({
+  to,
+  subject,
+  html,
+  text,
+  otp = false,
+}) => {
+  if (otp) {
+    logger.info('OTP_EMAIL_DIRECT_SEND', {
+      email: to,
+      provider: 'brevo',
+    });
+  } else {
+    logger.info('AUTH_EMAIL_DIRECT_SEND', {
+      email: to,
+      subject,
+      provider: 'brevo',
+    });
+  }
+
+  return sendEmailNow({ to, subject, html, text });
+};
+
 /**
  * Generate a cryptographically secure random token
  * @returns {string} Random token (32 bytes as hex string)
@@ -344,12 +367,12 @@ Best regards,
 Docketra Team
   `.trim();
   
-  return await sendEmail({
+  return await sendDirectAuthEmail({
     to: email,
     subject,
     html: htmlContent,
     text: textContent,
-  }, context);
+  });
 };
 
 /**
@@ -423,12 +446,12 @@ Best regards,
 Docketra Team
   `.trim();
   
-  return await sendEmail({
+  return await sendDirectAuthEmail({
     to: email,
     subject,
     html: htmlContent,
     text: textContent,
-  }, req);
+  });
 };
 
 /**
@@ -476,7 +499,7 @@ Best regards,
 Docketra Team
   `.trim();
   
-  return await sendEmail({
+  return await sendDirectAuthEmail({
     to: email,
     subject,
     html: htmlContent,
@@ -527,7 +550,7 @@ Best regards,
 Docketra Team
   `.trim();
   
-  return await sendEmail({
+  return await sendDirectAuthEmail({
     to: email,
     subject,
     html: htmlContent,
@@ -898,12 +921,12 @@ Best regards,
 Docketra Team
   `.trim();
 
-  return await sendEmail({
+  return await sendDirectAuthEmail({
     to: email,
     subject,
     html: htmlContent,
     text: textContent,
-  }, context);
+  });
 };
 
 
@@ -1020,12 +1043,53 @@ const sendLoginOtpEmail = async ({
   `;
   const text = `Hello ${greetingName},\n\nYour one-time login code is:\n\n${resolvedOtp}\n\nThis code expires in ${expiryMinutes} minutes.\n\nIf you did not request this login, please ignore this email.\n\nBest regards,\nDocketra Team`;
 
-  logger.info('OTP_EMAIL_DIRECT_SEND', {
-    email,
-    provider: 'brevo',
+  return sendDirectAuthEmail({
+    to: email,
+    subject,
+    html,
+    text,
+    otp: true,
   });
+};
 
-  return sendEmailNow({ to: email, subject, html, text });
+const sendSignupOtpEmail = async ({
+  email,
+  name,
+  otp,
+  expiryMinutes = 10,
+  isResend = false,
+}) => {
+  const resolvedOtp = String(otp || '').trim();
+  if (!email || !resolvedOtp) {
+    throw new Error('Email and OTP are required to send signup verification email');
+  }
+
+  const greetingName = String(name || '').trim() || 'there';
+  const subject = isResend
+    ? 'Docketra Signup – Your New Verification Code'
+    : 'Docketra Signup – Verify Your Email';
+  const introLine = isResend
+    ? 'Your new verification code is:'
+    : 'Your verification code is:';
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2>Hello ${greetingName},</h2>
+      <p>${introLine}</p>
+      <p style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #1976D2; margin: 20px 0;">${resolvedOtp}</p>
+      <p>This code expires in ${expiryMinutes} minutes.</p>
+      <p>If you did not request this, please ignore this email.</p>
+      <p>Best regards,<br>Docketra Team</p>
+    </div>
+  `;
+  const text = `Hello ${greetingName},\n\n${introLine}\n\n${resolvedOtp}\n\nThis code expires in ${expiryMinutes} minutes.\n\nBest regards,\nDocketra Team`;
+
+  return sendDirectAuthEmail({
+    to: email,
+    subject,
+    html,
+    text,
+    otp: true,
+  });
 };
 
 module.exports = {
@@ -1040,6 +1104,7 @@ module.exports = {
   sendAdminPasswordResetEmail,
   sendFirmSetupEmail,
   sendLoginOtpEmail,
+  sendSignupOtpEmail,
   sendEnterpriseInquiryNotification,
   sendTestEmail,
   maskEmail,
