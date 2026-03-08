@@ -233,6 +233,7 @@ const categoryWorklist = async (req, res) => {
     
     // Get authenticated user from req.user (set by auth middleware)
     const user = req.user;
+    const firmId = req.firmId || req.context?.firmId || req.user?.firmId || null;
     
     if (!user || !user.xID) {
       return res.status(401).json({
@@ -288,7 +289,7 @@ const categoryWorklist = async (req, res) => {
     
     res.json({
       success: true,
-      data: cases.map(c => ({
+      data: (cases || []).map(c => ({
         caseId: c.caseId,
         createdAt: c.createdAt,
         createdBy: c.createdBy,
@@ -301,6 +302,7 @@ const categoryWorklist = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching category worklist',
+      data: [],
       error: error.message,
     });
   }
@@ -337,6 +339,7 @@ const employeeWorklist = async (req, res) => {
   try {
     // Get authenticated user from req.user (set by auth middleware)
     const user = req.user;
+    const firmId = req.firmId || req.context?.firmId || req.user?.firmId || null;
     
     if (!user || !user.xID) {
       return res.status(401).json({
@@ -353,7 +356,11 @@ const employeeWorklist = async (req, res) => {
     }
     
     // Auto-reopen expired pending cases for this user
-    await caseActionService.autoReopenExpiredPendingCases(user.xID, firmId);
+    try {
+      await caseActionService.autoReopenExpiredPendingCases(user.xID, firmId);
+    } catch (error) {
+      console.warn('[WORKLIST] Failed to auto-reopen expired pending cases:', error.message);
+    }
     
     // CANONICAL QUERY: assignedToXID = xID AND status = OPEN
     // This is the ONLY correct query for "My Worklist"
@@ -380,7 +387,7 @@ const employeeWorklist = async (req, res) => {
     
     res.json({
       success: true,
-      data: cases.map(c => ({
+      data: (cases || []).map(c => ({
         _id: c._id, // Include _id for UI compatibility
         caseId: c.caseId,
         caseName: c.caseName,
@@ -397,6 +404,7 @@ const employeeWorklist = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching employee worklist',
+      data: [],
       error: error.message,
     });
   }

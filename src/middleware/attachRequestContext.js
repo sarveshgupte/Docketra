@@ -1,7 +1,10 @@
+const { getSession } = require('../utils/getSession');
+
 const buildRequestContext = (req) => ({
-  firmId: req.user?.firmId || null,
-  userId: req.user?._id || null,
+  firmId: req.context?.firmId || req.firmId || req.user?.firmId || null,
+  userId: req.user?._id || req.user?.id || null,
   userXID: req.user?.xID || req.user?.xid || null,
+  dbSession: getSession(req),
   route: req.originalUrl || req.url || null,
   requestId: req.requestId || null,
 });
