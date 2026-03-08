@@ -2115,7 +2115,6 @@ const createUser = async (req, res) => {
             ? `Invite email sent to ${emailService.maskEmail(newUser.email)}`
             : `Invite email failed to send to ${emailService.maskEmail(newUser.email)}: ${emailResult?.error || 'Unknown email error'}`,
           performedBy: admin.xID,
-          req,
         }, req);
       },
     });
