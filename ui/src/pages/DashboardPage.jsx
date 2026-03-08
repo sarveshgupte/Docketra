@@ -13,7 +13,7 @@ import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
-import { DashboardSkeleton } from '../components/common/Skeleton';
+import { DashboardSkeleton, SkeletonBlock } from '../components/common/Skeleton';
 import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/layout/EmptyState';
 import { PriorityPill } from '../components/common/PriorityPill';
@@ -30,6 +30,24 @@ import { getStatusLabel } from '../utils/statusDisplay';
 import { UX_COPY } from '../constants/uxCopy';
 import api from '../services/api';
 import './DashboardPage.css';
+
+const DASHBOARD_RECENT_CASES_ROW_COUNT = 5;
+const DASHBOARD_RECENT_CASES_MAX_ROWS = 10;
+const DASHBOARD_RECENT_CASES_LIMIT = Math.min(DASHBOARD_RECENT_CASES_ROW_COUNT, DASHBOARD_RECENT_CASES_MAX_ROWS);
+
+const getCaseTimestamp = (caseItem) => {
+  const timestamp = new Date(caseItem?.updatedAt || caseItem?.createdAt || '').getTime();
+  return Number.isFinite(timestamp) ? timestamp : Number.NEGATIVE_INFINITY;
+};
+
+const getRecentCasesSnapshot = (cases = []) =>
+  [...cases]
+    .sort((firstCase, secondCase) => {
+      const firstTimestamp = getCaseTimestamp(firstCase);
+      const secondTimestamp = getCaseTimestamp(secondCase);
+      return secondTimestamp - firstTimestamp;
+    })
+    .slice(0, DASHBOARD_RECENT_CASES_LIMIT);
 
 export const DashboardPage = () => {
   const { user } = useAuth();
@@ -55,8 +73,10 @@ export const DashboardPage = () => {
     totalExecutedCases: 0,
   });
   const [recentCases, setRecentCases] = useState([]);
+  const [recentCasesLoading, setRecentCasesLoading] = useState(true);
   const [showBookmarkPrompt, setShowBookmarkPrompt] = useState(false);
   const [loadWarnings, setLoadWarnings] = useState([]);
+  const [hasLoadedDashboard, setHasLoadedDashboard] = useState(false);
 
   const reportLoadWarning = (message) => {
     setLoadWarnings((current) => (current.includes(message) ? current : [...current, message]));
@@ -98,14 +118,18 @@ export const DashboardPage = () => {
   };
 
   const loadDashboardData = async () => {
-    setLoading(true);
+    if (!hasLoadedDashboard) {
+      setLoading(true);
+    }
+
+    setRecentCasesLoading(true);
     setLoadWarnings([]);
     try {
       let casesToDisplay = [];
       
       if (isAdmin) {
         try {
-          const casesResponse = await caseService.getCases({ limit: 5 });
+          const casesResponse = await caseService.getCases({ limit: DASHBOARD_RECENT_CASES_LIMIT });
           if (casesResponse.success) {
             casesToDisplay = casesResponse.data || [];
           }
@@ -115,7 +139,7 @@ export const DashboardPage = () => {
         }
       } else {
         try {
-          const worklistResponse = await worklistService.getEmployeeWorklist();
+          const worklistResponse = await worklistService.getEmployeeWorklist({ limit: DASHBOARD_RECENT_CASES_LIMIT });
           if (worklistResponse.success) {
             casesToDisplay = worklistResponse.data || [];
           }
@@ -125,7 +149,7 @@ export const DashboardPage = () => {
         }
       }
       
-      setRecentCases(casesToDisplay.slice(0, 5));
+      setRecentCases(getRecentCasesSnapshot(casesToDisplay));
 
       const userFirmId = user?.firmId || user?.firm?.id;
       if (userFirmId) {
@@ -234,12 +258,18 @@ export const DashboardPage = () => {
       console.error('Failed to load dashboard data:', error);
       reportLoadWarning('Dashboard data');
     } finally {
+      setRecentCasesLoading(false);
       setLoading(false);
+      setHasLoadedDashboard(true);
     }
   };
 
   const handleCaseClick = (caseId) => {
     navigate(`/app/firm/${firmSlug}/cases/${caseId}`);
+  };
+
+  const handleViewAllCases = () => {
+    navigate(`/app/firm/${firmSlug}/cases`);
   };
 
   const handleChecklistAction = (stepId) => {
@@ -419,14 +449,26 @@ export const DashboardPage = () => {
             </h2>
             <Button
               variant="outline"
-              onClick={() => navigate(`/app/firm/${firmSlug}/cases`)}
-              style={{ fontSize: 'var(--font-size-sm)' }}
+              className="dashboard__view-all-button"
+              onClick={handleViewAllCases}
             >
               View All Cases
             </Button>
           </div>
           <Card>
-            {recentCases.length === 0 ? (
+            {recentCasesLoading ? (
+              <div className="dashboard__recent-cases-skeleton" aria-busy="true" aria-live="polite">
+                {Array.from({ length: DASHBOARD_RECENT_CASES_LIMIT }).map((_, index) => (
+                  <div key={index} className="dashboard__recent-cases-skeleton-row">
+                    <SkeletonBlock style={{ width: '100%', height: '14px' }} />
+                    <SkeletonBlock style={{ width: '80%', height: '14px' }} />
+                    <SkeletonBlock style={{ width: '72%', height: '14px' }} />
+                    <SkeletonBlock style={{ width: '64%', height: '14px' }} />
+                    <SkeletonBlock style={{ width: '58%', height: '14px' }} />
+                  </div>
+                ))}
+              </div>
+            ) : recentCases.length === 0 ? (
               <EmptyState
                 title={isAdmin ? 'No cases yet' : 'No assigned cases yet'}
                 description={
@@ -439,7 +481,7 @@ export const DashboardPage = () => {
               />
             ) : (
               <div className="dashboard__table-wrap">
-                <table className="neo-table" aria-label="Recent cases">
+                <table className="neo-table dashboard__recent-cases-table" aria-label="Recent cases">
                   <thead>
                     <tr>
                       <th>Case Name</th>
@@ -457,7 +499,11 @@ export const DashboardPage = () => {
                         onKeyDown={(event) => activateWithKeyboard(event, () => handleCaseClick(caseItem.caseId))}
                         tabIndex={0}
                       >
-                        <td>{caseItem.caseName}</td>
+                        <td className="dashboard__case-name-cell">
+                          <span className="dashboard__case-name" title={caseItem.caseName}>
+                            {caseItem.caseName}
+                          </span>
+                        </td>
                         <td>{caseItem.category}</td>
                         <td>
                           <Badge status={caseItem.status}>{getStatusLabel(caseItem.status)}</Badge>
