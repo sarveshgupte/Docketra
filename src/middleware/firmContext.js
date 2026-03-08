@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const Firm = require('../models/Firm.model');
 const { isSuperAdminRole } = require('../utils/role.utils');
 const { normalizeFirmSlug } = require('../utils/slugify');
+const { isActiveStatus } = require('../utils/status.utils');
 
 // Constants
 const FIRM_ID_PATTERN = /^FIRM\d{3,}$/i;
@@ -82,7 +83,7 @@ const firmContext = async (req, res, next) => {
       throw error;
     }
 
-    if (firm.status !== 'active') {
+    if (!isActiveStatus(firm.status)) {
       console.warn(`[FIRM_CONTEXT][${requestId}] Firm disabled`, { firmId: firm._id.toString(), status: firm.status });
       return res.status(403).json({
         success: false,

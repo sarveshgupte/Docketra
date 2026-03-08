@@ -158,7 +158,7 @@ const makeMockRes = () => {
 // Note: requiring the controller here pulls in its module-level code
 // (constants, function definitions) without starting any server.
 // The googleapis and FirmStorage stubs above ensure no real I/O occurs.
-const { buildStateCookie } = require('../src/controllers/storage.controller');
+const { buildStateCookie, googleConnect } = require('../src/controllers/storage.controller');
 
 // ──────────────────────────────────────────────────────────────────
 // Tests
@@ -197,6 +197,22 @@ async function testGoogleConnectRedirects() {
   assert(typeof decoded.nonce === 'string' && decoded.nonce.length === 32, 'Nonce should be 32 hex chars');
 
   console.log('  ✓ buildStateToken generates correct structure');
+}
+
+async function testGoogleConnectAllowsLegacyAdminRole() {
+  const req = {
+    firmId: 'firm-abc',
+    user: { role: 'Admin' },
+    headers: {},
+  };
+  const res = makeMockRes();
+
+  googleConnect(req, res);
+
+  assert(res.redirectedTo && res.redirectedTo.startsWith('https://accounts.google.com/o/oauth2/v2/auth?'),
+    `Expected Google OAuth redirect, got: ${res.redirectedTo}`);
+  assert(res.headers['Set-Cookie'], 'Expected state cookie to be set for admin user');
+  console.log('  ✓ googleConnect accepts normalized Admin role for storage management');
 }
 
 async function testVerifyStateToken() {
@@ -346,6 +362,7 @@ async function run() {
   try {
     await testTokenEncryptionRoundtrip();
     await testGoogleConnectRedirects();
+    await testGoogleConnectAllowsLegacyAdminRole();
     await testVerifyStateToken();
     await testGoogleCallbackMissingParams();
     await testGoogleCallbackFirmMismatch();

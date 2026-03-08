@@ -20,6 +20,7 @@ const tenantResolver = require('../middleware/tenantResolver');
 const { authBlockEnforcer, loginLimiter, otpVerifyLimiter, publicLimiter } = require('../middleware/rateLimiters');
 const { login, verifyLoginOtp } = require('../controllers/auth.controller');
 const { noFirmNoTransaction } = require('../middleware/noFirmNoTransaction.middleware');
+const { isActiveStatus } = require('../utils/status.utils');
 const setTenantLoginScope = (req, _res, next) => {
   req.loginScope = 'tenant';
   next();
@@ -51,7 +52,7 @@ router.get('/login', publicLimiter, (req, res) => {
       firmSlug: req.firmSlug,
       name: req.firmName,
       status: req.firm.status,
-      isActive: req.firm.status === 'active',
+      isActive: isActiveStatus(req.firm?.status),
     },
   });
 });
