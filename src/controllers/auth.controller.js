@@ -64,6 +64,7 @@ const ROLE_EMPLOYEE = 'Employee';
 const log = require('../utils/log');
 const logger = log;
 const { safeLogForensicAudit, getRequestIp, getRequestUserAgent } = require('../services/forensicAudit.service');
+const { safeAuditLog, safeQueueEmail } = require('../services/safeSideEffects.service');
 
 const getLoginOtpConfig = () => (
   process.env.NODE_ENV === 'production'
@@ -2013,19 +2014,6 @@ const createUser = async (req, res) => {
         message: 'Firm not found',
       });
     }
-
-    // Auto-create default client if missing (defensive backfill)
-    if (!firm.defaultClientId) {
-      await ensureDefaultClientForFirm(firm);
-    }
-
-    if (!firm.defaultClientId) {
-      console.error('[AUTH] Firm default client not configured for admin firm', admin.firmId);
-      return res.status(500).json({
-        success: false,
-        message: 'Firm default client not configured',
-      });
-    }
     
     // Check if email already exists (enforce uniqueness)
     const existingUser = await User.findOne({
@@ -2052,6 +2040,11 @@ const createUser = async (req, res) => {
     const maskedEmail = emailParts[0].substring(0, 2) + '***@' + emailParts[1];
     console.log(`[AUTH] Auto-generated xID: ${xID} for ${maskedEmail}`);
     
+    const inheritedDefaultClientId = (
+      firm.defaultClientId
+      && mongoose.Types.ObjectId.isValid(firm.defaultClientId)
+    ) ? firm.defaultClientId : null;
+
     // Generate secure invite token (48-hour expiry per PR 32)
     const token = emailService.generateSecureToken();
     const tokenHash = emailService.hashToken(token);
@@ -2065,7 +2058,7 @@ const createUser = async (req, res) => {
       name,
       email: email.trim().toLowerCase(),
       firmId: admin.firmId, // Inherit firmId from admin
-      defaultClientId: firm.defaultClientId,
+      ...(inheritedDefaultClientId ? { defaultClientId: inheritedDefaultClientId } : {}),
       role: persistedRole,
       allowedCategories: allowedCategories || [],
       isActive: false,
@@ -2085,56 +2078,49 @@ const createUser = async (req, res) => {
     
     await newUser.save(session ? { session } : undefined);
     await incrementTenantMetric(admin.firmId, 'users').catch(() => null);
-    console.log(`[AUTH] User inherited defaultClientId from firm ${firm._id}`);
+    console.log(`[AUTH] User default client inheritance resolved`, {
+      requestId: req.requestId,
+      firmId: admin.firmId?.toString?.() || admin.firmId,
+      inheritedDefaultClientId: inheritedDefaultClientId ? inheritedDefaultClientId.toString() : null,
+      xID,
+    });
     
     // Fetch firmSlug for email
     const firmSlug = firm.firmSlug;
     
-    // Send invite email with xID included (per PR 32 requirements)
-    try {
-      const emailResult = await emailService.sendPasswordSetupEmail({
+    await safeQueueEmail({
+      context: req,
+      operation: 'EMAIL_QUEUE',
+      payload: {
+        action: 'USER_INVITE_EMAIL',
+        tenantId: newUser.firmId?.toString?.() || newUser.firmId || null,
         email: newUser.email,
-        name: newUser.name,
-        token: token,
-        xID: newUser.xID,
-        firmSlug: firmSlug, // Pass firmSlug for firm-specific URL in email
-        req,
-      });
+      },
+      execute: async () => {
+        const emailResult = await emailService.sendPasswordSetupEmail({
+          email: newUser.email,
+          name: newUser.name,
+          token,
+          xID: newUser.xID,
+          firmSlug,
+          req,
+        });
 
-      if (!emailResult.success) {
-        console.warn('[AUTH] Invite email not sent:', emailResult.error);
-      }
-      
-      // Log invite email sent
-      await logAuthAudit({
-        xID: newUser.xID,
-        firmId: newUser.firmId,
-        userId: newUser._id,
-        actionType: 'InviteEmailSent',
-        description: emailResult.success 
-          ? `Invite email sent to ${emailService.maskEmail(newUser.email)}` 
-          : `Invite email failed to send to ${emailService.maskEmail(newUser.email)}: ${emailResult.error}`,
-        performedBy: admin.xID,
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent'),
-      });
-    } catch (emailError) {
-      console.warn('[AUTH] Failed to send invite email:', emailError.message);
-      // Don't fail user creation if email fails - log and continue
-      await logAuthAudit({
-        xID: newUser.xID,
-        firmId: newUser.firmId,
-        userId: newUser._id,
-        actionType: 'InviteEmailFailed',
-        description: `Failed to send invite email to ${emailService.maskEmail(newUser.email)}: ${emailError.message}`,
-        performedBy: admin.xID,
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent'),
-      });
-    }
+        await safeAuditLog({
+          xID: newUser.xID,
+          firmId: newUser.firmId,
+          userId: newUser._id,
+          actionType: emailResult?.success ? 'InviteEmailSent' : 'InviteEmailFailed',
+          description: emailResult?.success
+            ? `Invite email sent to ${emailService.maskEmail(newUser.email)}`
+            : `Invite email failed to send to ${emailService.maskEmail(newUser.email)}: ${emailResult?.error || 'Unknown email error'}`,
+          performedBy: admin.xID,
+          req,
+        }, req);
+      },
+    });
     
-    // Log user creation
-    await logAuthAudit({
+    await safeAuditLog({
       xID: newUser.xID,
       firmId: newUser.firmId,
       userId: newUser._id,
@@ -2148,7 +2134,7 @@ const createUser = async (req, res) => {
         role: newUser.role,
         xID: newUser.xID,
       },
-    });
+    }, req);
     
     res.status(201).json({
       success: true,
@@ -2173,6 +2159,12 @@ const createUser = async (req, res) => {
         redirectTo: '/pricing',
       });
     }
+    logger.error('USER_CREATE_FAILED', {
+      req,
+      firmId: req.user?.firmId || null,
+      email: req.body?.email || null,
+      error: error.message,
+    });
     // Handle duplicate key errors from MongoDB (E11000)
     if (error.code === 11000) {
       // Check which field caused the duplicate

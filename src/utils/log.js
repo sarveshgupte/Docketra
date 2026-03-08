@@ -15,10 +15,10 @@ const buildContext = (level, event, meta = {}) => {
     severity: (severity || level).toUpperCase(),
     event,
     requestId: resolvedRequestId,
-    firmId: meta.firmId || req?.firmId || req?.firm?.id || req?.user?.firmId || null,
-    userId: meta.userId || req?.user?._id || req?.user?.id || null,
-    userXID: meta.userXID || req?.user?.xID || null,
-    route: meta.route || req?.originalUrl || req?.url || null,
+    firmId: meta.firmId || req?.context?.firmId || req?.firmId || req?.firm?.id || req?.user?.firmId || null,
+    userId: meta.userId || req?.context?.userId || req?.user?._id || req?.user?.id || null,
+    userXID: meta.userXID || req?.context?.userXID || req?.user?.xID || null,
+    route: meta.route || req?.context?.route || req?.originalUrl || req?.url || null,
     ...rest,
   };
 };

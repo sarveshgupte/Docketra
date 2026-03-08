@@ -2,6 +2,7 @@ const User = require('../models/User.model');
 const jwtService = require('../services/jwt.service');
 const { isSuperAdminRole } = require('../utils/role.utils');
 const metricsService = require('../services/metrics.service');
+const { buildRequestContext } = require('./attachRequestContext');
 
 const MUST_SET_ALLOWED_PATHS = [
   '/auth/profile',
@@ -127,6 +128,10 @@ const authenticate = async (req, res, next) => {
         role: normalizedRole,
       };
       req.isSuperAdmin = true;
+      req.context = {
+        ...(req.context || {}),
+        ...buildRequestContext(req),
+      };
       
       return next();
     }
@@ -248,6 +253,10 @@ const authenticate = async (req, res, next) => {
       userId: req.userId,
       firmId: req.jwt.firmId || (user?.firmId ? user.firmId.toString() : null),
       role: req.jwt.role || user?.role || null,
+    };
+    req.context = {
+      ...(req.context || {}),
+      ...buildRequestContext(req),
     };
     
     next();
