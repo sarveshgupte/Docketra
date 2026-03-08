@@ -9,8 +9,13 @@ export const worklistService = {
    * Get employee worklist (my cases)
    * PR: Hard Cutover to xID - Removed email parameter, relies on auth middleware
    */
-  getEmployeeWorklist: async () => {
-    const response = await api.get('/worklists/employee/me');
+  getEmployeeWorklist: async (filters = {}) => {
+    const params = new URLSearchParams();
+
+    if (filters.limit) params.append('limit', filters.limit);
+
+    const queryString = params.toString();
+    const response = await api.get(`/worklists/employee/me${queryString ? `?${queryString}` : ''}`);
     return response.data;
   },
 

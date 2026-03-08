@@ -337,6 +337,11 @@ const categoryWorklist = async (req, res) => {
  */
 const employeeWorklist = async (req, res) => {
   try {
+    const requestedLimit = Number.parseInt(req.query?.limit, 10);
+    const normalizedLimit = Number.isFinite(requestedLimit)
+      ? Math.min(Math.max(requestedLimit, 1), 100)
+      : null;
+
     // Get authenticated user from req.user (set by auth middleware)
     const user = req.user;
     const firmId = req.firmId || req.context?.firmId || req.user?.firmId || null;
@@ -371,10 +376,15 @@ const employeeWorklist = async (req, res) => {
       status: CaseStatus.OPEN, // Only OPEN cases, not PENDED, not legacy 'Open'
     };
     
-    const cases = await Case.find(query)
+    const casesQuery = Case.find(query)
       .select('caseId caseName category createdAt createdBy updatedAt status clientId clientName')
-      .sort({ createdAt: -1 })
-      .lean();
+      .sort({ updatedAt: -1, createdAt: -1 });
+
+    if (normalizedLimit) {
+      casesQuery.limit(normalizedLimit);
+    }
+
+    const cases = await casesQuery.lean();
     
     // Log case list view for audit
     await logCaseListViewed({
