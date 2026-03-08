@@ -21,6 +21,7 @@ const { assertFirmPlanCapacity, PlanLimitExceededError, PlanAdminLimitExceededEr
 const { safeLogForensicAudit, getRequestIp, getRequestUserAgent, PLATFORM_TENANT } = require('../services/forensicAudit.service');
 const { createFirmWithAdmin } = require('../modules/onboarding/onboarding.service');
 const { safeAuditLog } = require('../services/safeSideEffects.service');
+const { getSession } = require('../utils/getSession');
 
 // Constants
 const FIRM_ID_PATTERN = /^FIRM\d{3,}$/i;
@@ -952,7 +953,7 @@ const updateFirmAdminStatus = async (req, res) => {
 
   const oldStatus = admin.status;
   if (status === 'disabled' && normalizeAdminLifecycleStatus(admin.status) === 'active') {
-    const session = req.transactionSession?.session;
+    const session = getSession(req);
     const activeAdminsCountQuery = User.countDocuments({
       firmId: firm._id,
       role: 'Admin',
@@ -1191,7 +1192,7 @@ const deleteFirmAdmin = async (req, res) => {
     });
   }
 
-  const session = req.transactionSession?.session;
+  const session = getSession(req);
   const adminForDeleteQuery = User.findOne({
     _id: admin._id,
     firmId: firm._id,

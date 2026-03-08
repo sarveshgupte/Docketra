@@ -7,13 +7,12 @@ const Category = require('../models/Category.model');
 const User = require('../models/User.model');
 const { recordAdminAudit } = require('./adminAudit.service');
 const { enqueueAfterCommit } = require('./sideEffectQueue.service');
+const { getSession } = require('../utils/getSession');
 
 const getCaseKey = (caseDoc) => caseDoc?.caseId || caseDoc?.caseNumber;
 
 const getActorXID = (req) => req?.user?.xID || req?.user?.xid || req?.actorXID || null;
 const getFirmId = (req, fallbackDoc) => req?.firmId || req?.user?.firmId || fallbackDoc?.firmId || null;
-const getSession = (req, explicitSession) => explicitSession || req?.transactionSession?.session || req?.mongoSession || null;
-
 const emitAudit = async ({ action, modelName, doc, req, reason }) => {
   if (!req) return;
   try {

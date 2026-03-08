@@ -9,12 +9,7 @@ const ensureSession = (providedSession = null) => {
   if (session?.skipTransaction) {
     return null;
   }
-  if (!session) {
-    const err = new Error('Write attempted without active transaction');
-    err.statusCode = 500;
-    throw err;
-  }
-  return session;
+  return session || null;
 };
 
 const applyOptionsSession = (args, index, session) => {
