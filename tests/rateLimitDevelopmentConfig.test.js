@@ -59,7 +59,7 @@ function testRouteLimiterWiring() {
   assert.ok(workTypeRoutes.includes("router.post('/', authorizeFirmPermission('WORKTYPE_MANAGE'), userWriteLimiter, createWorkType);"));
   assert.ok(securityRoutes.includes("router.get('/alerts', requireSuperadmin, superadminLimiter, listSecurityAlerts);"));
   assert.ok(dashboardRoutes.includes("router.get('/summary', userReadLimiter, getDashboardSummary);"));
-  assert.ok(categoryRoutes.includes("router.get('/', publicLimiter, getCategories);"));
+  assert.ok(categoryRoutes.includes("router.get('/', authenticate, userReadLimiter, attachFirmContext, requireTenant, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), authorizeFirmPermission('CATEGORY_VIEW'), getCategories);"));
   assert.ok(inboundRoutes.includes("router.post('/email', inboundEmailLimiter, inboundStorageHealthGuard, handleInboundEmail);"));
   assert.ok(publicRoutes.includes("router.post('/signup', signupLimiter, async (req, res, next) => {"));
 

@@ -22,6 +22,8 @@ const resolveCategoryFirmScope = (req, res) => {
   return { firmId: req.user.firmId };
 };
 
+const parseBooleanQuery = (value) => value === true || value === 'true';
+
 /**
  * Get all categories (including inactive for admin)
  * GET /api/categories
@@ -32,9 +34,10 @@ const getCategories = async (req, res) => {
     const { activeOnly } = req.query;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
+    const shouldFilterActiveOnly = parseBooleanQuery(activeOnly);
     
     // Filter based on activeOnly query parameter
-    const filter = activeOnly === 'true' ? { ...firmScope, isActive: true } : { ...firmScope };
+    const filter = shouldFilterActiveOnly ? { ...firmScope, isActive: true } : { ...firmScope };
     
     const categories = await Category.find(filter).sort({ name: 1 });
     
