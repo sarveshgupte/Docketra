@@ -28,8 +28,10 @@ import { getStatusLabel } from '../utils/statusDisplay';
 import { UX_COPY } from '../constants/uxCopy';
 import api from '../services/api';
 import './WorklistPage.css';
-
-const DATE_SORT_KEYS = new Set(['createdAt', 'updatedAt', 'pendingUntil']);
+const normalizeCases = (records = []) => records.map((record) => ({
+  ...record,
+  caseId: record.caseId || record._id,
+}));
 
 export const WorklistPage = () => {
   const navigate = useNavigate();
@@ -67,10 +69,7 @@ export const WorklistPage = () => {
         // Load pending cases
         const response = await api.get('/cases/my-pending');
         if (response.data.success) {
-          setCases((response.data.data || []).map((record) => ({
-            ...record,
-            caseId: record.caseId || record._id,
-          })));
+          setCases(normalizeCases(response.data.data || []));
         }
       } else {
         // Load open cases (default worklist)
@@ -79,10 +78,7 @@ export const WorklistPage = () => {
         
         if (response.success) {
           // Worklist only contains OPEN cases (backend already filters)
-          setCases((response.data || []).map((record) => ({
-            ...record,
-            caseId: record.caseId || record._id,
-          })));
+          setCases(normalizeCases(response.data || []));
         }
       }
     } catch (error) {
@@ -115,12 +111,13 @@ export const WorklistPage = () => {
   const pageInfo = getPageInfo();
 
   const sortedCases = useMemo(() => {
+    const dateSortKeys = new Set(['createdAt', 'updatedAt', 'pendingUntil']);
     const direction = sortState.direction === 'asc' ? 1 : -1;
     return [...cases].sort((left, right) => {
       const leftValue = left?.[sortState.key];
       const rightValue = right?.[sortState.key];
 
-      if (DATE_SORT_KEYS.has(sortState.key)) {
+      if (dateSortKeys.has(sortState.key)) {
         const leftTime = leftValue ? new Date(leftValue).getTime() : 0;
         const rightTime = rightValue ? new Date(rightValue).getTime() : 0;
         return (leftTime - rightTime) * direction;
@@ -220,11 +217,11 @@ export const WorklistPage = () => {
           ) : cases.length === 0 ? (
             <EmptyState
               title={isPendingView ? 'No pending cases right now.' : UX_COPY.emptyStates.NO_MY_OPEN}
-              description={
-                isPendingView
-                  ? 'There are no cases currently in review. When a case is placed on hold, it will appear here with its review date.'
-                  : 'No open cases are assigned to you right now. Create a new case or wait for a case to be assigned.'
-              }
+                description={
+                  isPendingView
+                    ? 'There are no cases currently in review. When a case is placed on hold, it will appear here with its review date.'
+                    : 'No open cases are assigned to you right now. Create a new case or wait for one to be assigned.'
+                }
               actionLabel={!isPendingView ? UX_COPY.actions.CREATE_CASE : undefined}
               onAction={!isPendingView ? () => navigate(`/app/firm/${firmSlug}/cases/create`) : undefined}
             />

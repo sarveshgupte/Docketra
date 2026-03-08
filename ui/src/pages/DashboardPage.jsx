@@ -63,8 +63,12 @@ export const DashboardPage = () => {
   };
 
   const activateWithKeyboard = (event, action) => {
-    if (event.key === 'Enter' || event.key === ' ') {
+    if (event.key === ' ') {
       event.preventDefault();
+      action();
+    }
+
+    if (event.key === 'Enter') {
       action();
     }
   };
@@ -411,7 +415,7 @@ export const DashboardPage = () => {
         <div className="dashboard__section">
           <div className="dashboard__section-header">
             <h2 className="dashboard__section-title">
-               {isAdmin ? 'Recent Cases' : 'Recent Cases'}
+               Recent Cases
             </h2>
             <Button
               variant="outline"
@@ -452,7 +456,6 @@ export const DashboardPage = () => {
                         onClick={() => handleCaseClick(caseItem.caseId)}
                         onKeyDown={(event) => activateWithKeyboard(event, () => handleCaseClick(caseItem.caseId))}
                         tabIndex={0}
-                        role="button"
                       >
                         <td>{caseItem.caseName}</td>
                         <td>{caseItem.category}</td>
