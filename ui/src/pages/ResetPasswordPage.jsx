@@ -110,7 +110,7 @@ export const ResetPasswordPage = () => {
           )}
 
           {!token && (
-            <div className="reset-password-actions" aria-label="Recovery actions">
+            <div className="reset-password-actions" role="navigation" aria-label="Recovery actions">
               <Link to="/forgot-password" className="reset-password-link">
                 Request a new reset link
               </Link>
