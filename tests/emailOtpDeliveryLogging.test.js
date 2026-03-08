@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 const assert = require('assert');
 const bcrypt = require('bcrypt');
 
