@@ -21,6 +21,24 @@
   background-color: var(--color-bg-app);
 }
 
+.enterprise-skip-link {
+  position: fixed;
+  top: var(--space-3);
+  left: var(--space-3);
+  z-index: 400;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--text-main);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-150%);
+  transition: transform var(--transition-fast);
+}
+
+.enterprise-skip-link:focus {
+  transform: translateY(0);
+}
+
 /* =====================================================
    SIDEBAR
    ===================================================== */

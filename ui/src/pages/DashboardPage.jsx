@@ -56,6 +56,18 @@ export const DashboardPage = () => {
   });
   const [recentCases, setRecentCases] = useState([]);
   const [showBookmarkPrompt, setShowBookmarkPrompt] = useState(false);
+  const [loadWarnings, setLoadWarnings] = useState([]);
+
+  const reportLoadWarning = (message) => {
+    setLoadWarnings((current) => (current.includes(message) ? current : [...current, message]));
+  };
+
+  const activateWithKeyboard = (event, action) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      action();
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -83,6 +95,7 @@ export const DashboardPage = () => {
 
   const loadDashboardData = async () => {
     setLoading(true);
+    setLoadWarnings([]);
     try {
       let casesToDisplay = [];
       
@@ -94,6 +107,7 @@ export const DashboardPage = () => {
           }
         } catch (error) {
           console.error('Failed to load firm cases:', error);
+          reportLoadWarning('Recent cases');
         }
       } else {
         try {
@@ -103,6 +117,7 @@ export const DashboardPage = () => {
           }
         } catch (error) {
           console.error('Failed to load worklist:', error);
+          reportLoadWarning('Recent cases');
         }
       }
       
@@ -120,6 +135,7 @@ export const DashboardPage = () => {
           }
         } catch (error) {
           console.error('Failed to load firm metrics:', error);
+          reportLoadWarning('Firm metrics');
         }
       }
       
@@ -131,6 +147,7 @@ export const DashboardPage = () => {
         }
       } catch (error) {
         console.error('Failed to load open cases count:', error);
+        reportLoadWarning('Open case counts');
       }
       
       // My Pending Cases (SLA risk)
@@ -141,6 +158,7 @@ export const DashboardPage = () => {
         }
       } catch (error) {
         console.error('Failed to load pending cases:', error);
+        reportLoadWarning('Pending case counts');
       }
       
       // My Resolved Cases
@@ -151,6 +169,7 @@ export const DashboardPage = () => {
         }
       } catch (error) {
         console.error('Failed to load resolved cases:', error);
+        reportLoadWarning('Resolved case counts');
       }
       
       // My Unassigned Created Cases
@@ -161,6 +180,7 @@ export const DashboardPage = () => {
         }
       } catch (error) {
         console.error('Failed to load unassigned created cases:', error);
+        reportLoadWarning('Unassigned case counts');
       }
       
       // Admin stats
@@ -172,6 +192,7 @@ export const DashboardPage = () => {
           }
         } catch (error) {
           console.error('Failed to load pending approvals:', error);
+          reportLoadWarning('Pending approvals');
         }
         
         try {
@@ -181,6 +202,7 @@ export const DashboardPage = () => {
           }
         } catch (error) {
           console.error('Failed to load filed cases:', error);
+          reportLoadWarning('Filed cases');
         }
         
         try {
@@ -190,6 +212,7 @@ export const DashboardPage = () => {
           }
         } catch (error) {
           console.error('Failed to load admin resolved cases:', error);
+          reportLoadWarning('Resolved admin cases');
         }
 
         // Active Clients
@@ -200,10 +223,12 @@ export const DashboardPage = () => {
           }
         } catch (error) {
           console.error('Failed to load active clients:', error);
+          reportLoadWarning('Client counts');
         }
       }
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
+      reportLoadWarning('Dashboard data');
     } finally {
       setLoading(false);
     }
@@ -274,12 +299,29 @@ export const DashboardPage = () => {
           />
         ) : null}
 
+        {loadWarnings.length ? (
+          <div className="dashboard__warning" role="status" aria-live="polite">
+            <div>
+              <strong>Some dashboard data could not be loaded.</strong>
+              <p>
+                Metrics may be incomplete right now. Retry to refresh the latest workload and compliance signals.
+              </p>
+            </div>
+            <Button variant="outline" onClick={loadDashboardData}>
+              Retry
+            </Button>
+          </div>
+        ) : null}
+
         {/* Section 1: KPI Strip */}
         <div className="dashboard__kpi-strip">
           {/* Open Cases */}
           <div
             className="dashboard__kpi-card dashboard__kpi-card--clickable"
             onClick={() => navigate(`/app/firm/${firmSlug}/my-worklist?status=OPEN`)}
+            onKeyDown={(event) => activateWithKeyboard(event, () => navigate(`/app/firm/${firmSlug}/my-worklist?status=OPEN`))}
+            role="button"
+            tabIndex={0}
           >
              <div className="dashboard__kpi-number">{stats.overdueComplianceItems}</div>
              <div className="dashboard__kpi-label">Overdue Compliance Items</div>
@@ -290,6 +332,9 @@ export const DashboardPage = () => {
           <div
             className="dashboard__kpi-card dashboard__kpi-card--clickable dashboard__kpi-card--accent"
             onClick={() => navigate(`/app/firm/${firmSlug}/cases?approvalStatus=PENDING`)}
+            onKeyDown={(event) => activateWithKeyboard(event, () => navigate(`/app/firm/${firmSlug}/cases?approvalStatus=PENDING`))}
+            role="button"
+            tabIndex={0}
           >
             <div className="dashboard__kpi-number">
                {stats.dueInSevenDays}
@@ -302,6 +347,9 @@ export const DashboardPage = () => {
           <div
             className="dashboard__kpi-card dashboard__kpi-card--clickable dashboard__kpi-card--warning"
             onClick={() => navigate(`/app/firm/${firmSlug}/my-worklist?status=PENDED`)}
+            onKeyDown={(event) => activateWithKeyboard(event, () => navigate(`/app/firm/${firmSlug}/my-worklist?status=PENDED`))}
+            role="button"
+            tabIndex={0}
           >
              <div className="dashboard__kpi-number">{awaitingPartnerReview}</div>
              <div className="dashboard__kpi-label">Awaiting Partner Review</div>
@@ -310,19 +358,25 @@ export const DashboardPage = () => {
 
           {/* Active Clients (admin) / Resolved Cases (regular user) */}
           {isAdmin ? (
-            <div
-              className="dashboard__kpi-card dashboard__kpi-card--clickable dashboard__kpi-card--success"
-              onClick={() => navigate(`/app/firm/${firmSlug}/admin`)}
-            >
+              <div
+                className="dashboard__kpi-card dashboard__kpi-card--clickable dashboard__kpi-card--success"
+                onClick={() => navigate(`/app/firm/${firmSlug}/admin`)}
+                onKeyDown={(event) => activateWithKeyboard(event, () => navigate(`/app/firm/${firmSlug}/admin`))}
+                role="button"
+                tabIndex={0}
+              >
                 <div className="dashboard__kpi-number">{stats.activeClients}</div>
                 <div className="dashboard__kpi-label">Active Reporting Entities</div>
                 <div className="dashboard__kpi-sub">Total active reporting entities</div>
               </div>
           ) : (
-            <div
-              className="dashboard__kpi-card dashboard__kpi-card--clickable dashboard__kpi-card--success"
-              onClick={() => navigate(`/app/firm/${firmSlug}/my-worklist?status=RESOLVED`)}
-            >
+              <div
+                className="dashboard__kpi-card dashboard__kpi-card--clickable dashboard__kpi-card--success"
+                onClick={() => navigate(`/app/firm/${firmSlug}/my-worklist?status=RESOLVED`)}
+                onKeyDown={(event) => activateWithKeyboard(event, () => navigate(`/app/firm/${firmSlug}/my-worklist?status=RESOLVED`))}
+                role="button"
+                tabIndex={0}
+              >
                <div className="dashboard__kpi-number">{stats.myResolvedCases}</div>
                <div className="dashboard__kpi-label">Risk Summary Panel</div>
                <div className="dashboard__kpi-sub">Executed compliance items</div>
@@ -357,7 +411,7 @@ export const DashboardPage = () => {
         <div className="dashboard__section">
           <div className="dashboard__section-header">
             <h2 className="dashboard__section-title">
-               {isAdmin ? 'Recent Audit Records' : 'Recent Audit Records'}
+               {isAdmin ? 'Recent Cases' : 'Recent Cases'}
             </h2>
             <Button
               variant="outline"
@@ -370,36 +424,48 @@ export const DashboardPage = () => {
           <Card>
             {recentCases.length === 0 ? (
               <EmptyState
-                title="No compliance records available."
-                description={isAdmin ? 'No audit records are available for this firm yet.' : 'No audit records are available for your assigned compliance items.'}
+                title={isAdmin ? 'No cases yet' : 'No assigned cases yet'}
+                description={
+                  isAdmin
+                    ? 'Create your first case to start tracking deadlines, ownership, and firm workflow health.'
+                    : 'Once work is assigned to you, your recently updated cases will appear here for quick follow-up.'
+                }
                 actionLabel={UX_COPY.actions.CREATE_CASE}
                 onAction={() => navigate(`/app/firm/${firmSlug}/cases/create`)}
               />
             ) : (
-              <table className="neo-table">
-                <thead>
-                  <tr>
-                    <th>Case Name</th>
-                    <th>Category</th>
-                    <th>Status</th>
-                    <th>Priority</th>
-                    <th>Last Action Timestamp</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentCases.map((caseItem) => (
-                    <tr key={caseItem._id} onClick={() => handleCaseClick(caseItem.caseId)}>
-                      <td>{caseItem.caseName}</td>
-                      <td>{caseItem.category}</td>
-                      <td>
-                        <Badge status={caseItem.status}>{getStatusLabel(caseItem.status)}</Badge>
-                      </td>
-                      <td><PriorityPill caseRecord={caseItem} /></td>
-                      <td>{formatDate(caseItem.updatedAt)}</td>
+              <div className="dashboard__table-wrap">
+                <table className="neo-table" aria-label="Recent cases">
+                  <thead>
+                    <tr>
+                      <th>Case Name</th>
+                      <th>Category</th>
+                      <th>Status</th>
+                      <th>Priority</th>
+                      <th>Last Action Timestamp</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {recentCases.map((caseItem) => (
+                      <tr
+                        key={caseItem._id}
+                        onClick={() => handleCaseClick(caseItem.caseId)}
+                        onKeyDown={(event) => activateWithKeyboard(event, () => handleCaseClick(caseItem.caseId))}
+                        tabIndex={0}
+                        role="button"
+                      >
+                        <td>{caseItem.caseName}</td>
+                        <td>{caseItem.category}</td>
+                        <td>
+                          <Badge status={caseItem.status}>{getStatusLabel(caseItem.status)}</Badge>
+                        </td>
+                        <td><PriorityPill caseRecord={caseItem} /></td>
+                        <td>{formatDate(caseItem.updatedAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </Card>
         </div>
@@ -412,6 +478,9 @@ export const DashboardPage = () => {
               <div
                 className="dashboard__stat-card dashboard__stat-card--clickable"
                 onClick={() => navigate(`/app/firm/${firmSlug}/cases?status=FILED`)}
+                onKeyDown={(event) => activateWithKeyboard(event, () => navigate(`/app/firm/${firmSlug}/cases?status=FILED`))}
+                role="button"
+                tabIndex={0}
               >
                 <div className="dashboard__stat-value">{stats.adminFiledCases}</div>
                 <div className="dashboard__stat-label">Filed Cases</div>
@@ -420,6 +489,9 @@ export const DashboardPage = () => {
               <div
                 className="dashboard__stat-card dashboard__stat-card--clickable"
                 onClick={() => navigate(`/app/firm/${firmSlug}/cases?status=RESOLVED`)}
+                onKeyDown={(event) => activateWithKeyboard(event, () => navigate(`/app/firm/${firmSlug}/cases?status=RESOLVED`))}
+                role="button"
+                tabIndex={0}
               >
                 <div className="dashboard__stat-value">{stats.adminResolvedCases}</div>
                 <div className="dashboard__stat-label">All Resolved</div>
@@ -428,6 +500,9 @@ export const DashboardPage = () => {
               <div
                 className="dashboard__stat-card dashboard__stat-card--clickable"
                 onClick={() => navigate(`/app/firm/${firmSlug}/global-worklist?createdBy=me&status=UNASSIGNED`)}
+                onKeyDown={(event) => activateWithKeyboard(event, () => navigate(`/app/firm/${firmSlug}/global-worklist?createdBy=me&status=UNASSIGNED`))}
+                role="button"
+                tabIndex={0}
               >
                 <div className="dashboard__stat-value">{stats.myUnassignedCreatedCases}</div>
                 <div className="dashboard__stat-label">Unassigned</div>
