@@ -14,8 +14,11 @@ export const caseService = {
     if (filters.status) params.append('status', filters.status);
     if (filters.category) params.append('category', filters.category);
     if (filters.assignedTo) params.append('assignedTo', filters.assignedTo);
+    if (filters.page) params.append('page', filters.page);
+    if (filters.limit) params.append('limit', filters.limit);
     
-    const response = await api.get(`/cases?${params.toString()}`);
+    const queryString = params.toString();
+    const response = await api.get(`/cases${queryString ? `?${queryString}` : ''}`);
     return response.data;
   },
 
