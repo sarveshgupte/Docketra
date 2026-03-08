@@ -2,9 +2,8 @@ const express = require('express');
 const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
 const routeSchemas = require('../schemas/client.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
-const { authenticate } = require('../middleware/auth.middleware');
-const { attachFirmContext } = require('../middleware/firmContext.middleware');
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
+const { firmAuthenticatedAccess } = require('./routeGroups');
 const {
   userReadLimiter,
   userWriteLimiter,
@@ -48,9 +47,7 @@ const uploadCFS = createSecureUpload();
  * - All changes are audited
  */
 
-// Block SuperAdmin from accessing client routes
-router.use(authenticate);
-router.use(attachFirmContext);
+router.use(...firmAuthenticatedAccess);
 
 // Public/authenticated endpoints
 router.get('/', authorizeFirmPermission('CLIENT_VIEW'), userReadLimiter, getClients);

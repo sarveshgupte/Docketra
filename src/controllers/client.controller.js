@@ -20,6 +20,7 @@ const CaseFile = require('../models/CaseFile.model');
 const { incrementTenantMetric } = require('../services/tenantMetrics.service');
 const path = require('path');
 const fs = require('fs');
+const { parseBooleanQuery } = require('../utils/query.utils');
 
 const getClientAccessContext = (req, res, message) => {
   const firmId = req.user?.firmId;
@@ -59,9 +60,11 @@ const getClients = async (req, res) => {
     const { activeOnly, forCreateCase } = req.query;
     const accessContext = getClientAccessContext(req, res, 'User must belong to a firm to access clients');
     if (!accessContext) return;
+    const shouldFilterActiveOnly = parseBooleanQuery(activeOnly);
+    const shouldLoadForCreateCase = parseBooleanQuery(forCreateCase);
     
     // Special logic for Create Case: Always include Default Client + other active clients
-    if (forCreateCase === 'true') {
+    if (shouldLoadForCreateCase) {
       const clients = await ClientRepository.find(
         accessContext.firmId,
         {
@@ -87,7 +90,7 @@ const getClients = async (req, res) => {
     // Filter based on activeOnly query parameter
     // Use canonical status field (ACTIVE/INACTIVE) instead of deprecated isActive
     const filter = { 
-      ...(activeOnly === 'true' ? { status: CLIENT_STATUS.ACTIVE } : {})
+      ...(shouldFilterActiveOnly ? { status: CLIENT_STATUS.ACTIVE } : {})
     };
     
     const clients = await ClientRepository.find(

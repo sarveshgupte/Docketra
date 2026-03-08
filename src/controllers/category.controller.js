@@ -2,6 +2,7 @@ const Category = require('../models/Category.model');
 const Case = require('../models/Case.model');
 const mongoose = require('mongoose');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
+const { parseBooleanQuery } = require('../utils/query.utils');
 
 /**
  * Category Controller for Admin-Managed Categories
@@ -32,9 +33,10 @@ const getCategories = async (req, res) => {
     const { activeOnly } = req.query;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
+    const shouldFilterActiveOnly = parseBooleanQuery(activeOnly);
     
     // Filter based on activeOnly query parameter
-    const filter = activeOnly === 'true' ? { ...firmScope, isActive: true } : { ...firmScope };
+    const filter = shouldFilterActiveOnly ? { ...firmScope, isActive: true } : { ...firmScope };
     
     const categories = await Category.find(filter).sort({ name: 1 });
     

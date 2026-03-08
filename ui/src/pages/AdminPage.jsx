@@ -227,7 +227,7 @@ export const AdminPage = () => {
         const response = await adminService.getUsers();
         setUsers(response?.success ? (response.data || []) : []);
       } else if (activeTab === 'categories') {
-        const response = await categoryService.getCategories(false); // Get all categories including inactive
+        const response = await categoryService.getAdminCategories(false); // Get all categories including inactive
         setCategories(response?.success ? (response.data || []) : []);
       } else if (activeTab === 'clients') {
         const response = await adminService.listClients({ activeOnly: false });

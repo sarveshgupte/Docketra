@@ -81,6 +81,7 @@ const {
 const { tenantThrottle } = require('./middleware/tenantThrottle.middleware');
 const { uploadErrorHandler } = require('./middleware/uploadProtection.middleware');
 const { allowInternalTokenOrSuperadmin } = require('./middleware/internalMetricsAccess.middleware');
+const { tenantScopedApiAccess, adminTenantScopedApiAccess } = require('./routes/routeGroups');
 
 // Routes
 const userRoutes = require('./routes/user.routes');
@@ -413,13 +414,13 @@ app.use('/public', publicLimiter, publicSignupRoutes);
 // Contact form route (public, no authentication required)
 app.use('/api/contact', contactLimiter, contactRoutes);
 
-// Category routes (public GET for active categories, admin-only for modifications)
+// Category routes (user-facing reads; admin management is also available under /api/admin/categories)
 app.use('/api/categories', writeGuardChain, categoryRoutes);
-app.use('/api/work-types', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, workTypeRoutes);
+app.use('/api/work-types', ...tenantScopedApiAccess, writeGuardChain, workTypeRoutes);
 
 // Admin routes (firm-scoped) - enforce auth + firm context + admin role boundary
-app.use('/api/admin', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, requireAdmin, adminAuditTrail('admin'), adminRoutes);
-app.use('/api/dashboard', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, requireAdmin, dashboardRoutes);
+app.use('/api/admin', ...adminTenantScopedApiAccess, writeGuardChain, adminAuditTrail('admin'), adminRoutes);
+app.use('/api/dashboard', ...adminTenantScopedApiAccess, writeGuardChain, dashboardRoutes);
 
 // Superadmin routes - platform scope only (no firm context)
 // Include legacy /superadmin to prevent SPA fallback when UI calls API without /api prefix.
@@ -440,18 +441,18 @@ if (inboundEmailEnabled) {
 
 // Protected routes - require authentication
 // Firm context must be attached for all tenant-scoped operations
-app.use('/api/users', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, userRoutes);
-app.use('/api/tasks', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, taskRoutes);
-app.use('/api/cases', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, caseRoutes);
-app.use('/api/search', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, searchRoutes);
-app.use('/api/worklists', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, searchRoutes);
-app.use('/api/client-approval', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, clientApprovalRoutes);
-app.use('/api/clients', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, clientRoutes);  // Client management (PR #39)
-app.use('/api/reports', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, reportsRoutes);  // Reports routes
-app.use('/api/firm/:firmId', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, firmMetricsRoutes);
+app.use('/api/users', ...tenantScopedApiAccess, writeGuardChain, userRoutes);
+app.use('/api/tasks', ...tenantScopedApiAccess, writeGuardChain, taskRoutes);
+app.use('/api/cases', ...tenantScopedApiAccess, writeGuardChain, caseRoutes);
+app.use('/api/search', ...tenantScopedApiAccess, writeGuardChain, searchRoutes);
+app.use('/api/worklists', ...tenantScopedApiAccess, writeGuardChain, searchRoutes);
+app.use('/api/client-approval', ...tenantScopedApiAccess, writeGuardChain, clientApprovalRoutes);
+app.use('/api/clients', ...tenantScopedApiAccess, writeGuardChain, clientRoutes);  // Client management (PR #39)
+app.use('/api/reports', ...tenantScopedApiAccess, writeGuardChain, reportsRoutes);  // Reports routes
+app.use('/api/firm/:firmId', ...tenantScopedApiAccess, writeGuardChain, firmMetricsRoutes);
 app.use('/api/storage', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), storageRoutes);  // BYOS storage routes (read-only, no writeGuardChain needed)
-app.use('/api/files', authLimiter, authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, filesRoutes);
-app.use('/api/tenant', authLimiter, authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, tenantRoutes);
+app.use('/api/files', authLimiter, ...tenantScopedApiAccess, writeGuardChain, filesRoutes);
+app.use('/api/tenant', authLimiter, ...tenantScopedApiAccess, writeGuardChain, tenantRoutes);
 
 // Firm-scoped API auth routes for tenant login and OTP verification
 app.use('/api/:firmSlug', firmRoutes);

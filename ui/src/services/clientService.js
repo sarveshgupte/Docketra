@@ -36,7 +36,7 @@ export const clientService = {
    * Create a new client (Admin only)
    */
   createClient: async (clientData) => {
-    const response = await api.post('/clients', clientData);
+    const response = await api.post('/admin/clients', clientData);
     return response.data;
   },
 
@@ -45,7 +45,7 @@ export const clientService = {
    * Only allows updating: businessEmail, primaryContactNumber, secondaryContactNumber
    */
   updateClient: async (clientId, clientData) => {
-    const response = await api.put(`/clients/${clientId}`, clientData);
+    const response = await api.put(`/admin/clients/${clientId}`, clientData);
     return response.data;
   },
 
@@ -53,7 +53,7 @@ export const clientService = {
    * Enable/disable client (Admin only)
    */
   toggleClientStatus: async (clientId, isActive) => {
-    const response = await api.patch(`/clients/${clientId}/status`, { isActive });
+    const response = await api.patch(`/admin/clients/${clientId}/status`, { isActive });
     return response.data;
   },
 
@@ -62,7 +62,7 @@ export const clientService = {
    * Requires newBusinessName and reason for audit compliance
    */
   changeLegalName: async (clientId, newBusinessName, reason) => {
-    const response = await api.post(`/clients/${clientId}/change-name`, {
+    const response = await api.post(`/admin/clients/${clientId}/change-name`, {
       newBusinessName,
       reason,
     });
@@ -74,7 +74,7 @@ export const clientService = {
    * Update description and notes for client fact sheet
    */
   updateClientFactSheet: async (clientId, description, notes) => {
-    const response = await api.put(`/clients/${clientId}/fact-sheet`, {
+    const response = await api.put(`/admin/clients/${clientId}/fact-sheet`, {
       description,
       notes,
     });
@@ -89,7 +89,7 @@ export const clientService = {
   uploadFactSheetFile: async (clientId, file) => {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await api.post(`/clients/${clientId}/fact-sheet/files`, formData, {
+    const response = await api.post(`/admin/clients/${clientId}/fact-sheet/files`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -101,7 +101,7 @@ export const clientService = {
    * Delete file from Client Fact Sheet (Admin only)
    */
   deleteFactSheetFile: async (clientId, fileId) => {
-    const response = await api.delete(`/clients/${clientId}/fact-sheet/files/${fileId}`);
+    const response = await api.delete(`/admin/clients/${clientId}/fact-sheet/files/${fileId}`);
     return response.data;
   },
 
