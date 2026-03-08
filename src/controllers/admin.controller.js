@@ -189,8 +189,7 @@ const resendInviteEmail = async (req, res) => {
       });
     }
     
-    const invitePending = user.status === 'invited' || Boolean(user.mustSetPassword) || !user.passwordHash;
-    if (!invitePending) {
+    if (user.status !== 'invited') {
       return res.status(400).json({
         success: false,
         message: 'User already activated. Cannot resend invite email for activated users.',
