@@ -389,6 +389,13 @@ export const FirmLoginPage = () => {
           </p>
         </div>
 
+        {!showOtpForm && (
+          <p className="auth-helper-text">
+            Use the xID from your welcome email. First-time users should check their inbox for their activation link
+            and credentials before signing in here.
+          </p>
+        )}
+
         {statusMessage && (
           <div className="neo-alert neo-alert--success auth-alert" role="status" aria-live="polite">
             {statusMessage}

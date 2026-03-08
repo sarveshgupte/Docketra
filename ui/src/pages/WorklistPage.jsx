@@ -11,7 +11,7 @@
  * PR: Clickable Dashboard KPI Cards - Added support for status query params
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
@@ -20,6 +20,7 @@ import { Button } from '../components/common/Button';
 import { TableSkeleton } from '../components/common/Skeleton';
 import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/layout/EmptyState';
+import { DataTable } from '../components/layout/DataTable';
 import { PriorityPill } from '../components/common/PriorityPill';
 import { worklistService } from '../services/worklistService';
 import { formatDate } from '../utils/formatters';
@@ -28,6 +29,8 @@ import { UX_COPY } from '../constants/uxCopy';
 import api from '../services/api';
 import './WorklistPage.css';
 
+const DATE_SORT_KEYS = new Set(['createdAt', 'updatedAt', 'pendingUntil']);
+
 export const WorklistPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -35,6 +38,8 @@ export const WorklistPage = () => {
   
   const [loading, setLoading] = useState(true);
   const [cases, setCases] = useState([]);
+  const [error, setError] = useState('');
+  const [sortState, setSortState] = useState({ key: 'updatedAt', direction: 'desc' });
   
   // Get status filter from query params
   const statusParam = searchParams.get('status');
@@ -47,17 +52,25 @@ export const WorklistPage = () => {
   );
 
   useEffect(() => {
+    setSortState({ key: isPendingView ? 'pendingUntil' : 'updatedAt', direction: 'desc' });
+  }, [isPendingView]);
+
+  useEffect(() => {
     loadWorklist();
   }, [statusParam]);
 
   const loadWorklist = async () => {
     setLoading(true);
+    setError('');
     try {
       if (isPendingView) {
         // Load pending cases
         const response = await api.get('/cases/my-pending');
         if (response.data.success) {
-          setCases(response.data.data || []);
+          setCases((response.data.data || []).map((record) => ({
+            ...record,
+            caseId: record.caseId || record._id,
+          })));
         }
       } else {
         // Load open cases (default worklist)
@@ -66,11 +79,16 @@ export const WorklistPage = () => {
         
         if (response.success) {
           // Worklist only contains OPEN cases (backend already filters)
-          setCases(response.data || []);
+          setCases((response.data || []).map((record) => ({
+            ...record,
+            caseId: record.caseId || record._id,
+          })));
         }
       }
     } catch (error) {
       console.error('Failed to load worklist:', error);
+      setError('We couldn’t load your worklist. Retry to fetch the latest assigned cases.');
+      setCases([]);
     } finally {
       setLoading(false);
     }
@@ -96,6 +114,76 @@ export const WorklistPage = () => {
   
   const pageInfo = getPageInfo();
 
+  const sortedCases = useMemo(() => {
+    const direction = sortState.direction === 'asc' ? 1 : -1;
+    return [...cases].sort((left, right) => {
+      const leftValue = left?.[sortState.key];
+      const rightValue = right?.[sortState.key];
+
+      if (DATE_SORT_KEYS.has(sortState.key)) {
+        const leftTime = leftValue ? new Date(leftValue).getTime() : 0;
+        const rightTime = rightValue ? new Date(rightValue).getTime() : 0;
+        return (leftTime - rightTime) * direction;
+      }
+
+      return String(leftValue || '').localeCompare(String(rightValue || ''), undefined, {
+        numeric: true,
+        sensitivity: 'base',
+      }) * direction;
+    });
+  }, [cases, sortState]);
+
+  const columns = [
+    {
+      key: 'caseName',
+      header: 'Case Name',
+      sortable: true,
+    },
+    {
+      key: 'category',
+      header: 'Category',
+      sortable: true,
+    },
+    {
+      key: 'clientId',
+      header: 'Client ID',
+      render: (caseItem) => caseItem.clientId || '—',
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      sortable: true,
+      render: (caseItem) => (
+        <Badge status={caseItem.status}>{getStatusLabel(caseItem.status)}</Badge>
+      ),
+    },
+    {
+      key: 'priority',
+      header: 'Priority',
+      render: (caseItem) => <PriorityPill caseRecord={caseItem} />,
+    },
+    ...(isPendingView
+      ? [{
+        key: 'pendingUntil',
+        header: 'Pending Until',
+        sortable: true,
+        render: (caseItem) => formatDate(caseItem.pendingUntil),
+      }]
+      : []),
+    {
+      key: 'createdAt',
+      header: 'Created',
+      sortable: true,
+      render: (caseItem) => formatDate(caseItem.createdAt),
+    },
+    {
+      key: 'updatedAt',
+      header: 'Last Updated',
+      sortable: true,
+      render: (caseItem) => formatDate(caseItem.updatedAt),
+    },
+  ];
+
   if (loading) {
     return (
       <Layout>
@@ -117,63 +205,44 @@ export const WorklistPage = () => {
           )}
         />
 
-        <div className="worklist__toolbar">
-          <span className="worklist__count">
-            {cases.length} case{cases.length !== 1 ? 's' : ''}
-          </span>
-        </div>
-
         <Card>
-          {cases.length === 0 ? (
+          {error ? (
+            <EmptyState
+              tone="error"
+              eyebrow="Worklist unavailable"
+              title="We couldn’t load your worklist"
+              description="Retry to fetch the latest assigned cases. If the problem continues, refresh the page or contact your administrator."
+              actionLabel="Retry"
+              onAction={loadWorklist}
+              secondaryActionLabel={!isPendingView ? UX_COPY.actions.CREATE_CASE : undefined}
+              onSecondaryAction={!isPendingView ? () => navigate(`/app/firm/${firmSlug}/cases/create`) : undefined}
+            />
+          ) : cases.length === 0 ? (
             <EmptyState
               title={isPendingView ? 'No pending cases right now.' : UX_COPY.emptyStates.NO_MY_OPEN}
-              description={isPendingView ? 'There are no cases currently in review.' : 'No open cases are assigned to you right now.'}
+              description={
+                isPendingView
+                  ? 'There are no cases currently in review. When a case is placed on hold, it will appear here with its review date.'
+                  : 'No open cases are assigned to you right now. Create a new case or wait for a case to be assigned.'
+              }
               actionLabel={!isPendingView ? UX_COPY.actions.CREATE_CASE : undefined}
               onAction={!isPendingView ? () => navigate(`/app/firm/${firmSlug}/cases/create`) : undefined}
             />
           ) : (
-            <div className="worklist__table-wrap">
-              <table className="neo-table" role="grid" aria-label={pageInfo.title}>
-                <thead>
-                  <tr>
-                    <th scope="col">Case Name</th>
-                    <th scope="col">Category</th>
-                    <th scope="col">Client ID</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Priority</th>
-                    {isPendingView && <th scope="col">Pending Until</th>}
-                    <th scope="col">Created</th>
-                    <th scope="col">Last Updated</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {cases.map((caseItem) => (
-                    <tr
-                      key={caseItem._id}
-                      onClick={() => handleCaseClick(caseItem.caseId)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleCaseClick(caseItem.caseId)}
-                      tabIndex={0}
-                      role="row"
-                      aria-label={`Case: ${caseItem.caseName}, status ${getStatusLabel(caseItem.status)}`}
-                      className="worklist__row"
-                    >
-                      <td>{caseItem.caseName}</td>
-                      <td>{caseItem.category}</td>
-                      <td>{caseItem.clientId || '—'}</td>
-                      <td>
-                        <Badge status={caseItem.status}>{getStatusLabel(caseItem.status)}</Badge>
-                      </td>
-                      <td><PriorityPill caseRecord={caseItem} /></td>
-                      {isPendingView && (
-                        <td>{formatDate(caseItem.pendingUntil)}</td>
-                      )}
-                      <td>{formatDate(caseItem.createdAt)}</td>
-                      <td>{formatDate(caseItem.updatedAt)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              columns={columns}
+              data={sortedCases}
+              rowKey="caseId"
+              onRowClick={(caseItem) => handleCaseClick(caseItem.caseId)}
+              sortState={sortState}
+              onSortChange={setSortState}
+              toolbarLeft={(
+                <span className="worklist__count">
+                  {sortedCases.length} case{sortedCases.length !== 1 ? 's' : ''}
+                </span>
+              )}
+              dense
+            />
           )}
         </Card>
       </div>
