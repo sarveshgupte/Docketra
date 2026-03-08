@@ -61,7 +61,7 @@ const detectProfileLoop = (req, res, next) => {
 router.post('/setup-account', authBlockEnforcer, authLimiter, setupAccount);
 router.post('/resend-setup', authBlockEnforcer, authLimiter, resendSetup);
 router.post('/resend-credentials', authBlockEnforcer, authLimiter, sensitiveLimiter, resendCredentials);
-router.post('/resend-otp', authBlockEnforcer, otpResendLimiter, resendLoginOtp);
+router.post('/resend-otp', authBlockEnforcer, authLimiter, otpResendLimiter, resendLoginOtp);
 router.post('/reset-password-with-token', authBlockEnforcer, authLimiter, sensitiveLimiter, resetPasswordWithToken);
 router.post('/forgot-password', authBlockEnforcer, forgotPasswordLimiter, sensitiveLimiter, forgotPassword);
 router.post('/refresh', refreshIpLimiter, refreshUserLimiter, refreshAccessToken); // NEW: JWT token refresh

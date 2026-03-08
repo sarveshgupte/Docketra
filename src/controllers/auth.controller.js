@@ -1139,9 +1139,10 @@ const resendLoginOtp = async (req, res) => {
     });
 
     if (!user || !firm) {
-      return res.status(404).json({
-        success: false,
-        message: 'Unable to resend OTP for this account.',
+      return res.json({
+        success: true,
+        message: 'OTP resent successfully',
+        resendCooldownSeconds: otpConfig.resendCooldownSeconds,
       });
     }
 
@@ -1172,7 +1173,7 @@ const resendLoginOtp = async (req, res) => {
     if (retryAfter > 0) {
       return res.status(429).json({
         success: false,
-        message: `Please wait ${retryAfter}s before requesting another OTP.`,
+        message: `Please wait ${retryAfter} seconds before requesting another OTP.`,
         retryAfter,
       });
     }
