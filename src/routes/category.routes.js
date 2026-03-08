@@ -7,7 +7,7 @@ const { attachFirmContext } = require('../middleware/firmContext.middleware');
 const requireTenant = require('../middleware/requireTenant');
 const invariantGuard = require('../middleware/invariantGuard');
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
-const { publicLimiter, userReadLimiter, userWriteLimiter } = require('../middleware/rateLimiters');
+const { userReadLimiter, userWriteLimiter } = require('../middleware/rateLimiters');
 const {
   getCategories,
   getCategoryById,
@@ -24,16 +24,16 @@ const {
 /**
  * Category Routes for Admin-Managed Categories
  * 
- * Public endpoints:
- * - GET /api/categories (for case creation dropdowns)
+ * Authenticated read endpoints:
+ * - GET /api/categories
  * 
  * Admin-only endpoints:
  * - All other operations require authentication and admin role
  * - SuperAdmin is blocked from accessing firm-specific categories
  */
 
-// Public endpoint - Get active categories (for case creation)
-router.get('/', publicLimiter, getCategories);
+// Authenticated read endpoint - categories are firm-scoped and require tenant context
+router.get('/', authenticate, userReadLimiter, attachFirmContext, requireTenant, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), authorizeFirmPermission('CATEGORY_VIEW'), getCategories);
 
 // Get category by ID - require auth and block SuperAdmin
 router.get('/:id', authenticate, userReadLimiter, attachFirmContext, requireTenant, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), authorizeFirmPermission('CATEGORY_VIEW'), getCategoryById);

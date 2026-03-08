@@ -99,6 +99,60 @@ async function testClientReadsUseRepositoryAndReturnPlaintext() {
   console.log('  ✓ client reads use ClientRepository and return plaintext contact fields');
 }
 
+async function testClientActiveOnlyQueryParsingStaysBooleanSafe() {
+  let capturedFilter = null;
+
+  Module._load = function(request, parent, isMain) {
+    if (request === '../repositories/ClientRepository') {
+      return {
+        find: async (_firmId, filter) => {
+          capturedFilter = filter;
+          return [];
+        },
+      };
+    }
+    if (request === '../mappers/client.mapper') {
+      return { mapClientResponse: (client) => client };
+    }
+    if (request === '../config/constants') {
+      return { CLIENT_STATUS: { ACTIVE: 'ACTIVE' } };
+    }
+    if (request === '../middleware/wrapWriteHandler') {
+      return (fn) => fn;
+    }
+    if (
+      request.includes('/models/')
+      || request.includes('/services/')
+      || request.includes('/queues/')
+      || request.includes('/utils/')
+      || request.includes('/config/')
+    ) {
+      return {};
+    }
+    return originalLoad.apply(this, arguments);
+  };
+
+  clearModule('../src/controllers/client.controller');
+  const { getClients } = require('../src/controllers/client.controller');
+
+  const falseRes = createRes();
+  await getClients({
+    query: { activeOnly: 'false' },
+    user: { firmId: 'firm-1', role: 'Admin' },
+  }, falseRes);
+  assert.deepStrictEqual(capturedFilter, {}, 'activeOnly=false should not add an active-only filter');
+  assert.deepStrictEqual(falseRes.body.data, [], 'empty repository results should still return a stable array');
+
+  const trueRes = createRes();
+  await getClients({
+    query: { activeOnly: 'true' },
+    user: { firmId: 'firm-1', role: 'Admin' },
+  }, trueRes);
+  assert.deepStrictEqual(capturedFilter, { status: 'ACTIVE' }, 'activeOnly=true should filter by active status only');
+  assert.deepStrictEqual(trueRes.body.data, [], 'active-only requests should still preserve the stable response shape');
+  console.log('  ✓ client listing parses activeOnly safely and preserves empty-array responses');
+}
+
 function testUserMapperDerivesPasswordConfigured() {
   Module._load = originalLoad;
   clearModule('../src/mappers/user.mapper');
@@ -198,6 +252,7 @@ function testAuditMapperProducesForensicContract() {
 async function run() {
   try {
     await testClientReadsUseRepositoryAndReturnPlaintext();
+    await testClientActiveOnlyQueryParsingStaysBooleanSafe();
     testUserMapperDerivesPasswordConfigured();
     await testStorageGateBlocksUnavailableProviderMode();
     testAuditMapperProducesForensicContract();
