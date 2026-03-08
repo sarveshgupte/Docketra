@@ -181,8 +181,8 @@ export const CasesPage = () => {
 
   const handleExportCsv = () => {
     const headers = [
-      'Case ID',
-      'Case Name',
+      'Docket ID',
+      'Docket Name',
       'Client',
       'Status',
       'SLA Due',
@@ -229,8 +229,8 @@ export const CasesPage = () => {
     // Task 3: Block reassignment if case is locked
     if (caseRecord.lockStatus?.isLocked) {
       setConfirmModal({
-        title: 'Case Locked',
-        description: 'This case is locked and cannot be reassigned right now.',
+        title: 'Docket Locked',
+        description: 'This docket is locked and cannot be reassigned right now.',
         confirmText: 'OK',
         onConfirm: () => setConfirmModal(null),
       });
@@ -239,8 +239,8 @@ export const CasesPage = () => {
     // Task 3: Confirm before reassigning if already assigned to someone else
     if (caseRecord.assignedTo && caseRecord.status !== CASE_STATUS.UNASSIGNED) {
       setConfirmModal({
-        title: 'Reassign Case',
-        description: `This case is currently assigned to ${caseRecord.assignedToName || caseRecord.assignedTo}. Reassign to yourself?`,
+        title: 'Reassign Docket',
+        description: `This docket is currently assigned to ${caseRecord.assignedToName || caseRecord.assignedTo}. Reassign to yourself?`,
         onConfirm: async () => {
           setConfirmModal(null);
           setAssigningCaseId(caseRecord.caseId);
@@ -590,7 +590,7 @@ export const CasesPage = () => {
               )}
               {isLocked && (
                 <div className="cases-page__row-menu-info cases-page__row-menu-info--locked">
-                  🔒 Case Locked
+                  🔒 Docket Locked
                 </div>
               )}
               <button
@@ -714,7 +714,7 @@ export const CasesPage = () => {
           <input
             type="search"
             className="cases-page__search-input"
-            placeholder="Search by case ID, title, or client…"
+            placeholder="Search by docket ID, title, or client…"
             value={searchInput}
             onChange={handleSearchChange}
             aria-label="Search cases"

@@ -17,6 +17,20 @@ const workTypeSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
+  /**
+   * Docket ID prefix for this work type.
+   * Format: 2-4 uppercase letters (e.g. "CO", "TAX", "CORP").
+   * Used to generate human-readable docket IDs: PREFIX+YYYYMMDD+RANDOM
+   * Must be unique within the firm.
+   */
+  prefix: {
+    type: String,
+    trim: true,
+    uppercase: true,
+    minlength: 2,
+    maxlength: 4,
+    match: [/^[A-Z]{2,4}$/, 'Prefix must be 2-4 uppercase letters'],
+  },
   description: {
     type: String,
     trim: true,
@@ -41,5 +55,6 @@ const workTypeSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 workTypeSchema.index({ firmId: 1, name: 1 }, { unique: true });
+workTypeSchema.index({ firmId: 1, prefix: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('WorkType', workTypeSchema);

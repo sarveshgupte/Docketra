@@ -849,7 +849,7 @@ const cloneCase = async (req, res) => {
         caseId: newCase.caseId,
         text: comment.text,
         createdBy: comment.createdBy,
-        note: `Cloned from Case ID: ${originalCase.caseId}`,
+        note: `Cloned from Docket ${originalCase.caseId}`,
       });
       copiedComments.push(newComment);
     }
@@ -932,7 +932,7 @@ const cloneCase = async (req, res) => {
             source: attachment.source,
             visibility: attachment.visibility,
             mimeType: attachment.mimeType,
-            note: `Cloned from Case ID: ${originalCase.caseId}`,
+            note: `Cloned from Docket ${originalCase.caseId}`,
           });
           copiedAttachments.push(newAttachment);
           continue;
@@ -956,7 +956,7 @@ const cloneCase = async (req, res) => {
           type: attachment.type,
           source: attachment.source,
           visibility: attachment.visibility,
-          note: `Cloned from Case ID: ${originalCase.caseId}`,
+          note: `Cloned from Docket ${originalCase.caseId}`,
         });
         copiedAttachments.push(newAttachment);
       } catch (fileError) {
@@ -978,7 +978,7 @@ const cloneCase = async (req, res) => {
     await CaseHistory.create({
       caseId: newCase.caseId,
       actionType: 'Created (Cloned)',
-      description: `Cloned from ${originalCase.caseId}`,
+      description: `Cloned from Docket ${originalCase.caseId}`,
       performedBy: clonedBy.toLowerCase(),
     });
     
@@ -1521,28 +1521,40 @@ const lockCaseEndpoint = async (req, res) => {
         await CaseHistory.create({
           caseId,
           actionType: 'AutoUnlocked',
-          description: `Case auto-unlocked due to 2 hours of inactivity. Previous lock holder: ${caseData.lockStatus.activeUserEmail}`,
+          description: `Docket auto-unlocked due to 2 hours of inactivity. Previous lock holder: ${caseData.lockStatus.activeUserEmail}`,
           performedBy: 'system',
         });
         
         // Fall through to acquire new lock below
       } else {
         // Still within 2-hour window, deny lock
+        const lockerDisplay = caseData.lockStatus.activeUserDisplayName && caseData.lockStatus.activeUserXID
+          ? `${caseData.lockStatus.activeUserDisplayName} (${caseData.lockStatus.activeUserXID})`
+          : caseData.lockStatus.activeUserEmail;
+        const docketRef = caseData.caseNumber || caseData.caseId || caseId;
         return res.status(409).json({
           success: false,
-          message: `Case is currently locked by ${caseData.lockStatus.activeUserEmail}`,
+          message: `Docket ${docketRef} is locked by ${lockerDisplay}`,
           lockedBy: caseData.lockStatus.activeUserEmail,
+          lockedByXID: caseData.lockStatus.activeUserXID,
+          lockedByDisplayName: caseData.lockStatus.activeUserDisplayName,
           lockedAt: caseData.lockStatus.lockedAt,
           lastActivityAt: lastActivity,
         });
       }
     }
     
-    // Lock the case
+    // Lock the case — store rich user identity for display
     const now = new Date();
+    const lockerDisplayName = req.user?.name ||
+      [req.user?.firstName, req.user?.lastName].filter(Boolean).join(' ') ||
+      req.user?.email ||
+      userEmail;
     caseData.lockStatus = {
       isLocked: true,
       activeUserEmail: userEmail.toLowerCase(),
+      activeUserXID: req.user?.xID || null,
+      activeUserDisplayName: lockerDisplayName || null,
       lockedAt: now,
       lastActivityAt: now,
     };

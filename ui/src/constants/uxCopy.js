@@ -1,6 +1,6 @@
 export const UX_COPY = {
   actions: {
-    CREATE_CASE: 'Create Case',
+    CREATE_CASE: 'Create Docket',
     EXPORT_CASES: 'Export CSV',
     ASSIGN_TO_ME: 'Assign to Me',
     MOVE_TO_WORKBASKET: 'Move to Workbasket',
@@ -14,8 +14,8 @@ export const UX_COPY = {
     UNASSIGNED: 'Unassigned',
   },
   emptyStates: {
-    NO_OVERDUE: 'No overdue cases. Good job.',
+    NO_OVERDUE: 'No overdue dockets. Good job.',
     NO_ESCALATED: 'No escalations. System is stable.',
-    NO_MY_OPEN: 'You have no active cases assigned.',
+    NO_MY_OPEN: 'You have no active dockets assigned.',
   },
 };
