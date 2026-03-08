@@ -7,6 +7,7 @@ const { slugify } = require('../../utils/slugify');
 const { assertFirmPlanCapacity } = require('../../services/user.service');
 const { ensureDefaultClientForFirm } = require('../../services/defaultClient.service');
 const { generatePasswordSetupToken } = require('../../services/passwordSetupToken.service');
+const { safeQueueEmail } = require('../../services/safeSideEffects.service');
 
 const RESERVED_SLUGS = [
   'superadmin',
@@ -95,13 +96,17 @@ const createStarterWorkspace = async (payload = {}) => {
       }
 
       const xID = await xIDGenerator.generateNextXID(firm._id, session);
+      const inheritedDefaultClientId = (
+        firm.defaultClientId
+        && mongoose.Types.ObjectId.isValid(firm.defaultClientId)
+      ) ? firm.defaultClientId : null;
       const user = await User.create([{
         xID,
         name: fullName.trim(),
         email: normalizedAdminEmail,
         phoneNumber: phoneNumber.trim(),
         firmId: firm._id,
-        defaultClientId: firm.defaultClientId,
+        ...(inheritedDefaultClientId ? { defaultClientId: inheritedDefaultClientId } : {}),
         role: 'Admin',
         status: 'invited',
         mustSetPassword: false,
@@ -114,12 +119,20 @@ const createStarterWorkspace = async (payload = {}) => {
       result = { firm, admin: user };
     });
 
-    await emailService.sendPasswordSetupEmail({
-      email: result.admin.email,
-      name: result.admin.name,
-      token: setupToken,
-      xID: result.admin.xID,
-      firmSlug: result.firm.firmSlug,
+    await safeQueueEmail({
+      operation: 'EMAIL_QUEUE',
+      payload: {
+        action: 'PASSWORD_SETUP_EMAIL',
+        tenantId: result.firm._id.toString(),
+        email: result.admin.email,
+      },
+      execute: async () => emailService.sendPasswordSetupEmail({
+        email: result.admin.email,
+        name: result.admin.name,
+        token: setupToken,
+        xID: result.admin.xID,
+        firmSlug: result.firm.firmSlug,
+      }),
     });
 
     console.log('[ONBOARDING] createStarterWorkspace completed', { firmId: result.firm._id.toString(), adminId: result.admin._id.toString() });

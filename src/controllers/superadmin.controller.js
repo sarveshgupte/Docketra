@@ -20,6 +20,7 @@ const xIDGenerator = require('../services/xIDGenerator');
 const { assertFirmPlanCapacity, PlanLimitExceededError, PlanAdminLimitExceededError } = require('../services/user.service');
 const { safeLogForensicAudit, getRequestIp, getRequestUserAgent, PLATFORM_TENANT } = require('../services/forensicAudit.service');
 const { createFirmWithAdmin } = require('../modules/onboarding/onboarding.service');
+const { safeAuditLog } = require('../services/safeSideEffects.service');
 
 // Constants
 const FIRM_ID_PATTERN = /^FIRM\d{3,}$/i;
@@ -1453,6 +1454,7 @@ const activateFirm = async (req, res, next) => {
   try {
     session = await mongoose.startSession();
     let activatedFirm = null;
+    let activationAudit = null;
     const { id } = req.params;
     await session.withTransaction(async () => {
       const firm = await Firm.findById(id).session(session);
@@ -1471,14 +1473,13 @@ const activateFirm = async (req, res, next) => {
       firm.status = 'active';
       await firm.save({ session });
 
-      await logAuthEvent({
+      activationAudit = {
         eventType: 'AdminMutation',
         xID: req.user?.xID || 'UNKNOWN_ACTOR',
         firmId: firm.firmId || 'UNKNOWN_FIRM',
         userId: req.user?._id,
         description: `PATCH ${req.originalUrl || req.url || `/api/superadmin/firms/${id}/activate`}`,
         performedBy: req.user?.xID || req.user?.email || 'UNKNOWN',
-        req,
         metadata: {
           target: firm._id.toString(),
           scope: 'GLOBAL',
@@ -1486,22 +1487,20 @@ const activateFirm = async (req, res, next) => {
           oldStatus,
           newStatus: 'active',
         },
-        session,
-      });
-
-      await logSuperadminAction({
-        actionType: 'FirmActivated',
-        description: `Firm activated: ${firm.name} (${firm.firmId})`,
-        performedBy: req.user.email,
-        performedById: req.user._id,
-        targetEntityType: 'Firm',
-        targetEntityId: firm._id.toString(),
-        metadata: { firmId: firm.firmId, name: firm.name, oldStatus, newStatus: 'active' },
-        req,
-        session,
-      });
+      };
 
       activatedFirm = { _id: firm._id, firmId: firm.firmId, name: firm.name, status: firm.status };
+    });
+    await safeAuditLog(activationAudit, req);
+    await logSuperadminAction({
+      actionType: 'FirmActivated',
+      description: `Firm activated: ${activatedFirm.name} (${activatedFirm.firmId})`,
+      performedBy: req.user.email,
+      performedById: req.user._id,
+      targetEntityType: 'Firm',
+      targetEntityId: activatedFirm._id.toString(),
+      metadata: { firmId: activatedFirm.firmId, name: activatedFirm.name, newStatus: 'active' },
+      req,
     });
     return res.status(200).json({
       success: true,

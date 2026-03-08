@@ -208,13 +208,14 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Handle authorization failures - show error but DO NOT logout
+    // Handle authorization failures - clear auth state and redirect
     if (status === 403) {
-      // Forbidden - user is authenticated but not authorized for this action
+      clearAuthStorage();
       sessionStorage.setItem(SESSION_KEYS.GLOBAL_TOAST, JSON.stringify({
-        message: 'You do not have permission to perform this action.',
-        type: 'error'
+        message: 'Your session is no longer authorized. Please log in again.',
+        type: 'info'
       }));
+      redirectToLogin();
       return Promise.reject(error);
     }
     
