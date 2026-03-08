@@ -19,6 +19,12 @@ let redirecting = false;
 const REDIRECT_TIMEOUT_MS = 5000;
 const INITIAL_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 4000;
+const isPublicAuthFlowRequest = (requestConfig) => {
+  const requestUrl = String(requestConfig?.url || '');
+  return /\/auth\/(resend-otp|verify-totp|complete-mfa-login|forgot-password|reset-password-with-token|resend-credentials)$/.test(requestUrl)
+    || /\/verify-otp$/.test(requestUrl)
+    || /\/login$/.test(requestUrl);
+};
 
 function generateIdempotencyKey() {
   if (window.crypto?.randomUUID) {
@@ -190,6 +196,9 @@ api.interceptors.response.use(
     
     // Handle other 401 errors (invalid token, etc.)
     if (status === 401) {
+      if (isPublicAuthFlowRequest(originalRequest)) {
+        return Promise.reject(error);
+      }
       clearAuthStorage();
       sessionStorage.setItem(SESSION_KEYS.GLOBAL_TOAST, JSON.stringify({
         message: 'Your session expired. Please log in again.',

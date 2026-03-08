@@ -224,6 +224,16 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: null,
   },
+
+  loginOtpResendCount: {
+    type: Number,
+    default: 0,
+  },
+
+  loginOtpLockedUntil: {
+    type: Date,
+    default: null,
+  },
   
   // Bcrypt hashed password - null until user sets password via email link
   passwordHash: {

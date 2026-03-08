@@ -19,6 +19,11 @@ import { useToast } from '../hooks/useToast';
 import './LoginPage.css';
 
 const OTP_LENGTH = 6;
+const DEFAULT_RESEND_COOLDOWN_SECONDS = import.meta.env.PROD ? 30 : 3;
+const resolveResendCooldownSeconds = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_RESEND_COOLDOWN_SECONDS;
+};
 
 export const FirmLoginPage = () => {
   const { firmSlug } = useParams();
@@ -29,6 +34,8 @@ export const FirmLoginPage = () => {
   const [showOtpForm, setShowOtpForm] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resendCooldownSeconds, setResendCooldownSeconds] = useState(DEFAULT_RESEND_COOLDOWN_SECONDS);
+  const [resendCountdown, setResendCountdown] = useState(0);
   const [resendLoading, setResendLoading] = useState(false);
   const [resendEmail, setResendEmail] = useState('');
   const [showResendForm, setShowResendForm] = useState(false);
@@ -76,7 +83,20 @@ export const FirmLoginPage = () => {
     setOtp('');
     setLoginToken('');
     setPassword('');
+    setResendCountdown(0);
   };
+
+  useEffect(() => {
+    if (!showOtpForm || resendCountdown <= 0) {
+      return undefined;
+    }
+
+    const timer = window.setInterval(() => {
+      setResendCountdown((current) => (current > 0 ? current - 1 : 0));
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [showOtpForm, resendCountdown]);
 
   // Load firm metadata
   useEffect(() => {
@@ -146,8 +166,11 @@ export const FirmLoginPage = () => {
       const loginState = resolveFirmLoginResponseState(response.data);
 
       if (loginState.nextStep === 'otp') {
+        const cooldown = resolveResendCooldownSeconds(loginState.resendCooldownSeconds);
         setShowOtpForm(true);
         setLoginToken(loginState.loginToken);
+        setResendCooldownSeconds(cooldown);
+        setResendCountdown(cooldown);
         setOtp('');
         setPassword('');
         setShowResendForm(false);
@@ -212,9 +235,39 @@ export const FirmLoginPage = () => {
 
       setError(response.data?.message || 'OTP verification failed. Please try again.');
     } catch (err) {
-      setError(err.response?.data?.message || 'OTP verification failed. Please try again.');
+      setError(err.response?.data?.error || err.response?.data?.message || 'OTP verification failed. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (!identifier.trim() || !firmSlug || resendCountdown > 0) {
+      return;
+    }
+
+    setError('');
+    setResendLoading(true);
+
+    try {
+      const response = await api.post('/auth/resend-otp', {
+        xID: identifier.trim().toUpperCase(),
+        firmSlug,
+      });
+      const cooldown = resolveResendCooldownSeconds(response.data?.resendCooldownSeconds || resendCooldownSeconds);
+      setResendCooldownSeconds(cooldown);
+      setResendCountdown(cooldown);
+      setOtp('');
+      showSuccess('OTP sent again to your email');
+    } catch (err) {
+      const serverMessage = err.response?.data?.error || err.response?.data?.message || 'Unable to resend OTP right now.';
+      setError(serverMessage);
+      showError(serverMessage);
+      if (err.response?.data?.retryAfter) {
+        setResendCountdown(resolveResendCooldownSeconds(err.response.data.retryAfter));
+      }
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -273,7 +326,7 @@ export const FirmLoginPage = () => {
         <div className="login-header">
           <h1>{firmData.name}</h1>
           <p className="text-secondary">
-            {showOtpForm ? 'Enter OTP sent to your email' : 'Login to Docketra'}
+            {showOtpForm ? 'Enter the 6-digit code sent to your registered email.' : 'Login to Docketra'}
           </p>
           <p style={{ fontSize: '0.75rem', color: '#718096', marginTop: '0.5rem' }}>
             Firm ID: {firmData.firmId}
@@ -310,15 +363,35 @@ export const FirmLoginPage = () => {
               fontSize: '0.875rem',
               color: 'var(--text-secondary)',
               marginTop: '-0.5rem',
-              marginBottom: '1rem'
+              marginBottom: '0.5rem'
             }}>
-              Enter the 6-digit code sent to your registered email address.
+              Didn&apos;t receive OTP?{' '}
+              <button
+                type="button"
+                onClick={handleResendOtp}
+                disabled={resendLoading || resendCountdown > 0 || loading}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  color: (resendLoading || resendCountdown > 0 || loading) ? 'var(--text-secondary)' : '#2563eb',
+                  cursor: (resendLoading || resendCountdown > 0 || loading) ? 'not-allowed' : 'pointer',
+                  textDecoration: (resendLoading || resendCountdown > 0 || loading) ? 'none' : 'underline',
+                  font: 'inherit',
+                }}
+              >
+                {resendLoading
+                  ? 'Resending...'
+                  : resendCountdown > 0
+                    ? `Resend OTP in ${resendCountdown}s`
+                    : 'Resend OTP'}
+              </button>
             </p>
 
             <Button
               type="submit"
               fullWidth
-              disabled={loading}
+              disabled={loading || resendLoading}
             >
               {loading ? 'Verifying OTP...' : 'Verify OTP'}
             </Button>
@@ -326,7 +399,7 @@ export const FirmLoginPage = () => {
             <Button
               type="button"
               fullWidth
-              disabled={loading}
+              disabled={loading || resendLoading}
               onClick={resetOtpStep}
               variant="secondary"
             >
