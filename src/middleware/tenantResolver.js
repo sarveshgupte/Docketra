@@ -17,6 +17,7 @@
 
 const Firm = require('../models/Firm.model');
 const { normalizeFirmSlug } = require('../utils/slugify');
+const { getFirmInactiveCode, isActiveStatus } = require('../utils/status.utils');
 
 const FIRM_NOT_FOUND_RESPONSE = {
   success: false,
@@ -55,11 +56,11 @@ module.exports = async function tenantResolver(req, res, next) {
       return res.status(404).json(FIRM_NOT_FOUND_RESPONSE);
     }
 
-    if (firm.status !== 'active') {
+    if (!isActiveStatus(firm.status)) {
       return res.status(403).json({
         success: false,
-        code: 'FIRM_NOT_ACTIVE',
-        message: `This firm is currently ${firm.status.toLowerCase()}. Please contact support.`,
+        code: getFirmInactiveCode(firm.status),
+        message: `This firm is currently ${String(firm.status || 'inactive').toLowerCase()}. Please contact support.`,
         action: 'contact_admin',
       });
     }

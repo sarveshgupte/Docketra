@@ -2,6 +2,8 @@ const User = require('../models/User.model');
 const jwtService = require('../services/jwt.service');
 const { isSuperAdminRole } = require('../utils/role.utils');
 const metricsService = require('../services/metrics.service');
+const { getCookieValue } = require('../utils/requestCookies');
+const { isActiveStatus, getFirmInactiveCode } = require('../utils/status.utils');
 const { buildRequestContext } = require('./attachRequestContext');
 
 const MUST_SET_ALLOWED_PATHS = [
@@ -14,19 +16,6 @@ const MUST_SET_ALLOWED_PATHS = [
   '/auth/reset-password-with-token',
   '/api/auth/reset-password-with-token',
 ];
-
-const getTokenFromCookies = (cookieHeader, name) => {
-  if (!cookieHeader || !name) return null;
-  return cookieHeader
-    .split(';')
-    .map(c => c.trim())
-    .map((cookie) => {
-      const separatorIndex = cookie.indexOf('=');
-      if (separatorIndex === -1) return [cookie, ''];
-      return [cookie.slice(0, separatorIndex), cookie.slice(separatorIndex + 1)];
-    })
-    .find(([key]) => key === name)?.[1] || null;
-};
 
 /**
  * Authentication Middleware for Docketra Case Management System
@@ -57,7 +46,7 @@ const authenticate = async (req, res, next) => {
     // Fallback to accessToken cookie (Google OAuth sets HTTP-only cookies)
     if (!token) {
       const cookieHeader = req.headers.cookie;
-      token = getTokenFromCookies(cookieHeader, 'accessToken');
+      token = getCookieValue(cookieHeader, 'accessToken');
     }
     
     if (!token) {
@@ -156,7 +145,7 @@ const authenticate = async (req, res, next) => {
     }
     
     // Check if user is active
-    if (user.status !== 'active') {
+    if (!isActiveStatus(user.status)) {
       noteAuthFailure();
       return res.status(403).json({
         success: false,
@@ -202,12 +191,12 @@ const authenticate = async (req, res, next) => {
     if (user.role !== 'SUPER_ADMIN' && user.firmId) {
       const Firm = require('../models/Firm.model');
       const firm = await Firm.findById(user.firmId);
-      if (firm && firm.status !== 'active') {
+      if (firm && !isActiveStatus(firm.status)) {
         noteAuthFailure();
         return res.status(403).json({
           success: false,
-          message: 'Your firm has been suspended. Please contact support.',
-          code: 'FIRM_SUSPENDED',
+          message: `Your firm is currently ${String(firm.status || 'inactive').toLowerCase()}. Please contact support.`,
+          code: getFirmInactiveCode(firm.status),
         });
       }
     }
