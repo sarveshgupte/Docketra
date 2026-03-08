@@ -134,16 +134,21 @@ const getStorageStatus = async (req, res) => {
 const getStorageHealth = async (req, res) => {
   const tenantId = req.firmId;
   try {
-    const [record, activeConfig] = await Promise.all([
+    const [record, activeConfig, firm] = await Promise.all([
       TenantStorageHealth.findOne({ tenantId })
         .select('status lastVerifiedAt missingFilesCount sampleSize lastError -_id')
         .lean(),
       TenantStorageConfig.findOne({ tenantId, isActive: true })
         .select('_id')
         .lean(),
+      Firm.findById(tenantId)
+        .select('storage -_id')
+        .lean(),
     ]);
-    const defaultStatus = activeConfig ? 'HEALTHY' : 'DISCONNECTED';
-    const defaultLastError = activeConfig ? null : 'Active storage configuration not found';
+    const storageMode = firm?.storage?.mode || 'docketra_managed';
+    const usingManagedStorage = storageMode === 'docketra_managed';
+    const defaultStatus = usingManagedStorage || activeConfig ? 'HEALTHY' : 'DISCONNECTED';
+    const defaultLastError = usingManagedStorage || activeConfig ? null : 'Active storage configuration not found';
 
     return res.json({
       status: record?.status || defaultStatus,

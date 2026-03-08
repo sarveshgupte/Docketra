@@ -42,6 +42,20 @@ const getApiErrorType = (error) => {
   return 'unknown';
 };
 
+const getUserStatusBadge = (user) => {
+  const status = String(user?.status || '').toLowerCase();
+  if (status === 'invited') {
+    return { tone: 'Pending', label: 'Invited' };
+  }
+  if (status === 'active' || user?.isActive) {
+    return { tone: 'Approved', label: 'Active' };
+  }
+  if (status === 'disabled') {
+    return { tone: 'Rejected', label: 'Cancelled' };
+  }
+  return { tone: 'Rejected', label: status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Inactive' };
+};
+
 export const AdminPage = () => {
   const navigate = useNavigate();
   const { firmSlug } = useParams();
@@ -51,6 +65,7 @@ export const AdminPage = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('users');
   const [pendingCases, setPendingCases] = useState([]);
+  const [pendingInvites, setPendingInvites] = useState([]);
   const [users, setUsers] = useState([]);
   const [categories, setCategories] = useState([]);
   const [clients, setClients] = useState([]);
@@ -221,8 +236,13 @@ export const AdminPage = () => {
     setTabError(null);
     try {
       if (activeTab === 'approvals') {
-        const response = await adminService.getPendingApprovals();
-        setPendingCases(response?.success ? (response.data || []) : []);
+        const [approvalsResponse, usersResponse] = await Promise.all([
+          adminService.getPendingApprovals(),
+          adminService.getUsers(),
+        ]);
+        setPendingCases(approvalsResponse?.success ? (approvalsResponse.data || []) : []);
+        const inviteCandidates = usersResponse?.success ? (usersResponse.data || []) : [];
+        setPendingInvites(inviteCandidates.filter((user) => user.status === 'invited'));
       } else if (activeTab === 'users') {
         const response = await adminService.getUsers();
         setUsers(response?.success ? (response.data || []) : []);
@@ -251,6 +271,7 @@ export const AdminPage = () => {
       if (errorType === 'empty') {
         if (activeTab === 'approvals') {
           setPendingCases([]);
+          setPendingInvites([]);
         } else if (activeTab === 'users') {
           setUsers([]);
         } else if (activeTab === 'categories') {
@@ -353,10 +374,10 @@ export const AdminPage = () => {
       const response = await adminService.createUser(newUser);
       
       if (response.success) {
-        showToast(`User created successfully! xID: ${response.data?.xID}. Invite email sent.`, 'success');
+        showToast(`User invited successfully! xID: ${response.data?.xID}.`, 'success');
         setShowCreateModal(false);
         setNewUser({ name: '', email: '', role: '' });
-        loadAdminData();
+        await Promise.all([loadAdminStats(), loadAdminData()]);
       } else {
         showToast(response.message || 'Failed to create user', 'error');
       }
@@ -368,20 +389,21 @@ export const AdminPage = () => {
   };
 
   const handleToggleUserStatus = async (user) => {
-    const newStatus = user.status !== 'active';
-    const action = newStatus ? 'activate' : 'deactivate';
+    const isInvited = user.status === 'invited';
+    const newStatus = isInvited ? false : user.status !== 'active';
+    const action = isInvited ? 'cancel invite for' : (newStatus ? 'activate' : 'deactivate');
 
     try {
       const response = await adminService.updateUserStatus(user.xID, newStatus);
       
       if (response.success) {
-        showToast(`User ${action}d successfully`, 'success');
-        loadAdminData();
+        showToast(isInvited ? 'Invite cancelled successfully' : `User ${action}d successfully`, 'success');
+        await Promise.all([loadAdminStats(), loadAdminData()]);
       } else {
-        showToast(response.message || `Failed to ${action} user`, 'error');
+        showToast(response.message || (isInvited ? 'Failed to cancel invite' : `Failed to ${action} user`), 'error');
       }
     } catch (error) {
-      showToast(error.response?.data?.message || `Failed to ${action} user`, 'error');
+      showToast(error.response?.data?.message || (isInvited ? 'Failed to cancel invite' : `Failed to ${action} user`), 'error');
     }
   };
 
@@ -390,7 +412,8 @@ export const AdminPage = () => {
       const response = await adminService.resendSetupEmail(xID);
       
       if (response.success) {
-        showToast('Password setup email sent successfully', 'success');
+        showToast('Invite email sent successfully', 'success');
+        await loadAdminData();
       } else {
         showToast(response.message || 'Failed to send email', 'error');
       }
@@ -948,10 +971,12 @@ export const AdminPage = () => {
                 <tbody>
                   {users.map((user) => {
                     const isPrimaryOrSystemAdmin = user.isPrimaryAdmin || user.isSystem;
+                    const userStatus = getUserStatusBadge(user);
+                    const isInvited = user.status === 'invited';
                     return (
                     <tr key={user.xID}>
                       <td>{user.xID}</td>
-                      <td>{user.name}</td>
+                      <td>{user.name || '—'}</td>
                       <td>{user.email}</td>
                       <td>
                         {isPrimaryOrSystemAdmin ? (
@@ -964,8 +989,8 @@ export const AdminPage = () => {
                       </td>
                       <td>{user.firm?.name || 'N/A'}</td>
                       <td>
-                        <Badge status={user.isActive ? 'Approved' : 'Rejected'}>
-                          {user.isActive ? 'Active' : 'Inactive'}
+                        <Badge status={userStatus.tone}>
+                          {userStatus.label}
                         </Badge>
                       </td>
                       <td>
@@ -979,19 +1004,19 @@ export const AdminPage = () => {
                         ) : (
                           <Button
                             size="small"
-                            variant={user.isActive ? 'danger' : 'success'}
+                            variant={isInvited || user.isActive ? 'danger' : 'success'}
                             onClick={() => handleToggleUserStatus(user)}
                           >
-                            {user.isActive ? 'Deactivate' : 'Activate'}
+                            {isInvited ? 'Cancel Invite' : (user.isActive ? 'Deactivate' : 'Activate')}
                           </Button>
                         )}
-                        {!user.passwordConfigured && (
+                        {isInvited && (
                           <Button
                             size="small"
                             variant="default"
                             onClick={() => handleResendSetupEmail(user.xID)}
                           >
-                            Resend Email
+                            Resend Invite
                           </Button>
                         )}
                         {user.lockUntil && new Date(user.lockUntil) > new Date() && (
@@ -1317,11 +1342,41 @@ export const AdminPage = () => {
         {activeTab === 'approvals' && (
           <Card>
             <h2 className="neo-section__header">Pending Client Approvals</h2>
-            
-            {pendingCases.length === 0 ? (
+
+            {pendingInvites.length > 0 && (
+              <>
+                <h3 className="neo-section__header" style={{ marginTop: 0 }}>Pending Invitations</h3>
+                <table className="neo-table" style={{ marginBottom: '24px' }}>
+                  <thead>
+                    <tr>
+                      <th>xID</th>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Role</th>
+                      <th>Status</th>
+                      <th>Password Set</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pendingInvites.map((invite) => (
+                      <tr key={invite.xID}>
+                        <td>{invite.xID}</td>
+                        <td>{invite.name || '—'}</td>
+                        <td>{invite.email}</td>
+                        <td>{invite.role}</td>
+                        <td><Badge status="Pending">Invited</Badge></td>
+                        <td><Badge status="Pending">No</Badge></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
+
+            {pendingCases.length === 0 && pendingInvites.length === 0 ? (
               <EmptyState
                 title="No pending approvals yet"
-                description="New approvals will appear here when cases require review."
+                description="New approvals and invitations will appear here when review is needed."
               />
             ) : (
               <table className="neo-table">

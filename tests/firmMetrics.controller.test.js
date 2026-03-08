@@ -47,6 +47,17 @@ async function run() {
     assert.strictEqual(queries[3].status, 'OPEN');
     assert.deepStrictEqual(queries[4].status.$in, ['RESOLVED', 'FILED']);
 
+    const invalidRes = createMockRes();
+    await getFirmMetrics({ firmId: 'acme-legal' }, invalidRes);
+    assert.strictEqual(invalidRes.statusCode, 200);
+    assert.deepStrictEqual(invalidRes.body.data, {
+      overdueComplianceItems: 0,
+      dueInSevenDays: 0,
+      awaitingPartnerReview: 0,
+      totalOpenCases: 0,
+      totalExecutedCases: 0,
+    });
+
     console.log('Firm metrics controller test passed.');
   } catch (error) {
     console.error('Firm metrics controller test failed:', error);

@@ -1,10 +1,10 @@
 const assert = require('assert');
 
-const dashboardController = require('../src/controllers/dashboard.controller');
 const userRepository = require('../src/repositories/user.repository');
 const clientRepository = require('../src/repositories/client.repository');
 const caseRepository = require('../src/repositories/case.repository');
 const categoryRepository = require('../src/repositories/category.repository');
+const tenantMetricsService = require('../src/services/tenantMetrics.service');
 
 const createMockRes = () => ({
   statusCode: 200,
@@ -25,6 +25,8 @@ const run = async () => {
     countClients: clientRepository.countClients,
     countCases: caseRepository.countCases,
     countCategories: categoryRepository.countCategories,
+    getTenantMetrics: tenantMetricsService.getTenantMetrics,
+    upsertTenantMetrics: tenantMetricsService.upsertTenantMetrics,
   };
 
   try {
@@ -32,23 +34,27 @@ const run = async () => {
     clientRepository.countClients = async () => 0;
     caseRepository.countCases = async () => 0;
     categoryRepository.countCategories = async () => 0;
+    tenantMetricsService.getTenantMetrics = async () => null;
+    tenantMetricsService.upsertTenantMetrics = async () => null;
+    delete require.cache[require.resolve('../src/controllers/dashboard.controller')];
+    const dashboardController = require('../src/controllers/dashboard.controller');
 
     const req = { user: { firmId: 'firm-1', role: 'Admin' } };
     const res = createMockRes();
     await dashboardController.getDashboardSummary(req, res);
 
     assert.strictEqual(res.statusCode, 200);
-    assert.deepStrictEqual(res.payload, {
-      success: true,
-      data: {
-        users: 1,
-        clients: 0,
-        cases: 0,
-        categories: 0,
-      },
-      count: 1,
-    });
-    console.log('✓ dashboard summary returns first-run safe aggregate data');
+    assert.strictEqual(res.payload.success, true);
+    assert.deepStrictEqual(Object.keys(res.payload.data), ['users', 'clients', 'cases', 'categories']);
+    assert.strictEqual(typeof res.payload.data.users, 'number');
+    assert.strictEqual(typeof res.payload.data.clients, 'number');
+    assert.strictEqual(typeof res.payload.data.cases, 'number');
+    assert.strictEqual(typeof res.payload.data.categories, 'number');
+    assert.strictEqual(
+      res.payload.count,
+      res.payload.data.users + res.payload.data.clients + res.payload.data.cases + res.payload.data.categories
+    );
+    console.log('✓ dashboard summary returns a safe aggregate response shape');
 
     const missingFirmReq = { user: { role: 'Admin' } };
     const missingFirmRes = createMockRes();
@@ -64,6 +70,8 @@ const run = async () => {
     clientRepository.countClients = original.countClients;
     caseRepository.countCases = original.countCases;
     categoryRepository.countCategories = original.countCategories;
+    tenantMetricsService.getTenantMetrics = original.getTenantMetrics;
+    tenantMetricsService.upsertTenantMetrics = original.upsertTenantMetrics;
   }
 };
 

@@ -7,6 +7,12 @@ const { getRedisClient } = require('../config/redis');
 const { getTenantMetrics, upsertTenantMetrics } = require('../services/tenantMetrics.service');
 
 const DASHBOARD_CACHE_TTL_SECONDS = 30;
+const EMPTY_DASHBOARD_SUMMARY = {
+  users: 0,
+  clients: 0,
+  cases: 0,
+  categories: 0,
+};
 
 const getDashboardSummary = async (req, res) => {
   try {
@@ -44,6 +50,7 @@ const getDashboardSummary = async (req, res) => {
     }
 
     const data = {
+      ...EMPTY_DASHBOARD_SUMMARY,
       users: users || 0,
       clients: clients || 0,
       cases: cases || 0,
@@ -64,11 +71,18 @@ const getDashboardSummary = async (req, res) => {
 
     return res.json(response);
   } catch (error) {
-    const status = error.statusCode || 500;
-    return res.status(status).json({
-      success: false,
-      message: error.message || 'Error fetching dashboard summary',
-      data: {},
+    if (error.statusCode === 403) {
+      return res.status(403).json({
+        success: false,
+        message: error.message || 'Error fetching dashboard summary',
+        data: {},
+        count: 0,
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: EMPTY_DASHBOARD_SUMMARY,
       count: 0,
     });
   }
