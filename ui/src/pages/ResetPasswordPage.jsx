@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Card } from '../components/common/Card';
@@ -106,6 +106,17 @@ export const ResetPasswordPage = () => {
           {error && (
             <div className="neo-alert neo-alert--danger auth-alert" role="alert">
               {error}
+            </div>
+          )}
+
+          {!token && (
+            <div className="reset-password-actions" role="navigation" aria-label="Recovery actions">
+              <Link to="/forgot-password" className="reset-password-link">
+                Request a new reset link
+              </Link>
+              <Link to="/superadmin" className="reset-password-link">
+                Back to login
+              </Link>
             </div>
           )}
 

@@ -184,6 +184,25 @@
   margin-bottom: var(--space-6);
 }
 
+.dashboard__warning {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+  padding: var(--space-4);
+  border: 1px solid rgba(217, 119, 6, 0.18);
+  border-radius: var(--radius-md);
+  background: rgba(251, 191, 36, 0.12);
+  color: var(--text-main);
+}
+
+.dashboard__warning p {
+  margin: var(--space-1) 0 0;
+  color: var(--text-body);
+  font-size: var(--font-size-sm);
+}
+
 .dashboard__section-header {
   display: flex;
   align-items: center;
@@ -201,6 +220,10 @@
 
 .dashboard__section-header .dashboard__section-title {
   margin-bottom: 0;
+}
+
+.dashboard__table-wrap {
+  overflow-x: auto;
 }
 
 /* ── Admin Stats ────────────────────────────────────────── */
@@ -345,6 +368,11 @@
 @media (max-width: 1024px) {
   .dashboard__kpi-strip {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .dashboard__warning {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 

@@ -102,6 +102,11 @@ export const LoginPage = () => {
           <p className="text-secondary">Compliance Workflow Infrastructure</p>
         </div>
 
+        <p className="auth-helper-text">
+          Use the xID from your welcome email. If your account belongs to a firm workspace, sign in from that
+          workspace URL so password reset and activation links stay scoped correctly.
+        </p>
+
         <form onSubmit={handleLogin} noValidate>
           <Input
             label="xID"
