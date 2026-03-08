@@ -155,7 +155,7 @@ export const SetPasswordPage = () => {
             <h1>{APP_NAME}</h1>
             <p className="text-secondary">Account Activation</p>
           </div>
-          <div className="alert alert-error" style={{ textAlign: 'center', padding: '1.5rem' }}>
+          <div className="alert alert-error" style={{ textAlign: 'center', padding: '1.5rem' }} role="alert">
             {error || 'Firm not found. Please check your activation link.'}
           </div>
         </Card>
@@ -170,7 +170,7 @@ export const SetPasswordPage = () => {
           <div className="set-password-success">
             <h1>✓ Password Set Successfully</h1>
             <p>Your password has been set. You can now log in.</p>
-            <p className="text-secondary">Redirecting to login...</p>
+            <p className="text-secondary" aria-live="polite">Redirecting to login...</p>
           </div>
         </Card>
       </div>
@@ -187,9 +187,9 @@ export const SetPasswordPage = () => {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="set-password-form">
+        <form onSubmit={handleSubmit} className="set-password-form" noValidate>
           {error && (
-            <div className="alert alert-error">
+            <div className="alert alert-error" role="alert">
               {error}
             </div>
           )}
@@ -201,6 +201,9 @@ export const SetPasswordPage = () => {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Enter your password"
             required
+            autoComplete="new-password"
+            disabled={loading}
+            helpText={STRONG_PASSWORD_MESSAGE}
           />
 
           <Input
@@ -210,6 +213,8 @@ export const SetPasswordPage = () => {
             onChange={(e) => setConfirmPassword(e.target.value)}
             placeholder="Confirm your password"
             required
+            autoComplete="new-password"
+            disabled={loading}
           />
 
           <div className="password-requirements">
@@ -237,9 +242,9 @@ export const SetPasswordPage = () => {
             type="submit"
             variant="primary"
             fullWidth
-            disabled={loading}
+            loading={loading}
           >
-            {loading ? 'Setting Password...' : 'Set Password'}
+            Set Password
           </Button>
         </form>
       </Card>

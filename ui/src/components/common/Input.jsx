@@ -4,7 +4,7 @@
  * Read-only fields render as text, not disabled inputs
  */
 
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 
 export const Input = ({
   label,
@@ -19,20 +19,29 @@ export const Input = ({
   ...props
 }) => {
   const [showPassword, setShowPassword] = useState(false);
+  const generatedId = useId();
   const isPasswordType = type === 'password';
   const resolvedType = isPasswordType ? (showPassword ? 'text' : 'password') : type;
+  const inputId = props.id || props.name || `input-${generatedId}`;
+  const errorId = `${inputId}-error`;
+  const helpId = `${inputId}-help`;
+  const describedBy = [
+    props['aria-describedby'],
+    error ? errorId : null,
+    !error && helpText ? helpId : null,
+  ].filter(Boolean).join(' ') || undefined;
 
   // If read-only, render as static text instead of disabled input
   if (readOnly && value !== undefined) {
     return (
       <div className={`form-group ${className}`}>
         {label && (
-          <label className="form-label">
+          <label className="form-label" htmlFor={inputId}>
             {label}
-            {required && <span className="text-danger"> *</span>}
+            {required && <span className="text-danger" aria-hidden="true"> *</span>}
           </label>
         )}
-        <div className="flex items-center gap-2 py-2 text-text-body">
+        <div className="flex items-center gap-2 py-2 text-text-body" id={inputId} aria-readonly="true">
           <span>{value || '-'}</span>
           <span className="text-text-muted text-xs">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
@@ -40,7 +49,7 @@ export const Input = ({
             </svg>
           </span>
         </div>
-        {helpText && <div className="form-help">{helpText}</div>}
+        {helpText && <div className="form-help" id={helpId}>{helpText}</div>}
       </div>
     );
   }
@@ -48,17 +57,22 @@ export const Input = ({
   return (
     <div className={`form-group ${className}`}>
       {label && (
-        <label className="form-label">
+        <label className="form-label" htmlFor={inputId}>
           {label}
-          {required && <span className="text-danger"> *</span>}
+          {required && <span className="text-danger" aria-hidden="true"> *</span>}
         </label>
       )}
       <div className={`input-wrapper ${isPasswordType ? 'input-wrapper--password' : ''}`}>
         <input
+          id={inputId}
           className={`input ${error ? 'input-error' : ''} ${isPasswordType ? 'input-with-toggle' : ''}`}
           disabled={disabled}
           value={value}
           type={resolvedType}
+          required={required}
+          aria-invalid={error ? 'true' : undefined}
+          aria-describedby={describedBy}
+          aria-required={required || undefined}
           {...props}
         />
         {isPasswordType && (
@@ -136,8 +150,8 @@ export const Input = ({
           </button>
         )}
       </div>
-      {error && <div className="form-error">{error}</div>}
-      {!error && helpText && <div className="form-help">{helpText}</div>}
+      {error && <div className="form-error" id={errorId}>{error}</div>}
+      {!error && helpText && <div className="form-help" id={helpId}>{helpText}</div>}
     </div>
   );
 };
