@@ -125,135 +125,138 @@ export const DashboardPage = () => {
     setRecentCasesLoading(true);
     setLoadWarnings([]);
     try {
-      let casesToDisplay = [];
-      
-      if (isAdmin) {
-        try {
-          const casesResponse = await caseService.getCases({ limit: DASHBOARD_RECENT_CASES_LIMIT });
-          if (casesResponse.success) {
-            casesToDisplay = casesResponse.data || [];
-          }
-        } catch (error) {
-          console.error('Failed to load firm cases:', error);
-          reportLoadWarning('Recent cases');
-        }
-      } else {
-        try {
-          const worklistResponse = await worklistService.getEmployeeWorklist({ limit: DASHBOARD_RECENT_CASES_LIMIT });
-          if (worklistResponse.success) {
-            casesToDisplay = worklistResponse.data || [];
-          }
-        } catch (error) {
-          console.error('Failed to load worklist:', error);
-          reportLoadWarning('Recent cases');
-        }
-      }
-      
-      setRecentCases(getRecentCasesSnapshot(casesToDisplay));
-
       const userFirmId = user?.firmId || user?.firm?.id;
-      if (userFirmId) {
+      const fetchStatSafely = async (request, mapResponse, errorMessage, warningMessage) => {
         try {
-          const metricsResponse = await metricsService.getFirmMetrics(userFirmId);
-          if (metricsResponse.success) {
-            setStats((prev) => ({
-              ...prev,
-              ...metricsResponse.data,
-            }));
-          }
+          const response = await request();
+          return mapResponse(response);
         } catch (error) {
-          console.error('Failed to load firm metrics:', error);
-          reportLoadWarning('Firm metrics');
+          console.error(errorMessage, error);
+          reportLoadWarning(warningMessage);
+          return {};
         }
-      }
-      
-      // My Open Cases
-      try {
-        const worklistResponse = await worklistService.getEmployeeWorklist();
-        if (worklistResponse.success) {
-          setStats((prev) => ({ ...prev, myOpenCases: (worklistResponse.data || []).length }));
-        }
-      } catch (error) {
-        console.error('Failed to load open cases count:', error);
-        reportLoadWarning('Open case counts');
-      }
-      
-      // My Pending Cases (SLA risk)
-      try {
-        const pendingResponse = await api.get('/cases/my-pending');
-        if (pendingResponse.data.success) {
-          setStats((prev) => ({ ...prev, myPendingCases: (pendingResponse.data.data || []).length }));
-        }
-      } catch (error) {
-        console.error('Failed to load pending cases:', error);
-        reportLoadWarning('Pending case counts');
-      }
-      
-      // My Resolved Cases
-      try {
-        const resolvedResponse = await caseService.getMyResolvedCases();
-        if (resolvedResponse.success) {
-          setStats((prev) => ({ ...prev, myResolvedCases: (resolvedResponse.data || []).length }));
-        }
-      } catch (error) {
-        console.error('Failed to load resolved cases:', error);
-        reportLoadWarning('Resolved case counts');
-      }
-      
-      // My Unassigned Created Cases
-      try {
-        const unassignedCreatedResponse = await caseService.getMyUnassignedCreatedCases();
-        if (unassignedCreatedResponse.success) {
-          setStats((prev) => ({ ...prev, myUnassignedCreatedCases: (unassignedCreatedResponse.data || []).length }));
-        }
-      } catch (error) {
-        console.error('Failed to load unassigned created cases:', error);
-        reportLoadWarning('Unassigned case counts');
-      }
-      
-      // Admin stats
-      if (isAdmin) {
-        try {
-          const approvalsResponse = await adminService.getPendingApprovals();
-          if (approvalsResponse.success) {
-            setStats((prev) => ({ ...prev, adminPendingApprovals: approvalsResponse.data?.length || 0 }));
-          }
-        } catch (error) {
-          console.error('Failed to load pending approvals:', error);
-          reportLoadWarning('Pending approvals');
-        }
-        
-        try {
-          const filedResponse = await api.get('/admin/cases/filed');
-          if (filedResponse.data.success) {
-            setStats((prev) => ({ ...prev, adminFiledCases: filedResponse.data.pagination?.total || 0 }));
-          }
-        } catch (error) {
-          console.error('Failed to load filed cases:', error);
-          reportLoadWarning('Filed cases');
-        }
-        
-        try {
-          const adminResolvedResponse = await adminService.getAllResolvedCases();
-          if (adminResolvedResponse.success) {
-            setStats((prev) => ({ ...prev, adminResolvedCases: adminResolvedResponse.pagination?.total || 0 }));
-          }
-        } catch (error) {
-          console.error('Failed to load admin resolved cases:', error);
-          reportLoadWarning('Resolved admin cases');
-        }
+      };
 
-        // Active Clients
+      const recentCasesPromise = (async () => {
         try {
-          const clientsResponse = await clientService.getClients(true);
-          if (clientsResponse.success) {
-            setStats((prev) => ({ ...prev, activeClients: (clientsResponse.data || []).length }));
+          if (isAdmin) {
+            const casesResponse = await caseService.getCases({ limit: DASHBOARD_RECENT_CASES_LIMIT });
+            return casesResponse.success ? (casesResponse.data || []) : [];
           }
+
+          const worklistResponse = await worklistService.getEmployeeWorklist({ limit: DASHBOARD_RECENT_CASES_LIMIT });
+          return worklistResponse.success ? (worklistResponse.data || []) : [];
         } catch (error) {
-          console.error('Failed to load active clients:', error);
-          reportLoadWarning('Client counts');
+          console.error(isAdmin ? 'Failed to load firm cases:' : 'Failed to load worklist:', error);
+          reportLoadWarning('Recent cases');
+          return [];
         }
-      }
+      })();
+
+      const [
+        casesToDisplay,
+        metricsPatch,
+        openCasesPatch,
+        pendingCasesPatch,
+        resolvedCasesPatch,
+        unassignedCasesPatch,
+        adminPendingApprovalsPatch,
+        adminFiledCasesPatch,
+        adminResolvedCasesPatch,
+        activeClientsPatch,
+      ] = await Promise.all([
+        recentCasesPromise,
+        userFirmId
+          ? fetchStatSafely(
+            () => metricsService.getFirmMetrics(userFirmId),
+            (metricsResponse) => (metricsResponse.success ? (metricsResponse.data || {}) : {}),
+            'Failed to load firm metrics:',
+            'Firm metrics',
+          )
+          : Promise.resolve({}),
+        fetchStatSafely(
+          () => worklistService.getEmployeeWorklist(),
+          (worklistResponse) => (worklistResponse.success ? { myOpenCases: (worklistResponse.data || []).length } : {}),
+          'Failed to load open cases count:',
+          'Open case counts',
+        ),
+        fetchStatSafely(
+          () => api.get('/cases/my-pending'),
+          (pendingResponse) => (pendingResponse.data.success ? { myPendingCases: (pendingResponse.data.data || []).length } : {}),
+          'Failed to load pending cases:',
+          'Pending case counts',
+        ),
+        fetchStatSafely(
+          () => caseService.getMyResolvedCases(),
+          (resolvedResponse) => (resolvedResponse.success ? { myResolvedCases: (resolvedResponse.data || []).length } : {}),
+          'Failed to load resolved cases:',
+          'Resolved case counts',
+        ),
+        fetchStatSafely(
+          () => caseService.getMyUnassignedCreatedCases(),
+          (unassignedCreatedResponse) => (
+            unassignedCreatedResponse.success
+              ? { myUnassignedCreatedCases: (unassignedCreatedResponse.data || []).length }
+              : {}
+          ),
+          'Failed to load unassigned created cases:',
+          'Unassigned case counts',
+        ),
+        isAdmin
+          ? fetchStatSafely(
+            () => adminService.getPendingApprovals(),
+            (approvalsResponse) => (
+              approvalsResponse.success ? { adminPendingApprovals: approvalsResponse.data?.length || 0 } : {}
+            ),
+            'Failed to load pending approvals:',
+            'Pending approvals',
+          )
+          : Promise.resolve({}),
+        isAdmin
+          ? fetchStatSafely(
+            () => api.get('/admin/cases/filed'),
+            (filedResponse) => (
+              filedResponse.data.success ? { adminFiledCases: filedResponse.data.pagination?.total || 0 } : {}
+            ),
+            'Failed to load filed cases:',
+            'Filed cases',
+          )
+          : Promise.resolve({}),
+        isAdmin
+          ? fetchStatSafely(
+            () => adminService.getAllResolvedCases(),
+            (adminResolvedResponse) => (
+              adminResolvedResponse.success
+                ? { adminResolvedCases: adminResolvedResponse.pagination?.total || 0 }
+                : {}
+            ),
+            'Failed to load admin resolved cases:',
+            'Resolved admin cases',
+          )
+          : Promise.resolve({}),
+        isAdmin
+          ? fetchStatSafely(
+            () => clientService.getClients(true),
+            (clientsResponse) => (clientsResponse.success ? { activeClients: (clientsResponse.data || []).length } : {}),
+            'Failed to load active clients:',
+            'Client counts',
+          )
+          : Promise.resolve({}),
+      ]);
+
+      setRecentCases(getRecentCasesSnapshot(casesToDisplay));
+      const statsPatch = {
+        ...metricsPatch,
+        ...openCasesPatch,
+        ...pendingCasesPatch,
+        ...resolvedCasesPatch,
+        ...unassignedCasesPatch,
+        ...adminPendingApprovalsPatch,
+        ...adminFiledCasesPatch,
+        ...adminResolvedCasesPatch,
+        ...activeClientsPatch,
+      };
+      setStats((prev) => ({ ...prev, ...statsPatch }));
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
       reportLoadWarning('Dashboard data');
