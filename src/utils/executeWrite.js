@@ -19,6 +19,10 @@ const resolveResponseStatus = (req, result) => {
   if (result && typeof result === 'object' && Number.isInteger(result.statusCode)) {
     return result.statusCode;
   }
+  // Wrapped controllers either return an explicit { statusCode, ...payload }
+  // object or set the Express response status before the handler resolves.
+  // We inspect the live response as a legacy fallback for handlers that still
+  // write directly to res without returning a status-bearing payload.
   const response = req?._transactionResponse || req?.res;
   return Number.isInteger(response?.statusCode) ? response.statusCode : 200;
 };

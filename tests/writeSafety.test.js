@@ -151,7 +151,7 @@ async function testExecuteWriteEnforcesTransaction() {
   }
 }
 
-async function testExecuteWriteAllowsMissingTransactionSession() {
+async function testExecuteWriteWithUnavailableSession() {
   const mongoose = require('mongoose');
   const originalStartSession = mongoose.startSession;
   mongoose.startSession = async () => {
@@ -287,7 +287,7 @@ async function run() {
     await testCrossFirmGuard();
     await testInvalidStateGuard();
     await testExecuteWriteEnforcesTransaction();
-    await testExecuteWriteAllowsMissingTransactionSession();
+    await testExecuteWriteWithUnavailableSession();
     await testExecuteWriteRollsBackErrorResponses();
     await testIdempotencySkipsCacheOnRollback();
     await testControllerGuardWithoutTransaction();

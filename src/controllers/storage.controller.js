@@ -149,13 +149,15 @@ const getStorageHealth = async (req, res) => {
         .select('_id')
         .lean(),
     ]);
+    const defaultStatus = activeConfig ? 'HEALTHY' : 'DISCONNECTED';
+    const defaultLastError = activeConfig ? null : 'Active storage configuration not found';
 
     return res.json({
-      status: record?.status || (activeConfig ? 'HEALTHY' : 'DISCONNECTED'),
+      status: record?.status || defaultStatus,
       lastVerifiedAt: record?.lastVerifiedAt || null,
       missingFilesCount: record?.missingFilesCount || 0,
       sampleSize: record?.sampleSize || 0,
-      lastError: record?.lastError || (!activeConfig ? 'Active storage configuration not found' : null),
+      lastError: record?.lastError || defaultLastError,
     });
   } catch (error) {
     console.error('[Storage] Failed to query TenantStorageHealth:', { tenantId, message: error.message });
