@@ -1,5 +1,6 @@
 const signupService = require('../services/signup.service');
 const { validatePasswordStrength, PASSWORD_POLICY_MESSAGE } = require('../utils/passwordPolicy');
+const { getSession } = require('../utils/getSession');
 
 const phoneRegex = /^[0-9]{10}$/;
 const otpRegex = /^[0-9]{6}$/;
@@ -17,7 +18,7 @@ const initiateSignup = async (req, res) => {
       phone,
       firmName,
     } = req.body;
-    const session = req.transactionSession?.session;
+    const session = getSession(req);
 
     if (!name || !name.trim()) {
       return { success: false, statusCode: 400, message: 'Name is required' };
@@ -71,7 +72,7 @@ const initiateSignup = async (req, res) => {
 const verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
-    const session = req.transactionSession?.session;
+    const session = getSession(req);
 
     if (!email || !email.trim()) {
       return { success: false, statusCode: 400, message: 'Email is required' };
@@ -143,7 +144,7 @@ const completeSignup = async (req, res) => {
     if (!email || !email.trim()) {
       return { success: false, statusCode: 400, message: 'Email is required' };
     }
-    const result = await signupService.completeSignup({ email, firmName, session: req.transactionSession?.session, req });
+    const result = await signupService.completeSignup({ email, firmName, session: getSession(req), req });
 
     if (!result.success) {
       return { success: false, statusCode: result.status || 400, message: result.message };

@@ -29,6 +29,7 @@ const { enqueueStorageJob, JOB_TYPES } = require('../queues/storage.queue');
 const { assertFirmContext } = require('../utils/tenantGuard');
 const CaseFile = require('../models/CaseFile.model');
 const { incrementTenantMetric } = require('../services/tenantMetrics.service');
+const { getSession } = require('../utils/getSession');
 const fs = require('fs').promises;
 const fsSync = require('fs');
 const path = require('path');
@@ -353,7 +354,7 @@ const createCase = async (req, res) => {
       }
     }
 
-    const session = req.transactionSession?.session;
+    const session = getSession(req);
     try {
       // Create new case with defaults
       const slaState = await caseSlaService.initializeCaseSla({
@@ -1776,7 +1777,7 @@ const pullCases = async (req, res) => {
         caseId: caseIds[0],
         tenantId: req.user.firmId,
         userId: user.xID,
-        session: req.transactionSession?.session || null,
+        session: getSession(req),
       });
       
       if (!result.success) {

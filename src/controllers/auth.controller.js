@@ -16,6 +16,7 @@ const jwtService = require('../services/jwt.service');
 const { isSuperAdminRole, normalizeRole, toLegacyUserRole } = require('../utils/role.utils');
 const { normalizeFirmSlug } = require('../utils/slugify');
 const { validatePasswordStrength, PASSWORD_POLICY_MESSAGE } = require('../utils/passwordPolicy');
+const { getSession } = require('../utils/getSession');
 const { ensureDefaultClientForFirm } = require('../services/defaultClient.service');
 const { resolveUserIdentity } = require('../services/identity.service');
 const { isGoogleAuthDisabled } = require('../services/featureFlags.service');
@@ -380,7 +381,7 @@ const generateAndStoreRefreshToken = async ({ req, userId = null, firmId = null 
   const refreshToken = jwtService.generateRefreshToken();
   const refreshTokenHash = jwtService.hashRefreshToken(refreshToken);
   const expiresAt = jwtService.getRefreshTokenExpiry();
-  const session = req.transactionSession?.session || req.mongoSession || null;
+  const session = getSession(req);
 
   if (!refreshTokenHash || !expiresAt) {
     throw new Error('[AUTH][refresh-token] Refresh token generation failed: missing required fields');
@@ -2030,7 +2031,7 @@ const createUser = async (req, res) => {
       });
     }
     
-    const session = req.transactionSession?.session || null;
+    const session = getSession(req);
 
     // Generate next xID automatically (server-side only)
     const xID = await xIDGenerator.generateNextXID(admin.firmId, session);
@@ -2226,7 +2227,7 @@ const activateUser = async (req, res) => {
       });
     }
     
-    const session = req.transactionSession?.session || null;
+    const session = getSession(req);
     const currentlyCounted = ['active', 'invited'].includes(user.status);
     const incrementBy = currentlyCounted ? 0 : 1;
     await assertFirmPlanCapacity({ firmId: admin.firmId, session, incrementBy, role: user.role });

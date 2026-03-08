@@ -79,8 +79,8 @@ const getClients = async (req, res) => {
       
       return res.json({
         success: true,
-        data: clients.map(mapClientResponse),
-        count: clients.length,
+        data: (clients || []).map(mapClientResponse),
+        count: (clients || []).length,
       });
     }
     
@@ -102,8 +102,8 @@ const getClients = async (req, res) => {
     
     res.json({
       success: true,
-      data: clients.map(mapClientResponse),
-      count: clients.length,
+      data: (clients || []).map(mapClientResponse),
+      count: (clients || []).length,
     });
   } catch (error) {
     res.status(500).json({
