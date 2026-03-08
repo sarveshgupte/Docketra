@@ -1012,7 +1012,7 @@ const sendFirmSetupEmail = async ({
   `;
   const text = `Welcome to Docketra, ${name}!\n\nYour firm account has been created successfully.\nFirm name: ${firmName}\nUser xID: ${resolvedXid}\nLogin URL: ${resolvedLoginUrl}\nUse your xID and password to sign in to your firm account.\n\nBest regards,\nDocketra Team`;
 
-  return sendEmail({ to: email, subject, html, text }, context);
+  return sendDirectAuthEmail({ to: email, subject, html, text });
 };
 
 const sendLoginOtpEmail = async ({
