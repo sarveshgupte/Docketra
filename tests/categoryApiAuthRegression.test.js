@@ -112,6 +112,14 @@ function testCategoryServiceUsesAuthenticatedApiClient() {
     'category service should fetch categories through the authenticated api client'
   );
   assert.ok(
+    serviceSource.includes("api.get('/admin/categories'"),
+    'admin category management should use the dedicated /api/admin/categories endpoint'
+  );
+  assert.ok(
+    serviceSource.includes("api.post('/admin/categories'"),
+    'admin category writes should stay on the dedicated admin category API'
+  );
+  assert.ok(
     !serviceSource.includes("axios.get('/categories'"),
     'category service should not bypass the shared api client for categories'
   );

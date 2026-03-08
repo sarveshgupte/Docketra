@@ -37,6 +37,7 @@ function testRouteLimiterWiring() {
   const securityRoutes = read('../src/routes/security.routes.js');
   const dashboardRoutes = read('../src/routes/dashboard.routes.js');
   const categoryRoutes = read('../src/routes/category.routes.js');
+  const routeGroups = read('../src/routes/routeGroups.js');
   const inboundRoutes = read('../src/routes/inbound.routes.js');
   const publicRoutes = read('../src/routes/public.routes.js');
   const serverSource = read('../src/server.js');
@@ -59,11 +60,14 @@ function testRouteLimiterWiring() {
   assert.ok(workTypeRoutes.includes("router.post('/', authorizeFirmPermission('WORKTYPE_MANAGE'), userWriteLimiter, createWorkType);"));
   assert.ok(securityRoutes.includes("router.get('/alerts', requireSuperadmin, superadminLimiter, listSecurityAlerts);"));
   assert.ok(dashboardRoutes.includes("router.get('/summary', userReadLimiter, getDashboardSummary);"));
-  assert.ok(categoryRoutes.includes("router.get('/', authenticate, userReadLimiter, attachFirmContext, requireTenant, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), authorizeFirmPermission('CATEGORY_VIEW'), getCategories);"));
+  assert.ok(routeGroups.includes('const firmReadAccess = [authenticate, userReadLimiter, attachFirmContext, requireTenant, buildFirmInvariantGuard()];'));
+  assert.ok(routeGroups.includes('const adminTenantScopedApiAccess = [...tenantScopedApiAccess, requireAdmin];'));
+  assert.ok(categoryRoutes.includes("router.get('/', ...firmReadAccess, authorizeFirmPermission('CATEGORY_VIEW'), getCategories);"));
   assert.ok(inboundRoutes.includes("router.post('/email', inboundEmailLimiter, inboundStorageHealthGuard, handleInboundEmail);"));
   assert.ok(publicRoutes.includes("router.post('/signup', signupLimiter, async (req, res, next) => {"));
 
   assert.ok(serverSource.includes("app.get('/:firmSlug/login', publicLimiter, tenantResolver, (req, res) => {"));
+  assert.ok(serverSource.includes("app.use('/api/admin', ...adminTenantScopedApiAccess, writeGuardChain, adminAuditTrail('admin'), adminRoutes);"));
   assert.ok(!serverSource.includes('const superadminRouteLimiter = rateLimit({'));
   assert.ok(!serverSource.includes("app.use('/api/admin', authenticate, firmContext, requireTenant, tenantThrottle, sensitiveLimiter"));
   console.log('  ✓ wires updated route-level limiters and removes redundant throttles');

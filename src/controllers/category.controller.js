@@ -2,6 +2,7 @@ const Category = require('../models/Category.model');
 const Case = require('../models/Case.model');
 const mongoose = require('mongoose');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
+const { parseBooleanQuery } = require('../utils/query.utils');
 
 /**
  * Category Controller for Admin-Managed Categories
@@ -21,8 +22,6 @@ const resolveCategoryFirmScope = (req, res) => {
   }
   return { firmId: req.user.firmId };
 };
-
-const parseBooleanQuery = (value) => value === true || value === 'true';
 
 /**
  * Get all categories (including inactive for admin)

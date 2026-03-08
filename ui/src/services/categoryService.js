@@ -23,11 +23,18 @@ export const categoryService = {
     return response.data;
   },
 
+  getAdminCategories: async (activeOnly = false) => {
+    const response = await api.get('/admin/categories', {
+      params: { activeOnly: activeOnly ? 'true' : 'false' }
+    });
+    return response.data;
+  },
+
   /**
    * Create a new category (Admin only)
    */
   createCategory: async (name) => {
-    const response = await api.post('/categories', { name });
+    const response = await api.post('/admin/categories', { name });
     return response.data;
   },
 
@@ -35,7 +42,7 @@ export const categoryService = {
    * Update category name (Admin only)
    */
   updateCategory: async (id, name) => {
-    const response = await api.put(`/categories/${id}`, { name });
+    const response = await api.put(`/admin/categories/${id}`, { name });
     return response.data;
   },
 
@@ -43,7 +50,7 @@ export const categoryService = {
    * Enable/disable category (Admin only)
    */
   toggleCategoryStatus: async (id, isActive) => {
-    const response = await api.patch(`/categories/${id}/status`, { isActive });
+    const response = await api.patch(`/admin/categories/${id}/status`, { isActive });
     return response.data;
   },
 
@@ -51,7 +58,7 @@ export const categoryService = {
    * Add subcategory to category (Admin only)
    */
   addSubcategory: async (categoryId, name) => {
-    const response = await api.post(`/categories/${categoryId}/subcategories`, { name });
+    const response = await api.post(`/admin/categories/${categoryId}/subcategories`, { name });
     return response.data;
   },
 
@@ -59,7 +66,7 @@ export const categoryService = {
    * Update subcategory name (Admin only)
    */
   updateSubcategory: async (categoryId, subcategoryId, name) => {
-    const response = await api.put(`/categories/${categoryId}/subcategories/${subcategoryId}`, { name });
+    const response = await api.put(`/admin/categories/${categoryId}/subcategories/${subcategoryId}`, { name });
     return response.data;
   },
 
@@ -67,7 +74,7 @@ export const categoryService = {
    * Enable/disable subcategory (Admin only)
    */
   toggleSubcategoryStatus: async (categoryId, subcategoryId, isActive) => {
-    const response = await api.patch(`/categories/${categoryId}/subcategories/${subcategoryId}/status`, { isActive });
+    const response = await api.patch(`/admin/categories/${categoryId}/subcategories/${subcategoryId}/status`, { isActive });
     return response.data;
   },
 
@@ -75,7 +82,7 @@ export const categoryService = {
    * Delete category (Admin only) - Soft delete
    */
   deleteCategory: async (id) => {
-    const response = await api.delete(`/categories/${id}`);
+    const response = await api.delete(`/admin/categories/${id}`);
     return response.data;
   },
 
@@ -83,7 +90,7 @@ export const categoryService = {
    * Delete subcategory (Admin only) - Soft delete
    */
   deleteSubcategory: async (categoryId, subcategoryId) => {
-    const response = await api.delete(`/categories/${categoryId}/subcategories/${subcategoryId}`);
+    const response = await api.delete(`/admin/categories/${categoryId}/subcategories/${subcategoryId}`);
     return response.data;
   },
 };

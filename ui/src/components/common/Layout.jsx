@@ -7,9 +7,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { usePermissions } from '../../hooks/usePermissions';
 import { useToast } from '../../hooks/useToast';
 import api from '../../services/api';
+import { USER_ROLES } from '../../utils/constants';
 import './Layout.css';
 
 /* SVG icon helpers */
@@ -108,7 +108,6 @@ const IconPlus = () => (
 
 export const Layout = ({ children }) => {
   const { user, logout } = useAuth();
-  const { isAdmin, isSuperadmin } = usePermissions();
   const { showSuccess } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -125,7 +124,7 @@ export const Layout = ({ children }) => {
   const profileDropdownRef = useRef(null);
 
   const currentFirmSlug = firmSlug || user?.firmSlug;
-  const hasAdminAccess = isAdmin || isSuperadmin;
+  const hasAdminAccess = user?.role === USER_ROLES.ADMIN;
   const firmLabel = user?.firm?.name || currentFirmSlug || 'Firm';
   const firmInitials = firmLabel.substring(0, 2).toUpperCase();
 
