@@ -6,6 +6,7 @@
 
 const Firm = require('../models/Firm.model');
 const { normalizeFirmSlug } = require('../utils/slugify');
+const { getFirmInactiveCode, isActiveStatus } = require('../utils/status.utils');
 
 /**
  * Resolve firmSlug to firmId and attach to request
@@ -62,11 +63,11 @@ const resolveFirmSlug = async (req, res, next) => {
       });
     }
     
-    if (firm.status !== 'active') {
+    if (!isActiveStatus(firm.status)) {
       return res.status(403).json({
         success: false,
-        code: 'FIRM_SUSPENDED',
-        message: `This firm is currently ${firm.status.toLowerCase()}. Please contact support.`,
+        code: getFirmInactiveCode(firm.status),
+        message: `This firm is currently ${String(firm.status || 'inactive').toLowerCase()}. Please contact support.`,
         action: 'contact_admin',
       });
     }
@@ -119,7 +120,7 @@ const optionalFirmResolution = async (req, res, next) => {
     }
     const firm = await Firm.findOne({ firmSlug: normalizedSlug });
     
-    if (firm && firm.status === 'active') {
+    if (firm && isActiveStatus(firm.status)) {
       req.firmSlug = normalizedSlug;
       req.firmId = firm._id.toString();
       req.firmIdString = firm.firmId;

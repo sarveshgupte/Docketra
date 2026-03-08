@@ -75,6 +75,25 @@ async function shouldBlockDisabledFirm() {
   Firm.findOne = originalFindOne;
 }
 
+async function shouldAllowActiveFirmRegardlessOfStatusCase() {
+  const originalFindOne = Firm.findOne;
+  Firm.findOne = async () => ({ _id: OBJECT_ID_A, firmSlug: 'firm-a', status: 'ACTIVE' });
+
+  const req = {
+    params: { firmId: OBJECT_ID_A },
+    jwt: { firmId: OBJECT_ID_A },
+    user: { role: 'Admin' },
+  };
+
+  const { res, nextCalled } = await runMiddleware(attachFirmContext, req);
+  assert.strictEqual(res.statusCode, null, 'Uppercase ACTIVE status should still be treated as active');
+  assert.strictEqual(nextCalled, true, 'Middleware should continue for active firms regardless of status casing');
+  assert.strictEqual(req.firmId, OBJECT_ID_A, 'Firm context should still be attached');
+  console.log('✓ Uppercase ACTIVE firm status is accepted');
+
+  Firm.findOne = originalFindOne;
+}
+
 async function shouldBlockSuperadminFromFirmRoutes() {
   const req = {
     params: { firmId: OBJECT_ID_A },
@@ -157,6 +176,7 @@ async function shouldRejectLegacyFirmIdFallback() {
 async function run() {
   await shouldRejectJwtFirmMismatch();
   await shouldBlockDisabledFirm();
+  await shouldAllowActiveFirmRegardlessOfStatusCase();
   await shouldBlockSuperadminFromFirmRoutes();
   await shouldDenyCrossFirmMembership();
   await shouldNotAllowAdminToEscalateToSuperadmin();

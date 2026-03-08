@@ -5,6 +5,7 @@ const path = require('path');
 
 const { maskSensitiveObject } = require('../src/utils/pii');
 const errorHandler = require('../src/middleware/errorHandler');
+const { getCookieValue } = require('../src/utils/requestCookies');
 
 function createMockResponse() {
   return {
@@ -74,11 +75,20 @@ function testRateLimiterExports() {
   assert.strictEqual(typeof rateLimiters.publicLimiter, 'function');
 }
 
+function testCookieParsingUtility() {
+  const cookieHeader = 'theme=dark; refreshToken=refresh%3Dtoken%3Dvalue; accessToken=header.payload.signature';
+  assert.strictEqual(getCookieValue(cookieHeader, 'theme'), 'dark');
+  assert.strictEqual(getCookieValue(cookieHeader, 'refreshToken'), 'refresh=token=value');
+  assert.strictEqual(getCookieValue(cookieHeader, 'accessToken'), 'header.payload.signature');
+  assert.strictEqual(getCookieValue(cookieHeader, 'missing'), null);
+}
+
 function run() {
   testSensitiveLogMasking();
   testErrorHandlerHidesServerDetails();
   testServerHardeningWiring();
   testRateLimiterExports();
+  testCookieParsingUtility();
   console.log('coreSecurityHardeningPhase2 tests passed');
 }
 

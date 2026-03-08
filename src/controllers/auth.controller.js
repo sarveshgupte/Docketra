@@ -14,7 +14,9 @@ const xIDGenerator = require('../services/xIDGenerator');
 const signupService = require('../services/signup.service');
 const jwtService = require('../services/jwt.service');
 const { isSuperAdminRole, normalizeRole, toLegacyUserRole } = require('../utils/role.utils');
+const { getCookieValue } = require('../utils/requestCookies');
 const { normalizeFirmSlug } = require('../utils/slugify');
+const { isActiveStatus, getFirmInactiveCode } = require('../utils/status.utils');
 const { validatePasswordStrength, PASSWORD_POLICY_MESSAGE } = require('../utils/passwordPolicy');
 const { getSession } = require('../utils/getSession');
 const { ensureDefaultClientForFirm } = require('../services/defaultClient.service');
@@ -722,7 +724,7 @@ const login = async (req, res) => {
       status: { $ne: 'deleted' },
     });
     
-    if (!user || user.status !== 'active') {
+    if (!user || !isActiveStatus(user.status)) {
       await recordFailedLoginAttempt(req);
       console.warn(`[AUTH] Invalid login attempt for xID=${normalizedXID} in firm context ${req.firmSlug || req.firmId}`);
       try {
@@ -843,7 +845,7 @@ const login = async (req, res) => {
     }
     
     // Check if user is active
-    if (user.status !== 'active') {
+    if (!isActiveStatus(user.status)) {
       return res.status(403).json({
         success: false,
         message: 'Please complete your account setup using the invite link sent to your email',
@@ -2413,7 +2415,7 @@ const setPassword = async (req, res) => {
       });
     }
 
-    if (tokenOwner.passwordHash || tokenOwner.status === 'active') {
+    if (tokenOwner.passwordHash || isActiveStatus(tokenOwner.status)) {
       return res.status(409).json({
         success: false,
         code: 'ACCOUNT_ALREADY_ACTIVATED',
@@ -3122,7 +3124,7 @@ const forgotPassword = async (req, res) => {
     }
     
     // Check if user is active
-    if (user.status !== 'active') {
+    if (!isActiveStatus(user.status)) {
       console.log(`[AUTH] Forgot password requested for inactive user (xID: ${user.xID})`);
       
       return res.json({
@@ -3216,7 +3218,7 @@ const refreshAccessToken = async (req, res) => {
   try {
     const refreshToken =
       req.body.refreshToken ||
-      (req.headers.cookie ? req.headers.cookie.split(';').map(c => c.trim().split('=')).find(([k]) => k === 'refreshToken')?.[1] : null);
+      getCookieValue(req.headers.cookie, 'refreshToken');
     
     if (!refreshToken) {
       return res.status(400).json({
@@ -3227,7 +3229,7 @@ const refreshAccessToken = async (req, res) => {
     
     // Extract old access token to preserve JWT claims (JWT-first approach)
     const oldAccessToken = req.body.accessToken ||
-      (req.headers.cookie ? req.headers.cookie.split(';').map(c => c.trim().split('=')).find(([k]) => k === 'accessToken')?.[1] : null);
+      getCookieValue(req.headers.cookie, 'accessToken');
     
     let oldTokenClaims = null;
     if (oldAccessToken) {
@@ -3298,7 +3300,7 @@ const refreshAccessToken = async (req, res) => {
       firmId: storedToken.firmId,
     });
     
-    if (!user || user.status !== 'active') {
+    if (!user || !isActiveStatus(user.status)) {
       await noteRefreshTokenFailure({
         req,
         userId: storedToken.userId,
@@ -3645,11 +3647,11 @@ const initiateGoogleAuth = async (req, res) => {
       });
     }
 
-    if (firm.status !== 'active') {
+    if (!isActiveStatus(firm.status)) {
       return res.status(403).json({
         success: false,
-        code: 'FIRM_SUSPENDED',
-        message: `This firm is currently ${firm.status.toLowerCase()}. Please contact support.`,
+        code: getFirmInactiveCode(firm.status),
+        message: `This firm is currently ${String(firm.status || 'inactive').toLowerCase()}. Please contact support.`,
         action: 'contact_admin',
       });
     }
@@ -3765,7 +3767,7 @@ const handleGoogleCallback = async (req, res) => {
         if (candidate.firmId && candidate.firmId.toString() !== firmIdFromContext.toString()) return false;
         if (![ROLE_ADMIN, ROLE_EMPLOYEE].includes(candidate.role)) return false;
         if (candidate.status === 'suspended' || candidate.status === 'disabled') return false;
-        if (!isActivation && candidate.status !== 'active') return false;
+        if (!isActivation && !isActiveStatus(candidate.status)) return false;
         return true;
       },
       linkGoogleIfFound: true,
@@ -3791,7 +3793,7 @@ const handleGoogleCallback = async (req, res) => {
     }
 
     // Activation flow: elevate invited users to ACTIVE once linked
-    if (flow === 'activation' && user.status !== 'active') {
+    if (flow === 'activation' && !isActiveStatus(user.status)) {
       user.status = 'active';
     }
     if (linkedDuringRequest) {
@@ -3826,7 +3828,7 @@ const handleGoogleCallback = async (req, res) => {
     }
 
     // Account state checks
-    if (user.status !== 'active') {
+    if (!isActiveStatus(user.status)) {
       return res.status(403).json({
         success: false,
         code: 'FIRM_RESOLUTION_FAILED',
