@@ -31,6 +31,7 @@ const mapClientResponse = (client) => {
     isActive: client.isActive,
     isSystemClient: Boolean(client.isSystemClient),
     isInternal: Boolean(client.isInternal),
+    isDefaultClient: Boolean(client.isDefaultClient),
     createdAt: client.createdAt ?? null,
     updatedAt: client.updatedAt ?? null,
     createdByXid: client.createdByXid ?? null,
