@@ -185,19 +185,38 @@ const authenticate = async (req, res, next) => {
       }
     }
     
-    // Check if user's firm is suspended (Superadmin exempt)
+    // Check if user's organization is suspended (Superadmin exempt)
     // NOTE: This DB lookup is for runtime state check (SUSPENDED status), not authorization
     // Authorization decisions use JWT claims (req.jwt.firmId, req.jwt.firmSlug)
     if (user.role !== 'SUPER_ADMIN' && user.firmId) {
-      const Firm = require('../models/Firm.model');
-      const firm = await Firm.findById(user.firmId);
-      if (firm && !isActiveStatus(firm.status)) {
-        noteAuthFailure();
-        return res.status(403).json({
-          success: false,
-          message: `Your firm is currently ${String(firm.status || 'inactive').toLowerCase()}. Please contact support.`,
-          code: getFirmInactiveCode(firm.status),
-        });
+      // Try default-client lookup first (new architecture), fall back to Firm (legacy)
+      const Client = require('../models/Client.model');
+      const defaultClient = await Client.findOne({ _id: user.firmId, isDefaultClient: true })
+        .select('status').lean();
+      if (defaultClient) {
+        if (defaultClient.status && !isActiveStatus(defaultClient.status)) {
+          noteAuthFailure();
+          return res.status(403).json({
+            success: false,
+            message: `Your account is currently ${String(defaultClient.status || 'inactive').toLowerCase()}. Please contact support.`,
+            code: getFirmInactiveCode(defaultClient.status),
+          });
+        }
+      } else {
+        // Legacy Firm lookup
+        let Firm;
+        try { Firm = require('../models/Firm.model'); } catch (_) { /* no Firm model */ }
+        if (Firm) {
+          const firm = await Firm.findById(user.firmId).select('status').lean();
+          if (firm && !isActiveStatus(firm.status)) {
+            noteAuthFailure();
+            return res.status(403).json({
+              success: false,
+              message: `Your firm is currently ${String(firm.status || 'inactive').toLowerCase()}. Please contact support.`,
+              code: getFirmInactiveCode(firm.status),
+            });
+          }
+        }
       }
     }
     
