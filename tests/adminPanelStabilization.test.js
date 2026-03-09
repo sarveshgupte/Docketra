@@ -36,6 +36,7 @@ async function testClientReadsUseRepositoryAndReturnPlaintext() {
   Module._load = function(request, parent, isMain) {
     if (request === '../models/Client.model') {
       return {
+        exists: async () => ({ _id: 'client-1' }),
         find: async () => {
           directFindUsed = true;
           throw new Error('controller should not read Client model directly');
@@ -106,6 +107,11 @@ async function testClientActiveOnlyQueryParsingStaysBooleanSafe() {
   let capturedFilter = null;
 
   Module._load = function(request, parent, isMain) {
+    if (request === '../models/Client.model') {
+      return {
+        exists: async () => ({ _id: 'client-1' }),
+      };
+    }
     if (request === '../repositories/ClientRepository') {
       return {
         find: async (_firmId, filter) => {
@@ -157,6 +163,84 @@ async function testClientActiveOnlyQueryParsingStaysBooleanSafe() {
   assert.deepStrictEqual(capturedFilter, { status: 'ACTIVE' }, 'activeOnly=true should filter by active status only');
   assert.deepStrictEqual(trueRes.body.data, [], 'active-only requests should still preserve the stable response shape');
   console.log('  ✓ client listing parses activeOnly safely and preserves empty-array responses');
+}
+
+async function testClientDefaultCreationOnlyRunsWhenNoClientsExist() {
+  const createdClients = [];
+  let existsCalls = 0;
+  let repositoryCalled = false;
+
+  Module._load = function(request, parent, isMain) {
+    if (request === '../models/Client.model') {
+      return {
+        exists: async () => {
+          existsCalls += 1;
+          return null;
+        },
+        findOne: () => ({
+          select: () => ({
+            lean: async () => null,
+          }),
+        }),
+        create: async (payload) => {
+          createdClients.push(payload);
+          return payload;
+        },
+      };
+    }
+    if (request === '../repositories/ClientRepository') {
+      return {
+        find: async () => {
+          repositoryCalled = true;
+          return [];
+        },
+      };
+    }
+    if (request === '../mappers/client.mapper') {
+      return { mapClientResponse: (client) => client };
+    }
+    if (request === '../services/clientIdGenerator') {
+      return { generateNextClientId: async () => 'C000001' };
+    }
+    if (request === '../config/constants') {
+      return { CLIENT_STATUS: { ACTIVE: 'ACTIVE' } };
+    }
+    if (request === '../utils/query.utils') {
+      return { parseBooleanQuery: (value) => value === true || value === 'true' };
+    }
+    if (request === '../middleware/wrapWriteHandler') {
+      return (fn) => fn;
+    }
+    if (
+      request.includes('/models/')
+      || request.includes('/services/')
+      || request.includes('/queues/')
+      || request.includes('/utils/')
+      || request.includes('/config/')
+    ) {
+      return {};
+    }
+    return originalLoad.apply(this, arguments);
+  };
+
+  clearModule('../src/controllers/client.controller');
+  const { getClients } = require('../src/controllers/client.controller');
+
+  const res = createRes();
+  await getClients({
+    query: {},
+    user: { firmId: 'firm-1', role: 'Admin', name: 'Acme Admin' },
+  }, res);
+
+  assert.strictEqual(res.statusCode, 200);
+  assert.strictEqual(existsCalls, 1, 'controller should check for existing clients before bootstrapping');
+  assert.strictEqual(repositoryCalled, true, 'controller should continue loading clients after bootstrapping');
+  assert.strictEqual(createdClients.length, 1, 'controller should create the default client when none exist');
+  assert.strictEqual(createdClients[0].clientId, 'C000001');
+  assert.strictEqual(createdClients[0].firmId, 'firm-1');
+  assert.strictEqual(createdClients[0].businessName, 'Acme Admin');
+  assert.strictEqual(createdClients[0].isDefaultClient, true);
+  console.log('  ✓ client listing bootstraps the default client only when the organization has none');
 }
 
 function testUserMapperDerivesPasswordConfigured() {
@@ -259,6 +343,7 @@ async function run() {
   try {
     await testClientReadsUseRepositoryAndReturnPlaintext();
     await testClientActiveOnlyQueryParsingStaysBooleanSafe();
+    await testClientDefaultCreationOnlyRunsWhenNoClientsExist();
     testUserMapperDerivesPasswordConfigured();
     await testStorageGateBlocksUnavailableProviderMode();
     testAuditMapperProducesForensicContract();
