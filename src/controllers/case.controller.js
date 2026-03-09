@@ -392,7 +392,7 @@ const createCase = async (req, res) => {
         dueDate: computeDeadlineFromTatDays(tatDaysSnapshot) || undefined,
       });
       
-      await newCase.save({ session });
+      await newCase.saveWithRetry({ session });
       await incrementTenantMetric(firmId, 'cases').catch(() => null);
       
       // Create case history entry with enhanced audit logging
@@ -838,7 +838,7 @@ const cloneCase = async (req, res) => {
       assignedToXID: assignedTo ? assignedTo.toUpperCase() : null, // PR: xID Canonicalization - Store in assignedToXID
     });
     
-    await newCase.save();
+    await newCase.saveWithRetry();
     
     // Copy comments
     const originalComments = await Comment.find({ caseId: originalCase.caseId });
