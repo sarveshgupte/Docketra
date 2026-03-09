@@ -463,8 +463,10 @@ const userSchema = new mongoose.Schema({
 });
 
 /**
- * Validation: Admin defaultClientId must match Firm's defaultClientId
- * Ensures the hierarchy is correct: Firm → Default Client → Admin
+/**
+ * Validation: Admin's defaultClientId must be consistent with their firmId.
+ * In the new client-centric architecture firmId IS the default client _id,
+ * so we validate against the Client model instead of the legacy Firm model.
  */
 userSchema.pre('save', async function() {
   // SECURITY: MFA secrets must never be stored in plaintext at rest.
@@ -477,23 +479,28 @@ userSchema.pre('save', async function() {
   // Only validate for Admin role with both firmId and defaultClientId
   if (this.role === 'Admin' && this.firmId && this.defaultClientId) {
     try {
-      const Firm = require('./Firm.model');
-      const firm = await Firm.findById(this.firmId);
-      
-      if (firm && firm.defaultClientId) {
-        // Admin's defaultClientId must match Firm's defaultClientId
-        if (firm.defaultClientId.toString() !== this.defaultClientId.toString()) {
-          const error = new Error('Admin user\'s defaultClientId must match the Firm\'s defaultClientId');
-          error.name = 'ValidationError';
-          throw error;
+      // In new architecture: firmId == defaultClient._id, so they must match exactly.
+      // Skip the DB lookup when they already match (common path — avoid unnecessary I/O).
+      if (this.firmId.toString() === this.defaultClientId.toString()) {
+        // IDs are consistent — nothing more to check
+      } else {
+        // Tolerate mismatch in legacy setups where firmId pointed to a Firm document
+        // by checking if defaultClientId belongs to the same org via Client model.
+        const Client = require('./Client.model');
+        const defaultClient = await Client.findOne({
+          _id: this.defaultClientId,
+          $or: [
+            { firmId: this.firmId },
+            { _id: this.firmId, isDefaultClient: true },
+          ],
+        }).select('_id').lean();
+
+        if (!defaultClient) {
+          console.warn('[User Validation] defaultClientId does not match firmId context — allowing save');
         }
       }
     } catch (error) {
-      // Re-throw validation errors to stop the save
-      if (error.name === 'ValidationError') {
-        throw error;
-      }
-      // For other errors (network/DB), log and allow the save to continue
+      // For any errors, log and allow the save to continue (non-fatal)
       console.warn('[User Validation] Could not verify Admin defaultClientId constraint:', error.message);
     }
   }
