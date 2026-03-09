@@ -44,18 +44,45 @@ const createWorkType = async (req, res) => {
   const firmId = assertAdminFirm(req, res);
   if (!firmId) return;
 
-  const { name, description, tatDays = 0 } = req.body;
+  const { name, description, tatDays = 0, prefix } = req.body;
   if (!name || !String(name).trim()) {
     return res.status(400).json({ success: false, message: 'name is required' });
   }
 
-  const workType = await WorkType.create({
+  // Validate and normalise prefix if provided
+  const hasPrefix = prefix !== undefined && prefix !== null && prefix !== '';
+  let normalizedPrefix;
+  if (hasPrefix) {
+    normalizedPrefix = String(prefix).trim().toUpperCase();
+    if (!/^[A-Z]{2,4}$/.test(normalizedPrefix)) {
+      return res.status(400).json({
+        success: false,
+        message: 'prefix must be 2-4 uppercase letters (e.g. "CO", "TAX")',
+      });
+    }
+    // Check uniqueness within firm
+    const existing = await WorkType.findOne({ firmId, prefix: normalizedPrefix });
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        message: `Prefix "${normalizedPrefix}" is already used by another work type in this firm`,
+      });
+    }
+  }
+
+  const createData = {
     firmId,
     name: String(name).trim(),
     description: description ? String(description).trim() : '',
     tatDays: Number(tatDays) || 0,
     createdByXID: req.user.xID,
-  });
+  };
+
+  if (hasPrefix) {
+    createData.prefix = normalizedPrefix;
+  }
+
+  const workType = await WorkType.create(createData);
 
   return res.status(201).json({ success: true, data: workType });
 };

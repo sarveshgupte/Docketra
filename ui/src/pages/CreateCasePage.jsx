@@ -364,14 +364,14 @@ export const CreateCasePage = () => {
         {/* Success Message */}
         {successMessage && (
           <div className="neo-alert neo-alert--success" style={{ marginBottom: 'var(--spacing-lg)' }}>
-            <h3>✅ Case Created Successfully!</h3>
+            <h3>✅ Docket Created Successfully!</h3>
             <p>
-              Case <strong>{successMessage.caseId}</strong> has been created and moved to the Workbasket.
+              Docket <strong>{successMessage.caseId}</strong> has been created and moved to the Workbasket.
             </p>
             <p className="text-secondary">{successMessage.timestamp}</p>
             <div style={{ display: 'flex', gap: 'var(--spacing-md)', marginTop: 'var(--spacing-md)' }}>
               <Button variant="primary" onClick={() => navigate(`/app/firm/${firmSlug}/cases/${successMessage.caseId}`)}>
-                View Case
+                View Docket
               </Button>
               <Button variant="outline" onClick={() => navigate(`/app/firm/${firmSlug}/global-worklist`)}>
                 Go to Workbasket
