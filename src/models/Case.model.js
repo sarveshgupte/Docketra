@@ -800,9 +800,8 @@ caseSchema.pre('validate', async function() {
         const wt = await WorkType.findById(this.workTypeId).lean();
         if (wt && wt.prefix) {
           // Generate docket ID with work-type prefix.
-          // The unique index on caseNumber enforces uniqueness; if a duplicate-key
-          // error (E11000) is thrown on save(), the caller should retry — the next
-          // invocation of the pre-validate hook will generate a new random suffix.
+          // The unique index on caseNumber enforces uniqueness; use saveWithRetry()
+          // on new Case documents to automatically retry on E11000 collisions.
           this.caseNumber = generateDocketId(this.firmId, wt.prefix);
         } else {
           this.caseNumber = await generateCaseId(this.firmId);
@@ -988,6 +987,50 @@ caseSchema.pre('save', async function () {
     }
   }
 });
+
+/**
+ * Save a new Case document with automatic retry on docket ID collisions.
+ *
+ * When using the prefix-based docket ID format (PREFIXYYYYMMDDNNNN), the
+ * 4-digit random suffix gives ~9000 possibilities per prefix per day.  Under
+ * high concurrency a duplicate-key error (E11000) on caseNumber is possible.
+ * This method retries up to `maxAttempts` times, resetting caseNumber before
+ * each retry so the pre-validate hook regenerates a fresh random suffix.
+ *
+ * Only retries for E11000 errors on caseNumber; all other errors propagate
+ * immediately.  The legacy generateCaseId() path is unaffected because it
+ * uses an atomic counter and cannot produce duplicates.
+ *
+ * @param {object} [saveOptions={}]  Options forwarded to Mongoose save() (e.g. { session })
+ * @param {number} [maxAttempts=5]   Maximum save attempts before giving up
+ * @returns {Promise<this>}          The saved document
+ * @throws {Error}                   After maxAttempts exhausted, or on non-collision errors
+ */
+caseSchema.methods.saveWithRetry = async function (saveOptions = {}, maxAttempts = 5) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await this.save(saveOptions);
+    } catch (err) {
+      const isDuplicateCaseNumber =
+        err.code === 11000 &&
+        err.message &&
+        err.message.includes('caseNumber');
+
+      if (isDuplicateCaseNumber && attempt < maxAttempts - 1) {
+        // Reset caseNumber (and its deprecated alias) so the pre-validate
+        // hook generates a new random suffix on the next attempt.
+        this.caseNumber = undefined;
+        this.caseId = undefined;
+      } else if (isDuplicateCaseNumber) {
+        throw new Error(
+          `Failed to generate a unique docket ID after ${maxAttempts} attempts. Please try again.`
+        );
+      } else {
+        throw err;
+      }
+    }
+  }
+};
 
 // VALIDATION: Strict schema enforcement
 caseSchema.set('strict', true);
