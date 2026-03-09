@@ -82,7 +82,18 @@ const createWorkType = async (req, res) => {
     createData.prefix = normalizedPrefix;
   }
 
-  const workType = await WorkType.create(createData);
+  let workType;
+  try {
+    workType = await WorkType.create(createData);
+  } catch (err) {
+    if (err.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: 'Prefix already exists in this firm',
+      });
+    }
+    throw err;
+  }
 
   return res.status(201).json({ success: true, data: workType });
 };
