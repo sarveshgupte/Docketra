@@ -2,27 +2,17 @@
  * Bootstrap Completion Check Middleware
  * 
  * Enforces that Admin users can only access dashboard and data routes
- * after their firm's bootstrap process is completed.
+ * after their organization's bootstrap process is completed.
  * 
- * This middleware prevents the login deadlock by:
- * 1. NOT blocking authentication endpoints (login, set-password, Google OAuth)
- * 2. ONLY blocking access to firm data routes until bootstrap is complete
- * 
- * This allows Admin users to:
- * - Log in successfully
- * - Set their password
- * - Link Google account
- * - Reach a "firm setup incomplete" UI
- * - Complete the bootstrap process
- * - Then access firm data
+ * In the client-centric architecture the "organization" is represented by the
+ * default Client (isDefaultClient: true).  For backward compatibility with
+ * legacy Firm-based deployments the middleware also accepts a Firm document.
  */
 
-const Firm = require('../models/Firm.model');
-
 /**
- * Require completed firm bootstrap for Admin users
+ * Require completed organization bootstrap for Admin users.
  * 
- * Use this middleware on routes that require firm bootstrap to be completed:
+ * Use this middleware on routes that require bootstrap to be completed:
  * - Dashboard routes
  * - Case routes
  * - Client routes
@@ -42,7 +32,7 @@ const requireCompletedFirm = async (req, res, next) => {
       return next();
     }
     
-    // Admin must have firmId
+    // Admin must have firmId (tenant scope)
     if (!req.user.firmId) {
       console.error(`[BOOTSTRAP] Admin user ${req.user.xID} missing firmId`);
       return res.status(500).json({
@@ -50,36 +40,46 @@ const requireCompletedFirm = async (req, res, next) => {
         message: 'Account configuration error. Please contact administrator.',
       });
     }
-    
-    // Check firm bootstrap status
-    const firm = await Firm.findById(req.user.firmId);
-    
-    if (!firm) {
-      console.error(`[BOOTSTRAP] Firm not found for admin ${req.user.xID}, firmId: ${req.user.firmId}`);
-      return res.status(500).json({
-        success: false,
-        message: 'Firm not found. Please contact administrator.',
-      });
+
+    // ── New architecture: default client ─────────────────────────────────
+    const Client = require('../models/Client.model');
+    const defaultClient = await Client.findOne({ _id: req.user.firmId, isDefaultClient: true })
+      .select('status').lean();
+
+    if (defaultClient) {
+      // Default client exists — organization is bootstrapped
+      return next();
     }
-    
-    // Block access if bootstrap not completed
-    if (firm.bootstrapStatus !== 'COMPLETED') {
-      console.warn(`[BOOTSTRAP] Access blocked for ${req.user.xID} - firm bootstrap not completed (status: ${firm.bootstrapStatus})`);
-      return res.status(403).json({
-        success: false,
-        code: 'FIRM_BOOTSTRAP_INCOMPLETE',
-        message: 'Firm setup is incomplete. Please complete the setup process before accessing this feature.',
-        bootstrapStatus: firm.bootstrapStatus,
-      });
+
+    // ── Legacy Firm fallback ──────────────────────────────────────────────
+    let Firm;
+    try { Firm = require('../models/Firm.model'); } catch (_) { /* no Firm model */ }
+
+    if (Firm) {
+      const firm = await Firm.findById(req.user.firmId).select('bootstrapStatus').lean();
+      if (firm) {
+        if (firm.bootstrapStatus !== 'COMPLETED') {
+          console.warn(`[BOOTSTRAP] Access blocked for ${req.user.xID} - firm bootstrap not completed (status: ${firm.bootstrapStatus})`);
+          return res.status(403).json({
+            success: false,
+            code: 'FIRM_BOOTSTRAP_INCOMPLETE',
+            message: 'Organization setup is incomplete. Please complete the setup process before accessing this feature.',
+            bootstrapStatus: firm.bootstrapStatus,
+          });
+        }
+        return next();
+      }
     }
-    
-    // Bootstrap completed - allow access
-    next();
+
+    // Neither a default client nor a Firm was found — allow access so the user
+    // can trigger the auto-creation of the default client on the first request.
+    console.warn(`[BOOTSTRAP] No organization record found for admin ${req.user.xID}, firmId: ${req.user.firmId} — allowing through`);
+    return next();
   } catch (error) {
-    console.error('[BOOTSTRAP] Error checking firm bootstrap status:', error);
+    console.error('[BOOTSTRAP] Error checking organization bootstrap status:', error);
     res.status(500).json({
       success: false,
-      message: 'Error checking firm setup status',
+      message: 'Error checking organization setup status',
       error: error.message,
     });
   }

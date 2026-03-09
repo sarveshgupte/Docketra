@@ -98,11 +98,11 @@ export const AdminPage = () => {
   // Admin stats (PR #41)
   const [adminStats, setAdminStats] = useState(EMPTY_ADMIN_STATS);
   const defaultClients = useMemo(
-    () => clients.filter((client) => client.isSystemClient || client.isInternal),
+    () => clients.filter((client) => client.isDefaultClient || client.isSystemClient || client.isInternal),
     [clients]
   );
   const hasAdditionalClients = useMemo(
-    () => clients.some((client) => !client.isSystemClient && !client.isInternal),
+    () => clients.some((client) => !client.isDefaultClient && !client.isSystemClient && !client.isInternal),
     [clients]
   );
 
@@ -1098,12 +1098,12 @@ export const AdminPage = () => {
                   </thead>
                   <tbody>
                     {clients.map((client) => {
-                      const isDefaultClient = client.isSystemClient || client.isInternal;
+                      const isProtectedClient = client.isDefaultClient || client.isSystemClient || client.isInternal;
                       return (
                         <tr key={client.clientId}>
                           <td>
                             {client.clientId}
-                            {isDefaultClient && (
+                            {isProtectedClient && (
                               <span style={{ marginLeft: '8px' }}>
                                 <Badge status="Approved">Default</Badge>
                               </span>
@@ -1123,7 +1123,7 @@ export const AdminPage = () => {
                               size="small"
                               variant="default"
                               onClick={() => handleEditClient(client)}
-                              disabled={isDefaultClient}
+                              disabled={isProtectedClient}
                             >
                               Edit
                             </Button>
@@ -1131,11 +1131,11 @@ export const AdminPage = () => {
                               size="small"
                               variant="warning"
                               onClick={() => handleOpenChangeNameModal(client)}
-                              disabled={isDefaultClient}
+                              disabled={isProtectedClient}
                             >
                               Change Name
                             </Button>
-                            {!isDefaultClient && (
+                            {!isProtectedClient && (
                               <Button
                                 size="small"
                                 variant={client.status === 'ACTIVE' ? 'danger' : 'success'}

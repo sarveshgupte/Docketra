@@ -21,6 +21,38 @@ const { incrementTenantMetric } = require('../services/tenantMetrics.service');
 const path = require('path');
 const fs = require('fs');
 const { parseBooleanQuery } = require('../utils/query.utils');
+const Client = require('../models/Client.model');
+
+/**
+ * Ensure at least one default client exists for the given organization.
+ * If none exists, auto-creates a default client using the account name supplied.
+ *
+ * @param {string|ObjectId} firmId - Tenant scope
+ * @param {string} [accountName]   - Friendly name for the default client
+ * @returns {Promise<void>}
+ */
+async function ensureDefaultClientExists(firmId, accountName) {
+  const existing = await Client.findOne({ firmId }).select('_id').lean();
+  if (existing) return; // at least one client exists
+
+  const clientId = await generateNextClientId(firmId);
+  const name = accountName || 'Default Organization';
+  await Client.create({
+    clientId,
+    firmId,
+    businessName: name,
+    businessAddress: 'Default Address',
+    primaryContactNumber: '0000000000',
+    businessEmail: `${String(firmId).toLowerCase().replace(/[^a-z0-9]/g, '')}@system.local`,
+    isDefaultClient: true,
+    isSystemClient: true,
+    isInternal: true,
+    createdBySystem: true,
+    createdByXid: 'SYSTEM',
+    status: 'ACTIVE',
+    isActive: true,
+  });
+}
 
 const getClientAccessContext = (req, res, message) => {
   const firmId = req.user?.firmId;
@@ -62,6 +94,11 @@ const getClients = async (req, res) => {
     if (!accessContext) return;
     const shouldFilterActiveOnly = parseBooleanQuery(activeOnly);
     const shouldLoadForCreateCase = parseBooleanQuery(forCreateCase);
+
+    // Auto-create default client if the organization has no clients yet
+    await ensureDefaultClientExists(accessContext.firmId, req.user?.name).catch((err) => {
+      console.warn('[CLIENT_CTRL] Could not auto-create default client:', err.message);
+    });
     
     // Special logic for Create Case: Always include Default Client + other active clients
     if (shouldLoadForCreateCase) {
@@ -69,13 +106,14 @@ const getClients = async (req, res) => {
         accessContext.firmId,
         {
           $or: [
+            { isDefaultClient: true },
             { clientId: 'C000001' },
             { status: CLIENT_STATUS.ACTIVE },
           ],
         },
         accessContext.role,
         {
-          select: 'clientId businessName businessEmail primaryContactNumber status isSystemClient isInternal createdAt',
+          select: 'clientId businessName businessEmail primaryContactNumber status isSystemClient isInternal isDefaultClient createdAt',
           sort: { clientId: 1 },
         }
       );
@@ -98,7 +136,7 @@ const getClients = async (req, res) => {
       filter,
       accessContext.role,
       {
-        select: 'clientId businessName businessEmail primaryContactNumber status isSystemClient isInternal createdAt',
+        select: 'clientId businessName businessEmail primaryContactNumber status isSystemClient isInternal isDefaultClient createdAt',
         sort: { clientId: 1 },
       }
     );
@@ -493,11 +531,12 @@ const toggleClientStatus = async (req, res) => {
       });
     }
     
-    // PROTECTION: Prevent deactivation of system/internal clients
-    // Check multiple flags to ensure firm's operational identity is protected
+    // PROTECTION: Prevent deactivation of system/internal/default clients
+    // Check multiple flags to ensure the organization's root client is protected
     const isProtectedClient = 
       client.isSystemClient === true || 
-      client.isInternal === true || 
+      client.isInternal === true ||
+      client.isDefaultClient === true ||
       clientId === 'C000001';
     
     if (isProtectedClient && !isActive) {

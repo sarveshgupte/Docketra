@@ -68,6 +68,7 @@ const makeFirmStub = (store) => ({
 
 const makeClientStub = (store) => ({
   findOne: () => ({ session: () => Promise.resolve(null), sort: () => Promise.resolve(null) }),
+  find: () => ({ session: () => ({ select: () => ({ lean: () => Promise.resolve([]) }) }) }),
   create: async (docs, _opts) => {
     const saved = docs.map(d => ({ ...d, _id: `client-${Math.random().toString(36).slice(2)}` }));
     store.rows.push(...saved);
@@ -186,25 +187,26 @@ async function shouldRollbackWhenEnsureTenantKeyFails() {
 }
 
 async function shouldRejectFirmCreateWithoutId() {
+  // In the new client-centric architecture the "firm" is a default Client.
+  // If Client.create returns a document without an _id, the service must throw.
   const session = makeSession();
-  const firmWithoutIdStub = {
+  const clientWithoutIdStub = {
     findOne: () => ({ session: () => Promise.resolve(null), sort: () => Promise.resolve(null) }),
-    find: () => ({ session: () => ({ select: () => Promise.resolve([]) }) }),
-    create: async (docs) => [{ ...docs[0], _id: undefined, save: async () => {} }],
+    find: () => ({ session: () => ({ select: () => ({ lean: () => Promise.resolve([]) }) }) }),
+    create: async (docs) => [{ ...docs[0], _id: undefined }],
   };
 
   let threw = false;
   let thrownError = null;
   try {
     await createFirmHierarchy({
-      payload: { name: 'No Id Firm', adminName: 'Test', adminEmail: 'test@noid.test' },
+      payload: { name: 'No Id Client', adminName: 'Test', adminEmail: 'test@noid.test' },
       performedBy: null,
       requestId: 'test-no-id',
       context: null,
       session,
       deps: {
-        Firm: firmWithoutIdStub,
-        Client: makeClientStub({ rows: [] }),
+        Client: clientWithoutIdStub,
         User: makeUserStub({ rows: [] }),
         ensureTenantKey: async () => {},
         emailService: {
@@ -220,97 +222,109 @@ async function shouldRejectFirmCreateWithoutId() {
     thrownError = err;
   }
 
-  assert.strictEqual(threw, true, 'Should throw when firm _id is missing');
+  assert.strictEqual(threw, true, 'Should throw when default client _id is missing');
   assert.ok(thrownError instanceof FirmBootstrapError, 'Must throw FirmBootstrapError');
-  assert.ok(thrownError.message.includes('no _id returned'), 'Error must indicate missing firm _id');
-  console.log('✓ Missing firm _id is rejected before TenantKey creation');
+  assert.ok(thrownError.message.includes('no _id returned'), 'Error must indicate missing client _id');
+  console.log('✓ Missing default client _id is rejected before admin user creation');
 }
 
 async function shouldCallEnsureTenantKeyWithFirmId() {
-  const session = makeSession();
-  const firmStore = { rows: [] };
-  const allRows = { rows: [] };
-  let ensureTenantKeyChecked = false;
-  const callOrder = [];
-
-  const ensureTenantKeyStub = {
-    ensureTenantKey: async (tenantId, options = {}) => {
-      ensureTenantKeyChecked = true;
-      callOrder.push('ensureTenantKey');
-      assert.ok(tenantId, 'ensureTenantKey must be called with tenantId');
-      assert.strictEqual(options.session, session, 'ensureTenantKey must receive transaction session');
-    },
-  };
-
-  const result = await createFirmHierarchy({
-    payload: { name: 'Tenant Field Firm', adminName: 'Tenant Admin', adminEmail: 'tenant@field.test' },
-    performedBy: null,
-    requestId: 'test-tenant-field',
-    context: null,
-    session,
-    deps: {
-      Firm: makeFirmStub(firmStore),
-      Client: makeClientStub(allRows),
-      User: makeUserStub(allRows),
-      ensureTenantKey: ensureTenantKeyStub.ensureTenantKey,
-      emailService: {
-        sendFirmCreatedEmail: async () => {},
-        sendPasswordSetupEmail: async () => ({ success: true }),
-      },
-      generateNextClientId: async () => {
-        callOrder.push('generateNextClientId');
-        assert.strictEqual(
-          callOrder[0],
-          'ensureTenantKey',
-          'ensureTenantKey must run before generateNextClientId'
-        );
-        return 'C000001';
-      },
-      generateNextXID: async () => 'X000001',
-    },
-  });
-
-  assert.ok(result?.firm?._id, 'Firm should be created successfully');
-  assert.strictEqual(ensureTenantKeyChecked, true, 'ensureTenantKey should be invoked');
-  console.log('✓ TenantKey lifecycle is delegated to ensureTenantKey');
-}
-
-async function shouldSucceedWhenEnsureTenantKeyNoOps() {
-  const session = makeSession();
-  const firmStore = { rows: [] };
-  const allRows = { rows: [] };
-
-  const idempotentEnsureTenantKeyStub = { ensureTenantKey: async () => {} };
-
-  let threw = false;
-  let result = null;
+  const originalSecret = process.env.JWT_PASSWORD_SETUP_SECRET;
+  process.env.JWT_PASSWORD_SETUP_SECRET = 'test-secret-key-for-rollback-tests';
   try {
-    result = await createFirmHierarchy({
-      payload: { name: 'Idempotent Firm', adminName: 'Idem Admin', adminEmail: 'idem@test.test' },
+    const session = makeSession();
+    const firmStore = { rows: [] };
+    const allRows = { rows: [] };
+    let ensureTenantKeyChecked = false;
+    const callOrder = [];
+
+    const ensureTenantKeyStub = {
+      ensureTenantKey: async (tenantId, options = {}) => {
+        ensureTenantKeyChecked = true;
+        callOrder.push('ensureTenantKey');
+        assert.ok(tenantId, 'ensureTenantKey must be called with tenantId');
+        assert.strictEqual(options.session, session, 'ensureTenantKey must receive transaction session');
+      },
+    };
+
+    const result = await createFirmHierarchy({
+      payload: { name: 'Tenant Field Firm', adminName: 'Tenant Admin', adminEmail: 'tenant@field.test' },
       performedBy: null,
-      requestId: 'test-idempotent-001',
+      requestId: 'test-tenant-field',
       context: null,
       session,
       deps: {
         Firm: makeFirmStub(firmStore),
         Client: makeClientStub(allRows),
         User: makeUserStub(allRows),
-        ensureTenantKey: idempotentEnsureTenantKeyStub.ensureTenantKey,
+        ensureTenantKey: ensureTenantKeyStub.ensureTenantKey,
         emailService: {
           sendFirmCreatedEmail: async () => {},
           sendPasswordSetupEmail: async () => ({ success: true }),
         },
-        generateNextClientId: async () => 'C000001',
+        generateNextClientId: async () => {
+          callOrder.push('generateNextClientId');
+          assert.strictEqual(
+            callOrder[0],
+            'ensureTenantKey',
+            'ensureTenantKey must run before generateNextClientId'
+          );
+          return 'C000001';
+        },
         generateNextXID: async () => 'X000001',
       },
     });
-  } catch (err) {
-    threw = true;
-  }
 
-  assert.strictEqual(threw, false, 'Must NOT throw when ensureTenantKey no-ops');
-  assert.ok(result?.firm?._id, 'Firm should be returned even when ensureTenantKey no-ops');
-  console.log('✓ ensureTenantKey no-op does not block firm creation');
+    assert.ok(result?.firm?._id, 'Default client should be created successfully');
+    assert.strictEqual(ensureTenantKeyChecked, true, 'ensureTenantKey should be invoked');
+    console.log('✓ TenantKey lifecycle is delegated to ensureTenantKey');
+  } finally {
+    process.env.JWT_PASSWORD_SETUP_SECRET = originalSecret;
+  }
+}
+
+async function shouldSucceedWhenEnsureTenantKeyNoOps() {
+  const originalSecret = process.env.JWT_PASSWORD_SETUP_SECRET;
+  process.env.JWT_PASSWORD_SETUP_SECRET = 'test-secret-key-for-rollback-tests';
+  try {
+    const session = makeSession();
+    const firmStore = { rows: [] };
+    const allRows = { rows: [] };
+
+    const idempotentEnsureTenantKeyStub = { ensureTenantKey: async () => {} };
+
+    let threw = false;
+    let result = null;
+    try {
+      result = await createFirmHierarchy({
+        payload: { name: 'Idempotent Firm', adminName: 'Idem Admin', adminEmail: 'idem@test.test' },
+        performedBy: null,
+        requestId: 'test-idempotent-001',
+        context: null,
+        session,
+        deps: {
+          Firm: makeFirmStub(firmStore),
+          Client: makeClientStub(allRows),
+          User: makeUserStub(allRows),
+          ensureTenantKey: idempotentEnsureTenantKeyStub.ensureTenantKey,
+          emailService: {
+            sendFirmCreatedEmail: async () => {},
+            sendPasswordSetupEmail: async () => ({ success: true }),
+          },
+          generateNextClientId: async () => 'C000001',
+          generateNextXID: async () => 'X000001',
+        },
+      });
+    } catch (err) {
+      threw = true;
+    }
+
+    assert.strictEqual(threw, false, 'Must NOT throw when ensureTenantKey no-ops');
+    assert.ok(result?.firm?._id, 'Default client should be returned even when ensureTenantKey no-ops');
+    console.log('✓ ensureTenantKey no-op does not block organization creation');
+  } finally {
+    process.env.JWT_PASSWORD_SETUP_SECRET = originalSecret;
+  }
 }
 
 async function run() {

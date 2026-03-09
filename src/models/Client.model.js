@@ -52,13 +52,13 @@ const clientSchema = new mongoose.Schema({
     immutable: true, // Schema-level immutability enforcement
   },
   
-  // Firm/Organization ID for multi-tenancy
-  // Every client MUST belong to a firm
+  // Organization/Tenant ID for multi-tenancy.
+  // For the default (system) client this equals the client's own _id.
+  // For regular clients this equals the _id of the organization's default client.
   firmId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Firm',
     required: [true, 'Firm ID is required'],
-    immutable: true, // Client cannot be moved between firms
+    immutable: true, // Client cannot be moved between organizations
   },
   
   /**
@@ -407,6 +407,30 @@ const clientSchema = new mongoose.Schema({
   },
 
   /**
+   * Default client flag - marks this client as the organization's root account.
+   * The first client created during onboarding is the default client.
+   * Default clients cannot be deleted or deactivated.
+   * Only one default client per organization (enforced by partial unique index).
+   */
+  isDefaultClient: {
+    type: Boolean,
+    default: false,
+    immutable: true,
+  },
+
+  /**
+   * URL-safe slug for the organization (only relevant for isDefaultClient=true clients).
+   * Used for tenant-scoped login URLs: /f/:firmSlug/login
+   */
+  firmSlug: {
+    type: String,
+    lowercase: true,
+    trim: true,
+    sparse: true,
+    index: true,
+  },
+
+  /**
    * System provenance for auto-created clients
    */
   createdBySystem: {
@@ -553,26 +577,24 @@ clientSchema.pre('save', async function() {
  * This validation runs on save operations.
  */
 clientSchema.pre('save', async function() {
-  // Only validate if isSystemClient is true
-  if (this.isSystemClient === true && this.firmId) {
+  // Only validate if isSystemClient is true - ensure only one default/system client per org
+  if (this.isSystemClient === true && this.isNew && this.firmId) {
     try {
-      const Firm = require('./Firm.model');
-      const firm = await Firm.findById(this.firmId);
-      
-      if (firm && firm.defaultClientId) {
-        // If firm has a defaultClientId, this client must match it
-        if (firm.defaultClientId.toString() !== this._id.toString()) {
-          const error = new Error('A system client must be the firm\'s default client');
-          error.name = 'ValidationError';
-          throw error;
-        }
+      // Prevent creating a second system client for the same organization
+      const existingSystemClient = await mongoose.model('Client').findOne({
+        firmId: this.firmId,
+        isSystemClient: true,
+        _id: { $ne: this._id },
+      });
+      if (existingSystemClient) {
+        const error = new Error('An organization can only have one system client');
+        error.name = 'ValidationError';
+        throw error;
       }
     } catch (error) {
-      // Re-throw validation errors to stop the save
       if (error.name === 'ValidationError') {
         throw error;
       }
-      // For other errors (network/DB), log and allow the save to continue
       console.warn('[Client Validation] Could not verify isSystemClient constraint:', error.message);
     }
   }
@@ -581,29 +603,36 @@ clientSchema.pre('save', async function() {
 /**
  * Performance Indexes
  * 
- * CRITICAL: Firm-scoped unique index on (firmId, clientId)
- * - Each firm has its own C000001, C000002, etc.
- * - clientId is unique WITHIN a firm, not globally
+ * CRITICAL: Organization-scoped unique index on (firmId, clientId)
+ * - Each organization has its own C000001, C000002, etc.
+ * - clientId is unique WITHIN an organization, not globally
  * 
  * Other indexes:
  * - businessName: For lookups and searches
  * - isActive: For filtering active vs inactive clients
  * - isSystemClient: For identifying system clients
+ * - isDefaultClient: For identifying the organization root client
  * - createdByXid: For ownership queries (canonical identifier)
  * - firmId: For multi-tenancy queries
  */
-// MANDATORY: Firm-scoped unique index on (firmId, clientId)
+// MANDATORY: Organization-scoped unique index on (firmId, clientId)
 clientSchema.index({ firmId: 1, clientId: 1 }, { unique: true });
 
 clientSchema.index({ isActive: 1 });
 clientSchema.index({ isSystemClient: 1 });
+clientSchema.index({ isDefaultClient: 1 });
 clientSchema.index({ businessName: 1 });
 clientSchema.index({ createdByXid: 1 }); // CANONICAL - xID-based creator queries
-// REMOVED: { firmId: 1 } - redundant with compound indexes above
-clientSchema.index({ firmId: 1, status: 1 }); // Firm-scoped status queries
+clientSchema.index({ firmId: 1, status: 1 }); // Organization-scoped status queries
 clientSchema.index({ firmId: 1 });
 clientSchema.index({ firmId: 1, createdAt: -1 });
-// Enforce one internal client per firm - critical for firm onboarding integrity
+// Enforce one default client per organization - critical for onboarding integrity
+clientSchema.index({ firmId: 1, isDefaultClient: 1 }, {
+  unique: true,
+  partialFilterExpression: { isDefaultClient: true },
+  name: 'org_default_client_unique',
+});
+// Enforce one internal client per organization - critical for onboarding integrity
 clientSchema.index({ firmId: 1, isInternal: 1 }, { 
   unique: true, 
   partialFilterExpression: { isInternal: true },
