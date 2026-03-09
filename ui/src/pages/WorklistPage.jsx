@@ -1,9 +1,9 @@
 /**
  * Worklist Page
  * 
- * Shows cases assigned to the current user, with optional filtering by status.
- * - Default view: Only OPEN cases (My Worklist)
- * - With ?status=PENDING,ON_HOLD: Shows pending cases
+ * Shows dockets assigned to the current user, with optional filtering by status.
+ * - Default view: Only OPEN dockets (My Worklist)
+ * - With ?status=PENDING,ON_HOLD: Shows pending dockets
  * 
  * This is the canonical "My Worklist" view.
  * 
@@ -98,13 +98,13 @@ export const WorklistPage = () => {
   const getPageInfo = () => {
     if (isPendingView) {
       return {
-        title: 'My Pending Cases',
-        description: 'Cases temporarily on hold (status = PENDED)',
+        title: 'My Pending Dockets',
+        description: 'Dockets temporarily on hold (status = PENDED)',
       };
     }
     return {
       title: 'My Worklist',
-      description: 'Your open cases (status = OPEN). Pending cases appear in My Pending Cases.',
+      description: 'Your open dockets (status = OPEN). Pending dockets appear in My Pending Dockets.',
     };
   };
   
@@ -133,7 +133,7 @@ export const WorklistPage = () => {
   const columns = [
     {
       key: 'caseName',
-      header: 'Case Name',
+      header: 'Docket Name',
       sortable: true,
     },
     {
@@ -216,11 +216,11 @@ export const WorklistPage = () => {
             />
           ) : cases.length === 0 ? (
             <EmptyState
-              title={isPendingView ? 'No pending cases right now.' : UX_COPY.emptyStates.NO_MY_OPEN}
+              title={isPendingView ? 'No pending dockets right now.' : UX_COPY.emptyStates.NO_MY_OPEN}
                 description={
                   isPendingView
-                    ? 'There are no cases currently in review. When a case is placed on hold, it will appear here with its review date.'
-                    : 'No open cases are assigned to you right now. Create a new case or wait for one to be assigned.'
+                    ? 'There are no dockets currently in review. When a docket is placed on hold, it will appear here with its review date.'
+                    : 'No open dockets are assigned to you right now. Create a new docket or wait for one to be assigned.'
                 }
               actionLabel={!isPendingView ? UX_COPY.actions.CREATE_CASE : undefined}
               onAction={!isPendingView ? () => navigate(`/app/firm/${firmSlug}/cases/create`) : undefined}
@@ -235,7 +235,7 @@ export const WorklistPage = () => {
               onSortChange={setSortState}
               toolbarLeft={(
                 <span className="worklist__count">
-                  {sortedCases.length} case{sortedCases.length !== 1 ? 's' : ''}
+                  {sortedCases.length} docket{sortedCases.length !== 1 ? 's' : ''}
                 </span>
               )}
               dense
