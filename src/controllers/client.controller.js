@@ -95,10 +95,13 @@ const getClients = async (req, res) => {
     const shouldFilterActiveOnly = parseBooleanQuery(activeOnly);
     const shouldLoadForCreateCase = parseBooleanQuery(forCreateCase);
 
-    // Auto-create default client if the organization has no clients yet
-    await ensureDefaultClientExists(accessContext.firmId, req.user?.name).catch((err) => {
-      console.warn('[CLIENT_CTRL] Could not auto-create default client:', err.message);
-    });
+    const clientExists = await Client.exists({ firmId: accessContext.firmId });
+    if (!clientExists) {
+      // Auto-create default client if the organization has no clients yet
+      await ensureDefaultClientExists(accessContext.firmId, req.user?.name).catch((err) => {
+        console.warn('[CLIENT_CTRL] Could not auto-create default client:', err.message);
+      });
+    }
     
     // Special logic for Create Case: Always include Default Client + other active clients
     if (shouldLoadForCreateCase) {
