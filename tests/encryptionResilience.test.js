@@ -80,7 +80,14 @@ async function testDecryptReturnsNullAndLogsStructuredContext() {
     assert.strictEqual(result, null, 'decrypt should fail softly and return null');
     assert.strictEqual(capturedLogs.length, 1, 'decrypt should emit one structured error log');
     assert.strictEqual(capturedLogs[0][0], 'TENANT_DECRYPTION_FAILED');
-    assert.deepStrictEqual(capturedLogs[0][1], {
+    assert.match(capturedLogs[0][1].timestamp, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+    assert.deepStrictEqual({
+      tenantId: capturedLogs[0][1].tenantId,
+      field: capturedLogs[0][1].field,
+      route: capturedLogs[0][1].route,
+      model: capturedLogs[0][1].model,
+      error: capturedLogs[0][1].error,
+    }, {
       tenantId: 'tenant-1',
       field: 'businessEmail',
       route: '/api/admin/clients',

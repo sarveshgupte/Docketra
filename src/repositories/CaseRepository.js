@@ -63,7 +63,7 @@ function _guardSuperadmin(role) {
  * @param {string} firmId
  * @returns {Promise<Object|null>}
  */
-async function _decryptCaseDoc(doc, firmId, logContext = {}) {
+async function _decryptCaseDoc(doc, firmId, { logContext } = {}) {
   if (!doc || !process.env.MASTER_ENCRYPTION_KEY || !firmId) return doc;
   const tenantId = String(firmId);
   for (const field of CASE_ENCRYPTED_FIELDS) {
@@ -88,7 +88,7 @@ async function _decryptCaseDoc(doc, firmId, logContext = {}) {
  * @param {string} firmId
  * @returns {Promise<Array>}
  */
-async function _decryptCaseDocs(docs, firmId, logContext = {}) {
+async function _decryptCaseDocs(docs, firmId, { logContext } = {}) {
   if (!docs || !docs.length || !process.env.MASTER_ENCRYPTION_KEY || !firmId) return docs;
   const tenantId = String(firmId);
   await Promise.all(docs.map(async (doc) => {

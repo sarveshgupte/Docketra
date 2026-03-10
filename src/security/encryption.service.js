@@ -104,7 +104,7 @@ async function encrypt(value, tenantId, { session } = {}) {
  * @param {string} tenantId - Tenant (firm) identifier
  * @param {string} [role]   - Caller's role (from req.user.role)
  * @param {{ session?: import('mongoose').ClientSession, logContext?: { field?: string, route?: string, model?: string } }} [options]
- * @returns {Promise<string|null>}
+ * @returns {Promise<string|null|undefined>}
  */
 async function decrypt(value, tenantId, role, { session, logContext } = {}) {
   if (value == null) return value;
@@ -132,7 +132,8 @@ async function decrypt(value, tenantId, role, { session, logContext } = {}) {
     return await getProvider().decrypt(value, tenantId, { session });
   } catch (err) {
     console.error('TENANT_DECRYPTION_FAILED', {
-      tenantId: tenantId || null,
+      timestamp: new Date().toISOString(),
+      tenantId,
       field: logContext?.field || null,
       route: logContext?.route || null,
       model: logContext?.model || null,
