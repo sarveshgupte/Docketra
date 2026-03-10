@@ -245,17 +245,19 @@ async function testClientListingLogsStructuredFailures() {
     await getClients({
       query: { activeOnly: 'true' },
       requestId: 'req-123',
-      user: { firmId: 'firm-1', role: 'Admin' },
+      originalUrl: '/api/clients?activeOnly=true',
+      user: { _id: 'user-1', firmId: 'firm-1', role: 'Admin' },
     }, res);
 
     assert.strictEqual(res.statusCode, 500);
     assert.strictEqual(logged[0][0], 'CLIENT_LIST_ERROR');
-    assert.deepStrictEqual(logged[0][1], {
-      firmId: 'firm-1',
-      requestId: 'req-123',
-      query: { activeOnly: 'true' },
-      error: 'repository exploded',
-    });
+    assert.strictEqual(logged[0][1].firmId, 'firm-1');
+    assert.strictEqual(logged[0][1].requestId, 'req-123');
+    assert.strictEqual(logged[0][1].userId, 'user-1');
+    assert.strictEqual(logged[0][1].route, '/api/clients?activeOnly=true');
+    assert.deepStrictEqual(logged[0][1].query, { activeOnly: 'true' });
+    assert.strictEqual(logged[0][1].error, 'repository exploded');
+    assert.match(logged[0][1].stack, /repository exploded/);
     console.log('  ✓ client listing logs structured context when repository access fails');
   } finally {
     console.error = originalConsoleError;
