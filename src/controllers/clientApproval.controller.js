@@ -8,6 +8,19 @@ const CaseStatus = require('../domain/case/caseStatus');
 const CaseService = require('../services/case.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 
+const normalizeClientList = (clients) => (Array.isArray(clients) ? clients : []);
+
+const buildClientListResponse = (clients = [], total = 0) => {
+  const normalizedClients = normalizeClientList(clients);
+
+  return {
+    success: true,
+    data: normalizedClients,
+    clients: normalizedClients,
+    total,
+  };
+};
+
 /**
  * Client Approval Controller
  * 
@@ -591,9 +604,7 @@ const listClients = async (req, res) => {
     const total = await Client.countDocuments(query);
     
     res.status(200).json({
-      success: true,
-      data: clients,
-      count: clients.length,
+      ...buildClientListResponse(clients, total),
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -602,6 +613,13 @@ const listClients = async (req, res) => {
       },
     });
   } catch (error) {
+    console.error('CLIENT_LIST_ERROR', {
+      firmId: req.user?.firmId || null,
+      requestId: req.requestId || req.headers?.['x-request-id'] || null,
+      userId: req.user?._id || req.user?.id || null,
+      route: req.originalUrl || req.url || null,
+      error: error.message,
+    });
     res.status(500).json({
       success: false,
       message: 'Error fetching clients',

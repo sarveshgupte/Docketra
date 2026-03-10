@@ -142,6 +142,27 @@ async function testAuditNotWrittenOnRollback() {
   sideEffects.enqueueAfterCommit = originalEnqueue;
 }
 
+async function testDefaultClientCannotBeSoftDeleted() {
+  const { softDelete } = reloadSoftDelete();
+  const doc = {
+    isDefaultClient: true,
+    save: async function save() { return this; },
+  };
+  const model = {
+    modelName: 'Client',
+    findOne: () => ({
+      session() { return this; },
+      includeDeleted() { return this; },
+      async exec() { return doc; },
+    }),
+  };
+
+  await assert.rejects(
+    () => softDelete({ model, filter: {}, req: { user: { xID: 'X999999' } }, reason: 'blocked' }),
+    /Default client cannot be deleted\./
+  );
+}
+
 async function testManualDeletedAtGuard() {
   const { applyDefaultDeletedFilter } = plugin._test;
   assert.throws(
@@ -180,6 +201,7 @@ async function run() {
   await testRestore();
   await testUserDeleteRestorePreservesAuthState();
   await testAuditNotWrittenOnRollback();
+  await testDefaultClientCannotBeSoftDeleted();
   await testManualDeletedAtGuard();
   testCountDocumentsHookFallback();
   console.log('Soft delete service tests passed.');
