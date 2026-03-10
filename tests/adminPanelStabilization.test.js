@@ -85,6 +85,7 @@ async function testClientReadsUseRepositoryAndReturnPlaintext() {
   assert.strictEqual(res.statusCode, 200);
   assert.strictEqual(repositoryCalled, true, 'client controller should read via ClientRepository');
   assert.strictEqual(directFindUsed, false, 'client controller should not call Client.find directly');
+  assert.strictEqual(res.body.clients.length, 1, 'client aliases should mirror the repository result length');
   assert.strictEqual(res.body.data[0].businessEmail, 'ops@acme.test');
   assert.strictEqual(typeof res.body.data[0].primaryContactNumber, 'string');
   assert.strictEqual(typeof res.body.data[0].businessEmail, 'string');

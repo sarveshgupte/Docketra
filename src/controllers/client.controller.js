@@ -485,10 +485,10 @@ const toggleClientStatus = async (req, res) => {
       // Log the attempt for audit
       console.warn(`[CLIENT_PROTECTION] Attempt to deactivate protected client ${clientId} by user ${req.user?.xID}`);
       
-        return res.status(403).json({
-          success: false,
-          message: 'Default client cannot be deactivated.',
-        });
+      return res.status(403).json({
+        success: false,
+        message: 'Default client cannot be deactivated.',
+      });
     }
     
     // Update both legacy and new status fields
