@@ -18,6 +18,10 @@ const MUST_SET_ALLOWED_PATHS = [
   '/api/auth/reset-password-with-token',
 ];
 
+const resolveFirmNameForGuard = (req) => (
+  req.user?.firmName || req.firmName || req.firm?.name || null
+);
+
 const ensureTenantDefaultClient = async (req) => {
   if (!req.user?.firmId || req.isSuperAdmin === true) {
     return;
@@ -26,7 +30,7 @@ const ensureTenantDefaultClient = async (req) => {
   try {
     req.defaultClient = await ensureDefaultClient(
       req.user.firmId,
-      req.user?.firmName || req.firmName || req.firm?.name || null
+      resolveFirmNameForGuard(req)
     );
   } catch (error) {
     console.error('DEFAULT_CLIENT_GUARD_ERROR', {
