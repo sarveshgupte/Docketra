@@ -37,13 +37,37 @@ const getClientAccessContext = (req, res, message) => {
   };
 };
 
-const buildClientListResponse = (clients = []) => ({
-  success: true,
-  data: clients,
-  count: clients.length,
-  clients,
-  total: clients.length,
+const normalizeClientList = (clients) => (Array.isArray(clients) ? clients : []);
+
+const buildClientListResponse = (clients = []) => {
+  const normalizedClients = normalizeClientList(clients);
+
+  return {
+    success: true,
+    data: normalizedClients,
+    clients: normalizedClients,
+    total: normalizedClients.length,
+  };
+};
+
+const buildClientLogContext = (req, extra = {}) => ({
+  firmId: req.user?.firmId || req.firmId || null,
+  requestId: req.requestId || req.headers?.['x-request-id'] || null,
+  userId: req.user?._id || req.user?.id || null,
+  route: req.originalUrl || req.url || null,
+  ...extra,
 });
+
+const logClientError = (event, req, error, extra = {}) => {
+  console.error(event, buildClientLogContext(req, {
+    ...extra,
+    error: error.message,
+  }));
+};
+
+const logClientWarn = (event, req, extra = {}) => {
+  console.warn(event, buildClientLogContext(req, extra));
+};
 
 /**
  * Client Controller for Direct Client Management
@@ -85,13 +109,11 @@ const getClients = async (req, res) => {
       }
     );
     
-    return res.json(buildClientListResponse((clients || []).map(mapClientResponse)));
+    return res.json(buildClientListResponse(normalizeClientList(clients).map(mapClientResponse)));
   } catch (error) {
-    console.error('CLIENT_LIST_ERROR', {
+    logClientError('CLIENT_LIST_ERROR', req, error, {
       firmId: accessContext.firmId,
-      requestId: req.requestId || req.headers?.['x-request-id'] || null,
       query: req.query || {},
-      error: error.message,
     });
     return res.status(500).json({
       success: false,
@@ -124,6 +146,9 @@ const getClientById = async (req, res) => {
       data: mapClientResponse(client),
     });
   } catch (error) {
+    logClientError('CLIENT_GET_ERROR', req, error, {
+      clientId: req.params?.clientId || null,
+    });
     res.status(500).json({
       success: false,
       message: 'Error fetching client',
@@ -310,13 +335,9 @@ const createClient = async (req, res) => {
       message: 'Client created successfully',
     });
   } catch (error) {
-    // Enhanced error logging for debugging
-    // NOTE: In production, consider using structured logging with appropriate log levels
-    console.error('❌ Client creation failed');
-    console.error('Error message:', error.message);
-    if (error.errors) {
-      console.error('Validation errors:', error.errors);
-    }
+    logClientError('CLIENT_CREATE_ERROR', req, error, {
+      validationErrors: error.errors || null,
+    });
     
     res.status(400).json({
       success: false,
@@ -438,6 +459,9 @@ const updateClient = async (req, res) => {
       message: 'Client updated successfully',
     });
   } catch (error) {
+    logClientError('CLIENT_UPDATE_ERROR', req, error, {
+      clientId: req.params?.clientId || null,
+    });
     res.status(400).json({
       success: false,
       message: 'Error updating client',
@@ -482,8 +506,11 @@ const toggleClientStatus = async (req, res) => {
     const isProtectedClient = client.isDefaultClient === true || client.isSystemClient === true;
     
     if (isProtectedClient && !isActive) {
-      // Log the attempt for audit
-      console.warn(`[CLIENT_PROTECTION] Attempt to deactivate protected client ${clientId} by user ${req.user?.xID}`);
+      logClientWarn('CLIENT_PROTECTION', req, {
+        clientId,
+        isActive,
+        message: 'Attempt to deactivate protected client',
+      });
       
       return res.status(403).json({
         success: false,
@@ -504,6 +531,10 @@ const toggleClientStatus = async (req, res) => {
       message: `Client ${isActive ? 'activated' : 'deactivated'} successfully`,
     });
   } catch (error) {
+    logClientError('CLIENT_STATUS_UPDATE_ERROR', req, error, {
+      clientId: req.params?.clientId || null,
+      requestedIsActive: req.body?.isActive,
+    });
     res.status(400).json({
       success: false,
       message: 'Error updating client status',

@@ -245,7 +245,8 @@ async function testClientListingLogsStructuredFailures() {
     await getClients({
       query: { activeOnly: 'true' },
       requestId: 'req-123',
-      user: { firmId: 'firm-1', role: 'Admin' },
+      originalUrl: '/api/clients?activeOnly=true',
+      user: { _id: 'user-1', firmId: 'firm-1', role: 'Admin' },
     }, res);
 
     assert.strictEqual(res.statusCode, 500);
@@ -253,6 +254,8 @@ async function testClientListingLogsStructuredFailures() {
     assert.deepStrictEqual(logged[0][1], {
       firmId: 'firm-1',
       requestId: 'req-123',
+      userId: 'user-1',
+      route: '/api/clients?activeOnly=true',
       query: { activeOnly: 'true' },
       error: 'repository exploded',
     });
