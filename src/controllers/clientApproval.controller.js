@@ -599,8 +599,8 @@ const listClients = async (req, res) => {
       .select('clientId businessName status isActive') // Select only necessary fields
       .limit(parseInt(limit))
       .skip((parseInt(page) - 1) * parseInt(limit))
-      .sort({ clientId: 1 })
-      .lean(); // Sort by clientId ascending for predictable ordering
+      .sort({ clientId: 1 }) // Sort by clientId ascending for predictable ordering
+      .lean();
     
     const total = await Client.countDocuments(query);
     const normalizedClients = normalizeClientList(clients);

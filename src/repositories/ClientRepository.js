@@ -58,7 +58,7 @@ function _guardSuperadmin(role) {
  * @param {string} firmId
  * @returns {Promise<Object|null>}
  */
-async function _decryptClientDoc(doc, firmId, logContext = {}) {
+async function _decryptClientDoc(doc, firmId, { logContext } = {}) {
   if (!doc || !process.env.MASTER_ENCRYPTION_KEY || !firmId) return doc;
   const tenantId = String(firmId);
   for (const field of CLIENT_ENCRYPTED_FIELDS) {
@@ -83,7 +83,7 @@ async function _decryptClientDoc(doc, firmId, logContext = {}) {
  * @param {string} firmId
  * @returns {Promise<Array>}
  */
-async function _decryptClientDocs(docs, firmId, logContext = {}) {
+async function _decryptClientDocs(docs, firmId, { logContext } = {}) {
   if (!docs || !docs.length || !process.env.MASTER_ENCRYPTION_KEY || !firmId) return docs;
   const tenantId = String(firmId);
   await Promise.all(docs.map(async (doc) => {
@@ -136,7 +136,7 @@ const ClientRepository = {
     }
     _guardSuperadmin(role);
     const doc = await applyQueryOptions(Client.findOne({ firmId, clientId }), options);
-    return _decryptClientDoc(doc, firmId, options.logContext);
+    return _decryptClientDoc(doc, firmId, options);
   },
 
   /**
@@ -153,7 +153,7 @@ const ClientRepository = {
     }
     _guardSuperadmin(role);
     const doc = await applyQueryOptions(Client.findOne({ firmId, _id }), options);
-    return _decryptClientDoc(doc, firmId, options.logContext);
+    return _decryptClientDoc(doc, firmId, options);
   },
 
   /**
@@ -167,7 +167,7 @@ const ClientRepository = {
     assertTenantId(firmId);
     _guardSuperadmin(role);
     const docs = await applyQueryOptions(Client.find({ firmId, ...query }), options);
-    return _decryptClientDocs(docs, firmId, options.logContext);
+    return _decryptClientDocs(docs, firmId, options);
   },
 
   /**
@@ -181,7 +181,7 @@ const ClientRepository = {
     assertTenantId(firmId);
     _guardSuperadmin(role);
     const doc = await applyQueryOptions(Client.findOne({ firmId, ...query }), options);
-    return _decryptClientDoc(doc, firmId, options.logContext);
+    return _decryptClientDoc(doc, firmId, options);
   },
 
   /**
