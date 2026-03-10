@@ -125,6 +125,12 @@ const softDelete = async ({ model, filter, req, reason }) => {
   const doc = await query.exec();
   if (!doc) return null;
 
+  if (model.modelName === 'Client' && doc.isDefaultClient) {
+    const err = new Error('Default client cannot be deleted.');
+    err.statusCode = 400;
+    throw err;
+  }
+
   // User deletes disable login rather than removing data
   if (model.modelName === 'User') {
     if (!doc.deletedAuthSnapshot) {

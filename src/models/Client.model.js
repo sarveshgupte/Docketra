@@ -578,6 +578,14 @@ clientSchema.pre('save', async function() {
  */
 clientSchema.pre('save', async function() {
   // Only validate if isSystemClient is true - ensure only one default/system client per org
+  if (this.isSystemClient === true) {
+    if (this.isDefaultClient !== true) {
+      const error = new Error('System clients must also be the default client for their firm');
+      error.name = 'ValidationError';
+      throw error;
+    }
+  }
+
   if (this.isSystemClient === true && this.isNew && this.firmId) {
     try {
       // Prevent creating a second system client for the same organization
