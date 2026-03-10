@@ -506,6 +506,7 @@ async function testCreateFirmAndAdminTracksVerificationAndConsent() {
   assert.strictEqual(captured.users.length, 2, 'expected two created admin users');
   assert.strictEqual(captured.clients.length, 2, 'expected one default client per created firm');
   assert.strictEqual(captured.clients[0].businessName, 'Acme Legal', 'default client should use the firm name');
+  assert.strictEqual(captured.clients[0].isDefaultClient, true, 'default client should be explicitly marked as the firm default');
   assert.strictEqual(captured.clients[0].isInternal, true, 'default client should be marked internal');
   assert.strictEqual(captured.clients[0].isSystemClient, true, 'default client should be marked as system-managed');
   assert.strictEqual(captured.clients[0].createdBySystem, true, 'default client should be auto-created by the system');
