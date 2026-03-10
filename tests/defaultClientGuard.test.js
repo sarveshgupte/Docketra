@@ -54,6 +54,8 @@ async function testEnsureDefaultClientCreatesAndLogsMissingClient() {
   console.warn = (...args) => warnings.push(args);
 
   try {
+    const expectedBusinessEmail = `firm2-${Buffer.from('firm-2').toString('hex')}@system.local`;
+
     Module._load = function(request, parent, isMain) {
       if (request === '../models/Client.model') {
         return {
@@ -87,7 +89,7 @@ async function testEnsureDefaultClientCreatesAndLogsMissingClient() {
       businessName: 'Beta Legal',
       businessAddress: 'Default Address',
       primaryContactNumber: '0000000000',
-      businessEmail: 'firm2@system.local',
+      businessEmail: expectedBusinessEmail,
       isDefaultClient: true,
       isSystemClient: true,
       isInternal: true,

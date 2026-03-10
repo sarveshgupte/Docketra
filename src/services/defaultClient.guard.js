@@ -1,9 +1,24 @@
 const Client = require('../models/Client.model');
 const { generateNextClientId } = require('./clientIdGenerator');
 
-const buildSystemEmail = (firmId) => (
-  `${String(firmId).toLowerCase().replace(/[^a-z0-9]/g, '')}@system.local`
-);
+/**
+ * Build a non-routable internal email address for system-created default clients.
+ * The tenant identifier is reduced to lowercase alphanumeric characters so the
+ * generated address is stable and email-safe even when firm IDs contain symbols.
+ * The `.local` domain keeps the address clearly internal to the application and
+ * avoids implying that outbound delivery should ever be attempted.
+ */
+const buildSystemEmail = (firmId) => {
+  const normalizedFirmId = String(firmId).toLowerCase();
+  const safeLocalPart = normalizedFirmId.replace(/[^a-z0-9]/g, '');
+
+  if (safeLocalPart === normalizedFirmId) {
+    return `${safeLocalPart}@system.local`;
+  }
+
+  const hexEncodedFirmId = Buffer.from(normalizedFirmId).toString('hex');
+  return `${safeLocalPart || 'firm'}-${hexEncodedFirmId}@system.local`;
+};
 
 const findDefaultClient = (firmId) => Client.findOne({
   firmId,
@@ -40,7 +55,7 @@ const ensureDefaultClient = async (firmId, firmName = null) => {
     });
 
     console.warn('[DEFAULT_CLIENT_GUARD] Auto-created missing default client', {
-      firmId: String(firmId),
+      firmId,
       clientId: defaultClient.clientId,
       businessName: defaultClient.businessName,
     });

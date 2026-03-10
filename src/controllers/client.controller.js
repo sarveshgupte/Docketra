@@ -62,6 +62,7 @@ const logClientError = (event, req, error, extra = {}) => {
   console.error(event, buildClientLogContext(req, {
     ...extra,
     error: error.message,
+    ...(error.stack ? { stack: error.stack } : {}),
   }));
 };
 
@@ -106,13 +107,13 @@ const getClients = async (req, res) => {
       {
         select: 'clientId businessName businessEmail primaryContactNumber status isSystemClient isInternal isDefaultClient createdAt',
         sort: { clientId: 1 },
-      }
+        }
     );
-    
-    return res.json(buildClientListResponse(normalizeClientList(clients).map(mapClientResponse)));
+
+    const normalizedClients = normalizeClientList(clients).map(mapClientResponse);
+    return res.json(buildClientListResponse(normalizedClients));
   } catch (error) {
     logClientError('CLIENT_LIST_ERROR', req, error, {
-      firmId: accessContext.firmId,
       query: req.query || {},
     });
     return res.status(500).json({
