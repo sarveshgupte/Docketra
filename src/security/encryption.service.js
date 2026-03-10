@@ -7,7 +7,7 @@
  *  3. Enforce security guards:
  *     - superadmin cannot decrypt tenant data.
  *     - Missing tenant key fails fast (explicit bootstrap requirement).
- *     - Decryption failures surface as errors (fail-secure).
+ *     - Decryption failures are logged and return null (fail-soft).
  *
  * Provider selection:
  *   ENCRYPTION_PROVIDER=local  →  LocalEncryptionProvider  (default)
@@ -95,7 +95,7 @@ async function encrypt(value, tenantId, { session } = {}) {
  *  - Falls back to returning the original value if it does not match the
  *    encrypted payload format (temporary compatibility mode for existing
  *    plaintext records — see TODO below).
- *  - Re-throws all other decryption errors (fail-secure).
+ *  - Logs and returns null for decryption failures (fail-soft).
  *
  * TODO: Write migration script to encrypt existing plaintext fields.
  *       Once all records are encrypted, remove the plaintext fallback below.
@@ -103,10 +103,10 @@ async function encrypt(value, tenantId, { session } = {}) {
  * @param {string} value    - Ciphertext (iv:authTag:ciphertext) or plaintext (legacy)
  * @param {string} tenantId - Tenant (firm) identifier
  * @param {string} [role]   - Caller's role (from req.user.role)
- * @param {{ session?: import('mongoose').ClientSession }} [options]
- * @returns {Promise<string>}
+ * @param {{ session?: import('mongoose').ClientSession, logContext?: { field?: string, route?: string, model?: string } }} [options]
+ * @returns {Promise<string|null|undefined>}
  */
-async function decrypt(value, tenantId, role, { session } = {}) {
+async function decrypt(value, tenantId, role, { session, logContext } = {}) {
   if (value == null) return value;
 
   // Guard: superadmin must not access tenant-encrypted data.
@@ -118,21 +118,28 @@ async function decrypt(value, tenantId, role, { session } = {}) {
     }
   }
 
-  if (!tenantId) {
-    throw new Error('tenantId is required for decryption');
-  }
-
-  // Detect plaintext (legacy) records — they lack the iv:authTag:ciphertext format.
-  // Return as-is to preserve backward compatibility until migration is complete.
-  if (!looksEncrypted(value)) {
-    return value;
-  }
-
   try {
+    if (!tenantId) {
+      throw new Error('tenantId is required for decryption');
+    }
+
+    // Detect plaintext (legacy) records — they lack the iv:authTag:ciphertext format.
+    // Return as-is to preserve backward compatibility until migration is complete.
+    if (!looksEncrypted(value)) {
+      return value;
+    }
+
     return await getProvider().decrypt(value, tenantId, { session });
   } catch (err) {
-    // Re-throw — never silently swallow decryption failures for encrypted data
-    throw new Error(`Decryption failed for tenant ${tenantId}: ${err.message}`);
+    console.error('TENANT_DECRYPTION_FAILED', {
+      timestamp: new Date().toISOString(),
+      tenantId,
+      field: logContext?.field || null,
+      route: logContext?.route || null,
+      model: logContext?.model || null,
+      error: err.message,
+    });
+    return null;
   }
 }
 

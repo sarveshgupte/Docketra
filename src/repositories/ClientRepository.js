@@ -58,12 +58,18 @@ function _guardSuperadmin(role) {
  * @param {string} firmId
  * @returns {Promise<Object|null>}
  */
-async function _decryptClientDoc(doc, firmId) {
+async function _decryptClientDoc(doc, firmId, { logContext } = {}) {
   if (!doc || !process.env.MASTER_ENCRYPTION_KEY || !firmId) return doc;
   const tenantId = String(firmId);
   for (const field of CLIENT_ENCRYPTED_FIELDS) {
     if (doc[field] != null && looksEncrypted(doc[field])) {
-      doc[field] = await decrypt(doc[field], tenantId);
+      doc[field] = await decrypt(doc[field], tenantId, undefined, {
+        logContext: {
+          ...logContext,
+          field,
+          model: 'Client',
+        },
+      });
     }
   }
   return doc;
@@ -77,14 +83,20 @@ async function _decryptClientDoc(doc, firmId) {
  * @param {string} firmId
  * @returns {Promise<Array>}
  */
-async function _decryptClientDocs(docs, firmId) {
+async function _decryptClientDocs(docs, firmId, { logContext } = {}) {
   if (!docs || !docs.length || !process.env.MASTER_ENCRYPTION_KEY || !firmId) return docs;
   const tenantId = String(firmId);
   await Promise.all(docs.map(async (doc) => {
     if (!doc) return;
     for (const field of CLIENT_ENCRYPTED_FIELDS) {
       if (doc[field] != null && looksEncrypted(doc[field])) {
-        doc[field] = await decrypt(doc[field], tenantId);
+        doc[field] = await decrypt(doc[field], tenantId, undefined, {
+          logContext: {
+            ...logContext,
+            field,
+            model: 'Client',
+          },
+        });
       }
     }
   }));
@@ -124,7 +136,7 @@ const ClientRepository = {
     }
     _guardSuperadmin(role);
     const doc = await applyQueryOptions(Client.findOne({ firmId, clientId }), options);
-    return _decryptClientDoc(doc, firmId);
+    return _decryptClientDoc(doc, firmId, options);
   },
 
   /**
@@ -141,7 +153,7 @@ const ClientRepository = {
     }
     _guardSuperadmin(role);
     const doc = await applyQueryOptions(Client.findOne({ firmId, _id }), options);
-    return _decryptClientDoc(doc, firmId);
+    return _decryptClientDoc(doc, firmId, options);
   },
 
   /**
@@ -155,7 +167,7 @@ const ClientRepository = {
     assertTenantId(firmId);
     _guardSuperadmin(role);
     const docs = await applyQueryOptions(Client.find({ firmId, ...query }), options);
-    return _decryptClientDocs(docs, firmId);
+    return _decryptClientDocs(docs, firmId, options);
   },
 
   /**
@@ -169,7 +181,7 @@ const ClientRepository = {
     assertTenantId(firmId);
     _guardSuperadmin(role);
     const doc = await applyQueryOptions(Client.findOne({ firmId, ...query }), options);
-    return _decryptClientDoc(doc, firmId);
+    return _decryptClientDoc(doc, firmId, options);
   },
 
   /**
