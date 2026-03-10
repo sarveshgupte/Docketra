@@ -583,6 +583,7 @@ const createFirmAndAdmin = async ({
     primaryContactNumber: DEFAULT_CONTACT_NUMBER,
     businessEmail: `${firmId.toLowerCase()}@${SYSTEM_EMAIL_DOMAIN}`,
     firmId: firm._id,
+    isDefaultClient: true,
     isSystemClient: true,
     isInternal: true,
     createdBySystem: true,

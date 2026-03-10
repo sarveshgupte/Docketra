@@ -3,7 +3,6 @@ const Case = require('../models/Case.model');
 const ClientRepository = require('../repositories/ClientRepository');
 const { mapClientResponse } = require('../mappers/client.mapper');
 const { generateNextClientId } = require('../services/clientIdGenerator');
-const { CLIENT_STATUS } = require('../config/constants');
 const { 
   logFactSheetCreated, 
   logFactSheetUpdated, 
@@ -21,38 +20,6 @@ const { incrementTenantMetric } = require('../services/tenantMetrics.service');
 const path = require('path');
 const fs = require('fs');
 const { parseBooleanQuery } = require('../utils/query.utils');
-const Client = require('../models/Client.model');
-
-/**
- * Ensure at least one default client exists for the given organization.
- * If none exists, auto-creates a default client using the account name supplied.
- *
- * @param {string|ObjectId} firmId - Tenant scope
- * @param {string} [accountName]   - Friendly name for the default client
- * @returns {Promise<void>}
- */
-async function ensureDefaultClientExists(firmId, accountName) {
-  const existing = await Client.findOne({ firmId }).select('_id').lean();
-  if (existing) return; // at least one client exists
-
-  const clientId = await generateNextClientId(firmId);
-  const name = accountName || 'Default Organization';
-  await Client.create({
-    clientId,
-    firmId,
-    businessName: name,
-    businessAddress: 'Default Address',
-    primaryContactNumber: '0000000000',
-    businessEmail: `${String(firmId).toLowerCase().replace(/[^a-z0-9]/g, '')}@system.local`,
-    isDefaultClient: true,
-    isSystemClient: true,
-    isInternal: true,
-    createdBySystem: true,
-    createdByXid: 'SYSTEM',
-    status: 'ACTIVE',
-    isActive: true,
-  });
-}
 
 const getClientAccessContext = (req, res, message) => {
   const firmId = req.user?.firmId;
@@ -69,6 +36,14 @@ const getClientAccessContext = (req, res, message) => {
     role: req.user?.role,
   };
 };
+
+const buildClientListResponse = (clients = []) => ({
+  success: true,
+  data: clients,
+  count: clients.length,
+  clients,
+  total: clients.length,
+});
 
 /**
  * Client Controller for Direct Client Management
@@ -88,51 +63,17 @@ const getClientAccessContext = (req, res, message) => {
  * Query param: forCreateCase=true to get clients for case creation (always includes Default Client)
  */
 const getClients = async (req, res) => {
+  const accessContext = getClientAccessContext(req, res, 'User must belong to a firm to access clients');
+  if (!accessContext) return;
+
   try {
     const { activeOnly, forCreateCase } = req.query;
-    const accessContext = getClientAccessContext(req, res, 'User must belong to a firm to access clients');
-    if (!accessContext) return;
     const shouldFilterActiveOnly = parseBooleanQuery(activeOnly);
     const shouldLoadForCreateCase = parseBooleanQuery(forCreateCase);
 
-    const clientExists = await Client.exists({ firmId: accessContext.firmId });
-    if (!clientExists) {
-      // Auto-create default client if the organization has no clients yet
-      await ensureDefaultClientExists(accessContext.firmId, req.user?.name).catch((err) => {
-        console.warn('[CLIENT_CTRL] Could not auto-create default client:', err.message);
-      });
-    }
-    
-    // Special logic for Create Case: Always include Default Client + other active clients
-    if (shouldLoadForCreateCase) {
-      const clients = await ClientRepository.find(
-        accessContext.firmId,
-        {
-          $or: [
-            { isDefaultClient: true },
-            { clientId: 'C000001' },
-            { status: CLIENT_STATUS.ACTIVE },
-          ],
-        },
-        accessContext.role,
-        {
-          select: 'clientId businessName businessEmail primaryContactNumber status isSystemClient isInternal isDefaultClient createdAt',
-          sort: { clientId: 1 },
-        }
-      );
-      
-      return res.json({
-        success: true,
-        data: (clients || []).map(mapClientResponse),
-        count: (clients || []).length,
-      });
-    }
-    
-    // Filter based on activeOnly query parameter
-    // Use canonical status field (ACTIVE/INACTIVE) instead of deprecated isActive
-    const filter = { 
-      ...(shouldFilterActiveOnly ? { status: CLIENT_STATUS.ACTIVE } : {})
-    };
+    const filter = shouldLoadForCreateCase || shouldFilterActiveOnly
+      ? { isActive: true }
+      : {};
     
     const clients = await ClientRepository.find(
       accessContext.firmId,
@@ -144,13 +85,15 @@ const getClients = async (req, res) => {
       }
     );
     
-    res.json({
-      success: true,
-      data: (clients || []).map(mapClientResponse),
-      count: (clients || []).length,
-    });
+    return res.json(buildClientListResponse((clients || []).map(mapClientResponse)));
   } catch (error) {
-    res.status(500).json({
+    console.error('CLIENT_LIST_ERROR', {
+      firmId: accessContext.firmId,
+      requestId: req.requestId || req.headers?.['x-request-id'] || null,
+      query: req.query || {},
+      error: error.message,
+    });
+    return res.status(500).json({
       success: false,
       message: 'Error fetching clients',
       error: error.message,
@@ -536,11 +479,7 @@ const toggleClientStatus = async (req, res) => {
     
     // PROTECTION: Prevent deactivation of system/internal/default clients
     // Check multiple flags to ensure the organization's root client is protected
-    const isProtectedClient = 
-      client.isSystemClient === true || 
-      client.isInternal === true ||
-      client.isDefaultClient === true ||
-      clientId === 'C000001';
+    const isProtectedClient = client.isDefaultClient === true || client.isSystemClient === true;
     
     if (isProtectedClient && !isActive) {
       // Log the attempt for audit
@@ -548,7 +487,7 @@ const toggleClientStatus = async (req, res) => {
       
       return res.status(403).json({
         success: false,
-        message: 'Cannot deactivate the default internal client. This is a protected system entity.',
+        message: 'Default client cannot be deactivated.',
       });
     }
     
