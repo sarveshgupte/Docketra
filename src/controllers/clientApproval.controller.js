@@ -602,9 +602,13 @@ const listClients = async (req, res) => {
       .sort({ clientId: 1 }); // Sort by clientId ascending for predictable ordering
     
     const total = await Client.countDocuments(query);
+    const normalizedClients = normalizeClientList(clients);
     
     res.status(200).json({
-      ...buildClientListResponse(clients, total),
+      success: true,
+      data: normalizedClients,
+      clients: normalizedClients,
+      total,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -623,7 +627,6 @@ const listClients = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching clients',
-      error: error.message,
     });
   }
 };
