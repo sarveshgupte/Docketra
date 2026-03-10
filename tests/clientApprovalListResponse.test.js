@@ -28,14 +28,28 @@ const createRes = () => ({
 });
 
 async function testAdminClientListResponseContract() {
+  let selectedFields = null;
+
   Module._load = function(request, parent, isMain) {
     if (request === '../models/Client.model') {
       return {
         find: () => ({
-          select() { return this; },
+          select(fields) {
+            selectedFields = fields;
+            return this;
+          },
           limit() { return this; },
           skip() { return this; },
-          sort: async () => ([{ clientId: 'C000001', businessName: 'Acme Legal', status: 'ACTIVE', isActive: true }]),
+          sort() { return this; },
+          lean: async () => ([{
+            clientId: 'C000001',
+            businessName: 'Acme Legal',
+            businessEmail: 'ops@acme.test',
+            primaryContactNumber: '9999999999',
+            status: 'ACTIVE',
+            isActive: true,
+            createdAt: '2026-03-10T00:00:00.000Z',
+          }]),
         }),
         countDocuments: async () => 1,
       };
@@ -76,7 +90,16 @@ async function testAdminClientListResponseContract() {
   }, res);
 
   assert.strictEqual(res.statusCode, 200);
-  assert.deepStrictEqual(res.body.data, [{ clientId: 'C000001', businessName: 'Acme Legal', status: 'ACTIVE', isActive: true }]);
+  assert.strictEqual(selectedFields, 'clientId businessName businessEmail primaryContactNumber status isActive createdAt');
+  assert.deepStrictEqual(res.body.data, [{
+    clientId: 'C000001',
+    businessName: 'Acme Legal',
+    businessEmail: 'ops@acme.test',
+    primaryContactNumber: '9999999999',
+    status: 'ACTIVE',
+    isActive: true,
+    createdAt: '2026-03-10T00:00:00.000Z',
+  }]);
   assert.deepStrictEqual(res.body.clients, res.body.data);
   assert.strictEqual(res.body.total, 1);
   assert.deepStrictEqual(res.body.pagination, {
@@ -96,7 +119,8 @@ async function testAdminClientListNormalizesUnexpectedResults() {
           select() { return this; },
           limit() { return this; },
           skip() { return this; },
-          sort: async () => null,
+          sort() { return this; },
+          lean: async () => null,
         }),
         countDocuments: async () => 0,
       };
@@ -156,7 +180,8 @@ async function testAdminClientListLogsStructuredFailures() {
             select() { return this; },
             limit() { return this; },
             skip() { return this; },
-            sort: async () => {
+            sort() { return this; },
+            lean: async () => {
               throw new Error('list failed');
             },
           }),
