@@ -63,12 +63,18 @@ function _guardSuperadmin(role) {
  * @param {string} firmId
  * @returns {Promise<Object|null>}
  */
-async function _decryptCaseDoc(doc, firmId) {
+async function _decryptCaseDoc(doc, firmId, { logContext } = {}) {
   if (!doc || !process.env.MASTER_ENCRYPTION_KEY || !firmId) return doc;
   const tenantId = String(firmId);
   for (const field of CASE_ENCRYPTED_FIELDS) {
     if (doc[field] != null && looksEncrypted(doc[field])) {
-      doc[field] = await decrypt(doc[field], tenantId);
+      doc[field] = await decrypt(doc[field], tenantId, undefined, {
+        logContext: {
+          ...logContext,
+          field,
+          model: 'Case',
+        },
+      });
     }
   }
   return doc;
@@ -82,14 +88,20 @@ async function _decryptCaseDoc(doc, firmId) {
  * @param {string} firmId
  * @returns {Promise<Array>}
  */
-async function _decryptCaseDocs(docs, firmId) {
+async function _decryptCaseDocs(docs, firmId, { logContext } = {}) {
   if (!docs || !docs.length || !process.env.MASTER_ENCRYPTION_KEY || !firmId) return docs;
   const tenantId = String(firmId);
   await Promise.all(docs.map(async (doc) => {
     if (!doc) return;
     for (const field of CASE_ENCRYPTED_FIELDS) {
       if (doc[field] != null && looksEncrypted(doc[field])) {
-        doc[field] = await decrypt(doc[field], tenantId);
+        doc[field] = await decrypt(doc[field], tenantId, undefined, {
+          logContext: {
+            ...logContext,
+            field,
+            model: 'Case',
+          },
+        });
       }
     }
   }));
