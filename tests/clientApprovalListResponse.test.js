@@ -27,7 +27,7 @@ const createRes = () => ({
   },
 });
 
-async function testClientApprovalListResponseContract() {
+async function testAdminClientListResponseContract() {
   Module._load = function(request, parent, isMain) {
     if (request === '../models/Client.model') {
       return {
@@ -85,10 +85,10 @@ async function testClientApprovalListResponseContract() {
     total: 1,
     pages: 1,
   });
-  console.log('  ✓ client approval list returns the stable client response contract');
+  console.log('  ✓ admin client list returns the stable client response contract');
 }
 
-async function testClientApprovalListNormalizesUnexpectedResults() {
+async function testAdminClientListNormalizesUnexpectedResults() {
   Module._load = function(request, parent, isMain) {
     if (request === '../models/Client.model') {
       return {
@@ -140,10 +140,10 @@ async function testClientApprovalListNormalizesUnexpectedResults() {
   assert.deepStrictEqual(res.body.data, []);
   assert.deepStrictEqual(res.body.clients, []);
   assert.strictEqual(res.body.total, 0);
-  console.log('  ✓ client approval list normalizes unexpected query results to empty arrays');
+  console.log('  ✓ admin client list normalizes unexpected query results to empty arrays');
 }
 
-async function testClientApprovalListLogsStructuredFailures() {
+async function testAdminClientListLogsStructuredFailures() {
   const originalError = console.error;
   const logged = [];
   console.error = (...args) => logged.push(args);
@@ -212,7 +212,7 @@ async function testClientApprovalListLogsStructuredFailures() {
       success: false,
       message: 'Error fetching clients',
     });
-    console.log('  ✓ client approval list logs structured failures');
+    console.log('  ✓ admin client list logs structured failures');
   } finally {
     console.error = originalError;
   }
@@ -220,10 +220,10 @@ async function testClientApprovalListLogsStructuredFailures() {
 
 async function run() {
   try {
-    await testClientApprovalListResponseContract();
-    await testClientApprovalListNormalizesUnexpectedResults();
-    await testClientApprovalListLogsStructuredFailures();
-    console.log('Client approval list response tests passed.');
+    await testAdminClientListResponseContract();
+    await testAdminClientListNormalizesUnexpectedResults();
+    await testAdminClientListLogsStructuredFailures();
+    console.log('Admin client list response tests passed.');
   } finally {
     Module._load = originalLoad;
   }
