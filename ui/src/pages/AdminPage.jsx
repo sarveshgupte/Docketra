@@ -217,6 +217,12 @@ export const AdminPage = () => {
     }
   };
 
+  const fetchClients = async () => {
+    const response = await adminService.listClients({ activeOnly: false });
+    setClients(response?.success ? (response.data || []) : []);
+    return response;
+  };
+
   const loadStorageConfig = async () => {
     try {
       const response = await adminService.getStorageConfig();
@@ -255,8 +261,7 @@ export const AdminPage = () => {
         const response = await categoryService.getAdminCategories(false); // Get all categories including inactive
         setCategories(response?.success ? (response.data || []) : []);
       } else if (activeTab === 'clients') {
-        const response = await adminService.listClients({ activeOnly: false });
-        setClients(response?.success ? (response.data || []) : []);
+        await fetchClients();
       } else if (activeTab === 'storage') {
         if (!storageLoaded) {
           await loadStorageConfig();
@@ -433,7 +438,7 @@ export const AdminPage = () => {
       
       if (response.success) {
         showToast('Account unlocked successfully', 'success');
-        loadAdminData();
+        await loadAdminData();
       } else {
         showToast(response.message || 'Failed to unlock account', 'error');
       }
@@ -621,9 +626,7 @@ export const AdminPage = () => {
       
       if (response.success) {
         showToast(`Client created successfully! Client ID: ${response.data?.clientId}`, 'success');
-        if (response.data) {
-          setClients((prev) => [...prev, response.data].sort((a, b) => String(a.clientId).localeCompare(String(b.clientId))));
-        }
+        await fetchClients();
         setShowClientModal(false);
         setClientForm({
           businessName: '',

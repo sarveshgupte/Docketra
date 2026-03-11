@@ -1331,6 +1331,17 @@ const getCaseByCaseId = async (req, res) => {
  */
 const getCases = async (req, res) => {
   try {
+    if (typeof res.set === 'function') {
+      res.set({
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        Pragma: 'no-cache',
+        Expires: '0',
+      });
+    } else if (typeof res.setHeader === 'function') {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
     const {
       status,
       category,
