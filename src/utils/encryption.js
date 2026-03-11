@@ -17,7 +17,7 @@ function resolveKeyMaterial() {
 }
 
 function isEncrypted(value) {
-  return typeof value === 'string' && value.includes(':');
+  return hasEncryptedPrefix(value);
 }
 
 function hasEncryptedPrefix(value) {
@@ -45,8 +45,11 @@ function safeDecrypt(value) {
     return decrypt(value);
   } catch (err) {
     console.warn('TENANT_DECRYPTION_FAILED', {
-      field: null,
+      tenantId: null,
+      requestId: null,
+      route: null,
       model: 'utils/encryption',
+      field: null,
       error: err.message,
     });
     return value;
