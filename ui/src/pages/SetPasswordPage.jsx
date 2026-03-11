@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
+import { useSearchParams, useParams } from 'react-router-dom';
 import { Card } from '../components/common/Card';
 import { Input } from '../components/common/Input';
 import { Button } from '../components/common/Button';
@@ -16,7 +16,6 @@ import { STRONG_PASSWORD_MESSAGE, validateStrongPassword } from '../utils/valida
 import './SetPasswordPage.css';
 
 export const SetPasswordPage = () => {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { firmSlug } = useParams();
   const token = searchParams.get('token');
@@ -107,13 +106,11 @@ export const SetPasswordPage = () => {
 
       if (response.success) {
         setSuccess(true);
-        // Use redirectUrl from backend (firm-scoped login)
-        // Backend returns /{firmSlug}/login for admin users
-        const redirectPath = response.redirectUrl || (response.firmSlug 
-          ? `/${response.firmSlug}/login` 
-          : '/superadmin');
+        const resolvedFirmSlug = response.firmSlug || firmSlug || null;
+        const redirectPath = response.redirectUrl
+          || (resolvedFirmSlug ? `/${resolvedFirmSlug}/login` : '/login');
         setTimeout(() => {
-          navigate(redirectPath);
+          window.location.href = redirectPath;
         }, 2000);
       } else {
         setError(response.message || 'Failed to set password');
