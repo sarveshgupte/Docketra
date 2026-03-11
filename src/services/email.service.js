@@ -290,6 +290,14 @@ const hashToken = (token) => {
  * NOTE: Callers must check the return value. This helper returns { success: false, error }
  * without throwing when firm context is missing. Callers should log a warning and continue.
  */
+const resolveInviteRoleLabel = (role) => {
+  const normalized = String(role || '').trim().toUpperCase();
+  if (normalized === 'ADMIN') return 'Admin';
+  if (normalized === 'EMPLOYEE') return 'Employee';
+  if (normalized === 'STAFF') return 'Staff';
+  return normalized ? normalized.replace(/_/g, ' ') : 'Staff';
+};
+
 const sendPasswordSetupEmail = async ({ 
   email, 
   name, 
@@ -298,75 +306,61 @@ const sendPasswordSetupEmail = async ({
   firmSlug = null, 
   frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000',
   context = null,
+  role = 'ADMIN',
+  firmName = null,
+  invitedBy = null,
 }) => {
   const normalizedFirmSlug = normalizeFirmSlug(firmSlug);
   const setupLink = `${frontendUrl}/setup-password?token=${token}`;
-  
-  // Construct firm-specific login URL if firmSlug is provided
   const firmLoginUrl = normalizedFirmSlug ? `${frontendUrl}/${normalizedFirmSlug}/login` : null;
-  
-  const subject = 'Set up your Docketra Admin Account';
+  const normalizedRole = String(role || '').trim().toUpperCase();
+  const isAdminInvite = normalizedRole === 'ADMIN';
+
+  const subject = isAdminInvite
+    ? 'Set up your Docketra Admin Account'
+    : "You're invited to join your firm on Docketra";
+
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2>Hello ${name},</h2>
-      <p>Your firm account has been created successfully.</p>
-      <p><strong>Your Employee ID (xID):</strong> ${xID}</p>
-      <p>Please set your password using the link below:</p>
+      <p>${isAdminInvite ? 'Your admin account has been created.' : 'Your firm administrator has invited you to join the team.'}</p>
+      <p><strong>Invited by:</strong> ${invitedBy || 'Firm Administrator'}</p>
+      <p><strong>Firm:</strong> ${firmName || 'Your Firm'}</p>
+      <p><strong>Role:</strong> ${resolveInviteRoleLabel(normalizedRole)}</p>
+      <p><strong>Employee ID:</strong> ${xID}</p>
+      <p>Please set your password to activate your account.</p>
       <p style="margin: 20px 0;">
-        <a href="${setupLink}" style="background-color: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">Set Up Your Password</a>
+        <a href="${setupLink}" style="background-color: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">Set Your Password</a>
       </p>
       <p style="color: #666; font-size: 14px;">Or copy this link: ${setupLink}</p>
-      ${firmLoginUrl ? `
-      <div style="margin: 20px 0; padding: 15px; background-color: #f0f9ff; border-left: 4px solid #2196F3; border-radius: 4px;">
-        <p style="margin: 0 0 10px 0; font-weight: bold; color: #1976D2;">Your Firm Login URL:</p>
-        <p style="margin: 0; word-break: break-all;">
-          <a href="${firmLoginUrl}" style="color: #2196F3; text-decoration: none;">${firmLoginUrl}</a>
-        </p>
-        <p style="margin: 10px 0 0 0; font-size: 14px; color: #666;">
-          After setting your password, you will be redirected directly to your firm's login area.
-        </p>
-      </div>
-      ` : ''}
+      ${firmLoginUrl ? `<p><strong>Your Firm Login URL:</strong> <a href="${firmLoginUrl}" style="color: #2196F3; text-decoration: none;">${firmLoginUrl}</a></p>` : ''}
       <p style="color: #d32f2f;">⚠️ This link will expire in 48 hours for security reasons.</p>
-      <h3>For your security:</h3>
-      <ul>
-        <li>Keep your xID and password confidential</li>
-        <li>Do not share this link with anyone</li>
-        <li>Use a strong, unique password</li>
-      </ul>
-      <p>If you did not expect this invitation, please contact your administrator.</p>
       <p>Best regards,<br>Docketra Team</p>
     </div>
   `;
-  
+
   const textContent = `
 Hello ${name},
 
-Your firm account has been created successfully.
+${isAdminInvite ? 'Your admin account has been created.' : 'Your firm administrator has invited you to join the team.'}
 
-Your Employee ID (xID): ${xID}
+Invited by: ${invitedBy || 'Firm Administrator'}
+Firm: ${firmName || 'Your Firm'}
+Role: ${resolveInviteRoleLabel(normalizedRole)}
+Employee ID: ${xID}
 
-Please set your password using the link below:
+Please set your password to activate your account.
 ${setupLink}
 
 ${firmLoginUrl ? `Your Firm Login URL:
 ${firmLoginUrl}
 
-After setting your password, you will be redirected directly to your firm's login area.
-
 ` : ''}⚠️ This link will expire in 48 hours for security reasons.
-
-For your security:
-- Keep your xID and password confidential
-- Do not share this link with anyone
-- Use a strong, unique password
-
-If you did not expect this invitation, please contact your administrator.
 
 Best regards,
 Docketra Team
   `.trim();
-  
+
   return await sendDirectAuthEmail({
     to: email,
     subject,
@@ -375,19 +369,6 @@ Docketra Team
   });
 };
 
-/**
- * Send password setup reminder email (for resend functionality)
- * @param {Object} options - Email options
- * @param {string} options.email - Recipient email
- * @param {string} options.name - User's name
- * @param {string} options.token - Password setup token (plain text)
- * @param {string} options.xID - User's xID (for reference)
- * @param {string} [options.firmSlug] - Firm slug for firm-specific URL (optional)
- * @param {string} [options.frontendUrl] - Base URL of frontend application
- * @returns {Promise<Object>} Result object with success status.
- * NOTE: Callers must check the return value. This helper returns { success: false, error }
- * without throwing when firm context is missing. Callers should log a warning and continue.
- */
 const sendPasswordSetupReminderEmail = async ({ 
   email, 
   name, 
@@ -396,61 +377,20 @@ const sendPasswordSetupReminderEmail = async ({
   firmSlug = null, 
   frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000',
   req = null,
+  role = 'ADMIN',
+  firmName = null,
+  invitedBy = null,
 }) => {
-  const normalizedFirmSlug = normalizeFirmSlug(firmSlug);
-  const setupLink = `${frontendUrl}/setup-password?token=${token}`;
-  
-  // Construct firm-specific login URL if firmSlug is provided
-  const firmLoginUrl = normalizedFirmSlug ? `${frontendUrl}/${normalizedFirmSlug}/login` : null;
-  
-  const subject = 'Reminder: Set up your Docketra account';
-  const htmlContent = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2>Hello ${name},</h2>
-      <p>This is a reminder to set up your Docketra account.</p>
-      <p><strong>Your Employee ID (xID):</strong> ${xID}</p>
-      <p>Please complete your account setup by clicking the link below:</p>
-      <p style="margin: 20px 0;">
-        <a href="${setupLink}" style="background-color: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">Set Up Your Account</a>
-      </p>
-      <p style="color: #666; font-size: 14px;">Or copy this link: ${setupLink}</p>
-      ${firmLoginUrl ? `
-      <div style="margin: 20px 0; padding: 15px; background-color: #f0f9ff; border-left: 4px solid #2196F3; border-radius: 4px;">
-        <p style="margin: 0 0 10px 0; font-weight: bold; color: #1976D2;">Your Firm Login URL:</p>
-        <p style="margin: 0; word-break: break-all;">
-          <a href="${firmLoginUrl}" style="color: #2196F3; text-decoration: none;">${firmLoginUrl}</a>
-        </p>
-      </div>
-      ` : ''}
-      <p style="color: #d32f2f;">⚠️ This link will expire in 48 hours.</p>
-      <p>Best regards,<br>Docketra Team</p>
-    </div>
-  `;
-  
-  const textContent = `
-Hello ${name},
-
-This is a reminder to set up your Docketra account.
-
-Your Employee ID (xID): ${xID}
-
-Please complete your account setup by clicking the link below:
-${setupLink}
-
-${firmLoginUrl ? `Your Firm Login URL:
-${firmLoginUrl}
-
-` : ''}⚠️ This link will expire in 48 hours.
-
-Best regards,
-Docketra Team
-  `.trim();
-  
-  return await sendDirectAuthEmail({
-    to: email,
-    subject,
-    html: htmlContent,
-    text: textContent,
+  return sendPasswordSetupEmail({
+    email,
+    name,
+    token,
+    xID,
+    firmSlug,
+    frontendUrl,
+    role,
+    firmName,
+    invitedBy,
   });
 };
 
