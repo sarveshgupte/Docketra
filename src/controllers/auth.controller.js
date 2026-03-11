@@ -2802,7 +2802,18 @@ const setupAccount = async (req, res) => {
     { $set: { status: 'active' } }
   );
 
-  return res.json({ success: true, message: 'Account setup completed' });
+  let firmSlug = user.firmSlug || null;
+  if (!firmSlug && user.firmId) {
+    const firm = await Firm.findById(user.firmId).select('firmSlug');
+    firmSlug = firm?.firmSlug || null;
+  }
+
+  return res.json({
+    success: true,
+    message: 'Account setup completed',
+    firmSlug,
+    redirectUrl: firmSlug ? `/${firmSlug}/login` : '/login',
+  });
 };
 
 const resendSetup = async (req, res) => {
