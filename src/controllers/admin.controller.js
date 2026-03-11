@@ -219,11 +219,13 @@ const resendInviteEmail = async (req, res) => {
     
     // Fetch firmSlug for email
     let firmSlug = null;
+    let firmName = null;
     if (user.firmId) {
       const Firm = require('../models/Firm.model');
       const firm = await Firm.findById(user.firmId);
       if (firm) {
         firmSlug = firm.firmSlug;
+        firmName = firm.name;
       }
     }
     
@@ -235,6 +237,9 @@ const resendInviteEmail = async (req, res) => {
         token: token,
         xID: user.xID,
         firmSlug: firmSlug,
+        role: user.role,
+        firmName: firmName || undefined,
+        invitedBy: admin.name || admin.xID,
         req,
       });
       

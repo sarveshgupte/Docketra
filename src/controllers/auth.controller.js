@@ -2169,6 +2169,9 @@ const createUser = async (req, res) => {
                 token: inviteState.token,
                 xID: existingUser.xID,
                 firmSlug: firm.firmSlug,
+                role: existingUser.role,
+                firmName: firm.name,
+                invitedBy: admin.name || admin.xID,
                 req,
               });
 
@@ -2289,6 +2292,9 @@ const createUser = async (req, res) => {
           token: inviteState.token,
           xID: newUser.xID,
           firmSlug,
+          role: newUser.role,
+          firmName: firm.name,
+          invitedBy: admin.name || admin.xID,
           req,
         });
 
