@@ -39,6 +39,28 @@ const getClientAccessContext = (req, res, message) => {
 
 const normalizeClientList = (clients) => (Array.isArray(clients) ? clients : []);
 
+const normalizeString = (value) => {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : undefined;
+};
+
+const setNoCacheHeaders = (res) => {
+  const headers = {
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+    Pragma: 'no-cache',
+    Expires: '0',
+  };
+  if (typeof res.set === 'function') {
+    res.set(headers);
+    return;
+  }
+  if (typeof res.setHeader === 'function') {
+    Object.entries(headers).forEach(([key, value]) => res.setHeader(key, value));
+  }
+};
+
 const buildClientListResponse = (clients = []) => {
   const normalizedClients = normalizeClientList(clients);
 
@@ -92,6 +114,7 @@ const getClients = async (req, res) => {
   if (!accessContext) return;
 
   try {
+    setNoCacheHeaders(res);
     const { activeOnly, forCreateCase } = req.query;
     const shouldFilterActiveOnly = parseBooleanQuery(activeOnly);
     const shouldLoadForCreateCase = parseBooleanQuery(forCreateCase);
@@ -429,49 +452,61 @@ const updateClient = async (req, res) => {
       });
     }
     
+    const normalizedBusinessName = normalizeString(businessName);
+    const normalizedBusinessAddress = normalizeString(businessAddress);
+    const normalizedBusinessEmail = normalizeString(businessEmail);
+    const normalizedPrimaryContactNumber = normalizeString(primaryContactNumber);
+    const normalizedSecondaryContactNumber = normalizeString(secondaryContactNumber);
+
     if (isProtectedClient && businessName !== undefined) {
-      if (!businessName.trim()) {
+      if (typeof businessName !== 'string' || !normalizedBusinessName) {
         return res.status(400).json({
           success: false,
           message: 'Business name cannot be empty',
         });
       }
-      client.businessName = businessName.trim();
+      client.businessName = normalizedBusinessName;
     }
 
     if (isProtectedClient && businessAddress !== undefined) {
-      if (!businessAddress.trim()) {
+      if (typeof businessAddress !== 'string' || !normalizedBusinessAddress) {
         return res.status(400).json({
           success: false,
           message: 'Business address cannot be empty',
         });
       }
-      client.businessAddress = businessAddress.trim();
+      client.businessAddress = normalizedBusinessAddress;
     }
 
     // Update allowed fields
     if (businessEmail !== undefined) {
-      if (!businessEmail.trim()) {
+      if (typeof businessEmail !== 'string' || !normalizedBusinessEmail) {
         return res.status(400).json({
           success: false,
           message: 'Business email cannot be empty',
         });
       }
-      client.businessEmail = businessEmail.trim().toLowerCase();
+      client.businessEmail = normalizedBusinessEmail.toLowerCase();
     }
     
     if (primaryContactNumber !== undefined) {
-      if (!primaryContactNumber.trim()) {
+      if (typeof primaryContactNumber !== 'string' || !normalizedPrimaryContactNumber) {
         return res.status(400).json({
           success: false,
           message: 'Primary contact number cannot be empty',
         });
       }
-      client.primaryContactNumber = primaryContactNumber.trim();
+      client.primaryContactNumber = normalizedPrimaryContactNumber;
     }
     
     if (secondaryContactNumber !== undefined) {
-      client.secondaryContactNumber = secondaryContactNumber ? secondaryContactNumber.trim() : null;
+      if (secondaryContactNumber !== null && typeof secondaryContactNumber !== 'string') {
+        return res.status(400).json({
+          success: false,
+          message: 'Secondary contact number must be a string when provided',
+        });
+      }
+      client.secondaryContactNumber = normalizedSecondaryContactNumber || null;
     }
     
     await client.save();
