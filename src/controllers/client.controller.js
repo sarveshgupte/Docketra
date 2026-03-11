@@ -107,7 +107,8 @@ const getClients = async (req, res) => {
       {
         select: 'clientId businessName businessEmail primaryContactNumber status isSystemClient isInternal isDefaultClient createdAt',
         sort: { clientId: 1 },
-        }
+        logContext: buildClientLogContext(req, { model: 'Client' }),
+      }
     );
 
     const normalizedClients = normalizeClientList(clients).map(mapClientResponse);
@@ -133,7 +134,9 @@ const getClientById = async (req, res) => {
     const { clientId } = req.params;
     const accessContext = getClientAccessContext(req, res, 'User must belong to a firm to access clients');
     if (!accessContext) return;
-    const client = await ClientRepository.findByClientId(accessContext.firmId, clientId, accessContext.role);
+    const client = await ClientRepository.findByClientId(accessContext.firmId, clientId, accessContext.role, {
+      logContext: buildClientLogContext(req, { model: 'Client', clientId }),
+    });
     
     if (!client) {
       return res.status(404).json({
@@ -324,7 +327,10 @@ const createClient = async (req, res) => {
         console.log(`[ClientController] Created CFS folder structure for client ${clientId}`);
       }
     } catch (driveError) {
-      console.error('[ClientController] Failed to create CFS folder structure:', driveError.message);
+      logClientWarn('CFS_FOLDER_CREATION_SKIPPED', req, {
+        clientId,
+        reason: driveError.message,
+      });
       // Note: We don't fail the client creation if Drive setup fails
       // The client is already created and can be used
       // Drive folders can be created later if needed
@@ -371,12 +377,12 @@ const updateClient = async (req, res) => {
       businessEmail,
       primaryContactNumber,
       secondaryContactNumber,
-      // Explicitly list fields that should be rejected
       businessName,
+      businessAddress,
+      // Explicitly list fields that should be rejected
       PAN,
       TAN,
       CIN,
-      businessAddress,
       GST,
       latitude,
       longitude,
@@ -385,7 +391,9 @@ const updateClient = async (req, res) => {
     // Get firmId from authenticated user for query scoping
     const accessContext = getClientAccessContext(req, res, 'User must belong to a firm to update clients');
     if (!accessContext) return;
-    const client = await ClientRepository.findByClientId(accessContext.firmId, clientId, accessContext.role);
+    const client = await ClientRepository.findByClientId(accessContext.firmId, clientId, accessContext.role, {
+      logContext: buildClientLogContext(req, { model: 'Client', clientId }),
+    });
     
     if (!client) {
       return res.status(404).json({
@@ -394,16 +402,9 @@ const updateClient = async (req, res) => {
       });
     }
     
-    // Prevent editing system client
-    if (client.isSystemClient) {
-      return res.status(403).json({
-        success: false,
-        message: 'System client cannot be edited',
-      });
-    }
-    
-    // Explicitly reject attempts to update businessName
-    if (businessName !== undefined) {
+    const isProtectedClient = client.isDefaultClient === true || client.isSystemClient === true || client.isInternal === true;
+
+    if (!isProtectedClient && businessName !== undefined) {
       return res.status(400).json({
         success: false,
         message: 'Business name cannot be updated through this endpoint. Use the "Change Legal Name" action instead.',
@@ -419,14 +420,35 @@ const updateClient = async (req, res) => {
     }
     
     // Reject attempts to update other non-editable fields
-    if (businessAddress !== undefined || GST !== undefined || 
-        latitude !== undefined || longitude !== undefined) {
+    if (GST !== undefined || latitude !== undefined || longitude !== undefined) {
       return res.status(400).json({
         success: false,
-        message: 'Only businessEmail, primaryContactNumber, and secondaryContactNumber can be updated.',
+        message: isProtectedClient
+          ? 'Only businessName, businessAddress, businessEmail, primaryContactNumber, and secondaryContactNumber can be updated for the default client.'
+          : 'Only businessEmail, primaryContactNumber, and secondaryContactNumber can be updated.',
       });
     }
     
+    if (isProtectedClient && businessName !== undefined) {
+      if (!businessName.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Business name cannot be empty',
+        });
+      }
+      client.businessName = businessName.trim();
+    }
+
+    if (isProtectedClient && businessAddress !== undefined) {
+      if (!businessAddress.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Business address cannot be empty',
+        });
+      }
+      client.businessAddress = businessAddress.trim();
+    }
+
     // Update allowed fields
     if (businessEmail !== undefined) {
       if (!businessEmail.trim()) {
@@ -493,7 +515,9 @@ const toggleClientStatus = async (req, res) => {
     // Get firmId from authenticated user for query scoping
     const accessContext = getClientAccessContext(req, res, 'User must belong to a firm to update clients');
     if (!accessContext) return;
-    const client = await ClientRepository.findByClientId(accessContext.firmId, clientId, accessContext.role);
+    const client = await ClientRepository.findByClientId(accessContext.firmId, clientId, accessContext.role, {
+      logContext: buildClientLogContext(req, { model: 'Client', clientId }),
+    });
     
     if (!client) {
       return res.status(404).json({
@@ -579,7 +603,9 @@ const changeLegalName = async (req, res) => {
     // Get firmId from authenticated user for query scoping
     const accessContext = getClientAccessContext(req, res, 'User must belong to a firm to update clients');
     if (!accessContext) return;
-    const client = await ClientRepository.findByClientId(accessContext.firmId, clientId, accessContext.role);
+    const client = await ClientRepository.findByClientId(accessContext.firmId, clientId, accessContext.role, {
+      logContext: buildClientLogContext(req, { model: 'Client', clientId }),
+    });
     
     if (!client) {
       return res.status(404).json({

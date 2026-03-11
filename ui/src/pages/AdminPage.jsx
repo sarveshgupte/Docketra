@@ -33,6 +33,10 @@ const EMPTY_ADMIN_STATS = {
 const TOAST_DEDUPLICATION_WINDOW_MS = 1500;
 const EMPTY_FIELD_PLACEHOLDER = '—';
 
+const looksEncryptedToken = (value) => (
+  typeof value === 'string' && value.includes(':')
+);
+
 const getApiErrorType = (error) => {
   if (!error?.response) return 'network';
 
@@ -617,6 +621,9 @@ export const AdminPage = () => {
       
       if (response.success) {
         showToast(`Client created successfully! Client ID: ${response.data?.clientId}`, 'success');
+        if (response.data) {
+          setClients((prev) => [...prev, response.data].sort((a, b) => String(a.clientId).localeCompare(String(b.clientId))));
+        }
         setShowClientModal(false);
         setClientForm({
           businessName: '',
@@ -683,6 +690,11 @@ export const AdminPage = () => {
         primaryContactNumber: clientForm.primaryContactNumber,
         secondaryContactNumber: clientForm.secondaryContactNumber,
       };
+
+      if (selectedClient.isDefaultClient || selectedClient.isSystemClient || selectedClient.isInternal) {
+        updateData.businessName = clientForm.businessName;
+        updateData.businessAddress = clientForm.businessAddress;
+      }
       
       const response = await clientService.updateClient(selectedClient.clientId, updateData);
       
@@ -1110,7 +1122,7 @@ export const AdminPage = () => {
                             )}
                           </td>
                           <td>{client.businessName}</td>
-                          <td>{client.businessEmail || '—'}</td>
+                          <td>{looksEncryptedToken(client.businessEmail) ? EMPTY_FIELD_PLACEHOLDER : (client.businessEmail || EMPTY_FIELD_PLACEHOLDER)}</td>
                           <td>{client.primaryContactNumber || '—'}</td>
                           <td>
                             <Badge status={client.status === 'ACTIVE' ? 'Approved' : 'Rejected'}>
@@ -1123,7 +1135,7 @@ export const AdminPage = () => {
                               size="small"
                               variant="default"
                               onClick={() => handleEditClient(client)}
-                              disabled={isProtectedClient}
+                              disabled={false}
                             >
                               Edit
                             </Button>

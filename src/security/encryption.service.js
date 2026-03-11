@@ -95,7 +95,7 @@ async function encrypt(value, tenantId, { session } = {}) {
  *  - Falls back to returning the original value if it does not match the
  *    encrypted payload format (temporary compatibility mode for existing
  *    plaintext records — see TODO below).
- *  - Logs and returns null for decryption failures (fail-soft).
+ *  - Logs and returns the original value for decryption failures (fail-soft).
  *
  * TODO: Write migration script to encrypt existing plaintext fields.
  *       Once all records are encrypted, remove the plaintext fallback below.
@@ -131,15 +131,16 @@ async function decrypt(value, tenantId, role, { session, logContext } = {}) {
 
     return await getProvider().decrypt(value, tenantId, { session });
   } catch (err) {
-    console.error('TENANT_DECRYPTION_FAILED', {
+    console.warn('TENANT_DECRYPTION_FAILED', {
       timestamp: new Date().toISOString(),
       tenantId,
+      requestId: logContext?.requestId || null,
       field: logContext?.field || null,
       route: logContext?.route || null,
       model: logContext?.model || null,
       error: err.message,
     });
-    return null;
+    return value;
   }
 }
 

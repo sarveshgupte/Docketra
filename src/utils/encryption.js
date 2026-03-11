@@ -17,12 +17,16 @@ function resolveKeyMaterial() {
 }
 
 function isEncrypted(value) {
+  return typeof value === 'string' && value.includes(':');
+}
+
+function hasEncryptedPrefix(value) {
   return typeof value === 'string' && value.startsWith(ENCRYPTED_PREFIX);
 }
 
 function encrypt(value) {
   if (value === null || value === undefined || value === '') return value;
-  if (isEncrypted(value)) return value;
+  if (hasEncryptedPrefix(value)) return value;
 
   const iv = randomBytes(IV_LENGTH);
   const cipher = createCipheriv(ALGORITHM, resolveKeyMaterial(), iv, { authTagLength: AUTH_TAG_LENGTH });
@@ -32,9 +36,26 @@ function encrypt(value) {
   return `${ENCRYPTED_PREFIX}${iv.toString('base64')}:${authTag.toString('base64')}:${ciphertext.toString('base64')}`;
 }
 
-function decrypt(value) {
+
+function safeDecrypt(value) {
   if (value === null || value === undefined || value === '') return value;
   if (!isEncrypted(value)) return value;
+
+  try {
+    return decrypt(value);
+  } catch (err) {
+    console.warn('TENANT_DECRYPTION_FAILED', {
+      field: null,
+      model: 'utils/encryption',
+      error: err.message,
+    });
+    return value;
+  }
+}
+
+function decrypt(value) {
+  if (value === null || value === undefined || value === '') return value;
+  if (!hasEncryptedPrefix(value)) return value;
 
   const encoded = value.slice(ENCRYPTED_PREFIX.length);
   const [ivRaw, authTagRaw, ciphertextRaw] = encoded.split(':');
@@ -61,5 +82,6 @@ function decrypt(value) {
 module.exports = {
   encrypt,
   decrypt,
+  safeDecrypt,
   isEncrypted,
 };
