@@ -394,6 +394,62 @@ async function testEncryptionServiceWithDb() {
   console.log('✓ EncryptionService encrypt/decrypt roundtrip works end-to-end');
 }
 
+async function testClientRepositoryHandlesCorruptedEncryptedField() {
+  const Client = require('../src/models/Client.model');
+  const ClientRepository = require('../src/repositories/ClientRepository');
+  const { ensureTenantKey, encrypt, _resetProvider } = require('../src/security/encryption.service');
+
+  _resetProvider();
+
+  const firmA = new mongoose.Types.ObjectId();
+  const firmB = new mongoose.Types.ObjectId();
+
+  await ensureTenantKey(String(firmA));
+  await ensureTenantKey(String(firmB));
+
+  const encryptedWithOtherTenant = await encrypt('legacy@tenant-a.example', String(firmA));
+
+  await Client.create({
+    clientId: 'C000001',
+    firmId: firmB,
+    businessName: 'Corrupted Legacy Client',
+    businessAddress: '123 Test Street',
+    businessEmail: encryptedWithOtherTenant,
+    primaryContactNumber: '9999999999',
+    createdByXid: 'XTEST01',
+    isActive: true,
+    status: 'ACTIVE',
+  });
+
+  const listed = await ClientRepository.find(String(firmB), {}, 'ADMIN', {
+    sort: { clientId: 1 },
+    logContext: { route: '/api/admin/clients', requestId: 'test-req-1' },
+  });
+
+  assert.strictEqual(listed.length, 1, 'Corrupted record should still be listable');
+  assert.strictEqual(listed[0].businessEmail, 'Not Available', 'Failed decryption must map to safe display value');
+
+  const created = await ClientRepository.create({
+    clientId: 'C000002',
+    firmId: firmB,
+    businessName: 'Healthy Client',
+    businessAddress: '456 Test Street',
+    businessEmail: 'healthy@example.com',
+    primaryContactNumber: '8888888888',
+    createdByXid: 'XTEST01',
+    isActive: true,
+    status: 'ACTIVE',
+  }, 'ADMIN');
+
+  assert.strictEqual(created.clientId, 'C000002');
+  assert.strictEqual(created.businessEmail, 'healthy@example.com');
+
+  const storedHealthy = await Client.findOne({ firmId: firmB, clientId: 'C000002' }).lean();
+  assert(storedHealthy.businessEmail.includes(':'), 'Stored healthy client email must remain encrypted format');
+
+  console.log('✓ Corrupted encrypted client fields fail soft and do not block new client creation');
+}
+
 // ── runner ────────────────────────────────────────────────────────────────────
 
 async function run() {
@@ -430,6 +486,7 @@ async function run() {
     await testDifferentTenantsProduceDifferentCiphertext(provider);
     await testServiceSuperadminGuard();
     await testEncryptionServiceWithDb();
+    await testClientRepositoryHandlesCorruptedEncryptedField();
   } catch (err) {
     console.warn('⚠️  Skipping DB-dependent encryption tests (Mongo binary unavailable):', err.message);
   } finally {

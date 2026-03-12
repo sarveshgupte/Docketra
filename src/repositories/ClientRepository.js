@@ -73,20 +73,20 @@ function _guardSuperadmin(role) {
  * @returns {Promise<Object|null>}
  */
 async function _decryptClientDoc(doc, firmId, { logContext } = {}) {
-  if (!doc || !process.env.MASTER_ENCRYPTION_KEY || !firmId) return doc;
-  const tenantId = String(firmId);
+  if (!doc || !process.env.MASTER_ENCRYPTION_KEY) return doc;
+  const tenantId = doc.firmId || firmId;
+  if (!tenantId) return doc;
+
   for (const field of CLIENT_ENCRYPTED_FIELDS) {
     if (doc[field] != null && looksEncrypted(doc[field])) {
-      const decrypted = await decrypt(doc[field], tenantId, undefined, {
+      const decrypted = await decrypt(doc[field], String(tenantId), undefined, {
         logContext: {
           ...logContext,
           field,
           model: 'Client',
         },
       });
-      if (decrypted !== null && decrypted !== undefined) {
-        doc[field] = decrypted;
-      }
+      doc[field] = decrypted;
     }
   }
   return doc;
@@ -101,22 +101,23 @@ async function _decryptClientDoc(doc, firmId, { logContext } = {}) {
  * @returns {Promise<Array>}
  */
 async function _decryptClientDocs(docs, firmId, { logContext } = {}) {
-  if (!docs || !docs.length || !process.env.MASTER_ENCRYPTION_KEY || !firmId) return docs;
-  const tenantId = String(firmId);
+  if (!docs || !docs.length || !process.env.MASTER_ENCRYPTION_KEY) return docs;
+
   await Promise.all(docs.map(async (doc) => {
     if (!doc) return;
+    const tenantId = doc.firmId || firmId;
+    if (!tenantId) return;
+
     for (const field of CLIENT_ENCRYPTED_FIELDS) {
       if (doc[field] != null && looksEncrypted(doc[field])) {
-        const decrypted = await decrypt(doc[field], tenantId, undefined, {
+        const decrypted = await decrypt(doc[field], String(tenantId), undefined, {
           logContext: {
             ...logContext,
             field,
             model: 'Client',
           },
         });
-        if (decrypted !== null && decrypted !== undefined) {
-          doc[field] = decrypted;
-        }
+        doc[field] = decrypted;
       }
     }
   }));
