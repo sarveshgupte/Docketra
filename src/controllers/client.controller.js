@@ -13,10 +13,12 @@ const { getMimeType } = require('../utils/fileUtils');
 const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
 const { areFileUploadsDisabled } = require('../services/featureFlags.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
+const { executeWrite } = require('../utils/executeWrite');
 const { softDelete } = require('../services/softDelete.service');
 const { enqueueStorageJob, JOB_TYPES } = require('../queues/storage.queue');
 const CaseFile = require('../models/CaseFile.model');
 const { incrementTenantMetric } = require('../services/tenantMetrics.service');
+const Firm = require('../models/Firm.model');
 const path = require('path');
 const fs = require('fs');
 const { parseBooleanQuery } = require('../utils/query.utils');
@@ -90,6 +92,44 @@ const logClientError = (event, req, error, extra = {}) => {
 
 const logClientWarn = (event, req, extra = {}) => {
   console.warn(event, buildClientLogContext(req, extra));
+};
+
+const isStorageDisabled = async (firmId) => {
+  const firm = await Firm.findById(firmId).select('storage.mode').lean();
+  return firm?.storage?.mode !== 'firm_connected';
+};
+
+const setupClientStorage = async ({ req, userFirmId, clientId, clientMongoId }) => {
+  console.info('CLIENT_STORAGE_SETUP_STARTED', buildClientLogContext(req, {
+    clientId,
+    clientMongoId,
+  }));
+
+  if (await isStorageDisabled(userFirmId)) {
+    logClientWarn('CLIENT_STORAGE_SETUP_SKIPPED', req, {
+      clientId,
+      clientMongoId,
+      reason: 'Storage is only available when a firm has connected their own storage (firm_connected mode)',
+    });
+    // Keep legacy event name for existing dashboards/alerts.
+    logClientWarn('CFS_FOLDER_CREATION_SKIPPED', req, {
+      clientId,
+      reason: 'Storage is only available when a firm has connected their own storage (firm_connected mode)',
+    });
+    return;
+  }
+
+  const cfsDriveService = require('../services/cfsDrive.service');
+  const provider = await StorageProviderFactory.getProvider(userFirmId);
+  const folderIds = await cfsDriveService.createClientCFSFolderStructure(
+    userFirmId.toString(),
+    clientId,
+    provider
+  );
+
+  await ClientRepository.updateByClientId(userFirmId, clientId, {
+    $set: { drive: folderIds },
+  });
 };
 
 /**
@@ -302,66 +342,63 @@ const createClient = async (req, res) => {
       });
     }
     
-    // STEP 7: Generate clientId server-side
-    const clientId = await generateNextClientId(userFirmId);
-    
-    // STEP 8: Create new client with explicit field mapping
-    const client = await ClientRepository.create({
-      // System-generated ID (NEVER from client)
-      clientId,
-      // Business fields from sanitized request
-      businessName: businessName.trim(),
-      businessAddress: businessAddress.trim(),
-      primaryContactNumber: primaryContactNumber.trim(),
-      secondaryContactNumber: secondaryContactNumber ? secondaryContactNumber.trim() : undefined,
-      businessEmail: businessEmail.trim().toLowerCase(),
-      PAN: PAN ? PAN.trim().toUpperCase() : undefined,
-      GST: GST ? GST.trim().toUpperCase() : undefined,
-      TAN: TAN ? TAN.trim().toUpperCase() : undefined,
-      CIN: CIN ? CIN.trim().toUpperCase() : undefined,
-      // System-owned fields (injected server-side only, NEVER from client)
-      firmId: userFirmId, // Set from authenticated user's firm
-      createdByXid, // CANONICAL - set from auth context
-      createdBy: req.user?.email ? req.user.email.trim().toLowerCase() : undefined, // DEPRECATED - backward compatibility only
-      isSystemClient: false,
-      isActive: true, // Legacy field
-      status: 'ACTIVE', // New field
-      previousBusinessNames: [], // Initialize empty history
-    }, req.user?.role);
-    
-    // STEP 9: Persist the client first
+    // STEP 7-9: Perform transactional writes only
+    const client = await executeWrite(req, async () => {
+      const clientId = await generateNextClientId(userFirmId);
+
+      return ClientRepository.create({
+        // System-generated ID (NEVER from client)
+        clientId,
+        // Business fields from sanitized request
+        businessName: businessName.trim(),
+        businessAddress: businessAddress.trim(),
+        primaryContactNumber: primaryContactNumber.trim(),
+        secondaryContactNumber: secondaryContactNumber ? secondaryContactNumber.trim() : undefined,
+        businessEmail: businessEmail.trim().toLowerCase(),
+        PAN: PAN ? PAN.trim().toUpperCase() : undefined,
+        GST: GST ? GST.trim().toUpperCase() : undefined,
+        TAN: TAN ? TAN.trim().toUpperCase() : undefined,
+        CIN: CIN ? CIN.trim().toUpperCase() : undefined,
+        // System-owned fields (injected server-side only, NEVER from client)
+        firmId: userFirmId,
+        createdByXid,
+        createdBy: req.user?.email ? req.user.email.trim().toLowerCase() : undefined,
+        isSystemClient: false,
+        isActive: true,
+        status: 'ACTIVE',
+        previousBusinessNames: [],
+      }, req.user?.role);
+    });
+
     await incrementTenantMetric(userFirmId, 'clients').catch(() => null);
-    
-    // STEP 10: Create Google Drive CFS folder structure for the client
+
+    console.info('CLIENT_CREATED', buildClientLogContext(req, {
+      clientId: client.clientId,
+      clientMongoId: client._id,
+    }));
+
     try {
-      const cfsDriveService = require('../services/cfsDrive.service');
-      const provider = await StorageProviderFactory.getProvider(userFirmId);
-      const folderIds = await cfsDriveService.createClientCFSFolderStructure(
-        userFirmId.toString(),
-        clientId,
-        provider
-      );
-      
-      // Persist folder IDs in the client document
-      client.drive = folderIds;
-      await client.save();
-      
-      if (process.env.NODE_ENV !== 'production') {
-        console.log(`[ClientController] Created CFS folder structure for client ${clientId}`);
-      }
-    } catch (driveError) {
-      logClientWarn('CFS_FOLDER_CREATION_SKIPPED', req, {
-        clientId,
-        reason: driveError.message,
+      await setupClientStorage({
+        req,
+        userFirmId,
+        clientId: client.clientId,
+        clientMongoId: client._id,
       });
-      // Note: We don't fail the client creation if Drive setup fails
-      // The client is already created and can be used
-      // Drive folders can be created later if needed
+    } catch (storageError) {
+      logClientWarn('CLIENT_STORAGE_SETUP_FAILED', req, {
+        clientId: client.clientId,
+        clientMongoId: client._id,
+        reason: storageError.message,
+      });
     }
-    
-    res.status(201).json({
+
+    const createdClient = await ClientRepository.findByClientId(userFirmId, client.clientId, req.user?.role, {
+      logContext: buildClientLogContext(req, { model: 'Client', clientId: client.clientId }),
+    });
+
+    return res.status(201).json({
       success: true,
-      data: mapClientResponse(client),
+      data: mapClientResponse(createdClient || client),
       message: 'Client created successfully',
     });
   } catch (error) {
@@ -1391,7 +1428,7 @@ const downloadClientCFSFile = async (req, res) => {
 module.exports = {
   getClients,
   getClientById,
-  createClient: wrapWriteHandler(createClient),
+  createClient,
   updateClient: wrapWriteHandler(updateClient),
   toggleClientStatus: wrapWriteHandler(toggleClientStatus),
   changeLegalName: wrapWriteHandler(changeLegalName),
