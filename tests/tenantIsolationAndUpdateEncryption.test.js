@@ -50,7 +50,7 @@ async function run() {
 
     let guardError = null;
     try {
-      await Client.find({}).lean();
+      await Client.find({}).setOptions({ role: 'Admin' }).lean();
     } catch (err) {
       guardError = err;
     }
