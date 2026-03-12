@@ -265,15 +265,17 @@ async function testRepositoryThrowsWithoutFirmId() {
   }
   assert(clientFailed, 'ClientRepository.create must throw when firmId is missing');
 
-  // find returns [] / null when firmId is missing (no throw, safe default)
-  const cases = await CaseRepository.find(null);
-  assert(Array.isArray(cases) && cases.length === 0,
-    'CaseRepository.find with null firmId must return empty array');
+  await assert.rejects(
+    () => CaseRepository.find(null, {}, 'Admin'),
+    /TenantId required/
+  );
 
-  const client = await ClientRepository.findByClientId(null, 'C000001');
-  assert(client === null, 'ClientRepository.findByClientId with null firmId must return null');
+  await assert.rejects(
+    () => ClientRepository.findByClientId(null, 'C000001', 'Admin'),
+    /TenantId required/
+  );
 
-  console.log('✓ Repository throws (or returns safe default) when firmId is missing');
+  console.log('✓ Repository rejects operations when firmId is missing');
 }
 
 // ── tests that DO require MongoDB ─────────────────────────────────────────────
@@ -307,8 +309,8 @@ async function testEncryptDecryptRoundtrip(provider) {
 
   assert(typeof ciphertext === 'string', 'encrypt must return a string');
   assert.notStrictEqual(ciphertext, plaintext, 'ciphertext must differ from plaintext');
-  assert.match(ciphertext, /^[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]+$/,
-    'ciphertext must be iv:authTag:ciphertext format');
+  assert.match(ciphertext, /^v1:[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]+$/,
+    'ciphertext must be v1:iv:authTag:ciphertext format');
 
   const decrypted = await provider.decrypt(ciphertext, tenantId);
   assert.strictEqual(decrypted, plaintext, 'decrypted value must equal original plaintext');
@@ -346,6 +348,48 @@ async function testDifferentTenantsProduceDifferentCiphertext(provider) {
   assert(crossFailed, 'Cross-tenant decryption must throw an error');
 
   console.log('✓ Different tenants produce different ciphertext');
+}
+
+
+async function testVersionedAndLegacyDecryptCompatibility(provider) {
+  const tenantId = `tenant-version-${Date.now()}`;
+  await provider.generateTenantKey(tenantId);
+
+  const plaintext = 'compatibility-check';
+  const v1Ciphertext = await provider.encrypt(plaintext, tenantId);
+  const legacyCiphertext = v1Ciphertext.replace(/^v1:/, '');
+
+  const decV1 = await provider.decrypt(v1Ciphertext, tenantId);
+  const decLegacy = await provider.decrypt(legacyCiphertext, tenantId);
+
+  assert.strictEqual(decV1, plaintext, 'v1 ciphertext must decrypt');
+  assert.strictEqual(decLegacy, plaintext, 'legacy ciphertext must decrypt');
+  console.log('✓ Encryption supports both legacy and v1 payload formats');
+}
+
+async function testTenantKeyCache(provider) {
+  const TenantKey = require('../src/security/tenantKey.model');
+  const tenantId = `tenant-cache-${Date.now()}`;
+  await provider.generateTenantKey(tenantId);
+
+  const originalFindOne = TenantKey.findOne;
+  let findOneCount = 0;
+  TenantKey.findOne = (...args) => {
+    findOneCount += 1;
+    return originalFindOne.apply(TenantKey, args);
+  };
+
+  try {
+    const first = await provider.encrypt('cache-test-1', tenantId);
+    const second = await provider.encrypt('cache-test-2', tenantId);
+    assert(first && second, 'encrypt calls must return ciphertext');
+    assert.strictEqual(findOneCount, 1, 'tenant DEK should be loaded once due to cache');
+  } finally {
+    TenantKey.findOne = originalFindOne;
+    provider._clearTenantKeyCache();
+  }
+
+  console.log('✓ Tenant key cache reuses derived key per tenant');
 }
 
 async function testServiceSuperadminGuard() {
@@ -398,6 +442,7 @@ async function testClientRepositoryHandlesCorruptedEncryptedField() {
   const Client = require('../src/models/Client.model');
   const ClientRepository = require('../src/repositories/ClientRepository');
   const { ensureTenantKey, encrypt, _resetProvider } = require('../src/security/encryption.service');
+  const { looksEncrypted } = require('../src/security/encryption.utils');
 
   _resetProvider();
 
@@ -427,7 +472,7 @@ async function testClientRepositoryHandlesCorruptedEncryptedField() {
   });
 
   assert.strictEqual(listed.length, 1, 'Corrupted record should still be listable');
-  assert.strictEqual(listed[0].businessEmail, 'Not Available', 'Failed decryption must map to safe display value');
+  assert(looksEncrypted(listed[0].businessEmail), 'Failed decryption must preserve encrypted stored value');
 
   const created = await ClientRepository.create({
     clientId: 'C000002',
@@ -484,6 +529,8 @@ async function run() {
     await testGenerateTenantKey(provider);
     await testEncryptDecryptRoundtrip(provider);
     await testDifferentTenantsProduceDifferentCiphertext(provider);
+    await testVersionedAndLegacyDecryptCompatibility(provider);
+    await testTenantKeyCache(provider);
     await testServiceSuperadminGuard();
     await testEncryptionServiceWithDb();
     await testClientRepositoryHandlesCorruptedEncryptedField();

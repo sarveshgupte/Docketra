@@ -626,6 +626,7 @@ clientSchema.pre('save', async function() {
 clientSchema.index({ firmId: 1, clientId: 1 }, { unique: true });
 
 clientSchema.index({ isActive: 1 });
+clientSchema.index({ firmId: 1, isActive: 1 }); // Firm-scoped active/inactive filters
 clientSchema.index({ isSystemClient: 1 });
 clientSchema.index({ isDefaultClient: 1 });
 clientSchema.index({ businessName: 1 });
@@ -666,6 +667,7 @@ clientSchema.plugin(softDeletePlugin);
 // TODO: Write migration script to encrypt existing plaintext fields.
 
 const { looksEncrypted: _clientIsEncryptedValue } = require('../security/encryption.utils');
+const { tenantScopeGuardPlugin } = require('./plugins/tenantScopeGuard.plugin');
 
 /** Client fields that must be encrypted before persisting. */
 const _CLIENT_SENSITIVE_FIELDS = ['primaryContactNumber', 'businessEmail'];
@@ -679,6 +681,61 @@ let _clientEncService;
 function _getClientEncService() {
   if (!_clientEncService) _clientEncService = require('../security/encryption.service');
   return _clientEncService;
+}
+
+
+async function _encryptClientUpdatePayload(query) {
+  if (!process.env.MASTER_ENCRYPTION_KEY) return;
+  const update = query.getUpdate();
+  if (!update || Array.isArray(update)) return;
+
+  const updateDoc = update;
+  const directSet = {};
+  for (const field of _CLIENT_SENSITIVE_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(updateDoc, field)) {
+      directSet[field] = updateDoc[field];
+      delete updateDoc[field];
+    }
+  }
+
+  const setUpdate = {
+    ...(updateDoc.$set || {}),
+    ...directSet,
+  };
+
+  const fieldsToEncrypt = _CLIENT_SENSITIVE_FIELDS.filter((field) => setUpdate[field] != null && !_clientIsEncryptedValue(setUpdate[field]));
+  if (!fieldsToEncrypt.length) return;
+
+  const filter = query.getFilter ? query.getFilter() : {};
+  const tenantId = String(
+    setUpdate.firmId ||
+    filter.firmId ||
+    query.getOptions()?.firmId ||
+    ''
+  );
+  if (!tenantId) {
+    throw new Error('firmId is required to encrypt sensitive client update fields');
+  }
+
+  const { encrypt: _enc, ensureTenantKey: _ensure } = _getClientEncService();
+  await _ensure(tenantId, { session: query.getOptions?.().session });
+
+  if (typeof setUpdate.businessEmail === 'string' && !_clientIsEncryptedValue(setUpdate.businessEmail)) {
+    setUpdate.businessEmail = setUpdate.businessEmail.trim().toLowerCase();
+  }
+
+  if (typeof setUpdate.primaryContactNumber === 'string' && !_clientIsEncryptedValue(setUpdate.primaryContactNumber)) {
+    setUpdate.primaryContactNumber = setUpdate.primaryContactNumber.trim();
+  }
+
+  for (const field of fieldsToEncrypt) {
+    setUpdate[field] = await _enc(String(setUpdate[field]), tenantId, {
+      session: query.getOptions?.().session,
+    });
+  }
+
+  updateDoc.$set = setUpdate;
+  query.setUpdate(updateDoc);
 }
 
 /**
@@ -714,6 +771,21 @@ clientSchema.pre('save', async function () {
     }
   }
 });
+
+
+clientSchema.pre('findOneAndUpdate', async function () {
+  await _encryptClientUpdatePayload(this);
+});
+
+clientSchema.pre('updateOne', async function () {
+  await _encryptClientUpdatePayload(this);
+});
+
+clientSchema.pre('updateMany', async function () {
+  await _encryptClientUpdatePayload(this);
+});
+
+clientSchema.plugin(tenantScopeGuardPlugin);
 
 // VALIDATION: Strict schema enforcement
 clientSchema.set('strict', true);
