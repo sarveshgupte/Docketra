@@ -23,6 +23,7 @@
  */
 
 const Client = require('../models/Client.model');
+const { getActiveSession } = require('../utils/transactionContext');
 
 /**
  * Generate the next available clientId within a transaction
@@ -38,6 +39,7 @@ const Client = require('../models/Client.model');
  * @returns {Promise<string>} Next clientId in format C000001
  */
 const generateNextClientId = async (firmId, session = null) => {
+  const resolvedSession = session || getActiveSession() || null;
   if (!firmId) {
     throw new Error('firmId is required for clientId generation');
   }
@@ -46,7 +48,7 @@ const generateNextClientId = async (firmId, session = null) => {
     // Query the latest client WITHIN THIS FIRM within the transaction session
     // Sort by clientId descending to get the highest number in this firm
     // FIRM-SCOPED: Only look at clients within this firm
-    const queryOptions = session ? { session } : {};
+    const queryOptions = resolvedSession && !resolvedSession.skipTransaction ? { session: resolvedSession } : {};
     const lastClient = await Client
       .findOne({ firmId, clientId: /^C\d+$/ }, {}, queryOptions)
       .sort({ clientId: -1 });
