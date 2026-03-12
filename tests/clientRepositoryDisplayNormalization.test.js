@@ -112,6 +112,33 @@ async function testEmptyDisplayValuesNormalizeToNotAvailable() {
   console.log('  ✓ client repository normalizes empty contact values to Not Available');
 }
 
+
+async function testSelectiveDecryptOnlyRequestedFields() {
+  const decryptedInputs = [];
+  const ClientRepository = loadClientRepository({
+    findResult: [{
+      clientId: 'C000010',
+      businessName: 'Selective Client',
+      businessEmail: 'enc:email@client.test',
+      primaryContactNumber: 'enc:9876543210',
+      status: 'ACTIVE',
+    }],
+    decryptImpl: async (value) => {
+      decryptedInputs.push(value);
+      return value.slice(4);
+    },
+  });
+
+  const clients = await ClientRepository.find('firm-1', {}, 'Admin', {
+    decryptFields: ['businessEmail'],
+  });
+
+  assert.strictEqual(clients[0].businessEmail, 'email@client.test');
+  assert.strictEqual(clients[0].primaryContactNumber, 'enc:9876543210');
+  assert.deepStrictEqual(decryptedInputs, ['enc:email@client.test']);
+  console.log('  ✓ client repository selectively decrypts requested fields only');
+}
+
 async function run() {
   const originalKey = process.env.MASTER_ENCRYPTION_KEY;
   process.env.MASTER_ENCRYPTION_KEY = 'test-master-key';
@@ -120,6 +147,7 @@ async function run() {
     await testEncryptedFieldsDecryptForListings();
     await testDecryptFailurePreservesStoredValue();
     await testEmptyDisplayValuesNormalizeToNotAvailable();
+    await testSelectiveDecryptOnlyRequestedFields();
     console.log('Client repository display normalization tests passed.');
   } finally {
     Module._load = originalLoad;
