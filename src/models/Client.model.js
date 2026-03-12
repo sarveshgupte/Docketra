@@ -334,7 +334,6 @@ const clientSchema = new mongoose.Schema({
   businessEmail: {
     type: String,
     required: [true, 'Business email is required'],
-    lowercase: true,
     trim: true,
   },
   
@@ -701,6 +700,14 @@ clientSchema.pre('save', async function () {
   const tenantId = String(this.firmId);
   const session = typeof this.$session === 'function' ? this.$session() : undefined;
   await _ensure(tenantId, { session });
+  if (typeof this.businessEmail === 'string' && !_clientIsEncryptedValue(this.businessEmail)) {
+    this.businessEmail = this.businessEmail.trim().toLowerCase();
+  }
+
+  if (typeof this.primaryContactNumber === 'string' && !_clientIsEncryptedValue(this.primaryContactNumber)) {
+    this.primaryContactNumber = this.primaryContactNumber.trim();
+  }
+
   for (const field of _CLIENT_SENSITIVE_FIELDS) {
     if (this[field] != null && !_clientIsEncryptedValue(this[field])) {
       this[field] = await _enc(String(this[field]), tenantId, { session });
