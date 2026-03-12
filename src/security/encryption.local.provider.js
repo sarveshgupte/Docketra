@@ -31,6 +31,8 @@ const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12;       // 12 bytes = 96 bits (GCM recommended)
 const AUTH_TAG_LENGTH = 16; // 16 bytes = 128 bits (maximum)
 const KEY_LENGTH = 32;      // 32 bytes = 256 bits
+const PAYLOAD_VERSION = 'v1';
+const TENANT_KEY_CACHE_MAX_SIZE = 500;
 
 /**
  * Derive a usable 32-byte Buffer from the MASTER_ENCRYPTION_KEY env variable.
@@ -102,12 +104,14 @@ function aesgcmDecrypt(iv, authTag, ciphertext, key) {
  * @param {Buffer} ciphertext
  * @returns {string}
  */
-function encodePayload(iv, authTag, ciphertext) {
-  return [
+function encodePayload(iv, authTag, ciphertext, version = null) {
+  const payload = [
     iv.toString('base64'),
     authTag.toString('base64'),
     ciphertext.toString('base64'),
   ].join(':');
+  if (!version) return payload;
+  return `${version}:${payload}`;
 }
 
 /**
@@ -118,13 +122,16 @@ function encodePayload(iv, authTag, ciphertext) {
  */
 function decodePayload(encoded) {
   const parts = encoded.split(':');
-  if (parts.length !== 3) {
-    throw new Error('Invalid encrypted payload format. Expected iv:authTag:ciphertext');
+  const version = parts[0] === PAYLOAD_VERSION ? parts[0] : null;
+  const payloadParts = version ? parts.slice(1) : parts;
+  if (payloadParts.length !== 3) {
+    throw new Error('Invalid encrypted payload format. Expected [v1:]iv:authTag:ciphertext');
   }
   return {
-    iv: Buffer.from(parts[0], 'base64'),
-    authTag: Buffer.from(parts[1], 'base64'),
-    ciphertext: Buffer.from(parts[2], 'base64'),
+    version,
+    iv: Buffer.from(payloadParts[0], 'base64'),
+    authTag: Buffer.from(payloadParts[1], 'base64'),
+    ciphertext: Buffer.from(payloadParts[2], 'base64'),
   };
 }
 
@@ -140,7 +147,37 @@ function zeroBuffer(buf) {
   }
 }
 
+
+function getCachedDek(cache, tenantId) {
+  if (!cache.has(tenantId)) return null;
+  const dek = cache.get(tenantId);
+  cache.delete(tenantId);
+  cache.set(tenantId, dek);
+  return Buffer.from(dek);
+}
+
+function setCachedDek(cache, tenantId, dek) {
+  if (cache.has(tenantId)) {
+    const previous = cache.get(tenantId);
+    zeroBuffer(previous);
+    cache.delete(tenantId);
+  }
+  const cached = Buffer.from(dek);
+  cache.set(tenantId, cached);
+  while (cache.size > TENANT_KEY_CACHE_MAX_SIZE) {
+    const oldestTenantId = cache.keys().next().value;
+    const oldestDek = cache.get(oldestTenantId);
+    zeroBuffer(oldestDek);
+    cache.delete(oldestTenantId);
+  }
+}
+
 class LocalEncryptionProvider extends EncryptionProvider {
+  constructor() {
+    super();
+    this._tenantKeyCache = new Map();
+  }
+
   /**
    * Generate a new encrypted DEK without persisting it.
    * Used for atomic tenant key creation inside a MongoDB transaction.
@@ -152,7 +189,7 @@ class LocalEncryptionProvider extends EncryptionProvider {
     const dek = crypto.randomBytes(KEY_LENGTH);
     try {
       const { iv, authTag, ciphertext } = aesgcmEncrypt(dek, masterKey);
-      return encodePayload(iv, authTag, ciphertext);
+      return encodePayload(iv, authTag, ciphertext, PAYLOAD_VERSION);
     } finally {
       zeroBuffer(dek);
       zeroBuffer(masterKey);
@@ -206,7 +243,7 @@ class LocalEncryptionProvider extends EncryptionProvider {
     try {
       const plainBuf = Buffer.from(String(plaintext), 'utf8');
       const { iv, authTag, ciphertext } = aesgcmEncrypt(plainBuf, dek);
-      return encodePayload(iv, authTag, ciphertext);
+      return encodePayload(iv, authTag, ciphertext, PAYLOAD_VERSION);
     } finally {
       zeroBuffer(dek);
     }
@@ -245,6 +282,11 @@ class LocalEncryptionProvider extends EncryptionProvider {
    * @private
    */
   async _unwrapDek(tenantId, session) {
+    const cachedDek = getCachedDek(this._tenantKeyCache, tenantId);
+    if (cachedDek) {
+      return cachedDek;
+    }
+
     const query = TenantKey.findOne({ tenantId });
     if (session) {
       query.session(session);
@@ -259,10 +301,22 @@ class LocalEncryptionProvider extends EncryptionProvider {
     try {
       const { iv, authTag, ciphertext } = decodePayload(record.encryptedDek);
       const dek = aesgcmDecrypt(iv, authTag, ciphertext, masterKey);
+      setCachedDek(this._tenantKeyCache, tenantId, dek);
       return dek;
     } finally {
       zeroBuffer(masterKey);
     }
+  }
+
+  _clearTenantKeyCache() {
+    for (const dek of this._tenantKeyCache.values()) {
+      zeroBuffer(dek);
+    }
+    this._tenantKeyCache.clear();
+  }
+
+  _tenantKeyCacheSize() {
+    return this._tenantKeyCache.size;
   }
 }
 

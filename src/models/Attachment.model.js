@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const softDeletePlugin = require('../utils/softDelete.plugin');
+const { tenantScopeGuardPlugin } = require('./plugins/tenantScopeGuard.plugin');
 
 /**
  * Attachment Model for Docketra Case Management System
@@ -317,5 +318,6 @@ attachmentSchema.index({ firmId: 1, clientId: 1, checksum: 1 }, { sparse: true }
 attachmentSchema.index({ firmId: 1, contentHash: 1 });
 
 attachmentSchema.plugin(softDeletePlugin);
+attachmentSchema.plugin(tenantScopeGuardPlugin);
 
 module.exports = mongoose.model('Attachment', attachmentSchema);
