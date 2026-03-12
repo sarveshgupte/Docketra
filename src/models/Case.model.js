@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const { randomUUID } = require('crypto');
 const CaseStatus = require('../domain/case/caseStatus');
 const softDeletePlugin = require('../utils/softDelete.plugin');
+const { tenantScopeGuardPlugin } = require('./plugins/tenantScopeGuard.plugin');
 const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
@@ -937,6 +938,7 @@ caseSchema.index({ firmId: 1, createdAt: -1 });
 caseSchema.index({ firmId: 1, clientId: 1 });
 
 caseSchema.plugin(softDeletePlugin);
+caseSchema.plugin(tenantScopeGuardPlugin);
 
 // ============================================================
 // TRANSPARENT FIELD ENCRYPTION — AES-256-GCM envelope model

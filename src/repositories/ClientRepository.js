@@ -31,6 +31,15 @@ const { looksEncrypted } = require('../security/encryption.utils');
  */
 const CLIENT_ENCRYPTED_FIELDS = ['primaryContactNumber', 'businessEmail'];
 
+function resolveDecryptFields(decryptFields) {
+  if (!Array.isArray(decryptFields) || !decryptFields.length) {
+    return CLIENT_ENCRYPTED_FIELDS;
+  }
+  const allowed = new Set(CLIENT_ENCRYPTED_FIELDS);
+  return decryptFields.filter((field) => allowed.has(field));
+}
+
+
 function normalizeClientDisplay(client) {
   if (!client) return client;
 
@@ -72,12 +81,13 @@ function _guardSuperadmin(role) {
  * @param {string} firmId
  * @returns {Promise<Object|null>}
  */
-async function _decryptClientDoc(doc, firmId, { logContext } = {}) {
+async function _decryptClientDoc(doc, firmId, { logContext, decryptFields } = {}) {
   if (!doc || !process.env.MASTER_ENCRYPTION_KEY) return doc;
   const tenantId = doc.firmId || firmId;
   if (!tenantId) return doc;
 
-  for (const field of CLIENT_ENCRYPTED_FIELDS) {
+  const fieldsToDecrypt = resolveDecryptFields(decryptFields);
+  for (const field of fieldsToDecrypt) {
     if (doc[field] != null && looksEncrypted(doc[field])) {
       const decrypted = await decrypt(doc[field], String(tenantId), undefined, {
         logContext: {
@@ -86,7 +96,7 @@ async function _decryptClientDoc(doc, firmId, { logContext } = {}) {
           model: 'Client',
         },
       });
-      doc[field] = decrypted;
+      doc[field] = decrypted == null ? doc[field] : decrypted;
     }
   }
   return doc;
@@ -100,15 +110,16 @@ async function _decryptClientDoc(doc, firmId, { logContext } = {}) {
  * @param {string} firmId
  * @returns {Promise<Array>}
  */
-async function _decryptClientDocs(docs, firmId, { logContext } = {}) {
+async function _decryptClientDocs(docs, firmId, { logContext, decryptFields } = {}) {
   if (!docs || !docs.length || !process.env.MASTER_ENCRYPTION_KEY) return docs;
 
+  const fieldsToDecrypt = resolveDecryptFields(decryptFields);
   await Promise.all(docs.map(async (doc) => {
     if (!doc) return;
     const tenantId = doc.firmId || firmId;
     if (!tenantId) return;
 
-    for (const field of CLIENT_ENCRYPTED_FIELDS) {
+    for (const field of fieldsToDecrypt) {
       if (doc[field] != null && looksEncrypted(doc[field])) {
         const decrypted = await decrypt(doc[field], String(tenantId), undefined, {
           logContext: {
@@ -117,7 +128,7 @@ async function _decryptClientDocs(docs, firmId, { logContext } = {}) {
             model: 'Client',
           },
         });
-        doc[field] = decrypted;
+        doc[field] = decrypted == null ? doc[field] : decrypted;
       }
     }
   }));
