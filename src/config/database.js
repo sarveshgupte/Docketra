@@ -11,6 +11,9 @@ const connectDB = async () => {
     // VALIDATION: Strict schema enforcement
     mongoose.set('strict', true);
     mongoose.set('strictQuery', true);
+    if (process.env.MONGOOSE_DEBUG === 'true') {
+      mongoose.set('debug', true);
+    }
 
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
       autoIndex: process.env.NODE_ENV !== 'production',

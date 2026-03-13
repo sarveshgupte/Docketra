@@ -28,7 +28,7 @@ const { getNextSequence } = require('./counter.service');
  * @returns {Promise<string>} Generated case name
  * @throws {Error} If firmId is missing or generation fails
  */
-async function generateCaseName(firmId) {
+async function generateCaseName(firmId, options = {}) {
   try {
     // Validate firmId
     if (!firmId) {
@@ -50,7 +50,7 @@ async function generateCaseName(firmId) {
     const counterName = `caseName-${datePrefix}`;
     
     // Get next sequence atomically - this is thread-safe and eliminates race conditions
-    const sequenceNumber = await getNextSequence(counterName, firmId);
+    const sequenceNumber = await getNextSequence(counterName, firmId, options);
     
     // Format as 5-digit zero-padded number
     const paddedSequence = String(sequenceNumber).padStart(5, '0');
