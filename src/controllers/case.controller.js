@@ -160,6 +160,7 @@ const createCase = async (req, res) => {
       clientId,
       priority,
       assignedTo,
+      slaDueDate,
       forceCreate, // Flag to override duplicate warning
       clientData, // Client data for duplicate detection (for "Client – New" cases)
       payload, // Payload for client governance cases
@@ -246,6 +247,7 @@ const createCase = async (req, res) => {
     
     // Determine the actual category name to use (for backward compatibility)
     const actualCategory = caseCategory || category || categoryDoc.name;
+    const isAdminUser = ['ADMIN', 'Admin'].includes(req.user?.role);
 
     // Optional: resolve firm-scoped work type and sub-work type.
     // This keeps case creation backward compatible while enabling deadline auto-calculation.
@@ -337,6 +339,10 @@ const createCase = async (req, res) => {
       }
     }
     
+    if (!isAdminUser && Object.prototype.hasOwnProperty.call(req.body, 'slaDueDate')) {
+      delete req.body.slaDueDate;
+    }
+
     const idempotencyKeyRaw = req.headers['idempotency-key'] || req.body.idempotencyKey;
     const idempotencyKey = idempotencyKeyRaw ? idempotencyKeyRaw.toString().trim().toLowerCase() : null;
 
@@ -357,11 +363,25 @@ const createCase = async (req, res) => {
     const session = getSession(req);
     try {
       // Create new case with defaults
+      const defaultSlaDays = Number(subcategory.defaultSlaDays || categoryDoc.defaultSlaDays || 0);
+      const requestedSlaDueDate = isAdminUser && slaDueDate ? new Date(slaDueDate) : null;
+      const hasValidRequestedSla = requestedSlaDueDate && !Number.isNaN(requestedSlaDueDate.getTime());
+
       const slaState = await caseSlaService.initializeCaseSla({
         tenantId: firmId,
         caseType: actualCategory,
         now: new Date(),
       });
+
+      if (defaultSlaDays > 0 && !hasValidRequestedSla) {
+        const computedDefault = new Date();
+        computedDefault.setDate(computedDefault.getDate() + defaultSlaDays);
+        slaState.slaDueAt = computedDefault;
+      }
+
+      if (hasValidRequestedSla) {
+        slaState.slaDueAt = requestedSlaDueDate;
+      }
 
       const newCase = new Case({
         title: title.trim(),
@@ -378,6 +398,8 @@ const createCase = async (req, res) => {
         priority: priority || 'Medium',
         status: 'UNASSIGNED', // New cases default to UNASSIGNED for global worklist
         assignedToXID: assignedTo ? assignedTo.toUpperCase() : null, // PR: xID Canonicalization - Store in assignedToXID
+        assignedTo: null,
+        assignedBy: null,
         slaDueAt: slaState.slaDueAt,
         tatPaused: slaState.tatPaused,
         tatLastStartedAt: slaState.tatLastStartedAt,
@@ -1347,6 +1369,7 @@ const getCases = async (req, res) => {
       category,
       priority,
       assignedTo,
+      slaDueDate,
       createdBy,
       clientId,
       page = 1,
@@ -1754,7 +1777,7 @@ const updateCaseActivity = async (req, res) => {
  */
 const pullCases = async (req, res) => {
   try {
-    const { caseIds } = req.body;
+    const { caseIds, assignTo } = req.body;
     
     // Get authenticated user from req.user (set by auth middleware)
     const user = req.user;
@@ -1792,6 +1815,20 @@ const pullCases = async (req, res) => {
     
     // Use assignment service for canonical assignment logic
     const caseAssignmentService = require('../services/caseAssignment.service');
+
+    let effectiveAssigneeXID = user.xID;
+    let effectiveAssigneeUserId = user._id || null;
+    if (assignTo) {
+      if (!['ADMIN', 'Admin'].includes(user.role)) {
+        return res.status(403).json({ success: false, message: 'Only admins can assign dockets to other employees.' });
+      }
+      const targetUser = await User.findOne({ _id: assignTo, firmId: req.user.firmId, role: { $in: ['Employee', 'ADMIN', 'Admin'] } }).select('_id xID');
+      if (!targetUser?.xID) {
+        return res.status(404).json({ success: false, message: 'Selected employee not found for assignment.' });
+      }
+      effectiveAssigneeXID = targetUser.xID;
+      effectiveAssigneeUserId = targetUser._id;
+    }
     
     // Handle single case pull vs bulk pull
     if (caseIds.length === 1) {
@@ -1799,7 +1836,9 @@ const pullCases = async (req, res) => {
       const result = await caseAssignmentService.pullCaseFromWorkbasket({
         caseId: caseIds[0],
         tenantId: req.user.firmId,
-        userId: user.xID,
+        userId: effectiveAssigneeXID,
+        assigneeObjectId: effectiveAssigneeUserId,
+        assignerObjectId: user._id || null,
         session: getSession(req),
       });
       
@@ -1816,7 +1855,7 @@ const pullCases = async (req, res) => {
       });
     } else {
       // Bulk case pull - with firm scoping
-      const result = await caseAssignmentService.bulkAssignCasesToUser(req.user.firmId, caseIds, user);
+      const result = await caseAssignmentService.bulkAssignCasesToUser(req.user.firmId, caseIds, { ...user, xID: effectiveAssigneeXID, _id: effectiveAssigneeUserId }, user._id || null);
       
       const successCount = result.assigned;
       const requestedCount = result.requested;
@@ -1947,6 +1986,7 @@ const unassignCase = async (req, res) => {
       statusPatch: {
         assignedToXID: null,
         assignedTo: null,
+        assignedBy: null,
         queueType: 'GLOBAL',
         assignedAt: null,
       },

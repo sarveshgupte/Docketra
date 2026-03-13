@@ -447,9 +447,15 @@ const caseSchema = new mongoose.Schema({
    * This field will be removed in a future release.
    */
   assignedTo: {
-    type: String,
-    uppercase: true,
-    trim: true,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
+  },
+
+  assignedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
   },
   
   /**
@@ -915,7 +921,8 @@ caseSchema.index({ category: 1 });
 caseSchema.index({ createdBy: 1 }); // DEPRECATED - kept for backward compatibility
 caseSchema.index({ createdByXID: 1 }); // CANONICAL - xID-based creator queries
 caseSchema.index({ assignedToXID: 1 }); // CANONICAL - xID-based assignment queries
-caseSchema.index({ assignedTo: 1 }); // DEPRECATED - kept for migration
+caseSchema.index({ assignedTo: 1 }); // Assignment owner lookup
+caseSchema.index({ assignedBy: 1 }); // Assignment actor lookup
 caseSchema.index({ clientId: 1 });
 caseSchema.index({ status: 1 });
 caseSchema.index({ createdAt: -1 });

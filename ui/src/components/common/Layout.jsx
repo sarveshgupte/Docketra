@@ -243,22 +243,22 @@ export const Layout = ({ children }) => {
           active: isActive(`/app/firm/${currentFirmSlug}/dashboard`),
         },
         {
-          to: `/app/firm/${currentFirmSlug}/cases`,
-          label: 'Cases',
-          icon: <IconCases />,
-          active: isActivePrefix(`/app/firm/${currentFirmSlug}/cases`) && !location.search.includes('view=audit'),
+          to: `/app/firm/${currentFirmSlug}/global-worklist`,
+          label: 'Workbasket',
+          icon: <IconWorkbasket />,
+          active: isActive(`/app/firm/${currentFirmSlug}/global-worklist`),
         },
         {
           to: `/app/firm/${currentFirmSlug}/worklist`,
-          label: 'Tasks / Worklist',
+          label: 'My Worklist',
           icon: <IconWorklist />,
           active: isActive(`/app/firm/${currentFirmSlug}/worklist`) || isActive(`/app/firm/${currentFirmSlug}/my-worklist`),
         },
         {
-          to: `/app/firm/${currentFirmSlug}/global-worklist`,
+          to: `/app/firm/${currentFirmSlug}/cases`,
           label: 'Insights',
-          icon: <IconWorkbasket />,
-          active: isActive(`/app/firm/${currentFirmSlug}/global-worklist`),
+          icon: <IconCases />,
+          active: isActivePrefix(`/app/firm/${currentFirmSlug}/cases`) && !location.search.includes('view=audit'),
         },
         {
           to: `/app/firm/${currentFirmSlug}/admin/reports`,
@@ -398,8 +398,8 @@ export const Layout = ({ children }) => {
             <input
               className="enterprise-header__omnibar-input"
               type="search"
-              placeholder="Search cases, clients…"
-              aria-label="Search cases and clients"
+              placeholder="Search dockets, clients…"
+              aria-label="Search dockets and clients"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -407,7 +407,7 @@ export const Layout = ({ children }) => {
             {(searchQuery.trim().length >= 2 || searching) && (
               <div className="dropdown-menu" style={{ display: 'block', top: 'calc(100% + 8px)', width: '100%' }}>
                 <div className="dropdown-item" style={{ pointerEvents: 'none', opacity: 0.7 }}>
-                  {searching ? 'Searching…' : `Cases ${searchResults.cases.length} · Users ${searchResults.users.length} · Compliance Items ${searchResults.tasks.length}`}
+                  {searching ? 'Searching…' : `Dockets ${searchResults.cases.length} · Users ${searchResults.users.length} · Compliance Items ${searchResults.tasks.length}`}
                 </div>
                 {searchResults.cases.slice(0, 3).map((item) => (
                   <button
@@ -415,21 +415,21 @@ export const Layout = ({ children }) => {
                     className="dropdown-item"
                     onClick={() => navigate(`/app/firm/${currentFirmSlug}/cases/${item.caseId}`)}
                   >
-                    Case: {item.caseId} — {item.title}
+                    Docket: {item.caseId} — {item.title}
                   </button>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Create Case CTA */}
+          {/* Create Docket CTA */}
           <button
             className="btn btn-primary enterprise-header__new-case"
             onClick={() => navigate(`/app/firm/${currentFirmSlug}/cases/create`)}
-            aria-label="Create new case"
+            aria-label="Create new docket"
           >
             <IconPlus />
-            <span>New Case</span>
+            <span>New Docket</span>
           </button>
 
           {/* Right actions */}
