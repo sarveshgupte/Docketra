@@ -22,7 +22,7 @@ const CaseService = require('./case.service');
  * PR: Case Lifecycle & Dashboard Logic
  */
 
-const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, session = null }) => {
+const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObjectId = null, assignerObjectId = null, session = null }) => {
   if (!caseId || !tenantId || !userId) {
     throw new Error('caseId, tenantId, and userId are required');
   }
@@ -41,8 +41,9 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, session = null
     {
       $set: {
         assignedToXID: normalizedUserId,
-        assignedTo: normalizedUserId,
         assignedAt,
+        assignedTo: assigneeObjectId || null,
+        assignedBy: assignerObjectId || assigneeObjectId || null,
         queueType: 'PERSONAL',
       },
     },
@@ -165,7 +166,7 @@ const assignCaseToUser = async (firmId, caseId, user, session = null) => {
  * @param {object} user - User object with xID and email
  * @returns {object} Results with count of assigned cases
  */
-const bulkAssignCasesToUser = async (firmId, caseIds, user) => {
+const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = null) => {
   if (!user || !user.xID) {
     throw new Error('Valid user with xID is required for case assignment');
   }
@@ -188,6 +189,8 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user) => {
       {
         $set: {
           assignedToXID: user.xID.toUpperCase(), // CANONICAL: Store xID in assignedToXID
+          assignedTo: user._id || null,
+          assignedBy: assignerObjectId || user._id || null,
           queueType: 'PERSONAL', // Move from GLOBAL to PERSONAL queue
           assignedAt,
         },

@@ -92,7 +92,7 @@ const getCategoryById = async (req, res) => {
  */
 const createCategory = async (req, res) => {
   try {
-    const { name } = req.body;
+    const { name, defaultSlaDays = 0 } = req.body;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
     
@@ -121,6 +121,7 @@ const createCategory = async (req, res) => {
       name: name.trim(),
       subcategories: [],
       isActive: true,
+      defaultSlaDays: Math.max(0, Number(defaultSlaDays) || 0),
     });
     
     await category.save();
@@ -146,7 +147,7 @@ const createCategory = async (req, res) => {
 const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name } = req.body;
+    const { name, defaultSlaDays } = req.body;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
     
@@ -181,6 +182,9 @@ const updateCategory = async (req, res) => {
     }
     
     category.name = name.trim();
+    if (typeof defaultSlaDays !== 'undefined') {
+      category.defaultSlaDays = Math.max(0, Number(defaultSlaDays) || 0);
+    }
     await category.save();
     
     res.json({
@@ -254,7 +258,7 @@ const toggleCategoryStatus = async (req, res) => {
 const addSubcategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name } = req.body;
+    const { name, defaultSlaDays = 0 } = req.body;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
     
@@ -293,6 +297,7 @@ const addSubcategory = async (req, res) => {
       id: subcategoryId,
       name: name.trim(),
       isActive: true,
+      defaultSlaDays: Math.max(0, Number(defaultSlaDays) || 0),
     });
     
     await category.save();
@@ -318,7 +323,7 @@ const addSubcategory = async (req, res) => {
 const updateSubcategory = async (req, res) => {
   try {
     const { id, subcategoryId } = req.params;
-    const { name } = req.body;
+    const { name, defaultSlaDays } = req.body;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
     
@@ -360,6 +365,9 @@ const updateSubcategory = async (req, res) => {
     }
     
     subcategory.name = name.trim();
+    if (typeof defaultSlaDays !== 'undefined') {
+      subcategory.defaultSlaDays = Math.max(0, Number(defaultSlaDays) || 0);
+    }
     await category.save();
     
     res.json({
