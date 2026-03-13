@@ -33,7 +33,8 @@ const Counter = require('../models/Counter.model');
  * @returns {Promise<number>} Next sequence number
  * @throws {Error} If firmId is missing or operation fails
  */
-async function getNextSequence(name, firmId) {
+async function getNextSequence(name, firmId, options = {}) {
+  const { session } = options;
   // Validate required parameters
   if (!name || typeof name !== 'string') {
     throw new Error('Counter name is required and must be a string');
@@ -57,6 +58,7 @@ async function getNextSequence(name, firmId) {
       { 
         new: true,        // Return updated document
         upsert: true,     // Create if doesn't exist
+        session,
       }
     );
     
@@ -75,7 +77,7 @@ async function getNextSequence(name, firmId) {
         const counter = await Counter.findOneAndUpdate(
           { name, firmId },
           { $inc: { seq: 1 } },
-          { new: true }
+          { new: true, session }
         );
         
         if (!counter || typeof counter.seq !== 'number') {

@@ -68,7 +68,7 @@ function generateDocketId(firmId, workTypePrefix) {
  * @returns {Promise<string>} Generated case ID
  * @throws {Error} If firmId is missing or generation fails
  */
-async function generateCaseId(firmId) {
+async function generateCaseId(firmId, options = {}) {
   try {
     // Validate firmId
     if (!firmId) {
@@ -90,7 +90,7 @@ async function generateCaseId(firmId) {
     const counterName = `case-${datePrefix}`;
     
     // Get next sequence atomically - this is thread-safe and eliminates race conditions
-    const sequenceNumber = await getNextSequence(counterName, firmId);
+    const sequenceNumber = await getNextSequence(counterName, firmId, options);
     
     // Format as 5-digit zero-padded number
     const paddedSequence = String(sequenceNumber).padStart(5, '0');
