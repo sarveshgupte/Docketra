@@ -145,6 +145,9 @@ const checkCaseAccess = (caseData, user) => {
 const createCase = async (req, res) => {
   const requestId = req.requestId || randomUUID();
   req.requestId = requestId;
+  const step = (label) => {
+    console.log(`[CASE_CREATE][${requestId}] STEP -> ${label}`);
+  };
   let responseMeta = { requestId, firmId: req.user?.firmId || null };
 
   try {
@@ -372,11 +375,14 @@ const createCase = async (req, res) => {
       const requestedSlaDueDate = isAdminUser && slaDueDate ? new Date(slaDueDate) : null;
       const hasValidRequestedSla = requestedSlaDueDate && !Number.isNaN(requestedSlaDueDate.getTime());
 
+      step('before SLA initialization');
       const slaState = await caseSlaService.initializeCaseSla({
         tenantId: firmId,
         caseType: actualCategory,
         now: new Date(),
+        session,
       });
+      step('after SLA initialization');
 
       if (defaultSlaDays > 0 && !hasValidRequestedSla) {
         const computedDefault = new Date();
@@ -419,13 +425,19 @@ const createCase = async (req, res) => {
         dueDate: computeDeadlineFromTatDays(tatDaysSnapshot) || undefined,
       });
       
+      step('before case create');
       await newCase.saveWithRetry({ session });
-      await incrementTenantMetric(firmId, 'cases').catch(() => null);
+      step('after case create');
+
+      step('before counter increment');
+      await incrementTenantMetric(firmId, 'cases', 1, { session }).catch(() => null);
+      step('after counter increment');
       
       // Create case history entry with enhanced audit logging
       const { logCaseHistory } = require('../services/auditLog.service');
       const { CASE_ACTION_TYPES } = require('../config/constants');
       
+      step('before history insert');
       await logCaseHistory({
         caseId: newCase.caseId,
         firmId: newCase.firmId,
@@ -446,15 +458,18 @@ const createCase = async (req, res) => {
         req,
         session,
       });
+      step('after history insert');
       
       // Add system comment if duplicate was overridden
       if (systemComment) {
+        step('before duplicate override comment insert');
         await Comment.create([{
           caseId: newCase.caseId,
           text: systemComment,
           createdBy: 'system',
           note: 'Automated duplicate detection notice',
         }], { session });
+        step('after duplicate override comment insert');
       }
 
       return res.status(201).json({
@@ -495,7 +510,11 @@ const createCase = async (req, res) => {
         });
       }
 
-      console.error(`[CASE_CREATE][${requestId}] Create docket failed`, { firmId, error: error.message });
+      console.error(`[CASE_CREATE][${requestId}] Create docket failed`, {
+        firmId: firmId?.toString(),
+        error: error.message,
+        stack: error.stack,
+      });
       return res.status(400).json({
         success: false,
         message: 'Failed to create docket.',

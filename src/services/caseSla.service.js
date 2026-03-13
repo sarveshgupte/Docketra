@@ -157,16 +157,25 @@ const isBreached = (caseDoc, now = new Date()) => {
   return new Date(now).getTime() > new Date(caseDoc.slaDueAt).getTime();
 };
 
-const findConfig = async (tenantId, caseType) => {
+const findConfig = async (tenantId, caseType, options = {}) => {
+  const { session } = options;
   if (caseType) {
-    const override = await TenantSlaConfig.findOne({ firmId: tenantId, caseType }).lean();
+    const overrideQuery = TenantSlaConfig.findOne({ firmId: tenantId, caseType });
+    if (session) {
+      overrideQuery.session(session);
+    }
+    const override = await overrideQuery.lean();
     if (override) return override;
   }
-  return TenantSlaConfig.findOne({ firmId: tenantId, caseType: null }).lean();
+  const fallbackQuery = TenantSlaConfig.findOne({ firmId: tenantId, caseType: null });
+  if (session) {
+    fallbackQuery.session(session);
+  }
+  return fallbackQuery.lean();
 };
 
-const initializeCaseSla = async ({ tenantId, caseType, now = new Date() }) => {
-  const dbConfig = tenantId ? await findConfig(tenantId, caseType || null) : null;
+const initializeCaseSla = async ({ tenantId, caseType, now = new Date(), session }) => {
+  const dbConfig = tenantId ? await findConfig(tenantId, caseType || null, { session }) : null;
   const config = normalizeConfig(dbConfig || DEFAULT_SLA_CONFIG);
   const startedAt = new Date(now);
   const slaDueAt = calculateDueDate(startedAt, config.tatDurationMinutes, config);
