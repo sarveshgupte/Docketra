@@ -32,7 +32,8 @@ const upsertTenantMetrics = async (firmId, metrics) => {
   return result;
 };
 
-const incrementTenantMetric = async (firmId, field, amount = 1) => {
+const incrementTenantMetric = async (firmId, field, amount = 1, options = {}) => {
+  const { session } = options;
   if (!firmId || !['users', 'clients', 'cases', 'categories'].includes(field)) return null;
   const result = await TenantMetrics.findOneAndUpdate(
     { firmId: String(firmId) },
@@ -41,7 +42,7 @@ const incrementTenantMetric = async (firmId, field, amount = 1) => {
       $set: { updatedAt: new Date() },
       $setOnInsert: { firmId: String(firmId), users: 0, clients: 0, cases: 0, categories: 0 },
     },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+    { upsert: true, new: true, setDefaultsOnInsert: true, session }
   );
   await invalidateDashboardCache(firmId);
   return result;
