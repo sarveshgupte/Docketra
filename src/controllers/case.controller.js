@@ -200,15 +200,15 @@ const createCase = async (req, res) => {
       });
     }
     
-    // Verify subcategory exists and is active within the category
-    const subcategory = categoryDoc.subcategories.find(
-      sub => sub.id === subcategoryId && sub.isActive
+    // Resolve selected subcategory from category document and validate if provided
+    const subcategoryDoc = categoryDoc.subcategories?.find(
+      (sub) => String(sub.id) === String(subcategoryId)
     );
-    
-    if (!subcategory) {
-      return res.status(404).json({
+
+    if (subcategoryId && (!subcategoryDoc || !subcategoryDoc.isActive)) {
+      return res.status(400).json({
         success: false,
-        message: 'Subcategory not found or inactive',
+        message: 'Invalid subcategory selected.',
         ...responseMeta,
       });
     }
@@ -363,7 +363,12 @@ const createCase = async (req, res) => {
     const session = getSession(req);
     try {
       // Create new case with defaults
-      const defaultSlaDays = Number(subcategory.defaultSlaDays || categoryDoc.defaultSlaDays || 0);
+      let defaultSlaDays = Number(
+        subcategoryDoc?.defaultSlaDays ?? categoryDoc?.defaultSlaDays ?? 0
+      );
+      if (!Number.isFinite(defaultSlaDays)) {
+        defaultSlaDays = 0;
+      }
       const requestedSlaDueDate = isAdminUser && slaDueDate ? new Date(slaDueDate) : null;
       const hasValidRequestedSla = requestedSlaDueDate && !Number.isNaN(requestedSlaDueDate.getTime());
 
@@ -390,7 +395,7 @@ const createCase = async (req, res) => {
         subcategoryId,
         category: actualCategory, // Legacy field
         caseCategory: actualCategory,
-        caseSubCategory: subcategory.name,
+        caseSubCategory: subcategoryDoc?.name || caseSubCategory || '',
         clientId: finalClientId,
         firmId, // PR 2: Explicitly set firmId for atomic counter scoping
         createdByXID, // Set from authenticated user context
@@ -490,10 +495,10 @@ const createCase = async (req, res) => {
         });
       }
 
+      console.error(`[CASE_CREATE][${requestId}] Create docket failed`, { firmId, error: error.message });
       return res.status(400).json({
         success: false,
-        message: 'Error creating case',
-        error: error.message,
+        message: 'Failed to create docket.',
         ...responseMeta,
       });
     }
