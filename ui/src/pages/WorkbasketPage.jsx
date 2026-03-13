@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import api from '../services/api';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
@@ -38,10 +39,26 @@ export const WorkbasketPage = () => {
   const [pullingCase, setPullingCase] = useState(null);
   const [selectedCases, setSelectedCases] = useState([]);
   const [bulkPulling, setBulkPulling] = useState(false);
+  const [employees, setEmployees] = useState([]);
+  const [assignTo, setAssignTo] = useState('');
+  const isAdmin = ['ADMIN', 'Admin'].includes(user?.role);
 
   useEffect(() => {
     loadGlobalWorklist();
   }, [filters]);
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      if (!isAdmin) return;
+      try {
+        const res = await api.get('/auth/admin/users');
+        setEmployees((res.data?.data || []).filter((u) => u.role === 'Employee'));
+      } catch (e) {
+        console.warn('Failed to load employees for assignment', e);
+      }
+    };
+    loadUsers();
+  }, [isAdmin]);
 
   const loadGlobalWorklist = async () => {
     setLoading(true);
@@ -94,7 +111,7 @@ export const WorkbasketPage = () => {
     setBulkPulling(true);
     try {
       // Use unified pullCases endpoint for bulk operations
-      const response = await worklistService.pullCases(selectedCases);
+      const response = await worklistService.pullCases(selectedCases, assignTo || null);
       
       if (response.success) {
         const message = response.pulled < response.requested
@@ -124,10 +141,10 @@ export const WorkbasketPage = () => {
     setPullingCase(caseId);
     try {
       // Use unified pullCases endpoint for single case (pass as array)
-      const response = await worklistService.pullCases([caseId]);
+      const response = await worklistService.pullCases([caseId], assignTo || null);
       
       if (response.success) {
-        showSuccess('Docket pulled successfully.');
+        showSuccess(assignTo ? 'Docket assigned successfully.' : 'Docket pulled successfully.');
         // Refresh the worklist
         loadGlobalWorklist();
       }
@@ -136,7 +153,7 @@ export const WorkbasketPage = () => {
         showInfo('Docket is no longer available (already assigned).');
         loadGlobalWorklist(); // Refresh to remove it
       } else {
-        showError(error.response?.data?.message || error.message || 'Failed to pull case');
+        showError(error.response?.data?.message || error.message || 'Failed to pull docket');
       }
     } finally {
       setPullingCase(null);
@@ -184,7 +201,7 @@ export const WorkbasketPage = () => {
       <div className="global-worklist">
         <div className="global-worklist__header">
           <h1>Workbasket</h1>
-          <p className="text-secondary">Pull dockets from the unassigned queue</p>
+          <p className="text-secondary">Shared pool of unassigned, open, pending, and resolved dockets.</p>
         </div>
 
         <Card>
@@ -283,6 +300,18 @@ export const WorkbasketPage = () => {
             <span className="text-secondary">
               {selectedCases.length} of {cases.length} selected
             </span>
+            {isAdmin && (
+              <>
+                <label htmlFor="assign-to">Assign to:</label>
+                <select id="assign-to" value={assignTo} onChange={(e) => setAssignTo(e.target.value)}>
+                  <option value="">My Worklist</option>
+                  {employees.map((emp) => (
+                    <option key={emp._id} value={emp._id}>{emp.name || emp.xID}</option>
+                  ))}
+                </select>
+              </>
+            )}
+
           </div>
 
           {loading && <Loading message="Loading..." />}
@@ -308,6 +337,7 @@ export const WorkbasketPage = () => {
                   <th onClick={() => handleSort('category')} style={{ cursor: 'pointer' }}>
                     Category {getSortIcon('category')}
                   </th>
+                  <th>Status</th>
                   <th onClick={() => handleSort('slaDueDate')} style={{ cursor: 'pointer' }}>
                     SLA Due Date {getSortIcon('slaDueDate')}
                   </th>
@@ -321,8 +351,8 @@ export const WorkbasketPage = () => {
               <tbody>
                 {cases.length === 0 ? (
                   <tr>
-                    <td colSpan="8" style={{ textAlign: 'center', padding: '2rem' }}>
-                      No unassigned dockets found. Adjust filters or check back soon.
+                    <td colSpan="9" style={{ textAlign: 'center', padding: '2rem' }}>
+                      No dockets found in the workbasket. Adjust filters or check back soon.
                     </td>
                   </tr>
                 ) : (
@@ -338,6 +368,7 @@ export const WorkbasketPage = () => {
                       <td>{caseItem.caseId}</td>
                       <td>{caseItem.clientId}</td>
                       <td>{caseItem.category}</td>
+                      <td>{caseItem.status}</td>
                       <td>{formatDate(caseItem.slaDueDate)}</td>
                       <td className={getSLAStatusClass(caseItem.slaDaysRemaining)}>
                         {caseItem.slaDaysRemaining !== null 

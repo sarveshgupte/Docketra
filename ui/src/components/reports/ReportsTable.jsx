@@ -23,7 +23,7 @@ export const ReportsTable = ({ cases, onCaseClick, pagination, onPageChange }) =
             <table className="neo-table">
               <thead>
                 <tr>
-                  <th>Case ID</th>
+                  <th>Docket ID</th>
                   <th>Case Name</th>
                   <th>Title</th>
                   <th>Status</th>

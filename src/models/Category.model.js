@@ -41,6 +41,11 @@ const subcategorySchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  defaultSlaDays: {
+    type: Number,
+    min: 0,
+    default: 0,
+  },
 }, {
   _id: false, // Disable automatic _id generation for subdocuments
 });
@@ -81,6 +86,11 @@ const categorySchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true,
+  },
+  defaultSlaDays: {
+    type: Number,
+    min: 0,
+    default: 0,
   },
 }, {
   // Automatic timestamp management for audit trail

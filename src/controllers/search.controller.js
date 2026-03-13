@@ -373,7 +373,7 @@ const employeeWorklist = async (req, res) => {
     const query = {
       firmId,
       assignedToXID: user.xID, // CANONICAL: Query by xID in assignedToXID field
-      status: CaseStatus.OPEN, // Only OPEN cases, not PENDED, not legacy 'Open'
+      status: { $in: [CaseStatus.OPEN, CaseStatus.PENDED] },
     };
     
     const casesQuery = Case.find(query)
@@ -463,7 +463,7 @@ const globalWorklist = async (req, res) => {
     }
     
     // Build query for UNASSIGNED cases only
-    const query = { status: 'UNASSIGNED', firmId };
+    const query = { status: { $in: ['UNASSIGNED', 'OPEN', 'PENDED', 'RESOLVED'] }, firmId };
     
     // Apply filters
     if (clientId) {
@@ -533,7 +533,7 @@ const globalWorklist = async (req, res) => {
       }
       
       casesWithSLA = await Case.find(queryWithSLA)
-        .select('caseId caseName clientId category slaDueAt createdAt createdBy')
+        .select('caseId caseName clientId category status slaDueAt createdAt createdBy')
         .sort(sort)
         .limit(parseInt(limit))
         .skip((parseInt(page) - 1) * parseInt(limit))
@@ -544,7 +544,7 @@ const globalWorklist = async (req, res) => {
         const queryWithoutSLA = { ...baseQuery, slaDueAt: null };
         
         casesWithoutSLA = await Case.find(queryWithoutSLA)
-          .select('caseId caseName clientId category slaDueAt createdAt createdBy')
+          .select('caseId caseName clientId category status slaDueAt createdAt createdBy')
           .sort({ createdAt: sortDirection })
           .limit(parseInt(limit) - casesWithSLA.length)
           .skip(Math.max(0, (parseInt(page) - 1) * parseInt(limit) - casesWithSLA.length))
@@ -553,7 +553,7 @@ const globalWorklist = async (req, res) => {
     } else {
       // For other sort fields, just execute the query normally
       casesWithSLA = await Case.find(baseQuery)
-        .select('caseId caseName clientId category slaDueAt createdAt createdBy')
+        .select('caseId caseName clientId category status slaDueAt createdAt createdBy')
         .sort(sort)
         .limit(parseInt(limit))
         .skip((parseInt(page) - 1) * parseInt(limit))
@@ -577,6 +577,7 @@ const globalWorklist = async (req, res) => {
         caseId: c.caseId,
         caseName: c.caseName,
         clientId: c.clientId,
+        status: c.status,
         category: c.category,
         slaDueAt: c.slaDueAt,
         slaDaysRemaining,
