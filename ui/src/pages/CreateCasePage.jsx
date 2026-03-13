@@ -1,5 +1,5 @@
 /**
- * Create Case Page
+ * Create Docket Page
  */
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
@@ -46,6 +46,7 @@ export const CreateCasePage = () => {
   const navigate = useNavigate();
   const { firmSlug } = useParams();
   const { user } = useAuth();
+  const isAdmin = ['ADMIN', 'Admin'].includes(user?.role);
   const { showSuccess } = useToast();
   const { loading: submitting, error: submitError, run: runSubmit, clearError } = useAsyncAction();
   
@@ -286,11 +287,12 @@ export const CreateCasePage = () => {
     }
 
     try {
-      const response = await runSubmit(() => caseService.createCase(formData, forceCreate));
+      const payload = isAdmin ? formData : { ...formData, slaDueDate: undefined };
+      const response = await runSubmit(() => caseService.createCase(payload, forceCreate));
       
       if (response.success) {
         const confirmationTime = formatDateTime(new Date());
-        const successCopy = `Case ${response.data.caseId} created • ${confirmationTime}`;
+        const successCopy = `Docket ${response.data.caseId} created • ${confirmationTime}`;
         showSuccess(successCopy);
         setFooterConfirmation(successCopy);
         // DO NOT redirect to case detail - show success message instead
@@ -323,7 +325,7 @@ export const CreateCasePage = () => {
         // Duplicate client warning
         setDuplicateWarning(err.response.data);
       } else {
-        setErrors(prev => ({ ...prev, submit: submitError || 'Failed to create case' }));
+        setErrors(prev => ({ ...prev, submit: submitError || 'Failed to create docket. Please retry.' }));
       }
     }
   };
@@ -351,7 +353,7 @@ export const CreateCasePage = () => {
     <Layout>
       <div className="create-case">
         <div className="create-case__header">
-          <h1>{UX_COPY.actions.CREATE_CASE}</h1>
+          <h1>Create Docket</h1>
           <p className="text-secondary">All fields marked with * are required</p>
           {/* Task 7: Draft auto-save indicator */}
           {draftSaved && (
@@ -377,7 +379,7 @@ export const CreateCasePage = () => {
                 Go to Workbasket
               </Button>
               <Button variant="outline" onClick={() => setSuccessMessage(null)}>
-                Create Another Case
+                Create Another Docket
               </Button>
             </div>
           </div>
@@ -444,11 +446,11 @@ export const CreateCasePage = () => {
                   />
                 </SectionCard>
 
-                {/* Section 2 – Case Classification */}
+                {/* Section 2 – Docket Classification */}
                 <SectionCard
                   title={
                     <span className="create-case__section-heading">
-                      Case Classification <CompletionDot complete={sec2.complete} />
+                      Docket Classification <CompletionDot complete={sec2.complete} />
                     </span>
                   }
                   subtitle="Define the case type and details."
@@ -484,7 +486,7 @@ export const CreateCasePage = () => {
                     value={formData.title}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder="Enter case title"
+                    placeholder="Enter docket title"
                     required
                     error={touched.title && errors.title}
                   />
@@ -495,7 +497,7 @@ export const CreateCasePage = () => {
                     value={formData.description}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder="Provide detailed case description"
+                    placeholder="Provide detailed docket description"
                     rows={6}
                     required
                     error={touched.description && errors.description}
@@ -513,13 +515,15 @@ export const CreateCasePage = () => {
                   className="create-case__section"
                 >
                   <Input
-                    label="SLA Due Date *"
+                    label={`SLA Due Date ${isAdmin ? "*" : "🔒"}` }
                     name="slaDueDate"
                     type="datetime-local"
                     value={formData.slaDueDate}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     required
+                    disabled={!isAdmin}
+                    title={!isAdmin ? 'Only admins can modify SLA.' : undefined}
                     error={touched.slaDueDate && errors.slaDueDate}
                   />
                 </SectionCard>
@@ -539,7 +543,7 @@ export const CreateCasePage = () => {
                     Cancel
                     </Button>
                     <Button type="submit" variant="primary" disabled={submitting}>
-                      {submitting ? 'Saving...' : UX_COPY.actions.CREATE_CASE}
+                      {submitting ? 'Saving...' : 'Create Docket'}
                     </Button>
                   </div>
                 </div>

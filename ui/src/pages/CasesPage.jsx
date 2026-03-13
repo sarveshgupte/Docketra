@@ -717,7 +717,7 @@ export const CasesPage = () => {
             placeholder="Search by docket ID, title, or client…"
             value={searchInput}
             onChange={handleSearchChange}
-            aria-label="Search cases"
+            aria-label="Search dockets"
           />
         </div>
 

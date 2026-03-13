@@ -47,10 +47,11 @@ export const worklistService = {
    * 
    * PR: Hard Cutover to xID - Unified pull endpoint
    */
-  pullCases: async (caseIds) => {
-    // Ensure caseIds is an array
+  pullCases: async (caseIds, assignTo = null) => {
     const ids = Array.isArray(caseIds) ? caseIds : [caseIds];
-    const response = await api.post('/cases/pull', { caseIds: ids });
+    const payload = { caseIds: ids };
+    if (assignTo) payload.assignTo = assignTo;
+    const response = await api.post('/cases/pull', payload);
     return response.data;
   },
 
