@@ -77,11 +77,13 @@ const logCaseHistory = async ({
   session
 }) => {
   try {
+    const inTransaction = Boolean(session);
+
     // Validate required fields
     if (!caseId || !actionType || !description) {
       console.error('[AUDIT] Missing required fields for case history:', { caseId, actionType });
-      if (session) {
-        throw new Error('Missing required fields for case history');
+      if (inTransaction) {
+        throw new Error('Invalid CaseHistory payload');
       }
       return null; // Don't throw - audit failures shouldn't block operations
     }
@@ -89,8 +91,8 @@ const logCaseHistory = async ({
     // Validate firmId is provided
     if (!firmId) {
       console.error('[AUDIT] firmId is required for case history');
-      if (session) {
-        throw new Error('firmId is required for case history');
+      if (inTransaction) {
+        throw new Error('Invalid CaseHistory payload');
       }
       return null; // Don't throw - audit failures shouldn't block operations
     }
@@ -117,14 +119,26 @@ const logCaseHistory = async ({
       historyEntry.userAgent = getUserAgent(req);
     }
 
-    if (session) {
-      const [entry] = await CaseHistory.create([historyEntry], { session });
-      return entry || null;
-    }
+    const options = session ? { session } : {};
+    const [entry] = await CaseHistory.create([historyEntry], options);
 
-    return await CaseHistory.create(historyEntry);
+    return entry || null;
   } catch (error) {
-    console.error('[AUDIT] Failed to create case history entry:', error.message);
+    console.error('[AUDIT] Failed to create case history entry', {
+      error: error.message,
+      stack: error.stack,
+      historyEntry: {
+        caseId,
+        firmId,
+        actionType,
+        actionLabel,
+        description,
+        performedBy,
+        performedByXID,
+        actorRole,
+        metadata,
+      },
+    });
     if (session) {
       throw error;
     }
