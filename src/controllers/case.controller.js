@@ -394,9 +394,21 @@ const createCase = async (req, res) => {
         slaState.slaDueAt = requestedSlaDueDate;
       }
 
+      const normalizedTitle = typeof title === 'string' && title.trim().length > 0
+        ? title.trim()
+        : 'Untitled Docket';
+      const normalizedDescription = typeof description === 'string' ? description.trim() : '';
+      if (!normalizedDescription) {
+        return res.status(400).json({
+          success: false,
+          message: 'Description is required',
+          ...responseMeta,
+        });
+      }
+
       const newCase = new Case({
-        title: title.trim(),
-        description: description.trim(),
+        title: normalizedTitle,
+        description: normalizedDescription,
         categoryId,
         subcategoryId,
         category: actualCategory, // Legacy field
@@ -430,7 +442,7 @@ const createCase = async (req, res) => {
       step('after case create');
 
       step('before counter increment');
-      await incrementTenantMetric(firmId, 'cases', 1, { session }).catch(() => null);
+      await incrementTenantMetric(firmId, 'cases', 1, { session });
       step('after counter increment');
       
       // Create case history entry with enhanced audit logging
