@@ -34,13 +34,14 @@ const upsertTenantMetrics = async (firmId, metrics) => {
 
 const incrementTenantMetric = async (firmId, field, amount = 1, options = {}) => {
   const { session } = options;
+  if (!field) throw new Error('metricName required');
   if (!firmId || !['users', 'clients', 'cases', 'categories'].includes(field)) return null;
   const result = await TenantMetrics.findOneAndUpdate(
     { firmId: String(firmId) },
     {
       $inc: { [field]: Number(amount) || 1 },
       $set: { updatedAt: new Date() },
-      $setOnInsert: { firmId: String(firmId), users: 0, clients: 0, cases: 0, categories: 0 },
+      $setOnInsert: { firmId: String(firmId) },
     },
     { upsert: true, new: true, setDefaultsOnInsert: true, session }
   );
