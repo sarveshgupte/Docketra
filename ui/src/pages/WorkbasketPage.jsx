@@ -100,7 +100,7 @@ export const WorkbasketPage = () => {
     }
 
     if (selectedCases.length === 0) {
-      showInfo('Please select at least one docket to pull.');
+      showInfo('Please select at least one docket.');
       return;
     }
 
@@ -177,9 +177,11 @@ export const WorkbasketPage = () => {
   };
 
   const getSLAStatusClass = (daysRemaining) => {
-    if (daysRemaining === null) return '';
-    if (daysRemaining < 0) return 'sla-overdue';
-    if (daysRemaining <= 2) return 'sla-due-soon';
+    if (daysRemaining === null || daysRemaining === undefined) return '';
+    const normalizedDays = Number(daysRemaining);
+    if (Number.isNaN(normalizedDays)) return '';
+    if (normalizedDays < 0) return 'sla-overdue';
+    if (normalizedDays <= 2) return 'sla-due-soon';
     return 'sla-on-track';
   };
 
@@ -356,7 +358,10 @@ export const WorkbasketPage = () => {
                     </td>
                   </tr>
                 ) : (
-                  cases.map((caseItem) => (
+                  cases.map((caseItem) => {
+                    const slaDate = caseItem.slaDueDate || caseItem.slaState?.slaDueAt;
+
+                    return (
                     <tr key={caseItem.caseId}>
                       <td>
                         <input
@@ -365,11 +370,18 @@ export const WorkbasketPage = () => {
                           onChange={() => handleSelectCase(caseItem.caseId)}
                         />
                       </td>
-                      <td>{caseItem.caseId}</td>
+                      <td>
+                        <a
+                          className="docket-link"
+                          onClick={() => navigate(`/app/firm/${firmSlug}/cases/${caseItem.caseId}`)}
+                        >
+                          {caseItem.caseId}
+                        </a>
+                      </td>
                       <td>{caseItem.clientId}</td>
                       <td>{caseItem.category}</td>
                       <td>{caseItem.status}</td>
-                      <td>{formatDate(caseItem.slaDueDate)}</td>
+                      <td>{formatDate(slaDate)}</td>
                       <td className={getSLAStatusClass(caseItem.slaDaysRemaining)}>
                         {caseItem.slaDaysRemaining !== null 
                           ? `${caseItem.slaDaysRemaining} days`
@@ -396,7 +408,8 @@ export const WorkbasketPage = () => {
                         </div>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>

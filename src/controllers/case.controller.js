@@ -1225,19 +1225,25 @@ const getCaseByCaseId = async (req, res) => {
     // PR: Fix Case Visibility - Enhanced logging for debugging
     console.log(`[GET_CASE] Attempting to fetch case: caseId=${caseId}, firmId=${req.user.firmId}, userXID=${req.user.xID}`);
     
-    // PR: Case Identifier Semantics - Resolve identifier to internal ID
-    // This handles both ObjectId and CASE-YYYYMMDD-XXXXX formats
-    let caseData;
-    try {
-      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
-      console.log(`[GET_CASE] Resolved identifier: ${caseId} -> ${internalId}`);
-      caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
-    } catch (error) {
-      console.error(`[GET_CASE] Case not found or identifier resolution failed: caseId=${caseId}, error=${error.message}`);
-      return res.status(404).json({
-        success: false,
-        message: 'Case not found',
-      });
+    // Prefer direct caseId lookup for docket deep-links, scoped by firm.
+    // Fallback to identifier resolution for backward compatibility with internal IDs.
+    let caseData = await Case.findOne({
+      caseId,
+      firmId: req.user.firmId,
+    });
+
+    if (!caseData) {
+      try {
+        const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
+        console.log(`[GET_CASE] Resolved identifier: ${caseId} -> ${internalId}`);
+        caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
+      } catch (error) {
+        console.error(`[GET_CASE] Case not found or identifier resolution failed: caseId=${caseId}, error=${error.message}`);
+        return res.status(404).json({
+          success: false,
+          message: 'Case not found',
+        });
+      }
     }
     
     if (!caseData) {
@@ -1270,7 +1276,7 @@ const getCaseByCaseId = async (req, res) => {
     const displayCaseId = caseData.caseId;
     const comments = await Comment.find({ caseId: displayCaseId }).sort({ createdAt: 1 });
     const attachments = await Attachment.find({ caseId: displayCaseId }).sort({ createdAt: 1 });
-    const history = await CaseHistory.find({ caseId: displayCaseId, firmId: req.firmId }).sort({ timestamp: -1 });
+    const history = await CaseHistory.find({ caseId: displayCaseId, firmId: req.user.firmId }).sort({ timestamp: -1 });
     
     // PR #45: Also fetch CaseAudit entries for view-mode tracking
     // Use aggregation to lookup user names from performedByXID
@@ -1885,6 +1891,10 @@ const pullCases = async (req, res) => {
       }
       
       return res.status(200).json({
+        success: true,
+        message: 'Docket pulled successfully',
+        requested: 1,
+        pulled: 1,
         status: result.status,
         caseId: result.caseId,
         assignedTo: result.assignedTo,

@@ -118,7 +118,7 @@ export const FilteredCasesPage = () => {
   if (loading) {
     return (
       <Layout>
-        <Loading message="Loading cases..." />
+        <Loading message="Loading dockets..." />
       </Layout>
     );
   }
@@ -133,7 +133,7 @@ export const FilteredCasesPage = () => {
 
         <div className="filtered-cases__info">
           <span className="filtered-cases__count">
-            Total: {pagination.total} case{pagination.total !== 1 ? 's' : ''}
+            Total: {pagination.total} docket{pagination.total !== 1 ? 's' : ''}
           </span>
           <span className="filtered-cases__page">
             Page {pagination.page} of {pagination.pages}
@@ -143,14 +143,14 @@ export const FilteredCasesPage = () => {
         <Card>
           {cases.length === 0 ? (
             <div className="filtered-cases__empty">
-              <p className="text-secondary">No cases found</p>
+              <p className="text-secondary">No dockets found</p>
             </div>
           ) : (
             <table className="neo-table">
               <thead>
                 <tr>
                   <th>Docket ID</th>
-                  <th>Case Name</th>
+                  <th>Docket Name</th>
                   <th>Category</th>
                   <th>Client ID</th>
                   <th>Status</th>
