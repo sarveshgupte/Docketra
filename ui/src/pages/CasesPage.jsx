@@ -247,7 +247,7 @@ export const CasesPage = () => {
           try {
             const response = await caseService.pullCase(caseRecord.caseId);
             if (response.success) {
-              showSuccess(`Case assigned to you`);
+              showSuccess(`Docket assigned to you`);
               await loadCases();
             }
           } catch (err) {
@@ -263,7 +263,7 @@ export const CasesPage = () => {
     try {
       const response = await caseService.pullCase(caseRecord.caseId);
       if (response.success) {
-        showSuccess(`Case assigned to you`);
+        showSuccess(`Docket assigned to you`);
         await loadCases();
       }
     } catch (err) {
@@ -303,7 +303,7 @@ export const CasesPage = () => {
       try {
         await Promise.all(selectedList.map((c) => caseService.pullCase(c.caseId)));
         setSelectedCaseIds(new Set());
-        showSuccess(`${selectedList.length} case${selectedList.length !== 1 ? 's' : ''} assigned to you`);
+        showSuccess(`${selectedList.length} docket${selectedList.length !== 1 ? 's' : ''} assigned to you`);
         await loadCases();
       } catch (err) {
         console.error('Bulk assign failed:', err);
@@ -314,7 +314,7 @@ export const CasesPage = () => {
     if (mixedStates) {
       setConfirmModal({
         title: 'Assign Cases',
-        description: `Selected cases have mixed lifecycle states. Assign all ${selectedList.length} case(s) to yourself?`,
+        description: `Selected dockets have mixed lifecycle states. Assign all ${selectedList.length} docket(s) to yourself?`,
         onConfirm: async () => { setConfirmModal(null); await doAssign(); },
       });
       return;
@@ -329,14 +329,14 @@ export const CasesPage = () => {
     if (!selectedList.length) return;
     setConfirmModal({
       title: 'Move to Workbasket',
-      description: `Move ${selectedList.length} case(s) to Workbasket?`,
+      description: `Move ${selectedList.length} docket(s) to Workbasket?`,
       onConfirm: async () => {
         setConfirmModal(null);
         setBulkActionInProgress(true);
         try {
           await Promise.all(selectedList.map((c) => caseService.moveCaseToGlobal(c.caseId)));
           setSelectedCaseIds(new Set());
-          showSuccess(`${selectedList.length} case${selectedList.length !== 1 ? 's' : ''} moved to Workbasket`);
+          showSuccess(`${selectedList.length} docket${selectedList.length !== 1 ? 's' : ''} moved to Workbasket`);
           await loadCases();
         } catch (err) {
           console.error('Bulk move failed:', err);
@@ -603,7 +603,7 @@ export const CasesPage = () => {
                   });
                 }}
               >
-                View Case
+                View Docket
               </button>
               {canAssign && (
                 <button
@@ -665,7 +665,7 @@ export const CasesPage = () => {
               aria-label={`Total open cases: ${slaSummary.totalOpen}`}
             >
               <span className="cases-page__sla-tile-value">{slaSummary.totalOpen}</span>
-              <span className="cases-page__sla-tile-label">Open Cases</span>
+              <span className="cases-page__sla-tile-label">Open Dockets</span>
             </button>
             <button
               type="button"
