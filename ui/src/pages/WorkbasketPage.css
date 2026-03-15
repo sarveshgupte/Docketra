@@ -118,3 +118,14 @@
     padding: 0.75rem 0.5rem;
   }
 }
+
+.docket-link {
+  color: var(--accent-primary, #2563eb);
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.docket-link:hover {
+  color: var(--accent-primary-hover, #1d4ed8);
+}

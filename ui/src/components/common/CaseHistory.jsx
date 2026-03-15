@@ -35,8 +35,8 @@ export const CaseHistory = ({ caseId }) => {
         setHistory(response.data.history || []);
       }
     } catch (err) {
-      console.error('Failed to load case history:', err);
-      setError('Failed to load case history');
+      console.error('Failed to load docket history:', err);
+      setError('Failed to load docket history');
     } finally {
       setLoading(false);
     }
@@ -66,7 +66,7 @@ export const CaseHistory = ({ caseId }) => {
 
   if (loading) {
     return (
-      <Card title="Case History" className="mt-6">
+      <Card title="Docket History" className="mt-6">
         <Loading text="Loading history..." />
       </Card>
     );
@@ -74,7 +74,7 @@ export const CaseHistory = ({ caseId }) => {
 
   if (error) {
     return (
-      <Card title="Case History" className="mt-6">
+      <Card title="Docket History" className="mt-6">
         <p className="text-red-600">{error}</p>
       </Card>
     );
@@ -82,14 +82,14 @@ export const CaseHistory = ({ caseId }) => {
 
   if (history.length === 0) {
     return (
-      <Card title="Case History" className="mt-6">
+      <Card title="Docket History" className="mt-6">
         <p className="text-gray-500">No history entries found.</p>
       </Card>
     );
   }
 
   return (
-    <Card title="Case History" className="mt-6">
+    <Card title="Docket History" className="mt-6">
       <div className="space-y-4">
         {history.map((entry, index) => (
           <div 

@@ -594,7 +594,7 @@ export const CaseDetailPage = () => {
   if (loading) {
     return (
       <Layout>
-        <Loading message="Loading case..." />
+        <Loading message="Loading docket..." />
       </Layout>
     );
   }
@@ -604,7 +604,7 @@ export const CaseDetailPage = () => {
       <Layout>
         <div className="container">
           <Card>
-            <p>Case not found</p>
+            <p>Docket not found</p>
           </Card>
         </div>
       </Layout>
