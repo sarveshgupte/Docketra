@@ -166,7 +166,7 @@ const assignCaseToUser = async (firmId, caseId, user, session = null) => {
  * @param {object} user - User object with xID and email
  * @returns {object} Results with count of assigned cases
  */
-const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = null) => {
+const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = null, existingSession = null) => {
   if (!user || !user.xID) {
     throw new Error('Valid user with xID is required for case assignment');
   }
@@ -176,15 +176,21 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
   }
   
   const assignedAt = new Date();
-  const session = await mongoose.startSession();
+  const session = existingSession || await mongoose.startSession();
+  const ownsSession = !existingSession;
   try {
-    session.startTransaction();
+    if (ownsSession) {
+      session.startTransaction();
+    }
 
     const result = await Case.updateMany(
       {
         firmId,
         caseId: { $in: caseIds },
         status: CaseStatus.UNASSIGNED,
+        assignedToXID: null,
+        assignedTo: null,
+        'lockStatus.isLocked': { $ne: true },
       },
       {
         $set: {
@@ -222,12 +228,25 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
       })
     ));
 
+    await Promise.all(updatedCases.map((caseData) =>
+      CaseHistory.create([{
+        caseId: caseData.caseId,
+        actionType: 'CASE_PULLED',
+        description: `Case pulled from Global Workbasket by ${user.xID.toUpperCase()}`,
+        performedBy: user.email?.toLowerCase() || 'system@local',
+        performedByXID: user.xID.toUpperCase(),
+        firmId,
+      }], { session })
+    ));
+
     const transitionedCases = await Case.find({
       firmId,
       caseId: { $in: updatedCases.map((caseData) => caseData.caseId) },
     }, null, { session });
 
-    await session.commitTransaction();
+    if (ownsSession) {
+      await session.commitTransaction();
+    }
     return {
       success: true,
       assigned: result.modifiedCount,
@@ -236,7 +255,9 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
     };
   } catch (error) {
     try {
-      await session.abortTransaction();
+      if (ownsSession) {
+        await session.abortTransaction();
+      }
     } catch (_) {
       // noop
     }
@@ -249,7 +270,9 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
     }
     throw error;
   } finally {
-    await session.endSession();
+    if (ownsSession) {
+      await session.endSession();
+    }
   }
 };
 
