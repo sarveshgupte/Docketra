@@ -137,6 +137,17 @@ export const CaseDetailPage = () => {
   // Configuration for view tracking
   const VIEW_TRACKING_DEBOUNCE_MS = 2000; // 2 seconds
 
+  const caseInfo = useMemo(
+    () => (caseData ? normalizeCase(caseData) : null),
+    [caseData]
+  );
+  const comments = caseData?.comments ?? [];
+  const attachments = caseData?.attachments ?? [];
+  const auditLog = caseData?.auditLog ?? [];
+  const history = caseData?.history ?? [];
+  const timelineEvents = auditLog.length > 0 ? auditLog : history;
+
+
   useEffect(() => {
     loadCase();
     
@@ -192,7 +203,8 @@ export const CaseDetailPage = () => {
       const response = await caseService.getCaseById(caseId);
       
       if (response.success) {
-        setCaseData(response.data);
+        const normalized = response.data?.case || response.data;
+        setCaseData(normalized);
       }
     } catch (error) {
       console.error('Failed to load case:', error);
@@ -347,10 +359,10 @@ export const CaseDetailPage = () => {
     }
 
     const confirmationTimestamp = new Date().toISOString();
-    const responsibleExecutive = caseData?.case?.assignedToName || caseData?.case?.assignedToXID || user?.name || user?.xID || 'Unassigned';
+    const responsibleExecutive = caseInfo?.assignedToName || caseInfo?.assignedToXID || user?.name || user?.xID || 'Unassigned';
     setConfirmModal({
       title: 'File Case',
-      description: `Stage change: ${toLifecycleStage(caseInfo.status)} → Marked as Executed\nResponsible party: ${responsibleExecutive}\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
+      description: `Stage change: ${toLifecycleStage(caseInfo?.status)} → Marked as Executed\nResponsible party: ${responsibleExecutive}\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
       confirmText: 'File Case',
       onConfirm: async () => {
         setConfirmModal(null);
@@ -405,10 +417,10 @@ export const CaseDetailPage = () => {
     }
 
     const confirmationTimestamp = new Date().toISOString();
-    const responsibleExecutive = caseData?.case?.assignedToName || caseData?.case?.assignedToXID || user?.name || user?.xID || 'Unassigned';
+    const responsibleExecutive = caseInfo?.assignedToName || caseInfo?.assignedToXID || user?.name || user?.xID || 'Unassigned';
     setConfirmModal({
       title: 'Pend Case',
-      description: `Stage change: ${toLifecycleStage(caseInfo.status)} → Awaiting Partner Approval\nResponsible party: ${responsibleExecutive}\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
+      description: `Stage change: ${toLifecycleStage(caseInfo?.status)} → Awaiting Partner Approval\nResponsible party: ${responsibleExecutive}\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
       confirmText: 'Pend Case',
       onConfirm: async () => {
         setConfirmModal(null);
@@ -447,10 +459,10 @@ export const CaseDetailPage = () => {
     }
 
     const confirmationTimestamp = new Date().toISOString();
-    const responsibleExecutive = caseData?.case?.assignedToName || caseData?.case?.assignedToXID || user?.name || user?.xID || 'Unassigned';
+    const responsibleExecutive = caseInfo?.assignedToName || caseInfo?.assignedToXID || user?.name || user?.xID || 'Unassigned';
     setConfirmModal({
       title: 'Resolve Case',
-      description: `Stage change: ${toLifecycleStage(caseInfo.status)} → Executed\nResponsible party: ${responsibleExecutive}\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
+      description: `Stage change: ${toLifecycleStage(caseInfo?.status)} → Executed\nResponsible party: ${responsibleExecutive}\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
       confirmText: 'Resolve Case',
       onConfirm: async () => {
         setConfirmModal(null);
@@ -488,7 +500,7 @@ export const CaseDetailPage = () => {
     }
 
     const confirmationTimestamp = new Date().toISOString();
-    const responsibleExecutive = caseData?.case?.assignedToName || caseData?.case?.assignedToXID || user?.name || user?.xID || 'Unassigned';
+    const responsibleExecutive = caseInfo?.assignedToName || caseInfo?.assignedToXID || user?.name || user?.xID || 'Unassigned';
     setConfirmModal({
       title: 'Unpend Case',
       description: `Stage change: Awaiting Partner Approval → Under Execution\nResponsible party: ${responsibleExecutive}\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
@@ -542,8 +554,8 @@ export const CaseDetailPage = () => {
   };
 
   const handlePrintSummary = () => {
-    const caseInfo = normalizeCase(caseData);
-    const timeline = (caseData.auditLog || caseData.history || []).slice(0, 10);
+    const printableCaseInfo = caseInfo || normalizeCase(caseData || {});
+    const timeline = timelineEvents.slice(0, 10);
     const printWindow = window.open('', '_blank', 'noopener,noreferrer');
     if (!printWindow) return;
     const timelineRows = timeline
@@ -559,7 +571,7 @@ export const CaseDetailPage = () => {
     printWindow.document.write(`
       <html>
         <head>
-          <title>Docket Summary - ${escapeHtml(caseInfo.caseId || caseId)}</title>
+          <title>Docket Summary - ${escapeHtml(printableCaseInfo.caseId || caseId)}</title>
           <style>
             body { font-family: Arial, sans-serif; margin: 24px; color: #111827; }
             h1 { font-size: 20px; margin-bottom: 4px; }
@@ -571,11 +583,11 @@ export const CaseDetailPage = () => {
           </style>
         </head>
         <body>
-          <h1>${escapeHtml(caseInfo.caseName || caseInfo.title || 'Case')}</h1>
-          <div class="meta">Docket ID: ${escapeHtml(caseInfo.caseId || caseId)}</div>
-          <div><strong>Status:</strong> ${escapeHtml(toLifecycleStage(caseInfo.status))}</div>
-          <div><strong>SLA Due:</strong> ${escapeHtml(caseInfo.slaDueDate ? formatDateTime(caseInfo.slaDueDate) : 'Not configured')}</div>
-          <div><strong>Assigned To:</strong> ${escapeHtml(caseInfo.assignedToName || caseInfo.assignedToXID || 'Unassigned')}</div>
+          <h1>${escapeHtml(printableCaseInfo.caseName || printableCaseInfo.title || 'Case')}</h1>
+          <div class="meta">Docket ID: ${escapeHtml(printableCaseInfo.caseId || caseId)}</div>
+          <div><strong>Status:</strong> ${escapeHtml(toLifecycleStage(printableCaseInfo?.status))}</div>
+          <div><strong>SLA Due:</strong> ${escapeHtml(printableCaseInfo.slaDueDate ? formatDateTime(printableCaseInfo.slaDueDate) : 'Not configured')}</div>
+          <div><strong>Assigned To:</strong> ${escapeHtml(printableCaseInfo.assignedToName || printableCaseInfo.assignedToXID || 'Unassigned')}</div>
           <div><strong>Client:</strong> ${escapeHtml(formatClientDisplay(caseData.client, true))}</div>
           <h2>Timeline (Last 10 entries)</h2>
           <table>
@@ -590,6 +602,62 @@ export const CaseDetailPage = () => {
       printWindow.print();
     };
   };
+
+  // PR #45: Extract access mode information from API response
+  const accessMode = caseData?.accessMode || {};
+  const isViewOnlyMode = accessMode.isViewOnlyMode;
+
+  // Determine if user is admin
+  const isAdmin = user?.role === 'Admin';
+
+  // Task 2: Inactivity warning — OPEN case not updated in 3+ days (not pended)
+  const isInactiveWarning = useMemo(() => {
+    if (!caseInfo) return false;
+    if (caseInfo?.status !== 'OPEN') return false;
+    if (!caseInfo.updatedAt) return false;
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+    return new Date(caseInfo.updatedAt) < threeDaysAgo;
+  }, [caseInfo]);
+
+  // Task 3: Smart lifecycle warnings for File/Resolve modals
+  const lifecycleWarnings = useMemo(() => {
+    if (!caseInfo) return [];
+    const warnings = [];
+    const unresolvedComments = comments.filter((c) => !c.resolved).length;
+    if (unresolvedComments > 0) {
+      warnings.push(`${unresolvedComments} unresolved comment(s) on this case.`);
+    }
+    if (caseInfo.approvalStatus === 'PENDING') {
+      warnings.push('Pending approval is outstanding.');
+    }
+    const isSlaBreach =
+      caseInfo.slaDueDate &&
+      new Date(caseInfo.slaDueDate) < new Date() &&
+      caseInfo?.status !== 'RESOLVED' &&
+      caseInfo?.status !== 'FILED';
+    if (isSlaBreach) {
+      warnings.push('SLA has been breached for this case.');
+    }
+    return warnings;
+  }, [caseInfo, comments]);
+
+  // Determine button visibility
+  // Pull Case button: show only if view-only mode, unassigned, and in GLOBAL queue
+  const showPullButton = isViewOnlyMode &&
+    !caseInfo?.assignedToXID &&
+    caseInfo?.queueType === 'GLOBAL' &&
+    caseInfo?.status === 'UNASSIGNED';
+
+  // Move to Workbasket button: show only for admin users AND case is currently assigned
+  const showMoveToWorkbasketButton = isAdmin && caseInfo?.assignedToXID;
+
+  // Case action buttons (File, Pend, Resolve) - PR: Fix Case Lifecycle
+  // Action Visibility Rules:
+  // - OPEN: Show File, Pend, Resolve (no Unpend)
+  // - PENDING/PENDED: Show ONLY Unpend (no File, Pend, Resolve)
+  // - FILED or RESOLVED: Show nothing (terminal states, read-only)
+  const canPerformLifecycleActions = caseInfo?.status === 'OPEN' && !isViewOnlyMode;
+  const canUnpend = (caseInfo?.status === 'PENDED' || caseInfo?.status === 'PENDING') && !isViewOnlyMode;
 
   if (loading) {
     return (
@@ -611,64 +679,7 @@ export const CaseDetailPage = () => {
     );
   }
 
-  // PR #45: Extract access mode information from API response
-  const accessMode = caseData.accessMode || {};
-  const isViewOnlyMode = accessMode.isViewOnlyMode;
-  
-  // PR #45: Normalize case data structure
-  const caseInfo = normalizeCase(caseData);
-
-  // Determine if user is admin
-  const isAdmin = user?.role === 'Admin';
-
-  // Task 2: Inactivity warning — OPEN case not updated in 3+ days (not pended)
-  const isInactiveWarning = useMemo(() => {
-    if (!caseInfo) return false;
-    if (caseInfo.status !== 'OPEN') return false;
-    if (!caseInfo.updatedAt) return false;
-    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
-    return new Date(caseInfo.updatedAt) < threeDaysAgo;
-  }, [caseInfo]);
-
-  // Task 3: Smart lifecycle warnings for File/Resolve modals
-  const lifecycleWarnings = useMemo(() => {
-    if (!caseInfo) return [];
-    const warnings = [];
-    const unresolvedComments = (caseData?.comments || []).filter((c) => !c.resolved).length;
-    if (unresolvedComments > 0) {
-      warnings.push(`${unresolvedComments} unresolved comment(s) on this case.`);
-    }
-    if (caseInfo.approvalStatus === 'PENDING') {
-      warnings.push('Pending approval is outstanding.');
-    }
-    const isSlaBreach =
-      caseInfo.slaDueDate &&
-      new Date(caseInfo.slaDueDate) < new Date() &&
-      caseInfo.status !== 'RESOLVED' &&
-      caseInfo.status !== 'FILED';
-    if (isSlaBreach) {
-      warnings.push('SLA has been breached for this case.');
-    }
-    return warnings;
-  }, [caseInfo, caseData]);
-
-  // Determine button visibility
-  // Pull Case button: show only if view-only mode, unassigned, and in GLOBAL queue
-  const showPullButton = isViewOnlyMode && 
-                          !caseInfo.assignedToXID && 
-                          caseInfo.queueType === 'GLOBAL' &&
-                          caseInfo.status === 'UNASSIGNED';
-
-  // Move to Workbasket button: show only for admin users AND case is currently assigned
-  const showMoveToWorkbasketButton = isAdmin && caseInfo.assignedToXID;
-
-  // Case action buttons (File, Pend, Resolve) - PR: Fix Case Lifecycle
-  // Action Visibility Rules:
-  // - OPEN: Show File, Pend, Resolve (no Unpend)
-  // - PENDING/PENDED: Show ONLY Unpend (no File, Pend, Resolve)
-  // - FILED or RESOLVED: Show nothing (terminal states, read-only)
-  const canPerformLifecycleActions = caseInfo.status === 'OPEN' && !isViewOnlyMode;
-  const canUnpend = (caseInfo.status === 'PENDED' || caseInfo.status === 'PENDING') && !isViewOnlyMode;
+  if (!caseInfo) return null;
 
   return (
     <Layout>
@@ -773,7 +784,7 @@ export const CaseDetailPage = () => {
             {caseInfo.approvalStatus === 'PENDING' && <Badge variant="warning">Awaiting Partner Approval</Badge>}
             {caseInfo.lockStatus?.isLocked && <Badge variant="warning">Lifecycle Locked</Badge>}
             {isViewOnlyMode && <Badge variant="warning">Role Restricted Action</Badge>}
-            <Badge status={caseInfo.status}>{toLifecycleStage(caseInfo.status)}</Badge>
+            <Badge status={caseInfo?.status}>{toLifecycleStage(caseInfo?.status)}</Badge>
           </div>
         </div>
         {actionConfirmation ? <div className="case-detail__confirmation">{actionConfirmation}</div> : null}
@@ -797,7 +808,7 @@ export const CaseDetailPage = () => {
         {caseInfo.lockStatus?.isLocked &&
           caseInfo.lockStatus.activeUserEmail !== user?.email?.toLowerCase() && (
           <div className="neo-alert neo-alert--warning case-detail__alert">
-            <strong>Docket {caseInfo.caseId || caseId} is locked</strong>{' '}
+            <strong>Docket {caseInfo?.caseId || caseId} is locked</strong>{' '}
             {(() => {
               const name = caseInfo.lockStatus.activeUserDisplayName;
               const xid  = caseInfo.lockStatus.activeUserXID;
@@ -820,12 +831,12 @@ export const CaseDetailPage = () => {
           <div className="case-detail__lifecycle-fields">
             <div className="case-detail__lifecycle-field">
               <span className="case-detail__lifecycle-label">Current Stage</span>
-              <Badge status={caseInfo.status}>{toLifecycleStage(caseInfo.status)}</Badge>
+              <Badge status={caseInfo?.status}>{toLifecycleStage(caseInfo?.status)}</Badge>
             </div>
             <div className="case-detail__lifecycle-field">
               <span className="case-detail__lifecycle-label">SLA Due</span>
-              <span className={`case-detail__lifecycle-value${caseInfo.slaDueDate && new Date(caseInfo.slaDueDate) < new Date() && caseInfo.status !== 'RESOLVED' && caseInfo.status !== 'FILED' ? ' case-detail__lifecycle-value--danger' : ''}`}>
-                {caseInfo.slaDueDate ? formatDateTime(caseInfo.slaDueDate) : '—'}
+              <span className={`case-detail__lifecycle-value${caseInfo.slaDueDate && new Date(caseInfo.slaDueDate) < new Date() && caseInfo?.status !== 'RESOLVED' && caseInfo?.status !== 'FILED' ? ' case-detail__lifecycle-value--danger' : ''}`}>
+                {caseInfo?.slaDueDate ? formatDateTime(caseInfo.slaDueDate) : '—'}
               </span>
             </div>
             <div className="case-detail__lifecycle-field">
@@ -895,11 +906,11 @@ export const CaseDetailPage = () => {
                 </div>
                 <div className="case-detail__field">
                   <span className="case-detail__label">Current Lifecycle Stage</span>
-                  <Badge status={caseInfo.status}>{toLifecycleStage(caseInfo.status)}</Badge>
+                  <Badge status={caseInfo?.status}>{toLifecycleStage(caseInfo?.status)}</Badge>
                 </div>
                 <div className="case-detail__field">
                   <span className="case-detail__label">Responsible Executive</span>
-                  <span>{caseInfo.assignedToName || caseInfo.assignedToXID || 'Unassigned'}</span>
+                  <span>{caseInfo?.assignedToName || caseInfo?.assignedToXID || 'Unassigned'}</span>
                 </div>
                 <div className="case-detail__field">
                   <span className="case-detail__label">Assigned By</span>
@@ -940,8 +951,8 @@ export const CaseDetailPage = () => {
             <Card className="case-detail__section">
               <h2 className="neo-section__header">Comments</h2>
               <div className="case-detail__comments">
-                {caseData.comments && caseData.comments.length > 0 ? (
-                  caseData.comments.map((comment, index) => (
+                {comments.length > 0 ? (
+                  comments.map((comment, index) => (
                     <div key={index} className="neo-inset case-detail__comment-item">
                       <div className="case-detail__comment-header">
                         <span className="case-detail__comment-author">
@@ -979,11 +990,11 @@ export const CaseDetailPage = () => {
             </Card>
 
             {/* Activity Timeline (new audit log) */}
-            {caseData.auditLog && caseData.auditLog.length > 0 && (
+            {auditLog.length > 0 && (
                <Card className="case-detail__section" id="audit-history-section">
                  <h2 className="neo-section__header">Recent Audit Records</h2>
                 <div className="case-detail__audit">
-                  {caseData.auditLog.map((entry, index) => (
+                  {auditLog.map((entry, index) => (
                     <div key={index} className="neo-inset case-detail__audit-item">
                       <div className="case-detail__audit-entry">
                         <span className="case-detail__audit-time">{formatDateTime(entry.timestamp)}</span>
@@ -1002,12 +1013,12 @@ export const CaseDetailPage = () => {
             )}
 
             {/* Fallback: old audit history */}
-            {(!caseData.auditLog || caseData.auditLog.length === 0) &&
-              caseData.history && caseData.history.length > 0 && (
+            {auditLog.length === 0 &&
+              history.length > 0 && (
                <Card className="case-detail__section" id="audit-history-section">
                  <h2 className="neo-section__header">Audit History</h2>
                 <div className="case-detail__audit">
-                  {caseData.history.map((entry, index) => (
+                  {history.map((entry, index) => (
                     <div key={index} className="neo-inset case-detail__audit-item">
                       <div className="case-detail__audit-entry">
                         <span className="case-detail__audit-time">{formatDateTime(entry.timestamp)}</span>
@@ -1032,8 +1043,8 @@ export const CaseDetailPage = () => {
             <Card className="case-detail__context-card">
               <h2 className="neo-section__header">Attachments</h2>
               <div className="case-detail__attachments">
-                {caseData.attachments && caseData.attachments.length > 0 ? (
-                  caseData.attachments.map((attachment, index) => (
+                {attachments.length > 0 ? (
+                  attachments.map((attachment, index) => (
                     <div key={index} className="neo-inset case-detail__attachment-item">
                       <div className="case-detail__attachment-name">
                         📄 {attachment.fileName || attachment.filename}
@@ -1315,7 +1326,7 @@ export const CaseDetailPage = () => {
           isOpen={timelineOpen}
           onClose={() => setTimelineOpen(false)}
           caseId={caseId}
-          events={(caseData.auditLog || caseData.history || []).map((entry) => ({
+          events={timelineEvents.map((entry) => ({
             id: entry._id || entry.id || `${entry.timestamp}-${entry.actionType}`,
             action: entry.actionType || entry.action || 'Updated',
             actor:
