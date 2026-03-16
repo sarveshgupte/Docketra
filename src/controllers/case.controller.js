@@ -1274,35 +1274,48 @@ const getCaseByCaseId = async (req, res) => {
     
     // Get related data - use caseId from database (display number)
     const displayCaseId = caseData.caseId;
-    const comments = await Comment.find({ caseId: displayCaseId }).sort({ createdAt: 1 });
-    const attachments = await Attachment.find({ caseId: displayCaseId }).sort({ createdAt: 1 });
-    const history = await CaseHistory.find({ caseId: displayCaseId, firmId: req.user.firmId }).sort({ timestamp: -1 });
-    
-    // PR #45: Also fetch CaseAudit entries for view-mode tracking
-    // Use aggregation to lookup user names from performedByXID
-    const auditLog = await CaseAudit.aggregate([
-      { $match: { caseId: displayCaseId } },
-      { $sort: { timestamp: -1 } },
-      { $limit: 50 },
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'performedByXID',
-          foreignField: 'xID',
-          as: 'userInfo'
-        }
-      },
-      {
-        $addFields: {
-          performedByName: { $arrayElemAt: ['$userInfo.name', 0] }
-        }
-      },
-      {
-        $project: {
-          userInfo: 0  // Remove the userInfo array from results
-        }
-      }
-    ]);
+    const [commentsResult, attachmentsResult, historyResult, auditResult] =
+      await Promise.allSettled([
+        Comment.find({ caseId: displayCaseId }).sort({ createdAt: 1 }).lean(),
+        Attachment.find({ caseId: displayCaseId }).sort({ createdAt: 1 }).lean(),
+        CaseHistory.find({
+          caseId: displayCaseId,
+          firmId: req.user.firmId,
+        }).sort({ timestamp: -1 }).lean(),
+        CaseAudit.aggregate([
+          { $match: { caseId: displayCaseId } },
+          { $sort: { timestamp: -1 } },
+          { $limit: 50 },
+          {
+            $lookup: {
+              from: 'users',
+              localField: 'performedByXID',
+              foreignField: 'xID',
+              as: 'userInfo',
+            },
+          },
+          {
+            $addFields: {
+              performedByName: { $arrayElemAt: ['$userInfo.name', 0] },
+            },
+          },
+          {
+            $project: {
+              userInfo: 0,
+            },
+          },
+        ]),
+      ]);
+
+    const comments = commentsResult.status === 'fulfilled' ? commentsResult.value : [];
+    const attachments = attachmentsResult.status === 'fulfilled' ? attachmentsResult.value : [];
+    const history = historyResult.status === 'fulfilled' ? historyResult.value : [];
+    const auditLog = auditResult.status === 'fulfilled' ? auditResult.value : [];
+
+    if (commentsResult.status === 'rejected') console.error('[GET_CASE] Comments load failed', commentsResult.reason);
+    if (attachmentsResult.status === 'rejected') console.error('[GET_CASE] Attachments load failed', attachmentsResult.reason);
+    if (historyResult.status === 'rejected') console.error('[GET_CASE] History load failed', historyResult.reason);
+    if (auditResult.status === 'rejected') console.error('[GET_CASE] Audit log load failed', auditResult.reason);
     
     // Fetch current client details - with firm scoping
     // TODO: Consider using aggregation pipeline with $lookup for better performance
@@ -1329,32 +1342,38 @@ const getCaseByCaseId = async (req, res) => {
     const isViewOnlyMode = caseData.assignedToXID !== req.user.xID;
     const isOwner = caseData.createdByXID === req.user.xID;
     
-    // PR #45: Add CaseAudit entry with xID attribution
-    await CaseAudit.create({
-      caseId: displayCaseId,
-      actionType: 'CASE_VIEWED',
-      description: `Case viewed by ${req.user.xID}${isViewOnlyMode ? ' (view-only mode)' : ' (assigned mode)'}`,
-      performedByXID: req.user.xID,
-      metadata: {
-        isViewOnlyMode,
-        isOwner,
-        isAssigned: !isViewOnlyMode,
-      },
-    });
-    
-    // Also add to CaseHistory for backward compatibility
-    await CaseHistory.create({
-      caseId: displayCaseId,
-      actionType: 'CASE_VIEWED',
-      description: `Case viewed by ${req.user.email}`,
-      performedBy: req.user.email.toLowerCase(),
-      performedByXID: req.user.xID.toUpperCase(), // Canonical identifier (uppercase)
-    });
-    
-    res.json({
+    // PR #45: Add CaseAudit and CaseHistory entries with xID attribution
+    await Promise.allSettled([
+      CaseAudit.create({
+        caseId: displayCaseId,
+        actionType: 'CASE_VIEWED',
+        description: `Case viewed by ${req.user.xID}${isViewOnlyMode ? ' (view-only mode)' : ' (assigned mode)'}`,
+        performedByXID: req.user.xID,
+        metadata: {
+          isViewOnlyMode,
+          isOwner,
+          isAssigned: !isViewOnlyMode,
+        },
+      }),
+
+      CaseHistory.create({
+        caseId: displayCaseId,
+        actionType: 'CASE_VIEWED',
+        description: `Case viewed by ${req.user.email}`,
+        performedBy: req.user.email.toLowerCase(),
+        performedByXID: req.user.xID.toUpperCase(), // Canonical identifier (uppercase)
+      }),
+    ]);
+
+    const caseObject =
+      typeof caseData.toObject === 'function'
+        ? caseData.toObject()
+        : caseData;
+
+    return res.status(200).json({
       success: true,
       data: {
-        case: caseData,
+        ...caseObject,
         client: client ? {
           clientId: client.clientId,
           businessName: client.businessName,
@@ -1379,7 +1398,9 @@ const getCaseByCaseId = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({
+    console.error('[GET_CASE] Unexpected error:', error);
+
+    return res.status(500).json({
       success: false,
       message: 'Error fetching case',
       error: error.message,
