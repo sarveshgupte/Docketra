@@ -1956,17 +1956,17 @@ const updateCaseActivity = async (req, res) => {
 const pullCases = async (req, res) => {
   try {
     const { caseIds, assignTo } = req.body;
-    
+
     // Get authenticated user from req.user (set by auth middleware)
     const user = req.user;
-    
+
     if (!user || !user.xID) {
       return res.status(401).json({
         success: false,
         message: 'Authentication required - user identity not found',
       });
     }
-    
+
     // Reject if userEmail or userXID is in the payload
     if (req.body.userEmail || req.body.userXID) {
       return res.status(400).json({
@@ -1974,25 +1974,17 @@ const pullCases = async (req, res) => {
         message: 'userEmail and userXID must not be provided in request body. User identity is obtained from authentication token.',
       });
     }
-    
+
     if (!Array.isArray(caseIds) || caseIds.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Case IDs array is required and must not be empty',
+        message: 'caseIds array is required and must not be empty',
       });
     }
-    
-    // Validate caseIds format (expect CASE-YYYYMMDD-XXXXX format)
-    const invalidCaseIds = caseIds.filter(id => !/^CASE-\d{8}-\d{5}$/i.test(id));
-    if (invalidCaseIds.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Invalid case ID format. Expected format: CASE-YYYYMMDD-XXXXX. Invalid IDs: ${invalidCaseIds.join(', ')}`,
-      });
+
+    for (const caseId of caseIds) {
+      console.log(`[CASE_PULL] ${user.xID} pulling case ${caseId}`);
     }
-    
-    // Use assignment service for canonical assignment logic
-    const caseAssignmentService = require('../services/caseAssignment.service');
 
     let effectiveAssigneeXID = user.xID;
     let effectiveAssigneeUserId = user._id || null;
@@ -2007,68 +1999,31 @@ const pullCases = async (req, res) => {
       effectiveAssigneeXID = targetUser.xID;
       effectiveAssigneeUserId = targetUser._id;
     }
-    
-    // Handle single case pull vs bulk pull
-    if (caseIds.length === 1) {
-      // Single case pull - with firm scoping
-      const result = await caseAssignmentService.pullCaseFromWorkbasket({
-        caseId: caseIds[0],
-        tenantId: req.user.firmId,
-        userId: effectiveAssigneeXID,
-        assigneeObjectId: effectiveAssigneeUserId,
-        assignerObjectId: user._id || null,
-        session: getSession(req),
-      });
-      
-      if (!result.success) {
-        return res.status(409).json({
-          error: result.error,
-        });
-      }
-      
-      return res.status(200).json({
-        success: true,
-        message: 'Docket pulled successfully',
-        requested: 1,
-        pulled: 1,
-        status: result.status,
-        caseId: result.caseId,
-        assignedTo: result.assignedTo,
-      });
-    } else {
-      // Bulk case pull - with firm scoping
-      const result = await caseAssignmentService.bulkAssignCasesToUser(req.user.firmId, caseIds, { ...user, xID: effectiveAssigneeXID, _id: effectiveAssigneeUserId }, user._id || null);
-      
-      const successCount = result.assigned;
-      const requestedCount = result.requested;
-      
-      if (successCount === 0) {
-        return res.status(409).json({
-          success: false,
-          message: 'No cases were pulled. All cases were already assigned to other users.',
-          pulled: 0,
-          requested: requestedCount,
-        });
-      }
-      
-      if (successCount < requestedCount) {
-        return res.status(200).json({
-          success: true,
-          message: `Partial success: ${successCount} of ${requestedCount} cases pulled. Some cases were already assigned to other users.`,
-          pulled: successCount,
-          requested: requestedCount,
-          data: result.cases,
-        });
-      }
-      
-      return res.json({
-        success: true,
-        message: `All ${successCount} cases pulled successfully`,
-        pulled: successCount,
-        requested: requestedCount,
-        data: result.cases,
+
+    // Use assignment service for canonical assignment logic
+    const caseAssignmentService = require('../services/caseAssignment.service');
+    const result = await caseAssignmentService.bulkAssignCasesToUser(
+      req.user.firmId,
+      caseIds,
+      { ...user, xID: effectiveAssigneeXID, _id: effectiveAssigneeUserId, email: user.email },
+      user._id || null,
+      getSession(req)
+    );
+
+    if (result.assigned === 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'No cases were pulled. All cases were already assigned to other users.',
+        pulledCount: 0,
+        cases: [],
       });
     }
+
+    return res.status(200).json({
+      success: true,
+      pulledCount: result.assigned,
+      cases: result.cases,
+    });
   } catch (error) {
     // Handle specific errors
     if (error.message === 'Case not found') {
