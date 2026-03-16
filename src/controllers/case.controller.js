@@ -1220,6 +1220,7 @@ const updateCaseStatus = async (req, res) => {
  */
 const getCaseByCaseId = async (req, res) => {
   try {
+    console.time('[GET_CASE]');
     const { caseId } = req.params;
     
     // PR: Fix Case Visibility - Enhanced logging for debugging
@@ -1274,53 +1275,165 @@ const getCaseByCaseId = async (req, res) => {
     
     // Get related data - use caseId from database (display number)
     const displayCaseId = caseData.caseId;
-    const [commentsResult, attachmentsResult, historyResult, auditResult] =
-      await Promise.allSettled([
-        Comment.find({ caseId: displayCaseId }).sort({ createdAt: 1 }).lean(),
-        Attachment.find({ caseId: displayCaseId }).sort({ createdAt: 1 }).lean(),
-        CaseHistory.find({
-          caseId: displayCaseId,
-          firmId: req.user.firmId,
-        }).sort({ timestamp: -1 }).lean(),
-        CaseAudit.aggregate([
-          { $match: { caseId: displayCaseId } },
-          { $sort: { timestamp: -1 } },
-          { $limit: 50 },
-          {
-            $lookup: {
-              from: 'users',
-              localField: 'performedByXID',
-              foreignField: 'xID',
-              as: 'userInfo',
+    const scopedCaseId = caseData.caseId;
+    const scopedFirmId = String(caseData.firmId || req.user.firmId);
+    const relatedDataPipeline = [
+      {
+        $match: {
+          caseId: scopedCaseId,
+          firmId: scopedFirmId,
+        },
+      },
+      {
+        $lookup: {
+          from: Comment.collection.name,
+          let: { lookupCaseId: scopedCaseId },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ['$caseId', '$$lookupCaseId'],
+                },
+              },
             },
-          },
-          {
-            $addFields: {
-              performedByName: { $arrayElemAt: ['$userInfo.name', 0] },
+            { $sort: { createdAt: 1 } },
+          ],
+          as: 'comments',
+        },
+      },
+      {
+        $lookup: {
+          from: Attachment.collection.name,
+          let: { lookupCaseId: scopedCaseId, lookupFirmId: scopedFirmId },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$caseId', '$$lookupCaseId'] },
+                    { $eq: ['$firmId', '$$lookupFirmId'] },
+                  ],
+                },
+              },
             },
-          },
-          {
-            $project: {
-              userInfo: 0,
+            { $sort: { createdAt: 1 } },
+          ],
+          as: 'attachments',
+        },
+      },
+      {
+        $lookup: {
+          from: CaseHistory.collection.name,
+          let: { lookupCaseId: scopedCaseId, lookupFirmId: scopedFirmId },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$caseId', '$$lookupCaseId'] },
+                    { $eq: ['$firmId', '$$lookupFirmId'] },
+                  ],
+                },
+              },
             },
-          },
-        ]),
-      ]);
+            { $sort: { timestamp: -1 } },
+            { $limit: 100 },
+          ],
+          as: 'history',
+        },
+      },
+      {
+        $lookup: {
+          from: CaseAudit.collection.name,
+          let: { lookupCaseId: scopedCaseId, lookupFirmId: scopedFirmId },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$caseId', '$$lookupCaseId'] },
+                    { $eq: ['$firmId', '$$lookupFirmId'] },
+                  ],
+                },
+              },
+            },
+            { $sort: { timestamp: -1 } },
+            { $limit: 50 },
+            {
+              $lookup: {
+                from: User.collection.name,
+                let: { auditPerformerXID: '$performedByXID', lookupFirmId: '$$lookupFirmId' },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          { $eq: ['$xID', '$$auditPerformerXID'] },
+                          { $eq: [{ $toString: '$firmId' }, '$$lookupFirmId'] },
+                        ],
+                      },
+                    },
+                  },
+                  { $project: { name: 1 } },
+                ],
+                as: 'userInfo',
+              },
+            },
+            {
+              $addFields: {
+                performedByName: { $arrayElemAt: ['$userInfo.name', 0] },
+              },
+            },
+            {
+              $project: {
+                userInfo: 0,
+              },
+            },
+          ],
+          as: 'auditLog',
+        },
+      },
+      {
+        $project: {
+          comments: 1,
+          attachments: 1,
+          history: 1,
+          auditLog: 1,
+        },
+      },
+    ];
 
-    const comments = commentsResult.status === 'fulfilled' ? commentsResult.value : [];
-    const attachments = attachmentsResult.status === 'fulfilled' ? attachmentsResult.value : [];
-    const history = historyResult.status === 'fulfilled' ? historyResult.value : [];
-    const auditLog = auditResult.status === 'fulfilled' ? auditResult.value : [];
+    if (req.query.explain === 'true' && !isProduction()) {
+      const explainPlan = await Case.aggregate(relatedDataPipeline).explain('executionStats');
+      console.log('[GET_CASE][EXPLAIN]', JSON.stringify(explainPlan));
+    }
 
-    if (commentsResult.status === 'rejected') console.error('[GET_CASE] Comments load failed', commentsResult.reason);
-    if (attachmentsResult.status === 'rejected') console.error('[GET_CASE] Attachments load failed', attachmentsResult.reason);
-    if (historyResult.status === 'rejected') console.error('[GET_CASE] History load failed', historyResult.reason);
-    if (auditResult.status === 'rejected') console.error('[GET_CASE] Audit log load failed', auditResult.reason);
+    const [relatedResult, clientResult] = await Promise.allSettled([
+      Case.aggregate(relatedDataPipeline),
+      ClientRepository.findByClientId(req.user.firmId, caseData.clientId, req.user.role),
+    ]);
+
+    if (relatedResult.status === 'rejected') {
+      console.error('[GET_CASE] Related data load failed', relatedResult.reason);
+    }
+    if (clientResult.status === 'rejected') {
+      console.error('[GET_CASE] Client load failed', clientResult.reason);
+    }
+
+    const relatedData =
+      relatedResult.status === 'fulfilled' && Array.isArray(relatedResult.value)
+        ? (relatedResult.value[0] && typeof relatedResult.value[0] === 'object' ? relatedResult.value[0] : {})
+        : {};
+
+    const comments = relatedData.comments || [];
+    const attachments = relatedData.attachments || [];
+    const history = relatedData.history || [];
+    const auditLog = relatedData.auditLog || [];
     
     // Fetch current client details - with firm scoping
     // TODO: Consider using aggregation pipeline with $lookup for better performance
     // PR: Client Lifecycle - fetch client regardless of status to display existing cases with inactive clients
-    const client = await ClientRepository.findByClientId(req.user.firmId, caseData.clientId, req.user.role);
+    const client = clientResult.status === 'fulfilled' ? clientResult.value : null;
     
     // PR #45: Require authenticated user with xID for audit logging
     if (!req.user?.email || !req.user?.xID) {
@@ -1405,6 +1518,8 @@ const getCaseByCaseId = async (req, res) => {
       message: 'Error fetching case',
       error: error.message,
     });
+  } finally {
+    console.timeEnd('[GET_CASE]');
   }
 };
 
