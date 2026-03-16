@@ -28,7 +28,12 @@ module.exports = {
   'GET /': { query: z.object({}).strip() },
   'GET /search': { query: z.object({ q: z.string().optional() }).strip() },
   'POST /': { body: createCaseBody },
-  'POST /pull': { body: z.object({}).strip() },
+  'POST /pull': {
+    body: z.object({
+      caseIds: z.array(caseIdString).optional(),
+      assignTo: objectIdString.optional(),
+    }).strip(),
+  },
   'GET /my-pending': { query: z.object({}).strip() },
   'GET /my-resolved': { query: z.object({}).strip() },
   'GET /my-unassigned-created': { query: z.object({}).strip() },
