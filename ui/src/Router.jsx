@@ -33,6 +33,8 @@ const FirmsManagement = lazyPage(() => import('./pages/FirmsManagement'), 'Firms
 const ReportsDashboard = lazyPage(() => import('./pages/reports/ReportsDashboard'), 'ReportsDashboard');
 const DetailedReports = lazyPage(() => import('./pages/reports/DetailedReports'), 'DetailedReports');
 const CasesPage = lazyPage(() => import('./pages/CasesPage'), 'CasesPage');
+const ClientsPage = lazyPage(() => import('./pages/ClientsPage'), 'ClientsPage');
+const ClientWorkspacePage = lazyPage(() => import('./pages/ClientWorkspacePage'), 'ClientWorkspacePage');
 const MarketingHomePage = lazyPage(() => import('./pages/marketing/HomePage'), 'HomePage');
 const MarketingFeaturesPage = lazyPage(() => import('./pages/marketing/Features'), 'FeaturesPage');
 const MarketingPricingPage = lazyPage(() => import('./pages/marketing/Pricing'), 'PricingPage');
@@ -191,6 +193,62 @@ export const Router = () => {
               element={(
                 <ProtectedRoute>
                   <WorkbasketPage />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="clients"
+              element={(
+                <ProtectedRoute>
+                  <ClientsPage />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="clients/:clientId"
+              element={(
+                <ProtectedRoute>
+                  <ClientWorkspacePage />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="clients/:clientId/cfs"
+              element={(
+                <ProtectedRoute>
+                  <ClientWorkspacePage />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="clients/:clientId/compliance"
+              element={(
+                <ProtectedRoute>
+                  <ClientWorkspacePage />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="clients/:clientId/documents"
+              element={(
+                <ProtectedRoute>
+                  <ClientWorkspacePage />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="clients/:clientId/dockets"
+              element={(
+                <ProtectedRoute>
+                  <ClientWorkspacePage />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="clients/:clientId/activity"
+              element={(
+                <ProtectedRoute>
+                  <ClientWorkspacePage />
                 </ProtectedRoute>
               )}
             />

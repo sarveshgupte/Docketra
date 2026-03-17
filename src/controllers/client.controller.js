@@ -7,7 +7,8 @@ const {
   logFactSheetCreated, 
   logFactSheetUpdated, 
   logFactSheetFileAdded, 
-  logFactSheetFileRemoved 
+  logFactSheetFileRemoved,
+  logClientFactSheetAction
 } = require('../services/clientFactSheetAudit.service');
 const { getMimeType } = require('../utils/fileUtils');
 const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
@@ -843,6 +844,15 @@ const updateClientFactSheet = async (req, res) => {
         },
       });
     }
+    await logClientFactSheetAction({
+      clientId,
+      firmId: userFirmId,
+      actionType: 'CLIENT_CFS_UPDATED',
+      description: `Client Fact Sheet updated for ${client.businessName}`,
+      performedByXID,
+      metadata: { navigateTo: `/clients/${clientId}/cfs` },
+      req,
+    });
     
     res.json({
       success: true,
@@ -975,6 +985,15 @@ const uploadFactSheetFile = async (req, res) => {
         mimeType,
         fileSize: req.file.size,
       },
+    });
+    await logClientFactSheetAction({
+      clientId,
+      firmId: userFirmId,
+      actionType: 'CLIENT_CFS_ATTACHMENT_ADDED',
+      description: `Attachment added to CFS for ${client.businessName}: ${req.file.originalname}`,
+      performedByXID,
+      metadata: { fileName: req.file.originalname, navigateTo: `/clients/${clientId}/cfs` },
+      req,
     });
     
     res.status(201).json({
@@ -1426,6 +1445,74 @@ const downloadClientCFSFile = async (req, res) => {
 };
 
 
+
+const listClientCfsComments = async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    const userFirmId = req.user?.firmId;
+    const client = await ClientRepository.findByClientId(userFirmId, clientId, req.user?.role);
+    if (!client) return res.status(404).json({ success: false, message: 'Client not found' });
+    const comments = client.clientFactSheet?.comments || [];
+    return res.json({ success: true, data: comments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)) });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Error fetching CFS comments', error: error.message });
+  }
+};
+
+const addClientCfsComment = async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    const { commentText, attachments = [] } = req.body;
+    const userFirmId = req.user?.firmId;
+    const userXID = req.user?.xID;
+    const client = await ClientRepository.findByClientId(userFirmId, clientId, req.user?.role);
+    if (!client) return res.status(404).json({ success: false, message: 'Client not found' });
+    if (!client.clientFactSheet) client.clientFactSheet = { files: [], comments: [] };
+    if (!Array.isArray(client.clientFactSheet.comments)) client.clientFactSheet.comments = [];
+    const entry = {
+      client_id: clientId,
+      user_id: userXID,
+      author_name: req.user?.name || req.user?.email || userXID,
+      comment_text: commentText,
+      created_at: new Date(),
+      attachments: attachments.map((a) => ({
+        file_name: a.file_name,
+        file_url: a.file_url,
+        uploaded_by: userXID,
+        uploaded_at: new Date(),
+      })),
+    };
+    client.clientFactSheet.comments.unshift(entry);
+    await client.save();
+
+    await logClientFactSheetAction({
+      clientId,
+      firmId: userFirmId,
+      actionType: 'CLIENT_CFS_COMMENT_ADDED',
+      description: `CFS comment added for client ${clientId}`,
+      performedByXID: userXID,
+      metadata: { commentLength: commentText?.length || 0 },
+      req,
+    });
+
+    return res.status(201).json({ success: true, data: entry, message: 'Comment added' });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Error adding CFS comment', error: error.message });
+  }
+};
+
+const listClientActivity = async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    const userFirmId = req.user?.firmId;
+    const ClientAudit = require('../models/ClientAudit.model');
+    const data = await ClientAudit.find({ clientId, firmId: userFirmId }).sort({ timestamp: -1 }).limit(100).lean();
+    return res.json({ success: true, data: data.map((item) => ({ id: item._id, actionType: item.actionType, description: item.description, timestamp: item.timestamp })) });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Error fetching client activity', error: error.message });
+  }
+};
+
 const listClientDockets = async (req, res) => {
   try {
     const { clientId } = req.params;
@@ -1459,5 +1546,8 @@ module.exports = {
   listClientCFSFiles,
   deleteClientCFSFile: wrapWriteHandler(deleteClientCFSFile),
   downloadClientCFSFile,
+  listClientCfsComments,
+  addClientCfsComment: wrapWriteHandler(addClientCfsComment),
+  listClientActivity,
   listClientDockets,
 };
