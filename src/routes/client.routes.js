@@ -25,6 +25,7 @@ const {
   listClientCFSFiles,
   deleteClientCFSFile,
   downloadClientCFSFile,
+  listClientDockets,
 } = require('../controllers/client.controller');
 
 const upload = createSecureUpload({ memory: true });
@@ -51,6 +52,7 @@ router.use(...firmAuthenticatedAccess);
 
 // Public/authenticated endpoints
 router.get('/', authorizeFirmPermission('CLIENT_VIEW'), userReadLimiter, getClients);
+router.get('/:clientId/dockets', authorizeFirmPermission('CLIENT_VIEW'), userReadLimiter, listClientDockets);
 router.get('/:clientId', authorizeFirmPermission('CLIENT_VIEW'), userReadLimiter, getClientById);
 
 // Admin-only endpoints

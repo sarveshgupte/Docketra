@@ -114,12 +114,12 @@ export const AuditTimelineDrawer = ({ isOpen, onClose, caseId, events }) => {
   return (
     <div className={`audit-drawer${isOpen ? ' audit-drawer--open' : ''}`} aria-hidden={!isOpen}>
       <div className="audit-drawer__backdrop" onClick={onClose} />
-      <aside className="audit-drawer__panel" role="dialog" aria-label="Case timeline">
+      <aside className="audit-drawer__panel" role="dialog" aria-label="Audit History">
         <div className="audit-drawer__header">
-          <h3>Timeline</h3>
+          <h3>Audit History</h3>
           <div style={{ display: 'flex', gap: '8px' }}>
             <Button variant="outline" onClick={handleDownloadCsv} disabled={!timelineItems.length}>
-              Download Timeline (CSV)
+              Download Audit History (CSV)
             </Button>
             <Button variant="outline" onClick={onClose}>
               Close
@@ -127,8 +127,7 @@ export const AuditTimelineDrawer = ({ isOpen, onClose, caseId, events }) => {
           </div>
         </div>
         <p className="audit-drawer__meta">Audit log is system-recorded</p>
-        {loading ? <p className="audit-drawer__meta">Loading timeline…</p> : null}
-        {!loading && !timelineItems.length ? <p className="audit-drawer__meta">No audit events available.</p> : null}
+        {loading ? <p className="audit-drawer__meta">Loading audit history...</p> : null}
         <div className="audit-drawer__list">
           {timelineItems.map((entry, idx) => {
             const lifecycle = isLifecycleEvent(entry.action);
