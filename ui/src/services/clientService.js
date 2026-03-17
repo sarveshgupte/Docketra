@@ -73,11 +73,33 @@ export const clientService = {
    * Update Client Fact Sheet (Admin only)
    * Update description and notes for client fact sheet
    */
-  updateClientFactSheet: async (clientId, description, notes) => {
-    const response = await api.put(`/admin/clients/${clientId}/fact-sheet`, {
+  updateClientFactSheet: async (clientId, description, notes, basicInfo) => {
+    const response = await api.put(`/clients/${clientId}/fact-sheet`, {
       description,
       notes,
+      basicInfo,
     });
+    return response.data;
+  },
+
+
+  getClientDockets: async (clientId) => {
+    const response = await api.get(`/clients/${clientId}/dockets`);
+    return response.data;
+  },
+
+  getClientActivity: async (clientId) => {
+    const response = await api.get(`/clients/${clientId}/activity`);
+    return response.data;
+  },
+
+  getClientCfsComments: async (clientId) => {
+    const response = await api.get(`/clients/${clientId}/cfs/comments`);
+    return response.data;
+  },
+
+  addClientCfsComment: async (clientId, payload) => {
+    const response = await api.post(`/clients/${clientId}/cfs/comments`, payload);
     return response.data;
   },
 
@@ -89,7 +111,7 @@ export const clientService = {
   uploadFactSheetFile: async (clientId, file) => {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await api.post(`/admin/clients/${clientId}/fact-sheet/files`, formData, {
+    const response = await api.post(`/clients/${clientId}/fact-sheet/files`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -101,7 +123,7 @@ export const clientService = {
    * Delete file from Client Fact Sheet (Admin only)
    */
   deleteFactSheetFile: async (clientId, fileId) => {
-    const response = await api.delete(`/admin/clients/${clientId}/fact-sheet/files/${fileId}`);
+    const response = await api.delete(`/clients/${clientId}/fact-sheet/files/${fileId}`);
     return response.data;
   },
 

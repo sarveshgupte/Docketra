@@ -30,6 +30,9 @@ export const WorkbasketPage = () => {
     createdAtFrom: '',
     createdAtTo: '',
     slaStatus: '',
+    assignedUser: '',
+    dueDate: '',
+    status: '',
     sortBy: 'slaDueDate',
     sortOrder: 'asc',
     page: 1,
@@ -250,6 +253,19 @@ export const WorkbasketPage = () => {
               />
             </div>
 
+
+            <div className="filter-group">
+              <label>Assigned User</label>
+              <input type="text" placeholder="Assigned user" value={filters.assignedUser} onChange={(e) => handleFilterChange('assignedUser', e.target.value)} className="neo-input" />
+            </div>
+            <div className="filter-group">
+              <label>Due Date</label>
+              <input type="date" value={filters.dueDate} onChange={(e) => handleFilterChange('dueDate', e.target.value)} className="neo-input" />
+            </div>
+            <div className="filter-group">
+              <label>Status</label>
+              <input type="text" placeholder="Status" value={filters.status} onChange={(e) => handleFilterChange('status', e.target.value)} className="neo-input" />
+            </div>
             <div className="filter-group">
               <label>SLA Status</label>
               <select
@@ -264,6 +280,11 @@ export const WorkbasketPage = () => {
               </select>
             </div>
 
+            <div className="filter-group" style={{ display: 'flex', gap: '0.5rem', alignItems: 'end' }}>
+              <Button variant="default" onClick={() => handleFilterChange('slaStatus', 'overdue')}>Overdue</Button>
+              <Button variant="default" onClick={() => handleFilterChange('dueDate', new Date().toISOString().slice(0,10))}>Today</Button>
+              <Button variant="default" onClick={() => handleFilterChange('createdAtFrom', new Date(Date.now()-6*24*3600*1000).toISOString().slice(0,10))}>This Week</Button>
+            </div>
             <div className="filter-group">
               <Button
                 variant="default"
@@ -273,6 +294,9 @@ export const WorkbasketPage = () => {
                   createdAtFrom: '',
                   createdAtTo: '',
                   slaStatus: '',
+                  assignedUser: '',
+                  dueDate: '',
+                  status: '',
                   sortBy: 'slaDueDate',
                   sortOrder: 'asc',
                   page: 1,

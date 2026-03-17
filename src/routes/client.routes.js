@@ -26,6 +26,9 @@ const {
   deleteClientCFSFile,
   downloadClientCFSFile,
   listClientDockets,
+  listClientCfsComments,
+  addClientCfsComment,
+  listClientActivity,
 } = require('../controllers/client.controller');
 
 const upload = createSecureUpload({ memory: true });
@@ -54,6 +57,9 @@ router.use(...firmAuthenticatedAccess);
 router.get('/', authorizeFirmPermission('CLIENT_VIEW'), userReadLimiter, getClients);
 router.get('/:clientId/dockets', authorizeFirmPermission('CLIENT_VIEW'), userReadLimiter, listClientDockets);
 router.get('/:clientId', authorizeFirmPermission('CLIENT_VIEW'), userReadLimiter, getClientById);
+router.get('/:clientId/activity', authorizeFirmPermission('CLIENT_VIEW'), userReadLimiter, listClientActivity);
+router.get('/:clientId/cfs/comments', authorizeFirmPermission('CLIENT_VIEW'), userReadLimiter, listClientCfsComments);
+router.post('/:clientId/cfs/comments', authorizeFirmPermission('CLIENT_MANAGE'), userWriteLimiter, addClientCfsComment);
 
 // Admin-only endpoints
 router.post('/', authorizeFirmPermission('CLIENT_MANAGE'), userWriteLimiter, createClient);

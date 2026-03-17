@@ -234,45 +234,55 @@ export const Layout = ({ children }) => {
   const navSections = [
     {
       id: 'workspace',
-      label: 'Workspace',
+      label: 'Dashboard',
       links: [
-        {
-          to: `/app/firm/${currentFirmSlug}/dashboard`,
-          label: 'Dashboard',
-          icon: <IconDashboard />,
-          active: isActive(`/app/firm/${currentFirmSlug}/dashboard`),
-        },
-        {
-          to: `/app/firm/${currentFirmSlug}/global-worklist`,
-          label: 'Workbasket',
-          icon: <IconWorkbasket />,
-          active: isActive(`/app/firm/${currentFirmSlug}/global-worklist`),
-        },
-        {
-          to: `/app/firm/${currentFirmSlug}/worklist`,
-          label: 'My Worklist',
-          icon: <IconWorklist />,
-          active: isActive(`/app/firm/${currentFirmSlug}/worklist`) || isActive(`/app/firm/${currentFirmSlug}/my-worklist`),
-        },
-        {
-          to: `/app/firm/${currentFirmSlug}/cases`,
-          label: 'Insights',
-          icon: <IconCases />,
-          active: isActivePrefix(`/app/firm/${currentFirmSlug}/cases`) && !location.search.includes('view=audit'),
-        },
-        {
-          to: `/app/firm/${currentFirmSlug}/admin/reports`,
-          label: 'Reports',
-          icon: <IconReport />,
-          active: isActivePrefix(`/app/firm/${currentFirmSlug}/admin/reports`),
-          hidden: !hasAdminAccess,
-        },
-        {
-          to: `/app/firm/${currentFirmSlug}/cases?view=audit`,
-          label: 'Audit Logs',
-          icon: <IconReport />,
-          active: isActive(`/app/firm/${currentFirmSlug}/cases`) && location.search.includes('view=audit'),
-        },
+        { to: `/app/firm/${currentFirmSlug}/dashboard`, label: 'Dashboard', icon: <IconDashboard />, active: isActive(`/app/firm/${currentFirmSlug}/dashboard`) },
+      ],
+    },
+    {
+      id: 'work',
+      label: 'Work',
+      links: [
+        { to: `/app/firm/${currentFirmSlug}/global-worklist`, label: 'Workbasket', icon: <IconWorkbasket />, active: isActive(`/app/firm/${currentFirmSlug}/global-worklist`) },
+        { to: `/app/firm/${currentFirmSlug}/worklist`, label: 'My Worklist', icon: <IconWorklist />, active: isActive(`/app/firm/${currentFirmSlug}/worklist`) || isActive(`/app/firm/${currentFirmSlug}/my-worklist`) },
+      ],
+    },
+    {
+      id: 'clients',
+      label: 'Clients',
+      links: [
+        { to: `/app/firm/${currentFirmSlug}/clients`, label: 'All Clients', icon: <IconCases />, active: isActivePrefix(`/app/firm/${currentFirmSlug}/clients`) },
+      ],
+    },
+    {
+      id: 'compliance',
+      label: 'Compliance',
+      links: [
+        { to: `/app/firm/${currentFirmSlug}/worklist`, label: 'Compliance Calendar', icon: <IconWorklist />, active: false },
+        { to: `/app/firm/${currentFirmSlug}/worklist`, label: 'Compliance Register', icon: <IconWorklist />, active: false },
+        { to: `/app/firm/${currentFirmSlug}/worklist`, label: 'Risk Alerts', icon: <IconBell />, active: false },
+      ],
+    },
+    {
+      id: 'insights',
+      label: 'Insights',
+      links: [
+        { to: `/app/firm/${currentFirmSlug}/cases`, label: 'Firm Analytics', icon: <IconCases />, active: isActivePrefix(`/app/firm/${currentFirmSlug}/cases`) && !location.search.includes('view=audit') },
+        { to: `/app/firm/${currentFirmSlug}/worklist`, label: 'Productivity', icon: <IconWorklist />, active: false },
+      ],
+    },
+    {
+      id: 'reports',
+      label: 'Reports',
+      links: [
+        { to: `/app/firm/${currentFirmSlug}/admin/reports`, label: 'Reports', icon: <IconReport />, active: isActivePrefix(`/app/firm/${currentFirmSlug}/admin/reports`), hidden: !hasAdminAccess },
+      ],
+    },
+    {
+      id: 'audit',
+      label: 'Audit Logs',
+      links: [
+        { to: `/app/firm/${currentFirmSlug}/cases?view=audit`, label: 'Audit Logs', icon: <IconReport />, active: isActive(`/app/firm/${currentFirmSlug}/cases`) && location.search.includes('view=audit') },
       ],
     },
     {
@@ -280,18 +290,8 @@ export const Layout = ({ children }) => {
       label: 'Administration',
       hidden: !hasAdminAccess,
       links: [
-        {
-          to: `/app/firm/${currentFirmSlug}/admin`,
-          label: 'Team',
-          icon: <IconTeam />,
-          active: isActivePrefix(`/app/firm/${currentFirmSlug}/admin`) && !isActivePrefix(`/app/firm/${currentFirmSlug}/admin/reports`),
-        },
-        {
-          to: `/app/firm/${currentFirmSlug}/settings/firm`,
-          label: 'Firm Settings',
-          icon: <IconAdmin />,
-          active: isActivePrefix(`/app/firm/${currentFirmSlug}/settings/firm`),
-        },
+        { to: `/app/firm/${currentFirmSlug}/admin`, label: 'Team', icon: <IconTeam />, active: isActivePrefix(`/app/firm/${currentFirmSlug}/admin`) && !isActivePrefix(`/app/firm/${currentFirmSlug}/admin/reports`) },
+        { to: `/app/firm/${currentFirmSlug}/settings/firm`, label: 'Firm Settings', icon: <IconAdmin />, active: isActivePrefix(`/app/firm/${currentFirmSlug}/settings/firm`) },
       ],
     },
   ].filter((section) => !section.hidden);
@@ -398,8 +398,8 @@ export const Layout = ({ children }) => {
             <input
               className="enterprise-header__omnibar-input"
               type="search"
-              placeholder="Search dockets, clients…"
-              aria-label="Search dockets and clients"
+              placeholder="Search clients, dockets, documents..."
+              aria-label="Search clients, dockets, documents"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />

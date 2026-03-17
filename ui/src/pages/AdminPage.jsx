@@ -1150,6 +1150,13 @@ export const AdminPage = () => {
                             >
                               Change Name
                             </Button>
+                            <Button
+                              size="small"
+                              variant="default"
+                              onClick={() => navigate(`/app/firm/${firmSlug}/clients/${client.clientId}/cfs`)}
+                            >
+                              Edit CFS
+                            </Button>
                             {!isProtectedClient && (
                               <Button
                                 size="small"
