@@ -32,6 +32,7 @@ const {
   viewClientFactSheetFile,
   listClientCFSFilesForCase,
   downloadClientCFSFileForCase,
+  getDocketSummaryPdf,
 } = require('../controllers/case.controller');
 
 // PR #44: Import xID ownership validation middleware
@@ -121,6 +122,8 @@ router.post('/:caseId/track-exit', authorizeFirmPermission('CASE_VIEW'), userWri
 
 // GET /api/cases/:caseId/history - Get case audit history
 router.get('/:caseId/history', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, getCaseHistory);
+
+router.get('/:caseId/summary-pdf', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, getDocketSummaryPdf);
 
 // GET /api/cases/:caseId - Get case by caseId with comments, attachments, and history
 // Check if user can access this case's client

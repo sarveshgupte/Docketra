@@ -14,7 +14,6 @@ import { Button } from '../components/common/Button';
 import { Textarea } from '../components/common/Textarea';
 import { Input } from '../components/common/Input';
 import { Modal } from '../components/common/Modal';
-import { CaseHistory } from '../components/common/CaseHistory';
 import { ClientFactSheetModal } from '../components/common/ClientFactSheetModal';
 import { ActionConfirmModal } from '../components/common/ActionConfirmModal';
 import { useAuth } from '../hooks/useAuth';
@@ -43,6 +42,8 @@ const toLifecycleStage = (status) => {
   if (status === 'FILED') return 'Marked as Executed';
   return status || 'Under Execution';
 };
+
+const formatDocketId = (value = '') => String(value || '').replace(/^CASE-/, 'DOCKET-');
 
 const escapeHtml = (value = '') =>
   String(value)
@@ -90,11 +91,15 @@ export const CaseDetailPage = () => {
   const [fileDescription, setFileDescription] = useState('');
   const [uploadingFile, setUploadingFile] = useState(false);
   const [pullingCase, setPullingCase] = useState(false);
+  const [loadingClientDockets, setLoadingClientDockets] = useState(false);
+  const [clientDockets, setClientDockets] = useState([]);
   const [movingToGlobal, setMovingToGlobal] = useState(false);
   const [actionConfirmation, setActionConfirmation] = useState('');
   const [actionError, setActionError] = useState(null);
-  const [timelineOpen, setTimelineOpen] = useState(false);
+  const [auditSidebarOpen, setAuditSidebarOpen] = useState(false);
   const fileInputRef = React.useRef(null);
+  const attachmentsSectionRef = React.useRef(null);
+  const docketHistorySectionRef = React.useRef(null);
   // Confirm modal state (replaces window.confirm)
   const [confirmModal, setConfirmModal] = useState(null);
 
@@ -173,6 +178,33 @@ export const CaseDetailPage = () => {
     }
   }, [caseData, viewTracked, caseId]);
 
+
+  useEffect(() => {
+    if (!actionError && !actionConfirmation) return;
+    const timer = setTimeout(() => {
+      setActionError(null);
+      setActionConfirmation('');
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [actionError, actionConfirmation]);
+
+  useEffect(() => {
+    if (!caseData?.clientId) return;
+    const loadClientDockets = async () => {
+      setLoadingClientDockets(true);
+      try {
+        const response = await caseService.getClientDockets(caseData.clientId);
+        const rows = response.data || response.dockets || [];
+        setClientDockets(rows.filter((row) => row.caseId !== caseId));
+      } catch (error) {
+        setClientDockets([]);
+      } finally {
+        setLoadingClientDockets(false);
+      }
+    };
+    loadClientDockets();
+  }, [caseData?.clientId, caseId]);
+
   // Track exit on beforeunload (best-effort for tab close)
   // Note: sendBeacon doesn't support custom headers, so we rely on cookie-based auth
   useEffect(() => {
@@ -215,27 +247,27 @@ export const CaseDetailPage = () => {
 
   const handlePullCase = () => {
     setConfirmModal({
-      title: 'Pull Case',
+      title: 'Pull Docket',
       description: 'Pull this case? This will assign it to you.',
-      confirmText: 'Pull Case',
+      confirmText: 'Pull Docket',
       onConfirm: async () => {
         setConfirmModal(null);
         setPullingCase(true);
         try {
           const response = await caseService.pullCase(caseId);
           if (response.success) {
-            const message = `Docket ${caseId} assigned • ${formatDateTime(new Date())}`;
+            const message = 'Docket moved to My Worklist';
             showSuccess(message);
             setActionConfirmation(message);
             setActionError(null);
-            await loadCase();
+            navigate('/my-worklist');
           }
         } catch (error) {
-          console.error('Failed to pull case:', error);
+          console.error('Failed to pull docket:', error);
           const serverMessage = error.response?.data?.message;
           const errorMessage = serverMessage && typeof serverMessage === 'string'
             ? serverMessage.substring(0, 200)
-            : 'Failed to pull case. Please try again.';
+            : 'Unable to pull docket. Please try again.';
           showError(errorMessage);
           setActionError({ message: errorMessage, retry: handlePullCase });
         } finally {
@@ -345,8 +377,11 @@ export const CaseDetailPage = () => {
       await loadCase(); // Reload to show new attachment
     } catch (error) {
       console.error('Failed to upload file:', error);
-      showError('Failed to upload file. Please try again.');
-      setActionError({ message: 'Failed to upload file. Please retry.', retry: handleUploadFile });
+      const safeMessage = error?.response?.data?.message?.toLowerCase?.().includes('malware scanner not configured')
+        ? 'File upload temporarily unavailable. Please contact administrator.'
+        : 'Failed to upload file. Please try again.';
+      showError(safeMessage);
+      setActionError({ message: safeMessage, retry: handleUploadFile });
     } finally {
       setUploadingFile(false);
     }
@@ -554,53 +589,8 @@ export const CaseDetailPage = () => {
   };
 
   const handlePrintSummary = () => {
-    const printableCaseInfo = caseInfo || normalizeCase(caseData || {});
-    const timeline = timelineEvents.slice(0, 10);
-    const printWindow = window.open('', '_blank', 'noopener,noreferrer');
-    if (!printWindow) return;
-    const timelineRows = timeline
-      .map((entry) => `
-        <tr>
-          <td>${escapeHtml(entry.actionType || entry.action || 'Updated')}</td>
-          <td>${escapeHtml(entry.performedByName || entry.performedByXID || entry.actorXID || 'System')}</td>
-          <td>${escapeHtml(formatDateTime(entry.timestamp || entry.createdAt))}</td>
-          <td>${escapeHtml(entry.description || entry.comment || '')}</td>
-        </tr>
-      `)
-      .join('');
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Docket Summary - ${escapeHtml(printableCaseInfo.caseId || caseId)}</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 24px; color: #111827; }
-            h1 { font-size: 20px; margin-bottom: 4px; }
-            h2 { font-size: 14px; margin-top: 20px; }
-            .meta { color: #4b5563; margin-bottom: 12px; }
-            table { width: 100%; border-collapse: collapse; font-size: 12px; }
-            th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; vertical-align: top; }
-            @media print { body { margin: 0; } button { display: none; } }
-          </style>
-        </head>
-        <body>
-          <h1>${escapeHtml(printableCaseInfo.caseName || printableCaseInfo.title || 'Case')}</h1>
-          <div class="meta">Docket ID: ${escapeHtml(printableCaseInfo.caseId || caseId)}</div>
-          <div><strong>Status:</strong> ${escapeHtml(toLifecycleStage(printableCaseInfo?.status))}</div>
-          <div><strong>SLA Due:</strong> ${escapeHtml(printableCaseInfo.slaDueDate ? formatDateTime(printableCaseInfo.slaDueDate) : 'Not configured')}</div>
-          <div><strong>Assigned To:</strong> ${escapeHtml(printableCaseInfo.assignedToName || printableCaseInfo.assignedToXID || 'Unassigned')}</div>
-          <div><strong>Client:</strong> ${escapeHtml(formatClientDisplay(caseData.client, true))}</div>
-          <h2>Timeline (Last 10 entries)</h2>
-          <table>
-            <thead><tr><th>Action</th><th>Actor</th><th>Timestamp</th><th>Description</th></tr></thead>
-            <tbody>${timelineRows || '<tr><td colspan="4">No timeline records</td></tr>'}</tbody>
-          </table>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.onload = () => {
-      printWindow.print();
-    };
+    const pdfUrl = caseService.getSummaryPdfUrl(caseId);
+    window.open(pdfUrl, '_blank', 'noopener,noreferrer');
   };
 
   // PR #45: Extract access mode information from API response
@@ -641,12 +631,11 @@ export const CaseDetailPage = () => {
     return warnings;
   }, [caseInfo, comments]);
 
-  // Determine button visibility
-  // Pull Case button: show only if view-only mode, unassigned, and in GLOBAL queue
-  const showPullButton = isViewOnlyMode &&
-    !caseInfo?.assignedToXID &&
-    caseInfo?.queueType === 'GLOBAL' &&
-    caseInfo?.status === 'UNASSIGNED';
+  const docketMode = caseInfo?.status === 'UNASSIGNED' && caseInfo?.queueType === 'GLOBAL'
+    ? 'VIEW'
+    : (caseInfo?.status === 'PENDED' || caseInfo?.status === 'PENDING' ? 'PEND' : 'OPEN');
+
+  const showPullButton = docketMode === 'VIEW';
 
   // Move to Workbasket button: show only for admin users AND case is currently assigned
   const showMoveToWorkbasketButton = isAdmin && caseInfo?.assignedToXID;
@@ -657,7 +646,11 @@ export const CaseDetailPage = () => {
   // - PENDING/PENDED: Show ONLY Unpend (no File, Pend, Resolve)
   // - FILED or RESOLVED: Show nothing (terminal states, read-only)
   const canPerformLifecycleActions = caseInfo?.status === 'OPEN' && !isViewOnlyMode;
-  const canUnpend = (caseInfo?.status === 'PENDED' || caseInfo?.status === 'PENDING') && !isViewOnlyMode;
+  const canUnpend = docketMode === 'PEND' && !isViewOnlyMode;
+
+  const scrollToDocketHistory = () => docketHistorySectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToAttachments = () => attachmentsSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
   if (loading) {
     return (
@@ -684,7 +677,7 @@ export const CaseDetailPage = () => {
   return (
     <Layout>
       <div className="case-detail">
-        {/* ─── Next/Previous Case Navigation ────────────────────────── */}
+        {/* ─── Next/Previous Docket Navigation ────────────────────────── */}
         {sourceList && (
           <div className="case-detail__nav-bar">
             <Button
@@ -694,7 +687,7 @@ export const CaseDetailPage = () => {
               className="case-detail__nav-btn"
               aria-label="Previous case"
             >
-              ← Previous Case
+              ← Previous Docket
             </Button>
             <span className="case-detail__nav-pos">
               {sourceIndex + 1} / {sourceList.length}
@@ -706,14 +699,14 @@ export const CaseDetailPage = () => {
               className="case-detail__nav-btn"
               aria-label="Next case"
             >
-              Next Case →
+              Next Docket →
             </Button>
           </div>
         )}
         {/* ─── Page Header ──────────────────────────────────────────── */}
         <div className="case-detail__header">
           <div className="case-detail__header-left">
-            <h1 className="case-detail__title">{caseInfo.caseName}</h1>
+            <h1 className="case-detail__title">{formatDocketId(caseInfo.caseId || caseId)}</h1>
             <p className="case-detail__subtitle">{caseInfo.category}</p>
             <p className="case-detail__meta-line">
               {formatAuditStamp({
@@ -723,67 +716,16 @@ export const CaseDetailPage = () => {
             </p>
           </div>
           <div className="case-detail__header-actions">
-            {/* Client Fact Sheet Button */}
-            <Button
-              variant="outline"
-              onClick={handleShowClientFactSheet}
-              disabled={loadingFactSheet}
-              title="View Client Fact Sheet"
-              className="case-detail__fact-sheet-btn"
-            >
-              ⓘ Fact Sheet
-            </Button>
-            {/* Contextual Action Buttons */}
-            {showPullButton && (
-              <Button variant="primary" onClick={handlePullCase} disabled={pullingCase}>
-                {pullingCase ? 'Pulling…' : 'Pull Case'}
-              </Button>
-            )}
-            {showMoveToWorkbasketButton && (
-              <Button
-                variant="outline"
-                onClick={handleMoveToGlobal}
-                disabled={movingToGlobal}
-                className="case-detail__btn-warning"
-              >
-                {movingToGlobal ? 'Moving…' : 'Move to Workbasket'}
-              </Button>
-            )}
-            {canPerformLifecycleActions && (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowFileModal(true)}
-                  className="case-detail__btn-muted"
-                >
-                  File
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowPendModal(true)}
-                  className="case-detail__btn-warning"
-                >
-                  Pend
-                </Button>
-                <Button variant="primary" onClick={() => setShowResolveModal(true)}>
-                  Resolve
-                </Button>
-              </>
-            )}
-            {canUnpend && (
-              <Button variant="primary" onClick={() => setShowUnpendModal(true)}>
-                Unpend
-              </Button>
-            )}
-            <Button variant="outline" onClick={() => setTimelineOpen(true)}>
-              View Timeline
-            </Button>
-            <Button variant="outline" onClick={handlePrintSummary}>
-              Print Summary
-            </Button>
+            <Button variant="outline" onClick={handleShowClientFactSheet} disabled={loadingFactSheet}>Fact Sheet</Button>
+            {showPullButton && <Button variant="primary" onClick={handlePullCase} disabled={pullingCase}>{pullingCase ? 'Pulling docket...' : 'Pull Docket'}</Button>}
+            {canUnpend && <Button variant="primary" onClick={() => setShowUnpendModal(true)}>Unpend Docket</Button>}
+            <Button variant="outline" onClick={handlePrintSummary}>Print Summary</Button>
+            <Button variant="outline" onClick={() => setAuditSidebarOpen(true)}>Audit History</Button>
+            <Button variant="outline" onClick={scrollToDocketHistory}>Docket History</Button>
+            <Button variant="outline" onClick={scrollToAttachments}>Attachments</Button>
             {caseInfo.approvalStatus === 'PENDING' && <Badge variant="warning">Awaiting Partner Approval</Badge>}
             {caseInfo.lockStatus?.isLocked && <Badge variant="warning">Lifecycle Locked</Badge>}
-            {isViewOnlyMode && <Badge variant="warning">Role Restricted Action</Badge>}
+            {caseInfo?.stage?.requiresApproval === true && isViewOnlyMode && <Badge variant="warning">Role Restricted Action</Badge>}
             <Badge status={caseInfo?.status}>{toLifecycleStage(caseInfo?.status)}</Badge>
           </div>
         </div>
@@ -800,7 +742,7 @@ export const CaseDetailPage = () => {
         ) : null}
 
         {/* Alerts */}
-        {isViewOnlyMode && (
+        {caseInfo?.stage?.requiresApproval === true && isViewOnlyMode && (
           <div className="neo-alert neo-alert--info case-detail__alert">
             <strong>Role Restricted Action</strong> — Action restricted: Only Partners can approve this lifecycle stage.
           </div>
@@ -889,10 +831,10 @@ export const CaseDetailPage = () => {
             {/* Case Info + Description */}
             <div className="case-detail__info-grid">
               <Card className="case-detail__section">
-                <h2 className="neo-section__header">Case Information</h2>
+                <h2 className="neo-section__header">Docket Information</h2>
                 <div className="case-detail__field">
-                  <span className="case-detail__label">Case Name</span>
-                  <span>{caseInfo.caseName}</span>
+                  <span className="case-detail__label">Docket Name</span>
+                  <span>{formatDocketId(caseInfo.caseId || caseId)}</span>
                 </div>
                 {caseData.client && (
                   <div className="case-detail__field">
@@ -931,11 +873,6 @@ export const CaseDetailPage = () => {
                 <div className="case-detail__field">
                   <span className="case-detail__label">Last Action Timestamp</span>
                   <span>{formatDateTime(caseInfo.updatedAt)}</span>
-                </div>
-                <div className="case-detail__field">
-                  <Button variant="outline" size="sm" onClick={() => setTimelineOpen(true)}>
-                    Audit History
-                  </Button>
                 </div>
               </Card>
 
@@ -989,58 +926,30 @@ export const CaseDetailPage = () => {
               )}
             </Card>
 
-            {/* Activity Timeline (new audit log) */}
-            {auditLog.length > 0 && (
-               <Card className="case-detail__section" id="audit-history-section">
-                 <h2 className="neo-section__header">Recent Audit Records</h2>
-                <div className="case-detail__audit">
-                  {auditLog.map((entry, index) => (
-                    <div key={index} className="neo-inset case-detail__audit-item">
-                      <div className="case-detail__audit-entry">
-                        <span className="case-detail__audit-time">{formatDateTime(entry.timestamp)}</span>
-                        <span className="case-detail__audit-action">{entry.actionType}</span>
-                        <span className="case-detail__audit-actor">
-                          {entry.performedByName && entry.performedByXID
-                            ? `${entry.performedByName} (${entry.performedByXID})`
-                            : 'System (Unknown)'}
-                        </span>
-                      </div>
-                      <p className="case-detail__audit-desc">{entry.description}</p>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            )}
-
-            {/* Fallback: old audit history */}
-            {auditLog.length === 0 &&
-              history.length > 0 && (
-               <Card className="case-detail__section" id="audit-history-section">
-                 <h2 className="neo-section__header">Audit History</h2>
-                <div className="case-detail__audit">
-                  {history.map((entry, index) => (
-                    <div key={index} className="neo-inset case-detail__audit-item">
-                      <div className="case-detail__audit-entry">
-                        <span className="case-detail__audit-time">{formatDateTime(entry.timestamp)}</span>
-                        <span className="case-detail__audit-action">{entry.actionType}</span>
-                        <span className="case-detail__audit-actor">
-                          {entry.performedByXID
-                            ? `System (${entry.performedByXID})`
-                            : 'System (Unknown)'}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            )}
+            <Card className="case-detail__section" id="docket-history-section" ref={docketHistorySectionRef}>
+              <h2 className="neo-section__header">Docket History</h2>
+              {loadingClientDockets ? <p className="case-detail__empty-note">Loading docket history...</p> : (
+                <table className="case-detail__history-table">
+                  <thead><tr><th>Docket ID</th><th>Category</th><th>Status</th><th>Created</th></tr></thead>
+                  <tbody>
+                    {clientDockets.map((row) => (
+                      <tr key={formatDocketId(row.caseId)} onClick={() => navigate(`/app/firm/${firmSlug}/cases/${row.caseId}`)} style={{ cursor: 'pointer' }}>
+                        <td>{formatDocketId(row.caseId)}</td><td>{row.category}</td><td>{row.status}</td><td>{formatDateTime(row.createdAt)}</td>
+                      </tr>
+                    ))}
+                    {!clientDockets.length ? <tr><td colSpan={4}>No related dockets found.</td></tr> : null}
+                  </tbody>
+                </table>
+              )}
+              <Button variant="outline" onClick={scrollToTop}>Back to Top</Button>
+            </Card>
           </div>
 
           {/* Right pane — 40% sticky context panel */}
           <aside className="case-detail__split-context" aria-label="Case context panel">
 
             {/* Attachments + Dropzone */}
-            <Card className="case-detail__context-card">
+            <Card className="case-detail__context-card" id="attachments-section" ref={attachmentsSectionRef}>
               <h2 className="neo-section__header">Attachments</h2>
               <div className="case-detail__attachments">
                 {attachments.length > 0 ? (
@@ -1140,13 +1049,6 @@ export const CaseDetailPage = () => {
                 </div>
               )}
             </Card>
-
-            {/* Case History (audit trail) */}
-            {user && user.role !== USER_ROLES.SUPER_ADMIN && (
-              <div className="case-detail__context-history">
-                <CaseHistory caseId={caseId} />
-              </div>
-            )}
           </aside>
         </div>
 
@@ -1323,8 +1225,8 @@ export const CaseDetailPage = () => {
           />
         )}
         <AuditTimelineDrawer
-          isOpen={timelineOpen}
-          onClose={() => setTimelineOpen(false)}
+          isOpen={auditSidebarOpen}
+          onClose={() => setAuditSidebarOpen(false)}
           caseId={caseId}
           events={timelineEvents.map((entry) => ({
             id: entry._id || entry.id || `${entry.timestamp}-${entry.actionType}`,
