@@ -33,6 +33,7 @@ const { getSession } = require('../utils/getSession');
 const fs = require('fs').promises;
 const fsSync = require('fs');
 const path = require('path');
+const PDFDocument = require('pdfkit');
 
 /**
  * Case Controller for Core Case APIs
@@ -2814,6 +2815,43 @@ const searchCases = async (req, res) => {
   }
 };
 
+
+const getDocketSummaryPdf = async (req, res) => {
+  try {
+    const { caseId } = req.params;
+    const caseData = await Case.findOne({ firmId: req.user.firmId, caseId }).lean();
+    if (!caseData) {
+      return res.status(404).json({ success: false, message: 'Docket not found' });
+    }
+
+    const client = caseData.clientId
+      ? await Client.findOne({ firmId: req.user.firmId, clientId: caseData.clientId }).lean()
+      : null;
+    const attachments = await Attachment.find({ firmId: req.user.firmId, caseId }).lean();
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${caseId}-summary.pdf"`);
+
+    const doc = new PDFDocument({ margin: 40 });
+    doc.pipe(res);
+    doc.fontSize(18).text('Docket Summary');
+    doc.moveDown(0.5);
+    doc.fontSize(12).text(`Docket ID: ${caseData.caseId}`);
+    doc.text(`Docket details: ${caseData.caseName || '-'}`);
+    doc.text(`Client information: ${client?.businessName || caseData.clientId || '-'}`);
+    doc.text(`Category: ${caseData.category || '-'}`);
+    doc.text(`Current stage: ${caseData.status || '-'}`);
+    doc.text(`SLA: ${caseData.slaDueDate ? new Date(caseData.slaDueDate).toISOString() : '-'}`);
+    doc.text(`Comments: ${(caseData.description || '').slice(0, 500) || '-'}`);
+    doc.moveDown();
+    doc.fontSize(13).text('Attachments list');
+    attachments.forEach((a, i) => doc.fontSize(11).text(`${i + 1}. ${a.fileName || a.filename || 'Attachment'}`));
+    doc.end();
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Error generating docket summary PDF' });
+  }
+};
+
 module.exports = {
   createCase: wrapWriteHandler(createCase),
   addComment: wrapWriteHandler(addComment),
@@ -2822,6 +2860,7 @@ module.exports = {
   unpendCase: wrapWriteHandler(unpendCase),
   updateCaseStatus: wrapWriteHandler(updateCaseStatus),
   getCaseByCaseId,
+  getDocketSummaryPdf,
   getCases,
   searchCases,
   lockCaseEndpoint: wrapWriteHandler(lockCaseEndpoint),
