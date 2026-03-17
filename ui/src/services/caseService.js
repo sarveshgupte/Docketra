@@ -133,6 +133,14 @@ export const caseService = {
     return response.data;
   },
 
+  getSummaryPdfUrl: (caseId) => `${window.location.origin}/api/cases/${caseId}/summary-pdf`,
+
+
+  getClientDockets: async (clientId) => {
+    const response = await api.get(`/clients/${clientId}/dockets?sort=createdAt&order=desc&limit=20`);
+    return response.data;
+  },
+
   /**
    * Move case to global worklist (unassign) - Admin only
    */

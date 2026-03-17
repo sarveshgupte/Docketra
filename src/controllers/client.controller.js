@@ -1425,6 +1425,25 @@ const downloadClientCFSFile = async (req, res) => {
   }
 };
 
+
+const listClientDockets = async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    const { limit = 20, order = 'desc' } = req.query;
+    const Case = require('../models/Case.model');
+
+    const rows = await Case.find({ firmId: req.user.firmId, clientId })
+      .sort({ createdAt: String(order).toLowerCase() === 'asc' ? 1 : -1 })
+      .limit(parseInt(limit, 10))
+      .select('caseId category status createdAt')
+      .lean();
+
+    return res.status(200).json({ success: true, data: rows });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Error fetching client dockets' });
+  }
+};
+
 module.exports = {
   getClients,
   getClientById,
@@ -1440,4 +1459,5 @@ module.exports = {
   listClientCFSFiles,
   deleteClientCFSFile: wrapWriteHandler(deleteClientCFSFile),
   downloadClientCFSFile,
+  listClientDockets,
 };

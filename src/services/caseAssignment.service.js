@@ -166,7 +166,7 @@ const assignCaseToUser = async (firmId, caseId, user, session = null) => {
  * @param {object} user - User object with xID and email
  * @returns {object} Results with count of assigned cases
  */
-const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = null, existingSession = null) => {
+const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = null, existingSession = null, useTransaction = true) => {
   if (!user || !user.xID) {
     throw new Error('Valid user with xID is required for case assignment');
   }
@@ -179,7 +179,7 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
   const session = existingSession || await mongoose.startSession();
   const ownsSession = !existingSession;
   try {
-    if (ownsSession) {
+    if (ownsSession && useTransaction) {
       session.startTransaction();
     }
 
@@ -244,7 +244,7 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
       caseId: { $in: updatedCases.map((caseData) => caseData.caseId) },
     }, null, { session });
 
-    if (ownsSession) {
+    if (ownsSession && useTransaction) {
       await session.commitTransaction();
     }
     return {
@@ -255,7 +255,7 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
     };
   } catch (error) {
     try {
-      if (ownsSession) {
+      if (ownsSession && useTransaction) {
         await session.abortTransaction();
       }
     } catch (_) {
@@ -263,10 +263,12 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
     }
     const message = error?.message || '';
     if (
-      message.includes('Transaction numbers are only allowed on a replica set member or mongos') ||
-      message.toLowerCase().includes('replica set')
+      useTransaction && ownsSession && (
+        message.includes('Transaction numbers are only allowed on a replica set member or mongos') ||
+        message.toLowerCase().includes('replica set')
+      )
     ) {
-      throw new Error('MongoDB transactions require replica set');
+      return bulkAssignCasesToUser(firmId, caseIds, user, assignerObjectId, null, false);
     }
     throw error;
   } finally {
