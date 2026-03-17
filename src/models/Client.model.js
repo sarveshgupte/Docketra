@@ -175,6 +175,21 @@ const clientSchema = new mongoose.Schema({
       uploadedBy: { type: String, trim: true, uppercase: true },
       uploadedAt: { type: Date, default: Date.now },
     }],
+    comments: [{
+      comment_id: { type: mongoose.Schema.Types.ObjectId, default: () => new mongoose.Types.ObjectId() },
+      client_id: { type: String, trim: true },
+      user_id: { type: String, trim: true, uppercase: true },
+      author_name: { type: String, trim: true },
+      comment_text: { type: String, trim: true },
+      created_at: { type: Date, default: Date.now },
+      attachments: [{
+        attachment_id: { type: mongoose.Schema.Types.ObjectId, default: () => new mongoose.Types.ObjectId() },
+        file_url: { type: String, trim: true },
+        file_name: { type: String, trim: true },
+        uploaded_by: { type: String, trim: true, uppercase: true },
+        uploaded_at: { type: Date, default: Date.now },
+      }],
+    }],
   },
   
   /**

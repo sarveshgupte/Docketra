@@ -26,6 +26,10 @@ module.exports = {
   'DELETE /:clientId/fact-sheet/files/:fileId': { params: z.object({ clientId: clientIdString, fileId: nonEmptyString }) },
   'POST /:clientId/cfs/files': { params: z.object({ clientId: clientIdString }), body: z.object({}).passthrough() },
   'DELETE /:clientId/cfs/files/:attachmentId': { params: z.object({ clientId: clientIdString, attachmentId: nonEmptyString }) },
+
+  'GET /:clientId/activity': { params: z.object({ clientId: clientIdString }), query: z.object({}).passthrough() },
+  'GET /:clientId/cfs/comments': { params: z.object({ clientId: clientIdString }), query: z.object({}).passthrough() },
+  'POST /:clientId/cfs/comments': { params: z.object({ clientId: clientIdString }), body: z.object({ commentText: nonEmptyString }).passthrough() },
   'GET /:clientId/cfs/files': { params: z.object({ clientId: clientIdString }), query: z.object({}).passthrough() },
   'GET /:clientId/cfs/files/:attachmentId/download': {
     params: z.object({ clientId: clientIdString, attachmentId: nonEmptyString }),

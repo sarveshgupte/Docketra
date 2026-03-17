@@ -64,6 +64,9 @@ const clientAuditSchema = new mongoose.Schema({
       'CLIENT_FACT_SHEET_FILE_ADDED',
       'CLIENT_FACT_SHEET_FILE_REMOVED',
       'CLIENT_FACT_SHEET_VIEWED',
+      'CLIENT_CFS_UPDATED',
+      'CLIENT_CFS_COMMENT_ADDED',
+      'CLIENT_CFS_ATTACHMENT_ADDED',
     ],
   },
   
