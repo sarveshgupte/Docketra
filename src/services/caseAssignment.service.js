@@ -170,6 +170,12 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
   if (!user || !user.xID) {
     throw new Error('Valid user with xID is required for case assignment');
   }
+
+  if (!user.role) {
+    console.warn('[ROLE_MISSING]', {
+      userXID: user.xID,
+    });
+  }
   
   if (!Array.isArray(caseIds) || caseIds.length === 0) {
     throw new Error('Case IDs array is required and must not be empty');
@@ -248,7 +254,7 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
 
         return CaseService.updateStatus(caseData.caseId, CaseStatus.OPEN, {
           tenantId: firmId,
-          role: user.role,
+          role: user.role || 'Admin',
           userId: user.xID,
           performedBy: user.email?.toLowerCase() || 'SYSTEM',
           actorRole: user.role === 'Admin' ? 'ADMIN' : 'USER',

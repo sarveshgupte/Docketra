@@ -269,8 +269,18 @@ const authenticate = async (req, res, next) => {
       }
     }
     
-    // Attach full user object to request
-    req.user = user;
+    // Attach normalized auth context to request
+    // NOTE: role is mandatory for downstream repository authorization checks.
+    req.user = {
+      ...user.toObject(),
+      _id: user?._id ? user._id.toString() : decoded.userId,
+      id: user?._id ? user._id.toString() : decoded.userId,
+      xID: user.xID,
+      email: user.email,
+      role: user.role || decoded.role || null,
+      firmId: user.firmId || decoded.firmId || null,
+      defaultClientId: user.defaultClientId || decoded.defaultClientId || null,
+    };
     
     // OBJECTIVE 2 & 3: Attach decoded JWT data including firm context for authorization
     // This makes firmSlug and defaultClientId available for route handlers

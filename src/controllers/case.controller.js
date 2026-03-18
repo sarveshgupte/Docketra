@@ -2001,12 +2001,23 @@ const pullCases = async (req, res) => {
       effectiveAssigneeUserId = targetUser._id;
     }
 
+    console.log('[USER_DEBUG]', req.user);
+
+    const normalizedUserContext = {
+      ...(typeof user?.toObject === 'function' ? user.toObject() : user),
+      xID: effectiveAssigneeXID,
+      _id: effectiveAssigneeUserId,
+      email: user.email,
+      role: user.role,
+      firmId: req.user.firmId,
+    };
+
     // Use assignment service for canonical assignment logic
     const caseAssignmentService = require('../services/caseAssignment.service');
     const result = await caseAssignmentService.bulkAssignCasesToUser(
       req.user.firmId,
       caseIds,
-      { ...user, xID: effectiveAssigneeXID, _id: effectiveAssigneeUserId, email: user.email },
+      normalizedUserContext,
       user._id || null,
       getSession(req)
     );
