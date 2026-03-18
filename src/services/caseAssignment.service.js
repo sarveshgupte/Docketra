@@ -172,9 +172,7 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
   }
 
   if (!user.role) {
-    console.warn('[ROLE_MISSING]', {
-      userXID: user.xID,
-    });
+    throw new Error('User role is required for case assignment');
   }
   
   if (!Array.isArray(caseIds) || caseIds.length === 0) {
@@ -254,7 +252,7 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
 
         return CaseService.updateStatus(caseData.caseId, CaseStatus.OPEN, {
           tenantId: firmId,
-          role: user.role || 'Admin',
+          role: user.role,
           userId: user.xID,
           performedBy: user.email?.toLowerCase() || 'SYSTEM',
           actorRole: user.role === 'Admin' ? 'ADMIN' : 'USER',
