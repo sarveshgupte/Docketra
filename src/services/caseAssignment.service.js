@@ -170,6 +170,10 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
   if (!user || !user.xID) {
     throw new Error('Valid user with xID is required for case assignment');
   }
+
+  if (!user.role) {
+    throw new Error('User role is required for case assignment');
+  }
   
   if (!Array.isArray(caseIds) || caseIds.length === 0) {
     throw new Error('Case IDs array is required and must not be empty');

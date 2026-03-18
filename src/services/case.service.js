@@ -25,6 +25,10 @@ async function updateStatus(caseId, newStatus, context = {}) {
     throw new Error('Transaction session required for status transition');
   }
 
+  if (!context.role) {
+    throw new Error('Role is required for status transition');
+  }
+
   const existingCase = await CaseRepository.findByCaseId(tenantId, caseId, context.role);
   if (!existingCase) {
     throw new Error('Case not found');
