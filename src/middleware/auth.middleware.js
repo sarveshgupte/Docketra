@@ -269,6 +269,10 @@ const authenticate = async (req, res, next) => {
       }
     }
     
+    if (!user.role && !decoded.role) {
+      throw new Error('Authentication failed: role missing');
+    }
+
     // Attach normalized auth context to request
     // NOTE: role is mandatory for downstream repository authorization checks.
     req.user = {
@@ -277,10 +281,15 @@ const authenticate = async (req, res, next) => {
       id: user?._id ? user._id.toString() : decoded.userId,
       xID: user.xID,
       email: user.email,
-      role: user.role || decoded.role || null,
+      role: user.role || decoded.role,
       firmId: user.firmId || decoded.firmId || null,
       defaultClientId: user.defaultClientId || decoded.defaultClientId || null,
     };
+
+    console.log('[AUTH_USER]', {
+      xID: req.user.xID,
+      role: req.user.role,
+    });
     
     // OBJECTIVE 2 & 3: Attach decoded JWT data including firm context for authorization
     // This makes firmSlug and defaultClientId available for route handlers
@@ -308,6 +317,13 @@ const authenticate = async (req, res, next) => {
     next();
   } catch (error) {
     console.error('[AUTH] Authentication error:', error);
+    if (error.message === 'Authentication failed: role missing') {
+      return res.status(401).json({
+        success: false,
+        code: 'AUTH_ROLE_MISSING',
+        message: error.message,
+      });
+    }
     res.status(500).json({
       success: false,
       code: 'AUTH_MIDDLEWARE_ERROR',

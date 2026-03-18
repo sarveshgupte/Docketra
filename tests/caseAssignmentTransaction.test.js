@@ -215,11 +215,25 @@ async function testReplicaSetErrorIsClear() {
   }
 }
 
+async function testBulkAssignRejectsMissingRole() {
+  const caseAssignmentService = freshService();
+  await assert.rejects(
+    () => caseAssignmentService.bulkAssignCasesToUser(
+      'firm-1',
+      ['CASE-1'],
+      { xID: 'X123456', email: 'test@example.com' }
+    ),
+    /User role is required for case assignment/
+  );
+  console.log('✓ Bulk assignment rejects requests with missing role');
+}
+
 async function run() {
   try {
     await testBulkAssignCommitsAtomicTransaction();
     await testBulkAssignRollsBackOnTransitionFailure();
     await testReplicaSetErrorIsClear();
+    await testBulkAssignRejectsMissingRole();
     console.log('Case assignment transaction tests passed.');
   } catch (error) {
     console.error('Case assignment transaction tests failed:', error);
