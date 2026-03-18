@@ -190,7 +190,10 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
         status: CaseStatus.UNASSIGNED,
         assignedToXID: null,
         assignedTo: null,
-        'lockStatus.isLocked': { $ne: true },
+        $or: [
+          { 'lockStatus.isLocked': { $ne: true } },
+          { lockStatus: { $exists: false } },
+        ],
       },
       {
         $set: {
@@ -204,6 +207,26 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
       { session }
     );
 
+    console.log('[CASE_PULL_DEBUG]', {
+      requested: caseIds,
+      matched: result.matchedCount,
+      modified: result.modifiedCount,
+      user: user.xID,
+    });
+
+    if (result.modifiedCount === 0) {
+      if (ownsSession && useTransaction) {
+        await session.commitTransaction();
+      }
+
+      return {
+        success: true,
+        assigned: 0,
+        requested: caseIds.length,
+        cases: [],
+      };
+    }
+
     const updatedCases = await Case.find({
       firmId,
       caseId: { $in: caseIds },
@@ -212,21 +235,31 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
       assignedAt,
     }, null, { session });
 
-    await Promise.all(updatedCases.map((caseData) =>
-      CaseService.updateStatus(caseData.caseId, CaseStatus.OPEN, {
-        tenantId: firmId,
-        role: user.role,
-        userId: user.xID,
-        performedBy: user.email?.toLowerCase() || 'SYSTEM',
-        actorRole: user.role === 'Admin' ? 'ADMIN' : 'USER',
-        currentStatus: CaseStatus.UNASSIGNED,
-        session,
-        statusPatch: {
-          lastActionByXID: user.xID.toUpperCase(),
-          lastActionAt: assignedAt,
-        },
-      })
-    ));
+    const validCases = updatedCases.filter(
+      (caseData) => caseData.status === CaseStatus.UNASSIGNED
+    );
+
+    if (validCases.length > 0) {
+      await Promise.all(validCases.map((caseData) => {
+        console.log('[STATUS_TRANSITION_DEBUG]', {
+          caseId: caseData.caseId,
+          actualStatus: caseData.status,
+        });
+
+        return CaseService.updateStatus(caseData.caseId, CaseStatus.OPEN, {
+          tenantId: firmId,
+          role: user.role,
+          userId: user.xID,
+          performedBy: user.email?.toLowerCase() || 'SYSTEM',
+          actorRole: user.role === 'Admin' ? 'ADMIN' : 'USER',
+          session,
+          statusPatch: {
+            lastActionByXID: user.xID.toUpperCase(),
+            lastActionAt: assignedAt,
+          },
+        });
+      }));
+    }
 
     await Promise.all(updatedCases.map((caseData) =>
       CaseHistory.create([{
@@ -261,6 +294,12 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
     } catch (_) {
       // noop
     }
+    console.error('[CASE_PULL_ERROR]', {
+      message: error.message,
+      stack: error.stack,
+      caseIds,
+      user: user.xID,
+    });
     const message = error?.message || '';
     if (
       useTransaction && ownsSession && (

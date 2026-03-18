@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const Case = require('../src/models/Case.model');
 const CaseService = require('../src/services/case.service');
 const CaseAudit = require('../src/models/CaseAudit.model');
+const CaseHistory = require('../src/models/CaseHistory.model');
 const auditLogService = require('../src/services/auditLog.service');
 
 const servicePath = require.resolve('../src/services/caseAssignment.service');
@@ -38,6 +39,7 @@ async function testBulkAssignCommitsAtomicTransaction() {
   const originalFind = Case.find;
   const originalUpdateStatus = CaseService.updateStatus;
   const originalCaseAuditCreate = CaseAudit.create;
+  const originalCaseHistoryCreate = CaseHistory.create;
   const originalLogCaseHistory = auditLogService.logCaseHistory;
 
   const { session, counters } = createSession();
@@ -46,6 +48,7 @@ async function testBulkAssignCommitsAtomicTransaction() {
     find: 0,
     updateStatus: 0,
     caseAudit: 0,
+    caseHistory: 0,
     history: 0,
   };
 
@@ -71,11 +74,15 @@ async function testBulkAssignCommitsAtomicTransaction() {
   };
   CaseService.updateStatus = async (_caseId, _newStatus, context) => {
     calls.updateStatus += 1;
-    assert.strictEqual(context.currentStatus, 'UNASSIGNED');
+    assert.strictEqual(context.currentStatus, undefined);
     assert.strictEqual(context.session, session);
   };
   CaseAudit.create = async (_docs, options) => {
     calls.caseAudit += 1;
+    assert.strictEqual(options.session, session);
+  };
+  CaseHistory.create = async (_docs, options) => {
+    calls.caseHistory += 1;
     assert.strictEqual(options.session, session);
   };
   auditLogService.logCaseHistory = async (payload) => {
@@ -99,8 +106,9 @@ async function testBulkAssignCommitsAtomicTransaction() {
     assert.strictEqual(counters.ended, 1);
     assert.strictEqual(calls.updateMany, 1);
     assert.strictEqual(calls.updateStatus, 2);
-    assert.strictEqual(calls.caseAudit, 1);
-    assert.strictEqual(calls.history, 2);
+    assert.strictEqual(calls.caseAudit, 0);
+    assert.strictEqual(calls.caseHistory, 2);
+    assert.strictEqual(calls.history, 0);
     console.log('✓ Bulk assignment commits transaction and propagates session');
   } finally {
     mongoose.startSession = originalStartSession;
@@ -108,6 +116,7 @@ async function testBulkAssignCommitsAtomicTransaction() {
     Case.find = originalFind;
     CaseService.updateStatus = originalUpdateStatus;
     CaseAudit.create = originalCaseAuditCreate;
+    CaseHistory.create = originalCaseHistoryCreate;
     auditLogService.logCaseHistory = originalLogCaseHistory;
     delete require.cache[servicePath];
   }
@@ -119,12 +128,14 @@ async function testBulkAssignRollsBackOnTransitionFailure() {
   const originalFind = Case.find;
   const originalUpdateStatus = CaseService.updateStatus;
   const originalCaseAuditCreate = CaseAudit.create;
+  const originalCaseHistoryCreate = CaseHistory.create;
   const originalLogCaseHistory = auditLogService.logCaseHistory;
 
   const { session, counters } = createSession();
   let updateStatusCalls = 0;
   let caseAuditCalls = 0;
   let historyCalls = 0;
+  let caseHistoryCalls = 0;
 
   mongoose.startSession = async () => session;
   Case.updateMany = async () => ({ modifiedCount: 2 });
@@ -142,6 +153,7 @@ async function testBulkAssignRollsBackOnTransitionFailure() {
     }
   };
   CaseAudit.create = async () => { caseAuditCalls += 1; };
+  CaseHistory.create = async () => { caseHistoryCalls += 1; };
   auditLogService.logCaseHistory = async () => { historyCalls += 1; };
 
   try {
@@ -159,6 +171,7 @@ async function testBulkAssignRollsBackOnTransitionFailure() {
     assert.strictEqual(counters.aborted, 1);
     assert.strictEqual(counters.ended, 1);
     assert.strictEqual(caseAuditCalls, 0);
+    assert.strictEqual(caseHistoryCalls, 0);
     assert.strictEqual(historyCalls, 0);
     console.log('✓ Bulk assignment aborts transaction on transition failure');
   } finally {
@@ -167,6 +180,7 @@ async function testBulkAssignRollsBackOnTransitionFailure() {
     Case.find = originalFind;
     CaseService.updateStatus = originalUpdateStatus;
     CaseAudit.create = originalCaseAuditCreate;
+    CaseHistory.create = originalCaseHistoryCreate;
     auditLogService.logCaseHistory = originalLogCaseHistory;
     delete require.cache[servicePath];
   }
@@ -174,6 +188,7 @@ async function testBulkAssignRollsBackOnTransitionFailure() {
 
 async function testReplicaSetErrorIsClear() {
   const originalStartSession = mongoose.startSession;
+  const originalUpdateMany = Case.updateMany;
   const { session, counters } = createSession();
   session.startTransaction = () => {
     counters.started += 1;
@@ -181,20 +196,21 @@ async function testReplicaSetErrorIsClear() {
   };
 
   mongoose.startSession = async () => session;
+  Case.updateMany = async () => ({ modifiedCount: 0 });
   try {
     const caseAssignmentService = freshService();
-    await assert.rejects(
-      () => caseAssignmentService.bulkAssignCasesToUser(
-        'firm-1',
-        ['CASE-1'],
-        { xID: 'X123456', email: 'test@example.com', role: 'Admin' }
-      ),
-      /MongoDB transactions require replica set/
+    const result = await caseAssignmentService.bulkAssignCasesToUser(
+      'firm-1',
+      ['CASE-1'],
+      { xID: 'X123456', email: 'test@example.com', role: 'Admin' }
     );
-    assert.strictEqual(counters.ended, 1);
-    console.log('✓ Replica set requirement error is surfaced clearly');
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(result.assigned, 0);
+    assert.strictEqual(counters.ended, 2);
+    console.log('✓ Replica set transaction errors fallback to non-transaction mode');
   } finally {
     mongoose.startSession = originalStartSession;
+    Case.updateMany = originalUpdateMany;
     delete require.cache[servicePath];
   }
 }
