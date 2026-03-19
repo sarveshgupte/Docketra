@@ -40,18 +40,6 @@ const resolveUserIdentity = async ({
         email: normalizedEmail,
         status: { $ne: 'deleted' },
       }, null, withSession);
-    } else {
-      const candidates = await User.find({
-        email: normalizedEmail,
-        status: { $ne: 'deleted' },
-      }, null, withSession).limit(2);
-      if (candidates.length > 1) {
-        const maskedEmail = normalizedEmail.includes('@')
-          ? normalizedEmail.replace(/(^.).*(@.*$)/, '$1***$2')
-          : `${normalizedEmail.slice(0, 1) || '*'}***`;
-        console.warn(`[IDENTITY] Ambiguous email match across firms: ${maskedEmail}`);
-      }
-      candidate = candidates.length === 1 ? candidates[0] : null;
     }
     if (candidate) {
       const allowLink = typeof canLinkGoogle === 'function'
@@ -67,6 +55,7 @@ const resolveUserIdentity = async ({
         const updated = await User.findOneAndUpdate(
           { 
             _id: candidate._id, 
+            firmId: candidate.firmId,
             $or: [
               { 'authProviders.google.googleId': { $exists: false } },
               { 'authProviders.google.googleId': null },
