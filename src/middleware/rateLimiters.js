@@ -1,10 +1,10 @@
 const rateLimit = require('express-rate-limit');
 const { createHash } = require('crypto');
 const { RedisStore } = require('rate-limit-redis');
-const jwt = require('jsonwebtoken');
 const config = require('../config/config');
 const { getRedisClient } = require('../config/redis');
 const metricsService = require('../services/metrics.service');
+const jwtService = require('../services/jwt.service');
 const { getCookieValue } = require('../utils/requestCookies');
 const { logSecurityEvent } = require('./securityAudit.middleware');
 
@@ -138,12 +138,12 @@ const refreshUserKeyGenerator = (req) => {
   const accessToken = req.body?.accessToken || getCookieValue(req.headers?.cookie, 'accessToken');
   if (accessToken) {
     try {
-      const decoded = jwt.decode(accessToken);
+      const decoded = jwtService.verifyAccessToken(accessToken);
       if (decoded?.userId) {
         return `user:${decoded.userId}`;
       }
     } catch (_) {
-      // fallback below
+      // Fallback below for invalid/expired/missing access tokens.
     }
   }
 
