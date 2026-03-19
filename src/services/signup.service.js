@@ -391,19 +391,16 @@ const resendOtp = async ({ email, req = null }) => {
 
   const resendCount = resolveOtpResendCount(record);
   if (resendCount >= MAX_RESEND_COUNT) {
-    return { success: false, status: 429, message: 'Maximum resend limit reached. Please initiate signup again.' };
+    await enforceMinimumDuration(startedAt);
+    return { success: true, message: EMAIL_ENUMERATION_SAFE_MESSAGE };
   }
 
   const lastOtpSentAt = resolveOtpLastSentAt(record);
   if (lastOtpSentAt) {
     const secondsSinceLastOtp = (Date.now() - lastOtpSentAt.getTime()) / 1000;
     if (secondsSinceLastOtp < OTP_RESEND_COOLDOWN) {
-      const waitSeconds = Math.ceil(OTP_RESEND_COOLDOWN - secondsSinceLastOtp);
-      return {
-        success: false,
-        status: 429,
-        message: `Please wait ${waitSeconds} seconds before requesting another OTP.`,
-      };
+      await enforceMinimumDuration(startedAt);
+      return { success: true, message: EMAIL_ENUMERATION_SAFE_MESSAGE };
     }
   }
 

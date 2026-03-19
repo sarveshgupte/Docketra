@@ -1227,6 +1227,11 @@ const login = async (req, res) => {
 
 const resendLoginOtp = async (req, res) => {
   try {
+    const genericResendResponse = {
+      success: true,
+      message: 'If the account exists, a verification code has been sent.',
+      resendCooldownSeconds: getLoginOtpConfig().resendCooldownSeconds,
+    };
     const otpConfig = getLoginOtpConfig();
     const requestedFirmSlug = req.body?.firmSlug || req.params?.firmSlug || req.firmSlug || null;
     const requestedXID = req.body?.xid || req.body?.xID || req.body?.XID || null;
@@ -1242,11 +1247,7 @@ const resendLoginOtp = async (req, res) => {
     });
 
     if (!user || !firm) {
-      return res.json({
-        success: true,
-        message: 'OTP resent successfully',
-        resendCooldownSeconds: otpConfig.resendCooldownSeconds,
-      });
+      return res.json(genericResendResponse);
     }
 
     req.firmId = req.firmId || firm._id;
@@ -1262,40 +1263,23 @@ const resendLoginOtp = async (req, res) => {
         retryAfter: activeLockSeconds,
         reason: 'verify_lock_active',
       });
-      return res.status(429).json({
-        success: false,
-        error: 'Too many attempts. Try again later.',
-        message: 'Too many attempts. Try again later.',
-        retryAfter: activeLockSeconds,
-      });
+      return res.json(genericResendResponse);
     }
 
     const lastSentAtMs = user.loginOtpLastSentAt ? new Date(user.loginOtpLastSentAt).getTime() : 0;
     const resendCooldownEndsAt = lastSentAtMs + (otpConfig.resendCooldownSeconds * 1000);
     const retryAfter = Math.max(0, Math.ceil((resendCooldownEndsAt - Date.now()) / 1000));
     if (retryAfter > 0) {
-      return res.status(429).json({
-        success: false,
-        message: `Please wait ${retryAfter} seconds before requesting another OTP.`,
-        retryAfter,
-      });
+      return res.json(genericResendResponse);
     }
 
     if (Number(user.loginOtpResendCount || 0) >= otpConfig.maxResends) {
-      return res.status(429).json({
-        success: false,
-        error: 'Too many attempts. Try again later.',
-        message: 'Too many attempts. Try again later.',
-      });
+      return res.json(genericResendResponse);
     }
 
     await sendLoginOtpChallenge(req, user, { isResend: true, returnLoginToken: false });
 
-    return res.json({
-      success: true,
-      message: 'OTP resent successfully',
-      resendCooldownSeconds: otpConfig.resendCooldownSeconds,
-    });
+    return res.json(genericResendResponse);
   } catch (error) {
     console.error('[AUTH] Resend OTP error:', error);
     return res.status(500).json({
@@ -2860,6 +2844,7 @@ const setupAccount = async (req, res) => {
 const resendSetup = async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ success: false, code: 'EMAIL_REQUIRED', message: 'email is required' });
+  const genericResponse = { success: true, message: 'If the account exists, a setup email has been sent.' };
 
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
   const normalizedEmail = email.toLowerCase().trim();
@@ -2868,7 +2853,7 @@ const resendSetup = async (req, res) => {
     userQuery.firmId = req.firmId;
   }
   const user = await User.findOne(userQuery);
-  if (!user) return res.status(404).json({ success: false, code: 'USER_NOT_FOUND', message: 'User not found' });
+  if (!user) return res.json(genericResponse);
 
   const recentCount = await AuthAudit.countDocuments({
     userId: user._id,
@@ -2906,7 +2891,7 @@ const resendSetup = async (req, res) => {
     performedBy: user.xID,
   }, req);
   console.log('[AUTH][setup] setup link resent', { userId: user._id.toString(), firmId: user.firmId?.toString?.() || user.firmId });
-  return res.json({ success: true, message: 'Setup link resent' });
+  return res.json(genericResponse);
 };
 
 const resendCredentials = async (req, res) => {
@@ -3392,10 +3377,9 @@ const forgotPassword = async (req, res) => {
         .limit(2);
       if (candidateUsers.length > 1) {
         console.warn(`[AUTH] Forgot password email is ambiguous across firms: ${emailService.maskEmail(normalizedEmail)}`);
-        return res.status(400).json({
-          success: false,
-          error: 'Multiple firms found. Please use your firm login URL.',
-          message: 'Multiple firms found. Please use your firm login URL.',
+        return res.json({
+          success: true,
+          message: 'If an account exists with this email, you will receive a password reset link.',
         });
       }
       user = candidateUsers.length === 1 ? candidateUsers[0] : null;
