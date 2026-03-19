@@ -1,5 +1,7 @@
 const User = require('../models/User.model');
+const Client = require('../models/Client.model');
 const jwtService = require('../services/jwt.service');
+const { getOrCreateDefaultClient } = require('../services/defaultClient.guard');
 const { isSuperAdminRole } = require('../utils/role.utils');
 const metricsService = require('../services/metrics.service');
 const { getCookieValue } = require('../utils/requestCookies');
@@ -16,6 +18,40 @@ const MUST_SET_ALLOWED_PATHS = [
   '/auth/reset-password-with-token',
   '/api/auth/reset-password-with-token',
 ];
+
+const ensureTenantDefaultClient = async (req, user) => {
+  if (!user || user.role === 'SUPER_ADMIN') {
+    return null;
+  }
+
+  if (!user.firmId) {
+    throw new Error('MISSING_FIRM_CONTEXT');
+  }
+
+  let defaultClient = null;
+  if (user.defaultClientId) {
+    defaultClient = await Client.findById(user.defaultClientId)
+      .select('_id firmId isDefaultClient')
+      .lean();
+  }
+
+  const needsRepair = (
+    !defaultClient
+    || !defaultClient.isDefaultClient
+    || String(defaultClient.firmId) !== String(user.firmId)
+  );
+
+  if (needsRepair) {
+    defaultClient = await getOrCreateDefaultClient(user.firmId, {
+      userId: user._id,
+      requestId: req?.id || req?.requestId || null,
+    });
+    user.defaultClientId = defaultClient._id;
+    await user.save();
+  }
+
+  return defaultClient;
+};
 
 /**
  * Authentication Middleware for Docketra Case Management System
@@ -245,6 +281,17 @@ const authenticate = async (req, res, next) => {
     
     if (!user.role && !decoded.role) {
       throw new Error('Authentication failed: role missing');
+    }
+
+    try {
+      await ensureTenantDefaultClient(req, user);
+    } catch (defaultClientError) {
+      noteAuthFailure();
+      console.error('[AUTH] Failed to enforce tenant default client invariant:', defaultClientError.message);
+      return res.status(500).json({
+        success: false,
+        message: 'Account configuration error. Please contact administrator.',
+      });
     }
 
     // Attach normalized auth context to request

@@ -463,10 +463,8 @@ const userSchema = new mongoose.Schema({
 });
 
 /**
-/**
- * Validation: Admin's defaultClientId must be consistent with their firmId.
- * In the new client-centric architecture firmId IS the default client _id,
- * so we validate against the Client model instead of the legacy Firm model.
+ * Validation: Every non-superadmin user must be linked to a valid tenant
+ * default client within the same firm.
  */
 userSchema.pre('save', async function() {
   // SECURITY: MFA secrets must never be stored in plaintext at rest.
@@ -476,8 +474,20 @@ userSchema.pre('save', async function() {
     this.twoFactorSecret = encryptProtectedValue(this.twoFactorSecret);
   }
 
-  // Only validate for Admin role with both firmId and defaultClientId
-  if (this.role === 'Admin' && this.firmId && this.defaultClientId) {
+  // GUARDRAIL: Prevent saving non-superadmin users without firm/default client context
+  if (this.role !== 'SUPER_ADMIN') {
+    if (!this.firmId) {
+      const error = new Error('Non-superadmin users must have firmId set');
+      error.name = 'ValidationError';
+      throw error;
+    }
+
+    if (!this.defaultClientId) {
+      const error = new Error('Non-superadmin users must have defaultClientId set');
+      error.name = 'ValidationError';
+      throw error;
+    }
+
     const Client = require('./Client.model');
     const defaultClient = await Client.findById(this.defaultClientId)
       .select('_id firmId isDefaultClient')
@@ -495,16 +505,6 @@ userSchema.pre('save', async function() {
       throw error;
     }
   }
-  
-  // GUARDRAIL: Prevent saving non-superadmin users without firm/default client context
-  if (this.role !== 'SUPER_ADMIN') {
-    if (!this.firmId) {
-      const error = new Error('Non-superadmin users must have firmId set');
-      error.name = 'ValidationError';
-      throw error;
-    }
-  }
-
 
   // Single source of truth: status drives activation state.
   if (this.isModified('status') || this.isNew) {
