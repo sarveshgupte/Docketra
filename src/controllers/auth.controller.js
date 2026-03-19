@@ -6,6 +6,7 @@ const speakeasy = require('speakeasy');
 const { google } = require('googleapis');
 const User = require('../models/User.model');
 const Firm = require('../models/Firm.model');
+const Client = require('../models/Client.model');
 const UserProfile = require('../models/UserProfile.model');
 const AuthAudit = require('../models/AuthAudit.model');
 const RefreshToken = require('../models/RefreshToken.model');
@@ -20,6 +21,7 @@ const { isActiveStatus, getFirmInactiveCode } = require('../utils/status.utils')
 const { validatePasswordStrength, PASSWORD_POLICY_MESSAGE } = require('../utils/passwordPolicy');
 const { getSession } = require('../utils/getSession');
 const { ensureDefaultClientForFirm } = require('../services/defaultClient.service');
+const { getOrCreateDefaultClient } = require('../services/defaultClient.guard');
 const { resolveUserIdentity } = require('../services/identity.service');
 const { isGoogleAuthDisabled } = require('../services/featureFlags.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
@@ -63,6 +65,36 @@ const SUPERADMIN_ROLE = 'SUPERADMIN';
 const ROLE_SUPER_ADMIN = 'SUPER_ADMIN';
 const ROLE_ADMIN = 'Admin';
 const ROLE_EMPLOYEE = 'Employee';
+
+const ensureUserDefaultClientLink = async (user, req = null) => {
+  if (!user?.firmId) {
+    throw new Error('MISSING_FIRM_CONTEXT');
+  }
+
+  let defaultClient = null;
+  if (user.defaultClientId) {
+    defaultClient = await Client.findById(user.defaultClientId)
+      .select('_id firmId isDefaultClient')
+      .lean();
+  }
+
+  const needsRepair = (
+    !defaultClient
+    || !defaultClient.isDefaultClient
+    || String(defaultClient.firmId) !== String(user.firmId)
+  );
+
+  if (needsRepair) {
+    defaultClient = await getOrCreateDefaultClient(user.firmId, {
+      userId: user._id,
+      requestId: req?.id || req?.requestId || null,
+    });
+    user.defaultClientId = defaultClient._id;
+    await user.save();
+  }
+
+  return defaultClient;
+};
 
 const log = require('../utils/log');
 const logger = log;
@@ -497,6 +529,10 @@ const generateAndStoreRefreshToken = async ({ req, userId = null, firmId = null 
  * OBJECTIVE 2: Ensure firm context (firmId, firmSlug, defaultClientId) is always in JWT
  */
 const buildTokenResponse = async (user, req, authMethod = 'Password') => {
+  if (user?.role !== ROLE_SUPER_ADMIN && user?.firmId) {
+    await ensureUserDefaultClientLink(user, req);
+  }
+
   // Fetch firm details if user has firmId
   const firmSlug = await getFirmSlug(user.firmId);
 
@@ -890,43 +926,14 @@ const login = async (req, res) => {
       
       console.log(`[AUTH] Admin ${user.xID} validation - firmId: ${user.firmId}, defaultClientId: ${user.defaultClientId}`);
       
-      // PR-2: Backward compatibility - Auto-assign defaultClientId if missing
-      if (!user.defaultClientId) {
-        console.warn(`[AUTH] Admin user ${user.xID} missing defaultClientId - attempting auto-repair`);
-        
-        try {
-          // Find firm and get its defaultClientId
-          const firm = await Firm.findById(user.firmId);
-          
-          console.log(`[AUTH] Firm lookup for auto-repair: ${firm ? `found, defaultClientId: ${firm.defaultClientId}` : 'not found'}`);
-          
-          if (firm && firm.defaultClientId) {
-            // Auto-assign firm's defaultClientId to admin (persist to database)
-            // NOTE: No longer checks bootstrapStatus to prevent login deadlock
-            await User.updateOne(
-              { _id: user._id },
-              { $set: { defaultClientId: firm.defaultClientId } }
-            );
-            
-            // Update in-memory user object with persisted value
-            user.defaultClientId = firm.defaultClientId;
-            
-            console.log(`[AUTH] ✓ Persisted defaultClientId for legacy admin ${user.xID}`);
-            console.log(`[AUTH]   Subsequent logins will not trigger auto-repair`);
-          } else {
-            console.error(`[AUTH] Admin user ${user.xID} missing defaultClientId - cannot auto-repair (firm not ready)`);
-            return res.status(500).json({
-              success: false,
-              message: 'Account configuration error. Please contact administrator.',
-            });
-          }
-        } catch (autoRepairError) {
-          console.error(`[AUTH] Failed to auto-repair defaultClientId for ${user.xID}:`, autoRepairError.message);
-          return res.status(500).json({
-            success: false,
-            message: 'Account configuration error. Please contact administrator.',
-          });
-        }
+      try {
+        await ensureUserDefaultClientLink(user, req);
+      } catch (defaultClientError) {
+        console.error(`[AUTH] Failed to enforce default client invariant for ${user.xID}:`, defaultClientError.message);
+        return res.status(500).json({
+          success: false,
+          message: 'Account configuration error. Please contact administrator.',
+        });
       }
     }
     
@@ -1860,6 +1867,25 @@ const getProfile = async (req, res) => {
       });
     }
     
+    const userFirmId = user?.firmId ? String(user.firmId) : null;
+    if (!userFirmId) {
+      return res.status(500).json({
+        success: false,
+        message: 'Account configuration error. Please contact administrator.',
+      });
+    }
+
+    // Harden profile fetch: heal missing/stale default-client linkage without middleware writes.
+    try {
+      await ensureUserDefaultClientLink(user, req);
+    } catch (defaultClientError) {
+      console.error('[AUTH] Failed to self-heal default client during profile fetch:', defaultClientError.message);
+      return res.status(503).json({
+        success: false,
+        message: 'Unable to resolve account context. Please try again.',
+      });
+    }
+
     // Populate firm metadata for display ONLY (not for authorization)
     // Authorization uses JWT claims (req.jwt.firmId, req.jwt.firmSlug)
     await user.populate('firmId', 'firmId name firmSlug');
@@ -1905,7 +1931,7 @@ const getProfile = async (req, res) => {
           firmId: user.firmId.firmId,
           name: user.firmId.name,
         } : null,
-        firmId: user.firmId ? user.firmId._id.toString() : null,
+        firmId: userFirmId,
         firmSlug: req.jwt?.firmSlug || user.firmId?.firmSlug || null, // JWT-first: use token claim, fallback to DB
         defaultClientId: req.jwt?.defaultClientId || (user.defaultClientId ? user.defaultClientId.toString() : null), // JWT-first
         // Mutable fields from UserProfile model (editable)
@@ -4132,32 +4158,7 @@ const handleGoogleCallback = async (req, res) => {
       console.log(`[AUTH] Google OAuth - Admin ${user.xID} validation - firmId: ${user.firmId}, defaultClientId: ${user.defaultClientId}`);
 
       try {
-        const firm = await Firm.findById(user.firmId);
-        
-        console.log(`[AUTH] Google OAuth - Firm lookup: ${firm ? `found, defaultClientId: ${firm.defaultClientId}` : 'not found'}`);
-        
-        // NOTE: Bootstrap status is NOT checked during login to prevent deadlock
-        // Admin users must be able to log in to complete firm setup
-        // Bootstrap enforcement is handled by route-level middleware
-
-        if (!user.defaultClientId) {
-          console.warn(`[AUTH] Google OAuth - Admin user ${user.xID} missing defaultClientId - attempting auto-repair`);
-          
-          if (firm && firm.defaultClientId) {
-            await User.updateOne(
-              { _id: user._id },
-              { $set: { defaultClientId: firm.defaultClientId } }
-            );
-            user.defaultClientId = firm.defaultClientId;
-            console.log(`[AUTH] Google OAuth - ✓ Persisted defaultClientId for admin ${user.xID}`);
-          } else {
-            console.error(`[AUTH] Google OAuth - Admin user ${user.xID} missing defaultClientId - cannot auto-repair (firm not ready)`);
-            return res.status(500).json({
-              success: false,
-              message: 'Account configuration error. Please contact administrator.',
-            });
-          }
-        }
+        await ensureUserDefaultClientLink(user, req);
       } catch (firmError) {
         console.error('[AUTH] Error validating admin firm for Google login:', firmError.message);
         return res.status(500).json({

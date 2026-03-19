@@ -20,10 +20,16 @@ const buildSystemEmail = (firmId) => {
   return `${safeLocalPart || 'firm'}-${hexEncodedFirmId}@system.local`;
 };
 
-const findDefaultClient = (firmId) => Client.findOne({
+const findDefaultClient = (firmId, session = null) => {
+  const query = Client.findOne({
   firmId,
   isDefaultClient: true,
 });
+  if (session) {
+    query.session(session);
+  }
+  return query;
+};
 
 const getOrCreateDefaultClient = async (firmId, options = {}) => {
   if (!firmId) {
@@ -34,9 +40,10 @@ const getOrCreateDefaultClient = async (firmId, options = {}) => {
     firmName = null,
     requestId = null,
     userId = null,
+    session = null,
   } = options;
   try {
-    const clientId = await generateNextClientId(firmId);
+    const clientId = await generateNextClientId(firmId, session);
     const now = new Date();
     const defaultClient = await Client.findOneAndUpdate(
       { firmId, isDefaultClient: true },
@@ -63,13 +70,14 @@ const getOrCreateDefaultClient = async (firmId, options = {}) => {
       {
         upsert: true,
         new: true,
+        session,
       }
     );
 
     return defaultClient;
   } catch (error) {
     if (error?.code === 11000) {
-      const repairedClient = await findDefaultClient(firmId);
+      const repairedClient = await findDefaultClient(firmId, session);
       if (repairedClient) {
         return repairedClient;
       }
