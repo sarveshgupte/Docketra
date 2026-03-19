@@ -3488,8 +3488,7 @@ const getAllUsers = async (req, res) => {
  * Refresh access token using refresh token
  * POST /api/auth/refresh
  * 
- * CRITICAL: Uses JWT claims as primary source of truth for firm context
- * Only falls back to DB lookup if JWT claims are missing
+ * CRITICAL: Refresh flow must rebuild all claims from trusted DB state.
  */
 const refreshAccessToken = async (req, res) => {
   try {
@@ -3502,22 +3501,6 @@ const refreshAccessToken = async (req, res) => {
         success: false,
         message: 'Refresh token is required',
       });
-    }
-    
-    // Extract old access token to preserve JWT claims (JWT-first approach)
-    const oldAccessToken = req.body.accessToken ||
-      getCookieValue(req.headers.cookie, 'accessToken');
-    
-    let oldTokenClaims = null;
-    if (oldAccessToken) {
-      try {
-        // Decode without verification (we only need the claims, not validation)
-        const jwt = require('jsonwebtoken');
-        oldTokenClaims = jwt.decode(oldAccessToken);
-      } catch (decodeError) {
-        // Ignore decode errors - we'll fall back to DB lookup
-        console.warn('[AUTH] Failed to decode old access token for refresh:', decodeError.message);
-      }
     }
     
     // Hash the provided refresh token
@@ -3602,13 +3585,11 @@ const refreshAccessToken = async (req, res) => {
     storedToken.lastUsedAt = now;
     await storedToken.save();
     
-    // CRITICAL: Use JWT claims as primary source of truth (JWT-FIRST approach)
-    // Only fetch from DB if JWT claims are missing
-    const firmSlug = oldTokenClaims?.firmSlug || await getFirmSlug(user.firmId);
-    const defaultClientId = oldTokenClaims?.defaultClientId || (user.defaultClientId ? user.defaultClientId.toString() : undefined);
+    // Rebuild token claims from trusted DB state (never reuse untrusted token payloads).
+    const firmSlug = await getFirmSlug(user.firmId);
+    const defaultClientId = user.defaultClientId ? user.defaultClientId.toString() : undefined;
     
-    // OBJECTIVE 2: Generate new access token with ALL firm context
-    // Preserve firm context from old token (JWT is authoritative)
+    // Generate new access token with current authoritative firm context.
     const newAccessToken = jwtService.generateAccessToken({
       userId: user._id.toString(),
       firmId: user.firmId ? user.firmId.toString() : undefined,
