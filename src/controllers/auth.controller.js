@@ -65,6 +65,12 @@ const SUPERADMIN_ROLE = 'SUPERADMIN';
 const ROLE_SUPER_ADMIN = 'SUPER_ADMIN';
 const ROLE_ADMIN = 'Admin';
 const ROLE_EMPLOYEE = 'Employee';
+const isSuperAdminRequest = (req) => (
+  req?.isSuperAdmin === true
+  || req?.jwt?.isSuperAdmin === true
+  || isSuperAdminRole(req?.jwt?.role || req?.user?.role)
+);
+const getRequestFirmId = (req) => req?.jwt?.firmId || req?.user?.firmId || req?.firmId || null;
 
 const ensureUserDefaultClientLink = async (user, req = null) => {
   if (!user?.firmId) {
@@ -239,7 +245,7 @@ const persistLastSuccessfulLogin = async (req, user) => {
     }
 
     if (user._id && mongoose.connection?.readyState === 1) {
-      await User.updateOne({ _id: user._id }, { $set: loginState });
+      await User.updateOne({ _id: user._id, firmId: user.firmId }, { $set: loginState });
     }
   } catch (error) {
     log.warn('AUTH_LAST_LOGIN_PERSIST_FAILED', {
@@ -424,7 +430,7 @@ const persistLoginOtpState = async (user) => {
 
   if (user._id && mongoose.connection?.readyState === 1) {
     await User.updateOne(
-      { _id: user._id },
+      { _id: user._id, firmId: user.firmId },
       {
         $set: {
           loginOtpHash: user.loginOtpHash || null,
@@ -984,7 +990,7 @@ const login = async (req, res) => {
 
       // SECURITY: Atomic login lockout update to prevent race conditions
       const updatedUser = await User.findOneAndUpdate(
-        { _id: user._id },
+        { _id: user._id, firmId: user.firmId },
         [
           {
             $set: {
@@ -1723,7 +1729,11 @@ const resetPassword = async (req, res) => {
     const admin = req.user;
     
     // Find user to reset
-    const user = await User.findOne({ xID: xID.toUpperCase() });
+    const lookupQuery = { xID: xID.toUpperCase() };
+    if (!isSuperAdminRequest(req)) {
+      lookupQuery.firmId = getRequestFirmId(req);
+    }
+    const user = await User.findOne(lookupQuery);
     
     if (!user) {
       return res.status(404).json({
@@ -2753,6 +2763,7 @@ const setupAccount = async (req, res) => {
   const now = new Date();
   const setupTokenHash = emailService.hashToken(token);
   const existingUser = await User.findOne({
+    ...(req.firmId ? { firmId: req.firmId } : {}),
     $or: [
       { setupTokenHash },
       { passwordSetupTokenHash: setupTokenHash },
@@ -2804,6 +2815,7 @@ const setupAccount = async (req, res) => {
   const user = await User.findOneAndUpdate(
     {
       _id: existingUser._id,
+      firmId: existingUser.firmId,
       setupTokenUsedAt: null,
       setupTokenExpiresAt: { $gt: now },
       $or: [{ setupTokenHash }, { passwordSetupTokenHash: setupTokenHash }],
@@ -2813,7 +2825,10 @@ const setupAccount = async (req, res) => {
   );
 
   if (!user) {
-    const raceUser = await User.findById(existingUser._id).select('setupTokenUsedAt setupTokenExpiresAt');
+    const raceUser = await User.findOne({
+      _id: existingUser._id,
+      firmId: existingUser.firmId,
+    }).select('setupTokenUsedAt setupTokenExpiresAt');
     if (raceUser?.setupTokenUsedAt) {
       return res.status(400).json({ success: false, code: 'SETUP_TOKEN_ALREADY_USED', message: 'This setup link has already been used.' });
     }
@@ -2847,7 +2862,12 @@ const resendSetup = async (req, res) => {
   if (!email) return res.status(400).json({ success: false, code: 'EMAIL_REQUIRED', message: 'email is required' });
 
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-  const user = await User.findOne({ email: email.toLowerCase().trim() });
+  const normalizedEmail = email.toLowerCase().trim();
+  const userQuery = { email: normalizedEmail };
+  if (req.firmId) {
+    userQuery.firmId = req.firmId;
+  }
+  const user = await User.findOne(userQuery);
   if (!user) return res.status(404).json({ success: false, code: 'USER_NOT_FOUND', message: 'User not found' });
 
   const recentCount = await AuthAudit.countDocuments({
@@ -2929,6 +2949,7 @@ const resetPasswordWithToken = async (req, res) => {
     
     // Find user with matching token hash (check both reset and setup tokens in one query)
     const user = await User.findOne({ 
+      ...(req.firmId ? { firmId: req.firmId } : {}),
       $or: [
         {
           passwordResetTokenHash: tokenHash,
@@ -3055,7 +3076,11 @@ const resendSetupEmail = async (req, res) => {
     const admin = req.user;
     
     // Find user
-    const user = await User.findOne({ xID: xID.toUpperCase() });
+    const lookupQuery = { xID: xID.toUpperCase() };
+    if (!isSuperAdminRequest(req)) {
+      lookupQuery.firmId = getRequestFirmId(req);
+    }
+    const user = await User.findOne(lookupQuery);
     
     if (!user) {
       return res.status(404).json({
@@ -3274,7 +3299,11 @@ const unlockAccount = async (req, res) => {
     const admin = req.user;
     
     // Find user
-    const user = await User.findOne({ xID: xID.toUpperCase() });
+    const lookupQuery = { xID: xID.toUpperCase() };
+    if (!isSuperAdminRequest(req)) {
+      lookupQuery.firmId = getRequestFirmId(req);
+    }
+    const user = await User.findOne(lookupQuery);
     
     if (!user) {
       return res.status(404).json({
@@ -3668,7 +3697,12 @@ const verifyTotp = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ xID, status: 'active' }).select('xID twoFactorSecret');
+    const firmId = getRequestFirmId(req);
+    const userQuery = { xID, status: 'active' };
+    if (firmId) {
+      userQuery.firmId = firmId;
+    }
+    const user = await User.findOne(userQuery).select('xID twoFactorSecret');
     if (!user || !user.twoFactorSecret) {
       return res.status(404).json({
         success: false,
@@ -4066,7 +4100,7 @@ const handleGoogleCallback = async (req, res) => {
         update.status = 'active';
       }
       const refreshed = await User.findOneAndUpdate(
-        { _id: user._id },
+        { _id: user._id, firmId: user.firmId },
         { $set: update },
         { new: true }
       );
