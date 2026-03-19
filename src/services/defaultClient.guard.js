@@ -44,7 +44,6 @@ const getOrCreateDefaultClient = async (firmId, options = {}) => {
   } = options;
   try {
     const clientId = await generateNextClientId(firmId, session);
-    const now = new Date();
     const defaultClient = await Client.findOneAndUpdate(
       { firmId, isDefaultClient: true },
       {
@@ -63,8 +62,6 @@ const getOrCreateDefaultClient = async (firmId, options = {}) => {
           isActive: true,
           createdByXid: 'SYSTEM',
           createdBy: 'system',
-          createdAt: now,
-          updatedAt: now,
         },
       },
       {
