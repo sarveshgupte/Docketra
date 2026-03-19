@@ -30,6 +30,7 @@ const { assertFirmContext } = require('../utils/tenantGuard');
 const CaseFile = require('../models/CaseFile.model');
 const { incrementTenantMetric } = require('../services/tenantMetrics.service');
 const { getSession } = require('../utils/getSession');
+const { getOrCreateDefaultClient } = require('../services/defaultClient.guard');
 const fs = require('fs').promises;
 const fsSync = require('fs');
 const path = require('path');
@@ -217,8 +218,15 @@ const createCase = async (req, res) => {
       });
     }
     
-    // Default clientId to C000001 if not provided
-    const finalClientId = clientId || 'C000001';
+    // Default to the tenant's default client when caller does not specify clientId
+    let finalClientId = clientId || null;
+    if (!finalClientId) {
+      const defaultClient = await getOrCreateDefaultClient(firmId, {
+        requestId,
+        userId: req.user?._id || req.user?.id || null,
+      });
+      finalClientId = defaultClient?.clientId || 'C000001';
+    }
     
     // Verify client exists and validate status - with firm scoping
     // PR: Client Lifecycle Enforcement - only ACTIVE clients can be used for new cases
