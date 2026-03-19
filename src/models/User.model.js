@@ -478,30 +478,21 @@ userSchema.pre('save', async function() {
 
   // Only validate for Admin role with both firmId and defaultClientId
   if (this.role === 'Admin' && this.firmId && this.defaultClientId) {
-    try {
-      // In new architecture: firmId == defaultClient._id, so they must match exactly.
-      // Skip the DB lookup when they already match (common path — avoid unnecessary I/O).
-      if (this.firmId.toString() === this.defaultClientId.toString()) {
-        // IDs are consistent — nothing more to check
-      } else {
-        // Tolerate mismatch in legacy setups where firmId pointed to a Firm document
-        // by checking if defaultClientId belongs to the same org via Client model.
-        const Client = require('./Client.model');
-        const defaultClient = await Client.findOne({
-          _id: this.defaultClientId,
-          $or: [
-            { firmId: this.firmId },
-            { _id: this.firmId, isDefaultClient: true },
-          ],
-        }).select('_id').lean();
+    const Client = require('./Client.model');
+    const defaultClient = await Client.findById(this.defaultClientId)
+      .select('_id firmId isDefaultClient')
+      .lean();
 
-        if (!defaultClient) {
-          console.warn('[User Validation] defaultClientId does not match firmId context — allowing save');
-        }
-      }
-    } catch (error) {
-      // For any errors, log and allow the save to continue (non-fatal)
-      console.warn('[User Validation] Could not verify Admin defaultClientId constraint:', error.message);
+    if (!defaultClient || !defaultClient.isDefaultClient) {
+      const error = new Error('DEFAULT_CLIENT_NOT_FOUND');
+      error.name = 'ValidationError';
+      throw error;
+    }
+
+    if (String(defaultClient.firmId) !== String(this.firmId)) {
+      const error = new Error('DEFAULT_CLIENT_FIRM_MISMATCH');
+      error.name = 'ValidationError';
+      throw error;
     }
   }
   

@@ -1,12 +1,11 @@
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const Firm = require('../models/Firm.model');
-const Client = require('../models/Client.model');
 const User = require('../models/User.model');
 const TemporarySignup = require('../models/TemporarySignup');
-const { generateNextClientId } = require('./clientIdGenerator');
 const { generateNextXID } = require('./xIDGenerator');
 const { ensureTenantKey } = require('../security/encryption.service');
+const { getOrCreateDefaultClient } = require('./defaultClient.guard');
 const { slugify } = require('../utils/slugify');
 const emailService = require('./email.service');
 const jwtService = require('./jwt.service');
@@ -28,9 +27,6 @@ const OTP_BLOCK_MINUTES = Math.max(1, Math.ceil(config.security.rateLimit.otpVer
 const MAX_RESEND_COUNT = config.security.rateLimit.signupOtpMaxResends;
 const MAX_SLUG_COLLISION_RETRIES = 5;
 const OTP_RESEND_COOLDOWN = config.security.rateLimit.otpResendCooldownSeconds;
-const SYSTEM_EMAIL_DOMAIN = 'system.local';
-const DEFAULT_BUSINESS_ADDRESS = 'Default Address';
-const DEFAULT_CONTACT_NUMBER = '0000000000';
 const PHONE_REGEX = /^[0-9]{10}$/;
 const EMAIL_ENUMERATION_SAFE_MESSAGE = 'If the details are valid, a verification code will be sent shortly.';
 const GENERIC_VERIFICATION_FAILURE_MESSAGE = 'Verification failed';
@@ -293,6 +289,20 @@ const verifyOtp = async ({ email, otp, session = null, req = null }) => {
       session,
       req,
     });
+
+    // Mandatory invariant: every user must be linked to the firm's default client.
+    const defaultClient = await getOrCreateDefaultClient(tenant.firmId, {
+      userId: tenant.userId,
+      requestId: req?.id || req?.requestId || null,
+      session,
+    });
+    const user = await User.findById(tenant.userId).session(session);
+    if (!user) {
+      throw new Error('Created signup user not found while linking default client');
+    }
+    user.defaultClientId = defaultClient._id;
+    await user.save({ session });
+    tenant.defaultClientId = defaultClient._id;
 
     const consumedAt = new Date();
     record.isVerified = true;
@@ -575,26 +585,11 @@ const createFirmAndAdmin = async ({
 
   await ensureTenantKey(String(firm._id), { session });
 
-  const clientId = await generateNextClientId(firm._id, session);
-  const [defaultClient] = await Client.create([{
-    clientId,
-    businessName: normalizedFirmName,
-    businessAddress: DEFAULT_BUSINESS_ADDRESS,
-    primaryContactNumber: DEFAULT_CONTACT_NUMBER,
-    businessEmail: `${firmId.toLowerCase()}@${SYSTEM_EMAIL_DOMAIN}`,
-    firmId: firm._id,
-    isDefaultClient: true,
-    isSystemClient: true,
-    isInternal: true,
-    createdBySystem: true,
-    isActive: true,
-    status: 'ACTIVE',
-    createdByXid: 'SELF_SIGNUP',
-    createdBy: normalizedEmail,
-    storageType: 'docketra',
-    storageProvider: null,
-    storageConfig: null,
-  }], { session });
+  const defaultClient = await getOrCreateDefaultClient(firm._id, {
+    firmName: normalizedFirmName,
+    requestId: req?.id || req?.requestId || null,
+    session,
+  });
 
   firm.defaultClientId = defaultClient._id;
   await firm.save({ session });
