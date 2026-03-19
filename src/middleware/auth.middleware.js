@@ -5,7 +5,6 @@ const metricsService = require('../services/metrics.service');
 const { getCookieValue } = require('../utils/requestCookies');
 const { isActiveStatus, getFirmInactiveCode } = require('../utils/status.utils');
 const { buildRequestContext } = require('./attachRequestContext');
-const { ensureDefaultClient } = require('../services/defaultClient.guard');
 
 const MUST_SET_ALLOWED_PATHS = [
   '/auth/profile',
@@ -17,31 +16,6 @@ const MUST_SET_ALLOWED_PATHS = [
   '/auth/reset-password-with-token',
   '/api/auth/reset-password-with-token',
 ];
-
-const resolveFirmNameForGuard = (req) => (
-  req.user?.firmName || req.firmName || req.firm?.name || null
-);
-
-const ensureTenantDefaultClient = async (req) => {
-  if (!req.user?.firmId || req.isSuperAdmin === true) {
-    return;
-  }
-
-  try {
-    req.defaultClient = await ensureDefaultClient(
-      req.user.firmId,
-      resolveFirmNameForGuard(req)
-    );
-  } catch (error) {
-    console.error('DEFAULT_CLIENT_GUARD_ERROR', {
-      firmId: req.user?.firmId || null,
-      requestId: req.requestId || req.headers?.['x-request-id'] || null,
-      userId: req.user?._id || req.user?.id || null,
-      route: req.originalUrl || req.url || null,
-      error: error.message,
-    });
-  }
-};
 
 /**
  * Authentication Middleware for Docketra Case Management System
@@ -312,8 +286,6 @@ const authenticate = async (req, res, next) => {
       ...buildRequestContext(req),
     };
 
-    await ensureTenantDefaultClient(req);
-    
     next();
   } catch (error) {
     console.error('[AUTH] Authentication error:', error);
