@@ -1,6 +1,4 @@
-const mongoose = require('mongoose');
-const Client = require('../models/Client.model');
-const { generateNextClientId } = require('./clientIdGenerator');
+const { getOrCreateDefaultClient } = require('./defaultClient.guard');
 
 /**
  * Ensure an organization has a default client.
@@ -33,45 +31,16 @@ const ensureDefaultClientForFirm = async (firmOrId, session = null) => {
     return null;
   }
 
-  // Check if a default client already exists for this organization
-  const existing = await Client.findOne({ firmId, isDefaultClient: true })
-    .session(session || undefined);
-  if (existing) {
-    // Link back to Firm if needed
-    if (isFirmDoc && !firmOrId.defaultClientId) {
-      firmOrId.defaultClientId = existing._id;
-      await firmOrId.save(session ? { session } : undefined);
-    }
-    return null;
-  }
-
-  const clientId = await generateNextClientId(firmId, session);
-  const businessEmail = `${String(firmId).toLowerCase().replace(/[^a-z0-9]/g, '')}@system.local`;
-
-  const [internalClient] = await Client.create([{
-    clientId,
-    businessName: firmName || 'Default Organization',
-    businessAddress: 'Default Address',
-    primaryContactNumber: '0000000000',
-    businessEmail,
-    firmId,
-    isDefaultClient: true,
-    isSystemClient: true,
-    isInternal: true,
-    createdBySystem: true,
-    status: 'ACTIVE',
-    isActive: true,
-    createdByXid: 'SYSTEM',
-    createdBy: process.env.SUPERADMIN_EMAIL || 'superadmin@system.local',
-  }], session ? { session } : undefined);
+  const internalClient = await getOrCreateDefaultClient(firmId, {
+    firmName,
+    session,
+  });
 
   // Link back to Firm document if provided
-  if (isFirmDoc) {
+  if (isFirmDoc && String(firmOrId.defaultClientId || '') !== String(internalClient._id)) {
     firmOrId.defaultClientId = internalClient._id;
     await firmOrId.save(session ? { session } : undefined);
   }
-
-  console.log(`[DEFAULT_CLIENT] Default client created for organization ${firmId}`);
   return internalClient;
 };
 
