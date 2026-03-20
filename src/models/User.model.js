@@ -125,6 +125,9 @@ const userSchema = new mongoose.Schema({
   defaultClientId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Client',
+    required: function() {
+      return this.role !== 'SUPER_ADMIN';
+    },
     default: null,
     immutable: true, // Cannot change default client after creation
     index: true,
@@ -463,8 +466,7 @@ const userSchema = new mongoose.Schema({
 });
 
 /**
- * Validation: Every non-superadmin user must be linked to a valid tenant
- * default client within the same firm.
+ * Validation: Every non-superadmin user must have tenant context fields set.
  */
 userSchema.pre('save', async function() {
   // SECURITY: MFA secrets must never be stored in plaintext at rest.
@@ -483,24 +485,7 @@ userSchema.pre('save', async function() {
     }
 
     if (!this.defaultClientId) {
-      const error = new Error('Non-superadmin users must have defaultClientId set');
-      error.name = 'ValidationError';
-      throw error;
-    }
-
-    const Client = require('./Client.model');
-    const defaultClient = await Client.findById(this.defaultClientId)
-      .select('_id firmId isDefaultClient')
-      .lean();
-
-    if (!defaultClient || !defaultClient.isDefaultClient) {
-      const error = new Error('DEFAULT_CLIENT_NOT_FOUND');
-      error.name = 'ValidationError';
-      throw error;
-    }
-
-    if (String(defaultClient.firmId) !== String(this.firmId)) {
-      const error = new Error('DEFAULT_CLIENT_FIRM_MISMATCH');
+      const error = new Error('DEFAULT_CLIENT_NOT_SET');
       error.name = 'ValidationError';
       throw error;
     }
