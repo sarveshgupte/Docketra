@@ -1828,16 +1828,16 @@ const resetPassword = async (req, res) => {
  */
 const getProfile = async (req, res) => {
   try {
-    // Get user from authenticated request
-    const user = req.user;
+    // Get authenticated request user snapshot (plain object from middleware)
+    const requestUser = req.user;
     
     // 1️⃣ IDENTIFY SUPERADMIN (defensive - check all signals)
     // Check multiple signals to ensure SuperAdmin is detected in all cases
     const isSuperAdmin = 
-      isSuperAdminRole(user?.role) ||           // Check user role
+      isSuperAdminRole(requestUser?.role) ||    // Check user role
       req.jwt?.isSuperAdmin === true ||          // Check JWT flag
       isSuperAdminRole(req.jwt?.role) ||         // Check JWT role (handles all variants)
-      user?.isSuperAdmin === true;               // Check user flag
+      requestUser?.isSuperAdmin === true;        // Check user flag
     
     // 2️⃣ SHORT-CIRCUIT before any firm logic, DB operations, or transactions
     if (isSuperAdmin) {
@@ -1861,17 +1861,29 @@ const getProfile = async (req, res) => {
       });
     }
     
-    const userFirmId = user?.firmId ? String(user.firmId) : null;
-    if (!userFirmId) {
-      return res.status(500).json({
+    // Always fetch a fresh DB user for profile hydration and consistency.
+    // Never mutate/populate req.user (middleware snapshot).
+    const dbUser = await User.findById(requestUser?._id)
+      .populate('firmId', 'firmId name firmSlug');
+
+    if (!dbUser) {
+      return res.status(401).json({
         success: false,
-        message: 'Account configuration error. Please contact administrator.',
+        message: 'Invalid session. Please log in again.',
+      });
+    }
+
+    const userFirmId = dbUser?.firmId?._id?.toString() || null;
+    if (!userFirmId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid session. Please log in again.',
       });
     }
 
     // Harden profile fetch: heal missing/stale default-client linkage without middleware writes.
     try {
-      await ensureUserDefaultClientLink(user, req);
+      await ensureUserDefaultClientLink(dbUser, req);
     } catch (defaultClientError) {
       console.error('[AUTH] Failed to self-heal default client during profile fetch:', defaultClientError.message);
       return res.status(503).json({
@@ -1879,18 +1891,14 @@ const getProfile = async (req, res) => {
         message: 'Unable to resolve account context. Please try again.',
       });
     }
-
-    // Populate firm metadata for display ONLY (not for authorization)
-    // Authorization uses JWT claims (req.jwt.firmId, req.jwt.firmSlug)
-    await user.populate('firmId', 'firmId name firmSlug');
     
     // Get profile info
-    let profile = await UserProfile.findOne({ xID: user.xID });
+    let profile = await UserProfile.findOne({ xID: dbUser.xID });
     
     // If profile doesn't exist, create empty one
     if (!profile) {
       profile = {
-        xID: user.xID,
+        xID: dbUser.xID,
         dob: null,
         dateOfBirth: null,
         gender: null,
@@ -1907,27 +1915,27 @@ const getProfile = async (req, res) => {
     res.json({
       success: true,
       data: {
-        id: user._id.toString(),
+        id: dbUser._id.toString(),
         // Immutable fields from User model (read-only)
-        xID: user.xID,
-        name: user.name,
-        email: user.email, // Email from User model is immutable
-        role: user.role,
-        mustSetPassword: !!user.mustSetPassword,
-        passwordSetAt: user.passwordSetAt,
-        allowedCategories: user.allowedCategories,
-        isActive: user.isActive,
+        xID: dbUser.xID,
+        name: dbUser.name,
+        email: dbUser.email, // Email from User model is immutable
+        role: dbUser.role,
+        mustSetPassword: !!dbUser.mustSetPassword,
+        passwordSetAt: dbUser.passwordSetAt,
+        allowedCategories: dbUser.allowedCategories,
+        isActive: dbUser.isActive,
         // OBJECTIVE 2: Include firm context (JWT-first approach)
         // Use JWT claims as primary source, DB as fallback for display
         // Firm metadata (read-only, admin-controlled)
-        firm: user.firmId ? {
-          id: user.firmId._id.toString(),
-          firmId: user.firmId.firmId,
-          name: user.firmId.name,
+        firm: dbUser.firmId ? {
+          id: dbUser.firmId._id.toString(),
+          firmId: dbUser.firmId.firmId,
+          name: dbUser.firmId.name,
         } : null,
         firmId: userFirmId,
-        firmSlug: req.jwt?.firmSlug || user.firmId?.firmSlug || null, // JWT-first: use token claim, fallback to DB
-        defaultClientId: req.jwt?.defaultClientId || (user.defaultClientId ? user.defaultClientId.toString() : null), // JWT-first
+        firmSlug: req.jwt?.firmSlug || dbUser.firmId?.firmSlug || null, // JWT-first: use token claim, fallback to DB
+        defaultClientId: req.jwt?.defaultClientId || (dbUser.defaultClientId ? dbUser.defaultClientId.toString() : null), // JWT-first
         // Mutable fields from UserProfile model (editable)
         dateOfBirth: profile.dob || profile.dateOfBirth,
         gender: profile.gender,
