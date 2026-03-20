@@ -319,7 +319,10 @@ const clientSchema = new mongoose.Schema({
    */
   businessAddress: {
     type: String,
-    required: [true, 'Business address is required'],
+    required: function requiredBusinessAddress() {
+      return this.isDefaultClient !== true;
+    },
+    default: null,
     trim: true,
   },
   
@@ -329,7 +332,10 @@ const clientSchema = new mongoose.Schema({
    */
   primaryContactNumber: {
     type: String,
-    required: [true, 'Primary contact number is required'],
+    required: function requiredPrimaryContactNumber() {
+      return this.isDefaultClient !== true;
+    },
+    default: null,
     trim: true,
   },
   
