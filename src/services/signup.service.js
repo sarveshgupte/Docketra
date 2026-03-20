@@ -1,11 +1,12 @@
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const Firm = require('../models/Firm.model');
+const Client = require('../models/Client.model');
 const User = require('../models/User.model');
 const TemporarySignup = require('../models/TemporarySignup');
 const { generateNextXID } = require('./xIDGenerator');
 const { ensureTenantKey } = require('../security/encryption.service');
-const { getOrCreateDefaultClient } = require('./defaultClient.guard');
+const { generateNextClientId } = require('./clientIdGenerator');
 const { slugify } = require('../utils/slugify');
 const emailService = require('./email.service');
 const jwtService = require('./jwt.service');
@@ -21,8 +22,8 @@ const {
 } = require('./signupRateLimit.service');
 
 const SALT_ROUNDS = 10;
-const OTP_EXPIRY_MINUTES = 10;
-const MAX_OTP_ATTEMPTS = config.security.rateLimit.otpVerifyPerMinute;
+const OTP_EXPIRY_MINUTES = 5;
+const MAX_OTP_ATTEMPTS = 5;
 const OTP_BLOCK_MINUTES = Math.max(1, Math.ceil(config.security.rateLimit.otpVerifyBlockSeconds / 60));
 const MAX_RESEND_COUNT = config.security.rateLimit.signupOtpMaxResends;
 const MAX_SLUG_COLLISION_RETRIES = 5;
@@ -263,7 +264,13 @@ const verifyOtp = async ({ email, otp, session = null, req = null }) => {
       return { success: false, status: 400, message: GENERIC_VERIFICATION_FAILURE_MESSAGE };
     }
 
-    const nextAttemptCount = (record.attemptCount ?? record.attempt_count ?? record.otpAttempts ?? 0) + 1;
+    const currentAttemptCount = (record.attemptCount ?? record.attempt_count ?? record.otpAttempts ?? 0);
+    if (currentAttemptCount >= MAX_OTP_ATTEMPTS) {
+      await enforceMinimumDuration(startedAt);
+      return { success: false, status: 429, message: OTP_RATE_LIMIT_MESSAGE };
+    }
+
+    const nextAttemptCount = currentAttemptCount + 1;
     // Canonical counter is attemptCount (attempt_count alias). otpAttempts is retained for backward compatibility.
     record.otpAttempts = nextAttemptCount;
     record.attemptCount = nextAttemptCount;
@@ -290,27 +297,7 @@ const verifyOtp = async ({ email, otp, session = null, req = null }) => {
       req,
     });
 
-    // Mandatory invariant: every user must be linked to the firm's default client.
-    const defaultClient = await getOrCreateDefaultClient(tenant.firmId, {
-      userId: tenant.userId,
-      requestId: req?.id || req?.requestId || null,
-      session,
-    });
-    const user = await User.findById(tenant.userId).session(session);
-    if (!user) {
-      throw new Error('Created signup user not found while linking default client');
-    }
-    user.defaultClientId = defaultClient._id;
-    await user.save({ session });
-    tenant.defaultClientId = defaultClient._id;
-
-    const consumedAt = new Date();
-    record.isVerified = true;
-    record.otpAttempts = 0;
-    record.attemptCount = 0;
-    record.otpBlockedUntil = null;
-    record.consumedAt = consumedAt;
-    await record.save({ session });
+    await TemporarySignup.deleteOne({ _id: record._id }, { session });
 
     await clearOtpAttempts({ email: normalizedEmail, ip: req?.ip });
     await logSignupAuthEvent({ eventType: 'OTP_VERIFIED', email: normalizedEmail, req, userId: tenant.userId, firmId: tenant.firmId });
@@ -324,24 +311,6 @@ const verifyOtp = async ({ email, otp, session = null, req = null }) => {
     });
     log.info('OTP_VERIFIED', { req, email: normalizedEmail, firmSlug: tenant.firmSlug });
     log.info('SIGNUP_COMPLETED', { req, email: normalizedEmail, firmSlug: tenant.firmSlug, xid: tenant.xid });
-    try {
-      await safeQueueEmail({
-        context: req,
-        operation: 'EMAIL_QUEUE',
-        payload: { action: 'SIGNUP_WELCOME_EMAIL', tenantId: String(tenant.firmId), email: normalizedEmail },
-        execute: async () => sendSignupWelcomeEmail({
-          name: record.name,
-          email: normalizedEmail,
-          xid: tenant.xid,
-          firmName: record.firmName,
-          firmSlug: tenant.firmSlug,
-          req,
-        }),
-      });
-    } catch (emailError) {
-      console.error('[PUBLIC_SIGNUP] Failed to send welcome email after OTP verification:', emailError.message);
-    }
-
     const token = jwtService.generateAccessToken({
       userId: String(tenant.userId),
       role: 'Admin',
@@ -582,10 +551,34 @@ const createFirmAndAdmin = async ({
 
   await ensureTenantKey(String(firm._id), { session });
 
-  const defaultClient = await getOrCreateDefaultClient(firm._id, {
-    firmName: normalizedFirmName,
-    requestId: req?.id || req?.requestId || null,
-    session,
+  const defaultClientId = await generateNextClientId(firm._id, session);
+  const [defaultClient] = await Client.create([{
+    clientId: defaultClientId,
+    firmId: firm._id,
+    businessName: normalizedFirmName,
+    businessAddress: null,
+    primaryContactNumber: normalizePhone(phone) || null,
+    businessEmail: normalizedEmail,
+    status: 'ACTIVE',
+    isActive: true,
+    isDefaultClient: true,
+    isSystemClient: true,
+    isInternal: true,
+    createdBySystem: true,
+    createdByXid: 'SYSTEM',
+    createdBy: 'system',
+    firmSlug,
+    storageType: 'docketra',
+    storageProvider: null,
+    storageConfig: null,
+  }], { session });
+  if (!defaultClient?._id) {
+    throw new Error('DEFAULT_CLIENT_CREATION_FAILED');
+  }
+  log.info('DEFAULT_CLIENT_CREATED', {
+    req,
+    firmId: String(firm._id),
+    clientId: defaultClient.clientId,
   });
 
   firm.defaultClientId = defaultClient._id;
