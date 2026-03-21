@@ -1,16 +1,18 @@
 const crypto = require('crypto');
 const { google } = require('googleapis');
-const TenantStorageConfig = require('../models/TenantStorageConfig.model');
-const TenantStorageHealth = require('../models/TenantStorageHealth.model');
 const Firm = require('../models/Firm.model');
+const StorageConfiguration = require('../models/StorageConfiguration.model');
 const { getCookieValue } = require('../utils/requestCookies');
 const { isAdminRole } = require('../utils/role.utils');
 const { encrypt, decrypt } = require('../storage/services/TokenEncryption.service');
-const GoogleDriveProvider = require('../storage/providers/GoogleDriveProvider');
-const OneDriveProvider = require('../storage/providers/OneDriveProvider');
+const GoogleDriveProvider = require('../services/storage/providers/GoogleDriveProvider');
+const { StorageValidationError } = require('../storage/errors/StorageErrors');
+const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
 
-const GOOGLE_SCOPE = 'https://www.googleapis.com/auth/drive';
-const ONEDRIVE_SCOPES = ['Files.ReadWrite.All', 'Sites.ReadWrite.All', 'offline_access'];
+const GOOGLE_SCOPES = [
+  'https://www.googleapis.com/auth/drive.file',
+  'https://www.googleapis.com/auth/drive.metadata.readonly',
+];
 const STATE_COOKIE_NAME = 'storage_oauth_state';
 const STATE_TTL_SECONDS = 10 * 60;
 const MANAGED_STORAGE_MODE = 'docketra_managed';
@@ -31,51 +33,31 @@ function getStorageOAuthClient() {
   return new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_OAUTH_REDIRECT_URI);
 }
 
-function getOneDriveOAuthConfig() {
-  const {
-    ONEDRIVE_CLIENT_ID,
-    ONEDRIVE_CLIENT_SECRET,
-    ONEDRIVE_REDIRECT_URI,
-    ONEDRIVE_TENANT_ID = 'common',
-  } = process.env;
-  if (!ONEDRIVE_CLIENT_ID || !ONEDRIVE_CLIENT_SECRET || !ONEDRIVE_REDIRECT_URI) {
-    throw new Error('OneDrive OAuth for storage is not fully configured');
-  }
-  return { ONEDRIVE_CLIENT_ID, ONEDRIVE_CLIENT_SECRET, ONEDRIVE_REDIRECT_URI, ONEDRIVE_TENANT_ID };
-}
-
-function buildStateToken(tenantId, provider) {
+function buildStateToken(tenantId) {
   const nonce = crypto.randomBytes(16).toString('hex');
-  const payload = Buffer.from(JSON.stringify({ tenantId, provider, nonce })).toString('base64url');
-  const sig = crypto
-    .createHmac('sha256', process.env.JWT_SECRET)
-    .update(payload)
-    .digest('hex');
+  const payload = Buffer.from(JSON.stringify({ tenantId, provider: 'google_drive', nonce })).toString('base64url');
+  const sig = crypto.createHmac('sha256', process.env.JWT_SECRET).update(payload).digest('hex');
   return `${payload}.${sig}`;
 }
 
 function verifyStateToken(cookieValue, stateParam) {
-  if (!cookieValue || !stateParam || cookieValue !== stateParam) {
-    return null;
-  }
+  if (!cookieValue || !stateParam || cookieValue !== stateParam) return null;
   const dotIdx = cookieValue.lastIndexOf('.');
   if (dotIdx === -1) return null;
 
   const payload = cookieValue.slice(0, dotIdx);
   const sig = cookieValue.slice(dotIdx + 1);
+  const expectedSig = crypto.createHmac('sha256', process.env.JWT_SECRET).update(payload).digest('hex');
 
-  const expectedSig = crypto
-    .createHmac('sha256', process.env.JWT_SECRET)
-    .update(payload)
-    .digest('hex');
-
-  let sigBuffer, expectedBuffer;
+  let sigBuffer;
+  let expectedBuffer;
   try {
     sigBuffer = Buffer.from(sig, 'hex');
     expectedBuffer = Buffer.from(expectedSig, 'hex');
   } catch {
     return null;
   }
+
   if (sigBuffer.length !== expectedBuffer.length) return null;
   if (!crypto.timingSafeEqual(sigBuffer, expectedBuffer)) return null;
 
@@ -87,79 +69,53 @@ function verifyStateToken(cookieValue, stateParam) {
 }
 
 function buildStateCookie(value, maxAge) {
-  const parts = [
-    `${STATE_COOKIE_NAME}=${value}`,
-    'HttpOnly',
-    'SameSite=Lax',
-    `Max-Age=${maxAge}`,
-    'Path=/',
-  ];
-  if (process.env.NODE_ENV === 'production') {
-    parts.push('Secure');
-  }
+  const parts = [`${STATE_COOKIE_NAME}=${value}`, 'HttpOnly', 'SameSite=Lax', `Max-Age=${maxAge}`, 'Path=/'];
+  if (process.env.NODE_ENV === 'production') parts.push('Secure');
   return parts.join('; ');
 }
 
 function mapProviderErrorToStatus(error) {
   const message = (error?.message || '').toLowerCase();
-  if (error?.status === 401 || message.includes('invalid_grant')) {
-    return 'DISCONNECTED';
-  }
-  if (error?.status === 403 && message.includes('quota')) {
-    return 'QUOTA_EXCEEDED';
-  }
+  if (error?.status === 401 || message.includes('invalid_grant')) return 'DISCONNECTED';
+  if (error?.status === 403 && message.includes('quota')) return 'QUOTA_EXCEEDED';
   return 'ERROR';
 }
 
 const getStorageStatus = async (req, res) => {
-  const tenantId = req.firmId;
   try {
-    const record = await TenantStorageConfig.findOne({ tenantId, isActive: true })
-      .select('provider status isActive -_id');
-
-    if (!record) {
-      return res.json({ connected: false, provider: null, status: null });
-    }
+    const record = await StorageConfiguration.findOne({ firmId: req.firmId, isActive: true }).select('provider -_id').lean();
+    if (!record) return res.json({ connected: false, provider: null, status: null });
 
     return res.json({
-      connected: record.status === 'ACTIVE' && record.isActive === true,
+      connected: true,
       provider: record.provider,
-      status: record.status,
+      status: 'ACTIVE',
     });
-  } catch (err) {
-    console.error('[Storage] Failed to query TenantStorageConfig:', { tenantId, message: err.message });
+  } catch {
     return res.status(500).json({ error: 'Failed to retrieve storage status' });
   }
 };
 
 const getStorageHealth = async (req, res) => {
-  const tenantId = req.firmId;
   try {
-    const [record, activeConfig, firm] = await Promise.all([
-      TenantStorageHealth.findOne({ tenantId })
-        .select('status lastVerifiedAt missingFilesCount sampleSize lastError -_id')
-        .lean(),
-      TenantStorageConfig.findOne({ tenantId, isActive: true })
-        .select('_id')
-        .lean(),
-      Firm.findById(tenantId)
-        .select('storage -_id')
-        .lean(),
+    const [activeConfig, firm] = await Promise.all([
+      StorageConfiguration.findOne({ firmId: req.firmId, isActive: true }).select('_id').lean(),
+      Firm.findById(req.firmId).select('storage -_id').lean(),
     ]);
+
     const storageMode = firm?.storage?.mode || MANAGED_STORAGE_MODE;
     const usingManagedStorage = storageMode === MANAGED_STORAGE_MODE;
     const defaultStatus = usingManagedStorage || activeConfig ? 'HEALTHY' : 'DISCONNECTED';
     const defaultLastError = usingManagedStorage || activeConfig ? null : 'Active storage configuration not found';
 
     return res.json({
-      status: record?.status || defaultStatus,
-      lastVerifiedAt: record?.lastVerifiedAt || null,
-      missingFilesCount: record?.missingFilesCount || 0,
-      sampleSize: record?.sampleSize || 0,
-      lastError: record?.lastError || defaultLastError,
+      status: defaultStatus,
+      lastVerifiedAt: null,
+      missingFilesCount: 0,
+      sampleSize: 0,
+      lastError: defaultLastError,
     });
-  } catch (error) {
-    console.error('[Storage] Failed to query TenantStorageHealth:', { tenantId, message: error.message });
+  } catch {
     return res.status(500).json({ error: 'Failed to retrieve storage health' });
   }
 };
@@ -168,19 +124,18 @@ const googleConnect = (req, res) => {
   if (!ensureFirmAdmin(req, res)) return;
   try {
     const oauthClient = getStorageOAuthClient();
-    const stateToken = buildStateToken(req.firmId, 'google_drive');
+    const stateToken = buildStateToken(req.firmId);
 
     const authUrl = oauthClient.generateAuthUrl({
       access_type: 'offline',
       prompt: 'consent',
-      scope: [GOOGLE_SCOPE],
+      scope: GOOGLE_SCOPES,
       state: stateToken,
     });
 
     res.setHeader('Set-Cookie', buildStateCookie(stateToken, STATE_TTL_SECONDS));
     return res.redirect(authUrl);
-  } catch (err) {
-    console.error('[Storage][GoogleConnect] Configuration error:', err.message);
+  } catch {
     return res.status(503).json({ error: 'Google OAuth for storage is not configured' });
   }
 };
@@ -189,9 +144,7 @@ const googleCallback = async (req, res) => {
   if (!ensureFirmAdmin(req, res)) return;
   try {
     const { code, state } = req.query;
-    if (!code || !state) {
-      return res.status(400).json({ error: 'missing_params' });
-    }
+    if (!code || !state) return res.status(400).json({ error: 'missing_params' });
 
     const cookieValue = getCookieValue(req.headers.cookie, STATE_COOKIE_NAME);
     const stateData = verifyStateToken(cookieValue, state);
@@ -202,186 +155,117 @@ const googleCallback = async (req, res) => {
     const oauthClient = getStorageOAuthClient();
     const result = await oauthClient.getToken(code);
     const tokens = result.tokens || {};
-
-    if (!tokens.refresh_token) {
-      return res.status(400).json({ error: 'no_refresh_token' });
-    }
+    if (!tokens.refresh_token) return res.status(400).json({ error: 'no_refresh_token' });
 
     oauthClient.setCredentials({ refresh_token: tokens.refresh_token });
     const drive = google.drive({ version: 'v3', auth: oauthClient });
+    const about = await drive.about.get({ fields: 'user(emailAddress)' });
     const drives = await drive.drives.list({ pageSize: 100, fields: 'drives(id,name)' });
 
-    await TenantStorageConfig.findOneAndUpdate(
-      { tenantId: req.firmId, provider: 'google_drive', isActive: false },
-      {
-        tenantId: req.firmId,
-        provider: 'google_drive',
-        encryptedRefreshToken: encrypt(tokens.refresh_token),
-        connectedByUserId: req.user?._id?.toString() || req.user?.xID || 'system',
-        status: 'DISCONNECTED',
-        isActive: false,
-      },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
+    await StorageConfiguration.updateMany({ firmId: req.firmId, isActive: true }, { isActive: false });
+    const config = await StorageConfiguration.findOne({ firmId: req.firmId, provider: 'google-drive' });
+    const doc = config || new StorageConfiguration({ firmId: req.firmId, provider: 'google-drive' });
+    doc.isActive = true;
+    doc.credentials = {
+      googleRefreshToken: encrypt(tokens.refresh_token),
+      connectedEmail: about?.data?.user?.emailAddress || null,
+    };
+    await doc.save();
 
     res.setHeader('Set-Cookie', buildStateCookie('', 0));
 
     return res.json({
       success: true,
-      provider: 'google_drive',
+      provider: 'google-drive',
       drives: (drives.data.drives || []).map((d) => ({ id: d.id, name: d.name })),
     });
   } catch (error) {
-    console.error('[Storage][GoogleCallback] OAuth callback failed', { message: error.message });
+    if (error instanceof StorageValidationError) {
+      return res.status(400).json({ error: 'storage_configuration_invalid', message: error.message });
+    }
     return res.status(500).json({ error: 'oauth_failed' });
   }
 };
 
-const onedriveConnect = (req, res) => {
+const googleConfirmDrive = async (req, res) => {
   if (!ensureFirmAdmin(req, res)) return;
-  try {
-    const { ONEDRIVE_CLIENT_ID, ONEDRIVE_REDIRECT_URI, ONEDRIVE_TENANT_ID } = getOneDriveOAuthConfig();
-    const stateToken = buildStateToken(req.firmId, 'onedrive');
-    const params = new URLSearchParams({
-      client_id: ONEDRIVE_CLIENT_ID,
-      response_type: 'code',
-      redirect_uri: ONEDRIVE_REDIRECT_URI,
-      response_mode: 'query',
-      scope: ONEDRIVE_SCOPES.join(' '),
-      state: stateToken,
-    });
-    res.setHeader('Set-Cookie', buildStateCookie(stateToken, STATE_TTL_SECONDS));
-    return res.redirect(`https://login.microsoftonline.com/${ONEDRIVE_TENANT_ID}/oauth2/v2.0/authorize?${params.toString()}`);
-  } catch (error) {
-    console.error('[Storage][OneDriveConnect] Configuration error:', error.message);
-    return res.status(503).json({ error: 'OneDrive OAuth for storage is not configured' });
-  }
-};
-
-const onedriveCallback = async (req, res) => {
-  if (!ensureFirmAdmin(req, res)) return;
-  try {
-    const { code, state } = req.query;
-    if (!code || !state) {
-      return res.status(400).json({ error: 'missing_params' });
-    }
-
-    const cookieValue = getCookieValue(req.headers.cookie, STATE_COOKIE_NAME);
-    const stateData = verifyStateToken(cookieValue, state);
-    if (!stateData || stateData.tenantId !== req.firmId || stateData.provider !== 'onedrive') {
-      return res.status(400).json({ error: 'invalid_state' });
-    }
-
-    const { ONEDRIVE_CLIENT_ID, ONEDRIVE_CLIENT_SECRET, ONEDRIVE_REDIRECT_URI, ONEDRIVE_TENANT_ID } = getOneDriveOAuthConfig();
-
-    const tokenRes = await fetch(`https://login.microsoftonline.com/${ONEDRIVE_TENANT_ID}/oauth2/v2.0/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: ONEDRIVE_CLIENT_ID,
-        client_secret: ONEDRIVE_CLIENT_SECRET,
-        code,
-        redirect_uri: ONEDRIVE_REDIRECT_URI,
-        grant_type: 'authorization_code',
-      }),
-    });
-
-    if (!tokenRes.ok) {
-      return res.status(400).json({ error: 'token_exchange_failed' });
-    }
-
-    const tokenData = await tokenRes.json();
-    if (!tokenData.refresh_token) {
-      return res.status(400).json({ error: 'no_refresh_token' });
-    }
-
-    const drivesRes = await fetch('https://graph.microsoft.com/v1.0/me/drives', {
-      headers: { Authorization: `Bearer ${tokenData.access_token}` },
-    });
-    if (!drivesRes.ok) {
-      return res.status(400).json({ error: 'drive_list_failed' });
-    }
-
-    const drivesData = await drivesRes.json();
-
-    await TenantStorageConfig.findOneAndUpdate(
-      { tenantId: req.firmId, provider: 'onedrive', isActive: false },
-      {
-        tenantId: req.firmId,
-        provider: 'onedrive',
-        encryptedRefreshToken: encrypt(tokenData.refresh_token),
-        connectedByUserId: req.user?._id?.toString() || req.user?.xID || 'system',
-        status: 'DISCONNECTED',
-        isActive: false,
-      },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
-
-    res.setHeader('Set-Cookie', buildStateCookie('', 0));
-
-    return res.json({
-      success: true,
-      provider: 'onedrive',
-      drives: (drivesData.value || []).map((d) => ({ id: d.id, name: d.name })),
-    });
-  } catch (error) {
-    console.error('[Storage][OneDriveCallback] OAuth callback failed', { message: error.message });
-    return res.status(500).json({ error: 'oauth_failed' });
-  }
-};
-
-async function confirmDrive(req, res, providerName) {
-  if (!ensureFirmAdmin(req, res)) return;
-  const tenantId = req.firmId;
+  const firmId = req.firmId;
   const { driveId } = req.body || {};
-
-  if (!driveId) {
-    return res.status(400).json({ error: 'driveId is required' });
-  }
-
-  const pending = await TenantStorageConfig.findOne({ tenantId, provider: providerName, isActive: false }).sort({ updatedAt: -1 });
-  if (!pending) {
-    return res.status(404).json({ error: 'No pending storage OAuth session found' });
-  }
+  if (!driveId) return res.status(400).json({ error: 'driveId is required' });
 
   try {
-    const refreshToken = decrypt(pending.encryptedRefreshToken);
-    const firm = await Firm.findById(tenantId).select('name');
-    const tenantName = firm?.name || `Unknown-Tenant-${tenantId}`;
-
-    let provider;
-    if (providerName === 'google_drive') {
-      const oauthClient = getStorageOAuthClient();
-      oauthClient.setCredentials({ refresh_token: refreshToken });
-      provider = new GoogleDriveProvider({ oauthClient, driveId });
-    } else {
-      provider = new OneDriveProvider({ refreshToken, driveId });
+    const config = await StorageConfiguration.findOne({ firmId, isActive: true, provider: 'google-drive' });
+    if (!config?.credentials?.googleRefreshToken) {
+      return res.status(404).json({ error: 'No active Google storage session found' });
     }
 
-    const { folderId: docketraFolderId } = await provider.createFolder('Docketra');
-    const { folderId: rootFolderId } = await provider.createFolder(tenantName, docketraFolderId);
+    const refreshToken = decrypt(config.credentials.googleRefreshToken);
+    const firm = await Firm.findById(firmId).select('name');
+    const firmName = firm?.name || `Firm-${firmId}`;
 
-    await TenantStorageConfig.updateMany({ tenantId, isActive: true }, { isActive: false, status: 'DISCONNECTED' });
+    const oauthClient = getStorageOAuthClient();
+    oauthClient.setCredentials({ refresh_token: refreshToken });
+    const provider = new GoogleDriveProvider({ oauthClient, driveId });
 
-    await TenantStorageConfig.findByIdAndUpdate(pending._id, {
-      driveId,
-      rootFolderId,
-      connectedByUserId: req.user?._id?.toString() || req.user?.xID || 'system',
-      status: 'ACTIVE',
-      isActive: true,
-    });
+    const docketraFolderId = await provider.getOrCreateFolder(null, 'Docketra');
+    const firmFolderId = await provider.getOrCreateFolder(docketraFolderId, firmName);
 
-    return res.json({ success: true, status: 'ACTIVE' });
+    config.driveId = driveId;
+    config.rootFolderId = firmFolderId;
+    await config.save();
+
+    return res.json({ success: true, status: 'ACTIVE', rootFolderId: firmFolderId });
   } catch (error) {
     const mappedStatus = mapProviderErrorToStatus(error);
-    await TenantStorageConfig.findByIdAndUpdate(pending._id, { status: mappedStatus, isActive: false });
-    console.error('[Storage][ConfirmDrive] Failed to confirm drive', { tenantId, provider: providerName, message: error.message });
     return res.status(500).json({ error: 'confirm_drive_failed', status: mappedStatus });
   }
-}
+};
 
-const googleConfirmDrive = (req, res) => confirmDrive(req, res, 'google_drive');
-const onedriveConfirmDrive = (req, res) => confirmDrive(req, res, 'onedrive');
+const getStorageConfiguration = async (req, res) => {
+  try {
+    const firmId = req.firmId;
+    const config = await StorageConfiguration.findOne({ firmId, isActive: true }).select('provider rootFolderId credentials.connectedEmail updatedAt createdAt').lean();
+
+    if (!config) {
+      return res.json({ provider: 'google-drive', isConfigured: false, status: 'DISCONNECTED' });
+    }
+
+    let folderPath = null;
+    if (config.rootFolderId) {
+      try {
+        const provider = await StorageProviderFactory.getProvider(firmId);
+        folderPath = await provider.getFolderPath(config.rootFolderId);
+      } catch {
+        folderPath = null;
+      }
+    }
+
+    return res.json({
+      provider: config.provider,
+      isConfigured: true,
+      status: 'ACTIVE',
+      connectedEmail: config.credentials?.connectedEmail || null,
+      rootFolderId: config.rootFolderId || null,
+      folderPath,
+      createdAt: config.createdAt,
+      updatedAt: config.updatedAt,
+    });
+  } catch {
+    return res.status(500).json({ error: 'configuration_fetch_failed' });
+  }
+};
+
+const testStorageConnection = async (req, res) => {
+  try {
+    const provider = await StorageProviderFactory.getProvider(req.firmId);
+    if (typeof provider.testConnection === 'function') {
+      await provider.testConnection();
+    }
+    return res.json({ success: true, message: 'Storage connection is healthy.' });
+  } catch {
+    return res.status(502).json({ success: false, error: 'storage_connection_failed' });
+  }
+};
 
 module.exports = {
   getStorageStatus,
@@ -389,9 +273,8 @@ module.exports = {
   googleConnect,
   googleCallback,
   googleConfirmDrive,
-  onedriveConnect,
-  onedriveCallback,
-  onedriveConfirmDrive,
+  getStorageConfiguration,
+  testStorageConnection,
   buildStateCookie,
   mapProviderErrorToStatus,
 };

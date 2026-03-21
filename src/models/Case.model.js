@@ -723,6 +723,23 @@ const caseSchema = new mongoose.Schema({
       trim: true,
     },
   },
+
+  /**
+   * Active storage provider context used for new case attachments.
+   * Legacy attachments continue to rely on driveFileId for compatibility.
+   */
+  storage: {
+    provider: {
+      type: String,
+      enum: ['google-drive'],
+      default: 'google-drive',
+      trim: true,
+    },
+    rootFolderId: {
+      type: String,
+      trim: true,
+    },
+  },
 }, {
   // Automatic timestamp management for audit trail
   timestamps: true,

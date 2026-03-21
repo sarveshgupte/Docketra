@@ -387,6 +387,8 @@ const processInboundEmailPayload = async (payload) => {
           firmId: caseData.firmId,
           fileName: safeName,
           driveFileId: uploadFileId,
+          storageProvider: 'google-drive',
+          storageFileId: uploadFileId,
           size: finalSize,
           mimeType,
           description: 'Inbound email attachment',
