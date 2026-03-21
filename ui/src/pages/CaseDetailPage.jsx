@@ -4,7 +4,7 @@
  * PR: Comprehensive CaseHistory & Audit Trail - Added view tracking and history display
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
@@ -17,12 +17,16 @@ import { Modal } from '../components/common/Modal';
 import { ClientFactSheetModal } from '../components/common/ClientFactSheetModal';
 import { ActionConfirmModal } from '../components/common/ActionConfirmModal';
 import { SaveIndicator } from '../components/ui/SaveIndicator';
+import { ActivityItem } from '../components/ui/ActivityItem';
+import { AuditMetadata } from '../components/ui/AuditMetadata';
+import { EmptyState } from '../components/ui/EmptyState';
+import { CaseHeader } from '../components/ui/CaseHeader';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
 import { useToast } from '../hooks/useToast';
 import { caseService } from '../services/caseService';
 import { clientService } from '../services/clientService';
-import { formatDateTime, formatAuditStamp } from '../utils/formatDateTime';
+import { formatDateTime } from '../utils/formatDateTime';
 import { formatClientDisplay } from '../utils/formatters';
 import { USER_ROLES } from '../utils/constants';
 import { AuditTimelineDrawer } from '../components/common/AuditTimelineDrawer';
@@ -46,13 +50,6 @@ const toLifecycleStage = (status) => {
 
 const formatDocketId = (value = '') => String(value || '').replace(/^CASE-/, 'DOCKET-');
 
-const escapeHtml = (value = '') =>
-  String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
 
 export const CaseDetailPage = () => {
   const { caseId, firmSlug } = useParams();
@@ -100,9 +97,16 @@ export const CaseDetailPage = () => {
   const [actionConfirmation, setActionConfirmation] = useState('');
   const [actionError, setActionError] = useState(null);
   const [auditSidebarOpen, setAuditSidebarOpen] = useState(false);
-  const fileInputRef = React.useRef(null);
-  const attachmentsSectionRef = React.useRef(null);
-  const docketHistorySectionRef = React.useRef(null);
+  const fileInputRef = useRef(null);
+  const overviewSectionRef = useRef(null);
+  const commentsSectionRef = useRef(null);
+  const attachmentsSectionRef = useRef(null);
+  const historySectionRef = useRef(null);
+  const commentsListRef = useRef(null);
+  const commentComposerId = `case-comment-composer-${caseId}`;
+  const [activeSection, setActiveSection] = useState('overview');
+  const [isEditingOverview, setIsEditingOverview] = useState(false);
+  const [overviewDraft, setOverviewDraft] = useState({ category: '', description: '' });
   // Confirm modal state (replaces window.confirm)
   const [confirmModal, setConfirmModal] = useState(null);
 
@@ -193,6 +197,40 @@ export const CaseDetailPage = () => {
 
     return () => clearTimeout(timer);
   }, [newComment, commentDraftKey]);
+
+  useEffect(() => {
+    if (!caseInfo) return;
+    setOverviewDraft({
+      category: caseInfo.category || '',
+      description: caseInfo.description || '',
+    });
+    setIsEditingOverview(false);
+  }, [caseInfo?.caseId, caseInfo?.category, caseInfo?.description]);
+
+  useEffect(() => {
+    const refs = [
+      ['overview', overviewSectionRef.current],
+      ['comments', commentsSectionRef.current],
+      ['attachments', attachmentsSectionRef.current],
+      ['history', historySectionRef.current],
+    ].filter(([, el]) => Boolean(el));
+    if (!refs.length) return undefined;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (visible?.target?.id) {
+          setActiveSection(visible.target.id);
+        }
+      },
+      { rootMargin: '-120px 0px -50% 0px', threshold: [0.15, 0.4, 0.75] }
+    );
+
+    refs.forEach(([, el]) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [loading]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -366,6 +404,7 @@ export const CaseDetailPage = () => {
       setActionConfirmation(message);
       setActionError(null);
       await loadCase(); // Reload to show new comment
+      window.setTimeout(handleAddCommentSuccess, 80);
     } catch (error) {
       console.error('Failed to add comment:', error);
       setActionError({ message: 'Failed to add comment. Please retry.', retry: handleAddComment });
@@ -641,6 +680,10 @@ export const CaseDetailPage = () => {
   // PR #45: Extract access mode information from API response
   const accessMode = caseData?.accessMode || {};
   const isViewOnlyMode = accessMode.isViewOnlyMode;
+  const canEditOverview = permissions.canEditCase(caseData) && !isViewOnlyMode;
+  const hasOverviewChanges =
+    overviewDraft.category !== (caseInfo?.category || '') ||
+    overviewDraft.description !== (caseInfo?.description || '');
 
   // Determine if user is admin
   const isAdmin = user?.role === 'Admin';
@@ -693,9 +736,43 @@ export const CaseDetailPage = () => {
   const canPerformLifecycleActions = caseInfo?.status === 'OPEN' && !isViewOnlyMode;
   const canUnpend = docketMode === 'PEND' && !isViewOnlyMode;
 
-  const scrollToDocketHistory = () => docketHistorySectionRef.current?.scrollIntoView({ behavior: 'smooth' });
-  const scrollToAttachments = () => attachmentsSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
-  const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+  const scrollToSection = (key) => {
+    const sectionMap = {
+      overview: overviewSectionRef,
+      comments: commentsSectionRef,
+      attachments: attachmentsSectionRef,
+      history: historySectionRef,
+    };
+    sectionMap[key]?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const handleScrollToComments = () => {
+    scrollToSection('comments');
+    window.setTimeout(() => {
+      document.getElementById(commentComposerId)?.focus?.();
+    }, 250);
+  };
+
+  const handleSaveOverview = () => {
+    setCaseData((prev) => ({
+      ...prev,
+      category: overviewDraft.category,
+      description: overviewDraft.description,
+      case: prev?.case
+        ? {
+            ...prev.case,
+            category: overviewDraft.category,
+            description: overviewDraft.description,
+          }
+        : prev?.case,
+    }));
+    setIsEditingOverview(false);
+    showSuccess('Overview updated locally');
+  };
+
+  const handleAddCommentSuccess = () => {
+    commentsListRef.current?.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
 
   if (loading) {
     return (
@@ -748,31 +825,44 @@ export const CaseDetailPage = () => {
             </Button>
           </div>
         )}
-        {/* ─── Page Header ──────────────────────────────────────────── */}
-        <div className="case-detail__header">
-          <div className="case-detail__header-left">
-            <h1 className="case-detail__title">{formatDocketId(caseInfo.caseId || caseId)}</h1>
-            <p className="case-detail__subtitle">{caseInfo.category}</p>
-            <p className="case-detail__meta-line">
-              {formatAuditStamp({
-                actor: caseInfo.updatedByName || caseInfo.assignedToName || 'System',
-                timestamp: caseInfo.updatedAt,
-              })}
-            </p>
-          </div>
-          <div className="case-detail__header-actions">
-            <Button variant="outline" onClick={handleShowClientFactSheet} disabled={loadingFactSheet}>Fact Sheet</Button>
-            {showPullButton && <Button variant="primary" onClick={handlePullCase} disabled={pullingCase}>{pullingCase ? 'Pulling docket...' : 'Pull Docket'}</Button>}
-            {canUnpend && <Button variant="primary" onClick={() => setShowUnpendModal(true)}>Unpend Docket</Button>}
-            <Button variant="outline" onClick={handlePrintSummary}>Print Summary</Button>
-            <Button variant="outline" onClick={() => setAuditSidebarOpen(true)}>Audit History</Button>
-            <Button variant="outline" onClick={scrollToDocketHistory}>Docket History</Button>
-            <Button variant="outline" onClick={scrollToAttachments}>Attachments</Button>
-            {caseInfo.approvalStatus === 'PENDING' && <Badge variant="warning">Awaiting Partner Approval</Badge>}
-            {caseInfo.lockStatus?.isLocked && <Badge variant="warning">Lifecycle Locked</Badge>}
-            {caseInfo?.stage?.requiresApproval === true && isViewOnlyMode && <Badge variant="warning">Role Restricted Action</Badge>}
-            <Badge status={caseInfo?.status}>{toLifecycleStage(caseInfo?.status)}</Badge>
-          </div>
+        {/* UPDATED: Sticky case header */}
+        <CaseHeader
+          caseId={formatDocketId(caseInfo.caseId || caseId)}
+          caseName={caseInfo.title || caseInfo.category}
+          status={toLifecycleStage(caseInfo?.status)}
+          showSave={canEditOverview && isEditingOverview}
+          onSave={handleSaveOverview}
+          disableSave={!hasOverviewChanges}
+          onAddComment={handleScrollToComments}
+          onOpenAudit={() => setAuditSidebarOpen(true)}
+          saveLabel="Save Overview"
+        />
+        <div className="case-detail__header-actions case-detail__header-actions--top">
+          <Button variant="outline" onClick={handleShowClientFactSheet} disabled={loadingFactSheet}>Fact Sheet</Button>
+          {showPullButton && <Button variant="primary" onClick={handlePullCase} disabled={pullingCase}>{pullingCase ? 'Pulling docket...' : 'Pull Docket'}</Button>}
+          {canUnpend && <Button variant="primary" onClick={() => setShowUnpendModal(true)}>Unpend Docket</Button>}
+          <Button variant="outline" onClick={handlePrintSummary}>Print Summary</Button>
+          {caseInfo.approvalStatus === 'PENDING' && <Badge variant="warning">Awaiting Partner Approval</Badge>}
+          {caseInfo.lockStatus?.isLocked && <Badge variant="warning">Lifecycle Locked</Badge>}
+          {caseInfo?.stage?.requiresApproval === true && isViewOnlyMode && <Badge variant="warning">Role Restricted Action</Badge>}
+        </div>
+
+        <div className="case-detail__section-tabs" role="tablist" aria-label="Case detail sections">
+          {[
+            { key: 'overview', label: 'Overview' },
+            { key: 'comments', label: 'Comments' },
+            { key: 'attachments', label: 'Files' },
+            { key: 'history', label: 'History' },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              className={`case-detail__section-tab${activeSection === tab.key ? ' is-active' : ''}`}
+              onClick={() => scrollToSection(tab.key)}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
         {actionConfirmation ? <div className="case-detail__confirmation">{actionConfirmation}</div> : null}
         {actionError ? (
@@ -813,129 +903,98 @@ export const CaseDetailPage = () => {
           </div>
         )}
 
-        {/* ─── Lifecycle Status Panel (Task 4) ──────────────────── */}
-        <div className="case-detail__lifecycle-panel">
-          <div className="case-detail__lifecycle-fields">
-            <div className="case-detail__lifecycle-field">
-              <span className="case-detail__lifecycle-label">Current Stage</span>
-              <Badge status={caseInfo?.status}>{toLifecycleStage(caseInfo?.status)}</Badge>
-            </div>
-            <div className="case-detail__lifecycle-field">
-              <span className="case-detail__lifecycle-label">SLA Due</span>
-              <span className={`case-detail__lifecycle-value${caseInfo.slaDueDate && new Date(caseInfo.slaDueDate) < new Date() && caseInfo?.status !== 'RESOLVED' && caseInfo?.status !== 'FILED' ? ' case-detail__lifecycle-value--danger' : ''}`}>
-                {caseInfo?.slaDueDate ? formatDateTime(caseInfo.slaDueDate) : '—'}
-              </span>
-            </div>
-            <div className="case-detail__lifecycle-field">
-              <span className="case-detail__lifecycle-label">Lock Status</span>
-              <span className="case-detail__lifecycle-value">
-                {caseInfo.lockStatus?.isLocked ? '🔒 Locked' : '🔓 Unlocked'}
-              </span>
-            </div>
-            <div className="case-detail__lifecycle-field">
-              <span className="case-detail__lifecycle-label">Approval Status</span>
-              <span className="case-detail__lifecycle-value">
-                {caseInfo.approvalStatus === 'PENDING' ? '⏳ Awaiting Approval' : caseInfo.approvalStatus || '—'}
-              </span>
-            </div>
-            <div className="case-detail__lifecycle-field">
-              <span className="case-detail__lifecycle-label">Last Updated</span>
-              <span className="case-detail__lifecycle-value">{formatDateTime(caseInfo.updatedAt)}</span>
-            </div>
-          </div>
-          {(canPerformLifecycleActions || canUnpend) && (
-            <div className="case-detail__lifecycle-actions">
-              {canPerformLifecycleActions && (
-                <>
-                  <Button variant="outline" onClick={() => setShowFileModal(true)} className="case-detail__btn-muted">
-                    📤 File
-                  </Button>
-                  <Button variant="outline" onClick={() => setShowPendModal(true)} className="case-detail__btn-warning">
-                    ⏳ Pend
-                  </Button>
-                  <Button variant="primary" onClick={() => setShowResolveModal(true)}>
-                    ✓ Resolve
-                  </Button>
-                </>
-              )}
-              {canUnpend && (
-                <Button variant="primary" onClick={() => setShowUnpendModal(true)}>
-                  🔁 Unpend
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* ─── Split-Pane Body ────────────────────────────────────── */}
         <div className="case-detail__split">
-
-          {/* Left pane — 60% — main case content */}
           <div className="case-detail__split-main">
-
-            {/* Case Info + Description */}
-            <div className="case-detail__info-grid">
-              <Card className="case-detail__section">
-                <h2 className="neo-section__header">Docket Information</h2>
-                <div className="case-detail__field">
-                  <span className="case-detail__label">Docket Name</span>
-                  <span>{formatDocketId(caseInfo.caseId || caseId)}</span>
-                </div>
-                {caseData.client && (
-                  <div className="case-detail__field">
-                    <span className="case-detail__label">Client</span>
-                    <span>{formatClientDisplay(caseData.client, true)}</span>
-                  </div>
-                )}
-                <div className="case-detail__field">
-                  <span className="case-detail__label">Category</span>
+            <Card className="case-detail__section case-section" id="overview" ref={overviewSectionRef}>
+              <div className="case-detail__section-heading">
+                <h2 className="neo-section__header">Overview</h2>
+                {canEditOverview ? (
+                  <Button variant="outline" onClick={() => setIsEditingOverview((value) => !value)}>
+                    {isEditingOverview ? 'Cancel Edit' : 'Edit'}
+                  </Button>
+                ) : null}
+              </div>
+              <div className="case-detail__metadata-grid">
+                <AuditMetadata
+                  className="case-detail__metadata-item"
+                  prefix="Created by"
+                  actor={caseInfo.createdByName || caseInfo.createdByXID || 'System'}
+                  timestamp={caseInfo.createdAt}
+                />
+                <AuditMetadata
+                  className="case-detail__metadata-item"
+                  prefix="Last updated by"
+                  actor={caseInfo.updatedByName || caseInfo.assignedToName || 'System'}
+                  timestamp={caseInfo.updatedAt}
+                />
+                <span className="case-detail__metadata-item">
+                  Assigned to: {caseInfo?.assignedToName || caseInfo?.assignedToXID || 'Unassigned'}
+                </span>
+              </div>
+              <div className="case-detail__field">
+                <span className="case-detail__label">Client</span>
+                <span>{caseData.client ? formatClientDisplay(caseData.client, true) : '—'}</span>
+              </div>
+              <div className="case-detail__field">
+                <span className="case-detail__label">Category</span>
+                {isEditingOverview ? (
+                  <Input
+                    value={overviewDraft.category}
+                    onChange={(e) => setOverviewDraft((prev) => ({ ...prev, category: e.target.value }))}
+                    aria-label="Case category"
+                  />
+                ) : (
                   <span>{caseInfo.category}</span>
+                )}
+              </div>
+              <div className="case-detail__field">
+                <span className="case-detail__label">Current Lifecycle Stage</span>
+                <Badge status={caseInfo?.status}>{toLifecycleStage(caseInfo?.status)}</Badge>
+              </div>
+              <div className="case-detail__field">
+                <span className="case-detail__label">Due Date</span>
+                <span>{caseInfo.dueDate ? formatDateTime(caseInfo.dueDate) : 'Not configured'}</span>
+              </div>
+              <div className="case-detail__field">
+                <span className="case-detail__label">Description</span>
+                {isEditingOverview ? (
+                  <Textarea
+                    value={overviewDraft.description}
+                    onChange={(e) => setOverviewDraft((prev) => ({ ...prev, description: e.target.value }))}
+                    rows={3}
+                    aria-label="Case description"
+                  />
+                ) : (
+                  <span>{caseInfo.description || 'No description'}</span>
+                )}
+              </div>
+              {(canPerformLifecycleActions || canUnpend) && (
+                <div className="case-detail__lifecycle-actions">
+                  {canPerformLifecycleActions && (
+                    <>
+                      <Button variant="outline" onClick={() => setShowFileModal(true)} className="case-detail__btn-muted">
+                        📤 File
+                      </Button>
+                      <Button variant="outline" onClick={() => setShowPendModal(true)} className="case-detail__btn-warning">
+                        ⏳ Pend
+                      </Button>
+                      <Button variant="primary" onClick={() => setShowResolveModal(true)}>
+                        ✓ Resolve
+                      </Button>
+                    </>
+                  )}
+                  {canUnpend && <Button variant="primary" onClick={() => setShowUnpendModal(true)}>🔁 Unpend</Button>}
+                  {showMoveToWorkbasketButton ? <Button variant="outline" onClick={handleMoveToGlobal} disabled={movingToGlobal}>{movingToGlobal ? 'Moving…' : 'Move to Workbasket'}</Button> : null}
                 </div>
-                <div className="case-detail__field">
-                  <span className="case-detail__label">Current Lifecycle Stage</span>
-                  <Badge status={caseInfo?.status}>{toLifecycleStage(caseInfo?.status)}</Badge>
-                </div>
-                <div className="case-detail__field">
-                  <span className="case-detail__label">Responsible Executive</span>
-                  <span>{caseInfo?.assignedToName || caseInfo?.assignedToXID || 'Unassigned'}</span>
-                </div>
-                <div className="case-detail__field">
-                  <span className="case-detail__label">Assigned By</span>
-                  <span>{caseInfo.assignedByName || caseInfo.assignedByXID || caseInfo.createdByName || caseInfo.createdByXID || 'System'}</span>
-                </div>
-                <div className="case-detail__field">
-                  <span className="case-detail__label">Due Date</span>
-                  <span>{caseInfo.dueDate ? formatDateTime(caseInfo.dueDate) : 'Not configured'}</span>
-                </div>
-                <div className="case-detail__field">
-                  <span className="case-detail__label">Location</span>
-                  <span>{caseInfo.assignedToXID ? 'My Worklist' : 'Workbasket'}</span>
-                </div>
-                <div className="case-detail__field">
-                  <span className="case-detail__label">Created</span>
-                  <span>{formatDateTime(caseInfo.createdAt)}</span>
-                </div>
-                <div className="case-detail__field">
-                  <span className="case-detail__label">Last Action Timestamp</span>
-                  <span>{formatDateTime(caseInfo.updatedAt)}</span>
-                </div>
-              </Card>
-
-              {caseInfo.description && (
-                <Card className="case-detail__section">
-                  <h2 className="neo-section__header">Description</h2>
-                  <p className="case-detail__description-text">{caseInfo.description}</p>
-                </Card>
               )}
-            </div>
+            </Card>
 
-            {/* Comments */}
-            <Card className="case-detail__section">
+            <Card className="case-detail__section case-section" id="comments" ref={commentsSectionRef}>
               <h2 className="neo-section__header">Comments</h2>
-              <div className="case-detail__comments">
+              <div className="case-detail__comments" ref={commentsListRef}>
                 {comments.length > 0 ? (
                   comments.map((comment, index) => (
-                    <div key={index} className="neo-inset case-detail__comment-item">
+                    <div key={index} className="case-detail__comment-item">
                       <div className="case-detail__comment-header">
                         <span className="case-detail__comment-author">
                           {comment.createdByName && comment.createdByXID
@@ -948,7 +1007,7 @@ export const CaseDetailPage = () => {
                     </div>
                   ))
                 ) : (
-                  <p className="case-detail__empty-note">No comments yet</p>
+                  <EmptyState title="No comments yet" description="Use comments to capture updates and handoffs." />
                 )}
               </div>
               {(accessMode.canComment || permissions.canAddComment(caseData)) && (
@@ -969,24 +1028,33 @@ export const CaseDetailPage = () => {
                   />
                   <Textarea
                     label="Add Comment"
+                    id={commentComposerId}
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
                     placeholder="Enter your comment…"
                     rows={3}
+                    className="case-detail__comment-input"
                   />
-                  <Button
-                    variant="primary"
-                    onClick={handleAddComment}
-                    disabled={!newComment.trim() || submitting}
-                  >
+                  <Button variant="primary" onClick={handleAddComment} disabled={!newComment.trim() || submitting}>
                     {submitting ? 'Adding…' : 'Add Comment'}
                   </Button>
                 </div>
               )}
             </Card>
 
-            <Card className="case-detail__section" id="docket-history-section" ref={docketHistorySectionRef}>
-              <h2 className="neo-section__header">Docket History</h2>
+            <Card className="case-detail__section case-section" id="history" ref={historySectionRef}>
+              <h2 className="neo-section__header">History / Audit</h2>
+              <div className="case-detail__history-events">
+                {timelineEvents.length ? timelineEvents.map((entry) => (
+                  <ActivityItem
+                    key={entry._id || entry.id || `${entry.timestamp || entry.createdAt}-${entry.actionType || entry.action || 'updated'}`}
+                    user={entry.performedByName || entry.actorXID || entry.performedByXID || entry.createdByName || 'System'}
+                    action={entry.actionType || entry.action || 'Updated'}
+                    timestamp={entry.timestamp || entry.createdAt}
+                  />
+                )) : <EmptyState title="No activity yet" description="Audit events will appear here once actions are performed." />}
+              </div>
+              <h3 className="case-detail__subheading">Related Dockets</h3>
               {loadingClientDockets ? <p className="case-detail__empty-note">Loading docket history...</p> : (
                 <table className="case-detail__history-table">
                   <thead><tr><th>Docket ID</th><th>Category</th><th>Status</th><th>Created</th></tr></thead>
@@ -1000,15 +1068,11 @@ export const CaseDetailPage = () => {
                   </tbody>
                 </table>
               )}
-              <Button variant="outline" onClick={scrollToTop}>Back to Top</Button>
             </Card>
           </div>
 
-          {/* Right pane — 40% sticky context panel */}
           <aside className="case-detail__split-context" aria-label="Case context panel">
-
-            {/* Attachments + Dropzone */}
-            <Card className="case-detail__context-card" id="attachments-section" ref={attachmentsSectionRef}>
+            <Card className="case-detail__context-card case-section" id="attachments" ref={attachmentsSectionRef}>
               <h2 className="neo-section__header">Attachments</h2>
               <div className="case-detail__attachments">
                 {attachments.length > 0 ? (
@@ -1051,9 +1115,7 @@ export const CaseDetailPage = () => {
                       </div>
                     </div>
                   ))
-                ) : (
-                  <p className="case-detail__empty-note">No attachments yet</p>
-                )}
+                ) : <EmptyState title="No attachments yet" description="Upload files or forward an email to keep artifacts with this docket." />}
               </div>
 
               {/* File Upload Dropzone */}
