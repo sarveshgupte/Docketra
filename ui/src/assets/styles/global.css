@@ -253,3 +253,72 @@
   color: #111827;
   border-bottom-color: #111827;
 }
+
+/* NEW: shared UI primitives */
+.save-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.save-indicator--saving {
+  color: var(--color-text-secondary);
+}
+
+.save-indicator--saved {
+  color: var(--color-success, var(--color-accent));
+}
+
+.save-indicator--error {
+  color: var(--color-danger, #b42318);
+}
+
+.save-indicator button {
+  border: 1px solid var(--border-color, var(--color-border));
+  background: var(--color-bg);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+.skeleton-loader {
+  display: grid;
+  gap: 8px;
+}
+
+.skeleton-loader__row,
+.skeleton-loader__block {
+  height: 44px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--surface-secondary, #f3f4f6) 25%, var(--surface-primary, #fff) 37%, var(--surface-secondary, #f3f4f6) 63%);
+  background-size: 400% 100%;
+  animation: skeletonShimmer 1.2s ease-in-out infinite;
+}
+
+.ui-empty-state {
+  display: grid;
+  gap: 12px;
+  padding: 24px;
+  border: 1px dashed var(--border-color, var(--color-border));
+  border-radius: 6px;
+}
+
+.activity-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-color, var(--color-border));
+}
+
+.activity-item__time {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+@keyframes skeletonShimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}

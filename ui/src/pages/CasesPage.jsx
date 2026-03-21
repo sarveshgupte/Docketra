@@ -24,9 +24,12 @@ import { CASE_STATUS, USER_ROLES } from '../utils/constants';
 import { getCaseListRecords } from '../utils/caseResponse';
 import { getFirmConfig } from '../utils/firmConfig';
 import { useFeatureFlag } from '../hooks/useFeatureFlag';
-import { formatDateTime, formatAuditStamp } from '../utils/formatDateTime';
+import { formatDateTime } from '../utils/formatDateTime';
 import { buildCsv } from '../utils/csv';
 import { UX_COPY } from '../constants/uxCopy';
+import { useQueryState } from '../hooks/useQueryState';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { AuditMetadata } from '../components/ui/AuditMetadata';
 import './CasesPage.css';
 
 // Keep date-sort keys explicit so additional date columns can be added safely.
@@ -72,6 +75,12 @@ export const CasesPage = () => {
   const enableBulkActions = useFeatureFlag('BULK_ACTIONS');
   const enablePerformanceView = useFeatureFlag('PERFORMANCE_VIEW');
   const enableEscalationView = useFeatureFlag('ESCALATION_VIEW');
+  const { query, setQuery } = useQueryState({
+    status: 'ALL',
+    sort: 'updatedAt',
+    order: 'desc',
+    q: '',
+  });
 
   const { activeView, setActiveView, applyView, availableViews, hasStoredView, applySmartDefault } = useCaseView(
     isAdmin,
@@ -87,14 +96,14 @@ export const CasesPage = () => {
 
   const [loading, setLoading] = useState(true);
   const [cases, setCases] = useState([]);
-  const [statusFilter, setStatusFilter] = useState('ALL');
-  const [sortState, setSortState] = useState({ key: 'updatedAt', direction: 'desc' });
+  const [statusFilter, setStatusFilter] = useState(query.status || 'ALL');
+  const [sortState, setSortState] = useState({ key: query.sort || 'updatedAt', direction: query.order || 'desc' });
   const [timelineCaseId, setTimelineCaseId] = useState(null);
   const [error, setError] = useState(null);
   const [assigningCaseId, setAssigningCaseId] = useState(null);
   // Task 6: Search & Quick Jump
-  const [searchInput, setSearchInput] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState(query.q || '');
+  const [searchQuery, setSearchQuery] = useState((query.q || '').trim().toLowerCase());
   const searchDebounceRef = useRef(null);
   // Task 7: Performance Insight toggle (hidden for Partner role)
   const [showPerformance, setShowPerformance] = useState(false);
@@ -131,13 +140,39 @@ export const CasesPage = () => {
     }
   }, [user, isAdmin]);
 
+  useEffect(() => {
+    if (query.status && query.status !== statusFilter) {
+      setStatusFilter(query.status);
+    }
+    if ((query.q || '') !== searchInput) {
+      setSearchInput(query.q || '');
+      setSearchQuery((query.q || '').trim().toLowerCase());
+    }
+    if (query.sort && query.order) {
+      const nextSort = { key: query.sort, direction: query.order };
+      if (nextSort.key !== sortState.key || nextSort.direction !== sortState.direction) {
+        setSortState(nextSort);
+      }
+    }
+  }, [query.status, query.q, query.sort, query.order]);
+
   // When the preset view changes, apply its default sort.
   useEffect(() => {
+    if (query.sort && query.order) return;
     const viewDef = CASE_VIEWS[activeView];
     if (viewDef?.defaultSort) {
       setSortState(viewDef.defaultSort);
     }
-  }, [activeView]);
+  }, [activeView, query.sort, query.order]);
+
+  useEffect(() => {
+    setQuery({
+      status: statusFilter !== 'ALL' ? statusFilter : null,
+      q: searchInput || null,
+      sort: sortState?.key || null,
+      order: sortState?.direction || null,
+    });
+  }, [statusFilter, searchInput, sortState, setQuery]);
 
   const loadCases = async () => {
     setLoading(true);
@@ -406,6 +441,7 @@ export const CasesPage = () => {
 
   const sortedCases = useMemo(() => {
     const list = [...searchedCases];
+    if (!sortState?.key || !sortState?.direction) return list;
     list.sort((a, b) => {
       const current = a?.[sortState.key];
       const next = b?.[sortState.key];
@@ -492,6 +528,17 @@ export const CasesPage = () => {
     return selectable.length > 0 && selectable.every((c) => selectedCaseIds.has(c.caseId));
   }, [sortedCases, selectedCaseIds, enableBulkActions]);
 
+  useKeyboardShortcuts({
+    onOpen: () => {
+      const first = sortedCases[0];
+      if (first) handleCaseClick(first);
+    },
+    onEdit: () => {
+      const first = sortedCases[0];
+      if (first?.caseId) navigate(`/app/firm/${firmSlug}/cases/${first.caseId}?mode=edit`);
+    },
+  });
+
   if (loading) {
     return (
       <Layout>
@@ -535,12 +582,11 @@ export const CasesPage = () => {
         return (
           <div className={`cases-page__name-cell${breached ? ' cases-page__name-cell--sla-breach' : ''}`}>
             <span className="cases-page__case-title">{row.caseName}</span>
-            <span className="cases-page__case-meta">
-              {formatAuditStamp({
-                actor: row.updatedByName || row.updatedByXID || row.assignedToName || 'System',
-                timestamp: row.updatedAt,
-              })}
-            </span>
+            <AuditMetadata
+              className="cases-page__case-meta"
+              actor={row.updatedByName || row.updatedByXID || row.assignedToName || 'System'}
+              timestamp={row.updatedAt}
+            />
             {recency && (
               <span className="cases-page__recency" aria-label={recency}>{recency}</span>
             )}
