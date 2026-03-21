@@ -1,45 +1,28 @@
-const mongoose = require('mongoose');
-const Firm = require('../../models/Firm.model');
-const GoogleDriveOAuthProvider = require('./providers/GoogleDriveOAuthProvider');
-const OneDriveProvider = require('./providers/OneDriveProvider');
+const { google } = require('googleapis');
+const StorageConfiguration = require('../../models/StorageConfiguration.model');
+const { decrypt } = require('../../storage/services/TokenEncryption.service');
+const GoogleDriveProvider = require('./providers/GoogleDriveProvider');
 
-/**
- * Storage Provider Factory
- * Resolves the correct provider based on firm storage configuration.
- * Storage only operates when a firm has connected their own storage (firm_connected mode).
- */
 class StorageProviderFactory {
-  static async getProvider(firmOrId) {
-    if (!firmOrId) {
-      throw new Error('Firm context is required to resolve storage provider');
+  static async getProvider(firmId) {
+    if (!firmId) throw new Error('Firm context is required to resolve storage provider');
+
+    const config = await StorageConfiguration.findOne({ firmId, isActive: true }).lean();
+    if (!config) {
+      throw new Error('No active storage configuration');
+    }
+    if (config.provider !== 'google-drive') {
+      throw new Error('Only google-drive provider is supported');
     }
 
-    let firm = firmOrId;
+    const oauthClient = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      process.env.GOOGLE_OAUTH_REDIRECT_URI
+    );
+    oauthClient.setCredentials({ refresh_token: decrypt(config.credentials.googleRefreshToken) });
 
-    if (typeof firmOrId === 'string') {
-      const isObjectId = mongoose.Types.ObjectId.isValid(firmOrId);
-      if (isObjectId) {
-        firm = await Firm.findById(firmOrId);
-      } else {
-        firm = await Firm.findOne({ firmId: firmOrId });
-      }
-    }
-
-    const storage = firm?.storage || {};
-    const mode = storage.mode;
-
-    if (mode === 'firm_connected') {
-      switch (storage.provider) {
-        case 'google_drive':
-          return new GoogleDriveOAuthProvider(storage.google || {});
-        case 'onedrive':
-          return new OneDriveProvider(storage.onedrive || {});
-        default:
-          throw new Error('Storage provider is required when mode is firm_connected');
-      }
-    }
-
-    throw new Error('Storage is only available when a firm has connected their own storage (firm_connected mode)');
+    return new GoogleDriveProvider({ oauthClient, driveId: config.driveId || null });
   }
 }
 

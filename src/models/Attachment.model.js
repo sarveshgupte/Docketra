@@ -57,7 +57,7 @@ const attachmentSchema = new mongoose.Schema({
    * ⚠️ DEPRECATED - FOR BACKWARD COMPATIBILITY ONLY ⚠️
    * 
    * Legacy field for local file storage.
-   * New attachments use Google Drive (driveFileId) instead.
+   * New attachments use storageFileId instead.
    * This field is kept for backward compatibility with existing attachments.
    */
   filePath: {
@@ -67,16 +67,33 @@ const attachmentSchema = new mongoose.Schema({
   
   /**
    * Google Drive file ID
-   * ✅ CANONICAL STORAGE LOCATION ✅
+   * ⚠️ LEGACY GOOGLE FILE REFERENCE ⚠️
    * 
    * All new attachments are stored in Google Drive.
    * This field stores the Google Drive file ID for the attachment.
    * 
-   * Required for all new attachments (created after Google Drive integration).
-   * Optional for backward compatibility with legacy attachments (stored locally).
+   * Optional for backward compatibility with legacy attachments.
+   * New writes must persist storageFileId + storageProvider.
    */
   driveFileId: {
     type: String,
+    trim: true,
+  },
+
+  storageProvider: {
+    type: String,
+    enum: ['google-drive'],
+    required: function requiredStorageProvider() {
+      return !!this.storageFileId;
+    },
+    trim: true,
+  },
+
+  storageFileId: {
+    type: String,
+    required: function requiredStorageFileId() {
+      return this.storageProvider === 'google-drive';
+    },
     trim: true,
   },
   
@@ -260,6 +277,10 @@ attachmentSchema.pre('save', function(next) {
   // Validate at least one of clientId or caseId is present
   if (!this.clientId && !this.caseId) {
     return next(new Error('Attachment must belong to either a client or a case'));
+  }
+
+  if (!this.storageFileId && !this.driveFileId && !this.filePath) {
+    return next(new Error('Invalid attachment: no storage reference'));
   }
   
   next();
