@@ -16,6 +16,7 @@ import { Input } from '../components/common/Input';
 import { Modal } from '../components/common/Modal';
 import { ClientFactSheetModal } from '../components/common/ClientFactSheetModal';
 import { ActionConfirmModal } from '../components/common/ActionConfirmModal';
+import { SaveIndicator } from '../components/ui/SaveIndicator';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
 import { useToast } from '../hooks/useToast';
@@ -86,6 +87,8 @@ export const CaseDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [caseData, setCaseData] = useState(null);
   const [newComment, setNewComment] = useState('');
+  const [commentSaveStatus, setCommentSaveStatus] = useState(null);
+  const [commentSavedAt, setCommentSavedAt] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileDescription, setFileDescription] = useState('');
@@ -151,6 +154,7 @@ export const CaseDetailPage = () => {
   const auditLog = caseData?.auditLog ?? [];
   const history = caseData?.history ?? [];
   const timelineEvents = auditLog.length > 0 ? auditLog : history;
+  const commentDraftKey = `docketra_case_comment_draft_${firmSlug || 'firm'}_${caseId}`;
 
 
   useEffect(() => {
@@ -164,6 +168,46 @@ export const CaseDetailPage = () => {
       caseService.trackCaseExit(caseId);
     };
   }, [caseId]);
+
+  useEffect(() => {
+    const existingDraft = localStorage.getItem(commentDraftKey);
+    if (existingDraft) {
+      setNewComment(existingDraft);
+      setCommentSaveStatus('saved');
+      setCommentSavedAt(new Date());
+    }
+  }, [commentDraftKey]);
+
+  useEffect(() => {
+    if (!newComment) return undefined;
+    setCommentSaveStatus('saving');
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem(commentDraftKey, newComment);
+        setCommentSaveStatus('saved');
+        setCommentSavedAt(new Date());
+      } catch (error) {
+        setCommentSaveStatus('error');
+      }
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [newComment, commentDraftKey]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (!newComment) return;
+      try {
+        localStorage.setItem(commentDraftKey, newComment);
+        setCommentSaveStatus('saved');
+        setCommentSavedAt(new Date());
+      } catch (error) {
+        setCommentSaveStatus('error');
+      }
+    }, 30000);
+
+    return () => clearInterval(timer);
+  }, [newComment, commentDraftKey]);
 
   // Track case viewed after successful load (debounced, once per session)
   useEffect(() => {
@@ -315,6 +359,7 @@ export const CaseDetailPage = () => {
     setSubmitting(true);
     try {
       await caseService.addComment(caseId, newComment, user?.email);
+      localStorage.removeItem(commentDraftKey);
       setNewComment('');
       const message = `Comment added to docket ${caseId} • ${formatDateTime(new Date())}`;
       showSuccess(message);
@@ -908,6 +953,20 @@ export const CaseDetailPage = () => {
               </div>
               {(accessMode.canComment || permissions.canAddComment(caseData)) && (
                 <div className="case-detail__add-comment">
+                  <SaveIndicator
+                    status={commentSaveStatus}
+                    time={commentSavedAt}
+                    onRetry={() => {
+                      try {
+                        setCommentSaveStatus('saving');
+                        localStorage.setItem(commentDraftKey, newComment);
+                        setCommentSaveStatus('saved');
+                        setCommentSavedAt(new Date());
+                      } catch (error) {
+                        setCommentSaveStatus('error');
+                      }
+                    }}
+                  />
                   <Textarea
                     label="Add Comment"
                     value={newComment}
