@@ -4,7 +4,6 @@ const STATUS_ALIASES = Object.freeze({
   [CaseStatus.PENDING_ALIAS]: CaseStatus.PENDED,
   [CaseStatus.PENDING_LEGACY]: CaseStatus.PENDED,
   [CaseStatus.OPEN_LEGACY]: CaseStatus.OPEN,
-  [CaseStatus.OPEN]: CaseStatus.IN_PROGRESS,
   [CaseStatus.FILED_LEGACY]: CaseStatus.FILED,
   [CaseStatus.REVIEWED]: CaseStatus.UNDER_REVIEW,
   [CaseStatus.ARCHIVED]: CaseStatus.CLOSED,
@@ -61,20 +60,6 @@ const transitions = Object.freeze({
   [CaseStatus.CLOSED]: Object.freeze([]),
 });
 
-const CASE_STATUSES = Object.freeze({
-  UNASSIGNED: CaseStatus.UNASSIGNED,
-  ASSIGNED: 'ASSIGNED',
-  IN_PROGRESS: 'IN_PROGRESS',
-  RESOLVED: CaseStatus.RESOLVED,
-});
-
-const ALLOWED_TRANSITIONS = Object.freeze({
-  [CASE_STATUSES.UNASSIGNED]: Object.freeze([CASE_STATUSES.ASSIGNED]),
-  [CASE_STATUSES.ASSIGNED]: Object.freeze([CASE_STATUSES.IN_PROGRESS]),
-  [CASE_STATUSES.IN_PROGRESS]: Object.freeze([CASE_STATUSES.RESOLVED]),
-  [CASE_STATUSES.RESOLVED]: Object.freeze([]),
-});
-
 function canTransition(from, to, _role = null) {
   const normalizedFrom = normalizeStatus(from);
   const normalizedTo = normalizeStatus(to);
@@ -85,7 +70,7 @@ function canTransition(from, to, _role = null) {
 function assertValidTransition(from, to) {
   const normalizedFrom = normalizeStatus(from);
   const normalizedTo = normalizeStatus(to);
-  const allowedNextStatuses = ALLOWED_TRANSITIONS[normalizedFrom] || [];
+  const allowedNextStatuses = transitions[normalizedFrom] || [];
   if (allowedNextStatuses.includes(normalizedTo)) {
     return true;
   }
@@ -98,8 +83,6 @@ function assertValidTransition(from, to) {
 
 module.exports = {
   transitions,
-  CASE_STATUSES,
-  ALLOWED_TRANSITIONS,
   normalizeStatus,
   canTransition,
   assertValidTransition,
