@@ -168,12 +168,19 @@ if (missingEnvVars.length > 0) {
   process.exit(1);
 }
 
-// BYOS Google OAuth env validation — warn only, app continues without these vars.
-// Validation is enforced at request time inside getStorageOAuthClient().
-const requiredStorageOAuthVars = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_OAUTH_REDIRECT_URI', 'STORAGE_TOKEN_SECRET', 'FRONTEND_URL'];
-const missingByosVars = requiredStorageOAuthVars.filter(key => !process.env[key]);
+// BYOS Google-only env validation (fail-fast in production, warn in non-production).
+const byosGoogleEnvVars = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_OAUTH_REDIRECT_URI', 'STORAGE_TOKEN_SECRET'];
+const missingByosVars = byosGoogleEnvVars.filter((key) => !process.env[key]);
+
 if (missingByosVars.length > 0) {
-  console.warn(`⚠️  BYOS Google OAuth variables not set: ${missingByosVars.join(', ')}. Storage connect endpoints will be unavailable until these are configured.`);
+  const message = `BYOS environment variables missing: ${missingByosVars.join(', ')}`;
+  if (isProduction) {
+    console.error(`❌ ${message}`);
+    process.exit(1);
+  }
+  console.warn(`⚠️  ${message}`);
+} else {
+  console.log('[STORAGE] BYOS provider enabled: Google Drive');
 }
 
 // Google Drive initialization block removed — legacy service-account storage eliminated.

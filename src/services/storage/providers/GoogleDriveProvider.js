@@ -1,0 +1,145 @@
+const { google } = require('googleapis');
+const { Readable } = require('stream');
+const StorageProvider = require('../StorageProvider.interface');
+
+class GoogleDriveProvider extends StorageProvider {
+  constructor({ oauthClient, driveId } = {}) {
+    super();
+    this.providerName = 'google-drive';
+    this.oauthClient = oauthClient;
+    this.driveId = driveId || null;
+  }
+
+  async authenticate(credentials = {}) {
+    const refreshToken = credentials.refreshToken;
+    if (!this.oauthClient && !refreshToken) {
+      throw new Error('Google Drive credentials are missing');
+    }
+    if (!this.oauthClient) {
+      const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_OAUTH_REDIRECT_URI } = process.env;
+      this.oauthClient = new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_OAUTH_REDIRECT_URI);
+      this.oauthClient.setCredentials({ refresh_token: refreshToken });
+    }
+    return this.oauthClient;
+  }
+
+  getClient() {
+    if (!this.oauthClient) {
+      throw new Error('Google Drive OAuth client is not initialized');
+    }
+    return google.drive({ version: 'v3', auth: this.oauthClient });
+  }
+
+  async testConnection(rootFolderId = null) {
+    const drive = this.getClient();
+    if (this.driveId) {
+      await drive.drives.get({ driveId: this.driveId, fields: 'id' });
+    }
+    if (rootFolderId) {
+      await drive.files.get({ fileId: rootFolderId, fields: 'id', supportsAllDrives: true });
+    }
+    return { healthy: true };
+  }
+
+  async createFolder(parentFolderId, folderName) {
+    const drive = this.getClient();
+    const requestBody = {
+      name: folderName,
+      mimeType: 'application/vnd.google-apps.folder',
+      ...(parentFolderId ? { parents: [parentFolderId] } : {}),
+    };
+    const created = await drive.files.create({
+      requestBody,
+      supportsAllDrives: true,
+      fields: 'id',
+    });
+    return { folderId: created.data.id };
+  }
+
+  async uploadFile(folderId, filename, stream, mimeType = 'application/octet-stream') {
+    const drive = this.getClient();
+    const created = await drive.files.create({
+      requestBody: { name: filename, parents: [folderId] },
+      media: { mimeType, body: stream },
+      supportsAllDrives: true,
+      fields: 'id,webViewLink',
+    });
+    return {
+      fileId: created.data.id,
+      webViewLink: created.data.webViewLink || null,
+    };
+  }
+
+  async uploadFileBuffer(folderId, filename, fileBuffer, mimeType) {
+    return this.uploadFile(folderId, filename, Readable.from(fileBuffer), mimeType);
+  }
+
+  async downloadFile(fileId) {
+    const drive = this.getClient();
+    const res = await drive.files.get({ fileId, alt: 'media', supportsAllDrives: true }, { responseType: 'stream' });
+    return res.data;
+  }
+
+  async deleteFile(fileId) {
+    const drive = this.getClient();
+    await drive.files.delete({ fileId, supportsAllDrives: true });
+  }
+
+  async listFiles(folderId) {
+    const drive = this.getClient();
+    const res = await drive.files.list({
+      q: `'${folderId}' in parents and trashed = false`,
+      fields: 'files(id,name,mimeType,size)',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+    });
+    return (res.data.files || []).map((f) => ({ fileId: f.id, name: f.name, mimeType: f.mimeType, size: Number(f.size || 0) }));
+  }
+
+  async shareFile(fileId, withUserId, permission) {
+    const drive = this.getClient();
+    await drive.permissions.create({
+      fileId,
+      requestBody: {
+        type: 'user',
+        role: permission === 'edit' ? 'writer' : 'reader',
+        emailAddress: withUserId,
+      },
+      supportsAllDrives: true,
+    });
+  }
+
+  async getFolderPath(folderId) {
+    const drive = this.getClient();
+    const path = [];
+    let cursor = folderId;
+    for (let i = 0; i < 10 && cursor; i += 1) {
+      const res = await drive.files.get({ fileId: cursor, fields: 'id,name,parents', supportsAllDrives: true });
+      path.unshift(res.data.name || res.data.id);
+      cursor = res.data.parents?.[0] || null;
+    }
+    return path.join('/');
+  }
+
+  async getOrCreateFolder(parentFolderId = null, folderName) {
+    const drive = this.getClient();
+    const escapedName = folderName.replace(/'/g, "\\'");
+    let q = `name = '${escapedName}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`;
+    if (parentFolderId) {
+      q += ` and '${parentFolderId}' in parents`;
+    }
+    const found = await drive.files.list({
+      q,
+      fields: 'files(id)',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+    });
+    if (found.data.files?.length) {
+      return found.data.files[0].id;
+    }
+    const created = await this.createFolder(parentFolderId, folderName);
+    return created.folderId;
+  }
+}
+
+module.exports = GoogleDriveProvider;
