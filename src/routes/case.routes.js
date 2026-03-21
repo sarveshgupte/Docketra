@@ -47,6 +47,7 @@ const {
   checkCaseClientAccess,
   applyClientAccessFilter,
 } = require('../middleware/clientAccess.middleware');
+const { validateCaseCommentPayload } = require('../middleware/commentValidation.middleware');
 
 const upload = createSecureUpload();
 
@@ -130,7 +131,7 @@ router.get('/:caseId/summary-pdf', authorizeFirmPermission('CASE_VIEW'), userRea
 router.get('/:caseId', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, getCaseByCaseId);
 
 // POST /api/cases/:caseId/comments - Add comment to case
-router.post('/:caseId/comments', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, addComment);
+router.post('/:caseId/comments', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, validateCaseCommentPayload, addComment);
 
 // POST /api/cases/:caseId/attachments - Upload attachment to case
 router.post('/:caseId/attachments', upload.single('file'), enforceUploadSecurity, authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, attachmentLimiter, checkCaseClientAccess, addAttachment);

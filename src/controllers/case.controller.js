@@ -564,7 +564,8 @@ const createCase = async (req, res) => {
 const addComment = async (req, res) => {
   try {
     const { caseId } = req.params;
-    const { text, createdBy, note } = req.body;
+    const { text, note } = req.body;
+    const tenantFirmId = req.firmId || req.user?.firmId;
     
     // PR #45: Require authenticated user with xID for security and audit
     if (!req.user?.email || !req.user?.xID) {
@@ -573,27 +574,19 @@ const addComment = async (req, res) => {
         message: 'Authentication required',
       });
     }
-    
-    // Validate required fields
-    if (!text) {
+
+    if (!tenantFirmId) {
       return res.status(400).json({
         success: false,
-        message: 'Comment text is required',
-      });
-    }
-    
-    if (!createdBy) {
-      return res.status(400).json({
-        success: false,
-        message: 'Created by email is required',
+        message: 'Firm context is required',
       });
     }
     
     // PR: Case Identifier Semantics - Resolve identifier to internal ID
     // This handles both ObjectId and CASE-YYYYMMDD-XXXXX formats
     try {
-      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
-      var caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
+      const internalId = await resolveCaseIdentifier(tenantFirmId, caseId, req.user.role);
+      var caseData = await CaseRepository.findByInternalId(tenantFirmId, internalId, req.user.role);
     } catch (error) {
       return res.status(404).json({
         success: false,
@@ -622,7 +615,7 @@ const addComment = async (req, res) => {
     const comment = await Comment.create({
       caseId: caseData.caseId,
       text,
-      createdBy: createdBy.toLowerCase(),
+      createdBy: req.user.email.toLowerCase(),
       createdByXID: req.user.xID,
       createdByName: req.user.name,
       note,
