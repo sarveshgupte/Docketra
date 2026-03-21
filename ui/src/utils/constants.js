@@ -148,3 +148,13 @@ export const HTTP_STATUS = {
   CONFLICT: 409,
   INTERNAL_SERVER_ERROR: 500,
 };
+
+
+export const CASE_DETAIL_TABS = {
+  OVERVIEW: 'overview',
+  COMMENTS: 'comments',
+  ATTACHMENTS: 'attachments',
+  HISTORY: 'history',
+};
+
+export const VALID_CASE_DETAIL_TAB_NAMES = Object.values(CASE_DETAIL_TABS);

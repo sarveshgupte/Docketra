@@ -8,7 +8,12 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
+import { useCommandPalette } from '../../hooks/useCommandPalette';
+import { SidebarSection } from '../navigation/SidebarSection';
+import { CommandPalette } from './CommandPalette';
+import { ErrorBoundary } from './ErrorBoundary';
 import api from '../../services/api';
+import { worklistService } from '../../services/worklistService';
 import { USER_ROLES } from '../../utils/constants';
 import './Layout.css';
 
@@ -120,6 +125,10 @@ export const Layout = ({ children }) => {
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState({ cases: [], users: [], tasks: [] });
   const [storageHealthStatus, setStorageHealthStatus] = useState('HEALTHY');
+  const [workbasketCount, setWorkbasketCount] = useState('loading');
+  const [worklistCount, setWorklistCount] = useState('loading');
+  const [countsFetched, setCountsFetched] = useState(false);
+  const { isOpen: commandPaletteOpen, setIsOpen: setCommandPaletteOpen } = useCommandPalette();
 
   const profileDropdownRef = useRef(null);
 
@@ -206,6 +215,51 @@ export const Layout = ({ children }) => {
     return () => clearTimeout(timer);
   }, [searchQuery, runGlobalSearch]);
 
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchCounts = async () => {
+      if (!user) {
+        if (!cancelled) {
+          setWorkbasketCount(null);
+          setWorklistCount(null);
+          setCountsFetched(true);
+        }
+        return;
+      }
+
+      if (!cancelled) {
+        setWorkbasketCount('loading');
+        setWorklistCount('loading');
+      }
+
+      try {
+        const [globalData, myData] = await Promise.all([
+          worklistService.getGlobalWorklist({ limit: 1 }),
+          worklistService.getEmployeeWorklist({ limit: 1 }),
+        ]);
+
+        if (!cancelled) {
+          setWorkbasketCount(globalData?.meta?.total ?? globalData?.data?.length ?? 0);
+          setWorklistCount(myData?.meta?.total ?? myData?.data?.length ?? 0);
+          setCountsFetched(true);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.warn('[Layout] Failed to fetch worklist counts', error);
+          setWorkbasketCount(0);
+          setWorklistCount(0);
+          setCountsFetched(true);
+        }
+      }
+    };
+
+    fetchCounts();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
   useEffect(() => {
     let cancelled = false;
     const fetchStorageHealth = async () => {
@@ -233,68 +287,72 @@ export const Layout = ({ children }) => {
 
   const navSections = [
     {
-      id: 'workspace',
-      label: 'Dashboard',
-      links: [
-        { to: `/app/firm/${currentFirmSlug}/dashboard`, label: 'Dashboard', icon: <IconDashboard />, active: isActive(`/app/firm/${currentFirmSlug}/dashboard`) },
+      id: 'core-work',
+      title: 'CORE WORK',
+      sticky: true,
+      defaultOpen: true,
+      collapsible: false,
+      items: [
+        {
+          to: `/app/firm/${currentFirmSlug}/global-worklist`,
+          label: 'Workbasket',
+          icon: <IconWorkbasket />,
+          active: isActive(`/app/firm/${currentFirmSlug}/global-worklist`),
+          badge: countsFetched ? workbasketCount : 'loading',
+        },
+        {
+          to: `/app/firm/${currentFirmSlug}/worklist`,
+          label: 'My Worklist',
+          icon: <IconWorklist />,
+          active: isActive(`/app/firm/${currentFirmSlug}/worklist`) || isActive(`/app/firm/${currentFirmSlug}/my-worklist`),
+          badge: countsFetched ? worklistCount : 'loading',
+        },
+        {
+          to: `/app/firm/${currentFirmSlug}/dashboard`,
+          label: 'Dashboard',
+          icon: <IconDashboard />,
+          active: isActive(`/app/firm/${currentFirmSlug}/dashboard`),
+        },
       ],
     },
     {
-      id: 'work',
-      label: 'Work',
-      links: [
-        { to: `/app/firm/${currentFirmSlug}/global-worklist`, label: 'Workbasket', icon: <IconWorkbasket />, active: isActive(`/app/firm/${currentFirmSlug}/global-worklist`) },
-        { to: `/app/firm/${currentFirmSlug}/worklist`, label: 'My Worklist', icon: <IconWorklist />, active: isActive(`/app/firm/${currentFirmSlug}/worklist`) || isActive(`/app/firm/${currentFirmSlug}/my-worklist`) },
-      ],
-    },
-    {
-      id: 'clients',
-      label: 'Clients',
-      links: [
+      id: 'cases-clients',
+      title: 'CASES & CLIENTS',
+      defaultOpen: true,
+      items: [
         { to: `/app/firm/${currentFirmSlug}/clients`, label: 'All Clients', icon: <IconCases />, active: isActivePrefix(`/app/firm/${currentFirmSlug}/clients`) },
-      ],
-    },
-    {
-      id: 'compliance',
-      label: 'Compliance',
-      links: [
+        { to: `/app/firm/${currentFirmSlug}/cases`, label: 'All Cases', icon: <IconCases />, active: isActivePrefix(`/app/firm/${currentFirmSlug}/cases`) && !location.search.includes('view=audit') },
         { to: `/app/firm/${currentFirmSlug}/worklist`, label: 'Compliance Calendar', icon: <IconWorklist />, active: false },
-        { to: `/app/firm/${currentFirmSlug}/worklist`, label: 'Compliance Register', icon: <IconWorklist />, active: false },
-        { to: `/app/firm/${currentFirmSlug}/worklist`, label: 'Risk Alerts', icon: <IconBell />, active: false },
       ],
     },
     {
       id: 'insights',
-      label: 'Insights',
-      links: [
+      title: 'INSIGHTS',
+      defaultOpen: false,
+      items: [
         { to: `/app/firm/${currentFirmSlug}/cases`, label: 'Firm Analytics', icon: <IconCases />, active: isActivePrefix(`/app/firm/${currentFirmSlug}/cases`) && !location.search.includes('view=audit') },
-        { to: `/app/firm/${currentFirmSlug}/worklist`, label: 'Productivity', icon: <IconWorklist />, active: false },
+        { to: `/app/firm/${currentFirmSlug}/admin/reports`, label: 'Reports', icon: <IconReport />, active: isActivePrefix(`/app/firm/${currentFirmSlug}/admin/reports`) },
       ],
     },
     {
-      id: 'reports',
-      label: 'Reports',
-      links: [
-        { to: `/app/firm/${currentFirmSlug}/admin/reports`, label: 'Reports', icon: <IconReport />, active: isActivePrefix(`/app/firm/${currentFirmSlug}/admin/reports`), hidden: !hasAdminAccess },
-      ],
-    },
-    {
-      id: 'audit',
-      label: 'Audit Logs',
-      links: [
-        { to: `/app/firm/${currentFirmSlug}/cases?view=audit`, label: 'Audit Logs', icon: <IconReport />, active: isActive(`/app/firm/${currentFirmSlug}/cases`) && location.search.includes('view=audit') },
-      ],
-    },
-    {
-      id: 'administration',
-      label: 'Administration',
+      id: 'admin',
+      title: 'ADMIN',
+      defaultOpen: false,
       hidden: !hasAdminAccess,
-      links: [
-        { to: `/app/firm/${currentFirmSlug}/admin`, label: 'Team', icon: <IconTeam />, active: isActivePrefix(`/app/firm/${currentFirmSlug}/admin`) && !isActivePrefix(`/app/firm/${currentFirmSlug}/admin/reports`) },
+      items: [
+        { to: `/app/firm/${currentFirmSlug}/admin`, label: 'Team Management', icon: <IconTeam />, active: isActivePrefix(`/app/firm/${currentFirmSlug}/admin`) && !isActivePrefix(`/app/firm/${currentFirmSlug}/admin/reports`) },
+        { to: `/app/firm/${currentFirmSlug}/cases?view=audit`, label: 'Audit Logs', icon: <IconReport />, active: isActive(`/app/firm/${currentFirmSlug}/cases`) && location.search.includes('view=audit') },
         { to: `/app/firm/${currentFirmSlug}/settings/firm`, label: 'Firm Settings', icon: <IconAdmin />, active: isActivePrefix(`/app/firm/${currentFirmSlug}/settings/firm`) },
       ],
     },
   ].filter((section) => !section.hidden);
+
+  const commandPaletteCommands = [
+    { id: 'new-docket', label: 'New Docket', shortcut: '⌘N', action: () => navigate(`/app/firm/${currentFirmSlug}/cases/create`) },
+    { id: 'workbasket', label: 'Go to Workbasket', shortcut: '⌘1', action: () => navigate(`/app/firm/${currentFirmSlug}/global-worklist`) },
+    { id: 'worklist', label: 'Go to My Worklist', shortcut: '⌘2', action: () => navigate(`/app/firm/${currentFirmSlug}/worklist`) },
+    { id: 'dashboard', label: 'Go to Dashboard', shortcut: '⌘D', action: () => navigate(`/app/firm/${currentFirmSlug}/dashboard`) },
+  ];
 
   return (
     <div className="enterprise-layout">
@@ -336,21 +394,15 @@ export const Layout = ({ children }) => {
         {/* Navigation */}
         <nav className="enterprise-sidebar__nav" aria-label="Firm operations navigation">
           {navSections.map((section) => (
-            <div key={section.id} className="enterprise-sidebar__nav-section">
-              <div className="enterprise-sidebar__nav-label" aria-hidden="true">{section.label}</div>
-              {section.links.filter((link) => !link.hidden).map((link) => (
-                <Link
-                  key={link.to}
-                  to={link.to}
-                  className={`enterprise-sidebar__nav-link ${link.active ? 'active' : ''}`}
-                  aria-current={link.active ? 'page' : undefined}
-                  title={sidebarCollapsed ? link.label : undefined}
-                >
-                  <span className="enterprise-sidebar__nav-icon" aria-hidden="true">{link.icon}</span>
-                  <span className="enterprise-sidebar__nav-text">{link.label}</span>
-                </Link>
-              ))}
-            </div>
+            <SidebarSection
+              key={section.id}
+              title={section.title}
+              items={section.items}
+              sticky={section.sticky}
+              defaultOpen={section.defaultOpen}
+              collapsible={section.collapsible}
+              collapsed={sidebarCollapsed}
+            />
           ))}
         </nav>
 
@@ -474,6 +526,13 @@ export const Layout = ({ children }) => {
         {/* Page Content */}
         <main className="enterprise-content" id="main-content">{children}</main>
       </div>
+      <ErrorBoundary name="CommandPalette" fallback={null}>
+        <CommandPalette
+          isOpen={commandPaletteOpen}
+          onClose={() => setCommandPaletteOpen(false)}
+          commands={commandPaletteCommands}
+        />
+      </ErrorBoundary>
     </div>
   );
 };
