@@ -163,6 +163,9 @@ const resolveCase = async (firmId, caseId, comment, user, req = null) => {
     {
       previousStatus,
       newStatus: CaseStatus.RESOLVED,
+      fromStatus: previousStatus,
+      toStatus: CaseStatus.RESOLVED,
+      timestamp: new Date(),
       commentLength: comment.length,
     }
   );

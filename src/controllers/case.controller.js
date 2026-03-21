@@ -2079,7 +2079,6 @@ const pullCases = async (req, res) => {
  * 
  * This endpoint:
  * - Sets assignedToXID = null
- * - Sets queueType = GLOBAL
  * - Sets status = UNASSIGNED
  * - Creates audit log entry
  * 
@@ -2153,7 +2152,6 @@ const unassignCase = async (req, res) => {
         assignedToXID: null,
         assignedTo: null,
         assignedBy: null,
-        queueType: 'GLOBAL',
         assignedAt: null,
       },
     });
