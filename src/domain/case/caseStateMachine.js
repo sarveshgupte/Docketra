@@ -52,6 +52,20 @@ const transitions = Object.freeze({
   [CaseStatus.CLOSED]: Object.freeze([]),
 });
 
+const CASE_STATUSES = Object.freeze({
+  UNASSIGNED: CaseStatus.UNASSIGNED,
+  ASSIGNED: 'ASSIGNED',
+  IN_PROGRESS: 'IN_PROGRESS',
+  RESOLVED: CaseStatus.RESOLVED,
+});
+
+const ALLOWED_TRANSITIONS = Object.freeze({
+  [CASE_STATUSES.UNASSIGNED]: Object.freeze([CASE_STATUSES.ASSIGNED]),
+  [CASE_STATUSES.ASSIGNED]: Object.freeze([CASE_STATUSES.IN_PROGRESS]),
+  [CASE_STATUSES.IN_PROGRESS]: Object.freeze([CASE_STATUSES.RESOLVED]),
+  [CASE_STATUSES.RESOLVED]: Object.freeze([]),
+});
+
 function canTransition(from, to, _role = null) {
   const normalizedFrom = normalizeStatus(from);
   const normalizedTo = normalizeStatus(to);
@@ -59,8 +73,23 @@ function canTransition(from, to, _role = null) {
   return transitions[normalizedFrom].includes(normalizedTo);
 }
 
+function assertValidTransition(from, to) {
+  const allowedNextStatuses = ALLOWED_TRANSITIONS[from] || [];
+  if (allowedNextStatuses.includes(to)) {
+    return true;
+  }
+
+  const error = new Error(`Invalid case transition: ${from || 'UNKNOWN'} -> ${to || 'UNKNOWN'}`);
+  error.code = 'INVALID_CASE_TRANSITION';
+  error.statusCode = 400;
+  throw error;
+}
+
 module.exports = {
   transitions,
+  CASE_STATUSES,
+  ALLOWED_TRANSITIONS,
   normalizeStatus,
   canTransition,
+  assertValidTransition,
 };
