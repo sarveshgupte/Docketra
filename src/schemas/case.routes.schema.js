@@ -45,7 +45,7 @@ module.exports = {
   'GET /:caseId': { params: caseIdParams, query: z.object({}).strip() },
   'POST /:caseId/comments': {
     params: caseIdParams,
-    body: z.object({ text: nonEmptyString, createdBy: z.string().trim().optional(), note: z.string().trim().optional() }).strip(),
+    body: z.object({ text: nonEmptyString, note: nonEmptyString.optional() }).strip(),
   },
   'POST /:caseId/attachments': { params: caseIdParams, body: z.object({}).strip() },
   'GET /:caseId/attachments/:attachmentId/view': { params: caseAndAttachmentParams, query: z.object({}).strip() },
