@@ -74,6 +74,8 @@ async function updateStatus(caseId, newStatus, context = {}) {
   const metadata = {
     oldStatus: fromStatus,
     newStatus: normalizedNewStatus,
+    fromStatus,
+    toStatus: normalizedNewStatus,
     timestamp: new Date().toISOString(),
     userId: context.userId || context.performedByXID || null,
     ipAddress: context.ipAddress || null,
