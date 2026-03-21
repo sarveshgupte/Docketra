@@ -312,14 +312,14 @@ const categoryWorklist = async (req, res) => {
  * Employee Worklist
  * GET /api/worklists/employee/me
  * 
- * Shows all OPEN cases assigned to the current user.
+ * Shows all ASSIGNED/IN_PROGRESS cases assigned to the current user.
  * This is the CANONICAL "My Worklist" query.
  * 
- * Query: assignedToXID = user.xID AND status = OPEN
+ * Query: assignedToXID = user.xID AND status IN (ASSIGNED, IN_PROGRESS)
  * 
  * Cases shown:
  * - Assigned to this user's xID
- * - Status is OPEN (not PENDED, not FILED, not anything else)
+ * - Status is ASSIGNED or IN_PROGRESS
  * 
  * Cases NOT shown:
  * - PENDED cases (these appear only in "My Pending Cases" dashboard)
@@ -367,13 +367,13 @@ const employeeWorklist = async (req, res) => {
       console.warn('[WORKLIST] Failed to auto-reopen expired pending cases:', error.message);
     }
     
-    // CANONICAL QUERY: assignedToXID = xID AND status = OPEN
+    // CANONICAL QUERY: assignedToXID = xID AND status IN (ASSIGNED, IN_PROGRESS)
     // This is the ONLY correct query for "My Worklist"
     // Dashboard counts MUST use the same query
     const query = {
       firmId,
       assignedToXID: user.xID, // CANONICAL: Query by xID in assignedToXID field
-      status: { $in: [CaseStatus.OPEN, CaseStatus.PENDED] },
+      status: { $in: [CaseStatus.ASSIGNED, CaseStatus.IN_PROGRESS] },
     };
     
     const casesQuery = Case.find(query)
@@ -389,7 +389,7 @@ const employeeWorklist = async (req, res) => {
     // Log case list view for audit
     await logCaseListViewed({
       viewerXID: user.xID,
-      filters: { status: CaseStatus.OPEN },
+      filters: { status: [CaseStatus.ASSIGNED, CaseStatus.IN_PROGRESS] },
       listType: 'MY_WORKLIST',
       resultCount: cases.length,
       req,
@@ -463,7 +463,11 @@ const globalWorklist = async (req, res) => {
     }
     
     // Build query for UNASSIGNED cases only
-    const query = { status: { $in: ['UNASSIGNED', 'OPEN', 'PENDED', 'RESOLVED'] }, firmId };
+    const query = {
+      status: CaseStatus.UNASSIGNED,
+      assignedToXID: null,
+      firmId,
+    };
     
     // Apply filters
     if (clientId) {

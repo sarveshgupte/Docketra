@@ -6,6 +6,7 @@ const mongoose = require('mongoose');
 const { CaseRepository } = require('../repositories');
 const { CASE_ACTION_TYPES } = require('../config/constants');
 const CaseStatus = require('../domain/case/caseStatus');
+const { assertValidTransition, CASE_STATUSES } = require('../domain/case/caseStateMachine');
 const CaseService = require('./case.service');
 const { DateTime } = require('luxon');
 const { logCaseHistory } = require('./auditLog.service');
@@ -108,6 +109,11 @@ const resolveCase = async (firmId, caseId, comment, user, req = null) => {
   if (!caseData) {
     throw new Error('Case not found');
   }
+
+  if (caseData.status !== CASE_STATUSES.IN_PROGRESS) {
+    throw new Error('Case must be IN_PROGRESS before resolving');
+  }
+  assertValidTransition(caseData.status, CASE_STATUSES.RESOLVED);
   
   // Store previous status for audit
   const previousStatus = caseData.status;
@@ -157,6 +163,9 @@ const resolveCase = async (firmId, caseId, comment, user, req = null) => {
     {
       previousStatus,
       newStatus: CaseStatus.RESOLVED,
+      fromStatus: previousStatus,
+      toStatus: CaseStatus.RESOLVED,
+      timestamp: new Date(),
       commentLength: comment.length,
     }
   );
