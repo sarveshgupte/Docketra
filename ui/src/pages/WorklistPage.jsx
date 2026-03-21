@@ -12,7 +12,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
@@ -26,6 +26,8 @@ import { worklistService } from '../services/worklistService';
 import { formatDate } from '../utils/formatters';
 import { getStatusLabel } from '../utils/statusDisplay';
 import { UX_COPY } from '../constants/uxCopy';
+import { useQueryState } from '../hooks/useQueryState';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import api from '../services/api';
 import './WorklistPage.css';
 const normalizeCases = (records = []) => records.map((record) => ({
@@ -35,16 +37,17 @@ const normalizeCases = (records = []) => records.map((record) => ({
 
 export const WorklistPage = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const { query, setQuery } = useQueryState({ status: '', sort: 'updatedAt', order: 'desc' });
   const { firmSlug } = useParams();
   
   const [loading, setLoading] = useState(true);
   const [cases, setCases] = useState([]);
   const [error, setError] = useState('');
-  const [sortState, setSortState] = useState({ key: 'updatedAt', direction: 'desc' });
+  const [sortState, setSortState] = useState({ key: query.sort, direction: query.order });
+  const [focusedIndex, setFocusedIndex] = useState(0);
   
   // Get status filter from query params
-  const statusParam = searchParams.get('status');
+  const statusParam = query.status;
   // Check for PENDING or PENDED status (both are valid)
   const isPendingView = statusParam && (
     statusParam === 'PENDING' || 
@@ -54,12 +57,24 @@ export const WorklistPage = () => {
   );
 
   useEffect(() => {
-    setSortState({ key: isPendingView ? 'pendingUntil' : 'updatedAt', direction: 'desc' });
-  }, [isPendingView]);
+    const defaultKey = isPendingView ? 'pendingUntil' : 'updatedAt';
+    const nextKey = query.sort || defaultKey;
+    const nextDirection = query.order || 'desc';
+    setSortState({ key: nextKey, direction: nextDirection });
+  }, [isPendingView, query.sort, query.order]);
 
   useEffect(() => {
     loadWorklist();
   }, [statusParam]);
+
+
+  useEffect(() => {
+    if (!sortState?.key || !sortState?.direction) {
+      setQuery({ sort: null, order: null });
+      return;
+    }
+    setQuery({ sort: sortState.key, order: sortState.direction });
+  }, [sortState, setQuery]);
 
   const loadWorklist = async () => {
     setLoading(true);
@@ -111,6 +126,7 @@ export const WorklistPage = () => {
   const pageInfo = getPageInfo();
 
   const sortedCases = useMemo(() => {
+    if (!sortState?.key || !sortState?.direction) return [...cases];
     const dateSortKeys = new Set(['createdAt', 'updatedAt', 'pendingUntil']);
     const direction = sortState.direction === 'asc' ? 1 : -1;
     return [...cases].sort((left, right) => {
@@ -129,6 +145,16 @@ export const WorklistPage = () => {
       }) * direction;
     });
   }, [cases, sortState]);
+
+
+  useKeyboardShortcuts({
+    onNext: () => setFocusedIndex((idx) => Math.min(idx + 1, Math.max(sortedCases.length - 1, 0))),
+    onPrev: () => setFocusedIndex((idx) => Math.max(idx - 1, 0)),
+    onOpen: () => {
+      const target = sortedCases[focusedIndex];
+      if (target?.caseId) handleCaseClick(target.caseId);
+    },
+  });
 
   const columns = [
     {

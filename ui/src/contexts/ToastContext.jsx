@@ -1,9 +1,7 @@
 /**
  * Enterprise Toast Context for notifications
- * Success: Auto-dismiss after 3 seconds
- * Error: Persistent until dismissed
- * Warning: Auto-dismiss after 5 seconds
- * Info: Auto-dismiss after 4 seconds
+ * Max 3 stacked toasts
+ * All toasts auto-dismiss after 4 seconds by default
  */
 
 import React, { createContext, useState, useCallback, useEffect } from 'react';
@@ -28,10 +26,10 @@ export const ToastProvider = ({ children }) => {
     // Auto remove based on type
     if (!persistent) {
       const timeoutMap = {
-        success: 3000,
-        warning: 5000,
+        success: 4000,
+        warning: 4000,
         info: 4000,
-        danger: 0,
+        danger: 4000,
       };
       const timeout = timeoutMap[type] ?? 0;
       
@@ -54,7 +52,7 @@ export const ToastProvider = ({ children }) => {
   }, [addToast]);
 
   const showError = useCallback((message) => {
-    return addToast(message, 'danger', true); // Errors are persistent
+    return addToast(message, 'danger', false);
   }, [addToast]);
 
   const showWarning = useCallback((message) => {
