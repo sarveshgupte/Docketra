@@ -4,8 +4,6 @@ const CaseAudit = require('../models/CaseAudit.model');
 const mongoose = require('mongoose');
 const { CaseRepository } = require('../repositories');
 const CaseStatus = require('../domain/case/caseStatus');
-const { assertValidTransition, CASE_STATUSES } = require('../domain/case/caseStateMachine');
-const CaseService = require('./case.service');
 
 /**
  * Case Assignment Service
@@ -28,11 +26,9 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObject
     throw new Error('caseId, tenantId, and userId are required');
   }
 
-  assertValidTransition(CaseStatus.UNASSIGNED, CASE_STATUSES.ASSIGNED);
-
   const assignedAt = new Date();
   const normalizedUserId = userId.toUpperCase();
-  const result = await Case.updateOne(
+  const updatedCase = await Case.findOneAndUpdate(
     {
       caseId,
       firmId: tenantId,
@@ -48,12 +44,16 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObject
         assignedTo: assigneeObjectId || null,
         assignedBy: assignerObjectId || assigneeObjectId || null,
         queueType: 'PERSONAL',
+        status: CaseStatus.ASSIGNED,
       },
     },
-    session ? { session } : {}
+    {
+      new: true,
+      ...(session ? { session } : {}),
+    }
   );
 
-  if (result.modifiedCount !== 1) {
+  if (!updatedCase) {
     console.warn('[AtomicPullConflict]', {
       caseId,
       tenantId,
@@ -65,23 +65,6 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObject
       error: 'Case already assigned',
     };
   }
-
-  await CaseService.updateStatus(caseId, CaseStatus.ASSIGNED, {
-    tenantId,
-    userId: normalizedUserId,
-    performedBy: normalizedUserId,
-    performedByXID: normalizedUserId,
-    actorRole: 'USER',
-    currentStatus: CaseStatus.UNASSIGNED,
-    session,
-    auditMetadata: {
-      reason: 'WORKBASKET_PULL',
-    },
-    statusPatch: {
-      lastActionByXID: normalizedUserId,
-      lastActionAt: assignedAt,
-    },
-  });
 
   setImmediate(() => {
     CaseAudit.create({
@@ -209,6 +192,9 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
           assignedBy: assignerObjectId || user._id || null,
           queueType: 'PERSONAL', // Move from GLOBAL to PERSONAL queue
           assignedAt,
+          status: CaseStatus.ASSIGNED,
+          lastActionByXID: user.xID.toUpperCase(),
+          lastActionAt: assignedAt,
         },
       },
       { session }
@@ -241,33 +227,6 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
       queueType: 'PERSONAL',
       assignedAt,
     }, null, { session });
-
-    const validCases = updatedCases.filter(
-      (caseData) => caseData.status === CaseStatus.UNASSIGNED
-    );
-
-    if (validCases.length > 0) {
-      await Promise.all(validCases.map((caseData) => {
-        console.log('[STATUS_TRANSITION_DEBUG]', {
-          caseId: caseData.caseId,
-          actualStatus: caseData.status,
-        });
-
-        assertValidTransition(caseData.status, CASE_STATUSES.ASSIGNED);
-        return CaseService.updateStatus(caseData.caseId, CaseStatus.ASSIGNED, {
-          tenantId: firmId,
-          role: user.role,
-          userId: user.xID,
-          performedBy: user.email?.toLowerCase() || 'SYSTEM',
-          actorRole: user.role === 'Admin' ? 'ADMIN' : 'USER',
-          session,
-          statusPatch: {
-            lastActionByXID: user.xID.toUpperCase(),
-            lastActionAt: assignedAt,
-          },
-        });
-      }));
-    }
 
     await Promise.all(updatedCases.map((caseData) =>
       CaseHistory.create([{
