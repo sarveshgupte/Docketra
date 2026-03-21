@@ -24,26 +24,40 @@ export const MarketingLayout = () => {
 
   return (
     <div className="marketing-shell min-h-screen bg-white text-gray-900">
+      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:text-blue-700">
+        Skip to main content
+      </a>
+
       <header
         className={`sticky top-0 z-40 border-b backdrop-blur-md transition-[background-color,border-color,box-shadow] duration-300 ${
           isScrolled ? 'border-gray-200 bg-white/95 shadow-sm' : 'border-gray-100 bg-white/80'
         }`}
       >
-        <nav className={`marketing-container flex w-full items-center justify-between transition-[height] duration-300 ${isScrolled ? 'h-16' : 'h-20'}`}>
+        <nav
+          className={`marketing-container flex w-full items-center justify-between transition-[height] duration-300 ${isScrolled ? 'h-16' : 'h-20'}`}
+        >
           <Link to="/" className="text-xl font-semibold tracking-tight text-gray-900">
             Docketra
           </Link>
 
           <div className="flex items-center gap-6">
-            <NavLink to="/features" className={navLinkClass}>Features</NavLink>
-            <NavLink to="/pricing" className={navLinkClass}>Pricing</NavLink>
-            <NavLink to="/security" className={navLinkClass}>Security</NavLink>
-            <NavLink to="/about" className={navLinkClass}>About</NavLink>
+            <NavLink to="/features" className={navLinkClass}>
+              Features
+            </NavLink>
+            <NavLink to="/pricing" className={navLinkClass}>
+              Pricing
+            </NavLink>
+            <NavLink to="/security" className={navLinkClass}>
+              Security
+            </NavLink>
+            <NavLink to="/about" className={navLinkClass}>
+              About
+            </NavLink>
           </div>
         </nav>
       </header>
 
-      <main className="w-full">
+      <main id="main" className="w-full">
         <AnimatePresence mode="wait" initial={false}>
           <PageWrapper key={location.pathname}>
             <Outlet />
@@ -54,17 +68,84 @@ export const MarketingLayout = () => {
       <footer className="border-t border-gray-200 bg-white">
         <section className="w-full marketing-section">
           <div className="marketing-container">
-            <div className="flex flex-wrap items-center gap-6">
-              <Link to="/features" className="marketing-footer-link">Features</Link>
-              <Link to="/pricing" className="marketing-footer-link">Pricing</Link>
-              <Link to="/security" className="marketing-footer-link">Security</Link>
-              <Link to="/privacy" className="marketing-footer-link">Privacy</Link>
-              <Link to="/terms" className="marketing-footer-link">Terms</Link>
-              <Link to="/contact" className="marketing-footer-link">Contact</Link>
+            <div className="mb-8 grid grid-cols-2 gap-8 md:grid-cols-4">
+              <div>
+                <h4 className="mb-3 text-sm font-semibold text-gray-900">Product</h4>
+                <ul className="space-y-2 text-sm">
+                  <li>
+                    <Link to="/features" className="text-gray-600 hover:text-gray-900">
+                      Features
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/pricing" className="text-gray-600 hover:text-gray-900">
+                      Pricing
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/security" className="text-gray-600 hover:text-gray-900">
+                      Security
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="mb-3 text-sm font-semibold text-gray-900">Company</h4>
+                <ul className="space-y-2 text-sm">
+                  <li>
+                    <Link to="/about" className="text-gray-600 hover:text-gray-900">
+                      About
+                    </Link>
+                  </li>
+                  <li>
+                    <a href="mailto:hello@docketra.com" className="text-gray-600 hover:text-gray-900">
+                      Contact
+                    </a>
+                  </li>
+                  <li>
+                    <Link to="/contact" className="text-gray-600 hover:text-gray-900">
+                      Contact Center
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="mb-3 text-sm font-semibold text-gray-900">Legal</h4>
+                <ul className="space-y-2 text-sm">
+                  <li>
+                    <Link to="/privacy" className="text-gray-600 hover:text-gray-900">
+                      Privacy
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/terms" className="text-gray-600 hover:text-gray-900">
+                      Terms
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/security" className="text-gray-600 hover:text-gray-900">
+                      Security
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="mb-3 text-sm font-semibold text-gray-900">Contact</h4>
+                <p className="text-sm text-gray-600">
+                  <a href="mailto:hello@docketra.com" className="hover:text-gray-900">
+                    hello@docketra.com
+                  </a>
+                </p>
+              </div>
             </div>
 
-            <div className="mt-8 border-t border-gray-200 pt-6 text-xs text-gray-500">
-              <p>© 2026 GUPTE ENTERPRISES (OPC) PRIVATE LIMITED</p>
+            <div className="border-t border-gray-200 pt-6">
+              <p className="text-xs text-gray-500">
+                © 2026 GUPTE ENTERPRISES (OPC) PRIVATE LIMITED. All rights reserved. Docketra is in early development.
+              </p>
             </div>
           </div>
         </section>
