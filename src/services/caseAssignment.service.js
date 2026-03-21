@@ -4,6 +4,7 @@ const CaseAudit = require('../models/CaseAudit.model');
 const mongoose = require('mongoose');
 const { CaseRepository } = require('../repositories');
 const CaseStatus = require('../domain/case/caseStatus');
+const { assertValidTransition, CASE_STATUSES } = require('../domain/case/caseStateMachine');
 const CaseService = require('./case.service');
 
 /**
@@ -13,7 +14,7 @@ const CaseService = require('./case.service');
  * - Atomic assignment (prevents race conditions)
  * - xID-based ownership
  * - Queue type management (GLOBAL → PERSONAL)
- * - Status transitions (UNASSIGNED → OPEN)
+ * - Status transitions (UNASSIGNED → ASSIGNED)
  * - Audit trail creation
  * 
  * All case assignment operations must go through this service to ensure
@@ -26,6 +27,8 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObject
   if (!caseId || !tenantId || !userId) {
     throw new Error('caseId, tenantId, and userId are required');
   }
+
+  assertValidTransition(CaseStatus.UNASSIGNED, CASE_STATUSES.ASSIGNED);
 
   const assignedAt = new Date();
   const normalizedUserId = userId.toUpperCase();
@@ -63,7 +66,7 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObject
     };
   }
 
-  await CaseService.updateStatus(caseId, CaseStatus.OPEN, {
+  await CaseService.updateStatus(caseId, CaseStatus.ASSIGNED, {
     tenantId,
     userId: normalizedUserId,
     performedBy: normalizedUserId,
@@ -112,7 +115,7 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObject
  * Atomically assigns a case to a user with:
  * - assignedTo = userXID
  * - queueType = PERSONAL
- * - status = OPEN
+ * - status = ASSIGNED
  * - assignedAt = now
  * 
  * This is the CANONICAL way to pull cases from the global worklist.
@@ -250,7 +253,8 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
           actualStatus: caseData.status,
         });
 
-        return CaseService.updateStatus(caseData.caseId, CaseStatus.OPEN, {
+        assertValidTransition(caseData.status, CASE_STATUSES.ASSIGNED);
+        return CaseService.updateStatus(caseData.caseId, CaseStatus.ASSIGNED, {
           tenantId: firmId,
           role: user.role,
           userId: user.xID,
