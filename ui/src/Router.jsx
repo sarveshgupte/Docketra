@@ -28,6 +28,7 @@ const CreateCasePage = lazyPage(() => import('./pages/CreateCasePage'), 'CreateC
 const ProfilePage = lazyPage(() => import('./pages/ProfilePage'), 'ProfilePage');
 const AdminPage = lazyPage(() => import('./pages/AdminPage'), 'AdminPage');
 const FirmSettingsPage = lazyPage(() => import('./pages/FirmSettingsPage'), 'FirmSettingsPage');
+const StorageSettingsPage = lazyPage(() => import('./pages/StorageSettingsPage'), 'StorageSettingsPage');
 const PlatformDashboard = lazyPage(() => import('./pages/PlatformDashboard'), 'PlatformDashboard');
 const FirmsManagement = lazyPage(() => import('./pages/FirmsManagement'), 'FirmsManagement');
 const ReportsDashboard = lazyPage(() => import('./pages/reports/ReportsDashboard'), 'ReportsDashboard');
@@ -289,6 +290,14 @@ export const Router = () => {
               element={(
                 <ProtectedRoute requireAdmin>
                   <FirmSettingsPage />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="storage-settings"
+              element={(
+                <ProtectedRoute requireAdmin>
+                  <StorageSettingsPage />
                 </ProtectedRoute>
               )}
             />

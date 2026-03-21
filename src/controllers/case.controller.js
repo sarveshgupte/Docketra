@@ -1015,6 +1015,8 @@ const cloneCase = async (req, res) => {
           firmId: newCase.firmId,
           fileName: attachment.fileName,
           driveFileId: newDriveFileId,
+          storageProvider: 'google-drive',
+          storageFileId: newDriveFileId,
           size: fileSize,
           mimeType: fileMimeType,
           description: attachment.description,
