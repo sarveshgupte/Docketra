@@ -322,3 +322,15 @@
   0% { background-position: 100% 50%; }
   100% { background-position: 0 50%; }
 }
+
+.gradient-text {
+  background: linear-gradient(90deg, #2563eb 0%, #7c3aed 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.highlight-accent {
+  color: #2563eb;
+  font-weight: 700;
+}
