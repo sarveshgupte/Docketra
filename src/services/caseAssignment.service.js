@@ -4,7 +4,6 @@ const CaseAudit = require('../models/CaseAudit.model');
 const mongoose = require('mongoose');
 const { CaseRepository } = require('../repositories');
 const CaseStatus = require('../domain/case/caseStatus');
-const CaseService = require('./case.service');
 
 /**
  * Case Assignment Service
@@ -12,8 +11,7 @@ const CaseService = require('./case.service');
  * Provides centralized case assignment operations with:
  * - Atomic assignment (prevents race conditions)
  * - xID-based ownership
- * - Queue type management (GLOBAL → PERSONAL)
- * - Status transitions (UNASSIGNED → OPEN)
+ * - Status transitions (UNASSIGNED → ASSIGNED)
  * - Audit trail creation
  * 
  * All case assignment operations must go through this service to ensure
@@ -29,7 +27,7 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObject
 
   const assignedAt = new Date();
   const normalizedUserId = userId.toUpperCase();
-  const result = await Case.updateOne(
+  const updatedCase = await Case.findOneAndUpdate(
     {
       caseId,
       firmId: tenantId,
@@ -44,13 +42,16 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObject
         assignedAt,
         assignedTo: assigneeObjectId || null,
         assignedBy: assignerObjectId || assigneeObjectId || null,
-        queueType: 'PERSONAL',
+        status: CaseStatus.ASSIGNED,
       },
     },
-    session ? { session } : {}
+    {
+      new: true,
+      ...(session ? { session } : {}),
+    }
   );
 
-  if (result.modifiedCount !== 1) {
+  if (!updatedCase) {
     console.warn('[AtomicPullConflict]', {
       caseId,
       tenantId,
@@ -63,23 +64,6 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObject
     };
   }
 
-  await CaseService.updateStatus(caseId, CaseStatus.OPEN, {
-    tenantId,
-    userId: normalizedUserId,
-    performedBy: normalizedUserId,
-    performedByXID: normalizedUserId,
-    actorRole: 'USER',
-    currentStatus: CaseStatus.UNASSIGNED,
-    session,
-    auditMetadata: {
-      reason: 'WORKBASKET_PULL',
-    },
-    statusPatch: {
-      lastActionByXID: normalizedUserId,
-      lastActionAt: assignedAt,
-    },
-  });
-
   setImmediate(() => {
     CaseAudit.create({
       caseId,
@@ -89,6 +73,8 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObject
       metadata: {
         previousValue: null,
         newValue: normalizedUserId,
+        fromStatus: CaseStatus.UNASSIGNED,
+        toStatus: CaseStatus.ASSIGNED,
         tenantId,
         timestamp: assignedAt,
       },
@@ -111,8 +97,7 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObject
  * 
  * Atomically assigns a case to a user with:
  * - assignedTo = userXID
- * - queueType = PERSONAL
- * - status = OPEN
+ * - status = ASSIGNED
  * - assignedAt = now
  * 
  * This is the CANONICAL way to pull cases from the global worklist.
@@ -204,8 +189,10 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
           assignedToXID: user.xID.toUpperCase(), // CANONICAL: Store xID in assignedToXID
           assignedTo: user._id || null,
           assignedBy: assignerObjectId || user._id || null,
-          queueType: 'PERSONAL', // Move from GLOBAL to PERSONAL queue
           assignedAt,
+          status: CaseStatus.ASSIGNED,
+          lastActionByXID: user.xID.toUpperCase(),
+          lastActionAt: assignedAt,
         },
       },
       { session }
@@ -235,35 +222,8 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
       firmId,
       caseId: { $in: caseIds },
       assignedToXID: user.xID.toUpperCase(),
-      queueType: 'PERSONAL',
       assignedAt,
     }, null, { session });
-
-    const validCases = updatedCases.filter(
-      (caseData) => caseData.status === CaseStatus.UNASSIGNED
-    );
-
-    if (validCases.length > 0) {
-      await Promise.all(validCases.map((caseData) => {
-        console.log('[STATUS_TRANSITION_DEBUG]', {
-          caseId: caseData.caseId,
-          actualStatus: caseData.status,
-        });
-
-        return CaseService.updateStatus(caseData.caseId, CaseStatus.OPEN, {
-          tenantId: firmId,
-          role: user.role,
-          userId: user.xID,
-          performedBy: user.email?.toLowerCase() || 'SYSTEM',
-          actorRole: user.role === 'Admin' ? 'ADMIN' : 'USER',
-          session,
-          statusPatch: {
-            lastActionByXID: user.xID.toUpperCase(),
-            lastActionAt: assignedAt,
-          },
-        });
-      }));
-    }
 
     await Promise.all(updatedCases.map((caseData) =>
       CaseHistory.create([{
