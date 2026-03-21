@@ -14,7 +14,7 @@ const categoryRepository = require('../repositories/category.repository');
 const { detectDuplicates, generateDuplicateOverrideComment } = require('../services/clientDuplicateDetector');
 const { CASE_CATEGORIES, CASE_LOCK_CONFIG, COMMENT_PREVIEW_LENGTH, CLIENT_STATUS } = require('../config/constants');
 const CaseStatus = require('../domain/case/caseStatus');
-const { assertValidTransition, CASE_STATUSES } = require('../domain/case/caseStateMachine');
+const { assertValidTransition } = require('../domain/case/caseStateMachine');
 const { isProduction } = require('../config/config');
 const { logCaseListViewed, logAdminAction } = require('../services/auditLog.service');
 const caseActionService = require('../services/caseAction.service');
@@ -1188,11 +1188,7 @@ const updateCaseStatus = async (req, res) => {
       });
     }
 
-    if (
-      normalizedStatus === CASE_STATUSES.ASSIGNED ||
-      normalizedStatus === CASE_STATUSES.IN_PROGRESS ||
-      normalizedStatus === CASE_STATUSES.RESOLVED
-    ) {
+    if (normalizedStatus !== CaseStatus.DRAFT && normalizedStatus !== CaseStatus.SUBMITTED) {
       assertValidTransition(caseData.status, normalizedStatus);
     }
 

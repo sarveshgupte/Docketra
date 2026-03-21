@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 const assert = require('assert');
-const { canTransition, normalizeStatus } = require('../src/domain/case/caseStateMachine');
+const { canTransition, normalizeStatus, assertValidTransition } = require('../src/domain/case/caseStateMachine');
 const CaseStatus = require('../src/domain/case/caseStatus');
 
 function testValidTransitions() {
@@ -14,7 +14,8 @@ function testValidTransitions() {
   assert.strictEqual(canTransition(CaseStatus.OPEN, CaseStatus.RESOLVED), true);
   assert.strictEqual(canTransition(CaseStatus.PENDED, CaseStatus.OPEN), true);
   assert.strictEqual(canTransition(CaseStatus.FILED, CaseStatus.RESOLVED), true);
-  assert.strictEqual(canTransition(CaseStatus.UNASSIGNED, CaseStatus.OPEN), true);
+  assert.strictEqual(canTransition(CaseStatus.UNASSIGNED, CaseStatus.ASSIGNED), true);
+  assert.strictEqual(canTransition(CaseStatus.ASSIGNED, CaseStatus.IN_PROGRESS), true);
   assert.strictEqual(canTransition(CaseStatus.PENDING_ALIAS, CaseStatus.OPEN), true);
 }
 
@@ -30,6 +31,15 @@ function testInvalidTransitions() {
 
 function testStatusNormalization() {
   assert.strictEqual(normalizeStatus('Pending'), CaseStatus.PENDED);
+  assert.strictEqual(normalizeStatus(CaseStatus.OPEN), CaseStatus.OPEN);
+}
+
+function testAssertValidTransition() {
+  assert.strictEqual(assertValidTransition(CaseStatus.UNASSIGNED, CaseStatus.ASSIGNED), true);
+  assert.throws(
+    () => assertValidTransition(CaseStatus.UNASSIGNED, CaseStatus.RESOLVED),
+    (error) => error && error.code === 'INVALID_CASE_TRANSITION'
+  );
 }
 
 function run() {
@@ -37,6 +47,7 @@ function run() {
     testValidTransitions();
     testInvalidTransitions();
     testStatusNormalization();
+    testAssertValidTransition();
     console.log('Case state machine transition tests passed.');
   } catch (err) {
     console.error('Case state machine transition tests failed:', err);
