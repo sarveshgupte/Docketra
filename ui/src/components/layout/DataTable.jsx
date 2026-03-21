@@ -1,4 +1,5 @@
 import React from 'react';
+import { SortableTableHeader } from '../ui/SortableTableHeader';
 import './layoutPrimitives.css';
 
 export const DataTable = ({
@@ -31,12 +32,11 @@ export const DataTable = ({
     }
   };
 
-  const handleSortToggle = (column) => {
-    if (!column.sortable || typeof onSortChange !== 'function') {
+  const handleSortToggle = (nextSortState) => {
+    if (typeof onSortChange !== 'function') {
       return;
     }
-    const nextDirection = sortState?.key === column.key && sortState.direction === 'asc' ? 'desc' : 'asc';
-    onSortChange({ key: column.key, direction: nextDirection });
+    onSortChange(nextSortState);
   };
 
   return (
@@ -74,12 +74,12 @@ export const DataTable = ({
             {columns.map((column) => (
               <th key={column.key} className={column.align === 'right' ? 'data-table__cell--right' : ''}>
                 {column.sortable ? (
-                  <button type="button" className="data-table__sort" onClick={() => handleSortToggle(column)}>
-                    <span>{column.header}</span>
-                    <span className="data-table__sort-indicator" aria-hidden="true">
-                      {sortState?.key === column.key ? (sortState.direction === 'asc' ? '↑' : '↓') : '↕'}
-                    </span>
-                  </button>
+                  <SortableTableHeader
+                    column={column.key}
+                    label={column.header}
+                    sortState={sortState}
+                    onSortChange={handleSortToggle}
+                  />
                 ) : (
                   column.header
                 )}
