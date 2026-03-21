@@ -17,10 +17,8 @@ import { Modal } from '../components/common/Modal';
 import { ClientFactSheetModal } from '../components/common/ClientFactSheetModal';
 import { ActionConfirmModal } from '../components/common/ActionConfirmModal';
 import { SaveIndicator } from '../components/ui/SaveIndicator';
-import { ActivityItem } from '../components/ui/ActivityItem';
 import { AuditMetadata } from '../components/ui/AuditMetadata';
 import { EmptyState } from '../components/ui/EmptyState';
-import { CaseHeader } from '../components/ui/CaseHeader';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
 import { useToast } from '../hooks/useToast';
@@ -28,8 +26,11 @@ import { caseService } from '../services/caseService';
 import { clientService } from '../services/clientService';
 import { formatDateTime } from '../utils/formatDateTime';
 import { formatClientDisplay } from '../utils/formatters';
-import { USER_ROLES } from '../utils/constants';
+import { USER_ROLES, CASE_DETAIL_TABS, VALID_CASE_DETAIL_TAB_NAMES } from '../utils/constants';
 import { AuditTimelineDrawer } from '../components/common/AuditTimelineDrawer';
+import { StickyTabs } from '../components/common/StickyTabs';
+import { CaseDetailHeader } from '../components/case/CaseDetailHeader';
+import { AuditTimeline } from '../components/common/AuditTimeline';
 import './CaseDetailPage.css';
 
 /**
@@ -104,7 +105,9 @@ export const CaseDetailPage = () => {
   const historySectionRef = useRef(null);
   const commentsListRef = useRef(null);
   const commentComposerId = `case-comment-composer-${caseId}`;
-  const [activeSection, setActiveSection] = useState('overview');
+  const queryTab = new URLSearchParams(location.search).get('tab');
+  const initialTab = VALID_CASE_DETAIL_TAB_NAMES.includes(queryTab) ? queryTab : CASE_DETAIL_TABS.OVERVIEW;
+  const [activeSection, setActiveSection] = useState(initialTab);
   const [isEditingOverview, setIsEditingOverview] = useState(false);
   const [overviewDraft, setOverviewDraft] = useState({ category: '', description: '' });
   // Confirm modal state (replaces window.confirm)
@@ -232,6 +235,14 @@ export const CaseDetailPage = () => {
     return () => observer.disconnect();
   }, [loading]);
 
+
+  useEffect(() => {
+    const tabFromUrl = new URLSearchParams(location.search).get('tab');
+    if (VALID_CASE_DETAIL_TAB_NAMES.includes(tabFromUrl) && tabFromUrl !== activeSection) {
+      setActiveSection(tabFromUrl);
+      setTimeout(() => scrollToSection(tabFromUrl), 80);
+    }
+  }, [location.search, activeSection]);
   useEffect(() => {
     const timer = setInterval(() => {
       if (!newComment) return;
@@ -738,16 +749,17 @@ export const CaseDetailPage = () => {
 
   const scrollToSection = (key) => {
     const sectionMap = {
-      overview: overviewSectionRef,
-      comments: commentsSectionRef,
-      attachments: attachmentsSectionRef,
-      history: historySectionRef,
+      [CASE_DETAIL_TABS.OVERVIEW]: overviewSectionRef,
+      [CASE_DETAIL_TABS.COMMENTS]: commentsSectionRef,
+      [CASE_DETAIL_TABS.ATTACHMENTS]: attachmentsSectionRef,
+      [CASE_DETAIL_TABS.HISTORY]: historySectionRef,
     };
+    setActiveSection(key);
     sectionMap[key]?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const handleScrollToComments = () => {
-    scrollToSection('comments');
+    scrollToSection(CASE_DETAIL_TABS.COMMENTS);
     window.setTimeout(() => {
       document.getElementById(commentComposerId)?.focus?.();
     }, 250);
@@ -825,17 +837,14 @@ export const CaseDetailPage = () => {
             </Button>
           </div>
         )}
-        {/* UPDATED: Sticky case header */}
-        <CaseHeader
+        <CaseDetailHeader
           caseId={formatDocketId(caseInfo.caseId || caseId)}
-          caseName={caseInfo.title || caseInfo.category}
+          title={caseInfo.title || caseInfo.category}
           status={toLifecycleStage(caseInfo?.status)}
-          showSave={canEditOverview && isEditingOverview}
-          onSave={handleSaveOverview}
-          disableSave={!hasOverviewChanges}
-          onAddComment={handleScrollToComments}
+          lastUpdated={formatDateTime(caseInfo.updatedAt)}
           onOpenAudit={() => setAuditSidebarOpen(true)}
-          saveLabel="Save Overview"
+          onAddComment={handleScrollToComments}
+          onCloseCase={() => setShowFileModal(true)}
         />
         <div className="case-detail__header-actions case-detail__header-actions--top">
           <Button variant="outline" onClick={handleShowClientFactSheet} disabled={loadingFactSheet}>Fact Sheet</Button>
@@ -847,23 +856,16 @@ export const CaseDetailPage = () => {
           {caseInfo?.stage?.requiresApproval === true && isViewOnlyMode && <Badge variant="warning">Role Restricted Action</Badge>}
         </div>
 
-        <div className="case-detail__section-tabs" role="tablist" aria-label="Case detail sections">
-          {[
-            { key: 'overview', label: 'Overview' },
-            { key: 'comments', label: 'Comments' },
-            { key: 'attachments', label: 'Files' },
-            { key: 'history', label: 'History' },
-          ].map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              className={`case-detail__section-tab${activeSection === tab.key ? ' is-active' : ''}`}
-              onClick={() => scrollToSection(tab.key)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        <StickyTabs
+          tabs={[
+            { name: CASE_DETAIL_TABS.OVERVIEW, label: 'Overview' },
+            { name: CASE_DETAIL_TABS.COMMENTS, label: 'Comments', badge: comments.length || null },
+            { name: CASE_DETAIL_TABS.ATTACHMENTS, label: 'Files', badge: attachments.length || null },
+            { name: CASE_DETAIL_TABS.HISTORY, label: 'History' },
+          ]}
+          defaultTab={CASE_DETAIL_TABS.OVERVIEW}
+          onTabChange={scrollToSection}
+        />
         {actionConfirmation ? <div className="case-detail__confirmation">{actionConfirmation}</div> : null}
         {actionError ? (
           <div className="neo-alert neo-alert--danger case-detail__alert">
@@ -1045,14 +1047,7 @@ export const CaseDetailPage = () => {
             <Card className="case-detail__section case-section" id="history" ref={historySectionRef}>
               <h2 className="neo-section__header">History / Audit</h2>
               <div className="case-detail__history-events">
-                {timelineEvents.length ? timelineEvents.map((entry) => (
-                  <ActivityItem
-                    key={entry._id || entry.id || `${entry.timestamp || entry.createdAt}-${entry.actionType || entry.action || 'updated'}`}
-                    user={entry.performedByName || entry.actorXID || entry.performedByXID || entry.createdByName || 'System'}
-                    action={entry.actionType || entry.action || 'Updated'}
-                    timestamp={entry.timestamp || entry.createdAt}
-                  />
-                )) : <EmptyState title="No activity yet" description="Audit events will appear here once actions are performed." />}
+                <AuditTimeline events={timelineEvents} />
               </div>
               <h3 className="case-detail__subheading">Related Dockets</h3>
               {loadingClientDockets ? <p className="case-detail__empty-note">Loading docket history...</p> : (

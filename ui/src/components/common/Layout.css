@@ -640,3 +640,117 @@
   font-weight: 500;
   color: #991B1B;
 }
+
+.enterprise-sidebar__section {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.enterprise-sidebar__section--sticky {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #fff;
+}
+
+.enterprise-sidebar__section-header {
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.enterprise-sidebar__section-title {
+  text-transform: uppercase;
+}
+
+.enterprise-sidebar__section-chevron {
+  transition: transform var(--transition-fast);
+}
+
+.enterprise-sidebar__section-chevron.is-open {
+  transform: rotate(90deg);
+}
+
+.enterprise-sidebar__section-items {
+  padding-bottom: 8px;
+}
+
+.enterprise-sidebar__nav-badge {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 0 6px;
+}
+
+.command-palette__overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  border: 0;
+  z-index: 900;
+}
+
+.command-palette {
+  position: fixed;
+  top: 15vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(640px, calc(100vw - 32px));
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg);
+  z-index: 901;
+  overflow: hidden;
+}
+
+.command-palette__input {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  padding: 14px 16px;
+}
+
+.command-palette__results {
+  list-style: none;
+  margin: 0;
+  padding: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.command-palette__item {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 8px;
+  border-radius: 6px;
+}
+
+.command-palette__item:hover {
+  background: var(--color-bg-app);
+}
+
+.command-palette__empty {
+  color: var(--text-muted);
+  padding: 12px 8px;
+  font-size: var(--font-size-sm);
+}
