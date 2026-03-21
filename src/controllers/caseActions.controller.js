@@ -67,7 +67,9 @@ const resolveCase = async (req, res) => {
     }
     
     if (error.message.startsWith('Illegal transition:') ||
-        error.message === 'Resolved cases cannot be modified') {
+        error.message === 'Resolved cases cannot be modified' ||
+        error.message === 'Case must be IN_PROGRESS before resolving' ||
+        error.code === 'INVALID_CASE_TRANSITION') {
       return res.status(400).json({
         success: false,
         message: error.message,

@@ -1,5 +1,7 @@
 const CaseStatus = Object.freeze({
   UNASSIGNED: 'UNASSIGNED',
+  ASSIGNED: 'ASSIGNED',
+  IN_PROGRESS: 'IN_PROGRESS',
   OPEN: 'OPEN',
   PENDED: 'PENDED',
   RESOLVED: 'RESOLVED',
