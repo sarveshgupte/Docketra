@@ -11,7 +11,6 @@ const CaseStatus = require('../domain/case/caseStatus');
  * Provides centralized case assignment operations with:
  * - Atomic assignment (prevents race conditions)
  * - xID-based ownership
- * - Queue type management (GLOBAL → PERSONAL)
  * - Status transitions (UNASSIGNED → ASSIGNED)
  * - Audit trail creation
  * 
@@ -43,7 +42,6 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObject
         assignedAt,
         assignedTo: assigneeObjectId || null,
         assignedBy: assignerObjectId || assigneeObjectId || null,
-        queueType: 'PERSONAL',
         status: CaseStatus.ASSIGNED,
       },
     },
@@ -75,6 +73,8 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObject
       metadata: {
         previousValue: null,
         newValue: normalizedUserId,
+        fromStatus: CaseStatus.UNASSIGNED,
+        toStatus: CaseStatus.ASSIGNED,
         tenantId,
         timestamp: assignedAt,
       },
@@ -97,7 +97,6 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObject
  * 
  * Atomically assigns a case to a user with:
  * - assignedTo = userXID
- * - queueType = PERSONAL
  * - status = ASSIGNED
  * - assignedAt = now
  * 
@@ -190,7 +189,6 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
           assignedToXID: user.xID.toUpperCase(), // CANONICAL: Store xID in assignedToXID
           assignedTo: user._id || null,
           assignedBy: assignerObjectId || user._id || null,
-          queueType: 'PERSONAL', // Move from GLOBAL to PERSONAL queue
           assignedAt,
           status: CaseStatus.ASSIGNED,
           lastActionByXID: user.xID.toUpperCase(),
@@ -224,7 +222,6 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
       firmId,
       caseId: { $in: caseIds },
       assignedToXID: user.xID.toUpperCase(),
-      queueType: 'PERSONAL',
       assignedAt,
     }, null, { session });
 
