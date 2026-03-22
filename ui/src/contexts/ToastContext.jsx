@@ -10,20 +10,29 @@ import { SESSION_KEYS } from '../utils/constants';
 
 export const ToastContext = createContext(null);
 
+const TOAST_META = {
+  success: { icon: '✅', borderColor: '#D1D5DB' },
+  warning: { icon: '⚠️', borderColor: '#FDE68A' },
+  info: { icon: 'ℹ️', borderColor: '#CBD5E1' },
+  danger: { icon: '🔴', borderColor: '#FECACA' },
+};
+
 export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
+
+  const removeToast = useCallback((id) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  }, []);
 
   const addToast = useCallback((message, type = 'info', persistent = false) => {
     const id = Date.now();
     const toast = { id, message, type };
-    
+
     setToasts((prev) => {
-      // Limit to 3 toasts at a time
       const newToasts = [...prev, toast];
       return newToasts.slice(-3);
     });
-    
-    // Auto remove based on type
+
     if (!persistent) {
       const timeoutMap = {
         success: 4000,
@@ -32,20 +41,16 @@ export const ToastProvider = ({ children }) => {
         danger: 4000,
       };
       const timeout = timeoutMap[type] ?? 0;
-      
+
       if (timeout > 0) {
         setTimeout(() => {
           removeToast(id);
         }, timeout);
       }
     }
-    
-    return id;
-  }, []);
 
-  const removeToast = useCallback((id) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
-  }, []);
+    return id;
+  }, [removeToast]);
 
   const showSuccess = useCallback((message) => {
     return addToast(message, 'success', false);
@@ -104,73 +109,82 @@ export const ToastProvider = ({ children }) => {
   );
 };
 
-const TOAST_CONTAINER_TOP_OFFSET = '72px';
-
 const ToastContainer = ({ toasts, removeToast }) => {
   if (toasts.length === 0 || typeof document === 'undefined') return null;
 
   return createPortal((
-    <div
-      style={{
-        position: 'fixed',
-        top: TOAST_CONTAINER_TOP_OFFSET,
-        right: '24px',
-        zIndex: 9999,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-        alignItems: 'flex-end',
-        width: 'min(320px, calc(100vw - 32px))',
-        pointerEvents: 'none',
-      }}
-    >
-      {toasts.map((toast) => (
-        <div
-          key={toast.id}
-          className={`neo-alert neo-alert--${toast.type}`}
-          style={{
-            width: '100%',
-            maxWidth: '320px',
-            wordBreak: 'break-word',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            animation: 'toastSlideIn 0.2s ease-out',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-            pointerEvents: 'auto',
-          }}
-        >
-          <span style={{ flex: 1, paddingRight: '12px' }}>{toast.message}</span>
-          <button
-            onClick={() => removeToast(toast.id)}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '20px',
-              lineHeight: '1',
-              padding: '0 4px',
-              color: 'inherit',
-              opacity: 0.6,
-            }}
-            aria-label="Close notification"
-          >
-            ×
-          </button>
-        </div>
-      ))}
+    <>
+      <div
+        style={{
+          position: 'fixed',
+          right: 'var(--space-4)',
+          bottom: 'var(--space-4)',
+          zIndex: 9999,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 'var(--space-2)',
+          alignItems: 'flex-end',
+          width: 'min(360px, calc(100vw - 32px))',
+          pointerEvents: 'none',
+        }}
+      >
+        {toasts.map((toast) => {
+          const meta = TOAST_META[toast.type] || TOAST_META.info;
+
+          return (
+            <div
+              key={toast.id}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px',
+                padding: '10px 12px',
+                borderRadius: 'var(--radius-md)',
+                border: `1px solid ${meta.borderColor}`,
+                background: 'var(--color-surface)',
+                color: 'var(--text-main)',
+                wordBreak: 'break-word',
+                pointerEvents: 'auto',
+                animation: 'toastSlideIn 160ms ease-out',
+              }}
+              role="status"
+              aria-live="polite"
+            >
+              <span aria-hidden="true" style={{ lineHeight: 1.2 }}>{meta.icon}</span>
+              <span style={{ flex: 1, fontSize: 'var(--font-size-sm)', lineHeight: 1.4 }}>{toast.message}</span>
+              <button
+                type="button"
+                onClick={() => removeToast(toast.id)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  lineHeight: 1,
+                  padding: 0,
+                }}
+                aria-label="Close notification"
+              >
+                ×
+              </button>
+            </div>
+          );
+        })}
+      </div>
       <style>{`
         @keyframes toastSlideIn {
           from {
-            transform: translateX(400px);
+            transform: translate3d(12px, 12px, 0);
             opacity: 0;
           }
           to {
-            transform: translateX(0);
+            transform: translate3d(0, 0, 0);
             opacity: 1;
           }
         }
       `}</style>
-    </div>
+    </>
   ), document.body);
 };

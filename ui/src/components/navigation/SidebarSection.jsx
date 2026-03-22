@@ -34,13 +34,15 @@ export const SidebarSection = ({
             <Link
               key={item.to}
               to={item.to}
-              className={`enterprise-sidebar__nav-link ${item.active ? 'active' : ''}`}
+              className={`enterprise-sidebar__nav-link ${item.active ? 'active' : ''} ${collapsed ? 'enterprise-sidebar__nav-link--collapsed' : ''}`}
               aria-current={item.active ? 'page' : undefined}
+              aria-label={collapsed ? item.label : undefined}
+              data-tooltip={collapsed ? item.label : undefined}
               title={collapsed ? item.label : undefined}
             >
               <span className="enterprise-sidebar__nav-icon" aria-hidden="true">{item.icon}</span>
-              <span className="enterprise-sidebar__nav-text">{item.label}</span>
-              <BadgeCount count={item.badge} />
+              {!collapsed ? <span className="enterprise-sidebar__nav-text">{item.label}</span> : null}
+              {!collapsed ? <BadgeCount count={item.badge} /> : null}
             </Link>
           ))}
         </div>

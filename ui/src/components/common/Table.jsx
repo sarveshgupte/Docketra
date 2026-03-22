@@ -1,14 +1,14 @@
 /**
  * Enterprise Table Component
- * Features: sticky header, zebra striping, hover states, action column
+ * Features: compact density, sticky header, subtle hover states, action column
  */
 
 import React from 'react';
 
-export const Table = ({ children, className = '' }) => {
+export const Table = ({ children, className = '', dense = true }) => {
   return (
-    <div className={`table-container ${className}`}>
-      <table className="table">
+    <div className={`table-container${dense ? ' table-container--dense' : ''} ${className}`.trim()}>
+      <table className={`table${dense ? ' table--dense' : ''}`.trim()}>
         {children}
       </table>
     </div>
@@ -25,9 +25,9 @@ export const TableBody = ({ children }) => {
 
 export const TableRow = ({ children, onClick, className = '' }) => {
   return (
-    <tr 
-      onClick={onClick} 
-      className={`${onClick ? 'cursor-pointer' : ''} ${className}`}
+    <tr
+      onClick={onClick}
+      className={`${onClick ? 'cursor-pointer table__row--interactive' : ''} ${className}`.trim()}
     >
       {children}
     </tr>
@@ -46,12 +46,12 @@ export const TableFooter = ({ children, colSpan }) => {
   return (
     <tfoot>
       <tr>
-        <td 
-          colSpan={colSpan} 
+        <td
+          colSpan={colSpan}
           className="text-sm border-t border-border-subtle"
-          style={{ 
-            padding: '12px var(--spacing-md)', 
-            color: 'var(--text-body)' 
+          style={{
+            padding: 'var(--space-2) var(--space-3)',
+            color: 'var(--text-body)',
           }}
         >
           {children}

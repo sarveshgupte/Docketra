@@ -8,7 +8,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
-import { useCommandPalette } from '../../hooks/useCommandPalette';
 import { SidebarSection } from '../navigation/SidebarSection';
 import { CommandPalette } from './CommandPalette';
 import { ErrorBoundary } from './ErrorBoundary';
@@ -128,7 +127,7 @@ export const Layout = ({ children }) => {
   const [workbasketCount, setWorkbasketCount] = useState('loading');
   const [worklistCount, setWorklistCount] = useState('loading');
   const [countsFetched, setCountsFetched] = useState(false);
-  const { isOpen: commandPaletteOpen, setIsOpen: setCommandPaletteOpen } = useCommandPalette();
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
   const profileDropdownRef = useRef(null);
 
@@ -347,6 +346,10 @@ export const Layout = ({ children }) => {
     },
   ].filter((section) => !section.hidden);
 
+  const toggleCommandPalette = useCallback(() => {
+    setCommandPaletteOpen((isOpen) => !isOpen);
+  }, []);
+
   const commandPaletteCommands = [
     { id: 'new-docket', label: 'New Docket', shortcut: '⌘N', action: () => navigate(`/app/firm/${currentFirmSlug}/cases/create`) },
     { id: 'workbasket', label: 'Go to Workbasket', shortcut: '⌘1', action: () => navigate(`/app/firm/${currentFirmSlug}/global-worklist`) },
@@ -370,16 +373,6 @@ export const Layout = ({ children }) => {
           .join(' ')}
         aria-label="Main navigation"
       >
-        {/* Collapse toggle (desktop) */}
-        <button
-          className="enterprise-sidebar__toggle"
-          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {sidebarCollapsed ? <IconChevronRight /> : <IconChevronLeft />}
-        </button>
-
         {/* Firm Badge */}
         <div className="enterprise-sidebar__firm">
           <div className="enterprise-sidebar__firm-icon" aria-hidden="true">{firmInitials}</div>
@@ -408,6 +401,20 @@ export const Layout = ({ children }) => {
 
         {/* Footer */}
         <div className="enterprise-sidebar__footer">
+          <button
+            type="button"
+            className="enterprise-sidebar__footer-toggle"
+            onClick={() => setSidebarCollapsed((value) => !value)}
+            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            <span className="enterprise-sidebar__footer-toggle-icon" aria-hidden="true">
+              {sidebarCollapsed ? <IconChevronRight /> : <IconChevronLeft />}
+            </span>
+            <span className="enterprise-sidebar__footer-toggle-label">
+              {sidebarCollapsed ? 'Expand' : 'Collapse'}
+            </span>
+          </button>
           <div className="enterprise-sidebar__version">Docketra v1.0</div>
         </div>
       </aside>
@@ -454,6 +461,7 @@ export const Layout = ({ children }) => {
               aria-label="Search clients, dockets, documents"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setCommandPaletteOpen(true)}
             />
             <kbd className="enterprise-header__omnibar-shortcut" aria-hidden="true">⌘K</kbd>
             {(searchQuery.trim().length >= 2 || searching) && (
@@ -530,6 +538,7 @@ export const Layout = ({ children }) => {
         <CommandPalette
           isOpen={commandPaletteOpen}
           onClose={() => setCommandPaletteOpen(false)}
+          onToggle={toggleCommandPalette}
           commands={commandPaletteCommands}
         />
       </ErrorBoundary>
