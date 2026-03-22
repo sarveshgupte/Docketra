@@ -938,70 +938,32 @@ export const CaseDetailPage = () => {
           </div>
         )}
 
-        <div className="case-detail-layout-grid grid grid-cols-1 gap-8 lg:grid-cols-[300px_minmax(0,1fr)]">
-          <aside className="case-detail-sidebar" aria-label="Case navigation and summary">
-            <div className="case-detail-sidebar__section">
-              <p className="case-detail-sidebar__label">Case Snapshot</p>
-              <div className="case-detail-sidebar__stack space-y-6">
-                <div className="field-group">
+        <div className="case-detail-layout-grid flex w-full flex-col gap-6 lg:flex-row">
+          <main className="case-detail-main flex-1 min-w-0">
+            <section className="case-card" aria-labelledby="snapshot-heading">
+              <div className="case-card__heading">
+                <h2 id="snapshot-heading">Case Snapshot</h2>
+              </div>
+              <div className="field-grid">
+                <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Client</span>
-                  <span className="field-value text-sm font-medium text-gray-900">{caseData.client ? formatClientDisplay(caseData.client, true) : '—'}</span>
+                  <span className="field-value text-sm font-medium text-gray-900 break-words">{caseData.client ? formatClientDisplay(caseData.client, true) : '—'}</span>
                 </div>
-                <div className="field-group">
+                <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Assigned To</span>
-                  <span className="field-value text-sm font-medium text-gray-900">{caseInfo?.assignedToName || caseInfo?.assignedToXID || 'Unassigned'}</span>
+                  <span className="field-value text-sm font-medium text-gray-900 break-words">{caseInfo?.assignedToName || caseInfo?.assignedToXID || 'Unassigned'}</span>
                 </div>
-                <div className="field-group">
+                <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Lifecycle</span>
                   <Badge status={caseInfo?.status} className="case-detail-status-badge">{toLifecycleStage(caseInfo?.status)}</Badge>
                 </div>
-                <div className="field-group">
+                <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Due Date</span>
-                  <span className="field-value text-sm font-medium text-gray-900">{caseInfo.dueDate ? formatDateTime(caseInfo.dueDate) : 'Not configured'}</span>
+                  <span className="field-value text-sm font-medium text-gray-900 break-words">{caseInfo.dueDate ? formatDateTime(caseInfo.dueDate) : 'Not configured'}</span>
                 </div>
               </div>
-            </div>
+            </section>
 
-            <div className="case-detail-sidebar__section">
-              <p className="case-detail-sidebar__label">Audit Metadata</p>
-              <div className="case-detail-sidebar__stack space-y-6">
-                <AuditMetadata
-                  className="case-detail__metadata-item"
-                  prefix="Created by"
-                  actor={caseInfo.createdByName || caseInfo.createdByXID || 'System'}
-                  timestamp={caseInfo.createdAt}
-                />
-                <AuditMetadata
-                  className="case-detail__metadata-item"
-                  prefix="Last updated by"
-                  actor={caseInfo.updatedByName || caseInfo.assignedToName || 'System'}
-                  timestamp={caseInfo.updatedAt}
-                />
-              </div>
-            </div>
-
-            <div className="case-detail-sidebar__section">
-              <p className="case-detail-sidebar__label">Related Dockets</p>
-              {loadingClientDockets ? <p className="case-detail__empty-note">Loading docket history...</p> : (
-                <div className="case-detail-related-list">
-                  {clientDockets.length ? clientDockets.map((row) => (
-                    <button
-                      key={formatDocketId(row.caseId)}
-                      type="button"
-                      className="case-detail-related-item"
-                      onClick={() => navigate(`/app/firm/${firmSlug}/cases/${row.caseId}`)}
-                    >
-                      <span className="case-detail-related-item__title">{formatDocketId(row.caseId)}</span>
-                      <span className="case-detail-related-item__meta">{row.category}</span>
-                      <span className="case-detail-related-item__meta">{formatDateTime(row.createdAt)}</span>
-                    </button>
-                  )) : <p className="case-detail__empty-note">No related dockets found.</p>}
-                </div>
-              )}
-            </div>
-          </aside>
-
-          <main className="case-detail-main">
             {activeSection === CASE_DETAIL_TABS.OVERVIEW && (
               <section className="case-card" aria-labelledby="overview-heading">
                 <div className="case-card__heading">
@@ -1013,7 +975,7 @@ export const CaseDetailPage = () => {
                   ) : null}
                 </div>
                 <div className="field-grid">
-                  <div className="field-group min-w-[300px]">
+                  <div className="field-group min-w-0">
                     <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Category</span>
                     {isEditingOverview ? (
                       <Input
@@ -1025,7 +987,7 @@ export const CaseDetailPage = () => {
                       <span className="field-value text-sm font-medium text-gray-900">{caseInfo.category}</span>
                     )}
                   </div>
-                  <div className="field-group min-w-[300px]">
+                  <div className="field-group min-w-0">
                     <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Current Lifecycle Stage</span>
                     <Badge status={caseInfo?.status} className="case-detail-status-badge">{toLifecycleStage(caseInfo?.status)}</Badge>
                   </div>
@@ -1040,7 +1002,7 @@ export const CaseDetailPage = () => {
                       aria-label="Case description"
                     />
                   ) : (
-                    <span className="field-value text-sm font-medium text-gray-900">{descriptionContent}</span>
+                    <span className="field-value case-detail__description-text whitespace-pre-wrap break-words text-sm font-medium text-gray-900">{descriptionContent}</span>
                   )}
                 </div>
                 {(canPerformLifecycleActions || canUnpend) && (
@@ -1223,6 +1185,48 @@ export const CaseDetailPage = () => {
             )}
           </main>
 
+          <aside className="case-detail-sidebar w-full lg:w-80 flex-shrink-0" aria-label="Audit history and related case details">
+            <div className="case-detail-sidebar__section">
+              <p className="case-detail-sidebar__label">Audit History</p>
+              <div className="case-detail-sidebar__stack space-y-6">
+                <AuditMetadata
+                  className="case-detail__metadata-item"
+                  prefix="Created by"
+                  actor={caseInfo.createdByName || caseInfo.createdByXID || 'System'}
+                  timestamp={caseInfo.createdAt}
+                />
+                <AuditMetadata
+                  className="case-detail__metadata-item"
+                  prefix="Last updated by"
+                  actor={caseInfo.updatedByName || caseInfo.assignedToName || 'System'}
+                  timestamp={caseInfo.updatedAt}
+                />
+              </div>
+              <div className="case-detail-history-list">
+                {timelineEvents.length ? <AuditTimeline events={timelineEvents.slice(0, 6)} /> : <p className="case-detail__empty-note">No audit history yet.</p>}
+              </div>
+            </div>
+
+            <div className="case-detail-sidebar__section">
+              <p className="case-detail-sidebar__label">Related Dockets</p>
+              {loadingClientDockets ? <p className="case-detail__empty-note">Loading docket history...</p> : (
+                <div className="case-detail-related-list">
+                  {clientDockets.length ? clientDockets.map((row) => (
+                    <button
+                      key={formatDocketId(row.caseId)}
+                      type="button"
+                      className="case-detail-related-item"
+                      onClick={() => navigate(`/app/firm/${firmSlug}/cases/${row.caseId}`)}
+                    >
+                      <span className="case-detail-related-item__title">{formatDocketId(row.caseId)}</span>
+                      <span className="case-detail-related-item__meta">{row.category}</span>
+                      <span className="case-detail-related-item__meta">{formatDateTime(row.createdAt)}</span>
+                    </button>
+                  )) : <p className="case-detail__empty-note">No related dockets found.</p>}
+                </div>
+              )}
+            </div>
+          </aside>
         </div>
 
         {/* ─── Modals (positioned outside split pane) ─────────────── */}

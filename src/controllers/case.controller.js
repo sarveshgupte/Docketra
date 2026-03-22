@@ -1310,12 +1310,10 @@ const getCaseByCaseId = async (req, res) => {
     // PR: Fix Case Visibility - Enhanced logging for debugging
     console.log(`[GET_CASE] Attempting to fetch case: caseId=${caseId}, firmId=${req.user.firmId}, userXID=${req.user.xID}`);
     
-    // Prefer direct caseId lookup for docket deep-links, scoped by firm.
-    // Fallback to identifier resolution for backward compatibility with internal IDs.
-    let caseData = await Case.findOne({
-      caseId,
-      firmId: req.user.firmId,
-    });
+    // Prefer repository-backed lookup for docket deep-links so encrypted fields
+    // are decrypted before reaching the UI. Fallback to identifier resolution
+    // for backward compatibility with internal IDs.
+    let caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
 
     if (!caseData) {
       try {
