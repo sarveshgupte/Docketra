@@ -299,10 +299,50 @@
 
 .ui-empty-state {
   display: grid;
-  gap: 12px;
-  padding: 24px;
-  border: 1px dashed var(--border-color, var(--color-border));
-  border-radius: 6px;
+  justify-items: start;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.ui-empty-state__icon {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  background: var(--layout-surface-muted);
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ui-empty-state__content {
+  display: grid;
+  gap: 4px;
+}
+
+.ui-empty-state__title {
+  margin: 0;
+  color: var(--text-main);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+}
+
+.ui-empty-state__description {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.ui-empty-state__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
 }
 
 .activity-item {

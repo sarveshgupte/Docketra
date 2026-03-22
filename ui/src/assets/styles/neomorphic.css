@@ -18,6 +18,7 @@
 
 .neo-card:hover,
 .neo-section:hover {
+  background: var(--layout-surface);
   border-color: var(--border-strong);
   box-shadow: none;
 }
@@ -41,6 +42,7 @@
   justify-content: center;
   gap: 6px;
   letter-spacing: 0.01em;
+  box-shadow: none;
 }
 
 .neo-button:hover:not(:disabled),
@@ -101,11 +103,17 @@
   font-family: var(--font-family);
   font-size: var(--font-size-sm);
   padding: var(--spacing-sm) var(--spacing-md);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
   width: 100%;
   outline: none;
   min-height: 38px;
   line-height: var(--line-height-normal);
+  box-shadow: none;
+}
+
+.neo-input:hover:not(:disabled) {
+  background: var(--layout-surface-muted);
+  border-color: var(--border-strong);
 }
 
 .neo-input:disabled {
@@ -121,24 +129,49 @@
 
 .neo-badge {
   background: var(--status-neutral-bg);
+  border: 1px solid var(--status-neutral-border, var(--color-border));
   border-radius: var(--radius-pill);
   color: var(--status-neutral-color);
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   font-size: var(--font-size-xs);
-  font-weight: 600;
-  padding: 4px 10px;
-  border: none;
-  letter-spacing: 0.02em;
+  font-weight: 500;
+  padding: 2px 8px;
+  letter-spacing: 0;
   white-space: nowrap;
+  box-shadow: none;
 }
 
-.neo-badge--success { color: var(--badge-resolved-color); background: var(--badge-resolved-bg); }
-.neo-badge--warning { color: var(--badge-pended-color); background: var(--badge-pended-bg); }
-.neo-badge--danger { color: var(--badge-unassigned-color); background: var(--badge-unassigned-bg); }
-.neo-badge--primary { color: var(--badge-open-color); background: var(--badge-open-bg); }
-.neo-badge--neutral { color: var(--badge-filed-color); background: var(--badge-filed-bg); }
+.neo-badge--success {
+  color: var(--badge-resolved-color);
+  background: var(--badge-resolved-bg);
+  border-color: var(--badge-resolved-border);
+}
+
+.neo-badge--warning {
+  color: var(--badge-pended-color);
+  background: var(--badge-pended-bg);
+  border-color: var(--badge-pended-border);
+}
+
+.neo-badge--danger {
+  color: var(--badge-unassigned-color);
+  background: var(--badge-unassigned-bg);
+  border-color: var(--badge-unassigned-border);
+}
+
+.neo-badge--primary {
+  color: var(--badge-open-color);
+  background: var(--badge-open-bg);
+  border-color: var(--badge-open-border);
+}
+
+.neo-badge--neutral {
+  color: var(--badge-filed-color);
+  background: var(--badge-filed-bg);
+  border-color: var(--badge-filed-border);
+}
 
 .neo-section__header {
   border-bottom: 1px solid var(--border-subtle);

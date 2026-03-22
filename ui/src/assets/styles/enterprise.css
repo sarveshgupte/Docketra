@@ -319,45 +319,39 @@
   
   .table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
   }
   
   .table thead {
-    background-color: var(--color-bg-app);
+    background-color: var(--color-surface);
     position: sticky;
     top: 0;
-    z-index: 1;
+    z-index: 10;
   }
   
   .table th {
     text-align: left;
-    padding: 12px var(--spacing-md);
+    padding: var(--space-2) var(--space-3);
     font-size: var(--font-size-xs);
     font-weight: 600;
-    color: var(--text-main);
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     border-bottom: 1px solid var(--color-border);
   }
   
   .table td {
-    padding: 12px var(--spacing-md);
+    padding: var(--space-2) var(--space-3);
     font-size: var(--font-size-sm);
     color: var(--text-body);
-    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+    line-height: 1.4;
   }
   
   .table tbody tr:hover td {
-    background-color: var(--color-primary-hover-bg);
+    background-color: var(--color-row-hover);
     cursor: pointer;
-  }
-  
-  .table tbody tr:nth-child(even) td {
-    background-color: rgba(247, 249, 252, 0.6);
-  }
-  
-  .table tbody tr:nth-child(even):hover td {
-    background-color: var(--color-primary-hover-bg);
   }
 
   /* Table empty state */

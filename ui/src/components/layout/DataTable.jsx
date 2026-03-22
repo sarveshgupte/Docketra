@@ -40,7 +40,7 @@ export const DataTable = ({
   };
 
   return (
-    <div className="data-table__wrapper">
+    <div className={`data-table__wrapper${dense ? ' data-table__wrapper--dense' : ''}`}>
       {hasToolbar ? (
         <div className="data-table__toolbar">
           <div className="data-table__toolbar-left">{toolbarLeft}</div>

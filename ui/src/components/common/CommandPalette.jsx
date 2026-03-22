@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
-export const CommandPalette = ({ isOpen, onClose, commands = [] }) => {
+export const CommandPalette = ({ isOpen, onClose, onToggle, commands = [] }) => {
   const [query, setQuery] = useState('');
   const inputRef = useRef(null);
 
@@ -10,16 +10,30 @@ export const CommandPalette = ({ isOpen, onClose, commands = [] }) => {
   }
 
   useEffect(() => {
+    const handleKeyDown = (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        onToggle?.();
+      }
+
+      if (event.key === 'Escape' && isOpen) {
+        event.preventDefault();
+        onClose?.();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose, onToggle]);
+
+  useEffect(() => {
     if (!isOpen) {
       setQuery('');
       return;
     }
 
-    const timer = setTimeout(() => {
-      inputRef.current?.focus();
-    }, 10);
-
-    return () => clearTimeout(timer);
+    inputRef.current?.focus();
+    inputRef.current?.select();
   }, [isOpen]);
 
   const validCommands = useMemo(
@@ -45,15 +59,19 @@ export const CommandPalette = ({ isOpen, onClose, commands = [] }) => {
     <>
       <button type="button" className="command-palette__overlay" onClick={onClose} aria-label="Close command palette" />
       <div className="command-palette" role="dialog" aria-modal="true" aria-label="Command palette">
-        <input
-          ref={inputRef}
-          className="command-palette__input"
-          type="search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search actions"
-        />
-        <ul className="command-palette__results">
+        <div className="command-palette__header">
+          <input
+            ref={inputRef}
+            className="command-palette__input"
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Jump to a page or action"
+            aria-label="Search commands"
+          />
+          <kbd className="command-palette__shortcut" aria-hidden="true">⌘K</kbd>
+        </div>
+        <ul className="command-palette__results" role="listbox" aria-label="Command results">
           {filtered.map((command) => (
             <li key={command.id}>
               <button
@@ -64,12 +82,12 @@ export const CommandPalette = ({ isOpen, onClose, commands = [] }) => {
                   onClose();
                 }}
               >
-                <span>{command.label}</span>
-                {command.shortcut ? <kbd>{command.shortcut}</kbd> : null}
+                <span className="command-palette__item-label">{command.label}</span>
+                {command.shortcut ? <kbd className="command-palette__item-shortcut">{command.shortcut}</kbd> : null}
               </button>
             </li>
           ))}
-          {!filtered.length ? <li className="command-palette__empty">No commands found</li> : null}
+          {!filtered.length ? <li className="command-palette__empty">No actions match your search.</li> : null}
         </ul>
       </div>
     </>

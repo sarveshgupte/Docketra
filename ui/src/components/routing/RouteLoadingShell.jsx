@@ -13,11 +13,18 @@ const getShellContent = (pathname) => {
   }
 
   if (pathname.includes('/cases') || pathname.includes('/worklist') || pathname.includes('/admin')) {
-    return <TableSkeleton />;
+    return <TableSkeleton rows={5} />;
   }
 
   return <PageSkeleton />;
 };
+
+const LoadingBody = ({ children, centered = false }) => (
+  <div className="route-loading-shell" aria-busy="true" aria-live="polite">
+    <div className="route-loading-shell__progress" aria-hidden="true" />
+    <div className={centered ? 'route-loading-shell__panel' : 'route-loading-shell__content'}>{children}</div>
+  </div>
+);
 
 export const RouteLoadingShell = () => {
   const { pathname } = useLocation();
@@ -25,18 +32,14 @@ export const RouteLoadingShell = () => {
   if (pathname.startsWith('/app/firm/')) {
     return (
       <Layout>
-        <div aria-busy="true" aria-live="polite">
-          {getShellContent(pathname)}
-        </div>
+        <LoadingBody>{getShellContent(pathname)}</LoadingBody>
       </Layout>
     );
   }
 
   return (
-    <div className="route-loading-shell" aria-busy="true" aria-live="polite">
-      <div className="route-loading-shell__panel">
-        <FormSkeleton />
-      </div>
-    </div>
+    <LoadingBody centered>
+      <FormSkeleton />
+    </LoadingBody>
   );
 };
