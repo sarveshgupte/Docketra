@@ -1,34 +1,23 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Badge } from '../common/Badge';
-import { Button } from '../common/Button';
+import { formatDateTime } from '../../utils/formatDateTime';
 
-export const CaseDetailHeader = ({ caseId, title, status, lastUpdated, onOpenAudit, onCloseCase, onAddComment }) => {
-  const [showMenu, setShowMenu] = useState(false);
-
+export const CaseDetailHeader = ({ caseInfo, actions, statusBadges }) => {
   return (
-    <div className="case-header">
-      <div className="case-header__left">
-        <h1 className="case-header__id">{caseId}</h1>
-        <p className="case-header__subtitle">{title}</p>
+    <header className="case-detail-header">
+      <div className="case-detail-header__identity">
+        <h1 className="case-detail-header__title">{caseInfo.caseId}</h1>
+        <p className="case-detail-header__subtitle">{caseInfo.category}</p>
+        <div className="case-detail-header__meta">Last updated {formatDateTime(caseInfo.updatedAt)}</div>
       </div>
 
-      <div className="case-header__middle">
-        <Badge status={status}>{status}</Badge>
-        <span className="case-header__metadata">{lastUpdated}</span>
+      <div className="case-detail-header__actions">
+        <Badge status={caseInfo.status} className="case-detail-status-badge">
+          {caseInfo.status}
+        </Badge>
+        {statusBadges}
+        {actions}
       </div>
-
-      <div className="case-header__right">
-        <Button variant="outline" onClick={onOpenAudit}>Audit ↗</Button>
-        <div className="dropdown">
-          <Button variant="outline" onClick={() => setShowMenu((value) => !value)}>⋮</Button>
-          {showMenu && (
-            <div className="dropdown-menu dropdown-menu-right" role="menu">
-              <button type="button" className="dropdown-item" onClick={onAddComment}>Add comment</button>
-              <button type="button" className="dropdown-item" onClick={onCloseCase}>Close</button>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+    </header>
   );
 };

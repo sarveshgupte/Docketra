@@ -1,13 +1,12 @@
 import React from 'react';
-import './layoutPrimitives.css';
 
 export const SectionCard = ({ title, subtitle, children, className = '' }) => {
   return (
-    <section className={`section-card ${className}`}>
+    <section className={`case-card ${className}`.trim()}>
       {(title || subtitle) && (
-        <div className="section-card__header">
-          {title ? <h2 className="section-card__title">{title}</h2> : null}
-          {subtitle ? <p className="section-card__subtitle">{subtitle}</p> : null}
+        <div className="case-card__heading">
+          {title ? <h2>{title}</h2> : null}
+          {subtitle ? <p className="case-card__subtitle">{subtitle}</p> : null}
         </div>
       )}
       {children}
