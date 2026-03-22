@@ -4,9 +4,9 @@
  * Read-only fields render as text, not disabled inputs
  */
 
-import React, { useId, useState } from 'react';
+import React, { forwardRef, useId, useState } from 'react';
 
-export const Input = ({
+export const Input = forwardRef(({
   label,
   error,
   helpText,
@@ -17,7 +17,7 @@ export const Input = ({
   value,
   type = 'text',
   ...props
-}) => {
+}, ref) => {
   const [showPassword, setShowPassword] = useState(false);
   const generatedId = useId();
   const isPasswordType = type === 'password';
@@ -31,7 +31,6 @@ export const Input = ({
     !error && helpText ? helpId : null,
   ].filter(Boolean).join(' ') || undefined;
 
-  // If read-only, render as static text instead of disabled input
   if (readOnly && value !== undefined) {
     return (
       <div className={`form-group ${className}`}>
@@ -53,7 +52,7 @@ export const Input = ({
       </div>
     );
   }
-  
+
   return (
     <div className={`form-group ${className}`}>
       {label && (
@@ -64,6 +63,7 @@ export const Input = ({
       )}
       <div className={`input-wrapper ${isPasswordType ? 'input-wrapper--password' : ''}`}>
         <input
+          ref={ref}
           id={inputId}
           className={`input ${error ? 'input-error' : ''} ${isPasswordType ? 'input-with-toggle' : ''}`}
           disabled={disabled}
@@ -154,4 +154,6 @@ export const Input = ({
       {!error && helpText && <div className="form-help" id={helpId}>{helpText}</div>}
     </div>
   );
-};
+});
+
+Input.displayName = 'Input';

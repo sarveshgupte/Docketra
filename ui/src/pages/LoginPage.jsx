@@ -23,8 +23,7 @@ export const LoginPage = () => {
   const { showSuccess } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  
-  // Get success message from location state if present
+
   const successMessage = location.state?.message;
   const messageType = location.state?.messageType;
 
@@ -47,7 +46,6 @@ export const LoginPage = () => {
     setFieldErrors({});
     const normalizedIdentifier = identifier.trim().toUpperCase();
 
-    // Validation - xID only (no email)
     if (!validateXID(normalizedIdentifier)) {
       setFieldErrors({ identifier: 'Please enter a valid xID (for example, X123456).' });
       return;
@@ -65,26 +63,21 @@ export const LoginPage = () => {
 
       if (response.success) {
         showSuccess('Signed in successfully.');
-        
-        // Trigger profile hydration to set auth state
+
         const profileResult = await fetchProfile();
-        
-        // Explicit post-login navigation (SuperAdmin only)
+
         if (profileResult?.success) {
           navigate('/app/superadmin', { replace: true });
         }
       }
     } catch (err) {
       const errorData = err.response?.data;
-      
+
       if (errorData?.mustChangePassword) {
-        // Redirect to change password page with identifier
         navigate('/change-password', { state: { xID: normalizedIdentifier } });
       } else if (errorData?.passwordSetupRequired) {
-        // User needs to set password via email link
         setError('Please set your password using the link sent to your email. If you haven\'t received it, contact your administrator.');
       } else if (errorData?.lockedUntil) {
-        // Account is locked
         setError(errorData?.message || 'Account is locked. Please try again later or contact an administrator.');
       } else {
         setError(errorData?.message || 'Invalid xID or password');
@@ -95,19 +88,19 @@ export const LoginPage = () => {
   };
 
   return (
-    <div className="login-page">
-      <Card className="login-card">
-        <div className="login-header">
-          <h1>Docketra</h1>
-          <p className="text-secondary">Compliance Workflow Infrastructure</p>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4 sm:p-8">
+      <Card className="w-full max-w-md">
+        <div className="text-center">
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">Docketra</h1>
+          <p className="mt-2 text-sm text-gray-500 text-center">Compliance Workflow Infrastructure</p>
         </div>
 
-        <p className="auth-helper-text">
+        <p className="mt-6 text-sm text-gray-500 text-center">
           Use the xID from your welcome email. If your account belongs to a firm workspace, sign in from that
           workspace URL so password reset and activation links stay scoped correctly.
         </p>
 
-        <form onSubmit={handleLogin} noValidate>
+        <form onSubmit={handleLogin} noValidate className="mt-6 space-y-5">
           <Input
             label="xID"
             type="text"
@@ -160,8 +153,11 @@ export const LoginPage = () => {
             Login
           </Button>
 
-          <div className="login-footer">
-            <Link to="/forgot-password" className="forgot-password-link">
+          <div className="text-center">
+            <Link
+              to="/forgot-password"
+              className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
+            >
               Forgot Password?
             </Link>
           </div>
