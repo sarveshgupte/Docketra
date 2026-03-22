@@ -68,13 +68,40 @@ async function _decryptCaseDoc(doc, firmId, { logContext } = {}) {
   const tenantId = String(firmId);
   for (const field of CASE_ENCRYPTED_FIELDS) {
     if (doc[field] != null && looksEncrypted(doc[field])) {
-      doc[field] = await decrypt(doc[field], tenantId, undefined, {
-        logContext: {
-          ...logContext,
+      const encryptedValue = doc[field];
+      try {
+        const decrypted = await decrypt(encryptedValue, tenantId, undefined, {
+          logContext: {
+            ...logContext,
+            field,
+            model: 'Case',
+          },
+        });
+
+        if (decrypted == null) {
+          console.error('[CaseRepository] DECRYPTION_FAILED - FALLBACK', {
+            field,
+            firmId: tenantId,
+            encryptedValueLength: String(encryptedValue).length,
+            encryptedValueStart: String(encryptedValue).substring(0, 50),
+            logContext,
+          });
+          doc[field] = encryptedValue;
+        } else {
+          doc[field] = decrypted;
+        }
+      } catch (err) {
+        console.error('[CaseRepository] DECRYPTION_ERROR', {
           field,
-          model: 'Case',
-        },
-      });
+          firmId: tenantId,
+          error: err.message,
+          errorStack: err.stack,
+          encryptedValueLength: String(encryptedValue).length,
+          encryptedValueStart: String(encryptedValue).substring(0, 50),
+          logContext,
+        });
+        doc[field] = encryptedValue;
+      }
     }
   }
   return doc;
@@ -91,21 +118,126 @@ async function _decryptCaseDoc(doc, firmId, { logContext } = {}) {
 async function _decryptCaseDocs(docs, firmId, { logContext } = {}) {
   if (!docs || !docs.length || !process.env.MASTER_ENCRYPTION_KEY || !firmId) return docs;
   const tenantId = String(firmId);
-  await Promise.all(docs.map(async (doc) => {
-    if (!doc) return;
+
+  for (const doc of docs) {
+    if (!doc) continue;
+
     for (const field of CASE_ENCRYPTED_FIELDS) {
       if (doc[field] != null && looksEncrypted(doc[field])) {
-        doc[field] = await decrypt(doc[field], tenantId, undefined, {
-          logContext: {
-            ...logContext,
+        const encryptedValue = doc[field];
+        try {
+          const decrypted = await decrypt(encryptedValue, tenantId, undefined, {
+            logContext: {
+              ...logContext,
+              field,
+              model: 'Case',
+              docId: doc._id,
+            },
+          });
+
+          if (decrypted == null) {
+            console.error('[CaseRepository] DECRYPTION_FAILED_IN_BATCH', {
+              field,
+              firmId: tenantId,
+              docId: doc._id,
+              encryptedValueLength: String(encryptedValue).length,
+              encryptedValueStart: String(encryptedValue).substring(0, 50),
+              logContext,
+            });
+            doc[field] = encryptedValue;
+          } else {
+            doc[field] = decrypted;
+          }
+        } catch (err) {
+          console.error('[CaseRepository] DECRYPTION_ERROR_IN_BATCH', {
             field,
-            model: 'Case',
-          },
-        });
+            firmId: tenantId,
+            docId: doc._id,
+            error: err.message,
+            errorStack: err.stack,
+            encryptedValueLength: String(encryptedValue).length,
+            encryptedValueStart: String(encryptedValue).substring(0, 50),
+            logContext,
+          });
+          doc[field] = encryptedValue;
+        }
       }
     }
-  }));
+  }
+
   return docs;
+}
+
+
+/**
+ * Diagnose decryption issues for a specific case description.
+ * Intended for support/debug workflows.
+ *
+ * @param {string|ObjectId} firmId
+ * @param {string|ObjectId} caseId - Case internal ID
+ * @returns {Promise<Object>}
+ */
+async function diagnoseDescriptionDecryption(firmId, caseId) {
+  const tenantId = String(firmId);
+  const report = {
+    timestamp: new Date().toISOString(),
+    firmId: tenantId,
+    caseId: String(caseId),
+    checks: {},
+  };
+
+  report.checks.masterKeyConfigured = !!process.env.MASTER_ENCRYPTION_KEY;
+
+  try {
+    const TenantKey = require('../models/tenantKey.model');
+    const tenantKey = await TenantKey.findOne({ tenantId });
+    report.checks.tenantKeyExists = !!tenantKey;
+    report.checks.tenantKeyFormat = tenantKey
+      ? (/^[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]+$/.test(tenantKey.encryptedDek)
+        ? 'VALID'
+        : 'INVALID_FORMAT')
+      : 'N/A';
+  } catch (err) {
+    report.checks.tenantKeyError = err.message;
+  }
+
+  try {
+    const doc = await Case.findOne({ firmId, caseInternalId: caseId });
+    report.checks.caseExists = !!doc;
+    if (doc) {
+      const description = doc.description;
+      report.checks.descriptionExists = description != null;
+      report.checks.descriptionLength = description?.length;
+      report.checks.descriptionLooksEncrypted = looksEncrypted(description);
+      report.checks.descriptionStart = description?.substring(0, 50);
+      report.checks.descriptionEnd = description?.substring(Math.max(0, description.length - 20));
+    }
+  } catch (err) {
+    report.checks.caseQueryError = err.message;
+  }
+
+  try {
+    const doc = await Case.findOne({ firmId, caseInternalId: caseId });
+    if (doc && looksEncrypted(doc.description)) {
+      const plaintext = await decrypt(doc.description, tenantId, undefined, {
+        logContext: {
+          operation: 'diagnoseDescriptionDecryption',
+          model: 'Case',
+          field: 'description',
+          caseId: String(caseId),
+        },
+      });
+      report.checks.decryptionSuccessful = !!plaintext;
+      report.checks.decryptedLength = plaintext?.length;
+      report.checks.decryptedPreview = plaintext?.substring(0, 100);
+    }
+  } catch (err) {
+    report.checks.decryptionError = err.message;
+    report.checks.decryptionErrorStack = err.stack;
+  }
+
+  console.log('[CaseRepository] DIAGNOSTIC_REPORT', report);
+  return report;
 }
 
 // ── Query validation ────────────────────────────────────────────────────────
@@ -435,12 +567,48 @@ const CaseRepository = {
       throw new Error('firmId is required to create a case');
     }
     _guardSuperadmin(role);
-    // Ensure the per-tenant DEK exists before the model pre-save hook needs it.
-    await ensureTenantKey(String(caseData.firmId));
-    const doc = await Case.create(caseData);
-    // The pre-save hook encrypted sensitive fields; decrypt them for the caller.
-    return _decryptCaseDoc(doc, caseData.firmId);
+
+    const tenantId = String(caseData.firmId);
+
+    try {
+      await ensureTenantKey(tenantId);
+      console.info('[CaseRepository.create] Tenant key ensured', { tenantId });
+    } catch (err) {
+      console.error('[CaseRepository.create] TENANT_KEY_BOOTSTRAP_FAILED', {
+        tenantId,
+        error: err.message,
+        errorStack: err.stack,
+      });
+      throw new Error(`Cannot create case: Encryption key bootstrap failed for firm ${tenantId}. Contact support.`);
+    }
+
+    if (!process.env.MASTER_ENCRYPTION_KEY) {
+      console.error('[CaseRepository.create] MASTER_ENCRYPTION_KEY_MISSING', { tenantId });
+      throw new Error('System is not properly configured for case creation. Contact support.');
+    }
+
+    try {
+      const doc = await Case.create(caseData);
+      console.info('[CaseRepository.create] Case created with encrypted description', {
+        tenantId,
+        caseId: doc._id,
+        descriptionEncrypted: !!doc.description && looksEncrypted(doc.description),
+        descriptionLength: doc.description?.length,
+      });
+      return await _decryptCaseDoc(doc, tenantId, {
+        logContext: { operation: 'create', caseId: doc._id },
+      });
+    } catch (err) {
+      console.error('[CaseRepository.create] CASE_CREATION_FAILED', {
+        tenantId,
+        error: err.message,
+        errorStack: err.stack,
+      });
+      throw err;
+    }
   },
+
+  diagnoseDescriptionDecryption,
 };
 
 Object.freeze(CaseRepository);

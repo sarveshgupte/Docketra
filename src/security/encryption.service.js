@@ -7,7 +7,7 @@
  *  3. Enforce security guards:
  *     - superadmin cannot decrypt tenant data.
  *     - Missing tenant key fails fast (explicit bootstrap requirement).
- *     - Decryption failures are logged and return null (fail-soft).
+ *     - Decryption failures are logged with context and re-thrown.
  *
  * Provider selection:
  *   ENCRYPTION_PROVIDER=local  →  LocalEncryptionProvider  (default)
@@ -95,7 +95,7 @@ async function encrypt(value, tenantId, { session } = {}) {
  *  - Falls back to returning the original value if it does not match the
  *    encrypted payload format (temporary compatibility mode for existing
  *    plaintext records — see TODO below).
- *  - Logs and returns null for decryption failures (fail-soft).
+ *  - Logs and re-throws decryption failures (fail-fast at caller boundary).
  *
  * TODO: Write migration script to encrypt existing plaintext fields.
  *       Once all records are encrypted, remove the plaintext fallback below.
@@ -109,8 +109,6 @@ async function encrypt(value, tenantId, { session } = {}) {
 async function decrypt(value, tenantId, role, { session, logContext } = {}) {
   if (value == null) return value;
 
-  // Guard: superadmin must not access tenant-encrypted data.
-  // Normalise role before comparison to handle both 'superadmin' and 'SUPER_ADMIN'.
   if (role) {
     const normalizedRole = role.toLowerCase().replace('_', '');
     if (normalizedRole === 'superadmin') {
@@ -118,29 +116,51 @@ async function decrypt(value, tenantId, role, { session, logContext } = {}) {
     }
   }
 
+  if (!looksEncrypted(value)) {
+    return value;
+  }
+
+  if (!tenantId) {
+    const err = new Error('[EncryptionService] tenantId is required for decryption');
+    console.error('DECRYPTION_TENANT_ID_MISSING', {
+      valueStart: String(value).substring(0, 50),
+      error: err.message,
+      logContext,
+    });
+    throw err;
+  }
+
   try {
-    if (!tenantId) {
-      throw new Error('tenantId is required for decryption');
+    const plaintext = await getProvider().decrypt(String(value), tenantId, { session });
+
+    if (plaintext == null) {
+      console.warn('[EncryptionService] DECRYPTION_RETURNED_NULL', {
+        tenantId,
+        valueLength: String(value).length,
+        valueStart: String(value).substring(0, 50),
+        logContext,
+      });
+      throw new Error('Decryption returned null - possible corrupt encrypted value');
     }
 
-    // Detect plaintext (legacy) records — they lack the iv:authTag:ciphertext format.
-    // Return as-is to preserve backward compatibility until migration is complete.
-    if (!looksEncrypted(value)) {
-      return value;
-    }
-
-    return await getProvider().decrypt(value, tenantId, { session });
+    return plaintext;
   } catch (err) {
-    console.warn('TENANT_DECRYPTION_FAILED', {
-      timestamp: new Date().toISOString(),
+    console.error('[EncryptionService] DECRYPTION_ERROR', {
       tenantId,
       requestId: logContext?.requestId || null,
       field: logContext?.field || null,
       route: logContext?.route || null,
       model: logContext?.model || null,
-      error: err.message,
+      errorMessage: err.message,
+      errorName: err.name,
+      valueLength: String(value).length,
+      valueStart: String(value).substring(0, 50),
+      valueEnd: String(value).substring(Math.max(0, String(value).length - 20)),
+      logContext,
+      errorStack: err.stack,
     });
-    return null;
+
+    throw new Error(`Decryption failed${logContext?.field ? ` for ${logContext.field}` : ''}: ${err.message}`);
   }
 }
 
