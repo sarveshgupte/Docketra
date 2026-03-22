@@ -22,7 +22,7 @@ export const FirmLayout = () => {
   if (user?.firmSlug && user.firmSlug !== firmSlug) {
     return (
       <div className="min-h-screen bg-white text-gray-900">
-        <main className="max-w-7xl mx-auto px-6 py-24 text-center">
+        <main className="w-full px-6 py-24 text-center lg:px-8">
           <h1 className="type-section">Access denied</h1>
           <p className="mt-6 type-body">
             You tried to open firm "{firmSlug}", but your session is scoped to "{user.firmSlug}".
@@ -35,7 +35,7 @@ export const FirmLayout = () => {
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
-      <main className="max-w-7xl mx-auto px-6">
+      <main className="flex w-full flex-1 px-6 lg:px-8">
         <PageWrapper key={location.pathname}>
           <Outlet />
         </PageWrapper>
