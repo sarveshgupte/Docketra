@@ -338,31 +338,36 @@ export const HomePage = () => {
       </Section>
 
       <Section muted>
-        <div className="space-y-4 text-center">
-          <h2 className="type-section">Join the Early Access Program</h2>
-          <p className="type-body type-lg mx-auto max-w-[600px] text-gray-600">
-            Help shape the future of compliance workflows. Get early access, share feedback, and receive launch
-            updates.
+        <div className="space-y-6 text-center max-w-2xl mx-auto py-8">
+          <span className="text-sm font-bold tracking-wider text-blue-600 uppercase">Pre-Launch Access</span>
+          <h2 className="type-section text-gray-900">Join the Docketra Early Access Program</h2>
+          <p className="type-body text-lg text-gray-600">
+            We are building the future of compliance workflows. Join our exclusive early access group to secure your free workspace and directly influence our product roadmap.
           </p>
 
-          <form className="mx-auto mt-6 max-w-sm space-y-3" onSubmit={onEarlyAccessSubmit} aria-label="Early access signup">
-            <label htmlFor="early-access-email" className="block text-left text-sm font-medium text-gray-800">
-              Email Address
-            </label>
+          <form
+            className="mx-auto mt-8 flex flex-col sm:flex-row gap-3 max-w-md"
+            onSubmit={onEarlyAccessSubmit}
+            aria-label="Early access signup"
+          >
             <input
               id="early-access-email"
               name="email"
               type="email"
-              placeholder="your@email.com"
-              className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
+              placeholder="Enter your work email"
+              className="flex-1 rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
               required
               aria-required="true"
             />
-            <button type="submit" className="marketing-btn-primary w-full" aria-label="Join early access program">
-              Get Early Access
+            <button
+              type="submit"
+              className="marketing-btn-primary rounded-xl px-6 py-3 font-semibold whitespace-nowrap shadow-sm"
+              aria-label="Request Early Access"
+            >
+              Request Access
             </button>
-            <p className="text-xs text-gray-500">We will only email you about launch updates and onboarding.</p>
           </form>
+          <p className="text-xs text-gray-500">No spam. We'll only contact you regarding your workspace setup.</p>
         </div>
       </Section>
 

@@ -7,84 +7,104 @@ const PRICING_TIERS = [
   {
     name: 'Starter',
     price: 'Free',
-    description: 'Free for lifetime. Includes up to 2 users total (1 admin + 1 user).',
-    ctaLabel: 'Sign Up Now',
+    interval: 'forever',
+    description: 'Perfect for small teams testing the waters during our Early Access phase.',
+    features: ['Up to 2 users (1 Admin + 1 Member)', 'Basic Case Management', 'Standard Workflows', 'Community Support'],
+    ctaLabel: 'Get Early Access',
     ctaTo: '/signup',
     disabled: false,
-    badge: null,
+    badge: 'Current Phase',
+    highlight: true,
   },
   {
     name: 'Professional',
-    price: 'Coming Soon',
-    description: 'For growing organizations with advanced operational controls.',
+    price: 'TBA',
+    interval: 'coming soon',
+    description: 'For growing firms that need advanced operational controls and partner visibility.',
+    features: ['Unlimited Users', 'Advanced Role Permissions', 'Custom Workflow Templates', 'Priority Support'],
     ctaLabel: 'Coming Soon',
     ctaTo: null,
     disabled: true,
-    badge: 'Coming Soon',
+    badge: 'Roadmap',
+    highlight: false,
   },
   {
     name: 'Enterprise',
     price: 'Custom',
-    description: 'For large organizations needing advanced governance and scale.',
+    interval: 'tailored',
+    description: 'For large organizations requiring bespoke governance, scaling, and integrations.',
+    features: ['Multi-Office Coordination', 'Dedicated Account Manager', 'Custom API Access', 'On-Premise / Private Cloud Setup'],
     ctaLabel: 'Contact Sales',
     ctaTo: '/contact',
     disabled: false,
-    badge: 'Custom',
+    badge: null,
+    highlight: false,
   },
 ];
 
 const SECTION_REVEAL = {
-  initial: { opacity: 0, y: 40 },
+  initial: { opacity: 0, y: 20 },
   whileInView: { opacity: 1, y: 0 },
-  transition: { duration: 0.6, ease: [0.4, 0, 0.2, 1] },
-  viewport: { once: true, amount: 0.2 },
+  transition: { duration: 0.5, ease: 'easeOut' },
+  viewport: { once: true, amount: 0.1 },
 };
 
 export const PricingPage = () => (
   <Section>
-    <div>
-      <h1 className="type-section">Pricing</h1>
+    <div className="text-center max-w-2xl mx-auto mb-12">
+      <h1 className="type-section text-gray-900">Simple, Transparent Pricing</h1>
+      <p className="mt-4 type-body text-lg text-gray-600">
+        We are currently in Early Access. Join now to lock in your free Starter workspace and help shape the future of Docketra.
+      </p>
     </div>
 
-    <motion.div
-      {...SECTION_REVEAL}
-      className="grid gap-8 lg:grid-cols-3"
-      style={{ marginTop: 'var(--space-md)' }}
-    >
-      {PRICING_TIERS.map(({ name, price, description, ctaLabel, ctaTo, disabled, badge }, index) => (
+    <motion.div {...SECTION_REVEAL} className="grid gap-8 lg:grid-cols-3 max-w-6xl mx-auto">
+      {PRICING_TIERS.map((tier, index) => (
         <motion.article
-          key={name}
-          className="marketing-card flex h-full flex-col p-8"
+          key={tier.name}
+          className={`flex h-full flex-col rounded-2xl p-8 border ${
+            tier.highlight ? 'border-blue-500 shadow-xl bg-white relative' : 'border-gray-200 bg-gray-50 shadow-sm'
+          }`}
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, delay: Math.min(index * 0.06, 0.2), ease: [0.4, 0, 0.2, 1] }}
-          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 0.35, delay: index * 0.1 }}
+          viewport={{ once: true }}
         >
-          <div className="flex items-start justify-between gap-3">
-            <h2 className="type-card-title">{name}</h2>
-            {badge ? (
-              <span className="rounded-full border border-gray-200 bg-gray-100 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-gray-600">
-                {badge}
-              </span>
-            ) : null}
-          </div>
-          <p className="mt-6 text-3xl font-semibold leading-tight tracking-tight text-gray-900">{price}</p>
-          <p className="mt-6 flex-1 type-body">{description}</p>
+          {tier.badge && (
+            <span className={`absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${
+              tier.highlight ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'
+            }`}>
+              {tier.badge}
+            </span>
+          )}
 
-          {disabled ? (
-            <button
-              type="button"
-              disabled
-              className="mt-8 inline-flex items-center justify-center rounded-xl bg-gray-200 px-4 py-2 text-sm font-medium text-gray-500"
-            >
-              {ctaLabel}
+          <div className="mb-6">
+            <h2 className="text-xl font-bold text-gray-900">{tier.name}</h2>
+            <div className="mt-4 flex items-baseline text-4xl font-extrabold text-gray-900">
+              {tier.price}
+              {tier.interval && <span className="ml-1 text-sm font-medium text-gray-500">/{tier.interval}</span>}
+            </div>
+            <p className="mt-4 text-sm text-gray-600 min-h-[40px]">{tier.description}</p>
+          </div>
+
+          <ul className="flex-1 space-y-4 mb-8">
+            {tier.features.map((feature) => (
+              <li key={feature} className="flex items-start gap-3 text-sm text-gray-700">
+                <span className="text-green-500 font-bold">✓</span>
+                {feature}
+              </li>
+            ))}
+          </ul>
+
+          {tier.disabled ? (
+            <button disabled className="w-full rounded-xl bg-gray-200 px-4 py-3 text-sm font-bold text-gray-500 cursor-not-allowed">
+              {tier.ctaLabel}
             </button>
           ) : (
-            <Link
-              to={ctaTo}
-              className="marketing-btn-primary mt-8 inline-flex items-center justify-center px-4 py-2 text-sm font-medium"
-            >
-              {ctaLabel}
+            <Link to={tier.ctaTo} className={`w-full flex justify-center items-center rounded-xl px-4 py-3 text-sm font-bold transition-colors ${
+              tier.highlight ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-900 text-white hover:bg-gray-800'
+            }`}>
+              {tier.ctaLabel}
             </Link>
           )}
         </motion.article>
