@@ -1,113 +1,108 @@
 /**
  * Enterprise Design Tokens
- * Docketra B2B SaaS Design System — 2026 Edition
- * Indian professional firm edition (CS, CA, Legal, Compliance)
+ * Refined for Docketra's flat, minimal SaaS UI.
  */
 
 :root {
-  /* === 2026 Design Token System === */
-
   /* App & Surface Colors */
   --color-bg-app: #F9FAFB;
   --color-surface: #FFFFFF;
   --color-surface-raised: #FFFFFF;
   --color-border: #E5E7EB;
 
-  /* Semantic aliases requested by design system */
+  /* Semantic aliases */
   --bg-primary: #FFFFFF;
   --bg-secondary: #F9FAFB;
-  --border-focus: 1px solid #3B82F6;
+  --border-focus: 1px solid #2563EB;
 
   /* Brand Colors */
-  --color-primary-dark: #0B1F3A;   /* primary dark – used for button hover */
-  --color-primary: #1E3A8A;         /* primary buttons, avatars, active states */
-  --color-accent: #3B82F6;          /* blue – active sidebar border indicator */
+  --color-primary-dark: #1D4ED8;
+  --color-primary: #2563EB;
+  --color-accent: #3B82F6;
 
-  /* Semantic Status Colors (muted-neon palette) */
-  --color-success: #059669;
-  --color-warning: #D97706;
-  --color-error: #DC2626;
-  --color-info: #2563EB;
+  /* Semantic Status Colors */
+  --color-success: #15803D;
+  --color-warning: #B45309;
+  --color-error: #B91C1C;
+  --color-info: #1D4ED8;
 
-  /* Muted-neon semantic badge tokens */
+  /* Minimal badge tokens */
   --badge-open-bg: rgba(37, 99, 235, 0.10);
   --badge-open-color: #1D4ED8;
-  --badge-open-border: rgba(37, 99, 235, 0.20);
+  --badge-open-border: transparent;
 
-  --badge-resolved-bg: rgba(5, 150, 105, 0.10);
-  --badge-resolved-color: #047857;
-  --badge-resolved-border: rgba(5, 150, 105, 0.20);
+  --badge-resolved-bg: rgba(21, 128, 61, 0.10);
+  --badge-resolved-color: #15803D;
+  --badge-resolved-border: transparent;
 
-  --badge-pended-bg: rgba(217, 119, 6, 0.10);
+  --badge-pended-bg: rgba(180, 83, 9, 0.10);
   --badge-pended-color: #B45309;
-  --badge-pended-border: rgba(217, 119, 6, 0.20);
+  --badge-pended-border: transparent;
 
-  --badge-filed-bg: rgba(100, 116, 139, 0.10);
-  --badge-filed-color: #475569;
-  --badge-filed-border: rgba(100, 116, 139, 0.20);
+  --badge-filed-bg: rgba(71, 85, 105, 0.10);
+  --badge-filed-color: #334155;
+  --badge-filed-border: transparent;
 
-  --badge-unassigned-bg: rgba(220, 38, 38, 0.08);
+  --badge-unassigned-bg: rgba(185, 28, 28, 0.08);
   --badge-unassigned-color: #B91C1C;
-  --badge-unassigned-border: rgba(220, 38, 38, 0.18);
+  --badge-unassigned-border: transparent;
 
-
-  /* Layout primitives semantic tokens */
+  /* Layout tokens */
   --layout-surface: var(--color-surface);
-  --layout-surface-muted: #F8FAFC;
-  --layout-border-subtle: #EEF2F7;
+  --layout-surface-muted: #F9FAFB;
+  --layout-border-subtle: #E5E7EB;
 
   --status-draft-bg: #F3F4F6;
   --status-draft-color: #4B5563;
-  --status-draft-border: #E5E7EB;
+  --status-draft-border: transparent;
 
   --status-open-bg: #DBEAFE;
   --status-open-color: #1D4ED8;
-  --status-open-border: #BFDBFE;
+  --status-open-border: transparent;
 
   --status-review-bg: #FEF3C7;
   --status-review-color: #B45309;
-  --status-review-border: #FDE68A;
+  --status-review-border: transparent;
 
   --status-escalated-bg: #FFE4E6;
   --status-escalated-color: #BE123C;
-  --status-escalated-border: #FECDD3;
+  --status-escalated-border: transparent;
 
-  --status-closed-bg: #D1FAE5;
-  --status-closed-color: #047857;
-  --status-closed-border: #A7F3D0;
+  --status-closed-bg: #DCFCE7;
+  --status-closed-color: #15803D;
+  --status-closed-border: transparent;
 
-  --status-neutral-bg: #F8FAFC;
+  --status-neutral-bg: #F1F5F9;
   --status-neutral-color: #475569;
-  --status-neutral-border: #CBD5E1;
+  --status-neutral-border: transparent;
 
-  /* Border Radius Scale */
+  /* Radius */
   --radius-xs: 4px;
   --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
   --radius-pill: 999px;
 
-  /* Elevation / Shadow Scale — soft, multi-layered */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.10), 0 1px 2px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.10), 0 2px 4px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 28px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.06);
+  /* Shadows */
+  --shadow-xs: none;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 
-  /* Glass / Glassmorphism tokens — light frosted glass */
-  --glass-bg: rgba(255, 255, 255, 0.75);
-  --glass-bg-strong: rgba(255, 255, 255, 0.80);
-  --glass-border: rgba(229, 231, 235, 0.80);
-  --glass-border-subtle: rgba(229, 231, 235, 0.50);
-  --glass-blur: blur(8px);
-  --glass-blur-sm: blur(8px);
-  --glass-shadow: 0 1px 3px rgba(0, 0, 0, 0.10), 0 1px 2px rgba(0, 0, 0, 0.06);
+  /* Flat surface tokens replacing legacy glass usage */
+  --glass-bg: #FFFFFF;
+  --glass-bg-strong: #FFFFFF;
+  --glass-border: #E5E7EB;
+  --glass-border-subtle: #E5E7EB;
+  --glass-blur: none;
+  --glass-blur-sm: none;
+  --glass-shadow: var(--shadow-sm);
 
-  /* Hover and state backgrounds */
-  --color-primary-hover-bg: rgba(30, 58, 138, 0.05);
-  --color-row-hover: rgba(30, 58, 138, 0.04);
+  --color-primary-hover-bg: rgba(37, 99, 235, 0.06);
+  --color-row-hover: rgba(17, 24, 39, 0.03);
 
-  /* Spacing Scale (4px base grid) */
+  /* Spacing */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -124,30 +119,22 @@
   --space-xl: 64px;
   --space-2xl: 96px;
 
-  /* === Legacy Token Aliases (backward compatibility) === */
-
-  /* Colors */
-  --primary-600: #0B1F3A;
-  --primary-500: #1E3A8A;
-
+  /* Legacy aliases */
+  --primary-600: #1D4ED8;
+  --primary-500: #2563EB;
   --surface-base: var(--color-bg-app);
   --surface-card: var(--color-surface);
   --surface-raised: var(--color-surface);
   --surface-inset: var(--color-bg-app);
-
   --border-subtle: var(--color-border);
-  --border-strong: #CBD5E1;
-
+  --border-strong: #D1D5DB;
   --text-main: #111827;
   --text-body: #374151;
   --text-muted: #6B7280;
-
   --success: var(--color-success);
   --warning: var(--color-warning);
   --danger: var(--color-error);
   --info: var(--color-info);
-
-  /* Legacy aliases */
   --text-primary: var(--text-main);
   --text-secondary: var(--text-body);
   --text-disabled: var(--text-muted);
@@ -156,17 +143,17 @@
   --accent-warning: var(--warning);
   --accent-danger: var(--danger);
 
-  /* Focus States */
-  --focus-ring: 0 0 0 2px rgba(37, 99, 235, 0.50);
-  --focus-ring-offset: 0 0 0 2px #fff, 0 0 0 4px rgba(37, 99, 235, 0.50);
+  /* Focus */
+  --focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.14);
+  --focus-ring-offset: 0 0 0 2px #fff, 0 0 0 4px rgba(37, 99, 235, 0.18);
 
-  /* Borders (legacy names) */
+  /* Borders */
   --border-radius: var(--radius-sm);
   --border-radius-sm: var(--radius-xs);
   --border-radius-lg: var(--radius-md);
   --border-radius-xl: var(--radius-lg);
 
-  /* Spacing (legacy names) */
+  /* Spacing aliases */
   --spacing-xs: var(--space-1);
   --spacing-sm: var(--space-2);
   --spacing-md: var(--space-4);
@@ -176,36 +163,35 @@
 
   /* Typography */
   --font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-size-xs: 11px;
-  --font-size-sm: 13px;
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
   --font-size-md: 14px;
   --font-size-lg: 16px;
-  --font-size-xl: 22px;
-  --font-size-2xl: 28px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
   --type-title: var(--font-size-2xl);
   --type-section: var(--font-size-xl);
   --type-body: var(--font-size-md);
-  --type-caption: var(--font-size-sm);
+  --type-caption: var(--font-size-xs);
   --line-height-tight: 1.25;
   --line-height-normal: 1.5;
   --letter-spacing-wide: 0.05em;
   --letter-spacing-wider: 0.08em;
 
-  /* Transitions */
+  /* Motion */
   --motion-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
-  --motion-duration-fast: 0.16s;
-  --motion-duration-normal: 0.24s;
-  --motion-duration-slow: 0.9s;
+  --motion-duration-fast: 0.15s;
+  --motion-duration-normal: 0.2s;
+  --motion-duration-slow: 0.3s;
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
   --transition-fast: var(--motion-duration-fast) var(--motion-ease-standard);
-  --transition-normal: 0.35s var(--motion-ease-standard);
-  --transition-slow: 0.6s var(--motion-ease-standard);
-  --elevation-1: var(--shadow-xs);
+  --transition-normal: var(--motion-duration-normal) var(--motion-ease-standard);
+  --transition-slow: var(--motion-duration-slow) var(--motion-ease-standard);
+  --elevation-1: var(--shadow-sm);
   --elevation-2: var(--shadow-sm);
-  --elevation-3: var(--shadow-md);
-  --elevation-4: var(--shadow-lg);
+  --elevation-3: var(--shadow-sm);
+  --elevation-4: var(--shadow-sm);
 
-  /* Impersonation banner tokens */
   --impersonation-read-only-bg: rgba(239, 68, 68, 0.92);
   --impersonation-full-access-bg: rgba(234, 179, 8, 0.95);
 }
