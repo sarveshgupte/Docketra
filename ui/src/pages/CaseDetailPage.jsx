@@ -684,14 +684,14 @@ export const CaseDetailPage = () => {
     window.open(pdfUrl, '_blank', 'noopener,noreferrer');
   };
 
-  const descriptionLooksEncrypted = useMemo(() => {
+  const descriptionContent = useMemo(() => {
     const value = String(caseInfo?.description || '').trim();
-    return /^v\d+:[A-Za-z0-9+/=_-]+$/.test(value);
+    if (!value) return 'No description available';
+    if (/^v\d+:[A-Za-z0-9+/=_-]+$/.test(value)) {
+      return <span className="text-gray-400 italic">Description unavailable</span>;
+    }
+    return value;
   }, [caseInfo?.description]);
-
-  const displayDescription = descriptionLooksEncrypted
-    ? ''
-    : (caseInfo?.description || '').trim();
 
   const handleMoreAction = (callback) => {
     setMoreActionsOpen(false);
@@ -938,7 +938,7 @@ export const CaseDetailPage = () => {
           </div>
         )}
 
-        <div className="case-detail-layout-grid grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="case-detail-layout-grid grid grid-cols-1 gap-8 lg:grid-cols-[300px_minmax(0,1fr)]">
           <aside className="case-detail-sidebar" aria-label="Case navigation and summary">
             <div className="case-detail-sidebar__section">
               <p className="case-detail-sidebar__label">Case Snapshot</p>
@@ -1040,7 +1040,7 @@ export const CaseDetailPage = () => {
                       aria-label="Case description"
                     />
                   ) : (
-                    <span className="field-value">{displayDescription || 'No description available'}</span>
+                    <span className="field-value">{descriptionContent}</span>
                   )}
                 </div>
                 {(canPerformLifecycleActions || canUnpend) && (
@@ -1403,6 +1403,7 @@ export const CaseDetailPage = () => {
               entry.createdByName ||
               'System',
             timestamp: entry.timestamp || entry.createdAt,
+            description: entry.description || entry.comment || '',
           }))}
         />
         {confirmModal && (
