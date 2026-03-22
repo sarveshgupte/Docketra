@@ -1,33 +1,34 @@
-/**
- * Enterprise Table Component
- * Features: compact density, sticky header, subtle hover states, action column
- */
-
 import React from 'react';
 
-export const Table = ({ children, className = '', dense = true }) => {
+const joinClasses = (...classes) => classes.filter(Boolean).join(' ');
+
+export const Table = ({ children, className = '' }) => {
   return (
-    <div className={`table-container${dense ? ' table-container--dense' : ''} ${className}`.trim()}>
-      <table className={`table${dense ? ' table--dense' : ''}`.trim()}>
-        {children}
-      </table>
+    <div className={joinClasses('bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm', className)}>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">{children}</table>
+      </div>
     </div>
   );
 };
 
-export const TableHead = ({ children }) => {
-  return <thead>{children}</thead>;
+export const TableHead = ({ children, className = '' }) => {
+  return <thead className={joinClasses('bg-gray-50 border-b border-gray-200', className)}>{children}</thead>;
 };
 
-export const TableBody = ({ children }) => {
-  return <tbody>{children}</tbody>;
+export const TableBody = ({ children, className = '' }) => {
+  return <tbody className={joinClasses('divide-y divide-gray-200 bg-white', className)}>{children}</tbody>;
 };
 
 export const TableRow = ({ children, onClick, className = '' }) => {
   return (
     <tr
       onClick={onClick}
-      className={`${onClick ? 'cursor-pointer table__row--interactive' : ''} ${className}`.trim()}
+      className={joinClasses(
+        'transition-colors duration-150 hover:bg-gray-50',
+        onClick && 'cursor-pointer',
+        className,
+      )}
     >
       {children}
     </tr>
@@ -35,25 +36,27 @@ export const TableRow = ({ children, onClick, className = '' }) => {
 };
 
 export const TableHeader = ({ children, className = '' }) => {
-  return <th className={className}>{children}</th>;
+  return (
+    <th
+      className={joinClasses(
+        'px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap',
+        className,
+      )}
+    >
+      {children}
+    </th>
+  );
 };
 
 export const TableCell = ({ children, className = '' }) => {
-  return <td className={className}>{children}</td>;
+  return <td className={joinClasses('px-6 py-4 whitespace-nowrap text-sm text-gray-900', className)}>{children}</td>;
 };
 
-export const TableFooter = ({ children, colSpan }) => {
+export const TableFooter = ({ children, colSpan, className = '' }) => {
   return (
-    <tfoot>
+    <tfoot className="bg-white">
       <tr>
-        <td
-          colSpan={colSpan}
-          className="text-sm border-t border-border-subtle"
-          style={{
-            padding: 'var(--space-2) var(--space-3)',
-            color: 'var(--text-body)',
-          }}
-        >
+        <td colSpan={colSpan} className={joinClasses('px-6 py-4 text-sm text-gray-500 border-t border-gray-200', className)}>
           {children}
         </td>
       </tr>

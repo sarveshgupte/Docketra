@@ -1,11 +1,14 @@
 import React, { useContext, useEffect, useState } from 'react';
+import { Layout } from '../components/common/Layout';
+import { Card } from '../components/common/Card';
+import { Button } from '../components/common/Button';
+import { Input } from '../components/common/Input';
 import { ToastContext } from '../contexts/ToastContext';
 import {
   connectGoogleDrive,
   getStorageConfiguration,
   testStorageConnection,
 } from '../services/storageService';
-import './StorageSettingsPage.css';
 
 const formatDate = (value) => (value ? new Date(value).toLocaleString() : 'N/A');
 
@@ -48,28 +51,66 @@ export function StorageSettingsPage() {
     }
   };
 
-  if (loading) return <div className="storage-settings__loading">Loading storage settings...</div>;
+  if (loading) {
+    return (
+      <Layout>
+        <div className="min-h-screen bg-gray-50">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+            <div className="space-y-2">
+              <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Storage Settings</h1>
+              <p className="text-sm text-gray-500">Configure and validate your external document storage integration.</p>
+            </div>
+            <Card className="p-6">
+              <p className="text-sm text-gray-500">Loading storage settings...</p>
+            </Card>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   const connected = config?.isConfigured;
 
   return (
-    <div className="storage-settings">
-      <h1>Storage Settings</h1>
-      {!connected ? (
-        <button type="button" onClick={onConnectGoogleDrive}>Connect Google Drive</button>
-      ) : (
-        <>
-          <p className="storage-settings__status"><strong>Provider:</strong> Google Drive</p>
-          <p className="storage-settings__status"><strong>Status:</strong> Active</p>
-          <p className="storage-settings__status"><strong>Connected email:</strong> {config?.connectedEmail || 'N/A'}</p>
-          <p className="storage-settings__status"><strong>Folder path:</strong> {config?.folderPath || config?.rootFolderId || 'N/A'}</p>
-          <p className="storage-settings__status"><strong>Connected since:</strong> {formatDate(config?.createdAt)}</p>
-          <button type="button" onClick={onTestConnection} disabled={testing}>
-            {testing ? 'Testing...' : 'Test Connection'}
-          </button>
-        </>
-      )}
-    </div>
+    <Layout>
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+          <div className="space-y-2">
+            <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Storage Settings</h1>
+            <p className="text-sm text-gray-500">Configure and validate your external document storage integration.</p>
+          </div>
+
+          <Card className="p-6">
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-lg font-medium text-gray-900 mb-4">Google Drive Connection</h2>
+                <p className="text-sm text-gray-500">Authorize Google Drive to store firm documents and verify the integration health.</p>
+              </div>
+
+              <div className="space-y-5">
+                <Input label="Provider" value="Google Drive" readOnly />
+                <Input label="Status" value={connected ? 'Active' : 'Not Connected'} readOnly />
+                <Input label="Connected email" value={config?.connectedEmail || 'N/A'} readOnly />
+                <Input label="Folder path" value={config?.folderPath || config?.rootFolderId || 'N/A'} readOnly />
+                <Input label="Connected since" value={formatDate(config?.createdAt)} readOnly />
+              </div>
+
+              <div className="mt-6 pt-5 border-t border-gray-200 flex justify-end gap-3">
+                {!connected ? (
+                  <Button type="button" variant="primary" onClick={onConnectGoogleDrive}>
+                    Connect Google Drive
+                  </Button>
+                ) : (
+                  <Button type="button" variant="primary" onClick={onTestConnection} disabled={testing}>
+                    {testing ? 'Testing...' : 'Test Connection'}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    </Layout>
   );
 }
 
