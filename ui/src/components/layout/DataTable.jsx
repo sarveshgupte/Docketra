@@ -1,6 +1,7 @@
 import React from 'react';
 import { SortableTableHeader } from '../ui/SortableTableHeader';
-import './layoutPrimitives.css';
+
+const joinClasses = (...classes) => classes.filter(Boolean).join(' ');
 
 export const DataTable = ({
   columns,
@@ -15,7 +16,6 @@ export const DataTable = ({
   onResetFilters,
   toolbarLeft,
   toolbarRight,
-  dense = false,
 }) => {
   if (!data.length) {
     return <>{emptyContent}</>;
@@ -40,25 +40,29 @@ export const DataTable = ({
   };
 
   return (
-    <div className={`data-table__wrapper${dense ? ' data-table__wrapper--dense' : ''}`}>
+    <div className="space-y-3">
       {hasToolbar ? (
-        <div className="data-table__toolbar">
-          <div className="data-table__toolbar-left">{toolbarLeft}</div>
-          <div className="data-table__toolbar-right">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">{toolbarLeft}</div>
+          <div className="flex flex-wrap items-center gap-2">
             {activeFilters.length ? (
-              <div className="data-table__chips" aria-label="Active filters">
+              <div className="flex flex-wrap items-center gap-2" aria-label="Active filters">
                 {activeFilters.map((filter) => (
                   <button
                     key={filter.key}
                     type="button"
-                    className="data-table__chip"
+                    className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-700 transition-colors duration-150 hover:bg-gray-100"
                     onClick={() => onRemoveFilter?.(filter.key)}
                   >
                     {filter.label}: {filter.value} ×
                   </button>
                 ))}
                 {onResetFilters ? (
-                  <button type="button" className="data-table__reset" onClick={onResetFilters}>
+                  <button
+                    type="button"
+                    className="text-xs font-medium text-gray-500 underline underline-offset-2 transition-colors duration-150 hover:text-gray-700"
+                    onClick={onResetFilters}
+                  >
                     Reset filters
                   </button>
                 ) : null}
@@ -68,52 +72,64 @@ export const DataTable = ({
           </div>
         </div>
       ) : null}
-      <table className={`data-table${dense ? ' data-table--dense' : ''}`}>
-        <thead>
-          <tr>
-            {columns.map((column) => (
-              <th key={column.key} className={column.align === 'right' ? 'data-table__cell--right' : ''}>
-                {column.sortable ? (
-                  <SortableTableHeader
-                    column={column.key}
-                    label={column.header}
-                    sortState={sortState}
-                    onSortChange={handleSortToggle}
-                  />
-                ) : (
-                  column.header
-                )}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((row) => (
-            <tr
-              key={row[rowKey]}
-              onClick={isInteractive ? () => onRowClick(row) : undefined}
-              onKeyDown={isInteractive ? (event) => handleRowKeyDown(event, row) : undefined}
-              tabIndex={isInteractive ? 0 : undefined}
-              role={isInteractive ? 'button' : undefined}
-              className={isInteractive ? 'data-table__row--clickable' : ''}
-            >
-              {columns.map((column) => (
-                <td
-                  key={`${row[rowKey]}-${column.key}`}
-                  className={[
-                    column.align === 'right' && 'data-table__cell--right',
-                    column.tabular && 'data-table__cell--tabular',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                {columns.map((column) => (
+                  <th
+                    key={column.key}
+                    className={joinClasses(
+                      'px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap',
+                      column.align === 'right' && 'text-right',
+                    )}
+                  >
+                    {column.sortable ? (
+                      <SortableTableHeader
+                        column={column.key}
+                        label={column.header}
+                        sortState={sortState}
+                        onSortChange={handleSortToggle}
+                      />
+                    ) : (
+                      column.header
+                    )}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 bg-white">
+              {data.map((row) => (
+                <tr
+                  key={row[rowKey]}
+                  onClick={isInteractive ? () => onRowClick(row) : undefined}
+                  onKeyDown={isInteractive ? (event) => handleRowKeyDown(event, row) : undefined}
+                  tabIndex={isInteractive ? 0 : undefined}
+                  role={isInteractive ? 'button' : undefined}
+                  className={joinClasses(
+                    'transition-colors duration-150 hover:bg-gray-50',
+                    isInteractive && 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset',
+                  )}
                 >
-                  {column.render ? column.render(row) : row[column.key]}
-                </td>
+                  {columns.map((column) => (
+                    <td
+                      key={`${row[rowKey]}-${column.key}`}
+                      className={joinClasses(
+                        'px-6 py-4 whitespace-nowrap text-sm text-gray-900',
+                        column.align === 'right' && 'text-right',
+                        column.tabular && 'tabular-nums',
+                      )}
+                    >
+                      {column.render ? column.render(row) : row[column.key]}
+                    </td>
+                  ))}
+                </tr>
               ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 };
