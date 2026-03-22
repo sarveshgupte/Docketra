@@ -1,11 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Button } from '../../components/common/Button';
+import { Card } from '../../components/common/Card';
+import { Input } from '../../components/common/Input';
 import api from '../../services/api';
 import { STRONG_PASSWORD_MESSAGE, validateStrongPassword } from '../../utils/validators';
-
-const inputClass =
-  'w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition-colors duration-150 focus:border-gray-900 focus:shadow-[0_0_0_3px_rgba(17,24,39,0.08)] bg-white';
-const labelClass = 'block text-xs font-medium text-gray-700 mb-1.5';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phonePattern = /^[0-9]{10}$/;
@@ -58,7 +57,6 @@ export default function Signup() {
   const [loginRedirectPath, setLoginRedirectPath] = useState('/signup');
   const [otpDigits, setOtpDigits] = useState(Array(OTP_LENGTH).fill(''));
   const [errors, setErrors] = useState({});
-  const [showPassword, setShowPassword] = useState(false);
   const [resendTimer, setResendTimer] = useState(OTP_RESEND_COOLDOWN);
   const [canResend, setCanResend] = useState(false);
   const otpInputRefs = useRef([]);
@@ -294,247 +292,197 @@ export default function Signup() {
   };
 
   return (
-    <section className="flex min-h-screen w-full items-center justify-center bg-white px-6 py-10">
-      <div className="signup-form-card w-full max-w-[420px] p-8">
-          <h1 className="type-section text-gray-900">Starter Signup</h1>
-          <p className="mt-2 text-sm text-gray-600">Create your free Starter workspace in minutes.</p>
+    <section className="min-h-screen flex items-center justify-center bg-gray-50 p-4 sm:p-8">
+      <Card className="w-full max-w-md">
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">Starter Signup</h1>
+        <p className="mt-2 text-sm text-gray-500 text-center">Create your free Starter workspace in minutes.</p>
 
-          {apiError && (
-            <div role="alert" className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-              {apiError}
-            </div>
-          )}
-          {apiMessage && (
-            <div role="status" aria-live="polite" className="mt-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700">
-              {apiMessage}
-            </div>
-          )}
+        {apiError && (
+          <div role="alert" className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {apiError}
+          </div>
+        )}
+        {apiMessage && (
+          <div role="status" aria-live="polite" className="mt-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700">
+            {apiMessage}
+          </div>
+        )}
 
-          {step === 'form' && (
-            <form className="mt-6 space-y-4" onSubmit={submitManualSignup} noValidate>
-              <div>
-                <label htmlFor="signup-name" className={labelClass}>{renderRequiredLabel('Name')}</label>
-                <input
-                  id="signup-name"
-                  name="name"
-                  value={form.name}
-                  onChange={onFormChange}
-                  className={inputClass}
-                  disabled={loading}
-                  autoComplete="name"
-                  aria-invalid={errors.name ? 'true' : undefined}
-                  aria-describedby={getDescribedBy(errors.name ? 'signup-name-error' : null)}
-                  required
-                />
-                {errors.name && <p id="signup-name-error" className="mt-1 text-xs text-red-600">{errors.name}</p>}
-              </div>
-              <div>
-                <label htmlFor="signup-email" className={labelClass}>{renderRequiredLabel('Email')}</label>
-                <input
-                  id="signup-email"
-                  type="email"
-                  name="email"
-                  value={form.email}
-                  onChange={onFormChange}
-                  className={inputClass}
-                  disabled={loading}
-                  autoComplete="email"
-                  aria-invalid={errors.email ? 'true' : undefined}
-                  aria-describedby={getDescribedBy(errors.email ? 'signup-email-error' : null)}
-                  required
-                />
-                {errors.email && <p id="signup-email-error" className="mt-1 text-xs text-red-600">{errors.email}</p>}
-              </div>
-              <div>
-                <label htmlFor="signup-firm-name" className={labelClass}>{renderRequiredLabel('Firm Name')}</label>
-                <input
-                  id="signup-firm-name"
-                  name="firmName"
-                  value={form.firmName}
-                  onChange={onFormChange}
-                  className={inputClass}
-                  disabled={loading}
-                  autoComplete="organization"
-                  aria-invalid={errors.firmName ? 'true' : undefined}
-                  aria-describedby={getDescribedBy(errors.firmName ? 'signup-firm-name-error' : null)}
-                  required
-                />
-                {errors.firmName && <p id="signup-firm-name-error" className="mt-1 text-xs text-red-600">{errors.firmName}</p>}
-              </div>
-              <div>
-                <label htmlFor="signup-password" className={labelClass}>{renderRequiredLabel('Password')}</label>
-                <div className="relative">
-                  <input
-                    id="signup-password"
-                    type={showPassword ? 'text' : 'password'}
-                    name="password"
-                    value={form.password}
-                     onChange={onFormChange}
-                      className={`${inputClass} pr-10`}
-                       disabled={loading}
-                       autoComplete="new-password"
-                       aria-invalid={errors.password ? 'true' : undefined}
-                       aria-describedby={getDescribedBy(errors.password ? 'signup-password-error' : null, PASSWORD_HINT_ID)}
-                       minLength={8}
-                       required
-                     />
-                  <button
-                    type="button"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute inset-y-0 right-0 inline-flex items-center px-3 text-gray-500 hover:text-gray-700"
-                    disabled={loading}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5" aria-hidden="true">
-                      <path d="M2.46 12C3.73 7.94 7.52 5 12 5c4.48 0 8.27 2.94 9.54 7-1.27 4.06-5.06 7-9.54 7-4.48 0-8.27-2.94-9.54-7Z" />
-                      <circle cx="12" cy="12" r="3" />
-                      {showPassword && <path d="M4 4l16 16" />}
-                    </svg>
-                  </button>
-                </div>
-                {errors.password && <p id="signup-password-error" className="mt-1 text-xs text-red-600">{errors.password}</p>}
-              </div>
-              <div>
-                <label htmlFor="signup-phone" className={labelClass}>{renderRequiredLabel('Phone Number (+91)')}</label>
-                <input
-                  id="signup-phone"
-                  name="phone"
-                  value={form.phone}
-                  onChange={onFormChange}
-                  className={inputClass}
-                  disabled={loading}
-                  autoComplete="tel"
-                  inputMode="numeric"
-                  pattern="[0-9]{10}"
-                  title="Enter a 10-digit Indian mobile number"
-                  maxLength={10}
-                  aria-invalid={errors.phone ? 'true' : undefined}
-                  aria-describedby={getDescribedBy(errors.phone ? 'signup-phone-error' : null, 'signup-phone-help')}
-                  required
-                />
-                  <p id="signup-phone-help" className="mt-1 text-xs text-gray-500">Enter a 10-digit Indian mobile number</p>
-                  {errors.phone && <p id="signup-phone-error" className="mt-1 text-xs text-red-600">{errors.phone}</p>}
-                </div>
-                <p id={PASSWORD_HINT_ID} className="text-xs text-gray-500">{STRONG_PASSWORD_MESSAGE}</p>
-               <button
-                type="submit"
-                disabled={loading}
-                className="marketing-btn-primary inline-flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {loading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : null}
-                {loading ? 'Submitting…' : 'Sign up with Email'}
-              </button>
-              {isGoogleLoginEnabled && (
-                <button
-                  type="button"
-                  disabled={loading}
-                  className="marketing-btn-secondary inline-flex w-full items-center justify-center px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  Continue with Google
-                </button>
-              )}
-              <p className="text-center text-[12px] text-gray-500 sm:text-[13px]">
-                By signing up, you agree to our{' '}
-                <Link to="/terms" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-700">
-                  Terms &amp; Conditions
-                </Link>{' '}
-                and{' '}
-                <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-700">
-                  Privacy Policy
-                </Link>
-                .
+        {step === 'form' && (
+          <form className="mt-6 space-y-5" onSubmit={submitManualSignup} noValidate>
+            <Input
+              id="signup-name"
+              name="name"
+              label={renderRequiredLabel('Name')}
+              value={form.name}
+              onChange={onFormChange}
+              disabled={loading}
+              autoComplete="name"
+              error={errors.name}
+              required
+            />
+
+            <Input
+              id="signup-email"
+              type="email"
+              name="email"
+              label={renderRequiredLabel('Email')}
+              value={form.email}
+              onChange={onFormChange}
+              disabled={loading}
+              autoComplete="email"
+              error={errors.email}
+              required
+            />
+
+            <Input
+              id="signup-firm-name"
+              name="firmName"
+              label={renderRequiredLabel('Firm Name')}
+              value={form.firmName}
+              onChange={onFormChange}
+              disabled={loading}
+              autoComplete="organization"
+              error={errors.firmName}
+              required
+            />
+
+            <Input
+              id="signup-password"
+              type="password"
+              name="password"
+              label={renderRequiredLabel('Password')}
+              value={form.password}
+              onChange={onFormChange}
+              disabled={loading}
+              autoComplete="new-password"
+              error={errors.password}
+              aria-describedby={getDescribedBy(PASSWORD_HINT_ID)}
+              minLength={8}
+              required
+            />
+
+            <Input
+              id="signup-phone"
+              name="phone"
+              label={renderRequiredLabel('Phone Number (+91)')}
+              value={form.phone}
+              onChange={onFormChange}
+              disabled={loading}
+              autoComplete="tel"
+              inputMode="numeric"
+              pattern="[0-9]{10}"
+              title="Enter a 10-digit Indian mobile number"
+              maxLength={10}
+              error={errors.phone}
+              helpText="Enter a 10-digit Indian mobile number"
+              required
+            />
+
+            <p id={PASSWORD_HINT_ID} className="text-xs text-gray-500">{STRONG_PASSWORD_MESSAGE}</p>
+
+            <Button type="submit" variant="primary" fullWidth loading={loading}>
+              {loading ? 'Submitting…' : 'Sign up with Email'}
+            </Button>
+
+            {isGoogleLoginEnabled && (
+              <Button type="button" variant="secondary" fullWidth disabled={loading}>
+                Continue with Google
+              </Button>
+            )}
+
+            <p className="text-center text-[12px] text-gray-500 sm:text-[13px]">
+              By signing up, you agree to our{' '}
+              <Link to="/terms" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-700">
+                Terms &amp; Conditions
+              </Link>{' '}
+              and{' '}
+              <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-700">
+                Privacy Policy
+              </Link>
+              .
+            </p>
+          </form>
+        )}
+
+        {step === 'otp' && (
+          <form className="mt-6 space-y-5" onSubmit={submitOtpVerification} noValidate>
+            <Input id="otp-email" label="Email" value={signupEmail} readOnly />
+
+            <fieldset>
+              <legend className="mb-1 block text-sm font-medium text-gray-900 text-center">{renderRequiredLabel('6-digit OTP')}</legend>
+              <p id={OTP_HINT_ID} className="mt-2 text-sm text-gray-500 text-center">
+                Enter the one-time password sent to your email.
               </p>
-            </form>
-          )}
+              <div className="mt-4 flex justify-center gap-2" onPaste={handleOtpPaste}>
+                {otpDigits.map((digit, index) => (
+                  <Input
+                    key={`otp-digit-${index}`}
+                    id={`otp-code-${index}`}
+                    ref={(element) => {
+                      otpInputRefs.current[index] = element;
+                    }}
+                    value={digit}
+                    onChange={(event) => handleOtpChange(index, event.target.value)}
+                    onKeyDown={(event) => handleOtpKeyDown(index, event)}
+                    className="w-11 [&_.input]:px-0 [&_.input]:text-center"
+                    disabled={loading}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    autoComplete={index === 0 ? 'one-time-code' : 'off'}
+                    maxLength={1}
+                    aria-label={`OTP digit ${index + 1}`}
+                    aria-invalid={errors.otp ? 'true' : undefined}
+                    aria-describedby={getDescribedBy(errors.otp ? 'signup-otp-error' : null, OTP_HINT_ID)}
+                    required
+                  />
+                ))}
+              </div>
+              {errors.otp && <p id="signup-otp-error" className="mt-2 text-xs text-red-600 text-center">{errors.otp}</p>}
+            </fieldset>
 
-          {step === 'otp' && (
-            <form className="mt-6 space-y-4" onSubmit={submitOtpVerification} noValidate>
-              <div>
-                <label htmlFor="otp-email" className={labelClass}>Email</label>
-                <input id="otp-email" value={signupEmail} className={inputClass} readOnly />
-              </div>
-              <fieldset>
-                <legend className={labelClass}>{renderRequiredLabel('6-digit OTP')}</legend>
-                <p id={OTP_HINT_ID} className="mt-1 text-xs text-gray-500">Enter the one-time password sent to your email.</p>
-                <div className="flex gap-2" onPaste={handleOtpPaste}>
-                  {otpDigits.map((digit, index) => (
-                    <input
-                      key={`otp-digit-${index}`}
-                      id={`otp-code-${index}`}
-                      ref={(element) => {
-                        otpInputRefs.current[index] = element;
-                      }}
-                      value={digit}
-                      onChange={(event) => handleOtpChange(index, event.target.value)}
-                      onKeyDown={(event) => handleOtpKeyDown(index, event)}
-                      className={`${inputClass} w-11 text-center`}
-                      disabled={loading}
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      autoComplete={index === 0 ? 'one-time-code' : 'off'}
-                      maxLength={1}
-                      aria-label={`OTP digit ${index + 1}`}
-                      aria-invalid={errors.otp ? 'true' : undefined}
-                      aria-describedby={getDescribedBy(errors.otp ? 'signup-otp-error' : null, OTP_HINT_ID)}
-                      required
-                    />
-                  ))}
-                </div>
-                {errors.otp && <p id="signup-otp-error" className="mt-1 text-xs text-red-600">{errors.otp}</p>}
-              </fieldset>
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="marketing-btn-primary inline-flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {loading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : null}
-                  Verify OTP
-                </button>
-                <button
-                  type="button"
-                  onClick={resendOtp}
-                  disabled={loading || !canResend}
-                  className="marketing-btn-secondary inline-flex w-full items-center justify-center px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {canResend ? 'Resend OTP' : `Resend OTP (${resendTimer}s)`}
-                </button>
-              </div>
-            </form>
-          )}
-
-          {step === 'success' && (
-            <div className="mt-6 space-y-4">
-              <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800" role="status" aria-live="polite">
-                <p className="font-semibold">🎉 Your firm account has been created successfully.</p>
-                <p className="mt-2">
-                  Your login credentials have been sent to your registered email address.
-                </p>
-                <p className="mt-2">
-                  Please check your email to find your XID and login instructions.
-                </p>
-              </div>
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={() => navigate(loginRedirectPath)}
-                  className="marketing-btn-primary inline-flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-medium"
-                >
-                  Go to Login
-                </button>
-                <button
-                  type="button"
-                  onClick={resendCredentialsEmail}
-                  disabled={loading}
-                  className="marketing-btn-secondary inline-flex w-full items-center justify-center px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {loading ? 'Resending…' : 'Resend Credentials Email'}
-                </button>
-              </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button type="submit" variant="primary" fullWidth loading={loading}>
+                Verify OTP
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={resendOtp}
+                disabled={loading || !canResend}
+                fullWidth
+              >
+                {canResend ? 'Resend OTP' : `Resend OTP (${resendTimer}s)`}
+              </Button>
             </div>
-          )}
+          </form>
+        )}
 
-      </div>
+        {step === 'success' && (
+          <div className="mt-6 space-y-5">
+            <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800" role="status" aria-live="polite">
+              <p className="font-semibold">🎉 Your firm account has been created successfully.</p>
+              <p className="mt-2">Your login credentials have been sent to your registered email address.</p>
+              <p className="mt-2">Please check your email to find your XID and login instructions.</p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button type="button" variant="primary" onClick={() => navigate(loginRedirectPath)} fullWidth>
+                Go to Login
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={resendCredentialsEmail}
+                disabled={loading}
+                loading={loading}
+                fullWidth
+              >
+                Resend Credentials Email
+              </Button>
+            </div>
+          </div>
+        )}
+      </Card>
     </section>
   );
 }
