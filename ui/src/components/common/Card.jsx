@@ -8,10 +8,10 @@ import { motion } from 'framer-motion';
 
 export const Card = ({ children, className = '', onClick, interactive = false, animateOnMount = false, ...props }) => {
   const interactiveClass = interactive || onClick
-    ? 'shadow-md hover:shadow-xl transition-shadow duration-300 cursor-pointer'
-    : 'shadow-md';
+    ? 'transition-colors duration-150 cursor-pointer hover:border-gray-300 hover:bg-gray-50'
+    : '';
 
-  const cardClasses = `card rounded-2xl border border-gray-200 p-6 ${interactiveClass} ${className}`;
+  const cardClasses = `card rounded-xl border border-gray-200 bg-white p-6 ${interactiveClass} ${className}`;
 
   if (animateOnMount) {
     return (
