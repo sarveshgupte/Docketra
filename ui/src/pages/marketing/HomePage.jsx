@@ -195,14 +195,14 @@ export const HomePage = () => {
   return (
     <div className="w-full">
       <Section>
-        <div className="grid items-center gap-12 lg:grid-cols-[1.1fr_1fr]">
-          <div className="text-left">
+        <div className="grid w-full items-stretch gap-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+          <div className="w-full text-left">
             <h1 className="type-hero">
               Compliance Workflows That Actually Stick.
               <br />
               <span className="text-blue-600">No More Spreadsheets. No More Guessing.</span>
             </h1>
-            <p className="type-body type-lg max-w-[560px]">
+            <p className="type-body type-lg w-full max-w-[560px]">
               Docketra gives teams real-time visibility into deadlines, assignments, and ownership—with audit trails
               built in. Made for accounting, audit, and tax teams who need to stay in control.
             </p>
@@ -219,7 +219,7 @@ export const HomePage = () => {
 
           <motion.div
             {...SECTION_REVEAL}
-            className="marketing-card border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-8"
+            className="marketing-card w-full border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-8"
           >
             <div className="space-y-4">
               <div className="border-b border-blue-100 pb-4">
@@ -247,7 +247,7 @@ export const HomePage = () => {
                 ].map((item) => (
                   <div key={item.title} className="flex items-start gap-3">
                     <span className="mt-0.5 text-green-600">✓</span>
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-gray-900">{item.title}</p>
                       <p className="text-xs text-gray-600">{item.desc}</p>
                     </div>
@@ -284,12 +284,12 @@ export const HomePage = () => {
       <Section>
         <div className="mb-12 text-center">
           <h2 className="type-section">How Docketra Works</h2>
-          <p className="type-body type-lg mx-auto max-w-[600px] text-gray-600">
+          <p className="type-body type-lg mx-auto w-full max-w-[600px] text-gray-600">
             Built for compliance-heavy teams that need operational discipline and clear ownership.
           </p>
         </div>
 
-        <div className="grid gap-8 md:grid-cols-3">
+        <div className="grid w-full gap-8 md:grid-cols-3">
           {SOLUTION_POINTS.map((item) => (
             <motion.div key={item.num} className="marketing-card p-8" {...SECTION_REVEAL}>
               <div className="flex items-start gap-4">
@@ -309,7 +309,7 @@ export const HomePage = () => {
       <Section muted>
         <div className="mb-12 text-center">
           <h2 className="type-section">Built For Your Workflow</h2>
-          <p className="type-body type-lg mx-auto max-w-[600px] text-gray-600">
+          <p className="type-body type-lg mx-auto w-full max-w-[600px] text-gray-600">
             Whether you run audits, manage compliance, or deliver consulting projects, Docketra supports your process.
           </p>
         </div>
@@ -338,7 +338,7 @@ export const HomePage = () => {
       </Section>
 
       <Section muted>
-        <div className="space-y-6 text-center max-w-2xl mx-auto py-8">
+        <div className="mx-auto w-full max-w-2xl space-y-6 py-8 text-center">
           <span className="text-sm font-bold tracking-wider text-blue-600 uppercase">Pre-Launch Access</span>
           <h2 className="type-section text-gray-900">Join the Docketra Early Access Program</h2>
           <p className="type-body text-lg text-gray-600">
@@ -346,7 +346,7 @@ export const HomePage = () => {
           </p>
 
           <form
-            className="mx-auto mt-8 flex flex-col sm:flex-row gap-3 max-w-md"
+            className="mx-auto mt-8 flex w-full max-w-2xl flex-col gap-3 sm:flex-row sm:items-stretch"
             onSubmit={onEarlyAccessSubmit}
             aria-label="Early access signup"
           >
@@ -355,13 +355,13 @@ export const HomePage = () => {
               name="email"
               type="email"
               placeholder="Enter your work email"
-              className="flex-1 rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+              className="w-full flex-1 rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-600"
               required
               aria-required="true"
             />
             <button
               type="submit"
-              className="marketing-btn-primary rounded-xl px-6 py-3 font-semibold whitespace-nowrap shadow-sm"
+              className="marketing-btn-primary w-full shrink-0 rounded-xl px-6 py-3 font-semibold whitespace-nowrap shadow-sm sm:w-auto"
               aria-label="Request Early Access"
             >
               Request Access
@@ -405,7 +405,7 @@ export const HomePage = () => {
           <h2 className="type-section">Questions Answered</h2>
         </div>
 
-        <div className="mx-auto max-w-4xl space-y-4 px-4 md:px-0">
+        <div className="mx-auto w-full max-w-4xl space-y-4 px-4 md:px-0">
           {FAQS.map((item) => (
             <Accordion key={item.q} question={item.q} answer={item.a} />
           ))}

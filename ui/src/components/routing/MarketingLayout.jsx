@@ -34,13 +34,13 @@ export const MarketingLayout = () => {
         }`}
       >
         <nav
-          className={`marketing-container flex w-full items-center justify-between transition-[height] duration-300 ${isScrolled ? 'h-16' : 'h-20'}`}
+          className={`marketing-container flex w-full flex-col items-stretch justify-between gap-4 py-4 transition-[height] duration-300 sm:flex-row sm:items-center sm:gap-6 sm:py-0 ${isScrolled ? 'sm:h-16' : 'sm:h-20'}`}
         >
-          <Link to="/" className="text-xl font-semibold tracking-tight text-gray-900">
+          <Link to="/" className="shrink-0 text-xl font-semibold tracking-tight text-gray-900">
             Docketra
           </Link>
 
-          <div className="flex items-center gap-6">
+          <div className="flex w-full flex-wrap items-center gap-x-6 gap-y-3 sm:w-auto sm:justify-end">
             <NavLink to="/features" className={navLinkClass}>
               Features
             </NavLink>
@@ -67,8 +67,8 @@ export const MarketingLayout = () => {
 
       <footer className="border-t border-gray-200 bg-white">
         <section className="w-full marketing-section">
-          <div className="marketing-container">
-            <div className="mb-8 grid grid-cols-2 gap-8 md:grid-cols-4">
+          <div className="marketing-container w-full">
+            <div className="mb-8 grid w-full grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-4">
               <div>
                 <h4 className="mb-3 text-sm font-semibold text-gray-900">Product</h4>
                 <ul className="space-y-2 text-sm">
