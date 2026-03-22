@@ -12,6 +12,7 @@ export const PageWrapper = ({ children, __motionState }) => {
 
   return (
     <motion.div
+      className="flex w-full flex-1 min-w-0 flex-col"
       __motionState={__motionState}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
