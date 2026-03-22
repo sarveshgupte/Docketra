@@ -8,9 +8,11 @@ import { useNavigate } from 'react-router-dom';
 import { superadminService } from '../services/superadminService';
 import { SuperAdminLayout } from '../components/common/SuperAdminLayout';
 import { Card } from '../components/common/Card';
+import { Badge } from '../components/common/Badge';
+import { Button } from '../components/common/Button';
+import { MetricCard } from '../components/reports/MetricCard';
 import { Loading } from '../components/common/Loading';
 import { useToast } from '../hooks/useToast';
-import './PlatformDashboard.css';
 
 export const PlatformDashboard = () => {
   const navigate = useNavigate();
@@ -88,59 +90,57 @@ export const PlatformDashboard = () => {
 
   return (
     <SuperAdminLayout>
-      <div className="platform-dashboard">
-        <div className="platform-dashboard__header">
-          <h1>Platform Overview</h1>
-          <p className="platform-dashboard__subtitle">
-            Manage firms on the Docketra platform. Operational work is handled within firms.
-          </p>
-        </div>
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+          <div className="space-y-2">
+            <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Platform Overview</h1>
+            <p className="text-sm text-gray-500">
+              Manage firms on the Docketra platform. Operational work is handled within firms.
+            </p>
+          </div>
 
-        <div className="platform-dashboard__metrics">
-          <Card className="platform-metric-card" onClick={() => navigate('/app/superadmin/firms')}>
-            <div className="platform-metric-card__icon">🏢</div>
-            <div className="platform-metric-card__value">{stats.totalFirms}</div>
-            <div className="platform-metric-card__label">Total Firms</div>
-            <div className="platform-metric-card__subtext">
-              {stats.totalFirms === 0 
-                ? 'No firms exist yet. This is expected.' 
-                : `${stats.activeFirms} Active • ${stats.inactiveFirms} Inactive`}
-            </div>
-          </Card>
-
-          <Card className="platform-metric-card">
-            <div className="platform-metric-card__icon">👥</div>
-            <div className="platform-metric-card__value">{stats.totalClients}</div>
-            <div className="platform-metric-card__label">Total Clients</div>
-            <div className="platform-metric-card__subtext">
-              {stats.totalClients === 0 
-                ? 'No clients yet. Create a firm to begin.' 
-                : 'Across all firms'}
-            </div>
-          </Card>
-
-          <Card className="platform-metric-card">
-            <div className="platform-metric-card__icon">👤</div>
-            <div className="platform-metric-card__value">{stats.totalUsers}</div>
-            <div className="platform-metric-card__label">Total Users</div>
-            <div className="platform-metric-card__subtext">
-              {stats.totalUsers === 0 
-                ? 'No users yet. Create a firm to begin.' 
-                : 'Across all firms'}
-            </div>
-          </Card>
-        </div>
-
-        <div className="platform-dashboard__cta">
-          <Card className="platform-cta-card">
-            <h2>Manage Firms</h2>
-            <p>Create new firms, activate or deactivate existing ones, and manage firm administrators.</p>
-            <button 
-              className="neo-button neo-button--primary"
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <MetricCard
+              title="Total Firms"
+              value={stats.totalFirms}
+              subtitle={
+                stats.totalFirms === 0
+                  ? 'No firms exist yet. This is expected.'
+                  : `${stats.activeFirms} Active • ${stats.inactiveFirms} Inactive`
+              }
               onClick={() => navigate('/app/superadmin/firms')}
-            >
-              Go to Firms Management
-            </button>
+            />
+            <MetricCard
+              title="Active Firms"
+              value={stats.activeFirms}
+              subtitle="Currently enabled firms"
+              subtitleClassName="text-green-600"
+            />
+            <MetricCard
+              title="Total Clients"
+              value={stats.totalClients}
+              subtitle={stats.totalClients === 0 ? 'No clients yet. Create a firm to begin.' : 'Across all firms'}
+            />
+            <MetricCard
+              title="Total Users"
+              value={stats.totalUsers}
+              subtitle={stats.totalUsers === 0 ? 'No users yet. Create a firm to begin.' : 'Across all firms'}
+            />
+          </div>
+
+          <Card className="space-y-4 p-6">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-gray-900 tracking-tight">Firm Management</h2>
+              <Badge>Platform Admin</Badge>
+            </div>
+            <p className="text-sm text-gray-500">
+              Create new firms, activate or deactivate existing ones, and manage firm administrators.
+            </p>
+            <div>
+              <Button variant="primary" onClick={() => navigate('/app/superadmin/firms')}>
+                Go to Firms Management
+              </Button>
+            </div>
           </Card>
         </div>
       </div>

@@ -1,4 +1,3 @@
-// NEW
 import React from 'react';
 
 export const SortableTableHeader = ({
@@ -27,9 +26,13 @@ export const SortableTableHeader = ({
   };
 
   return (
-    <button type="button" className="data-table__sort" onClick={handleToggle}>
+    <button
+      type="button"
+      className="inline-flex items-center gap-1 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 transition-colors duration-150 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded-sm"
+      onClick={handleToggle}
+    >
       <span>{label}</span>
-      <span className="data-table__sort-indicator" aria-hidden="true">
+      <span className="text-gray-400" aria-hidden="true">
         {direction === 'asc' ? '↑' : direction === 'desc' ? '↓' : '↕'}
       </span>
     </button>

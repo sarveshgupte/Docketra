@@ -14,10 +14,11 @@ import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
 import { DashboardSkeleton, SkeletonBlock } from '../components/common/Skeleton';
-import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/layout/EmptyState';
 import { PriorityPill } from '../components/common/PriorityPill';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/common/Table';
 import { SetupChecklist } from '../components/onboarding/SetupChecklist';
+import { MetricCard } from '../components/reports/MetricCard';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
 import { caseService } from '../services/caseService';
@@ -29,7 +30,6 @@ import { formatDate } from '../utils/formatters';
 import { getStatusLabel } from '../utils/statusDisplay';
 import { UX_COPY } from '../constants/uxCopy';
 import api from '../services/api';
-import './DashboardPage.css';
 
 const DASHBOARD_RECENT_CASES_ROW_COUNT = 5;
 const DASHBOARD_RECENT_CASES_MAX_ROWS = 10;
@@ -80,17 +80,6 @@ export const DashboardPage = () => {
 
   const reportLoadWarning = (message) => {
     setLoadWarnings((current) => (current.includes(message) ? current : [...current, message]));
-  };
-
-  const activateWithKeyboard = (event, action) => {
-    if (event.key === ' ') {
-      event.preventDefault();
-      action();
-    }
-
-    if (event.key === 'Enter') {
-      action();
-    }
   };
 
   useEffect(() => {
@@ -314,274 +303,250 @@ export const DashboardPage = () => {
     { label: 'Unassigned', count: stats.myUnassignedCreatedCases, color: 'var(--text-muted)' },
   ];
 
+  const kpiCards = [
+    {
+      title: 'Overdue Compliance Items',
+      value: stats.overdueComplianceItems,
+      subtitle: 'Red Risk Band',
+      subtitleClassName: 'text-red-600',
+      onClick: () => navigate(`/app/firm/${firmSlug}/my-worklist?status=OPEN`),
+    },
+    {
+      title: 'Due in 7 Days',
+      value: stats.dueInSevenDays,
+      subtitle: 'Amber Risk Band',
+      subtitleClassName: 'text-amber-600',
+      onClick: () => navigate(`/app/firm/${firmSlug}/cases?approvalStatus=PENDING`),
+    },
+    {
+      title: 'Awaiting Partner Review',
+      value: awaitingPartnerReview,
+      subtitle: 'Approval queue',
+      onClick: () => navigate(`/app/firm/${firmSlug}/my-worklist?status=PENDED`),
+    },
+    isAdmin
+      ? {
+          title: 'Active Reporting Entities',
+          value: stats.activeClients,
+          subtitle: 'Total active reporting entities',
+          subtitleClassName: 'text-green-600',
+          onClick: () => navigate(`/app/firm/${firmSlug}/admin`),
+        }
+      : {
+          title: 'Risk Summary Panel',
+          value: stats.myResolvedCases,
+          subtitle: 'Executed compliance items',
+          subtitleClassName: 'text-green-600',
+          onClick: () => navigate(`/app/firm/${firmSlug}/my-worklist?status=RESOLVED`),
+        },
+  ];
+
+  const adminStatCards = [
+    {
+      title: 'Filed Cases',
+      value: stats.adminFiledCases,
+      subtitle: 'Archived cases',
+      onClick: () => navigate(`/app/firm/${firmSlug}/cases?status=FILED`),
+    },
+    {
+      title: 'All Resolved',
+      value: stats.adminResolvedCases,
+      subtitle: 'All executed cases',
+      onClick: () => navigate(`/app/firm/${firmSlug}/cases?status=RESOLVED`),
+    },
+    {
+      title: 'Unassigned',
+      value: stats.myUnassignedCreatedCases,
+      subtitle: 'Needs assignment',
+      onClick: () => navigate(`/app/firm/${firmSlug}/global-worklist?createdBy=me&status=UNASSIGNED`),
+    },
+  ];
+
   return (
     <Layout>
-      <div className="dashboard">
-        {/* Header */}
-        <PageHeader
-          title="Partner Control Dashboard"
-          description="Where is the compliance risk in my firm today?"
-          actions={(
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-2">
+              <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Partner Control Dashboard</h1>
+              <p className="text-sm text-gray-500">Where is the compliance risk in my firm today?</p>
+            </div>
             <Button variant="primary" onClick={() => navigate(`/app/firm/${firmSlug}/cases/create`)}>
               {UX_COPY.actions.CREATE_CASE}
             </Button>
-          )}
-        />
-
-        {isAdmin && user?.xID && firmSlug ? (
-          <SetupChecklist
-            storageKey={`setupChecklist:${user.xID}:${firmSlug}`}
-            recentCases={recentCases}
-            onAction={handleChecklistAction}
-          />
-        ) : null}
-
-        {loadWarnings.length ? (
-          <div className="dashboard__warning" role="status" aria-live="polite">
-            <div>
-              <strong>Some dashboard data could not be loaded.</strong>
-              <p>
-                Metrics may be incomplete right now. Retry to refresh the latest workload and compliance signals.
-              </p>
-            </div>
-            <Button variant="outline" onClick={loadDashboardData}>
-              Retry
-            </Button>
           </div>
-        ) : null}
 
-        {/* Section 1: KPI Strip */}
-        <div className="dashboard__kpi-strip">
-          {/* Open Cases */}
-          <div
-            className="dashboard__kpi-card dashboard__kpi-card--clickable"
-            onClick={() => navigate(`/app/firm/${firmSlug}/my-worklist?status=OPEN`)}
-            onKeyDown={(event) => activateWithKeyboard(event, () => navigate(`/app/firm/${firmSlug}/my-worklist?status=OPEN`))}
-            role="button"
-            tabIndex={0}
-          >
-             <div className="dashboard__kpi-number">{stats.overdueComplianceItems}</div>
-             <div className="dashboard__kpi-label">Overdue Compliance Items</div>
-             <div className="dashboard__kpi-sub" style={{ color: 'var(--danger)' }}>Red Risk Band</div>
-           </div>
+          {isAdmin && user?.xID && firmSlug ? (
+            <SetupChecklist
+              storageKey={`setupChecklist:${user.xID}:${firmSlug}`}
+              recentCases={recentCases}
+              onAction={handleChecklistAction}
+            />
+          ) : null}
 
-          {/* Pending Approvals */}
-          <div
-            className="dashboard__kpi-card dashboard__kpi-card--clickable dashboard__kpi-card--accent"
-            onClick={() => navigate(`/app/firm/${firmSlug}/cases?approvalStatus=PENDING`)}
-            onKeyDown={(event) => activateWithKeyboard(event, () => navigate(`/app/firm/${firmSlug}/cases?approvalStatus=PENDING`))}
-            role="button"
-            tabIndex={0}
-          >
-            <div className="dashboard__kpi-number">
-               {stats.dueInSevenDays}
-             </div>
-             <div className="dashboard__kpi-label">Due in 7 Days</div>
-             <div className="dashboard__kpi-sub" style={{ color: 'var(--warning)' }}>Amber Risk Band</div>
-           </div>
-
-          {/* SLA Breaches (cases on hold / pended) */}
-          <div
-            className="dashboard__kpi-card dashboard__kpi-card--clickable dashboard__kpi-card--warning"
-            onClick={() => navigate(`/app/firm/${firmSlug}/my-worklist?status=PENDED`)}
-            onKeyDown={(event) => activateWithKeyboard(event, () => navigate(`/app/firm/${firmSlug}/my-worklist?status=PENDED`))}
-            role="button"
-            tabIndex={0}
-          >
-             <div className="dashboard__kpi-number">{awaitingPartnerReview}</div>
-             <div className="dashboard__kpi-label">Awaiting Partner Review</div>
-             <div className="dashboard__kpi-sub">Approval queue</div>
-           </div>
-
-          {/* Active Clients (admin) / Resolved Cases (regular user) */}
-          {isAdmin ? (
-              <div
-                className="dashboard__kpi-card dashboard__kpi-card--clickable dashboard__kpi-card--success"
-                onClick={() => navigate(`/app/firm/${firmSlug}/admin`)}
-                onKeyDown={(event) => activateWithKeyboard(event, () => navigate(`/app/firm/${firmSlug}/admin`))}
-                role="button"
-                tabIndex={0}
-              >
-                <div className="dashboard__kpi-number">{stats.activeClients}</div>
-                <div className="dashboard__kpi-label">Active Reporting Entities</div>
-                <div className="dashboard__kpi-sub">Total active reporting entities</div>
+          {loadWarnings.length ? (
+            <div
+              className="flex flex-col gap-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-gray-900 sm:flex-row sm:items-center sm:justify-between"
+              role="status"
+              aria-live="polite"
+            >
+              <div>
+                <strong>Some dashboard data could not be loaded.</strong>
+                <p className="mt-1 text-sm text-gray-600">
+                  Metrics may be incomplete right now. Retry to refresh the latest workload and compliance signals.
+                </p>
               </div>
-          ) : (
-              <div
-                className="dashboard__kpi-card dashboard__kpi-card--clickable dashboard__kpi-card--success"
-                onClick={() => navigate(`/app/firm/${firmSlug}/my-worklist?status=RESOLVED`)}
-                onKeyDown={(event) => activateWithKeyboard(event, () => navigate(`/app/firm/${firmSlug}/my-worklist?status=RESOLVED`))}
-                role="button"
-                tabIndex={0}
-              >
-               <div className="dashboard__kpi-number">{stats.myResolvedCases}</div>
-               <div className="dashboard__kpi-label">Risk Summary Panel</div>
-               <div className="dashboard__kpi-sub">Executed compliance items</div>
-             </div>
-          )}
-        </div>
+              <Button variant="outline" onClick={loadDashboardData}>
+                Retry
+              </Button>
+            </div>
+          ) : null}
 
-        {/* Section 2: Docket Workflow Summary */}
-        <div className="dashboard__section">
-          <h2 className="dashboard__section-title">Docket Lifecycle Distribution</h2>
-          <div className="dashboard__workflow">
-            {workflowStatuses.map((item, idx) => (
-              <React.Fragment key={item.label}>
-                <div className="dashboard__workflow-step">
-                  <div
-                    className="dashboard__workflow-count"
-                    style={{ color: item.color, borderColor: item.color }}
-                  >
-                    {item.count}
-                  </div>
-                  <div className="dashboard__workflow-label">{item.label}</div>
-                </div>
-                {idx < workflowStatuses.length - 1 && (
-                  <div className="dashboard__workflow-arrow">›</div>
-                )}
-              </React.Fragment>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {kpiCards.map((card) => (
+              <MetricCard
+                key={card.title}
+                title={card.title}
+                value={card.value}
+                subtitle={card.subtitle}
+                subtitleClassName={card.subtitleClassName}
+                onClick={card.onClick}
+              />
             ))}
           </div>
-        </div>
 
-        {/* Section 3: Worklist Panel */}
-        <div className="dashboard__section">
-          <div className="dashboard__section-header">
-            <h2 className="dashboard__section-title">
-               Recent Dockets
-            </h2>
-            <Button
-              variant="outline"
-              className="dashboard__view-all-button"
-              onClick={handleViewAllCases}
-            >
-              View All Dockets
-            </Button>
-          </div>
-          <Card>
-            {recentCasesLoading ? (
-              <div className="dashboard__recent-cases-skeleton" aria-busy="true" aria-live="polite">
-                {Array.from({ length: DASHBOARD_RECENT_CASES_LIMIT }).map((_, index) => (
-                  <div key={index} className="dashboard__recent-cases-skeleton-row">
-                    <SkeletonBlock style={{ width: '100%', height: '14px' }} />
-                    <SkeletonBlock style={{ width: '80%', height: '14px' }} />
-                    <SkeletonBlock style={{ width: '72%', height: '14px' }} />
-                    <SkeletonBlock style={{ width: '64%', height: '14px' }} />
-                    <SkeletonBlock style={{ width: '58%', height: '14px' }} />
-                  </div>
+          <section className="space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900 tracking-tight">Docket Lifecycle Distribution</h2>
+            <Card className="p-6">
+              <div className="flex flex-wrap items-center gap-4 lg:flex-nowrap">
+                {workflowStatuses.map((item, idx) => (
+                  <React.Fragment key={item.label}>
+                    <div className="flex min-w-[96px] flex-1 flex-col items-center gap-2 text-center">
+                      <div
+                        className="flex h-12 w-12 items-center justify-center rounded-full border-2 bg-gray-50 text-base font-bold"
+                        style={{ color: item.color, borderColor: item.color }}
+                      >
+                        {item.count}
+                      </div>
+                      <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">{item.label}</div>
+                    </div>
+                    {idx < workflowStatuses.length - 1 ? (
+                      <div className="hidden text-xl text-gray-300 lg:block">›</div>
+                    ) : null}
+                  </React.Fragment>
                 ))}
               </div>
-            ) : recentCases.length === 0 ? (
-              <EmptyState
-                title={isAdmin ? 'No dockets yet' : 'No assigned dockets yet'}
-                description={
-                  isAdmin
-                    ? 'Create your first docket to start tracking deadlines, ownership, and firm workflow health.'
-                    : 'Once work is assigned to you, your recently updated dockets will appear here for quick follow-up.'
-                }
-                actionLabel={UX_COPY.actions.CREATE_CASE}
-                onAction={() => navigate(`/app/firm/${firmSlug}/cases/create`)}
-              />
-            ) : (
-              <div className="dashboard__table-wrap">
-                <table className="neo-table dashboard__recent-cases-table" aria-label="Recent dockets">
-                  <thead>
+            </Card>
+          </section>
+
+          <section className="space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-lg font-semibold text-gray-900 tracking-tight">Recent Dockets</h2>
+              <Button variant="outline" onClick={handleViewAllCases}>
+                View All Dockets
+              </Button>
+            </div>
+            <Card className="p-0">
+              {recentCasesLoading ? (
+                <div className="grid gap-3 p-6" aria-busy="true" aria-live="polite">
+                  {Array.from({ length: DASHBOARD_RECENT_CASES_LIMIT }).map((_, index) => (
+                    <div
+                      key={index}
+                      className="grid items-center gap-3 min-[720px]:grid-cols-[minmax(180px,2fr)_repeat(4,minmax(96px,1fr))]"
+                    >
+                      <SkeletonBlock style={{ width: '100%', height: '14px' }} />
+                      <SkeletonBlock style={{ width: '80%', height: '14px' }} />
+                      <SkeletonBlock style={{ width: '72%', height: '14px' }} />
+                      <SkeletonBlock style={{ width: '64%', height: '14px' }} />
+                      <SkeletonBlock style={{ width: '58%', height: '14px' }} />
+                    </div>
+                  ))}
+                </div>
+              ) : recentCases.length === 0 ? (
+                <div className="p-6">
+                  <EmptyState
+                    title={isAdmin ? 'No dockets yet' : 'No assigned dockets yet'}
+                    description={
+                      isAdmin
+                        ? 'Create your first docket to start tracking deadlines, ownership, and firm workflow health.'
+                        : 'Once work is assigned to you, your recently updated dockets will appear here for quick follow-up.'
+                    }
+                    actionLabel={UX_COPY.actions.CREATE_CASE}
+                    onAction={() => navigate(`/app/firm/${firmSlug}/cases/create`)}
+                  />
+                </div>
+              ) : (
+                <Table className="border-0 rounded-none shadow-none">
+                  <TableHead>
                     <tr>
-                      <th>Docket Name</th>
-                      <th>Category</th>
-                      <th>Status</th>
-                      <th>Priority</th>
-                      <th>Last Action Timestamp</th>
+                      <TableHeader>Docket Name</TableHeader>
+                      <TableHeader>Category</TableHeader>
+                      <TableHeader>Status</TableHeader>
+                      <TableHeader>Priority</TableHeader>
+                      <TableHeader>Last Action Timestamp</TableHeader>
                     </tr>
-                  </thead>
-                  <tbody>
+                  </TableHead>
+                  <TableBody>
                     {recentCases.map((caseItem) => (
-                      <tr
+                      <TableRow
                         key={caseItem._id}
                         onClick={() => handleCaseClick(caseItem.caseId)}
-                        onKeyDown={(event) => activateWithKeyboard(event, () => handleCaseClick(caseItem.caseId))}
-                        tabIndex={0}
+                        className="focus-within:bg-gray-50"
                       >
-                        <td className="dashboard__case-name-cell">
-                          <span className="dashboard__case-name" title={caseItem.caseName}>
+                        <TableCell className="max-w-0">
+                          <span className="block overflow-hidden text-ellipsis whitespace-nowrap" title={caseItem.caseName}>
                             {caseItem.caseName}
                           </span>
-                        </td>
-                        <td>{caseItem.category}</td>
-                        <td>
+                        </TableCell>
+                        <TableCell>{caseItem.category}</TableCell>
+                        <TableCell>
                           <Badge status={caseItem.status}>{getStatusLabel(caseItem.status)}</Badge>
-                        </td>
-                        <td><PriorityPill caseRecord={caseItem} /></td>
-                        <td>{formatDate(caseItem.updatedAt)}</td>
-                      </tr>
+                        </TableCell>
+                        <TableCell><PriorityPill caseRecord={caseItem} /></TableCell>
+                        <TableCell>{formatDate(caseItem.updatedAt)}</TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Card>
-        </div>
+                  </TableBody>
+                </Table>
+              )}
+            </Card>
+          </section>
 
-        {/* Admin extended stats */}
-        {isAdmin && (
-          <div className="dashboard__section">
-            <h2 className="dashboard__section-title">Execution Status by Team Member</h2>
-            <div className="dashboard__admin-stats">
-              <div
-                className="dashboard__stat-card dashboard__stat-card--clickable"
-                onClick={() => navigate(`/app/firm/${firmSlug}/cases?status=FILED`)}
-                onKeyDown={(event) => activateWithKeyboard(event, () => navigate(`/app/firm/${firmSlug}/cases?status=FILED`))}
-                role="button"
-                tabIndex={0}
-              >
-                <div className="dashboard__stat-value">{stats.adminFiledCases}</div>
-                <div className="dashboard__stat-label">Filed Cases</div>
-                <div className="dashboard__stat-description">Archived cases</div>
+          {isAdmin ? (
+            <section className="space-y-4">
+              <h2 className="text-lg font-semibold text-gray-900 tracking-tight">Execution Status by Team Member</h2>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                {adminStatCards.map((card) => (
+                  <MetricCard
+                    key={card.title}
+                    title={card.title}
+                    value={card.value}
+                    subtitle={card.subtitle}
+                    onClick={card.onClick}
+                  />
+                ))}
               </div>
-              <div
-                className="dashboard__stat-card dashboard__stat-card--clickable"
-                onClick={() => navigate(`/app/firm/${firmSlug}/cases?status=RESOLVED`)}
-                onKeyDown={(event) => activateWithKeyboard(event, () => navigate(`/app/firm/${firmSlug}/cases?status=RESOLVED`))}
-                role="button"
-                tabIndex={0}
-              >
-                <div className="dashboard__stat-value">{stats.adminResolvedCases}</div>
-                <div className="dashboard__stat-label">All Resolved</div>
-                <div className="dashboard__stat-description">All executed cases</div>
-              </div>
-              <div
-                className="dashboard__stat-card dashboard__stat-card--clickable"
-                onClick={() => navigate(`/app/firm/${firmSlug}/global-worklist?createdBy=me&status=UNASSIGNED`)}
-                onKeyDown={(event) => activateWithKeyboard(event, () => navigate(`/app/firm/${firmSlug}/global-worklist?createdBy=me&status=UNASSIGNED`))}
-                role="button"
-                tabIndex={0}
-              >
-                <div className="dashboard__stat-value">{stats.myUnassignedCreatedCases}</div>
-                <div className="dashboard__stat-label">Unassigned</div>
-                <div className="dashboard__stat-description">Needs assignment</div>
-              </div>
-            </div>
-          </div>
-        )}
+            </section>
+          ) : null}
+        </div>
       </div>
 
-      {/* Bookmark Prompt Modal */}
-      {showBookmarkPrompt && (
-        <div className="dashboard__modal-overlay">
-          <div className="dashboard__modal">
-            <h2 className="dashboard__modal-title">Bookmark Your Firm Dashboard</h2>
-            <p className="dashboard__modal-text">
+      {showBookmarkPrompt ? (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/40 px-4">
+          <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-8 shadow-xl">
+            <h2 className="text-lg font-semibold text-gray-900 tracking-tight">Bookmark Your Firm Dashboard</h2>
+            <p className="mt-3 text-sm text-gray-600">
               For quick access in the future, we recommend bookmarking this page:
             </p>
-            <div className="dashboard__modal-url">
+            <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 font-mono text-xs text-gray-700 break-all">
               {window.location.origin}/app/firm/{firmSlug}
             </div>
-            <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleDismissBookmarkPrompt}>
+            <button className="btn btn-primary mt-5 w-full" onClick={handleDismissBookmarkPrompt}>
               Got it
             </button>
           </div>
         </div>
-      )}
+      ) : null}
     </Layout>
   );
 };
