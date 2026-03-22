@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button } from './Button';
 import { caseService } from '../../services/caseService';
 import { formatDateTime } from '../../utils/formatDateTime';
 import { buildCsv } from '../../utils/csv';
@@ -112,23 +111,40 @@ export const AuditTimelineDrawer = ({ isOpen, onClose, caseId, events }) => {
   };
 
   return (
-    <div className={`audit-drawer${isOpen ? ' audit-drawer--open' : ''}`} aria-hidden={!isOpen}>
-      <div className="audit-drawer__backdrop" onClick={onClose} />
-      <aside className="audit-drawer__panel" role="dialog" aria-label="Audit History">
+    <>
+      <div
+        className={`fixed inset-0 z-40 bg-gray-900/50 transition-opacity duration-300 ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        aria-hidden={!isOpen}
+        onClick={onClose}
+      />
+      <aside
+        className={`audit-drawer fixed inset-y-0 right-0 z-50 flex w-full max-w-md transform flex-col bg-white shadow-2xl transition-transform duration-300 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Audit History"
+      >
         <div className="audit-drawer__header">
-          <h3>Audit History</h3>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <Button variant="outline" onClick={handleDownloadCsv} disabled={!timelineItems.length}>
-              Download Audit History (CSV)
-            </Button>
-            <Button variant="outline" onClick={onClose}>
-              Close
-            </Button>
+          <div>
+            <h3 className="audit-drawer__title">Audit History</h3>
+            <p className="audit-drawer__meta">Audit log is system-recorded</p>
+            {loading ? <p className="audit-drawer__meta">Loading audit history...</p> : null}
           </div>
+          <button type="button" className="audit-drawer__close" onClick={onClose} aria-label="Close audit history">
+            ×
+          </button>
         </div>
-        <p className="audit-drawer__meta">Audit log is system-recorded</p>
-        {loading ? <p className="audit-drawer__meta">Loading audit history...</p> : null}
-        <div className="audit-drawer__list">
+        <div className="audit-drawer__toolbar">
+          <button
+            type="button"
+            className="audit-drawer__download"
+            onClick={handleDownloadCsv}
+            disabled={!timelineItems.length}
+          >
+            Download Audit History (CSV)
+          </button>
+        </div>
+        <div className="audit-drawer__body overflow-y-auto">
+          <div className="audit-drawer__list">
           {timelineItems.map((entry, idx) => {
             const lifecycle = isLifecycleEvent(entry.action);
             const irreversible = isIrreversible(entry.action);
@@ -153,8 +169,9 @@ export const AuditTimelineDrawer = ({ isOpen, onClose, caseId, events }) => {
               </React.Fragment>
             );
           })}
+          </div>
         </div>
       </aside>
-    </div>
+    </>
   );
 };

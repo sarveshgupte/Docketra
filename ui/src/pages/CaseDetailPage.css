@@ -138,6 +138,7 @@
   padding: 24px;
   align-items: start;
   background: #f9fafb;
+  grid-template-columns: 1fr;
 }
 
 .case-detail-sidebar {
@@ -405,9 +406,9 @@
   min-width: 180px;
 }
 
-@media (max-width: 1280px) {
+@media (min-width: 1024px) {
   .case-detail-layout-grid {
-    grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+    grid-template-columns: 300px minmax(0, 1fr);
   }
 }
 
