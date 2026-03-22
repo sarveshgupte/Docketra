@@ -164,6 +164,9 @@ const caseSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Case description is required'],
     trim: true,
+    // Encrypted payloads have significant overhead (v1:iv:authTag:ciphertext).
+    // Allow ample room so encrypted descriptions are not truncated at rest.
+    maxlength: [5000, 'Case description cannot exceed 5000 characters'],
   },
   
   /**
