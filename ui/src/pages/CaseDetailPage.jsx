@@ -944,20 +944,20 @@ export const CaseDetailPage = () => {
               <p className="case-detail-sidebar__label">Case Snapshot</p>
               <div className="case-detail-sidebar__stack space-y-6">
                 <div className="field-group">
-                  <span className="field-label">Client</span>
-                  <span className="field-value">{caseData.client ? formatClientDisplay(caseData.client, true) : '—'}</span>
+                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Client</span>
+                  <span className="field-value text-sm font-medium text-gray-900">{caseData.client ? formatClientDisplay(caseData.client, true) : '—'}</span>
                 </div>
                 <div className="field-group">
-                  <span className="field-label">Assigned To</span>
-                  <span className="field-value">{caseInfo?.assignedToName || caseInfo?.assignedToXID || 'Unassigned'}</span>
+                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Assigned To</span>
+                  <span className="field-value text-sm font-medium text-gray-900">{caseInfo?.assignedToName || caseInfo?.assignedToXID || 'Unassigned'}</span>
                 </div>
                 <div className="field-group">
-                  <span className="field-label">Lifecycle</span>
+                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Lifecycle</span>
                   <Badge status={caseInfo?.status} className="case-detail-status-badge">{toLifecycleStage(caseInfo?.status)}</Badge>
                 </div>
                 <div className="field-group">
-                  <span className="field-label">Due Date</span>
-                  <span className="field-value">{caseInfo.dueDate ? formatDateTime(caseInfo.dueDate) : 'Not configured'}</span>
+                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Due Date</span>
+                  <span className="field-value text-sm font-medium text-gray-900">{caseInfo.dueDate ? formatDateTime(caseInfo.dueDate) : 'Not configured'}</span>
                 </div>
               </div>
             </div>
@@ -1014,7 +1014,7 @@ export const CaseDetailPage = () => {
                 </div>
                 <div className="field-grid">
                   <div className="field-group min-w-[300px]">
-                    <span className="field-label">Category</span>
+                    <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Category</span>
                     {isEditingOverview ? (
                       <Input
                         value={overviewDraft.category}
@@ -1022,16 +1022,16 @@ export const CaseDetailPage = () => {
                         aria-label="Case category"
                       />
                     ) : (
-                      <span className="field-value">{caseInfo.category}</span>
+                      <span className="field-value text-sm font-medium text-gray-900">{caseInfo.category}</span>
                     )}
                   </div>
                   <div className="field-group min-w-[300px]">
-                    <span className="field-label">Current Lifecycle Stage</span>
+                    <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Current Lifecycle Stage</span>
                     <Badge status={caseInfo?.status} className="case-detail-status-badge">{toLifecycleStage(caseInfo?.status)}</Badge>
                   </div>
                 </div>
                 <div className="field-group">
-                  <span className="field-label">Description</span>
+                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Description</span>
                   {isEditingOverview ? (
                     <Textarea
                       value={overviewDraft.description}
@@ -1040,11 +1040,11 @@ export const CaseDetailPage = () => {
                       aria-label="Case description"
                     />
                   ) : (
-                    <span className="field-value">{descriptionContent}</span>
+                    <span className="field-value text-sm font-medium text-gray-900">{descriptionContent}</span>
                   )}
                 </div>
                 {(canPerformLifecycleActions || canUnpend) && (
-                  <div className="case-detail-lifecycle-actions">
+                  <div className="case-detail-lifecycle-actions flex flex-wrap justify-end gap-3">
                     {canPerformLifecycleActions && (
                       <>
                         <Button variant="outline" onClick={() => setShowFileModal(true)} className="case-detail__btn-muted">📤 File</Button>
@@ -1057,7 +1057,7 @@ export const CaseDetailPage = () => {
                   </div>
                 )}
                 {canEditOverview && isEditingOverview && (
-                  <div className="case-detail-lifecycle-actions">
+                  <div className="case-detail-lifecycle-actions flex flex-wrap justify-end gap-3">
                     <Button variant="primary" onClick={handleSaveOverview} disabled={!hasOverviewChanges}>Save Overview</Button>
                   </div>
                 )}
@@ -1072,20 +1072,22 @@ export const CaseDetailPage = () => {
                 <div className="case-detail__comments" ref={commentsListRef}>
                   {comments.length > 0 ? (
                     comments.map((comment, index) => (
-                      <div key={index} className="case-detail__comment-item">
+                      <article key={index} className="case-detail__comment-item">
                         <div className="case-detail__comment-header">
                           <span className="case-detail__comment-author">
                             {comment.createdByName && comment.createdByXID
                               ? `${comment.createdByName} (${comment.createdByXID})`
                               : 'System (Unknown)'}
                           </span>
-                          <span className="case-detail__comment-time">{formatDateTime(comment.createdAt)}</span>
+                          <time className="case-detail__comment-time" dateTime={comment.createdAt}>
+                            {formatDateTime(comment.createdAt)}
+                          </time>
                         </div>
                         <p className="case-detail__comment-text">{comment.text}</p>
-                      </div>
+                      </article>
                     ))
                   ) : (
-                    <EmptyState title="No comments yet" description="Use comments to capture updates and handoffs." />
+                    <div className="case-detail__empty-state rounded-xl border border-dashed border-gray-200 bg-gray-50 p-8 text-gray-500"><EmptyState title="No comments yet" description="Use comments to capture updates and handoffs." /></div>
                   )}
                 </div>
                 {(accessMode.canComment || permissions.canAddComment(caseData)) && (
@@ -1113,9 +1115,11 @@ export const CaseDetailPage = () => {
                       rows={3}
                       className="case-detail__comment-input"
                     />
-                    <Button variant="primary" onClick={handleAddComment} disabled={!newComment.trim() || submitting}>
-                      {submitting ? 'Adding…' : 'Add Comment'}
-                    </Button>
+                    <div className="flex justify-end">
+                      <Button variant="primary" onClick={handleAddComment} disabled={!newComment.trim() || submitting}>
+                        {submitting ? 'Adding…' : 'Add Comment'}
+                      </Button>
+                    </div>
                   </div>
                 )}
               </section>
@@ -1129,31 +1133,35 @@ export const CaseDetailPage = () => {
                 <div className="case-detail__attachments">
                   {attachments.length > 0 ? (
                     attachments.map((attachment, index) => (
-                      <div key={index} className="case-detail__attachment-item case-detail__attachment-card">
-                        <div className="case-detail__attachment-name">📄 {attachment.fileName || attachment.filename}</div>
-                        <div className="case-detail__attachment-meta">
-                          {attachment.visibility === 'external' ? (
-                            <><strong>📧 External Email</strong> · From: {attachment.createdBy}</>
-                          ) : (
-                            <>{attachment.source === 'email' ? '📧' : '📤'} Attached by {attachment.createdByName && attachment.createdByXID
-                              ? `${attachment.createdByName} (${attachment.createdByXID})`
-                              : 'System (Unknown)'}</>
-                          )}
+                      <article key={index} className="case-detail__attachment-item case-detail__attachment-card">
+                        <div className="case-detail__attachment-main">
+                          <div className="case-detail__attachment-name">📄 {attachment.fileName || attachment.filename}</div>
+                          <div className="case-detail__attachment-meta-group">
+                            <div className="case-detail__attachment-meta">
+                              {attachment.visibility === 'external' ? (
+                                <><strong>📧 External Email</strong> · From: {attachment.createdBy}</>
+                              ) : (
+                                <>{attachment.source === 'email' ? '📧' : '📤'} Attached by {attachment.createdByName && attachment.createdByXID
+                                  ? `${attachment.createdByName} (${attachment.createdByXID})`
+                                  : 'System (Unknown)'}</>
+                              )}
+                            </div>
+                            <div className="case-detail__attachment-date">
+                              {attachment.visibility === 'external' ? 'Received: ' : 'Attached: '}
+                              {formatDateTime(attachment.createdAt)}
+                            </div>
+                            {attachment.description && (
+                              <div className="case-detail__attachment-desc">{attachment.description}</div>
+                            )}
+                          </div>
                         </div>
-                        <div className="case-detail__attachment-date">
-                          {attachment.visibility === 'external' ? 'Received: ' : 'Attached: '}
-                          {formatDateTime(attachment.createdAt)}
+                        <div className="case-detail__attachment-actions" aria-label="Attachment actions">
+                          <Button variant="outline" className="case-detail__attachment-action" onClick={() => caseService.viewAttachment(caseId, attachment._id)}>View</Button>
+                          <Button variant="outline" className="case-detail__attachment-action" onClick={() => caseService.downloadAttachment(caseId, attachment._id, attachment.fileName || attachment.filename)}>Download</Button>
                         </div>
-                        {attachment.description && (
-                          <div className="case-detail__attachment-desc">{attachment.description}</div>
-                        )}
-                        <div className="case-detail__attachment-actions">
-                          <Button variant="outline" size="sm" onClick={() => caseService.viewAttachment(caseId, attachment._id)}>View</Button>
-                          <Button variant="outline" size="sm" onClick={() => caseService.downloadAttachment(caseId, attachment._id, attachment.fileName || attachment.filename)}>Download</Button>
-                        </div>
-                      </div>
+                      </article>
                     ))
-                  ) : <EmptyState title="No attachments yet" description="Upload files or forward an email to keep artifacts with this docket." />}
+                  ) : <div className="case-detail__empty-state rounded-xl border border-dashed border-gray-200 bg-gray-50 p-8 text-gray-500"><EmptyState title="No attachments yet" description="Upload files or forward an email to keep artifacts with this docket." /></div>}
                 </div>
                 {(accessMode.canAttach || permissions.canAddAttachment(caseData)) && (
                   <div className="case-detail__upload">
@@ -1209,7 +1217,7 @@ export const CaseDetailPage = () => {
                   <h2 id="history-heading">History</h2>
                 </div>
                 <div className="case-detail-history-list">
-                  {timelineEvents.length ? <AuditTimeline events={timelineEvents} /> : <EmptyState title="No history yet" description="Audit events will appear here as the case changes." />}
+                  {timelineEvents.length ? <AuditTimeline events={timelineEvents} /> : <div className="case-detail__empty-state rounded-xl border border-dashed border-gray-200 bg-gray-50 p-8 text-gray-500"><EmptyState title="No history yet" description="Audit events will appear here as the case changes." /></div>}
                 </div>
               </section>
             )}
