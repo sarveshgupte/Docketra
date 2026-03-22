@@ -99,10 +99,6 @@ export const CaseDetailPage = () => {
   const [actionError, setActionError] = useState(null);
   const [auditSidebarOpen, setAuditSidebarOpen] = useState(false);
   const fileInputRef = useRef(null);
-  const overviewSectionRef = useRef(null);
-  const commentsSectionRef = useRef(null);
-  const attachmentsSectionRef = useRef(null);
-  const historySectionRef = useRef(null);
   const commentsListRef = useRef(null);
   const commentComposerId = `case-comment-composer-${caseId}`;
   const queryTab = new URLSearchParams(location.search).get('tab');
@@ -209,32 +205,6 @@ export const CaseDetailPage = () => {
     });
     setIsEditingOverview(false);
   }, [caseInfo?.caseId, caseInfo?.category, caseInfo?.description]);
-
-  useEffect(() => {
-    const refs = [
-      ['overview', overviewSectionRef.current],
-      ['comments', commentsSectionRef.current],
-      ['attachments', attachmentsSectionRef.current],
-      ['history', historySectionRef.current],
-    ].filter(([, el]) => Boolean(el));
-    if (!refs.length) return undefined;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (visible?.target?.id) {
-          setActiveSection(visible.target.id);
-        }
-      },
-      { rootMargin: '-120px 0px -50% 0px', threshold: [0.15, 0.4, 0.75] }
-    );
-
-    refs.forEach(([, el]) => observer.observe(el));
-    return () => observer.disconnect();
-  }, [loading]);
-
 
   useEffect(() => {
     const tabFromUrl = new URLSearchParams(location.search).get('tab');
@@ -748,14 +718,7 @@ export const CaseDetailPage = () => {
   const canUnpend = docketMode === 'PEND' && !isViewOnlyMode;
 
   const scrollToSection = (key) => {
-    const sectionMap = {
-      [CASE_DETAIL_TABS.OVERVIEW]: overviewSectionRef,
-      [CASE_DETAIL_TABS.COMMENTS]: commentsSectionRef,
-      [CASE_DETAIL_TABS.ATTACHMENTS]: attachmentsSectionRef,
-      [CASE_DETAIL_TABS.HISTORY]: historySectionRef,
-    };
     setActiveSection(key);
-    sectionMap[key]?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const handleScrollToComments = () => {
@@ -838,23 +801,31 @@ export const CaseDetailPage = () => {
           </div>
         )}
         <CaseDetailHeader
-          caseId={formatDocketId(caseInfo.caseId || caseId)}
-          title={caseInfo.title || caseInfo.category}
-          status={toLifecycleStage(caseInfo?.status)}
-          lastUpdated={formatDateTime(caseInfo.updatedAt)}
-          onOpenAudit={() => setAuditSidebarOpen(true)}
-          onAddComment={handleScrollToComments}
-          onCloseCase={() => setShowFileModal(true)}
+          caseInfo={{
+            caseId: formatDocketId(caseInfo.caseId || caseId),
+            category: caseInfo.title || caseInfo.category,
+            status: caseInfo?.status,
+            updatedAt: caseInfo.updatedAt,
+          }}
+          actions={(
+            <>
+              <Button variant="outline" onClick={handleShowClientFactSheet} disabled={loadingFactSheet}>Fact Sheet</Button>
+              {showPullButton && <Button variant="primary" onClick={handlePullCase} disabled={pullingCase}>{pullingCase ? 'Pulling docket...' : 'Pull Docket'}</Button>}
+              {canUnpend && <Button variant="primary" onClick={() => setShowUnpendModal(true)}>Unpend Docket</Button>}
+              <Button variant="outline" onClick={handlePrintSummary}>Print Summary</Button>
+              <Button variant="outline" onClick={() => setAuditSidebarOpen(true)}>Audit ↗</Button>
+              <Button variant="outline" onClick={handleScrollToComments}>Add Comment</Button>
+              <Button variant="outline" onClick={() => setShowFileModal(true)}>More Actions</Button>
+            </>
+          )}
+          statusBadges={(
+            <>
+              {caseInfo.approvalStatus === 'PENDING' && <Badge variant="warning">Awaiting Partner Approval</Badge>}
+              {caseInfo.lockStatus?.isLocked && <Badge variant="warning">Lifecycle Locked</Badge>}
+              {caseInfo?.stage?.requiresApproval === true && isViewOnlyMode && <Badge variant="warning">Role Restricted Action</Badge>}
+            </>
+          )}
         />
-        <div className="case-detail__header-actions case-detail__header-actions--top">
-          <Button variant="outline" onClick={handleShowClientFactSheet} disabled={loadingFactSheet}>Fact Sheet</Button>
-          {showPullButton && <Button variant="primary" onClick={handlePullCase} disabled={pullingCase}>{pullingCase ? 'Pulling docket...' : 'Pull Docket'}</Button>}
-          {canUnpend && <Button variant="primary" onClick={() => setShowUnpendModal(true)}>Unpend Docket</Button>}
-          <Button variant="outline" onClick={handlePrintSummary}>Print Summary</Button>
-          {caseInfo.approvalStatus === 'PENDING' && <Badge variant="warning">Awaiting Partner Approval</Badge>}
-          {caseInfo.lockStatus?.isLocked && <Badge variant="warning">Lifecycle Locked</Badge>}
-          {caseInfo?.stage?.requiresApproval === true && isViewOnlyMode && <Badge variant="warning">Role Restricted Action</Badge>}
-        </div>
 
         <StickyTabs
           tabs={[
@@ -905,18 +876,33 @@ export const CaseDetailPage = () => {
           </div>
         )}
 
-        <div className="case-detail__split">
-          <div className="case-detail__split-main">
-            <Card className="case-detail__section case-section" id="overview" ref={overviewSectionRef}>
-              <div className="case-detail__section-heading">
-                <h2 className="neo-section__header">Overview</h2>
-                {canEditOverview ? (
-                  <Button variant="outline" onClick={() => setIsEditingOverview((value) => !value)}>
-                    {isEditingOverview ? 'Cancel Edit' : 'Edit'}
-                  </Button>
-                ) : null}
+        <div className="case-detail-layout-grid">
+          <aside className="case-detail-sidebar" aria-label="Case navigation and summary">
+            <div className="case-detail-sidebar__section">
+              <p className="case-detail-sidebar__label">Case Snapshot</p>
+              <div className="case-detail-sidebar__stack">
+                <div className="field-group">
+                  <span className="field-label">Client</span>
+                  <span className="field-value">{caseData.client ? formatClientDisplay(caseData.client, true) : '—'}</span>
+                </div>
+                <div className="field-group">
+                  <span className="field-label">Assigned To</span>
+                  <span className="field-value">{caseInfo?.assignedToName || caseInfo?.assignedToXID || 'Unassigned'}</span>
+                </div>
+                <div className="field-group">
+                  <span className="field-label">Lifecycle</span>
+                  <Badge status={caseInfo?.status} className="case-detail-status-badge">{toLifecycleStage(caseInfo?.status)}</Badge>
+                </div>
+                <div className="field-group">
+                  <span className="field-label">Due Date</span>
+                  <span className="field-value">{caseInfo.dueDate ? formatDateTime(caseInfo.dueDate) : 'Not configured'}</span>
+                </div>
               </div>
-              <div className="case-detail__metadata-grid">
+            </div>
+
+            <div className="case-detail-sidebar__section">
+              <p className="case-detail-sidebar__label">Audit Metadata</p>
+              <div className="case-detail-sidebar__stack">
                 <AuditMetadata
                   className="case-detail__metadata-item"
                   prefix="Created by"
@@ -929,242 +915,246 @@ export const CaseDetailPage = () => {
                   actor={caseInfo.updatedByName || caseInfo.assignedToName || 'System'}
                   timestamp={caseInfo.updatedAt}
                 />
-                <span className="case-detail__metadata-item">
-                  Assigned to: {caseInfo?.assignedToName || caseInfo?.assignedToXID || 'Unassigned'}
-                </span>
               </div>
-              <div className="case-detail__field">
-                <span className="case-detail__label">Client</span>
-                <span>{caseData.client ? formatClientDisplay(caseData.client, true) : '—'}</span>
-              </div>
-              <div className="case-detail__field">
-                <span className="case-detail__label">Category</span>
-                {isEditingOverview ? (
-                  <Input
-                    value={overviewDraft.category}
-                    onChange={(e) => setOverviewDraft((prev) => ({ ...prev, category: e.target.value }))}
-                    aria-label="Case category"
-                  />
-                ) : (
-                  <span>{caseInfo.category}</span>
-                )}
-              </div>
-              <div className="case-detail__field">
-                <span className="case-detail__label">Current Lifecycle Stage</span>
-                <Badge status={caseInfo?.status}>{toLifecycleStage(caseInfo?.status)}</Badge>
-              </div>
-              <div className="case-detail__field">
-                <span className="case-detail__label">Due Date</span>
-                <span>{caseInfo.dueDate ? formatDateTime(caseInfo.dueDate) : 'Not configured'}</span>
-              </div>
-              <div className="case-detail__field">
-                <span className="case-detail__label">Description</span>
-                {isEditingOverview ? (
-                  <Textarea
-                    value={overviewDraft.description}
-                    onChange={(e) => setOverviewDraft((prev) => ({ ...prev, description: e.target.value }))}
-                    rows={3}
-                    aria-label="Case description"
-                  />
-                ) : (
-                  <span>{caseInfo.description || 'No description'}</span>
-                )}
-              </div>
-              {(canPerformLifecycleActions || canUnpend) && (
-                <div className="case-detail__lifecycle-actions">
-                  {canPerformLifecycleActions && (
-                    <>
-                      <Button variant="outline" onClick={() => setShowFileModal(true)} className="case-detail__btn-muted">
-                        📤 File
-                      </Button>
-                      <Button variant="outline" onClick={() => setShowPendModal(true)} className="case-detail__btn-warning">
-                        ⏳ Pend
-                      </Button>
-                      <Button variant="primary" onClick={() => setShowResolveModal(true)}>
-                        ✓ Resolve
-                      </Button>
-                    </>
-                  )}
-                  {canUnpend && <Button variant="primary" onClick={() => setShowUnpendModal(true)}>🔁 Unpend</Button>}
-                  {showMoveToWorkbasketButton ? <Button variant="outline" onClick={handleMoveToGlobal} disabled={movingToGlobal}>{movingToGlobal ? 'Moving…' : 'Move to Workbasket'}</Button> : null}
-                </div>
-              )}
-            </Card>
+            </div>
 
-            <Card className="case-detail__section case-section" id="comments" ref={commentsSectionRef}>
-              <h2 className="neo-section__header">Comments</h2>
-              <div className="case-detail__comments" ref={commentsListRef}>
-                {comments.length > 0 ? (
-                  comments.map((comment, index) => (
-                    <div key={index} className="case-detail__comment-item">
-                      <div className="case-detail__comment-header">
-                        <span className="case-detail__comment-author">
-                          {comment.createdByName && comment.createdByXID
-                            ? `${comment.createdByName} (${comment.createdByXID})`
-                            : 'System (Unknown)'}
-                        </span>
-                        <span className="case-detail__comment-time">{formatDateTime(comment.createdAt)}</span>
-                      </div>
-                      <p className="case-detail__comment-text">{comment.text}</p>
-                    </div>
-                  ))
-                ) : (
-                  <EmptyState title="No comments yet" description="Use comments to capture updates and handoffs." />
-                )}
-              </div>
-              {(accessMode.canComment || permissions.canAddComment(caseData)) && (
-                <div className="case-detail__add-comment">
-                  <SaveIndicator
-                    status={commentSaveStatus}
-                    time={commentSavedAt}
-                    onRetry={() => {
-                      try {
-                        setCommentSaveStatus('saving');
-                        localStorage.setItem(commentDraftKey, newComment);
-                        setCommentSaveStatus('saved');
-                        setCommentSavedAt(new Date());
-                      } catch (error) {
-                        setCommentSaveStatus('error');
-                      }
-                    }}
-                  />
-                  <Textarea
-                    label="Add Comment"
-                    id={commentComposerId}
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    placeholder="Enter your comment…"
-                    rows={3}
-                    className="case-detail__comment-input"
-                  />
-                  <Button variant="primary" onClick={handleAddComment} disabled={!newComment.trim() || submitting}>
-                    {submitting ? 'Adding…' : 'Add Comment'}
-                  </Button>
-                </div>
-              )}
-            </Card>
-
-            <Card className="case-detail__section case-section" id="history" ref={historySectionRef}>
-              <h2 className="neo-section__header">History / Audit</h2>
-              <div className="case-detail__history-events">
-                <AuditTimeline events={timelineEvents} />
-              </div>
-              <h3 className="case-detail__subheading">Related Dockets</h3>
+            <div className="case-detail-sidebar__section">
+              <p className="case-detail-sidebar__label">Related Dockets</p>
               {loadingClientDockets ? <p className="case-detail__empty-note">Loading docket history...</p> : (
-                <table className="case-detail__history-table">
-                  <thead><tr><th>Docket ID</th><th>Category</th><th>Status</th><th>Created</th></tr></thead>
-                  <tbody>
-                    {clientDockets.map((row) => (
-                      <tr key={formatDocketId(row.caseId)} onClick={() => navigate(`/app/firm/${firmSlug}/cases/${row.caseId}`)} style={{ cursor: 'pointer' }}>
-                        <td>{formatDocketId(row.caseId)}</td><td>{row.category}</td><td>{row.status}</td><td>{formatDateTime(row.createdAt)}</td>
-                      </tr>
-                    ))}
-                    {!clientDockets.length ? <tr><td colSpan={4}>No related dockets found.</td></tr> : null}
-                  </tbody>
-                </table>
-              )}
-            </Card>
-          </div>
-
-          <aside className="case-detail__split-context" aria-label="Case context panel">
-            <Card className="case-detail__context-card case-section" id="attachments" ref={attachmentsSectionRef}>
-              <h2 className="neo-section__header">Attachments</h2>
-              <div className="case-detail__attachments">
-                {attachments.length > 0 ? (
-                  attachments.map((attachment, index) => (
-                    <div key={index} className="neo-inset case-detail__attachment-item">
-                      <div className="case-detail__attachment-name">
-                        📄 {attachment.fileName || attachment.filename}
-                      </div>
-                      <div className="case-detail__attachment-meta">
-                        {attachment.visibility === 'external' ? (
-                          <><strong>📧 External Email</strong> · From: {attachment.createdBy}</>
-                        ) : (
-                          <>{attachment.source === 'email' ? '📧' : '📤'} Attached by {attachment.createdByName && attachment.createdByXID
-                            ? `${attachment.createdByName} (${attachment.createdByXID})`
-                            : 'System (Unknown)'}</>
-                        )}
-                      </div>
-                      <div className="case-detail__attachment-date">
-                        {attachment.visibility === 'external' ? 'Received: ' : 'Attached: '}
-                        {formatDateTime(attachment.createdAt)}
-                      </div>
-                      {attachment.description && (
-                        <div className="case-detail__attachment-desc">{attachment.description}</div>
-                      )}
-                      <div className="case-detail__attachment-actions">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => caseService.viewAttachment(caseId, attachment._id)}
-                        >
-                          View
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => caseService.downloadAttachment(caseId, attachment._id, attachment.fileName || attachment.filename)}
-                        >
-                          Download
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                ) : <EmptyState title="No attachments yet" description="Upload files or forward an email to keep artifacts with this docket." />}
-              </div>
-
-              {/* File Upload Dropzone */}
-              {(accessMode.canAttach || permissions.canAddAttachment(caseData)) && (
-                <div className="case-detail__upload">
-                  <div className={`neo-dropzone${isDragActive ? ' neo-dropzone--active' : ''}`} onClick={() => fileInputRef.current?.click()} role="button" tabIndex={0}
-                    onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
-                    onDragOver={(e) => { e.preventDefault(); setIsDragActive(true); }}
-                    onDragLeave={() => setIsDragActive(false)}
-                    onDrop={handleDropFiles}
-                    aria-label="Click to upload attachment">
-                    <div className="neo-dropzone__icon" aria-hidden="true">📎</div>
-                    <div className="neo-dropzone__label">
-                      {selectedFile ? selectedFile.name : 'Drag files here or click to attach'}
-                    </div>
-                    <div className="neo-dropzone__sub">PDF, DOCX, XLSX, images up to 25MB</div>
-                  </div>
-                  {inboundAddress && (
-                    <div className="neo-dropzone__sub" style={{ marginTop: '8px' }}>
-                      Forward emails to: <strong>{inboundAddress}</strong>{' '}
-                      <button type="button" className="neo-btn neo-btn--ghost neo-btn--sm" onClick={handleCopyInboundAddress}>Copy</button>
-                    </div>
-                  )}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    style={{ display: 'none' }}
-                    onChange={handleFileSelect}
-                    disabled={uploadingFile}
-                    aria-hidden="true"
-                  />
-                  {selectedFile && (
-                    <Textarea
-                      label="File Description"
-                      value={fileDescription}
-                      onChange={(e) => setFileDescription(e.target.value)}
-                      placeholder="Describe this attachment…"
-                      rows={2}
-                      disabled={uploadingFile}
-                    />
-                  )}
-                  {selectedFile && (
-                    <Button
-                      variant="primary"
-                      onClick={handleUploadFile}
-                      disabled={!selectedFile || !fileDescription.trim() || uploadingFile}
-                      style={{ width: '100%' }}
+                <div className="case-detail-related-list">
+                  {clientDockets.length ? clientDockets.map((row) => (
+                    <button
+                      key={formatDocketId(row.caseId)}
+                      type="button"
+                      className="case-detail-related-item"
+                      onClick={() => navigate(`/app/firm/${firmSlug}/cases/${row.caseId}`)}
                     >
-                      {uploadingFile ? 'Uploading…' : 'Upload File'}
-                    </Button>
-                  )}
+                      <span className="case-detail-related-item__title">{formatDocketId(row.caseId)}</span>
+                      <span className="case-detail-related-item__meta">{row.category}</span>
+                      <span className="case-detail-related-item__meta">{formatDateTime(row.createdAt)}</span>
+                    </button>
+                  )) : <p className="case-detail__empty-note">No related dockets found.</p>}
                 </div>
               )}
-            </Card>
+            </div>
+          </aside>
+
+          <main className="case-detail-main">
+            {activeSection === CASE_DETAIL_TABS.OVERVIEW && (
+              <section className="case-card" aria-labelledby="overview-heading">
+                <div className="case-card__heading">
+                  <h2 id="overview-heading">Overview</h2>
+                  {canEditOverview ? (
+                    <Button variant="outline" onClick={() => setIsEditingOverview((value) => !value)}>
+                      {isEditingOverview ? 'Cancel Edit' : 'Edit'}
+                    </Button>
+                  ) : null}
+                </div>
+                <div className="field-grid">
+                  <div className="field-group">
+                    <span className="field-label">Category</span>
+                    {isEditingOverview ? (
+                      <Input
+                        value={overviewDraft.category}
+                        onChange={(e) => setOverviewDraft((prev) => ({ ...prev, category: e.target.value }))}
+                        aria-label="Case category"
+                      />
+                    ) : (
+                      <span className="field-value">{caseInfo.category}</span>
+                    )}
+                  </div>
+                  <div className="field-group">
+                    <span className="field-label">Current Lifecycle Stage</span>
+                    <Badge status={caseInfo?.status} className="case-detail-status-badge">{toLifecycleStage(caseInfo?.status)}</Badge>
+                  </div>
+                </div>
+                <div className="field-group">
+                  <span className="field-label">Description</span>
+                  {isEditingOverview ? (
+                    <Textarea
+                      value={overviewDraft.description}
+                      onChange={(e) => setOverviewDraft((prev) => ({ ...prev, description: e.target.value }))}
+                      rows={3}
+                      aria-label="Case description"
+                    />
+                  ) : (
+                    <span className="field-value">{caseInfo.description || 'No description'}</span>
+                  )}
+                </div>
+                {(canPerformLifecycleActions || canUnpend) && (
+                  <div className="case-detail-lifecycle-actions">
+                    {canPerformLifecycleActions && (
+                      <>
+                        <Button variant="outline" onClick={() => setShowFileModal(true)} className="case-detail__btn-muted">📤 File</Button>
+                        <Button variant="outline" onClick={() => setShowPendModal(true)} className="case-detail__btn-warning">⏳ Pend</Button>
+                        <Button variant="primary" onClick={() => setShowResolveModal(true)}>✓ Resolve</Button>
+                      </>
+                    )}
+                    {canUnpend && <Button variant="primary" onClick={() => setShowUnpendModal(true)}>🔁 Unpend</Button>}
+                    {showMoveToWorkbasketButton ? <Button variant="outline" onClick={handleMoveToGlobal} disabled={movingToGlobal}>{movingToGlobal ? 'Moving…' : 'Move to Workbasket'}</Button> : null}
+                  </div>
+                )}
+                {canEditOverview && isEditingOverview && (
+                  <div className="case-detail-lifecycle-actions">
+                    <Button variant="primary" onClick={handleSaveOverview} disabled={!hasOverviewChanges}>Save Overview</Button>
+                  </div>
+                )}
+              </section>
+            )}
+
+            {activeSection === CASE_DETAIL_TABS.COMMENTS && (
+              <section className="case-card" aria-labelledby="comments-heading">
+                <div className="case-card__heading">
+                  <h2 id="comments-heading">Comments</h2>
+                </div>
+                <div className="case-detail__comments" ref={commentsListRef}>
+                  {comments.length > 0 ? (
+                    comments.map((comment, index) => (
+                      <div key={index} className="case-detail__comment-item">
+                        <div className="case-detail__comment-header">
+                          <span className="case-detail__comment-author">
+                            {comment.createdByName && comment.createdByXID
+                              ? `${comment.createdByName} (${comment.createdByXID})`
+                              : 'System (Unknown)'}
+                          </span>
+                          <span className="case-detail__comment-time">{formatDateTime(comment.createdAt)}</span>
+                        </div>
+                        <p className="case-detail__comment-text">{comment.text}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <EmptyState title="No comments yet" description="Use comments to capture updates and handoffs." />
+                  )}
+                </div>
+                {(accessMode.canComment || permissions.canAddComment(caseData)) && (
+                  <div className="case-detail__add-comment">
+                    <SaveIndicator
+                      status={commentSaveStatus}
+                      time={commentSavedAt}
+                      onRetry={() => {
+                        try {
+                          setCommentSaveStatus('saving');
+                          localStorage.setItem(commentDraftKey, newComment);
+                          setCommentSaveStatus('saved');
+                          setCommentSavedAt(new Date());
+                        } catch (error) {
+                          setCommentSaveStatus('error');
+                        }
+                      }}
+                    />
+                    <Textarea
+                      label="Add Comment"
+                      id={commentComposerId}
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      placeholder="Enter your comment…"
+                      rows={3}
+                      className="case-detail__comment-input"
+                    />
+                    <Button variant="primary" onClick={handleAddComment} disabled={!newComment.trim() || submitting}>
+                      {submitting ? 'Adding…' : 'Add Comment'}
+                    </Button>
+                  </div>
+                )}
+              </section>
+            )}
+
+            {activeSection === CASE_DETAIL_TABS.ATTACHMENTS && (
+              <section className="case-card" aria-labelledby="attachments-heading">
+                <div className="case-card__heading">
+                  <h2 id="attachments-heading">Attachments</h2>
+                </div>
+                <div className="case-detail__attachments">
+                  {attachments.length > 0 ? (
+                    attachments.map((attachment, index) => (
+                      <div key={index} className="case-detail__attachment-item case-detail__attachment-card">
+                        <div className="case-detail__attachment-name">📄 {attachment.fileName || attachment.filename}</div>
+                        <div className="case-detail__attachment-meta">
+                          {attachment.visibility === 'external' ? (
+                            <><strong>📧 External Email</strong> · From: {attachment.createdBy}</>
+                          ) : (
+                            <>{attachment.source === 'email' ? '📧' : '📤'} Attached by {attachment.createdByName && attachment.createdByXID
+                              ? `${attachment.createdByName} (${attachment.createdByXID})`
+                              : 'System (Unknown)'}</>
+                          )}
+                        </div>
+                        <div className="case-detail__attachment-date">
+                          {attachment.visibility === 'external' ? 'Received: ' : 'Attached: '}
+                          {formatDateTime(attachment.createdAt)}
+                        </div>
+                        {attachment.description && (
+                          <div className="case-detail__attachment-desc">{attachment.description}</div>
+                        )}
+                        <div className="case-detail__attachment-actions">
+                          <Button variant="outline" size="sm" onClick={() => caseService.viewAttachment(caseId, attachment._id)}>View</Button>
+                          <Button variant="outline" size="sm" onClick={() => caseService.downloadAttachment(caseId, attachment._id, attachment.fileName || attachment.filename)}>Download</Button>
+                        </div>
+                      </div>
+                    ))
+                  ) : <EmptyState title="No attachments yet" description="Upload files or forward an email to keep artifacts with this docket." />}
+                </div>
+                {(accessMode.canAttach || permissions.canAddAttachment(caseData)) && (
+                  <div className="case-detail__upload">
+                    <div className={`neo-dropzone${isDragActive ? ' neo-dropzone--active' : ''}`} onClick={() => fileInputRef.current?.click()} role="button" tabIndex={0}
+                      onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
+                      onDragOver={(e) => { e.preventDefault(); setIsDragActive(true); }}
+                      onDragLeave={() => setIsDragActive(false)}
+                      onDrop={handleDropFiles}
+                      aria-label="Click to upload attachment">
+                      <div className="neo-dropzone__icon" aria-hidden="true">📎</div>
+                      <div className="neo-dropzone__label">
+                        {selectedFile ? selectedFile.name : 'Drag files here or click to attach'}
+                      </div>
+                      <div className="neo-dropzone__sub">PDF, DOCX, XLSX, images up to 25MB</div>
+                    </div>
+                    {inboundAddress && (
+                      <div className="case-detail-upload-hint">
+                        Forward emails to: <strong>{inboundAddress}</strong>{' '}
+                        <button type="button" className="neo-btn neo-btn--ghost neo-btn--sm" onClick={handleCopyInboundAddress}>Copy</button>
+                      </div>
+                    )}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      style={{ display: 'none' }}
+                      onChange={handleFileSelect}
+                      disabled={uploadingFile}
+                      aria-hidden="true"
+                    />
+                    {selectedFile && (
+                      <Textarea
+                        label="File Description"
+                        value={fileDescription}
+                        onChange={(e) => setFileDescription(e.target.value)}
+                        placeholder="Describe this attachment…"
+                        rows={2}
+                        disabled={uploadingFile}
+                      />
+                    )}
+                    {selectedFile && (
+                      <Button variant="primary" onClick={handleUploadFile} disabled={!selectedFile || !fileDescription.trim() || uploadingFile}>
+                        {uploadingFile ? 'Uploading…' : 'Upload File'}
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </section>
+            )}
+
+            {activeSection === CASE_DETAIL_TABS.HISTORY && (
+              <section className="case-card" aria-labelledby="history-heading">
+                <div className="case-card__heading">
+                  <h2 id="history-heading">History</h2>
+                </div>
+                <div className="case-detail-history-list">
+                  {timelineEvents.length ? <AuditTimeline events={timelineEvents} /> : <EmptyState title="No history yet" description="Audit events will appear here as the case changes." />}
+                </div>
+              </section>
+            )}
+          </main>
+
+          <aside className="case-detail-audit" aria-label="Audit history panel">
+            <AuditTimeline events={timelineEvents} />
           </aside>
         </div>
 
