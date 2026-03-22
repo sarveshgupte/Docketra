@@ -31,22 +31,22 @@ const FEATURES = [
 
 export const FeaturesPage = () => (
   <Section>
-    <div className="text-center max-w-3xl mx-auto">
+    <div className="mx-auto w-full max-w-3xl text-center">
       <h1 className="type-section text-gray-900">Platform Features</h1>
       <p className="mt-6 type-body text-lg text-gray-600">
         Everything you need to bring operational discipline to your firm. Built for compliance, audit, and tax teams who cannot afford to miss a deadline.
       </p>
     </div>
-    <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="mt-16 grid w-full gap-8 sm:grid-cols-2 lg:grid-cols-3">
       {FEATURES.map(({ title, description }, index) => (
         <motion.div
           key={title}
-          className="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col"
+          className="flex h-full w-full flex-col rounded-2xl border border-gray-100 bg-white p-8 shadow-sm transition-shadow duration-300 hover:shadow-lg"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: Math.min(index * 0.1, 0.4) }}
         >
-          <div className="h-10 w-10 rounded-lg bg-blue-50 flex items-center justify-center mb-6">
+          <div className="mb-6 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50">
             <span className="text-blue-600 font-bold text-xl">✓</span>
           </div>
           <h2 className="type-card-title text-gray-900 mb-3">{title}</h2>
