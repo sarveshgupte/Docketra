@@ -86,6 +86,74 @@ const sanitizeForLog = (text, maxLength = 100) => {
     .trim();
 };
 
+const buildAddCommentErrorResponse = (error, context = {}) => {
+  const validationDetails = error?.errors
+    ? Object.values(error.errors)
+      .map((validationError) => validationError.message)
+      .join('; ')
+    : undefined;
+
+  console.error('[ADD_COMMENT_ERROR]', {
+    error,
+    message: error?.message,
+    name: error?.name,
+    stack: error?.stack,
+    caseId: context.caseId,
+    resolvedCaseId: context.resolvedCaseId,
+    userId: context.userId,
+    firmId: context.firmId,
+    lockStatus: context.lockStatus,
+    requestBody: context.requestBody,
+    validationDetails,
+  });
+
+  if (error?.message?.includes('Case is locked')) {
+    return {
+      status: 423,
+      body: {
+        success: false,
+        message: 'Case is locked',
+        details: error.message,
+        code: 'CASE_LOCKED',
+      },
+    };
+  }
+
+  if (error?.message?.includes('Case not found')) {
+    return {
+      status: 404,
+      body: {
+        success: false,
+        message: 'Case not found',
+        details: error.message,
+        code: 'CASE_NOT_FOUND',
+      },
+    };
+  }
+
+  if (error?.name === 'ValidationError') {
+    return {
+      status: 400,
+      body: {
+        success: false,
+        message: 'Comment validation failed',
+        details: validationDetails || error.message,
+        code: 'COMMENT_VALIDATION_ERROR',
+      },
+    };
+  }
+
+  return {
+    status: 500,
+    body: {
+      success: false,
+      message: 'Unexpected error while adding comment',
+      details: error?.message || 'Unknown server error',
+      code: 'ADD_COMMENT_ERROR',
+    },
+  };
+};
+
 const computeDeadlineFromTatDays = (tatDays) => {
   const days = Number(tatDays);
   if (!Number.isFinite(days) || days <= 0) return null;
@@ -562,10 +630,12 @@ const createCase = async (req, res) => {
  * PR: Case Identifier Semantics - Uses internal ID resolution
  */
 const addComment = async (req, res) => {
+  const { caseId } = req.params;
+  const tenantFirmId = req.firmId || req.user?.firmId;
+  let caseData = null;
+
   try {
-    const { caseId } = req.params;
     const { text, note } = req.body;
-    const tenantFirmId = req.firmId || req.user?.firmId;
     
     // PR #45: Require authenticated user with xID for security and audit
     if (!req.user?.email || !req.user?.xID) {
@@ -586,29 +656,23 @@ const addComment = async (req, res) => {
     // This handles both ObjectId and CASE-YYYYMMDD-XXXXX formats
     try {
       const internalId = await resolveCaseIdentifier(tenantFirmId, caseId, req.user.role);
-      var caseData = await CaseRepository.findByInternalId(tenantFirmId, internalId, req.user.role);
+      caseData = await CaseRepository.findByInternalId(tenantFirmId, internalId, req.user.role);
     } catch (error) {
-      return res.status(404).json({
-        success: false,
-        message: 'Case not found',
-      });
+      if (!error.message) {
+        error.message = 'Case not found during identifier resolution';
+      }
+      throw error;
     }
     
     if (!caseData) {
-      return res.status(404).json({
-        success: false,
-        message: 'Case not found',
-      });
+      throw new Error('Case not found');
     }
     
     // PR #45: Allow comments in view mode - no assignment/ownership check
     // Only check if case is locked by someone else - use authenticated user for security
     if (caseData.lockStatus?.isLocked && 
         caseData.lockStatus.activeUserEmail !== req.user.email.toLowerCase()) {
-      return res.status(423).json({
-        success: false,
-        message: `Case is currently locked by ${caseData.lockStatus.activeUserEmail}`,
-      });
+      throw new Error(`Case is locked by ${caseData.lockStatus.activeUserEmail}`);
     }
     
     // Create comment - use caseId from database (caseNumber for display)
@@ -650,11 +714,19 @@ const addComment = async (req, res) => {
       message: 'Comment added successfully',
     });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: 'Error adding comment',
-      error: error.message,
+    const { status, body } = buildAddCommentErrorResponse(error, {
+      caseId,
+      resolvedCaseId: caseData?.caseId || null,
+      userId: req.user?.xID,
+      firmId: tenantFirmId,
+      lockStatus: caseData?.lockStatus || null,
+      requestBody: {
+        textLength: typeof req.body?.text === 'string' ? req.body.text.length : null,
+        hasNote: Boolean(req.body?.note),
+        createdBy: req.body?.createdBy || null,
+      },
     });
+    return res.status(status).json(body);
   }
 };
 
