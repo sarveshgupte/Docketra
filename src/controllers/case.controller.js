@@ -678,6 +678,7 @@ const addComment = async (req, res) => {
     // Create comment - use caseId from database (caseNumber for display)
     const comment = await Comment.create({
       caseId: caseData.caseId,
+      firmId: tenantFirmId,
       text,
       createdBy: req.user.email.toLowerCase(),
       createdByXID: req.user.xID,
@@ -690,6 +691,7 @@ const addComment = async (req, res) => {
     const sanitizedText = sanitizeForLog(text, COMMENT_PREVIEW_LENGTH);
     await CaseAudit.create({
       caseId: caseData.caseId,
+      firmId: tenantFirmId,
       actionType: 'CASE_COMMENT_ADDED',
       description: `Comment added by ${req.user.xID}: ${sanitizedText}${text.length > COMMENT_PREVIEW_LENGTH ? '...' : ''}`,
       performedByXID: req.user.xID,
@@ -702,6 +704,7 @@ const addComment = async (req, res) => {
     // Also add to CaseHistory for backward compatibility
     await CaseHistory.create({
       caseId: caseData.caseId,
+      firmId: tenantFirmId,
       actionType: 'CASE_COMMENT_ADDED',
       description: `Comment added by ${req.user.email}: ${text.substring(0, COMMENT_PREVIEW_LENGTH)}${text.length > COMMENT_PREVIEW_LENGTH ? '...' : ''}`,
       performedBy: req.user.email.toLowerCase(),
