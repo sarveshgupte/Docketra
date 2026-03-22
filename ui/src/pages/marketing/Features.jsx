@@ -4,57 +4,53 @@ import { Section } from '../../components/layout/Section';
 
 const FEATURES = [
   {
-    title: 'Multi-Tenant Foundation',
-    description:
-      'Docketra is architected as a multi-tenant platform, keeping each organization isolated while allowing centralized operations at scale.',
+    title: 'Centralized Firm Dashboard',
+    description: 'Manage all your clients, cases, and team members from a single, secure platform. Say goodbye to scattered spreadsheets and isolated WhatsApp groups.',
   },
   {
-    title: 'Role-Scoped Access Control',
-    description:
-      'Permissions are role-scoped by default so admins, managers, and contributors only see and act on what their responsibilities allow.',
+    title: 'Granular Access Controls',
+    description: 'Data privacy is built-in. Assign specific roles to partners, managers, and trainees so everyone only accesses the information they are authorized to see.',
   },
   {
-    title: 'Governance-Ready Workflows',
-    description:
-      'Every workflow is governance-ready with auditable actions, traceable status transitions, and policy-aligned operational controls.',
+    title: 'Standardized Workflows',
+    description: 'Turn chaotic processes into predictable, step-by-step workflows. Set clear intake-to-resolution checkpoints with SLA-aware tracking and deadlines.',
   },
   {
-    title: 'Case Workflow Management',
-    description:
-      'Standardize intake-to-resolution processes with predictable handoffs, SLA-aware queues, and clear ownership across teams.',
+    title: 'Automated Audit Trails',
+    description: 'Never wonder "who approved this?" again. Every action, document upload, and status change is logged with an immutable timestamp and user ID.',
   },
   {
-    title: 'Secure Document Operations',
-    description:
-      'Handle upload, storage, and retrieval in a controlled lifecycle that supports accountability and enterprise-grade document hygiene.',
+    title: 'Secure Document Storage',
+    description: 'Keep client files attached directly to their specific cases. Ensure document hygiene with version control and secure retrieval.',
   },
   {
-    title: 'Audit & Reliability Controls',
-    description:
-      'Operational visibility is built in through immutable activity logs, resilient background processing, and monitoring-ready system signals.',
+    title: 'Real-Time Operational Metrics',
+    description: 'Partners get a bird\'s-eye view of firm performance. Identify bottlenecks, track overdue items, and monitor team workload instantly.',
   },
 ];
 
 export const FeaturesPage = () => (
   <Section>
-    <div>
-      <h1 className="type-section">Features</h1>
-      <p className="mt-6 max-w-3xl type-body">
-        Built for modern service organizations that need multi-tenant, role-scoped, and
-        governance-ready operations without sacrificing usability.
+    <div className="text-center max-w-3xl mx-auto">
+      <h1 className="type-section text-gray-900">Platform Features</h1>
+      <p className="mt-6 type-body text-lg text-gray-600">
+        Everything you need to bring operational discipline to your firm. Built for compliance, audit, and tax teams who cannot afford to miss a deadline.
       </p>
     </div>
-    <div className="mt-8 grid gap-12 sm:grid-cols-2">
+    <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
       {FEATURES.map(({ title, description }, index) => (
         <motion.div
           key={title}
-          className="rounded-2xl border border-gray-200 bg-white p-8 shadow-md hover:shadow-xl transition-shadow duration-300"
-          initial={{ opacity: 0, y: 6 }}
+          className="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col"
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2, delay: Math.min(index * 0.04, 0.2) }}
+          transition={{ duration: 0.3, delay: Math.min(index * 0.1, 0.4) }}
         >
-          <h2 className="type-card-title">{title}</h2>
-          <p className="mt-6 type-body">{description}</p>
+          <div className="h-10 w-10 rounded-lg bg-blue-50 flex items-center justify-center mb-6">
+            <span className="text-blue-600 font-bold text-xl">✓</span>
+          </div>
+          <h2 className="type-card-title text-gray-900 mb-3">{title}</h2>
+          <p className="type-body text-gray-600 flex-1">{description}</p>
         </motion.div>
       ))}
     </div>
