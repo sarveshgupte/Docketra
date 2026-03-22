@@ -27,25 +27,25 @@
   --color-info: #1D4ED8;
 
   /* Minimal badge tokens */
-  --badge-open-bg: rgba(37, 99, 235, 0.10);
-  --badge-open-color: #1D4ED8;
-  --badge-open-border: transparent;
+  --badge-open-bg: #EFF6FF;
+  --badge-open-color: #1E3A8A;
+  --badge-open-border: #BFDBFE;
 
-  --badge-resolved-bg: rgba(21, 128, 61, 0.10);
-  --badge-resolved-color: #15803D;
-  --badge-resolved-border: transparent;
+  --badge-resolved-bg: #F8FAFC;
+  --badge-resolved-color: #334155;
+  --badge-resolved-border: #CBD5E1;
 
-  --badge-pended-bg: rgba(180, 83, 9, 0.10);
-  --badge-pended-color: #B45309;
-  --badge-pended-border: transparent;
+  --badge-pended-bg: #FFFBEB;
+  --badge-pended-color: #92400E;
+  --badge-pended-border: #FDE68A;
 
-  --badge-filed-bg: rgba(71, 85, 105, 0.10);
-  --badge-filed-color: #334155;
-  --badge-filed-border: transparent;
+  --badge-filed-bg: #F8FAFC;
+  --badge-filed-color: #475569;
+  --badge-filed-border: #CBD5E1;
 
-  --badge-unassigned-bg: rgba(185, 28, 28, 0.08);
+  --badge-unassigned-bg: #FEF2F2;
   --badge-unassigned-color: #B91C1C;
-  --badge-unassigned-border: transparent;
+  --badge-unassigned-border: #FECACA;
 
   /* Layout tokens */
   --layout-surface: var(--color-surface);
@@ -86,9 +86,9 @@
 
   /* Shadows */
   --shadow-xs: none;
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
 
   /* Flat surface tokens replacing legacy glass usage */
   --glass-bg: #FFFFFF;
@@ -99,8 +99,8 @@
   --glass-blur-sm: none;
   --glass-shadow: var(--shadow-sm);
 
-  --color-primary-hover-bg: rgba(37, 99, 235, 0.06);
-  --color-row-hover: rgba(17, 24, 39, 0.03);
+  --color-primary-hover-bg: #EFF6FF;
+  --color-row-hover: #F8FAFC;
 
   /* Spacing */
   --space-1: 4px;
@@ -144,8 +144,8 @@
   --accent-danger: var(--danger);
 
   /* Focus */
-  --focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.14);
-  --focus-ring-offset: 0 0 0 2px #fff, 0 0 0 4px rgba(37, 99, 235, 0.18);
+  --focus-ring: 0 0 0 2px rgba(37, 99, 235, 0.16);
+  --focus-ring-offset: 0 0 0 1px #fff, 0 0 0 3px rgba(37, 99, 235, 0.18);
 
   /* Borders */
   --border-radius: var(--radius-sm);

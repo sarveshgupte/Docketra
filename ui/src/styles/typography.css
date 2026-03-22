@@ -17,10 +17,21 @@
 .type-card-title {
   font-size: 1.125rem;
   font-weight: 600;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.02em;
+  line-height: 1.35;
 }
 
 .type-body {
-  color: #6b7280;
-  line-height: 1.7;
+  color: var(--text-body);
+  font-size: var(--font-size-md);
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+.type-body--medium {
+  font-weight: 500;
+}
+
+.type-body--semibold {
+  font-weight: 600;
 }
