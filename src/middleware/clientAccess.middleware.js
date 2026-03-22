@@ -90,15 +90,36 @@ const checkCaseClientAccess = async (req, res, next) => {
     // This ensures the middleware uses the same lookup logic as the controller
     let caseData;
     try {
+      console.info('[CLIENT_ACCESS] Resolving case identifier', {
+        caseId,
+        firmId: user.firmId,
+        userId: user.xID,
+        restrictedClientCount: user.restrictedClientIds.length,
+      });
+
       // Resolve identifier (handles both caseNumber and caseInternalId)
       const internalId = await resolveCaseIdentifier(user.firmId, caseId, user.role);
       
       // Fetch case with firm scoping via repository
       caseData = await CaseRepository.findByInternalId(user.firmId, internalId, user.role);
+
+      console.info('[CLIENT_ACCESS] Case identifier resolved', {
+        requestedCaseId: caseId,
+        resolvedCaseId: caseData?.caseId || null,
+        internalId,
+        clientId: caseData?.clientId || null,
+        userId: user.xID,
+      });
     } catch (error) {
       // Case not found or invalid identifier - let the controller handle it
       // This ensures consistent error handling between middleware and controller
-      console.error(`[CLIENT_ACCESS] Case identifier resolution failed for caseId=${caseId}, firmId=${user.firmId}: ${error.message}`);
+      console.error('[CLIENT_ACCESS] Case identifier resolution failed', {
+        caseId,
+        firmId: user.firmId,
+        userId: user.xID,
+        error: error.message,
+        stack: error.stack,
+      });
       return next();
     }
     
