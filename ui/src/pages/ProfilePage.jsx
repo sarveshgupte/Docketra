@@ -1,21 +1,24 @@
-/**
- * Profile Page
- */
-
 import React, { useState, useEffect } from 'react';
 import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
 import { Input } from '../components/common/Input';
+import { Textarea } from '../components/common/Textarea';
+import { Select } from '../components/common/Select';
 import { Button } from '../components/common/Button';
 import { Loading } from '../components/common/Loading';
 import { useAuth } from '../hooks/useAuth';
 import { authService } from '../services/authService';
-import { formatDate } from '../utils/formatters';
-import './ProfilePage.css';
+
+const genderOptions = [
+  { value: '', label: 'Select gender', disabled: true },
+  { value: 'Male', label: 'Male' },
+  { value: 'Female', label: 'Female' },
+  { value: 'Other', label: 'Other' },
+];
 
 export const ProfilePage = () => {
   const { user, updateUser } = useAuth();
-  
+
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -49,27 +52,28 @@ export const ProfilePage = () => {
     setLoading(false);
   }, [user]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
+  const handleChange = (event) => {
+    const { name, value } = event.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = async (e) => {
-    e.preventDefault();
+  const handleSave = async (event) => {
+    event.preventDefault();
     setError('');
     setSuccess('');
     setSubmitting(true);
 
     try {
       const response = await authService.updateProfile(formData);
-      
+
       if (response.success) {
-        setSuccess('Profile updated successfully');
+        setSuccess('Profile updated successfully.');
         setEditing(false);
+        setProfileData(response.data);
         updateUser(response.data);
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update profile');
+      setError(err.response?.data?.message || 'Failed to update profile.');
     } finally {
       setSubmitting(false);
     }
@@ -79,7 +83,7 @@ export const ProfilePage = () => {
     setEditing(false);
     setError('');
     setSuccess('');
-    // Reset form data
+
     if (profileData) {
       setFormData({
         dateOfBirth: profileData.dateOfBirth || '',
@@ -102,161 +106,117 @@ export const ProfilePage = () => {
 
   return (
     <Layout>
-      <div className="profile">
-        <div className="profile__header">
-          <h1>My Profile</h1>
-          <p className="text-secondary">View and edit your profile information</p>
-        </div>
-
-        <Card>
-          <div className="profile__section">
-            <h2 className="neo-section__header">Identity (Read-Only)</h2>
-            <p className="text-secondary profile__section-description">
-              These fields are immutable and cannot be changed
-            </p>
-            
-            <Input
-              label="Employee ID (xID)"
-              value={profileData?.xID || ''}
-              readOnly
-              disabled
-            />
-
-            <Input
-              label="Name"
-              value={profileData?.name || ''}
-              readOnly
-              disabled
-            />
-
-            <Input
-              label="Email"
-              value={profileData?.email || ''}
-              readOnly
-              disabled
-            />
-
-            <Input
-              label="Role"
-              value={profileData?.role || ''}
-              readOnly
-              disabled
-            />
-            
-            {profileData?.firm && (
-              <Input
-                label="Firm (managed by Admin)"
-                value={profileData.firm.name || ''}
-                readOnly
-                disabled
-              />
-            )}
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+          <div className="space-y-2">
+            <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">My Profile</h1>
+            <p className="text-sm text-gray-500">View and update your personal account information.</p>
           </div>
 
-          <div className="profile__section">
-            <h2 className="neo-section__header">Personal Information (Editable)</h2>
-            
-            <Input
-              label="Date of Birth"
-              name="dateOfBirth"
-              type="date"
-              value={formData.dateOfBirth}
-              onChange={handleChange}
-              disabled={!editing}
-            />
-
-            <div className="neo-form-group">
-              <label className="neo-label">Gender</label>
-              <select
-                name="gender"
-                value={formData.gender}
-                onChange={handleChange}
-                disabled={!editing}
-                className="neo-select"
-              >
-                <option value="" disabled>Select Gender</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-              </select>
+          <Card className="p-6">
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-lg font-medium text-gray-900 mb-4">Identity</h2>
+                <p className="text-sm text-gray-500">These fields are managed by your organization and cannot be edited here.</p>
+              </div>
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <Input label="Employee ID (xID)" value={profileData?.xID || ''} readOnly />
+                <Input label="Role" value={profileData?.role || ''} readOnly />
+                <Input label="Name" value={profileData?.name || ''} readOnly />
+                <Input label="Email" value={profileData?.email || ''} readOnly />
+                {profileData?.firm ? (
+                  <Input label="Firm" value={profileData.firm.name || ''} readOnly className="sm:col-span-2" />
+                ) : null}
+              </div>
             </div>
+          </Card>
 
-            <Input
-              label="Phone"
-              name="phone"
-              type="tel"
-              value={formData.phone}
-              onChange={handleChange}
-              disabled={!editing}
-              placeholder="10-digit mobile number"
-            />
-
-            <Input
-              label="Address"
-              name="address"
-              value={formData.address}
-              onChange={handleChange}
-              disabled={!editing}
-              placeholder="Full address"
-            />
-
-            <Input
-              label="PAN (Masked)"
-              name="panMasked"
-              value={formData.panMasked}
-              onChange={handleChange}
-              disabled={!editing}
-              maxLength={10}
-              placeholder="ABCDE1234F"
-            />
-            {editing && (
-              <p className="text-secondary profile__field-hint">
-                Format: ABCDE1234F (masked)
-              </p>
-            )}
-
-            <Input
-              label="Aadhaar (Masked)"
-              name="aadhaarMasked"
-              value={formData.aadhaarMasked}
-              onChange={handleChange}
-              disabled={!editing}
-              placeholder="XXXX-XXXX-1234"
-            />
-            {editing && (
-              <p className="text-secondary profile__field-hint">
-                Format: XXXX-XXXX-1234 (only last 4 digits visible)
-              </p>
-            )}
-
-            {error && (
-              <div className="neo-alert neo-alert--danger">
-                {error}
+          <Card className="p-6">
+            <form className="space-y-6" onSubmit={handleSave}>
+              <div>
+                <h2 className="text-lg font-medium text-gray-900 mb-4">Personal Information</h2>
+                <p className="text-sm text-gray-500">Keep your contact details and masked identity information current.</p>
               </div>
-            )}
 
-            {success && (
-              <div className="neo-alert neo-alert--success">
-                {success}
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <Input
+                  label="Date of Birth"
+                  name="dateOfBirth"
+                  type="date"
+                  value={formData.dateOfBirth}
+                  onChange={handleChange}
+                  disabled={!editing}
+                />
+                <Select
+                  label="Gender"
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleChange}
+                  disabled={!editing}
+                  options={genderOptions}
+                />
+                <Input
+                  label="Phone"
+                  name="phone"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  disabled={!editing}
+                  placeholder="10-digit mobile number"
+                />
+                <Input
+                  label="PAN (Masked)"
+                  name="panMasked"
+                  value={formData.panMasked}
+                  onChange={handleChange}
+                  disabled={!editing}
+                  maxLength={10}
+                  placeholder="ABCDE1234F"
+                  helpText={editing ? 'Format: ABCDE1234F (masked).' : undefined}
+                />
+                <Input
+                  label="Aadhaar (Masked)"
+                  name="aadhaarMasked"
+                  value={formData.aadhaarMasked}
+                  onChange={handleChange}
+                  disabled={!editing}
+                  placeholder="XXXX-XXXX-1234"
+                  className="sm:col-span-2"
+                  helpText={editing ? 'Format: XXXX-XXXX-1234 (only the last 4 digits should be visible).' : undefined}
+                />
+                <Textarea
+                  label="Address"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  disabled={!editing}
+                  placeholder="Full address"
+                  className="sm:col-span-2"
+                />
               </div>
-            )}
 
-            <div className="profile__actions">
-              {editing ? (
-                <>
-                  <Button onClick={handleCancel}>Cancel</Button>
-                  <Button variant="primary" onClick={handleSave} disabled={submitting}>
-                    {submitting ? 'Saving...' : 'Save Changes'}
+              {error ? <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
+              {success ? <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{success}</div> : null}
+
+              <div className="mt-6 pt-5 border-t border-gray-200 flex justify-end gap-3">
+                {editing ? (
+                  <>
+                    <Button type="button" variant="outline" onClick={handleCancel}>
+                      Cancel
+                    </Button>
+                    <Button variant="primary" type="submit" disabled={submitting}>
+                      {submitting ? 'Saving...' : 'Save Changes'}
+                    </Button>
+                  </>
+                ) : (
+                  <Button type="button" variant="primary" onClick={() => setEditing(true)}>
+                    Edit Profile
                   </Button>
-                </>
-              ) : (
-                <Button variant="primary" onClick={() => setEditing(true)}>
-                  Edit Profile
-                </Button>
-              )}
-            </div>
-          </div>
-        </Card>
+                )}
+              </div>
+            </form>
+          </Card>
+        </div>
       </div>
     </Layout>
   );

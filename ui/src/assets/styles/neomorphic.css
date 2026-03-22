@@ -182,38 +182,3 @@
   padding-bottom: var(--spacing-md);
   letter-spacing: -0.01em;
 }
-
-.neo-table {
-  background: transparent;
-  border-collapse: separate;
-  border-spacing: 0;
-  width: 100%;
-}
-
-.neo-table thead {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-
-.neo-table th {
-  background: var(--color-bg-app);
-  color: var(--text-muted);
-  font-size: var(--font-size-xs);
-  font-weight: 600;
-  padding: 10px var(--spacing-md);
-  text-align: left;
-  text-transform: uppercase;
-  letter-spacing: var(--letter-spacing-wider);
-  border-bottom: 1px solid var(--color-border);
-  white-space: nowrap;
-}
-
-.neo-table td {
-  border-top: 1px solid var(--color-border);
-  color: var(--text-body);
-  font-size: var(--font-size-sm);
-  padding: 10px var(--spacing-md);
-  line-height: var(--line-height-normal);
-  vertical-align: middle;
-}
