@@ -1,6 +1,8 @@
 .case-detail {
   min-height: 100vh;
-  background: #ffffff;
+  background: #f9fafb;
+  display: flex;
+  flex-direction: column;
 }
 
 .case-detail__nav-bar,
@@ -37,17 +39,12 @@
   all: unset;
 }
 
-.case-detail {
-  display: flex;
-  flex-direction: column;
-}
-
 .case-detail__nav-bar {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 16px 24px 0;
-  background: #ffffff;
+  background: #f9fafb;
 }
 
 .case-detail__nav-btn {
@@ -55,15 +52,15 @@
 }
 
 .case-detail__nav-pos {
-  font-size: 13px;
-  color: #9ca3af;
+  font-size: 12px;
+  color: #6b7280;
 }
 
 .case-detail-header {
   position: sticky;
   top: 0;
   z-index: 30;
-  height: 64px;
+  min-height: 72px;
   padding: 0 24px;
   border-bottom: 1px solid #e5e7eb;
   background: #ffffff;
@@ -79,7 +76,7 @@
 
 .case-detail-header__title {
   margin: 0;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
   letter-spacing: -0.02em;
   color: #111827;
@@ -87,14 +84,14 @@
 
 .case-detail-header__subtitle {
   margin: 4px 0 0;
-  font-size: 13px;
-  color: #6b7280;
+  font-size: 14px;
+  color: #4b5563;
 }
 
 .case-detail-header__meta {
   margin-top: 4px;
-  font-size: 11px;
-  color: #9ca3af;
+  font-size: 12px;
+  color: #6b7280;
 }
 
 .case-detail-header__actions {
@@ -107,7 +104,7 @@
 
 .sticky-tabs {
   position: sticky;
-  top: 64px;
+  top: 72px;
   z-index: 25;
   display: flex;
   overflow-x: auto;
@@ -137,27 +134,32 @@
 }
 
 .case-detail-layout-grid {
-  display: grid;
-  grid-template-columns: 280px minmax(0, 1fr) 320px;
-  min-height: calc(100vh - 112px);
-  background: #ffffff;
+  min-height: calc(100vh - 144px);
+  padding: 24px;
+  align-items: start;
+  background: #f9fafb;
 }
 
 .case-detail-sidebar {
-  border-right: 1px solid #e5e7eb;
-  background: #fafafa;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
   padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 24px;
+  border-radius: 12px;
 }
 
 .case-detail-sidebar__section,
-.case-detail-sidebar__stack,
 .case-detail-related-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
+}
+
+.case-detail-sidebar__stack {
+  display: flex;
+  flex-direction: column;
 }
 
 .case-detail-sidebar__label,
@@ -167,31 +169,24 @@
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   color: #6b7280;
 }
 
 .case-detail-main {
-  padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 24px;
 }
 
-.case-detail-audit {
-  border-left: 1px solid #e5e7eb;
-  padding: 24px;
-  background: #ffffff;
-}
-
 .case-card {
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 24px;
   background: #ffffff;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .case-card__heading {
@@ -210,22 +205,17 @@
   color: #111827;
 }
 
-.case-card__subtitle {
-  margin: 0;
-  font-size: 11px;
-  color: #9ca3af;
-}
-
 .field-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(300px, 1fr));
+  gap: 24px;
 }
 
 .field-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  min-width: 0;
 }
 
 .field-value,
@@ -245,21 +235,21 @@
 .case-detail__attachment-desc,
 .case-detail-related-item__meta,
 .audit-entry-actor {
-  font-size: 13px;
+  font-size: 12px;
   color: #6b7280;
 }
 
 .case-detail__empty-note,
 .audit-entry-timestamp,
 .case-detail-upload-hint {
-  font-size: 11px;
-  color: #9ca3af;
+  font-size: 12px;
+  color: #6b7280;
 }
 
 .case-detail-status-badge.badge,
 .case-detail-header .badge {
   border: none;
-  border-radius: 6px;
+  border-radius: 999px;
   padding: 4px 10px;
   font-size: 12px;
   font-weight: 600;
@@ -280,15 +270,15 @@
 .case-detail-status-badge.badge-info,
 .case-detail-header .badge-info {
   background: #dbeafe;
-  color: #1e40af;
+  color: #1d4ed8;
 }
 
 .case-detail-status-badge.badge-neutral,
 .case-detail-header .badge-neutral,
 .case-detail-status-badge.badge-danger,
 .case-detail-header .badge-danger {
-  background: #f3f4f6;
-  color: #374151;
+  background: #f1f5f9;
+  color: #334155;
 }
 
 .case-detail-lifecycle-actions,
@@ -314,8 +304,8 @@
 .audit-entry,
 .case-detail-related-item {
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background: #fafafa;
+  border-radius: 10px;
+  background: #ffffff;
   padding: 12px;
 }
 
@@ -376,7 +366,7 @@
 .case-detail__retry {
   border: none;
   background: transparent;
-  color: #E11D48;
+  color: #b91c1c;
   cursor: pointer;
   text-decoration: underline;
 }
@@ -384,7 +374,7 @@
 .case-detail__confirmation {
   padding: 8px 24px 0;
   font-size: 13px;
-  color: #059669;
+  color: #15803d;
 }
 
 .case-detail__alert {
@@ -397,8 +387,8 @@
   padding: 12px;
   background: #fef3c7;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  color: #b45309;
+  border-radius: 10px;
+  color: #92400e;
   font-size: 13px;
 }
 
@@ -407,13 +397,27 @@
   padding-left: 16px;
 }
 
+.case-detail-more-actions {
+  position: relative;
+}
+
+.case-detail-more-actions__menu {
+  min-width: 180px;
+}
+
+@media (max-width: 1280px) {
+  .case-detail-layout-grid {
+    grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 1024px) {
   .case-detail-layout-grid {
-    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-columns: 1fr;
   }
 
-  .case-detail-sidebar {
-    display: none;
+  .field-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -421,8 +425,7 @@
   .case-detail__nav-bar,
   .case-detail-header,
   .sticky-tabs,
-  .case-detail-main,
-  .case-detail-audit {
+  .case-detail-layout-grid {
     padding-left: 16px;
     padding-right: 16px;
   }
@@ -436,21 +439,10 @@
   }
 
   .sticky-tabs {
-    top: 96px;
+    top: 104px;
   }
 
-  .case-detail-layout-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .case-detail-audit {
-    border-left: none;
-    border-top: 1px solid #e5e7eb;
-  }
-
-  .field-grid,
   .case-detail__comment-header {
-    grid-template-columns: 1fr;
     flex-direction: column;
   }
 }
