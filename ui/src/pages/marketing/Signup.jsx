@@ -292,8 +292,8 @@ export default function Signup() {
   };
 
   return (
-    <section className="min-h-screen flex items-center justify-center bg-gray-50 p-4 sm:p-8">
-      <Card className="w-full max-w-md">
+    <div className="auth-wrapper">
+      <Card className="auth-card">
         <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">Starter Signup</h1>
         <p className="mt-2 text-sm text-gray-500 text-center">Create your free Starter workspace in minutes.</p>
 
@@ -483,6 +483,6 @@ export default function Signup() {
           </div>
         )}
       </Card>
-    </section>
+    </div>
   );
 }
