@@ -98,8 +98,10 @@ export const CaseDetailPage = () => {
   const [actionConfirmation, setActionConfirmation] = useState('');
   const [actionError, setActionError] = useState(null);
   const [auditSidebarOpen, setAuditSidebarOpen] = useState(false);
+  const [moreActionsOpen, setMoreActionsOpen] = useState(false);
   const fileInputRef = useRef(null);
   const commentsListRef = useRef(null);
+  const moreActionsRef = useRef(null);
   const commentComposerId = `case-comment-composer-${caseId}`;
   const queryTab = new URLSearchParams(location.search).get('tab');
   const initialTab = VALID_CASE_DETAIL_TAB_NAMES.includes(queryTab) ? queryTab : CASE_DETAIL_TABS.OVERVIEW;
@@ -241,6 +243,30 @@ export const CaseDetailPage = () => {
     }
   }, [caseData, viewTracked, caseId]);
 
+
+  useEffect(() => {
+    if (!moreActionsOpen) return undefined;
+
+    const handlePointerDown = (event) => {
+      if (!moreActionsRef.current?.contains(event.target)) {
+        setMoreActionsOpen(false);
+      }
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setMoreActionsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [moreActionsOpen]);
 
   useEffect(() => {
     if (!actionError && !actionConfirmation) return;
@@ -658,6 +684,20 @@ export const CaseDetailPage = () => {
     window.open(pdfUrl, '_blank', 'noopener,noreferrer');
   };
 
+  const descriptionLooksEncrypted = useMemo(() => {
+    const value = String(caseInfo?.description || '').trim();
+    return /^v\d+:[A-Za-z0-9+/=_-]+$/.test(value);
+  }, [caseInfo?.description]);
+
+  const displayDescription = descriptionLooksEncrypted
+    ? ''
+    : (caseInfo?.description || '').trim();
+
+  const handleMoreAction = (callback) => {
+    setMoreActionsOpen(false);
+    callback();
+  };
+
   // PR #45: Extract access mode information from API response
   const accessMode = caseData?.accessMode || {};
   const isViewOnlyMode = accessMode.isViewOnlyMode;
@@ -809,13 +849,35 @@ export const CaseDetailPage = () => {
           }}
           actions={(
             <>
-              <Button variant="outline" onClick={handleShowClientFactSheet} disabled={loadingFactSheet}>Fact Sheet</Button>
               {showPullButton && <Button variant="primary" onClick={handlePullCase} disabled={pullingCase}>{pullingCase ? 'Pulling docket...' : 'Pull Docket'}</Button>}
               {canUnpend && <Button variant="primary" onClick={() => setShowUnpendModal(true)}>Unpend Docket</Button>}
-              <Button variant="outline" onClick={handlePrintSummary}>Print Summary</Button>
-              <Button variant="outline" onClick={() => setAuditSidebarOpen(true)}>Audit ↗</Button>
-              <Button variant="outline" onClick={handleScrollToComments}>Add Comment</Button>
-              <Button variant="outline" onClick={() => setShowFileModal(true)}>More Actions</Button>
+              <Button variant="primary" onClick={handleScrollToComments}>Add Comment</Button>
+              <div className="dropdown case-detail-more-actions" ref={moreActionsRef}>
+                <Button
+                  variant="outline"
+                  onClick={() => setMoreActionsOpen((value) => !value)}
+                  aria-haspopup="menu"
+                  aria-expanded={moreActionsOpen}
+                >
+                  More Actions
+                </Button>
+                {moreActionsOpen ? (
+                  <div className="dropdown-menu dropdown-menu-right case-detail-more-actions__menu" role="menu">
+                    <button type="button" className="dropdown-item" role="menuitem" onClick={() => handleMoreAction(handleShowClientFactSheet)} disabled={loadingFactSheet}>
+                      Fact Sheet
+                    </button>
+                    <button type="button" className="dropdown-item" role="menuitem" onClick={() => handleMoreAction(handlePrintSummary)}>
+                      Print Summary
+                    </button>
+                    <button type="button" className="dropdown-item" role="menuitem" onClick={() => handleMoreAction(() => setAuditSidebarOpen(true))}>
+                      Audit
+                    </button>
+                    <button type="button" className="dropdown-item" role="menuitem" onClick={() => handleMoreAction(() => setShowFileModal(true))}>
+                      File Case
+                    </button>
+                  </div>
+                ) : null}
+              </div>
             </>
           )}
           statusBadges={(
@@ -876,11 +938,11 @@ export const CaseDetailPage = () => {
           </div>
         )}
 
-        <div className="case-detail-layout-grid">
+        <div className="case-detail-layout-grid grid grid-cols-1 gap-6 lg:grid-cols-3">
           <aside className="case-detail-sidebar" aria-label="Case navigation and summary">
             <div className="case-detail-sidebar__section">
               <p className="case-detail-sidebar__label">Case Snapshot</p>
-              <div className="case-detail-sidebar__stack">
+              <div className="case-detail-sidebar__stack space-y-6">
                 <div className="field-group">
                   <span className="field-label">Client</span>
                   <span className="field-value">{caseData.client ? formatClientDisplay(caseData.client, true) : '—'}</span>
@@ -902,7 +964,7 @@ export const CaseDetailPage = () => {
 
             <div className="case-detail-sidebar__section">
               <p className="case-detail-sidebar__label">Audit Metadata</p>
-              <div className="case-detail-sidebar__stack">
+              <div className="case-detail-sidebar__stack space-y-6">
                 <AuditMetadata
                   className="case-detail__metadata-item"
                   prefix="Created by"
@@ -951,7 +1013,7 @@ export const CaseDetailPage = () => {
                   ) : null}
                 </div>
                 <div className="field-grid">
-                  <div className="field-group">
+                  <div className="field-group min-w-[300px]">
                     <span className="field-label">Category</span>
                     {isEditingOverview ? (
                       <Input
@@ -963,7 +1025,7 @@ export const CaseDetailPage = () => {
                       <span className="field-value">{caseInfo.category}</span>
                     )}
                   </div>
-                  <div className="field-group">
+                  <div className="field-group min-w-[300px]">
                     <span className="field-label">Current Lifecycle Stage</span>
                     <Badge status={caseInfo?.status} className="case-detail-status-badge">{toLifecycleStage(caseInfo?.status)}</Badge>
                   </div>
@@ -978,7 +1040,7 @@ export const CaseDetailPage = () => {
                       aria-label="Case description"
                     />
                   ) : (
-                    <span className="field-value">{caseInfo.description || 'No description'}</span>
+                    <span className="field-value">{displayDescription || 'No description available'}</span>
                   )}
                 </div>
                 {(canPerformLifecycleActions || canUnpend) && (
@@ -1153,9 +1215,6 @@ export const CaseDetailPage = () => {
             )}
           </main>
 
-          <aside className="case-detail-audit" aria-label="Audit history panel">
-            <AuditTimeline events={timelineEvents} />
-          </aside>
         </div>
 
         {/* ─── Modals (positioned outside split pane) ─────────────── */}

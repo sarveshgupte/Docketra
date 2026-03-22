@@ -1,27 +1,26 @@
 /**
- * Neomorphic Component Styles — 2026 Edition
- * Glassmorphism + Spatial depth for Docketra Enterprise UI
+ * Legacy neomorphic class names mapped to flat minimal styles.
  */
 
-/* ─── Glass Card ─────────────────────────────────────────────── */
-
-.neo-card {
-  background: var(--glass-bg-strong);
-  backdrop-filter: var(--glass-blur-sm);
-  -webkit-backdrop-filter: var(--glass-blur-sm);
+.neo-card,
+.neo-section,
+.neo-inset {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  border: 1px solid var(--border-subtle);
+  box-shadow: none;
+}
+
+.neo-card,
+.neo-section {
   padding: var(--spacing-lg);
-  transition: box-shadow var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
-  box-shadow: var(--shadow-sm);
 }
 
-.neo-card:hover {
+.neo-card:hover,
+.neo-section:hover {
   border-color: var(--border-strong);
-  box-shadow: var(--shadow-md);
+  box-shadow: none;
 }
-
-/* ─── Button ─────────────────────────────────────────────────── */
 
 .neo-button,
 .neo-btn {
@@ -34,9 +33,9 @@
   font-size: var(--font-size-sm);
   font-weight: 500;
   padding: var(--spacing-sm) var(--spacing-md);
-  transition: all var(--transition-fast);
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
   outline: none;
-  min-height: 34px;
+  min-height: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -52,13 +51,13 @@
 
 .neo-button:active:not(:disabled),
 .neo-btn:active:not(:disabled) {
-  transform: scale(0.98);
-  background: var(--color-border);
+  background: #F3F4F6;
 }
 
 .neo-button:focus-visible,
-.neo-btn:focus-visible {
-  box-shadow: var(--focus-ring-offset);
+.neo-btn:focus-visible,
+.neo-input:focus {
+  box-shadow: var(--focus-ring);
   outline: none;
 }
 
@@ -73,35 +72,26 @@
 .neo-btn--primary {
   background: var(--color-primary);
   color: white;
-  border: none;
+  border-color: var(--color-primary);
 }
 
 .neo-button--primary:hover:not(:disabled),
 .neo-btn--primary:hover:not(:disabled) {
   background: var(--color-primary-dark);
+  border-color: var(--color-primary-dark);
 }
 
 .neo-button--danger {
   background: var(--danger);
   color: white;
-  border: none;
-}
-
-.neo-button--danger:hover:not(:disabled) {
-  opacity: 0.88;
+  border-color: var(--danger);
 }
 
 .neo-button--success {
   background: var(--success);
   color: white;
-  border: none;
+  border-color: var(--success);
 }
-
-.neo-button--success:hover:not(:disabled) {
-  opacity: 0.88;
-}
-
-/* ─── Input ──────────────────────────────────────────────────── */
 
 .neo-input {
   background: var(--color-surface);
@@ -118,11 +108,6 @@
   line-height: var(--line-height-normal);
 }
 
-.neo-input:focus {
-  box-shadow: var(--focus-ring);
-  border-color: var(--color-info);
-}
-
 .neo-input:disabled {
   color: var(--text-muted);
   cursor: not-allowed;
@@ -134,72 +119,26 @@
   color: var(--text-muted);
 }
 
-/* ─── Inset Container ────────────────────────────────────────── */
-
-.neo-inset {
-  background: var(--color-bg-app);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-subtle);
-  padding: var(--spacing-md);
-}
-
-/* ─── Badge ──────────────────────────────────────────────────── */
-
 .neo-badge {
-  background: var(--color-bg-app);
+  background: var(--status-neutral-bg);
   border-radius: var(--radius-pill);
-  color: var(--text-main);
+  color: var(--status-neutral-color);
   display: inline-flex;
   align-items: center;
   gap: 4px;
   font-size: var(--font-size-xs);
   font-weight: 600;
-  padding: 3px 10px;
-  border: 1px solid transparent;
+  padding: 4px 10px;
+  border: none;
   letter-spacing: 0.02em;
   white-space: nowrap;
 }
 
-.neo-badge--success {
-  color: var(--badge-resolved-color);
-  background: var(--badge-resolved-bg);
-  border-color: var(--badge-resolved-border);
-}
-
-.neo-badge--warning {
-  color: var(--badge-pended-color);
-  background: var(--badge-pended-bg);
-  border-color: var(--badge-pended-border);
-}
-
-.neo-badge--danger {
-  color: var(--badge-unassigned-color);
-  background: var(--badge-unassigned-bg);
-  border-color: var(--badge-unassigned-border);
-}
-
-.neo-badge--primary {
-  color: var(--badge-open-color);
-  background: var(--badge-open-bg);
-  border-color: var(--badge-open-border);
-}
-
-.neo-badge--neutral {
-  color: var(--badge-filed-color);
-  background: var(--badge-filed-bg);
-  border-color: var(--badge-filed-border);
-}
-
-/* ─── Section ────────────────────────────────────────────────── */
-
-.neo-section {
-  background: var(--color-surface);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-subtle);
-  margin-bottom: var(--spacing-lg);
-  padding: var(--spacing-lg);
-  box-shadow: var(--shadow-sm);
-}
+.neo-badge--success { color: var(--badge-resolved-color); background: var(--badge-resolved-bg); }
+.neo-badge--warning { color: var(--badge-pended-color); background: var(--badge-pended-bg); }
+.neo-badge--danger { color: var(--badge-unassigned-color); background: var(--badge-unassigned-bg); }
+.neo-badge--primary { color: var(--badge-open-color); background: var(--badge-open-bg); }
+.neo-badge--neutral { color: var(--badge-filed-color); background: var(--badge-filed-bg); }
 
 .neo-section__header {
   border-bottom: 1px solid var(--border-subtle);
@@ -210,8 +149,6 @@
   padding-bottom: var(--spacing-md);
   letter-spacing: -0.01em;
 }
-
-/* ─── Table ──────────────────────────────────────────────────── */
 
 .neo-table {
   background: transparent;
@@ -239,14 +176,6 @@
   white-space: nowrap;
 }
 
-.neo-table th:first-child {
-  border-top-left-radius: var(--radius-sm);
-}
-
-.neo-table th:last-child {
-  border-top-right-radius: var(--radius-sm);
-}
-
 .neo-table td {
   border-top: 1px solid var(--color-border);
   color: var(--text-body);
@@ -254,264 +183,4 @@
   padding: 10px var(--spacing-md);
   line-height: var(--line-height-normal);
   vertical-align: middle;
-}
-
-/* First td in row (primary content) */
-.neo-table td:first-child {
-  color: var(--text-main);
-  font-weight: 500;
-}
-
-/* Row hover — 150ms transition */
-.neo-table tbody tr {
-  transition: background-color 150ms ease-in-out;
-  cursor: pointer;
-}
-
-.neo-table tbody tr:hover td {
-  background-color: var(--color-row-hover);
-}
-
-/* Zebra striping */
-.neo-table tbody tr:nth-child(even) td {
-  background-color: rgba(247, 249, 252, 0.55);
-}
-
-.neo-table tbody tr:nth-child(even):hover td {
-  background-color: var(--color-row-hover);
-}
-
-/* Focus for keyboard navigation */
-.neo-table tbody tr:focus {
-  outline: none;
-}
-
-.neo-table tbody tr:focus-visible td {
-  box-shadow: inset 0 0 0 2px var(--color-primary);
-}
-
-/* Status pills inside tables */
-.neo-table .badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 9px;
-  border-radius: var(--radius-pill);
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
-  border: 1px solid transparent;
-}
-
-/* ─── Form Group ─────────────────────────────────────────────── */
-
-.neo-form-group {
-  margin-bottom: var(--spacing-md);
-}
-
-.neo-form-label,
-.neo-label {
-  color: var(--text-main);
-  display: block;
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  margin-bottom: 5px;
-  letter-spacing: 0.01em;
-}
-
-.neo-form-error {
-  color: var(--danger);
-  font-size: var(--font-size-xs);
-  margin-top: 4px;
-}
-
-/* ─── Select ─────────────────────────────────────────────────── */
-
-.neo-select {
-  appearance: none;
-  background: var(--color-surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 12px center;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  color: var(--text-main);
-  cursor: pointer;
-  font-family: var(--font-family);
-  font-size: var(--font-size-sm);
-  padding: var(--spacing-sm) 36px var(--spacing-sm) var(--spacing-md);
-  transition: all var(--transition-fast);
-  width: 100%;
-  outline: none;
-  min-height: 38px;
-}
-
-.neo-select:focus {
-  box-shadow: var(--focus-ring);
-  border-color: var(--color-info);
-}
-
-/* ─── Textarea ───────────────────────────────────────────────── */
-
-.neo-textarea {
-  background: var(--color-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  color: var(--text-main);
-  font-family: var(--font-family);
-  font-size: var(--font-size-sm);
-  min-height: 96px;
-  padding: var(--spacing-sm) var(--spacing-md);
-  resize: vertical;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-  width: 100%;
-  outline: none;
-  line-height: var(--line-height-normal);
-}
-
-.neo-textarea:focus {
-  box-shadow: var(--focus-ring);
-  border-color: var(--color-info);
-}
-
-/* ─── Alert ──────────────────────────────────────────────────── */
-
-.neo-alert {
-  background: var(--color-surface);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-subtle);
-  border-left: 4px solid;
-  margin-bottom: var(--spacing-md);
-  padding: var(--spacing-md) var(--spacing-lg);
-  font-size: var(--font-size-sm);
-}
-
-.neo-alert--success {
-  border-left-color: var(--success);
-  background: var(--badge-resolved-bg);
-}
-
-.neo-alert--warning {
-  border-left-color: var(--warning);
-  background: var(--badge-pended-bg);
-}
-
-.neo-alert--danger {
-  border-left-color: var(--danger);
-  background: var(--badge-unassigned-bg);
-}
-
-.neo-alert--info {
-  border-left-color: var(--info);
-  background: var(--badge-open-bg);
-}
-
-/* ─── Loading Spinner ────────────────────────────────────────── */
-
-.neo-spinner {
-  animation: neo-spin 0.8s linear infinite;
-  border: 2px solid var(--border-subtle);
-  border-top-color: var(--color-primary);
-  border-radius: 50%;
-  height: 36px;
-  width: 36px;
-}
-
-@keyframes neo-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* ─── Glass Modal Overlay ────────────────────────────────────── */
-
-.neo-modal-overlay {
-  align-items: center;
-  background: rgba(11, 31, 58, 0.45);
-  backdrop-filter: var(--glass-blur-sm);
-  -webkit-backdrop-filter: var(--glass-blur-sm);
-  display: flex;
-  inset: 0;
-  justify-content: center;
-  position: fixed;
-  z-index: 1000;
-  animation: neo-overlay-in 180ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes neo-overlay-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-.neo-modal {
-  background: var(--glass-bg-strong);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
-  max-height: 88vh;
-  max-width: 600px;
-  overflow-y: auto;
-  padding: var(--spacing-xl);
-  width: 92%;
-  animation: neo-modal-in 180ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes neo-modal-in {
-  from { opacity: 0; transform: scale(0.98); }
-  to   { opacity: 1; transform: scale(1); }
-}
-
-.neo-modal__header {
-  border-bottom: 1px solid var(--border-subtle);
-  color: var(--text-main);
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  margin-bottom: var(--spacing-lg);
-  padding-bottom: var(--spacing-md);
-  letter-spacing: -0.01em;
-}
-
-.neo-modal__actions {
-  border-top: 1px solid var(--border-subtle);
-  display: flex;
-  gap: var(--spacing-md);
-  justify-content: flex-end;
-  margin-top: var(--spacing-lg);
-  padding-top: var(--spacing-md);
-}
-
-/* ─── Dropzone ───────────────────────────────────────────────── */
-
-.neo-dropzone {
-  border: 2px dashed var(--border-strong);
-  border-radius: var(--radius-md);
-  background: var(--color-bg-app);
-  padding: var(--spacing-xl) var(--spacing-lg);
-  text-align: center;
-  cursor: pointer;
-  transition: border-color var(--transition-fast), background var(--transition-fast);
-  color: var(--text-muted);
-  font-size: var(--font-size-sm);
-}
-
-.neo-dropzone:hover,
-.neo-dropzone--active {
-  border-color: var(--color-primary);
-  background: var(--color-primary-hover-bg);
-  color: var(--color-primary);
-}
-
-.neo-dropzone__icon {
-  font-size: 28px;
-  margin-bottom: var(--spacing-sm);
-  opacity: 0.6;
-}
-
-.neo-dropzone__label {
-  font-weight: 500;
-  color: var(--text-main);
-  margin-bottom: var(--space-1);
-}
-
-.neo-dropzone__sub {
-  font-size: var(--font-size-xs);
-  color: var(--text-muted);
 }
