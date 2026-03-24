@@ -31,6 +31,7 @@ import { AuditTimelineDrawer } from '../components/common/AuditTimelineDrawer';
 import { StickyTabs } from '../components/common/StickyTabs';
 import { CaseDetailHeader } from '../components/case/CaseDetailHeader';
 import { AuditTimeline } from '../components/common/AuditTimeline';
+import { StatusBadge } from '../components/layout/StatusBadge';
 import './CaseDetailPage.css';
 
 /**
@@ -955,7 +956,7 @@ export const CaseDetailPage = () => {
                 </div>
                 <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Lifecycle</span>
-                  <Badge status={caseInfo?.status} className="case-detail-status-badge">{toLifecycleStage(caseInfo?.status)}</Badge>
+                  <StatusBadge status={caseInfo?.status} />
                 </div>
                 <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Due Date</span>
@@ -989,7 +990,7 @@ export const CaseDetailPage = () => {
                   </div>
                   <div className="field-group min-w-0">
                     <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Current Lifecycle Stage</span>
-                    <Badge status={caseInfo?.status} className="case-detail-status-badge">{toLifecycleStage(caseInfo?.status)}</Badge>
+                    <StatusBadge status={caseInfo?.status} />
                   </div>
                 </div>
                 <div className="field-group">
