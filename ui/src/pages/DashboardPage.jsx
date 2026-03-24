@@ -15,6 +15,7 @@ import { Badge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
 import { DashboardSkeleton, SkeletonBlock } from '../components/common/Skeleton';
 import { EmptyState } from '../components/layout/EmptyState';
+import { PageHeader } from '../components/layout/PageHeader';
 import { PriorityPill } from '../components/common/PriorityPill';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/common/Table';
 import { SetupChecklist } from '../components/onboarding/SetupChecklist';
@@ -366,15 +367,15 @@ export const DashboardPage = () => {
     <Layout>
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-2">
-              <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Partner Control Dashboard</h1>
-              <p className="text-sm text-gray-500">Where is the compliance risk in my firm today?</p>
-            </div>
-            <Button variant="primary" onClick={() => navigate(`/app/firm/${firmSlug}/cases/create`)}>
-              {UX_COPY.actions.CREATE_CASE}
-            </Button>
-          </div>
+          <PageHeader
+            title="Partner Control Dashboard"
+            description="Where is the compliance risk in my firm today?"
+            actions={(
+              <Button variant="primary" onClick={() => navigate(`/app/firm/${firmSlug}/cases/create`)}>
+                {UX_COPY.actions.CREATE_CASE}
+              </Button>
+            )}
+          />
 
           {isAdmin && user?.xID && firmSlug ? (
             <SetupChecklist
@@ -479,11 +480,11 @@ export const DashboardPage = () => {
                 <Table className="border-0 rounded-none shadow-none">
                   <TableHead>
                     <tr>
-                      <TableHeader>Docket Name</TableHeader>
-                      <TableHeader>Category</TableHeader>
-                      <TableHeader>Status</TableHeader>
-                      <TableHeader>Priority</TableHeader>
-                      <TableHeader>Last Action Timestamp</TableHeader>
+                      <TableHeader className="w-full max-w-lg">Docket Name</TableHeader>
+                      <TableHeader className="w-[1px] whitespace-nowrap">Category</TableHeader>
+                      <TableHeader className="w-[1px] whitespace-nowrap text-center">Status</TableHeader>
+                      <TableHeader className="w-[1px] whitespace-nowrap text-center">Priority</TableHeader>
+                      <TableHeader className="w-[1px] whitespace-nowrap text-right">Last Action Timestamp</TableHeader>
                     </tr>
                   </TableHead>
                   <TableBody>
@@ -493,17 +494,17 @@ export const DashboardPage = () => {
                         onClick={() => handleCaseClick(caseItem.caseId)}
                         className="focus-within:bg-gray-50"
                       >
-                        <TableCell className="max-w-0">
+                        <TableCell className="w-full max-w-lg">
                           <span className="block overflow-hidden text-ellipsis whitespace-nowrap" title={caseItem.caseName}>
                             {caseItem.caseName}
                           </span>
                         </TableCell>
-                        <TableCell>{caseItem.category}</TableCell>
-                        <TableCell>
+                        <TableCell className="w-[1px] whitespace-nowrap">{caseItem.category}</TableCell>
+                        <TableCell className="w-[1px] whitespace-nowrap text-center">
                           <Badge status={caseItem.status}>{getStatusLabel(caseItem.status)}</Badge>
                         </TableCell>
-                        <TableCell><PriorityPill caseRecord={caseItem} /></TableCell>
-                        <TableCell>{formatDate(caseItem.updatedAt)}</TableCell>
+                        <TableCell className="w-[1px] whitespace-nowrap text-center"><PriorityPill caseRecord={caseItem} /></TableCell>
+                        <TableCell className="w-[1px] whitespace-nowrap text-right tabular-nums">{formatDate(caseItem.updatedAt)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

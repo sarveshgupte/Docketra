@@ -1,13 +1,13 @@
 import React from 'react';
 import { CASE_STATUS } from '../../utils/constants';
 import { isEscalatedCase, CASE_VIEWS } from '../../hooks/useCaseView';
-import './PriorityPill.css';
+import { Badge } from './Badge';
 
 const PRIORITY_META = {
-  ESCALATED: { label: 'Escalated', tone: 'escalated' },
-  OVERDUE: { label: 'SLA Overdue', tone: 'overdue' },
-  DUE_TODAY: { label: 'Due Today', tone: 'today' },
-  NORMAL: { label: 'Normal', tone: 'normal' },
+  ESCALATED: { label: 'Escalated', variant: 'warning', className: 'bg-purple-50 text-purple-700 border border-purple-200' },
+  OVERDUE: { label: 'SLA Overdue', variant: 'danger', className: '' },
+  DUE_TODAY: { label: 'Due Today', variant: 'warning', className: '' },
+  NORMAL: { label: 'Normal', variant: 'neutral', className: '' },
 };
 
 const getPriorityState = (caseRecord, inactivityThresholdHours) => {
@@ -27,8 +27,8 @@ const getPriorityState = (caseRecord, inactivityThresholdHours) => {
 export const PriorityPill = ({ caseRecord, inactivityThresholdHours, className = '' }) => {
   const priority = PRIORITY_META[getPriorityState(caseRecord, inactivityThresholdHours)];
   return (
-    <span className={`priority-pill priority-pill--${priority.tone} ${className}`.trim()}>
+    <Badge variant={priority.variant} className={`font-semibold px-2 py-0.5 rounded-full ${priority.className} ${className}`.trim()}>
       {priority.label}
-    </span>
+    </Badge>
   );
 };

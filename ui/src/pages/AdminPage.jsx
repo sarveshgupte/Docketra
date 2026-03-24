@@ -15,6 +15,7 @@ import { Modal } from '../components/common/Modal';
 import { Loading } from '../components/common/Loading';
 import { TableSkeleton } from '../components/common/Skeleton';
 import { EmptyState } from '../components/EmptyState';
+import { PageHeader } from '../components/layout/PageHeader';
 import { useAuth } from '../hooks/useAuth';
 import { adminService } from '../services/adminService';
 import { categoryService } from '../services/categoryService';
@@ -900,10 +901,7 @@ export const AdminPage = () => {
   return (
     <Layout>
       <div className="admin">
-        <div className="admin__header">
-          <h1>Admin Panel</h1>
-          <p className="text-secondary">Manage users and approvals</p>
-        </div>
+        <PageHeader title="Admin Panel" description="Manage users and approvals" />
 
         <div className="admin__tabs">
           <Button

@@ -7,7 +7,7 @@ import { PageHeader } from '../components/layout/PageHeader';
 import { SectionCard } from '../components/layout/SectionCard';
 import { DataTable } from '../components/layout/DataTable';
 import { StatusBadge } from '../components/layout/StatusBadge';
-import { EmptyState } from '../components/layout/EmptyState';
+import { EmptyState } from '../components/ui/EmptyState';
 import { AuditTimelineDrawer } from '../components/common/AuditTimelineDrawer';
 import { PriorityPill } from '../components/common/PriorityPill';
 import { ActionConfirmModal } from '../components/common/ActionConfirmModal';
@@ -571,11 +571,16 @@ export const CasesPage = () => {
           />
         );
       },
+      align: 'center',
+      headerClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'w-[1px] whitespace-nowrap',
     }] : []),
     {
       key: 'caseName',
       header: 'Case Name',
       sortable: true,
+      headerClassName: 'w-full max-w-lg',
+      cellClassName: 'w-full max-w-lg',
       render: (row) => {
         const breached = isSlaBreached(row);
         const recency = getRecencyLabel(row.updatedAt);
@@ -595,17 +600,28 @@ export const CasesPage = () => {
         );
       },
     },
-    { key: 'category', header: 'Category', sortable: true },
+    {
+      key: 'category',
+      header: 'Category',
+      sortable: true,
+      headerClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'w-[1px] whitespace-nowrap',
+    },
     {
       key: 'status',
       header: 'Status',
       sortable: true,
+      align: 'center',
+      headerClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'w-[1px] whitespace-nowrap',
       render: (row) => <StatusBadge status={row.status} />,
     },
     {
       key: 'assignedToName',
       header: 'Assigned To',
       sortable: true,
+      headerClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'w-[1px] whitespace-nowrap',
       render: (row) => row.assignedToName || row.assignedTo || 'Unassigned',
     },
     {
@@ -614,12 +630,16 @@ export const CasesPage = () => {
       align: 'right',
       tabular: true,
       sortable: true,
+      headerClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'w-[1px] whitespace-nowrap',
       render: (row) => formatDateTime(row.updatedAt),
     },
     {
       key: 'rowActions',
       header: '',
       align: 'right',
+      headerClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'w-[1px] whitespace-nowrap',
       render: (row) => {
         const isLocked = Boolean(row.lockStatus?.isLocked);
         // Non-admin users can assign to themselves for any unlocked case.
