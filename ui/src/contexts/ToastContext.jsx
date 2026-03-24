@@ -11,10 +11,10 @@ import { SESSION_KEYS } from '../utils/constants';
 export const ToastContext = createContext(null);
 
 const TOAST_META = {
-  success: { icon: '✅', borderColor: '#D1D5DB' },
-  warning: { icon: '⚠️', borderColor: '#FDE68A' },
-  info: { icon: 'ℹ️', borderColor: '#CBD5E1' },
-  danger: { icon: '🔴', borderColor: '#FECACA' },
+  success: { icon: '✓', iconClass: 'text-green-500' },
+  warning: { icon: '!', iconClass: 'text-amber-500' },
+  info: { icon: 'i', iconClass: 'text-blue-500' },
+  danger: { icon: '!', iconClass: 'text-red-500' },
 };
 
 export const ToastProvider = ({ children }) => {
@@ -113,78 +113,35 @@ const ToastContainer = ({ toasts, removeToast }) => {
   if (toasts.length === 0 || typeof document === 'undefined') return null;
 
   return createPortal((
-    <>
-      <div
-        style={{
-          position: 'fixed',
-          right: 'var(--space-4)',
-          bottom: 'var(--space-4)',
-          zIndex: 9999,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 'var(--space-2)',
-          alignItems: 'flex-end',
-          width: 'min(360px, calc(100vw - 32px))',
-          pointerEvents: 'none',
-        }}
-      >
-        {toasts.map((toast) => {
-          const meta = TOAST_META[toast.type] || TOAST_META.info;
+    <div className="fixed bottom-4 right-4 z-[200] flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-2">
+      {toasts.map((toast) => {
+        const meta = TOAST_META[toast.type] || TOAST_META.info;
 
-          return (
-            <div
-              key={toast.id}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '10px',
-                padding: '10px 12px',
-                borderRadius: 'var(--radius-md)',
-                border: `1px solid ${meta.borderColor}`,
-                background: 'var(--color-surface)',
-                color: 'var(--text-main)',
-                wordBreak: 'break-word',
-                pointerEvents: 'auto',
-                animation: 'toastSlideIn 160ms ease-out',
-              }}
-              role="status"
-              aria-live="polite"
+        return (
+          <div
+            key={toast.id}
+            className="flex max-w-sm items-start gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 text-gray-900 shadow-lg"
+            role="status"
+            aria-live="polite"
+          >
+            <span
+              aria-hidden="true"
+              className={`inline-flex h-5 w-5 items-center justify-center text-sm font-semibold leading-none ${meta.iconClass}`}
             >
-              <span aria-hidden="true" style={{ lineHeight: 1.2 }}>{meta.icon}</span>
-              <span style={{ flex: 1, fontSize: 'var(--font-size-sm)', lineHeight: 1.4 }}>{toast.message}</span>
-              <button
-                type="button"
-                onClick={() => removeToast(toast.id)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--text-muted)',
-                  cursor: 'pointer',
-                  fontSize: '16px',
-                  lineHeight: 1,
-                  padding: 0,
-                }}
-                aria-label="Close notification"
-              >
-                ×
-              </button>
-            </div>
-          );
-        })}
-      </div>
-      <style>{`
-        @keyframes toastSlideIn {
-          from {
-            transform: translate3d(12px, 12px, 0);
-            opacity: 0;
-          }
-          to {
-            transform: translate3d(0, 0, 0);
-            opacity: 1;
-          }
-        }
-      `}</style>
-    </>
+              {meta.icon}
+            </span>
+            <span className="flex-1 break-words text-sm font-medium text-gray-900">{toast.message}</span>
+            <button
+              type="button"
+              onClick={() => removeToast(toast.id)}
+              className="text-gray-400 transition-colors hover:text-gray-600"
+              aria-label="Close notification"
+            >
+              ×
+            </button>
+          </div>
+        );
+      })}
+    </div>
   ), document.body);
 };
