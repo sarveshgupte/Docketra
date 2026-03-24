@@ -1,11 +1,4 @@
-/**
- * Impersonation Banner Component — 2026 Edition
- * Glassmorphic, highly visible — screams "Read-Only Mode"
- */
-
 import React from 'react';
-import { Button } from './Button';
-import './ImpersonationBanner.css';
 
 export const ImpersonationBanner = ({ firmName, mode, onExit }) => {
   if (!firmName) return null;
@@ -18,32 +11,26 @@ export const ImpersonationBanner = ({ firmName, mode, onExit }) => {
 
   return (
     <div
-      className={`impersonation-banner ${isReadOnly ? 'impersonation-banner--read-only' : 'impersonation-banner--full-access'}`}
+      className="sticky top-0 z-[60] flex w-full items-center justify-center gap-3 border-b border-amber-200 bg-amber-50 px-4 py-2.5"
       role="alert"
       aria-live="polite"
       aria-label={ariaLabel}
     >
-      <div className="impersonation-banner__content">
-        <span className="impersonation-banner__pill" aria-hidden="true">
-          {isReadOnly ? '👁' : '✏️'}
-          <span className="impersonation-banner__pill-label">{modeLabel}</span>
-        </span>
-        <span className="impersonation-banner__text">
-          Impersonating <strong>{firmName}</strong>
-          {isReadOnly && (
-            <span className="impersonation-banner__readonly-note"> — no edits permitted</span>
-          )}
-        </span>
-        <Button
-          variant="secondary"
-          size="small"
-          onClick={onExit}
-          className="impersonation-banner__exit-btn"
-          aria-label={`Exit impersonation of ${firmName}`}
-        >
-          Exit Firm
-        </Button>
-      </div>
+      <span className="text-sm font-medium text-amber-800" aria-hidden="true">
+        {isReadOnly ? '👁' : '✏️'} {modeLabel}
+      </span>
+      <span className="text-sm font-medium text-amber-800">
+        Impersonating <strong>{firmName}</strong>
+        {isReadOnly && <span> — no edits permitted</span>}
+      </span>
+      <button
+        type="button"
+        onClick={onExit}
+        className="ml-4 rounded-md bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900 transition-colors hover:bg-amber-200"
+        aria-label={`Exit impersonation of ${firmName}`}
+      >
+        Stop Impersonating
+      </button>
     </div>
   );
 };
