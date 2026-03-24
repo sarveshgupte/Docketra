@@ -1,5 +1,5 @@
 import React from 'react';
-import { Badge } from '../common/Badge';
+import { StatusBadge } from '../layout/StatusBadge';
 import { formatDateTime } from '../../utils/formatDateTime';
 
 export const CaseDetailHeader = ({ caseInfo, actions, statusBadges }) => {
@@ -12,9 +12,7 @@ export const CaseDetailHeader = ({ caseInfo, actions, statusBadges }) => {
       </div>
 
       <div className="case-detail-header__actions">
-        <Badge status={caseInfo.status} className="case-detail-status-badge">
-          {caseInfo.status}
-        </Badge>
+        <StatusBadge status={caseInfo.status} />
         {statusBadges}
         {actions}
       </div>

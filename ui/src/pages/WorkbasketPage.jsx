@@ -10,6 +10,8 @@ import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Loading } from '../components/common/Loading';
+import { PageHeader } from '../components/layout/PageHeader';
+import { EmptyState } from '../components/ui/EmptyState';
 import { useAuth } from '../hooks/useAuth';
 import { worklistService } from '../services/worklistService';
 import { formatDate } from '../utils/formatters';
@@ -204,10 +206,10 @@ export const WorkbasketPage = () => {
   return (
     <Layout>
       <div className="global-worklist">
-        <div className="global-worklist__header">
-          <h1>Workbasket</h1>
-          <p className="text-secondary">Shared pool of unassigned, open, pending, and resolved dockets.</p>
-        </div>
+        <PageHeader
+          title="Workbasket"
+          description="Shared pool of unassigned, open, pending, and resolved dockets."
+        />
 
         <Card>
           <div className="global-worklist__filters">
@@ -342,6 +344,15 @@ export const WorkbasketPage = () => {
 
           {loading && <Loading message="Loading..." />}
 
+          {cases.length === 0 && !loading ? (
+            <div className="p-6">
+              <EmptyState
+                title="No dockets found in Workbasket"
+                description="Adjust filters or check back soon when new unassigned dockets are available."
+              />
+            </div>
+          ) : null}
+
           <div className="global-worklist__table-container">
             <table className="global-worklist__table">
               <thead>
@@ -354,47 +365,41 @@ export const WorkbasketPage = () => {
                       disabled={cases.length === 0}
                     />
                   </th>
-                  <th onClick={() => handleSort('caseId')} style={{ cursor: 'pointer' }}>
+                  <th className="global-worklist__col-fit" onClick={() => handleSort('caseId')} style={{ cursor: 'pointer' }}>
                     Docket ID {getSortIcon('caseId')}
                   </th>
-                  <th onClick={() => handleSort('clientId')} style={{ cursor: 'pointer' }}>
+                  <th className="global-worklist__col-fit global-worklist__th-center" onClick={() => handleSort('clientId')} style={{ cursor: 'pointer' }}>
                     Client ID {getSortIcon('clientId')}
                   </th>
-                  <th onClick={() => handleSort('category')} style={{ cursor: 'pointer' }}>
+                  <th className="global-worklist__col-name" onClick={() => handleSort('category')} style={{ cursor: 'pointer' }}>
                     Category {getSortIcon('category')}
                   </th>
-                  <th>Status</th>
-                  <th onClick={() => handleSort('slaDueDate')} style={{ cursor: 'pointer' }}>
+                  <th className="global-worklist__col-fit global-worklist__th-center">Status</th>
+                  <th className="global-worklist__col-fit global-worklist__th-right" onClick={() => handleSort('slaDueDate')} style={{ cursor: 'pointer' }}>
                     SLA Due Date {getSortIcon('slaDueDate')}
                   </th>
-                  <th>SLA Days Remaining</th>
-                  <th onClick={() => handleSort('createdAt')} style={{ cursor: 'pointer' }}>
+                  <th className="global-worklist__col-fit global-worklist__th-right">SLA Days Remaining</th>
+                  <th className="global-worklist__col-fit global-worklist__th-right" onClick={() => handleSort('createdAt')} style={{ cursor: 'pointer' }}>
                     Created Date {getSortIcon('createdAt')}
                   </th>
-                  <th>Actions</th>
+                  <th className="global-worklist__col-fit global-worklist__th-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {cases.length === 0 ? (
-                  <tr>
-                    <td colSpan="9" style={{ textAlign: 'center', padding: '2rem' }}>
-                      No dockets found in the workbasket. Adjust filters or check back soon.
-                    </td>
-                  </tr>
-                ) : (
+                {cases.length > 0 ? (
                   cases.map((caseItem) => {
                     const slaDate = caseItem.slaDueDate || caseItem.slaState?.slaDueAt;
 
                     return (
                     <tr key={caseItem.caseId}>
-                      <td>
+                      <td className="global-worklist__col-fit">
                         <input
                           type="checkbox"
                           checked={selectedCases.includes(caseItem.caseId)}
                           onChange={() => handleSelectCase(caseItem.caseId)}
                         />
                       </td>
-                      <td>
+                      <td className="global-worklist__col-fit">
                         <a
                           className="docket-link"
                           onClick={() => navigate(`/app/firm/${firmSlug}/cases/${caseItem.caseId}`)}
@@ -402,18 +407,20 @@ export const WorkbasketPage = () => {
                           {caseItem.caseId}
                         </a>
                       </td>
-                      <td>{caseItem.clientId}</td>
-                      <td>{caseItem.category}</td>
-                      <td>{caseItem.status}</td>
-                      <td>{formatDate(slaDate)}</td>
-                      <td className={getSLAStatusClass(caseItem.slaDaysRemaining)}>
+                      <td className="global-worklist__col-fit global-worklist__td-center">{caseItem.clientId}</td>
+                      <td className="global-worklist__col-name">
+                        <span className="global-worklist__truncate" title={caseItem.category}>{caseItem.category}</span>
+                      </td>
+                      <td className="global-worklist__col-fit global-worklist__td-center">{caseItem.status}</td>
+                      <td className="global-worklist__col-fit global-worklist__td-right">{formatDate(slaDate)}</td>
+                      <td className={`global-worklist__col-fit global-worklist__td-right ${getSLAStatusClass(caseItem.slaDaysRemaining)}`}>
                         {caseItem.slaDaysRemaining !== null 
                           ? `${caseItem.slaDaysRemaining} days`
                           : 'N/A'}
                       </td>
-                      <td>{formatDate(caseItem.createdAt)}</td>
-                      <td>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <td className="global-worklist__col-fit global-worklist__td-right">{formatDate(caseItem.createdAt)}</td>
+                      <td className="global-worklist__col-fit">
+                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                           <Button
                             variant="default"
                             size="small"
@@ -434,7 +441,7 @@ export const WorkbasketPage = () => {
                     </tr>
                     );
                   })
-                )}
+                ) : null}
               </tbody>
             </table>
           </div>

@@ -6,7 +6,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../../components/common/Layout';
-import { EmptyState } from '../../components/EmptyState';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { PageHeader } from '../../components/layout/PageHeader';
 import { DashboardSkeleton } from '../../components/common/Skeleton';
 import { MetricCard } from '../../components/reports/MetricCard';
 import { AuditLogView } from '../../components/reports/AuditLogView';
@@ -83,8 +84,6 @@ export const ReportsDashboard = () => {
       <Layout>
         <div className="reports-dashboard">
           <EmptyState
-            tone="error"
-            eyebrow="Reports unavailable"
             title="We couldn’t load your reports"
             description={error}
             actionLabel="Try again"
@@ -99,12 +98,11 @@ export const ReportsDashboard = () => {
     return (
       <Layout>
         <div className="reports-dashboard">
-          <div className="reports-dashboard__header">
-            <h1>Reports & MIS Dashboard</h1>
-            <p className="text-secondary">Management information system - Read-only view</p>
-          </div>
+          <PageHeader
+            title="Reports & MIS Dashboard"
+            description="Management information system - Read-only view"
+          />
           <EmptyState
-            eyebrow="No reporting data yet"
             title="No reports available yet"
             description="Once cases and team activity start flowing, your reporting workspace will populate automatically."
             actionLabel="Review case registry"
@@ -118,10 +116,10 @@ export const ReportsDashboard = () => {
   return (
     <Layout>
       <div className="reports-dashboard">
-        <div className="reports-dashboard__header">
-          <h1>Reports & MIS Dashboard</h1>
-          <p className="text-secondary">Management information system - Read-only view</p>
-        </div>
+        <PageHeader
+          title="Reports & MIS Dashboard"
+          description="Management information system - Read-only view"
+        />
 
         <div className="reports-dashboard__grid">
           {/* Total Cases Card */}
@@ -158,7 +156,10 @@ export const ReportsDashboard = () => {
                 </tbody>
               </table>
             ) : (
-              <p className="text-secondary">No data available</p>
+              <EmptyState
+                title="No category data"
+                description="Category trends will appear when dockets are categorized."
+              />
             )}
           </div>
 
@@ -177,7 +178,10 @@ export const ReportsDashboard = () => {
                 </tbody>
               </table>
             ) : (
-              <p className="text-secondary">No data available</p>
+              <EmptyState
+                title="No client data"
+                description="Client leaderboard data will appear once dockets are active."
+              />
             )}
           </div>
 
@@ -204,7 +208,10 @@ export const ReportsDashboard = () => {
                 </tbody>
               </table>
             ) : (
-              <p className="text-secondary">No data available</p>
+              <EmptyState
+                title="No ageing data"
+                description="Pending ageing insights will appear when pending dockets exist."
+              />
             )}
           </div>
 
@@ -223,7 +230,10 @@ export const ReportsDashboard = () => {
                 </tbody>
               </table>
             ) : (
-              <p className="text-secondary">No data available</p>
+              <EmptyState
+                title="No employee data"
+                description="Team workload data will appear as team members process dockets."
+              />
             )}
           </div>
 

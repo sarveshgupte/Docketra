@@ -83,6 +83,8 @@ export const DataTable = ({
                     className={joinClasses(
                       'px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap',
                       column.align === 'right' && 'text-right',
+                      column.align === 'center' && 'text-center',
+                      column.headerClassName,
                     )}
                   >
                     {column.sortable ? (
@@ -118,10 +120,14 @@ export const DataTable = ({
                       className={joinClasses(
                         'px-6 py-4 whitespace-nowrap text-sm text-gray-900',
                         column.align === 'right' && 'text-right',
+                        column.align === 'center' && 'text-center',
                         column.tabular && 'tabular-nums',
+                        column.cellClassName,
                       )}
                     >
-                      {column.render ? column.render(row) : row[column.key]}
+                      <div className={joinClasses(column.contentClassName)}>
+                        {column.render ? column.render(row) : row[column.key]}
+                      </div>
                     </td>
                   ))}
                 </tr>

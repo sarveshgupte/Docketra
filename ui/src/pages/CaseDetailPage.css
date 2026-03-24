@@ -265,42 +265,6 @@
   color: #6b7280;
 }
 
-.case-detail-status-badge.badge,
-.case-detail-header .badge {
-  border: 0;
-  box-shadow: none;
-  border-radius: 9999px;
-  padding: 4px 10px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.case-detail-status-badge.badge-success,
-.case-detail-header .badge-success {
-  background: rgba(34, 197, 94, 0.12);
-  color: #15803d;
-}
-
-.case-detail-status-badge.badge-warning,
-.case-detail-header .badge-warning {
-  background: rgba(245, 158, 11, 0.14);
-  color: #b45309;
-}
-
-.case-detail-status-badge.badge-info,
-.case-detail-header .badge-info {
-  background: rgba(59, 130, 246, 0.12);
-  color: #1d4ed8;
-}
-
-.case-detail-status-badge.badge-neutral,
-.case-detail-header .badge-neutral,
-.case-detail-status-badge.badge-danger,
-.case-detail-header .badge-danger {
-  background: rgba(100, 116, 139, 0.12);
-  color: #334155;
-}
-
 .case-detail-lifecycle-actions,
 .case-detail__attachment-actions,
 .case-detail__add-comment {
