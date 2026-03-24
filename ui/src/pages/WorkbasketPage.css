@@ -65,6 +65,34 @@
   border-bottom: 1px solid var(--border-color);
 }
 
+.global-worklist__col-fit {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.global-worklist__col-name {
+  width: 100%;
+  max-width: 32rem;
+}
+
+.global-worklist__truncate {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.global-worklist__th-center,
+.global-worklist__td-center {
+  text-align: center;
+}
+
+.global-worklist__th-right,
+.global-worklist__td-right {
+  text-align: right;
+}
+
 .global-worklist__table tbody tr:hover {
   background: var(--bg-secondary);
 }

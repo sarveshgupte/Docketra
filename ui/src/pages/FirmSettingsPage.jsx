@@ -5,6 +5,8 @@ import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Select } from '../components/common/Select';
+import { PageHeader } from '../components/layout/PageHeader';
+import { EmptyState } from '../components/ui/EmptyState';
 import { caseService } from '../services/caseService';
 import { getFirmConfig, setFirmConfig } from '../utils/firmConfig';
 import { formatDateTime } from '../utils/formatDateTime';
@@ -85,10 +87,10 @@ export const FirmSettingsPage = () => {
     <Layout>
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-8">
-          <div className="space-y-2">
-            <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Firm Settings</h1>
-            <p className="text-sm text-gray-500">Configure operational defaults and feature visibility for this firm.</p>
-          </div>
+          <PageHeader
+            title="Firm Settings"
+            description="Configure operational defaults and feature visibility for this firm."
+          />
 
           <Card className="p-6">
             <div className="space-y-6">
@@ -185,7 +187,10 @@ export const FirmSettingsPage = () => {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-gray-500">No recent activity available.</p>
+                <EmptyState
+                  title="No recent activity available"
+                  description="Recent audit events will appear here as your team works on dockets."
+                />
               )}
             </div>
           </Card>

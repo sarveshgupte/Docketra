@@ -19,7 +19,7 @@ import { Badge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
 import { TableSkeleton } from '../components/common/Skeleton';
 import { PageHeader } from '../components/layout/PageHeader';
-import { EmptyState } from '../components/layout/EmptyState';
+import { EmptyState } from '../components/ui/EmptyState';
 import { DataTable } from '../components/layout/DataTable';
 import { PriorityPill } from '../components/common/PriorityPill';
 import { worklistService } from '../services/worklistService';
@@ -161,21 +161,33 @@ export const WorklistPage = () => {
       key: 'caseName',
       header: 'Docket Name',
       sortable: true,
+      headerClassName: 'w-full max-w-lg',
+      cellClassName: 'w-full max-w-lg',
+      contentClassName: 'truncate',
     },
     {
       key: 'category',
       header: 'Category',
       sortable: true,
+      headerClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'w-[1px] whitespace-nowrap',
     },
     {
       key: 'clientId',
       header: 'Client ID',
+      align: 'center',
+      tabular: true,
+      headerClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'w-[1px] whitespace-nowrap',
       render: (caseItem) => caseItem.clientId || '—',
     },
     {
       key: 'status',
       header: 'Status',
       sortable: true,
+      align: 'center',
+      headerClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'w-[1px] whitespace-nowrap',
       render: (caseItem) => (
         <Badge status={caseItem.status}>{getStatusLabel(caseItem.status)}</Badge>
       ),
@@ -183,6 +195,9 @@ export const WorklistPage = () => {
     {
       key: 'priority',
       header: 'Priority',
+      align: 'center',
+      headerClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'w-[1px] whitespace-nowrap',
       render: (caseItem) => <PriorityPill caseRecord={caseItem} />,
     },
     ...(isPendingView
@@ -190,6 +205,10 @@ export const WorklistPage = () => {
         key: 'pendingUntil',
         header: 'Pending Until',
         sortable: true,
+        align: 'right',
+        tabular: true,
+        headerClassName: 'w-[1px] whitespace-nowrap',
+        cellClassName: 'w-[1px] whitespace-nowrap',
         render: (caseItem) => formatDate(caseItem.pendingUntil),
       }]
       : []),
@@ -197,12 +216,20 @@ export const WorklistPage = () => {
       key: 'createdAt',
       header: 'Created',
       sortable: true,
+      align: 'right',
+      tabular: true,
+      headerClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'w-[1px] whitespace-nowrap',
       render: (caseItem) => formatDate(caseItem.createdAt),
     },
     {
       key: 'updatedAt',
       header: 'Last Updated',
       sortable: true,
+      align: 'right',
+      tabular: true,
+      headerClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'w-[1px] whitespace-nowrap',
       render: (caseItem) => formatDate(caseItem.updatedAt),
     },
   ];
@@ -231,15 +258,17 @@ export const WorklistPage = () => {
         <Card>
           {error ? (
             <EmptyState
-              tone="error"
-              eyebrow="Worklist unavailable"
               title="We couldn’t load your worklist"
               description="Retry to fetch the latest assigned cases. If the problem continues, refresh the page or contact your administrator."
               actionLabel="Retry"
               onAction={loadWorklist}
-              secondaryActionLabel={!isPendingView ? UX_COPY.actions.CREATE_CASE : undefined}
-              onSecondaryAction={!isPendingView ? () => navigate(`/app/firm/${firmSlug}/cases/create`) : undefined}
-            />
+            >
+              {!isPendingView ? (
+                <Button variant="outline" onClick={() => navigate(`/app/firm/${firmSlug}/cases/create`)}>
+                  {UX_COPY.actions.CREATE_CASE}
+                </Button>
+              ) : null}
+            </EmptyState>
           ) : cases.length === 0 ? (
             <EmptyState
               title={isPendingView ? 'No pending dockets right now.' : UX_COPY.emptyStates.NO_MY_OPEN}
