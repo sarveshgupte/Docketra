@@ -106,19 +106,19 @@ export const ProfilePage = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+      <div className="min-h-screen w-full flex-1 bg-gray-50">
+        <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 space-y-8">
           <div className="space-y-2">
             <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">My Profile</h1>
             <p className="text-sm text-gray-500">View and update your personal account information.</p>
           </div>
 
-          <Card className="p-6">
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-lg font-medium text-gray-900 mb-4">Identity</h2>
-                <p className="text-sm text-gray-500">These fields are managed by your organization and cannot be edited here.</p>
-              </div>
+          <section className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:items-start">
+            <div className="space-y-2 lg:col-span-1">
+              <h2 className="text-lg font-medium text-gray-900">Identity</h2>
+              <p className="text-sm text-gray-500">These fields are managed by your organization and cannot be edited here.</p>
+            </div>
+            <Card className="p-6 lg:col-span-2 lg:max-w-4xl">
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <Input label="Employee ID (xID)" value={profileData?.xID || ''} readOnly />
                 <Input label="Role" value={profileData?.role || ''} readOnly />
@@ -128,94 +128,96 @@ export const ProfilePage = () => {
                   <Input label="Firm" value={profileData.firm.name || ''} readOnly className="sm:col-span-2" />
                 ) : null}
               </div>
+            </Card>
+          </section>
+
+          <section className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:items-start">
+            <div className="space-y-2 lg:col-span-1">
+              <h2 className="text-lg font-medium text-gray-900">Personal Information</h2>
+              <p className="text-sm text-gray-500">Keep your contact details and masked identity information current.</p>
             </div>
-          </Card>
+            <Card className="p-6 lg:col-span-2 lg:max-w-4xl">
+              <form className="space-y-6" onSubmit={handleSave}>
 
-          <Card className="p-6">
-            <form className="space-y-6" onSubmit={handleSave}>
-              <div>
-                <h2 className="text-lg font-medium text-gray-900 mb-4">Personal Information</h2>
-                <p className="text-sm text-gray-500">Keep your contact details and masked identity information current.</p>
-              </div>
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <Input
+                    label="Date of Birth"
+                    name="dateOfBirth"
+                    type="date"
+                    value={formData.dateOfBirth}
+                    onChange={handleChange}
+                    disabled={!editing}
+                  />
+                  <Select
+                    label="Gender"
+                    name="gender"
+                    value={formData.gender}
+                    onChange={handleChange}
+                    disabled={!editing}
+                    options={genderOptions}
+                  />
+                  <Input
+                    label="Phone"
+                    name="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    disabled={!editing}
+                    placeholder="10-digit mobile number"
+                  />
+                  <Input
+                    label="PAN (Masked)"
+                    name="panMasked"
+                    value={formData.panMasked}
+                    onChange={handleChange}
+                    disabled={!editing}
+                    maxLength={10}
+                    placeholder="ABCDE1234F"
+                    helpText={editing ? 'Format: ABCDE1234F (masked).' : undefined}
+                  />
+                  <Input
+                    label="Aadhaar (Masked)"
+                    name="aadhaarMasked"
+                    value={formData.aadhaarMasked}
+                    onChange={handleChange}
+                    disabled={!editing}
+                    placeholder="XXXX-XXXX-1234"
+                    className="sm:col-span-2"
+                    helpText={editing ? 'Format: XXXX-XXXX-1234 (only the last 4 digits should be visible).' : undefined}
+                  />
+                  <Textarea
+                    label="Address"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleChange}
+                    disabled={!editing}
+                    placeholder="Full address"
+                    className="sm:col-span-2"
+                  />
+                </div>
 
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <Input
-                  label="Date of Birth"
-                  name="dateOfBirth"
-                  type="date"
-                  value={formData.dateOfBirth}
-                  onChange={handleChange}
-                  disabled={!editing}
-                />
-                <Select
-                  label="Gender"
-                  name="gender"
-                  value={formData.gender}
-                  onChange={handleChange}
-                  disabled={!editing}
-                  options={genderOptions}
-                />
-                <Input
-                  label="Phone"
-                  name="phone"
-                  type="tel"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  disabled={!editing}
-                  placeholder="10-digit mobile number"
-                />
-                <Input
-                  label="PAN (Masked)"
-                  name="panMasked"
-                  value={formData.panMasked}
-                  onChange={handleChange}
-                  disabled={!editing}
-                  maxLength={10}
-                  placeholder="ABCDE1234F"
-                  helpText={editing ? 'Format: ABCDE1234F (masked).' : undefined}
-                />
-                <Input
-                  label="Aadhaar (Masked)"
-                  name="aadhaarMasked"
-                  value={formData.aadhaarMasked}
-                  onChange={handleChange}
-                  disabled={!editing}
-                  placeholder="XXXX-XXXX-1234"
-                  className="sm:col-span-2"
-                  helpText={editing ? 'Format: XXXX-XXXX-1234 (only the last 4 digits should be visible).' : undefined}
-                />
-                <Textarea
-                  label="Address"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleChange}
-                  disabled={!editing}
-                  placeholder="Full address"
-                  className="sm:col-span-2"
-                />
-              </div>
+                {error ? <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
+                {success ? <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{success}</div> : null}
 
-              {error ? <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
-              {success ? <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{success}</div> : null}
-
-              <div className="mt-6 pt-5 border-t border-gray-200 flex justify-end gap-3">
-                {editing ? (
-                  <>
-                    <Button type="button" variant="outline" onClick={handleCancel}>
-                      Cancel
+                <div className="mt-6 pt-5 border-t border-gray-200 flex justify-end gap-3">
+                  {editing ? (
+                    <>
+                      <Button type="button" variant="outline" onClick={handleCancel}>
+                        Cancel
+                      </Button>
+                      <Button variant="primary" type="submit" disabled={submitting}>
+                        {submitting ? 'Saving...' : 'Save Changes'}
+                      </Button>
+                    </>
+                  ) : (
+                    <Button type="button" variant="primary" onClick={() => setEditing(true)}>
+                      Edit Profile
                     </Button>
-                    <Button variant="primary" type="submit" disabled={submitting}>
-                      {submitting ? 'Saving...' : 'Save Changes'}
-                    </Button>
-                  </>
-                ) : (
-                  <Button type="button" variant="primary" onClick={() => setEditing(true)}>
-                    Edit Profile
-                  </Button>
-                )}
-              </div>
-            </form>
-          </Card>
+                  )}
+                </div>
+              </form>
+            </Card>
+          </section>
         </div>
       </div>
     </Layout>

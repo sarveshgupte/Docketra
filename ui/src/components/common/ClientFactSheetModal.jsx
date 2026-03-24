@@ -10,6 +10,7 @@
 
 import React from 'react';
 import { Modal } from './Modal';
+import { Button } from './Button';
 import { API_BASE_URL } from '../../utils/constants';
 import './ClientFactSheetModal.css';
 
@@ -26,7 +27,17 @@ export const ClientFactSheetModal = ({ isOpen, onClose, factSheet, caseId }) => 
   const hasContent = factSheet.description || factSheet.notes || (factSheet.files && factSheet.files.length > 0);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Client Fact Sheet" size="large">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Client Fact Sheet"
+      maxWidth="4xl"
+      actions={(
+        <Button type="button" variant="outline" onClick={onClose}>
+          Close
+        </Button>
+      )}
+    >
       <div className="client-fact-sheet-modal">
         <div className="client-fact-sheet-header">
           <h3>{factSheet.businessName}</h3>
@@ -84,12 +95,6 @@ export const ClientFactSheetModal = ({ isOpen, onClose, factSheet, caseId }) => 
             </div>
           </div>
         )}
-
-        <div className="modal-footer">
-          <button className="btn btn-secondary" onClick={onClose}>
-            Close
-          </button>
-        </div>
       </div>
     </Modal>
   );

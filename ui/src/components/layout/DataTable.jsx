@@ -26,7 +26,7 @@ export const DataTable = ({
 
   const handleRowKeyDown = (event, row) => {
     if (!isInteractive) return;
-    if (event.key === 'Enter') {
+    if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       onRowClick(row);
     }
@@ -110,8 +110,10 @@ export const DataTable = ({
                   tabIndex={isInteractive ? 0 : undefined}
                   role={isInteractive ? 'button' : undefined}
                   className={joinClasses(
-                    'transition-colors duration-150 hover:bg-gray-50',
-                    isInteractive && 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset',
+                    'transition-all duration-200 ease-in-out',
+                    isInteractive
+                      ? 'cursor-pointer hover:bg-gray-50 focus-visible:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset'
+                      : undefined,
                   )}
                 >
                   {columns.map((column) => (
