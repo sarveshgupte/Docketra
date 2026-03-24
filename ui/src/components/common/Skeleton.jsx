@@ -5,28 +5,23 @@ export const SkeletonBlock = ({ className = '', style = {} }) => (
   <div className={`skeleton-block ${className}`.trim()} style={style} aria-hidden="true" />
 );
 
-const TABLE_HEADER_WIDTHS = ['22%', '18%', '18%', '16%', '12%'];
-const TABLE_ROW_WIDTHS = [
-  ['34%', '26%', '24%', '18%', '16%'],
-  ['28%', '20%', '22%', '14%', '18%'],
-  ['32%', '24%', '18%', '16%', '12%'],
-  ['26%', '28%', '20%', '15%', '17%'],
-  ['30%', '18%', '22%', '14%', '16%'],
-];
-
 const TableGridSkeleton = ({ rows = 5 }) => (
   <div className="table-skeleton__grid" aria-hidden="true">
     <div className="table-skeleton__table-head">
-      {TABLE_HEADER_WIDTHS.map((width, index) => (
-        <SkeletonBlock key={`head-${index}`} className="table-skeleton__cell table-skeleton__cell--header" style={{ width }} />
-      ))}
+      <SkeletonBlock className="table-skeleton__cell table-skeleton__cell--header animate-pulse table-skeleton__cell--id" />
+      <SkeletonBlock className="table-skeleton__cell table-skeleton__cell--header animate-pulse table-skeleton__cell--main" />
+      <SkeletonBlock className="table-skeleton__cell table-skeleton__cell--header animate-pulse table-skeleton__cell--meta" />
+      <SkeletonBlock className="table-skeleton__cell table-skeleton__cell--header animate-pulse table-skeleton__cell--meta" />
+      <SkeletonBlock className="table-skeleton__cell table-skeleton__cell--header animate-pulse table-skeleton__cell--actions" />
     </div>
     <div className="table-skeleton__table-body">
-      {TABLE_ROW_WIDTHS.slice(0, rows).map((widths, rowIndex) => (
+      {Array.from({ length: rows }).map((_, rowIndex) => (
         <div key={`row-${rowIndex}`} className="table-skeleton__table-row">
-          {widths.map((width, cellIndex) => (
-            <SkeletonBlock key={`row-${rowIndex}-cell-${cellIndex}`} className="table-skeleton__cell" style={{ width }} />
-          ))}
+          <SkeletonBlock className="table-skeleton__cell animate-pulse table-skeleton__cell--id" />
+          <SkeletonBlock className="table-skeleton__cell animate-pulse table-skeleton__cell--main" />
+          <SkeletonBlock className="table-skeleton__cell animate-pulse table-skeleton__cell--meta" />
+          <SkeletonBlock className="table-skeleton__cell animate-pulse table-skeleton__cell--meta" />
+          <SkeletonBlock className="table-skeleton__cell animate-pulse table-skeleton__cell--actions" />
         </div>
       ))}
     </div>

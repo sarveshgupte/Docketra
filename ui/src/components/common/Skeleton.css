@@ -120,7 +120,7 @@
 .table-skeleton__table-head,
 .table-skeleton__table-row {
   display: grid;
-  grid-template-columns: 1.8fr 1.2fr 1.1fr 0.9fr 0.8fr;
+  grid-template-columns: 4.5rem minmax(16rem, 1fr) 7rem 8rem 6rem;
   gap: var(--space-3);
   align-items: center;
 }
@@ -152,6 +152,27 @@
 
 .table-skeleton__cell--header {
   height: 10px;
+}
+
+.table-skeleton__cell--id {
+  width: 2.25rem;
+}
+
+.table-skeleton__cell--main {
+  width: 100%;
+  max-width: 28rem;
+}
+
+.table-skeleton__cell--meta {
+  width: 100%;
+  max-width: 6rem;
+  justify-self: end;
+}
+
+.table-skeleton__cell--actions {
+  width: 100%;
+  max-width: 5rem;
+  justify-self: end;
 }
 
 .form-skeleton__body {
@@ -227,6 +248,14 @@
   .table-skeleton__table-head,
   .table-skeleton__table-row {
     grid-template-columns: 1fr;
+  }
+
+  .table-skeleton__cell--id,
+  .table-skeleton__cell--main,
+  .table-skeleton__cell--meta,
+  .table-skeleton__cell--actions {
+    max-width: 100%;
+    justify-self: stretch;
   }
 
   .route-loading-shell__content,

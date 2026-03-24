@@ -85,19 +85,19 @@ export const FirmSettingsPage = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+      <div className="min-h-screen w-full flex-1 bg-gray-50">
+        <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 space-y-8">
           <PageHeader
             title="Firm Settings"
             description="Configure operational defaults and feature visibility for this firm."
           />
 
-          <Card className="p-6">
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-lg font-medium text-gray-900 mb-4">Operational Configuration</h2>
-                <p className="text-sm text-gray-500">Set the default thresholds that guide case routing, SLAs, and escalation timing.</p>
-              </div>
+          <section className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:items-start">
+            <div className="space-y-2 lg:col-span-1">
+              <h2 className="text-lg font-medium text-gray-900">Operational Configuration</h2>
+              <p className="text-sm text-gray-500">Set the default thresholds that guide case routing, SLAs, and escalation timing.</p>
+            </div>
+            <Card className="p-6 lg:col-span-2 lg:max-w-4xl">
               <div className="space-y-5">
                 <Input
                   label="SLA default days"
@@ -124,15 +124,15 @@ export const FirmSettingsPage = () => {
                   onChange={handleNumberChange}
                 />
               </div>
-            </div>
-          </Card>
+            </Card>
+          </section>
 
-          <Card className="p-6">
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-lg font-medium text-gray-900 mb-4">View &amp; Action Controls</h2>
-                <p className="text-sm text-gray-500">Enable or hide operational views and bulk actions for firm users.</p>
-              </div>
+          <section className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:items-start">
+            <div className="space-y-2 lg:col-span-1">
+              <h2 className="text-lg font-medium text-gray-900">View &amp; Action Controls</h2>
+              <p className="text-sm text-gray-500">Enable or hide operational views and bulk actions for firm users.</p>
+            </div>
+            <Card className="p-6 lg:col-span-2 lg:max-w-4xl">
               <div className="space-y-5">
                 <Select
                   label="Performance View"
@@ -167,10 +167,10 @@ export const FirmSettingsPage = () => {
                   Save Changes
                 </Button>
               </div>
-            </div>
-          </Card>
+            </Card>
+          </section>
 
-          <Card className="p-6">
+          <Card className="max-w-4xl p-6">
             <div className="space-y-5">
               <div>
                 <h2 className="text-lg font-medium text-gray-900 mb-4">Recent User Activity</h2>
