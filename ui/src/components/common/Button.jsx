@@ -18,13 +18,14 @@ export const Button = ({
   ...props
 }) => {
   const baseClasses =
-    'btn transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900';
+    'btn transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
 
   const variantClasses = {
-    primary: 'btn-primary',
-    secondary: 'btn-secondary',
-    outline: 'btn-outline',
-    danger: 'btn-danger',
+    primary: 'btn-primary hover:bg-blue-700 active:bg-blue-800 focus-visible:ring-blue-600',
+    secondary: 'btn-secondary hover:bg-gray-100 active:bg-gray-200 focus-visible:ring-gray-500',
+    outline: 'btn-outline hover:bg-gray-50 active:bg-gray-100 focus-visible:ring-gray-500',
+    danger: 'btn-danger hover:bg-red-700 active:bg-red-800 focus-visible:ring-red-600',
+    ghost: 'border border-transparent bg-transparent text-gray-700 hover:bg-gray-100 active:bg-gray-200 focus-visible:ring-gray-500',
   };
 
   const isDisabled = disabled || loading;

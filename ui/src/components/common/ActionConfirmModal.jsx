@@ -32,6 +32,7 @@ export const ActionConfirmModal = ({
     isOpen={isOpen}
     onClose={loading ? () => {} : onCancel}
     title={title}
+    maxWidth="sm"
     actions={(
       <>
         <Button variant="outline" onClick={onCancel} disabled={loading}>

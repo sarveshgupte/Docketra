@@ -14,11 +14,16 @@ const FOCUSABLE_SELECTOR = [
 ].join(', ');
 
 const sizeClasses = {
+  xs: 'max-w-sm',
+  small: 'max-w-md',
   sm: 'max-w-md',
   md: 'max-w-lg',
   lg: 'max-w-3xl',
   large: 'max-w-3xl',
   xl: 'max-w-5xl',
+  '2xl': 'max-w-6xl',
+  '3xl': 'max-w-7xl',
+  '4xl': 'max-w-[56rem]',
 };
 
 export const Modal = ({
@@ -28,11 +33,12 @@ export const Modal = ({
   children,
   actions,
   size = 'md',
+  maxWidth,
 }) => {
   const modalRef = useRef(null);
   const previousActiveElementRef = useRef(null);
 
-  const modalSizeClass = useMemo(() => sizeClasses[size] || sizeClasses.md, [size]);
+  const modalSizeClass = useMemo(() => sizeClasses[maxWidth || size] || sizeClasses.md, [maxWidth, size]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -114,7 +120,7 @@ export const Modal = ({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/50 p-4 sm:p-6"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4 sm:p-6"
       onClick={handleOverlayClick}
       role="presentation"
     >
@@ -131,10 +137,10 @@ export const Modal = ({
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-400 transition-colors hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2"
             aria-label="Close modal"
           >
-            <span aria-hidden="true">✕</span>
+            <span aria-hidden="true" className="text-base leading-none">✕</span>
           </button>
         </div>
         <div className="overflow-y-auto px-6 py-5">{children}</div>

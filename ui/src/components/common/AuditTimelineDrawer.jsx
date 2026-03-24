@@ -113,12 +113,12 @@ export const AuditTimelineDrawer = ({ isOpen, onClose, caseId, events }) => {
   return (
     <>
       <div
-        className={`fixed inset-0 z-40 bg-gray-900/50 transition-opacity duration-300 ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm transition-opacity duration-300 ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
         aria-hidden={!isOpen}
         onClick={onClose}
       />
       <aside
-        className={`audit-drawer fixed inset-y-0 right-0 z-50 flex w-full max-w-md transform flex-col bg-white shadow-2xl transition-transform duration-300 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`audit-drawer fixed inset-y-0 right-0 z-50 flex w-full sm:w-[400px] transform flex-col bg-white shadow-2xl transition-transform duration-300 ease-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
         role="dialog"
         aria-modal="true"
         aria-label="Audit History"
