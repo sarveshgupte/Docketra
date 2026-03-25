@@ -82,6 +82,29 @@
   color: #111827;
 }
 
+.case-detail-header__title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.case-detail-header__info-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+  cursor: pointer;
+}
+
+.case-detail-header__info-btn:hover {
+  background: #f3f4f6;
+}
+
 .case-detail-header__subtitle {
   margin: 4px 0 0;
   font-size: 14px;

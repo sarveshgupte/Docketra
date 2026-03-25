@@ -1,6 +1,6 @@
-const { createHash } = require('crypto');
 const Case = require('../models/Case.model');
 const ClientRepository = require('../repositories/ClientRepository');
+const AttachmentRepository = require('../repositories/AttachmentRepository');
 const { mapClientResponse } = require('../mappers/client.mapper');
 const { generateNextClientId } = require('../services/clientIdGenerator');
 const { 
@@ -15,14 +15,10 @@ const { StorageProviderFactory } = require('../services/storage/StorageProviderF
 const { areFileUploadsDisabled } = require('../services/featureFlags.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { executeWrite } = require('../utils/executeWrite');
-const { softDelete } = require('../services/softDelete.service');
-const { enqueueStorageJob, JOB_TYPES } = require('../queues/storage.queue');
-const CaseFile = require('../models/CaseFile.model');
 const { incrementTenantMetric } = require('../services/tenantMetrics.service');
 const Firm = require('../models/Firm.model');
-const path = require('path');
-const fs = require('fs');
 const { parseBooleanQuery } = require('../utils/query.utils');
+const cfsDriveService = require('../services/cfsDrive.service');
 
 const getClientAccessContext = (req, res, message) => {
   const firmId = req.user?.firmId;
@@ -209,9 +205,22 @@ const getClientById = async (req, res) => {
       });
     }
     
+    const attachments = await AttachmentRepository.findByClientSource(accessContext.firmId, clientId, 'client_cfs');
+    const payload = mapClientResponse(client);
+    payload.clientFactSheet = payload.clientFactSheet || {};
+    payload.clientFactSheet.attachments = attachments.map((attachment) => ({
+      fileId: attachment._id,
+      fileName: attachment.fileName,
+      size: attachment.size || 0,
+      mimeType: attachment.mimeType,
+      uploadedAt: attachment.createdAt,
+      uploadedByXID: attachment.createdByXID,
+      uploadedByName: attachment.createdByName,
+    }));
+
     res.json({
       success: true,
-      data: mapClientResponse(client),
+      data: payload,
     });
   } catch (error) {
     logClientError('CLIENT_GET_ERROR', req, error, {
@@ -795,9 +804,11 @@ const updateClientFactSheet = async (req, res) => {
     // Update description and notes
     if (description !== undefined) {
       client.clientFactSheet.description = description;
+      client.clientFactSheet.updatedAt = new Date();
     }
     if (notes !== undefined) {
       client.clientFactSheet.notes = notes;
+      client.clientFactSheet.updatedAt = new Date();
     }
 
     // Optional: capture structured client fact sheet metadata.
@@ -904,75 +915,21 @@ const uploadFactSheetFile = async (req, res) => {
       });
     }
     
-    // Find client with firmId scoping
-    const client = await ClientRepository.findByClientId(userFirmId, clientId, req.user?.role);
-    
-    if (!client) {
-      return res.status(404).json({
-        success: false,
-        message: 'Client not found',
-      });
-    }
-    
-    // Initialize clientFactSheet if it doesn't exist
-    if (!client.clientFactSheet) {
-      client.clientFactSheet = { description: '', notes: '', files: [] };
-    }
-    if (!client.clientFactSheet.files) {
-      client.clientFactSheet.files = [];
-    }
-    
-    // Get MIME type
-    const mimeType = getMimeType(req.file.originalname) || req.file.mimetype || 'application/octet-stream';
-    let checksumSource = req.file.buffer;
-    if (!checksumSource && req.file.path) {
-      try {
-        checksumSource = await fs.promises.readFile(req.file.path);
-      } catch (err) {
-        console.warn('[uploadFactSheetFile] Unable to read uploaded file for checksum:', err.message);
-        return res.status(500).json({
-          success: false,
-          message: 'Unable to read uploaded file for checksum',
-        });
-      }
-    }
-    if (!checksumSource) {
-      return res.status(400).json({
-        success: false,
-        message: 'Missing upload content for checksum',
-      });
-    }
-    const checksum = createHash('sha256').update(checksumSource).digest('hex');
-    const existingFile = client.clientFactSheet.files.find((file) => file.checksum && file.checksum === checksum);
-    if (existingFile) {
-      return res.status(409).json({
-        success: false,
-        message: 'Duplicate upload detected',
-      });
-    }
-    
-    // Add file to client fact sheet
-    const newFile = {
-      fileName: req.file.originalname,
-      mimeType,
-      storagePath: req.file.path,
-      uploadedByXID: performedByXID,
-      uploadedAt: new Date(),
-      checksum,
-    };
-    
-    client.clientFactSheet.files.push(newFile);
-    client.clientFactSheet.documents = client.clientFactSheet.documents || [];
-    client.clientFactSheet.documents.push({
-      fileName: newFile.fileName,
-      fileUrl: newFile.storagePath,
-      uploadedBy: newFile.uploadedByXID,
-      uploadedAt: newFile.uploadedAt,
+    const queuedFile = await cfsDriveService.uploadClientCFSFile(clientId, userFirmId, req.file, {
+      userRole: req.user?.role,
+      userEmail: req.user?.email || 'unknown',
+      userXID: performedByXID,
+      userName: req.user?.name || req.user?.email || performedByXID,
+      description: req.body?.description || 'Client Fact Sheet attachment',
+      fileType: req.body?.fileType || 'documents',
     });
-    await client.save();
-    
-    // Get the newly added file (with generated fileId)
-    const addedFile = client.clientFactSheet.files[client.clientFactSheet.files.length - 1];
+
+    const client = await ClientRepository.findByClientId(userFirmId, clientId, req.user?.role);
+    if (client) {
+      client.clientFactSheet = client.clientFactSheet || {};
+      client.clientFactSheet.updatedAt = new Date();
+      await client.save();
+    }
     
     // Log audit event
     await logFactSheetFileAdded({
@@ -981,8 +938,8 @@ const uploadFactSheetFile = async (req, res) => {
       performedByXID,
       fileName: req.file.originalname,
       metadata: {
-        fileId: addedFile.fileId.toString(),
-        mimeType,
+        fileId: String(queuedFile._id),
+        mimeType: getMimeType(req.file.originalname) || req.file.mimetype || 'application/octet-stream',
         fileSize: req.file.size,
       },
     });
@@ -996,10 +953,16 @@ const uploadFactSheetFile = async (req, res) => {
       req,
     });
     
-    res.status(201).json({
+    res.status(202).json({
       success: true,
-      data: addedFile,
-      message: 'File uploaded successfully',
+      data: {
+        fileId: String(queuedFile._id),
+        fileName: req.file.originalname,
+        size: req.file.size || 0,
+        mimeType: getMimeType(req.file.originalname) || req.file.mimetype || 'application/octet-stream',
+        uploadedAt: queuedFile.createdAt || new Date(),
+      },
+      message: 'File upload queued for processing',
     });
   } catch (error) {
     console.error('Error uploading fact sheet file:', error);
@@ -1030,61 +993,24 @@ const deleteFactSheetFile = async (req, res) => {
       });
     }
     
-    // Find client with firmId scoping
+    const deletedAttachment = await cfsDriveService.deleteClientCFSFile(clientId, fileId, userFirmId, {
+      req,
+      reason: req.body?.reason || 'Client Fact Sheet delete',
+    });
+
     const client = await ClientRepository.findByClientId(userFirmId, clientId, req.user?.role);
-    
-    if (!client) {
-      return res.status(404).json({
-        success: false,
-        message: 'Client not found',
-      });
+    if (client) {
+      client.clientFactSheet = client.clientFactSheet || {};
+      client.clientFactSheet.updatedAt = new Date();
+      await client.save();
     }
-    
-    // Check if clientFactSheet exists
-    if (!client.clientFactSheet || !client.clientFactSheet.files) {
-      return res.status(404).json({
-        success: false,
-        message: 'No files found',
-      });
-    }
-    
-    // Find file to delete
-    const fileIndex = client.clientFactSheet.files.findIndex(
-      f => f.fileId.toString() === fileId
-    );
-    
-    if (fileIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: 'File not found',
-      });
-    }
-    
-    const fileToDelete = client.clientFactSheet.files[fileIndex];
-    
-    // Delete physical file
-    try {
-      await fs.unlink(fileToDelete.storagePath);
-    } catch (error) {
-      console.error('Error deleting physical file:', error);
-      // Continue even if physical file deletion fails
-    }
-    
-    // Remove file from array
-    client.clientFactSheet.files.splice(fileIndex, 1);
-    if (Array.isArray(client.clientFactSheet.documents)) {
-      client.clientFactSheet.documents = client.clientFactSheet.documents.filter(
-        (doc) => !(doc.fileName === fileToDelete.fileName && String(doc.uploadedAt) === String(fileToDelete.uploadedAt))
-      );
-    }
-    await client.save();
     
     // Log audit event
     await logFactSheetFileRemoved({
       clientId,
       firmId: userFirmId,
       performedByXID,
-      fileName: fileToDelete.fileName,
+      fileName: deletedAttachment.fileName,
       metadata: {
         fileId,
       },
@@ -1151,70 +1077,21 @@ const uploadClientCFSFile = async (req, res) => {
       });
     }
 
-    // Fetch client and validate access
-    const client = await ClientRepository.findByClientId(userFirmId, clientId, req.user?.role);
-
-    if (!client) {
-      return res.status(404).json({
-        success: false,
-        message: 'Client not found or access denied',
-      });
-    }
-
-    // Validate client has CFS folder structure metadata; resolve folderId synchronously
-    // so we can pass it to the worker (folder creation still happens here, not in worker)
-    const cfsDriveService = require('../services/cfsDrive.service');
-    const isValidStructure = await cfsDriveService.validateClientCFSMetadata(client.drive);
-    if (!isValidStructure) {
-      try {
-        const provider = await StorageProviderFactory.getProvider(userFirmId);
-        const folderIds = await cfsDriveService.createClientCFSFolderStructure(
-          userFirmId.toString(),
-          clientId,
-          provider
-        );
-        client.drive = folderIds;
-        await client.save();
-      } catch (createError) {
-        return res.status(500).json({
-          success: false,
-          message: 'Client CFS folder structure is invalid and could not be created',
-        });
-      }
-    }
-
-    const folderId = cfsDriveService.getClientFolderIdForFileType(client.drive, fileType);
-    const fileMimeType = getMimeType(req.file.originalname) || req.file.mimetype || 'application/octet-stream';
-
-    // Move file to firm-scoped temp directory
-    const firmIdStr = userFirmId.toString();
-    const tmpDir = path.join(__dirname, '../../uploads/tmp', firmIdStr);
-    await fs.promises.mkdir(tmpDir, { recursive: true });
-    const destPath = path.join(tmpDir, path.basename(req.file.path));
-    await fs.promises.rename(req.file.path, destPath);
-
-    // Create staging record — Drive upload is processed asynchronously
-    const caseFile = await CaseFile.create({
-      firmId: userFirmId,
-      clientId,
-      localPath: destPath,
-      originalName: req.file.originalname,
-      mimeType: fileMimeType,
-      size: req.file.size,
-      uploadStatus: 'pending',
+    const caseFile = await cfsDriveService.uploadClientCFSFile(clientId, userFirmId, req.file, {
+      userRole: req.user?.role,
+      userEmail: req.user?.email || 'unknown',
+      userXID,
+      userName,
       description: description.trim(),
-      createdBy: req.user?.email || 'unknown',
-      createdByXID: userXID,
-      createdByName: userName,
-      source: 'client_cfs',
+      fileType,
     });
 
-    await enqueueStorageJob(JOB_TYPES.UPLOAD_FILE, {
-      firmId: firmIdStr,
-      provider: 'google',
-      folderId,
-      fileId: caseFile._id,
-    });
+    const client = await ClientRepository.findByClientId(userFirmId, clientId, req.user?.role);
+    if (client) {
+      client.clientFactSheet = client.clientFactSheet || {};
+      client.clientFactSheet.updatedAt = new Date();
+      await client.save();
+    }
 
     return res.status(202).json({
       success: true,
@@ -1261,13 +1138,7 @@ const listClientCFSFiles = async (req, res) => {
       });
     }
 
-    // Fetch all client CFS attachments
-    const Attachment = require('../models/Attachment.model');
-    const attachments = await Attachment.find({
-      firmId: userFirmId,
-      clientId: clientId,
-      source: 'client_cfs',
-    }).sort({ createdAt: -1 });
+    const attachments = await AttachmentRepository.findByClientSource(userFirmId, clientId, 'client_cfs');
 
     res.json({
       success: true,
@@ -1321,41 +1192,14 @@ const deleteClientCFSFile = async (req, res) => {
       });
     }
 
-    const provider = await StorageProviderFactory.getProvider(userFirmId);
-
-    // Find attachment
-    const Attachment = require('../models/Attachment.model');
-    const attachment = await Attachment.findOne({
-      _id: attachmentId,
-      firmId: userFirmId,
-      clientId: clientId,
-      source: 'client_cfs',
-    });
-
-    if (!attachment) {
-      return res.status(404).json({
-        success: false,
-        message: 'File not found or access denied',
-      });
-    }
-
-    // Delete from Google Drive
-    if (attachment.driveFileId) {
-      try {
-        await provider.deleteFile(attachment.driveFileId);
-      } catch (driveError) {
-        console.error('Error deleting file from Drive:', driveError);
-        // Continue with database deletion even if Drive deletion fails
-      }
-    }
-
-    // Soft delete attachment record instead of hard delete
-    await softDelete({
-      model: Attachment,
-      filter: { _id: attachment._id },
+    await cfsDriveService.deleteClientCFSFile(clientId, attachmentId, userFirmId, {
       req,
       reason: req.body?.reason || 'Client CFS delete',
     });
+
+    client.clientFactSheet = client.clientFactSheet || {};
+    client.clientFactSheet.updatedAt = new Date();
+    await client.save();
 
     res.json({
       success: true,
