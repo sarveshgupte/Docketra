@@ -109,6 +109,10 @@ const clientSchema = new mongoose.Schema({
       trim: true,
       default: '',
     },
+    updatedAt: {
+      type: Date,
+      default: null,
+    },
     /**
      * Internal initialization flag
      * Tracks whether fact sheet has been initialized (for accurate audit logging)
@@ -133,6 +137,7 @@ const clientSchema = new mongoose.Schema({
      * - uploadedBy: xID of user who uploaded
      * - uploadedAt: Timestamp
      */
+    // DEPRECATED: migrated to Attachment collection with source='client_cfs'
     files: [{
       fileId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -166,6 +171,46 @@ const clientSchema = new mongoose.Schema({
       uploadedAt: {
         type: Date,
         default: Date.now,
+      },
+    }],
+    // DEPRECATED: migrated to Attachment collection with source='client_cfs'
+    attachments: [{
+      fileId: {
+        type: mongoose.Schema.Types.ObjectId,
+        default: () => new mongoose.Types.ObjectId(),
+      },
+      fileName: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+      mimeType: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+      storagePath: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+      checksum: {
+        type: String,
+        trim: true,
+      },
+      uploadedByXID: {
+        type: String,
+        required: true,
+        uppercase: true,
+        trim: true,
+      },
+      uploadedAt: {
+        type: Date,
+        default: Date.now,
+      },
+      size: {
+        type: Number,
+        default: 0,
       },
     }],
     // Compatibility view for downstream consumers expecting document object structure

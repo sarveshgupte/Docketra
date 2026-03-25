@@ -669,7 +669,13 @@ export const CaseDetailPage = () => {
     try {
       const response = await clientService.getClientFactSheetForCase(caseId);
       if (response.success) {
-        setClientFactSheet(response.data);
+        setClientFactSheet({
+          ...response.data,
+          client: caseData?.client || {
+            clientId: caseData?.clientId,
+            businessName: caseData?.businessName || caseData?.clientName,
+          },
+        });
       }
     } catch (error) {
       console.error('Failed to load client fact sheet:', error);
@@ -848,6 +854,7 @@ export const CaseDetailPage = () => {
             status: caseInfo?.status,
             updatedAt: caseInfo.updatedAt,
           }}
+          onInfoClick={handleShowClientFactSheet}
           actions={(
             <>
               {showPullButton && <Button variant="primary" onClick={handlePullCase} disabled={pullingCase}>{pullingCase ? 'Pulling docket...' : 'Pull Docket'}</Button>}
@@ -1400,6 +1407,7 @@ export const CaseDetailPage = () => {
             onClose={() => { setShowClientFactSheet(false); setClientFactSheet(null); }}
             factSheet={clientFactSheet}
             caseId={caseId}
+            client={caseData?.client || { clientId: caseData?.clientId, businessName: caseData?.businessName || caseData?.clientName }}
           />
         )}
         <AuditTimelineDrawer
