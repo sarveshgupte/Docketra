@@ -2,7 +2,7 @@
  * Router Configuration
  */
 
-import React, { Suspense } from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-router-dom';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { FirmLayout } from './components/routing/FirmLayout';
@@ -10,7 +10,7 @@ import { MarketingLayout } from './components/routing/MarketingLayout';
 import { DefaultRoute } from './components/routing/DefaultRoute';
 import { RouteLoadingShell } from './components/routing/RouteLoadingShell';
 
-const lazyPage = (importer, exportName) => React.lazy(
+const lazyPage = (importer, exportName) => lazy(
   () => importer().then((module) => ({ default: module[exportName] }))
 );
 
@@ -44,15 +44,13 @@ const MarketingPrivacyPage = lazyPage(() => import('./pages/marketing/Privacy'),
 const MarketingSecurityPage = lazyPage(() => import('./pages/marketing/Security'), 'SecurityPage');
 const MarketingAboutPage = lazyPage(() => import('./pages/marketing/About'), 'AboutPage');
 const MarketingContactPage = lazyPage(() => import('./pages/marketing/Contact'), 'ContactPage');
-const MarketingSignupPage = React.lazy(() => import('./pages/marketing/Signup'));
+const MarketingSignupPage = lazy(() => import('./pages/marketing/Signup'));
 const NotFoundPage = lazyPage(() => import('./pages/NotFoundPage'), 'NotFoundPage');
-
-const RouteLoadingFallback = () => <RouteLoadingShell />;
 
 const RouteSuspenseOutlet = () => (
   // Keep suspense at the route-group level so layout shells render immediately.
   // Chunk load failures are still caught by the root ErrorBoundary in index.jsx.
-  <Suspense fallback={<RouteLoadingFallback />}>
+  <Suspense fallback={<RouteLoadingShell />}>
     <Outlet />
   </Suspense>
 );
