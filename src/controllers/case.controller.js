@@ -9,7 +9,7 @@ const Client = require('../models/Client.model');
 const User = require('../models/User.model');
 const WorkType = require('../models/WorkType.model');
 const SubWorkType = require('../models/SubWorkType.model');
-const { CaseRepository, ClientRepository } = require('../repositories');
+const { CaseRepository, ClientRepository, AttachmentRepository } = require('../repositories');
 const categoryRepository = require('../repositories/category.repository');
 const { detectDuplicates, generateDuplicateOverrideComment } = require('../services/clientDuplicateDetector');
 const { CASE_CATEGORIES, CASE_LOCK_CONFIG, COMMENT_PREVIEW_LENGTH, CLIENT_STATUS } = require('../config/constants');
@@ -2521,6 +2521,7 @@ const getClientFactSheetForCase = async (req, res) => {
     
     // Check if client has fact sheet
     if (!client.clientFactSheet) {
+      const attachments = await AttachmentRepository.findByClientSource(req.user.firmId, client.clientId, 'client_cfs');
       return res.json({
         success: true,
         data: {
@@ -2537,7 +2538,15 @@ const getClientFactSheetForCase = async (req, res) => {
           },
           description: '',
           notes: '',
+          updatedAt: null,
           files: [],
+          attachments: attachments.map((file) => ({
+            fileId: file._id,
+            fileName: file.fileName,
+            mimeType: file.mimeType,
+            uploadedAt: file.createdAt,
+            size: file.size || 0,
+          })),
           documents: [],
         },
         message: 'No fact sheet available for this client',
@@ -2559,13 +2568,9 @@ const getClientFactSheetForCase = async (req, res) => {
       },
       description: client.clientFactSheet.description || '',
       notes: client.clientFactSheet.notes || '',
-      files: (client.clientFactSheet.files || []).map(file => ({
-        fileId: file.fileId,
-        fileName: file.fileName,
-        mimeType: file.mimeType,
-        uploadedAt: file.uploadedAt,
-        // Note: storagePath is intentionally excluded for security
-      })),
+      updatedAt: client.clientFactSheet.updatedAt || null,
+      files: [],
+      attachments: [],
       documents: (client.clientFactSheet.documents || []).map((doc) => ({
         fileName: doc.fileName,
         fileUrl: doc.fileUrl,
@@ -2573,6 +2578,16 @@ const getClientFactSheetForCase = async (req, res) => {
         uploadedAt: doc.uploadedAt,
       })),
     };
+
+    const attachments = await AttachmentRepository.findByClientSource(req.user.firmId, client.clientId, 'client_cfs');
+    factSheetData.attachments = attachments.map((file) => ({
+      fileId: file._id,
+      fileName: file.fileName,
+      mimeType: file.mimeType,
+      uploadedAt: file.createdAt,
+      size: file.size || 0,
+    }));
+    factSheetData.files = factSheetData.attachments;
     
     // Log audit event for viewing
     const { logFactSheetViewed } = require('../services/clientFactSheetAudit.service');
@@ -2648,54 +2663,38 @@ const viewClientFactSheetFile = async (req, res) => {
       });
     }
     
-    // Get client for this case
-    const client = await Client.findOne({ 
+    const attachment = await Attachment.findOne({
+      _id: fileId,
+      firmId: req.user.firmId,
       clientId: caseData.clientId,
-      firmId: req.user.firmId 
+      source: 'client_cfs',
     });
-    
-    if (!client || !client.clientFactSheet || !client.clientFactSheet.files) {
-      return res.status(404).json({
-        success: false,
-        message: 'Client fact sheet or files not found',
-      });
-    }
-    
-    // Find file
-    const file = client.clientFactSheet.files.find(
-      f => f.fileId.toString() === fileId
-    );
-    
-    if (!file) {
+
+    if (!attachment) {
       return res.status(404).json({
         success: false,
         message: 'File not found',
       });
     }
-    
-    // Check if file exists on disk
-    try {
-      await fs.access(file.storagePath);
-    } catch (err) {
+
+    if (!attachment.driveFileId) {
       return res.status(404).json({
         success: false,
-        message: 'File not found on server',
+        message: 'File not available in Google Drive',
       });
     }
-    
-    // Determine MIME type and sanitize filename
-    const mimeType = file.mimeType || getMimeType(file.fileName);
-    const safeFilename = sanitizeFilename(file.fileName);
-    
-    // Set headers for INLINE viewing ONLY (no download)
-    res.setHeader('Content-Type', mimeType);
+
+    const provider = await StorageProviderFactory.getProvider(req.user.firmId);
+    const fileStream = await provider.downloadFile(attachment.driveFileId);
+    const safeFilename = sanitizeFilename(attachment.fileName);
+
+    res.setHeader('Content-Type', attachment.mimeType || 'application/octet-stream');
     res.setHeader('Content-Disposition', `inline; filename="${safeFilename}"`);
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('Pragma', 'no-cache');
-    
-    // Send file
-    res.sendFile(path.resolve(file.storagePath));
+
+    fileStream.pipe(res);
   } catch (error) {
     console.error('[viewClientFactSheetFile] Error:', error);
     res.status(500).json({
