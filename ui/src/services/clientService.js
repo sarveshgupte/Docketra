@@ -108,10 +108,12 @@ export const clientService = {
    * @param {string} clientId - Client ID
    * @param {File} file - File to upload
    */
-  uploadFactSheetFile: async (clientId, file) => {
+  uploadClientCFSFile: async (clientId, file) => {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await api.post(`/clients/${clientId}/fact-sheet/files`, formData, {
+    formData.append('description', 'Client Fact Sheet attachment');
+    formData.append('fileType', 'documents');
+    const response = await api.post(`/clients/${clientId}/cfs/files`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -119,11 +121,16 @@ export const clientService = {
     return response.data;
   },
 
+  // Backward-compatible alias
+  uploadFactSheetFile: async (clientId, file) => {
+    return clientService.uploadClientCFSFile(clientId, file);
+  },
+
   /**
    * Delete file from Client Fact Sheet (Admin only)
    */
   deleteFactSheetFile: async (clientId, fileId) => {
-    const response = await api.delete(`/clients/${clientId}/fact-sheet/files/${fileId}`);
+    const response = await api.delete(`/clients/${clientId}/cfs/files/${fileId}`);
     return response.data;
   },
 

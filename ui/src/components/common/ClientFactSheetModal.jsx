@@ -12,19 +12,21 @@ import React from 'react';
 import { Modal } from './Modal';
 import { Button } from './Button';
 import { API_BASE_URL } from '../../utils/constants';
+import { formatDateTime } from '../../utils/formatDateTime';
 import './ClientFactSheetModal.css';
 
-export const ClientFactSheetModal = ({ isOpen, onClose, factSheet, caseId }) => {
+export const ClientFactSheetModal = ({ isOpen, onClose, factSheet, caseId, client }) => {
   if (!isOpen || !factSheet) return null;
 
   const handleViewFile = (fileId) => {
-    // Open file in new tab for viewing (no download)
-    // Use centralized API_BASE_URL from constants
     const viewUrl = `${API_BASE_URL}/cases/${caseId}/client-fact-sheet/files/${fileId}/view`;
     window.open(viewUrl, '_blank');
   };
 
-  const hasContent = factSheet.description || factSheet.notes || (factSheet.files && factSheet.files.length > 0);
+  const attachments = factSheet.attachments || factSheet.files || [];
+  const hasContent = factSheet.description || (attachments && attachments.length > 0);
+  const businessName = factSheet.businessName || client?.businessName;
+  const clientId = factSheet.clientId || client?.clientId;
 
   return (
     <Modal
@@ -40,8 +42,8 @@ export const ClientFactSheetModal = ({ isOpen, onClose, factSheet, caseId }) => 
     >
       <div className="client-fact-sheet-modal">
         <div className="client-fact-sheet-header">
-          <h3>{factSheet.businessName}</h3>
-          <p className="client-id">{factSheet.clientId}</p>
+          <h3>{businessName}</h3>
+          <p className="client-id">{clientId}</p>
         </div>
 
         {!hasContent && (
@@ -50,51 +52,43 @@ export const ClientFactSheetModal = ({ isOpen, onClose, factSheet, caseId }) => 
           </div>
         )}
 
-        {factSheet.description && (
+        <div className="client-fact-sheet-grid">
           <div className="fact-sheet-section">
             <h4>Description</h4>
-            <div className="fact-sheet-content">
-              {factSheet.description}
+            <div className="fact-sheet-updated-at">
+              Updated: {factSheet.updatedAt ? formatDateTime(factSheet.updatedAt) : 'Never'}
             </div>
-          </div>
-        )}
-
-        {factSheet.notes && (
-          <div className="fact-sheet-section">
-            <h4>Internal Notes</h4>
             <div className="fact-sheet-content notes">
-              {factSheet.notes}
+              {factSheet.description || 'No description provided.'}
             </div>
           </div>
-        )}
 
-        {factSheet.files && factSheet.files.length > 0 && (
           <div className="fact-sheet-section">
-            <h4>Files</h4>
+            <h4>Documents</h4>
             <div className="files-list">
-              {factSheet.files.map((file) => (
+              {attachments.length === 0 ? <p className="file-date">No documents attached.</p> : attachments.map((file) => (
                 <div key={file.fileId} className="file-item">
                   <div className="file-info">
                     <span className="file-icon">📄</span>
                     <div className="file-details">
                       <span className="file-name">{file.fileName}</span>
                       <span className="file-date">
-                        Uploaded: {new Date(file.uploadedAt).toLocaleDateString()}
+                        Attached On: {file.uploadedAt ? formatDateTime(file.uploadedAt) : '—'}
                       </span>
                     </div>
                   </div>
                   <button
                     className="btn-view-file"
                     onClick={() => handleViewFile(file.fileId)}
-                    title="View file (opens in new tab)"
+                    title="View or download file (opens in new tab)"
                   >
-                    👁️ View
+                    Open
                   </button>
                 </div>
               ))}
             </div>
           </div>
-        )}
+        </div>
       </div>
     </Modal>
   );

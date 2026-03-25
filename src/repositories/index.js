@@ -10,6 +10,7 @@ const ClientRepository = require('./ClientRepository');
 const categoryRepository = require('./category.repository');
 const TaskRepository = require('./TaskRepository');
 const UserRepository = require('./UserRepository');
+const AttachmentRepository = require('./AttachmentRepository');
 
 module.exports = {
   CaseRepository,
@@ -17,4 +18,5 @@ module.exports = {
   categoryRepository,
   TaskRepository,
   UserRepository,
+  AttachmentRepository,
 };
