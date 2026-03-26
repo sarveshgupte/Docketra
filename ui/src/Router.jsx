@@ -9,6 +9,7 @@ import { FirmLayout } from './components/routing/FirmLayout';
 import { MarketingLayout } from './components/routing/MarketingLayout';
 import { DefaultRoute } from './components/routing/DefaultRoute';
 import { RouteLoadingShell } from './components/routing/RouteLoadingShell';
+import { RouteErrorBoundary } from './components/routing/RouteErrorBoundary';
 
 const lazyPage = (importer, exportName) => lazy(
   () => importer().then((module) => ({ default: module[exportName] }))
@@ -166,9 +167,11 @@ export const Router = () => {
             <Route
               path="dashboard"
               element={(
-                <ProtectedRoute>
-                  <DashboardPage />
-                </ProtectedRoute>
+                <RouteErrorBoundary title="Unable to load dashboard" message="Please retry or return to your previous page.">
+                  <ProtectedRoute>
+                    <DashboardPage />
+                  </ProtectedRoute>
+                </RouteErrorBoundary>
               )}
             />
             <Route
@@ -262,9 +265,11 @@ export const Router = () => {
             <Route
               path="cases"
               element={(
-                <ProtectedRoute>
-                  <CasesPage />
-                </ProtectedRoute>
+                <RouteErrorBoundary title="Unable to load cases" message="Cases could not be loaded right now. Please retry.">
+                  <ProtectedRoute>
+                    <CasesPage />
+                  </ProtectedRoute>
+                </RouteErrorBoundary>
               )}
             />
             <Route
