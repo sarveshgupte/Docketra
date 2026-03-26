@@ -14,7 +14,6 @@ import { Button } from '../components/common/Button';
 import { Textarea } from '../components/common/Textarea';
 import { Input } from '../components/common/Input';
 import { Modal } from '../components/common/Modal';
-import { ClientFactSheetModal } from '../components/common/ClientFactSheetModal';
 import { ActionConfirmModal } from '../components/common/ActionConfirmModal';
 import { SaveIndicator } from '../components/ui/SaveIndicator';
 import { AuditMetadata } from '../components/ui/AuditMetadata';
@@ -23,15 +22,17 @@ import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
 import { useToast } from '../hooks/useToast';
 import { caseService } from '../services/caseService';
-import { clientService } from '../services/clientService';
 import { formatDateTime } from '../utils/formatDateTime';
 import { formatClientDisplay } from '../utils/formatters';
 import { USER_ROLES, CASE_DETAIL_TABS, VALID_CASE_DETAIL_TAB_NAMES } from '../utils/constants';
-import { AuditTimelineDrawer } from '../components/common/AuditTimelineDrawer';
 import { StickyTabs } from '../components/common/StickyTabs';
 import { CaseDetailHeader } from '../components/case/CaseDetailHeader';
 import { AuditTimeline } from '../components/common/AuditTimeline';
 import { StatusBadge } from '../components/layout/StatusBadge';
+import { DocketSidebar } from '../components/docket/DocketSidebar';
+import { DocketComments } from '../components/docket/DocketComments';
+import { DocketActions } from '../components/docket/DocketActions';
+import { ActionModal } from '../components/docket/ActionModal';
 import './CaseDetailPage.css';
 import { ROUTES } from '../constants/routes';
 import { RouteErrorFallback } from '../components/routing/RouteErrorFallback';
@@ -100,11 +101,8 @@ export const CaseDetailPage = () => {
   const [movingToGlobal, setMovingToGlobal] = useState(false);
   const [actionConfirmation, setActionConfirmation] = useState('');
   const [actionError, setActionError] = useState(null);
-  const [auditSidebarOpen, setAuditSidebarOpen] = useState(false);
-  const [moreActionsOpen, setMoreActionsOpen] = useState(false);
   const fileInputRef = useRef(null);
   const commentsListRef = useRef(null);
-  const moreActionsRef = useRef(null);
   const commentComposerId = `case-comment-composer-${caseId}`;
   const queryTab = new URLSearchParams(location.search).get('tab');
   const initialTab = VALID_CASE_DETAIL_TAB_NAMES.includes(queryTab) ? queryTab : CASE_DETAIL_TABS.OVERVIEW;
@@ -134,17 +132,17 @@ export const CaseDetailPage = () => {
   const [showResolveModal, setShowResolveModal] = useState(false);
   const [resolveComment, setResolveComment] = useState('');
   const [resolvingCase, setResolvingCase] = useState(false);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [assignComment, setAssignComment] = useState('');
+  const [assignUser, setAssignUser] = useState('');
+  const [assigningCase, setAssigningCase] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarType, setSidebarType] = useState(null);
 
   // State for Unpend action modal
   const [showUnpendModal, setShowUnpendModal] = useState(false);
   const [unpendComment, setUnpendComment] = useState('');
   const [unpendingCase, setUnpendingCase] = useState(false);
-
-  // State for Client Fact Sheet modal
-  // PR: Client Fact Sheet Foundation
-  const [showClientFactSheet, setShowClientFactSheet] = useState(false);
-  const [clientFactSheet, setClientFactSheet] = useState(null);
-  const [loadingFactSheet, setLoadingFactSheet] = useState(false);
 
   // Track case view session
   // PR: Comprehensive CaseHistory & Audit Trail
@@ -212,6 +210,12 @@ export const CaseDetailPage = () => {
   }, [caseInfo?.caseId, caseInfo?.category, caseInfo?.description]);
 
   useEffect(() => {
+    if (!assignUser && availableAssignees.length > 0) {
+      setAssignUser(availableAssignees[0].value);
+    }
+  }, [assignUser, availableAssignees]);
+
+  useEffect(() => {
     const tabFromUrl = new URLSearchParams(location.search).get('tab');
     if (VALID_CASE_DETAIL_TAB_NAMES.includes(tabFromUrl) && tabFromUrl !== activeSection) {
       setActiveSection(tabFromUrl);
@@ -246,30 +250,6 @@ export const CaseDetailPage = () => {
     }
   }, [caseData, viewTracked, caseId]);
 
-
-  useEffect(() => {
-    if (!moreActionsOpen) return undefined;
-
-    const handlePointerDown = (event) => {
-      if (!moreActionsRef.current?.contains(event.target)) {
-        setMoreActionsOpen(false);
-      }
-    };
-
-    const handleEscape = (event) => {
-      if (event.key === 'Escape') {
-        setMoreActionsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handlePointerDown);
-    document.addEventListener('keydown', handleEscape);
-
-    return () => {
-      document.removeEventListener('mousedown', handlePointerDown);
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [moreActionsOpen]);
 
   useEffect(() => {
     if (!actionError && !actionConfirmation) return;
@@ -695,36 +675,6 @@ export const CaseDetailPage = () => {
     });
   };
 
-  // Handle Client Fact Sheet
-  // PR: Client Fact Sheet Foundation
-  const handleShowClientFactSheet = async () => {
-    setLoadingFactSheet(true);
-    setShowClientFactSheet(true);
-    try {
-      const response = await clientService.getClientFactSheetForCase(caseId);
-      if (response.success) {
-        setClientFactSheet({
-          ...response.data,
-          client: caseData?.client || {
-            clientId: caseData?.clientId,
-            businessName: caseData?.businessName || caseData?.clientName,
-          },
-        });
-      }
-    } catch (error) {
-      console.error('Failed to load client fact sheet:', error);
-      showError('Failed to load client fact sheet');
-      setShowClientFactSheet(false);
-    } finally {
-      setLoadingFactSheet(false);
-    }
-  };
-
-  const handlePrintSummary = () => {
-    const pdfUrl = caseService.getSummaryPdfUrl(caseId);
-    window.open(pdfUrl, '_blank', 'noopener,noreferrer');
-  };
-
   const descriptionContent = useMemo(() => {
     const value = String(caseInfo?.description || '').trim();
     if (!value) return 'No description available';
@@ -734,9 +684,49 @@ export const CaseDetailPage = () => {
     return value;
   }, [caseInfo?.description]);
 
-  const handleMoreAction = (callback) => {
-    setMoreActionsOpen(false);
-    callback();
+  const openSidebar = (type) => {
+    setSidebarType(type);
+    setSidebarOpen(true);
+  };
+
+  const handleAssignDocket = async () => {
+    if (!assignUser) {
+      showWarning('Please select a user to assign.');
+      return;
+    }
+
+    setAssigningCase(true);
+    const selectedAssignee = availableAssignees.find((option) => option.value === assignUser);
+    const previous = caseData;
+    const optimisticComment = assignComment.trim()
+      ? {
+          id: `assign-${Date.now()}`,
+          text: assignComment.trim(),
+          createdAt: new Date().toISOString(),
+          createdBy: user?.xID || user?.email || 'System',
+        }
+      : null;
+
+    setCaseData((prev) => ({
+      ...prev,
+      assignedToXID: assignUser,
+      assignedToName: selectedAssignee?.label || assignUser,
+      comments: optimisticComment ? [...(prev?.comments || []), optimisticComment] : (prev?.comments || []),
+    }));
+    setShowAssignModal(false);
+    setAssignComment('');
+    setActionError(null);
+    setActionConfirmation(`Docket assigned to ${selectedAssignee?.label || assignUser}.`);
+
+    try {
+      await caseService.updateStatus(caseId, caseInfo?.status || 'OPEN', assignComment.trim());
+      showSuccess(`Assigned to ${selectedAssignee?.label || assignUser}`);
+    } catch (error) {
+      setCaseData(previous);
+      showError('Failed to assign docket. Please try again.');
+    } finally {
+      setAssigningCase(false);
+    }
   };
 
   // PR #45: Extract access mode information from API response
@@ -749,6 +739,19 @@ export const CaseDetailPage = () => {
 
   // Determine if user is admin
   const isAdmin = user?.role === 'Admin';
+  const availableAssignees = useMemo(() => {
+    const fromCase = caseData?.assignableUsers || caseData?.users || [];
+    const mapped = fromCase
+      .map((entry) => ({
+        value: entry.xID || entry.userId || entry.email,
+        label: entry.name || entry.fullName || entry.xID || entry.email,
+      }))
+      .filter((entry) => entry.value);
+    if (!mapped.length && user?.xID) {
+      return [{ value: user.xID, label: user.name || user.xID }];
+    }
+    return mapped;
+  }, [caseData?.assignableUsers, caseData?.users, user?.xID, user?.name]);
 
   // Task 2: Inactivity warning — OPEN case not updated in 3+ days (not pended)
   const isInactiveWarning = useMemo(() => {
@@ -892,38 +895,24 @@ export const CaseDetailPage = () => {
             status: caseInfo?.status,
             updatedAt: caseInfo.updatedAt,
           }}
-          onInfoClick={handleShowClientFactSheet}
+          onInfoClick={() => openSidebar('cfs')}
           actions={(
             <>
               {showPullButton && <Button variant="primary" onClick={handlePullCase} disabled={pullingCase}>{pullingCase ? 'Pulling docket...' : 'Pull Docket'}</Button>}
               {canUnpend && <Button variant="primary" onClick={() => setShowUnpendModal(true)}>Unpend Docket</Button>}
-              <Button variant="primary" onClick={handleScrollToComments}>Add Comment</Button>
-              <div className="dropdown case-detail-more-actions" ref={moreActionsRef}>
-                <Button
-                  variant="outline"
-                  onClick={() => setMoreActionsOpen((value) => !value)}
-                  aria-haspopup="menu"
-                  aria-expanded={moreActionsOpen}
-                >
-                  More Actions
-                </Button>
-                {moreActionsOpen ? (
-                  <div className="dropdown-menu dropdown-menu-right case-detail-more-actions__menu" role="menu">
-                    <button type="button" className="dropdown-item" role="menuitem" onClick={() => handleMoreAction(handleShowClientFactSheet)} disabled={loadingFactSheet}>
-                      Fact Sheet
-                    </button>
-                    <button type="button" className="dropdown-item" role="menuitem" onClick={() => handleMoreAction(handlePrintSummary)}>
-                      Print Summary
-                    </button>
-                    <button type="button" className="dropdown-item" role="menuitem" onClick={() => handleMoreAction(() => setAuditSidebarOpen(true))}>
-                      Audit
-                    </button>
-                    <button type="button" className="dropdown-item" role="menuitem" onClick={() => handleMoreAction(() => setShowFileModal(true))}>
-                      File Case
-                    </button>
-                  </div>
-                ) : null}
-              </div>
+              <Button variant="ghost" onClick={() => openSidebar('cfs')} title="CFS" className="h-10 w-10 rounded-full p-0" aria-label="Open CFS sidebar">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9" />
+                  <line x1="12" y1="10" x2="12" y2="16" />
+                  <line x1="12" y1="7" x2="12.01" y2="7" />
+                </svg>
+              </Button>
+              <Button variant="ghost" onClick={() => openSidebar('attachments')} title="Attachments" className="h-10 w-10 rounded-full p-0" aria-label="Open attachments sidebar">
+                <span aria-hidden="true" className="text-base">📎</span>
+              </Button>
+              <Button variant="ghost" onClick={() => openSidebar('history')} title="History" className="h-10 w-10 rounded-full p-0" aria-label="Open history sidebar">
+                <span aria-hidden="true" className="text-base">🕒</span>
+              </Button>
             </>
           )}
           statusBadges={(
@@ -1011,7 +1000,7 @@ export const CaseDetailPage = () => {
             </section>
 
             {activeSection === CASE_DETAIL_TABS.OVERVIEW && (
-              <section className="case-card" aria-labelledby="overview-heading">
+              <section className={`case-card ${caseInfo?.status === 'PENDED' ? 'opacity-90' : ''}`} aria-labelledby="overview-heading">
                 <div className="case-card__heading">
                   <h2 id="overview-heading">Overview</h2>
                   {canEditOverview ? (
@@ -1036,6 +1025,11 @@ export const CaseDetailPage = () => {
                   <div className="field-group min-w-0">
                     <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Current Lifecycle Stage</span>
                     <StatusBadge status={caseInfo?.status} />
+                    {caseInfo?.status === 'PENDED' && (caseInfo?.pendingUntil || caseInfo?.reopenDate) ? (
+                      <Badge variant="warning" className="mt-2 inline-flex">
+                        PENDED till {formatDateTime(caseInfo.pendingUntil || caseInfo.reopenDate)}
+                      </Badge>
+                    ) : null}
                   </div>
                 </div>
                 <div className="field-group">
@@ -1051,19 +1045,6 @@ export const CaseDetailPage = () => {
                     <span className="field-value case-detail__description-text whitespace-pre-wrap break-words text-sm font-medium text-gray-900">{descriptionContent}</span>
                   )}
                 </div>
-                {(canPerformLifecycleActions || canUnpend) && (
-                  <div className="case-detail-lifecycle-actions flex flex-wrap justify-end gap-3">
-                    {canPerformLifecycleActions && (
-                      <>
-                        <Button variant="outline" onClick={() => setShowFileModal(true)} className="case-detail__btn-muted">📤 File</Button>
-                        <Button variant="outline" onClick={() => setShowPendModal(true)} className="case-detail__btn-warning">⏳ Pend</Button>
-                        <Button variant="primary" onClick={() => setShowResolveModal(true)}>✓ Resolve</Button>
-                      </>
-                    )}
-                    {canUnpend && <Button variant="primary" onClick={() => setShowUnpendModal(true)}>🔁 Unpend</Button>}
-                    {showMoveToWorkbasketButton ? <Button variant="outline" onClick={handleMoveToGlobal} disabled={movingToGlobal}>{movingToGlobal ? 'Moving…' : 'Move to Workbasket'}</Button> : null}
-                  </div>
-                )}
                 {canEditOverview && isEditingOverview && (
                   <div className="case-detail-lifecycle-actions flex flex-wrap justify-end gap-3">
                     <Button variant="primary" onClick={handleSaveOverview} disabled={!hasOverviewChanges}>Save Overview</Button>
@@ -1078,25 +1059,7 @@ export const CaseDetailPage = () => {
                   <h2 id="comments-heading">Comments</h2>
                 </div>
                 <div className="case-detail__comments" ref={commentsListRef}>
-                  {comments.length > 0 ? (
-                    comments.map((comment, index) => (
-                      <article key={index} className="case-detail__comment-item">
-                        <div className="case-detail__comment-header">
-                          <span className="case-detail__comment-author">
-                            {comment.createdByName && comment.createdByXID
-                              ? `${comment.createdByName} (${comment.createdByXID})`
-                              : 'System (Unknown)'}
-                          </span>
-                          <time className="case-detail__comment-time" dateTime={comment.createdAt}>
-                            {formatDateTime(comment.createdAt)}
-                          </time>
-                        </div>
-                        <p className="case-detail__comment-text">{comment.text}</p>
-                      </article>
-                    ))
-                  ) : (
-                    <div className="case-detail__empty-state rounded-xl border border-dashed border-gray-200 bg-gray-50 p-8 text-gray-500"><EmptyState title="No comments yet" description="Use comments to capture updates and handoffs." /></div>
-                  )}
+                  <DocketComments comments={comments} />
                 </div>
                 {(accessMode.canComment || permissions.canAddComment(caseData)) && (
                   <div className="case-detail__add-comment">
@@ -1275,20 +1238,36 @@ export const CaseDetailPage = () => {
           </aside>
         </div>
 
+        <DocketActions
+          onFile={() => setShowFileModal(true)}
+          onPend={() => setShowPendModal(true)}
+          onResolve={() => setShowResolveModal(true)}
+          onAssign={() => setShowAssignModal(true)}
+        />
+
+        <DocketSidebar
+          isOpen={sidebarOpen}
+          type={sidebarType}
+          onClose={() => setSidebarOpen(false)}
+          caseInfo={caseInfo}
+          attachments={attachments}
+          timelineEvents={timelineEvents}
+        />
+
         {/* ─── Modals (positioned outside split pane) ─────────────── */}
 
-        {/* File Case Modal */}
+        {/* File Docket Modal */}
         <Modal
           isOpen={showFileModal}
           onClose={() => { setShowFileModal(false); setFileComment(''); }}
-          title="File Case"
+          title="File Docket"
           actions={
             <>
               <Button variant="outline" onClick={() => { setShowFileModal(false); setFileComment(''); }} disabled={filingCase}>
                 Cancel
               </Button>
               <Button variant="primary" onClick={handleFileCase} disabled={!fileComment.trim() || filingCase}>
-                {filingCase ? 'Filing…' : 'File Case'}
+                {filingCase ? 'Filing…' : 'File Docket'}
               </Button>
             </>
           }
@@ -1319,18 +1298,18 @@ export const CaseDetailPage = () => {
           </div>
         </Modal>
 
-        {/* Pend Case Modal */}
+        {/* Pend Docket Modal */}
         <Modal
           isOpen={showPendModal}
           onClose={() => { setShowPendModal(false); setPendComment(''); setPendingUntil(''); }}
-          title="Pend Case"
+          title="Pend Docket"
           actions={
             <>
               <Button variant="outline" onClick={() => { setShowPendModal(false); setPendComment(''); setPendingUntil(''); }} disabled={pendingCase}>
                 Cancel
               </Button>
               <Button variant="primary" onClick={handlePendCase} disabled={!pendComment.trim() || !pendingUntil || pendingCase}>
-                {pendingCase ? 'Pending…' : 'Pend Case'}
+                {pendingCase ? 'Pending…' : 'Pend Docket'}
               </Button>
             </>
           }
@@ -1338,7 +1317,7 @@ export const CaseDetailPage = () => {
           <div style={{ padding: 'var(--spacing-md)' }}>
             <p style={{ marginBottom: 'var(--spacing-md)', color: 'var(--text-secondary)' }}>
               Pending a case temporarily pauses it until a specified date.
-              The case will not appear in your worklist until the reopen date.
+              The docket will remain in your worklist but move below active dockets until the selected date.
             </p>
             <Textarea
               label="Comment (Required)"
@@ -1363,18 +1342,18 @@ export const CaseDetailPage = () => {
           </div>
         </Modal>
 
-        {/* Resolve Case Modal */}
+        {/* Resolve Docket Modal */}
         <Modal
           isOpen={showResolveModal}
           onClose={() => { setShowResolveModal(false); setResolveComment(''); }}
-          title="Resolve Case"
+          title="Resolve Docket"
           actions={
             <>
               <Button variant="outline" onClick={() => { setShowResolveModal(false); setResolveComment(''); }} disabled={resolvingCase}>
                 Cancel
               </Button>
               <Button variant="primary" onClick={handleResolveCase} disabled={!resolveComment.trim() || resolvingCase}>
-                {resolvingCase ? 'Resolving…' : 'Resolve Case'}
+                {resolvingCase ? 'Resolving…' : 'Resolve Docket'}
               </Button>
             </>
           }
@@ -1404,6 +1383,36 @@ export const CaseDetailPage = () => {
             />
           </div>
         </Modal>
+
+        <ActionModal
+          isOpen={showAssignModal}
+          onClose={() => setShowAssignModal(false)}
+          title="Assign Docket"
+          comment={assignComment}
+          setComment={setAssignComment}
+          commentRequired={false}
+          submitLabel="Assign Docket"
+          submitting={assigningCase}
+          onSubmit={handleAssignDocket}
+          disabled={!assignUser}
+        >
+          <div className="space-y-2">
+            <p className="text-sm text-gray-500">
+              Currently assigned to: {caseInfo?.assignedToName || caseInfo?.assignedToXID || 'Unassigned'}
+            </p>
+            <label htmlFor="assign-user" className="block text-sm font-medium text-gray-700">Select user</label>
+            <select
+              id="assign-user"
+              className="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+              value={assignUser}
+              onChange={(e) => setAssignUser(e.target.value)}
+            >
+              {availableAssignees.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+        </ActionModal>
 
         {/* Unpend Case Modal */}
         <Modal
@@ -1438,33 +1447,6 @@ export const CaseDetailPage = () => {
           </div>
         </Modal>
 
-        {/* Client Fact Sheet Modal */}
-        {showClientFactSheet && (
-          <ClientFactSheetModal
-            isOpen={showClientFactSheet}
-            onClose={() => { setShowClientFactSheet(false); setClientFactSheet(null); }}
-            factSheet={clientFactSheet}
-            caseId={caseId}
-            client={caseData?.client || { clientId: caseData?.clientId, businessName: caseData?.businessName || caseData?.clientName }}
-          />
-        )}
-        <AuditTimelineDrawer
-          isOpen={auditSidebarOpen}
-          onClose={() => setAuditSidebarOpen(false)}
-          caseId={caseId}
-          events={timelineEvents.map((entry) => ({
-            id: entry._id || entry.id || `${entry.timestamp}-${entry.actionType}`,
-            action: entry.actionType || entry.action || 'Updated',
-            actor:
-              entry.performedByName ||
-              entry.actorXID ||
-              entry.performedByXID ||
-              entry.createdByName ||
-              'System',
-            timestamp: entry.timestamp || entry.createdAt,
-            description: entry.description || entry.comment || '',
-          }))}
-        />
         {confirmModal && (
           <ActionConfirmModal
             isOpen={true}
