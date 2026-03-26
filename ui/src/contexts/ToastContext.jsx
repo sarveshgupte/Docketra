@@ -113,14 +113,14 @@ const ToastContainer = ({ toasts, removeToast }) => {
   if (toasts.length === 0 || typeof document === 'undefined') return null;
 
   return createPortal((
-    <div className="fixed bottom-4 right-4 z-[200] flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-2">
+    <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-3 pointer-events-none">
       {toasts.map((toast) => {
         const meta = TOAST_META[toast.type] || TOAST_META.info;
 
         return (
           <div
             key={toast.id}
-            className="flex max-w-sm items-start gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 text-gray-900 shadow-lg"
+            className={`pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-xl border p-4 shadow-lg transition-all duration-300 ease-in-out ${toast.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : toast.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' : 'bg-blue-50 border-blue-200 text-blue-800'}`}
             role="status"
             aria-live="polite"
           >
@@ -130,7 +130,7 @@ const ToastContainer = ({ toasts, removeToast }) => {
             >
               {meta.icon}
             </span>
-            <span className="flex-1 break-words text-sm font-medium text-gray-900">{toast.message}</span>
+            <span className="flex-1 break-words text-sm font-medium">{toast.message}</span>
             <button
               type="button"
               onClick={() => removeToast(toast.id)}

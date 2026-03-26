@@ -158,9 +158,7 @@
 
 .case-detail-layout-grid {
   min-height: calc(100vh - 144px);
-  padding: 24px;
   align-items: flex-start;
-  background: #f9fafb;
 }
 
 .case-detail-sidebar {
