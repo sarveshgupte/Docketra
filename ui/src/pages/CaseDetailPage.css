@@ -176,16 +176,6 @@
   min-width: 0;
 }
 
-.case-card {
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 24px;
-  background: #ffffff;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
 .case-card__heading {
   display: flex;
   align-items: center;

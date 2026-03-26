@@ -18,13 +18,13 @@ export const Button = ({
   ...props
 }) => {
   const baseClasses =
-    'btn transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
+    'inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-sm px-4 py-2';
 
   const variantClasses = {
-    primary: 'btn-primary hover:bg-blue-700 active:bg-blue-800 focus-visible:ring-blue-600',
-    secondary: 'btn-secondary hover:bg-gray-100 active:bg-gray-200 focus-visible:ring-gray-500',
-    outline: 'btn-outline hover:bg-gray-50 active:bg-gray-100 focus-visible:ring-gray-500',
-    danger: 'btn-danger hover:bg-red-700 active:bg-red-800 focus-visible:ring-red-600',
+    primary: 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 focus-visible:ring-blue-600',
+    secondary: 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 active:bg-gray-200 focus-visible:ring-gray-500',
+    outline: 'border border-gray-300 bg-transparent text-gray-700 hover:bg-gray-50 active:bg-gray-100 focus-visible:ring-gray-500',
+    danger: 'bg-red-600 text-white hover:bg-red-700 active:bg-red-800 focus-visible:ring-red-600',
     ghost: 'border border-transparent bg-transparent text-gray-700 hover:bg-gray-100 active:bg-gray-200 focus-visible:ring-gray-500',
   };
 
