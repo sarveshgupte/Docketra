@@ -35,7 +35,7 @@ export const Select = ({
       )}
       <select 
         id={selectId}
-        className={`input ${error ? 'input-error' : ''}`}
+        className={`input ${error ? 'input-error border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500' : ''}`}
         disabled={disabled} 
         required={required} 
         aria-invalid={error ? 'true' : undefined}
@@ -49,7 +49,7 @@ export const Select = ({
           </option>
         ))}
       </select>
-      {error && <div className="form-error" id={errorId}>{error}</div>}
+      {error && <p className="mt-1 text-sm text-red-600" id={errorId}>{error}</p>}
       {!error && helpText && <div className="form-help" id={helpId}>{helpText}</div>}
     </div>
   );
