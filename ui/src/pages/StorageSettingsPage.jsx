@@ -55,9 +55,9 @@ export function StorageSettingsPage() {
     return (
       <Layout>
         <div className="min-h-screen bg-gray-50">
-          <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+          <div className="w-full max-w-3xl mx-auto px-4 sm:px-container-x py-8 space-y-8">
             <div className="space-y-2">
-              <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Storage Settings</h1>
+              <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Storage Settings</h1>
               <p className="text-sm text-gray-500">Configure and validate your external document storage integration.</p>
             </div>
             <Card className="p-6">
@@ -74,16 +74,16 @@ export function StorageSettingsPage() {
   return (
     <Layout>
       <div className="min-h-screen bg-gray-50">
-        <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+        <div className="w-full max-w-3xl mx-auto px-4 sm:px-container-x py-8 space-y-8">
           <div className="space-y-2">
-            <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Storage Settings</h1>
+            <h1 className="text-2xl font-semibold text-text-primary tracking-tight">Storage Settings</h1>
             <p className="text-sm text-gray-500">Configure and validate your external document storage integration.</p>
           </div>
 
           <Card className="p-6">
             <div className="space-y-6">
               <div>
-                <h2 className="text-lg font-medium text-gray-900 mb-4">Google Drive Connection</h2>
+                <h2 className="text-lg font-medium text-text-primary mb-4">Google Drive Connection</h2>
                 <p className="text-sm text-gray-500">Authorize Google Drive to store firm documents and verify the integration health.</p>
               </div>
 

@@ -293,8 +293,8 @@ export default function Signup() {
 
   return (
     <div className="auth-wrapper">
-      <Card className="auth-card">
-        <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">Starter Signup</h1>
+      <Card className="auth-card max-w-form">
+        <h1 className="text-2xl font-semibold tracking-tight text-text-primary text-center">Starter Signup</h1>
         <p className="mt-2 text-sm text-gray-500 text-center">Create your free Starter workspace in minutes.</p>
 
         {apiError && (
@@ -309,7 +309,7 @@ export default function Signup() {
         )}
 
         {step === 'form' && (
-          <form className="mt-6 space-y-5" onSubmit={submitManualSignup} noValidate>
+          <form className="mt-6 space-y-4" onSubmit={submitManualSignup} noValidate>
             <Input
               id="signup-name"
               name="name"
@@ -406,11 +406,11 @@ export default function Signup() {
         )}
 
         {step === 'otp' && (
-          <form className="mt-6 space-y-5" onSubmit={submitOtpVerification} noValidate>
+          <form className="mt-6 space-y-4" onSubmit={submitOtpVerification} noValidate>
             <Input id="otp-email" label="Email" value={signupEmail} readOnly />
 
             <fieldset>
-              <legend className="mb-1 block text-sm font-medium text-gray-900 text-center">{renderRequiredLabel('6-digit OTP')}</legend>
+              <legend className="mb-1 block text-sm font-medium text-text-primary text-center">{renderRequiredLabel('6-digit OTP')}</legend>
               <p id={OTP_HINT_ID} className="mt-2 text-sm text-gray-500 text-center">
                 Enter the one-time password sent to your email.
               </p>
@@ -459,7 +459,7 @@ export default function Signup() {
         )}
 
         {step === 'success' && (
-          <div className="mt-6 space-y-5">
+          <div className="mt-6 space-y-4">
             <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800" role="status" aria-live="polite">
               <p className="font-semibold">🎉 Your firm account has been created successfully.</p>
               <p className="mt-2">Your login credentials have been sent to your registered email address.</p>

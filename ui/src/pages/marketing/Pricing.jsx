@@ -52,13 +52,13 @@ const SECTION_REVEAL = {
 export const PricingPage = () => (
   <Section>
     <div className="mb-12">
-      <h1 className="type-section text-gray-900">Simple, Transparent Pricing</h1>
-      <p className="mt-4 type-body text-lg text-gray-600">
+      <h1 className="type-section text-text-primary">Simple, Transparent Pricing</h1>
+      <p className="mt-4 type-body text-lg text-text-secondary">
         We are currently in Early Access. Join now to lock in your free Starter workspace and help shape the future of Docketra.
       </p>
     </div>
 
-    <motion.div {...SECTION_REVEAL} className="grid w-full gap-12 lg:grid-cols-3">
+    <motion.div {...SECTION_REVEAL} className="grid w-full gap-section lg:grid-cols-3">
       {PRICING_TIERS.map((tier, index) => (
         <motion.article
           key={tier.name}
@@ -79,12 +79,12 @@ export const PricingPage = () => (
           )}
 
           <div className="mb-12">
-            <h2 className="text-xl font-bold text-gray-900">{tier.name}</h2>
-            <div className="mt-4 flex items-baseline text-4xl font-extrabold text-gray-900">
+            <h2 className="text-xl font-bold text-text-primary">{tier.name}</h2>
+            <div className="mt-4 flex items-baseline text-4xl font-extrabold text-text-primary">
               {tier.price}
               {tier.interval && <span className="ml-1 text-sm font-medium text-gray-500">/{tier.interval}</span>}
             </div>
-            <p className="mt-4 min-h-[40px] text-sm text-gray-600">{tier.description}</p>
+            <p className="mt-4 min-h-[40px] text-sm text-text-secondary">{tier.description}</p>
           </div>
 
           <ul className="mb-12 flex-1 space-y-4">

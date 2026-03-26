@@ -335,7 +335,7 @@ export const FirmLoginPage = () => {
   if (firmLoading) {
     return (
       <div className="auth-wrapper">
-        <Card className="auth-card">
+        <Card className="auth-card max-w-form">
           <Loading message="Loading firm information..." />
         </Card>
       </div>
@@ -345,13 +345,13 @@ export const FirmLoginPage = () => {
   if (!firmData) {
     return (
       <div className="auth-wrapper">
-        <Card className="auth-card">
+        <Card className="auth-card max-w-form">
           <div className="text-center">
-            <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">Docketra</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-text-primary text-center">Docketra</h1>
             <p className="mt-2 text-sm text-gray-500 text-center">Compliance Workflow Infrastructure</p>
           </div>
 
-          <div className="mt-6 space-y-5">
+          <div className="mt-6 space-y-4">
             <div className="neo-alert neo-alert--danger auth-alert" role="alert">
               {error}
             </div>
@@ -369,9 +369,9 @@ export const FirmLoginPage = () => {
 
   return (
     <div className="auth-wrapper">
-      <Card className="auth-card">
+      <Card className="auth-card max-w-form">
         <div className="text-center">
-          <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">{firmData.name}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-text-primary text-center">{firmData.name}</h1>
           <p className="mt-2 text-sm text-gray-500 text-center">
             {showOtpForm ? 'Enter the 6-digit code sent to your registered email.' : 'Login to Docketra'}
           </p>
@@ -398,7 +398,7 @@ export const FirmLoginPage = () => {
         )}
 
         {showOtpForm ? (
-          <form onSubmit={handleVerifyOtp} noValidate className="mt-6 space-y-5">
+          <form onSubmit={handleVerifyOtp} noValidate className="mt-6 space-y-4">
             <Input label="xID" type="text" value={identifier} readOnly />
 
             <Input
@@ -448,7 +448,7 @@ export const FirmLoginPage = () => {
             </Button>
           </form>
         ) : (
-          <form onSubmit={handleLogin} noValidate className="mt-6 space-y-5">
+          <form onSubmit={handleLogin} noValidate className="mt-6 space-y-4">
             <Input
               label="xID"
               type="text"
@@ -473,7 +473,7 @@ export const FirmLoginPage = () => {
             </button>
 
             {showResendForm && (
-              <div className="space-y-5">
+              <div className="space-y-4">
                 <Input
                   label="Registered email"
                   type="email"

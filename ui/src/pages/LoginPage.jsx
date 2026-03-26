@@ -89,9 +89,9 @@ export const LoginPage = () => {
 
   return (
     <div className="auth-wrapper">
-      <Card className="auth-card">
+      <Card className="auth-card max-w-form">
         <div className="text-center">
-          <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">Docketra</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-text-primary text-center">Docketra</h1>
           <p className="mt-2 text-sm text-gray-500 text-center">Compliance Workflow Infrastructure</p>
         </div>
 
@@ -100,7 +100,7 @@ export const LoginPage = () => {
           workspace URL so password reset and activation links stay scoped correctly.
         </p>
 
-        <form onSubmit={handleLogin} noValidate className="mt-6 space-y-5">
+        <form onSubmit={handleLogin} noValidate className="mt-6 space-y-4">
           <Input
             label="xID"
             type="text"
