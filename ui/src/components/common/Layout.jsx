@@ -15,6 +15,7 @@ import api from '../../services/api';
 import { worklistService } from '../../services/worklistService';
 import { USER_ROLES } from '../../utils/constants';
 import './Layout.css';
+import { ROUTES, safeRoute } from '../../constants/routes';
 
 /* SVG icon helpers */
 const IconDashboard = () => (
@@ -141,9 +142,9 @@ export const Layout = ({ children }) => {
     await logout({ preserveFirmSlug: !!currentFirmSlug });
     showSuccess('You have been signed out safely.');
     if (currentFirmSlug) {
-      navigate(`/${currentFirmSlug}/login`);
+      navigate(ROUTES.FIRM_LOGIN(currentFirmSlug));
     } else {
-      navigate('/superadmin');
+      navigate(ROUTES.SUPERADMIN_LOGIN);
     }
   };
 
@@ -293,24 +294,24 @@ export const Layout = ({ children }) => {
       collapsible: false,
       items: [
         {
-          to: `/app/firm/${currentFirmSlug}/global-worklist`,
+          to: ROUTES.GLOBAL_WORKLIST(currentFirmSlug),
           label: 'Workbasket',
           icon: <IconWorkbasket />,
-          active: isActive(`/app/firm/${currentFirmSlug}/global-worklist`),
+          active: isActive(ROUTES.GLOBAL_WORKLIST(currentFirmSlug)),
           badge: countsFetched ? workbasketCount : 'loading',
         },
         {
-          to: `/app/firm/${currentFirmSlug}/worklist`,
+          to: ROUTES.WORKLIST(currentFirmSlug),
           label: 'My Worklist',
           icon: <IconWorklist />,
-          active: isActive(`/app/firm/${currentFirmSlug}/worklist`) || isActive(`/app/firm/${currentFirmSlug}/my-worklist`),
+          active: isActive(ROUTES.WORKLIST(currentFirmSlug)) || isActive(ROUTES.MY_WORKLIST(currentFirmSlug)),
           badge: countsFetched ? worklistCount : 'loading',
         },
         {
-          to: `/app/firm/${currentFirmSlug}/dashboard`,
+          to: ROUTES.DASHBOARD(currentFirmSlug),
           label: 'Dashboard',
           icon: <IconDashboard />,
-          active: isActive(`/app/firm/${currentFirmSlug}/dashboard`),
+          active: isActive(ROUTES.DASHBOARD(currentFirmSlug)),
         },
       ],
     },
@@ -319,9 +320,9 @@ export const Layout = ({ children }) => {
       title: 'CASES & CLIENTS',
       defaultOpen: true,
       items: [
-        { to: `/app/firm/${currentFirmSlug}/clients`, label: 'All Clients', icon: <IconCases />, active: isActivePrefix(`/app/firm/${currentFirmSlug}/clients`) },
-        { to: `/app/firm/${currentFirmSlug}/cases`, label: 'All Cases', icon: <IconCases />, active: isActivePrefix(`/app/firm/${currentFirmSlug}/cases`) && !location.search.includes('view=audit') },
-        { to: `/app/firm/${currentFirmSlug}/worklist`, label: 'Compliance Calendar', icon: <IconWorklist />, active: false },
+        { to: ROUTES.FIRM_BASE(currentFirmSlug) + '/clients', label: 'All Clients', icon: <IconCases />, active: isActivePrefix(ROUTES.FIRM_BASE(currentFirmSlug) + '/clients') },
+        { to: ROUTES.CASES(currentFirmSlug), label: 'All Cases', icon: <IconCases />, active: isActivePrefix(ROUTES.CASES(currentFirmSlug)) && !location.search.includes('view=audit') },
+        { to: ROUTES.WORKLIST(currentFirmSlug), label: 'Compliance Calendar', icon: <IconWorklist />, active: false },
       ],
     },
     {
@@ -329,8 +330,8 @@ export const Layout = ({ children }) => {
       title: 'INSIGHTS',
       defaultOpen: false,
       items: [
-        { to: `/app/firm/${currentFirmSlug}/cases`, label: 'Firm Analytics', icon: <IconCases />, active: isActivePrefix(`/app/firm/${currentFirmSlug}/cases`) && !location.search.includes('view=audit') },
-        { to: `/app/firm/${currentFirmSlug}/admin/reports`, label: 'Reports', icon: <IconReport />, active: isActivePrefix(`/app/firm/${currentFirmSlug}/admin/reports`) },
+        { to: ROUTES.CASES(currentFirmSlug), label: 'Firm Analytics', icon: <IconCases />, active: isActivePrefix(ROUTES.CASES(currentFirmSlug)) && !location.search.includes('view=audit') },
+        { to: ROUTES.FIRM_BASE(currentFirmSlug) + '/admin/reports', label: 'Reports', icon: <IconReport />, active: isActivePrefix(ROUTES.FIRM_BASE(currentFirmSlug) + '/admin/reports') },
       ],
     },
     {
@@ -339,9 +340,9 @@ export const Layout = ({ children }) => {
       defaultOpen: false,
       hidden: !hasAdminAccess,
       items: [
-        { to: `/app/firm/${currentFirmSlug}/admin`, label: 'Team Management', icon: <IconTeam />, active: isActivePrefix(`/app/firm/${currentFirmSlug}/admin`) && !isActivePrefix(`/app/firm/${currentFirmSlug}/admin/reports`) },
-        { to: `/app/firm/${currentFirmSlug}/cases?view=audit`, label: 'Audit Logs', icon: <IconReport />, active: isActive(`/app/firm/${currentFirmSlug}/cases`) && location.search.includes('view=audit') },
-        { to: `/app/firm/${currentFirmSlug}/settings/firm`, label: 'Firm Settings', icon: <IconAdmin />, active: isActivePrefix(`/app/firm/${currentFirmSlug}/settings/firm`) },
+        { to: ROUTES.ADMIN(currentFirmSlug), label: 'Team Management', icon: <IconTeam />, active: isActivePrefix(ROUTES.ADMIN(currentFirmSlug)) && !isActivePrefix(ROUTES.FIRM_BASE(currentFirmSlug) + '/admin/reports') },
+        { to: `${ROUTES.CASES(currentFirmSlug)}?view=audit`, label: 'Audit Logs', icon: <IconReport />, active: isActive(ROUTES.CASES(currentFirmSlug)) && location.search.includes('view=audit') },
+        { to: ROUTES.FIRM_SETTINGS(currentFirmSlug), label: 'Firm Settings', icon: <IconAdmin />, active: isActivePrefix(ROUTES.FIRM_SETTINGS(currentFirmSlug)) },
       ],
     },
   ].filter((section) => !section.hidden);
@@ -351,10 +352,10 @@ export const Layout = ({ children }) => {
   }, []);
 
   const commandPaletteCommands = [
-    { id: 'new-docket', label: 'New Docket', shortcut: '⌘N', action: () => navigate(`/app/firm/${currentFirmSlug}/cases/create`) },
-    { id: 'workbasket', label: 'Go to Workbasket', shortcut: '⌘1', action: () => navigate(`/app/firm/${currentFirmSlug}/global-worklist`) },
-    { id: 'worklist', label: 'Go to My Worklist', shortcut: '⌘2', action: () => navigate(`/app/firm/${currentFirmSlug}/worklist`) },
-    { id: 'dashboard', label: 'Go to Dashboard', shortcut: '⌘D', action: () => navigate(`/app/firm/${currentFirmSlug}/dashboard`) },
+    { id: 'new-docket', label: 'New Docket', shortcut: '⌘N', action: () => navigate(ROUTES.CREATE_CASE(currentFirmSlug)) },
+    { id: 'workbasket', label: 'Go to Workbasket', shortcut: '⌘1', action: () => navigate(ROUTES.GLOBAL_WORKLIST(currentFirmSlug)) },
+    { id: 'worklist', label: 'Go to My Worklist', shortcut: '⌘2', action: () => navigate(ROUTES.WORKLIST(currentFirmSlug)) },
+    { id: 'dashboard', label: 'Go to Dashboard', shortcut: '⌘D', action: () => navigate(ROUTES.DASHBOARD(currentFirmSlug)) },
   ];
 
   return (
@@ -473,7 +474,7 @@ export const Layout = ({ children }) => {
                   <button
                     key={`case-${item.caseId}`}
                     className="dropdown-item"
-                    onClick={() => navigate(`/app/firm/${currentFirmSlug}/cases/${item.caseId}`)}
+                    onClick={() => navigate(safeRoute(ROUTES.CASE_DETAIL(currentFirmSlug, item.caseId), ROUTES.CASES(currentFirmSlug)))}
                   >
                     Docket: {item.caseId} — {item.title}
                   </button>
@@ -485,7 +486,7 @@ export const Layout = ({ children }) => {
           {/* Create Docket CTA */}
           <button
             className="btn btn-primary enterprise-header__new-case"
-            onClick={() => navigate(`/app/firm/${currentFirmSlug}/cases/create`)}
+            onClick={() => navigate(safeRoute(ROUTES.CREATE_CASE(currentFirmSlug), ROUTES.CASES(currentFirmSlug)))}
             aria-label="Create new docket"
           >
             <IconPlus />
@@ -495,7 +496,7 @@ export const Layout = ({ children }) => {
           {/* Right actions */}
           <div className="enterprise-header__right">
             {/* Notification Bell */}
-            <button className="enterprise-header__icon-btn" aria-label="Notifications">
+            <button className="enterprise-header__icon-btn" aria-label="Notifications" disabled title="Notifications are coming soon">
               <IconBell />
             </button>
 
@@ -515,7 +516,7 @@ export const Layout = ({ children }) => {
               {profileDropdownOpen && (
                 <div className="dropdown-menu dropdown-menu-right" role="menu">
                   <Link
-                    to={`/app/firm/${currentFirmSlug}/profile`}
+                    to={ROUTES.PROFILE(currentFirmSlug)}
                     className="dropdown-item"
                     role="menuitem"
                     onClick={() => setProfileDropdownOpen(false)}

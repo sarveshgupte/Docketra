@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Button } from '../components/common/Button';
 import { TableSkeleton } from '../components/common/Skeleton';
@@ -30,6 +30,9 @@ import { UX_COPY } from '../constants/uxCopy';
 import { useQueryState } from '../hooks/useQueryState';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { AuditMetadata } from '../components/ui/AuditMetadata';
+import { useFirm } from '../hooks/useFirm';
+import { ROUTES } from '../constants/routes';
+import { RouteErrorFallback } from '../components/routing/RouteErrorFallback';
 import './CasesPage.css';
 
 // Keep date-sort keys explicit so additional date columns can be added safely.
@@ -68,7 +71,7 @@ export const CasesPage = () => {
   const { user } = useAuth();
   const { isAdmin } = usePermissions();
   const navigate = useNavigate();
-  const { firmSlug } = useParams();
+  const { firmSlug, isValidFirm } = useFirm();
   const isPartner = user?.role === USER_ROLES.PARTNER;
 
   const firmConfig = getFirmConfig();
@@ -251,13 +254,13 @@ export const CasesPage = () => {
 
   const handleCaseClick = useCallback((caseRecord) => {
     const index = sortedCases.findIndex((c) => c.caseId === caseRecord.caseId);
-    navigate(`/app/firm/${firmSlug}/cases/${caseRecord.caseId}`, {
+    navigate(ROUTES.CASE_DETAIL(firmSlug, caseRecord.caseId), {
       state: { sourceList: sortedCases.map((c) => c.caseId), index },
     });
   }, [sortedCases, navigate, firmSlug]);
 
   const handleCreateCase = useCallback(() => {
-    navigate(`/app/firm/${firmSlug}/cases/create`);
+    navigate(ROUTES.CREATE_CASE(firmSlug));
   }, [navigate, firmSlug]);
 
   const handleAssignToMe = useCallback(async (caseRecord, event) => {
@@ -554,9 +557,13 @@ export const CasesPage = () => {
     },
     onEdit: () => {
       const first = sortedCases[0];
-      if (first?.caseId) navigate(`/app/firm/${firmSlug}/cases/${first.caseId}?mode=edit`);
+      if (first?.caseId) navigate(`${ROUTES.CASE_DETAIL(firmSlug, first.caseId)}?mode=edit`);
     },
   });
+
+  if (!isValidFirm) {
+    return <RouteErrorFallback title="Invalid firm" message="Unable to load cases without a valid firm context." backTo={ROUTES.SUPERADMIN_LOGIN} />;
+  }
 
   if (loading) {
     return (
@@ -683,7 +690,7 @@ export const CasesPage = () => {
                 onClick={(event) => {
                   event.stopPropagation();
                   const index = sortedCases.findIndex((c) => c.caseId === row.caseId);
-                  navigate(`/app/firm/${firmSlug}/cases/${row.caseId}`, {
+                  navigate(ROUTES.CASE_DETAIL(firmSlug, row.caseId), {
                     state: { sourceList: sortedCases.map((c) => c.caseId), index },
                   });
                 }}
@@ -1000,7 +1007,7 @@ export const CasesPage = () => {
             </ol>
             <div className="cases-page__onboarding-actions">
               <Button variant="primary" onClick={handleCreateCase}>Create First Case</Button>
-              <Button variant="outline" onClick={() => navigate(`/app/firm/${firmSlug}/settings/firm`)}>Configure SLA Policy</Button>
+              <Button variant="outline" onClick={() => navigate(ROUTES.FIRM_SETTINGS(firmSlug))}>Configure SLA Policy</Button>
               <Button variant="outline" onClick={dismissOnboarding}>Dismiss</Button>
             </div>
           </SectionCard>
