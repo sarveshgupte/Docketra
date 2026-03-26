@@ -2,7 +2,7 @@
  * Admin Page
  */
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
@@ -16,7 +16,6 @@ import { Loading } from '../components/common/Loading';
 import { TableSkeleton } from '../components/common/Skeleton';
 import { EmptyState } from '../components/EmptyState';
 import { PageHeader } from '../components/layout/PageHeader';
-import { useAuth } from '../hooks/useAuth';
 import { adminService } from '../services/adminService';
 import { categoryService } from '../services/categoryService';
 import { clientService } from '../services/clientService';
@@ -65,7 +64,6 @@ const getUserStatusBadge = (user) => {
 export const AdminPage = () => {
   const navigate = useNavigate();
   const { firmSlug } = useParams();
-  const { user } = useAuth();
   const { showToast } = useToast();
   
   const [loading, setLoading] = useState(true);

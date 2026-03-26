@@ -6,36 +6,9 @@
 }
 
 .case-detail__nav-bar,
-.case-detail__header-actions--top,
-.case-detail__section-heading,
-.case-detail__history-table,
-.case-detail__subheading,
-.case-detail__metadata-grid,
-.case-detail__history-events,
-.case-detail__split,
-.case-detail__split-main,
-.case-detail__split-context,
-.case-detail__context-card,
 .case-detail__context-history,
 .case-header,
-.case-header__left,
-.case-header__id,
-.case-header__subtitle,
-.case-header__middle,
-.case-header__metadata,
-.case-header__right,
-.case-detail__header,
-.case-detail__header-actions,
-.case-detail__section,
-.case-section,
-.case-detail__section-tabs,
-.case-detail__section-tab,
-.timeline,
-.timeline-item,
-.timeline-item__dot,
-.timeline-item__header,
-.timeline-item__action,
-.timeline-item__details {
+.timeline-item {
   all: unset;
 }
 
