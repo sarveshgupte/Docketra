@@ -97,7 +97,7 @@ export const CaseHistory = ({ caseId }) => {
             className="border-l-4 border-gray-300 pl-4 pb-4"
           >
             <div className="flex items-start justify-between">
-              <div className="flex-1">
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <Badge color={getActionTypeColor(entry.actionType)}>
                     {entry.actionType.replace(/_/g, ' ')}
