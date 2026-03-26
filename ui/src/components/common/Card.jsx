@@ -11,7 +11,7 @@ export const Card = ({ children, className = '', onClick, interactive = false, a
     ? 'transition-colors duration-150 cursor-pointer hover:border-gray-300 hover:bg-gray-50'
     : '';
 
-  const cardClasses = `card rounded-xl border border-gray-200 bg-white p-6 ${interactiveClass} ${className}`;
+  const cardClasses = `bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden p-6 ${interactiveClass} ${className}`;
 
   if (animateOnMount) {
     return (
