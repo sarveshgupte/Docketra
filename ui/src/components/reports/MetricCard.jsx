@@ -49,7 +49,7 @@ export const MetricCard = ({
         <p className="text-sm font-medium text-gray-500">{title}</p>
         {badge ? <Badge className="shrink-0">{badge}</Badge> : null}
       </div>
-      <p className={['text-3xl font-bold text-gray-900 tracking-tight', valueClassName].filter(Boolean).join(' ')}>{value}</p>
+      <p className={['text-3xl font-bold text-text-primary tracking-tight', valueClassName].filter(Boolean).join(' ')}>{value}</p>
       {subtitle ? (
         <p className={['text-sm', trendClassName, subtitleClassName].filter(Boolean).join(' ')}>{subtitle}</p>
       ) : null}

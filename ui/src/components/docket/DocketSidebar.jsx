@@ -26,10 +26,10 @@ export const DocketSidebar = ({ isOpen, type, onClose, caseInfo, attachments = [
     if (type === 'cfs') {
       return (
         <div className="space-y-4 text-sm text-gray-700">
-          <div><span className="font-semibold text-gray-900">Client:</span> {caseInfo?.clientName || caseInfo?.businessName || 'Unknown'}</div>
-          <div><span className="font-semibold text-gray-900">Category:</span> {caseInfo?.category || '—'}</div>
-          <div><span className="font-semibold text-gray-900">Assigned To:</span> {caseInfo?.assignedToName || caseInfo?.assignedToXID || 'Unassigned'}</div>
-          <div><span className="font-semibold text-gray-900">Created:</span> {formatDateTime(caseInfo?.createdAt)}</div>
+          <div><span className="font-semibold text-text-primary">Client:</span> {caseInfo?.clientName || caseInfo?.businessName || 'Unknown'}</div>
+          <div><span className="font-semibold text-text-primary">Category:</span> {caseInfo?.category || '—'}</div>
+          <div><span className="font-semibold text-text-primary">Assigned To:</span> {caseInfo?.assignedToName || caseInfo?.assignedToXID || 'Unassigned'}</div>
+          <div><span className="font-semibold text-text-primary">Created:</span> {formatDateTime(caseInfo?.createdAt)}</div>
         </div>
       );
     }
@@ -40,7 +40,7 @@ export const DocketSidebar = ({ isOpen, type, onClose, caseInfo, attachments = [
         <ul className="space-y-3">
           {attachments.map((attachment, index) => (
             <li key={attachment.id || attachment._id || index} className="rounded-xl border border-gray-200 bg-gray-50 p-3">
-              <p className="text-sm font-medium text-gray-900">{attachment.fileName || attachment.filename || 'Attachment'}</p>
+              <p className="text-sm font-medium text-text-primary">{attachment.fileName || attachment.filename || 'Attachment'}</p>
               <p className="text-xs text-gray-500">{formatDateTime(attachment.createdAt || attachment.uploadedAt)}</p>
             </li>
           ))}
@@ -54,7 +54,7 @@ export const DocketSidebar = ({ isOpen, type, onClose, caseInfo, attachments = [
       <ul className="space-y-3">
         {timelineEvents.map((event, index) => (
           <li key={event.id || event._id || index} className="rounded-xl border border-gray-200 p-3">
-            <p className="text-sm font-medium text-gray-900">{event.action || event.event || event.title || 'Update'}</p>
+            <p className="text-sm font-medium text-text-primary">{event.action || event.event || event.title || 'Update'}</p>
             <p className="text-xs text-gray-500">{formatDateTime(event.createdAt || event.timestamp || event.date)}</p>
           </li>
         ))}
@@ -67,7 +67,7 @@ export const DocketSidebar = ({ isOpen, type, onClose, caseInfo, attachments = [
       <button type="button" className="docket-sidebar__backdrop" onClick={onClose} aria-label="Close docket sidebar" />
       <aside className="docket-sidebar__panel" aria-label={`${TITLES[type] || 'Details'} panel`}>
         <div className="docket-sidebar__header">
-          <h3 className="text-base font-semibold text-gray-900">{TITLES[type] || 'Details'}</h3>
+          <h3 className="text-base font-semibold text-text-primary">{TITLES[type] || 'Details'}</h3>
           <button type="button" onClick={onClose} className="docket-sidebar__close" aria-label="Close panel">✕</button>
         </div>
         <div className="docket-sidebar__content">{renderContent()}</div>

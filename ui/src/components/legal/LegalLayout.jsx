@@ -39,13 +39,13 @@ export const LegalLayout = ({ title, description, sections, children }) => {
         meta={`Version ${LEGAL_VERSION} — Last Updated: ${LAST_UPDATED}`}
       />
 
-      <div className="grid w-full grid-cols-1 gap-12 md:grid-cols-[240px_1fr]">
+      <div className="grid w-full grid-cols-1 gap-section md:grid-cols-[240px_1fr]">
         {sections && sections.length > 0 && (
           <nav
             aria-label="Table of contents"
-            className="mb-12 w-full md:mb-0 md:w-[240px] md:flex-shrink-0 md:sticky md:top-8 md:self-start"
+            className="mb-section w-full md:mb-0 md:w-[240px] md:flex-shrink-0 md:sticky md:top-8 md:self-start"
           >
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+            <p className="mb-3 text-meta font-semibold uppercase tracking-wider text-text-muted">
               Contents
             </p>
             <ul className="space-y-1">
@@ -53,10 +53,10 @@ export const LegalLayout = ({ title, description, sections, children }) => {
                 <li key={id}>
                   <a
                     href={`#${id}`}
-                    className={`block w-full break-words rounded px-2 py-1 text-sm transition-colors ${
+                    className={`block w-full break-words rounded px-2 py-1 text-body transition-colors ${
                       activeId === id
-                        ? 'bg-slate-100 font-medium text-slate-900'
-                        : 'text-slate-500 hover:text-slate-800'
+                        ? 'bg-surface font-medium text-text-primary'
+                        : 'text-text-secondary hover:text-text-primary'
                     }`}
                   >
                     {label}
@@ -67,11 +67,11 @@ export const LegalLayout = ({ title, description, sections, children }) => {
           </nav>
         )}
 
-        <main className="min-w-0 w-full space-y-12 text-slate-700">
+        <main className="min-w-0 w-full space-y-section text-text-secondary">
           {children}
 
-          <footer className="mt-12 border-t border-slate-200 pt-6 text-xs text-slate-400">
-            <p>Operated by <strong className="text-slate-600">{COMPANY_NAME}</strong></p>
+          <footer className="mt-12 border-t border-border pt-6 text-meta text-text-muted">
+            <p>Operated by <strong className="text-text-secondary">{COMPANY_NAME}</strong></p>
             <p className="mt-1">CIN: {COMPANY_CIN}</p>
             <p className="mt-1">Legal Version {LEGAL_VERSION} &mdash; {LAST_UPDATED}</p>
           </footer>

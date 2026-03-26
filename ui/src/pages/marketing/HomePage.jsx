@@ -134,7 +134,7 @@ const Accordion = ({ question, answer }) => {
         }}
         aria-expanded={open}
       >
-        <h3 className="min-w-0 flex-1 text-base font-semibold text-gray-900">{question}</h3>
+        <h3 className="min-w-0 flex-1 text-base font-semibold text-text-primary">{question}</h3>
         <span className="flex-shrink-0 font-bold text-blue-600" aria-hidden="true">
           {open ? '−' : '+'}
         </span>
@@ -195,7 +195,7 @@ export const HomePage = () => {
   return (
     <div className="w-full">
       <Section>
-        <div className="grid w-full items-stretch gap-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+        <div className="grid w-full items-stretch gap-section lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
           <div className="w-full text-left">
             <h1 className="type-hero">
               Compliance Workflows That Actually Stick.
@@ -224,8 +224,8 @@ export const HomePage = () => {
             <div className="space-y-4">
               <div className="border-b border-blue-100 pb-4">
                 <p className="text-xs font-bold uppercase tracking-wide text-blue-600">Launching Soon</p>
-                <h3 className="mt-2 text-lg font-semibold text-gray-900">Be Among the First to Try Docketra</h3>
-                <p className="mt-2 text-sm text-gray-600">
+                <h3 className="mt-2 text-lg font-semibold text-text-primary">Be Among the First to Try Docketra</h3>
+                <p className="mt-2 text-sm text-text-secondary">
                   We are building Docketra with early users. Your feedback directly shapes the product roadmap.
                 </p>
               </div>
@@ -248,8 +248,8 @@ export const HomePage = () => {
                   <div key={item.title} className="flex items-start gap-3">
                     <span className="mt-0.5 text-green-600">✓</span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-gray-900">{item.title}</p>
-                      <p className="text-xs text-gray-600">{item.desc}</p>
+                      <p className="text-sm font-medium text-text-primary">{item.title}</p>
+                      <p className="text-xs text-text-secondary">{item.desc}</p>
                     </div>
                   </div>
                 ))}
@@ -274,8 +274,8 @@ export const HomePage = () => {
               <p className="text-2xl" aria-hidden="true">
                 {point.icon}
               </p>
-              <h3 className="text-sm font-semibold text-gray-900">{point.title}</h3>
-              <p className="text-xs text-gray-600">{point.desc}</p>
+              <h3 className="text-sm font-semibold text-text-primary">{point.title}</h3>
+              <p className="text-xs text-text-secondary">{point.desc}</p>
             </motion.div>
           ))}
         </div>
@@ -284,12 +284,12 @@ export const HomePage = () => {
       <Section>
         <div className="mb-12">
           <h2 className="type-section">How Docketra Works</h2>
-          <p className="type-body type-lg w-full text-gray-600">
+          <p className="type-body type-lg w-full text-text-secondary">
             Built for compliance-heavy teams that need operational discipline and clear ownership.
           </p>
         </div>
 
-        <div className="grid w-full gap-12 md:grid-cols-3">
+        <div className="grid w-full gap-section md:grid-cols-3">
           {SOLUTION_POINTS.map((item) => (
             <motion.div key={item.num} className="marketing-card p-8" {...SECTION_REVEAL}>
               <div className="flex items-start gap-4">
@@ -297,8 +297,8 @@ export const HomePage = () => {
                   {item.icon}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="mb-2 font-bold text-gray-900">{item.title}</h3>
-                  <p className="text-sm text-gray-600">{item.desc}</p>
+                  <h3 className="mb-2 font-bold text-text-primary">{item.title}</h3>
+                  <p className="text-sm text-text-secondary">{item.desc}</p>
                 </div>
               </div>
             </motion.div>
@@ -309,19 +309,19 @@ export const HomePage = () => {
       <Section muted>
         <div className="mb-12">
           <h2 className="type-section">Built For Your Workflow</h2>
-          <p className="type-body type-lg w-full text-gray-600">
+          <p className="type-body type-lg w-full text-text-secondary">
             Whether you run audits, manage compliance, or deliver consulting projects, Docketra supports your process.
           </p>
         </div>
 
-        <div className="grid gap-12 md:grid-cols-3">
+        <div className="grid gap-section md:grid-cols-3">
           {AUDIENCE_SEGMENTS.map((segment) => (
             <motion.div
               key={segment.title}
               className={`marketing-card border-t-4 p-6 transition-shadow hover:shadow-lg ${segment.color}`}
               {...SECTION_REVEAL}
             >
-              <h3 className="mb-4 text-lg font-bold text-gray-900">{segment.title}</h3>
+              <h3 className="mb-4 text-lg font-bold text-text-primary">{segment.title}</h3>
               <ul className="space-y-3">
                 {segment.points.map((point) => (
                   <li key={point} className="flex items-start gap-3">
@@ -340,8 +340,8 @@ export const HomePage = () => {
       <Section muted>
         <div className="space-y-12 text-left">
           <span className="text-sm font-bold tracking-wider text-blue-600 uppercase">Pre-Launch Access</span>
-          <h2 className="type-section text-gray-900">Join the Docketra Early Access Program</h2>
-          <p className="type-body text-lg text-gray-600">
+          <h2 className="type-section text-text-primary">Join the Docketra Early Access Program</h2>
+          <p className="type-body text-lg text-text-secondary">
             We are building the future of compliance workflows. Join our exclusive early access group to secure your free workspace and directly influence our product roadmap.
           </p>
 
@@ -361,7 +361,7 @@ export const HomePage = () => {
             />
             <button
               type="submit"
-              className="marketing-btn-primary w-full shrink-0 rounded-xl px-6 py-3 font-semibold whitespace-nowrap shadow-sm sm:w-auto"
+              className="marketing-btn-primary w-full shrink-0 rounded-xl px-container-x py-3 font-semibold whitespace-nowrap shadow-sm sm:w-auto"
               aria-label="Request Early Access"
             >
               Request Access

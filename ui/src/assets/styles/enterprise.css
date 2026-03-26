@@ -11,6 +11,7 @@
 
 /* Design Tokens */
 @import "./tokens.css";
+@import "../../styles/tokens.css";
 
 /* Enterprise Design Tokens - Custom Theme */
 @theme {
