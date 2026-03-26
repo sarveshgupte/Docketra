@@ -1,4 +1,3 @@
-import React from 'react';
 
 export const SectionCard = ({ title, subtitle, children, className = '' }) => {
   return (
