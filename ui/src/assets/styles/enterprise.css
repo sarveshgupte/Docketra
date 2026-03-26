@@ -115,69 +115,6 @@
 
 /* Component Layer - Enterprise Components */
 @layer components {
-  /* Enterprise Button Styles */
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: theme(--spacing-sm) theme(--spacing-md);
-    border-radius: theme(--radius);
-    font-weight: 500;
-    transition: background-color 150ms ease-in-out, border-color 150ms ease-in-out, color 150ms ease-in-out;
-    min-height: 44px;
-    min-width: 80px;
-    cursor: pointer;
-    border: none;
-  }
-  
-  .btn:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px theme(--color-info), 0 0 0 4px rgba(37, 99, 235, 0.2);
-  }
-  
-  .btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  
-  .btn-primary {
-    background-color: var(--color-primary);
-    color: white;
-  }
-  
-  .btn-primary:hover:not(:disabled) {
-    background-color: var(--color-primary-dark);
-  }
-  
-  .btn-secondary {
-    background-color: white;
-    color: theme(--color-primary-600);
-    border: 1px solid theme(--color-border-strong);
-  }
-  
-  .btn-secondary:hover:not(:disabled) {
-    background-color: theme(--color-surface-base);
-  }
-  
-  .btn-danger {
-    background-color: theme(--color-danger);
-    color: white;
-  }
-  
-  .btn-danger:hover:not(:disabled) {
-    opacity: 0.9;
-  }
-
-  .btn-outline {
-    background-color: transparent;
-    color: theme(--color-primary-600);
-    border: 1px solid theme(--color-border-strong);
-  }
-
-  .btn-outline:hover:not(:disabled) {
-    background-color: theme(--color-surface-base);
-  }
-  
   /* Auth Layout Primitives */
   .auth-wrapper {
     min-height: 100vh;
@@ -191,35 +128,6 @@
   .auth-card {
     width: 100%;
     max-width: 440px;
-  }
-
-  /* Base Input Styles (Replaces legacy .neo-input) */
-  .input {
-    width: 100%;
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    color: var(--text-main);
-    font-size: var(--font-size-sm);
-    padding: var(--spacing-sm) var(--spacing-md);
-    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-    outline: none;
-    min-height: 38px;
-  }
-  
-  .input::placeholder {
-    color: theme(--color-text-muted);
-  }
-  
-  .input:focus {
-    box-shadow: var(--focus-ring);
-    border-color: var(--color-primary);
-  }
-  
-  .input:disabled {
-    background-color: theme(--color-surface-base);
-    cursor: not-allowed;
-    opacity: 0.7;
   }
 
   .input-wrapper {
@@ -381,14 +289,6 @@
   /* Form Groups */
   .form-group {
     margin-bottom: theme(--spacing-md);
-  }
-  
-  .form-label {
-    display: block;
-    font-size: theme(--text-sm);
-    font-weight: 500;
-    color: theme(--color-text-main);
-    margin-bottom: 4px;
   }
   
   .form-error {
