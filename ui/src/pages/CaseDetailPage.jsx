@@ -55,6 +55,11 @@ const toLifecycleStage = (status) => {
 };
 
 const formatDocketId = (value = '') => String(value || '').replace(/^CASE-/, 'DOCKET-');
+const REALTIME_POLL_MS = 15000;
+const INITIAL_VIRTUAL_WINDOW = 30;
+const ACTION_RETRY_KEY = 'docketra_case_retry_queue';
+const ACTION_RETRY_MAX_ATTEMPTS = 3;
+const ACTION_RETRY_BASE_DELAY_MS = 1000;
 
 
 export const CaseDetailPage = () => {
@@ -104,6 +109,7 @@ export const CaseDetailPage = () => {
   const [actionConfirmation, setActionConfirmation] = useState('');
   const [actionError, setActionError] = useState(null);
   const fileInputRef = useRef(null);
+  const pageContainerRef = useRef(null);
   const commentsListRef = useRef(null);
   const commentComposerId = `case-comment-composer-${caseId}`;
   const queryTab = new URLSearchParams(location.search).get('tab');
@@ -140,6 +146,16 @@ export const CaseDetailPage = () => {
   const [assigningCase, setAssigningCase] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarType, setSidebarType] = useState(null);
+  const [realtimeStatus, setRealtimeStatus] = useState('live');
+  const [commentWindowSize, setCommentWindowSize] = useState(INITIAL_VIRTUAL_WINDOW);
+  const [historyWindowSize, setHistoryWindowSize] = useState(INITIAL_VIRTUAL_WINDOW);
+  const [retryQueue, setRetryQueue] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(ACTION_RETRY_KEY) || '[]');
+    } catch (error) {
+      return [];
+    }
+  });
 
   // State for Unpend action modal
   const [showUnpendModal, setShowUnpendModal] = useState(false);
@@ -150,6 +166,8 @@ export const CaseDetailPage = () => {
   // PR: Comprehensive CaseHistory & Audit Trail
   const [viewTracked, setViewTracked] = useState(false);
   const loadSequenceRef = useRef(0);
+  const previousRealtimeRef = useRef(null);
+  const notificationPermissionRequestedRef = useRef(false);
   
   // Configuration for view tracking
   const VIEW_TRACKING_DEBOUNCE_MS = 2000; // 2 seconds
@@ -163,6 +181,50 @@ export const CaseDetailPage = () => {
   const auditLog = caseData?.auditLog ?? [];
   const history = caseData?.history ?? [];
   const timelineEvents = auditLog.length > 0 ? auditLog : history;
+  const sortedTimelineEvents = useMemo(
+    () => [...timelineEvents].sort((left, right) => {
+      const leftTs = new Date(left?.timestamp || left?.createdAt || left?.updatedAt || 0).getTime();
+      const rightTs = new Date(right?.timestamp || right?.createdAt || right?.updatedAt || 0).getTime();
+      return rightTs - leftTs;
+    }),
+    [timelineEvents]
+  );
+  const visibleComments = useMemo(() => comments.slice(-commentWindowSize), [comments, commentWindowSize]);
+  const visibleTimelineEvents = useMemo(
+    () => sortedTimelineEvents.slice(0, historyWindowSize),
+    [sortedTimelineEvents, historyWindowSize]
+  );
+  const groupedTimelineEvents = useMemo(() => {
+    const importantKeywords = ['resolved', 'filed', 'assigned', 'escalated', 'failed', 'reopened', 'approval'];
+    const grouped = [];
+    const dateMap = new Map();
+    visibleTimelineEvents.forEach((event, index) => {
+      const dt = event.timestamp || event.createdAt || event.updatedAt;
+      const dateLabel = dt ? new Date(dt).toLocaleDateString() : 'Unknown Date';
+      const action = String(event.action || event.type || 'updated').toLowerCase();
+      const description = String(event.description || event.comment || '').toLowerCase();
+      const important = importantKeywords.some((keyword) => action.includes(keyword) || description.includes(keyword));
+      if (!dateMap.has(dateLabel)) {
+        const group = { dateLabel, items: [] };
+        dateMap.set(dateLabel, group);
+        grouped.push(group);
+      }
+      dateMap.get(dateLabel).items.push({ ...event, _important: important, _eventIndex: index });
+    });
+    grouped.forEach((group) => {
+      group.items.sort((left, right) => {
+        const leftTs = new Date(left?.timestamp || left?.createdAt || left?.updatedAt || 0).getTime();
+        const rightTs = new Date(right?.timestamp || right?.createdAt || right?.updatedAt || 0).getTime();
+        return leftTs - rightTs;
+      });
+    });
+
+    return grouped.sort((left, right) => {
+      const leftTs = new Date(left.items[0]?.timestamp || left.items[0]?.createdAt || left.items[0]?.updatedAt || 0).getTime();
+      const rightTs = new Date(right.items[0]?.timestamp || right.items[0]?.createdAt || right.items[0]?.updatedAt || 0).getTime();
+      return rightTs - leftTs;
+    });
+  }, [visibleTimelineEvents]);
   const commentDraftKey = `docketra_case_comment_draft_${firmSlug || 'firm'}_${caseId}`;
   const availableAssignees = useMemo(() => {
     const fromCase = caseData?.assignableUsers || caseData?.users || [];
@@ -189,6 +251,84 @@ export const CaseDetailPage = () => {
     });
     return Array.from(map.values());
   }, []);
+
+  const mergeCaseData = useCallback((prev, incoming, { source = 'unknown' } = {}) => {
+    if (!prev) return incoming;
+    if (!incoming) return prev;
+
+    const prevComments = prev.comments || [];
+    const incomingComments = incoming.comments || [];
+    const commentsMatch = (left, right) => {
+      if (!left || !right) return false;
+      const leftId = left._id || left.id || left.tempId;
+      const rightId = right._id || right.id || right.tempId;
+      if (leftId && rightId && leftId === rightId) return true;
+      if (left.tempId && rightId && left.tempId === rightId) return true;
+
+      const leftText = String(left.text || '').trim();
+      const rightText = String(right.text || '').trim();
+      if (!leftText || !rightText || leftText !== rightText) return false;
+
+      const leftTs = new Date(left.createdAt || left.timestamp || 0).getTime();
+      const rightTs = new Date(right.createdAt || right.timestamp || 0).getTime();
+      if (!leftTs || !rightTs) return false;
+      return Math.abs(leftTs - rightTs) <= 60_000;
+    };
+
+    const reconciledPrevComments = prevComments.filter((comment) => {
+      if (!comment?.optimistic) return true;
+      const matched = incomingComments.some((incomingComment) => commentsMatch(comment, incomingComment));
+      if (matched && import.meta.env.DEV) {
+        console.debug(`[CaseDetail:${source}] optimistic comment reconciled with server payload.`);
+      }
+      return !matched;
+    });
+
+    const mergedComments = mergeUniqueComments([...reconciledPrevComments, ...incomingComments]).sort((left, right) => {
+      const leftTs = new Date(left?.createdAt || left?.timestamp || 0).getTime();
+      const rightTs = new Date(right?.createdAt || right?.timestamp || 0).getTime();
+      return leftTs - rightTs;
+    });
+
+    const prevHistory = prev.history || [];
+    const incomingHistory = incoming.history || [];
+    const mergedHistory = mergeUniqueComments([...prevHistory, ...incomingHistory]).sort((left, right) => {
+      const leftTs = new Date(left?.timestamp || left?.createdAt || left?.updatedAt || 0).getTime();
+      const rightTs = new Date(right?.timestamp || right?.createdAt || right?.updatedAt || 0).getTime();
+      return rightTs - leftTs;
+    });
+
+    const prevAudit = prev.auditLog || [];
+    const incomingAudit = incoming.auditLog || [];
+    const mergedAudit = mergeUniqueComments([...prevAudit, ...incomingAudit]).sort((left, right) => {
+      const leftTs = new Date(left?.timestamp || left?.createdAt || left?.updatedAt || 0).getTime();
+      const rightTs = new Date(right?.timestamp || right?.createdAt || right?.updatedAt || 0).getTime();
+      return rightTs - leftTs;
+    });
+
+    if (import.meta.env.DEV) {
+      if (incomingComments.length < prevComments.length) {
+        console.debug(`[CaseDetail:${source}] incoming comments smaller than local state; merge preserved local items.`);
+      }
+      const prevOptimistic = prevComments.filter((item) => item?.optimistic).length;
+      const mergedOptimistic = mergedComments.filter((item) => item?.optimistic).length;
+      if (prevOptimistic > 0 && mergedOptimistic < prevOptimistic) {
+        console.debug(`[CaseDetail:${source}] optimistic comments may have been replaced during merge.`);
+      }
+    }
+
+    return {
+      ...prev,
+      ...incoming,
+      case: {
+        ...(prev.case || {}),
+        ...(incoming.case || {}),
+      },
+      comments: mergedComments,
+      history: mergedHistory,
+      auditLog: mergedAudit,
+    };
+  }, [mergeUniqueComments]);
 
   const appendTimelineEvent = useCallback((event) => {
     setCaseData((prev) => ({
@@ -217,7 +357,7 @@ export const CaseDetailPage = () => {
       
       if (response.success && requestId === loadSequenceRef.current) {
         const normalized = response.data?.case || response.data;
-        setCaseData(normalized);
+        setCaseData((prev) => mergeCaseData(prev, normalized, { source: 'loadCase' }));
       }
     } catch (error) {
       showError(extractErrorMessage(error, 'Unable to load docket details. Please try again.'));
@@ -230,6 +370,60 @@ export const CaseDetailPage = () => {
     }
   }, [caseId, showError]);
 
+  const queueFailedAction = useCallback((action) => {
+    setRetryQueue((prev) => {
+      const next = [...prev, {
+        ...action,
+        id: `${action.type}-${Date.now()}`,
+        attempts: 0,
+        queuedAt: new Date().toISOString(),
+        nextRetryAt: Date.now(),
+      }];
+      localStorage.setItem(ACTION_RETRY_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const ensureNotificationPermission = useCallback(async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return false;
+    if (Notification.permission === 'granted') return true;
+    if (Notification.permission === 'denied') return false;
+    if (notificationPermissionRequestedRef.current) return false;
+
+    notificationPermissionRequestedRef.current = true;
+    try {
+      const permission = await Notification.requestPermission();
+      return permission === 'granted';
+    } catch (error) {
+      return false;
+    }
+  }, []);
+
+  const sendBrowserNotification = useCallback(async (title, body, fallbackMessage = null) => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    const granted = await ensureNotificationPermission();
+    if (granted) {
+      // eslint-disable-next-line no-new
+      new Notification(title, { body });
+      return;
+    }
+    if (fallbackMessage) {
+      showSuccess(fallbackMessage);
+    }
+  }, [ensureNotificationPermission, showSuccess]);
+
+  const executeQueuedAction = useCallback(async (action) => {
+    if (action.type === 'ADD_COMMENT') {
+      await caseService.addComment(caseId, action.payload.commentText);
+      return true;
+    }
+    if (action.type === 'RESOLVE_CASE') {
+      await caseService.resolveCase(caseId, action.payload.comment);
+      return true;
+    }
+    return false;
+  }, [caseId]);
+
   useEffect(() => {
     loadCase();
     
@@ -241,6 +435,104 @@ export const CaseDetailPage = () => {
       caseService.trackCaseExit(caseId);
     };
   }, [caseId, loadCase]);
+
+  useEffect(() => {
+    if (!caseData) return;
+    previousRealtimeRef.current = {
+      status: caseInfo?.status,
+      assignee: caseInfo?.assignedToXID || caseInfo?.assignedToName || null,
+      commentsCount: comments.length,
+    };
+  }, [caseData, caseInfo?.status, caseInfo?.assignedToXID, caseInfo?.assignedToName, comments.length]);
+
+  useEffect(() => {
+    const pollForUpdates = async () => {
+      try {
+        if (document.hidden || !navigator.onLine) {
+          return;
+        }
+
+        const response = await caseService.getCaseById(caseId, {
+          commentsPage: 1,
+          commentsLimit: 50,
+          activityPage: 1,
+          activityLimit: 50,
+        });
+        if (!response?.success) return;
+        const updated = response.data?.case || response.data;
+        const previous = previousRealtimeRef.current;
+        const nextInfo = normalizeCase(updated);
+        const nextCommentsCount = updated?.comments?.length || 0;
+        const nextAssignee = nextInfo?.assignedToXID || nextInfo?.assignedToName || null;
+
+        if (previous) {
+          if (nextCommentsCount > previous.commentsCount) {
+            showSuccess('New comment update received.');
+            sendBrowserNotification('Docketra update', 'A new comment was added to this docket.');
+          }
+          if (nextInfo?.status && previous.status && nextInfo.status !== previous.status) {
+            showSuccess(`Status updated: ${previous.status} → ${nextInfo.status}`);
+            sendBrowserNotification('Docket status changed', `${previous.status} → ${nextInfo.status}`);
+          }
+          if (nextAssignee && previous.assignee && nextAssignee !== previous.assignee) {
+            showWarning(`Assignment updated: ${previous.assignee} → ${nextAssignee}`);
+          }
+        }
+        setCaseData((prev) => mergeCaseData(prev, updated, { source: 'polling' }));
+        setRealtimeStatus('live');
+      } catch (error) {
+        setRealtimeStatus('reconnecting');
+      }
+    };
+
+    const timer = setInterval(pollForUpdates, REALTIME_POLL_MS);
+    return () => clearInterval(timer);
+  }, [caseId, mergeCaseData, sendBrowserNotification, showSuccess, showWarning]);
+
+  useEffect(() => {
+    localStorage.setItem(ACTION_RETRY_KEY, JSON.stringify(retryQueue));
+  }, [retryQueue]);
+
+  useEffect(() => {
+    const retryQueued = async () => {
+      if (!navigator.onLine || retryQueue.length === 0) return;
+      const remaining = [];
+      const now = Date.now();
+      for (const action of retryQueue) {
+        if ((action.attempts || 0) >= ACTION_RETRY_MAX_ATTEMPTS) {
+          showWarning(`Dropping queued ${action.type} after ${ACTION_RETRY_MAX_ATTEMPTS} attempts.`);
+          continue;
+        }
+        if (action.nextRetryAt && action.nextRetryAt > now) {
+          remaining.push(action);
+          continue;
+        }
+        try {
+          const handled = await executeQueuedAction(action);
+          if (!handled) {
+            remaining.push(action);
+          }
+        } catch (error) {
+          const nextAttempts = (action.attempts || 0) + 1;
+          if (nextAttempts >= ACTION_RETRY_MAX_ATTEMPTS) {
+            showWarning(`Dropping queued ${action.type} after ${ACTION_RETRY_MAX_ATTEMPTS} attempts.`);
+            continue;
+          }
+          const delay = (2 ** nextAttempts) * ACTION_RETRY_BASE_DELAY_MS;
+          remaining.push({ ...action, attempts: nextAttempts, nextRetryAt: Date.now() + delay });
+        }
+      }
+      setRetryQueue(remaining);
+      if (remaining.length === 0) {
+        showSuccess('Queued offline actions synced successfully.');
+        loadCase({ background: true });
+      }
+    };
+
+    window.addEventListener('online', retryQueued);
+    retryQueued();
+    return () => window.removeEventListener('online', retryQueued);
+  }, [executeQueuedAction, loadCase, retryQueue, showSuccess, showWarning]);
 
   useEffect(() => {
     const existingDraft = localStorage.getItem(commentDraftKey);
@@ -472,12 +764,20 @@ export const CaseDetailPage = () => {
         createdBy: user?.name || user?.xID || user?.email || 'System',
       });
       window.setTimeout(handleAddCommentSuccess, 80);
+      const mentioned = (commentText.match(/@([a-zA-Z0-9._-]+)/g) || []).map((token) => token.slice(1));
+      if (mentioned.length > 0) {
+        showSuccess(`Mention alert sent: ${mentioned.map((id) => `@${id}`).join(', ')}`);
+      }
       loadCase({ background: true });
     } catch (error) {
       setCaseData((prev) => ({ ...prev, comments: previousComments }));
       setNewComment(commentText);
       const message = extractErrorMessage(error, 'Failed to add comment. Please retry.');
       showError(message);
+      if (!navigator.onLine) {
+        queueFailedAction({ type: 'ADD_COMMENT', payload: { commentText } });
+        showWarning('You are offline. Comment queued and will retry automatically.');
+      }
       setActionError({ message, retry: handleAddComment });
     } finally {
       setSubmitting(false);
@@ -695,6 +995,10 @@ export const CaseDetailPage = () => {
           setCaseData(previousState);
           const errorMessage = extractErrorMessage(error, 'Failed to resolve case. Please try again.');
           showError(errorMessage);
+          if (!navigator.onLine) {
+            queueFailedAction({ type: 'RESOLVE_CASE', payload: { comment: resolveComment } });
+            showWarning('You are offline. Resolve action queued and will retry automatically.');
+          }
           setActionError({ message: errorMessage, retry: handleResolveCase });
         } finally {
           setResolvingCase(false);
@@ -863,6 +1167,14 @@ export const CaseDetailPage = () => {
   // - FILED or RESOLVED: Show nothing (terminal states, read-only)
   const canPerformLifecycleActions = caseInfo?.status === 'OPEN' && !isViewOnlyMode;
   const canUnpend = docketMode === 'PEND' && !isViewOnlyMode;
+  const isAnyModalOpen = Boolean(
+    showFileModal
+    || showPendModal
+    || showResolveModal
+    || showAssignModal
+    || showUnpendModal
+    || confirmModal
+  );
 
   const scrollToSection = (key) => {
     setActiveSection(key);
@@ -896,6 +1208,34 @@ export const CaseDetailPage = () => {
     commentsListRef.current?.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
 
+  useEffect(() => {
+    const handleKeyboardShortcuts = (event) => {
+      const target = event.target;
+      const typing = target instanceof HTMLElement
+        && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+      if (typing || isAnyModalOpen) return;
+
+      const key = event.key.toLowerCase();
+
+      if (key === 'c') {
+        event.preventDefault();
+        handleScrollToComments();
+      }
+      if (key === 'a') {
+        event.preventDefault();
+        setShowAssignModal(true);
+      }
+      if (key === 'r' && canPerformLifecycleActions) {
+        event.preventDefault();
+        setShowResolveModal(true);
+      }
+    };
+    const container = pageContainerRef.current;
+    if (!container) return undefined;
+    container.addEventListener('keydown', handleKeyboardShortcuts);
+    return () => container.removeEventListener('keydown', handleKeyboardShortcuts);
+  }, [canPerformLifecycleActions, handleScrollToComments, isAnyModalOpen]);
+
   if (!firmSlug) {
     return <RouteErrorFallback title="Invalid firm" message="Unable to open this docket because firm context is missing." backTo={ROUTES.SUPERADMIN_LOGIN} />;
   }
@@ -924,7 +1264,7 @@ export const CaseDetailPage = () => {
 
   return (
     <Layout>
-      <div className="case-detail">
+      <div className="case-detail" ref={pageContainerRef} tabIndex={-1}>
         {/* ─── Next/Previous Docket Navigation ────────────────────────── */}
         {sourceList && (
           <div className="case-detail__nav-bar">
@@ -998,6 +1338,10 @@ export const CaseDetailPage = () => {
           onTabChange={scrollToSection}
         />
         {actionConfirmation ? <div className="case-detail__confirmation">{actionConfirmation}</div> : null}
+        <div className="case-detail__realtime-status" role="status" aria-live="polite">
+          {realtimeStatus === 'live' ? '● Real-time updates active' : '● Reconnecting to real-time updates...'}
+          {retryQueue.length > 0 ? ` • ${retryQueue.length} queued offline action(s)` : ''}
+        </div>
         {actionError ? (
           <div className="neo-alert neo-alert--danger case-detail__alert">
             {actionError.message}{' '}
@@ -1123,8 +1467,19 @@ export const CaseDetailPage = () => {
                   <p className="case-detail-section__subheading">Discussion, notes, and decision context.</p>
                 </div>
                 <div className="case-detail__comments" ref={commentsListRef}>
-                  {sectionLoading.comments ? <Loading message="Refreshing comments..." /> : <DocketComments comments={comments} />}
+                  {sectionLoading.comments ? (
+                    <div className="case-detail__section-skeleton" aria-hidden="true">
+                      {Array.from({ length: 4 }).map((_, idx) => <div key={`comment-skeleton-${idx}`} className="case-detail__skeleton-row" />)}
+                    </div>
+                  ) : <DocketComments comments={visibleComments} />}
                 </div>
+                {comments.length > visibleComments.length ? (
+                  <div className="case-detail__virtual-actions">
+                    <Button variant="outline" onClick={() => setCommentWindowSize((size) => size + INITIAL_VIRTUAL_WINDOW)}>
+                      Load older comments ({comments.length - visibleComments.length} remaining)
+                    </Button>
+                  </div>
+                ) : null}
                 {(accessMode.canComment || permissions.canAddComment(caseData)) && (
                   <div className="case-detail__add-comment">
                     <SaveIndicator
@@ -1254,10 +1609,28 @@ export const CaseDetailPage = () => {
                   <p className="case-detail-section__subheading">Lifecycle timeline and audit events.</p>
                 </div>
                 <div className="case-detail-history-list">
-                  {sectionLoading.history
-                    ? <Loading message="Refreshing activity..." />
-                    : (timelineEvents.length ? <AuditTimeline events={timelineEvents} /> : <div className="case-detail__empty-state rounded-xl border border-dashed border-gray-200 bg-gray-50 p-8 text-gray-500"><EmptyState title="No activity yet" description="Timeline events and lifecycle updates will appear here as the docket changes." /></div>)}
+                  {sectionLoading.history ? (
+                    <div className="case-detail__section-skeleton" aria-hidden="true">
+                      {Array.from({ length: 5 }).map((_, idx) => <div key={`history-skeleton-${idx}`} className="case-detail__skeleton-row" />)}
+                    </div>
+                  ) : (timelineEvents.length ? (
+                    <div className="case-detail__timeline-groups">
+                      {groupedTimelineEvents.map((group) => (
+                        <section key={group.dateLabel} className="case-detail__timeline-group">
+                          <h3 className="case-detail__timeline-group-title">{group.dateLabel}</h3>
+                          <AuditTimeline events={group.items} />
+                        </section>
+                      ))}
+                    </div>
+                  ) : <div className="case-detail__empty-state rounded-xl border border-dashed border-gray-200 bg-gray-50 p-8 text-gray-500"><EmptyState title="No activity yet" description="Timeline events and lifecycle updates will appear here as the docket changes." /></div>)}
                 </div>
+                {timelineEvents.length > visibleTimelineEvents.length ? (
+                  <div className="case-detail__virtual-actions">
+                    <Button variant="outline" onClick={() => setHistoryWindowSize((size) => size + INITIAL_VIRTUAL_WINDOW)}>
+                      Load older timeline events ({timelineEvents.length - visibleTimelineEvents.length} remaining)
+                    </Button>
+                  </div>
+                ) : null}
               </section>
             )}
           </main>

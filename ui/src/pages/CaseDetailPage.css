@@ -477,6 +477,12 @@
   color: #15803d;
 }
 
+.case-detail__realtime-status {
+  padding: 4px 24px 0;
+  font-size: 12px;
+  color: #2563eb;
+}
+
 .case-detail__alert {
   margin: 0 24px;
   font-size: 13px;
@@ -558,6 +564,68 @@
   font-size: 14px;
   line-height: 1.5;
   color: #111827;
+}
+
+.docket-comments__mention {
+  padding: 0 4px;
+  border-radius: 6px;
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.case-detail__virtual-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.case-detail__section-skeleton {
+  display: grid;
+  gap: 10px;
+}
+
+.case-detail__skeleton-row {
+  height: 56px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 37%, #f3f4f6 63%);
+  background-size: 400% 100%;
+  animation: case-detail-shimmer 1.25s ease-in-out infinite;
+}
+
+.case-detail__timeline-groups {
+  display: grid;
+  gap: 12px;
+}
+
+.case-detail__timeline-group {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px;
+  background: #fff;
+}
+
+.case-detail__timeline-group-title {
+  margin: 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6b7280;
+}
+
+.audit-entry-important {
+  margin-left: 8px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #991b1b;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+@keyframes case-detail-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
 }
 
 .docket-comments__meta {
