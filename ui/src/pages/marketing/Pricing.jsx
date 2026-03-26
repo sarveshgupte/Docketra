@@ -51,7 +51,7 @@ const SECTION_REVEAL = {
 
 export const PricingPage = () => (
   <Section>
-    <div className="mx-auto mb-12 w-full max-w-2xl text-center">
+    <div className="mx-auto mb-12 w-full max-w-2xl px-4 text-center sm:px-6 lg:px-8">
       <h1 className="type-section text-gray-900">Simple, Transparent Pricing</h1>
       <p className="mt-4 type-body text-lg text-gray-600">
         We are currently in Early Access. Join now to lock in your free Starter workspace and help shape the future of Docketra.

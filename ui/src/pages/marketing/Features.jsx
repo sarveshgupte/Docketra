@@ -31,7 +31,7 @@ const FEATURES = [
 
 export const FeaturesPage = () => (
   <Section>
-    <div className="mx-auto w-full max-w-3xl text-center">
+    <div className="mx-auto w-full max-w-3xl px-4 text-center sm:px-6 lg:px-8">
       <h1 className="type-section text-gray-900">Platform Features</h1>
       <p className="mt-6 type-body text-lg text-gray-600">
         Everything you need to bring operational discipline to your firm. Built for compliance, audit, and tax teams who cannot afford to miss a deadline.
@@ -50,7 +50,7 @@ export const FeaturesPage = () => (
             <span className="text-blue-600 font-bold text-xl">✓</span>
           </div>
           <h2 className="type-card-title text-gray-900 mb-3">{title}</h2>
-          <p className="type-body text-gray-600 flex-1">{description}</p>
+          <p className="type-body min-w-0 flex-1 text-gray-600">{description}</p>
         </motion.div>
       ))}
     </div>
