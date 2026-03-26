@@ -338,7 +338,7 @@ export const HomePage = () => {
       </Section>
 
       <Section muted>
-        <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-8 text-center sm:px-6 lg:px-8">
+        <div className="space-y-6 py-8 text-center">
           <span className="text-sm font-bold tracking-wider text-blue-600 uppercase">Pre-Launch Access</span>
           <h2 className="type-section text-gray-900">Join the Docketra Early Access Program</h2>
           <p className="type-body text-lg text-gray-600">
@@ -346,7 +346,7 @@ export const HomePage = () => {
           </p>
 
           <form
-            className="mx-auto mt-8 flex w-full max-w-2xl flex-col gap-3 sm:flex-row sm:items-stretch"
+            className="mx-auto mt-8 flex w-full flex-col gap-3 sm:flex-row sm:items-stretch"
             onSubmit={onEarlyAccessSubmit}
             aria-label="Early access signup"
           >
