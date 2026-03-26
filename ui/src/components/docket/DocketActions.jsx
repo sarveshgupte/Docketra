@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '../common/Button';
 
-export const DocketActions = ({ onFile, onPend, onResolve, onAssign }) => {
+export const DocketActions = React.memo(({ onFile, onPend, onResolve, onAssign }) => {
   return (
     <div className="sticky bottom-4 z-20 mt-6 flex flex-wrap justify-end rounded-xl border border-gray-200 bg-white/95 p-3 shadow-sm backdrop-blur">
       <div className="flex gap-3">
@@ -14,4 +14,4 @@ export const DocketActions = ({ onFile, onPend, onResolve, onAssign }) => {
       </div>
     </div>
   );
-};
+});

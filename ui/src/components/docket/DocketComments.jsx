@@ -14,6 +14,7 @@ export const DocketComments = memo(({ comments = [] }) => {
           const createdBy = comment.createdBy || comment.createdByXID || comment.createdByName || 'System';
           const commentKey = comment.id
             || comment._id
+            || comment.tempId
             || `${comment.createdAt || 'na'}-${comment.createdByXID || comment.createdBy || 'system'}-${comment.text || ''}`;
           return (
             <li key={commentKey} className="relative rounded-xl border border-gray-200 bg-white p-4">
