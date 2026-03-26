@@ -1,6 +1,23 @@
 import React, { memo } from 'react';
 import { formatDateTime } from '../../utils/formatDateTime';
 
+const mentionPattern = /(@[a-zA-Z0-9._-]+)/g;
+
+const renderCommentText = (text = '') => {
+  if (!mentionPattern.test(text)) {
+    return text;
+  }
+
+  mentionPattern.lastIndex = 0;
+  const parts = text.split(mentionPattern);
+  return parts.map((part, index) => {
+    if (part.startsWith('@')) {
+      return <mark key={`${part}-${index}`} className="docket-comments__mention">{part}</mark>;
+    }
+    return <React.Fragment key={`text-${index}`}>{part}</React.Fragment>;
+  });
+};
+
 export const DocketComments = memo(({ comments = [] }) => {
   if (!comments.length) {
     return (
@@ -23,7 +40,7 @@ export const DocketComments = memo(({ comments = [] }) => {
           return (
             <li key={commentKey} className="docket-comments__item">
               <span className="docket-comments__dot" aria-hidden="true">•</span>
-              <p className="docket-comments__text">{comment.text}</p>
+              <p className="docket-comments__text">{renderCommentText(comment.text)}</p>
               <div className="docket-comments__meta">
                 <span>{formatDateTime(comment.createdAt)}</span>
                 <span>By: {createdBy}</span>

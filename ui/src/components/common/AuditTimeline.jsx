@@ -33,7 +33,10 @@ export const AuditTimeline = ({ events = [], onViewFullTimeline }) => {
 
             return (
               <div key={event._id || event.id || index} className="audit-entry">
-                <div className="audit-entry-event">{ACTION_LABELS[action] || action}</div>
+                <div className="audit-entry-event">
+                  {ACTION_LABELS[action] || action}
+                  {event._important ? <span className="audit-entry-important">Important</span> : null}
+                </div>
                 <div className="audit-entry-actor">
                   by {actorName ? `${actorName}${actorId ? ` (${actorId})` : ''}` : actorId || 'System'}
                 </div>
