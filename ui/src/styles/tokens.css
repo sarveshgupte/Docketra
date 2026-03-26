@@ -1,4 +1,5 @@
-:root {
-  --container-width: 72rem;
-  --spacing-section: 4rem;
-}
+/*
+  Legacy token bridge.
+  Design tokens are now defined in ui/tailwind.config.js (theme.extend).
+  Keep this file for compatibility with existing imports.
+*/
