@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { LEGAL_VERSION, LAST_UPDATED, COMPANY_NAME, COMPANY_CIN } from '../../lib/legalVersion';
+import { PageContainer } from '../layout/PageContainer';
 
 export const LegalLayout = ({ title, description, sections, children }) => {
   const [activeId, setActiveId] = useState('');
@@ -30,22 +31,22 @@ export const LegalLayout = ({ title, description, sections, children }) => {
   }, []);
 
   return (
-    <article ref={containerRef} className="page-container relative w-full">
+    <PageContainer as="article" className="relative" ref={containerRef}>
       <div className="mb-8 border-b border-slate-200 pb-6">
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">{title}</h1>
         {description && (
-          <p className="mt-2 w-full max-w-2xl text-sm leading-relaxed text-slate-600">{description}</p>
+          <p className="mt-2 w-full text-sm leading-relaxed text-slate-600">{description}</p>
         )}
         <p className="mt-3 text-xs text-slate-400">
           Version {LEGAL_VERSION} &mdash; Last Updated: {LAST_UPDATED}
         </p>
       </div>
 
-      <div className="doc-layout w-full">
+      <div className="grid w-full grid-cols-1 gap-8 md:grid-cols-4">
         {sections && sections.length > 0 && (
           <nav
             aria-label="Table of contents"
-            className="mb-8 shrink-0 lg:mb-0 lg:w-56 lg:self-start lg:sticky lg:top-8"
+            className="mb-8 w-full md:col-span-1 md:mb-0 md:max-w-sm md:sticky md:top-8 md:self-start"
           >
             <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
               Contents
@@ -55,7 +56,7 @@ export const LegalLayout = ({ title, description, sections, children }) => {
                 <li key={id}>
                   <a
                     href={`#${id}`}
-                    className={`block rounded px-2 py-1 text-sm transition-colors ${
+                    className={`block w-full break-words rounded px-2 py-1 text-sm transition-colors ${
                       activeId === id
                         ? 'bg-slate-100 font-medium text-slate-900'
                         : 'text-slate-500 hover:text-slate-800'
@@ -69,7 +70,7 @@ export const LegalLayout = ({ title, description, sections, children }) => {
           </nav>
         )}
 
-        <main className="doc-content min-w-0 w-full flex-1 space-y-10 text-slate-700">
+        <main className="min-w-0 w-full space-y-10 text-slate-700 md:col-span-3">
           {children}
 
           <footer className="mt-12 border-t border-slate-200 pt-6 text-xs text-slate-400">
@@ -79,6 +80,6 @@ export const LegalLayout = ({ title, description, sections, children }) => {
           </footer>
         </main>
       </div>
-    </article>
+    </PageContainer>
   );
 };
