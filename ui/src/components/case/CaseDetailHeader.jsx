@@ -8,6 +8,7 @@ export const CaseDetailHeader = ({ caseInfo, actions, statusBadges, onInfoClick 
       <div className="case-detail-header__identity">
         <div className="case-detail-header__title-row">
           <h1 className="case-detail-header__title">{caseInfo.caseId}</h1>
+          <StatusBadge status={caseInfo.status} />
           <button
             type="button"
             className="case-detail-header__info-btn"
@@ -27,7 +28,6 @@ export const CaseDetailHeader = ({ caseInfo, actions, statusBadges, onInfoClick 
       </div>
 
       <div className="case-detail-header__actions">
-        <StatusBadge status={caseInfo.status} />
         {statusBadges}
         {actions}
       </div>
