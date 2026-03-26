@@ -1,6 +1,7 @@
 const Case = require('../models/Case.model');
 const Comment = require('../models/Comment.model');
 const Attachment = require('../models/Attachment.model');
+const { enforceTenantScope } = require('../utils/tenantScope');
 const CaseStatus = require('../domain/case/caseStatus');
 const { logCaseListViewed } = require('../services/auditLog.service');
 const caseActionService = require('../services/caseAction.service');
@@ -36,7 +37,7 @@ const globalSearch = async (req, res) => {
     
     // Get authenticated user from req.user (set by auth middleware)
     const user = req.user;
-    const firmId = req.firmId;
+    const firmId = req.user?.firmId;
     
     if (!user || !user.xID) {
       return res.status(401).json({
@@ -63,7 +64,7 @@ const globalSearch = async (req, res) => {
     const isAdmin = user.role === 'Admin';
     
     // Build search query
-    let caseQuery = { firmId };
+    let caseQuery = {};
     
     // Search in case fields (caseId, clientName, category)
     const caseSearchConditions = [
@@ -79,14 +80,13 @@ const globalSearch = async (req, res) => {
     
     // Find cases matching direct fields
     if (isAdmin) {
-      caseQuery = { firmId, $or: caseSearchConditions };
+      caseQuery = { $or: caseSearchConditions };
     } else {
       // Employee: Only see assigned or allowed category cases
       // PR #42: Use xID for assignment matching
       // PR: xID Canonicalization - Use assignedToXID field
       caseQuery = {
         $and: [
-          { firmId },
           { $or: caseSearchConditions },
           {
             $or: [
@@ -98,7 +98,7 @@ const globalSearch = async (req, res) => {
       };
     }
     
-    const casesFromDirectSearch = await Case.find(caseQuery)
+    const casesFromDirectSearch = await Case.find(enforceTenantScope(caseQuery, req, { source: 'search.global.direct' }))
       .select('caseId title status category clientId clientName createdAt createdBy')
       .lean();
     
@@ -106,7 +106,7 @@ const globalSearch = async (req, res) => {
     let commentsWithMatches = [];
     try {
       commentsWithMatches = await Comment.find(
-        { $text: { $search: searchTerm } },
+        enforceTenantScope({ $text: { $search: searchTerm } }, req, { source: 'search.comments.text' }),
         { score: { $meta: 'textScore' } }
       )
         .select('caseId')
@@ -114,7 +114,7 @@ const globalSearch = async (req, res) => {
     } catch (error) {
       // Text index might not be ready yet, fallback to regex
       commentsWithMatches = await Comment.find(
-        { text: { $regex: searchTerm, $options: 'i' } }
+        enforceTenantScope({ text: { $regex: searchTerm, $options: 'i' } }, req, { source: 'search.comments.regex' })
       )
         .select('caseId')
         .lean();
@@ -124,7 +124,7 @@ const globalSearch = async (req, res) => {
     let attachmentsWithMatches = [];
     try {
       attachmentsWithMatches = await Attachment.find(
-        { firmId, $text: { $search: searchTerm } },
+        enforceTenantScope({ $text: { $search: searchTerm } }, req, { source: 'search.attachments.text' }),
         { score: { $meta: 'textScore' } }
       )
         .select('caseId')
@@ -132,7 +132,7 @@ const globalSearch = async (req, res) => {
     } catch (error) {
       // Text index might not be ready yet, fallback to regex
       attachmentsWithMatches = await Attachment.find(
-        { firmId, fileName: { $regex: searchTerm, $options: 'i' } }
+        enforceTenantScope({ fileName: { $regex: searchTerm, $options: 'i' } }, req, { source: 'search.attachments.regex' })
       )
         .select('caseId')
         .lean();
@@ -146,7 +146,7 @@ const globalSearch = async (req, res) => {
     // Find cases by these caseIds with visibility rules
     let casesFromRelated = [];
     if (caseIdsFromRelated.length > 0) {
-      let relatedQuery = { firmId, caseId: { $in: caseIdsFromRelated } };
+      let relatedQuery = { caseId: { $in: caseIdsFromRelated } };
       
       if (!isAdmin) {
         // Apply employee visibility rules
@@ -154,7 +154,6 @@ const globalSearch = async (req, res) => {
         // PR: xID Canonicalization - Use assignedToXID field
         relatedQuery = {
             $and: [
-              { firmId },
               { caseId: { $in: caseIdsFromRelated } },
             {
               $or: [
@@ -166,7 +165,7 @@ const globalSearch = async (req, res) => {
         };
       }
       
-      casesFromRelated = await Case.find(relatedQuery)
+      casesFromRelated = await Case.find(enforceTenantScope(relatedQuery, req, { source: 'search.global.related' }))
         .select('caseId title status category clientId clientName createdAt createdBy')
         .lean();
     }
@@ -233,7 +232,7 @@ const categoryWorklist = async (req, res) => {
     
     // Get authenticated user from req.user (set by auth middleware)
     const user = req.user;
-    const firmId = req.firmId || req.context?.firmId || req.user?.firmId || null;
+    const firmId = req.user?.firmId || null;
     
     if (!user || !user.xID) {
       return res.status(401).json({
@@ -268,12 +267,11 @@ const categoryWorklist = async (req, res) => {
     
     // Build query: category matches and status is NOT Pending
     const query = {
-      firmId,
       category: categoryId,
       status: { $ne: 'Pending' },
     };
     
-    const cases = await Case.find(query)
+    const cases = await Case.find(enforceTenantScope(query, req, { source: 'search.categoryWorklist' }))
       .select('caseId createdAt createdBy status clientId clientName')
       .sort({ createdAt: -1 })
       .lean();
@@ -344,7 +342,7 @@ const employeeWorklist = async (req, res) => {
 
     // Get authenticated user from req.user (set by auth middleware)
     const user = req.user;
-    const firmId = req.firmId || req.context?.firmId || req.user?.firmId || null;
+    const firmId = req.user?.firmId || null;
     
     if (!user || !user.xID) {
       return res.status(401).json({
@@ -371,12 +369,11 @@ const employeeWorklist = async (req, res) => {
     // This is the ONLY correct query for "My Worklist"
     // Dashboard counts MUST use the same query
     const query = {
-      firmId,
       assignedToXID: user.xID, // CANONICAL: Query by xID in assignedToXID field
       status: { $in: [CaseStatus.ASSIGNED, CaseStatus.IN_PROGRESS] },
     };
     
-    const casesQuery = Case.find(query)
+    const casesQuery = Case.find(enforceTenantScope(query, req, { source: 'search.employeeWorklist' }))
       .select('caseId caseName category createdAt createdBy updatedAt status clientId clientName')
       .sort({ createdAt: -1 });
 
@@ -453,7 +450,7 @@ const globalWorklist = async (req, res) => {
       page = 1,
       limit = 20,
     } = req.query;
-    const firmId = req.firmId;
+    const firmId = req.user?.firmId;
 
     if (!firmId) {
       return res.status(400).json({
@@ -466,7 +463,6 @@ const globalWorklist = async (req, res) => {
     const query = {
       status: CaseStatus.UNASSIGNED,
       assignedToXID: null,
-      firmId,
     };
     
     // Apply filters
@@ -536,7 +532,7 @@ const globalWorklist = async (req, res) => {
         queryWithSLA.slaDueAt = { $ne: null };
       }
       
-      casesWithSLA = await Case.find(queryWithSLA)
+      casesWithSLA = await Case.find(enforceTenantScope(queryWithSLA, req, { source: 'search.globalWorklist.withSLA' }))
         .select('caseId caseName clientId category status slaDueAt createdAt createdBy')
         .sort(sort)
         .limit(parseInt(limit))
@@ -547,7 +543,7 @@ const globalWorklist = async (req, res) => {
       if (!slaStatus && casesWithSLA.length < parseInt(limit)) {
         const queryWithoutSLA = { ...baseQuery, slaDueAt: null };
         
-        casesWithoutSLA = await Case.find(queryWithoutSLA)
+        casesWithoutSLA = await Case.find(enforceTenantScope(queryWithoutSLA, req, { source: 'search.globalWorklist.withoutSLA' }))
           .select('caseId caseName clientId category status slaDueAt createdAt createdBy')
           .sort({ createdAt: sortDirection })
           .limit(parseInt(limit) - casesWithSLA.length)
@@ -556,7 +552,7 @@ const globalWorklist = async (req, res) => {
       }
     } else {
       // For other sort fields, just execute the query normally
-      casesWithSLA = await Case.find(baseQuery)
+      casesWithSLA = await Case.find(enforceTenantScope(baseQuery, req, { source: 'search.globalWorklist.base' }))
         .select('caseId caseName clientId category status slaDueAt createdAt createdBy')
         .sort(sort)
         .limit(parseInt(limit))
@@ -593,7 +589,7 @@ const globalWorklist = async (req, res) => {
     // Count total for pagination
     const totalQuery = { ...baseQuery };
     // Don't exclude null slaDueAt from count unless slaStatus filter is applied
-    const total = await Case.countDocuments(totalQuery);
+    const total = await Case.countDocuments(enforceTenantScope(totalQuery, req, { source: 'search.globalWorklist.total' }));
     
     // Log case list view for audit (if user is authenticated)
     if (req.user?.xID) {

@@ -78,6 +78,7 @@ const submitCase = async (req, res) => {
     // Create history entry
     await CaseHistory.create({
       caseId,
+      firmId: req.user.firmId,
       actionType: 'Submitted',
       description: 'Case submitted for review',
       performedBy: userEmail.toLowerCase(),
@@ -148,6 +149,7 @@ const moveToUnderReview = async (req, res) => {
     // Create history entry
     await CaseHistory.create({
       caseId,
+      firmId: req.user.firmId,
       actionType: 'UnderReview',
       description: 'Case moved to under review',
       performedBy: userEmail.toLowerCase(),
@@ -221,6 +223,7 @@ const closeCase = async (req, res) => {
     if (comment) {
       await Comment.create({
         caseId,
+        firmId: req.user.firmId,
         text: comment,
         createdBy: userEmail.toLowerCase(),
         note: 'Case closure comment',
@@ -230,6 +233,7 @@ const closeCase = async (req, res) => {
     // Create history entry
     await CaseHistory.create({
       caseId,
+      firmId: req.user.firmId,
       actionType: 'Closed',
       description: `Case closed from ${oldStatus} status${comment ? `. Comment: ${comment}` : ''}`,
       performedBy: userEmail.toLowerCase(),
@@ -304,6 +308,7 @@ const reopenCase = async (req, res) => {
     if (comment) {
       await Comment.create({
         caseId,
+        firmId: req.user.firmId,
         text: comment,
         createdBy: userEmail.toLowerCase(),
         note: 'Case reopen comment',
@@ -313,6 +318,7 @@ const reopenCase = async (req, res) => {
     // Create history entry
     await CaseHistory.create({
       caseId,
+      firmId: req.user.firmId,
       actionType: 'Reopened',
       description: `Case reopened from ${oldStatus} status${comment ? `. Comment: ${comment}` : ''}`,
       performedBy: userEmail.toLowerCase(),
