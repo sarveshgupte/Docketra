@@ -329,6 +329,7 @@ attachmentSchema.pre('findOneAndDelete', function(next) {
  * - firmId: Multi-tenancy queries
  */
 attachmentSchema.index({ caseId: 1, createdAt: -1 });
+attachmentSchema.index({ caseId: 1, firmId: 1, createdAt: 1 });
 attachmentSchema.index({ clientId: 1, createdAt: -1 }); // Client CFS attachments
 attachmentSchema.index({ fileName: 'text' });
 // REMOVED: { firmId: 1 } - redundant with compound indexes below

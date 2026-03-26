@@ -9,6 +9,8 @@ const {
   userWriteLimiter,
   attachmentLimiter,
   sensitiveLimiter,
+  commentLimiter,
+  fileUploadLimiter,
 } = require('../middleware/rateLimiters');
 const { createSecureUpload, enforceUploadSecurity } = require('../middleware/uploadProtection.middleware');
 const {
@@ -131,10 +133,10 @@ router.get('/:caseId/summary-pdf', authorizeFirmPermission('CASE_VIEW'), userRea
 router.get('/:caseId', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, getCaseByCaseId);
 
 // POST /api/cases/:caseId/comments - Add comment to case
-router.post('/:caseId/comments', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, validateCaseCommentPayload, addComment);
+router.post('/:caseId/comments', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, commentLimiter, checkCaseClientAccess, validateCaseCommentPayload, addComment);
 
 // POST /api/cases/:caseId/attachments - Upload attachment to case
-router.post('/:caseId/attachments', upload.single('file'), enforceUploadSecurity, authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, attachmentLimiter, checkCaseClientAccess, addAttachment);
+router.post('/:caseId/attachments', upload.single('file'), enforceUploadSecurity, authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, attachmentLimiter, fileUploadLimiter, checkCaseClientAccess, addAttachment);
 
 // GET /api/cases/:caseId/attachments/:attachmentId/view - View attachment inline
 // Note: authenticate middleware accepts xID from query params (req.query.xID)

@@ -28,6 +28,14 @@ const isMimeAndExtensionValid = (file) => {
   return extensionMap[file.mimetype] === normalizeExtension(file.originalname);
 };
 
+const detectMimeFromBuffer = (buffer) => {
+  if (!Buffer.isBuffer(buffer) || buffer.length < 4) return null;
+  if (buffer.subarray(0, 4).equals(Buffer.from([0x25, 0x50, 0x44, 0x46]))) return 'application/pdf'; // %PDF
+  if (buffer.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]))) return 'image/jpeg';
+  if (buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return 'image/png';
+  return null;
+};
+
 const CLAMAV_HOST = process.env.CLAMAV_HOST || '';
 const CLAMAV_PORT = Number(process.env.CLAMAV_PORT || 3310);
 const CLAMAV_TIMEOUT_MS = Number(process.env.CLAMAV_TIMEOUT_MS || 10000);
@@ -130,6 +138,30 @@ const createSecureUpload = ({ memory = false } = {}) => {
 const enforceUploadSecurity = async (req, res, next) => {
   if (!req.file) return next();
   try {
+    const fileBuffer = await readFileBuffer(req.file);
+    if (!fileBuffer) {
+      return res.status(400).json({
+        success: false,
+        error: 'FILE_UPLOAD_REJECTED',
+        message: 'Unable to validate uploaded file',
+      });
+    }
+    const sniffedMime = detectMimeFromBuffer(fileBuffer);
+    const extension = normalizeExtension(req.file.originalname);
+    const expectedExtension = extensionMap[sniffedMime];
+    if (
+      !sniffedMime
+      || !config.security.upload.allowedMimeTypes.includes(sniffedMime)
+      || sniffedMime !== req.file.mimetype
+      || expectedExtension !== extension
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: 'FILE_UPLOAD_REJECTED',
+        message: 'Invalid file signature or extension mismatch',
+      });
+    }
+
     const result = await virusScanHook(req.file);
     console.info('[uploadProtection] Virus scan completed', {
       fileName: req.file.originalname,

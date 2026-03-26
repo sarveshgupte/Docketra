@@ -236,6 +236,7 @@ caseHistorySchema.pre('findOneAndDelete', function(next) {
  * - actorRole: For role-based audit queries (PR: Audit Trail)
  */
 caseHistorySchema.index({ firmId: 1, caseId: 1, timestamp: -1 });
+caseHistorySchema.index({ caseId: 1, firmId: 1, timestamp: -1 });
 caseHistorySchema.index({ caseId: 1, firmId: 1 });
 caseHistorySchema.index({ performedBy: 1 }); // Legacy
 caseHistorySchema.index({ performedByXID: 1 }); // Canonical
