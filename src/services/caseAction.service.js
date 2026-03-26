@@ -144,6 +144,7 @@ const resolveCase = async (firmId, caseId, comment, user, req = null) => {
   // Add comment
   await Comment.create({
     caseId,
+    firmId,
     text: comment,
     createdBy: user.email.toLowerCase(),
     createdByXID: user.xID,
@@ -239,6 +240,7 @@ const pendCase = async (firmId, caseId, comment, reopenDate, user, req = null) =
   // Add comment
   await Comment.create({
     caseId,
+    firmId,
     text: comment,
     createdBy: user.email.toLowerCase(),
     createdByXID: user.xID,
@@ -317,6 +319,7 @@ const fileCase = async (firmId, caseId, comment, user, req = null) => {
   // Add comment
   await Comment.create({
     caseId,
+    firmId,
     text: comment,
     createdBy: user.email.toLowerCase(),
     createdByXID: user.xID,
@@ -397,6 +400,7 @@ const unpendCase = async (firmId, caseId, comment, user, req = null) => {
   // Add comment
   await Comment.create({
     caseId,
+    firmId,
     text: comment,
     createdBy: user.email.toLowerCase(),
     createdByXID: user.xID,
@@ -462,6 +466,7 @@ const performAutoReopen = async (caseData) => {
       // Add system comment
       await Comment.create([{
         caseId: caseData.caseId,
+        firmId: caseData.firmId,
         text: `Case automatically reopened after pending period expired (was pended until: ${previousPendingUntil})`,
         createdBy: 'SYSTEM', // Use uppercase for consistency
         createdByXID: 'SYSTEM',

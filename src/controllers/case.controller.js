@@ -28,6 +28,7 @@ const { StorageProviderFactory } = require('../services/storage/StorageProviderF
 const { areFileUploadsDisabled } = require('../services/featureFlags.service');
 const { enqueueStorageJob, JOB_TYPES } = require('../queues/storage.queue');
 const { assertFirmContext } = require('../utils/tenantGuard');
+const { enforceTenantScope } = require('../utils/tenantScope');
 const CaseFile = require('../models/CaseFile.model');
 const { incrementTenantMetric } = require('../services/tenantMetrics.service');
 const { getSession } = require('../utils/getSession');
@@ -169,16 +170,15 @@ const computeDeadlineFromTatDays = (tatDays) => {
   return deadline;
 };
 
-const findScopedCaseAttachment = ({ attachmentId, caseData, firmId }) => {
+const findScopedCaseAttachment = ({ attachmentId, caseData, req }) => {
   const displayCaseId = caseData?.caseId || caseData?.caseNumber;
-  if (!displayCaseId || !attachmentId || !firmId) {
+  if (!displayCaseId || !attachmentId) {
     return null;
   }
-  return Attachment.findOne({
+  return Attachment.findOne(enforceTenantScope({
     _id: attachmentId,
     caseId: displayCaseId,
-    firmId: String(firmId),
-  });
+  }, req, { source: 'case.findScopedCaseAttachment' }));
 };
 
 /**
@@ -562,6 +562,7 @@ const createCase = async (req, res) => {
         step('before duplicate override comment insert');
         await Comment.create([{
           caseId: newCase.caseId,
+          firmId: newCase.firmId,
           text: systemComment,
           createdBy: 'system',
           note: 'Automated duplicate detection notice',
@@ -977,12 +978,13 @@ const cloneCase = async (req, res) => {
     await newCase.saveWithRetry();
     
     // Copy comments
-    const originalComments = await Comment.find({ caseId: originalCase.caseId });
+    const originalComments = await Comment.find(enforceTenantScope({ caseId: originalCase.caseId }, req, { source: 'case.clone.originalComments' }));
     const copiedComments = [];
     
     for (const comment of originalComments) {
       const newComment = await Comment.create({
         caseId: newCase.caseId,
+        firmId: req.user.firmId,
         text: comment.text,
         createdBy: comment.createdBy,
         note: `Cloned from Docket ${originalCase.caseId}`,
@@ -991,7 +993,7 @@ const cloneCase = async (req, res) => {
     }
     
     // Copy attachments (including actual files)
-    const originalAttachments = await Attachment.find({ caseId: originalCase.caseId });
+    const originalAttachments = await Attachment.find(enforceTenantScope({ caseId: originalCase.caseId }, req, { source: 'case.clone.originalAttachments' }));
     const copiedAttachments = [];
     const provider = await StorageProviderFactory.getProvider(req.user.firmId);
     
@@ -1107,6 +1109,7 @@ const cloneCase = async (req, res) => {
     // For original case
     await CaseHistory.create({
       caseId: originalCase.caseId,
+      firmId: req.user.firmId,
       actionType: 'Cloned',
       description: `Cloned to ${newCase.caseId}`,
       performedBy: clonedBy.toLowerCase(),
@@ -1115,6 +1118,7 @@ const cloneCase = async (req, res) => {
     // For new case
     await CaseHistory.create({
       caseId: newCase.caseId,
+      firmId: req.user.firmId,
       actionType: 'Created (Cloned)',
       description: `Cloned from Docket ${originalCase.caseId}`,
       performedBy: clonedBy.toLowerCase(),
@@ -1400,7 +1404,7 @@ const getCaseByCaseId = async (req, res) => {
     const [commentsResult, attachmentsResult, historyResult, auditResult, clientResult] = await Promise.allSettled([
       runPaginatedFacet({
         model: Comment,
-        match: { caseId: scopedCaseId },
+        match: enforceTenantScope({ caseId: scopedCaseId }, req, { source: 'case.getCase.comments' }),
         sort: { createdAt: 1 },
         skip: commentsSkip,
         limit: commentsLimit,
@@ -1415,13 +1419,13 @@ const getCaseByCaseId = async (req, res) => {
           createdAt: 1,
         },
       }),
-      Attachment.find({ caseId: scopedCaseId, firmId: scopedFirmId })
+      Attachment.find(enforceTenantScope({ caseId: scopedCaseId }, req, { source: 'case.getCase.attachments' }))
         .select('_id fileName description createdAt uploadedAt uploadedBy createdByXID isAvailable uploadStatus')
         .sort({ createdAt: 1 })
         .lean(),
       runPaginatedFacet({
         model: CaseHistory,
-        match: { caseId: scopedCaseId, firmId: scopedFirmId },
+        match: enforceTenantScope({ caseId: scopedCaseId }, req, { source: 'case.getCase.history' }),
         sort: { timestamp: -1 },
         skip: activitySkip,
         limit: activityLimit,
@@ -1436,7 +1440,7 @@ const getCaseByCaseId = async (req, res) => {
       }),
       runPaginatedFacet({
         model: CaseAudit,
-        match: { caseId: scopedCaseId, firmId: scopedFirmId },
+        match: enforceTenantScope({ caseId: scopedCaseId }, req, { source: 'case.getCase.audit' }),
         sort: { timestamp: -1 },
         skip: activitySkip,
         limit: activityLimit,
@@ -1630,11 +1634,8 @@ const getCases = async (req, res) => {
       limit = 20,
     } = req.query;
     
-    // Get firmId from authenticated user for query scoping
-    const userFirmId = req.user?.firmId;
-    
-    // Base query with firmId scoping (SUPER_ADMIN has no firmId, can see all)
-    const query = userFirmId ? { firmId: userFirmId } : {};
+    // Base query (tenant scope is enforced centrally via enforceTenantScope)
+    const query = {};
     
     if (status) query.status = status;
     if (category) query.category = category;
@@ -1671,7 +1672,8 @@ const getCases = async (req, res) => {
       Object.assign(query, req.clientAccessFilter);
     }
     
-    const cases = await Case.find(query)
+    const scopedCaseQuery = enforceTenantScope(query, req, { source: 'case.getCases.list' });
+    const cases = await Case.find(scopedCaseQuery)
       .limit(parseInt(limit))
       .skip((parseInt(page) - 1) * parseInt(limit))
       .sort({ createdAt: -1 });
@@ -1698,7 +1700,7 @@ const getCases = async (req, res) => {
       })
     );
     
-    const total = await Case.countDocuments(query);
+    const total = await Case.countDocuments(scopedCaseQuery);
     
     // Log case list view for audit
     if (req.user?.xID) {
@@ -2298,7 +2300,7 @@ const viewAttachment = async (req, res) => {
     const attachment = await findScopedCaseAttachment({
       attachmentId,
       caseData,
-      firmId: req.user.firmId,
+      req,
     });
     
     if (!attachment) {
@@ -2382,7 +2384,7 @@ const downloadAttachment = async (req, res) => {
     const attachment = await findScopedCaseAttachment({
       attachmentId,
       caseData,
-      firmId: req.user.firmId,
+      req,
     });
     
     if (!attachment) {
@@ -2657,12 +2659,11 @@ const viewClientFactSheetFile = async (req, res) => {
       });
     }
     
-    const attachment = await Attachment.findOne({
+    const attachment = await Attachment.findOne(enforceTenantScope({
       _id: fileId,
-      firmId: req.user.firmId,
       clientId: caseData.clientId,
       source: 'client_cfs',
-    });
+    }, req, { source: 'case.viewClientFactSheetFile.attachment' }));
 
     if (!attachment) {
       return res.status(404).json({
@@ -2720,10 +2721,9 @@ const listClientCFSFilesForCase = async (req, res) => {
 
     // Fetch case and validate access
     const Case = require('../models/Case.model');
-    const caseDoc = await Case.findOne({ 
-      caseNumber: caseId, 
-      firmId: userFirmId 
-    });
+    const caseDoc = await Case.findOne(enforceTenantScope({
+      caseNumber: caseId,
+    }, req, { source: 'case.listClientCFSFilesForCase.case' }));
 
     if (!caseDoc) {
       return res.status(404).json({
@@ -2743,11 +2743,10 @@ const listClientCFSFilesForCase = async (req, res) => {
 
     // Fetch all client CFS attachments
     const Attachment = require('../models/Attachment.model');
-    const attachments = await Attachment.find({
-      firmId: userFirmId,
+    const attachments = await Attachment.find(enforceTenantScope({
       clientId: clientId,
       source: 'client_cfs',
-    }).sort({ createdAt: -1 });
+    }, req, { source: 'case.listClientCFSFilesForCase.attachments' })).sort({ createdAt: -1 });
 
     res.json({
       success: true,
@@ -2793,10 +2792,9 @@ const downloadClientCFSFileForCase = async (req, res) => {
 
     // Fetch case and validate access
     const Case = require('../models/Case.model');
-    const caseDoc = await Case.findOne({ 
-      caseNumber: caseId, 
-      firmId: userFirmId 
-    });
+    const caseDoc = await Case.findOne(enforceTenantScope({
+      caseNumber: caseId,
+    }, req, { source: 'case.listClientCFSFilesForCase.case' }));
 
     if (!caseDoc) {
       return res.status(404).json({
@@ -2816,12 +2814,11 @@ const downloadClientCFSFileForCase = async (req, res) => {
 
     // Find attachment
     const Attachment = require('../models/Attachment.model');
-    const attachment = await Attachment.findOne({
+    const attachment = await Attachment.findOne(enforceTenantScope({
       _id: attachmentId,
-      firmId: userFirmId,
       clientId: clientId,
       source: 'client_cfs',
-    });
+    }, req, { source: 'case.downloadClientCFSFileForCase.attachment' }));
 
     if (!attachment) {
       return res.status(404).json({
@@ -2902,7 +2899,7 @@ const searchCases = async (req, res) => {
 const getDocketSummaryPdf = async (req, res) => {
   try {
     const { caseId } = req.params;
-    const caseData = await Case.findOne({ firmId: req.user.firmId, caseId }).lean();
+    const caseData = await Case.findOne(enforceTenantScope({ caseId }, req, { source: 'case.getDocketSummaryPdf.case' })).lean();
     if (!caseData) {
       return res.status(404).json({ success: false, message: 'Docket not found' });
     }
@@ -2910,7 +2907,7 @@ const getDocketSummaryPdf = async (req, res) => {
     const client = caseData.clientId
       ? await Client.findOne({ firmId: req.user.firmId, clientId: caseData.clientId }).lean()
       : null;
-    const attachments = await Attachment.find({ firmId: req.user.firmId, caseId }).lean();
+    const attachments = await Attachment.find(enforceTenantScope({ caseId }, req, { source: 'case.getDocketSummaryPdf.attachments' })).lean();
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename="${caseId}-summary.pdf"`);

@@ -171,6 +171,7 @@ const approveNewClient = async (req, res) => {
     // Add approval comment
     await Comment.create({
       caseId,
+      firmId: req.user.firmId,
       text: comment,
       createdBy: approverEmail.toLowerCase(),
       note: 'Admin approval - Client created',
@@ -179,6 +180,7 @@ const approveNewClient = async (req, res) => {
     // Create case history entry
     await CaseHistory.create({
       caseId,
+      firmId: req.user.firmId,
       actionType: 'ClientCreated',
       description: `Client created via case ${caseId}. New Client ID: ${newClient.clientId}`,
       performedBy: approverEmail.toLowerCase(),
@@ -187,6 +189,7 @@ const approveNewClient = async (req, res) => {
     // Also log case approval
     await CaseHistory.create({
       caseId,
+      firmId: req.user.firmId,
       actionType: 'Approved',
       description: `Case approved by Admin. Client ${newClient.clientId} created successfully.`,
       performedBy: approverEmail.toLowerCase(),
@@ -374,6 +377,7 @@ const approveClientEdit = async (req, res) => {
     // Add approval comment
     await Comment.create({
       caseId,
+      firmId: req.user.firmId,
       text: comment,
       createdBy: approverEmail.toLowerCase(),
       note: 'Admin approval - Client updated',
@@ -386,6 +390,7 @@ const approveClientEdit = async (req, res) => {
     
     await CaseHistory.create({
       caseId,
+      firmId: req.user.firmId,
       actionType: 'ClientUpdated',
       description: `Client ${client.clientId} updated via case ${caseId}. Changes: ${changesDescription}`,
       performedBy: approverEmail.toLowerCase(),
@@ -394,6 +399,7 @@ const approveClientEdit = async (req, res) => {
     // Also log case approval
     await CaseHistory.create({
       caseId,
+      firmId: req.user.firmId,
       actionType: 'Approved',
       description: `Case approved by Admin. Client ${client.clientId} updated successfully.`,
       performedBy: approverEmail.toLowerCase(),
@@ -503,6 +509,7 @@ const rejectClientCase = async (req, res) => {
     // Add rejection comment
     await Comment.create({
       caseId,
+      firmId: req.user.firmId,
       text: comment,
       createdBy: approverEmail.toLowerCase(),
       note: 'Admin rejection - No changes made',
@@ -511,6 +518,7 @@ const rejectClientCase = async (req, res) => {
     // Create case history entry
     await CaseHistory.create({
       caseId,
+      firmId: req.user.firmId,
       actionType: 'Rejected',
       description: `Case rejected by Admin. No client changes made. Reason: ${comment}`,
       performedBy: approverEmail.toLowerCase(),

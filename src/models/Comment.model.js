@@ -24,6 +24,13 @@ const commentSchema = new mongoose.Schema({
     index: true,
   },
   
+
+  // Firm/Organization ID for multi-tenancy
+  firmId: {
+    type: String,
+    index: true,
+  },
+  
   /**
    * The comment text content
    */
@@ -132,11 +139,10 @@ commentSchema.pre('findOneAndDelete', function(next) {
 
 /**
  * Performance Indexes
- * - caseId + createdAt: List comments for a case
+ * - firmId + caseId + createdAt: List comments for a firm-scoped case
  * - text: Full-text search index for global search
  */
-commentSchema.index({ caseId: 1, createdAt: -1 });
-commentSchema.index({ caseId: 1, createdAt: 1 });
+commentSchema.index({ firmId: 1, caseId: 1, createdAt: -1 });
 commentSchema.index({ text: 'text' });
 
 commentSchema.plugin(softDeletePlugin);
