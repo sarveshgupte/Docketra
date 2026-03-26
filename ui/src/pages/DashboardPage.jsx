@@ -261,10 +261,6 @@ export const DashboardPage = () => {
     navigate(`/app/firm/${firmSlug}/cases/${caseId}`);
   };
 
-  const handleViewAllCases = () => {
-    navigate(`/app/firm/${firmSlug}/cases`);
-  };
-
   const handleChecklistAction = (stepId) => {
     if (stepId === 'create-case') {
       navigate(`/app/firm/${firmSlug}/cases/create`);
@@ -441,11 +437,8 @@ export const DashboardPage = () => {
           </section>
 
           <section className="space-y-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <h2 className="text-lg font-semibold text-gray-900 tracking-tight">Recent Dockets</h2>
-              <Button variant="outline" onClick={handleViewAllCases}>
-                View All Dockets
-              </Button>
             </div>
             <Card className="p-0">
               {recentCasesLoading ? (
