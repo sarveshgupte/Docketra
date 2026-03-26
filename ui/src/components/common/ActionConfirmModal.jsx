@@ -51,7 +51,7 @@ export const ActionConfirmModal = ({
     )}
   >
     {description ? (
-      <p className="whitespace-pre-line text-sm leading-6 text-gray-600">{description}</p>
+      <p className="whitespace-pre-line text-sm leading-6 text-text-secondary">{description}</p>
     ) : null}
   </Modal>
 );

@@ -1389,11 +1389,11 @@ export const CaseDetailPage = () => {
               <div className="field-grid">
                 <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Client</span>
-                  <span className="field-value text-sm font-medium text-gray-900 break-words">{caseData.client ? formatClientDisplay(caseData.client, true) : '—'}</span>
+                  <span className="field-value text-sm font-medium text-text-primary break-words">{caseData.client ? formatClientDisplay(caseData.client, true) : '—'}</span>
                 </div>
                 <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Assigned To</span>
-                  <span className="field-value text-sm font-medium text-gray-900 break-words">{caseInfo?.assignedToName || caseInfo?.assignedToXID || 'Unassigned'}</span>
+                  <span className="field-value text-sm font-medium text-text-primary break-words">{caseInfo?.assignedToName || caseInfo?.assignedToXID || 'Unassigned'}</span>
                 </div>
                 <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Lifecycle</span>
@@ -1401,7 +1401,7 @@ export const CaseDetailPage = () => {
                 </div>
                 <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Due Date</span>
-                  <span className="field-value text-sm font-medium text-gray-900 break-words">{caseInfo.dueDate ? formatDateTime(caseInfo.dueDate) : 'Not configured'}</span>
+                  <span className="field-value text-sm font-medium text-text-primary break-words">{caseInfo.dueDate ? formatDateTime(caseInfo.dueDate) : 'Not configured'}</span>
                 </div>
               </div>
             </section>
@@ -1426,7 +1426,7 @@ export const CaseDetailPage = () => {
                         aria-label="Case category"
                       />
                     ) : (
-                      <span className="field-value text-sm font-medium text-gray-900">{caseInfo.category}</span>
+                      <span className="field-value text-sm font-medium text-text-primary">{caseInfo.category}</span>
                     )}
                   </div>
                   <div className="field-group min-w-0">
@@ -1449,7 +1449,7 @@ export const CaseDetailPage = () => {
                       aria-label="Case description"
                     />
                   ) : (
-                    <span className="field-value case-detail__description-text whitespace-pre-wrap break-words text-sm font-medium text-gray-900">{descriptionContent}</span>
+                    <span className="field-value case-detail__description-text whitespace-pre-wrap break-words text-sm font-medium text-text-primary">{descriptionContent}</span>
                   )}
                 </div>
                 {canEditOverview && isEditingOverview && (
