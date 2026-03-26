@@ -6,6 +6,22 @@
 
 import React from 'react';
 
+const LAYOUT_CLASS_PATTERNS = [
+  /^(m|mx|my|mt|mr|mb|ml)-/, // margin utilities
+  /^-m(x|y|t|r|b|l)?-/, // negative margin utilities
+  /^grow(?:-0)?$/, // flex-grow utilities
+  /^shrink(?:-0)?$/, // flex-shrink utilities
+  /^basis-/, // flex-basis utilities
+  /^self-/, // self-alignment utilities
+];
+
+const sanitizeLayoutClasses = (className = '') =>
+  className
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter((token) => LAYOUT_CLASS_PATTERNS.some((pattern) => pattern.test(token)))
+    .join(' ');
+
 export const Button = ({
   children,
   onClick,
@@ -21,14 +37,17 @@ export const Button = ({
     'inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-sm px-4 py-2';
 
   const variantClasses = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 focus-visible:ring-blue-600',
-    secondary: 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 active:bg-gray-200 focus-visible:ring-gray-500',
-    outline: 'border border-gray-300 bg-transparent text-gray-700 hover:bg-gray-50 active:bg-gray-100 focus-visible:ring-gray-500',
-    danger: 'bg-red-600 text-white hover:bg-red-700 active:bg-red-800 focus-visible:ring-red-600',
-    ghost: 'border border-transparent bg-transparent text-gray-700 hover:bg-gray-100 active:bg-gray-200 focus-visible:ring-gray-500',
+    primary: 'bg-primary text-white hover:brightness-110 active:brightness-90 focus-visible:ring-primary',
+    secondary:
+      'border border-border bg-white text-textMain hover:bg-slate-50 active:bg-slate-100 focus-visible:ring-textMuted',
+    outline:
+      'border border-border bg-transparent text-textMain hover:bg-slate-50 active:bg-slate-100 focus-visible:ring-textMuted',
+    danger: 'bg-error text-white hover:brightness-110 active:brightness-90 focus-visible:ring-error',
+    ghost: 'border border-transparent bg-transparent text-textMain hover:bg-slate-100 active:bg-slate-200 focus-visible:ring-textMuted',
   };
 
   const isDisabled = disabled || loading;
+  const layoutClassName = sanitizeLayoutClasses(className);
 
   return (
     <button
@@ -36,7 +55,7 @@ export const Button = ({
       onClick={onClick}
       disabled={isDisabled}
       aria-busy={loading || undefined}
-      className={`${baseClasses} ${fullWidth ? 'w-full' : ''} ${variantClasses[variant] || variantClasses.secondary} ${className}`}
+      className={`${baseClasses} ${fullWidth ? 'w-full' : ''} ${variantClasses[variant] || variantClasses.secondary} ${layoutClassName}`}
       {...props}
     >
       {loading && (
