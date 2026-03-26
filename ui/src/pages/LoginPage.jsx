@@ -91,7 +91,7 @@ export const LoginPage = () => {
     <div className="auth-wrapper">
       <Card className="auth-card max-w-form">
         <div className="text-center">
-          <h1 className="text-2xl font-semibold tracking-tight text-text-primary text-center">Docketra</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">Docketra</h1>
           <p className="mt-2 text-sm text-gray-500 text-center">Compliance Workflow Infrastructure</p>
         </div>
 

@@ -36,7 +36,7 @@ export const SidebarSection = ({
               to={item.to}
               className={[
                 'enterprise-sidebar__nav-link text-sm font-medium',
-                item.active ? 'active bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50 hover:text-text-primary',
+                item.active ? 'active bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900',
                 collapsed ? 'enterprise-sidebar__nav-link--collapsed' : '',
               ]
                 .filter(Boolean)

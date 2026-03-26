@@ -369,7 +369,7 @@ export const DashboardPage = () => {
   return (
     <Layout>
       <div className="min-h-screen bg-gray-50">
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-container-x lg:px-8 py-8 space-y-8">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
           <PageHeader
             title="Partner Control Dashboard"
             description="Where is the compliance risk in my firm today?"
@@ -390,13 +390,13 @@ export const DashboardPage = () => {
 
           {loadWarnings.length ? (
             <div
-              className="flex flex-col gap-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-text-primary sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-gray-900 sm:flex-row sm:items-center sm:justify-between"
               role="status"
               aria-live="polite"
             >
               <div>
                 <strong>Some dashboard data could not be loaded.</strong>
-                <p className="mt-1 text-sm text-text-secondary">
+                <p className="mt-1 text-sm text-gray-600">
                   Metrics may be incomplete right now. Retry to refresh the latest workload and compliance signals.
                 </p>
               </div>
@@ -420,7 +420,7 @@ export const DashboardPage = () => {
           </div>
 
           <section className="space-y-4">
-            <h2 className="text-lg font-semibold text-text-primary tracking-tight">Docket Lifecycle Distribution</h2>
+            <h2 className="text-lg font-semibold text-gray-900 tracking-tight">Docket Lifecycle Distribution</h2>
             <Card className="p-6">
               <div className="flex flex-wrap items-center gap-4 lg:flex-nowrap">
                 {workflowStatuses.map((item, idx) => (
@@ -445,7 +445,7 @@ export const DashboardPage = () => {
 
           <section className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <h2 className="text-lg font-semibold text-text-primary tracking-tight">Recent Dockets</h2>
+              <h2 className="text-lg font-semibold text-gray-900 tracking-tight">Recent Dockets</h2>
             </div>
             <Card className="p-0">
               {recentCasesLoading ? (
@@ -515,7 +515,7 @@ export const DashboardPage = () => {
 
           {isAdmin ? (
             <section className="space-y-4">
-              <h2 className="text-lg font-semibold text-text-primary tracking-tight">Execution Status by Team Member</h2>
+              <h2 className="text-lg font-semibold text-gray-900 tracking-tight">Execution Status by Team Member</h2>
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 {adminStatCards.map((card) => (
                   <MetricCard
@@ -535,8 +535,8 @@ export const DashboardPage = () => {
       {showBookmarkPrompt ? (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/40 px-4">
           <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-8 shadow-xl">
-            <h2 className="text-lg font-semibold text-text-primary tracking-tight">Bookmark Your Firm Dashboard</h2>
-            <p className="mt-3 text-sm text-text-secondary">
+            <h2 className="text-lg font-semibold text-gray-900 tracking-tight">Bookmark Your Firm Dashboard</h2>
+            <p className="mt-3 text-sm text-gray-600">
               For quick access in the future, we recommend bookmarking this page:
             </p>
             <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 font-mono text-xs text-gray-700 break-all">

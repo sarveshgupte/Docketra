@@ -132,20 +132,20 @@ export const Modal = ({
         aria-label={title}
         tabIndex={-1}
       >
-        <div className="flex items-center justify-between border-b border-gray-200 px-container-x py-4">
-          <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
+        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-text-secondary focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2"
             aria-label="Close modal"
           >
             <span aria-hidden="true" className="text-base leading-none">✕</span>
           </button>
         </div>
-        <div className="overflow-y-auto px-container-x py-5">{children}</div>
+        <div className="overflow-y-auto px-6 py-5">{children}</div>
         {actions ? (
-          <div className="flex justify-end gap-3 border-t border-gray-200 bg-gray-50 px-container-x py-4">
+          <div className="flex justify-end gap-3 border-t border-gray-200 bg-gray-50 px-6 py-4">
             {actions}
           </div>
         ) : null}

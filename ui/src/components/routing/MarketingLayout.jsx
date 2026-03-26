@@ -23,7 +23,7 @@ export const MarketingLayout = () => {
   }, [location.pathname]);
 
   return (
-    <div className="marketing-shell min-h-screen bg-white text-text-primary">
+    <div className="marketing-shell min-h-screen bg-white text-gray-900">
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:text-blue-700">
         Skip to main content
       </a>
@@ -36,7 +36,7 @@ export const MarketingLayout = () => {
         <nav
           className={`marketing-container flex w-full flex-col items-stretch justify-between gap-4 py-4 transition-[height] duration-300 sm:flex-row sm:items-center sm:gap-6 sm:py-0 ${isScrolled ? 'sm:h-16' : 'sm:h-20'}`}
         >
-          <Link to="/" className="shrink-0 text-xl font-semibold tracking-tight text-text-primary">
+          <Link to="/" className="shrink-0 text-xl font-semibold tracking-tight text-gray-900">
             Docketra
           </Link>
 
@@ -68,22 +68,22 @@ export const MarketingLayout = () => {
       <footer className="border-t border-gray-200 bg-white">
         <section className="w-full marketing-section">
           <div className="marketing-container w-full">
-            <div className="mb-8 grid w-full grid-cols-1 gap-section sm:grid-cols-2 md:grid-cols-4">
+            <div className="mb-8 grid w-full grid-cols-1 gap-12 sm:grid-cols-2 md:grid-cols-4">
               <div>
-                <h4 className="mb-3 text-sm font-semibold text-text-primary">Product</h4>
+                <h4 className="mb-3 text-sm font-semibold text-gray-900">Product</h4>
                 <ul className="space-y-2 text-sm">
                   <li>
-                    <Link to="/features" className="text-text-secondary hover:text-text-primary">
+                    <Link to="/features" className="text-gray-600 hover:text-gray-900">
                       Features
                     </Link>
                   </li>
                   <li>
-                    <Link to="/pricing" className="text-text-secondary hover:text-text-primary">
+                    <Link to="/pricing" className="text-gray-600 hover:text-gray-900">
                       Pricing
                     </Link>
                   </li>
                   <li>
-                    <Link to="/security" className="text-text-secondary hover:text-text-primary">
+                    <Link to="/security" className="text-gray-600 hover:text-gray-900">
                       Security
                     </Link>
                   </li>
@@ -91,20 +91,20 @@ export const MarketingLayout = () => {
               </div>
 
               <div>
-                <h4 className="mb-3 text-sm font-semibold text-text-primary">Company</h4>
+                <h4 className="mb-3 text-sm font-semibold text-gray-900">Company</h4>
                 <ul className="space-y-2 text-sm">
                   <li>
-                    <Link to="/about" className="text-text-secondary hover:text-text-primary">
+                    <Link to="/about" className="text-gray-600 hover:text-gray-900">
                       About
                     </Link>
                   </li>
                   <li>
-                    <a href="mailto:hello@docketra.com" className="text-text-secondary hover:text-text-primary">
+                    <a href="mailto:hello@docketra.com" className="text-gray-600 hover:text-gray-900">
                       Contact
                     </a>
                   </li>
                   <li>
-                    <Link to="/contact" className="text-text-secondary hover:text-text-primary">
+                    <Link to="/contact" className="text-gray-600 hover:text-gray-900">
                       Contact Center
                     </Link>
                   </li>
@@ -112,20 +112,20 @@ export const MarketingLayout = () => {
               </div>
 
               <div>
-                <h4 className="mb-3 text-sm font-semibold text-text-primary">Legal</h4>
+                <h4 className="mb-3 text-sm font-semibold text-gray-900">Legal</h4>
                 <ul className="space-y-2 text-sm">
                   <li>
-                    <Link to="/privacy" className="text-text-secondary hover:text-text-primary">
+                    <Link to="/privacy" className="text-gray-600 hover:text-gray-900">
                       Privacy
                     </Link>
                   </li>
                   <li>
-                    <Link to="/terms" className="text-text-secondary hover:text-text-primary">
+                    <Link to="/terms" className="text-gray-600 hover:text-gray-900">
                       Terms
                     </Link>
                   </li>
                   <li>
-                    <Link to="/security" className="text-text-secondary hover:text-text-primary">
+                    <Link to="/security" className="text-gray-600 hover:text-gray-900">
                       Security
                     </Link>
                   </li>
@@ -133,9 +133,9 @@ export const MarketingLayout = () => {
               </div>
 
               <div>
-                <h4 className="mb-3 text-sm font-semibold text-text-primary">Contact</h4>
-                <p className="text-sm text-text-secondary">
-                  <a href="mailto:hello@docketra.com" className="hover:text-text-primary">
+                <h4 className="mb-3 text-sm font-semibold text-gray-900">Contact</h4>
+                <p className="text-sm text-gray-600">
+                  <a href="mailto:hello@docketra.com" className="hover:text-gray-900">
                     hello@docketra.com
                   </a>
                 </p>
