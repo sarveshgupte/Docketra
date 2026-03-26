@@ -37,6 +37,11 @@ const {
   resendSetup,
   resendCredentials,
   resendLoginOtp,
+  googleTokenLogin,
+  signupWithEmail,
+  universalLogin,
+  sendOtpEndpoint,
+  verifyOtpEndpoint,
   } = require('../controllers/auth.controller');
 
 let profileHitCount = 0;
@@ -67,6 +72,11 @@ router.post('/forgot-password', authBlockEnforcer, forgotPasswordLimiter, sensit
 router.post('/refresh', refreshIpLimiter, refreshUserLimiter, refreshAccessToken); // NEW: JWT token refresh
 router.post('/verify-totp', otpVerifyLimiter, verifyTotp);
 router.post('/complete-mfa-login', otpVerifyLimiter, completeMfaLogin);
+router.post('/google', authBlockEnforcer, authLimiter, googleTokenLogin);
+router.post('/signup', authBlockEnforcer, authLimiter, signupWithEmail);
+router.post('/login', authBlockEnforcer, authLimiter, universalLogin);
+router.post('/send-otp', authBlockEnforcer, authLimiter, otpResendLimiter, sendOtpEndpoint);
+router.post('/verify-otp', authBlockEnforcer, authLimiter, otpVerifyLimiter, verifyOtpEndpoint);
 
 // Protected authentication endpoints - require authentication
 router.post('/logout', sensitiveLimiter, authenticate, logout);
