@@ -4,7 +4,7 @@
  * PR: Comprehensive CaseHistory & Audit Trail - Added view tracking and history display
  */
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
