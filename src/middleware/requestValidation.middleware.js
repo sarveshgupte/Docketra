@@ -1,7 +1,12 @@
 const { z } = require('zod');
 
-const emptyObjectSchema = z.object({}).passthrough();
+const emptyObjectSchema = z.object({}).strict();
 const POLLUTION_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
+const isDangerousKey = (key) => (
+  POLLUTION_KEYS.has(key)
+  || key.startsWith('$')
+  || key.includes('.')
+);
 
 const sanitizeInput = (value) => {
   if (Array.isArray(value)) {
@@ -9,7 +14,7 @@ const sanitizeInput = (value) => {
   }
   if (value && typeof value === 'object') {
     return Object.entries(value).reduce((acc, [key, nestedValue]) => {
-      if (POLLUTION_KEYS.has(key)) {
+      if (isDangerousKey(key)) {
         return acc;
       }
       acc[key] = sanitizeInput(nestedValue);

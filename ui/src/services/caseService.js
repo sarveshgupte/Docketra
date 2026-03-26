@@ -4,6 +4,37 @@
 
 import api from './api';
 
+const caseRoute = {
+  detail: (caseId) => `/cases/${caseId}`,
+  comments: (caseId) => `/cases/${caseId}/comments`,
+  attachments: (caseId) => `/cases/${caseId}/attachments`,
+};
+
+const CASE_CACHE_TTL_MS = 30 * 1000;
+const caseCache = new Map();
+const makeCaseCacheKey = (caseId, params = {}) => `${caseId}:${JSON.stringify(params)}`;
+const getCached = (key) => {
+  const cached = caseCache.get(key);
+  if (!cached) return null;
+  if (cached.promise) return cached.promise;
+  if ((Date.now() - cached.ts) > CASE_CACHE_TTL_MS) {
+    caseCache.delete(key);
+    return null;
+  }
+  return cached.value;
+};
+const setCached = (key, value) => {
+  caseCache.set(key, { value, ts: Date.now() });
+};
+const invalidateCaseCache = (caseId) => {
+  const prefix = `${caseId}:`;
+  for (const key of caseCache.keys()) {
+    if (key.startsWith(prefix)) {
+      caseCache.delete(key);
+    }
+  }
+};
+
 export const caseService = {
   /**
    * Get all cases with optional filters
@@ -25,9 +56,21 @@ export const caseService = {
   /**
    * Get case by caseId
    */
-  getCaseById: async (caseId) => {
-    const response = await api.get(`/cases/${caseId}`);
-    return response.data;
+  getCaseById: async (caseId, params = {}) => {
+    const cacheKey = makeCaseCacheKey(caseId, params);
+    const cached = getCached(cacheKey);
+    if (cached) return cached;
+    const pendingPromise = api.get(caseRoute.detail(caseId), { params })
+      .then((response) => {
+        setCached(cacheKey, response.data);
+        return response.data;
+      })
+      .catch((error) => {
+        caseCache.delete(cacheKey);
+        throw error;
+      });
+    caseCache.set(cacheKey, { promise: pendingPromise, ts: Date.now() });
+    return pendingPromise;
   },
 
   /**
@@ -43,39 +86,29 @@ export const caseService = {
 
   /**
    * Add comment to case
-   * Note: createdBy (email) must be provided by the caller from AuthContext
    */
-  addComment: async (caseId, commentText, userEmail) => {
-    if (!userEmail) {
-      throw new Error('User email is required to create comments. This should be provided by the caller.');
-    }
-    
-    const response = await api.post(`/cases/${caseId}/comments`, {
+  addComment: async (caseId, commentText) => {
+    const response = await api.post(caseRoute.comments(caseId), {
       text: commentText,
-      createdBy: userEmail,
     });
+    invalidateCaseCache(caseId);
     return response.data;
   },
 
   /**
    * Add attachment to case
-   * Note: createdBy (email) must be provided by the caller from AuthContext
    */
-  addAttachment: async (caseId, file, description, userEmail) => {
-    if (!userEmail) {
-      throw new Error('User email is required to create attachments. This should be provided by the caller.');
-    }
-    
+  addAttachment: async (caseId, file, description) => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('description', description);
-    formData.append('createdBy', userEmail);
     
-    const response = await api.post(`/cases/${caseId}/attachments`, formData, {
+    const response = await api.post(caseRoute.attachments(caseId), formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
+    invalidateCaseCache(caseId);
     return response.data;
   },
 
