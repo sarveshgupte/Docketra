@@ -86,7 +86,7 @@ export const FirmSettingsPage = () => {
   return (
     <Layout>
       <div className="min-h-screen w-full flex-1 bg-gray-50">
-        <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-container-x space-y-8">
+        <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 space-y-8">
           <PageHeader
             title="Firm Settings"
             description="Configure operational defaults and feature visibility for this firm."
@@ -94,7 +94,7 @@ export const FirmSettingsPage = () => {
 
           <section className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:items-start">
             <div className="space-y-2 lg:col-span-1">
-              <h2 className="text-lg font-medium text-text-primary">Operational Configuration</h2>
+              <h2 className="text-lg font-medium text-gray-900">Operational Configuration</h2>
               <p className="text-sm text-gray-500">Set the default thresholds that guide case routing, SLAs, and escalation timing.</p>
             </div>
             <Card className="p-6 lg:col-span-2 lg:max-w-4xl">
@@ -129,7 +129,7 @@ export const FirmSettingsPage = () => {
 
           <section className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:items-start">
             <div className="space-y-2 lg:col-span-1">
-              <h2 className="text-lg font-medium text-text-primary">View &amp; Action Controls</h2>
+              <h2 className="text-lg font-medium text-gray-900">View &amp; Action Controls</h2>
               <p className="text-sm text-gray-500">Enable or hide operational views and bulk actions for firm users.</p>
             </div>
             <Card className="p-6 lg:col-span-2 lg:max-w-4xl">
@@ -173,14 +173,14 @@ export const FirmSettingsPage = () => {
           <Card className="max-w-4xl p-6">
             <div className="space-y-5">
               <div>
-                <h2 className="text-lg font-medium text-text-primary mb-4">Recent User Activity</h2>
+                <h2 className="text-lg font-medium text-gray-900 mb-4">Recent User Activity</h2>
                 <p className="text-sm text-gray-500">Last 10 activity records derived from the most recent available audit events.</p>
               </div>
               {activity.length ? (
                 <ul className="space-y-3">
                   {activity.map((entry) => (
-                    <li key={entry.id} className="rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-text-secondary">
-                      <span className="font-medium text-text-primary">{entry.actor}</span>
+                    <li key={entry.id} className="rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-600">
+                      <span className="font-medium text-gray-900">{entry.actor}</span>
                       <span className="mx-2 text-gray-300">•</span>
                       <span>{formatDateTime(entry.timestamp)}</span>
                     </li>
