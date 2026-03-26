@@ -31,6 +31,7 @@ import { formatDate } from '../utils/formatters';
 import { getStatusLabel } from '../utils/statusDisplay';
 import { UX_COPY } from '../constants/uxCopy';
 import api from '../services/api';
+import { ROUTES, safeRoute } from '../constants/routes';
 
 const DASHBOARD_RECENT_CASES_ROW_COUNT = 5;
 const DASHBOARD_RECENT_CASES_MAX_ROWS = 10;
@@ -88,6 +89,12 @@ export const DashboardPage = () => {
       loadDashboardData();
     }
   }, [user, isAdmin]);
+
+  useEffect(() => {
+    if (!firmSlug) {
+      navigate('/superadmin', { replace: true });
+    }
+  }, [firmSlug, navigate]);
 
   // Show bookmark prompt only after dashboard loading completes
   useEffect(() => {
@@ -258,27 +265,27 @@ export const DashboardPage = () => {
   };
 
   const handleCaseClick = (caseId) => {
-    navigate(`/app/firm/${firmSlug}/cases/${caseId}`);
+    navigate(safeRoute(ROUTES.CASE_DETAIL(firmSlug, caseId)));
   };
 
   const handleChecklistAction = (stepId) => {
     if (stepId === 'create-case') {
-      navigate(`/app/firm/${firmSlug}/cases/create`);
+      navigate(safeRoute(ROUTES.CREATE_CASE(firmSlug)));
       return;
     }
 
     if (stepId === 'assign-owner') {
-      navigate(`/app/firm/${firmSlug}/cases`);
+      navigate(safeRoute(ROUTES.CASES(firmSlug)));
       return;
     }
 
     if (stepId === 'invite-team') {
-      navigate(`/app/firm/${firmSlug}/admin`);
+      navigate(safeRoute(ROUTES.ADMIN(firmSlug)));
       return;
     }
 
     if (stepId === 'configure-firm') {
-      navigate(`/app/firm/${firmSlug}/settings/firm`);
+      navigate(safeRoute(ROUTES.FIRM_SETTINGS(firmSlug)));
     }
   };
 
@@ -306,20 +313,20 @@ export const DashboardPage = () => {
       value: stats.overdueComplianceItems,
       subtitle: 'Red Risk Band',
       subtitleClassName: 'text-red-600',
-      onClick: () => navigate(`/app/firm/${firmSlug}/my-worklist?status=OPEN`),
+      onClick: () => navigate(`${safeRoute(ROUTES.MY_WORKLIST(firmSlug))}?status=OPEN`),
     },
     {
       title: 'Due in 7 Days',
       value: stats.dueInSevenDays,
       subtitle: 'Amber Risk Band',
       subtitleClassName: 'text-amber-600',
-      onClick: () => navigate(`/app/firm/${firmSlug}/cases?approvalStatus=PENDING`),
+      onClick: () => navigate(`${safeRoute(ROUTES.CASES(firmSlug))}?approvalStatus=PENDING`),
     },
     {
       title: 'Awaiting Partner Review',
       value: awaitingPartnerReview,
       subtitle: 'Approval queue',
-      onClick: () => navigate(`/app/firm/${firmSlug}/my-worklist?status=PENDED`),
+      onClick: () => navigate(`${safeRoute(ROUTES.MY_WORKLIST(firmSlug))}?status=PENDED`),
     },
     isAdmin
       ? {
@@ -327,14 +334,14 @@ export const DashboardPage = () => {
           value: stats.activeClients,
           subtitle: 'Total active reporting entities',
           subtitleClassName: 'text-green-600',
-          onClick: () => navigate(`/app/firm/${firmSlug}/admin`),
+          onClick: () => navigate(safeRoute(ROUTES.ADMIN(firmSlug))),
         }
       : {
           title: 'Risk Summary Panel',
           value: stats.myResolvedCases,
           subtitle: 'Executed compliance items',
           subtitleClassName: 'text-green-600',
-          onClick: () => navigate(`/app/firm/${firmSlug}/my-worklist?status=RESOLVED`),
+          onClick: () => navigate(`${safeRoute(ROUTES.MY_WORKLIST(firmSlug))}?status=RESOLVED`),
         },
   ];
 
@@ -343,19 +350,19 @@ export const DashboardPage = () => {
       title: 'Filed Cases',
       value: stats.adminFiledCases,
       subtitle: 'Archived cases',
-      onClick: () => navigate(`/app/firm/${firmSlug}/cases?status=FILED`),
+      onClick: () => navigate(`${safeRoute(ROUTES.CASES(firmSlug))}?status=FILED`),
     },
     {
       title: 'All Resolved',
       value: stats.adminResolvedCases,
       subtitle: 'All executed cases',
-      onClick: () => navigate(`/app/firm/${firmSlug}/cases?status=RESOLVED`),
+      onClick: () => navigate(`${safeRoute(ROUTES.CASES(firmSlug))}?status=RESOLVED`),
     },
     {
       title: 'Unassigned',
       value: stats.myUnassignedCreatedCases,
       subtitle: 'Needs assignment',
-      onClick: () => navigate(`/app/firm/${firmSlug}/global-worklist?createdBy=me&status=UNASSIGNED`),
+      onClick: () => navigate(`${safeRoute(ROUTES.GLOBAL_WORKLIST(firmSlug))}?createdBy=me&status=UNASSIGNED`),
     },
   ];
 
@@ -367,7 +374,7 @@ export const DashboardPage = () => {
             title="Partner Control Dashboard"
             description="Where is the compliance risk in my firm today?"
             actions={(
-              <Button variant="primary" onClick={() => navigate(`/app/firm/${firmSlug}/cases/create`)}>
+              <Button variant="primary" onClick={() => navigate(safeRoute(ROUTES.CREATE_CASE(firmSlug)))}>
                 {UX_COPY.actions.CREATE_CASE}
               </Button>
             )}
@@ -466,7 +473,7 @@ export const DashboardPage = () => {
                         : 'Once work is assigned to you, your recently updated dockets will appear here for quick follow-up.'
                     }
                     actionLabel={UX_COPY.actions.CREATE_CASE}
-                    onAction={() => navigate(`/app/firm/${firmSlug}/cases/create`)}
+                    onAction={() => navigate(safeRoute(ROUTES.CREATE_CASE(firmSlug)))}
                   />
                 </div>
               ) : (

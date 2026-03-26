@@ -263,6 +263,7 @@ const processInboundEmailPayload = async (payload) => {
     if (!shouldCreateAttachment) {
       await Comment.create({
         caseId: resolvedCaseId,
+        firmId: caseData.firmId,
         text: bodyText || subject || '(empty email body)',
         createdBy: createdByEmail,
         createdByXID,
