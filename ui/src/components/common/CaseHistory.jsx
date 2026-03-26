@@ -107,12 +107,12 @@ export const CaseHistory = ({ caseId }) => {
                   </Badge>
                 </div>
                 
-                <p className="font-medium text-gray-900 mb-1">
+                <p className="font-medium text-text-primary mb-1">
                   {entry.actionLabel || entry.description}
                 </p>
                 
                 {entry.actionLabel && entry.actionLabel !== entry.description && (
-                  <p className="text-sm text-gray-600 mb-2">
+                  <p className="text-sm text-text-secondary mb-2">
                     {entry.description}
                   </p>
                 )}
