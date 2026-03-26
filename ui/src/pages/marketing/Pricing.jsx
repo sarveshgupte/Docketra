@@ -51,14 +51,14 @@ const SECTION_REVEAL = {
 
 export const PricingPage = () => (
   <Section>
-    <div className="mb-12 text-center">
+    <div className="mb-12">
       <h1 className="type-section text-gray-900">Simple, Transparent Pricing</h1>
       <p className="mt-4 type-body text-lg text-gray-600">
         We are currently in Early Access. Join now to lock in your free Starter workspace and help shape the future of Docketra.
       </p>
     </div>
 
-    <motion.div {...SECTION_REVEAL} className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-3">
+    <motion.div {...SECTION_REVEAL} className="grid w-full gap-12 lg:grid-cols-3">
       {PRICING_TIERS.map((tier, index) => (
         <motion.article
           key={tier.name}
@@ -78,7 +78,7 @@ export const PricingPage = () => (
             </span>
           )}
 
-          <div className="mb-6">
+          <div className="mb-12">
             <h2 className="text-xl font-bold text-gray-900">{tier.name}</h2>
             <div className="mt-4 flex items-baseline text-4xl font-extrabold text-gray-900">
               {tier.price}
@@ -87,7 +87,7 @@ export const PricingPage = () => (
             <p className="mt-4 min-h-[40px] text-sm text-gray-600">{tier.description}</p>
           </div>
 
-          <ul className="mb-8 flex-1 space-y-4">
+          <ul className="mb-12 flex-1 space-y-4">
             {tier.features.map((feature) => (
               <li key={feature} className="flex items-start gap-3 text-sm text-gray-700">
                 <span className="text-green-500 font-bold">✓</span>

@@ -46,12 +46,12 @@ export const ContactPage = () => {
 
   return (
     <LegalLayout title="Contact" description="Contact our enterprise team." sections={SECTIONS}>
-      <section id="contact-form">
+      <section id="contact-form" className="max-w-2xl">
         <h2 className="text-xl font-semibold text-slate-900">Enterprise Inquiry</h2>
         {status === 'success' ? (
-          <div className="mt-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">Inquiry received. Our enterprise team will contact you soon.</div>
+          <div className="mt-12 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">Inquiry received. Our enterprise team will contact you soon.</div>
         ) : (
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4" aria-label="Contact form">
+          <form onSubmit={handleSubmit} className="mt-12 space-y-4" aria-label="Contact form">
             <input name="name" value={form.name} onChange={handleChange} placeholder="Your name" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm transition-all duration-150 focus:border-slate-900 focus:shadow-[0_0_0_3px_rgba(17,24,39,0.08)]" required />
             <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="Work email" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm transition-all duration-150 focus:border-slate-900 focus:shadow-[0_0_0_3px_rgba(17,24,39,0.08)]" required />
             <input name="firmName" value={form.firmName} onChange={handleChange} placeholder="Firm name" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm transition-all duration-150 focus:border-slate-900 focus:shadow-[0_0_0_3px_rgba(17,24,39,0.08)]" required />
