@@ -33,6 +33,8 @@ import { CaseDetailHeader } from '../components/case/CaseDetailHeader';
 import { AuditTimeline } from '../components/common/AuditTimeline';
 import { StatusBadge } from '../components/layout/StatusBadge';
 import './CaseDetailPage.css';
+import { ROUTES } from '../constants/routes';
+import { RouteErrorFallback } from '../components/routing/RouteErrorFallback';
 
 /**
  * Helper function to normalize case data structure
@@ -70,7 +72,7 @@ export const CaseDetailPage = () => {
   const handlePrevCase = () => {
     if (!hasPrev) return;
     const prevId = sourceList[sourceIndex - 1];
-    navigate(`/app/firm/${firmSlug}/cases/${prevId}`, {
+    navigate(ROUTES.CASE_DETAIL(firmSlug, prevId), {
       state: { sourceList, index: sourceIndex - 1 },
     });
   };
@@ -78,7 +80,7 @@ export const CaseDetailPage = () => {
   const handleNextCase = () => {
     if (!hasNext) return;
     const nextId = sourceList[sourceIndex + 1];
-    navigate(`/app/firm/${firmSlug}/cases/${nextId}`, {
+    navigate(ROUTES.CASE_DETAIL(firmSlug, nextId), {
       state: { sourceList, index: sourceIndex + 1 },
     });
   };
@@ -350,7 +352,7 @@ export const CaseDetailPage = () => {
             showSuccess(message);
             setActionConfirmation(message);
             setActionError(null);
-            navigate('/my-worklist');
+            navigate(ROUTES.MY_WORKLIST(firmSlug));
           }
         } catch (error) {
           console.error('Failed to pull docket:', error);
@@ -828,6 +830,10 @@ export const CaseDetailPage = () => {
     commentsListRef.current?.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
 
+  if (!firmSlug) {
+    return <RouteErrorFallback title="Invalid firm" message="Unable to open this docket because firm context is missing." backTo={ROUTES.SUPERADMIN_LOGIN} />;
+  }
+
   if (loading) {
     return (
       <Layout>
@@ -1256,7 +1262,7 @@ export const CaseDetailPage = () => {
                       key={formatDocketId(row.caseId)}
                       type="button"
                       className="case-detail-related-item"
-                      onClick={() => navigate(`/app/firm/${firmSlug}/cases/${row.caseId}`)}
+                      onClick={() => navigate(ROUTES.CASE_DETAIL(firmSlug, row.caseId))}
                     >
                       <span className="case-detail-related-item__title">{formatDocketId(row.caseId)}</span>
                       <span className="case-detail-related-item__meta">{row.category}</span>
