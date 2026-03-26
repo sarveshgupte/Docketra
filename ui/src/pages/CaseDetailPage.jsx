@@ -399,19 +399,32 @@ export const CaseDetailPage = () => {
     });
   };
 
-  const handleAddComment = async () => {
+  const handleAddComment = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
     if (!newComment.trim()) return;
     
     setSubmitting(true);
     try {
-      await caseService.addComment(caseId, newComment, user?.email);
+      const commentText = newComment.trim();
+      await caseService.addComment(caseId, commentText, user?.email);
+      const newCommentObj = {
+        _id: Date.now().toString(), // Temporary ID
+        text: commentText,
+        createdBy: user?.email || 'Unknown',
+        createdByName: user?.name || null,
+        createdByXID: user?.xID || null,
+        createdAt: new Date().toISOString(),
+      };
+      setCaseData((prev) => ({
+        ...prev,
+        comments: [...(prev?.comments || []), newCommentObj],
+      }));
       localStorage.removeItem(commentDraftKey);
       setNewComment('');
       const message = `Comment added to docket ${caseId} • ${formatDateTime(new Date())}`;
       showSuccess(message);
       setActionConfirmation(message);
       setActionError(null);
-      await loadCase(); // Reload to show new comment
       window.setTimeout(handleAddCommentSuccess, 80);
     } catch (error) {
       console.error('Failed to add comment:', error);
@@ -447,7 +460,8 @@ export const CaseDetailPage = () => {
     }
   };
 
-  const handleUploadFile = async () => {
+  const handleUploadFile = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
     if (!selectedFile || !fileDescription.trim()) {
       showWarning('Please select a file and provide a description');
       return;
@@ -455,7 +469,25 @@ export const CaseDetailPage = () => {
 
     setUploadingFile(true);
     try {
-      await caseService.addAttachment(caseId, selectedFile, fileDescription, user?.email);
+      const uploadedFile = selectedFile;
+      const description = fileDescription.trim();
+      await caseService.addAttachment(caseId, uploadedFile, description, user?.email);
+      const newFileObj = {
+        _id: Date.now().toString(), // Temporary ID
+        fileName: uploadedFile.name,
+        filename: uploadedFile.name,
+        description,
+        uploadedBy: user?.email || 'Unknown',
+        createdBy: user?.email || 'Unknown',
+        createdByName: user?.name || null,
+        createdByXID: user?.xID || null,
+        uploadedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      };
+      setCaseData((prev) => ({
+        ...prev,
+        attachments: [...(prev?.attachments || []), newFileObj],
+      }));
       setSelectedFile(null);
       setFileDescription('');
       // Reset file input using ref
@@ -466,7 +498,6 @@ export const CaseDetailPage = () => {
       showSuccess(message);
       setActionConfirmation(message);
       setActionError(null);
-      await loadCase(); // Reload to show new attachment
     } catch (error) {
       console.error('Failed to upload file:', error);
       const safeMessage = error?.response?.data?.message?.toLowerCase?.().includes('malware scanner not configured')
@@ -479,7 +510,8 @@ export const CaseDetailPage = () => {
     }
   };
 
-  const handleFileCase = async () => {
+  const handleFileCase = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
     if (!fileComment.trim()) {
       showWarning('Comment is mandatory for filing a case');
       return;
