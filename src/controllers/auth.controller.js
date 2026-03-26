@@ -10,6 +10,8 @@ const Client = require('../models/Client.model');
 const UserProfile = require('../models/UserProfile.model');
 const AuthAudit = require('../models/AuthAudit.model');
 const RefreshToken = require('../models/RefreshToken.model');
+const AuthIdentity = require('../models/AuthIdentity.model');
+const { sendOtp: sendCentralOtp, verifyOtp: verifyCentralOtp } = require('../services/otp.service');
 const emailService = require('../services/email.service');
 const xIDGenerator = require('../services/xIDGenerator');
 const signupService = require('../services/signup.service');
@@ -543,6 +545,8 @@ const buildTokenResponse = async (user, req, authMethod = 'Password') => {
   const firmSlug = await getFirmSlug(user.firmId);
 
   // OBJECTIVE 2: Include ALL firm context in JWT token
+  await ensureCanonicalXid(user);
+
   const accessToken = jwtService.generateAccessToken({
     userId: user._id.toString(),
     firmId: user.firmId ? user.firmId.toString() : undefined,
@@ -803,7 +807,9 @@ const login = async (req, res) => {
         metadata: { eventType: 'LOGIN_SUCCESS', email: superadminEmail || null, timestamp: new Date().toISOString() },
       }, req);
       
-      const accessToken = jwtService.generateAccessToken({
+      await ensureCanonicalXid(user);
+
+  const accessToken = jwtService.generateAccessToken({
         userId: SUPERADMIN_USER_ID(),
         role: SUPERADMIN_ROLE,
         firmId: null,
@@ -3810,7 +3816,9 @@ const completeMfaLogin = async (req, res) => {
     }
 
     const firmSlug = await getFirmSlug(user.firmId);
-    const accessToken = jwtService.generateAccessToken({
+    await ensureCanonicalXid(user);
+
+  const accessToken = jwtService.generateAccessToken({
       userId: user._id.toString(),
       firmId: user.firmId ? user.firmId.toString() : undefined,
       firmSlug: firmSlug || undefined,
@@ -4225,6 +4233,226 @@ const handleGoogleCallback = async (req, res) => {
   }
 };
 
+
+const generatePrimaryXid = async () => {
+  for (let i = 0; i < 20; i += 1) {
+    const candidate = `DK-${crypto.randomBytes(3).toString('hex').slice(0, 5).toUpperCase()}`;
+    // eslint-disable-next-line no-await-in-loop
+    const exists = await User.exists({ xid: candidate });
+    if (!exists) return candidate;
+  }
+  throw new Error('XID_GENERATION_FAILED');
+};
+
+const ensureCanonicalXid = async (user) => {
+  if (!user) return user;
+  if (user.xid) return user;
+
+  if (user.xID && /^DK-[A-Z0-9]{5}$/.test(user.xID)) {
+    user.xid = user.xID;
+  } else {
+    user.xid = await generatePrimaryXid();
+  }
+
+  if (typeof user.save === 'function') {
+    await user.save();
+  } else {
+    await User.updateOne({ _id: user._id }, { $set: { xid: user.xid } });
+  }
+
+  return user;
+};
+
+const issueAuthTokens = async (req, user) => {
+  await ensureCanonicalXid(user);
+
+  const accessToken = jwtService.generateAccessToken({
+    userId: user._id.toString(),
+    xid: user.xid,
+    role: user.role || 'Employee',
+    firmId: user.firmId ? user.firmId.toString() : null,
+    defaultClientId: user.defaultClientId ? user.defaultClientId.toString() : null,
+  });
+
+  const { refreshToken } = await generateAndStoreRefreshToken({
+    req,
+    userId: user._id,
+    firmId: user.firmId || null,
+  });
+
+  return { accessToken, refreshToken };
+};
+
+const googleTokenClient = new google.auth.OAuth2(process.env.GOOGLE_CLIENT_ID || undefined);
+
+const googleTokenLogin = async (req, res) => {
+  try {
+    const idToken = String(req.body?.idToken || '').trim();
+    if (!idToken) return res.status(400).json({ success: false, message: 'idToken is required' });
+
+    const ticket = await googleTokenClient.verifyIdToken({ idToken, audience: process.env.GOOGLE_CLIENT_ID });
+    const payload = ticket.getPayload() || {};
+    const email = String(payload.email || '').trim().toLowerCase();
+    const providerId = String(payload.sub || '').trim();
+    if (!email || !providerId) return res.status(400).json({ success: false, message: 'Invalid Google token' });
+
+    let user = await User.findOne({ $or: [{ primary_email: email }, { email }] });
+
+    if (user) {
+      const linked = await AuthIdentity.findOne({ user_id: user._id, provider: 'google' });
+      if (!linked) {
+        await AuthIdentity.create({ user_id: user._id, provider: 'google', provider_id: providerId });
+      }
+      const tokens = await issueAuthTokens(req, user);
+      return res.json({ success: true, message: 'Google login successful', data: { ...tokens, xid: user.xid } });
+    }
+
+    const xid = await generatePrimaryXid();
+    user = await User.create({
+      xid,
+      xID: xid,
+      id: crypto.randomUUID(),
+      primary_email: email,
+      email,
+      is_verified: true,
+      emailVerified: true,
+      verificationMethod: 'GOOGLE',
+      name: String(payload.name || email.split('@')[0]),
+      role: 'Employee',
+      status: 'active',
+      mustSetPassword: false,
+      passwordSet: false,
+      termsAccepted: true,
+    });
+
+    await AuthIdentity.create({ user_id: user._id, provider: 'google', provider_id: providerId });
+    await emailService.sendFirmSetupEmail({ email, name: user.name, firmName: 'Docketra', workspaceUrl: process.env.FRONTEND_URL || 'http://localhost:3000/login', xid });
+
+    const tokens = await issueAuthTokens(req, user);
+    return res.status(201).json({ success: true, message: 'Google login successful', data: { ...tokens, xid } });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message || 'Google login failed' });
+  }
+};
+
+const signupWithEmail = async (req, res) => {
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const password = String(req.body?.password || '');
+    const otp = req.body?.otp ? String(req.body.otp).trim() : '';
+
+    if (!email || !password) return res.status(400).json({ success: false, message: 'email and password are required' });
+    const existing = await User.findOne({ $or: [{ primary_email: email }, { email }] });
+    if (existing) return res.status(409).json({ success: false, message: 'Account already exists for this email' });
+
+    if (!otp) {
+      await sendCentralOtp({ email, purpose: 'signup' });
+      return res.status(202).json({ success: true, message: 'OTP sent. Verify OTP to complete signup.' });
+    }
+
+    await verifyCentralOtp({ identifier: email, code: otp, purpose: 'signup' });
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    const xid = await generatePrimaryXid();
+    const user = await User.create({
+      xid,
+      xID: xid,
+      id: crypto.randomUUID(),
+      primary_email: email,
+      email,
+      is_verified: true,
+      emailVerified: true,
+      verificationMethod: 'OTP',
+      name: email.split('@')[0],
+      passwordHash,
+      passwordSet: true,
+      mustSetPassword: false,
+      role: 'Employee',
+      status: 'active',
+      termsAccepted: true,
+    });
+
+    await AuthIdentity.create({
+      user_id: user._id,
+      provider: 'email',
+      provider_id: email,
+      password_hash: passwordHash,
+    });
+
+    const tokens = await issueAuthTokens(req, user);
+    return res.status(201).json({ success: true, data: { ...tokens, xid } });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message || 'Signup failed' });
+  }
+};
+
+const universalLogin = async (req, res) => {
+  try {
+    const loginId = String(req.body?.xid || req.body?.email || '').trim();
+    const password = String(req.body?.password || '');
+    const otp = req.body?.otp ? String(req.body.otp).trim() : null;
+    if (!loginId || !password) return res.status(400).json({ success: false, message: 'xid or email and password are required' });
+
+    const isEmail = loginId.includes('@');
+    const normalizedEmail = loginId.toLowerCase();
+    const normalizedXid = loginId.toUpperCase();
+
+    let user = null;
+    if (isEmail) user = await User.findOne({ $or: [{ primary_email: normalizedEmail }, { email: normalizedEmail }] });
+    else user = await User.findOne({ xid: normalizedXid });
+
+    if (!user) return res.status(401).json({ success: false, message: 'Invalid credentials' });
+
+    const identity = await AuthIdentity.findOne({ user_id: user._id, provider: 'email' });
+    const passwordHash = identity?.password_hash || user.passwordHash;
+    if (!passwordHash || !(await bcrypt.compare(password, passwordHash))) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    const identifier = String(user.primary_email || user.email).toLowerCase();
+
+    if (!otp) {
+      await sendCentralOtp({ email: identifier, purpose: 'login' });
+      return res.status(202).json({
+        success: true,
+        message: 'OTP required',
+        otpRequired: true,
+      });
+    }
+
+    await verifyCentralOtp({ identifier, code: otp, purpose: 'login' });
+
+    const tokens = await issueAuthTokens(req, user);
+    return res.json({ success: true, data: { ...tokens, xid: user.xid } });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message || 'Login failed' });
+  }
+};
+
+const sendOtpEndpoint = async (req, res) => {
+  try {
+    const email = req.body?.email ? String(req.body.email).trim().toLowerCase() : null;
+    const xid = req.body?.xid ? String(req.body.xid).trim().toUpperCase() : null;
+    const purpose = String(req.body?.purpose || 'login').trim();
+    const result = await sendCentralOtp({ email, xid, purpose });
+    return res.status(202).json({ success: true, data: result });
+  } catch (error) {
+    const statusCode = error.message === 'OTP_RATE_LIMITED' ? 429 : 400;
+    return res.status(statusCode).json({ success: false, message: error.message });
+  }
+};
+
+const verifyOtpEndpoint = async (req, res) => {
+  try {
+    const identifier = String(req.body?.identifier || '').trim().toLowerCase();
+    const code = String(req.body?.code || '').trim();
+    const purpose = String(req.body?.purpose || '').trim();
+    const result = await verifyCentralOtp({ identifier, code, purpose });
+    return res.json({ success: true, data: result });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   login: wrapWriteHandler(login),
   logout: wrapWriteHandler(logout),
@@ -4253,4 +4481,9 @@ module.exports = {
   handleGoogleCallback: wrapWriteHandler(handleGoogleCallback),
   generateAndStoreRefreshToken,
   verifyOAuthState,
+  googleTokenLogin: wrapWriteHandler(googleTokenLogin),
+  signupWithEmail: wrapWriteHandler(signupWithEmail),
+  universalLogin: wrapWriteHandler(universalLogin),
+  sendOtpEndpoint: wrapWriteHandler(sendOtpEndpoint),
+  verifyOtpEndpoint: wrapWriteHandler(verifyOtpEndpoint),
 };

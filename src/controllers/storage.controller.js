@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 const { google } = require('googleapis');
 const Firm = require('../models/Firm.model');
 const StorageConfiguration = require('../models/StorageConfiguration.model');
@@ -16,6 +17,7 @@ const GOOGLE_SCOPES = [
 const STATE_COOKIE_NAME = 'storage_oauth_state';
 const STATE_TTL_SECONDS = 10 * 60;
 const MANAGED_STORAGE_MODE = 'docketra_managed';
+const usedStorageOtpJti = new Map();
 
 function ensureFirmAdmin(req, res) {
   if (!isAdminRole(req.user?.role)) {
@@ -25,6 +27,55 @@ function ensureFirmAdmin(req, res) {
   return true;
 }
 
+
+function ensureStorageOtpVerification(req, res) {
+  const verificationToken = String(req.body?.verificationToken || '').trim();
+  if (!verificationToken) {
+    res.status(403).json({ error: 'storage_change_otp_required' });
+    return false;
+  }
+
+  try {
+    const decoded = jwt.verify(verificationToken, process.env.JWT_SECRET, {
+      issuer: 'docketra',
+      audience: 'docketra-api',
+      algorithms: ['HS256'],
+    });
+
+    if (decoded?.type !== 'otp_verification' || decoded?.purpose !== 'storage_change') {
+      res.status(403).json({ error: 'invalid_storage_change_verification' });
+      return false;
+    }
+
+    const jti = String(decoded?.jti || '').trim();
+    if (!jti) {
+      res.status(403).json({ error: 'invalid_storage_change_verification' });
+      return false;
+    }
+
+    const usedUntil = usedStorageOtpJti.get(jti);
+    if (usedUntil && usedUntil > Date.now()) {
+      res.status(403).json({ error: 'storage_change_verification_reused' });
+      return false;
+    }
+
+    const expectedIdentifier = String(req.user?.primary_email || req.user?.email || '').trim().toLowerCase();
+    if (!expectedIdentifier || decoded.identifier !== expectedIdentifier) {
+      res.status(403).json({ error: 'storage_change_identifier_mismatch' });
+      return false;
+    }
+
+    const expiryMs = Number(decoded?.exp || 0) * 1000;
+    if (expiryMs > Date.now()) {
+      usedStorageOtpJti.set(jti, expiryMs);
+    }
+
+    return true;
+  } catch {
+    res.status(403).json({ error: 'invalid_storage_change_verification' });
+    return false;
+  }
+}
 function getStorageOAuthClient() {
   const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_OAUTH_REDIRECT_URI } = process.env;
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_OAUTH_REDIRECT_URI) {
@@ -189,6 +240,7 @@ const googleCallback = async (req, res) => {
 
 const googleConfirmDrive = async (req, res) => {
   if (!ensureFirmAdmin(req, res)) return;
+  if (!ensureStorageOtpVerification(req, res)) return;
   const firmId = req.firmId;
   const { driveId } = req.body || {};
   if (!driveId) return res.status(400).json({ error: 'driveId is required' });

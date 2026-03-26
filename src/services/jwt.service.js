@@ -65,6 +65,8 @@ const generateAccessToken = (payload) => {
   // Note: firmId, firmSlug, defaultClientId are optional for SUPER_ADMIN role
   const tokenPayload = {
     userId: payload.userId,
+    user_id: payload.userId,
+    xid: payload.xid || null,
     role: payload.role,
     type: 'access',
   };
@@ -73,6 +75,7 @@ const generateAccessToken = (payload) => {
   // Only include firm context if provided (including explicit null for SuperAdmin)
   if ('firmId' in payload) {
     tokenPayload.firmId = payload.firmId;
+    tokenPayload.firm_id = payload.firmId;
   }
 
   if (payload.firmSlug) {
