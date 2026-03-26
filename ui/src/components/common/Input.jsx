@@ -65,7 +65,7 @@ export const Input = forwardRef(({
         <input
           ref={ref}
           id={inputId}
-          className={`input ${error ? 'input-error' : ''} ${isPasswordType ? 'input-with-toggle' : ''}`}
+          className={`input ${error ? 'input-error border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500' : ''} ${isPasswordType ? 'input-with-toggle' : ''}`}
           disabled={disabled}
           value={value}
           type={resolvedType}
@@ -150,7 +150,7 @@ export const Input = forwardRef(({
           </button>
         )}
       </div>
-      {error && <div className="form-error" id={errorId}>{error}</div>}
+      {error && <p className="mt-1 text-sm text-red-600" id={errorId}>{error}</p>}
       {!error && helpText && <div className="form-help" id={helpId}>{helpText}</div>}
     </div>
   );
