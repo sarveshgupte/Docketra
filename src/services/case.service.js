@@ -85,6 +85,7 @@ async function updateStatus(caseId, newStatus, context = {}) {
 
   await CaseAudit.create([{
     caseId: existingCase.caseId || caseId,
+    firmId: tenantId,
     actionType: CASE_ACTION_TYPES.CASE_STATUS_CHANGED,
     description: `Status changed from ${fromStatus} to ${normalizedNewStatus}`,
     performedByXID: context.userId || context.performedByXID || 'SYSTEM',
@@ -137,6 +138,7 @@ async function updateStatus(caseId, newStatus, context = {}) {
 
     await CaseAudit.create([{
       caseId: existingCase.caseId || caseId,
+      firmId: tenantId,
       actionType: CASE_ACTION_TYPES.CASE_SYSTEM_EVENT,
       description: `SLA event ${slaTransition.auditEvent.event}`,
       performedByXID: context.userId || context.performedByXID || 'SYSTEM',
