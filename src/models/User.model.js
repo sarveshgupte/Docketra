@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 const softDeletePlugin = require('../utils/softDelete.plugin');
 const { encrypt: encryptProtectedValue, isEncrypted } = require('../utils/encryption');
 // NOTE: If upgrading from previous version,
@@ -29,6 +30,23 @@ const userSchema = new mongoose.Schema({
     match: [/^X\d{6}$/, 'xID must be in format X123456'],
     immutable: true,
   },
+
+  // New canonical identity in DK-XXXXX format
+  xid: {
+    type: String,
+    uppercase: true,
+    trim: true,
+    match: [/^DK-[A-Z0-9]{5}$/, 'xid must be in format DK-XXXXX'],
+  },
+
+  // UUID identity key for external references
+  id: {
+    type: String,
+    default: () => crypto.randomUUID(),
+    unique: true,
+    immutable: true,
+    index: true,
+  },
   
   // User's full name
   // IMMUTABLE - Cannot be changed after creation
@@ -46,6 +64,17 @@ const userSchema = new mongoose.Schema({
     lowercase: true,
     trim: true,
     match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email address'],
+  },
+
+  primary_email: {
+    type: String,
+    lowercase: true,
+    trim: true,
+  },
+
+  is_verified: {
+    type: Boolean,
+    default: false,
   },
 
   emailVerified: {
@@ -460,10 +489,29 @@ const userSchema = new mongoose.Schema({
     lockUntil: { type: Date },
   },
 }, {
+  id: false,
   // Enable virtuals in JSON output
   toJSON: { virtuals: true, getters: true },
   toObject: { virtuals: true, getters: true },
 });
+
+const generateMigratedXid = async (legacyXid) => {
+  const normalizedLegacy = String(legacyXid || '').replace(/[^A-Z0-9]/gi, '').toUpperCase();
+  const base = normalizedLegacy.slice(-5).padStart(5, '0');
+  const directCandidate = `DK-${base}`;
+
+  const directExists = await mongoose.models.User.exists({ xid: directCandidate });
+  if (!directExists) return directCandidate;
+
+  for (let i = 0; i < 20; i += 1) {
+    const candidate = `DK-${crypto.randomBytes(3).toString('hex').slice(0, 5).toUpperCase()}`;
+    // eslint-disable-next-line no-await-in-loop
+    const exists = await mongoose.models.User.exists({ xid: candidate });
+    if (!exists) return candidate;
+  }
+
+  throw new Error('XID_MIGRATION_FAILED');
+};
 
 /**
  * Validation: Every non-superadmin user must have tenant context fields set.
@@ -474,6 +522,17 @@ userSchema.pre('save', async function() {
   // already-encrypted values untouched.
   if (this.isModified('twoFactorSecret') && this.twoFactorSecret && !isEncrypted(this.twoFactorSecret)) {
     this.twoFactorSecret = encryptProtectedValue(this.twoFactorSecret);
+  }
+
+  // Migration safety: backfill canonical xid from legacy xID when missing
+  if (!this.xid) {
+    if (this.xID && /^DK-[A-Z0-9]{5}$/.test(this.xID)) {
+      this.xid = this.xID;
+    } else if (this.xID) {
+      this.xid = await generateMigratedXid(this.xID);
+    } else {
+      this.xid = await generateMigratedXid('');
+    }
   }
 
   // GUARDRAIL: Prevent saving non-superadmin users without firm/default client context
@@ -489,6 +548,17 @@ userSchema.pre('save', async function() {
       error.name = 'ValidationError';
       throw error;
     }
+  }
+
+  // Keep canonical identity fields synchronized for backward compatibility
+  if (this.email && !this.primary_email) {
+    this.primary_email = this.email.toLowerCase();
+  }
+  if (this.primary_email && this.email !== this.primary_email) {
+    this.email = this.primary_email;
+  }
+  if (this.emailVerified === true) {
+    this.is_verified = true;
   }
 
   // Single source of truth: status drives activation state.
@@ -533,6 +603,8 @@ userSchema.pre('save', async function() {
 // - xID is unique WITHIN a firm, not globally
 // - Email uniqueness is enforced per firm for active lifecycle users
 userSchema.index({ firmId: 1, xID: 1 }, { unique: true });
+userSchema.index({ xid: 1 }, { unique: true, sparse: true });
+userSchema.index({ primary_email: 1 }, { unique: true, sparse: true });
 // Email uniqueness is enforced per firm (multi-tenant model).
 // Global uniqueness is intentionally NOT enforced.
 userSchema.index(
