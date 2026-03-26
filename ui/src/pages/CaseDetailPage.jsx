@@ -1117,9 +1117,10 @@ export const CaseDetailPage = () => {
             )}
 
             {activeSection === CASE_DETAIL_TABS.COMMENTS && (
-              <section className="case-card" aria-labelledby="comments-heading">
-                <div className="case-card__heading">
+              <section className="case-card case-detail-section case-detail-section--comments" aria-labelledby="comments-heading">
+                <div className="case-card__heading case-detail-section__heading">
                   <h2 id="comments-heading">Comments</h2>
+                  <p className="case-detail-section__subheading">Discussion, notes, and decision context.</p>
                 </div>
                 <div className="case-detail__comments" ref={commentsListRef}>
                   {sectionLoading.comments ? <Loading message="Refreshing comments..." /> : <DocketComments comments={comments} />}
@@ -1149,7 +1150,7 @@ export const CaseDetailPage = () => {
                       rows={3}
                       className="case-detail__comment-input"
                     />
-                    <div className="flex justify-end">
+                    <div className="case-detail__composer-actions">
                       <Button variant="primary" onClick={handleAddComment} disabled={!newComment.trim() || submitting}>
                         {submitting ? 'Adding…' : 'Add Comment'}
                       </Button>
@@ -1160,9 +1161,10 @@ export const CaseDetailPage = () => {
             )}
 
             {activeSection === CASE_DETAIL_TABS.ATTACHMENTS && (
-              <section className="case-card" aria-labelledby="attachments-heading">
-                <div className="case-card__heading">
+              <section className="case-card case-detail-section case-detail-section--attachments" aria-labelledby="attachments-heading">
+                <div className="case-card__heading case-detail-section__heading">
                   <h2 id="attachments-heading">Attachments</h2>
+                  <p className="case-detail-section__subheading">Files and supporting artifacts for this docket.</p>
                 </div>
                 <div className="case-detail__attachments">
                   {attachments.length > 0 ? (
@@ -1246,9 +1248,10 @@ export const CaseDetailPage = () => {
             )}
 
             {activeSection === CASE_DETAIL_TABS.HISTORY && (
-              <section className="case-card" aria-labelledby="history-heading">
-                <div className="case-card__heading">
+              <section className="case-card case-detail-section case-detail-section--history" aria-labelledby="history-heading">
+                <div className="case-card__heading case-detail-section__heading">
                   <h2 id="history-heading">History</h2>
+                  <p className="case-detail-section__subheading">Lifecycle timeline and audit events.</p>
                 </div>
                 <div className="case-detail-history-list">
                   {sectionLoading.history
