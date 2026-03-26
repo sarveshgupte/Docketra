@@ -39,6 +39,6 @@ export const ConfirmDialog = ({
       </>
     )}
   >
-    <p className="text-sm leading-6 text-text-secondary">{message}</p>
+    <p className="text-sm leading-6 text-gray-600">{message}</p>
   </Modal>
 );

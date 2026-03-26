@@ -81,7 +81,7 @@ export const DataTable = React.memo(({
                   <th
                     key={column.key}
                     className={joinClasses(
-                      'sticky top-0 z-10 bg-gray-50 drop-shadow-sm px-container-x py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap',
+                      'sticky top-0 z-10 bg-gray-50 drop-shadow-sm px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap',
                       column.align === 'right' && 'text-right',
                       column.align === 'center' && 'text-center',
                       column.headerClassName,
@@ -120,7 +120,7 @@ export const DataTable = React.memo(({
                     <td
                       key={`${row[rowKey]}-${column.key}`}
                       className={joinClasses(
-                        'px-container-x py-4 whitespace-nowrap text-sm text-text-primary',
+                        'px-6 py-4 whitespace-nowrap text-sm text-gray-900',
                         column.align === 'right' && 'text-right',
                         column.align === 'center' && 'text-center',
                         column.tabular && 'tabular-nums',

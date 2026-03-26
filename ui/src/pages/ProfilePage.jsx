@@ -107,15 +107,15 @@ export const ProfilePage = () => {
   return (
     <Layout>
       <div className="min-h-screen w-full flex-1 bg-gray-50">
-        <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-container-x space-y-8">
+        <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 space-y-8">
           <div className="space-y-2">
-            <h1 className="text-2xl font-semibold text-text-primary tracking-tight">My Profile</h1>
+            <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">My Profile</h1>
             <p className="text-sm text-gray-500">View and update your personal account information.</p>
           </div>
 
           <section className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:items-start">
             <div className="space-y-2 lg:col-span-1">
-              <h2 className="text-lg font-medium text-text-primary">Identity</h2>
+              <h2 className="text-lg font-medium text-gray-900">Identity</h2>
               <p className="text-sm text-gray-500">These fields are managed by your organization and cannot be edited here.</p>
             </div>
             <Card className="p-6 lg:col-span-2 lg:max-w-4xl">
@@ -133,7 +133,7 @@ export const ProfilePage = () => {
 
           <section className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:items-start">
             <div className="space-y-2 lg:col-span-1">
-              <h2 className="text-lg font-medium text-text-primary">Personal Information</h2>
+              <h2 className="text-lg font-medium text-gray-900">Personal Information</h2>
               <p className="text-sm text-gray-500">Keep your contact details and masked identity information current.</p>
             </div>
             <Card className="p-6 lg:col-span-2 lg:max-w-4xl">
