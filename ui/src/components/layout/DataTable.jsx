@@ -3,7 +3,7 @@ import { SortableTableHeader } from '../ui/SortableTableHeader';
 
 const joinClasses = (...classes) => classes.filter(Boolean).join(' ');
 
-export const DataTable = ({
+export const DataTable = React.memo(({
   columns,
   data,
   onRowClick,
@@ -140,4 +140,4 @@ export const DataTable = ({
       </div>
     </div>
   );
-};
+});

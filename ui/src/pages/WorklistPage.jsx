@@ -11,7 +11,7 @@
  * PR: Clickable Dashboard KPI Cards - Added support for status query params
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
@@ -105,9 +105,13 @@ export const WorklistPage = () => {
     }
   };
 
-  const handleCaseClick = (caseId) => {
+  const handleCaseClick = useCallback((caseId) => {
     navigate(`/app/firm/${firmSlug}/cases/${caseId}`);
-  };
+  }, [navigate, firmSlug]);
+
+  const handleRowClick = useCallback((caseItem) => {
+    handleCaseClick(caseItem.caseId);
+  }, [handleCaseClick]);
   
   // Get page title and description
   const getPageInfo = () => {
@@ -156,7 +160,7 @@ export const WorklistPage = () => {
     },
   });
 
-  const columns = [
+  const columns = useMemo(() => [
     {
       key: 'caseName',
       header: 'Docket Name',
@@ -232,7 +236,7 @@ export const WorklistPage = () => {
       cellClassName: 'w-[1px] whitespace-nowrap',
       render: (caseItem) => formatDate(caseItem.updatedAt),
     },
-  ];
+  ], [isPendingView]);
 
   if (loading) {
     return (
@@ -285,7 +289,7 @@ export const WorklistPage = () => {
               columns={columns}
               data={sortedCases}
               rowKey="caseId"
-              onRowClick={(caseItem) => handleCaseClick(caseItem.caseId)}
+              onRowClick={handleRowClick}
               sortState={sortState}
               onSortChange={setSortState}
               toolbarLeft={(

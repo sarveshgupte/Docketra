@@ -4,7 +4,7 @@
  * All toasts auto-dismiss after 4 seconds by default
  */
 
-import React, { createContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useState, useCallback, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { SESSION_KEYS } from '../utils/constants';
 
@@ -68,7 +68,7 @@ export const ToastProvider = ({ children }) => {
     return addToast(message, 'info', false);
   }, [addToast]);
 
-  const value = {
+  const value = useMemo(() => ({
     toasts,
     addToast,
     removeToast,
@@ -76,7 +76,7 @@ export const ToastProvider = ({ children }) => {
     showError,
     showWarning,
     showInfo,
-  };
+  }), [toasts, addToast, removeToast, showSuccess, showError, showWarning, showInfo]);
 
   useEffect(() => {
     const stored = sessionStorage.getItem(SESSION_KEYS.GLOBAL_TOAST);

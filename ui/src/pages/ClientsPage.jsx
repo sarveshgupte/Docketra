@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
@@ -32,7 +32,7 @@ export const ClientsPage = () => {
   const fileInputRef = useRef(null);
   const isAdmin = user?.role === 'Admin';
 
-  const loadClients = async () => {
+  const loadClients = useCallback(async () => {
     setLoading(true);
     try {
       const response = await clientService.getClients(false);
@@ -40,11 +40,11 @@ export const ClientsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadClients();
-  }, []);
+  }, [loadClients]);
 
   const selectedFactSheet = useMemo(
     () => editCfsClient?.clientFactSheet || {},
@@ -52,7 +52,7 @@ export const ClientsPage = () => {
   );
   const selectedFiles = selectedFactSheet.attachments || [];
 
-  const openEditCfsModal = async (client) => {
+  const openEditCfsModal = useCallback(async (client) => {
     try {
       const response = await clientService.getClientById(client.clientId);
       const fullClient = response?.data || client;
@@ -62,7 +62,64 @@ export const ClientsPage = () => {
     } catch (error) {
       showError(error?.response?.data?.message || 'Failed to load client details');
     }
-  };
+  }, [showError]);
+
+  const columns = useMemo(() => [
+    {
+      key: 'clientId',
+      header: 'Client ID',
+      align: 'center',
+      tabular: true,
+      headerClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'w-[1px] whitespace-nowrap',
+    },
+    {
+      key: 'businessName',
+      header: 'Business Name',
+      headerClassName: 'w-full max-w-lg',
+      cellClassName: 'w-full max-w-lg',
+      contentClassName: 'truncate',
+    },
+    {
+      key: 'businessEmail',
+      header: 'Email',
+      headerClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'w-[1px] whitespace-nowrap',
+      render: (client) => client.businessEmail || '—',
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      align: 'center',
+      headerClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'w-[1px] whitespace-nowrap',
+      render: (client) => <Badge status={client.status === 'ACTIVE' ? 'Approved' : 'Rejected'}>{client.status}</Badge>,
+    },
+    {
+      key: 'createdAt',
+      header: 'Created',
+      align: 'right',
+      tabular: true,
+      headerClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'w-[1px] whitespace-nowrap',
+      render: (client) => formatDate(client.createdAt),
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      align: 'right',
+      headerClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'w-[1px] whitespace-nowrap',
+      render: (client) => (
+        <div className="admin__actions justify-end">
+          <Button size="small" onClick={() => navigate(`/app/firm/${firmSlug}/clients/${client.clientId}`)}>Workspace</Button>
+          {isAdmin ? (
+            <Button size="small" variant="warning" onClick={() => openEditCfsModal(client)}>Edit Fact Sheet</Button>
+          ) : null}
+        </div>
+      ),
+    },
+  ], [navigate, firmSlug, isAdmin, openEditCfsModal]);
 
   const refreshSelectedClient = async () => {
     if (!editCfsClient?.clientId) return;
@@ -130,62 +187,7 @@ export const ClientsPage = () => {
       <Card>
         {loading ? <Loading message="Loading clients..." /> : (
           <DataTable
-            columns={[
-              {
-                key: 'clientId',
-                header: 'Client ID',
-                align: 'center',
-                tabular: true,
-                headerClassName: 'w-[1px] whitespace-nowrap',
-                cellClassName: 'w-[1px] whitespace-nowrap',
-              },
-              {
-                key: 'businessName',
-                header: 'Business Name',
-                headerClassName: 'w-full max-w-lg',
-                cellClassName: 'w-full max-w-lg',
-                contentClassName: 'truncate',
-              },
-              {
-                key: 'businessEmail',
-                header: 'Email',
-                headerClassName: 'w-[1px] whitespace-nowrap',
-                cellClassName: 'w-[1px] whitespace-nowrap',
-                render: (client) => client.businessEmail || '—',
-              },
-              {
-                key: 'status',
-                header: 'Status',
-                align: 'center',
-                headerClassName: 'w-[1px] whitespace-nowrap',
-                cellClassName: 'w-[1px] whitespace-nowrap',
-                render: (client) => <Badge status={client.status === 'ACTIVE' ? 'Approved' : 'Rejected'}>{client.status}</Badge>,
-              },
-              {
-                key: 'createdAt',
-                header: 'Created',
-                align: 'right',
-                tabular: true,
-                headerClassName: 'w-[1px] whitespace-nowrap',
-                cellClassName: 'w-[1px] whitespace-nowrap',
-                render: (client) => formatDate(client.createdAt),
-              },
-              {
-                key: 'actions',
-                header: 'Actions',
-                align: 'right',
-                headerClassName: 'w-[1px] whitespace-nowrap',
-                cellClassName: 'w-[1px] whitespace-nowrap',
-                render: (client) => (
-                  <div className="admin__actions justify-end">
-                    <Button size="small" onClick={() => navigate(`/app/firm/${firmSlug}/clients/${client.clientId}`)}>Workspace</Button>
-                    {isAdmin ? (
-                      <Button size="small" variant="warning" onClick={() => openEditCfsModal(client)}>Edit Fact Sheet</Button>
-                    ) : null}
-                  </div>
-                ),
-              },
-            ]}
+            columns={columns}
             data={clients}
             rowKey="clientId"
             emptyContent={(
