@@ -1,6 +1,6 @@
 import React from 'react';
 
-const PAGE_CONTAINER_BASE = 'mx-auto w-full max-w-6xl px-6';
+const PAGE_CONTAINER_BASE = 'mx-auto w-full max-w-container px-6';
 
 export const PageContainer = React.forwardRef(
   ({ as: Component = 'div', className = '', children }, ref) => (
