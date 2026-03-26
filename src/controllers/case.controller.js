@@ -86,6 +86,13 @@ const sanitizeForLog = (text, maxLength = 100) => {
     .trim();
 };
 
+const sanitizeOutput = (value) => String(value ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+
 const buildAddCommentErrorResponse = (error, context = {}) => {
   const validationDetails = error?.errors
     ? Object.values(error.errors)
@@ -750,7 +757,7 @@ const addAttachment = async (req, res) => {
       });
     }
     const { caseId } = req.params;
-    const { description, createdBy, note } = req.body;
+    const { description, note } = req.body;
     
     // PR #45: Require authenticated user with xID for security and audit
     if (!req.user?.email || !req.user?.xID) {
@@ -773,13 +780,6 @@ const addAttachment = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Description is required',
-      });
-    }
-    
-    if (!createdBy) {
-      return res.status(400).json({
-        success: false,
-        message: 'Created by email is required',
       });
     }
     
@@ -857,7 +857,7 @@ const addAttachment = async (req, res) => {
       uploadStatus: 'pending',
       description,
       checksum,
-      createdBy: createdBy.toLowerCase(),
+      createdBy: req.user.email.toLowerCase(),
       createdByXID: req.user.xID,
       createdByName: req.user.name,
       note,
@@ -1359,158 +1359,138 @@ const getCaseByCaseId = async (req, res) => {
     const displayCaseId = caseData.caseId;
     const scopedCaseId = caseData.caseId;
     const scopedFirmId = String(caseData.firmId || req.user.firmId);
-    const relatedDataPipeline = [
-      {
-        $match: {
-          caseId: scopedCaseId,
-          firmId: scopedFirmId,
+    const commentsPage = Number(req.query.commentsPage || 1);
+    const commentsLimit = Math.min(100, Number(req.query.commentsLimit || 25));
+    const commentsSkip = (commentsPage - 1) * commentsLimit;
+    const activityPage = Number(req.query.activityPage || 1);
+    const activityLimit = Math.min(100, Number(req.query.activityLimit || 25));
+    const activitySkip = (activityPage - 1) * activityLimit;
+    const runPaginatedFacet = async ({
+      model,
+      match,
+      sort,
+      skip,
+      limit,
+      project,
+    }) => {
+      const facetResult = await model.aggregate([
+        { $match: match },
+        {
+          $facet: {
+            data: [
+              { $sort: sort },
+              { $skip: skip },
+              { $limit: limit + 1 },
+              { $project: project },
+            ],
+            totalCount: [{ $count: 'count' }],
+          },
         },
-      },
-      {
-        $lookup: {
-          from: Comment.collection.name,
-          let: { lookupCaseId: scopedCaseId },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $eq: ['$caseId', '$$lookupCaseId'],
-                },
-              },
-            },
-            { $sort: { createdAt: 1 } },
-          ],
-          as: 'comments',
-        },
-      },
-      {
-        $lookup: {
-          from: Attachment.collection.name,
-          let: { lookupCaseId: scopedCaseId, lookupFirmId: scopedFirmId },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $and: [
-                    { $eq: ['$caseId', '$$lookupCaseId'] },
-                    { $eq: ['$firmId', '$$lookupFirmId'] },
-                  ],
-                },
-              },
-            },
-            { $sort: { createdAt: 1 } },
-          ],
-          as: 'attachments',
-        },
-      },
-      {
-        $lookup: {
-          from: CaseHistory.collection.name,
-          let: { lookupCaseId: scopedCaseId, lookupFirmId: scopedFirmId },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $and: [
-                    { $eq: ['$caseId', '$$lookupCaseId'] },
-                    { $eq: ['$firmId', '$$lookupFirmId'] },
-                  ],
-                },
-              },
-            },
-            { $sort: { timestamp: -1 } },
-            { $limit: 100 },
-          ],
-          as: 'history',
-        },
-      },
-      {
-        $lookup: {
-          from: CaseAudit.collection.name,
-          let: { lookupCaseId: scopedCaseId, lookupFirmId: scopedFirmId },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $and: [
-                    { $eq: ['$caseId', '$$lookupCaseId'] },
-                    { $eq: ['$firmId', '$$lookupFirmId'] },
-                  ],
-                },
-              },
-            },
-            { $sort: { timestamp: -1 } },
-            { $limit: 50 },
-            {
-              $lookup: {
-                from: User.collection.name,
-                let: { auditPerformerXID: '$performedByXID', lookupFirmId: '$$lookupFirmId' },
-                pipeline: [
-                  {
-                    $match: {
-                      $expr: {
-                        $and: [
-                          { $eq: ['$xID', '$$auditPerformerXID'] },
-                          { $eq: [{ $toString: '$firmId' }, '$$lookupFirmId'] },
-                        ],
-                      },
-                    },
-                  },
-                  { $project: { name: 1 } },
-                ],
-                as: 'userInfo',
-              },
-            },
-            {
-              $addFields: {
-                performedByName: { $arrayElemAt: ['$userInfo.name', 0] },
-              },
-            },
-            {
-              $project: {
-                userInfo: 0,
-              },
-            },
-          ],
-          as: 'auditLog',
-        },
-      },
-      {
-        $project: {
-          comments: 1,
-          attachments: 1,
-          history: 1,
-          auditLog: 1,
-        },
-      },
-    ];
+      ]);
+      const first = Array.isArray(facetResult) ? facetResult[0] || {} : {};
+      const rows = Array.isArray(first.data) ? first.data : [];
+      const totalCount = first.totalCount?.[0]?.count || 0;
+      return {
+        rows: rows.slice(0, limit),
+        hasMore: rows.length > limit,
+        totalCount,
+      };
+    };
 
-    if (req.query.explain === 'true' && !isProduction()) {
-      const explainPlan = await Case.aggregate(relatedDataPipeline).explain('executionStats');
-      console.log('[GET_CASE][EXPLAIN]', JSON.stringify(explainPlan));
-    }
-
-    const [relatedResult, clientResult] = await Promise.allSettled([
-      Case.aggregate(relatedDataPipeline),
+    const [commentsResult, attachmentsResult, historyResult, auditResult, clientResult] = await Promise.allSettled([
+      runPaginatedFacet({
+        model: Comment,
+        match: { caseId: scopedCaseId },
+        sort: { createdAt: 1 },
+        skip: commentsSkip,
+        limit: commentsLimit,
+        project: {
+          _id: 1,
+          caseId: 1,
+          text: 1,
+          note: 1,
+          createdBy: 1,
+          createdByXID: 1,
+          createdByName: 1,
+          createdAt: 1,
+        },
+      }),
+      Attachment.find({ caseId: scopedCaseId, firmId: scopedFirmId })
+        .select('_id fileName description createdAt uploadedAt uploadedBy createdByXID isAvailable uploadStatus')
+        .sort({ createdAt: 1 })
+        .lean(),
+      runPaginatedFacet({
+        model: CaseHistory,
+        match: { caseId: scopedCaseId, firmId: scopedFirmId },
+        sort: { timestamp: -1 },
+        skip: activitySkip,
+        limit: activityLimit,
+        project: {
+          _id: 1,
+          actionType: 1,
+          description: 1,
+          timestamp: 1,
+          performedBy: 1,
+          performedByXID: 1,
+        },
+      }),
+      runPaginatedFacet({
+        model: CaseAudit,
+        match: { caseId: scopedCaseId, firmId: scopedFirmId },
+        sort: { timestamp: -1 },
+        skip: activitySkip,
+        limit: activityLimit,
+        project: {
+          _id: 1,
+          actionType: 1,
+          description: 1,
+          timestamp: 1,
+          performedByXID: 1,
+          metadata: 1,
+        },
+      }),
       ClientRepository.findByClientId(req.user.firmId, caseData.clientId, req.user.role),
     ]);
 
-    if (relatedResult.status === 'rejected') {
-      console.error('[GET_CASE] Related data load failed', relatedResult.reason);
+    if (commentsResult.status === 'rejected' || attachmentsResult.status === 'rejected' || historyResult.status === 'rejected' || auditResult.status === 'rejected') {
+      console.error('[GET_CASE] Related data load failed', {
+        comments: commentsResult.status,
+        attachments: attachmentsResult.status,
+        history: historyResult.status,
+        audit: auditResult.status,
+      });
     }
     if (clientResult.status === 'rejected') {
       console.error('[GET_CASE] Client load failed', clientResult.reason);
     }
-
-    const relatedData =
-      relatedResult.status === 'fulfilled' && Array.isArray(relatedResult.value)
-        ? (relatedResult.value[0] && typeof relatedResult.value[0] === 'object' ? relatedResult.value[0] : {})
-        : {};
-
-    const comments = relatedData.comments || [];
-    const attachments = relatedData.attachments || [];
-    const history = relatedData.history || [];
-    const auditLog = relatedData.auditLog || [];
+    const commentsPayload = commentsResult.status === 'fulfilled' ? commentsResult.value : { rows: [], hasMore: false, totalCount: 0 };
+    const historyPayload = historyResult.status === 'fulfilled' ? historyResult.value : { rows: [], hasMore: false, totalCount: 0 };
+    const auditPayload = auditResult.status === 'fulfilled' ? auditResult.value : { rows: [], hasMore: false, totalCount: 0 };
+    const comments = (commentsPayload.rows || []).map((comment) => ({
+      ...comment,
+      text: sanitizeOutput(comment.text),
+      note: comment.note ? sanitizeOutput(comment.note) : comment.note,
+    }));
+    const attachments = (attachmentsResult.status === 'fulfilled' ? attachmentsResult.value : []).map((attachment) => ({
+      ...attachment,
+      description: attachment.description ? sanitizeOutput(attachment.description) : attachment.description,
+    }));
+    const history = historyPayload.rows || [];
+    let auditLog = auditPayload.rows || [];
+    if (auditLog.length > 0) {
+      const auditXids = [...new Set(auditLog.map((entry) => entry.performedByXID).filter(Boolean))];
+      if (auditXids.length > 0) {
+        const users = await User.find({
+          xID: { $in: auditXids },
+          firmId: scopedFirmId,
+        }).select('xID name').lean();
+        const namesByXid = new Map(users.map((user) => [user.xID, user.name]));
+        auditLog = auditLog.map((entry) => ({
+          ...entry,
+          performedByName: namesByXid.get(entry.performedByXID) || undefined,
+        }));
+      }
+    }
     
     // Fetch current client details - with firm scoping
     // TODO: Consider using aggregation pipeline with $lookup for better performance
@@ -1589,6 +1569,20 @@ const getCaseByCaseId = async (req, res) => {
           canEdit: !isViewOnlyMode,
           canComment: true, // Always allowed
           canAttach: true, // Always allowed
+        },
+        pagination: {
+          comments: {
+            page: commentsPage,
+            limit: commentsLimit,
+            hasMore: commentsPayload.hasMore,
+            totalCount: commentsPayload.totalCount,
+          },
+          activity: {
+            page: activityPage,
+            limit: activityLimit,
+            hasMore: historyPayload.hasMore || auditPayload.hasMore,
+            totalCount: (historyPayload.totalCount || 0) + (auditPayload.totalCount || 0),
+          },
         },
       },
     });

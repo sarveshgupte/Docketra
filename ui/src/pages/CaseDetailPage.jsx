@@ -4,7 +4,7 @@
  * PR: Comprehensive CaseHistory & Audit Trail - Added view tracking and history display
  */
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
@@ -163,6 +163,29 @@ export const CaseDetailPage = () => {
   const commentDraftKey = `docketra_case_comment_draft_${firmSlug || 'firm'}_${caseId}`;
 
 
+  const loadCase = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await caseService.getCaseById(caseId, {
+        commentsPage: 1,
+        commentsLimit: 25,
+        activityPage: 1,
+        activityLimit: 25,
+      });
+      
+      if (response.success) {
+        const normalized = response.data?.case || response.data;
+        setCaseData(normalized);
+      }
+    } catch (error) {
+      console.error('Failed to load case:', error);
+      const serverMessage = error?.response?.data?.message;
+      showError(serverMessage || 'Unable to load docket details. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [caseId, showError]);
+
   useEffect(() => {
     loadCase();
     
@@ -173,7 +196,7 @@ export const CaseDetailPage = () => {
     return () => {
       caseService.trackCaseExit(caseId);
     };
-  }, [caseId]);
+  }, [caseId, loadCase]);
 
   useEffect(() => {
     const existingDraft = localStorage.getItem(commentDraftKey);
@@ -301,22 +324,6 @@ export const CaseDetailPage = () => {
     };
   }, [caseId]);
 
-  const loadCase = async () => {
-    setLoading(true);
-    try {
-      const response = await caseService.getCaseById(caseId);
-      
-      if (response.success) {
-        const normalized = response.data?.case || response.data;
-        setCaseData(normalized);
-      }
-    } catch (error) {
-      console.error('Failed to load case:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handlePullCase = () => {
     setConfirmModal({
       title: 'Pull Docket',
@@ -388,9 +395,10 @@ export const CaseDetailPage = () => {
     setSubmitting(true);
     try {
       const commentText = newComment.trim();
-      await caseService.addComment(caseId, commentText, user?.email);
-      const newCommentObj = {
-        _id: Date.now().toString(), // Temporary ID
+      const response = await caseService.addComment(caseId, commentText);
+      const serverComment = response?.data && typeof response.data === 'object' ? response.data : null;
+      const newCommentObj = serverComment || {
+        _id: `tmp-${Date.now()}`,
         text: commentText,
         createdBy: user?.email || 'Unknown',
         createdByName: user?.name || null,
@@ -399,7 +407,11 @@ export const CaseDetailPage = () => {
       };
       setCaseData((prev) => ({
         ...prev,
-        comments: [...(prev?.comments || []), newCommentObj],
+        comments: [...(prev?.comments || []), newCommentObj].filter((comment, index, all) => {
+          const key = comment?._id || comment?.id;
+          if (!key) return true;
+          return all.findIndex((entry) => (entry?._id || entry?.id) === key) === index;
+        }),
       }));
       localStorage.removeItem(commentDraftKey);
       setNewComment('');
@@ -453,7 +465,7 @@ export const CaseDetailPage = () => {
     try {
       const uploadedFile = selectedFile;
       const description = fileDescription.trim();
-      await caseService.addAttachment(caseId, uploadedFile, description, user?.email);
+      await caseService.addAttachment(caseId, uploadedFile, description);
       const newFileObj = {
         _id: Date.now().toString(), // Temporary ID
         fileName: uploadedFile.name,

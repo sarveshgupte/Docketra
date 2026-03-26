@@ -301,6 +301,20 @@ const contactLimiter = createLimiter({
   keyGenerator: ipKeyGenerator,
 });
 
+const commentLimiter = createLimiter({
+  name: 'commentLimiter',
+  windowMs: config.security.rateLimit.commentWindowSeconds * 1000,
+  max: config.security.rateLimit.commentPerMinute,
+  keyGenerator: userOrIpKeyGenerator,
+});
+
+const fileUploadLimiter = createLimiter({
+  name: 'fileUploadLimiter',
+  windowMs: config.security.rateLimit.fileUploadWindowSeconds * 1000,
+  max: config.security.rateLimit.fileUploadPerMinute,
+  keyGenerator: userOrIpKeyGenerator,
+});
+
 const debugLimiter = createLimiter({
   name: 'debugLimiter',
   windowMs: config.security.rateLimit.debugWindowSeconds * 1000,
@@ -340,6 +354,8 @@ module.exports = {
   refreshUserLimiter,
   internalMetricsLimiter,
   contactLimiter,
+  commentLimiter,
+  fileUploadLimiter,
   debugLimiter,
   inboundEmailLimiter,
   superadminAdminResendLimiter,
