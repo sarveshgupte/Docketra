@@ -30,13 +30,19 @@ export class ErrorBoundary extends React.Component {
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4">
           <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-8">
             <div className="text-center">
-              <h1 className="mt-4 text-2xl font-bold text-gray-900">Something went wrong</h1>
-              <p className="mt-2 text-gray-600">We're sorry, but something unexpected happened. Please try refreshing the page.</p>
+              <h1 className="mt-4 text-2xl font-bold text-gray-900">Unable to load this view</h1>
+              <p className="mt-2 text-gray-600">A rendering error occurred. Retry now or go back to continue working.</p>
               <button
                 onClick={() => window.location.reload()}
                 className="mt-6 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
               >
-                Refresh Page
+                Retry
+              </button>
+              <button
+                onClick={() => window.history.back()}
+                className="mt-3 inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Go Back
               </button>
             </div>
           </div>

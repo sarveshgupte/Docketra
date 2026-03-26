@@ -11,6 +11,7 @@ import { SESSION_KEYS, STORAGE_KEYS } from '../../utils/constants.js';
 import { isSuperAdmin } from '../../utils/authUtils.js';
 import { resolveFirmLoginPath } from '../../utils/tenantRouting.js';
 import { RouteLoadingShell } from '../routing/RouteLoadingShell';
+import { ROUTES } from '../../constants/routes.js';
 
 // Use sessionStorage to persist toasts across redirects in auth guard flows.
 const setAccessToast = (message) => {
@@ -70,7 +71,7 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
     // Non-SuperAdmin users trying to access SuperAdmin routes
     if (effectiveFirmSlug) {
       setAccessToast('SuperAdmin access is required to view that page.');
-      return <Navigate to={`/app/firm/${effectiveFirmSlug}/dashboard`} replace />;
+      return <Navigate to={ROUTES.DASHBOARD(effectiveFirmSlug)} replace />;
     }
     setAccessToast('SuperAdmin access is required to view that page.');
     return <Navigate to="/superadmin" replace />;
@@ -85,7 +86,7 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
   // 5. Admin-only route authorization
   if (requireAdmin && !isAdmin) {
     setAccessToast('Admin access is required to view that page.');
-    return <Navigate to={`/app/firm/${effectiveFirmSlug}/dashboard`} replace />;
+    return <Navigate to={ROUTES.DASHBOARD(effectiveFirmSlug)} replace />;
   }
 
   return children;

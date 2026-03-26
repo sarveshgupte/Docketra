@@ -11,7 +11,7 @@ const ACTION_LABELS = {
   CASE_CLOSED: 'Docket closed',
 };
 
-export const AuditTimeline = ({ events = [] }) => {
+export const AuditTimeline = ({ events = [], onViewFullTimeline }) => {
   const orderedEvents = [...events].sort((a, b) => {
     const left = new Date(b.timestamp || b.createdAt || 0).getTime();
     const right = new Date(a.timestamp || a.createdAt || 0).getTime();
@@ -44,8 +44,8 @@ export const AuditTimeline = ({ events = [] }) => {
           })}
         </div>
       )}
-      {!!orderedEvents.length && (
-        <button type="button" className="audit-timeline-link">
+      {!!orderedEvents.length && onViewFullTimeline && (
+        <button type="button" className="audit-timeline-link" onClick={onViewFullTimeline}>
           View Full Timeline →
         </button>
       )}
