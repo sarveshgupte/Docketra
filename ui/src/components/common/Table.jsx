@@ -39,7 +39,7 @@ export const TableHeader = ({ children, className = '' }) => {
   return (
     <th
       className={joinClasses(
-        'px-container-x py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap',
+        'px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap',
         className,
       )}
     >
@@ -49,14 +49,14 @@ export const TableHeader = ({ children, className = '' }) => {
 };
 
 export const TableCell = ({ children, className = '' }) => {
-  return <td className={joinClasses('px-container-x py-4 whitespace-nowrap text-sm text-text-primary', className)}>{children}</td>;
+  return <td className={joinClasses('px-6 py-4 whitespace-nowrap text-sm text-gray-900', className)}>{children}</td>;
 };
 
 export const TableFooter = ({ children, colSpan, className = '' }) => {
   return (
     <tfoot className="bg-white">
       <tr>
-        <td colSpan={colSpan} className={joinClasses('px-container-x py-4 text-sm text-gray-500 border-t border-gray-200', className)}>
+        <td colSpan={colSpan} className={joinClasses('px-6 py-4 text-sm text-gray-500 border-t border-gray-200', className)}>
           {children}
         </td>
       </tr>

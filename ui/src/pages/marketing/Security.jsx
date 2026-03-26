@@ -19,8 +19,8 @@ export const SecurityPage = () => (
     sections={SECTIONS}
   >
     <section id="security-overview">
-      <h2 className="text-xl font-semibold text-slate-900">1. Security Overview</h2>
-      <p className="mt-3 text-sm leading-relaxed">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">1. Security Overview</h2>
+      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
         Security is a foundational principle of the Docketra platform. We apply defence-in-depth
         across every layer — from network transport and application logic to data storage and
         identity management. Our security posture is designed to meet the expectations of
@@ -29,8 +29,8 @@ export const SecurityPage = () => (
     </section>
 
     <section id="tenant-isolation">
-      <h2 className="text-xl font-semibold text-slate-900">2. Multi-Tenant Isolation Model</h2>
-      <p className="mt-3 text-sm leading-relaxed">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">2. Multi-Tenant Isolation Model</h2>
+      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
         Each tenant operates in a fully isolated logical environment. All data queries, API
         responses, and background operations are scoped to the authenticated tenant context.
         Cross-tenant data access is architecturally prevented through server-side enforcement —
@@ -40,8 +40,8 @@ export const SecurityPage = () => (
     </section>
 
     <section id="encryption">
-      <h2 className="text-xl font-semibold text-slate-900">3. Encryption Standards</h2>
-      <p className="mt-3 text-sm leading-relaxed">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">3. Encryption Standards</h2>
+      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
         All data in transit is encrypted using TLS 1.2 or higher. Data at rest is encrypted using
         AES-256 or equivalent. Authentication tokens are signed using asymmetric cryptography with
         short expiry windows. Sensitive fields are individually encrypted within the data layer.
@@ -49,8 +49,8 @@ export const SecurityPage = () => (
     </section>
 
     <section id="access-control">
-      <h2 className="text-xl font-semibold text-slate-900">4. Access Control &amp; RBAC</h2>
-      <p className="mt-3 text-sm leading-relaxed">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">4. Access Control &amp; RBAC</h2>
+      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
         Docketra enforces role-based access control (RBAC) at every layer of the stack. Permissions
         are evaluated server-side on every request — there is no reliance on client-side gating.
         Roles are scoped per tenant and cannot be escalated without explicit administrative action.
@@ -59,8 +59,8 @@ export const SecurityPage = () => (
     </section>
 
     <section id="audit-logging">
-      <h2 className="text-xl font-semibold text-slate-900">5. Audit Logging</h2>
-      <p className="mt-3 text-sm leading-relaxed">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">5. Audit Logging</h2>
+      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
         All platform actions — including authentication events, data modifications, role changes,
         and file operations — are recorded in an immutable, timestamped audit log. Logs are
         scoped by tenant and retained in accordance with our data retention policy. Audit records
@@ -69,8 +69,8 @@ export const SecurityPage = () => (
     </section>
 
     <section id="incident-response">
-      <h2 className="text-xl font-semibold text-slate-900">6. Incident Response</h2>
-      <p className="mt-3 text-sm leading-relaxed">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">6. Incident Response</h2>
+      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
         We maintain an incident response plan aligned with industry best practices. In the event
         of a confirmed data breach, affected customers will be notified within the timeframes
         mandated by applicable law. We conduct post-incident reviews and implement remediation
@@ -79,14 +79,14 @@ export const SecurityPage = () => (
     </section>
 
     <section id="vulnerability-disclosure">
-      <h2 className="text-xl font-semibold text-slate-900">7. Vulnerability Disclosure</h2>
-      <p className="mt-3 text-sm leading-relaxed">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">7. Vulnerability Disclosure</h2>
+      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
         We welcome responsible disclosure of security vulnerabilities. If you discover a potential
         security issue in the Docketra platform, please report it directly to our security team
         at{' '}
         <a
           href="mailto:security@docketra.com"
-          className="text-slate-800 underline hover:no-underline"
+          className="text-gray-700 underline hover:no-underline"
         >
           security@docketra.com
         </a>
@@ -96,8 +96,8 @@ export const SecurityPage = () => (
     </section>
 
     <section id="compliance">
-      <h2 className="text-xl font-semibold text-slate-900">8. Compliance Alignment</h2>
-      <p className="mt-3 text-sm leading-relaxed">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">8. Compliance Alignment</h2>
+      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
         Our security and data handling practices are designed to align with the requirements of
         the Digital Personal Data Protection Act, 2023 (DPDP Act) and the general principles of
         the General Data Protection Regulation (GDPR). We continuously review our controls to

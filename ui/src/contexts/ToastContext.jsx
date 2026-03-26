@@ -134,7 +134,7 @@ const ToastContainer = ({ toasts, removeToast }) => {
             <button
               type="button"
               onClick={() => removeToast(toast.id)}
-              className="text-gray-400 transition-colors hover:text-text-secondary"
+              className="text-gray-400 transition-colors hover:text-gray-600"
               aria-label="Close notification"
             >
               ×

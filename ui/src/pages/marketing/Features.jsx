@@ -31,13 +31,13 @@ const FEATURES = [
 
 export const FeaturesPage = () => (
   <Section>
-    <div className="mx-auto w-full max-w-3xl px-4 text-center sm:px-container-x lg:px-8">
-      <h1 className="type-section text-text-primary">Platform Features</h1>
-      <p className="mt-6 type-body text-lg text-text-secondary">
+    <div className="mx-auto w-full max-w-3xl px-4 text-center sm:px-6 lg:px-8">
+      <h1 className="type-section text-gray-900">Platform Features</h1>
+      <p className="mt-6 type-body text-lg text-gray-600">
         Everything you need to bring operational discipline to your firm. Built for compliance, audit, and tax teams who cannot afford to miss a deadline.
       </p>
     </div>
-    <div className="mt-16 grid w-full gap-section sm:grid-cols-2 lg:grid-cols-3">
+    <div className="mt-16 grid w-full gap-12 sm:grid-cols-2 lg:grid-cols-3">
       {FEATURES.map(({ title, description }, index) => (
         <motion.div
           key={title}
@@ -49,8 +49,8 @@ export const FeaturesPage = () => (
           <div className="mb-6 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50">
             <span className="text-blue-600 font-bold text-xl">✓</span>
           </div>
-          <h2 className="type-card-title text-text-primary mb-3">{title}</h2>
-          <p className="type-body min-w-0 flex-1 text-text-secondary">{description}</p>
+          <h2 className="type-card-title text-gray-900 mb-3">{title}</h2>
+          <p className="type-body min-w-0 flex-1 text-gray-600">{description}</p>
         </motion.div>
       ))}
     </div>

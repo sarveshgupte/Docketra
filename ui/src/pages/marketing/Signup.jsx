@@ -294,7 +294,7 @@ export default function Signup() {
   return (
     <div className="auth-wrapper">
       <Card className="auth-card max-w-form">
-        <h1 className="text-2xl font-semibold tracking-tight text-text-primary text-center">Starter Signup</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">Starter Signup</h1>
         <p className="mt-2 text-sm text-gray-500 text-center">Create your free Starter workspace in minutes.</p>
 
         {apiError && (
@@ -410,7 +410,7 @@ export default function Signup() {
             <Input id="otp-email" label="Email" value={signupEmail} readOnly />
 
             <fieldset>
-              <legend className="mb-1 block text-sm font-medium text-text-primary text-center">{renderRequiredLabel('6-digit OTP')}</legend>
+              <legend className="mb-1 block text-sm font-medium text-gray-900 text-center">{renderRequiredLabel('6-digit OTP')}</legend>
               <p id={OTP_HINT_ID} className="mt-2 text-sm text-gray-500 text-center">
                 Enter the one-time password sent to your email.
               </p>
