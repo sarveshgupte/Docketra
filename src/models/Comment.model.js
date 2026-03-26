@@ -136,6 +136,7 @@ commentSchema.pre('findOneAndDelete', function(next) {
  * - text: Full-text search index for global search
  */
 commentSchema.index({ caseId: 1, createdAt: -1 });
+commentSchema.index({ caseId: 1, createdAt: 1 });
 commentSchema.index({ text: 'text' });
 
 commentSchema.plugin(softDeletePlugin);

@@ -227,6 +227,7 @@ caseAuditSchema.pre('remove', function(next) {
  */
 caseAuditSchema.index({ caseId: 1, timestamp: -1 });
 caseAuditSchema.index({ caseId: 1, firmId: 1 });
+caseAuditSchema.index({ caseId: 1, firmId: 1, timestamp: -1 });
 caseAuditSchema.index({ firmId: 1, timestamp: -1 });
 caseAuditSchema.index({ performedByXID: 1 });
 caseAuditSchema.index({ actionType: 1 });
