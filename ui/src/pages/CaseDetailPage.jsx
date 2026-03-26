@@ -22,6 +22,7 @@ import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
 import { useToast } from '../hooks/useToast';
 import { caseService } from '../services/caseService';
+import { extractErrorMessage } from '../services/apiResponse';
 import { formatDateTime } from '../utils/formatDateTime';
 import { formatClientDisplay } from '../utils/formatters';
 import { USER_ROLES, CASE_DETAIL_TABS, VALID_CASE_DETAIL_TAB_NAMES } from '../utils/constants';
@@ -87,6 +88,7 @@ export const CaseDetailPage = () => {
   };
 
   const [loading, setLoading] = useState(true);
+  const [sectionLoading, setSectionLoading] = useState({ comments: false, history: false, attachments: false });
   const [caseData, setCaseData] = useState(null);
   const [newComment, setNewComment] = useState('');
   const [commentSaveStatus, setCommentSaveStatus] = useState(null);
@@ -147,6 +149,7 @@ export const CaseDetailPage = () => {
   // Track case view session
   // PR: Comprehensive CaseHistory & Audit Trail
   const [viewTracked, setViewTracked] = useState(false);
+  const loadSequenceRef = useRef(0);
   
   // Configuration for view tracking
   const VIEW_TRACKING_DEBOUNCE_MS = 2000; // 2 seconds
@@ -161,10 +164,49 @@ export const CaseDetailPage = () => {
   const history = caseData?.history ?? [];
   const timelineEvents = auditLog.length > 0 ? auditLog : history;
   const commentDraftKey = `docketra_case_comment_draft_${firmSlug || 'firm'}_${caseId}`;
+  const availableAssignees = useMemo(() => {
+    const fromCase = caseData?.assignableUsers || caseData?.users || [];
+    const mapped = fromCase
+      .map((entry) => ({
+        value: entry.xID || entry.userId || entry.email,
+        label: entry.name || entry.fullName || entry.xID || entry.email,
+      }))
+      .filter((entry) => entry.value);
+    if (!mapped.length && user?.xID) {
+      return [{ value: user.xID, label: user.name || user.xID }];
+    }
+    return mapped;
+  }, [caseData?.assignableUsers, caseData?.users, user?.xID, user?.name]);
+
+  const mergeUniqueComments = useCallback((inputComments = []) => {
+    const map = new Map();
+    inputComments.forEach((comment) => {
+      if (!comment) return;
+      const stableKey = comment._id || comment.id || comment.tempId || `${comment.createdAt || ''}:${comment.text || ''}:${comment.createdByXID || comment.createdBy || ''}`;
+      if (!map.has(stableKey)) {
+        map.set(stableKey, comment);
+      }
+    });
+    return Array.from(map.values());
+  }, []);
+
+  const appendTimelineEvent = useCallback((event) => {
+    setCaseData((prev) => ({
+      ...prev,
+      auditLog: mergeUniqueComments([...(prev?.auditLog || []), event]),
+      history: mergeUniqueComments([...(prev?.history || []), event]),
+    }));
+  }, [mergeUniqueComments]);
 
 
-  const loadCase = useCallback(async () => {
-    setLoading(true);
+  const loadCase = useCallback(async ({ background = false } = {}) => {
+    const requestId = loadSequenceRef.current + 1;
+    loadSequenceRef.current = requestId;
+    if (!background) {
+      setLoading(true);
+    } else {
+      setSectionLoading({ comments: true, history: true, attachments: true });
+    }
     try {
       const response = await caseService.getCaseById(caseId, {
         commentsPage: 1,
@@ -173,16 +215,18 @@ export const CaseDetailPage = () => {
         activityLimit: 25,
       });
       
-      if (response.success) {
+      if (response.success && requestId === loadSequenceRef.current) {
         const normalized = response.data?.case || response.data;
         setCaseData(normalized);
       }
     } catch (error) {
-      console.error('Failed to load case:', error);
-      const serverMessage = error?.response?.data?.message;
-      showError(serverMessage || 'Unable to load docket details. Please try again.');
+      showError(extractErrorMessage(error, 'Unable to load docket details. Please try again.'));
     } finally {
-      setLoading(false);
+      if (!background) {
+        setLoading(false);
+      } else {
+        setSectionLoading({ comments: false, history: false, attachments: false });
+      }
     }
   }, [caseId, showError]);
 
@@ -342,11 +386,7 @@ export const CaseDetailPage = () => {
             navigate(ROUTES.MY_WORKLIST(firmSlug));
           }
         } catch (error) {
-          console.error('Failed to pull docket:', error);
-          const serverMessage = error.response?.data?.message;
-          const errorMessage = serverMessage && typeof serverMessage === 'string'
-            ? serverMessage.substring(0, 200)
-            : 'Unable to pull docket. Please try again.';
+          const errorMessage = extractErrorMessage(error, 'Unable to pull docket. Please try again.');
           showError(errorMessage);
           setActionError({ message: errorMessage, retry: handlePullCase });
         } finally {
@@ -371,14 +411,10 @@ export const CaseDetailPage = () => {
             showSuccess(message);
             setActionConfirmation(message);
             setActionError(null);
-            await loadCase();
+            loadCase({ background: true });
           }
         } catch (error) {
-          console.error('Failed to move docket to workbasket:', error);
-          const serverMessage = error.response?.data?.message;
-          const errorMessage = serverMessage && typeof serverMessage === 'string'
-            ? serverMessage.substring(0, 200)
-            : 'Failed to move docket. Please try again.';
+          const errorMessage = extractErrorMessage(error, 'Failed to move docket. Please try again.');
           showError(errorMessage);
           setActionError({ message: errorMessage, retry: handleMoveToGlobal });
         } finally {
@@ -390,39 +426,59 @@ export const CaseDetailPage = () => {
 
   const handleAddComment = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
-    if (!newComment.trim()) return;
+    if (!newComment.trim() || submitting) return;
     
+    const commentText = newComment.trim();
+    const tempId = `tmp-comment-${Date.now()}`;
+    const optimisticComment = {
+      tempId,
+      _id: tempId,
+      text: commentText,
+      createdBy: user?.email || 'Unknown',
+      createdByName: user?.name || null,
+      createdByXID: user?.xID || null,
+      createdAt: new Date().toISOString(),
+      optimistic: true,
+    };
+    const previousComments = comments;
+    setCaseData((prev) => ({
+      ...prev,
+      comments: mergeUniqueComments([...(prev?.comments || []), optimisticComment]),
+    }));
+    setNewComment('');
     setSubmitting(true);
     try {
-      const commentText = newComment.trim();
       const response = await caseService.addComment(caseId, commentText);
-      const serverComment = response?.data && typeof response.data === 'object' ? response.data : null;
-      const newCommentObj = serverComment || {
-        _id: `tmp-${Date.now()}`,
-        text: commentText,
-        createdBy: user?.email || 'Unknown',
-        createdByName: user?.name || null,
-        createdByXID: user?.xID || null,
-        createdAt: new Date().toISOString(),
-      };
+      const serverCommentPayload = response?.data;
+      const serverComment = serverCommentPayload?.comment || (serverCommentPayload?.text ? serverCommentPayload : null);
       setCaseData((prev) => ({
         ...prev,
-        comments: [...(prev?.comments || []), newCommentObj].filter((comment, index, all) => {
-          const key = comment?._id || comment?.id;
-          if (!key) return true;
-          return all.findIndex((entry) => (entry?._id || entry?.id) === key) === index;
-        }),
+        comments: mergeUniqueComments(
+          (prev?.comments || [])
+            .filter((comment) => (comment?._id || comment?.id || comment?.tempId) !== tempId)
+            .concat(serverComment || [{ ...optimisticComment, optimistic: false }])
+        ),
       }));
       localStorage.removeItem(commentDraftKey);
-      setNewComment('');
       const message = `Comment added to docket ${caseId} • ${formatDateTime(new Date())}`;
       showSuccess(message);
       setActionConfirmation(message);
       setActionError(null);
+      appendTimelineEvent({
+        id: `comment-event-${Date.now()}`,
+        action: 'COMMENTED',
+        description: commentText,
+        createdAt: new Date().toISOString(),
+        createdBy: user?.name || user?.xID || user?.email || 'System',
+      });
       window.setTimeout(handleAddCommentSuccess, 80);
+      loadCase({ background: true });
     } catch (error) {
-      console.error('Failed to add comment:', error);
-      setActionError({ message: 'Failed to add comment. Please retry.', retry: handleAddComment });
+      setCaseData((prev) => ({ ...prev, comments: previousComments }));
+      setNewComment(commentText);
+      const message = extractErrorMessage(error, 'Failed to add comment. Please retry.');
+      showError(message);
+      setActionError({ message, retry: handleAddComment });
     } finally {
       setSubmitting(false);
     }
@@ -493,7 +549,6 @@ export const CaseDetailPage = () => {
       setActionConfirmation(message);
       setActionError(null);
     } catch (error) {
-      console.error('Failed to upload file:', error);
       const safeMessage = error?.response?.data?.message?.toLowerCase?.().includes('malware scanner not configured')
         ? 'File upload temporarily unavailable. Please contact administrator.'
         : 'Failed to upload file. Please try again.';
@@ -529,14 +584,10 @@ export const CaseDetailPage = () => {
             setActionError(null);
             setShowFileModal(false);
             setFileComment('');
-            await loadCase();
+            loadCase({ background: true });
           }
         } catch (error) {
-          console.error('Failed to file case:', error);
-          const serverMessage = error.response?.data?.message;
-          const errorMessage = serverMessage && typeof serverMessage === 'string'
-            ? serverMessage.substring(0, 200)
-            : 'Failed to file case. Please try again.';
+          const errorMessage = extractErrorMessage(error, 'Failed to file case. Please try again.');
           showError(errorMessage);
           setActionError({ message: errorMessage, retry: handleFileCase });
         } finally {
@@ -588,14 +639,10 @@ export const CaseDetailPage = () => {
             setShowPendModal(false);
             setPendComment('');
             setPendingUntil('');
-            await loadCase();
+            loadCase({ background: true });
           }
         } catch (error) {
-          console.error('Failed to pend case:', error);
-          const serverMessage = error.response?.data?.message;
-          const errorMessage = serverMessage && typeof serverMessage === 'string'
-            ? serverMessage.substring(0, 200)
-            : 'Failed to pend case. Please try again.';
+          const errorMessage = extractErrorMessage(error, 'Failed to pend case. Please try again.');
           showError(errorMessage);
           setActionError({ message: errorMessage, retry: handlePendCase });
         } finally {
@@ -619,7 +666,13 @@ export const CaseDetailPage = () => {
       confirmText: 'Resolve Case',
       onConfirm: async () => {
         setConfirmModal(null);
+        const previousState = caseData;
         setResolvingCase(true);
+        setCaseData((prev) => ({
+          ...prev,
+          status: 'RESOLVED',
+          case: prev?.case ? { ...prev.case, status: 'RESOLVED' } : prev?.case,
+        }));
         try {
           const response = await caseService.resolveCase(caseId, resolveComment);
           if (response.success) {
@@ -629,14 +682,18 @@ export const CaseDetailPage = () => {
             setActionError(null);
             setShowResolveModal(false);
             setResolveComment('');
-            await loadCase();
+            appendTimelineEvent({
+              id: `resolved-event-${Date.now()}`,
+              action: 'RESOLVED',
+              description: resolveComment,
+              createdAt: new Date().toISOString(),
+              createdBy: user?.name || user?.xID || user?.email || 'System',
+            });
+            loadCase({ background: true });
           }
         } catch (error) {
-          console.error('Failed to resolve case:', error);
-          const serverMessage = error.response?.data?.message;
-          const errorMessage = serverMessage && typeof serverMessage === 'string'
-            ? serverMessage.substring(0, 200)
-            : 'Failed to resolve case. Please try again.';
+          setCaseData(previousState);
+          const errorMessage = extractErrorMessage(error, 'Failed to resolve case. Please try again.');
           showError(errorMessage);
           setActionError({ message: errorMessage, retry: handleResolveCase });
         } finally {
@@ -670,14 +727,10 @@ export const CaseDetailPage = () => {
             setActionError(null);
             setShowUnpendModal(false);
             setUnpendComment('');
-            await loadCase();
+            loadCase({ background: true });
           }
         } catch (error) {
-          console.error('Failed to unpend case:', error);
-          const serverMessage = error.response?.data?.message;
-          const errorMessage = serverMessage && typeof serverMessage === 'string'
-            ? serverMessage.substring(0, 200)
-            : 'Failed to unpend case. Please try again.';
+          const errorMessage = extractErrorMessage(error, 'Failed to unpend case. Please try again.');
           showError(errorMessage);
           setActionError({ message: errorMessage, retry: handleUnpendCase });
         } finally {
@@ -707,6 +760,7 @@ export const CaseDetailPage = () => {
       return;
     }
 
+    if (assigningCase) return;
     setAssigningCase(true);
     const selectedAssignee = availableAssignees.find((option) => option.value === assignUser);
     const previous = caseData;
@@ -733,9 +787,19 @@ export const CaseDetailPage = () => {
     try {
       await caseService.updateStatus(caseId, caseInfo?.status || 'OPEN', assignComment.trim());
       showSuccess(`Assigned to ${selectedAssignee?.label || assignUser}`);
+      appendTimelineEvent({
+        id: `assigned-event-${Date.now()}`,
+        action: 'ASSIGNED',
+        description: assignComment.trim() || `Assigned to ${selectedAssignee?.label || assignUser}`,
+        createdAt: new Date().toISOString(),
+        createdBy: user?.name || user?.xID || user?.email || 'System',
+      });
+      loadCase({ background: true });
     } catch (error) {
       setCaseData(previous);
-      showError('Failed to assign docket. Please try again.');
+      const message = extractErrorMessage(error, 'Failed to assign docket. Please try again.');
+      showError(message);
+      setActionError({ message, retry: handleAssignDocket });
     } finally {
       setAssigningCase(false);
     }
@@ -751,19 +815,6 @@ export const CaseDetailPage = () => {
 
   // Determine if user is admin
   const isAdmin = user?.role === 'Admin';
-  const availableAssignees = useMemo(() => {
-    const fromCase = caseData?.assignableUsers || caseData?.users || [];
-    const mapped = fromCase
-      .map((entry) => ({
-        value: entry.xID || entry.userId || entry.email,
-        label: entry.name || entry.fullName || entry.xID || entry.email,
-      }))
-      .filter((entry) => entry.value);
-    if (!mapped.length && user?.xID) {
-      return [{ value: user.xID, label: user.name || user.xID }];
-    }
-    return mapped;
-  }, [caseData?.assignableUsers, caseData?.users, user?.xID, user?.name]);
 
   // Task 2: Inactivity warning — OPEN case not updated in 3+ days (not pended)
   const isInactiveWarning = useMemo(() => {
@@ -1071,7 +1122,7 @@ export const CaseDetailPage = () => {
                   <h2 id="comments-heading">Comments</h2>
                 </div>
                 <div className="case-detail__comments" ref={commentsListRef}>
-                  <DocketComments comments={comments} />
+                  {sectionLoading.comments ? <Loading message="Refreshing comments..." /> : <DocketComments comments={comments} />}
                 </div>
                 {(accessMode.canComment || permissions.canAddComment(caseData)) && (
                   <div className="case-detail__add-comment">
@@ -1115,8 +1166,8 @@ export const CaseDetailPage = () => {
                 </div>
                 <div className="case-detail__attachments">
                   {attachments.length > 0 ? (
-                    attachments.map((attachment, index) => (
-                      <article key={index} className="case-detail__attachment-item case-detail__attachment-card">
+                    attachments.map((attachment) => (
+                      <article key={attachment._id || attachment.id || `${attachment.createdAt}-${attachment.fileName || attachment.filename}`} className="case-detail__attachment-item case-detail__attachment-card">
                         <div className="case-detail__attachment-main">
                           <div className="case-detail__attachment-name">📄 {attachment.fileName || attachment.filename}</div>
                           <div className="case-detail__attachment-meta-group">
@@ -1200,7 +1251,9 @@ export const CaseDetailPage = () => {
                   <h2 id="history-heading">History</h2>
                 </div>
                 <div className="case-detail-history-list">
-                  {timelineEvents.length ? <AuditTimeline events={timelineEvents} /> : <div className="case-detail__empty-state rounded-xl border border-dashed border-gray-200 bg-gray-50 p-8 text-gray-500"><EmptyState title="No history yet" description="Audit events will appear here as the case changes." /></div>}
+                  {sectionLoading.history
+                    ? <Loading message="Refreshing activity..." />
+                    : (timelineEvents.length ? <AuditTimeline events={timelineEvents} /> : <div className="case-detail__empty-state rounded-xl border border-dashed border-gray-200 bg-gray-50 p-8 text-gray-500"><EmptyState title="No activity yet" description="Timeline events and lifecycle updates will appear here as the docket changes." /></div>)}
                 </div>
               </section>
             )}
@@ -1290,7 +1343,7 @@ export const CaseDetailPage = () => {
               <div className="case-detail__lifecycle-warnings" role="note">
                 <strong>⚠ Heads up before filing:</strong>
                 <ul className="case-detail__lifecycle-warnings-list">
-                  {lifecycleWarnings.map((w, i) => <li key={i}>{w}</li>)}
+                  {lifecycleWarnings.map((w) => <li key={w}>{w}</li>)}
                 </ul>
               </div>
             )}
@@ -1376,7 +1429,7 @@ export const CaseDetailPage = () => {
               <div className="case-detail__lifecycle-warnings" role="note">
                 <strong>⚠ Heads up before resolving:</strong>
                 <ul className="case-detail__lifecycle-warnings-list">
-                  {lifecycleWarnings.map((w, i) => <li key={i}>{w}</li>)}
+                  {lifecycleWarnings.map((w) => <li key={w}>{w}</li>)}
                 </ul>
               </div>
             )}
