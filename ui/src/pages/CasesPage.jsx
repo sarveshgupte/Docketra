@@ -128,17 +128,52 @@ export const CasesPage = () => {
     };
   }, []);
 
-  const normalizeCases = (records = []) =>
+  const normalizeCases = useCallback((records = []) =>
     records.map((record) => ({
       ...record,
       caseId: record.caseId || record._id,
-    }));
+    })), []);
+
+  const loadCases = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      let casesData = [];
+      if (isAdmin) {
+        const response = await caseService.getCases();
+        if (response.success) {
+          casesData = getCaseListRecords(response);
+        }
+      } else {
+        const response = await worklistService.getEmployeeWorklist();
+        if (response.success) {
+          casesData = response.data || [];
+        }
+      }
+      let resolvedCategoryCount = 0;
+      if (isAdmin) {
+        const categoriesResponse = await categoryService.getCategories(false);
+        resolvedCategoryCount = categoriesResponse?.data?.length || 0;
+      }
+      const normalized = normalizeCases(casesData);
+      setCases(normalized);
+      setCategoryCount(resolvedCategoryCount);
+      // Task 5: apply smart default view if no manual selection stored
+      applySmartDefault(normalized);
+    } catch (err) {
+      console.error('Failed to load cases:', err);
+      setError(err);
+      setCases([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [isAdmin, normalizeCases, applySmartDefault]);
 
   useEffect(() => {
     if (user) {
       loadCases();
     }
-  }, [user, isAdmin]);
+  }, [user, loadCases]);
 
   useEffect(() => {
     if (query.status && query.status !== statusFilter) {
@@ -174,40 +209,6 @@ export const CasesPage = () => {
     });
   }, [statusFilter, searchInput, sortState, setQuery]);
 
-  const loadCases = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      let casesData = [];
-      if (isAdmin) {
-        const response = await caseService.getCases();
-        if (response.success) {
-          casesData = getCaseListRecords(response);
-        }
-      } else {
-        const response = await worklistService.getEmployeeWorklist();
-        if (response.success) {
-          casesData = response.data || [];
-        }
-      }
-      let resolvedCategoryCount = 0;
-      if (isAdmin) {
-        const categoriesResponse = await categoryService.getCategories(false);
-        resolvedCategoryCount = categoriesResponse?.data?.length || 0;
-      }
-      const normalized = normalizeCases(casesData);
-      setCases(normalized);
-      setCategoryCount(resolvedCategoryCount);
-      // Task 5: apply smart default view if no manual selection stored
-      applySmartDefault(normalized);
-    } catch (err) {
-      console.error('Failed to load cases:', err);
-      setError(err);
-      setCases([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const dismissOnboarding = () => {
     localStorage.setItem(onboardingStorageKey, 'true');
@@ -248,18 +249,18 @@ export const CasesPage = () => {
     URL.revokeObjectURL(url);
   };
 
-  const handleCaseClick = (caseRecord) => {
+  const handleCaseClick = useCallback((caseRecord) => {
     const index = sortedCases.findIndex((c) => c.caseId === caseRecord.caseId);
     navigate(`/app/firm/${firmSlug}/cases/${caseRecord.caseId}`, {
       state: { sourceList: sortedCases.map((c) => c.caseId), index },
     });
-  };
+  }, [sortedCases, navigate, firmSlug]);
 
-  const handleCreateCase = () => {
+  const handleCreateCase = useCallback(() => {
     navigate(`/app/firm/${firmSlug}/cases/create`);
-  };
+  }, [navigate, firmSlug]);
 
-  const handleAssignToMe = async (caseRecord, event) => {
+  const handleAssignToMe = useCallback(async (caseRecord, event) => {
     event.stopPropagation();
     // Task 3: Block reassignment if case is locked
     if (caseRecord.lockStatus?.isLocked) {
@@ -306,7 +307,7 @@ export const CasesPage = () => {
     } finally {
       setAssigningCaseId(null);
     }
-  };
+  }, [showSuccess, loadCases]);
 
   // Task 6: Bulk action handlers
   const handleToggleSelectCase = useCallback((caseId, isLocked) => {
@@ -519,7 +520,25 @@ export const CasesPage = () => {
     return { avgDays, pctBreach, pctWithinSla, resolvedCount: resolved.length };
   }, [cases]);
 
-  const activeFilters = statusFilter === 'ALL' ? [] : [{ key: 'status', label: 'Status', value: statusFilter }];
+  const activeFilters = useMemo(
+    () => (statusFilter === 'ALL' ? [] : [{ key: 'status', label: 'Status', value: statusFilter }]),
+    [statusFilter],
+  );
+
+  const handleRemoveFilter = useCallback((key) => {
+    if (key === 'status') {
+      setStatusFilter('ALL');
+    }
+  }, []);
+
+  const handleResetFilters = useCallback(() => {
+    setStatusFilter('ALL');
+  }, []);
+
+  const toolbarLeft = useMemo(
+    () => <span className="cases-page__toolbar-copy">{sortedCases.length} records</span>,
+    [sortedCases.length],
+  );
 
   // Memoize select-all state to avoid repeated inline filtering (Task 6)
   const allVisibleSelected = useMemo(() => {
@@ -547,7 +566,7 @@ export const CasesPage = () => {
     );
   }
 
-  const columns = [
+  const columns = useMemo(() => [
     ...(enableBulkActions ? [{
       key: '__select',
       header: (
@@ -694,7 +713,20 @@ export const CasesPage = () => {
         );
       },
     },
-  ];
+  ], [
+    enableBulkActions,
+    allVisibleSelected,
+    handleSelectAll,
+    sortedCases,
+    selectedCaseIds,
+    handleToggleSelectCase,
+    firmConfig.escalationInactivityThresholdHours,
+    isAdmin,
+    assigningCaseId,
+    navigate,
+    firmSlug,
+    handleAssignToMe,
+  ]);
 
   return (
     <Layout>
@@ -983,13 +1015,9 @@ export const CasesPage = () => {
             sortState={sortState}
             onSortChange={setSortState}
             activeFilters={activeFilters}
-            onRemoveFilter={(key) => {
-              if (key === 'status') {
-                setStatusFilter('ALL');
-              }
-            }}
-            onResetFilters={() => setStatusFilter('ALL')}
-            toolbarLeft={<span className="cases-page__toolbar-copy">{sortedCases.length} records</span>}
+            onRemoveFilter={handleRemoveFilter}
+            onResetFilters={handleResetFilters}
+            toolbarLeft={toolbarLeft}
             dense
             emptyContent={
               <EmptyState

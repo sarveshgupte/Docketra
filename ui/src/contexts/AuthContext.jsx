@@ -13,7 +13,7 @@
  * The API is the single source of truth for user identity.
  */
 
-import React, { createContext, useState, useCallback, useEffect, useRef } from 'react';
+import React, { createContext, useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { authService } from '../services/authService';
 import { STORAGE_KEYS } from '../utils/constants';
 import { isSuperAdmin } from '../utils/authUtils';
@@ -174,7 +174,7 @@ export const AuthProvider = ({ children }) => {
     }
   }, [resetAuthState, setAuthFromProfile]);
 
-  const login = async (xID, password, endpoint) => {
+  const login = useCallback(async (xID, password, endpoint) => {
     try {
       const response = await authService.login(xID, password, endpoint);
       
@@ -190,9 +190,9 @@ export const AuthProvider = ({ children }) => {
       resetAuthState();
       throw error;
     }
-  };
+  }, [resetAuthState]);
 
-  const logout = async ({ preserveFirmSlug = false } = {}) => {
+  const logout = useCallback(async ({ preserveFirmSlug = false } = {}) => {
     let firmSlugToPreserve = null;
     if (preserveFirmSlug) {
       try {
@@ -216,9 +216,9 @@ export const AuthProvider = ({ children }) => {
       
       clearAuthStorage(firmSlugToPreserve);
     }
-  };
+  }, [user, clearAuthStorage]);
 
-  const updateUser = (userData) => {
+  const updateUser = useCallback((userData) => {
     setUser((prev) => {
       const mergedUser = { ...prev, ...userData };
 
@@ -233,11 +233,11 @@ export const AuthProvider = ({ children }) => {
 
       return mergedUser;
     });
-  };
+  }, []);
 
   const isAuthResolved = !loading && !isHydrating;
 
-  const value = {
+  const value = useMemo(() => ({
     user,
     loading,
     isAuthenticated,
@@ -248,7 +248,18 @@ export const AuthProvider = ({ children }) => {
     fetchProfile,
     updateUser,
     setAuthFromProfile,
-  };
+  }), [
+    user,
+    loading,
+    isAuthenticated,
+    isHydrating,
+    isAuthResolved,
+    login,
+    logout,
+    fetchProfile,
+    updateUser,
+    setAuthFromProfile,
+  ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
