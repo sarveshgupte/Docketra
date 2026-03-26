@@ -3,6 +3,7 @@
  */
 
 import api from './api';
+import { normalizeApiResponse } from './apiResponse';
 
 const caseRoute = {
   detail: (caseId) => `/cases/${caseId}`,
@@ -50,7 +51,7 @@ export const caseService = {
     
     const queryString = params.toString();
     const response = await api.get(`/cases${queryString ? `?${queryString}` : ''}`);
-    return response.data;
+    return normalizeApiResponse(response);
   },
 
   /**
@@ -62,8 +63,9 @@ export const caseService = {
     if (cached) return cached;
     const pendingPromise = api.get(caseRoute.detail(caseId), { params })
       .then((response) => {
-        setCached(cacheKey, response.data);
-        return response.data;
+        const normalized = normalizeApiResponse(response);
+        setCached(cacheKey, normalized);
+        return normalized;
       })
       .catch((error) => {
         caseCache.delete(cacheKey);
@@ -81,7 +83,7 @@ export const caseService = {
       ...caseData,
       forceCreate,
     });
-    return response.data;
+    return normalizeApiResponse(response);
   },
 
   /**
@@ -92,7 +94,7 @@ export const caseService = {
       text: commentText,
     });
     invalidateCaseCache(caseId);
-    return response.data;
+    return normalizeApiResponse(response);
   },
 
   /**
@@ -109,7 +111,7 @@ export const caseService = {
       },
     });
     invalidateCaseCache(caseId);
-    return response.data;
+    return normalizeApiResponse(response);
   },
 
   /**
@@ -120,7 +122,8 @@ export const caseService = {
       status,
       comment,
     });
-    return response.data;
+    invalidateCaseCache(caseId);
+    return normalizeApiResponse(response);
   },
 
   /**
@@ -128,7 +131,7 @@ export const caseService = {
    */
   cloneCase: async (caseId) => {
     const response = await api.post(`/cases/${caseId}/clone`);
-    return response.data;
+    return normalizeApiResponse(response);
   },
 
   /**
@@ -138,7 +141,8 @@ export const caseService = {
     const response = await api.post(`/cases/${caseId}/unpend`, {
       comment,
     });
-    return response.data;
+    invalidateCaseCache(caseId);
+    return normalizeApiResponse(response);
   },
 
   /**
@@ -146,7 +150,7 @@ export const caseService = {
    */
   lockCase: async (caseId) => {
     const response = await api.post(`/cases/${caseId}/lock`);
-    return response.data;
+    return normalizeApiResponse(response);
   },
 
   /**
@@ -154,7 +158,7 @@ export const caseService = {
    */
   unlockCase: async (caseId) => {
     const response = await api.post(`/cases/${caseId}/unlock`);
-    return response.data;
+    return normalizeApiResponse(response);
   },
 
   /**
@@ -163,7 +167,8 @@ export const caseService = {
    */
   pullCase: async (caseId) => {
     const response = await api.post('/cases/pull', { caseIds: [caseId] });
-    return response.data;
+    invalidateCaseCache(caseId);
+    return normalizeApiResponse(response);
   },
 
   getSummaryPdfUrl: (caseId) => `${window.location.origin}/api/cases/${caseId}/summary-pdf`,
@@ -171,7 +176,7 @@ export const caseService = {
 
   getClientDockets: async (clientId) => {
     const response = await api.get(`/clients/${clientId}/dockets?sort=createdAt&order=desc&limit=20`);
-    return response.data;
+    return normalizeApiResponse(response);
   },
 
   /**
@@ -179,7 +184,8 @@ export const caseService = {
    */
   moveCaseToGlobal: async (caseId) => {
     const response = await api.post(`/cases/${caseId}/unassign`);
-    return response.data;
+    invalidateCaseCache(caseId);
+    return normalizeApiResponse(response);
   },
 
   /**
@@ -190,7 +196,8 @@ export const caseService = {
     const response = await api.post(`/cases/${caseId}/file`, {
       comment,
     });
-    return response.data;
+    invalidateCaseCache(caseId);
+    return normalizeApiResponse(response);
   },
 
   /**
@@ -202,7 +209,8 @@ export const caseService = {
       comment,
       reopenDate,
     });
-    return response.data;
+    invalidateCaseCache(caseId);
+    return normalizeApiResponse(response);
   },
 
   /**
@@ -213,7 +221,8 @@ export const caseService = {
     const response = await api.post(`/cases/${caseId}/resolve`, {
       comment,
     });
-    return response.data;
+    invalidateCaseCache(caseId);
+    return normalizeApiResponse(response);
   },
 
   /**
@@ -224,7 +233,8 @@ export const caseService = {
     const response = await api.post(`/cases/${caseId}/unpend`, {
       comment,
     });
-    return response.data;
+    invalidateCaseCache(caseId);
+    return normalizeApiResponse(response);
   },
 
   /**
@@ -233,7 +243,7 @@ export const caseService = {
    */
   getMyResolvedCases: async () => {
     const response = await api.get('/cases/my-resolved');
-    return response.data;
+    return normalizeApiResponse(response);
   },
 
   /**
@@ -243,7 +253,7 @@ export const caseService = {
    */
   getMyUnassignedCreatedCases: async () => {
     const response = await api.get('/cases/my-unassigned-created');
-    return response.data;
+    return normalizeApiResponse(response);
   },
 
   /**
@@ -331,6 +341,6 @@ export const caseService = {
    */
   getCaseHistory: async (caseId) => {
     const response = await api.get(`/cases/${caseId}/history`);
-    return response.data;
+    return normalizeApiResponse(response);
   },
 };
