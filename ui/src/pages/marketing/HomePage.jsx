@@ -134,7 +134,7 @@ const Accordion = ({ question, answer }) => {
         }}
         aria-expanded={open}
       >
-        <h3 className="flex-1 break-words text-base font-semibold text-gray-900">{question}</h3>
+        <h3 className="min-w-0 flex-1 break-words text-base font-semibold text-gray-900">{question}</h3>
         <span className="flex-shrink-0 font-bold text-blue-600" aria-hidden="true">
           {open ? '−' : '+'}
         </span>
@@ -296,7 +296,7 @@ export const HomePage = () => {
                 <div className="text-4xl" aria-hidden="true">
                   {item.icon}
                 </div>
-                <div className="flex-1">
+                <div className="min-w-0 flex-1">
                   <h3 className="mb-2 font-bold text-gray-900">{item.title}</h3>
                   <p className="text-sm text-gray-600">{item.desc}</p>
                 </div>
@@ -338,7 +338,7 @@ export const HomePage = () => {
       </Section>
 
       <Section muted>
-        <div className="mx-auto w-full max-w-2xl space-y-6 py-8 text-center">
+        <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-8 text-center sm:px-6 lg:px-8">
           <span className="text-sm font-bold tracking-wider text-blue-600 uppercase">Pre-Launch Access</span>
           <h2 className="type-section text-gray-900">Join the Docketra Early Access Program</h2>
           <p className="type-body text-lg text-gray-600">
@@ -355,7 +355,7 @@ export const HomePage = () => {
               name="email"
               type="email"
               placeholder="Enter your work email"
-              className="w-full flex-1 rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-600"
+              className="w-full min-w-0 flex-1 rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-600"
               required
               aria-required="true"
             />
