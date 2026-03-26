@@ -35,7 +35,7 @@ export const Textarea = ({
       )}
       <textarea
         id={textareaId}
-        className={`input ${error ? 'input-error' : ''}`}
+        className={`input ${error ? 'input-error border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500' : ''}`}
         disabled={disabled}
         readOnly={readOnly}
         rows={rows}
@@ -46,7 +46,7 @@ export const Textarea = ({
         aria-required={required || undefined}
         {...props}
       />
-      {error && <div className="form-error" id={errorId}>{error}</div>}
+      {error && <p className="mt-1 text-sm text-red-600" id={errorId}>{error}</p>}
       {!error && helpText && <div className="form-help" id={helpId}>{helpText}</div>}
     </div>
   );

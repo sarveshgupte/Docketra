@@ -16,13 +16,18 @@ export const EmptyState = ({
   actionLabel,
   onAction,
   children,
-  icon = DefaultEmptyStateIcon,
+  icon,
 }) => {
   const resolvedAction = action || (actionLabel && onAction ? { label: actionLabel, onClick: onAction } : null);
+  const resolvedIcon = icon === true ? DefaultEmptyStateIcon : icon;
 
   return (
     <div className="ui-empty-state" role="status">
-      <div className="ui-empty-state__icon" aria-hidden="true">{icon}</div>
+      {resolvedIcon ? (
+        <div className="ui-empty-state__icon mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-500" aria-hidden="true">
+          {resolvedIcon}
+        </div>
+      ) : null}
       <div className="ui-empty-state__content">
         <h3 className="ui-empty-state__title">{title}</h3>
         {description ? <p className="ui-empty-state__description">{description}</p> : null}
