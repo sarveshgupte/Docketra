@@ -1,4 +1,3 @@
-import React from 'react';
 import { caseStatusAppearance } from '../../lib/designTokens';
 import { getStatusLabel } from '../../utils/statusDisplay';
 import './layoutPrimitives.css';

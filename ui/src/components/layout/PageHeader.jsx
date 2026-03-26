@@ -1,4 +1,3 @@
-import React from 'react';
 import './layoutPrimitives.css';
 
 export const PageHeader = ({ title, description, actions }) => {
