@@ -134,7 +134,7 @@ const Accordion = ({ question, answer }) => {
         }}
         aria-expanded={open}
       >
-        <h3 className="min-w-0 flex-1 break-words text-base font-semibold text-gray-900">{question}</h3>
+        <h3 className="min-w-0 flex-1 text-base font-semibold text-gray-900">{question}</h3>
         <span className="flex-shrink-0 font-bold text-blue-600" aria-hidden="true">
           {open ? '−' : '+'}
         </span>
@@ -282,14 +282,14 @@ export const HomePage = () => {
       </Section>
 
       <Section>
-        <div className="mb-12 text-center">
+        <div className="mb-12">
           <h2 className="type-section">How Docketra Works</h2>
-          <p className="type-body type-lg mx-auto w-full max-w-[600px] text-gray-600">
+          <p className="type-body type-lg w-full text-gray-600">
             Built for compliance-heavy teams that need operational discipline and clear ownership.
           </p>
         </div>
 
-        <div className="grid w-full gap-8 md:grid-cols-3">
+        <div className="grid w-full gap-12 md:grid-cols-3">
           {SOLUTION_POINTS.map((item) => (
             <motion.div key={item.num} className="marketing-card p-8" {...SECTION_REVEAL}>
               <div className="flex items-start gap-4">
@@ -307,14 +307,14 @@ export const HomePage = () => {
       </Section>
 
       <Section muted>
-        <div className="mb-12 text-center">
+        <div className="mb-12">
           <h2 className="type-section">Built For Your Workflow</h2>
-          <p className="type-body type-lg mx-auto w-full max-w-[600px] text-gray-600">
+          <p className="type-body type-lg w-full text-gray-600">
             Whether you run audits, manage compliance, or deliver consulting projects, Docketra supports your process.
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-12 md:grid-cols-3">
           {AUDIENCE_SEGMENTS.map((segment) => (
             <motion.div
               key={segment.title}
@@ -338,7 +338,7 @@ export const HomePage = () => {
       </Section>
 
       <Section muted>
-        <div className="space-y-6 py-8 text-center">
+        <div className="space-y-12 text-left">
           <span className="text-sm font-bold tracking-wider text-blue-600 uppercase">Pre-Launch Access</span>
           <h2 className="type-section text-gray-900">Join the Docketra Early Access Program</h2>
           <p className="type-body text-lg text-gray-600">
@@ -346,7 +346,7 @@ export const HomePage = () => {
           </p>
 
           <form
-            className="mx-auto mt-8 flex w-full flex-col gap-3 sm:flex-row sm:items-stretch"
+            className="mt-12 flex w-full max-w-2xl flex-col gap-3 sm:flex-row sm:items-stretch"
             onSubmit={onEarlyAccessSubmit}
             aria-label="Early access signup"
           >
@@ -372,7 +372,7 @@ export const HomePage = () => {
       </Section>
 
       <Section muted>
-        <div className="mb-12 text-center">
+        <div className="mb-12">
           <h2 className="type-section">Why Choose Docketra Over Spreadsheets &amp; WhatsApp?</h2>
         </div>
 
@@ -401,11 +401,11 @@ export const HomePage = () => {
       </Section>
 
       <Section>
-        <div className="mb-12 text-center">
+        <div className="mb-12">
           <h2 className="type-section">Questions Answered</h2>
         </div>
 
-        <div className="mx-auto w-full max-w-4xl space-y-4 px-4 md:px-0">
+        <div className="w-full space-y-4">
           {FAQS.map((item) => (
             <Accordion key={item.q} question={item.q} answer={item.a} />
           ))}
