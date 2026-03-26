@@ -11,6 +11,46 @@ module.exports = {
       googleId: nonEmptyString.optional(),
     }).strip(),
   },
+  'POST /google': {
+    body: z.object({
+      idToken: nonEmptyString,
+    }).strip(),
+  },
+  'POST /signup': {
+    body: z.object({
+      email: z.string().trim().email(),
+      password: strongPassword,
+      otp: z.string().trim().regex(/^\d{6}$/).optional(),
+    }).strip(),
+  },
+  'POST /login': {
+    body: z.object({
+      xid: z.string().trim().toUpperCase().regex(/^DK-[A-Z0-9]{5}$/).optional(),
+      email: z.string().trim().email().optional(),
+      password: nonEmptyString,
+      otp: z.string().trim().regex(/^\d{6}$/).optional(),
+    }).strip().refine((value) => Boolean(value.xid || value.email), {
+      message: 'xid or email is required',
+      path: ['xid'],
+    }),
+  },
+  'POST /send-otp': {
+    body: z.object({
+      email: z.string().trim().email().optional(),
+      xid: z.string().trim().toUpperCase().regex(/^DK-[A-Z0-9]{5}$/).optional(),
+      purpose: z.enum(['signup', 'login', 'storage_change']).default('login'),
+    }).strip().refine((value) => Boolean(value.email || value.xid), {
+      message: 'email or xid is required',
+      path: ['email'],
+    }),
+  },
+  'POST /verify-otp': {
+    body: z.object({
+      identifier: nonEmptyString,
+      code: z.string().trim().regex(/^\d{6}$/),
+      purpose: z.enum(['signup', 'login', 'storage_change']),
+    }).strip(),
+  },
   'POST /resend-setup': {
     body: z.object({ email: z.string().trim().email() }).strip(),
   },
