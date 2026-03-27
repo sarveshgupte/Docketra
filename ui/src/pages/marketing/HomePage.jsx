@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Section } from '../../components/layout/Section';
 import '../../assets/styles/marketing-tokens.css';
 
@@ -136,11 +136,12 @@ const MinimalIcon = ({ type }) => {
     eye: 'M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Zm10 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
     check: 'm5 12 4 4 10-10',
   };
+  const path = iconMap[type] || iconMap.list;
 
   return (
     <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-gray-600">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
-        <path d={iconMap[type] || iconMap.list} strokeLinecap="round" strokeLinejoin="round" />
+        <path d={path} strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </span>
   );
@@ -170,30 +171,73 @@ const Accordion = ({ question, answer }) => {
           {open ? '−' : '+'}
         </span>
       </button>
-      <AnimatePresence initial={false}>
-        {open ? (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
-            className="overflow-hidden"
-          >
-            <p className="pt-4 text-sm text-gray-700">{answer}</p>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+          className="overflow-hidden"
+        >
+          <p className="pt-4 text-sm text-gray-700">{answer}</p>
+        </motion.div>
+      )}
     </div>
   );
 };
 
 const renderComparisonCell = (value, accent = false) => {
+  if (!value) return <span className="text-gray-400">—</span>;
   if (value === '✅') return <span className={`font-semibold text-green-600 ${accent ? 'text-base' : ''}`}>✅</span>;
   if (value === '❌') return <span className={`font-semibold text-red-500 ${accent ? 'text-base' : ''}`}>❌</span>;
   return <span className={`font-semibold text-amber-500 ${accent ? 'text-base' : ''}`}>{value}</span>;
 };
 
 export const HomePage = () => {
+  useEffect(() => {
+    const originalOnError = window.onerror;
+    window.onerror = (msg, src, line, col, err) => {
+      console.error('GLOBAL ERROR:', err);
+      if (typeof originalOnError === 'function') {
+        return originalOnError(msg, src, line, col, err);
+      }
+      return false;
+    };
+
+    return () => {
+      window.onerror = originalOnError || null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const collections = {
+      PROBLEM_POINTS,
+      SOLUTION_POINTS,
+      AUDIENCE_SEGMENTS,
+      METRICS,
+    };
+    Object.entries(collections).forEach(([name, list]) => {
+      if (!Array.isArray(list)) {
+        console.warn(`[HomePage] ${name} is not an array`, list);
+        return;
+      }
+      list.forEach((entry, idx) => {
+        if (entry == null) {
+          console.warn(`[HomePage] ${name}[${idx}] is null/undefined`, entry);
+          return;
+        }
+        if (typeof entry !== 'object') {
+          console.warn(`[HomePage] ${name}[${idx}] is not an object`, entry);
+          return;
+        }
+        const missingKeys = Object.keys(entry).filter((key) => entry[key] == null);
+        if (missingKeys.length > 0) {
+          console.warn(`[HomePage] ${name}[${idx}] has null/undefined keys`, missingKeys, entry);
+        }
+      });
+    });
+  }, []);
+
   useEffect(() => {
     const schema = {
       '@context': 'https://schema.org',
@@ -240,6 +284,13 @@ export const HomePage = () => {
     )}`;
     event.currentTarget.reset();
   };
+
+  console.log({
+    PROBLEM_POINTS,
+    SOLUTION_POINTS,
+    AUDIENCE_SEGMENTS,
+    METRICS,
+  });
 
   return (
     <div className="w-full">
@@ -337,7 +388,7 @@ export const HomePage = () => {
 
       <Section muted>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {METRICS.map((item) => (
+          {METRICS?.map((item) => (
             <div key={item.label} className="card-base p-6 text-center">
               <p className="text-3xl font-semibold text-gray-900">{item.value}</p>
               <p className="mt-2 text-sm font-medium text-gray-600">{item.label}</p>
@@ -349,7 +400,7 @@ export const HomePage = () => {
       <Section muted>
         <h2 className="type-section">Why Teams Lose Control</h2>
         <div className="mt-8 grid items-stretch gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {PROBLEM_POINTS.map((point, index) => (
+          {PROBLEM_POINTS?.map((point, index) => (
             <motion.div
               key={point.title}
               className="card-base hover-card relative p-6"
@@ -375,12 +426,12 @@ export const HomePage = () => {
         </div>
 
         <div className="grid w-full gap-8 md:grid-cols-3">
-          {SOLUTION_POINTS.map((item, idx) => (
+          {SOLUTION_POINTS?.map((item, idx) => (
             <motion.div key={item.num} className="relative" {...SECTION_REVEAL}>
               <span className="text-5xl font-semibold text-gray-200">{item.num}</span>
               <h3 className="mt-3 text-lg font-semibold text-gray-900">{item.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-gray-600">{item.desc}</p>
-              {idx < SOLUTION_POINTS.length - 1 ? (
+              {idx < SOLUTION_POINTS?.length - 1 ? (
                 <span
                   aria-hidden="true"
                   className="absolute top-8 right-[-18px] hidden h-px w-9 bg-gray-200 md:block lg:w-12"
@@ -400,7 +451,7 @@ export const HomePage = () => {
         </div>
 
         <div className="grid gap-6 md:grid-cols-3">
-          {AUDIENCE_SEGMENTS.map((segment) => (
+          {AUDIENCE_SEGMENTS?.map((segment) => (
             <motion.div
               key={segment.title}
               className="card-base hover-card relative p-6"
