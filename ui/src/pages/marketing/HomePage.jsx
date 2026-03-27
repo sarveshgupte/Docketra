@@ -6,32 +6,32 @@ import '../../assets/styles/marketing-tokens.css';
 
 const PROBLEM_POINTS = [
   {
-    icon: '📊',
+    icon: 'chart',
     title: 'Spreadsheets Are Invisible Until Review Time',
     desc: 'Partners discover issues during final approval, not during execution when there is still time to fix them.',
   },
   {
-    icon: '💬',
+    icon: 'messages',
     title: 'WhatsApp Assignments Leave No Trail',
     desc: 'If regulators ask who approved something, teams often cannot provide a verifiable record.',
   },
   {
-    icon: '🔍',
+    icon: 'search',
     title: 'No One Knows Who Owns What',
     desc: 'When deadlines slip, ownership and blockers are unclear across teams.',
   },
   {
-    icon: '👥',
+    icon: 'users',
     title: 'Onboarding New Team Members Takes Weeks',
     desc: 'People restart work instead of continuing from documented progress.',
   },
   {
-    icon: '⏰',
+    icon: 'clock',
     title: 'Status Meetings Eat Up Everyone’s Time',
     desc: 'Partners have to chase updates manually instead of seeing one shared view.',
   },
   {
-    icon: '🚨',
+    icon: 'alert',
     title: 'Overdue Items Surface Too Late',
     desc: 'Missed deadlines are often discovered only after clients are already impacted.',
   },
@@ -42,36 +42,36 @@ const SOLUTION_POINTS = [
     num: '1',
     title: 'Structured Lifecycle Stages',
     desc: 'Track work through explicit checkpoints with ownership and approvals at each stage.',
-    icon: '📋',
+    icon: 'list',
   },
   {
     num: '2',
     title: 'Real-Time Team Visibility',
     desc: 'See who is responsible, what changed, and what needs attention right now.',
-    icon: '👁️',
+    icon: 'eye',
   },
   {
     num: '3',
     title: 'Audit Trails By Default',
     desc: 'Every action is logged with actor and timestamp for operational accountability.',
-    icon: '✅',
+    icon: 'check',
   },
 ];
 
 const AUDIENCE_SEGMENTS = [
   {
     title: 'Audit & Assurance',
-    color: 'border-blue-500',
+    color: 'bg-blue-500',
     points: ['Parallel testing workflows', 'Partner review stages', 'Engagement risk visibility', 'Quality gates'],
   },
   {
     title: 'Tax & Compliance',
-    color: 'border-green-500',
+    color: 'bg-emerald-500',
     points: ['GST, TDS, ROC tracking', 'Multi-office coordination', 'Deadline reminders', 'Filing calendar visibility'],
   },
   {
     title: 'Consulting',
-    color: 'border-purple-500',
+    color: 'bg-indigo-500',
     points: ['Project phase tracking', 'Deliverable approval chains', 'Client communication notes', 'Escalation workflows'],
   },
 ];
@@ -115,13 +115,35 @@ const SECTION_REVEAL = {
   viewport: { once: true, amount: 0.2 },
 };
 
+const MinimalIcon = ({ type }) => {
+  const iconMap = {
+    chart: 'M4 18h16M7 14l2-2 3 3 5-6',
+    messages: 'M4 6h16v10H8l-4 4V6Z',
+    search: 'm15 15 5 5m-9-3a6 6 0 1 1 0-12 6 6 0 0 1 0 12Z',
+    users: 'M15 19v-1a4 4 0 0 0-8 0v1m12 0v-1a4 4 0 0 0-3-3.87M9 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm8 1a2.5 2.5 0 1 0 0-5',
+    clock: 'M12 7v5l3 2m7-2a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z',
+    alert: 'm12 9.5.01 0M11 13h2m-1-10 9 16H3l9-16Z',
+    list: 'M8 7h12M8 12h12M8 17h12M4 7h.01M4 12h.01M4 17h.01',
+    eye: 'M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Zm10 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
+    check: 'm5 12 4 4 10-10',
+  };
+
+  return (
+    <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-gray-600">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+        <path d={iconMap[type] || iconMap.list} strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </span>
+  );
+};
+
 const Accordion = ({ question, answer }) => {
   const [open, setOpen] = useState(false);
 
   const toggle = () => setOpen((prev) => !prev);
 
   return (
-    <div className="marketing-card p-6">
+    <div className="card-base hover-card p-6">
       <button
         type="button"
         className="flex w-full items-start justify-between gap-4 text-left"
@@ -195,64 +217,70 @@ export const HomePage = () => {
   return (
     <div className="w-full">
       <Section>
-        <div className="grid w-full items-stretch gap-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+        <div className="grid w-full items-center gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <div className="w-full text-left">
-            <h1 className="type-hero">
-              Compliance Workflows That Actually Stick.
+            <h1 className="text-5xl font-semibold tracking-tight text-gray-900 md:text-6xl">
+              Compliance operations
               <br />
-              <span className="text-blue-600">No More Spreadsheets. No More Guessing.</span>
+              <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                without the chaos.
+              </span>
             </h1>
-            <p className="type-body type-lg w-full max-w-[560px]">
-              Docketra gives teams real-time visibility into deadlines, assignments, and ownership—with audit trails
-              built in. Made for accounting, audit, and tax teams who need to stay in control.
+            <p className="mt-4 max-w-xl text-base text-gray-600">
+              Docketra gives leadership and delivery teams one shared system for ownership, deadlines, and approvals,
+              with audit-ready visibility built into every step.
             </p>
-            <div className="mt-8 flex flex-wrap gap-4 pb-2">
-              <Link to="/signup" className="marketing-btn-primary px-8 py-3 text-sm font-semibold">
+            <div className="mt-8 flex flex-wrap gap-4">
+              <Link
+                to="/signup"
+                className="inline-flex items-center justify-center rounded-lg bg-black px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-gray-900"
+              >
                 Request Early Access
               </Link>
-              <a href="mailto:hello@docketra.com" className="marketing-btn-secondary px-8 py-3 text-sm font-semibold">
-                Contact Team
+              <a
+                href="mailto:hello@docketra.com"
+                className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-6 py-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100"
+              >
+                Book a Demo
               </a>
             </div>
-            <span className="text-xs text-gray-500">Pre-launch • Early access signups are open</span>
+            <p className="mt-3 text-xs text-gray-500">Takes 30 seconds. No spam.</p>
           </div>
 
           <motion.div
             {...SECTION_REVEAL}
-            className="marketing-card w-full border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-8"
+            className="w-full rounded-xl bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-3 shadow-[0_20px_60px_rgba(15,23,42,0.12)]"
           >
-            <div className="space-y-4">
-              <div className="border-b border-blue-100 pb-4">
-                <p className="text-xs font-bold uppercase tracking-wide text-blue-600">Launching Soon</p>
-                <h3 className="mt-2 text-lg font-semibold text-gray-900">Be Among the First to Try Docketra</h3>
-                <p className="mt-2 text-sm text-gray-600">
-                  We are building Docketra with early users. Your feedback directly shapes the product roadmap.
-                </p>
+            <div className="overflow-hidden rounded-lg bg-white p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold tracking-wide text-gray-500 uppercase">Operations dashboard</p>
+                <span className="rounded-full bg-emerald-100 px-2 py-1 text-[11px] font-medium text-emerald-700">
+                  Live
+                </span>
               </div>
 
-              <div className="space-y-3">
+              <div className="mt-6 grid gap-3 sm:grid-cols-3">
                 {[
-                  {
-                    title: 'Real-Time Compliance Tracking',
-                    desc: 'See deadlines, assignments, and ownership in one place.',
-                  },
-                  {
-                    title: 'Audit Trails for Every Action',
-                    desc: 'Know who did what and when with event-level history.',
-                  },
-                  {
-                    title: 'Role-Based Workflows',
-                    desc: 'Approvals, assignments, and permissions built into daily flow.',
-                  },
+                  { label: 'Open tasks', value: '142' },
+                  { label: 'Due this week', value: '26' },
+                  { label: 'Awaiting review', value: '9' },
                 ].map((item) => (
-                  <div key={item.title} className="flex items-start gap-3">
-                    <span className="mt-0.5 text-green-600">✓</span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-gray-900">{item.title}</p>
-                      <p className="text-xs text-gray-600">{item.desc}</p>
-                    </div>
+                  <div key={item.label} className="rounded-lg bg-slate-50 p-3">
+                    <p className="text-[11px] text-gray-500">{item.label}</p>
+                    <p className="mt-2 text-xl font-semibold text-gray-900">{item.value}</p>
                   </div>
                 ))}
+              </div>
+
+              <div className="mt-5 space-y-3">
+                {['Q4 Tax Filings - West Region', 'Statutory Audit FY 2025-26', 'Client Onboarding Quality Review'].map(
+                  (row) => (
+                    <div key={row} className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2.5">
+                      <p className="truncate pr-3 text-sm text-gray-700">{row}</p>
+                      <span className="text-xs font-medium text-indigo-600">In progress</span>
+                    </div>
+                  ),
+                )}
               </div>
             </div>
           </motion.div>
@@ -261,21 +289,19 @@ export const HomePage = () => {
 
       <Section muted>
         <h2 className="type-section">Why Teams Lose Control</h2>
-        <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-8 grid items-stretch gap-6 md:grid-cols-2 lg:grid-cols-3">
           {PROBLEM_POINTS.map((point, index) => (
             <motion.div
               key={point.title}
-              className="marketing-card space-y-2 p-5 transition-shadow hover:shadow-md"
+              className="card-base hover-card relative p-6"
               initial={{ opacity: 0, y: 10 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
               viewport={{ once: true, amount: 0.2 }}
             >
-              <p className="text-2xl" aria-hidden="true">
-                {point.icon}
-              </p>
-              <h3 className="text-sm font-semibold text-gray-900">{point.title}</h3>
-              <p className="text-xs text-gray-600">{point.desc}</p>
+              <MinimalIcon type={point.icon} />
+              <h3 className="mt-3 text-base font-medium text-gray-900">{point.title}</h3>
+              <p className="mt-1 text-sm leading-relaxed text-gray-600">{point.desc}</p>
             </motion.div>
           ))}
         </div>
@@ -289,17 +315,13 @@ export const HomePage = () => {
           </p>
         </div>
 
-        <div className="grid w-full gap-12 md:grid-cols-3">
+        <div className="grid w-full gap-6 md:grid-cols-3">
           {SOLUTION_POINTS.map((item) => (
-            <motion.div key={item.num} className="marketing-card p-8" {...SECTION_REVEAL}>
-              <div className="flex items-start gap-4">
-                <div className="text-4xl" aria-hidden="true">
-                  {item.icon}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="mb-2 font-bold text-gray-900">{item.title}</h3>
-                  <p className="text-sm text-gray-600">{item.desc}</p>
-                </div>
+            <motion.div key={item.num} className="card-base hover-card relative p-6" {...SECTION_REVEAL}>
+              <div className="min-w-0">
+                <MinimalIcon type={item.icon} />
+                <h3 className="mt-3 text-lg font-medium text-gray-900">{item.title}</h3>
+                <p className="mt-2 text-sm text-gray-600">{item.desc}</p>
               </div>
             </motion.div>
           ))}
@@ -314,20 +336,18 @@ export const HomePage = () => {
           </p>
         </div>
 
-        <div className="grid gap-12 md:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-3">
           {AUDIENCE_SEGMENTS.map((segment) => (
             <motion.div
               key={segment.title}
-              className={`marketing-card border-t-4 p-6 transition-shadow hover:shadow-lg ${segment.color}`}
+              className="card-base hover-card relative p-6"
               {...SECTION_REVEAL}
             >
-              <h3 className="mb-4 text-lg font-bold text-gray-900">{segment.title}</h3>
+              <h3 className="text-lg font-medium text-gray-900">{segment.title}</h3>
               <ul className="space-y-3">
                 {segment.points.map((point) => (
-                  <li key={point} className="flex items-start gap-3">
-                    <span className="font-bold text-green-600" aria-hidden="true">
-                      ✓
-                    </span>
+                  <li key={point} className="mt-3 flex items-start gap-3 text-sm text-gray-600">
+                    <span className={`mt-0.5 inline-block h-2 w-2 rounded-full ${segment.color}`} aria-hidden="true" />
                     <span className="text-sm text-gray-700">{point}</span>
                   </li>
                 ))}
