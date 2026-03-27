@@ -192,7 +192,7 @@
 }
 
 
-.marketing-shell :where(a, button, input, textarea, select, .card, .marketing-card, .marketing-nav-item) {
+.marketing-shell :where(a, button, input, textarea, select, .card, .card-base, .marketing-nav-item) {
   transition-property: background-color, border-color, color, box-shadow, transform;
   transition-duration: var(--transition-normal);
   transition-timing-function: var(--ease-standard);
@@ -230,16 +230,35 @@
   border-color: #9ca3af;
 }
 
-.marketing-card {
-  border: 1px solid #e5e7eb;
+.card-base {
+  position: relative;
+  border: 1px solid #f3f4f6;
   border-radius: 1rem;
   background: #fff;
-  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.marketing-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.10);
+.card-base::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 1rem;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.05), rgba(99, 102, 241, 0.05));
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.1);
+  border-color: #e5e7eb;
+}
+
+.hover-card:hover::before {
+  opacity: 1;
 }
 
 .marketing-nav-item {
