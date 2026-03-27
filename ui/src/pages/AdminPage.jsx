@@ -11,6 +11,7 @@ import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Textarea } from '../components/common/Textarea';
 import { Select } from '../components/common/Select';
+import { FormLabel } from '../components/common/FormLabel';
 import { Modal } from '../components/common/Modal';
 import { Loading } from '../components/common/Loading';
 import { TableSkeleton } from '../components/common/Skeleton';
@@ -1464,7 +1465,7 @@ export const AdminPage = () => {
             value={newUser.role}
             onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
             options={[
-              { value: '', label: 'Select Role *', disabled: true },
+              { value: '', label: 'Select Role', disabled: true },
               { value: 'Employee', label: 'Employee' },
               { value: 'Admin', label: 'Admin' },
             ]}
@@ -1590,7 +1591,7 @@ export const AdminPage = () => {
           )}
 
           <Input
-            label="Business Name *"
+            label="Business Name"
             name="businessName"
             value={clientForm.businessName}
             onChange={(e) => setClientForm({ ...clientForm, businessName: e.target.value })}
@@ -1618,7 +1619,7 @@ export const AdminPage = () => {
           />
 
           <Input
-            label="Primary Contact Number *"
+            label="Primary Contact Number"
             name="primaryContactNumber"
             type="tel"
             value={clientForm.primaryContactNumber}
@@ -1637,7 +1638,7 @@ export const AdminPage = () => {
           />
 
           <Input
-            label="Business Email *"
+            label="Business Email"
             name="businessEmail"
             type="email"
             value={clientForm.businessEmail}
@@ -1798,7 +1799,7 @@ export const AdminPage = () => {
           </div>
 
           <Input
-            label="New Business Name *"
+            label="New Business Name"
             name="newBusinessName"
             value={changeNameForm.newBusinessName}
             onChange={(e) => setChangeNameForm({ ...changeNameForm, newBusinessName: e.target.value })}
@@ -1807,7 +1808,7 @@ export const AdminPage = () => {
           />
 
           <div className="neo-form-group">
-            <label className="neo-label">Reason for Name Change *</label>
+            <FormLabel label="Reason for Name Change" required />
             <textarea
               name="reason"
               value={changeNameForm.reason}

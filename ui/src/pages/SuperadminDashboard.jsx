@@ -10,6 +10,7 @@ import { superadminService } from '../services/superadminService';
 import { Button } from '../components/common/Button';
 import { Card } from '../components/common/Card';
 import { Input } from '../components/common/Input';
+import { Select } from '../components/common/Select';
 import { useToast } from '../hooks/useToast';
 import { formatDate, getFirmStatusInfo } from '../utils/formatters';
 import './SuperadminDashboard.css';
@@ -173,7 +174,8 @@ export const SuperadminDashboard = () => {
         {showCreateFirm && (
           <Card className="modal-card">
             <h2>Create New Firm</h2>
-            <form onSubmit={handleCreateFirm}>
+            <form onSubmit={handleCreateFirm} className="space-y-4">
+              <p className="text-sm text-gray-500">Fields marked with * are required.</p>
               <Input
                 label="Firm Name"
                 value={newFirmData.name}
@@ -217,26 +219,26 @@ export const SuperadminDashboard = () => {
         {showCreateAdmin && (
           <Card className="modal-card">
             <h2>Create Firm Admin</h2>
-            <form onSubmit={handleCreateAdmin}>
-              <div className="form-group">
-                <label>Select Firm *</label>
-                <select
-                  value={selectedFirm?._id || ''}
-                  onChange={(e) => {
-                    const firm = firms.find(f => f._id === e.target.value);
-                    setSelectedFirm(firm || null);
-                  }}
-                  required
-                  className="form-select"
-                >
-                  <option value="">-- Select a firm --</option>
-                  {firms.filter(f => f.status === 'ACTIVE').map(firm => (
-                    <option key={firm._id} value={firm._id}>
-                      {firm.name} ({firm.firmId})
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <form onSubmit={handleCreateAdmin} className="space-y-4">
+              <p className="text-sm text-gray-500">Fields marked with * are required.</p>
+              <Select
+                label="Select Firm"
+                value={selectedFirm?._id || ''}
+                onChange={(e) => {
+                  const firm = firms.find((f) => f._id === e.target.value);
+                  setSelectedFirm(firm || null);
+                }}
+                required
+                options={[
+                  { value: '', label: '-- Select a firm --', disabled: true },
+                  ...firms
+                    .filter((firm) => firm.status === 'ACTIVE')
+                    .map((firm) => ({
+                      value: firm._id,
+                      label: `${firm.name} (${firm.firmId})`,
+                    })),
+                ]}
+              />
               <Input
                 label="Admin Name"
                 value={adminData.name}
