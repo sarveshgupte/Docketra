@@ -321,23 +321,24 @@ export const FirmsManagement = () => {
                   ×
                 </button>
               </div>
-              <form onSubmit={handleCreateFirm} className="modal-form">
+              <form onSubmit={handleCreateFirm} className="modal-form space-y-4">
+                <p className="text-sm text-gray-500">Fields marked with * are required.</p>
                 <Input
-                  label="Firm Name *"
+                  label="Firm Name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
                   placeholder="Enter firm name"
                 />
                 <Input
-                  label="Admin Name *"
+                  label="Admin Name"
                   value={formData.adminName}
                   onChange={(e) => setFormData({ ...formData, adminName: e.target.value })}
                   required
                   placeholder="Enter admin name"
                 />
                 <Input
-                  label="Admin Email *"
+                  label="Admin Email"
                   type="email"
                   value={formData.adminEmail}
                   onChange={(e) => setFormData({ ...formData, adminEmail: e.target.value })}

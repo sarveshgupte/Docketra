@@ -101,6 +101,7 @@ export const LoginPage = () => {
         </p>
 
         <form onSubmit={handleLogin} noValidate className="mt-6 space-y-4">
+          <p className="text-sm text-gray-500">Fields marked with * are required.</p>
           <Input
             label="xID"
             type="text"

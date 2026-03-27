@@ -164,7 +164,7 @@ export const CreateCasePage = () => {
   }, [formData]);
 
   const categoryOptions = [
-    { value: '', label: 'Select Category *', disabled: true },
+    { value: '', label: 'Select Category', disabled: true },
     ...categories.map(cat => ({
       value: cat._id,
       label: cat.name,
@@ -172,7 +172,7 @@ export const CreateCasePage = () => {
   ];
   
   const subcategoryOptions = [
-    { value: '', label: 'Select Subcategory *', disabled: true },
+    { value: '', label: 'Select Subcategory', disabled: true },
     ...subcategories.map(sub => ({
       value: sub.id,
       label: sub.name,
@@ -180,7 +180,7 @@ export const CreateCasePage = () => {
   ];
 
   const clientOptions = [
-    { value: '', label: 'Select Client *', disabled: true },
+    { value: '', label: 'Select Client', disabled: true },
     ...clients.map(client => ({
       value: client.clientId,
       label: formatClientDisplay(client), // Format: C000002 – Business Name
@@ -434,7 +434,7 @@ export const CreateCasePage = () => {
                   className="create-case__section"
                 >
                   <Select
-                    label="Client *"
+                    label="Client"
                     name="clientId"
                     value={formData.clientId}
                     onChange={handleChange}
@@ -457,7 +457,7 @@ export const CreateCasePage = () => {
                   className="create-case__section"
                 >
                   <Select
-                    label="Category *"
+                    label="Category"
                     name="categoryId"
                     value={formData.categoryId}
                     onChange={handleChange}
@@ -469,7 +469,7 @@ export const CreateCasePage = () => {
                   />
 
                   <Select
-                    label="Subcategory *"
+                    label="Subcategory"
                     name="subcategoryId"
                     value={formData.subcategoryId}
                     onChange={handleChange}
@@ -481,7 +481,7 @@ export const CreateCasePage = () => {
                   />
 
                   <Input
-                    label="Title *"
+                    label="Title"
                     name="title"
                     value={formData.title}
                     onChange={handleChange}
@@ -492,7 +492,7 @@ export const CreateCasePage = () => {
                   />
 
                   <Textarea
-                    label="Description *"
+                    label="Description"
                     name="description"
                     value={formData.description}
                     onChange={handleChange}
@@ -515,7 +515,7 @@ export const CreateCasePage = () => {
                   className="create-case__section"
                 >
                   <Input
-                    label={`SLA Due Date ${isAdmin ? "*" : "🔒"}` }
+                    label={isAdmin ? 'SLA Due Date' : 'SLA Due Date 🔒'}
                     name="slaDueDate"
                     type="datetime-local"
                     value={formData.slaDueDate}

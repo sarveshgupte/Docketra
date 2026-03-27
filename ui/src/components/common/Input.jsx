@@ -5,6 +5,7 @@
  */
 
 import React, { forwardRef, useId, useState } from 'react';
+import { FormLabel } from './FormLabel';
 
 export const Input = forwardRef(({
   label,
@@ -34,12 +35,7 @@ export const Input = forwardRef(({
   if (readOnly && value !== undefined) {
     return (
       <div className={`form-group ${className}`}>
-        {label && (
-          <label className="mb-1.5 block text-sm font-semibold text-gray-700" htmlFor={inputId}>
-            {label}
-            {required && <span className="text-danger" aria-hidden="true"> *</span>}
-          </label>
-        )}
+        <FormLabel htmlFor={inputId} label={label} required={required} />
         <div className="flex items-center gap-2 py-2 text-sm text-gray-600 leading-relaxed" id={inputId} aria-readonly="true">
           <span>{value || '-'}</span>
           <span className="text-gray-400 text-xs">
@@ -55,17 +51,12 @@ export const Input = forwardRef(({
 
   return (
     <div className={`form-group ${className}`}>
-      {label && (
-        <label className="mb-1.5 block text-sm font-semibold text-gray-700" htmlFor={inputId}>
-          {label}
-          {required && <span className="text-danger" aria-hidden="true"> *</span>}
-        </label>
-      )}
+      <FormLabel htmlFor={inputId} label={label} required={required} />
       <div className={`input-wrapper ${isPasswordType ? 'input-wrapper--password' : ''}`}>
         <input
           ref={ref}
           id={inputId}
-          className={`w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-600 leading-relaxed text-gray-900 transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 ${error ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500/20' : ''} ${isPasswordType ? 'pr-11' : ''}`}
+          className={`h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-sm text-gray-900 transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 ${error ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500/20' : ''} ${isPasswordType ? 'pr-11' : ''}`}
           disabled={disabled}
           value={value}
           type={resolvedType}
@@ -150,7 +141,7 @@ export const Input = forwardRef(({
           </button>
         )}
       </div>
-      {error && <p className="mt-1 text-sm text-red-600" id={errorId}>{error}</p>}
+      {error && <p className="mt-1 text-sm text-red-500" id={errorId}>{error}</p>}
       {!error && helpText && <div className="form-help" id={helpId}>{helpText}</div>}
     </div>
   );
