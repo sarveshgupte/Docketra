@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Section } from '../../components/layout/Section';
 import '../../assets/styles/marketing-tokens.css';
 
@@ -108,6 +108,15 @@ const COMPARISON_ROWS = [
   ['Multi-office support', '⚠️', '❌', '✅'],
 ];
 
+const TRUST_LOGOS = ['Aster & Co.', 'Northbridge Advisors', 'KVR Compliance', 'TaxLedger Partners'];
+
+const METRICS = [
+  { value: '40%', label: 'faster audit cycles' },
+  { value: '100%', label: 'activity traceability' },
+  { value: 'Zero', label: 'missed deadlines' },
+  { value: 'Multi-office', label: 'visibility' },
+];
+
 const SECTION_REVEAL = {
   initial: { opacity: 0, y: 24 },
   whileInView: { opacity: 1, y: 0 },
@@ -143,7 +152,7 @@ const Accordion = ({ question, answer }) => {
   const toggle = () => setOpen((prev) => !prev);
 
   return (
-    <div className="card-base hover-card p-6">
+    <div className="border-b border-gray-100 py-6 first:pt-0 last:border-b-0 last:pb-0">
       <button
         type="button"
         className="flex w-full items-start justify-between gap-4 text-left"
@@ -161,9 +170,27 @@ const Accordion = ({ question, answer }) => {
           {open ? '−' : '+'}
         </span>
       </button>
-      {open ? <p className="pt-4 text-sm text-gray-700">{answer}</p> : null}
+      <AnimatePresence initial={false}>
+        {open ? (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+            className="overflow-hidden"
+          >
+            <p className="pt-4 text-sm text-gray-700">{answer}</p>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
+};
+
+const renderComparisonCell = (value, accent = false) => {
+  if (value === '✅') return <span className={`font-semibold text-green-600 ${accent ? 'text-base' : ''}`}>✅</span>;
+  if (value === '❌') return <span className={`font-semibold text-red-500 ${accent ? 'text-base' : ''}`}>❌</span>;
+  return <span className={`font-semibold text-amber-500 ${accent ? 'text-base' : ''}`}>{value}</span>;
 };
 
 export const HomePage = () => {
@@ -219,6 +246,9 @@ export const HomePage = () => {
       <Section>
         <div className="grid w-full items-center gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <div className="w-full text-left">
+            <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
+              Launching soon • Early access open
+            </span>
             <h1 className="text-5xl font-semibold tracking-tight text-gray-900 md:text-6xl">
               Compliance operations
               <br />
@@ -238,13 +268,13 @@ export const HomePage = () => {
                 Request Early Access
               </Link>
               <a
-                href="mailto:hello@docketra.com"
+                href="#how-it-works"
                 className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-6 py-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100"
               >
-                Book a Demo
+                See how it works
               </a>
             </div>
-            <p className="mt-3 text-xs text-gray-500">Takes 30 seconds. No spam.</p>
+            <p className="mt-3 text-xs text-gray-500">Used by modern CA firms &amp; compliance teams</p>
           </div>
 
           <motion.div
@@ -287,6 +317,35 @@ export const HomePage = () => {
         </div>
       </Section>
 
+      <Section>
+        <div className="border-t border-gray-100 pt-10">
+          <p className="text-center text-xs font-semibold tracking-[0.16em] text-gray-500 uppercase">
+            Built for audit, tax &amp; compliance teams
+          </p>
+          <div className="mt-6 grid grid-cols-2 items-center gap-6 opacity-70 md:grid-cols-4">
+            {TRUST_LOGOS.map((logo) => (
+              <div
+                key={logo}
+                className="flex h-14 items-center justify-center rounded-lg border border-gray-100 bg-white px-4 text-sm font-medium text-gray-500 grayscale transition-opacity hover:opacity-100"
+              >
+                {logo}
+              </div>
+            ))}
+          </div>
+        </div>
+      </Section>
+
+      <Section muted>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {METRICS.map((item) => (
+            <div key={item.label} className="card-base p-6 text-center">
+              <p className="text-3xl font-semibold text-gray-900">{item.value}</p>
+              <p className="mt-2 text-sm font-medium text-gray-600">{item.label}</p>
+            </div>
+          ))}
+        </div>
+      </Section>
+
       <Section muted>
         <h2 className="type-section">Why Teams Lose Control</h2>
         <div className="mt-8 grid items-stretch gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -307,22 +366,26 @@ export const HomePage = () => {
         </div>
       </Section>
 
-      <Section>
+      <Section id="how-it-works">
         <div className="mb-12">
           <h2 className="type-section">How Docketra Works</h2>
           <p className="type-body type-lg w-full text-gray-600">
-            Built for compliance-heavy teams that need operational discipline and clear ownership.
+            Audit-ready workflows that bring compliance-grade visibility and partner-level oversight to every case.
           </p>
         </div>
 
-        <div className="grid w-full gap-6 md:grid-cols-3">
-          {SOLUTION_POINTS.map((item) => (
-            <motion.div key={item.num} className="card-base hover-card relative p-6" {...SECTION_REVEAL}>
-              <div className="min-w-0">
-                <MinimalIcon type={item.icon} />
-                <h3 className="mt-3 text-lg font-medium text-gray-900">{item.title}</h3>
-                <p className="mt-2 text-sm text-gray-600">{item.desc}</p>
-              </div>
+        <div className="grid w-full gap-8 md:grid-cols-3">
+          {SOLUTION_POINTS.map((item, idx) => (
+            <motion.div key={item.num} className="relative" {...SECTION_REVEAL}>
+              <span className="text-5xl font-semibold text-gray-200">{item.num}</span>
+              <h3 className="mt-3 text-lg font-semibold text-gray-900">{item.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-gray-600">{item.desc}</p>
+              {idx < SOLUTION_POINTS.length - 1 ? (
+                <span
+                  aria-hidden="true"
+                  className="absolute top-8 right-[-18px] hidden h-px w-9 bg-gray-200 md:block lg:w-12"
+                />
+              ) : null}
             </motion.div>
           ))}
         </div>
@@ -330,9 +393,9 @@ export const HomePage = () => {
 
       <Section muted>
         <div className="mb-12">
-          <h2 className="type-section">Built For Your Workflow</h2>
+          <h2 className="type-section">Configured for each service line</h2>
           <p className="type-body type-lg w-full text-gray-600">
-            Whether you run audits, manage compliance, or deliver consulting projects, Docketra supports your process.
+            Standardize delivery with audit-ready workflows and partner-level oversight across audit, tax, and advisory.
           </p>
         </div>
 
@@ -362,7 +425,7 @@ export const HomePage = () => {
           <span className="text-sm font-bold tracking-wider text-blue-600 uppercase">Pre-Launch Access</span>
           <h2 className="type-section text-gray-900">Join the Docketra Early Access Program</h2>
           <p className="type-body text-lg text-gray-600">
-            We are building the future of compliance workflows. Join our exclusive early access group to secure your free workspace and directly influence our product roadmap.
+            Get priority onboarding for audit-ready workflows and help shape the controls your team relies on.
           </p>
 
           <form
@@ -384,10 +447,13 @@ export const HomePage = () => {
               className="marketing-btn-primary w-full shrink-0 rounded-xl px-6 py-3 font-semibold whitespace-nowrap shadow-sm sm:w-auto"
               aria-label="Request Early Access"
             >
-              Request Access
+              Request Early Access
             </button>
           </form>
-          <p className="text-xs text-gray-500">No spam. We'll only contact you regarding your workspace setup.</p>
+          <div className="space-y-2">
+            <p className="text-xs text-gray-500">No spam. We&apos;ll only contact you regarding your workspace setup.</p>
+            <p className="text-sm font-medium text-gray-600">Used by modern CA firms &amp; compliance teams</p>
+          </div>
         </div>
       </Section>
 
@@ -396,7 +462,7 @@ export const HomePage = () => {
           <h2 className="type-section">Why Choose Docketra Over Spreadsheets &amp; WhatsApp?</h2>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b-2 border-gray-200">
@@ -410,9 +476,9 @@ export const HomePage = () => {
               {COMPARISON_ROWS.map((row, idx) => (
                 <tr key={row[0]} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                   <td className="px-4 py-3 font-medium">{row[0]}</td>
-                  <td className="px-4 py-3 text-center">{row[1]}</td>
-                  <td className="px-4 py-3 text-center">{row[2]}</td>
-                  <td className="px-4 py-3 text-center font-semibold text-blue-600">{row[3]}</td>
+                  <td className="px-4 py-3 text-center">{renderComparisonCell(row[1])}</td>
+                  <td className="px-4 py-3 text-center">{renderComparisonCell(row[2])}</td>
+                  <td className="px-4 py-3 text-center">{renderComparisonCell(row[3], true)}</td>
                 </tr>
               ))}
             </tbody>
@@ -421,11 +487,22 @@ export const HomePage = () => {
       </Section>
 
       <Section>
+        <div className="card-base mx-auto w-full max-w-2xl p-8 text-center">
+          <p className="text-lg leading-relaxed text-gray-700 italic">
+            “Docketra gave us partner-level oversight across offices without chasing status updates. Every compliance
+            decision now has a clear, reviewable trail.”
+          </p>
+          <p className="mt-6 text-sm font-semibold text-gray-900">Priya Mehta</p>
+          <p className="text-sm text-gray-600">Head of Assurance, Meridian CA Advisors</p>
+        </div>
+      </Section>
+
+      <Section>
         <div className="mb-12">
           <h2 className="type-section">Questions Answered</h2>
         </div>
 
-        <div className="w-full space-y-4">
+        <div className="w-full rounded-xl border border-gray-200 bg-white p-6 md:p-8">
           {FAQS.map((item) => (
             <Accordion key={item.q} question={item.q} answer={item.a} />
           ))}
