@@ -1,22 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { NavLink, Link, Outlet, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { PageWrapper } from '../layout/PageWrapper';
 
 const navLinkClass = ({ isActive }) =>
-  `marketing-nav-item text-sm font-medium${isActive ? ' marketing-nav-item--active' : ''}`;
-const SCROLL_THRESHOLD_PX = 6;
+  `text-sm text-gray-600 hover:text-gray-900${isActive ? ' text-gray-900' : ''}`;
 
 export const MarketingLayout = () => {
   const location = useLocation();
-  const [isScrolled, setIsScrolled] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setIsScrolled(window.scrollY > SCROLL_THRESHOLD_PX);
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' });
@@ -28,19 +19,15 @@ export const MarketingLayout = () => {
         Skip to main content
       </a>
 
-      <header
-        className={`sticky top-0 z-40 border-b backdrop-blur-md transition-[background-color,border-color,box-shadow] duration-300 ${
-          isScrolled ? 'border-gray-200 bg-white/95 shadow-sm' : 'border-gray-100 bg-white/80'
-        }`}
-      >
-        <nav
-          className={`marketing-container flex w-full flex-col items-stretch justify-between gap-4 py-4 transition-[height] duration-300 sm:flex-row sm:items-center sm:gap-6 sm:py-0 ${isScrolled ? 'sm:h-16' : 'sm:h-20'}`}
-        >
-          <Link to="/" className="shrink-0 text-xl font-semibold tracking-tight text-gray-900">
-            Docketra
-          </Link>
+      <header className="w-full border-b border-gray-100 bg-white">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+          <div className="min-w-0 flex items-center">
+            <Link to="/" className="text-lg font-semibold text-gray-900">
+              Docketra
+            </Link>
+          </div>
 
-          <div className="flex w-full flex-wrap items-center gap-x-6 gap-y-3 sm:w-auto sm:justify-end">
+          <nav className="min-w-0 flex items-center gap-8">
             <NavLink to="/features" className={navLinkClass}>
               Features
             </NavLink>
@@ -53,8 +40,8 @@ export const MarketingLayout = () => {
             <NavLink to="/about" className={navLinkClass}>
               About
             </NavLink>
-          </div>
-        </nav>
+          </nav>
+        </div>
       </header>
 
       <main id="main" className="w-full">
