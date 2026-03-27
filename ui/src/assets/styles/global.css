@@ -13,8 +13,8 @@
 .marketing-container {
   width: 100%;
   margin: 0 auto;
-  max-width: 1280px;
-  padding: 0 calc(var(--space-sm) * 2);
+  max-width: 80rem;
+  padding: 0 1.5rem;
 }
 
 .marketing-section {

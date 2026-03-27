@@ -295,42 +295,44 @@ export const HomePage = () => {
   return (
     <div className="w-full">
       <Section>
-        <div className="grid w-full items-center gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          <div className="w-full text-left">
-            <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
-              Launching soon • Early access open
-            </span>
-            <h1 className="text-5xl font-semibold tracking-tight text-gray-900 md:text-6xl">
-              Compliance operations
-              <br />
-              <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                without the chaos.
+        <div className="grid w-full items-center gap-8 lg:grid-cols-2">
+          <div className="w-full min-w-0 text-left">
+            <div className="max-w-xl">
+              <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
+                Launching soon • Early access open
               </span>
-            </h1>
-            <p className="mt-4 max-w-xl text-base text-gray-600">
-              Docketra gives leadership and delivery teams one shared system for ownership, deadlines, and approvals,
-              with audit-ready visibility built into every step.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-4">
-              <Link
-                to="/signup"
-                className="inline-flex items-center justify-center rounded-lg bg-black px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-gray-900"
-              >
-                Request Early Access
-              </Link>
-              <a
-                href="#how-it-works"
-                className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-6 py-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100"
-              >
-                See how it works
-              </a>
+              <h1 className="text-5xl md:text-6xl font-semibold tracking-tight leading-tight text-gray-900">
+                Compliance operations
+                <br />
+                <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                  without the chaos.
+                </span>
+              </h1>
+              <p className="mt-4 text-base text-gray-600">
+                Docketra gives leadership and delivery teams one shared system for ownership, deadlines, and
+                approvals, with audit-ready visibility built into every step.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-4">
+                <Link
+                  to="/signup"
+                  className="inline-flex items-center justify-center rounded-lg bg-black px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-gray-900"
+                >
+                  Request Early Access
+                </Link>
+                <a
+                  href="#how-it-works"
+                  className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-6 py-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100"
+                >
+                  See how it works
+                </a>
+              </div>
+              <p className="mt-3 text-xs text-gray-500">Used by modern CA firms &amp; compliance teams</p>
             </div>
-            <p className="mt-3 text-xs text-gray-500">Used by modern CA firms &amp; compliance teams</p>
           </div>
 
           <motion.div
             {...SECTION_REVEAL}
-            className="w-full rounded-xl bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-3 shadow-[0_20px_60px_rgba(15,23,42,0.12)]"
+            className="w-full min-w-0 rounded-xl bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-3 shadow-[0_20px_60px_rgba(15,23,42,0.12)]"
           >
             <div className="overflow-hidden rounded-lg bg-white p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
               <div className="flex items-center justify-between">

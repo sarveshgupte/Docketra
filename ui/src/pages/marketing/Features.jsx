@@ -31,7 +31,7 @@ const FEATURES = [
 
 export const FeaturesPage = () => (
   <Section>
-    <div className="mx-auto w-full max-w-3xl px-4 text-center sm:px-6 lg:px-8">
+    <div className="mx-auto w-full max-w-3xl min-w-0 text-center">
       <h1 className="type-section text-gray-900">Platform Features</h1>
       <p className="mt-6 type-body text-lg text-gray-600">
         Everything you need to bring operational discipline to your firm. Built for compliance, audit, and tax teams who cannot afford to miss a deadline.
