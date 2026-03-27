@@ -62,12 +62,6 @@ export default function Signup() {
   const otpInputRefs = useRef([]);
   const autoSubmittedOtpRef = useRef('');
   const otp = useMemo(() => otpDigits.join(''), [otpDigits]);
-  const renderRequiredLabel = (label) => (
-    <>
-      {label}
-      <span aria-hidden="true"> *</span>
-    </>
-  );
   const getDescribedBy = (...ids) => ids.filter(Boolean).join(' ') || undefined;
 
   useEffect(() => {
@@ -310,10 +304,11 @@ export default function Signup() {
 
         {step === 'form' && (
           <form className="mt-6 space-y-4" onSubmit={submitManualSignup} noValidate>
+            <p className="text-sm text-gray-500">Fields marked with * are required.</p>
             <Input
               id="signup-name"
               name="name"
-              label={renderRequiredLabel('Name')}
+              label="Name"
               value={form.name}
               onChange={onFormChange}
               disabled={loading}
@@ -326,7 +321,7 @@ export default function Signup() {
               id="signup-email"
               type="email"
               name="email"
-              label={renderRequiredLabel('Email')}
+              label="Email"
               value={form.email}
               onChange={onFormChange}
               disabled={loading}
@@ -338,7 +333,7 @@ export default function Signup() {
             <Input
               id="signup-firm-name"
               name="firmName"
-              label={renderRequiredLabel('Firm Name')}
+              label="Firm Name"
               value={form.firmName}
               onChange={onFormChange}
               disabled={loading}
@@ -351,7 +346,7 @@ export default function Signup() {
               id="signup-password"
               type="password"
               name="password"
-              label={renderRequiredLabel('Password')}
+              label="Password"
               value={form.password}
               onChange={onFormChange}
               disabled={loading}
@@ -365,7 +360,7 @@ export default function Signup() {
             <Input
               id="signup-phone"
               name="phone"
-              label={renderRequiredLabel('Phone Number (+91)')}
+              label="Phone Number (+91)"
               value={form.phone}
               onChange={onFormChange}
               disabled={loading}
@@ -410,7 +405,9 @@ export default function Signup() {
             <Input id="otp-email" label="Email" value={signupEmail} readOnly />
 
             <fieldset>
-              <legend className="mb-1 block text-sm font-medium text-gray-900 text-center">{renderRequiredLabel('6-digit OTP')}</legend>
+              <legend className="mb-1 block text-sm font-medium text-gray-900 text-center">
+                6-digit OTP<span className="ml-1 text-red-500" aria-hidden="true">*</span>
+              </legend>
               <p id={OTP_HINT_ID} className="mt-2 text-sm text-gray-500 text-center">
                 Enter the one-time password sent to your email.
               </p>
