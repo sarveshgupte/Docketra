@@ -202,4 +202,18 @@ export const authService = {
     
     return response.data;
   },
+
+  googleLogin: async (idToken) => {
+    const response = await api.post('/auth/google', { idToken });
+    const payload = response.data?.data || {};
+    if (response.data?.success && payload.accessToken) {
+      localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, payload.accessToken);
+      if (payload.refreshToken) {
+        localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, payload.refreshToken);
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+      }
+    }
+    return response.data;
+  },
 };

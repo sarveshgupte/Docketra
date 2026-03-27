@@ -11,9 +11,9 @@ const storageConfigurationSchema = new mongoose.Schema(
     },
     provider: {
       type: String,
-      enum: ['google-drive'],
+      enum: ['docketra_managed', 'google-drive', 's3'],
       required: true,
-      default: 'google-drive',
+      default: 'docketra_managed',
       index: true,
     },
     isActive: {
@@ -22,15 +22,8 @@ const storageConfigurationSchema = new mongoose.Schema(
       index: true,
     },
     credentials: {
-      googleRefreshToken: {
-        type: String,
-        trim: true,
-        required: true,
-      },
-      connectedEmail: {
-        type: String,
-        trim: true,
-      },
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
     },
     rootFolderId: {
       type: String,
@@ -55,12 +48,9 @@ storageConfigurationSchema.index(
   { unique: true, partialFilterExpression: { isActive: true } }
 );
 
-storageConfigurationSchema.pre('save', function validateGoogleOnlyConfig(next) {
+storageConfigurationSchema.pre('save', function validateStorageConfig(next) {
   try {
-    if (this.provider !== 'google-drive') {
-      throw new StorageValidationError('Only google-drive provider is supported in this release');
-    }
-    if (!this.credentials?.googleRefreshToken) {
+    if (this.provider === 'google-drive' && !this.credentials?.googleRefreshToken) {
       throw new StorageValidationError('Missing Google Drive refresh token');
     }
     next();

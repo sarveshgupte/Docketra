@@ -13,3 +13,25 @@ export async function testStorageConnection() {
   const response = await api.post('/storage/test-connection');
   return response.data;
 }
+
+export async function sendStorageChangeOtp(email) {
+  const response = await api.post('/auth/send-otp', {
+    email,
+    purpose: 'storage_change',
+  });
+  return response.data;
+}
+
+export async function verifyStorageChangeOtp(identifier, code) {
+  const response = await api.post('/auth/verify-otp', {
+    identifier,
+    code,
+    purpose: 'storage_change',
+  });
+  return response.data;
+}
+
+export async function changeStorageProvider(payload) {
+  const response = await api.post('/firm/storage/change', payload);
+  return response.data;
+}

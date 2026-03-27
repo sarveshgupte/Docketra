@@ -27,7 +27,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, 'xID is required'],
     uppercase: true,
-    match: [/^X\d{6}$/, 'xID must be in format X123456'],
+    match: [/^(X\d{6}|DK-[A-Z0-9]{5})$/, 'xID must be in format X123456 or DK-XXXXX'],
     immutable: true,
   },
 
@@ -53,7 +53,6 @@ const userSchema = new mongoose.Schema({
   name: {
     type: String,
     required: [true, 'Name is required'],
-    immutable: true,
   },
   
   // Email address - REQUIRED for password setup emails
@@ -124,6 +123,12 @@ const userSchema = new mongoose.Schema({
     default: null,
     trim: true,
   },
+
+  isOnboarded: {
+    type: Boolean,
+    default: false,
+    index: true,
+  },
   
   // Firm/Organization ID for multi-tenancy
   // All users belong to a firm - enforces data isolation
@@ -134,7 +139,7 @@ const userSchema = new mongoose.Schema({
     ref: 'Firm',
     required: function() {
       // firmId is required for Admin and Employee, but not for SUPER_ADMIN
-      return this.role !== 'SUPER_ADMIN';
+      return this.role !== 'SUPER_ADMIN' && this.isOnboarded === true;
     },
     immutable: true,
   },
@@ -155,7 +160,7 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Client',
     required: function() {
-      return this.role !== 'SUPER_ADMIN';
+      return this.role !== 'SUPER_ADMIN' && this.isOnboarded === true;
     },
     default: null,
     immutable: true, // Cannot change default client after creation
