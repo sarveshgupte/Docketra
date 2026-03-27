@@ -21,6 +21,7 @@ const ChangePasswordPage = lazyPage(() => import('./pages/ChangePasswordPage'), 
 const SetPasswordPage = lazyPage(() => import('./pages/SetPasswordPage'), 'SetPasswordPage');
 const ForgotPasswordPage = lazyPage(() => import('./pages/ForgotPasswordPage'), 'ForgotPasswordPage');
 const ResetPasswordPage = lazyPage(() => import('./pages/ResetPasswordPage'), 'ResetPasswordPage');
+const CompleteProfilePage = lazyPage(() => import('./pages/CompleteProfilePage'), 'CompleteProfilePage');
 const DashboardPage = lazyPage(() => import('./pages/DashboardPage'), 'DashboardPage');
 const WorklistPage = lazyPage(() => import('./pages/WorklistPage'), 'WorklistPage');
 const WorkbasketPage = lazyPage(() => import('./pages/WorkbasketPage'), 'WorkbasketPage');
@@ -141,6 +142,7 @@ export const Router = () => {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/change-password" element={<ChangePasswordPage />} />
+          <Route path="/complete-profile" element={<CompleteProfilePage />} />
           <Route path="/auth/setup-account" element={<SetPasswordPage />} />
           <Route path="/setup-password" element={<SetPasswordPage />} />
           <Route

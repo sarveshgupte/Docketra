@@ -10,6 +10,7 @@ import { Input } from '../components/common/Input';
 import { Card } from '../components/common/Card';
 import { validateXID, validatePassword } from '../utils/validators';
 import { useToast } from '../hooks/useToast';
+import GoogleSignIn from '../components/auth/GoogleSignIn';
 import './LoginPage.css';
 
 export const LoginPage = () => {
@@ -87,6 +88,19 @@ export const LoginPage = () => {
     }
   };
 
+  const handleGoogleSuccess = async (result) => {
+    try {
+      const isOnboarded = result?.data?.isOnboarded;
+      if (isOnboarded === false) {
+        navigate('/complete-profile', { replace: true });
+        return;
+      }
+      navigate('/app/firm', { replace: true });
+    } catch (googleError) {
+      setError(googleError?.response?.data?.message || 'Google sign-in failed');
+    }
+  };
+
   return (
     <div className="auth-wrapper">
       <Card className="auth-card max-w-form">
@@ -153,6 +167,14 @@ export const LoginPage = () => {
           <Button type="submit" variant="primary" fullWidth loading={loading}>
             Login
           </Button>
+
+          <div className="flex items-center gap-2 py-1">
+            <div className="h-px flex-1 bg-gray-200" />
+            <span className="text-xs text-gray-500">or</span>
+            <div className="h-px flex-1 bg-gray-200" />
+          </div>
+
+          <GoogleSignIn onSuccess={handleGoogleSuccess} onError={(googleError) => setError(googleError?.message || 'Google sign-in failed')} />
 
           <div className="text-center">
             <Link

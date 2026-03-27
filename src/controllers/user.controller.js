@@ -1,11 +1,17 @@
 const { randomUUID } = require('crypto');
+const mongoose = require('mongoose');
 const User = require('../models/User.model');
+const Firm = require('../models/Firm.model');
+const StorageConfiguration = require('../models/StorageConfiguration.model');
 const userRepository = require('../repositories/user.repository');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { assertFirmPlanCapacity, PlanLimitExceededError, PlanAdminLimitExceededError, assertCanDeleteUser, PrimaryAdminActionError } = require('../services/user.service');
 const { incrementTenantMetric } = require('../services/tenantMetrics.service');
 const { logSecurityAuditEvent, SECURITY_AUDIT_ACTIONS } = require('../services/securityAudit.service');
 const { noteAdminPrivilegeChange } = require('../services/securityTelemetry.service');
+const jwtService = require('../services/jwt.service');
+const { slugify } = require('../utils/slugify');
+const { sendWelcomeEmail } = require('../services/welcomeEmail.service');
 
 const resolveUserFirmScope = (req, res) => {
   if (req.user?.role === 'SUPER_ADMIN') return {};
@@ -17,6 +23,26 @@ const resolveUserFirmScope = (req, res) => {
     return null;
   }
   return { firmId: req.user.firmId };
+};
+
+const buildUniqueFirmSlug = async (firmName, session) => {
+  const baseSlug = slugify(String(firmName || '').trim()) || `firm-${Date.now()}`;
+  for (let index = 0; index < 20; index += 1) {
+    const candidate = index === 0 ? baseSlug : `${baseSlug}-${index + 1}`;
+    // eslint-disable-next-line no-await-in-loop
+    const existing = await Firm.findOne({ firmSlug: candidate }).session(session);
+    if (!existing) return candidate;
+  }
+  throw new Error('FIRM_SLUG_GENERATION_FAILED');
+};
+
+const buildNextFirmIdentifier = async (session) => {
+  const latestFirm = await Firm.findOne({ firmId: /^FIRM\d+$/ })
+    .sort({ createdAt: -1 })
+    .select('firmId')
+    .session(session);
+  const latestNumeric = Number(String(latestFirm?.firmId || '').replace('FIRM', '')) || 0;
+  return `FIRM${String(latestNumeric + 1).padStart(3, '0')}`;
 };
 
 /**
@@ -304,10 +330,108 @@ const deleteUser = async (req, res) => {
   }
 };
 
+const completeProfile = async (req, res) => {
+  const { name, firmName, phoneNumber } = req.body || {};
+  const userId = req.user?._id;
+
+  if (!userId) {
+    return res.status(401).json({ success: false, message: 'Authentication required' });
+  }
+  if (!firmName || !phoneNumber) {
+    return res.status(400).json({ success: false, message: 'firmName and phoneNumber are required' });
+  }
+
+  const session = await mongoose.startSession();
+  let updatedUser = null;
+  let createdFirm = null;
+  let onboardingCompletedNow = false;
+
+  try {
+    await session.withTransaction(async () => {
+      const user = await User.findById(userId).session(session);
+      if (!user) throw new Error('USER_NOT_FOUND');
+
+      if (user.isOnboarded && user.firmId) {
+        updatedUser = user;
+        return;
+      }
+
+      const firmSlug = await buildUniqueFirmSlug(firmName, session);
+      const firmId = await buildNextFirmIdentifier(session);
+
+      [createdFirm] = await Firm.create([{
+        firmId,
+        name: String(firmName).trim(),
+        firmSlug,
+        status: 'active',
+        storage: { mode: 'docketra_managed', provider: null },
+        bootstrapStatus: 'PENDING',
+      }], { session });
+
+      await StorageConfiguration.updateMany(
+        { firmId: String(createdFirm._id), isActive: true },
+        { isActive: false },
+        { session }
+      );
+      await StorageConfiguration.create([{
+        firmId: String(createdFirm._id),
+        provider: 'docketra_managed',
+        credentials: null,
+        isActive: true,
+      }], { session });
+
+      if (name && String(name).trim()) {
+        user.name = String(name).trim();
+      }
+      user.phoneNumber = String(phoneNumber).trim();
+      user.firmId = createdFirm._id;
+      user.isOnboarded = true;
+      await user.save({ session });
+      updatedUser = user;
+      onboardingCompletedNow = true;
+    });
+  } catch (error) {
+    const statusCode = error.message === 'USER_NOT_FOUND' ? 404 : 400;
+    return res.status(statusCode).json({ success: false, message: error.message });
+  } finally {
+    await session.endSession();
+  }
+
+  const accessToken = jwtService.generateAccessToken({
+    userId: updatedUser._id.toString(),
+    xid: updatedUser.xid,
+    role: updatedUser.role || 'Employee',
+    firmId: updatedUser.firmId ? updatedUser.firmId.toString() : null,
+    defaultClientId: updatedUser.defaultClientId ? updatedUser.defaultClientId.toString() : null,
+  });
+
+  if (onboardingCompletedNow) {
+    await sendWelcomeEmail({
+      email: updatedUser.primary_email || updatedUser.email,
+      name: updatedUser.name,
+      firmName: createdFirm?.name || String(firmName).trim(),
+      firmSlug: createdFirm?.firmSlug || null,
+      xid: updatedUser.xid || updatedUser.xID,
+    }).catch(() => null);
+  }
+
+  return res.json({
+    success: true,
+    message: 'Profile completed successfully',
+    data: {
+      accessToken,
+      isOnboarded: true,
+      firmId: updatedUser.firmId ? updatedUser.firmId.toString() : null,
+      firmSlug: createdFirm?.firmSlug || null,
+    },
+  });
+};
+
 module.exports = {
   getUsers,
   getUserById,
   createUser: wrapWriteHandler(createUser),
   updateUser: wrapWriteHandler(updateUser),
   deleteUser: wrapWriteHandler(deleteUser),
+  completeProfile: wrapWriteHandler(completeProfile),
 };

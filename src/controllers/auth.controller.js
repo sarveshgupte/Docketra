@@ -4304,7 +4304,15 @@ const googleTokenLogin = async (req, res) => {
         await AuthIdentity.create({ user_id: user._id, provider: 'google', provider_id: providerId });
       }
       const tokens = await issueAuthTokens(req, user);
-      return res.json({ success: true, message: 'Google login successful', data: { ...tokens, xid: user.xid } });
+      return res.json({
+        success: true,
+        message: 'Google login successful',
+        data: {
+          ...tokens,
+          xid: user.xid,
+          isOnboarded: Boolean(user.isOnboarded),
+        },
+      });
     }
 
     const xid = await generatePrimaryXid();
@@ -4323,13 +4331,21 @@ const googleTokenLogin = async (req, res) => {
       mustSetPassword: false,
       passwordSet: false,
       termsAccepted: true,
+      isOnboarded: false,
     });
 
     await AuthIdentity.create({ user_id: user._id, provider: 'google', provider_id: providerId });
-    await emailService.sendFirmSetupEmail({ email, name: user.name, firmName: 'Docketra', workspaceUrl: process.env.FRONTEND_URL || 'http://localhost:3000/login', xid });
 
     const tokens = await issueAuthTokens(req, user);
-    return res.status(201).json({ success: true, message: 'Google login successful', data: { ...tokens, xid } });
+    return res.status(201).json({
+      success: true,
+      message: 'Google login successful',
+      data: {
+        ...tokens,
+        xid,
+        isOnboarded: false,
+      },
+    });
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message || 'Google login failed' });
   }
