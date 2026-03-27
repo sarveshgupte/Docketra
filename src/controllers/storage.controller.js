@@ -9,6 +9,7 @@ const { encrypt, decrypt } = require('../storage/services/TokenEncryption.servic
 const GoogleDriveProvider = require('../services/storage/providers/GoogleDriveProvider');
 const { StorageValidationError } = require('../storage/errors/StorageErrors');
 const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
+const { S3Adapter } = require('../services/storageAdapter.service');
 
 const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/drive.file',
@@ -17,6 +18,7 @@ const GOOGLE_SCOPES = [
 const STATE_COOKIE_NAME = 'storage_oauth_state';
 const STATE_TTL_SECONDS = 10 * 60;
 const MANAGED_STORAGE_MODE = 'docketra_managed';
+const SUPPORTED_STORAGE_PROVIDERS = new Set(['docketra_managed', 'google-drive', 's3']);
 const usedStorageOtpJti = new Map();
 
 function ensureFirmAdmin(req, res) {
@@ -279,7 +281,7 @@ const getStorageConfiguration = async (req, res) => {
     const config = await StorageConfiguration.findOne({ firmId, isActive: true }).select('provider rootFolderId credentials.connectedEmail updatedAt createdAt').lean();
 
     if (!config) {
-      return res.json({ provider: 'google-drive', isConfigured: false, status: 'DISCONNECTED' });
+      return res.json({ provider: 'docketra_managed', isConfigured: true, status: 'ACTIVE' });
     }
 
     let folderPath = null;
@@ -319,6 +321,61 @@ const testStorageConnection = async (req, res) => {
   }
 };
 
+const changeFirmStorage = async (req, res) => {
+  if (!ensureFirmAdmin(req, res)) return;
+  if (!ensureStorageOtpVerification(req, res)) return;
+
+  const firmId = String(req.firmId || '');
+  const provider = String(req.body?.provider || '').trim();
+  const rawCredentials = req.body?.credentials || {};
+
+  if (!SUPPORTED_STORAGE_PROVIDERS.has(provider)) {
+    return res.status(400).json({ success: false, message: 'Unsupported storage provider' });
+  }
+
+  try {
+    let adapter = null;
+    if (provider === 'docketra_managed') {
+      adapter = { providerName: 'docketra_managed' };
+    } else if (provider === 'google-drive') {
+      if (!rawCredentials?.googleRefreshToken) {
+        return res.status(400).json({ success: false, message: 'googleRefreshToken is required for Google Drive' });
+      }
+      const oauthClient = getStorageOAuthClient();
+      oauthClient.setCredentials({ refresh_token: rawCredentials.googleRefreshToken });
+      adapter = new GoogleDriveProvider({ oauthClient, driveId: rawCredentials.driveId || null });
+      if (typeof adapter.testConnection === 'function') {
+        await adapter.testConnection();
+      }
+    } else if (provider === 's3') {
+      adapter = new S3Adapter(rawCredentials);
+      await adapter.testConnection();
+    }
+
+    await StorageConfiguration.updateMany({ firmId, isActive: true }, { isActive: false });
+    const encryptedCredentials = provider === 'docketra_managed'
+      ? null
+      : encrypt(JSON.stringify(rawCredentials || {}));
+    await StorageConfiguration.create({
+      firmId,
+      provider,
+      credentials: encryptedCredentials ? { encryptedPayload: encryptedCredentials } : null,
+      isActive: true,
+    });
+
+    await Firm.findByIdAndUpdate(firmId, {
+      $set: {
+        'storage.mode': provider === 'docketra_managed' ? 'docketra_managed' : 'firm_connected',
+        'storage.provider': provider === 'google-drive' ? 'google_drive' : provider,
+      },
+    });
+
+    return res.json({ success: true, data: { provider, isActive: true, tested: Boolean(adapter) } });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message || 'Unable to update storage provider' });
+  }
+};
+
 module.exports = {
   getStorageStatus,
   getStorageHealth,
@@ -327,6 +384,7 @@ module.exports = {
   googleConfirmDrive,
   getStorageConfiguration,
   testStorageConnection,
+  changeFirmStorage,
   buildStateCookie,
   mapProviderErrorToStatus,
 };

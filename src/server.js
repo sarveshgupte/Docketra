@@ -85,6 +85,7 @@ const { tenantScopedApiAccess, adminTenantScopedApiAccess } = require('./routes/
 
 // Routes
 const userRoutes = require('./routes/user.routes');
+const selfUserRoutes = require('./routes/selfUser.routes');
 const taskRoutes = require('./routes/task.routes');
 const caseRoutes = require('./routes/case.routes');
 const searchRoutes = require('./routes/search.routes');  // Search and worklist routes
@@ -104,6 +105,7 @@ const contactRoutes = require('./routes/contact.routes');  // Public contact for
 const publicRoutes = require('./routes/public.routes');  // Public routes (firm lookup)
 const publicSignupRoutes = require('./routes/publicSignup.routes');  // Public self-serve signup routes
 const firmRoutes = require('./routes/firm.routes');
+const firmStorageRoutes = require('./routes/firmStorage.routes');
 const healthRoutes = require('./routes/health.routes');  // Health endpoints
 const { apiHealth } = require('./controllers/health.controller');
 const storageRoutes = require('./routes/storage.routes');  // Storage BYOS routes
@@ -450,6 +452,7 @@ if (inboundEmailEnabled) {
 // Protected routes - require authentication
 // Firm context must be attached for all tenant-scoped operations
 app.use('/api/users', ...tenantScopedApiAccess, writeGuardChain, userRoutes);
+app.use('/api/user', authenticate, selfUserRoutes);
 app.use('/api/tasks', ...tenantScopedApiAccess, writeGuardChain, taskRoutes);
 app.use('/api/cases', ...tenantScopedApiAccess, writeGuardChain, caseRoutes);
 app.use('/api/search', ...tenantScopedApiAccess, writeGuardChain, searchRoutes);
@@ -459,6 +462,7 @@ app.use('/api/clients', ...tenantScopedApiAccess, writeGuardChain, clientRoutes)
 app.use('/api/reports', ...tenantScopedApiAccess, writeGuardChain, reportsRoutes);  // Reports routes
 app.use('/api/firm/:firmId', ...tenantScopedApiAccess, writeGuardChain, firmMetricsRoutes);
 app.use('/api/storage', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), storageRoutes);  // BYOS storage routes (read-only, no writeGuardChain needed)
+app.use('/api/firm', ...tenantScopedApiAccess, writeGuardChain, firmStorageRoutes);
 app.use('/api/files', authLimiter, ...tenantScopedApiAccess, writeGuardChain, filesRoutes);
 app.use('/api/tenant', authLimiter, ...tenantScopedApiAccess, writeGuardChain, tenantRoutes);
 

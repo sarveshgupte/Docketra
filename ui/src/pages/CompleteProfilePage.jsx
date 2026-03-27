@@ -1,0 +1,60 @@
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Card } from '../components/common/Card';
+import { Input } from '../components/common/Input';
+import { Button } from '../components/common/Button';
+import api from '../services/api';
+import { STORAGE_KEYS } from '../utils/constants';
+
+export function CompleteProfilePage() {
+  const navigate = useNavigate();
+  const [name, setName] = useState('');
+  const [firmName, setFirmName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const response = await api.post('/user/complete-profile', { name, firmName, phoneNumber });
+      const token = response.data?.data?.accessToken;
+      const firmSlug = response.data?.data?.firmSlug;
+      if (token) {
+        localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, token);
+      }
+      if (firmSlug) {
+        localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, firmSlug);
+        navigate(`/app/firm/${firmSlug}/dashboard`, { replace: true });
+        return;
+      }
+      navigate('/app/firm', { replace: true });
+    } catch (submitError) {
+      setError(submitError?.response?.data?.message || 'Failed to complete profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="auth-wrapper">
+      <Card className="auth-card max-w-form">
+        <h1 className="text-2xl font-semibold text-center text-gray-900">Complete your profile</h1>
+        <p className="mt-2 text-sm text-gray-500 text-center">Finish onboarding before using your workspace.</p>
+        <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+          <Input label="Name" value={name} onChange={(event) => setName(event.target.value)} required />
+          <Input label="Firm Name" value={firmName} onChange={(event) => setFirmName(event.target.value)} required />
+          <Input label="Phone Number" value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} required />
+          {error ? <p className="text-sm text-red-600">{error}</p> : null}
+          <Button type="submit" variant="primary" fullWidth disabled={loading}>
+            {loading ? 'Saving...' : 'Continue'}
+          </Button>
+        </form>
+      </Card>
+    </div>
+  );
+}
+
+export default CompleteProfilePage;
