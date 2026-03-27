@@ -11,7 +11,7 @@ const { logSecurityAuditEvent, SECURITY_AUDIT_ACTIONS } = require('../services/s
 const { noteAdminPrivilegeChange } = require('../services/securityTelemetry.service');
 const jwtService = require('../services/jwt.service');
 const { slugify } = require('../utils/slugify');
-const { sendWelcomeEmail } = require('../services/welcomeEmail.service');
+const { sendWelcomeEmail } = require('../services/email/sendWelcomeEmail');
 
 const resolveUserFirmScope = (req, res) => {
   if (req.user?.role === 'SUPER_ADMIN') return {};
@@ -406,13 +406,20 @@ const completeProfile = async (req, res) => {
   });
 
   if (onboardingCompletedNow) {
-    await sendWelcomeEmail({
-      email: updatedUser.primary_email || updatedUser.email,
-      name: updatedUser.name,
-      firmName: createdFirm?.name || String(firmName).trim(),
-      firmSlug: createdFirm?.firmSlug || null,
-      xid: updatedUser.xid || updatedUser.xID,
-    }).catch(() => null);
+    try {
+      await sendWelcomeEmail({
+        email: updatedUser.primary_email || updatedUser.email,
+        name: updatedUser.name,
+        xid: updatedUser.xid || updatedUser.xID,
+        firmId: createdFirm?._id?.toString?.() || updatedUser.firmId?.toString?.(),
+      });
+    } catch (emailError) {
+      console.error('[ONBOARDING] Failed to send welcome email', {
+        userId: updatedUser._id?.toString?.(),
+        firmId: createdFirm?._id?.toString?.() || updatedUser.firmId?.toString?.(),
+        error: emailError.message,
+      });
+    }
   }
 
   return res.json({
