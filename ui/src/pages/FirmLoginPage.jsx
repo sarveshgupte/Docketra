@@ -399,6 +399,7 @@ export const FirmLoginPage = () => {
 
         {showOtpForm ? (
           <form onSubmit={handleVerifyOtp} noValidate className="mt-6 space-y-4">
+            <p className="text-sm text-gray-500">Fields marked with * are required.</p>
             <Input label="xID" type="text" value={identifier} readOnly />
 
             <Input
@@ -449,6 +450,7 @@ export const FirmLoginPage = () => {
           </form>
         ) : (
           <form onSubmit={handleLogin} noValidate className="mt-6 space-y-4">
+            <p className="text-sm text-gray-500">Fields marked with * are required.</p>
             <Input
               label="xID"
               type="text"
