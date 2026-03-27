@@ -7,52 +7,52 @@ import '../../assets/styles/marketing-tokens.css';
 const PROBLEM_POINTS = [
   {
     icon: 'chart',
-    title: 'Spreadsheets Are Invisible Until Review Time',
-    desc: 'Partners discover issues during final approval, not during execution when there is still time to fix them.',
+    title: 'Work Hides in Too Many Places',
+    desc: 'Critical tasks get buried across docs, chats, and emails, so teams miss what needs attention.',
   },
   {
     icon: 'messages',
-    title: 'WhatsApp Assignments Leave No Trail',
-    desc: 'If regulators ask who approved something, teams often cannot provide a verifiable record.',
+    title: 'Assignments Have No Clear Trail',
+    desc: 'Without a shared system, ownership and handoffs become hard to trace.',
   },
   {
     icon: 'search',
-    title: 'No One Knows Who Owns What',
-    desc: 'When deadlines slip, ownership and blockers are unclear across teams.',
+    title: 'Ownership Gets Blurry',
+    desc: 'When deadlines slip, it is unclear who is responsible and where work is blocked.',
   },
   {
     icon: 'users',
-    title: 'Onboarding New Team Members Takes Weeks',
-    desc: 'People restart work instead of continuing from documented progress.',
+    title: 'Onboarding Slows Delivery',
+    desc: 'New teammates struggle to pick up in-flight work without context and structure.',
   },
   {
     icon: 'clock',
-    title: 'Status Meetings Eat Up Everyone’s Time',
-    desc: 'Partners have to chase updates manually instead of seeing one shared view.',
+    title: 'Status Meetings Replace Actual Work',
+    desc: 'Teams spend too much time requesting updates instead of progressing tasks.',
   },
   {
     icon: 'alert',
-    title: 'Overdue Items Surface Too Late',
-    desc: 'Missed deadlines are often discovered only after clients are already impacted.',
+    title: 'Risks Surface Too Late',
+    desc: 'Teams often discover missed deadlines only after timelines are already impacted.',
   },
 ];
 
 const SOLUTION_POINTS = [
   {
     num: '1',
-    title: 'Structured Lifecycle Stages',
+    title: 'Standardize Every Workflow',
     desc: 'Track work through explicit checkpoints with ownership and approvals at each stage.',
     icon: 'list',
   },
   {
     num: '2',
-    title: 'Real-Time Team Visibility',
+    title: 'Stay Aligned in Real Time',
     desc: 'See who is responsible, what changed, and what needs attention right now.',
     icon: 'eye',
   },
   {
     num: '3',
-    title: 'Audit Trails By Default',
+    title: 'Keep Accountability Built In',
     desc: 'Every action is logged with actor and timestamp for operational accountability.',
     icon: 'check',
   },
@@ -60,19 +60,19 @@ const SOLUTION_POINTS = [
 
 const AUDIENCE_SEGMENTS = [
   {
-    title: 'Audit & Assurance',
+    title: 'Operations Teams',
     color: 'bg-blue-500',
-    points: ['Parallel testing workflows', 'Partner review stages', 'Engagement risk visibility', 'Quality gates'],
+    points: ['Recurring process templates', 'Cross-functional handoffs', 'Escalation visibility', 'Progress by stage'],
   },
   {
-    title: 'Tax & Compliance',
+    title: 'Project Teams',
     color: 'bg-emerald-500',
-    points: ['GST, TDS, ROC tracking', 'Multi-office coordination', 'Deadline reminders', 'Filing calendar visibility'],
+    points: ['Timeline and milestone tracking', 'Approvals in one place', 'Owner-level accountability', 'Fewer status meetings'],
   },
   {
-    title: 'Consulting',
+    title: 'Support Teams',
     color: 'bg-indigo-500',
-    points: ['Project phase tracking', 'Deliverable approval chains', 'Client communication notes', 'Escalation workflows'],
+    points: ['Ticket-to-resolution workflows', 'Priority and SLA tracking', 'Shared team visibility', 'Consistent follow-through'],
   },
 ];
 
@@ -82,8 +82,8 @@ const FAQS = [
     a: 'Most teams can set up a workspace and first workflow in minutes.',
   },
   {
-    q: 'Do you support GST, TDS, and ROC filing workflows?',
-    a: 'Yes. Docketra is being built with templates for common compliance workflows used by Indian firms.',
+    q: 'Can we customize workflows for different teams?',
+    a: 'Yes. You can adapt stages, ownership, and approvals to match how each team works.',
   },
   {
     q: 'Can our clients see case status?',
@@ -95,23 +95,23 @@ const FAQS = [
   },
   {
     q: 'How is data secured?',
-    a: 'Data security controls include access restrictions, encryption, and audited activity logs.',
+    a: 'Data security controls include access restrictions, encryption, and timestamped activity logs.',
   },
 ];
 
 const COMPARISON_ROWS = [
   ['Real-time visibility', '❌', '❌', '✅'],
-  ['Audit trail / Compliance', '❌', '❌', '✅'],
+  ['End-to-end activity trail', '❌', '❌', '✅'],
   ['Role-based approval flows', '❌', '❌', '✅'],
   ['Automatic deadline alerts', '⚠️', '❌', '✅'],
-  ['Partner visibility', '❌', '❌', '✅'],
-  ['Multi-office support', '⚠️', '❌', '✅'],
+  ['Stakeholder visibility', '❌', '❌', '✅'],
+  ['Cross-team support', '⚠️', '❌', '✅'],
 ];
 
-const TRUST_LOGOS = ['Aster & Co.', 'Northbridge Advisors', 'KVR Compliance', 'TaxLedger Partners'];
+const TRUST_LOGOS = ['Northline Ops', 'Peakstone Labs', 'Atlas Projects', 'Relay Support'];
 
 const METRICS = [
-  { value: '40%', label: 'faster audit cycles' },
+  { value: '40%', label: 'faster workflow cycles' },
   { value: '100%', label: 'activity traceability' },
   { value: 'Zero', label: 'missed deadlines' },
   { value: 'Multi-office', label: 'visibility' },
@@ -244,7 +244,7 @@ export const HomePage = () => {
       '@type': 'SoftwareApplication',
       name: 'Docketra',
       applicationCategory: 'BusinessApplication',
-      description: 'Compliance task and case management system for professional firms',
+      description: 'Workflow management system for modern teams',
       url: 'https://docketra.com',
       operatingSystem: 'Web',
       browserRequirements: 'Requires JavaScript',
@@ -296,23 +296,22 @@ export const HomePage = () => {
     <div className="w-full">
       <Section>
         <div className="grid w-full items-center gap-8 lg:grid-cols-2">
-          <div className="w-full min-w-0 text-left">
+          <div className="w-full min-w-0 flex flex-col">
             <div className="max-w-xl">
               <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
                 Launching soon • Early access open
               </span>
               <h1 className="text-5xl md:text-6xl font-semibold tracking-tight leading-tight text-gray-900">
-                Compliance operations
+                Workflows that actually
                 <br />
                 <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                  without the chaos.
+                  move work forward.
                 </span>
               </h1>
               <p className="mt-4 text-base text-gray-600">
-                Docketra gives leadership and delivery teams one shared system for ownership, deadlines, and
-                approvals, with audit-ready visibility built into every step.
+                Manage tasks, ownership, and approvals in one shared system your team can rely on.
               </p>
-              <div className="mt-8 flex flex-wrap gap-4">
+              <div className="mt-8 flex flex-wrap items-center gap-4">
                 <Link
                   to="/signup"
                   className="inline-flex items-center justify-center rounded-lg bg-black px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-gray-900"
@@ -326,7 +325,9 @@ export const HomePage = () => {
                   See how it works
                 </a>
               </div>
-              <p className="mt-3 text-xs text-gray-500">Used by modern CA firms &amp; compliance teams</p>
+              <p className="mt-3 text-xs text-gray-500">
+                Built for teams that need clarity, accountability, and speed.
+              </p>
             </div>
           </div>
 
@@ -356,7 +357,7 @@ export const HomePage = () => {
               </div>
 
               <div className="mt-5 space-y-3">
-                {['Q4 Tax Filings - West Region', 'Statutory Audit FY 2025-26', 'Client Onboarding Quality Review'].map(
+                {['Website Redesign Sprint', 'Vendor Onboarding Rollout', 'Client Onboarding Quality Review'].map(
                   (row) => (
                     <div key={row} className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2.5">
                       <p className="truncate pr-3 text-sm text-gray-700">{row}</p>
@@ -371,11 +372,11 @@ export const HomePage = () => {
       </Section>
 
       <Section>
-        <div className="border-t border-gray-100 pt-10">
+        <div className="min-w-0 border-t border-gray-100 pt-10">
           <p className="text-center text-xs font-semibold tracking-[0.16em] text-gray-500 uppercase">
-            Built for audit, tax &amp; compliance teams
+            Workflow management for your team
           </p>
-          <div className="mt-6 grid grid-cols-2 items-center gap-6 opacity-70 md:grid-cols-4">
+          <div className="mx-auto mt-6 grid max-w-4xl grid-cols-2 gap-4 opacity-70 md:grid-cols-4">
             {TRUST_LOGOS.map((logo) => (
               <div
                 key={logo}
@@ -391,7 +392,7 @@ export const HomePage = () => {
       <Section muted>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {METRICS?.map((item) => (
-            <div key={item.label} className="card-base p-6 text-center">
+            <div key={item.label} className="card-base min-w-0 p-6 text-center">
               <p className="text-3xl font-semibold text-gray-900">{item.value}</p>
               <p className="mt-2 text-sm font-medium text-gray-600">{item.label}</p>
             </div>
@@ -405,7 +406,7 @@ export const HomePage = () => {
           {PROBLEM_POINTS?.map((point, index) => (
             <motion.div
               key={point.title}
-              className="card-base hover-card relative p-6"
+              className="card-base hover-card relative min-w-0 p-6"
               initial={{ opacity: 0, y: 10 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
@@ -423,13 +424,13 @@ export const HomePage = () => {
         <div className="mb-12">
           <h2 className="type-section">How Docketra Works</h2>
           <p className="type-body type-lg w-full text-gray-600">
-            Audit-ready workflows that bring compliance-grade visibility and partner-level oversight to every case.
+            Workflow management for your team, with visibility and accountability at every stage.
           </p>
         </div>
 
         <div className="grid w-full gap-8 md:grid-cols-3">
           {SOLUTION_POINTS?.map((item, idx) => (
-            <motion.div key={item.num} className="relative" {...SECTION_REVEAL}>
+            <motion.div key={item.num} className="relative min-w-0" {...SECTION_REVEAL}>
               <span className="text-5xl font-semibold text-gray-200">{item.num}</span>
               <h3 className="mt-3 text-lg font-semibold text-gray-900">{item.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-gray-600">{item.desc}</p>
@@ -446,9 +447,9 @@ export const HomePage = () => {
 
       <Section muted>
         <div className="mb-12">
-          <h2 className="type-section">Configured for each service line</h2>
+          <h2 className="type-section">Built for cross-functional teams</h2>
           <p className="type-body type-lg w-full text-gray-600">
-            Standardize delivery with audit-ready workflows and partner-level oversight across audit, tax, and advisory.
+            Standardize how work moves from request to completion across operations, projects, and support.
           </p>
         </div>
 
@@ -456,7 +457,7 @@ export const HomePage = () => {
           {AUDIENCE_SEGMENTS?.map((segment) => (
             <motion.div
               key={segment.title}
-              className="card-base hover-card relative p-6"
+              className="card-base hover-card relative min-w-0 p-6"
               {...SECTION_REVEAL}
             >
               <h3 className="text-lg font-medium text-gray-900">{segment.title}</h3>
@@ -478,34 +479,38 @@ export const HomePage = () => {
           <span className="text-sm font-bold tracking-wider text-blue-600 uppercase">Pre-Launch Access</span>
           <h2 className="type-section text-gray-900">Join the Docketra Early Access Program</h2>
           <p className="type-body text-lg text-gray-600">
-            Get priority onboarding for audit-ready workflows and help shape the controls your team relies on.
+            Get priority onboarding and help shape the workflow system your team will run on every day.
           </p>
 
-          <form
-            className="mt-12 flex w-full max-w-2xl flex-col gap-3 sm:flex-row sm:items-stretch"
-            onSubmit={onEarlyAccessSubmit}
-            aria-label="Early access signup"
-          >
-            <input
-              id="early-access-email"
-              name="email"
-              type="email"
-              placeholder="Enter your work email"
-              className="w-full min-w-0 flex-1 rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-600"
-              required
-              aria-required="true"
-            />
-            <button
-              type="submit"
-              className="marketing-btn-primary w-full shrink-0 rounded-xl px-6 py-3 font-semibold whitespace-nowrap shadow-sm sm:w-auto"
-              aria-label="Request Early Access"
+          <div className="max-w-md w-full min-w-0">
+            <form
+              className="mt-12 flex min-w-0 w-full flex-col gap-3 sm:flex-row sm:items-stretch"
+              onSubmit={onEarlyAccessSubmit}
+              aria-label="Early access signup"
             >
-              Request Early Access
-            </button>
-          </form>
+              <input
+                id="early-access-email"
+                name="email"
+                type="email"
+                placeholder="Enter your work email"
+                className="w-full min-w-0 flex-1 rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-600"
+                required
+                aria-required="true"
+              />
+              <button
+                type="submit"
+                className="marketing-btn-primary w-full shrink-0 rounded-xl px-6 py-3 font-semibold whitespace-nowrap shadow-sm sm:w-auto"
+                aria-label="Request Early Access"
+              >
+                Request Early Access
+              </button>
+            </form>
+          </div>
           <div className="space-y-2">
             <p className="text-xs text-gray-500">No spam. We&apos;ll only contact you regarding your workspace setup.</p>
-            <p className="text-sm font-medium text-gray-600">Used by modern CA firms &amp; compliance teams</p>
+            <p className="text-sm font-medium text-gray-600">
+              Built for teams that need clarity, accountability, and speed.
+            </p>
           </div>
         </div>
       </Section>
@@ -542,11 +547,11 @@ export const HomePage = () => {
       <Section>
         <div className="card-base mx-auto w-full max-w-2xl p-8 text-center">
           <p className="text-lg leading-relaxed text-gray-700 italic">
-            “Docketra gave us partner-level oversight across offices without chasing status updates. Every compliance
-            decision now has a clear, reviewable trail.”
+            “Docketra gave us one shared workflow system across teams without chasing updates. Every decision now has
+            a clear, reviewable trail.”
           </p>
           <p className="mt-6 text-sm font-semibold text-gray-900">Priya Mehta</p>
-          <p className="text-sm text-gray-600">Head of Assurance, Meridian CA Advisors</p>
+          <p className="text-sm text-gray-600">Head of Operations, Meridian Group</p>
         </div>
       </Section>
 

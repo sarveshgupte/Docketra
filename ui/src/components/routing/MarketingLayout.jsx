@@ -20,27 +20,29 @@ export const MarketingLayout = () => {
       </a>
 
       <header className="w-full border-b border-gray-100 bg-white">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          <div className="min-w-0 flex items-center">
-            <Link to="/" className="text-lg font-semibold text-gray-900">
-              Docketra
-            </Link>
-          </div>
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="flex h-16 min-w-0 items-center justify-between">
+            <div className="min-w-0 flex items-center">
+              <Link to="/" className="text-lg font-semibold text-gray-900">
+                Docketra
+              </Link>
+            </div>
 
-          <nav className="min-w-0 flex items-center gap-8">
-            <NavLink to="/features" className={navLinkClass}>
-              Features
-            </NavLink>
-            <NavLink to="/pricing" className={navLinkClass}>
-              Pricing
-            </NavLink>
-            <NavLink to="/security" className={navLinkClass}>
-              Security
-            </NavLink>
-            <NavLink to="/about" className={navLinkClass}>
-              About
-            </NavLink>
-          </nav>
+            <nav className="min-w-0 flex items-center gap-8">
+              <NavLink to="/features" className={navLinkClass}>
+                Features
+              </NavLink>
+              <NavLink to="/pricing" className={navLinkClass}>
+                Pricing
+              </NavLink>
+              <NavLink to="/security" className={navLinkClass}>
+                Security
+              </NavLink>
+              <NavLink to="/about" className={navLinkClass}>
+                About
+              </NavLink>
+            </nav>
+          </div>
         </div>
       </header>
 
@@ -53,9 +55,9 @@ export const MarketingLayout = () => {
       </main>
 
       <footer className="border-t border-gray-200 bg-white">
-        <section className="w-full marketing-section">
-          <div className="marketing-container w-full">
-            <div className="mb-8 grid w-full grid-cols-1 gap-12 sm:grid-cols-2 md:grid-cols-4">
+        <section className="w-full py-16 md:py-20">
+          <div className="mx-auto max-w-7xl px-6">
+            <div className="mb-8 grid w-full min-w-0 grid-cols-1 gap-12 sm:grid-cols-2 md:grid-cols-4">
               <div>
                 <h4 className="mb-3 text-sm font-semibold text-gray-900">Product</h4>
                 <ul className="space-y-2 text-sm">
