@@ -59,7 +59,14 @@ function bootstrapController({ sendOtpImpl, verifyOtpImpl, verifyIdTokenImpl, us
   const originalVerify = google.auth.OAuth2.prototype.verifyIdToken;
   google.auth.OAuth2.prototype.verifyIdToken = verifyIdTokenImpl;
 
-  process.env.JWT_SECRET = 'test-secret';
+  process.env.JWT_SECRET = 'abcdefghijklmnopqrstuvwxyz123456';
+  process.env.MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/docketra';
+  process.env.DISABLE_GOOGLE_AUTH = 'true';
+  process.env.ENCRYPTION_PROVIDER = 'disabled';
+  process.env.SUPERADMIN_PASSWORD_HASH = process.env.SUPERADMIN_PASSWORD_HASH || '$2b$10$abcdefghijklmnopqrstuu0Lz3M0RtZpmjHtkobaN6D2PfYZ7RUTy';
+  process.env.SUPERADMIN_XID = process.env.SUPERADMIN_XID || 'X000001';
+  process.env.SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL || 'superadmin@example.com';
+  process.env.SUPERADMIN_OBJECT_ID = process.env.SUPERADMIN_OBJECT_ID || '000000000000000000000001';
   process.env.GOOGLE_CLIENT_ID = 'google-client-id';
 
   const controller = require('../src/controllers/auth.controller');
@@ -83,7 +90,7 @@ async function testLoginWithoutOtpReturns202() {
     verifyIdTokenImpl: async () => ({ getPayload: () => ({ email: 'g@example.com', sub: 'g-sub' }) }),
     userFindOneImpl: async (query) => {
       if (query.xid === 'DK-ABCDE') {
-        return { _id: 'u1', xid: 'DK-ABCDE', primary_email: 'user@example.com', passwordHash: hash, role: 'Employee', save: async () => {} };
+        return { _id: 'u1', xid: 'DK-ABCDE', primary_email: 'user@example.com', passwordHash: hash, role: 'Employee', firmId: 'firm-1', save: async () => {} };
       }
       return null;
     },
@@ -108,7 +115,7 @@ async function testLoginWithWrongOtpFails() {
     sendOtpImpl: async () => ({}),
     verifyOtpImpl: async () => { throw new Error('OTP_INVALID'); },
     verifyIdTokenImpl: async () => ({ getPayload: () => ({ email: 'g@example.com', sub: 'g-sub' }) }),
-    userFindOneImpl: async () => ({ _id: 'u1', xid: 'DK-ABCDE', primary_email: 'user@example.com', passwordHash: hash, role: 'Employee', save: async () => {} }),
+    userFindOneImpl: async () => ({ _id: 'u1', xid: 'DK-ABCDE', primary_email: 'user@example.com', passwordHash: hash, role: 'Employee', firmId: 'firm-1', save: async () => {} }),
     authIdentityFindOneImpl: async () => ({ password_hash: hash }),
   });
 
@@ -128,7 +135,7 @@ async function testLoginWithCorrectOtpSucceeds() {
     sendOtpImpl: async () => ({}),
     verifyOtpImpl: async () => ({ verificationToken: 'ok' }),
     verifyIdTokenImpl: async () => ({ getPayload: () => ({ email: 'g@example.com', sub: 'g-sub' }) }),
-    userFindOneImpl: async () => ({ _id: 'u1', xid: 'DK-ABCDE', primary_email: 'user@example.com', passwordHash: hash, role: 'Employee', save: async () => {} }),
+    userFindOneImpl: async () => ({ _id: 'u1', xid: 'DK-ABCDE', primary_email: 'user@example.com', passwordHash: hash, role: 'Employee', firmId: 'firm-1', save: async () => {} }),
     authIdentityFindOneImpl: async () => ({ password_hash: hash }),
   });
 
