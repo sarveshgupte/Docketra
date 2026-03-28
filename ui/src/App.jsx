@@ -33,11 +33,13 @@ const AppBootstrap = () => {
 
 function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <AppBootstrap />
-      </AuthProvider>
-    </BrowserRouter>
+    <div className="min-h-screen flex flex-col">
+      <BrowserRouter>
+        <AuthProvider>
+          <AppBootstrap />
+        </AuthProvider>
+      </BrowserRouter>
+    </div>
   );
 }
 

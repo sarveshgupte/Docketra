@@ -36,7 +36,7 @@ export const SuperAdminLayout = ({ children }) => {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <aside className="w-full border-b border-gray-200 bg-white px-4 py-5 md:w-72 md:border-b-0 md:border-r md:px-6 md:py-8">
+      <aside className="w-72 shrink-0 border-r border-gray-200 bg-white px-6 py-8">
         <div className="flex items-start justify-between gap-3 md:block">
           <div>
             <h1 className="text-lg font-semibold text-gray-900">Docketra Platform</h1>
@@ -67,7 +67,7 @@ export const SuperAdminLayout = ({ children }) => {
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1 p-4 md:p-8">{children}</main>
+      <main className="flex-1 min-w-0 overflow-x-hidden p-4 md:p-8">{children}</main>
     </div>
   );
 };
