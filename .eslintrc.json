@@ -1,0 +1,29 @@
+{
+  "root": true,
+  "env": {
+    "node": true,
+    "es2022": true
+  },
+  "extends": [
+    "eslint:recommended"
+  ],
+  "parserOptions": {
+    "ecmaVersion": "latest"
+  },
+  "rules": {
+    "no-use-before-define": [
+      "error",
+      {
+        "functions": false,
+        "classes": true,
+        "variables": true
+      }
+    ],
+    "no-shadow": "error"
+  },
+  "ignorePatterns": [
+    "node_modules/",
+    "ui/dist/",
+    "coverage/"
+  ]
+}
