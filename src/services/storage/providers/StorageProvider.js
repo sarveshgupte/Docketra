@@ -14,6 +14,10 @@ class StorageProvider {
   async testConnection() {
     throw new Error('StorageProvider.testConnection() not implemented');
   }
+
+  async getFileMetadata(fileId) { // eslint-disable-line no-unused-vars
+    throw new Error('StorageProvider.getFileMetadata() not implemented');
+  }
 }
 
 module.exports = StorageProvider;

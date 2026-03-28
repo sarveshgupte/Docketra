@@ -3521,7 +3521,7 @@ const refreshAccessToken = async (req, res) => {
   try {
     const refreshToken =
       req.body.refreshToken ||
-      getCookieValue(req.headers.cookie, 'refreshToken');
+      req.cookies?.refreshToken;
     
     if (!refreshToken) {
       return res.status(400).json({
@@ -3967,6 +3967,7 @@ const initiateGoogleAuth = async (req, res) => {
 
     res.cookie('google_oauth_state', state, cookieOptions);
     res.cookie('google_oauth_verifier', codeVerifier, cookieOptions);
+    console.info('[AUTH]', { event: 'oauth_start', provider: 'google', firmSlug: normalizedFirmSlug });
 
     const authUrl = oauthClient.generateAuthUrl({
       access_type: 'offline',
@@ -3979,7 +3980,7 @@ const initiateGoogleAuth = async (req, res) => {
 
     return res.redirect(authUrl);
   } catch (error) {
-    console.error('[AUTH] Google OAuth initiation failed:', error.message);
+    console.error('[AUTH]', { event: 'oauth_start_failed', provider: 'google', message: error.message });
     return res.status(500).json({
       success: false,
       code: 'FIRM_RESOLUTION_FAILED',
@@ -3994,6 +3995,7 @@ const initiateGoogleAuth = async (req, res) => {
  */
 const handleGoogleCallback = async (req, res) => {
   try {
+    console.info('[AUTH]', { event: 'oauth_callback_received', provider: 'google' });
     if (isGoogleAuthDisabled()) {
       return res.status(503).json({
         success: false,
@@ -4011,13 +4013,19 @@ const handleGoogleCallback = async (req, res) => {
       });
     }
 
-    const cookieState = getCookieValue(req.headers.cookie, 'google_oauth_state');
-    const codeVerifier = getCookieValue(req.headers.cookie, 'google_oauth_verifier');
-    if (!cookieState || !codeVerifier || cookieState !== state) {
+    const cookieState = req.cookies?.google_oauth_state || null;
+    const codeVerifier = req.cookies?.google_oauth_verifier || null;
+    if (!cookieState || cookieState !== state) {
       return res.status(400).json({
         success: false,
         code: 'FIRM_RESOLUTION_FAILED',
         message: 'Invalid or expired OAuth state',
+      });
+    }
+    if (!codeVerifier) {
+      return res.status(400).json({
+        success: false,
+        message: 'OAuth session expired. Please retry login.',
       });
     }
 
@@ -4158,6 +4166,12 @@ const handleGoogleCallback = async (req, res) => {
       req,
       linkedDuringRequest ? 'GoogleOAuthLink' : 'GoogleOAuth'
     );
+    console.info('[AUTH]', {
+      event: 'oauth_callback_success',
+      provider: 'google',
+      userId: user._id?.toString?.() || null,
+      firmId: user.firmId?.toString?.() || null,
+    });
 
     const frontendBase = process.env.FRONTEND_URL || 'http://localhost:3000';
     const finalFirmSlug = firmSlugFromState || resolvedSlug || '';
@@ -4188,7 +4202,7 @@ const handleGoogleCallback = async (req, res) => {
 
     return res.redirect(redirectUrl.toString());
   } catch (error) {
-    console.error('[AUTH] Google OAuth callback error:', error);
+    console.error('[AUTH]', { event: 'oauth_callback_failed', provider: 'google', message: error.message });
     return res.status(500).json({
       success: false,
       code: 'FIRM_RESOLUTION_FAILED',

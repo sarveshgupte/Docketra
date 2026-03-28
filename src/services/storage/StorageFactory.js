@@ -21,7 +21,7 @@ const PROVIDERS = {
  *
  * @param {string} providerName  - e.g. "google"
  * @param {object} [oauthClient] - Optional authenticated OAuth2 client (used by Google provider)
- * @returns {import('./StorageProvider.interface').StorageProvider}
+ * @returns {import('./providers/StorageProvider')}
  * @throws {Error} if the provider name is not recognised
  */
 function getStorageProvider(providerName, oauthClient, options = {}) {

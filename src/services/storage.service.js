@@ -1,8 +1,8 @@
 const Attachment = require('../models/Attachment.model');
 const Case = require('../models/Case.model');
 const Firm = require('../models/Firm.model');
-const StorageConfiguration = require('../models/StorageConfiguration.model');
 const { StorageProviderFactory } = require('./storage/StorageProviderFactory');
+const { decrypt } = require('./storage/services/TokenEncryption.service');
 
 class StorageService {
   /**
@@ -32,9 +32,11 @@ class StorageService {
       return caseDoc.drive.attachmentsFolderId;
     }
 
-    const activeConfig = await StorageConfiguration.findOne({ firmId, isActive: true }).lean();
-    const rootFolderId = activeConfig?.rootFolderId || null;
-    const firm = await Firm.findById(firmId).select('name').lean();
+    const firm = await Firm.findById(firmId).select('name storageConfig').lean();
+    const storageCredentials = firm?.storageConfig?.credentials
+      ? JSON.parse(decrypt(firm.storageConfig.credentials))
+      : {};
+    const rootFolderId = storageCredentials?.rootFolderId || null;
     const firmName = (firm?.name || `Firm-${firmId}`).trim();
 
     const docketraFolderId = await provider.getOrCreateFolder(rootFolderId, 'Docketra');

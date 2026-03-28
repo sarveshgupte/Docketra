@@ -2,7 +2,6 @@ const { randomUUID } = require('crypto');
 const mongoose = require('mongoose');
 const User = require('../models/User.model');
 const Firm = require('../models/Firm.model');
-const StorageConfiguration = require('../models/StorageConfiguration.model');
 const userRepository = require('../repositories/user.repository');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { assertFirmPlanCapacity, PlanLimitExceededError, PlanAdminLimitExceededError, assertCanDeleteUser, PrimaryAdminActionError } = require('../services/user.service');
@@ -366,18 +365,6 @@ const completeProfile = async (req, res) => {
         status: 'active',
         storage: { mode: 'docketra_managed', provider: null },
         bootstrapStatus: 'PENDING',
-      }], { session });
-
-      await StorageConfiguration.updateMany(
-        { firmId: String(createdFirm._id), isActive: true },
-        { isActive: false },
-        { session }
-      );
-      await StorageConfiguration.create([{
-        firmId: String(createdFirm._id),
-        provider: 'docketra_managed',
-        credentials: null,
-        isActive: true,
       }], { session });
 
       if (name && String(name).trim()) {
