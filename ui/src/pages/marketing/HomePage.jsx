@@ -18,17 +18,6 @@ const CAPABILITIES = [
 ];
 
 export const HomePage = () => {
-  const onEarlyAccessSubmit = (event) => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const email = String(formData.get('email') || '').trim();
-    if (!email) return;
-    window.location.href = `mailto:hello@docketra.com?subject=Early%20Access%20Request&body=${encodeURIComponent(
-      `Please add me to Docketra early access. Email: ${email}`,
-    )}`;
-    event.currentTarget.reset();
-  };
-
   return (
     <div className="w-full bg-white text-gray-900">
       {/* HERO */}
@@ -45,30 +34,19 @@ export const HomePage = () => {
               Track tasks, assign ownership, and ensure nothing falls through the cracks.
             </p>
 
-            <form onSubmit={onEarlyAccessSubmit} className="mt-8 max-w-md">
-              <div className="flex flex-col sm:flex-row items-center gap-4">
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="Enter your email"
-                  className="h-11 w-full rounded-lg border border-gray-300 px-4 focus:outline-none focus:ring-2 focus:ring-gray-900"
-                  required
-                />
-                <button
-                  type="submit"
-                  className="h-11 w-full sm:w-auto rounded-lg bg-black px-6 text-white whitespace-nowrap hover:bg-gray-900 transition-colors"
-                >
-                  Get Early Access
-                </button>
-              </div>
-            </form>
-
-            <div className="flex items-center gap-4 mt-6">
+            <div className="mt-8 flex flex-col sm:flex-row gap-4">
               <Link
                 to="/signup"
-                className="text-sm font-medium text-gray-700 underline underline-offset-4 hover:text-gray-900"
+                className="inline-flex items-center justify-center h-11 px-6 rounded-lg bg-black text-white font-medium hover:bg-gray-900 transition-colors"
               >
-                Or create your workspace
+                Start your workspace
+              </Link>
+
+              <Link
+                to="/login"
+                className="inline-flex items-center justify-center h-11 px-6 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Sign in
               </Link>
             </div>
           </div>
@@ -102,11 +80,11 @@ export const HomePage = () => {
       {/* FEATURES */}
       <section id="how-it-works" className="w-full bg-gray-50 py-20 md:py-28">
         <Container>
-          <div className="max-w-2xl">
+          <div className="w-full max-w-xl">
             <h2 className="text-3xl md:text-4xl font-semibold tracking-tight">
               How Docketra helps your team deliver
             </h2>
-            <p className="mt-6 text-lg text-gray-600 max-w-lg">
+            <p className="mt-6 text-lg text-gray-600 max-w-xl leading-relaxed">
               Clear ownership, clear approvals, and a complete audit trail.
             </p>
           </div>
