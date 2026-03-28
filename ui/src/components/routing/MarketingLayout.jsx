@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { NavLink, Link, Outlet, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { PageWrapper } from '../layout/PageWrapper';
+import Container from '../layout/Container';
 
 const navLinkClass = ({ isActive }) =>
   `text-sm text-gray-600 hover:text-gray-900${isActive ? ' text-gray-900' : ''}`;
@@ -20,7 +21,7 @@ export const MarketingLayout = () => {
       </a>
 
       <header className="w-full border-b border-gray-100 bg-white">
-        <div className="mx-auto max-w-6xl px-6">
+        <Container>
           <div className="flex h-16 min-w-0 items-center justify-between">
             <div className="min-w-0 flex items-center">
               <Link to="/" className="text-lg font-semibold text-gray-900">
@@ -43,7 +44,7 @@ export const MarketingLayout = () => {
               </NavLink>
             </nav>
           </div>
-        </div>
+        </Container>
       </header>
 
       <main id="main" className="w-full">
@@ -55,8 +56,8 @@ export const MarketingLayout = () => {
       </main>
 
       <footer className="border-t border-gray-200 bg-white">
-        <section className="w-full py-20">
-          <div className="mx-auto max-w-6xl px-6">
+        <section className="w-full py-20 md:py-28">
+          <Container>
             <div className="flex flex-wrap items-center gap-6 text-sm">
               <Link to="/features" className="text-gray-600 hover:text-gray-900">
                 Features
@@ -71,7 +72,7 @@ export const MarketingLayout = () => {
             <p className="mt-6 text-xs text-gray-500">
               © 2026 Docketra
             </p>
-          </div>
+          </Container>
         </section>
       </footer>
     </div>

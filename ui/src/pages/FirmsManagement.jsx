@@ -319,7 +319,7 @@ export const FirmsManagement = () => {
   if (error && (!firms || !Array.isArray(firms) || firms.length === 0)) {
     return (
       <SuperAdminLayout>
-        <div className="container">
+        <div className="page-container">
           <Card className="center-card">
             <h2>Unable to load firms</h2>
             <p className="text-secondary-dark">Please retry in a moment.</p>
@@ -333,7 +333,7 @@ export const FirmsManagement = () => {
   if (!firms || !Array.isArray(firms)) {
     return (
       <SuperAdminLayout>
-        <div className="container">
+        <div className="page-container">
           <Card className="center-card">
             <h2>No firms found</h2>
             <p className="text-secondary-dark">There is no valid firms data to render yet.</p>
@@ -348,7 +348,7 @@ export const FirmsManagement = () => {
   return (
     <ErrorBoundary name="FirmsManagementPage">
       <SuperAdminLayout>
-      <div className="container">
+      <div className="page-container">
       <div className="firms-management">
         <div className="page-header">
           <div>
