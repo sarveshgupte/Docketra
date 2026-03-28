@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { StorageValidationError } = require('../storage/errors/StorageErrors');
+const { StorageValidationError } = require('../services/storage/errors/StorageErrors');
 
 const storageConfigurationSchema = new mongoose.Schema(
   {

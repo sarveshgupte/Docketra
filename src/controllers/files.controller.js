@@ -2,13 +2,13 @@ const { randomUUID } = require('crypto');
 const Case = require('../models/Case.model');
 const File = require('../models/File.model');
 const TenantStorageConfig = require('../models/TenantStorageConfig.model');
-const { getProviderForTenant } = require('../storage/StorageProviderFactory');
+const { getProviderForTenant } = require('../services/storage/StorageProviderFactory');
 const { mapProviderErrorToStatus } = require('./storage.controller');
 const {
   StorageConfigMissingError,
   StorageAccessError,
   UnsupportedProviderError,
-} = require('../storage/errors');
+} = require('../services/storage/errors');
 const { safeLogForensicAudit, getRequestIp, getRequestUserAgent } = require('../services/forensicAudit.service');
 const { enqueueStorageJob, JOB_TYPES } = require('../queues/storage.queue');
 const { logSecurityAuditEvent, SECURITY_AUDIT_ACTIONS } = require('../services/securityAudit.service');
@@ -120,17 +120,24 @@ async function requestUpload(req, res) {
       objectKey,
       provider: storageConfig.provider || 'unknown',
     };
-    await Promise.all([
-      enqueueStorageJob(JOB_TYPES.FILE_SCAN, storagePayload),
-      enqueueStorageJob(JOB_TYPES.THUMBNAIL_GENERATE, storagePayload),
-      enqueueStorageJob(JOB_TYPES.FILE_METADATA, storagePayload),
-    ]).catch((queueError) => {
-      console.warn('[requestUpload] Failed to enqueue background storage jobs', {
+    let queueWarning = null;
+    try {
+      await Promise.all([
+        enqueueStorageJob(JOB_TYPES.FILE_SCAN, storagePayload),
+        enqueueStorageJob(JOB_TYPES.THUMBNAIL_GENERATE, storagePayload),
+        enqueueStorageJob(JOB_TYPES.FILE_METADATA, storagePayload),
+      ]);
+    } catch (queueError) {
+      queueWarning = 'Background processing was queued for retry.';
+      console.warn('[requestUpload] Failed to enqueue background storage jobs. Scheduling retry.', {
         tenantId,
         fileId: file._id.toString(),
         message: queueError.message,
       });
-    });
+      setTimeout(() => {
+        enqueueStorageJob(JOB_TYPES.FILE_METADATA, storagePayload).catch(() => null);
+      }, 5000);
+    }
 
     await safeLogForensicAudit({
       tenantId,
@@ -158,6 +165,7 @@ async function requestUpload(req, res) {
         uploadUrl,
         objectKey,
         expiresIn: URL_EXPIRY_SECONDS,
+        warnings: queueWarning ? [queueWarning] : [],
       },
     });
   } catch (error) {
@@ -259,6 +267,7 @@ async function downloadFile(req, res) {
         fileId: file._id,
         downloadUrl,
         expiresIn: URL_EXPIRY_SECONDS,
+        warnings: queueWarning ? [queueWarning] : [],
       },
     });
   } catch (error) {

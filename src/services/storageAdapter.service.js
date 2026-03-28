@@ -1,6 +1,6 @@
 const { google } = require('googleapis');
 const StorageConfiguration = require('../models/StorageConfiguration.model');
-const { decrypt } = require('../storage/services/TokenEncryption.service');
+const { decrypt } = require('../services/storage/services/TokenEncryption.service');
 const GoogleDriveProvider = require('./storage/providers/GoogleDriveProvider');
 
 class DocketraGoogleAdapter {

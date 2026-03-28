@@ -1,7 +1,7 @@
 const Attachment = require('../models/Attachment.model');
 const TenantStorageConfig = require('../models/TenantStorageConfig.model');
 const TenantStorageHealth = require('../models/TenantStorageHealth.model');
-const { getProviderForTenant } = require('../storage/StorageProviderFactory');
+const { getProviderForTenant } = require('../services/storage/StorageProviderFactory');
 
 // Keep daily verification lightweight while still checking recent storage writes.
 const SAMPLE_SIZE = 20;

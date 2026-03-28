@@ -11,6 +11,17 @@ module.exports = {
       googleId: nonEmptyString.optional(),
     }).strip(),
   },
+  'GET /google/login': {
+    query: z.object({
+      firmSlug: nonEmptyString,
+    }).strip(),
+  },
+  'GET /google/callback': {
+    query: z.object({
+      code: nonEmptyString,
+      state: nonEmptyString,
+    }).strip(),
+  },
   'POST /google': {
     body: z.object({
       idToken: nonEmptyString,
