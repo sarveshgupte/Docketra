@@ -3,19 +3,25 @@
  */
 
 .firms-management {
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
 }
 
-.firms-management__header {
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.page-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   margin-bottom: 2rem;
   color: white;
+  gap: 1rem;
 }
 
-.firms-management__header h1 {
+.page-header h1 {
   font-size: 2rem;
   font-weight: 700;
   margin: 0 0 0.5rem 0;
@@ -104,6 +110,19 @@
   padding: 4rem 2rem;
   background: white;
   border-radius: 20px;
+}
+
+.center-card {
+  max-width: 600px;
+  margin: 80px auto;
+  text-align: center;
+  padding: 40px;
+  border-radius: 16px;
+  background: white;
+}
+
+.text-secondary-dark {
+  color: #718096;
 }
 
 .empty-state__icon {
@@ -343,9 +362,14 @@
 
 /* Responsive */
 @media (max-width: 768px) {
-  .firms-management__header {
+  .page-header {
     flex-direction: column;
+    align-items: flex-start;
     gap: 1rem;
+  }
+
+  .container {
+    padding: 0 16px;
   }
 
   .modal-card {
