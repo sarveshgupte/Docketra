@@ -1,6 +1,7 @@
 const { google } = require('googleapis');
 const { Readable } = require('stream');
-const StorageProvider = require('../StorageProvider.interface');
+const StorageProvider = require('./StorageProvider');
+const { StorageAccessError } = require('../errors');
 
 class GoogleDriveProvider extends StorageProvider {
   constructor({ oauthClient, driveId } = {}) {
@@ -13,7 +14,7 @@ class GoogleDriveProvider extends StorageProvider {
   async authenticate(credentials = {}) {
     const refreshToken = credentials.refreshToken;
     if (!this.oauthClient && !refreshToken) {
-      throw new Error('Google Drive credentials are missing');
+      throw new StorageAccessError('Google Drive credentials are missing', 'unknown');
     }
     if (!this.oauthClient) {
       const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_OAUTH_REDIRECT_URI } = process.env;
@@ -25,7 +26,7 @@ class GoogleDriveProvider extends StorageProvider {
 
   getClient() {
     if (!this.oauthClient) {
-      throw new Error('Google Drive OAuth client is not initialized');
+      throw new StorageAccessError('Google Drive OAuth client is not initialized', 'unknown');
     }
     return google.drive({ version: 'v3', auth: this.oauthClient });
   }

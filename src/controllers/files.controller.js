@@ -128,15 +128,27 @@ async function requestUpload(req, res) {
         enqueueStorageJob(JOB_TYPES.FILE_METADATA, storagePayload),
       ]);
     } catch (queueError) {
-      queueWarning = 'Background processing was queued for retry.';
-      console.warn('[requestUpload] Failed to enqueue background storage jobs. Scheduling retry.', {
+      queueWarning = 'Background processing delayed';
+      console.error('[STORAGE]', {
+        event: 'upload_queue_failed',
         tenantId,
         fileId: file._id.toString(),
         message: queueError.message,
       });
-      setTimeout(() => {
-        enqueueStorageJob(JOB_TYPES.FILE_METADATA, storagePayload).catch(() => null);
-      }, 5000);
+      try {
+        await Promise.all([
+          enqueueStorageJob(JOB_TYPES.FILE_SCAN, storagePayload),
+          enqueueStorageJob(JOB_TYPES.THUMBNAIL_GENERATE, storagePayload),
+          enqueueStorageJob(JOB_TYPES.FILE_METADATA, storagePayload),
+        ]);
+      } catch (retryError) {
+        console.error('[STORAGE]', {
+          event: 'upload_queue_retry_failed',
+          tenantId,
+          fileId: file._id.toString(),
+          message: retryError.message,
+        });
+      }
     }
 
     await safeLogForensicAudit({
@@ -267,7 +279,6 @@ async function downloadFile(req, res) {
         fileId: file._id,
         downloadUrl,
         expiresIn: URL_EXPIRY_SECONDS,
-        warnings: queueWarning ? [queueWarning] : [],
       },
     });
   } catch (error) {

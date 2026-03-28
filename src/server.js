@@ -79,6 +79,7 @@ const {
   superadminLimiter,
 } = require('./middleware/rateLimiters');
 const { tenantThrottle } = require('./middleware/tenantThrottle.middleware');
+const cookieParser = require('./middleware/cookieParser.middleware');
 const { uploadErrorHandler, ensureUploadRoot } = require('./middleware/uploadProtection.middleware');
 const { allowInternalTokenOrSuperadmin } = require('./middleware/internalMetricsAccess.middleware');
 const { tenantScopedApiAccess, adminTenantScopedApiAccess } = require('./routes/routeGroups');
@@ -319,6 +320,7 @@ if (inboundEmailEnabled) {
 }
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '100kb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 app.use(requestId);
 app.use(attachRequestContext);
 app.use(enforceTemporaryIpBlock);
