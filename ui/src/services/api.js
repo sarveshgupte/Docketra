@@ -218,6 +218,13 @@ api.interceptors.response.use(
       redirectToLogin();
       return Promise.reject(error);
     }
+
+    if (status >= 500) {
+      sessionStorage.setItem(SESSION_KEYS.GLOBAL_TOAST, JSON.stringify({
+        message: 'A server error occurred. Please try again shortly.',
+        type: 'danger'
+      }));
+    }
     
     return Promise.reject(error);
   }

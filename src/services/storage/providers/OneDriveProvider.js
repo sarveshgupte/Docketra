@@ -1,10 +1,11 @@
-const { StorageProvider } = require('../StorageProvider.interface');
+const StorageProvider = require('./StorageProvider');
+const { StorageAccessError } = require('../errors');
 
 class OneDriveProvider extends StorageProvider {
   constructor({ refreshToken, driveId }) {
     super();
     if (!refreshToken) {
-      throw new Error('[OneDriveProvider] refreshToken is required');
+      throw new StorageAccessError('[OneDriveProvider] refreshToken is required', 'unknown');
     }
     this.providerName = 'onedrive';
     this.refreshToken = refreshToken;
@@ -15,7 +16,7 @@ class OneDriveProvider extends StorageProvider {
     // "common" supports multi-tenant AAD apps; set ONEDRIVE_TENANT_ID to a specific tenant for single-tenant deployments.
     const { ONEDRIVE_CLIENT_ID, ONEDRIVE_CLIENT_SECRET, ONEDRIVE_TENANT_ID = 'common' } = process.env;
     if (!ONEDRIVE_CLIENT_ID || !ONEDRIVE_CLIENT_SECRET || !this.refreshToken) {
-      const error = new Error('[OneDriveProvider] OAuth configuration is incomplete');
+      const error = new StorageAccessError('[OneDriveProvider] OAuth configuration is incomplete', 'unknown');
       error.status = 500;
       throw error;
     }
@@ -31,7 +32,7 @@ class OneDriveProvider extends StorageProvider {
       body,
     });
     if (!tokenRes.ok) {
-      const error = new Error('[OneDriveProvider] Token refresh failed');
+      const error = new StorageAccessError('[OneDriveProvider] Token refresh failed', 'unknown');
       error.status = Number(tokenRes.status) || 500;
       throw error;
     }
@@ -45,7 +46,7 @@ class OneDriveProvider extends StorageProvider {
         },
       });
       if (!response.ok) {
-        const error = new Error('[OneDriveProvider] Graph request failed');
+        const error = new StorageAccessError('[OneDriveProvider] Graph request failed', 'unknown');
         error.status = Number(response.status) || 500;
         throw error;
       }

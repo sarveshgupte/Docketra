@@ -1,6 +1,5 @@
 const { google } = require('googleapis');
 const Firm = require('../../models/Firm.model');
-const StorageConfiguration = require('../../models/StorageConfiguration.model');
 const { decrypt } = require('./services/TokenEncryption.service');
 const GoogleDriveProvider = require('./providers/GoogleDriveProvider');
 const OneDriveProvider = require('./providers/OneDriveProvider');
@@ -21,36 +20,24 @@ function decryptCredentials(encryptedBlob, firmId) {
 }
 
 async function getFirmStorageConfig(firmId) {
-  const firm = await Firm.findById(firmId).select('storageConfig storage mode provider').lean();
+  const firm = await Firm.findById(firmId).select('storageConfig').lean();
   if (!firm) {
     throw new StorageConfigMissingError(firmId);
   }
 
-  if (firm.storageConfig?.provider) {
-    return {
-      provider: firm.storageConfig.provider,
-      credentials: decryptCredentials(firm.storageConfig.credentials, firmId),
-      source: 'firm.storageConfig',
-    };
+  if (!firm.storageConfig) {
+    console.error('[STORAGE] Missing storageConfig for firm', firmId);
   }
 
-  const legacy = await StorageConfiguration.findOne({ firmId: String(firmId), isActive: true }).lean();
-  if (!legacy) {
+  if (!firm.storageConfig?.provider) {
     throw new StorageConfigMissingError(firmId);
   }
 
-  const provider = legacy.provider === 'google-drive' ? 'google_drive' : legacy.provider;
-  const credentials = legacy.credentials?.encryptedPayload
-    ? decryptCredentials(legacy.credentials.encryptedPayload, firmId)
-    : legacy.credentials || {};
-
-  if (provider === 'google_drive' && legacy.credentials?.googleRefreshToken) {
-    credentials.refreshToken = decrypt(legacy.credentials.googleRefreshToken);
-    credentials.connectedEmail = legacy.credentials.connectedEmail || null;
-    credentials.driveId = legacy.driveId || credentials.driveId || null;
-  }
-
-  return { provider, credentials, source: 'StorageConfiguration' };
+  return {
+    provider: firm.storageConfig.provider,
+    credentials: decryptCredentials(firm.storageConfig.credentials, firmId),
+    source: 'firm.storageConfig',
+  };
 }
 
 async function getProviderForTenant(firmId) {
@@ -60,6 +47,15 @@ async function getProviderForTenant(firmId) {
 
   const config = await getFirmStorageConfig(firmId);
   const provider = String(config.provider || '').toLowerCase();
+  if (!provider) {
+    throw new Error(`Invalid storage provider for firm ${firmId}`);
+  }
+  console.info('[STORAGE]', {
+    event: 'provider_resolution',
+    firmId: String(firmId),
+    provider,
+    source: config.source,
+  });
 
   switch (provider) {
     case 'google_drive': {
