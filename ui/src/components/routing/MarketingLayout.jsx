@@ -20,7 +20,7 @@ export const MarketingLayout = () => {
       </a>
 
       <header className="w-full border-b border-gray-100 bg-white">
-        <div className="mx-auto max-w-7xl px-6">
+        <div className="mx-auto max-w-6xl px-6">
           <div className="flex h-16 min-w-0 items-center justify-between">
             <div className="min-w-0 flex items-center">
               <Link to="/" className="text-lg font-semibold text-gray-900">
@@ -55,87 +55,22 @@ export const MarketingLayout = () => {
       </main>
 
       <footer className="border-t border-gray-200 bg-white">
-        <section className="w-full py-16 md:py-20">
-          <div className="mx-auto max-w-7xl px-6">
-            <div className="mb-8 grid w-full min-w-0 grid-cols-1 gap-12 sm:grid-cols-2 md:grid-cols-4">
-              <div>
-                <h4 className="mb-3 text-sm font-semibold text-gray-900">Product</h4>
-                <ul className="space-y-2 text-sm">
-                  <li>
-                    <Link to="/features" className="text-gray-600 hover:text-gray-900">
-                      Features
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="/pricing" className="text-gray-600 hover:text-gray-900">
-                      Pricing
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="/security" className="text-gray-600 hover:text-gray-900">
-                      Security
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="mb-3 text-sm font-semibold text-gray-900">Company</h4>
-                <ul className="space-y-2 text-sm">
-                  <li>
-                    <Link to="/about" className="text-gray-600 hover:text-gray-900">
-                      About
-                    </Link>
-                  </li>
-                  <li>
-                    <a href="mailto:hello@docketra.com" className="text-gray-600 hover:text-gray-900">
-                      Contact
-                    </a>
-                  </li>
-                  <li>
-                    <Link to="/contact" className="text-gray-600 hover:text-gray-900">
-                      Contact Center
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="mb-3 text-sm font-semibold text-gray-900">Legal</h4>
-                <ul className="space-y-2 text-sm">
-                  <li>
-                    <Link to="/privacy" className="text-gray-600 hover:text-gray-900">
-                      Privacy
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="/terms" className="text-gray-600 hover:text-gray-900">
-                      Terms
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="/security" className="text-gray-600 hover:text-gray-900">
-                      Security
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="mb-3 text-sm font-semibold text-gray-900">Contact</h4>
-                <p className="text-sm text-gray-600">
-                  <a href="mailto:hello@docketra.com" className="hover:text-gray-900">
-                    hello@docketra.com
-                  </a>
-                </p>
-              </div>
+        <section className="w-full py-20">
+          <div className="mx-auto max-w-6xl px-6">
+            <div className="flex flex-wrap items-center gap-6 text-sm">
+              <Link to="/features" className="text-gray-600 hover:text-gray-900">
+                Features
+              </Link>
+              <Link to="/pricing" className="text-gray-600 hover:text-gray-900">
+                Pricing
+              </Link>
+              <a href="mailto:hello@docketra.com" className="text-gray-600 hover:text-gray-900">
+                Contact
+              </a>
             </div>
-
-            <div className="border-t border-gray-200 pt-6">
-              <p className="text-xs text-gray-500">
-                © 2026 GUPTE ENTERPRISES (OPC) PRIVATE LIMITED. All rights reserved. Docketra is in early development.
-              </p>
-            </div>
+            <p className="mt-6 text-xs text-gray-500">
+              © 2026 Docketra
+            </p>
           </div>
         </section>
       </footer>
