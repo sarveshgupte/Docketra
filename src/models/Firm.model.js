@@ -116,6 +116,23 @@ const firmSchema = new mongoose.Schema({
     default: null,
   },
 
+
+
+  /**
+   * Canonical firm-level BYOS configuration (single source of truth).
+   */
+  storageConfig: {
+    provider: {
+      type: String,
+      enum: ['google_drive', 'onedrive', 's3'],
+      default: null,
+    },
+    credentials: {
+      type: String,
+      default: null,
+    },
+  },
+
   /**
    * Firm-level storage configuration
    * Defaults to Docketra-managed Google Drive (service account)

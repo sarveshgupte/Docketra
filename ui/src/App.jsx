@@ -11,7 +11,6 @@ import { ScrollToTop } from './components/routing/ScrollToTop';
 import { useAuth } from './hooks/useAuth';
 import { bootstrapAuth } from './auth/authBootstrap';
 import './assets/styles/enterprise.css';
-import './assets/styles/neomorphic.css';
 import './assets/styles/global.css';
 import './styles/typography.css';
 

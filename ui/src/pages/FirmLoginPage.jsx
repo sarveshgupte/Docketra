@@ -16,6 +16,7 @@ import { isAccessTokenOnlyUser } from '../utils/authUtils';
 import { resolveFirmLoginResponseState } from '../utils/firmLoginResponse';
 import api from '../services/api';
 import { useToast } from '../hooks/useToast';
+import GoogleSignIn from '../components/auth/GoogleSignIn';
 import './LoginPage.css';
 
 const OTP_LENGTH = 6;
@@ -352,7 +353,7 @@ export const FirmLoginPage = () => {
           </div>
 
           <div className="mt-6 space-y-4">
-            <div className="neo-alert neo-alert--danger auth-alert" role="alert">
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
               {error}
             </div>
             <p className="auth-helper-text text-center">
@@ -386,13 +387,13 @@ export const FirmLoginPage = () => {
         )}
 
         {statusMessage && (
-          <div className="neo-alert neo-alert--success auth-alert mt-6" role="status" aria-live="polite">
+          <div className="mt-6 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700" role="status" aria-live="polite">
             {statusMessage}
           </div>
         )}
 
         {error && (
-          <div className="neo-alert neo-alert--danger auth-alert mt-6" role="alert">
+          <div className="mt-6 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
             {error}
           </div>
         )}
@@ -516,6 +517,17 @@ export const FirmLoginPage = () => {
             <Button type="submit" variant="primary" fullWidth loading={loading} disabled={resendLoading}>
               Login
             </Button>
+
+            <div className="flex items-center gap-2 py-1">
+              <div className="h-px flex-1 bg-gray-200" />
+              <span className="text-xs text-gray-500">or</span>
+              <div className="h-px flex-1 bg-gray-200" />
+            </div>
+
+            <GoogleSignIn
+              firmSlug={firmSlug}
+              onError={(googleError) => setError(googleError?.message || 'Google sign-in failed')}
+            />
 
             <div className="text-center space-y-3">
               <Link

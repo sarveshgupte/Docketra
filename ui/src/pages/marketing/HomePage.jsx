@@ -1,279 +1,54 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { Section } from '../../components/layout/Section';
-import '../../assets/styles/marketing-tokens.css';
+import Container from '../../components/layout/Container';
 
-const PROBLEM_POINTS = [
+const CHALLENGES = [
   {
-    icon: 'chart',
-    title: 'Work Hides in Too Many Places',
-    desc: 'Critical tasks get buried across docs, chats, and emails, so teams miss what needs attention.',
+    title: 'Scattered work across tools',
+    desc: 'Tasks, approvals, and updates are spread across chats, docs, and inboxes.',
   },
   {
-    icon: 'messages',
-    title: 'Assignments Have No Clear Trail',
-    desc: 'Without a shared system, ownership and handoffs become hard to trace.',
+    title: 'Unclear ownership',
+    desc: 'Teams lose momentum when accountability is not visible at every step.',
   },
   {
-    icon: 'search',
-    title: 'Ownership Gets Blurry',
-    desc: 'When deadlines slip, it is unclear who is responsible and where work is blocked.',
-  },
-  {
-    icon: 'users',
-    title: 'Onboarding Slows Delivery',
-    desc: 'New teammates struggle to pick up in-flight work without context and structure.',
-  },
-  {
-    icon: 'clock',
-    title: 'Status Meetings Replace Actual Work',
-    desc: 'Teams spend too much time requesting updates instead of progressing tasks.',
-  },
-  {
-    icon: 'alert',
-    title: 'Risks Surface Too Late',
-    desc: 'Teams often discover missed deadlines only after timelines are already impacted.',
+    title: 'Late risk discovery',
+    desc: 'Missed deadlines are often discovered after customer timelines are impacted.',
   },
 ];
 
-const SOLUTION_POINTS = [
+const CAPABILITIES = [
   {
-    num: '1',
-    title: 'Standardize Every Workflow',
-    desc: 'Track work through explicit checkpoints with ownership and approvals at each stage.',
-    icon: 'list',
+    title: 'Track every workflow stage',
+    desc: 'Move work forward with clear status, owners, and due dates.',
   },
   {
-    num: '2',
-    title: 'Stay Aligned in Real Time',
-    desc: 'See who is responsible, what changed, and what needs attention right now.',
-    icon: 'eye',
+    title: 'Assign and review with context',
+    desc: 'Keep decisions, approvals, and updates in one shared place.',
   },
   {
-    num: '3',
-    title: 'Keep Accountability Built In',
-    desc: 'Every action is logged with actor and timestamp for operational accountability.',
-    icon: 'check',
-  },
-];
-
-const AUDIENCE_SEGMENTS = [
-  {
-    title: 'Operations Teams',
-    color: 'bg-blue-500',
-    points: ['Recurring process templates', 'Cross-functional handoffs', 'Escalation visibility', 'Progress by stage'],
-  },
-  {
-    title: 'Project Teams',
-    color: 'bg-emerald-500',
-    points: ['Timeline and milestone tracking', 'Approvals in one place', 'Owner-level accountability', 'Fewer status meetings'],
-  },
-  {
-    title: 'Support Teams',
-    color: 'bg-indigo-500',
-    points: ['Ticket-to-resolution workflows', 'Priority and SLA tracking', 'Shared team visibility', 'Consistent follow-through'],
+    title: 'Stay audit-ready',
+    desc: 'Maintain a complete activity trail across teams and cases.',
   },
 ];
 
 const FAQS = [
   {
-    q: 'How quickly can we get set up?',
-    a: 'Most teams can set up a workspace and first workflow in minutes.',
+    q: 'How quickly can we start?',
+    a: 'Most teams can configure a workspace and launch their first workflow in minutes.',
   },
   {
-    q: 'Can we customize workflows for different teams?',
-    a: 'Yes. You can adapt stages, ownership, and approvals to match how each team works.',
+    q: 'Can teams customize workflows?',
+    a: 'Yes. You can customize stages, ownership, and approvals by workflow.',
   },
   {
-    q: 'Can our clients see case status?',
-    a: 'Client visibility is role-controlled so you can share only what each client needs to see.',
-  },
-  {
-    q: 'Is there a mobile app?',
-    a: 'The web app is mobile responsive. Native app support is on our roadmap.',
-  },
-  {
-    q: 'How is data secured?',
-    a: 'Data security controls include access restrictions, encryption, and timestamped activity logs.',
+    q: 'Is Docketra secure?',
+    a: 'Docketra supports role-based access, encryption, and detailed activity logs.',
   },
 ];
-
-const COMPARISON_ROWS = [
-  ['Real-time visibility', '❌', '❌', '✅'],
-  ['End-to-end activity trail', '❌', '❌', '✅'],
-  ['Role-based approval flows', '❌', '❌', '✅'],
-  ['Automatic deadline alerts', '⚠️', '❌', '✅'],
-  ['Stakeholder visibility', '❌', '❌', '✅'],
-  ['Cross-team support', '⚠️', '❌', '✅'],
-];
-
-const TRUST_LOGOS = ['Northline Ops', 'Peakstone Labs', 'Atlas Projects', 'Relay Support'];
-
-const METRICS = [
-  { value: '40%', label: 'faster workflow cycles' },
-  { value: '100%', label: 'activity traceability' },
-  { value: 'Zero', label: 'missed deadlines' },
-  { value: 'Multi-office', label: 'visibility' },
-];
-
-const SECTION_REVEAL = {
-  initial: { opacity: 0, y: 24 },
-  whileInView: { opacity: 1, y: 0 },
-  transition: { duration: 0.45, ease: [0.4, 0, 0.2, 1] },
-  viewport: { once: true, amount: 0.2 },
-};
-
-const MinimalIcon = ({ type }) => {
-  const iconMap = {
-    chart: 'M4 18h16M7 14l2-2 3 3 5-6',
-    messages: 'M4 6h16v10H8l-4 4V6Z',
-    search: 'm15 15 5 5m-9-3a6 6 0 1 1 0-12 6 6 0 0 1 0 12Z',
-    users: 'M15 19v-1a4 4 0 0 0-8 0v1m12 0v-1a4 4 0 0 0-3-3.87M9 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm8 1a2.5 2.5 0 1 0 0-5',
-    clock: 'M12 7v5l3 2m7-2a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z',
-    alert: 'm12 9.5.01 0M11 13h2m-1-10 9 16H3l9-16Z',
-    list: 'M8 7h12M8 12h12M8 17h12M4 7h.01M4 12h.01M4 17h.01',
-    eye: 'M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Zm10 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
-    check: 'm5 12 4 4 10-10',
-  };
-  const path = iconMap[type] || iconMap.list;
-
-  return (
-    <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-gray-600">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
-        <path d={path} strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </span>
-  );
-};
-
-const Accordion = ({ question, answer }) => {
-  const [open, setOpen] = useState(false);
-
-  const toggle = () => setOpen((prev) => !prev);
-
-  return (
-    <div className="border-b border-gray-100 py-6 first:pt-0 last:border-b-0 last:pb-0">
-      <button
-        type="button"
-        className="flex w-full items-start justify-between gap-4 text-left"
-        onClick={toggle}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            toggle();
-          }
-        }}
-        aria-expanded={open}
-      >
-        <h3 className="min-w-0 flex-1 text-base font-semibold text-gray-900">{question}</h3>
-        <span className="flex-shrink-0 font-bold text-blue-600" aria-hidden="true">
-          {open ? '−' : '+'}
-        </span>
-      </button>
-      {open && (
-        <motion.div
-          initial={{ height: 0, opacity: 0 }}
-          animate={{ height: 'auto', opacity: 1 }}
-          exit={{ height: 0, opacity: 0 }}
-          transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
-          className="overflow-hidden"
-        >
-          <p className="pt-4 text-sm text-gray-700">{answer}</p>
-        </motion.div>
-      )}
-    </div>
-  );
-};
-
-const renderComparisonCell = (value, accent = false) => {
-  if (!value) return <span className="text-gray-400">—</span>;
-  if (value === '✅') return <span className={`font-semibold text-green-600 ${accent ? 'text-base' : ''}`}>✅</span>;
-  if (value === '❌') return <span className={`font-semibold text-red-500 ${accent ? 'text-base' : ''}`}>❌</span>;
-  return <span className={`font-semibold text-amber-500 ${accent ? 'text-base' : ''}`}>{value}</span>;
-};
 
 export const HomePage = () => {
-  useEffect(() => {
-    const originalOnError = window.onerror;
-    window.onerror = (msg, src, line, col, err) => {
-      console.error('GLOBAL ERROR:', err);
-      if (typeof originalOnError === 'function') {
-        return originalOnError(msg, src, line, col, err);
-      }
-      return false;
-    };
-
-    return () => {
-      window.onerror = originalOnError || null;
-    };
-  }, []);
-
-  useEffect(() => {
-    const collections = {
-      PROBLEM_POINTS,
-      SOLUTION_POINTS,
-      AUDIENCE_SEGMENTS,
-      METRICS,
-    };
-    Object.entries(collections).forEach(([name, list]) => {
-      if (!Array.isArray(list)) {
-        console.warn(`[HomePage] ${name} is not an array`, list);
-        return;
-      }
-      list.forEach((entry, idx) => {
-        if (entry == null) {
-          console.warn(`[HomePage] ${name}[${idx}] is null/undefined`, entry);
-          return;
-        }
-        if (typeof entry !== 'object') {
-          console.warn(`[HomePage] ${name}[${idx}] is not an object`, entry);
-          return;
-        }
-        const missingKeys = Object.keys(entry).filter((key) => entry[key] == null);
-        if (missingKeys.length > 0) {
-          console.warn(`[HomePage] ${name}[${idx}] has null/undefined keys`, missingKeys, entry);
-        }
-      });
-    });
-  }, []);
-
-  useEffect(() => {
-    const schema = {
-      '@context': 'https://schema.org',
-      '@type': 'SoftwareApplication',
-      name: 'Docketra',
-      applicationCategory: 'BusinessApplication',
-      description: 'Workflow management system for modern teams',
-      url: 'https://docketra.com',
-      operatingSystem: 'Web',
-      browserRequirements: 'Requires JavaScript',
-      offers: {
-        '@type': 'Offer',
-        price: 'Contact for pricing',
-        priceCurrency: 'INR',
-        url: 'https://docketra.com/pricing',
-      },
-      author: {
-        '@type': 'Organization',
-        name: 'GUPTE ENTERPRISES (OPC) PRIVATE LIMITED',
-        url: 'https://docketra.com',
-      },
-      datePublished: '2026-01-01',
-      inLanguage: 'en-IN',
-    };
-
-    const script = document.createElement('script');
-    script.type = 'application/ld+json';
-    script.id = 'homepage-structured-data';
-    script.textContent = JSON.stringify(schema);
-    document.head.appendChild(script);
-
-    return () => {
-      document.getElementById('homepage-structured-data')?.remove();
-    };
-  }, []);
-
   const onEarlyAccessSubmit = (event) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
@@ -285,285 +60,118 @@ export const HomePage = () => {
     event.currentTarget.reset();
   };
 
-  console.log({
-    PROBLEM_POINTS,
-    SOLUTION_POINTS,
-    AUDIENCE_SEGMENTS,
-    METRICS,
-  });
-
   return (
-    <div className="w-full">
-      <Section>
-        <div className="grid w-full items-center gap-8 lg:grid-cols-2">
-          <div className="w-full min-w-0 flex flex-col">
-            <div className="max-w-xl">
+    <div className="w-full bg-white text-gray-900">
+      <section className="py-20 bg-white">
+        <Container>
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div className="max-w-2xl">
               <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
                 Launching soon • Early access open
               </span>
-              <h1 className="text-5xl md:text-6xl font-semibold tracking-tight leading-tight text-gray-900">
-                Workflows that actually
-                <br />
-                <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                  move work forward.
-                </span>
+              <h1 className="mt-6 text-5xl font-semibold leading-tight tracking-tight">
+                Workflows that actually move work forward.
               </h1>
-              <p className="mt-4 text-base text-gray-600">
-                Manage tasks, ownership, and approvals in one shared system your team can rely on.
+              <p className="mt-6 text-lg text-gray-600">
+                Track tasks, assign ownership, and ensure nothing falls through the cracks — all in one place.
               </p>
-              <div className="mt-8 flex flex-wrap items-center gap-4">
-                <Link
-                  to="/signup"
-                  className="inline-flex items-center justify-center rounded-lg bg-black px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-gray-900"
-                >
-                  Request Early Access
+
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Link to="/signup" className="rounded-lg bg-gray-900 px-6 py-3 text-sm font-semibold text-white hover:bg-black">
+                  Get Early Access
                 </Link>
-                <a
-                  href="#how-it-works"
-                  className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-6 py-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100"
-                >
+                <a href="#how-it-works" className="rounded-lg border border-gray-300 px-6 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50">
                   See how it works
                 </a>
               </div>
-              <p className="mt-3 text-xs text-gray-500">
-                Built for teams that need clarity, accountability, and speed.
-              </p>
-            </div>
-          </div>
 
-          <motion.div
-            {...SECTION_REVEAL}
-            className="w-full min-w-0 rounded-xl bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-3 shadow-[0_20px_60px_rgba(15,23,42,0.12)]"
-          >
-            <div className="overflow-hidden rounded-lg bg-white p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+              <form onSubmit={onEarlyAccessSubmit} className="mt-8 max-w-md" aria-label="Early access signup">
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <input
+                    type="email"
+                    name="email"
+                    placeholder="Enter your email"
+                    className="flex-1 border rounded-lg px-4 py-2"
+                    required
+                  />
+                  <button type="submit" className="rounded-lg bg-gray-900 px-5 py-2 text-sm font-semibold text-white hover:bg-black whitespace-nowrap">
+                    Get Early Access
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <div className="bg-white shadow-lg rounded-2xl p-6 border border-gray-100">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold tracking-wide text-gray-500 uppercase">Operations dashboard</p>
-                <span className="rounded-full bg-emerald-100 px-2 py-1 text-[11px] font-medium text-emerald-700">
-                  Live
-                </span>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Workflow dashboard</p>
+                <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700">Live</span>
               </div>
 
-              <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                {[
-                  { label: 'Open tasks', value: '142' },
-                  { label: 'Due this week', value: '26' },
-                  { label: 'Awaiting review', value: '9' },
-                ].map((item) => (
-                  <div key={item.label} className="rounded-lg bg-slate-50 p-3">
-                    <p className="text-[11px] text-gray-500">{item.label}</p>
-                    <p className="mt-2 text-xl font-semibold text-gray-900">{item.value}</p>
+              <div className="mt-6 grid gap-6 sm:grid-cols-3">
+                {[{ label: 'Open tasks', value: '142' }, { label: 'Due this week', value: '26' }, { label: 'Awaiting review', value: '9' }].map((item) => (
+                  <div key={item.label} className="rounded-lg bg-gray-50 p-4">
+                    <p className="text-xs text-gray-500">{item.label}</p>
+                    <p className="mt-2 text-2xl font-semibold text-gray-900">{item.value}</p>
                   </div>
                 ))}
               </div>
 
-              <div className="mt-5 space-y-3">
-                {['Website Redesign Sprint', 'Vendor Onboarding Rollout', 'Client Onboarding Quality Review'].map(
-                  (row) => (
-                    <div key={row} className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2.5">
-                      <p className="truncate pr-3 text-sm text-gray-700">{row}</p>
-                      <span className="text-xs font-medium text-indigo-600">In progress</span>
-                    </div>
-                  ),
-                )}
+              <div className="mt-6 space-y-3">
+                {['New client onboarding', 'Monthly reporting review', 'Vendor contract renewal'].map((row) => (
+                  <div key={row} className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-3">
+                    <p className="truncate pr-3 text-sm text-gray-700">{row}</p>
+                    <span className="text-xs font-medium text-indigo-600">In progress</span>
+                  </div>
+                ))}
               </div>
             </div>
-          </motion.div>
-        </div>
-      </Section>
-
-      <Section>
-        <div className="min-w-0 border-t border-gray-100 pt-10">
-          <p className="text-center text-xs font-semibold tracking-[0.16em] text-gray-500 uppercase">
-            Workflow management for your team
-          </p>
-          <div className="mx-auto mt-6 grid max-w-4xl grid-cols-2 gap-4 opacity-70 md:grid-cols-4">
-            {TRUST_LOGOS.map((logo) => (
-              <div
-                key={logo}
-                className="flex h-14 items-center justify-center rounded-lg border border-gray-100 bg-white px-4 text-sm font-medium text-gray-500 grayscale transition-opacity hover:opacity-100"
-              >
-                {logo}
-              </div>
-            ))}
           </div>
-        </div>
-      </Section>
+        </Container>
+      </section>
 
       <Section muted>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {METRICS?.map((item) => (
-            <div key={item.label} className="card-base min-w-0 p-6 text-center">
-              <p className="text-3xl font-semibold text-gray-900">{item.value}</p>
-              <p className="mt-2 text-sm font-medium text-gray-600">{item.label}</p>
+        <div className="max-w-2xl">
+          <h2 className="text-3xl font-semibold tracking-tight">Why teams lose momentum</h2>
+          <p className="mt-6 text-lg text-gray-600">Docketra keeps execution predictable by replacing fragmented updates with a single operating view.</p>
+        </div>
+        <div className="mt-10 grid gap-6 md:grid-cols-3">
+          {CHALLENGES.map((item) => (
+            <div key={item.title} className="rounded-xl border border-gray-200 bg-white p-6">
+              <h3 className="text-lg font-semibold text-gray-900">{item.title}</h3>
+              <p className="mt-6 text-sm text-gray-600">{item.desc}</p>
             </div>
-          ))}
-        </div>
-      </Section>
-
-      <Section muted>
-        <h2 className="type-section">Why Teams Lose Control</h2>
-        <div className="mt-8 grid items-stretch gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {PROBLEM_POINTS?.map((point, index) => (
-            <motion.div
-              key={point.title}
-              className="card-base hover-card relative min-w-0 p-6"
-              initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-              viewport={{ once: true, amount: 0.2 }}
-            >
-              <MinimalIcon type={point.icon} />
-              <h3 className="mt-3 text-base font-medium text-gray-900">{point.title}</h3>
-              <p className="mt-1 text-sm leading-relaxed text-gray-600">{point.desc}</p>
-            </motion.div>
           ))}
         </div>
       </Section>
 
       <Section id="how-it-works">
-        <div className="mb-12">
-          <h2 className="type-section">How Docketra Works</h2>
-          <p className="type-body type-lg w-full text-gray-600">
-            Workflow management for your team, with visibility and accountability at every stage.
-          </p>
+        <div className="max-w-2xl">
+          <h2 className="text-3xl font-semibold tracking-tight">How Docketra helps your team deliver</h2>
+          <p className="mt-6 text-lg text-gray-600">Unify planning, ownership, and execution across every workflow.</p>
         </div>
-
-        <div className="grid w-full gap-8 md:grid-cols-3">
-          {SOLUTION_POINTS?.map((item, idx) => (
-            <motion.div key={item.num} className="relative min-w-0" {...SECTION_REVEAL}>
-              <span className="text-5xl font-semibold text-gray-200">{item.num}</span>
-              <h3 className="mt-3 text-lg font-semibold text-gray-900">{item.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-gray-600">{item.desc}</p>
-              {idx < SOLUTION_POINTS?.length - 1 ? (
-                <span
-                  aria-hidden="true"
-                  className="absolute top-8 right-[-18px] hidden h-px w-9 bg-gray-200 md:block lg:w-12"
-                />
-              ) : null}
-            </motion.div>
+        <div className="mt-10 grid gap-6 md:grid-cols-3">
+          {CAPABILITIES.map((item) => (
+            <div key={item.title} className="rounded-xl border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900">{item.title}</h3>
+              <p className="mt-6 text-sm text-gray-600">{item.desc}</p>
+            </div>
           ))}
         </div>
       </Section>
 
       <Section muted>
-        <div className="mb-12">
-          <h2 className="type-section">Built for cross-functional teams</h2>
-          <p className="type-body type-lg w-full text-gray-600">
-            Standardize how work moves from request to completion across operations, projects, and support.
-          </p>
+        <div className="max-w-2xl">
+          <h2 className="text-3xl font-semibold tracking-tight">Questions answered</h2>
         </div>
-
-        <div className="grid gap-6 md:grid-cols-3">
-          {AUDIENCE_SEGMENTS?.map((segment) => (
-            <motion.div
-              key={segment.title}
-              className="card-base hover-card relative min-w-0 p-6"
-              {...SECTION_REVEAL}
-            >
-              <h3 className="text-lg font-medium text-gray-900">{segment.title}</h3>
-              <ul className="space-y-3">
-                {segment.points.map((point) => (
-                  <li key={point} className="mt-3 flex items-start gap-3 text-sm text-gray-600">
-                    <span className={`mt-0.5 inline-block h-2 w-2 rounded-full ${segment.color}`} aria-hidden="true" />
-                    <span className="text-sm text-gray-700">{point}</span>
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
-          ))}
-        </div>
-      </Section>
-
-      <Section muted>
-        <div className="space-y-12 text-left">
-          <span className="text-sm font-bold tracking-wider text-blue-600 uppercase">Pre-Launch Access</span>
-          <h2 className="type-section text-gray-900">Join the Docketra Early Access Program</h2>
-          <p className="type-body text-lg text-gray-600">
-            Get priority onboarding and help shape the workflow system your team will run on every day.
-          </p>
-
-          <div className="max-w-md w-full min-w-0">
-            <form
-              className="mt-12 flex min-w-0 w-full flex-col gap-3 sm:flex-row sm:items-stretch"
-              onSubmit={onEarlyAccessSubmit}
-              aria-label="Early access signup"
-            >
-              <input
-                id="early-access-email"
-                name="email"
-                type="email"
-                placeholder="Enter your work email"
-                className="w-full min-w-0 flex-1 rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-600"
-                required
-                aria-required="true"
-              />
-              <button
-                type="submit"
-                className="marketing-btn-primary w-full shrink-0 rounded-xl px-6 py-3 font-semibold whitespace-nowrap shadow-sm sm:w-auto"
-                aria-label="Request Early Access"
-              >
-                Request Early Access
-              </button>
-            </form>
+        <div className="mt-10 rounded-xl border border-gray-200 bg-white p-6">
+          <div className="space-y-6">
+            {FAQS.map((item) => (
+              <div key={item.q}>
+                <h3 className="text-base font-semibold text-gray-900">{item.q}</h3>
+                <p className="mt-2 text-sm text-gray-600">{item.a}</p>
+              </div>
+            ))}
           </div>
-          <div className="space-y-2">
-            <p className="text-xs text-gray-500">No spam. We&apos;ll only contact you regarding your workspace setup.</p>
-            <p className="text-sm font-medium text-gray-600">
-              Built for teams that need clarity, accountability, and speed.
-            </p>
-          </div>
-        </div>
-      </Section>
-
-      <Section muted>
-        <div className="mb-12">
-          <h2 className="type-section">Why Choose Docketra Over Spreadsheets &amp; WhatsApp?</h2>
-        </div>
-
-        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b-2 border-gray-200">
-                <th className="px-4 py-4 text-left font-semibold">Feature</th>
-                <th className="px-4 py-4 text-center font-semibold">Spreadsheets</th>
-                <th className="px-4 py-4 text-center font-semibold">WhatsApp</th>
-                <th className="px-4 py-4 text-center font-semibold text-blue-600">Docketra</th>
-              </tr>
-            </thead>
-            <tbody>
-              {COMPARISON_ROWS.map((row, idx) => (
-                <tr key={row[0]} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                  <td className="px-4 py-3 font-medium">{row[0]}</td>
-                  <td className="px-4 py-3 text-center">{renderComparisonCell(row[1])}</td>
-                  <td className="px-4 py-3 text-center">{renderComparisonCell(row[2])}</td>
-                  <td className="px-4 py-3 text-center">{renderComparisonCell(row[3], true)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Section>
-
-      <Section>
-        <div className="card-base mx-auto w-full max-w-2xl p-8 text-center">
-          <p className="text-lg leading-relaxed text-gray-700 italic">
-            “Docketra gave us one shared workflow system across teams without chasing updates. Every decision now has
-            a clear, reviewable trail.”
-          </p>
-          <p className="mt-6 text-sm font-semibold text-gray-900">Priya Mehta</p>
-          <p className="text-sm text-gray-600">Head of Operations, Meridian Group</p>
-        </div>
-      </Section>
-
-      <Section>
-        <div className="mb-12">
-          <h2 className="type-section">Questions Answered</h2>
-        </div>
-
-        <div className="w-full rounded-xl border border-gray-200 bg-white p-6 md:p-8">
-          {FAQS.map((item) => (
-            <Accordion key={item.q} question={item.q} answer={item.a} />
-          ))}
         </div>
       </Section>
     </div>

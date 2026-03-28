@@ -5,9 +5,9 @@ const Firm = require('../models/Firm.model');
 const StorageConfiguration = require('../models/StorageConfiguration.model');
 const { getCookieValue } = require('../utils/requestCookies');
 const { isAdminRole } = require('../utils/role.utils');
-const { encrypt, decrypt } = require('../storage/services/TokenEncryption.service');
+const { encrypt, decrypt } = require('../services/storage/services/TokenEncryption.service');
 const GoogleDriveProvider = require('../services/storage/providers/GoogleDriveProvider');
-const { StorageValidationError } = require('../storage/errors/StorageErrors');
+const { StorageValidationError } = require('../services/storage/errors/StorageErrors');
 const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
 const { S3Adapter } = require('../services/storageAdapter.service');
 
@@ -225,6 +225,22 @@ const googleCallback = async (req, res) => {
     };
     await doc.save();
 
+    const storageCredentials = {
+      refreshToken: tokens.refresh_token,
+      connectedEmail: about?.data?.user?.emailAddress || null,
+      driveId: doc.driveId || null,
+    };
+    await Firm.findByIdAndUpdate(req.firmId, {
+      $set: {
+        storageConfig: {
+          provider: 'google_drive',
+          credentials: encrypt(JSON.stringify(storageCredentials)),
+        },
+        'storage.mode': 'firm_connected',
+        'storage.provider': 'google_drive',
+      },
+    });
+
     res.setHeader('Set-Cookie', buildStateCookie('', 0));
 
     return res.json({
@@ -267,6 +283,20 @@ const googleConfirmDrive = async (req, res) => {
     config.driveId = driveId;
     config.rootFolderId = firmFolderId;
     await config.save();
+
+    await Firm.findByIdAndUpdate(firmId, {
+      $set: {
+        storageConfig: {
+          provider: 'google_drive',
+          credentials: encrypt(JSON.stringify({
+            refreshToken,
+            connectedEmail: config.credentials?.connectedEmail || null,
+            driveId,
+            rootFolderId: firmFolderId,
+          })),
+        },
+      },
+    });
 
     return res.json({ success: true, status: 'ACTIVE', rootFolderId: firmFolderId });
   } catch (error) {
@@ -363,10 +393,17 @@ const changeFirmStorage = async (req, res) => {
       isActive: true,
     });
 
+    const canonicalProvider = provider === 'google-drive' ? 'google_drive' : provider;
     await Firm.findByIdAndUpdate(firmId, {
       $set: {
         'storage.mode': provider === 'docketra_managed' ? 'docketra_managed' : 'firm_connected',
-        'storage.provider': provider === 'google-drive' ? 'google_drive' : provider,
+        'storage.provider': canonicalProvider,
+        storageConfig: provider === 'docketra_managed'
+          ? null
+          : {
+              provider: canonicalProvider,
+              credentials: encryptedCredentials,
+            },
       },
     });
 

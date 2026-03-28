@@ -1,6 +1,7 @@
 const TenantStorageConfig = require('../models/TenantStorageConfig.model');
-const { encrypt } = require('../storage/services/TokenEncryption.service');
-const { UnsupportedProviderError } = require('../storage/errors');
+const Firm = require('../models/Firm.model');
+const { encrypt } = require('../services/storage/services/TokenEncryption.service');
+const { UnsupportedProviderError } = require('../services/storage/errors');
 
 function maskCredentialLog(tenantId, provider) {
   return { tenantId, provider };
@@ -49,6 +50,21 @@ async function updateTenantStorage(req, res) {
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
+
+    await Firm.findByIdAndUpdate(tenantId, {
+      $set: {
+        storageConfig: {
+          provider,
+          credentials: encrypt(JSON.stringify({
+            refreshToken,
+            driveId: driveId || null,
+            rootFolderId: rootFolderId || null,
+          })),
+        },
+        'storage.mode': 'firm_connected',
+        'storage.provider': provider,
+      },
+    });
 
     console.info('[TenantStorage] Updated storage config', maskCredentialLog(tenantId, provider));
 
