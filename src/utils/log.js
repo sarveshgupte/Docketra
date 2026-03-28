@@ -1,4 +1,5 @@
 const { randomUUID } = require('crypto');
+const { maskSensitiveObject } = require('./pii');
 
 /**
  * OBSERVABILITY: Structured logging & request tracing
@@ -24,7 +25,7 @@ const buildContext = (level, event, meta = {}) => {
 };
 
 const logAtLevel = (level, event, meta = {}) => {
-  const context = buildContext(level, event, meta);
+  const context = maskSensitiveObject(buildContext(level, event, meta));
   const logger = level === 'error' ? console.error : level === 'warn' ? console.warn : console.log;
 
   if (process.env.NODE_ENV === 'production') {

@@ -1,13 +1,17 @@
+const { loadEnv } = require('./env');
+
 /**
  * Application configuration
  * Centralized configuration management
  */
 
+const env = loadEnv();
+
 const config = {
-  port: process.env.PORT || 5000,
-  env: process.env.NODE_ENV || 'development',
+  port: env.PORT,
+  env: env.NODE_ENV,
   appName: process.env.APP_NAME || 'Docketra',
-  mongodbUri: process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/caseflow',
+  mongodbUri: env.MONGODB_URI,
   
   // Pagination defaults
   pagination: {

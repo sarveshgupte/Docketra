@@ -28,6 +28,7 @@ const { resolveUserIdentity } = require('../services/identity.service');
 const { isGoogleAuthDisabled } = require('../services/featureFlags.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const config = require('../config/config');
+const { loadEnv } = require('../config/env');
 const { recordFailedLoginAttempt, clearFailedLoginAttempts } = require('../middleware/accountLockout.middleware');
 const { assertFirmPlanCapacity, PlanLimitExceededError, PlanAdminLimitExceededError, assertCanDeactivateUser, PrimaryAdminActionError } = require('../services/user.service');
 const { logAuthEvent } = require('../services/audit.service');
@@ -62,7 +63,8 @@ const DEFAULT_FIRM_ID = 'PLATFORM'; // Default firmId for SUPER_ADMIN and audit 
 const DEFAULT_XID = 'SUPERADMIN'; // Default xID for SUPER_ADMIN in audit logs
 const GOOGLE_SCOPES = ['openid', 'email'];
 const GOOGLE_STATE_TTL_SECONDS = 10 * 60; // 10 minutes
-const SUPERADMIN_USER_ID = () => process.env.SUPERADMIN_OBJECT_ID;
+const env = loadEnv();
+const SUPERADMIN_USER_ID = () => env.SUPERADMIN_OBJECT_ID;
 const SUPERADMIN_ROLE = 'SUPERADMIN';
 const ROLE_SUPER_ADMIN = 'SUPER_ADMIN';
 const ROLE_ADMIN = 'Admin';
@@ -327,11 +329,10 @@ const logAuthAudit = async (params, req = null) => {
 };
 
 const getSuperadminEnv = () => {
-  const rawXID = process.env.SUPERADMIN_XID ? process.env.SUPERADMIN_XID.trim() : null;
   return {
-    rawXID,
-    normalizedXID: rawXID ? rawXID.toUpperCase() : null,
-    email: process.env.SUPERADMIN_EMAIL || 'superadmin@system.local',
+    rawXID: env.SUPERADMIN_XID,
+    normalizedXID: env.SUPERADMIN_XID_NORMALIZED,
+    email: env.SUPERADMIN_EMAIL_NORMALIZED,
   };
 };
 
@@ -4150,7 +4151,7 @@ const handleGoogleCallback = async (req, res) => {
       user = refreshed;
     }
 
-    if (user.role === ROLE_SUPER_ADMIN || user.xID === process.env.SUPERADMIN_XID) {
+    if (user.role === ROLE_SUPER_ADMIN || user.xID === env.SUPERADMIN_XID_NORMALIZED) {
       return res.status(403).json({
         success: false,
         code: 'FIRM_RESOLUTION_FAILED',

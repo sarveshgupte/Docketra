@@ -10,10 +10,12 @@ const log = require('./utils/log');
 const { runBootstrap } = require('./services/bootstrap.service');
 const { maskSensitiveObject, sanitizeErrorForLog } = require('./utils/pii');
 const { validateEnv } = require('./config/validateEnv');
+const { loadEnv, maskEnvForLog } = require('./config/env');
 const { logBuildMetadata } = require('./services/buildInfo.service');
 const { isInboundEmailEnabled } = require('./services/featureFlags.service');
 require('./utils/transactionSessionEnforcer');
 
+const env = loadEnv();
 const inboundEmailEnabled = isInboundEmailEnabled();
 log.info('API_RUNTIME_WORKERS_DISABLED');
 
@@ -138,94 +140,27 @@ const writeGuardChain = (req, res, next) => {
  */
 
 // Log NODE_ENV for debugging
-log.info('SERVER_ENV', { nodeEnv: process.env.NODE_ENV || 'undefined' });
+log.info('SERVER_ENV', { nodeEnv: env.NODE_ENV });
 
 // Detect production mode
-const isProduction = process.env.NODE_ENV === 'production';
-
-if (isProduction && !process.env.SUPERADMIN_PASSWORD_HASH) {
-  throw new Error('SECURITY: SUPERADMIN_PASSWORD_HASH is required in production');
-}
-
-// SECURITY: Metrics endpoint fail-closed enforcement
-if (isProduction && !process.env.METRICS_TOKEN) {
-  throw new Error('SECURITY: METRICS_TOKEN is required in production');
-}
-if (isProduction && inboundEmailEnabled && !process.env.INBOUND_EMAIL_WEBHOOK_SECRET) {
-  throw new Error('INBOUND_EMAIL_WEBHOOK_SECRET must be configured in production');
-}
+const isProduction = env.NODE_ENV === 'production';
 
 validateEnv();
 logBuildMetadata();
 ensureUploadRoot();
 
-// Environment variable validation
-const requiredEnvVars = ['JWT_SECRET', 'NODE_ENV'];
-const missingEnvVars = requiredEnvVars.filter(key => !process.env[key]);
-if (!process.env.MONGO_URI && !process.env.MONGODB_URI) {
-  missingEnvVars.push('MONGO_URI or MONGODB_URI');
-}
-if (missingEnvVars.length > 0) {
-  console.error(`❌ Error: Missing required environment variables: ${missingEnvVars.join(', ')}`);
-  console.error('Please ensure these variables are set in your .env file or environment.');
-  process.exit(1);
-}
-
-// BYOS Google-only env validation (fail-fast in production, warn in non-production).
-const byosGoogleEnvVars = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_OAUTH_REDIRECT_URI', 'STORAGE_TOKEN_SECRET'];
-const missingByosVars = byosGoogleEnvVars.filter((key) => !process.env[key]);
-
-if (missingByosVars.length > 0) {
-  const message = `BYOS environment variables missing: ${missingByosVars.join(', ')}`;
-  if (isProduction) {
-    console.error(`❌ ${message}`);
-    process.exit(1);
-  }
-  console.warn(`⚠️  ${message}`);
-} else {
-  console.log('[STORAGE] BYOS provider enabled: Google Drive');
-}
-
-// Google Drive initialization block removed — legacy service-account storage eliminated.
-
-// SMTP environment variable validation (production only)
-if (isProduction) {
-  const requiredEmailVars = ['BREVO_API_KEY'];
-  const missingEmailVars = requiredEmailVars.filter(key => !process.env[key]);
-  
-  // Check for sender email (prefer MAIL_FROM, fallback to SMTP_FROM)
-  const senderEmail = process.env.MAIL_FROM || process.env.SMTP_FROM;
-  if (!senderEmail) {
-    missingEmailVars.push('MAIL_FROM or SMTP_FROM');
-  } else {
-    // Validate MAIL_FROM format
-    // Note: Require here (not at top) to ensure env vars are loaded first
-    try {
-      const { parseSender } = require('./services/email.service');
-      const sender = parseSender(senderEmail);
-      console.log(`[EMAIL] Using sender: ${sender.name} <${sender.email}>`);
-    } catch (error) {
-      console.error('❌ Error: Invalid MAIL_FROM format.');
-      console.error(error.message);
-      console.error('Expected format: "Name <email@domain>" or "email@domain"');
-      console.error(`Current value: ${senderEmail}`);
-      process.exit(1);
-    }
-  }
-  
-  if (missingEmailVars.length > 0) {
-    console.error('❌ Error: Production requires Brevo API configuration for email delivery.');
-    console.error('Missing email variables:', missingEmailVars.join(', '));
-    console.error('Please configure these variables in your production environment:');
-    missingEmailVars.forEach(varName => {
-      console.error(`  - ${varName}`);
-    });
-    process.exit(1);
-  }
-  console.log('[EMAIL] Brevo API configured for production email delivery.');
-} else {
-  console.log('[EMAIL] Development mode – emails will be logged to console only.');
-}
+log.info('ENV_CONFIG_LOADED', {
+  env: env.NODE_ENV,
+  superadminXID: env.SUPERADMIN_XID_NORMALIZED,
+  inboundEmailEnabled,
+  snapshot: maskEnvForLog({
+    NODE_ENV: env.NODE_ENV,
+    MONGODB_URI: env.MONGODB_URI,
+    SUPERADMIN_EMAIL: env.SUPERADMIN_EMAIL_NORMALIZED,
+    ENCRYPTION_PROVIDER: env.ENCRYPTION_PROVIDER,
+    ENABLE_INBOUND_EMAIL: String(env.ENABLE_INBOUND_EMAIL),
+  }),
+});
 
 // Initialize Express app
 const app = express();
