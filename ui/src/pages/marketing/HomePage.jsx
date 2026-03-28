@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Container from '../../components/layout/Container';
+import Navbar from '../../components/layout/Navbar';
 
 const CAPABILITIES = [
   {
@@ -20,6 +21,7 @@ const CAPABILITIES = [
 export const HomePage = () => {
   return (
     <div className="w-full bg-white text-gray-900">
+      <Navbar />
       {/* HERO */}
       <section className="w-full bg-white py-20 md:py-28">
         <Container className="grid grid-cols-1 md:grid-cols-[1.3fr_0.7fr] gap-12 items-center">
@@ -34,19 +36,12 @@ export const HomePage = () => {
               Track tasks, assign ownership, and ensure nothing falls through the cracks.
             </p>
 
-            <div className="mt-8 flex flex-col sm:flex-row gap-4">
+            <div className="mt-8">
               <Link
                 to="/signup"
                 className="inline-flex items-center justify-center h-11 px-6 rounded-lg bg-black text-white font-medium hover:bg-gray-900 transition-colors"
               >
                 Start your workspace
-              </Link>
-
-              <Link
-                to="/login"
-                className="inline-flex items-center justify-center h-11 px-6 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                Sign in
               </Link>
             </div>
           </div>
@@ -80,11 +75,11 @@ export const HomePage = () => {
       {/* FEATURES */}
       <section id="how-it-works" className="w-full bg-gray-50 py-20 md:py-28">
         <Container>
-          <div className="w-full max-w-xl">
+          <div className="w-full">
             <h2 className="text-3xl md:text-4xl font-semibold tracking-tight">
               How Docketra helps your team deliver
             </h2>
-            <p className="mt-6 text-lg text-gray-600 max-w-xl leading-relaxed">
+            <p className="mt-6 text-lg text-gray-600 leading-relaxed">
               Clear ownership, clear approvals, and a complete audit trail.
             </p>
           </div>
