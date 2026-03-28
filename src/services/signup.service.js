@@ -530,6 +530,7 @@ const createFirmAndAdmin = async ({
         firmId,
         name: normalizedFirmName,
         firmSlug,
+        source: 'SELF_SERVE',
         plan: 'starter',
         maxUsers: 2,
         status: 'active',

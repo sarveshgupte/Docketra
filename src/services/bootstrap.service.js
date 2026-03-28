@@ -4,7 +4,8 @@
  * Performs startup validation and integrity checks.
  * 
  * IMPORTANT: This service does NOT auto-create firms or users.
- * - Firms are created ONLY by SuperAdmin via POST /api/superadmin/firms
+ * - Firms are created by SuperAdmin via POST /api/superadmin/firms
+ *   OR by public self-serve signup flows
  * - Empty database is a valid and supported state
  * - SuperAdmin is NOT stored in MongoDB - exists ONLY in .env
  * 
@@ -32,7 +33,8 @@ const { loadEnv } = require('../config/env');
  * This function previously auto-created FIRM001, a default client, and system admin.
  * 
  * NEW BEHAVIOR:
- * - Firms are created ONLY by SuperAdmin via POST /api/superadmin/firms
+ * - Firms are created by SuperAdmin via POST /api/superadmin/firms
+ *   OR by public self-serve signup flows
  * - Empty database is a valid and supported state
  * - Bootstrap does NOT auto-create any firms or users
  */
@@ -40,7 +42,7 @@ const { loadEnv } = require('../config/env');
 /**
  * REMOVED: seedDefaultClient
  * 
- * This function is no longer needed as firms are created by SuperAdmin only.
+ * This function is no longer needed as firms are created by SuperAdmin and signup flows.
  */
 
 /**
@@ -88,7 +90,7 @@ const runPreflightChecks = async ({ session } = {}) => {
     const totalFirms = await Firm.countDocuments();
     
     if (totalFirms === 0) {
-      console.log('ℹ️  No firms exist yet. This is expected - firms are created by SuperAdmin.');
+      console.log('ℹ️  No firms exist yet. Firms can be created by SuperAdmin or during user signup.');
       console.log('✓ All preflight checks passed (empty database is valid)');
       return { hasViolations: false, violations: {}, info: {} };
     }
