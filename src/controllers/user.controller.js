@@ -362,6 +362,7 @@ const completeProfile = async (req, res) => {
         firmId,
         name: String(firmName).trim(),
         firmSlug,
+        source: 'SELF_SERVE',
         status: 'active',
         storage: { mode: 'docketra_managed', provider: null },
         bootstrapStatus: 'PENDING',
