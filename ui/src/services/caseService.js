@@ -100,7 +100,7 @@ export const caseService = {
   /**
    * Add attachment to case
    */
-  addAttachment: async (caseId, file, description) => {
+  addAttachment: async (caseId, file, description, onProgress) => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('description', description);
@@ -109,6 +109,14 @@ export const caseService = {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      onUploadProgress: typeof onProgress === 'function'
+        ? (progressEvent) => {
+            const total = progressEvent.total || file.size || 0;
+            const loaded = progressEvent.loaded || 0;
+            const percent = total > 0 ? Math.round((loaded / total) * 100) : 0;
+            onProgress({ loaded, total, percent });
+          }
+        : undefined,
     });
     invalidateCaseCache(caseId);
     return normalizeApiResponse(response);
@@ -117,11 +125,8 @@ export const caseService = {
   /**
    * Update case status
    */
-  updateStatus: async (caseId, status, comment = '') => {
-    const response = await api.put(`/cases/${caseId}/status`, {
-      status,
-      comment,
-    });
+  updateStatus: async (caseId, payload) => {
+    const response = await api.put(`/cases/${caseId}/status`, payload);
     invalidateCaseCache(caseId);
     return normalizeApiResponse(response);
   },

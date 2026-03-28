@@ -27,7 +27,6 @@ import { formatDateTime } from '../utils/formatDateTime';
 import { formatClientDisplay } from '../utils/formatters';
 import { USER_ROLES, CASE_DETAIL_TABS, VALID_CASE_DETAIL_TAB_NAMES } from '../utils/constants';
 import { StickyTabs } from '../components/common/StickyTabs';
-import { CaseDetailHeader } from '../components/case/CaseDetailHeader';
 import { AuditTimeline } from '../components/common/AuditTimeline';
 import { StatusBadge } from '../components/layout/StatusBadge';
 import { DocketSidebar } from '../components/docket/DocketSidebar';
@@ -60,6 +59,13 @@ const INITIAL_VIRTUAL_WINDOW = 30;
 const ACTION_RETRY_KEY = 'docketra_case_retry_queue';
 const ACTION_RETRY_MAX_ATTEMPTS = 3;
 const ACTION_RETRY_BASE_DELAY_MS = 1000;
+const formatFileSize = (bytes) => {
+  if (!Number.isFinite(Number(bytes)) || Number(bytes) <= 0) return 'Unknown size';
+  const value = Number(bytes);
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 
 export const CaseDetailPage = () => {
@@ -102,6 +108,7 @@ export const CaseDetailPage = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileDescription, setFileDescription] = useState('');
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [pullingCase, setPullingCase] = useState(false);
   const [loadingClientDockets, setLoadingClientDockets] = useState(false);
   const [clientDockets, setClientDockets] = useState([]);
@@ -161,6 +168,7 @@ export const CaseDetailPage = () => {
   const [showUnpendModal, setShowUnpendModal] = useState(false);
   const [unpendComment, setUnpendComment] = useState('');
   const [unpendingCase, setUnpendingCase] = useState(false);
+  const [startingWork, setStartingWork] = useState(false);
 
   // Track case view session
   // PR: Comprehensive CaseHistory & Audit Trail
@@ -688,32 +696,27 @@ export const CaseDetailPage = () => {
     });
   };
 
-  const handleMoveToGlobal = () => {
-    setConfirmModal({
-      title: 'Move to Workbasket',
-      description: 'This will remove the current assignment and move the docket to the Workbasket. Continue?',
-      confirmText: 'Move to Workbasket',
-      onConfirm: async () => {
-        setConfirmModal(null);
-        setMovingToGlobal(true);
-        try {
-          const response = await caseService.moveCaseToGlobal(caseId);
-          if (response.success) {
-            const message = `Docket ${caseId} moved to Workbasket • ${formatDateTime(new Date())}`;
-            showSuccess(message);
-            setActionConfirmation(message);
-            setActionError(null);
-            loadCase({ background: true });
-          }
-        } catch (error) {
-          const errorMessage = extractErrorMessage(error, 'Failed to move docket. Please try again.');
-          showError(errorMessage);
-          setActionError({ message: errorMessage, retry: handleMoveToGlobal });
-        } finally {
-          setMovingToGlobal(false);
-        }
-      },
-    });
+  const handleMoveToWB = async () => {
+    try {
+      if (!caseInfo?.version && caseInfo?.version !== 0) {
+        showError('Case version missing. Please refresh.');
+        return;
+      }
+
+      setMovingToGlobal(true);
+      await caseService.updateStatus(caseId, {
+        status: 'UNASSIGNED',
+        version: statusVersion,
+        performedBy,
+        notes: 'Moved back to Workbasket',
+      });
+      showSuccess(`Docket ${caseId} moved to Workbasket`);
+      loadCase({ background: true });
+    } catch (error) {
+      showError(extractErrorMessage(error, 'Failed to move docket to Workbasket.'));
+    } finally {
+      setMovingToGlobal(false);
+    }
   };
 
   const handleAddComment = async (e) => {
@@ -818,10 +821,13 @@ export const CaseDetailPage = () => {
     }
 
     setUploadingFile(true);
+    setUploadProgress(0);
     try {
       const uploadedFile = selectedFile;
       const description = fileDescription.trim();
-      await caseService.addAttachment(caseId, uploadedFile, description);
+      await caseService.addAttachment(caseId, uploadedFile, description, ({ percent }) => {
+        setUploadProgress(percent);
+      });
       const newFileObj = {
         _id: Date.now().toString(), // Temporary ID
         fileName: uploadedFile.name,
@@ -856,6 +862,7 @@ export const CaseDetailPage = () => {
       setActionError({ message: safeMessage, retry: handleUploadFile });
     } finally {
       setUploadingFile(false);
+      setUploadProgress(0);
     }
   };
 
@@ -876,7 +883,16 @@ export const CaseDetailPage = () => {
         setConfirmModal(null);
         setFilingCase(true);
         try {
-          const response = await caseService.fileCase(caseId, fileComment);
+          if (!caseInfo?.version && caseInfo?.version !== 0) {
+            showError('Case version missing. Please refresh.');
+            return;
+          }
+          const response = await caseService.updateStatus(caseId, {
+            status: 'FILED',
+            version: statusVersion,
+            performedBy,
+            notes: fileComment.trim(),
+          });
           if (response.success) {
             const message = `Docket ${caseId} filed • ${formatDateTime(new Date())}`;
             showSuccess(message);
@@ -930,7 +946,17 @@ export const CaseDetailPage = () => {
         setConfirmModal(null);
         setPendingCase(true);
         try {
-          const response = await caseService.pendCase(caseId, pendComment, pendingUntil);
+          if (!caseInfo?.version && caseInfo?.version !== 0) {
+            showError('Case version missing. Please refresh.');
+            return;
+          }
+          const response = await caseService.updateStatus(caseId, {
+            status: 'PENDED',
+            version: statusVersion,
+            performedBy,
+            reason: pendComment.trim(),
+            notes: `Reopen date: ${pendingUntil}`,
+          });
           if (response.success) {
             const message = `Docket ${caseId} pended • ${formatDateTime(new Date())}`;
             showSuccess(message);
@@ -974,7 +1000,16 @@ export const CaseDetailPage = () => {
           case: prev?.case ? { ...prev.case, status: 'RESOLVED' } : prev?.case,
         }));
         try {
-          const response = await caseService.resolveCase(caseId, resolveComment);
+          if (!caseInfo?.version && caseInfo?.version !== 0) {
+            showError('Case version missing. Please refresh.');
+            return;
+          }
+          const response = await caseService.updateStatus(caseId, {
+            status: 'RESOLVED',
+            version: statusVersion,
+            performedBy,
+            notes: resolveComment.trim(),
+          });
           if (response.success) {
             const message = `Docket ${caseId} resolved • ${formatDateTime(new Date())}`;
             showSuccess(message);
@@ -1052,6 +1087,9 @@ export const CaseDetailPage = () => {
     }
     return value;
   }, [caseInfo?.description]);
+  const docketState = String(caseInfo?.status || '').toUpperCase();
+  const statusVersion = Number.isFinite(Number(caseInfo?.version)) ? Number(caseInfo.version) : 0;
+  const performedBy = user?.email || user?.xID || 'system';
 
   const openSidebar = (type) => {
     setSidebarType(type);
@@ -1089,7 +1127,17 @@ export const CaseDetailPage = () => {
     setActionConfirmation(`Docket assigned to ${selectedAssignee?.label || assignUser}.`);
 
     try {
-      await caseService.updateStatus(caseId, caseInfo?.status || 'OPEN', assignComment.trim());
+      if (!caseInfo?.version && caseInfo?.version !== 0) {
+        showError('Case version missing. Please refresh.');
+        setCaseData(previous);
+        return;
+      }
+      await caseService.updateStatus(caseId, {
+        status: 'ASSIGNED',
+        version: statusVersion,
+        performedBy,
+        notes: assignComment.trim(),
+      });
       showSuccess(`Assigned to ${selectedAssignee?.label || assignUser}`);
       appendTimelineEvent({
         id: `assigned-event-${Date.now()}`,
@@ -1151,11 +1199,60 @@ export const CaseDetailPage = () => {
     return warnings;
   }, [caseInfo, comments]);
 
-  const docketMode = caseInfo?.status === 'UNASSIGNED' && caseInfo?.queueType === 'GLOBAL'
-    ? 'VIEW'
-    : (caseInfo?.status === 'PENDED' || caseInfo?.status === 'PENDING' ? 'PEND' : 'OPEN');
+  const actionInFlight = pullingCase || assigningCase || pendingCase || resolvingCase || filingCase || unpendingCase || startingWork || movingToGlobal;
 
-  const showPullButton = docketMode === 'VIEW';
+  const handleStartWork = async () => {
+    setStartingWork(true);
+    try {
+      if (!caseInfo?.version && caseInfo?.version !== 0) {
+        showError('Case version missing. Please refresh.');
+        return;
+      }
+      await caseService.updateStatus(caseId, {
+        status: 'IN_PROGRESS',
+        version: statusVersion,
+        performedBy,
+        notes: 'Started work',
+      });
+      showSuccess(`Docket ${caseId} moved to In Progress`);
+      loadCase({ background: true });
+    } catch (error) {
+      showError(extractErrorMessage(error, 'Failed to start work.'));
+    } finally {
+      setStartingWork(false);
+    }
+  };
+
+  const headerActions = useMemo(() => {
+    if (isViewOnlyMode) return [];
+    if (docketState === 'UNASSIGNED') {
+      return [{ key: 'move_wl', label: 'Move to WL', variant: 'primary', onClick: handlePullCase, disabled: actionInFlight }];
+    }
+    if (docketState === 'OPEN') {
+      return [{ key: 'assign', label: 'Assign', variant: 'primary', onClick: () => setShowAssignModal(true), disabled: actionInFlight }];
+    }
+    if (docketState === 'ASSIGNED') {
+      return [
+        { key: 'start_work', label: 'Start Work', variant: 'primary', onClick: handleStartWork, disabled: actionInFlight },
+        { key: 'move_wb', label: 'Move to WB', variant: 'outline', onClick: handleMoveToWB, disabled: actionInFlight },
+      ];
+    }
+    if (docketState === 'IN_PROGRESS') {
+      return [
+        { key: 'pend', label: 'Pend', onClick: () => setShowPendModal(true), disabled: actionInFlight },
+        { key: 'resolve', label: 'Resolve', variant: 'primary', onClick: () => setShowResolveModal(true), disabled: actionInFlight },
+        { key: 'file', label: 'File', onClick: () => setShowFileModal(true), disabled: actionInFlight },
+        { key: 'move_wb', label: 'Move to WB', variant: 'outline', onClick: handleMoveToWB, disabled: actionInFlight },
+      ];
+    }
+    if (docketState === 'PENDED') {
+      return [
+        { key: 'resume', label: 'Resume Work', variant: 'primary', onClick: () => setShowUnpendModal(true), disabled: actionInFlight },
+        { key: 'move_wb', label: 'Move to WB', variant: 'outline', onClick: handleMoveToWB, disabled: actionInFlight },
+      ];
+    }
+    return [];
+  }, [actionInFlight, docketState, isViewOnlyMode, handleMoveToWB, handlePullCase, handleStartWork]);
 
   // Move to Workbasket button: show only for admin users AND case is currently assigned
   const showMoveToWorkbasketButton = isAdmin && caseInfo?.assignedToXID;
@@ -1165,8 +1262,7 @@ export const CaseDetailPage = () => {
   // - OPEN: Show File, Pend, Resolve (no Unpend)
   // - PENDING/PENDED: Show ONLY Unpend (no File, Pend, Resolve)
   // - FILED or RESOLVED: Show nothing (terminal states, read-only)
-  const canPerformLifecycleActions = caseInfo?.status === 'OPEN' && !isViewOnlyMode;
-  const canUnpend = docketMode === 'PEND' && !isViewOnlyMode;
+  const canPerformLifecycleActions = docketState === 'IN_PROGRESS' && !isViewOnlyMode;
   const isAnyModalOpen = Boolean(
     showFileModal
     || showPendModal
@@ -1291,41 +1387,27 @@ export const CaseDetailPage = () => {
             </Button>
           </div>
         )}
-        <CaseDetailHeader
-          caseInfo={{
-            caseId: formatDocketId(caseInfo.caseId || caseId),
-            category: caseInfo.title || caseInfo.category,
-            status: caseInfo?.status,
-            updatedAt: caseInfo.updatedAt,
-          }}
-          onInfoClick={() => openSidebar('cfs')}
-          actions={(
-            <>
-              {showPullButton && <Button variant="primary" onClick={handlePullCase} disabled={pullingCase}>{pullingCase ? 'Pulling docket...' : 'Pull Docket'}</Button>}
-              {canUnpend && <Button variant="primary" onClick={() => setShowUnpendModal(true)}>Unpend Docket</Button>}
-              <Button variant="ghost" onClick={() => openSidebar('cfs')} title="CFS" className="h-10 w-10 rounded-full p-0" aria-label="Open CFS sidebar">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                  <circle cx="12" cy="12" r="9" />
-                  <line x1="12" y1="10" x2="12" y2="16" />
-                  <line x1="12" y1="7" x2="12.01" y2="7" />
-                </svg>
-              </Button>
-              <Button variant="ghost" onClick={() => openSidebar('attachments')} title="Attachments" className="h-10 w-10 rounded-full p-0" aria-label="Open attachments sidebar">
-                <span aria-hidden="true" className="text-base">📎</span>
-              </Button>
-              <Button variant="ghost" onClick={() => openSidebar('history')} title="History" className="h-10 w-10 rounded-full p-0" aria-label="Open history sidebar">
-                <span aria-hidden="true" className="text-base">🕒</span>
-              </Button>
-            </>
-          )}
-          statusBadges={(
-            <>
-              {caseInfo.approvalStatus === 'PENDING' && <Badge variant="warning">Awaiting Partner Approval</Badge>}
-              {caseInfo.lockStatus?.isLocked && <Badge variant="warning">Lifecycle Locked</Badge>}
-              {caseInfo?.stage?.requiresApproval === true && isViewOnlyMode && <Badge variant="warning">Role Restricted Action</Badge>}
-            </>
-          )}
-        />
+        <header className="case-detail-header">
+          <div className="case-detail-header__identity">
+            <div className="case-detail-header__title-row">
+              <h1 className="case-detail-header__title">{caseInfo.title || caseInfo.caseName || formatDocketId(caseInfo.caseId || caseId)}</h1>
+            </div>
+            <p className="case-detail-header__subtitle">Assigned to: {caseInfo?.assignedToName || caseInfo?.assignedToXID || 'Unassigned'}</p>
+            <div className="case-detail-header__meta">
+              Priority: {caseInfo.priority || caseInfo.slaPriority || 'Standard'} • Last updated {formatDateTime(caseInfo.updatedAt)}
+            </div>
+          </div>
+
+          <div className="case-detail-header__actions">
+            <StatusBadge status={docketState} className="case-detail-header__status-prominent" />
+            {caseInfo.approvalStatus === 'PENDING' && <Badge variant="warning">Awaiting Partner Approval</Badge>}
+            {caseInfo.lockStatus?.isLocked && <Badge variant="warning">Lifecycle Locked</Badge>}
+            {caseInfo?.stage?.requiresApproval === true && isViewOnlyMode && <Badge variant="warning">Role Restricted Action</Badge>}
+            <Button variant="ghost" onClick={() => openSidebar('cfs')} title="CFS" className="h-10 w-10 rounded-full p-0" aria-label="Open CFS sidebar">ⓘ</Button>
+            <Button variant="ghost" onClick={() => openSidebar('attachments')} title="Attachments" className="h-10 w-10 rounded-full p-0" aria-label="Open attachments sidebar">📎</Button>
+            <Button variant="ghost" onClick={() => openSidebar('history')} title="History" className="h-10 w-10 rounded-full p-0" aria-label="Open history sidebar">🕒</Button>
+          </div>
+        </header>
 
         <StickyTabs
           tabs={[
@@ -1381,7 +1463,7 @@ export const CaseDetailPage = () => {
         )}
 
         <div className="case-detail-layout-grid flex w-full flex-col gap-6 lg:flex-row">
-          <main className="case-detail-main flex-1 min-w-0">
+          <main className="case-detail-main min-w-0 lg:w-[70%]">
             <section className="case-card" aria-labelledby="snapshot-heading">
               <div className="case-card__heading">
                 <h2 id="snapshot-heading">Case Snapshot</h2>
@@ -1527,6 +1609,7 @@ export const CaseDetailPage = () => {
                       <article key={attachment._id || attachment.id || `${attachment.createdAt}-${attachment.fileName || attachment.filename}`} className="case-detail__attachment-item case-detail__attachment-card">
                         <div className="case-detail__attachment-main">
                           <div className="case-detail__attachment-name">📄 {attachment.fileName || attachment.filename}</div>
+                          <div className="case-detail__attachment-date">Size: {formatFileSize(attachment.size || attachment.fileSize)}</div>
                           <div className="case-detail__attachment-meta-group">
                             <div className="case-detail__attachment-meta">
                               {attachment.visibility === 'external' ? (
@@ -1597,6 +1680,11 @@ export const CaseDetailPage = () => {
                         {uploadingFile ? 'Uploading…' : 'Upload File'}
                       </Button>
                     )}
+                    {uploadingFile ? (
+                      <div className="case-detail__upload-progress" role="status" aria-live="polite">
+                        Upload progress: {uploadProgress}%
+                      </div>
+                    ) : null}
                   </div>
                 )}
               </section>
@@ -1635,7 +1723,7 @@ export const CaseDetailPage = () => {
             )}
           </main>
 
-          <aside className="case-detail-sidebar w-full lg:w-80 flex-shrink-0" aria-label="Audit history and related case details">
+          <aside className="case-detail-sidebar w-full lg:w-[30%] flex-shrink-0" aria-label="Audit history and related case details">
             <div className="case-detail-sidebar__section">
               <p className="case-detail-sidebar__label">Audit History</p>
               <div className="case-detail-sidebar__stack space-y-6">
@@ -1679,12 +1767,7 @@ export const CaseDetailPage = () => {
           </aside>
         </div>
 
-        <DocketActions
-          onFile={() => setShowFileModal(true)}
-          onPend={() => setShowPendModal(true)}
-          onResolve={() => setShowResolveModal(true)}
-          onAssign={() => setShowAssignModal(true)}
-        />
+        <DocketActions actions={headerActions} />
 
         <DocketSidebar
           isOpen={sidebarOpen}
