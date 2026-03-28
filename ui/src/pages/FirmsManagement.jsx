@@ -11,6 +11,7 @@ import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
 import { ConfirmDialog } from '../components/common/ConfirmDialog';
+import { ErrorBoundary } from '../components/common/ErrorBoundary';
 import { useToast } from '../hooks/useToast';
 import { formatDate, getFirmStatusInfo } from '../utils/formatters';
 import './FirmsManagement.css';
@@ -42,6 +43,7 @@ export const FirmsManagement = () => {
   const toast = useToast();
   
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [firms, setFirms] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -71,6 +73,7 @@ export const FirmsManagement = () => {
 
   // Load firms
   useEffect(() => {
+    console.log('API BASE:', import.meta.env.VITE_API_BASE_URL);
     loadFirms();
   }, []);
 
@@ -88,6 +91,7 @@ export const FirmsManagement = () => {
   const loadFirms = async () => {
     try {
       setLoading(true);
+      setError(null);
       const response = await superadminService.listFirms();
       
       // HTTP 304 means cached data is still valid - keep current state
@@ -97,11 +101,13 @@ export const FirmsManagement = () => {
         } else {
           // Ensure UI can render with safe defaults even on API failure
           setFirms([]);
+          setError('Failed to load firms');
           toast.error('Failed to load firms');
         }
       }
     } catch (error) {
       // Don't reset firms on error - preserve existing data
+      setError('Failed to load firms');
       toast.error('Failed to load firms');
       console.error('Error loading firms:', error);
     } finally {
@@ -124,14 +130,21 @@ export const FirmsManagement = () => {
         formData.adminName.trim(),
         formData.adminEmail.trim()
       );
-      
+
+      if (!response) {
+        throw new Error('Invalid response');
+      }
+
       if (response.success) {
         toast.success('Firm created successfully. Admin credentials have been emailed.');
         setFormData({ name: '', adminName: '', adminEmail: '' });
         setShowCreateModal(false);
         await loadFirms();
+      } else {
+        throw new Error(response.message || 'Failed to create firm');
       }
     } catch (error) {
+      console.error('Create firm failed:', error);
       toast.error(error.response?.data?.message || 'Failed to create firm');
     } finally {
       setIsSubmitting(false);
@@ -232,6 +245,20 @@ export const FirmsManagement = () => {
     }
   };
 
+  const handleSetDefaultAdminStatus = async (firm, nextStatus) => {
+    try {
+      setIsUpdatingAdminStatus(true);
+      const response = await superadminService.updateFirmAdminStatus(firm._id, nextStatus);
+      if (response.success) {
+        toast.success(`Admin ${nextStatus === 'ACTIVE' ? 'enabled' : 'disabled'} successfully`);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update admin status');
+    } finally {
+      setIsUpdatingAdminStatus(false);
+    }
+  };
+
   const handleAdminStatusChange = async (firm, adminId, currentStatus) => {
     const nextStatus = currentStatus === 'DISABLED' ? 'ACTIVE' : 'DISABLED';
     return handleSetAdminStatus(firm, adminId, nextStatus);
@@ -289,12 +316,41 @@ export const FirmsManagement = () => {
     );
   }
 
+  if (error && (!firms || !Array.isArray(firms) || firms.length === 0)) {
+    return (
+      <SuperAdminLayout>
+        <div className="container">
+          <Card className="center-card">
+            <h2>Unable to load firms</h2>
+            <p className="text-secondary-dark">Please retry in a moment.</p>
+            <Button onClick={loadFirms}>Retry</Button>
+          </Card>
+        </div>
+      </SuperAdminLayout>
+    );
+  }
+
+  if (!firms || !Array.isArray(firms)) {
+    return (
+      <SuperAdminLayout>
+        <div className="container">
+          <Card className="center-card">
+            <h2>No firms found</h2>
+            <p className="text-secondary-dark">There is no valid firms data to render yet.</p>
+          </Card>
+        </div>
+      </SuperAdminLayout>
+    );
+  }
+
   const admins = Array.isArray(adminModal.details) ? adminModal.details : [];
 
   return (
-    <SuperAdminLayout>
+    <ErrorBoundary name="FirmsManagementPage">
+      <SuperAdminLayout>
+      <div className="container">
       <div className="firms-management">
-        <div className="firms-management__header">
+        <div className="page-header">
           <div>
             <h1>Firms Management</h1>
             <p className="text-secondary">Manage firms and their lifecycle on the platform</p>
@@ -514,7 +570,7 @@ export const FirmsManagement = () => {
 
         {/* Firms Table */}
         {firms.length === 0 ? (
-          <Card className="empty-state">
+          <Card className="empty-state center-card">
             <div className="empty-state__icon">🏢</div>
             <h2>No firms exist yet</h2>
             <p>This is expected for a new platform. Create your first firm to begin.</p>
@@ -652,7 +708,7 @@ export const FirmsManagement = () => {
                                     className="firm-actions__dropdown-item"
                                     onClick={async () => {
                                       setOpenDropdownId(null);
-                                      await handleSetAdminStatus(firm, 'DISABLED');
+                                      await handleSetDefaultAdminStatus(firm, 'DISABLED');
                                     }}
                                   >
                                     ⛔ Disable Admin
@@ -671,6 +727,8 @@ export const FirmsManagement = () => {
           </Card>
         )}
       </div>
-    </SuperAdminLayout>
+      </div>
+      </SuperAdminLayout>
+    </ErrorBoundary>
   );
 };
