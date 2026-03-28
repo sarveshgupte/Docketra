@@ -18,7 +18,23 @@ export const superadminService = {
    * Create a new firm
    */
   createFirm: async (name, adminName, adminEmail) => {
-    const response = await api.post('/superadmin/firms', { name, adminName, adminEmail });
+    const slug = String(name || '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+
+    const response = await api.post('/superadmin/firms', {
+      // Backend onboarding contract currently expects firmName
+      firmName: name,
+      adminName,
+      adminEmail,
+      // Keep explicit name/slug for compatibility with legacy handlers
+      name,
+      slug,
+    });
     return response.data;
   },
 
