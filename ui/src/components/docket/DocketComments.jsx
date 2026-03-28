@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { formatDateTime } from '../../utils/formatDateTime';
+import { formatDateTime, formatRelativeTime } from '../../utils/formatDateTime';
 
 const mentionPattern = /(@[a-zA-Z0-9._-]+)/g;
 
@@ -40,11 +40,11 @@ export const DocketComments = memo(({ comments = [] }) => {
           return (
             <li key={commentKey} className="docket-comments__item">
               <span className="docket-comments__dot" aria-hidden="true">•</span>
-              <p className="docket-comments__text">{renderCommentText(comment.text)}</p>
               <div className="docket-comments__meta">
-                <span>{formatDateTime(comment.createdAt)}</span>
-                <span>By: {createdBy}</span>
+                <span>{createdBy}</span>
+                <span title={formatDateTime(comment.createdAt)}>{formatRelativeTime(comment.createdAt) || formatDateTime(comment.createdAt)}</span>
               </div>
+              <p className="docket-comments__text">{renderCommentText(comment.text)}</p>
             </li>
           );
         })}

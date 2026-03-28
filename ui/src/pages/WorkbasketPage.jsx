@@ -12,10 +12,12 @@ import { Button } from '../components/common/Button';
 import { Loading } from '../components/common/Loading';
 import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
+import { StatusBadge } from '../components/layout/StatusBadge';
 import { useAuth } from '../hooks/useAuth';
 import { worklistService } from '../services/worklistService';
 import { formatDate } from '../utils/formatters';
 import { useToast } from '../hooks/useToast';
+import { ROUTES } from '../constants/routes';
 import './WorkbasketPage.css';
 
 export const WorkbasketPage = () => {
@@ -208,8 +210,12 @@ export const WorkbasketPage = () => {
       <div className="global-worklist">
         <PageHeader
           title="Workbasket"
-          description="Shared pool of unassigned, open, pending, and resolved dockets."
+          description="Unassigned dockets ready to be moved into a worklist."
         />
+        <div className="worklist-view-tabs" role="tablist" aria-label="Docket queues">
+          <Button variant="primary">Workbasket</Button>
+          <Button variant="outline" onClick={() => navigate(ROUTES.MY_WORKLIST(firmSlug))}>My Worklist</Button>
+        </div>
 
         <Card>
           <div className="global-worklist__filters">
@@ -347,8 +353,8 @@ export const WorkbasketPage = () => {
           {cases.length === 0 && !loading ? (
             <div className="p-6">
               <EmptyState
-                title="No dockets found in Workbasket"
-                description="Adjust filters or check back soon when new unassigned dockets are available."
+                title="No unassigned dockets"
+                description="New unassigned dockets will appear here as soon as they enter the shared queue."
               />
             </div>
           ) : null}
@@ -375,6 +381,7 @@ export const WorkbasketPage = () => {
                     Category {getSortIcon('category')}
                   </th>
                   <th className="global-worklist__col-fit global-worklist__th-center">Status</th>
+                  <th className="global-worklist__col-fit global-worklist__th-center">Assigned To</th>
                   <th className="global-worklist__col-fit global-worklist__th-right" onClick={() => handleSort('slaDueDate')} style={{ cursor: 'pointer' }}>
                     SLA Due Date {getSortIcon('slaDueDate')}
                   </th>
@@ -400,18 +407,20 @@ export const WorkbasketPage = () => {
                         />
                       </td>
                       <td className="global-worklist__col-fit">
-                        <a
+                        <button
+                          type="button"
                           className="docket-link"
-                          onClick={() => navigate(`/app/firm/${firmSlug}/cases/${caseItem.caseId}`)}
+                          onClick={() => navigate(ROUTES.CASE_DETAIL(firmSlug, caseItem.caseId))}
                         >
                           {caseItem.caseId}
-                        </a>
+                        </button>
                       </td>
                       <td className="global-worklist__col-fit global-worklist__td-center">{caseItem.clientId}</td>
                       <td className="global-worklist__col-name">
                         <span className="global-worklist__truncate" title={caseItem.category}>{caseItem.category}</span>
                       </td>
-                      <td className="global-worklist__col-fit global-worklist__td-center">{caseItem.status}</td>
+                      <td className="global-worklist__col-fit global-worklist__td-center"><StatusBadge status={caseItem.status} /></td>
+                      <td className="global-worklist__col-fit global-worklist__td-center">{caseItem.assignedToName || caseItem.assignedToXID || 'Unassigned'}</td>
                       <td className="global-worklist__col-fit global-worklist__td-right">{formatDate(slaDate)}</td>
                       <td className={`global-worklist__col-fit global-worklist__td-right ${getSLAStatusClass(caseItem.slaDaysRemaining)}`}>
                         {caseItem.slaDaysRemaining !== null 
@@ -424,7 +433,7 @@ export const WorkbasketPage = () => {
                           <Button
                             variant="default"
                             size="small"
-                            onClick={() => navigate(`/app/firm/${firmSlug}/cases/${caseItem.caseId}`)}
+                            onClick={() => navigate(ROUTES.CASE_DETAIL(firmSlug, caseItem.caseId))}
                           >
                             View
                           </Button>

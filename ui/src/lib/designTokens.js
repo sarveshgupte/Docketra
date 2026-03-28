@@ -29,13 +29,18 @@ export const designTokens = {
 };
 
 export const caseStatusAppearance = {
+  WB: { label: 'WB', tone: 'neutral' },
+  WL: { label: 'WL', tone: 'open' },
+  ASSIGNED: { label: 'Assigned', tone: 'escalated' },
+  IN_PROGRESS: { label: 'In Progress', tone: 'review' },
+  PENDED: { label: 'Pended', tone: 'warning' },
+  RESOLVED: { label: 'Resolved', tone: 'success' },
+  FILED: { label: 'Filed', tone: 'dark' },
   DRAFT: { label: 'Draft', tone: 'draft' },
   OPEN: { label: 'Open', tone: 'open' },
   UNDER_REVIEW: { label: 'In Review', tone: 'review' },
-  PENDED: { label: 'In Review', tone: 'review' },
+  PENDING: { label: 'Pended', tone: 'warning' },
   ESCALATED: { label: 'Escalated', tone: 'escalated' },
   CLOSED: { label: 'Closed', tone: 'closed' },
-  RESOLVED: { label: 'Resolved', tone: 'closed' },
-  FILED: { label: 'Filed', tone: 'closed' },
   UNASSIGNED: { label: 'Unassigned', tone: 'draft' },
 };
