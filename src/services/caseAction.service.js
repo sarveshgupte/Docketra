@@ -128,6 +128,7 @@ const resolveCase = async (firmId, caseId, comment, user, req = null) => {
     ipAddress: req?.ip || null,
     userAgent: req?.get?.('user-agent') || null,
     req,
+    notes: comment,
     statusPatch: {
       pendingUntil: null,
       resolvedAt: new Date(),
@@ -223,6 +224,7 @@ const pendCase = async (firmId, caseId, comment, reopenDate, user, req = null) =
     ipAddress: req?.ip || null,
     userAgent: req?.get?.('user-agent') || null,
     req,
+    reason: comment,
     statusPatch: {
       pendedByXID: user.xID,
       pendingUntil,
