@@ -287,6 +287,11 @@ const caseSchema = new mongoose.Schema({
     default: 'UNASSIGNED',
     required: true,
   },
+  version: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
   
   /**
    * Priority level for task prioritization and resource allocation

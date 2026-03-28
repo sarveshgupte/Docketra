@@ -1216,7 +1216,14 @@ const unpendCase = async (req, res) => {
 const updateCaseStatus = async (req, res) => {
   try {
     const { caseId } = req.params;
-    const { status, performedBy, pendingUntil } = req.body;
+    const {
+      status,
+      performedBy,
+      pendingUntil,
+      version,
+      reason,
+      notes,
+    } = req.body;
     
     // Validate required fields
     if (!status) {
@@ -1276,6 +1283,9 @@ const updateCaseStatus = async (req, res) => {
       ipAddress: req.ip || null,
       userAgent: req.get('user-agent'),
       req,
+      expectedVersion: Number.isInteger(version) ? version : caseData.version,
+      reason,
+      notes,
       statusPatch: normalizedStatus === CaseStatus.PENDED
         ? { pendingUntil }
         : { pendingUntil: null },
@@ -1289,7 +1299,8 @@ const updateCaseStatus = async (req, res) => {
       message: 'Case status updated successfully',
     });
   } catch (error) {
-    res.status(400).json({
+    const statusCode = Number.isInteger(error.statusCode) ? error.statusCode : 400;
+    res.status(statusCode).json({
       success: false,
       message: 'Error updating case status',
       error: error.message,

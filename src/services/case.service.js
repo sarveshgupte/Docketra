@@ -3,8 +3,8 @@ const { CaseRepository } = require('../repositories');
 const { CASE_ACTION_TYPES } = require('../config/constants');
 const { logCaseHistory } = require('./auditLog.service');
 const { safeLogForensicAudit, computeChangedFields, getRequestIp, getRequestUserAgent } = require('./forensicAudit.service');
-const { canTransition, normalizeStatus } = require('../domain/case/caseStateMachine');
-const CaseStatus = require('../domain/case/caseStatus');
+const { normalizeStatus } = require('../domain/case/caseStateMachine');
+const { transitionDocket } = require('./docketTransition.service');
 const caseSlaService = require('./caseSla.service');
 
 async function updateStatus(caseId, newStatus, context = {}) {
@@ -14,10 +14,6 @@ async function updateStatus(caseId, newStatus, context = {}) {
 
   if (!tenantId) {
     throw new Error('Tenant context required');
-  }
-
-  if (!Object.values(CaseStatus).includes(normalizedNewStatus)) {
-    throw new Error(`Invalid status value: ${newStatus}`);
   }
 
   const session = context.session || context.req?.transactionSession?.session || null;
@@ -35,30 +31,23 @@ async function updateStatus(caseId, newStatus, context = {}) {
   }
 
   const fromStatus = normalizedCurrentStatus || normalizeStatus(existingCase.status);
-  const expectedCurrentStatus = context.currentStatus || existingCase.status;
-
-  if (fromStatus === normalizedNewStatus) {
-    throw new Error(`Self-transition not allowed: ${fromStatus}`);
-  }
-
-  if (fromStatus === CaseStatus.RESOLVED) {
-    throw new Error('Resolved cases cannot be modified');
-  }
-
-  if (!canTransition(fromStatus, normalizedNewStatus, context.role || null)) {
-    console.warn({
-      event: 'ILLEGAL_STATUS_TRANSITION_ATTEMPT',
-      caseId,
-      from: fromStatus,
-      to: normalizedNewStatus,
-      userId: context.userId || context.performedByXID || null,
-    });
-    throw new Error(`Illegal transition: ${fromStatus} → ${normalizedNewStatus}`);
-  }
 
   const slaTransition = caseSlaService.handleStatusTransition(existingCase, normalizedNewStatus, {
     now: new Date(),
     userId: context.userId || context.performedByXID || null,
+  });
+
+  await transitionDocket(caseId, normalizedNewStatus, context.userId || context.performedByXID || 'SYSTEM', {
+    firmId: tenantId,
+    session,
+    expectedVersion: Number.isInteger(context.expectedVersion) ? context.expectedVersion : existingCase.version,
+    reason: context.reason || context.auditMetadata?.reason || null,
+    notes: context.notes || context.auditMetadata?.notes || null,
+    metadata: {
+      ipAddress: context.ipAddress || null,
+      userAgent: context.userAgent || null,
+      ...(context.auditMetadata || {}),
+    },
   });
 
   await CaseRepository.updateStatus(
@@ -67,8 +56,7 @@ async function updateStatus(caseId, newStatus, context = {}) {
     normalizedNewStatus,
     { ...(context.statusPatch || {}), ...(slaTransition.patch || {}) },
     session,
-    expectedCurrentStatus,
-    existingCase.tatLastStartedAt || null
+    normalizedNewStatus
   );
 
   const metadata = {
