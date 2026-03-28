@@ -15,6 +15,7 @@ const TOAST_META = {
   warning: { icon: '!', iconClass: 'text-amber-500' },
   info: { icon: 'i', iconClass: 'text-blue-500' },
   danger: { icon: '!', iconClass: 'text-red-500' },
+  error: { icon: '!', iconClass: 'text-red-500' },
 };
 
 export const ToastProvider = ({ children }) => {
@@ -39,6 +40,7 @@ export const ToastProvider = ({ children }) => {
         warning: 4000,
         info: 4000,
         danger: 4000,
+        error: 4000,
       };
       const timeout = timeoutMap[type] ?? 0;
 
@@ -120,7 +122,7 @@ const ToastContainer = ({ toasts, removeToast }) => {
         return (
           <div
             key={toast.id}
-            className={`pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-xl border p-4 shadow-lg transition-all duration-300 ease-in-out ${toast.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : toast.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' : 'bg-blue-50 border-blue-200 text-blue-800'}`}
+            className={`pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-xl border p-4 shadow-lg transition-all duration-300 ease-in-out ${toast.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : (toast.type === 'danger' || toast.type === 'error') ? 'bg-red-50 border-red-200 text-red-800' : 'bg-blue-50 border-blue-200 text-blue-800'}`}
             role="status"
             aria-live="polite"
           >
