@@ -806,34 +806,47 @@ const login = async (req, res) => {
         userAgent: req.get('user-agent'),
         metadata: { eventType: 'LOGIN_SUCCESS', email: superadminEmail || null, timestamp: new Date().toISOString() },
       }, req);
-      
-      await ensureCanonicalXid(user);
 
-  const accessToken = jwtService.generateAccessToken({
-        userId: SUPERADMIN_USER_ID(),
+      const user = {
+        id: SUPERADMIN_USER_ID(),
+        xID: superadminXIDRaw || 'SUPERADMIN',
+        email: superadminEmail,
         role: SUPERADMIN_ROLE,
         firmId: null,
-        firmSlug: null,
-        defaultClientId: null,
         isSuperAdmin: true,
-      });
-      
-      return res.json({
-        success: true,
-        message: 'Login successful',
-        accessToken,
-        refreshToken: null,
-        isSuperAdmin: true,
-        refreshEnabled: false,
-        data: {
-          id: SUPERADMIN_USER_ID(),
-          xID: superadminXIDRaw || 'SUPERADMIN',
-          email: superadminEmail,
-          role: SUPERADMIN_ROLE,
-          firmId: null,
+      };
+
+      try {
+        console.log('[DEBUG] user object:', user);
+
+        const accessToken = jwtService.generateAccessToken({
+          userId: user.id,
+          role: user.role,
+          firmId: user.firmId,
+          firmSlug: null,
+          defaultClientId: null,
+          isSuperAdmin: user.isSuperAdmin,
+        });
+
+        return res.json({
+          success: true,
+          message: 'Login successful',
+          accessToken,
+          refreshToken: null,
           isSuperAdmin: true,
-        },
-      });
+          refreshEnabled: false,
+          data: user,
+        });
+      } catch (postAuthError) {
+        console.error('[AUTH][superadmin] Post-auth token/response failure', {
+          message: postAuthError.message,
+          xID: normalizedXID || DEFAULT_XID,
+        });
+        return res.status(500).json({
+          success: false,
+          message: 'Authentication succeeded but response generation failed',
+        });
+      }
     }
     
     // ============================================================
