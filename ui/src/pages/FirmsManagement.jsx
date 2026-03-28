@@ -349,16 +349,16 @@ export const FirmsManagement = () => {
     <ErrorBoundary name="FirmsManagementPage">
       <SuperAdminLayout>
       <div className="page-container">
-      <div className="firms-management">
-        <div className="page-header">
-          <div>
-            <h1>Firms Management</h1>
-            <p className="text-secondary">Manage firms and their lifecycle on the platform</p>
-          </div>
-          <Button onClick={() => setShowCreateModal(true)}>
+        <div className="firms-management">
+          <div className="page-header">
+            <div>
+              <h1>Firms Management</h1>
+            <p className="text-secondary">Admin-created firms</p>
+            </div>
+            <Button onClick={() => setShowCreateModal(true)}>
             + Create Firm
-          </Button>
-        </div>
+            </Button>
+          </div>
 
         {/* Create Firm Modal */}
         {showCreateModal && (
@@ -573,7 +573,7 @@ export const FirmsManagement = () => {
           <Card className="empty-state center-card">
             <div className="empty-state__icon">🏢</div>
             <h2>No firms exist yet</h2>
-            <p>This is expected for a new platform. Create your first firm to begin.</p>
+            <p>This is expected for a new platform. Create your firm or join an existing one.</p>
             <Button onClick={() => setShowCreateModal(true)}>
               + Create Firm
             </Button>
