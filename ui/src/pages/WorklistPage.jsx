@@ -29,6 +29,7 @@ import { UX_COPY } from '../constants/uxCopy';
 import { useQueryState } from '../hooks/useQueryState';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import api from '../services/api';
+import { ROUTES } from '../constants/routes';
 import './WorklistPage.css';
 const normalizeCases = (records = []) => records.map((record) => ({
   ...record,
@@ -106,7 +107,7 @@ export const WorklistPage = () => {
   };
 
   const handleCaseClick = useCallback((caseId) => {
-    navigate(`/app/firm/${firmSlug}/cases/${caseId}`);
+    navigate(ROUTES.CASE_DETAIL(firmSlug, caseId));
   }, [navigate, firmSlug]);
 
   const handleRowClick = useCallback((caseItem) => {
@@ -197,6 +198,13 @@ export const WorklistPage = () => {
       ),
     },
     {
+      key: 'assignedTo',
+      header: 'Assigned To',
+      headerClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'w-[1px] whitespace-nowrap',
+      render: (caseItem) => caseItem.assignedToName || caseItem.assignedToXID || 'Unassigned',
+    },
+    {
       key: 'priority',
       header: 'Priority',
       align: 'center',
@@ -253,11 +261,15 @@ export const WorklistPage = () => {
           title={pageInfo.title}
           description={pageInfo.description}
           actions={(
-            <Button variant="primary" onClick={() => navigate(`/app/firm/${firmSlug}/cases/create`)}>
+            <Button variant="primary" onClick={() => navigate(ROUTES.CREATE_CASE(firmSlug))}>
               {UX_COPY.actions.CREATE_CASE}
             </Button>
           )}
         />
+        <div className="worklist-view-tabs" role="tablist" aria-label="Docket queues">
+          <Button variant="outline" onClick={() => navigate(ROUTES.GLOBAL_WORKLIST(firmSlug))}>Workbasket</Button>
+          <Button variant="primary">My Worklist</Button>
+        </div>
 
         <Card>
           {error ? (
@@ -268,21 +280,21 @@ export const WorklistPage = () => {
               onAction={loadWorklist}
             >
               {!isPendingView ? (
-                <Button variant="outline" onClick={() => navigate(`/app/firm/${firmSlug}/cases/create`)}>
+                <Button variant="outline" onClick={() => navigate(ROUTES.CREATE_CASE(firmSlug))}>
                   {UX_COPY.actions.CREATE_CASE}
                 </Button>
               ) : null}
             </EmptyState>
           ) : cases.length === 0 ? (
             <EmptyState
-              title={isPendingView ? 'No pending dockets right now.' : UX_COPY.emptyStates.NO_MY_OPEN}
+              title={isPendingView ? 'No pending dockets right now.' : 'No dockets assigned to you'}
                 description={
                   isPendingView
                     ? 'There are no dockets currently in review. When a docket is placed on hold, it will appear here with its review date.'
                     : 'No open dockets are assigned to you right now. Create a new docket or wait for one to be assigned.'
                 }
               actionLabel={!isPendingView ? UX_COPY.actions.CREATE_CASE : undefined}
-              onAction={!isPendingView ? () => navigate(`/app/firm/${firmSlug}/cases/create`) : undefined}
+              onAction={!isPendingView ? () => navigate(ROUTES.CREATE_CASE(firmSlug)) : undefined}
             />
           ) : (
             <DataTable

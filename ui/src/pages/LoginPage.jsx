@@ -7,6 +7,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Input } from '../components/common/Input';
 import { Card } from '../components/common/Card';
+import { Button } from '../components/common/Button';
 import { validateXID, validatePassword } from '../utils/validators';
 import { useToast } from '../hooks/useToast';
 import './LoginPage.css';
@@ -71,6 +72,7 @@ export const LoginPage = () => {
       }
     } catch (err) {
       const errorData = err.response?.data;
+      const statusCode = err.response?.status;
 
       if (errorData?.mustChangePassword) {
         navigate('/change-password', { state: { xID: normalizedIdentifier } });
@@ -78,6 +80,10 @@ export const LoginPage = () => {
         setError('Please set your password using the link sent to your email. If you haven\'t received it, contact your administrator.');
       } else if (errorData?.lockedUntil) {
         setError(errorData?.message || 'Account is locked. Please try again later or contact an administrator.');
+      } else if (statusCode === 401) {
+        setError('Invalid xID or password');
+      } else if (statusCode >= 500) {
+        setError('Something went wrong. Try again');
       } else {
         setError(errorData?.message || 'Invalid xID or password');
       }
@@ -148,13 +154,16 @@ export const LoginPage = () => {
             </div>
           )}
 
-          <button
+          <Button
             type="submit"
+            variant="primary"
+            fullWidth
+            className="mt-4"
+            loading={loading}
             disabled={loading}
-            className="w-full mt-4 bg-black text-white py-2.5 rounded-lg font-medium hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading ? 'Signing in...' : 'Sign in'}
-          </button>
+            {loading ? 'Signing in' : 'Sign in'}
+          </Button>
 
           <div className="text-center">
             <Link
