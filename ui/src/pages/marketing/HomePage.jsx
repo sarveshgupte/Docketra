@@ -36,12 +36,12 @@ export const HomePage = () => {
         <Container className="grid grid-cols-1 md:grid-cols-[1.3fr_0.7fr] gap-12 items-center">
           
           {/* LEFT */}
-          <div className="w-full max-w-2xl">
-            <h1 className="text-4xl md:text-6xl font-semibold tracking-tight leading-[1.05] max-w-2xl lg:max-w-3xl text-balance">
+          <div className="w-full">
+            <h1 className="text-4xl md:text-6xl font-semibold tracking-tight leading-[1.05] text-balance">
               Workflows that actually move work forward.
             </h1>
 
-            <p className="mt-6 text-lg text-gray-600 max-w-xl leading-relaxed">
+            <p className="mt-6 text-lg text-gray-600 leading-relaxed">
               Track tasks, assign ownership, and ensure nothing falls through the cracks.
             </p>
 
