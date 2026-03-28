@@ -24,6 +24,7 @@ const User = require('../models/User.model');
 const Plan = require('../models/Plan.model');
 const mongoose = require('mongoose');
 const { runAdminHierarchyBackfill } = require('../scripts/fixAdminHierarchy');
+const { loadEnv } = require('../config/env');
 
 /**
  * REMOVED: seedSystemAdmin
@@ -60,6 +61,7 @@ const { runAdminHierarchyBackfill } = require('../scripts/fixAdminHierarchy');
  * - Does NOT send email for empty database
  */
 let adminBackfillRan = false;
+const env = loadEnv();
 
 const seedPlans = async ({ session } = {}) => {
   const seedData = [
@@ -375,7 +377,7 @@ const recoverFirmBootstrap = async (firmId) => {
             isActive: true,
             status: 'ACTIVE',
             createdByXid: 'SUPERADMIN',
-            createdBy: process.env.SUPERADMIN_EMAIL || 'superadmin@system.local',
+            createdBy: env.SUPERADMIN_EMAIL_NORMALIZED,
           });
           await defaultClient.save({ session });
           console.log(`[BOOTSTRAP_RECOVERY] Created default client: ${clientId}`);

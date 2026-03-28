@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const log = require('../utils/log');
+const config = require('./config');
 
 /**
  * Database connection configuration
@@ -15,7 +16,7 @@ const connectDB = async () => {
       mongoose.set('debug', true);
     }
 
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
+    const conn = await mongoose.connect(config.mongodbUri, {
       autoIndex: process.env.NODE_ENV !== 'production',
     });
 
