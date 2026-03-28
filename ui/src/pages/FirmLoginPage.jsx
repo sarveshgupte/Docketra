@@ -348,8 +348,7 @@ export const FirmLoginPage = () => {
       <div className="auth-wrapper">
         <Card className="auth-card max-w-form">
           <div className="text-center">
-            <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">Docketra</h1>
-            <p className="mt-2 text-sm text-gray-500 text-center">Compliance Workflow Infrastructure</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">Sign in to Docketra</h1>
           </div>
 
           <div className="mt-6 space-y-4">
@@ -381,8 +380,7 @@ export const FirmLoginPage = () => {
 
         {!showOtpForm && (
           <p className="mt-6 text-sm text-gray-500 text-center">
-            Use the xID from your welcome email. First-time users should check their inbox for their activation link
-            and credentials before signing in here.
+            Sign in to your workspace using your xID and password.
           </p>
         )}
 
@@ -514,9 +512,13 @@ export const FirmLoginPage = () => {
               disabled={loading || resendLoading}
             />
 
-            <Button type="submit" variant="primary" fullWidth loading={loading} disabled={resendLoading}>
-              Login
-            </Button>
+            <button
+              type="submit"
+              disabled={loading || resendLoading}
+              className="w-full mt-4 bg-black text-white py-2.5 rounded-lg font-medium hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading ? 'Signing in...' : 'Sign in'}
+            </button>
 
             <div className="flex items-center gap-2 py-1">
               <div className="h-px flex-1 bg-gray-200" />
