@@ -90,8 +90,7 @@ export const PlatformDashboard = () => {
 
   return (
     <SuperAdminLayout>
-      <div className="min-h-screen bg-gray-50">
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <div className="mx-auto w-full max-w-7xl space-y-8">
           <div className="space-y-2">
             <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Platform Overview</h1>
             <p className="text-sm text-gray-500">
@@ -142,7 +141,6 @@ export const PlatformDashboard = () => {
               </Button>
             </div>
           </Card>
-        </div>
       </div>
     </SuperAdminLayout>
   );

@@ -1,6 +1,6 @@
 /**
  * SuperAdmin Layout Component
- * Minimal layout for platform-level management
+ * Dashboard shell for platform-level management
  */
 
 import React from 'react';
@@ -9,7 +9,11 @@ import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { Loading } from './Loading';
 import { USER_ROLES } from '../../utils/constants';
-import './SuperAdminLayout.css';
+
+const navItemClass = (isActive) =>
+  `rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+    isActive ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+  }`;
 
 export const SuperAdminLayout = ({ children }) => {
   const { user, logout } = useAuth();
@@ -23,9 +27,7 @@ export const SuperAdminLayout = ({ children }) => {
     navigate('/superadmin');
   };
 
-  const isActive = (path) => {
-    return location.pathname === path;
-  };
+  const isActive = (path) => location.pathname === path;
 
   // Guard: Only render children if user is loaded and is SuperAdmin
   if (user === null || (user?.isSuperAdmin !== true && user?.role !== USER_ROLES.SUPER_ADMIN)) {
@@ -33,38 +35,39 @@ export const SuperAdminLayout = ({ children }) => {
   }
 
   return (
-    <div className="superadmin-layout">
-      <nav className="superadmin-layout__nav">
-        <div className="superadmin-layout__nav-container">
-          <div className="superadmin-layout__brand">
-            <h1>Docketra Platform</h1>
-            <span className="superadmin-layout__badge">SuperAdmin</span>
-          </div>
-          <div className="superadmin-layout__nav-links">
-            <Link
-              to="/app/superadmin"
-              className={`superadmin-layout__nav-link ${isActive('/app/superadmin') ? 'active' : ''}`}
-            >
-              Platform Dashboard
-            </Link>
-            <Link
-              to="/app/superadmin/firms"
-              className={`superadmin-layout__nav-link ${isActive('/app/superadmin/firms') ? 'active' : ''}`}
-            >
-              Firms
-            </Link>
-          </div>
-          <div className="superadmin-layout__nav-user">
-            <span className="superadmin-layout__user-info">
-              {(user?.xID || user?.email || 'SuperAdmin')} (SuperAdmin)
+    <div className="flex min-h-screen bg-gray-50">
+      <aside className="w-full border-b border-gray-200 bg-white px-4 py-5 md:w-72 md:border-b-0 md:border-r md:px-6 md:py-8">
+        <div className="flex items-start justify-between gap-3 md:block">
+          <div>
+            <h1 className="text-lg font-semibold text-gray-900">Docketra Platform</h1>
+            <span className="mt-2 inline-flex rounded-full bg-gray-900 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-white">
+              SuperAdmin
             </span>
-            <button onClick={handleLogout} className="neo-button">
-              Logout
-            </button>
           </div>
+          <button onClick={handleLogout} className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 md:hidden">
+            Logout
+          </button>
         </div>
-      </nav>
-      <main className="superadmin-layout__main">{children}</main>
+
+        <nav className="mt-6 flex gap-2 md:flex-col">
+          <Link to="/app/superadmin" className={navItemClass(isActive('/app/superadmin'))}>
+            Platform Dashboard
+          </Link>
+          <Link to="/app/superadmin/firms" className={navItemClass(isActive('/app/superadmin/firms'))}>
+            Firms
+          </Link>
+        </nav>
+
+        <div className="mt-6 hidden rounded-xl border border-gray-200 bg-gray-50 p-3 md:block">
+          <p className="truncate text-xs text-gray-500">Signed in as</p>
+          <p className="truncate text-sm font-medium text-gray-900">{user?.xID || user?.email || 'SuperAdmin'}</p>
+          <button onClick={handleLogout} className="mt-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-white">
+            Logout
+          </button>
+        </div>
+      </aside>
+
+      <main className="min-w-0 flex-1 p-4 md:p-8">{children}</main>
     </div>
   );
 };

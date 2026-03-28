@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Container from '../../components/layout/Container';
-import './HomePage.css';
 
 const CAPABILITIES = [
   {
@@ -32,58 +31,58 @@ export const HomePage = () => {
 
   return (
     <div className="w-full bg-white text-gray-900">
-      <section className="section bg-white">
-        <div className="hero-container">
-          <div className="hero-left">
-            <h1 className="hero-title font-semibold max-w-xl">
+      <section className="w-full bg-white py-20 md:py-28">
+        <Container className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+          <div>
+            <h1 className="text-4xl md:text-6xl font-semibold tracking-tight leading-tight max-w-xl">
               Workflows that actually move work forward.
             </h1>
-            <p className="mt-6 text-lg text-gray-600 max-w-md leading-relaxed">
+            <p className="mt-6 text-lg text-gray-600 max-w-md">
               Track tasks, assign ownership, and ensure nothing falls through the cracks.
             </p>
 
-            <form onSubmit={onEarlyAccessSubmit}>
-              <div className="cta-group max-w-md">
+            <form onSubmit={onEarlyAccessSubmit} className="mt-6 max-w-md">
+              <div className="flex flex-col sm:flex-row items-center gap-4">
                 <input
                   type="email"
                   name="email"
                   placeholder="Enter your email"
-                  className="cta-input border border-gray-300 rounded-lg px-4"
+                  className="h-11 w-full rounded-lg border border-gray-300 px-4"
                   required
                 />
-                <button type="submit" className="cta-button bg-black text-white px-6 rounded-lg whitespace-nowrap">
+                <button type="submit" className="h-11 w-full sm:w-auto rounded-lg bg-black px-6 text-white whitespace-nowrap">
                   Get Early Access
                 </button>
               </div>
             </form>
 
-            <div className="mt-6">
+            <div className="flex items-center gap-4 mt-6">
               <Link to="/signup" className="text-sm font-medium text-gray-700 underline hover:text-gray-900">
                 Or create your workspace
               </Link>
             </div>
           </div>
 
-          <div className="hero-right">
-            <div className="card-preview bg-gray-50 rounded-2xl p-6 border border-gray-200">
+          <div className="w-full">
+            <div className="rounded-2xl border bg-white shadow-sm p-6 min-h-[280px] flex flex-col">
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Workflow dashboard</p>
               <div className="mt-6 text-sm text-gray-500">
                 Your workflows will appear here
               </div>
             </div>
           </div>
-        </div>
+        </Container>
       </section>
 
-      <section id="how-it-works" className="section bg-gray-50">
+      <section id="how-it-works" className="w-full bg-gray-50 py-20 md:py-28">
         <Container>
           <div className="max-w-2xl">
             <h2 className="text-3xl font-semibold tracking-tight">How Docketra helps your team deliver</h2>
-            <p className="mt-6 text-lg text-gray-600">Clear ownership, clear approvals, and a complete audit trail.</p>
+            <p className="mt-6 text-lg text-gray-600 max-w-md">Clear ownership, clear approvals, and a complete audit trail.</p>
           </div>
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
+          <div className="grid md:grid-cols-3 gap-6 mt-12">
             {CAPABILITIES.map((item) => (
-              <div key={item.title} className="rounded-xl border border-gray-200 bg-white p-6">
+              <div key={item.title} className="h-full flex flex-col justify-between rounded-xl border border-gray-200 bg-white p-6">
                 <h3 className="text-lg font-semibold text-gray-900">{item.title}</h3>
                 <p className="mt-4 text-sm text-gray-600">{item.desc}</p>
               </div>
