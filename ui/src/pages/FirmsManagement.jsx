@@ -471,8 +471,8 @@ export const FirmsManagement = () => {
                         <p><strong>User Agent:</strong> {adminModal.firm?.signupUserAgent || 'Unknown'}</p>
                       </div>
                     </div>
-                    <div className="table-container">
-                      <table className="firms-table admin-table">
+                    <div className="w-full overflow-x-auto">
+                      <table className="firms-table admin-table min-w-[1000px] w-full">
                        <thead>
                          <tr>
                            <th>Name</th>
@@ -580,8 +580,8 @@ export const FirmsManagement = () => {
           </Card>
         ) : (
           <Card>
-            <div className="table-container">
-              <table className="firms-table">
+            <div className="w-full overflow-x-auto">
+              <table className="firms-table min-w-[1000px] w-full">
                 <thead>
                   <tr>
                      <th>Firm Name</th>
