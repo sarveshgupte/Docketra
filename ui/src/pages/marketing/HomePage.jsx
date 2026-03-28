@@ -31,13 +31,17 @@ export const HomePage = () => {
 
   return (
     <div className="w-full bg-white text-gray-900">
+      {/* HERO */}
       <section className="w-full bg-white py-20 md:py-28">
         <Container className="grid grid-cols-1 md:grid-cols-[1.3fr_0.7fr] gap-12 items-center">
-          <div>
+          
+          {/* LEFT */}
+          <div className="w-full max-w-2xl">
             <h1 className="text-4xl md:text-6xl font-semibold tracking-tight leading-[1.05] max-w-2xl lg:max-w-3xl text-balance">
               Workflows that actually move work forward.
             </h1>
-            <p className="mt-6 text-lg text-gray-600 max-w-lg">
+
+            <p className="mt-6 text-lg text-gray-600 max-w-xl leading-relaxed">
               Track tasks, assign ownership, and ensure nothing falls through the cracks.
             </p>
 
@@ -69,10 +73,17 @@ export const HomePage = () => {
             </div>
           </div>
 
+          {/* RIGHT */}
           <div className="w-full">
             <div className="rounded-2xl border bg-white shadow-md p-6 min-h-[320px] flex flex-col">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Workflow dashboard</p>
-              <div className="mt-6 text-sm text-gray-500">Your workflows will appear here</div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Workflow dashboard
+              </p>
+
+              <div className="mt-6 text-sm text-gray-500">
+                Your workflows will appear here
+              </div>
+
               <div className="mt-6 space-y-4 flex-1">
                 <div className="h-3 w-2/3 rounded-full bg-gray-100" />
                 <div className="h-3 w-1/2 rounded-full bg-gray-100" />
@@ -84,23 +95,34 @@ export const HomePage = () => {
               </div>
             </div>
           </div>
+
         </Container>
       </section>
 
+      {/* FEATURES */}
       <section id="how-it-works" className="w-full bg-gray-50 py-20 md:py-28">
         <Container>
           <div className="max-w-2xl">
-            <h2 className="text-3xl md:text-4xl font-semibold tracking-tight">How Docketra helps your team deliver</h2>
-            <p className="mt-6 text-lg text-gray-600 max-w-lg">Clear ownership, clear approvals, and a complete audit trail.</p>
+            <h2 className="text-3xl md:text-4xl font-semibold tracking-tight">
+              How Docketra helps your team deliver
+            </h2>
+            <p className="mt-6 text-lg text-gray-600 max-w-lg">
+              Clear ownership, clear approvals, and a complete audit trail.
+            </p>
           </div>
+
           <div className="grid md:grid-cols-3 gap-6 mt-12">
             {CAPABILITIES.map((item) => (
               <div
                 key={item.title}
                 className="h-full flex flex-col justify-between rounded-xl border border-gray-200 bg-white p-6 hover:shadow-md transition-shadow"
               >
-                <h3 className="text-lg font-semibold text-gray-900">{item.title}</h3>
-                <p className="mt-4 text-sm text-gray-600">{item.desc}</p>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {item.title}
+                </h3>
+                <p className="mt-4 text-sm text-gray-600">
+                  {item.desc}
+                </p>
               </div>
             ))}
           </div>
