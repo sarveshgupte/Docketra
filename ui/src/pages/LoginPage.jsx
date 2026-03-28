@@ -10,7 +10,6 @@ import { Input } from '../components/common/Input';
 import { Card } from '../components/common/Card';
 import { validateXID, validatePassword } from '../utils/validators';
 import { useToast } from '../hooks/useToast';
-import GoogleSignIn from '../components/auth/GoogleSignIn';
 import './LoginPage.css';
 
 export const LoginPage = () => {
@@ -88,18 +87,6 @@ export const LoginPage = () => {
     }
   };
 
-  const handleGoogleSuccess = async (result) => {
-    try {
-      const isOnboarded = result?.data?.isOnboarded;
-      if (isOnboarded === false) {
-        navigate('/complete-profile', { replace: true });
-        return;
-      }
-      navigate('/app/firm', { replace: true });
-    } catch (googleError) {
-      setError(googleError?.response?.data?.message || 'Google sign-in failed');
-    }
-  };
 
   return (
     <div className="auth-wrapper">
@@ -144,13 +131,13 @@ export const LoginPage = () => {
 
           {successMessage && (
             <div
-              className={`neo-alert ${
+              className={`rounded-md px-3 py-2 text-sm ${
                 messageType === 'warning'
-                  ? 'neo-alert--warning'
+                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
                   : messageType === 'info'
-                    ? 'neo-alert--info'
-                    : 'neo-alert--success'
-              } auth-alert`}
+                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                    : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+              }`}
               role={messageType === 'warning' ? 'alert' : 'status'}
               aria-live="polite"
             >
@@ -159,7 +146,7 @@ export const LoginPage = () => {
           )}
 
           {error && (
-            <div className="neo-alert neo-alert--danger auth-alert" role="alert">
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
               {error}
             </div>
           )}
@@ -167,14 +154,6 @@ export const LoginPage = () => {
           <Button type="submit" variant="primary" fullWidth loading={loading}>
             Login
           </Button>
-
-          <div className="flex items-center gap-2 py-1">
-            <div className="h-px flex-1 bg-gray-200" />
-            <span className="text-xs text-gray-500">or</span>
-            <div className="h-px flex-1 bg-gray-200" />
-          </div>
-
-          <GoogleSignIn onSuccess={handleGoogleSuccess} onError={(googleError) => setError(googleError?.message || 'Google sign-in failed')} />
 
           <div className="text-center">
             <Link

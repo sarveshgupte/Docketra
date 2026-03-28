@@ -2,7 +2,7 @@ const express = require('express');
 const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
 const routeSchemas = require('../schemas/storage.routes.schema');
 const { userReadLimiter } = require('../middleware/rateLimiters');
-const { oauthLimiter } = require('../storage/middleware/oauthLimiter');
+const { oauthLimiter } = require('../services/storage/middleware/oauthLimiter');
 const {
   getStorageStatus,
   getStorageHealth,

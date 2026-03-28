@@ -20,8 +20,8 @@ const CaseHistory = require('../models/CaseHistory.model');
 const Firm = require('../models/Firm.model');
 const Case = require('../models/Case.model');
 const File = require('../models/File.model');
-const { decrypt } = require('../storage/services/TokenEncryption.service');
-const { getStorageProvider } = require('../storage/StorageFactory');
+const { decrypt } = require('../services/storage/services/TokenEncryption.service');
+const { getStorageProvider } = require('../services/storage/StorageFactory');
 const { google } = require('googleapis');
 const { allow, recordFailure: circuitFailure, recordSuccess: circuitSuccess } = require('../services/circuitBreaker.service');
 const {

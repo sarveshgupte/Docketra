@@ -1,5 +1,5 @@
 const TenantStorageConfig = require('../models/TenantStorageConfig.model');
-const { getProviderForTenant } = require('../storage/StorageProviderFactory');
+const { getProviderForTenant } = require('../services/storage/StorageProviderFactory');
 const { mapProviderErrorToStatus } = require('../controllers/storage.controller');
 
 async function runStorageHealthCheck() {

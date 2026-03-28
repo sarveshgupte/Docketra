@@ -3904,8 +3904,8 @@ const completeMfaLogin = async (req, res) => {
 };
 
 /**
- * Initiate Google OAuth (invite-only, DB-backed users only)
- * GET /api/auth/google
+ * Initiate Google OAuth (identity-only login flow)
+ * GET /api/auth/google/login
  */
 const initiateGoogleAuth = async (req, res) => {
   try {
@@ -3916,10 +3916,9 @@ const initiateGoogleAuth = async (req, res) => {
         message: 'Google authentication is temporarily disabled',
       });
     }
-    const oauthClient = getGoogleOAuthClient();
-    const { firmSlug, flow } = req.query;
-    const normalizedFirmSlug = normalizeFirmSlug(firmSlug);
 
+    const oauthClient = getGoogleOAuthClient();
+    const normalizedFirmSlug = normalizeFirmSlug(req.query?.firmSlug);
     if (!normalizedFirmSlug) {
       return res.status(404).json({
         success: false,
@@ -3929,7 +3928,7 @@ const initiateGoogleAuth = async (req, res) => {
       });
     }
 
-    const firm = await Firm.findOne({ firmSlug: normalizedFirmSlug });
+    const firm = await Firm.findOne({ firmSlug: normalizedFirmSlug }).select('_id status firmSlug');
     if (!firm) {
       return res.status(404).json({
         success: false,
@@ -3949,14 +3948,33 @@ const initiateGoogleAuth = async (req, res) => {
     }
 
     const state = createOAuthState({
+      flow: 'login',
       firmSlug: normalizedFirmSlug,
-      flow: flow || 'login',
+      nonce: crypto.randomBytes(16).toString('hex'),
     });
 
+    const codeVerifier = crypto.randomBytes(64).toString('base64url');
+    const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64url');
+
+    const secureCookies = process.env.NODE_ENV === 'production';
+    const cookieOptions = {
+      httpOnly: true,
+      secure: secureCookies,
+      sameSite: 'lax',
+      maxAge: GOOGLE_STATE_TTL_SECONDS * 1000,
+      path: '/',
+    };
+
+    res.cookie('google_oauth_state', state, cookieOptions);
+    res.cookie('google_oauth_verifier', codeVerifier, cookieOptions);
+
     const authUrl = oauthClient.generateAuthUrl({
-      prompt: 'select_account',
+      access_type: 'offline',
+      prompt: 'consent',
       scope: GOOGLE_SCOPES,
       state,
+      code_challenge: codeChallenge,
+      code_challenge_method: 'S256',
     });
 
     return res.redirect(authUrl);
@@ -3971,7 +3989,7 @@ const initiateGoogleAuth = async (req, res) => {
 };
 
 /**
- * Google OAuth callback (Authorization Code flow)
+ * Google OAuth callback (identity-only login flow)
  * GET /api/auth/google/callback
  */
 const handleGoogleCallback = async (req, res) => {
@@ -3983,8 +4001,8 @@ const handleGoogleCallback = async (req, res) => {
         message: 'Google authentication is temporarily disabled',
       });
     }
-    const { code, state } = req.query;
 
+    const { code, state } = req.query;
     if (!code || !state) {
       return res.status(400).json({
         success: false,
@@ -3993,26 +4011,29 @@ const handleGoogleCallback = async (req, res) => {
       });
     }
 
-    let statePayload = req.oauthState || null;
-    let flow = 'login';
-    let firmSlugFromState = null;
-    if (!statePayload) {
-      try {
-        statePayload = verifyOAuthState(state);
-      } catch (stateError) {
-        return res.status(400).json({
-          success: false,
-          code: 'FIRM_RESOLUTION_FAILED',
-          message: 'Invalid or expired OAuth state',
-        });
-      }
+    const cookieState = getCookieValue(req.headers.cookie, 'google_oauth_state');
+    const codeVerifier = getCookieValue(req.headers.cookie, 'google_oauth_verifier');
+    if (!cookieState || !codeVerifier || cookieState !== state) {
+      return res.status(400).json({
+        success: false,
+        code: 'FIRM_RESOLUTION_FAILED',
+        message: 'Invalid or expired OAuth state',
+      });
     }
-    flow = statePayload?.flow || 'login';
-    firmSlugFromState = normalizeFirmSlug(statePayload?.firmSlug);
 
-    // Canonical firm context for auth flows: req.context.firmId
-    const firmIdFromContext = req.context?.firmId || null;
-    if (!firmSlugFromState || !firmIdFromContext) {
+    let statePayload;
+    try {
+      statePayload = verifyOAuthState(state);
+    } catch {
+      return res.status(400).json({
+        success: false,
+        code: 'FIRM_RESOLUTION_FAILED',
+        message: 'Invalid or expired OAuth state',
+      });
+    }
+
+    const firmSlugFromState = normalizeFirmSlug(statePayload?.firmSlug);
+    if (!firmSlugFromState) {
       return res.status(404).json({
         success: false,
         code: 'FIRM_NOT_FOUND',
@@ -4021,8 +4042,22 @@ const handleGoogleCallback = async (req, res) => {
       });
     }
 
+    const firm = await Firm.findOne({ firmSlug: firmSlugFromState }).select('_id status');
+    if (!firm || !isActiveStatus(firm.status)) {
+      return res.status(404).json({
+        success: false,
+        code: 'FIRM_NOT_FOUND',
+        message: 'Firm not found. Please check your login URL.',
+        action: 'contact_admin',
+      });
+    }
+
+    const firmIdFromContext = firm._id.toString();
     const oauthClient = getGoogleOAuthClient();
-    const { tokens } = await oauthClient.getToken(code);
+    const { tokens } = await oauthClient.getToken({
+      code,
+      codeVerifier,
+    });
 
     if (!tokens?.id_token) {
       return res.status(400).json({
@@ -4040,7 +4075,7 @@ const handleGoogleCallback = async (req, res) => {
     const payload = ticket.getPayload() || {};
     const email = payload.email ? payload.email.trim().toLowerCase() : null;
     const googleId = payload.sub;
-    const emailVerified = payload.email_verified !== false; // treat undefined as true
+    const emailVerified = payload.email_verified !== false;
 
     if (!email || !googleId || !emailVerified) {
       return res.status(403).json({
@@ -4055,19 +4090,17 @@ const handleGoogleCallback = async (req, res) => {
       email,
       firmId: firmIdFromContext,
       canLinkGoogle: (candidate) => {
-        const isActivation = flow === 'activation';
-        if (candidate.firmId && candidate.firmId.toString() !== firmIdFromContext.toString()) return false;
+        if (candidate.firmId && candidate.firmId.toString() !== firmIdFromContext) return false;
         if (![ROLE_ADMIN, ROLE_EMPLOYEE].includes(candidate.role)) return false;
         if (candidate.status === 'suspended' || candidate.status === 'disabled') return false;
-        if (!isActivation && !isActiveStatus(candidate.status)) return false;
-        return true;
+        return isActiveStatus(candidate.status);
       },
       linkGoogleIfFound: true,
     });
+
     let user = identityResult.user;
     const linkedDuringRequest = identityResult.linkedDuringRequest;
 
-    // Reject external / non-invited users
     if (!user) {
       return res.status(403).json({
         success: false,
@@ -4076,32 +4109,18 @@ const handleGoogleCallback = async (req, res) => {
       });
     }
 
-    if (user?.firmId && user.firmId.toString() !== firmIdFromContext.toString()) {
-      return res.status(403).json({
-        success: false,
-        code: 'FIRM_MISMATCH',
-        message: 'Firm mismatch detected for Google activation.',
-      });
-    }
-
-    // Activation flow: elevate invited users to ACTIVE once linked
-    if (flow === 'activation' && !isActiveStatus(user.status)) {
-      user.status = 'active';
-    }
     if (linkedDuringRequest) {
-      const update = {
-        mustChangePassword: false,
-        forcePasswordReset: false,
-        emailVerified: true,
-        emailVerifiedAt: new Date(),
-        verificationMethod: 'GOOGLE',
-      };
-      if (flow === 'activation') {
-        update.status = 'active';
-      }
       const refreshed = await User.findOneAndUpdate(
         { _id: user._id, firmId: user.firmId },
-        { $set: update },
+        {
+          $set: {
+            mustChangePassword: false,
+            forcePasswordReset: false,
+            emailVerified: true,
+            emailVerifiedAt: new Date(),
+            verificationMethod: 'GOOGLE',
+          },
+        },
         { new: true }
       );
       if (!refreshed) {
@@ -4110,7 +4129,6 @@ const handleGoogleCallback = async (req, res) => {
       user = refreshed;
     }
 
-    // Guardrails: SuperAdmin cannot use Google auth
     if (user.role === ROLE_SUPER_ADMIN || user.xID === process.env.SUPERADMIN_XID) {
       return res.status(403).json({
         success: false,
@@ -4119,7 +4137,6 @@ const handleGoogleCallback = async (req, res) => {
       });
     }
 
-    // Account state checks
     if (!isActiveStatus(user.status)) {
       return res.status(403).json({
         success: false,
@@ -4128,83 +4145,30 @@ const handleGoogleCallback = async (req, res) => {
       });
     }
 
-
-    if (user.isLocked) {
-      return res.status(403).json({
-        success: false,
-        code: 'FIRM_RESOLUTION_FAILED',
-        message: 'Account is locked. Please try again later or contact an administrator.',
-        lockedUntil: user.lockUntil,
-      });
-    }
-
-    // OBJECTIVE 1: Enforce mustSetPassword on Google Login
-    // Block Google login if user must set password first
-    // CRITICAL FIX: Must redirect to neutral OAuth post-auth route, NOT directly to /set-password
-    // (direct redirect causes redirect_uri_mismatch error with Google OAuth)
     if (user.mustSetPassword) {
-      console.warn(`[AUTH] Google login blocked for ${user.xID} - mustSetPassword=true`);
-      
-      // Fetch firmSlug for redirect context
-      const firmSlug = await getFirmSlug(user.firmId);
-      
-      // Redirect to neutral post-auth route (do NOT issue tokens)
-      // Frontend will handle final navigation to /set-password
       const frontendBase = process.env.FRONTEND_URL || 'http://localhost:3000';
       const redirectUrl = new URL('/oauth/post-auth', frontendBase);
       redirectUrl.searchParams.set('error', 'PASSWORD_SETUP_REQUIRED');
-      if (firmSlug) {
-        redirectUrl.searchParams.set('firmSlug', firmSlug);
-      }
-      
+      redirectUrl.searchParams.set('firmSlug', firmSlugFromState);
       return res.redirect(redirectUrl.toString());
     }
 
-    // Admin firm bootstrapping + default client guardrails
-    if (user.role === 'Admin') {
-      if (!user.firmId) {
-        console.error(`[AUTH] Google OAuth - Admin user ${user.xID} missing firmId`);
-        return res.status(500).json({
-          success: false,
-          message: 'Account configuration error. Please contact administrator.',
-        });
-      }
-
-      console.log(`[AUTH] Google OAuth - Admin ${user.xID} validation - firmId: ${user.firmId}, defaultClientId: ${user.defaultClientId}`);
-
-      try {
-        await ensureUserDefaultClientLink(user, req);
-      } catch (firmError) {
-        console.error('[AUTH] Error validating admin firm for Google login:', firmError.message);
-        return res.status(500).json({
-          success: false,
-          message: 'Account configuration error. Please contact administrator.',
-        });
-      }
-    }
-
-    // Build tokens + audit
-    console.log(`[AUTH] Google OAuth - Generating tokens for user ${user.xID}, firmId: ${user.firmId}`);
-    
     const { accessToken, refreshToken, firmSlug: resolvedSlug } = await buildTokenResponse(
       user,
       req,
       linkedDuringRequest ? 'GoogleOAuthLink' : 'GoogleOAuth'
     );
-    
-    console.log(`[AUTH] Google OAuth - Tokens generated successfully for user ${user.xID}, firmSlug: ${resolvedSlug}`);
 
     const frontendBase = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const redirectUrl = new URL('/google-callback', frontendBase);
-
-    const finalFirmSlug = firmSlugFromState || resolvedSlug || null;
-    if (finalFirmSlug) {
-      redirectUrl.searchParams.set('firmSlug', finalFirmSlug);
-    }
+    const finalFirmSlug = firmSlugFromState || resolvedSlug || '';
+    const redirectUrl = new URL(`/app/firm/${finalFirmSlug}/dashboard`, frontendBase);
 
     const secureCookies = process.env.NODE_ENV === 'production';
     const fifteenMinutesMs = 15 * 60 * 1000;
     const refreshMs = (jwtService.REFRESH_TOKEN_EXPIRY_DAYS || 7) * 24 * 60 * 60 * 1000;
+
+    res.clearCookie('google_oauth_state', { path: '/' });
+    res.clearCookie('google_oauth_verifier', { path: '/' });
 
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
