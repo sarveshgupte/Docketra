@@ -24,12 +24,12 @@ export const HomePage = () => {
       <Navbar />
       {/* HERO */}
       <section className="w-full bg-white py-20 md:py-28">
-        <Container className="grid grid-cols-1 md:grid-cols-[1.3fr_0.7fr] gap-12 items-center">
+        <Container className="grid grid-cols-1 md:grid-cols-[1.2fr_0.8fr] gap-12 items-center">
           
           {/* LEFT */}
           <div className="w-full">
             <h1 className="text-4xl md:text-6xl font-semibold tracking-tight leading-[1.05] text-balance">
-              Workflows that actually move work forward.
+              Manage work clearly. Move tasks forward without chaos.
             </h1>
 
             <p className="mt-6 text-lg text-gray-600 leading-relaxed">
@@ -43,29 +43,25 @@ export const HomePage = () => {
               >
                 Start your workspace
               </Link>
+              <p className="mt-4 text-sm text-gray-500">
+                No setup complexity. Start in minutes.
+              </p>
             </div>
           </div>
 
           {/* RIGHT */}
           <div className="w-full">
-            <div className="rounded-2xl border bg-white shadow-md p-6 min-h-[320px] flex flex-col">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Workflow dashboard
-              </p>
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-8">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Built for teams that need clarity
+              </h3>
 
-              <div className="mt-6 text-sm text-gray-500">
-                Your workflows will appear here
-              </div>
-
-              <div className="mt-6 space-y-4 flex-1">
-                <div className="h-3 w-2/3 rounded-full bg-gray-100" />
-                <div className="h-3 w-1/2 rounded-full bg-gray-100" />
-                <div className="grid grid-cols-3 gap-3 pt-2">
-                  <div className="h-16 rounded-lg bg-gray-100" />
-                  <div className="h-16 rounded-lg bg-gray-100" />
-                  <div className="h-16 rounded-lg bg-gray-100" />
-                </div>
-              </div>
+              <ul className="mt-6 space-y-4 text-sm text-gray-600">
+                <li>• Assign clear ownership to every task</li>
+                <li>• Track progress across workflows</li>
+                <li>• Keep approvals and decisions in one place</li>
+                <li>• Maintain a complete audit trail</li>
+              </ul>
             </div>
           </div>
 
