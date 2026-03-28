@@ -1,7 +1,12 @@
 const { google } = require('googleapis');
-const StorageConfiguration = require('../models/StorageConfiguration.model');
+const Firm = require('../models/Firm.model');
 const { decrypt } = require('../services/storage/services/TokenEncryption.service');
 const GoogleDriveProvider = require('./storage/providers/GoogleDriveProvider');
+const {
+  StorageAccessError,
+  StorageConfigMissingError,
+  UnsupportedProviderError,
+} = require('./storage/errors');
 
 class DocketraGoogleAdapter {
   constructor() {
@@ -21,7 +26,7 @@ class S3Adapter {
 
   async testConnection() {
     if (!this.credentials?.bucket || !this.credentials?.region) {
-      throw new Error('S3 credentials are incomplete');
+      throw new StorageAccessError('S3 credentials are incomplete', 'unknown');
     }
     return true;
   }
@@ -34,11 +39,11 @@ const buildGoogleDriveAdapter = (config) => {
       const parsed = JSON.parse(decrypt(config.credentials.encryptedPayload));
       refreshToken = parsed?.googleRefreshToken || null;
     } catch (error) {
-      throw new Error('Unable to decrypt Google Drive credentials');
+      throw new StorageAccessError('Unable to decrypt Google Drive credentials', 'unknown', error);
     }
   }
   if (!refreshToken) {
-    throw new Error('Missing Google Drive refresh token');
+    throw new StorageAccessError('Missing Google Drive refresh token', 'unknown');
   }
 
   const oauthClient = new google.auth.OAuth2(
@@ -53,21 +58,30 @@ const buildGoogleDriveAdapter = (config) => {
 const getStorageAdapter = async (firm) => {
   const firmId = typeof firm === 'string' ? firm : firm?._id?.toString?.() || firm?.id || firm?.firmId;
   if (!firmId) {
-    throw new Error('Firm context is required');
+    throw new StorageConfigMissingError('unknown');
   }
 
-  const config = await StorageConfiguration.findOne({ firmId: String(firmId), isActive: true }).lean();
-  if (!config || config.provider === 'docketra_managed') {
+  const firmDoc = await Firm.findById(firmId).select('storageConfig').lean();
+  if (!firmDoc?.storageConfig?.provider || firmDoc.storageConfig.provider === 'docketra_managed') {
     return new DocketraGoogleAdapter();
   }
-  if (config.provider === 'google-drive') {
-    return buildGoogleDriveAdapter(config);
+  const provider = String(firmDoc.storageConfig.provider).toLowerCase();
+  const credentials = firmDoc.storageConfig.credentials
+    ? JSON.parse(decrypt(firmDoc.storageConfig.credentials))
+    : {};
+  if (provider === 'google_drive' || provider === 'google-drive') {
+    return buildGoogleDriveAdapter({
+      credentials: {
+        googleRefreshToken: credentials.refreshToken || credentials.googleRefreshToken,
+      },
+      driveId: credentials.driveId || null,
+    });
   }
-  if (config.provider === 's3') {
-    return new S3Adapter(config.credentials || {});
+  if (provider === 's3') {
+    return new S3Adapter(credentials || {});
   }
 
-  throw new Error(`Unsupported storage provider: ${config.provider}`);
+  throw new UnsupportedProviderError(provider, firmId);
 };
 
 module.exports = {

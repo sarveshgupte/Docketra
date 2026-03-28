@@ -36,7 +36,7 @@ export function GoogleSignIn({ firmSlug, onError }) {
         aria-busy={loading}
         className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {loading ? 'Connecting to Google...' : 'Continue with Google'}
+        {loading ? 'Redirecting to Google Sign-In…' : 'Continue with Google'}
       </button>
       {localError ? <p className="text-xs text-red-600">{localError}</p> : null}
     </div>

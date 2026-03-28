@@ -48,6 +48,7 @@ const MarketingAboutPage = lazyPage(() => import('./pages/marketing/About'), 'Ab
 const MarketingContactPage = lazyPage(() => import('./pages/marketing/Contact'), 'ContactPage');
 const MarketingSignupPage = lazy(() => import('./pages/marketing/Signup'));
 const NotFoundPage = lazyPage(() => import('./pages/NotFoundPage'), 'NotFoundPage');
+const OAuthPostAuthPage = lazyPage(() => import('./pages/OAuthPostAuthPage'), 'OAuthPostAuthPage');
 
 const RouteSuspenseOutlet = () => (
   // Keep suspense at the route-group level so layout shells render immediately.
@@ -145,6 +146,7 @@ export const Router = () => {
           <Route path="/complete-profile" element={<CompleteProfilePage />} />
           <Route path="/auth/setup-account" element={<SetPasswordPage />} />
           <Route path="/setup-password" element={<SetPasswordPage />} />
+          <Route path="/oauth/post-auth" element={<OAuthPostAuthPage />} />
           <Route
             path="/app/superadmin"
             element={(

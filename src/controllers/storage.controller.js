@@ -2,7 +2,6 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { google } = require('googleapis');
 const Firm = require('../models/Firm.model');
-const StorageConfiguration = require('../models/StorageConfiguration.model');
 const { getCookieValue } = require('../utils/requestCookies');
 const { isAdminRole } = require('../utils/role.utils');
 const { encrypt, decrypt } = require('../services/storage/services/TokenEncryption.service');
@@ -20,6 +19,21 @@ const STATE_TTL_SECONDS = 10 * 60;
 const MANAGED_STORAGE_MODE = 'docketra_managed';
 const SUPPORTED_STORAGE_PROVIDERS = new Set(['docketra_managed', 'google-drive', 's3']);
 const usedStorageOtpJti = new Map();
+
+function decodeFirmStorageConfig(firm, firmId) {
+  const encrypted = firm?.storageConfig?.credentials;
+  if (!encrypted) return {};
+  try {
+    return JSON.parse(decrypt(encrypted));
+  } catch (error) {
+    console.error('[STORAGE]', {
+      event: 'storage_credentials_decrypt_failed',
+      firmId,
+      message: error.message,
+    });
+    return {};
+  }
+}
 
 function ensureFirmAdmin(req, res) {
   if (!isAdminRole(req.user?.role)) {
@@ -136,12 +150,12 @@ function mapProviderErrorToStatus(error) {
 
 const getStorageStatus = async (req, res) => {
   try {
-    const record = await StorageConfiguration.findOne({ firmId: req.firmId, isActive: true }).select('provider -_id').lean();
-    if (!record) return res.json({ connected: false, provider: null, status: null });
+    const firm = await Firm.findById(req.firmId).select('storageConfig').lean();
+    if (!firm?.storageConfig?.provider) return res.json({ connected: false, provider: null, status: null });
 
     return res.json({
       connected: true,
-      provider: record.provider,
+      provider: firm.storageConfig.provider,
       status: 'ACTIVE',
     });
   } catch {
@@ -151,15 +165,13 @@ const getStorageStatus = async (req, res) => {
 
 const getStorageHealth = async (req, res) => {
   try {
-    const [activeConfig, firm] = await Promise.all([
-      StorageConfiguration.findOne({ firmId: req.firmId, isActive: true }).select('_id').lean(),
-      Firm.findById(req.firmId).select('storage -_id').lean(),
-    ]);
+    const firm = await Firm.findById(req.firmId).select('storage storageConfig -_id').lean();
 
     const storageMode = firm?.storage?.mode || MANAGED_STORAGE_MODE;
     const usingManagedStorage = storageMode === MANAGED_STORAGE_MODE;
-    const defaultStatus = usingManagedStorage || activeConfig ? 'HEALTHY' : 'DISCONNECTED';
-    const defaultLastError = usingManagedStorage || activeConfig ? null : 'Active storage configuration not found';
+    const hasFirmStorageConfig = Boolean(firm?.storageConfig?.provider);
+    const defaultStatus = usingManagedStorage || hasFirmStorageConfig ? 'HEALTHY' : 'DISCONNECTED';
+    const defaultLastError = usingManagedStorage || hasFirmStorageConfig ? null : 'Active storage configuration not found';
 
     return res.json({
       status: defaultStatus,
@@ -199,7 +211,7 @@ const googleCallback = async (req, res) => {
     const { code, state } = req.query;
     if (!code || !state) return res.status(400).json({ error: 'missing_params' });
 
-    const cookieValue = getCookieValue(req.headers.cookie, STATE_COOKIE_NAME);
+    const cookieValue = req.cookies?.[STATE_COOKIE_NAME] || getCookieValue(req.headers.cookie, STATE_COOKIE_NAME);
     const stateData = verifyStateToken(cookieValue, state);
     if (!stateData || stateData.tenantId !== req.firmId || stateData.provider !== 'google_drive') {
       return res.status(400).json({ error: 'invalid_state' });
@@ -215,20 +227,11 @@ const googleCallback = async (req, res) => {
     const about = await drive.about.get({ fields: 'user(emailAddress)' });
     const drives = await drive.drives.list({ pageSize: 100, fields: 'drives(id,name)' });
 
-    await StorageConfiguration.updateMany({ firmId: req.firmId, isActive: true }, { isActive: false });
-    const config = await StorageConfiguration.findOne({ firmId: req.firmId, provider: 'google-drive' });
-    const doc = config || new StorageConfiguration({ firmId: req.firmId, provider: 'google-drive' });
-    doc.isActive = true;
-    doc.credentials = {
-      googleRefreshToken: encrypt(tokens.refresh_token),
-      connectedEmail: about?.data?.user?.emailAddress || null,
-    };
-    await doc.save();
-
     const storageCredentials = {
       refreshToken: tokens.refresh_token,
       connectedEmail: about?.data?.user?.emailAddress || null,
-      driveId: doc.driveId || null,
+      driveId: null,
+      rootFolderId: null,
     };
     await Firm.findByIdAndUpdate(req.firmId, {
       $set: {
@@ -264,14 +267,14 @@ const googleConfirmDrive = async (req, res) => {
   if (!driveId) return res.status(400).json({ error: 'driveId is required' });
 
   try {
-    const config = await StorageConfiguration.findOne({ firmId, isActive: true, provider: 'google-drive' });
-    if (!config?.credentials?.googleRefreshToken) {
+    const firm = await Firm.findById(firmId).select('name storageConfig').lean();
+    const existingStorageConfig = decodeFirmStorageConfig(firm, firmId);
+    if (!existingStorageConfig?.refreshToken) {
       return res.status(404).json({ error: 'No active Google storage session found' });
     }
 
-    const refreshToken = decrypt(config.credentials.googleRefreshToken);
-    const firm = await Firm.findById(firmId).select('name');
     const firmName = firm?.name || `Firm-${firmId}`;
+    const refreshToken = existingStorageConfig.refreshToken;
 
     const oauthClient = getStorageOAuthClient();
     oauthClient.setCredentials({ refresh_token: refreshToken });
@@ -280,17 +283,13 @@ const googleConfirmDrive = async (req, res) => {
     const docketraFolderId = await provider.getOrCreateFolder(null, 'Docketra');
     const firmFolderId = await provider.getOrCreateFolder(docketraFolderId, firmName);
 
-    config.driveId = driveId;
-    config.rootFolderId = firmFolderId;
-    await config.save();
-
     await Firm.findByIdAndUpdate(firmId, {
       $set: {
         storageConfig: {
           provider: 'google_drive',
           credentials: encrypt(JSON.stringify({
             refreshToken,
-            connectedEmail: config.credentials?.connectedEmail || null,
+            connectedEmail: existingStorageConfig.connectedEmail || null,
             driveId,
             rootFolderId: firmFolderId,
           })),
@@ -308,17 +307,19 @@ const googleConfirmDrive = async (req, res) => {
 const getStorageConfiguration = async (req, res) => {
   try {
     const firmId = req.firmId;
-    const config = await StorageConfiguration.findOne({ firmId, isActive: true }).select('provider rootFolderId credentials.connectedEmail updatedAt createdAt').lean();
+    const firm = await Firm.findById(firmId).select('storageConfig').lean();
+    const config = firm?.storageConfig;
 
     if (!config) {
       return res.json({ provider: 'docketra_managed', isConfigured: true, status: 'ACTIVE' });
     }
+    const credentials = decodeFirmStorageConfig(firm, firmId);
 
     let folderPath = null;
-    if (config.rootFolderId) {
+    if (credentials.rootFolderId) {
       try {
         const provider = await StorageProviderFactory.getProvider(firmId);
-        folderPath = await provider.getFolderPath(config.rootFolderId);
+        folderPath = await provider.getFolderPath(credentials.rootFolderId);
       } catch {
         folderPath = null;
       }
@@ -328,11 +329,11 @@ const getStorageConfiguration = async (req, res) => {
       provider: config.provider,
       isConfigured: true,
       status: 'ACTIVE',
-      connectedEmail: config.credentials?.connectedEmail || null,
-      rootFolderId: config.rootFolderId || null,
+      connectedEmail: credentials.connectedEmail || null,
+      rootFolderId: credentials.rootFolderId || null,
       folderPath,
-      createdAt: config.createdAt,
-      updatedAt: config.updatedAt,
+      createdAt: firm?.storageConfig?.createdAt || null,
+      updatedAt: firm?.storageConfig?.updatedAt || null,
     });
   } catch {
     return res.status(500).json({ error: 'configuration_fetch_failed' });
@@ -382,16 +383,9 @@ const changeFirmStorage = async (req, res) => {
       await adapter.testConnection();
     }
 
-    await StorageConfiguration.updateMany({ firmId, isActive: true }, { isActive: false });
     const encryptedCredentials = provider === 'docketra_managed'
       ? null
       : encrypt(JSON.stringify(rawCredentials || {}));
-    await StorageConfiguration.create({
-      firmId,
-      provider,
-      credentials: encryptedCredentials ? { encryptedPayload: encryptedCredentials } : null,
-      isActive: true,
-    });
 
     const canonicalProvider = provider === 'google-drive' ? 'google_drive' : provider;
     await Firm.findByIdAndUpdate(firmId, {
@@ -409,6 +403,12 @@ const changeFirmStorage = async (req, res) => {
 
     return res.json({ success: true, data: { provider, isActive: true, tested: Boolean(adapter) } });
   } catch (error) {
+    console.error('[STORAGE]', {
+      event: 'change_provider_failed',
+      firmId,
+      provider,
+      message: error.message,
+    });
     return res.status(400).json({ success: false, message: error.message || 'Unable to update storage provider' });
   }
 };
