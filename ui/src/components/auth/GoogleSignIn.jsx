@@ -1,38 +1,46 @@
-import React, { useEffect } from 'react';
-import { authService } from '../../services/authService';
+import React, { useState } from 'react';
 
-export function GoogleSignIn({ onSuccess, onError }) {
-  useEffect(() => {
-    if (!window.google?.accounts?.id) return undefined;
+export function GoogleSignIn({ firmSlug, onError }) {
+  const [loading, setLoading] = useState(false);
+  const [localError, setLocalError] = useState('');
 
-    const handleCredentialResponse = async (response) => {
-      try {
-        const idToken = response?.credential;
-        if (!idToken) throw new Error('Google credential missing');
-        const result = await authService.googleLogin(idToken);
-        onSuccess?.(result);
-      } catch (error) {
-        onError?.(error);
-      }
-    };
+  const handleGoogleLogin = () => {
+    if (loading) return;
+    if (!firmSlug) {
+      const message = 'Firm context is required for Google login.';
+      setLocalError(message);
+      onError?.(new Error(message));
+      return;
+    }
 
-    window.google.accounts.id.initialize({
-      client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-      callback: handleCredentialResponse,
-    });
+    setLoading(true);
+    setLocalError('');
 
-    window.google.accounts.id.renderButton(
-      document.getElementById('google-signin-btn'),
-      { theme: 'outline', size: 'large', width: 300 }
-    );
+    try {
+      const url = new URL('/api/auth/google/login', window.location.origin);
+      url.searchParams.set('firmSlug', firmSlug);
+      window.location.assign(url.toString());
+    } catch (error) {
+      setLoading(false);
+      setLocalError('Unable to start Google login. Please try again.');
+      onError?.(error);
+    }
+  };
 
-    return () => {
-      const container = document.getElementById('google-signin-btn');
-      if (container) container.innerHTML = '';
-    };
-  }, [onError, onSuccess]);
-
-  return <div id="google-signin-btn" className="flex justify-center" />;
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        onClick={handleGoogleLogin}
+        disabled={loading}
+        aria-busy={loading}
+        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {loading ? 'Connecting to Google...' : 'Continue with Google'}
+      </button>
+      {localError ? <p className="text-xs text-red-600">{localError}</p> : null}
+    </div>
+  );
 }
 
 export default GoogleSignIn;
