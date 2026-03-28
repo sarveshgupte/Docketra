@@ -940,15 +940,17 @@ const login = async (req, res) => {
     // Bootstrap enforcement is handled by route-level middleware (requireCompletedFirm)
     // which blocks access to dashboard and data routes until bootstrap is complete
     
+    // Reject tenant users without firm linkage to avoid orphan sessions.
+    if (!isSuperAdminRole(user.role) && !user.firmId) {
+      console.error(`[AUTH] User ${user.xID} missing firmId - login rejected`);
+      return res.status(403).json({
+        success: false,
+        message: 'Account is not linked to a firm. Please complete onboarding or contact administrator.',
+      });
+    }
+
     // Validate Admin user has required fields (firmId and defaultClientId)
     if (user.role === ROLE_ADMIN) {
-      if (!user.firmId) {
-        console.error(`[AUTH] Admin user ${user.xID} missing firmId - data integrity violation`);
-        return res.status(500).json({
-          success: false,
-          message: 'Account configuration error. Please contact administrator.',
-        });
-      }
       
       console.log(`[AUTH] Admin ${user.xID} validation - firmId: ${user.firmId}, defaultClientId: ${user.defaultClientId}`);
       
@@ -4307,36 +4309,9 @@ const googleTokenLogin = async (req, res) => {
       });
     }
 
-    const xid = await generatePrimaryXid();
-    user = await User.create({
-      xid,
-      xID: xid,
-      id: crypto.randomUUID(),
-      primary_email: email,
-      email,
-      is_verified: true,
-      emailVerified: true,
-      verificationMethod: 'GOOGLE',
-      name: String(payload.name || email.split('@')[0]),
-      role: 'Employee',
-      status: 'active',
-      mustSetPassword: false,
-      passwordSet: false,
-      termsAccepted: true,
-      isOnboarded: false,
-    });
-
-    await AuthIdentity.create({ user_id: user._id, provider: 'google', provider_id: providerId });
-
-    const tokens = await issueAuthTokens(req, user);
-    return res.status(201).json({
-      success: true,
-      message: 'Google login successful',
-      data: {
-        ...tokens,
-        xid,
-        isOnboarded: false,
-      },
+    return res.status(409).json({
+      success: false,
+      message: 'Google signup without firm is disabled. Ask your firm admin for an invite or use self-serve signup.',
     });
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message || 'Google login failed' });
@@ -4344,9 +4319,11 @@ const googleTokenLogin = async (req, res) => {
 };
 
 const signupWithEmail = async (req, res) => {
+  const session = await mongoose.startSession();
   try {
     const email = String(req.body?.email || '').trim().toLowerCase();
     const password = String(req.body?.password || '');
+    const firmName = String(req.body?.firmName || '').trim();
     const otp = req.body?.otp ? String(req.body.otp).trim() : '';
 
     if (!email || !password) return res.status(400).json({ success: false, message: 'email and password are required' });
@@ -4360,36 +4337,62 @@ const signupWithEmail = async (req, res) => {
 
     await verifyCentralOtp({ identifier: email, code: otp, purpose: 'signup' });
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
-    const xid = await generatePrimaryXid();
-    const user = await User.create({
-      xid,
-      xID: xid,
-      id: crypto.randomUUID(),
-      primary_email: email,
-      email,
-      is_verified: true,
-      emailVerified: true,
-      verificationMethod: 'OTP',
-      name: email.split('@')[0],
-      passwordHash,
-      passwordSet: true,
-      mustSetPassword: false,
-      role: 'Employee',
-      status: 'active',
-      termsAccepted: true,
+    const firmCount = await Firm.countDocuments();
+    if (firmCount > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'Self-serve firm creation is only available for the first firm. Ask your firm admin to invite you.',
+      });
+    }
+
+    if (!firmName) {
+      return res.status(400).json({ success: false, message: 'firmName is required to create your firm' });
+    }
+
+    let createdUser = null;
+    let createdFirm = null;
+
+    await session.withTransaction(async () => {
+      const created = await signupService.createFirmAndAdmin({
+        name: email.split('@')[0],
+        email,
+        firmName,
+        passwordHash,
+        phone: null,
+        authProvider: 'password',
+        session,
+        req,
+      });
+
+      createdFirm = created;
+      createdUser = await User.findById(created.userId).session(session);
+      if (!createdUser) {
+        throw new Error('SIGNUP_USER_NOT_FOUND');
+      }
+
+      await AuthIdentity.create([{
+        user_id: createdUser._id,
+        provider: 'email',
+        provider_id: email,
+        password_hash: passwordHash,
+      }], { session });
     });
 
-    await AuthIdentity.create({
-      user_id: user._id,
-      provider: 'email',
-      provider_id: email,
-      password_hash: passwordHash,
+    const tokens = await issueAuthTokens(req, createdUser);
+    return res.status(201).json({
+      success: true,
+      data: {
+        ...tokens,
+        xid: createdUser.xID || createdUser.xid,
+        firmId: createdUser.firmId ? String(createdUser.firmId) : null,
+        role: createdUser.role,
+        firmSlug: createdFirm?.firmSlug || null,
+      },
     });
-
-    const tokens = await issueAuthTokens(req, user);
-    return res.status(201).json({ success: true, data: { ...tokens, xid } });
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message || 'Signup failed' });
+  } finally {
+    await session.endSession();
   }
 };
 
@@ -4428,6 +4431,13 @@ const universalLogin = async (req, res) => {
     }
 
     await verifyCentralOtp({ identifier, code: otp, purpose: 'login' });
+
+    if (!isSuperAdminRole(user.role) && !user.firmId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Account is not linked to a firm. Please complete onboarding or contact your administrator.',
+      });
+    }
 
     const tokens = await issueAuthTokens(req, user);
     return res.json({ success: true, data: { ...tokens, xid: user.xid } });

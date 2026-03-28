@@ -84,6 +84,12 @@ const firmSchema = new mongoose.Schema({
     enum: ['pending_setup', 'active', 'suspended'],
     default: 'pending_setup',
   },
+  source: {
+    type: String,
+    enum: ['SUPERADMIN', 'SELF_SERVE'],
+    default: 'SUPERADMIN',
+    index: true,
+  },
 
   planId: {
     type: mongoose.Schema.Types.ObjectId,
