@@ -8,9 +8,9 @@ const AUTH_TAG_LENGTH = 16;
 const ENCRYPTED_PREFIX = 'enc::';
 
 function resolveKeyMaterial() {
-  const rawKey = process.env.SECURITY_ENCRYPTION_KEY || process.env.MASTER_ENCRYPTION_KEY;
+  const rawKey = process.env.MASTER_ENCRYPTION_KEY;
   if (!rawKey) {
-    throw new Error('SECURITY_ENCRYPTION_KEY must be configured before encrypting protected values');
+    throw new Error('MASTER_ENCRYPTION_KEY must be configured before encrypting protected values');
   }
 
   return createHash('sha256').update(String(rawKey)).digest();

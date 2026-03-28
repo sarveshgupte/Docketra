@@ -39,7 +39,7 @@ async function backfillFirm(firm) {
       status: 'ACTIVE',
       isActive: true,
       createdByXid: 'SUPERADMIN',
-      createdBy: process.env.SUPERADMIN_EMAIL || 'superadmin@system.local',
+      createdBy: process.env.SUPERADMIN_EMAIL, // required by env validation in application runtime
     });
 
     await internalClient.save({ session });

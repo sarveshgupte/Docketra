@@ -18,6 +18,8 @@ const MASK_SEGMENT_LENGTH = 4;
 const MIN_JWT_LENGTH = 20;
 const MIN_TOKEN_MASK_LENGTH = 6;
 const REDACTED = '***REDACTED***';
+
+const SENSITIVE_KEY_PATTERN = /(secret|token|password|key|credential|auth)/i;
 const STRICT_REDACTION_KEYS = new Set([
   'authorization',
   'cookie',
@@ -128,7 +130,7 @@ const maskValue = (key, value, seen = new WeakSet()) => {
   if (['phone', 'phonenumber', 'mobile'].includes(lowerKey)) return maskPhone(value);
   if (['pan', 'pan_number', 'pannumber'].includes(lowerKey)) return maskPAN(value);
   if (['aadhaar', 'aadhar', 'aadhaarnumber'].includes(lowerKey)) return maskAadhaar(value);
-  if (STRICT_REDACTION_KEYS.has(lowerKey)) {
+  if (STRICT_REDACTION_KEYS.has(lowerKey) || SENSITIVE_KEY_PATTERN.test(lowerKey)) {
     return lowerKey === 'authorization' ? maskAuthorizationHeader(value) : REDACTED;
   }
   if (looksLikeBearerToken(value)) return 'Bearer *****';

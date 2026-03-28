@@ -3,10 +3,13 @@ const Client = require('../models/Client.model');
 const jwtService = require('../services/jwt.service');
 const { getOrCreateDefaultClient } = require('../services/defaultClient.guard');
 const { isSuperAdminRole } = require('../utils/role.utils');
+const { loadEnv } = require('../config/env');
 const metricsService = require('../services/metrics.service');
 const { getCookieValue } = require('../utils/requestCookies');
 const { isActiveStatus, getFirmInactiveCode } = require('../utils/status.utils');
 const { buildRequestContext } = require('./attachRequestContext');
+
+const env = loadEnv();
 
 const MUST_SET_ALLOWED_PATHS = [
   '/auth/profile',
@@ -118,13 +121,13 @@ const authenticate = async (req, res, next) => {
     // ============================================================
     // SuperAdmin tokens have role: 'SuperAdmin' or 'SUPERADMIN' and userId: SUPERADMIN_OBJECT_ID
     // They never have firmId or defaultClientId
-    const superadminObjectId = process.env.SUPERADMIN_OBJECT_ID?.trim();
+    const superadminObjectId = env.SUPERADMIN_OBJECT_ID;
     if (decoded.userId === superadminObjectId && isSuperAdminRole(decoded.role)) {
       console.log('[AUTH][superadmin] SuperAdmin token authenticated');
       
       const normalizedRole = 'SuperAdmin';
-      const superadminXID = process.env.SUPERADMIN_XID || 'SUPERADMIN';
-      const superadminEmail = process.env.SUPERADMIN_EMAIL || 'superadmin@docketra.local';
+      const superadminXID = env.SUPERADMIN_XID_NORMALIZED;
+      const superadminEmail = env.SUPERADMIN_EMAIL_NORMALIZED;
       
       // Attach SuperAdmin pseudo-user to request
       req.user = {

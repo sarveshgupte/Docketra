@@ -8,11 +8,13 @@ const { generateNextClientId } = require('./clientIdGenerator');
 const { generateNextXID } = require('./xIDGenerator');
 const { slugify } = require('../utils/slugify');
 const { isFirmCreationDisabled } = require('./featureFlags.service');
+const { loadEnv } = require('../config/env');
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SYSTEM_EMAIL_DOMAIN = 'system.local';
 const DEFAULT_BUSINESS_ADDRESS = 'Default Address';
 const DEFAULT_CONTACT_NUMBER = '0000000000';
 const PASSWORD_SETUP_TOKEN_EXPIRY = '24h';
+const env = loadEnv();
 
 class FirmBootstrapError extends Error {
   constructor(message, statusCode = 500, meta = {}) {
@@ -156,7 +158,7 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
       isActive: true,
       status: 'ACTIVE',
       createdByXid: 'SUPERADMIN',
-      createdBy: process.env.SUPERADMIN_EMAIL || `superadmin@${SYSTEM_EMAIL_DOMAIN}`,
+      createdBy: env.SUPERADMIN_EMAIL_NORMALIZED,
     }], { session });
 
     if (!defaultClient || !defaultClient._id) {
@@ -210,7 +212,7 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
   const { defaultClient, adminUser, adminXID, setupToken, firmSlug } = createdEntities;
 
   try {
-    const superadminEmail = process.env.SUPERADMIN_EMAIL;
+    const superadminEmail = env.SUPERADMIN_EMAIL_NORMALIZED;
     if (superadminEmail) {
       await deps.emailService.sendFirmCreatedEmail(superadminEmail, {
         firmId: defaultClient.clientId,
