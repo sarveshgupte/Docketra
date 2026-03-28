@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../../components/common/Button';
 import { Card } from '../../components/common/Card';
 import { Input } from '../../components/common/Input';
+import GoogleSignIn from '../../components/auth/GoogleSignIn';
 import api from '../../services/api';
 import { STRONG_PASSWORD_MESSAGE, validateStrongPassword } from '../../utils/validators';
 
@@ -40,7 +41,6 @@ const resolveSafeLoginPath = ({ redirectPathFromApi, firmSlug, fallbackPath }) =
 
 export default function Signup() {
   const navigate = useNavigate();
-  const isGoogleLoginEnabled = String(import.meta.env.VITE_ENABLE_GOOGLE_LOGIN || '').toLowerCase() === 'true';
   const [step, setStep] = useState('form');
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
@@ -303,7 +303,16 @@ export default function Signup() {
         )}
 
         {step === 'form' && (
-          <form className="mt-6 space-y-4" onSubmit={submitManualSignup} noValidate>
+          <>
+            <GoogleSignIn className="mt-6 mb-2" />
+
+            <div className="mb-2 flex items-center gap-2">
+              <div className="h-px flex-1 bg-gray-200" />
+              <span className="text-xs uppercase tracking-wide text-gray-500">OR</span>
+              <div className="h-px flex-1 bg-gray-200" />
+            </div>
+
+            <form className="mt-4 space-y-4" onSubmit={submitManualSignup} noValidate>
             <p className="text-sm text-gray-500">Fields marked with * are required.</p>
             <Input
               id="signup-name"
@@ -380,12 +389,6 @@ export default function Signup() {
               {loading ? 'Submitting…' : 'Sign up with Email'}
             </Button>
 
-            {isGoogleLoginEnabled && (
-              <Button type="button" variant="secondary" fullWidth disabled={loading}>
-                Continue with Google
-              </Button>
-            )}
-
             <p className="text-center text-[12px] text-gray-500 sm:text-[13px]">
               By signing up, you agree to our{' '}
               <Link to="/terms" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-700">
@@ -397,7 +400,8 @@ export default function Signup() {
               </Link>
               .
             </p>
-          </form>
+            </form>
+          </>
         )}
 
         {step === 'otp' && (
