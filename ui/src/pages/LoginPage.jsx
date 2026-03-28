@@ -5,7 +5,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Card } from '../components/common/Card';
 import { validateXID, validatePassword } from '../utils/validators';
@@ -92,13 +91,11 @@ export const LoginPage = () => {
     <div className="auth-wrapper">
       <Card className="auth-card max-w-form">
         <div className="text-center">
-          <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">Docketra</h1>
-          <p className="mt-2 text-sm text-gray-500 text-center">Compliance Workflow Infrastructure</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">Sign in to Docketra</h1>
         </div>
 
         <p className="mt-6 text-sm text-gray-500 text-center">
-          Use the xID from your welcome email. If your account belongs to a firm workspace, sign in from that
-          workspace URL so password reset and activation links stay scoped correctly.
+          Sign in to your workspace using your xID and password.
         </p>
 
         <form onSubmit={handleLogin} noValidate className="mt-6 space-y-4">
@@ -151,9 +148,13 @@ export const LoginPage = () => {
             </div>
           )}
 
-          <Button type="submit" variant="primary" fullWidth loading={loading}>
-            Login
-          </Button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full mt-4 bg-black text-white py-2.5 rounded-lg font-medium hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loading ? 'Signing in...' : 'Sign in'}
+          </button>
 
           <div className="text-center">
             <Link
