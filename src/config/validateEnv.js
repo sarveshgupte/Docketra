@@ -1,93 +1,10 @@
-const config = require('./config');
-const { isGoogleAuthDisabled } = require('../services/featureFlags.service');
-
-const XID_DIGITS = 6;
-const SUPERADMIN_XID_REGEX = new RegExp(`^X\\d{${XID_DIGITS}}$`, 'i');
-const MIN_JWT_SECRET_LENGTH = 32;
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const BCRYPT_HASH_REGEX = /^\$2[abxy]?\$\d{2}\$.+/;
-const MONGODB_OBJECTID_REGEX = /^[a-f0-9]{24}$/i;
-
-const logError = (logFn, details) => {
-  (logFn || console.error)({ severity: 'ERROR', scope: 'env', ...details });
-};
+const { loadEnv } = require('./env');
 
 const validateEnv = ({ exitOnError = true, logger = console } = {}) => {
-  const errors = [];
-
-  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < MIN_JWT_SECRET_LENGTH) {
-    errors.push({ field: 'JWT_SECRET', reason: 'missing or too short' });
+  const env = loadEnv({ exitOnError, logger });
+  if (!env) {
+    return { valid: false, errors: ['Environment validation failed'] };
   }
-
-  if (!process.env.NODE_ENV) {
-    errors.push({ field: 'NODE_ENV', reason: 'missing' });
-  }
-
-  const superadminPasswordHash = process.env.SUPERADMIN_PASSWORD_HASH;
-
-  if (!superadminPasswordHash) {
-    errors.push({ field: 'SUPERADMIN_PASSWORD_HASH', reason: 'missing (hash-only superadmin authentication required)' });
-  } else if (!BCRYPT_HASH_REGEX.test(superadminPasswordHash)) {
-    errors.push({ field: 'SUPERADMIN_PASSWORD_HASH', reason: 'not bcrypt hash' });
-  }
-
-  const superadminXid = process.env.SUPERADMIN_XID;
-  if (!superadminXid || !SUPERADMIN_XID_REGEX.test(superadminXid.trim())) {
-    errors.push({ field: 'SUPERADMIN_XID', reason: 'missing or invalid format (expected X followed by 6 digits, e.g., X000001)' });
-  }
-
-  const superadminEmail = process.env.SUPERADMIN_EMAIL;
-  if (!superadminEmail || !EMAIL_REGEX.test(superadminEmail)) {
-    errors.push({ field: 'SUPERADMIN_EMAIL', reason: 'missing or invalid format' });
-  }
-
-  const superadminObjectId = process.env.SUPERADMIN_OBJECT_ID;
-  if (!superadminObjectId) {
-    errors.push({ field: 'SUPERADMIN_OBJECT_ID', reason: 'missing (required to normalize SuperAdmin identity)' });
-  } else if (!MONGODB_OBJECTID_REGEX.test(superadminObjectId.trim())) {
-    errors.push({ field: 'SUPERADMIN_OBJECT_ID', reason: 'invalid format (expected 24-character hex ObjectId)' });
-  }
-
-  if (!config.mongodbUri || !config.mongodbUri.startsWith('mongodb')) {
-    errors.push({ field: 'MONGO_URI', reason: 'missing or invalid mongodb connection string (MONGO_URI or MONGODB_URI)' });
-  }
-
-  if (!isGoogleAuthDisabled()) {
-    if (!process.env.GOOGLE_CLIENT_ID) {
-      errors.push({ field: 'GOOGLE_CLIENT_ID', reason: 'missing (required when Google auth enabled)' });
-    }
-    if (!process.env.GOOGLE_CLIENT_SECRET) {
-      errors.push({ field: 'GOOGLE_CLIENT_SECRET', reason: 'missing (required when Google auth enabled)' });
-    }
-  }
-
-  // MASTER_ENCRYPTION_KEY is required unless encryption is explicitly disabled.
-  // Use ENCRYPTION_PROVIDER=disabled to opt out of encryption (e.g. in legacy
-  // development environments that have not yet been migrated).
-  //
-  // NEVER silently disable encryption — misconfiguration must be visible at startup.
-  const encProvider = (process.env.ENCRYPTION_PROVIDER || 'local').toLowerCase();
-  if (encProvider !== 'disabled') {
-    const masterKey = process.env.MASTER_ENCRYPTION_KEY;
-    if (!masterKey) {
-      errors.push({
-        field: 'MASTER_ENCRYPTION_KEY',
-        reason:
-          'missing — generate one with: ' +
-          "node -e \"console.log(require('crypto').randomBytes(32).toString('base64'))\"" +
-          ' — set ENCRYPTION_PROVIDER=disabled to explicitly opt out of encryption',
-      });
-    }
-  }
-
-  if (errors.length > 0) {
-    logError(logger.error || logger.log, { message: 'Environment validation failed', errors });
-    if (exitOnError) {
-      process.exit(1);
-    }
-    return { valid: false, errors };
-  }
-
   return { valid: true };
 };
 

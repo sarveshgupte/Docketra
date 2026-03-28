@@ -178,7 +178,7 @@ async function decrypt(value, tenantId, role, { session, logContext } = {}) {
 async function generateEncryptedDek() {
   const providerName = (process.env.ENCRYPTION_PROVIDER || 'local').toLowerCase();
   if (providerName === 'local') {
-    const masterKey = process.env.MASTER_ENCRYPTION_KEY || process.env.MASTER_KEY;
+    const masterKey = process.env.MASTER_ENCRYPTION_KEY;
     if (!masterKey) {
       throw new Error('Master encryption key missing for local provider. Set MASTER_ENCRYPTION_KEY.');
     }
