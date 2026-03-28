@@ -110,6 +110,7 @@ const log = require('../utils/log');
 const logger = log;
 const { safeLogForensicAudit, getRequestIp, getRequestUserAgent } = require('../services/forensicAudit.service');
 const { safeAuditLog, safeQueueEmail, safeAnalyticsEvent } = require('../services/safeSideEffects.service');
+const { sendWelcomeEmail } = require('../services/email/sendWelcomeEmail');
 
 const resolveInviteRequestState = async ({ req, admin, normalizedEmail, session, existingXID = null }) => {
   const cachedState = req._inviteRequestState;
@@ -4287,31 +4288,58 @@ const googleTokenLogin = async (req, res) => {
     const ticket = await googleTokenClient.verifyIdToken({ idToken, audience: process.env.GOOGLE_CLIENT_ID });
     const payload = ticket.getPayload() || {};
     const email = String(payload.email || '').trim().toLowerCase();
+    const name = String(payload.name || '').trim();
     const providerId = String(payload.sub || '').trim();
     if (!email || !providerId) return res.status(400).json({ success: false, message: 'Invalid Google token' });
 
-    let user = await User.findOne({ $or: [{ primary_email: email }, { email }] });
+    let user = await User.findOne({ primary_email: email });
 
-    if (user) {
-      const linked = await AuthIdentity.findOne({ user_id: user._id, provider: 'google' });
-      if (!linked) {
-        await AuthIdentity.create({ user_id: user._id, provider: 'google', provider_id: providerId });
+    if (!user) {
+      const generatedXid = await xIDGenerator.generateNextXID();
+      try {
+        [user] = await User.create([{
+          xID: generatedXid,
+          name: name || email.split('@')[0],
+          email,
+          primary_email: email,
+          passwordHash: null,
+          passwordSet: false,
+          isOnboarded: false,
+          role: 'Employee',
+          authProviders: {
+            local: {
+              passwordHash: null,
+              passwordSet: false,
+            },
+            google: {
+              googleId: providerId,
+              linkedAt: new Date(),
+            },
+          },
+        }]);
+      } catch (createError) {
+        const duplicateEmail = createError?.code === 11000 && (createError?.keyPattern?.primary_email || createError?.keyPattern?.email);
+        if (!duplicateEmail) {
+          throw createError;
+        }
+        user = await User.findOne({ primary_email: email });
       }
-      const tokens = await issueAuthTokens(req, user);
-      return res.json({
-        success: true,
-        message: 'Google login successful',
-        data: {
-          ...tokens,
-          xid: user.xid,
-          isOnboarded: Boolean(user.isOnboarded),
-        },
-      });
     }
 
-    return res.status(409).json({
-      success: false,
-      message: 'Google signup without firm is disabled. Ask your firm admin for an invite or use self-serve signup.',
+    const linked = await AuthIdentity.findOne({ user_id: user._id, provider: 'google' });
+    if (!linked) {
+      await AuthIdentity.create({ user_id: user._id, provider: 'google', provider_id: providerId });
+    }
+
+    const tokens = await issueAuthTokens(req, user);
+    return res.json({
+      success: true,
+      message: 'Google login successful',
+      data: {
+        ...tokens,
+        xid: user.xid,
+        isOnboarded: Boolean(user.isOnboarded),
+      },
     });
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message || 'Google login failed' });
@@ -4320,6 +4348,7 @@ const googleTokenLogin = async (req, res) => {
 
 const signupWithEmail = async (req, res) => {
   const session = await mongoose.startSession();
+  let onboardingCompletedNow = false;
   try {
     const email = String(req.body?.email || '').trim().toLowerCase();
     const password = String(req.body?.password || '');
@@ -4369,6 +4398,7 @@ const signupWithEmail = async (req, res) => {
       if (!createdUser) {
         throw new Error('SIGNUP_USER_NOT_FOUND');
       }
+      onboardingCompletedNow = createdUser.isOnboarded === true;
 
       await AuthIdentity.create([{
         user_id: createdUser._id,
@@ -4377,6 +4407,22 @@ const signupWithEmail = async (req, res) => {
         password_hash: passwordHash,
       }], { session });
     });
+
+    if (onboardingCompletedNow) {
+      try {
+        await sendWelcomeEmail({
+          email: createdUser.primary_email || createdUser.email,
+          name: createdUser.name,
+          xid: createdUser.xid || createdUser.xID,
+          firmId: createdUser.firmId ? String(createdUser.firmId) : null,
+        });
+      } catch (emailError) {
+        console.error('[SIGNUP] Failed to send welcome email', {
+          userId: createdUser?._id?.toString?.(),
+          error: emailError.message,
+        });
+      }
+    }
 
     const tokens = await issueAuthTokens(req, createdUser);
     return res.status(201).json({
