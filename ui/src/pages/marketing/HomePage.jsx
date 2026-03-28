@@ -32,12 +32,12 @@ export const HomePage = () => {
   return (
     <div className="w-full bg-white text-gray-900">
       <section className="w-full bg-white py-20 md:py-28">
-        <Container className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+        <Container className="grid grid-cols-1 md:grid-cols-[1.3fr_0.7fr] gap-12 items-center">
           <div>
-            <h1 className="text-4xl md:text-6xl font-semibold tracking-tight leading-tight max-w-xl">
+            <h1 className="text-4xl md:text-6xl font-semibold tracking-tight leading-[1.05] max-w-2xl lg:max-w-3xl text-balance">
               Workflows that actually move work forward.
             </h1>
-            <p className="mt-6 text-lg text-gray-600 max-w-md">
+            <p className="mt-6 text-lg text-gray-600 max-w-lg">
               Track tasks, assign ownership, and ensure nothing falls through the cracks.
             </p>
 
@@ -64,7 +64,7 @@ export const HomePage = () => {
           </div>
 
           <div className="w-full">
-            <div className="rounded-2xl border bg-white shadow-sm p-6 min-h-[280px] flex flex-col">
+            <div className="rounded-2xl border bg-white shadow-sm p-6 min-h-[320px] flex flex-col">
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Workflow dashboard</p>
               <div className="mt-6 text-sm text-gray-500">
                 Your workflows will appear here
