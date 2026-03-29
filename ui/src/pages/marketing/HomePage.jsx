@@ -76,7 +76,7 @@ export const HomePage = () => {
               Manage work clearly. Move every task forward with confidence.
             </h1>
 
-            <p className="mt-6 md:mt-8 text-base sm:text-lg text-gray-600 leading-relaxed max-w-xl md:max-w-2xl w-full min-w-0">
+            <p className="mt-6 md:mt-8 text-base sm:text-lg text-gray-600 leading-relaxed max-w-xl w-full min-w-0">
               Docketra helps teams run structured workflows, assign accountable owners, and keep approvals moving without chaos.
             </p>
 
