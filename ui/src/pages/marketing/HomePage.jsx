@@ -74,7 +74,7 @@ export const HomePage = () => {
               Manage work clearly. Move every task forward with confidence.
             </h1>
 
-            <p className="mt-6 md:mt-7 max-w-3xl text-base sm:text-lg text-gray-600 leading-relaxed">
+            <p className="mt-6 md:mt-8 text-base sm:text-lg text-gray-600 leading-relaxed max-w-xl w-full min-w-0">
               Docketra helps teams run structured workflows, assign accountable owners, and keep approvals moving without chaos.
             </p>
 
@@ -129,8 +129,8 @@ export const HomePage = () => {
       {/* HOW IT WORKS */}
       <section className="w-full bg-gray-50 py-20 md:py-24 border-t border-gray-100">
         <Container>
-          <div className="grid min-w-0 gap-12">
-            <div className="max-w-3xl">
+          <div className="grid min-w-0 gap-16">
+            <div className="w-full min-w-0">
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight">How it works</h2>
               <p className="mt-4 text-gray-600 leading-relaxed">
                 Launch a reliable workflow in minutes and keep every stakeholder aligned from start to completion.
@@ -155,8 +155,8 @@ export const HomePage = () => {
       {/* FEATURES */}
       <section id="features" className="w-full bg-gray-50 py-20 md:py-24 border-t border-gray-100">
         <Container>
-          <div className="grid min-w-0 gap-12">
-            <div className="max-w-3xl">
+          <div className="grid min-w-0 gap-16">
+            <div className="w-full min-w-0">
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight">
                 How Docketra helps your team deliver
               </h2>
@@ -190,8 +190,8 @@ export const HomePage = () => {
       {/* PRICING */}
       <section id="pricing" className="w-full bg-white py-20 md:py-24 border-t border-gray-100">
         <Container>
-          <div className="grid min-w-0 gap-12">
-            <div className="max-w-3xl">
+          <div className="grid min-w-0 gap-16">
+            <div className="w-full min-w-0">
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight">
                 Pricing
               </h2>
