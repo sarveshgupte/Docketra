@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useToast } from '../../hooks/useToast';
-import { authService } from '../../services/authService';
 import { STORAGE_KEYS } from '../../utils/constants';
 
 export function GoogleSignIn({
@@ -20,17 +19,24 @@ export function GoogleSignIn({
   const handleCredentialResponse = useCallback(async (response) => {
     if (loading) return;
 
-    const idToken = String(response?.credential || '').trim();
-    if (!idToken) {
-      const error = new Error('Google login failed: ID token was not returned.');
-      showError(error.message);
-      onError?.(error);
-      return;
-    }
-
-    setLoading(true);
     try {
-      const result = await authService.googleLogin(idToken);
+      setLoading(true);
+      const idToken = response?.credential;
+      if (!idToken) {
+        throw new Error('Google login failed: ID token was not returned.');
+      }
+
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/auth/google`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ idToken }),
+      });
+
+      const result = await res.json();
+      console.log('Google response:', result);
+
       if (!result?.success) {
         throw new Error(result?.message || 'Google login failed');
       }
@@ -48,9 +54,10 @@ export function GoogleSignIn({
       }
 
       const destination = isOnboarded === false ? redirectNotOnboarded : redirectAuthenticated;
-      window.location.assign(destination);
+      window.location.href = destination;
     } catch (error) {
       const message = error?.message || 'Google login failed';
+      console.error('Google login error', error);
       showError(message);
       onError?.(error);
     } finally {
@@ -77,6 +84,7 @@ export function GoogleSignIn({
     window.google.accounts.id.initialize({
       client_id: clientId,
       callback: handleCredentialResponse,
+      auto_select: false,
     });
 
     window.google.accounts.id.renderButton(
@@ -97,7 +105,7 @@ export function GoogleSignIn({
   }, [buttonId, handleCredentialResponse, onError, showError]);
 
   return (
-    <div className={className}>
+    <div className={className} aria-busy={loading}>
       <div className={`relative mb-4 ${loading ? 'pointer-events-none opacity-60' : ''}`}>
         <div id={buttonId} />
       </div>
