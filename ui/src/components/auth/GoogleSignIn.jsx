@@ -8,6 +8,8 @@ export function GoogleSignIn({
   className = '',
   onError,
   onSuccess,
+  onAutoAccountShownChange,
+  enableAutoPrompt = false,
   redirectAuthenticated = '/dashboard',
   redirectNotOnboarded = '/complete-profile',
 }) {
@@ -85,6 +87,15 @@ export function GoogleSignIn({
       auto_select: false,
     });
 
+    if (enableAutoPrompt) {
+      window.google.accounts.id.prompt((notification) => {
+        const isDisplayed = typeof notification?.isDisplayed === 'function' && notification.isDisplayed();
+        onAutoAccountShownChange?.(Boolean(isDisplayed));
+      });
+    } else {
+      onAutoAccountShownChange?.(false);
+    }
+
     window.google.accounts.id.renderButton(
       document.getElementById(buttonId),
       {
@@ -96,11 +107,12 @@ export function GoogleSignIn({
     );
 
     return () => {
+      onAutoAccountShownChange?.(false);
       if (window.google?.accounts?.id) {
         window.google.accounts.id.cancel();
       }
     };
-  }, [buttonId, handleCredentialResponse, onError, showError]);
+  }, [buttonId, enableAutoPrompt, handleCredentialResponse, onAutoAccountShownChange, onError, showError]);
 
   return (
     <div className={className} aria-busy={loading}>
