@@ -44,7 +44,7 @@ export default function Navbar() {
 
           <Link
             to="/signup"
-            className="hidden md:inline-flex items-center justify-center h-9 px-4 rounded-lg bg-black text-white text-sm font-medium hover:bg-gray-900 transition-colors"
+            className="hidden md:inline-flex items-center justify-center h-9 px-4 rounded-lg bg-black text-white text-sm font-medium shadow-sm hover:scale-[1.02] hover:bg-gray-900 transition-all"
           >
             Create your workspace
           </Link>
