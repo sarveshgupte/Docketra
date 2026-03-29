@@ -29,9 +29,9 @@ module.exports = {
   },
   'POST /signup': {
     body: z.object({
+      name: nonEmptyString,
       email: z.string().trim().email(),
       password: strongPassword,
-      otp: z.string().trim().regex(/^\d{6}$/).optional(),
     }).strip(),
   },
   'POST /login': {

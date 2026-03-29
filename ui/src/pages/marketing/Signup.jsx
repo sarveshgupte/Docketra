@@ -20,9 +20,7 @@ const getErrorMessage = (error, fallback) => (
 export default function Signup() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [showGoogleOnly, setShowGoogleOnly] = useState(false);
   const [apiError, setApiError] = useState('');
-  const [apiMessage, setApiMessage] = useState('');
   const [errors, setErrors] = useState({});
   const [form, setForm] = useState({
     name: '',
@@ -35,13 +33,11 @@ export default function Signup() {
     setForm((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: '' }));
     setApiError('');
-    setApiMessage('');
   };
 
   const submitEmailSignup = async (event) => {
     event.preventDefault();
     setApiError('');
-    setApiMessage('');
 
     const nextErrors = {};
     if (!form.name.trim()) nextErrors.name = 'Name is required';
@@ -83,12 +79,7 @@ export default function Signup() {
         return;
       }
 
-      if (isOnboarded === true || accessToken) {
-        navigate('/dashboard', { replace: true });
-        return;
-      }
-
-      setApiMessage(response?.data?.message || 'Signup started. Please continue the onboarding flow.');
+      navigate('/dashboard', { replace: true });
     } catch (error) {
       setApiError(getErrorMessage(error, 'Unable to sign up with email right now.'));
     } finally {
@@ -100,103 +91,80 @@ export default function Signup() {
     <div className="auth-wrapper">
       <Card className="auth-card max-w-form">
         <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">Create your workspace</h1>
-        <p className="mt-2 text-sm text-gray-500 text-center">
-          {showGoogleOnly ? 'Continue with Google to finish setup.' : 'Step 1 of 2: Authenticate with Google or email.'}
-        </p>
+        <p className="mt-2 text-sm text-gray-500 text-center">Step 1 of 2: authenticate with Google or email.</p>
 
         {apiError && (
           <div role="alert" className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
             {apiError}
           </div>
         )}
-        {apiMessage && (
-          <div role="status" aria-live="polite" className="mt-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700">
-            {apiMessage}
-          </div>
-        )}
 
-        <GoogleSignIn
-          className="mt-6 mb-2"
-          enableAutoPrompt
-          onAutoAccountShownChange={(isShown) => setShowGoogleOnly(isShown)}
-        />
+        <GoogleSignIn className="mt-6 mb-2" />
 
-        {showGoogleOnly ? (
-          <button
-            type="button"
-            className="mt-2 text-sm font-medium text-gray-600 underline decoration-gray-300 underline-offset-4 hover:text-gray-900"
-            onClick={() => setShowGoogleOnly(false)}
-          >
-            Use another account
-          </button>
-        ) : (
-          <>
-            <div className="mb-2 flex items-center gap-2">
-              <div className="h-px flex-1 bg-gray-200" />
-              <span className="text-xs uppercase tracking-wide text-gray-500">OR</span>
-              <div className="h-px flex-1 bg-gray-200" />
-            </div>
+        <div className="mb-2 flex items-center gap-2">
+          <div className="h-px flex-1 bg-gray-200" />
+          <span className="text-xs uppercase tracking-wide text-gray-500">OR</span>
+          <div className="h-px flex-1 bg-gray-200" />
+        </div>
 
-            <form className="mt-4 space-y-4" onSubmit={submitEmailSignup} noValidate>
-              <Input
-                id="signup-name"
-                name="name"
-                label="Name"
-                value={form.name}
-                onChange={onFormChange}
-                disabled={loading}
-                autoComplete="name"
-                error={errors.name}
-                required
-              />
+        <form className="mt-4 space-y-4" onSubmit={submitEmailSignup} noValidate>
+          <Input
+            id="signup-name"
+            name="name"
+            label="Name"
+            value={form.name}
+            onChange={onFormChange}
+            disabled={loading}
+            autoComplete="name"
+            error={errors.name}
+            required
+          />
 
-              <Input
-                id="signup-email"
-                type="email"
-                name="email"
-                label="Email"
-                value={form.email}
-                onChange={onFormChange}
-                disabled={loading}
-                autoComplete="email"
-                error={errors.email}
-                required
-              />
+          <Input
+            id="signup-email"
+            type="email"
+            name="email"
+            label="Email"
+            value={form.email}
+            onChange={onFormChange}
+            disabled={loading}
+            autoComplete="email"
+            error={errors.email}
+            required
+          />
 
-              <Input
-                id="signup-password"
-                type="password"
-                name="password"
-                label="Password"
-                value={form.password}
-                onChange={onFormChange}
-                disabled={loading}
-                autoComplete="new-password"
-                error={errors.password}
-                minLength={8}
-                required
-              />
+          <Input
+            id="signup-password"
+            type="password"
+            name="password"
+            label="Password"
+            value={form.password}
+            onChange={onFormChange}
+            disabled={loading}
+            autoComplete="new-password"
+            error={errors.password}
+            minLength={8}
+            required
+          />
 
-              <p className="text-xs text-gray-500">{STRONG_PASSWORD_MESSAGE}</p>
+          <p className="text-xs text-gray-500">{STRONG_PASSWORD_MESSAGE}</p>
 
-              <Button type="submit" variant="primary" fullWidth loading={loading}>
-                {loading ? 'Creating account…' : 'Sign up with Email'}
-              </Button>
+          <Button type="submit" variant="primary" fullWidth loading={loading}>
+            {loading ? 'Creating account…' : 'Continue'}
+          </Button>
 
-              <p className="text-center text-[12px] text-gray-500 sm:text-[13px]">
-                By signing up, you agree to our{' '}
-                <Link to="/terms" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-700">
-                  Terms &amp; Conditions
-                </Link>{' '}
-                and{' '}
-                <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-700">
-                  Privacy Policy
-                </Link>
-                .
-              </p>
-            </form>
-          </>
-        )}
+          <p className="text-center text-[12px] text-gray-500 sm:text-[13px]">
+            By signing up, you agree to our{' '}
+            <Link to="/terms" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-700">
+              Terms &amp; Conditions
+            </Link>{' '}
+            and{' '}
+            <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-700">
+              Privacy Policy
+            </Link>
+            .
+          </p>
+        </form>
       </Card>
     </div>
   );

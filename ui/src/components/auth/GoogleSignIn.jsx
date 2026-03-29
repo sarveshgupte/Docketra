@@ -8,8 +8,6 @@ export function GoogleSignIn({
   className = '',
   onError,
   onSuccess,
-  onAutoAccountShownChange,
-  enableAutoPrompt = false,
   redirectAuthenticated = '/dashboard',
   redirectNotOnboarded = '/complete-profile',
 }) {
@@ -37,14 +35,14 @@ export function GoogleSignIn({
         throw new Error(result?.message || 'Google login failed');
       }
 
-      const { accessToken, isOnboarded, user } = result.data || {};
+      const { accessToken, isOnboarded } = result.data || {};
       if (!accessToken) {
         throw new Error('Google login failed: access token missing from response.');
       }
 
       localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
 
-      const callbackResult = await onSuccess?.({ ...result, data: { ...result.data, user } });
+      const callbackResult = await onSuccess?.(result);
       if (callbackResult === false) {
         return;
       }
@@ -87,15 +85,6 @@ export function GoogleSignIn({
       auto_select: false,
     });
 
-    if (enableAutoPrompt) {
-      window.google.accounts.id.prompt((notification) => {
-        const isDisplayed = typeof notification?.isDisplayed === 'function' && notification.isDisplayed();
-        onAutoAccountShownChange?.(Boolean(isDisplayed));
-      });
-    } else {
-      onAutoAccountShownChange?.(false);
-    }
-
     window.google.accounts.id.renderButton(
       document.getElementById(buttonId),
       {
@@ -107,16 +96,15 @@ export function GoogleSignIn({
     );
 
     return () => {
-      onAutoAccountShownChange?.(false);
       if (window.google?.accounts?.id) {
         window.google.accounts.id.cancel();
       }
     };
-  }, [buttonId, enableAutoPrompt, handleCredentialResponse, onAutoAccountShownChange, onError, showError]);
+  }, [buttonId, handleCredentialResponse, onError, showError]);
 
   return (
-    <div className={className} aria-busy={loading}>
-      <div className={`relative mb-4 ${loading ? 'pointer-events-none opacity-60' : ''}`}>
+    <div className={className}>
+      <div className={`relative mb-4 ${loading ? 'opacity-60' : ''}`}>
         <div id={buttonId} />
       </div>
     </div>
