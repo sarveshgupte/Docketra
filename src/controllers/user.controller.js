@@ -9,7 +9,7 @@ const { incrementTenantMetric } = require('../services/tenantMetrics.service');
 const { logSecurityAuditEvent, SECURITY_AUDIT_ACTIONS } = require('../services/securityAudit.service');
 const { noteAdminPrivilegeChange } = require('../services/securityTelemetry.service');
 const jwtService = require('../services/jwt.service');
-const { slugify } = require('../utils/slugify');
+const { generateFirmSlug } = require('../utils/firmSlug');
 const { sendWelcomeEmail } = require('../services/email/sendWelcomeEmail');
 
 const resolveUserFirmScope = (req, res) => {
@@ -25,9 +25,9 @@ const resolveUserFirmScope = (req, res) => {
 };
 
 const buildUniqueFirmSlug = async (firmName, session) => {
-  const baseSlug = slugify(String(firmName || '').trim()) || `firm-${Date.now()}`;
+  const baseSlug = generateFirmSlug(firmName) || `firm-${Date.now()}`;
   for (let index = 0; index < 20; index += 1) {
-    const candidate = index === 0 ? baseSlug : `${baseSlug}-${index + 1}`;
+    const candidate = index === 0 ? baseSlug : `${baseSlug}-${index}`;
     // eslint-disable-next-line no-await-in-loop
     const existing = await Firm.findOne({ firmSlug: candidate }).session(session);
     if (!existing) return candidate;
@@ -368,6 +368,10 @@ const completeProfile = async (req, res) => {
   if (!firmName || !phone) {
     return res.status(400).json({ success: false, message: 'firmName and phone are required' });
   }
+  const normalizedPhone = String(phone).replace(/\D/g, '');
+  if (!/^\d{10}$/.test(normalizedPhone)) {
+    return res.status(400).json({ success: false, message: 'phone must be exactly 10 digits' });
+  }
 
   const session = await mongoose.startSession();
   let updatedUser = null;
@@ -379,9 +383,8 @@ const completeProfile = async (req, res) => {
       const user = await User.findById(userId).session(session);
       if (!user) throw new Error('USER_NOT_FOUND');
 
-      if (user.isOnboarded && user.firmId) {
-        updatedUser = user;
-        return;
+      if (user.isOnboarded === true) {
+        throw new Error('USER_ALREADY_ONBOARDED');
       }
 
       const firmSlug = await buildUniqueFirmSlug(firmName, session);
@@ -391,6 +394,8 @@ const completeProfile = async (req, res) => {
         firmId,
         name: String(firmName).trim(),
         firmSlug,
+        createdBy: user._id,
+        storageProvider: 'docketra',
         source: 'SELF_SERVE',
         status: 'active',
         storage: { mode: 'docketra_managed', provider: null },
@@ -400,7 +405,7 @@ const completeProfile = async (req, res) => {
       if (name && String(name).trim()) {
         user.name = String(name).trim();
       }
-      user.phoneNumber = String(phone).trim();
+      user.phoneNumber = normalizedPhone;
       user.firmId = createdFirm._id;
       user.isOnboarded = true;
       await user.save({ session });
@@ -408,7 +413,9 @@ const completeProfile = async (req, res) => {
       onboardingCompletedNow = true;
     });
   } catch (error) {
-    const statusCode = error.message === 'USER_NOT_FOUND' ? 404 : 400;
+    const statusCode = error.message === 'USER_NOT_FOUND'
+      ? 404
+      : (error.message === 'USER_ALREADY_ONBOARDED' ? 409 : 400);
     return res.status(statusCode).json({ success: false, message: error.message });
   } finally {
     await session.endSession();
@@ -441,7 +448,8 @@ const completeProfile = async (req, res) => {
 
   return res.json({
     success: true,
-    message: 'Profile completed successfully',
+    firmSlug: createdFirm?.firmSlug || null,
+    isOnboarded: true,
     data: {
       accessToken,
       isOnboarded: true,
