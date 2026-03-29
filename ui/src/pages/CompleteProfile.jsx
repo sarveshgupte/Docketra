@@ -6,7 +6,7 @@ import { Button } from '../components/common/Button';
 import api from '../services/api';
 import { STORAGE_KEYS } from '../utils/constants';
 
-const phonePattern = /^[0-9+()\-\s]{7,20}$/;
+const phonePattern = /^\d{10}$/;
 
 const getErrorMessage = (error, fallback) => (
   error?.response?.data?.message
@@ -69,17 +69,17 @@ export function CompleteProfile() {
     setError('');
 
     const trimmedFirmName = form.firmName.trim();
-    const trimmedPhone = form.phone.trim();
+    const normalizedPhone = form.phone.replace(/\D/g, '');
     if (!trimmedFirmName) {
       setError('Firm name is required.');
       return;
     }
-    if (!trimmedPhone) {
+    if (!normalizedPhone) {
       setError('Phone number is required.');
       return;
     }
-    if (!phonePattern.test(trimmedPhone)) {
-      setError('Enter a valid phone number.');
+    if (!phonePattern.test(normalizedPhone)) {
+      setError('Phone number must be exactly 10 digits.');
       return;
     }
 
@@ -89,14 +89,19 @@ export function CompleteProfile() {
       const response = await api.post('/user/complete-profile', {
         name: form.name.trim(),
         firmName: trimmedFirmName,
-        phone: trimmedPhone,
+        phone: normalizedPhone,
       });
 
       const accessToken = response?.data?.data?.accessToken;
+      const firmSlug = response?.data?.firmSlug || response?.data?.data?.firmSlug;
       if (accessToken) {
         localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
       }
-
+      if (firmSlug) {
+        localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, firmSlug);
+        navigate(`/${firmSlug}/dashboard`, { replace: true });
+        return;
+      }
       navigate('/dashboard', { replace: true });
     } catch (submitError) {
       setError(getErrorMessage(submitError, 'Failed to complete workspace setup.'));
