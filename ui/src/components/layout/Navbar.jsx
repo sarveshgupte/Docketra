@@ -15,23 +15,18 @@ export default function Navbar() {
         {/* RIGHT — Nav + CTA */}
         <div className="flex items-center gap-6">
           <nav className="hidden md:flex items-center gap-6 text-sm text-gray-600">
-            <a href="#how-it-works" className="hover:text-gray-900">Features</a>
-            <a href="#" className="hover:text-gray-900">Pricing</a>
-            <a href="#" className="hover:text-gray-900">Security</a>
+            <a href="#features" className="hover:text-gray-900">Features</a>
+            <a href="#pricing" className="hover:text-gray-900">Pricing</a>
+            <Link to="/security" className="hover:text-gray-900">Security</Link>
+            <Link to="/about" className="hover:text-gray-900">About</Link>
           </nav>
 
-          <Link
-            to="/login"
-            className="hidden md:inline text-sm text-gray-600 hover:text-gray-900"
-          >
-            Login
-          </Link>
 
           <Link
             to="/signup"
             className="hidden md:inline-flex items-center justify-center h-9 px-4 rounded-lg bg-black text-white text-sm font-medium hover:bg-gray-900 transition-colors"
           >
-            Start workspace
+            Create your workspace
           </Link>
 
           <button
@@ -45,30 +40,27 @@ export default function Navbar() {
 
       {isOpen && (
         <div className="md:hidden border-t border-gray-100 bg-white px-4 py-4 space-y-4">
-          <a href="#how-it-works" className="block text-sm text-gray-700">
+          <a href="#features" className="block text-sm text-gray-700">
             Features
           </a>
 
-          <a href="#" className="block text-sm text-gray-700">
+          <a href="#pricing" className="block text-sm text-gray-700">
             Pricing
           </a>
 
-          <a href="#" className="block text-sm text-gray-700">
+          <Link to="/security" className="block text-sm text-gray-700">
             Security
-          </a>
+          </Link>
 
-          <Link
-            to="/login"
-            className="block text-sm text-gray-700"
-          >
-            Login
+          <Link to="/about" className="block text-sm text-gray-700">
+            About
           </Link>
 
           <Link
             to="/signup"
             className="block w-full text-center h-10 leading-[40px] rounded-lg bg-black text-white text-sm font-medium"
           >
-            Start workspace
+            Create your workspace
           </Link>
         </div>
       )}
