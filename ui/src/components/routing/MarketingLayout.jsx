@@ -10,8 +10,12 @@ export const MarketingLayout = () => {
   const location = useLocation();
 
   useEffect(() => {
+    if (location.hash) {
+      return;
+    }
+
     window.scrollTo({ top: 0, behavior: 'auto' });
-  }, [location.pathname]);
+  }, [location.pathname, location.hash]);
 
   return (
     <div className="marketing-shell min-h-screen bg-white text-gray-900">
@@ -32,12 +36,12 @@ export const MarketingLayout = () => {
         <section className="w-full py-16 md:py-20">
           <Container>
             <div className="flex flex-wrap items-center gap-6 text-sm">
-              <a href="/#features" className="text-gray-600 hover:text-gray-900">
+              <Link to="/#features" className="text-gray-600 hover:text-gray-900">
                 Features
-              </a>
-              <a href="/#pricing" className="text-gray-600 hover:text-gray-900">
+              </Link>
+              <Link to="/#pricing" className="text-gray-600 hover:text-gray-900">
                 Pricing
-              </a>
+              </Link>
               <a href="mailto:hello@docketra.com" className="text-gray-600 hover:text-gray-900">
                 Contact
               </a>

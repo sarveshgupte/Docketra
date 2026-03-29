@@ -1,5 +1,5 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import Container from '../../components/layout/Container';
 
 const CAPABILITIES = [
@@ -18,6 +18,24 @@ const CAPABILITIES = [
 ];
 
 export const HomePage = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!location.hash) {
+      return undefined;
+    }
+
+    const id = location.hash.replace('#', '');
+    const timer = window.setTimeout(() => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+
+    return () => window.clearTimeout(timer);
+  }, [location.hash]);
+
   return (
     <div className="w-full bg-white text-gray-900">
       {/* HERO */}
