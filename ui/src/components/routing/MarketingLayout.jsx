@@ -29,7 +29,7 @@ export const MarketingLayout = () => {
       </main>
 
       <footer className="border-t border-gray-200 bg-white">
-        <section className="w-full py-20 md:py-28">
+        <section className="w-full py-16 md:py-20">
           <Container>
             <div className="flex flex-wrap items-center gap-6 text-sm">
               <a href="/#features" className="text-gray-600 hover:text-gray-900">

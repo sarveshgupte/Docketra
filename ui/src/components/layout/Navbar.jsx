@@ -15,8 +15,8 @@ export default function Navbar() {
         {/* RIGHT — Nav + CTA */}
         <div className="flex items-center gap-6">
           <nav className="hidden md:flex items-center gap-6 text-sm text-gray-600">
-            <a href="#features" className="hover:text-gray-900">Features</a>
-            <a href="#pricing" className="hover:text-gray-900">Pricing</a>
+            <a href="/#features" className="hover:text-gray-900">Features</a>
+            <a href="/#pricing" className="hover:text-gray-900">Pricing</a>
             <Link to="/security" className="hover:text-gray-900">Security</Link>
             <Link to="/about" className="hover:text-gray-900">About</Link>
           </nav>
@@ -40,24 +40,25 @@ export default function Navbar() {
 
       {isOpen && (
         <div className="md:hidden border-t border-gray-100 bg-white px-4 py-4 space-y-4">
-          <a href="#features" className="block text-sm text-gray-700">
+          <a href="/#features" className="block text-sm text-gray-700" onClick={() => setIsOpen(false)}>
             Features
           </a>
 
-          <a href="#pricing" className="block text-sm text-gray-700">
+          <a href="/#pricing" className="block text-sm text-gray-700" onClick={() => setIsOpen(false)}>
             Pricing
           </a>
 
-          <Link to="/security" className="block text-sm text-gray-700">
+          <Link to="/security" className="block text-sm text-gray-700" onClick={() => setIsOpen(false)}>
             Security
           </Link>
 
-          <Link to="/about" className="block text-sm text-gray-700">
+          <Link to="/about" className="block text-sm text-gray-700" onClick={() => setIsOpen(false)}>
             About
           </Link>
 
           <Link
             to="/signup"
+            onClick={() => setIsOpen(false)}
             className="block w-full text-center h-10 leading-[40px] rounded-lg bg-black text-white text-sm font-medium"
           >
             Create your workspace
