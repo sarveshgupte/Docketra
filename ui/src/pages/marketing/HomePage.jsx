@@ -41,26 +41,38 @@ export const HomePage = () => {
                 to="/signup"
                 className="inline-flex items-center justify-center h-11 px-6 rounded-lg bg-black text-white font-medium hover:bg-gray-900 transition-colors"
               >
-                Start your workspace
+                Create your workspace
               </Link>
               <p className="mt-4 text-sm text-gray-500">
-                No setup complexity. Start in minutes.
+                We’ll set up your workspace and send access details to your email.
               </p>
             </div>
           </div>
 
           {/* RIGHT */}
           <div className="w-full">
-            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-8">
+            <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-8 md:p-10">
               <h3 className="text-lg font-semibold text-gray-900">
                 Built for teams that need clarity
               </h3>
 
               <ul className="mt-6 space-y-4 text-sm text-gray-600">
-                <li>• Assign clear ownership to every task</li>
-                <li>• Track progress across workflows</li>
-                <li>• Keep approvals and decisions in one place</li>
-                <li>• Maintain a complete audit trail</li>
+                <li className="flex gap-2">
+                  <span className="text-gray-400">—</span>
+                  <span>Assign clear ownership to every task</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-gray-400">—</span>
+                  <span>Track progress across workflows</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-gray-400">—</span>
+                  <span>Keep approvals and decisions in one place</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-gray-400">—</span>
+                  <span>Maintain a complete audit trail</span>
+                </li>
               </ul>
             </div>
           </div>

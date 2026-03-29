@@ -21,17 +21,10 @@ export default function Navbar() {
           </nav>
 
           <Link
-            to="/login"
-            className="hidden md:inline text-sm text-gray-600 hover:text-gray-900"
-          >
-            Login
-          </Link>
-
-          <Link
             to="/signup"
             className="hidden md:inline-flex items-center justify-center h-9 px-4 rounded-lg bg-black text-white text-sm font-medium hover:bg-gray-900 transition-colors"
           >
-            Start workspace
+            Create workspace
           </Link>
 
           <button
@@ -58,17 +51,10 @@ export default function Navbar() {
           </a>
 
           <Link
-            to="/login"
-            className="block text-sm text-gray-700"
-          >
-            Login
-          </Link>
-
-          <Link
             to="/signup"
             className="block w-full text-center h-10 leading-[40px] rounded-lg bg-black text-white text-sm font-medium"
           >
-            Start workspace
+            Create workspace
           </Link>
         </div>
       )}
