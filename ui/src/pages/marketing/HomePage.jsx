@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Container from '../../components/layout/Container';
-import Navbar from '../../components/layout/Navbar';
 
 const CAPABILITIES = [
   {
@@ -21,7 +20,6 @@ const CAPABILITIES = [
 export const HomePage = () => {
   return (
     <div className="w-full bg-white text-gray-900">
-      <Navbar />
       {/* HERO */}
       <section className="w-full bg-white py-20 md:py-28">
         <Container className="grid grid-cols-1 md:grid-cols-[1.2fr_0.8fr] gap-12 items-center">
@@ -41,7 +39,7 @@ export const HomePage = () => {
                 to="/signup"
                 className="inline-flex items-center justify-center h-11 px-6 rounded-lg bg-black text-white font-medium hover:bg-gray-900 transition-colors"
               >
-                Start your workspace
+                Create your workspace
               </Link>
               <p className="mt-4 text-sm text-gray-500">
                 No setup complexity. Start in minutes.
@@ -69,7 +67,7 @@ export const HomePage = () => {
       </section>
 
       {/* FEATURES */}
-      <section id="how-it-works" className="w-full bg-gray-50 py-20 md:py-28">
+      <section id="features" className="w-full bg-gray-50 py-20 md:py-28">
         <Container>
           <div className="w-full">
             <h2 className="text-3xl md:text-4xl font-semibold tracking-tight">
@@ -94,6 +92,36 @@ export const HomePage = () => {
                 </p>
               </div>
             ))}
+          </div>
+        </Container>
+      </section>
+
+      <section id="pricing" className="w-full bg-white py-20 md:py-28 border-t border-gray-100">
+        <Container>
+          <div className="max-w-2xl">
+            <h2 className="text-3xl md:text-4xl font-semibold tracking-tight">
+              Pricing
+            </h2>
+            <p className="mt-6 text-gray-600">
+              Start free. Scale as your team grows.
+            </p>
+          </div>
+
+          <div className="mt-12 grid md:grid-cols-3 gap-6">
+            <div className="border rounded-xl p-6">
+              <h3 className="font-semibold">Starter</h3>
+              <p className="mt-2 text-sm text-gray-600">Free during early access</p>
+            </div>
+
+            <div className="border rounded-xl p-6 opacity-60">
+              <h3 className="font-semibold">Professional</h3>
+              <p className="mt-2 text-sm text-gray-600">Coming soon</p>
+            </div>
+
+            <div className="border rounded-xl p-6 opacity-60">
+              <h3 className="font-semibold">Enterprise</h3>
+              <p className="mt-2 text-sm text-gray-600">Custom pricing</p>
+            </div>
           </div>
         </Container>
       </section>
