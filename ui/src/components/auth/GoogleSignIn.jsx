@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../hooks/useToast';
 import { STORAGE_KEYS } from '../../utils/constants';
+import api from '../../services/api';
 
 export function GoogleSignIn({
   className = '',
@@ -9,6 +11,7 @@ export function GoogleSignIn({
   redirectAuthenticated = '/dashboard',
   redirectNotOnboarded = '/complete-profile',
 }) {
+  const navigate = useNavigate();
   const { showError } = useToast();
   const [loading, setLoading] = useState(false);
   const buttonId = useMemo(
@@ -16,45 +19,40 @@ export function GoogleSignIn({
     []
   );
 
-  const handleCredentialResponse = useCallback(async (response) => {
+  const handleCredentialResponse = useCallback(async (credentialResponse) => {
     if (loading) return;
 
     try {
       setLoading(true);
-      const idToken = response?.credential;
+      const idToken = credentialResponse?.credential;
       if (!idToken) {
         throw new Error('Google login failed: ID token was not returned.');
       }
 
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/auth/google`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ idToken }),
-      });
-
-      const result = await res.json();
-      console.log('Google response:', result);
-
+      const apiResponse = await api.post('/auth/google', { idToken });
+      const result = apiResponse?.data;
       if (!result?.success) {
         throw new Error(result?.message || 'Google login failed');
       }
 
-      const { accessToken, isOnboarded } = result.data || {};
+      const { accessToken, isOnboarded, user } = result.data || {};
       if (!accessToken) {
         throw new Error('Google login failed: access token missing from response.');
       }
 
       localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
 
-      const callbackResult = await onSuccess?.(result);
+      const callbackResult = await onSuccess?.({ ...result, data: { ...result.data, user } });
       if (callbackResult === false) {
         return;
       }
 
-      const destination = isOnboarded === false ? redirectNotOnboarded : redirectAuthenticated;
-      window.location.href = destination;
+      if (isOnboarded === false) {
+        navigate(redirectNotOnboarded, { replace: true });
+        return;
+      }
+
+      navigate(redirectAuthenticated, { replace: true });
     } catch (error) {
       const message = error?.message || 'Google login failed';
       console.error('Google login error', error);
@@ -63,7 +61,7 @@ export function GoogleSignIn({
     } finally {
       setLoading(false);
     }
-  }, [loading, onError, onSuccess, redirectAuthenticated, redirectNotOnboarded, showError]);
+  }, [loading, navigate, onError, onSuccess, redirectAuthenticated, redirectNotOnboarded, showError]);
 
   useEffect(() => {
     const clientId = String(import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
