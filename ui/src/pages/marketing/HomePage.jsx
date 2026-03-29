@@ -132,7 +132,7 @@ export const HomePage = () => {
       <section className="w-full bg-gray-50 py-24 md:py-28 border-t border-gray-100">
         <Container>
           <div className="grid min-w-0 gap-16">
-            <div className="max-w-2xl w-full min-w-0">
+            <div className="w-full min-w-0">
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight">How it works</h2>
               <p className="mt-4 w-full min-w-0 text-gray-600 leading-relaxed">
                 Launch a reliable workflow in minutes and keep every stakeholder aligned from start to completion.
@@ -158,7 +158,7 @@ export const HomePage = () => {
       <section id="features" className="w-full bg-gray-50 py-24 md:py-28 border-t border-gray-100">
         <Container>
           <div className="grid min-w-0 gap-16">
-            <div className="max-w-2xl w-full min-w-0">
+            <div className="w-full min-w-0">
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight">
                 How Docketra helps your team deliver
               </h2>
@@ -193,7 +193,7 @@ export const HomePage = () => {
       <section id="pricing" className="w-full bg-white py-24 md:py-28 border-t border-gray-100">
         <Container>
           <div className="grid min-w-0 gap-16">
-            <div className="max-w-2xl w-full min-w-0">
+            <div className="w-full min-w-0">
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight">
                 Pricing
               </h2>
