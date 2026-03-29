@@ -110,7 +110,6 @@ const log = require('../utils/log');
 const logger = log;
 const { safeLogForensicAudit, getRequestIp, getRequestUserAgent } = require('../services/forensicAudit.service');
 const { safeAuditLog, safeQueueEmail, safeAnalyticsEvent } = require('../services/safeSideEffects.service');
-const { sendWelcomeEmail } = require('../services/email/sendWelcomeEmail');
 
 const resolveInviteRequestState = async ({ req, admin, normalizedEmail, session, existingXID = null }) => {
   const cachedState = req._inviteRequestState;
@@ -4347,100 +4346,69 @@ const googleTokenLogin = async (req, res) => {
 };
 
 const signupWithEmail = async (req, res) => {
-  const session = await mongoose.startSession();
-  let onboardingCompletedNow = false;
   try {
+    const name = String(req.body?.name || '').trim();
     const email = String(req.body?.email || '').trim().toLowerCase();
     const password = String(req.body?.password || '');
-    const firmName = String(req.body?.firmName || '').trim();
-    const otp = req.body?.otp ? String(req.body.otp).trim() : '';
 
-    if (!email || !password) return res.status(400).json({ success: false, message: 'email and password are required' });
+    if (!name || !email || !password) {
+      return res.status(400).json({ success: false, message: 'name, email and password are required' });
+    }
+
     const existing = await User.findOne({ $or: [{ primary_email: email }, { email }] });
-    if (existing) return res.status(409).json({ success: false, message: 'Account already exists for this email' });
-
-    if (!otp) {
-      await sendCentralOtp({ email, purpose: 'signup' });
-      return res.status(202).json({ success: true, message: 'OTP sent. Verify OTP to complete signup.' });
+    if (existing) {
+      const tokens = await issueAuthTokens(req, existing);
+      return res.status(200).json({
+        success: true,
+        data: {
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+          isOnboarded: Boolean(existing.isOnboarded),
+        },
+      });
     }
 
-    await verifyCentralOtp({ identifier: email, code: otp, purpose: 'signup' });
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
-    const firmCount = await Firm.countDocuments();
-    if (firmCount > 0) {
-      return res.status(409).json({
-        success: false,
-        message: 'Self-serve firm creation is only available for the first firm. Ask your firm admin to invite you.',
-      });
-    }
+    const generatedXid = await xIDGenerator.generateNextXID();
 
-    if (!firmName) {
-      return res.status(400).json({ success: false, message: 'firmName is required to create your firm' });
-    }
+    const [createdUser] = await User.create([{
+      xID: generatedXid,
+      name,
+      email,
+      primary_email: email,
+      passwordHash,
+      passwordSet: true,
+      isOnboarded: false,
+      role: 'Employee',
+      authProviders: {
+        local: {
+          passwordHash,
+          passwordSet: true,
+        },
+      },
+    }]);
 
-    let createdUser = null;
-    let createdFirm = null;
-
-    await session.withTransaction(async () => {
-      const created = await signupService.createFirmAndAdmin({
-        name: email.split('@')[0],
-        email,
-        firmName,
-        passwordHash,
-        phone: null,
-        authProvider: 'password',
-        session,
-        req,
-      });
-
-      createdFirm = created;
-      createdUser = await User.findById(created.userId).session(session);
-      if (!createdUser) {
-        throw new Error('SIGNUP_USER_NOT_FOUND');
-      }
-      onboardingCompletedNow = createdUser.isOnboarded === true;
-
-      await AuthIdentity.create([{
-        user_id: createdUser._id,
-        provider: 'email',
-        provider_id: email,
-        password_hash: passwordHash,
-      }], { session });
-    });
-
-    if (onboardingCompletedNow) {
-      try {
-        await sendWelcomeEmail({
-          email: createdUser.primary_email || createdUser.email,
-          name: createdUser.name,
-          xid: createdUser.xid || createdUser.xID,
-          firmId: createdUser.firmId ? String(createdUser.firmId) : null,
-        });
-      } catch (emailError) {
-        console.error('[SIGNUP] Failed to send welcome email', {
-          userId: createdUser?._id?.toString?.(),
-          error: emailError.message,
-        });
-      }
-    }
+    await AuthIdentity.create([{
+      user_id: createdUser._id,
+      provider: 'email',
+      provider_id: email,
+      password_hash: passwordHash,
+    }]);
 
     const tokens = await issueAuthTokens(req, createdUser);
     return res.status(201).json({
       success: true,
       data: {
-        ...tokens,
-        xid: createdUser.xID || createdUser.xid,
-        firmId: createdUser.firmId ? String(createdUser.firmId) : null,
-        role: createdUser.role,
-        firmSlug: createdFirm?.firmSlug || null,
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        isOnboarded: false,
       },
     });
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message || 'Signup failed' });
-  } finally {
-    await session.endSession();
   }
 };
+
 
 const universalLogin = async (req, res) => {
   try {
