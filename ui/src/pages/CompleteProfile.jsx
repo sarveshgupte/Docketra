@@ -1,0 +1,159 @@
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Card } from '../components/common/Card';
+import { Input } from '../components/common/Input';
+import { Button } from '../components/common/Button';
+import api from '../services/api';
+import { STORAGE_KEYS } from '../utils/constants';
+
+const getErrorMessage = (error, fallback) => (
+  error?.response?.data?.message
+  || error?.response?.data?.error
+  || error?.message
+  || fallback
+);
+
+export function CompleteProfile() {
+  const navigate = useNavigate();
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    firmName: '',
+    phone: '',
+  });
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadUser = async () => {
+      setError('');
+      try {
+        const response = await api.get('/user/me');
+        const user = response?.data?.data || response?.data?.user || response?.data || {};
+        if (!mounted) return;
+
+        setForm((prev) => ({
+          ...prev,
+          name: user?.name || '',
+          email: user?.email || user?.primary_email || '',
+        }));
+      } catch (primaryError) {
+        try {
+          const fallbackResponse = await api.get('/auth/profile');
+          const user = fallbackResponse?.data?.data || fallbackResponse?.data?.user || fallbackResponse?.data || {};
+          if (!mounted) return;
+
+          setForm((prev) => ({
+            ...prev,
+            name: user?.name || '',
+            email: user?.email || user?.primary_email || '',
+          }));
+        } catch (fallbackError) {
+          if (mounted) {
+            setError(getErrorMessage(fallbackError, 'Unable to load your profile details.'));
+          }
+        }
+      } finally {
+        if (mounted) setLoadingProfile(false);
+      }
+    };
+
+    loadUser();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const onChange = (event) => {
+    const { name, value } = event.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+    setError('');
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError('');
+    setSubmitting(true);
+
+    try {
+      const response = await api.post('/user/complete-profile', {
+        name: form.name.trim(),
+        firmName: form.firmName.trim(),
+        phone: form.phone.trim(),
+        phoneNumber: form.phone.trim(),
+      });
+
+      const accessToken = response?.data?.data?.accessToken;
+      if (accessToken) {
+        localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
+      }
+
+      navigate('/dashboard', { replace: true });
+    } catch (submitError) {
+      setError(getErrorMessage(submitError, 'Failed to complete workspace setup.'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="auth-wrapper">
+      <Card className="auth-card max-w-form">
+        <h1 className="text-2xl font-semibold text-center text-gray-900">Complete your workspace setup</h1>
+        <p className="mt-2 text-sm text-gray-500 text-center">Step 2 of 2: finalize your profile to create your workspace.</p>
+
+        <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+          <Input
+            id="complete-profile-name"
+            name="name"
+            label="Name"
+            value={form.name}
+            onChange={onChange}
+            disabled={loadingProfile || submitting}
+            required
+          />
+          <Input
+            id="complete-profile-email"
+            name="email"
+            label="Email"
+            type="email"
+            value={form.email}
+            disabled
+          />
+          <Input
+            id="complete-profile-firm"
+            name="firmName"
+            label="Firm Name"
+            value={form.firmName}
+            onChange={onChange}
+            disabled={loadingProfile || submitting}
+            autoComplete="organization"
+            required
+          />
+          <Input
+            id="complete-profile-phone"
+            name="phone"
+            label="Phone Number"
+            value={form.phone}
+            onChange={onChange}
+            disabled={loadingProfile || submitting}
+            autoComplete="tel"
+            required
+          />
+
+          {error ? <p className="text-sm text-red-600">{error}</p> : null}
+
+          <Button type="submit" variant="primary" fullWidth disabled={loadingProfile || submitting}>
+            {submitting ? 'Creating Workspace...' : 'Create Workspace'}
+          </Button>
+        </form>
+      </Card>
+    </div>
+  );
+}
+
+export default CompleteProfile;
