@@ -49,16 +49,12 @@ export const HomePage = () => {
   const location = useLocation();
 
   useEffect(() => {
-    if (!location.hash) {
-      return undefined;
-    }
+    if (!location.hash) return;
 
     const id = location.hash.replace('#', '');
     const timer = window.setTimeout(() => {
       const el = document.getElementById(id);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
 
     return () => window.clearTimeout(timer);
@@ -66,15 +62,19 @@ export const HomePage = () => {
 
   return (
     <div className="w-full bg-white text-gray-900">
+
       {/* HERO */}
       <section className="w-full bg-white py-16 md:py-24">
         <Container className="grid min-w-0 grid-cols-1 gap-10 md:grid-cols-12 md:gap-8 lg:gap-12 items-start">
+
+          {/* LEFT */}
           <div className="w-full min-w-0 md:col-span-7 lg:col-span-8">
-            <h1 className="max-w-4xl text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.06]">
+
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.06] max-w-none">
               Manage work clearly. Move every task forward with confidence.
             </h1>
 
-            <p className="mt-6 md:mt-8 text-base sm:text-lg text-gray-600 leading-relaxed max-w-xl w-full min-w-0">
+            <p className="mt-6 md:mt-8 text-base sm:text-lg text-gray-600 leading-relaxed max-w-none">
               Docketra helps teams run structured workflows, assign accountable owners, and keep approvals moving without chaos.
             </p>
 
@@ -85,19 +85,27 @@ export const HomePage = () => {
               >
                 Create your workspace
               </Link>
+
               <p className="text-sm text-gray-500">
                 No setup complexity. Start in minutes.
               </p>
             </div>
           </div>
 
+          {/* RIGHT */}
           <div className="w-full min-w-0 md:col-span-5 lg:col-span-4">
             <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-4 sm:p-5 md:p-6">
+
               <div className="flex items-center justify-between pb-3 border-b border-gray-100">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Live workflow</p>
-                  <h3 className="mt-1 text-sm font-semibold text-gray-900">Month-end Operations</h3>
+                  <p className="text-xs uppercase tracking-[0.16em] text-gray-500">
+                    Live workflow
+                  </p>
+                  <h3 className="mt-1 text-sm font-semibold text-gray-900">
+                    Month-end Operations
+                  </h3>
                 </div>
+
                 <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
                   4 active tasks
                 </span>
@@ -105,15 +113,22 @@ export const HomePage = () => {
 
               <div className="mt-4 space-y-3">
                 {HERO_TASKS.map((task) => (
-                  <div key={task.name} className="rounded-lg border border-gray-100 bg-white p-3 sm:p-3.5">
+                  <div
+                    key={task.name}
+                    className="rounded-lg border border-gray-100 bg-white p-3 sm:p-3.5"
+                  >
                     <div className="flex items-start justify-between gap-3">
-                      <p className="min-w-0 text-sm font-medium text-gray-900 leading-snug">{task.name}</p>
+                      <p className="min-w-0 text-sm font-medium text-gray-900 leading-snug">
+                        {task.name}
+                      </p>
+
                       <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-900 text-[11px] font-semibold text-white">
                         {task.assignee}
                       </span>
                     </div>
+
                     <div className="mt-3 flex items-center gap-2">
-                      <span className={`h-2 w-2 rounded-full ${statusDotMap[task.status]}`} aria-hidden="true" />
+                      <span className={`h-2 w-2 rounded-full ${statusDotMap[task.status]}`} />
                       <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${task.tone}`}>
                         {task.status}
                       </span>
@@ -121,30 +136,38 @@ export const HomePage = () => {
                   </div>
                 ))}
               </div>
+
             </div>
           </div>
+
         </Container>
       </section>
 
       {/* HOW IT WORKS */}
       <section className="w-full bg-gray-50 py-20 md:py-24 border-t border-gray-100">
         <Container>
-          <div className="grid min-w-0 gap-16">
-            <div className="w-full min-w-0">
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight">How it works</h2>
+          <div className="grid gap-16">
+            <div>
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight">
+                How it works
+              </h2>
               <p className="mt-4 text-gray-600 leading-relaxed">
                 Launch a reliable workflow in minutes and keep every stakeholder aligned from start to completion.
               </p>
             </div>
 
-            <div className="grid min-w-0 md:grid-cols-3 gap-8">
+            <div className="grid md:grid-cols-3 gap-8">
               {HOW_IT_WORKS.map((step, index) => (
-                <div key={step.title} className="h-full rounded-xl border border-gray-200 bg-white p-6 shadow-sm hover:shadow-md transition-all duration-200">
+                <div key={step.title} className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
                   <div className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 text-sm font-semibold text-gray-700">
                     {index + 1}
                   </div>
-                  <h3 className="mt-5 text-lg font-semibold text-gray-900">{step.title}</h3>
-                  <p className="mt-3 text-sm leading-relaxed text-gray-600">{step.desc}</p>
+                  <h3 className="mt-5 text-lg font-semibold text-gray-900">
+                    {step.title}
+                  </h3>
+                  <p className="mt-3 text-sm text-gray-600">
+                    {step.desc}
+                  </p>
                 </div>
               ))}
             </div>
@@ -155,29 +178,26 @@ export const HomePage = () => {
       {/* FEATURES */}
       <section id="features" className="w-full bg-gray-50 py-20 md:py-24 border-t border-gray-100">
         <Container>
-          <div className="grid min-w-0 gap-16">
-            <div className="w-full min-w-0">
+          <div className="grid gap-16">
+            <div>
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight">
                 How Docketra helps your team deliver
               </h2>
-              <p className="mt-4 text-gray-600 leading-relaxed">
+              <p className="mt-4 text-gray-600">
                 Clear ownership, clear approvals, and a complete audit trail.
               </p>
             </div>
 
-            <div className="grid min-w-0 md:grid-cols-3 gap-6 md:gap-8 lg:gap-6">
+            <div className="grid md:grid-cols-3 gap-6 md:gap-8">
               {CAPABILITIES.map((item, index) => (
-                <div
-                  key={item.title}
-                  className="h-full flex flex-col rounded-xl border border-gray-200 bg-white p-7 shadow-sm hover:shadow-md transition-all duration-200"
-                >
-                  <span className="inline-flex h-10 min-w-10 px-3 items-center justify-center rounded-lg bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                <div key={item.title} className="rounded-xl border border-gray-200 bg-white p-7 shadow-sm">
+                  <span className="inline-flex h-10 min-w-10 px-3 items-center justify-center rounded-lg bg-gray-50 text-xs font-semibold">
                     {`0${index + 1}`}
                   </span>
                   <h3 className="mt-5 text-lg font-semibold text-gray-900">
                     {item.title}
                   </h3>
-                  <p className="mt-4 text-sm text-gray-600 leading-relaxed">
+                  <p className="mt-4 text-sm text-gray-600">
                     {item.desc}
                   </p>
                 </div>
@@ -190,58 +210,39 @@ export const HomePage = () => {
       {/* PRICING */}
       <section id="pricing" className="w-full bg-white py-20 md:py-24 border-t border-gray-100">
         <Container>
-          <div className="grid min-w-0 gap-16">
-            <div className="w-full min-w-0">
+          <div className="grid gap-16">
+            <div>
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight">
                 Pricing
               </h2>
-              <p className="mt-4 text-gray-600 leading-relaxed">
+              <p className="mt-4 text-gray-600">
                 Start free and move to advanced controls as your team grows.
               </p>
             </div>
 
-            <div className="grid min-w-0 md:grid-cols-3 gap-8 md:gap-10 w-full items-stretch">
-              <div className="h-full border border-gray-200 ring-1 ring-black/5 md:scale-[1.02] bg-white rounded-xl p-6 md:p-7 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 flex flex-col">
+            <div className="grid md:grid-cols-3 gap-8 md:gap-10">
+              <div className="border border-gray-200 rounded-xl p-6 md:p-7 shadow-sm">
                 <h3 className="font-semibold text-lg">Starter</h3>
-                <p className="mt-2 w-full min-w-0 text-sm text-gray-600">Free during early access</p>
-                <ul className="mt-5 space-y-2 text-sm text-gray-600">
-                  <li>Up to 2 users</li>
-                  <li>Basic workflows</li>
-                  <li>Case management</li>
-                </ul>
-                <Link
-                  to="/signup"
-                  className="mt-auto pt-6 inline-block rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-900 transition-colors"
-                >
+                <p className="mt-2 text-sm text-gray-600">Free during early access</p>
+                <Link to="/signup" className="mt-6 inline-block bg-black text-white px-4 py-2 rounded-lg">
                   Create workspace
                 </Link>
               </div>
 
-              <div className="h-full border border-gray-200 bg-white rounded-xl p-6 md:p-7 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 flex flex-col">
+              <div className="border border-gray-200 rounded-xl p-6 md:p-7 shadow-sm">
                 <h3 className="font-semibold text-lg">Professional</h3>
-                <p className="mt-2 w-full min-w-0 text-sm text-gray-600">Coming soon</p>
-                <ul className="mt-5 space-y-2 text-sm text-gray-600">
-                  <li>Up to 25 users</li>
-                  <li>Advanced workflows and approvals</li>
-                  <li>Priority support</li>
-                </ul>
-                <p className="mt-auto pt-6 w-full min-w-0 text-sm font-medium text-gray-500">Coming soon</p>
+                <p className="mt-2 text-sm text-gray-600">Coming soon</p>
               </div>
 
-              <div className="h-full border border-gray-200 bg-white rounded-xl p-6 md:p-7 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 flex flex-col">
+              <div className="border border-gray-200 rounded-xl p-6 md:p-7 shadow-sm">
                 <h3 className="font-semibold text-lg">Enterprise</h3>
-                <p className="mt-2 w-full min-w-0 text-sm text-gray-600">Coming soon</p>
-                <ul className="mt-5 space-y-2 text-sm text-gray-600">
-                  <li>Unlimited users</li>
-                  <li>Audit-focused controls</li>
-                  <li>Dedicated onboarding support</li>
-                </ul>
-                <p className="mt-auto pt-6 w-full min-w-0 text-sm font-medium text-gray-500">Coming soon</p>
+                <p className="mt-2 text-sm text-gray-600">Coming soon</p>
               </div>
             </div>
           </div>
         </Container>
       </section>
+
     </div>
   );
 };
