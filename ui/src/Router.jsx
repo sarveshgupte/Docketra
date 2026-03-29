@@ -40,7 +40,6 @@ const ClientsPage = lazyPage(() => import('./pages/ClientsPage'), 'ClientsPage')
 const ClientWorkspacePage = lazyPage(() => import('./pages/ClientWorkspacePage'), 'ClientWorkspacePage');
 const MarketingHomePage = lazyPage(() => import('./pages/marketing/HomePage'), 'HomePage');
 const MarketingFeaturesPage = lazyPage(() => import('./pages/marketing/Features'), 'FeaturesPage');
-const MarketingPricingPage = lazyPage(() => import('./pages/marketing/Pricing'), 'PricingPage');
 const MarketingTermsPage = lazyPage(() => import('./pages/marketing/Terms'), 'TermsPage');
 const MarketingPrivacyPage = lazyPage(() => import('./pages/marketing/Privacy'), 'PrivacyPage');
 const MarketingSecurityPage = lazyPage(() => import('./pages/marketing/Security'), 'SecurityPage');
@@ -125,7 +124,6 @@ export const Router = () => {
           <Route element={<RouteSuspenseOutlet />}>
             <Route path="/" element={<MarketingHomePage />} />
             <Route path="/features" element={<MarketingFeaturesPage />} />
-            <Route path="/pricing" element={<MarketingPricingPage />} />
             <Route path="/terms" element={<MarketingTermsPage />} />
             <Route path="/privacy" element={<MarketingPrivacyPage />} />
             <Route path="/security" element={<MarketingSecurityPage />} />
