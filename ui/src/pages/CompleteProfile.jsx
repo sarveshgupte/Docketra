@@ -6,6 +6,8 @@ import { Button } from '../components/common/Button';
 import api from '../services/api';
 import { STORAGE_KEYS } from '../utils/constants';
 
+const phonePattern = /^[0-9+()\-\s]{7,20}$/;
+
 const getErrorMessage = (error, fallback) => (
   error?.response?.data?.message
   || error?.response?.data?.error
@@ -40,21 +42,9 @@ export function CompleteProfile() {
           name: user?.name || '',
           email: user?.email || user?.primary_email || '',
         }));
-      } catch (primaryError) {
-        try {
-          const fallbackResponse = await api.get('/auth/profile');
-          const user = fallbackResponse?.data?.data || fallbackResponse?.data?.user || fallbackResponse?.data || {};
-          if (!mounted) return;
-
-          setForm((prev) => ({
-            ...prev,
-            name: user?.name || '',
-            email: user?.email || user?.primary_email || '',
-          }));
-        } catch (fallbackError) {
-          if (mounted) {
-            setError(getErrorMessage(fallbackError, 'Unable to load your profile details.'));
-          }
+      } catch (loadError) {
+        if (mounted) {
+          setError(getErrorMessage(loadError, 'Unable to load your profile details.'));
         }
       } finally {
         if (mounted) setLoadingProfile(false);
@@ -77,14 +67,29 @@ export function CompleteProfile() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
+
+    const trimmedFirmName = form.firmName.trim();
+    const trimmedPhone = form.phone.trim();
+    if (!trimmedFirmName) {
+      setError('Firm name is required.');
+      return;
+    }
+    if (!trimmedPhone) {
+      setError('Phone number is required.');
+      return;
+    }
+    if (!phonePattern.test(trimmedPhone)) {
+      setError('Enter a valid phone number.');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
       const response = await api.post('/user/complete-profile', {
         name: form.name.trim(),
-        firmName: form.firmName.trim(),
-        phone: form.phone.trim(),
-        phoneNumber: form.phone.trim(),
+        firmName: trimmedFirmName,
+        phone: trimmedPhone,
       });
 
       const accessToken = response?.data?.data?.accessToken;
@@ -104,7 +109,7 @@ export function CompleteProfile() {
     <div className="auth-wrapper">
       <Card className="auth-card max-w-form">
         <h1 className="text-2xl font-semibold text-center text-gray-900">Complete your workspace setup</h1>
-        <p className="mt-2 text-sm text-gray-500 text-center">Step 2 of 2: finalize your profile to create your workspace.</p>
+        <p className="mt-2 text-sm text-gray-500 text-center">Step 2 of 2: add your workspace details.</p>
 
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
           <Input
