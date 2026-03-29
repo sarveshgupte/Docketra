@@ -69,11 +69,11 @@ export const HomePage = () => {
       {/* WHO IT'S FOR */}
       <section className="w-full bg-white py-16 md:py-20 border-t border-gray-100">
         <Container>
-          <div className="max-w-2xl">
+          <div className="max-w-xl">
             <h2 className="text-3xl md:text-4xl font-semibold tracking-tight">
               Built for teams that need structured workflows
             </h2>
-            <p className="mt-6 text-gray-600">
+            <p className="mt-4 text-gray-600 leading-relaxed">
               Docketra is designed for teams where accountability, approvals, and audit trails matter.
             </p>
           </div>
@@ -112,11 +112,11 @@ export const HomePage = () => {
       {/* FEATURES */}
       <section id="features" className="w-full bg-gray-50 py-16 md:py-20">
         <Container>
-          <div className="w-full">
+          <div className="max-w-xl">
             <h2 className="text-3xl md:text-4xl font-semibold tracking-tight">
               How Docketra helps your team deliver
             </h2>
-            <p className="mt-6 text-lg text-gray-600 leading-relaxed">
+            <p className="mt-4 text-lg text-gray-600 leading-relaxed">
               Clear ownership, clear approvals, and a complete audit trail.
             </p>
           </div>
@@ -141,16 +141,16 @@ export const HomePage = () => {
 
       <section id="pricing" className="w-full bg-white py-16 md:py-20 border-t border-gray-100">
         <Container>
-          <div className="max-w-2xl">
+          <div className="max-w-xl">
             <h2 className="text-3xl md:text-4xl font-semibold tracking-tight">
               Pricing
             </h2>
-            <p className="mt-6 text-gray-600">
+            <p className="mt-4 text-gray-600 leading-relaxed">
               Start free and move to advanced controls as your team grows.
             </p>
           </div>
 
-          <div className="mt-12 grid md:grid-cols-3 gap-6">
+          <div className="mt-12 grid md:grid-cols-3 gap-6 w-full">
             <div className="border rounded-xl p-6 shadow-sm">
               <h3 className="font-semibold text-lg">Starter</h3>
               <p className="mt-2 text-sm text-gray-600">Free during early access</p>
