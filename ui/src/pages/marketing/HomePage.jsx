@@ -69,45 +69,45 @@ export const HomePage = () => {
   return (
     <div className="w-full bg-white text-gray-900">
       {/* HERO */}
-      <section className="w-full bg-white py-20 md:py-24">
-        <Container className="grid grid-cols-1 md:grid-cols-[1.3fr_0.7fr] gap-12 md:gap-14 items-center">
+      <section className="w-full bg-white py-24 md:py-28">
+        <Container className="grid grid-cols-1 md:grid-cols-[1.3fr_0.7fr] gap-16 md:gap-16 items-center">
           <div className="w-full">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight leading-tight max-w-none">
               Manage work clearly. Move every task forward with confidence.
             </h1>
 
-            <p className="mt-6 text-lg text-gray-600 leading-relaxed max-w-2xl">
+            <p className="mt-8 text-lg text-gray-600 leading-relaxed max-w-xl md:max-w-2xl">
               Docketra helps teams run structured workflows, assign accountable owners, and keep approvals moving without chaos.
             </p>
 
-            <div className="mt-9 flex flex-col items-start gap-4">
+            <div className="mt-10 flex flex-col items-start gap-4">
               <Link
                 to="/signup"
-                className="inline-flex items-center justify-center h-11 px-6 rounded-lg bg-black text-white font-medium shadow-sm hover:bg-gray-900 transition-colors"
+                className="inline-flex items-center justify-center h-11 px-6 rounded-lg bg-black text-white font-medium shadow-md hover:shadow-lg hover:bg-gray-900 transition-colors"
               >
                 Create your workspace
               </Link>
               <p className="text-sm text-gray-500">
-                Trusted by process-driven teams to keep work on track.
+                No setup complexity. Start in minutes.
               </p>
             </div>
           </div>
 
           <div className="w-full">
-            <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-5 md:p-6">
-              <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+            <div className="rounded-2xl border border-gray-200 bg-white/95 backdrop-blur shadow-md p-5 md:p-6">
+              <div className="flex items-center justify-between pb-4">
                 <div>
                   <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Live workflow</p>
                   <h3 className="mt-1 text-sm font-semibold text-gray-900">Month-end Operations</h3>
                 </div>
-                <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-medium text-gray-700">
+                <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
                   4 active tasks
                 </span>
               </div>
 
               <div className="mt-4 space-y-3">
                 {HERO_TASKS.map((task) => (
-                  <div key={task.name} className="rounded-lg border border-gray-200 bg-white p-3.5">
+                  <div key={task.name} className="rounded-lg bg-white p-3.5">
                     <div className="flex items-start justify-between gap-3">
                       <p className="text-sm font-medium text-gray-900 leading-snug">{task.name}</p>
                       <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-900 text-[11px] font-semibold text-white">
@@ -129,9 +129,9 @@ export const HomePage = () => {
       </section>
 
       {/* HOW IT WORKS */}
-      <section className="w-full bg-gray-50 py-20 md:py-24 border-t border-gray-100">
+      <section className="w-full bg-gray-50 py-24 md:py-28 border-t border-gray-100">
         <Container>
-          <div className="grid gap-12">
+          <div className="grid gap-16">
             <div className="max-w-2xl">
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight">How it works</h2>
               <p className="mt-4 text-gray-600 leading-relaxed">
@@ -141,7 +141,7 @@ export const HomePage = () => {
 
             <div className="grid md:grid-cols-3 gap-8">
               {HOW_IT_WORKS.map((step, index) => (
-                <div key={step.title} className="h-full rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                <div key={step.title} className="h-full rounded-xl border border-gray-200 bg-white p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200">
                   <div className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 text-sm font-semibold text-gray-700">
                     {index + 1}
                   </div>
@@ -155,25 +155,25 @@ export const HomePage = () => {
       </section>
 
       {/* FEATURES */}
-      <section id="features" className="w-full bg-gray-50 py-20 md:py-24 border-t border-gray-100">
+      <section id="features" className="w-full bg-gray-50 py-24 md:py-28 border-t border-gray-100">
         <Container>
-          <div className="grid gap-12">
+          <div className="grid gap-16">
             <div className="max-w-2xl">
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight">
                 How Docketra helps your team deliver
               </h2>
-              <p className="mt-4 text-lg text-gray-600 leading-relaxed">
+              <p className="mt-4 text-gray-600 leading-relaxed">
                 Clear ownership, clear approvals, and a complete audit trail.
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid md:grid-cols-3 gap-6">
               {CAPABILITIES.map((item, index) => (
                 <div
                   key={item.title}
-                  className="h-full flex flex-col rounded-xl border border-gray-200 bg-white p-7 hover:shadow-md transition-all"
+                  className="h-full flex flex-col rounded-xl border border-gray-200 bg-white p-7 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200"
                 >
-                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-base text-gray-600">
+                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-gray-50 text-base text-gray-600">
                     {FEATURE_ICONS[index]}
                   </span>
                   <h3 className="mt-5 text-lg font-semibold text-gray-900">
@@ -190,10 +190,10 @@ export const HomePage = () => {
       </section>
 
       {/* PRICING */}
-      <section id="pricing" className="w-full bg-white py-20 md:py-24 border-t border-gray-100">
+      <section id="pricing" className="w-full bg-white py-24 md:py-28 border-t border-gray-100">
         <Container>
-          <div className="grid gap-12">
-            <div className="max-w-2xl mx-auto text-center">
+          <div className="grid gap-16">
+            <div className="max-w-2xl">
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight">
                 Pricing
               </h2>
@@ -202,8 +202,8 @@ export const HomePage = () => {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-8 w-full items-stretch">
-              <div className="h-full border border-gray-200 rounded-xl p-7 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all flex flex-col">
+            <div className="grid md:grid-cols-3 gap-10 w-full items-stretch">
+              <div className="h-full border border-gray-200 ring-1 ring-black/5 scale-[1.02] bg-white rounded-xl p-7 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 flex flex-col">
                 <h3 className="font-semibold text-lg">Starter</h3>
                 <p className="mt-2 text-sm text-gray-600">Free during early access</p>
                 <ul className="mt-5 space-y-2 text-sm text-gray-600">
@@ -219,7 +219,7 @@ export const HomePage = () => {
                 </Link>
               </div>
 
-              <div className="h-full border border-gray-200 rounded-xl p-7 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all flex flex-col">
+              <div className="h-full border border-gray-200 bg-white rounded-xl p-7 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 flex flex-col">
                 <h3 className="font-semibold text-lg">Professional</h3>
                 <p className="mt-2 text-sm text-gray-600">Coming soon</p>
                 <ul className="mt-5 space-y-2 text-sm text-gray-600">
@@ -230,7 +230,7 @@ export const HomePage = () => {
                 <p className="mt-auto pt-6 text-sm font-medium text-gray-500">Coming soon</p>
               </div>
 
-              <div className="h-full border border-gray-200 rounded-xl p-7 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all flex flex-col">
+              <div className="h-full border border-gray-200 bg-white rounded-xl p-7 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 flex flex-col">
                 <h3 className="font-semibold text-lg">Enterprise</h3>
                 <p className="mt-2 text-sm text-gray-600">Coming soon</p>
                 <ul className="mt-5 space-y-2 text-sm text-gray-600">
