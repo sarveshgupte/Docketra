@@ -44,7 +44,7 @@ export default function Navbar() {
 
           <Link
             to="/signup"
-            className="hidden md:inline-flex items-center justify-center h-9 px-4 rounded-lg bg-black text-white text-sm font-medium shadow-sm hover:scale-[1.02] hover:bg-gray-900 transition-all"
+            className="hidden md:inline-flex items-center justify-center h-9 px-4 rounded-lg bg-black text-white text-sm font-medium shadow-sm transition-all hover:bg-gray-800 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/30 focus-visible:ring-offset-2"
           >
             Create your workspace
           </Link>
@@ -88,7 +88,7 @@ export default function Navbar() {
           <Link
             to="/signup"
             onClick={() => setIsOpen(false)}
-            className="block w-full text-center h-10 leading-[40px] rounded-lg bg-black text-white text-sm font-medium"
+            className="block w-full text-center h-10 leading-[40px] rounded-lg bg-black text-white text-sm font-medium transition-colors hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/30 focus-visible:ring-offset-2"
           >
             Create your workspace
           </Link>

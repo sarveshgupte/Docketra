@@ -69,14 +69,14 @@ export const HomePage = () => {
   return (
     <div className="w-full bg-white text-gray-900">
       {/* HERO */}
-      <section className="w-full bg-white py-24 md:py-28">
-        <Container className="grid grid-cols-1 md:grid-cols-[1.3fr_0.7fr] gap-16 md:gap-16 items-center">
+      <section className="w-full bg-white py-20 md:py-28">
+        <Container className="grid grid-cols-1 md:grid-cols-[1.3fr_0.7fr] gap-12 md:gap-16 items-center">
           <div className="w-full">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight leading-tight max-w-none">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight leading-tight max-w-none">
               Manage work clearly. Move every task forward with confidence.
             </h1>
 
-            <p className="mt-8 text-lg text-gray-600 leading-relaxed max-w-xl md:max-w-2xl">
+            <p className="mt-6 md:mt-8 text-base sm:text-lg text-gray-600 leading-relaxed max-w-xl md:max-w-2xl">
               Docketra helps teams run structured workflows, assign accountable owners, and keep approvals moving without chaos.
             </p>
 
@@ -94,7 +94,7 @@ export const HomePage = () => {
           </div>
 
           <div className="w-full">
-            <div className="rounded-2xl border border-gray-200 bg-white/95 backdrop-blur shadow-md p-5 md:p-6">
+            <div className="rounded-2xl border border-gray-200 bg-white/95 backdrop-blur shadow-md p-4 sm:p-5 md:p-6">
               <div className="flex items-center justify-between pb-4">
                 <div>
                   <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Live workflow</p>
@@ -107,9 +107,9 @@ export const HomePage = () => {
 
               <div className="mt-4 space-y-3">
                 {HERO_TASKS.map((task) => (
-                  <div key={task.name} className="rounded-lg bg-white p-3.5">
+                  <div key={task.name} className="rounded-lg bg-white p-3 sm:p-3.5">
                     <div className="flex items-start justify-between gap-3">
-                      <p className="text-sm font-medium text-gray-900 leading-snug">{task.name}</p>
+                      <p className="min-w-0 text-sm font-medium text-gray-900 leading-snug break-words">{task.name}</p>
                       <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-900 text-[11px] font-semibold text-white">
                         {task.assignee}
                       </span>
@@ -167,7 +167,7 @@ export const HomePage = () => {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-3 gap-6 md:gap-8 lg:gap-6">
               {CAPABILITIES.map((item, index) => (
                 <div
                   key={item.title}
@@ -202,8 +202,8 @@ export const HomePage = () => {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-10 w-full items-stretch">
-              <div className="h-full border border-gray-200 ring-1 ring-black/5 scale-[1.02] bg-white rounded-xl p-7 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 flex flex-col">
+            <div className="grid md:grid-cols-3 gap-8 md:gap-10 w-full items-stretch">
+              <div className="h-full border border-gray-200 ring-1 ring-black/5 md:scale-[1.02] bg-white rounded-xl p-6 md:p-7 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 flex flex-col">
                 <h3 className="font-semibold text-lg">Starter</h3>
                 <p className="mt-2 text-sm text-gray-600">Free during early access</p>
                 <ul className="mt-5 space-y-2 text-sm text-gray-600">
@@ -219,7 +219,7 @@ export const HomePage = () => {
                 </Link>
               </div>
 
-              <div className="h-full border border-gray-200 bg-white rounded-xl p-7 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 flex flex-col">
+              <div className="h-full border border-gray-200 bg-white rounded-xl p-6 md:p-7 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 flex flex-col">
                 <h3 className="font-semibold text-lg">Professional</h3>
                 <p className="mt-2 text-sm text-gray-600">Coming soon</p>
                 <ul className="mt-5 space-y-2 text-sm text-gray-600">
@@ -230,7 +230,7 @@ export const HomePage = () => {
                 <p className="mt-auto pt-6 text-sm font-medium text-gray-500">Coming soon</p>
               </div>
 
-              <div className="h-full border border-gray-200 bg-white rounded-xl p-7 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 flex flex-col">
+              <div className="h-full border border-gray-200 bg-white rounded-xl p-6 md:p-7 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 flex flex-col">
                 <h3 className="font-semibold text-lg">Enterprise</h3>
                 <p className="mt-2 text-sm text-gray-600">Coming soon</p>
                 <ul className="mt-5 space-y-2 text-sm text-gray-600">
