@@ -70,9 +70,9 @@ export const HomePage = () => {
     <div className="w-full bg-white text-gray-900">
       {/* HERO */}
       <section className="w-full bg-white py-20 md:py-24">
-        <Container className="grid grid-cols-1 md:grid-cols-[1.2fr_0.8fr] gap-12 md:gap-14 items-center">
+        <Container className="grid grid-cols-1 md:grid-cols-[1.3fr_0.7fr] gap-12 md:gap-14 items-center">
           <div className="w-full">
-            <h1 className="text-4xl md:text-6xl font-semibold tracking-tight leading-[1.02] max-w-3xl">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight leading-tight max-w-none">
               Manage work clearly. Move every task forward with confidence.
             </h1>
 
@@ -129,58 +129,62 @@ export const HomePage = () => {
       </section>
 
       {/* HOW IT WORKS */}
-      <section className="w-full bg-gray-50 py-20 md:py-24 border-y border-gray-100">
+      <section className="w-full bg-gray-50 py-20 md:py-24 border-t border-gray-100">
         <Container>
-          <div className="max-w-3xl px-4">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight">How it works</h2>
-            <p className="mt-4 text-gray-600 leading-relaxed">
-              Launch a reliable workflow in minutes and keep every stakeholder aligned from start to completion.
-            </p>
-          </div>
+          <div className="grid gap-12">
+            <div className="max-w-2xl">
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight">How it works</h2>
+              <p className="mt-4 text-gray-600 leading-relaxed">
+                Launch a reliable workflow in minutes and keep every stakeholder aligned from start to completion.
+              </p>
+            </div>
 
-          <div className="mt-12 grid md:grid-cols-3 gap-8">
-            {HOW_IT_WORKS.map((step, index) => (
-              <div key={step.title} className="h-full rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                <div className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 text-sm font-semibold text-gray-700">
-                  {index + 1}
+            <div className="grid md:grid-cols-3 gap-8">
+              {HOW_IT_WORKS.map((step, index) => (
+                <div key={step.title} className="h-full rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                  <div className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 text-sm font-semibold text-gray-700">
+                    {index + 1}
+                  </div>
+                  <h3 className="mt-5 text-lg font-semibold text-gray-900">{step.title}</h3>
+                  <p className="mt-3 text-sm leading-relaxed text-gray-600">{step.desc}</p>
                 </div>
-                <h3 className="mt-5 text-lg font-semibold text-gray-900">{step.title}</h3>
-                <p className="mt-3 text-sm leading-relaxed text-gray-600">{step.desc}</p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </Container>
       </section>
 
       {/* FEATURES */}
-      <section id="features" className="w-full bg-gray-50 py-20 md:py-24">
+      <section id="features" className="w-full bg-gray-50 py-20 md:py-24 border-t border-gray-100">
         <Container>
-          <div className="max-w-3xl px-4">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight">
-              How Docketra helps your team deliver
-            </h2>
-            <p className="mt-4 text-lg text-gray-600 leading-relaxed">
-              Clear ownership, clear approvals, and a complete audit trail.
-            </p>
-          </div>
+          <div className="grid gap-12">
+            <div className="max-w-2xl">
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight">
+                How Docketra helps your team deliver
+              </h2>
+              <p className="mt-4 text-lg text-gray-600 leading-relaxed">
+                Clear ownership, clear approvals, and a complete audit trail.
+              </p>
+            </div>
 
-          <div className="grid md:grid-cols-3 gap-6 mt-12">
-            {CAPABILITIES.map((item, index) => (
-              <div
-                key={item.title}
-                className="h-full flex flex-col rounded-xl border border-gray-200 bg-white p-7 hover:shadow-md transition-all"
-              >
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-base text-gray-600">
-                  {FEATURE_ICONS[index]}
-                </span>
-                <h3 className="mt-5 text-lg font-semibold text-gray-900">
-                  {item.title}
-                </h3>
-                <p className="mt-4 text-sm text-gray-600 leading-relaxed">
-                  {item.desc}
-                </p>
-              </div>
-            ))}
+            <div className="grid md:grid-cols-3 gap-8">
+              {CAPABILITIES.map((item, index) => (
+                <div
+                  key={item.title}
+                  className="h-full flex flex-col rounded-xl border border-gray-200 bg-white p-7 hover:shadow-md transition-all"
+                >
+                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-base text-gray-600">
+                    {FEATURE_ICONS[index]}
+                  </span>
+                  <h3 className="mt-5 text-lg font-semibold text-gray-900">
+                    {item.title}
+                  </h3>
+                  <p className="mt-4 text-sm text-gray-600 leading-relaxed">
+                    {item.desc}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         </Container>
       </section>
@@ -188,52 +192,54 @@ export const HomePage = () => {
       {/* PRICING */}
       <section id="pricing" className="w-full bg-white py-20 md:py-24 border-t border-gray-100">
         <Container>
-          <div className="max-w-3xl mx-auto text-center px-4">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight">
-              Pricing
-            </h2>
-            <p className="mt-4 text-gray-600 leading-relaxed">
-              Start free and move to advanced controls as your team grows.
-            </p>
-          </div>
-
-          <div className="mt-12 grid md:grid-cols-3 gap-6 w-full items-stretch">
-            <div className="h-full border border-gray-200 rounded-xl p-7 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all flex flex-col">
-              <h3 className="font-semibold text-lg">Starter</h3>
-              <p className="mt-2 text-sm text-gray-600">Free during early access</p>
-              <ul className="mt-5 space-y-2 text-sm text-gray-600">
-                <li>Up to 2 users</li>
-                <li>Basic workflows</li>
-                <li>Case management</li>
-              </ul>
-              <Link
-                to="/signup"
-                className="mt-auto pt-6 inline-block rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-900 transition-colors"
-              >
-                Create workspace
-              </Link>
+          <div className="grid gap-12">
+            <div className="max-w-2xl mx-auto text-center">
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight">
+                Pricing
+              </h2>
+              <p className="mt-4 text-gray-600 leading-relaxed">
+                Start free and move to advanced controls as your team grows.
+              </p>
             </div>
 
-            <div className="h-full border border-gray-200 rounded-xl p-7 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all flex flex-col">
-              <h3 className="font-semibold text-lg">Professional</h3>
-              <p className="mt-2 text-sm text-gray-600">For growing teams with more workflow volume</p>
-              <ul className="mt-5 space-y-2 text-sm text-gray-600">
-                <li>Up to 25 users</li>
-                <li>Advanced workflows and approvals</li>
-                <li>Priority support</li>
-              </ul>
-              <p className="mt-auto pt-6 text-sm font-medium text-gray-500">Coming soon</p>
-            </div>
+            <div className="grid md:grid-cols-3 gap-8 w-full items-stretch">
+              <div className="h-full border border-gray-200 rounded-xl p-7 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all flex flex-col">
+                <h3 className="font-semibold text-lg">Starter</h3>
+                <p className="mt-2 text-sm text-gray-600">Free during early access</p>
+                <ul className="mt-5 space-y-2 text-sm text-gray-600">
+                  <li>Up to 2 users</li>
+                  <li>Basic workflows</li>
+                  <li>Case management</li>
+                </ul>
+                <Link
+                  to="/signup"
+                  className="mt-auto pt-6 inline-block rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-900 transition-colors"
+                >
+                  Create workspace
+                </Link>
+              </div>
 
-            <div className="h-full border border-gray-200 rounded-xl p-7 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all flex flex-col">
-              <h3 className="font-semibold text-lg">Enterprise</h3>
-              <p className="mt-2 text-sm text-gray-600">For larger teams with governance requirements</p>
-              <ul className="mt-5 space-y-2 text-sm text-gray-600">
-                <li>Unlimited users</li>
-                <li>Audit-focused controls</li>
-                <li>Dedicated onboarding support</li>
-              </ul>
-              <p className="mt-auto pt-6 text-sm font-medium text-gray-500">Custom pricing</p>
+              <div className="h-full border border-gray-200 rounded-xl p-7 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all flex flex-col">
+                <h3 className="font-semibold text-lg">Professional</h3>
+                <p className="mt-2 text-sm text-gray-600">Coming soon</p>
+                <ul className="mt-5 space-y-2 text-sm text-gray-600">
+                  <li>Up to 25 users</li>
+                  <li>Advanced workflows and approvals</li>
+                  <li>Priority support</li>
+                </ul>
+                <p className="mt-auto pt-6 text-sm font-medium text-gray-500">Coming soon</p>
+              </div>
+
+              <div className="h-full border border-gray-200 rounded-xl p-7 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all flex flex-col">
+                <h3 className="font-semibold text-lg">Enterprise</h3>
+                <p className="mt-2 text-sm text-gray-600">Coming soon</p>
+                <ul className="mt-5 space-y-2 text-sm text-gray-600">
+                  <li>Unlimited users</li>
+                  <li>Audit-focused controls</li>
+                  <li>Dedicated onboarding support</li>
+                </ul>
+                <p className="mt-auto pt-6 text-sm font-medium text-gray-500">Coming soon</p>
+              </div>
             </div>
           </div>
         </Container>
