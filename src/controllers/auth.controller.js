@@ -4289,9 +4289,9 @@ const googleTokenLogin = async (req, res) => {
     const email = String(payload.email || '').trim().toLowerCase();
     const name = String(payload.name || '').trim();
     const providerId = String(payload.sub || '').trim();
-    if (!email || !providerId) return res.status(400).json({ success: false, message: 'Invalid Google token' });
+    if (!email) return res.status(400).json({ success: false, message: 'Invalid Google token' });
 
-    let user = await User.findOne({ primary_email: email });
+    let user = await User.findOne({ email });
 
     if (!user) {
       const generatedXid = await xIDGenerator.generateNextXID();
@@ -4310,10 +4310,6 @@ const googleTokenLogin = async (req, res) => {
               passwordHash: null,
               passwordSet: false,
             },
-            google: {
-              googleId: providerId,
-              linkedAt: new Date(),
-            },
           },
         }]);
       } catch (createError) {
@@ -4321,19 +4317,23 @@ const googleTokenLogin = async (req, res) => {
         if (!duplicateEmail) {
           throw createError;
         }
-        user = await User.findOne({ primary_email: email });
+        user = await User.findOne({ email });
       }
     }
 
-    const linked = await AuthIdentity.findOne({ user_id: user._id, provider: 'google' });
-    if (!linked) {
-      await AuthIdentity.create({ user_id: user._id, provider: 'google', provider_id: providerId });
+    if (providerId) {
+      const linked = await AuthIdentity.findOne({ user_id: user._id, provider: 'google' });
+      if (!linked) {
+        await AuthIdentity.create({ user_id: user._id, provider: 'google', provider_id: providerId });
+      }
     }
 
     const tokens = await issueAuthTokens(req, user);
     return res.json({
       success: true,
       message: 'Google login successful',
+      accessToken: tokens.accessToken,
+      isOnboarded: Boolean(user.isOnboarded),
       data: {
         ...tokens,
         xid: user.xid,
@@ -4360,6 +4360,8 @@ const signupWithEmail = async (req, res) => {
       const tokens = await issueAuthTokens(req, existing);
       return res.status(200).json({
         success: true,
+        accessToken: tokens.accessToken,
+        isOnboarded: Boolean(existing.isOnboarded),
         data: {
           accessToken: tokens.accessToken,
           refreshToken: tokens.refreshToken,
@@ -4398,6 +4400,8 @@ const signupWithEmail = async (req, res) => {
     const tokens = await issueAuthTokens(req, createdUser);
     return res.status(201).json({
       success: true,
+      accessToken: tokens.accessToken,
+      isOnboarded: false,
       data: {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
@@ -4414,7 +4418,6 @@ const universalLogin = async (req, res) => {
   try {
     const loginId = String(req.body?.xid || req.body?.email || '').trim();
     const password = String(req.body?.password || '');
-    const otp = req.body?.otp ? String(req.body.otp).trim() : null;
     if (!loginId || !password) return res.status(400).json({ success: false, message: 'xid or email and password are required' });
 
     const isEmail = loginId.includes('@');
@@ -4431,26 +4434,6 @@ const universalLogin = async (req, res) => {
     const passwordHash = identity?.password_hash || user.passwordHash;
     if (!passwordHash || !(await bcrypt.compare(password, passwordHash))) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
-    }
-
-    const identifier = String(user.primary_email || user.email).toLowerCase();
-
-    if (!otp) {
-      await sendCentralOtp({ email: identifier, purpose: 'login' });
-      return res.status(202).json({
-        success: true,
-        message: 'OTP required',
-        otpRequired: true,
-      });
-    }
-
-    await verifyCentralOtp({ identifier, code: otp, purpose: 'login' });
-
-    if (!isSuperAdminRole(user.role) && !user.firmId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Account is not linked to a firm. Please complete onboarding or contact your administrator.',
-      });
     }
 
     const tokens = await issueAuthTokens(req, user);
