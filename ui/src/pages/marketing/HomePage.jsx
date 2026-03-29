@@ -32,8 +32,6 @@ const HOW_IT_WORKS = [
   },
 ];
 
-const FEATURE_ICONS = ['◌', '◎', '◍'];
-
 const HERO_TASKS = [
   { name: 'Review monthly filing checklist', status: 'In Progress', assignee: 'AR', tone: 'text-amber-700 bg-amber-50 border-amber-200' },
   { name: 'Collect final sign-off from approver', status: 'Pending', assignee: 'KP', tone: 'text-slate-700 bg-slate-100 border-slate-200' },
@@ -69,10 +67,10 @@ export const HomePage = () => {
   return (
     <div className="w-full bg-white text-gray-900">
       {/* HERO */}
-      <section className="w-full bg-white py-20 md:py-28">
-        <Container className="grid min-w-0 grid-cols-1 md:grid-cols-[1.3fr_0.7fr] gap-12 md:gap-16 items-center">
-          <div className="w-full min-w-0">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight leading-tight max-w-none">
+      <section className="w-full bg-white py-16 md:py-24">
+        <Container className="grid min-w-0 grid-cols-1 gap-10 md:grid-cols-12 md:gap-8 lg:gap-12 items-start">
+          <div className="w-full min-w-0 md:col-span-7 lg:col-span-8">
+            <h1 className="max-w-4xl text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.06]">
               Manage work clearly. Move every task forward with confidence.
             </h1>
 
@@ -80,22 +78,22 @@ export const HomePage = () => {
               Docketra helps teams run structured workflows, assign accountable owners, and keep approvals moving without chaos.
             </p>
 
-            <div className="mt-10 flex flex-col items-start gap-4">
+            <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row sm:items-center items-start gap-3 sm:gap-4">
               <Link
                 to="/signup"
-                className="inline-flex items-center justify-center h-11 px-6 rounded-lg bg-black text-white font-medium shadow-md hover:shadow-lg hover:bg-gray-900 transition-colors"
+                className="inline-flex items-center justify-center h-11 px-6 rounded-lg bg-black text-white text-sm sm:text-base font-medium shadow-md hover:shadow-lg hover:bg-gray-900 transition-colors"
               >
                 Create your workspace
               </Link>
-              <p className="w-full min-w-0 text-sm text-gray-500">
+              <p className="text-sm text-gray-500">
                 No setup complexity. Start in minutes.
               </p>
             </div>
           </div>
 
-          <div className="w-full min-w-0">
-            <div className="rounded-2xl border border-gray-200 bg-white/95 backdrop-blur shadow-md p-4 sm:p-5 md:p-6">
-              <div className="flex items-center justify-between pb-4">
+          <div className="w-full min-w-0 md:col-span-5 lg:col-span-4">
+            <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-4 sm:p-5 md:p-6">
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100">
                 <div>
                   <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Live workflow</p>
                   <h3 className="mt-1 text-sm font-semibold text-gray-900">Month-end Operations</h3>
@@ -107,9 +105,9 @@ export const HomePage = () => {
 
               <div className="mt-4 space-y-3">
                 {HERO_TASKS.map((task) => (
-                  <div key={task.name} className="rounded-lg bg-white p-3 sm:p-3.5">
+                  <div key={task.name} className="rounded-lg border border-gray-100 bg-white p-3 sm:p-3.5">
                     <div className="flex items-start justify-between gap-3">
-                      <p className="min-w-0 text-sm font-medium text-gray-900 leading-snug break-words">{task.name}</p>
+                      <p className="min-w-0 text-sm font-medium text-gray-900 leading-snug">{task.name}</p>
                       <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-900 text-[11px] font-semibold text-white">
                         {task.assignee}
                       </span>
@@ -129,24 +127,24 @@ export const HomePage = () => {
       </section>
 
       {/* HOW IT WORKS */}
-      <section className="w-full bg-gray-50 py-24 md:py-28 border-t border-gray-100">
+      <section className="w-full bg-gray-50 py-20 md:py-24 border-t border-gray-100">
         <Container>
           <div className="grid min-w-0 gap-16">
             <div className="w-full min-w-0">
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight">How it works</h2>
-              <p className="mt-4 w-full min-w-0 text-gray-600 leading-relaxed">
+              <p className="mt-4 text-gray-600 leading-relaxed">
                 Launch a reliable workflow in minutes and keep every stakeholder aligned from start to completion.
               </p>
             </div>
 
             <div className="grid min-w-0 md:grid-cols-3 gap-8">
               {HOW_IT_WORKS.map((step, index) => (
-                <div key={step.title} className="h-full rounded-xl border border-gray-200 bg-white p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200">
+                <div key={step.title} className="h-full rounded-xl border border-gray-200 bg-white p-6 shadow-sm hover:shadow-md transition-all duration-200">
                   <div className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 text-sm font-semibold text-gray-700">
                     {index + 1}
                   </div>
                   <h3 className="mt-5 text-lg font-semibold text-gray-900">{step.title}</h3>
-                  <p className="mt-3 w-full min-w-0 text-sm leading-relaxed text-gray-600">{step.desc}</p>
+                  <p className="mt-3 text-sm leading-relaxed text-gray-600">{step.desc}</p>
                 </div>
               ))}
             </div>
@@ -155,14 +153,14 @@ export const HomePage = () => {
       </section>
 
       {/* FEATURES */}
-      <section id="features" className="w-full bg-gray-50 py-24 md:py-28 border-t border-gray-100">
+      <section id="features" className="w-full bg-gray-50 py-20 md:py-24 border-t border-gray-100">
         <Container>
           <div className="grid min-w-0 gap-16">
             <div className="w-full min-w-0">
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight">
                 How Docketra helps your team deliver
               </h2>
-              <p className="mt-4 w-full min-w-0 text-gray-600 leading-relaxed">
+              <p className="mt-4 text-gray-600 leading-relaxed">
                 Clear ownership, clear approvals, and a complete audit trail.
               </p>
             </div>
@@ -171,15 +169,15 @@ export const HomePage = () => {
               {CAPABILITIES.map((item, index) => (
                 <div
                   key={item.title}
-                  className="h-full flex flex-col rounded-xl border border-gray-200 bg-white p-7 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200"
+                  className="h-full flex flex-col rounded-xl border border-gray-200 bg-white p-7 shadow-sm hover:shadow-md transition-all duration-200"
                 >
-                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-gray-50 text-base text-gray-600">
-                    {FEATURE_ICONS[index]}
+                  <span className="inline-flex h-10 min-w-10 px-3 items-center justify-center rounded-lg bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    {`0${index + 1}`}
                   </span>
                   <h3 className="mt-5 text-lg font-semibold text-gray-900">
                     {item.title}
                   </h3>
-                  <p className="mt-4 w-full min-w-0 text-sm text-gray-600 leading-relaxed">
+                  <p className="mt-4 text-sm text-gray-600 leading-relaxed">
                     {item.desc}
                   </p>
                 </div>
@@ -190,14 +188,14 @@ export const HomePage = () => {
       </section>
 
       {/* PRICING */}
-      <section id="pricing" className="w-full bg-white py-24 md:py-28 border-t border-gray-100">
+      <section id="pricing" className="w-full bg-white py-20 md:py-24 border-t border-gray-100">
         <Container>
           <div className="grid min-w-0 gap-16">
             <div className="w-full min-w-0">
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight">
                 Pricing
               </h2>
-              <p className="mt-4 w-full min-w-0 text-gray-600 leading-relaxed">
+              <p className="mt-4 text-gray-600 leading-relaxed">
                 Start free and move to advanced controls as your team grows.
               </p>
             </div>
