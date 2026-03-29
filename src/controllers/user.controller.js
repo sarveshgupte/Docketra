@@ -329,15 +329,44 @@ const deleteUser = async (req, res) => {
   }
 };
 
+
+const getCurrentUser = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
+    const user = await User.findById(userId)
+      .select('name email primary_email isOnboarded')
+      .lean();
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        name: user.name || '',
+        email: user.email || user.primary_email || '',
+        isOnboarded: Boolean(user.isOnboarded),
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message || 'Unable to load profile' });
+  }
+};
+
 const completeProfile = async (req, res) => {
-  const { name, firmName, phoneNumber } = req.body || {};
+  const { name, firmName, phone } = req.body || {};
   const userId = req.user?._id;
 
   if (!userId) {
     return res.status(401).json({ success: false, message: 'Authentication required' });
   }
-  if (!firmName || !phoneNumber) {
-    return res.status(400).json({ success: false, message: 'firmName and phoneNumber are required' });
+  if (!firmName || !phone) {
+    return res.status(400).json({ success: false, message: 'firmName and phone are required' });
   }
 
   const session = await mongoose.startSession();
@@ -371,7 +400,7 @@ const completeProfile = async (req, res) => {
       if (name && String(name).trim()) {
         user.name = String(name).trim();
       }
-      user.phoneNumber = String(phoneNumber).trim();
+      user.phoneNumber = String(phone).trim();
       user.firmId = createdFirm._id;
       user.isOnboarded = true;
       await user.save({ session });
@@ -423,6 +452,7 @@ const completeProfile = async (req, res) => {
 };
 
 module.exports = {
+  getCurrentUser,
   getUsers,
   getUserById,
   createUser: wrapWriteHandler(createUser),
