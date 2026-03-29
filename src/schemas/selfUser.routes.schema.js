@@ -8,7 +8,7 @@ module.exports = {
     body: z.object({
       name: nonEmptyString.optional(),
       firmName: nonEmptyString,
-      phone: nonEmptyString,
+      phone: z.string().trim().regex(/^\d{10}$/, 'phone must be exactly 10 digits'),
     }).strip(),
   },
 };

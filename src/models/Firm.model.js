@@ -56,6 +56,26 @@ const firmSchema = new mongoose.Schema({
     immutable: true,
     match: [/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'firmSlug must be URL-safe (lowercase letters, numbers, and hyphens only)'],
   },
+
+  /**
+   * User who created this firm.
+   */
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
+    index: true,
+  },
+
+  /**
+   * Logical storage provider selector for onboarding.
+   */
+  storageProvider: {
+    type: String,
+    default: 'docketra',
+    lowercase: true,
+    trim: true,
+  },
   
   /**
    * Default Client ID - represents the firm itself
