@@ -35,7 +35,7 @@ export function GoogleSignIn({
         throw new Error(result?.message || 'Google login failed');
       }
 
-      const { accessToken, isOnboarded } = result.data || {};
+      const { accessToken, isOnboarded } = result.data || result || {};
       if (!accessToken) {
         throw new Error('Google login failed: access token missing from response.');
       }

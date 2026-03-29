@@ -35,7 +35,7 @@ export default function Signup() {
     setApiError('');
   };
 
-  const submitEmailSignup = async (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     setApiError('');
 
@@ -67,7 +67,7 @@ export default function Signup() {
         password: form.password,
       });
 
-      const data = response?.data?.data || {};
+      const data = response?.data?.data || response?.data || {};
       const { accessToken, isOnboarded } = data;
 
       if (accessToken) {
@@ -107,7 +107,7 @@ export default function Signup() {
           <div className="h-px flex-1 bg-gray-200" />
         </div>
 
-        <form className="mt-4 space-y-4" onSubmit={submitEmailSignup} noValidate>
+        <form className="mt-4 space-y-4" onSubmit={handleSubmit} noValidate>
           <Input
             id="signup-name"
             name="name"
