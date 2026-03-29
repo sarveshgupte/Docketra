@@ -70,13 +70,13 @@ export const HomePage = () => {
     <div className="w-full bg-white text-gray-900">
       {/* HERO */}
       <section className="w-full bg-white py-20 md:py-28">
-        <Container className="grid grid-cols-1 md:grid-cols-[1.3fr_0.7fr] gap-12 md:gap-16 items-center">
-          <div className="w-full">
+        <Container className="grid min-w-0 grid-cols-1 md:grid-cols-[1.3fr_0.7fr] gap-12 md:gap-16 items-center">
+          <div className="w-full min-w-0">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight leading-tight max-w-none">
               Manage work clearly. Move every task forward with confidence.
             </h1>
 
-            <p className="mt-6 md:mt-8 text-base sm:text-lg text-gray-600 leading-relaxed max-w-xl md:max-w-2xl">
+            <p className="mt-6 md:mt-8 text-base sm:text-lg text-gray-600 leading-relaxed max-w-xl md:max-w-2xl w-full min-w-0">
               Docketra helps teams run structured workflows, assign accountable owners, and keep approvals moving without chaos.
             </p>
 
@@ -87,13 +87,13 @@ export const HomePage = () => {
               >
                 Create your workspace
               </Link>
-              <p className="text-sm text-gray-500">
+              <p className="w-full min-w-0 text-sm text-gray-500">
                 No setup complexity. Start in minutes.
               </p>
             </div>
           </div>
 
-          <div className="w-full">
+          <div className="w-full min-w-0">
             <div className="rounded-2xl border border-gray-200 bg-white/95 backdrop-blur shadow-md p-4 sm:p-5 md:p-6">
               <div className="flex items-center justify-between pb-4">
                 <div>
@@ -131,22 +131,22 @@ export const HomePage = () => {
       {/* HOW IT WORKS */}
       <section className="w-full bg-gray-50 py-24 md:py-28 border-t border-gray-100">
         <Container>
-          <div className="grid gap-16">
-            <div className="max-w-2xl">
+          <div className="grid min-w-0 gap-16">
+            <div className="max-w-2xl w-full min-w-0">
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight">How it works</h2>
-              <p className="mt-4 text-gray-600 leading-relaxed">
+              <p className="mt-4 w-full min-w-0 text-gray-600 leading-relaxed">
                 Launch a reliable workflow in minutes and keep every stakeholder aligned from start to completion.
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid min-w-0 md:grid-cols-3 gap-8">
               {HOW_IT_WORKS.map((step, index) => (
                 <div key={step.title} className="h-full rounded-xl border border-gray-200 bg-white p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200">
                   <div className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 text-sm font-semibold text-gray-700">
                     {index + 1}
                   </div>
                   <h3 className="mt-5 text-lg font-semibold text-gray-900">{step.title}</h3>
-                  <p className="mt-3 text-sm leading-relaxed text-gray-600">{step.desc}</p>
+                  <p className="mt-3 w-full min-w-0 text-sm leading-relaxed text-gray-600">{step.desc}</p>
                 </div>
               ))}
             </div>
@@ -157,17 +157,17 @@ export const HomePage = () => {
       {/* FEATURES */}
       <section id="features" className="w-full bg-gray-50 py-24 md:py-28 border-t border-gray-100">
         <Container>
-          <div className="grid gap-16">
-            <div className="max-w-2xl">
+          <div className="grid min-w-0 gap-16">
+            <div className="max-w-2xl w-full min-w-0">
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight">
                 How Docketra helps your team deliver
               </h2>
-              <p className="mt-4 text-gray-600 leading-relaxed">
+              <p className="mt-4 w-full min-w-0 text-gray-600 leading-relaxed">
                 Clear ownership, clear approvals, and a complete audit trail.
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6 md:gap-8 lg:gap-6">
+            <div className="grid min-w-0 md:grid-cols-3 gap-6 md:gap-8 lg:gap-6">
               {CAPABILITIES.map((item, index) => (
                 <div
                   key={item.title}
@@ -179,7 +179,7 @@ export const HomePage = () => {
                   <h3 className="mt-5 text-lg font-semibold text-gray-900">
                     {item.title}
                   </h3>
-                  <p className="mt-4 text-sm text-gray-600 leading-relaxed">
+                  <p className="mt-4 w-full min-w-0 text-sm text-gray-600 leading-relaxed">
                     {item.desc}
                   </p>
                 </div>
@@ -192,20 +192,20 @@ export const HomePage = () => {
       {/* PRICING */}
       <section id="pricing" className="w-full bg-white py-24 md:py-28 border-t border-gray-100">
         <Container>
-          <div className="grid gap-16">
-            <div className="max-w-2xl">
+          <div className="grid min-w-0 gap-16">
+            <div className="max-w-2xl w-full min-w-0">
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight">
                 Pricing
               </h2>
-              <p className="mt-4 text-gray-600 leading-relaxed">
+              <p className="mt-4 w-full min-w-0 text-gray-600 leading-relaxed">
                 Start free and move to advanced controls as your team grows.
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-8 md:gap-10 w-full items-stretch">
+            <div className="grid min-w-0 md:grid-cols-3 gap-8 md:gap-10 w-full items-stretch">
               <div className="h-full border border-gray-200 ring-1 ring-black/5 md:scale-[1.02] bg-white rounded-xl p-6 md:p-7 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 flex flex-col">
                 <h3 className="font-semibold text-lg">Starter</h3>
-                <p className="mt-2 text-sm text-gray-600">Free during early access</p>
+                <p className="mt-2 w-full min-w-0 text-sm text-gray-600">Free during early access</p>
                 <ul className="mt-5 space-y-2 text-sm text-gray-600">
                   <li>Up to 2 users</li>
                   <li>Basic workflows</li>
@@ -221,24 +221,24 @@ export const HomePage = () => {
 
               <div className="h-full border border-gray-200 bg-white rounded-xl p-6 md:p-7 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 flex flex-col">
                 <h3 className="font-semibold text-lg">Professional</h3>
-                <p className="mt-2 text-sm text-gray-600">Coming soon</p>
+                <p className="mt-2 w-full min-w-0 text-sm text-gray-600">Coming soon</p>
                 <ul className="mt-5 space-y-2 text-sm text-gray-600">
                   <li>Up to 25 users</li>
                   <li>Advanced workflows and approvals</li>
                   <li>Priority support</li>
                 </ul>
-                <p className="mt-auto pt-6 text-sm font-medium text-gray-500">Coming soon</p>
+                <p className="mt-auto pt-6 w-full min-w-0 text-sm font-medium text-gray-500">Coming soon</p>
               </div>
 
               <div className="h-full border border-gray-200 bg-white rounded-xl p-6 md:p-7 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 flex flex-col">
                 <h3 className="font-semibold text-lg">Enterprise</h3>
-                <p className="mt-2 text-sm text-gray-600">Coming soon</p>
+                <p className="mt-2 w-full min-w-0 text-sm text-gray-600">Coming soon</p>
                 <ul className="mt-5 space-y-2 text-sm text-gray-600">
                   <li>Unlimited users</li>
                   <li>Audit-focused controls</li>
                   <li>Dedicated onboarding support</li>
                 </ul>
-                <p className="mt-auto pt-6 text-sm font-medium text-gray-500">Coming soon</p>
+                <p className="mt-auto pt-6 w-full min-w-0 text-sm font-medium text-gray-500">Coming soon</p>
               </div>
             </div>
           </div>
