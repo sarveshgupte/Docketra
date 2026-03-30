@@ -6,6 +6,7 @@ import api from '../../services/api';
 
 export function GoogleSignIn({
   className = '',
+  firmSlug = '',
   onError,
   onSuccess,
   redirectAuthenticated = '/dashboard',
@@ -29,7 +30,10 @@ export function GoogleSignIn({
         throw new Error('Google login failed: ID token was not returned.');
       }
 
-      const apiResponse = await api.post('/auth/google', { idToken });
+      const apiResponse = await api.post('/auth/google', {
+        idToken,
+        ...(firmSlug ? { firmSlug } : {}),
+      });
       const result = apiResponse?.data;
       if (!result?.success) {
         throw new Error(result?.message || 'Google login failed');
@@ -61,7 +65,7 @@ export function GoogleSignIn({
     } finally {
       setLoading(false);
     }
-  }, [loading, navigate, onError, onSuccess, redirectAuthenticated, redirectNotOnboarded, showError]);
+  }, [firmSlug, loading, navigate, onError, onSuccess, redirectAuthenticated, redirectNotOnboarded, showError]);
 
   useEffect(() => {
     const clientId = String(import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();

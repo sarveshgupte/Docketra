@@ -17,10 +17,4 @@ module.exports = {
   'POST /login': {
     body: loginBodySchema,
   },
-  'POST /verify-otp': {
-    body: z.object({
-      loginToken: nonEmptyString,
-      otp: z.string().trim().regex(/^\d{6}$/, 'OTP must be a 6 digit code'),
-    }).strip(),
-  },
 };

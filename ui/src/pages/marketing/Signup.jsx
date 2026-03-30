@@ -23,7 +23,6 @@ export default function Signup() {
   const [apiError, setApiError] = useState('');
   const [errors, setErrors] = useState({});
   const [form, setForm] = useState({
-    name: '',
     email: '',
     password: '',
   });
@@ -40,7 +39,6 @@ export default function Signup() {
     setApiError('');
 
     const nextErrors = {};
-    if (!form.name.trim()) nextErrors.name = 'Name is required';
     if (!form.email.trim()) {
       nextErrors.email = 'Email is required';
     } else if (!emailPattern.test(form.email.trim())) {
@@ -62,7 +60,6 @@ export default function Signup() {
 
     try {
       const response = await api.post('/auth/signup', {
-        name: form.name.trim(),
         email: form.email.trim().toLowerCase(),
         password: form.password,
       });
@@ -91,7 +88,7 @@ export default function Signup() {
     <div className="auth-wrapper">
       <Card className="auth-card max-w-form">
         <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">Create your workspace</h1>
-        <p className="mt-2 text-sm text-gray-500 text-center">Step 1 of 2: authenticate with Google or email.</p>
+        <p className="mt-2 text-sm text-gray-500 text-center">Step 1 of 2: authenticate with Google or email/password. Step 2 will collect your name, firm name, and phone number.</p>
 
         {apiError && (
           <div role="alert" className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -108,18 +105,6 @@ export default function Signup() {
         </div>
 
         <form className="mt-4 space-y-4" onSubmit={handleSubmit} noValidate>
-          <Input
-            id="signup-name"
-            name="name"
-            label="Name"
-            value={form.name}
-            onChange={onFormChange}
-            disabled={loading}
-            autoComplete="name"
-            error={errors.name}
-            required
-          />
-
           <Input
             id="signup-email"
             type="email"
