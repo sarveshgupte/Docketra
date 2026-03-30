@@ -10,12 +10,11 @@ import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Card } from '../components/common/Card';
 import { Loading } from '../components/common/Loading';
-import { validateEmail, validatePassword, validateXID } from '../utils/validators';
+import { validateEmail, validatePassword } from '../utils/validators';
 import { STORAGE_KEYS } from '../utils/constants';
 import { isAccessTokenOnlyUser } from '../utils/authUtils';
 import api from '../services/api';
 import { useToast } from '../hooks/useToast';
-import GoogleSignIn from '../components/auth/GoogleSignIn';
 import './LoginPage.css';
 
 const getLoginErrorMessage = (error) => {
@@ -131,21 +130,13 @@ export const FirmLoginPage = () => {
     setFieldErrors({});
 
     const normalizedLoginId = loginId.trim();
-    const isEmail = normalizedLoginId.includes('@');
-    const normalizedXid = normalizedLoginId.toUpperCase();
-
     if (!normalizedLoginId) {
-      setFieldErrors({ loginId: 'Email or xID is required.' });
+      setFieldErrors({ loginId: 'Email is required.' });
       return;
     }
 
-    if (isEmail && !validateEmail(normalizedLoginId.toLowerCase())) {
+    if (!validateEmail(normalizedLoginId.toLowerCase())) {
       setFieldErrors({ loginId: 'Please enter a valid email address.' });
-      return;
-    }
-
-    if (!isEmail && !validateXID(normalizedXid)) {
-      setFieldErrors({ loginId: 'Please enter a valid xID (for example, X123456).' });
       return;
     }
 
@@ -163,12 +154,32 @@ export const FirmLoginPage = () => {
 
     try {
       const response = await api.post('/auth/login', {
-        loginId: isEmail ? normalizedLoginId.toLowerCase() : normalizedXid,
+        email: normalizedLoginId.toLowerCase(),
         password,
         firmSlug,
       });
 
       await completeLogin(response.data);
+    } catch (err) {
+      const message = getLoginErrorMessage(err);
+      setError(message);
+      showError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOtpLogin = async () => {
+    const normalizedLoginId = loginId.trim().toLowerCase();
+    if (!validateEmail(normalizedLoginId)) {
+      setFieldErrors({ loginId: 'Enter a valid email to continue with OTP.' });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await api.post('/auth/login', { email: normalizedLoginId });
+      navigate('/auth/otp', { state: { email: normalizedLoginId, purpose: 'login' } });
     } catch (err) {
       const message = getLoginErrorMessage(err);
       setError(message);
@@ -217,7 +228,7 @@ export const FirmLoginPage = () => {
       <Card className="auth-card max-w-form">
         <div className="text-center">
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">{firmData.name}</h1>
-          <p className="mt-2 text-sm text-gray-500 text-center">Sign in using Google or your email/xID and password.</p>
+          <p className="mt-2 text-sm text-gray-500 text-center">Sign in using your email and password.</p>
           <p className="mt-2 text-xs text-gray-500 text-center">{`Firm login URL: /${firmSlug}/login`}</p>
         </div>
 
@@ -227,29 +238,15 @@ export const FirmLoginPage = () => {
           </div>
         )}
 
-        <div className="mt-6">
-          <GoogleSignIn
-            firmSlug={firmSlug}
-            redirectAuthenticated={`/${firmSlug}/dashboard`}
-            onError={(googleError) => setError(googleError?.message || 'Google sign-in failed')}
-          />
-        </div>
-
-        <div className="flex items-center gap-2 py-1">
-          <div className="h-px flex-1 bg-gray-200" />
-          <span className="text-xs text-gray-500">OR</span>
-          <div className="h-px flex-1 bg-gray-200" />
-        </div>
-
         <form onSubmit={handleLogin} noValidate className="mt-4 space-y-4">
           <Input
-            label="Email or xID"
+            label="Email"
             type="text"
             value={loginId}
             onChange={handleLoginIdChange}
             error={fieldErrors.loginId}
             required
-            placeholder="you@firm.com or X123456"
+            placeholder="you@firm.com"
             autoComplete="username"
             disabled={loading}
             autoFocus
@@ -269,6 +266,9 @@ export const FirmLoginPage = () => {
 
           <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading}>
             {loading ? 'Signing in...' : 'Sign in'}
+          </Button>
+          <Button type="button" variant="secondary" fullWidth onClick={handleOtpLogin} disabled={loading}>
+            Login with OTP
           </Button>
 
           <div className="text-center space-y-3">

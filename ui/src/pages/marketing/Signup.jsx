@@ -3,9 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../../components/common/Button';
 import { Card } from '../../components/common/Card';
 import { Input } from '../../components/common/Input';
-import GoogleSignIn from '../../components/auth/GoogleSignIn';
 import api from '../../services/api';
-import { STORAGE_KEYS } from '../../utils/constants';
 import { STRONG_PASSWORD_MESSAGE, validateStrongPassword } from '../../utils/validators';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -23,6 +21,7 @@ export default function Signup() {
   const [apiError, setApiError] = useState('');
   const [errors, setErrors] = useState({});
   const [form, setForm] = useState({
+    name: '',
     email: '',
     password: '',
   });
@@ -39,6 +38,9 @@ export default function Signup() {
     setApiError('');
 
     const nextErrors = {};
+    if (!form.name.trim()) {
+      nextErrors.name = 'Name is required';
+    }
     if (!form.email.trim()) {
       nextErrors.email = 'Email is required';
     } else if (!emailPattern.test(form.email.trim())) {
@@ -60,23 +62,16 @@ export default function Signup() {
 
     try {
       const response = await api.post('/auth/signup', {
+        name: form.name.trim(),
         email: form.email.trim().toLowerCase(),
         password: form.password,
       });
 
-      const data = response?.data?.data || response?.data || {};
-      const { accessToken, isOnboarded } = data;
-
-      if (accessToken) {
-        localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
-      }
-
-      if (isOnboarded === false) {
-        navigate('/complete-profile', { replace: true });
-        return;
-      }
-
-      navigate('/dashboard', { replace: true });
+      const signupEmail = response?.data?.data?.email || form.email.trim().toLowerCase();
+      navigate('/auth/otp', {
+        replace: true,
+        state: { email: signupEmail, purpose: 'signup' },
+      });
     } catch (error) {
       setApiError(getErrorMessage(error, 'Unable to sign up with email right now.'));
     } finally {
@@ -88,7 +83,7 @@ export default function Signup() {
     <div className="auth-wrapper">
       <Card className="auth-card max-w-form">
         <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">Create your workspace</h1>
-        <p className="mt-2 text-sm text-gray-500 text-center">Step 1 of 2: authenticate with Google or email/password. Step 2 will collect your name, firm name, and phone number.</p>
+        <p className="mt-2 text-sm text-gray-500 text-center">Create your account using email, password, and OTP verification.</p>
 
         {apiError && (
           <div role="alert" className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -96,15 +91,20 @@ export default function Signup() {
           </div>
         )}
 
-        <GoogleSignIn className="mt-6 mb-2" />
-
-        <div className="mb-2 flex items-center gap-2">
-          <div className="h-px flex-1 bg-gray-200" />
-          <span className="text-xs uppercase tracking-wide text-gray-500">OR</span>
-          <div className="h-px flex-1 bg-gray-200" />
-        </div>
-
         <form className="mt-4 space-y-4" onSubmit={handleSubmit} noValidate>
+          <Input
+            id="signup-name"
+            type="text"
+            name="name"
+            label="Name"
+            value={form.name}
+            onChange={onFormChange}
+            disabled={loading}
+            autoComplete="name"
+            error={errors.name}
+            required
+          />
+
           <Input
             id="signup-email"
             type="email"

@@ -8,7 +8,6 @@ import { useAuth } from '../hooks/useAuth';
 import { Input } from '../components/common/Input';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
-import GoogleSignIn from '../components/auth/GoogleSignIn';
 import { validateXID, validatePassword } from '../utils/validators';
 import { useToast } from '../hooks/useToast';
 import './LoginPage.css';
@@ -104,14 +103,6 @@ export const LoginPage = () => {
         <p className="mt-6 text-sm text-gray-500 text-center">
           Sign in to your workspace using your xID and password.
         </p>
-
-        <div className="google-container">
-          <GoogleSignIn />
-        </div>
-
-        <div className="divider">
-          <span>OR</span>
-        </div>
 
         <form onSubmit={handleLogin} noValidate className="mt-4 space-y-4">
           <p className="text-sm text-gray-500">Fields marked with * are required.</p>
