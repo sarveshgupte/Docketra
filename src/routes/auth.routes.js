@@ -37,9 +37,6 @@ const {
   resendSetup,
   resendCredentials,
   resendLoginOtp,
-  googleTokenLogin,
-  initiateGoogleAuth,
-  handleGoogleCallback,
   signupWithEmail,
   universalLogin,
   sendOtpEndpoint,
@@ -74,9 +71,6 @@ router.post('/forgot-password', authBlockEnforcer, forgotPasswordLimiter, sensit
 router.post('/refresh', refreshIpLimiter, refreshUserLimiter, refreshAccessToken); // NEW: JWT token refresh
 router.post('/verify-totp', otpVerifyLimiter, verifyTotp);
 router.post('/complete-mfa-login', otpVerifyLimiter, completeMfaLogin);
-router.get('/google/login', authBlockEnforcer, authLimiter, initiateGoogleAuth);
-router.get('/google/callback', authBlockEnforcer, authLimiter, handleGoogleCallback);
-router.post('/google', authBlockEnforcer, authLimiter, googleTokenLogin);
 router.post('/signup', authBlockEnforcer, authLimiter, signupWithEmail);
 router.post('/login', authBlockEnforcer, authLimiter, universalLogin);
 router.post('/send-otp', authBlockEnforcer, authLimiter, otpResendLimiter, sendOtpEndpoint);
