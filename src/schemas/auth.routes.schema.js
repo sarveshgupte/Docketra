@@ -25,25 +25,22 @@ module.exports = {
   'POST /google': {
     body: z.object({
       idToken: nonEmptyString,
+      firmSlug: z.string().trim().min(1).optional(),
     }).strip(),
   },
   'POST /signup': {
     body: z.object({
-      name: nonEmptyString,
+      name: nonEmptyString.optional(),
       email: z.string().trim().email(),
       password: strongPassword,
     }).strip(),
   },
   'POST /login': {
     body: z.object({
-      xid: z.string().trim().toUpperCase().regex(/^DK-[A-Z0-9]{5}$/).optional(),
-      email: z.string().trim().email().optional(),
+      loginId: nonEmptyString,
       password: nonEmptyString,
-      otp: z.string().trim().regex(/^\d{6}$/).optional(),
-    }).strip().refine((value) => Boolean(value.xid || value.email), {
-      message: 'xid or email is required',
-      path: ['xid'],
-    }),
+      firmSlug: nonEmptyString,
+    }).strip(),
   },
   'POST /send-otp': {
     body: z.object({

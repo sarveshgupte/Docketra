@@ -8,7 +8,6 @@
  * Route structure:
  *   GET  /api/:firmSlug/login        — return firm metadata for the login page
  *   POST /api/:firmSlug/login       — authenticate a firm user (firmSlug from URL)
- *   POST /api/:firmSlug/verify-otp  — verify login OTP and issue tokens
  */
 
 const express = require('express');
@@ -17,8 +16,8 @@ const routeSchemas = require('../schemas/firm.routes.schema');
 const router = applyRouteValidation(express.Router({ mergeParams: true }), routeSchemas);
 
 const tenantResolver = require('../middleware/tenantResolver');
-const { authBlockEnforcer, loginLimiter, otpVerifyLimiter, publicLimiter } = require('../middleware/rateLimiters');
-const { login, verifyLoginOtp } = require('../controllers/auth.controller');
+const { authBlockEnforcer, loginLimiter, publicLimiter } = require('../middleware/rateLimiters');
+const { login } = require('../controllers/auth.controller');
 const { noFirmNoTransaction } = require('../middleware/noFirmNoTransaction.middleware');
 const { isActiveStatus } = require('../utils/status.utils');
 const setTenantLoginScope = (req, _res, next) => {
@@ -27,7 +26,7 @@ const setTenantLoginScope = (req, _res, next) => {
 };
 
 // Keep the temporary auth block check at the router level, but scope login and
-// OTP throttles to their POST endpoints so public firm metadata is not needlessly limited.
+// login throttles to POST endpoints so public firm metadata is not needlessly limited.
 router.use(authBlockEnforcer);
 
 // Apply tenant resolver to every route in this file
@@ -63,6 +62,5 @@ router.get('/login', publicLimiter, (req, res) => {
  * than the request body, giving a clean, slug-scoped login endpoint.
  */
 router.post('/login', loginLimiter, noFirmNoTransaction, setTenantLoginScope, login);
-router.post('/verify-otp', otpVerifyLimiter, noFirmNoTransaction, setTenantLoginScope, verifyLoginOtp);
 
 module.exports = router;
