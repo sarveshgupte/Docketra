@@ -11,35 +11,17 @@ module.exports = {
       googleId: nonEmptyString.optional(),
     }).strip(),
   },
-  'GET /google/login': {
-    query: z.object({
-      firmSlug: nonEmptyString,
-    }).strip(),
-  },
-  'GET /google/callback': {
-    query: z.object({
-      code: nonEmptyString,
-      state: nonEmptyString,
-    }).strip(),
-  },
-  'POST /google': {
-    body: z.object({
-      idToken: nonEmptyString,
-      firmSlug: z.string().trim().min(1).optional(),
-    }).strip(),
-  },
   'POST /signup': {
     body: z.object({
-      name: nonEmptyString.optional(),
+      name: nonEmptyString,
       email: z.string().trim().email(),
       password: strongPassword,
     }).strip(),
   },
   'POST /login': {
     body: z.object({
-      loginId: nonEmptyString,
-      password: nonEmptyString,
-      firmSlug: nonEmptyString,
+      email: z.string().trim().email(),
+      password: nonEmptyString.optional(),
     }).strip(),
   },
   'POST /send-otp': {
@@ -54,9 +36,8 @@ module.exports = {
   },
   'POST /verify-otp': {
     body: z.object({
-      identifier: nonEmptyString,
-      code: z.string().trim().regex(/^\d{6}$/),
-      purpose: z.enum(['signup', 'login', 'storage_change']),
+      email: z.string().trim().email(),
+      otp: z.string().trim().regex(/^\d{6}$/),
     }).strip(),
   },
   'POST /resend-setup': {

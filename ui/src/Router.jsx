@@ -47,7 +47,7 @@ const MarketingAboutPage = lazyPage(() => import('./pages/marketing/About'), 'Ab
 const MarketingContactPage = lazyPage(() => import('./pages/marketing/Contact'), 'ContactPage');
 const MarketingSignupPage = lazy(() => import('./pages/marketing/Signup'));
 const NotFoundPage = lazyPage(() => import('./pages/NotFoundPage'), 'NotFoundPage');
-const OAuthPostAuthPage = lazyPage(() => import('./pages/OAuthPostAuthPage'), 'OAuthPostAuthPage');
+const OtpVerificationPage = lazyPage(() => import('./pages/OtpVerificationPage'), 'OtpVerificationPage');
 
 const RouteSuspenseOutlet = () => (
   // Keep suspense at the route-group level so layout shells render immediately.
@@ -136,16 +136,17 @@ export const Router = () => {
 
         <Route element={<RouteSuspenseOutlet />}>
           <Route path="/signup" element={<MarketingSignupPage />} />
+          <Route path="/auth/otp" element={<OtpVerificationPage />} />
           <Route path="/:firmSlug/login" element={<FirmLoginPage />} />
           <Route path="/:firmSlug/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/change-password" element={<ChangePasswordPage />} />
           <Route path="/complete-profile" element={<CompleteProfile />} />
+          <Route path="/onboarding" element={<CompleteProfile />} />
           <Route path="/dashboard" element={<DefaultRoute />} />
           <Route path="/auth/setup-account" element={<SetPasswordPage />} />
           <Route path="/setup-password" element={<SetPasswordPage />} />
-          <Route path="/oauth/post-auth" element={<OAuthPostAuthPage />} />
           <Route
             path="/app/superadmin"
             element={(
