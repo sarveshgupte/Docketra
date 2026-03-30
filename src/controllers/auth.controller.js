@@ -3,7 +3,6 @@ const mongoose = require('mongoose');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const speakeasy = require('speakeasy');
-const { google } = require('googleapis');
 const User = require('../models/User.model');
 const Firm = require('../models/Firm.model');
 const Client = require('../models/Client.model');
@@ -24,8 +23,6 @@ const { validatePasswordStrength, PASSWORD_POLICY_MESSAGE } = require('../utils/
 const { getSession } = require('../utils/getSession');
 const { ensureDefaultClientForFirm } = require('../services/defaultClient.service');
 const { getOrCreateDefaultClient } = require('../services/defaultClient.guard');
-const { resolveUserIdentity } = require('../services/identity.service');
-const { isGoogleAuthDisabled } = require('../services/featureFlags.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const config = require('../config/config');
 const { loadEnv } = require('../config/env');
@@ -61,8 +58,6 @@ const FORGOT_PASSWORD_TOKEN_EXPIRY_MINUTES = 30; // 30 minutes for forgot passwo
 const PRE_AUTH_TOKEN_EXPIRY = '5m';
 const DEFAULT_FIRM_ID = 'PLATFORM'; // Default firmId for SUPER_ADMIN and audit logging
 const DEFAULT_XID = 'SUPERADMIN'; // Default xID for SUPER_ADMIN in audit logs
-const GOOGLE_SCOPES = ['openid', 'email'];
-const GOOGLE_STATE_TTL_SECONDS = 10 * 60; // 10 minutes
 const env = loadEnv();
 const SUPERADMIN_USER_ID = () => env.SUPERADMIN_OBJECT_ID;
 const SUPERADMIN_ROLE = 'SUPERADMIN';
@@ -334,58 +329,6 @@ const getSuperadminEnv = () => {
     normalizedXID: env.SUPERADMIN_XID_NORMALIZED,
     email: env.SUPERADMIN_EMAIL_NORMALIZED,
   };
-};
-
-/**
- * Google OAuth client factory (Authorization Code Flow)
- */
-const getGoogleOAuthClient = () => {
-  const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_CALLBACK_URL } = process.env;
-  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_CALLBACK_URL) {
-    throw new Error('Google OAuth is not configured');
-  }
-
-  return new google.auth.OAuth2(
-    GOOGLE_CLIENT_ID,
-    GOOGLE_CLIENT_SECRET,
-    GOOGLE_CALLBACK_URL
-  );
-};
-
-/**
- * Create signed, expiring OAuth state token for CSRF protection
- */
-const createOAuthState = (payload = {}) => {
-  if (!process.env.JWT_SECRET) {
-    throw new Error('JWT_SECRET is not configured for OAuth state signing');
-  }
-
-  return jwt.sign(
-    {
-      nonce: crypto.randomBytes(16).toString('hex'),
-      ...payload,
-    },
-    process.env.JWT_SECRET,
-    {
-      expiresIn: `${GOOGLE_STATE_TTL_SECONDS}s`,
-      // SECURITY: Explicit JWT algorithm allowlist
-      algorithm: 'HS256',
-    }
-  );
-};
-
-/**
- * Verify OAuth state token
- */
-const verifyOAuthState = (stateToken) => {
-  if (!process.env.JWT_SECRET) {
-    throw new Error('JWT_SECRET is not configured for OAuth state verification');
-  }
-
-  // SECURITY: Explicit JWT algorithm allowlist
-  return jwt.verify(stateToken, process.env.JWT_SECRET, {
-    algorithms: ['HS256'],
-  });
 };
 
 const createMfaPreAuthToken = (payload) => {
@@ -3919,315 +3862,6 @@ const completeMfaLogin = async (req, res) => {
   }
 };
 
-/**
- * Initiate Google OAuth (identity-only login flow)
- * GET /api/auth/google/login
- */
-const initiateGoogleAuth = async (req, res) => {
-  try {
-    if (isGoogleAuthDisabled()) {
-      return res.status(503).json({
-        success: false,
-        code: 'FIRM_RESOLUTION_FAILED',
-        message: 'Google authentication is temporarily disabled',
-      });
-    }
-
-    const oauthClient = getGoogleOAuthClient();
-    const normalizedFirmSlug = normalizeFirmSlug(req.query?.firmSlug);
-    if (!normalizedFirmSlug) {
-      return res.status(404).json({
-        success: false,
-        code: 'FIRM_NOT_FOUND',
-        message: 'Firm not found. Please check your login URL.',
-        action: 'contact_admin',
-      });
-    }
-
-    const firm = await Firm.findOne({ firmSlug: normalizedFirmSlug }).select('_id status firmSlug');
-    if (!firm) {
-      return res.status(404).json({
-        success: false,
-        code: 'FIRM_NOT_FOUND',
-        message: 'Firm not found. Please check your login URL.',
-        action: 'contact_admin',
-      });
-    }
-
-    if (!isActiveStatus(firm.status)) {
-      return res.status(403).json({
-        success: false,
-        code: getFirmInactiveCode(firm.status),
-        message: `This firm is currently ${String(firm.status || 'inactive').toLowerCase()}. Please contact support.`,
-        action: 'contact_admin',
-      });
-    }
-
-    const state = createOAuthState({
-      flow: 'login',
-      firmSlug: normalizedFirmSlug,
-      nonce: crypto.randomBytes(16).toString('hex'),
-    });
-
-    const codeVerifier = crypto.randomBytes(64).toString('base64url');
-    const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64url');
-
-    const secureCookies = process.env.NODE_ENV === 'production';
-    const cookieOptions = {
-      httpOnly: true,
-      secure: secureCookies,
-      sameSite: 'lax',
-      maxAge: GOOGLE_STATE_TTL_SECONDS * 1000,
-      path: '/',
-    };
-
-    res.cookie('google_oauth_state', state, cookieOptions);
-    res.cookie('google_oauth_verifier', codeVerifier, cookieOptions);
-    console.info('[AUTH]', { event: 'oauth_start', provider: 'google', firmSlug: normalizedFirmSlug });
-
-    const authUrl = oauthClient.generateAuthUrl({
-      access_type: 'offline',
-      prompt: 'consent',
-      scope: GOOGLE_SCOPES,
-      state,
-      code_challenge: codeChallenge,
-      code_challenge_method: 'S256',
-    });
-
-    return res.redirect(authUrl);
-  } catch (error) {
-    console.error('[AUTH]', { event: 'oauth_start_failed', provider: 'google', message: error.message });
-    return res.status(500).json({
-      success: false,
-      code: 'FIRM_RESOLUTION_FAILED',
-      message: 'Google OAuth is not configured. Please use password login.',
-    });
-  }
-};
-
-/**
- * Google OAuth callback (identity-only login flow)
- * GET /api/auth/google/callback
- */
-const handleGoogleCallback = async (req, res) => {
-  try {
-    console.info('[AUTH]', { event: 'oauth_callback_received', provider: 'google' });
-    if (isGoogleAuthDisabled()) {
-      return res.status(503).json({
-        success: false,
-        code: 'FIRM_RESOLUTION_FAILED',
-        message: 'Google authentication is temporarily disabled',
-      });
-    }
-
-    const { code, state } = req.query;
-    if (!code || !state) {
-      return res.status(400).json({
-        success: false,
-        code: 'FIRM_RESOLUTION_FAILED',
-        message: 'Missing authorization code or state',
-      });
-    }
-
-    const cookieState = req.cookies?.google_oauth_state || null;
-    const codeVerifier = req.cookies?.google_oauth_verifier || null;
-    if (!cookieState || cookieState !== state) {
-      return res.status(400).json({
-        success: false,
-        code: 'FIRM_RESOLUTION_FAILED',
-        message: 'Invalid or expired OAuth state',
-      });
-    }
-    if (!codeVerifier) {
-      return res.status(400).json({
-        success: false,
-        message: 'OAuth session expired. Please retry login.',
-      });
-    }
-
-    let statePayload;
-    try {
-      statePayload = verifyOAuthState(state);
-    } catch {
-      return res.status(400).json({
-        success: false,
-        code: 'FIRM_RESOLUTION_FAILED',
-        message: 'Invalid or expired OAuth state',
-      });
-    }
-
-    const firmSlugFromState = normalizeFirmSlug(statePayload?.firmSlug);
-    if (!firmSlugFromState) {
-      return res.status(404).json({
-        success: false,
-        code: 'FIRM_NOT_FOUND',
-        message: 'Firm not found. Please check your login URL.',
-        action: 'contact_admin',
-      });
-    }
-
-    const firm = await Firm.findOne({ firmSlug: firmSlugFromState }).select('_id status');
-    if (!firm || !isActiveStatus(firm.status)) {
-      return res.status(404).json({
-        success: false,
-        code: 'FIRM_NOT_FOUND',
-        message: 'Firm not found. Please check your login URL.',
-        action: 'contact_admin',
-      });
-    }
-
-    const firmIdFromContext = firm._id.toString();
-    const oauthClient = getGoogleOAuthClient();
-    const { tokens } = await oauthClient.getToken({
-      code,
-      codeVerifier,
-    });
-
-    if (!tokens?.id_token) {
-      return res.status(400).json({
-        success: false,
-        code: 'FIRM_RESOLUTION_FAILED',
-        message: 'Failed to exchange authorization code',
-      });
-    }
-
-    const ticket = await oauthClient.verifyIdToken({
-      idToken: tokens.id_token,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-
-    const payload = ticket.getPayload() || {};
-    const email = payload.email ? payload.email.trim().toLowerCase() : null;
-    const googleId = payload.sub;
-    const emailVerified = payload.email_verified !== false;
-
-    if (!email || !googleId || !emailVerified) {
-      return res.status(403).json({
-        success: false,
-        code: 'FIRM_RESOLUTION_FAILED',
-        message: 'Google account not eligible for login',
-      });
-    }
-
-    const identityResult = await resolveUserIdentity({
-      googleProfile: { sub: googleId },
-      email,
-      firmId: firmIdFromContext,
-      canLinkGoogle: (candidate) => {
-        if (candidate.firmId && candidate.firmId.toString() !== firmIdFromContext) return false;
-        if (![ROLE_ADMIN, ROLE_EMPLOYEE].includes(candidate.role)) return false;
-        if (candidate.status === 'suspended' || candidate.status === 'disabled') return false;
-        return isActiveStatus(candidate.status);
-      },
-      linkGoogleIfFound: true,
-    });
-
-    let user = identityResult.user;
-    const linkedDuringRequest = identityResult.linkedDuringRequest;
-
-    if (!user) {
-      return res.status(403).json({
-        success: false,
-        code: 'FIRM_RESOLUTION_FAILED',
-        message: 'Access denied. Account is not invited.',
-      });
-    }
-
-    if (linkedDuringRequest) {
-      const refreshed = await User.findOneAndUpdate(
-        { _id: user._id, firmId: user.firmId },
-        {
-          $set: {
-            mustChangePassword: false,
-            forcePasswordReset: false,
-            emailVerified: true,
-            emailVerifiedAt: new Date(),
-            verificationMethod: 'GOOGLE',
-          },
-        },
-        { new: true }
-      );
-      if (!refreshed) {
-        throw new Error('Failed to persist Google identity link for user');
-      }
-      user = refreshed;
-    }
-
-    if (user.role === ROLE_SUPER_ADMIN || user.xID === env.SUPERADMIN_XID_NORMALIZED) {
-      return res.status(403).json({
-        success: false,
-        code: 'FIRM_RESOLUTION_FAILED',
-        message: 'SuperAdmin accounts must use password login',
-      });
-    }
-
-    if (!isActiveStatus(user.status)) {
-      return res.status(403).json({
-        success: false,
-        code: 'FIRM_RESOLUTION_FAILED',
-        message: 'Account is not active. Contact your administrator.',
-      });
-    }
-
-    if (user.mustSetPassword) {
-      const frontendBase = process.env.FRONTEND_URL || 'http://localhost:3000';
-      const redirectUrl = new URL('/oauth/post-auth', frontendBase);
-      redirectUrl.searchParams.set('error', 'PASSWORD_SETUP_REQUIRED');
-      redirectUrl.searchParams.set('firmSlug', firmSlugFromState);
-      return res.redirect(redirectUrl.toString());
-    }
-
-    const { accessToken, refreshToken, firmSlug: resolvedSlug } = await buildTokenResponse(
-      user,
-      req,
-      linkedDuringRequest ? 'GoogleOAuthLink' : 'GoogleOAuth'
-    );
-    console.info('[AUTH]', {
-      event: 'oauth_callback_success',
-      provider: 'google',
-      userId: user._id?.toString?.() || null,
-      firmId: user.firmId?.toString?.() || null,
-    });
-
-    const frontendBase = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const finalFirmSlug = firmSlugFromState || resolvedSlug || '';
-    const redirectUrl = new URL(`/app/firm/${finalFirmSlug}/dashboard`, frontendBase);
-
-    const secureCookies = process.env.NODE_ENV === 'production';
-    const fifteenMinutesMs = 15 * 60 * 1000;
-    const refreshMs = (jwtService.REFRESH_TOKEN_EXPIRY_DAYS || 7) * 24 * 60 * 60 * 1000;
-
-    res.clearCookie('google_oauth_state', { path: '/' });
-    res.clearCookie('google_oauth_verifier', { path: '/' });
-
-    res.cookie('accessToken', accessToken, {
-      httpOnly: true,
-      secure: secureCookies,
-      sameSite: 'lax',
-      maxAge: fifteenMinutesMs,
-      path: '/',
-    });
-
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: secureCookies,
-      sameSite: 'lax',
-      maxAge: refreshMs,
-      path: '/',
-    });
-
-    return res.redirect(redirectUrl.toString());
-  } catch (error) {
-    console.error('[AUTH]', { event: 'oauth_callback_failed', provider: 'google', message: error.message });
-    return res.status(500).json({
-      success: false,
-      code: 'FIRM_RESOLUTION_FAILED',
-      message: 'Google login failed',
-    });
-  }
-};
-
-
 const generatePrimaryXid = async () => {
   for (let i = 0; i < 20; i += 1) {
     const candidate = `DK-${crypto.randomBytes(3).toString('hex').slice(0, 5).toUpperCase()}`;
@@ -4277,148 +3911,37 @@ const issueAuthTokens = async (req, user) => {
   return { accessToken, refreshToken };
 };
 
-const googleTokenClient = new google.auth.OAuth2(process.env.GOOGLE_CLIENT_ID || undefined);
-
-const googleTokenLogin = async (req, res) => {
-  try {
-    const idToken = String(req.body?.idToken || '').trim();
-    const firmSlug = String(req.body?.firmSlug || '').trim().toLowerCase();
-
-    if (!idToken) {
-      return res.status(400).json({ success: false, message: 'idToken is required' });
-    }
-
-    const ticket = await googleTokenClient.verifyIdToken({ idToken, audience: process.env.GOOGLE_CLIENT_ID });
-    const payload = ticket.getPayload() || {};
-    const name = String(payload.name || '').trim();
-    const providerId = String(payload.sub || '').trim();
-    const email = String(payload.email || '').trim().toLowerCase();
-
-    if (!email) {
-      return res.status(400).json({ success: false, message: 'Invalid Google token' });
-    }
-
-    let user = await User.findOne({
-      $or: [{ primary_email: email }, { email }],
-      status: { $ne: 'deleted' },
-    });
-
-    if (!firmSlug && !user) {
-      const generatedXid = await xIDGenerator.generateNextXID();
-      try {
-        [user] = await User.create([{
-          xID: generatedXid,
-          name: name || email.split('@')[0],
-          email,
-          primary_email: email,
-          passwordHash: null,
-          passwordSet: false,
-          isOnboarded: false,
-          role: 'Employee',
-          authProviders: {
-            local: {
-              passwordHash: null,
-              passwordSet: false,
-            },
-          },
-        }]);
-      } catch (createError) {
-        const duplicateEmail = createError?.code === 11000 && (createError?.keyPattern?.primary_email || createError?.keyPattern?.email);
-        if (!duplicateEmail) {
-          throw createError;
-        }
-        user = await User.findOne({ $or: [{ primary_email: email }, { email }] });
-      }
-    }
-
-    if (providerId && user) {
-      const linked = await AuthIdentity.findOne({ user_id: user._id, provider: 'google' });
-      if (!linked) {
-        await AuthIdentity.create({ user_id: user._id, provider: 'google', provider_id: providerId });
-      }
-    }
-
-    if (!firmSlug) {
-      const tokens = await issueAuthTokens(req, user);
-      return res.json({
-        success: true,
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        isOnboarded: Boolean(user.isOnboarded),
-        data: {
-          ...tokens,
-          xid: user.xid || user.xID,
-          isOnboarded: Boolean(user.isOnboarded),
-        },
-      });
-    }
-
-    const firm = await Firm.findOne({ firmSlug }).lean();
-    if (!firm) {
-      return res.status(404).json({ success: false, message: 'Firm not found' });
-    }
-
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'No account found. Please sign up first.' });
-    }
-
-    if (!user.firmId || user.firmId.toString() !== firm._id.toString()) {
-      return res.status(403).json({ success: false, message: 'This account does not belong to this workspace' });
-    }
-
-    const tokens = await issueAuthTokens(req, user);
-    return res.json({
-      success: true,
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      isOnboarded: Boolean(user.isOnboarded),
-      data: {
-        ...tokens,
-        xid: user.xid || user.xID,
-        isOnboarded: Boolean(user.isOnboarded),
-      },
-    });
-  } catch (error) {
-    return res.status(400).json({ success: false, message: error.message || 'Google login failed' });
-  }
-};
-
 const signupWithEmail = async (req, res) => {
   try {
     const name = String(req.body?.name || '').trim();
     const email = String(req.body?.email || '').trim().toLowerCase();
     const password = String(req.body?.password || '');
 
-    if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'email and password are required' });
+    if (!name || !email || !password) {
+      return res.status(400).json({ success: false, message: 'name, email and password are required' });
     }
 
     const existing = await User.findOne({ $or: [{ primary_email: email }, { email }] });
     if (existing) {
-      const tokens = await issueAuthTokens(req, existing);
-      return res.status(200).json({
-        success: true,
-        accessToken: tokens.accessToken,
-        isOnboarded: Boolean(existing.isOnboarded),
-        data: {
-          accessToken: tokens.accessToken,
-          refreshToken: tokens.refreshToken,
-          isOnboarded: Boolean(existing.isOnboarded),
-        },
-      });
+      return res.status(409).json({ success: false, message: 'Email already registered' });
     }
 
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
-    const generatedXid = await xIDGenerator.generateNextXID();
+    const generatedXid = `DK-${crypto.randomBytes(3).toString('hex').slice(0, 5).toUpperCase()}`;
 
     const [createdUser] = await User.create([{
       xID: generatedXid,
+      xid: generatedXid,
       name: name || email.split('@')[0],
       email,
       primary_email: email,
       passwordHash,
       passwordSet: true,
       isOnboarded: false,
+      hasCompletedOnboarding: false,
+      emailVerified: false,
+      is_verified: false,
+      verificationMethod: 'OTP',
       role: 'Employee',
       authProviders: {
         local: {
@@ -4435,16 +3958,12 @@ const signupWithEmail = async (req, res) => {
       password_hash: passwordHash,
     }]);
 
-    const tokens = await issueAuthTokens(req, createdUser);
+    await sendCentralOtp({ email, purpose: 'signup' });
+
     return res.status(201).json({
       success: true,
-      accessToken: tokens.accessToken,
-      isOnboarded: false,
-      data: {
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        isOnboarded: false,
-      },
+      message: 'Signup successful. OTP sent to your email.',
+      data: { email: createdUser.primary_email || createdUser.email },
     });
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message || 'Signup failed' });
@@ -4454,42 +3973,40 @@ const signupWithEmail = async (req, res) => {
 
 const universalLogin = async (req, res) => {
   try {
-    const loginId = String(req.body?.loginId || req.body?.xid || req.body?.email || '').trim();
+    const email = String(req.body?.email || req.body?.loginId || '').trim().toLowerCase();
     const password = String(req.body?.password || '');
     const firmSlug = String(req.body?.firmSlug || '').trim().toLowerCase();
 
-    if (!loginId || !password || !firmSlug) {
-      return res.status(400).json({ success: false, message: 'loginId, password and firmSlug are required' });
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'email is required' });
     }
 
-    const firm = await Firm.findOne({ firmSlug }).lean();
-    if (!firm) {
-      return res.status(404).json({ success: false, message: 'Firm not found' });
-    }
-
-    const isEmail = loginId.includes('@');
-    const normalizedEmail = loginId.toLowerCase();
-    const normalizedXid = loginId.toUpperCase();
-
-    let user = null;
-    if (isEmail) {
-      user = await User.findOne({
-        $or: [{ primary_email: normalizedEmail }, { email: normalizedEmail }],
-        status: { $ne: 'deleted' },
-      });
-    } else {
-      user = await User.findOne({
-        $or: [{ xID: normalizedXid }, { xid: normalizedXid }],
-        status: { $ne: 'deleted' },
-      });
-    }
+    const user = await User.findOne({
+      $or: [{ primary_email: email }, { email }],
+      status: { $ne: 'deleted' },
+    });
 
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
-    if (!user.firmId || user.firmId.toString() !== firm._id.toString()) {
-      return res.status(403).json({ success: false, message: 'This account does not belong to this workspace' });
+    if (firmSlug) {
+      const firm = await Firm.findOne({ firmSlug }).lean();
+      if (!firm) {
+        return res.status(404).json({ success: false, message: 'Firm not found' });
+      }
+      if (!user.firmId || user.firmId.toString() !== firm._id.toString()) {
+        return res.status(403).json({ success: false, message: 'This account does not belong to this workspace' });
+      }
+    }
+
+    if (!password) {
+      await sendCentralOtp({ email, purpose: 'login' });
+      return res.status(202).json({
+        success: true,
+        otpRequired: true,
+        message: 'OTP sent to your email.',
+      });
     }
 
     const identity = await AuthIdentity.findOne({ user_id: user._id, provider: 'email' });
@@ -4531,11 +4048,38 @@ const sendOtpEndpoint = async (req, res) => {
 
 const verifyOtpEndpoint = async (req, res) => {
   try {
-    const identifier = String(req.body?.identifier || '').trim().toLowerCase();
-    const code = String(req.body?.code || '').trim();
-    const purpose = String(req.body?.purpose || '').trim();
-    const result = await verifyCentralOtp({ identifier, code, purpose });
-    return res.json({ success: true, data: result });
+    const email = String(req.body?.email || req.body?.identifier || '').trim().toLowerCase();
+    const otp = String(req.body?.otp || req.body?.code || '').trim();
+    const purpose = String(req.body?.purpose || 'login').trim();
+    const result = await verifyCentralOtp({ identifier: email, code: otp, purpose });
+
+    const user = await User.findOne({
+      $or: [{ primary_email: result.identifier }, { email: result.identifier }],
+      status: { $ne: 'deleted' },
+    });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Account not found' });
+    }
+
+    if (!user.emailVerified) {
+      user.emailVerified = true;
+      user.is_verified = true;
+      user.emailVerifiedAt = new Date();
+      user.verificationMethod = 'OTP';
+      await user.save();
+    }
+
+    const tokens = await issueAuthTokens(req, user);
+    return res.json({
+      success: true,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      data: {
+        ...tokens,
+        user,
+      },
+    });
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message });
   }
@@ -4565,11 +4109,7 @@ module.exports = {
   verifyTotp: wrapWriteHandler(verifyTotp),
   verifyLoginOtp: wrapWriteHandler(verifyLoginOtp),
   completeMfaLogin: wrapWriteHandler(completeMfaLogin),
-  initiateGoogleAuth,
-  handleGoogleCallback: wrapWriteHandler(handleGoogleCallback),
   generateAndStoreRefreshToken,
-  verifyOAuthState,
-  googleTokenLogin: wrapWriteHandler(googleTokenLogin),
   signupWithEmail: wrapWriteHandler(signupWithEmail),
   universalLogin: wrapWriteHandler(universalLogin),
   sendOtpEndpoint: wrapWriteHandler(sendOtpEndpoint),
