@@ -4282,18 +4282,28 @@ const googleTokenClient = new google.auth.OAuth2(process.env.GOOGLE_CLIENT_ID ||
 const googleTokenLogin = async (req, res) => {
   try {
     const idToken = String(req.body?.idToken || '').trim();
-    if (!idToken) return res.status(400).json({ success: false, message: 'idToken is required' });
+    const firmSlug = String(req.body?.firmSlug || '').trim().toLowerCase();
+
+    if (!idToken) {
+      return res.status(400).json({ success: false, message: 'idToken is required' });
+    }
 
     const ticket = await googleTokenClient.verifyIdToken({ idToken, audience: process.env.GOOGLE_CLIENT_ID });
     const payload = ticket.getPayload() || {};
-    const email = String(payload.email || '').trim().toLowerCase();
     const name = String(payload.name || '').trim();
     const providerId = String(payload.sub || '').trim();
-    if (!email) return res.status(400).json({ success: false, message: 'Invalid Google token' });
+    const email = String(payload.email || '').trim().toLowerCase();
 
-    let user = await User.findOne({ email });
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Invalid Google token' });
+    }
 
-    if (!user) {
+    let user = await User.findOne({
+      $or: [{ primary_email: email }, { email }],
+      status: { $ne: 'deleted' },
+    });
+
+    if (!firmSlug && !user) {
       const generatedXid = await xIDGenerator.generateNextXID();
       try {
         [user] = await User.create([{
@@ -4317,26 +4327,54 @@ const googleTokenLogin = async (req, res) => {
         if (!duplicateEmail) {
           throw createError;
         }
-        user = await User.findOne({ email });
+        user = await User.findOne({ $or: [{ primary_email: email }, { email }] });
       }
     }
 
-    if (providerId) {
+    if (providerId && user) {
       const linked = await AuthIdentity.findOne({ user_id: user._id, provider: 'google' });
       if (!linked) {
         await AuthIdentity.create({ user_id: user._id, provider: 'google', provider_id: providerId });
       }
     }
 
+    if (!firmSlug) {
+      const tokens = await issueAuthTokens(req, user);
+      return res.json({
+        success: true,
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        isOnboarded: Boolean(user.isOnboarded),
+        data: {
+          ...tokens,
+          xid: user.xid || user.xID,
+          isOnboarded: Boolean(user.isOnboarded),
+        },
+      });
+    }
+
+    const firm = await Firm.findOne({ firmSlug }).lean();
+    if (!firm) {
+      return res.status(404).json({ success: false, message: 'Firm not found' });
+    }
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'No account found. Please sign up first.' });
+    }
+
+    if (!user.firmId || user.firmId.toString() !== firm._id.toString()) {
+      return res.status(403).json({ success: false, message: 'This account does not belong to this workspace' });
+    }
+
     const tokens = await issueAuthTokens(req, user);
     return res.json({
       success: true,
-      message: 'Google login successful',
       accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
       isOnboarded: Boolean(user.isOnboarded),
       data: {
         ...tokens,
-        xid: user.xid,
+        xid: user.xid || user.xID,
         isOnboarded: Boolean(user.isOnboarded),
       },
     });
@@ -4351,8 +4389,8 @@ const signupWithEmail = async (req, res) => {
     const email = String(req.body?.email || '').trim().toLowerCase();
     const password = String(req.body?.password || '');
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ success: false, message: 'name, email and password are required' });
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'email and password are required' });
     }
 
     const existing = await User.findOne({ $or: [{ primary_email: email }, { email }] });
@@ -4375,7 +4413,7 @@ const signupWithEmail = async (req, res) => {
 
     const [createdUser] = await User.create([{
       xID: generatedXid,
-      name,
+      name: name || email.split('@')[0],
       email,
       primary_email: email,
       passwordHash,
@@ -4416,28 +4454,63 @@ const signupWithEmail = async (req, res) => {
 
 const universalLogin = async (req, res) => {
   try {
-    const loginId = String(req.body?.xid || req.body?.email || '').trim();
+    const loginId = String(req.body?.loginId || req.body?.xid || req.body?.email || '').trim();
     const password = String(req.body?.password || '');
-    if (!loginId || !password) return res.status(400).json({ success: false, message: 'xid or email and password are required' });
+    const firmSlug = String(req.body?.firmSlug || '').trim().toLowerCase();
+
+    if (!loginId || !password || !firmSlug) {
+      return res.status(400).json({ success: false, message: 'loginId, password and firmSlug are required' });
+    }
+
+    const firm = await Firm.findOne({ firmSlug }).lean();
+    if (!firm) {
+      return res.status(404).json({ success: false, message: 'Firm not found' });
+    }
 
     const isEmail = loginId.includes('@');
     const normalizedEmail = loginId.toLowerCase();
     const normalizedXid = loginId.toUpperCase();
 
     let user = null;
-    if (isEmail) user = await User.findOne({ $or: [{ primary_email: normalizedEmail }, { email: normalizedEmail }] });
-    else user = await User.findOne({ xid: normalizedXid });
+    if (isEmail) {
+      user = await User.findOne({
+        $or: [{ primary_email: normalizedEmail }, { email: normalizedEmail }],
+        status: { $ne: 'deleted' },
+      });
+    } else {
+      user = await User.findOne({
+        $or: [{ xID: normalizedXid }, { xid: normalizedXid }],
+        status: { $ne: 'deleted' },
+      });
+    }
 
-    if (!user) return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    if (!user.firmId || user.firmId.toString() !== firm._id.toString()) {
+      return res.status(403).json({ success: false, message: 'This account does not belong to this workspace' });
+    }
 
     const identity = await AuthIdentity.findOne({ user_id: user._id, provider: 'email' });
-    const passwordHash = identity?.password_hash || user.passwordHash;
+    const passwordHash = identity?.password_hash || user.passwordHash || user?.authProviders?.local?.passwordHash || null;
+
     if (!passwordHash || !(await bcrypt.compare(password, passwordHash))) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
     const tokens = await issueAuthTokens(req, user);
-    return res.json({ success: true, data: { ...tokens, xid: user.xid } });
+    return res.json({
+      success: true,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      isOnboarded: Boolean(user.isOnboarded),
+      data: {
+        ...tokens,
+        xid: user.xid || user.xID,
+        isOnboarded: Boolean(user.isOnboarded),
+      },
+    });
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message || 'Login failed' });
   }
