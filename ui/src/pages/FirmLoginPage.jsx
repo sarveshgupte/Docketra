@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from '../components/common/Button';
@@ -15,8 +15,9 @@ import './LoginPage.css';
 const mapSafeLoginError = (error) => {
   const status = error?.response?.status;
   if (status === 429) return 'Too many attempts. Please wait before retrying.';
-  if (status === 401 || status === 403) return 'Invalid credentials or verification code.';
-  if (status === 404) return 'Firm not found. Please check your login URL.';
+  if (status === 401 || status === 403) return 'Invalid credentials or verification code';
+  if (status === 404) return 'Invalid workspace URL';
+  if (status === 423) return 'This workspace is inactive. Contact your admin.';
   return 'Sign-in failed. Please try again.';
 };
 
@@ -37,21 +38,25 @@ export const FirmLoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [firmLoading, setFirmLoading] = useState(true);
   const [firmData, setFirmData] = useState(null);
+  const [cooldown, setCooldown] = useState(30);
+  const otpInputRef = useRef(null);
 
   useEffect(() => {
     const loadFirmData = async () => {
       try {
         setFirmLoading(true);
-        const response = await api.get(`/public/firms/${firmSlug}`);
+        const response = await api.get(`/${firmSlug}/login`);
         if (response.data.success && response.data.data?.status === 'active') {
           setFirmData(response.data.data);
           localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, firmSlug);
         } else {
-          setError('This firm is currently inactive.');
+          setError(response?.data?.data?.status === 'inactive'
+            ? 'This workspace is inactive. Contact your admin.'
+            : 'Invalid workspace URL');
           setFirmData(null);
         }
       } catch (_err) {
-        setError('Firm not found. Please check your login URL.');
+        setError('Invalid workspace URL');
         setFirmData(null);
         localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
       } finally {
@@ -61,6 +66,29 @@ export const FirmLoginPage = () => {
 
     if (firmSlug) loadFirmData();
   }, [firmSlug]);
+
+  useEffect(() => {
+    if (step === 'otp') {
+      otpInputRef.current?.focus();
+      setCooldown(30);
+    }
+    setError('');
+    setFieldErrors({});
+  }, [step]);
+
+  useEffect(() => {
+    if (step !== 'otp' || cooldown <= 0) return undefined;
+    const timer = window.setInterval(() => {
+      setCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [step, cooldown]);
+
+  useEffect(() => {
+    if (step === 'otp' && !loginToken) {
+      setStep('credentials');
+    }
+  }, [step, loginToken]);
 
   const completeLogin = async (responseData) => {
     const { accessToken, refreshToken, data: userData, refreshEnabled } = responseData;
@@ -83,6 +111,7 @@ export const FirmLoginPage = () => {
 
   const handleCredentialSubmit = async (event) => {
     event.preventDefault();
+    if (loading) return;
     setError('');
     setFieldErrors({});
 
@@ -102,6 +131,7 @@ export const FirmLoginPage = () => {
       if (response?.data?.otpRequired && response?.data?.loginToken) {
         setLoginToken(response.data.loginToken);
         setOtpHint(response?.data?.otpDeliveryHint || 'A verification code was sent to your email.');
+        setOtp('');
         setStep('otp');
       } else if (response?.data?.accessToken) {
         await completeLogin(response.data);
@@ -119,7 +149,9 @@ export const FirmLoginPage = () => {
 
   const handleOtpSubmit = async (event) => {
     event.preventDefault();
+    if (loading) return;
     setError('');
+    setFieldErrors({});
     if (!/^\d{6}$/.test(otp.trim())) {
       setFieldErrors({ otp: 'Enter a valid 6-digit OTP.' });
       return;
@@ -130,7 +162,8 @@ export const FirmLoginPage = () => {
       const response = await api.post(`/${firmSlug}/verify-otp`, { loginToken, otp: otp.trim() });
       await completeLogin(response.data);
     } catch (err) {
-      const message = mapSafeLoginError(err);
+      const status = err?.response?.status;
+      const message = status === 400 || status === 401 ? 'Invalid or expired OTP' : mapSafeLoginError(err);
       setError(message);
       showError(message);
     } finally {
@@ -140,12 +173,15 @@ export const FirmLoginPage = () => {
 
 
   const handleResendOtp = async () => {
+    if (loading || cooldown > 0) return;
     setError('');
     setLoading(true);
     try {
       const normalizedXid = xid.trim().toUpperCase();
       const response = await api.post(`/${firmSlug}/resend-otp`, { xid: normalizedXid });
       setOtpHint(response?.data?.message || 'If the account exists, a new OTP has been sent.');
+      setOtp('');
+      setCooldown(30);
     } catch (err) {
       const message = mapSafeLoginError(err);
       setError(message);
@@ -167,6 +203,7 @@ export const FirmLoginPage = () => {
         <div className="text-center">
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">{firmData.name}</h1>
           <p className="mt-2 text-sm text-gray-500 text-center">Step {step === 'credentials' ? '1' : '2'} of 2</p>
+          <p className="mt-2 text-sm text-gray-500 text-center">{step === 'credentials' ? 'Enter your XID and password' : 'Enter the 6-digit code sent to your email'}</p>
           <p className="mt-2 text-xs text-gray-500 text-center">{`Firm login URL: /app/${firmSlug}/login`}</p>
         </div>
 
@@ -180,10 +217,32 @@ export const FirmLoginPage = () => {
           </form>
         ) : (
           <form onSubmit={handleOtpSubmit} noValidate className="mt-4 space-y-4">
-            <Input label="Email OTP" type="text" value={otp} onChange={(e) => setOtp(e.target.value)} error={fieldErrors.otp} required placeholder="6-digit code" disabled={loading} autoFocus />
+            <Input
+              ref={otpInputRef}
+              label="Email OTP"
+              type="text"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              onPaste={(e) => {
+                const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+                if (pasted.length === 6) {
+                  e.preventDefault();
+                  setOtp(pasted);
+                }
+              }}
+              error={fieldErrors.otp}
+              required
+              placeholder="6-digit code"
+              disabled={loading}
+              autoComplete="one-time-code"
+              inputMode="numeric"
+              pattern="[0-9]*"
+            />
             {otpHint && <p className="text-xs text-gray-500">{otpHint}</p>}
             <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading}>{loading ? 'Verifying...' : 'Sign in'}</Button>
-            <Button type="button" variant="secondary" fullWidth disabled={loading} onClick={handleResendOtp}>Resend OTP</Button>
+            <Button type="button" variant="secondary" fullWidth disabled={loading || cooldown > 0} onClick={handleResendOtp}>
+              {cooldown > 0 ? `Resend OTP in ${cooldown}s` : 'Resend OTP'}
+            </Button>
             <Button type="button" variant="secondary" fullWidth disabled={loading} onClick={() => setStep('credentials')}>Back</Button>
           </form>
         )}
