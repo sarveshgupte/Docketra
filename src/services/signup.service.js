@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const Firm = require('../models/Firm.model');
 const Client = require('../models/Client.model');
 const User = require('../models/User.model');
-const TemporarySignup = require('../models/TemporarySignup');
+const SignupSession = require('../models/SignupSession.model');
 const { generateNextXID } = require('./xIDGenerator');
 const { ensureTenantKey } = require('../security/encryption.service');
 const { generateNextClientId } = require('./clientIdGenerator');
@@ -68,9 +68,9 @@ const logSignupAuthEvent = async ({
   }
 };
 
-const resolveOtpExpiry = (record) => record.otpExpiresAt || record.otpExpiry;
-const resolveOtpLastSentAt = (record) => record.otpLastSentAt || record.lastOtpSentAt;
-const resolveOtpResendCount = (record) => record.otpResendCount ?? record.resendCount ?? 0;
+const resolveOtpExpiry = (record) => record.otpExpiresAt;
+const resolveOtpLastSentAt = (record) => record.otpLastSentAt;
+const resolveOtpResendCount = (record) => record.otpResendCount ?? 0;
 const resolveConsumedAt = (record) => record.consumedAt || record.consumed_at;
 const normalizePhone = (phone) => (typeof phone === 'string' ? phone.trim() : '');
 
@@ -152,15 +152,14 @@ const initiateSignup = async ({
     session,
   });
 
-  await TemporarySignup.deleteMany({
+  await SignupSession.deleteMany({
     $or: [
       { otpExpiresAt: { $lt: new Date() } },
-      { otpExpiry: { $lt: new Date() } },
     ],
   }, { session });
 
   // Remove any existing temporary signup for this email
-  await TemporarySignup.deleteMany({ email: normalizedEmail }, { session });
+  await SignupSession.deleteMany({ email: normalizedEmail }, { session });
 
   if (existingUser) {
     log.warn('SIGNUP_FAILED', { req, email: normalizedEmail, reason: 'EMAIL_OR_PHONE_IN_USE' });
@@ -173,7 +172,7 @@ const initiateSignup = async ({
   const otpHash = await bcrypt.hash(otp, SALT_ROUNDS);
 
   const otpExpiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
-  await TemporarySignup.create({
+  await SignupSession.create({
     name: name.trim(),
     email: normalizedEmail,
     firmName: firmName.trim(),
@@ -182,15 +181,11 @@ const initiateSignup = async ({
     provider: 'manual',
     otpHash,
     otpExpiresAt,
-    // Legacy compatibility field retained for old records/read paths.
-    otpExpiry: otpExpiresAt,
     otpAttempts: 0,
     attemptCount: 0,
     otpBlockedUntil: null,
     otpResendCount: 0,
-    resendCount: 0,
     otpLastSentAt: new Date(),
-    lastOtpSentAt: new Date(),
     isVerified: false,
     consumedAt: null,
   }, { session });
@@ -247,7 +242,7 @@ const verifyOtp = async ({ email, otp, session = null, req = null }) => {
   }
 
   try {
-    const record = await TemporarySignup.findOne({ email: normalizedEmail, provider: 'manual' }).session(session);
+    const record = await SignupSession.findOne({ email: normalizedEmail, provider: 'manual' }).session(session);
     if (!record) {
       await enforceMinimumDuration(startedAt);
       return { success: false, status: 400, message: GENERIC_VERIFICATION_FAILURE_MESSAGE };
@@ -275,6 +270,12 @@ const verifyOtp = async ({ email, otp, session = null, req = null }) => {
     record.otpAttempts = nextAttemptCount;
     record.attemptCount = nextAttemptCount;
 
+    const existingUser = await User.findOne({ email: normalizedEmail, status: { $ne: 'deleted' } }).session(session);
+    if (existingUser) {
+      await enforceMinimumDuration(startedAt);
+      return { success: false, status: 409, message: 'Account already exists' };
+    }
+
     const otpHashToCompare = record.otpHash || DUMMY_BCRYPT_HASH;
     const isValid = await bcrypt.compare(otp, otpHashToCompare);
     if (!record.otpHash || !isValid) {
@@ -297,7 +298,21 @@ const verifyOtp = async ({ email, otp, session = null, req = null }) => {
       req,
     });
 
-    await TemporarySignup.deleteOne({ _id: record._id }, { session });
+    await SignupSession.deleteOne({ _id: record._id }, { session });
+
+    await safeQueueEmail({
+      context: req,
+      operation: 'EMAIL_QUEUE',
+      payload: { action: 'SIGNUP_WELCOME_EMAIL', tenantId: String(tenant.firmId || ''), email: normalizedEmail },
+      execute: async () => sendSignupWelcomeEmail({
+        name: record.name,
+        email: normalizedEmail,
+        xid: tenant.xid,
+        firmName: record.firmName,
+        firmSlug: tenant.firmSlug,
+        req,
+      }),
+    });
 
     await clearOtpAttempts({ email: normalizedEmail, ip: req?.ip });
     await logSignupAuthEvent({ eventType: 'OTP_VERIFIED', email: normalizedEmail, req, userId: tenant.userId, firmId: tenant.firmId });
@@ -328,7 +343,7 @@ const verifyOtp = async ({ email, otp, session = null, req = null }) => {
       xid: tenant.xid,
       firmSlug: tenant.firmSlug,
       firmUrl: tenant.firmUrl,
-      redirectPath: `/${tenant.firmSlug}/login`,
+      redirectPath: `/app/${tenant.firmSlug}/login`,
     };
   } catch (error) {
     log.error('SIGNUP_FAILED', { req, email: normalizedEmail, reason: 'VERIFY_OTP_ERROR', error: error.message });
@@ -351,7 +366,7 @@ const resendOtp = async ({ email, req = null }) => {
   if (!resendQuota.allowed) {
     return { success: false, status: 429, message: 'Too many OTP resend requests. Please try again later.' };
   }
-  const record = await TemporarySignup.findOne({ email: normalizedEmail, provider: 'manual' });
+  const record = await SignupSession.findOne({ email: normalizedEmail, provider: 'manual' });
 
   if (!record) {
     await enforceMinimumDuration(startedAt);
@@ -379,14 +394,11 @@ const resendOtp = async ({ email, req = null }) => {
 
   record.otpHash = otpHash;
   record.otpExpiresAt = otpExpiresAt;
-  record.otpExpiry = otpExpiresAt;
   record.otpAttempts = 0;
   record.attemptCount = 0;
   record.otpBlockedUntil = null;
   record.otpResendCount = resendCount + 1;
-  record.resendCount = resendCount + 1;
   record.otpLastSentAt = new Date();
-  record.lastOtpSentAt = new Date();
   record.consumedAt = null;
   await record.save();
 
@@ -457,7 +469,7 @@ const buildFirmUrl = (firmSlug) => {
   if (appRootDomain) {
     return `https://${firmSlug}.${appRootDomain}`;
   }
-  return `${frontendUrl}/${firmSlug}/login`;
+  return `${frontendUrl}/app/${firmSlug}/login`;
 };
 
 const sendSignupWelcomeEmail = async ({
@@ -691,7 +703,7 @@ const createTenant = async ({
  */
 const completeSignup = async ({ email, firmName, session, req = null }) => {
   const normalizedEmail = email.toLowerCase().trim();
-  const record = await TemporarySignup.findOne({ email: normalizedEmail, isVerified: true });
+  const record = await SignupSession.findOne({ email: normalizedEmail, isVerified: true });
 
   if (!record) {
     return { success: false, status: 400, message: 'No verified signup found. Please complete verification first.' };
@@ -720,7 +732,7 @@ const completeSignup = async ({ email, firmName, session, req = null }) => {
       session,
       req,
     });
-    await TemporarySignup.deleteOne({ _id: record._id }, { session });
+    await SignupSession.deleteOne({ _id: record._id }, { session });
     await logSignupAuthEvent({
       eventType: 'SIGNUP_COMPLETED',
       email: normalizedEmail,
@@ -748,7 +760,7 @@ const completeSignup = async ({ email, firmName, session, req = null }) => {
       xid: result.adminXID,
       firmUrl: result.firmUrl,
       firmSlug: result.firmSlug,
-      redirectPath: `/${result.firmSlug}/login`,
+      redirectPath: `/app/${result.firmSlug}/login`,
     };
   } catch (error) {
     console.error('[PUBLIC_SIGNUP] Complete signup failed:', error.message);

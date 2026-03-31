@@ -10,6 +10,7 @@ const UserProfile = require('../models/UserProfile.model');
 const AuthAudit = require('../models/AuthAudit.model');
 const RefreshToken = require('../models/RefreshToken.model');
 const AuthIdentity = require('../models/AuthIdentity.model');
+const LoginSession = require('../models/LoginSession.model');
 const { sendOtp: sendCentralOtp, verifyOtp: verifyCentralOtp } = require('../services/otp.service');
 const emailService = require('../services/email.service');
 const xIDGenerator = require('../services/xIDGenerator');
@@ -343,17 +344,8 @@ const createMfaPreAuthToken = (payload) => {
   });
 };
 
-const createLoginOtpToken = (payload) => {
-  if (!process.env.JWT_SECRET) {
-    throw new Error('JWT_SECRET is not configured for login token signing');
-  }
-
-  return jwt.sign(payload, process.env.JWT_SECRET, {
-    expiresIn: PRE_AUTH_TOKEN_EXPIRY,
-    algorithm: 'HS256',
-  });
-};
-
+const generateLoginSessionToken = () => crypto.randomBytes(32).toString('hex');
+const hashLoginSessionToken = (token) => crypto.createHash('sha256').update(String(token)).digest('hex');
 const generateLoginOtp = () => crypto.randomInt(100000, 1000000).toString();
 
 const clearLoginOtpState = (user) => {
@@ -584,13 +576,19 @@ const sendLoginOtpChallenge = async (req, user, { isResend = false, returnLoginT
     return null;
   }
 
-  return createLoginOtpToken({
-    userId: user._id.toString(),
-    firmId: user.firmId ? user.firmId.toString() : undefined,
-    firmSlug: req.params?.firmSlug || req.firmSlug || undefined,
-    role: user.role,
-    loginStage: 'email-otp',
+  const loginToken = generateLoginSessionToken();
+  const tokenHash = hashLoginSessionToken(loginToken);
+  await LoginSession.deleteMany({ userId: user._id, consumedAt: null });
+  await LoginSession.create({
+    tokenHash,
+    userId: user._id,
+    firmId: user.firmId,
+    xID: user.xID,
+    expiresAt: new Date(Date.now() + otpConfig.expiryMinutes * 60 * 1000),
+    consumedAt: null,
   });
+
+  return loginToken;
 };
 
 const findTenantUserForOtp = async ({ xID, firmSlug }) => {
@@ -1171,6 +1169,7 @@ const login = async (req, res) => {
         success: true,
         otpRequired: true,
         loginToken,
+        otpDeliveryHint: user.email ? `Code sent to ${user.email.replace(/(.{2}).+(@.+)/, '$1***$2')}` : 'Code sent to your registered email',
         resendCooldownSeconds: otpConfig.resendCooldownSeconds,
       });
     } catch (otpError) {
@@ -1275,25 +1274,10 @@ const verifyLoginOtp = async (req, res) => {
       });
     }
 
-    let decodedLoginToken;
-    try {
-      decodedLoginToken = jwt.verify(loginToken, process.env.JWT_SECRET, {
-        algorithms: ['HS256'],
-      });
-    } catch (_error) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid or expired login token',
-      });
-    }
+    const tokenHash = hashLoginSessionToken(loginToken);
+    const loginSession = await LoginSession.findOne({ tokenHash, consumedAt: null });
 
-    if (
-      decodedLoginToken?.loginStage !== 'email-otp'
-      || !decodedLoginToken?.userId
-      || !decodedLoginToken?.firmId
-      || !mongoose.Types.ObjectId.isValid(decodedLoginToken.userId)
-      || !mongoose.Types.ObjectId.isValid(decodedLoginToken.firmId)
-    ) {
+    if (!loginSession || !loginSession.expiresAt || loginSession.expiresAt.getTime() < Date.now()) {
       return res.status(401).json({
         success: false,
         message: 'Invalid or expired login token',
@@ -1301,21 +1285,16 @@ const verifyLoginOtp = async (req, res) => {
     }
 
     const normalizedRequestedFirmSlug = normalizeFirmSlug(requestedFirmSlug);
-    const normalizedTokenFirmSlug = normalizeFirmSlug(decodedLoginToken.firmSlug);
-
-    if (
-      (req.firmId && decodedLoginToken.firmId !== String(req.firmId))
-      || (normalizedRequestedFirmSlug && normalizedTokenFirmSlug && normalizedRequestedFirmSlug !== normalizedTokenFirmSlug)
-    ) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid or expired login token',
-      });
+    if (req.firmId && String(req.firmId) !== String(loginSession.firmId)) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired login token' });
+    }
+    if (normalizedRequestedFirmSlug && normalizeFirmSlug(req.firmSlug) && normalizedRequestedFirmSlug !== normalizeFirmSlug(req.firmSlug)) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired login token' });
     }
 
     const user = await User.findOne({
-      _id: decodedLoginToken.userId,
-      firmId: decodedLoginToken.firmId,
+      _id: loginSession.userId,
+      firmId: loginSession.firmId,
       status: 'active',
       isActive: true,
     });
@@ -1432,6 +1411,7 @@ const verifyLoginOtp = async (req, res) => {
 
     clearLoginOtpState(user);
     await persistLoginOtpState(user);
+    await LoginSession.updateOne({ _id: loginSession._id, consumedAt: null }, { $set: { consumedAt: new Date() } });
     logLoginOtpEvent('OTP_VERIFIED', req, user);
 
     try {
@@ -3911,125 +3891,103 @@ const issueAuthTokens = async (req, user) => {
   return { accessToken, refreshToken };
 };
 
-const signupWithEmail = async (req, res) => {
+const signupInit = async (req, res) => {
   try {
     const name = String(req.body?.name || '').trim();
     const email = String(req.body?.email || '').trim().toLowerCase();
     const password = String(req.body?.password || '');
+    const firmName = String(req.body?.firmName || '').trim();
+    const phone = String(req.body?.phone || '').trim();
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ success: false, message: 'name, email and password are required' });
+    if (!name || !email || !password || !firmName || !phone) {
+      return res.status(400).json({ success: false, message: 'name, email, password, firmName and phone are required' });
     }
 
-    const existing = await User.findOne({ $or: [{ primary_email: email }, { email }] });
-    if (existing) {
-      return res.status(409).json({ success: false, message: 'Email already registered' });
-    }
-
-    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
-    const generatedXid = `DK-${crypto.randomBytes(3).toString('hex').slice(0, 5).toUpperCase()}`;
-
-    const [createdUser] = await User.create([{
-      xID: generatedXid,
-      xid: generatedXid,
-      name: name || email.split('@')[0],
+    const result = await signupService.initiateSignup({
+      name,
       email,
-      primary_email: email,
-      passwordHash,
-      passwordSet: true,
-      isOnboarded: false,
-      hasCompletedOnboarding: false,
-      emailVerified: false,
-      is_verified: false,
-      verificationMethod: 'OTP',
-      role: 'Employee',
-      authProviders: {
-        local: {
-          passwordHash,
-          passwordSet: true,
-        },
-      },
-    }]);
+      password,
+      firmName,
+      phone,
+      session: getSession(req),
+      req,
+    });
 
-    await AuthIdentity.create([{
-      user_id: createdUser._id,
-      provider: 'email',
-      provider_id: email,
-      password_hash: passwordHash,
-    }]);
-
-    await sendCentralOtp({ email, purpose: 'signup' });
+    if (!result.success) {
+      return res.status(result.status || 400).json({ success: false, message: result.message });
+    }
 
     return res.status(201).json({
       success: true,
-      message: 'Signup successful. OTP sent to your email.',
-      data: { email: createdUser.primary_email || createdUser.email },
+      message: result.message,
+      data: { email },
     });
   } catch (error) {
-    return res.status(400).json({ success: false, message: error.message || 'Signup failed' });
+    return res.status(500).json({ success: false, message: 'Unable to start signup right now.' });
   }
 };
 
-
-const universalLogin = async (req, res) => {
+const signupVerify = async (req, res) => {
+  const session = await mongoose.startSession();
   try {
-    const email = String(req.body?.email || req.body?.loginId || '').trim().toLowerCase();
-    const password = String(req.body?.password || '');
-    const firmSlug = String(req.body?.firmSlug || '').trim().toLowerCase();
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const otp = String(req.body?.otp || '').trim();
 
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, message: 'email and otp are required' });
+    }
+
+    let result = null;
+    await session.withTransaction(async () => {
+      const existingUser = await User.findOne({ email, status: { $ne: 'deleted' } }).session(session);
+      if (existingUser) {
+        result = { success: false, status: 409, message: 'Account already exists' };
+        return;
+      }
+
+      result = await signupService.verifyOtp({
+        email,
+        otp,
+        session,
+        req,
+      });
+    });
+
+    if (!result?.success) {
+      return res.status(result?.status || 400).json({ success: false, message: result?.message || 'Unable to verify signup OTP.' });
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: result.message,
+      data: {
+        xid: result.xid,
+        firmSlug: result.firmSlug,
+        firmUrl: result.firmUrl,
+        redirectPath: result.redirectPath,
+      },
+    });
+  } catch (_error) {
+    return res.status(500).json({ success: false, message: 'Unable to verify signup OTP right now.' });
+  } finally {
+    await session.endSession();
+  }
+};
+
+const signupResend = async (req, res) => {
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase();
     if (!email) {
       return res.status(400).json({ success: false, message: 'email is required' });
     }
 
-    const user = await User.findOne({
-      $or: [{ primary_email: email }, { email }],
-      status: { $ne: 'deleted' },
+    const result = await signupService.resendOtp({ email, req });
+    return res.status(result.success ? 200 : (result.status || 400)).json({
+      success: result.success,
+      message: result.message,
     });
-
-    if (!user) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
-    }
-
-    if (firmSlug) {
-      const firm = await Firm.findOne({ firmSlug }).lean();
-      if (!firm) {
-        return res.status(404).json({ success: false, message: 'Firm not found' });
-      }
-      if (!user.firmId || user.firmId.toString() !== firm._id.toString()) {
-        return res.status(403).json({ success: false, message: 'This account does not belong to this workspace' });
-      }
-    }
-
-    if (!password) {
-      await sendCentralOtp({ email, purpose: 'login' });
-      return res.status(202).json({
-        success: true,
-        otpRequired: true,
-        message: 'OTP sent to your email.',
-      });
-    }
-
-    const identity = await AuthIdentity.findOne({ user_id: user._id, provider: 'email' });
-    const passwordHash = identity?.password_hash || user.passwordHash || user?.authProviders?.local?.passwordHash || null;
-
-    if (!passwordHash || !(await bcrypt.compare(password, passwordHash))) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
-    }
-
-    const tokens = await issueAuthTokens(req, user);
-    return res.json({
-      success: true,
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      isOnboarded: Boolean(user.isOnboarded),
-      data: {
-        ...tokens,
-        xid: user.xid || user.xID,
-        isOnboarded: Boolean(user.isOnboarded),
-      },
-    });
-  } catch (error) {
-    return res.status(400).json({ success: false, message: error.message || 'Login failed' });
+  } catch (_error) {
+    return res.status(500).json({ success: false, message: 'Unable to resend OTP right now.' });
   }
 };
 
@@ -4110,8 +4068,9 @@ module.exports = {
   verifyLoginOtp: wrapWriteHandler(verifyLoginOtp),
   completeMfaLogin: wrapWriteHandler(completeMfaLogin),
   generateAndStoreRefreshToken,
-  signupWithEmail: wrapWriteHandler(signupWithEmail),
-  universalLogin: wrapWriteHandler(universalLogin),
+  signupInit: wrapWriteHandler(signupInit),
+  signupVerify: wrapWriteHandler(signupVerify),
+  signupResend: wrapWriteHandler(signupResend),
   sendOtpEndpoint: wrapWriteHandler(sendOtpEndpoint),
   verifyOtpEndpoint: wrapWriteHandler(verifyOtpEndpoint),
 };

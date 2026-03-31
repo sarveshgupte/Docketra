@@ -11,17 +11,24 @@ module.exports = {
       googleId: nonEmptyString.optional(),
     }).strip(),
   },
-  'POST /signup': {
+  'POST /signup/init': {
     body: z.object({
       name: nonEmptyString,
       email: z.string().trim().email(),
       password: strongPassword,
+      firmName: nonEmptyString,
+      phone: z.string().trim().regex(/^\d{10}$/),
     }).strip(),
   },
-  'POST /login': {
+  'POST /signup/verify': {
     body: z.object({
       email: z.string().trim().email(),
-      password: nonEmptyString.optional(),
+      otp: z.string().trim().regex(/^\d{6}$/),
+    }).strip(),
+  },
+  'POST /signup/resend': {
+    body: z.object({
+      email: z.string().trim().email(),
     }).strip(),
   },
   'POST /send-otp': {
