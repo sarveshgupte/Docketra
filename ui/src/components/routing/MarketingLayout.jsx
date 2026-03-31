@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { PageWrapper } from '../layout/PageWrapper';
-import { SharedLayout } from './SharedLayout';
+import { AppLayout } from './AppLayout';
 
 export const MarketingLayout = () => {
   const location = useLocation();
@@ -16,12 +16,12 @@ export const MarketingLayout = () => {
   }, [location.pathname, location.hash]);
 
   return (
-    <SharedLayout>
+    <AppLayout>
       <AnimatePresence mode="wait" initial={false}>
         <PageWrapper key={location.pathname}>
           <Outlet />
         </PageWrapper>
       </AnimatePresence>
-    </SharedLayout>
+    </AppLayout>
   );
 };
