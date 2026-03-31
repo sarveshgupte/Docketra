@@ -24,6 +24,12 @@ const setTenantLoginScope = (req, _res, next) => {
   req.loginScope = 'tenant';
   next();
 };
+const safeVerifyLoginOtp = typeof verifyLoginOtp === 'function'
+  ? verifyLoginOtp
+  : (_req, res) => res.status(500).json({ success: false, message: 'Login OTP verification unavailable' });
+const safeResendLoginOtp = typeof resendLoginOtp === 'function'
+  ? resendLoginOtp
+  : (_req, res) => res.status(500).json({ success: false, message: 'Login OTP resend unavailable' });
 
 // Keep the temporary auth block check at the router level, but scope login and
 // login throttles to POST endpoints so public firm metadata is not needlessly limited.
@@ -62,7 +68,7 @@ router.get('/login', publicLimiter, (req, res) => {
  * than the request body, giving a clean, slug-scoped login endpoint.
  */
 router.post('/login', loginLimiter, noFirmNoTransaction, setTenantLoginScope, login);
-router.post('/verify-otp', loginLimiter, noFirmNoTransaction, setTenantLoginScope, verifyLoginOtp);
-router.post('/resend-otp', loginLimiter, noFirmNoTransaction, setTenantLoginScope, resendLoginOtp);
+router.post('/verify-otp', loginLimiter, noFirmNoTransaction, setTenantLoginScope, safeVerifyLoginOtp);
+router.post('/resend-otp', loginLimiter, noFirmNoTransaction, setTenantLoginScope, safeResendLoginOtp);
 
 module.exports = router;
