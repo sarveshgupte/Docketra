@@ -51,6 +51,16 @@ const attachmentSchema = new mongoose.Schema({
     type: String,
     required: [true, 'File name is required'],
   },
+
+  fileUrl: {
+    type: String,
+    trim: true,
+  },
+  uploadedBy: {
+    type: String,
+    uppercase: true,
+    trim: true,
+  },
   
   /**
    * Local storage path for the file

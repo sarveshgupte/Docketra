@@ -261,6 +261,30 @@ export const caseService = {
     return normalizeApiResponse(response);
   },
 
+
+  assignDocket: async (caseId, assigneeXID) => {
+    const response = await api.post(`/cases/${caseId}/assign`, { assigneeXID });
+    invalidateCaseCache(caseId);
+    return normalizeApiResponse(response);
+  },
+
+  unassignDocket: async (caseId) => {
+    const response = await api.post(`/cases/${caseId}/unassign`);
+    invalidateCaseCache(caseId);
+    return normalizeApiResponse(response);
+  },
+
+  transitionDocket: async (caseId, payload) => {
+    const response = await api.post(`/cases/${caseId}/transition`, payload);
+    invalidateCaseCache(caseId);
+    return normalizeApiResponse(response);
+  },
+
+  getDocketComments: async (caseId) => {
+    const response = await api.get(`/cases/${caseId}/comments`);
+    return normalizeApiResponse(response);
+  },
+
   /**
    * View attachment inline
    * Opens attachment in new tab

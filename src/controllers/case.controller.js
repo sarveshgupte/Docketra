@@ -14,7 +14,7 @@ const categoryRepository = require('../repositories/category.repository');
 const { detectDuplicates, generateDuplicateOverrideComment } = require('../services/clientDuplicateDetector');
 const { CASE_CATEGORIES, CASE_LOCK_CONFIG, COMMENT_PREVIEW_LENGTH, CLIENT_STATUS } = require('../config/constants');
 const CaseStatus = require('../domain/case/caseStatus');
-const { assertValidTransition } = require('../domain/case/caseStateMachine');
+const { isValidTransition } = require('./docketWorkflow.controller');
 const { isProduction } = require('../config/config');
 const { logCaseListViewed, logAdminAction } = require('../services/auditLog.service');
 const caseActionService = require('../services/caseAction.service');
@@ -1259,18 +1259,21 @@ const updateCaseStatus = async (req, res) => {
       });
     }
     
-    const normalizedStatus = status === 'Pending' ? CaseStatus.PENDED : status;
+    const normalizedStatus = String(status || '').toUpperCase();
+    const docketStatuses = new Set(['OPEN', 'PENDING', 'RESOLVED', 'FILED']);
 
-    // Handle Pending/PENDED status - require pendingUntil
-    if (normalizedStatus === CaseStatus.PENDED && !pendingUntil) {
+    if (normalizedStatus === 'PENDING' && !reason) {
       return res.status(400).json({
         success: false,
-        message: 'pendingUntil date is required when status is Pending or PENDED',
+        message: 'pendingReason is required when status is PENDING',
       });
     }
 
-    if (normalizedStatus !== CaseStatus.DRAFT && normalizedStatus !== CaseStatus.SUBMITTED) {
-      assertValidTransition(caseData.status, normalizedStatus);
+    if (docketStatuses.has(String(caseData.status || '').toUpperCase()) && docketStatuses.has(normalizedStatus)) {
+      const isAssigned = Boolean(caseData.assignedToXID);
+      if (!isValidTransition(String(caseData.status || '').toUpperCase(), normalizedStatus, isAssigned)) {
+        return res.status(400).json({ success: false, message: 'Invalid transition' });
+      }
     }
 
     await CaseService.updateStatus(caseData.caseId, normalizedStatus, {
@@ -1286,9 +1289,9 @@ const updateCaseStatus = async (req, res) => {
       expectedVersion: Number.isInteger(version) ? version : caseData.version,
       reason,
       notes,
-      statusPatch: normalizedStatus === CaseStatus.PENDED
-        ? { pendingUntil }
-        : { pendingUntil: null },
+      statusPatch: normalizedStatus === 'PENDING'
+        ? { pendingUntil, pendingReason: reason || null }
+        : { pendingUntil: null, pendingReason: null },
     });
 
     caseData = await CaseRepository.findByInternalId(req.user.firmId, caseData.caseInternalId, req.user.role);

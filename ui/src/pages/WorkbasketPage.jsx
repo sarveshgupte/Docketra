@@ -329,7 +329,7 @@ export const WorkbasketPage = () => {
               onClick={handleBulkPull}
               disabled={selectedCases.length === 0 || bulkPulling}
             >
-              {bulkPulling ? 'Pulling...' : `Pull Dockets (${selectedCases.length})`}
+              {bulkPulling ? 'Assigning...' : `Assign Dockets (${selectedCases.length})`}
             </Button>
             <span className="text-secondary">
               {selectedCases.length} of {cases.length} selected
@@ -353,7 +353,7 @@ export const WorkbasketPage = () => {
           {cases.length === 0 && !loading ? (
             <div className="p-6">
               <EmptyState
-                title="No unassigned dockets"
+                title="No dockets in backlog"
                 description="New unassigned dockets will appear here as soon as they enter the shared queue."
               />
             </div>
@@ -443,7 +443,7 @@ export const WorkbasketPage = () => {
                             onClick={() => handlePullCase(caseItem.caseId)}
                             disabled={pullingCase === caseItem.caseId}
                           >
-                            {pullingCase === caseItem.caseId ? 'Pulling...' : 'Pull'}
+                            {pullingCase === caseItem.caseId ? 'Assigning...' : 'Assign'}
                           </Button>
                         </div>
                       </td>
