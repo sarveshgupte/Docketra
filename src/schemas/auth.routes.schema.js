@@ -57,17 +57,9 @@ module.exports = {
   },
   'POST /resend-otp': {
     body: z.object({
-      xid: xidString.optional(),
-      xID: xidString.optional(),
-      XID: xidString.optional(),
       firmSlug: nonEmptyString,
-    }).strip().refine(
-      (value) => Boolean(value.xid || value.xID || value.XID),
-      {
-        message: 'xID is required',
-        path: ['xid'],
-      }
-    ),
+      loginToken: nonEmptyString,
+    }).strip(),
   },
   'POST /reset-password-with-token': {
     body: z.object({
@@ -79,6 +71,55 @@ module.exports = {
     body: z.object({
       email: z.string().trim().email(),
       firmSlug: z.string().trim().min(1).optional(),
+    }).strip(),
+  },
+  'POST /forgot-password/init': {
+    body: z.object({
+      email: z.string().trim().email(),
+      firmSlug: nonEmptyString,
+    }).strip(),
+  },
+  'POST /forgot-password/verify': {
+    body: z.object({
+      email: z.string().trim().email(),
+      firmSlug: nonEmptyString,
+      otp: z.string().trim().regex(/^\d{6}$/),
+    }).strip(),
+  },
+  'POST /forgot-password/reset': {
+    body: z.object({
+      email: z.string().trim().email(),
+      firmSlug: nonEmptyString,
+      resetToken: nonEmptyString,
+      password: strongPassword,
+    }).strip(),
+  },
+  'POST /login/init': {
+    body: z.object({
+      firmSlug: nonEmptyString,
+      xid: xidString.optional(),
+      xID: xidString.optional(),
+      XID: xidString.optional(),
+      password: nonEmptyString,
+    }).strip().refine(
+      (value) => Boolean(value.xid || value.xID || value.XID),
+      {
+        message: 'xID is required',
+        path: ['xid'],
+      }
+    ),
+  },
+  'POST /login/verify': {
+    body: z.object({
+      firmSlug: nonEmptyString,
+      otp: z.string().trim().regex(/^\d{6}$/),
+      loginToken: nonEmptyString,
+    }).strip(),
+  },
+  'POST /login/resend': {
+    body: z.object({
+      firmSlug: nonEmptyString,
+      loginToken: nonEmptyString,
     }).strip(),
   },
   'POST /refresh': {
