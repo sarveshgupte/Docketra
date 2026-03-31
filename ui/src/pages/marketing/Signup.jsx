@@ -1,7 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Button } from '../../components/common/Button';
-import { Card } from '../../components/common/Card';
 import { Input } from '../../components/common/Input';
 import api from '../../services/api';
 import { STRONG_PASSWORD_MESSAGE, validateStrongPassword } from '../../utils/validators';
@@ -132,7 +130,6 @@ export default function Signup() {
     }
   };
 
-
   const resendOtp = async () => {
     if (loading || cooldown > 0) return;
     setLoading(true);
@@ -160,78 +157,110 @@ export default function Signup() {
 
   if (signupSuccessData) {
     return (
-      <div className="min-h-screen overflow-y-auto flex items-center justify-center px-4 py-8 bg-gray-50">
-        <Card className="w-full max-w-md p-6 space-y-4 overflow-visible">
-          <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">🎉 Workspace created successfully</h1>
-          <div className="mt-4 rounded-md border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700 space-y-2">
-            <p><span className="font-medium">Firm URL:</span> {`https://app.com/${signupSuccessData.firmSlug}`}</p>
-            <p><span className="font-medium">Your XID:</span> {signupSuccessData.xid}</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-8">
+        <div className="w-full max-w-md">
+          <div className="bg-white rounded-2xl shadow-sm p-6">
+            <h1 className="text-xl font-semibold text-center">🎉 Workspace created successfully</h1>
+            <div className="mt-4 rounded-md border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700 space-y-2">
+              <p><span className="font-medium">Firm URL:</span> {`https://app.com/${signupSuccessData.firmSlug}`}</p>
+              <p><span className="font-medium">Your XID:</span> {signupSuccessData.xid}</p>
+            </div>
+            <button
+              type="button"
+              className="w-full mt-4 bg-black text-white py-2 rounded-lg disabled:opacity-50"
+              onClick={handleLoginRedirect}
+            >
+              Go to Login
+            </button>
           </div>
-          <Button type="button" variant="primary" fullWidth className="mt-4" onClick={handleLoginRedirect}>
-            Go to Login
-          </Button>
-        </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen overflow-y-auto flex items-center justify-center px-4 py-8 bg-gray-50">
-      <Card className="w-full max-w-md p-6 space-y-4 overflow-visible">
-        <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">Create your workspace</h1>
-        <p className="mt-2 text-sm text-gray-500 text-center">Step {step} of 2</p>
-        <p className="mt-2 text-sm text-gray-500 text-center">{step === 1 ? 'Takes less than 1 minute' : 'Enter the 6-digit code sent to your email'}</p>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-8">
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-2xl shadow-sm p-6">
+          <h1 className="text-xl font-semibold text-center">Create your workspace</h1>
+          <p className="mt-2 text-sm text-gray-500 text-center">Step {step} of 2</p>
+          <p className="mt-2 text-sm text-gray-500 text-center">{step === 1 ? 'Takes less than 1 minute' : 'Enter the 6-digit code sent to your email'}</p>
 
-        {apiError && <div role="alert" className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{apiError}</div>}
+          {apiError && <div role="alert" className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{apiError}</div>}
 
-        {step === 1 ? (
-          <form className="mt-6 space-y-4" onSubmit={submitStepOne} noValidate>
-            <Input id="signup-name" type="text" name="name" label="Name" className="w-full" value={form.name} onChange={onFormChange} disabled={loading} error={errors.name} required />
-            <Input id="signup-email" type="email" name="email" label="Email" className="w-full" value={form.email} onChange={onFormChange} disabled={loading} error={errors.email} required autoComplete="username" />
-            <Input id="signup-password" type="password" name="password" label="Password" className="w-full" value={form.password} onChange={onFormChange} disabled={loading} error={errors.password} required autoComplete="current-password" />
-            <Input id="signup-firm" type="text" name="firmName" label="Firm name" className="w-full" value={form.firmName} onChange={onFormChange} disabled={loading} error={errors.firmName} required />
-            <Input id="signup-phone" type="text" name="phone" label="Phone" className="w-full" value={form.phone} onChange={onFormChange} disabled={loading} error={errors.phone} required />
-            <p className="text-xs text-gray-500">{STRONG_PASSWORD_MESSAGE}</p>
-            <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading} className="mt-2">{loading ? 'Sending OTP...' : 'Continue'}</Button>
-          </form>
-        ) : (
-          <form className="mt-6 space-y-4" onSubmit={submitOtp} noValidate>
-            {otpInfo && <p className="text-xs text-gray-500">{otpInfo}</p>}
-            <Input
-              ref={otpInputRef}
-              id="signup-otp"
-              type="text"
-              name="otp"
-              label="Email OTP"
-              className="w-full"
-              value={otp}
-              onChange={(e) => { setOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setErrors((prev) => ({ ...prev, otp: '' })); }}
-              onPaste={(e) => {
-                const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-                if (pasted.length === 6) {
-                  e.preventDefault();
-                  setOtp(pasted);
-                }
-              }}
-              disabled={loading}
-              error={errors.otp}
-              required
-              autoComplete="one-time-code"
-              inputMode="numeric"
-              pattern="[0-9]*"
-            />
-            <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading}>{loading ? 'Verifying...' : 'Verify & create workspace'}</Button>
-            <Button type="button" variant="secondary" fullWidth disabled={loading || cooldown > 0} onClick={resendOtp}>
-              {cooldown > 0 ? `Resend OTP in ${cooldown}s` : 'Resend OTP'}
-            </Button>
-            <Button type="button" variant="secondary" fullWidth disabled={loading} onClick={() => setStep(1)}>Back</Button>
-          </form>
-        )}
+          {step === 1 ? (
+            <form className="mt-6 space-y-4 w-full" onSubmit={submitStepOne} noValidate>
+              <Input id="signup-name" type="text" name="name" label="Name" className="w-full" value={form.name} onChange={onFormChange} disabled={loading} error={errors.name} required />
+              <Input id="signup-email" type="email" name="email" label="Email" className="w-full" value={form.email} onChange={onFormChange} disabled={loading} error={errors.email} required autoComplete="username" />
+              <Input id="signup-password" type="password" name="password" label="Password" className="w-full" value={form.password} onChange={onFormChange} disabled={loading} error={errors.password} required autoComplete="current-password" />
+              <Input id="signup-firm" type="text" name="firmName" label="Firm name" className="w-full" value={form.firmName} onChange={onFormChange} disabled={loading} error={errors.firmName} required />
+              <Input id="signup-phone" type="text" name="phone" label="Phone" className="w-full" value={form.phone} onChange={onFormChange} disabled={loading} error={errors.phone} required />
+              <p className="text-xs text-gray-500">{STRONG_PASSWORD_MESSAGE}</p>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full mt-4 bg-black text-white py-2 rounded-lg disabled:opacity-50"
+              >
+                {loading ? 'Sending OTP...' : 'Send OTP'}
+              </button>
+            </form>
+          ) : (
+            <form className="mt-6 space-y-4 w-full" onSubmit={submitOtp} noValidate>
+              {otpInfo && <p className="text-xs text-gray-500">{otpInfo}</p>}
+              <Input
+                ref={otpInputRef}
+                id="signup-otp"
+                type="text"
+                name="otp"
+                label="Email OTP"
+                className="w-full"
+                value={otp}
+                onChange={(e) => { setOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setErrors((prev) => ({ ...prev, otp: '' })); }}
+                onPaste={(e) => {
+                  const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+                  if (pasted.length === 6) {
+                    e.preventDefault();
+                    setOtp(pasted);
+                  }
+                }}
+                disabled={loading}
+                error={errors.otp}
+                required
+                autoComplete="one-time-code"
+                inputMode="numeric"
+                pattern="[0-9]*"
+              />
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full mt-4 bg-black text-white py-2 rounded-lg disabled:opacity-50"
+              >
+                {loading ? 'Verifying...' : 'Verify & create workspace'}
+              </button>
+              <button
+                type="button"
+                disabled={loading || cooldown > 0}
+                onClick={resendOtp}
+                className="w-full border border-gray-300 bg-white text-gray-800 py-2 rounded-lg disabled:opacity-50"
+              >
+                {cooldown > 0 ? `Resend OTP in ${cooldown}s` : 'Resend OTP'}
+              </button>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => setStep(1)}
+                className="w-full border border-gray-300 bg-white text-gray-800 py-2 rounded-lg disabled:opacity-50"
+              >
+                Back
+              </button>
+            </form>
+          )}
 
-        <p className="mt-4 text-center text-[12px] text-gray-500 sm:text-[13px]">
-          By signing up, you agree to our <Link to="/terms" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-700">Terms &amp; Conditions</Link> and <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-700">Privacy Policy</Link>.
-        </p>
-      </Card>
+          <p className="mt-4 text-center text-[12px] text-gray-500 sm:text-[13px]">
+            By signing up, you agree to our <Link to="/terms" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-700">Terms &amp; Conditions</Link> and <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-700">Privacy Policy</Link>.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
