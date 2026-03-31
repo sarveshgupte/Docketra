@@ -15,10 +15,25 @@ export function CompleteProfilePage() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  const validate = () => {
+    const nextErrors = {};
+    if (!name.trim()) nextErrors.name = 'Name is required.';
+    if (!firmName.trim()) nextErrors.firmName = 'Firm name is required.';
+    if (!phoneNumber.trim()) {
+      nextErrors.phoneNumber = 'Phone number is required.';
+    } else if (!/^[+\d][\d\s-]{7,}$/.test(phoneNumber.trim())) {
+      nextErrors.phoneNumber = 'Enter a valid phone number.';
+    }
+    setFieldErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
+    if (!validate()) return;
     setLoading(true);
     try {
       await userApi.completeProfile({ name, firmName, phoneNumber });
@@ -41,10 +56,42 @@ export function CompleteProfilePage() {
         <h1 className="text-2xl font-semibold text-center text-gray-900">Complete your profile</h1>
         <p className="mt-2 text-sm text-gray-500 text-center">Finish onboarding before using your workspace.</p>
         <form className={`mt-6 ${spacingClasses.formFieldSpacing}`} onSubmit={handleSubmit}>
-          <Input label="Name" value={name} onChange={(event) => setName(event.target.value)} required />
-          <Input label="Firm Name" value={firmName} onChange={(event) => setFirmName(event.target.value)} required />
-          <Input label="Phone Number" value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} required />
-          {error ? <p className="text-sm text-red-600">{error}</p> : null}
+          <Input
+            label="Name"
+            value={name}
+            onChange={(event) => {
+              setName(event.target.value);
+              setFieldErrors((current) => ({ ...current, name: '' }));
+            }}
+            error={fieldErrors.name}
+            required
+            disabled={loading}
+          />
+          <Input
+            label="Firm Name"
+            value={firmName}
+            onChange={(event) => {
+              setFirmName(event.target.value);
+              setFieldErrors((current) => ({ ...current, firmName: '' }));
+            }}
+            error={fieldErrors.firmName}
+            required
+            disabled={loading}
+          />
+          <Input
+            label="Phone Number"
+            value={phoneNumber}
+            onChange={(event) => {
+              setPhoneNumber(event.target.value);
+              setFieldErrors((current) => ({ ...current, phoneNumber: '' }));
+            }}
+            error={fieldErrors.phoneNumber}
+            helpText="Include country code if outside your default dialing region."
+            required
+            disabled={loading}
+          />
+          {error ? <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p> : null}
+          {loading ? <p className="text-xs text-gray-500">Saving your onboarding details and preparing your workspace…</p> : null}
           <Button type="submit" variant="primary" fullWidth disabled={loading} loading={loading}>
             {loading ? 'Saving...' : 'Continue'}
           </Button>

@@ -21,52 +21,63 @@ export const FirmSettingsPage = () => {
   const { firmSlug } = useParams();
   const [config, setConfig] = useState(getFirmConfig());
   const [activity, setActivity] = useState([]);
-  const [saveMessage, setSaveMessage] = useState('');
+  const [saveMessage, setSaveMessage] = useState({ type: '', text: '' });
+  const [loadingActivity, setLoadingActivity] = useState(true);
+  const [activityError, setActivityError] = useState('');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  const loadActivity = async () => {
+    setLoadingActivity(true);
+    setActivityError('');
+    try {
+      const response = await caseApi.getCases();
+      const records = response?.data || [];
+      const mockActivity = records
+        .flatMap((record) => {
+          const auditLog = record.auditLog || [];
+          if (auditLog.length) {
+            return auditLog.map((entry) => ({
+              id: entry._id || `${entry.timestamp}-${entry.performedByXID || entry.actorXID || 'user'}`,
+              actor: entry.performedByName || entry.actorXID || entry.performedByXID || 'User',
+              timestamp: entry.timestamp || entry.createdAt,
+            }));
+          }
+          return [
+            {
+              id: record.caseId,
+              actor: record.updatedByName || record.assignedToName || 'User',
+              timestamp: record.updatedAt,
+            },
+          ];
+        })
+        .filter((entry) => entry.timestamp)
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+        .slice(0, 10);
+      setActivity(mockActivity);
+    } catch {
+      setActivity([]);
+      setActivityError('Could not load recent activity. You can retry without losing settings changes.');
+    } finally {
+      setLoadingActivity(false);
+    }
+  };
 
   useEffect(() => {
-    const loadActivity = async () => {
-      try {
-        const response = await caseApi.getCases();
-        const records = response?.data || [];
-        const mockActivity = records
-          .flatMap((record) => {
-            const auditLog = record.auditLog || [];
-            if (auditLog.length) {
-              return auditLog.map((entry) => ({
-                id: entry._id || `${entry.timestamp}-${entry.performedByXID || entry.actorXID || 'user'}`,
-                actor: entry.performedByName || entry.actorXID || entry.performedByXID || 'User',
-                timestamp: entry.timestamp || entry.createdAt,
-              }));
-            }
-            return [
-              {
-                id: record.caseId,
-                actor: record.updatedByName || record.assignedToName || 'User',
-                timestamp: record.updatedAt,
-              },
-            ];
-          })
-          .filter((entry) => entry.timestamp)
-          .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-          .slice(0, 10);
-        setActivity(mockActivity);
-      } catch {
-        setActivity([]);
-      }
-    };
     loadActivity();
   }, []);
 
   const handleNumberChange = (event) => {
     const { name, value } = event.target;
-    setSaveMessage('');
+    setSaveMessage({ type: '', text: '' });
     setConfig((prev) => ({ ...prev, [name]: value }));
+    setHasUnsavedChanges(true);
   };
 
   const handleToggleChange = (event) => {
     const { name, value } = event.target;
-    setSaveMessage('');
+    setSaveMessage({ type: '', text: '' });
     setConfig((prev) => ({ ...prev, [name]: value === 'true' }));
+    setHasUnsavedChanges(true);
   };
 
   const handleSave = () => {
@@ -78,9 +89,14 @@ export const FirmSettingsPage = () => {
       enableEscalationView: Boolean(config.enableEscalationView),
       enableBulkActions: Boolean(config.enableBulkActions),
     };
-    const saved = setFirmConfig(payload);
-    setConfig(saved);
-    setSaveMessage('Firm settings saved successfully.');
+    try {
+      const saved = setFirmConfig(payload);
+      setConfig(saved);
+      setHasUnsavedChanges(false);
+      setSaveMessage({ type: 'success', text: 'Firm settings saved successfully.' });
+    } catch {
+      setSaveMessage({ type: 'error', text: 'Could not save settings. Please retry.' });
+    }
   };
 
   return (
@@ -157,14 +173,24 @@ export const FirmSettingsPage = () => {
                 />
               </div>
 
-              {saveMessage ? <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{saveMessage}</div> : null}
+              {saveMessage.text ? (
+                <div
+                  className={`rounded-lg px-4 py-3 text-sm ${
+                    saveMessage.type === 'success'
+                      ? 'border border-green-200 bg-green-50 text-green-700'
+                      : 'border border-red-200 bg-red-50 text-red-700'
+                  }`}
+                >
+                  {saveMessage.text}
+                </div>
+              ) : null}
 
               <div className="mt-6 pt-5 border-t border-gray-200 flex justify-end gap-3">
                 <Button type="button" variant="outline" onClick={() => navigate(`/app/firm/${firmSlug}/admin`)}>
                   Back to Admin
                 </Button>
                 <Button type="button" variant="primary" onClick={handleSave}>
-                  Save Changes
+                  {hasUnsavedChanges ? 'Save Changes' : 'Saved'}
                 </Button>
               </div>
             </Card>
@@ -176,7 +202,18 @@ export const FirmSettingsPage = () => {
                 <h2 className="text-lg font-medium text-gray-900 mb-4">Recent User Activity</h2>
                 <p className="text-sm text-gray-500">Last 10 activity records derived from the most recent available audit events.</p>
               </div>
-              {activity.length ? (
+              {loadingActivity ? (
+                <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+                  Loading recent activity…
+                </div>
+              ) : activityError ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  <p>{activityError}</p>
+                  <Button type="button" variant="outline" onClick={loadActivity} className="mt-3">
+                    Retry Activity Feed
+                  </Button>
+                </div>
+              ) : activity.length ? (
                 <ul className="space-y-3">
                   {activity.map((entry) => (
                     <li key={entry.id} className="rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-600">
