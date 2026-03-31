@@ -21,7 +21,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
 import { useToast } from '../hooks/useToast';
-import { caseService } from '../services/caseService';
+import { caseApi } from '../api/case.api';
 import { extractErrorMessage } from '../services/apiResponse';
 import { formatDateTime } from '../utils/formatDateTime';
 import { formatClientDisplay } from '../utils/formatters';
@@ -356,7 +356,7 @@ export const CaseDetailPage = () => {
       setSectionLoading({ comments: true, history: true, attachments: true });
     }
     try {
-      const response = await caseService.getCaseById(caseId, {
+      const response = await caseApi.getCaseById(caseId, {
         commentsPage: 1,
         commentsLimit: 25,
         activityPage: 1,
@@ -422,11 +422,11 @@ export const CaseDetailPage = () => {
 
   const executeQueuedAction = useCallback(async (action) => {
     if (action.type === 'ADD_COMMENT') {
-      await caseService.addComment(caseId, action.payload.commentText);
+      await caseApi.addComment(caseId, action.payload.commentText);
       return true;
     }
     if (action.type === 'RESOLVE_CASE') {
-      await caseService.resolveCase(caseId, action.payload.comment);
+      await caseApi.resolveCase(caseId, action.payload.comment);
       return true;
     }
     return false;
@@ -436,11 +436,11 @@ export const CaseDetailPage = () => {
     loadCase();
     
     // Track case opened
-    caseService.trackCaseOpen(caseId);
+    caseApi.trackCaseOpen(caseId);
     
     // Cleanup: track case exit on unmount
     return () => {
-      caseService.trackCaseExit(caseId);
+      caseApi.trackCaseExit(caseId);
     };
   }, [caseId, loadCase]);
 
@@ -460,7 +460,7 @@ export const CaseDetailPage = () => {
           return;
         }
 
-        const response = await caseService.getCaseById(caseId, {
+        const response = await caseApi.getCaseById(caseId, {
           commentsPage: 1,
           commentsLimit: 50,
           activityPage: 1,
@@ -609,7 +609,7 @@ export const CaseDetailPage = () => {
     if (caseData && !viewTracked) {
       // Delay slightly to ensure page is fully rendered
       const timer = setTimeout(() => {
-        caseService.trackCaseView(caseId);
+        caseApi.trackCaseView(caseId);
         setViewTracked(true);
       }, VIEW_TRACKING_DEBOUNCE_MS);
       
@@ -632,7 +632,7 @@ export const CaseDetailPage = () => {
     const loadClientDockets = async () => {
       setLoadingClientDockets(true);
       try {
-        const response = await caseService.getClientDockets(caseData.clientId);
+        const response = await caseApi.getClientDockets(caseData.clientId);
         const rows = response.data || response.dockets || [];
         setClientDockets(rows.filter((row) => row.caseId !== caseId));
       } catch (error) {
@@ -677,7 +677,7 @@ export const CaseDetailPage = () => {
         setConfirmModal(null);
         setPullingCase(true);
         try {
-          const response = await caseService.pullCase(caseId);
+          const response = await caseApi.pullCase(caseId);
           if (response.success) {
             const message = 'Docket moved to My Worklist';
             showSuccess(message);
@@ -704,7 +704,7 @@ export const CaseDetailPage = () => {
       }
 
       setMovingToGlobal(true);
-      await caseService.updateStatus(caseId, {
+      await caseApi.updateStatus(caseId, {
         status: 'UNASSIGNED',
         version: statusVersion,
         performedBy,
@@ -743,7 +743,7 @@ export const CaseDetailPage = () => {
     setNewComment('');
     setSubmitting(true);
     try {
-      const response = await caseService.addComment(caseId, commentText);
+      const response = await caseApi.addComment(caseId, commentText);
       const serverCommentPayload = response?.data;
       const serverComment = serverCommentPayload?.comment || (serverCommentPayload?.text ? serverCommentPayload : null);
       setCaseData((prev) => ({
@@ -825,7 +825,7 @@ export const CaseDetailPage = () => {
     try {
       const uploadedFile = selectedFile;
       const description = fileDescription.trim();
-      await caseService.addAttachment(caseId, uploadedFile, description, ({ percent }) => {
+      await caseApi.addAttachment(caseId, uploadedFile, description, ({ percent }) => {
         setUploadProgress(percent);
       });
       const newFileObj = {
@@ -887,7 +887,7 @@ export const CaseDetailPage = () => {
             showError('Case version missing. Please refresh.');
             return;
           }
-          const response = await caseService.updateStatus(caseId, {
+          const response = await caseApi.updateStatus(caseId, {
             status: 'FILED',
             version: statusVersion,
             performedBy,
@@ -950,7 +950,7 @@ export const CaseDetailPage = () => {
             showError('Case version missing. Please refresh.');
             return;
           }
-          const response = await caseService.updateStatus(caseId, {
+          const response = await caseApi.updateStatus(caseId, {
             status: 'PENDED',
             version: statusVersion,
             performedBy,
@@ -1004,7 +1004,7 @@ export const CaseDetailPage = () => {
             showError('Case version missing. Please refresh.');
             return;
           }
-          const response = await caseService.updateStatus(caseId, {
+          const response = await caseApi.updateStatus(caseId, {
             status: 'RESOLVED',
             version: statusVersion,
             performedBy,
@@ -1058,7 +1058,7 @@ export const CaseDetailPage = () => {
         setConfirmModal(null);
         setUnpendingCase(true);
         try {
-          const response = await caseService.unpendCase(caseId, unpendComment);
+          const response = await caseApi.unpendCase(caseId, unpendComment);
           if (response.success) {
             const message = `Docket ${caseId} unpended • ${formatDateTime(new Date())}`;
             showSuccess(message);
@@ -1132,7 +1132,7 @@ export const CaseDetailPage = () => {
         setCaseData(previous);
         return;
       }
-      await caseService.updateStatus(caseId, {
+      await caseApi.updateStatus(caseId, {
         status: 'ASSIGNED',
         version: statusVersion,
         performedBy,
@@ -1208,7 +1208,7 @@ export const CaseDetailPage = () => {
         showError('Case version missing. Please refresh.');
         return;
       }
-      await caseService.updateStatus(caseId, {
+      await caseApi.updateStatus(caseId, {
         status: 'IN_PROGRESS',
         version: statusVersion,
         performedBy,
@@ -1630,8 +1630,8 @@ export const CaseDetailPage = () => {
                           </div>
                         </div>
                         <div className="case-detail__attachment-actions" aria-label="Attachment actions">
-                          <Button variant="outline" className="case-detail__attachment-action" onClick={() => caseService.viewAttachment(caseId, attachment._id)}>View</Button>
-                          <Button variant="outline" className="case-detail__attachment-action" onClick={() => caseService.downloadAttachment(caseId, attachment._id, attachment.fileName || attachment.filename)}>Download</Button>
+                          <Button variant="outline" className="case-detail__attachment-action" onClick={() => caseApi.viewAttachment(caseId, attachment._id)}>View</Button>
+                          <Button variant="outline" className="case-detail__attachment-action" onClick={() => caseApi.downloadAttachment(caseId, attachment._id, attachment.fileName || attachment.filename)}>Download</Button>
                         </div>
                       </article>
                     ))

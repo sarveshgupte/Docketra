@@ -22,16 +22,15 @@ import { SetupChecklist } from '../components/onboarding/SetupChecklist';
 import { MetricCard } from '../components/reports/MetricCard';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
-import { caseService } from '../services/caseService';
-import { worklistService } from '../services/worklistService';
-import { adminService } from '../services/adminService';
-import { clientService } from '../services/clientService';
-import { metricsService } from '../services/metricsService';
+import { caseApi } from '../api/case.api';
+import { worklistApi } from '../api/worklist.api';
+import { adminApi } from '../api/admin.api';
+import { clientApi } from '../api/client.api';
+import { metricsApi } from '../api/metrics.api';
 import { formatDate } from '../utils/formatters';
 import { getStatusLabel } from '../utils/statusDisplay';
 import { UX_COPY } from '../constants/uxCopy';
 import { ROUTES, safeRoute } from '../constants/routes';
-import { caseApi } from '../api/case.api';
 
 const DASHBOARD_RECENT_CASES_ROW_COUNT = 5;
 const DASHBOARD_RECENT_CASES_MAX_ROWS = 10;
@@ -137,11 +136,11 @@ export const DashboardPage = () => {
       const recentCasesPromise = (async () => {
         try {
           if (isAdmin) {
-            const casesResponse = await caseService.getCases({ limit: DASHBOARD_RECENT_CASES_LIMIT });
+            const casesResponse = await caseApi.getCases({ limit: DASHBOARD_RECENT_CASES_LIMIT });
             return casesResponse.success ? (casesResponse.data || []) : [];
           }
 
-          const worklistResponse = await worklistService.getEmployeeWorklist({ limit: DASHBOARD_RECENT_CASES_LIMIT });
+          const worklistResponse = await worklistApi.getEmployeeWorklist({ limit: DASHBOARD_RECENT_CASES_LIMIT });
           return worklistResponse.success ? (worklistResponse.data || []) : [];
         } catch (error) {
           console.error(isAdmin ? 'Failed to load firm cases:' : 'Failed to load worklist:', error);
@@ -165,14 +164,14 @@ export const DashboardPage = () => {
         recentCasesPromise,
         userFirmId
           ? fetchStatSafely(
-            () => metricsService.getFirmMetrics(userFirmId),
+            () => metricsApi.getFirmMetrics(userFirmId),
             (metricsResponse) => (metricsResponse.success ? (metricsResponse.data || {}) : {}),
             'Failed to load firm metrics:',
             'Firm metrics',
           )
           : Promise.resolve({}),
         fetchStatSafely(
-          () => worklistService.getEmployeeWorklist(),
+          () => worklistApi.getEmployeeWorklist(),
           (worklistResponse) => (worklistResponse.success ? { myOpenCases: (worklistResponse.data || []).length } : {}),
           'Failed to load open cases count:',
           'Open case counts',
@@ -184,13 +183,13 @@ export const DashboardPage = () => {
           'Pending case counts',
         ),
         fetchStatSafely(
-          () => caseService.getMyResolvedCases(),
+          () => caseApi.getMyResolvedCases(),
           (resolvedResponse) => (resolvedResponse.success ? { myResolvedCases: (resolvedResponse.data || []).length } : {}),
           'Failed to load resolved cases:',
           'Resolved case counts',
         ),
         fetchStatSafely(
-          () => caseService.getMyUnassignedCreatedCases(),
+          () => caseApi.getMyUnassignedCreatedCases(),
           (unassignedCreatedResponse) => (
             unassignedCreatedResponse.success
               ? { myUnassignedCreatedCases: (unassignedCreatedResponse.data || []).length }
@@ -201,7 +200,7 @@ export const DashboardPage = () => {
         ),
         isAdmin
           ? fetchStatSafely(
-            () => adminService.getPendingApprovals(),
+            () => adminApi.getPendingApprovals(),
             (approvalsResponse) => (
               approvalsResponse.success ? { adminPendingApprovals: approvalsResponse.data?.length || 0 } : {}
             ),
@@ -221,7 +220,7 @@ export const DashboardPage = () => {
           : Promise.resolve({}),
         isAdmin
           ? fetchStatSafely(
-            () => adminService.getAllResolvedCases(),
+            () => adminApi.getAllResolvedCases(),
             (adminResolvedResponse) => (
               adminResolvedResponse.success
                 ? { adminResolvedCases: adminResolvedResponse.pagination?.total || 0 }
@@ -233,7 +232,7 @@ export const DashboardPage = () => {
           : Promise.resolve({}),
         isAdmin
           ? fetchStatSafely(
-            () => clientService.getClients(true),
+            () => clientApi.getClients(true),
             (clientsResponse) => (clientsResponse.success ? { activeClients: (clientsResponse.data || []).length } : {}),
             'Failed to load active clients:',
             'Client counts',

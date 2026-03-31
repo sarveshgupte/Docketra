@@ -12,7 +12,7 @@ import { DataTable } from '../components/layout/DataTable';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
-import { clientService } from '../services/clientService';
+import { clientApi } from '../api/client.api';
 import { formatDate } from '../utils/formatters';
 import { formatDateTime } from '../utils/formatDateTime';
 
@@ -35,7 +35,7 @@ export const ClientsPage = () => {
   const loadClients = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await clientService.getClients(false);
+      const response = await clientApi.getClients(false);
       setClients(response?.data || []);
     } finally {
       setLoading(false);
@@ -54,7 +54,7 @@ export const ClientsPage = () => {
 
   const openEditCfsModal = useCallback(async (client) => {
     try {
-      const response = await clientService.getClientById(client.clientId);
+      const response = await clientApi.getClientById(client.clientId);
       const fullClient = response?.data || client;
       setEditCfsClient(fullClient);
       setDescriptionDraft(fullClient?.clientFactSheet?.description || '');
@@ -123,7 +123,7 @@ export const ClientsPage = () => {
 
   const refreshSelectedClient = async () => {
     if (!editCfsClient?.clientId) return;
-    const response = await clientService.getClientById(editCfsClient.clientId);
+    const response = await clientApi.getClientById(editCfsClient.clientId);
     const refreshedClient = response?.data || editCfsClient;
     setEditCfsClient(refreshedClient);
     setDescriptionDraft(refreshedClient?.clientFactSheet?.description || '');
@@ -134,7 +134,7 @@ export const ClientsPage = () => {
     if (!editCfsClient?.clientId) return;
     setSavingText(true);
     try {
-      await clientService.updateClientFactSheet(editCfsClient.clientId, descriptionDraft, notesDraft);
+      await clientApi.updateClientFactSheet(editCfsClient.clientId, descriptionDraft, notesDraft);
       showSuccess('Client Fact Sheet updated');
       await Promise.all([refreshSelectedClient(), loadClients()]);
     } catch (error) {
@@ -149,7 +149,7 @@ export const ClientsPage = () => {
     if (!file || !editCfsClient?.clientId) return;
     setUploadingFile(true);
     try {
-      await clientService.uploadClientCFSFile(editCfsClient.clientId, file);
+      await clientApi.uploadClientCFSFile(editCfsClient.clientId, file);
       showSuccess('Document attached successfully');
       await Promise.all([refreshSelectedClient(), loadClients()]);
     } catch (error) {
@@ -164,7 +164,7 @@ export const ClientsPage = () => {
     if (!editCfsClient?.clientId || !fileId) return;
     setDeletingFileId(fileId);
     try {
-      await clientService.deleteFactSheetFile(editCfsClient.clientId, fileId);
+      await clientApi.deleteFactSheetFile(editCfsClient.clientId, fileId);
       showSuccess('Document removed');
       await Promise.all([refreshSelectedClient(), loadClients()]);
     } catch (error) {

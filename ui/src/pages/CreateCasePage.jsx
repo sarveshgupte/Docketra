@@ -14,9 +14,9 @@ import { SectionCard } from '../components/layout/SectionCard';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
 import { useAsyncAction } from '../hooks/useAsyncAction';
-import { caseService } from '../services/caseService';
+import { caseApi } from '../api/case.api';
 import { categoryService } from '../services/categoryService';
-import { clientService } from '../services/clientService';
+import { clientApi } from '../api/client.api';
 import { getFirmConfig } from '../utils/firmConfig';
 import { formatClientDisplay } from '../utils/formatters';
 import { formatDateTime } from '../utils/formatDateTime';
@@ -97,7 +97,7 @@ export const CreateCasePage = () => {
     const fetchClients = async () => {
       try {
         // Use forCreateCase=true to always get Default Client (C000001) + active clients
-        const response = await clientService.getClients(false, true);
+        const response = await clientApi.getClients(false, true);
         if (response.success) {
           const clientList = response.data || [];
           setClients(clientList);
@@ -288,7 +288,7 @@ export const CreateCasePage = () => {
 
     try {
       const payload = isAdmin ? formData : { ...formData, slaDueDate: undefined };
-      const response = await runSubmit(() => caseService.createCase(payload, forceCreate));
+      const response = await runSubmit(() => caseApi.createCase(payload, forceCreate));
       
       if (response.success) {
         const confirmationTime = formatDateTime(new Date());
