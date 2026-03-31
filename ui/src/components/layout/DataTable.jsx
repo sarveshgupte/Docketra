@@ -2,6 +2,7 @@ import React from 'react';
 import { SortableTableHeader } from '../ui/SortableTableHeader';
 import { EmptyState } from './EmptyState';
 import { Loading } from '../common/Loading';
+import { spacingClasses, surfaceClasses } from '../../theme/tokens';
 
 const joinClasses = (...classes) => classes.filter(Boolean).join(' ');
 
@@ -56,7 +57,7 @@ export const DataTable = React.memo(({
   };
 
   return (
-    <div className="space-y-3">
+    <div className={spacingClasses.sectionMargin}>
       {hasToolbar ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">{toolbarLeft}</div>
@@ -88,7 +89,7 @@ export const DataTable = React.memo(({
           </div>
         </div>
       ) : null}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+      <div className={surfaceClasses.tableWrapper}>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50 border-b border-gray-200">
@@ -97,7 +98,7 @@ export const DataTable = React.memo(({
                   <th
                     key={column.key}
                     className={joinClasses(
-                      'sticky top-0 z-10 bg-gray-50 drop-shadow-sm px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap',
+                      `sticky top-0 z-10 bg-gray-50 drop-shadow-sm ${spacingClasses.tableHeaderPadding} text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap`,
                       column.align === 'right' && 'text-right',
                       column.align === 'center' && 'text-center',
                       column.headerClassName,
@@ -136,7 +137,7 @@ export const DataTable = React.memo(({
                     <td
                       key={`${row[rowKey]}-${column.key}`}
                       className={joinClasses(
-                        'px-6 py-4 whitespace-nowrap text-sm text-gray-900',
+                        `${spacingClasses.tableCellPadding} whitespace-nowrap text-sm text-gray-900`,
                         column.align === 'right' && 'text-right',
                         column.align === 'center' && 'text-center',
                         column.tabular && 'tabular-nums',
