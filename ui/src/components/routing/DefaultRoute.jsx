@@ -29,7 +29,7 @@ export const DefaultRoute = () => {
 
   // Redirect SuperAdmin to platform dashboard
   if (isSuperadmin) {
-    return <Navigate to={ROUTES.SUPERADMIN_LOGIN} replace />;
+    return <Navigate to={ROUTES.SUPERADMIN_DASHBOARD} replace />;
   }
 
   // Redirect regular users to their firm dashboard
