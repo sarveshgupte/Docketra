@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { LEGAL_VERSION, LAST_UPDATED, COMPANY_NAME, COMPANY_CIN } from '../../lib/legalVersion';
 import { PageContainer } from '../layout/PageContainer';
 import { PageHeader } from '../layout/PageHeader';
+import { spacingClasses } from '../../theme/tokens';
 
 export const LegalLayout = ({ title, description, sections, children }) => {
   const [activeId, setActiveId] = useState('');
@@ -67,7 +68,7 @@ export const LegalLayout = ({ title, description, sections, children }) => {
           </nav>
         )}
 
-        <main className="min-w-0 w-full space-y-6 text-sm text-gray-700 leading-relaxed">
+        <main className={`min-w-0 w-full ${spacingClasses.sectionMargin} text-sm text-gray-700 leading-relaxed`}>
           {children}
 
           <footer className="mt-12 border-t border-gray-200 pt-6 text-xs text-gray-400">
