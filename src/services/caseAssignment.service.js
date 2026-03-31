@@ -4,7 +4,6 @@ const CaseAudit = require('../models/CaseAudit.model');
 const mongoose = require('mongoose');
 const { CaseRepository } = require('../repositories');
 const CaseStatus = require('../domain/case/caseStatus');
-const { assertValidTransition } = require('../domain/case/caseStateMachine');
 
 /**
  * Case Assignment Service
@@ -28,7 +27,6 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObject
 
   const assignedAt = new Date();
   const normalizedUserId = userId.toUpperCase();
-  assertValidTransition(CaseStatus.UNASSIGNED, CaseStatus.ASSIGNED);
   const updatedCase = await Case.findOneAndUpdate(
     {
       caseId,
@@ -167,7 +165,6 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
   }
   
   const assignedAt = new Date();
-  assertValidTransition(CaseStatus.UNASSIGNED, CaseStatus.ASSIGNED);
   const session = existingSession || await mongoose.startSession();
   const ownsSession = !existingSession;
   try {

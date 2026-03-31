@@ -49,12 +49,9 @@ export const WorklistPage = () => {
   
   // Get status filter from query params
   const statusParam = query.status;
-  // Check for PENDING or PENDED status (both are valid)
   const isPendingView = statusParam && (
-    statusParam === 'PENDING' || 
-    statusParam === 'PENDED' || 
-    statusParam.split(',').includes('PENDING') ||
-    statusParam.split(',').includes('PENDED')
+    statusParam === 'PENDING' ||
+    statusParam.split(',').includes('PENDING')
   );
 
   useEffect(() => {
@@ -119,7 +116,7 @@ export const WorklistPage = () => {
     if (isPendingView) {
       return {
         title: 'My Pending Dockets',
-        description: 'Dockets temporarily on hold (status = PENDED)',
+        description: 'Dockets temporarily on hold (status = PENDING)',
       };
     }
     return {
@@ -287,7 +284,7 @@ export const WorklistPage = () => {
             </EmptyState>
           ) : cases.length === 0 ? (
             <EmptyState
-              title={isPendingView ? 'No pending dockets right now.' : 'No dockets assigned to you'}
+              title={isPendingView ? 'No pending dockets right now.' : 'No work assigned'}
                 description={
                   isPendingView
                     ? 'There are no dockets currently in review. When a docket is placed on hold, it will appear here with its review date.'

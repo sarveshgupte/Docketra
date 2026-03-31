@@ -3,7 +3,9 @@ const CaseStatus = Object.freeze({
   ASSIGNED: 'ASSIGNED',
   IN_PROGRESS: 'IN_PROGRESS',
   OPEN: 'OPEN',
-  PENDED: 'PENDED',
+  PENDING: 'PENDING',
+  // TODO(docket-lifecycle): remove legacy PENDED alias after data migration.
+  PENDED: 'PENDING',
   RESOLVED: 'RESOLVED',
   FILED: 'FILED',
   DRAFT: 'DRAFT',
@@ -13,7 +15,6 @@ const CaseStatus = Object.freeze({
   REJECTED: 'REJECTED',
   CLOSED: 'CLOSED',
   REVIEWED: 'Reviewed',
-  PENDING_ALIAS: 'PENDING',
   OPEN_LEGACY: 'Open',
   PENDING_LEGACY: 'Pending',
   FILED_LEGACY: 'Filed',

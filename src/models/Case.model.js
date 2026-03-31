@@ -284,7 +284,7 @@ const caseSchema = new mongoose.Schema({
       values: Object.values(CaseStatus),
       message: '{VALUE} is not a valid status',
     },
-    default: 'UNASSIGNED',
+    default: 'OPEN',
     required: true,
   },
   version: {
@@ -299,10 +299,10 @@ const caseSchema = new mongoose.Schema({
   priority: {
     type: String,
     enum: {
-      values: ['Low', 'Medium', 'High', 'Urgent'],
+      values: ['low', 'medium', 'high', 'urgent'],
       message: '{VALUE} is not a valid priority',
     },
-    default: 'Medium',
+    default: 'medium',
     required: true,
   },
   
@@ -338,6 +338,26 @@ const caseSchema = new mongoose.Schema({
   // Timestamp when case was transitioned to RESOLVED
   resolvedAt: {
     type: Date,
+  },
+  filedAt: {
+    type: Date,
+  },
+
+  filedReason: {
+    type: String,
+    enum: ['duplicate', 'invalid', 'not_required', 'other'],
+  },
+  filedNote: {
+    type: String,
+    trim: true,
+  },
+  pendingReason: {
+    type: String,
+    enum: ['waiting_client', 'waiting_internal', 'blocked', 'other'],
+  },
+  completionType: {
+    type: String,
+    enum: ['resolved', 'filed'],
   },
   
   slaDueAt: {
@@ -763,11 +783,11 @@ caseSchema.set('optimisticConcurrency', true);
  * PR: Updated to support both legacy 'Pending' and new 'PENDED' status
  */
 caseSchema.path('status').validate(function(value) {
-  if ((value === 'Pending' || value === 'PENDED') && !this.pendingUntil) {
+  if (value === 'PENDING' && !this.pendingReason) {
     return false;
   }
   return true;
-}, 'pendingUntil date is required when status is Pending or PENDED');
+}, 'pendingReason is required when status is PENDING');
 
 /**
  * Virtual Property: isReadOnly
