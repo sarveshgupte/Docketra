@@ -1,8 +1,22 @@
 import React from 'react';
+import { Loading } from './Loading';
 
 const joinClasses = (...classes) => classes.filter(Boolean).join(' ');
 
-export const Table = ({ children, className = '' }) => {
+export const Table = ({
+  children,
+  className = '',
+  loading = false,
+  loadingMessage = 'Loading data...',
+}) => {
+  if (loading) {
+    return (
+      <div className={joinClasses('bg-white border border-gray-200 rounded-xl shadow-sm', className)}>
+        <Loading message={loadingMessage} />
+      </div>
+    );
+  }
+
   return (
     <div className={joinClasses('bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm', className)}>
       <div className="overflow-x-auto">
@@ -63,3 +77,11 @@ export const TableFooter = ({ children, colSpan, className = '' }) => {
     </tfoot>
   );
 };
+
+export const TableEmptyState = ({ colSpan, message = 'No records found.' }) => (
+  <tr>
+    <td colSpan={colSpan} className="px-6 py-8 text-center text-sm text-gray-500">
+      {message}
+    </td>
+  </tr>
+);
