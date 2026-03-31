@@ -1,0 +1,29 @@
+import { request } from './apiClient';
+import { buildQueryString } from '../utils/queryParams';
+
+export const adminApi = {
+  getAdminStats: () => request((http) => http.get('/admin/stats'), 'Failed to load admin stats'),
+  createUser: (userData) => request((http) => http.post('/admin/users', userData), 'Failed to create user'),
+  getUsers: (params = {}) => request((http) => http.get(`/admin/users${buildQueryString(params)}`), 'Failed to load users'),
+
+  activateUser: (xID) => request((http) => http.put(`/admin/users/${xID}/activate`), 'Failed to activate user'),
+  deactivateUser: (xID) => request((http) => http.put(`/admin/users/${xID}/deactivate`), 'Failed to deactivate user'),
+  updateUserStatus: (xID, active) => (active ? adminApi.activateUser(xID) : adminApi.deactivateUser(xID)),
+
+  resetPassword: (xID) => request((http) => http.post('/auth/reset-password', { xID }), 'Failed to reset password'),
+  resendSetupEmail: (xID) => request((http) => http.post(`/admin/users/${xID}/resend-invite`), 'Failed to resend setup email'),
+  unlockAccount: (xID) => request((http) => http.post('/auth/unlock-account', { xID }), 'Failed to unlock account'),
+
+  getPendingApprovals: () => request((http) => http.get('/cases?status=Pending'), 'Failed to load pending approvals'),
+  approveNewClient: (caseId, comment = '') => request((http) => http.post(`/client-approval/${caseId}/approve-new`, { comment }), 'Failed to approve new client case'),
+  approveClientEdit: (caseId, comment = '') => request((http) => http.post(`/client-approval/${caseId}/approve-edit`, { comment }), 'Failed to approve client edit case'),
+  rejectCase: (caseId, comment) => request((http) => http.post(`/client-approval/${caseId}/reject`, { comment }), 'Failed to reject case'),
+
+  listClients: (params = { activeOnly: false }) => request((http) => http.get('/admin/clients', { params }), 'Failed to list clients'),
+  getClientById: (clientId) => request((http) => http.get(`/client-approval/clients/${clientId}`), 'Failed to load client'),
+  getAllResolvedCases: (params = {}) => request((http) => http.get(`/admin/cases/resolved${buildQueryString(params)}`), 'Failed to load resolved cases'),
+
+  getStorageConfig: () => request((http) => http.get('/admin/storage'), 'Failed to load storage config'),
+  updateStorageConfig: (payload) => request((http) => http.put('/admin/storage', payload), 'Failed to update storage config'),
+  disconnectStorage: () => request((http) => http.post('/admin/storage/disconnect'), 'Failed to disconnect storage'),
+};

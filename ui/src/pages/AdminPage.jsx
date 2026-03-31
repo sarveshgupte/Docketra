@@ -17,9 +17,9 @@ import { Loading } from '../components/common/Loading';
 import { TableSkeleton } from '../components/common/Skeleton';
 import { EmptyState } from '../components/EmptyState';
 import { PageHeader } from '../components/layout/PageHeader';
-import { adminService } from '../services/adminService';
+import { adminApi } from '../api/admin.api';
 import { categoryService } from '../services/categoryService';
-import { clientService } from '../services/clientService';
+import { clientApi } from '../api/client.api';
 import { useToast } from '../hooks/useToast';
 import { formatDate } from '../utils/formatters';
 import './AdminPage.css';
@@ -195,7 +195,7 @@ export const AdminPage = () => {
 
   const loadAdminStats = async () => {
     try {
-      const response = await adminService.getAdminStats();
+      const response = await adminApi.getAdminStats();
       const data = response?.success ? response.data : null;
       if (data) {
         setAdminStats(data);
@@ -218,14 +218,14 @@ export const AdminPage = () => {
   };
 
   const fetchClients = async () => {
-    const response = await adminService.listClients({ activeOnly: false });
+    const response = await adminApi.listClients({ activeOnly: false });
     setClients(response?.success ? (response.data || []) : []);
     return response;
   };
 
   const loadStorageConfig = async () => {
     try {
-      const response = await adminService.getStorageConfig();
+      const response = await adminApi.getStorageConfig();
       if (response.success) {
         setStorageConfig({
           mode: response.data?.mode || 'docketra_managed',
@@ -248,14 +248,14 @@ export const AdminPage = () => {
     try {
       if (activeTab === 'approvals') {
         const [approvalsResponse, usersResponse] = await Promise.all([
-          adminService.getPendingApprovals(),
-          adminService.getUsers(),
+          adminApi.getPendingApprovals(),
+          adminApi.getUsers(),
         ]);
         setPendingCases(approvalsResponse?.success ? (approvalsResponse.data || []) : []);
         const inviteCandidates = usersResponse?.success ? (usersResponse.data || []) : [];
         setPendingInvites(inviteCandidates.filter((user) => user.status === 'invited'));
       } else if (activeTab === 'users') {
-        const response = await adminService.getUsers();
+        const response = await adminApi.getUsers();
         setUsers(response?.success ? (response.data || []) : []);
       } else if (activeTab === 'categories') {
         const response = await categoryService.getAdminCategories(false); // Get all categories including inactive
@@ -324,7 +324,7 @@ export const AdminPage = () => {
         provider: storageConfig.provider,
       };
 
-      const response = await adminService.updateStorageConfig(payload);
+      const response = await adminApi.updateStorageConfig(payload);
       if (response.success) {
         setStorageConfig((prev) => ({
           ...prev,
@@ -345,7 +345,7 @@ export const AdminPage = () => {
   const handleStorageDisconnect = async () => {
     setSavingStorage(true);
     try {
-      const response = await adminService.disconnectStorage();
+      const response = await adminApi.disconnectStorage();
       if (response.success) {
         setStorageConfig({
           mode: 'docketra_managed',
@@ -381,7 +381,7 @@ export const AdminPage = () => {
     setCreatingUser(true);
 
     try {
-      const response = await adminService.createUser(newUser);
+      const response = await adminApi.createUser(newUser);
       
       if (response.success) {
         showToast(`User invited successfully! xID: ${response.data?.xID}.`, 'success');
@@ -404,7 +404,7 @@ export const AdminPage = () => {
     const action = isInvited ? 'cancel invite for' : (shouldActivate ? 'activate' : 'deactivate');
 
     try {
-      const response = await adminService.updateUserStatus(user.xID, shouldActivate);
+      const response = await adminApi.updateUserStatus(user.xID, shouldActivate);
       
       if (response.success) {
         showToast(isInvited ? 'Invite cancelled successfully' : `User ${action}d successfully`, 'success');
@@ -419,7 +419,7 @@ export const AdminPage = () => {
 
   const handleResendSetupEmail = async (xID) => {
     try {
-      const response = await adminService.resendSetupEmail(xID);
+      const response = await adminApi.resendSetupEmail(xID);
       
       if (response.success) {
         showToast('Invite email sent successfully', 'success');
@@ -434,7 +434,7 @@ export const AdminPage = () => {
 
   const handleUnlockAccount = async (xID) => {
     try {
-      const response = await adminService.unlockAccount(xID);
+      const response = await adminApi.unlockAccount(xID);
       
       if (response.success) {
         showToast('Account unlocked successfully', 'success');
@@ -622,7 +622,7 @@ export const AdminPage = () => {
         throw new Error('Deprecated fields detected in client payload');
       }
       
-      const response = await clientService.createClient(payload);
+      const response = await clientApi.createClient(payload);
       
       if (response.success) {
         showToast(`Client created successfully! Client ID: ${response.data?.clientId}`, 'success');
@@ -699,12 +699,12 @@ export const AdminPage = () => {
         updateData.businessAddress = clientForm.businessAddress;
       }
       
-      const response = await clientService.updateClient(selectedClient.clientId, updateData);
+      const response = await clientApi.updateClient(selectedClient.clientId, updateData);
       
       if (response.success) {
         // Also update fact sheet if description or notes changed
         if (clientForm.description || clientForm.notes) {
-          await clientService.updateClientFactSheet(
+          await clientApi.updateClientFactSheet(
             selectedClient.clientId,
             clientForm.description,
             clientForm.notes
@@ -746,7 +746,7 @@ export const AdminPage = () => {
     const action = newStatus ? 'activate' : 'deactivate';
     
     try {
-      const response = await clientService.toggleClientStatus(client.clientId, newStatus);
+      const response = await clientApi.toggleClientStatus(client.clientId, newStatus);
       
       if (response.success) {
         showToast(`Client ${action}d successfully`, 'success');
@@ -766,7 +766,7 @@ export const AdminPage = () => {
 
     setUploadingFactSheetFile(true);
     try {
-      const response = await clientService.uploadFactSheetFile(selectedClient.clientId, file);
+      const response = await clientApi.uploadFactSheetFile(selectedClient.clientId, file);
       
       if (response.success) {
         showToast('File uploaded successfully', 'success');
@@ -792,7 +792,7 @@ export const AdminPage = () => {
     }
 
     try {
-      const response = await clientService.deleteFactSheetFile(selectedClient.clientId, fileId);
+      const response = await clientApi.deleteFactSheetFile(selectedClient.clientId, fileId);
       
       if (response.success) {
         showToast('File deleted successfully', 'success');
@@ -836,7 +836,7 @@ export const AdminPage = () => {
     setSubmitting(true);
     
     try {
-      const response = await clientService.changeLegalName(
+      const response = await clientApi.changeLegalName(
         selectedClient.clientId,
         changeNameForm.newBusinessName.trim(),
         changeNameForm.reason.trim()
