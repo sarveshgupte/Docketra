@@ -12,6 +12,7 @@ import { Badge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
 import { MetricCard } from '../components/reports/MetricCard';
 import { Loading } from '../components/common/Loading';
+import { EmptyState } from '../components/ui/EmptyState';
 import { useToast } from '../hooks/useToast';
 
 export const PlatformDashboard = () => {
@@ -126,6 +127,18 @@ export const PlatformDashboard = () => {
               subtitle={stats.totalUsers === 0 ? 'No users yet. Create a firm to begin.' : 'Across all firms'}
             />
           </div>
+
+          {stats.totalFirms === 0 ? (
+            <Card className="p-6">
+              <EmptyState
+                title="No firms created yet"
+                description="Create your first firm to start onboarding clients, users, and operational dashboards."
+                actionLabel="Create first firm"
+                onAction={() => navigate('/app/superadmin/firms')}
+                icon
+              />
+            </Card>
+          ) : null}
 
           <Card className="space-y-4 p-6">
             <div className="flex items-center justify-between gap-3">
