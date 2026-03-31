@@ -420,7 +420,7 @@ export const DashboardPage = () => {
 
           <section className="space-y-4">
             <h2 className="text-lg font-semibold text-gray-900 tracking-tight">Docket Lifecycle Distribution</h2>
-            <Card className="p-6">
+            <Card>
               <div className="flex flex-wrap items-center gap-4 lg:flex-nowrap">
                 {workflowStatuses.map((item, idx) => (
                   <React.Fragment key={item.label}>
