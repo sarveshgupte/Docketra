@@ -10,6 +10,7 @@ import { STORAGE_KEYS } from '../utils/constants';
 import { authService } from '../services/authService';
 import { useToast } from '../hooks/useToast';
 import { authApi } from '../api/auth.api';
+import { toUserFacingError } from '../utils/errorHandling';
 import './LoginPage.css';
 
 const mapSafeLoginError = (error) => {
@@ -130,7 +131,7 @@ export const FirmLoginPage = () => {
         setError('Unexpected response. Please try again.');
       }
     } catch (err) {
-      const message = mapSafeLoginError(err);
+      const message = toUserFacingError(err, mapSafeLoginError(err));
       setError(message);
       showError(message);
     } finally {
@@ -154,7 +155,7 @@ export const FirmLoginPage = () => {
       await completeLogin(response);
     } catch (err) {
       const status = err?.status;
-      const message = status === 400 || status === 401 ? 'Invalid or expired OTP' : mapSafeLoginError(err);
+      const message = status === 400 || status === 401 ? 'Invalid or expired OTP' : toUserFacingError(err, mapSafeLoginError(err));
       setError(message);
       showError(message);
     } finally {
@@ -173,7 +174,7 @@ export const FirmLoginPage = () => {
       setOtp('');
       setCooldown(30);
     } catch (err) {
-      const message = mapSafeLoginError(err);
+      const message = toUserFacingError(err, mapSafeLoginError(err));
       setError(message);
       showError(message);
     } finally {
@@ -184,7 +185,19 @@ export const FirmLoginPage = () => {
   if (firmLoading) return <div className="auth-wrapper"><Card className="auth-card max-w-form"><Loading message="Loading firm information..." /></Card></div>;
 
   if (!firmData) {
-    return <div className="auth-wrapper"><Card className="auth-card max-w-form"><div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div></Card></div>;
+    return (
+      <div className="auth-wrapper">
+        <Card className="auth-card max-w-form">
+          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
+          <div className="mt-4 space-y-3">
+            <Button type="button" variant="primary" fullWidth onClick={() => window.location.reload()}>
+              Retry Workspace Lookup
+            </Button>
+            <Link to="/" className="block text-center text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline">Back to home</Link>
+          </div>
+        </Card>
+      </div>
+    );
   }
 
   return (
