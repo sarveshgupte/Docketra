@@ -320,9 +320,9 @@ const categoryWorklist = async (req, res) => {
  * - Status is ASSIGNED or IN_PROGRESS
  * 
  * Cases NOT shown:
- * - PENDED cases (these appear only in "My Pending Cases" dashboard)
+ * - PENDING cases (these appear only in "My Pending Cases" dashboard)
  * - FILED cases (these are hidden from employees)
- * - UNASSIGNED cases (these are in global worklist)
+ * - unassigned OPEN cases (these are in global worklist)
  * 
  * Before returning results, auto-reopens any cases where pendingUntil has elapsed.
  * 
@@ -370,7 +370,7 @@ const employeeWorklist = async (req, res) => {
     // Dashboard counts MUST use the same query
     const query = {
       assignedToXID: user.xID, // CANONICAL: Query by xID in assignedToXID field
-      status: { $in: [CaseStatus.ASSIGNED, CaseStatus.IN_PROGRESS] },
+      status: { $in: [CaseStatus.OPEN, CaseStatus.PENDING] },
     };
     
     const casesQuery = Case.find(enforceTenantScope(query, req, { source: 'search.employeeWorklist' }))
@@ -386,7 +386,7 @@ const employeeWorklist = async (req, res) => {
     // Log case list view for audit
     await logCaseListViewed({
       viewerXID: user.xID,
-      filters: { status: [CaseStatus.ASSIGNED, CaseStatus.IN_PROGRESS] },
+      filters: { status: [CaseStatus.OPEN, CaseStatus.PENDING] },
       listType: 'MY_WORKLIST',
       resultCount: cases.length,
       req,
@@ -421,7 +421,7 @@ const employeeWorklist = async (req, res) => {
  * Global Worklist (Unassigned Cases Queue)
  * GET /api/worklists/global
  * 
- * Returns all cases with status UNASSIGNED
+ * Returns all unassigned OPEN cases
  * Supports server-side filtering and sorting
  * 
  * Query Parameters:
@@ -459,9 +459,9 @@ const globalWorklist = async (req, res) => {
       });
     }
     
-    // Build query for UNASSIGNED cases only
+    // Build query for unassigned OPEN cases only
     const query = {
-      status: CaseStatus.UNASSIGNED,
+      status: CaseStatus.OPEN,
       assignedToXID: null,
     };
     

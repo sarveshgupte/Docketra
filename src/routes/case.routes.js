@@ -53,6 +53,15 @@ const { validateCaseCommentPayload } = require('../middleware/commentValidation.
 
 const upload = createSecureUpload();
 
+const {
+  assignDocket,
+  unassignDocket,
+  transitionDocket,
+  addDocketComment,
+  listDocketComments,
+} = require('../controllers/docketWorkflow.controller');
+
+
 /**
  * Case Routes
  * RESTful API endpoints for core case management
@@ -194,8 +203,14 @@ router.post('/:caseId/pend', authorizeFirmPermission('CASE_ACTION'), userWriteLi
 // POST /api/cases/:caseId/file - File a case with mandatory comment
 router.post('/:caseId/file', authorizeFirmPermission('CASE_ACTION'), userWriteLimiter, fileCase);
 
-// POST /api/cases/:caseId/unassign - Move case to global worklist (Admin only)
-router.post('/:caseId/unassign', authorizeFirmPermission('CASE_ASSIGN'), sensitiveLimiter, userWriteLimiter, unassignCase);
+
+// Docket workflow endpoints (strict OPEN/PENDING/RESOLVED/FILED lifecycle)
+router.post('/:caseId/assign', authorizeFirmPermission('CASE_ASSIGN'), userWriteLimiter, checkCaseClientAccess, assignDocket);
+router.post('/:caseId/unassign', authorizeFirmPermission('CASE_ASSIGN'), sensitiveLimiter, userWriteLimiter, checkCaseClientAccess, unassignDocket);
+router.post('/:caseId/transition', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, transitionDocket);
+router.post('/:caseId/comment', authorizeFirmPermission('CASE_UPDATE'), commentLimiter, userWriteLimiter, checkCaseClientAccess, addDocketComment);
+router.get('/:caseId/comments', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, listDocketComments);
+
 
 // Client Fact Sheet routes (Read-Only from Case view)
 // GET /api/cases/:caseId/client-fact-sheet - Get client fact sheet for a case (read-only)
