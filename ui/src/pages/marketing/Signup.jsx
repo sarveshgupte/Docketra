@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Input } from '../../components/common/Input';
-import api from '../../services/api';
+import { useAuth } from '../../hooks/useAuth';
 import { STRONG_PASSWORD_MESSAGE, validateStrongPassword } from '../../utils/validators';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -17,6 +17,7 @@ const mapSafeError = (error, fallback) => {
 
 export default function Signup() {
   const navigate = useNavigate();
+  const { signup, verifySignup, resendSignupOtp } = useAuth();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
   const [apiError, setApiError] = useState('');
@@ -84,7 +85,7 @@ export default function Signup() {
     setLoading(true);
     setApiError('');
     try {
-      await api.post('/auth/signup/init', {
+      await signup({
         name: form.name.trim(),
         email: form.email.trim().toLowerCase(),
         password: form.password,
@@ -113,7 +114,7 @@ export default function Signup() {
     setLoading(true);
     setApiError('');
     try {
-      const response = await api.post('/auth/signup/verify', {
+      const response = await verifySignup({
         email: form.email.trim().toLowerCase(),
         otp: otp.trim(),
       });
@@ -135,7 +136,7 @@ export default function Signup() {
     setLoading(true);
     setApiError('');
     try {
-      const response = await api.post('/auth/signup/resend', { email: form.email.trim().toLowerCase() });
+      const response = await resendSignupOtp(form.email.trim().toLowerCase());
       setOtpInfo(response?.data?.message || 'OTP sent.');
       setOtp('');
       setCooldown(30);

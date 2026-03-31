@@ -7,6 +7,38 @@ import { ERROR_CODES, STORAGE_KEYS } from '../utils/constants';
 import { isAccessTokenOnlyUser } from '../utils/authUtils';
 
 export const authService = {
+  setSessionTokens: (payload = {}) => {
+    const {
+      accessToken,
+      refreshToken,
+      data: userData = {},
+      refreshEnabled,
+      isSuperAdmin,
+    } = payload;
+
+    if (!accessToken) return;
+
+    const userWithFlags = {
+      ...userData,
+      refreshEnabled: refreshEnabled !== undefined ? refreshEnabled : userData.refreshEnabled,
+      isSuperAdmin: isSuperAdmin !== undefined ? isSuperAdmin : userData.isSuperAdmin,
+    };
+
+    const accessTokenOnly = isAccessTokenOnlyUser(userWithFlags);
+    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
+    if (!accessTokenOnly && refreshToken) {
+      localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+    }
+
+    if (userData?.firmSlug) {
+      localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, userData.firmSlug);
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
+    }
+  },
+
   /**
    * Login with xID and password
    * Backend expects payload key as 'xID' (uppercase 'D')
@@ -21,39 +53,43 @@ export const authService = {
     const response = await api.post(endpoint, payload);
     
     if (response.data.success) {
-      const {
-        accessToken,
-        refreshToken,
-        data: userData,
-        refreshEnabled,
-      } = response.data;
-      
-      // Merge backend flags with user data for access-token-only determination
-      const userWithFlags = {
-        ...userData,
-        refreshEnabled: refreshEnabled !== undefined ? refreshEnabled : userData.refreshEnabled,
-        isSuperAdmin: response.data.isSuperAdmin !== undefined ? response.data.isSuperAdmin : userData.isSuperAdmin,
-      };
-      
-      const accessTokenOnly = isAccessTokenOnlyUser(userWithFlags);
-      
-      // Store JWT tokens only
-      localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
-      if (!accessTokenOnly && refreshToken) {
-        localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
-      } else {
-        localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
-      }
-      
-      // Store firmSlug as a routing hint (optional)
-      if (userData?.firmSlug) {
-        localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, userData.firmSlug);
-      } else {
-        localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
-      }
+      authService.setSessionTokens(response.data);
     }
     // Don't store anything if login fails or requires password change
     
+    return response.data;
+  },
+
+  /**
+   * Start signup flow (OTP send)
+   */
+  signup: async ({ name, email, password, firmName, phone }) => {
+    const response = await api.post('/auth/signup/init', {
+      name,
+      email,
+      password,
+      firmName,
+      phone,
+    });
+    return response.data;
+  },
+
+  /**
+   * Verify signup OTP and create account
+   */
+  verifySignup: async ({ email, otp }) => {
+    const response = await api.post('/auth/signup/verify', {
+      email,
+      otp,
+    });
+    return response.data;
+  },
+
+  /**
+   * Resend signup OTP
+   */
+  resendSignupOtp: async (email) => {
+    const response = await api.post('/auth/signup/resend', { email });
     return response.data;
   },
 
