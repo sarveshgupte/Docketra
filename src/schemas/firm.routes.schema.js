@@ -26,13 +26,8 @@ const verifyOtpBodySchema = z.object({
 }).strip();
 
 const resendOtpBodySchema = z.object({
-  xid: xidString.optional(),
-  xID: xidString.optional(),
-  XID: xidString.optional(),
-}).strip().refine((value) => Boolean(value.xid || value.xID || value.XID), {
-  message: 'xID is required',
-  path: ['xid'],
-});
+  loginToken: nonEmptyString,
+}).strip();
 
 module.exports['POST /verify-otp'] = { body: verifyOtpBodySchema };
 module.exports['POST /resend-otp'] = { body: resendOtpBodySchema };

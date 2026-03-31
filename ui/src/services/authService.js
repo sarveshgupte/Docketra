@@ -125,6 +125,26 @@ export const authService = {
     return response.data;
   },
 
+  forgotPasswordInit: async (email, firmSlug) => {
+    const response = await api.post('/auth/forgot-password/init', { email, firmSlug });
+    return response.data;
+  },
+
+  forgotPasswordVerify: async (email, firmSlug, otp) => {
+    const response = await api.post('/auth/forgot-password/verify', { email, firmSlug, otp });
+    return response.data;
+  },
+
+  forgotPasswordResetWithOtp: async (email, firmSlug, resetToken, password) => {
+    const response = await api.post('/auth/forgot-password/reset', {
+      email,
+      firmSlug,
+      resetToken,
+      password,
+    });
+    return response.data;
+  },
+
   /**
    * Reset password with token (for forgot password flow)
    */
