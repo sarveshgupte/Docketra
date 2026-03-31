@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Card } from '../components/common/Card';
 import { Input } from '../components/common/Input';
 import { Button } from '../components/common/Button';
-import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
+import { userApi } from '../api/user.api';
 
 export function CompleteProfilePage() {
   const navigate = useNavigate();
@@ -20,7 +20,7 @@ export function CompleteProfilePage() {
     setError('');
     setLoading(true);
     try {
-      await api.post('/user/complete-profile', { name, firmName, phoneNumber });
+      await userApi.completeProfile({ name, firmName, phoneNumber });
       const profileResult = await fetchProfile();
       if (profileResult?.success) {
         navigate(resolvePostAuthRoute(profileResult.data), { replace: true });
@@ -28,7 +28,7 @@ export function CompleteProfilePage() {
         navigate('/superadmin', { replace: true });
       }
     } catch (submitError) {
-      setError(submitError?.response?.data?.message || 'Failed to complete profile');
+      setError(submitError?.data?.message || submitError?.message || 'Failed to complete profile');
     } finally {
       setLoading(false);
     }
