@@ -7,13 +7,13 @@ import { Card } from '../components/common/Card';
 import { Loading } from '../components/common/Loading';
 import { validatePassword, validateXID } from '../utils/validators';
 import { STORAGE_KEYS } from '../utils/constants';
-import api from '../services/api';
 import { authService } from '../services/authService';
 import { useToast } from '../hooks/useToast';
+import { authApi } from '../api/auth.api';
 import './LoginPage.css';
 
 const mapSafeLoginError = (error) => {
-  const status = error?.response?.status;
+  const status = error?.status || error?.response?.status;
   if (status === 429) return 'Too many attempts. Please wait before retrying.';
   if (status === 401 || status === 403) return 'Invalid credentials or verification code';
   if (status === 404) return 'Invalid workspace URL';
@@ -45,12 +45,12 @@ export const FirmLoginPage = () => {
     const loadFirmData = async () => {
       try {
         setFirmLoading(true);
-        const response = await api.get(`/${firmSlug}/login`);
-        if (response.data.success && response.data.data?.status === 'active') {
-          setFirmData(response.data.data);
+        const response = await authApi.getFirmLoginDetails(firmSlug);
+        if (response.success && response.data?.status === 'active') {
+          setFirmData(response.data);
           localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, firmSlug);
         } else {
-          setError(response?.data?.data?.status === 'inactive'
+          setError(response?.data?.status === 'inactive'
             ? 'This workspace is inactive. Contact your admin.'
             : 'Invalid workspace URL');
           setFirmData(null);
@@ -118,14 +118,14 @@ export const FirmLoginPage = () => {
 
     setLoading(true);
     try {
-      const response = await api.post('/auth/login/init', { firmSlug, xid: normalizedXid, password });
-      if (response?.data?.otpRequired && response?.data?.loginToken) {
-        setLoginToken(response.data.loginToken);
-        setOtpHint(response?.data?.otpDeliveryHint || 'A verification code was sent to your email.');
+      const response = await authApi.loginInit({ firmSlug, xid: normalizedXid, password });
+      if (response?.otpRequired && response?.loginToken) {
+        setLoginToken(response.loginToken);
+        setOtpHint(response?.otpDeliveryHint || 'A verification code was sent to your email.');
         setOtp('');
         setStep('otp');
-      } else if (response?.data?.accessToken) {
-        await completeLogin(response.data);
+      } else if (response?.accessToken) {
+        await completeLogin(response);
       } else {
         setError('Unexpected response. Please try again.');
       }
@@ -150,10 +150,10 @@ export const FirmLoginPage = () => {
 
     setLoading(true);
     try {
-      const response = await api.post('/auth/login/verify', { firmSlug, loginToken, otp: otp.trim() });
-      await completeLogin(response.data);
+      const response = await authApi.loginVerify({ firmSlug, loginToken, otp: otp.trim() });
+      await completeLogin(response);
     } catch (err) {
-      const status = err?.response?.status;
+      const status = err?.status;
       const message = status === 400 || status === 401 ? 'Invalid or expired OTP' : mapSafeLoginError(err);
       setError(message);
       showError(message);
@@ -168,8 +168,8 @@ export const FirmLoginPage = () => {
     setError('');
     setLoading(true);
     try {
-      const response = await api.post('/auth/login/resend', { firmSlug, loginToken });
-      setOtpHint(response?.data?.message || 'If the account exists, a new OTP has been sent.');
+      const response = await authApi.loginResendOtp({ firmSlug, loginToken });
+      setOtpHint(response?.message || 'If the account exists, a new OTP has been sent.');
       setOtp('');
       setCooldown(30);
     } catch (err) {
