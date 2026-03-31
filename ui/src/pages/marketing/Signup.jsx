@@ -160,8 +160,8 @@ export default function Signup() {
 
   if (signupSuccessData) {
     return (
-      <div className="auth-wrapper">
-        <Card className="auth-card max-w-form">
+      <div className="min-h-screen overflow-y-auto flex items-center justify-center px-4 py-8 bg-gray-50">
+        <Card className="w-full max-w-md p-6 space-y-4 overflow-visible">
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">🎉 Workspace created successfully</h1>
           <div className="mt-4 rounded-md border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700 space-y-2">
             <p><span className="font-medium">Firm URL:</span> {`https://app.com/${signupSuccessData.firmSlug}`}</p>
@@ -176,8 +176,8 @@ export default function Signup() {
   }
 
   return (
-    <div className="auth-wrapper">
-      <Card className="auth-card max-w-form">
+    <div className="min-h-screen overflow-y-auto flex items-center justify-center px-4 py-8 bg-gray-50">
+      <Card className="w-full max-w-md p-6 space-y-4 overflow-visible">
         <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">Create your workspace</h1>
         <p className="mt-2 text-sm text-gray-500 text-center">Step {step} of 2</p>
         <p className="mt-2 text-sm text-gray-500 text-center">{step === 1 ? 'Takes less than 1 minute' : 'Enter the 6-digit code sent to your email'}</p>
@@ -185,17 +185,17 @@ export default function Signup() {
         {apiError && <div role="alert" className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{apiError}</div>}
 
         {step === 1 ? (
-          <form className="mt-4 space-y-4" onSubmit={submitStepOne} noValidate>
-            <Input id="signup-name" type="text" name="name" label="Name" value={form.name} onChange={onFormChange} disabled={loading} error={errors.name} required />
-            <Input id="signup-email" type="email" name="email" label="Email" value={form.email} onChange={onFormChange} disabled={loading} error={errors.email} required autoComplete="username" />
-            <Input id="signup-password" type="password" name="password" label="Password" value={form.password} onChange={onFormChange} disabled={loading} error={errors.password} required autoComplete="current-password" />
-            <Input id="signup-firm" type="text" name="firmName" label="Firm name" value={form.firmName} onChange={onFormChange} disabled={loading} error={errors.firmName} required />
-            <Input id="signup-phone" type="text" name="phone" label="Phone" value={form.phone} onChange={onFormChange} disabled={loading} error={errors.phone} required />
+          <form className="mt-6 space-y-4" onSubmit={submitStepOne} noValidate>
+            <Input id="signup-name" type="text" name="name" label="Name" className="w-full" value={form.name} onChange={onFormChange} disabled={loading} error={errors.name} required />
+            <Input id="signup-email" type="email" name="email" label="Email" className="w-full" value={form.email} onChange={onFormChange} disabled={loading} error={errors.email} required autoComplete="username" />
+            <Input id="signup-password" type="password" name="password" label="Password" className="w-full" value={form.password} onChange={onFormChange} disabled={loading} error={errors.password} required autoComplete="current-password" />
+            <Input id="signup-firm" type="text" name="firmName" label="Firm name" className="w-full" value={form.firmName} onChange={onFormChange} disabled={loading} error={errors.firmName} required />
+            <Input id="signup-phone" type="text" name="phone" label="Phone" className="w-full" value={form.phone} onChange={onFormChange} disabled={loading} error={errors.phone} required />
             <p className="text-xs text-gray-500">{STRONG_PASSWORD_MESSAGE}</p>
-            <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading}>{loading ? 'Sending OTP...' : 'Continue'}</Button>
+            <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading} className="mt-2">{loading ? 'Sending OTP...' : 'Continue'}</Button>
           </form>
         ) : (
-          <form className="mt-4 space-y-4" onSubmit={submitOtp} noValidate>
+          <form className="mt-6 space-y-4" onSubmit={submitOtp} noValidate>
             {otpInfo && <p className="text-xs text-gray-500">{otpInfo}</p>}
             <Input
               ref={otpInputRef}
@@ -203,6 +203,7 @@ export default function Signup() {
               type="text"
               name="otp"
               label="Email OTP"
+              className="w-full"
               value={otp}
               onChange={(e) => { setOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setErrors((prev) => ({ ...prev, otp: '' })); }}
               onPaste={(e) => {
