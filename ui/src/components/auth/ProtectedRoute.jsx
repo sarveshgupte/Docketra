@@ -12,6 +12,7 @@ import { isSuperAdmin } from '../../utils/authUtils.js';
 import { resolveFirmLoginPath } from '../../utils/tenantRouting.js';
 import { RouteLoadingShell } from '../routing/RouteLoadingShell';
 import { ROUTES } from '../../constants/routes.js';
+import { AUTH_STATES } from '../../contexts/AuthContext.jsx';
 
 // Use sessionStorage to persist toasts across redirects in auth guard flows.
 const setAccessToast = (message) => {
@@ -22,7 +23,7 @@ const setAccessToast = (message) => {
 };
 
 export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadmin = false }) => {
-  const { isAuthenticated, isAuthResolved, user } = useAuth();
+  const { isAuthenticated, isAuthResolved, user, authState } = useAuth();
   const { isAdmin } = usePermissions();
   const location = useLocation();
   const { firmSlug } = useParams();
@@ -58,6 +59,10 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
       }));
     }
     return <Navigate to={loginPath} replace />;
+  }
+
+  if (authState === AUTH_STATES.ONBOARDING_REQUIRED) {
+    return <Navigate to="/complete-profile" replace />;
   }
 
   // 2. Firm context check: Non-SuperAdmin users must have firm context

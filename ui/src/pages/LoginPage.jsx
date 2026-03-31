@@ -19,7 +19,7 @@ export const LoginPage = () => {
   const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
-  const { login, fetchProfile } = useAuth();
+  const { login, fetchProfile, resolvePostAuthRoute } = useAuth();
   const { showSuccess } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -67,7 +67,7 @@ export const LoginPage = () => {
         const profileResult = await fetchProfile();
 
         if (profileResult?.success) {
-          navigate('/app/superadmin', { replace: true });
+          navigate(resolvePostAuthRoute(profileResult.data), { replace: true });
         }
       }
     } catch (err) {

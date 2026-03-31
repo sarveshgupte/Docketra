@@ -7,8 +7,8 @@ import { Card } from '../components/common/Card';
 import { Loading } from '../components/common/Loading';
 import { validatePassword, validateXID } from '../utils/validators';
 import { STORAGE_KEYS } from '../utils/constants';
-import { isAccessTokenOnlyUser } from '../utils/authUtils';
 import api from '../services/api';
+import { authService } from '../services/authService';
 import { useToast } from '../hooks/useToast';
 import './LoginPage.css';
 
@@ -24,7 +24,7 @@ const mapSafeLoginError = (error) => {
 export const FirmLoginPage = () => {
   const { firmSlug } = useParams();
   const navigate = useNavigate();
-  const { fetchProfile } = useAuth();
+  const { fetchProfile, resolvePostAuthRoute } = useAuth();
   const { showError, showSuccess } = useToast();
 
   const [xid, setXid] = useState('');
@@ -91,21 +91,12 @@ export const FirmLoginPage = () => {
   }, [step, loginToken]);
 
   const completeLogin = async (responseData) => {
-    const { accessToken, refreshToken, data: userData, refreshEnabled } = responseData;
-    const userWithFlags = {
-      ...userData,
-      refreshEnabled: refreshEnabled !== undefined ? refreshEnabled : userData?.refreshEnabled,
-      isSuperAdmin: responseData.isSuperAdmin !== undefined ? responseData.isSuperAdmin : userData?.isSuperAdmin,
-    };
-    const accessTokenOnly = isAccessTokenOnlyUser(userWithFlags);
-    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
-    if (!accessTokenOnly && refreshToken) localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
-    else localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+    authService.setSessionTokens(responseData);
 
     const profileResult = await fetchProfile();
     if (profileResult?.success) {
       showSuccess('Signed in successfully.');
-      navigate(`/app/firm/${firmSlug}/dashboard`, { replace: true });
+      navigate(resolvePostAuthRoute(profileResult.data), { replace: true });
     }
   };
 

@@ -4,10 +4,11 @@ import { Card } from '../components/common/Card';
 import { Input } from '../components/common/Input';
 import { Button } from '../components/common/Button';
 import api from '../services/api';
-import { STORAGE_KEYS } from '../utils/constants';
+import { useAuth } from '../hooks/useAuth';
 
 export function CompleteProfilePage() {
   const navigate = useNavigate();
+  const { fetchProfile, resolvePostAuthRoute } = useAuth();
   const [name, setName] = useState('');
   const [firmName, setFirmName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -19,18 +20,13 @@ export function CompleteProfilePage() {
     setError('');
     setLoading(true);
     try {
-      const response = await api.post('/user/complete-profile', { name, firmName, phoneNumber });
-      const token = response.data?.data?.accessToken;
-      const firmSlug = response.data?.data?.firmSlug;
-      if (token) {
-        localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, token);
+      await api.post('/user/complete-profile', { name, firmName, phoneNumber });
+      const profileResult = await fetchProfile();
+      if (profileResult?.success) {
+        navigate(resolvePostAuthRoute(profileResult.data), { replace: true });
+      } else {
+        navigate('/superadmin', { replace: true });
       }
-      if (firmSlug) {
-        localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, firmSlug);
-        navigate(`/app/firm/${firmSlug}/dashboard`, { replace: true });
-        return;
-      }
-      navigate('/app/firm', { replace: true });
     } catch (submitError) {
       setError(submitError?.response?.data?.message || 'Failed to complete profile');
     } finally {
