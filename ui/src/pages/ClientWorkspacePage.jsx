@@ -4,7 +4,7 @@ import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Textarea } from '../components/common/Textarea';
-import { clientService } from '../services/clientService';
+import { clientApi } from '../api/client.api';
 import { formatDate } from '../utils/formatters';
 
 const tabs = [
@@ -31,10 +31,10 @@ export const ClientWorkspacePage = () => {
 
   const load = async () => {
     const [clientRes, docketRes, activityRes, commentsRes] = await Promise.all([
-      clientService.getClientById(clientId),
-      clientService.getClientDockets(clientId),
-      clientService.getClientActivity(clientId),
-      clientService.getClientCfsComments(clientId),
+      clientApi.getClientById(clientId),
+      clientApi.getClientDockets(clientId),
+      clientApi.getClientActivity(clientId),
+      clientApi.getClientCfsComments(clientId),
     ]);
     const c = clientRes?.data;
     setClient(c);
@@ -58,7 +58,7 @@ export const ClientWorkspacePage = () => {
   useEffect(() => { load(); }, [clientId]);
 
   const onSaveCfs = async () => {
-    await clientService.updateClientFactSheet(clientId, cfsForm.compliance_notes, cfsForm.compliance_notes, {
+    await clientApi.updateClientFactSheet(clientId, cfsForm.compliance_notes, cfsForm.compliance_notes, {
       clientName: client?.businessName,
       entityType: cfsForm.entity_type,
       CIN: cfsForm.cin_llpin,
@@ -72,7 +72,7 @@ export const ClientWorkspacePage = () => {
 
   const onAddComment = async () => {
     if (!commentText.trim()) return;
-    await clientService.addClientCfsComment(clientId, { commentText });
+    await clientApi.addClientCfsComment(clientId, { commentText });
     setCommentText('');
     await load();
   };
@@ -80,7 +80,7 @@ export const ClientWorkspacePage = () => {
   const onUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    await clientService.uploadFactSheetFile(clientId, file);
+    await clientApi.uploadFactSheetFile(clientId, file);
     await load();
   };
 

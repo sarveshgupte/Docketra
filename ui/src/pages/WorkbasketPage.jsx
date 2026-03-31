@@ -14,7 +14,7 @@ import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
 import { StatusBadge } from '../components/layout/StatusBadge';
 import { useAuth } from '../hooks/useAuth';
-import { worklistService } from '../services/worklistService';
+import { worklistApi } from '../api/worklist.api';
 import { formatDate } from '../utils/formatters';
 import { useToast } from '../hooks/useToast';
 import { ROUTES } from '../constants/routes';
@@ -70,7 +70,7 @@ export const WorkbasketPage = () => {
   const loadGlobalWorklist = async () => {
     setLoading(true);
     try {
-      const response = await worklistService.getGlobalWorklist(filters);
+      const response = await worklistApi.getGlobalWorklist(filters);
       
       if (response.success) {
         setCases(response.data || []);
@@ -118,7 +118,7 @@ export const WorkbasketPage = () => {
     setBulkPulling(true);
     try {
       // Use unified pullCases endpoint for bulk operations
-      const response = await worklistService.pullCases(selectedCases, assignTo || null);
+      const response = await worklistApi.pullCases(selectedCases, assignTo || null);
       
       if (response.success) {
         const message = response.pulled < response.requested
@@ -148,7 +148,7 @@ export const WorkbasketPage = () => {
     setPullingCase(caseId);
     try {
       // Use unified pullCases endpoint for single case (pass as array)
-      const response = await worklistService.pullCases([caseId], assignTo || null);
+      const response = await worklistApi.pullCases([caseId], assignTo || null);
       
       if (response.success) {
         showSuccess(assignTo ? 'Docket assigned successfully.' : 'Docket pulled successfully.');

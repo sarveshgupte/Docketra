@@ -12,7 +12,7 @@ import { SidebarSection } from '../navigation/SidebarSection';
 import { CommandPalette } from './CommandPalette';
 import { ErrorBoundary } from './ErrorBoundary';
 import api from '../../services/api';
-import { worklistService } from '../../services/worklistService';
+import { worklistApi } from '../../api/worklist.api';
 import { USER_ROLES } from '../../utils/constants';
 import './Layout.css';
 import { ROUTES, safeRoute } from '../../constants/routes';
@@ -236,8 +236,8 @@ export const Layout = ({ children }) => {
 
       try {
         const [globalData, myData] = await Promise.all([
-          worklistService.getGlobalWorklist({ limit: 1 }),
-          worklistService.getEmployeeWorklist({ limit: 1 }),
+          worklistApi.getGlobalWorklist({ limit: 1 }),
+          worklistApi.getEmployeeWorklist({ limit: 1 }),
         ]);
 
         if (!cancelled) {

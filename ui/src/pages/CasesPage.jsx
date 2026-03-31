@@ -17,8 +17,8 @@ import { usePermissions } from '../hooks/usePermissions';
 import { useToast } from '../hooks/useToast';
 import { useCaseView, CASE_VIEWS, isEscalatedCase } from '../hooks/useCaseView';
 import { useSavedViews } from '../hooks/useSavedViews';
-import { caseService } from '../services/caseService';
-import { worklistService } from '../services/worklistService';
+import { caseApi } from '../api/case.api';
+import { worklistApi } from '../api/worklist.api';
 import { categoryService } from '../services/categoryService';
 import { CASE_STATUS, USER_ROLES } from '../utils/constants';
 import { getCaseListRecords } from '../utils/caseResponse';
@@ -143,12 +143,12 @@ export const CasesPage = () => {
     try {
       let casesData = [];
       if (isAdmin) {
-        const response = await caseService.getCases();
+        const response = await caseApi.getCases();
         if (response.success) {
           casesData = getCaseListRecords(response);
         }
       } else {
-        const response = await worklistService.getEmployeeWorklist();
+        const response = await worklistApi.getEmployeeWorklist();
         if (response.success) {
           casesData = response.data || [];
         }
@@ -284,7 +284,7 @@ export const CasesPage = () => {
           setConfirmModal(null);
           setAssigningCaseId(caseRecord.caseId);
           try {
-            const response = await caseService.pullCase(caseRecord.caseId);
+            const response = await caseApi.pullCase(caseRecord.caseId);
             if (response.success) {
               showSuccess(`Docket assigned to you`);
               await loadCases();
@@ -300,7 +300,7 @@ export const CasesPage = () => {
     }
     setAssigningCaseId(caseRecord.caseId);
     try {
-      const response = await caseService.pullCase(caseRecord.caseId);
+      const response = await caseApi.pullCase(caseRecord.caseId);
       if (response.success) {
         showSuccess(`Docket assigned to you`);
         await loadCases();
@@ -340,7 +340,7 @@ export const CasesPage = () => {
     const doAssign = async () => {
       setBulkActionInProgress(true);
       try {
-        await Promise.all(selectedList.map((c) => caseService.pullCase(c.caseId)));
+        await Promise.all(selectedList.map((c) => caseApi.pullCase(c.caseId)));
         setSelectedCaseIds(new Set());
         showSuccess(`${selectedList.length} docket${selectedList.length !== 1 ? 's' : ''} assigned to you`);
         await loadCases();
@@ -373,7 +373,7 @@ export const CasesPage = () => {
         setConfirmModal(null);
         setBulkActionInProgress(true);
         try {
-          await Promise.all(selectedList.map((c) => caseService.moveCaseToGlobal(c.caseId)));
+          await Promise.all(selectedList.map((c) => caseApi.moveCaseToGlobal(c.caseId)));
           setSelectedCaseIds(new Set());
           showSuccess(`${selectedList.length} docket${selectedList.length !== 1 ? 's' : ''} moved to Workbasket`);
           await loadCases();

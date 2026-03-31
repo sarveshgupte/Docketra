@@ -11,7 +11,7 @@ import { Card } from './Card';
 import { Loading } from './Loading';
 import { Badge } from './Badge';
 import { useAuth } from '../../hooks/useAuth';
-import { caseService } from '../../services/caseService';
+import { caseApi } from '../../api/case.api';
 import { formatDateTime } from '../../utils/formatters';
 
 export const CaseHistory = ({ caseId }) => {
@@ -29,7 +29,7 @@ export const CaseHistory = ({ caseId }) => {
     setError(null);
     
     try {
-      const response = await caseService.getCaseHistory(caseId);
+      const response = await caseApi.getCaseHistory(caseId);
       
       if (response.success) {
         setHistory(response.data.history || []);

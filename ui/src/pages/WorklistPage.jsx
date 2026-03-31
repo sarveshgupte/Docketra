@@ -22,7 +22,7 @@ import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
 import { DataTable } from '../components/layout/DataTable';
 import { PriorityPill } from '../components/common/PriorityPill';
-import { worklistService } from '../services/worklistService';
+import { worklistApi } from '../api/worklist.api';
 import { formatDate } from '../utils/formatters';
 import { getStatusLabel } from '../utils/statusDisplay';
 import { UX_COPY } from '../constants/uxCopy';
@@ -87,7 +87,7 @@ export const WorklistPage = () => {
       } else {
         // Load open cases (default worklist)
         // PR: Hard Cutover to xID - Removed email parameter, uses auth token
-        const response = await worklistService.getEmployeeWorklist();
+        const response = await worklistApi.getEmployeeWorklist();
         
         if (response.success) {
           // Worklist only contains OPEN cases (backend already filters)
