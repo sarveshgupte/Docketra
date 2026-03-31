@@ -44,7 +44,7 @@ export const Input = forwardRef(({
             </svg>
           </span>
         </div>
-        {helpText && <div className="form-help" id={helpId}>{helpText}</div>}
+        {helpText && <p className="mt-1 text-xs text-gray-500" id={helpId}>{helpText}</p>}
       </div>
     );
   }
@@ -52,7 +52,7 @@ export const Input = forwardRef(({
   return (
     <div className={`w-full ${className}`}>
       <FormLabel htmlFor={inputId} label={label} required={required} />
-      <div className={`w-full relative ${isPasswordType ? 'input-wrapper--password' : ''}`}>
+      <div className="w-full relative">
         <input
           ref={ref}
           id={inputId}
@@ -69,7 +69,7 @@ export const Input = forwardRef(({
         {isPasswordType && (
           <button
             type="button"
-            className="input-toggle"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
             onClick={() => setShowPassword((prev) => !prev)}
             aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
@@ -142,7 +142,7 @@ export const Input = forwardRef(({
         )}
       </div>
       {error && <p className="mt-1 text-sm text-red-500" id={errorId}>{error}</p>}
-      {!error && helpText && <div className="form-help" id={helpId}>{helpText}</div>}
+      {!error && helpText && <p className="mt-1 text-xs text-gray-500" id={helpId}>{helpText}</p>}
     </div>
   );
 });
