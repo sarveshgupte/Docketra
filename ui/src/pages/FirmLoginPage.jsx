@@ -11,6 +11,7 @@ import { authService } from '../services/authService';
 import { useToast } from '../hooks/useToast';
 import { authApi } from '../api/auth.api';
 import { toUserFacingError } from '../utils/errorHandling';
+import { spacingClasses } from '../theme/tokens';
 import './LoginPage.css';
 
 const mapSafeLoginError = (error) => {
@@ -213,13 +214,13 @@ export const FirmLoginPage = () => {
         {error && <div className="mt-6 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</div>}
 
         {step === 'credentials' ? (
-          <form onSubmit={handleCredentialSubmit} noValidate className="mt-4 space-y-4">
+          <form onSubmit={handleCredentialSubmit} noValidate className={`mt-4 ${spacingClasses.formFieldSpacing}`}>
             <Input label="xID" type="text" value={xid} onChange={(e) => setXid(e.target.value)} error={fieldErrors.xid} required placeholder="X123456" autoComplete="username" disabled={loading} autoFocus />
             <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} error={fieldErrors.password} required placeholder="Enter your password" autoComplete="current-password" disabled={loading} />
             <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading}>{loading ? 'Sending OTP...' : 'Continue'}</Button>
           </form>
         ) : (
-          <form onSubmit={handleOtpSubmit} noValidate className="mt-4 space-y-4">
+          <form onSubmit={handleOtpSubmit} noValidate className={`mt-4 ${spacingClasses.formFieldSpacing}`}>
             <Input
               ref={otpInputRef}
               label="Email OTP"
@@ -243,14 +244,14 @@ export const FirmLoginPage = () => {
             />
             {otpHint && <p className="text-xs text-gray-500">{otpHint}</p>}
             <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading}>{loading ? 'Verifying...' : 'Verify OTP'}</Button>
-            <Button type="button" variant="secondary" fullWidth disabled={loading || cooldown > 0} onClick={handleResendOtp}>
+            <Button type="button" variant="outline" fullWidth disabled={loading || cooldown > 0} onClick={handleResendOtp}>
               {cooldown > 0 ? `Resend OTP in ${cooldown}s` : 'Resend OTP'}
             </Button>
-            <Button type="button" variant="secondary" fullWidth disabled={loading} onClick={() => setStep('credentials')}>Back</Button>
+            <Button type="button" variant="outline" fullWidth disabled={loading} onClick={() => setStep('credentials')}>Back</Button>
           </form>
         )}
 
-        <div className="text-center space-y-3 mt-4">
+        <div className={`text-center mt-4 ${spacingClasses.formFieldSpacing}`}>
           <Link to={`/app/${firmSlug}/forgot-password`} className="block text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline">Forgot Password?</Link>
           <Link to="/signup" className="block text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline">Need a workspace? Create one here.</Link>
         </div>

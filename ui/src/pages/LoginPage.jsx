@@ -10,6 +10,7 @@ import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { validateXID, validatePassword } from '../utils/validators';
 import { useToast } from '../hooks/useToast';
+import { spacingClasses } from '../theme/tokens';
 import './LoginPage.css';
 
 export const LoginPage = () => {
@@ -104,7 +105,7 @@ export const LoginPage = () => {
           Sign in to your workspace using your xID and password.
         </p>
 
-        <form onSubmit={handleLogin} noValidate className="mt-4 space-y-4">
+        <form onSubmit={handleLogin} noValidate className={`mt-4 ${spacingClasses.formFieldSpacing}`}>
           <p className="text-sm text-gray-500">Fields marked with * are required.</p>
           <Input
             label="xID"
@@ -158,7 +159,6 @@ export const LoginPage = () => {
             type="submit"
             variant="primary"
             fullWidth
-            className="mt-4"
             loading={loading}
             disabled={loading}
           >

@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
 import { LegalLayout } from '../../components/legal/LegalLayout';
+import { Input } from '../../components/common/Input';
+import { Textarea } from '../../components/common/Textarea';
+import { Button } from '../../components/common/Button';
+import { spacingClasses } from '../../theme/tokens';
 
 const SECTIONS = [{ id: 'contact-form', label: 'Enterprise Inquiry' }];
 
@@ -51,14 +55,18 @@ export const ContactPage = () => {
         {status === 'success' ? (
           <div className="mt-12 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">Inquiry received. Our enterprise team will contact you soon.</div>
         ) : (
-          <form onSubmit={handleSubmit} className="mt-12 space-y-4" aria-label="Contact form">
-            <input name="name" value={form.name} onChange={handleChange} placeholder="Your name" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm transition-all duration-150 focus:border-gray-900 focus:shadow-[0_0_0_3px_rgba(17,24,39,0.08)]" required />
-            <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="Work email" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm transition-all duration-150 focus:border-gray-900 focus:shadow-[0_0_0_3px_rgba(17,24,39,0.08)]" required />
-            <input name="firmName" value={form.firmName} onChange={handleChange} placeholder="Firm name" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm transition-all duration-150 focus:border-gray-900 focus:shadow-[0_0_0_3px_rgba(17,24,39,0.08)]" required />
-            <input name="numberOfUsers" type="number" min="1" value={form.numberOfUsers} onChange={handleChange} placeholder="Number of users" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm transition-all duration-150 focus:border-gray-900 focus:shadow-[0_0_0_3px_rgba(17,24,39,0.08)]" required />
-            <input name="phone" value={form.phone} onChange={handleChange} placeholder="Phone" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm transition-all duration-150 focus:border-gray-900 focus:shadow-[0_0_0_3px_rgba(17,24,39,0.08)]" required />
-            <textarea name="requirements" value={form.requirements} onChange={handleChange} placeholder="Requirements" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm transition-all duration-150 focus:border-gray-900 focus:shadow-[0_0_0_3px_rgba(17,24,39,0.08)]" rows={5} required />
-            <button type="submit" disabled={status === 'submitting'} className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white transition-all duration-150 hover:scale-[1.01] hover:-translate-y-0.5 hover:bg-gray-700 active:scale-[0.98]">{status === 'submitting' ? 'Submitting...' : 'Send Inquiry'}</button>
+          <form onSubmit={handleSubmit} className={`mt-12 ${spacingClasses.formFieldSpacing}`} aria-label="Contact form">
+            <Input name="name" value={form.name} onChange={handleChange} label="Your name" required />
+            <Input name="email" type="email" value={form.email} onChange={handleChange} label="Work email" required />
+            <Input name="firmName" value={form.firmName} onChange={handleChange} label="Firm name" required />
+            <Input name="numberOfUsers" type="number" min="1" value={form.numberOfUsers} onChange={handleChange} label="Number of users" required />
+            <Input name="phone" value={form.phone} onChange={handleChange} label="Phone" required />
+            <Textarea name="requirements" value={form.requirements} onChange={handleChange} label="Requirements" rows={5} required />
+            <div className={`${spacingClasses.formActions} ${spacingClasses.formActionsGap}`}>
+              <Button type="submit" variant="primary" disabled={status === 'submitting'} loading={status === 'submitting'}>
+                {status === 'submitting' ? 'Submitting' : 'Send Inquiry'}
+              </Button>
+            </div>
           </form>
         )}
       </section>

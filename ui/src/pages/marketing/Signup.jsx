@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Input } from '../../components/common/Input';
+import { Button } from '../../components/common/Button';
 import { useAuth } from '../../hooks/useAuth';
 import { STRONG_PASSWORD_MESSAGE, validateStrongPassword } from '../../utils/validators';
+import { spacingClasses } from '../../theme/tokens';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phonePattern = /^\d{10}$/;
@@ -165,13 +167,9 @@ export default function Signup() {
             <p><span className="font-medium">Firm URL:</span> {`https://app.com/${signupSuccessData.firmSlug}`}</p>
             <p><span className="font-medium">Your XID:</span> {signupSuccessData.xid}</p>
           </div>
-          <button
-            type="button"
-            className="w-full mt-4 bg-black text-white py-2 rounded-lg disabled:opacity-50"
-            onClick={handleLoginRedirect}
-          >
+          <Button type="button" variant="primary" fullWidth onClick={handleLoginRedirect}>
             Go to Login
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -187,23 +185,19 @@ export default function Signup() {
         {apiError && <div role="alert" className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{apiError}</div>}
 
         {step === 1 ? (
-          <form className="mt-6 space-y-4 w-full" onSubmit={submitStepOne} noValidate>
+          <form className={`mt-6 ${spacingClasses.formFieldSpacing} w-full`} onSubmit={submitStepOne} noValidate>
             <Input id="signup-name" type="text" name="name" label="Name" className="w-full" value={form.name} onChange={onFormChange} disabled={loading} error={errors.name} required />
             <Input id="signup-email" type="email" name="email" label="Email" className="w-full" value={form.email} onChange={onFormChange} disabled={loading} error={errors.email} required autoComplete="username" />
             <Input id="signup-password" type="password" name="password" label="Password" className="w-full" value={form.password} onChange={onFormChange} disabled={loading} error={errors.password} required autoComplete="current-password" />
             <Input id="signup-firm" type="text" name="firmName" label="Firm name" className="w-full" value={form.firmName} onChange={onFormChange} disabled={loading} error={errors.firmName} required />
             <Input id="signup-phone" type="text" name="phone" label="Phone" className="w-full" value={form.phone} onChange={onFormChange} disabled={loading} error={errors.phone} required />
             <p className="text-xs text-gray-500">{STRONG_PASSWORD_MESSAGE}</p>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full mt-4 bg-black text-white py-2 rounded-lg disabled:opacity-50"
-            >
+            <Button type="submit" variant="primary" fullWidth disabled={loading} loading={loading}>
               {loading ? 'Sending OTP...' : 'Send OTP'}
-            </button>
+            </Button>
           </form>
         ) : (
-          <form className="mt-6 space-y-4 w-full" onSubmit={submitOtp} noValidate>
+          <form className={`mt-6 ${spacingClasses.formFieldSpacing} w-full`} onSubmit={submitOtp} noValidate>
             {otpInfo && <p className="text-xs text-gray-500">{otpInfo}</p>}
             <Input
               ref={otpInputRef}
@@ -228,29 +222,27 @@ export default function Signup() {
               inputMode="numeric"
               pattern="[0-9]*"
             />
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full mt-4 bg-black text-white py-2 rounded-lg disabled:opacity-50"
-            >
+            <Button type="submit" variant="primary" fullWidth disabled={loading} loading={loading}>
               {loading ? 'Verifying...' : 'Verify & create workspace'}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               disabled={loading || cooldown > 0}
               onClick={resendOtp}
-              className="w-full border border-gray-300 bg-white text-gray-800 py-2 rounded-lg disabled:opacity-50"
+              variant="outline"
+              fullWidth
             >
               {cooldown > 0 ? `Resend OTP in ${cooldown}s` : 'Resend OTP'}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               disabled={loading}
               onClick={() => setStep(1)}
-              className="w-full border border-gray-300 bg-white text-gray-800 py-2 rounded-lg disabled:opacity-50"
+              variant="outline"
+              fullWidth
             >
               Back
-            </button>
+            </Button>
           </form>
         )}
 
