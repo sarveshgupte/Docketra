@@ -8,6 +8,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
 import { userApi } from '../api/user.api';
 import { toUserFacingError } from '../utils/errorHandling';
+import { spacingClasses } from '../theme/tokens';
 
 const phonePattern = /^\d{10}$/;
 
@@ -146,7 +147,7 @@ export function CompleteProfile() {
         <h1 className="text-2xl font-semibold text-center text-gray-900">Complete your workspace setup</h1>
         <p className="mt-2 text-sm text-gray-500 text-center">Step 2 of 2: add your workspace details.</p>
 
-        <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+        <form className={`mt-6 ${spacingClasses.formFieldSpacing}`} onSubmit={handleSubmit}>
           <Input
             id="complete-profile-name"
             name="name"

@@ -8,6 +8,7 @@ import { Button } from '../components/common/Button';
 import { Loading } from '../components/common/Loading';
 import { useAuth } from '../hooks/useAuth';
 import { authService } from '../services/authService';
+import { spacingClasses } from '../theme/tokens';
 
 const genderOptions = [
   { value: '', label: 'Select gender', disabled: true },
@@ -137,7 +138,7 @@ export const ProfilePage = () => {
               <p className="text-sm text-gray-500">Keep your contact details and masked identity information current.</p>
             </div>
             <Card className="lg:col-span-2 lg:max-w-4xl">
-              <form className="space-y-4" onSubmit={handleSave}>
+              <form className={spacingClasses.formFieldSpacing} onSubmit={handleSave}>
 
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                   <Input
@@ -199,13 +200,13 @@ export const ProfilePage = () => {
                 {error ? <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
                 {success ? <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{success}</div> : null}
 
-                <div className="mt-6 pt-5 border-t border-gray-200 flex justify-end gap-3">
+                <div className={`${spacingClasses.formActions} ${spacingClasses.formActionsGap}`}>
                   {editing ? (
                     <>
                       <Button type="button" variant="outline" onClick={handleCancel}>
                         Cancel
                       </Button>
-                      <Button variant="primary" type="submit" disabled={submitting}>
+                      <Button variant="primary" type="submit" disabled={submitting} loading={submitting}>
                         {submitting ? 'Saving...' : 'Save Changes'}
                       </Button>
                     </>

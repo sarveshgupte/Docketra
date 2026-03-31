@@ -9,6 +9,7 @@ import { Input } from '../components/common/Input';
 import { Card } from '../components/common/Card';
 import { authService } from '../services/authService';
 import { STRONG_PASSWORD_MESSAGE, validateStrongPassword } from '../utils/validators';
+import { spacingClasses } from '../theme/tokens';
 import './ResetPasswordPage.css';
 
 export const ResetPasswordPage = () => {
@@ -78,7 +79,7 @@ export const ResetPasswordPage = () => {
           <p className="text-secondary">Enter your new password below.</p>
         </div>
 
-        <form onSubmit={handleSubmit} noValidate>
+        <form onSubmit={handleSubmit} noValidate className={spacingClasses.formFieldSpacing}>
           <Input
             label="New Password"
             type="password"

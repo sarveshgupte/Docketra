@@ -11,6 +11,20 @@ export const spacingClasses = {
   tableCellPadding: 'px-6 py-4',
   tableHeaderPadding: 'px-6 py-3',
   sectionMargin: 'space-y-6',
+  formFieldSpacing: 'space-y-4',
+  formMessageSpacing: 'mt-1',
+  formActions: 'pt-5 border-t border-gray-200 flex justify-end',
+  formActionsGap: 'gap-3',
+};
+
+export const formClasses = {
+  label: 'block text-sm font-medium text-gray-900',
+  inputBase:
+    'h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-sm text-gray-900 transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500',
+  textareaBase:
+    'w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500',
+  errorText: `${spacingClasses.formMessageSpacing} text-sm text-red-500`,
+  helpText: `${spacingClasses.formMessageSpacing} text-xs text-gray-500`,
 };
 
 export const fontSizes = {

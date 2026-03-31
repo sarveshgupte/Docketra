@@ -6,6 +6,7 @@
 
 import React, { forwardRef, useId, useState } from 'react';
 import { FormLabel } from './FormLabel';
+import { formClasses } from '../../theme/tokens';
 
 export const Input = forwardRef(({
   label,
@@ -44,7 +45,7 @@ export const Input = forwardRef(({
             </svg>
           </span>
         </div>
-        {helpText && <p className="mt-1 text-xs text-gray-500" id={helpId}>{helpText}</p>}
+        {helpText && <p className={formClasses.helpText} id={helpId}>{helpText}</p>}
       </div>
     );
   }
@@ -56,7 +57,7 @@ export const Input = forwardRef(({
         <input
           ref={ref}
           id={inputId}
-          className={`h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-sm text-gray-900 transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 ${error ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500/20' : ''} ${isPasswordType ? 'pr-11' : ''}`}
+          className={`${formClasses.inputBase} ${error ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500/20' : ''} ${isPasswordType ? 'pr-11' : ''}`}
           disabled={disabled}
           value={value}
           type={resolvedType}
@@ -141,8 +142,8 @@ export const Input = forwardRef(({
           </button>
         )}
       </div>
-      {error && <p className="mt-1 text-sm text-red-500" id={errorId}>{error}</p>}
-      {!error && helpText && <p className="mt-1 text-xs text-gray-500" id={helpId}>{helpText}</p>}
+      {error && <p className={formClasses.errorText} id={errorId}>{error}</p>}
+      {!error && helpText && <p className={formClasses.helpText} id={helpId}>{helpText}</p>}
     </div>
   );
 });

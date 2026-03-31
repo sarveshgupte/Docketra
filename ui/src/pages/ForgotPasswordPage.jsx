@@ -9,6 +9,7 @@ import { Input } from '../components/common/Input';
 import { Card } from '../components/common/Card';
 import { authService } from '../services/authService';
 import { STRONG_PASSWORD_MESSAGE, validateEmail, validateStrongPassword } from '../utils/validators';
+import { spacingClasses } from '../theme/tokens';
 import './ForgotPasswordPage.css';
 
 const FALLBACK_RATE_LIMIT_MESSAGE = 'Too many password reset requests. Please wait a few minutes before trying again.';
@@ -148,7 +149,7 @@ export const ForgotPasswordPage = () => {
           </p>
         </div>
 
-        <form onSubmit={step === 1 ? handleInit : step === 2 ? handleVerifyOtp : handleReset} noValidate>
+        <form onSubmit={step === 1 ? handleInit : step === 2 ? handleVerifyOtp : handleReset} noValidate className={spacingClasses.formFieldSpacing}>
           {step === 1 && <Input
             label="Email Address"
             type="email"
@@ -217,7 +218,7 @@ export const ForgotPasswordPage = () => {
             {step === 1 ? 'Send OTP' : step === 2 ? 'Verify OTP' : 'Set New Password'}
           </Button>
           {step === 2 && (
-            <Button type="button" variant="secondary" fullWidth disabled={loading || cooldown > 0} onClick={handleResend}>
+            <Button type="button" variant="outline" fullWidth disabled={loading || cooldown > 0} onClick={handleResend}>
               {cooldown > 0 ? `Resend OTP in ${cooldown}s` : 'Resend OTP'}
             </Button>
           )}
