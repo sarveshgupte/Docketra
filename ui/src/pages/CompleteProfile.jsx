@@ -3,13 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { Card } from '../components/common/Card';
 import { Input } from '../components/common/Input';
 import { Button } from '../components/common/Button';
-import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
+import { userApi } from '../api/user.api';
 
 const phonePattern = /^\d{10}$/;
 
 const getErrorMessage = (error, fallback) => (
-  error?.response?.data?.message
+  error?.data?.message
+  || error?.data?.error
+  || error?.response?.data?.message
   || error?.response?.data?.error
   || error?.message
   || fallback
@@ -34,8 +36,8 @@ export function CompleteProfile() {
     const loadUser = async () => {
       setError('');
       try {
-        const response = await api.get('/user/me');
-        const user = response?.data?.data || response?.data?.user || response?.data || {};
+        const response = await userApi.getCurrentUser();
+        const user = response?.data || response?.user || response || {};
         if (!mounted) return;
 
         setForm((prev) => ({
@@ -87,7 +89,7 @@ export function CompleteProfile() {
     setSubmitting(true);
 
     try {
-      await api.post('/user/complete-profile', {
+      await userApi.completeProfile({
         name: form.name.trim(),
         firmName: trimmedFirmName,
         phone: normalizedPhone,
