@@ -13,6 +13,7 @@ const AuthIdentity = require('../models/AuthIdentity.model');
 const LoginSession = require('../models/LoginSession.model');
 const { sendOtp: sendCentralOtp, verifyOtp: verifyCentralOtp } = require('../services/otp.service');
 const emailService = require('../services/email.service');
+const authOtpService = require('../services/authOtp.service');
 const xIDGenerator = require('../services/xIDGenerator');
 const signupService = require('../services/signup.service');
 const jwtService = require('../services/jwt.service');
@@ -346,7 +347,9 @@ const createMfaPreAuthToken = (payload) => {
 
 const generateLoginSessionToken = () => crypto.randomBytes(32).toString('hex');
 const hashLoginSessionToken = (token) => crypto.createHash('sha256').update(String(token)).digest('hex');
-const generateLoginOtp = () => crypto.randomInt(100000, 1000000).toString();
+const FORGOT_PASSWORD_OTP_EXPIRY_MINUTES = 10;
+const FORGOT_PASSWORD_OTP_LOCK_MINUTES = 10;
+const FORGOT_PASSWORD_OTP_RESEND_COOLDOWN_SECONDS = 30;
 
 const clearLoginOtpState = (user) => {
   if (!user) return;
@@ -356,6 +359,16 @@ const clearLoginOtpState = (user) => {
   user.loginOtpLastSentAt = null;
   user.loginOtpResendCount = 0;
   user.loginOtpLockedUntil = null;
+};
+
+const clearForgotPasswordOtpState = (user) => {
+  if (!user) return;
+  user.forgotPasswordOtpHash = null;
+  user.forgotPasswordOtpExpiresAt = null;
+  user.forgotPasswordOtpAttempts = 0;
+  user.forgotPasswordOtpLastSentAt = null;
+  user.forgotPasswordOtpLockedUntil = null;
+  user.forgotPasswordOtpResendCount = 0;
 };
 
 const persistLoginOtpState = async (user) => {
@@ -513,13 +526,13 @@ const buildTokenResponse = async (user, req, authMethod = 'Password') => {
 
 const sendLoginOtpChallenge = async (req, user, { isResend = false, returnLoginToken = true } = {}) => {
   const otpConfig = getLoginOtpConfig();
-  const otp = generateLoginOtp();
+  const otp = authOtpService.generateOtp();
   logLoginOtpEvent('OTP_GENERATED', req, user, {
     expiryMinutes: otpConfig.expiryMinutes,
     resend: isResend,
   });
 
-  const otpHash = await bcrypt.hash(otp, SALT_ROUNDS);
+  const otpHash = await authOtpService.hashOtp(otp, SALT_ROUNDS);
   const otpExpiresAt = new Date(Date.now() + otpConfig.expiryMinutes * 60 * 1000);
 
   user.loginOtpHash = otpHash;
@@ -1191,33 +1204,30 @@ const login = async (req, res) => {
 
 const resendLoginOtp = async (req, res) => {
   try {
-    const genericResendResponse = {
-      success: true,
-      message: 'If the account exists, a verification code has been sent.',
-      resendCooldownSeconds: getLoginOtpConfig().resendCooldownSeconds,
-    };
     const otpConfig = getLoginOtpConfig();
-    const requestedFirmSlug = req.body?.firmSlug || req.params?.firmSlug || req.firmSlug || null;
-    const requestedXID = req.body?.xid || req.body?.xID || req.body?.XID || null;
-    const { user, firm, normalizedXID, normalizedFirmSlug } = await findTenantUserForOtp({
-      xID: requestedXID,
-      firmSlug: requestedFirmSlug,
-    });
-
-    log.info('OTP_RESEND_REQUESTED', {
-      req,
-      userXID: normalizedXID || null,
-      firmSlug: normalizedFirmSlug,
-    });
-
-    if (!user || !firm) {
-      return res.json(genericResendResponse);
+    const loginToken = String(req.body?.loginToken || '').trim();
+    if (!loginToken) {
+      return res.status(400).json({ success: false, message: 'loginToken is required' });
     }
 
-    req.firmId = req.firmId || firm._id;
-    req.firmSlug = req.firmSlug || firm.firmSlug;
-    req.firmName = req.firmName || firm.name || null;
-    req.firm = req.firm || firm;
+    const tokenHash = hashLoginSessionToken(loginToken);
+    const loginSession = await LoginSession.findOne({ tokenHash, consumedAt: null });
+    if (!loginSession || !loginSession.expiresAt || loginSession.expiresAt.getTime() < Date.now()) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired login token' });
+    }
+    if (req.firmId && String(req.firmId) !== String(loginSession.firmId)) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired login token' });
+    }
+
+    const user = await User.findOne({
+      _id: loginSession.userId,
+      firmId: loginSession.firmId,
+      status: 'active',
+      isActive: true,
+    });
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired login token' });
+    }
 
     await clearExpiredLoginOtpLock(user);
 
@@ -1227,23 +1237,27 @@ const resendLoginOtp = async (req, res) => {
         retryAfter: activeLockSeconds,
         reason: 'verify_lock_active',
       });
-      return res.json(genericResendResponse);
+      return res.status(429).json({ success: false, message: 'Too many attempts. Try again later.' });
     }
 
     const lastSentAtMs = user.loginOtpLastSentAt ? new Date(user.loginOtpLastSentAt).getTime() : 0;
     const resendCooldownEndsAt = lastSentAtMs + (otpConfig.resendCooldownSeconds * 1000);
     const retryAfter = Math.max(0, Math.ceil((resendCooldownEndsAt - Date.now()) / 1000));
     if (retryAfter > 0) {
-      return res.json(genericResendResponse);
+      return res.status(429).json({ success: false, message: 'Too many attempts. Try again later.', retryAfter });
     }
 
     if (Number(user.loginOtpResendCount || 0) >= otpConfig.maxResends) {
-      return res.json(genericResendResponse);
+      return res.status(429).json({ success: false, message: 'Too many attempts. Try again later.' });
     }
 
     await sendLoginOtpChallenge(req, user, { isResend: true, returnLoginToken: false });
 
-    return res.json(genericResendResponse);
+    return res.json({
+      success: true,
+      message: 'Verification code resent.',
+      resendCooldownSeconds: otpConfig.resendCooldownSeconds,
+    });
   } catch (error) {
     console.error('[AUTH] Resend OTP error:', error);
     return res.status(500).json({
@@ -1260,23 +1274,21 @@ const verifyLoginOtp = async (req, res) => {
     const otp = String(req.body?.otp || '').trim();
     const loginToken = String(req.body?.loginToken || '').trim();
 
-    if (!loginToken) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid or expired login token',
-      });
-    }
-
     if (!/^\d{6}$/.test(otp)) {
       return res.status(400).json({
         success: false,
         message: 'OTP must be a 6 digit code',
       });
     }
+    if (!loginToken) {
+      return res.status(400).json({
+        success: false,
+        message: 'loginToken is required',
+      });
+    }
 
     const tokenHash = hashLoginSessionToken(loginToken);
     const loginSession = await LoginSession.findOne({ tokenHash, consumedAt: null });
-
     if (!loginSession || !loginSession.expiresAt || loginSession.expiresAt.getTime() < Date.now()) {
       return res.status(401).json({
         success: false,
@@ -1347,7 +1359,7 @@ const verifyLoginOtp = async (req, res) => {
       });
     }
 
-    const isValidOtp = await bcrypt.compare(otp, user.loginOtpHash);
+    const isValidOtp = await authOtpService.verifyOtp(otp, user.loginOtpHash);
     if (!isValidOtp) {
       user.loginOtpAttempts = currentAttempts + 1;
       const exhaustedAttempts = user.loginOtpAttempts >= otpConfig.maxAttempts;
@@ -1411,7 +1423,9 @@ const verifyLoginOtp = async (req, res) => {
 
     clearLoginOtpState(user);
     await persistLoginOtpState(user);
-    await LoginSession.updateOne({ _id: loginSession._id, consumedAt: null }, { $set: { consumedAt: new Date() } });
+    if (loginSession?._id) {
+      await LoginSession.updateOne({ _id: loginSession._id, consumedAt: null }, { $set: { consumedAt: new Date() } });
+    }
     logLoginOtpEvent('OTP_VERIFIED', req, user);
 
     try {
@@ -3279,6 +3293,19 @@ const unlockAccount = async (req, res) => {
   }
 };
 
+const loginInit = async (req, res) => {
+  req.loginScope = 'tenant';
+  return login(req, res);
+};
+
+const loginVerify = async (req, res) => {
+  return verifyLoginOtp(req, res);
+};
+
+const loginResend = async (req, res) => {
+  return resendLoginOtp(req, res);
+};
+
 /**
  * Forgot password - Request password reset link
  * POST /api/auth/forgot-password
@@ -3405,6 +3432,185 @@ const forgotPassword = async (req, res) => {
       message: 'Error processing password reset request',
     });
   }
+};
+
+const forgotPasswordInit = async (req, res) => {
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  if (!email) {
+    return res.status(400).json({ success: false, message: 'email is required' });
+  }
+  const firm = req.firm;
+  const now = Date.now();
+
+  const user = await User.findOne({ firmId: firm._id, email, status: 'active', isActive: true });
+  const genericResponse = { success: true, message: 'If the account exists, an OTP has been sent to email.' };
+  if (!user) return res.json(genericResponse);
+
+  const lastSentAtMs = user.forgotPasswordOtpLastSentAt ? new Date(user.forgotPasswordOtpLastSentAt).getTime() : 0;
+  const resendCooldownEndsAt = lastSentAtMs + (FORGOT_PASSWORD_OTP_RESEND_COOLDOWN_SECONDS * 1000);
+  if (now < resendCooldownEndsAt) {
+    return res.status(429).json({
+      success: false,
+      message: 'Too many attempts',
+      retryAfter: Math.ceil((resendCooldownEndsAt - now) / 1000),
+    });
+  }
+
+  const otp = authOtpService.generateOtp();
+  user.forgotPasswordOtpHash = await authOtpService.hashOtp(otp, SALT_ROUNDS);
+  user.forgotPasswordOtpExpiresAt = new Date(Date.now() + FORGOT_PASSWORD_OTP_EXPIRY_MINUTES * 60 * 1000);
+  user.forgotPasswordOtpAttempts = 0;
+  user.forgotPasswordOtpLastSentAt = new Date();
+  user.forgotPasswordOtpLockedUntil = null;
+  user.forgotPasswordOtpResendCount = Number(user.forgotPasswordOtpResendCount || 0) + 1;
+  user.forgotPasswordResetTokenHash = null;
+  user.forgotPasswordResetTokenExpiresAt = null;
+  await user.save();
+
+  await emailService.sendLoginOtpEmail({
+    email: user.email,
+    name: user.name,
+    otp,
+    firmName: firm.name,
+    firmSlug: firm.firmSlug,
+    expiryMinutes: FORGOT_PASSWORD_OTP_EXPIRY_MINUTES,
+  });
+  await logAuthAudit({
+    xID: user.xID || DEFAULT_XID,
+    firmId: user.firmId || DEFAULT_FIRM_ID,
+    userId: user._id,
+    actionType: 'FORGOT_PASSWORD_OTP_SENT',
+    description: 'Forgot-password OTP issued',
+    performedBy: user.xID || DEFAULT_XID,
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+    metadata: {
+      eventType: 'FORGOT_PASSWORD_OTP_SENT',
+      firmSlug: req.firmSlug || null,
+    },
+  }, req);
+
+  return res.json({
+    ...genericResponse,
+    resendCooldownSeconds: FORGOT_PASSWORD_OTP_RESEND_COOLDOWN_SECONDS,
+  });
+};
+
+const forgotPasswordVerify = async (req, res) => {
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  const otp = String(req.body?.otp || '').trim();
+
+  if (!email || !/^\d{6}$/.test(otp)) {
+    return res.status(400).json({ success: false, message: 'email and valid OTP are required' });
+  }
+  const firm = req.firm;
+
+  const user = await User.findOne({ firmId: firm._id, email, status: 'active', isActive: true });
+  if (!user || !user.forgotPasswordOtpHash || !user.forgotPasswordOtpExpiresAt || user.forgotPasswordOtpExpiresAt.getTime() < Date.now()) {
+    return res.status(401).json({ success: false, message: 'Invalid or expired OTP' });
+  }
+
+  const activeLockSeconds = user.forgotPasswordOtpLockedUntil
+    ? Math.max(0, Math.ceil((new Date(user.forgotPasswordOtpLockedUntil).getTime() - Date.now()) / 1000))
+    : 0;
+  if (activeLockSeconds > 0) {
+    return res.status(429).json({ success: false, message: 'Too many attempts', retryAfter: activeLockSeconds });
+  }
+
+  const attempts = Number(user.forgotPasswordOtpAttempts || 0);
+  if (attempts >= 5) {
+    user.forgotPasswordOtpLockedUntil = new Date(Date.now() + (FORGOT_PASSWORD_OTP_LOCK_MINUTES * 60 * 1000));
+    await user.save();
+    return res.status(429).json({ success: false, message: 'Too many attempts' });
+  }
+
+  const ok = await authOtpService.verifyOtp(otp, user.forgotPasswordOtpHash);
+  if (!ok) {
+    const attemptState = authOtpService.incrementAttempts(attempts, 5);
+    user.forgotPasswordOtpAttempts = attemptState.attempts;
+    if (attemptState.exhausted) {
+      user.forgotPasswordOtpLockedUntil = new Date(Date.now() + (FORGOT_PASSWORD_OTP_LOCK_MINUTES * 60 * 1000));
+    }
+    await user.save();
+    await logAuthAudit({
+      xID: user.xID || DEFAULT_XID,
+      firmId: user.firmId || DEFAULT_FIRM_ID,
+      userId: user._id,
+      actionType: 'FORGOT_PASSWORD_OTP_FAILED',
+      description: 'Forgot-password OTP verification failed',
+      performedBy: user.xID || DEFAULT_XID,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      metadata: {
+        eventType: 'FORGOT_PASSWORD_OTP_FAILED',
+        attempts: user.forgotPasswordOtpAttempts,
+      },
+    }, req);
+    return res.status(attemptState.exhausted ? 429 : 401).json({
+      success: false,
+      message: attemptState.exhausted ? 'Too many attempts' : 'Invalid or expired OTP',
+    });
+  }
+
+  clearForgotPasswordOtpState(user);
+  const resetToken = generateLoginSessionToken();
+  user.forgotPasswordResetTokenHash = hashLoginSessionToken(resetToken);
+  user.forgotPasswordResetTokenExpiresAt = new Date(Date.now() + FORGOT_PASSWORD_OTP_EXPIRY_MINUTES * 60 * 1000);
+  await user.save();
+  await logAuthAudit({
+    xID: user.xID || DEFAULT_XID,
+    firmId: user.firmId || DEFAULT_FIRM_ID,
+    userId: user._id,
+    actionType: 'FORGOT_PASSWORD_OTP_VERIFIED',
+    description: 'Forgot-password OTP verified',
+    performedBy: user.xID || DEFAULT_XID,
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+    metadata: {
+      eventType: 'FORGOT_PASSWORD_OTP_VERIFIED',
+    },
+  }, req);
+  return res.json({ success: true, message: 'OTP verified', resetToken });
+};
+
+const forgotPasswordResetWithOtp = async (req, res) => {
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  const resetToken = String(req.body?.resetToken || '').trim();
+  const password = String(req.body?.password || '');
+
+  if (!validatePasswordStrength(password)) {
+    return res.status(400).json({ success: false, message: PASSWORD_POLICY_MESSAGE });
+  }
+
+  const firm = req.firm;
+
+  const user = await User.findOne({ firmId: firm._id, email, status: 'active', isActive: true });
+  if (!user || !user.forgotPasswordResetTokenHash || !user.forgotPasswordResetTokenExpiresAt || user.forgotPasswordResetTokenExpiresAt.getTime() < Date.now()) {
+    return res.status(401).json({ success: false, message: 'Invalid or expired reset session' });
+  }
+  if (!resetToken || hashLoginSessionToken(resetToken) !== user.forgotPasswordResetTokenHash) {
+    return res.status(401).json({ success: false, message: 'Invalid or expired reset session' });
+  }
+
+  user.passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+  user.passwordSet = true;
+  user.passwordSetAt = new Date();
+  user.forcePasswordReset = false;
+  user.forgotPasswordResetTokenHash = null;
+  user.forgotPasswordResetTokenExpiresAt = null;
+  await user.save();
+  await logAuthAudit({
+    xID: user.xID || DEFAULT_XID,
+    firmId: user.firmId || DEFAULT_FIRM_ID,
+    userId: user._id,
+    actionType: 'FORGOT_PASSWORD_RESET_SUCCESS',
+    description: 'Password reset completed via OTP flow',
+    performedBy: user.xID || DEFAULT_XID,
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  }, req);
+
+  return res.json({ success: true, message: 'Password reset successful' });
 };
 
 /**
@@ -4057,11 +4263,17 @@ module.exports = {
   resendSetup: wrapWriteHandler(resendSetup),
   resendCredentials: wrapWriteHandler(resendCredentials),
   resendLoginOtp: wrapWriteHandler(resendLoginOtp),
+  loginInit: wrapWriteHandler(loginInit),
+  loginVerify: wrapWriteHandler(loginVerify),
+  loginResend: wrapWriteHandler(loginResend),
   resetPasswordWithToken: wrapWriteHandler(resetPasswordWithToken),
   // resendSetupEmail - REMOVED: Deprecated in PR #48, use admin.controller.resendInviteEmail instead
   updateUserStatus: wrapWriteHandler(updateUserStatus),
   unlockAccount: wrapWriteHandler(unlockAccount),
   forgotPassword: wrapWriteHandler(forgotPassword),
+  forgotPasswordInit: wrapWriteHandler(forgotPasswordInit),
+  forgotPasswordVerify: wrapWriteHandler(forgotPasswordVerify),
+  forgotPasswordResetWithOtp: wrapWriteHandler(forgotPasswordResetWithOtp),
   getAllUsers,
   refreshAccessToken: wrapWriteHandler(refreshAccessToken), // NEW: JWT token refresh
   verifyTotp: wrapWriteHandler(verifyTotp),

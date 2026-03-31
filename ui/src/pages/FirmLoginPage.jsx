@@ -127,7 +127,7 @@ export const FirmLoginPage = () => {
 
     setLoading(true);
     try {
-      const response = await api.post(`/${firmSlug}/login`, { xid: normalizedXid, password });
+      const response = await api.post('/auth/login/init', { firmSlug, xid: normalizedXid, password });
       if (response?.data?.otpRequired && response?.data?.loginToken) {
         setLoginToken(response.data.loginToken);
         setOtpHint(response?.data?.otpDeliveryHint || 'A verification code was sent to your email.');
@@ -159,7 +159,7 @@ export const FirmLoginPage = () => {
 
     setLoading(true);
     try {
-      const response = await api.post(`/${firmSlug}/verify-otp`, { loginToken, otp: otp.trim() });
+      const response = await api.post('/auth/login/verify', { firmSlug, loginToken, otp: otp.trim() });
       await completeLogin(response.data);
     } catch (err) {
       const status = err?.response?.status;
@@ -177,8 +177,7 @@ export const FirmLoginPage = () => {
     setError('');
     setLoading(true);
     try {
-      const normalizedXid = xid.trim().toUpperCase();
-      const response = await api.post(`/${firmSlug}/resend-otp`, { xid: normalizedXid });
+      const response = await api.post('/auth/login/resend', { firmSlug, loginToken });
       setOtpHint(response?.data?.message || 'If the account exists, a new OTP has been sent.');
       setOtp('');
       setCooldown(30);
@@ -239,7 +238,7 @@ export const FirmLoginPage = () => {
               pattern="[0-9]*"
             />
             {otpHint && <p className="text-xs text-gray-500">{otpHint}</p>}
-            <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading}>{loading ? 'Verifying...' : 'Sign in'}</Button>
+            <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading}>{loading ? 'Verifying...' : 'Verify OTP'}</Button>
             <Button type="button" variant="secondary" fullWidth disabled={loading || cooldown > 0} onClick={handleResendOtp}>
               {cooldown > 0 ? `Resend OTP in ${cooldown}s` : 'Resend OTP'}
             </Button>
