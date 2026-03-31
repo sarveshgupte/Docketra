@@ -10,6 +10,7 @@ import { Input } from '../components/common/Input';
 import { Card } from '../components/common/Card';
 import { authService } from '../services/authService';
 import { STRONG_PASSWORD_MESSAGE, validateStrongPassword } from '../utils/validators';
+import { spacingClasses } from '../theme/tokens';
 import './ChangePasswordPage.css';
 
 export const ChangePasswordPage = () => {
@@ -94,7 +95,7 @@ export const ChangePasswordPage = () => {
           <p className="text-secondary">You must change your password to continue</p>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className={spacingClasses.formFieldSpacing}>
           <Input
             label="Current Password"
             type="password"

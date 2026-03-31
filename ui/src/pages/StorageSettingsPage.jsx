@@ -3,6 +3,7 @@ import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
+import { Select } from '../components/common/Select';
 import { ToastContext } from '../contexts/ToastContext';
 import {
   changeStorageProvider,
@@ -136,15 +137,17 @@ export function StorageSettingsPage() {
                 <p className="text-sm text-gray-500">Default is Docketra managed storage. BYOS changes require OTP verification.</p>
               </div>
 
-              <div className="space-y-5">
-                <label className="block">
-                  <span className="text-sm text-gray-600">Provider</span>
-                  <select className="mt-1 w-full border rounded-md px-3 py-2" value={provider} onChange={(event) => setProvider(event.target.value)}>
-                    <option value="docketra_managed">Default (Docketra Storage)</option>
-                    <option value="google-drive">Google Drive</option>
-                    <option value="s3">AWS S3 (future)</option>
-                  </select>
-                </label>
+              <div className={spacingClasses.formFieldSpacing}>
+                <Select
+                  label="Provider"
+                  value={provider}
+                  onChange={(event) => setProvider(event.target.value)}
+                  options={[
+                    { value: 'docketra_managed', label: 'Default (Docketra Storage)' },
+                    { value: 'google-drive', label: 'Google Drive' },
+                    { value: 's3', label: 'AWS S3 (future)' },
+                  ]}
+                />
                 <Input label="Status" value={connected ? 'Active' : 'Not Connected'} readOnly />
                 <Input label="Connected email" value={config?.connectedEmail || 'N/A'} readOnly />
                 <Input label="Folder path" value={config?.folderPath || config?.rootFolderId || 'N/A'} readOnly />
@@ -157,24 +160,24 @@ export function StorageSettingsPage() {
                     placeholder="Paste encrypted-source refresh token"
                   />
                 ) : null}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                <div className={`grid grid-cols-1 md:grid-cols-3 ${spacingClasses.formActionsGap} items-end`}>
                   <Input label="OTP Code" value={otpCode} onChange={(event) => setOtpCode(event.target.value)} />
-                  <Button type="button" variant="secondary" onClick={requestOtp}>Send OTP</Button>
-                  <Button type="button" variant="secondary" onClick={verifyOtp}>Verify OTP</Button>
+                  <Button type="button" variant="outline" onClick={requestOtp}>Send OTP</Button>
+                  <Button type="button" variant="outline" onClick={verifyOtp}>Verify OTP</Button>
                 </div>
               </div>
 
-              <div className="mt-6 pt-5 border-t border-gray-200 flex justify-end gap-3">
+              <div className={`${spacingClasses.formActions} ${spacingClasses.formActionsGap}`}>
                 {!connected ? (
-                  <Button type="button" variant="primary" onClick={onConnectGoogleDrive}>
+                  <Button type="button" variant="primary" onClick={onConnectGoogleDrive} disabled={testing}>
                     Connect Google Drive
                   </Button>
                 ) : (
                   <>
-                    <Button type="button" variant="secondary" onClick={onTestConnection} disabled={testing}>
-                      {testing ? 'Testing...' : 'Test Connection'}
+                    <Button type="button" variant="outline" onClick={onTestConnection} disabled={testing} loading={testing}>
+                      {testing ? 'Testing' : 'Test Connection'}
                     </Button>
-                    <Button type="button" variant="primary" onClick={onSaveStorageSettings} disabled={!verificationToken}>
+                    <Button type="button" variant="primary" onClick={onSaveStorageSettings} disabled={!verificationToken || testing}>
                       Save Provider
                     </Button>
                   </>

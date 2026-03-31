@@ -6,6 +6,7 @@ import { Button } from '../components/common/Button';
 import api from '../services/api';
 import { authService } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
+import { spacingClasses } from '../theme/tokens';
 
 export const OtpVerificationPage = () => {
   const navigate = useNavigate();
@@ -51,7 +52,7 @@ export const OtpVerificationPage = () => {
         <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">Verify OTP</h1>
         <p className="mt-2 text-sm text-gray-500 text-center">Enter the 6-digit code sent to {email || 'your email'}.</p>
 
-        <form onSubmit={onSubmit} className="mt-6 space-y-4" noValidate>
+        <form onSubmit={onSubmit} className={`mt-6 ${spacingClasses.formFieldSpacing}`} noValidate>
           <Input
             label="OTP"
             type="text"
