@@ -34,7 +34,7 @@ export const Input = forwardRef(({
 
   if (readOnly && value !== undefined) {
     return (
-      <div className={`form-group ${className}`}>
+      <div className={`w-full ${className}`}>
         <FormLabel htmlFor={inputId} label={label} required={required} />
         <div className="flex items-center gap-2 py-2 text-sm text-gray-600 leading-relaxed" id={inputId} aria-readonly="true">
           <span>{value || '-'}</span>
@@ -50,9 +50,9 @@ export const Input = forwardRef(({
   }
 
   return (
-    <div className={`form-group ${className}`}>
+    <div className={`w-full ${className}`}>
       <FormLabel htmlFor={inputId} label={label} required={required} />
-      <div className={`input-wrapper ${isPasswordType ? 'input-wrapper--password' : ''}`}>
+      <div className={`w-full relative ${isPasswordType ? 'input-wrapper--password' : ''}`}>
         <input
           ref={ref}
           id={inputId}
