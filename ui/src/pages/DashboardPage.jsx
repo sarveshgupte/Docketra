@@ -30,8 +30,8 @@ import { metricsService } from '../services/metricsService';
 import { formatDate } from '../utils/formatters';
 import { getStatusLabel } from '../utils/statusDisplay';
 import { UX_COPY } from '../constants/uxCopy';
-import api from '../services/api';
 import { ROUTES, safeRoute } from '../constants/routes';
+import { caseApi } from '../api/case.api';
 
 const DASHBOARD_RECENT_CASES_ROW_COUNT = 5;
 const DASHBOARD_RECENT_CASES_MAX_ROWS = 10;
@@ -178,8 +178,8 @@ export const DashboardPage = () => {
           'Open case counts',
         ),
         fetchStatSafely(
-          () => api.get('/cases/my-pending'),
-          (pendingResponse) => (pendingResponse.data.success ? { myPendingCases: (pendingResponse.data.data || []).length } : {}),
+          () => caseApi.getMyPendingCases(),
+          (pendingResponse) => (pendingResponse.success ? { myPendingCases: (pendingResponse.data || []).length } : {}),
           'Failed to load pending cases:',
           'Pending case counts',
         ),
@@ -211,9 +211,9 @@ export const DashboardPage = () => {
           : Promise.resolve({}),
         isAdmin
           ? fetchStatSafely(
-            () => api.get('/admin/cases/filed'),
+            () => caseApi.getAdminFiledCases(),
             (filedResponse) => (
-              filedResponse.data.success ? { adminFiledCases: filedResponse.data.pagination?.total || 0 } : {}
+              filedResponse.success ? { adminFiledCases: filedResponse.pagination?.total || 0 } : {}
             ),
             'Failed to load filed cases:',
             'Filed cases',
