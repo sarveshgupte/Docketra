@@ -5,6 +5,7 @@ import { Input } from '../components/common/Input';
 import { Button } from '../components/common/Button';
 import { useAuth } from '../hooks/useAuth';
 import { userApi } from '../api/user.api';
+import { spacingClasses } from '../theme/tokens';
 
 export function CompleteProfilePage() {
   const navigate = useNavigate();
@@ -39,12 +40,12 @@ export function CompleteProfilePage() {
       <Card className="auth-card max-w-form">
         <h1 className="text-2xl font-semibold text-center text-gray-900">Complete your profile</h1>
         <p className="mt-2 text-sm text-gray-500 text-center">Finish onboarding before using your workspace.</p>
-        <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+        <form className={`mt-6 ${spacingClasses.formFieldSpacing}`} onSubmit={handleSubmit}>
           <Input label="Name" value={name} onChange={(event) => setName(event.target.value)} required />
           <Input label="Firm Name" value={firmName} onChange={(event) => setFirmName(event.target.value)} required />
           <Input label="Phone Number" value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} required />
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
-          <Button type="submit" variant="primary" fullWidth disabled={loading}>
+          <Button type="submit" variant="primary" fullWidth disabled={loading} loading={loading}>
             {loading ? 'Saving...' : 'Continue'}
           </Button>
         </form>

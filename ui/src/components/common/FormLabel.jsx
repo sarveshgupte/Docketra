@@ -1,4 +1,5 @@
 import React from 'react';
+import { formClasses } from '../../theme/tokens';
 
 export const FormLabel = ({ htmlFor, label, required = false, className = '' }) => {
   if (!label) return null;
@@ -6,7 +7,7 @@ export const FormLabel = ({ htmlFor, label, required = false, className = '' }) 
   return (
     <label
       htmlFor={htmlFor}
-      className={`mb-1 block text-sm font-medium text-gray-900 ${className}`.trim()}
+      className={`mb-1 ${formClasses.label} ${className}`.trim()}
     >
       {label}
       {required && (
@@ -17,4 +18,3 @@ export const FormLabel = ({ htmlFor, label, required = false, className = '' }) 
     </label>
   );
 };
-
