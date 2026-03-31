@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { caseService } from '../../services/caseService';
+import { caseApi } from '../../api/case.api';
 import { formatDateTime } from '../../utils/formatDateTime';
 import { buildCsv } from '../../utils/csv';
 import './AuditTimelineDrawer.css';
@@ -70,7 +70,7 @@ export const AuditTimelineDrawer = ({ isOpen, onClose, caseId, events }) => {
     const loadTimeline = async () => {
       setLoading(true);
       try {
-        const response = await caseService.getCaseById(caseId);
+        const response = await caseApi.getCaseById(caseId);
         if (!cancelled && response.success) {
           setResolvedEvents(normalizeEvents(response.data));
         }

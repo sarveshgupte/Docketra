@@ -7,7 +7,7 @@ import { Input } from '../components/common/Input';
 import { Select } from '../components/common/Select';
 import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
-import { caseService } from '../services/caseService';
+import { caseApi } from '../api/case.api';
 import { getFirmConfig, setFirmConfig } from '../utils/firmConfig';
 import { formatDateTime } from '../utils/formatDateTime';
 
@@ -26,7 +26,7 @@ export const FirmSettingsPage = () => {
   useEffect(() => {
     const loadActivity = async () => {
       try {
-        const response = await caseService.getCases();
+        const response = await caseApi.getCases();
         const records = response?.data || [];
         const mockActivity = records
           .flatMap((record) => {
