@@ -97,7 +97,7 @@ export const FirmSettingsPage = () => {
               <h2 className="text-lg font-medium text-gray-900">Operational Configuration</h2>
               <p className="text-sm text-gray-500">Set the default thresholds that guide case routing, SLAs, and escalation timing.</p>
             </div>
-            <Card className="p-6 lg:col-span-2 lg:max-w-4xl">
+            <Card className="lg:col-span-2 lg:max-w-4xl">
               <div className="space-y-5">
                 <Input
                   label="SLA default days"
@@ -132,7 +132,7 @@ export const FirmSettingsPage = () => {
               <h2 className="text-lg font-medium text-gray-900">View &amp; Action Controls</h2>
               <p className="text-sm text-gray-500">Enable or hide operational views and bulk actions for firm users.</p>
             </div>
-            <Card className="p-6 lg:col-span-2 lg:max-w-4xl">
+            <Card className="lg:col-span-2 lg:max-w-4xl">
               <div className="space-y-5">
                 <Select
                   label="Performance View"
@@ -170,7 +170,7 @@ export const FirmSettingsPage = () => {
             </Card>
           </section>
 
-          <Card className="max-w-4xl p-6">
+          <Card className="max-w-4xl">
             <div className="space-y-5">
               <div>
                 <h2 className="text-lg font-medium text-gray-900 mb-4">Recent User Activity</h2>
