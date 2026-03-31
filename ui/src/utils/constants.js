@@ -37,23 +37,10 @@ const normalizeApiBaseUrl = (value) => {
 
 const defaultApiBaseUrl = '/api';
 
-// Runtime validation with environment-aware behavior.
+// Runtime validation with fallback behavior.
 if (!rawApiBaseUrl || rawApiBaseUrl.trim() === '') {
-  if (isProduction) {
-    const errorMessage = `❌ DEPLOYMENT ERROR: VITE_API_BASE_URL environment variable is not defined or empty.
-
-This is a deployment misconfiguration.
-
-ACTION REQUIRED:
-1. Set VITE_API_BASE_URL in your deployment platform (e.g., Render)
-2. Rebuild and redeploy the application
-
-Example: VITE_API_BASE_URL=https://api.example.com/api`;
-    console.error(errorMessage);
-    throw new Error('VITE_API_BASE_URL is not defined or empty. Check console for details.');
-  }
-
-  const warningMessage = `⚠️ VITE_API_BASE_URL is not defined or empty.
+  const warningPrefix = isProduction ? '⚠️ DEPLOYMENT WARNING' : '⚠️ DEVELOPMENT WARNING';
+  const warningMessage = `${warningPrefix}: VITE_API_BASE_URL is not defined or empty.
 Falling back to same-origin API path: ${defaultApiBaseUrl}
 
 If your API is hosted on another domain, set:
