@@ -5,14 +5,13 @@
  */
 
 import React from 'react';
-import { Outlet, useLocation, useParams } from 'react-router-dom';
+import { Outlet, useParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { PageWrapper } from '../layout/PageWrapper';
 import { RouteLoadingShell } from './RouteLoadingShell';
 
 export const FirmLayout = () => {
   const { firmSlug } = useParams();
-  const location = useLocation();
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -36,7 +35,7 @@ export const FirmLayout = () => {
   return (
     <div className="min-h-screen bg-white text-gray-900">
       <main className="flex w-full flex-1 px-6 lg:px-8">
-        <PageWrapper key={location.pathname}>
+        <PageWrapper>
           <Outlet />
         </PageWrapper>
       </main>
