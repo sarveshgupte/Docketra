@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Input } from '../../components/common/Input';
 import api from '../../services/api';
+import Container from '../../components/layout/Container';
 import { STRONG_PASSWORD_MESSAGE, validateStrongPassword } from '../../utils/validators';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -157,9 +158,10 @@ export default function Signup() {
 
   if (signupSuccessData) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-8">
-        <div className="w-full max-w-md">
-          <div className="bg-white rounded-2xl shadow-sm p-6">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Container>
+          <div className="w-full max-w-md mx-auto">
+            <div className="bg-white rounded-2xl shadow-sm p-6 w-full">
             <h1 className="text-xl font-semibold text-center">🎉 Workspace created successfully</h1>
             <div className="mt-4 rounded-md border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700 space-y-2">
               <p><span className="font-medium">Firm URL:</span> {`https://app.com/${signupSuccessData.firmSlug}`}</p>
@@ -172,16 +174,18 @@ export default function Signup() {
             >
               Go to Login
             </button>
+            </div>
           </div>
-        </div>
+        </Container>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-sm p-6">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <Container>
+        <div className="w-full max-w-md mx-auto">
+          <div className="bg-white rounded-2xl shadow-sm p-6 w-full">
           <h1 className="text-xl font-semibold text-center">Create your workspace</h1>
           <p className="mt-2 text-sm text-gray-500 text-center">Step {step} of 2</p>
           <p className="mt-2 text-sm text-gray-500 text-center">{step === 1 ? 'Takes less than 1 minute' : 'Enter the 6-digit code sent to your email'}</p>
@@ -259,8 +263,9 @@ export default function Signup() {
           <p className="mt-4 text-center text-[12px] text-gray-500 sm:text-[13px]">
             By signing up, you agree to our <Link to="/terms" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-700">Terms &amp; Conditions</Link> and <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-700">Privacy Policy</Link>.
           </p>
+          </div>
         </div>
-      </div>
+      </Container>
     </div>
   );
 }
