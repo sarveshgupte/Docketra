@@ -19,6 +19,11 @@ import { STORAGE_KEYS } from '../utils/constants';
 import { isSuperAdmin } from '../utils/authUtils';
 
 export const AuthContext = createContext(null);
+export const AUTH_STATES = {
+  UNAUTHENTICATED: 'unauthenticated',
+  AUTHENTICATED: 'authenticated',
+  ONBOARDING_REQUIRED: 'onboarding_required',
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -192,6 +197,24 @@ export const AuthProvider = ({ children }) => {
     }
   }, [resetAuthState]);
 
+  const signup = useCallback(async ({ name, email, password, firmName, phone }) => {
+    return authService.signup({
+      name,
+      email,
+      password,
+      firmName,
+      phone,
+    });
+  }, []);
+
+  const verifySignup = useCallback(async ({ email, otp }) => {
+    return authService.verifySignup({ email, otp });
+  }, []);
+
+  const resendSignupOtp = useCallback(async (email) => {
+    return authService.resendSignupOtp(email);
+  }, []);
+
   const logout = useCallback(async ({ preserveFirmSlug = false } = {}) => {
     let firmSlugToPreserve = null;
     if (preserveFirmSlug) {
@@ -235,6 +258,31 @@ export const AuthProvider = ({ children }) => {
     });
   }, []);
 
+  const resolveAuthState = useCallback((candidateUser, candidateIsAuthenticated) => {
+    if (!candidateIsAuthenticated || !candidateUser) {
+      return AUTH_STATES.UNAUTHENTICATED;
+    }
+
+    if (isSuperAdmin(candidateUser)) {
+      return AUTH_STATES.AUTHENTICATED;
+    }
+
+    if (!candidateUser?.firmSlug) {
+      return AUTH_STATES.ONBOARDING_REQUIRED;
+    }
+
+    return AUTH_STATES.AUTHENTICATED;
+  }, []);
+
+  const authState = resolveAuthState(user, isAuthenticated);
+
+  const resolvePostAuthRoute = useCallback((candidateUser = user) => {
+    if (!candidateUser) return '/superadmin';
+    if (isSuperAdmin(candidateUser)) return '/app/superadmin';
+    if (!candidateUser?.firmSlug) return '/complete-profile';
+    return `/app/firm/${candidateUser.firmSlug}/dashboard`;
+  }, [user]);
+
   const isAuthResolved = !loading && !isHydrating;
 
   const value = useMemo(() => ({
@@ -243,22 +291,32 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     isHydrating,
     isAuthResolved,
+    authState,
     login,
+    signup,
+    verifySignup,
+    resendSignupOtp,
     logout,
     fetchProfile,
     updateUser,
     setAuthFromProfile,
+    resolvePostAuthRoute,
   }), [
     user,
     loading,
     isAuthenticated,
     isHydrating,
     isAuthResolved,
+    authState,
     login,
+    signup,
+    verifySignup,
+    resendSignupOtp,
     logout,
     fetchProfile,
     updateUser,
     setAuthFromProfile,
+    resolvePostAuthRoute,
   ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

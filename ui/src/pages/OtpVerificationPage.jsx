@@ -4,11 +4,13 @@ import { Card } from '../components/common/Card';
 import { Input } from '../components/common/Input';
 import { Button } from '../components/common/Button';
 import api from '../services/api';
-import { STORAGE_KEYS } from '../utils/constants';
+import { authService } from '../services/authService';
+import { useAuth } from '../hooks/useAuth';
 
 export const OtpVerificationPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { fetchProfile, resolvePostAuthRoute } = useAuth();
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -29,13 +31,13 @@ export const OtpVerificationPage = () => {
     try {
       const response = await api.post('/auth/verify-otp', { email, otp, purpose });
       const payload = response?.data || {};
-      if (payload?.accessToken) {
-        localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, payload.accessToken);
+      authService.setSessionTokens(payload);
+      const profileResult = await fetchProfile();
+      if (profileResult?.success) {
+        navigate(resolvePostAuthRoute(profileResult.data), { replace: true });
+      } else {
+        navigate('/superadmin', { replace: true });
       }
-      if (payload?.refreshToken) {
-        localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, payload.refreshToken);
-      }
-      navigate('/onboarding', { replace: true });
     } catch (submitError) {
       setError(submitError?.response?.data?.message || 'Invalid OTP. Please try again.');
     } finally {
