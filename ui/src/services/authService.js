@@ -5,6 +5,7 @@
 import api from './api';
 import { ERROR_CODES, STORAGE_KEYS } from '../utils/constants';
 import { isAccessTokenOnlyUser } from '../utils/authUtils';
+import { authApi } from '../api/auth.api';
 
 export const authService = {
   setSessionTokens: (payload = {}) => {
@@ -64,33 +65,32 @@ export const authService = {
    * Start signup flow (OTP send)
    */
   signup: async ({ name, email, password, firmName, phone }) => {
-    const response = await api.post('/auth/signup/init', {
+    const response = await authApi.signupInit({
       name,
       email,
       password,
       firmName,
       phone,
     });
-    return response.data;
+    return response;
   },
 
   /**
    * Verify signup OTP and create account
    */
   verifySignup: async ({ email, otp }) => {
-    const response = await api.post('/auth/signup/verify', {
+    const response = await authApi.signupVerify({
       email,
       otp,
     });
-    return response.data;
+    return response;
   },
 
   /**
    * Resend signup OTP
    */
   resendSignupOtp: async (email) => {
-    const response = await api.post('/auth/signup/resend', { email });
-    return response.data;
+    return authApi.signupResendOtp(email);
   },
 
   /**
