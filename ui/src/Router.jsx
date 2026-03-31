@@ -101,6 +101,22 @@ const LegacyFirmRedirect = () => {
   return <Navigate to={target} replace />;
 };
 
+
+const AppFirmRootRedirect = () => {
+  const { firmSlug } = useParams();
+  return <Navigate to={`/app/${firmSlug}/login`} replace />;
+};
+
+const LegacyFirmLoginRedirect = () => {
+  const { firmSlug } = useParams();
+  return <Navigate to={`/app/${firmSlug}/login`} replace />;
+};
+
+const LegacyFirmForgotRedirect = () => {
+  const { firmSlug } = useParams();
+  return <Navigate to={`/app/${firmSlug}/forgot-password`} replace />;
+};
+
 const LegacySlugRedirect = () => {
   const { firmSlug, '*': legacyPath = '' } = useParams();
   const location = useLocation();
@@ -137,8 +153,11 @@ export const Router = () => {
         <Route element={<RouteSuspenseOutlet />}>
           <Route path="/signup" element={<MarketingSignupPage />} />
           <Route path="/auth/otp" element={<OtpVerificationPage />} />
-          <Route path="/:firmSlug/login" element={<FirmLoginPage />} />
-          <Route path="/:firmSlug/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/app/:firmSlug/login" element={<FirmLoginPage />} />
+          <Route path="/app/:firmSlug" element={<AppFirmRootRedirect />} />
+          <Route path="/:firmSlug/login" element={<LegacyFirmLoginRedirect />} />
+          <Route path="/app/:firmSlug/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/:firmSlug/forgot-password" element={<LegacyFirmForgotRedirect />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/change-password" element={<ChangePasswordPage />} />

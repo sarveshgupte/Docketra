@@ -17,7 +17,7 @@ const router = applyRouteValidation(express.Router({ mergeParams: true }), route
 
 const tenantResolver = require('../middleware/tenantResolver');
 const { authBlockEnforcer, loginLimiter, publicLimiter } = require('../middleware/rateLimiters');
-const { login } = require('../controllers/auth.controller');
+const { login, verifyLoginOtp, resendLoginOtp } = require('../controllers/auth.controller');
 const { noFirmNoTransaction } = require('../middleware/noFirmNoTransaction.middleware');
 const { isActiveStatus } = require('../utils/status.utils');
 const setTenantLoginScope = (req, _res, next) => {
@@ -62,5 +62,7 @@ router.get('/login', publicLimiter, (req, res) => {
  * than the request body, giving a clean, slug-scoped login endpoint.
  */
 router.post('/login', loginLimiter, noFirmNoTransaction, setTenantLoginScope, login);
+router.post('/verify-otp', loginLimiter, noFirmNoTransaction, setTenantLoginScope, verifyLoginOtp);
+router.post('/resend-otp', loginLimiter, noFirmNoTransaction, setTenantLoginScope, resendLoginOtp);
 
 module.exports = router;
