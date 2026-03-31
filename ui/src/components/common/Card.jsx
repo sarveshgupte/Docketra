@@ -5,13 +5,14 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
+import { surfaceClasses } from '../../theme/tokens';
 
 export const Card = ({ children, className = '', onClick, interactive = false, animateOnMount = false, ...props }) => {
   const interactiveClass = interactive || onClick
     ? 'transition-colors duration-150 cursor-pointer hover:border-gray-300 hover:bg-gray-50'
     : '';
 
-  const cardClasses = `bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden p-6 ${interactiveClass} ${className}`;
+  const cardClasses = `${surfaceClasses.card} ${interactiveClass} ${className}`;
 
   if (animateOnMount) {
     return (
