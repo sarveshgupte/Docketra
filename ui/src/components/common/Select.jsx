@@ -27,7 +27,7 @@ export const Select = ({
   ].filter(Boolean).join(' ') || undefined;
 
   return (
-    <div className={`form-group ${className}`}>
+    <div className={`w-full ${className}`}>
       <FormLabel htmlFor={selectId} label={label} required={required} />
       <select 
         id={selectId}
@@ -46,7 +46,7 @@ export const Select = ({
         ))}
       </select>
       {error && <p className="mt-1 text-sm text-red-500" id={errorId}>{error}</p>}
-      {!error && helpText && <div className="form-help" id={helpId}>{helpText}</div>}
+      {!error && helpText && <p className="mt-1 text-xs text-gray-500" id={helpId}>{helpText}</p>}
     </div>
   );
 };
