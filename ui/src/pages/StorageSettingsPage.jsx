@@ -13,6 +13,7 @@ import {
   verifyStorageChangeOtp,
 } from '../services/storageService';
 import { useAuth } from '../hooks/useAuth';
+import { spacingClasses } from '../theme/tokens';
 
 const formatDate = (value) => (value ? new Date(value).toLocaleString() : 'N/A');
 
@@ -108,7 +109,7 @@ export function StorageSettingsPage() {
               <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Storage Settings</h1>
               <p className="text-sm text-gray-500">Configure and validate your external document storage integration.</p>
             </div>
-            <Card className="p-6">
+            <Card>
               <p className="text-sm text-gray-500">Loading storage settings...</p>
             </Card>
           </div>
@@ -128,8 +129,8 @@ export function StorageSettingsPage() {
             <p className="text-sm text-gray-500">Configure and validate your external document storage integration.</p>
           </div>
 
-          <Card className="p-6">
-            <div className="space-y-6">
+          <Card>
+            <div className={spacingClasses.sectionMargin}>
               <div>
                 <h2 className="text-lg font-medium text-gray-900 mb-4">Storage Provider</h2>
                 <p className="text-sm text-gray-500">Default is Docketra managed storage. BYOS changes require OTP verification.</p>

@@ -129,7 +129,7 @@ export const PlatformDashboard = () => {
           </div>
 
           {stats.totalFirms === 0 ? (
-            <Card className="p-6">
+            <Card>
               <EmptyState
                 title="No firms created yet"
                 description="Create your first firm to start onboarding clients, users, and operational dashboards."
@@ -140,7 +140,7 @@ export const PlatformDashboard = () => {
             </Card>
           ) : null}
 
-          <Card className="space-y-4 p-6">
+          <Card className="space-y-4">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold text-gray-900 tracking-tight">Firm Management</h2>
               <Badge>Platform Admin</Badge>

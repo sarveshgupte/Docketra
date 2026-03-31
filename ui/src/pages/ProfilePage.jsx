@@ -118,7 +118,7 @@ export const ProfilePage = () => {
               <h2 className="text-lg font-medium text-gray-900">Identity</h2>
               <p className="text-sm text-gray-500">These fields are managed by your organization and cannot be edited here.</p>
             </div>
-            <Card className="p-6 lg:col-span-2 lg:max-w-4xl">
+            <Card className="lg:col-span-2 lg:max-w-4xl">
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <Input label="Employee ID (xID)" value={profileData?.xID || ''} readOnly />
                 <Input label="Role" value={profileData?.role || ''} readOnly />
@@ -136,7 +136,7 @@ export const ProfilePage = () => {
               <h2 className="text-lg font-medium text-gray-900">Personal Information</h2>
               <p className="text-sm text-gray-500">Keep your contact details and masked identity information current.</p>
             </div>
-            <Card className="p-6 lg:col-span-2 lg:max-w-4xl">
+            <Card className="lg:col-span-2 lg:max-w-4xl">
               <form className="space-y-4" onSubmit={handleSave}>
 
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
