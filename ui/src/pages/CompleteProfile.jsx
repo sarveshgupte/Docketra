@@ -4,7 +4,7 @@ import { Card } from '../components/common/Card';
 import { Input } from '../components/common/Input';
 import { Button } from '../components/common/Button';
 import api from '../services/api';
-import { STORAGE_KEYS } from '../utils/constants';
+import { useAuth } from '../hooks/useAuth';
 
 const phonePattern = /^\d{10}$/;
 
@@ -17,6 +17,7 @@ const getErrorMessage = (error, fallback) => (
 
 export function CompleteProfile() {
   const navigate = useNavigate();
+  const { fetchProfile, resolvePostAuthRoute } = useAuth();
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -86,23 +87,18 @@ export function CompleteProfile() {
     setSubmitting(true);
 
     try {
-      const response = await api.post('/user/complete-profile', {
+      await api.post('/user/complete-profile', {
         name: form.name.trim(),
         firmName: trimmedFirmName,
         phone: normalizedPhone,
       });
 
-      const accessToken = response?.data?.data?.accessToken;
-      const firmSlug = response?.data?.firmSlug || response?.data?.data?.firmSlug;
-      if (accessToken) {
-        localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
+      const profileResult = await fetchProfile();
+      if (profileResult?.success) {
+        navigate(resolvePostAuthRoute(profileResult.data), { replace: true });
+      } else {
+        navigate('/superadmin', { replace: true });
       }
-      if (firmSlug) {
-        localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, firmSlug);
-        navigate(`/${firmSlug}/dashboard`, { replace: true });
-        return;
-      }
-      navigate('/dashboard', { replace: true });
     } catch (submitError) {
       setError(getErrorMessage(submitError, 'Failed to complete workspace setup.'));
     } finally {
