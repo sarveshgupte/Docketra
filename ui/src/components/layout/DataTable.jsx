@@ -1,5 +1,7 @@
 import React from 'react';
 import { SortableTableHeader } from '../ui/SortableTableHeader';
+import { EmptyState } from './EmptyState';
+import { Loading } from '../common/Loading';
 
 const joinClasses = (...classes) => classes.filter(Boolean).join(' ');
 
@@ -16,9 +18,23 @@ export const DataTable = React.memo(({
   onResetFilters,
   toolbarLeft,
   toolbarRight,
+  loading = false,
+  loadingMessage = 'Loading data...',
+  emptyTitle = 'No records found',
+  emptyDescription = 'Try adjusting filters or create a new record.',
 }) => {
+  if (loading) {
+    return <Loading message={loadingMessage} />;
+  }
+
   if (!data.length) {
-    return <>{emptyContent}</>;
+    return emptyContent || (
+      <EmptyState
+        title={emptyTitle}
+        description={emptyDescription}
+        icon
+      />
+    );
   }
 
   const isInteractive = typeof onRowClick === 'function';

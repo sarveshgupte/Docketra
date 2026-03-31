@@ -16,6 +16,14 @@ const api = axios.create({
 });
 
 let redirecting = false;
+const markErrorToasted = (error, message) => {
+  if (!error) return;
+  error.uiFeedback = {
+    ...(error.uiFeedback || {}),
+    toasted: true,
+    message,
+  };
+};
 const REDIRECT_TIMEOUT_MS = 5000;
 const INITIAL_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 4000;
@@ -140,6 +148,12 @@ api.interceptors.response.use(
         await delay(backoffMs);
         return api(originalRequest);
       }
+      const message = 'Network error. Please check your connection and retry.';
+      sessionStorage.setItem(SESSION_KEYS.GLOBAL_TOAST, JSON.stringify({
+        message,
+        type: 'danger'
+      }));
+      markErrorToasted(error, message);
       return Promise.reject(error);
     }
     
@@ -220,10 +234,12 @@ api.interceptors.response.use(
     }
 
     if (status >= 500) {
+      const message = 'A server error occurred. Please try again shortly.';
       sessionStorage.setItem(SESSION_KEYS.GLOBAL_TOAST, JSON.stringify({
-        message: 'A server error occurred. Please try again shortly.',
+        message,
         type: 'danger'
       }));
+      markErrorToasted(error, message);
     }
     
     return Promise.reject(error);
