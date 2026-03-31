@@ -3,7 +3,7 @@ import { Link, Outlet } from 'react-router-dom';
 import Navbar from '../layout/Navbar';
 import Container from '../layout/Container';
 
-export const SharedLayout = ({ children }) => {
+export const AppLayout = ({ children }) => {
   const content = children ?? <Outlet />;
 
   return (
