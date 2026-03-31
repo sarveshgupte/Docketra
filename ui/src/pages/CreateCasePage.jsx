@@ -21,6 +21,7 @@ import { getFirmConfig } from '../utils/firmConfig';
 import { formatClientDisplay } from '../utils/formatters';
 import { formatDateTime } from '../utils/formatDateTime';
 import { UX_COPY } from '../constants/uxCopy';
+import { resolveUiError } from '../utils/uiFeedback';
 import './CreateCasePage.css';
 
 /** Returns a simple completion fraction for a section given field names and formData. */
@@ -47,7 +48,8 @@ export const CreateCasePage = () => {
   const { firmSlug } = useParams();
   const { user } = useAuth();
   const isAdmin = ['ADMIN', 'Admin'].includes(user?.role);
-  const { showSuccess } = useToast();
+  const toast = useToast();
+  const { showSuccess } = toast;
   const { loading: submitting, error: submitError, run: runSubmit, clearError } = useAsyncAction();
   
   const [formData, setFormData] = useState({
@@ -63,6 +65,7 @@ export const CreateCasePage = () => {
   const [clients, setClients] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [loadingClients, setLoadingClients] = useState(true);
+  const [loadingDependencies, setLoadingDependencies] = useState(false);
   const [duplicateWarning, setDuplicateWarning] = useState(null);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
@@ -78,23 +81,31 @@ export const CreateCasePage = () => {
   // Fetch categories for dropdown
   useEffect(() => {
     const fetchCategories = async () => {
+      setLoadingDependencies(true);
       try {
         const response = await categoryService.getCategories(true); // Get only active categories
         if (response.success) {
           setCategories(response.data || []);
         }
       } catch (err) {
-        console.error('Error fetching categories:', err);
+        resolveUiError(err, {
+          fallbackMessage: 'Failed to load categories.',
+          toast,
+          toastOnError: true,
+          inline: false,
+        });
       } finally {
         setLoadingCategories(false);
+        setLoadingDependencies(false);
       }
     };
     fetchCategories();
-  }, []);
+  }, [toast]);
 
   // Fetch clients for dropdown
   useEffect(() => {
     const fetchClients = async () => {
+      setLoadingDependencies(true);
       try {
         // Use forCreateCase=true to always get Default Client (C000001) + active clients
         const response = await clientApi.getClients(false, true);
@@ -112,15 +123,21 @@ export const CreateCasePage = () => {
           }
         }
       } catch (err) {
-        console.error('Error fetching clients:', err);
+        resolveUiError(err, {
+          fallbackMessage: 'Failed to load clients.',
+          toast,
+          toastOnError: true,
+          inline: false,
+        });
       } finally {
         setLoadingClients(false);
+        setLoadingDependencies(false);
       }
     };
     fetchClients();
     // Only run once on mount - formData.clientId is intentionally not in deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [toast]);
   
   // Update subcategories when category changes
   useEffect(() => {
@@ -288,7 +305,12 @@ export const CreateCasePage = () => {
 
     try {
       const payload = isAdmin ? formData : { ...formData, slaDueDate: undefined };
-      const response = await runSubmit(() => caseApi.createCase(payload, forceCreate));
+      const response = await runSubmit(() => caseApi.createCase(payload, forceCreate), {
+        toast,
+        toastOnError: true,
+        inline: false,
+        fallbackMessage: 'Failed to create docket. Please retry.',
+      });
       
       if (response.success) {
         const confirmationTime = formatDateTime(new Date());
@@ -325,7 +347,7 @@ export const CreateCasePage = () => {
         // Duplicate client warning
         setDuplicateWarning(err.response.data);
       } else {
-        setErrors(prev => ({ ...prev, submit: submitError || 'Failed to create docket. Please retry.' }));
+        setErrors(prev => ({ ...prev, submit: '' }));
       }
     }
   };
@@ -536,7 +558,11 @@ export const CreateCasePage = () => {
 
                 <div className="create-case__actions">
                   <div className="create-case__status" aria-live="polite">
-                    {footerConfirmation || 'Draft not saved yet'}
+                    {submitting
+                      ? 'Creating docket...'
+                      : loadingDependencies
+                        ? 'Loading required dropdown data...'
+                        : footerConfirmation || 'Draft not saved yet'}
                   </div>
                   <div className="create-case__actions-right">
                     <Button type="button" variant="outline" onClick={() => navigate(-1)}>
