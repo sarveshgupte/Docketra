@@ -21,6 +21,7 @@ export const APP_NAME = 'Docketra';
  * - No silent fallbacks - will fail fast with clear error message
  */
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+const isProduction = import.meta.env.PROD;
 
 const normalizeApiBaseUrl = (value) => {
   const trimmedValue = value.trim();
@@ -34,9 +35,12 @@ const normalizeApiBaseUrl = (value) => {
     : `${withoutTrailingSlashes}/api`;
 };
 
-// Runtime validation: Fail fast if API base URL is missing or empty
+const defaultApiBaseUrl = '/api';
+
+// Runtime validation with environment-aware behavior.
 if (!rawApiBaseUrl || rawApiBaseUrl.trim() === '') {
-  const errorMessage = `❌ DEPLOYMENT ERROR: VITE_API_BASE_URL environment variable is not defined or empty.
+  if (isProduction) {
+    const errorMessage = `❌ DEPLOYMENT ERROR: VITE_API_BASE_URL environment variable is not defined or empty.
 
 This is a deployment misconfiguration.
 
@@ -45,15 +49,19 @@ ACTION REQUIRED:
 2. Rebuild and redeploy the application
 
 Example: VITE_API_BASE_URL=https://api.example.com/api`;
-  
-  // Log to console for debugging
-  console.error(errorMessage);
-  
-  // Throw error to prevent silent failures
-  throw new Error('VITE_API_BASE_URL is not defined or empty. Check console for details.');
+    console.error(errorMessage);
+    throw new Error('VITE_API_BASE_URL is not defined or empty. Check console for details.');
+  }
+
+  const warningMessage = `⚠️ VITE_API_BASE_URL is not defined or empty.
+Falling back to same-origin API path: ${defaultApiBaseUrl}
+
+If your API is hosted on another domain, set:
+VITE_API_BASE_URL=https://api.example.com/api`;
+  console.warn(warningMessage);
 }
 
-export const API_BASE_URL = normalizeApiBaseUrl(rawApiBaseUrl);
+export const API_BASE_URL = normalizeApiBaseUrl(rawApiBaseUrl || defaultApiBaseUrl);
 
 console.info(`✓ Using API base URL: ${API_BASE_URL}`);
 
