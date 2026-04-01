@@ -78,6 +78,9 @@ export const CreateCasePage = () => {
   const AUTO_SAVE_DELAY_MS = 5000;
   const autoSaveTimerRef = useRef(null);
   const [draftSaved, setDraftSaved] = useState(false);
+  const [hasDraft, setHasDraft] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const titleInputRef = useRef(null);
 
   const fetchCategories = useCallback(async () => {
     setLoadingDependencies(true);
@@ -143,6 +146,23 @@ export const CreateCasePage = () => {
   useEffect(() => {
     fetchClients();
   }, [fetchClients]);
+
+  useEffect(() => {
+    if (!DRAFT_STORAGE_KEY || draftRestored) return;
+    try {
+      const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (!raw) return;
+      const parsedDraft = JSON.parse(raw);
+      if (!parsedDraft || typeof parsedDraft !== 'object') return;
+      const hasMeaningfulContent = Boolean(parsedDraft.title || parsedDraft.description || parsedDraft.categoryId);
+      if (!hasMeaningfulContent) return;
+      setHasDraft(true);
+    } catch {
+      // ignore invalid draft payload
+    } finally {
+      setDraftRestored(true);
+    }
+  }, [DRAFT_STORAGE_KEY, draftRestored]);
   
   // Update subcategories when category changes
   useEffect(() => {
@@ -152,15 +172,25 @@ export const CreateCasePage = () => {
         // Filter only active subcategories
         const activeSubs = (selectedCategory.subcategories || []).filter(sub => sub.isActive);
         setSubcategories(activeSubs);
+        if (activeSubs.length === 1) {
+          setFormData((prev) => ({ ...prev, subcategoryId: activeSubs[0].id }));
+        }
       } else {
         setSubcategories([]);
       }
       // Reset subcategory when category changes
-      setFormData(prev => ({ ...prev, subcategoryId: '' }));
+      if (!selectedCategory || (selectedCategory.subcategories || []).filter(sub => sub.isActive).length !== 1) {
+        setFormData(prev => ({ ...prev, subcategoryId: '' }));
+      }
     } else {
       setSubcategories([]);
     }
   }, [formData.categoryId, categories]);
+
+  useEffect(() => {
+    if (loadingDependencies || loadingCategories || loadingClients || successMessage) return;
+    titleInputRef.current?.focus();
+  }, [loadingDependencies, loadingCategories, loadingClients, successMessage]);
 
   // Task 7: Auto-save draft to localStorage after 5s of inactivity (only when authenticated)
   useEffect(() => {
@@ -331,7 +361,7 @@ export const CreateCasePage = () => {
         });
         // Reset form for creating another case
         setFormData({
-          clientId: clients.length > 0 ? clients[0].clientId : '',
+          clientId: clients.find((client) => client.clientId === 'C000001')?.clientId || (clients.length > 0 ? clients[0].clientId : ''),
           categoryId: '',
           subcategoryId: '',
           title: '',
@@ -346,6 +376,7 @@ export const CreateCasePage = () => {
           try { localStorage.removeItem(DRAFT_STORAGE_KEY); } catch { /* ignore */ }
         }
         setDraftSaved(false);
+        setHasDraft(false);
       }
     } catch (err) {
       if (err.response?.status === 409) {
@@ -373,6 +404,28 @@ export const CreateCasePage = () => {
     fetchClients();
   };
 
+  const restoreDraft = () => {
+    if (!DRAFT_STORAGE_KEY) return;
+    try {
+      const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (!raw) return;
+      const parsedDraft = JSON.parse(raw);
+      if (!parsedDraft || typeof parsedDraft !== 'object') return;
+      setFormData((prev) => ({ ...prev, ...parsedDraft }));
+      setHasDraft(false);
+      setFooterConfirmation('Draft restored. Review fields and submit when ready.');
+    } catch {
+      setHasDraft(false);
+    }
+  };
+
+  const discardDraft = () => {
+    if (!DRAFT_STORAGE_KEY) return;
+    try { localStorage.removeItem(DRAFT_STORAGE_KEY); } catch { /* ignore */ }
+    setHasDraft(false);
+    setFooterConfirmation('Saved draft removed. Starting with fresh defaults.');
+  };
+
   // Computed section completion state
   const sec1 = useMemo(() => sectionCompletion(['clientId'], formData), [formData]);
   const sec2 = useMemo(() => sectionCompletion(['categoryId', 'subcategoryId', 'title', 'description'], formData), [formData]);
@@ -393,6 +446,7 @@ export const CreateCasePage = () => {
         <div className="create-case__header">
           <h1>Create Docket</h1>
           <p className="text-secondary">All fields marked with * are required</p>
+          <p className="text-secondary">Tip: use Tab to move quickly across fields, and press Ctrl/Cmd + Enter in Description to submit.</p>
           {/* Task 7: Draft auto-save indicator */}
           {draftSaved && (
             <span className="create-case__draft-saved" role="status" aria-live="polite">
@@ -400,6 +454,19 @@ export const CreateCasePage = () => {
             </span>
           )}
         </div>
+
+        {hasDraft ? (
+          <Card className="mb-4">
+            <div className="neo-alert neo-alert--warning">
+              <h3>Resume where you left off?</h3>
+              <p className="mt-sm">We found an unsent draft for this form.</p>
+              <div className="mt-md" style={{ display: 'flex', gap: 'var(--spacing-sm)', flexWrap: 'wrap' }}>
+                <Button type="button" variant="primary" onClick={restoreDraft}>Restore draft</Button>
+                <Button type="button" variant="outline" onClick={discardDraft}>Start fresh</Button>
+              </div>
+            </div>
+          </Card>
+        ) : null}
 
         {/* Success Message */}
         {successMessage && (
@@ -502,6 +569,7 @@ export const CreateCasePage = () => {
                     required
                     disabled={loadingClients || blockingDependencyIssue || hasNoClients}
                     error={touched.clientId && errors.clientId}
+                    helpText="Default client is preselected when available to reduce setup time."
                   />
                 </SectionCard>
 
@@ -537,6 +605,7 @@ export const CreateCasePage = () => {
                     required
                     disabled={!formData.categoryId || subcategories.length === 0}
                     error={touched.subcategoryId && errors.subcategoryId}
+                    helpText={!formData.categoryId ? 'Pick a category first.' : subcategories.length === 0 ? 'No active subcategories available for this category yet.' : undefined}
                   />
 
                   <Input
@@ -548,6 +617,8 @@ export const CreateCasePage = () => {
                     placeholder="Enter docket title"
                     required
                     error={touched.title && errors.title}
+                    ref={titleInputRef}
+                    helpText="Use a short, descriptive title (e.g., GST filing delay Q2)."
                   />
 
                   <Textarea
@@ -560,6 +631,13 @@ export const CreateCasePage = () => {
                     rows={6}
                     required
                     error={touched.description && errors.description}
+                    helpText="Add context, key dates, and expected next action."
+                    onKeyDown={(event) => {
+                      if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+                        event.preventDefault();
+                        event.currentTarget.form?.requestSubmit();
+                      }
+                    }}
                   />
                 </SectionCard>
 
