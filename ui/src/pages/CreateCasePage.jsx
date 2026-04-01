@@ -2,7 +2,7 @@
  * Create Docket Page
  */
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
@@ -66,6 +66,7 @@ export const CreateCasePage = () => {
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [loadingClients, setLoadingClients] = useState(true);
   const [loadingDependencies, setLoadingDependencies] = useState(false);
+  const [dependencyErrors, setDependencyErrors] = useState({ categories: '', clients: '' });
   const [duplicateWarning, setDuplicateWarning] = useState(null);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
@@ -78,66 +79,70 @@ export const CreateCasePage = () => {
   const autoSaveTimerRef = useRef(null);
   const [draftSaved, setDraftSaved] = useState(false);
 
+  const fetchCategories = useCallback(async () => {
+    setLoadingDependencies(true);
+    setDependencyErrors((current) => ({ ...current, categories: '' }));
+    try {
+      const response = await categoryService.getCategories(true); // Get only active categories
+      if (response.success) {
+        setCategories(response.data || []);
+      }
+    } catch (err) {
+      setDependencyErrors((current) => ({ ...current, categories: 'Could not load categories.' }));
+      resolveUiError(err, {
+        fallbackMessage: 'Failed to load categories.',
+        toast,
+        toastOnError: true,
+        inline: false,
+      });
+    } finally {
+      setLoadingCategories(false);
+      setLoadingDependencies(false);
+    }
+  }, [toast]);
+
+  const fetchClients = useCallback(async () => {
+    setLoadingDependencies(true);
+    setDependencyErrors((current) => ({ ...current, clients: '' }));
+    try {
+      // Use forCreateCase=true to always get Default Client (C000001) + active clients
+      const response = await clientApi.getClients(false, true);
+      if (response.success) {
+        const clientList = response.data || [];
+        setClients(clientList);
+        
+        // Always default to C000001 (Default Client) if available
+        const defaultClient = clientList.find(c => c.clientId === 'C000001');
+        setFormData((prev) => {
+          if (prev.clientId) return prev;
+          if (defaultClient) return { ...prev, clientId: 'C000001' };
+          if (clientList.length > 0) return { ...prev, clientId: clientList[0].clientId };
+          return prev;
+        });
+      }
+    } catch (err) {
+      setDependencyErrors((current) => ({ ...current, clients: 'Could not load clients.' }));
+      resolveUiError(err, {
+        fallbackMessage: 'Failed to load clients.',
+        toast,
+        toastOnError: true,
+        inline: false,
+      });
+    } finally {
+      setLoadingClients(false);
+      setLoadingDependencies(false);
+    }
+  }, [toast]);
+
   // Fetch categories for dropdown
   useEffect(() => {
-    const fetchCategories = async () => {
-      setLoadingDependencies(true);
-      try {
-        const response = await categoryService.getCategories(true); // Get only active categories
-        if (response.success) {
-          setCategories(response.data || []);
-        }
-      } catch (err) {
-        resolveUiError(err, {
-          fallbackMessage: 'Failed to load categories.',
-          toast,
-          toastOnError: true,
-          inline: false,
-        });
-      } finally {
-        setLoadingCategories(false);
-        setLoadingDependencies(false);
-      }
-    };
     fetchCategories();
-  }, [toast]);
+  }, [fetchCategories]);
 
   // Fetch clients for dropdown
   useEffect(() => {
-    const fetchClients = async () => {
-      setLoadingDependencies(true);
-      try {
-        // Use forCreateCase=true to always get Default Client (C000001) + active clients
-        const response = await clientApi.getClients(false, true);
-        if (response.success) {
-          const clientList = response.data || [];
-          setClients(clientList);
-          
-          // Always default to C000001 (Default Client) if available
-          const defaultClient = clientList.find(c => c.clientId === 'C000001');
-          if (defaultClient && formData.clientId === '') {
-            setFormData(prev => ({ ...prev, clientId: 'C000001' }));
-          } else if (clientList.length > 0 && formData.clientId === '') {
-            // Fallback to first client if Default Client not found (shouldn't happen)
-            setFormData(prev => ({ ...prev, clientId: clientList[0].clientId }));
-          }
-        }
-      } catch (err) {
-        resolveUiError(err, {
-          fallbackMessage: 'Failed to load clients.',
-          toast,
-          toastOnError: true,
-          inline: false,
-        });
-      } finally {
-        setLoadingClients(false);
-        setLoadingDependencies(false);
-      }
-    };
     fetchClients();
-    // Only run once on mount - formData.clientId is intentionally not in deps
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [toast]);
+  }, [fetchClients]);
   
   // Update subcategories when category changes
   useEffect(() => {
@@ -360,6 +365,14 @@ export const CreateCasePage = () => {
     setDuplicateWarning(null);
   };
 
+  const retryDependencies = () => {
+    setLoadingCategories(true);
+    setLoadingClients(true);
+    setDependencyErrors({ categories: '', clients: '' });
+    fetchCategories();
+    fetchClients();
+  };
+
   // Computed section completion state
   const sec1 = useMemo(() => sectionCompletion(['clientId'], formData), [formData]);
   const sec2 = useMemo(() => sectionCompletion(['categoryId', 'subcategoryId', 'title', 'description'], formData), [formData]);
@@ -370,6 +383,9 @@ export const CreateCasePage = () => {
   const selectedCategory = categories.find((c) => c._id === formData.categoryId);
   const selectedSubcategory = subcategories.find((s) => s.id === formData.subcategoryId);
   const allSectionsValid = sec1.complete && sec2.complete && sec3.complete;
+  const blockingDependencyIssue = Boolean(dependencyErrors.categories || dependencyErrors.clients);
+  const hasNoClients = !loadingClients && clients.length === 0;
+  const hasNoCategories = !loadingCategories && categories.length === 0;
 
   return (
     <Layout>
@@ -410,6 +426,27 @@ export const CreateCasePage = () => {
         <div className="create-case__layout">
           {/* Main form area */}
           <div className="create-case__form-area">
+            {(blockingDependencyIssue || hasNoClients || hasNoCategories) && (
+              <Card className="mb-4">
+                <div className="neo-alert neo-alert--warning">
+                  <h3>Some required setup data is unavailable</h3>
+                  <p className="mt-sm">
+                    {blockingDependencyIssue
+                      ? 'We could not load clients or categories, so case creation is temporarily disabled.'
+                      : 'Add at least one active client and category before creating a docket.'}
+                  </p>
+                  <div className="mt-md" style={{ display: 'flex', gap: 'var(--spacing-sm)', flexWrap: 'wrap' }}>
+                    <Button type="button" variant="outline" onClick={() => window.location.reload()}>
+                      Reload page
+                    </Button>
+                    <Button type="button" variant="primary" onClick={retryDependencies}>
+                      Retry setup data
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            )}
+
             {duplicateWarning ? (
               <Card>
                 <div className="create-case__duplicate-warning">
@@ -463,7 +500,7 @@ export const CreateCasePage = () => {
                     onBlur={handleBlur}
                     options={clientOptions}
                     required
-                    disabled={loadingClients}
+                    disabled={loadingClients || blockingDependencyIssue || hasNoClients}
                     error={touched.clientId && errors.clientId}
                   />
                 </SectionCard>
@@ -486,7 +523,7 @@ export const CreateCasePage = () => {
                     onBlur={handleBlur}
                     options={categoryOptions}
                     required
-                    disabled={loadingCategories}
+                    disabled={loadingCategories || blockingDependencyIssue || hasNoCategories}
                     error={touched.categoryId && errors.categoryId}
                   />
 
@@ -568,7 +605,11 @@ export const CreateCasePage = () => {
                     <Button type="button" variant="outline" onClick={() => navigate(-1)}>
                     Cancel
                     </Button>
-                    <Button type="submit" variant="primary" disabled={submitting}>
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      disabled={submitting || blockingDependencyIssue || hasNoClients || hasNoCategories}
+                    >
                       {submitting ? 'Saving...' : 'Create Docket'}
                     </Button>
                   </div>
