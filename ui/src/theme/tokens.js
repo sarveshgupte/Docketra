@@ -20,7 +20,9 @@ export const spacingClasses = {
 export const formClasses = {
   label: 'block text-sm font-medium text-gray-900',
   inputBase:
-    'h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-sm text-gray-900 transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500',
+    'min-h-11 w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition-[border-color,box-shadow,background-color] duration-150 placeholder:text-gray-400 hover:border-gray-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-500',
+  inputError:
+    'border-red-400 bg-red-50/60 text-red-900 placeholder:text-red-400 focus:border-red-500 focus:ring-red-500/20',
   textareaBase:
     'w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500',
   errorText: `${spacingClasses.formMessageSpacing} text-sm text-red-500`,
