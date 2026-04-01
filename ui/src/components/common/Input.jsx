@@ -57,7 +57,7 @@ export const Input = forwardRef(({
         <input
           ref={ref}
           id={inputId}
-          className={`${formClasses.inputBase} ${error ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500/20' : ''} ${isPasswordType ? 'pr-11' : ''}`}
+          className={`${formClasses.inputBase} ${error ? formClasses.inputError : ''} ${isPasswordType ? 'pr-11' : ''}`}
           disabled={disabled}
           value={value}
           type={resolvedType}
@@ -70,7 +70,7 @@ export const Input = forwardRef(({
         {isPasswordType && (
           <button
             type="button"
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+            className="absolute right-3 top-1/2 -translate-y-1/2 rounded text-gray-500 transition-colors hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
             onClick={() => setShowPassword((prev) => !prev)}
             aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
