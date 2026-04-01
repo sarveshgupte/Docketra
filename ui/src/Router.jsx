@@ -11,9 +11,9 @@ import { LegacyRoutes } from './routes/LegacyRoutes';
 export const Router = () => {
   return (
     <Routes>
-      <PublicRoutes />
-      <ProtectedRoutes />
-      <LegacyRoutes />
+      {PublicRoutes()}
+      {ProtectedRoutes()}
+      {LegacyRoutes()}
     </Routes>
   );
 };
