@@ -8,30 +8,35 @@ const CHECKLIST_STEPS = [
     title: 'Create your first case',
     description: 'Start your workspace with a live compliance record so dashboards and queues have real work to track.',
     hint: 'Best first move for a brand-new workspace.',
+    actionLabel: 'Create case',
   },
   {
     id: 'assign-owner',
     title: 'Assign an owner',
     description: 'Clear ownership keeps work moving and makes accountability visible in the worklist.',
     hint: 'Use the case registry to assign an executive.',
+    actionLabel: 'Open case registry',
   },
   {
     id: 'invite-team',
     title: 'Invite a team member',
     description: 'Add collaborators so work can move from intake to review without bottlenecks.',
     hint: 'Open team management to invite or activate a teammate.',
+    actionLabel: 'Open team management',
   },
   {
     id: 'configure-firm',
     title: 'Configure firm profile',
     description: 'Set your operating defaults and firm details before you scale the workspace.',
     hint: 'Review firm settings and update your profile details.',
+    actionLabel: 'Open firm settings',
   },
   {
     id: 'review-insights',
     title: 'Review dashboard insights',
     description: 'Use the risk and workload indicators to understand what needs attention this week.',
     hint: 'You are here — review the KPI cards and workflow summary.',
+    actionLabel: 'Review dashboard',
   },
 ];
 
@@ -153,7 +158,7 @@ export const SetupChecklist = ({ storageKey, recentCases = [], onAction }) => {
                 <span className="setup-checklist__hint">{step.hint}</span>
                 {!step.complete && (
                   <Button variant="outline" onClick={() => handleAction(step.id)}>
-                    Open step
+                    {step.actionLabel || 'Open step'}
                   </Button>
                 )}
               </div>
