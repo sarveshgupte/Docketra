@@ -1,0 +1,10 @@
+{
+  "name": "Docketra",
+  "short_name": "Docketra",
+  "description": "Compliance Task Management for Professional Firms",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#0066CC",
+  "background_color": "#ffffff",
+  "icons": []
+}
