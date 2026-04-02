@@ -10,9 +10,6 @@ import { Router } from './Router';
 import { ScrollToTop } from './components/routing/ScrollToTop';
 import { useAuth } from './hooks/useAuth';
 import { bootstrapAuth } from './auth/authBootstrap';
-import './assets/styles/enterprise.css';
-import './assets/styles/global.css';
-import './styles/typography.css';
 
 const AppBootstrap = () => {
   const { fetchProfile } = useAuth();
