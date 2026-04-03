@@ -1100,7 +1100,7 @@ const login = async (req, res) => {
             },
           },
         ],
-        { new: true }
+        { returnDocument: 'after' }
       );
 
       if (!updatedUser) {
@@ -2932,7 +2932,7 @@ const setupAccount = async (req, res) => {
       $or: [{ setupTokenHash }, { passwordSetupTokenHash: setupTokenHash }],
     },
     { $set: update },
-    { new: true }
+    { returnDocument: 'after' }
   );
 
   if (!user) {

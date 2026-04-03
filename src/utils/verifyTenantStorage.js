@@ -38,7 +38,7 @@ async function verifyTenantStorage(tenantId) {
     const record = await TenantStorageHealth.findOneAndUpdate(
       { tenantId },
       { ...baseRecord, status: 'DISCONNECTED', lastError: 'Active storage configuration not found' },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
     );
     return record;
   }
@@ -52,7 +52,7 @@ async function verifyTenantStorage(tenantId) {
     const record = await TenantStorageHealth.findOneAndUpdate(
       { tenantId },
       { ...baseRecord, status, lastError: error.message || 'Storage verification failed' },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
     );
     return record;
   }
@@ -81,7 +81,7 @@ async function verifyTenantStorage(tenantId) {
             status: 'DISCONNECTED',
             lastError: error.message || 'Storage provider disconnected',
           },
-          { upsert: true, new: true, setDefaultsOnInsert: true }
+          { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
         );
         return record;
       }
@@ -103,7 +103,7 @@ async function verifyTenantStorage(tenantId) {
       status,
       lastError,
     },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+    { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
   );
 }
 
