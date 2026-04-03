@@ -15,7 +15,7 @@ import { FormLabel } from '../components/common/FormLabel';
 import { Modal } from '../components/common/Modal';
 import { Loading } from '../components/common/Loading';
 import { TableSkeleton } from '../components/common/Skeleton';
-import { EmptyState } from '../components/EmptyState';
+import { EmptyState } from '../components/ui/EmptyState';
 import { PageHeader } from '../components/layout/PageHeader';
 import { adminApi } from '../api/admin.api';
 import { categoryService } from '../services/categoryService';

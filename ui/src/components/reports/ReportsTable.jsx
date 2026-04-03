@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { Badge } from '../common/Badge';
-import { EmptyState } from '../EmptyState';
+import { EmptyState } from '../ui/EmptyState';
 import { formatDateTime } from '../../utils/formatters';
 import './ReportsTable.css';
 

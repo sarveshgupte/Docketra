@@ -1037,6 +1037,8 @@ export const CasesPage = () => {
                         : isAdmin ? 'No dockets yet' : 'No assigned dockets'
                 }
                 description={isAdmin ? 'Use Create Docket to start managing firm workflows.' : 'You do not have assigned dockets right now.'}
+                actionLabel={isAdmin ? UX_COPY.actions.CREATE_CASE : undefined}
+                onAction={isAdmin ? () => navigate(ROUTES.CREATE_CASE(firmSlug)) : undefined}
               />
             }
           />

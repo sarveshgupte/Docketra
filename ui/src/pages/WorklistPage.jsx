@@ -277,7 +277,7 @@ export const WorklistPage = () => {
             />
           ) : cases.length === 0 ? (
             <EmptyState
-              title={isPendingView ? 'No pending dockets right now.' : 'No work assigned'}
+              title={isPendingView ? 'No pending dockets' : 'No assigned dockets'}
                 description={
                   isPendingView
                     ? 'There are no dockets currently in review. When a docket is placed on hold, it will appear here with its review date.'
