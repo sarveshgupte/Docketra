@@ -3,7 +3,6 @@ const { applyRouteValidation } = require('../middleware/requestValidation.middle
 const routeSchemas = require('../schemas/client.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
-const { firmAuthenticatedAccess } = require('./routeGroups');
 const {
   userReadLimiter,
   userWriteLimiter,
@@ -50,8 +49,6 @@ const uploadCFS = createSecureUpload();
  * - Admin can manage client fact sheet (description, notes, files)
  * - All changes are audited
  */
-
-router.use(...firmAuthenticatedAccess);
 
 // Public/authenticated endpoints
 router.get('/', authorizeFirmPermission('CLIENT_VIEW'), userReadLimiter, getClients);
