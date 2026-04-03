@@ -200,6 +200,86 @@ const getCaseMetrics = async (req, res) => {
   }
 };
 
+
+const calculateAgeingForCases = (cases) => {
+  const today = new Date();
+  return cases.map(caseItem => {
+    const pendingDate = new Date(caseItem.pendingUntil);
+    const ageingDays = Math.floor((today - pendingDate) / (1000 * 60 * 60 * 24));
+
+    let ageingBucketValue;
+    if (ageingDays <= 7) {
+      ageingBucketValue = '0-7 days';
+    } else if (ageingDays <= 30) {
+      ageingBucketValue = '8-30 days';
+    } else {
+      ageingBucketValue = '30+ days';
+    }
+
+    return {
+      ...caseItem,
+      ageingDays,
+      ageingBucket: ageingBucketValue,
+    };
+  });
+};
+
+const aggregateByCategory = (cases) => {
+  const byCategoryMap = {};
+  cases.forEach(c => {
+    byCategoryMap[c.category] = (byCategoryMap[c.category] || 0) + 1;
+  });
+  return byCategoryMap;
+};
+
+const aggregateByEmployee = async (firmId, cases) => {
+  const byEmployeeMap = {};
+  cases.forEach(c => {
+    if (c.assignedTo) {
+      byEmployeeMap[c.assignedTo] = (byEmployeeMap[c.assignedTo] || 0) + 1;
+    }
+  });
+
+  const employeeLookupValues = Object.keys(byEmployeeMap);
+  const normalizedEmails = employeeLookupValues.map((value) => String(value).trim().toLowerCase());
+  // PERFORMANCE: Eliminated N+1 query pattern
+  const [employeeUsersByXid, employeeUsersByEmail] = await Promise.all([
+    User.find({
+      firmId,
+      xID: { $in: employeeLookupValues },
+      status: { $ne: 'deleted' },
+    }).select('xID email name').lean(),
+    User.find({
+      firmId,
+      email: { $in: normalizedEmails },
+      status: { $ne: 'deleted' },
+    }).select('xID email name').lean(),
+  ]);
+  const byXidMap = new Map(employeeUsersByXid.map((user) => [user.xID, user]));
+  const byEmailMap = new Map(employeeUsersByEmail.map((user) => [String(user.email).trim().toLowerCase(), user]));
+
+  const byEmployee = [];
+  for (const assignedToValue of employeeLookupValues) {
+    const user = byXidMap.get(assignedToValue) || byEmailMap.get(String(assignedToValue).trim().toLowerCase());
+    byEmployee.push({
+      xID: user ? user.xID : assignedToValue,
+      email: user ? user.email : 'Unknown',
+      name: user ? user.name : 'Unknown',
+      count: byEmployeeMap[assignedToValue],
+    });
+  }
+  byEmployee.sort((a, b) => b.count - a.count);
+  return byEmployee;
+};
+
+const aggregateByAgeing = (cases) => {
+  return {
+    '0-7 days': cases.filter(c => c.ageingBucket === '0-7 days').length,
+    '8-30 days': cases.filter(c => c.ageingBucket === '8-30 days').length,
+    '30+ days': cases.filter(c => c.ageingBucket === '30+ days').length,
+  };
+};
+
 /**
  * GET /api/reports/pending-cases
  * 
@@ -232,26 +312,7 @@ const getPendingCasesReport = async (req, res) => {
     }
 
     // Calculate ageing for each case
-    const today = new Date();
-    const casesWithAgeing = cases.map(caseItem => {
-      const pendingDate = new Date(caseItem.pendingUntil);
-      const ageingDays = Math.floor((today - pendingDate) / (1000 * 60 * 60 * 24));
-      
-      let ageingBucketValue;
-      if (ageingDays <= 7) {
-        ageingBucketValue = '0-7 days';
-      } else if (ageingDays <= 30) {
-        ageingBucketValue = '8-30 days';
-      } else {
-        ageingBucketValue = '30+ days';
-      }
-      
-      return {
-        ...caseItem,
-        ageingDays,
-        ageingBucket: ageingBucketValue,
-      };
-    });
+    const casesWithAgeing = calculateAgeingForCases(cases);
     
     // Filter by ageing bucket if specified
     let filteredCases = casesWithAgeing;
@@ -265,56 +326,13 @@ const getPendingCasesReport = async (req, res) => {
     casesWithClientNames.sort((a, b) => b.ageingDays - a.ageingDays);
     
     // Aggregate by category
-    const byCategoryMap = {};
-    filteredCases.forEach(c => {
-      byCategoryMap[c.category] = (byCategoryMap[c.category] || 0) + 1;
-    });
+    const byCategoryMap = aggregateByCategory(filteredCases);
     
     // Aggregate by employee
-    // PR #42: assignedTo now stores xID, need to resolve to user info
-    const byEmployeeMap = {};
-    filteredCases.forEach(c => {
-      if (c.assignedTo) {
-        byEmployeeMap[c.assignedTo] = (byEmployeeMap[c.assignedTo] || 0) + 1;
-      }
-    });
-    
-    const employeeLookupValues = Object.keys(byEmployeeMap);
-    const normalizedEmails = employeeLookupValues.map((value) => String(value).trim().toLowerCase());
-    // PERFORMANCE: Eliminated N+1 query pattern
-    const [employeeUsersByXid, employeeUsersByEmail] = await Promise.all([
-      User.find({
-        firmId,
-        xID: { $in: employeeLookupValues },
-        status: { $ne: 'deleted' },
-      }).select('xID email name').lean(),
-      User.find({
-        firmId,
-        email: { $in: normalizedEmails },
-        status: { $ne: 'deleted' },
-      }).select('xID email name').lean(),
-    ]);
-    const byXidMap = new Map(employeeUsersByXid.map((user) => [user.xID, user]));
-    const byEmailMap = new Map(employeeUsersByEmail.map((user) => [String(user.email).trim().toLowerCase(), user]));
-
-    const byEmployee = [];
-    for (const assignedToValue of employeeLookupValues) {
-      const user = byXidMap.get(assignedToValue) || byEmailMap.get(String(assignedToValue).trim().toLowerCase());
-      byEmployee.push({
-        xID: user ? user.xID : assignedToValue,
-        email: user ? user.email : 'Unknown',
-        name: user ? user.name : 'Unknown',
-        count: byEmployeeMap[assignedToValue],
-      });
-    }
-    byEmployee.sort((a, b) => b.count - a.count);
+    const byEmployee = await aggregateByEmployee(firmId, filteredCases);
     
     // Aggregate by ageing
-    const byAgeing = {
-      '0-7 days': filteredCases.filter(c => c.ageingBucket === '0-7 days').length,
-      '8-30 days': filteredCases.filter(c => c.ageingBucket === '8-30 days').length,
-      '30+ days': filteredCases.filter(c => c.ageingBucket === '30+ days').length,
-    };
+    const byAgeing = aggregateByAgeing(filteredCases);
     
     res.json({
       success: true,
