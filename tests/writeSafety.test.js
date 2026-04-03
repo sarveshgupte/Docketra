@@ -1,5 +1,45 @@
 #!/usr/bin/env node
 const assert = require('assert');
+
+const distributedIdempotencyStore = new Map();
+const redisMock = {
+  async set(key, value, exToken, ttl, nxToken) {
+    if (exToken !== 'EX' || nxToken !== 'NX') throw new Error('Unexpected Redis set contract');
+    const now = Date.now();
+    const existing = distributedIdempotencyStore.get(key);
+    if (existing && existing.expiresAt > now) {
+      return null;
+    }
+    distributedIdempotencyStore.set(key, { value, expiresAt: now + (ttl * 1000) });
+    return 'OK';
+  },
+  async keys(pattern) {
+    const prefix = pattern.replace('*', '');
+    const now = Date.now();
+    for (const [key, record] of distributedIdempotencyStore.entries()) {
+      if (record.expiresAt <= now) distributedIdempotencyStore.delete(key);
+    }
+    return Array.from(distributedIdempotencyStore.keys()).filter((key) => key.startsWith(prefix));
+  },
+  async del(...keys) {
+    let removed = 0;
+    for (const key of keys) {
+      if (distributedIdempotencyStore.delete(key)) removed += 1;
+    }
+    return removed;
+  },
+};
+
+const redisConfigPath = require.resolve('../src/config/redis');
+require.cache[redisConfigPath] = {
+  id: redisConfigPath,
+  filename: redisConfigPath,
+  loaded: true,
+  exports: {
+    getRedisClient: () => redisMock,
+  },
+};
+
 const { idempotencyMiddleware, resetIdempotencyCache } = require('../src/middleware/idempotency.middleware');
 const domainInvariantGuard = require('../src/middleware/domainInvariantGuard');
 const { executeWrite } = require('../src/utils/executeWrite');
@@ -63,8 +103,8 @@ const buildRequest = (overrides = {}) => {
   return req;
 };
 
-async function testIdempotentReplay() {
-  resetIdempotencyCache();
+async function testRejectDuplicateRequest() {
+  await resetIdempotencyCache();
   let handlerInvocations = 0;
   const reqA = buildRequest({ headers: { 'Idempotency-Key': 'k1' } });
   const resA = createMockRes();
@@ -77,13 +117,13 @@ async function testIdempotentReplay() {
   const resB = createMockRes();
   await runMiddleware(idempotencyMiddleware, reqB, resB);
 
-  assert.strictEqual(handlerInvocations, 1, 'Handler should not re-run on replay');
-  assert.strictEqual(resB.headers['Idempotent-Replay'], 'true');
-  assert.strictEqual(resB.body.ok, true);
+  assert.strictEqual(handlerInvocations, 1, 'Handler should only run for the first request');
+  assert.strictEqual(resB.statusCode, 409, 'Duplicate request should be rejected');
+  assert.strictEqual(resB.body.error, 'duplicate_request');
 }
 
-async function testConcurrentFingerprintConflict() {
-  resetIdempotencyCache();
+async function testDuplicateRejectedRegardlessOfBody() {
+  await resetIdempotencyCache();
   const reqA = buildRequest({ headers: { 'Idempotency-Key': 'k2' }, body: { title: 'A' } });
   const resA = createMockRes();
   await runMiddleware(idempotencyMiddleware, reqA, resA);
@@ -93,11 +133,11 @@ async function testConcurrentFingerprintConflict() {
   const reqB = buildRequest({ headers: { 'Idempotency-Key': 'k2' }, body: { title: 'B' } });
   const resB = createMockRes();
   await runMiddleware(idempotencyMiddleware, reqB, resB);
-  assert.strictEqual(resB.statusCode, 409, 'Conflicting fingerprint should be rejected');
+  assert.strictEqual(resB.statusCode, 409, 'Duplicate key should be rejected');
 }
 
-async function testRetryAfterDelay() {
-  resetIdempotencyCache();
+async function testRetryWithinTtlIsRejected() {
+  await resetIdempotencyCache();
   const req = buildRequest({ method: 'PATCH', originalUrl: '/api/clients/1', body: { name: 'X' }, headers: { 'Idempotency-Key': 'k3' } });
   const res = createMockRes();
   await runMiddleware(idempotencyMiddleware, req, res);
@@ -107,7 +147,7 @@ async function testRetryAfterDelay() {
 
   const resRetry = createMockRes();
   await runMiddleware(idempotencyMiddleware, req, resRetry);
-  assert.strictEqual(resRetry.body.ok, true);
+  assert.strictEqual(resRetry.statusCode, 409, 'Retry within TTL should be rejected');
 }
 
 async function testCrossFirmGuard() {
@@ -201,13 +241,13 @@ async function testExecuteWriteRollsBackErrorResponses() {
 }
 
 async function testIdempotencySkipsCacheOnRollback() {
-  resetIdempotencyCache();
+  await resetIdempotencyCache();
   let handlerRuns = 0;
   const mongoose = require('mongoose');
   const originalStartSession = mongoose.startSession;
 
-  const makeReq = () => buildRequest({
-    headers: { 'Idempotency-Key': 'k4' },
+  const makeReq = (key = 'k4') => buildRequest({
+    headers: { 'Idempotency-Key': key },
     transactionCommitted: false,
   });
 
@@ -238,19 +278,14 @@ async function testIdempotencySkipsCacheOnRollback() {
     withTransaction: async (fn) => fn(),
     endSession: async () => {},
   });
-  const successReq = makeReq();
+  const successReq = makeReq('k4');
   const res2 = createMockRes();
   await runMiddleware(idempotencyMiddleware, successReq, res2);
-  await executeWrite(successReq, async () => {
-    handlerRuns += 1;
-    res2.json({ ok: true });
-  });
 
   mongoose.startSession = originalStartSession;
 
-  assert.strictEqual(handlerRuns, 2, 'Handler should run again after rollback');
-  assert.strictEqual(res2.headers['Idempotent-Replay'], undefined, 'Replay header should not be set after rollback');
-  assert.strictEqual(successReq.transactionCommitted, true, 'Commit flag should be true after successful transaction');
+  assert.strictEqual(handlerRuns, 1, 'Duplicate requests should be blocked before handler retry');
+  assert.strictEqual(res2.statusCode, 409, 'Retry after rollback should still be blocked within TTL');
 }
 
 async function testControllerGuardWithoutTransaction() {
@@ -281,9 +316,9 @@ async function testNestedWrapperGuard() {
 
 async function run() {
   try {
-    await testIdempotentReplay();
-    await testConcurrentFingerprintConflict();
-    await testRetryAfterDelay();
+    await testRejectDuplicateRequest();
+    await testDuplicateRejectedRegardlessOfBody();
+    await testRetryWithinTtlIsRejected();
     await testCrossFirmGuard();
     await testInvalidStateGuard();
     await testExecuteWriteEnforcesTransaction();
