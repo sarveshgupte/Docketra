@@ -190,18 +190,16 @@ const initiateSignup = async ({
     consumedAt: null,
   }, { session });
 
-  // Send OTP email
-  await safeQueueEmail({
-    context: req,
-    operation: 'EMAIL_QUEUE',
-    payload: { action: 'SIGNUP_OTP_EMAIL', tenantId: null, email: normalizedEmail },
-    execute: async () => emailService.sendSignupOtpEmail({
-      email: normalizedEmail,
-      name: name.trim(),
-      otp,
-      expiryMinutes: OTP_EXPIRY_MINUTES,
-    }),
+  // OTP delivery is auth-critical: fail fast when email cannot be dispatched.
+  const initialOtpResult = await emailService.sendSignupOtpEmail({
+    email: normalizedEmail,
+    name: name.trim(),
+    otp,
+    expiryMinutes: OTP_EXPIRY_MINUTES,
   });
+  if (!initialOtpResult?.success) {
+    throw new Error(initialOtpResult?.error || 'SIGNUP_OTP_SEND_FAILED');
+  }
 
   await logSignupAuthEvent({ eventType: 'SIGNUP_INITIATED', email: normalizedEmail, req });
   await logSignupAuthEvent({ eventType: 'OTP_SENT', email: normalizedEmail, req });
@@ -402,18 +400,17 @@ const resendOtp = async ({ email, req = null }) => {
   record.consumedAt = null;
   await record.save();
 
-  await safeQueueEmail({
-    context: req,
-    operation: 'EMAIL_QUEUE',
-    payload: { action: 'SIGNUP_OTP_RESEND_EMAIL', tenantId: null, email: normalizedEmail },
-    execute: async () => emailService.sendSignupOtpEmail({
-      email: normalizedEmail,
-      name: record.name,
-      otp,
-      expiryMinutes: OTP_EXPIRY_MINUTES,
-      isResend: true,
-    }),
+  // OTP delivery is auth-critical: fail fast when email cannot be dispatched.
+  const resendOtpResult = await emailService.sendSignupOtpEmail({
+    email: normalizedEmail,
+    name: record.name,
+    otp,
+    expiryMinutes: OTP_EXPIRY_MINUTES,
+    isResend: true,
   });
+  if (!resendOtpResult?.success) {
+    throw new Error(resendOtpResult?.error || 'SIGNUP_OTP_RESEND_FAILED');
+  }
 
   await logSignupAuthEvent({ eventType: 'OTP_SENT', email: normalizedEmail, req, metadata: { resend: true } });
   log.info('OTP_SENT', { req, email: normalizedEmail, event: 'OTP_RESENT' });
