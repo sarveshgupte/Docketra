@@ -171,7 +171,7 @@ export const WorkbasketPage = () => {
 
   const handleBulkPull = async () => {
     if (!user?.xID) {
-      showError('Authenticated userXID is required to pull cases. Please log in again.');
+      showError('Authenticated userXID is required to pull dockets. Please log in again.');
       return;
     }
 
@@ -204,7 +204,7 @@ export const WorkbasketPage = () => {
         loadGlobalWorklist();
       }
     } catch (error) {
-      showError(error.response?.data?.message || error.message || 'Failed to pull cases');
+      showError(error.response?.data?.message || error.message || 'Failed to pull dockets');
     } finally {
       setBulkPulling(false);
     }
@@ -414,7 +414,7 @@ export const WorkbasketPage = () => {
             View
           </Button>
           <Button
-            variant="primary"
+            variant="outline"
             size="small"
             onClick={() => handlePullCase(caseItem.caseId)}
             disabled={pullingCase === caseItem.caseId}
@@ -476,10 +476,15 @@ export const WorkbasketPage = () => {
       <div className="global-worklist">
         <PageHeader
           title="Workbasket"
-          description="Unassigned dockets ready to be moved into a worklist."
+          subtitle="Unassigned dockets ready to be moved into a worklist."
+          actions={(
+            <Button variant="primary" onClick={() => navigate(ROUTES.CREATE_CASE(firmSlug))}>
+              Create Docket
+            </Button>
+          )}
         />
         <div className="worklist-view-tabs" role="tablist" aria-label="Docket queues">
-          <Button variant="primary">Workbasket</Button>
+          <Button variant="outline">Workbasket</Button>
           <Button variant="outline" onClick={() => navigate(ROUTES.MY_WORKLIST(firmSlug))}>My Worklist</Button>
         </div>
 
@@ -587,7 +592,7 @@ export const WorkbasketPage = () => {
             borderBottom: '1px solid var(--border-color)'
           }}>
             <Button
-              variant="primary"
+              variant="outline"
               onClick={handleBulkPull}
               disabled={selectedCases.length === 0 || bulkPulling}
             >
