@@ -208,7 +208,7 @@ export const FirmLoginPage = () => {
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">{firmData.name}</h1>
           <p className="mt-2 text-sm text-gray-500 text-center">Step {step === 'credentials' ? '1' : '2'} of 2</p>
           <p className="mt-2 text-sm text-gray-500 text-center">{step === 'credentials' ? 'Enter your XID and password' : 'Enter the 6-digit code sent to your email'}</p>
-          <p className="mt-2 text-xs text-gray-500 text-center">{`Firm login URL: /app/${firmSlug}/login`}</p>
+          <p className="mt-2 text-xs text-gray-500 text-center">{`Firm login URL: /${firmSlug}/login`}</p>
         </div>
 
         {error && <div className="mt-6 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</div>}

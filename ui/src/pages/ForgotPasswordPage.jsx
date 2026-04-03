@@ -34,7 +34,7 @@ export const ForgotPasswordPage = () => {
   const [fieldError, setFieldError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const loginPath = firmSlug ? `/app/${firmSlug}/login` : '/superadmin';
+  const loginPath = firmSlug ? `/${firmSlug}/login` : '/superadmin';
 
   React.useEffect(() => {
     if (step !== 2 || cooldown <= 0) return undefined;

@@ -215,6 +215,10 @@ export const AuthProvider = ({ children }) => {
     return authService.resendSignupOtp(email);
   }, []);
 
+  const resendCredentials = useCallback(async (email) => {
+    return authService.resendCredentials(email);
+  }, []);
+
   const logout = useCallback(async ({ preserveFirmSlug = false } = {}) => {
     let firmSlugToPreserve = null;
     if (preserveFirmSlug) {
@@ -296,6 +300,7 @@ export const AuthProvider = ({ children }) => {
     signup,
     verifySignup,
     resendSignupOtp,
+    resendCredentials,
     logout,
     fetchProfile,
     updateUser,
@@ -312,6 +317,7 @@ export const AuthProvider = ({ children }) => {
     signup,
     verifySignup,
     resendSignupOtp,
+    resendCredentials,
     logout,
     fetchProfile,
     updateUser,
