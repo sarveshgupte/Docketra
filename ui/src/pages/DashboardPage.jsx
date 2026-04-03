@@ -301,7 +301,7 @@ export const DashboardPage = () => {
   // Workflow status pipeline data
   const workflowStatuses = [
     { label: UX_COPY.statusLabels.OPEN, count: stats.myOpenCases, color: 'var(--color-primary)' },
-    { label: UX_COPY.statusLabels.PENDED, count: stats.myPendingCases, color: 'var(--warning)' },
+    { label: UX_COPY.statusLabels.PENDING, count: stats.myPendingCases, color: 'var(--warning)' },
     { label: UX_COPY.statusLabels.RESOLVED, count: stats.myResolvedCases, color: 'var(--color-success)' },
     { label: 'Unassigned', count: stats.myUnassignedCreatedCases, color: 'var(--text-muted)' },
   ];
@@ -325,7 +325,7 @@ export const DashboardPage = () => {
       title: 'Awaiting Partner Review',
       value: awaitingPartnerReview,
       subtitle: 'Approval queue',
-      onClick: () => navigate(`${safeRoute(ROUTES.MY_WORKLIST(firmSlug))}?status=PENDED`),
+      onClick: () => navigate(`${safeRoute(ROUTES.MY_WORKLIST(firmSlug))}?status=PENDING`),
     },
     isAdmin
       ? {

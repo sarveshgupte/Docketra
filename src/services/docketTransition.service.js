@@ -45,8 +45,8 @@ async function transitionDocket(docketId, newState, userId, options = {}) {
   const fromState = toDocketState(docket.status);
   const toState = toDocketState(newState);
 
-  if (toState === 'PENDED' && !reason) {
-    const err = new Error('PENDED transition requires reason');
+  if (toState === 'PENDING' && !reason) {
+    const err = new Error('PENDING transition requires reason');
     err.statusCode = 400;
     throw err;
   }
@@ -72,7 +72,7 @@ async function transitionDocket(docketId, newState, userId, options = {}) {
   const update = {
     $set: {
       status: persistenceState,
-      ...(toState !== 'PENDED' ? { pendingUntil: null } : {}),
+      ...(toState !== 'PENDING' ? { pendingUntil: null } : {}),
       updatedAt: new Date(),
     },
     $inc: {

@@ -176,7 +176,7 @@ const resolveCase = async (firmId, caseId, comment, user, req = null) => {
 /**
  * Pend a case
  * 
- * Changes case status to PENDED with mandatory comment and reopenDate.
+ * Changes case status to PENDING with mandatory comment and reopenDate.
  * Case disappears from My Worklist but appears in My Pending Cases dashboard.
  * 
  * Backend normalizes reopenDate to 8:00 AM IST regardless of input time.
@@ -212,7 +212,7 @@ const pendCase = async (firmId, caseId, comment, reopenDate, user, req = null) =
     .toUTC()
     .toJSDate();
   
-  await CaseService.updateStatus(caseId, CaseStatus.PENDED, {
+  await CaseService.updateStatus(caseId, CaseStatus.PENDING, {
     tenantId: firmId,
     role: user.role,
     userId: user.xID,
@@ -259,7 +259,7 @@ const pendCase = async (firmId, caseId, comment, reopenDate, user, req = null) =
     user.role === 'Admin' ? 'ADMIN' : 'USER',
     {
       previousStatus,
-      newStatus: CaseStatus.PENDED,
+      newStatus: CaseStatus.PENDING,
       pendingUntil,
       commentLength: comment.length,
     }
@@ -502,7 +502,7 @@ const performAutoReopen = async (caseData) => {
 /**
  * Auto-reopen expired pending cases for a specific user
  * 
- * Finds all cases assigned to userXid with status PENDED where pendingUntil <= now
+ * Finds all cases assigned to userXid with status PENDING where pendingUntil <= now
  * and changes their status back to OPEN.
  * 
  * This is called at read time (worklist, dashboard) to ensure data correctness
@@ -516,7 +516,7 @@ const autoReopenExpiredPendingCases = async (userXid, firmId = null) => {
   
   // Find all pended cases for this user where pendingUntil has passed
   const pendedCases = await Case.find({
-    status: CaseStatus.PENDED,
+    status: CaseStatus.PENDING,
     pendingUntil: { $lte: now },
     assignedToXID: userXid,
     ...(firmId ? { firmId } : {}),
@@ -539,7 +539,7 @@ const autoReopenExpiredPendingCases = async (userXid, firmId = null) => {
 /**
  * Auto-reopen pended cases (global)
  * 
- * Finds all cases with status PENDED where pendingUntil <= now
+ * Finds all cases with status PENDING where pendingUntil <= now
  * and changes their status back to OPEN.
  * 
  * This should be called by a scheduler (cron job) periodically.
@@ -551,7 +551,7 @@ const autoReopenPendedCases = async (firmId = null) => {
   
   // Find all pended cases where pendingUntil has passed
   const pendedCases = await Case.find({
-    status: CaseStatus.PENDED,
+    status: CaseStatus.PENDING,
     pendingUntil: { $lte: now },
     ...(firmId ? { firmId } : {}),
   });

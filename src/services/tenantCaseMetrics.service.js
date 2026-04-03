@@ -69,13 +69,13 @@ async function computeTenantDailyMetrics(tenantId, dateInput) {
               openCases: {
                 $sum: {
                   $cond: [
-                    { $in: ['$status', [CaseStatus.OPEN, CaseStatus.PENDED, CaseStatus.FILED]] },
+                    { $in: ['$status', [CaseStatus.OPEN, CaseStatus.PENDING, CaseStatus.FILED]] },
                     1,
                     0,
                   ],
                 },
               },
-              pendedCases: { $sum: { $cond: [{ $eq: ['$status', CaseStatus.PENDED] }, 1, 0] } },
+              pendedCases: { $sum: { $cond: [{ $eq: ['$status', CaseStatus.PENDING] }, 1, 0] } },
               filedCases: { $sum: { $cond: [{ $eq: ['$status', CaseStatus.FILED] }, 1, 0] } },
               resolvedCases: { $sum: { $cond: [{ $eq: ['$status', CaseStatus.RESOLVED] }, 1, 0] } },
               pendingApprovals: {

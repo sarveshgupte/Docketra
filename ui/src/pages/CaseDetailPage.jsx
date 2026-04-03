@@ -951,7 +951,7 @@ export const CaseDetailPage = () => {
             return;
           }
           const response = await caseApi.updateStatus(caseId, {
-            status: 'PENDED',
+            status: 'PENDING',
             version: statusVersion,
             performedBy,
             reason: pendComment.trim(),
@@ -1245,7 +1245,7 @@ export const CaseDetailPage = () => {
         { key: 'move_wb', label: 'Move to WB', variant: 'outline', onClick: handleMoveToWB, disabled: actionInFlight },
       ];
     }
-    if (docketState === 'PENDED') {
+    if (docketState === 'PENDING') {
       return [
         { key: 'resume', label: 'Resume Work', variant: 'primary', onClick: () => setShowUnpendModal(true), disabled: actionInFlight },
         { key: 'move_wb', label: 'Move to WB', variant: 'outline', onClick: handleMoveToWB, disabled: actionInFlight },
@@ -1260,7 +1260,7 @@ export const CaseDetailPage = () => {
   // Case action buttons (File, Pend, Resolve) - PR: Fix Case Lifecycle
   // Action Visibility Rules:
   // - OPEN: Show File, Pend, Resolve (no Unpend)
-  // - PENDING/PENDED: Show ONLY Unpend (no File, Pend, Resolve)
+  // - PENDING: Show ONLY Unpend (no File, Pend, Resolve)
   // - FILED or RESOLVED: Show nothing (terminal states, read-only)
   const canPerformLifecycleActions = docketState === 'IN_PROGRESS' && !isViewOnlyMode;
   const isAnyModalOpen = Boolean(
@@ -1489,7 +1489,7 @@ export const CaseDetailPage = () => {
             </section>
 
             {activeSection === CASE_DETAIL_TABS.OVERVIEW && (
-              <section className={`case-card ${caseInfo?.status === 'PENDED' ? 'opacity-90' : ''}`} aria-labelledby="overview-heading">
+              <section className={`case-card ${caseInfo?.status === 'PENDING' ? 'opacity-90' : ''}`} aria-labelledby="overview-heading">
                 <div className="case-card__heading">
                   <h2 id="overview-heading">Overview</h2>
                   {canEditOverview ? (
@@ -1514,9 +1514,9 @@ export const CaseDetailPage = () => {
                   <div className="field-group min-w-0">
                     <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Current Lifecycle Stage</span>
                     <StatusBadge status={caseInfo?.status} />
-                    {caseInfo?.status === 'PENDED' && (caseInfo?.pendingUntil || caseInfo?.reopenDate) ? (
+                    {caseInfo?.status === 'PENDING' && (caseInfo?.pendingUntil || caseInfo?.reopenDate) ? (
                       <Badge variant="warning" className="mt-2 inline-flex">
-                        PENDED till {formatDateTime(caseInfo.pendingUntil || caseInfo.reopenDate)}
+                        PENDING till {formatDateTime(caseInfo.pendingUntil || caseInfo.reopenDate)}
                       </Badge>
                     ) : null}
                   </div>
