@@ -62,24 +62,28 @@ async function runMigration() {
     console.log(`[MIGRATION] Found ${usersToUpdate.length} users to update`);
     
     let updatedUsers = 0;
-    for (const user of usersToUpdate) {
+    if (usersToUpdate.length > 0) {
       try {
-        // Update using updateOne to bypass immutability for migration
-        await User.updateOne(
-          { _id: user._id },
+        const userIds = usersToUpdate.map(user => user._id);
+
+        // Update firmId using updateMany to bypass immutability and reduce DB calls
+        await User.updateMany(
+          { _id: { $in: userIds } },
           { $set: { firmId: defaultFirm._id } }
         );
         
         // Add restrictedClientIds if it doesn't exist
-        await User.updateOne(
-          { _id: user._id, restrictedClientIds: { $exists: false } },
+        await User.updateMany(
+          { _id: { $in: userIds }, restrictedClientIds: { $exists: false } },
           { $set: { restrictedClientIds: [] } }
         );
         
-        updatedUsers++;
-        console.log(`[MIGRATION]   ✓ Updated user: ${user.xID}`);
+        updatedUsers = usersToUpdate.length;
+        for (const user of usersToUpdate) {
+          console.log(`[MIGRATION]   ✓ Updated user: ${user.xID}`);
+        }
       } catch (err) {
-        console.error(`[MIGRATION]   ✗ Failed to update user ${user.xID}:`, err.message);
+        console.error(`[MIGRATION]   ✗ Failed to perform bulk update on users:`, err.message);
       }
     }
     
