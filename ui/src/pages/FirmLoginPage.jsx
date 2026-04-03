@@ -20,6 +20,7 @@ const mapSafeLoginError = (error) => {
   if (status === 401 || status === 403) return 'Invalid credentials or verification code';
   if (status === 404) return 'Invalid workspace URL';
   if (status === 423) return 'This workspace is inactive. Contact your admin.';
+  if (status >= 500) return 'Workspace lookup is temporarily unavailable. Please try again.';
   return 'Sign-in failed. Please try again.';
 };
 
@@ -44,10 +45,41 @@ export const FirmLoginPage = () => {
   const otpInputRef = useRef(null);
 
   useEffect(() => {
+    const fetchLegacyFirmLoginDetails = async (slug) => {
+      const response = await fetch(`/${slug}/login`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: { Accept: 'application/json' },
+      });
+
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.success) {
+        const error = new Error(payload?.message || 'Workspace lookup failed');
+        error.status = response.status;
+        throw error;
+      }
+
+      return payload;
+    };
+
     const loadFirmData = async () => {
       try {
         setFirmLoading(true);
-        const response = await authApi.getFirmLoginDetails(firmSlug);
+        let response = null;
+        try {
+          response = await authApi.getFirmLoginDetails(firmSlug);
+        } catch (primaryLookupError) {
+          response = await fetchLegacyFirmLoginDetails(firmSlug);
+          if (import.meta.env.DEV) {
+            // Keep fallback instrumentation in development only.
+            // eslint-disable-next-line no-console
+            console.info('[FirmLoginPage] Fallback workspace lookup used', {
+              firmSlug,
+              status: primaryLookupError?.status || primaryLookupError?.response?.status || null,
+            });
+          }
+        }
+
         if (response.success && response.data?.status === 'active') {
           setFirmData(response.data);
           localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, firmSlug);
@@ -57,8 +89,8 @@ export const FirmLoginPage = () => {
             : 'Invalid workspace URL');
           setFirmData(null);
         }
-      } catch (_err) {
-        setError('Invalid workspace URL');
+      } catch (err) {
+        setError(mapSafeLoginError(err));
         setFirmData(null);
         localStorage.removeItem(STORAGE_KEYS.FIRM_SLUG);
       } finally {
