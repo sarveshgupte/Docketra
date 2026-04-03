@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+require('dotenv').config();
 const assert = require('assert');
 const express = require('express');
 const request = require('supertest');
