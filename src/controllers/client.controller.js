@@ -449,13 +449,6 @@ const updateClient = async (req, res) => {
       secondaryContactNumber,
       businessName,
       businessAddress,
-      // Explicitly list fields that should be rejected
-      PAN,
-      TAN,
-      CIN,
-      GST,
-      latitude,
-      longitude,
     } = req.body;
     
     // Get firmId from authenticated user for query scoping
@@ -480,80 +473,26 @@ const updateClient = async (req, res) => {
         message: 'Business name cannot be updated through this endpoint. Use the "Change Legal Name" action instead.',
       });
     }
-    
-    // Explicitly reject attempts to update immutable regulatory fields
-    if (PAN !== undefined || TAN !== undefined || CIN !== undefined) {
-      return res.status(400).json({
-        success: false,
-        message: 'PAN, TAN, and CIN are immutable and cannot be modified after creation.',
-      });
-    }
-    
-    // Reject attempts to update other non-editable fields
-    if (GST !== undefined || latitude !== undefined || longitude !== undefined) {
-      return res.status(400).json({
-        success: false,
-        message: isProtectedClient
-          ? 'Only businessName, businessAddress, businessEmail, primaryContactNumber, and secondaryContactNumber can be updated for the default client.'
-          : 'Only businessEmail, primaryContactNumber, and secondaryContactNumber can be updated.',
-      });
-    }
-    
-    const normalizedBusinessName = normalizeString(businessName);
-    const normalizedBusinessAddress = normalizeString(businessAddress);
-    const normalizedBusinessEmail = normalizeString(businessEmail);
-    const normalizedPrimaryContactNumber = normalizeString(primaryContactNumber);
-    const normalizedSecondaryContactNumber = normalizeString(secondaryContactNumber);
 
     if (isProtectedClient && businessName !== undefined) {
-      if (typeof businessName !== 'string' || !normalizedBusinessName) {
-        return res.status(400).json({
-          success: false,
-          message: 'Business name cannot be empty',
-        });
-      }
-      client.businessName = normalizedBusinessName;
+      client.businessName = businessName;
     }
 
     if (isProtectedClient && businessAddress !== undefined) {
-      if (typeof businessAddress !== 'string' || !normalizedBusinessAddress) {
-        return res.status(400).json({
-          success: false,
-          message: 'Business address cannot be empty',
-        });
-      }
-      client.businessAddress = normalizedBusinessAddress;
+      client.businessAddress = businessAddress;
     }
 
     // Update allowed fields
     if (businessEmail !== undefined) {
-      if (typeof businessEmail !== 'string' || !normalizedBusinessEmail) {
-        return res.status(400).json({
-          success: false,
-          message: 'Business email cannot be empty',
-        });
-      }
-      client.businessEmail = normalizedBusinessEmail.toLowerCase();
+      client.businessEmail = businessEmail.toLowerCase();
     }
     
     if (primaryContactNumber !== undefined) {
-      if (typeof primaryContactNumber !== 'string' || !normalizedPrimaryContactNumber) {
-        return res.status(400).json({
-          success: false,
-          message: 'Primary contact number cannot be empty',
-        });
-      }
-      client.primaryContactNumber = normalizedPrimaryContactNumber;
+      client.primaryContactNumber = primaryContactNumber;
     }
     
     if (secondaryContactNumber !== undefined) {
-      if (secondaryContactNumber !== null && typeof secondaryContactNumber !== 'string') {
-        return res.status(400).json({
-          success: false,
-          message: 'Secondary contact number must be a string when provided',
-        });
-      }
-      client.secondaryContactNumber = normalizedSecondaryContactNumber || null;
+      client.secondaryContactNumber = secondaryContactNumber || null;
     }
     
     await client.save();
