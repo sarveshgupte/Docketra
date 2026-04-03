@@ -34,6 +34,16 @@ Module._load = function (request, parent, isMain) {
       }),
     };
   }
+  if (request === '../services/storage/StorageProviderFactory') {
+    return {
+      getProviderForTenant: async () => ({
+        uploadFile: async (firmId, folderId, buffer, options) => {
+          uploadCalls.push({ firmId, folderId, size: buffer.length, name: options?.name });
+          return { fileId: `drive-${uploadCalls.length}` };
+        },
+      }),
+    };
+  }
   if (request === '../models/Comment.model') return { create: async () => ({}) };
   if (request === '../models/Attachment.model') {
     return {
