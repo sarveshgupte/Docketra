@@ -14,7 +14,7 @@ export const adminApi = {
   resendSetupEmail: (xID) => request((http) => http.post(`/admin/users/${xID}/resend-invite`), 'Failed to resend setup email'),
   unlockAccount: (xID) => request((http) => http.post('/auth/unlock-account', { xID }), 'Failed to unlock account'),
 
-  getPendingApprovals: () => request((http) => http.get('/cases?status=Pending'), 'Failed to load pending approvals'),
+  getPendingApprovals: () => request((http) => http.get('/cases?status=UNDER_REVIEW,Reviewed,Pending'), 'Failed to load pending approvals'),
   approveNewClient: (caseId, comment = '') => request((http) => http.post(`/client-approval/${caseId}/approve-new`, { comment }), 'Failed to approve new client case'),
   approveClientEdit: (caseId, comment = '') => request((http) => http.post(`/client-approval/${caseId}/approve-edit`, { comment }), 'Failed to approve client edit case'),
   rejectCase: (caseId, comment) => request((http) => http.post(`/client-approval/${caseId}/reject`, { comment }), 'Failed to reject case'),
