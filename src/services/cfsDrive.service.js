@@ -441,36 +441,11 @@ class CFSDriveService {
     }
 
     const provider = await StorageProviderFactory.getProvider(firmId);
-
-    // Reference counting: Only delete the file from the storage provider if no other active attachments or case files reference it
     if (attachment.driveFileId) {
-      const duplicateCount = await Attachment.countDocuments({
-        driveFileId: attachment.driveFileId,
-        _id: { $ne: attachment._id },
-        deletedAt: null // Ensure we only count active attachments
-      });
-
-      const caseFileCount = await CaseFile.countDocuments({
-        storageFileId: attachment.driveFileId,
-        $or: [
-          { deletedAt: null },
-          { deletedAt: { $exists: false } }
-        ],
-        isDeleted: { $ne: true }
-      });
-
-      if (duplicateCount === 0 && caseFileCount === 0) {
-        try {
-          await provider.deleteFile(attachment.driveFileId);
-        } catch (error) {
-          console.error('[CFSDriveService] Error deleting Drive file:', error.message);
-        }
-      } else {
-        console.info('[CFSDriveService] Skipping Drive file deletion due to reference counting', {
-          driveFileId: attachment.driveFileId,
-          duplicateCount,
-          caseFileCount,
-        });
+      try {
+        await provider.deleteFile(attachment.driveFileId);
+      } catch (error) {
+        console.error('[CFSDriveService] Error deleting Drive file:', error.message);
       }
     }
 

@@ -94,8 +94,11 @@ async function encrypt(value, tenantId, { session } = {}) {
  *  - Throws ForbiddenError if role === 'superadmin' or 'SUPER_ADMIN'.
  *  - Falls back to returning the original value if it does not match the
  *    encrypted payload format (temporary compatibility mode for existing
- *    plaintext records).
+ *    plaintext records — see TODO below).
  *  - Logs and re-throws decryption failures (fail-fast at caller boundary).
+ *
+ * TODO: Write migration script to encrypt existing plaintext fields.
+ *       Once all records are encrypted, remove the plaintext fallback below.
  *
  * @param {string} value    - Ciphertext (iv:authTag:ciphertext) or plaintext (legacy)
  * @param {string} tenantId - Tenant (firm) identifier

@@ -729,6 +729,8 @@ clientSchema.plugin(softDeletePlugin);
 //
 // Note: businessName is NOT encrypted because it is indexed and used for
 // display queries where the plaintext must be searchable.
+//
+// TODO: Write migration script to encrypt existing plaintext fields.
 
 const { looksEncrypted: _clientIsEncryptedValue } = require('../security/encryption.utils');
 const { tenantScopeGuardPlugin } = require('./plugins/tenantScopeGuard.plugin');

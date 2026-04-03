@@ -553,19 +553,6 @@ const CaseRepository = {
   },
 
   /**
-   * Decrypt an array of case documents.
-   * Useful for aggregation results.
-   * @param {Array} docs - Array of case objects
-   * @param {string} firmId - Tenant ID
-   * @param {Object} options - Decryption options
-   * @returns {Promise<Array>} Decrypted cases
-   */
-  async decryptDocs(docs, firmId, options = {}) {
-    if (!docs || !docs.length) return docs;
-    return _decryptCaseDocs(docs, firmId, options);
-  },
-
-  /**
    * Create a new case
    * NOTE: firmId MUST be included in caseData
    * Sensitive fields (description) are encrypted by the Case model pre-save hook.

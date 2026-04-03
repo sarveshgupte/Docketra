@@ -132,19 +132,16 @@ const runPreflightChecks = async ({ session } = {}) => {
     if (firmsWithoutBootstrapStatus.length > 0) {
       console.log(`ℹ️  Found ${firmsWithoutBootstrapStatus.length} firm(s) without bootstrapStatus - applying backward compatibility...`);
       
-      const bulkOps = firmsWithoutBootstrapStatus.map(firm => {
+      for (const firm of firmsWithoutBootstrapStatus) {
+        // Firms with defaultClientId are considered COMPLETED (legacy firms)
+        // Firms without defaultClientId are considered PENDING (need recovery)
         const status = firm.defaultClientId ? 'COMPLETED' : 'PENDING';
+        await Firm.updateOne(
+          { _id: firm._id },
+          { $set: { bootstrapStatus: status } },
+          { session }
+        );
         console.log(`   ✓ Set ${firm.firmId} bootstrapStatus to ${status}`);
-        return {
-          updateOne: {
-            filter: { _id: firm._id },
-            update: { $set: { bootstrapStatus: status } }
-          }
-        };
-      });
-
-      if (bulkOps.length > 0) {
-        await Firm.bulkWrite(bulkOps, { session });
       }
     }
     

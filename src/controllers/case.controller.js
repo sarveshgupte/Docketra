@@ -1687,70 +1687,32 @@ const getCases = async (req, res) => {
     }
     
     const scopedCaseQuery = enforceTenantScope(query, req, { source: 'case.getCases.list' });
+    const cases = await Case.find(scopedCaseQuery)
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit))
+      .sort({ createdAt: -1 });
 
-    // Refactor: Use MongoDB aggregation with $lookup to join client data in a single query
+    // Fetch client details for each case
+    // TODO: Optimize N+1 query - consider pre-fetching unique clientIds or using aggregation
+    // TODO: Use MongoDB aggregation with $lookup to join client data in a single query
+    // Example: Case.aggregate([{ $lookup: { from: 'clients', localField: 'clientId', foreignField: 'clientId', as: 'client' }}])
     // PR: Client Lifecycle - fetch clients regardless of status to display existing cases with inactive clients
-    const aggregationPipeline = [
-      { $match: scopedCaseQuery },
-      { $sort: { createdAt: -1 } },
-      { $skip: (parseInt(page) - 1) * parseInt(limit) },
-      { $limit: parseInt(limit) },
-      {
-        $lookup: {
-          from: 'clients',
-          let: { caseClientId: '$clientId', caseFirmId: '$firmId' },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $and: [
-                    { $eq: ['$clientId', '$$caseClientId'] },
-                    { $eq: ['$firmId', { $toObjectId: '$$caseFirmId' }] },
-                  ],
-                },
-              },
-            },
-          ],
-          as: 'clientData',
-        },
-      },
-      {
-        $addFields: {
-          client: { $arrayElemAt: ['$clientData', 0] },
-        },
-      },
-      {
-        $project: {
-          clientData: 0,
-        },
-      },
-    ];
-
-    const cases = await Case.aggregate(aggregationPipeline);
-
-    // Decrypt case and client documents
-    // Note: CaseRepository.decryptDocs and ClientRepository.decryptDocs handle decryption and normalization
-    const decryptedCases = await CaseRepository.decryptDocs(cases, req.user.firmId, { role: req.user.role });
-
-    const clientDocs = decryptedCases.map(c => c.client).filter(Boolean);
-    if (clientDocs.length > 0) {
-      await ClientRepository.decryptDocs(clientDocs, req.user.firmId, { role: req.user.role });
-    }
-
-    const casesWithClients = decryptedCases.map(caseItem => {
-      const client = caseItem.client;
-      return {
-        ...caseItem,
-        client: client ? {
-          clientId: client.clientId,
-          businessName: client.businessName,
-          primaryContactNumber: client.primaryContactNumber,
-          businessEmail: client.businessEmail,
-          status: client.status,
-          isActive: client.isActive,
-        } : null,
-      };
-    });
+    const casesWithClients = await Promise.all(
+      cases.map(async (caseItem) => {
+        const client = await ClientRepository.findByClientId(req.user.firmId, caseItem.clientId, req.user.role);
+        return {
+          ...caseItem.toObject(),
+          client: client ? {
+            clientId: client.clientId,
+            businessName: client.businessName,
+            primaryContactNumber: client.primaryContactNumber,
+            businessEmail: client.businessEmail,
+            status: client.status, // Include status for inactive label display
+            isActive: client.isActive, // Legacy field for backward compatibility
+          } : null,
+        };
+      })
+    );
     
     const total = await Case.countDocuments(scopedCaseQuery);
     

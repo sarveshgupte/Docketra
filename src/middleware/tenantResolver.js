@@ -56,11 +56,7 @@ module.exports = async function tenantResolver(req, res, next) {
       return res.status(404).json(FIRM_NOT_FOUND_RESPONSE);
     }
 
-    const isPublicLoginLookup = req.method === 'GET' && /\/login\/?$/.test(String(req.path || req.originalUrl || ''));
-
-    // Allow public login page metadata lookup for non-active firms so the UI can
-    // render a clear workspace-status message instead of a generic lookup failure.
-    if (!isActiveStatus(firm.status) && !isPublicLoginLookup) {
+    if (!isActiveStatus(firm.status)) {
       return res.status(403).json({
         success: false,
         code: getFirmInactiveCode(firm.status),

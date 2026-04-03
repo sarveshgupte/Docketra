@@ -31,16 +31,13 @@ async function testConcurrentPauseConflictIsRejected() {
   let updateOneAttempts = 0;
 
   try {
-    Case.findOne = () => ({
-      lean: async () => ({
-        caseId: 'CASE-20260301-00002',
-        status: 'IN_PROGRESS', // IN_PROGRESS maps to Docket IN_PROGRESS, which can transition to PENDED
-        docketStatus: 'IN_PROGRESS',
-        tatPaused: false,
-        tatLastStartedAt: fixedStart,
-        tatAccumulatedMinutes: 0,
-        firmId: 'firm-a',
-      }),
+    Case.findOne = async () => ({
+      caseId: 'CASE-20260301-00002',
+      status: 'OPEN',
+      tatPaused: false,
+      tatLastStartedAt: fixedStart,
+      tatAccumulatedMinutes: 0,
+      firmId: 'firm-a',
     });
     Case.updateOne = async () => {
       updateOneAttempts += 1;
@@ -50,39 +47,21 @@ async function testConcurrentPauseConflictIsRejected() {
     CaseHistory.create = async (docs) => (Array.isArray(docs) ? docs : [docs]);
     auditLogService.logCaseHistory = async () => ({});
 
-    // Provide a dummy mock for DocketAuditLog which is created in docket transitions
-    let originalDocketAuditLogCreate;
-    try {
-      originalDocketAuditLogCreate = require('../src/models/DocketAuditLog.model').create;
-      require('../src/models/DocketAuditLog.model').create = async () => ({});
-    } catch(e) {}
-
     const context = {
       tenantId: 'firm-a',
       role: 'Admin',
-      currentStatus: 'IN_PROGRESS',
+      currentStatus: 'OPEN',
       userId: 'X123456',
       performedByXID: 'X123456',
       performedBy: 'test@example.com',
       session: { id: 's1' },
-      reason: 'Testing SLA Concurrency' // Required by Docket logic
     };
 
-    // The first attempt will successfully "update" the status (our mock matchedCount=1)
-    try {
-      await CaseService.updateStatus('CASE-20260301-00002', 'PENDED', context);
-    } catch(err) {}
-
-    const staleContext = { ...context, currentStatus: 'IN_PROGRESS' };
-
-    // On the second attempt, matchedCount=0 triggers the concurrent state change logic
-    let rejected = false;
-    try {
-      await CaseService.updateStatus('CASE-20260301-00002', 'PENDED', staleContext);
-    } catch(err) {
-      rejected = true;
-    }
-    assert.strictEqual(rejected, true, 'Should reject stale writer');
+    await CaseService.updateStatus('CASE-20260301-00002', 'PENDED', context);
+    await assert.rejects(
+      () => CaseService.updateStatus('CASE-20260301-00002', 'PENDED', context),
+      /Case state changed concurrently/
+    );
     console.log('✓ Concurrent pause attempts reject stale writer');
   } finally {
     Case.findOne = originalFindOne;

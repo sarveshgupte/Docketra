@@ -10,13 +10,13 @@ function testValidTransitions() {
   assert.strictEqual(canTransition(CaseStatus.APPROVED, CaseStatus.OPEN), true);
   assert.strictEqual(canTransition(CaseStatus.REJECTED, CaseStatus.DRAFT), true);
   assert.strictEqual(canTransition(CaseStatus.OPEN, CaseStatus.FILED), true);
-  assert.strictEqual(canTransition(CaseStatus.OPEN, CaseStatus.PENDING), true);
+  assert.strictEqual(canTransition(CaseStatus.OPEN, CaseStatus.PENDED), true);
   assert.strictEqual(canTransition(CaseStatus.OPEN, CaseStatus.RESOLVED), true);
-  assert.strictEqual(canTransition(CaseStatus.PENDING, CaseStatus.OPEN), true);
-
-  // Test legacy aliases that map back to the primary state machine
-  assert.strictEqual(canTransition(CaseStatus.UNASSIGNED, CaseStatus.PENDING), true);
-  assert.strictEqual(canTransition(CaseStatus.PENDING_LEGACY, CaseStatus.OPEN), true);
+  assert.strictEqual(canTransition(CaseStatus.PENDED, CaseStatus.OPEN), true);
+  assert.strictEqual(canTransition(CaseStatus.FILED, CaseStatus.RESOLVED), true);
+  assert.strictEqual(canTransition(CaseStatus.UNASSIGNED, CaseStatus.ASSIGNED), true);
+  assert.strictEqual(canTransition(CaseStatus.ASSIGNED, CaseStatus.IN_PROGRESS), true);
+  assert.strictEqual(canTransition(CaseStatus.PENDING_ALIAS, CaseStatus.OPEN), true);
 }
 
 function testInvalidTransitions() {
@@ -35,9 +35,9 @@ function testStatusNormalization() {
 }
 
 function testAssertValidTransition() {
-  assert.strictEqual(assertValidTransition(CaseStatus.DRAFT, CaseStatus.SUBMITTED), true);
+  assert.strictEqual(assertValidTransition(CaseStatus.UNASSIGNED, CaseStatus.ASSIGNED), true);
   assert.throws(
-    () => assertValidTransition(CaseStatus.DRAFT, CaseStatus.RESOLVED),
+    () => assertValidTransition(CaseStatus.UNASSIGNED, CaseStatus.RESOLVED),
     (error) => error && error.code === 'INVALID_CASE_TRANSITION'
   );
 }
