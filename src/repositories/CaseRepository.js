@@ -267,8 +267,60 @@ const assertTenantId = (firmId) => {
 };
 
 const CaseRepository = {
+
+  async _findWithClient(matchQuery, firmId, role) {
+    const pipeline = [
+      { $match: matchQuery },
+      { $limit: 1 },
+      {
+        $lookup: {
+          from: 'clients',
+          let: { caseClientId: '$clientId', caseFirmId: '$firmId' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$clientId', '$caseClientId'] },
+                    { $eq: ['$firmId', { $toObjectId: '$caseFirmId' }] },
+                  ],
+                },
+              },
+            },
+          ],
+          as: 'clientData',
+        },
+      },
+      {
+        $addFields: {
+          client: { $arrayElemAt: ['$clientData', 0] },
+        },
+      },
+      {
+        $project: {
+          clientData: 0,
+        },
+      },
+    ];
+
+    const results = await Case.aggregate(pipeline, { role });
+    if (!results || results.length === 0) return null;
+
+    // Use the public decryptDocs method on the Repository to handle POJOs
+    const decrypted = await this.decryptDocs(results, firmId, { role });
+    const doc = decrypted[0];
+
+    if (doc.client) {
+      const ClientRepository = require('./ClientRepository');
+      await ClientRepository.decryptDocs([doc.client], firmId, { role });
+    }
+
+    return doc;
+  },
+
   /**
    * Find case by internal ID (PREFERRED METHOD)
+
    * Uses opaque caseInternalId for secure, non-guessable lookups
    *
    * @param {string|ObjectId} firmId - Firm ID from req.user.firmId
@@ -276,7 +328,7 @@ const CaseRepository = {
    * @param {string} role - Caller's role (required); superadmin triggers ForbiddenError
    * @returns {Promise<Object|null>} Case document or null
    */
-  async findByInternalId(firmId, caseInternalId, role) {
+  async findByInternalId(firmId, caseInternalId, role, options = {}) {
     assertTenantId(firmId);
     if (!caseInternalId) {
       return null;
@@ -285,11 +337,15 @@ const CaseRepository = {
 
     // Convert string to ObjectId if needed
     const internalId = mongoose.Types.ObjectId.isValid(caseInternalId)
-      ? caseInternalId
+      ? new mongoose.Types.ObjectId(caseInternalId)
       : null;
 
     if (!internalId) {
       return null;
+    }
+
+    if (options.includeClient) {
+      return this._findWithClient({ firmId: String(firmId), caseInternalId: internalId }, firmId, role);
     }
 
     const doc = await Case.findOne({ firmId, caseInternalId: internalId });
@@ -328,12 +384,17 @@ const CaseRepository = {
    * @returns {Promise<Object|null>} Case document or null
    * @deprecated Use findByInternalId or findByCaseNumber instead
    */
-  async findByCaseId(firmId, caseId, role) {
+  async findByCaseId(firmId, caseId, role, options = {}) {
     assertTenantId(firmId);
     if (!caseId) {
       return null;
     }
     _guardSuperadmin(role);
+
+    if (options.includeClient) {
+      return this._findWithClient({ firmId: String(firmId), caseId: String(caseId) }, firmId, role);
+    }
+
     // During transition, caseId = caseNumber
     const doc = await Case.findOne({ firmId, caseId });
     return _decryptCaseDoc(doc, firmId);
