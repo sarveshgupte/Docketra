@@ -24,6 +24,17 @@ const mapSafeLoginError = (error) => {
   return 'Sign-in failed. Please try again.';
 };
 
+const getWorkspaceStatusMessage = (status) => {
+  const normalized = String(status || '').trim().toLowerCase();
+  if (normalized === 'pending_setup') {
+    return 'Workspace setup is not complete yet. Please finish account setup from your invitation email.';
+  }
+  if (normalized === 'inactive' || normalized === 'suspended') {
+    return 'This workspace is inactive. Contact your admin.';
+  }
+  return 'Invalid workspace URL';
+};
+
 export const FirmLoginPage = () => {
   const { firmSlug } = useParams();
   const navigate = useNavigate();
@@ -105,9 +116,7 @@ export const FirmLoginPage = () => {
           setFirmData(response.data);
           localStorage.setItem(STORAGE_KEYS.FIRM_SLUG, firmSlug);
         } else {
-          setError(response?.data?.status === 'inactive'
-            ? 'This workspace is inactive. Contact your admin.'
-            : 'Invalid workspace URL');
+          setError(getWorkspaceStatusMessage(response?.data?.status));
           setFirmData(null);
         }
       } catch (err) {

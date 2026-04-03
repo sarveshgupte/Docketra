@@ -1015,8 +1015,6 @@ caseSchema.plugin(tenantScopeGuardPlugin);
 //
 // The pre-save hook calls ensureTenantKey() which auto-generates the
 // per-tenant DEK on first use (envelope encryption — see encryption.service.js).
-//
-// TODO: Write migration script to encrypt existing plaintext fields.
 
 const { looksEncrypted: _caseIsEncryptedValue } = require('../security/encryption.utils');
 
