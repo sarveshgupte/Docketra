@@ -478,15 +478,19 @@ const sendSignupWelcomeEmail = async ({
   req = null,
 }) => {
   const workspaceUrl = buildFirmUrl(firmSlug);
+  const sendPayload = {
+    name,
+    email,
+    xid,
+    workspaceUrl,
+    firmName,
+    context: req,
+  };
   try {
-    const emailResult = await emailService.sendFirmSetupEmail({
-      name,
-      email,
-      xid,
-      workspaceUrl,
-      firmName,
-      context: req,
-    });
+    let emailResult = await emailService.sendFirmSetupEmail(sendPayload);
+    if (!emailResult?.success) {
+      emailResult = await emailService.sendFirmSetupEmail(sendPayload);
+    }
 
     if (!emailResult?.success) {
       const failureMessage = emailResult.error || 'Unknown email error';
