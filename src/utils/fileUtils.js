@@ -66,15 +66,7 @@ const getExtension = (filename) => {
  * @param {string} dir - The directory path
  */
 const ensureDirectoryExists = async (dir) => {
-  try {
-    await fs.promises.access(dir, fs.constants.F_OK);
-  } catch (err) {
-    if (err.code === 'ENOENT') {
-      await fs.promises.mkdir(dir, { recursive: true });
-    } else {
-      throw err;
-    }
-  }
+  await fs.promises.mkdir(dir, { recursive: true });
 };
 
 module.exports = {
