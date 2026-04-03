@@ -33,6 +33,7 @@ const CaseFile = require('../models/CaseFile.model');
 const { incrementTenantMetric } = require('../services/tenantMetrics.service');
 const { getSession } = require('../utils/getSession');
 const { getOrCreateDefaultClient } = require('../services/defaultClient.guard');
+const encryptionService = require('../security/encryption.service');
 const fs = require('fs').promises;
 const fsSync = require('fs');
 const path = require('path');
@@ -1687,29 +1688,89 @@ const getCases = async (req, res) => {
     }
     
     const scopedCaseQuery = enforceTenantScope(query, req, { source: 'case.getCases.list' });
-    const cases = await Case.find(scopedCaseQuery)
-      .limit(parseInt(limit))
-      .skip((parseInt(page) - 1) * parseInt(limit))
-      .sort({ createdAt: -1 });
-    
-    // Fetch client details for each case
-    // TODO: Optimize N+1 query - consider pre-fetching unique clientIds or using aggregation
-    // TODO: Use MongoDB aggregation with $lookup to join client data in a single query
-    // Example: Case.aggregate([{ $lookup: { from: 'clients', localField: 'clientId', foreignField: 'clientId', as: 'client' }}])
-    // PR: Client Lifecycle - fetch clients regardless of status to display existing cases with inactive clients
+
+    // Use aggregation to join client data in a single query (fixes N+1 issue)
+    const casesWithClientsRaw = await Case.aggregate([
+      { $match: scopedCaseQuery },
+      { $sort: { createdAt: -1 } },
+      { $skip: (parseInt(page, 10) - 1) * parseInt(limit, 10) },
+      { $limit: parseInt(limit, 10) },
+      {
+        $addFields: {
+          firmIdObj: { $toObjectId: '$firmId' },
+        },
+      },
+      {
+        $lookup: {
+          from: 'clients',
+          let: { clientId: '$clientId', firmId: '$firmIdObj' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$clientId', '$$clientId'] },
+                    { $eq: ['$firmId', '$$firmId'] },
+                    { $eq: [{ $ifNull: ['$deletedAt', null] }, null] },
+                  ],
+                },
+              },
+            },
+          ],
+          as: 'client',
+        },
+      },
+      {
+        $unwind: {
+          path: '$client',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+    ], { role: req.user.role });
+
     const casesWithClients = await Promise.all(
-      cases.map(async (caseItem) => {
-        const client = await ClientRepository.findByClientId(req.user.firmId, caseItem.clientId, req.user.role);
-        return {
-          ...caseItem.toObject(),
-          client: client ? {
+      casesWithClientsRaw.map(async (caseItem) => {
+        const client = caseItem.client;
+        let decryptedClient = null;
+
+        if (client) {
+          // Decrypt sensitive fields if encryption is configured
+          const fieldsToDecrypt = ['primaryContactNumber', 'businessEmail'];
+          for (const field of fieldsToDecrypt) {
+            if (client[field] != null && encryptionService.looksEncrypted(client[field])) {
+              try {
+                // eslint-disable-next-line no-await-in-loop
+                const decrypted = await encryptionService.decrypt(
+                  client[field],
+                  String(client.firmId),
+                  req.user.role,
+                  { logContext: { field, model: 'Client', route: 'getCases' } }
+                );
+                client[field] = decrypted ?? client[field];
+              } catch (err) {
+                console.error(`[getCases] Failed to decrypt client ${field}:`, err.message);
+              }
+            }
+          }
+
+          const normalizeValue = (value) => {
+            if (!value || value === '') return 'Not Available';
+            return value;
+          };
+
+          decryptedClient = {
             clientId: client.clientId,
             businessName: client.businessName,
-            primaryContactNumber: client.primaryContactNumber,
-            businessEmail: client.businessEmail,
-            status: client.status, // Include status for inactive label display
-            isActive: client.isActive, // Legacy field for backward compatibility
-          } : null,
+            primaryContactNumber: normalizeValue(client.primaryContactNumber),
+            businessEmail: normalizeValue(client.businessEmail),
+            status: client.status,
+            isActive: client.isActive,
+          };
+        }
+
+        return {
+          ...caseItem,
+          client: decryptedClient,
         };
       })
     );
