@@ -19,17 +19,25 @@ const USER_STATUS_MAP = {
 const run = async () => {
   await connectDB();
 
-  let firmUpdates = 0;
-  for (const [from, to] of Object.entries(FIRM_STATUS_MAP)) {
-    const result = await Firm.updateMany({ status: from }, { $set: { status: to } });
-    firmUpdates += result.modifiedCount || 0;
-  }
+  const firmBulkOps = Object.entries(FIRM_STATUS_MAP).map(([from, to]) => ({
+    updateMany: {
+      filter: { status: from },
+      update: { $set: { status: to } },
+    },
+  }));
 
-  let userUpdates = 0;
-  for (const [from, to] of Object.entries(USER_STATUS_MAP)) {
-    const result = await User.updateMany({ status: from }, { $set: { status: to } });
-    userUpdates += result.modifiedCount || 0;
-  }
+  const firmResult = await Firm.bulkWrite(firmBulkOps);
+  const firmUpdates = firmResult.modifiedCount || 0;
+
+  const userBulkOps = Object.entries(USER_STATUS_MAP).map(([from, to]) => ({
+    updateMany: {
+      filter: { status: from },
+      update: { $set: { status: to } },
+    },
+  }));
+
+  const userResult = await User.bulkWrite(userBulkOps);
+  const userUpdates = userResult.modifiedCount || 0;
 
   console.log(`[status-migration] Updated firms: ${firmUpdates}`);
   console.log(`[status-migration] Updated users: ${userUpdates}`);
