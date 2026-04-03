@@ -104,9 +104,10 @@ const createCategory = async (req, res) => {
     }
     
     // Check for duplicate name (case-insensitive)
+    const escapedName = name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const existing = await Category.findOne({ 
       ...firmScope,
-      name: { $regex: new RegExp(`^${name.trim()}$`, 'i') } 
+      name: { $regex: new RegExp(`^${escapedName}$`, 'i') }
     });
     
     if (existing) {
@@ -168,10 +169,11 @@ const updateCategory = async (req, res) => {
     }
     
     // Check for duplicate name (case-insensitive), excluding current category
+    const escapedName = name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const existing = await Category.findOne({ 
       _id: { $ne: id },
       ...firmScope,
-      name: { $regex: new RegExp(`^${name.trim()}$`, 'i') } 
+      name: { $regex: new RegExp(`^${escapedName}$`, 'i') }
     });
     
     if (existing) {
