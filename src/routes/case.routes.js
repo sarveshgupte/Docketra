@@ -2,7 +2,6 @@ const express = require('express');
 const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
 const routeSchemas = require('../schemas/case.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
-const { authenticate } = require('../middleware/auth.middleware');
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
 const {
   userReadLimiter,
@@ -148,12 +147,10 @@ router.post('/:caseId/comments', authorizeFirmPermission('CASE_UPDATE'), userWri
 router.post('/:caseId/attachments', upload.single('file'), enforceUploadSecurity, authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, attachmentLimiter, fileUploadLimiter, checkCaseClientAccess, addAttachment);
 
 // GET /api/cases/:caseId/attachments/:attachmentId/view - View attachment inline
-// Note: authenticate middleware accepts xID from query params (req.query.xID)
-router.get('/:caseId/attachments/:attachmentId/view', authenticate, authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, viewAttachment);
+router.get('/:caseId/attachments/:attachmentId/view', authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, viewAttachment);
 
 // GET /api/cases/:caseId/attachments/:attachmentId/download - Download attachment
-// Note: authenticate middleware accepts xID from query params (req.query.xID)
-router.get('/:caseId/attachments/:attachmentId/download', authenticate, authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, downloadAttachment);
+router.get('/:caseId/attachments/:attachmentId/download', authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, downloadAttachment);
 
 // POST /api/cases/:caseId/clone - Clone case with comments and attachments
 // PR #44: Apply xID validation for assignment fields
@@ -217,13 +214,13 @@ router.get('/:caseId/comments', authorizeFirmPermission('CASE_VIEW'), userReadLi
 router.get('/:caseId/client-fact-sheet', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, getClientFactSheetForCase);
 
 // GET /api/cases/:caseId/client-fact-sheet/files/:fileId/view - View client fact sheet file (view-only, no download)
-router.get('/:caseId/client-fact-sheet/files/:fileId/view', authenticate, authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, viewClientFactSheetFile);
+router.get('/:caseId/client-fact-sheet/files/:fileId/view', authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, viewClientFactSheetFile);
 
 // Client CFS access from case context (read-only)
 // GET /api/cases/:caseId/client-cfs/files - List client CFS files for this case's client
-router.get('/:caseId/client-cfs/files', authenticate, authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, listClientCFSFilesForCase);
+router.get('/:caseId/client-cfs/files', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, listClientCFSFilesForCase);
 
 // GET /api/cases/:caseId/client-cfs/files/:attachmentId/download - Download client CFS file
-router.get('/:caseId/client-cfs/files/:attachmentId/download', authenticate, authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, downloadClientCFSFileForCase);
+router.get('/:caseId/client-cfs/files/:attachmentId/download', authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, downloadClientCFSFileForCase);
 
 module.exports = router;

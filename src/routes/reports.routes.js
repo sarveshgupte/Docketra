@@ -2,8 +2,6 @@ const express = require('express');
 const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
 const routeSchemas = require('../schemas/reports.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
-const { authenticate } = require('../middleware/auth.middleware');
-const { attachFirmContext } = require('../middleware/firmContext.middleware');
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
 const { userReadLimiter } = require('../middleware/rateLimiters');
 const {
@@ -25,9 +23,7 @@ const {
  * Rate limited to prevent report generation abuse
  */
 
-// All report routes require authentication and admin role
-router.use(authenticate);
-router.use(attachFirmContext);
+// Auth + tenant context are provided by app-level tenantScopedApiAccess in server.js
 router.use(authorizeFirmPermission('REPORT_VIEW'));
 router.use(userReadLimiter);
 
