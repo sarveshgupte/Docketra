@@ -1689,28 +1689,35 @@ const getCases = async (req, res) => {
     
     const scopedCaseQuery = enforceTenantScope(query, req, { source: 'case.getCases.list' });
 
+    // Mongoose Model.aggregate() does not auto-cast criteria in $match stage.
+    // Ensure identifiers are correctly typed for the aggregation pipeline.
+    const aggregateMatch = { ...scopedCaseQuery };
+    if (aggregateMatch.firmId) aggregateMatch.firmId = String(aggregateMatch.firmId);
+
     // Use aggregation to join client data in a single query (fixes N+1 issue)
     const casesWithClientsRaw = await Case.aggregate([
-      { $match: scopedCaseQuery },
+      { $match: aggregateMatch },
       { $sort: { createdAt: -1 } },
       { $skip: (parseInt(page, 10) - 1) * parseInt(limit, 10) },
       { $limit: parseInt(limit, 10) },
       {
         $addFields: {
+          // Case.firmId is String, Client.firmId is ObjectId.
+          // Convert for join compatibility.
           firmIdObj: { $toObjectId: '$firmId' },
         },
       },
       {
         $lookup: {
           from: 'clients',
-          let: { clientId: '$clientId', firmId: '$firmIdObj' },
+          let: { cId: '$clientId', fId: '$firmIdObj' },
           pipeline: [
             {
               $match: {
                 $expr: {
                   $and: [
-                    { $eq: ['$clientId', '$$clientId'] },
-                    { $eq: ['$firmId', '$$firmId'] },
+                    { $eq: ['$clientId', '$$cId'] },
+                    { $eq: ['$firmId', '$$fId'] },
                     { $eq: [{ $ifNull: ['$deletedAt', null] }, null] },
                   ],
                 },
@@ -1726,7 +1733,7 @@ const getCases = async (req, res) => {
           preserveNullAndEmptyArrays: true,
         },
       },
-    ], { role: req.user.role });
+    ]).options({ role: req.user.role });
 
     const casesWithClients = await Promise.all(
       casesWithClientsRaw.map(async (caseItem) => {
