@@ -1331,13 +1331,14 @@ const getCaseByCaseId = async (req, res) => {
     // Prefer repository-backed lookup for docket deep-links so encrypted fields
     // are decrypted before reaching the UI. Fallback to identifier resolution
     // for backward compatibility with internal IDs.
-    let caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
+    // Refactor: Use MongoDB aggregation with $lookup to join client data in a single query
+    let caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role, { includeClient: true });
 
     if (!caseData) {
       try {
         const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
         console.log(`[GET_CASE] Resolved identifier: ${caseId} -> ${internalId}`);
-        caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
+        caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role, { includeClient: true });
       } catch (error) {
         console.error(`[GET_CASE] Case not found or identifier resolution failed: caseId=${caseId}, error=${error.message}`);
         return res.status(404).json({
@@ -1415,7 +1416,7 @@ const getCaseByCaseId = async (req, res) => {
       };
     };
 
-    const [commentsResult, attachmentsResult, historyResult, auditResult, clientResult] = await Promise.allSettled([
+    const [commentsResult, attachmentsResult, historyResult, auditResult] = await Promise.allSettled([
       runPaginatedFacet({
         model: Comment,
         match: enforceTenantScope({ caseId: scopedCaseId }, req, { source: 'case.getCase.comments' }),
@@ -1467,7 +1468,6 @@ const getCaseByCaseId = async (req, res) => {
           metadata: 1,
         },
       }),
-      ClientRepository.findByClientId(req.user.firmId, caseData.clientId, req.user.role),
     ]);
 
     if (commentsResult.status === 'rejected' || attachmentsResult.status === 'rejected' || historyResult.status === 'rejected' || auditResult.status === 'rejected') {
@@ -1477,9 +1477,6 @@ const getCaseByCaseId = async (req, res) => {
         history: historyResult.status,
         audit: auditResult.status,
       });
-    }
-    if (clientResult.status === 'rejected') {
-      console.error('[GET_CASE] Client load failed', clientResult.reason);
     }
     const commentsPayload = commentsResult.status === 'fulfilled' ? commentsResult.value : { rows: [], hasMore: false, totalCount: 0 };
     const historyPayload = historyResult.status === 'fulfilled' ? historyResult.value : { rows: [], hasMore: false, totalCount: 0 };
@@ -1511,9 +1508,9 @@ const getCaseByCaseId = async (req, res) => {
     }
     
     // Fetch current client details - with firm scoping
-    // TODO: Consider using aggregation pipeline with $lookup for better performance
     // PR: Client Lifecycle - fetch client regardless of status to display existing cases with inactive clients
-    const client = clientResult.status === 'fulfilled' ? clientResult.value : null;
+    // (Note: resolved via CaseRepository aggregation pipeline with $lookup)
+    const client = caseData.client || null;
     
     // PR #45: Require authenticated user with xID for audit logging
     if (!req.user?.email || !req.user?.xID) {
