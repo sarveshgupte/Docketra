@@ -212,8 +212,10 @@ async function runDailyAggregationJob(dateInput = DateTime.utc().minus({ days: 1
     bootstrapStatus: 'COMPLETED',
   }).select({ _id: 0, firmId: 1 }).lean();
 
-  for (const tenant of tenants) {
-    await runTenantAggregation(tenant.firmId, dateInput);
+  const BATCH_SIZE = 50;
+  for (let i = 0; i < tenants.length; i += BATCH_SIZE) {
+    const batch = tenants.slice(i, i + BATCH_SIZE);
+    await Promise.all(batch.map((tenant) => runTenantAggregation(tenant.firmId, dateInput)));
   }
 }
 
