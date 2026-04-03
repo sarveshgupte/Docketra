@@ -26,7 +26,7 @@ const resolveUserIdentity = async ({
   let user = null;
   let linkedDuringRequest = false;
   const withSession = session ? { session } : undefined;
-  const updateOptions = { new: true, ...(withSession || {}) };
+  const updateOptions = { returnDocument: 'after', ...(withSession || {}) };
 
   if (googleId) {
     user = await User.findOne({ 'authProviders.google.googleId': googleId }, null, withSession);

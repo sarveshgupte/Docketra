@@ -46,7 +46,7 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObject
       },
     },
     {
-      new: true,
+      returnDocument: 'after',
       ...(session ? { session } : {}),
     }
   );

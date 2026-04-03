@@ -32,7 +32,7 @@ const generateNextXID = async (_firmId = null, legacySession = null) => {
       { name: 'user_xid', firmId: 'GLOBAL' },
       { $inc: { seq: 1 } },
       {
-        new: true,
+        returnDocument: 'after',
         upsert: true,
         setDefaultsOnInsert: true,
       }
