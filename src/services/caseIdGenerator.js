@@ -1,4 +1,5 @@
 const { getNextSequence } = require('./counter.service');
+const crypto = require('crypto');
 
 /**
  * Case ID Generator Service
@@ -55,7 +56,7 @@ function generateDocketId(firmId, workTypePrefix) {
   const dateStr = `${year}${month}${day}`;
 
   // 4-digit random suffix: 1000–9999 (always 4 digits)
-  const randomSuffix = String(Math.floor(1000 + Math.random() * 9000));
+  const randomSuffix = String(crypto.randomInt(1000, 10000));
 
   return `${prefix}${dateStr}${randomSuffix}`;
 }
