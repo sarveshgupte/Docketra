@@ -18,6 +18,9 @@ import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
 import { TableSkeleton } from '../components/common/Skeleton';
+import { ErrorState } from '../components/feedback/ErrorState';
+import { Stack } from '../components/layout/Stack';
+import { Row } from '../components/layout/Row';
 import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
 import { DataTable } from '../components/layout/DataTable';
@@ -252,7 +255,7 @@ export const WorklistPage = () => {
 
   return (
     <Layout>
-      <div className="worklist">
+      <Stack className="worklist" space={16}>
         <PageHeader
           title={pageInfo.title}
           subtitle={pageInfo.description}
@@ -262,18 +265,17 @@ export const WorklistPage = () => {
             </Button>
           )}
         />
-        <div className="worklist-view-tabs" role="tablist" aria-label="Docket queues">
+        <Row className="worklist-view-tabs" role="tablist" aria-label="Docket queues" gap={8}>
           <Button variant="outline" onClick={() => navigate(ROUTES.GLOBAL_WORKLIST(firmSlug))}>Workbasket</Button>
           <Button variant="outline">My Worklist</Button>
-        </div>
+        </Row>
 
         <Card>
           {error ? (
-            <EmptyState
+            <ErrorState
               title="We couldn’t load your worklist"
               description="Retry to fetch the latest assigned dockets. If the problem continues, refresh the page or contact your administrator."
-              actionLabel="Retry"
-              onAction={loadWorklist}
+              onRetry={loadWorklist}
             />
           ) : cases.length === 0 ? (
             <EmptyState
@@ -301,7 +303,7 @@ export const WorklistPage = () => {
             />
           )}
         </Card>
-      </div>
+      </Stack>
     </Layout>
   );
 };

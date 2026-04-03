@@ -11,6 +11,7 @@ import { Button } from '../components/common/Button';
 import { validateXID, validatePassword } from '../utils/validators';
 import { useToast } from '../hooks/useToast';
 import { spacingClasses } from '../theme/tokens';
+import { ErrorState } from '../components/feedback/ErrorState';
 import './LoginPage.css';
 
 export const LoginPage = () => {
@@ -32,14 +33,23 @@ export const LoginPage = () => {
     const nextValue = event.target.value.replace(/\s+/g, '').toUpperCase();
     setIdentifier(nextValue);
     setError('');
-    setFieldErrors((current) => ({ ...current, identifier: '' }));
+    setFieldErrors((current) => ({
+      ...current,
+      identifier: nextValue.length === 0 || validateXID(nextValue) ? '' : 'Please enter a valid xID (for example, X123456).',
+    }));
   };
 
   const handlePasswordChange = (event) => {
-    setPassword(event.target.value);
+    const nextValue = event.target.value;
+    setPassword(nextValue);
     setError('');
-    setFieldErrors((current) => ({ ...current, password: '' }));
+    setFieldErrors((current) => ({
+      ...current,
+      password: nextValue.length === 0 || validatePassword(nextValue) ? '' : 'Password must be at least 8 characters.',
+    }));
   };
+
+  const canSubmit = validateXID(identifier.trim().toUpperCase()) && validatePassword(password);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -149,20 +159,16 @@ export const LoginPage = () => {
             </div>
           )}
 
-          {error && (
-            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
-              {error}
-            </div>
-          )}
+          {error && (<ErrorState title="Sign-in failed" description={error} />)}
 
           <Button
             type="submit"
             variant="primary"
             fullWidth
             loading={loading}
-            disabled={loading}
+            disabled={loading || !canSubmit}
           >
-            {loading ? 'Signing in' : 'Sign in'}
+            {loading ? 'Signing in' : 'Submit & Sign in'}
           </Button>
 
           <div className="text-center">
