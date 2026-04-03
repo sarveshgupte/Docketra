@@ -66,7 +66,7 @@ const getOrCreateDefaultClient = async (firmId, options = {}) => {
       },
       {
         upsert: true,
-        new: true,
+        returnDocument: 'after',
         session,
       }
     );
