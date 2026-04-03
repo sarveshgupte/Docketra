@@ -2,7 +2,6 @@ const express = require('express');
 const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
 const routeSchemas = require('../schemas/debug.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
-const { authenticate } = require('../middleware/auth.middleware');
 const { requireAdmin } = require('../middleware/permission.middleware');
 const { debugLimiter } = require('../middleware/rateLimiters');
 const { sendTestEmail } = require('../services/email.service');
@@ -22,7 +21,7 @@ const { sendTestEmail } = require('../services/email.service');
  * Rate limited with temporary development defaults (applied before auth to prevent DB abuse)
  */
 // lgtm [js/missing-rate-limiting]
-router.get('/email-test', debugLimiter, authenticate, requireAdmin, async (req, res) => {
+router.get('/email-test', debugLimiter, requireAdmin, async (req, res) => {
   try {
     // Use authenticated user's email or query parameter
     const testEmail = req.query.email || req.user.email;

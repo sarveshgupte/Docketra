@@ -17,6 +17,9 @@ const { isActiveStatus } = require('../utils/status.utils');
 const firmContext = async (req, res, next) => {
   const requestId = req.requestId || randomUUID();
   req.requestId = requestId;
+  if (req._firmContextResolved && req.tenant?.id && req.firmId) {
+    return next();
+  }
 
   try {
     if (req.skipFirmContext) {
@@ -150,9 +153,13 @@ const firmContext = async (req, res, next) => {
       tenantSlug,
     };
 
-    console.log(`[FIRM_CONTEXT][${requestId}] Tenant context resolved`, { 
-      firmId: req.firmId,
-    });
+    req._firmContextResolved = true;
+    if (!req._firmContextLogged) {
+      console.log(`[FIRM_CONTEXT][${requestId}] Tenant context resolved`, {
+        firmId: req.firmId,
+      });
+      req._firmContextLogged = true;
+    }
 
     return next();
   } catch (error) {
