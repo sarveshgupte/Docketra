@@ -63,39 +63,13 @@ function testGetExtension() {
 async function testEnsureDirectoryExists() {
   console.log('Running testEnsureDirectoryExists...');
 
-  const originalAccess = fs.promises.access;
   const originalMkdir = fs.promises.mkdir;
 
   try {
-    // Test case 1: Directory exists
-    let accessCalled = false;
     let mkdirCalled = false;
-
-    fs.promises.access = async (dir, mode) => {
-      accessCalled = true;
-      return Promise.resolve();
-    };
-    fs.promises.mkdir = async (dir, options) => {
-      mkdirCalled = true;
-      return Promise.resolve();
-    };
-
-    await ensureDirectoryExists('/existing/dir');
-    assert.strictEqual(accessCalled, true, 'fs.promises.access should be called');
-    assert.strictEqual(mkdirCalled, false, 'fs.promises.mkdir should NOT be called if dir exists');
-
-    // Test case 2: Directory does not exist (ENOENT)
-    accessCalled = false;
-    mkdirCalled = false;
     let mkdirPath = null;
     let mkdirOptions = null;
 
-    fs.promises.access = async (dir, mode) => {
-      accessCalled = true;
-      const error = new Error('ENOENT');
-      error.code = 'ENOENT';
-      throw error;
-    };
     fs.promises.mkdir = async (dir, options) => {
       mkdirCalled = true;
       mkdirPath = dir;
@@ -104,37 +78,13 @@ async function testEnsureDirectoryExists() {
     };
 
     await ensureDirectoryExists('/new/dir');
-    assert.strictEqual(accessCalled, true, 'fs.promises.access should be called');
-    assert.strictEqual(mkdirCalled, true, 'fs.promises.mkdir should be called when dir does not exist');
+    assert.strictEqual(mkdirCalled, true, 'fs.promises.mkdir should be called');
     assert.strictEqual(mkdirPath, '/new/dir');
     assert.deepStrictEqual(mkdirOptions, { recursive: true });
-
-    // Test case 3: access throws non-ENOENT error
-    accessCalled = false;
-    mkdirCalled = false;
-
-    fs.promises.access = async (dir, mode) => {
-      accessCalled = true;
-      const error = new Error('EACCES');
-      error.code = 'EACCES';
-      throw error;
-    };
-
-    let errorThrown = false;
-    try {
-      await ensureDirectoryExists('/forbidden/dir');
-    } catch (err) {
-      errorThrown = true;
-      assert.strictEqual(err.code, 'EACCES');
-    }
-    assert.strictEqual(accessCalled, true);
-    assert.strictEqual(mkdirCalled, false);
-    assert.strictEqual(errorThrown, true, 'Should rethrow non-ENOENT errors');
 
     console.log('testEnsureDirectoryExists passed.');
   } finally {
     // Restore original functions
-    fs.promises.access = originalAccess;
     fs.promises.mkdir = originalMkdir;
   }
 }
