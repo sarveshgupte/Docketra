@@ -7,6 +7,9 @@ import api from '../services/api';
 import { authService } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
 import { spacingClasses } from '../theme/tokens';
+import { Stack } from '../components/layout/Stack';
+import { Row } from '../components/layout/Row';
+import { ErrorState } from '../components/feedback/ErrorState';
 
 export const OtpVerificationPage = () => {
   const navigate = useNavigate();
@@ -18,6 +21,8 @@ export const OtpVerificationPage = () => {
 
   const email = String(location.state?.email || '').trim().toLowerCase();
   const purpose = location.state?.purpose || 'login';
+
+  const isOtpValid = /^\d{6}$/.test(otp);
 
   const onSubmit = async (event) => {
     event.preventDefault();
@@ -49,8 +54,14 @@ export const OtpVerificationPage = () => {
   return (
     <div className="auth-wrapper">
       <Card className="auth-card max-w-form">
-        <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">Verify OTP</h1>
-        <p className="mt-2 text-sm text-gray-500 text-center">Enter the 6-digit code sent to {email || 'your email'}.</p>
+        <Stack space={8} className="items-center">
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">Verify OTP</h1>
+          <Row justify="center" gap={8}>
+            <span className="h-2.5 w-2.5 rounded-full bg-blue-200" aria-hidden="true" />
+            <span className="h-2.5 w-2.5 rounded-full bg-blue-600" aria-hidden="true" />
+          </Row>
+          <p className="text-sm text-gray-500 text-center">Step 2 of 2 · Enter the 6-digit code sent to {email || 'your email'}.</p>
+        </Stack>
 
         <form onSubmit={onSubmit} className={`mt-6 ${spacingClasses.formFieldSpacing}`} noValidate>
           <Input
@@ -63,13 +74,9 @@ export const OtpVerificationPage = () => {
             disabled={loading}
           />
 
-          {error && (
-            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
-              {error}
-            </div>
-          )}
+          {error && (<ErrorState title="OTP verification failed" description={error} />)}
 
-          <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading || otp.length !== 6}>
+          <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading || !isOtpValid}>
             {loading ? 'Verifying...' : 'Verify OTP'}
           </Button>
         </form>

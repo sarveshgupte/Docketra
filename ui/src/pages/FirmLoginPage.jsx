@@ -12,6 +12,9 @@ import { useToast } from '../hooks/useToast';
 import { authApi } from '../api/auth.api';
 import { toUserFacingError } from '../utils/errorHandling';
 import { spacingClasses } from '../theme/tokens';
+import { Stack } from '../components/layout/Stack';
+import { Row } from '../components/layout/Row';
+import { ErrorState } from '../components/feedback/ErrorState';
 import './LoginPage.css';
 
 const mapSafeLoginError = (error) => {
@@ -164,6 +167,9 @@ export const FirmLoginPage = () => {
     }
   };
 
+  const credentialFormValid = validateXID(xid.trim().toUpperCase()) && validatePassword(password);
+  const otpFormValid = /^\d{6}$/.test(otp.trim());
+
   const handleCredentialSubmit = async (event) => {
     event.preventDefault();
     if (loading) return;
@@ -266,20 +272,24 @@ export const FirmLoginPage = () => {
   return (
     <div className="auth-wrapper">
       <Card className="auth-card max-w-form">
-        <div className="text-center">
+        <Stack space={12} className="text-center">
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900 text-center">{firmData.name}</h1>
-          <p className="mt-2 text-sm text-gray-500 text-center">Step {step === 'credentials' ? '1' : '2'} of 2</p>
-          <p className="mt-2 text-sm text-gray-500 text-center">{step === 'credentials' ? 'Enter your XID and password' : 'Enter the 6-digit code sent to your email'}</p>
-          <p className="mt-2 text-xs text-gray-500 text-center">{`Firm login URL: /${firmSlug}/login`}</p>
-        </div>
+          <Row justify="center" gap={8}>
+            <span className={`h-2.5 w-2.5 rounded-full ${step === 'credentials' ? 'bg-blue-600' : 'bg-blue-200'}`} aria-hidden="true" />
+            <span className={`h-2.5 w-2.5 rounded-full ${step === 'otp' ? 'bg-blue-600' : 'bg-blue-200'}`} aria-hidden="true" />
+          </Row>
+          <p className="text-sm text-gray-500 text-center">Step {step === 'credentials' ? '1' : '2'} of 2</p>
+          <p className="text-sm text-gray-500 text-center">{step === 'credentials' ? 'Enter your XID and password' : 'Enter the 6-digit code sent to your email'}</p>
+          <p className="text-xs text-gray-500 text-center">{`Firm login URL: /${firmSlug}/login`}</p>
+        </Stack>
 
-        {error && <div className="mt-6 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</div>}
+        {error && <ErrorState title="Sign in failed" description={error} />}
 
         {step === 'credentials' ? (
           <form onSubmit={handleCredentialSubmit} noValidate className={`mt-4 ${spacingClasses.formFieldSpacing}`}>
-            <Input label="xID" type="text" value={xid} onChange={(e) => setXid(e.target.value)} error={fieldErrors.xid} required placeholder="X123456" autoComplete="username" disabled={loading} autoFocus />
-            <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} error={fieldErrors.password} required placeholder="Enter your password" autoComplete="current-password" disabled={loading} />
-            <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading}>{loading ? 'Sending OTP...' : 'Continue'}</Button>
+            <Input label="xID" type="text" value={xid} onChange={(e) => { const value = e.target.value.toUpperCase(); setXid(value); setFieldErrors((prev) => ({ ...prev, xid: value.trim() === '' || validateXID(value.trim()) ? '' : 'Enter a valid xID (example: X123456).' })); }} error={fieldErrors.xid} required placeholder="X123456" autoComplete="username" disabled={loading} autoFocus />
+            <Input label="Password" type="password" value={password} onChange={(e) => { const value = e.target.value; setPassword(value); setFieldErrors((prev) => ({ ...prev, password: value.length === 0 || validatePassword(value) ? '' : 'Password must be at least 8 characters.' })); }} error={fieldErrors.password} required placeholder="Enter your password" autoComplete="current-password" disabled={loading} />
+            <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading || !credentialFormValid}>{loading ? 'Sending OTP...' : 'Next: Verify OTP'}</Button>
           </form>
         ) : (
           <form onSubmit={handleOtpSubmit} noValidate className={`mt-4 ${spacingClasses.formFieldSpacing}`}>
@@ -305,7 +315,7 @@ export const FirmLoginPage = () => {
               pattern="[0-9]*"
             />
             {otpHint && <p className="text-xs text-gray-500">{otpHint}</p>}
-            <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading}>{loading ? 'Verifying...' : 'Verify OTP'}</Button>
+            <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading || !otpFormValid}>{loading ? 'Verifying...' : 'Submit & Sign in'}</Button>
             <Button type="button" variant="outline" fullWidth disabled={loading || cooldown > 0} onClick={handleResendOtp}>
               {cooldown > 0 ? `Resend OTP in ${cooldown}s` : 'Resend OTP'}
             </Button>
