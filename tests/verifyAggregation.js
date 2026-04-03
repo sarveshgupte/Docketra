@@ -20,7 +20,7 @@ const mockMongoose = {
     this.set = () => {};
     this.path = () => ({ validate: () => {} });
   },
-  model: function(name) {
+  models: {}, model: function(name) {
     return {
       aggregate: async (pipeline) => {
          mockMongoose.lastPipeline = pipeline;
