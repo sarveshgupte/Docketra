@@ -118,7 +118,11 @@ const resolveInviteRequestState = async ({ req, admin, normalizedEmail, session,
     && (!existingXID || cachedState.xID === existingXID)
   ) {
     log.info('ADMIN_INVITE_STATE_REUSED', {
-      req,
+      req: {
+        requestId: req.requestId || req.id || null,
+        method: req.method,
+        path: req.originalUrl || req.url,
+      },
       firmId: admin.firmId,
       userXID: admin.xID,
       invitedEmail: emailService.maskEmail(normalizedEmail),
@@ -146,14 +150,22 @@ const resolveInviteRequestState = async ({ req, admin, normalizedEmail, session,
   req._inviteRequestState = inviteState;
 
   log.info('ADMIN_INVITE_XID_GENERATED', {
-    req,
+    req: {
+      requestId: req.requestId || req.id || null,
+      method: req.method,
+      path: req.originalUrl || req.url,
+    },
     firmId: admin.firmId,
     userXID: admin.xID,
     invitedEmail: emailService.maskEmail(normalizedEmail),
     inviteXID: xID,
   });
   log.info('ADMIN_INVITE_TOKEN_GENERATED', {
-    req,
+    req: {
+      requestId: req.requestId || req.id || null,
+      method: req.method,
+      path: req.originalUrl || req.url,
+    },
     firmId: admin.firmId,
     userXID: admin.xID,
     inviteXID: xID,
@@ -216,7 +228,11 @@ const getTwoFactorSecret = (user) => decryptProtectedValue(user?.twoFactorSecret
 
 const logLoginOtpEvent = (event, req, user, metadata = {}) => {
   log.info(event, {
-    req,
+    req: {
+      requestId: req?.requestId || req?.id || null,
+      method: req?.method,
+      path: req?.originalUrl || req?.url,
+    },
     userId: user?._id || null,
     userXID: user?.xID || null,
     email: user?.email || null,
@@ -250,7 +266,11 @@ const persistLastSuccessfulLogin = async (req, user) => {
     }
   } catch (error) {
     log.warn('AUTH_LAST_LOGIN_PERSIST_FAILED', {
-      req,
+      req: {
+        requestId: req?.requestId || req?.id || null,
+        method: req?.method,
+        path: req?.originalUrl || req?.url,
+      },
       userId: user?._id || null,
       firmId: user?.firmId || null,
       error: error.message,
@@ -2086,7 +2106,11 @@ const createUser = async (req, res) => {
     const session = getSession(req);
 
     log.info('ADMIN_INVITE_REQUEST_RECEIVED', {
-      req,
+      req: {
+        requestId: req.requestId || req.id || null,
+        method: req.method,
+        path: req.originalUrl || req.url,
+      },
       firmId: admin.firmId,
       userXID: admin.xID,
       invitedEmail: emailService.maskEmail(normalizedEmail),
@@ -2114,7 +2138,11 @@ const createUser = async (req, res) => {
         const shouldQueueInviteEmail = !existingUser.inviteSentAt;
 
         log.info('ADMIN_INVITE_STATE_REUSED', {
-          req,
+          req: {
+            requestId: req.requestId || req.id || null,
+            method: req.method,
+            path: req.originalUrl || req.url,
+          },
           firmId: admin.firmId,
           userXID: admin.xID,
           invitedEmail: emailService.maskEmail(normalizedEmail),
@@ -2165,7 +2193,11 @@ const createUser = async (req, res) => {
 
               if (emailResult?.success) {
                 log.info('ADMIN_INVITE_EMAIL_SENT', {
-                  req,
+                  req: {
+                    requestId: req.requestId || req.id || null,
+                    method: req.method,
+                    path: req.originalUrl || req.url,
+                  },
                   firmId: existingUser.firmId,
                   userXID: admin.xID,
                   inviteXID: existingUser.xID,
@@ -2173,7 +2205,11 @@ const createUser = async (req, res) => {
                 });
               } else {
                 log.warn('ADMIN_INVITE_EMAIL_FAILED', {
-                  req,
+                  req: {
+                    requestId: req.requestId || req.id || null,
+                    method: req.method,
+                    path: req.originalUrl || req.url,
+                  },
                   firmId: existingUser.firmId,
                   userXID: admin.xID,
                   inviteXID: existingUser.xID,
@@ -2240,7 +2276,11 @@ const createUser = async (req, res) => {
     
     await newUser.save(session ? { session } : undefined);
     log.info('ADMIN_INVITE_USER_CREATED', {
-      req,
+      req: {
+        requestId: req.requestId || req.id || null,
+        method: req.method,
+        path: req.originalUrl || req.url,
+      },
       firmId: admin.firmId,
       userXID: admin.xID,
       inviteXID: newUser.xID,
@@ -2288,7 +2328,11 @@ const createUser = async (req, res) => {
 
         if (emailResult?.success) {
           log.info('ADMIN_INVITE_EMAIL_SENT', {
-            req,
+            req: {
+              requestId: req.requestId || req.id || null,
+              method: req.method,
+              path: req.originalUrl || req.url,
+            },
             firmId: newUser.firmId,
             userXID: admin.xID,
             inviteXID: newUser.xID,
@@ -2296,7 +2340,11 @@ const createUser = async (req, res) => {
           });
         } else {
           log.warn('ADMIN_INVITE_EMAIL_FAILED', {
-            req,
+            req: {
+              requestId: req.requestId || req.id || null,
+              method: req.method,
+              path: req.originalUrl || req.url,
+            },
             firmId: newUser.firmId,
             userXID: admin.xID,
             inviteXID: newUser.xID,
@@ -2350,7 +2398,11 @@ const createUser = async (req, res) => {
       });
     }
     logger.error('USER_CREATE_FAILED', {
-      req,
+      req: {
+        requestId: req.requestId || req.id || null,
+        method: req.method,
+        path: req.originalUrl || req.url,
+      },
       firmId: req.user?.firmId || null,
       email: req.body?.email || null,
       error: error.message,
@@ -2367,7 +2419,11 @@ const createUser = async (req, res) => {
 
         if (existingUser?.status === 'invited') {
           log.info('ADMIN_INVITE_STATE_REUSED', {
-            req,
+            req: {
+              requestId: req.requestId || req.id || null,
+              method: req.method,
+              path: req.originalUrl || req.url,
+            },
             firmId: admin.firmId,
             userXID: admin.xID,
             invitedEmail: emailService.maskEmail(normalizedEmail),
