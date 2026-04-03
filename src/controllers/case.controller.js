@@ -1692,27 +1692,34 @@ const getCases = async (req, res) => {
       .skip((parseInt(page) - 1) * parseInt(limit))
       .sort({ createdAt: -1 });
     
-    // Fetch client details for each case
-    // TODO: Optimize N+1 query - consider pre-fetching unique clientIds or using aggregation
-    // TODO: Use MongoDB aggregation with $lookup to join client data in a single query
-    // Example: Case.aggregate([{ $lookup: { from: 'clients', localField: 'clientId', foreignField: 'clientId', as: 'client' }}])
+    // Fetch client details for all cases in a single batch query to prevent N+1 queries
     // PR: Client Lifecycle - fetch clients regardless of status to display existing cases with inactive clients
-    const casesWithClients = await Promise.all(
-      cases.map(async (caseItem) => {
-        const client = await ClientRepository.findByClientId(req.user.firmId, caseItem.clientId, req.user.role);
-        return {
-          ...caseItem.toObject(),
-          client: client ? {
-            clientId: client.clientId,
-            businessName: client.businessName,
-            primaryContactNumber: client.primaryContactNumber,
-            businessEmail: client.businessEmail,
-            status: client.status, // Include status for inactive label display
-            isActive: client.isActive, // Legacy field for backward compatibility
-          } : null,
-        };
-      })
-    );
+    const uniqueClientIds = [...new Set(cases.map(c => c.clientId).filter(Boolean))];
+
+    let clientsMap = new Map();
+    if (uniqueClientIds.length > 0) {
+      const clients = await ClientRepository.find(req.user.firmId, { clientId: { $in: uniqueClientIds } }, req.user.role);
+      clients.forEach(client => {
+        if (client) {
+          clientsMap.set(client.clientId, client);
+        }
+      });
+    }
+
+    const casesWithClients = cases.map(caseItem => {
+      const client = clientsMap.get(caseItem.clientId);
+      return {
+        ...caseItem.toObject(),
+        client: client ? {
+          clientId: client.clientId,
+          businessName: client.businessName,
+          primaryContactNumber: client.primaryContactNumber,
+          businessEmail: client.businessEmail,
+          status: client.status, // Include status for inactive label display
+          isActive: client.isActive, // Legacy field for backward compatibility
+        } : null,
+      };
+    });
     
     const total = await Case.countDocuments(scopedCaseQuery);
     
