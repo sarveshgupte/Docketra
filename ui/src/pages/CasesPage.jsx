@@ -469,7 +469,7 @@ export const CasesPage = () => {
   const slaSummary = useMemo(() => {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     return {
-      totalOpen: cases.filter((c) => c.status === CASE_STATUS.OPEN || c.status === CASE_STATUS.PENDED).length,
+      totalOpen: cases.filter((c) => c.status === CASE_STATUS.OPEN || c.status === CASE_STATUS.PENDING).length,
       dueToday: cases.filter(isDueToday).length,
       overdue: cases.filter(isSlaBreached).length,
       escalated: cases.filter((row) => isEscalatedCase(row, firmConfig.escalationInactivityThresholdHours)).length,
@@ -944,7 +944,7 @@ export const CasesPage = () => {
           >
             <option value="ALL">All statuses</option>
             <option value={CASE_STATUS.OPEN}>{UX_COPY.statusLabels.OPEN}</option>
-            <option value={CASE_STATUS.PENDED}>{UX_COPY.statusLabels.PENDED}</option>
+            <option value={CASE_STATUS.PENDING}>{UX_COPY.statusLabels.PENDING}</option>
             <option value={CASE_STATUS.RESOLVED}>{UX_COPY.statusLabels.RESOLVED}</option>
             <option value={CASE_STATUS.FILED}>{UX_COPY.statusLabels.FILED}</option>
           </select>

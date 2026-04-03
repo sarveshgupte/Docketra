@@ -1,8 +1,7 @@
 const CaseStatus = require('./caseStatus');
 
 const STATUS_ALIASES = Object.freeze({
-  [CaseStatus.UNASSIGNED]: CaseStatus.OPEN,
-    [CaseStatus.PENDING_LEGACY]: CaseStatus.PENDING,
+  [CaseStatus.PENDING_LEGACY]: CaseStatus.PENDING,
   [CaseStatus.OPEN_LEGACY]: CaseStatus.OPEN,
   [CaseStatus.FILED_LEGACY]: CaseStatus.FILED,
   [CaseStatus.REVIEWED]: CaseStatus.UNDER_REVIEW,
@@ -31,6 +30,18 @@ const transitions = Object.freeze({
   ]),
   [CaseStatus.APPROVED]: Object.freeze([
     CaseStatus.OPEN,
+  ]),
+  [CaseStatus.UNASSIGNED]: Object.freeze([
+    CaseStatus.ASSIGNED,
+  ]),
+  [CaseStatus.ASSIGNED]: Object.freeze([
+    CaseStatus.IN_PROGRESS,
+  ]),
+  [CaseStatus.IN_PROGRESS]: Object.freeze([
+    CaseStatus.OPEN,
+    CaseStatus.PENDING,
+    CaseStatus.FILED,
+    CaseStatus.RESOLVED,
   ]),
   [CaseStatus.OPEN]: Object.freeze([
     CaseStatus.PENDING,

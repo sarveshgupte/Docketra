@@ -202,7 +202,7 @@ const handleStatusTransition = (caseDoc, newStatus, options = {}) => {
   const toStatus = normalizeStatus(newStatus);
   const previousTat = clampMinutes(caseDoc?.tatAccumulatedMinutes);
 
-  if (toStatus === CaseStatus.PENDED && !caseDoc?.tatPaused) {
+  if (toStatus === CaseStatus.PENDING && !caseDoc?.tatPaused) {
     const elapsed = computeElapsedMinutes(caseDoc.tatLastStartedAt, now);
     // Defensive invariant: never allow negative TAT even under clock anomalies.
     const newTat = Math.max(previousTat + elapsed, 0);
@@ -224,7 +224,7 @@ const handleStatusTransition = (caseDoc, newStatus, options = {}) => {
   }
 
   if (toStatus === CaseStatus.OPEN) {
-    if (!(fromStatus === CaseStatus.PENDED || caseDoc?.tatPaused)) {
+    if (!(fromStatus === CaseStatus.PENDING || caseDoc?.tatPaused)) {
       return { patch: {}, auditEvent: null };
     }
     return {

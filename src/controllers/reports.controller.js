@@ -133,7 +133,7 @@ const getCaseMetrics = async (req, res) => {
         totalCases: rangeData.aggregate.totalCases,
         byStatus: {
           OPEN: rangeData.aggregate.openCases,
-          PENDED: rangeData.aggregate.pendedCases,
+          PENDING: rangeData.aggregate.pendedCases,
           FILED: rangeData.aggregate.filedCases,
           RESOLVED: rangeData.aggregate.resolvedCases,
         },
@@ -159,7 +159,7 @@ const getCaseMetrics = async (req, res) => {
         totalCases: latest?.totalCases || 0,
         byStatus: {
           OPEN: latest?.openCases || 0,
-          PENDED: latest?.pendedCases || 0,
+          PENDING: latest?.pendedCases || 0,
           FILED: latest?.filedCases || 0,
           RESOLVED: latest?.resolvedCases || 0,
         },
@@ -214,8 +214,8 @@ const getPendingCasesReport = async (req, res) => {
     
     // Build match stage for pending cases
     // SECURITY: Enforcing tenant isolation (firm-scoped query)
-    // Support legacy records that still use "Pending" while the canonical backend enum is "PENDED".
-    const matchStage = { firmId, status: { $in: ['Pending', 'PENDED'] } };
+    // Support legacy records that still use "Pending" while the canonical backend enum is "PENDING".
+    const matchStage = { firmId, status: { $in: ['Pending', 'PENDING'] } };
     
     if (category) matchStage.category = category;
     if (assignedTo) matchStage.assignedToXID = assignedTo; // Use assignedToXID for canonical queries
@@ -738,7 +738,7 @@ const generateClientFactSheetPdf = async (req, res) => {
     const activeCases = await Case.find({
       firmId,
       clientId,
-      status: { $in: ['UNASSIGNED', 'OPEN', 'PENDED', 'UNDER_REVIEW', 'SUBMITTED', 'APPROVED'] },
+      status: { $in: ['UNASSIGNED', 'OPEN', 'PENDING', 'UNDER_REVIEW', 'SUBMITTED', 'APPROVED'] },
     })
       .select('caseId caseNumber title status')
       .lean();

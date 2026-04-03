@@ -59,7 +59,7 @@ export const CaseHistory = ({ caseId }) => {
     if (actionType.includes('CREATED')) return 'green';
     if (actionType.includes('ASSIGNED')) return 'blue';
     if (actionType.includes('RESOLVED') || actionType.includes('FILED')) return 'purple';
-    if (actionType.includes('PENDED')) return 'yellow';
+    if (actionType.includes('PENDING')) return 'yellow';
     if (actionType.includes('VIEWED') || actionType.includes('OPENED') || actionType.includes('EXITED')) return 'gray';
     return 'blue';
   };
