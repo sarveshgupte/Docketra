@@ -1568,15 +1568,16 @@ const changePassword = async (req, res) => {
     
     // Check if new password matches any of the last 5 passwords
     const passwordHistory = user.passwordHistory || [];
-    
-    for (const oldPassword of passwordHistory.slice(-PASSWORD_HISTORY_LIMIT)) {
-      const isReused = await bcrypt.compare(newPassword, oldPassword.hash);
-      if (isReused) {
-        return res.status(400).json({
-          success: false,
-          message: 'Cannot reuse any of your last 5 passwords',
-        });
-      }
+    const passwordHistorySlice = passwordHistory.slice(-PASSWORD_HISTORY_LIMIT);
+    const passwordHistoryResults = await Promise.all(
+      passwordHistorySlice.map((oldPassword) => bcrypt.compare(newPassword, oldPassword.hash))
+    );
+
+    if (passwordHistoryResults.includes(true)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot reuse any of your last 5 passwords',
+      });
     }
     
     // Check if new password is same as current
@@ -2923,15 +2924,16 @@ const resetPasswordWithToken = async (req, res) => {
     
     // Check if new password matches any of the last 5 passwords
     const passwordHistory = user.passwordHistory || [];
-    
-    for (const oldPassword of passwordHistory.slice(-PASSWORD_HISTORY_LIMIT)) {
-      const isReused = await bcrypt.compare(password, oldPassword.hash);
-      if (isReused) {
-        return res.status(400).json({
-          success: false,
-          message: 'Cannot reuse any of your last 5 passwords',
-        });
-      }
+    const passwordHistorySlice = passwordHistory.slice(-PASSWORD_HISTORY_LIMIT);
+    const passwordHistoryResults = await Promise.all(
+      passwordHistorySlice.map((oldPassword) => bcrypt.compare(password, oldPassword.hash))
+    );
+
+    if (passwordHistoryResults.includes(true)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot reuse any of your last 5 passwords',
+      });
     }
     
     // Check if new password is same as current
