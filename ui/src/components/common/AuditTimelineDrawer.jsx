@@ -9,7 +9,7 @@ const MAX_TIMELINE_EVENTS = 10;
 
 // Actions that represent lifecycle stage transitions (not comments/attachments)
 const LIFECYCLE_ACTIONS = new Set([
-  'CREATED', 'OPENED', 'ASSIGNED', 'RESOLVED', 'FILED', 'PENDED', 'UNPENDED',
+  'CREATED', 'OPENED', 'ASSIGNED', 'RESOLVED', 'FILED', 'PENDING', 'UNPENDED',
   'UNASSIGNED', 'PULLED', 'MOVED_TO_GLOBAL', 'STAGE_CHANGE',
 ]);
 const IRREVERSIBLE_ACTIONS = new Set(['RESOLVED', 'FILED']);
@@ -17,7 +17,7 @@ const IRREVERSIBLE_ACTIONS = new Set(['RESOLVED', 'FILED']);
 const ACTION_ICONS = {
   RESOLVED: '✓',
   FILED: '📤',
-  PENDED: '⏳',
+  PENDING: '⏳',
   UNPENDED: '🔁',
   CREATED: '📋',
   OPENED: '📋',

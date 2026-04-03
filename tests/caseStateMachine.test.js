@@ -10,13 +10,12 @@ function testValidTransitions() {
   assert.strictEqual(canTransition(CaseStatus.APPROVED, CaseStatus.OPEN), true);
   assert.strictEqual(canTransition(CaseStatus.REJECTED, CaseStatus.DRAFT), true);
   assert.strictEqual(canTransition(CaseStatus.OPEN, CaseStatus.FILED), true);
-  assert.strictEqual(canTransition(CaseStatus.OPEN, CaseStatus.PENDED), true);
+  assert.strictEqual(canTransition(CaseStatus.OPEN, CaseStatus.PENDING), true);
   assert.strictEqual(canTransition(CaseStatus.OPEN, CaseStatus.RESOLVED), true);
-  assert.strictEqual(canTransition(CaseStatus.PENDED, CaseStatus.OPEN), true);
-  assert.strictEqual(canTransition(CaseStatus.FILED, CaseStatus.RESOLVED), true);
+  assert.strictEqual(canTransition(CaseStatus.PENDING, CaseStatus.OPEN), true);
+  assert.strictEqual(canTransition(CaseStatus.FILED, CaseStatus.RESOLVED), false);
   assert.strictEqual(canTransition(CaseStatus.UNASSIGNED, CaseStatus.ASSIGNED), true);
   assert.strictEqual(canTransition(CaseStatus.ASSIGNED, CaseStatus.IN_PROGRESS), true);
-  assert.strictEqual(canTransition(CaseStatus.PENDING_ALIAS, CaseStatus.OPEN), true);
 }
 
 function testInvalidTransitions() {
@@ -24,13 +23,13 @@ function testInvalidTransitions() {
   assert.strictEqual(canTransition(CaseStatus.RESOLVED, CaseStatus.FILED), false);
   assert.strictEqual(canTransition(CaseStatus.CLOSED, CaseStatus.DRAFT), false);
   assert.strictEqual(canTransition(CaseStatus.FILED, CaseStatus.OPEN), false);
-  assert.strictEqual(canTransition(CaseStatus.PENDED, CaseStatus.RESOLVED), false);
+  assert.strictEqual(canTransition(CaseStatus.PENDING, CaseStatus.RESOLVED), false);
   assert.strictEqual(canTransition(CaseStatus.OPEN, CaseStatus.OPEN), false);
   assert.strictEqual(canTransition('INVALID_STATUS', CaseStatus.OPEN), false);
 }
 
 function testStatusNormalization() {
-  assert.strictEqual(normalizeStatus('Pending'), CaseStatus.PENDED);
+  assert.strictEqual(normalizeStatus('Pending'), CaseStatus.PENDING);
   assert.strictEqual(normalizeStatus(CaseStatus.OPEN), CaseStatus.OPEN);
 }
 

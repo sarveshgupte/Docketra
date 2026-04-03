@@ -9,7 +9,7 @@ const auditLogService = require('../src/services/auditLog.service');
 
 async function testStatusTransitionRequiresSession() {
   await assert.rejects(
-    () => CaseService.updateStatus('CASE-20260301-00001', 'PENDED', {
+    () => CaseService.updateStatus('CASE-20260301-00001', 'PENDING', {
       tenantId: 'firm-a',
       role: 'Admin',
       currentStatus: 'OPEN',
@@ -57,9 +57,9 @@ async function testConcurrentPauseConflictIsRejected() {
       session: { id: 's1' },
     };
 
-    await CaseService.updateStatus('CASE-20260301-00002', 'PENDED', context);
+    await CaseService.updateStatus('CASE-20260301-00002', 'PENDING', context);
     await assert.rejects(
-      () => CaseService.updateStatus('CASE-20260301-00002', 'PENDED', context),
+      () => CaseService.updateStatus('CASE-20260301-00002', 'PENDING', context),
       /Case state changed concurrently/
     );
     console.log('✓ Concurrent pause attempts reject stale writer');

@@ -379,7 +379,7 @@ const getAllOpenCases = async (req, res) => {
  * Get all pending cases (Admin view)
  * GET /api/admin/cases/pending
  * 
- * Returns all cases with status PENDED across all users.
+ * Returns all cases with status PENDING across all users.
  * Admins can see all pending cases regardless of who pended them.
  * 
  * PR: Case Lifecycle - Admin visibility for all pending cases
@@ -390,19 +390,19 @@ const getAllPendingCases = async (req, res) => {
     
     const firmScope = { firmId: req.firmId };
 
-    const cases = await Case.find({ ...firmScope, status: CaseStatus.PENDED })
+    const cases = await Case.find({ ...firmScope, status: CaseStatus.PENDING })
       .select('caseId caseName category createdAt updatedAt status clientId assignedTo pendedByXID pendingUntil')
       .sort({ pendingUntil: 1 }) // Sort by pending deadline (earliest first)
       .limit(parseInt(limit))
       .skip((parseInt(page) - 1) * parseInt(limit))
       .lean();
     
-    const total = await Case.countDocuments({ ...firmScope, status: CaseStatus.PENDED });
+    const total = await Case.countDocuments({ ...firmScope, status: CaseStatus.PENDING });
     
     // Log admin action for audit
     await logCaseListViewed({
       viewerXID: req.user.xID,
-      filters: { status: CaseStatus.PENDED },
+      filters: { status: CaseStatus.PENDING },
       listType: 'ADMIN_ALL_PENDING_CASES',
       resultCount: cases.length,
       req,

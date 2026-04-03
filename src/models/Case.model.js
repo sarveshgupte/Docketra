@@ -254,7 +254,7 @@ const caseSchema = new mongoose.Schema({
    * ✅ CANONICAL LIFECYCLE STATES (New System):
    * - UNASSIGNED: Newly created case in global worklist, not yet assigned
    * - OPEN: Active case being worked on (appears in My Worklist)
-   * - PENDED: Temporarily paused, waiting for external input (does NOT appear in My Worklist)
+   * - PENDING: Temporarily paused, waiting for external input (does NOT appear in My Worklist)
    * - RESOLVED: Case completed successfully
    * - FILED: Case archived and finalized (read-only, admin-visible only)
    * 
@@ -269,13 +269,13 @@ const caseSchema = new mongoose.Schema({
    * Legacy states (for backward compatibility):
    * - Open: Active and being worked on (use OPEN instead)
    * - Reviewed: Ready for Admin approval (used for client cases)
-   * - Pending: Waiting for external input/decision (use PENDED instead)
+   * - Pending: Waiting for external input/decision (use PENDING instead)
    * - Filed: Archived and finalized (use FILED instead)
    * - Archived: Historical record (read-only)
    * 
    * PR: Case Lifecycle & Dashboard Logic
    * - OPEN cases: Appear in "My Open Cases" dashboard and "My Worklist"
-   * - PENDED cases: Appear only in "My Pending Cases" dashboard (not in worklist)
+   * - PENDING cases: Appear only in "My Pending Cases" dashboard (not in worklist)
    * - FILED cases: Hidden from employees, visible only to admins
    */
   status: {
@@ -522,16 +522,16 @@ const caseSchema = new mongoose.Schema({
   /**
    * xID of user who pended this case
    * 
-   * ✅ CANONICAL IDENTIFIER - MANDATORY FOR PENDED CASES ✅
+   * ✅ CANONICAL IDENTIFIER - MANDATORY FOR PENDING CASES ✅
    * 
-   * Tracks who put the case into PENDED status.
+   * Tracks who put the case into PENDING status.
    * Used for:
    * - "My Pending Cases" dashboard queries
    * - Audit trail for pending actions
    * - Auto-reopen attribution
    * 
    * Format: X123456
-   * Must be set when status changes to PENDED
+   * Must be set when status changes to PENDING
    * 
    * PR: Case Lifecycle & Dashboard Logic
    */
@@ -777,10 +777,8 @@ const caseSchema = new mongoose.Schema({
 caseSchema.set('optimisticConcurrency', true);
 
 /**
- * Custom Validator: Pending/PENDED status requires pendingUntil date
- * Ensures cases in Pending/PENDED status have a review date set
- * 
- * PR: Updated to support both legacy 'Pending' and new 'PENDED' status
+ * Custom Validator: Pending status requires pendingUntil date
+ * Ensures cases in PENDING status have a review date set
  */
 caseSchema.path('status').validate(function(value) {
   if (value === 'PENDING' && !this.pendingReason) {
