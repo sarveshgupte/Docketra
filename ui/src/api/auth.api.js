@@ -21,4 +21,7 @@ export const authApi = {
 
   signupResendOtp: (email) =>
     request((http) => http.post('/auth/signup/resend', { email }), 'Unable to resend signup OTP.'),
+
+  resendCredentials: (email) =>
+    request((http) => http.post('/auth/resend-credentials', { email }), 'Unable to resend welcome email.'),
 };

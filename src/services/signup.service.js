@@ -341,7 +341,7 @@ const verifyOtp = async ({ email, otp, session = null, req = null }) => {
       xid: tenant.xid,
       firmSlug: tenant.firmSlug,
       firmUrl: tenant.firmUrl,
-      redirectPath: `/app/${tenant.firmSlug}/login`,
+      redirectPath: `/${tenant.firmSlug}/login`,
     };
   } catch (error) {
     log.error('SIGNUP_FAILED', { req, email: normalizedEmail, reason: 'VERIFY_OTP_ERROR', error: error.message });
@@ -466,7 +466,7 @@ const buildFirmUrl = (firmSlug) => {
   if (appRootDomain) {
     return `https://${firmSlug}.${appRootDomain}`;
   }
-  return `${frontendUrl}/app/${firmSlug}/login`;
+  return `${frontendUrl}/${firmSlug}/login`;
 };
 
 const sendSignupWelcomeEmail = async ({
@@ -761,7 +761,7 @@ const completeSignup = async ({ email, firmName, session, req = null }) => {
       xid: result.adminXID,
       firmUrl: result.firmUrl,
       firmSlug: result.firmSlug,
-      redirectPath: `/app/${result.firmSlug}/login`,
+      redirectPath: `/${result.firmSlug}/login`,
     };
   } catch (error) {
     console.error('[PUBLIC_SIGNUP] Complete signup failed:', error.message);
