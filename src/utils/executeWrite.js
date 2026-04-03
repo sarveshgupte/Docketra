@@ -28,9 +28,11 @@ const resolveResponseStatus = (req, result) => {
 };
 
 const executeWrite = async (req, handler) => {
+  req.transactionState = 'not_started';
   if (req?.skipTransaction) {
     req.transactionSkipped = true;
     req.transactionCommitted = false;
+    req.transactionState = 'skipped';
     setSession(req, null);
     return runWithoutTransaction(() => handler(null));
   }
@@ -44,19 +46,29 @@ const executeWrite = async (req, handler) => {
   } catch (error) {
     console.warn(`[TXN] optional transaction unavailable for ${routeLabel}: ${error.message}`);
     req.transactionStartFailed = true;
+    req.transactionState = 'start_failed';
   }
 
   if (!session) {
     req.transactionSkipped = true;
     req.transactionCommitted = false;
+    if (req.transactionState !== 'start_failed') {
+      req.transactionState = 'skipped';
+    }
     setSession(req, null);
     return runWithoutTransaction(() => handler(null));
   }
+
+  let finalizeTransaction;
+  req.transactionFinalized = new Promise((resolve) => {
+    finalizeTransaction = resolve;
+  });
 
   try {
     setSession(req, session);
     req.transactionSkipped = false;
     req.transactionCommitted = false;
+    req.transactionState = 'started';
     console.info(`[TXN] start ${routeLabel}`);
     await session.withTransaction(async () => {
       result = await runWithSession(session, async () => {
@@ -70,8 +82,10 @@ const executeWrite = async (req, handler) => {
     });
 
     req.transactionCommitted = true;
+    req.transactionState = 'committed';
     console.info(`[TXN] commit ${routeLabel}`);
   } catch (error) {
+    req.transactionState = 'rolled_back';
     if (error instanceof TransactionRollback) {
       req.transactionCommitted = false;
       return error.result;
@@ -80,6 +94,7 @@ const executeWrite = async (req, handler) => {
   } finally {
     setSession(req, null);
     await session.endSession();
+    finalizeTransaction();
   }
 
   return result;
