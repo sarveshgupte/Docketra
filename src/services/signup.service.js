@@ -460,13 +460,20 @@ const generateFirmId = async (session) => {
  * @returns {string} firmUrl
  */
 const buildFirmUrl = (firmSlug) => {
-  const appRootDomain = process.env.APP_ROOT_DOMAIN;
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const appRootDomain = String(process.env.APP_ROOT_DOMAIN || '').trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+  const frontendUrl = String(process.env.FRONTEND_URL || 'http://localhost:3000').trim();
 
   if (appRootDomain) {
-    return `https://${firmSlug}.${appRootDomain}`;
+    return `https://${firmSlug}.${appRootDomain}/login`;
   }
-  return `${frontendUrl}/${firmSlug}/login`;
+
+  try {
+    const resolved = new URL(frontendUrl);
+    return `${resolved.origin}/${firmSlug}/login`;
+  } catch (_error) {
+    const normalizedFrontendUrl = frontendUrl.replace(/\/+$/, '');
+    return `${normalizedFrontendUrl}/${firmSlug}/login`;
+  }
 };
 
 const sendSignupWelcomeEmail = async ({
