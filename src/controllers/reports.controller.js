@@ -5,7 +5,7 @@ const Task = require('../models/Task');
 const CaseAudit = require('../models/CaseAudit.model');
 const AuthAudit = require('../models/AuthAudit.model');
 const { Parser } = require('json2csv');
-const ExcelJS = require('exceljs');
+const { generateCasesExcelWorkbook } = require('../services/excel.service');
 const PDFDocument = require('pdfkit');
 const { getLatestTenantMetrics, getTenantMetricsByRange } = require('../services/tenantCaseMetrics.service');
 const { mapAuditResponse } = require('../mappers/audit.mapper');
@@ -553,47 +553,8 @@ const exportCasesExcel = async (req, res) => {
     
     const casesWithClientNames = await hydrateCasesForReport(firmId, cases);
     
-    // Create Excel workbook
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Docketra Cases Report');
-    
-    // Define columns
-    worksheet.columns = [
-      { header: 'Case ID', key: 'caseId', width: 12 },
-      { header: 'Case Name', key: 'caseName', width: 20 },
-      { header: 'Title', key: 'title', width: 30 },
-      { header: 'Status', key: 'status', width: 12 },
-      { header: 'Category', key: 'category', width: 20 },
-      { header: 'Client ID', key: 'clientId', width: 12 },
-      { header: 'Client Name', key: 'clientName', width: 25 },
-      { header: 'Assigned To', key: 'assignedTo', width: 25 },
-      { header: 'Created At', key: 'createdAt', width: 20 },
-      { header: 'Created By', key: 'createdBy', width: 25 },
-    ];
-    
-    // Add rows
-    casesWithClientNames.forEach(caseItem => {
-      worksheet.addRow({
-        caseId: caseItem.caseId,
-        caseName: caseItem.caseName,
-        title: caseItem.title,
-        status: caseItem.status,
-        category: caseItem.category,
-        clientId: caseItem.clientId,
-        clientName: caseItem.clientName,
-        assignedTo: caseItem.assignedTo,
-        createdAt: caseItem.createdAt.toISOString().replace('T', ' ').substring(0, 19),
-        createdBy: caseItem.createdBy,
-      });
-    });
-    
-    // Style header row
-    worksheet.getRow(1).font = { bold: true };
-    worksheet.getRow(1).fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFE0E5EC' },
-    };
+    // Create Excel workbook using the service
+    const workbook = generateCasesExcelWorkbook(casesWithClientNames);
     
     // Generate filename with date
     const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
