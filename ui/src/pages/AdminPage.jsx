@@ -38,6 +38,28 @@ const looksEncryptedToken = (value) => (
   typeof value === 'string' && value.includes(':')
 );
 
+const normalizeSubcategory = (subcategory) => {
+  if (!subcategory || typeof subcategory !== 'object') return null;
+  return {
+    ...subcategory,
+    id: subcategory.id || subcategory._id || null,
+    name: typeof subcategory.name === 'string' ? subcategory.name : '',
+    isActive: Boolean(subcategory.isActive),
+  };
+};
+
+const normalizeCategory = (category) => {
+  if (!category || typeof category !== 'object') return null;
+  const rawSubcategories = Array.isArray(category.subcategories) ? category.subcategories : [];
+  return {
+    ...category,
+    _id: category._id || category.id || null,
+    name: typeof category.name === 'string' ? category.name : '',
+    isActive: Boolean(category.isActive),
+    subcategories: rawSubcategories.map(normalizeSubcategory).filter(Boolean),
+  };
+};
+
 const getApiErrorType = (error) => {
   if (!error?.response) return 'network';
 
@@ -259,7 +281,10 @@ export const AdminPage = () => {
         setUsers(response?.success ? (response.data || []) : []);
       } else if (activeTab === 'categories') {
         const response = await categoryService.getAdminCategories(false); // Get all categories including inactive
-        setCategories(response?.success ? (response.data || []) : []);
+        const normalizedCategories = (response?.success ? (response.data || []) : [])
+          .map(normalizeCategory)
+          .filter(Boolean);
+        setCategories(normalizedCategories);
       } else if (activeTab === 'clients') {
         await fetchClients();
       } else if (activeTab === 'storage') {
