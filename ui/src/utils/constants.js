@@ -56,7 +56,7 @@ export const CASE_STATUS = {
   // Canonical lifecycle states (NEW - use these)
   UNASSIGNED: 'UNASSIGNED',
   OPEN: 'OPEN',
-  PENDED: 'PENDED',
+  PENDING: 'PENDING',
   RESOLVED: 'RESOLVED',
   FILED: 'FILED',
   
@@ -71,7 +71,6 @@ export const CASE_STATUS = {
   // Legacy statuses for backward compatibility (do NOT use for new code)
   OPEN_LEGACY: 'Open',
   REVIEWED: 'Reviewed',
-  PENDING: 'Pending',
   PENDING_LEGACY: 'Pending',
   FILED_LEGACY: 'Filed',
   ARCHIVED: 'Archived',

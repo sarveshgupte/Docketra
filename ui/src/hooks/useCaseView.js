@@ -19,7 +19,7 @@ export const isEscalatedCase = (record, inactivityThresholdHours) => {
   if (!record.slaDueDate) return false;
   if (record.status === CASE_STATUS.RESOLVED || record.status === CASE_STATUS.FILED) return false;
   if (new Date(record.slaDueDate) >= new Date()) return false;
-  if (record.status !== CASE_STATUS.OPEN && record.status !== CASE_STATUS.PENDED) return false;
+  if (record.status !== CASE_STATUS.OPEN && record.status !== CASE_STATUS.PENDING) return false;
   if (!record.updatedAt) return false; // require updatedAt to exist before comparison
   const thresholdHours = Number(
     inactivityThresholdHours ?? getFirmConfig().escalationInactivityThresholdHours ?? 24

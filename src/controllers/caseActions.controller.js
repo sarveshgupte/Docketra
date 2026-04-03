@@ -248,12 +248,12 @@ const getMyPendingCases = async (req, res) => {
     await caseActionService.autoReopenExpiredPendingCases(req.user.xID, req.firmId);
     
     // CANONICAL QUERY for "My Pending Cases"
-    // A case appears here if it's assigned to me AND has PENDED status
+    // A case appears here if it's assigned to me AND has PENDING status
     // We do NOT filter by pendedByXID - any pended case assigned to me should appear
     const query = {
       firmId: req.firmId,
       assignedToXID: req.user.xID,
-      status: CaseStatus.PENDED,
+      status: CaseStatus.PENDING,
     };
     
     // Apply client access filter from middleware (restrictedClientIds)
@@ -269,7 +269,7 @@ const getMyPendingCases = async (req, res) => {
     // Log case list view for audit
     await logCaseListViewed({
       viewerXID: req.user.xID,
-      filters: { status: CaseStatus.PENDED },
+      filters: { status: CaseStatus.PENDING },
       listType: 'MY_PENDING_CASES',
       resultCount: cases.length,
       req,

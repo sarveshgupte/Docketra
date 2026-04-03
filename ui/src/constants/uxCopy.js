@@ -7,7 +7,6 @@ export const UX_COPY = {
   },
   statusLabels: {
     OPEN: 'Open',
-    PENDED: 'In Review',
     PENDING: 'In Review',
     RESOLVED: 'Resolved',
     FILED: 'Filed',
