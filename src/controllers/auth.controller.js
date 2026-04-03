@@ -35,6 +35,7 @@ const { incrementTenantMetric } = require('../services/tenantMetrics.service');
 const { mapUserResponse } = require('../mappers/user.mapper');
 const { decrypt: decryptProtectedValue } = require('../utils/encryption');
 const { logSecurityAuditEvent, SECURITY_AUDIT_ACTIONS } = require('../services/securityAudit.service');
+const { getRedisClient } = require('../config/redis');
 const {
   noteLoginFailure,
   noteLockedAccountAttempt,
@@ -370,6 +371,8 @@ const hashLoginSessionToken = (token) => crypto.createHash('sha256').update(Stri
 const FORGOT_PASSWORD_OTP_EXPIRY_MINUTES = 10;
 const FORGOT_PASSWORD_OTP_LOCK_MINUTES = 10;
 const FORGOT_PASSWORD_OTP_RESEND_COOLDOWN_SECONDS = 30;
+const LOGIN_OTP_COOLDOWN_SECONDS = 30;
+const loginOtpCacheFallback = new Map();
 
 const clearLoginOtpState = (user) => {
   if (!user) return;
@@ -443,6 +446,81 @@ const clearExpiredLoginOtpLock = async (user) => {
   user.loginOtpLockedUntil = null;
   user.loginOtpAttempts = 0;
   await persistLoginOtpState(user);
+};
+
+const getLoginOtpRedisKeys = (user) => {
+  const userId = String(user?._id || '').trim();
+  const firmId = String(user?.firmId || 'platform').trim();
+  return {
+    lockKey: `otp_lock:${firmId}:${userId}`,
+    otpKey: `otp:${firmId}:${userId}`,
+  };
+};
+
+const acquireLoginOtpCooldownLock = async (user) => {
+  const { lockKey } = getLoginOtpRedisKeys(user);
+  const token = crypto.randomUUID();
+  const redis = getRedisClient();
+
+  if (redis) {
+    const response = await redis.set(lockKey, token, 'NX', 'EX', LOGIN_OTP_COOLDOWN_SECONDS);
+    if (response === 'OK') {
+      return { acquired: true, token, retryAfter: 0 };
+    }
+
+    const ttl = await redis.ttl(lockKey);
+    return {
+      acquired: false,
+      retryAfter: Number.isFinite(ttl) && ttl > 0 ? ttl : LOGIN_OTP_COOLDOWN_SECONDS,
+    };
+  }
+
+  const now = Date.now();
+  const current = loginOtpCacheFallback.get(lockKey);
+  if (current && current.expiresAt > now) {
+    return {
+      acquired: false,
+      retryAfter: Math.max(1, Math.ceil((current.expiresAt - now) / 1000)),
+    };
+  }
+
+  loginOtpCacheFallback.set(lockKey, {
+    token,
+    expiresAt: now + (LOGIN_OTP_COOLDOWN_SECONDS * 1000),
+  });
+  return { acquired: true, token, retryAfter: 0 };
+};
+
+const cacheLoginOtpState = async (user, { otpHash, otpExpiresAt }) => {
+  const { otpKey } = getLoginOtpRedisKeys(user);
+  const redis = getRedisClient();
+  const payload = JSON.stringify({
+    otpHash,
+    otpExpiresAt: otpExpiresAt.toISOString(),
+    createdAt: new Date().toISOString(),
+  });
+
+  if (redis) {
+    await redis.set(otpKey, payload, 'EX', LOGIN_OTP_COOLDOWN_SECONDS);
+    return;
+  }
+
+  loginOtpCacheFallback.set(otpKey, {
+    value: payload,
+    expiresAt: Date.now() + (LOGIN_OTP_COOLDOWN_SECONDS * 1000),
+  });
+};
+
+const clearCachedLoginOtpState = async (user) => {
+  const { lockKey, otpKey } = getLoginOtpRedisKeys(user);
+  const redis = getRedisClient();
+  if (redis) {
+    await redis.del(lockKey, otpKey);
+    return;
+  }
+
+  loginOtpCacheFallback.delete(lockKey);
+  loginOtpCacheFallback.delete(otpKey);
 };
 
 /**
@@ -546,6 +624,14 @@ const buildTokenResponse = async (user, req, authMethod = 'Password') => {
 
 const sendLoginOtpChallenge = async (req, user, { isResend = false, returnLoginToken = true } = {}) => {
   const otpConfig = getLoginOtpConfig();
+  const lockResult = await acquireLoginOtpCooldownLock(user);
+  if (!lockResult.acquired) {
+    const conflictError = new Error('LOGIN_OTP_COOLDOWN_ACTIVE');
+    conflictError.code = 'LOGIN_OTP_COOLDOWN_ACTIVE';
+    conflictError.retryAfter = lockResult.retryAfter;
+    throw conflictError;
+  }
+
   const otp = authOtpService.generateOtp();
   logLoginOtpEvent('OTP_GENERATED', req, user, {
     expiryMinutes: otpConfig.expiryMinutes,
@@ -564,6 +650,7 @@ const sendLoginOtpChallenge = async (req, user, { isResend = false, returnLoginT
     ? Number(user.loginOtpResendCount || 0) + 1
     : 0;
   await persistLoginOtpState(user);
+  await cacheLoginOtpState(user, { otpHash, otpExpiresAt });
 
   try {
     await emailService.sendLoginOtpEmail({
@@ -582,6 +669,7 @@ const sendLoginOtpChallenge = async (req, user, { isResend = false, returnLoginT
   } catch (error) {
     clearLoginOtpState(user);
     await persistLoginOtpState(user);
+    await clearCachedLoginOtpState(user);
     throw error;
   }
 
@@ -1206,6 +1294,13 @@ const login = async (req, res) => {
         resendCooldownSeconds: otpConfig.resendCooldownSeconds,
       });
     } catch (otpError) {
+      if (otpError?.code === 'LOGIN_OTP_COOLDOWN_ACTIVE') {
+        return res.status(429).json({
+          success: false,
+          message: 'OTP recently sent. Please wait before requesting a new code.',
+          retryAfter: otpError.retryAfter || LOGIN_OTP_COOLDOWN_SECONDS,
+        });
+      }
       console.error('[AUTH] Failed to send login OTP email:', otpError.message);
       return res.status(500).json({
         success: false,
@@ -1279,6 +1374,13 @@ const resendLoginOtp = async (req, res) => {
       resendCooldownSeconds: otpConfig.resendCooldownSeconds,
     });
   } catch (error) {
+    if (error?.code === 'LOGIN_OTP_COOLDOWN_ACTIVE') {
+      return res.status(429).json({
+        success: false,
+        message: 'OTP recently sent. Please wait before requesting a new code.',
+        retryAfter: error.retryAfter || LOGIN_OTP_COOLDOWN_SECONDS,
+      });
+    }
     console.error('[AUTH] Resend OTP error:', error);
     return res.status(500).json({
       success: false,
@@ -1443,6 +1545,7 @@ const verifyLoginOtp = async (req, res) => {
 
     clearLoginOtpState(user);
     await persistLoginOtpState(user);
+    await clearCachedLoginOtpState(user);
     if (loginSession?._id) {
       await LoginSession.updateOne({ _id: loginSession._id, consumedAt: null }, { $set: { consumedAt: new Date() } });
     }
