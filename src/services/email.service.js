@@ -9,8 +9,9 @@
 
 const crypto = require('crypto');
 const https = require('https');
-const { enqueueEmailJob } = require('../queues/email.queue');
 const logger = require('../utils/log');
+const { getSession } = require('../utils/getSession');
+const { enqueueOutbox } = require('./outbox.service');
 
 // Detect production mode
 const isProduction = process.env.NODE_ENV === 'production';
@@ -168,7 +169,6 @@ const sendTransactionalEmail = async ({ to, subject, html, text }) => {
  *   - requestId: string (for logging)
  * @returns {Promise<Object>} Result object with success status and messageId
  */
-const { enqueueAfterCommit } = require('./sideEffectQueue.service');
 const { allow, recordFailure, recordSuccess } = require('./circuitBreaker.service');
 
 const sendEmailNow = async (mailOptions) => {
@@ -211,29 +211,23 @@ const sendEmailNow = async (mailOptions) => {
 
 const sendEmail = async (mailOptions, context = null) => {
   const maskedEmail = maskEmail(mailOptions.to);
-  const execute = async () => {
-    const queued = await enqueueEmailJob('sendEmail', { mailOptions });
-    if (queued.queued) {
-      logger.info('EMAIL_JOB_ENQUEUED', {
-        to: mailOptions.to,
-        subject: mailOptions.subject,
-      });
-      return { success: true, queued: true, messageId: queued.jobId || null };
-    }
-    return sendEmailNow(mailOptions);
+  const session = getSession(context);
+  const entry = await enqueueOutbox({
+    type: 'EMAIL',
+    payload: {
+      mailOptions,
+      toMasked: maskedEmail,
+      subject: mailOptions.subject,
+    },
+    requestId: context?.requestId || null,
+    session,
+  });
+
+  return {
+    success: true,
+    queued: true,
+    messageId: entry?._id?.toString?.() || null,
   };
-
-  if (context) {
-    enqueueAfterCommit(context, {
-      type: 'SEND_EMAIL',
-      payload: { to: maskedEmail, subject: mailOptions.subject },
-      execute,
-      maxRetries: 3,
-    });
-    return { success: true, queued: true, messageId: null };
-  }
-
-  return execute();
 };
 
 const sendDirectAuthEmail = async ({
