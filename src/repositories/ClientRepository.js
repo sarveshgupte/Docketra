@@ -266,6 +266,20 @@ const ClientRepository = {
   },
 
   /**
+   * Decrypt and normalize an array of client documents.
+   * Useful for aggregation results.
+   * @param {Array} docs - Array of client objects
+   * @param {string} firmId - Tenant ID
+   * @param {Object} options - Decryption options
+   * @returns {Promise<Array>} Decrypted and normalized clients
+   */
+  async decryptDocs(docs, firmId, options = {}) {
+    if (!docs || !docs.length) return docs;
+    await _decryptClientDocs(docs, firmId, options);
+    return Array.isArray(docs) ? docs.map(normalizeClientDisplay) : docs;
+  },
+
+  /**
    * Create a new client
    * NOTE: firmId MUST be included in clientData
    * Sensitive fields (primaryContactNumber, businessEmail) are encrypted by
