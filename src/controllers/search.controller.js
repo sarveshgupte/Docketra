@@ -63,19 +63,22 @@ const globalSearch = async (req, res) => {
     const searchTerm = q.trim();
     const isAdmin = user.role === 'Admin';
     
+    // Escape special regex characters to prevent ReDoS (Regular Expression Denial of Service)
+    const escapedSearchTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
     // Build search query
     let caseQuery = {};
     
     // Search in case fields (caseId, clientName, category)
     const caseSearchConditions = [
-      { caseId: { $regex: searchTerm, $options: 'i' } },
-      { clientName: { $regex: searchTerm, $options: 'i' } },
-      { category: { $regex: searchTerm, $options: 'i' } },
+      { caseId: { $regex: escapedSearchTerm, $options: 'i' } },
+      { clientName: { $regex: escapedSearchTerm, $options: 'i' } },
+      { category: { $regex: escapedSearchTerm, $options: 'i' } },
     ];
     
     // Include clientId if it exists on the model
     if (searchTerm) {
-      caseSearchConditions.push({ clientId: { $regex: searchTerm, $options: 'i' } });
+      caseSearchConditions.push({ clientId: { $regex: escapedSearchTerm, $options: 'i' } });
     }
     
     // Find cases matching direct fields
@@ -114,7 +117,7 @@ const globalSearch = async (req, res) => {
     } catch (error) {
       // Text index might not be ready yet, fallback to regex
       commentsWithMatches = await Comment.find(
-        enforceTenantScope({ text: { $regex: searchTerm, $options: 'i' } }, req, { source: 'search.comments.regex' })
+        enforceTenantScope({ text: { $regex: escapedSearchTerm, $options: 'i' } }, req, { source: 'search.comments.regex' })
       )
         .select('caseId')
         .lean();
@@ -132,7 +135,7 @@ const globalSearch = async (req, res) => {
     } catch (error) {
       // Text index might not be ready yet, fallback to regex
       attachmentsWithMatches = await Attachment.find(
-        enforceTenantScope({ fileName: { $regex: searchTerm, $options: 'i' } }, req, { source: 'search.attachments.regex' })
+        enforceTenantScope({ fileName: { $regex: escapedSearchTerm, $options: 'i' } }, req, { source: 'search.attachments.regex' })
       )
         .select('caseId')
         .lean();

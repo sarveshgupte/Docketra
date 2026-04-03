@@ -18,6 +18,7 @@ const { executeWrite } = require('../utils/executeWrite');
 const { incrementTenantMetric } = require('../services/tenantMetrics.service');
 const Firm = require('../models/Firm.model');
 const { parseBooleanQuery } = require('../utils/query.utils');
+const { sanitizePayload, enforceAllowedFields, PayloadValidationError } = require('../utils/payloadValidation');
 const cfsDriveService = require('../services/cfsDrive.service');
 
 const getClientAccessContext = (req, res, message) => {
@@ -251,22 +252,6 @@ const getClientById = async (req, res) => {
  */
 const createClient = async (req, res) => {
   try {
-    // STEP 1: Sanitize input - Remove empty, null, undefined values
-    const sanitizedBody = Object.fromEntries(
-      Object.entries(req.body).filter(
-        ([key, value]) => value !== '' && value !== null && value !== undefined
-      )
-    );
-    
-    // STEP 2: Unconditionally strip forbidden/deprecated fields
-    // NOTE: These fields are also not in the allowedFields whitelist (STEP 3),
-    // but we explicitly delete them here as a defensive measure and to make
-    // the intent clear that these fields must NEVER be accepted.
-    ['latitude', 'longitude', 'businessPhone'].forEach(field => {
-      delete sanitizedBody[field];
-    });
-    
-    // STEP 3: Define allowed fields (whitelist approach)
     const allowedFields = [
       'businessName',
       'businessAddress',
@@ -279,16 +264,22 @@ const createClient = async (req, res) => {
       'CIN'
     ];
     
-    // STEP 4: Reject unexpected fields
-    const unexpectedFields = Object.keys(sanitizedBody).filter(
-      key => !allowedFields.includes(key)
-    );
-    
-    if (unexpectedFields.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Unexpected field(s) in client payload: ${unexpectedFields.join(', ')}`,
-      });
+    let sanitizedBody;
+    try {
+      sanitizedBody = enforceAllowedFields(
+        sanitizePayload(req.body),
+        ['latitude', 'longitude', 'businessPhone'],
+        allowedFields,
+        'client payload'
+      );
+    } catch (validationErr) {
+      if (validationErr instanceof PayloadValidationError) {
+        return res.status(400).json({
+          success: false,
+          message: validationErr.message,
+        });
+      }
+      throw validationErr;
     }
     
     // STEP 5: Extract and validate required business fields

@@ -1404,7 +1404,7 @@ const getCaseByCaseId = async (req, res) => {
             totalCount: [{ $count: 'count' }],
           },
         },
-      ]);
+      ], { role: req.user.role });
       const first = Array.isArray(facetResult) ? facetResult[0] || {} : {};
       const rows = Array.isArray(first.data) ? first.data : [];
       const totalCount = first.totalCount?.[0]?.count || 0;
@@ -2929,7 +2929,7 @@ const searchCases = async (req, res) => {
       { $addFields: { score: { $meta: 'textScore' } } },
       { $sort: { score: -1, createdAt: -1 } },
       { $limit: 50 },
-    ]);
+    ], { role: req.user.role });
 
     return res.json({
       success: true,
