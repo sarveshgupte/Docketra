@@ -77,6 +77,7 @@ export const DataTable = React.memo(({
               type="button"
               className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-700 transition-colors duration-150 hover:bg-gray-100"
               onClick={() => onRemoveFilter?.(filter.key)}
+              aria-label={`Remove filter ${filter.label}: ${filter.value}`}
             >
               <span className="truncate max-w-44">{filter.label}: {filter.value}</span>
               <span aria-hidden>✕</span>
@@ -88,6 +89,7 @@ export const DataTable = React.memo(({
               type="button"
               className="text-xs font-medium text-gray-500 underline underline-offset-2 transition-colors duration-150 hover:text-gray-700"
               onClick={onResetFilters}
+              aria-label="Clear all active filters"
             >
               Clear All
             </button>
