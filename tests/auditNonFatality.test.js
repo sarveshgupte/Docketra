@@ -223,6 +223,7 @@ async function testLifecycleStatusMatchesResponse() {
 
   lifecycle(req, res, () => {});
   res.emit('finish');
+  await new Promise((resolve) => setImmediate(resolve));
 
   log.info = originalInfo;
 
