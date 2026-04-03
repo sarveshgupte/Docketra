@@ -185,6 +185,79 @@ async function shouldRequireEmailOtpForFirmScopedLogin() {
   assert.strictEqual(decodedLoginToken.loginStage, 'email-otp');
 }
 
+async function shouldPreventDuplicateOtpGenerationWithinCooldown() {
+  const { login } = require('../src/controllers/auth.controller');
+  const originalJwtSecret = process.env.JWT_SECRET;
+  process.env.JWT_SECRET = 'firm-login-otp-secret';
+
+  const originalUserFindOne = User.findOne;
+  const originalFirmCountDocuments = Firm.countDocuments;
+  const originalAuthAuditCreate = AuthAudit.create;
+  const originalAuditLogCreate = AuditLog.create;
+  const originalSendLoginOtpEmail = emailService.sendLoginOtpEmail;
+
+  const passwordHash = await bcrypt.hash('Correct#123', 4);
+  const user = {
+    _id: { toString: () => '507f1f77bcf86cd799439011' },
+    xID: 'X000001',
+    name: 'Tenant User',
+    email: 'tenant@example.com',
+    role: 'Admin',
+    firmId: { toString: () => '507f1f77bcf86cd799439022' },
+    status: 'active',
+    isActive: true,
+    passwordHash,
+    mustSetPassword: false,
+    failedLoginAttempts: 0,
+    lockUntil: null,
+    forcePasswordReset: false,
+    allowedCategories: [],
+    save: async () => {},
+  };
+
+  let emailSendCount = 0;
+
+  User.findOne = async () => user;
+  Firm.countDocuments = async () => 1;
+  AuthAudit.create = async () => ({});
+  AuditLog.create = async () => ({});
+  emailService.sendLoginOtpEmail = async () => {
+    emailSendCount += 1;
+    return { success: true };
+  };
+
+  const first = createMockRes();
+  const second = createMockRes();
+  const req = {
+    body: { xid: 'X000001', password: 'Correct#123' },
+    params: { firmSlug: 'firm-a' },
+    firmId: '507f1f77bcf86cd799439022',
+    firmSlug: 'firm-a',
+    firmName: 'Firm A',
+    loginScope: 'tenant',
+    skipTransaction: true,
+    ip: '127.0.0.1',
+    get: () => 'agent',
+  };
+
+  try {
+    await login(req, first.res, () => {});
+    await login(req, second.res, () => {});
+  } finally {
+    User.findOne = originalUserFindOne;
+    Firm.countDocuments = originalFirmCountDocuments;
+    AuthAudit.create = originalAuthAuditCreate;
+    AuditLog.create = originalAuditLogCreate;
+    emailService.sendLoginOtpEmail = originalSendLoginOtpEmail;
+    process.env.JWT_SECRET = originalJwtSecret;
+  }
+
+  assert.strictEqual(first.body.success, true, 'First login attempt should trigger OTP challenge');
+  assert.strictEqual(second.res.statusCode, 429, 'Second login attempt inside cooldown should be rejected');
+  assert.strictEqual(second.body.success, false, 'Cooldown rejection should fail safely');
+  assert.strictEqual(emailSendCount, 1, 'Only one OTP email should be sent during cooldown window');
+}
+
 async function shouldVerifyEmailOtpAndIssueTokens() {
   const { verifyLoginOtp } = require('../src/controllers/auth.controller');
   const originalJwtSecret = process.env.JWT_SECRET;
@@ -438,6 +511,7 @@ async function run() {
   try {
     await shouldMountFirmScopedApiRoutes();
     await shouldRequireEmailOtpForFirmScopedLogin();
+    await shouldPreventDuplicateOtpGenerationWithinCooldown();
     await shouldVerifyEmailOtpAndIssueTokens();
     await shouldBlockAfterMaxInvalidOtpAttempts();
     await shouldResendOtpWithDevelopmentCooldown();
