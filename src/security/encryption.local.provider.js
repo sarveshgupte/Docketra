@@ -23,8 +23,6 @@ const TenantKey = require('./tenantKey.model');
  *  - 16-byte auth tag detects tampering.
  *  - KEK lives only in environment (never in DB); DB compromise alone is insufficient.
  *  - Superadmin with DB-only access cannot decrypt tenant data.
- *
- * TODO: Write migration script to encrypt existing plaintext fields.
  */
 
 const ALGORITHM = 'aes-256-gcm';
