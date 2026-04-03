@@ -4,6 +4,7 @@
  */
 
 const path = require('path');
+const fs = require('fs');
 
 /**
  * Determine MIME type based on file extension
@@ -49,7 +50,28 @@ const sanitizeFilename = (filename) => {
     .substring(0, 255); // Limit length
 };
 
+/**
+ * Get file extension without the dot
+ * @param {string} filename - The filename
+ * @returns {string} Extension string
+ */
+const getExtension = (filename) => {
+  if (!filename) return '';
+  const ext = path.extname(filename);
+  return ext.startsWith('.') ? ext.slice(1) : ext;
+};
+
+/**
+ * Ensures that a directory exists, creating it if necessary
+ * @param {string} dir - The directory path
+ */
+const ensureDirectoryExists = async (dir) => {
+  await fs.promises.mkdir(dir, { recursive: true });
+};
+
 module.exports = {
   getMimeType,
   sanitizeFilename,
+  getExtension,
+  ensureDirectoryExists,
 };
