@@ -352,7 +352,7 @@ export const CasesPage = () => {
     };
     if (mixedStates) {
       setConfirmModal({
-        title: 'Assign Cases',
+        title: 'Assign Dockets',
         description: `Selected dockets have mixed lifecycle states. Assign all ${selectedList.length} docket(s) to yourself?`,
         onConfirm: async () => { setConfirmModal(null); await doAssign(); },
       });
@@ -603,7 +603,7 @@ export const CasesPage = () => {
     }] : []),
     {
       key: 'caseName',
-      header: 'Case Name',
+      header: 'Docket Name',
       sortable: true,
       headerClassName: 'w-full max-w-lg',
       cellClassName: 'w-full max-w-lg',
@@ -739,8 +739,8 @@ export const CasesPage = () => {
     <Layout>
       <div className="cases-page">
         <PageHeader
-          title="Cases"
-          description="Manage lifecycle, assignments, and status transitions."
+          title="Dockets"
+          subtitle="Manage lifecycle, assignments, and status transitions."
           actions={
             <div className="cases-page__header-actions">
               {/* Task 4: High workload indicator */}
@@ -755,7 +755,7 @@ export const CasesPage = () => {
                   {showPerformance ? 'Hide Performance View' : 'Show Performance View'}
                 </Button>
               )}
-              {isAdmin && <Button variant="primary" onClick={handleCreateCase}>{UX_COPY.actions.CREATE_CASE}</Button>}
+              {isAdmin && <Button variant="primary" onClick={handleCreateCase}>Create Docket</Button>}
             </div>
           }
         />
@@ -863,7 +863,7 @@ export const CasesPage = () => {
               <input
                 type="text"
                 className="cases-page__saved-views-input"
-                placeholder="Preset name (e.g. My Overdue Cases)"
+                placeholder="Preset name (e.g. My Overdue Dockets)"
                 value={saveViewName}
                 onChange={(e) => setSaveViewName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSaveCurrentView()}
@@ -882,7 +882,7 @@ export const CasesPage = () => {
         </div>
 
         {/* Preset operational view tabs */}
-        <div className="cases-page__views cases-page__control-section" role="tablist" aria-label="Case views">
+        <div className="cases-page__views cases-page__control-section" role="tablist" aria-label="Docket views">
           {availableViews.map((view) => (
             <button
               key={view.id}
@@ -934,7 +934,7 @@ export const CasesPage = () => {
           </div>
         )}
 
-        <SectionCard className="cases-page__filters cases-page__control-section" title="Filters" subtitle="Narrow down the case list by workflow status.">
+        <SectionCard className="cases-page__filters cases-page__control-section" title="Filters" subtitle="Narrow down the docket list by workflow status.">
           <label className="cases-page__filter-label" htmlFor="status-filter">Status</label>
           <select
             id="status-filter"
@@ -965,7 +965,7 @@ export const CasesPage = () => {
                     )}
                     {performanceMetrics.pctBreach !== null && (
                       <div className="cases-page__perf-metric">
-                        <span className="cases-page__perf-metric-label">Cases Breaching SLA</span>
+                        <span className="cases-page__perf-metric-label">Dockets Breaching SLA</span>
                         <span className={`cases-page__perf-metric-value${performanceMetrics.pctBreach > 20 ? ' cases-page__perf-metric-value--danger' : ''}`}>
                           {performanceMetrics.pctBreach}%
                         </span>
@@ -1003,17 +1003,16 @@ export const CasesPage = () => {
             <ol className="cases-page__onboarding-list">
               <li>Configure your SLA and operational thresholds.</li>
               <li>Create categories for your firm workflow.</li>
-              <li>Create your first case and assign ownership.</li>
+              <li>Create your first docket and assign ownership.</li>
             </ol>
             <div className="cases-page__onboarding-actions">
-              <Button variant="primary" onClick={handleCreateCase}>Create First Case</Button>
               <Button variant="outline" onClick={() => navigate(ROUTES.FIRM_SETTINGS(firmSlug))}>Configure SLA Policy</Button>
               <Button variant="outline" onClick={dismissOnboarding}>Dismiss</Button>
             </div>
           </SectionCard>
         )}
 
-        <SectionCard title="Case Registry" subtitle={`${searchedCases.length} records`}>
+        <SectionCard title="Docket Registry" subtitle={`${searchedCases.length} records`}>
           <DataTable
             columns={columns}
             data={sortedCases}
@@ -1035,11 +1034,9 @@ export const CasesPage = () => {
                       ? UX_COPY.emptyStates.NO_ESCALATED
                       : activeView === CASE_VIEWS.MY_OPEN.id
                         ? UX_COPY.emptyStates.NO_MY_OPEN
-                        : isAdmin ? 'No cases yet' : 'No assigned cases'
+                        : isAdmin ? 'No dockets yet' : 'No assigned dockets'
                 }
-                description={isAdmin ? 'Create your first case to start managing firm workflows.' : 'You do not have assigned cases right now.'}
-                actionLabel={isAdmin ? UX_COPY.actions.CREATE_CASE : undefined}
-                onAction={isAdmin ? handleCreateCase : undefined}
+                description={isAdmin ? 'Use Create Docket to start managing firm workflows.' : 'You do not have assigned dockets right now.'}
               />
             }
           />
