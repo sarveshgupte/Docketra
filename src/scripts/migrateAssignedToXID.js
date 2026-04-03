@@ -47,13 +47,26 @@ async function migrateAssignedToXID() {
     let failedCount = 0;
     const failedCases = [];
     
-    // Process each case
+    const uniqueEmails = [...new Set(casesWithEmail.map(c => c.assignedTo.trim().toLowerCase()))];
+
+    // Find all relevant users at once
+    const users = await User.find({ email: { $in: uniqueEmails }, status: { $ne: 'deleted' } }).lean();
+
+    // Build an email-to-user map
+    const userMap = new Map();
+    for (const user of users) {
+      userMap.set(user.email.toLowerCase(), user);
+    }
+
+    const bulkCaseUpdates = [];
+    const bulkHistoryInserts = [];
+
+    // Process each case in memory
     for (const caseData of casesWithEmail) {
       const email = caseData.assignedTo.trim().toLowerCase();
       
       try {
-        // Find user by email
-        const user = await User.findOne({ email, status: { $ne: 'deleted' } }).lean();
+        const user = userMap.get(email);
         
         if (!user) {
           console.log(`⚠️  Case ${caseData.caseId}: User not found for email ${email}`);
@@ -66,14 +79,16 @@ async function migrateAssignedToXID() {
           continue;
         }
         
-        // Update case with xID
-        await Case.updateOne(
-          { _id: caseData._id },
-          { $set: { assignedTo: user.xID } }
-        );
+        // Prepare bulk update for Case
+        bulkCaseUpdates.push({
+          updateOne: {
+            filter: { _id: caseData._id },
+            update: { $set: { assignedTo: user.xID } }
+          }
+        });
         
-        // Create audit log entry
-        await CaseHistory.create({
+        // Prepare audit log entry for CaseHistory
+        bulkHistoryInserts.push({
           caseId: caseData.caseId,
           actionType: 'MIGRATION_EMAIL_TO_XID',
           description: `Migration: assignedTo updated from ${email} to ${user.xID}`,
@@ -91,6 +106,18 @@ async function migrateAssignedToXID() {
           email: email,
           reason: error.message,
         });
+      }
+    }
+
+    if (bulkCaseUpdates.length > 0) {
+      try {
+        console.log(`\n💾 Executing ${bulkCaseUpdates.length} database updates...`);
+        await Case.bulkWrite(bulkCaseUpdates);
+        await CaseHistory.insertMany(bulkHistoryInserts);
+        console.log('✅ Database updates successful\n');
+      } catch (error) {
+        console.error('❌ Database update failed:', error.message);
+        throw error;
       }
     }
     
