@@ -1648,7 +1648,16 @@ const getCases = async (req, res) => {
     // Base query (tenant scope is enforced centrally via enforceTenantScope)
     const query = {};
     
-    if (status) query.status = status;
+    const requestedStatuses = Array.isArray(status)
+      ? status.flatMap((value) => String(value).split(','))
+      : (typeof status === 'string' ? status.split(',') : []);
+    const normalizedStatuses = requestedStatuses.map((value) => value.trim()).filter(Boolean);
+
+    if (normalizedStatuses.length === 1) {
+      query.status = normalizedStatuses[0];
+    } else if (normalizedStatuses.length > 1) {
+      query.status = { $in: normalizedStatuses };
+    }
     if (category) query.category = category;
     if (priority) query.priority = priority;
     
@@ -1733,11 +1742,14 @@ const getCases = async (req, res) => {
     // Log case list view for audit
     if (req.user?.xID) {
       // Determine if this is an admin viewing pending approvals
-      const isPendingApprovalView = 
-        status === CaseStatus.PENDING ||
-        status === CaseStatus.PENDING_LEGACY ||
-        status === CaseStatus.REVIEWED ||
-        status === CaseStatus.UNDER_REVIEW;
+      const approvalStatuses = [
+        CaseStatus.PENDING,
+        CaseStatus.PENDING_LEGACY,
+        CaseStatus.REVIEWED,
+        CaseStatus.UNDER_REVIEW,
+      ];
+      const statusesForAudit = normalizedStatuses.length > 0 ? normalizedStatuses : (status ? [status] : []);
+      const isPendingApprovalView = statusesForAudit.some((statusValue) => approvalStatuses.includes(statusValue));
       
       if (isPendingApprovalView && req.user.role === 'Admin') {
         // Log admin approval queue access
