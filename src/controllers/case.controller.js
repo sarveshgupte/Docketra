@@ -1050,7 +1050,7 @@ const cloneCase = async (req, res) => {
         } else if (attachment.filePath) {
           // Legacy: Handle old attachments stored locally
           const fileExt = path.extname(attachment.fileName);
-          const newFileName = `${Date.now()}-${Math.random().toString(36).substring(7)}${fileExt}`;
+          const newFileName = `${Date.now()}-${require('crypto').randomBytes(4).toString('hex')}${fileExt}`;
           const newFilePath = path.join(__dirname, '../../uploads', newFileName);
           
           // Copy the actual file
