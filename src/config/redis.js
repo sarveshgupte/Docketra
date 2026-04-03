@@ -73,7 +73,12 @@ const getRedisClient = () => {
       try {
         await validateRedisEvictionPolicy(redisClient);
       } catch (err) {
-        console.warn(`[REDIS] Eviction policy validation failed: ${err.message}`);
+        const errorMessage = `[REDIS] Eviction policy validation failed: ${err.message}`;
+        if (process.env.NODE_ENV === 'production') {
+          console.error(errorMessage);
+          process.exit(1);
+        }
+        console.warn(errorMessage);
       }
     });
     

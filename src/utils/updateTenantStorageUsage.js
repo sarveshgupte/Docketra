@@ -19,7 +19,7 @@ const updateTenantStorageUsage = async (tenantId, bytesDelta) => {
         },
       },
     ],
-    { upsert: true, new: true }
+    { upsert: true, returnDocument: 'after' }
   );
 };
 

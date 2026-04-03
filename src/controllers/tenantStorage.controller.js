@@ -48,7 +48,7 @@ async function updateTenantStorage(req, res) {
         compressionEnabled: compressionEnabled ?? true,
         compressionLevel: compressionLevel ?? 6,
       },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
     );
 
     await Firm.findByIdAndUpdate(tenantId, {
