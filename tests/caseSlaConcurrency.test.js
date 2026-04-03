@@ -31,14 +31,14 @@ async function testConcurrentPauseConflictIsRejected() {
   let updateOneAttempts = 0;
 
   try {
-    Case.findOne = async () => ({
+    Case.findOne = () => ({ lean: async () => ({
       caseId: 'CASE-20260301-00002',
       status: 'OPEN',
       tatPaused: false,
       tatLastStartedAt: fixedStart,
       tatAccumulatedMinutes: 0,
       firmId: 'firm-a',
-    });
+    }) });
     Case.updateOne = async () => {
       updateOneAttempts += 1;
       return { matchedCount: updateOneAttempts === 1 ? 1 : 0 };
@@ -57,9 +57,9 @@ async function testConcurrentPauseConflictIsRejected() {
       session: { id: 's1' },
     };
 
-    await CaseService.updateStatus('CASE-20260301-00002', 'PENDING', context);
+    await CaseService.updateStatus('CASE-20260301-00002', 'PENDING', { ...context, reason: 'Test reason' });
     await assert.rejects(
-      () => CaseService.updateStatus('CASE-20260301-00002', 'PENDING', context),
+      () => CaseService.updateStatus('CASE-20260301-00002', 'PENDING', { ...context, reason: 'Test reason' }),
       /Case state changed concurrently/
     );
     console.log('✓ Concurrent pause attempts reject stale writer');
