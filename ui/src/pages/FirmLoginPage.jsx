@@ -45,23 +45,6 @@ export const FirmLoginPage = () => {
   const otpInputRef = useRef(null);
 
   useEffect(() => {
-    const fetchFirmLoginDetailsFromApiPath = async (slug) => {
-      const response = await fetch(`/api/${slug}/login`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: { Accept: 'application/json' },
-      });
-
-      const payload = await response.json().catch(() => null);
-      if (!response.ok || !payload?.success) {
-        const error = new Error(payload?.message || 'Workspace lookup failed');
-        error.status = response.status;
-        throw error;
-      }
-
-      return payload;
-    };
-
     const fetchLegacyFirmLoginDetails = async (slug) => {
       const response = await fetch(`/${slug}/login`, {
         method: 'GET',
@@ -86,11 +69,7 @@ export const FirmLoginPage = () => {
         try {
           response = await authApi.getFirmLoginDetails(firmSlug);
         } catch (primaryLookupError) {
-          try {
-            response = await fetchFirmLoginDetailsFromApiPath(firmSlug);
-          } catch (_sameOriginApiFallbackError) {
-            response = await fetchLegacyFirmLoginDetails(firmSlug);
-          }
+          response = await fetchLegacyFirmLoginDetails(firmSlug);
           if (import.meta.env.DEV) {
             // Keep fallback instrumentation in development only.
             // eslint-disable-next-line no-console

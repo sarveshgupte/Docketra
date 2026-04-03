@@ -1,6 +1,6 @@
 import React from 'react';
 import { SortableTableHeader } from '../ui/SortableTableHeader';
-import { EmptyState } from './EmptyState';
+import { EmptyState } from '../ui/EmptyState';
 import { Loading } from '../common/Loading';
 import { spacingClasses, surfaceClasses } from '../../theme/tokens';
 

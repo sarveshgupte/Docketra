@@ -14,7 +14,7 @@ import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
 import { DashboardSkeleton, SkeletonBlock } from '../components/common/Skeleton';
-import { EmptyState } from '../components/layout/EmptyState';
+import { EmptyState } from '../components/ui/EmptyState';
 import { PageHeader } from '../components/layout/PageHeader';
 import { PriorityPill } from '../components/common/PriorityPill';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/common/Table';
@@ -471,8 +471,8 @@ export const DashboardPage = () => {
                         ? 'Create your first docket to start tracking deadlines, ownership, and firm workflow health.'
                         : 'Once work is assigned to you, your recently updated dockets will appear here for quick follow-up.'
                     }
-                    actionLabel={UX_COPY.actions.CREATE_CASE}
-                    onAction={() => navigate(safeRoute(ROUTES.CREATE_CASE(firmSlug)))}
+                    actionLabel={isAdmin ? UX_COPY.actions.CREATE_CASE : undefined}
+                    onAction={isAdmin ? () => navigate(safeRoute(ROUTES.CREATE_CASE(firmSlug))) : undefined}
                   />
                 </div>
               ) : (

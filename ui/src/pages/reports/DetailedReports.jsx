@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../../components/common/Layout';
-import { EmptyState } from '../../components/EmptyState';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { FilterPanel } from '../../components/reports/FilterPanel';
 import { ReportsTable } from '../../components/reports/ReportsTable';
 import { ExportModal } from './ExportModal';
