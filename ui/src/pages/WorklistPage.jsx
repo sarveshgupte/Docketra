@@ -7,7 +7,7 @@
  * 
  * This is the canonical "My Worklist" view.
  * 
- * PR: Case Lifecycle - Fixed to show only OPEN status cases
+ * PR: Docket Lifecycle - Fixed to show only OPEN status dockets
  * PR: Clickable Dashboard KPI Cards - Added support for status query params
  */
 
@@ -25,7 +25,6 @@ import { PriorityPill } from '../components/common/PriorityPill';
 import { worklistApi } from '../api/worklist.api';
 import { formatDate } from '../utils/formatters';
 import { getStatusLabel } from '../utils/statusDisplay';
-import { UX_COPY } from '../constants/uxCopy';
 import { useQueryState } from '../hooks/useQueryState';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import api from '../services/api';
@@ -96,7 +95,7 @@ export const WorklistPage = () => {
       }
     } catch (error) {
       console.error('Failed to load worklist:', error);
-      setError('We couldn’t load your worklist. Retry to fetch the latest assigned cases.');
+      setError('We couldn’t load your worklist. Retry to fetch the latest assigned dockets.');
       setCases([]);
     } finally {
       setLoading(false);
@@ -256,42 +255,34 @@ export const WorklistPage = () => {
       <div className="worklist">
         <PageHeader
           title={pageInfo.title}
-          description={pageInfo.description}
+          subtitle={pageInfo.description}
           actions={(
             <Button variant="primary" onClick={() => navigate(ROUTES.CREATE_CASE(firmSlug))}>
-              {UX_COPY.actions.CREATE_CASE}
+              Create Docket
             </Button>
           )}
         />
         <div className="worklist-view-tabs" role="tablist" aria-label="Docket queues">
           <Button variant="outline" onClick={() => navigate(ROUTES.GLOBAL_WORKLIST(firmSlug))}>Workbasket</Button>
-          <Button variant="primary">My Worklist</Button>
+          <Button variant="outline">My Worklist</Button>
         </div>
 
         <Card>
           {error ? (
             <EmptyState
               title="We couldn’t load your worklist"
-              description="Retry to fetch the latest assigned cases. If the problem continues, refresh the page or contact your administrator."
+              description="Retry to fetch the latest assigned dockets. If the problem continues, refresh the page or contact your administrator."
               actionLabel="Retry"
               onAction={loadWorklist}
-            >
-              {!isPendingView ? (
-                <Button variant="outline" onClick={() => navigate(ROUTES.CREATE_CASE(firmSlug))}>
-                  {UX_COPY.actions.CREATE_CASE}
-                </Button>
-              ) : null}
-            </EmptyState>
+            />
           ) : cases.length === 0 ? (
             <EmptyState
               title={isPendingView ? 'No pending dockets right now.' : 'No work assigned'}
                 description={
                   isPendingView
                     ? 'There are no dockets currently in review. When a docket is placed on hold, it will appear here with its review date.'
-                    : 'No open dockets are assigned to you right now. Create a new docket or wait for one to be assigned.'
+                    : 'No open dockets are assigned to you right now.'
                 }
-              actionLabel={!isPendingView ? UX_COPY.actions.CREATE_CASE : undefined}
-              onAction={!isPendingView ? () => navigate(ROUTES.CREATE_CASE(firmSlug)) : undefined}
             />
           ) : (
             <DataTable
