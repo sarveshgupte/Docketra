@@ -10,7 +10,7 @@ const { looksEncrypted } = require('../src/security/encryption.utils');
 let mongoServer;
 
 async function setupDatabase() {
-  process.env.MASTER_ENCRYPTION_KEY = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+  process.env.MASTER_ENCRYPTION_KEY = require('crypto').randomBytes(32).toString('hex');
   try {
     mongoServer = await MongoMemoryServer.create();
     const uri = mongoServer.getUri();
