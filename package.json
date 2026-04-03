@@ -7,7 +7,9 @@
     "start": "node server.js",
     "start:worker": "node worker.js",
     "dev": "nodemon src/server.js",
+    "build": "npm install --include=dev && cd ui && npm install --include=dev && npm run build",
     "lint": "find src tests -name '*.js' -print0 | xargs -0 -n1 node --check",
+    "verify:build": "cd ui && npm run build",
     "build:ui": "cd ui && npm run build",
     "install:ui": "cd ui && npm install",
     "heroku-postbuild": "npm run install:ui && npm run build:ui",
@@ -30,7 +32,7 @@
     "mongodb"
   ],
   "engines": {
-    "node": ">=18.0.0",
+    "node": "18.x",
     "npm": ">=9.0.0"
   },
   "author": "",
