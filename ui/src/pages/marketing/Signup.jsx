@@ -21,7 +21,7 @@ const mapSafeError = (error, fallback) => {
 
 export default function Signup() {
   const navigate = useNavigate();
-  const { signup, verifySignup, resendSignupOtp } = useAuth();
+  const { signup, verifySignup, resendSignupOtp, resendCredentials } = useAuth();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
   const [apiError, setApiError] = useState('');
@@ -30,6 +30,7 @@ export default function Signup() {
   const [otpInfo, setOtpInfo] = useState('');
   const [cooldown, setCooldown] = useState(30);
   const [signupSuccessData, setSignupSuccessData] = useState(null);
+  const [emailStatus, setEmailStatus] = useState('');
   const otpInputRef = useRef(null);
   const [form, setForm] = useState({
     name: '',
@@ -127,6 +128,7 @@ export default function Signup() {
       const resolvedRedirectPath = responseData?.redirectPath || '';
       const resolvedFirmUrl = responseData?.firmUrl
         || (resolvedRedirectPath ? `${getOrigin()}${resolvedRedirectPath}` : buildFallbackFirmLoginUrl(resolvedFirmSlug));
+      setEmailStatus('');
       setSignupSuccessData({
         firmSlug: resolvedFirmSlug,
         firmUrl: resolvedFirmUrl,
@@ -153,6 +155,28 @@ export default function Signup() {
       setCooldown(30);
     } catch (error) {
       setApiError(mapSafeError(error, 'Unable to resend OTP right now.'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  const handleResendWelcomeEmail = async () => {
+    if (loading) return;
+    const email = form.email.trim().toLowerCase();
+    if (!emailPattern.test(email)) {
+      setEmailStatus('Unable to resend welcome email because the signup email is missing.');
+      return;
+    }
+
+    setLoading(true);
+    setApiError('');
+    setEmailStatus('');
+    try {
+      const response = await resendCredentials(email);
+      setEmailStatus(response?.message || 'If an account exists, credentials have been sent to your email.');
+    } catch (error) {
+      setEmailStatus(mapSafeError(error, 'Unable to resend welcome email right now.'));
     } finally {
       setLoading(false);
     }
@@ -192,6 +216,10 @@ export default function Signup() {
           <Button type="button" variant="primary" fullWidth onClick={handleLoginRedirect}>
             Go to Login
           </Button>
+          <Button type="button" variant="outline" fullWidth onClick={handleResendWelcomeEmail} disabled={loading}>
+            {loading ? 'Sending...' : 'Resend welcome email'}
+          </Button>
+          {emailStatus ? <p className="mt-2 text-xs text-gray-500">{emailStatus}</p> : null}
         </div>
       </div>
     );

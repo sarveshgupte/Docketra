@@ -93,6 +93,10 @@ export const authService = {
     return authApi.signupResendOtp(email);
   },
 
+  resendCredentials: async (email) => {
+    return authApi.resendCredentials(email);
+  },
+
   /**
    * Logout
    */
