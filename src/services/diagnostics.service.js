@@ -59,7 +59,7 @@ const getDiagnosticsSnapshot = async () => {
     ],
     redis: getRedisStatus(),
     dbLatencyMs,
-    idempotencyCacheSize: getIdempotencyCacheSize(),
+    idempotencyCacheSize: await getIdempotencyCacheSize(),
     transactionFailures: getTransactionMetrics(),
     metrics: await metricsService.getSnapshot(),
     circuitBreakers: getBreakerSnapshot(),

@@ -1,11 +1,7 @@
-const crypto = require('crypto');
-
 const mutatingMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
-const idempotencyCache = new Map();
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
-let inMemoryWarningLogged = false;
+const IDEMPOTENCY_TTL_SECONDS = 60;
 
-const hash = (value) => crypto.createHash('sha256').update(value || '').digest('hex');
+const { getRedisClient } = require('../config/redis');
 
 const resolveKey = (req) => {
   const headerVal = req.get?.('Idempotency-Key');
@@ -14,74 +10,84 @@ const resolveKey = (req) => {
   return headers['idempotency-key'] || headers['Idempotency-Key'];
 };
 
-const buildFingerprint = (req) => {
-  const bodyHash = hash(JSON.stringify(req.body || {}));
-  const route = req.originalUrl || req.path || '';
-  const firmId = req.firmId || req.user?.firmId || 'none';
-  const userId = req.user?._id || req.user?.id || req.user?.xID || req.user?.email || 'anonymous';
-  return hash([req.method, route, firmId, userId, bodyHash].join('|'));
+const resolveRouteSegment = (req) => {
+  const route = req.route?.path || req.baseUrl || req.path || req.originalUrl || 'unknown-route';
+  return String(route).replace(/\s+/g, '').replace(/\//g, ':');
 };
 
-const idempotencyMiddleware = (req, res, next) => {
+const resolveFirmSlug = (req) => (
+  req.firmSlug
+  || req.firm?.firmSlug
+  || req.params?.firmSlug
+  || req.user?.firmSlug
+  || req.user?.firmId
+  || req.firmId
+  || 'unknown-firm'
+);
+
+const resolveXid = (req) => (
+  req.user?.xid
+  || req.user?.xID
+  || req.body?.xid
+  || req.body?.xID
+  || req.params?.xid
+  || req.params?.xID
+  || 'anonymous'
+);
+
+const buildDistributedKey = (req, xid) => {
+  const route = resolveRouteSegment(req);
+  const firmSlug = resolveFirmSlug(req);
+  return `idempotency:${route}:${firmSlug}:${xid}`;
+};
+
+const idempotencyMiddleware = async (req, res, next) => {
   if (!mutatingMethods.has(req.method)) {
     return next();
   }
 
-  const key = resolveKey(req);
-  if (!key) {
+  const idempotencyKey = resolveKey(req);
+  if (!idempotencyKey) {
     return res.status(400).json({ error: 'idempotency_key_required' });
   }
 
-  if (!inMemoryWarningLogged && process.env.NODE_ENV === 'production') {
-    console.warn('[idempotencyMiddleware] Using in-memory idempotency cache; enable shared store for multi-instance deployments.');
-    inMemoryWarningLogged = true;
+  const redis = getRedisClient();
+  if (!redis) {
+    return next(new Error('Redis is required for idempotency middleware'));
   }
 
-  const fingerprint = buildFingerprint(req);
-  const existing = idempotencyCache.get(key);
+  const xid = String(idempotencyKey).trim();
+  const distributedKey = buildDistributedKey(req, xid);
 
-  if (existing) {
-    if (existing.expiresAt && existing.expiresAt < Date.now()) {
-      idempotencyCache.delete(key);
-    } else {
-      if (existing.fingerprint !== fingerprint) {
-        return res.status(409).json({ error: 'idempotency_key_conflict' });
-      }
-      if (existing.response) {
-        if (res.set) {
-          res.set('Idempotent-Replay', 'true');
-        }
-        return res.status(existing.response.status).json(existing.response.body);
-      }
+  try {
+    const result = await redis.set(distributedKey, '1', 'EX', IDEMPOTENCY_TTL_SECONDS, 'NX');
+    if (result !== 'OK') {
+      return res.status(409).json({ error: 'duplicate_request' });
     }
+    return next();
+  } catch (error) {
+    return next(error);
   }
-
-  const record = existing || { fingerprint };
-  record.expiresAt = Date.now() + CACHE_TTL_MS;
-  idempotencyCache.set(key, record);
-
-  const originalJson = res.json.bind(res);
-  res.json = (payload) => {
-    if (res.headersSent) return;
-    if (req.transactionCommitted === true || req.transactionSkipped === true) {
-      record.response = {
-        status: res.statusCode || 200,
-        body: payload,
-      };
-      idempotencyCache.set(key, record);
-    }
-    return originalJson(payload);
-  };
-
-  return next();
 };
 
-const resetIdempotencyCache = () => idempotencyCache.clear();
-const getIdempotencyCacheSize = () => idempotencyCache.size;
+const resetIdempotencyCache = async () => {
+  const redis = getRedisClient();
+  if (!redis) return;
+  const keys = await redis.keys('idempotency:*');
+  if (keys.length) {
+    await redis.del(...keys);
+  }
+};
+
+const getIdempotencyCacheSize = async () => {
+  const redis = getRedisClient();
+  if (!redis) return 0;
+  const keys = await redis.keys('idempotency:*');
+  return keys.length;
+};
 
 module.exports = {
   idempotencyMiddleware,
   resetIdempotencyCache,
   getIdempotencyCacheSize,
-  _idempotencyCache: idempotencyCache,
 };
