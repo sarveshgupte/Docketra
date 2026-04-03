@@ -17,6 +17,7 @@ const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { executeWrite } = require('../utils/executeWrite');
 const { incrementTenantMetric } = require('../services/tenantMetrics.service');
 const Firm = require('../models/Firm.model');
+const { ensureDefaultClientForFirm } = require('../services/defaultClient.service');
 const { parseBooleanQuery } = require('../utils/query.utils');
 const { sanitizePayload, enforceAllowedFields, PayloadValidationError } = require('../utils/payloadValidation');
 const cfsDriveService = require('../services/cfsDrive.service');
@@ -152,6 +153,12 @@ const getClients = async (req, res) => {
   if (!accessContext) return;
 
   try {
+    // Self-heal invariant: each firm must always have its own default/system client.
+    // When older tenants are missing this record, admin client listing can fail
+    // across related flows (case creation, permissions, and client management).
+    const firm = await Firm.findById(accessContext.firmId).select('_id name defaultClientId');
+    await ensureDefaultClientForFirm(firm || accessContext.firmId);
+
     setNoCacheHeaders(res);
     const { activeOnly, forCreateCase } = req.query;
     const shouldFilterActiveOnly = parseBooleanQuery(activeOnly);
