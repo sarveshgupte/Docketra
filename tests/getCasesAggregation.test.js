@@ -29,7 +29,8 @@ const mongoose = {
       updateOne: async () => ({ n: 1, matchedCount: 1 }),
       create: async (data) => data,
     };
-  }
+  },
+  models: {}
 };
 mongoose.Schema.Types = {
   ObjectId: String,
@@ -47,10 +48,45 @@ const constants = {
 require.cache[require.resolve('../src/config/constants')] = { exports: constants };
 
 // Mock controllers
-require.cache[require.resolve('./docketWorkflow.controller')] = { exports: { isValidTransition: () => true } };
+require.cache[require.resolve('../src/controllers/docketWorkflow.controller')] = { exports: { isValidTransition: () => true } };
+require.cache[require.resolve('../src/config/config')] = { exports: { isProduction: () => false, config: {} } };
 
 const Case = require('../src/models/Case.model');
-const { CaseRepository, ClientRepository } = require('../src/repositories');
+
+// We must override the repository methods via prototype or proxy if they are frozen,
+// but since they are plain objects, we can intercept the require cache for the repositories index
+const mockCaseRepository = {
+  decryptDocs: async (docs) => {
+    docs.forEach(doc => {
+      if (doc.description === 'Encrypted description') {
+        doc.description = 'Decrypted description';
+      }
+    });
+    return docs;
+  }
+};
+
+const mockClientRepository = {
+  decryptDocs: async (docs) => {
+    docs.forEach(doc => {
+      if (doc.businessEmail === 'Encrypted email') {
+        doc.businessEmail = 'decrypted@example.com';
+      }
+    });
+    return docs;
+  }
+};
+
+const originalRepositories = require('../src/repositories');
+const overriddenRepositories = {
+  ...originalRepositories,
+  CaseRepository: { ...originalRepositories.CaseRepository, ...mockCaseRepository },
+  ClientRepository: { ...originalRepositories.ClientRepository, ...mockClientRepository }
+};
+// Provide mocked exports for direct repository require paths because controller may require from there directly
+require.cache[require.resolve('../src/repositories')] = { exports: overriddenRepositories };
+require.cache[require.resolve('../src/repositories/CaseRepository')] = { exports: overriddenRepositories.CaseRepository };
+require.cache[require.resolve('../src/repositories/ClientRepository')] = { exports: overriddenRepositories.ClientRepository };
 
 const createMockRes = () => ({
   statusCode: 200,
@@ -72,9 +108,6 @@ const run = async () => {
 
   const originalAggregate = Case.aggregate;
   const originalCountDocuments = Case.countDocuments;
-  const originalCaseDecrypt = CaseRepository.decryptDocs;
-  const originalClientDecrypt = ClientRepository.decryptDocs;
-
   try {
     const mockFirmId = '507f1f77bcf86cd799439011';
     const mockClientId = 'C123456';
@@ -96,6 +129,7 @@ const run = async () => {
     };
 
     Case.aggregate = async (pipeline) => {
+      console.log('Mock Case.aggregate called');
       // Verify pipeline structure
       assert.ok(Array.isArray(pipeline), 'Pipeline should be an array');
       // The match stage should have firmId
@@ -110,24 +144,6 @@ const run = async () => {
 
     Case.countDocuments = async () => 1;
 
-    CaseRepository.decryptDocs = async (docs) => {
-      docs.forEach(doc => {
-        if (doc.description === 'Encrypted description') {
-          doc.description = 'Decrypted description';
-        }
-      });
-      return docs;
-    };
-
-    ClientRepository.decryptDocs = async (docs) => {
-      docs.forEach(doc => {
-        if (doc.businessEmail === 'Encrypted email') {
-          doc.businessEmail = 'decrypted@example.com';
-        }
-      });
-      return docs;
-    };
-
     const caseController = require('../src/controllers/case.controller');
     const req = {
       user: mockUser,
@@ -135,7 +151,9 @@ const run = async () => {
     };
     const res = createMockRes();
 
+    console.log('Calling caseController.getCases');
     await caseController.getCases(req, res);
+    console.log('Result payload:', res.payload);
 
     assert.strictEqual(res.statusCode, 200);
     assert.strictEqual(res.payload.success, true);
@@ -152,8 +170,7 @@ const run = async () => {
   } finally {
     Case.aggregate = originalAggregate;
     Case.countDocuments = originalCountDocuments;
-    CaseRepository.decryptDocs = originalCaseDecrypt;
-    ClientRepository.decryptDocs = originalClientDecrypt;
+    require.cache[require.resolve('../src/repositories')] = { exports: originalRepositories };
   }
 };
 
