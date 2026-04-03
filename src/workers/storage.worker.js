@@ -275,7 +275,6 @@ const storageWorker = new Worker(
             contentHash,
             isDuplicate,
           });
-          // TODO: In future, support reference counting if deleting duplicate attachments.
 
           // Mark CaseFile as uploaded
           await CaseFile.findByIdAndUpdate(fileId, {

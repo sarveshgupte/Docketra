@@ -381,7 +381,6 @@ const processInboundEmailPayload = async (payload) => {
           contentHash,
           isDuplicate,
         });
-        // TODO: In future, support reference counting if deleting duplicate attachments.
 
         await Attachment.create({
           caseId: resolvedCaseId,

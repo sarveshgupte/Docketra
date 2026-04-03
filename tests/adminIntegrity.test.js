@@ -32,6 +32,7 @@ async function shouldRejectAdminWithoutFirm() {
     name: 'Admin Missing Context',
     email: 'admin-missing@test.com',
     role: 'Admin',
+    isOnboarded: true, // firmId is only strictly required via schema validation if isOnboarded is true
   });
 
   let failed = false;
