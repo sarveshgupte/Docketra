@@ -1,5 +1,9 @@
 const { z, nonEmptyString, xidString } = require('./common');
 
+const baseParamsSchema = z.object({
+  firmSlug: nonEmptyString,
+}).strip();
+
 const loginBodySchema = z.object({
   xid: xidString.optional(),
   xID: xidString.optional(),
@@ -13,13 +17,6 @@ const loginBodySchema = z.object({
   }
 );
 
-module.exports = {
-  'POST /login': {
-    body: loginBodySchema,
-  },
-};
-
-
 const verifyOtpBodySchema = z.object({
   loginToken: nonEmptyString,
   otp: z.string().trim().regex(/^\d{6}$/),
@@ -29,5 +26,20 @@ const resendOtpBodySchema = z.object({
   loginToken: nonEmptyString,
 }).strip();
 
-module.exports['POST /verify-otp'] = { body: verifyOtpBodySchema };
-module.exports['POST /resend-otp'] = { body: resendOtpBodySchema };
+module.exports = {
+  'GET /login': {
+    params: baseParamsSchema,
+  },
+  'POST /login': {
+    params: baseParamsSchema,
+    body: loginBodySchema,
+  },
+  'POST /verify-otp': {
+    params: baseParamsSchema,
+    body: verifyOtpBodySchema,
+  },
+  'POST /resend-otp': {
+    params: baseParamsSchema,
+    body: resendOtpBodySchema,
+  },
+};
