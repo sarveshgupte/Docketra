@@ -1726,7 +1726,7 @@ const getCases = async (req, res) => {
       },
     ];
 
-    const cases = await Case.aggregate(aggregationPipeline);
+    const cases = await Case.aggregate(aggregationPipeline, { role: req.user.role });
 
     // Decrypt case and client documents
     // Note: CaseRepository.decryptDocs and ClientRepository.decryptDocs handle decryption and normalization
