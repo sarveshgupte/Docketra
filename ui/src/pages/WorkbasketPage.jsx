@@ -3,7 +3,7 @@
  * Displays unassigned dockets that can be pulled by users
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import api from '../services/api';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
@@ -11,14 +11,63 @@ import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Loading } from '../components/common/Loading';
 import { PageHeader } from '../components/layout/PageHeader';
-import { EmptyState } from '../components/ui/EmptyState';
 import { StatusBadge } from '../components/layout/StatusBadge';
+import { DataTable } from '../components/layout/DataTable';
+import { ActionConfirmModal } from '../components/common/ActionConfirmModal';
 import { useAuth } from '../hooks/useAuth';
 import { worklistApi } from '../api/worklist.api';
 import { formatDate } from '../utils/formatters';
 import { useToast } from '../hooks/useToast';
+import { formClasses } from '../theme/tokens';
+import { useQueryState } from '../hooks/useQueryState';
 import { ROUTES } from '../constants/routes';
 import './WorkbasketPage.css';
+
+const WORKBASKET_FILTER_DEFAULTS = {
+  clientId: '',
+  category: '',
+  createdAtFrom: '',
+  createdAtTo: '',
+  slaStatus: '',
+  assignedUser: '',
+  dueDate: '',
+  status: '',
+  sortBy: 'slaDueDate',
+  sortOrder: 'asc',
+  page: 1,
+  limit: 20,
+};
+
+const FILTER_KEY_BY_LABEL = {
+  'Client ID': 'clientId',
+  Category: 'category',
+  'Created From': 'createdAtFrom',
+  'Created To': 'createdAtTo',
+  'Assigned User': 'assignedUser',
+  'Due Date': 'dueDate',
+  Status: 'status',
+  SLA: 'slaStatus',
+};
+
+const SelectAllCheckbox = ({ checked, indeterminate, disabled, onChange }) => {
+  const checkboxRef = useRef(null);
+
+  useEffect(() => {
+    if (!checkboxRef.current) return;
+    checkboxRef.current.indeterminate = indeterminate;
+  }, [indeterminate]);
+
+  return (
+    <input
+      ref={checkboxRef}
+      type="checkbox"
+      checked={checked}
+      onChange={onChange}
+      disabled={disabled}
+      aria-label="Select all dockets"
+    />
+  );
+};
 
 export const WorkbasketPage = () => {
   const { user } = useAuth();
@@ -28,7 +77,18 @@ export const WorkbasketPage = () => {
   
   const [loading, setLoading] = useState(true);
   const [cases, setCases] = useState([]);
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState(() => ({ ...WORKBASKET_FILTER_DEFAULTS }));
+  const [pagination, setPagination] = useState(null);
+  const [pullingCase, setPullingCase] = useState(null);
+  const [selectedCases, setSelectedCases] = useState([]);
+  const [bulkPulling, setBulkPulling] = useState(false);
+  const [employees, setEmployees] = useState([]);
+  const [assignTo, setAssignTo] = useState('');
+  const [confirmModal, setConfirmModal] = useState(null);
+  const isAdmin = ['ADMIN', 'Admin'].includes(user?.role);
+  const allSelected = cases.length > 0 && selectedCases.length === cases.length;
+  const partiallySelected = selectedCases.length > 0 && !allSelected;
+  const { query, setQuery } = useQueryState({
     clientId: '',
     category: '',
     createdAtFrom: '',
@@ -37,22 +97,31 @@ export const WorkbasketPage = () => {
     assignedUser: '',
     dueDate: '',
     status: '',
-    sortBy: 'slaDueDate',
-    sortOrder: 'asc',
-    page: 1,
-    limit: 20,
+    sortBy: WORKBASKET_FILTER_DEFAULTS.sortBy,
+    sortOrder: WORKBASKET_FILTER_DEFAULTS.sortOrder,
+    page: String(WORKBASKET_FILTER_DEFAULTS.page),
   });
-  const [pagination, setPagination] = useState(null);
-  const [pullingCase, setPullingCase] = useState(null);
-  const [selectedCases, setSelectedCases] = useState([]);
-  const [bulkPulling, setBulkPulling] = useState(false);
-  const [employees, setEmployees] = useState([]);
-  const [assignTo, setAssignTo] = useState('');
-  const isAdmin = ['ADMIN', 'Admin'].includes(user?.role);
 
   useEffect(() => {
     loadGlobalWorklist();
   }, [filters]);
+
+  useEffect(() => {
+    setFilters({
+      ...WORKBASKET_FILTER_DEFAULTS,
+      clientId: query.clientId || '',
+      category: query.category || '',
+      createdAtFrom: query.createdAtFrom || '',
+      createdAtTo: query.createdAtTo || '',
+      slaStatus: query.slaStatus || '',
+      assignedUser: query.assignedUser || '',
+      dueDate: query.dueDate || '',
+      status: query.status || '',
+      sortBy: query.sortBy || WORKBASKET_FILTER_DEFAULTS.sortBy,
+      sortOrder: query.sortOrder || WORKBASKET_FILTER_DEFAULTS.sortOrder,
+      page: Number.parseInt(query.page, 10) > 0 ? Number.parseInt(query.page, 10) : WORKBASKET_FILTER_DEFAULTS.page,
+    });
+  }, [query]);
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -111,21 +180,27 @@ export const WorkbasketPage = () => {
       return;
     }
 
-    if (!confirm(`Pull ${selectedCases.length} selected docket(s)? This will assign them to you.`)) {
-      return;
-    }
+    setConfirmModal({
+      type: 'bulk-pull',
+      title: `Assign ${selectedCases.length} dockets?`,
+      description: assignTo
+        ? `This will assign ${selectedCases.length} selected docket(s) to the selected teammate.`
+        : `This will move ${selectedCases.length} selected docket(s) into your worklist.`,
+      confirmText: 'Assign selected dockets',
+    });
+  };
 
+  const executeBulkPull = async () => {
+    setConfirmModal(null);
     setBulkPulling(true);
     try {
-      // Use unified pullCases endpoint for bulk operations
       const response = await worklistApi.pullCases(selectedCases, assignTo || null);
-      
+
       if (response.success) {
         const message = response.pulled < response.requested
           ? `${response.pulled} of ${response.requested} dockets pulled. Some were already assigned.`
           : `All ${response.pulled} dockets pulled successfully!`;
         showInfo(message);
-        // Refresh the worklist
         loadGlobalWorklist();
       }
     } catch (error) {
@@ -141,18 +216,25 @@ export const WorkbasketPage = () => {
       return;
     }
 
-    if (!confirm(`Pull docket ${caseId}? This will assign it to you.`)) {
-      return;
-    }
+    setConfirmModal({
+      type: 'single-pull',
+      caseId,
+      title: `Assign docket ${caseId}?`,
+      description: assignTo
+        ? 'This docket will be assigned to the selected teammate.'
+        : 'This docket will be assigned to your worklist.',
+      confirmText: 'Assign docket',
+    });
+  };
 
+  const executeSinglePull = async (caseId) => {
+    setConfirmModal(null);
     setPullingCase(caseId);
     try {
-      // Use unified pullCases endpoint for single case (pass as array)
       const response = await worklistApi.pullCases([caseId], assignTo || null);
-      
+
       if (response.success) {
         showSuccess(assignTo ? 'Docket assigned successfully.' : 'Docket pulled successfully.');
-        // Refresh the worklist
         loadGlobalWorklist();
       }
     } catch (error) {
@@ -168,19 +250,38 @@ export const WorkbasketPage = () => {
   };
 
   const handleFilterChange = (name, value) => {
+    const nextValue = value ?? '';
     setFilters((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: nextValue,
       page: 1, // Reset to first page when filters change
     }));
+    setQuery({ [name]: nextValue, page: '1' });
   };
 
-  const handleSort = (field) => {
+  const activeFilters = useMemo(() => [
+    ['Client ID', filters.clientId],
+    ['Category', filters.category],
+    ['Created From', filters.createdAtFrom],
+    ['Created To', filters.createdAtTo],
+    ['Assigned User', filters.assignedUser],
+    ['Due Date', filters.dueDate],
+    ['Status', filters.status],
+    ['SLA', filters.slaStatus],
+  ].filter(([, value]) => Boolean(value)).map(([label, value]) => ({
+    key: FILTER_KEY_BY_LABEL[label],
+    label,
+    value,
+  })), [filters]);
+
+  const handleSort = (field, direction) => {
     setFilters((prev) => ({
       ...prev,
       sortBy: field,
-      sortOrder: prev.sortBy === field && prev.sortOrder === 'asc' ? 'desc' : 'asc',
+      sortOrder: direction,
+      page: 1,
     }));
+    setQuery({ sortBy: field, sortOrder: direction, page: '1' });
   };
 
   const getSLAStatusClass = (daysRemaining) => {
@@ -192,10 +293,175 @@ export const WorkbasketPage = () => {
     return 'sla-on-track';
   };
 
-  const getSortIcon = (field) => {
-    if (filters.sortBy !== field) return '⇅';
-    return filters.sortOrder === 'asc' ? '↑' : '↓';
+  const columns = useMemo(() => ([
+    {
+      key: 'selection',
+      header: (
+        <SelectAllCheckbox
+          checked={allSelected}
+          indeterminate={partiallySelected}
+          onChange={handleSelectAll}
+          disabled={cases.length === 0}
+        />
+      ),
+      headerClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'w-[1px] whitespace-nowrap',
+      render: (caseItem) => (
+        <input
+          type="checkbox"
+          checked={selectedCases.includes(caseItem.caseId)}
+          onChange={() => handleSelectCase(caseItem.caseId)}
+          aria-label={`Select docket ${caseItem.caseId}`}
+        />
+      ),
+    },
+    {
+      key: 'caseId',
+      header: 'Docket ID',
+      sortable: true,
+      headerClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'w-[1px] whitespace-nowrap',
+      render: (caseItem) => (
+        <button
+          type="button"
+          className="docket-link"
+          onClick={() => navigate(ROUTES.CASE_DETAIL(firmSlug, caseItem.caseId))}
+        >
+          {caseItem.caseId}
+        </button>
+      ),
+    },
+    {
+      key: 'clientId',
+      header: 'Client ID',
+      sortable: true,
+      align: 'center',
+      headerClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'w-[1px] whitespace-nowrap',
+      render: (caseItem) => caseItem.clientId || '—',
+    },
+    {
+      key: 'category',
+      header: 'Category',
+      sortable: true,
+      headerClassName: 'w-full max-w-lg',
+      cellClassName: 'w-full max-w-lg',
+      contentClassName: 'truncate',
+      render: (caseItem) => caseItem.category || '—',
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      align: 'center',
+      headerClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'w-[1px] whitespace-nowrap',
+      render: (caseItem) => <StatusBadge status={caseItem.status} />,
+    },
+    {
+      key: 'assignedTo',
+      header: 'Assigned To',
+      align: 'center',
+      headerClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'w-[1px] whitespace-nowrap',
+      render: (caseItem) => caseItem.assignedToName || caseItem.assignedToXID || 'Unassigned',
+    },
+    {
+      key: 'slaDueDate',
+      header: 'SLA Due Date',
+      sortable: true,
+      align: 'right',
+      tabular: true,
+      headerClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'w-[1px] whitespace-nowrap',
+      render: (caseItem) => formatDate(caseItem.slaDueDate || caseItem.slaState?.slaDueAt),
+    },
+    {
+      key: 'slaDaysRemaining',
+      header: 'SLA Days Remaining',
+      align: 'right',
+      tabular: true,
+      headerClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'w-[1px] whitespace-nowrap',
+      render: (caseItem) => (
+        <span className={getSLAStatusClass(caseItem.slaDaysRemaining)}>
+          {caseItem.slaDaysRemaining !== null ? `${caseItem.slaDaysRemaining} days` : 'N/A'}
+        </span>
+      ),
+    },
+    {
+      key: 'createdAt',
+      header: 'Created Date',
+      sortable: true,
+      align: 'right',
+      tabular: true,
+      headerClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'w-[1px] whitespace-nowrap',
+      render: (caseItem) => formatDate(caseItem.createdAt),
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      align: 'right',
+      headerClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'w-[1px] whitespace-nowrap',
+      render: (caseItem) => (
+        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+          <Button
+            variant="outline"
+            size="small"
+            onClick={() => navigate(ROUTES.CASE_DETAIL(firmSlug, caseItem.caseId))}
+          >
+            View
+          </Button>
+          <Button
+            variant="primary"
+            size="small"
+            onClick={() => handlePullCase(caseItem.caseId)}
+            disabled={pullingCase === caseItem.caseId}
+          >
+            {pullingCase === caseItem.caseId ? 'Assigning...' : 'Assign'}
+          </Button>
+        </div>
+      ),
+    },
+  ]), [allSelected, partiallySelected, cases.length, selectedCases, pullingCase, firmSlug, navigate]);
+
+  const handleSortChange = useCallback((nextSort) => {
+    handleSort(nextSort.key, nextSort.direction);
+  }, []);
+
+  const handleResetFilters = useCallback(() => {
+    setFilters({ ...WORKBASKET_FILTER_DEFAULTS });
+    setQuery({
+      clientId: null,
+      category: null,
+      createdAtFrom: null,
+      createdAtTo: null,
+      slaStatus: null,
+      assignedUser: null,
+      dueDate: null,
+      status: null,
+      sortBy: WORKBASKET_FILTER_DEFAULTS.sortBy,
+      sortOrder: WORKBASKET_FILTER_DEFAULTS.sortOrder,
+      page: '1',
+    });
+  }, [setQuery]);
+
+  const filterIds = {
+    clientId: 'workbasket-filter-client-id',
+    category: 'workbasket-filter-category',
+    createdAtFrom: 'workbasket-filter-created-from',
+    createdAtTo: 'workbasket-filter-created-to',
+    assignedUser: 'workbasket-filter-assigned-user',
+    dueDate: 'workbasket-filter-due-date',
+    status: 'workbasket-filter-status',
+    slaStatus: 'workbasket-filter-sla-status',
+    assignTo: 'workbasket-assign-to',
   };
+
+  const resultSummary = pagination
+    ? `${pagination.total} dockets found. Page ${pagination.page} of ${pagination.pages}.`
+    : `${cases.length} dockets loaded.`;
 
   if (loading && cases.length === 0) {
     return (
@@ -218,68 +484,73 @@ export const WorkbasketPage = () => {
         </div>
 
         <Card>
-          <div className="global-worklist__filters">
+          <form className="global-worklist__filters" role="search" aria-label="Workbasket filters">
             <div className="filter-group">
-              <label>Client ID</label>
+              <label htmlFor={filterIds.clientId}>Client ID</label>
               <input
+                id={filterIds.clientId}
                 type="text"
                 placeholder="Filter by client ID"
                 value={filters.clientId}
                 onChange={(e) => handleFilterChange('clientId', e.target.value)}
-                className="neo-input"
+                className={formClasses.inputBase}
               />
             </div>
 
             <div className="filter-group">
-              <label>Category</label>
+              <label htmlFor={filterIds.category}>Category</label>
               <input
+                id={filterIds.category}
                 type="text"
                 placeholder="Filter by category"
                 value={filters.category}
                 onChange={(e) => handleFilterChange('category', e.target.value)}
-                className="neo-input"
+                className={formClasses.inputBase}
               />
             </div>
 
             <div className="filter-group">
-              <label>Created From</label>
+              <label htmlFor={filterIds.createdAtFrom}>Created From</label>
               <input
+                id={filterIds.createdAtFrom}
                 type="date"
                 value={filters.createdAtFrom}
                 onChange={(e) => handleFilterChange('createdAtFrom', e.target.value)}
-                className="neo-input"
+                className={formClasses.inputBase}
               />
             </div>
 
             <div className="filter-group">
-              <label>Created To</label>
+              <label htmlFor={filterIds.createdAtTo}>Created To</label>
               <input
+                id={filterIds.createdAtTo}
                 type="date"
                 value={filters.createdAtTo}
                 onChange={(e) => handleFilterChange('createdAtTo', e.target.value)}
-                className="neo-input"
+                className={formClasses.inputBase}
               />
             </div>
 
 
             <div className="filter-group">
-              <label>Assigned User</label>
-              <input type="text" placeholder="Assigned user" value={filters.assignedUser} onChange={(e) => handleFilterChange('assignedUser', e.target.value)} className="neo-input" />
+              <label htmlFor={filterIds.assignedUser}>Assigned User</label>
+              <input id={filterIds.assignedUser} type="text" placeholder="Assigned user" value={filters.assignedUser} onChange={(e) => handleFilterChange('assignedUser', e.target.value)} className={formClasses.inputBase} />
             </div>
             <div className="filter-group">
-              <label>Due Date</label>
-              <input type="date" value={filters.dueDate} onChange={(e) => handleFilterChange('dueDate', e.target.value)} className="neo-input" />
+              <label htmlFor={filterIds.dueDate}>Due Date</label>
+              <input id={filterIds.dueDate} type="date" value={filters.dueDate} onChange={(e) => handleFilterChange('dueDate', e.target.value)} className={formClasses.inputBase} />
             </div>
             <div className="filter-group">
-              <label>Status</label>
-              <input type="text" placeholder="Status" value={filters.status} onChange={(e) => handleFilterChange('status', e.target.value)} className="neo-input" />
+              <label htmlFor={filterIds.status}>Status</label>
+              <input id={filterIds.status} type="text" placeholder="Status" value={filters.status} onChange={(e) => handleFilterChange('status', e.target.value)} className={formClasses.inputBase} />
             </div>
             <div className="filter-group">
-              <label>SLA Status</label>
+              <label htmlFor={filterIds.slaStatus}>SLA Status</label>
               <select
+                id={filterIds.slaStatus}
                 value={filters.slaStatus}
                 onChange={(e) => handleFilterChange('slaStatus', e.target.value)}
-                className="neo-input"
+                className={formClasses.inputBase}
               >
                 <option value="">All</option>
                 <option value="overdue">Overdue</option>
@@ -289,31 +560,22 @@ export const WorkbasketPage = () => {
             </div>
 
             <div className="filter-group" style={{ display: 'flex', gap: '0.5rem', alignItems: 'end' }}>
-              <Button variant="default" onClick={() => handleFilterChange('slaStatus', 'overdue')}>Overdue</Button>
-              <Button variant="default" onClick={() => handleFilterChange('dueDate', new Date().toISOString().slice(0,10))}>Today</Button>
-              <Button variant="default" onClick={() => handleFilterChange('createdAtFrom', new Date(Date.now()-6*24*3600*1000).toISOString().slice(0,10))}>This Week</Button>
+              <Button variant="outline" onClick={() => handleFilterChange('slaStatus', 'overdue')}>Overdue</Button>
+              <Button variant="outline" onClick={() => handleFilterChange('dueDate', new Date().toISOString().slice(0,10))}>Today</Button>
+              <Button variant="outline" onClick={() => handleFilterChange('createdAtFrom', new Date(Date.now()-6*24*3600*1000).toISOString().slice(0,10))}>This Week</Button>
             </div>
             <div className="filter-group">
               <Button
-                variant="default"
-                onClick={() => setFilters({
-                  clientId: '',
-                  category: '',
-                  createdAtFrom: '',
-                  createdAtTo: '',
-                  slaStatus: '',
-                  assignedUser: '',
-                  dueDate: '',
-                  status: '',
-                  sortBy: 'slaDueDate',
-                  sortOrder: 'asc',
-                  page: 1,
-                  limit: 20,
-                })}
+                variant="outline"
+                onClick={handleResetFilters}
               >
                 Clear Filters
               </Button>
             </div>
+          </form>
+
+          <div className="sr-only" role="status" aria-live="polite">
+            {resultSummary}
           </div>
 
           {/* Bulk Actions Toolbar */}
@@ -336,8 +598,8 @@ export const WorkbasketPage = () => {
             </span>
             {isAdmin && (
               <>
-                <label htmlFor="assign-to">Assign to:</label>
-                <select id="assign-to" value={assignTo} onChange={(e) => setAssignTo(e.target.value)}>
+                <label htmlFor={filterIds.assignTo}>Assign to:</label>
+                <select id={filterIds.assignTo} value={assignTo} onChange={(e) => setAssignTo(e.target.value)} className={formClasses.inputBase}>
                   <option value="">My Worklist</option>
                   {employees.map((emp) => (
                     <option key={emp._id} value={emp._id}>{emp.name || emp.xID}</option>
@@ -348,119 +610,30 @@ export const WorkbasketPage = () => {
 
           </div>
 
-          {loading && <Loading message="Loading..." />}
-
-          {cases.length === 0 && !loading ? (
-            <div className="p-6">
-              <EmptyState
-                title="No dockets in backlog"
-                description="New unassigned dockets will appear here as soon as they enter the shared queue."
-              />
-            </div>
-          ) : null}
-
-          <div className="global-worklist__table-container">
-            <table className="global-worklist__table">
-              <thead>
-                <tr>
-                  <th style={{ width: '50px' }}>
-                    <input
-                      type="checkbox"
-                      checked={selectedCases.length === cases.length && cases.length > 0}
-                      onChange={handleSelectAll}
-                      disabled={cases.length === 0}
-                    />
-                  </th>
-                  <th className="global-worklist__col-fit" onClick={() => handleSort('caseId')} style={{ cursor: 'pointer' }}>
-                    Docket ID {getSortIcon('caseId')}
-                  </th>
-                  <th className="global-worklist__col-fit global-worklist__th-center" onClick={() => handleSort('clientId')} style={{ cursor: 'pointer' }}>
-                    Client ID {getSortIcon('clientId')}
-                  </th>
-                  <th className="global-worklist__col-name" onClick={() => handleSort('category')} style={{ cursor: 'pointer' }}>
-                    Category {getSortIcon('category')}
-                  </th>
-                  <th className="global-worklist__col-fit global-worklist__th-center">Status</th>
-                  <th className="global-worklist__col-fit global-worklist__th-center">Assigned To</th>
-                  <th className="global-worklist__col-fit global-worklist__th-right" onClick={() => handleSort('slaDueDate')} style={{ cursor: 'pointer' }}>
-                    SLA Due Date {getSortIcon('slaDueDate')}
-                  </th>
-                  <th className="global-worklist__col-fit global-worklist__th-right">SLA Days Remaining</th>
-                  <th className="global-worklist__col-fit global-worklist__th-right" onClick={() => handleSort('createdAt')} style={{ cursor: 'pointer' }}>
-                    Created Date {getSortIcon('createdAt')}
-                  </th>
-                  <th className="global-worklist__col-fit global-worklist__th-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cases.length > 0 ? (
-                  cases.map((caseItem) => {
-                    const slaDate = caseItem.slaDueDate || caseItem.slaState?.slaDueAt;
-
-                    return (
-                    <tr key={caseItem.caseId}>
-                      <td className="global-worklist__col-fit">
-                        <input
-                          type="checkbox"
-                          checked={selectedCases.includes(caseItem.caseId)}
-                          onChange={() => handleSelectCase(caseItem.caseId)}
-                        />
-                      </td>
-                      <td className="global-worklist__col-fit">
-                        <button
-                          type="button"
-                          className="docket-link"
-                          onClick={() => navigate(ROUTES.CASE_DETAIL(firmSlug, caseItem.caseId))}
-                        >
-                          {caseItem.caseId}
-                        </button>
-                      </td>
-                      <td className="global-worklist__col-fit global-worklist__td-center">{caseItem.clientId}</td>
-                      <td className="global-worklist__col-name">
-                        <span className="global-worklist__truncate" title={caseItem.category}>{caseItem.category}</span>
-                      </td>
-                      <td className="global-worklist__col-fit global-worklist__td-center"><StatusBadge status={caseItem.status} /></td>
-                      <td className="global-worklist__col-fit global-worklist__td-center">{caseItem.assignedToName || caseItem.assignedToXID || 'Unassigned'}</td>
-                      <td className="global-worklist__col-fit global-worklist__td-right">{formatDate(slaDate)}</td>
-                      <td className={`global-worklist__col-fit global-worklist__td-right ${getSLAStatusClass(caseItem.slaDaysRemaining)}`}>
-                        {caseItem.slaDaysRemaining !== null 
-                          ? `${caseItem.slaDaysRemaining} days`
-                          : 'N/A'}
-                      </td>
-                      <td className="global-worklist__col-fit global-worklist__td-right">{formatDate(caseItem.createdAt)}</td>
-                      <td className="global-worklist__col-fit">
-                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                          <Button
-                            variant="default"
-                            size="small"
-                            onClick={() => navigate(ROUTES.CASE_DETAIL(firmSlug, caseItem.caseId))}
-                          >
-                            View
-                          </Button>
-                          <Button
-                            variant="primary"
-                            size="small"
-                            onClick={() => handlePullCase(caseItem.caseId)}
-                            disabled={pullingCase === caseItem.caseId}
-                          >
-                            {pullingCase === caseItem.caseId ? 'Assigning...' : 'Assign'}
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                    );
-                  })
-                ) : null}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            columns={columns}
+            data={cases}
+            rowKey="caseId"
+            sortState={{ key: filters.sortBy, direction: filters.sortOrder }}
+            onSortChange={handleSortChange}
+            activeFilters={activeFilters}
+            onRemoveFilter={(key) => handleFilterChange(key, '')}
+            onResetFilters={handleResetFilters}
+            loading={loading}
+            loadingMessage="Loading workbasket..."
+            emptyTitle="No dockets in backlog"
+            emptyDescription="New unassigned dockets will appear here as soon as they enter the shared queue."
+          />
 
           {pagination && pagination.pages > 1 && (
             <div className="global-worklist__pagination">
               <Button
-                variant="default"
+                variant="outline"
                 disabled={pagination.page === 1}
-                onClick={() => handleFilterChange('page', pagination.page - 1)}
+                onClick={() => {
+                  setFilters((prev) => ({ ...prev, page: pagination.page - 1 }));
+                  setQuery({ page: String(pagination.page - 1) });
+                }}
               >
                 Previous
               </Button>
@@ -468,9 +641,12 @@ export const WorkbasketPage = () => {
                 Page {pagination.page} of {pagination.pages} ({pagination.total} total)
               </span>
               <Button
-                variant="default"
+                variant="outline"
                 disabled={pagination.page === pagination.pages}
-                onClick={() => handleFilterChange('page', pagination.page + 1)}
+                onClick={() => {
+                  setFilters((prev) => ({ ...prev, page: pagination.page + 1 }));
+                  setQuery({ page: String(pagination.page + 1) });
+                }}
               >
                 Next
               </Button>
@@ -478,6 +654,24 @@ export const WorkbasketPage = () => {
           )}
         </Card>
       </div>
+      <ActionConfirmModal
+        isOpen={Boolean(confirmModal)}
+        title={confirmModal?.title || 'Confirm action'}
+        description={confirmModal?.description}
+        confirmText={confirmModal?.confirmText || 'Confirm'}
+        cancelText="Cancel"
+        loading={bulkPulling || Boolean(pullingCase)}
+        onCancel={() => setConfirmModal(null)}
+        onConfirm={() => {
+          if (confirmModal?.type === 'bulk-pull') {
+            executeBulkPull();
+            return;
+          }
+          if (confirmModal?.type === 'single-pull' && confirmModal?.caseId) {
+            executeSinglePull(confirmModal.caseId);
+          }
+        }}
+      />
     </Layout>
   );
 };
