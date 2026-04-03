@@ -298,18 +298,15 @@ const verifyOtp = async ({ email, otp, session = null, req = null }) => {
 
     await SignupSession.deleteOne({ _id: record._id }, { session });
 
-    await safeQueueEmail({
-      context: req,
-      operation: 'EMAIL_QUEUE',
-      payload: { action: 'SIGNUP_WELCOME_EMAIL', tenantId: String(tenant.firmId || ''), email: normalizedEmail },
-      execute: async () => sendSignupWelcomeEmail({
-        name: record.name,
-        email: normalizedEmail,
-        xid: tenant.xid,
-        firmName: record.firmName,
-        firmSlug: tenant.firmSlug,
-        req,
-      }),
+    // Welcome credentials are onboarding-critical; send immediately so users
+    // receive login details right after successful OTP verification.
+    await sendSignupWelcomeEmail({
+      name: record.name,
+      email: normalizedEmail,
+      xid: tenant.xid,
+      firmName: record.firmName,
+      firmSlug: tenant.firmSlug,
+      req,
     });
 
     await clearOtpAttempts({ email: normalizedEmail, ip: req?.ip });
@@ -748,18 +745,14 @@ const completeSignup = async ({ email, firmName, session, req = null }) => {
       metadata: { firmSlug: result.firmSlug },
     });
 
-    await safeQueueEmail({
-      context: req,
-      operation: 'EMAIL_QUEUE',
-      payload: { action: 'SIGNUP_WELCOME_EMAIL', tenantId: String(result.firmId || ''), email: normalizedEmail },
-      execute: async () => sendSignupWelcomeEmail({
-        name: record.name,
-        email: normalizedEmail,
-        xid: result.adminXID,
-        firmName: resolvedFirmName,
-        firmSlug: result.firmSlug,
-        req,
-      }),
+    // Keep completion flow aligned with OTP verify flow: send immediately.
+    await sendSignupWelcomeEmail({
+      name: record.name,
+      email: normalizedEmail,
+      xid: result.adminXID,
+      firmName: resolvedFirmName,
+      firmSlug: result.firmSlug,
+      req,
     });
 
     return {
