@@ -72,8 +72,16 @@ const seedPlans = async ({ session } = {}) => {
     { name: 'Enterprise', maxUsers: null, billingType: 'ENTERPRISE', pricePerUser: null, isEnterprise: true },
   ];
 
-  for (const plan of seedData) {
-    await Plan.updateOne({ name: plan.name }, { $set: plan }, { upsert: true, session });
+  const bulkOps = seedData.map(plan => ({
+    updateOne: {
+      filter: { name: plan.name },
+      update: { $set: plan },
+      upsert: true
+    }
+  }));
+
+  if (bulkOps.length > 0) {
+    await Plan.bulkWrite(bulkOps, { session });
   }
 };
 
