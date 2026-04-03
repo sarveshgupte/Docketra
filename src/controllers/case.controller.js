@@ -1685,57 +1685,36 @@ const getCases = async (req, res) => {
     
     const scopedCaseQuery = enforceTenantScope(query, req, { source: 'case.getCases.list' });
 
-    // Refactor: Use MongoDB aggregation with $lookup to join client data in a single query
-    // PR: Client Lifecycle - fetch clients regardless of status to display existing cases with inactive clients
-    const aggregationPipeline = [
-      { $match: scopedCaseQuery },
-      { $sort: { createdAt: -1 } },
-      { $skip: (parseInt(page) - 1) * parseInt(limit) },
-      { $limit: parseInt(limit) },
-      {
-        $lookup: {
-          from: 'clients',
-          let: { caseClientId: '$clientId', caseFirmId: '$firmId' },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $and: [
-                    { $eq: ['$clientId', '$$caseClientId'] },
-                    { $eq: ['$firmId', { $toObjectId: '$$caseFirmId' }] },
-                  ],
-                },
-              },
-            },
-          ],
-          as: 'clientData',
-        },
-      },
-      {
-        $addFields: {
-          client: { $arrayElemAt: ['$clientData', 0] },
-        },
-      },
-      {
-        $project: {
-          clientData: 0,
-        },
-      },
-    ];
+    const cases = await Case.find(scopedCaseQuery)
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit))
+      .sort({ createdAt: -1 })
+      .lean();
 
-    const cases = await Case.aggregate(aggregationPipeline, { role: req.user.role });
-
-    // Decrypt case and client documents
-    // Note: CaseRepository.decryptDocs and ClientRepository.decryptDocs handle decryption and normalization
+    // Decrypt case documents
+    // Note: CaseRepository.decryptDocs handles decryption and normalization
     const decryptedCases = await CaseRepository.decryptDocs(cases, req.user.firmId, { role: req.user.role });
 
-    const clientDocs = decryptedCases.map(c => c.client).filter(Boolean);
-    if (clientDocs.length > 0) {
-      await ClientRepository.decryptDocs(clientDocs, req.user.firmId, { role: req.user.role });
+    // Fetch client details for all cases in a single batch query to prevent N+1 queries
+    // PR: Client Lifecycle - fetch clients regardless of status to display existing cases with inactive clients
+    const uniqueClientIds = [...new Set(decryptedCases.map(c => c.clientId).filter(Boolean))];
+
+    let clientsMap = new Map();
+    if (uniqueClientIds.length > 0) {
+      const clientDocs = await Client.find(enforceTenantScope({ clientId: { $in: uniqueClientIds } }, req, { source: 'case.getCases.clients' })).lean();
+
+      if (clientDocs.length > 0) {
+        const decryptedClients = await ClientRepository.decryptDocs(clientDocs, req.user.firmId, { role: req.user.role });
+        decryptedClients.forEach(client => {
+          if (client) {
+            clientsMap.set(client.clientId, client);
+          }
+        });
+      }
     }
 
     const casesWithClients = decryptedCases.map(caseItem => {
-      const client = caseItem.client;
+      const client = clientsMap.get(caseItem.clientId);
       return {
         ...caseItem,
         client: client ? {
