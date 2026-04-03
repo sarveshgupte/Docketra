@@ -79,7 +79,7 @@ const runReadinessChecks = async () => {
   checks.featureFlags = featureFlags;
 
   const systemState = getState();
-  const redisStatusOk = ['ready', 'ok', 'degraded', 'not_configured', 'unknown'].includes(checks.redis);
+  const redisStatusOk = ['ok', 'degraded', 'not_configured', 'unknown'].includes(checks.redis);
   const dbStatusOk = checks.db === 'ok';
   const ready = checks.env === 'ok' && redisStatusOk && dbStatusOk;
   if (ready) {
