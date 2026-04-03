@@ -3,6 +3,7 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
 const helmet = require('helmet');
 const connectDB = require('./config/database');
 const config = require('./config/config');
@@ -250,6 +251,7 @@ const corsOptions = {
 // Handle CORS preflight requests before auth/transaction middleware
 app.use(optionsPreflight(allowedOrigins, CORS_ALLOWED_HEADERS, CORS_ALLOWED_METHODS));
 app.use(cors(corsOptions));
+app.use(compression());
 if (inboundEmailEnabled) {
   app.use('/api/inbound/email', express.raw({ type: '*/*', limit: '30mb' }));
 }
