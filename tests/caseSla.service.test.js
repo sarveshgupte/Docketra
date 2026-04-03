@@ -62,16 +62,17 @@ function testMultiPauseScenario() {
     tatAccumulatedMinutes: 0,
   };
 
+  // CaseSla.service uses CaseStatus.PENDING as the literal.
   const pausedOnce = caseSlaService.handleStatusTransition(
     initialCase,
-    'PENDED',
+    'PENDING',
     { now: new Date('2026-03-02T11:00:00.000Z'), userId: 'X111111' }
   );
   assert.strictEqual(pausedOnce.patch.tatAccumulatedMinutes, 60);
   assert.strictEqual(pausedOnce.auditEvent.event, 'SLA_PAUSED');
 
   const resumed = caseSlaService.handleStatusTransition(
-    { ...initialCase, ...pausedOnce.patch, status: 'PENDED' },
+    { ...initialCase, ...pausedOnce.patch, status: 'PENDING' },
     'OPEN',
     { now: new Date('2026-03-02T12:00:00.000Z'), userId: 'X111111' }
   );
@@ -80,7 +81,7 @@ function testMultiPauseScenario() {
 
   const pausedTwice = caseSlaService.handleStatusTransition(
     { ...initialCase, ...pausedOnce.patch, ...resumed.patch, status: 'OPEN' },
-    'PENDED',
+    'PENDING',
     { now: new Date('2026-03-02T12:30:00.000Z'), userId: 'X111111' }
   );
   assert.strictEqual(pausedTwice.patch.tatAccumulatedMinutes, 90);

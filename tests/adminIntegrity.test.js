@@ -32,6 +32,7 @@ async function shouldRejectAdminWithoutFirm() {
     name: 'Admin Missing Context',
     email: 'admin-missing@test.com',
     role: 'Admin',
+    isOnboarded: true, // Only onboarded admins strictly require a firm
   });
 
   let failed = false;
