@@ -8,6 +8,8 @@ import { spacingClasses } from '../../theme/tokens';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phonePattern = /^\d{10}$/;
+const getOrigin = () => (typeof window !== 'undefined' ? window.location.origin : '');
+const buildFallbackFirmLoginUrl = (firmSlug) => (firmSlug ? `${getOrigin()}/${firmSlug}/login` : '');
 
 const mapSafeError = (error, fallback) => {
   const status = error?.response?.status;
@@ -120,9 +122,16 @@ export default function Signup() {
         email: form.email.trim().toLowerCase(),
         otp: otp.trim(),
       });
+      const responseData = response?.data || {};
+      const resolvedFirmSlug = responseData?.firmSlug || '';
+      const resolvedRedirectPath = responseData?.redirectPath || '';
+      const resolvedFirmUrl = responseData?.firmUrl
+        || (resolvedRedirectPath ? `${getOrigin()}${resolvedRedirectPath}` : buildFallbackFirmLoginUrl(resolvedFirmSlug));
       setSignupSuccessData({
-        firmSlug: response?.data?.data?.firmSlug || '',
-        xid: response?.data?.data?.xid || '',
+        firmSlug: resolvedFirmSlug,
+        firmUrl: resolvedFirmUrl,
+        redirectPath: resolvedRedirectPath,
+        xid: responseData?.xid || '',
       });
     } catch (error) {
       const status = error?.response?.status;
@@ -150,9 +159,22 @@ export default function Signup() {
   };
 
   const handleLoginRedirect = () => {
+    const redirectPath = signupSuccessData?.redirectPath;
     const slug = signupSuccessData?.firmSlug;
+    const firmUrl = signupSuccessData?.firmUrl;
+
+    if (redirectPath) {
+      navigate(redirectPath, { replace: true });
+      return;
+    }
+
+    if (firmUrl) {
+      window.location.assign(firmUrl);
+      return;
+    }
+
     if (slug) {
-      navigate(`/app/${slug}/login`, { replace: true });
+      navigate(`/${slug}/login`, { replace: true });
       return;
     }
     navigate('/', { replace: true });
@@ -164,7 +186,7 @@ export default function Signup() {
         <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-sm sm:p-8">
           <h1 className="text-xl font-semibold text-center">🎉 Workspace created successfully</h1>
           <div className="mt-4 rounded-md border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700 space-y-2">
-            <p><span className="font-medium">Firm URL:</span> {`https://app.com/${signupSuccessData.firmSlug}`}</p>
+            <p><span className="font-medium">Firm URL:</span> {signupSuccessData.firmUrl || buildFallbackFirmLoginUrl(signupSuccessData.firmSlug)}</p>
             <p><span className="font-medium">Your XID:</span> {signupSuccessData.xid}</p>
           </div>
           <Button type="button" variant="primary" fullWidth onClick={handleLoginRedirect}>
