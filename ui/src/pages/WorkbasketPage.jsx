@@ -13,6 +13,7 @@ import { Loading } from '../components/common/Loading';
 import { PageHeader } from '../components/layout/PageHeader';
 import { StatusBadge } from '../components/layout/StatusBadge';
 import { DataTable } from '../components/layout/DataTable';
+import { EmptyState } from '../components/ui/EmptyState';
 import { ActionConfirmModal } from '../components/common/ActionConfirmModal';
 import { useAuth } from '../hooks/useAuth';
 import { worklistApi } from '../api/worklist.api';
@@ -626,8 +627,14 @@ export const WorkbasketPage = () => {
             onResetFilters={handleResetFilters}
             loading={loading}
             loadingMessage="Loading workbasket..."
-            emptyTitle="No dockets in backlog"
-            emptyDescription="New unassigned dockets will appear here as soon as they enter the shared queue."
+            emptyContent={(
+              <EmptyState
+                title="No dockets in backlog"
+                description="New unassigned dockets will appear here as soon as they enter the shared queue."
+                actionLabel={isAdmin ? 'Create Docket' : undefined}
+                onAction={isAdmin ? () => navigate(ROUTES.CREATE_CASE(firmSlug)) : undefined}
+              />
+            )}
           />
 
           {pagination && pagination.pages > 1 && (

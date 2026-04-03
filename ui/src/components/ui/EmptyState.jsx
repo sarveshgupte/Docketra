@@ -12,14 +12,12 @@ const DefaultEmptyStateIcon = (
 export const EmptyState = ({
   title,
   description,
-  action,
   actionLabel,
   onAction,
-  children,
   icon,
 }) => {
-  const resolvedAction = action || (actionLabel && onAction ? { label: actionLabel, onClick: onAction } : null);
   const resolvedIcon = icon === true ? DefaultEmptyStateIcon : icon;
+  const hasAction = Boolean(actionLabel && onAction);
 
   return (
     <div className="ui-empty-state" role="status">
@@ -30,13 +28,12 @@ export const EmptyState = ({
       ) : null}
       <div className="ui-empty-state__content">
         <h3 className="ui-empty-state__title">{title}</h3>
-        {description ? <p className="ui-empty-state__description">{description}</p> : null}
+        <p className="ui-empty-state__description">{description}</p>
       </div>
-      {children ? <div className="ui-empty-state__actions">{children}</div> : null}
-      {!children && resolvedAction ? (
+      {hasAction ? (
         <div className="ui-empty-state__actions">
-          <Button variant="primary" onClick={resolvedAction.onClick}>
-            {resolvedAction.label}
+          <Button variant="primary" onClick={onAction}>
+            {actionLabel}
           </Button>
         </div>
       ) : null}
