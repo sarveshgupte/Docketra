@@ -29,7 +29,7 @@ const requestLifecycle = (req, res, next) => {
     attachRecorder(req);
   }
 
-  const finalize = (reason) => {
+  const emitLifecycleLog = (reason) => {
     if (res._lifecycleLogged) return;
     res._lifecycleLogged = true;
     const durationMs = Date.now() - startTime;
@@ -51,11 +51,22 @@ const requestLifecycle = (req, res, next) => {
       status: res.statusCode,
       lifecycleEnd: reason,
       transactionCommitted: !!req.transactionCommitted,
+      transactionState: req.transactionState || (req.transactionCommitted ? 'committed' : 'not_started'),
     });
     Promise.resolve(noteApiActivity({ req, statusCode: res.statusCode })).catch(() => null);
     if (!skipSideEffects) {
       setImmediate(() => flushRequestEffects(req));
     }
+  };
+
+  const finalize = (reason) => {
+    if (res._lifecycleFinalizeScheduled || res._lifecycleLogged) return;
+    res._lifecycleFinalizeScheduled = true;
+    Promise.resolve(req.transactionFinalized)
+      .catch(() => null)
+      .finally(() => {
+        emitLifecycleLog(reason);
+      });
   };
 
   res.once('finish', () => finalize('finish'));
