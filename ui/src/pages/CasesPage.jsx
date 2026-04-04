@@ -25,6 +25,7 @@ import { getCaseListRecords } from '../utils/caseResponse';
 import { getFirmConfig } from '../utils/firmConfig';
 import { useFeatureFlag } from '../hooks/useFeatureFlag';
 import { formatDateTime } from '../utils/formatDateTime';
+import { formatCaseName } from '../utils/formatters';
 import { buildCsv } from '../utils/csv';
 import { UX_COPY } from '../constants/uxCopy';
 import { useQueryState } from '../hooks/useQueryState';
@@ -562,7 +563,7 @@ export const CasesPage = () => {
   });
 
   if (!isValidFirm) {
-    return <RouteErrorFallback title="Invalid firm" message="Unable to load cases without a valid firm context." backTo={ROUTES.SUPERADMIN_LOGIN} />;
+    return <RouteErrorFallback title="Invalid firm" message="Unable to load dockets without a valid firm context." backTo={ROUTES.SUPERADMIN_LOGIN} />;
   }
 
   if (loading) {
@@ -589,7 +590,7 @@ export const CasesPage = () => {
         return (
           <input
             type="checkbox"
-            aria-label={`Select ${row.caseName}`}
+            aria-label={`Select ${formatCaseName(row.caseName)}`}
             checked={selectedCaseIds.has(row.caseId)}
             disabled={isLocked}
             onChange={() => handleToggleSelectCase(row.caseId, isLocked)}
@@ -612,7 +613,7 @@ export const CasesPage = () => {
         const recency = getRecencyLabel(row.updatedAt);
         return (
           <div className={`cases-page__name-cell${breached ? ' cases-page__name-cell--sla-breach' : ''}`}>
-            <span className="cases-page__case-title">{row.caseName}</span>
+            <span className="cases-page__case-title">{formatCaseName(row.caseName)}</span>
             <AuditMetadata
               className="cases-page__case-meta"
               actor={row.updatedByName || row.updatedByXID || row.assignedToName || 'System'}
@@ -673,7 +674,7 @@ export const CasesPage = () => {
         const canAssign = !isAdmin && !isLocked;
         return (
           <details className="cases-page__row-menu" onClick={(event) => event.stopPropagation()}>
-            <summary aria-label={`Row actions for ${row.caseName}`}>⋯</summary>
+            <summary aria-label={`Row actions for ${formatCaseName(row.caseName)}`}>⋯</summary>
             <div className="cases-page__row-menu-panel">
               {(row.assignedToName || row.assignedTo) && (
                 <div className="cases-page__row-menu-info">
@@ -767,7 +768,7 @@ export const CasesPage = () => {
               type="button"
               className="cases-page__sla-tile"
               onClick={() => { setStatusFilter('ALL'); setActiveView('MY_OPEN'); }}
-              aria-label={`Total open cases: ${slaSummary.totalOpen}`}
+              aria-label={`Total open dockets: ${slaSummary.totalOpen}`}
             >
               <span className="cases-page__sla-tile-value">{slaSummary.totalOpen}</span>
               <span className="cases-page__sla-tile-label">Open Dockets</span>
@@ -985,7 +986,7 @@ export const CasesPage = () => {
                     </div>
                   </>
                 ) : (
-                  <p className="cases-page__perf-empty">No resolved cases to compute metrics.</p>
+                  <p className="cases-page__perf-empty">No resolved dockets to compute metrics.</p>
                 )}
               </div>
             )}
@@ -994,7 +995,7 @@ export const CasesPage = () => {
 
         {error ? (
           <div className="cases-page__error" role="alert">
-            Failed to load cases. Refresh the page or try again in a moment.
+            Failed to load dockets. Refresh the page or try again in a moment.
           </div>
         ) : null}
 

@@ -17,7 +17,7 @@ import { Loading } from '../components/common/Loading';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
 import { CASE_STATUS } from '../utils/constants';
-import { formatDate } from '../utils/formatters';
+import { formatCaseName, formatDate } from '../utils/formatters';
 import api from '../services/api';
 import './FilteredCasesPage.css';
 
@@ -70,7 +70,7 @@ export const FilteredCasesPage = () => {
         }
       }
     } catch (error) {
-      console.error('Failed to load cases:', error);
+      console.error('Failed to load dockets:', error);
     } finally {
       setLoading(false);
     }
@@ -84,19 +84,19 @@ export const FilteredCasesPage = () => {
   const getPageInfo = () => {
     if (status === CASE_STATUS.FILED) {
       return {
-        title: 'Filed Cases',
-        description: 'Archived and finalized cases (Admin only)',
+        title: 'Filed Dockets',
+        description: 'Archived and finalized dockets (Admin only)',
       };
     }
     if (approvalStatus === 'PENDING') {
       return {
         title: 'Pending Approvals',
-        description: 'Cases awaiting admin review and approval',
+        description: 'Dockets awaiting admin review and approval',
       };
     }
     return {
-      title: 'Cases',
-      description: 'Filtered case list',
+      title: 'Dockets',
+      description: 'Filtered docket list',
     };
   };
   
@@ -162,7 +162,7 @@ export const FilteredCasesPage = () => {
                 {cases.map((caseItem) => (
                   <tr key={caseItem._id || caseItem.caseId} onClick={() => handleCaseClick(caseItem.caseId)}>
                     <td>{caseItem.caseId}</td>
-                    <td>{caseItem.caseName}</td>
+                    <td>{formatCaseName(caseItem.caseName)}</td>
                     <td>{caseItem.category}</td>
                     <td>{caseItem.clientId || 'N/A'}</td>
                     <td>
