@@ -947,12 +947,6 @@ export const AdminPage = () => {
             Storage Settings
           </Button>
           <Button
-            variant={activeTab === 'approvals' ? 'primary' : 'default'}
-            onClick={() => setActiveTab('approvals')}
-          >
-            Pending Approvals ({statsFailed ? '--' : adminStats.pendingApprovals})
-          </Button>
-          <Button
             variant={activeTab === 'reports' ? 'primary' : 'default'}
             onClick={() => navigate(`/app/firm/${firmSlug}/admin/reports`)}
           >
