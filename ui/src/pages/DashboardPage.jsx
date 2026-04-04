@@ -9,6 +9,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
@@ -173,6 +174,17 @@ export const DashboardPage = () => {
       setShowProductTour(true);
     }
   }, [loading, user, firmSlug]);
+
+  useEffect(() => {
+    if (!showProductTour && !showBookmarkPrompt) return undefined;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [showProductTour, showBookmarkPrompt]);
 
   const handleDismissBookmarkPrompt = () => {
     setShowBookmarkPrompt(false);
@@ -706,8 +718,8 @@ export const DashboardPage = () => {
         </div>
       </div>
 
-      {showProductTour ? (
-        <div className="fixed inset-0 z-[1001] flex items-center justify-center bg-slate-950/50 px-4">
+      {showProductTour ? createPortal(
+        <div className="fixed inset-0 z-[1001] flex min-h-screen items-center justify-center bg-slate-950/50 px-4">
           <div className="w-full max-w-2xl rounded-xl border border-gray-200 bg-white p-6 shadow-2xl">
             <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">
               Product tour · Step {tourStepIndex + 1} of {PRODUCT_TOUR_STEPS.length}
@@ -737,11 +749,12 @@ export const DashboardPage = () => {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       ) : null}
 
-      {showBookmarkPrompt ? (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/40 px-4">
+      {showBookmarkPrompt ? createPortal(
+        <div className="fixed inset-0 z-[1000] flex min-h-screen items-center justify-center bg-slate-950/40 px-4">
           <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-8 shadow-xl">
             <h2 className="text-lg font-semibold text-gray-900 tracking-tight">Bookmark Your Firm Dashboard</h2>
             <p className="mt-3 text-sm text-gray-600">
@@ -754,7 +767,8 @@ export const DashboardPage = () => {
               Got it
             </button>
           </div>
-        </div>
+        </div>,
+        document.body,
       ) : null}
     </Layout>
   );
