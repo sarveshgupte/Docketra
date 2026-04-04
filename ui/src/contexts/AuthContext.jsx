@@ -33,6 +33,7 @@ export const AuthProvider = ({ children }) => {
   const bootHydratedRef = useRef(false);
   const profileFetchAttemptedRef = useRef(null); // Token-based guard for profile hydration
   const profileFetchInFlightRef = useRef(false);
+  const profileFetchPromiseRef = useRef(null);
   const authTokenRef = useRef(null); // Ensure auth is set once per access token
 
   useEffect(() => {
@@ -86,6 +87,7 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(false);
     profileFetchAttemptedRef.current = null;
     profileFetchInFlightRef.current = false;
+    profileFetchPromiseRef.current = null;
     authTokenRef.current = null;
   }, [clearAuthStorage]);
 
@@ -130,7 +132,7 @@ export const AuthProvider = ({ children }) => {
 
   const fetchProfile = useCallback(async () => {
     if (profileFetchInFlightRef.current) {
-      return { success: false, data: null };
+      return profileFetchPromiseRef.current || { success: false, data: null };
     }
 
     let accessToken = null;
@@ -151,7 +153,7 @@ export const AuthProvider = ({ children }) => {
     profileFetchAttemptedRef.current = accessToken;
     profileFetchInFlightRef.current = true;
 
-    try {
+    const profileFetchPromise = (async () => {
       // Always fetch from API - no cached user fallback
       const response = await authService.getProfile();
 
@@ -163,6 +165,13 @@ export const AuthProvider = ({ children }) => {
       // Profile fetch returned unsuccessful response - clear auth state
       resetAuthState();
       return { success: false, data: null };
+    })();
+
+    profileFetchPromiseRef.current = profileFetchPromise;
+
+    try {
+      return await profileFetchPromise;
+
     } catch (err) {
       // Fail fast on auth errors (401) to avoid hidden polling loops
       // 403 means user is authenticated but profile endpoint denied access (shouldn't happen normally)
@@ -176,6 +185,7 @@ export const AuthProvider = ({ children }) => {
     } finally {
       // Hydration completion is handled by the boot-time effect.
       profileFetchInFlightRef.current = false;
+      profileFetchPromiseRef.current = null;
     }
   }, [resetAuthState, setAuthFromProfile]);
 
@@ -240,7 +250,8 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setIsAuthenticated(false);
       profileFetchInFlightRef.current = false;
-      
+      profileFetchPromiseRef.current = null;
+
       clearAuthStorage(firmSlugToPreserve);
     }
   }, [user, clearAuthStorage]);
