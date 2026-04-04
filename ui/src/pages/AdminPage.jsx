@@ -21,6 +21,7 @@ import { adminApi } from '../api/admin.api';
 import { categoryService } from '../services/categoryService';
 import { clientApi } from '../api/client.api';
 import { useToast } from '../hooks/useToast';
+import { useAuth } from '../hooks/useAuth';
 import { formatDate } from '../utils/formatters';
 import './AdminPage.css';
 
@@ -88,6 +89,7 @@ export const AdminPage = () => {
   const navigate = useNavigate();
   const { firmSlug } = useParams();
   const { showToast } = useToast();
+  const { user: loggedInUser } = useAuth();
   
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('users');
@@ -207,6 +209,37 @@ export const AdminPage = () => {
     return errorType;
   };
 
+  const ensureLoggedInAdminVisible = (loadedUsers = []) => {
+    if (!loggedInUser || !loggedInUser.xID) {
+      return loadedUsers;
+    }
+
+    const hasLoggedInUser = loadedUsers.some((user) => user?.xID === loggedInUser.xID);
+    if (hasLoggedInUser) {
+      return loadedUsers;
+    }
+
+    const fallbackAdminUser = {
+      _id: loggedInUser.id || loggedInUser._id || loggedInUser.userId || loggedInUser.xID,
+      id: loggedInUser.id || loggedInUser._id || loggedInUser.userId || loggedInUser.xID,
+      xID: loggedInUser.xID,
+      name: loggedInUser.name || loggedInUser.fullName || EMPTY_FIELD_PLACEHOLDER,
+      email: loggedInUser.email || '',
+      role: loggedInUser.role || 'ADMIN',
+      status: loggedInUser.status || 'active',
+      isActive: loggedInUser.status ? String(loggedInUser.status).toLowerCase() === 'active' : true,
+      isSystem: Boolean(loggedInUser.isSystem),
+      isPrimaryAdmin: Boolean(loggedInUser.isPrimaryAdmin || loggedInUser.isAdmin),
+      passwordConfigured: true,
+      restrictedClientIds: Array.isArray(loggedInUser.restrictedClientIds) ? loggedInUser.restrictedClientIds : [],
+      firm: {
+        name: loggedInUser.firmName || loggedInUser.firm?.name || null,
+      },
+    };
+
+    return [fallbackAdminUser, ...loadedUsers];
+  };
+
   const loadAdminStats = async () => {
     try {
       const response = await adminApi.getAdminStats();
@@ -243,7 +276,8 @@ export const AdminPage = () => {
     try {
       if (activeTab === 'users') {
         const response = await adminApi.getUsers();
-        setUsers(response?.success ? (response.data || []) : []);
+        const apiUsers = response?.success ? (response.data || []) : [];
+        setUsers(ensureLoggedInAdminVisible(apiUsers));
       } else if (activeTab === 'categories') {
         const response = await categoryService.getAdminCategories(false); // Get all categories including inactive
         const normalizedCategories = (response?.success ? (response.data || []) : [])
