@@ -26,7 +26,7 @@ export const WorkSettingsPage = () => {
           </div>
           <Button
             variant="primary"
-            onClick={() => navigate(`${ROUTES.ADMIN(firmSlug)}?tab=categories`)}
+            onClick={() => navigate(ROUTES.WORK_CATEGORY_MANAGEMENT(firmSlug))}
           >
             Open Category Management
           </Button>
