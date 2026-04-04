@@ -91,8 +91,6 @@ export const AdminPage = () => {
   
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('users');
-  const [pendingCases, setPendingCases] = useState([]);
-  const [pendingInvites, setPendingInvites] = useState([]);
   const [users, setUsers] = useState([]);
   const [categories, setCategories] = useState([]);
   const [clients, setClients] = useState([]);
@@ -243,21 +241,9 @@ export const AdminPage = () => {
     setLoading(true);
     setTabError(null);
     try {
-      if (activeTab === 'approvals') {
-        const [approvalsResponse, usersResponse] = await Promise.all([
-          adminApi.getPendingApprovals(),
-          adminApi.getUsers(),
-        ]);
-        setPendingCases(approvalsResponse?.success ? (approvalsResponse.data || []) : []);
-        const inviteCandidates = usersResponse?.success ? (usersResponse.data || []) : [];
-        setPendingInvites(inviteCandidates.filter((user) => user.status === 'invited'));
-      } else if (activeTab === 'users') {
-        const [usersResponse, clientsResponse] = await Promise.all([
-          adminApi.getUsers(),
-          adminApi.listClients({ activeOnly: false }),
-        ]);
-        setUsers(usersResponse?.success ? (usersResponse.data || []) : []);
-        setClients(clientsResponse?.success ? (clientsResponse.data || []) : []);
+      if (activeTab === 'users') {
+        const response = await adminApi.getUsers();
+        setUsers(response?.success ? (response.data || []) : []);
       } else if (activeTab === 'categories') {
         const response = await categoryService.getAdminCategories(false); // Get all categories including inactive
         const normalizedCategories = (response?.success ? (response.data || []) : [])
@@ -279,10 +265,7 @@ export const AdminPage = () => {
         });
       }
       if (errorType === 'empty') {
-        if (activeTab === 'approvals') {
-          setPendingCases([]);
-          setPendingInvites([]);
-        } else if (activeTab === 'users') {
+        if (activeTab === 'users') {
           setUsers([]);
         } else if (activeTab === 'categories') {
           setCategories([]);
@@ -296,8 +279,73 @@ export const AdminPage = () => {
     }
   };
 
-  const handleCaseClick = (caseId) => {
-    navigate(`/app/firm/${firmSlug}/cases/${caseId}`);
+  const handleStorageModeChange = (mode) => {
+    setStorageConfig((prev) => ({
+      ...prev,
+      mode,
+      provider: mode === 'docketra_managed' ? null : prev.provider,
+    }));
+  };
+
+  const handleStorageProviderChange = (provider) => {
+    setStorageConfig((prev) => ({
+      ...prev,
+      provider,
+    }));
+  };
+
+  const handleStorageSave = async () => {
+    if (storageConfig.mode === 'firm_connected' && !storageConfig.provider) {
+      showToast('Please select a provider', 'error');
+      return;
+    }
+
+    setSavingStorage(true);
+    try {
+      const payload = {
+        mode: storageConfig.mode,
+        provider: storageConfig.provider,
+      };
+
+      const response = await adminApi.updateStorageConfig(payload);
+      if (response.success) {
+        setStorageConfig((prev) => ({
+          ...prev,
+          ...response.data,
+        }));
+        showToast('Storage settings updated', 'success');
+      } else {
+        showToast(response.message || 'Failed to update storage settings', 'error');
+      }
+    } catch (error) {
+      console.error('Failed to update storage settings:', error);
+      showToast(error.response?.data?.message || 'Failed to update storage settings', 'error');
+    } finally {
+      setSavingStorage(false);
+    }
+  };
+
+  const handleStorageDisconnect = async () => {
+    setSavingStorage(true);
+    try {
+      const response = await adminApi.disconnectStorage();
+      if (response.success) {
+        setStorageConfig({
+          mode: 'docketra_managed',
+          provider: null,
+          google: {},
+          onedrive: {},
+        });
+        showToast('Disconnected from firm storage', 'success');
+      } else {
+        showToast(response.message || 'Failed to disconnect storage', 'error');
+      }
+    } catch (error) {
+      console.error('Failed to disconnect storage:', error);
+      showToast(error.response?.data?.message || 'Failed to disconnect storage', 'error');
+    } finally {
+      setSavingStorage(false);
+    }
   };
 
   const handleCreateUser = async (e) => {
@@ -901,12 +949,6 @@ export const AdminPage = () => {
             Firm Settings
           </Button>
           <Button
-            variant={activeTab === 'approvals' ? 'primary' : 'default'}
-            onClick={() => setActiveTab('approvals')}
-          >
-            Pending Approvals ({statsFailed ? '--' : adminStats.pendingApprovals})
-          </Button>
-          <Button
             variant={activeTab === 'reports' ? 'primary' : 'default'}
             onClick={() => navigate(`/app/firm/${firmSlug}/admin/reports`)}
           >
@@ -1276,73 +1318,86 @@ export const AdminPage = () => {
           </Card>
         )}
 
-        {activeTab === 'approvals' && (
+        {activeTab === 'storage' && (
           <Card>
-            <h2 className="neo-section__header">Pending Client Approvals</h2>
+            <div className="admin__section-header">
+              <h2 className="neo-section__header">Storage Settings</h2>
+            </div>
 
-            {pendingInvites.length > 0 && (
-              <>
-                <h3 className="neo-section__header" style={{ marginTop: 0 }}>Pending Invitations</h3>
-                <table className="neo-table" style={{ marginBottom: '24px' }}>
-                  <thead>
-                    <tr>
-                      <th>xID</th>
-                      <th>Name</th>
-                      <th>Email</th>
-                      <th>Role</th>
-                      <th>Status</th>
-                      <th>Password Set</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pendingInvites.map((invite) => (
-                      <tr key={invite.xID}>
-                        <td>{invite.xID}</td>
-                        <td>{invite.name || EMPTY_FIELD_PLACEHOLDER}</td>
-                        <td>{invite.email}</td>
-                        <td>{invite.role}</td>
-                        <td><Badge status="Pending">Invited</Badge></td>
-                        <td><Badge status="Pending">No</Badge></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </>
-            )}
+            <div className="storage-settings">
+              <div className="neo-form-group">
+                <label className="neo-label">Storage Mode</label>
+                <div className="storage-options">
+                  <label className="neo-radio">
+                    <input
+                      type="radio"
+                      name="storageMode"
+                      checked={storageConfig.mode === 'docketra_managed'}
+                      onChange={() => handleStorageModeChange('docketra_managed')}
+                    />
+                    <span>Use Docketra Storage (Recommended)</span>
+                  </label>
+                  <p className="text-secondary">
+                    Files will be stored securely in Docketra-managed Google Drive using the service account.
+                  </p>
 
-            {pendingCases.length === 0 && pendingInvites.length === 0 ? (
-              <EmptyState
-                title="No pending approvals yet"
-                description="New approvals and invitations will appear here when review is needed."
-              />
-            ) : (
-              <table className="neo-table">
-                <thead>
-                  <tr>
-                    <th>Case Name</th>
-                    <th>Category</th>
-                    <th>Client ID</th>
-                    <th>Created</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pendingCases.map((caseItem) => (
-                    <tr key={caseItem._id} onClick={() => handleCaseClick(caseItem.caseName)}>
-                      <td>{caseItem.caseName}</td>
-                      <td>{caseItem.category}</td>
-                      <td>{caseItem.clientId || 'N/A'}</td>
-                      <td>{formatDate(caseItem.createdAt)}</td>
-                      <td>
-                        <Badge status={caseItem.status}>{caseItem.status}</Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+                  <label className="neo-radio storage-radio-spaced">
+                    <input
+                      type="radio"
+                      name="storageMode"
+                      checked={storageConfig.mode === 'firm_connected'}
+                      onChange={() => handleStorageModeChange('firm_connected')}
+                      disabled={!externalStorageEnabled}
+                    />
+                    <span>Connect My Storage</span>
+                  </label>
+                  <p className="text-secondary">
+                    {externalStorageEnabled
+                      ? 'Files will be stored in your own cloud provider. Docketra will only access the selected folder.'
+                      : 'Connect Your Storage — Coming Soon'}
+                  </p>
+                </div>
+              </div>
+
+              {storageConfig.mode === 'firm_connected' && externalStorageEnabled && (
+                <div className="neo-form-group">
+                  <label className="neo-label">Provider</label>
+                  <select
+                    className="neo-input"
+                    value={storageConfig.provider || ''}
+                    onChange={(e) => handleStorageProviderChange(e.target.value)}
+                  >
+                    <option value="">Select provider</option>
+                    <option value="google_drive">Google Drive</option>
+                    <option value="onedrive">OneDrive</option>
+                  </select>
+                  <div className="neo-info-text storage-info">
+                    Provider connection will be enabled in a future release. Settings here prepare for the upcoming OAuth flow.
+                  </div>
+                </div>
+              )}
+
+              <div className="storage-actions">
+                <Button
+                  variant="primary"
+                  onClick={handleStorageSave}
+                  disabled={savingStorage}
+                >
+                  {savingStorage ? 'Saving...' : 'Save Settings'}
+                </Button>
+                <Button
+                  variant="default"
+                  onClick={handleStorageDisconnect}
+                  disabled={savingStorage || storageConfig.mode === 'docketra_managed'}
+                  className="storage-disconnect"
+                >
+                  Disconnect
+                </Button>
+              </div>
+            </div>
           </Card>
         )}
+
       </div>
 
       {/* Create User Modal */}
