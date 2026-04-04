@@ -196,6 +196,19 @@ export const FirmSettingsPage = () => {
             </Card>
           </section>
 
+          <section className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:items-start">
+            <div className="space-y-2 lg:col-span-1">
+              <h2 className="text-lg font-medium text-gray-900">Storage Settings</h2>
+              <p className="text-sm text-gray-500">BYOS controls are being planned and will be enabled in a future release.</p>
+            </div>
+            <Card className="lg:col-span-2 lg:max-w-4xl">
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                Bring Your Own Storage (BYOS) is currently parked for a future phase.
+                Docketra-managed storage remains active by default for now.
+              </div>
+            </Card>
+          </section>
+
           <Card className="max-w-4xl">
             <div className="space-y-5">
               <div>
