@@ -298,6 +298,23 @@ export const Layout = ({ children }) => {
     };
   }, [user]);
 
+  useEffect(() => {
+    const preloadHighTrafficRoutes = () => {
+      import('../../pages/CasesPage');
+      import('../../pages/CaseDetailPage');
+      import('../../pages/CreateCasePage');
+      import('../../pages/reports/ReportsDashboard');
+    };
+
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      const idleId = window.requestIdleCallback(preloadHighTrafficRoutes, { timeout: 1200 });
+      return () => window.cancelIdleCallback(idleId);
+    }
+
+    const timeoutId = setTimeout(preloadHighTrafficRoutes, 300);
+    return () => clearTimeout(timeoutId);
+  }, []);
+
   const navSections = [
     {
       id: 'core-work',
