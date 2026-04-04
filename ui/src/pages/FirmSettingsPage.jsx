@@ -8,8 +8,10 @@ import { Select } from '../components/common/Select';
 import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
 import { caseApi } from '../api/case.api';
+import { adminApi } from '../api/admin.api';
 import { getFirmConfig, setFirmConfig } from '../utils/firmConfig';
 import { formatDateTime } from '../utils/formatDateTime';
+import { ROUTES } from '../constants/routes';
 
 const enabledDisabledOptions = [
   { value: 'true', label: 'Enabled' },
@@ -25,6 +27,24 @@ export const FirmSettingsPage = () => {
   const [loadingActivity, setLoadingActivity] = useState(true);
   const [activityError, setActivityError] = useState('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [loadingConfig, setLoadingConfig] = useState(true);
+
+  const loadFirmSettings = async () => {
+    setLoadingConfig(true);
+    try {
+      const response = await adminApi.getFirmSettings();
+      const serverConfig = response?.data?.firm;
+      if (serverConfig) {
+        const merged = setFirmConfig(serverConfig);
+        setConfig(merged);
+      }
+    } catch {
+      // Fall back to locally cached config to keep UI functional.
+      setConfig(getFirmConfig());
+    } finally {
+      setLoadingConfig(false);
+    }
+  };
 
   const loadActivity = async () => {
     setLoadingActivity(true);
@@ -66,6 +86,10 @@ export const FirmSettingsPage = () => {
     loadActivity();
   }, []);
 
+  useEffect(() => {
+    loadFirmSettings();
+  }, []);
+
   const handleNumberChange = (event) => {
     const { name, value } = event.target;
     setSaveMessage({ type: '', text: '' });
@@ -80,8 +104,8 @@ export const FirmSettingsPage = () => {
     setHasUnsavedChanges(true);
   };
 
-  const handleSave = () => {
-    const payload = {
+  const handleSave = async () => {
+    const firmPayload = {
       slaDefaultDays: Number(config.slaDefaultDays) || 0,
       escalationInactivityThresholdHours: Number(config.escalationInactivityThresholdHours) || 0,
       workloadThreshold: Number(config.workloadThreshold) || 15,
@@ -90,7 +114,8 @@ export const FirmSettingsPage = () => {
       enableBulkActions: Boolean(config.enableBulkActions),
     };
     try {
-      const saved = setFirmConfig(payload);
+      const response = await adminApi.updateFirmSettings({ firm: firmPayload });
+      const saved = setFirmConfig(response?.data?.firm || firmPayload);
       setConfig(saved);
       setHasUnsavedChanges(false);
       setSaveMessage({ type: 'success', text: 'Firm settings saved successfully.' });
@@ -107,6 +132,16 @@ export const FirmSettingsPage = () => {
             title="Firm Settings"
             description="Configure operational defaults and feature visibility for this firm."
           />
+
+          <Card className="lg:max-w-4xl">
+            <div className="flex flex-wrap items-center gap-3">
+              <Button type="button" variant="outline" onClick={() => navigate(ROUTES.FIRM_SETTINGS(firmSlug))}>Firm</Button>
+              <Button type="button" variant="outline" onClick={() => navigate(ROUTES.WORK_SETTINGS(firmSlug))}>Work</Button>
+              <Button type="button" variant="outline" onClick={() => navigate(ROUTES.STORAGE_SETTINGS(firmSlug))}>Storage</Button>
+              <Button type="button" variant="outline" onClick={() => navigate(`${ROUTES.ADMIN(firmSlug)}?tab=users`)}>Security</Button>
+              <Button type="button" variant="outline" onClick={() => navigate('/app/firm/' + firmSlug + '/admin/reports/detailed')}>Audit</Button>
+            </div>
+          </Card>
 
           <section className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:items-start">
             <div className="space-y-2 lg:col-span-1">
@@ -189,8 +224,8 @@ export const FirmSettingsPage = () => {
                 <Button type="button" variant="outline" onClick={() => navigate(`/app/firm/${firmSlug}/admin`)}>
                   Back to Admin
                 </Button>
-                <Button type="button" variant="primary" onClick={handleSave}>
-                  {hasUnsavedChanges ? 'Save Changes' : 'Saved'}
+                <Button type="button" variant="primary" onClick={handleSave} disabled={loadingConfig}>
+                  {loadingConfig ? 'Loading…' : (hasUnsavedChanges ? 'Save Changes' : 'Saved')}
                 </Button>
               </div>
             </Card>
@@ -199,12 +234,16 @@ export const FirmSettingsPage = () => {
           <section className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:items-start">
             <div className="space-y-2 lg:col-span-1">
               <h2 className="text-lg font-medium text-gray-900">Storage Settings</h2>
-              <p className="text-sm text-gray-500">BYOS controls are being planned and will be enabled in a future release.</p>
+              <p className="text-sm text-gray-500">Manage storage mode, provider connection, and verification from the dedicated storage settings page.</p>
             </div>
             <Card className="lg:col-span-2 lg:max-w-4xl">
-              <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                Bring Your Own Storage (BYOS) is currently parked for a future phase.
-                Docketra-managed storage remains active by default for now.
+              <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+                Storage configuration is now managed in one place to avoid duplicate settings paths.
+                <div className="mt-3">
+                  <Button type="button" variant="outline" onClick={() => navigate(ROUTES.STORAGE_SETTINGS(firmSlug))}>
+                    Open Storage Settings
+                  </Button>
+                </div>
               </div>
             </Card>
           </section>
