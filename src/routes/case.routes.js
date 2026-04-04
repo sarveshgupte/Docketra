@@ -54,10 +54,11 @@ const upload = createSecureUpload();
 
 const {
   assignDocket,
-  unassignDocket,
   transitionDocket,
-  addDocketComment,
-  listDocketComments,
+  qcAction,
+  reassignDocket,
+  reopenPendingDocket,
+  runPendingReopen,
 } = require('../controllers/docketWorkflow.controller');
 
 
@@ -203,10 +204,11 @@ router.post('/:caseId/file', authorizeFirmPermission('CASE_ACTION'), userWriteLi
 
 // Docket workflow endpoints (strict OPEN/PENDING/RESOLVED/FILED lifecycle)
 router.post('/:caseId/assign', authorizeFirmPermission('CASE_ASSIGN'), userWriteLimiter, checkCaseClientAccess, assignDocket);
-router.post('/:caseId/unassign', authorizeFirmPermission('CASE_ASSIGN'), sensitiveLimiter, userWriteLimiter, checkCaseClientAccess, unassignDocket);
 router.post('/:caseId/transition', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, transitionDocket);
-router.post('/:caseId/comment', authorizeFirmPermission('CASE_UPDATE'), commentLimiter, userWriteLimiter, checkCaseClientAccess, addDocketComment);
-router.get('/:caseId/comments', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, listDocketComments);
+router.post('/:caseId/reopen-pending', authorizeFirmPermission('CASE_ACTION'), userWriteLimiter, checkCaseClientAccess, reopenPendingDocket);
+router.post('/:caseId/qc-action', authorizeFirmPermission('CASE_ASSIGN'), sensitiveLimiter, userWriteLimiter, checkCaseClientAccess, qcAction);
+router.post('/:caseId/reassign', authorizeFirmPermission('CASE_ASSIGN'), sensitiveLimiter, userWriteLimiter, checkCaseClientAccess, reassignDocket);
+router.post('/pending/reopen-due', authorizeFirmPermission('CASE_ADMIN_VIEW'), sensitiveLimiter, userWriteLimiter, runPendingReopen);
 
 
 // Client Fact Sheet routes (Read-Only from Case view)

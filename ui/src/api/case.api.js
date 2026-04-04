@@ -144,6 +144,21 @@ export const caseApi = {
     () => request((http) => http.post(`/cases/${caseId}/transition`, payload), 'Failed to transition case'),
   ),
 
+  qcAction: (caseId, decision, comment) => withCaseInvalidation(
+    caseId,
+    () => request((http) => http.post(`/cases/${caseId}/qc-action`, { decision, comment }), 'Failed to perform QC action'),
+  ),
+
+  reassignDocket: (caseId, assigneeXID, comment) => withCaseInvalidation(
+    caseId,
+    () => request((http) => http.post(`/cases/${caseId}/reassign`, { assigneeXID, comment }), 'Failed to reassign docket'),
+  ),
+
+  reopenPendingDocket: (caseId, comment) => withCaseInvalidation(
+    caseId,
+    () => request((http) => http.post(`/cases/${caseId}/reopen-pending`, { comment }), 'Failed to reopen docket'),
+  ),
+
   getDocketComments: (caseId) => request((http) => http.get(`/cases/${caseId}/comments`), 'Failed to load comments'),
 
   viewAttachment: (caseId, attachmentId) => {

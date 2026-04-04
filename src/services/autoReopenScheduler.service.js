@@ -1,4 +1,4 @@
-const caseActionService = require('./caseAction.service');
+const { reopenDuePending } = require('./docketWorkflow.service');
 
 /**
  * Pending Case Auto-Reopen Scheduler
@@ -24,11 +24,11 @@ const runAutoReopenJob = async () => {
   try {
     console.log('[AutoReopen] Starting auto-reopen job...');
     
-    const result = await caseActionService.autoReopenPendedCases();
+    const result = await reopenDuePending();
     
     if (result.count > 0) {
       console.log(`[AutoReopen] Successfully reopened ${result.count} case(s)`);
-      console.log(`[AutoReopen] Case IDs: ${result.cases.join(', ')}`);
+      console.log(`[AutoReopen] Case IDs: ${result.docketIds.join(', ')}`);
     } else {
       console.log('[AutoReopen] No cases to reopen');
     }

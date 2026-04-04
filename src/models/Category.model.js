@@ -46,6 +46,10 @@ const subcategorySchema = new mongoose.Schema({
     min: 0,
     default: 0,
   },
+  forceQC: {
+    type: Boolean,
+    default: false,
+  },
 }, {
   _id: false, // Disable automatic _id generation for subdocuments
 });
@@ -91,6 +95,10 @@ const categorySchema = new mongoose.Schema({
     type: Number,
     min: 0,
     default: 0,
+  },
+  forceQC: {
+    type: Boolean,
+    default: false,
   },
 }, {
   // Automatic timestamp management for audit trail
