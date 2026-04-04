@@ -35,9 +35,16 @@ import { ROUTES, safeRoute } from '../constants/routes';
 const DASHBOARD_RECENT_CASES_ROW_COUNT = 5;
 const DASHBOARD_RECENT_CASES_MAX_ROWS = 10;
 const DASHBOARD_RECENT_CASES_LIMIT = Math.min(DASHBOARD_RECENT_CASES_ROW_COUNT, DASHBOARD_RECENT_CASES_MAX_ROWS);
-const DEFAULT_SUPPORT_EMAIL = import.meta.env.VITE_SUPPORT_EMAIL
-  || import.meta.env.VITE_DEFAULT_EMAIL
-  || 'support@docketra.com';
+const resolveSupportEmail = () => {
+  const rawMailFrom = String(import.meta.env.VITE_MAIL_FROM || import.meta.env.MAIL_FROM || '').trim();
+  if (!rawMailFrom) return 'support@docketra.com';
+
+  const bracketMatch = rawMailFrom.match(/<([^>]+)>/);
+  const candidate = (bracketMatch?.[1] || rawMailFrom).trim();
+  return candidate.includes('@') ? candidate : 'support@docketra.com';
+};
+
+const DEFAULT_SUPPORT_EMAIL = resolveSupportEmail();
 
 const PRODUCT_TOUR_STEPS = [
   {
