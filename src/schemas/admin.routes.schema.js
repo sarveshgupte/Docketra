@@ -84,6 +84,8 @@ module.exports = {
     params: z.object({ xID: xidString }),
     body: passthroughBody,
   },
+  'GET /firm-settings': { query: passthroughQuery },
+  'PUT /firm-settings': { body: passthroughBody },
   'POST /users/:id/restore': {
     params: z.object({ id: objectIdOrString }),
     body: passthroughBody,

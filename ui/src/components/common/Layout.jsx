@@ -354,6 +354,7 @@ export const Layout = ({ children }) => {
         { to: ROUTES.ADMIN(currentFirmSlug), label: 'Team Management', icon: <IconTeam />, active: isActivePrefix(ROUTES.ADMIN(currentFirmSlug)) && !isActivePrefix(reportsRoute) },
         { to: ROUTES.FIRM_SETTINGS(currentFirmSlug), label: 'Firm Settings', icon: <IconAdmin />, active: isActivePrefix(ROUTES.FIRM_SETTINGS(currentFirmSlug)) },
         { to: ROUTES.WORK_SETTINGS(currentFirmSlug), label: 'Work Settings', icon: <IconWorklist />, active: isActivePrefix(ROUTES.WORK_SETTINGS(currentFirmSlug)) },
+        { to: ROUTES.STORAGE_SETTINGS(currentFirmSlug), label: 'Storage Settings', icon: <IconAdmin />, active: isActivePrefix(ROUTES.STORAGE_SETTINGS(currentFirmSlug)) },
       ],
     },
   ].filter((section) => !section.hidden);
