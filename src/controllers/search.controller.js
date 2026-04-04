@@ -447,6 +447,7 @@ const globalWorklist = async (req, res) => {
       category,
       createdAtFrom,
       createdAtTo,
+      status,
       slaStatus,
       sortBy = 'slaDueAt',
       sortOrder = 'asc',
@@ -462,9 +463,9 @@ const globalWorklist = async (req, res) => {
       });
     }
     
-    // Build query for unassigned OPEN cases only
+    // Build query for unassigned cases in workbasket states.
     const query = {
-      status: CaseStatus.OPEN,
+      status: { $in: [CaseStatus.UNASSIGNED, CaseStatus.OPEN] },
       assignedToXID: null,
     };
     
@@ -475,6 +476,10 @@ const globalWorklist = async (req, res) => {
     
     if (category) {
       query.category = category;
+    }
+
+    if (status) {
+      query.status = status;
     }
     
     // Date range filter
