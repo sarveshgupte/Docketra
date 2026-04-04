@@ -294,6 +294,12 @@ export const Layout = ({ children }) => {
       collapsible: false,
       items: [
         {
+          to: ROUTES.DASHBOARD(currentFirmSlug),
+          label: 'Dashboard',
+          icon: <IconDashboard />,
+          active: isActive(ROUTES.DASHBOARD(currentFirmSlug)),
+        },
+        {
           to: ROUTES.GLOBAL_WORKLIST(currentFirmSlug),
           label: 'Workbasket',
           icon: <IconWorkbasket />,
@@ -306,12 +312,6 @@ export const Layout = ({ children }) => {
           icon: <IconWorklist />,
           active: isActive(ROUTES.WORKLIST(currentFirmSlug)) || isActive(ROUTES.MY_WORKLIST(currentFirmSlug)),
           badge: countsFetched ? worklistCount : 'loading',
-        },
-        {
-          to: ROUTES.DASHBOARD(currentFirmSlug),
-          label: 'Dashboard',
-          icon: <IconDashboard />,
-          active: isActive(ROUTES.DASHBOARD(currentFirmSlug)),
         },
       ],
     },
