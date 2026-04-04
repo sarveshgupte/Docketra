@@ -22,6 +22,7 @@ import { formatClientDisplay } from '../utils/formatters';
 import { formatDateTime } from '../utils/formatDateTime';
 import { UX_COPY } from '../constants/uxCopy';
 import { resolveUiError } from '../utils/uiFeedback';
+import { SESSION_KEYS } from '../utils/constants';
 import './CreateCasePage.css';
 
 /** Returns a simple completion fraction for a section given field names and formData. */
@@ -384,16 +385,13 @@ export const CreateCasePage = () => {
       
       if (response.success) {
         const confirmationTime = formatDateTime(new Date());
-        const successCopy = `Docket ${response.data.caseId} created • ${confirmationTime}`;
+        const successCopy = `✅ Docket ${response.data.caseId} created successfully and moved to Workbasket • ${confirmationTime}`;
         showSuccess(successCopy);
         setFooterConfirmation(successCopy);
-        // DO NOT redirect to case detail - show success message instead
-        // Per PR requirements: show success and options to go to Workbasket or create another
-        setSuccessMessage({
-          caseId: response.data.caseId,
-          caseName: response.data.caseName,
-          timestamp: confirmationTime,
-        });
+        sessionStorage.setItem(SESSION_KEYS.GLOBAL_TOAST, JSON.stringify({
+          message: successCopy,
+          type: 'success',
+        }));
         // Reset form for creating another case
         setFormData({
           clientId: resolveDefaultClientId(clients),
@@ -412,6 +410,7 @@ export const CreateCasePage = () => {
         }
         setDraftSaved(false);
         setHasDraft(false);
+        navigate(`/app/firm/${firmSlug}/global-worklist`);
       }
     } catch (err) {
       if (err.response?.status === 409) {
