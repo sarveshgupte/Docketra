@@ -32,7 +32,19 @@ const createCaseBody = z.object({
 }).strict();
 
 module.exports = {
-  'GET /': { query: strictEmpty },
+  'GET /': {
+    query: z.object({
+      status: z.union([z.string(), z.array(z.string())]).optional(),
+      category: z.string().trim().min(1).optional(),
+      priority: z.string().trim().min(1).optional(),
+      assignedTo: z.string().trim().min(1).optional(),
+      slaDueDate: z.string().trim().min(1).optional(),
+      createdBy: z.string().trim().min(1).optional(),
+      clientId: clientIdString.optional(),
+      page: z.coerce.number().int().min(1).optional(),
+      limit: z.coerce.number().int().min(1).max(100).optional(),
+    }).strict(),
+  },
   'GET /search': { query: z.object({ q: z.string().optional() }).strict() },
   'POST /': { body: createCaseBody },
   'POST /pull': {
