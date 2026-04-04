@@ -700,18 +700,13 @@ export const DashboardPage = () => {
                 <p className="text-sm text-gray-600">
                   Need implementation help, training, or want to share feedback? Reach out to the Docketra team.
                 </p>
-                <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Contact email</p>
-                  <a href={`mailto:${DEFAULT_SUPPORT_EMAIL}`} className="mt-1 inline-block text-sm font-semibold text-blue-600 hover:text-blue-700">
-                    {DEFAULT_SUPPORT_EMAIL}
-                  </a>
-                </div>
                 <a
                   href={`mailto:${DEFAULT_SUPPORT_EMAIL}?subject=${encodeURIComponent('Docketra Support & Feedback')}`}
                   className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-all duration-200 ease-in-out hover:brightness-110 active:brightness-90"
                 >
-                  Contact support
+                  Write to support
                 </a>
+                <p className="text-xs text-gray-500">This will open your default email app with a pre-filled support subject.</p>
               </Card>
             </div>
           </section>
