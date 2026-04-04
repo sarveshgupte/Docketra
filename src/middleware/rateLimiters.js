@@ -11,6 +11,7 @@ const { logSecurityEvent } = require('./securityAudit.middleware');
 const DEFAULT_RATE_LIMIT_MESSAGE = 'Too many requests. Please wait a moment before trying again.';
 const FORGOT_PASSWORD_RATE_LIMIT_MESSAGE = 'Too many password reset requests. Please wait a few minutes before trying again.';
 const FORGOT_PASSWORD_PATH_PATTERN = /\bforgot[-_]password\b/i;
+let hasWarnedRedisRateLimitFallback = false;
 
 const getRetryAfterSeconds = (req, windowMs) => {
   const reset = req.rateLimit?.resetTime;
@@ -29,8 +30,9 @@ const getRateLimitMessage = (req, name) => {
 const createRedisStore = () => {
   const redis = getRedisClient();
   if (!redis) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('Redis is required for rate limiting in production');
+    if (process.env.NODE_ENV === 'production' && !hasWarnedRedisRateLimitFallback) {
+      hasWarnedRedisRateLimitFallback = true;
+      console.warn('[RATE_LIMIT] Redis unavailable in production; falling back to in-memory rate limiting for this instance.');
     }
     return null;
   }
