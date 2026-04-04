@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
@@ -18,8 +17,6 @@ import { formatDate } from '../utils/formatters';
 import { formatDateTime } from '../utils/formatDateTime';
 
 export const ClientsPage = () => {
-  const navigate = useNavigate();
-  const { firmSlug } = useParams();
   const { user } = useAuth();
   const { showError, showSuccess } = useToast();
   const [loading, setLoading] = useState(true);
@@ -39,6 +36,13 @@ export const ClientsPage = () => {
     primaryContactNumber: '',
     secondaryContactNumber: '',
     businessEmail: '',
+    PAN: '',
+    TAN: '',
+    CIN: '',
+    contactPersonName: '',
+    contactPersonDesignation: '',
+    contactPersonPhoneNumber: '',
+    contactPersonEmailAddress: '',
   });
   const fileInputRef = useRef(null);
   const isAdmin = user?.role === 'Admin';
@@ -87,6 +91,13 @@ export const ClientsPage = () => {
       primaryContactNumber: '',
       secondaryContactNumber: '',
       businessEmail: '',
+      PAN: '',
+      TAN: '',
+      CIN: '',
+      contactPersonName: '',
+      contactPersonDesignation: '',
+      contactPersonPhoneNumber: '',
+      contactPersonEmailAddress: '',
     });
   }, []);
 
@@ -103,6 +114,13 @@ export const ClientsPage = () => {
       primaryContactNumber: client.primaryContactNumber || '',
       secondaryContactNumber: client.secondaryContactNumber || '',
       businessEmail: client.businessEmail || '',
+      PAN: client.PAN || '',
+      TAN: client.TAN || '',
+      CIN: client.CIN || '',
+      contactPersonName: client.contactPersonName || '',
+      contactPersonDesignation: client.contactPersonDesignation || '',
+      contactPersonPhoneNumber: client.contactPersonPhoneNumber || '',
+      contactPersonEmailAddress: client.contactPersonEmailAddress || '',
     });
     setShowClientModal(true);
   };
@@ -123,9 +141,18 @@ export const ClientsPage = () => {
     try {
       if (selectedClient?.clientId) {
         const response = await clientApi.updateClient(selectedClient.clientId, {
+          businessName: clientForm.businessName,
+          businessAddress: clientForm.businessAddress,
           businessEmail: clientForm.businessEmail,
           primaryContactNumber: clientForm.primaryContactNumber,
           secondaryContactNumber: clientForm.secondaryContactNumber,
+          PAN: clientForm.PAN,
+          TAN: clientForm.TAN,
+          CIN: clientForm.CIN,
+          contactPersonName: clientForm.contactPersonName,
+          contactPersonDesignation: clientForm.contactPersonDesignation,
+          contactPersonPhoneNumber: clientForm.contactPersonPhoneNumber,
+          contactPersonEmailAddress: clientForm.contactPersonEmailAddress,
         });
         if (!response?.success) throw new Error(response?.message || 'Failed to update client');
         showSuccess('Client updated successfully');
@@ -136,6 +163,13 @@ export const ClientsPage = () => {
           businessEmail: clientForm.businessEmail,
           primaryContactNumber: clientForm.primaryContactNumber,
           ...(clientForm.secondaryContactNumber ? { secondaryContactNumber: clientForm.secondaryContactNumber } : {}),
+          ...(clientForm.PAN ? { PAN: clientForm.PAN } : {}),
+          ...(clientForm.TAN ? { TAN: clientForm.TAN } : {}),
+          ...(clientForm.CIN ? { CIN: clientForm.CIN } : {}),
+          ...(clientForm.contactPersonName ? { contactPersonName: clientForm.contactPersonName } : {}),
+          ...(clientForm.contactPersonDesignation ? { contactPersonDesignation: clientForm.contactPersonDesignation } : {}),
+          ...(clientForm.contactPersonPhoneNumber ? { contactPersonPhoneNumber: clientForm.contactPersonPhoneNumber } : {}),
+          ...(clientForm.contactPersonEmailAddress ? { contactPersonEmailAddress: clientForm.contactPersonEmailAddress } : {}),
         });
         if (!response?.success) throw new Error(response?.message || 'Failed to create client');
         showSuccess(`Client created successfully${response?.data?.clientId ? ` (${response.data.clientId})` : ''}`);
@@ -166,6 +200,10 @@ export const ClientsPage = () => {
   };
 
   const openEditCfsModal = useCallback(async (client) => {
+    setEditCfsClient(client);
+    setDescriptionDraft(client?.clientFactSheet?.description || '');
+    setNotesDraft(client?.clientFactSheet?.notes || '');
+
     try {
       const response = await clientApi.getClientById(client.clientId);
       const fullClient = response?.data || client;
@@ -173,7 +211,7 @@ export const ClientsPage = () => {
       setDescriptionDraft(fullClient?.clientFactSheet?.description || '');
       setNotesDraft(fullClient?.clientFactSheet?.notes || '');
     } catch (error) {
-      showError(error?.response?.data?.message || 'Failed to load client details');
+      showError(error?.response?.data?.message || error?.message || 'Failed to load latest client details');
     }
   }, [showError]);
 
@@ -225,8 +263,7 @@ export const ClientsPage = () => {
       cellClassName: 'w-[1px] whitespace-nowrap',
       render: (client) => (
         <div className="admin__actions justify-end">
-          <Button size="small" onClick={() => navigate(`/app/firm/${firmSlug}/clients/${client.clientId}`)}>Workspace</Button>
-          {isAdmin ? (
+                    {isAdmin ? (
             <>
               <Button size="small" variant="secondary" onClick={() => openEditClientModal(client)}>Edit Client</Button>
               <Button
@@ -242,7 +279,7 @@ export const ClientsPage = () => {
         </div>
       ),
     },
-  ], [navigate, firmSlug, isAdmin, openEditCfsModal, openEditClientModal, handleToggleClientStatus]);
+  ], [isAdmin, openEditCfsModal, openEditClientModal, handleToggleClientStatus]);
 
   const refreshSelectedClient = async () => {
     if (!editCfsClient?.clientId) return;
@@ -340,14 +377,14 @@ export const ClientsPage = () => {
             value={clientForm.businessName}
             onChange={(event) => setClientForm((prev) => ({ ...prev, businessName: event.target.value }))}
             required
-            disabled={Boolean(selectedClient)}
+            disabled={!isAdmin}
           />
           <Input
             label="Business Address"
             value={clientForm.businessAddress}
             onChange={(event) => setClientForm((prev) => ({ ...prev, businessAddress: event.target.value }))}
             required
-            disabled={Boolean(selectedClient)}
+            disabled={!isAdmin}
           />
           <Input
             label="Primary Contact Number"
@@ -367,6 +404,44 @@ export const ClientsPage = () => {
             onChange={(event) => setClientForm((prev) => ({ ...prev, businessEmail: event.target.value }))}
             required
           />
+
+          <Input
+            label="PAN"
+            value={clientForm.PAN}
+            onChange={(event) => setClientForm((prev) => ({ ...prev, PAN: event.target.value }))}
+          />
+          <Input
+            label="TAN"
+            value={clientForm.TAN}
+            onChange={(event) => setClientForm((prev) => ({ ...prev, TAN: event.target.value }))}
+          />
+          <Input
+            label="CIN"
+            value={clientForm.CIN}
+            onChange={(event) => setClientForm((prev) => ({ ...prev, CIN: event.target.value }))}
+          />
+          <Input
+            label="Contact Person Name"
+            value={clientForm.contactPersonName}
+            onChange={(event) => setClientForm((prev) => ({ ...prev, contactPersonName: event.target.value }))}
+          />
+          <Input
+            label="Contact Person Designation"
+            value={clientForm.contactPersonDesignation}
+            onChange={(event) => setClientForm((prev) => ({ ...prev, contactPersonDesignation: event.target.value }))}
+          />
+          <Input
+            label="Contact Person Phone Number"
+            value={clientForm.contactPersonPhoneNumber}
+            onChange={(event) => setClientForm((prev) => ({ ...prev, contactPersonPhoneNumber: event.target.value }))}
+          />
+          <Input
+            label="Contact Person Email Address"
+            type="email"
+            value={clientForm.contactPersonEmailAddress}
+            onChange={(event) => setClientForm((prev) => ({ ...prev, contactPersonEmailAddress: event.target.value }))}
+          />
+
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
             <Button type="button" variant="outline" onClick={closeClientModal}>Cancel</Button>
             <Button type="submit" disabled={savingClient}>{savingClient ? 'Saving…' : 'Save Client'}</Button>
