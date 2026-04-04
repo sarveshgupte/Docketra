@@ -15,6 +15,7 @@ export const ROUTES = {
   COMPLIANCE_CALENDAR: (firmSlug) => `/app/firm/${firmSlug}/compliance-calendar`,
   PROFILE: (firmSlug) => `/app/firm/${firmSlug}/profile`,
   ADMIN: (firmSlug) => `/app/firm/${firmSlug}/admin`,
+  WORK_CATEGORY_MANAGEMENT: (firmSlug) => `/app/firm/${firmSlug}/admin?tab=categories&context=work-settings`,
   FIRM_SETTINGS: (firmSlug) => `/app/firm/${firmSlug}/settings/firm`,
   WORK_SETTINGS: (firmSlug) => `/app/firm/${firmSlug}/settings/work`,
 };

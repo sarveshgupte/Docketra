@@ -90,6 +90,7 @@ export const AdminPage = () => {
   const { firmSlug } = useParams();
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
+  const isWorkSettingsContext = searchParams.get('context') === 'work-settings';
   
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('users');
@@ -969,33 +970,49 @@ export const AdminPage = () => {
   return (
     <Layout>
       <div className="admin">
-        <PageHeader title="Team Management" description="Manage users, access control, and security actions" />
+        <PageHeader
+          title={isWorkSettingsContext ? 'Category Management' : 'Team Management'}
+          description={isWorkSettingsContext
+            ? 'Create and manage docket categories and subcategories.'
+            : 'Manage users, access control, and security actions'}
+        />
 
         <div className="admin__tabs">
-          <Button
-            variant={activeTab === 'users' ? 'primary' : 'default'}
-            onClick={() => { setActiveTab('users'); setSearchParams({ tab: 'users' }); }}
-          >
-            User Management ({statsFailed ? '--' : adminStats.totalUsers})
-          </Button>
+          {!isWorkSettingsContext && (
+            <Button
+              variant={activeTab === 'users' ? 'primary' : 'default'}
+              onClick={() => { setActiveTab('users'); setSearchParams({ tab: 'users' }); }}
+            >
+              User Management ({statsFailed ? '--' : adminStats.totalUsers})
+            </Button>
+          )}
           <Button
             variant={activeTab === 'categories' ? 'primary' : 'default'}
-            onClick={() => { setActiveTab('categories'); setSearchParams({ tab: 'categories' }); }}
+            onClick={() => {
+              setActiveTab('categories');
+              setSearchParams(isWorkSettingsContext
+                ? { tab: 'categories', context: 'work-settings' }
+                : { tab: 'categories' });
+            }}
           >
             Categories ({statsFailed ? '--' : adminStats.totalCategories})
           </Button>
-          <Button
-            variant="default"
-            onClick={() => navigate(`/app/firm/${firmSlug}/settings/firm`)}
-          >
-            Firm Settings
-          </Button>
-          <Button
-            variant={activeTab === 'reports' ? 'primary' : 'default'}
-            onClick={() => navigate(`/app/firm/${firmSlug}/admin/reports`)}
-          >
-            Reports & MIS
-          </Button>
+          {!isWorkSettingsContext && (
+            <>
+              <Button
+                variant="default"
+                onClick={() => navigate(`/app/firm/${firmSlug}/settings/firm`)}
+              >
+                Firm Settings
+              </Button>
+              <Button
+                variant={activeTab === 'reports' ? 'primary' : 'default'}
+                onClick={() => navigate(`/app/firm/${firmSlug}/admin/reports`)}
+              >
+                Reports & MIS
+              </Button>
+            </>
+          )}
         </div>
 
         {statsEmpty && (
