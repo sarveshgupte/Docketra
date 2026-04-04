@@ -173,7 +173,7 @@ const getClients = async (req, res) => {
       filter,
       accessContext.role,
       {
-        select: 'clientId businessName businessEmail primaryContactNumber status isSystemClient isInternal isDefaultClient createdAt',
+        select: 'clientId businessName businessEmail primaryContactNumber status isSystemClient isInternal isDefaultClient createdAt PAN TAN CIN contactPersonName contactPersonDesignation contactPersonPhoneNumber contactPersonEmailAddress',
         sort: { clientId: 1 },
         logContext: buildClientLogContext(req, { model: 'Client' }),
       }
@@ -268,7 +268,11 @@ const createClient = async (req, res) => {
       'PAN',
       'TAN',
       'GST',
-      'CIN'
+      'CIN',
+      'contactPersonName',
+      'contactPersonDesignation',
+      'contactPersonPhoneNumber',
+      'contactPersonEmailAddress'
     ];
     
     let sanitizedBody;
@@ -300,6 +304,10 @@ const createClient = async (req, res) => {
       GST,
       TAN,
       CIN,
+      contactPersonName,
+      contactPersonDesignation,
+      contactPersonPhoneNumber,
+      contactPersonEmailAddress,
     } = sanitizedBody;
     
     // Validate required business fields
@@ -367,6 +375,10 @@ const createClient = async (req, res) => {
         GST: GST ? GST.trim().toUpperCase() : undefined,
         TAN: TAN ? TAN.trim().toUpperCase() : undefined,
         CIN: CIN ? CIN.trim().toUpperCase() : undefined,
+        contactPersonName: contactPersonName ? contactPersonName.trim() : undefined,
+        contactPersonDesignation: contactPersonDesignation ? contactPersonDesignation.trim() : undefined,
+        contactPersonPhoneNumber: contactPersonPhoneNumber ? contactPersonPhoneNumber.trim() : undefined,
+        contactPersonEmailAddress: contactPersonEmailAddress ? contactPersonEmailAddress.trim().toLowerCase() : undefined,
         // System-owned fields (injected server-side only, NEVER from client)
         firmId: userFirmId,
         createdByXid,
@@ -426,17 +438,11 @@ const createClient = async (req, res) => {
  * Update client (Admin only)
  * PUT /api/clients/:clientId
  * 
- * RESTRICTED FIELDS - Only these fields can be updated:
- * - businessEmail
- * - primaryContactNumber
- * - secondaryContactNumber
- * 
- * IMMUTABLE FIELDS - These cannot be changed:
- * - clientId
- * - businessName (use changeLegalName endpoint instead)
- * - PAN, TAN, CIN
- * - createdByXid
- * - isSystemClient
+ * Admin-managed editable fields include core business details,
+ * tax identifiers (PAN/TAN/CIN/GST), and contact person details.
+ *
+ * Immutable/system fields (clientId, firmId, createdByXid, system flags)
+ * remain server-controlled.
  */
 const updateClient = async (req, res) => {
   try {
@@ -447,6 +453,14 @@ const updateClient = async (req, res) => {
       secondaryContactNumber,
       businessName,
       businessAddress,
+      PAN,
+      TAN,
+      CIN,
+      GST,
+      contactPersonName,
+      contactPersonDesignation,
+      contactPersonPhoneNumber,
+      contactPersonEmailAddress,
     } = req.body;
     
     // Get firmId from authenticated user for query scoping
@@ -463,36 +477,59 @@ const updateClient = async (req, res) => {
       });
     }
     
-    const isProtectedClient = client.isDefaultClient === true || client.isSystemClient === true || client.isInternal === true;
-
-    if (!isProtectedClient && businessName !== undefined) {
-      return res.status(400).json({
-        success: false,
-        message: 'Business name cannot be updated through this endpoint. Use the "Change Legal Name" action instead.',
-      });
+    if (businessName !== undefined) {
+      client.businessName = String(businessName).trim();
     }
 
-    if (isProtectedClient && businessName !== undefined) {
-      client.businessName = businessName;
-    }
-
-    if (isProtectedClient && businessAddress !== undefined) {
-      client.businessAddress = businessAddress;
+    if (businessAddress !== undefined) {
+      client.businessAddress = String(businessAddress).trim();
     }
 
     // Update allowed fields
     if (businessEmail !== undefined) {
-      client.businessEmail = businessEmail.toLowerCase();
+      client.businessEmail = String(businessEmail).trim().toLowerCase();
     }
     
     if (primaryContactNumber !== undefined) {
-      client.primaryContactNumber = primaryContactNumber;
+      client.primaryContactNumber = String(primaryContactNumber).trim();
     }
     
     if (secondaryContactNumber !== undefined) {
       client.secondaryContactNumber = secondaryContactNumber || null;
     }
-    
+
+    if (PAN !== undefined) {
+      client.PAN = PAN ? String(PAN).trim().toUpperCase() : null;
+    }
+
+    if (TAN !== undefined) {
+      client.TAN = TAN ? String(TAN).trim().toUpperCase() : null;
+    }
+
+    if (CIN !== undefined) {
+      client.CIN = CIN ? String(CIN).trim().toUpperCase() : null;
+    }
+
+    if (GST !== undefined) {
+      client.GST = GST ? String(GST).trim().toUpperCase() : null;
+    }
+
+    if (contactPersonName !== undefined) {
+      client.contactPersonName = contactPersonName ? String(contactPersonName).trim() : null;
+    }
+
+    if (contactPersonDesignation !== undefined) {
+      client.contactPersonDesignation = contactPersonDesignation ? String(contactPersonDesignation).trim() : null;
+    }
+
+    if (contactPersonPhoneNumber !== undefined) {
+      client.contactPersonPhoneNumber = contactPersonPhoneNumber ? String(contactPersonPhoneNumber).trim() : null;
+    }
+
+    if (contactPersonEmailAddress !== undefined) {
+      client.contactPersonEmailAddress = contactPersonEmailAddress ? String(contactPersonEmailAddress).trim().toLowerCase() : null;
+    }
+
     await client.save();
     
     res.json({

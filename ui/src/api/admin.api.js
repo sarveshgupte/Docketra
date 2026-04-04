@@ -12,6 +12,10 @@ export const adminApi = {
 
   resetPassword: (xID) => request((http) => http.post('/auth/reset-password', { xID }), 'Failed to reset password'),
   resendSetupEmail: (xID) => request((http) => http.post(`/admin/users/${xID}/resend-invite`), 'Failed to resend setup email'),
+  updateRestrictedClients: (xID, restrictedClientIds = []) => request(
+    (http) => http.patch(`/admin/users/${xID}/restrict-clients`, { restrictedClientIds }),
+    'Failed to update user client access'
+  ),
   unlockAccount: (xID) => request((http) => http.post('/auth/unlock-account', { xID }), 'Failed to unlock account'),
 
   getPendingApprovals: () => request((http) => http.get('/cases?status=UNDER_REVIEW,Reviewed,Pending'), 'Failed to load pending approvals'),
