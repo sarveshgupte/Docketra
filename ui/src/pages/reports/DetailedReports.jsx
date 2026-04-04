@@ -138,7 +138,7 @@ export const DetailedReports = () => {
   };
 
   const handleCaseClick = (caseId) => {
-    navigate(`/app/firm/${firmSlug}/cases/${caseId}`);
+    navigate(`/app/firm/${firmSlug}/dockets/${caseId}`);
   };
 
   const handleExport = (type) => {

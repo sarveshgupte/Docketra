@@ -12,7 +12,7 @@ const getShellContent = (pathname) => {
     return <FormSkeleton />;
   }
 
-  if (pathname.includes('/cases') || pathname.includes('/worklist') || pathname.includes('/admin')) {
+  if (pathname.includes('/dockets') || pathname.includes('/cases') || pathname.includes('/worklist') || pathname.includes('/admin')) {
     return <TableSkeleton rows={5} />;
   }
 
