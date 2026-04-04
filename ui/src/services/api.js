@@ -222,14 +222,15 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Handle authorization failures - clear auth state and redirect
+    // Handle authorization failures without force-logging the user out.
+    // A 403 typically means "not allowed for this action" (RBAC/tenant guard),
+    // not "session is invalid". Keep auth state intact so users can navigate back.
     if (status === 403) {
-      clearAuthStorage();
       sessionStorage.setItem(SESSION_KEYS.GLOBAL_TOAST, JSON.stringify({
-        message: 'Your session is no longer authorized. Please log in again.',
-        type: 'info'
+        message: 'You are not allowed to perform that action. Your session is still active.',
+        type: 'warning'
       }));
-      redirectToLogin();
+      markErrorToasted(error, 'You are not allowed to perform that action.');
       return Promise.reject(error);
     }
 
