@@ -1,4 +1,9 @@
 import { lazy } from 'react';
+import { DashboardPage as DashboardPageComponent } from '../pages/DashboardPage';
+import { WorklistPage as WorklistPageComponent } from '../pages/WorklistPage';
+import { WorkbasketPage as WorkbasketPageComponent } from '../pages/WorkbasketPage';
+import { FirmSettingsPage as FirmSettingsPageComponent } from '../pages/FirmSettingsPage';
+import { WorkSettingsPage as WorkSettingsPageComponent } from '../pages/WorkSettingsPage';
 
 const lazyPage = (importer, exportName) => lazy(
   () => importer().then((module) => ({ default: module[exportName] }))
@@ -11,16 +16,16 @@ export const SetPasswordPage = lazyPage(() => import('../pages/SetPasswordPage')
 export const ForgotPasswordPage = lazyPage(() => import('../pages/ForgotPasswordPage'), 'ForgotPasswordPage');
 export const ResetPasswordPage = lazyPage(() => import('../pages/ResetPasswordPage'), 'ResetPasswordPage');
 export const CompleteProfile = lazyPage(() => import('../pages/CompleteProfile'), 'CompleteProfile');
-export const DashboardPage = lazyPage(() => import('../pages/DashboardPage'), 'DashboardPage');
-export const WorklistPage = lazyPage(() => import('../pages/WorklistPage'), 'WorklistPage');
-export const WorkbasketPage = lazyPage(() => import('../pages/WorkbasketPage'), 'WorkbasketPage');
+export const DashboardPage = DashboardPageComponent;
+export const WorklistPage = WorklistPageComponent;
+export const WorkbasketPage = WorkbasketPageComponent;
 export const ComplianceCalendarPage = lazyPage(() => import('../pages/ComplianceCalendarPage'), 'ComplianceCalendarPage');
 export const CaseDetailPage = lazyPage(() => import('../pages/CaseDetailPage'), 'CaseDetailPage');
 export const CreateCasePage = lazyPage(() => import('../pages/CreateCasePage'), 'CreateCasePage');
 export const ProfilePage = lazyPage(() => import('../pages/ProfilePage'), 'ProfilePage');
 export const AdminPage = lazyPage(() => import('../pages/AdminPage'), 'AdminPage');
-export const FirmSettingsPage = lazyPage(() => import('../pages/FirmSettingsPage'), 'FirmSettingsPage');
-export const WorkSettingsPage = lazyPage(() => import('../pages/WorkSettingsPage'), 'WorkSettingsPage');
+export const FirmSettingsPage = FirmSettingsPageComponent;
+export const WorkSettingsPage = WorkSettingsPageComponent;
 export const StorageSettingsPage = lazyPage(() => import('../pages/StorageSettingsPage'), 'StorageSettingsPage');
 export const PlatformDashboard = lazyPage(() => import('../pages/PlatformDashboard'), 'PlatformDashboard');
 export const FirmsManagement = lazyPage(() => import('../pages/FirmsManagement'), 'FirmsManagement');
