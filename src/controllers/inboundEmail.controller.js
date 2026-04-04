@@ -29,13 +29,57 @@ const { updateTenantStorageUsage } = require('../utils/updateTenantStorageUsage'
  * @returns {string|null} normalized public email token
  */
 const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const EMAIL_ADDRESS_REGEX = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i;
+const toRecipientCandidates = (input) => {
+  if (Array.isArray(input)) return input.flatMap((entry) => toRecipientCandidates(entry));
+  if (input && typeof input === 'object') {
+    return [
+      input.email,
+      input.address,
+      input.value,
+      input.original,
+      input.text,
+    ].filter(Boolean);
+  }
+  if (typeof input === 'string') {
+    return input
+      .split(/[;,]/)
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+  }
+  return [];
+};
+
+const extractEmailAddress = (input) => {
+  const candidates = toRecipientCandidates(input);
+  for (const candidate of candidates) {
+    const text = String(candidate || '').trim();
+    if (!text) continue;
+    const angleMatch = text.match(/<([^>]+)>/);
+    if (angleMatch && EMAIL_ADDRESS_REGEX.test(angleMatch[1])) {
+      return angleMatch[1].trim().toLowerCase();
+    }
+    const inlineMatch = text.match(EMAIL_ADDRESS_REGEX);
+    if (inlineMatch) {
+      return inlineMatch[0].trim().toLowerCase();
+    }
+  }
+  return null;
+};
+
 const parsePublicEmailTokenFromRecipient = (toAddress) => {
-  const recipient = String(toAddress || '').trim().toLowerCase();
-  const localPart = recipient.split('@')[0] || '';
-  const match = localPart.match(/^case-([a-z0-9-]+)$/i);
-  if (!match) return null;
-  const token = match[1].toLowerCase();
-  return UUID_V4_REGEX.test(token) ? token : null;
+  const candidates = toRecipientCandidates(toAddress);
+  for (const recipientValue of candidates) {
+    const recipient = String(recipientValue || '').trim().toLowerCase();
+    const angleMatch = recipient.match(/<([^>]+)>/);
+    const normalizedRecipient = (angleMatch ? angleMatch[1] : recipient).trim();
+    const localPart = normalizedRecipient.split('@')[0] || '';
+    const match = localPart.match(/^case-([a-z0-9-]+)$/i);
+    if (!match) continue;
+    const token = match[1].toLowerCase();
+    if (UUID_V4_REGEX.test(token)) return token;
+  }
+  return null;
 };
 
 const BLOCKED_EXTENSIONS = new Set(['.exe', '.bat', '.cmd', '.com', '.scr', '.js', '.jar', '.msi', '.sh']);
@@ -187,13 +231,14 @@ const processInboundEmailPayload = async (payload) => {
   const sender = String(from || '').trim().toLowerCase();
 
   try {
-    if (!to || !from) {
+    const normalizedFromEmail = extractEmailAddress(from);
+    if (!to || !normalizedFromEmail) {
       throw createInboundError('Missing required fields: to, from', { unrecoverable: true, reason: 'Invalid payload' });
     }
 
     const publicEmailToken = parsePublicEmailTokenFromRecipient(to);
     if (!publicEmailToken) {
-      await sendInboundFailureEmail({ to: from, reason: 'Invalid token' });
+      await sendInboundFailureEmail({ to: normalizedFromEmail, reason: 'Invalid token' });
       throw createInboundError('Invalid public email token', { unrecoverable: true, reason: 'Invalid token' });
     }
 
@@ -202,16 +247,15 @@ const processInboundEmailPayload = async (payload) => {
     }).lean();
 
     if (!caseData) {
-      await sendInboundFailureEmail({ to: from, reason: 'Case not found' });
+      await sendInboundFailureEmail({ to: normalizedFromEmail, reason: 'Case not found' });
       throw createInboundError('Case not found', { unrecoverable: true, reason: 'Case not found' });
     }
 
     if (['FILED', 'Filed', 'Archived'].includes(caseData.status)) {
-      await sendInboundFailureEmail({ to: from, reason: 'Case archived' });
+      await sendInboundFailureEmail({ to: normalizedFromEmail, reason: 'Case archived' });
       throw createInboundError('Case archived', { unrecoverable: true, reason: 'Case archived' });
     }
 
-    const normalizedFromEmail = from.toLowerCase().trim();
     const user = await User.findOne({
       email: normalizedFromEmail,
       firmId: caseData.firmId,
@@ -253,7 +297,7 @@ const processInboundEmailPayload = async (payload) => {
     }).lean();
 
     if (!tenantConfig) {
-      await sendInboundFailureEmail({ to: from, reason: 'Storage misconfiguration' });
+      await sendInboundFailureEmail({ to: normalizedFromEmail, reason: 'Storage misconfiguration' });
       throw createInboundError('Storage configuration missing', {
         unrecoverable: true,
         reason: 'Storage misconfiguration',
@@ -272,10 +316,10 @@ const processInboundEmailPayload = async (payload) => {
       });
     } else {
       if (!caseData.drive?.attachmentsFolderId) {
-        await sendInboundFailureEmail({ to: from, reason: 'Storage misconfiguration' });
-        throw createInboundError('Case Drive folder structure not initialized', {
-          unrecoverable: true,
-          reason: 'Storage misconfiguration',
+          await sendInboundFailureEmail({ to: normalizedFromEmail, reason: 'Storage misconfiguration' });
+          throw createInboundError('Case Drive folder structure not initialized', {
+            unrecoverable: true,
+            reason: 'Storage misconfiguration',
         });
       }
 
@@ -284,14 +328,14 @@ const processInboundEmailPayload = async (payload) => {
         provider = await getProviderForTenant(caseData.firmId);
       } catch (error) {
         if (error?.code === 'STORAGE_CONFIG_MISSING') {
-          await sendInboundFailureEmail({ to: from, reason: 'Storage misconfiguration' });
+          await sendInboundFailureEmail({ to: normalizedFromEmail, reason: 'Storage misconfiguration' });
           throw createInboundError(error.message, { unrecoverable: true, reason: 'Storage misconfiguration' });
         }
         throw error;
       }
 
       if (!provider || typeof provider.uploadFile !== 'function') {
-        await sendInboundFailureEmail({ to: from, reason: 'Storage misconfiguration' });
+        await sendInboundFailureEmail({ to: normalizedFromEmail, reason: 'Storage misconfiguration' });
         throw createInboundError('Invalid storage provider configuration', {
           unrecoverable: true,
           reason: 'Storage misconfiguration',
@@ -301,7 +345,7 @@ const processInboundEmailPayload = async (payload) => {
       const targetFolderId = cfsDriveService.getFolderIdForFileType(caseData.drive, 'attachment');
 
       if (!targetFolderId) {
-        await sendInboundFailureEmail({ to: from, reason: 'Storage misconfiguration' });
+        await sendInboundFailureEmail({ to: normalizedFromEmail, reason: 'Storage misconfiguration' });
         throw createInboundError('Storage folder not found for inbound attachment', {
           unrecoverable: true,
           reason: 'Storage misconfiguration',
@@ -316,7 +360,7 @@ const processInboundEmailPayload = async (payload) => {
         const size = Number(attachmentInput?.size) || (buffer ? buffer.length : 0);
 
         if (BLOCKED_EXTENSIONS.has(ext)) {
-          await sendInboundFailureEmail({ to: from, reason: 'Unsupported file type' });
+          await sendInboundFailureEmail({ to: normalizedFromEmail, reason: 'Unsupported file type' });
           throw createInboundError(`Blocked executable attachment: ${safeName}`, {
             unrecoverable: true,
             reason: 'Unsupported file type',
@@ -329,7 +373,7 @@ const processInboundEmailPayload = async (payload) => {
         }
 
         if (size > MAX_ATTACHMENT_SIZE_BYTES) {
-          await sendInboundFailureEmail({ to: from, reason: 'Attachment too large' });
+          await sendInboundFailureEmail({ to: normalizedFromEmail, reason: 'Attachment too large' });
           throw createInboundError(`Attachment too large: ${safeName}`, {
             unrecoverable: true,
             reason: 'Attachment too large',
@@ -568,6 +612,7 @@ const deleteInboundAttachment = async (attachmentId, firmId, options = {}) => {
 
 module.exports = {
   deleteInboundAttachment,
+  extractEmailAddress,
   parsePublicEmailTokenFromRecipient,
   processInboundEmailPayload,
   handleInboundEmail: wrapWriteHandler(handleInboundEmail),
