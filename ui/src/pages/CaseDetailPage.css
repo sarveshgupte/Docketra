@@ -3,6 +3,9 @@
   background: #f9fafb;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .case-detail__nav-bar,
@@ -138,8 +141,10 @@
   min-height: calc(100vh - 144px);
   align-items: flex-start;
   width: min(1120px, 100%);
+  max-width: 100%;
   margin: 0 auto;
   padding: 0 24px 24px;
+  box-sizing: border-box;
 }
 
 .case-detail-sidebar {
@@ -632,6 +637,39 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: #6b7280;
+}
+
+.case-detail-table-wrap {
+  overflow-x: auto;
+}
+
+.case-detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.case-detail-table th,
+.case-detail-table td {
+  text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.case-detail-table th {
+  color: #6b7280;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+
+.case-detail-table__link {
+  border: 0;
+  background: transparent;
+  color: #1d4ed8;
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0;
 }
 
 .audit-entry-important {

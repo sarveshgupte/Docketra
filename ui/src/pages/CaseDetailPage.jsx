@@ -13,20 +13,19 @@ import { Badge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
 import { Textarea } from '../components/common/Textarea';
 import { Input } from '../components/common/Input';
+import { Select } from '../components/common/Select';
 import { Modal } from '../components/common/Modal';
 import { ActionConfirmModal } from '../components/common/ActionConfirmModal';
 import { SaveIndicator } from '../components/ui/SaveIndicator';
-import { EmptyState } from '../components/ui/EmptyState';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
 import { useToast } from '../hooks/useToast';
 import { caseApi } from '../api/case.api';
+import { categoryService } from '../services/categoryService';
 import { extractErrorMessage } from '../services/apiResponse';
 import { formatDateTime } from '../utils/formatDateTime';
 import { formatClientDisplay } from '../utils/formatters';
-import { USER_ROLES, CASE_DETAIL_TABS, VALID_CASE_DETAIL_TAB_NAMES } from '../utils/constants';
-import { StickyTabs } from '../components/common/StickyTabs';
-import { AuditTimeline } from '../components/common/AuditTimeline';
+import { USER_ROLES } from '../utils/constants';
 import { StatusBadge } from '../components/layout/StatusBadge';
 import { DocketSidebar } from '../components/docket/DocketSidebar';
 import { DocketComments } from '../components/docket/DocketComments';
@@ -58,13 +57,6 @@ const INITIAL_VIRTUAL_WINDOW = 30;
 const ACTION_RETRY_KEY = 'docketra_case_retry_queue';
 const ACTION_RETRY_MAX_ATTEMPTS = 3;
 const ACTION_RETRY_BASE_DELAY_MS = 1000;
-const formatFileSize = (bytes) => {
-  if (!Number.isFinite(Number(bytes)) || Number(bytes) <= 0) return 'Unknown size';
-  const value = Number(bytes);
-  if (value < 1024) return `${value} B`;
-  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
-  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
-};
 
 
 export const CaseDetailPage = () => {
@@ -118,11 +110,12 @@ export const CaseDetailPage = () => {
   const pageContainerRef = useRef(null);
   const commentsListRef = useRef(null);
   const commentComposerId = `case-comment-composer-${caseId}`;
-  const queryTab = new URLSearchParams(location.search).get('tab');
-  const initialTab = VALID_CASE_DETAIL_TAB_NAMES.includes(queryTab) ? queryTab : CASE_DETAIL_TABS.OVERVIEW;
-  const [activeSection, setActiveSection] = useState(initialTab);
-  const [isEditingOverview, setIsEditingOverview] = useState(false);
-  const [overviewDraft, setOverviewDraft] = useState({ category: '', description: '' });
+  const [cloneModalOpen, setCloneModalOpen] = useState(false);
+  const [cloneCategoryId, setCloneCategoryId] = useState('');
+  const [cloneSubcategoryId, setCloneSubcategoryId] = useState('');
+  const [cloningCase, setCloningCase] = useState(false);
+  const [categoryCatalog, setCategoryCatalog] = useState([]);
+  const [loadingCloneCatalog, setLoadingCloneCatalog] = useState(false);
   // Confirm modal state (replaces window.confirm)
   const [confirmModal, setConfirmModal] = useState(null);
 
@@ -154,7 +147,6 @@ export const CaseDetailPage = () => {
   const [sidebarType, setSidebarType] = useState(null);
   const [realtimeStatus, setRealtimeStatus] = useState('live');
   const [commentWindowSize, setCommentWindowSize] = useState(INITIAL_VIRTUAL_WINDOW);
-  const [historyWindowSize, setHistoryWindowSize] = useState(INITIAL_VIRTUAL_WINDOW);
   const [retryQueue, setRetryQueue] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem(ACTION_RETRY_KEY) || '[]');
@@ -197,41 +189,6 @@ export const CaseDetailPage = () => {
     [timelineEvents]
   );
   const visibleComments = useMemo(() => comments.slice(-commentWindowSize), [comments, commentWindowSize]);
-  const visibleTimelineEvents = useMemo(
-    () => sortedTimelineEvents.slice(0, historyWindowSize),
-    [sortedTimelineEvents, historyWindowSize]
-  );
-  const groupedTimelineEvents = useMemo(() => {
-    const importantKeywords = ['resolved', 'filed', 'assigned', 'escalated', 'failed', 'reopened', 'approval'];
-    const grouped = [];
-    const dateMap = new Map();
-    visibleTimelineEvents.forEach((event, index) => {
-      const dt = event.timestamp || event.createdAt || event.updatedAt;
-      const dateLabel = dt ? new Date(dt).toLocaleDateString() : 'Unknown Date';
-      const action = String(event.action || event.type || 'updated').toLowerCase();
-      const description = String(event.description || event.comment || '').toLowerCase();
-      const important = importantKeywords.some((keyword) => action.includes(keyword) || description.includes(keyword));
-      if (!dateMap.has(dateLabel)) {
-        const group = { dateLabel, items: [] };
-        dateMap.set(dateLabel, group);
-        grouped.push(group);
-      }
-      dateMap.get(dateLabel).items.push({ ...event, _important: important, _eventIndex: index });
-    });
-    grouped.forEach((group) => {
-      group.items.sort((left, right) => {
-        const leftTs = new Date(left?.timestamp || left?.createdAt || left?.updatedAt || 0).getTime();
-        const rightTs = new Date(right?.timestamp || right?.createdAt || right?.updatedAt || 0).getTime();
-        return leftTs - rightTs;
-      });
-    });
-
-    return grouped.sort((left, right) => {
-      const leftTs = new Date(left.items[0]?.timestamp || left.items[0]?.createdAt || left.items[0]?.updatedAt || 0).getTime();
-      const rightTs = new Date(right.items[0]?.timestamp || right.items[0]?.createdAt || right.items[0]?.updatedAt || 0).getTime();
-      return rightTs - leftTs;
-    });
-  }, [visibleTimelineEvents]);
   const commentDraftKey = `docketra_case_comment_draft_${firmSlug || 'firm'}_${caseId}`;
   const availableAssignees = useMemo(() => {
     const fromCase = caseData?.assignableUsers || caseData?.users || [];
@@ -583,27 +540,37 @@ export const CaseDetailPage = () => {
   }, [newComment, commentDraftKey]);
 
   useEffect(() => {
-    if (!caseInfo) return;
-    setOverviewDraft({
-      category: caseInfo.category || '',
-      description: caseInfo.description || '',
-    });
-    setIsEditingOverview(false);
-  }, [caseInfo?.caseId, caseInfo?.category, caseInfo?.description]);
-
-  useEffect(() => {
     if (!assignUser && availableAssignees.length > 0) {
       setAssignUser(availableAssignees[0].value);
     }
   }, [assignUser, availableAssignees]);
 
   useEffect(() => {
-    const tabFromUrl = new URLSearchParams(location.search).get('tab');
-    if (VALID_CASE_DETAIL_TAB_NAMES.includes(tabFromUrl) && tabFromUrl !== activeSection) {
-      setActiveSection(tabFromUrl);
-      setTimeout(() => scrollToSection(tabFromUrl), 80);
-    }
-  }, [location.search, activeSection]);
+    if (!cloneModalOpen) return;
+    let ignore = false;
+    const loadCategories = async () => {
+      setLoadingCloneCatalog(true);
+      try {
+        const response = await categoryService.getCategories(true);
+        if (ignore) return;
+        const rows = response?.data || [];
+        setCategoryCatalog(rows);
+      } catch (error) {
+        if (!ignore) {
+          setCategoryCatalog([]);
+          showError('Unable to load categories for cloning.');
+        }
+      } finally {
+        if (!ignore) {
+          setLoadingCloneCatalog(false);
+        }
+      }
+    };
+    loadCategories();
+    return () => {
+      ignore = true;
+    };
+  }, [cloneModalOpen, showError]);
   useEffect(() => {
     const timer = setInterval(() => {
       if (!newComment) return;
@@ -1186,10 +1153,7 @@ export const CaseDetailPage = () => {
   // PR #45: Extract access mode information from API response
   const accessMode = caseData?.accessMode || {};
   const isViewOnlyMode = accessMode.isViewOnlyMode;
-  const canEditOverview = permissions.canEditCase(caseData) && !isViewOnlyMode;
-  const hasOverviewChanges =
-    overviewDraft.category !== (caseInfo?.category || '') ||
-    overviewDraft.description !== (caseInfo?.description || '');
+  const canCloneDocket = permissions.canCloneCase?.(caseData) !== false;
 
   // Determine if user is admin
   const isAdmin = user?.role === 'Admin';
@@ -1298,32 +1262,40 @@ export const CaseDetailPage = () => {
     || confirmModal
   );
 
-  const scrollToSection = (key) => {
-    setActiveSection(key);
-  };
+  const selectedCloneCategory = useMemo(
+    () => categoryCatalog.find((entry) => entry._id === cloneCategoryId),
+    [categoryCatalog, cloneCategoryId]
+  );
+  const cloneSubcategories = useMemo(
+    () => (selectedCloneCategory?.subcategories || []).filter((entry) => entry?.isActive !== false),
+    [selectedCloneCategory]
+  );
 
-  const handleScrollToComments = () => {
-    scrollToSection(CASE_DETAIL_TABS.COMMENTS);
-    window.setTimeout(() => {
-      document.getElementById(commentComposerId)?.focus?.();
-    }, 250);
-  };
-
-  const handleSaveOverview = () => {
-    setCaseData((prev) => ({
-      ...prev,
-      category: overviewDraft.category,
-      description: overviewDraft.description,
-      case: prev?.case
-        ? {
-            ...prev.case,
-            category: overviewDraft.category,
-            description: overviewDraft.description,
-          }
-        : prev?.case,
-    }));
-    setIsEditingOverview(false);
-    showSuccess('Overview updated locally');
+  const handleCloneDocket = async () => {
+    if (!cloneCategoryId || !cloneSubcategoryId) {
+      showWarning('Select category and subcategory before cloning.');
+      return;
+    }
+    setCloningCase(true);
+    try {
+      const response = await caseApi.cloneCase(caseId, {
+        categoryId: cloneCategoryId,
+        subcategoryId: cloneSubcategoryId,
+      });
+      const clonedId = response?.data?.caseId || response?.data?.docketId || response?.caseId || response?.docketId || 'new docket';
+      showSuccess(`Docket cloned successfully: ${clonedId}. It has been moved to the Workbasket.`);
+      setActionConfirmation(`Docket cloned successfully: ${clonedId}. It has been moved to the Workbasket.`);
+      setCloneModalOpen(false);
+      setCloneCategoryId('');
+      setCloneSubcategoryId('');
+      setActionError(null);
+    } catch (error) {
+      const message = extractErrorMessage(error, 'Failed to clone docket. Please try again.');
+      showError(message);
+      setActionError({ message, retry: handleCloneDocket });
+    } finally {
+      setCloningCase(false);
+    }
   };
 
   const handleAddCommentSuccess = () => {
@@ -1341,7 +1313,7 @@ export const CaseDetailPage = () => {
 
       if (key === 'c') {
         event.preventDefault();
-        handleScrollToComments();
+        document.getElementById(commentComposerId)?.focus?.();
       }
       if (key === 'a') {
         event.preventDefault();
@@ -1356,7 +1328,7 @@ export const CaseDetailPage = () => {
     if (!container) return undefined;
     container.addEventListener('keydown', handleKeyboardShortcuts);
     return () => container.removeEventListener('keydown', handleKeyboardShortcuts);
-  }, [canPerformLifecycleActions, handleScrollToComments, isAnyModalOpen]);
+  }, [canPerformLifecycleActions, commentComposerId, isAnyModalOpen]);
 
   if (!firmSlug) {
     return <RouteErrorFallback title="Invalid firm" message="Unable to open this docket because firm context is missing." backTo={ROUTES.SUPERADMIN_LOGIN} />;
@@ -1432,19 +1404,11 @@ export const CaseDetailPage = () => {
             <Button variant="ghost" onClick={() => openSidebar('cfs')} title="CFS" className="h-10 w-10 rounded-full p-0" aria-label="Open CFS sidebar">ⓘ</Button>
             <Button variant="ghost" onClick={() => openSidebar('attachments')} title="Attachments" className="h-10 w-10 rounded-full p-0" aria-label="Open attachments sidebar">📎</Button>
             <Button variant="ghost" onClick={() => openSidebar('history')} title="History" className="h-10 w-10 rounded-full p-0" aria-label="Open history sidebar">🕒</Button>
+            {canCloneDocket ? (
+              <Button variant="ghost" onClick={() => setCloneModalOpen(true)} title="Clone Docket" className="h-10 w-10 rounded-full p-0" aria-label="Clone docket">⧉</Button>
+            ) : null}
           </div>
         </header>
-
-        <StickyTabs
-          tabs={[
-            { name: CASE_DETAIL_TABS.OVERVIEW, label: 'Overview' },
-            { name: CASE_DETAIL_TABS.COMMENTS, label: 'Comments', badge: comments.length || null },
-            { name: CASE_DETAIL_TABS.ATTACHMENTS, label: 'Files', badge: attachments.length || null },
-            { name: CASE_DETAIL_TABS.HISTORY, label: 'History' },
-          ]}
-          defaultTab={CASE_DETAIL_TABS.OVERVIEW}
-          onTabChange={scrollToSection}
-        />
         {actionConfirmation ? <div className="case-detail__confirmation">{actionConfirmation}</div> : null}
         <div className="case-detail__realtime-status" role="status" aria-live="polite">
           {realtimeStatus === 'live' ? '● Real-time updates active' : '● Reconnecting to real-time updates...'}
@@ -1514,243 +1478,137 @@ export const CaseDetailPage = () => {
               </div>
             </section>
 
-            {activeSection === CASE_DETAIL_TABS.OVERVIEW && (
-              <section className={`case-card ${caseInfo?.status === 'PENDING' ? 'opacity-90' : ''}`} aria-labelledby="overview-heading">
-                <div className="case-card__heading">
-                  <h2 id="overview-heading">Overview</h2>
-                  {canEditOverview ? (
-                    <Button variant="outline" onClick={() => setIsEditingOverview((value) => !value)}>
-                      {isEditingOverview ? 'Cancel Edit' : 'Edit'}
-                    </Button>
-                  ) : null}
-                </div>
-                <div className="field-grid">
-                  <div className="field-group min-w-0">
-                    <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Category</span>
-                    {isEditingOverview ? (
-                      <Input
-                        value={overviewDraft.category}
-                        onChange={(e) => setOverviewDraft((prev) => ({ ...prev, category: e.target.value }))}
-                        aria-label="Docket category"
-                      />
-                    ) : (
-                      <span className="field-value text-sm font-medium text-gray-900">{caseInfo.category}</span>
-                    )}
-                  </div>
+            <section className={`case-card ${caseInfo?.status === 'PENDING' ? 'opacity-90' : ''}`} aria-labelledby="overview-heading">
+              <div className="case-card__heading">
+                <h2 id="overview-heading">Docket Details</h2>
+              </div>
+              <div className="field-grid">
                 <div className="field-group min-w-0">
-                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Current Lifecycle Stage</span>
-                  <StatusBadge status={caseInfo?.status} />
-                    {caseInfo?.status === 'PENDING' && (caseInfo?.pendingUntil || caseInfo?.reopenDate) ? (
-                      <Badge variant="warning" className="mt-2 inline-flex">
-                        PENDING till {formatDateTime(caseInfo.pendingUntil || caseInfo.reopenDate)}
-                      </Badge>
-                    ) : null}
+                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Category</span>
+                  <span className="field-value text-sm font-medium text-gray-900">{caseInfo.category || '—'}</span>
                 </div>
                 <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Subcategory</span>
                   <span className="field-value text-sm font-medium text-gray-900">{subcategoryLabel}</span>
                 </div>
+                <div className="field-group min-w-0">
+                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Current Lifecycle Stage</span>
+                  <StatusBadge status={caseInfo?.status} />
+                </div>
+                <div className="field-group min-w-0">
+                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Due Date</span>
+                  <span className="field-value text-sm font-medium text-gray-900">{caseInfo.dueDate ? formatDateTime(caseInfo.dueDate) : 'Not configured'}</span>
+                </div>
               </div>
-                <div className="field-group">
-                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Description</span>
-                  {isEditingOverview ? (
-                    <Textarea
-                      value={overviewDraft.description}
-                      onChange={(e) => setOverviewDraft((prev) => ({ ...prev, description: e.target.value }))}
-                      rows={3}
-                      aria-label="Docket description"
-                    />
-                  ) : (
-                    <span className="field-value case-detail__description-text whitespace-pre-wrap break-words text-sm font-medium text-gray-900">{descriptionContent}</span>
-                  )}
-                </div>
-                {canEditOverview && isEditingOverview && (
-                  <div className="case-detail-lifecycle-actions flex flex-wrap justify-end gap-3">
-                    <Button variant="primary" onClick={handleSaveOverview} disabled={!hasOverviewChanges}>Save Overview</Button>
-                  </div>
-                )}
-              </section>
-            )}
+              {caseInfo?.status === 'PENDING' && (caseInfo?.pendingUntil || caseInfo?.reopenDate) ? (
+                <Badge variant="warning" className="mt-3 inline-flex">
+                  PENDING till {formatDateTime(caseInfo.pendingUntil || caseInfo.reopenDate)}
+                </Badge>
+              ) : null}
+              <div className="field-group mt-4">
+                <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Description</span>
+                <span className="field-value case-detail__description-text whitespace-pre-wrap break-words text-sm font-medium text-gray-900">{descriptionContent}</span>
+              </div>
+            </section>
 
-            {activeSection === CASE_DETAIL_TABS.COMMENTS && (
-              <section className="case-card case-detail-section case-detail-section--comments" aria-labelledby="comments-heading">
-                <div className="case-card__heading case-detail-section__heading">
-                  <h2 id="comments-heading">Comments</h2>
-                  <p className="case-detail-section__subheading">Discussion, notes, and decision context.</p>
+            <section className="case-card case-detail-section case-detail-section--comments" aria-labelledby="comments-heading">
+              <div className="case-card__heading case-detail-section__heading">
+                <h2 id="comments-heading">Case Comments</h2>
+                <p className="case-detail-section__subheading">Discussion, notes, and decision context.</p>
+              </div>
+              <div className="case-detail__comments" ref={commentsListRef}>
+                {sectionLoading.comments ? (
+                  <div className="case-detail__section-skeleton" aria-hidden="true">
+                    {Array.from({ length: 4 }).map((_, idx) => <div key={`comment-skeleton-${idx}`} className="case-detail__skeleton-row" />)}
+                  </div>
+                ) : <DocketComments comments={visibleComments} />}
+              </div>
+              {comments.length > visibleComments.length ? (
+                <div className="case-detail__virtual-actions">
+                  <Button variant="outline" onClick={() => setCommentWindowSize((size) => size + INITIAL_VIRTUAL_WINDOW)}>
+                    Load older comments ({comments.length - visibleComments.length} remaining)
+                  </Button>
                 </div>
-                <div className="case-detail__comments" ref={commentsListRef}>
-                  {sectionLoading.comments ? (
-                    <div className="case-detail__section-skeleton" aria-hidden="true">
-                      {Array.from({ length: 4 }).map((_, idx) => <div key={`comment-skeleton-${idx}`} className="case-detail__skeleton-row" />)}
-                    </div>
-                  ) : <DocketComments comments={visibleComments} />}
-                </div>
-                {comments.length > visibleComments.length ? (
-                  <div className="case-detail__virtual-actions">
-                    <Button variant="outline" onClick={() => setCommentWindowSize((size) => size + INITIAL_VIRTUAL_WINDOW)}>
-                      Load older comments ({comments.length - visibleComments.length} remaining)
+              ) : null}
+              {(accessMode.canComment || permissions.canAddComment(caseData)) && (
+                <div className="case-detail__add-comment">
+                  <SaveIndicator
+                    status={commentSaveStatus}
+                    time={commentSavedAt}
+                    onRetry={() => {
+                      try {
+                        setCommentSaveStatus('saving');
+                        localStorage.setItem(commentDraftKey, newComment);
+                        setCommentSaveStatus('saved');
+                        setCommentSavedAt(new Date());
+                      } catch (error) {
+                        setCommentSaveStatus('error');
+                      }
+                    }}
+                  />
+                  <Textarea
+                    label="Add Comment"
+                    id={commentComposerId}
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Enter your comment…"
+                    rows={3}
+                    className="case-detail__comment-input"
+                  />
+                  <div className="case-detail__composer-actions">
+                    <Button variant="primary" onClick={handleAddComment} disabled={!newComment.trim() || submitting}>
+                      {submitting ? 'Adding…' : 'Add Comment'}
                     </Button>
                   </div>
-                ) : null}
-                {(accessMode.canComment || permissions.canAddComment(caseData)) && (
-                  <div className="case-detail__add-comment">
-                    <SaveIndicator
-                      status={commentSaveStatus}
-                      time={commentSavedAt}
-                      onRetry={() => {
-                        try {
-                          setCommentSaveStatus('saving');
-                          localStorage.setItem(commentDraftKey, newComment);
-                          setCommentSaveStatus('saved');
-                          setCommentSavedAt(new Date());
-                        } catch (error) {
-                          setCommentSaveStatus('error');
-                        }
-                      }}
-                    />
-                    <Textarea
-                      label="Add Comment"
-                      id={commentComposerId}
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      placeholder="Enter your comment…"
-                      rows={3}
-                      className="case-detail__comment-input"
-                    />
-                    <div className="case-detail__composer-actions">
-                      <Button variant="primary" onClick={handleAddComment} disabled={!newComment.trim() || submitting}>
-                        {submitting ? 'Adding…' : 'Add Comment'}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </section>
-            )}
+                </div>
+              )}
+            </section>
 
-            {activeSection === CASE_DETAIL_TABS.ATTACHMENTS && (
-              <section className="case-card case-detail-section case-detail-section--attachments" aria-labelledby="attachments-heading">
-                <div className="case-card__heading case-detail-section__heading">
-                  <h2 id="attachments-heading">Attachments</h2>
-                  <p className="case-detail-section__subheading">Files and supporting artifacts for this docket.</p>
+            <section className="case-card" aria-labelledby="past-dockets-heading">
+              <div className="case-card__heading">
+                <h2 id="past-dockets-heading">Past Dockets</h2>
+              </div>
+              {loadingClientDockets ? (
+                <p className="case-detail__empty-note">Loading past dockets…</p>
+              ) : clientDockets.length === 0 ? (
+                <p className="case-detail__empty-note">No past dockets found for this client.</p>
+              ) : (
+                <div className="case-detail-table-wrap">
+                  <table className="case-detail-table">
+                    <thead>
+                      <tr>
+                        <th>Docket #</th>
+                        <th>Created</th>
+                        <th>Resolved/Filed</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {clientDockets.map((row) => {
+                        const rowId = row.caseId || row.docketId || row._id;
+                        const closedDate = row.resolvedAt || row.filedAt || row.closedAt || row.completedAt;
+                        return (
+                          <tr key={rowId}>
+                            <td>
+                              <button
+                                type="button"
+                                className="case-detail-table__link"
+                                onClick={() => navigate(ROUTES.CASE_DETAIL(firmSlug, rowId))}
+                              >
+                                {formatDocketId(rowId)}
+                              </button>
+                            </td>
+                            <td>{row.createdAt ? formatDateTime(row.createdAt) : '—'}</td>
+                            <td>{closedDate ? formatDateTime(closedDate) : '—'}</td>
+                            <td>{row.status || 'UNASSIGNED'}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-                <div className="case-detail__attachments">
-                  {attachments.length > 0 ? (
-                    attachments.map((attachment) => (
-                      <article key={attachment._id || attachment.id || `${attachment.createdAt}-${attachment.fileName || attachment.filename}`} className="case-detail__attachment-item case-detail__attachment-card">
-                        <div className="case-detail__attachment-main">
-                          <div className="case-detail__attachment-name">📄 {attachment.fileName || attachment.filename}</div>
-                          <div className="case-detail__attachment-date">Size: {formatFileSize(attachment.size || attachment.fileSize)}</div>
-                          <div className="case-detail__attachment-meta-group">
-                            <div className="case-detail__attachment-meta">
-                              {attachment.visibility === 'external' ? (
-                                <><strong>📧 External Email</strong> · From: {attachment.createdBy}</>
-                              ) : (
-                                <>{attachment.source === 'email' ? '📧' : '📤'} Attached by {attachment.createdByName && attachment.createdByXID
-                                  ? `${attachment.createdByName} (${attachment.createdByXID})`
-                                  : 'System (Unknown)'}</>
-                              )}
-                            </div>
-                            <div className="case-detail__attachment-date">
-                              {attachment.visibility === 'external' ? 'Received: ' : 'Attached: '}
-                              {formatDateTime(attachment.createdAt)}
-                            </div>
-                            {attachment.description && (
-                              <div className="case-detail__attachment-desc">{attachment.description}</div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="case-detail__attachment-actions" aria-label="Attachment actions">
-                          <Button variant="outline" className="case-detail__attachment-action" onClick={() => caseApi.viewAttachment(caseId, attachment._id)}>View</Button>
-                          <Button variant="outline" className="case-detail__attachment-action" onClick={() => caseApi.downloadAttachment(caseId, attachment._id, attachment.fileName || attachment.filename)}>Download</Button>
-                        </div>
-                      </article>
-                    ))
-                  ) : <div className="case-detail__empty-state rounded-xl border border-dashed border-gray-200 bg-gray-50 p-8 text-gray-500"><EmptyState title="No attachments yet" description="Upload files or forward an email to keep artifacts with this docket." /></div>}
-                </div>
-                {(accessMode.canAttach || permissions.canAddAttachment(caseData)) && (
-                  <div className="case-detail__upload">
-                    <div className={`neo-dropzone${isDragActive ? ' neo-dropzone--active' : ''}`} onClick={() => fileInputRef.current?.click()} role="button" tabIndex={0}
-                      onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
-                      onDragOver={(e) => { e.preventDefault(); setIsDragActive(true); }}
-                      onDragLeave={() => setIsDragActive(false)}
-                      onDrop={handleDropFiles}
-                      aria-label="Click to upload attachment">
-                      <div className="neo-dropzone__icon" aria-hidden="true">📎</div>
-                      <div className="neo-dropzone__label">
-                        {selectedFile ? selectedFile.name : 'Drag files here or click to attach'}
-                      </div>
-                      <div className="neo-dropzone__sub">PDF, DOCX, XLSX, images up to 25MB</div>
-                    </div>
-                    {inboundAddress && (
-                      <div className="case-detail-upload-hint">
-                        Forward emails to: <strong>{inboundAddress}</strong>{' '}
-                        <button type="button" className="neo-btn neo-btn--ghost neo-btn--sm" onClick={handleCopyInboundAddress}>Copy</button>
-                      </div>
-                    )}
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      style={{ display: 'none' }}
-                      onChange={handleFileSelect}
-                      disabled={uploadingFile}
-                      aria-hidden="true"
-                    />
-                    {selectedFile && (
-                      <Textarea
-                        label="File Description"
-                        value={fileDescription}
-                        onChange={(e) => setFileDescription(e.target.value)}
-                        placeholder="Describe this attachment…"
-                        rows={2}
-                        disabled={uploadingFile}
-                      />
-                    )}
-                    {selectedFile && (
-                      <Button variant="primary" onClick={handleUploadFile} disabled={!selectedFile || !fileDescription.trim() || uploadingFile}>
-                        {uploadingFile ? 'Uploading…' : 'Upload File'}
-                      </Button>
-                    )}
-                    {uploadingFile ? (
-                      <div className="case-detail__upload-progress" role="status" aria-live="polite">
-                        Upload progress: {uploadProgress}%
-                      </div>
-                    ) : null}
-                  </div>
-                )}
-              </section>
-            )}
-
-            {activeSection === CASE_DETAIL_TABS.HISTORY && (
-              <section className="case-card case-detail-section case-detail-section--history" aria-labelledby="history-heading">
-                <div className="case-card__heading case-detail-section__heading">
-                  <h2 id="history-heading">History</h2>
-                  <p className="case-detail-section__subheading">Lifecycle timeline and audit events.</p>
-                </div>
-                <div className="case-detail-history-list">
-                  {sectionLoading.history ? (
-                    <div className="case-detail__section-skeleton" aria-hidden="true">
-                      {Array.from({ length: 5 }).map((_, idx) => <div key={`history-skeleton-${idx}`} className="case-detail__skeleton-row" />)}
-                    </div>
-                  ) : (timelineEvents.length ? (
-                    <div className="case-detail__timeline-groups">
-                      {groupedTimelineEvents.map((group) => (
-                        <section key={group.dateLabel} className="case-detail__timeline-group">
-                          <h3 className="case-detail__timeline-group-title">{group.dateLabel}</h3>
-                          <AuditTimeline events={group.items} />
-                        </section>
-                      ))}
-                    </div>
-                  ) : <div className="case-detail__empty-state rounded-xl border border-dashed border-gray-200 bg-gray-50 p-8 text-gray-500"><EmptyState title="No activity yet" description="Timeline events and lifecycle updates will appear here as the docket changes." /></div>)}
-                </div>
-                {timelineEvents.length > visibleTimelineEvents.length ? (
-                  <div className="case-detail__virtual-actions">
-                    <Button variant="outline" onClick={() => setHistoryWindowSize((size) => size + INITIAL_VIRTUAL_WINDOW)}>
-                      Load older timeline events ({timelineEvents.length - visibleTimelineEvents.length} remaining)
-                    </Button>
-                  </div>
-                ) : null}
-              </section>
-            )}
+              )}
+            </section>
           </main>
 
         </div>
@@ -1770,6 +1628,70 @@ export const CaseDetailPage = () => {
         />
 
         {/* ─── Modals (positioned outside split pane) ─────────────── */}
+        <Modal
+          isOpen={cloneModalOpen}
+          onClose={() => {
+            setCloneModalOpen(false);
+            setCloneCategoryId('');
+            setCloneSubcategoryId('');
+          }}
+          title="Clone Docket"
+          actions={(
+            <>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setCloneModalOpen(false);
+                  setCloneCategoryId('');
+                  setCloneSubcategoryId('');
+                }}
+                disabled={cloningCase}
+              >
+                Cancel
+              </Button>
+              <Button variant="primary" onClick={handleCloneDocket} disabled={!cloneCategoryId || !cloneSubcategoryId || cloningCase}>
+                {cloningCase ? 'Cloning…' : 'Clone Docket'}
+              </Button>
+            </>
+          )}
+        >
+          <div style={{ padding: 'var(--spacing-md)' }}>
+            <p style={{ marginBottom: 'var(--spacing-md)', color: 'var(--text-secondary)' }}>
+              Create a new docket from this one. Select the category and subcategory for the cloned docket.
+            </p>
+            <Select
+              label="Category"
+              value={cloneCategoryId}
+              onChange={(event) => {
+                setCloneCategoryId(event.target.value);
+                setCloneSubcategoryId('');
+              }}
+              disabled={loadingCloneCatalog || cloningCase}
+            >
+              <option value="">Select category</option>
+              {categoryCatalog.map((category) => (
+                <option key={category._id} value={category._id}>
+                  {category.name}
+                </option>
+              ))}
+            </Select>
+            <div style={{ marginTop: 'var(--spacing-md)' }}>
+              <Select
+                label="Subcategory"
+                value={cloneSubcategoryId}
+                onChange={(event) => setCloneSubcategoryId(event.target.value)}
+                disabled={!cloneCategoryId || cloningCase}
+              >
+                <option value="">Select subcategory</option>
+                {cloneSubcategories.map((subcategory) => (
+                  <option key={subcategory.id} value={subcategory.id}>
+                    {subcategory.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </div>
+        </Modal>
 
         {/* File Docket Modal */}
         <Modal

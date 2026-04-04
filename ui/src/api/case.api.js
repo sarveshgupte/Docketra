@@ -85,7 +85,7 @@ export const caseApi = {
     () => request((http) => http.put(`/cases/${caseId}/status`, payload), 'Failed to update case status'),
   ),
 
-  cloneCase: (caseId) => request((http) => http.post(`/cases/${caseId}/clone`), 'Failed to clone case'),
+  cloneCase: (caseId, payload = {}) => request((http) => http.post(`/cases/${caseId}/clone`, payload), 'Failed to clone case'),
   lockCase: (caseId) => request((http) => http.post(`/cases/${caseId}/lock`), 'Failed to lock case'),
   unlockCase: (caseId) => request((http) => http.post(`/cases/${caseId}/unlock`), 'Failed to unlock case'),
 
