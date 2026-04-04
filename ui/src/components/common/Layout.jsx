@@ -322,7 +322,7 @@ export const Layout = ({ children }) => {
       hidden: !hasAdminAccess,
       items: [
         { to: ROUTES.FIRM_BASE(currentFirmSlug) + '/clients', label: 'All Clients', icon: <IconCases />, active: isActivePrefix(ROUTES.FIRM_BASE(currentFirmSlug) + '/clients') },
-        { to: ROUTES.COMPLIANCE_CALENDAR(currentFirmSlug), label: 'Compliance Calendar', icon: <IconWorklist />, active: isActive(ROUTES.COMPLIANCE_CALENDAR(currentFirmSlug)) },
+        { to: ROUTES.WORKLIST(currentFirmSlug), label: 'Compliance Calendar', icon: <IconWorklist />, active: false },
       ],
     },
     {
