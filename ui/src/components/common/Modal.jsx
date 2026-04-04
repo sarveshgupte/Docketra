@@ -37,8 +37,13 @@ export const Modal = ({
 }) => {
   const modalRef = useRef(null);
   const previousActiveElementRef = useRef(null);
+  const onCloseRef = useRef(onClose);
 
   const modalSizeClass = useMemo(() => sizeClasses[maxWidth || size] || sizeClasses.md, [maxWidth, size]);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -64,7 +69,7 @@ export const Modal = ({
 
       if (event.key === 'Escape') {
         event.preventDefault();
-        onClose();
+        onCloseRef.current?.();
         return;
       }
 
@@ -108,13 +113,13 @@ export const Modal = ({
       document.removeEventListener('keydown', handleKeyDown);
       previousActiveElementRef.current?.focus?.();
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   const handleOverlayClick = (event) => {
     if (event.target === event.currentTarget) {
-      onClose();
+      onCloseRef.current?.();
     }
   };
 
@@ -136,7 +141,7 @@ export const Modal = ({
           <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => onCloseRef.current?.()}
             className="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2"
             aria-label="Close modal"
           >
