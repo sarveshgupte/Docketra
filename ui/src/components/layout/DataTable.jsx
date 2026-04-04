@@ -96,16 +96,16 @@ export const DataTable = React.memo(({
           ) : null}
         </div>
       ) : null}
-      <div className={surfaceClasses.tableWrapper}>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+      <div className={joinClasses(surfaceClasses.tableWrapper, 'w-full max-w-full min-w-0')}>
+        <div className="w-full max-w-full overflow-x-hidden">
+          <table className="w-full table-fixed divide-y divide-gray-200">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 {columns.map((column) => (
                   <th
                     key={column.key}
                     className={joinClasses(
-                      `sticky top-0 z-10 bg-gray-50 drop-shadow-sm ${spacingClasses.tableHeaderPadding} text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap`,
+                      `sticky top-0 z-10 bg-gray-50 drop-shadow-sm ${spacingClasses.tableHeaderPadding} text-left text-xs font-semibold text-gray-500 uppercase tracking-wider`,
                       column.align === 'right' && 'text-right',
                       column.align === 'center' && 'text-center',
                       column.headerClassName,
@@ -151,7 +151,7 @@ export const DataTable = React.memo(({
                         column.cellClassName,
                       )}
                     >
-                      <div className={joinClasses('truncate', column.contentClassName)}>
+                      <div className={joinClasses('min-w-0', column.contentClassName)}>
                         {column.render ? column.render(row) : row[column.key]}
                       </div>
                     </td>
