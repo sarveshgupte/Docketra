@@ -100,13 +100,44 @@ const normalizeIp = (value) => String(value || '')
 
 const hashKeyPart = (value) => createHash('sha256').update(String(value)).digest('hex');
 
-const ipKeyGenerator = (req) => normalizeIp(
-  req.ip
+const resolveClientIp = (req) => normalizeIp(
+  req.headers?.['x-forwarded-for']
+  || req.headers?.['x-real-ip']
+  || req.ip
   || req.ips?.[0]
   || req.socket?.remoteAddress
   || req.connection?.remoteAddress
   || 'unknown',
 );
+
+const ipKeyGenerator = (req) => resolveClientIp(req);
+
+const globalApiKeyGenerator = (req) => {
+  if (req.user?.xID || req.user?._id) {
+    return userOrIpKeyGenerator(req);
+  }
+
+  const authHeader = req.headers?.authorization;
+  const bearerToken = typeof authHeader === 'string' && authHeader.toLowerCase().startsWith('bearer ')
+    ? authHeader.slice(7).trim()
+    : null;
+
+  if (bearerToken) {
+    try {
+      const decoded = jwtService.verifyAccessToken(bearerToken);
+      if (decoded?.userId) {
+        return `user:${decoded.userId}`;
+      }
+      if (decoded?.xID) {
+        return `xid:${decoded.xID}`;
+      }
+    } catch (_) {
+      // Fall back to IP throttling for missing/expired/invalid bearer tokens.
+    }
+  }
+
+  return `ip:${resolveClientIp(req)}`;
+};
 
 const userOrIpKeyGenerator = (req) => req.user?.xID || req.user?._id || `ip:${ipKeyGenerator(req)}`;
 const otpVerifyKeyGenerator = (req) => {
@@ -161,7 +192,7 @@ const globalApiLimiter = createLimiter({
   name: 'globalApiLimiter',
   windowMs: config.security.rateLimit.globalWindowSeconds * 1000,
   max: config.security.rateLimit.global,
-  keyGenerator: ipKeyGenerator,
+  keyGenerator: globalApiKeyGenerator,
 });
 
 const authLimiter = createLimiter({
