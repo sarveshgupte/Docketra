@@ -32,17 +32,23 @@ export const DocketComments = memo(({ comments = [] }) => {
       <div className="docket-comments__rail" aria-hidden="true" />
       <ul className="docket-comments__list">
         {comments.map((comment) => {
-          const createdBy = comment.createdBy || comment.createdByXID || comment.createdByName || 'System';
+          const createdByName = comment.createdByName || null;
+          const createdByXID = comment.createdByXID || null;
+          const createdBy = createdByName && createdByXID
+            ? `${createdByName} (${createdByXID})`
+            : createdByName || createdByXID || comment.createdBy || 'System (Unknown)';
           const commentKey = comment.id
             || comment._id
             || comment.tempId
             || `${comment.createdAt || 'na'}-${comment.createdByXID || comment.createdBy || 'system'}-${comment.text || ''}`;
+          const createdAtLabel = formatDateTime(comment.createdAt) || 'Unknown time';
+          const relativeLabel = formatRelativeTime(comment.createdAt);
           return (
             <li key={commentKey} className="docket-comments__item">
               <span className="docket-comments__dot" aria-hidden="true">•</span>
               <div className="docket-comments__meta">
                 <span>{createdBy}</span>
-                <span title={formatDateTime(comment.createdAt)}>{formatRelativeTime(comment.createdAt) || formatDateTime(comment.createdAt)}</span>
+                <span title={relativeLabel || createdAtLabel}>{createdAtLabel}</span>
               </div>
               <p className="docket-comments__text">{renderCommentText(comment.text)}</p>
             </li>

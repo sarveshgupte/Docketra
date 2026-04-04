@@ -247,6 +247,22 @@ export const CaseDetailPage = () => {
     return mapped;
   }, [caseData?.assignableUsers, caseData?.users, user?.xID, user?.name]);
 
+  const clientSnapshotLabel = useMemo(() => {
+    const clientPayload = caseData?.client;
+    if (clientPayload) {
+      return formatClientDisplay(clientPayload, true);
+    }
+
+    const fallbackClientId = caseInfo?.clientId || caseData?.clientId || '';
+    const fallbackClientName = caseInfo?.clientName || caseData?.clientName || caseInfo?.businessName || '';
+    if (fallbackClientId && fallbackClientName) return `${fallbackClientId} – ${fallbackClientName}`;
+    if (fallbackClientName) return fallbackClientName;
+    if (fallbackClientId) return fallbackClientId;
+    return '—';
+  }, [caseData?.client, caseData?.clientId, caseData?.clientName, caseInfo?.businessName, caseInfo?.clientId, caseInfo?.clientName]);
+
+  const subcategoryLabel = caseInfo?.caseSubCategory || caseInfo?.subCategory || caseInfo?.subcategory || '—';
+
   const mergeUniqueComments = useCallback((inputComments = []) => {
     const map = new Map();
     inputComments.forEach((comment) => {
@@ -1481,7 +1497,7 @@ export const CaseDetailPage = () => {
               <div className="field-grid">
                 <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Client</span>
-                  <span className="field-value text-sm font-medium text-gray-900 break-words">{caseData.client ? formatClientDisplay(caseData.client, true) : '—'}</span>
+                  <span className="field-value text-sm font-medium text-gray-900 break-words">{clientSnapshotLabel}</span>
                 </div>
                 <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Assigned To</span>
@@ -1521,16 +1537,20 @@ export const CaseDetailPage = () => {
                       <span className="field-value text-sm font-medium text-gray-900">{caseInfo.category}</span>
                     )}
                   </div>
-                  <div className="field-group min-w-0">
-                    <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Current Lifecycle Stage</span>
-                    <StatusBadge status={caseInfo?.status} />
+                <div className="field-group min-w-0">
+                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Current Lifecycle Stage</span>
+                  <StatusBadge status={caseInfo?.status} />
                     {caseInfo?.status === 'PENDING' && (caseInfo?.pendingUntil || caseInfo?.reopenDate) ? (
                       <Badge variant="warning" className="mt-2 inline-flex">
                         PENDING till {formatDateTime(caseInfo.pendingUntil || caseInfo.reopenDate)}
                       </Badge>
                     ) : null}
-                  </div>
                 </div>
+                <div className="field-group min-w-0">
+                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Subcategory</span>
+                  <span className="field-value text-sm font-medium text-gray-900">{subcategoryLabel}</span>
+                </div>
+              </div>
                 <div className="field-group">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Description</span>
                   {isEditingOverview ? (
