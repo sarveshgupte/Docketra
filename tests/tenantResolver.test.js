@@ -47,12 +47,16 @@ async function shouldCallNextWhenNoSlug() {
 // ---------------------------------------------------------------------------
 async function shouldResolveFirmContext() {
   const originalFindOne = Firm.findOne;
-  Firm.findOne = async () => ({
-    _id: { toString: () => OBJECT_ID_ACTIVE },
-    firmId: 'FIRM001',
-    firmSlug: 'test-firm',
-    name: 'Test Firm',
-    status: 'ACTIVE',
+  Firm.findOne = () => ({
+    select: () => ({
+      lean: async () => ({
+        _id: { toString: () => OBJECT_ID_ACTIVE },
+        firmId: 'FIRM001',
+        firmSlug: 'test-firm',
+        name: 'Test Firm',
+        status: 'ACTIVE',
+      }),
+    }),
   });
 
   const req = { params: { firmSlug: 'test-firm' } };
@@ -76,22 +80,26 @@ async function shouldResolveFirmContext() {
 async function shouldNormalizeUppercaseSlug() {
   const originalFindOne = Firm.findOne;
   let queriedSlug = null;
-  Firm.findOne = async (filter) => {
+  Firm.findOne = (filter) => {
     queriedSlug = filter.firmSlug;
     return {
-      _id: { toString: () => OBJECT_ID_ACTIVE },
-      firmId: 'FIRM001',
-      firmSlug: 'test-firm',
-      name: 'Test Firm',
-      status: 'ACTIVE',
+      select: () => ({
+        lean: async () => ({
+          _id: { toString: () => OBJECT_ID_ACTIVE },
+          firmId: 'FIRM001',
+          firmSlug: 'test-firm-2',
+          name: 'Test Firm',
+          status: 'ACTIVE',
+        }),
+      }),
     };
   };
 
-  const req = { params: { firmSlug: 'TEST-FIRM' } };
+  const req = { params: { firmSlug: 'TEST-FIRM-2' } };
   const { nextCalled } = await runMiddleware(req);
 
   assert.strictEqual(nextCalled, true, 'Should resolve even with uppercase slug in URL');
-  assert.strictEqual(queriedSlug, 'test-firm', 'Query must use normalised (lowercase) slug');
+  assert.strictEqual(queriedSlug, 'test-firm-2', 'Query must use normalised (lowercase) slug');
   console.log('✓ Uppercase slug is normalised before DB lookup');
 
   Firm.findOne = originalFindOne;
@@ -102,7 +110,11 @@ async function shouldNormalizeUppercaseSlug() {
 // ---------------------------------------------------------------------------
 async function shouldReturn404ForUnknownSlug() {
   const originalFindOne = Firm.findOne;
-  Firm.findOne = async () => null;
+  Firm.findOne = () => ({
+    select: () => ({
+      lean: async () => null,
+    }),
+  });
 
   const req = { params: { firmSlug: 'does-not-exist' } };
   const { res, nextCalled } = await runMiddleware(req);
@@ -120,12 +132,16 @@ async function shouldReturn404ForUnknownSlug() {
 // ---------------------------------------------------------------------------
 async function shouldReturn403ForInactiveFirm() {
   const originalFindOne = Firm.findOne;
-  Firm.findOne = async () => ({
-    _id: { toString: () => OBJECT_ID_ACTIVE },
-    firmId: 'FIRM001',
-    firmSlug: 'inactive-firm',
-    name: 'Inactive Firm',
-    status: 'INACTIVE',
+  Firm.findOne = () => ({
+    select: () => ({
+      lean: async () => ({
+        _id: { toString: () => OBJECT_ID_ACTIVE },
+        firmId: 'FIRM001',
+        firmSlug: 'inactive-firm',
+        name: 'Inactive Firm',
+        status: 'INACTIVE',
+      }),
+    }),
   });
 
   const req = { params: { firmSlug: 'inactive-firm' } };
@@ -144,12 +160,16 @@ async function shouldReturn403ForInactiveFirm() {
 // ---------------------------------------------------------------------------
 async function shouldReturn403ForSuspendedFirm() {
   const originalFindOne = Firm.findOne;
-  Firm.findOne = async () => ({
-    _id: { toString: () => OBJECT_ID_ACTIVE },
-    firmId: 'FIRM001',
-    firmSlug: 'suspended-firm',
-    name: 'Suspended Firm',
-    status: 'SUSPENDED',
+  Firm.findOne = () => ({
+    select: () => ({
+      lean: async () => ({
+        _id: { toString: () => OBJECT_ID_ACTIVE },
+        firmId: 'FIRM001',
+        firmSlug: 'suspended-firm',
+        name: 'Suspended Firm',
+        status: 'SUSPENDED',
+      }),
+    }),
   });
 
   const req = { params: { firmSlug: 'suspended-firm' } };
@@ -159,6 +179,36 @@ async function shouldReturn403ForSuspendedFirm() {
   assert.strictEqual(res.statusCode, 403, 'Should return 403 for suspended firm');
   assert.strictEqual(res.body.code, 'FIRM_SUSPENDED');
   console.log('✓ Suspended firm returns 403');
+
+  Firm.findOne = originalFindOne;
+}
+
+// ---------------------------------------------------------------------------
+// Test: repeated lookups for same slug should use cache
+// ---------------------------------------------------------------------------
+async function shouldReuseTenantCacheForRepeatedSlug() {
+  const originalFindOne = Firm.findOne;
+  let queryCount = 0;
+  Firm.findOne = () => {
+    queryCount += 1;
+    return {
+      select: () => ({
+        lean: async () => ({
+          _id: { toString: () => OBJECT_ID_ACTIVE },
+          firmId: 'FIRM001',
+          firmSlug: 'cached-firm',
+          name: 'Cached Firm',
+          status: 'ACTIVE',
+        }),
+      }),
+    };
+  };
+
+  await runMiddleware({ params: { firmSlug: 'cached-firm' } });
+  await runMiddleware({ params: { firmSlug: 'cached-firm' } });
+
+  assert.strictEqual(queryCount, 1, 'second request should resolve via in-memory cache');
+  console.log('✓ Tenant cache avoids repeated DB lookups for same slug');
 
   Firm.findOne = originalFindOne;
 }
@@ -177,6 +227,7 @@ async function run() {
   await shouldReturn404ForUnknownSlug();
   await shouldReturn403ForInactiveFirm();
   await shouldReturn403ForSuspendedFirm();
+  await shouldReuseTenantCacheForRepeatedSlug();
 
   console.log('\nAll tenantResolver tests passed.');
 }

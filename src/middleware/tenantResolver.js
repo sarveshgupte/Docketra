@@ -19,11 +19,39 @@ const Firm = require('../models/Firm.model');
 const { normalizeFirmSlug } = require('../utils/slugify');
 const { getFirmInactiveCode, isActiveStatus } = require('../utils/status.utils');
 
+const TENANT_CACHE_TTL_MS = 60 * 1000;
+const tenantCache = new Map();
+
 const FIRM_NOT_FOUND_RESPONSE = {
   success: false,
   code: 'FIRM_NOT_FOUND',
   message: 'Firm not found. Please check your login URL.',
   action: 'contact_admin',
+};
+
+const getCachedTenant = (slug) => {
+  const cached = tenantCache.get(slug);
+  if (!cached) return null;
+  if (cached.expiresAt <= Date.now()) {
+    tenantCache.delete(slug);
+    return null;
+  }
+  return cached.firm;
+};
+
+const setCachedTenant = (slug, firm) => {
+  tenantCache.set(slug, {
+    firm,
+    expiresAt: Date.now() + TENANT_CACHE_TTL_MS,
+  });
+};
+
+const fetchFirmForTenantResolution = async (slug) => {
+  const query = Firm.findOne({ firmSlug: slug }).select('_id firmId firmSlug name status');
+  if (typeof query.lean === 'function') {
+    return query.lean();
+  }
+  return query;
 };
 
 module.exports = async function tenantResolver(req, res, next) {
@@ -42,18 +70,15 @@ module.exports = async function tenantResolver(req, res, next) {
   }
 
   try {
-    // Look up by slug only; status is checked explicitly below
-    const firm = await Firm.findOne({ firmSlug: normalizedSlug });
-
-    console.log({
-      event: 'firm_login_attempt',
-      slug: normalizedSlug,
-      found: !!firm,
-      status: firm?.status,
-    });
+    const cachedFirm = getCachedTenant(normalizedSlug);
+    const firm = cachedFirm || await fetchFirmForTenantResolution(normalizedSlug);
 
     if (!firm) {
       return res.status(404).json(FIRM_NOT_FOUND_RESPONSE);
+    }
+
+    if (!cachedFirm) {
+      setCachedTenant(normalizedSlug, firm);
     }
 
     const isPublicLoginLookup = req.method === 'GET' && /\/login\/?$/.test(String(req.path || req.originalUrl || ''));
@@ -70,7 +95,7 @@ module.exports = async function tenantResolver(req, res, next) {
     }
 
     // Attach canonical tenant context for downstream controllers
-    const tenantId = firm._id.toString();
+    const tenantId = String(firm._id);
     req.firm = {
       id: tenantId,
       slug: firm.firmSlug,
