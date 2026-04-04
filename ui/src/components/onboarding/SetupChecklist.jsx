@@ -5,17 +5,17 @@ import './SetupChecklist.css';
 const CHECKLIST_STEPS = [
   {
     id: 'create-case',
-    title: 'Create your first case',
+    title: 'Create your first docket',
     description: 'Start your workspace with a live compliance record so dashboards and queues have real work to track.',
     hint: 'Best first move for a brand-new workspace.',
-    actionLabel: 'Create case',
+    actionLabel: 'Create docket',
   },
   {
     id: 'assign-owner',
     title: 'Assign an owner',
     description: 'Clear ownership keeps work moving and makes accountability visible in the worklist.',
-    hint: 'Use the case registry to assign an executive.',
-    actionLabel: 'Open case registry',
+    hint: 'Use the docket registry to assign an executive.',
+    actionLabel: 'Open docket registry',
   },
   {
     id: 'invite-team',

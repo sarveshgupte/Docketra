@@ -12,9 +12,9 @@ import React from 'react';
 
 const SMART_VIEW_MESSAGES = {
   OVERDUE: (count) =>
-    `Showing Overdue cases because ${count} case${count !== 1 ? 's' : ''} ${count !== 1 ? 'have' : 'has'} breached SLA.`,
+    `Showing Overdue dockets because ${count} docket${count !== 1 ? 's' : ''} ${count !== 1 ? 'have' : 'has'} breached SLA.`,
   DUE_TODAY: (count) =>
-    `Showing Due Today cases because ${count} case${count !== 1 ? 's are' : ' is'} due today.`,
+    `Showing Due Today dockets because ${count} docket${count !== 1 ? 's are' : ' is'} due today.`,
 };
 
 /**

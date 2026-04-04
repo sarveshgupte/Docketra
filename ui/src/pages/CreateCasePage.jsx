@@ -533,7 +533,7 @@ export const CreateCasePage = () => {
                   <h3>Some required setup data is unavailable</h3>
                   <p className="mt-sm">
                     {blockingDependencyIssue
-                      ? 'We could not load clients or categories, so case creation is temporarily disabled.'
+                      ? 'We could not load clients or categories, so docket creation is temporarily disabled.'
                       : 'Add at least one active client and category before creating a docket.'}
                   </p>
                   <div className="mt-md" style={{ display: 'flex', gap: 'var(--spacing-sm)', flexWrap: 'wrap' }}>
@@ -567,7 +567,7 @@ export const CreateCasePage = () => {
                     )}
                     
                     <p className="mt-md">
-                      Do you want to continue creating this case?
+                      Do you want to continue creating this docket?
                     </p>
                   </div>
 
@@ -590,7 +590,7 @@ export const CreateCasePage = () => {
                       Client Context <CompletionDot complete={sec1.complete} />
                     </span>
                   }
-                  subtitle="Who is this case for?"
+                  subtitle="Who is this docket for?"
                   className="create-case__section"
                 >
                   <Select
@@ -614,7 +614,7 @@ export const CreateCasePage = () => {
                       Docket Classification <CompletionDot complete={sec2.complete} />
                     </span>
                   }
-                  subtitle="Define the case type and details."
+                  subtitle="Define the docket type and details."
                   className="create-case__section"
                 >
                   <Select

@@ -6,7 +6,7 @@
 import React from 'react';
 import { Badge } from '../common/Badge';
 import { EmptyState } from '../ui/EmptyState';
-import { formatDateTime } from '../../utils/formatters';
+import { formatCaseName, formatDateTime } from '../../utils/formatters';
 import './ReportsTable.css';
 
 export const ReportsTable = ({ cases, onCaseClick, pagination, onPageChange }) => {
@@ -24,7 +24,7 @@ export const ReportsTable = ({ cases, onCaseClick, pagination, onPageChange }) =
               <thead>
                 <tr>
                   <th>Docket ID</th>
-                  <th>Case Name</th>
+                  <th>Docket Name</th>
                   <th>Title</th>
                   <th>Status</th>
                   <th>Category</th>
@@ -41,7 +41,7 @@ export const ReportsTable = ({ cases, onCaseClick, pagination, onPageChange }) =
                     className="reports-table__row"
                   >
                     <td>{caseItem.caseId}</td>
-                    <td>{caseItem.caseName}</td>
+                    <td>{formatCaseName(caseItem.caseName)}</td>
                     <td>{caseItem.title}</td>
                     <td>
                       <Badge status={caseItem.status}>{caseItem.status}</Badge>

@@ -4,8 +4,8 @@ const { getNextSequence } = require('./counter.service');
  * Case Name Generator Service
  * PART E - Deterministic Case Naming
  * 
- * Generates unique, deterministic case names in format: caseYYYYMMDDxxxxx
- * Example: case2026010700001
+ * Generates unique, deterministic docket names in format: Docket#YYYYMMDDxxxxx
+ * Example: Docket#2026010700001
  * 
  * PR 2: Atomic Counter Implementation
  * - Uses MongoDB atomic counters to eliminate race conditions
@@ -21,8 +21,8 @@ const { getNextSequence } = require('./counter.service');
  */
 
 /**
- * Generate case name for current date
- * Format: caseYYYYMMDDxxxxx
+ * Generate docket name for current date
+ * Format: Docket#YYYYMMDDxxxxx
  * 
  * @param {string} firmId - Firm ID for tenant scoping (REQUIRED)
  * @returns {Promise<string>} Generated case name
@@ -43,11 +43,11 @@ async function generateCaseName(firmId, options = {}) {
     
     // Create date prefix: YYYYMMDD
     const datePrefix = `${year}${month}${day}`;
-    const casePrefix = `case${datePrefix}`;
+    const casePrefix = `Docket#${datePrefix}`;
     
     // Counter name includes date for daily reset
     // Format: caseName-YYYYMMDD (e.g., caseName-20260110)
-    const counterName = `caseName-${datePrefix}`;
+    const counterName = `docketName-${datePrefix}`;
     
     // Get next sequence atomically - this is thread-safe and eliminates race conditions
     const sequenceNumber = await getNextSequence(counterName, firmId, options);
@@ -57,10 +57,10 @@ async function generateCaseName(firmId, options = {}) {
     
     // Generate final case name
     const caseName = `${casePrefix}${paddedSequence}`;
-    
+
     return caseName;
   } catch (error) {
-    throw new Error(`Error generating case name: ${error.message}`);
+    throw new Error(`Error generating docket name: ${error.message}`);
   }
 }
 
@@ -71,8 +71,8 @@ async function generateCaseName(firmId, options = {}) {
  * @returns {boolean} True if valid format
  */
 function isValidCaseNameFormat(caseName) {
-  // Format: caseYYYYMMDDxxxxx (e.g., case2026010700001)
-  const pattern = /^case\d{8}\d{5}$/;
+  // Format: Docket#YYYYMMDDxxxxx (e.g., Docket#2026010700001)
+  const pattern = /^Docket#\d{8}\d{5}$/;
   return pattern.test(caseName);
 }
 
@@ -88,7 +88,7 @@ function extractDateFromCaseName(caseName) {
   }
   
   // Extract YYYYMMDD from case name
-  const dateStr = caseName.substring(4, 12); // Skip "case" prefix
+  const dateStr = caseName.substring(7, 15); // Skip "Docket#" prefix
   const year = parseInt(dateStr.substring(0, 4), 10);
   const month = parseInt(dateStr.substring(4, 6), 10) - 1; // JS months are 0-indexed
   const day = parseInt(dateStr.substring(6, 8), 10);
