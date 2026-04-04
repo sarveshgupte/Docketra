@@ -17,6 +17,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { ActionConfirmModal } from '../components/common/ActionConfirmModal';
 import { useAuth } from '../hooks/useAuth';
 import { worklistApi } from '../api/worklist.api';
+import { categoryService } from '../services/categoryService';
 import { formatDate } from '../utils/formatters';
 import { useToast } from '../hooks/useToast';
 import { formClasses } from '../theme/tokens';
@@ -25,14 +26,12 @@ import { ROUTES } from '../constants/routes';
 import './WorkbasketPage.css';
 
 const WORKBASKET_FILTER_DEFAULTS = {
-  clientId: '',
   category: '',
+  status: '',
+  recency: '',
   createdAtFrom: '',
   createdAtTo: '',
   slaStatus: '',
-  assignedUser: '',
-  dueDate: '',
-  status: '',
   sortBy: 'slaDueDate',
   sortOrder: 'asc',
   page: 1,
@@ -40,13 +39,11 @@ const WORKBASKET_FILTER_DEFAULTS = {
 };
 
 const FILTER_KEY_BY_LABEL = {
-  'Client ID': 'clientId',
   Category: 'category',
+  Status: 'status',
+  Recency: 'recency',
   'Created From': 'createdAtFrom',
   'Created To': 'createdAtTo',
-  'Assigned User': 'assignedUser',
-  'Due Date': 'dueDate',
-  Status: 'status',
   SLA: 'slaStatus',
 };
 
@@ -87,18 +84,17 @@ export const WorkbasketPage = () => {
   const [employees, setEmployees] = useState([]);
   const [assignTo, setAssignTo] = useState('');
   const [confirmModal, setConfirmModal] = useState(null);
+  const [categories, setCategories] = useState([]);
   const isAdmin = ['ADMIN', 'Admin'].includes(user?.role);
   const allSelected = cases.length > 0 && selectedCases.length === cases.length;
   const partiallySelected = selectedCases.length > 0 && !allSelected;
   const queryDefaults = useMemo(() => ({
-    clientId: '',
     category: '',
+    status: '',
+    recency: '',
     createdAtFrom: '',
     createdAtTo: '',
     slaStatus: '',
-    assignedUser: '',
-    dueDate: '',
-    status: '',
     sortBy: WORKBASKET_FILTER_DEFAULTS.sortBy,
     sortOrder: WORKBASKET_FILTER_DEFAULTS.sortOrder,
     page: String(WORKBASKET_FILTER_DEFAULTS.page),
@@ -113,14 +109,12 @@ export const WorkbasketPage = () => {
   useEffect(() => {
     const nextFilters = {
       ...WORKBASKET_FILTER_DEFAULTS,
-      clientId: query.clientId || '',
       category: query.category || '',
+      status: query.status || '',
+      recency: query.recency || '',
       createdAtFrom: query.createdAtFrom || '',
       createdAtTo: query.createdAtTo || '',
       slaStatus: query.slaStatus || '',
-      assignedUser: query.assignedUser || '',
-      dueDate: query.dueDate || '',
-      status: query.status || '',
       sortBy: query.sortBy || WORKBASKET_FILTER_DEFAULTS.sortBy,
       sortOrder: query.sortOrder || WORKBASKET_FILTER_DEFAULTS.sortOrder,
       page: Number.parseInt(query.page, 10) > 0 ? Number.parseInt(query.page, 10) : WORKBASKET_FILTER_DEFAULTS.page,
@@ -144,6 +138,22 @@ export const WorkbasketPage = () => {
     };
     loadUsers();
   }, [isAdmin]);
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const response = await categoryService.getCategories(true);
+        const rawCategories = response?.data || response?.categories || [];
+        const names = rawCategories
+          .map((item) => item?.name)
+          .filter(Boolean);
+        setCategories(Array.from(new Set(names)).sort((a, b) => a.localeCompare(b)));
+      } catch (error) {
+        console.warn('Failed to load categories for workbasket filters', error);
+      }
+    };
+    loadCategories();
+  }, []);
 
   const loadGlobalWorklist = async () => {
     setLoading(true);
@@ -269,14 +279,46 @@ export const WorkbasketPage = () => {
     setQuery({ [name]: nextValue, page: '1' });
   };
 
+  const handleRecencyChange = (value) => {
+    const today = new Date();
+    let createdAtFrom = '';
+    let createdAtTo = '';
+    if (value === 'today') {
+      createdAtFrom = today.toISOString().slice(0, 10);
+      createdAtTo = createdAtFrom;
+    }
+    if (value === '7d') {
+      const lastWeek = new Date(today);
+      lastWeek.setDate(today.getDate() - 6);
+      createdAtFrom = lastWeek.toISOString().slice(0, 10);
+      createdAtTo = today.toISOString().slice(0, 10);
+    }
+    if (value === '30d') {
+      const lastMonth = new Date(today);
+      lastMonth.setDate(today.getDate() - 29);
+      createdAtFrom = lastMonth.toISOString().slice(0, 10);
+      createdAtTo = today.toISOString().slice(0, 10);
+    }
+
+    setFilters((prev) => ({
+      ...prev,
+      recency: value,
+      createdAtFrom,
+      createdAtTo,
+      page: 1,
+    }));
+    setQuery({
+      recency: value || null,
+      createdAtFrom: createdAtFrom || null,
+      createdAtTo: createdAtTo || null,
+      page: '1',
+    });
+  };
+
   const activeFilters = useMemo(() => [
-    ['Client ID', filters.clientId],
     ['Category', filters.category],
-    ['Created From', filters.createdAtFrom],
-    ['Created To', filters.createdAtTo],
-    ['Assigned User', filters.assignedUser],
-    ['Due Date', filters.dueDate],
     ['Status', filters.status],
+    ['Recency', filters.recency === '7d' ? 'Last 7 Days' : filters.recency === '30d' ? 'Last 30 Days' : filters.recency === 'today' ? 'Today' : ''],
     ['SLA', filters.slaStatus],
   ].filter(([, value]) => Boolean(value)).map(([label, value]) => ({
     key: FILTER_KEY_BY_LABEL[label],
@@ -443,29 +485,31 @@ export const WorkbasketPage = () => {
   const handleResetFilters = useCallback(() => {
     setFilters({ ...WORKBASKET_FILTER_DEFAULTS });
     setQuery({
-      clientId: null,
       category: null,
+      status: null,
+      recency: null,
       createdAtFrom: null,
       createdAtTo: null,
       slaStatus: null,
-      assignedUser: null,
-      dueDate: null,
-      status: null,
       sortBy: WORKBASKET_FILTER_DEFAULTS.sortBy,
       sortOrder: WORKBASKET_FILTER_DEFAULTS.sortOrder,
       page: '1',
     });
   }, [setQuery]);
 
+  const handleRemoveFilter = (key) => {
+    if (key === 'recency') {
+      handleRecencyChange('');
+      return;
+    }
+    handleFilterChange(key, '');
+  };
+
   const filterIds = {
-    clientId: 'workbasket-filter-client-id',
     category: 'workbasket-filter-category',
-    createdAtFrom: 'workbasket-filter-created-from',
-    createdAtTo: 'workbasket-filter-created-to',
-    assignedUser: 'workbasket-filter-assigned-user',
-    dueDate: 'workbasket-filter-due-date',
     status: 'workbasket-filter-status',
     slaStatus: 'workbasket-filter-sla-status',
+    recency: 'workbasket-filter-recency',
     assignTo: 'workbasket-assign-to',
   };
 
@@ -501,63 +545,26 @@ export const WorkbasketPage = () => {
         <Card>
           <form className="global-worklist__filters" role="search" aria-label="Workbasket filters">
             <div className="filter-group">
-              <label htmlFor={filterIds.clientId}>Client ID</label>
-              <input
-                id={filterIds.clientId}
-                type="text"
-                placeholder="Filter by client ID"
-                value={filters.clientId}
-                onChange={(e) => handleFilterChange('clientId', e.target.value)}
-                className={formClasses.inputBase}
-              />
-            </div>
-
-            <div className="filter-group">
               <label htmlFor={filterIds.category}>Category</label>
-              <input
+              <select
                 id={filterIds.category}
-                type="text"
-                placeholder="Filter by category"
                 value={filters.category}
                 onChange={(e) => handleFilterChange('category', e.target.value)}
                 className={formClasses.inputBase}
-              />
-            </div>
-
-            <div className="filter-group">
-              <label htmlFor={filterIds.createdAtFrom}>Created From</label>
-              <input
-                id={filterIds.createdAtFrom}
-                type="date"
-                value={filters.createdAtFrom}
-                onChange={(e) => handleFilterChange('createdAtFrom', e.target.value)}
-                className={formClasses.inputBase}
-              />
-            </div>
-
-            <div className="filter-group">
-              <label htmlFor={filterIds.createdAtTo}>Created To</label>
-              <input
-                id={filterIds.createdAtTo}
-                type="date"
-                value={filters.createdAtTo}
-                onChange={(e) => handleFilterChange('createdAtTo', e.target.value)}
-                className={formClasses.inputBase}
-              />
-            </div>
-
-
-            <div className="filter-group">
-              <label htmlFor={filterIds.assignedUser}>Assigned User</label>
-              <input id={filterIds.assignedUser} type="text" placeholder="Assigned user" value={filters.assignedUser} onChange={(e) => handleFilterChange('assignedUser', e.target.value)} className={formClasses.inputBase} />
-            </div>
-            <div className="filter-group">
-              <label htmlFor={filterIds.dueDate}>Due Date</label>
-              <input id={filterIds.dueDate} type="date" value={filters.dueDate} onChange={(e) => handleFilterChange('dueDate', e.target.value)} className={formClasses.inputBase} />
+              >
+                <option value="">All categories</option>
+                {categories.map((category) => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
             </div>
             <div className="filter-group">
               <label htmlFor={filterIds.status}>Status</label>
-              <input id={filterIds.status} type="text" placeholder="Status" value={filters.status} onChange={(e) => handleFilterChange('status', e.target.value)} className={formClasses.inputBase} />
+              <select id={filterIds.status} value={filters.status} onChange={(e) => handleFilterChange('status', e.target.value)} className={formClasses.inputBase}>
+                <option value="">All statuses</option>
+                <option value="UNASSIGNED">Unassigned</option>
+                <option value="OPEN">Open</option>
+              </select>
             </div>
             <div className="filter-group">
               <label htmlFor={filterIds.slaStatus}>SLA Status</label>
@@ -573,15 +580,19 @@ export const WorkbasketPage = () => {
                 <option value="on_track">On Track</option>
               </select>
             </div>
-
-            <div className="filter-group" style={{ display: 'flex', gap: '0.5rem', alignItems: 'end' }}>
-              <Button variant="outline" onClick={() => handleFilterChange('slaStatus', 'overdue')}>Overdue</Button>
-              <Button variant="outline" onClick={() => handleFilterChange('dueDate', new Date().toISOString().slice(0,10))}>Today</Button>
-              <Button variant="outline" onClick={() => handleFilterChange('createdAtFrom', new Date(Date.now()-6*24*3600*1000).toISOString().slice(0,10))}>This Week</Button>
+            <div className="filter-group">
+              <label htmlFor={filterIds.recency}>Created</label>
+              <select id={filterIds.recency} value={filters.recency} onChange={(e) => handleRecencyChange(e.target.value)} className={formClasses.inputBase}>
+                <option value="">All time</option>
+                <option value="today">Today</option>
+                <option value="7d">Last 7 days</option>
+                <option value="30d">Last 30 days</option>
+              </select>
             </div>
             <div className="filter-group">
               <Button
                 variant="outline"
+                type="button"
                 onClick={handleResetFilters}
               >
                 Clear Filters
@@ -632,7 +643,7 @@ export const WorkbasketPage = () => {
             sortState={{ key: filters.sortBy, direction: filters.sortOrder }}
             onSortChange={handleSortChange}
             activeFilters={activeFilters}
-            onRemoveFilter={(key) => handleFilterChange(key, '')}
+            onRemoveFilter={handleRemoveFilter}
             onResetFilters={handleResetFilters}
             loading={loading}
             loadingMessage="Loading workbasket..."
