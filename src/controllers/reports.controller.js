@@ -4,6 +4,7 @@ const User = require('../models/User.model');
 const Task = require('../models/Task');
 const CaseAudit = require('../models/CaseAudit.model');
 const AuthAudit = require('../models/AuthAudit.model');
+const ReportExportLog = require('../models/ReportExportLog.model');
 const { Parser } = require('json2csv');
 const { generateCasesExcelWorkbook } = require('../services/excel.service');
 const PDFDocument = require('pdfkit');
@@ -15,6 +16,8 @@ const MAX_AUDIT_LOG_LIMIT = 250;
 const MAX_EXPORT_ROWS = 5000;
 const MAX_REPORT_PAGE_LIMIT = 250;
 const MAX_REPORT_RANGE_DAYS = 366;
+const DEFAULT_EXPORT_HISTORY_LIMIT = 25;
+const MAX_EXPORT_HISTORY_LIMIT = 200;
 
 const isValidDate = (value) => {
   const date = new Date(value);
@@ -83,6 +86,32 @@ const resolveFirmIdFromAuthContext = (req, res) => {
     return null;
   }
   return firmId;
+};
+
+const logReportExport = async ({
+  firmId,
+  req,
+  exportType,
+  filename,
+  filters,
+  totalRecords,
+}) => {
+  const fallbackXid = req.user?.xID || req.user?.xid || 'UNKNOWN';
+  try {
+    await ReportExportLog.create({
+      firmId,
+      exportedByXID: String(fallbackXid),
+      exportedByName: req.user?.name || null,
+      exportedByEmail: req.user?.email || null,
+      exportType,
+      filename,
+      filters,
+      totalRecords,
+      exportedAt: new Date(),
+    });
+  } catch (error) {
+    console.error('Failed to persist report export log:', error);
+  }
 };
 
 
@@ -506,6 +535,15 @@ const exportCasesCSV = async (req, res) => {
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     
+    await logReportExport({
+      firmId,
+      req,
+      exportType: 'csv',
+      filename,
+      filters: { fromDate, toDate, status: status || null, category: category || null },
+      totalRecords: casesWithClientNames.length,
+    });
+
     res.send(csv);
   } catch (error) {
     console.error('Error in exportCasesCSV:', error);
@@ -583,6 +621,15 @@ const exportCasesExcel = async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     
     // Write to response
+    await logReportExport({
+      firmId,
+      req,
+      exportType: 'excel',
+      filename,
+      filters: { fromDate, toDate, status: status || null, category: category || null },
+      totalRecords: casesWithClientNames.length,
+    });
+
     await workbook.xlsx.write(res);
     res.end();
   } catch (error) {
@@ -694,6 +741,65 @@ const getAuditLogs = async (req, res) => {
   }
 };
 
+const getExportHistory = async (req, res) => {
+  try {
+    const firmId = resolveFirmIdFromAuthContext(req, res);
+    if (!firmId) return;
+
+    const {
+      exportType,
+      exportedByXID,
+      page = 1,
+      limit = DEFAULT_EXPORT_HISTORY_LIMIT,
+    } = req.query;
+
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    if (!Number.isInteger(pageNum) || pageNum < 1 || !Number.isInteger(limitNum) || limitNum < 1) {
+      return res.status(400).json({ success: false, message: 'page and limit must be positive integers' });
+    }
+    if (limitNum > MAX_EXPORT_HISTORY_LIMIT) {
+      return res.status(400).json({
+        success: false,
+        message: `limit cannot exceed ${MAX_EXPORT_HISTORY_LIMIT}`,
+      });
+    }
+
+    const query = { firmId };
+    if (exportType && ['csv', 'excel'].includes(String(exportType).toLowerCase())) {
+      query.exportType = String(exportType).toLowerCase();
+    }
+    if (exportedByXID) {
+      query.exportedByXID = String(exportedByXID);
+    }
+
+    const skip = (pageNum - 1) * limitNum;
+    const [items, total] = await Promise.all([
+      ReportExportLog.find(query).sort({ exportedAt: -1 }).skip(skip).limit(limitNum).lean(),
+      ReportExportLog.countDocuments(query),
+    ]);
+
+    return res.json({
+      success: true,
+      data: {
+        items,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          pages: Math.ceil(total / limitNum),
+        },
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch export history',
+      error: error.message,
+    });
+  }
+};
+
 /**
  * GET /api/reports/client-fact-sheet/:clientId/pdf
  * Generate PDF client fact sheet with active cases and pending tasks
@@ -780,5 +886,6 @@ module.exports = {
   exportCasesCSV,
   exportCasesExcel,
   getAuditLogs,
+  getExportHistory,
   generateClientFactSheetPdf,
 };
