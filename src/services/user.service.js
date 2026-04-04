@@ -35,7 +35,12 @@ class PrimaryAdminActionError extends Error {
  * @param {object} user - User document
  */
 const assertCanDeactivateUser = (user) => {
-  if (user.isPrimaryAdmin === true || user.isSystem === true) {
+  const isFirmDefaultAdmin = String(user?.role || '').toLowerCase() === 'admin'
+    && user?.defaultClientId
+    && user?.firmId
+    && String(user.defaultClientId) === String(user.firmId);
+
+  if (user.isPrimaryAdmin === true || user.isSystem === true || isFirmDefaultAdmin) {
     throw new PrimaryAdminActionError();
   }
 };

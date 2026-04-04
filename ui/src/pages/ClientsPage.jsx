@@ -185,6 +185,11 @@ export const ClientsPage = () => {
 
   const handleToggleClientStatus = async (client) => {
     if (!isAdmin) return;
+    const isProtectedClient = client?.isDefaultClient || client?.isSystemClient || client?.isInternal;
+    if (isProtectedClient) {
+      showError('Default client cannot be deactivated');
+      return;
+    }
     const isCurrentlyActive = client.status === 'ACTIVE';
     const action = isCurrentlyActive ? 'deactivate' : 'activate';
     const confirmed = window.confirm(`Are you sure you want to ${action} ${client.businessName}?`);
@@ -266,13 +271,15 @@ export const ClientsPage = () => {
                     {isAdmin ? (
             <>
               <Button size="small" variant="secondary" onClick={() => openEditClientModal(client)}>Edit Client</Button>
-              <Button
-                size="small"
-                variant={client.status === 'ACTIVE' ? 'danger' : 'success'}
-                onClick={() => handleToggleClientStatus(client)}
-              >
-                {client.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
-              </Button>
+              {!(client.isDefaultClient || client.isSystemClient || client.isInternal) && (
+                <Button
+                  size="small"
+                  variant={client.status === 'ACTIVE' ? 'danger' : 'success'}
+                  onClick={() => handleToggleClientStatus(client)}
+                >
+                  {client.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+                </Button>
+              )}
               <Button size="small" variant="warning" onClick={() => openEditCfsModal(client)}>Edit Fact Sheet</Button>
             </>
           ) : null}
