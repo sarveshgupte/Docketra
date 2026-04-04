@@ -107,6 +107,15 @@ const getRecentCasesSnapshot = (cases = []) =>
     })
     .slice(0, DASHBOARD_RECENT_CASES_LIMIT);
 
+const formatDocketIdentifier = (caseItem = {}) => {
+  const raw = String(caseItem.caseId || caseItem.caseNumber || '').trim();
+  if (raw) {
+    return raw.replace(/^CASE-/i, 'DOCKET-');
+  }
+  const caseName = formatCaseName(caseItem.caseName);
+  return caseName && caseName !== 'N/A' ? caseName : 'DOCKET-UNKNOWN';
+};
+
 export const DashboardPage = () => {
   const { user } = useAuth();
   const { isAdmin } = usePermissions();
@@ -640,9 +649,16 @@ export const DashboardPage = () => {
                         className="focus-within:bg-gray-50"
                       >
                         <TableCell className="w-full max-w-lg">
-                          <span className="block overflow-hidden text-ellipsis whitespace-nowrap" title={formatCaseName(caseItem.caseName)}>
-                            {formatCaseName(caseItem.caseName)}
-                          </span>
+                          <div className="flex flex-col">
+                            <span className="block overflow-hidden text-ellipsis whitespace-nowrap font-semibold text-gray-900" title={formatDocketIdentifier(caseItem)}>
+                              {formatDocketIdentifier(caseItem)}
+                            </span>
+                            {caseItem.title ? (
+                              <span className="block overflow-hidden text-ellipsis whitespace-nowrap text-xs text-gray-500" title={caseItem.title}>
+                                {caseItem.title}
+                              </span>
+                            ) : null}
+                          </div>
                         </TableCell>
                         <TableCell className="w-[1px] whitespace-nowrap">{caseItem.category}</TableCell>
                         <TableCell className="w-[1px] whitespace-nowrap text-center">

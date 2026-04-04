@@ -1514,7 +1514,18 @@ const getCaseByCaseId = async (req, res) => {
     // Fetch current client details - with firm scoping
     // PR: Client Lifecycle - fetch client regardless of status to display existing cases with inactive clients
     // (Note: resolved via CaseRepository aggregation pipeline with $lookup)
-    const client = caseData.client || null;
+    let client = caseData.client || null;
+    if (!client && caseData.clientId) {
+      try {
+        client = await ClientRepository.findByClientId(scopedFirmId, caseData.clientId, req.user.role);
+      } catch (error) {
+        console.warn('[GET_CASE] Failed to load fallback client', {
+          caseId: displayCaseId,
+          clientId: caseData.clientId,
+          message: error?.message,
+        });
+      }
+    }
     
     // PR #45: Require authenticated user with xID for audit logging
     if (!req.user?.email || !req.user?.xID) {
