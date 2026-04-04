@@ -27,6 +27,21 @@ const log = require('../utils/log');
 
 const INVITE_TOKEN_EXPIRY_HOURS = 48; // 48 hours for invite tokens
 const DEFAULT_STORAGE_MODE = 'docketra_managed';
+const DEFAULT_FIRM_SETTINGS = {
+  slaDefaultDays: 3,
+  escalationInactivityThresholdHours: 24,
+  workloadThreshold: 15,
+  enablePerformanceView: true,
+  enableEscalationView: true,
+  enableBulkActions: true,
+};
+const DEFAULT_WORK_SETTINGS = {
+  assignmentStrategy: 'manual',
+  statusWorkflowMode: 'flexible',
+  autoAssignmentEnabled: false,
+  highPrioritySlaDays: 1,
+  dueSoonWarningDays: 2,
+};
 
 /**
  * Helper function to safely log audit events without throwing
@@ -61,6 +76,25 @@ const resetUserToInvitedState = (user, { tokenHash, tokenExpiry, inviteSentAt })
   user.status = 'invited';
   user.isActive = false;
 };
+
+const normalizeFirmSettings = (raw = {}) => ({
+  slaDefaultDays: Number(raw.slaDefaultDays) > 0 ? Number(raw.slaDefaultDays) : DEFAULT_FIRM_SETTINGS.slaDefaultDays,
+  escalationInactivityThresholdHours: Number(raw.escalationInactivityThresholdHours) > 0
+    ? Number(raw.escalationInactivityThresholdHours)
+    : DEFAULT_FIRM_SETTINGS.escalationInactivityThresholdHours,
+  workloadThreshold: Number(raw.workloadThreshold) > 0 ? Number(raw.workloadThreshold) : DEFAULT_FIRM_SETTINGS.workloadThreshold,
+  enablePerformanceView: raw.enablePerformanceView !== false,
+  enableEscalationView: raw.enableEscalationView !== false,
+  enableBulkActions: raw.enableBulkActions !== false,
+});
+
+const normalizeWorkSettings = (raw = {}) => ({
+  assignmentStrategy: ['manual', 'balanced'].includes(raw.assignmentStrategy) ? raw.assignmentStrategy : DEFAULT_WORK_SETTINGS.assignmentStrategy,
+  statusWorkflowMode: ['flexible', 'strict'].includes(raw.statusWorkflowMode) ? raw.statusWorkflowMode : DEFAULT_WORK_SETTINGS.statusWorkflowMode,
+  autoAssignmentEnabled: Boolean(raw.autoAssignmentEnabled),
+  highPrioritySlaDays: Number(raw.highPrioritySlaDays) > 0 ? Number(raw.highPrioritySlaDays) : DEFAULT_WORK_SETTINGS.highPrioritySlaDays,
+  dueSoonWarningDays: Number(raw.dueSoonWarningDays) > 0 ? Number(raw.dueSoonWarningDays) : DEFAULT_WORK_SETTINGS.dueSoonWarningDays,
+});
 
 /**
  * Get admin dashboard statistics
@@ -655,6 +689,100 @@ const updateRestrictedClients = async (req, res) => {
 };
 
 /**
+ * Get firm and work settings (Admin only)
+ * GET /api/admin/firm-settings
+ */
+const getFirmSettings = async (req, res) => {
+  try {
+    const firmId = req.user?.firmId;
+    if (!firmId) {
+      return res.status(403).json({ success: false, message: 'Firm context is required' });
+    }
+
+    const firm = await Firm.findById(firmId).select('settings');
+    if (!firm) {
+      return res.status(404).json({ success: false, message: 'Firm not found' });
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        firm: normalizeFirmSettings(firm.settings?.firm || {}),
+        work: normalizeWorkSettings(firm.settings?.work || {}),
+      },
+    });
+  } catch (error) {
+    console.error('[ADMIN] Error fetching firm settings:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching firm settings',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Update firm and work settings (Admin only)
+ * PUT /api/admin/firm-settings
+ */
+const updateFirmSettings = async (req, res) => {
+  try {
+    const firmId = req.user?.firmId;
+    if (!firmId) {
+      return res.status(403).json({ success: false, message: 'Firm context is required' });
+    }
+
+    const firm = await Firm.findById(firmId);
+    if (!firm) {
+      return res.status(404).json({ success: false, message: 'Firm not found' });
+    }
+
+    const previousSettings = {
+      firm: normalizeFirmSettings(firm.settings?.firm || {}),
+      work: normalizeWorkSettings(firm.settings?.work || {}),
+    };
+    const requestedFirmSettings = req.body?.firm ? normalizeFirmSettings(req.body.firm) : previousSettings.firm;
+    const requestedWorkSettings = req.body?.work ? normalizeWorkSettings(req.body.work) : previousSettings.work;
+
+    firm.settings = {
+      ...(firm.settings || {}),
+      firm: requestedFirmSettings,
+      work: requestedWorkSettings,
+    };
+    await firm.save();
+
+    const nextSettings = {
+      firm: normalizeFirmSettings(firm.settings?.firm || {}),
+      work: normalizeWorkSettings(firm.settings?.work || {}),
+    };
+
+    await logAdminAction({
+      adminXID: req.user?.xID,
+      actionType: 'FIRM_SETTINGS_UPDATED',
+      targetFirmId: firm.firmId,
+      metadata: {
+        previous: previousSettings,
+        next: nextSettings,
+      },
+      req,
+    });
+
+    return res.json({
+      success: true,
+      message: 'Firm settings updated successfully',
+      data: nextSettings,
+    });
+  } catch (error) {
+    console.error('[ADMIN] Error updating firm settings:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error updating firm settings',
+      error: error.message,
+    });
+  }
+};
+
+/**
  * Get firm storage configuration (Admin only)
  * GET /api/admin/storage
  */
@@ -980,6 +1108,8 @@ module.exports = {
   getAllFiledCases,
   getAllResolvedCases,
   updateRestrictedClients: wrapWriteHandler(updateRestrictedClients),
+  getFirmSettings,
+  updateFirmSettings: wrapWriteHandler(updateFirmSettings),
   getStorageConfig,
   updateStorageConfig: wrapWriteHandler(updateStorageConfig),
   disconnectStorage: wrapWriteHandler(disconnectStorage),
