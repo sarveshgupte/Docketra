@@ -136,6 +136,7 @@ export const Layout = ({ children }) => {
   const hasAdminAccess = user?.role === USER_ROLES.ADMIN;
   const firmLabel = user?.firm?.name || currentFirmSlug || 'Firm';
   const firmInitials = firmLabel.substring(0, 2).toUpperCase();
+  const reportsRoute = `${ROUTES.FIRM_BASE(currentFirmSlug)}/admin/reports`;
 
   const handleLogout = async () => {
     setProfileDropdownOpen(false);
@@ -342,7 +343,7 @@ export const Layout = ({ children }) => {
       defaultOpen: false,
       items: [
         { to: ROUTES.CASES(currentFirmSlug), label: 'Firm Analytics', icon: <IconCases />, active: isActivePrefix(ROUTES.CASES(currentFirmSlug)) },
-        { to: ROUTES.FIRM_BASE(currentFirmSlug) + '/admin/reports', label: 'Reports', icon: <IconReport />, active: isActivePrefix(ROUTES.FIRM_BASE(currentFirmSlug) + '/admin/reports') },
+        { to: reportsRoute, label: 'Reports', icon: <IconReport />, active: isActivePrefix(reportsRoute) },
       ],
     },
     {
@@ -351,7 +352,7 @@ export const Layout = ({ children }) => {
       defaultOpen: false,
       hidden: !hasAdminAccess,
       items: [
-        { to: ROUTES.ADMIN(currentFirmSlug), label: 'Team Management', icon: <IconTeam />, active: isActivePrefix(ROUTES.ADMIN(currentFirmSlug)) && !isActivePrefix(ROUTES.FIRM_BASE(currentFirmSlug) + '/admin/reports') },
+        { to: ROUTES.ADMIN(currentFirmSlug), label: 'Team Management', icon: <IconTeam />, active: isActivePrefix(ROUTES.ADMIN(currentFirmSlug)) && !isActivePrefix(reportsRoute) },
         { to: ROUTES.FIRM_SETTINGS(currentFirmSlug), label: 'Firm Settings', icon: <IconAdmin />, active: isActivePrefix(ROUTES.FIRM_SETTINGS(currentFirmSlug)) },
       ],
     },
