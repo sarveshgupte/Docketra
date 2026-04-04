@@ -1,12 +1,7 @@
 const fs = require('fs');
+let content = fs.readFileSync('src/config/redis.js', 'utf8');
 
-const file = 'src/config/redis.js';
-let content = fs.readFileSync(file, 'utf8');
-
-content = content.replace(
-  "const getRedisClient = () => {",
-  "const getRedisClient = () => { return null; "
-);
-
-fs.writeFileSync(file, content);
-console.log('patched redis');
+if (!content.includes('process.env.NODE_ENV === \'test\'')) {
+  content = content.replace('const initRedis = () => {', 'const initRedis = () => {\n  if (process.env.NODE_ENV === \'test\') return null;\n');
+  fs.writeFileSync('src/config/redis.js', content);
+}

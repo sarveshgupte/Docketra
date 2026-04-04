@@ -169,6 +169,7 @@ module.exports = {
       email: z.string().optional(),
       xID: z.string().optional(),
       firmId: z.string().optional(),
+      hasCompletedTutorial: z.boolean().optional(),
     }).strip(),
   },
   'POST /reset-password': {

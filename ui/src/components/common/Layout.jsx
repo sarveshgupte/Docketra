@@ -10,6 +10,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { SidebarSection } from '../navigation/SidebarSection';
 import { CommandPalette } from './CommandPalette';
+import { TutorialModal } from '../onboarding/TutorialModal';
 import { ErrorBoundary } from './ErrorBoundary';
 import api from '../../services/api';
 import { worklistApi } from '../../api/worklist.api';
@@ -111,6 +112,18 @@ const IconPlus = () => (
   </svg>
 );
 
+const IconHelp = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+);
+
+const IconMessage = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+  </svg>
+);
+
 export const Layout = ({ children }) => {
   const { user, logout } = useAuth();
   const { showSuccess } = useToast();
@@ -129,6 +142,13 @@ export const Layout = ({ children }) => {
   const [worklistCount, setWorklistCount] = useState('loading');
   const [countsFetched, setCountsFetched] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  useEffect(() => {
+    if (user && user.hasCompletedTutorial === false && !location.pathname.includes('/complete-profile')) {
+      setShowTutorial(true);
+    }
+  }, [user, location.pathname]);
 
   const profileDropdownRef = useRef(null);
 
@@ -345,6 +365,15 @@ export const Layout = ({ children }) => {
         { to: ROUTES.FIRM_SETTINGS(currentFirmSlug), label: 'Firm Settings', icon: <IconAdmin />, active: isActivePrefix(ROUTES.FIRM_SETTINGS(currentFirmSlug)) },
       ],
     },
+    {
+      id: 'help',
+      title: 'HELP & SUPPORT',
+      defaultOpen: false,
+      items: [
+        { to: ROUTES.FAQ(currentFirmSlug), label: 'Tutorial Guide & FAQ', icon: <IconHelp />, active: isActivePrefix(ROUTES.FAQ(currentFirmSlug)) },
+        { href: `mailto:${import.meta.env.VITE_SUPPORT_EMAIL || 'support@docketra.com'}`, label: 'Support & Feedback', icon: <IconMessage />, active: false, external: true },
+      ],
+    },
   ].filter((section) => !section.hidden);
 
   const toggleCommandPalette = useCallback(() => {
@@ -543,6 +572,7 @@ export const Layout = ({ children }) => {
           commands={commandPaletteCommands}
         />
       </ErrorBoundary>
+      <TutorialModal isOpen={showTutorial} onClose={() => setShowTutorial(false)} />
     </div>
   );
 };

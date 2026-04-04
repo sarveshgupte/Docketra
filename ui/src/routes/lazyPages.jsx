@@ -37,3 +37,5 @@ export const MarketingContactPage = lazyPage(() => import('../pages/marketing/Co
 export const MarketingSignupPage = lazy(() => import('../pages/marketing/Signup'));
 export const NotFoundPage = lazyPage(() => import('../pages/NotFoundPage'), 'NotFoundPage');
 export const OtpVerificationPage = lazyPage(() => import('../pages/OtpVerificationPage'), 'OtpVerificationPage');
+
+export const FAQPage = lazy(() => import('../pages/FAQPage').then(module => ({ default: module.FAQPage })));

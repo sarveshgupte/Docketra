@@ -2023,6 +2023,7 @@ const getProfile = async (req, res) => {
         address: profile.address,
         panMasked: profile.pan || profile.panMasked,
         aadhaarMasked: profile.aadhaar || profile.aadhaarMasked,
+        hasCompletedTutorial: profile.hasCompletedTutorial || false,
       },
     });
   } catch (error) {
@@ -2044,7 +2045,7 @@ const getProfile = async (req, res) => {
 const updateProfile = async (req, res) => {
   try {
     const { dateOfBirth, dob, gender, phone, address, panMasked, pan, aadhaarMasked, aadhaar, 
-            name, email, xID, firmId } = req.body;
+            name, email, xID, firmId, hasCompletedTutorial } = req.body;
     
     // PR 32: Block attempts to modify immutable fields
     if (name !== undefined || email !== undefined || xID !== undefined || firmId !== undefined) {
@@ -2081,6 +2082,7 @@ const updateProfile = async (req, res) => {
     if (gender !== undefined) profile.gender = gender;
     if (phone !== undefined) profile.phone = phone;
     if (address !== undefined) profile.address = address;
+    if (hasCompletedTutorial !== undefined) profile.hasCompletedTutorial = hasCompletedTutorial;
     
     // Handle PAN (support both pan and panMasked)
     // PR 32: Enforce masked format only (no raw PAN storage)

@@ -15,6 +15,7 @@ export const ROUTES = {
   PROFILE: (firmSlug) => `/app/firm/${firmSlug}/profile`,
   ADMIN: (firmSlug) => `/app/firm/${firmSlug}/admin`,
   FIRM_SETTINGS: (firmSlug) => `/app/firm/${firmSlug}/settings/firm`,
+  FAQ: (firmSlug) => `/app/firm/${firmSlug}/faq`,
 };
 
 export const hasValidFirmSlug = (firmSlug) => Boolean(firmSlug && !String(firmSlug).includes('undefined'));

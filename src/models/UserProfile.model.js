@@ -76,6 +76,12 @@ const userProfileSchema = new mongoose.Schema({
     lowercase: true,
   },
   
+  // Tutorial completion flag
+  hasCompletedTutorial: {
+    type: Boolean,
+    default: false,
+  },
+
   // Last update timestamp
   updatedAt: {
     type: Date,

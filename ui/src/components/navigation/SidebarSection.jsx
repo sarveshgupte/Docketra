@@ -30,7 +30,31 @@ export const SidebarSection = ({
 
       {isOpen && (
         <div className="enterprise-sidebar__section-items">
-          {items.filter((item) => !item.hidden).map((item) => (
+          {items.filter((item) => !item.hidden).map((item) => {
+            if (item.external) {
+              return (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  className={[
+                    'enterprise-sidebar__nav-link text-sm font-medium',
+                    item.active ? 'active bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900',
+                    collapsed ? 'enterprise-sidebar__nav-link--collapsed' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  aria-label={collapsed ? item.label : undefined}
+                  data-tooltip={collapsed ? item.label : undefined}
+                  title={collapsed ? item.label : undefined}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <span className={`enterprise-sidebar__nav-icon ${item.active ? 'text-blue-700' : 'text-gray-500'}`} aria-hidden="true">{item.icon}</span>
+                  {!collapsed ? <span className={`enterprise-sidebar__nav-text ${item.active ? 'text-blue-700' : 'text-gray-700'}`}>{item.label}</span> : null}
+                </a>
+              );
+            }
+            return (
             <Link
               key={item.to}
               to={item.to}
@@ -50,7 +74,8 @@ export const SidebarSection = ({
               {!collapsed ? <span className={`enterprise-sidebar__nav-text ${item.active ? 'text-blue-700' : 'text-gray-700'}`}>{item.label}</span> : null}
               {!collapsed ? <BadgeCount count={item.badge} /> : null}
             </Link>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
