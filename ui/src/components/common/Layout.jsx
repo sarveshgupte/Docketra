@@ -218,6 +218,14 @@ export const Layout = ({ children }) => {
 
   useEffect(() => {
     let cancelled = false;
+    const COUNT_FETCH_TIMEOUT_MS = 8000;
+
+    const withTimeout = (promise, fallbackValue) => Promise.race([
+      promise,
+      new Promise((resolve) => {
+        setTimeout(() => resolve(fallbackValue), COUNT_FETCH_TIMEOUT_MS);
+      }),
+    ]);
 
     const fetchCounts = async () => {
       if (!user) {
@@ -235,12 +243,15 @@ export const Layout = ({ children }) => {
       }
 
       try {
-        const [globalData, myData] = await Promise.all([
-          worklistApi.getGlobalWorklist({ limit: 1 }),
-          worklistApi.getEmployeeWorklist({ limit: 1 }),
+        const [globalResult, myResult] = await Promise.allSettled([
+          withTimeout(worklistApi.getGlobalWorklist({ limit: 1 }), null),
+          withTimeout(worklistApi.getEmployeeWorklist({ limit: 1 }), null),
         ]);
 
         if (!cancelled) {
+          const globalData = globalResult.status === 'fulfilled' ? globalResult.value : null;
+          const myData = myResult.status === 'fulfilled' ? myResult.value : null;
+
           setWorkbasketCount(globalData?.meta?.total ?? globalData?.data?.length ?? 0);
           setWorklistCount(myData?.meta?.total ?? myData?.data?.length ?? 0);
           setCountsFetched(true);
