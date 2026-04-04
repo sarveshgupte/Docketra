@@ -66,6 +66,26 @@ const taskSchema = new mongoose.Schema({
     type: String,
     trim: true,
   }],
+  clientId: {
+    type: String,
+    trim: true,
+  },
+  clientName: {
+    type: String,
+    trim: true,
+  },
+  categoryId: {
+    type: String,
+    trim: true,
+  },
+  categoryName: {
+    type: String,
+    trim: true,
+  },
+  linkedCaseId: {
+    type: String,
+    trim: true,
+  },
   // Audit trail fields
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,

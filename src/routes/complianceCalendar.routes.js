@@ -38,7 +38,16 @@ router.get('/', authorizeFirmPermission('TASK_VIEW'), userReadLimiter, async (re
 router.post('/', authorizeFirmPermission('TASK_MANAGE'), requireAdmin, userWriteLimiter, wrapWriteHandler(async (req, res) => {
   const firmId = req.firmId || req.user?.firmId;
   const userId = getUserId(req);
-  const { title, description, dueDate } = req.body || {};
+  const {
+    title,
+    description,
+    dueDate,
+    clientId,
+    clientName,
+    categoryId,
+    categoryName,
+    linkedCaseId,
+  } = req.body || {};
 
   if (!title || !dueDate) {
     return res.status(400).json({ success: false, message: 'title and dueDate are required' });
@@ -52,6 +61,11 @@ router.post('/', authorizeFirmPermission('TASK_MANAGE'), requireAdmin, userWrite
     status: 'pending',
     priority: 'high',
     tags: [CALENDAR_TAG],
+    clientId: String(clientId || '').trim() || undefined,
+    clientName: String(clientName || '').trim() || undefined,
+    categoryId: String(categoryId || '').trim() || undefined,
+    categoryName: String(categoryName || '').trim() || undefined,
+    linkedCaseId: String(linkedCaseId || '').trim() || undefined,
     createdBy: userId,
     updatedBy: userId,
   });
@@ -73,11 +87,26 @@ router.put('/:id', authorizeFirmPermission('TASK_MANAGE'), requireAdmin, userWri
     return res.status(404).json({ success: false, message: 'Entry not found' });
   }
 
-  const { title, description, dueDate, status } = req.body || {};
+  const {
+    title,
+    description,
+    dueDate,
+    status,
+    clientId,
+    clientName,
+    categoryId,
+    categoryName,
+    linkedCaseId,
+  } = req.body || {};
   if (title !== undefined) entry.title = String(title).trim();
   if (description !== undefined) entry.description = String(description).trim();
   if (dueDate !== undefined) entry.dueDate = new Date(dueDate);
   if (status !== undefined) entry.status = status;
+  if (clientId !== undefined) entry.clientId = String(clientId || '').trim() || undefined;
+  if (clientName !== undefined) entry.clientName = String(clientName || '').trim() || undefined;
+  if (categoryId !== undefined) entry.categoryId = String(categoryId || '').trim() || undefined;
+  if (categoryName !== undefined) entry.categoryName = String(categoryName || '').trim() || undefined;
+  if (linkedCaseId !== undefined) entry.linkedCaseId = String(linkedCaseId || '').trim() || undefined;
   entry.updatedBy = userId;
 
   await entry.save();
