@@ -935,12 +935,6 @@ export const AdminPage = () => {
             User Management ({statsFailed ? '--' : adminStats.totalUsers})
           </Button>
           <Button
-            variant={activeTab === 'clients' ? 'primary' : 'default'}
-            onClick={() => setActiveTab('clients')}
-          >
-            Client Management ({statsFailed ? '--' : adminStats.totalClients})
-          </Button>
-          <Button
             variant={activeTab === 'categories' ? 'primary' : 'default'}
             onClick={() => setActiveTab('categories')}
           >
