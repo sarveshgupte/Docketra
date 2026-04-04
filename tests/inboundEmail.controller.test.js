@@ -29,6 +29,7 @@ Module._load = function (request, parent, isMain) {
 const {
   parsePublicEmailTokenFromRecipient,
   handleInboundEmail,
+  extractEmailAddress,
 } = require('../src/controllers/inboundEmail.controller');
 
 function makeRes() {
@@ -49,9 +50,28 @@ function makeRes() {
 async function testParsePublicToken() {
   const token = parsePublicEmailTokenFromRecipient('case-550e8400-e29b-41d4-a716-446655440000@inbound.docketra.com');
   assert.strictEqual(token, '550e8400-e29b-41d4-a716-446655440000');
+  assert.strictEqual(
+    parsePublicEmailTokenFromRecipient('"Docketra Inbound" <case-550e8400-e29b-41d4-a716-446655440000@inbound.docketra.com>'),
+    '550e8400-e29b-41d4-a716-446655440000'
+  );
+  assert.strictEqual(
+    parsePublicEmailTokenFromRecipient([
+      'alerts@example.com',
+      'Case Inbound <case-550e8400-e29b-41d4-a716-446655440000@inbound.docketra.com>',
+    ]),
+    '550e8400-e29b-41d4-a716-446655440000'
+  );
   assert.strictEqual(parsePublicEmailTokenFromRecipient('CASE-ABC123@inbound.docketra.com'), null);
   assert.strictEqual(parsePublicEmailTokenFromRecipient('case-@inbound.docketra.com'), null);
   console.log('  ✓ parses public email tokens from inbound recipient addresses');
+}
+
+async function testExtractEmailAddress() {
+  assert.strictEqual(extractEmailAddress('Sender Person <sender@example.com>'), 'sender@example.com');
+  assert.strictEqual(extractEmailAddress({ email: 'agent@example.com' }), 'agent@example.com');
+  assert.strictEqual(extractEmailAddress(['"Name" <first@example.com>', 'second@example.com']), 'first@example.com');
+  assert.strictEqual(extractEmailAddress('no-valid-email-here'), null);
+  console.log('  ✓ extracts sender email address from provider-formatted input');
 }
 
 async function testRejectsMissingFields() {
@@ -188,6 +208,7 @@ async function run() {
   console.log('Running inboundEmail.controller tests...');
   try {
     await testParsePublicToken();
+    await testExtractEmailAddress();
     await testRejectsMissingFields();
     await testQueuesInboundPayload();
     await testRejectsInvalidSignature();
