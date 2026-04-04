@@ -62,7 +62,7 @@ const FORGOT_PASSWORD_TOKEN_EXPIRY_MINUTES = 30; // 30 minutes for forgot passwo
 const PRE_AUTH_TOKEN_EXPIRY = '5m';
 const DEFAULT_FIRM_ID = 'PLATFORM'; // Default firmId for SUPER_ADMIN and audit logging
 const DEFAULT_XID = 'SUPERADMIN'; // Default xID for SUPER_ADMIN in audit logs
-const env = loadEnv();
+const env = loadEnv({ exitOnError: false }) || {};
 const SUPERADMIN_USER_ID = () => env.SUPERADMIN_OBJECT_ID;
 const SUPERADMIN_ROLE = 'SUPERADMIN';
 const ROLE_SUPER_ADMIN = 'SUPER_ADMIN';

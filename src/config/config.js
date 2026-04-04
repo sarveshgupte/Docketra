@@ -5,7 +5,11 @@ const { loadEnv } = require('./env');
  * Centralized configuration management
  */
 
-const env = loadEnv();
+const env = loadEnv({ exitOnError: false }) || {
+  PORT: Number(process.env.PORT || 5000),
+  NODE_ENV: process.env.NODE_ENV || 'development',
+  MONGODB_URI: process.env.MONGODB_URI || process.env.MONGO_URI,
+};
 
 const config = {
   port: env.PORT,
