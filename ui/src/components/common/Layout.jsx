@@ -317,7 +317,7 @@ export const Layout = ({ children }) => {
     },
     {
       id: 'cases-clients',
-      title: 'CASES & CLIENTS',
+      title: 'CLIENTS',
       defaultOpen: true,
       hidden: !hasAdminAccess,
       items: [
