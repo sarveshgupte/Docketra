@@ -839,6 +839,12 @@ export const AdminPage = () => {
             Categories ({statsFailed ? '--' : adminStats.totalCategories})
           </Button>
           <Button
+            variant="default"
+            onClick={() => navigate(`/app/firm/${firmSlug}/settings/firm`)}
+          >
+            Firm Settings
+          </Button>
+          <Button
             variant={activeTab === 'approvals' ? 'primary' : 'default'}
             onClick={() => setActiveTab('approvals')}
           >
