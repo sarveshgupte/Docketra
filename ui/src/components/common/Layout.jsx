@@ -317,11 +317,11 @@ export const Layout = ({ children }) => {
     },
     {
       id: 'cases-clients',
-      title: 'CASES & CLIENTS',
+      title: 'CLIENTS',
       defaultOpen: true,
+      hidden: !hasAdminAccess,
       items: [
         { to: ROUTES.FIRM_BASE(currentFirmSlug) + '/clients', label: 'All Clients', icon: <IconCases />, active: isActivePrefix(ROUTES.FIRM_BASE(currentFirmSlug) + '/clients') },
-        { to: ROUTES.CASES(currentFirmSlug), label: 'All Cases', icon: <IconCases />, active: isActivePrefix(ROUTES.CASES(currentFirmSlug)) && !location.search.includes('view=audit') },
         { to: ROUTES.COMPLIANCE_CALENDAR(currentFirmSlug), label: 'Compliance Calendar', icon: <IconWorklist />, active: isActive(ROUTES.COMPLIANCE_CALENDAR(currentFirmSlug)) },
       ],
     },
