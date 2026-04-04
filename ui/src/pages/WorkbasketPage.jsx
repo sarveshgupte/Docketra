@@ -90,7 +90,7 @@ export const WorkbasketPage = () => {
   const isAdmin = ['ADMIN', 'Admin'].includes(user?.role);
   const allSelected = cases.length > 0 && selectedCases.length === cases.length;
   const partiallySelected = selectedCases.length > 0 && !allSelected;
-  const { query, setQuery } = useQueryState({
+  const queryDefaults = useMemo(() => ({
     clientId: '',
     category: '',
     createdAtFrom: '',
@@ -102,14 +102,16 @@ export const WorkbasketPage = () => {
     sortBy: WORKBASKET_FILTER_DEFAULTS.sortBy,
     sortOrder: WORKBASKET_FILTER_DEFAULTS.sortOrder,
     page: String(WORKBASKET_FILTER_DEFAULTS.page),
-  });
+  }), []);
+
+  const { query, setQuery } = useQueryState(queryDefaults);
 
   useEffect(() => {
     loadGlobalWorklist();
   }, [filters]);
 
   useEffect(() => {
-    setFilters({
+    const nextFilters = {
       ...WORKBASKET_FILTER_DEFAULTS,
       clientId: query.clientId || '',
       category: query.category || '',
@@ -122,6 +124,11 @@ export const WorkbasketPage = () => {
       sortBy: query.sortBy || WORKBASKET_FILTER_DEFAULTS.sortBy,
       sortOrder: query.sortOrder || WORKBASKET_FILTER_DEFAULTS.sortOrder,
       page: Number.parseInt(query.page, 10) > 0 ? Number.parseInt(query.page, 10) : WORKBASKET_FILTER_DEFAULTS.page,
+    };
+
+    setFilters((prev) => {
+      const unchanged = Object.keys(nextFilters).every((key) => prev[key] === nextFilters[key]);
+      return unchanged ? prev : nextFilters;
     });
   }, [query]);
 
