@@ -77,6 +77,7 @@ export const WorkbasketPage = () => {
   const { showSuccess, showError, showInfo } = useToast();
   
   const [loading, setLoading] = useState(true);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [cases, setCases] = useState([]);
   const [filters, setFilters] = useState(() => ({ ...WORKBASKET_FILTER_DEFAULTS }));
   const [pagination, setPagination] = useState(null);
@@ -151,6 +152,7 @@ export const WorkbasketPage = () => {
       console.error('Failed to load workbasket:', error);
     } finally {
       setLoading(false);
+      setInitialLoadComplete(true);
     }
   };
 
@@ -464,7 +466,7 @@ export const WorkbasketPage = () => {
     ? `${pagination.total} dockets found. Page ${pagination.page} of ${pagination.pages}.`
     : `${cases.length} dockets loaded.`;
 
-  if (loading && cases.length === 0) {
+  if (!initialLoadComplete && loading && cases.length === 0) {
     return (
       <Layout>
         <Loading message="Loading workbasket..." />
