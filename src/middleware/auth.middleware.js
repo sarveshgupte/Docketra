@@ -9,7 +9,7 @@ const { getCookieValue } = require('../utils/requestCookies');
 const { isActiveStatus, getFirmInactiveCode } = require('../utils/status.utils');
 const { buildRequestContext } = require('./attachRequestContext');
 
-const env = loadEnv();
+const env = loadEnv({ exitOnError: false }) || {};
 
 const MUST_SET_ALLOWED_PATHS = [
   '/auth/profile',

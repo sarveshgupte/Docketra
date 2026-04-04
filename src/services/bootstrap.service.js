@@ -63,7 +63,7 @@ const { loadEnv } = require('../config/env');
  * - Does NOT send email for empty database
  */
 let adminBackfillRan = false;
-const env = loadEnv();
+const env = loadEnv({ exitOnError: false }) || {};
 
 const seedPlans = async ({ session } = {}) => {
   const seedData = [
@@ -382,7 +382,7 @@ const recoverFirmBootstrap = async (firmId) => {
             isActive: true,
             status: 'ACTIVE',
             createdByXid: 'SUPERADMIN',
-            createdBy: env.SUPERADMIN_EMAIL_NORMALIZED,
+            createdBy: env.SUPERADMIN_EMAIL_NORMALIZED || process.env.SUPERADMIN_EMAIL || 'superadmin@system.local',
           });
           await defaultClient.save({ session });
           console.log(`[BOOTSTRAP_RECOVERY] Created default client: ${clientId}`);

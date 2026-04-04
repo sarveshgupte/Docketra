@@ -14,7 +14,7 @@ const SYSTEM_EMAIL_DOMAIN = 'system.local';
 const DEFAULT_BUSINESS_ADDRESS = 'Default Address';
 const DEFAULT_CONTACT_NUMBER = '0000000000';
 const PASSWORD_SETUP_TOKEN_EXPIRY = '24h';
-const env = loadEnv();
+const env = loadEnv({ exitOnError: false }) || {};
 
 class FirmBootstrapError extends Error {
   constructor(message, statusCode = 500, meta = {}) {
