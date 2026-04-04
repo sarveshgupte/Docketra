@@ -341,7 +341,7 @@ export const Layout = ({ children }) => {
       title: 'INSIGHTS',
       defaultOpen: false,
       items: [
-        { to: ROUTES.CASES(currentFirmSlug), label: 'Firm Analytics', icon: <IconCases />, active: isActivePrefix(ROUTES.CASES(currentFirmSlug)) && !location.search.includes('view=audit') },
+        { to: ROUTES.CASES(currentFirmSlug), label: 'Firm Analytics', icon: <IconCases />, active: isActivePrefix(ROUTES.CASES(currentFirmSlug)) },
         { to: ROUTES.FIRM_BASE(currentFirmSlug) + '/admin/reports', label: 'Reports', icon: <IconReport />, active: isActivePrefix(ROUTES.FIRM_BASE(currentFirmSlug) + '/admin/reports') },
       ],
     },
@@ -352,7 +352,6 @@ export const Layout = ({ children }) => {
       hidden: !hasAdminAccess,
       items: [
         { to: ROUTES.ADMIN(currentFirmSlug), label: 'Team Management', icon: <IconTeam />, active: isActivePrefix(ROUTES.ADMIN(currentFirmSlug)) && !isActivePrefix(ROUTES.FIRM_BASE(currentFirmSlug) + '/admin/reports') },
-        { to: `${ROUTES.CASES(currentFirmSlug)}?view=audit`, label: 'Audit Logs', icon: <IconReport />, active: isActive(ROUTES.CASES(currentFirmSlug)) && location.search.includes('view=audit') },
         { to: ROUTES.FIRM_SETTINGS(currentFirmSlug), label: 'Firm Settings', icon: <IconAdmin />, active: isActivePrefix(ROUTES.FIRM_SETTINGS(currentFirmSlug)) },
       ],
     },
