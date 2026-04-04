@@ -182,10 +182,14 @@ export const AdminPage = () => {
 
   useEffect(() => {
     const requestedTab = searchParams.get('tab');
-    if (requestedTab && ['users', 'categories', 'clients'].includes(requestedTab) && requestedTab !== activeTab) {
-      setActiveTab(requestedTab);
+    const allowedTabs = isWorkSettingsContext ? ['categories'] : ['users'];
+    const fallbackTab = isWorkSettingsContext ? 'categories' : 'users';
+
+    const nextTab = allowedTabs.includes(requestedTab) ? requestedTab : fallbackTab;
+    if (nextTab !== activeTab) {
+      setActiveTab(nextTab);
     }
-  }, [searchParams, activeTab]);
+  }, [searchParams, activeTab, isWorkSettingsContext]);
 
   useEffect(() => {
     return () => {
@@ -990,32 +994,16 @@ export const AdminPage = () => {
               User Management ({statsFailed ? '--' : adminStats.totalUsers})
             </Button>
           )}
-          <Button
-            variant={activeTab === 'categories' ? 'primary' : 'default'}
-            onClick={() => {
-              setActiveTab('categories');
-              setSearchParams(isWorkSettingsContext
-                ? { tab: 'categories', context: 'work-settings' }
-                : { tab: 'categories' });
-            }}
-          >
-            Categories ({statsFailed ? '--' : adminStats.totalCategories})
-          </Button>
-          {!isWorkSettingsContext && (
-            <>
-              <Button
-                variant="default"
-                onClick={() => navigate(`/app/firm/${firmSlug}/settings/firm`)}
-              >
-                Firm Settings
-              </Button>
-              <Button
-                variant={activeTab === 'reports' ? 'primary' : 'default'}
-                onClick={() => navigate(`/app/firm/${firmSlug}/admin/reports`)}
-              >
-                Reports & MIS
-              </Button>
-            </>
+          {isWorkSettingsContext && (
+            <Button
+              variant={activeTab === 'categories' ? 'primary' : 'default'}
+              onClick={() => {
+                setActiveTab('categories');
+                setSearchParams({ tab: 'categories', context: 'work-settings' });
+              }}
+            >
+              Categories ({statsFailed ? '--' : adminStats.totalCategories})
+            </Button>
           )}
         </div>
 
