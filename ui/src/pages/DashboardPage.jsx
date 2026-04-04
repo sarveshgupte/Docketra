@@ -35,6 +35,62 @@ import { ROUTES, safeRoute } from '../constants/routes';
 const DASHBOARD_RECENT_CASES_ROW_COUNT = 5;
 const DASHBOARD_RECENT_CASES_MAX_ROWS = 10;
 const DASHBOARD_RECENT_CASES_LIMIT = Math.min(DASHBOARD_RECENT_CASES_ROW_COUNT, DASHBOARD_RECENT_CASES_MAX_ROWS);
+const resolveSupportEmail = () => {
+  const rawMailFrom = String(import.meta.env.VITE_MAIL_FROM || import.meta.env.MAIL_FROM || '').trim();
+  if (!rawMailFrom) return 'support@docketra.com';
+
+  const bracketMatch = rawMailFrom.match(/<([^>]+)>/);
+  const candidate = (bracketMatch?.[1] || rawMailFrom).trim();
+  return candidate.includes('@') ? candidate : 'support@docketra.com';
+};
+
+const DEFAULT_SUPPORT_EMAIL = resolveSupportEmail();
+
+const PRODUCT_TOUR_STEPS = [
+  {
+    title: 'Add your first client',
+    description: 'Start by creating a client profile so every docket, document, and workflow has a clear reporting entity.',
+  },
+  {
+    title: 'Invite your team members',
+    description: 'Go to Admin and add users so work can be delegated, reviewed, and tracked across partners and employees.',
+  },
+  {
+    title: 'Configure case categories',
+    description: 'Create categories and subcategories to standardize your docket types and simplify filtering and reporting.',
+  },
+  {
+    title: 'Create your first docket',
+    description: 'Set up a docket with owner, due date, and priority so the team can begin execution immediately.',
+  },
+  {
+    title: 'Use Workbasket for firm-level triage',
+    description: 'Review newly created and unassigned dockets in Workbasket to plan ownership and execution order.',
+  },
+  {
+    title: 'Pull docket from Workbasket to Worklist',
+    description: 'Assign ownership and move dockets into Worklist for day-to-day action, status updates, and completion.',
+  },
+];
+
+const FAQ_ITEMS = [
+  {
+    question: 'How do I set up Docketra for a new firm?',
+    answer: 'Follow this sequence: add a client, invite users, define categories, create your first docket, then route it via Workbasket to Worklist.',
+  },
+  {
+    question: 'What is the difference between Workbasket and Worklist?',
+    answer: 'Workbasket is the firm-level intake and triage area; Worklist is the execution queue where assigned users do actual task follow-up.',
+  },
+  {
+    question: 'Why should we use categories before creating many dockets?',
+    answer: 'Categories ensure consistent naming, smarter filtering, cleaner reporting, and lower operational confusion as docket volume grows.',
+  },
+  {
+    question: 'Can we replay the guided tour later?',
+    answer: 'Yes. Use the "Replay product tour" button in the Help & Onboarding section on this dashboard anytime.',
+  },
+];
 
 const getCaseTimestamp = (caseItem) => {
   const timestamp = new Date(caseItem?.updatedAt || caseItem?.createdAt || '').getTime();
@@ -76,6 +132,8 @@ export const DashboardPage = () => {
   const [recentCases, setRecentCases] = useState([]);
   const [recentCasesLoading, setRecentCasesLoading] = useState(true);
   const [showBookmarkPrompt, setShowBookmarkPrompt] = useState(false);
+  const [showProductTour, setShowProductTour] = useState(false);
+  const [tourStepIndex, setTourStepIndex] = useState(0);
   const [loadWarnings, setLoadWarnings] = useState([]);
   const [hasLoadedDashboard, setHasLoadedDashboard] = useState(false);
 
@@ -106,11 +164,44 @@ export const DashboardPage = () => {
     }
   }, [loading, user, isAdmin, firmSlug]);
 
+  useEffect(() => {
+    if (loading || !user?.xID || !firmSlug) return;
+    const tourCompletedKey = `productTourCompleted:${user.xID}:${firmSlug}`;
+    const hasCompletedTour = localStorage.getItem(tourCompletedKey) === 'true';
+    if (!hasCompletedTour) {
+      setTourStepIndex(0);
+      setShowProductTour(true);
+    }
+  }, [loading, user, firmSlug]);
+
   const handleDismissBookmarkPrompt = () => {
     setShowBookmarkPrompt(false);
     if (user?.xID) {
       localStorage.setItem(`bookmarkPrompt_${user.xID}`, 'true');
     }
+  };
+
+  const markTourCompleted = () => {
+    if (user?.xID && firmSlug) {
+      localStorage.setItem(`productTourCompleted:${user.xID}:${firmSlug}`, 'true');
+    }
+    setShowProductTour(false);
+    setTourStepIndex(0);
+  };
+
+  const handleTourNext = () => {
+    setTourStepIndex((currentStep) => {
+      if (currentStep >= PRODUCT_TOUR_STEPS.length - 1) {
+        markTourCompleted();
+        return currentStep;
+      }
+      return currentStep + 1;
+    });
+  };
+
+  const handleReplayTour = () => {
+    setTourStepIndex(0);
+    setShowProductTour(true);
   };
 
   const loadDashboardData = async () => {
@@ -571,8 +662,83 @@ export const DashboardPage = () => {
               </div>
             </section>
           ) : null}
+
+          <section className="space-y-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-lg font-semibold text-gray-900 tracking-tight">Help & Onboarding</h2>
+              <Button variant="outline" onClick={handleReplayTour}>
+                Replay product tour
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <Card className="space-y-4">
+                <h3 className="text-base font-semibold text-gray-900">FAQ tutorial guide</h3>
+                <div className="space-y-3">
+                  {FAQ_ITEMS.map((item) => (
+                    <div key={item.question} className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                      <h4 className="text-sm font-semibold text-gray-900">{item.question}</h4>
+                      <p className="mt-1 text-sm text-gray-600">{item.answer}</p>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              <Card className="space-y-4">
+                <h3 className="text-base font-semibold text-gray-900">Support & feedback</h3>
+                <p className="text-sm text-gray-600">
+                  Need implementation help, training, or want to share feedback? Reach out to the Docketra team.
+                </p>
+                <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Contact email</p>
+                  <a href={`mailto:${DEFAULT_SUPPORT_EMAIL}`} className="mt-1 inline-block text-sm font-semibold text-blue-600 hover:text-blue-700">
+                    {DEFAULT_SUPPORT_EMAIL}
+                  </a>
+                </div>
+                <a
+                  href={`mailto:${DEFAULT_SUPPORT_EMAIL}?subject=${encodeURIComponent('Docketra Support & Feedback')}`}
+                  className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-all duration-200 ease-in-out hover:brightness-110 active:brightness-90"
+                >
+                  Contact support
+                </a>
+              </Card>
+            </div>
+          </section>
         </div>
       </div>
+
+      {showProductTour ? (
+        <div className="fixed inset-0 z-[1001] flex items-center justify-center bg-slate-950/50 px-4">
+          <div className="w-full max-w-2xl rounded-xl border border-gray-200 bg-white p-6 shadow-2xl">
+            <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">
+              Product tour · Step {tourStepIndex + 1} of {PRODUCT_TOUR_STEPS.length}
+            </p>
+            <h2 className="mt-2 text-xl font-semibold text-gray-900">
+              {PRODUCT_TOUR_STEPS[tourStepIndex]?.title}
+            </h2>
+            <p className="mt-3 text-sm text-gray-600">
+              {PRODUCT_TOUR_STEPS[tourStepIndex]?.description}
+            </p>
+
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+              <button className="btn btn-secondary" onClick={markTourCompleted}>
+                Skip tour
+              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setTourStepIndex((current) => Math.max(0, current - 1))}
+                  disabled={tourStepIndex === 0}
+                >
+                  Back
+                </button>
+                <button className="btn btn-primary" onClick={handleTourNext}>
+                  {tourStepIndex === PRODUCT_TOUR_STEPS.length - 1 ? 'Finish' : 'Next'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {showBookmarkPrompt ? (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/40 px-4">
