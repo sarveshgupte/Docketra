@@ -89,11 +89,15 @@ export const AdminPage = () => {
   const navigate = useNavigate();
   const { firmSlug } = useParams();
   const { showToast } = useToast();
+  const { user: loggedInUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const isWorkSettingsContext = searchParams.get('context') === 'work-settings';
   
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('users');
+  const [activeTab, setActiveTab] = useState(() => {
+    const requestedTab = searchParams.get('tab');
+    return ['users', 'categories', 'clients'].includes(requestedTab) ? requestedTab : 'users';
+  });
   const [users, setUsers] = useState([]);
   const [categories, setCategories] = useState([]);
   const [clients, setClients] = useState([]);
