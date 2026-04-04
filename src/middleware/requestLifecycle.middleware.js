@@ -29,14 +29,15 @@ const requestLifecycle = (req, res, next) => {
     attachRecorder(req);
   }
 
-  const finalize = (reason) => {
+  const emitLifecycleLog = (reason) => {
     if (res._lifecycleLogged) return;
     res._lifecycleLogged = true;
     const durationMs = Date.now() - startTime;
+    const responseStatusCode = Number.isInteger(res.statusCode) ? res.statusCode : 200;
     metricsService.recordHttpRequest({
       method: req.method,
       route: normalizeLifecycleRoute(req),
-      status: res.statusCode,
+      status: responseStatusCode,
       durationMs,
     });
     log.info('REQUEST_LIFECYCLE', {
@@ -48,14 +49,25 @@ const requestLifecycle = (req, res, next) => {
       firmId: req.firmId || req.firm?.id || req.user?.firmId || null,
       startTime: new Date(startTime).toISOString(),
       durationMs,
-      status: res.statusCode,
+      statusCode: responseStatusCode,
       lifecycleEnd: reason,
       transactionCommitted: !!req.transactionCommitted,
+      transactionState: req.transactionState || (req.transactionCommitted ? 'committed' : 'not_started'),
     });
-    Promise.resolve(noteApiActivity({ req, statusCode: res.statusCode })).catch(() => null);
+    Promise.resolve(noteApiActivity({ req, statusCode: responseStatusCode })).catch(() => null);
     if (!skipSideEffects) {
       setImmediate(() => flushRequestEffects(req));
     }
+  };
+
+  const finalize = (reason) => {
+    if (res._lifecycleFinalizeScheduled || res._lifecycleLogged) return;
+    res._lifecycleFinalizeScheduled = true;
+    Promise.resolve(req.transactionFinalized)
+      .catch(() => null)
+      .finally(() => {
+        emitLifecycleLog(reason);
+      });
   };
 
   res.once('finish', () => finalize('finish'));

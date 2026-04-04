@@ -1,8 +1,8 @@
 const { z, nonEmptyString, xidString } = require('./common');
 
-const baseParamsSchema = z.object({
+const tenantRouteParamsSchema = z.object({
   firmSlug: nonEmptyString,
-}).strip();
+}).strict();
 
 const loginBodySchema = z.object({
   xid: xidString.optional(),
@@ -28,18 +28,18 @@ const resendOtpBodySchema = z.object({
 
 module.exports = {
   'GET /login': {
-    params: baseParamsSchema,
+    params: tenantRouteParamsSchema,
   },
   'POST /login': {
-    params: baseParamsSchema,
+    params: tenantRouteParamsSchema,
     body: loginBodySchema,
   },
   'POST /verify-otp': {
-    params: baseParamsSchema,
+    params: tenantRouteParamsSchema,
     body: verifyOtpBodySchema,
   },
   'POST /resend-otp': {
-    params: baseParamsSchema,
+    params: tenantRouteParamsSchema,
     body: resendOtpBodySchema,
   },
 };

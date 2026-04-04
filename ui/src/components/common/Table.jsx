@@ -86,3 +86,6 @@ export const TableEmptyState = ({ colSpan, message = 'No records found.' }) => (
     </td>
   </tr>
 );
+
+// Re-export DataTable for convenience
+export { DataTable } from './DataTable';

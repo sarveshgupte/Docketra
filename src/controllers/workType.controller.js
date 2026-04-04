@@ -133,7 +133,7 @@ const updateWorkTypeStatus = async (req, res) => {
   const workType = await WorkType.findOneAndUpdate(
     { _id: req.params.workTypeId, firmId },
     { $set: { isActive } },
-    { new: true }
+    { returnDocument: 'after' }
   );
   if (!workType) return res.status(404).json({ success: false, message: 'Work type not found' });
 

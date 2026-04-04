@@ -98,7 +98,6 @@ const flushRequestEffects = (reqOrContext) => {
   if (!reqOrContext?._pendingSideEffects?.length) return;
   const shouldRun = !reqOrContext.transactionActive || reqOrContext.transactionCommitted;
   if (!shouldRun) {
-    log.warn('SIDE_EFFECT_SKIPPED_ROLLBACK', { requestId: reqOrContext.requestId, count: reqOrContext._pendingSideEffects.length });
     reqOrContext._pendingSideEffects = [];
     return;
   }

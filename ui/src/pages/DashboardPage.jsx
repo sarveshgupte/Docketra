@@ -122,13 +122,21 @@ export const DashboardPage = () => {
     setLoadWarnings([]);
     try {
       const userFirmId = user?.firmId || user?.firm?.id;
-      const fetchStatSafely = async (request, mapResponse, errorMessage, warningMessage) => {
+      const fetchStatSafely = async (
+        request,
+        mapResponse,
+        errorMessage,
+        warningMessage,
+        { showWarning = false } = {},
+      ) => {
         try {
           const response = await request();
           return mapResponse(response);
         } catch (error) {
           console.error(errorMessage, error);
-          reportLoadWarning(warningMessage);
+          if (showWarning) {
+            reportLoadWarning(warningMessage);
+          }
           return {};
         }
       };
@@ -168,6 +176,7 @@ export const DashboardPage = () => {
             (metricsResponse) => (metricsResponse.success ? (metricsResponse.data || {}) : {}),
             'Failed to load firm metrics:',
             'Firm metrics',
+            { showWarning: true },
           )
           : Promise.resolve({}),
         fetchStatSafely(

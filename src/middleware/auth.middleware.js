@@ -73,6 +73,11 @@ const ensureTenantDefaultClient = async (req, user) => {
  * Special case: allows password changes for users with mustChangePassword flag
  */
 const authenticate = async (req, res, next) => {
+  if (req._authResolved && req.user && req.jwt) {
+    return next();
+  }
+
+  const authStartedAt = Date.now();
   try {
     if (req.method === 'OPTIONS') {
       return next();
@@ -160,6 +165,7 @@ const authenticate = async (req, res, next) => {
         ...(req.context || {}),
         ...buildRequestContext(req),
       };
+      req._authResolved = true;
       
       return next();
     }
@@ -310,10 +316,13 @@ const authenticate = async (req, res, next) => {
       defaultClientId: user.defaultClientId || decoded.defaultClientId || null,
     };
 
-    console.log('[AUTH_USER]', {
-      xID: req.user.xID,
-      role: req.user.role,
-    });
+    if (!req._authLogged) {
+      console.log('[AUTH_USER]', {
+        xID: req.user.xID,
+        role: req.user.role,
+      });
+      req._authLogged = true;
+    }
     
     // OBJECTIVE 2 & 3: Attach decoded JWT data including firm context for authorization
     // This makes firmSlug and defaultClientId available for route handlers
@@ -335,8 +344,17 @@ const authenticate = async (req, res, next) => {
       ...(req.context || {}),
       ...buildRequestContext(req),
     };
+    req._authResolved = true;
 
-    next();
+    const authDurationMs = Date.now() - authStartedAt;
+    if (authDurationMs > 250) {
+      console.warn('[AUTH_TIMING]', {
+        durationMs: authDurationMs,
+        path: req.originalUrl || req.url,
+      });
+    }
+
+    return next();
   } catch (error) {
     console.error('[AUTH] Authentication error:', error);
     if (error.message === 'Authentication failed: role missing') {
@@ -346,7 +364,7 @@ const authenticate = async (req, res, next) => {
         message: error.message,
       });
     }
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       code: 'AUTH_MIDDLEWARE_ERROR',
       message: 'Authentication error',

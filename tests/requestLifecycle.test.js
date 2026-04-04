@@ -17,6 +17,8 @@ class MockResponse extends EventEmitter {
   }
 }
 
+const flushAsync = () => new Promise((resolve) => setImmediate(resolve));
+
 async function testLifecycleLogsOnce() {
   resetQueue();
   const logs = [];
@@ -34,6 +36,7 @@ async function testLifecycleLogsOnce() {
   lifecycle(req, res, () => {});
   res.emit('finish');
   res.emit('close');
+  await flushAsync();
 
   log.info = originalInfo;
 
@@ -59,6 +62,7 @@ async function testLoginSkipsSideEffects() {
   lifecycle(req, res, () => {});
   res.emit('finish');
   res.emit('close');
+  await flushAsync();
 
   log.info = originalInfo;
 
@@ -67,10 +71,47 @@ async function testLoginSkipsSideEffects() {
   assert.strictEqual(lifecycleLogs[0].meta.transactionCommitted, false);
 }
 
+async function testLifecycleWaitsForTransactionFinalization() {
+  resetQueue();
+  const logs = [];
+  const originalInfo = log.info;
+  log.info = (event, meta) => logs.push({ event, meta });
+
+  let resolveTransaction;
+  const req = {
+    method: 'POST',
+    originalUrl: '/api/cases',
+    transactionCommitted: false,
+    transactionState: 'started',
+    transactionFinalized: new Promise((resolve) => {
+      resolveTransaction = resolve;
+    }),
+  };
+  const res = new MockResponse();
+
+  lifecycle(req, res, () => {});
+  res.emit('finish');
+  await flushAsync();
+  assert.strictEqual(logs.filter((l) => l.event === 'REQUEST_LIFECYCLE').length, 0, 'Lifecycle should wait for transaction finalization');
+
+  req.transactionCommitted = true;
+  req.transactionState = 'committed';
+  resolveTransaction();
+  await flushAsync();
+
+  log.info = originalInfo;
+
+  const lifecycleLogs = logs.filter((l) => l.event === 'REQUEST_LIFECYCLE');
+  assert.strictEqual(lifecycleLogs.length, 1, 'Lifecycle log should fire exactly once');
+  assert.strictEqual(lifecycleLogs[0].meta.transactionCommitted, true, 'Lifecycle should capture final commit flag');
+  assert.strictEqual(lifecycleLogs[0].meta.transactionState, 'committed', 'Lifecycle should capture final transaction state');
+}
+
 async function run() {
   try {
     await testLifecycleLogsOnce();
     await testLoginSkipsSideEffects();
+    await testLifecycleWaitsForTransactionFinalization();
     console.log('Request lifecycle tests passed.');
   } catch (err) {
     console.error('Request lifecycle tests failed:', err);
