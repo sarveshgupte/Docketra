@@ -114,7 +114,7 @@ export const ClientWorkspacePage = () => {
 
       {currentTab === 'documents' && <Card><p>Corporate Documents · MCA Filings · Board Resolutions · Agreements</p><p>Upload / download / version history</p></Card>}
 
-      {currentTab === 'dockets' && <Card><table className="neo-table"><thead><tr><th>Docket ID</th><th>Category</th><th>Status</th><th>Created</th></tr></thead><tbody>{dockets.map((d) => <tr key={d.caseId} onClick={() => navigate(`/app/firm/${firmSlug}/cases/${d.caseId}`)}><td>{d.caseId}</td><td>{d.category}</td><td>{d.status}</td><td>{formatDate(d.createdAt)}</td></tr>)}</tbody></table></Card>}
+      {currentTab === 'dockets' && <Card><table className="neo-table"><thead><tr><th>Docket ID</th><th>Category</th><th>Status</th><th>Created</th></tr></thead><tbody>{dockets.map((d) => <tr key={d.caseId} onClick={() => navigate(`/app/firm/${firmSlug}/dockets/${d.caseId}`)}><td>{d.caseId}</td><td>{d.category}</td><td>{d.status}</td><td>{formatDate(d.createdAt)}</td></tr>)}</tbody></table></Card>}
 
       {currentTab === 'activity' && <Card>{activity.map((entry) => <div key={entry.id}>{entry.description} — {formatDate(entry.timestamp)}</div>)}</Card>}
     </Layout>
