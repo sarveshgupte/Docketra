@@ -8,6 +8,7 @@ import {
   CaseDetailPage,
   CasesPage,
   ClientWorkspacePage,
+  ComplianceCalendarPage,
   ClientsPage,
   CreateCasePage,
   DashboardPage,
@@ -77,6 +78,14 @@ export const ProtectedRoutes = () => (
           element={(
             <ProtectedRoute>
               <WorkbasketPage />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="compliance-calendar"
+          element={(
+            <ProtectedRoute>
+              <ComplianceCalendarPage />
             </ProtectedRoute>
           )}
         />

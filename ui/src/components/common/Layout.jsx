@@ -322,7 +322,7 @@ export const Layout = ({ children }) => {
       items: [
         { to: ROUTES.FIRM_BASE(currentFirmSlug) + '/clients', label: 'All Clients', icon: <IconCases />, active: isActivePrefix(ROUTES.FIRM_BASE(currentFirmSlug) + '/clients') },
         { to: ROUTES.CASES(currentFirmSlug), label: 'All Cases', icon: <IconCases />, active: isActivePrefix(ROUTES.CASES(currentFirmSlug)) && !location.search.includes('view=audit') },
-        { to: ROUTES.WORKLIST(currentFirmSlug), label: 'Compliance Calendar', icon: <IconWorklist />, active: false },
+        { to: ROUTES.COMPLIANCE_CALENDAR(currentFirmSlug), label: 'Compliance Calendar', icon: <IconWorklist />, active: isActive(ROUTES.COMPLIANCE_CALENDAR(currentFirmSlug)) },
       ],
     },
     {
