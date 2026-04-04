@@ -21,6 +21,7 @@ const mapUserResponse = (user) => {
     status: user.status,
     isActive: user.isActive,
     isSystem: Boolean(user.isSystem),
+    isPrimaryAdmin: Boolean(user.isPrimaryAdmin),
     lockUntil: user.lockUntil ?? null,
     mustSetPassword: Boolean(user.mustSetPassword),
     passwordSet: Boolean(user.passwordSet),
