@@ -511,7 +511,7 @@ export const CreateCasePage = () => {
             </p>
             <p className="text-secondary">{successMessage.timestamp}</p>
             <div style={{ display: 'flex', gap: 'var(--spacing-md)', marginTop: 'var(--spacing-md)' }}>
-              <Button variant="primary" onClick={() => navigate(`/app/firm/${firmSlug}/cases/${successMessage.caseId}`)}>
+              <Button variant="primary" onClick={() => navigate(`/app/firm/${firmSlug}/dockets/${successMessage.caseId}`)}>
                 View Docket
               </Button>
               <Button variant="outline" onClick={() => navigate(`/app/firm/${firmSlug}/global-worklist`)}>

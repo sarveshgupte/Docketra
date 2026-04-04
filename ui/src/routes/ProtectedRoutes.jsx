@@ -147,6 +147,32 @@ export const ProtectedRoutes = () => (
           )}
         />
         <Route
+          path="dockets/:caseId"
+          element={(
+            <ProtectedRoute>
+              <CaseDetailPage />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="dockets"
+          element={(
+            <RouteErrorBoundary title="Unable to load dockets" message="Dockets could not be loaded right now. Please retry.">
+              <ProtectedRoute>
+                <CasesPage />
+              </ProtectedRoute>
+            </RouteErrorBoundary>
+          )}
+        />
+        <Route
+          path="dockets/create"
+          element={(
+            <ProtectedRoute>
+              <CreateCasePage />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
           path="cases/:caseId"
           element={(
             <ProtectedRoute>
@@ -157,7 +183,7 @@ export const ProtectedRoutes = () => (
         <Route
           path="cases"
           element={(
-            <RouteErrorBoundary title="Unable to load cases" message="Cases could not be loaded right now. Please retry.">
+            <RouteErrorBoundary title="Unable to load dockets" message="Dockets could not be loaded right now. Please retry.">
               <ProtectedRoute>
                 <CasesPage />
               </ProtectedRoute>
