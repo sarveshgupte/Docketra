@@ -42,8 +42,7 @@ const clientSchema = new mongoose.Schema({
    * Auto-generated immutable client identifier
    * Format: C000001, C000002, etc. (firm-scoped)
    * Generated via pre-save hook by finding highest existing number and incrementing
-   * IMMUTABLE - Cannot be changed after creation
-   * FIRM-SCOPED - Each firm starts with C000001
+     * FIRM-SCOPED - Each firm starts with C000001
    */
   clientId: {
     type: String,
@@ -402,29 +401,46 @@ const clientSchema = new mongoose.Schema({
     required: [true, 'Business email is required'],
     trim: true,
   },
+
+  /**
+   * Contact person details for the client account.
+   */
+  contactPersonName: {
+    type: String,
+    trim: true,
+  },
+  contactPersonDesignation: {
+    type: String,
+    trim: true,
+  },
+  contactPersonPhoneNumber: {
+    type: String,
+    trim: true,
+  },
+  contactPersonEmailAddress: {
+    type: String,
+    trim: true,
+    lowercase: true,
+  },
   
   /**
    * PAN (Permanent Account Number)
    * Indian tax identifier
-   * IMMUTABLE - Cannot be changed after creation
-   */
+     */
   PAN: {
     type: String,
     trim: true,
     uppercase: true,
-    immutable: true,
   },
   
   /**
    * TAN (Tax Deduction and Collection Account Number)
    * Indian tax identifier for TDS
-   * IMMUTABLE - Cannot be changed after creation
-   */
+     */
   TAN: {
     type: String,
     trim: true,
     uppercase: true,
-    immutable: true,
   },
   
   /**
@@ -440,13 +456,11 @@ const clientSchema = new mongoose.Schema({
   /**
    * CIN (Corporate Identification Number)
    * Indian company registration number
-   * IMMUTABLE - Cannot be changed after creation
-   */
+     */
   CIN: {
     type: String,
     trim: true,
     uppercase: true,
-    immutable: true,
   },
   
   /**
