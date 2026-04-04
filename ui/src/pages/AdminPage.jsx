@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
@@ -88,6 +88,7 @@ export const AdminPage = () => {
   const navigate = useNavigate();
   const { firmSlug } = useParams();
   const { showToast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('users');
@@ -171,6 +172,14 @@ export const AdminPage = () => {
     loadAdminStats();
     loadAdminData();
   }, [activeTab]);
+
+
+  useEffect(() => {
+    const requestedTab = searchParams.get('tab');
+    if (requestedTab && ['users', 'categories', 'clients'].includes(requestedTab) && requestedTab !== activeTab) {
+      setActiveTab(requestedTab);
+    }
+  }, [searchParams, activeTab]);
 
   useEffect(() => {
     return () => {
@@ -932,13 +941,13 @@ export const AdminPage = () => {
         <div className="admin__tabs">
           <Button
             variant={activeTab === 'users' ? 'primary' : 'default'}
-            onClick={() => setActiveTab('users')}
+            onClick={() => { setActiveTab('users'); setSearchParams({ tab: 'users' }); }}
           >
             User Management ({statsFailed ? '--' : adminStats.totalUsers})
           </Button>
           <Button
             variant={activeTab === 'categories' ? 'primary' : 'default'}
-            onClick={() => setActiveTab('categories')}
+            onClick={() => { setActiveTab('categories'); setSearchParams({ tab: 'categories' }); }}
           >
             Categories ({statsFailed ? '--' : adminStats.totalCategories})
           </Button>
