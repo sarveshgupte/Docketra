@@ -52,6 +52,10 @@ export const reportsService = {
     });
   },
 
+  getExportHistory: (filters = {}) => {
+    return api.get('/reports/export-history', { params: filters });
+  },
+
   getAuditLogs: (filters = {}) => {
     return api.get('/reports/audit-logs', { params: filters });
   },

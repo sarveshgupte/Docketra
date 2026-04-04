@@ -14,6 +14,7 @@ import { Loading } from '../../components/common/Loading';
 import { Button } from '../../components/common/Button';
 import { useAuth } from '../../hooks/useAuth';
 import { reportsService } from '../../services/reports.service';
+import { formatDateTime, formatRelativeTime } from '../../utils/formatDateTime';
 import './DetailedReports.css';
 
 export const DetailedReports = () => {
@@ -25,6 +26,8 @@ export const DetailedReports = () => {
   const [pagination, setPagination] = useState(null);
   const [categories, setCategories] = useState([]);
   const [error, setError] = useState(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [exportHistory, setExportHistory] = useState([]);
 
   const [filters, setFilters] = useState({
     fromDate: '',
@@ -43,6 +46,7 @@ export const DetailedReports = () => {
 
   useEffect(() => {
     loadCategories();
+    loadExportHistory();
   }, []);
 
   const loadCategories = async () => {
@@ -56,6 +60,20 @@ export const DetailedReports = () => {
       'GST Filing',
       'Other',
     ]);
+  };
+
+  const loadExportHistory = async () => {
+    setHistoryLoading(true);
+    try {
+      const response = await reportsService.getExportHistory({ limit: 25 });
+      const items = response?.data?.data?.items || [];
+      setExportHistory(items);
+    } catch (err) {
+      console.error('Failed to load export history', err);
+      setExportHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
   };
 
   const handleFilterChange = (field, value) => {
@@ -173,6 +191,7 @@ export const DetailedReports = () => {
       window.URL.revokeObjectURL(url);
 
       setExportModal({ isOpen: false, type: null, loading: false });
+      loadExportHistory();
       
       // Show success message (you could add a toast here)
       console.log('Report exported successfully');
@@ -243,6 +262,67 @@ export const DetailedReports = () => {
           recordCount={pagination?.total || 0}
           loading={exportModal.loading}
         />
+
+        <section className="detailed-reports__history">
+          <div className="detailed-reports__history-header">
+            <h2>Export History</h2>
+            <Button variant="default" onClick={loadExportHistory} disabled={historyLoading}>
+              {historyLoading ? 'Refreshing...' : 'Refresh'}
+            </Button>
+          </div>
+          <p className="text-secondary">
+            Detailed history of CSV/Excel exports with admin xID, timestamp and filter criteria.
+          </p>
+
+          {historyLoading ? (
+            <Loading message="Loading export history..." />
+          ) : exportHistory.length === 0 ? (
+            <EmptyState
+              title="No export history yet"
+              description="Once admins export reports, each CSV/Excel action will appear here."
+            />
+          ) : (
+            <div className="detailed-reports__history-table-wrap">
+              <table className="neo-table">
+                <thead>
+                  <tr>
+                    <th>Exported At</th>
+                    <th>Format</th>
+                    <th>Records</th>
+                    <th>Admin xID</th>
+                    <th>Admin</th>
+                    <th>Filters</th>
+                    <th>File</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {exportHistory.map((entry) => (
+                    <tr key={entry._id}>
+                      <td>
+                        <div>{formatDateTime(entry.exportedAt)}</div>
+                        <small className="text-secondary">{formatRelativeTime(entry.exportedAt)}</small>
+                      </td>
+                      <td>{String(entry.exportType || '').toUpperCase()}</td>
+                      <td>{entry.totalRecords || 0}</td>
+                      <td>{entry.exportedByXID || 'N/A'}</td>
+                      <td>
+                        <div>{entry.exportedByName || 'Unknown'}</div>
+                        <small className="text-secondary">{entry.exportedByEmail || 'N/A'}</small>
+                      </td>
+                      <td>
+                        <div>From: {entry.filters?.fromDate || 'N/A'}</div>
+                        <div>To: {entry.filters?.toDate || 'N/A'}</div>
+                        <div>Status: {entry.filters?.status || 'All'}</div>
+                        <div>Category: {entry.filters?.category || 'All'}</div>
+                      </td>
+                      <td>{entry.filename || 'N/A'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
       </div>
     </Layout>
   );

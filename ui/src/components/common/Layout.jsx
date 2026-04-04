@@ -341,7 +341,6 @@ export const Layout = ({ children }) => {
       title: 'INSIGHTS',
       defaultOpen: false,
       items: [
-        { to: ROUTES.CASES(currentFirmSlug), label: 'Firm Analytics', icon: <IconCases />, active: isActivePrefix(ROUTES.CASES(currentFirmSlug)) && !location.search.includes('view=audit') },
         { to: ROUTES.FIRM_BASE(currentFirmSlug) + '/admin/reports', label: 'Reports', icon: <IconReport />, active: isActivePrefix(ROUTES.FIRM_BASE(currentFirmSlug) + '/admin/reports') },
       ],
     },
