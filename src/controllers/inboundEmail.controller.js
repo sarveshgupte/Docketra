@@ -2,14 +2,14 @@ const { createHash, createHmac, randomUUID, timingSafeEqual } = require('crypto'
 const path = require('path');
 const { getRedisClient } = require('../config/redis');
 const Case = require('../models/Case.model');
-const Comment = require('../models/Comment.model');
 const Attachment = require('../models/Attachment.model');
+const Comment = require('../models/Comment.model');
 const EmailThread = require('../models/EmailThread.model');
 const User = require('../models/User.model');
 const TenantStorageConfig = require('../models/TenantStorageConfig.model');
 const { getMimeType } = require('../utils/fileUtils');
-const { getProviderForTenant } = require('../services/storage/StorageProviderFactory');
 const { sendEmail } = require('../services/email.service');
+const { getProviderForTenant } = require('../services/storage/StorageProviderFactory');
 const { enqueueInboundEmailJob } = require('../queues/inboundEmail.queue');
 const cfsDriveService = require('../services/cfsDrive.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
@@ -502,7 +502,72 @@ const handleInboundEmail = async (req, res) => {
   });
 };
 
+
+const { softDelete } = require('../services/softDelete.service');
+const CaseFile = require('../models/CaseFile.model');
+
+const deleteInboundAttachment = async (attachmentId, firmId, options = {}) => {
+  if (!attachmentId || !firmId) {
+    throw new Error('attachmentId and firmId are required');
+  }
+
+  const { req, reason = 'Inbound email attachment delete' } = options;
+
+  const attachment = await Attachment.findOne({
+    _id: attachmentId,
+    firmId,
+    source: 'email',
+  });
+
+  if (!attachment) {
+    throw new Error('Attachment not found or access denied');
+  }
+
+  // Reference counting: Only delete the file from the storage provider if no other active attachments or case files reference it
+  if (attachment.driveFileId) {
+    const duplicateCount = await Attachment.countDocuments({
+      driveFileId: attachment.driveFileId,
+      _id: { $ne: attachment._id },
+      deletedAt: null // Ensure we only count active attachments
+    });
+
+    const caseFileCount = await CaseFile.countDocuments({
+      storageFileId: attachment.driveFileId,
+      $or: [
+        { deletedAt: null },
+        { deletedAt: { $exists: false } }
+      ],
+      isDeleted: { $ne: true }
+    });
+
+    if (duplicateCount === 0 && caseFileCount === 0) {
+      try {
+        const provider = await getProviderForTenant(firmId);
+        await provider.deleteFile(attachment.driveFileId);
+      } catch (error) {
+        console.error('[InboundEmailController] Error deleting Drive file:', error.message);
+      }
+    } else {
+      console.info('[InboundEmailController] Skipping Drive file deletion due to reference counting', {
+        driveFileId: attachment.driveFileId,
+        duplicateCount,
+        caseFileCount,
+      });
+    }
+  }
+
+  await softDelete({
+    model: Attachment,
+    filter: { _id: attachment._id },
+    req,
+    reason,
+  });
+
+  return attachment;
+};
+
 module.exports = {
+  deleteInboundAttachment,
   parsePublicEmailTokenFromRecipient,
   processInboundEmailPayload,
   handleInboundEmail: wrapWriteHandler(handleInboundEmail),
