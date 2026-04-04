@@ -33,10 +33,16 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import api from '../services/api';
 import { ROUTES } from '../constants/routes';
 import './WorklistPage.css';
-const normalizeCases = (records = []) => records.map((record) => ({
-  ...record,
-  caseId: record.caseId || record._id,
-}));
+const normalizeCases = (records = []) => {
+  if (!Array.isArray(records)) return [];
+
+  return records
+    .filter((record) => record && typeof record === 'object')
+    .map((record) => ({
+      ...record,
+      caseId: record.caseId || record._id,
+    }));
+};
 
 export const WorklistPage = () => {
   const navigate = useNavigate();
@@ -83,18 +89,19 @@ export const WorklistPage = () => {
       if (isPendingView) {
         // Load pending cases
         const response = await api.get('/cases/my-pending');
-        if (response.data.success) {
-          setCases(normalizeCases(response.data.data || []));
-        }
+        const pendingData = response?.data?.data;
+        setCases(normalizeCases(pendingData));
       } else {
         // Load open cases (default worklist)
         // PR: Hard Cutover to xID - Removed email parameter, uses auth token
         const response = await worklistApi.getEmployeeWorklist();
-        
-        if (response.success) {
-          // Worklist only contains OPEN cases (backend already filters)
-          setCases(normalizeCases(response.data || []));
-        }
+
+        // Worklist only contains OPEN cases (backend already filters)
+        // Accept both array and wrapped response formats defensively.
+        const worklistPayload = Array.isArray(response?.data)
+          ? response.data
+          : response?.data?.data;
+        setCases(normalizeCases(worklistPayload));
       }
     } catch (error) {
       console.error('Failed to load worklist:', error);
