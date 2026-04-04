@@ -835,3 +835,5 @@
   color: var(--text-muted);
   font-size: 10px;
 }
+
+.enterprise-header__notif-dot { width: 8px; height: 8px; border-radius: 9999px; background: #ef4444; position: absolute; top: 8px; right: 8px; }

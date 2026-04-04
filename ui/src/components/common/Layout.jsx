@@ -129,6 +129,7 @@ export const Layout = ({ children }) => {
   const [worklistCount, setWorklistCount] = useState('loading');
   const [countsFetched, setCountsFetched] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
 
   const profileDropdownRef = useRef(null);
 
@@ -320,12 +321,31 @@ export const Layout = ({ children }) => {
         },
         {
           to: ROUTES.WORKLIST(currentFirmSlug),
-          label: 'My Worklist',
+          label: 'My WL',
           icon: <IconWorklist />,
           active: isActive(ROUTES.WORKLIST(currentFirmSlug)) || isActive(ROUTES.MY_WORKLIST(currentFirmSlug)),
           badge: countsFetched ? worklistCount : 'loading',
         },
-      ],
+        {
+          to: `${ROUTES.CASES(currentFirmSlug)}?status=QC_PENDING`,
+          label: 'QC Queue',
+          icon: <IconAdmin />,
+          active: location.pathname === ROUTES.CASES(currentFirmSlug) && new URLSearchParams(location.search).get('status') === 'QC_PENDING',
+          hidden: !hasAdminAccess,
+        },
+        {
+          to: `${ROUTES.CASES(currentFirmSlug)}?status=RESOLVED`,
+          label: 'Resolved',
+          icon: <IconWorklist />,
+          active: location.pathname === ROUTES.CASES(currentFirmSlug) && new URLSearchParams(location.search).get('status') === 'RESOLVED',
+        },
+        {
+          to: `${ROUTES.CASES(currentFirmSlug)}?status=FILED`,
+          label: 'Filed',
+          icon: <IconWorklist />,
+          active: location.pathname === ROUTES.CASES(currentFirmSlug) && new URLSearchParams(location.search).get('status') === 'FILED',
+        },
+      ].filter((item) => !item.hidden),
     },
     {
       id: 'cases-clients',
@@ -362,6 +382,14 @@ export const Layout = ({ children }) => {
   const toggleCommandPalette = useCallback(() => {
     setCommandPaletteOpen((isOpen) => !isOpen);
   }, []);
+
+
+  const notificationItems = [
+    { id: 'assignment', label: 'Assignment updates are shown here', unread: true },
+    { id: 'qc', label: 'QC requests and failures will appear here', unread: true },
+    { id: 'pending', label: 'Pending reopen notifications will appear here', unread: false },
+  ];
+  const unreadCount = notificationItems.filter((item) => item.unread).length;
 
   const commandPaletteCommands = [
     { id: 'new-docket', label: 'New Docket', shortcut: '⌘N', action: () => navigate(ROUTES.CREATE_CASE(currentFirmSlug)) },
@@ -508,9 +536,21 @@ export const Layout = ({ children }) => {
           {/* Right actions */}
           <div className="enterprise-header__right">
             {/* Notification Bell */}
-            <button className="enterprise-header__icon-btn" aria-label="Notifications" disabled title="Notifications are coming soon">
-              <IconBell />
-            </button>
+            <div className="dropdown">
+              <button className="enterprise-header__icon-btn" aria-label="Notifications" onClick={() => setNotificationOpen((v) => !v)}>
+                <IconBell />
+                {unreadCount > 0 ? <span className="enterprise-header__notif-dot" aria-hidden="true" /> : null}
+              </button>
+              {notificationOpen ? (
+                <div className="dropdown-menu dropdown-menu-right" role="menu">
+                  {notificationItems.map((item) => (
+                    <div key={item.id} className="dropdown-item" role="menuitem">
+                      {item.label}{item.unread ? ' •' : ''}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
 
             {/* User Profile Dropdown */}
             <div className="dropdown" ref={profileDropdownRef}>

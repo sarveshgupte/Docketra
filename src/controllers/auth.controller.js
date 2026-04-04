@@ -23,6 +23,7 @@ const { normalizeFirmSlug } = require('../utils/slugify');
 const { isActiveStatus, getFirmInactiveCode } = require('../utils/status.utils');
 const { validatePasswordStrength, PASSWORD_POLICY_MESSAGE } = require('../utils/passwordPolicy');
 const { getSession } = require('../utils/getSession');
+const { handleUserDeactivation } = require('../services/docketWorkflow.service');
 const { ensureDefaultClientForFirm } = require('../services/defaultClient.service');
 const { getOrCreateDefaultClient } = require('../services/defaultClient.guard');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
@@ -2699,6 +2700,8 @@ const deactivateUser = async (req, res) => {
     user.status = 'disabled';
     await user.save();
     
+    await handleUserDeactivation({ firmId: admin.firmId, userXID: user.xID });
+
     // Log deactivation
     await logAuthAudit({
       xID: user.xID,
@@ -3366,6 +3369,10 @@ const updateUserStatus = async (req, res) => {
     user.status = resolvedStatus;
     await user.save();
     
+    if (resolvedStatus === 'disabled') {
+      await handleUserDeactivation({ firmId: admin.firmId, userXID: user.xID });
+    }
+
     // Log status change
     await logAuthAudit({
       xID: user.xID,
