@@ -105,7 +105,7 @@ export const ClientWorkspacePage = () => {
         <hr />
         <h3>Comments</h3>
         <Textarea value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder="Add a comment" />
-        <input type="file" onChange={onUpload} />
+        <input type="file" onChange={onUpload} aria-label="Upload file for comment" />
         <Button onClick={onAddComment}>Post comment</Button>
         {[...comments].reverse().map((comment) => <div key={comment.comment_id} style={{ marginTop: 12 }}><strong>{comment.author_name || comment.user_id}</strong> — {formatDate(comment.created_at)}<div>{comment.comment_text}</div>{(comment.attachments || []).map((a) => <div key={a.attachment_id}>{a.file_name}</div>)}</div>)}
       </Card>}
