@@ -1,9 +1,9 @@
-const { z, nonEmptyString, objectIdString } = require('./common');
+const { z, nonEmptyString, objectIdString, queryBoolean } = require('./common');
 
 module.exports = {
   'GET /': {
     query: z.object({
-      activeOnly: z.coerce.boolean().optional(),
+      activeOnly: queryBoolean.optional(),
     }).passthrough(),
   },
   'GET /:id': {
