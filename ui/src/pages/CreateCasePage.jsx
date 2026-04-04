@@ -60,6 +60,7 @@ export const CreateCasePage = () => {
   const toast = useToast();
   const { showSuccess } = toast;
   const { loading: submitting, error: submitError, run: runSubmit, clearError } = useAsyncAction();
+  const toastRef = useRef(toast);
   
   const [formData, setFormData] = useState({
     clientId: '', // Will be populated from active clients
@@ -90,9 +91,26 @@ export const CreateCasePage = () => {
   const [hasDraft, setHasDraft] = useState(false);
   const [draftRestored, setDraftRestored] = useState(false);
   const titleInputRef = useRef(null);
+  const dependencyRequestCountRef = useRef(0);
+
+  const beginDependencyLoad = useCallback(() => {
+    dependencyRequestCountRef.current += 1;
+    setLoadingDependencies(true);
+  }, []);
+
+  const endDependencyLoad = useCallback(() => {
+    dependencyRequestCountRef.current = Math.max(0, dependencyRequestCountRef.current - 1);
+    if (dependencyRequestCountRef.current === 0) {
+      setLoadingDependencies(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    toastRef.current = toast;
+  }, [toast]);
 
   const fetchCategories = useCallback(async () => {
-    setLoadingDependencies(true);
+    beginDependencyLoad();
     setDependencyErrors((current) => ({ ...current, categories: '' }));
     try {
       let response;
@@ -113,18 +131,18 @@ export const CreateCasePage = () => {
       setDependencyErrors((current) => ({ ...current, categories: 'Could not load categories.' }));
       resolveUiError(err, {
         fallbackMessage: 'Failed to load categories.',
-        toast,
+        toast: toastRef.current,
         toastOnError: true,
         inline: false,
       });
     } finally {
       setLoadingCategories(false);
-      setLoadingDependencies(false);
+      endDependencyLoad();
     }
-  }, [toast]);
+  }, [beginDependencyLoad, endDependencyLoad]);
 
   const fetchClients = useCallback(async () => {
-    setLoadingDependencies(true);
+    beginDependencyLoad();
     setDependencyErrors((current) => ({ ...current, clients: '' }));
     try {
       // Use forCreateCase=true to always get Default Client (C000001) + active clients
@@ -144,15 +162,15 @@ export const CreateCasePage = () => {
       setDependencyErrors((current) => ({ ...current, clients: 'Could not load clients.' }));
       resolveUiError(err, {
         fallbackMessage: 'Failed to load clients.',
-        toast,
+        toast: toastRef.current,
         toastOnError: true,
         inline: false,
       });
     } finally {
       setLoadingClients(false);
-      setLoadingDependencies(false);
+      endDependencyLoad();
     }
-  }, [toast]);
+  }, [beginDependencyLoad, endDependencyLoad]);
 
   // Fetch categories for dropdown
   useEffect(() => {
