@@ -91,6 +91,7 @@ const { tenantScopedApiAccess, adminTenantScopedApiAccess } = require('./routes/
 const userRoutes = require('./routes/user.routes');
 const selfUserRoutes = require('./routes/selfUser.routes');
 const taskRoutes = require('./routes/task.routes');
+const complianceCalendarRoutes = require('./routes/complianceCalendar.routes');
 const caseRoutes = require('./routes/case.routes');
 const searchRoutes = require('./routes/search.routes');  // Search and worklist routes
 const authRoutes = require('./routes/auth.routes');  // Authentication routes
@@ -394,6 +395,7 @@ if (inboundEmailEnabled) {
 app.use('/api/users', ...tenantScopedApiAccess, writeGuardChain, userRoutes);
 app.use('/api/user', authenticate, selfUserRoutes);
 app.use('/api/tasks', ...tenantScopedApiAccess, writeGuardChain, taskRoutes);
+app.use('/api/compliance-calendar', ...tenantScopedApiAccess, writeGuardChain, complianceCalendarRoutes);
 app.use('/api/cases', ...tenantScopedApiAccess, writeGuardChain, caseRoutes);
 app.use('/api/search', ...tenantScopedApiAccess, writeGuardChain, searchRoutes);
 app.use('/api/worklists', ...tenantScopedApiAccess, writeGuardChain, searchRoutes);

@@ -1,0 +1,100 @@
+.compliance-calendar-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.compliance-calendar-page__toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+}
+
+.compliance-calendar-page__month-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.compliance-calendar-page__weekdays,
+.compliance-calendar-page__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.compliance-calendar-page__weekdays span {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.compliance-calendar-page__day {
+  min-height: 108px;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 0.5rem;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  gap: 0.25rem;
+}
+
+.compliance-calendar-page__day.is-muted {
+  opacity: 0.45;
+}
+
+.compliance-calendar-page__day.is-selected {
+  border-color: #1d4ed8;
+  box-shadow: 0 0 0 1px #1d4ed8;
+}
+
+.compliance-calendar-page__day small {
+  font-size: 0.72rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #1e3a8a;
+}
+
+.compliance-calendar-page__details,
+.compliance-calendar-page__form {
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  padding: 1rem;
+  background: #fff;
+}
+
+.compliance-calendar-page__event {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.compliance-calendar-page__error {
+  color: #b91c1c;
+  font-size: 0.9rem;
+}
+
+.compliance-calendar-page__form {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.compliance-calendar-page__form input,
+.compliance-calendar-page__form textarea {
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+}
+
+.compliance-calendar-page__event-actions,
+.compliance-calendar-page__form-actions {
+  display: flex;
+  gap: 0.5rem;
+}
