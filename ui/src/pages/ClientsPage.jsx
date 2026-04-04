@@ -6,6 +6,7 @@ import { Button } from '../components/common/Button';
 import { Badge } from '../components/common/Badge';
 import { Loading } from '../components/common/Loading';
 import { Modal } from '../components/common/Modal';
+import { Input } from '../components/common/Input';
 import { Textarea } from '../components/common/Textarea';
 import { PageHeader } from '../components/layout/PageHeader';
 import { DataTable } from '../components/layout/DataTable';
@@ -29,6 +30,16 @@ export const ClientsPage = () => {
   const [savingText, setSavingText] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [deletingFileId, setDeletingFileId] = useState('');
+  const [showClientModal, setShowClientModal] = useState(false);
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [savingClient, setSavingClient] = useState(false);
+  const [clientForm, setClientForm] = useState({
+    businessName: '',
+    businessAddress: '',
+    primaryContactNumber: '',
+    secondaryContactNumber: '',
+    businessEmail: '',
+  });
   const fileInputRef = useRef(null);
   const isAdmin = user?.role === 'Admin';
 
@@ -51,6 +62,92 @@ export const ClientsPage = () => {
     [editCfsClient]
   );
   const selectedFiles = selectedFactSheet.attachments || [];
+
+  const resetClientForm = useCallback(() => {
+    setSelectedClient(null);
+    setClientForm({
+      businessName: '',
+      businessAddress: '',
+      primaryContactNumber: '',
+      secondaryContactNumber: '',
+      businessEmail: '',
+    });
+  }, []);
+
+  const openCreateClientModal = () => {
+    resetClientForm();
+    setShowClientModal(true);
+  };
+
+  const openEditClientModal = (client) => {
+    setSelectedClient(client);
+    setClientForm({
+      businessName: client.businessName || '',
+      businessAddress: client.businessAddress || '',
+      primaryContactNumber: client.primaryContactNumber || '',
+      secondaryContactNumber: client.secondaryContactNumber || '',
+      businessEmail: client.businessEmail || '',
+    });
+    setShowClientModal(true);
+  };
+
+  const closeClientModal = () => {
+    setShowClientModal(false);
+    resetClientForm();
+  };
+
+  const handleSaveClient = async (event) => {
+    event.preventDefault();
+    if (!isAdmin) return;
+    if (!clientForm.businessName || !clientForm.businessAddress || !clientForm.primaryContactNumber || !clientForm.businessEmail) {
+      showError('Please fill in business name, address, primary contact number, and business email');
+      return;
+    }
+    setSavingClient(true);
+    try {
+      if (selectedClient?.clientId) {
+        const response = await clientApi.updateClient(selectedClient.clientId, {
+          businessEmail: clientForm.businessEmail,
+          primaryContactNumber: clientForm.primaryContactNumber,
+          secondaryContactNumber: clientForm.secondaryContactNumber,
+        });
+        if (!response?.success) throw new Error(response?.message || 'Failed to update client');
+        showSuccess('Client updated successfully');
+      } else {
+        const response = await clientApi.createClient({
+          businessName: clientForm.businessName,
+          businessAddress: clientForm.businessAddress,
+          businessEmail: clientForm.businessEmail,
+          primaryContactNumber: clientForm.primaryContactNumber,
+          ...(clientForm.secondaryContactNumber ? { secondaryContactNumber: clientForm.secondaryContactNumber } : {}),
+        });
+        if (!response?.success) throw new Error(response?.message || 'Failed to create client');
+        showSuccess(`Client created successfully${response?.data?.clientId ? ` (${response.data.clientId})` : ''}`);
+      }
+      await loadClients();
+      closeClientModal();
+    } catch (error) {
+      showError(error?.response?.data?.message || error?.message || 'Failed to save client');
+    } finally {
+      setSavingClient(false);
+    }
+  };
+
+  const handleToggleClientStatus = async (client) => {
+    if (!isAdmin) return;
+    const isCurrentlyActive = client.status === 'ACTIVE';
+    const action = isCurrentlyActive ? 'deactivate' : 'activate';
+    const confirmed = window.confirm(`Are you sure you want to ${action} ${client.businessName}?`);
+    if (!confirmed) return;
+    try {
+      const response = await clientApi.toggleClientStatus(client.clientId, !isCurrentlyActive);
+      if (!response?.success) throw new Error(response?.message || `Failed to ${action} client`);
+      showSuccess(`Client ${isCurrentlyActive ? 'deactivated' : 'activated'} successfully`);
+      await loadClients();
+    } catch (error) {
+      showError(error?.response?.data?.message || error?.message || `Failed to ${action} client`);
+    }
+  };
 
   const openEditCfsModal = useCallback(async (client) => {
     try {
@@ -114,12 +211,22 @@ export const ClientsPage = () => {
         <div className="admin__actions justify-end">
           <Button size="small" onClick={() => navigate(`/app/firm/${firmSlug}/clients/${client.clientId}`)}>Workspace</Button>
           {isAdmin ? (
-            <Button size="small" variant="warning" onClick={() => openEditCfsModal(client)}>Edit Fact Sheet</Button>
+            <>
+              <Button size="small" variant="secondary" onClick={() => openEditClientModal(client)}>Edit Client</Button>
+              <Button
+                size="small"
+                variant={client.status === 'ACTIVE' ? 'danger' : 'success'}
+                onClick={() => handleToggleClientStatus(client)}
+              >
+                {client.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+              </Button>
+              <Button size="small" variant="warning" onClick={() => openEditCfsModal(client)}>Edit Fact Sheet</Button>
+            </>
           ) : null}
         </div>
       ),
     },
-  ], [navigate, firmSlug, isAdmin, openEditCfsModal]);
+  ], [navigate, firmSlug, isAdmin, openEditCfsModal, openEditClientModal, handleToggleClientStatus]);
 
   const refreshSelectedClient = async () => {
     if (!editCfsClient?.clientId) return;
@@ -183,15 +290,19 @@ export const ClientsPage = () => {
 
   return (
     <Layout>
-      <PageHeader title="All Clients" description="View and manage all registered client workspaces." />
+      <PageHeader
+        title="All Clients"
+        description="View and manage all registered client workspaces."
+        actions={isAdmin ? <Button onClick={openCreateClientModal}>+ Add Client</Button> : null}
+      />
       <Card>
         {loading ? <Loading message="Loading clients..." /> : (
           <DataTable
             columns={columns}
             data={clients}
             rowKey="clientId"
-            emptyContent={(
-              <div className="p-8">
+          emptyContent={(
+            <div className="p-8">
                 <EmptyState
                   title="No clients available yet"
                   description="Create your first client to begin organizing dockets and workspaces."
@@ -201,6 +312,51 @@ export const ClientsPage = () => {
           />
         )}
       </Card>
+      <Modal
+        isOpen={showClientModal}
+        onClose={closeClientModal}
+        title={selectedClient ? `Edit Client • ${selectedClient.businessName}` : 'Add New Client'}
+        maxWidth="2xl"
+      >
+        <form onSubmit={handleSaveClient} style={{ display: 'grid', gap: '1rem' }}>
+          <Input
+            label="Business Name"
+            value={clientForm.businessName}
+            onChange={(event) => setClientForm((prev) => ({ ...prev, businessName: event.target.value }))}
+            required
+            disabled={Boolean(selectedClient)}
+          />
+          <Input
+            label="Business Address"
+            value={clientForm.businessAddress}
+            onChange={(event) => setClientForm((prev) => ({ ...prev, businessAddress: event.target.value }))}
+            required
+            disabled={Boolean(selectedClient)}
+          />
+          <Input
+            label="Primary Contact Number"
+            value={clientForm.primaryContactNumber}
+            onChange={(event) => setClientForm((prev) => ({ ...prev, primaryContactNumber: event.target.value }))}
+            required
+          />
+          <Input
+            label="Secondary Contact Number"
+            value={clientForm.secondaryContactNumber}
+            onChange={(event) => setClientForm((prev) => ({ ...prev, secondaryContactNumber: event.target.value }))}
+          />
+          <Input
+            label="Business Email"
+            type="email"
+            value={clientForm.businessEmail}
+            onChange={(event) => setClientForm((prev) => ({ ...prev, businessEmail: event.target.value }))}
+            required
+          />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+            <Button type="button" variant="outline" onClick={closeClientModal}>Cancel</Button>
+            <Button type="submit" disabled={savingClient}>{savingClient ? 'Saving…' : 'Save Client'}</Button>
+          </div>
+        </form>
+      </Modal>
       <Modal
         isOpen={Boolean(editCfsClient)}
         onClose={() => {
