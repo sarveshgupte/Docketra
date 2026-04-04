@@ -691,7 +691,7 @@
 .docket-sidebar {
   position: fixed;
   inset: 0;
-  z-index: 90;
+  z-index: 1200;
   pointer-events: none;
 }
 
@@ -707,8 +707,8 @@
 .docket-sidebar__panel {
   position: absolute;
   right: 0;
-  top: 0;
-  height: 100%;
+  top: var(--app-header-offset, 72px);
+  height: calc(100% - var(--app-header-offset, 72px));
   width: min(440px, 100%);
   background: #ffffff;
   box-shadow: -6px 0 24px rgba(17, 24, 39, 0.14);

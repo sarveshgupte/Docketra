@@ -1092,9 +1092,20 @@ export const CaseDetailPage = () => {
   const performedBy = user?.email || user?.xID || 'system';
 
   const openSidebar = (type) => {
-    setSidebarType(type);
-    setSidebarOpen(true);
+    setSidebarType((previousType) => {
+      if (sidebarOpen && previousType === type) {
+        setSidebarOpen(false);
+        return null;
+      }
+      setSidebarOpen(true);
+      return type;
+    });
   };
+
+  useEffect(() => {
+    setSidebarOpen(false);
+    setSidebarType(null);
+  }, [caseId]);
 
   const handleAssignDocket = async () => {
     if (!assignUser) {
@@ -1770,9 +1781,12 @@ export const CaseDetailPage = () => {
         <DocketActions actions={headerActions} />
 
         <DocketSidebar
-          isOpen={sidebarOpen}
+          isOpen={sidebarOpen && Boolean(sidebarType)}
           type={sidebarType}
-          onClose={() => setSidebarOpen(false)}
+          onClose={() => {
+            setSidebarOpen(false);
+            setSidebarType(null);
+          }}
           caseInfo={caseInfo}
           attachments={attachments}
           timelineEvents={timelineEvents}
