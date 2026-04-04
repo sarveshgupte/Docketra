@@ -34,16 +34,16 @@ export const Button = ({
   ...props
 }) => {
   const baseClasses =
-    'inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-sm px-4 py-2';
+    'inline-flex min-h-11 items-center justify-center rounded-md border font-medium leading-5 transition-colors duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-sm px-4 py-2.5';
 
   const variantClasses = {
-    primary: 'bg-primary text-white hover:brightness-110 active:brightness-90 focus-visible:ring-primary',
+    primary: 'border-primary bg-primary text-white hover:brightness-105 active:brightness-95 focus-visible:ring-primary',
     secondary:
-      'border border-border bg-white text-textMain hover:bg-slate-50 active:bg-slate-100 focus-visible:ring-textMuted',
+      'border-border bg-white text-textMain hover:bg-slate-50 active:bg-slate-100 focus-visible:ring-textMuted',
     outline:
-      'border border-border bg-transparent text-textMain hover:bg-slate-50 active:bg-slate-100 focus-visible:ring-textMuted',
-    danger: 'bg-error text-white hover:brightness-110 active:brightness-90 focus-visible:ring-error',
-    ghost: 'border border-transparent bg-transparent text-textMain hover:bg-slate-100 active:bg-slate-200 focus-visible:ring-textMuted',
+      'border-border bg-transparent text-textMain hover:bg-slate-50 active:bg-slate-100 focus-visible:ring-textMuted',
+    danger: 'border-error bg-error text-white hover:brightness-105 active:brightness-95 focus-visible:ring-error',
+    ghost: 'border-transparent bg-transparent text-textMain hover:bg-slate-100 active:bg-slate-200 focus-visible:ring-textMuted',
   };
 
   const isDisabled = disabled || loading;

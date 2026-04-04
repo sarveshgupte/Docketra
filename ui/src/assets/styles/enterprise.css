@@ -58,6 +58,26 @@
   html {
     font-size: 14px;
   }
+
+  body {
+    margin: 0;
+    font-family: var(--font-family);
+    color: var(--text-body);
+    background: var(--color-bg-app);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
   
   
   
@@ -66,6 +86,19 @@
     font-weight: 600;
     color: theme(--color-text-main);
     line-height: 1.2;
+  }
+
+  h3,
+  h4,
+  h5,
+  h6 {
+    color: theme(--color-text-main);
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  p {
+    margin: 0;
   }
   
   h2 {
@@ -93,6 +126,17 @@
   textarea,
   select {
     font-family: inherit;
+    font-size: var(--font-size-sm);
+  }
+
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring-offset);
+  }
+
+  ::selection {
+    color: #ffffff;
+    background: #1d4ed8;
   }
 }
 
@@ -125,7 +169,7 @@
   /* Enterprise Card Styles */
   .card {
     background-color: var(--color-surface);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     border: 1px solid var(--color-border);
     padding: var(--spacing-md);
     box-shadow: none;
@@ -185,7 +229,7 @@
   /* Enterprise Table Styles */
   .table-container {
     background-color: var(--color-surface);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     border: 1px solid var(--color-border);
     overflow: auto;
     box-shadow: none;
