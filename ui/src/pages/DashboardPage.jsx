@@ -28,7 +28,7 @@ import { worklistApi } from '../api/worklist.api';
 import { adminApi } from '../api/admin.api';
 import { clientApi } from '../api/client.api';
 import { metricsApi } from '../api/metrics.api';
-import { formatDate } from '../utils/formatters';
+import { formatCaseName, formatDate } from '../utils/formatters';
 import { getStatusLabel } from '../utils/statusDisplay';
 import { UX_COPY } from '../constants/uxCopy';
 import { ROUTES, safeRoute } from '../constants/routes';
@@ -57,7 +57,7 @@ const PRODUCT_TOUR_STEPS = [
     description: 'Go to Admin and add users so work can be delegated, reviewed, and tracked across partners and employees.',
   },
   {
-    title: 'Configure case categories',
+    title: 'Configure docket categories',
     description: 'Create categories and subcategories to standardize your docket types and simplify filtering and reporting.',
   },
   {
@@ -492,15 +492,15 @@ export const DashboardPage = () => {
 
   const adminStatCards = [
     {
-      title: 'Filed Cases',
+      title: 'Filed Dockets',
       value: stats.adminFiledCases,
-      subtitle: 'Archived cases',
+      subtitle: 'Archived dockets',
       onClick: () => navigate(`${safeRoute(ROUTES.CASES(firmSlug))}?status=FILED`),
     },
     {
       title: 'All Resolved',
       value: stats.adminResolvedCases,
-      subtitle: 'All executed cases',
+      subtitle: 'All executed dockets',
       onClick: () => navigate(`${safeRoute(ROUTES.CASES(firmSlug))}?status=RESOLVED`),
     },
     {
@@ -640,8 +640,8 @@ export const DashboardPage = () => {
                         className="focus-within:bg-gray-50"
                       >
                         <TableCell className="w-full max-w-lg">
-                          <span className="block overflow-hidden text-ellipsis whitespace-nowrap" title={caseItem.caseName}>
-                            {caseItem.caseName}
+                          <span className="block overflow-hidden text-ellipsis whitespace-nowrap" title={formatCaseName(caseItem.caseName)}>
+                            {formatCaseName(caseItem.caseName)}
                           </span>
                         </TableCell>
                         <TableCell className="w-[1px] whitespace-nowrap">{caseItem.category}</TableCell>

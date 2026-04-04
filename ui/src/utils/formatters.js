@@ -44,7 +44,8 @@ export const getFirmStatusInfo = (status) => {
 };
 
 export const formatCaseName = (caseName) => {
-  return caseName || 'N/A';
+  if (!caseName) return 'N/A';
+  return String(caseName).replace(/^case(?=\d{8}\d{5}$)/i, 'Docket#');
 };
 
 export const formatStatus = (status) => {
