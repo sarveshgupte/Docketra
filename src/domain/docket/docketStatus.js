@@ -1,0 +1,14 @@
+const DocketStatus = Object.freeze({
+  CREATED: 'CREATED',
+  AVAILABLE: 'AVAILABLE',
+  ASSIGNED: 'ASSIGNED',
+  IN_PROGRESS: 'IN_PROGRESS',
+  PENDING: 'PENDING',
+  QC_PENDING: 'QC_PENDING',
+  QC_FAILED: 'QC_FAILED',
+  QC_CORRECTED: 'QC_CORRECTED',
+  RESOLVED: 'RESOLVED',
+  FILED: 'FILED',
+});
+
+module.exports = DocketStatus;
