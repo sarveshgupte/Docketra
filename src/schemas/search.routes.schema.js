@@ -13,7 +13,7 @@ module.exports = {
       createdAtFrom: nonEmptyString.optional(),
       createdAtTo: nonEmptyString.optional(),
       slaStatus: z.enum(['overdue', 'due_soon', 'on_track']).optional(),
-      sortBy: z.enum(['clientId', 'category', 'slaDueAt', 'createdAt']).optional(),
+      sortBy: z.enum(['clientId', 'category', 'slaDueAt', 'slaDueDate', 'createdAt']).optional(),
       sortOrder: z.enum(['asc', 'desc']).optional(),
       page: z.coerce.number().int().positive().optional(),
       limit: z.coerce.number().int().positive().optional(),

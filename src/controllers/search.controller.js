@@ -433,7 +433,7 @@ const employeeWorklist = async (req, res) => {
  * - createdAtFrom: Filter by creation date (start)
  * - createdAtTo: Filter by creation date (end)
  * - slaStatus: Filter by SLA status (overdue, due_soon, on_track)
- * - sortBy: Field to sort by (clientId, category, slaDueAt, createdAt)
+ * - sortBy: Field to sort by (clientId, category, slaDueAt/slaDueDate, createdAt)
  * - sortOrder: Sort order (asc, desc)
  * - page: Page number for pagination
  * - limit: Results per page
@@ -509,6 +509,8 @@ const globalWorklist = async (req, res) => {
     }
     
     // Build sort object
+    const normalizedSortBy = sortBy === 'slaDueDate' ? 'slaDueAt' : sortBy;
+
     const sortFields = {
       clientId: 'clientId',
       category: 'category',
@@ -516,7 +518,7 @@ const globalWorklist = async (req, res) => {
       createdAt: 'createdAt',
     };
     
-    const sortField = sortFields[sortBy] || 'slaDueAt';
+    const sortField = sortFields[normalizedSortBy] || 'slaDueAt';
     const sortDirection = sortOrder === 'desc' ? -1 : 1;
     const sort = { [sortField]: sortDirection };
     
@@ -527,7 +529,7 @@ const globalWorklist = async (req, res) => {
     let casesWithSLA = [];
     let casesWithoutSLA = [];
     
-    if (sortBy === 'slaDueAt') {
+    if (normalizedSortBy === 'slaDueAt') {
       // Query for cases WITH slaDueAt (not null)
       const queryWithSLA = { ...baseQuery };
       // Don't modify if slaStatus filter is already applied
