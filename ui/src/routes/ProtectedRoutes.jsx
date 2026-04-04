@@ -21,6 +21,7 @@ import {
   ReportsDashboard,
   StorageSettingsPage,
   WorkbasketPage,
+  WorkSettingsPage,
   WorklistPage,
 } from './lazyPages';
 import { RouteSuspenseOutlet } from './RouteSuspenseOutlet';
@@ -184,6 +185,14 @@ export const ProtectedRoutes = () => (
           element={(
             <ProtectedRoute requireAdmin>
               <FirmSettingsPage />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="settings/work"
+          element={(
+            <ProtectedRoute requireAdmin>
+              <WorkSettingsPage />
             </ProtectedRoute>
           )}
         />
