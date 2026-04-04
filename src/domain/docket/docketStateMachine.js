@@ -1,53 +1,59 @@
-const CaseStatus = require('../case/caseStatus');
-
-const DocketState = Object.freeze({
-  WB: 'WB',
-  WL: 'WL',
-  ASSIGNED: 'ASSIGNED',
-  IN_PROGRESS: 'IN_PROGRESS',
-  PENDED: 'PENDING',
-  FILED: 'FILED',
-  RESOLVED: 'RESOLVED',
-});
+const DocketStatus = require('./docketStatus');
 
 const allowedTransitions = Object.freeze({
-  [DocketState.WB]: Object.freeze([DocketState.WL]),
-  [DocketState.WL]: Object.freeze([DocketState.ASSIGNED]),
-  [DocketState.ASSIGNED]: Object.freeze([DocketState.IN_PROGRESS]),
-  [DocketState.IN_PROGRESS]: Object.freeze([DocketState.PENDED, DocketState.FILED, DocketState.RESOLVED]),
-  [DocketState.PENDED]: Object.freeze([DocketState.IN_PROGRESS]),
-  [DocketState.FILED]: Object.freeze([]),
-  [DocketState.RESOLVED]: Object.freeze([]),
+  [DocketStatus.AVAILABLE]: Object.freeze([DocketStatus.ASSIGNED]),
+  [DocketStatus.ASSIGNED]: Object.freeze([DocketStatus.IN_PROGRESS]),
+  [DocketStatus.IN_PROGRESS]: Object.freeze([
+    DocketStatus.PENDING,
+    DocketStatus.QC_PENDING,
+    DocketStatus.RESOLVED,
+    DocketStatus.FILED,
+  ]),
+  [DocketStatus.PENDING]: Object.freeze([DocketStatus.IN_PROGRESS]),
+  [DocketStatus.QC_PENDING]: Object.freeze([DocketStatus.ASSIGNED, DocketStatus.RESOLVED]),
+  [DocketStatus.QC_FAILED]: Object.freeze([DocketStatus.IN_PROGRESS]),
+  [DocketStatus.QC_CORRECTED]: Object.freeze([DocketStatus.RESOLVED]),
+  [DocketStatus.CREATED]: Object.freeze([DocketStatus.AVAILABLE]),
+  [DocketStatus.RESOLVED]: Object.freeze([]),
+  [DocketStatus.FILED]: Object.freeze([]),
 });
 
 const persistenceToDocket = Object.freeze({
-  [CaseStatus.UNASSIGNED]: DocketState.WB,
-  [CaseStatus.OPEN]: DocketState.WL,
-  [CaseStatus.ASSIGNED]: DocketState.ASSIGNED,
-  [CaseStatus.IN_PROGRESS]: DocketState.IN_PROGRESS,
-  [CaseStatus.PENDING]: DocketState.PENDED,
-  [CaseStatus.FILED]: DocketState.FILED,
-  [CaseStatus.RESOLVED]: DocketState.RESOLVED,
-  [CaseStatus.PENDING_LEGACY]: DocketState.PENDED,
-  [CaseStatus.OPEN_LEGACY]: DocketState.WL,
-  [CaseStatus.FILED_LEGACY]: DocketState.FILED,
+  UNASSIGNED: DocketStatus.AVAILABLE,
+  OPEN: DocketStatus.ASSIGNED,
+  ASSIGNED: DocketStatus.ASSIGNED,
+  IN_PROGRESS: DocketStatus.IN_PROGRESS,
+  PENDING: DocketStatus.PENDING,
+  QC_PENDING: DocketStatus.QC_PENDING,
+  QC_FAILED: DocketStatus.QC_FAILED,
+  QC_CORRECTED: DocketStatus.QC_CORRECTED,
+  RESOLVED: DocketStatus.RESOLVED,
+  FILED: DocketStatus.FILED,
+  Open: DocketStatus.ASSIGNED,
+  Pending: DocketStatus.PENDING,
+  Filed: DocketStatus.FILED,
 });
 
 const docketToPersistence = Object.freeze({
-  [DocketState.WB]: CaseStatus.UNASSIGNED,
-  [DocketState.WL]: CaseStatus.OPEN,
-  [DocketState.ASSIGNED]: CaseStatus.ASSIGNED,
-  [DocketState.IN_PROGRESS]: CaseStatus.IN_PROGRESS,
-  [DocketState.PENDED]: CaseStatus.PENDING,
-  [DocketState.FILED]: CaseStatus.FILED,
-  [DocketState.RESOLVED]: CaseStatus.RESOLVED,
+  [DocketStatus.CREATED]: 'UNASSIGNED',
+  [DocketStatus.AVAILABLE]: 'UNASSIGNED',
+  [DocketStatus.ASSIGNED]: 'ASSIGNED',
+  [DocketStatus.IN_PROGRESS]: 'IN_PROGRESS',
+  [DocketStatus.PENDING]: 'PENDING',
+  [DocketStatus.QC_PENDING]: 'QC_PENDING',
+  [DocketStatus.QC_FAILED]: 'QC_FAILED',
+  [DocketStatus.QC_CORRECTED]: 'QC_CORRECTED',
+  [DocketStatus.RESOLVED]: 'RESOLVED',
+  [DocketStatus.FILED]: 'FILED',
 });
 
 function toDocketState(state) {
+  if (!state) return state;
   return persistenceToDocket[state] || state;
 }
 
 function toPersistenceState(state) {
+  if (!state) return state;
   return docketToPersistence[state] || state;
 }
 
@@ -55,9 +61,8 @@ function assertValidDocketTransition(fromState, toState) {
   const from = toDocketState(fromState);
   const to = toDocketState(toState);
   const allowed = allowedTransitions[from] || [];
-  if (allowed.includes(to)) {
-    return true;
-  }
+
+  if (allowed.includes(to)) return true;
 
   const error = new Error(`Invalid docket state transition: ${from || 'UNKNOWN'} -> ${to || 'UNKNOWN'}`);
   error.code = 'INVALID_DOCKET_TRANSITION';
@@ -66,7 +71,7 @@ function assertValidDocketTransition(fromState, toState) {
 }
 
 module.exports = {
-  DocketState,
+  DocketStatus,
   allowedTransitions,
   toDocketState,
   toPersistenceState,

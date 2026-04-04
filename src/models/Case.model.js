@@ -255,6 +255,9 @@ const caseSchema = new mongoose.Schema({
    * - UNASSIGNED: Newly created case in global worklist, not yet assigned
    * - OPEN: Active case being worked on (appears in My Worklist)
    * - PENDING: Temporarily paused, waiting for external input (does NOT appear in My Worklist)
+ * - QC_PENDING: Awaiting quality control review
+ * - QC_FAILED: Failed QC and sent back for rework
+ * - QC_CORRECTED: Corrected during QC before final resolution
    * - RESOLVED: Case completed successfully
    * - FILED: Case archived and finalized (read-only, admin-visible only)
    * 
@@ -333,6 +336,23 @@ const caseSchema = new mongoose.Schema({
    */
   pendingUntil: {
     type: Date,
+  },
+  reopenAt: {
+    type: Date,
+  },
+  duplicateOf: {
+    type: String,
+    trim: true,
+  },
+  qc: {
+    requestedBy: { type: String, trim: true, uppercase: true },
+    handledBy: { type: String, trim: true, uppercase: true },
+    status: { type: String, enum: ['REQUESTED', 'APPROVED', 'FAILED', 'CORRECTED', 'SKIPPED'], default: null },
+    attempts: { type: Number, min: 0, default: 0 },
+    comment: { type: String, trim: true, default: null },
+    requestedAt: { type: Date },
+    handledAt: { type: Date },
+    originalAssigneeXID: { type: String, trim: true, uppercase: true },
   },
 
   // Timestamp when case was transitioned to RESOLVED
