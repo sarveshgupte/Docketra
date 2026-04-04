@@ -92,3 +92,9 @@
   border-radius: 0.5rem;
   padding: 0.5rem;
 }
+
+.compliance-calendar-page__event-actions,
+.compliance-calendar-page__form-actions {
+  display: flex;
+  gap: 0.5rem;
+}

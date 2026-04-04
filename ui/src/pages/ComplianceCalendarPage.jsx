@@ -7,8 +7,6 @@ import { usePermissions } from '../hooks/usePermissions';
 import api from '../services/api';
 import './ComplianceCalendarPage.css';
 
-const CALENDAR_TAG = 'compliance-calendar';
-
 const monthTitle = (date) => date.toLocaleString(undefined, { month: 'long', year: 'numeric' });
 
 const toISODate = (value) => {
@@ -41,23 +39,23 @@ export const ComplianceCalendarPage = () => {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [selectedDate, setSelectedDate] = useState(toISODate(new Date()));
+  const [editId, setEditId] = useState('');
   const [form, setForm] = useState({ title: '', description: '' });
 
   const loadEvents = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const response = await api.get('/tasks', { params: { limit: 200 } });
+      const response = await api.get('/compliance-calendar');
       const records = response?.data?.data || [];
       const calendarEvents = records
-        .filter((task) => Array.isArray(task.tags) && task.tags.includes(CALENDAR_TAG) && task.dueDate)
+        .filter((task) => task.dueDate)
         .map((task) => ({
           id: task._id,
           title: task.title,
           description: task.description || '',
           dueDate: toISODate(task.dueDate),
           status: task.status,
-          createdByName: task.createdByName,
         }));
       setEvents(calendarEvents);
     } catch (apiError) {
@@ -85,31 +83,47 @@ export const ComplianceCalendarPage = () => {
     return eventsByDate[selectedDate] || [];
   }, [eventsByDate, selectedDate]);
 
+  const resetForm = () => {
+    setEditId('');
+    setForm({ title: '', description: '' });
+  };
+
   const changeMonth = (offset) => {
     setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + offset, 1));
   };
 
-  const handleCreateEvent = async (event) => {
+  const handleSaveEvent = async (event) => {
     event.preventDefault();
     if (!isAdmin || !selectedDate || !form.title.trim()) return;
 
     setSaving(true);
     try {
-      await api.post('/tasks', {
+      const payload = {
         title: form.title.trim(),
         description: form.description.trim(),
         dueDate: selectedDate,
-        status: 'pending',
-        priority: 'high',
-        tags: [CALENDAR_TAG],
-      });
-      setForm({ title: '', description: '' });
+      };
+
+      if (editId) {
+        await api.put(`/compliance-calendar/${editId}`, payload);
+      } else {
+        await api.post('/compliance-calendar', payload);
+      }
+
+      resetForm();
       await loadEvents();
     } catch (apiError) {
-      setError(apiError?.response?.data?.message || 'Failed to create event.');
+      setError(apiError?.response?.data?.message || 'Failed to save entry.');
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleEditEvent = (entry) => {
+    if (!isAdmin) return;
+    setEditId(entry.id);
+    setSelectedDate(entry.dueDate);
+    setForm({ title: entry.title, description: entry.description || '' });
   };
 
   const handleDeleteEvent = async (eventId) => {
@@ -117,7 +131,8 @@ export const ComplianceCalendarPage = () => {
 
     setSaving(true);
     try {
-      await api.delete(`/tasks/${eventId}`);
+      await api.delete(`/compliance-calendar/${eventId}`);
+      if (editId === eventId) resetForm();
       await loadEvents();
     } catch (apiError) {
       setError(apiError?.response?.data?.message || 'Failed to delete event.');
@@ -137,7 +152,7 @@ export const ComplianceCalendarPage = () => {
         <div className="compliance-calendar-page__toolbar">
           <div>
             <h2>{monthTitle(currentMonth)}</h2>
-            <p>{isAdmin ? 'Admins can add/update/delete entries. Team members have view-only access.' : 'View-only calendar. Contact your admin to add or edit entries.'}</p>
+            <p>{isAdmin ? 'Admins can add/edit/delete entries. Team members have view-only access.' : 'View-only calendar. Contact your admin to add or edit entries.'}</p>
           </div>
           <div className="compliance-calendar-page__month-controls">
             <Button variant="outline" onClick={() => changeMonth(-1)}>Previous</Button>
@@ -189,15 +204,18 @@ export const ComplianceCalendarPage = () => {
                 <p>{item.description || 'No details provided.'}</p>
               </div>
               {isAdmin ? (
-                <Button variant="ghost" onClick={() => handleDeleteEvent(item.id)} disabled={saving}>Delete</Button>
+                <div className="compliance-calendar-page__event-actions">
+                  <Button variant="ghost" onClick={() => handleEditEvent(item)} disabled={saving}>Edit</Button>
+                  <Button variant="ghost" onClick={() => handleDeleteEvent(item.id)} disabled={saving}>Delete</Button>
+                </div>
               ) : null}
             </article>
           ))}
         </div>
 
         {isAdmin ? (
-          <form className="compliance-calendar-page__form" onSubmit={handleCreateEvent}>
-            <h3>Add reminder/task</h3>
+          <form className="compliance-calendar-page__form" onSubmit={handleSaveEvent}>
+            <h3>{editId ? 'Edit reminder/task' : 'Add reminder/task'}</h3>
             <label htmlFor="calendar-title">Title</label>
             <input
               id="calendar-title"
@@ -222,7 +240,10 @@ export const ComplianceCalendarPage = () => {
               onChange={(event) => setSelectedDate(event.target.value)}
               required
             />
-            <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Add to calendar'}</Button>
+            <div className="compliance-calendar-page__form-actions">
+              {editId ? <Button variant="outline" type="button" onClick={resetForm}>Cancel edit</Button> : null}
+              <Button type="submit" disabled={saving}>{saving ? 'Saving…' : editId ? 'Save changes' : 'Add to calendar'}</Button>
+            </div>
           </form>
         ) : null}
       </div>
