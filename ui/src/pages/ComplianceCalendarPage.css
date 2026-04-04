@@ -87,10 +87,18 @@
 }
 
 .compliance-calendar-page__form input,
-.compliance-calendar-page__form textarea {
+.compliance-calendar-page__form textarea,
+.compliance-calendar-page__form select {
   border: 1px solid #cbd5e1;
   border-radius: 0.5rem;
   padding: 0.5rem;
+}
+
+.compliance-calendar-page__checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
 }
 
 .compliance-calendar-page__event-actions,
