@@ -1,0 +1,9 @@
+const fs = require('fs');
+
+const content = fs.readFileSync('package.json', 'utf-8');
+const resolved = content.replace(
+/<<<<<<< HEAD\n    "test:integrity": "node tests\/adminIntegrity.test.js && node tests\/firmRbac.test.js && node tests\/writeSafety.test.js && node tests\/requestLifecycle.test.js && node tests\/sideEffectQueue.test.js && node tests\/circuitBreaker.test.js && node tests\/softDelete.test.js && node tests\/caseStateMachine.test.js && node tests\/caseSla.service.test.js && node tests\/caseSlaConcurrency.test.js && node tests\/diagnostics.service.test.js && node tests\/migrationEncryptFields.test.js && node tests\/caseTracking.controller.test.js",\n=======\n    "test:integrity": "node tests\/health.controller.test.js && node tests\/adminIntegrity.test.js && node tests\/firmRbac.test.js && node tests\/writeSafety.test.js && node tests\/requestLifecycle.test.js && node tests\/sideEffectQueue.test.js && node tests\/circuitBreaker.test.js && node tests\/softDelete.test.js && node tests\/caseStateMachine.test.js && node tests\/caseSla.service.test.js && node tests\/caseSlaConcurrency.test.js && node tests\/diagnostics.service.test.js && node tests\/migrationEncryptFields.test.js",\n>>>>>>> origin\/main/g,
+    `    "test:integrity": "node tests/health.controller.test.js && node tests/adminIntegrity.test.js && node tests/firmRbac.test.js && node tests/writeSafety.test.js && node tests/requestLifecycle.test.js && node tests/sideEffectQueue.test.js && node tests/circuitBreaker.test.js && node tests/softDelete.test.js && node tests/caseStateMachine.test.js && node tests/caseSla.service.test.js && node tests/caseSlaConcurrency.test.js && node tests/diagnostics.service.test.js && node tests/migrationEncryptFields.test.js && node tests/caseTracking.controller.test.js",`
+);
+
+fs.writeFileSync('package.json', resolved);
