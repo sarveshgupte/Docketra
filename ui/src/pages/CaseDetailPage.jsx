@@ -16,7 +16,6 @@ import { Input } from '../components/common/Input';
 import { Modal } from '../components/common/Modal';
 import { ActionConfirmModal } from '../components/common/ActionConfirmModal';
 import { SaveIndicator } from '../components/ui/SaveIndicator';
-import { AuditMetadata } from '../components/ui/AuditMetadata';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
@@ -1473,7 +1472,7 @@ export const CaseDetailPage = () => {
           </div>
         )}
 
-        <div className="case-detail-layout-grid flex w-full flex-col gap-6 lg:flex-row">
+        <div className="case-detail-layout-grid flex w-full flex-col gap-6">
           <main className="case-detail-main min-w-0 lg:w-[70%]">
             <section className="case-card" aria-labelledby="snapshot-heading">
               <div className="case-card__heading">
@@ -1734,48 +1733,6 @@ export const CaseDetailPage = () => {
             )}
           </main>
 
-          <aside className="case-detail-sidebar w-full lg:w-[30%] flex-shrink-0" aria-label="Audit history and related case details">
-            <div className="case-detail-sidebar__section">
-              <p className="case-detail-sidebar__label">Audit History</p>
-              <div className="case-detail-sidebar__stack space-y-6">
-                <AuditMetadata
-                  className="case-detail__metadata-item"
-                  prefix="Created by"
-                  actor={caseInfo.createdByName || caseInfo.createdByXID || 'System'}
-                  timestamp={caseInfo.createdAt}
-                />
-                <AuditMetadata
-                  className="case-detail__metadata-item"
-                  prefix="Last updated by"
-                  actor={caseInfo.updatedByName || caseInfo.assignedToName || 'System'}
-                  timestamp={caseInfo.updatedAt}
-                />
-              </div>
-              <div className="case-detail-history-list">
-                {timelineEvents.length ? <AuditTimeline events={timelineEvents.slice(0, 6)} /> : <p className="case-detail__empty-note">No audit history yet.</p>}
-              </div>
-            </div>
-
-            <div className="case-detail-sidebar__section">
-              <p className="case-detail-sidebar__label">Related Dockets</p>
-              {loadingClientDockets ? <p className="case-detail__empty-note">Loading docket history...</p> : (
-                <div className="case-detail-related-list">
-                  {clientDockets.length ? clientDockets.map((row) => (
-                    <button
-                      key={formatDocketId(row.caseId)}
-                      type="button"
-                      className="case-detail-related-item"
-                      onClick={() => navigate(ROUTES.CASE_DETAIL(firmSlug, row.caseId))}
-                    >
-                      <span className="case-detail-related-item__title">{formatDocketId(row.caseId)}</span>
-                      <span className="case-detail-related-item__meta">{row.category}</span>
-                      <span className="case-detail-related-item__meta">{formatDateTime(row.createdAt)}</span>
-                    </button>
-                  )) : <p className="case-detail__empty-note">No related dockets found.</p>}
-                </div>
-              )}
-            </div>
-          </aside>
         </div>
 
         <DocketActions actions={headerActions} />
