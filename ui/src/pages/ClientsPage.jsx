@@ -47,11 +47,27 @@ export const ClientsPage = () => {
     setLoading(true);
     try {
       const response = await clientApi.getClients(false);
-      setClients(response?.data || []);
+      const payload = Array.isArray(response?.data)
+        ? response.data
+        : Array.isArray(response?.clients)
+          ? response.clients
+          : [];
+
+      const normalizedClients = payload.filter((client) => (
+        client
+        && typeof client === 'object'
+        && typeof client.clientId === 'string'
+        && client.clientId.trim().length > 0
+      ));
+
+      setClients(normalizedClients);
+    } catch (error) {
+      setClients([]);
+      showError(error?.response?.data?.message || error?.message || 'Failed to load clients');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showError]);
 
   useEffect(() => {
     loadClients();
