@@ -91,35 +91,26 @@ export const AdminPage = () => {
   
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('users');
-  const [pendingCases, setPendingCases] = useState([]);
-  const [pendingInvites, setPendingInvites] = useState([]);
   const [users, setUsers] = useState([]);
   const [categories, setCategories] = useState([]);
   const [clients, setClients] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showAccessModal, setShowAccessModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showSubcategoryModal, setShowSubcategoryModal] = useState(false);
   const [showClientModal, setShowClientModal] = useState(false);
   const [showChangeNameModal, setShowChangeNameModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedClient, setSelectedClient] = useState(null);
+  const [selectedUserForAccess, setSelectedUserForAccess] = useState(null);
   const [creatingUser, setCreatingUser] = useState(false);
+  const [savingUserAccess, setSavingUserAccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [storageConfig, setStorageConfig] = useState({
-    mode: 'docketra_managed',
-    provider: null,
-    capabilities: {
-      externalStorageEnabled: false,
-    },
-  });
-  const [savingStorage, setSavingStorage] = useState(false);
-  const [storageLoaded, setStorageLoaded] = useState(false);
   const [statsEmpty, setStatsEmpty] = useState(false);
   const [statsFailed, setStatsFailed] = useState(false);
   const [tabError, setTabError] = useState(null);
   const toastLockRef = useRef({});
   const toastTimerRef = useRef({});
-  const externalStorageEnabled = Boolean(storageConfig.capabilities?.externalStorageEnabled);
   
   // Admin stats (PR #41)
   const [adminStats, setAdminStats] = useState(EMPTY_ADMIN_STATS);
@@ -174,6 +165,7 @@ export const AdminPage = () => {
     newBusinessName: '',
     reason: '',
   });
+  const [restrictedClientDraft, setRestrictedClientDraft] = useState([]);
 
   useEffect(() => {
     loadAdminStats();
@@ -245,38 +237,11 @@ export const AdminPage = () => {
     return response;
   };
 
-  const loadStorageConfig = async () => {
-    try {
-      const response = await adminApi.getStorageConfig();
-      if (response.success) {
-        setStorageConfig({
-          mode: response.data?.mode || 'docketra_managed',
-          provider: response.data?.provider || null,
-          google: response.data?.google || {},
-          onedrive: response.data?.onedrive || {},
-          capabilities: response.data?.capabilities || { externalStorageEnabled: false },
-        });
-        setStorageLoaded(true);
-      }
-    } catch (error) {
-      console.error('Failed to load storage config:', error);
-      notifyLoadError(error, 'admin-storage-load');
-    }
-  };
-
   const loadAdminData = async () => {
     setLoading(true);
     setTabError(null);
     try {
-      if (activeTab === 'approvals') {
-        const [approvalsResponse, usersResponse] = await Promise.all([
-          adminApi.getPendingApprovals(),
-          adminApi.getUsers(),
-        ]);
-        setPendingCases(approvalsResponse?.success ? (approvalsResponse.data || []) : []);
-        const inviteCandidates = usersResponse?.success ? (usersResponse.data || []) : [];
-        setPendingInvites(inviteCandidates.filter((user) => user.status === 'invited'));
-      } else if (activeTab === 'users') {
+      if (activeTab === 'users') {
         const response = await adminApi.getUsers();
         setUsers(response?.success ? (response.data || []) : []);
       } else if (activeTab === 'categories') {
@@ -287,10 +252,6 @@ export const AdminPage = () => {
         setCategories(normalizedCategories);
       } else if (activeTab === 'clients') {
         await fetchClients();
-      } else if (activeTab === 'storage') {
-        if (!storageLoaded) {
-          await loadStorageConfig();
-        }
       }
     } catch (error) {
       console.error('Failed to load admin data:', error);
@@ -304,10 +265,7 @@ export const AdminPage = () => {
         });
       }
       if (errorType === 'empty') {
-        if (activeTab === 'approvals') {
-          setPendingCases([]);
-          setPendingInvites([]);
-        } else if (activeTab === 'users') {
+        if (activeTab === 'users') {
           setUsers([]);
         } else if (activeTab === 'categories') {
           setCategories([]);
@@ -390,10 +348,6 @@ export const AdminPage = () => {
     }
   };
 
-  const handleCaseClick = (caseId) => {
-    navigate(`/app/firm/${firmSlug}/cases/${caseId}`);
-  };
-
   const handleCreateUser = async (e) => {
     e.preventDefault();
     
@@ -469,6 +423,54 @@ export const AdminPage = () => {
       }
     } catch (error) {
       showToast(error.response?.data?.message || 'Failed to unlock account', 'error');
+    }
+  };
+
+  const handleSendPasswordReset = async (user) => {
+    try {
+      const response = await adminApi.resetPassword(user.xID);
+      if (response.success) {
+        showToast(`Password reset link sent to ${user.email}`, 'success');
+        await loadAdminData();
+      } else {
+        showToast(response.message || 'Failed to send password reset link', 'error');
+      }
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Failed to send password reset link', 'error');
+    }
+  };
+
+  const handleOpenAccessModal = (user) => {
+    setSelectedUserForAccess(user);
+    setRestrictedClientDraft(Array.isArray(user.restrictedClientIds) ? user.restrictedClientIds : []);
+    setShowAccessModal(true);
+  };
+
+  const handleToggleClientRestriction = (clientId) => {
+    setRestrictedClientDraft((prev) => (
+      prev.includes(clientId)
+        ? prev.filter((id) => id !== clientId)
+        : [...prev, clientId]
+    ));
+  };
+
+  const handleSaveUserAccess = async () => {
+    if (!selectedUserForAccess) return;
+    setSavingUserAccess(true);
+    try {
+      const response = await adminApi.updateRestrictedClients(selectedUserForAccess.xID, restrictedClientDraft);
+      if (response.success) {
+        showToast('User client docket access updated', 'success');
+        setShowAccessModal(false);
+        setSelectedUserForAccess(null);
+        await loadAdminData();
+      } else {
+        showToast(response.message || 'Failed to update user access', 'error');
+      }
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Failed to update user access', 'error');
+    } finally {
+      setSavingUserAccess(false);
     }
   };
   
@@ -925,7 +927,7 @@ export const AdminPage = () => {
   return (
     <Layout>
       <div className="admin">
-        <PageHeader title="Admin Panel" description="Manage users and approvals" />
+        <PageHeader title="Team Management" description="Manage users, access control, and security actions" />
 
         <div className="admin__tabs">
           <Button
@@ -941,16 +943,10 @@ export const AdminPage = () => {
             Categories ({statsFailed ? '--' : adminStats.totalCategories})
           </Button>
           <Button
-            variant={activeTab === 'storage' ? 'primary' : 'default'}
-            onClick={() => setActiveTab('storage')}
+            variant="default"
+            onClick={() => navigate(`/app/firm/${firmSlug}/settings/firm`)}
           >
-            Storage Settings
-          </Button>
-          <Button
-            variant={activeTab === 'approvals' ? 'primary' : 'default'}
-            onClick={() => setActiveTab('approvals')}
-          >
-            Pending Approvals ({statsFailed ? '--' : adminStats.pendingApprovals})
+            Firm Settings
           </Button>
           <Button
             variant={activeTab === 'reports' ? 'primary' : 'default'}
@@ -995,6 +991,7 @@ export const AdminPage = () => {
                     <th>Email</th>
                     <th>Role</th>
                     <th>Firm</th>
+                    <th>Client Docket Access</th>
                     <th>Status</th>
                     <th>Password Set</th>
                     <th>Actions</th>
@@ -1020,6 +1017,11 @@ export const AdminPage = () => {
                         )}
                       </td>
                       <td>{user.firm?.name || 'N/A'}</td>
+                      <td>
+                        <Badge status={(user.restrictedClientIds || []).length === 0 ? 'Approved' : 'Pending'}>
+                          {(user.restrictedClientIds || []).length === 0 ? 'Full Access (Default)' : `Restricted (${(user.restrictedClientIds || []).length})`}
+                        </Badge>
+                      </td>
                       <td>
                         <Badge status={userStatus.tone}>
                           {userStatus.label}
@@ -1049,6 +1051,24 @@ export const AdminPage = () => {
                             onClick={() => handleResendSetupEmail(user.xID)}
                           >
                             Resend Invite
+                          </Button>
+                        )}
+                        {!isPrimaryOrSystemAdmin && (
+                          <Button
+                            size="small"
+                            variant="default"
+                            onClick={() => handleOpenAccessModal(user)}
+                          >
+                            Client Access
+                          </Button>
+                        )}
+                        {!isPrimaryOrSystemAdmin && (
+                          <Button
+                            size="small"
+                            variant="warning"
+                            onClick={() => handleSendPasswordReset(user)}
+                          >
+                            Send Reset Link
                           </Button>
                         )}
                         {user.lockUntil && new Date(user.lockUntil) > new Date() && (
@@ -1378,73 +1398,6 @@ export const AdminPage = () => {
           </Card>
         )}
 
-        {activeTab === 'approvals' && (
-          <Card>
-            <h2 className="neo-section__header">Pending Client Approvals</h2>
-
-            {pendingInvites.length > 0 && (
-              <>
-                <h3 className="neo-section__header" style={{ marginTop: 0 }}>Pending Invitations</h3>
-                <table className="neo-table" style={{ marginBottom: '24px' }}>
-                  <thead>
-                    <tr>
-                      <th>xID</th>
-                      <th>Name</th>
-                      <th>Email</th>
-                      <th>Role</th>
-                      <th>Status</th>
-                      <th>Password Set</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pendingInvites.map((invite) => (
-                      <tr key={invite.xID}>
-                        <td>{invite.xID}</td>
-                        <td>{invite.name || EMPTY_FIELD_PLACEHOLDER}</td>
-                        <td>{invite.email}</td>
-                        <td>{invite.role}</td>
-                        <td><Badge status="Pending">Invited</Badge></td>
-                        <td><Badge status="Pending">No</Badge></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </>
-            )}
-
-            {pendingCases.length === 0 && pendingInvites.length === 0 ? (
-              <EmptyState
-                title="No pending approvals yet"
-                description="New approvals and invitations will appear here when review is needed."
-              />
-            ) : (
-              <table className="neo-table">
-                <thead>
-                  <tr>
-                    <th>Case Name</th>
-                    <th>Category</th>
-                    <th>Client ID</th>
-                    <th>Created</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pendingCases.map((caseItem) => (
-                    <tr key={caseItem._id} onClick={() => handleCaseClick(caseItem.caseName)}>
-                      <td>{caseItem.caseName}</td>
-                      <td>{caseItem.category}</td>
-                      <td>{caseItem.clientId || 'N/A'}</td>
-                      <td>{formatDate(caseItem.createdAt)}</td>
-                      <td>
-                        <Badge status={caseItem.status}>{caseItem.status}</Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </Card>
-        )}
       </div>
 
       {/* Create User Modal */}
@@ -1509,6 +1462,74 @@ export const AdminPage = () => {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        isOpen={showAccessModal}
+        onClose={() => {
+          setShowAccessModal(false);
+          setSelectedUserForAccess(null);
+          setRestrictedClientDraft([]);
+        }}
+        title={`Client Access Control${selectedUserForAccess ? ` — ${selectedUserForAccess.name}` : ''}`}
+      >
+        <div className="admin__create-form">
+          <div className="neo-info-text">
+            Default policy is full access to all client dockets. Select clients below to explicitly remove access for this user.
+          </div>
+
+          <div className="admin__access-summary">
+            {(restrictedClientDraft || []).length === 0 ? (
+              <Badge status="Approved">Full Access Enabled</Badge>
+            ) : (
+              <Badge status="Pending">{(restrictedClientDraft || []).length} client access restriction(s)</Badge>
+            )}
+          </div>
+
+          <div className="admin__client-access-list">
+            {clients.length === 0 ? (
+              <div className="neo-info-text">No clients available yet.</div>
+            ) : (
+              clients.map((client) => (
+                <label key={client.clientId} className="admin__client-access-item">
+                  <input
+                    type="checkbox"
+                    checked={restrictedClientDraft.includes(client.clientId)}
+                    onChange={() => handleToggleClientRestriction(client.clientId)}
+                  />
+                  <span>
+                    <strong>{client.businessName}</strong> ({client.clientId})
+                  </span>
+                  <Badge status={restrictedClientDraft.includes(client.clientId) ? 'Rejected' : 'Approved'}>
+                    {restrictedClientDraft.includes(client.clientId) ? 'Access Removed' : 'Access Allowed'}
+                  </Badge>
+                </label>
+              ))
+            )}
+          </div>
+
+          <div className="admin__form-actions">
+            <Button
+              type="button"
+              variant="default"
+              onClick={() => {
+                setShowAccessModal(false);
+                setSelectedUserForAccess(null);
+                setRestrictedClientDraft([]);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              disabled={savingUserAccess}
+              onClick={handleSaveUserAccess}
+            >
+              {savingUserAccess ? 'Saving...' : 'Save Access'}
+            </Button>
+          </div>
+        </div>
       </Modal>
       
       {/* Create Category Modal */}
