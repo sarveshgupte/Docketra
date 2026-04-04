@@ -43,6 +43,15 @@ const getDefaultSlaDueDate = () => {
   return due.toISOString().slice(0, 16);
 };
 
+const resolveDefaultClientId = (clientList = []) => {
+  if (!Array.isArray(clientList) || clientList.length === 0) return '';
+  const flaggedDefault = clientList.find((client) => client?.isDefaultClient);
+  if (flaggedDefault?.clientId) return flaggedDefault.clientId;
+  const legacyDefault = clientList.find((client) => client?.clientId === 'C000001');
+  if (legacyDefault?.clientId) return legacyDefault.clientId;
+  return clientList[0]?.clientId || '';
+};
+
 export const CreateCasePage = () => {
   const navigate = useNavigate();
   const { firmSlug } = useParams();
@@ -86,7 +95,17 @@ export const CreateCasePage = () => {
     setLoadingDependencies(true);
     setDependencyErrors((current) => ({ ...current, categories: '' }));
     try {
-      const response = await categoryService.getCategories(true); // Get only active categories
+      let response;
+      try {
+        response = await categoryService.getCategories(true); // User-facing category read endpoint
+      } catch (error) {
+        if (error?.response?.status !== 403) {
+          throw error;
+        }
+        // Permission matrix can grant CATEGORY_MANAGE without CATEGORY_VIEW.
+        // Fallback to admin-managed category endpoint so admins can still create dockets.
+        response = await categoryService.getAdminCategories(true);
+      }
       if (response.success) {
         setCategories(response.data || []);
       }
@@ -113,12 +132,10 @@ export const CreateCasePage = () => {
       if (response.success) {
         const clientList = response.data || [];
         setClients(clientList);
-        
-        // Always default to C000001 (Default Client) if available
-        const defaultClient = clientList.find(c => c.clientId === 'C000001');
+        const resolvedDefaultClientId = resolveDefaultClientId(clientList);
         setFormData((prev) => {
           if (prev.clientId) return prev;
-          if (defaultClient) return { ...prev, clientId: 'C000001' };
+          if (resolvedDefaultClientId) return { ...prev, clientId: resolvedDefaultClientId };
           if (clientList.length > 0) return { ...prev, clientId: clientList[0].clientId };
           return prev;
         });
@@ -361,7 +378,7 @@ export const CreateCasePage = () => {
         });
         // Reset form for creating another case
         setFormData({
-          clientId: clients.find((client) => client.clientId === 'C000001')?.clientId || (clients.length > 0 ? clients[0].clientId : ''),
+          clientId: resolveDefaultClientId(clients),
           categoryId: '',
           subcategoryId: '',
           title: '',
