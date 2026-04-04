@@ -6,6 +6,8 @@
   padding: 2rem;
   max-width: 1400px;
   margin: 0 auto;
+  width: 100%;
+  min-width: 0;
 }
 
 .global-worklist__header {
@@ -49,6 +51,22 @@
 .global-worklist__table-container {
   overflow-x: auto;
   margin: 1rem 0;
+}
+
+.global-worklist__bulk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.global-worklist__actions-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
 }
 
 .global-worklist__table {
