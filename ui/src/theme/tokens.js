@@ -18,15 +18,15 @@ export const spacingClasses = {
 };
 
 export const formClasses = {
-  label: 'block text-sm font-medium text-gray-900',
+  label: 'mb-1.5 block text-sm font-medium text-gray-800',
   inputBase:
-    'min-h-11 w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 transition-[border-color,box-shadow,background-color] duration-150 placeholder:text-gray-400 hover:border-gray-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-500',
+    'min-h-11 w-full rounded-md border border-gray-300 bg-white px-3.5 py-2.5 text-sm leading-5 text-gray-900 shadow-sm transition-[border-color,box-shadow,background-color] duration-150 placeholder:text-gray-400 hover:border-gray-400 focus:border-blue-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600/15 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-500',
   inputError:
     'border-red-400 bg-red-50/60 text-red-900 placeholder:text-red-400 focus:border-red-500 focus:ring-red-500/20',
   textareaBase:
-    'w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500',
+    'w-full rounded-md border border-gray-300 bg-white px-3.5 py-2.5 text-sm leading-5 text-gray-900 shadow-sm transition-colors hover:border-gray-400 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/15 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500',
   errorText: `${spacingClasses.formMessageSpacing} text-sm text-red-500`,
-  helpText: `${spacingClasses.formMessageSpacing} text-xs text-gray-500`,
+  helpText: `${spacingClasses.formMessageSpacing} text-xs leading-5 text-gray-500`,
 };
 
 export const fontSizes = {
@@ -56,6 +56,6 @@ export const colors = {
 };
 
 export const surfaceClasses = {
-  card: `bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden ${spacingClasses.cardPadding}`,
-  tableWrapper: 'bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm',
+  card: `bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden ${spacingClasses.cardPadding}`,
+  tableWrapper: 'bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm',
 };
