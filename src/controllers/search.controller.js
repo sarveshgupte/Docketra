@@ -368,12 +368,14 @@ const employeeWorklist = async (req, res) => {
       console.warn('[WORKLIST] Failed to auto-reopen expired pending cases:', error.message);
     }
     
-    // CANONICAL QUERY: assignedToXID = xID AND status IN (ASSIGNED, IN_PROGRESS)
+    // CANONICAL QUERY: assignedToXID = xID AND status IN (ASSIGNED, IN_PROGRESS, OPEN)
     // This is the ONLY correct query for "My Worklist"
     // Dashboard counts MUST use the same query
     const query = {
       assignedToXID: user.xID, // CANONICAL: Query by xID in assignedToXID field
-      status: { $in: [CaseStatus.OPEN, CaseStatus.PENDING] },
+      // Assignment flow writes ASSIGNED; legacy/older records may still be OPEN/IN_PROGRESS.
+      // PENDING must be excluded because pending dockets are shown via /cases/my-pending.
+      status: { $in: [CaseStatus.ASSIGNED, CaseStatus.IN_PROGRESS, CaseStatus.OPEN] },
     };
     
     const casesQuery = Case.find(enforceTenantScope(query, req, { source: 'search.employeeWorklist' }))
@@ -389,7 +391,7 @@ const employeeWorklist = async (req, res) => {
     // Log case list view for audit
     await logCaseListViewed({
       viewerXID: user.xID,
-      filters: { status: [CaseStatus.OPEN, CaseStatus.PENDING] },
+      filters: { status: [CaseStatus.ASSIGNED, CaseStatus.IN_PROGRESS, CaseStatus.OPEN] },
       listType: 'MY_WORKLIST',
       resultCount: cases.length,
       req,
