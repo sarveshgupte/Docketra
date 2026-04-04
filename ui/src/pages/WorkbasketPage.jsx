@@ -356,8 +356,8 @@ export const WorkbasketPage = () => {
           disabled={cases.length === 0}
         />
       ),
-      headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'w-[1px] whitespace-nowrap',
+      headerClassName: 'w-[1px]',
+      cellClassName: 'w-[1px]',
       render: (caseItem) => (
         <input
           type="checkbox"
@@ -371,8 +371,8 @@ export const WorkbasketPage = () => {
       key: 'caseId',
       header: 'Docket ID',
       sortable: true,
-      headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'w-[1px] whitespace-nowrap',
+      headerClassName: 'w-[1px]',
+      cellClassName: 'w-[1px]',
       render: (caseItem) => (
         <button
           type="button"
@@ -388,8 +388,8 @@ export const WorkbasketPage = () => {
       header: 'Client ID',
       sortable: true,
       align: 'center',
-      headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'w-[1px] whitespace-nowrap',
+      headerClassName: 'w-[1px]',
+      cellClassName: 'w-[1px]',
       render: (caseItem) => caseItem.clientId || '—',
     },
     {
@@ -405,16 +405,16 @@ export const WorkbasketPage = () => {
       key: 'status',
       header: 'Status',
       align: 'center',
-      headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'w-[1px] whitespace-nowrap',
+      headerClassName: 'w-[1px]',
+      cellClassName: 'w-[1px]',
       render: (caseItem) => <StatusBadge status={caseItem.status} />,
     },
     {
       key: 'assignedTo',
       header: 'Assigned To',
       align: 'center',
-      headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'w-[1px] whitespace-nowrap',
+      headerClassName: 'w-[1px]',
+      cellClassName: 'w-[1px]',
       render: (caseItem) => caseItem.assignedToName || caseItem.assignedToXID || 'Unassigned',
     },
     {
@@ -423,8 +423,8 @@ export const WorkbasketPage = () => {
       sortable: true,
       align: 'right',
       tabular: true,
-      headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'w-[1px] whitespace-nowrap',
+      headerClassName: 'w-[1px]',
+      cellClassName: 'w-[1px]',
       render: (caseItem) => formatDate(caseItem.slaDueDate || caseItem.slaState?.slaDueAt),
     },
     {
@@ -432,8 +432,8 @@ export const WorkbasketPage = () => {
       header: 'SLA Days Remaining',
       align: 'right',
       tabular: true,
-      headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'w-[1px] whitespace-nowrap',
+      headerClassName: 'w-[1px]',
+      cellClassName: 'w-[1px]',
       render: (caseItem) => (
         <span className={getSLAStatusClass(caseItem.slaDaysRemaining)}>
           {caseItem.slaDaysRemaining !== null ? `${caseItem.slaDaysRemaining} days` : 'N/A'}
@@ -446,18 +446,18 @@ export const WorkbasketPage = () => {
       sortable: true,
       align: 'right',
       tabular: true,
-      headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'w-[1px] whitespace-nowrap',
+      headerClassName: 'w-[1px]',
+      cellClassName: 'w-[1px]',
       render: (caseItem) => formatDate(caseItem.createdAt),
     },
     {
       key: 'actions',
       header: 'Actions',
       align: 'right',
-      headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'w-[1px] whitespace-nowrap',
+      headerClassName: 'w-[1px]',
+      cellClassName: 'w-[1px]',
       render: (caseItem) => (
-        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+        <div className="global-worklist__actions-cell">
           <Button
             variant="outline"
             size="small"
@@ -605,13 +605,7 @@ export const WorkbasketPage = () => {
           </div>
 
           {/* Bulk Actions Toolbar */}
-          <div className="global-worklist__bulk-actions" style={{ 
-            display: 'flex', 
-            gap: '1rem', 
-            alignItems: 'center',
-            padding: '1rem',
-            borderBottom: '1px solid var(--border-color)'
-          }}>
+          <div className="global-worklist__bulk-actions">
             <Button
               variant="outline"
               onClick={handleBulkPull}
