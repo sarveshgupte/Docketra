@@ -718,6 +718,10 @@
   flex-direction: column;
 }
 
+.docket-sidebar__panel--enter {
+  animation: docketSidebarSlideIn 0.24s ease;
+}
+
 .docket-sidebar--open {
   pointer-events: auto;
 }
@@ -728,6 +732,15 @@
 
 .docket-sidebar--open .docket-sidebar__panel {
   transform: translateX(0);
+}
+
+@keyframes docketSidebarSlideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 
 .docket-sidebar__header {

@@ -22,6 +22,8 @@ export const DocketSidebar = ({ isOpen, type, onClose, caseInfo, attachments = [
     };
   }, [isOpen]);
 
+  if (!isOpen || !type) return null;
+
   const renderContent = () => {
     if (type === 'cfs') {
       return (
@@ -63,9 +65,9 @@ export const DocketSidebar = ({ isOpen, type, onClose, caseInfo, attachments = [
   };
 
   return (
-    <div className={`docket-sidebar ${isOpen ? 'docket-sidebar--open' : ''}`} role="presentation" aria-hidden={!isOpen}>
+    <div className="docket-sidebar docket-sidebar--open" role="presentation" aria-hidden={false}>
       <button type="button" className="docket-sidebar__backdrop" onClick={onClose} aria-label="Close docket sidebar" />
-      <aside className="docket-sidebar__panel" aria-label={`${TITLES[type] || 'Details'} panel`}>
+      <aside className="docket-sidebar__panel docket-sidebar__panel--enter" aria-label={`${TITLES[type] || 'Details'} panel`}>
         <div className="docket-sidebar__header">
           <h3 className="text-base font-semibold text-gray-900">{TITLES[type] || 'Details'}</h3>
           <button type="button" onClick={onClose} className="docket-sidebar__close" aria-label="Close panel">✕</button>
