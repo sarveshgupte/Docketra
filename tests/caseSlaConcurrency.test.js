@@ -4,6 +4,7 @@ const assert = require('assert');
 const CaseService = require('../src/services/case.service');
 const Case = require('../src/models/Case.model');
 const CaseAudit = require('../src/models/CaseAudit.model');
+const DocketAudit = require('../src/models/DocketAuditLog.model');
 const CaseHistory = require('../src/models/CaseHistory.model');
 const auditLogService = require('../src/services/auditLog.service');
 const DocketAuditLog = require('../src/models/DocketAuditLog.model');
@@ -37,14 +38,23 @@ async function testConcurrentPauseConflictIsRejected() {
   let updateOneCalls = 0;
 
   try {
+<<<<<<< HEAD
     Case.findOne = () => {
       const execFn = async () => ({
         caseId: 'CASE-20260301-00002',
         status: 'IN_PROGRESS',
+=======
+    Case.findOne = () => ({
+      lean: async () => ({
+        caseId: 'CASE-20260301-00002',
+        status: 'IN_PROGRESS',
+        docketState: 'IN_PROGRESS',
+>>>>>>> origin/main
         tatPaused: false,
         tatLastStartedAt: fixedStart,
         tatAccumulatedMinutes: 0,
         firmId: 'firm-a',
+<<<<<<< HEAD
         version: 1, // needed for version mismatch test?
       });
       return {
@@ -53,6 +63,18 @@ async function testConcurrentPauseConflictIsRejected() {
         lean: execFn,
       };
     };
+=======
+      })
+    });
+    /*
+      caseId: 'CASE-20260301-00002',
+      status: 'OPEN',
+      tatPaused: false,
+      tatLastStartedAt: fixedStart,
+      tatAccumulatedMinutes: 0,
+      firmId: 'firm-a',
+    }); */
+>>>>>>> origin/main
     Case.updateOne = async () => {
       updateOneCalls += 1;
       if (updateOneAttempts === 0) {
@@ -62,6 +84,7 @@ async function testConcurrentPauseConflictIsRejected() {
       }
     };
     CaseAudit.create = async () => ({});
+    DocketAudit.create = async () => ({});
     CaseHistory.create = async (docs) => (Array.isArray(docs) ? docs : [docs]);
     DocketAuditLog.create = async () => ({});
     AuditLog.create = async () => ({});
@@ -82,6 +105,7 @@ async function testConcurrentPauseConflictIsRejected() {
       expectedVersion: 1 // Provide expected version to hit version mismatch if we want
     };
 
+<<<<<<< HEAD
     // First attempt succeeds
     await CaseService.updateStatus('CASE-20260301-00002', 'PENDING', context);
 
@@ -92,6 +116,13 @@ async function testConcurrentPauseConflictIsRejected() {
     // So let's adjust the regex to match either.
     await assert.rejects(
       () => CaseService.updateStatus('CASE-20260301-00002', 'PENDING', context),
+=======
+    // update1
+    await CaseService.updateStatus('CASE-20260301-00002', 'PENDING', { ...context, reason: 'test' }).catch(e => { if (e.message !== 'Case state changed concurrently' && !e.message.includes('Version mismatch')) throw e; });
+    // update2
+    await assert.rejects(
+      () => CaseService.updateStatus('CASE-20260301-00002', 'PENDING', { ...context, reason: 'test' }),
+>>>>>>> origin/main
       /Case state changed concurrently|Version mismatch: docket was updated by another request/
     );
     console.log('✓ Concurrent pause attempts reject stale writer');
@@ -99,6 +130,7 @@ async function testConcurrentPauseConflictIsRejected() {
     Case.findOne = originalFindOne;
     Case.updateOne = originalUpdateOne;
     CaseAudit.create = originalCaseAuditCreate;
+    DocketAudit.create = undefined;
     CaseHistory.create = originalCaseHistoryCreate;
     DocketAuditLog.create = originalDocketAuditLogCreate;
     AuditLog.create = originalAuditLogCreate;
