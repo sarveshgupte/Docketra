@@ -106,7 +106,7 @@ export const ReportsDashboard = () => {
             title="No reports available yet"
             description="Once cases and team activity start flowing, your reporting workspace will populate automatically."
             actionLabel="Review case registry"
-            onAction={() => navigate(`/app/firm/${firmSlug}/cases`)}
+            onAction={() => navigate(`/app/firm/${firmSlug}/dockets`)}
           />
         </div>
       </Layout>

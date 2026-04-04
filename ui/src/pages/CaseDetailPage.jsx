@@ -1379,7 +1379,7 @@ export const CaseDetailPage = () => {
               onClick={handlePrevCase}
               disabled={!hasPrev}
               className="case-detail__nav-btn"
-              aria-label="Previous case"
+              aria-label="Previous docket"
             >
               ← Previous Docket
             </Button>
@@ -1391,7 +1391,7 @@ export const CaseDetailPage = () => {
               onClick={handleNextCase}
               disabled={!hasNext}
               className="case-detail__nav-btn"
-              aria-label="Next case"
+              aria-label="Next docket"
             >
               Next Docket →
             </Button>
@@ -1473,10 +1473,10 @@ export const CaseDetailPage = () => {
         )}
 
         <div className="case-detail-layout-grid flex w-full flex-col gap-6">
-          <main className="case-detail-main min-w-0 lg:w-[70%]">
+          <main className="case-detail-main min-w-0">
             <section className="case-card" aria-labelledby="snapshot-heading">
               <div className="case-card__heading">
-                <h2 id="snapshot-heading">Case Snapshot</h2>
+                <h2 id="snapshot-heading">Docket Snapshot</h2>
               </div>
               <div className="field-grid">
                 <div className="field-group min-w-0">
@@ -1515,7 +1515,7 @@ export const CaseDetailPage = () => {
                       <Input
                         value={overviewDraft.category}
                         onChange={(e) => setOverviewDraft((prev) => ({ ...prev, category: e.target.value }))}
-                        aria-label="Case category"
+                        aria-label="Docket category"
                       />
                     ) : (
                       <span className="field-value text-sm font-medium text-gray-900">{caseInfo.category}</span>
@@ -1538,7 +1538,7 @@ export const CaseDetailPage = () => {
                       value={overviewDraft.description}
                       onChange={(e) => setOverviewDraft((prev) => ({ ...prev, description: e.target.value }))}
                       rows={3}
-                      aria-label="Case description"
+                      aria-label="Docket description"
                     />
                   ) : (
                     <span className="field-value case-detail__description-text whitespace-pre-wrap break-words text-sm font-medium text-gray-900">{descriptionContent}</span>
