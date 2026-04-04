@@ -491,6 +491,10 @@ const createCase = async (req, res) => {
         });
       }
 
+      const normalizedPriority = typeof priority === 'string' && priority.trim().length > 0
+        ? priority.trim().toLowerCase()
+        : 'medium';
+
       const newCase = new Case({
         title: normalizedTitle,
         description: normalizedDescription,
@@ -503,7 +507,7 @@ const createCase = async (req, res) => {
         firmId, // PR 2: Explicitly set firmId for atomic counter scoping
         createdByXID, // Set from authenticated user context
         createdBy: req.user.email || req.user.xID, // Legacy field - use email or xID as fallback
-        priority: priority || 'Medium',
+        priority: normalizedPriority,
         status: 'UNASSIGNED', // New cases default to UNASSIGNED for global worklist
         assignedToXID: assignedTo ? assignedTo.toUpperCase() : null, // PR: xID Canonicalization - Store in assignedToXID
         assignedTo: null,
@@ -547,7 +551,7 @@ const createCase = async (req, res) => {
         metadata: {
             category: actualCategory,
             clientId: finalClientId,
-            priority: priority || 'Medium',
+            priority: normalizedPriority,
             slaDueAt: newCase.slaDueAt,
             assignedToXID: newCase.assignedToXID,
             duplicateOverridden: !!systemComment,
