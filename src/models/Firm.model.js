@@ -197,6 +197,68 @@ const firmSchema = new mongoose.Schema({
       scopes: [{ type: String }],
     },
   },
+
+  /**
+   * Firm-level admin settings (persisted server-side).
+   * These values are used to drive UI defaults and workflow behavior.
+   */
+  settings: {
+    firm: {
+      slaDefaultDays: {
+        type: Number,
+        min: 1,
+        default: 3,
+      },
+      escalationInactivityThresholdHours: {
+        type: Number,
+        min: 1,
+        default: 24,
+      },
+      workloadThreshold: {
+        type: Number,
+        min: 1,
+        default: 15,
+      },
+      enablePerformanceView: {
+        type: Boolean,
+        default: true,
+      },
+      enableEscalationView: {
+        type: Boolean,
+        default: true,
+      },
+      enableBulkActions: {
+        type: Boolean,
+        default: true,
+      },
+    },
+    work: {
+      assignmentStrategy: {
+        type: String,
+        enum: ['manual', 'balanced'],
+        default: 'manual',
+      },
+      statusWorkflowMode: {
+        type: String,
+        enum: ['flexible', 'strict'],
+        default: 'flexible',
+      },
+      autoAssignmentEnabled: {
+        type: Boolean,
+        default: false,
+      },
+      highPrioritySlaDays: {
+        type: Number,
+        min: 1,
+        default: 1,
+      },
+      dueSoonWarningDays: {
+        type: Number,
+        min: 1,
+        default: 2,
+      },
+    },
+  },
   
   /**
    * Bootstrap status for firm onboarding lifecycle

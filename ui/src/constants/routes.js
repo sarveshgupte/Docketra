@@ -18,6 +18,7 @@ export const ROUTES = {
   WORK_CATEGORY_MANAGEMENT: (firmSlug) => `/app/firm/${firmSlug}/admin?tab=categories&context=work-settings`,
   FIRM_SETTINGS: (firmSlug) => `/app/firm/${firmSlug}/settings/firm`,
   WORK_SETTINGS: (firmSlug) => `/app/firm/${firmSlug}/settings/work`,
+  STORAGE_SETTINGS: (firmSlug) => `/app/firm/${firmSlug}/storage-settings`,
 };
 
 export const hasValidFirmSlug = (firmSlug) => Boolean(firmSlug && !String(firmSlug).includes('undefined'));

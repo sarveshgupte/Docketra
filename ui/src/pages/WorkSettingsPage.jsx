@@ -1,13 +1,56 @@
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
+import { Input } from '../components/common/Input';
+import { Select } from '../components/common/Select';
 import { PageHeader } from '../components/layout/PageHeader';
+import { adminApi } from '../api/admin.api';
 import { ROUTES } from '../constants/routes';
 
 export const WorkSettingsPage = () => {
   const navigate = useNavigate();
   const { firmSlug } = useParams();
+  const [settings, setSettings] = useState({
+    assignmentStrategy: 'manual',
+    statusWorkflowMode: 'flexible',
+    autoAssignmentEnabled: false,
+    highPrioritySlaDays: 1,
+    dueSoonWarningDays: 2,
+  });
+  const [saveState, setSaveState] = useState({ loading: true, message: '', type: '' });
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      setSaveState({ loading: true, message: '', type: '' });
+      try {
+        const response = await adminApi.getFirmSettings();
+        setSettings((prev) => ({ ...prev, ...(response?.data?.work || {}) }));
+      } catch {
+        setSaveState({ loading: false, message: 'Could not load work settings. You can still edit defaults locally.', type: 'error' });
+        return;
+      }
+      setSaveState({ loading: false, message: '', type: '' });
+    };
+
+    loadSettings();
+  }, []);
+
+  const handleChange = (field, value) => {
+    setSettings((prev) => ({ ...prev, [field]: value }));
+    setSaveState((prev) => ({ ...prev, message: '', type: '' }));
+  };
+
+  const handleSave = async () => {
+    try {
+      const response = await adminApi.updateFirmSettings({ work: settings });
+      setSettings((prev) => ({ ...prev, ...(response?.data?.work || {}) }));
+      setSaveState({ loading: false, message: 'Work settings saved successfully.', type: 'success' });
+    } catch {
+      setSaveState({ loading: false, message: 'Could not save work settings.', type: 'error' });
+    }
+  };
 
   return (
     <Layout>
@@ -15,6 +58,70 @@ export const WorkSettingsPage = () => {
         title="Work Settings"
         subtitle="Configure work taxonomy and docket structuring rules for your firm."
       />
+
+      <Card className="neo-card">
+        <div className="flex flex-wrap items-center gap-3 p-6">
+          <Button type="button" variant="outline" onClick={() => navigate(ROUTES.FIRM_SETTINGS(firmSlug))}>Firm</Button>
+          <Button type="button" variant="outline" onClick={() => navigate(ROUTES.WORK_SETTINGS(firmSlug))}>Work</Button>
+          <Button type="button" variant="outline" onClick={() => navigate(ROUTES.STORAGE_SETTINGS(firmSlug))}>Storage</Button>
+          <Button type="button" variant="outline" onClick={() => navigate(`${ROUTES.ADMIN(firmSlug)}?tab=users`)}>Security</Button>
+          <Button type="button" variant="outline" onClick={() => navigate('/app/firm/' + firmSlug + '/admin/reports/detailed')}>Audit</Button>
+        </div>
+      </Card>
+
+      <Card className="neo-card">
+        <div className="grid gap-4 p-6 md:grid-cols-2">
+          <Select
+            label="Assignment Strategy"
+            value={settings.assignmentStrategy}
+            onChange={(event) => handleChange('assignmentStrategy', event.target.value)}
+            options={[
+              { value: 'manual', label: 'Manual Assignment' },
+              { value: 'balanced', label: 'Balanced Auto Distribution' },
+            ]}
+          />
+          <Select
+            label="Status Workflow"
+            value={settings.statusWorkflowMode}
+            onChange={(event) => handleChange('statusWorkflowMode', event.target.value)}
+            options={[
+              { value: 'flexible', label: 'Flexible' },
+              { value: 'strict', label: 'Strict' },
+            ]}
+          />
+          <Select
+            label="Auto-assignment"
+            value={String(Boolean(settings.autoAssignmentEnabled))}
+            onChange={(event) => handleChange('autoAssignmentEnabled', event.target.value === 'true')}
+            options={[
+              { value: 'false', label: 'Disabled' },
+              { value: 'true', label: 'Enabled' },
+            ]}
+          />
+          <Input
+            label="High priority SLA (days)"
+            type="number"
+            min="1"
+            value={settings.highPrioritySlaDays}
+            onChange={(event) => handleChange('highPrioritySlaDays', Number(event.target.value))}
+          />
+          <Input
+            label="Due-soon warning (days)"
+            type="number"
+            min="1"
+            value={settings.dueSoonWarningDays}
+            onChange={(event) => handleChange('dueSoonWarningDays', Number(event.target.value))}
+          />
+        </div>
+        <div className="flex items-center justify-end gap-3 px-6 pb-6">
+          {saveState.message ? (
+            <span className={`text-sm ${saveState.type === 'success' ? 'text-green-700' : 'text-red-700'}`}>{saveState.message}</span>
+          ) : null}
+          <Button type="button" variant="primary" onClick={handleSave} disabled={saveState.loading}>
+            {saveState.loading ? 'Loading…' : 'Save Work Settings'}
+          </Button>
+        </div>
+      </Card>
 
       <Card className="neo-card">
         <div className="flex items-start justify-between gap-4 p-6">
