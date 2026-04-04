@@ -121,7 +121,41 @@ export const DashboardPage = () => {
     setRecentCasesLoading(true);
     setLoadWarnings([]);
     try {
-      const userFirmId = user?.firmId || user?.firm?.id;
+      const firmIdCandidates = [
+        user?.firmId,
+        user?.firm?.id,
+        user?.firm?._id,
+      ]
+        .map((value) => (typeof value === 'string' ? value.trim() : value))
+        .filter(Boolean);
+      const [userFirmId] = [...new Set(firmIdCandidates)];
+
+      const fetchFirmMetrics = async (firmId) => {
+        if (!firmId) {
+          return {};
+        }
+
+        const firmMetricsCandidates = [firmId, ...firmIdCandidates.filter((candidate) => candidate !== firmId)];
+        let lastError = null;
+
+        for (const candidateFirmId of firmMetricsCandidates) {
+          try {
+            const metricsResponse = await metricsApi.getFirmMetrics(candidateFirmId);
+            if (metricsResponse.success) {
+              return metricsResponse.data || {};
+            }
+          } catch (error) {
+            lastError = error;
+          }
+        }
+
+        if (lastError) {
+          throw lastError;
+        }
+
+        return {};
+      };
+
       const fetchStatSafely = async (
         request,
         mapResponse,
@@ -172,8 +206,8 @@ export const DashboardPage = () => {
         recentCasesPromise,
         userFirmId
           ? fetchStatSafely(
-            () => metricsApi.getFirmMetrics(userFirmId),
-            (metricsResponse) => (metricsResponse.success ? (metricsResponse.data || {}) : {}),
+            () => fetchFirmMetrics(userFirmId),
+            (metricsResponse) => metricsResponse,
             'Failed to load firm metrics:',
             'Firm metrics',
             { showWarning: true },
