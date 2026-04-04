@@ -14,6 +14,7 @@ export const CompleteProfile = lazyPage(() => import('../pages/CompleteProfile')
 export const DashboardPage = lazyPage(() => import('../pages/DashboardPage'), 'DashboardPage');
 export const WorklistPage = lazyPage(() => import('../pages/WorklistPage'), 'WorklistPage');
 export const WorkbasketPage = lazyPage(() => import('../pages/WorkbasketPage'), 'WorkbasketPage');
+export const ComplianceCalendarPage = lazyPage(() => import('../pages/ComplianceCalendarPage'), 'ComplianceCalendarPage');
 export const CaseDetailPage = lazyPage(() => import('../pages/CaseDetailPage'), 'CaseDetailPage');
 export const CreateCasePage = lazyPage(() => import('../pages/CreateCasePage'), 'CreateCasePage');
 export const ProfilePage = lazyPage(() => import('../pages/ProfilePage'), 'ProfilePage');
