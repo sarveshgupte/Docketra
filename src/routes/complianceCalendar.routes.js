@@ -35,7 +35,7 @@ router.get('/', authorizeFirmPermission('TASK_VIEW'), userReadLimiter, async (re
   }
 });
 
-router.post('/', authorizeFirmPermission('TASK_VIEW'), requireAdmin, userWriteLimiter, wrapWriteHandler(async (req, res) => {
+router.post('/', authorizeFirmPermission('TASK_MANAGE'), requireAdmin, userWriteLimiter, wrapWriteHandler(async (req, res) => {
   const firmId = req.firmId || req.user?.firmId;
   const userId = getUserId(req);
   const { title, description, dueDate } = req.body || {};
@@ -59,7 +59,7 @@ router.post('/', authorizeFirmPermission('TASK_VIEW'), requireAdmin, userWriteLi
   return res.status(201).json({ success: true, data: task });
 }));
 
-router.put('/:id', authorizeFirmPermission('TASK_VIEW'), requireAdmin, userWriteLimiter, wrapWriteHandler(async (req, res) => {
+router.put('/:id', authorizeFirmPermission('TASK_MANAGE'), requireAdmin, userWriteLimiter, wrapWriteHandler(async (req, res) => {
   const firmId = req.firmId || req.user?.firmId;
   const userId = getUserId(req);
   const { id } = req.params;
@@ -84,7 +84,7 @@ router.put('/:id', authorizeFirmPermission('TASK_VIEW'), requireAdmin, userWrite
   return res.json({ success: true, data: entry });
 }));
 
-router.delete('/:id', authorizeFirmPermission('TASK_VIEW'), requireAdmin, userWriteLimiter, wrapWriteHandler(async (req, res) => {
+router.delete('/:id', authorizeFirmPermission('TASK_MANAGE'), requireAdmin, userWriteLimiter, wrapWriteHandler(async (req, res) => {
   const firmId = req.firmId || req.user?.firmId;
   const userId = getUserId(req);
   const { id } = req.params;
