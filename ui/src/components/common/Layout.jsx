@@ -342,7 +342,6 @@ export const Layout = ({ children }) => {
       title: 'INSIGHTS',
       defaultOpen: false,
       items: [
-        { to: ROUTES.CASES(currentFirmSlug), label: 'Firm Analytics', icon: <IconCases />, active: isActivePrefix(ROUTES.CASES(currentFirmSlug)) },
         { to: reportsRoute, label: 'Reports', icon: <IconReport />, active: isActivePrefix(reportsRoute) },
       ],
     },
@@ -354,6 +353,7 @@ export const Layout = ({ children }) => {
       items: [
         { to: ROUTES.ADMIN(currentFirmSlug), label: 'Team Management', icon: <IconTeam />, active: isActivePrefix(ROUTES.ADMIN(currentFirmSlug)) && !isActivePrefix(reportsRoute) },
         { to: ROUTES.FIRM_SETTINGS(currentFirmSlug), label: 'Firm Settings', icon: <IconAdmin />, active: isActivePrefix(ROUTES.FIRM_SETTINGS(currentFirmSlug)) },
+        { to: ROUTES.WORK_SETTINGS(currentFirmSlug), label: 'Work Settings', icon: <IconWorklist />, active: isActivePrefix(ROUTES.WORK_SETTINGS(currentFirmSlug)) },
       ],
     },
   ].filter((section) => !section.hidden);
