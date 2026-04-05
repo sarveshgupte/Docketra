@@ -1,12 +1,15 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import api from '../src/services/api';
 import { worklistApi } from '../src/api/worklist.api';
 import { Card } from '../src/components/common/Card';
+import { Button } from '../src/components/common/Button';
 import { ErrorState } from '../src/components/feedback/ErrorState';
 import { EmptyState } from '../src/components/ui/EmptyState';
 import { TableSkeleton } from '../src/components/common/Skeleton';
-import { DocketCard } from '../components/DocketCard';
+import { DataTable } from '../src/components/layout/DataTable';
+import { formClasses } from '../src/theme/tokens';
 import { useKeyboardShortcuts } from '../src/hooks/useKeyboardShortcuts';
+import { formatDate } from '../src/utils/formatters';
 import { resolveLifecycleKey } from '../utils/lifecycleMap';
 
 const normalizeRecords = (records = []) => {
@@ -16,6 +19,11 @@ const normalizeRecords = (records = []) => {
     .map((record) => ({
       ...record,
       caseId: record.caseId || record._id,
+      clientId: record.clientId || '—',
+      clientName: record.clientName || '—',
+      category: record.category || '—',
+      subcategory: record.subcategory || '—',
+      dueDate: record.dueDate || record.pendingUntil || null,
     }));
 };
 
@@ -26,17 +34,23 @@ function isAllowedWorklistLifecycle(record) {
   return key === 'open_active' || key === 'in_progress' || key === 'blocked';
 }
 
+const dateSortKeys = new Set(['createdAt', 'updatedAt', 'pendingUntil', 'dueDate']);
+
+const matchText = (value, query) => String(value || '').toLowerCase().includes(query);
+
 export function WorklistView({
   variant = 'worklist',
   sortState = { key: 'updatedAt', direction: 'desc' },
+  onSortChange,
   onOpenDocket,
 }) {
   const [loading, setLoading] = useState(true);
   const [records, setRecords] = useState([]);
   const [error, setError] = useState('');
   const [focusedIndex, setFocusedIndex] = useState(0);
-  const [openingCaseId, setOpeningCaseId] = useState(null);
-  const rowRefs = useRef([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [subcategoryFilter, setSubcategoryFilter] = useState('');
 
   const isPendingView = variant === 'pending';
 
@@ -68,14 +82,26 @@ export function WorklistView({
     void load();
   }, [load]);
 
-  const filtered = useMemo(
-    () => records.filter((row) => isAllowedWorklistLifecycle(row)),
-    [records],
-  );
+  const filtered = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    return records
+      .filter((row) => isAllowedWorklistLifecycle(row))
+      .filter((row) => (categoryFilter ? row.category === categoryFilter : true))
+      .filter((row) => (subcategoryFilter ? row.subcategory === subcategoryFilter : true))
+      .filter((row) => {
+        if (!normalizedQuery) return true;
+        return (
+          matchText(row.caseId, normalizedQuery)
+          || matchText(row.clientId, normalizedQuery)
+          || matchText(row.clientName, normalizedQuery)
+          || matchText(row.category, normalizedQuery)
+          || matchText(row.subcategory, normalizedQuery)
+        );
+      });
+  }, [records, searchQuery, categoryFilter, subcategoryFilter]);
 
   const sorted = useMemo(() => {
     if (!sortState?.key || !sortState?.direction) return [...filtered];
-    const dateSortKeys = new Set(['createdAt', 'updatedAt', 'pendingUntil']);
     const direction = sortState.direction === 'asc' ? 1 : -1;
     return [...filtered].sort((left, right) => {
       const leftValue = left?.[sortState.key];
@@ -94,6 +120,26 @@ export function WorklistView({
     });
   }, [filtered, sortState]);
 
+  const categories = useMemo(
+    () => [...new Set(records.map((row) => row.category).filter((value) => value && value !== '—'))].sort(),
+    [records],
+  );
+
+  const subcategories = useMemo(() => {
+    const source = categoryFilter
+      ? records.filter((row) => row.category === categoryFilter)
+      : records;
+    return [...new Set(source.map((row) => row.subcategory).filter((value) => value && value !== '—'))].sort();
+  }, [records, categoryFilter]);
+
+  const activeFilters = useMemo(() => {
+    const filters = [];
+    if (searchQuery.trim()) filters.push({ key: 'search', label: 'Search', value: searchQuery.trim() });
+    if (categoryFilter) filters.push({ key: 'category', label: 'Category', value: categoryFilter });
+    if (subcategoryFilter) filters.push({ key: 'subcategory', label: 'Sub category', value: subcategoryFilter });
+    return filters;
+  }, [searchQuery, categoryFilter, subcategoryFilter]);
+
   useEffect(() => {
     setFocusedIndex((idx) => Math.min(idx, Math.max(sorted.length - 1, 0)));
   }, [sorted.length]);
@@ -101,7 +147,6 @@ export function WorklistView({
   const handleOpen = useCallback(
     (caseId, index) => {
       if (!caseId) return;
-      setOpeningCaseId(caseId);
       onOpenDocket?.({
         caseId,
         sourceList: sorted.map((row) => row.caseId).filter(Boolean),
@@ -112,6 +157,11 @@ export function WorklistView({
     [onOpenDocket, sorted],
   );
 
+  const handleRowClick = useCallback((row) => {
+    const index = sorted.findIndex((item) => item.caseId === row.caseId);
+    handleOpen(row.caseId, index >= 0 ? index : 0);
+  }, [handleOpen, sorted]);
+
   useKeyboardShortcuts({
     onNext: () => setFocusedIndex((idx) => Math.min(idx + 1, Math.max(sorted.length - 1, 0))),
     onPrev: () => setFocusedIndex((idx) => Math.max(idx - 1, 0)),
@@ -121,12 +171,71 @@ export function WorklistView({
     },
   });
 
-  useEffect(() => {
-    const target = rowRefs.current[focusedIndex];
-    if (target) {
-      target.scrollIntoView({ block: 'nearest' });
-    }
-  }, [focusedIndex]);
+  const resetFilters = useCallback(() => {
+    setSearchQuery('');
+    setCategoryFilter('');
+    setSubcategoryFilter('');
+  }, []);
+
+  const removeFilter = useCallback((key) => {
+    if (key === 'search') setSearchQuery('');
+    if (key === 'category') setCategoryFilter('');
+    if (key === 'subcategory') setSubcategoryFilter('');
+  }, []);
+
+  const columns = useMemo(() => [
+    {
+      key: 'clientId',
+      header: 'Client ID',
+      sortable: true,
+      render: (row) => row.clientId || '—',
+    },
+    {
+      key: 'clientName',
+      header: 'Client Name',
+      sortable: true,
+      contentClassName: 'truncate max-w-[220px]',
+      render: (row) => row.clientName || '—',
+    },
+    {
+      key: 'category',
+      header: 'Category',
+      sortable: true,
+      render: (row) => row.category || '—',
+    },
+    {
+      key: 'subcategory',
+      header: 'Sub Category',
+      sortable: true,
+      render: (row) => row.subcategory || '—',
+    },
+    {
+      key: 'caseId',
+      header: 'Docket#',
+      sortable: true,
+      render: (row) => (
+        <div className="font-semibold text-gray-900">{row.caseId || '—'}</div>
+      ),
+    },
+    {
+      key: 'dueDate',
+      header: 'Due Date',
+      sortable: true,
+      render: (row) => formatDate(row.dueDate),
+    },
+    {
+      key: 'updatedAt',
+      header: 'Last Updated Date',
+      sortable: true,
+      render: (row) => formatDate(row.updatedAt),
+    },
+    {
+      key: 'createdAt',
+      header: 'Docket Create Date',
+      sortable: true,
+      render: (row) => formatDate(row.createdAt),
+    },
+  ], []);
 
   if (loading) {
     return (
@@ -148,7 +257,7 @@ export function WorklistView({
     );
   }
 
-  if (sorted.length === 0) {
+  if (records.length === 0) {
     return (
       <Card>
         <EmptyState
@@ -165,36 +274,71 @@ export function WorklistView({
 
   return (
     <Card>
-      <div style={{ marginBottom: 16, fontSize: '0.875rem', color: '#6b7280' }}>
-        {sorted.length} docket{sorted.length !== 1 ? 's' : ''}
+      <div className="worklist-toolbar">
+        <div className="worklist-toolbar__field worklist-toolbar__field--search">
+          <label htmlFor="worklist-search">Search</label>
+          <input
+            id="worklist-search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search by client, category, sub category, docket#"
+            className={formClasses.inputBase}
+          />
+        </div>
+        <div className="worklist-toolbar__field">
+          <label htmlFor="worklist-category">Category</label>
+          <select
+            id="worklist-category"
+            value={categoryFilter}
+            onChange={(event) => {
+              const nextCategory = event.target.value;
+              setCategoryFilter(nextCategory);
+              setSubcategoryFilter('');
+            }}
+            className={formClasses.inputBase}
+          >
+            <option value="">All categories</option>
+            {categories.map((category) => (
+              <option key={category} value={category}>{category}</option>
+            ))}
+          </select>
+        </div>
+        <div className="worklist-toolbar__field">
+          <label htmlFor="worklist-subcategory">Sub category</label>
+          <select
+            id="worklist-subcategory"
+            value={subcategoryFilter}
+            onChange={(event) => setSubcategoryFilter(event.target.value)}
+            className={formClasses.inputBase}
+          >
+            <option value="">All sub categories</option>
+            {subcategories.map((subcategory) => (
+              <option key={subcategory} value={subcategory}>{subcategory}</option>
+            ))}
+          </select>
+        </div>
+        <div className="worklist-toolbar__actions">
+          <Button variant="outline" onClick={resetFilters}>Clear Filters</Button>
+        </div>
       </div>
-      <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 12 }}>
-        {sorted.map((row, index) => {
-          const assignParts = [row.assignedToName, row.assignedToXID].filter(
-            (p) => p != null && String(p).trim() !== '',
-          );
-          const assignedTo = assignParts.length > 0 ? assignParts.join(' · ') : 'You';
-          return (
-            <li
-              key={row.caseId}
-              ref={(el) => {
-                rowRefs.current[index] = el;
-              }}
-            >
-              <DocketCard
-                docketId={row.caseId}
-                title={row.title || row.caseName}
-                lifecycle={row.lifecycle}
-                assignedTo={assignedTo}
-                lastUpdated={row.updatedAt}
-                focused={index === focusedIndex}
-                isOpening={openingCaseId === row.caseId}
-                onOpen={(caseId) => handleOpen(caseId, index)}
-              />
-            </li>
-          );
-        })}
-      </ul>
+
+      <DataTable
+        columns={columns}
+        data={sorted}
+        rowKey="caseId"
+        onRowClick={handleRowClick}
+        sortState={sortState}
+        onSortChange={onSortChange}
+        activeFilters={activeFilters}
+        onRemoveFilter={removeFilter}
+        onResetFilters={resetFilters}
+        emptyContent={(
+          <EmptyState
+            title="No matching dockets"
+            description="Try changing your filters or clear them to see all assigned dockets."
+          />
+        )}
+      />
     </Card>
   );
 }

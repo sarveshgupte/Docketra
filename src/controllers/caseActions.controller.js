@@ -285,7 +285,7 @@ const getMyPendingCases = async (req, res) => {
     }
     
     const cases = await Case.find(query)
-      .select('caseId caseName category createdAt updatedAt status clientId clientName pendingUntil')
+      .select('caseId caseName category subcategory dueDate createdAt updatedAt status clientId clientName pendingUntil')
       .sort({ pendingUntil: 1 }) // Sort by pending deadline (earliest first)
       .lean();
     
@@ -305,6 +305,8 @@ const getMyPendingCases = async (req, res) => {
         caseId: c.caseId,
         caseName: c.caseName,
         category: c.category,
+        subcategory: c.subcategory || null,
+        dueDate: c.dueDate || c.pendingUntil || null,
         createdAt: c.createdAt,
         updatedAt: c.updatedAt,
         status: c.status,
@@ -379,6 +381,8 @@ const getMyResolvedCases = async (req, res) => {
         caseId: c.caseId,
         caseName: c.caseName,
         category: c.category,
+        subcategory: c.subcategory || null,
+        dueDate: c.dueDate || c.pendingUntil || null,
         createdAt: c.createdAt,
         updatedAt: c.updatedAt,
         status: c.status,
@@ -485,6 +489,8 @@ const getMyUnassignedCreatedCases = async (req, res) => {
         caseId: c.caseId,
         caseName: c.caseName,
         category: c.category,
+        subcategory: c.subcategory || null,
+        dueDate: c.dueDate || c.pendingUntil || null,
         createdAt: c.createdAt,
         updatedAt: c.updatedAt,
         status: c.status,

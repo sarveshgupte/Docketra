@@ -79,6 +79,7 @@ export const WorklistPage = () => {
         <WorklistView
           variant={isPendingView ? 'pending' : 'worklist'}
           sortState={sortState}
+          onSortChange={setSortState}
           onOpenDocket={handleCaseClick}
         />
       </Stack>
