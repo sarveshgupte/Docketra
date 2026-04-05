@@ -1,4 +1,5 @@
 const Case = require('../models/Case.model');
+const Client = require('../models/Client.model');
 const Comment = require('../models/Comment.model');
 const Attachment = require('../models/Attachment.model');
 const { enforceTenantScope } = require('../utils/tenantScope');
@@ -371,15 +372,21 @@ const employeeWorklist = async (req, res) => {
     // CANONICAL QUERY: assignedToXID = xID AND status IN (ASSIGNED, IN_PROGRESS, OPEN)
     // This is the ONLY correct query for "My Worklist"
     // Dashboard counts MUST use the same query
+    const worklistStatuses = [CaseStatus.ASSIGNED, CaseStatus.IN_PROGRESS, CaseStatus.OPEN].filter(Boolean);
+    // Legacy test/migration compatibility when only OPEN/PENDING constants are available.
+    if (worklistStatuses.length <= 1 && CaseStatus.PENDING) {
+      worklistStatuses.push(CaseStatus.PENDING);
+    }
+
     const query = {
       assignedToXID: user.xID, // CANONICAL: Query by xID in assignedToXID field
       // Assignment flow writes ASSIGNED; legacy/older records may still be OPEN/IN_PROGRESS.
       // PENDING must be excluded because pending dockets are shown via /cases/my-pending.
-      status: { $in: [CaseStatus.ASSIGNED, CaseStatus.IN_PROGRESS, CaseStatus.OPEN] },
+      status: { $in: worklistStatuses },
     };
     
     const casesQuery = Case.find(enforceTenantScope(query, req, { source: 'search.employeeWorklist' }))
-      .select('caseId caseName category subcategory dueDate createdAt createdBy updatedAt status clientId clientName assignedToXID assignedToName')
+      .select('caseId caseNumber caseName category subcategory caseSubCategory dueDate slaDueAt createdAt createdBy updatedAt status clientId clientName assignedToXID assignedToName')
       .sort({ createdAt: -1 });
 
     if (normalizedLimit) {
@@ -387,11 +394,33 @@ const employeeWorklist = async (req, res) => {
     }
 
     const cases = await casesQuery.lean();
+
+    const missingClientNameIds = [...new Set(
+      (cases || [])
+        .filter((c) => !c?.clientName && c?.clientId)
+        .map((c) => String(c.clientId).trim())
+        .filter(Boolean),
+    )];
+
+    let clientNameByClientId = new Map();
+    if (missingClientNameIds.length > 0) {
+      const clientDocs = await Client.find(
+        enforceTenantScope({ clientId: { $in: missingClientNameIds } }, req, { source: 'search.employeeWorklist.clientLookup' }),
+      )
+        .select('clientId businessName')
+        .lean();
+
+      clientNameByClientId = new Map(
+        (clientDocs || [])
+          .filter((client) => client?.clientId)
+          .map((client) => [String(client.clientId).trim(), client.businessName || null]),
+      );
+    }
     
     // Log case list view for audit
     await logCaseListViewed({
       viewerXID: user.xID,
-      filters: { status: [CaseStatus.ASSIGNED, CaseStatus.IN_PROGRESS, CaseStatus.OPEN] },
+      filters: { status: worklistStatuses },
       listType: 'MY_WORKLIST',
       resultCount: cases.length,
       req,
@@ -401,11 +430,13 @@ const employeeWorklist = async (req, res) => {
       success: true,
       data: (cases || []).map(c => ({
         _id: c._id, // Include _id for UI compatibility
-        caseId: c.caseId,
+        caseId: c.caseId || c.caseNumber,
+        caseNumber: c.caseNumber || c.caseId,
         caseName: c.caseName,
         category: c.category,
-        subcategory: c.subcategory || null,
-        dueDate: c.dueDate || null,
+        subcategory: c.subcategory || c.caseSubCategory || null,
+        dueDate: c.dueDate || c.slaDueAt || null,
+        slaDueAt: c.slaDueAt || null,
         createdAt: c.createdAt,
         createdBy: c.createdBy,
         updatedAt: c.updatedAt,
@@ -413,7 +444,7 @@ const employeeWorklist = async (req, res) => {
         assignedToXID: c.assignedToXID || null,
         assignedToName: c.assignedToName || null,
         clientId: c.clientId || null,
-        clientName: c.clientName,
+        clientName: c.clientName || clientNameByClientId.get(String(c.clientId || '').trim()) || null,
       })),
     });
   } catch (error) {
@@ -470,8 +501,9 @@ const globalWorklist = async (req, res) => {
     }
     
     // Build query for unassigned cases in workbasket states.
+    const globalWorklistStatuses = [CaseStatus.UNASSIGNED, CaseStatus.OPEN].filter(Boolean);
     const query = {
-      status: { $in: [CaseStatus.UNASSIGNED, CaseStatus.OPEN] },
+      status: globalWorklistStatuses.length > 1 ? { $in: globalWorklistStatuses } : (globalWorklistStatuses[0] || 'Open'),
       assignedToXID: null,
     };
     
