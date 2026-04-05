@@ -186,10 +186,10 @@ export const CaseDetailPage = () => {
     () => (caseData ? normalizeCase(caseData) : null),
     [caseData]
   );
-  const comments = caseData?.comments ?? [];
-  const attachments = caseData?.attachments ?? [];
-  const auditLog = caseData?.auditLog ?? [];
-  const history = caseData?.history ?? [];
+  const comments = Array.isArray(caseData?.comments) ? caseData.comments.filter(Boolean) : [];
+  const attachments = Array.isArray(caseData?.attachments) ? caseData.attachments.filter(Boolean) : [];
+  const auditLog = Array.isArray(caseData?.auditLog) ? caseData.auditLog.filter(Boolean) : [];
+  const history = Array.isArray(caseData?.history) ? caseData.history.filter(Boolean) : [];
   const timelineEvents = useMemo(() => {
     const merged = [...auditLog, ...history];
     const seen = new Set();
