@@ -572,18 +572,6 @@ export const CasesPage = () => {
     },
   });
 
-  if (!isValidFirm) {
-    return <RouteErrorFallback title="Invalid firm" message="Unable to load dockets without a valid firm context." backTo={ROUTES.SUPERADMIN_LOGIN} />;
-  }
-
-  if (loading) {
-    return (
-      <Layout>
-        <TableSkeleton rows={8} />
-      </Layout>
-    );
-  }
-
   const columns = useMemo(() => [
     ...(enableBulkActions ? [{
       key: '__select',
@@ -745,6 +733,18 @@ export const CasesPage = () => {
     firmSlug,
     handleAssignToMe,
   ]);
+
+  if (!isValidFirm) {
+    return <RouteErrorFallback title="Invalid firm" message="Unable to load dockets without a valid firm context." backTo={ROUTES.SUPERADMIN_LOGIN} />;
+  }
+
+  if (loading) {
+    return (
+      <Layout>
+        <TableSkeleton rows={8} />
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
