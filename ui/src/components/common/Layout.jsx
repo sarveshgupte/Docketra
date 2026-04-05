@@ -136,7 +136,6 @@ export const Layout = ({ children }) => {
   const [countsFetched, setCountsFetched] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
-  const [notificationHistoryOpen, setNotificationHistoryOpen] = useState(false);
   const [notificationItems, setNotificationItems] = useState([]);
 
   const profileDropdownRef = useRef(null);
@@ -471,7 +470,6 @@ export const Layout = ({ children }) => {
   const clearNotification = (id) => setNotificationItems((items) => items.filter((item) => item.id !== id));
   const markNotificationRead = (id) => setNotificationItems((items) => items.map((item) => (item.id === id ? { ...item, unread: false } : item)));
   const markAllRead = () => setNotificationItems((items) => items.map((item) => ({ ...item, unread: false })));
-  const clearAllNotifications = () => setNotificationItems([]);
 
   const commandPaletteCommands = [
     { id: 'new-docket', label: 'New Docket', shortcut: '⌘N', action: () => navigate(ROUTES.CREATE_CASE(currentFirmSlug)) },
@@ -629,82 +627,78 @@ export const Layout = ({ children }) => {
                     <span>Notifications</span>
                     <span className="enterprise-header__notification-count">{unreadCount} unread</span>
                   </div>
-                  <div className="enterprise-header__notification-header">
-                    <button type="button" className="enterprise-header__notification-action-btn" onClick={markAllRead}>Mark all read</button>
-                    <button type="button" className="enterprise-header__notification-action-btn" onClick={() => setNotificationHistoryOpen(true)}>View All Notifications</button>
+                  <div className="enterprise-header__notification-section-actions">
+                    <button type="button" className="enterprise-header__notification-text-btn" onClick={markAllRead}>Mark all read</button>
+                    {currentFirmSlug ? (
+                      <button
+                        type="button"
+                        className="enterprise-header__notification-text-btn"
+                        onClick={() => {
+                          setNotificationOpen(false);
+                          navigate(safeRoute(ROUTES.NOTIFICATIONS_HISTORY(currentFirmSlug), ROUTES.DASHBOARD(currentFirmSlug)));
+                        }}
+                      >
+                        View all notifications
+                      </button>
+                    ) : null}
                   </div>
-                  {notificationItems.map((item) => (
-                    <div key={item.id} className="dropdown-item enterprise-header__notification-item" role="menuitem">
-                      <div className="enterprise-header__notification-title-row">
-                        <span className="enterprise-header__notification-title">{item.title}</span>
-                        <div className="enterprise-header__notification-actions">
-                          <button
-                            type="button"
-                            className="enterprise-header__notification-action-btn"
-                            aria-label="Mark notification as read"
-                            title="Mark as read"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              markNotificationRead(item.id);
-                            }}
-                          >
-                            ✓
-                          </button>
-                          <button
-                            type="button"
-                            className="enterprise-header__notification-action-btn"
-                            aria-label="Clear notification"
-                            title="Clear"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              clearNotification(item.id);
-                            }}
-                          >
-                            ✕
-                          </button>
-                          {item.unread ? <span className="enterprise-header__notification-unread-badge">New</span> : null}
+                  <div className="enterprise-header__notification-list" role="presentation">
+                    {notificationItems.length === 0 ? (
+                      <div className="enterprise-header__notification-empty">No notifications yet.</div>
+                    ) : (
+                      notificationItems.map((item) => (
+                        <div key={item.id} className="dropdown-item enterprise-header__notification-item" role="menuitem">
+                          <div className="enterprise-header__notification-title-row">
+                            <span className="enterprise-header__notification-title">{item.title}</span>
+                            <div className="enterprise-header__notification-actions">
+                              <button
+                                type="button"
+                                className="enterprise-header__notification-action-btn"
+                                aria-label="Mark notification as read"
+                                title="Mark as read"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  markNotificationRead(item.id);
+                                }}
+                              >
+                                ✓
+                              </button>
+                              <button
+                                type="button"
+                                className="enterprise-header__notification-action-btn"
+                                aria-label="Clear notification"
+                                title="Clear"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  clearNotification(item.id);
+                                }}
+                              >
+                                ✕
+                              </button>
+                              {item.unread ? <span className="enterprise-header__notification-unread-badge">New</span> : null}
+                            </div>
+                          </div>
+                          <div className="enterprise-header__notification-description">{item.description}</div>
+                          <div className="enterprise-header__notification-meta">
+                            <span>{item.category}</span>
+                            <span>{formatDateTime(item.timestamp)}</span>
+                          </div>
+                          {item.docketNumber && currentFirmSlug ? (
+                            <Link
+                              to={safeRoute(ROUTES.CASE_DETAIL(currentFirmSlug, item.docketNumber), ROUTES.CASES(currentFirmSlug))}
+                              className="enterprise-header__notification-link"
+                              onClick={() => { markNotificationRead(item.id); setNotificationOpen(false); }}
+                            >
+                              Open docket #{item.docketNumber}
+                            </Link>
+                          ) : null}
                         </div>
-                      </div>
-                      <div className="enterprise-header__notification-description">{item.description}</div>
-                      <div className="enterprise-header__notification-meta">
-                        <span>{item.category}</span>
-                        <span>{formatDateTime(item.timestamp)}</span>
-                      </div>
-                      {item.docketNumber && currentFirmSlug ? (
-                        <Link
-                          to={safeRoute(ROUTES.CASE_DETAIL(currentFirmSlug, item.docketNumber), ROUTES.CASES(currentFirmSlug))}
-                          className="enterprise-header__notification-link"
-                          onClick={() => { markNotificationRead(item.id); setNotificationOpen(false); }}
-                        >
-                          Open docket #{item.docketNumber}
-                        </Link>
-                      ) : null}
-                    </div>
-                  ))}
+                      ))
+                    )}
+                  </div>
                 </div>
               ) : null}
             </div>
-
-
-            {notificationHistoryOpen ? (
-              <div className="dropdown-menu dropdown-menu-right enterprise-header__notification-menu" role="dialog" aria-label="Notifications history panel">
-                <div className="enterprise-header__notification-header">
-                  <span>Notifications History</span>
-                  <button type="button" className="enterprise-header__notification-action-btn" onClick={() => setNotificationHistoryOpen(false)}>Close</button>
-                </div>
-                <div className="enterprise-header__notification-header">
-                  <button type="button" className="enterprise-header__notification-action-btn" onClick={markAllRead}>Mark all read</button>
-                  <button type="button" className="enterprise-header__notification-action-btn" onClick={clearAllNotifications}>Clear all</button>
-                </div>
-                {notificationItems.map((item) => (
-                  <div key={`history-${item.id}`} className="dropdown-item enterprise-header__notification-item">
-                    <div className="enterprise-header__notification-title">{item.title}</div>
-                    <div className="enterprise-header__notification-description">{item.description}</div>
-                    <div className="enterprise-header__notification-meta"><span>{item.category}</span><span>{formatDateTime(item.timestamp)}</span></div>
-                  </div>
-                ))}
-              </div>
-            ) : null}
 
             {/* User Profile Dropdown */}
             <div className="dropdown" ref={profileDropdownRef}>
