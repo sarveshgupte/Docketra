@@ -4,7 +4,7 @@ import { Button } from '../common/Button';
 export const DocketActions = React.memo(({ actions = [], loadingAction }) => {
   if (!actions.length) return null;
   const lifecycleKeys = ['pend', 'resolve', 'file'];
-  const ownershipKeys = ['assign', 'move_wb', 'start_work', 'move_wl'];
+  const ownershipKeys = ['assign', 'move_wb', 'move_wl'];
   const lifecycleActions = actions.filter((action) => lifecycleKeys.includes(action.key));
   const ownershipActions = actions.filter((action) => ownershipKeys.includes(action.key) || !lifecycleKeys.includes(action.key));
 

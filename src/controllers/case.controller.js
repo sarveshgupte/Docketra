@@ -16,6 +16,7 @@ const { CASE_CATEGORIES, CASE_LOCK_CONFIG, COMMENT_PREVIEW_LENGTH, CLIENT_STATUS
 const CaseStatus = require('../domain/case/caseStatus');
 const { CASE_LIFECYCLE } = require('../domain/case/caseLifecycle');
 const { isValidTransition } = require('./docketWorkflow.controller');
+const { activateOnOpen } = require('../services/docketWorkflow.service');
 const { isProduction } = require('../config/config');
 const { logCaseListViewed, logAdminAction } = require('../services/auditLog.service');
 const caseActionService = require('../services/caseAction.service');
@@ -1405,6 +1406,14 @@ const getCaseByCaseId = async (req, res) => {
     }
     
     console.log(`[GET_CASE] Authorization passed for userXID=${req.user.xID}`);
+
+    if (String(caseData.assignedToXID || '').toUpperCase() === String(req.user?.xID || '').toUpperCase()) {
+      caseData = await activateOnOpen({
+        docketId: caseData.caseId,
+        firmId: req.user.firmId,
+        actor: req.user,
+      });
+    }
     
     // Get related data - use caseId from database (display number)
     const displayCaseId = caseData.caseId;

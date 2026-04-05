@@ -1,3 +1,5 @@
+const { DocketLifecycle } = require('../docketLifecycle');
+
 const CASE_LIFECYCLE = Object.freeze({
   CREATED: 'CREATED',
   ASSIGNED: 'ASSIGNED',
@@ -7,21 +9,29 @@ const CASE_LIFECYCLE = Object.freeze({
   ARCHIVED: 'ARCHIVED',
 });
 
+const LEGAL_DOCKET_LIFECYCLES = Object.freeze(Object.values(DocketLifecycle));
+
 const deriveLifecycle = ({ status, assignedToXID, lifecycle }) => {
-  const explicitLifecycle = String(lifecycle || '').toUpperCase();
+  const explicitRaw = String(lifecycle || '').trim();
+  const explicitLifecycle = explicitRaw.toUpperCase();
+  const explicitDocketLifecycle = explicitRaw.toLowerCase();
+
+  if (LEGAL_DOCKET_LIFECYCLES.includes(explicitDocketLifecycle)) {
+    return explicitDocketLifecycle;
+  }
+
   if (Object.values(CASE_LIFECYCLE).includes(explicitLifecycle)) {
     return explicitLifecycle;
   }
 
   const normalizedStatus = String(status || '').toUpperCase();
 
-  if (['FILED', 'ARCHIVED'].includes(normalizedStatus)) return CASE_LIFECYCLE.ARCHIVED;
-  if (['RESOLVED', 'CLOSED'].includes(normalizedStatus)) return CASE_LIFECYCLE.COMPLETED;
-  if (['QC_PENDING', 'UNDER_REVIEW', 'REVIEWED'].includes(normalizedStatus)) return CASE_LIFECYCLE.REVIEW;
-  if (['IN_PROGRESS', 'OPEN', 'PENDING', 'QC_FAILED', 'QC_CORRECTED'].includes(normalizedStatus)) return CASE_LIFECYCLE.IN_PROGRESS;
-  if (['ASSIGNED'].includes(normalizedStatus)) return CASE_LIFECYCLE.ASSIGNED;
+  if (['FILED', 'ARCHIVED'].includes(normalizedStatus)) return DocketLifecycle.ARCHIVED;
+  if (['RESOLVED', 'CLOSED'].includes(normalizedStatus)) return DocketLifecycle.COMPLETED;
+  if (['ASSIGNED'].includes(normalizedStatus)) return DocketLifecycle.IN_WORKLIST;
+  if (['IN_PROGRESS', 'OPEN', 'PENDING', 'QC_FAILED', 'QC_CORRECTED', 'QC_PENDING'].includes(normalizedStatus)) return DocketLifecycle.ACTIVE;
 
-  return assignedToXID ? CASE_LIFECYCLE.ASSIGNED : CASE_LIFECYCLE.CREATED;
+  return assignedToXID ? DocketLifecycle.IN_WORKLIST : DocketLifecycle.CREATED;
 };
 
 module.exports = {
