@@ -3,6 +3,7 @@ import { caseApi } from '../src/api/case.api';
 import { invalidateCaseCache } from '../src/utils/caseCache';
 import { formatDateTime } from '../src/utils/formatDateTime';
 import { LifecycleBadge } from './LifecycleBadge';
+import { ActivityTimeline } from '../src/components/docket/ActivityTimeline';
 
 const normalizeDoc = (data) => data?.case || data;
 
@@ -150,22 +151,7 @@ export function DocketDetails({
         ) : null}
       </header>
 
-      <section
-        aria-labelledby="docket-activity-heading"
-        style={{
-          marginTop: 20,
-          padding: 16,
-          border: '1px solid #e5e7eb',
-          borderRadius: 12,
-          background: '#fafafa',
-        }}
-      >
-        <h2 id="docket-activity-heading" style={{ fontSize: '0.9rem', fontWeight: 600, margin: '0 0 8px' }}>
-          Activity
-        </h2>
-        <h3 style={{ margin: '0 0 6px', fontSize: '0.88rem', fontWeight: 600, color: '#111827' }}>No activity yet</h3>
-        <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>Actions, updates, and comments on this docket will appear here.</p>
-      </section>
+      <ActivityTimeline docketId={docketId} initialActivity={docket.activity} />
     </>
   );
 }
