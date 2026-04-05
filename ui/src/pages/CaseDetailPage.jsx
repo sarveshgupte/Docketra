@@ -21,6 +21,7 @@ import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
 import { useToast } from '../hooks/useToast';
 import { caseApi } from '../api/case.api';
+import { clientApi } from '../api/client.api';
 import { categoryService } from '../services/categoryService';
 import { extractErrorMessage } from '../services/apiResponse';
 import { formatDateTime } from '../utils/formatDateTime';
@@ -144,6 +145,8 @@ export const CaseDetailPage = () => {
   const [assigningCase, setAssigningCase] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarType, setSidebarType] = useState(null);
+  const [clientFactSheet, setClientFactSheet] = useState(null);
+  const [loadingClientFactSheet, setLoadingClientFactSheet] = useState(false);
   const [realtimeStatus, setRealtimeStatus] = useState('live');
   const [commentWindowSize, setCommentWindowSize] = useState(INITIAL_VIRTUAL_WINDOW);
   const [retryQueue, setRetryQueue] = useState(() => {
@@ -1068,6 +1071,20 @@ export const CaseDetailPage = () => {
   const statusVersion = Number.isFinite(Number(caseInfo?.version)) ? Number(caseInfo.version) : 0;
   const performedBy = user?.email || user?.xID || 'system';
 
+  const loadClientFactSheet = useCallback(async () => {
+    if (!caseId) return;
+    setLoadingClientFactSheet(true);
+    try {
+      const response = await clientApi.getClientFactSheetForCase(caseId);
+      setClientFactSheet(response?.data || null);
+    } catch (error) {
+      setClientFactSheet(null);
+      showError(error?.response?.data?.message || error?.message || 'Failed to load client fact sheet');
+    } finally {
+      setLoadingClientFactSheet(false);
+    }
+  }, [caseId, showError]);
+
   const openSidebar = (type) => {
     setSidebarType((previousType) => {
       if (sidebarOpen && previousType === type) {
@@ -1075,6 +1092,9 @@ export const CaseDetailPage = () => {
         return null;
       }
       setSidebarOpen(true);
+      if (type === 'cfs') {
+        void loadClientFactSheet();
+      }
       return type;
     });
   };
@@ -1082,6 +1102,7 @@ export const CaseDetailPage = () => {
   useEffect(() => {
     setSidebarOpen(false);
     setSidebarType(null);
+    setClientFactSheet(null);
   }, [caseId]);
 
   const handleAssignDocket = async () => {
