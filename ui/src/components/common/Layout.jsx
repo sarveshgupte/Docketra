@@ -14,6 +14,7 @@ import { ErrorBoundary } from './ErrorBoundary';
 import api from '../../services/api';
 import { worklistApi } from '../../api/worklist.api';
 import { USER_ROLES } from '../../utils/constants';
+import { useActiveDocket } from '../../hooks/useActiveDocket';
 import { formatDateTime } from '../../utils/formatDateTime';
 import './Layout.css';
 import { ROUTES, safeRoute } from '../../constants/routes';
@@ -112,10 +113,12 @@ const IconPlus = () => (
   </svg>
 );
 
-const sortNotificationsAscending = (items) => [...items].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+const ALLOWED_NOTIFICATION_EVENTS = new Set(['assignment', 'comment', 'status_change', 'mention']);
+const sortNotificationsLatestFirst = (items) => [...items].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
 export const Layout = ({ children }) => {
   const { user, logout } = useAuth();
+  const { openDocket } = useActiveDocket();
   const { showSuccess } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -133,38 +136,8 @@ export const Layout = ({ children }) => {
   const [countsFetched, setCountsFetched] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
-  const [notificationItems, setNotificationItems] = useState(() => sortNotificationsAscending([
-    {
-      id: 'assignment',
-      category: 'Assignment',
-      title: 'Assignment updates',
-      description: 'Docket #20260404-00002 has been reassigned to a new owner.',
-      timestamp: new Date('2026-04-05T09:55:00.000Z'),
-      docketNumber: '20260404-00002',
-      unread: true,
-      saved: false,
-    },
-    {
-      id: 'qc',
-      category: 'QC',
-      title: 'QC requests and failures',
-      description: 'QC flagged docket #20260404-00007 for missing mandatory fields.',
-      timestamp: new Date('2026-04-05T10:20:00.000Z'),
-      docketNumber: '20260404-00007',
-      unread: true,
-      saved: false,
-    },
-    {
-      id: 'pending',
-      category: 'Pending Reopen',
-      title: 'Pending reopen reminders',
-      description: 'Docket #20260401-00015 reached reopen date and needs review.',
-      timestamp: new Date('2026-04-05T10:45:00.000Z'),
-      docketNumber: '20260401-00015',
-      unread: false,
-      saved: true,
-    },
-  ]));
+  const [notificationHistoryOpen, setNotificationHistoryOpen] = useState(false);
+  const [notificationItems, setNotificationItems] = useState([]);
 
   const profileDropdownRef = useRef(null);
   const notificationDropdownRef = useRef(null);
@@ -292,17 +265,19 @@ export const Layout = ({ children }) => {
   useEffect(() => {
     const handleIncomingNotification = (event) => {
       const payload = event.detail || {};
+      const eventType = String(payload.eventType || payload.type || '').trim().toLowerCase();
+      if (!ALLOWED_NOTIFICATION_EVENTS.has(eventType)) return;
       const incoming = {
         id: payload.id || `notif-${Date.now()}`,
-        category: payload.category || 'General',
+        eventType,
+        category: payload.category || eventType.replace('_', ' '),
         title: payload.title || 'New update',
         description: payload.description || 'You received a new notification.',
         timestamp: payload.timestamp ? new Date(payload.timestamp) : new Date(),
         docketNumber: payload.docketNumber || payload.docketId || null,
         unread: true,
-        saved: false,
       };
-      setNotificationItems((items) => sortNotificationsAscending([...items, incoming]));
+      setNotificationItems((items) => sortNotificationsLatestFirst([...items, incoming]));
     };
     window.addEventListener('docketra:new-notification', handleIncomingNotification);
     return () => window.removeEventListener('docketra:new-notification', handleIncomingNotification);
@@ -494,11 +469,9 @@ export const Layout = ({ children }) => {
 
   const unreadCount = notificationItems.filter((item) => item.unread).length;
   const clearNotification = (id) => setNotificationItems((items) => items.filter((item) => item.id !== id));
-  const toggleSavedNotification = (id) => {
-    setNotificationItems((items) => sortNotificationsAscending(items.map((item) => (
-      item.id === id ? { ...item, saved: !item.saved } : item
-    ))));
-  };
+  const markNotificationRead = (id) => setNotificationItems((items) => items.map((item) => (item.id === id ? { ...item, unread: false } : item)));
+  const markAllRead = () => setNotificationItems((items) => items.map((item) => ({ ...item, unread: false })));
+  const clearAllNotifications = () => setNotificationItems([]);
 
   const commandPaletteCommands = [
     { id: 'new-docket', label: 'New Docket', shortcut: '⌘N', action: () => navigate(ROUTES.CREATE_CASE(currentFirmSlug)) },
@@ -623,7 +596,7 @@ export const Layout = ({ children }) => {
                   <button
                     key={`case-${item.caseId}`}
                     className="dropdown-item"
-                    onClick={() => navigate(safeRoute(ROUTES.CASE_DETAIL(currentFirmSlug, item.caseId), ROUTES.CASES(currentFirmSlug)))}
+                    onClick={() => openDocket({ caseId: item.caseId, navigate, to: safeRoute(ROUTES.CASE_DETAIL(currentFirmSlug, item.caseId), ROUTES.CASES(currentFirmSlug)) })}
                   >
                     Docket: {item.caseId} — {item.title}
                   </button>
@@ -648,13 +621,17 @@ export const Layout = ({ children }) => {
             <div className="dropdown" ref={notificationDropdownRef}>
               <button className="enterprise-header__icon-btn" aria-label="Notifications" onClick={() => setNotificationOpen((v) => !v)}>
                 <IconBell />
-                {unreadCount > 0 ? <span className="enterprise-header__notif-dot" aria-hidden="true" /> : null}
+                {unreadCount > 0 ? <span className="enterprise-header__notif-dot" aria-hidden="true">{unreadCount}</span> : null}
               </button>
               {notificationOpen ? (
                 <div className="dropdown-menu dropdown-menu-right enterprise-header__notification-menu" role="menu">
                   <div className="enterprise-header__notification-header">
                     <span>Notifications</span>
                     <span className="enterprise-header__notification-count">{unreadCount} unread</span>
+                  </div>
+                  <div className="enterprise-header__notification-header">
+                    <button type="button" className="enterprise-header__notification-action-btn" onClick={markAllRead}>Mark all read</button>
+                    <button type="button" className="enterprise-header__notification-action-btn" onClick={() => setNotificationHistoryOpen(true)}>View All Notifications</button>
                   </div>
                   {notificationItems.map((item) => (
                     <div key={item.id} className="dropdown-item enterprise-header__notification-item" role="menuitem">
@@ -664,14 +641,14 @@ export const Layout = ({ children }) => {
                           <button
                             type="button"
                             className="enterprise-header__notification-action-btn"
-                            aria-label={item.saved ? 'Unsave notification' : 'Save notification'}
-                            title={item.saved ? 'Unsave' : 'Save'}
+                            aria-label="Mark notification as read"
+                            title="Mark as read"
                             onClick={(event) => {
                               event.stopPropagation();
-                              toggleSavedNotification(item.id);
+                              markNotificationRead(item.id);
                             }}
                           >
-                            {item.saved ? '★' : '☆'}
+                            ✓
                           </button>
                           <button
                             type="button"
@@ -697,7 +674,7 @@ export const Layout = ({ children }) => {
                         <Link
                           to={safeRoute(ROUTES.CASE_DETAIL(currentFirmSlug, item.docketNumber), ROUTES.CASES(currentFirmSlug))}
                           className="enterprise-header__notification-link"
-                          onClick={() => setNotificationOpen(false)}
+                          onClick={() => { markNotificationRead(item.id); setNotificationOpen(false); }}
                         >
                           Open docket #{item.docketNumber}
                         </Link>
@@ -707,6 +684,27 @@ export const Layout = ({ children }) => {
                 </div>
               ) : null}
             </div>
+
+
+            {notificationHistoryOpen ? (
+              <div className="dropdown-menu dropdown-menu-right enterprise-header__notification-menu" role="dialog" aria-label="Notifications history panel">
+                <div className="enterprise-header__notification-header">
+                  <span>Notifications History</span>
+                  <button type="button" className="enterprise-header__notification-action-btn" onClick={() => setNotificationHistoryOpen(false)}>Close</button>
+                </div>
+                <div className="enterprise-header__notification-header">
+                  <button type="button" className="enterprise-header__notification-action-btn" onClick={markAllRead}>Mark all read</button>
+                  <button type="button" className="enterprise-header__notification-action-btn" onClick={clearAllNotifications}>Clear all</button>
+                </div>
+                {notificationItems.map((item) => (
+                  <div key={`history-${item.id}`} className="dropdown-item enterprise-header__notification-item">
+                    <div className="enterprise-header__notification-title">{item.title}</div>
+                    <div className="enterprise-header__notification-description">{item.description}</div>
+                    <div className="enterprise-header__notification-meta"><span>{item.category}</span><span>{formatDateTime(item.timestamp)}</span></div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
 
             {/* User Profile Dropdown */}
             <div className="dropdown" ref={profileDropdownRef}>
