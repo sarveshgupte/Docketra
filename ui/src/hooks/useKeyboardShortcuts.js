@@ -19,10 +19,10 @@ export const useKeyboardShortcuts = (handlers = {}) => {
         return;
       }
 
-      if (key === 'j' && handlers.onNext) {
+      if ((key === 'j' || key === 'arrowdown') && handlers.onNext) {
         event.preventDefault();
         handlers.onNext();
-      } else if (key === 'k' && handlers.onPrev) {
+      } else if ((key === 'k' || key === 'arrowup') && handlers.onPrev) {
         event.preventDefault();
         handlers.onPrev();
       } else if (key === 'enter' && handlers.onOpen) {

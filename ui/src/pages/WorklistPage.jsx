@@ -45,8 +45,13 @@ export const WorklistPage = () => {
     setQuery({ sort: sortState.key, order: sortState.direction });
   }, [sortState, setQuery]);
 
-  const handleCaseClick = useCallback((caseId) => {
-    openDocket({ caseId, navigate, to: ROUTES.CASE_DETAIL(firmSlug, caseId) });
+  const handleCaseClick = useCallback(({ caseId, sourceList, index, origin }) => {
+    openDocket({
+      caseId,
+      navigate,
+      to: ROUTES.CASE_DETAIL(firmSlug, caseId),
+      state: { sourceList, index, origin },
+    });
   }, [openDocket, navigate, firmSlug]);
 
   const pageInfo = isPendingView

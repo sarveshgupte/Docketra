@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import api from '../src/services/api';
 import { worklistApi } from '../src/api/worklist.api';
 import { Card } from '../src/components/common/Card';
@@ -35,6 +35,8 @@ export function WorklistView({
   const [records, setRecords] = useState([]);
   const [error, setError] = useState('');
   const [focusedIndex, setFocusedIndex] = useState(0);
+  const [openingCaseId, setOpeningCaseId] = useState(null);
+  const rowRefs = useRef([]);
 
   const isPendingView = variant === 'pending';
 
@@ -97,10 +99,17 @@ export function WorklistView({
   }, [sorted.length]);
 
   const handleOpen = useCallback(
-    (caseId) => {
-      if (caseId) onOpenDocket?.(caseId);
+    (caseId, index) => {
+      if (!caseId) return;
+      setOpeningCaseId(caseId);
+      onOpenDocket?.({
+        caseId,
+        sourceList: sorted.map((row) => row.caseId).filter(Boolean),
+        index,
+        origin: 'worklist',
+      });
     },
-    [onOpenDocket],
+    [onOpenDocket, sorted],
   );
 
   useKeyboardShortcuts({
@@ -108,9 +117,16 @@ export function WorklistView({
     onPrev: () => setFocusedIndex((idx) => Math.max(idx - 1, 0)),
     onOpen: () => {
       const target = sorted[focusedIndex];
-      if (target?.caseId) handleOpen(target.caseId);
+      if (target?.caseId) handleOpen(target.caseId, focusedIndex);
     },
   });
+
+  useEffect(() => {
+    const target = rowRefs.current[focusedIndex];
+    if (target) {
+      target.scrollIntoView({ block: 'nearest' });
+    }
+  }, [focusedIndex]);
 
   if (loading) {
     return (
@@ -159,7 +175,12 @@ export function WorklistView({
           );
           const assignedTo = assignParts.length > 0 ? assignParts.join(' · ') : 'You';
           return (
-            <li key={row.caseId}>
+            <li
+              key={row.caseId}
+              ref={(el) => {
+                rowRefs.current[index] = el;
+              }}
+            >
               <DocketCard
                 docketId={row.caseId}
                 title={row.title || row.caseName}
@@ -167,7 +188,8 @@ export function WorklistView({
                 assignedTo={assignedTo}
                 lastUpdated={row.updatedAt}
                 focused={index === focusedIndex}
-                onOpen={handleOpen}
+                isOpening={openingCaseId === row.caseId}
+                onOpen={(caseId) => handleOpen(caseId, index)}
               />
             </li>
           );

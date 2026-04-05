@@ -12,10 +12,12 @@ const COLOR_STYLES = {
   green: { bg: '#ecfdf5', fg: '#047857', border: '#a7f3d0' },
 };
 
-/** Map API / legacy values to a canonical lifecycleMeta key, or null when unresolved. */
+const DEFAULT_LIFECYCLE_KEY = 'open_active';
+
+/** Map API / legacy values to a canonical lifecycleMeta key. Unknown values fall back to open_active. */
 export function resolveLifecycleKey(raw) {
   const s = String(raw ?? '').trim();
-  if (!s) return null;
+  if (!s) return DEFAULT_LIFECYCLE_KEY;
   const lower = s.toLowerCase().replace(/-/g, '_');
   if (lifecycleMeta[lower]) return lower;
 
@@ -43,12 +45,11 @@ export function resolveLifecycleKey(raw) {
   };
 
   const mapped = fromLegacy[legacyUpper];
-  return mapped && lifecycleMeta[mapped] ? mapped : null;
+  return mapped && lifecycleMeta[mapped] ? mapped : DEFAULT_LIFECYCLE_KEY;
 }
 
 export function getLifecycleMeta(raw) {
   const key = resolveLifecycleKey(raw);
-  if (!key) return null;
   return { key, ...lifecycleMeta[key] };
 }
 
