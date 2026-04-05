@@ -29,7 +29,6 @@ import { USER_ROLES } from '../utils/constants';
 import { StatusBadge } from '../components/layout/StatusBadge';
 import { DocketSidebar } from '../components/docket/DocketSidebar';
 import { DocketComments } from '../components/docket/DocketComments';
-import { DocketActions } from '../components/docket/DocketActions';
 import { ActionModal } from '../components/docket/ActionModal';
 import './CaseDetailPage.css';
 import { ROUTES } from '../constants/routes';
@@ -892,10 +891,9 @@ export const CaseDetailPage = () => {
     }
 
     const confirmationTimestamp = new Date().toISOString();
-    const responsibleExecutive = caseInfo?.assignedToName || caseInfo?.assignedToXID || user?.name || user?.xID || 'Unassigned';
     setConfirmModal({
       title: 'File Case',
-      description: `Stage change: ${toLifecycleStage(caseInfo?.status)} → Marked as Executed\nResponsible party: ${responsibleExecutive}\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
+      description: `Stage change: ${toLifecycleStage(caseInfo?.status)} → Marked as Executed\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
       confirmText: 'File Case',
       onConfirm: async () => {
         setConfirmModal(null);
@@ -949,10 +947,9 @@ export const CaseDetailPage = () => {
     }
 
     const confirmationTimestamp = new Date().toISOString();
-    const responsibleExecutive = caseInfo?.assignedToName || caseInfo?.assignedToXID || user?.name || user?.xID || 'Unassigned';
     setConfirmModal({
       title: 'Pend Case',
-      description: `Stage change: ${toLifecycleStage(caseInfo?.status)} → Awaiting Partner Approval\nResponsible party: ${responsibleExecutive}\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
+      description: `Stage change: ${toLifecycleStage(caseInfo?.status)} → Awaiting Partner Approval\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
       confirmText: 'Pend Case',
       onConfirm: async () => {
         setConfirmModal(null);
@@ -993,10 +990,9 @@ export const CaseDetailPage = () => {
     }
 
     const confirmationTimestamp = new Date().toISOString();
-    const responsibleExecutive = caseInfo?.assignedToName || caseInfo?.assignedToXID || user?.name || user?.xID || 'Unassigned';
     setConfirmModal({
       title: 'Resolve Case',
-      description: `Stage change: ${toLifecycleStage(caseInfo?.status)} → Executed\nResponsible party: ${responsibleExecutive}\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
+      description: `Stage change: ${toLifecycleStage(caseInfo?.status)} → Executed\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
       confirmText: 'Resolve Case',
       onConfirm: async () => {
         setConfirmModal(null);
@@ -1012,6 +1008,7 @@ export const CaseDetailPage = () => {
             toState: 'RESOLVED',
             comment: resolveComment.trim(),
             sendToQC: forceQcReview,
+            forceQc: forceQcReview,
           });
           if (response.success) {
             const message = forceQcReview
@@ -1054,10 +1051,9 @@ export const CaseDetailPage = () => {
     }
 
     const confirmationTimestamp = new Date().toISOString();
-    const responsibleExecutive = caseInfo?.assignedToName || caseInfo?.assignedToXID || user?.name || user?.xID || 'Unassigned';
     setConfirmModal({
       title: 'Unpend Case',
-      description: `Stage change: Awaiting Partner Approval → Under Execution\nResponsible party: ${responsibleExecutive}\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
+      description: `Stage change: Awaiting Partner Approval → Under Execution\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
       confirmText: 'Unpend Case',
       onConfirm: async () => {
         setConfirmModal(null);
@@ -1585,7 +1581,7 @@ export const CaseDetailPage = () => {
 
             <section className="case-card case-detail-section case-detail-section--comments" aria-labelledby="comments-heading">
               <div className="case-card__heading case-detail-section__heading">
-                <h2 id="comments-heading">Case Comments</h2>
+                <h2 id="comments-heading">Docket Comments</h2>
                 <p className="case-detail-section__subheading">Discussion, notes, and decision context.</p>
               </div>
               <div className="case-detail__comments" ref={commentsListRef}>
@@ -1622,15 +1618,6 @@ export const CaseDetailPage = () => {
               )}
               {canPerformLifecycleActions ? (
                 <section className="mt-4 border-t pt-4" aria-label="Docket actions">
-                  <h3 className="text-sm font-semibold text-gray-900">Docket Actions</h3>
-                  <Textarea
-                    label="Action Comment (Required)"
-                    value={actionComment}
-                    onChange={(e) => setActionComment(e.target.value)}
-                    placeholder="Enter mandatory action comment…"
-                    rows={3}
-                    className="mt-2"
-                  />
                   <label className="mt-3 flex items-center gap-2 text-sm text-gray-700">
                     <input
                       type="checkbox"
@@ -1639,14 +1626,23 @@ export const CaseDetailPage = () => {
                     />
                     Force QC Review
                   </label>
+                  <h3 className="mt-3 text-sm font-semibold text-gray-900">Docket Actions</h3>
+                  <Textarea
+                    label="Action Comment (Required)"
+                    value={actionComment}
+                    onChange={(e) => setActionComment(e.target.value)}
+                    placeholder="Enter mandatory action comment…"
+                    rows={3}
+                    className="mt-2"
+                  />
                   <div className="case-detail__composer-actions mt-3">
-                    <Button variant="outline" onClick={() => openActionModal('pend')} disabled={!canRunDocketAction}>
+                    <Button variant="secondary" onClick={() => openActionModal('pend')} disabled={!canRunDocketAction}>
                       Pend
                     </Button>
                     <Button variant="primary" onClick={() => openActionModal('resolve')} disabled={!canRunDocketAction}>
                       Resolve
                     </Button>
-                    <Button variant="outline" onClick={() => openActionModal('file')} disabled={!canRunDocketAction}>
+                    <Button variant="danger" onClick={() => openActionModal('file')} disabled={!canRunDocketAction}>
                       File
                     </Button>
                   </div>
@@ -1659,10 +1655,10 @@ export const CaseDetailPage = () => {
                     <Button variant="primary" onClick={() => { setQcDecisionType('APPROVED'); setQcComment(''); setShowQcModal(true); }}>
                       Approve
                     </Button>
-                    <Button variant="outline" onClick={() => { setQcDecisionType('CORRECTED'); setQcComment(''); setShowQcModal(true); }}>
+                    <Button variant="secondary" onClick={() => { setQcDecisionType('CORRECTED'); setQcComment(''); setShowQcModal(true); }}>
                       Corrected
                     </Button>
-                    <Button variant="outline" onClick={() => { setQcDecisionType('FAILED'); setQcComment(''); setShowQcModal(true); }}>
+                    <Button variant="danger" onClick={() => { setQcDecisionType('FAILED'); setQcComment(''); setShowQcModal(true); }}>
                       Reject
                     </Button>
                   </div>
@@ -1706,7 +1702,7 @@ export const CaseDetailPage = () => {
                             </td>
                             <td>{row.createdAt ? formatDateTime(row.createdAt) : '—'}</td>
                             <td>{closedDate ? formatDateTime(closedDate) : '—'}</td>
-                            <td>{row.status || 'UNASSIGNED'}</td>
+                            <td>{row.status || '—'}</td>
                           </tr>
                         );
                       })}
