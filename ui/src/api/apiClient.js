@@ -33,6 +33,12 @@ export const request = async (requestFn, fallbackMessage) => {
     const response = await requestFn(api);
     return handleApiSuccess(response);
   } catch (error) {
+    if (error?.response?.status === 304) {
+      return {
+        ...handleApiSuccess(error.response),
+        notModified: true,
+      };
+    }
     return handleApiError(error, fallbackMessage);
   }
 };
