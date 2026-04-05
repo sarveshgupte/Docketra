@@ -356,8 +356,8 @@ export const WorkbasketPage = () => {
           disabled={cases.length === 0}
         />
       ),
-      headerClassName: 'w-[1px]',
-      cellClassName: 'w-[1px]',
+      headerClassName: 'min-w-[3rem]',
+      cellClassName: 'min-w-[3rem]',
       render: (caseItem) => (
         <input
           type="checkbox"
@@ -369,10 +369,10 @@ export const WorkbasketPage = () => {
     },
     {
       key: 'caseId',
-      header: 'Docket ID',
+      header: 'Docket#',
       sortable: true,
-      headerClassName: 'w-[1px]',
-      cellClassName: 'w-[1px]',
+      headerClassName: 'min-w-[14rem] whitespace-nowrap',
+      cellClassName: 'min-w-[14rem] whitespace-nowrap',
       render: (caseItem) => (
         <button
           type="button"
@@ -388,16 +388,16 @@ export const WorkbasketPage = () => {
       header: 'Client ID',
       sortable: true,
       align: 'center',
-      headerClassName: 'w-[1px]',
-      cellClassName: 'w-[1px]',
+      headerClassName: 'min-w-[8rem] whitespace-nowrap',
+      cellClassName: 'min-w-[8rem] whitespace-nowrap',
       render: (caseItem) => caseItem.clientId || '—',
     },
     {
       key: 'category',
       header: 'Category',
       sortable: true,
-      headerClassName: 'w-full max-w-lg',
-      cellClassName: 'w-full max-w-lg',
+      headerClassName: 'min-w-[10rem] whitespace-nowrap',
+      cellClassName: 'min-w-[10rem] whitespace-nowrap',
       contentClassName: 'truncate',
       render: (caseItem) => caseItem.category || '—',
     },
@@ -405,16 +405,16 @@ export const WorkbasketPage = () => {
       key: 'status',
       header: 'Status',
       align: 'center',
-      headerClassName: 'w-[1px]',
-      cellClassName: 'w-[1px]',
+      headerClassName: 'min-w-[9rem] whitespace-nowrap',
+      cellClassName: 'min-w-[9rem] whitespace-nowrap',
       render: (caseItem) => <StatusBadge status={caseItem.status} />,
     },
     {
       key: 'assignedTo',
       header: 'Assigned To',
       align: 'center',
-      headerClassName: 'w-[1px]',
-      cellClassName: 'w-[1px]',
+      headerClassName: 'min-w-[10rem] whitespace-nowrap',
+      cellClassName: 'min-w-[10rem] whitespace-nowrap',
       render: (caseItem) => caseItem.assignedToName || caseItem.assignedToXID || 'Unassigned',
     },
     {
@@ -423,8 +423,8 @@ export const WorkbasketPage = () => {
       sortable: true,
       align: 'right',
       tabular: true,
-      headerClassName: 'w-[1px]',
-      cellClassName: 'w-[1px]',
+      headerClassName: 'min-w-[10rem] whitespace-nowrap',
+      cellClassName: 'min-w-[10rem] whitespace-nowrap',
       render: (caseItem) => formatDate(caseItem.slaDueDate || caseItem.slaState?.slaDueAt),
     },
     {
@@ -432,8 +432,8 @@ export const WorkbasketPage = () => {
       header: 'SLA Days Remaining',
       align: 'right',
       tabular: true,
-      headerClassName: 'w-[1px]',
-      cellClassName: 'w-[1px]',
+      headerClassName: 'min-w-[10rem] whitespace-nowrap',
+      cellClassName: 'min-w-[10rem] whitespace-nowrap',
       render: (caseItem) => (
         <span className={getSLAStatusClass(caseItem.slaDaysRemaining)}>
           {caseItem.slaDaysRemaining !== null ? `${caseItem.slaDaysRemaining} days` : 'N/A'}
@@ -446,16 +446,16 @@ export const WorkbasketPage = () => {
       sortable: true,
       align: 'right',
       tabular: true,
-      headerClassName: 'w-[1px]',
-      cellClassName: 'w-[1px]',
+      headerClassName: 'min-w-[9rem] whitespace-nowrap',
+      cellClassName: 'min-w-[9rem] whitespace-nowrap',
       render: (caseItem) => formatDate(caseItem.createdAt),
     },
     {
       key: 'actions',
       header: 'Actions',
       align: 'right',
-      headerClassName: 'w-[1px]',
-      cellClassName: 'w-[1px]',
+      headerClassName: 'min-w-[10rem] whitespace-nowrap',
+      cellClassName: 'min-w-[10rem] whitespace-nowrap',
       render: (caseItem) => (
         <div className="global-worklist__actions-cell">
           <Button
@@ -537,11 +537,6 @@ export const WorkbasketPage = () => {
             </Button>
           )}
         />
-        <div className="worklist-view-tabs" role="tablist" aria-label="Docket queues">
-          <Button variant="outline">Workbasket</Button>
-          <Button variant="outline" onClick={() => navigate(ROUTES.MY_WORKLIST(firmSlug))}>My Worklist</Button>
-        </div>
-
         <Card>
           <form className="global-worklist__filters" role="search" aria-label="Workbasket filters">
             <div className="filter-group">
