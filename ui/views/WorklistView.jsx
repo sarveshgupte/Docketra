@@ -18,12 +18,13 @@ const normalizeRecords = (records = []) => {
     .filter((record) => record && typeof record === 'object')
     .map((record) => ({
       ...record,
-      caseId: record.caseId || record._id,
+      caseId: record.caseId || record.caseNumber || record._id,
+      docketNumber: record.caseNumber || record.docketNumber || record.caseId || record._id,
       clientId: record.clientId || '—',
-      clientName: record.clientName || '—',
+      clientName: record.clientName || record.client?.businessName || '—',
       category: record.category || '—',
-      subcategory: record.subcategory || '—',
-      dueDate: record.dueDate || record.pendingUntil || null,
+      subcategory: record.subcategory || record.caseSubCategory || record.subCategory || '—',
+      dueDate: record.dueDate || record.slaDueAt || record.pendingUntil || null,
     }));
 };
 
@@ -92,6 +93,7 @@ export function WorklistView({
         if (!normalizedQuery) return true;
         return (
           matchText(row.caseId, normalizedQuery)
+          || matchText(row.docketNumber, normalizedQuery)
           || matchText(row.clientId, normalizedQuery)
           || matchText(row.clientName, normalizedQuery)
           || matchText(row.category, normalizedQuery)
@@ -214,7 +216,7 @@ export function WorklistView({
       header: 'Docket#',
       sortable: true,
       render: (row) => (
-        <div className="font-semibold text-gray-900">{row.caseId || '—'}</div>
+        <div className="font-semibold text-gray-900">{row.docketNumber || row.caseId || '—'}</div>
       ),
     },
     {
