@@ -265,10 +265,10 @@ export const ClientsPage = () => {
       header: 'Actions',
       align: 'right',
       headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'w-[1px]',
       render: (client) => (
         <div className="admin__actions justify-end">
-                    {isAdmin ? (
+          {isAdmin ? (
             <>
               <Button size="small" variant="secondary" onClick={() => openEditClientModal(client)}>Edit Client</Button>
               {!(client.isDefaultClient || client.isSystemClient || client.isInternal) && (
@@ -361,8 +361,9 @@ export const ClientsPage = () => {
             columns={columns}
             data={clients}
             rowKey="clientId"
-          emptyContent={(
-            <div className="p-8">
+            preventHorizontalScroll
+            emptyContent={(
+              <div className="p-8">
                 <EmptyState
                   title="No clients available yet"
                   description="Create your first client to begin organizing dockets and workspaces."
