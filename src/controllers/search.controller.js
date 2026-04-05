@@ -379,7 +379,7 @@ const employeeWorklist = async (req, res) => {
     };
     
     const casesQuery = Case.find(enforceTenantScope(query, req, { source: 'search.employeeWorklist' }))
-      .select('caseId caseName category createdAt createdBy updatedAt status clientId clientName assignedToXID assignedToName')
+      .select('caseId caseName category subcategory dueDate createdAt createdBy updatedAt status clientId clientName assignedToXID assignedToName')
       .sort({ createdAt: -1 });
 
     if (normalizedLimit) {
@@ -404,6 +404,8 @@ const employeeWorklist = async (req, res) => {
         caseId: c.caseId,
         caseName: c.caseName,
         category: c.category,
+        subcategory: c.subcategory || null,
+        dueDate: c.dueDate || null,
         createdAt: c.createdAt,
         createdBy: c.createdBy,
         updatedAt: c.updatedAt,
