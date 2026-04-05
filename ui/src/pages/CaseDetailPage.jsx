@@ -242,6 +242,8 @@ export const CaseDetailPage = () => {
 
   const subcategoryLabel = caseInfo?.subcategory || caseInfo?.caseSubCategory || caseInfo?.subCategory || '—';
   const lifecycleStatus = normalizeLifecycleForUi(caseInfo?.lifecycle);
+  const assignedToLabel = caseInfo?.assignedToName || caseInfo?.assignedToXID || 'Unassigned';
+  const isAssignedToCurrentUser = Boolean(user?.xID) && caseInfo?.assignedToXID === user.xID;
 
   const mergeUniqueComments = useCallback((inputComments = []) => {
     const map = new Map();
@@ -1154,6 +1156,23 @@ export const CaseDetailPage = () => {
     }
   };
 
+  const handleTakeOwnership = async () => {
+    if (!user?.xID || actionInFlight) return;
+    try {
+      setAssigningCase(true);
+      await caseApi.assignDocket(caseId, user.xID);
+      showSuccess('You now own this docket.');
+      setActionConfirmation('Ownership updated to you.');
+      await loadCase({ background: true });
+    } catch (error) {
+      const message = extractErrorMessage(error, 'Failed to take ownership. Please try again.');
+      showError(message);
+      setActionError({ message, retry: handleTakeOwnership });
+    } finally {
+      setAssigningCase(false);
+    }
+  };
+
   // PR #45: Extract access mode information from API response
   const accessMode = caseData?.accessMode || {};
   const isViewOnlyMode = accessMode.isViewOnlyMode;
@@ -1381,6 +1400,9 @@ export const CaseDetailPage = () => {
             <div className="case-detail-header__meta">
               Priority: {caseInfo.priority || caseInfo.slaPriority || 'Standard'} • Last updated {formatDateTime(caseInfo.updatedAt)}
             </div>
+            <div className="case-detail-header__meta">
+              Assigned to: {assignedToLabel}
+            </div>
           </div>
 
           <div className="case-detail-header__actions">
@@ -1393,6 +1415,14 @@ export const CaseDetailPage = () => {
             {caseInfo.approvalStatus === 'PENDING' && <Badge variant="warning">Awaiting Partner Approval</Badge>}
             {caseInfo.lockStatus?.isLocked && <Badge variant="warning">Lifecycle Locked</Badge>}
             {caseInfo?.stage?.requiresApproval === true && isViewOnlyMode && <Badge variant="warning">Role Restricted Action</Badge>}
+            {!isViewOnlyMode && !caseInfo?.assignedToXID && (
+              <Button variant="primary" onClick={handleTakeOwnership} disabled={assigningCase}>
+                {assigningCase ? 'Taking ownership…' : 'Take Ownership'}
+              </Button>
+            )}
+            {!isViewOnlyMode && caseInfo?.assignedToXID && !isAssignedToCurrentUser && (
+              <Badge variant="info">Assigned: {assignedToLabel}</Badge>
+            )}
             <Button variant="ghost" onClick={() => runGuardedAction(() => openSidebar('cfs'), 'Unable to open CFS panel right now.')} title="CFS" className="h-10 w-10 rounded-full p-0" aria-label="Open CFS sidebar">ⓘ</Button>
             <Button variant="ghost" onClick={() => runGuardedAction(() => openSidebar('attachments'), 'Unable to open attachments panel right now.')} title="Attachments" className="h-10 w-10 rounded-full p-0" aria-label="Open attachments sidebar">📎</Button>
             <Button variant="ghost" onClick={() => runGuardedAction(() => openSidebar('history'), 'Unable to open history panel right now.')} title="History" className="h-10 w-10 rounded-full p-0" aria-label="Open history sidebar">🕒</Button>

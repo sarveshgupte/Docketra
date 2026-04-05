@@ -417,7 +417,7 @@ export const WorkbasketPage = () => {
       align: 'center',
       headerClassName: 'min-w-[10rem] whitespace-nowrap',
       cellClassName: 'min-w-[10rem] whitespace-nowrap',
-      render: (caseItem) => caseItem.assignedToName || caseItem.assignedToXID || (caseItem.openedByXID === user?.xID ? (user?.name || user?.xID) : 'Unassigned'),
+      render: (caseItem) => caseItem.assignedToName || caseItem.assignedToXID || 'Unassigned',
     },
     {
       key: 'slaDueDate',

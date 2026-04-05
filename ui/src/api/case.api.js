@@ -131,7 +131,7 @@ export const caseApi = {
 
   assignDocket: (caseId, assigneeXID) => withCaseInvalidation(
     caseId,
-    () => request((http) => http.post(`/cases/${caseId}/assign`, { assigneeXID }), 'Failed to assign case'),
+    () => request((http) => http.patch(`/cases/${caseId}/assign`, { assigneeXID }), 'Failed to assign case'),
   ),
 
   unassignDocket: (caseId) => withCaseInvalidation(

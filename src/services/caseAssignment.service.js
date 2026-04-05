@@ -357,9 +357,79 @@ const reassignCase = async (firmId, caseId, newUserXID, performedBy) => {
   return caseData;
 };
 
+/**
+ * Explicit assignment helper.
+ * Single source of truth for ownership updates.
+ */
+const assignDocket = async ({ firmId, caseId, userXID, assigneeObjectId = null, assignedByObjectId = null, session = null }) => {
+  const normalizedUserXID = String(userXID || '').trim().toUpperCase();
+  if (!normalizedUserXID) {
+    throw new Error('Valid userXID is required');
+  }
+
+  const assignedAt = new Date();
+  const updated = await Case.findOneAndUpdate(
+    {
+      firmId,
+      caseId,
+      assignedToXID: null,
+      status: { $in: [CaseStatus.UNASSIGNED, CaseStatus.OPEN] },
+    },
+    {
+      $set: {
+        assignedToXID: normalizedUserXID,
+        assignedTo: assigneeObjectId || null,
+        assignedBy: assignedByObjectId || assigneeObjectId || null,
+        assignedAt,
+        status: CaseStatus.ASSIGNED,
+        queueType: 'PERSONAL',
+        lifecycle: CASE_LIFECYCLE.ASSIGNED,
+      },
+    },
+    {
+      new: true,
+      ...(session ? { session } : {}),
+    }
+  );
+
+  return updated;
+};
+
+/**
+ * Explicit unassignment helper.
+ */
+const unassignDocket = async ({ firmId, caseId, session = null }) => {
+  const updated = await Case.findOneAndUpdate(
+    {
+      firmId,
+      caseId,
+      status: { $ne: CaseStatus.FILED },
+    },
+    {
+      $set: {
+        assignedToXID: null,
+        assignedTo: null,
+        assignedBy: null,
+        assignedAt: null,
+        queueType: 'GLOBAL',
+        lifecycle: CASE_LIFECYCLE.CREATED,
+        status: CaseStatus.UNASSIGNED,
+      },
+    },
+    {
+      new: true,
+      ...(session ? { session } : {}),
+    }
+  );
+
+  return updated;
+};
+
 module.exports = {
   pullCaseFromWorkbasket,
   assignCaseToUser,
   bulkAssignCasesToUser,
   reassignCase,
+  assignDocket,
+  unassignDocket,
 };
