@@ -24,7 +24,7 @@ const extractActivity = (response) => {
   return payload?.activity || payload?.events || [];
 };
 
-export function ActivityTimeline({ docketId, initialActivity = [] }) {
+export function ActivityTimeline({ docketId, initialActivity = [], refreshKey = 0 }) {
   const [activity, setActivity] = useState(() => normalizeFeed(initialActivity));
   const [loading, setLoading] = useState(() => !Array.isArray(initialActivity) || initialActivity.length === 0);
   const [error, setError] = useState('');
@@ -75,7 +75,7 @@ export function ActivityTimeline({ docketId, initialActivity = [] }) {
         window.clearTimeout(trigger);
       }
     };
-  }, [docketId, loadActivity]);
+  }, [docketId, refreshKey, loadActivity]);
 
   const groupedActivity = useMemo(() => {
     const sorted = sortActivityLatestFirst(activity);
