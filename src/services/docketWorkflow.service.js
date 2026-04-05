@@ -108,6 +108,7 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
           finalTarget = DocketStatus.QC_PENDING;
           requireComment(comment, 'QC request');
         }
+        docket.forceQc = Boolean(forceQC || sendToQC);
       }
 
       assertValidDocketTransition(fromState, finalTarget);
@@ -129,6 +130,9 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
       }
 
       if (finalTarget === DocketStatus.QC_PENDING) {
+        docket.qcStatus = 'REQUESTED';
+        docket.qcBy = actor.xID;
+        docket.qcAt = new Date();
         docket.qc = {
           ...(docket.qc || {}),
           requestedBy: actor.xID,
@@ -183,6 +187,9 @@ async function qcDecision({ docketId, firmId, actor, decision, comment }) {
     toState = DocketStatus.ASSIGNED;
     docket.assignedToXID = docket.qc?.originalAssigneeXID || docket.assignedToXID;
     docket.queueType = 'PERSONAL';
+    docket.qcStatus = 'REJECTED';
+    docket.qcBy = actor.xID;
+    docket.qcAt = new Date();
     docket.qc = {
       ...(docket.qc || {}),
       status: 'FAILED',
@@ -194,14 +201,17 @@ async function qcDecision({ docketId, firmId, actor, decision, comment }) {
   }
 
   if (normalizedDecision === QC_DECISIONS.APPROVED) {
+    docket.qcStatus = 'APPROVED';
+    docket.qcBy = actor.xID;
+    docket.qcAt = new Date();
     docket.qc = { ...(docket.qc || {}), status: 'APPROVED', handledBy: actor.xID, handledAt: new Date(), comment };
   }
 
   if (normalizedDecision === QC_DECISIONS.CORRECTED) {
+    docket.qcStatus = 'CORRECTED';
+    docket.qcBy = actor.xID;
+    docket.qcAt = new Date();
     docket.qc = { ...(docket.qc || {}), status: 'CORRECTED', handledBy: actor.xID, handledAt: new Date(), comment };
-    docket.status = toPersistenceState(DocketStatus.QC_CORRECTED);
-    await writeAudit({ docketId, fromState, toState: DocketStatus.QC_CORRECTED, userId: actor.xID, firmId, comment, action: 'QC_CORRECTED' });
-    assertValidDocketTransition(DocketStatus.QC_CORRECTED, DocketStatus.RESOLVED);
   }
 
   assertValidDocketTransition(fromState, toState);
