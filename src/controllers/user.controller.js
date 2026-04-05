@@ -61,13 +61,15 @@ const getUsers = async (req, res) => {
     if (role) query.role = role;
     if (isActive !== undefined) query.isActive = isActive === 'true';
     
-    const users = await User.find(query)
-      .select('-passwordHash -passwordSetupTokenHash -passwordHistory')
-      .limit(parseInt(limit))
-      .skip((parseInt(page) - 1) * parseInt(limit))
-      .sort({ createdAt: -1 });
-    
-    const total = await User.countDocuments(query);
+    // PERFORMANCE: Execute independent queries concurrently
+    const [users, total] = await Promise.all([
+      User.find(query)
+        .select('-passwordHash -passwordSetupTokenHash -passwordHistory')
+        .limit(parseInt(limit))
+        .skip((parseInt(page) - 1) * parseInt(limit))
+        .sort({ createdAt: -1 }),
+      User.countDocuments(query)
+    ]);
     
     res.json({
       success: true,
