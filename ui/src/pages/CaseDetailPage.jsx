@@ -242,7 +242,7 @@ export const CaseDetailPage = () => {
 
   const subcategoryLabel = caseInfo?.subcategory || caseInfo?.caseSubCategory || caseInfo?.subCategory || '—';
   const lifecycleStatus = normalizeLifecycleForUi(caseInfo?.lifecycle);
-  const assignedToLabel = caseInfo?.assignedToName || caseInfo?.assignedToXID || 'Unassigned';
+  const assignedToLabel = caseInfo?.assignedToName || caseInfo?.assignedToXID || (caseInfo?.lifecycle === 'created' ? 'Not in worklist' : '—');
   const isAssignedToCurrentUser = Boolean(user?.xID) && caseInfo?.assignedToXID === user.xID;
 
   const mergeUniqueComments = useCallback((inputComments = []) => {
@@ -1104,50 +1104,16 @@ export const CaseDetailPage = () => {
     if (assigningCase) return;
     setAssigningCase(true);
     const selectedAssignee = availableAssignees.find((option) => option.value === assignUser);
-    const previous = caseData;
-    const optimisticComment = assignComment.trim()
-      ? {
-          id: `assign-${Date.now()}`,
-          text: assignComment.trim(),
-          createdAt: new Date().toISOString(),
-          createdBy: user?.xID || user?.email || 'System',
-        }
-      : null;
-
-    setCaseData((prev) => ({
-      ...prev,
-      assignedToXID: assignUser,
-      assignedToName: selectedAssignee?.label || assignUser,
-      comments: optimisticComment ? [...(prev?.comments || []), optimisticComment] : (prev?.comments || []),
-    }));
-    setShowAssignModal(false);
-    setAssignComment('');
-    setActionError(null);
-    setActionConfirmation(`Docket assigned to ${selectedAssignee?.label || assignUser}.`);
 
     try {
-      if (!caseInfo?.version && caseInfo?.version !== 0) {
-        showError('Case version missing. Please refresh.');
-        setCaseData(previous);
-        return;
-      }
-      await caseApi.updateStatus(caseId, {
-        status: 'ASSIGNED',
-        version: statusVersion,
-        performedBy,
-        notes: assignComment.trim(),
-      });
+      await caseApi.assignDocket(caseId, assignUser);
+      setShowAssignModal(false);
+      setAssignComment('');
+      setActionError(null);
+      setActionConfirmation(`Docket assigned to ${selectedAssignee?.label || assignUser}.`);
       showSuccess(`Docket owner updated to ${selectedAssignee?.label || assignUser}`);
-      appendTimelineEvent({
-        id: `assigned-event-${Date.now()}`,
-        action: 'ASSIGNED',
-        description: assignComment.trim() || `Docket owner updated to ${selectedAssignee?.label || assignUser}`,
-        createdAt: new Date().toISOString(),
-        createdBy: user?.name || user?.xID || user?.email || 'System',
-      });
       loadCase({ background: true });
     } catch (error) {
-      setCaseData(previous);
       const message = extractErrorMessage(error, 'Failed to assign docket. Please try again.');
       showError(message);
       setActionError({ message, retry: handleAssignDocket });
