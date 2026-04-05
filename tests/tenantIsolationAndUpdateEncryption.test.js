@@ -3,6 +3,7 @@ const assert = require('assert');
 const crypto = require('crypto');
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
+const { createMongoMemoryOrNull } = require('./utils/mongoMemory');
 
 function makeTestKey() {
   return crypto.randomBytes(32).toString('base64');
@@ -11,7 +12,14 @@ function makeTestKey() {
 async function run() {
   let mongoServer;
   try {
-    mongoServer = await MongoMemoryServer.create();
+    mongoServer = await createMongoMemoryOrNull(
+      () => MongoMemoryServer.create(),
+      'Skipping tenant isolation/update encryption test (Mongo binary unavailable)'
+    );
+    if (!mongoServer) {
+      console.log('✓ tenant isolation/update encryption test skipped (Mongo binary unavailable)');
+      return;
+    }
     await mongoose.connect(mongoServer.getUri());
 
     process.env.MASTER_ENCRYPTION_KEY = makeTestKey();

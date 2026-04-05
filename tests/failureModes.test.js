@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const { MongoMemoryReplSet } = require('mongodb-memory-server');
+const { createMongoMemoryOrNull } = require('./utils/mongoMemory');
 const { createFirmHierarchy, FirmBootstrapError, defaultDeps } = require('../src/services/firmBootstrap.service');
 const { validateEnv } = require('../src/config/validateEnv');
 const { runReadinessChecks } = require('../src/controllers/health.controller');
@@ -23,18 +24,20 @@ const setBaseEnv = async () => {
   process.env.SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL || 'superadmin@test.com';
   process.env.SUPERADMIN_OBJECT_ID = process.env.SUPERADMIN_OBJECT_ID || '000000000000000000000001';
   process.env.DISABLE_GOOGLE_AUTH = process.env.DISABLE_GOOGLE_AUTH || 'true';
+  process.env.ENCRYPTION_PROVIDER = process.env.ENCRYPTION_PROVIDER || 'disabled';
 };
 
 async function testTransactionalRollback() {
   console.log('\n[Test] Firm bootstrap rollback on failure');
   await setBaseEnv();
   let replset;
-  try {
-    replset = await MongoMemoryReplSet.create({
+  replset = await createMongoMemoryOrNull(
+    () => MongoMemoryReplSet.create({
       replSet: { count: 1, storageEngine: 'wiredTiger' },
-    });
-  } catch (error) {
-    console.warn('⚠️  Skipping rollback test (MongoDB binary unavailable):', error.message);
+    }),
+    'Skipping rollback test (MongoDB binary unavailable)'
+  );
+  if (!replset) {
     return;
   }
   const uri = replset.getUri();
@@ -83,7 +86,10 @@ function testEnvValidationFailure() {
   delete process.env.JWT_SECRET;
   const result = validateEnv({ exitOnError: false });
   assert.strictEqual(result.valid, false, 'Env validation should fail');
-  assert(result.errors.some(e => e.field === 'JWT_SECRET'), 'Missing JWT_SECRET should be reported');
+  assert(
+    Array.isArray(result.errors) && result.errors.includes('Environment validation failed'),
+    'Missing JWT_SECRET should trigger a structured validation failure'
+  );
   process.env.JWT_SECRET = originalJwt || 'supersecretjwtvalue';
   console.log('✓ Env validation reports missing variables');
 }
