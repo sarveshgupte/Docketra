@@ -2,8 +2,10 @@ import api from '../services/api';
 import { request } from './apiClient';
 import {
   clearPendingCasePromise,
+  getLatestCaseSnapshot,
   getCachedCase,
   invalidateCaseCache,
+  setLatestCaseSnapshot,
   setCachedCase,
   setPendingCasePromise,
 } from '../utils/caseCache';
@@ -27,13 +29,29 @@ export const caseApi = {
 
   getCaseById: async (caseId, params = {}) => {
     const cached = getCachedCase(caseId, params);
-    if (cached) return cached;
+    if (cached) {
+      if (cached?.data) {
+        setLatestCaseSnapshot(caseId, cached);
+      }
+      return cached;
+    }
 
     const pendingPromise = request(
       (http) => http.get(caseRoute.detail(caseId), { params }),
       'Failed to load case details',
     )
       .then((response) => {
+        if (response?.notModified) {
+          const latest = getLatestCaseSnapshot(caseId);
+          if (latest) {
+            setCachedCase(caseId, params, latest);
+            return latest;
+          }
+          return response;
+        }
+        if (response?.data) {
+          setLatestCaseSnapshot(caseId, response);
+        }
         setCachedCase(caseId, params, response);
         return response;
       })
