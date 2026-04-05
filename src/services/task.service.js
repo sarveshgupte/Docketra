@@ -19,8 +19,11 @@ const getTasks = async (firmId, queryParams = {}) => {
   const limit = toInt(queryParams.limit, 20);
   const query = buildTaskQuery(queryParams);
 
-  const tasks = await TaskRepository.find(firmId, query, { page, limit });
-  const total = await TaskRepository.count(firmId, query);
+  // ⚡ Bolt: Fetch tasks and total count concurrently to reduce database latency
+  const [tasks, total] = await Promise.all([
+    TaskRepository.find(firmId, query, { page, limit }),
+    TaskRepository.count(firmId, query),
+  ]);
 
   return {
     tasks,
