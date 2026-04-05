@@ -23,6 +23,7 @@ export const DataTable = React.memo(({
   loadingMessage = 'Loading data...',
   emptyTitle = 'No records found',
   emptyDescription = 'Try adjusting filters or create a new record.',
+  preventHorizontalScroll = false,
 }) => {
   const hasActiveFilters = activeFilters.length > 0;
 
@@ -98,7 +99,12 @@ export const DataTable = React.memo(({
       ) : null}
       <div className={joinClasses(surfaceClasses.tableWrapper, 'w-full max-w-full min-w-0')}>
         <div className="w-full max-w-full overflow-x-auto">
-          <table className="w-full min-w-max table-auto divide-y divide-gray-200">
+          <table
+            className={joinClasses(
+              'w-full divide-y divide-gray-200',
+              preventHorizontalScroll ? 'min-w-full table-fixed' : 'min-w-max table-auto',
+            )}
+          >
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 {columns.map((column) => (
