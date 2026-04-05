@@ -359,6 +359,25 @@ const caseSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
+  forceQc: {
+    type: Boolean,
+    default: false,
+  },
+  qcStatus: {
+    type: String,
+    enum: ['REQUESTED', 'APPROVED', 'FAILED', 'CORRECTED', 'REJECTED'],
+    default: null,
+  },
+  qcBy: {
+    type: String,
+    trim: true,
+    uppercase: true,
+    default: null,
+  },
+  qcAt: {
+    type: Date,
+    default: null,
+  },
   qc: {
     requestedBy: { type: String, trim: true, uppercase: true },
     handledBy: { type: String, trim: true, uppercase: true },

@@ -136,6 +136,12 @@ export const CaseDetailPage = () => {
   const [showResolveModal, setShowResolveModal] = useState(false);
   const [resolveComment, setResolveComment] = useState('');
   const [resolvingCase, setResolvingCase] = useState(false);
+  const [actionComment, setActionComment] = useState('');
+  const [forceQcReview, setForceQcReview] = useState(false);
+  const [showQcModal, setShowQcModal] = useState(false);
+  const [qcDecisionType, setQcDecisionType] = useState('');
+  const [qcComment, setQcComment] = useState('');
+  const [qcSubmitting, setQcSubmitting] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignComment, setAssignComment] = useState('');
   const [assignUser, setAssignUser] = useState('');
@@ -555,6 +561,10 @@ export const CaseDetailPage = () => {
   }, [assignUser, availableAssignees]);
 
   useEffect(() => {
+    setForceQcReview(Boolean(caseInfo?.forceQc));
+  }, [caseInfo?.forceQc]);
+
+  useEffect(() => {
     if (!cloneModalOpen) return;
     let ignore = false;
     const loadCategories = async () => {
@@ -868,7 +878,10 @@ export const CaseDetailPage = () => {
         setConfirmModal(null);
         setFilingCase(true);
         try {
-          const response = await caseApi.fileCase(caseId, fileComment.trim());
+          const response = await caseApi.transitionDocket(caseId, {
+            toState: 'FILED',
+            comment: fileComment.trim(),
+          });
           if (response.success) {
             const message = `Docket ${caseId} filed • ${formatDateTime(new Date())}`;
             showSuccess(message);
@@ -922,7 +935,13 @@ export const CaseDetailPage = () => {
         setConfirmModal(null);
         setPendingCase(true);
         try {
-          const response = await caseApi.pendCase(caseId, pendComment.trim(), pendingUntil);
+          const [year, month, day] = String(pendingUntil).split('-').map(Number);
+          const reopenAt = new Date(Date.UTC(year, month - 1, day, 2, 30, 0)).toISOString(); // 08:00 IST
+          const response = await caseApi.transitionDocket(caseId, {
+            toState: 'PENDING',
+            comment: pendComment.trim(),
+            reopenAt,
+          });
           if (response.success) {
             const message = `Docket ${caseId} pended • ${formatDateTime(new Date())}`;
             showSuccess(message);
@@ -966,9 +985,15 @@ export const CaseDetailPage = () => {
           case: prev?.case ? { ...prev.case, status: 'RESOLVED' } : prev?.case,
         }));
         try {
-          const response = await caseApi.resolveCase(caseId, resolveComment.trim());
+          const response = await caseApi.transitionDocket(caseId, {
+            toState: 'RESOLVED',
+            comment: resolveComment.trim(),
+            sendToQC: forceQcReview,
+          });
           if (response.success) {
-            const message = `Docket ${caseId} resolved • ${formatDateTime(new Date())}`;
+            const message = forceQcReview
+              ? `Docket ${caseId} sent to QC review • ${formatDateTime(new Date())}`
+              : `Docket ${caseId} resolved • ${formatDateTime(new Date())}`;
             showSuccess(message);
             setActionConfirmation(message);
             setActionError(null);
@@ -976,7 +1001,7 @@ export const CaseDetailPage = () => {
             setResolveComment('');
             appendTimelineEvent({
               id: `resolved-event-${Date.now()}`,
-              action: 'RESOLVED',
+              action: forceQcReview ? 'QC_PENDING' : 'RESOLVED',
               description: resolveComment,
               createdAt: new Date().toISOString(),
               createdBy: user?.name || user?.xID || user?.email || 'System',
@@ -1197,6 +1222,29 @@ export const CaseDetailPage = () => {
   }, [caseInfo, comments]);
 
   const actionInFlight = pullingCase || assigningCase || pendingCase || resolvingCase || filingCase || unpendingCase || startingWork || movingToGlobal;
+  const canRunDocketAction = Boolean(actionComment.trim()) && !actionInFlight;
+
+  const openActionModal = (type) => {
+    const seedComment = actionComment.trim();
+    if (!seedComment) {
+      showWarning('Comment is mandatory for docket actions');
+      return;
+    }
+    if (type === 'pend') {
+      setPendComment(seedComment);
+      setShowPendModal(true);
+      return;
+    }
+    if (type === 'resolve') {
+      setResolveComment(seedComment);
+      setShowResolveModal(true);
+      return;
+    }
+    if (type === 'file') {
+      setFileComment(seedComment);
+      setShowFileModal(true);
+    }
+  };
 
   const handleStartWork = async () => {
     setStartingWork(true);
@@ -1235,12 +1283,7 @@ export const CaseDetailPage = () => {
       ];
     }
     if (docketState === 'IN_PROGRESS') {
-      return [
-        { key: 'pend', label: 'Pend', onClick: () => setShowPendModal(true), disabled: actionInFlight },
-        { key: 'resolve', label: 'Resolve', variant: 'primary', onClick: () => setShowResolveModal(true), disabled: actionInFlight },
-        { key: 'file', label: 'File', onClick: () => setShowFileModal(true), disabled: actionInFlight },
-        { key: 'move_wb', label: 'Move to WB', variant: 'outline', onClick: handleMoveToWB, disabled: actionInFlight },
-      ];
+      return [{ key: 'move_wb', label: 'Move to WB', variant: 'outline', onClick: handleMoveToWB, disabled: actionInFlight }];
     }
     if (docketState === 'PENDING') {
       return [
@@ -1259,7 +1302,8 @@ export const CaseDetailPage = () => {
   // - OPEN: Show File, Pend, Resolve (no Unpend)
   // - PENDING: Show ONLY Unpend (no File, Pend, Resolve)
   // - FILED or RESOLVED: Show nothing (terminal states, read-only)
-  const canPerformLifecycleActions = docketState === 'OPEN' && !isViewOnlyMode;
+  const canPerformLifecycleActions = ['OPEN', 'IN_PROGRESS'].includes(docketState) && !isViewOnlyMode;
+  const showQcActions = isAdmin && docketState === 'QC_PENDING' && !isViewOnlyMode;
   const isAnyModalOpen = Boolean(
     showFileModal
     || showPendModal
@@ -1395,9 +1439,10 @@ export const CaseDetailPage = () => {
         <header className="case-detail-header">
           <div className="case-detail-header__identity">
             <div className="case-detail-header__title-row">
-              <h1 className="case-detail-header__title">{caseInfo.title || caseInfo.caseName || formatDocketId(caseInfo.caseId || caseId)}</h1>
+              <h1 className="case-detail-header__title">{formatDocketId(caseInfo.caseId || caseId)}</h1>
             </div>
-            <p className="case-detail-header__subtitle">Assigned to: {assignedLabel}</p>
+            <p className="case-detail-header__subtitle">{caseInfo.title || caseInfo.caseName || 'Untitled docket'}</p>
+            <p className="case-detail-header__meta">{descriptionContent}</p>
             <div className="case-detail-header__meta">
               Priority: {caseInfo.priority || caseInfo.slaPriority || 'Standard'} • Last updated {formatDateTime(caseInfo.updatedAt)}
             </div>
@@ -1405,6 +1450,11 @@ export const CaseDetailPage = () => {
 
           <div className="case-detail-header__actions">
             <StatusBadge status={lifecycleStatus} className="case-detail-header__status-prominent" />
+            {caseInfo?.qc?.status || caseInfo?.qcStatus ? (
+              <Badge variant={String(caseInfo?.qc?.status || caseInfo?.qcStatus).toUpperCase() === 'FAILED' ? 'danger' : 'info'}>
+                QC: {caseInfo?.qc?.status || caseInfo?.qcStatus}
+              </Badge>
+            ) : null}
             {caseInfo.approvalStatus === 'PENDING' && <Badge variant="warning">Awaiting Partner Approval</Badge>}
             {caseInfo.lockStatus?.isLocked && <Badge variant="warning">Lifecycle Locked</Badge>}
             {caseInfo?.stage?.requiresApproval === true && isViewOnlyMode && <Badge variant="warning">Role Restricted Action</Badge>}
@@ -1469,10 +1519,6 @@ export const CaseDetailPage = () => {
                 <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Client</span>
                   <span className="field-value text-sm font-medium text-gray-900 break-words">{clientSnapshotLabel}</span>
-                </div>
-                <div className="field-group min-w-0">
-                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Assigned To</span>
-                  <span className="field-value text-sm font-medium text-gray-900 break-words">{assignedLabel}</span>
                 </div>
                 <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Lifecycle</span>
@@ -1552,17 +1598,52 @@ export const CaseDetailPage = () => {
                 </div>
               )}
               {canPerformLifecycleActions ? (
-                <div className="case-detail__composer-actions mt-3">
-                  <Button variant="outline" onClick={() => setShowPendModal(true)} disabled={actionInFlight}>
-                    Pend
-                  </Button>
-                  <Button variant="primary" onClick={() => setShowResolveModal(true)} disabled={actionInFlight}>
-                    Resolve
-                  </Button>
-                  <Button variant="outline" onClick={() => setShowFileModal(true)} disabled={actionInFlight}>
-                    File
-                  </Button>
-                </div>
+                <section className="mt-4 border-t pt-4" aria-label="Docket actions">
+                  <h3 className="text-sm font-semibold text-gray-900">Docket Actions</h3>
+                  <Textarea
+                    label="Action Comment (Required)"
+                    value={actionComment}
+                    onChange={(e) => setActionComment(e.target.value)}
+                    placeholder="Enter mandatory action comment…"
+                    rows={3}
+                    className="mt-2"
+                  />
+                  <label className="mt-3 flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={forceQcReview}
+                      onChange={(e) => setForceQcReview(e.target.checked)}
+                    />
+                    Force QC Review
+                  </label>
+                  <div className="case-detail__composer-actions mt-3">
+                    <Button variant="outline" onClick={() => openActionModal('pend')} disabled={!canRunDocketAction}>
+                      Pend
+                    </Button>
+                    <Button variant="primary" onClick={() => openActionModal('resolve')} disabled={!canRunDocketAction}>
+                      Resolve
+                    </Button>
+                    <Button variant="outline" onClick={() => openActionModal('file')} disabled={!canRunDocketAction}>
+                      File
+                    </Button>
+                  </div>
+                </section>
+              ) : null}
+              {showQcActions ? (
+                <section className="mt-4 border-t pt-4" aria-label="QC actions">
+                  <h3 className="text-sm font-semibold text-gray-900">QC Actions</h3>
+                  <div className="case-detail__composer-actions mt-3">
+                    <Button variant="primary" onClick={() => { setQcDecisionType('APPROVED'); setQcComment(''); setShowQcModal(true); }}>
+                      Approve
+                    </Button>
+                    <Button variant="outline" onClick={() => { setQcDecisionType('CORRECTED'); setQcComment(''); setShowQcModal(true); }}>
+                      Corrected
+                    </Button>
+                    <Button variant="outline" onClick={() => { setQcDecisionType('FAILED'); setQcComment(''); setShowQcModal(true); }}>
+                      Reject
+                    </Button>
+                  </div>
+                </section>
               ) : null}
             </section>
 
@@ -1833,6 +1914,36 @@ export const CaseDetailPage = () => {
             />
           </div>
         </Modal>
+        <ActionModal
+          isOpen={showQcModal}
+          onClose={() => setShowQcModal(false)}
+          title={`QC Action: ${qcDecisionType || 'REVIEW'}`}
+          comment={qcComment}
+          setComment={setQcComment}
+          commentRequired
+          submitLabel="Submit QC Action"
+          submitting={qcSubmitting}
+          onSubmit={async () => {
+            if (!qcComment.trim()) {
+              showWarning('Comment is mandatory for QC action');
+              return;
+            }
+            setQcSubmitting(true);
+            try {
+              const response = await caseApi.qcAction(caseId, qcDecisionType, qcComment.trim());
+              if (response.success) {
+                showSuccess(`QC action ${qcDecisionType} recorded.`);
+                setShowQcModal(false);
+                setQcComment('');
+                loadCase({ background: true });
+              }
+            } catch (error) {
+              showError(extractErrorMessage(error, 'Failed to apply QC action.'));
+            } finally {
+              setQcSubmitting(false);
+            }
+          }}
+        />
 
         <ActionModal
           isOpen={showAssignModal}
