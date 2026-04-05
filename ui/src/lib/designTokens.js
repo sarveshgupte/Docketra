@@ -42,4 +42,8 @@ export const caseStatusAppearance = {
   ESCALATED: { label: 'Escalated', tone: 'escalated' },
   CLOSED: { label: 'Closed', tone: 'closed' },
   UNASSIGNED: { label: 'Unassigned', tone: 'draft' },
+  CREATED: { label: 'Created', tone: 'draft' },
+  REVIEW: { label: 'Review', tone: 'review' },
+  COMPLETED: { label: 'Completed', tone: 'success' },
+  ARCHIVED: { label: 'Archived', tone: 'dark' },
 };
