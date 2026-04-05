@@ -16,6 +16,7 @@ import { worklistApi } from '../../api/worklist.api';
 import { USER_ROLES } from '../../utils/constants';
 import { useActiveDocket } from '../../hooks/useActiveDocket';
 import { formatDateTime } from '../../utils/formatDateTime';
+import { getFirmConfig } from '../../utils/firmConfig';
 import './Layout.css';
 import { ROUTES, safeRoute } from '../../constants/routes';
 
@@ -147,8 +148,19 @@ export const Layout = ({ children }) => {
   const hasAdminAccess = user?.role === USER_ROLES.ADMIN;
   const firmLabel = user?.firm?.name || currentFirmSlug || 'Firm';
   const firmType = typeof user?.firm?.type === 'string' ? user.firm.type.trim() : '';
+  const configuredFirmLogoUrl = getFirmConfig()?.brandLogoUrl || '';
+  const firmLogoUrl = typeof configuredFirmLogoUrl === 'string' ? configuredFirmLogoUrl.trim() : '';
   const firmInitials = firmLabel.substring(0, 2).toUpperCase();
   const reportsRoute = `${ROUTES.FIRM_BASE(currentFirmSlug)}/admin/reports`;
+  const isMobileViewport = typeof window !== 'undefined' && window.matchMedia('(max-width: 1024px)').matches;
+
+  const handleSidebarToggle = () => {
+    if (isMobileViewport) {
+      setMobileSidebarOpen((value) => !value);
+      return;
+    }
+    setSidebarCollapsed((value) => !value);
+  };
 
   const handleLogout = async () => {
     setProfileDropdownOpen(false);
@@ -496,7 +508,22 @@ export const Layout = ({ children }) => {
       >
         {/* Firm Badge */}
         <div className="enterprise-sidebar__firm">
-          <div className="enterprise-sidebar__firm-icon" aria-hidden="true">{firmInitials}</div>
+          <div className="enterprise-sidebar__firm-icon" aria-hidden="true">
+            <span className="enterprise-sidebar__firm-icon-text">{firmInitials}</span>
+            {firmLogoUrl ? (
+              <img
+                src={firmLogoUrl}
+                alt=""
+                className="enterprise-sidebar__firm-logo-image"
+                loading="lazy"
+                decoding="async"
+                referrerPolicy="no-referrer"
+                onError={(event) => {
+                  event.currentTarget.style.display = 'none';
+                }}
+              />
+            ) : null}
+          </div>
           <div className="enterprise-sidebar__firm-info">
             <div className="enterprise-sidebar__firm-name" title={firmLabel}>
               {firmLabel}
@@ -563,9 +590,9 @@ export const Layout = ({ children }) => {
           {/* Mobile sidebar toggle */}
           <button
             className="enterprise-header__sidebar-toggle"
-            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-            aria-label="Toggle sidebar"
-            aria-expanded={mobileSidebarOpen}
+            onClick={handleSidebarToggle}
+            aria-label={isMobileViewport ? 'Toggle sidebar' : (sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar')}
+            aria-expanded={isMobileViewport ? mobileSidebarOpen : !sidebarCollapsed}
           >
             <IconMenu />
           </button>

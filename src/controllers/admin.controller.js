@@ -34,6 +34,7 @@ const DEFAULT_FIRM_SETTINGS = {
   enablePerformanceView: true,
   enableEscalationView: true,
   enableBulkActions: true,
+  brandLogoUrl: '',
 };
 const DEFAULT_WORK_SETTINGS = {
   assignmentStrategy: 'manual',
@@ -86,6 +87,7 @@ const normalizeFirmSettings = (raw = {}) => ({
   enablePerformanceView: raw.enablePerformanceView !== false,
   enableEscalationView: raw.enableEscalationView !== false,
   enableBulkActions: raw.enableBulkActions !== false,
+  brandLogoUrl: typeof raw.brandLogoUrl === 'string' ? raw.brandLogoUrl.trim() : DEFAULT_FIRM_SETTINGS.brandLogoUrl,
 });
 
 const normalizeWorkSettings = (raw = {}) => ({
