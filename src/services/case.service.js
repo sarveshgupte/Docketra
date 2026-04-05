@@ -4,8 +4,55 @@ const { CASE_ACTION_TYPES } = require('../config/constants');
 const { logCaseHistory } = require('./auditLog.service');
 const { safeLogForensicAudit, computeChangedFields, getRequestIp, getRequestUserAgent } = require('./forensicAudit.service');
 const { normalizeStatus } = require('../domain/case/caseStateMachine');
+const CaseStatus = require('../domain/case/caseStatus');
+const { DocketLifecycle, coerceLifecycleToDocket, deriveLifecycle } = require('../domain/docketLifecycle');
 const { transitionDocket } = require('./docketTransition.service');
 const caseSlaService = require('./caseSla.service');
+
+/**
+ * Compute lifecycle for CaseRepository.updateStatus from workflow status + patch.
+ * Terminal and in-flight phases use CaseStatus; falls back to deriveLifecycle with status for edge cases.
+ */
+function inferLifecycleAfterStatusChange(existingCase, normalizedNewStatus, patch) {
+  const assigned = patch.assignedToXID !== undefined ? patch.assignedToXID : existingCase.assignedToXID;
+  const explicit = patch.lifecycle;
+  if (explicit !== undefined && explicit !== null && String(explicit).trim() !== '') {
+    return deriveLifecycle({
+      lifecycle: explicit,
+      assignedToXID: assigned,
+      status: normalizedNewStatus,
+    });
+  }
+
+  const ns = normalizedNewStatus;
+  if (ns === CaseStatus.RESOLVED || ns === CaseStatus.CLOSED) return DocketLifecycle.COMPLETED;
+  if (ns === CaseStatus.FILED) return DocketLifecycle.ARCHIVED;
+
+  const prev = coerceLifecycleToDocket(existingCase.lifecycle);
+  if (prev === DocketLifecycle.COMPLETED || prev === DocketLifecycle.ARCHIVED) {
+    return prev;
+  }
+
+  if (!assigned) return DocketLifecycle.CREATED;
+
+  if (ns === CaseStatus.ASSIGNED) return DocketLifecycle.IN_WORKLIST;
+  if ([
+    CaseStatus.IN_PROGRESS,
+    CaseStatus.OPEN,
+    CaseStatus.PENDING,
+    CaseStatus.QC_PENDING,
+    CaseStatus.QC_FAILED,
+    CaseStatus.QC_CORRECTED,
+  ].includes(ns)) {
+    return DocketLifecycle.ACTIVE;
+  }
+
+  return deriveLifecycle({
+    lifecycle: existingCase.lifecycle,
+    assignedToXID: assigned,
+    status: normalizedNewStatus,
+  });
+}
 
 async function updateStatus(caseId, newStatus, context = {}) {
   const tenantId = context.tenantId || context.firmId;
@@ -50,11 +97,14 @@ async function updateStatus(caseId, newStatus, context = {}) {
     },
   });
 
+  const mergedPatch = { ...(context.statusPatch || {}), ...(slaTransition.patch || {}) };
+  mergedPatch.lifecycle = inferLifecycleAfterStatusChange(existingCase, normalizedNewStatus, mergedPatch);
+
   await CaseRepository.updateStatus(
     caseId,
     tenantId,
     normalizedNewStatus,
-    { ...(context.statusPatch || {}), ...(slaTransition.patch || {}) },
+    mergedPatch,
     session,
     normalizedNewStatus
   );
