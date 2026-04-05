@@ -9,6 +9,7 @@ const DEFAULT_FIRM_CONFIG = {
   enablePerformanceView: true,
   enableEscalationView: true,
   enableBulkActions: true,
+  brandLogoUrl: '',
   featureFlags: { ...FEATURE_FLAGS },
 };
 
@@ -43,4 +44,3 @@ export const setFirmConfig = (nextConfig = {}) => {
   localStorage.setItem(FIRM_CONFIG_STORAGE_KEY, JSON.stringify(merged));
   return merged;
 };
-

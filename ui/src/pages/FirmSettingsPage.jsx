@@ -104,6 +104,13 @@ export const FirmSettingsPage = () => {
     setHasUnsavedChanges(true);
   };
 
+  const handleTextChange = (event) => {
+    const { name, value } = event.target;
+    setSaveMessage({ type: '', text: '' });
+    setConfig((prev) => ({ ...prev, [name]: value }));
+    setHasUnsavedChanges(true);
+  };
+
   const handleSave = async () => {
     const firmPayload = {
       slaDefaultDays: Number(config.slaDefaultDays) || 0,
@@ -112,6 +119,7 @@ export const FirmSettingsPage = () => {
       enablePerformanceView: Boolean(config.enablePerformanceView),
       enableEscalationView: Boolean(config.enableEscalationView),
       enableBulkActions: Boolean(config.enableBulkActions),
+      brandLogoUrl: typeof config.brandLogoUrl === 'string' ? config.brandLogoUrl.trim() : '',
     };
     try {
       const response = await adminApi.updateFirmSettings({ firm: firmPayload });
@@ -173,6 +181,15 @@ export const FirmSettingsPage = () => {
                   min="1"
                   value={config.workloadThreshold}
                   onChange={handleNumberChange}
+                />
+                <Input
+                  label="Firm/company logo URL"
+                  name="brandLogoUrl"
+                  type="url"
+                  placeholder="https://example.com/company-logo.png"
+                  value={config.brandLogoUrl || ''}
+                  onChange={handleTextChange}
+                  helpText="Optional. This image replaces the initials badge in the sidebar."
                 />
               </div>
             </Card>
