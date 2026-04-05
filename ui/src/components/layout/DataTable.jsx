@@ -97,8 +97,8 @@ export const DataTable = React.memo(({
         </div>
       ) : null}
       <div className={joinClasses(surfaceClasses.tableWrapper, 'w-full max-w-full min-w-0')}>
-        <div className="w-full max-w-full overflow-x-hidden">
-          <table className="w-full table-fixed divide-y divide-gray-200">
+        <div className="w-full max-w-full overflow-x-auto">
+          <table className="w-full min-w-max table-auto divide-y divide-gray-200">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 {columns.map((column) => (

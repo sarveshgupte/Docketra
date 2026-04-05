@@ -20,12 +20,6 @@
   color: var(--text-primary);
 }
 
-.worklist-view-tabs {
-  display: flex;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-}
-
 .global-worklist__filters {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
