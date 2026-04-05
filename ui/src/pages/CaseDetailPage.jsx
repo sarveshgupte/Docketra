@@ -181,7 +181,20 @@ export const CaseDetailPage = () => {
   const attachments = caseData?.attachments ?? [];
   const auditLog = caseData?.auditLog ?? [];
   const history = caseData?.history ?? [];
-  const timelineEvents = auditLog.length > 0 ? auditLog : history;
+  const timelineEvents = useMemo(() => {
+    const merged = [...auditLog, ...history];
+    const seen = new Set();
+
+    return merged.filter((event) => {
+      if (!event) return false;
+      const stableKey = event._id
+        || event.id
+        || `${event.actionType || event.action || ''}:${event.timestamp || event.createdAt || ''}:${event.performedByXID || event.actorXID || ''}:${event.description || event.actionLabel || ''}`;
+      if (seen.has(stableKey)) return false;
+      seen.add(stableKey);
+      return true;
+    });
+  }, [auditLog, history]);
   const sortedTimelineEvents = useMemo(
     () => [...timelineEvents].sort((left, right) => {
       const leftTs = new Date(left?.timestamp || left?.createdAt || left?.updatedAt || 0).getTime();
