@@ -66,9 +66,16 @@ const resolveCase = async (req, res) => {
       });
     }
     
+    if (error.message === 'Permission denied') {
+      return res.status(403).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
     if (error.message.startsWith('Illegal transition:') ||
         error.message === 'Resolved cases cannot be modified' ||
-        error.message === 'Case must be OPEN before resolving' ||
+        error.message === 'Invalid lifecycle transition' ||
         error.code === 'INVALID_CASE_TRANSITION') {
       return res.status(400).json({
         success: false,
@@ -136,9 +143,16 @@ const pendCase = async (req, res) => {
       });
     }
     
+    if (error.message === 'Permission denied') {
+      return res.status(403).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
     if (error.message.startsWith('Illegal transition:') ||
         error.message === 'Resolved cases cannot be modified' ||
-        error.message === 'Case must be OPEN before pending') {
+        error.message === 'Invalid lifecycle transition') {
       return res.status(400).json({
         success: false,
         message: error.message,
@@ -204,9 +218,16 @@ const fileCase = async (req, res) => {
       });
     }
     
+    if (error.message === 'Permission denied') {
+      return res.status(403).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
     if (error.message.startsWith('Illegal transition:') ||
         error.message === 'Resolved cases cannot be modified' ||
-        error.message === 'Case must be OPEN before filing') {
+        error.message === 'Invalid lifecycle transition') {
       return res.status(400).json({
         success: false,
         message: error.message,

@@ -20,12 +20,50 @@ function requireComment(comment, context) {
   }
 }
 
-async function writeAudit({ docketId, fromState, toState, userId, comment = null, firmId, action, metadata = {}, session = null }) {
+function normalizeActorRole(actor = {}) {
+  const raw = String(actor?.role || '').toUpperCase();
+  if (raw === 'ADMIN' || raw === 'SUPER_ADMIN' || raw === 'SUPERADMIN') return 'ADMIN';
+  if (raw === 'SYSTEM') return 'SYSTEM';
+  return 'USER';
+}
+
+const ALLOWED_LIFECYCLE_TRANSITIONS = Object.freeze({
+  OPEN: Object.freeze(['PENDING', 'RESOLVED', 'FILED', 'QC_PENDING']),
+  PENDING: Object.freeze(['OPEN']),
+  QC_PENDING: Object.freeze(['RESOLVED', 'OPEN']),
+  RESOLVED: Object.freeze([]),
+  FILED: Object.freeze([]),
+});
+
+function normalizeLifecycleState(status) {
+  const normalized = String(toDocketState(status) || '').toUpperCase();
+  if (['ASSIGNED', 'IN_PROGRESS', 'AVAILABLE', 'CREATED'].includes(normalized)) return 'OPEN';
+  return normalized;
+}
+
+function validateLifecycleAccess({ actor, fromState, toState }) {
+  const role = normalizeActorRole(actor);
+  const from = normalizeLifecycleState(fromState);
+  const to = normalizeLifecycleState(toState);
+
+  if (role === 'USER' && from === 'QC_PENDING') {
+    throw makeError('Permission denied', 403, 'DOCKET_PERMISSION_DENIED');
+  }
+
+  const allowed = ALLOWED_LIFECYCLE_TRANSITIONS[from] || [];
+  if (!allowed.includes(to)) {
+    throw makeError('Invalid lifecycle transition', 400, 'INVALID_DOCKET_TRANSITION');
+  }
+}
+
+async function writeAudit({ docketId, fromState, toState, userId, comment = null, performedByRole = 'USER', firmId, action, metadata = {}, session = null }) {
   await DocketAuditLog.create([{
     docketId,
     action,
     fromState,
     toState,
+    comment,
+    performedByRole,
     performedBy: userId,
     timestamp: new Date(),
     metadata: { ...metadata, comment },
@@ -103,7 +141,7 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
         const category = docket.category
           ? await Category.findOne({ name: docket.category, firmId }).session(session).lean()
           : null;
-        const forceQC = Boolean(category?.forceQC);
+        const forceQC = Boolean(docket.forceQc || category?.forceQC);
         if (forceQC || sendToQC) {
           finalTarget = DocketStatus.QC_PENDING;
           requireComment(comment, 'QC request');
@@ -112,6 +150,7 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
       }
 
       assertValidDocketTransition(fromState, finalTarget);
+      validateLifecycleAccess({ actor, fromState, toState: finalTarget });
 
       docket.status = toPersistenceState(finalTarget);
       docket.lastActionByXID = actor.xID;
@@ -155,6 +194,7 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
         fromState,
         toState: finalTarget,
         userId: actor.xID,
+        performedByRole: normalizeActorRole(actor),
         firmId,
         comment,
         action: 'STATE_TRANSITION',
@@ -215,12 +255,22 @@ async function qcDecision({ docketId, firmId, actor, decision, comment }) {
   }
 
   assertValidDocketTransition(fromState, toState);
+  validateLifecycleAccess({ actor, fromState, toState });
   docket.status = toPersistenceState(toState);
   docket.lastActionByXID = actor.xID;
   docket.lastActionAt = new Date();
   await docket.save();
 
-  await writeAudit({ docketId, fromState, toState, userId: actor.xID, firmId, comment, action: `QC_${normalizedDecision}` });
+  await writeAudit({
+    docketId,
+    fromState,
+    toState: normalizeLifecycleState(toState) === 'OPEN' ? 'OPEN' : toState,
+    userId: actor.xID,
+    performedByRole: normalizeActorRole(actor),
+    firmId,
+    comment,
+    action: `QC_${normalizedDecision}`,
+  });
   return docket;
 }
 
