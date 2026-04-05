@@ -110,7 +110,6 @@ export const CaseDetailPage = () => {
   const [pullingCase, setPullingCase] = useState(false);
   const [loadingClientDockets, setLoadingClientDockets] = useState(false);
   const [clientDockets, setClientDockets] = useState([]);
-  const [movingToGlobal, setMovingToGlobal] = useState(false);
   const [actionConfirmation, setActionConfirmation] = useState('');
   const [actionError, setActionError] = useState(null);
   const pageContainerRef = useRef(null);
@@ -173,7 +172,6 @@ export const CaseDetailPage = () => {
   const [showUnpendModal, setShowUnpendModal] = useState(false);
   const [unpendComment, setUnpendComment] = useState('');
   const [unpendingCase, setUnpendingCase] = useState(false);
-  const [startingWork, setStartingWork] = useState(false);
 
   // Track case view session
   // PR: Comprehensive CaseHistory & Audit Trail
@@ -717,29 +715,6 @@ export const CaseDetailPage = () => {
     });
   };
 
-  const handleMoveToWB = async () => {
-    try {
-      if (!caseInfo?.version && caseInfo?.version !== 0) {
-        showError('Case version missing. Please refresh.');
-        return;
-      }
-
-      setMovingToGlobal(true);
-      await caseApi.updateStatus(caseId, {
-        status: 'UNASSIGNED',
-        version: statusVersion,
-        performedBy,
-        notes: 'Moved back to Workbasket',
-      });
-      showSuccess(`Docket ${caseId} moved to Workbasket`);
-      loadCase({ background: true });
-    } catch (error) {
-      showError(extractErrorMessage(error, 'Failed to move docket to Workbasket.'));
-    } finally {
-      setMovingToGlobal(false);
-    }
-  };
-
   const handleAddComment = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     if (!newComment.trim() || submitting) return;
@@ -1240,7 +1215,7 @@ export const CaseDetailPage = () => {
     return warnings;
   }, [caseInfo, comments]);
 
-  const actionInFlight = pullingCase || assigningCase || pendingCase || resolvingCase || filingCase || unpendingCase || startingWork || movingToGlobal;
+  const actionInFlight = pullingCase || assigningCase || pendingCase || resolvingCase || filingCase || unpendingCase;
   const canRunDocketAction = Boolean(actionComment.trim()) && !actionInFlight;
 
   const openActionModal = (type) => {
@@ -1265,28 +1240,6 @@ export const CaseDetailPage = () => {
     }
   };
 
-  const handleStartWork = async () => {
-    setStartingWork(true);
-    try {
-      if (!caseInfo?.version && caseInfo?.version !== 0) {
-        showError('Case version missing. Please refresh.');
-        return;
-      }
-      await caseApi.updateStatus(caseId, {
-        status: 'IN_PROGRESS',
-        version: statusVersion,
-        performedBy,
-        notes: 'Started work',
-      });
-      showSuccess(`Docket ${caseId} moved to In Progress`);
-      loadCase({ background: true });
-    } catch (error) {
-      showError(extractErrorMessage(error, 'Failed to start work.'));
-    } finally {
-      setStartingWork(false);
-    }
-  };
-
   const headerActions = useMemo(() => {
     if (isViewOnlyMode) return [];
     if (docketState === 'UNASSIGNED') {
@@ -1295,26 +1248,11 @@ export const CaseDetailPage = () => {
     if (docketState === 'OPEN') {
       return [{ key: 'assign', label: 'Assign', variant: 'primary', onClick: () => setShowAssignModal(true), disabled: actionInFlight }];
     }
-    if (docketState === 'ASSIGNED') {
-      return [
-        { key: 'start_work', label: 'Start Work', variant: 'primary', onClick: handleStartWork, disabled: actionInFlight },
-        { key: 'move_wb', label: 'Move to WB', variant: 'outline', onClick: handleMoveToWB, disabled: actionInFlight },
-      ];
-    }
-    if (docketState === 'IN_PROGRESS') {
-      return [{ key: 'move_wb', label: 'Move to WB', variant: 'outline', onClick: handleMoveToWB, disabled: actionInFlight }];
-    }
-    if (docketState === 'PENDING') {
-      return [
-        { key: 'resume', label: 'Resume Work', variant: 'primary', onClick: () => setShowUnpendModal(true), disabled: actionInFlight },
-        { key: 'move_wb', label: 'Move to WB', variant: 'outline', onClick: handleMoveToWB, disabled: actionInFlight },
-      ];
+    if (lifecycleStatus === 'PENDED') {
+      return [{ key: 'unpend', label: 'Unpend', variant: 'primary', onClick: () => setShowUnpendModal(true), disabled: actionInFlight }];
     }
     return [];
-  }, [actionInFlight, docketState, isViewOnlyMode, handleMoveToWB, handlePullCase, handleStartWork]);
-
-  // Move to Workbasket button: show only for admin users AND case is currently assigned
-  const showMoveToWorkbasketButton = isAdmin && caseInfo?.assignedToXID;
+  }, [actionInFlight, docketState, isViewOnlyMode, lifecycleStatus, handlePullCase]);
 
   // Case action buttons (File, Pend, Resolve) - PR: Fix Case Lifecycle
   // Action Visibility Rules:
@@ -1322,6 +1260,8 @@ export const CaseDetailPage = () => {
   // - PENDING: Show ONLY Unpend (no File, Pend, Resolve)
   // - FILED or RESOLVED: Show nothing (terminal states, read-only)
   const canPerformLifecycleActions = lifecycleStatus === 'OPEN' && !isViewOnlyMode;
+  const canShowUnpendAction = lifecycleStatus === 'PENDED' && !isViewOnlyMode;
+  const shouldShowActions = canPerformLifecycleActions || canShowUnpendAction;
   const showQcActions = isAdmin && docketState === 'QC_PENDING' && !isViewOnlyMode;
   const isAnyModalOpen = Boolean(
     showFileModal
@@ -1371,6 +1311,13 @@ export const CaseDetailPage = () => {
   const handleAddCommentSuccess = () => {
     commentsListRef.current?.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
+
+  useEffect(() => {
+    console.log('ACTION_VISIBILITY_DEBUG', {
+      lifecycle: lifecycleStatus,
+      shouldShowActions,
+    });
+  }, [lifecycleStatus, shouldShowActions]);
 
   useEffect(() => {
     const handleKeyboardShortcuts = (event) => {
@@ -1616,9 +1563,9 @@ export const CaseDetailPage = () => {
                   </div>
                 </div>
               )}
-              {canPerformLifecycleActions ? (
+              {shouldShowActions ? (
                 <section className="mt-4 border-t pt-4" aria-label="Docket actions">
-                  {isAdmin ? (
+                  {canPerformLifecycleActions ? (
                     <label className="mt-3 flex items-center gap-2 text-sm text-gray-700">
                       <input
                         type="checkbox"
@@ -1629,25 +1576,36 @@ export const CaseDetailPage = () => {
                     </label>
                   ) : null}
                   <h3 className="mt-3 text-sm font-semibold text-gray-900">Docket Actions</h3>
-                  <Textarea
-                    label="Action Comment (Required)"
-                    value={actionComment}
-                    onChange={(e) => setActionComment(e.target.value)}
-                    placeholder="Enter mandatory action comment…"
-                    rows={3}
-                    className="mt-2"
-                  />
-                  <div className="case-detail__composer-actions mt-3">
-                    <Button variant="secondary" onClick={() => openActionModal('pend')} disabled={!canRunDocketAction}>
-                      Pend
-                    </Button>
-                    <Button variant="primary" onClick={() => openActionModal('resolve')} disabled={!canRunDocketAction}>
-                      Resolve
-                    </Button>
-                    <Button variant="danger" onClick={() => openActionModal('file')} disabled={!canRunDocketAction}>
-                      File
-                    </Button>
-                  </div>
+                  {canPerformLifecycleActions ? (
+                    <>
+                      <Textarea
+                        label="Action Comment (Required)"
+                        value={actionComment}
+                        onChange={(e) => setActionComment(e.target.value)}
+                        placeholder="Enter mandatory action comment…"
+                        rows={3}
+                        className="mt-2"
+                      />
+                      <div className="case-detail__composer-actions mt-3">
+                        <Button variant="secondary" onClick={() => openActionModal('pend')} disabled={!canRunDocketAction}>
+                          Pend
+                        </Button>
+                        <Button variant="primary" onClick={() => openActionModal('resolve')} disabled={!canRunDocketAction}>
+                          Resolve
+                        </Button>
+                        <Button variant="danger" onClick={() => openActionModal('file')} disabled={!canRunDocketAction}>
+                          File
+                        </Button>
+                      </div>
+                    </>
+                  ) : null}
+                  {canShowUnpendAction ? (
+                    <div className="case-detail__composer-actions mt-3">
+                      <Button variant="primary" onClick={() => setShowUnpendModal(true)} disabled={actionInFlight}>
+                        Unpend
+                      </Button>
+                    </div>
+                  ) : null}
                 </section>
               ) : null}
               {showQcActions ? (
