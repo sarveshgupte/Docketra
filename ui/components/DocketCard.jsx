@@ -28,28 +28,31 @@ export function DocketCard({
       className="docket-card"
       style={{
         ...cardStyle,
+        borderColor: focused ? '#93c5fd' : '#e5e7eb',
         outline: focused ? '2px solid #2563eb' : 'none',
         outlineOffset: 2,
         boxShadow: focused ? '0 1px 6px rgba(37, 99, 235, 0.2)' : 'none',
       }}
       onClick={() => onOpen?.(docketId)}
+      aria-label={`Open docket ${docketId}`}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 500 }}>{docketId}</div>
-          <div style={{ fontSize: '1rem', fontWeight: 600, color: '#111827', marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {title || '—'}
+        <div style={{ minWidth: 0, display: 'grid', gap: 4 }}>
+          <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, letterSpacing: '0.03em' }}>{docketId}</div>
+          <div style={{ fontSize: '1rem', fontWeight: 700, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {title || 'Untitled docket'}
           </div>
         </div>
-        {lifecycle != null && lifecycle !== '' ? <LifecycleBadge lifecycle={lifecycle} /> : null}
+        <LifecycleBadge lifecycle={lifecycle} />
       </div>
-      {assignedTo != null && assignedTo !== '' ? (
-        <div style={{ marginTop: 12, fontSize: '0.85rem', color: '#4b5563' }}>
-          <span>{assignedTo}</span>
-        </div>
-      ) : null}
+
+      <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, color: '#374151', fontSize: '0.84rem' }}>
+        <span aria-hidden="true">👤</span>
+        <span style={{ fontWeight: 500 }}>{assignedTo || 'You'}</span>
+      </div>
+
       <div style={{ marginTop: 8, fontSize: '0.75rem', color: '#9ca3af' }}>
-        Last updated {lastUpdated ? formatDate(lastUpdated) : '—'}
+        Updated {lastUpdated ? formatDate(lastUpdated) : '—'}
       </div>
     </button>
   );

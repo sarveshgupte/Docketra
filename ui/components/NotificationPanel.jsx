@@ -1,58 +1,106 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { notificationsApi } from '../src/api/notifications.api';
 import { Button } from '../src/components/common/Button';
 import { Card } from '../src/components/common/Card';
+import { EmptyState } from '../src/components/ui/EmptyState';
+import { ErrorState } from '../src/components/feedback/ErrorState';
+import { SkeletonLoader } from '../src/components/ui/SkeletonLoader';
 import { formatDate } from '../src/utils/formatters';
 import { ROUTES } from '../src/constants/routes';
+
+const MEANINGFUL_TYPES = new Set([
+  'ASSIGNED',
+  'LIFECYCLE_CHANGED',
+  'COMMENT_ADDED',
+  'MENTION',
+  'BLOCKED',
+  'COMPLETED',
+  'DUE_SOON',
+]);
 
 function normalizeList(response) {
   const raw = response?.data;
   return Array.isArray(raw) ? raw : [];
 }
 
+function toGroupKey(item) {
+  return [item.type || 'GENERIC', item.docket_id || 'global', item.message || ''].join('::');
+}
+
+function groupNotifications(items) {
+  const map = new Map();
+  items.forEach((item) => {
+    const key = toGroupKey(item);
+    const existing = map.get(key);
+    const createdAt = item.created_at ? new Date(item.created_at).getTime() : 0;
+    if (!existing) {
+      map.set(key, { ...item, count: 1, latestAt: createdAt, ids: [item._id] });
+      return;
+    }
+    map.set(key, {
+      ...existing,
+      count: existing.count + 1,
+      latestAt: Math.max(existing.latestAt, createdAt),
+      ids: existing.ids.concat(item._id),
+    });
+  });
+
+  return [...map.values()].sort((a, b) => b.latestAt - a.latestAt);
+}
+
+function isMeaningful(item) {
+  if (!item || !item.message) return false;
+  if (!item.type) return true;
+  return MEANINGFUL_TYPES.has(String(item.type).toUpperCase());
+}
+
 export function NotificationPanel({ firmSlug, limit = 8 }) {
   const navigate = useNavigate();
   const [items, setItems] = useState([]);
+  const [dismissed, setDismissed] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const loadNotifications = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await notificationsApi.getNotifications();
+      setItems(normalizeList(response));
+    } catch (err) {
+      setError(err?.message || 'Failed to load notifications');
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await notificationsApi.getNotifications();
-        if (!mounted) return;
-        setItems(normalizeList(response));
-      } catch (err) {
-        if (!mounted) return;
-        setError(err?.message || 'Failed to load notifications');
-        setItems([]);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
+    void loadNotifications();
   }, []);
 
-  const sorted = [...items].sort(
-    (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0),
-  );
-  const visible = typeof limit === 'number' ? sorted.slice(0, limit) : sorted;
+  const grouped = useMemo(() => {
+    const meaningful = items.filter((item) => isMeaningful(item) && !dismissed.includes(item._id));
+    return groupNotifications(meaningful);
+  }, [items, dismissed]);
+
+  const visible = typeof limit === 'number' ? grouped.slice(0, limit) : grouped;
 
   const goToDocket = (docketId) => {
     if (!firmSlug || !docketId) return;
     navigate(ROUTES.CASE_DETAIL(firmSlug, docketId));
   };
 
+  const dismissGroup = (ids = []) => {
+    if (!ids.length) return;
+    setDismissed((prev) => [...new Set([...prev, ...ids])]);
+  };
+
   if (loading) {
     return (
       <Card>
-        <p className="text-sm text-gray-500">Loading notifications…</p>
+        <SkeletonLoader variant="text" />
       </Card>
     );
   }
@@ -60,27 +108,43 @@ export function NotificationPanel({ firmSlug, limit = 8 }) {
   if (error) {
     return (
       <Card>
-        <p className="text-sm text-red-600">{error}</p>
+        <ErrorState
+          title="Unable to load notifications"
+          description="Try again to load your latest docket activity."
+          onRetry={loadNotifications}
+        />
       </Card>
     );
   }
 
-  if (sorted.length === 0) {
+  if (grouped.length === 0) {
     return (
       <Card>
-        <p className="text-sm text-gray-500">No notifications yet.</p>
+        <EmptyState
+          title="No meaningful notifications"
+          description="Important updates (assignment, lifecycle, comments) will appear here."
+          icon
+        />
       </Card>
     );
   }
 
   return (
-    <Card className="space-y-4">
-      <ul className="space-y-3">
+    <Card>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+        <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>{grouped.length} grouped update{grouped.length > 1 ? 's' : ''}</p>
+        <Button type="button" variant="outline" onClick={() => setDismissed(items.map((item) => item._id))}>Clear all</Button>
+      </div>
+      <ul className="space-y-3" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
         {visible.map((item) => (
-          <li key={item._id} className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
-            <p className="text-sm font-medium text-gray-900">{item.message}</p>
+          <li key={`${item._id}-${item.latestAt}`} className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+              <p className="text-sm font-medium text-gray-900" style={{ margin: 0 }}>{item.message}</p>
+              <Button type="button" variant="ghost" onClick={() => dismissGroup(item.ids)} aria-label="Dismiss notification group">Dismiss</Button>
+            </div>
             <p className="mt-1 text-xs text-gray-500">
               {item.created_at ? formatDate(item.created_at) : '—'}
+              {item.count > 1 ? ` · ${item.count} similar` : ''}
               {item.docket_id ? (
                 <>
                   {' · '}
@@ -97,14 +161,15 @@ export function NotificationPanel({ firmSlug, limit = 8 }) {
           </li>
         ))}
       </ul>
-      <Button
-        type="button"
-        variant="outline"
-        className="w-full sm:w-auto"
-        onClick={() => navigate(ROUTES.NOTIFICATIONS_HISTORY(firmSlug))}
-      >
-        View All Notifications
-      </Button>
+      <div style={{ marginTop: 12 }}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => navigate(ROUTES.NOTIFICATIONS_HISTORY(firmSlug))}
+        >
+          Notification History
+        </Button>
+      </div>
     </Card>
   );
 }
