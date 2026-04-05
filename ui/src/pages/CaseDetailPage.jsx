@@ -106,7 +106,6 @@ export const CaseDetailPage = () => {
   const [pullingCase, setPullingCase] = useState(false);
   const [loadingClientDockets, setLoadingClientDockets] = useState(false);
   const [clientDockets, setClientDockets] = useState([]);
-  const [movingToGlobal, setMovingToGlobal] = useState(false);
   const [actionConfirmation, setActionConfirmation] = useState('');
   const [actionError, setActionError] = useState(null);
   const pageContainerRef = useRef(null);
@@ -715,29 +714,6 @@ export const CaseDetailPage = () => {
     });
   };
 
-  const handleMoveToWB = async () => {
-    try {
-      if (!caseInfo?.version && caseInfo?.version !== 0) {
-        showError('Case version missing. Please refresh.');
-        return;
-      }
-
-      setMovingToGlobal(true);
-      await caseApi.updateStatus(caseId, {
-        status: 'UNASSIGNED',
-        version: statusVersion,
-        performedBy,
-        notes: 'Moved back to Workbasket',
-      });
-      showSuccess(`Docket ${caseId} moved to Workbasket`);
-      loadCase({ background: true });
-    } catch (error) {
-      showError(extractErrorMessage(error, 'Failed to move docket to Workbasket.'));
-    } finally {
-      setMovingToGlobal(false);
-    }
-  };
-
   const handleAddComment = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     if (!newComment.trim() || submitting) return;
@@ -1342,6 +1318,13 @@ export const CaseDetailPage = () => {
   };
 
   useEffect(() => {
+    console.log('ACTION_VISIBILITY_DEBUG', {
+      lifecycle: lifecycleStatus,
+      shouldShowActions,
+    });
+  }, [lifecycleStatus, shouldShowActions]);
+
+  useEffect(() => {
     const handleKeyboardShortcuts = (event) => {
       const target = event.target;
       const typing = target instanceof HTMLElement
@@ -1585,9 +1568,9 @@ export const CaseDetailPage = () => {
                   </div>
                 </div>
               )}
-              {canPerformLifecycleActions ? (
+              {shouldShowActions ? (
                 <section className="mt-4 border-t pt-4" aria-label="Docket actions">
-                  {isAdmin ? (
+                  {canPerformLifecycleActions ? (
                     <label className="mt-3 flex items-center gap-2 text-sm text-gray-700">
                       <input
                         type="checkbox"
@@ -1598,25 +1581,36 @@ export const CaseDetailPage = () => {
                     </label>
                   ) : null}
                   <h3 className="mt-3 text-sm font-semibold text-gray-900">Docket Actions</h3>
-                  <Textarea
-                    label="Action Comment (Required)"
-                    value={actionComment}
-                    onChange={(e) => setActionComment(e.target.value)}
-                    placeholder="Enter mandatory action comment…"
-                    rows={3}
-                    className="mt-2"
-                  />
-                  <div className="case-detail__composer-actions mt-3">
-                    <Button variant="secondary" onClick={() => openActionModal('pend')} disabled={!canRunDocketAction}>
-                      Pend
-                    </Button>
-                    <Button variant="primary" onClick={() => openActionModal('resolve')} disabled={!canRunDocketAction}>
-                      Resolve
-                    </Button>
-                    <Button variant="danger" onClick={() => openActionModal('file')} disabled={!canRunDocketAction}>
-                      File
-                    </Button>
-                  </div>
+                  {canPerformLifecycleActions ? (
+                    <>
+                      <Textarea
+                        label="Action Comment (Required)"
+                        value={actionComment}
+                        onChange={(e) => setActionComment(e.target.value)}
+                        placeholder="Enter mandatory action comment…"
+                        rows={3}
+                        className="mt-2"
+                      />
+                      <div className="case-detail__composer-actions mt-3">
+                        <Button variant="secondary" onClick={() => openActionModal('pend')} disabled={!canRunDocketAction}>
+                          Pend
+                        </Button>
+                        <Button variant="primary" onClick={() => openActionModal('resolve')} disabled={!canRunDocketAction}>
+                          Resolve
+                        </Button>
+                        <Button variant="danger" onClick={() => openActionModal('file')} disabled={!canRunDocketAction}>
+                          File
+                        </Button>
+                      </div>
+                    </>
+                  ) : null}
+                  {canShowUnpendAction ? (
+                    <div className="case-detail__composer-actions mt-3">
+                      <Button variant="primary" onClick={() => setShowUnpendModal(true)} disabled={actionInFlight}>
+                        Unpend
+                      </Button>
+                    </div>
+                  ) : null}
                 </section>
               ) : null}
               {showQcActions ? (
