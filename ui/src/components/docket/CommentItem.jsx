@@ -18,14 +18,15 @@ const renderCommentText = (text = '') => {
   });
 };
 
-export function CommentItem({ comment }) {
+export function CommentItem({ comment, className = '', itemRef = null }) {
   const authorName = comment?.createdByName || comment?.createdByXID || comment?.createdBy || 'System';
   const authorInitial = String(authorName || 'S').trim().charAt(0).toUpperCase() || 'S';
   const timestamp = formatDateTime(comment?.createdAt) || 'Unknown time';
   const relativeTimestamp = formatRelativeTime(comment?.createdAt) || timestamp;
+  const itemClassName = ['docket-comment-item', className].filter(Boolean).join(' ');
 
   return (
-    <li className="docket-comment-item">
+    <li className={itemClassName} ref={itemRef}>
       <div className="docket-comment-item__avatar" aria-hidden="true">{authorInitial}</div>
       <div className="docket-comment-item__body">
         <div className="docket-comment-item__meta">

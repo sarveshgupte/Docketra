@@ -1,13 +1,14 @@
 import React from 'react';
 import { formatDateTime } from '../../utils/formatDateTime';
 
-export function ActivityItem({ event }) {
+export function ActivityItem({ event, className = '', itemRef = null }) {
   const actor = event?.actor || 'System';
   const timestamp = formatDateTime(event?.createdAt);
   const secondary = `${actor} • ${timestamp}`;
+  const itemClassName = ['docket-activity-item', className].filter(Boolean).join(' ');
 
   return (
-    <li className="docket-activity-item">
+    <li className={itemClassName} ref={itemRef}>
       <div className="docket-activity-item__marker" aria-hidden="true">
         <span className="docket-activity-item__dot" />
       </div>
