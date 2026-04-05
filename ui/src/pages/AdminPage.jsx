@@ -443,7 +443,9 @@ export const AdminPage = () => {
     setShowAccessModal(true);
   };
 
-  const handleToggleClientRestriction = (clientId) => {
+  const isClientAllowedForDraft = (clientId) => !restrictedClientDraft.includes(clientId);
+
+  const handleToggleClientAccess = (clientId) => {
     setRestrictedClientDraft((prev) => (
       prev.includes(clientId)
         ? prev.filter((id) => id !== clientId)
@@ -1381,14 +1383,18 @@ export const AdminPage = () => {
       >
         <div className="admin__create-form">
           <div className="neo-info-text">
-            Default policy is full access to all client dockets. Select clients below to explicitly remove access for this user.
+            Select which clients this user can access. Checked clients are allowed; unchecked clients are blocked.
           </div>
 
           <div className="admin__access-summary">
-            {(restrictedClientDraft || []).length === 0 ? (
-              <Badge status="Approved">Full Access Enabled</Badge>
+            {clients.length === 0 ? (
+              <Badge status="Pending">No Clients Found</Badge>
+            ) : (restrictedClientDraft || []).length === 0 ? (
+              <Badge status="Approved">All Clients Allowed</Badge>
             ) : (
-              <Badge status="Pending">{(restrictedClientDraft || []).length} client access restriction(s)</Badge>
+              <Badge status="Pending">
+                {clients.length - (restrictedClientDraft || []).length} of {clients.length} clients allowed
+              </Badge>
             )}
           </div>
 
@@ -1400,14 +1406,14 @@ export const AdminPage = () => {
                 <label key={client.clientId} className="admin__client-access-item">
                   <input
                     type="checkbox"
-                    checked={restrictedClientDraft.includes(client.clientId)}
-                    onChange={() => handleToggleClientRestriction(client.clientId)}
+                    checked={isClientAllowedForDraft(client.clientId)}
+                    onChange={() => handleToggleClientAccess(client.clientId)}
                   />
                   <span>
                     <strong>{client.businessName}</strong> ({client.clientId})
                   </span>
-                  <Badge status={restrictedClientDraft.includes(client.clientId) ? 'Rejected' : 'Approved'}>
-                    {restrictedClientDraft.includes(client.clientId) ? 'Access Removed' : 'Access Allowed'}
+                  <Badge status={isClientAllowedForDraft(client.clientId) ? 'Approved' : 'Rejected'}>
+                    {isClientAllowedForDraft(client.clientId) ? 'Allowed' : 'Blocked'}
                   </Badge>
                 </label>
               ))
