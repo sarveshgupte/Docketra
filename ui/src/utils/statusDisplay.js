@@ -1,54 +1,27 @@
-import { UX_COPY } from '../constants/uxCopy';
-
 const STATUS_EMOJI = {
-  ACTIVE: '🟢',
-  CLOSED: '⚪️',
-  DRAFT: '⚪️',
-  ESCALATED: '🔴',
-  FILED: '⚪️',
-  WB: '⚪️',
-  WL: '🔵',
-  ASSIGNED: '🟣',
-  IN_PROGRESS: '🟠',
   OPEN: '🟢',
-  PENDING: '🟡',
-  PENDED: '🟡',
-  QC_PENDING: '🟡',
-  RESOLVED: '⚪️',
-  REVIEW: '🟡',
-  UNDER_REVIEW: '🟡',
-  UNASSIGNED: '⚪️',
+  IN_PROGRESS: '🟡',
+  RESOLVED: '🔵',
+  CLOSED: '⚫',
 };
 
 const STATUS_COPY = {
-  ACTIVE: 'Active',
-  CLOSED: 'Closed',
-  DRAFT: 'Draft',
-  ESCALATED: 'Escalated',
-  FILED: 'Filed',
-  WB: 'Workbasket',
-  WL: 'Worklist',
-  ASSIGNED: 'Assigned',
+  OPEN: 'Open',
   IN_PROGRESS: 'In Progress',
-  OPEN: UX_COPY.statusLabels.OPEN,
-  PENDING: 'Pending',
-  PENDED: 'Pended',
-  QC_PENDING: 'QC Pending',
-  RESOLVED: UX_COPY.statusLabels.RESOLVED,
-  REVIEW: 'Pending',
-  UNDER_REVIEW: 'Pending',
-  UNASSIGNED: UX_COPY.statusLabels.UNASSIGNED,
+  RESOLVED: 'Resolved',
+  CLOSED: 'Closed',
+};
+
+const normalizeStatus = (status) => {
+  const normalizedStatus = String(status ?? '').trim().toUpperCase();
+  if (!normalizedStatus) return 'OPEN';
+  if (normalizedStatus === 'PENDING' || normalizedStatus === 'PENDED' || normalizedStatus === 'QC_PENDING') return 'IN_PROGRESS';
+  if (normalizedStatus === 'FILED') return 'CLOSED';
+  if (STATUS_COPY[normalizedStatus]) return normalizedStatus;
+  return 'OPEN';
 };
 
 export const getStatusLabel = (status) => {
-  const normalizedStatus = String(status ?? '').trim().toUpperCase();
-
-  if (!normalizedStatus) {
-    return '⚪️ Unknown';
-  }
-
-  const label = STATUS_COPY[normalizedStatus] || UX_COPY.statusLabels[normalizedStatus] || normalizedStatus.replaceAll('_', ' ');
-  const emoji = STATUS_EMOJI[normalizedStatus] || '⚪️';
-
-  return `${emoji} ${label}`;
+  const normalized = normalizeStatus(status);
+  return `${STATUS_EMOJI[normalized]} ${STATUS_COPY[normalized]}`;
 };
