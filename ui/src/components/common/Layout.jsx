@@ -138,9 +138,9 @@ export const Layout = ({ children }) => {
       id: 'assignment',
       category: 'Assignment',
       title: 'Assignment updates',
-      description: 'Docket CASE-20260404-00002 has been reassigned to a new owner.',
+      description: 'Docket #20260404-00002 has been reassigned to a new owner.',
       timestamp: new Date('2026-04-05T09:55:00.000Z'),
-      docketId: 'CASE-20260404-00002',
+      docketNumber: '20260404-00002',
       unread: true,
       saved: false,
     },
@@ -148,9 +148,9 @@ export const Layout = ({ children }) => {
       id: 'qc',
       category: 'QC',
       title: 'QC requests and failures',
-      description: 'QC flagged docket CASE-20260404-00007 for missing mandatory fields.',
+      description: 'QC flagged docket #20260404-00007 for missing mandatory fields.',
       timestamp: new Date('2026-04-05T10:20:00.000Z'),
-      docketId: 'CASE-20260404-00007',
+      docketNumber: '20260404-00007',
       unread: true,
       saved: false,
     },
@@ -158,9 +158,9 @@ export const Layout = ({ children }) => {
       id: 'pending',
       category: 'Pending Reopen',
       title: 'Pending reopen reminders',
-      description: 'Docket CASE-20260401-00015 reached reopen date and needs review.',
+      description: 'Docket #20260401-00015 reached reopen date and needs review.',
       timestamp: new Date('2026-04-05T10:45:00.000Z'),
-      docketId: 'CASE-20260401-00015',
+      docketNumber: '20260401-00015',
       unread: false,
       saved: true,
     },
@@ -297,7 +297,7 @@ export const Layout = ({ children }) => {
         title: payload.title || 'New update',
         description: payload.description || 'You received a new notification.',
         timestamp: payload.timestamp ? new Date(payload.timestamp) : new Date(),
-        docketId: payload.docketId || null,
+        docketNumber: payload.docketNumber || payload.docketId || null,
         unread: true,
         saved: false,
       };
@@ -692,13 +692,13 @@ export const Layout = ({ children }) => {
                         <span>{item.category}</span>
                         <span>{formatDateTime(item.timestamp)}</span>
                       </div>
-                      {item.docketId && currentFirmSlug ? (
+                      {item.docketNumber && currentFirmSlug ? (
                         <Link
-                          to={safeRoute(ROUTES.CASE_DETAIL(currentFirmSlug, item.docketId), ROUTES.CASES(currentFirmSlug))}
+                          to={safeRoute(ROUTES.CASE_DETAIL(currentFirmSlug, item.docketNumber), ROUTES.CASES(currentFirmSlug))}
                           className="enterprise-header__notification-link"
                           onClick={() => setNotificationOpen(false)}
                         >
-                          Open docket #{item.docketId}
+                          Open docket #{item.docketNumber}
                         </Link>
                       ) : null}
                     </div>
