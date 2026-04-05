@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { reportsService } from '../../services/reports.service';
+import { formatDateTime } from '../../utils/formatDateTime';
 
 export const AuditLogView = () => {
   const [filters, setFilters] = useState({ xID: '', action: '', timestamp: '' });
@@ -67,7 +68,7 @@ export const AuditLogView = () => {
               <tr key={`${item.source}-${item.timestamp}-${idx}`}>
                 <td>{item.xID}</td>
                 <td>{item.action}</td>
-                <td>{new Date(item.timestamp).toLocaleString()}</td>
+                <td>{formatDateTime(item.timestamp)}</td>
               </tr>
             ))}
             {!logs.length && (

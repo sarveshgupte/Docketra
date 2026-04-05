@@ -24,7 +24,7 @@ import { CASE_STATUS, USER_ROLES } from '../utils/constants';
 import { getCaseListRecords } from '../utils/caseResponse';
 import { getFirmConfig } from '../utils/firmConfig';
 import { useFeatureFlag } from '../hooks/useFeatureFlag';
-import { formatDateTime } from '../utils/formatDateTime';
+import { formatDateTime, getISODateInTimezone } from '../utils/formatDateTime';
 import { formatCaseName } from '../utils/formatters';
 import { buildCsv } from '../utils/csv';
 import { UX_COPY } from '../constants/uxCopy';
@@ -246,7 +246,7 @@ export const CasesPage = () => {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    const stamp = new Date().toISOString().slice(0, 10).replaceAll('-', '');
+    const stamp = getISODateInTimezone(new Date()).replaceAll('-', '');
     link.href = url;
     link.download = `cases_export_${stamp}.csv`;
     document.body.appendChild(link);

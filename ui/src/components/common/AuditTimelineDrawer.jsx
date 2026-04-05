@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { caseApi } from '../../api/case.api';
-import { formatDateTime } from '../../utils/formatDateTime';
+import { formatDateTime, getISODateInTimezone } from '../../utils/formatDateTime';
 import { buildCsv } from '../../utils/csv';
 import './AuditTimelineDrawer.css';
 
@@ -101,7 +101,7 @@ export const AuditTimelineDrawer = ({ isOpen, onClose, caseId, events }) => {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    const stamp = new Date().toISOString().slice(0, 10).replaceAll('-', '');
+    const stamp = getISODateInTimezone(new Date()).replaceAll('-', '');
     link.href = url;
     link.download = `timeline_export_${stamp}.csv`;
     document.body.appendChild(link);

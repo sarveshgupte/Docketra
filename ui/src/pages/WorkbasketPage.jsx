@@ -24,6 +24,7 @@ import { formClasses } from '../theme/tokens';
 import { useQueryState } from '../hooks/useQueryState';
 import { useActiveDocket } from '../hooks/useActiveDocket';
 import { ROUTES } from '../constants/routes';
+import { getISODateInTimezone } from '../utils/formatDateTime';
 import './WorkbasketPage.css';
 
 const WORKBASKET_FILTER_DEFAULTS = {
@@ -286,20 +287,20 @@ export const WorkbasketPage = () => {
     let createdAtFrom = '';
     let createdAtTo = '';
     if (value === 'today') {
-      createdAtFrom = today.toISOString().slice(0, 10);
+      createdAtFrom = getISODateInTimezone(today);
       createdAtTo = createdAtFrom;
     }
     if (value === '7d') {
       const lastWeek = new Date(today);
       lastWeek.setDate(today.getDate() - 6);
-      createdAtFrom = lastWeek.toISOString().slice(0, 10);
-      createdAtTo = today.toISOString().slice(0, 10);
+      createdAtFrom = getISODateInTimezone(lastWeek);
+      createdAtTo = getISODateInTimezone(today);
     }
     if (value === '30d') {
       const lastMonth = new Date(today);
       lastMonth.setDate(today.getDate() - 29);
-      createdAtFrom = lastMonth.toISOString().slice(0, 10);
-      createdAtTo = today.toISOString().slice(0, 10);
+      createdAtFrom = getISODateInTimezone(lastMonth);
+      createdAtTo = getISODateInTimezone(today);
     }
 
     setFilters((prev) => ({
