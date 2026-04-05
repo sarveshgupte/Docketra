@@ -85,6 +85,21 @@ const getUserStatusBadge = (user) => {
   return { tone: 'Rejected', label: status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Inactive' };
 };
 
+const getRoleBadgePresentation = (user) => {
+  const normalizedRole = String(user?.role || '').trim().toUpperCase();
+  const isPrimaryOrSystemAdmin = user?.isPrimaryAdmin || user?.isSystem;
+
+  if (isPrimaryOrSystemAdmin || normalizedRole === 'ADMIN') {
+    return { tone: 'InProgress', label: isPrimaryOrSystemAdmin ? 'Admin (Primary)' : 'Admin' };
+  }
+
+  if (['STAFF', 'EMPLOYEE', 'USER'].includes(normalizedRole)) {
+    return { tone: 'Pending', label: 'User' };
+  }
+
+  return { tone: 'Pending', label: normalizedRole ? normalizedRole.charAt(0) + normalizedRole.slice(1).toLowerCase() : 'User' };
+};
+
 export const AdminPage = () => {
   const navigate = useNavigate();
   const { firmSlug } = useParams();
@@ -983,6 +998,7 @@ export const AdminPage = () => {
                   {users.map((user) => {
                     const isPrimaryOrSystemAdmin = user.isPrimaryAdmin || user.isSystem;
                     const userStatus = getUserStatusBadge(user);
+                    const roleBadge = getRoleBadgePresentation(user);
                     const isInvited = user.status === 'invited';
                     return (
                     <tr key={user.xID}>
@@ -990,13 +1006,7 @@ export const AdminPage = () => {
                       <td>{user.name || EMPTY_FIELD_PLACEHOLDER}</td>
                       <td>{user.email}</td>
                       <td>
-                        {isPrimaryOrSystemAdmin ? (
-                          <Badge status="InProgress">Admin (Primary)</Badge>
-                        ) : (
-                          <Badge status={user.role === 'ADMIN' ? 'InProgress' : 'Pending'}>
-                            {user.role}
-                          </Badge>
-                        )}
+                        <Badge status={roleBadge.tone}>{roleBadge.label}</Badge>
                       </td>
                       <td>{user.firm?.name || 'N/A'}</td>
                       <td>
@@ -1340,7 +1350,7 @@ export const AdminPage = () => {
             onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
             options={[
               { value: '', label: 'Select Role', disabled: true },
-              { value: 'Employee', label: 'Employee' },
+              { value: 'Employee', label: 'User' },
               { value: 'Admin', label: 'Admin' },
             ]}
             required
