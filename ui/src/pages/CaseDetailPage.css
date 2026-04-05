@@ -806,6 +806,15 @@
   }
 }
 
+@keyframes docketNewItemFade {
+  0% {
+    background: #bfdbfe;
+  }
+  100% {
+    background: transparent;
+  }
+}
+
 .docket-sidebar__header {
   display: flex;
   align-items: center;
@@ -1096,6 +1105,12 @@
   margin: 4px 0 0;
   font-size: 0.82rem;
   color: #6b7280;
+}
+
+.docket-activity-item--new,
+.docket-comment-item--new {
+  background: #dbeafe;
+  animation: docketNewItemFade 2.6s ease-out forwards;
 }
 
 .docket-activity__empty h3 {
