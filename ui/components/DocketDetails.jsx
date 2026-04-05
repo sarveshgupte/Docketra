@@ -91,12 +91,27 @@ export function DocketDetails({
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [activityRefreshKey, setActivityRefreshKey] = useState(0);
   const [commentRefreshKey, setCommentRefreshKey] = useState(0);
+  const [activityUserRefreshToken, setActivityUserRefreshToken] = useState(0);
+  const [commentUserRefreshToken, setCommentUserRefreshToken] = useState(0);
+  const [highlightedCommentIds, setHighlightedCommentIds] = useState([]);
+  const [firstNewCommentId, setFirstNewCommentId] = useState(null);
   const [newActivityCount, setNewActivityCount] = useState(0);
   const [newCommentCount, setNewCommentCount] = useState(0);
+  const commentHighlightTimeoutRef = useRef(null);
+  const handledCommentRefreshTokenRef = useRef(0);
   const latestActivityHeadRef = useRef(null);
   const latestCommentHeadRef = useRef(null);
 
-  const loadComments = useCallback(async ({ page = 1, append = false } = {}) => {
+  const clearCommentHighlights = useCallback(() => {
+    if (commentHighlightTimeoutRef.current) {
+      window.clearTimeout(commentHighlightTimeoutRef.current);
+      commentHighlightTimeoutRef.current = null;
+    }
+    setHighlightedCommentIds([]);
+    setFirstNewCommentId(null);
+  }, []);
+
+  const loadComments = useCallback(async ({ page = 1, append = false, shouldFocusNewItems = false } = {}) => {
     if (!docketId) return;
 
     setCommentsError('');
@@ -110,6 +125,18 @@ export function DocketDetails({
       const response = await caseApi.getCaseById(docketId, getCommentParams(page));
       const payload = extractCommentsPayload(response);
       const normalized = payload.comments.map((comment, index) => normalizeComment(comment, index));
+      const nextHeadId = commentIdentity(normalized[0]) || null;
+      const previousHeadId = latestCommentHeadRef.current;
+      let newCommentIds = [];
+
+      if (!append && shouldFocusNewItems && nextHeadId && previousHeadId && nextHeadId !== previousHeadId) {
+        for (const comment of normalized) {
+          const id = commentIdentity(comment);
+          if (!id || id === previousHeadId) break;
+          newCommentIds.push(id);
+        }
+      }
+
       latestCommentHeadRef.current = commentIdentity(normalized[0]) || latestCommentHeadRef.current;
       setComments((prev) => {
         if (!append) return normalized;
@@ -117,13 +144,30 @@ export function DocketDetails({
       });
       setCommentsPage(page);
       setCommentsHasMore(Boolean(payload.pagination?.hasMore));
+
+      if (!append && shouldFocusNewItems) {
+        if (newCommentIds.length > 0) {
+          setHighlightedCommentIds(newCommentIds);
+          setFirstNewCommentId(newCommentIds[0]);
+          if (commentHighlightTimeoutRef.current) {
+            window.clearTimeout(commentHighlightTimeoutRef.current);
+          }
+          commentHighlightTimeoutRef.current = window.setTimeout(() => {
+            setHighlightedCommentIds([]);
+            setFirstNewCommentId(null);
+            commentHighlightTimeoutRef.current = null;
+          }, 2500);
+        } else {
+          clearCommentHighlights();
+        }
+      }
     } catch (loadError) {
       setCommentsError('Unable to load comments. Retry.');
     } finally {
       setCommentsLoading(false);
       setCommentsLoadingMore(false);
     }
-  }, [docketId]);
+  }, [clearCommentHighlights, docketId]);
 
   const pollLatestUpdates = useCallback(async () => {
     if (!docketId || typeof document === 'undefined' || document.visibilityState !== 'visible') return;
@@ -266,18 +310,23 @@ export function DocketDetails({
     setCommentsLoading(true);
     setNewCommentCount(0);
     setNewActivityCount(0);
+    clearCommentHighlights();
 
     let cancelled = false;
+    const shouldFocusNewItems = commentUserRefreshToken > handledCommentRefreshTokenRef.current;
+    if (shouldFocusNewItems) {
+      handledCommentRefreshTokenRef.current = commentUserRefreshToken;
+    }
     const canIdleSchedule = typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function';
     const trigger = canIdleSchedule
       ? window.requestIdleCallback(() => {
         if (!cancelled) {
-          void loadComments({ page: 1, append: false });
+          void loadComments({ page: 1, append: false, shouldFocusNewItems });
         }
       })
       : window.setTimeout(() => {
         if (!cancelled) {
-          void loadComments({ page: 1, append: false });
+          void loadComments({ page: 1, append: false, shouldFocusNewItems });
         }
       }, 0);
 
@@ -289,7 +338,13 @@ export function DocketDetails({
         window.clearTimeout(trigger);
       }
     };
-  }, [docketId, commentRefreshKey, loadComments]);
+  }, [clearCommentHighlights, docketId, commentRefreshKey, commentUserRefreshToken, loadComments]);
+
+  useEffect(() => () => {
+    if (commentHighlightTimeoutRef.current) {
+      window.clearTimeout(commentHighlightTimeoutRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     if (!docketId || typeof document === 'undefined') return undefined;
@@ -340,11 +395,13 @@ export function DocketDetails({
 
   const handleRefreshActivity = useCallback(() => {
     setActivityRefreshKey((prev) => prev + 1);
+    setActivityUserRefreshToken((prev) => prev + 1);
     setNewActivityCount(0);
   }, []);
 
   const handleRefreshComments = useCallback(() => {
     setCommentRefreshKey((prev) => prev + 1);
+    setCommentUserRefreshToken((prev) => prev + 1);
     setNewCommentCount(0);
   }, []);
 
@@ -400,6 +457,7 @@ export function DocketDetails({
         docketId={docketId}
         initialActivity={docket.activity}
         refreshKey={activityRefreshKey}
+        userRefreshToken={activityUserRefreshToken}
       />
       {newActivityCount > 0 ? (
         <button type="button" className="docket-updates-indicator" onClick={handleRefreshActivity}>
@@ -422,6 +480,9 @@ export function DocketDetails({
           hasMore={commentsHasMore}
           onRetry={() => loadComments({ page: commentsPage, append: commentsPage > 1 })}
           onLoadMore={handleLoadMoreComments}
+          highlightedCommentIds={highlightedCommentIds}
+          scrollToCommentId={firstNewCommentId}
+          scrollRequestToken={commentUserRefreshToken}
         />
         <CommentInput onSubmit={handleAddComment} disabled={commentSubmitting} />
       </section>

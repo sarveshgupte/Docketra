@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { caseApi } from '../../api/case.api';
 import {
   groupActivityEvents,
@@ -28,11 +28,37 @@ export function ActivityTimeline({
   docketId,
   initialActivity = [],
   refreshKey = 0,
+  userRefreshToken = 0,
 }) {
   const [activity, setActivity] = useState(() => normalizeFeed(initialActivity));
   const [loading, setLoading] = useState(() => !Array.isArray(initialActivity) || initialActivity.length === 0);
   const [error, setError] = useState('');
-  const loadActivity = useCallback(async ({ silent = false } = {}) => {
+  const [highlightedActivityIds, setHighlightedActivityIds] = useState([]);
+  const previousHeadIdRef = useRef(null);
+  const handledUserRefreshTokenRef = useRef(0);
+  const clearHighlightsTimeoutRef = useRef(null);
+  const sectionTopRef = useRef(null);
+  const activityItemRefs = useRef(new Map());
+
+  const clearHighlights = useCallback(() => {
+    if (clearHighlightsTimeoutRef.current) {
+      window.clearTimeout(clearHighlightsTimeoutRef.current);
+      clearHighlightsTimeoutRef.current = null;
+    }
+    setHighlightedActivityIds([]);
+  }, []);
+
+  const scheduleHighlightClear = useCallback(() => {
+    if (clearHighlightsTimeoutRef.current) {
+      window.clearTimeout(clearHighlightsTimeoutRef.current);
+    }
+    clearHighlightsTimeoutRef.current = window.setTimeout(() => {
+      setHighlightedActivityIds([]);
+      clearHighlightsTimeoutRef.current = null;
+    }, 2500);
+  }, []);
+
+  const loadActivity = useCallback(async ({ silent = false, shouldFocusNewItems = false } = {}) => {
     if (!docketId) return;
 
     if (!silent) {
@@ -42,7 +68,36 @@ export function ActivityTimeline({
     try {
       const response = await caseApi.getCaseById(docketId, ACTIVITY_ONLY_PARAMS);
       const events = normalizeFeed(extractActivity(response));
+      const latestHeadId = events[0]?.id || events[0]?._id || null;
+      const previousHeadId = previousHeadIdRef.current;
+      let newActivityIds = [];
+
+      if (shouldFocusNewItems && latestHeadId && previousHeadId && latestHeadId !== previousHeadId) {
+        for (const event of events) {
+          const eventId = event?.id || event?._id;
+          if (!eventId || eventId === previousHeadId) break;
+          newActivityIds.push(eventId);
+        }
+      }
+
       setActivity(events);
+      previousHeadIdRef.current = latestHeadId || previousHeadIdRef.current;
+
+      if (shouldFocusNewItems) {
+        if (newActivityIds.length > 0) {
+          setHighlightedActivityIds(newActivityIds);
+          scheduleHighlightClear();
+          const firstNewItem = activityItemRefs.current.get(newActivityIds[0]);
+          if (firstNewItem?.scrollIntoView) {
+            firstNewItem.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } else if (sectionTopRef.current?.scrollIntoView) {
+            sectionTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        } else {
+          clearHighlights();
+          sectionTopRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+        }
+      }
     } catch (e) {
       if (!silent) {
         setError('Unable to load activity. Retry.');
@@ -52,27 +107,33 @@ export function ActivityTimeline({
         setLoading(false);
       }
     }
-  }, [docketId]);
+  }, [clearHighlights, docketId, scheduleHighlightClear]);
 
   useEffect(() => {
     const fromSnapshot = normalizeFeed(initialActivity);
     setActivity(fromSnapshot);
-  }, [initialActivity]);
+    previousHeadIdRef.current = fromSnapshot[0]?.id || fromSnapshot[0]?._id || null;
+    clearHighlights();
+  }, [clearHighlights, initialActivity]);
 
   useEffect(() => {
     if (!docketId) return undefined;
 
     let cancelled = false;
+    const shouldFocusNewItems = userRefreshToken > handledUserRefreshTokenRef.current;
+    if (shouldFocusNewItems) {
+      handledUserRefreshTokenRef.current = userRefreshToken;
+    }
     const canIdleSchedule = typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function';
     const trigger = canIdleSchedule
       ? window.requestIdleCallback(() => {
         if (!cancelled) {
-          void loadActivity();
+          void loadActivity({ shouldFocusNewItems });
         }
       })
       : window.setTimeout(() => {
         if (!cancelled) {
-          void loadActivity();
+          void loadActivity({ shouldFocusNewItems });
         }
       }, 0);
 
@@ -84,7 +145,13 @@ export function ActivityTimeline({
         window.clearTimeout(trigger);
       }
     };
-  }, [docketId, refreshKey, loadActivity]);
+  }, [docketId, refreshKey, loadActivity, userRefreshToken]);
+
+  useEffect(() => () => {
+    if (clearHighlightsTimeoutRef.current) {
+      window.clearTimeout(clearHighlightsTimeoutRef.current);
+    }
+  }, []);
 
   const groupedActivity = useMemo(() => {
     const sorted = sortActivityLatestFirst(activity);
@@ -92,7 +159,7 @@ export function ActivityTimeline({
   }, [activity]);
 
   return (
-    <section className="docket-activity" aria-labelledby="docket-activity-heading">
+    <section className="docket-activity" aria-labelledby="docket-activity-heading" ref={sectionTopRef}>
       <h2 id="docket-activity-heading" className="docket-activity__heading">Activity</h2>
 
       {loading ? (
@@ -126,7 +193,18 @@ export function ActivityTimeline({
       {!loading && !error && groupedActivity.length > 0 ? (
         <ul className="docket-activity__list">
           {groupedActivity.map((event) => (
-            <ActivityItem key={event.id} event={event} />
+            <ActivityItem
+              key={event.id}
+              event={event}
+              className={highlightedActivityIds.includes(event.id) ? 'docket-activity-item--new' : ''}
+              itemRef={(node) => {
+                if (node) {
+                  activityItemRefs.current.set(event.id, node);
+                } else {
+                  activityItemRefs.current.delete(event.id);
+                }
+              }}
+            />
           ))}
         </ul>
       ) : null}
