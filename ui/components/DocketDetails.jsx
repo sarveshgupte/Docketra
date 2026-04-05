@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { caseApi } from '../src/api/case.api';
 import { invalidateCaseCache } from '../src/utils/caseCache';
 import { formatDateTime } from '../src/utils/formatDateTime';
@@ -20,6 +20,7 @@ const CASE_FETCH_PARAMS = {
 };
 
 const COMMENT_PAGE_SIZE = 10;
+const POLL_INTERVAL_MS = 12000;
 
 const getCommentParams = (page = 1) => ({
   commentsPage: page,
@@ -41,6 +42,27 @@ const extractCommentsPayload = (response) => {
     comments: Array.isArray(payload?.comments) ? payload.comments : [],
     pagination: payload?.pagination?.comments || {},
   };
+};
+
+const extractActivityPayload = (response) => {
+  const payload = response?.data?.case || response?.data || {};
+  return Array.isArray(payload?.activity) ? payload.activity : [];
+};
+
+const commentIdentity = (comment) => comment?._id || comment?.id;
+
+const mergeComments = (existing = [], latestPage = []) => {
+  const latest = Array.isArray(latestPage) ? latestPage : [];
+  const prev = Array.isArray(existing) ? existing : [];
+  if (latest.length === 0) return prev;
+
+  const latestIds = new Set(latest.map(commentIdentity).filter(Boolean));
+  const previousOnly = prev.filter((comment) => {
+    const id = commentIdentity(comment);
+    return !id || !latestIds.has(id);
+  });
+
+  return [...latest, ...previousOnly];
 };
 
 function assignmentLabel(docket) {
@@ -83,6 +105,9 @@ export function DocketDetails({
   const [commentsHasMore, setCommentsHasMore] = useState(false);
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [activityRefreshKey, setActivityRefreshKey] = useState(0);
+  const [activitySilentRefreshKey, setActivitySilentRefreshKey] = useState(0);
+  const latestActivityHeadRef = useRef(null);
+  const latestCommentHeadRef = useRef(null);
 
   const loadComments = useCallback(async ({ page = 1, append = false } = {}) => {
     if (!docketId) return;
@@ -98,6 +123,7 @@ export function DocketDetails({
       const response = await caseApi.getCaseById(docketId, getCommentParams(page));
       const payload = extractCommentsPayload(response);
       const normalized = payload.comments.map((comment, index) => normalizeComment(comment, index));
+      latestCommentHeadRef.current = commentIdentity(normalized[0]) || latestCommentHeadRef.current;
       setComments((prev) => {
         if (!append) return normalized;
         return [...prev, ...normalized.filter((next) => !prev.some((existing) => (existing._id || existing.id) === (next._id || next.id)))];
@@ -109,6 +135,39 @@ export function DocketDetails({
     } finally {
       setCommentsLoading(false);
       setCommentsLoadingMore(false);
+    }
+  }, [docketId]);
+
+  const pollLatestUpdates = useCallback(async () => {
+    if (!docketId || typeof document === 'undefined' || document.visibilityState !== 'visible') return;
+
+    try {
+      const response = await caseApi.getCaseById(docketId, {
+        commentsPage: 1,
+        commentsLimit: COMMENT_PAGE_SIZE,
+        activityPage: 1,
+        activityLimit: 1,
+      });
+
+      const latestCommentsPayload = extractCommentsPayload(response);
+      const latestComments = latestCommentsPayload.comments.map((comment, index) => normalizeComment(comment, index));
+      const latestCommentHeadId = commentIdentity(latestComments[0]) || null;
+
+      if (latestCommentHeadId && latestCommentHeadId !== latestCommentHeadRef.current) {
+        setComments((prev) => mergeComments(prev, latestComments));
+        latestCommentHeadRef.current = latestCommentHeadId;
+      }
+
+      setCommentsHasMore(Boolean(latestCommentsPayload.pagination?.hasMore));
+
+      const latestActivity = extractActivityPayload(response);
+      const latestActivityHeadId = latestActivity[0]?._id || latestActivity[0]?.id || null;
+      if (latestActivityHeadId && latestActivityHeadId !== latestActivityHeadRef.current) {
+        latestActivityHeadRef.current = latestActivityHeadId;
+        setActivitySilentRefreshKey((prev) => prev + 1);
+      }
+    } catch (pollError) {
+      // Polling is intentionally silent.
     }
   }, [docketId]);
 
@@ -242,6 +301,46 @@ export function DocketDetails({
     };
   }, [docketId, loadComments]);
 
+  useEffect(() => {
+    if (!docketId || typeof document === 'undefined') return undefined;
+
+    let intervalId = null;
+    let disposed = false;
+
+    const stopPolling = () => {
+      if (intervalId) {
+        window.clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+
+    const startPolling = () => {
+      if (disposed || document.visibilityState !== 'visible' || intervalId) return;
+      intervalId = window.setInterval(() => {
+        void pollLatestUpdates();
+      }, POLL_INTERVAL_MS);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void pollLatestUpdates();
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    };
+
+    void pollLatestUpdates();
+    startPolling();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      disposed = true;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      stopPolling();
+    };
+  }, [docketId, pollLatestUpdates]);
+
   if (error) {
     return (
       <header className="case-detail-header" style={{ borderBottom: '1px solid #fecaca', paddingBottom: 16 }}>
@@ -290,7 +389,12 @@ export function DocketDetails({
         ) : null}
       </header>
 
-      <ActivityTimeline docketId={docketId} initialActivity={docket.activity} refreshKey={activityRefreshKey} />
+      <ActivityTimeline
+        docketId={docketId}
+        initialActivity={docket.activity}
+        refreshKey={activityRefreshKey}
+        silentRefreshKey={activitySilentRefreshKey}
+      />
 
       <section className="docket-comments-section" aria-labelledby="docket-comments-heading">
         <h2 id="docket-comments-heading" className="docket-comments-section__heading">Comments</h2>
