@@ -3,8 +3,6 @@ const mongoose = require('mongoose');
 const { softDelete } = require('../services/softDelete.service');
 const { decrypt, ensureTenantKey, ForbiddenError } = require('../security/encryption.service');
 const { looksEncrypted } = require('../security/encryption.utils');
-const { deriveLifecycle } = require('../domain/case/caseLifecycle');
-
 /**
  * ⚠️ SECURITY: Case Repository - Firm-Scoped Data Access Layer ⚠️
  * 
@@ -499,7 +497,7 @@ const CaseRepository = {
    * @param {string} caseId - Case identifier
    * @param {string|ObjectId} firmId - Firm ID from tenant context
    * @param {string} status - New status value
-   * @param {Object} extraFields - Additional fields to set with status update
+   * @param {Object} extraFields - Additional fields to set with status update (must include `lifecycle`, e.g. from case.service)
    * @returns {Promise<Object>} Mongoose update result
    */
    async updateStatus(
@@ -529,10 +527,6 @@ const CaseRepository = {
       {
         $set: {
           status,
-          lifecycle: deriveLifecycle({
-            status,
-            assignedToXID: extraFields.assignedToXID,
-          }),
           ...extraFields,
         },
       },

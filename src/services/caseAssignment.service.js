@@ -4,7 +4,7 @@ const CaseAudit = require('../models/CaseAudit.model');
 const mongoose = require('mongoose');
 const { CaseRepository } = require('../repositories');
 const CaseStatus = require('../domain/case/caseStatus');
-const { CASE_LIFECYCLE } = require('../domain/case/caseLifecycle');
+const { DocketLifecycle } = require('../domain/docketLifecycle');
 
 /**
  * Case Assignment Service
@@ -45,7 +45,7 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObject
         assignedBy: assignerObjectId || assigneeObjectId || null,
         status: CaseStatus.ASSIGNED,
         queueType: 'PERSONAL',
-        lifecycle: CASE_LIFECYCLE.ASSIGNED,
+        lifecycle: DocketLifecycle.IN_WORKLIST,
       },
     },
     {
@@ -195,7 +195,7 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
           assignedAt,
           status: CaseStatus.ASSIGNED,
           queueType: 'PERSONAL',
-          lifecycle: CASE_LIFECYCLE.ASSIGNED,
+          lifecycle: DocketLifecycle.IN_WORKLIST,
           lastActionByXID: user.xID.toUpperCase(),
           lastActionAt: assignedAt,
         },
@@ -383,7 +383,7 @@ const assignDocket = async ({ firmId, caseId, userXID, assigneeObjectId = null, 
         assignedAt,
         status: CaseStatus.ASSIGNED,
         queueType: 'PERSONAL',
-        lifecycle: CASE_LIFECYCLE.ASSIGNED,
+        lifecycle: DocketLifecycle.IN_WORKLIST,
       },
     },
     {
@@ -412,7 +412,7 @@ const unassignDocket = async ({ firmId, caseId, session = null }) => {
         assignedBy: null,
         assignedAt: null,
         queueType: 'GLOBAL',
-        lifecycle: CASE_LIFECYCLE.CREATED,
+        lifecycle: DocketLifecycle.CREATED,
         status: CaseStatus.UNASSIGNED,
       },
     },
