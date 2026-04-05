@@ -15,8 +15,7 @@ import {
 } from '../services/storageService';
 import { useAuth } from '../hooks/useAuth';
 import { spacingClasses } from '../theme/tokens';
-
-const formatDate = (value) => (value ? new Date(value).toLocaleString() : 'N/A');
+import { formatDateTime } from '../utils/formatDateTime';
 
 export function StorageSettingsPage() {
   const toast = useContext(ToastContext);
@@ -151,7 +150,7 @@ export function StorageSettingsPage() {
                 <Input label="Status" value={connected ? 'Active' : 'Not Connected'} readOnly />
                 <Input label="Connected email" value={config?.connectedEmail || 'N/A'} readOnly />
                 <Input label="Folder path" value={config?.folderPath || config?.rootFolderId || 'N/A'} readOnly />
-                <Input label="Connected since" value={formatDate(config?.createdAt)} readOnly />
+                <Input label="Connected since" value={formatDateTime(config?.createdAt)} readOnly />
                 {provider === 'google-drive' ? (
                   <Input
                     label="Google Refresh Token"

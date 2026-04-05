@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { formatDateTime } from '../../utils/formatDateTime';
+import { formatDateOnly, formatDateTime, formatTimeOnly } from '../../utils/formatDateTime';
 
 const TITLES = {
   cfs: 'Client Fact Sheet',
@@ -33,15 +33,13 @@ export const DocketSidebar = ({
 }) => {
   const attachmentFileInputRef = useRef(null);
   const formatDatePart = (value) => {
-    const parsed = value ? new Date(value) : null;
-    if (!parsed || Number.isNaN(parsed.getTime())) return '—';
-    return parsed.toLocaleDateString('en-GB');
+    const formatted = formatDateOnly(value);
+    return formatted === 'N/A' ? '—' : formatted;
   };
 
   const formatTimePart = (value) => {
-    const parsed = value ? new Date(value) : null;
-    if (!parsed || Number.isNaN(parsed.getTime())) return '—';
-    return parsed.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+    const formatted = formatTimeOnly(value);
+    return formatted === 'N/A' ? '—' : formatted;
   };
 
   const resolveParticulars = (event) => {

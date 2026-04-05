@@ -1,5 +1,7 @@
+export const BUSINESS_TIMEZONE = 'Asia/Kolkata';
+
 const DATE_TIME_FORMATTER = new Intl.DateTimeFormat('en-IN', {
-  timeZone: 'Asia/Kolkata',
+  timeZone: BUSINESS_TIMEZONE,
   day: '2-digit',
   month: 'short',
   year: 'numeric',
@@ -14,6 +16,50 @@ const toDate = (input) => {
   if (!input) return null;
   const value = input instanceof Date ? input : new Date(input);
   return Number.isNaN(value.getTime()) ? null : value;
+};
+
+const getDateParts = (date, timezone = BUSINESS_TIMEZONE) => {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+
+  return {
+    year: parts.find((part) => part.type === 'year')?.value || '',
+    month: parts.find((part) => part.type === 'month')?.value || '',
+    day: parts.find((part) => part.type === 'day')?.value || '',
+  };
+};
+
+export const getISODateInTimezone = (input = new Date(), timezone = BUSINESS_TIMEZONE) => {
+  const date = toDate(input);
+  if (!date) return '';
+  const { year, month, day } = getDateParts(date, timezone);
+  if (!year || !month || !day) return '';
+  return `${year}-${month}-${day}`;
+};
+
+export const formatDateOnly = (input, timezone = BUSINESS_TIMEZONE) => {
+  const date = toDate(input);
+  if (!date) return 'N/A';
+  const { year, month, day } = getDateParts(date, timezone);
+  if (!year || !month || !day) return 'N/A';
+  return `${day}/${month}/${year}`;
+};
+
+export const formatTimeOnly = (input, timezone = BUSINESS_TIMEZONE) => {
+  const date = toDate(input);
+  if (!date) return 'N/A';
+  const value = new Intl.DateTimeFormat('en-IN', {
+    timeZone: timezone,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+  }).format(date);
+  return value.replace(/\b(am|pm)\b/i, (token) => token.toUpperCase());
 };
 
 export const formatDateTime = (input) => {
