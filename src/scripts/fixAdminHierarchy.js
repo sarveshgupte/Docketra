@@ -57,15 +57,19 @@ async function fixSingleAdmin(admin) {
   if (!admin.firmId) {
     updates.firmId = firm._id;
   }
-  if (!admin.defaultClientId && firm.defaultClientId) {
-    updates.defaultClientId = firm.defaultClientId;
+
+  // Reload the firm to pick up any changes from ensureDefaultClientForFirm
+  const refreshedFirm = await Firm.findById(firm._id);
+
+  if (!admin.defaultClientId && refreshedFirm.defaultClientId) {
+    updates.defaultClientId = refreshedFirm.defaultClientId;
   }
 
   if (Object.keys(updates).length === 0) {
     return { fixed: false, reason: 'no_change' };
   }
 
-  await User.updateOne({ _id: admin._id }, { $set: updates });
+  await User.collection.updateOne({ _id: admin._id }, { $set: updates });
 
   console.log(
     `[MIGRATION] [${timestamp()}] Fixed ${admin.role} ${admin.xID} ` +
