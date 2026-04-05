@@ -20,6 +20,7 @@ const {
   unpendCase,
   updateCaseStatus,
   getCaseByCaseId,
+  getCaseComments,
   getCases,
   searchCases,
   lockCaseEndpoint,
@@ -143,6 +144,8 @@ router.get('/:caseId', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, ch
 
 // POST /api/cases/:caseId/comments - Add comment to case
 router.post('/:caseId/comments', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, commentLimiter, checkCaseClientAccess, validateCaseCommentPayload, addComment);
+router.post('/:caseId/comment', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, commentLimiter, checkCaseClientAccess, validateCaseCommentPayload, addComment);
+router.get('/:caseId/comments', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, getCaseComments);
 
 // POST /api/cases/:caseId/attachments - Upload attachment to case
 router.post('/:caseId/attachments', upload.single('file'), enforceUploadSecurity, authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, attachmentLimiter, fileUploadLimiter, checkCaseClientAccess, addAttachment);

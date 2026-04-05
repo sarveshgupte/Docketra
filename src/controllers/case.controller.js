@@ -14,6 +14,7 @@ const categoryRepository = require('../repositories/category.repository');
 const { detectDuplicates, generateDuplicateOverrideComment } = require('../services/clientDuplicateDetector');
 const { CASE_CATEGORIES, CASE_LOCK_CONFIG, COMMENT_PREVIEW_LENGTH, CLIENT_STATUS } = require('../config/constants');
 const CaseStatus = require('../domain/case/caseStatus');
+const { CASE_LIFECYCLE, deriveLifecycle } = require('../domain/case/caseLifecycle');
 const { isValidTransition } = require('./docketWorkflow.controller');
 const { isProduction } = require('../config/config');
 const { logCaseListViewed, logAdminAction } = require('../services/auditLog.service');
@@ -503,15 +504,18 @@ const createCase = async (req, res) => {
         category: actualCategory, // Legacy field
         caseCategory: actualCategory,
         caseSubCategory: subcategoryDoc?.name || caseSubCategory || '',
+        subcategory: subcategoryDoc?.name || caseSubCategory || '',
         clientId: finalClientId,
         firmId, // PR 2: Explicitly set firmId for atomic counter scoping
         createdByXID, // Set from authenticated user context
         createdBy: req.user.email || req.user.xID, // Legacy field - use email or xID as fallback
         priority: normalizedPriority,
         status: 'UNASSIGNED', // New cases default to UNASSIGNED for global worklist
+        lifecycle: assignedTo ? CASE_LIFECYCLE.ASSIGNED : CASE_LIFECYCLE.CREATED,
         assignedToXID: assignedTo ? assignedTo.toUpperCase() : null, // PR: xID Canonicalization - Store in assignedToXID
         assignedTo: null,
         assignedBy: null,
+        queueType: assignedTo ? 'PERSONAL' : 'GLOBAL',
         slaDueAt: slaState.slaDueAt,
         tatPaused: slaState.tatPaused,
         tatLastStartedAt: slaState.tatLastStartedAt,
@@ -523,7 +527,12 @@ const createCase = async (req, res) => {
         workTypeId: selectedWorkType?._id || null,
         subWorkTypeId: selectedSubWorkType?._id || null,
         tatDaysSnapshot,
-        dueDate: computeDeadlineFromTatDays(tatDaysSnapshot) || undefined,
+        slaDays: Math.max(0, Number(tatDaysSnapshot || defaultSlaDays || 0)),
+        dueDate: computeDeadlineFromTatDays(tatDaysSnapshot) || (defaultSlaDays > 0 ? (() => {
+          const due = new Date();
+          due.setUTCDate(due.getUTCDate() + defaultSlaDays);
+          return due;
+        })() : undefined),
       });
       
       step('before case create');
@@ -723,9 +732,19 @@ const addComment = async (req, res) => {
       performedByXID: req.user.xID.toUpperCase(), // Canonical identifier (uppercase)
     });
     
+    const comments = await Comment.find(
+      enforceTenantScope({ caseId: caseData.caseId }, req, { source: 'case.addComment.comments' })
+    )
+      .select('_id caseId text note createdBy createdByXID createdByName createdAt')
+      .sort({ createdAt: 1 })
+      .lean();
+
     res.status(201).json({
       success: true,
-      data: comment,
+      data: {
+        comment,
+        comments,
+      },
       message: 'Comment added successfully',
     });
   } catch (error) {
@@ -742,6 +761,28 @@ const addComment = async (req, res) => {
       },
     });
     return res.status(status).json(body);
+  }
+};
+
+const getCaseComments = async (req, res) => {
+  try {
+    const { caseId } = req.params;
+    const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
+    const caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
+    if (!caseData) {
+      return res.status(404).json({ success: false, message: 'Case not found' });
+    }
+
+    const comments = await Comment.find(
+      enforceTenantScope({ caseId: caseData.caseId }, req, { source: 'case.getCaseComments' })
+    )
+      .select('_id caseId text note createdBy createdByXID createdByName createdAt')
+      .sort({ createdAt: 1 })
+      .lean();
+
+    return res.status(200).json({ success: true, data: comments });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Failed to load comments', error: error.message });
   }
 };
 
@@ -965,11 +1006,19 @@ const cloneCase = async (req, res) => {
       title: originalCase.title,
       description: originalCase.description,
       category: newCategory,
+      caseCategory: newCategory,
+      caseSubCategory: originalCase.caseSubCategory || originalCase.subcategory || '',
+      subcategory: originalCase.subcategory || originalCase.caseSubCategory || '',
+      categoryId: originalCase.categoryId,
+      subcategoryId: originalCase.subcategoryId,
       clientId: originalCase.clientId,
       priority: originalCase.priority,
-      status: 'Open',
+      status: assignedTo ? 'ASSIGNED' : 'UNASSIGNED',
+      lifecycle: assignedTo ? CASE_LIFECYCLE.ASSIGNED : CASE_LIFECYCLE.CREATED,
       pendingUntil: null,
       slaDueAt: originalCase.slaDueAt || new Date(),
+      slaDays: Number(originalCase.slaDays || originalCase.tatDaysSnapshot || 0),
+      dueDate: originalCase.dueDate || null,
       tatPaused: originalCase.tatPaused || false,
       tatLastStartedAt: originalCase.tatLastStartedAt || new Date(),
       tatAccumulatedMinutes: originalCase.tatAccumulatedMinutes || 0,
@@ -977,6 +1026,7 @@ const cloneCase = async (req, res) => {
       slaConfigSnapshot: originalCase.slaConfigSnapshot || undefined,
       createdBy: clonedBy.toLowerCase(),
       assignedToXID: assignedTo ? assignedTo.toUpperCase() : null, // PR: xID Canonicalization - Store in assignedToXID
+      queueType: assignedTo ? 'PERSONAL' : 'GLOBAL',
     });
     
     await newCase.saveWithRetry();
@@ -1575,10 +1625,30 @@ const getCaseByCaseId = async (req, res) => {
         ? caseData.toObject()
         : caseData;
 
+    let assignedUser = null;
+    if (caseObject.assignedTo) {
+      assignedUser = await User.findOne({ _id: caseObject.assignedTo, firmId: scopedFirmId }).select('_id name email xID').lean();
+    } else if (caseObject.assignedToXID) {
+      assignedUser = await User.findOne({ xID: caseObject.assignedToXID, firmId: scopedFirmId }).select('_id name email xID').lean();
+    }
+    const resolvedLifecycle = deriveLifecycle({
+      status: caseObject.status,
+      assignedToXID: caseObject.assignedToXID,
+      lifecycle: caseObject.lifecycle,
+    });
+
     return res.status(200).json({
       success: true,
       data: {
         ...caseObject,
+        lifecycle: resolvedLifecycle,
+        assignedToName: assignedUser?.name || caseObject.assignedToName || null,
+        assignedTo: assignedUser ? {
+          _id: assignedUser._id,
+          name: assignedUser.name,
+          email: assignedUser.email,
+          xID: assignedUser.xID,
+        } : null,
         client: client ? {
           clientId: client.clientId,
           businessName: client.businessName,
@@ -2268,6 +2338,8 @@ const unassignCase = async (req, res) => {
         assignedTo: null,
         assignedBy: null,
         assignedAt: null,
+        queueType: 'GLOBAL',
+        lifecycle: CASE_LIFECYCLE.CREATED,
       },
     });
     caseData = await CaseRepository.findByInternalId(req.user.firmId, caseData.caseInternalId, req.user.role);
@@ -2995,6 +3067,7 @@ module.exports = {
   unpendCase: wrapWriteHandler(unpendCase),
   updateCaseStatus: wrapWriteHandler(updateCaseStatus),
   getCaseByCaseId,
+  getCaseComments,
   getDocketSummaryPdf,
   getCases,
   searchCases,
