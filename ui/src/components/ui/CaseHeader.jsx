@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Badge } from '../common/Badge';
 import { Button } from '../common/Button';
+import { formatCaseName, formatDocketId } from '../../utils/formatters';
 
 export const CaseHeader = ({
   caseId,
@@ -26,8 +27,8 @@ export const CaseHeader = ({
   return (
     <div className={`case-header ${isScrolled ? 'case-header--scrolled' : ''}`}>
       <div className="case-header__identity">
-        <h1 className="case-header__title">{caseId}</h1>
-        {caseName ? <p className="case-header__name">{caseName}</p> : null}
+        <h1 className="case-header__title">{formatDocketId(caseId)}</h1>
+        {caseName ? <p className="case-header__name">{formatCaseName(caseName)}</p> : null}
       </div>
       <div className="case-header__actions">
         <Badge status={status}>{status}</Badge>
