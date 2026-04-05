@@ -1127,79 +1127,73 @@ export const AdminPage = () => {
                     Your firm is set up as the default internal client. Add more clients when you are ready.
                   </p>
                 )}
-                <table className="neo-table">
-                  <thead>
-                    <tr>
-                      <th>Client ID</th>
-                      <th>Business Name</th>
-                      <th>Email</th>
-                      <th>Phone</th>
-                      <th>Status</th>
-                      <th>Created</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {clients.map((client) => {
-                      const isProtectedClient = client.isDefaultClient || client.isSystemClient || client.isInternal;
-                      return (
-                        <tr key={client.clientId}>
-                          <td>
-                            {client.clientId}
-                            {isProtectedClient && (
-                              <span style={{ marginLeft: '8px' }}>
-                                <Badge status="Approved">Default</Badge>
-                              </span>
-                            )}
-                          </td>
-                          <td>{client.businessName}</td>
-                          <td>{looksEncryptedToken(client.businessEmail) ? EMPTY_FIELD_PLACEHOLDER : (client.businessEmail || EMPTY_FIELD_PLACEHOLDER)}</td>
-                          <td>{client.primaryContactNumber || '—'}</td>
-                          <td>
-                            <Badge status={client.status === 'ACTIVE' ? 'Approved' : 'Rejected'}>
-                              {client.status === 'ACTIVE' ? 'Active' : 'Inactive'}
-                            </Badge>
-                          </td>
-                          <td>{formatDate(client.createdAt)}</td>
-                          <td className="admin__actions">
-                            <Button
-                              size="small"
-                              variant="default"
-                              onClick={() => handleEditClient(client)}
-                              disabled={false}
-                            >
-                              Edit
-                            </Button>
-                            <Button
-                              size="small"
-                              variant="warning"
-                              onClick={() => handleOpenChangeNameModal(client)}
-                              disabled={isProtectedClient}
-                            >
-                              Change Name
-                            </Button>
-                            <Button
-                              size="small"
-                              variant="default"
-                              onClick={() => navigate(`/app/firm/${firmSlug}/clients/${client.clientId}/cfs`)}
-                            >
-                              Edit CFS
-                            </Button>
-                            {!isProtectedClient && (
+                <div className="admin__clients-table-wrap">
+                  <table className="neo-table admin__clients-table">
+                    <thead>
+                      <tr>
+                        <th className="admin__col-id">Client ID</th>
+                        <th className="admin__col-business">Business Name</th>
+                        <th className="admin__col-email">Email</th>
+                        <th className="admin__col-status">Status</th>
+                        <th className="admin__col-created">Created</th>
+                        <th className="admin__col-actions">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {clients.map((client) => {
+                        const isProtectedClient = client.isDefaultClient || client.isSystemClient || client.isInternal;
+                        return (
+                          <tr key={client.clientId}>
+                            <td className="admin__cell-truncate" title={client.clientId}>
+                              {client.clientId}
+                              {isProtectedClient && (
+                                <span style={{ marginLeft: '8px' }}>
+                                  <Badge status="Approved">Default</Badge>
+                                </span>
+                              )}
+                            </td>
+                            <td className="admin__cell-business" title={client.businessName}>{client.businessName}</td>
+                            <td className="admin__cell-truncate" title={client.businessEmail || EMPTY_FIELD_PLACEHOLDER}>
+                              {looksEncryptedToken(client.businessEmail) ? EMPTY_FIELD_PLACEHOLDER : (client.businessEmail || EMPTY_FIELD_PLACEHOLDER)}
+                            </td>
+                            <td>
+                              <Badge status={client.status === 'ACTIVE' ? 'Approved' : 'Rejected'}>
+                                {client.status === 'ACTIVE' ? 'Active' : 'Inactive'}
+                              </Badge>
+                            </td>
+                            <td>{formatDate(client.createdAt)}</td>
+                            <td className="admin__actions admin__actions--compact">
                               <Button
                                 size="small"
-                                variant={client.status === 'ACTIVE' ? 'danger' : 'success'}
-                                onClick={() => handleToggleClientStatus(client)}
+                                variant="default"
+                                onClick={() => handleEditClient(client)}
+                                disabled={false}
                               >
-                                {client.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+                                Edit
                               </Button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                              <Button
+                                size="small"
+                                variant="default"
+                                onClick={() => navigate(`/app/firm/${firmSlug}/clients/${client.clientId}/cfs`)}
+                              >
+                                Fact Sheet
+                              </Button>
+                              {!isProtectedClient && (
+                                <Button
+                                  size="small"
+                                  variant={client.status === 'ACTIVE' ? 'danger' : 'success'}
+                                  onClick={() => handleToggleClientStatus(client)}
+                                >
+                                  {client.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+                                </Button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </>
             )}
           </Card>

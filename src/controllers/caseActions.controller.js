@@ -68,7 +68,7 @@ const resolveCase = async (req, res) => {
     
     if (error.message.startsWith('Illegal transition:') ||
         error.message === 'Resolved cases cannot be modified' ||
-        error.message === 'Case must be IN_PROGRESS before resolving' ||
+        error.message === 'Case must be OPEN before resolving' ||
         error.code === 'INVALID_CASE_TRANSITION') {
       return res.status(400).json({
         success: false,
@@ -137,7 +137,8 @@ const pendCase = async (req, res) => {
     }
     
     if (error.message.startsWith('Illegal transition:') ||
-        error.message === 'Resolved cases cannot be modified') {
+        error.message === 'Resolved cases cannot be modified' ||
+        error.message === 'Case must be OPEN before pending') {
       return res.status(400).json({
         success: false,
         message: error.message,
@@ -204,7 +205,8 @@ const fileCase = async (req, res) => {
     }
     
     if (error.message.startsWith('Illegal transition:') ||
-        error.message === 'Resolved cases cannot be modified') {
+        error.message === 'Resolved cases cannot be modified' ||
+        error.message === 'Case must be OPEN before filing') {
       return res.status(400).json({
         success: false,
         message: error.message,

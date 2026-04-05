@@ -109,8 +109,8 @@ const resolveCase = async (firmId, caseId, comment, user, req = null) => {
     throw new Error('Case not found');
   }
 
-  if (caseData.status !== CaseStatus.IN_PROGRESS) {
-    throw new Error('Case must be IN_PROGRESS before resolving');
+  if (caseData.status !== CaseStatus.OPEN) {
+    throw new Error('Case must be OPEN before resolving');
   }
   
   // Store previous status for audit
@@ -129,6 +129,7 @@ const resolveCase = async (firmId, caseId, comment, user, req = null) => {
     notes: comment,
     statusPatch: {
       pendingUntil: null,
+      reopenAt: null,
       resolvedAt: new Date(),
       lastActionByXID: user.xID,
       lastActionAt: new Date(),
@@ -201,6 +202,10 @@ const pendCase = async (firmId, caseId, comment, reopenDate, user, req = null) =
   if (!caseData) {
     throw new Error('Case not found');
   }
+
+  if (caseData.status !== CaseStatus.OPEN) {
+    throw new Error('Case must be OPEN before pending');
+  }
   
   // Store previous status for audit
   const previousStatus = caseData.status;
@@ -226,11 +231,13 @@ const pendCase = async (firmId, caseId, comment, reopenDate, user, req = null) =
     statusPatch: {
       pendedByXID: user.xID,
       pendingUntil,
+      reopenAt: pendingUntil,
       lastActionByXID: user.xID,
       lastActionAt: new Date(),
     },
     auditMetadata: {
       pendingUntil,
+      reopenAt: pendingUntil,
       commentLength: comment.length,
     },
   });
@@ -261,6 +268,7 @@ const pendCase = async (firmId, caseId, comment, reopenDate, user, req = null) =
       previousStatus,
       newStatus: CaseStatus.PENDING,
       pendingUntil,
+      reopenAt: pendingUntil,
       commentLength: comment.length,
     }
   );
@@ -290,6 +298,10 @@ const fileCase = async (firmId, caseId, comment, user, req = null) => {
   if (!caseData) {
     throw new Error('Case not found');
   }
+
+  if (caseData.status !== CaseStatus.OPEN) {
+    throw new Error('Case must be OPEN before filing');
+  }
   
   // Store previous status for audit
   const previousStatus = caseData.status;
@@ -306,6 +318,7 @@ const fileCase = async (firmId, caseId, comment, user, req = null) => {
     req,
     statusPatch: {
       pendingUntil: null,
+      reopenAt: null,
       lastActionByXID: user.xID,
       lastActionAt: new Date(),
     },
@@ -384,6 +397,7 @@ const unpendCase = async (firmId, caseId, comment, user, req = null) => {
     req,
     statusPatch: {
       pendingUntil: null,
+      reopenAt: null,
       pendedByXID: null,
       lastActionByXID: user.xID,
       lastActionAt: new Date(),
@@ -452,6 +466,7 @@ const performAutoReopen = async (caseData) => {
         session,
         statusPatch: {
           pendingUntil: null,
+          reopenAt: null,
           lastActionByXID: 'SYSTEM',
           lastActionAt: now,
         },

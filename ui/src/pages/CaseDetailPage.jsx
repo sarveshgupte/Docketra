@@ -868,16 +868,7 @@ export const CaseDetailPage = () => {
         setConfirmModal(null);
         setFilingCase(true);
         try {
-          if (!caseInfo?.version && caseInfo?.version !== 0) {
-            showError('Case version missing. Please refresh.');
-            return;
-          }
-          const response = await caseApi.updateStatus(caseId, {
-            status: 'FILED',
-            version: statusVersion,
-            performedBy,
-            notes: fileComment.trim(),
-          });
+          const response = await caseApi.fileCase(caseId, fileComment.trim());
           if (response.success) {
             const message = `Docket ${caseId} filed • ${formatDateTime(new Date())}`;
             showSuccess(message);
@@ -931,17 +922,7 @@ export const CaseDetailPage = () => {
         setConfirmModal(null);
         setPendingCase(true);
         try {
-          if (!caseInfo?.version && caseInfo?.version !== 0) {
-            showError('Case version missing. Please refresh.');
-            return;
-          }
-          const response = await caseApi.updateStatus(caseId, {
-            status: 'PENDING',
-            version: statusVersion,
-            performedBy,
-            reason: pendComment.trim(),
-            notes: `Reopen date: ${pendingUntil}`,
-          });
+          const response = await caseApi.pendCase(caseId, pendComment.trim(), pendingUntil);
           if (response.success) {
             const message = `Docket ${caseId} pended • ${formatDateTime(new Date())}`;
             showSuccess(message);
@@ -985,16 +966,7 @@ export const CaseDetailPage = () => {
           case: prev?.case ? { ...prev.case, status: 'RESOLVED' } : prev?.case,
         }));
         try {
-          if (!caseInfo?.version && caseInfo?.version !== 0) {
-            showError('Case version missing. Please refresh.');
-            return;
-          }
-          const response = await caseApi.updateStatus(caseId, {
-            status: 'RESOLVED',
-            version: statusVersion,
-            performedBy,
-            notes: resolveComment.trim(),
-          });
+          const response = await caseApi.resolveCase(caseId, resolveComment.trim());
           if (response.success) {
             const message = `Docket ${caseId} resolved • ${formatDateTime(new Date())}`;
             showSuccess(message);
@@ -1091,18 +1063,32 @@ export const CaseDetailPage = () => {
   }, [caseId, showError]);
 
   const openSidebar = (type) => {
-    setSidebarType((previousType) => {
-      if (sidebarOpen && previousType === type) {
-        setSidebarOpen(false);
-        return null;
-      }
-      setSidebarOpen(true);
-      if (type === 'cfs') {
-        void loadClientFactSheet();
-      }
-      return type;
-    });
+    try {
+      setSidebarType((previousType) => {
+        if (sidebarOpen && previousType === type) {
+          setSidebarOpen(false);
+          return null;
+        }
+        setSidebarOpen(true);
+        if (type === 'cfs') {
+          void loadClientFactSheet();
+        }
+        return type;
+      });
+    } catch (error) {
+      console.error('[CaseDetail] Failed to open sidebar', { type, error });
+      showError('Unable to open panel right now. Please retry.');
+    }
   };
+
+  const runGuardedAction = useCallback((action, fallbackMessage = 'Unable to complete this action right now.') => {
+    try {
+      action?.();
+    } catch (error) {
+      console.error('[CaseDetail] Action failed', error);
+      showError(fallbackMessage);
+    }
+  }, [showError]);
 
   useEffect(() => {
     setSidebarOpen(false);
@@ -1273,7 +1259,7 @@ export const CaseDetailPage = () => {
   // - OPEN: Show File, Pend, Resolve (no Unpend)
   // - PENDING: Show ONLY Unpend (no File, Pend, Resolve)
   // - FILED or RESOLVED: Show nothing (terminal states, read-only)
-  const canPerformLifecycleActions = docketState === 'IN_PROGRESS' && !isViewOnlyMode;
+  const canPerformLifecycleActions = docketState === 'OPEN' && !isViewOnlyMode;
   const isAnyModalOpen = Boolean(
     showFileModal
     || showPendModal
@@ -1422,11 +1408,11 @@ export const CaseDetailPage = () => {
             {caseInfo.approvalStatus === 'PENDING' && <Badge variant="warning">Awaiting Partner Approval</Badge>}
             {caseInfo.lockStatus?.isLocked && <Badge variant="warning">Lifecycle Locked</Badge>}
             {caseInfo?.stage?.requiresApproval === true && isViewOnlyMode && <Badge variant="warning">Role Restricted Action</Badge>}
-            <Button variant="ghost" onClick={() => openSidebar('cfs')} title="CFS" className="h-10 w-10 rounded-full p-0" aria-label="Open CFS sidebar">ⓘ</Button>
-            <Button variant="ghost" onClick={() => openSidebar('attachments')} title="Attachments" className="h-10 w-10 rounded-full p-0" aria-label="Open attachments sidebar">📎</Button>
-            <Button variant="ghost" onClick={() => openSidebar('history')} title="History" className="h-10 w-10 rounded-full p-0" aria-label="Open history sidebar">🕒</Button>
+            <Button variant="ghost" onClick={() => runGuardedAction(() => openSidebar('cfs'), 'Unable to open CFS panel right now.')} title="CFS" className="h-10 w-10 rounded-full p-0" aria-label="Open CFS sidebar">ⓘ</Button>
+            <Button variant="ghost" onClick={() => runGuardedAction(() => openSidebar('attachments'), 'Unable to open attachments panel right now.')} title="Attachments" className="h-10 w-10 rounded-full p-0" aria-label="Open attachments sidebar">📎</Button>
+            <Button variant="ghost" onClick={() => runGuardedAction(() => openSidebar('history'), 'Unable to open history panel right now.')} title="History" className="h-10 w-10 rounded-full p-0" aria-label="Open history sidebar">🕒</Button>
             {canCloneDocket ? (
-              <Button variant="ghost" onClick={() => setCloneModalOpen(true)} title="Clone Docket" className="h-10 w-10 rounded-full p-0" aria-label="Clone docket">⧉</Button>
+              <Button variant="ghost" onClick={() => runGuardedAction(() => setCloneModalOpen(true), 'Unable to open clone docket right now.')} title="Clone Docket" className="h-10 w-10 rounded-full p-0" aria-label="Clone docket">⧉</Button>
             ) : null}
           </div>
         </header>
@@ -1565,6 +1551,19 @@ export const CaseDetailPage = () => {
                   </div>
                 </div>
               )}
+              {canPerformLifecycleActions ? (
+                <div className="case-detail__composer-actions mt-3">
+                  <Button variant="outline" onClick={() => setShowPendModal(true)} disabled={actionInFlight}>
+                    Pend
+                  </Button>
+                  <Button variant="primary" onClick={() => setShowResolveModal(true)} disabled={actionInFlight}>
+                    Resolve
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowFileModal(true)} disabled={actionInFlight}>
+                    File
+                  </Button>
+                </div>
+              ) : null}
             </section>
 
             <section className="case-card" aria-labelledby="past-dockets-heading">
@@ -1628,6 +1627,8 @@ export const CaseDetailPage = () => {
           caseInfo={caseInfo}
           attachments={attachments}
           timelineEvents={timelineEvents}
+          cfsData={clientFactSheet}
+          cfsLoading={loadingClientFactSheet}
           selectedAttachmentFile={selectedFile}
           attachmentComment={fileDescription}
           uploadingAttachment={uploadingFile}
