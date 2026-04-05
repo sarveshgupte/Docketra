@@ -14,6 +14,7 @@ import { ErrorBoundary } from './ErrorBoundary';
 import api from '../../services/api';
 import { worklistApi } from '../../api/worklist.api';
 import { USER_ROLES } from '../../utils/constants';
+import { formatDateTime } from '../../utils/formatDateTime';
 import './Layout.css';
 import { ROUTES, safeRoute } from '../../constants/routes';
 
@@ -111,6 +112,8 @@ const IconPlus = () => (
   </svg>
 );
 
+const sortNotificationsAscending = (items) => [...items].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
 export const Layout = ({ children }) => {
   const { user, logout } = useAuth();
   const { showSuccess } = useToast();
@@ -130,8 +133,43 @@ export const Layout = ({ children }) => {
   const [countsFetched, setCountsFetched] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
+  const [notificationItems, setNotificationItems] = useState(() => sortNotificationsAscending([
+    {
+      id: 'assignment',
+      category: 'Assignment',
+      title: 'Assignment updates',
+      description: 'Docket CASE-20260404-00002 has been reassigned to a new owner.',
+      timestamp: new Date('2026-04-05T09:55:00.000Z'),
+      docketId: 'CASE-20260404-00002',
+      unread: true,
+      saved: false,
+    },
+    {
+      id: 'qc',
+      category: 'QC',
+      title: 'QC requests and failures',
+      description: 'QC flagged docket CASE-20260404-00007 for missing mandatory fields.',
+      timestamp: new Date('2026-04-05T10:20:00.000Z'),
+      docketId: 'CASE-20260404-00007',
+      unread: true,
+      saved: false,
+    },
+    {
+      id: 'pending',
+      category: 'Pending Reopen',
+      title: 'Pending reopen reminders',
+      description: 'Docket CASE-20260401-00015 reached reopen date and needs review.',
+      timestamp: new Date('2026-04-05T10:45:00.000Z'),
+      docketId: 'CASE-20260401-00015',
+      unread: false,
+      saved: true,
+    },
+  ]));
 
   const profileDropdownRef = useRef(null);
+  const notificationDropdownRef = useRef(null);
+  const hasMountedRef = useRef(false);
+  const seenNotificationIdsRef = useRef(new Set());
 
   const currentFirmSlug = firmSlug || user?.firmSlug;
   const hasAdminAccess = user?.role === USER_ROLES.ADMIN;
@@ -160,11 +198,14 @@ export const Layout = ({ children }) => {
     return user?.xID?.substring(0, 2)?.toUpperCase() || 'U';
   };
 
-  // Close profile dropdown on outside click
+  // Close profile and notification dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
         setProfileDropdownOpen(false);
+      }
+      if (notificationDropdownRef.current && !notificationDropdownRef.current.contains(event.target)) {
+        setNotificationOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -175,6 +216,7 @@ export const Layout = ({ children }) => {
   useEffect(() => {
     setProfileDropdownOpen(false);
     setMobileSidebarOpen(false);
+    setNotificationOpen(false);
   }, [location.pathname]);
 
   const runGlobalSearch = useCallback(async (term) => {
@@ -216,6 +258,54 @@ export const Layout = ({ children }) => {
 
     return () => clearTimeout(timer);
   }, [searchQuery, runGlobalSearch]);
+
+  const playNotificationTone = useCallback(() => {
+    if (typeof window === 'undefined' || typeof window.AudioContext === 'undefined') return;
+    const audioContext = new window.AudioContext();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(1240, audioContext.currentTime + 0.12);
+    gainNode.gain.setValueAtTime(0.0001, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.2, audioContext.currentTime + 0.02);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.2);
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 0.22);
+  }, []);
+
+  useEffect(() => {
+    const unreadIds = new Set(notificationItems.filter((item) => item.unread).map((item) => item.id));
+    if (!hasMountedRef.current) {
+      seenNotificationIdsRef.current = unreadIds;
+      hasMountedRef.current = true;
+      return;
+    }
+    const hasNewUnread = [...unreadIds].some((id) => !seenNotificationIdsRef.current.has(id));
+    if (hasNewUnread) playNotificationTone();
+    seenNotificationIdsRef.current = unreadIds;
+  }, [notificationItems, playNotificationTone]);
+
+  useEffect(() => {
+    const handleIncomingNotification = (event) => {
+      const payload = event.detail || {};
+      const incoming = {
+        id: payload.id || `notif-${Date.now()}`,
+        category: payload.category || 'General',
+        title: payload.title || 'New update',
+        description: payload.description || 'You received a new notification.',
+        timestamp: payload.timestamp ? new Date(payload.timestamp) : new Date(),
+        docketId: payload.docketId || null,
+        unread: true,
+        saved: false,
+      };
+      setNotificationItems((items) => sortNotificationsAscending([...items, incoming]));
+    };
+    window.addEventListener('docketra:new-notification', handleIncomingNotification);
+    return () => window.removeEventListener('docketra:new-notification', handleIncomingNotification);
+  }, []);
 
 
   useEffect(() => {
@@ -401,12 +491,13 @@ export const Layout = ({ children }) => {
   }, []);
 
 
-  const notificationItems = [
-    { id: 'assignment', label: 'Assignment updates are shown here', unread: true },
-    { id: 'qc', label: 'QC requests and failures will appear here', unread: true },
-    { id: 'pending', label: 'Pending reopen notifications will appear here', unread: false },
-  ];
   const unreadCount = notificationItems.filter((item) => item.unread).length;
+  const clearNotification = (id) => setNotificationItems((items) => items.filter((item) => item.id !== id));
+  const toggleSavedNotification = (id) => {
+    setNotificationItems((items) => sortNotificationsAscending(items.map((item) => (
+      item.id === id ? { ...item, saved: !item.saved } : item
+    ))));
+  };
 
   const commandPaletteCommands = [
     { id: 'new-docket', label: 'New Docket', shortcut: '⌘N', action: () => navigate(ROUTES.CREATE_CASE(currentFirmSlug)) },
@@ -553,16 +644,63 @@ export const Layout = ({ children }) => {
           {/* Right actions */}
           <div className="enterprise-header__right">
             {/* Notification Bell */}
-            <div className="dropdown">
+            <div className="dropdown" ref={notificationDropdownRef}>
               <button className="enterprise-header__icon-btn" aria-label="Notifications" onClick={() => setNotificationOpen((v) => !v)}>
                 <IconBell />
                 {unreadCount > 0 ? <span className="enterprise-header__notif-dot" aria-hidden="true" /> : null}
               </button>
               {notificationOpen ? (
-                <div className="dropdown-menu dropdown-menu-right" role="menu">
+                <div className="dropdown-menu dropdown-menu-right enterprise-header__notification-menu" role="menu">
+                  <div className="enterprise-header__notification-header">
+                    <span>Notifications</span>
+                    <span className="enterprise-header__notification-count">{unreadCount} unread</span>
+                  </div>
                   {notificationItems.map((item) => (
-                    <div key={item.id} className="dropdown-item" role="menuitem">
-                      {item.label}{item.unread ? ' •' : ''}
+                    <div key={item.id} className="dropdown-item enterprise-header__notification-item" role="menuitem">
+                      <div className="enterprise-header__notification-title-row">
+                        <span className="enterprise-header__notification-title">{item.title}</span>
+                        <div className="enterprise-header__notification-actions">
+                          <button
+                            type="button"
+                            className="enterprise-header__notification-action-btn"
+                            aria-label={item.saved ? 'Unsave notification' : 'Save notification'}
+                            title={item.saved ? 'Unsave' : 'Save'}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              toggleSavedNotification(item.id);
+                            }}
+                          >
+                            {item.saved ? '★' : '☆'}
+                          </button>
+                          <button
+                            type="button"
+                            className="enterprise-header__notification-action-btn"
+                            aria-label="Clear notification"
+                            title="Clear"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              clearNotification(item.id);
+                            }}
+                          >
+                            ✕
+                          </button>
+                          {item.unread ? <span className="enterprise-header__notification-unread-badge">New</span> : null}
+                        </div>
+                      </div>
+                      <div className="enterprise-header__notification-description">{item.description}</div>
+                      <div className="enterprise-header__notification-meta">
+                        <span>{item.category}</span>
+                        <span>{formatDateTime(item.timestamp)}</span>
+                      </div>
+                      {item.docketId && currentFirmSlug ? (
+                        <Link
+                          to={safeRoute(ROUTES.CASE_DETAIL(currentFirmSlug, item.docketId), ROUTES.CASES(currentFirmSlug))}
+                          className="enterprise-header__notification-link"
+                          onClick={() => setNotificationOpen(false)}
+                        >
+                          Open docket #{item.docketId}
+                        </Link>
+                      ) : null}
                     </div>
                   ))}
                 </div>
