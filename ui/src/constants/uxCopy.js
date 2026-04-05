@@ -3,7 +3,6 @@ export const UX_COPY = {
     CREATE_CASE: 'Create Docket',
     EXPORT_CASES: 'Export CSV',
     ASSIGN_TO_ME: 'Assign to Me',
-    MOVE_TO_WORKBASKET: 'Move to Workbasket',
   },
   statusLabels: {
     OPEN: 'Open',

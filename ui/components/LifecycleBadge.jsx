@@ -1,10 +1,8 @@
 import React from 'react';
 import { getLifecycleBadgePalette, getLifecycleMeta } from '../utils/lifecycleMap';
 
-/** Renders nothing when lifecycle cannot be resolved — never shows "Unknown". */
 export function LifecycleBadge({ lifecycle, className = '' }) {
   const meta = getLifecycleMeta(lifecycle);
-  if (!meta) return null;
   const palette = getLifecycleBadgePalette(meta.color);
 
   return (
