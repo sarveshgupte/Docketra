@@ -149,9 +149,11 @@ export const ProtectedRoutes = () => (
         <Route
           path="dockets/:caseId"
           element={(
-            <ProtectedRoute>
-              <CaseDetailPage />
-            </ProtectedRoute>
+            <RouteErrorBoundary title="Unable to load docket" message="Docket actions are temporarily unavailable. Please retry from the dockets list.">
+              <ProtectedRoute>
+                <CaseDetailPage />
+              </ProtectedRoute>
+            </RouteErrorBoundary>
           )}
         />
         <Route
@@ -175,9 +177,11 @@ export const ProtectedRoutes = () => (
         <Route
           path="cases/:caseId"
           element={(
-            <ProtectedRoute>
-              <CaseDetailPage />
-            </ProtectedRoute>
+            <RouteErrorBoundary title="Unable to load docket" message="Docket actions are temporarily unavailable. Please retry from the dockets list.">
+              <ProtectedRoute>
+                <CaseDetailPage />
+              </ProtectedRoute>
+            </RouteErrorBoundary>
           )}
         />
         <Route

@@ -38,7 +38,13 @@
   gap: var(--spacing-xs);
   flex-wrap: wrap;
   align-items: flex-start;
-  max-width: 14rem;
+  max-width: 100%;
+}
+
+.admin__actions--compact {
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  min-width: 210px;
 }
 
 .admin__primary-label {
@@ -110,6 +116,52 @@
 
 .neo-table tbody tr td:last-child:hover {
   cursor: default;
+}
+
+.admin__clients-table-wrap {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.admin__clients-table {
+  table-layout: fixed;
+}
+
+.admin__clients-table th,
+.admin__clients-table td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.admin__col-id { width: 15%; }
+.admin__col-business { width: 27%; }
+.admin__col-email { width: 23%; }
+.admin__col-status { width: 10%; }
+.admin__col-created { width: 11%; }
+.admin__col-actions { width: 14%; }
+
+.admin__cell-business {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.admin__cell-truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 1024px) {
+  .admin__clients-table-wrap {
+    overflow-x: auto;
+  }
+
+  .admin__clients-table {
+    min-width: 860px;
+  }
 }
 
 .categories-list {

@@ -12,7 +12,26 @@ const EMPTY_STATES = {
   history: 'No history yet. Lifecycle events will appear here as this docket progresses.',
 };
 
-export const DocketSidebar = ({ isOpen, type, onClose, caseInfo, attachments = [], timelineEvents = [] }) => {
+export const DocketSidebar = ({
+  isOpen,
+  type,
+  onClose,
+  caseInfo,
+  attachments = [],
+  timelineEvents = [],
+  cfsData = null,
+  cfsLoading = false,
+  selectedAttachmentFile = null,
+  attachmentComment = '',
+  uploadingAttachment = false,
+  uploadProgress = 0,
+  inboundAddress = '',
+  onAttachmentFileChange,
+  onAttachmentCommentChange,
+  onUploadAttachment,
+  onCopyInboundAddress,
+}) => {
+  const attachmentFileInputRef = useRef(null);
   const formatDatePart = (value) => {
     const parsed = value ? new Date(value) : null;
     if (!parsed || Number.isNaN(parsed.getTime())) return '—';
@@ -44,23 +63,24 @@ export const DocketSidebar = ({ isOpen, type, onClose, caseInfo, attachments = [
   if (!isOpen || !type) return null;
 
   const renderContent = () => {
-    if (type === 'cfs') {
-      const cfsAttachments = cfsData?.attachments || cfsData?.files || [];
-      const clientId = cfsData?.clientId || caseInfo?.clientId || caseInfo?.client?.clientId || '—';
-      const clientName = cfsData?.businessName
-        || cfsData?.basicInfo?.clientName
-        || caseInfo?.clientName
-        || caseInfo?.businessName
-        || caseInfo?.client?.businessName
-        || '—';
-      const notes = cfsData?.description || cfsData?.notes || '';
+    try {
+      if (type === 'cfs') {
+        const cfsAttachments = cfsData?.attachments || cfsData?.files || [];
+        const clientId = cfsData?.clientId || caseInfo?.clientId || caseInfo?.client?.clientId || '—';
+        const clientName = cfsData?.businessName
+          || cfsData?.basicInfo?.clientName
+          || caseInfo?.clientName
+          || caseInfo?.businessName
+          || caseInfo?.client?.businessName
+          || '—';
+        const notes = cfsData?.description || cfsData?.notes || '';
 
-      if (cfsLoading) {
-        return <p className="docket-sidebar__empty">Loading client fact sheet…</p>;
-      }
+        if (cfsLoading) {
+          return <p className="docket-sidebar__empty">Loading client fact sheet…</p>;
+        }
 
-      return (
-        <div className="space-y-4 text-sm text-gray-700">
+        return (
+          <div className="space-y-4 text-sm text-gray-700">
           <div><span className="font-semibold text-gray-900">Client Name:</span> {clientName}</div>
           <div><span className="font-semibold text-gray-900">Client ID:</span> {clientId}</div>
           <div>
@@ -90,19 +110,19 @@ export const DocketSidebar = ({ isOpen, type, onClose, caseInfo, attachments = [
               </ul>
             )}
           </div>
-        </div>
-      );
-    }
+          </div>
+        );
+      }
 
-    if (type === 'attachments') {
-      const uploaderLabel = (attachment) => {
-        const uploader = attachment.createdByXID || attachment.uploadedBy || attachment.createdBy || 'Unknown';
-        const uploaderName = attachment.createdByName || attachment.uploadedByName;
-        return uploaderName ? `${uploaderName} (${uploader})` : uploader;
-      };
+      if (type === 'attachments') {
+        const uploaderLabel = (attachment) => {
+          const uploader = attachment.createdByXID || attachment.uploadedBy || attachment.createdBy || 'Unknown';
+          const uploaderName = attachment.createdByName || attachment.uploadedByName;
+          return uploaderName ? `${uploaderName} (${uploader})` : uploader;
+        };
 
-      return (
-        <div className="space-y-4">
+        return (
+          <div className="space-y-4">
           <div className="rounded-xl border border-gray-200 bg-white p-3">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Attach file</p>
             <p className="mb-3 text-xs text-gray-500">
@@ -166,14 +186,14 @@ export const DocketSidebar = ({ isOpen, type, onClose, caseInfo, attachments = [
               </li>
             ))}
           </ul>
-        </div>
-      );
-    }
+          </div>
+        );
+      }
 
-    if (!timelineEvents.length) return <p className="docket-sidebar__empty">{EMPTY_STATES.history}</p>;
+      if (!timelineEvents.length) return <p className="docket-sidebar__empty">{EMPTY_STATES.history}</p>;
 
-    return (
-      <div className="docket-sidebar__history-wrap">
+      return (
+        <div className="docket-sidebar__history-wrap">
         <p className="docket-sidebar__history-note">Complete lifecycle log from docket creation/cloning through resolution/filing, including opens/views/closes and WB ↔ WL movements.</p>
         <div className="docket-sidebar__history-table-wrap">
           <table className="docket-sidebar__history-table">
@@ -200,8 +220,16 @@ export const DocketSidebar = ({ isOpen, type, onClose, caseInfo, attachments = [
             </tbody>
           </table>
         </div>
-      </div>
-    );
+        </div>
+      );
+    } catch (error) {
+      console.error('[DocketSidebar] Failed to render sidebar section', { type, error });
+      return (
+        <p className="docket-sidebar__empty">
+          Unable to load this panel right now. Please close and retry.
+        </p>
+      );
+    }
   };
 
   return (
