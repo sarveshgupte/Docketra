@@ -1,6 +1,7 @@
 const assert = require('assert');
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
+const { createMongoMemoryOrNull } = require('./utils/mongoMemory');
 const { migrateCollection } = require('../scripts/migrations/encrypt_existing_plaintext_fields');
 const Client = require('../src/models/Client.model');
 const Case = require('../src/models/Case.model');
@@ -11,18 +12,17 @@ let mongoServer;
 
 async function setupDatabase() {
   process.env.MASTER_ENCRYPTION_KEY = require('crypto').randomBytes(32).toString('hex');
-  try {
-    mongoServer = await MongoMemoryServer.create();
-    const uri = mongoServer.getUri();
-    await mongoose.connect(uri);
-    return true;
-  } catch (err) {
-    if (err.message && err.message.includes('MongoMemoryServer')) {
-      return false;
-    }
-    // Network/binary issues with MongoMemoryServer
+  mongoServer = await createMongoMemoryOrNull(
+    () => MongoMemoryServer.create(),
+    'Skipping DB-dependent migration tests (Mongo binary unavailable)'
+  );
+  if (!mongoServer) {
     return false;
   }
+
+  const uri = mongoServer.getUri();
+  await mongoose.connect(uri);
+  return true;
 }
 
 async function teardownDatabase() {
@@ -84,7 +84,6 @@ async function run() {
   try {
     const isDbReady = await setupDatabase();
     if (!isDbReady) {
-      console.warn('⚠️  Skipping DB-dependent migration tests (Mongo binary unavailable)');
       return;
     }
     await testClientMigration();

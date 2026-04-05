@@ -7,6 +7,7 @@
 const assert = require('assert');
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
+const { createMongoMemoryOrNull } = require('./utils/mongoMemory');
 
 const User = require('../src/models/User.model');
 const Firm = require('../src/models/Firm.model');
@@ -138,13 +139,18 @@ async function run() {
 
   let mongoServer = null;
   try {
-    mongoServer = await MongoMemoryServer.create();
-    await mongoose.connect(mongoServer.getUri());
+    mongoServer = await createMongoMemoryOrNull(
+      () => MongoMemoryServer.create(),
+      'Skipping DB-dependent integrity tests (Mongo binary unavailable)'
+    );
+    if (mongoServer) {
+      await mongoose.connect(mongoServer.getUri());
 
-    await shouldBackfillLegacyAdmin();
-    await shouldIgnoreSuperadminInPreflight();
+      await shouldBackfillLegacyAdmin();
+      await shouldIgnoreSuperadminInPreflight();
+    }
   } catch (err) {
-    console.warn('⚠️  Skipping DB-dependent integrity tests (Mongo binary unavailable):', err.message);
+    throw err;
   } finally {
     if (mongoose.connection.readyState === 1) {
       await mongoose.disconnect();
