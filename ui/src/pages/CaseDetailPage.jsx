@@ -52,6 +52,16 @@ const toLifecycleStage = (status) => {
 };
 
 const formatDocketId = (value = '') => String(value || '').replace(/^CASE-/, 'DOCKET-');
+const VALID_DOCKET_LIFECYCLES = new Set(['OPEN', 'PENDED', 'QC_PENDING', 'RESOLVED', 'FILED']);
+const normalizeLifecycleForUi = (lifecycle, status) => {
+  const normalizedLifecycle = String(lifecycle || '').trim().toUpperCase();
+  const normalizedStatus = String(status || '').trim().toUpperCase();
+  const source = normalizedLifecycle || normalizedStatus;
+  if (VALID_DOCKET_LIFECYCLES.has(source)) return source;
+  if (source === 'PENDING') return 'PENDED';
+  if (['ASSIGNED', 'IN_PROGRESS', 'CREATED', 'UNASSIGNED'].includes(source)) return 'OPEN';
+  return 'OPEN';
+};
 const REALTIME_POLL_MS = 15000;
 const INITIAL_VIRTUAL_WINDOW = 30;
 const ACTION_RETRY_KEY = 'docketra_case_retry_queue';
@@ -170,6 +180,7 @@ export const CaseDetailPage = () => {
   // PR: Comprehensive CaseHistory & Audit Trail
   const [viewTracked, setViewTracked] = useState(false);
   const loadSequenceRef = useRef(0);
+  const pollSequenceRef = useRef(0);
   const previousRealtimeRef = useRef(null);
   const notificationPermissionRequestedRef = useRef(false);
   
@@ -237,8 +248,7 @@ export const CaseDetailPage = () => {
   }, [caseData?.client, caseData?.clientId, caseData?.clientName, caseInfo?.businessName, caseInfo?.clientId, caseInfo?.clientName]);
 
   const subcategoryLabel = caseInfo?.subcategory || caseInfo?.caseSubCategory || caseInfo?.subCategory || '—';
-  const assignedLabel = caseInfo?.assignedTo?.name || caseInfo?.assignedToName || caseInfo?.assignedToXID || 'Unassigned';
-  const lifecycleStatus = caseInfo?.lifecycle || caseInfo?.status;
+  const lifecycleStatus = normalizeLifecycleForUi(caseInfo?.lifecycle, caseInfo?.status);
 
   const mergeUniqueComments = useCallback((inputComments = []) => {
     const map = new Map();
@@ -357,6 +367,11 @@ export const CaseDetailPage = () => {
       
       if (response.success && requestId === loadSequenceRef.current) {
         const normalized = response.data?.case || response.data;
+        console.log('ASSIGNMENT_DEBUG', {
+          assignedTo: normalized?.assignedToXID || normalized?.assignedTo?.xID || null,
+          responseSource: 'loadCase',
+          timestamp: new Date().toISOString(),
+        });
         setCaseData((prev) => mergeCaseData(prev, normalized, { source: 'loadCase' }));
       }
     } catch (error) {
@@ -447,6 +462,8 @@ export const CaseDetailPage = () => {
 
   useEffect(() => {
     const pollForUpdates = async () => {
+      const pollRequestId = pollSequenceRef.current + 1;
+      pollSequenceRef.current = pollRequestId;
       try {
         if (document.hidden || !navigator.onLine) {
           return;
@@ -460,6 +477,12 @@ export const CaseDetailPage = () => {
         });
         if (!response?.success) return;
         const updated = response.data?.case || response.data;
+        if (pollRequestId !== pollSequenceRef.current) return;
+        console.log('ASSIGNMENT_DEBUG', {
+          assignedTo: updated?.assignedToXID || updated?.assignedTo?.xID || null,
+          responseSource: 'polling',
+          timestamp: new Date().toISOString(),
+        });
         const previous = previousRealtimeRef.current;
         const nextInfo = normalizeCase(updated);
         const nextCommentsCount = updated?.comments?.length || 0;
@@ -1302,7 +1325,7 @@ export const CaseDetailPage = () => {
   // - OPEN: Show File, Pend, Resolve (no Unpend)
   // - PENDING: Show ONLY Unpend (no File, Pend, Resolve)
   // - FILED or RESOLVED: Show nothing (terminal states, read-only)
-  const canPerformLifecycleActions = ['OPEN', 'IN_PROGRESS'].includes(docketState) && !isViewOnlyMode;
+  const canPerformLifecycleActions = ['OPEN', 'ASSIGNED', 'IN_PROGRESS'].includes(docketState) && !isViewOnlyMode;
   const showQcActions = isAdmin && docketState === 'QC_PENDING' && !isViewOnlyMode;
   const isAnyModalOpen = Boolean(
     showFileModal
@@ -1958,9 +1981,6 @@ export const CaseDetailPage = () => {
           disabled={!assignUser}
         >
           <div className="space-y-2">
-            <p className="text-sm text-gray-500">
-              Currently assigned to: {assignedLabel}
-            </p>
             <label htmlFor="assign-user" className="block text-sm font-medium text-gray-700">Select user</label>
             <select
               id="assign-user"
