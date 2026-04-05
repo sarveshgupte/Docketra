@@ -6,11 +6,18 @@ export const handleApiSuccess = (response) => ({
 });
 
 export const handleApiError = (error, fallbackMessage = 'Request failed') => {
+  const serverMessage = error?.response?.data?.message;
+  const serverError = error?.response?.data?.error;
+  const resolvedMessage = typeof serverMessage === 'string' && serverMessage.trim()
+    ? serverMessage
+    : typeof serverError === 'string' && serverError.trim()
+      ? serverError
+      : typeof error?.message === 'string' && error.message.trim()
+        ? error.message
+        : fallbackMessage;
+
   const normalizedError = new Error(
-    error?.response?.data?.message
-      || error?.response?.data?.error
-      || error?.message
-      || fallbackMessage
+    resolvedMessage
   );
 
   normalizedError.status = error?.response?.status;
