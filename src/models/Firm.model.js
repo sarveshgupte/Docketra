@@ -231,6 +231,11 @@ const firmSchema = new mongoose.Schema({
         type: Boolean,
         default: true,
       },
+      brandLogoUrl: {
+        type: String,
+        trim: true,
+        default: '',
+      },
     },
     work: {
       assignmentStrategy: {
