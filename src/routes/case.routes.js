@@ -207,6 +207,7 @@ router.post('/:caseId/file', authorizeFirmPermission('CASE_ACTION'), userWriteLi
 
 // Docket workflow endpoints (strict OPEN/PENDING/RESOLVED/FILED lifecycle)
 router.post('/:caseId/assign', authorizeFirmPermission('CASE_ASSIGN'), userWriteLimiter, checkCaseClientAccess, assignDocket);
+router.patch('/:caseId/assign', authorizeFirmPermission('CASE_ASSIGN'), userWriteLimiter, checkCaseClientAccess, assignDocket);
 router.post('/:caseId/transition', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, transitionDocket);
 router.post('/:caseId/reopen-pending', authorizeFirmPermission('CASE_ACTION'), userWriteLimiter, checkCaseClientAccess, reopenPendingDocket);
 router.post('/:caseId/qc-action', authorizeFirmPermission('CASE_ASSIGN'), sensitiveLimiter, userWriteLimiter, checkCaseClientAccess, qcAction);
