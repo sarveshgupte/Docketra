@@ -1136,3 +1136,220 @@
   width: 34%;
   height: 8px;
 }
+
+.docket-comments-section {
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fafafa;
+}
+
+.docket-comments-section__heading {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.docket-comment-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.docket-comment-item {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 10px;
+  align-items: flex-start;
+  border: 1px solid #eceff3;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 10px;
+}
+
+.docket-comment-item__avatar,
+.docket-comment-list__skeleton-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1e3a8a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.docket-comment-item__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.docket-comment-item__author {
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.docket-comment-item__time {
+  font-size: 0.78rem;
+  color: #6b7280;
+}
+
+.docket-comment-item__text {
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: #111827;
+}
+
+.docket-comment-item__mention {
+  border-radius: 6px;
+  padding: 0 4px;
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.docket-comment-list__empty {
+  border: 1px dashed #d1d5db;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 12px;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.docket-comment-list__error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #991b1b;
+  padding: 10px;
+  font-size: 0.84rem;
+}
+
+.docket-comment-list__retry,
+.docket-comment-list__more,
+.docket-comment-input__submit {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  background: #fff;
+  color: #111827;
+  cursor: pointer;
+}
+
+.docket-comment-list__actions {
+  margin-top: 10px;
+}
+
+.docket-comment-list__more:disabled,
+.docket-comment-input__submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.docket-comment-input {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.docket-comment-input__label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.docket-comment-input__field {
+  width: 100%;
+  resize: vertical;
+  min-height: 72px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 0.84rem;
+  line-height: 1.4;
+  color: #111827;
+  background: #fff;
+}
+
+.docket-comment-input__field:focus {
+  outline: 2px solid rgba(59, 130, 246, 0.3);
+  outline-offset: 1px;
+  border-color: #93c5fd;
+}
+
+.docket-comment-input__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.docket-comment-input__hint,
+.docket-comment-input__error {
+  font-size: 0.78rem;
+}
+
+.docket-comment-input__hint {
+  color: #6b7280;
+}
+
+.docket-comment-input__error {
+  color: #b91c1c;
+}
+
+.docket-comment-list--skeleton {
+  gap: 10px;
+}
+
+.docket-comment-list__skeleton-item {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 10px;
+  border: 1px solid #eceff3;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 10px;
+}
+
+.docket-comment-list__skeleton-avatar {
+  background: #e5edf7;
+  color: transparent;
+}
+
+.docket-comment-list__skeleton-lines {
+  display: grid;
+  gap: 8px;
+  align-content: center;
+}
+
+.docket-comment-list__skeleton-line {
+  height: 9px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #e5edf7 25%, #f3f6fb 50%, #e5edf7 75%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.2s ease-in-out infinite;
+}
+
+.docket-comment-list__skeleton-line--primary {
+  width: 40%;
+}
+
+.docket-comment-list__skeleton-line--secondary {
+  width: 72%;
+}
