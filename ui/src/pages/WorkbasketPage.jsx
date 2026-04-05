@@ -84,7 +84,7 @@ export const WorkbasketPage = () => {
   const [pullingCase, setPullingCase] = useState(null);
   const [selectedCases, setSelectedCases] = useState([]);
   const [bulkPulling, setBulkPulling] = useState(false);
-  const [employees, setEmployees] = useState([]);
+  const [assignableUsers, setAssignableUsers] = useState([]);
   const [assignTo, setAssignTo] = useState('');
   const [confirmModal, setConfirmModal] = useState(null);
   const [categories, setCategories] = useState([]);
@@ -134,7 +134,14 @@ export const WorkbasketPage = () => {
       if (!isAdmin) return;
       try {
         const res = await api.get('/auth/admin/users');
-        setEmployees((res.data?.data || []).filter((u) => u.role === 'Employee'));
+        const users = Array.isArray(res.data?.data) ? res.data.data : [];
+        const teamMembers = users.filter((u) => {
+          const normalizedRole = String(u?.role || '').trim().toUpperCase();
+          const isFirmUser = normalizedRole === 'ADMIN' || normalizedRole === 'STAFF' || normalizedRole === 'EMPLOYEE';
+          const isActive = u?.isActive !== false && u?.status !== 'inactive' && u?.status !== 'deleted';
+          return isFirmUser && isActive;
+        });
+        setAssignableUsers(teamMembers);
       } catch (e) {
         console.warn('Failed to load employees for assignment', e);
       }
@@ -619,8 +626,8 @@ export const WorkbasketPage = () => {
                 <label htmlFor={filterIds.assignTo}>Assign to:</label>
                 <select id={filterIds.assignTo} value={assignTo} onChange={(e) => setAssignTo(e.target.value)} className={formClasses.inputBase}>
                   <option value="">My Worklist</option>
-                  {employees.map((emp) => (
-                    <option key={emp._id} value={emp._id}>{emp.name || emp.xID}</option>
+                  {assignableUsers.map((member) => (
+                    <option key={member._id} value={member._id}>{member.name || member.xID}</option>
                   ))}
                 </select>
               </>
