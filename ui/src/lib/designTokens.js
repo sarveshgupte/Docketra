@@ -34,6 +34,8 @@ export const caseStatusAppearance = {
   ASSIGNED: { label: 'Assigned', tone: 'escalated' },
   IN_PROGRESS: { label: 'In Progress', tone: 'review' },
   PENDING: { label: 'Pended', tone: 'warning' },
+  PENDED: { label: 'Pended', tone: 'warning' },
+  QC_PENDING: { label: 'QC Pending', tone: 'review' },
   RESOLVED: { label: 'Resolved', tone: 'success' },
   FILED: { label: 'Filed', tone: 'dark' },
   DRAFT: { label: 'Draft', tone: 'draft' },
