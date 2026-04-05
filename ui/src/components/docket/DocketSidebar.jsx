@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { formatDateTime } from '../../utils/formatDateTime';
 
 const TITLES = {
@@ -12,7 +12,25 @@ const EMPTY_STATES = {
   history: 'No history yet. Lifecycle events will appear here as this docket progresses.',
 };
 
-export const DocketSidebar = ({ isOpen, type, onClose, caseInfo, attachments = [], timelineEvents = [] }) => {
+export const DocketSidebar = ({
+  isOpen,
+  type,
+  onClose,
+  caseInfo,
+  attachments = [],
+  timelineEvents = [],
+  selectedAttachmentFile = null,
+  attachmentComment = '',
+  uploadingAttachment = false,
+  uploadProgress = 0,
+  inboundAddress = '',
+  onAttachmentFileChange,
+  onAttachmentCommentChange,
+  onUploadAttachment,
+  onCopyInboundAddress,
+}) => {
+  const attachmentFileInputRef = useRef(null);
+
   useEffect(() => {
     if (!isOpen) return undefined;
     const previousOverflow = document.body.style.overflow;
@@ -37,16 +55,78 @@ export const DocketSidebar = ({ isOpen, type, onClose, caseInfo, attachments = [
     }
 
     if (type === 'attachments') {
-      if (!attachments.length) return <p className="docket-sidebar__empty">{EMPTY_STATES.attachments}</p>;
+      const uploaderLabel = (attachment) => {
+        const uploader = attachment.createdByXID || attachment.uploadedBy || attachment.createdBy || 'Unknown';
+        const uploaderName = attachment.createdByName || attachment.uploadedByName;
+        return uploaderName ? `${uploaderName} (${uploader})` : uploader;
+      };
+
       return (
-        <ul className="space-y-3">
-          {attachments.map((attachment, index) => (
-            <li key={attachment.id || attachment._id || index} className="rounded-xl border border-gray-200 bg-gray-50 p-3">
-              <p className="text-sm font-medium text-gray-900">{attachment.fileName || attachment.filename || 'Attachment'}</p>
-              <p className="text-xs text-gray-500">{formatDateTime(attachment.createdAt || attachment.uploadedAt)}</p>
-            </li>
-          ))}
-        </ul>
+        <div className="space-y-4">
+          <div className="rounded-xl border border-gray-200 bg-white p-3">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Attach file</p>
+            <p className="mb-3 text-xs text-gray-500">
+              Comment is compulsory for every attachment.
+            </p>
+            <input
+              ref={attachmentFileInputRef}
+              type="file"
+              className="hidden"
+              onChange={(event) => onAttachmentFileChange?.(event.target.files?.[0] || null)}
+            />
+            <button
+              type="button"
+              className="mb-3 inline-flex items-center rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              onClick={() => attachmentFileInputRef.current?.click()}
+              disabled={uploadingAttachment}
+            >
+              Attach File
+            </button>
+            <p className="mb-3 truncate text-xs text-gray-500">{selectedAttachmentFile?.name || 'No file selected'}</p>
+            <textarea
+              className="mb-3 w-full rounded-md border border-gray-300 p-2 text-sm"
+              rows={3}
+              value={attachmentComment}
+              onChange={(event) => onAttachmentCommentChange?.(event.target.value)}
+              placeholder="Add compulsory comment for this attachment"
+              disabled={uploadingAttachment}
+            />
+            <button
+              type="button"
+              className="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={onUploadAttachment}
+              disabled={uploadingAttachment}
+            >
+              {uploadingAttachment ? `Uploading${uploadProgress ? ` ${uploadProgress}%` : '...'}` : 'Upload Attachment'}
+            </button>
+          </div>
+
+          <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Inbound email for attachments</p>
+            {inboundAddress ? (
+              <div className="mt-2 flex items-start justify-between gap-3">
+                <p className="break-all text-xs text-gray-600">{inboundAddress}</p>
+                <button type="button" className="text-xs font-semibold text-blue-600 hover:text-blue-700" onClick={onCopyInboundAddress}>
+                  Copy
+                </button>
+              </div>
+            ) : (
+              <p className="mt-1 text-xs text-gray-500">Inbound email not available for this docket.</p>
+            )}
+          </div>
+
+          {!attachments.length ? <p className="docket-sidebar__empty">{EMPTY_STATES.attachments}</p> : null}
+          <ul className="space-y-3">
+            {attachments.map((attachment, index) => (
+              <li key={attachment.id || attachment._id || index} className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+                <p className="text-sm font-medium text-gray-900">{attachment.fileName || attachment.filename || 'Attachment'}</p>
+                <p className="mt-1 text-xs text-gray-500">Attached on {formatDateTime(attachment.createdAt || attachment.uploadedAt)}</p>
+                <p className="mt-1 text-xs text-gray-500">Attached by {uploaderLabel(attachment)}</p>
+                {attachment.description ? <p className="mt-1 text-xs text-gray-500">Comment: {attachment.description}</p> : null}
+              </li>
+            ))}
+          </ul>
+        </div>
       );
     }
 
