@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { caseApi } from '../../api/case.api';
 import {
   groupActivityEvents,
@@ -28,13 +28,10 @@ export function ActivityTimeline({
   docketId,
   initialActivity = [],
   refreshKey = 0,
-  silentRefreshKey = 0,
 }) {
   const [activity, setActivity] = useState(() => normalizeFeed(initialActivity));
   const [loading, setLoading] = useState(() => !Array.isArray(initialActivity) || initialActivity.length === 0);
   const [error, setError] = useState('');
-  const hasMountedRef = useRef(false);
-
   const loadActivity = useCallback(async ({ silent = false } = {}) => {
     if (!docketId) return;
 
@@ -88,15 +85,6 @@ export function ActivityTimeline({
       }
     };
   }, [docketId, refreshKey, loadActivity]);
-
-  useEffect(() => {
-    if (!docketId) return;
-    if (!hasMountedRef.current) {
-      hasMountedRef.current = true;
-      return;
-    }
-    void loadActivity({ silent: true });
-  }, [docketId, silentRefreshKey, loadActivity]);
 
   const groupedActivity = useMemo(() => {
     const sorted = sortActivityLatestFirst(activity);
