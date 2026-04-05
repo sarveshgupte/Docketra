@@ -48,6 +48,8 @@
 
 .case-detail-header__identity {
   min-width: 0;
+  display: grid;
+  gap: 8px;
 }
 
 .case-detail-header__title {
@@ -61,7 +63,8 @@
 .case-detail-header__title-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .case-detail-header__info-btn {
@@ -82,15 +85,26 @@
 }
 
 .case-detail-header__subtitle {
-  margin: 4px 0 0;
+  margin: 0;
   font-size: 14px;
-  color: #4b5563;
+  color: #1f2937;
+  font-weight: 600;
 }
 
 .case-detail-header__meta {
-  margin-top: 4px;
   font-size: 12px;
   color: #6b7280;
+}
+
+.case-detail-header__secondary {
+  display: grid;
+  gap: 4px;
+}
+
+.case-detail-header__sync {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 500;
 }
 
 .case-detail-header__actions {
