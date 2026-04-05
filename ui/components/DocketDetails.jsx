@@ -51,20 +51,6 @@ const extractActivityPayload = (response) => {
 
 const commentIdentity = (comment) => comment?._id || comment?.id;
 
-const mergeComments = (existing = [], latestPage = []) => {
-  const latest = Array.isArray(latestPage) ? latestPage : [];
-  const prev = Array.isArray(existing) ? existing : [];
-  if (latest.length === 0) return prev;
-
-  const latestIds = new Set(latest.map(commentIdentity).filter(Boolean));
-  const previousOnly = prev.filter((comment) => {
-    const id = commentIdentity(comment);
-    return !id || !latestIds.has(id);
-  });
-
-  return [...latest, ...previousOnly];
-};
-
 function assignmentLabel(docket) {
   if (!docket) return null;
   const name = docket.assignedToName;
@@ -105,7 +91,9 @@ export function DocketDetails({
   const [commentsHasMore, setCommentsHasMore] = useState(false);
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [activityRefreshKey, setActivityRefreshKey] = useState(0);
-  const [activitySilentRefreshKey, setActivitySilentRefreshKey] = useState(0);
+  const [commentRefreshKey, setCommentRefreshKey] = useState(0);
+  const [newActivityCount, setNewActivityCount] = useState(0);
+  const [newCommentCount, setNewCommentCount] = useState(0);
   const latestActivityHeadRef = useRef(null);
   const latestCommentHeadRef = useRef(null);
 
@@ -154,8 +142,8 @@ export function DocketDetails({
       const latestCommentHeadId = commentIdentity(latestComments[0]) || null;
 
       if (latestCommentHeadId && latestCommentHeadId !== latestCommentHeadRef.current) {
-        setComments((prev) => mergeComments(prev, latestComments));
         latestCommentHeadRef.current = latestCommentHeadId;
+        setNewCommentCount((prev) => prev + 1);
       }
 
       setCommentsHasMore(Boolean(latestCommentsPayload.pagination?.hasMore));
@@ -164,7 +152,7 @@ export function DocketDetails({
       const latestActivityHeadId = latestActivity[0]?._id || latestActivity[0]?.id || null;
       if (latestActivityHeadId && latestActivityHeadId !== latestActivityHeadRef.current) {
         latestActivityHeadRef.current = latestActivityHeadId;
-        setActivitySilentRefreshKey((prev) => prev + 1);
+        setNewActivityCount((prev) => prev + 1);
       }
     } catch (pollError) {
       // Polling is intentionally silent.
@@ -202,6 +190,7 @@ export function DocketDetails({
       const normalizedSaved = savedComment ? normalizeComment(savedComment) : { ...optimisticComment, optimistic: false };
       setComments((prev) => prev.map((comment) => ((comment._id || comment.id || comment.tempId) === tempId ? normalizedSaved : comment)));
       setActivityRefreshKey((prev) => prev + 1);
+      setNewCommentCount(0);
       return true;
     } catch (submitError) {
       setComments((prev) => prev.filter((comment) => (comment._id || comment.id || comment.tempId) !== tempId));
@@ -276,6 +265,8 @@ export function DocketDetails({
     setCommentsHasMore(false);
     setCommentsError('');
     setCommentsLoading(true);
+    setNewCommentCount(0);
+    setNewActivityCount(0);
 
     let cancelled = false;
     const canIdleSchedule = typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function';
@@ -299,7 +290,7 @@ export function DocketDetails({
         window.clearTimeout(trigger);
       }
     };
-  }, [docketId, loadComments]);
+  }, [docketId, commentRefreshKey, loadComments]);
 
   useEffect(() => {
     if (!docketId || typeof document === 'undefined') return undefined;
@@ -340,6 +331,23 @@ export function DocketDetails({
       stopPolling();
     };
   }, [docketId, pollLatestUpdates]);
+
+  useEffect(() => {
+    const initialActivityHeadId = docket?.activity?.[0]?._id || docket?.activity?.[0]?.id || null;
+    if (initialActivityHeadId) {
+      latestActivityHeadRef.current = initialActivityHeadId;
+    }
+  }, [docket?.activity]);
+
+  const handleRefreshActivity = useCallback(() => {
+    setActivityRefreshKey((prev) => prev + 1);
+    setNewActivityCount(0);
+  }, []);
+
+  const handleRefreshComments = useCallback(() => {
+    setCommentRefreshKey((prev) => prev + 1);
+    setNewCommentCount(0);
+  }, []);
 
   if (error) {
     return (
@@ -393,11 +401,20 @@ export function DocketDetails({
         docketId={docketId}
         initialActivity={docket.activity}
         refreshKey={activityRefreshKey}
-        silentRefreshKey={activitySilentRefreshKey}
       />
+      {newActivityCount > 0 ? (
+        <button type="button" className="docket-updates-indicator" onClick={handleRefreshActivity}>
+          🔔 {newActivityCount} new update{newActivityCount > 1 ? 's' : ''} — Click to refresh
+        </button>
+      ) : null}
 
       <section className="docket-comments-section" aria-labelledby="docket-comments-heading">
         <h2 id="docket-comments-heading" className="docket-comments-section__heading">Comments</h2>
+        {newCommentCount > 0 ? (
+          <button type="button" className="docket-updates-indicator" onClick={handleRefreshComments}>
+            🔔 {newCommentCount} new comment{newCommentCount > 1 ? 's' : ''} — Click to refresh
+          </button>
+        ) : null}
         <CommentList
           comments={comments}
           loading={commentsLoading}
