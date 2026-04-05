@@ -3,6 +3,7 @@
  */
 
 import React, { useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
 const FOCUSABLE_SELECTOR = [
   'button:not([disabled])',
@@ -123,7 +124,7 @@ export const Modal = ({
     }
   };
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4 sm:p-6"
       onClick={handleOverlayClick}
@@ -155,6 +156,7 @@ export const Modal = ({
           </div>
         ) : null}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
