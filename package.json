@@ -67,7 +67,20 @@
     "nodemon": "^3.1.11",
     "supertest": "^7.1.4"
   },
+  "pnpm": {
+    "overrides": {
+      "tar": ">=7.5.11",
+      "esbuild": "^0.25.0",
+      "fast-xml-parser": ">=4.5.1",
+      "picomatch": "^4.0.2",
+      "path-to-regexp": "^8.3.0"
+    }
+  },
   "overrides": {
-    "tar": "^7.5.10"
+    "tar": ">=7.5.11",
+    "esbuild": "^0.25.0",
+    "fast-xml-parser": ">=4.5.1",
+    "picomatch": "^4.0.2",
+    "path-to-regexp": "^8.3.0"
   }
 }
