@@ -11,13 +11,37 @@ import { formatClientDisplay } from '../utils/formatters';
 import api from '../services/api';
 import './ComplianceCalendarPage.css';
 
-const monthTitle = (date) => date.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+const IST_TIMEZONE = 'Asia/Kolkata';
 
-const toISODate = (value) => {
+const monthTitle = (date) => date.toLocaleString('en-IN', { month: 'long', year: 'numeric', timeZone: IST_TIMEZONE });
+
+const toISODate = (value, timezone = IST_TIMEZONE) => {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toISOString().slice(0, 10);
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+
+  const year = parts.find((part) => part.type === 'year')?.value;
+  const month = parts.find((part) => part.type === 'month')?.value;
+  const day = parts.find((part) => part.type === 'day')?.value;
+
+  if (!year || !month || !day) return '';
+  return `${year}-${month}-${day}`;
+};
+
+const getTodayInTimezone = (timezone = IST_TIMEZONE) => {
+  const todayIso = toISODate(new Date(), timezone);
+  const [year, month] = todayIso.split('-').map((part) => Number(part));
+  if (!year || !month) {
+    const fallback = new Date();
+    return new Date(fallback.getFullYear(), fallback.getMonth(), 1);
+  }
+  return new Date(year, month - 1, 1);
 };
 
 const createMonthGrid = (currentMonth) => {
@@ -43,17 +67,14 @@ const defaultForm = {
 
 export const ComplianceCalendarPage = () => {
   const { isAdmin } = usePermissions();
-  const [currentMonth, setCurrentMonth] = useState(() => {
-    const today = new Date();
-    return new Date(today.getFullYear(), today.getMonth(), 1);
-  });
+  const [currentMonth, setCurrentMonth] = useState(() => getTodayInTimezone());
   const [events, setEvents] = useState([]);
   const [categories, setCategories] = useState([]);
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(toISODate(new Date()));
+  const [selectedDate, setSelectedDate] = useState(toISODate(new Date(), IST_TIMEZONE));
   const [editId, setEditId] = useState('');
   const [form, setForm] = useState(defaultForm);
 

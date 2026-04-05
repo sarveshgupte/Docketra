@@ -23,7 +23,7 @@ import { caseApi } from '../api/case.api';
 import { clientApi } from '../api/client.api';
 import { categoryService } from '../services/categoryService';
 import { extractErrorMessage } from '../services/apiResponse';
-import { formatDateTime } from '../utils/formatDateTime';
+import { formatDateTime, getISODateInTimezone } from '../utils/formatDateTime';
 import { formatClientDisplay } from '../utils/formatters';
 import { USER_ROLES } from '../utils/constants';
 import { LifecycleBadge } from '../../components/LifecycleBadge';
@@ -1835,7 +1835,7 @@ export const CaseDetailPage = () => {
                 label="Reopen Date (Required)"
                 value={pendingUntil}
                 onChange={(e) => setPendingUntil(e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
+                min={getISODateInTimezone(new Date())}
                 required
                 disabled={pendingCase}
               />
