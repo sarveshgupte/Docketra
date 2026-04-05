@@ -25,6 +25,7 @@ import {
   WorklistPage,
 } from './lazyPages';
 import { RouteSuspenseOutlet } from './RouteSuspenseOutlet';
+import { NotificationHistoryView } from '../../views/NotificationHistoryView';
 
 export const ProtectedRoutes = () => (
   <>
@@ -56,6 +57,14 @@ export const ProtectedRoutes = () => (
                 <DashboardPage />
               </ProtectedRoute>
             </RouteErrorBoundary>
+          )}
+        />
+        <Route
+          path="notifications"
+          element={(
+            <ProtectedRoute>
+              <NotificationHistoryView />
+            </ProtectedRoute>
           )}
         />
         <Route

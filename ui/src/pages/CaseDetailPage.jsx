@@ -26,7 +26,7 @@ import { extractErrorMessage } from '../services/apiResponse';
 import { formatDateTime } from '../utils/formatDateTime';
 import { formatClientDisplay } from '../utils/formatters';
 import { USER_ROLES } from '../utils/constants';
-import { StatusBadge } from '../components/layout/StatusBadge';
+import { LifecycleBadge } from '../../components/LifecycleBadge';
 import { DocketSidebar } from '../components/docket/DocketSidebar';
 import { DocketComments } from '../components/docket/DocketComments';
 import { ActionModal } from '../components/docket/ActionModal';
@@ -35,6 +35,9 @@ import { ROUTES } from '../constants/routes';
 import { RouteErrorFallback } from '../components/routing/RouteErrorFallback';
 import { useActiveDocket } from '../hooks/useActiveDocket';
 import { normalizeLifecycle } from '../utils/lifecycle';
+import { invalidateCaseCache } from '../utils/caseCache';
+import { getLifecycleMeta } from '../../utils/lifecycleMap';
+import { DocketDetails } from '../../components/DocketDetails';
 
 /**
  * Helper function to normalize case data structure
@@ -242,7 +245,9 @@ export const CaseDetailPage = () => {
 
   const subcategoryLabel = caseInfo?.subcategory || caseInfo?.caseSubCategory || caseInfo?.subCategory || '—';
   const lifecycleStatus = normalizeLifecycleForUi(caseInfo?.lifecycle);
-  const assignedToLabel = caseInfo?.assignedToName || caseInfo?.assignedToXID || (caseInfo?.lifecycle === 'created' ? 'Not in worklist' : '—');
+  const assignedToLabel = [caseInfo?.assignedToName, caseInfo?.assignedToXID]
+    .filter((v) => v != null && String(v).trim() !== '')
+    .join(' · ') || null;
   const isAssignedToCurrentUser = Boolean(user?.xID) && caseInfo?.assignedToXID === user.xID;
 
   const mergeUniqueComments = useCallback((inputComments = []) => {
@@ -335,6 +340,11 @@ export const CaseDetailPage = () => {
     };
   }, [mergeUniqueComments]);
 
+  const handleDocketDetailsUpdated = useCallback((doc) => {
+    setCaseData((prev) => mergeCaseData(prev, doc, { source: 'DocketDetails.activate' }));
+    setActiveDocketData(doc);
+  }, [mergeCaseData, setActiveDocketData]);
+
   const appendTimelineEvent = useCallback((event) => {
     setCaseData((prev) => ({
       ...prev,
@@ -353,6 +363,9 @@ export const CaseDetailPage = () => {
       setSectionLoading({ comments: true, history: true, attachments: true });
     }
     try {
+      if (!background) {
+        invalidateCaseCache(caseId);
+      }
       const response = await caseApi.getCaseById(caseId, {
         commentsPage: 1,
         commentsLimit: 25,
@@ -1356,47 +1369,45 @@ export const CaseDetailPage = () => {
             </Button>
           </div>
         )}
-        <header className="case-detail-header">
-          <div className="case-detail-header__identity">
-            <div className="case-detail-header__title-row">
-              <h1 className="case-detail-header__title">{formatDocketId(caseInfo.caseId || caseId)}</h1>
-            </div>
-            <p className="case-detail-header__subtitle">{caseInfo.title || caseInfo.caseName || 'Untitled docket'}</p>
-            <p className="case-detail-header__meta">{descriptionContent}</p>
-            <div className="case-detail-header__meta">
-              Priority: {caseInfo.priority || caseInfo.slaPriority || 'Standard'} • Last updated {formatDateTime(caseInfo.updatedAt)}
-            </div>
-            <div className="case-detail-header__meta">
-              Assigned to: {assignedToLabel}
-            </div>
-          </div>
-
-          <div className="case-detail-header__actions">
-            <StatusBadge status={lifecycleStatus} className="case-detail-header__status-prominent" />
-            {caseInfo?.qc?.status || caseInfo?.qcStatus ? (
-              <Badge variant={String(caseInfo?.qc?.status || caseInfo?.qcStatus).toUpperCase() === 'FAILED' ? 'danger' : 'info'}>
-                QC: {caseInfo?.qc?.status || caseInfo?.qcStatus}
-              </Badge>
-            ) : null}
-            {caseInfo.approvalStatus === 'PENDING' && <Badge variant="warning">Awaiting Partner Approval</Badge>}
-            {caseInfo.lockStatus?.isLocked && <Badge variant="warning">Lifecycle Locked</Badge>}
-            {caseInfo?.stage?.requiresApproval === true && isViewOnlyMode && <Badge variant="warning">Role Restricted Action</Badge>}
-            {!isViewOnlyMode && !caseInfo?.assignedToXID && (
-              <Button variant="primary" onClick={handleTakeOwnership} disabled={assigningCase}>
-                {assigningCase ? 'Taking ownership…' : 'Take Ownership'}
-              </Button>
-            )}
-            {!isViewOnlyMode && caseInfo?.assignedToXID && !isAssignedToCurrentUser && (
-              <Badge variant="info">Assigned: {assignedToLabel}</Badge>
-            )}
-            <Button variant="ghost" onClick={() => runGuardedAction(() => openSidebar('cfs'), 'Unable to open CFS panel right now.')} title="CFS" className="h-10 w-10 rounded-full p-0" aria-label="Open CFS sidebar">ⓘ</Button>
-            <Button variant="ghost" onClick={() => runGuardedAction(() => openSidebar('attachments'), 'Unable to open attachments panel right now.')} title="Attachments" className="h-10 w-10 rounded-full p-0" aria-label="Open attachments sidebar">📎</Button>
-            <Button variant="ghost" onClick={() => runGuardedAction(() => openSidebar('history'), 'Unable to open history panel right now.')} title="History" className="h-10 w-10 rounded-full p-0" aria-label="Open history sidebar">🕒</Button>
-            {canCloneDocket ? (
-              <Button variant="ghost" onClick={() => runGuardedAction(() => setCloneModalOpen(true), 'Unable to open clone docket right now.')} title="Clone Docket" className="h-10 w-10 rounded-full p-0" aria-label="Clone docket">⧉</Button>
-            ) : null}
-          </div>
-        </header>
+        <DocketDetails
+          docketId={caseId}
+          prefetchedCase={caseInfo}
+          prefetchedSyncKey={`${caseInfo?.lifecycle ?? ''}:${caseInfo?.updatedAt ?? ''}:${caseInfo?.assignedToXID ?? ''}`}
+          onDocketUpdated={handleDocketDetailsUpdated}
+          additionalMeta={(
+            <>
+              {descriptionContent && descriptionContent !== '-' ? (
+                <p className="case-detail-header__meta">{descriptionContent}</p>
+              ) : null}
+              <div className="case-detail-header__meta">
+                Priority: {caseInfo.priority || caseInfo.slaPriority || 'Standard'}
+              </div>
+            </>
+          )}
+        >
+          {caseInfo?.qc?.status || caseInfo?.qcStatus ? (
+            <Badge variant={String(caseInfo?.qc?.status || caseInfo?.qcStatus).toUpperCase() === 'FAILED' ? 'danger' : 'info'}>
+              QC: {caseInfo?.qc?.status || caseInfo?.qcStatus}
+            </Badge>
+          ) : null}
+          {caseInfo.approvalStatus === 'PENDING' && <Badge variant="warning">Awaiting Partner Approval</Badge>}
+          {caseInfo.lockStatus?.isLocked && <Badge variant="warning">Lifecycle Locked</Badge>}
+          {caseInfo?.stage?.requiresApproval === true && isViewOnlyMode && <Badge variant="warning">Role Restricted Action</Badge>}
+          {!isViewOnlyMode && !caseInfo?.assignedToXID && (
+            <Button variant="primary" onClick={handleTakeOwnership} disabled={assigningCase}>
+              {assigningCase ? 'Taking ownership…' : 'Take Ownership'}
+            </Button>
+          )}
+          {!isViewOnlyMode && caseInfo?.assignedToXID && !isAssignedToCurrentUser && (
+            <Badge variant="info">Assigned: {assignedToLabel || '—'}</Badge>
+          )}
+          <Button variant="ghost" onClick={() => runGuardedAction(() => openSidebar('cfs'), 'Unable to open CFS panel right now.')} title="CFS" className="h-10 w-10 rounded-full p-0" aria-label="Open CFS sidebar">ⓘ</Button>
+          <Button variant="ghost" onClick={() => runGuardedAction(() => openSidebar('attachments'), 'Unable to open attachments panel right now.')} title="Attachments" className="h-10 w-10 rounded-full p-0" aria-label="Open attachments sidebar">📎</Button>
+          <Button variant="ghost" onClick={() => runGuardedAction(() => openSidebar('history'), 'Unable to open history panel right now.')} title="History" className="h-10 w-10 rounded-full p-0" aria-label="Open history sidebar">🕒</Button>
+          {canCloneDocket ? (
+            <Button variant="ghost" onClick={() => runGuardedAction(() => setCloneModalOpen(true), 'Unable to open clone docket right now.')} title="Clone Docket" className="h-10 w-10 rounded-full p-0" aria-label="Clone docket">⧉</Button>
+          ) : null}
+        </DocketDetails>
         {actionConfirmation ? <div className="case-detail__confirmation">{actionConfirmation}</div> : null}
         <div className="case-detail__realtime-status" role="status" aria-live="polite">
           {realtimeStatus === 'live' ? '● Real-time updates active' : '● Reconnecting to real-time updates...'}
@@ -1453,7 +1464,11 @@ export const CaseDetailPage = () => {
                 </div>
                 <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Lifecycle</span>
-                  <StatusBadge status={lifecycleStatus} />
+                  {getLifecycleMeta(caseInfo?.lifecycle) ? (
+                    <LifecycleBadge lifecycle={caseInfo?.lifecycle} />
+                  ) : (
+                    <span className="field-value text-sm font-medium text-gray-900">—</span>
+                  )}
                 </div>
                 <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Due Date</span>
@@ -1627,7 +1642,13 @@ export const CaseDetailPage = () => {
                             </td>
                             <td>{row.createdAt ? formatDateTime(row.createdAt) : '—'}</td>
                             <td>{closedDate ? formatDateTime(closedDate) : '—'}</td>
-                            <td>{normalizeLifecycleForUi(row.lifecycle)}</td>
+                            <td>
+                              {getLifecycleMeta(row.lifecycle) ? (
+                                <LifecycleBadge lifecycle={row.lifecycle} />
+                              ) : (
+                                '—'
+                              )}
+                            </td>
                           </tr>
                         );
                       })}
