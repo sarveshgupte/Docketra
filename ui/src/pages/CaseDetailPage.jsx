@@ -43,22 +43,18 @@ const normalizeCase = (data) => {
   return data.case || data;
 };
 
-const toLifecycleStage = (status) => {
-  if (status === 'OPEN') return 'Under Execution';
-  if (status === 'RESOLVED') return 'Executed';
-  if (status === 'FILED') return 'Marked as Executed';
-  return status || 'Under Execution';
+const toLifecycleStage = (lifecycle) => {
+  if (lifecycle === 'OPEN') return 'Under Execution';
+  if (lifecycle === 'RESOLVED') return 'Executed';
+  if (lifecycle === 'FILED') return 'Marked as Executed';
+  return lifecycle || 'Under Execution';
 };
 
 const formatDocketId = (value = '') => String(value || '').replace(/^CASE-/, 'DOCKET-');
 const VALID_DOCKET_LIFECYCLES = new Set(['OPEN', 'PENDED', 'QC_PENDING', 'RESOLVED', 'FILED']);
-const normalizeLifecycleForUi = (lifecycle, status) => {
+const normalizeLifecycleForUi = (lifecycle) => {
   const normalizedLifecycle = String(lifecycle || '').trim().toUpperCase();
-  const normalizedStatus = String(status || '').trim().toUpperCase();
-  const source = normalizedLifecycle || normalizedStatus;
-  if (VALID_DOCKET_LIFECYCLES.has(source)) return source;
-  if (source === 'PENDING') return 'PENDED';
-  if (['ASSIGNED', 'IN_PROGRESS', 'CREATED', 'UNASSIGNED'].includes(source)) return 'OPEN';
+  if (VALID_DOCKET_LIFECYCLES.has(normalizedLifecycle)) return normalizedLifecycle;
   return 'OPEN';
 };
 const REALTIME_POLL_MS = 15000;
@@ -245,7 +241,7 @@ export const CaseDetailPage = () => {
   }, [caseData?.client, caseData?.clientId, caseData?.clientName, caseInfo?.businessName, caseInfo?.clientId, caseInfo?.clientName]);
 
   const subcategoryLabel = caseInfo?.subcategory || caseInfo?.caseSubCategory || caseInfo?.subCategory || '—';
-  const lifecycleStatus = normalizeLifecycleForUi(caseInfo?.lifecycle, caseInfo?.status);
+  const lifecycleStatus = normalizeLifecycleForUi(caseInfo?.lifecycle);
 
   const mergeUniqueComments = useCallback((inputComments = []) => {
     const map = new Map();
@@ -364,7 +360,8 @@ export const CaseDetailPage = () => {
       
       if (response.success && requestId === loadSequenceRef.current) {
         const normalized = response.data?.case || response.data;
-        console.log('ASSIGNMENT_DEBUG', {
+        console.log('DOCKET_STATE_DEBUG', {
+          lifecycle: normalizeLifecycleForUi(normalized?.lifecycle),
           assignedTo: normalized?.assignedToXID || normalized?.assignedTo?.xID || null,
           responseSource: 'loadCase',
           timestamp: new Date().toISOString(),
@@ -451,11 +448,11 @@ export const CaseDetailPage = () => {
   useEffect(() => {
     if (!caseData) return;
     previousRealtimeRef.current = {
-      status: caseInfo?.status,
+      lifecycle: lifecycleStatus,
       assignee: caseInfo?.assignedToXID || caseInfo?.assignedToName || null,
       commentsCount: comments.length,
     };
-  }, [caseData, caseInfo?.status, caseInfo?.assignedToXID, caseInfo?.assignedToName, comments.length]);
+  }, [caseData, lifecycleStatus, caseInfo?.assignedToXID, caseInfo?.assignedToName, comments.length]);
 
   useEffect(() => {
     const pollForUpdates = async () => {
@@ -475,7 +472,8 @@ export const CaseDetailPage = () => {
         if (!response?.success) return;
         const updated = response.data?.case || response.data;
         if (pollRequestId !== pollSequenceRef.current) return;
-        console.log('ASSIGNMENT_DEBUG', {
+        console.log('DOCKET_STATE_DEBUG', {
+          lifecycle: normalizeLifecycleForUi(updated?.lifecycle),
           assignedTo: updated?.assignedToXID || updated?.assignedTo?.xID || null,
           responseSource: 'polling',
           timestamp: new Date().toISOString(),
@@ -490,9 +488,10 @@ export const CaseDetailPage = () => {
             showSuccess('New comment update received.');
             sendBrowserNotification('Docketra update', 'A new comment was added to this docket.');
           }
-          if (nextInfo?.status && previous.status && nextInfo.status !== previous.status) {
-            showSuccess(`Status updated: ${previous.status} → ${nextInfo.status}`);
-            sendBrowserNotification('Docket status changed', `${previous.status} → ${nextInfo.status}`);
+          const nextLifecycle = normalizeLifecycleForUi(nextInfo?.lifecycle);
+          if (nextLifecycle && previous.lifecycle && nextLifecycle !== previous.lifecycle) {
+            showSuccess(`Lifecycle updated: ${previous.lifecycle} → ${nextLifecycle}`);
+            sendBrowserNotification('Docket lifecycle changed', `${previous.lifecycle} → ${nextLifecycle}`);
           }
           if (nextAssignee && previous.assignee && nextAssignee !== previous.assignee) {
             showWarning(`Assignment updated: ${previous.assignee} → ${nextAssignee}`);
@@ -725,7 +724,7 @@ export const CaseDetailPage = () => {
       tempId,
       _id: tempId,
       text: commentText,
-      createdBy: user?.email || 'Unknown',
+      createdBy: user?.email || 'System',
       createdByName: user?.name || null,
       createdByXID: user?.xID || null,
       createdAt: new Date().toISOString(),
@@ -829,8 +828,8 @@ export const CaseDetailPage = () => {
         fileName: uploadedFile.name,
         filename: uploadedFile.name,
         description,
-        uploadedBy: user?.email || 'Unknown',
-        createdBy: user?.email || 'Unknown',
+        uploadedBy: user?.email || 'System',
+        createdBy: user?.email || 'System',
         createdByName: user?.name || null,
         createdByXID: user?.xID || null,
         uploadedAt: new Date().toISOString(),
@@ -868,7 +867,7 @@ export const CaseDetailPage = () => {
     const confirmationTimestamp = new Date().toISOString();
     setConfirmModal({
       title: 'File Case',
-      description: `Stage change: ${toLifecycleStage(caseInfo?.status)} → Marked as Executed\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
+      description: `Stage change: ${toLifecycleStage(lifecycleStatus)} → Marked as Executed\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
       confirmText: 'File Case',
       onConfirm: async () => {
         setConfirmModal(null);
@@ -924,7 +923,7 @@ export const CaseDetailPage = () => {
     const confirmationTimestamp = new Date().toISOString();
     setConfirmModal({
       title: 'Pend Case',
-      description: `Stage change: ${toLifecycleStage(caseInfo?.status)} → Awaiting Partner Approval\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
+      description: `Stage change: ${toLifecycleStage(lifecycleStatus)} → Awaiting Partner Approval\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
       confirmText: 'Pend Case',
       onConfirm: async () => {
         setConfirmModal(null);
@@ -967,7 +966,7 @@ export const CaseDetailPage = () => {
     const confirmationTimestamp = new Date().toISOString();
     setConfirmModal({
       title: 'Resolve Case',
-      description: `Stage change: ${toLifecycleStage(caseInfo?.status)} → Executed\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
+      description: `Stage change: ${toLifecycleStage(lifecycleStatus)} → Executed\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
       confirmText: 'Resolve Case',
       onConfirm: async () => {
         setConfirmModal(null);
@@ -975,8 +974,8 @@ export const CaseDetailPage = () => {
         setResolvingCase(true);
         setCaseData((prev) => ({
           ...prev,
-          status: 'RESOLVED',
-          case: prev?.case ? { ...prev.case, status: 'RESOLVED' } : prev?.case,
+          lifecycle: 'RESOLVED',
+          case: prev?.case ? { ...prev.case, lifecycle: 'RESOLVED' } : prev?.case,
         }));
         try {
           const response = await caseApi.transitionDocket(caseId, {
@@ -1063,7 +1062,7 @@ export const CaseDetailPage = () => {
     }
     return value;
   }, [caseInfo?.description]);
-  const docketState = String(caseInfo?.status || '').toUpperCase();
+  const docketState = lifecycleStatus;
   const statusVersion = Number.isFinite(Number(caseInfo?.version)) ? Number(caseInfo.version) : 0;
   const performedBy = user?.email || user?.xID || 'system';
 
@@ -1157,11 +1156,11 @@ export const CaseDetailPage = () => {
         performedBy,
         notes: assignComment.trim(),
       });
-      showSuccess(`Assigned to ${selectedAssignee?.label || assignUser}`);
+      showSuccess(`Docket owner updated to ${selectedAssignee?.label || assignUser}`);
       appendTimelineEvent({
         id: `assigned-event-${Date.now()}`,
         action: 'ASSIGNED',
-        description: assignComment.trim() || `Assigned to ${selectedAssignee?.label || assignUser}`,
+        description: assignComment.trim() || `Docket owner updated to ${selectedAssignee?.label || assignUser}`,
         createdAt: new Date().toISOString(),
         createdBy: user?.name || user?.xID || user?.email || 'System',
       });
@@ -1187,11 +1186,11 @@ export const CaseDetailPage = () => {
   // Task 2: Inactivity warning — OPEN case not updated in 3+ days (not pended)
   const isInactiveWarning = useMemo(() => {
     if (!caseInfo) return false;
-    if (caseInfo?.status !== 'OPEN') return false;
+    if (lifecycleStatus !== 'OPEN') return false;
     if (!caseInfo.updatedAt) return false;
     const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
     return new Date(caseInfo.updatedAt) < threeDaysAgo;
-  }, [caseInfo]);
+  }, [caseInfo, lifecycleStatus]);
 
   // Task 3: Smart lifecycle warnings for File/Resolve modals
   const lifecycleWarnings = useMemo(() => {
@@ -1207,15 +1206,15 @@ export const CaseDetailPage = () => {
     const isSlaBreach =
       caseInfo.slaDueDate &&
       new Date(caseInfo.slaDueDate) < new Date() &&
-      caseInfo?.status !== 'RESOLVED' &&
-      caseInfo?.status !== 'FILED';
+      lifecycleStatus !== 'RESOLVED' &&
+      lifecycleStatus !== 'FILED';
     if (isSlaBreach) {
       warnings.push('SLA has been breached for this case.');
     }
     return warnings;
-  }, [caseInfo, comments]);
+  }, [caseInfo, comments, lifecycleStatus]);
 
-  const actionInFlight = pullingCase || assigningCase || pendingCase || resolvingCase || filingCase || unpendingCase;
+  const actionInFlight = pullingCase || assigningCase || pendingCase || resolvingCase || filingCase || unpendingCase || movingToGlobal;
   const canRunDocketAction = Boolean(actionComment.trim()) && !actionInFlight;
 
   const openActionModal = (type) => {
@@ -1242,27 +1241,33 @@ export const CaseDetailPage = () => {
 
   const headerActions = useMemo(() => {
     if (isViewOnlyMode) return [];
-    if (docketState === 'UNASSIGNED') {
-      return [{ key: 'move_wl', label: 'Move to WL', variant: 'primary', onClick: handlePullCase, disabled: actionInFlight }];
-    }
     if (docketState === 'OPEN') {
-      return [{ key: 'assign', label: 'Assign', variant: 'primary', onClick: () => setShowAssignModal(true), disabled: actionInFlight }];
+      if (caseInfo?.assignedToXID) {
+        return [
+          { key: 'assign', label: 'Assign', variant: 'primary', onClick: () => setShowAssignModal(true), disabled: actionInFlight },
+          { key: 'move_wb', label: 'Move to WB', variant: 'outline', onClick: handleMoveToWB, disabled: actionInFlight },
+        ];
+      }
+      return [
+        { key: 'assign', label: 'Assign', variant: 'primary', onClick: () => setShowAssignModal(true), disabled: actionInFlight },
+        { key: 'move_wl', label: 'Move to WL', variant: 'secondary', onClick: handlePullCase, disabled: actionInFlight },
+      ];
     }
-    if (lifecycleStatus === 'PENDED') {
-      return [{ key: 'unpend', label: 'Unpend', variant: 'primary', onClick: () => setShowUnpendModal(true), disabled: actionInFlight }];
+    if (docketState === 'PENDED') {
+      return [
+        { key: 'resume', label: 'Resume Work', variant: 'primary', onClick: () => setShowUnpendModal(true), disabled: actionInFlight },
+      ];
     }
     return [];
-  }, [actionInFlight, docketState, isViewOnlyMode, lifecycleStatus, handlePullCase]);
+  }, [actionInFlight, docketState, isViewOnlyMode, caseInfo?.assignedToXID, handleMoveToWB, handlePullCase]);
 
   // Case action buttons (File, Pend, Resolve) - PR: Fix Case Lifecycle
   // Action Visibility Rules:
   // - OPEN: Show File, Pend, Resolve (no Unpend)
-  // - PENDING: Show ONLY Unpend (no File, Pend, Resolve)
+  // - PENDED: Show ONLY Unpend (no File, Pend, Resolve)
   // - FILED or RESOLVED: Show nothing (terminal states, read-only)
   const canPerformLifecycleActions = lifecycleStatus === 'OPEN' && !isViewOnlyMode;
-  const canShowUnpendAction = lifecycleStatus === 'PENDED' && !isViewOnlyMode;
-  const shouldShowActions = canPerformLifecycleActions || canShowUnpendAction;
-  const showQcActions = isAdmin && docketState === 'QC_PENDING' && !isViewOnlyMode;
+  const showQcActions = isAdmin && lifecycleStatus === 'QC_PENDING' && !isViewOnlyMode;
   const isAnyModalOpen = Boolean(
     showFileModal
     || showPendModal
@@ -1497,7 +1502,7 @@ export const CaseDetailPage = () => {
               </div>
             </section>
 
-            <section className={`case-card ${caseInfo?.status === 'PENDING' ? 'opacity-90' : ''}`} aria-labelledby="overview-heading">
+            <section className={`case-card ${lifecycleStatus === 'PENDED' ? 'opacity-90' : ''}`} aria-labelledby="overview-heading">
               <div className="case-card__heading">
                 <h2 id="overview-heading">Docket Details</h2>
               </div>
@@ -1515,9 +1520,9 @@ export const CaseDetailPage = () => {
                   <span className="field-value text-sm font-medium text-gray-900">{Number(caseInfo?.slaDays || 0) > 0 ? String(caseInfo.slaDays) : '-'}</span>
                 </div>
               </div>
-              {caseInfo?.status === 'PENDING' && (caseInfo?.pendingUntil || caseInfo?.reopenDate) ? (
+              {lifecycleStatus === 'PENDED' && (caseInfo?.pendingUntil || caseInfo?.reopenDate) ? (
                 <Badge variant="warning" className="mt-3 inline-flex">
-                  PENDING till {formatDateTime(caseInfo.pendingUntil || caseInfo.reopenDate)}
+                  PENDED till {formatDateTime(caseInfo.pendingUntil || caseInfo.reopenDate)}
                 </Badge>
               ) : null}
               <div className="field-group mt-4">
@@ -1642,7 +1647,7 @@ export const CaseDetailPage = () => {
                         <th>Docket #</th>
                         <th>Created</th>
                         <th>Resolved/Filed</th>
-                        <th>Status</th>
+                        <th>Lifecycle</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1662,7 +1667,7 @@ export const CaseDetailPage = () => {
                             </td>
                             <td>{row.createdAt ? formatDateTime(row.createdAt) : '—'}</td>
                             <td>{closedDate ? formatDateTime(closedDate) : '—'}</td>
-                            <td>{row.status || '—'}</td>
+                            <td>{normalizeLifecycleForUi(row.lifecycle)}</td>
                           </tr>
                         );
                       })}
@@ -1969,7 +1974,7 @@ export const CaseDetailPage = () => {
         >
           <div style={{ padding: 'var(--spacing-md)' }}>
             <p style={{ marginBottom: 'var(--spacing-md)', color: 'var(--text-secondary)' }}>
-              Unpending a case will move it back to OPEN status and return it to your worklist.
+              Unpending a case will move it back to OPEN lifecycle and return it to your worklist.
               Use this when you no longer need to wait for external input.
             </p>
             <Textarea
