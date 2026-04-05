@@ -238,7 +238,7 @@ export const CasesPage = () => {
       row.clientName || row.client?.name || '',
       row.status || '',
       row.slaDueDate ? formatDateTime(row.slaDueDate) : '',
-      row.assignedToName || row.assignedTo || '',
+      row.assignedToName || row.assignedToXID || row.assignedTo || '',
       row.updatedAt ? formatDateTime(row.updatedAt) : '',
       isEscalatedCase(row, firmConfig.escalationInactivityThresholdHours) ? 'Yes' : 'No',
     ]);
@@ -282,10 +282,10 @@ export const CasesPage = () => {
       return;
     }
     // Task 3: Confirm before reassigning if already assigned to someone else
-    if (caseRecord.assignedTo && caseRecord.status !== CASE_STATUS.UNASSIGNED) {
+    if ((caseRecord.assignedToXID || caseRecord.assignedTo) && caseRecord.status !== CASE_STATUS.UNASSIGNED) {
       setConfirmModal({
         title: 'Reassign Docket',
-        description: `This docket is currently assigned to ${caseRecord.assignedToName || caseRecord.assignedTo}. Reassign to yourself?`,
+        description: `This docket is currently assigned to ${caseRecord.assignedToName || caseRecord.assignedToXID || caseRecord.assignedTo}. Reassign to yourself?`,
         onConfirm: async () => {
           setConfirmModal(null);
           setAssigningCaseId(caseRecord.caseId);
@@ -491,7 +491,8 @@ export const CasesPage = () => {
       cases.filter(
         (c) =>
           c.status === CASE_STATUS.OPEN &&
-          (c.assignedTo === user?._id ||
+          (c.assignedToXID === user?.xID ||
+            c.assignedTo === user?._id ||
             c.assignedTo === user?.id ||
             c.assignedToEmail === user?.email)
       ).length,
@@ -658,7 +659,7 @@ export const CasesPage = () => {
       sortable: true,
       headerClassName: 'w-[1px] whitespace-nowrap',
       cellClassName: 'w-[1px] whitespace-nowrap',
-      render: (row) => row.assignedToName || row.assignedTo || 'Unassigned',
+      render: (row) => row.assignedToName || row.assignedToXID || row.assignedTo || 'Unassigned',
     },
     {
       key: 'updatedAt',
@@ -685,9 +686,9 @@ export const CasesPage = () => {
           <details className="cases-page__row-menu" onClick={(event) => event.stopPropagation()}>
             <summary aria-label={`Row actions for ${formatCaseName(row.caseName)}`}>⋯</summary>
             <div className="cases-page__row-menu-panel">
-              {(row.assignedToName || row.assignedTo) && (
+              {(row.assignedToName || row.assignedToXID || row.assignedTo) && (
                 <div className="cases-page__row-menu-info">
-                  Assigned: {row.assignedToName || row.assignedTo}
+                  Assigned: {row.assignedToName || row.assignedToXID || row.assignedTo}
                 </div>
               )}
               {isLocked && (
