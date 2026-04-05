@@ -25,6 +25,16 @@ const docketAuditLogSchema = new mongoose.Schema({
     required: true,
     index: true,
   },
+  performedByRole: {
+    type: String,
+    enum: ['USER', 'ADMIN', 'SYSTEM'],
+    default: 'USER',
+    index: true,
+  },
+  comment: {
+    type: String,
+    default: null,
+  },
   timestamp: {
     type: Date,
     required: true,

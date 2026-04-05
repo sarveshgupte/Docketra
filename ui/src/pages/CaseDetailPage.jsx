@@ -1321,7 +1321,7 @@ export const CaseDetailPage = () => {
   // - OPEN: Show File, Pend, Resolve (no Unpend)
   // - PENDING: Show ONLY Unpend (no File, Pend, Resolve)
   // - FILED or RESOLVED: Show nothing (terminal states, read-only)
-  const canPerformLifecycleActions = ['OPEN', 'ASSIGNED', 'IN_PROGRESS'].includes(docketState) && !isViewOnlyMode;
+  const canPerformLifecycleActions = lifecycleStatus === 'OPEN' && !isViewOnlyMode;
   const showQcActions = isAdmin && docketState === 'QC_PENDING' && !isViewOnlyMode;
   const isAnyModalOpen = Boolean(
     showFileModal
@@ -1618,14 +1618,16 @@ export const CaseDetailPage = () => {
               )}
               {canPerformLifecycleActions ? (
                 <section className="mt-4 border-t pt-4" aria-label="Docket actions">
-                  <label className="mt-3 flex items-center gap-2 text-sm text-gray-700">
-                    <input
-                      type="checkbox"
-                      checked={forceQcReview}
-                      onChange={(e) => setForceQcReview(e.target.checked)}
-                    />
-                    Force QC Review
-                  </label>
+                  {isAdmin ? (
+                    <label className="mt-3 flex items-center gap-2 text-sm text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={forceQcReview}
+                        onChange={(e) => setForceQcReview(e.target.checked)}
+                      />
+                      Force QC Review
+                    </label>
+                  ) : null}
                   <h3 className="mt-3 text-sm font-semibold text-gray-900">Docket Actions</h3>
                   <Textarea
                     label="Action Comment (Required)"
