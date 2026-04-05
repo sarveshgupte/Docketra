@@ -1624,14 +1624,6 @@ const getCaseByCaseId = async (req, res) => {
       timestamp: new Date().toISOString(),
     });
 
-    console.log('ASSIGNMENT_DEBUG', {
-      caseId: displayCaseId,
-      assignedToXID: canonicalAssignmentXID,
-      assignedUserResolved: Boolean(assignedUser),
-      responseSource: 'GET /api/cases/:id',
-      timestamp: new Date().toISOString(),
-    });
-
     return res.status(200).json({
       success: true,
       data: {
@@ -1666,7 +1658,6 @@ const getCaseByCaseId = async (req, res) => {
         accessMode: {
           isViewOnlyMode,
           isOwner,
-          isAssigned: !isViewOnlyMode,
           canEdit: !isViewOnlyMode,
           canComment: true, // Always allowed
           canAttach: true, // Always allowed

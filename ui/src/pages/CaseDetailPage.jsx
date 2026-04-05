@@ -748,7 +748,7 @@ export const CaseDetailPage = () => {
       tempId,
       _id: tempId,
       text: commentText,
-      createdBy: user?.email || 'Unknown',
+      createdBy: user?.email || 'System',
       createdByName: user?.name || null,
       createdByXID: user?.xID || null,
       createdAt: new Date().toISOString(),
@@ -852,8 +852,8 @@ export const CaseDetailPage = () => {
         fileName: uploadedFile.name,
         filename: uploadedFile.name,
         description,
-        uploadedBy: user?.email || 'Unknown',
-        createdBy: user?.email || 'Unknown',
+        uploadedBy: user?.email || 'System',
+        createdBy: user?.email || 'System',
         createdByName: user?.name || null,
         createdByXID: user?.xID || null,
         uploadedAt: new Date().toISOString(),
@@ -1180,11 +1180,11 @@ export const CaseDetailPage = () => {
         performedBy,
         notes: assignComment.trim(),
       });
-      showSuccess(`Assigned to ${selectedAssignee?.label || assignUser}`);
+      showSuccess(`Docket owner updated to ${selectedAssignee?.label || assignUser}`);
       appendTimelineEvent({
         id: `assigned-event-${Date.now()}`,
         action: 'ASSIGNED',
-        description: assignComment.trim() || `Assigned to ${selectedAssignee?.label || assignUser}`,
+        description: assignComment.trim() || `Docket owner updated to ${selectedAssignee?.label || assignUser}`,
         createdAt: new Date().toISOString(),
         createdBy: user?.name || user?.xID || user?.email || 'System',
       });
@@ -1980,7 +1980,7 @@ export const CaseDetailPage = () => {
         >
           <div style={{ padding: 'var(--spacing-md)' }}>
             <p style={{ marginBottom: 'var(--spacing-md)', color: 'var(--text-secondary)' }}>
-              Unpending a case will move it back to OPEN status and return it to your worklist.
+              Unpending a case will move it back to OPEN lifecycle and return it to your worklist.
               Use this when you no longer need to wait for external input.
             </p>
             <Textarea
