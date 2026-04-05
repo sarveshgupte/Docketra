@@ -4,7 +4,7 @@
 
 .admin {
   width: 100%;
-  padding-top: 2rem;
+  padding-top: 1.25rem;
 }
 
 .admin__header {
@@ -21,7 +21,7 @@
 .admin__tabs {
   display: flex;
   gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
   flex-wrap: wrap;
 }
 
@@ -30,14 +30,15 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
 }
 
 .admin__actions {
   display: flex;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-xs);
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
+  max-width: 14rem;
 }
 
 .admin__primary-label {
@@ -91,9 +92,10 @@
 
 .neo-table th,
 .neo-table td {
-  padding: var(--spacing-md);
+  padding: 0.625rem 0.75rem;
   text-align: left;
   border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
 }
 
 .neo-table th {
