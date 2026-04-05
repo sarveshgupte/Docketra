@@ -21,6 +21,7 @@ import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
 import { useToast } from '../hooks/useToast';
 import { caseApi } from '../api/case.api';
+import { clientApi } from '../api/client.api';
 import { categoryService } from '../services/categoryService';
 import { extractErrorMessage } from '../services/apiResponse';
 import { formatDateTime } from '../utils/formatDateTime';
@@ -106,7 +107,6 @@ export const CaseDetailPage = () => {
   const [movingToGlobal, setMovingToGlobal] = useState(false);
   const [actionConfirmation, setActionConfirmation] = useState('');
   const [actionError, setActionError] = useState(null);
-  const fileInputRef = useRef(null);
   const pageContainerRef = useRef(null);
   const commentsListRef = useRef(null);
   const commentComposerId = `case-comment-composer-${caseId}`;
@@ -145,6 +145,8 @@ export const CaseDetailPage = () => {
   const [assigningCase, setAssigningCase] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarType, setSidebarType] = useState(null);
+  const [clientFactSheet, setClientFactSheet] = useState(null);
+  const [loadingClientFactSheet, setLoadingClientFactSheet] = useState(false);
   const [realtimeStatus, setRealtimeStatus] = useState('live');
   const [commentWindowSize, setCommentWindowSize] = useState(INITIAL_VIRTUAL_WINDOW);
   const [retryQueue, setRetryQueue] = useState(() => {
@@ -841,10 +843,6 @@ export const CaseDetailPage = () => {
       }));
       setSelectedFile(null);
       setFileDescription('');
-      // Reset file input using ref
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
       const message = `Attachment added to docket ${caseId} • ${formatDateTime(new Date())}`;
       showSuccess(message);
       setActionConfirmation(message);
@@ -1086,6 +1084,20 @@ export const CaseDetailPage = () => {
   const statusVersion = Number.isFinite(Number(caseInfo?.version)) ? Number(caseInfo.version) : 0;
   const performedBy = user?.email || user?.xID || 'system';
 
+  const loadClientFactSheet = useCallback(async () => {
+    if (!caseId) return;
+    setLoadingClientFactSheet(true);
+    try {
+      const response = await clientApi.getClientFactSheetForCase(caseId);
+      setClientFactSheet(response?.data || null);
+    } catch (error) {
+      setClientFactSheet(null);
+      showError(error?.response?.data?.message || error?.message || 'Failed to load client fact sheet');
+    } finally {
+      setLoadingClientFactSheet(false);
+    }
+  }, [caseId, showError]);
+
   const openSidebar = (type) => {
     setSidebarType((previousType) => {
       if (sidebarOpen && previousType === type) {
@@ -1093,6 +1105,9 @@ export const CaseDetailPage = () => {
         return null;
       }
       setSidebarOpen(true);
+      if (type === 'cfs') {
+        void loadClientFactSheet();
+      }
       return type;
     });
   };
@@ -1100,6 +1115,7 @@ export const CaseDetailPage = () => {
   useEffect(() => {
     setSidebarOpen(false);
     setSidebarType(null);
+    setClientFactSheet(null);
   }, [caseId]);
 
   const handleAssignDocket = async () => {
@@ -1638,6 +1654,15 @@ export const CaseDetailPage = () => {
           caseInfo={caseInfo}
           attachments={attachments}
           timelineEvents={timelineEvents}
+          selectedAttachmentFile={selectedFile}
+          attachmentComment={fileDescription}
+          uploadingAttachment={uploadingFile}
+          uploadProgress={uploadProgress}
+          inboundAddress={inboundAddress}
+          onAttachmentFileChange={setSelectedFile}
+          onAttachmentCommentChange={setFileDescription}
+          onUploadAttachment={handleUploadFile}
+          onCopyInboundAddress={handleCopyInboundAddress}
         />
 
         {/* ─── Modals (positioned outside split pane) ─────────────── */}
