@@ -14,7 +14,7 @@ const categoryRepository = require('../repositories/category.repository');
 const { detectDuplicates, generateDuplicateOverrideComment } = require('../services/clientDuplicateDetector');
 const { CASE_CATEGORIES, CASE_LOCK_CONFIG, COMMENT_PREVIEW_LENGTH, CLIENT_STATUS } = require('../config/constants');
 const CaseStatus = require('../domain/case/caseStatus');
-const { CASE_LIFECYCLE, deriveLifecycle } = require('../domain/case/caseLifecycle');
+const { CASE_LIFECYCLE } = require('../domain/case/caseLifecycle');
 const { isValidTransition } = require('./docketWorkflow.controller');
 const { isProduction } = require('../config/config');
 const { logCaseListViewed, logAdminAction } = require('../services/auditLog.service');
@@ -1609,20 +1609,20 @@ const getCaseByCaseId = async (req, res) => {
     } else if (caseObject.assignedToXID) {
       assignedUser = await User.findOne({ xID: caseObject.assignedToXID, firmId: scopedFirmId }).select('_id name email xID').lean();
     }
-    const resolvedLifecycle = deriveLifecycle({
-      status: caseObject.status,
-      assignedToXID: caseObject.assignedToXID,
-      lifecycle: caseObject.lifecycle,
-    });
     const canonicalAssignmentXID = caseObject.assignedToXID || assignedUser?.xID || null;
-    const normalizedStatus = String(caseObject.status || '').toUpperCase();
-    const normalizedLifecycle = (() => {
-      if (normalizedStatus === 'FILED') return 'FILED';
-      if (normalizedStatus === 'RESOLVED') return 'RESOLVED';
-      if (normalizedStatus === 'QC_PENDING') return 'QC_PENDING';
-      if (normalizedStatus === 'PENDING' || normalizedStatus === 'PENDED') return 'PENDED';
-      return 'OPEN';
-    })();
+    const normalizedLifecycle = String(caseObject.lifecycle || '').trim().toUpperCase();
+    const lifecycle =
+      ['OPEN', 'PENDED', 'QC_PENDING', 'RESOLVED', 'FILED'].includes(normalizedLifecycle)
+        ? normalizedLifecycle
+        : 'OPEN';
+
+    console.log('DOCKET_STATE_DEBUG', {
+      caseId: displayCaseId,
+      lifecycle,
+      assignedTo: canonicalAssignmentXID,
+      responseSource: 'GET /api/cases/:id',
+      timestamp: new Date().toISOString(),
+    });
 
     console.log('ASSIGNMENT_DEBUG', {
       caseId: displayCaseId,
@@ -1636,7 +1636,7 @@ const getCaseByCaseId = async (req, res) => {
       success: true,
       data: {
         ...caseObject,
-        lifecycle: normalizedLifecycle || resolvedLifecycle || 'OPEN',
+        lifecycle,
         assignedToXID: canonicalAssignmentXID,
         assignedToName: assignedUser?.name || caseObject.assignedToName || null,
         assignedTo: assignedUser ? {
