@@ -174,6 +174,7 @@ export const Layout = ({ children }) => {
   const currentFirmSlug = firmSlug || user?.firmSlug;
   const hasAdminAccess = user?.role === USER_ROLES.ADMIN;
   const firmLabel = user?.firm?.name || currentFirmSlug || 'Firm';
+  const firmType = typeof user?.firm?.type === 'string' ? user.firm.type.trim() : '';
   const firmInitials = firmLabel.substring(0, 2).toUpperCase();
   const reportsRoute = `${ROUTES.FIRM_BASE(currentFirmSlug)}/admin/reports`;
 
@@ -529,7 +530,7 @@ export const Layout = ({ children }) => {
             <div className="enterprise-sidebar__firm-name" title={firmLabel}>
               {firmLabel}
             </div>
-            <div className="enterprise-sidebar__firm-label">Professional Firm</div>
+            {firmType ? <div className="enterprise-sidebar__firm-label">{firmType}</div> : null}
           </div>
         </div>
 
