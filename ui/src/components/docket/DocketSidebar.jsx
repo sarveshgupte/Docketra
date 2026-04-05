@@ -13,6 +13,25 @@ const EMPTY_STATES = {
 };
 
 export const DocketSidebar = ({ isOpen, type, onClose, caseInfo, attachments = [], timelineEvents = [] }) => {
+  const formatDatePart = (value) => {
+    const parsed = value ? new Date(value) : null;
+    if (!parsed || Number.isNaN(parsed.getTime())) return '—';
+    return parsed.toLocaleDateString('en-GB');
+  };
+
+  const formatTimePart = (value) => {
+    const parsed = value ? new Date(value) : null;
+    if (!parsed || Number.isNaN(parsed.getTime())) return '—';
+    return parsed.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+  };
+
+  const resolveParticulars = (event) => {
+    if (!event) return 'Update';
+    return event.actionLabel || event.description || event.actionType || event.action || event.event || event.title || 'Update';
+  };
+
+  const resolveActorXid = (event) => event?.performedByXID || event?.actorXID || event?.createdByXID || event?.xID || 'SYSTEM';
+
   useEffect(() => {
     if (!isOpen) return undefined;
     const previousOverflow = document.body.style.overflow;
@@ -53,14 +72,34 @@ export const DocketSidebar = ({ isOpen, type, onClose, caseInfo, attachments = [
     if (!timelineEvents.length) return <p className="docket-sidebar__empty">{EMPTY_STATES.history}</p>;
 
     return (
-      <ul className="space-y-3">
-        {timelineEvents.map((event, index) => (
-          <li key={event.id || event._id || index} className="rounded-xl border border-gray-200 p-3">
-            <p className="text-sm font-medium text-gray-900">{event.action || event.event || event.title || 'Update'}</p>
-            <p className="text-xs text-gray-500">{formatDateTime(event.createdAt || event.timestamp || event.date)}</p>
-          </li>
-        ))}
-      </ul>
+      <div className="docket-sidebar__history-wrap">
+        <p className="docket-sidebar__history-note">Complete lifecycle log from docket creation/cloning through resolution/filing, including opens/views/closes and WB ↔ WL movements.</p>
+        <div className="docket-sidebar__history-table-wrap">
+          <table className="docket-sidebar__history-table">
+            <thead>
+              <tr>
+                <th scope="col">Particulars</th>
+                <th scope="col">xID</th>
+                <th scope="col">Time</th>
+                <th scope="col">Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {timelineEvents.map((event, index) => {
+                const eventTimestamp = event?.timestamp || event?.createdAt || event?.date || event?.updatedAt;
+                return (
+                  <tr key={event.id || event._id || `${resolveParticulars(event)}-${eventTimestamp}-${index}`}>
+                    <td>{resolveParticulars(event)}</td>
+                    <td>{resolveActorXid(event)}</td>
+                    <td>{formatTimePart(eventTimestamp)}</td>
+                    <td>{formatDatePart(eventTimestamp)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
     );
   };
 
