@@ -3,6 +3,7 @@
  */
 
 import React, { useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
 const FOCUSABLE_SELECTOR = [
   'button:not([disabled])',
@@ -123,15 +124,15 @@ export const Modal = ({
     }
   };
 
-  return (
+  const modalContent = (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4 sm:p-6"
+      className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-gray-900/50 p-4 backdrop-blur-sm sm:items-center sm:p-6"
       onClick={handleOverlayClick}
       role="presentation"
     >
       <div
         ref={modalRef}
-        className={`relative flex max-h-[90vh] w-full flex-col overflow-hidden rounded-xl bg-white shadow-xl ${modalSizeClass}`}
+        className={`relative my-8 flex max-h-[90vh] w-full flex-col overflow-hidden rounded-xl bg-white shadow-xl sm:my-0 ${modalSizeClass}`}
         role="dialog"
         aria-modal="true"
         aria-label={title}
@@ -157,4 +158,10 @@ export const Modal = ({
       </div>
     </div>
   );
+
+  if (typeof document === 'undefined') {
+    return modalContent;
+  }
+
+  return createPortal(modalContent, document.body);
 };
