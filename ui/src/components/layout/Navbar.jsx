@@ -53,6 +53,8 @@ export default function Navbar() {
             type="button"
             onClick={() => setIsOpen(!isOpen)}
             className="md:hidden inline-flex items-center justify-center p-2 rounded-lg border border-gray-200"
+            aria-label="Toggle navigation menu"
+            aria-expanded={isOpen}
           >
             ☰
           </button>
