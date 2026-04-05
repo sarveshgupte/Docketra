@@ -12,7 +12,16 @@ const EMPTY_STATES = {
   history: 'No history yet. Lifecycle events will appear here as this docket progresses.',
 };
 
-export const DocketSidebar = ({ isOpen, type, onClose, caseInfo, attachments = [], timelineEvents = [] }) => {
+export const DocketSidebar = ({
+  isOpen,
+  type,
+  onClose,
+  caseInfo,
+  attachments = [],
+  timelineEvents = [],
+  cfsData = null,
+  cfsLoading = false,
+}) => {
   useEffect(() => {
     if (!isOpen) return undefined;
     const previousOverflow = document.body.style.overflow;
@@ -26,12 +35,51 @@ export const DocketSidebar = ({ isOpen, type, onClose, caseInfo, attachments = [
 
   const renderContent = () => {
     if (type === 'cfs') {
+      const cfsAttachments = cfsData?.attachments || cfsData?.files || [];
+      const clientId = cfsData?.clientId || caseInfo?.clientId || caseInfo?.client?.clientId || '—';
+      const clientName = cfsData?.businessName
+        || cfsData?.basicInfo?.clientName
+        || caseInfo?.clientName
+        || caseInfo?.businessName
+        || caseInfo?.client?.businessName
+        || '—';
+      const notes = cfsData?.description || cfsData?.notes || '';
+
+      if (cfsLoading) {
+        return <p className="docket-sidebar__empty">Loading client fact sheet…</p>;
+      }
+
       return (
         <div className="space-y-4 text-sm text-gray-700">
-          <div><span className="font-semibold text-gray-900">Client:</span> {caseInfo?.clientName || caseInfo?.businessName || 'Unknown'}</div>
-          <div><span className="font-semibold text-gray-900">Category:</span> {caseInfo?.category || '—'}</div>
-          <div><span className="font-semibold text-gray-900">Assigned To:</span> {caseInfo?.assignedToName || caseInfo?.assignedToXID || 'Unassigned'}</div>
-          <div><span className="font-semibold text-gray-900">Created:</span> {formatDateTime(caseInfo?.createdAt)}</div>
+          <div><span className="font-semibold text-gray-900">Client Name:</span> {clientName}</div>
+          <div><span className="font-semibold text-gray-900">Client ID:</span> {clientId}</div>
+          <div>
+            <span className="mb-1 block font-semibold text-gray-900">Notes</span>
+            <textarea
+              value={notes}
+              readOnly
+              className="w-full min-h-[140px] rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700"
+              placeholder="No client fact sheet notes available."
+            />
+            <p className="mt-2 text-xs text-gray-500">
+              Read-only in dockets. Admins can edit this in Client Management.
+            </p>
+          </div>
+          <div>
+            <span className="mb-2 block font-semibold text-gray-900">File Attachments</span>
+            {cfsAttachments.length === 0 ? (
+              <p className="text-xs text-gray-500">No client fact sheet attachments.</p>
+            ) : (
+              <ul className="space-y-2">
+                {cfsAttachments.map((file, index) => (
+                  <li key={file.fileId || file._id || index} className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+                    <p className="text-sm font-medium text-gray-900">{file.fileName || file.filename || 'Attachment'}</p>
+                    <p className="text-xs text-gray-500">{formatDateTime(file.uploadedAt || file.createdAt)}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       );
     }
