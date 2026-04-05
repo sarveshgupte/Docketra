@@ -22,6 +22,7 @@ import { formatDate } from '../utils/formatters';
 import { useToast } from '../hooks/useToast';
 import { formClasses } from '../theme/tokens';
 import { useQueryState } from '../hooks/useQueryState';
+import { useActiveDocket } from '../hooks/useActiveDocket';
 import { ROUTES } from '../constants/routes';
 import './WorkbasketPage.css';
 
@@ -71,6 +72,7 @@ export const WorkbasketPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { firmSlug } = useParams();
+  const { openDocket } = useActiveDocket();
   const { showSuccess, showError, showInfo } = useToast();
   
   const [loading, setLoading] = useState(true);
@@ -377,7 +379,7 @@ export const WorkbasketPage = () => {
         <button
           type="button"
           className="docket-link"
-          onClick={() => navigate(ROUTES.CASE_DETAIL(firmSlug, caseItem.caseId))}
+          onClick={() => openDocket({ caseId: caseItem.caseId, navigate, to: ROUTES.CASE_DETAIL(firmSlug, caseItem.caseId) })}
         >
           {caseItem.caseId}
         </button>
@@ -415,7 +417,7 @@ export const WorkbasketPage = () => {
       align: 'center',
       headerClassName: 'min-w-[10rem] whitespace-nowrap',
       cellClassName: 'min-w-[10rem] whitespace-nowrap',
-      render: (caseItem) => caseItem.assignedToName || caseItem.assignedToXID || 'Unassigned',
+      render: (caseItem) => caseItem.assignedToName || caseItem.assignedToXID || (caseItem.openedByXID === user?.xID ? (user?.name || user?.xID) : 'Unassigned'),
     },
     {
       key: 'slaDueDate',
@@ -461,7 +463,7 @@ export const WorkbasketPage = () => {
           <Button
             variant="outline"
             size="small"
-            onClick={() => navigate(ROUTES.CASE_DETAIL(firmSlug, caseItem.caseId))}
+            onClick={() => openDocket({ caseId: caseItem.caseId, navigate, to: ROUTES.CASE_DETAIL(firmSlug, caseItem.caseId) })}
           >
             View
           </Button>

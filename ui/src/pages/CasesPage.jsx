@@ -34,6 +34,7 @@ import { AuditMetadata } from '../components/ui/AuditMetadata';
 import { useFirm } from '../hooks/useFirm';
 import { ROUTES } from '../constants/routes';
 import { RouteErrorFallback } from '../components/routing/RouteErrorFallback';
+import { useActiveDocket } from '../hooks/useActiveDocket';
 import './CasesPage.css';
 
 // Keep date-sort keys explicit so additional date columns can be added safely.
@@ -93,6 +94,7 @@ export const CasesPage = () => {
   );
 
   const { showSuccess } = useToast();
+  const { openDocket } = useActiveDocket();
   // Use a stable, unique identifier per user for saved-views storage.
   // _id is the MongoDB ObjectId; id is an alias used in some API responses.
   const savedViewsUserId = user?._id || user?.id || user?.email || null;
@@ -255,7 +257,10 @@ export const CasesPage = () => {
 
   const handleCaseClick = useCallback((caseRecord) => {
     const index = sortedCases.findIndex((c) => c.caseId === caseRecord.caseId);
-    navigate(ROUTES.CASE_DETAIL(firmSlug, caseRecord.caseId), {
+    openDocket({
+      caseId: caseRecord.caseId,
+      navigate,
+      to: ROUTES.CASE_DETAIL(firmSlug, caseRecord.caseId),
       state: { sourceList: sortedCases.map((c) => c.caseId), index },
     });
   }, [sortedCases, navigate, firmSlug]);
@@ -558,7 +563,11 @@ export const CasesPage = () => {
     },
     onEdit: () => {
       const first = sortedCases[0];
-      if (first?.caseId) navigate(`${ROUTES.CASE_DETAIL(firmSlug, first.caseId)}?mode=edit`);
+      if (first?.caseId) openDocket({
+        caseId: first.caseId,
+        navigate,
+        to: `${ROUTES.CASE_DETAIL(firmSlug, first.caseId)}?mode=edit`,
+      });
     },
   });
 

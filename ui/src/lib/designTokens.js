@@ -29,23 +29,8 @@ export const designTokens = {
 };
 
 export const caseStatusAppearance = {
-  WB: { label: 'WB', tone: 'neutral' },
-  WL: { label: 'WL', tone: 'open' },
-  ASSIGNED: { label: 'Assigned', tone: 'escalated' },
-  IN_PROGRESS: { label: 'In Progress', tone: 'review' },
-  PENDING: { label: 'Pended', tone: 'warning' },
-  PENDED: { label: 'Pended', tone: 'warning' },
-  QC_PENDING: { label: 'QC Pending', tone: 'review' },
-  RESOLVED: { label: 'Resolved', tone: 'success' },
-  FILED: { label: 'Filed', tone: 'dark' },
-  DRAFT: { label: 'Draft', tone: 'draft' },
-  OPEN: { label: 'Open', tone: 'open' },
-  UNDER_REVIEW: { label: 'In Review', tone: 'review' },
-  ESCALATED: { label: 'Escalated', tone: 'escalated' },
-  CLOSED: { label: 'Closed', tone: 'closed' },
-  UNASSIGNED: { label: 'Unassigned', tone: 'draft' },
-  CREATED: { label: 'Created', tone: 'draft' },
-  REVIEW: { label: 'Review', tone: 'review' },
-  COMPLETED: { label: 'Completed', tone: 'success' },
-  ARCHIVED: { label: 'Archived', tone: 'dark' },
+  OPEN: { label: '🟢 Open', tone: 'open' },
+  IN_PROGRESS: { label: '🟡 In Progress', tone: 'review' },
+  RESOLVED: { label: '🔵 Resolved', tone: 'success' },
+  CLOSED: { label: '⚫ Closed', tone: 'closed' },
 };

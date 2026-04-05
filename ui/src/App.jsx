@@ -6,6 +6,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
+import { ActiveDocketProvider } from './contexts/ActiveDocketContext';
 import { Router } from './Router';
 import { ScrollToTop } from './components/routing/ScrollToTop';
 import { useAuth } from './hooks/useAuth';
@@ -33,7 +34,9 @@ function App() {
     <div className="min-h-screen flex flex-col">
       <BrowserRouter>
         <AuthProvider>
-          <AppBootstrap />
+          <ActiveDocketProvider>
+            <AppBootstrap />
+          </ActiveDocketProvider>
         </AuthProvider>
       </BrowserRouter>
     </div>
