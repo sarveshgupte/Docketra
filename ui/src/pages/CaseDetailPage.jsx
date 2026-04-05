@@ -107,7 +107,6 @@ export const CaseDetailPage = () => {
   const [movingToGlobal, setMovingToGlobal] = useState(false);
   const [actionConfirmation, setActionConfirmation] = useState('');
   const [actionError, setActionError] = useState(null);
-  const fileInputRef = useRef(null);
   const pageContainerRef = useRef(null);
   const commentsListRef = useRef(null);
   const commentComposerId = `case-comment-composer-${caseId}`;
@@ -831,10 +830,6 @@ export const CaseDetailPage = () => {
       }));
       setSelectedFile(null);
       setFileDescription('');
-      // Reset file input using ref
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
       const message = `Attachment added to docket ${caseId} • ${formatDateTime(new Date())}`;
       showSuccess(message);
       setActionConfirmation(message);
@@ -1646,8 +1641,15 @@ export const CaseDetailPage = () => {
           caseInfo={caseInfo}
           attachments={attachments}
           timelineEvents={timelineEvents}
-          cfsData={clientFactSheet}
-          cfsLoading={loadingClientFactSheet}
+          selectedAttachmentFile={selectedFile}
+          attachmentComment={fileDescription}
+          uploadingAttachment={uploadingFile}
+          uploadProgress={uploadProgress}
+          inboundAddress={inboundAddress}
+          onAttachmentFileChange={setSelectedFile}
+          onAttachmentCommentChange={setFileDescription}
+          onUploadAttachment={handleUploadFile}
+          onCopyInboundAddress={handleCopyInboundAddress}
         />
 
         {/* ─── Modals (positioned outside split pane) ─────────────── */}
