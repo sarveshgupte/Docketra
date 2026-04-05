@@ -937,31 +937,51 @@ const addAttachment = async (req, res) => {
  * POST /api/cases/:caseId/clone
  */
 const cloneCase = async (req, res) => {
+  let session;
   try {
     const { caseId } = req.params;
-    const { newCategory, assignedTo, clonedBy } = req.body;
-    
-    // Validate required fields
-    if (!newCategory) {
+    const { categoryId, subcategoryId } = req.body;
+
+    if (!categoryId) {
       return res.status(400).json({
         success: false,
-        message: 'New category is required',
+        message: 'Category is required for clone.',
+        code: 'CLONE_CATEGORY_REQUIRED',
       });
     }
-    
-    if (!clonedBy) {
+
+    if (!subcategoryId) {
       return res.status(400).json({
         success: false,
-        message: 'Cloned by email is required',
+        message: 'Subcategory is required for clone.',
+        code: 'CLONE_SUBCATEGORY_REQUIRED',
       });
     }
-    
-    // PR: Case Identifier Semantics - Resolve identifier to internal ID
+
+    const categoryDoc = await categoryRepository.findActiveCategory(categoryId, req.user.firmId);
+    if (!categoryDoc) {
+      return res.status(404).json({
+        success: false,
+        message: 'Category not found or inactive.',
+        code: 'CLONE_CATEGORY_INVALID',
+      });
+    }
+    const subcategoryDoc = categoryDoc.subcategories?.find(
+      (sub) => String(sub.id) === String(subcategoryId)
+    );
+    if (!subcategoryDoc || subcategoryDoc.isActive === false) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid subcategory selected.',
+        code: 'CLONE_SUBCATEGORY_INVALID',
+      });
+    }
+
     let originalCase;
     try {
       const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
       originalCase = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
-    } catch (error) {
+    } catch (_error) {
       return res.status(404).json({
         success: false,
         message: 'Original case not found',
@@ -975,7 +995,6 @@ const cloneCase = async (req, res) => {
       });
     }
     
-    // Check if case can be cloned
     if (originalCase.status === 'Archived') {
       return res.status(400).json({
         success: false,
@@ -1000,149 +1019,91 @@ const cloneCase = async (req, res) => {
         message: 'This client is no longer active. Please contact your administrator to proceed.',
       });
     }
-    
-    // Create new case
-    const newCase = new Case({
-      title: originalCase.title,
-      description: originalCase.description,
-      category: newCategory,
-      caseCategory: newCategory,
-      caseSubCategory: originalCase.caseSubCategory || originalCase.subcategory || '',
-      subcategory: originalCase.subcategory || originalCase.caseSubCategory || '',
-      categoryId: originalCase.categoryId,
-      subcategoryId: originalCase.subcategoryId,
-      clientId: originalCase.clientId,
-      priority: originalCase.priority,
-      status: assignedTo ? 'ASSIGNED' : 'UNASSIGNED',
-      lifecycle: assignedTo ? CASE_LIFECYCLE.ASSIGNED : CASE_LIFECYCLE.CREATED,
-      pendingUntil: null,
-      slaDueAt: originalCase.slaDueAt || new Date(),
-      slaDays: Number(originalCase.slaDays || originalCase.tatDaysSnapshot || 0),
-      dueDate: originalCase.dueDate || null,
-      tatPaused: originalCase.tatPaused || false,
-      tatLastStartedAt: originalCase.tatLastStartedAt || new Date(),
-      tatAccumulatedMinutes: originalCase.tatAccumulatedMinutes || 0,
-      tatTotalMinutes: originalCase.tatTotalMinutes || 0,
-      slaConfigSnapshot: originalCase.slaConfigSnapshot || undefined,
-      createdBy: clonedBy.toLowerCase(),
-      assignedToXID: assignedTo ? assignedTo.toUpperCase() : null, // PR: xID Canonicalization - Store in assignedToXID
-      queueType: assignedTo ? 'PERSONAL' : 'GLOBAL',
-    });
-    
-    await newCase.saveWithRetry();
-    
-    // Copy comments
-    const originalComments = await Comment.find(enforceTenantScope({ caseId: originalCase.caseId }, req, { source: 'case.clone.originalComments' }));
-    const copiedComments = [];
-    
-    for (const comment of originalComments) {
-      const newComment = await Comment.create({
-        caseId: newCase.caseId,
+
+    session = await mongoose.startSession();
+    let clonedCase = null;
+    let copiedComments = 0;
+    let copiedAttachments = 0;
+
+    await session.withTransaction(async () => {
+      const now = new Date();
+      const normalizedPriority = typeof originalCase.priority === 'string'
+        ? originalCase.priority.toLowerCase()
+        : 'medium';
+
+      clonedCase = new Case({
+        title: originalCase.title,
+        description: originalCase.description,
+        category: categoryDoc?.name || originalCase.category || '',
+        caseCategory: categoryDoc?.name || originalCase.caseCategory || '',
+        caseSubCategory: subcategoryDoc?.name || '',
+        subcategory: subcategoryDoc?.name || '',
+        categoryId: categoryDoc._id,
+        subcategoryId: String(subcategoryId),
+        clientId: originalCase.clientId,
         firmId: req.user.firmId,
-        text: comment.text,
-        createdBy: comment.createdBy,
-        note: `Cloned from Docket ${originalCase.caseId}`,
+        priority: normalizedPriority,
+        status: 'UNASSIGNED',
+        lifecycle: CASE_LIFECYCLE.CREATED,
+        assignedTo: null,
+        assignedToXID: null,
+        queueType: 'GLOBAL',
+        pendingUntil: null,
+        reopenAt: null,
+        duplicateOf: originalCase.duplicateOf || null,
+        slaDueAt: originalCase.slaDueAt || now,
+        slaDays: Number(originalCase.slaDays || originalCase.tatDaysSnapshot || 0),
+        dueDate: originalCase.dueDate || null,
+        tatPaused: false,
+        tatLastStartedAt: now,
+        tatAccumulatedMinutes: 0,
+        tatTotalMinutes: originalCase.tatTotalMinutes || 0,
+        slaConfigSnapshot: originalCase.slaConfigSnapshot || undefined,
+        createdBy: (req.user.email || originalCase.createdBy || req.user.xID || '').toLowerCase(),
+        createdByXID: req.user.xID,
+        workTypeId: originalCase.workTypeId || null,
+        subWorkTypeId: originalCase.subWorkTypeId || null,
+        tatDaysSnapshot: Number(originalCase.tatDaysSnapshot || originalCase.slaDays || 0),
       });
-      copiedComments.push(newComment);
-    }
-    
-    // Copy attachments (including actual files)
-    const originalAttachments = await Attachment.find(enforceTenantScope({ caseId: originalCase.caseId }, req, { source: 'case.clone.originalAttachments' }));
-    const copiedAttachments = [];
-    const provider = await StorageProviderFactory.getProvider(req.user.firmId);
-    
-    for (const attachment of originalAttachments) {
-      try {
-        let newDriveFileId = null;
-        let fileSize = attachment.size;
-        let fileMimeType = attachment.mimeType;
-        
-        // Handle Google Drive attachments
-        if (attachment.driveFileId) {
-          // Ensure new case has Drive folder structure
-          if (!newCase.drive?.attachmentsFolderId) {
-            throw new Error('New case Drive folder structure not initialized');
-          }
-          
-          const cfsDriveService = require('../services/cfsDrive.service');
-          
-          // Note: This loads the entire file into memory
-          // For very large files (>100MB), consider implementing streaming or skipping clone
-          const MAX_CLONE_SIZE = 100 * 1024 * 1024; // 100MB limit
-          
-          if (attachment.size && attachment.size > MAX_CLONE_SIZE) {
-            console.warn(`[cloneCase] Skipping large file ${attachment.fileName} (${attachment.size} bytes)`);
-            continue;
-          }
-          
-          // Download file from original location
-          const fileStream = await provider.downloadFile(attachment.driveFileId);
-          
-          // Convert stream to buffer
-          const chunks = [];
-          for await (const chunk of fileStream) {
-            chunks.push(chunk);
-          }
-          const fileBuffer = Buffer.concat(chunks);
-          
-          // Upload to new case's folder
-          const targetFolderId = cfsDriveService.getFolderIdForFileType(
-            newCase.drive,
-            'attachment'
-          );
-          
-          const driveFile = await provider.uploadFile(
-            fileBuffer,
-            attachment.fileName,
-            fileMimeType || getMimeType(attachment.fileName),
-            targetFolderId
-          );
-          
-          newDriveFileId = driveFile.id;
-          fileSize = driveFile.size || fileSize;
-          fileMimeType = driveFile.mimeType || fileMimeType;
-        } else if (attachment.filePath) {
-          // Legacy: Handle old attachments stored locally
-          const fileExt = path.extname(attachment.fileName);
-          const newFileName = `${Date.now()}-${require('crypto').randomBytes(4).toString('hex')}${fileExt}`;
-          const newFilePath = path.join(__dirname, '../../uploads', newFileName);
-          
-          // Copy the actual file
-          await fs.copyFile(attachment.filePath, newFilePath);
-          
-          // Create new attachment record with local path (legacy)
-          const newAttachment = await Attachment.create({
-            caseId: newCase.caseId,
-            firmId: newCase.firmId,
-            fileName: attachment.fileName,
-            filePath: newFilePath,
-            description: attachment.description,
-            createdBy: attachment.createdBy,
-            createdByXID: attachment.createdByXID,
-            createdByName: attachment.createdByName,
-            type: attachment.type,
-            source: attachment.source,
-            visibility: attachment.visibility,
-            mimeType: attachment.mimeType,
+      await clonedCase.saveWithRetry({ session });
+
+      const originalComments = await Comment.find(
+        enforceTenantScope({ caseId: originalCase.caseId }, req, { source: 'case.clone.originalComments' })
+      ).session(session);
+      if (originalComments.length) {
+        await Comment.insertMany(
+          originalComments.map((comment) => ({
+            caseId: clonedCase.caseId,
+            firmId: req.user.firmId,
+            text: comment.text,
+            createdBy: comment.createdBy,
+            createdByXID: comment.createdByXID,
             note: `Cloned from Docket ${originalCase.caseId}`,
-          });
-          copiedAttachments.push(newAttachment);
-          continue;
-        } else {
-          console.error(`Attachment ${attachment._id} has no file location`);
-          continue;
-        }
-        
-        // Create new attachment record with Google Drive metadata
-        const newAttachment = await Attachment.create({
-          caseId: newCase.caseId,
-          firmId: newCase.firmId,
+          })),
+          { session }
+        );
+        copiedComments = originalComments.length;
+      }
+
+      const originalAttachments = await Attachment.find(
+        enforceTenantScope({ caseId: originalCase.caseId }, req, { source: 'case.clone.originalAttachments' })
+      ).session(session);
+      if (originalAttachments.length) {
+        const attachmentPayload = originalAttachments.map((attachment) => ({
+          caseId: clonedCase.caseId,
+          firmId: req.user.firmId,
+          clientId: attachment.clientId || originalCase.clientId || null,
           fileName: attachment.fileName,
-          driveFileId: newDriveFileId,
-          storageProvider: 'google-drive',
-          storageFileId: newDriveFileId,
-          size: fileSize,
-          mimeType: fileMimeType,
+          fileUrl: attachment.fileUrl,
+          uploadedBy: attachment.uploadedBy,
+          filePath: attachment.filePath,
+          driveFileId: attachment.driveFileId,
+          storageProvider: attachment.storageProvider,
+          storageFileId: attachment.storageFileId,
+          checksum: attachment.checksum,
+          contentHash: attachment.contentHash,
+          isDuplicate: attachment.isDuplicate,
+          size: attachment.size,
           description: attachment.description,
           createdBy: attachment.createdBy,
           createdByXID: attachment.createdByXID,
@@ -1150,50 +1111,60 @@ const cloneCase = async (req, res) => {
           type: attachment.type,
           source: attachment.source,
           visibility: attachment.visibility,
+          mimeType: attachment.mimeType,
+          emailThreadId: attachment.emailThreadId,
+          compressed: attachment.compressed,
           note: `Cloned from Docket ${originalCase.caseId}`,
-        });
-        copiedAttachments.push(newAttachment);
-      } catch (fileError) {
-        console.error(`Error copying file for attachment: ${fileError.message}`);
-        // Continue with other attachments even if one fails
+        }));
+        await Attachment.insertMany(attachmentPayload, { session });
+        copiedAttachments = attachmentPayload.length;
       }
-    }
-    
-    // Create history entries
-    // For original case
-    await CaseHistory.create({
-      caseId: originalCase.caseId,
-      firmId: req.user.firmId,
-      actionType: 'Cloned',
-      description: `Cloned to ${newCase.caseId}`,
-      performedBy: clonedBy.toLowerCase(),
+
+      await CaseHistory.create([{
+        caseId: originalCase.caseId,
+        firmId: req.user.firmId,
+        actionType: 'CLONED_TO_NEW_DOCKET',
+        description: `Cloned to ${clonedCase.caseId}`,
+        performedBy: (req.user.email || '').toLowerCase(),
+        performedByXID: req.user.xID,
+      }], { session });
+
+      await CaseHistory.create([{
+        caseId: clonedCase.caseId,
+        firmId: req.user.firmId,
+        actionType: 'CREATED_FROM_CLONE',
+        description: `Created from clone of ${originalCase.caseId}`,
+        performedBy: (req.user.email || '').toLowerCase(),
+        performedByXID: req.user.xID,
+        metadata: {
+          sourceDocketId: originalCase.caseId,
+          timestamp: now.toISOString(),
+        },
+      }], { session });
     });
-    
-    // For new case
-    await CaseHistory.create({
-      caseId: newCase.caseId,
-      firmId: req.user.firmId,
-      actionType: 'Created (Cloned)',
-      description: `Cloned from Docket ${originalCase.caseId}`,
-      performedBy: clonedBy.toLowerCase(),
-    });
-    
+
     res.status(201).json({
       success: true,
+      docketId: clonedCase.caseId,
       data: {
+        docketId: clonedCase.caseId,
         originalCaseId: originalCase.caseId,
-        newCase,
-        copiedComments: copiedComments.length,
-        copiedAttachments: copiedAttachments.length,
+        copiedComments,
+        copiedAttachments,
       },
-      message: 'Case cloned successfully',
+      message: 'Docket cloned successfully',
     });
   } catch (error) {
-    res.status(400).json({
+    res.status(error?.status || 400).json({
       success: false,
-      message: 'Error cloning case',
-      error: error.message,
+      message: typeof error?.message === 'string' && error.message.trim()
+        ? error.message
+        : 'Failed to clone docket',
     });
+  } finally {
+    if (session) {
+      await session.endSession();
+    }
   }
 };
 
