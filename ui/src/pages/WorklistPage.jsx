@@ -20,7 +20,6 @@ import { Button } from '../components/common/Button';
 import { TableSkeleton } from '../components/common/Skeleton';
 import { ErrorState } from '../components/feedback/ErrorState';
 import { Stack } from '../components/layout/Stack';
-import { Row } from '../components/layout/Row';
 import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
 import { DataTable } from '../components/layout/DataTable';
@@ -169,27 +168,29 @@ export const WorklistPage = () => {
 
   const columns = useMemo(() => [
     {
-      key: 'caseName',
-      header: 'Docket Name',
+      key: 'caseId',
+      header: 'Docket#',
       sortable: true,
-      headerClassName: 'w-full max-w-lg',
-      cellClassName: 'w-full max-w-lg',
+      headerClassName: 'min-w-[16rem]',
+      cellClassName: 'min-w-[16rem]',
       contentClassName: 'truncate',
+      render: (caseItem) => caseItem.caseId || '—',
     },
     {
       key: 'category',
       header: 'Category',
       sortable: true,
-      headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'w-[1px] whitespace-nowrap',
+      headerClassName: 'min-w-[8rem] whitespace-nowrap',
+      cellClassName: 'min-w-[8rem] whitespace-nowrap',
+      render: (caseItem) => caseItem.category || '—',
     },
     {
       key: 'clientId',
       header: 'Client ID',
       align: 'center',
       tabular: true,
-      headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'w-[1px] whitespace-nowrap',
+      headerClassName: 'min-w-[8rem] whitespace-nowrap',
+      cellClassName: 'min-w-[8rem] whitespace-nowrap',
       render: (caseItem) => caseItem.clientId || '—',
     },
     {
@@ -197,8 +198,8 @@ export const WorklistPage = () => {
       header: 'Status',
       sortable: true,
       align: 'center',
-      headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'w-[1px] whitespace-nowrap',
+      headerClassName: 'min-w-[9rem] whitespace-nowrap',
+      cellClassName: 'min-w-[9rem] whitespace-nowrap',
       render: (caseItem) => (
         <Badge status={caseItem.status}>{getStatusLabel(caseItem.status)}</Badge>
       ),
@@ -206,16 +207,16 @@ export const WorklistPage = () => {
     {
       key: 'assignedTo',
       header: 'Assigned To',
-      headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'w-[1px] whitespace-nowrap',
+      headerClassName: 'min-w-[10rem] whitespace-nowrap',
+      cellClassName: 'min-w-[10rem] whitespace-nowrap',
       render: (caseItem) => caseItem.assignedToName || caseItem.assignedToXID || 'Unassigned',
     },
     {
       key: 'priority',
       header: 'Priority',
       align: 'center',
-      headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'w-[1px] whitespace-nowrap',
+      headerClassName: 'min-w-[8rem] whitespace-nowrap',
+      cellClassName: 'min-w-[8rem] whitespace-nowrap',
       render: (caseItem) => <PriorityPill caseRecord={caseItem} />,
     },
     ...(isPendingView
@@ -225,8 +226,8 @@ export const WorklistPage = () => {
         sortable: true,
         align: 'right',
         tabular: true,
-        headerClassName: 'w-[1px] whitespace-nowrap',
-        cellClassName: 'w-[1px] whitespace-nowrap',
+        headerClassName: 'min-w-[10rem] whitespace-nowrap',
+        cellClassName: 'min-w-[10rem] whitespace-nowrap',
         render: (caseItem) => formatDate(caseItem.pendingUntil),
       }]
       : []),
@@ -236,8 +237,8 @@ export const WorklistPage = () => {
       sortable: true,
       align: 'right',
       tabular: true,
-      headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'w-[1px] whitespace-nowrap',
+      headerClassName: 'min-w-[9rem] whitespace-nowrap',
+      cellClassName: 'min-w-[9rem] whitespace-nowrap',
       render: (caseItem) => formatDate(caseItem.createdAt),
     },
     {
@@ -246,8 +247,8 @@ export const WorklistPage = () => {
       sortable: true,
       align: 'right',
       tabular: true,
-      headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'w-[1px] whitespace-nowrap',
+      headerClassName: 'min-w-[10rem] whitespace-nowrap',
+      cellClassName: 'min-w-[10rem] whitespace-nowrap',
       render: (caseItem) => formatDate(caseItem.updatedAt),
     },
   ], [isPendingView]);
@@ -272,11 +273,6 @@ export const WorklistPage = () => {
             </Button>
           )}
         />
-        <Row className="worklist-view-tabs" role="tablist" aria-label="Docket queues" gap={8}>
-          <Button variant="outline" onClick={() => navigate(ROUTES.GLOBAL_WORKLIST(firmSlug))}>Workbasket</Button>
-          <Button variant="outline">My Worklist</Button>
-        </Row>
-
         <Card>
           {error ? (
             <ErrorState
