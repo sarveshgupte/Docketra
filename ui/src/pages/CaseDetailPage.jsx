@@ -16,7 +16,6 @@ import { Input } from '../components/common/Input';
 import { Select } from '../components/common/Select';
 import { Modal } from '../components/common/Modal';
 import { ActionConfirmModal } from '../components/common/ActionConfirmModal';
-import { SaveIndicator } from '../components/ui/SaveIndicator';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
 import { useToast } from '../hooks/useToast';
@@ -94,8 +93,6 @@ export const CaseDetailPage = () => {
   const [sectionLoading, setSectionLoading] = useState({ comments: false, history: false, attachments: false });
   const [caseData, setCaseData] = useState(null);
   const [newComment, setNewComment] = useState('');
-  const [commentSaveStatus, setCommentSaveStatus] = useState(null);
-  const [commentSavedAt, setCommentSavedAt] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileDescription, setFileDescription] = useState('');
@@ -233,7 +230,9 @@ export const CaseDetailPage = () => {
     return '—';
   }, [caseData?.client, caseData?.clientId, caseData?.clientName, caseInfo?.businessName, caseInfo?.clientId, caseInfo?.clientName]);
 
-  const subcategoryLabel = caseInfo?.caseSubCategory || caseInfo?.subCategory || caseInfo?.subcategory || '—';
+  const subcategoryLabel = caseInfo?.subcategory || caseInfo?.caseSubCategory || caseInfo?.subCategory || '—';
+  const assignedLabel = caseInfo?.assignedTo?.name || caseInfo?.assignedToName || caseInfo?.assignedToXID || 'Unassigned';
+  const lifecycleStatus = caseInfo?.lifecycle || caseInfo?.status;
 
   const mergeUniqueComments = useCallback((inputComments = []) => {
     const map = new Map();
@@ -533,21 +532,16 @@ export const CaseDetailPage = () => {
     const existingDraft = localStorage.getItem(commentDraftKey);
     if (existingDraft) {
       setNewComment(existingDraft);
-      setCommentSaveStatus('saved');
-      setCommentSavedAt(new Date());
     }
   }, [commentDraftKey]);
 
   useEffect(() => {
     if (!newComment) return undefined;
-    setCommentSaveStatus('saving');
     const timer = setTimeout(() => {
       try {
         localStorage.setItem(commentDraftKey, newComment);
-        setCommentSaveStatus('saved');
-        setCommentSavedAt(new Date());
       } catch (error) {
-        setCommentSaveStatus('error');
+        // best-effort local draft persistence
       }
     }, 2000);
 
@@ -591,10 +585,8 @@ export const CaseDetailPage = () => {
       if (!newComment) return;
       try {
         localStorage.setItem(commentDraftKey, newComment);
-        setCommentSaveStatus('saved');
-        setCommentSavedAt(new Date());
       } catch (error) {
-        setCommentSaveStatus('error');
+        // best-effort local draft persistence
       }
     }, 30000);
 
@@ -1074,9 +1066,9 @@ export const CaseDetailPage = () => {
 
   const descriptionContent = useMemo(() => {
     const value = String(caseInfo?.description || '').trim();
-    if (!value) return 'No description available';
+    if (!value) return '-';
     if (/^v\d+:[A-Za-z0-9+/=_-]+$/.test(value)) {
-      return <span className="text-gray-400 italic">Description unavailable</span>;
+      return '-';
     }
     return value;
   }, [caseInfo?.description]);
@@ -1419,14 +1411,14 @@ export const CaseDetailPage = () => {
             <div className="case-detail-header__title-row">
               <h1 className="case-detail-header__title">{caseInfo.title || caseInfo.caseName || formatDocketId(caseInfo.caseId || caseId)}</h1>
             </div>
-            <p className="case-detail-header__subtitle">Assigned to: {caseInfo?.assignedToName || caseInfo?.assignedToXID || 'Unassigned'}</p>
+            <p className="case-detail-header__subtitle">Assigned to: {assignedLabel}</p>
             <div className="case-detail-header__meta">
               Priority: {caseInfo.priority || caseInfo.slaPriority || 'Standard'} • Last updated {formatDateTime(caseInfo.updatedAt)}
             </div>
           </div>
 
           <div className="case-detail-header__actions">
-            <StatusBadge status={docketState} className="case-detail-header__status-prominent" />
+            <StatusBadge status={lifecycleStatus} className="case-detail-header__status-prominent" />
             {caseInfo.approvalStatus === 'PENDING' && <Badge variant="warning">Awaiting Partner Approval</Badge>}
             {caseInfo.lockStatus?.isLocked && <Badge variant="warning">Lifecycle Locked</Badge>}
             {caseInfo?.stage?.requiresApproval === true && isViewOnlyMode && <Badge variant="warning">Role Restricted Action</Badge>}
@@ -1494,15 +1486,15 @@ export const CaseDetailPage = () => {
                 </div>
                 <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Assigned To</span>
-                  <span className="field-value text-sm font-medium text-gray-900 break-words">{caseInfo?.assignedToName || caseInfo?.assignedToXID || 'Unassigned'}</span>
+                  <span className="field-value text-sm font-medium text-gray-900 break-words">{assignedLabel}</span>
                 </div>
                 <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Lifecycle</span>
-                  <StatusBadge status={caseInfo?.status} />
+                  <StatusBadge status={lifecycleStatus} />
                 </div>
                 <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Due Date</span>
-                  <span className="field-value text-sm font-medium text-gray-900 break-words">{caseInfo.dueDate ? formatDateTime(caseInfo.dueDate) : 'Not configured'}</span>
+                  <span className="field-value text-sm font-medium text-gray-900 break-words">{caseInfo.dueDate ? formatDateTime(caseInfo.dueDate) : '-'}</span>
                 </div>
               </div>
             </section>
@@ -1521,12 +1513,8 @@ export const CaseDetailPage = () => {
                   <span className="field-value text-sm font-medium text-gray-900">{subcategoryLabel}</span>
                 </div>
                 <div className="field-group min-w-0">
-                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Current Lifecycle Stage</span>
-                  <StatusBadge status={caseInfo?.status} />
-                </div>
-                <div className="field-group min-w-0">
-                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Due Date</span>
-                  <span className="field-value text-sm font-medium text-gray-900">{caseInfo.dueDate ? formatDateTime(caseInfo.dueDate) : 'Not configured'}</span>
+                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">SLA (days)</span>
+                  <span className="field-value text-sm font-medium text-gray-900">{Number(caseInfo?.slaDays || 0) > 0 ? String(caseInfo.slaDays) : '-'}</span>
                 </div>
               </div>
               {caseInfo?.status === 'PENDING' && (caseInfo?.pendingUntil || caseInfo?.reopenDate) ? (
@@ -1561,20 +1549,6 @@ export const CaseDetailPage = () => {
               ) : null}
               {(accessMode.canComment || permissions.canAddComment(caseData)) && (
                 <div className="case-detail__add-comment">
-                  <SaveIndicator
-                    status={commentSaveStatus}
-                    time={commentSavedAt}
-                    onRetry={() => {
-                      try {
-                        setCommentSaveStatus('saving');
-                        localStorage.setItem(commentDraftKey, newComment);
-                        setCommentSaveStatus('saved');
-                        setCommentSavedAt(new Date());
-                      } catch (error) {
-                        setCommentSaveStatus('error');
-                      }
-                    }}
-                  />
                   <Textarea
                     label="Add Comment"
                     id={commentComposerId}
@@ -1873,7 +1847,7 @@ export const CaseDetailPage = () => {
         >
           <div className="space-y-2">
             <p className="text-sm text-gray-500">
-              Currently assigned to: {caseInfo?.assignedToName || caseInfo?.assignedToXID || 'Unassigned'}
+              Currently assigned to: {assignedLabel}
             </p>
             <label htmlFor="assign-user" className="block text-sm font-medium text-gray-700">Select user</label>
             <select

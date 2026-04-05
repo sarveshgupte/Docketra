@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const { softDelete } = require('../services/softDelete.service');
 const { decrypt, ensureTenantKey, ForbiddenError } = require('../security/encryption.service');
 const { looksEncrypted } = require('../security/encryption.utils');
+const { deriveLifecycle } = require('../domain/case/caseLifecycle');
 
 /**
  * ⚠️ SECURITY: Case Repository - Firm-Scoped Data Access Layer ⚠️
@@ -525,7 +526,16 @@ const CaseRepository = {
 
     const result = await Case.updateOne(
       filter,
-      { $set: { status, ...extraFields } },
+      {
+        $set: {
+          status,
+          lifecycle: deriveLifecycle({
+            status,
+            assignedToXID: extraFields.assignedToXID,
+          }),
+          ...extraFields,
+        },
+      },
       session ? { session } : {}
     );
 

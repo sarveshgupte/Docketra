@@ -4,6 +4,7 @@ const CaseAudit = require('../models/CaseAudit.model');
 const mongoose = require('mongoose');
 const { CaseRepository } = require('../repositories');
 const CaseStatus = require('../domain/case/caseStatus');
+const { CASE_LIFECYCLE } = require('../domain/case/caseLifecycle');
 
 /**
  * Case Assignment Service
@@ -43,6 +44,8 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObject
         assignedTo: assigneeObjectId || null,
         assignedBy: assignerObjectId || assigneeObjectId || null,
         status: CaseStatus.ASSIGNED,
+        queueType: 'PERSONAL',
+        lifecycle: CASE_LIFECYCLE.ASSIGNED,
       },
     },
     {
@@ -191,6 +194,8 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
           assignedBy: assignerObjectId || user._id || null,
           assignedAt,
           status: CaseStatus.ASSIGNED,
+          queueType: 'PERSONAL',
+          lifecycle: CASE_LIFECYCLE.ASSIGNED,
           lastActionByXID: user.xID.toUpperCase(),
           lastActionAt: assignedAt,
         },
