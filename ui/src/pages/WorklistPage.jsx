@@ -211,7 +211,7 @@ export const WorklistPage = () => {
       header: 'Assigned To',
       headerClassName: 'min-w-[10rem] whitespace-nowrap',
       cellClassName: 'min-w-[10rem] whitespace-nowrap',
-      render: (caseItem) => caseItem.assignedToName || caseItem.assignedToXID || user?.name || user?.xID || 'Unassigned',
+      render: (caseItem) => caseItem.assignedToName || caseItem.assignedToXID || '—',
     },
     {
       key: 'priority',

@@ -28,6 +28,7 @@ import { worklistApi } from '../api/worklist.api';
 import { adminApi } from '../api/admin.api';
 import { clientApi } from '../api/client.api';
 import { metricsApi } from '../api/metrics.api';
+import { notificationsApi } from '../api/notifications.api';
 import { formatCaseName, formatDate } from '../utils/formatters';
 import { getStatusLabel } from '../utils/statusDisplay';
 import { UX_COPY } from '../constants/uxCopy';
@@ -191,6 +192,7 @@ export const DashboardPage = () => {
   const [tourStepIndex, setTourStepIndex] = useState(0);
   const [loadWarnings, setLoadWarnings] = useState([]);
   const [hasLoadedDashboard, setHasLoadedDashboard] = useState(false);
+  const [notificationHistory, setNotificationHistory] = useState([]);
 
   const reportLoadWarning = (message) => {
     setLoadWarnings((current) => (current.includes(message) ? current : [...current, message]));
@@ -218,6 +220,26 @@ export const DashboardPage = () => {
       }
     }
   }, [loading, user, isAdmin, firmSlug]);
+
+  useEffect(() => {
+    let mounted = true;
+    if (!user?.xID) return undefined;
+
+    notificationsApi.getNotifications()
+      .then((response) => {
+        if (!mounted) return;
+        const items = Array.isArray(response?.data) ? response.data : [];
+        setNotificationHistory(items);
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setNotificationHistory([]);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [user?.xID]);
 
   useEffect(() => {
     if (loading || !user?.xID || !firmSlug) return;
@@ -739,6 +761,27 @@ export const DashboardPage = () => {
               </div>
             </section>
           ) : null}
+
+          <section className="space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900 tracking-tight">Notification History</h2>
+            <Card>
+              {notificationHistory.length === 0 ? (
+                <p className="text-sm text-gray-500">No notifications yet.</p>
+              ) : (
+                <ul className="space-y-3">
+                  {notificationHistory.map((item) => (
+                    <li key={item._id} className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                      <p className="text-sm font-medium text-gray-900">{item.message}</p>
+                      <p className="mt-1 text-xs text-gray-500">
+                        {item.type} · {formatDate(item.created_at)}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          </section>
+
 
           <section className="space-y-4">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
