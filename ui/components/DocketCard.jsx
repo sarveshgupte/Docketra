@@ -1,6 +1,6 @@
 import React from 'react';
 import { LifecycleBadge } from './LifecycleBadge';
-import { formatDate } from '../src/utils/formatters';
+import { formatCaseName, formatDate, formatDocketId } from '../src/utils/formatters';
 
 const cardStyle = {
   border: '1px solid #e5e7eb',
@@ -23,6 +23,9 @@ export function DocketCard({
   focused = false,
   isOpening = false,
 }) {
+  const displayDocketId = formatDocketId(docketId);
+  const displayTitle = formatCaseName(title);
+
   return (
     <button
       type="button"
@@ -37,14 +40,14 @@ export function DocketCard({
         transform: isOpening ? 'scale(0.995)' : 'none',
       }}
       onClick={() => onOpen?.(docketId)}
-      aria-label={`Open docket ${docketId}`}
+      aria-label={`Open docket ${displayDocketId}`}
       aria-pressed={isOpening}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
         <div style={{ minWidth: 0, display: 'grid', gap: 4 }}>
-          <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, letterSpacing: '0.03em' }}>{docketId}</div>
+          <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, letterSpacing: '0.03em' }}>{displayDocketId}</div>
           <div style={{ fontSize: '1rem', fontWeight: 700, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {title || 'Untitled docket'}
+            {displayTitle === 'N/A' ? 'Untitled docket' : displayTitle}
           </div>
         </div>
         <LifecycleBadge lifecycle={lifecycle} />

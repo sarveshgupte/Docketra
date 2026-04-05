@@ -24,7 +24,7 @@ import { clientApi } from '../api/client.api';
 import { categoryService } from '../services/categoryService';
 import { extractErrorMessage } from '../services/apiResponse';
 import { formatDateTime, getISODateInTimezone } from '../utils/formatDateTime';
-import { formatClientDisplay } from '../utils/formatters';
+import { formatClientDisplay, formatDocketId } from '../utils/formatters';
 import { USER_ROLES } from '../utils/constants';
 import { LifecycleBadge } from '../../components/LifecycleBadge';
 import { DocketSidebar } from '../components/docket/DocketSidebar';
@@ -56,7 +56,6 @@ const toLifecycleStage = (lifecycle) => {
   return 'Open';
 };
 
-const formatDocketId = (value = '') => String(value || '').replace(/^CASE-/, 'DOCKET-');
 const normalizeLifecycleForUi = (lifecycle) => normalizeLifecycle(lifecycle);
 const REALTIME_POLL_MS = 15000;
 const INITIAL_VIRTUAL_WINDOW = 30;

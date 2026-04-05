@@ -1,13 +1,14 @@
 import React from 'react';
 import { StatusBadge } from '../layout/StatusBadge';
 import { formatDateTime } from '../../utils/formatDateTime';
+import { formatDocketId } from '../../utils/formatters';
 
 export const CaseDetailHeader = ({ caseInfo, actions, statusBadges, onInfoClick }) => {
   return (
     <header className="case-detail-header">
       <div className="case-detail-header__identity">
         <div className="case-detail-header__title-row">
-          <h1 className="case-detail-header__title">{caseInfo.caseId}</h1>
+          <h1 className="case-detail-header__title">{formatDocketId(caseInfo.caseId)}</h1>
           <StatusBadge status={caseInfo.status} />
           <button
             type="button"
