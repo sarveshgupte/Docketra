@@ -1,8 +1,7 @@
 const mongoose = require('mongoose');
 const { randomUUID } = require('crypto');
 const CaseStatus = require('../domain/case/caseStatus');
-const { CASE_LIFECYCLE, deriveLifecycle } = require('../domain/case/caseLifecycle');
-const { DocketLifecycle, lifecycleRequiresAssignment } = require('../domain/docketLifecycle');
+const { DocketLifecycle, deriveLifecycle, lifecycleRequiresAssignment } = require('../domain/docketLifecycle');
 const softDeletePlugin = require('../utils/softDelete.plugin');
 const { tenantScopeGuardPlugin } = require('./plugins/tenantScopeGuard.plugin');
 const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -329,7 +328,7 @@ const caseSchema = new mongoose.Schema({
   },
   lifecycle: {
     type: String,
-    enum: [...Object.values(CASE_LIFECYCLE), ...Object.values(DocketLifecycle)],
+    enum: Object.values(DocketLifecycle),
     default: DocketLifecycle.CREATED,
   },
 
@@ -897,9 +896,9 @@ caseSchema.virtual('isReadOnly').get(function() {
  */
 caseSchema.pre('validate', async function() {
   this.lifecycle = deriveLifecycle({
-    status: this.status,
     assignedToXID: this.assignedToXID,
     lifecycle: this.lifecycle,
+    status: this.status,
   });
 
   if (!this.dueDate && Number(this.slaDays) > 0 && this.createdAt) {

@@ -4,6 +4,7 @@ const {
   DocketLifecycle,
   assertValidLifecycleTransition,
   lifecycleRequiresAssignment,
+  deriveLifecycle,
 } = require('../src/domain/docketLifecycle');
 const { activateOnOpen } = require('../src/services/docketWorkflow.service');
 const { createNotification, NotificationTypes } = require('../src/domain/notifications');
@@ -24,6 +25,24 @@ function testAssignmentEnforcementRule() {
   assert.strictEqual(lifecycleRequiresAssignment(DocketLifecycle.CREATED), false);
   assert.strictEqual(lifecycleRequiresAssignment(DocketLifecycle.IN_WORKLIST), true);
   assert.strictEqual(lifecycleRequiresAssignment(DocketLifecycle.ACTIVE), true);
+}
+
+function testDeriveLifecycle() {
+  assert.strictEqual(
+    deriveLifecycle({ lifecycle: DocketLifecycle.IN_WORKLIST, assignedToXID: null }),
+    DocketLifecycle.IN_WORKLIST,
+  );
+  assert.strictEqual(deriveLifecycle({ lifecycle: '', assignedToXID: 'X100' }), DocketLifecycle.IN_WORKLIST);
+  assert.strictEqual(deriveLifecycle({ lifecycle: null, assignedToXID: null }), DocketLifecycle.CREATED);
+  assert.strictEqual(deriveLifecycle({ lifecycle: 'ASSIGNED', assignedToXID: null }), DocketLifecycle.IN_WORKLIST);
+  assert.strictEqual(
+    deriveLifecycle({ lifecycle: '', assignedToXID: 'X100', status: 'OPEN' }),
+    DocketLifecycle.ACTIVE,
+  );
+  assert.strictEqual(
+    deriveLifecycle({ lifecycle: '', assignedToXID: null, status: 'RESOLVED' }),
+    DocketLifecycle.COMPLETED,
+  );
 }
 
 async function testAutoActivationOnOpen() {
@@ -100,6 +119,7 @@ async function run() {
   try {
     testLifecycleTransitions();
     testAssignmentEnforcementRule();
+    testDeriveLifecycle();
     await testAutoActivationOnOpen();
     await testNotificationCreation();
     console.log('Docket lifecycle workflow tests passed.');

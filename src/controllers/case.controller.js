@@ -14,7 +14,7 @@ const categoryRepository = require('../repositories/category.repository');
 const { detectDuplicates, generateDuplicateOverrideComment } = require('../services/clientDuplicateDetector');
 const { CASE_CATEGORIES, CASE_LOCK_CONFIG, COMMENT_PREVIEW_LENGTH, CLIENT_STATUS } = require('../config/constants');
 const CaseStatus = require('../domain/case/caseStatus');
-const { CASE_LIFECYCLE } = require('../domain/case/caseLifecycle');
+const { DocketLifecycle } = require('../domain/docketLifecycle');
 const { isValidTransition } = require('./docketWorkflow.controller');
 const { activateOnOpen } = require('../services/docketWorkflow.service');
 const { isProduction } = require('../config/config');
@@ -512,7 +512,7 @@ const createCase = async (req, res) => {
         createdBy: req.user.email || req.user.xID, // Legacy field - use email or xID as fallback
         priority: normalizedPriority,
         status: 'UNASSIGNED', // New cases default to UNASSIGNED for global worklist
-        lifecycle: assignedTo ? CASE_LIFECYCLE.ASSIGNED : CASE_LIFECYCLE.CREATED,
+        lifecycle: assignedTo ? DocketLifecycle.IN_WORKLIST : DocketLifecycle.CREATED,
         assignedToXID: assignedTo ? assignedTo.toUpperCase() : null, // PR: xID Canonicalization - Store in assignedToXID
         assignedTo: null,
         assignedBy: null,
@@ -1045,7 +1045,7 @@ const cloneCase = async (req, res) => {
         firmId: req.user.firmId,
         priority: normalizedPriority,
         status: 'UNASSIGNED',
-        lifecycle: CASE_LIFECYCLE.CREATED,
+        lifecycle: DocketLifecycle.CREATED,
         assignedTo: null,
         assignedToXID: null,
         queueType: 'GLOBAL',
@@ -1619,11 +1619,7 @@ const getCaseByCaseId = async (req, res) => {
       assignedUser = await User.findOne({ xID: caseObject.assignedToXID, firmId: scopedFirmId }).select('_id name email xID').lean();
     }
     const canonicalAssignmentXID = caseObject.assignedToXID || assignedUser?.xID || null;
-    const normalizedLifecycle = String(caseObject.lifecycle || '').trim().toUpperCase();
-    const lifecycle =
-      ['OPEN', 'PENDED', 'QC_PENDING', 'RESOLVED', 'FILED'].includes(normalizedLifecycle)
-        ? normalizedLifecycle
-        : 'OPEN';
+    const lifecycle = caseObject.lifecycle;
 
     console.log('DOCKET_STATE_DEBUG', {
       caseId: displayCaseId,
@@ -2340,7 +2336,7 @@ const unassignCase = async (req, res) => {
         assignedBy: null,
         assignedAt: null,
         queueType: 'GLOBAL',
-        lifecycle: CASE_LIFECYCLE.CREATED,
+        lifecycle: DocketLifecycle.CREATED,
       },
     });
     caseData = await CaseRepository.findByInternalId(req.user.firmId, caseData.caseInternalId, req.user.role);
