@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { caseApi } from '../src/api/case.api';
 import { invalidateCaseCache } from '../src/utils/caseCache';
 import { formatDateTime } from '../src/utils/formatDateTime';
+import { formatCaseName, formatDocketId } from '../src/utils/formatters';
 import { LifecycleBadge } from './LifecycleBadge';
 import { ActivityTimeline } from '../src/components/docket/ActivityTimeline';
 import { CommentList } from '../src/components/docket/CommentList';
@@ -9,8 +10,6 @@ import { CommentInput } from '../src/components/docket/CommentInput';
 import { useAuth } from '../src/hooks/useAuth';
 
 const normalizeDoc = (data) => data?.case || data;
-
-const formatDocketId = (value = '') => String(value || '').replace(/^CASE-/, 'DOCKET-');
 
 const CASE_FETCH_PARAMS = {
   commentsPage: 1,
@@ -362,7 +361,7 @@ export function DocketDetails({
   }
 
   const assigned = openedFromWorklist ? 'You' : (assignmentLabel(docket) || 'You');
-  const title = docket.title || docket.caseName || 'Untitled docket';
+  const title = docket.title || formatCaseName(docket.caseName);
 
   return (
     <>
@@ -376,7 +375,7 @@ export function DocketDetails({
             ) : null}
           </div>
           <div className="case-detail-header__secondary">
-            <p className="case-detail-header__subtitle">{title}</p>
+            <p className="case-detail-header__subtitle">{title === 'N/A' ? 'Untitled docket' : title}</p>
             <div className="case-detail-header__meta">Assigned to: {assigned}</div>
           </div>
           <div className="case-detail-header__meta">Updated {formatDateTime(docket.updatedAt)}</div>
