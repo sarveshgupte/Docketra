@@ -603,14 +603,16 @@ const listClients = async (req, res) => {
       ...(includeInactive === 'true' ? {} : { status: CLIENT_STATUS.ACTIVE }),
     };
     
-    const clients = await Client.find(query)
-      .select('clientId businessName businessEmail primaryContactNumber status isActive createdAt')
-      .limit(parseInt(limit))
-      .skip((parseInt(page) - 1) * parseInt(limit))
-      .sort({ clientId: 1 })
-      .lean();
-    
-    const total = await Client.countDocuments(query);
+    // PERFORMANCE: Execute independent queries concurrently
+    const [clients, total] = await Promise.all([
+      Client.find(query)
+        .select('clientId businessName businessEmail primaryContactNumber status isActive createdAt')
+        .limit(parseInt(limit))
+        .skip((parseInt(page) - 1) * parseInt(limit))
+        .sort({ clientId: 1 })
+        .lean(),
+      Client.countDocuments(query)
+    ]);
     const normalizedClients = normalizeClientList(clients);
     
     res.status(200).json({
