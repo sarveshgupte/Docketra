@@ -5,6 +5,7 @@ export const ROUTES = {
   FIRM_LOGIN: (firmSlug) => `/${firmSlug}/login`,
   FIRM_BASE: (firmSlug) => `/app/firm/${firmSlug}`,
   DASHBOARD: (firmSlug) => `/app/firm/${firmSlug}/dashboard`,
+  NOTIFICATIONS_HISTORY: (firmSlug) => `/app/firm/${firmSlug}/notifications`,
   CASES: (firmSlug) => `/app/firm/${firmSlug}/dockets`,
   CASE_DETAIL: (firmSlug, docketId) => `/app/firm/${firmSlug}/dockets/${docketId}`,
   CREATE_CASE: (firmSlug) => `/app/firm/${firmSlug}/dockets/create`,
