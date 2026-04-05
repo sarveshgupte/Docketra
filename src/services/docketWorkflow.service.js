@@ -3,7 +3,9 @@ const Case = require('../models/Case.model');
 const Category = require('../models/Category.model');
 const DocketAuditLog = require('../models/DocketAuditLog.model');
 const { DocketStatus, assertValidDocketTransition, toDocketState, toPersistenceState } = require('../domain/docket/docketStateMachine');
+const { DocketLifecycle, assertValidLifecycleTransition, normalizeLifecycle } = require('../domain/docketLifecycle');
 const { EVENT_NAMES, emitDocketEvent } = require('./docketEvents.service');
+const { NotificationTypes, createNotification } = require('../domain/notifications');
 
 const QC_DECISIONS = Object.freeze({ APPROVED: 'APPROVED', FAILED: 'FAILED', CORRECTED: 'CORRECTED' });
 
@@ -25,6 +27,38 @@ function normalizeActorRole(actor = {}) {
   if (raw === 'ADMIN' || raw === 'SUPER_ADMIN' || raw === 'SUPERADMIN') return 'ADMIN';
   if (raw === 'SYSTEM') return 'SYSTEM';
   return 'USER';
+}
+
+
+function transitionLifecycle(docket, targetLifecycle) {
+  const fromLifecycle = normalizeLifecycle(docket.lifecycle || DocketLifecycle.CREATED);
+  const toLifecycle = normalizeLifecycle(targetLifecycle);
+  if (fromLifecycle !== toLifecycle) {
+    assertValidLifecycleTransition(fromLifecycle, toLifecycle);
+  }
+  docket.lifecycle = toLifecycle;
+  return toLifecycle;
+}
+
+function assignToUser(docket, userId) {
+  docket.assignedToXID = String(userId || '').toUpperCase();
+  docket.queueType = 'PERSONAL';
+  docket.assignedAt = new Date();
+  docket.status = toPersistenceState(DocketStatus.ASSIGNED);
+  docket.lifecycle = DocketLifecycle.IN_WORKLIST;
+  return docket;
+}
+
+async function createDocketNotification({ firmId, userId, type, docketId, message }) {
+  if (!userId) return;
+  await createNotification({
+    firmId,
+    user_id: String(userId || '').toUpperCase(),
+    type,
+    docket_id: docketId,
+    message,
+    created_at: new Date(),
+  });
 }
 
 const ALLOWED_LIFECYCLE_TRANSITIONS = Object.freeze({
@@ -85,6 +119,7 @@ async function pullFromWorkbench({ docketId, firmId, userId, userObjectId = null
   const update = {
     $set: {
       status: toPersistenceState(DocketStatus.ASSIGNED),
+      lifecycle: DocketLifecycle.IN_WORKLIST,
       assignedToXID: assigneeXID,
       ...(userObjectId ? { assignedTo: userObjectId } : {}),
       assignedAt: new Date(),
@@ -118,6 +153,7 @@ async function pullFromWorkbench({ docketId, firmId, userId, userObjectId = null
   });
 
   emitDocketEvent(EVENT_NAMES.ASSIGNMENT, { docketId, firmId, assigneeXID, assignedBy: userId });
+  await createDocketNotification({ firmId, userId: assigneeXID, type: NotificationTypes.DOCKET_ASSIGNED, docketId, message: `Docket ${docketId} was assigned to you.` });
   return updated;
 }
 
@@ -153,6 +189,15 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
       validateLifecycleAccess({ actor, fromState, toState: finalTarget });
 
       docket.status = toPersistenceState(finalTarget);
+      if (finalTarget === DocketStatus.IN_PROGRESS || finalTarget === DocketStatus.PENDING || finalTarget === DocketStatus.QC_PENDING) {
+        transitionLifecycle(docket, DocketLifecycle.ACTIVE);
+      }
+      if (finalTarget === DocketStatus.RESOLVED) {
+        transitionLifecycle(docket, DocketLifecycle.COMPLETED);
+      }
+      if (finalTarget === DocketStatus.FILED) {
+        transitionLifecycle(docket, DocketLifecycle.ARCHIVED);
+      }
       docket.lastActionByXID = actor.xID;
       docket.lastActionAt = new Date();
 
@@ -201,6 +246,16 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
         metadata: { duplicateOf: duplicateOf || null, reopenAt: docket.reopenAt || null },
         session,
       });
+
+      if (finalTarget === DocketStatus.RESOLVED) {
+        await createDocketNotification({
+          firmId,
+          userId: docket.assignedToXID || actor.xID,
+          type: NotificationTypes.DOCKET_COMPLETED,
+          docketId,
+          message: `Docket ${docketId} was completed.`,
+        });
+      }
 
       result = docket;
     });
@@ -307,6 +362,30 @@ async function reassign({ docketId, firmId, actor, toUserXID, comment }) {
   return docket;
 }
 
+async function activateOnOpen({ docketId, firmId, actor }) {
+  const docket = await Case.findOne({ caseId: docketId, firmId });
+  if (!docket) throw makeError('Docket not found', 404, 'DOCKET_NOT_FOUND');
+
+  const lifecycle = normalizeLifecycle(docket.lifecycle || DocketLifecycle.CREATED);
+  if (lifecycle !== DocketLifecycle.IN_WORKLIST) return docket;
+
+  transitionLifecycle(docket, DocketLifecycle.ACTIVE);
+  docket.status = toPersistenceState(DocketStatus.IN_PROGRESS);
+  docket.lastActionByXID = actor?.xID || docket.assignedToXID || 'SYSTEM';
+  docket.lastActionAt = new Date();
+  await docket.save();
+
+  await createDocketNotification({
+    firmId,
+    userId: docket.assignedToXID,
+    type: NotificationTypes.DOCKET_ACTIVATED,
+    docketId,
+    message: `Docket ${docketId} is now active.`,
+  });
+
+  return docket;
+}
+
 async function handleUserDeactivation({ firmId, userXID }) {
   const normalized = String(userXID || '').toUpperCase();
   const qcp = await Case.updateMany(
@@ -326,6 +405,8 @@ module.exports = {
   DocketStatus,
   QC_DECISIONS,
   pullFromWorkbench,
+  assignToUser,
+  activateOnOpen,
   transition,
   qcDecision,
   reopenDuePending,

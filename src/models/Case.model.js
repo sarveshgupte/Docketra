@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const { randomUUID } = require('crypto');
 const CaseStatus = require('../domain/case/caseStatus');
 const { CASE_LIFECYCLE, deriveLifecycle } = require('../domain/case/caseLifecycle');
+const { DocketLifecycle, lifecycleRequiresAssignment } = require('../domain/docketLifecycle');
 const softDeletePlugin = require('../utils/softDelete.plugin');
 const { tenantScopeGuardPlugin } = require('./plugins/tenantScopeGuard.plugin');
 const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -328,8 +329,8 @@ const caseSchema = new mongoose.Schema({
   },
   lifecycle: {
     type: String,
-    enum: Object.values(CASE_LIFECYCLE),
-    default: CASE_LIFECYCLE.CREATED,
+    enum: [...Object.values(CASE_LIFECYCLE), ...Object.values(DocketLifecycle)],
+    default: DocketLifecycle.CREATED,
   },
 
   // Budget estimates used for reporting variance
@@ -840,6 +841,18 @@ caseSchema.path('status').validate(function(value) {
   }
   return true;
 }, 'pendingReason is required when status is PENDING');
+
+
+caseSchema.pre('validate', function enforceAssignedUserForWorklistLifecycle(next) {
+  const lifecycle = String(this.lifecycle || '').trim().toLowerCase();
+  if (!lifecycleRequiresAssignment(lifecycle)) return next();
+
+  if (!this.assignedToXID) {
+    this.invalidate('assignedToXID', 'assignedToXID is required once a docket enters worklist lifecycle');
+  }
+
+  return next();
+});
 
 /**
  * Virtual Property: isReadOnly
