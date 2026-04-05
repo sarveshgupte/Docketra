@@ -10,6 +10,36 @@ const CaseService = require('./case.service');
 const { DateTime } = require('luxon');
 const { logCaseHistory } = require('./auditLog.service');
 
+const LIFECYCLE_TRANSITIONS = Object.freeze({
+  OPEN: Object.freeze([CaseStatus.PENDING, CaseStatus.QC_PENDING, CaseStatus.RESOLVED, CaseStatus.FILED]),
+  PENDING: Object.freeze([CaseStatus.OPEN]),
+  QC_PENDING: Object.freeze([CaseStatus.RESOLVED, CaseStatus.OPEN]),
+  RESOLVED: Object.freeze([]),
+  FILED: Object.freeze([]),
+});
+
+const normalizeActorRole = (role) => {
+  const normalized = String(role || '').toUpperCase();
+  if (normalized === 'ADMIN' || normalized === 'SUPER_ADMIN' || normalized === 'SUPERADMIN') return 'ADMIN';
+  return 'USER';
+};
+
+const assertLifecycleTransitionAllowed = ({ currentStatus, nextStatus, actorRole }) => {
+  const current = String(currentStatus || '').toUpperCase();
+  const next = String(nextStatus || '').toUpperCase();
+  const role = normalizeActorRole(actorRole);
+
+  // User hard stop for QC and terminal states.
+  if (role === 'USER' && ['QC_PENDING', 'RESOLVED', 'FILED'].includes(current)) {
+    throw new Error('Permission denied');
+  }
+
+  const allowed = LIFECYCLE_TRANSITIONS[current] || [];
+  if (!allowed.includes(next)) {
+    throw new Error('Invalid lifecycle transition');
+  }
+};
+
 /**
  * Case Action Service
  * 
@@ -109,14 +139,16 @@ const resolveCase = async (firmId, caseId, comment, user, req = null) => {
     throw new Error('Case not found');
   }
 
-  if (caseData.status !== CaseStatus.OPEN) {
-    throw new Error('Case must be OPEN before resolving');
-  }
-  
-  // Store previous status for audit
+  const targetStatus = caseData.forceQc ? CaseStatus.QC_PENDING : CaseStatus.RESOLVED;
+  assertLifecycleTransitionAllowed({
+    currentStatus: caseData.status,
+    nextStatus: targetStatus,
+    actorRole: user?.role,
+  });
+
   const previousStatus = caseData.status;
 
-  await CaseService.updateStatus(caseId, CaseStatus.RESOLVED, {
+  await CaseService.updateStatus(caseId, targetStatus, {
     tenantId: firmId,
     role: user.role,
     userId: user.xID,
@@ -127,13 +159,23 @@ const resolveCase = async (firmId, caseId, comment, user, req = null) => {
     userAgent: req?.get?.('user-agent') || null,
     req,
     notes: comment,
-    statusPatch: {
-      pendingUntil: null,
-      reopenAt: null,
-      resolvedAt: new Date(),
-      lastActionByXID: user.xID,
-      lastActionAt: new Date(),
-    },
+    statusPatch: targetStatus === CaseStatus.QC_PENDING
+      ? {
+        pendingUntil: null,
+        reopenAt: null,
+        qcStatus: 'REQUESTED',
+        qcBy: user.xID,
+        qcAt: new Date(),
+        lastActionByXID: user.xID,
+        lastActionAt: new Date(),
+      }
+      : {
+        pendingUntil: null,
+        reopenAt: null,
+        resolvedAt: new Date(),
+        lastActionByXID: user.xID,
+        lastActionAt: new Date(),
+      },
     auditMetadata: {
       commentLength: comment.length,
     },
@@ -156,16 +198,18 @@ const resolveCase = async (firmId, caseId, comment, user, req = null) => {
   await recordAction(
     caseId,
     caseData.firmId,
-    CASE_ACTION_TYPES.CASE_RESOLVED,
-    `Case resolved by ${user.xID}. Previous status: ${previousStatus}`,
+    targetStatus === CaseStatus.QC_PENDING ? CASE_ACTION_TYPES.CASE_STATUS_CHANGED : CASE_ACTION_TYPES.CASE_RESOLVED,
+    targetStatus === CaseStatus.QC_PENDING
+      ? `Case moved to QC_PENDING by ${user.xID}. Previous status: ${previousStatus}`
+      : `Case resolved by ${user.xID}. Previous status: ${previousStatus}`,
     user.xID,
     user.email,
     user.role === 'Admin' ? 'ADMIN' : 'USER',
     {
       previousStatus,
-      newStatus: CaseStatus.RESOLVED,
+      newStatus: targetStatus,
       fromStatus: previousStatus,
-      toStatus: CaseStatus.RESOLVED,
+      toStatus: targetStatus,
       timestamp: new Date(),
       commentLength: comment.length,
     }
@@ -203,9 +247,11 @@ const pendCase = async (firmId, caseId, comment, reopenDate, user, req = null) =
     throw new Error('Case not found');
   }
 
-  if (caseData.status !== CaseStatus.OPEN) {
-    throw new Error('Case must be OPEN before pending');
-  }
+  assertLifecycleTransitionAllowed({
+    currentStatus: caseData.status,
+    nextStatus: CaseStatus.PENDING,
+    actorRole: user?.role,
+  });
   
   // Store previous status for audit
   const previousStatus = caseData.status;
@@ -299,9 +345,11 @@ const fileCase = async (firmId, caseId, comment, user, req = null) => {
     throw new Error('Case not found');
   }
 
-  if (caseData.status !== CaseStatus.OPEN) {
-    throw new Error('Case must be OPEN before filing');
-  }
+  assertLifecycleTransitionAllowed({
+    currentStatus: caseData.status,
+    nextStatus: CaseStatus.FILED,
+    actorRole: user?.role,
+  });
   
   // Store previous status for audit
   const previousStatus = caseData.status;
@@ -380,6 +428,12 @@ const unpendCase = async (firmId, caseId, comment, user, req = null) => {
   if (!caseData) {
     throw new Error('Case not found');
   }
+
+  assertLifecycleTransitionAllowed({
+    currentStatus: caseData.status,
+    nextStatus: CaseStatus.OPEN,
+    actorRole: user?.role,
+  });
   
   // Store previous status for audit
   const previousStatus = caseData.status;

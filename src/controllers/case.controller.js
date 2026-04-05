@@ -1218,7 +1218,14 @@ const unpendCase = async (req, res) => {
       });
     }
     
-    if (error.message.startsWith('Cannot change case from')) {
+    if (error.message === 'Permission denied') {
+      return res.status(403).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
+    if (error.message.startsWith('Cannot change case from') || error.message === 'Invalid lifecycle transition') {
       return res.status(400).json({
         success: false,
         message: error.message,
