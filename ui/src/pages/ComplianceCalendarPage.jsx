@@ -11,9 +11,9 @@ import { formatClientDisplay } from '../utils/formatters';
 import api from '../services/api';
 import './ComplianceCalendarPage.css';
 
-const monthTitle = (date) => date.toLocaleString(undefined, { month: 'long', year: 'numeric' });
-
 const IST_TIMEZONE = 'Asia/Kolkata';
+
+const monthTitle = (date) => date.toLocaleString('en-IN', { month: 'long', year: 'numeric', timeZone: IST_TIMEZONE });
 
 const toISODate = (value, timezone = IST_TIMEZONE) => {
   if (!value) return '';

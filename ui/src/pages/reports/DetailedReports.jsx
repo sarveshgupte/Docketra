@@ -14,7 +14,7 @@ import { Loading } from '../../components/common/Loading';
 import { Button } from '../../components/common/Button';
 import { useAuth } from '../../hooks/useAuth';
 import { reportsService } from '../../services/reports.service';
-import { formatDateTime, formatRelativeTime } from '../../utils/formatDateTime';
+import { formatDateTime, formatRelativeTime, getISODateInTimezone } from '../../utils/formatDateTime';
 import './DetailedReports.css';
 
 export const DetailedReports = () => {
@@ -182,7 +182,7 @@ export const DetailedReports = () => {
       const link = document.createElement('a');
       link.href = url;
 
-      const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+      const dateStr = getISODateInTimezone(new Date()).replace(/-/g, '');
       link.download = `docketra-report-${dateStr}.${exportModal.type === 'csv' ? 'csv' : 'xlsx'}`;
 
       document.body.appendChild(link);
