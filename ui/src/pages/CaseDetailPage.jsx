@@ -33,6 +33,8 @@ import { ActionModal } from '../components/docket/ActionModal';
 import './CaseDetailPage.css';
 import { ROUTES } from '../constants/routes';
 import { RouteErrorFallback } from '../components/routing/RouteErrorFallback';
+import { useActiveDocket } from '../hooks/useActiveDocket';
+import { normalizeLifecycle } from '../utils/lifecycle';
 
 /**
  * Helper function to normalize case data structure
@@ -44,19 +46,15 @@ const normalizeCase = (data) => {
 };
 
 const toLifecycleStage = (lifecycle) => {
-  if (lifecycle === 'OPEN') return 'Under Execution';
-  if (lifecycle === 'RESOLVED') return 'Executed';
-  if (lifecycle === 'FILED') return 'Marked as Executed';
-  return lifecycle || 'Under Execution';
+  if (lifecycle === 'OPEN') return 'Open';
+  if (lifecycle === 'IN_PROGRESS') return 'In Progress';
+  if (lifecycle === 'RESOLVED') return 'Resolved';
+  if (lifecycle === 'CLOSED') return 'Closed';
+  return 'Open';
 };
 
 const formatDocketId = (value = '') => String(value || '').replace(/^CASE-/, 'DOCKET-');
-const VALID_DOCKET_LIFECYCLES = new Set(['OPEN', 'PENDED', 'QC_PENDING', 'RESOLVED', 'FILED']);
-const normalizeLifecycleForUi = (lifecycle) => {
-  const normalizedLifecycle = String(lifecycle || '').trim().toUpperCase();
-  if (VALID_DOCKET_LIFECYCLES.has(normalizedLifecycle)) return normalizedLifecycle;
-  return 'OPEN';
-};
+const normalizeLifecycleForUi = (lifecycle) => normalizeLifecycle(lifecycle);
 const REALTIME_POLL_MS = 15000;
 const INITIAL_VIRTUAL_WINDOW = 30;
 const ACTION_RETRY_KEY = 'docketra_case_retry_queue';
@@ -71,6 +69,7 @@ export const CaseDetailPage = () => {
   const { user } = useAuth();
   const permissions = usePermissions();
   const { showSuccess, showError, showWarning } = useToast();
+  const { activeDocketId, activeDocketData, isDocketLoading, beginDocketOpen, setActiveDocketData } = useActiveDocket();
 
   // Next/Previous navigation: read list context passed from CasesPage
   const sourceList = location.state?.sourceList || null; // array of caseIds
@@ -81,6 +80,7 @@ export const CaseDetailPage = () => {
   const handlePrevCase = () => {
     if (!hasPrev) return;
     const prevId = sourceList[sourceIndex - 1];
+    beginDocketOpen(prevId);
     navigate(ROUTES.CASE_DETAIL(firmSlug, prevId), {
       state: { sourceList, index: sourceIndex - 1 },
     });
@@ -89,6 +89,7 @@ export const CaseDetailPage = () => {
   const handleNextCase = () => {
     if (!hasNext) return;
     const nextId = sourceList[sourceIndex + 1];
+    beginDocketOpen(nextId);
     navigate(ROUTES.CASE_DETAIL(firmSlug, nextId), {
       state: { sourceList, index: sourceIndex + 1 },
     });
@@ -103,7 +104,6 @@ export const CaseDetailPage = () => {
   const [fileDescription, setFileDescription] = useState('');
   const [uploadingFile, setUploadingFile] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [pullingCase, setPullingCase] = useState(false);
   const [loadingClientDockets, setLoadingClientDockets] = useState(false);
   const [clientDockets, setClientDockets] = useState([]);
   const [actionConfirmation, setActionConfirmation] = useState('');
@@ -360,13 +360,16 @@ export const CaseDetailPage = () => {
       
       if (response.success && requestId === loadSequenceRef.current) {
         const normalized = response.data?.case || response.data;
-        console.log('DOCKET_STATE_DEBUG', {
+        console.log('DOCKET_DEBUG', {
+          caseId,
+          activeDocketId,
           lifecycle: normalizeLifecycleForUi(normalized?.lifecycle),
           assignedTo: normalized?.assignedToXID || normalized?.assignedTo?.xID || null,
           responseSource: 'loadCase',
           timestamp: new Date().toISOString(),
         });
         setCaseData((prev) => mergeCaseData(prev, normalized, { source: 'loadCase' }));
+        setActiveDocketData(normalized);
       }
     } catch (error) {
       showError(extractErrorMessage(error, 'Unable to load docket details. Please try again.'));
@@ -434,16 +437,17 @@ export const CaseDetailPage = () => {
   }, [caseId]);
 
   useEffect(() => {
+    beginDocketOpen(caseId);
+    if (activeDocketId === caseId && activeDocketData?.caseId === caseId) {
+      setCaseData((prev) => mergeCaseData(prev, activeDocketData, { source: 'active-context' }));
+      setLoading(false);
+    }
     loadCase();
-    
-    // Track case opened
-    caseApi.trackCaseOpen(caseId);
-    
-    // Cleanup: track case exit on unmount
+    void caseApi.trackCaseOpen(caseId);
     return () => {
-      caseApi.trackCaseExit(caseId);
+      void caseApi.trackCaseExit(caseId);
     };
-  }, [caseId, loadCase]);
+  }, [activeDocketData, activeDocketId, beginDocketOpen, caseId, loadCase, mergeCaseData]);
 
   useEffect(() => {
     if (!caseData) return;
@@ -472,7 +476,9 @@ export const CaseDetailPage = () => {
         if (!response?.success) return;
         const updated = response.data?.case || response.data;
         if (pollRequestId !== pollSequenceRef.current) return;
-        console.log('DOCKET_STATE_DEBUG', {
+        console.log('DOCKET_DEBUG', {
+          caseId,
+          activeDocketId,
           lifecycle: normalizeLifecycleForUi(updated?.lifecycle),
           assignedTo: updated?.assignedToXID || updated?.assignedTo?.xID || null,
           responseSource: 'polling',
@@ -481,7 +487,7 @@ export const CaseDetailPage = () => {
         const previous = previousRealtimeRef.current;
         const nextInfo = normalizeCase(updated);
         const nextCommentsCount = updated?.comments?.length || 0;
-        const nextAssignee = nextInfo?.assignedToXID || nextInfo?.assignedToName || null;
+        const nextAssignee = nextInfo?.assignedToXID || nextInfo?.assignedToName || user?.xID || null;
 
         if (previous) {
           if (nextCommentsCount > previous.commentsCount) {
@@ -686,33 +692,6 @@ export const CaseDetailPage = () => {
     };
   }, [caseId]);
 
-  const handlePullCase = () => {
-    setConfirmModal({
-      title: 'Pull Docket',
-      description: 'Pull this case? This will assign it to you.',
-      confirmText: 'Pull Docket',
-      onConfirm: async () => {
-        setConfirmModal(null);
-        setPullingCase(true);
-        try {
-          const response = await caseApi.pullCase(caseId);
-          if (response.success) {
-            const message = 'Docket moved to My Worklist';
-            showSuccess(message);
-            setActionConfirmation(message);
-            setActionError(null);
-            navigate(ROUTES.MY_WORKLIST(firmSlug));
-          }
-        } catch (error) {
-          const errorMessage = extractErrorMessage(error, 'Unable to pull docket. Please try again.');
-          showError(errorMessage);
-          setActionError({ message: errorMessage, retry: handlePullCase });
-        } finally {
-          setPullingCase(false);
-        }
-      },
-    });
-  };
 
   const handleAddComment = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
@@ -1207,14 +1186,14 @@ export const CaseDetailPage = () => {
       caseInfo.slaDueDate &&
       new Date(caseInfo.slaDueDate) < new Date() &&
       lifecycleStatus !== 'RESOLVED' &&
-      lifecycleStatus !== 'FILED';
+      lifecycleStatus !== 'CLOSED';
     if (isSlaBreach) {
       warnings.push('SLA has been breached for this case.');
     }
     return warnings;
   }, [caseInfo, comments, lifecycleStatus]);
 
-  const actionInFlight = pullingCase || assigningCase || pendingCase || resolvingCase || filingCase || unpendingCase || movingToGlobal;
+  const actionInFlight = assigningCase || pendingCase || resolvingCase || filingCase || unpendingCase;
   const canRunDocketAction = Boolean(actionComment.trim()) && !actionInFlight;
 
   const openActionModal = (type) => {
@@ -1241,33 +1220,18 @@ export const CaseDetailPage = () => {
 
   const headerActions = useMemo(() => {
     if (isViewOnlyMode) return [];
-    if (docketState === 'OPEN') {
-      if (caseInfo?.assignedToXID) {
-        return [
-          { key: 'assign', label: 'Assign', variant: 'primary', onClick: () => setShowAssignModal(true), disabled: actionInFlight },
-          { key: 'move_wb', label: 'Move to WB', variant: 'outline', onClick: handleMoveToWB, disabled: actionInFlight },
-        ];
-      }
-      return [
-        { key: 'assign', label: 'Assign', variant: 'primary', onClick: () => setShowAssignModal(true), disabled: actionInFlight },
-        { key: 'move_wl', label: 'Move to WL', variant: 'secondary', onClick: handlePullCase, disabled: actionInFlight },
-      ];
-    }
-    if (docketState === 'PENDED') {
-      return [
-        { key: 'resume', label: 'Resume Work', variant: 'primary', onClick: () => setShowUnpendModal(true), disabled: actionInFlight },
-      ];
-    }
-    return [];
-  }, [actionInFlight, docketState, isViewOnlyMode, caseInfo?.assignedToXID, handleMoveToWB, handlePullCase]);
+    return [
+      { key: 'assign', label: 'Assign', variant: 'primary', onClick: () => setShowAssignModal(true), disabled: actionInFlight },
+    ];
+  }, [actionInFlight, isViewOnlyMode]);
 
   // Case action buttons (File, Pend, Resolve) - PR: Fix Case Lifecycle
   // Action Visibility Rules:
   // - OPEN: Show File, Pend, Resolve (no Unpend)
   // - PENDED: Show ONLY Unpend (no File, Pend, Resolve)
   // - FILED or RESOLVED: Show nothing (terminal states, read-only)
-  const canPerformLifecycleActions = lifecycleStatus === 'OPEN' && !isViewOnlyMode;
-  const showQcActions = isAdmin && lifecycleStatus === 'QC_PENDING' && !isViewOnlyMode;
+  const canPerformLifecycleActions = (lifecycleStatus === 'OPEN' || lifecycleStatus === 'IN_PROGRESS') && !isViewOnlyMode;
+  const showQcActions = false;
   const isAnyModalOpen = Boolean(
     showFileModal
     || showPendModal
@@ -1356,7 +1320,7 @@ export const CaseDetailPage = () => {
     return <RouteErrorFallback title="Invalid firm" message="Unable to open this docket because firm context is missing." backTo={ROUTES.SUPERADMIN_LOGIN} />;
   }
 
-  if (loading) {
+  if (loading || (activeDocketId === caseId && isDocketLoading && !caseData)) {
     return (
       <Layout>
         <Loading message="Loading docket..." />
@@ -1502,7 +1466,7 @@ export const CaseDetailPage = () => {
               </div>
             </section>
 
-            <section className={`case-card ${lifecycleStatus === 'PENDED' ? 'opacity-90' : ''}`} aria-labelledby="overview-heading">
+            <section className={`case-card ${lifecycleStatus === 'IN_PROGRESS' ? 'opacity-90' : ''}`} aria-labelledby="overview-heading">
               <div className="case-card__heading">
                 <h2 id="overview-heading">Docket Details</h2>
               </div>
@@ -1520,9 +1484,9 @@ export const CaseDetailPage = () => {
                   <span className="field-value text-sm font-medium text-gray-900">{Number(caseInfo?.slaDays || 0) > 0 ? String(caseInfo.slaDays) : '-'}</span>
                 </div>
               </div>
-              {lifecycleStatus === 'PENDED' && (caseInfo?.pendingUntil || caseInfo?.reopenDate) ? (
+              {lifecycleStatus === 'IN_PROGRESS' && (caseInfo?.pendingUntil || caseInfo?.reopenDate) ? (
                 <Badge variant="warning" className="mt-3 inline-flex">
-                  PENDED till {formatDateTime(caseInfo.pendingUntil || caseInfo.reopenDate)}
+                  In progress until {formatDateTime(caseInfo.pendingUntil || caseInfo.reopenDate)}
                 </Badge>
               ) : null}
               <div className="field-group mt-4">

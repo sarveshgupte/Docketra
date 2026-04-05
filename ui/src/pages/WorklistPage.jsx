@@ -28,6 +28,7 @@ import { worklistApi } from '../api/worklist.api';
 import { formatDate } from '../utils/formatters';
 import { getStatusLabel } from '../utils/statusDisplay';
 import { useQueryState } from '../hooks/useQueryState';
+import { useActiveDocket } from '../hooks/useActiveDocket';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import api from '../services/api';
 import { ROUTES } from '../constants/routes';
@@ -47,6 +48,7 @@ export const WorklistPage = () => {
   const navigate = useNavigate();
   const { query, setQuery } = useQueryState({ status: '', sort: 'updatedAt', order: 'desc' });
   const { firmSlug } = useParams();
+  const { openDocket } = useActiveDocket();
   
   const [loading, setLoading] = useState(true);
   const [cases, setCases] = useState([]);
@@ -112,8 +114,8 @@ export const WorklistPage = () => {
   };
 
   const handleCaseClick = useCallback((caseId) => {
-    navigate(ROUTES.CASE_DETAIL(firmSlug, caseId));
-  }, [navigate, firmSlug]);
+    openDocket({ caseId, navigate, to: ROUTES.CASE_DETAIL(firmSlug, caseId) });
+  }, [openDocket, navigate, firmSlug]);
 
   const handleRowClick = useCallback((caseItem) => {
     handleCaseClick(caseItem.caseId);
@@ -209,7 +211,7 @@ export const WorklistPage = () => {
       header: 'Assigned To',
       headerClassName: 'min-w-[10rem] whitespace-nowrap',
       cellClassName: 'min-w-[10rem] whitespace-nowrap',
-      render: (caseItem) => caseItem.assignedToName || caseItem.assignedToXID || 'Unassigned',
+      render: (caseItem) => caseItem.assignedToName || caseItem.assignedToXID || user?.name || user?.xID || 'Unassigned',
     },
     {
       key: 'priority',

@@ -32,6 +32,7 @@ import { formatCaseName, formatDate } from '../utils/formatters';
 import { getStatusLabel } from '../utils/statusDisplay';
 import { UX_COPY } from '../constants/uxCopy';
 import { ROUTES, safeRoute } from '../constants/routes';
+import { useActiveDocket } from '../hooks/useActiveDocket';
 
 const DASHBOARD_RECENT_CASES_ROW_COUNT = 5;
 const DASHBOARD_RECENT_CASES_MAX_ROWS = 10;
@@ -163,6 +164,7 @@ export const DashboardPage = () => {
   const { isAdmin } = usePermissions();
   const navigate = useNavigate();
   const { firmSlug } = useParams();
+  const { openDocket } = useActiveDocket();
   const productTourSteps = isAdmin ? ADMIN_PRODUCT_TOUR_STEPS : USER_PRODUCT_TOUR_STEPS;
   const faqItems = isAdmin ? ADMIN_FAQ_ITEMS : USER_FAQ_ITEMS;
   
@@ -462,7 +464,7 @@ export const DashboardPage = () => {
   };
 
   const handleCaseClick = (caseId) => {
-    navigate(safeRoute(ROUTES.CASE_DETAIL(firmSlug, caseId)));
+    openDocket({ caseId, navigate, to: safeRoute(ROUTES.CASE_DETAIL(firmSlug, caseId)) });
   };
 
   const handleChecklistAction = (stepId) => {
