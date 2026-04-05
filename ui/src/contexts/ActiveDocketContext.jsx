@@ -45,7 +45,7 @@ export const ActiveDocketProvider = ({ children }) => {
     if (navigate && to) {
       navigate(to, state ? { state } : undefined);
     }
-    void fetchDocket(caseId);
+    void fetchDocket(caseId).catch(() => null);
   }, [beginDocketOpen, fetchDocket]);
 
   const value = useMemo(() => ({

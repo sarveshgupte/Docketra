@@ -1,5 +1,6 @@
 const CASE_CACHE_TTL_MS = 30 * 1000;
 const caseCache = new Map();
+const latestCaseById = new Map();
 
 const makeCaseCacheKey = (caseId, params = {}) => `${caseId}:${JSON.stringify(params)}`;
 
@@ -22,6 +23,13 @@ export const setCachedCase = (caseId, params, value) => {
   const key = makeCaseCacheKey(caseId, params);
   caseCache.set(key, { value, ts: Date.now() });
 };
+
+export const setLatestCaseSnapshot = (caseId, value) => {
+  if (!value) return;
+  latestCaseById.set(caseId, value);
+};
+
+export const getLatestCaseSnapshot = (caseId) => latestCaseById.get(caseId) || null;
 
 export const setPendingCasePromise = (caseId, params, promise) => {
   const key = makeCaseCacheKey(caseId, params);
