@@ -227,20 +227,21 @@ export const ClientsPage = () => {
       align: 'center',
       tabular: true,
       headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'whitespace-nowrap',
     },
     {
       key: 'businessName',
       header: 'Business Name',
-      headerClassName: 'w-full max-w-lg',
-      cellClassName: 'w-full max-w-lg',
+      headerClassName: 'min-w-[16rem]',
+      cellClassName: 'min-w-[16rem]',
       contentClassName: 'truncate',
     },
     {
       key: 'businessEmail',
       header: 'Email',
-      headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'w-[1px] whitespace-nowrap',
+      headerClassName: 'min-w-[14rem]',
+      cellClassName: 'min-w-[14rem]',
+      contentClassName: 'truncate',
       render: (client) => client.businessEmail || '—',
     },
     {
@@ -248,7 +249,7 @@ export const ClientsPage = () => {
       header: 'Status',
       align: 'center',
       headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'whitespace-nowrap',
       render: (client) => <Badge status={client.status === 'ACTIVE' ? 'Approved' : 'Rejected'}>{client.status}</Badge>,
     },
     {
@@ -257,7 +258,7 @@ export const ClientsPage = () => {
       align: 'right',
       tabular: true,
       headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'whitespace-nowrap',
       render: (client) => formatDate(client.createdAt),
     },
     {
@@ -265,7 +266,7 @@ export const ClientsPage = () => {
       header: 'Actions',
       align: 'right',
       headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'w-[1px]',
+      cellClassName: 'min-w-[15rem]',
       render: (client) => (
         <div className="admin__actions justify-end">
           {isAdmin ? (
@@ -361,7 +362,6 @@ export const ClientsPage = () => {
             columns={columns}
             data={clients}
             rowKey="clientId"
-            preventHorizontalScroll
             emptyContent={(
               <div className="p-8">
                 <EmptyState
