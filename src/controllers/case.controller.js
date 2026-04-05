@@ -1607,19 +1607,42 @@ const getCaseByCaseId = async (req, res) => {
       assignedToXID: caseObject.assignedToXID,
       lifecycle: caseObject.lifecycle,
     });
+    const canonicalAssignmentXID = caseObject.assignedToXID || assignedUser?.xID || null;
+    const normalizedStatus = String(caseObject.status || '').toUpperCase();
+    const normalizedLifecycle = (() => {
+      if (normalizedStatus === 'FILED') return 'FILED';
+      if (normalizedStatus === 'RESOLVED') return 'RESOLVED';
+      if (normalizedStatus === 'QC_PENDING') return 'QC_PENDING';
+      if (normalizedStatus === 'PENDING' || normalizedStatus === 'PENDED') return 'PENDED';
+      return 'OPEN';
+    })();
+
+    console.log('ASSIGNMENT_DEBUG', {
+      caseId: displayCaseId,
+      assignedToXID: canonicalAssignmentXID,
+      assignedUserResolved: Boolean(assignedUser),
+      responseSource: 'GET /api/cases/:id',
+      timestamp: new Date().toISOString(),
+    });
 
     return res.status(200).json({
       success: true,
       data: {
         ...caseObject,
-        lifecycle: resolvedLifecycle,
+        lifecycle: normalizedLifecycle || resolvedLifecycle || 'OPEN',
+        assignedToXID: canonicalAssignmentXID,
         assignedToName: assignedUser?.name || caseObject.assignedToName || null,
         assignedTo: assignedUser ? {
           _id: assignedUser._id,
           name: assignedUser.name,
           email: assignedUser.email,
           xID: assignedUser.xID,
-        } : null,
+        } : (canonicalAssignmentXID ? {
+          _id: null,
+          name: caseObject.assignedToName || canonicalAssignmentXID,
+          email: null,
+          xID: canonicalAssignmentXID,
+        } : null),
         client: client ? {
           clientId: client.clientId,
           businessName: client.businessName,
