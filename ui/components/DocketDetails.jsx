@@ -122,7 +122,7 @@ export function DocketDetails({
     return null;
   }
 
-  const assigned = assignmentLabel(docket);
+  const assigned = assignmentLabel(docket) || 'You';
   const title = docket.title || docket.caseName || 'Untitled docket';
 
   return (
@@ -133,7 +133,7 @@ export function DocketDetails({
             <h1 className="case-detail-header__title">{formatDocketId(docket.caseId || docketId)}</h1>
             <LifecycleBadge lifecycle={docket.lifecycle} />
             {loading ? (
-              <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>Syncing…</span>
+              <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>Syncing latest status…</span>
             ) : null}
           </div>
           <p className="case-detail-header__subtitle">{title}</p>
@@ -141,13 +141,7 @@ export function DocketDetails({
           <div className="case-detail-header__meta">
             Last updated {formatDateTime(docket.updatedAt)}
           </div>
-          <div className="case-detail-header__meta">
-            {assigned != null ? (
-              <>Assigned to: {assigned}</>
-            ) : (
-              <>Assigned to: —</>
-            )}
-          </div>
+          <div className="case-detail-header__meta">Assigned to: {assigned}</div>
         </div>
 
         {children ? (

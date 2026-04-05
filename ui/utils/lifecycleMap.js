@@ -1,20 +1,18 @@
 export const lifecycleMeta = {
-  created: { label: 'Created', color: 'gray' },
-  in_worklist: { label: 'In Worklist', color: 'blue' },
-  active: { label: 'Active', color: 'green' },
-  completed: { label: 'Completed', color: 'purple' },
-  archived: { label: 'Archived', color: 'dark' },
+  open_active: { label: 'Open / Active', color: 'blue', icon: '◉' },
+  in_progress: { label: 'In Progress', color: 'amber', icon: '↻' },
+  blocked: { label: 'Blocked', color: 'red', icon: '⛔' },
+  completed: { label: 'Completed', color: 'green', icon: '✓' },
 };
 
 const COLOR_STYLES = {
-  gray: { bg: '#f3f4f6', fg: '#374151', border: '#e5e7eb' },
   blue: { bg: '#eff6ff', fg: '#1d4ed8', border: '#bfdbfe' },
+  amber: { bg: '#fffbeb', fg: '#b45309', border: '#fde68a' },
+  red: { bg: '#fef2f2', fg: '#b91c1c', border: '#fecaca' },
   green: { bg: '#ecfdf5', fg: '#047857', border: '#a7f3d0' },
-  purple: { bg: '#faf5ff', fg: '#6b21a8', border: '#e9d5ff' },
-  dark: { bg: '#f9fafb', fg: '#111827', border: '#d1d5db' },
 };
 
-/** Map API / legacy values to a canonical lifecycleMeta key, or null if unknown. */
+/** Map API / legacy values to a canonical lifecycleMeta key, or null when unresolved. */
 export function resolveLifecycleKey(raw) {
   const s = String(raw ?? '').trim();
   if (!s) return null;
@@ -23,24 +21,27 @@ export function resolveLifecycleKey(raw) {
 
   const legacyUpper = s.toUpperCase();
   const fromLegacy = {
-    CREATED: 'created',
-    UNASSIGNED: 'created',
-    ASSIGNED: 'in_worklist',
-    IN_WORKLIST: 'in_worklist',
-    OPEN: 'active',
-    IN_PROGRESS: 'active',
-    PENDING: 'active',
-    PENDED: 'active',
-    QC_PENDING: 'active',
-    QC_FAILED: 'active',
-    QC_CORRECTED: 'active',
+    CREATED: 'open_active',
+    UNASSIGNED: 'open_active',
+    ASSIGNED: 'open_active',
+    IN_WORKLIST: 'open_active',
+    OPEN: 'open_active',
+    ACTIVE: 'open_active',
+    IN_PROGRESS: 'in_progress',
+    PENDING: 'blocked',
+    PENDED: 'blocked',
+    BLOCKED: 'blocked',
+    ON_HOLD: 'blocked',
+    QC_PENDING: 'blocked',
+    QC_FAILED: 'blocked',
+    QC_CORRECTED: 'in_progress',
     RESOLVED: 'completed',
     CLOSED: 'completed',
-    FILED: 'archived',
-    ARCHIVED: 'archived',
+    FILED: 'completed',
+    ARCHIVED: 'completed',
     COMPLETED: 'completed',
-    ACTIVE: 'active',
   };
+
   const mapped = fromLegacy[legacyUpper];
   return mapped && lifecycleMeta[mapped] ? mapped : null;
 }
@@ -52,5 +53,5 @@ export function getLifecycleMeta(raw) {
 }
 
 export function getLifecycleBadgePalette(color) {
-  return COLOR_STYLES[color] || COLOR_STYLES.gray;
+  return COLOR_STYLES[color] || COLOR_STYLES.blue;
 }

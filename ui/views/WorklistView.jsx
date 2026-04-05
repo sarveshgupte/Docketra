@@ -23,7 +23,7 @@ function isAllowedWorklistLifecycle(record) {
   const raw = record?.lifecycle;
   if (raw == null || raw === '') return true;
   const key = resolveLifecycleKey(raw);
-  return key === 'in_worklist' || key === 'active';
+  return key === 'open_active' || key === 'in_progress' || key === 'blocked';
 }
 
 export function WorklistView({
@@ -157,7 +157,7 @@ export function WorklistView({
           const assignParts = [row.assignedToName, row.assignedToXID].filter(
             (p) => p != null && String(p).trim() !== '',
           );
-          const assignedTo = assignParts.length > 0 ? assignParts.join(' · ') : null;
+          const assignedTo = assignParts.length > 0 ? assignParts.join(' · ') : 'You';
           return (
             <li key={row.caseId}>
               <DocketCard

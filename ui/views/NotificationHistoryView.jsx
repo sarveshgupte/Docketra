@@ -6,6 +6,9 @@ import { Card } from '../src/components/common/Card';
 import { Layout } from '../src/components/common/Layout';
 import { PageHeader } from '../src/components/layout/PageHeader';
 import { Stack } from '../src/components/layout/Stack';
+import { EmptyState } from '../src/components/ui/EmptyState';
+import { ErrorState } from '../src/components/feedback/ErrorState';
+import { SkeletonLoader } from '../src/components/ui/SkeletonLoader';
 import { formatDate } from '../src/utils/formatters';
 import { ROUTES } from '../src/constants/routes';
 
@@ -16,6 +19,29 @@ function normalizeList(response) {
   return Array.isArray(raw) ? raw : [];
 }
 
+function toGroupKey(item) {
+  return [item.type || 'GENERIC', item.docket_id || 'global', item.message || ''].join('::');
+}
+
+function groupNotifications(items) {
+  const grouped = new Map();
+  items.forEach((item) => {
+    const key = toGroupKey(item);
+    const existing = grouped.get(key);
+    const createdAtMs = item.created_at ? new Date(item.created_at).getTime() : 0;
+    if (!existing) {
+      grouped.set(key, { ...item, count: 1, latestAtMs: createdAtMs });
+      return;
+    }
+    grouped.set(key, {
+      ...existing,
+      count: existing.count + 1,
+      latestAtMs: Math.max(existing.latestAtMs, createdAtMs),
+    });
+  });
+  return [...grouped.values()].sort((a, b) => b.latestAtMs - a.latestAtMs);
+}
+
 export function NotificationHistoryView() {
   const { firmSlug } = useParams();
   const navigate = useNavigate();
@@ -24,37 +50,30 @@ export function NotificationHistoryView() {
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
 
+  const load = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await notificationsApi.getNotifications();
+      setItems(normalizeList(response));
+    } catch (err) {
+      setError(err?.message || 'Failed to load notifications');
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await notificationsApi.getNotifications();
-        if (!mounted) return;
-        setItems(normalizeList(response));
-      } catch (err) {
-        if (!mounted) return;
-        setError(err?.message || 'Failed to load notifications');
-        setItems([]);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
+    void load();
   }, []);
 
-  const sorted = useMemo(
-    () => [...items].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)),
-    [items],
-  );
+  const grouped = useMemo(() => groupNotifications(items), [items]);
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(grouped.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const sliceStart = (safePage - 1) * PAGE_SIZE;
-  const pageRows = sorted.slice(sliceStart, sliceStart + PAGE_SIZE);
+  const pageRows = grouped.slice(sliceStart, sliceStart + PAGE_SIZE);
 
   const goToDocket = (docketId) => {
     if (!firmSlug || !docketId) return;
@@ -66,7 +85,7 @@ export function NotificationHistoryView() {
       <Stack space={16}>
         <PageHeader
           title="Notification history"
-          subtitle="Full log of notifications for your account (newest first)."
+          subtitle="Meaningful updates, grouped to reduce noise."
           actions={(
             <Button type="button" variant="outline" onClick={() => navigate(ROUTES.DASHBOARD(firmSlug))}>
               Back to dashboard
@@ -74,20 +93,31 @@ export function NotificationHistoryView() {
           )}
         />
         <Card>
-          {loading ? <p className="text-sm text-gray-500">Loading…</p> : null}
-          {!loading && error ? <p className="text-sm text-red-600">{error}</p> : null}
-          {!loading && !error && sorted.length === 0 ? (
-            <p className="text-sm text-gray-500">No notifications yet.</p>
+          {loading ? <SkeletonLoader variant="text" /> : null}
+          {!loading && error ? (
+            <ErrorState
+              title="Unable to load history"
+              description="Please retry to load notification history."
+              onRetry={load}
+            />
           ) : null}
-          {!loading && !error && sorted.length > 0 ? (
+          {!loading && !error && grouped.length === 0 ? (
+            <EmptyState
+              title="No notification history"
+              description="Once activity occurs, grouped updates will show here."
+              icon
+            />
+          ) : null}
+          {!loading && !error && grouped.length > 0 ? (
             <>
-              <ul className="space-y-3">
+              <ul className="space-y-3" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                 {pageRows.map((item) => (
                   <li key={item._id} className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
-                    <p className="text-sm font-medium text-gray-900">{item.message}</p>
+                    <p className="text-sm font-medium text-gray-900" style={{ margin: 0 }}>{item.message}</p>
                     <p className="mt-1 text-xs text-gray-500">
                       {item.type ? `${item.type} · ` : ''}
                       {item.created_at ? formatDate(item.created_at) : '—'}
+                      {item.count > 1 ? ` · ${item.count} similar` : ''}
                       {item.docket_id ? (
                         <>
                           {' · '}
@@ -106,7 +136,7 @@ export function NotificationHistoryView() {
               </ul>
               <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
                 <span className="text-sm text-gray-600">
-                  Page {safePage} of {totalPages} ({sorted.length} total)
+                  Page {safePage} of {totalPages} ({grouped.length} grouped)
                 </span>
                 <div className="flex gap-2">
                   <Button
