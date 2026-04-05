@@ -1223,6 +1223,11 @@ export const CaseDetailPage = () => {
     ];
   }, [actionInFlight, isViewOnlyMode]);
 
+  const shouldShowActions = useMemo(() => {
+    const hiddenLifecycleStates = new Set(['FILED', 'RESOLVED', 'CLOSED', 'ARCHIVED']);
+    return !hiddenLifecycleStates.has(lifecycleStatus);
+  }, [lifecycleStatus]);
+
   // Case action buttons (File, Pend, Resolve) - PR: Fix Case Lifecycle
   // Action Visibility Rules:
   // - OPEN: Show File, Pend, Resolve (no Unpend)
