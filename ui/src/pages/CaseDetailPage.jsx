@@ -1379,16 +1379,7 @@ export const CaseDetailPage = () => {
           prefetchedCase={caseInfo}
           prefetchedSyncKey={`${caseInfo?.lifecycle ?? ''}:${caseInfo?.updatedAt ?? ''}:${caseInfo?.assignedToXID ?? ''}`}
           onDocketUpdated={handleDocketDetailsUpdated}
-          additionalMeta={(
-            <>
-              {descriptionContent && descriptionContent !== '-' ? (
-                <p className="case-detail-header__meta">{descriptionContent}</p>
-              ) : null}
-              <div className="case-detail-header__meta">
-                Priority: {caseInfo.priority || caseInfo.slaPriority || 'Standard'}
-              </div>
-            </>
-          )}
+          openedFromWorklist={location.state?.origin === 'worklist'}
         >
           {caseInfo?.qc?.status || caseInfo?.qcStatus ? (
             <Badge variant={String(caseInfo?.qc?.status || caseInfo?.qcStatus).toUpperCase() === 'FAILED' ? 'danger' : 'info'}>

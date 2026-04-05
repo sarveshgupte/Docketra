@@ -27,7 +27,7 @@ function assignmentLabel(docket) {
 /**
  * Loads docket from API (or uses prefetched snapshot). When the server still reports
  * lifecycle in_worklist, performs a cache-bypassing refetch so GET /cases/:id can run
- * activateOnOpen and return the updated record — no manual "Start Work" control.
+ * activateOnOpen and return the updated record without extra user action.
  */
 export function DocketDetails({
   docketId,
@@ -35,8 +35,8 @@ export function DocketDetails({
   /** Stable string so parent identity changes do not retrigger network (e.g. `${lifecycle}:${updatedAt}`). */
   prefetchedSyncKey = '',
   onDocketUpdated,
-  /** Extra header rows (e.g. description, priority) rendered from API-backed parent data. */
-  additionalMeta = null,
+  /** If true, details should be treated as opened from worklist context. */
+  openedFromWorklist = false,
   children,
 }) {
   const [docket, setDocket] = useState(() => (prefetchedCase ? normalizeDoc(prefetchedCase) : null));
@@ -122,26 +122,25 @@ export function DocketDetails({
     return null;
   }
 
-  const assigned = assignmentLabel(docket) || 'You';
+  const assigned = openedFromWorklist ? 'You' : (assignmentLabel(docket) || 'You');
   const title = docket.title || docket.caseName || 'Untitled docket';
 
   return (
     <>
       <header className="case-detail-header">
         <div className="case-detail-header__identity">
-          <div className="case-detail-header__title-row" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div className="case-detail-header__title-row">
             <h1 className="case-detail-header__title">{formatDocketId(docket.caseId || docketId)}</h1>
             <LifecycleBadge lifecycle={docket.lifecycle} />
             {loading ? (
-              <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>Syncing latest status…</span>
+              <span className="case-detail-header__sync">Syncing…</span>
             ) : null}
           </div>
-          <p className="case-detail-header__subtitle">{title}</p>
-          {additionalMeta}
-          <div className="case-detail-header__meta">
-            Last updated {formatDateTime(docket.updatedAt)}
+          <div className="case-detail-header__secondary">
+            <p className="case-detail-header__subtitle">{title}</p>
+            <div className="case-detail-header__meta">Assigned to: {assigned}</div>
           </div>
-          <div className="case-detail-header__meta">Assigned to: {assigned}</div>
+          <div className="case-detail-header__meta">Updated {formatDateTime(docket.updatedAt)}</div>
         </div>
 
         {children ? (
@@ -164,9 +163,8 @@ export function DocketDetails({
         <h2 id="docket-activity-heading" style={{ fontSize: '0.9rem', fontWeight: 600, margin: '0 0 8px' }}>
           Activity
         </h2>
-        <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>
-          Timeline will appear here as audit and history data are surfaced in this view.
-        </p>
+        <h3 style={{ margin: '0 0 6px', fontSize: '0.88rem', fontWeight: 600, color: '#111827' }}>No activity yet</h3>
+        <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280' }}>Actions, updates, and comments on this docket will appear here.</p>
       </section>
     </>
   );

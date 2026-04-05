@@ -10,7 +10,7 @@ const cardStyle = {
   cursor: 'pointer',
   textAlign: 'left',
   width: '100%',
-  transition: 'box-shadow 0.15s ease, border-color 0.15s ease',
+  transition: 'box-shadow 0.15s ease, border-color 0.15s ease, transform 0.1s ease, opacity 0.1s ease',
 };
 
 export function DocketCard({
@@ -21,6 +21,7 @@ export function DocketCard({
   lastUpdated,
   onOpen,
   focused = false,
+  isOpening = false,
 }) {
   return (
     <button
@@ -32,9 +33,12 @@ export function DocketCard({
         outline: focused ? '2px solid #2563eb' : 'none',
         outlineOffset: 2,
         boxShadow: focused ? '0 1px 6px rgba(37, 99, 235, 0.2)' : 'none',
+        opacity: isOpening ? 0.85 : 1,
+        transform: isOpening ? 'scale(0.995)' : 'none',
       }}
       onClick={() => onOpen?.(docketId)}
       aria-label={`Open docket ${docketId}`}
+      aria-pressed={isOpening}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
         <div style={{ minWidth: 0, display: 'grid', gap: 4 }}>

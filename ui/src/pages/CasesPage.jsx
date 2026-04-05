@@ -368,31 +368,6 @@ export const CasesPage = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCaseIds, cases]);
 
-  const handleBulkMoveToWorkbasket = useCallback(async () => {
-    if (!isAdmin) return;
-    const selectedList = cases.filter((c) => selectedCaseIds.has(c.caseId));
-    if (!selectedList.length) return;
-    setConfirmModal({
-      title: 'Move to Workbasket',
-      description: `Move ${selectedList.length} docket(s) to Workbasket?`,
-      onConfirm: async () => {
-        setConfirmModal(null);
-        setBulkActionInProgress(true);
-        try {
-          await Promise.all(selectedList.map((c) => caseApi.moveCaseToGlobal(c.caseId)));
-          setSelectedCaseIds(new Set());
-          showSuccess(`${selectedList.length} docket${selectedList.length !== 1 ? 's' : ''} moved to Workbasket`);
-          await loadCases();
-        } catch (err) {
-          console.error('Bulk move failed:', err);
-        } finally {
-          setBulkActionInProgress(false);
-        }
-      },
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCaseIds, cases, isAdmin]);
-
   // Step 1: apply status filter (manual), then step 2: apply preset view predicate.
   const manuallyFilteredCases = useMemo(() => {
     if (statusFilter === 'ALL') return cases;
@@ -926,15 +901,6 @@ export const CasesPage = () => {
             >
               {UX_COPY.actions.ASSIGN_TO_ME}
             </Button>
-            {isAdmin && (
-              <Button
-                variant="outline"
-                onClick={handleBulkMoveToWorkbasket}
-                disabled={bulkActionInProgress}
-              >
-                {UX_COPY.actions.MOVE_TO_WORKBASKET}
-              </Button>
-            )}
             <button
               type="button"
               className="cases-page__bulk-clear"
