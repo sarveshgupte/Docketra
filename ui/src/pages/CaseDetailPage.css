@@ -998,6 +998,25 @@
   color: #111827;
 }
 
+.docket-updates-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid #dbeafe;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.docket-updates-indicator:hover {
+  background: #dbeafe;
+}
+
 .docket-activity__list,
 .docket-activity__skeleton {
   list-style: none;
@@ -1150,6 +1169,10 @@
   font-size: 0.9rem;
   font-weight: 600;
   color: #111827;
+}
+
+.docket-comments-section .docket-updates-indicator {
+  margin: 0 0 10px;
 }
 
 .docket-comment-list {
