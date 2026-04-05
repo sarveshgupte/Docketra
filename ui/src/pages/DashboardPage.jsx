@@ -47,7 +47,7 @@ const resolveSupportEmail = () => {
 
 const DEFAULT_SUPPORT_EMAIL = resolveSupportEmail();
 
-const PRODUCT_TOUR_STEPS = [
+const ADMIN_PRODUCT_TOUR_STEPS = [
   {
     title: 'Add your first client',
     description: 'Start by creating a client profile so every docket, document, and workflow has a clear reporting entity.',
@@ -74,7 +74,30 @@ const PRODUCT_TOUR_STEPS = [
   },
 ];
 
-const FAQ_ITEMS = [
+const USER_PRODUCT_TOUR_STEPS = [
+  {
+    title: 'Review your assigned worklist',
+    description: 'Open My WL to see the dockets assigned to you and identify what needs action first.',
+  },
+  {
+    title: 'Create your first docket',
+    description: 'Create a docket with due date, category, and priority so your team can begin tracking execution.',
+  },
+  {
+    title: 'Update docket progress',
+    description: 'Move dockets through statuses (open, in review, resolved) to keep timelines and compliance signals accurate.',
+  },
+  {
+    title: 'Use Workbasket for intake visibility',
+    description: 'Monitor incoming or unassigned dockets in Workbasket and coordinate with admins for ownership assignment.',
+  },
+  {
+    title: 'Track risk and due dates daily',
+    description: 'Use the KPI cards on this dashboard every day to prioritize overdue and upcoming compliance items.',
+  },
+];
+
+const ADMIN_FAQ_ITEMS = [
   {
     question: 'How do I set up Docketra for a new firm?',
     answer: 'Follow this sequence: add a client, invite users, define categories, create your first docket, then route it via Workbasket to Worklist.',
@@ -90,6 +113,25 @@ const FAQ_ITEMS = [
   {
     question: 'Can we replay the guided tour later?',
     answer: 'Yes. Use the "Replay product tour" button in the Help & Onboarding section on this dashboard anytime.',
+  },
+];
+
+const USER_FAQ_ITEMS = [
+  {
+    question: 'How should a USER start using Docketra on first login?',
+    answer: 'Start with My WL, review assigned dockets, and prioritize overdue or near-due items for immediate follow-up.',
+  },
+  {
+    question: 'Can a USER add clients or invite team members?',
+    answer: 'No. USER accounts focus on docket execution. Client and team setup actions are available to admin roles only.',
+  },
+  {
+    question: 'What should I do if a docket is unassigned?',
+    answer: 'Use Workbasket to identify the docket and coordinate with your admin for assignment before execution.',
+  },
+  {
+    question: 'Can I replay this tutorial later?',
+    answer: 'Yes. Use the "Replay product tour" button in the Help & Onboarding section at any time.',
   },
 ];
 
@@ -119,9 +161,10 @@ const formatDocketIdentifier = (caseItem = {}) => {
 export const DashboardPage = () => {
   const { user } = useAuth();
   const { isAdmin } = usePermissions();
-  const isEmployee = user?.role === 'Employee';
   const navigate = useNavigate();
   const { firmSlug } = useParams();
+  const productTourSteps = isAdmin ? ADMIN_PRODUCT_TOUR_STEPS : USER_PRODUCT_TOUR_STEPS;
+  const faqItems = isAdmin ? ADMIN_FAQ_ITEMS : USER_FAQ_ITEMS;
   
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -212,7 +255,7 @@ export const DashboardPage = () => {
 
   const handleTourNext = () => {
     setTourStepIndex((currentStep) => {
-      if (currentStep >= PRODUCT_TOUR_STEPS.length - 1) {
+      if (currentStep >= productTourSteps.length - 1) {
         markTourCompleted();
         return currentStep;
       }
@@ -477,7 +520,7 @@ export const DashboardPage = () => {
       onClick: () => navigate(`${safeRoute(ROUTES.CASES(firmSlug))}?approvalStatus=PENDING`),
     },
     {
-      title: 'Awaiting Partner Review',
+      title: isAdmin ? 'Awaiting Partner Review' : 'Awaiting My Review',
       value: awaitingPartnerReview,
       subtitle: 'Approval queue',
       onClick: () => navigate(`${safeRoute(ROUTES.MY_WORKLIST(firmSlug))}?status=PENDING`),
@@ -525,8 +568,12 @@ export const DashboardPage = () => {
       <div className="min-h-screen bg-gray-50">
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
           <PageHeader
-            title="Partner Control Dashboard"
-            description="Where is the compliance risk in my firm today?"
+            title={isAdmin ? 'Partner Control Dashboard' : 'User Work Dashboard'}
+            description={
+              isAdmin
+                ? 'Where is the compliance risk in my firm today?'
+                : 'What should I work on first today?'
+            }
             actions={(
               <Button variant="primary" onClick={() => navigate(safeRoute(ROUTES.CREATE_CASE(firmSlug)))}>
                 {UX_COPY.actions.CREATE_CASE}
@@ -702,7 +749,7 @@ export const DashboardPage = () => {
               <Card className="space-y-4">
                 <h3 className="text-base font-semibold text-gray-900">FAQ tutorial guide</h3>
                 <div className="space-y-3">
-                  {FAQ_ITEMS.map((item) => (
+                  {faqItems.map((item) => (
                     <div key={item.question} className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
                       <h4 className="text-sm font-semibold text-gray-900">{item.question}</h4>
                       <p className="mt-1 text-sm text-gray-600">{item.answer}</p>
@@ -733,13 +780,13 @@ export const DashboardPage = () => {
         <div className="fixed inset-0 z-[1001] flex min-h-screen items-center justify-center bg-slate-950/50 px-4">
           <div className="w-full max-w-2xl rounded-xl border border-gray-200 bg-white p-6 shadow-2xl">
             <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">
-              Product tour · Step {tourStepIndex + 1} of {PRODUCT_TOUR_STEPS.length}
+              Product tour · Step {tourStepIndex + 1} of {productTourSteps.length}
             </p>
             <h2 className="mt-2 text-xl font-semibold text-gray-900">
-              {PRODUCT_TOUR_STEPS[tourStepIndex]?.title}
+              {productTourSteps[tourStepIndex]?.title}
             </h2>
             <p className="mt-3 text-sm text-gray-600">
-              {PRODUCT_TOUR_STEPS[tourStepIndex]?.description}
+              {productTourSteps[tourStepIndex]?.description}
             </p>
 
             <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
@@ -755,7 +802,7 @@ export const DashboardPage = () => {
                   Back
                 </button>
                 <button className="btn btn-primary" onClick={handleTourNext}>
-                  {tourStepIndex === PRODUCT_TOUR_STEPS.length - 1 ? 'Finish' : 'Next'}
+                  {tourStepIndex === productTourSteps.length - 1 ? 'Finish' : 'Next'}
                 </button>
               </div>
             </div>
