@@ -18,6 +18,7 @@ const assert = require('assert');
 const crypto = require('crypto');
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
+const { createMongoMemoryOrNull } = require('./utils/mongoMemory');
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -510,32 +511,37 @@ async function run() {
   // Tests that DO need MongoDB
   let mongoServer = null;
   try {
-    mongoServer = await MongoMemoryServer.create();
-    const uri = mongoServer.getUri();
-    await mongoose.connect(uri);
+    mongoServer = await createMongoMemoryOrNull(
+      () => MongoMemoryServer.create(),
+      'Skipping DB-dependent encryption tests (Mongo binary unavailable)'
+    );
+    if (mongoServer) {
+      const uri = mongoServer.getUri();
+      await mongoose.connect(uri);
 
-    // Set up a test master key
-    const testKey = makeTestKey();
-    process.env.MASTER_ENCRYPTION_KEY = testKey;
-    process.env.ENCRYPTION_PROVIDER = 'local';
+      // Set up a test master key
+      const testKey = makeTestKey();
+      process.env.MASTER_ENCRYPTION_KEY = testKey;
+      process.env.ENCRYPTION_PROVIDER = 'local';
 
-    // Reset cached provider singleton
-    const { _resetProvider } = require('../src/security/encryption.service');
-    _resetProvider();
+      // Reset cached provider singleton
+      const { _resetProvider } = require('../src/security/encryption.service');
+      _resetProvider();
 
-    const LocalEncryptionProvider = require('../src/security/encryption.local.provider');
-    const provider = new LocalEncryptionProvider();
+      const LocalEncryptionProvider = require('../src/security/encryption.local.provider');
+      const provider = new LocalEncryptionProvider();
 
-    await testGenerateTenantKey(provider);
-    await testEncryptDecryptRoundtrip(provider);
-    await testDifferentTenantsProduceDifferentCiphertext(provider);
-    await testVersionedAndLegacyDecryptCompatibility(provider);
-    await testTenantKeyCache(provider);
-    await testServiceSuperadminGuard();
-    await testEncryptionServiceWithDb();
-    await testClientRepositoryHandlesCorruptedEncryptedField();
+      await testGenerateTenantKey(provider);
+      await testEncryptDecryptRoundtrip(provider);
+      await testDifferentTenantsProduceDifferentCiphertext(provider);
+      await testVersionedAndLegacyDecryptCompatibility(provider);
+      await testTenantKeyCache(provider);
+      await testServiceSuperadminGuard();
+      await testEncryptionServiceWithDb();
+      await testClientRepositoryHandlesCorruptedEncryptedField();
+    }
   } catch (err) {
-    console.warn('⚠️  Skipping DB-dependent encryption tests (Mongo binary unavailable):', err.message);
+    throw err;
   } finally {
     delete process.env.MASTER_ENCRYPTION_KEY;
     if (mongoose.connection.readyState === 1) {

@@ -2,12 +2,21 @@
 const assert = require('assert');
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
+const { createMongoMemoryOrNull } = require('./utils/mongoMemory');
 
 async function run() {
   let mongoServer;
 
   try {
-    mongoServer = await MongoMemoryServer.create();
+    mongoServer = await createMongoMemoryOrNull(
+      () => MongoMemoryServer.create(),
+      'Skipping tenant scope guard plugin test (Mongo binary unavailable)'
+    );
+    if (!mongoServer) {
+      console.log('✓ tenant scope guard plugin test skipped (Mongo binary unavailable)');
+      return;
+    }
+
     await mongoose.connect(mongoServer.getUri());
 
     const Client = require('../src/models/Client.model');
