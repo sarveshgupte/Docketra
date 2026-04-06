@@ -2,8 +2,15 @@ const mongoose = require('mongoose');
 const Case = require('../models/Case.model');
 const Category = require('../models/Category.model');
 const DocketAuditLog = require('../models/DocketAuditLog.model');
-const { DocketStatus, assertValidDocketTransition, toDocketState, toPersistenceState } = require('../domain/docket/docketStateMachine');
-const { DocketLifecycle, assertValidLifecycleTransition, normalizeLifecycle } = require('../domain/docketLifecycle');
+const { DocketStatus, toDocketState, toPersistenceState } = require('../domain/docket/docketStateMachine');
+const {
+  DocketLifecycle,
+  assertValidLifecycleTransition,
+  normalizeLifecycle,
+  isValidTransition,
+  getNextStates,
+  toLifecycleFromStatus,
+} = require('../domain/docketLifecycle');
 const { EVENT_NAMES, emitDocketEvent } = require('./docketEvents.service');
 const { NotificationTypes, createNotification } = require('../domain/notifications');
 
@@ -61,32 +68,20 @@ async function createDocketNotification({ firmId, userId, type, docketId, messag
   });
 }
 
-const ALLOWED_LIFECYCLE_TRANSITIONS = Object.freeze({
-  OPEN: Object.freeze(['PENDING', 'RESOLVED', 'FILED', 'QC_PENDING']),
-  PENDING: Object.freeze(['OPEN']),
-  QC_PENDING: Object.freeze(['RESOLVED', 'OPEN']),
-  RESOLVED: Object.freeze([]),
-  FILED: Object.freeze([]),
-});
-
-function normalizeLifecycleState(status) {
-  const normalized = String(toDocketState(status) || '').toUpperCase();
-  if (['ASSIGNED', 'IN_PROGRESS', 'AVAILABLE', 'CREATED'].includes(normalized)) return 'OPEN';
-  return normalized;
-}
-
-function validateLifecycleAccess({ actor, fromState, toState }) {
+function validateLifecycleAccess({ actor, fromLifecycle, toLifecycle, fromStatus }) {
   const role = normalizeActorRole(actor);
-  const from = normalizeLifecycleState(fromState);
-  const to = normalizeLifecycleState(toState);
 
-  if (role === 'USER' && from === 'QC_PENDING') {
+  if (role === 'USER' && String(toDocketState(fromStatus) || '').toUpperCase() === DocketStatus.QC_PENDING) {
     throw makeError('Permission denied', 403, 'DOCKET_PERMISSION_DENIED');
   }
 
-  const allowed = ALLOWED_LIFECYCLE_TRANSITIONS[from] || [];
-  if (!allowed.includes(to)) {
-    throw makeError('Invalid lifecycle transition', 400, 'INVALID_DOCKET_TRANSITION');
+  if (!isValidTransition(fromLifecycle, toLifecycle)) {
+    const allowedTargets = getNextStates(fromLifecycle);
+    throw makeError(
+      `Invalid lifecycle transition from ${fromLifecycle} to ${toLifecycle}. Allowed: ${allowedTargets.join(', ') || 'none'}`,
+      400,
+      'INVALID_DOCKET_TRANSITION',
+    );
   }
 }
 
@@ -185,19 +180,17 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
         docket.forceQc = Boolean(forceQC || sendToQC);
       }
 
-      assertValidDocketTransition(fromState, finalTarget);
-      validateLifecycleAccess({ actor, fromState, toState: finalTarget });
+      const fromLifecycle = normalizeLifecycle(docket.lifecycle || DocketLifecycle.WL);
+      const targetLifecycle = toLifecycleFromStatus(finalTarget);
+      validateLifecycleAccess({
+        actor,
+        fromLifecycle,
+        toLifecycle: targetLifecycle,
+        fromStatus: fromState,
+      });
 
       docket.status = toPersistenceState(finalTarget);
-      if (finalTarget === DocketStatus.IN_PROGRESS || finalTarget === DocketStatus.PENDING || finalTarget === DocketStatus.QC_PENDING) {
-        transitionLifecycle(docket, DocketLifecycle.ACTIVE);
-      }
-      if (finalTarget === DocketStatus.RESOLVED) {
-        transitionLifecycle(docket, DocketLifecycle.COMPLETED);
-      }
-      if (finalTarget === DocketStatus.FILED) {
-        transitionLifecycle(docket, DocketLifecycle.ARCHIVED);
-      }
+      transitionLifecycle(docket, targetLifecycle);
       docket.lastActionByXID = actor.xID;
       docket.lastActionAt = new Date();
 
@@ -309,9 +302,16 @@ async function qcDecision({ docketId, firmId, actor, decision, comment }) {
     docket.qc = { ...(docket.qc || {}), status: 'CORRECTED', handledBy: actor.xID, handledAt: new Date(), comment };
   }
 
-  assertValidDocketTransition(fromState, toState);
-  validateLifecycleAccess({ actor, fromState, toState });
+  const fromLifecycle = normalizeLifecycle(docket.lifecycle || DocketLifecycle.WL);
+  const targetLifecycle = toLifecycleFromStatus(toState);
+  validateLifecycleAccess({
+    actor,
+    fromLifecycle,
+    toLifecycle: targetLifecycle,
+    fromStatus: fromState,
+  });
   docket.status = toPersistenceState(toState);
+  transitionLifecycle(docket, targetLifecycle);
   docket.lastActionByXID = actor.xID;
   docket.lastActionAt = new Date();
   await docket.save();
@@ -319,7 +319,7 @@ async function qcDecision({ docketId, firmId, actor, decision, comment }) {
   await writeAudit({
     docketId,
     fromState,
-    toState: normalizeLifecycleState(toState) === 'OPEN' ? 'OPEN' : toState,
+    toState: targetLifecycle,
     userId: actor.xID,
     performedByRole: normalizeActorRole(actor),
     firmId,

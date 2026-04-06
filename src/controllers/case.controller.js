@@ -14,7 +14,7 @@ const categoryRepository = require('../repositories/category.repository');
 const { detectDuplicates, generateDuplicateOverrideComment } = require('../services/clientDuplicateDetector');
 const { CASE_CATEGORIES, CASE_LOCK_CONFIG, COMMENT_PREVIEW_LENGTH, CLIENT_STATUS } = require('../config/constants');
 const CaseStatus = require('../domain/case/caseStatus');
-const { DocketLifecycle } = require('../domain/docketLifecycle');
+const { DocketLifecycle, toLifecycleFromStatus } = require('../domain/docketLifecycle');
 const { isValidTransition } = require('./docketWorkflow.controller');
 const { activateOnOpen } = require('../services/docketWorkflow.service');
 const { isProduction } = require('../config/config');
@@ -1303,8 +1303,10 @@ const updateCaseStatus = async (req, res) => {
     }
 
     if (docketStatuses.has(String(caseData.status || '').toUpperCase()) && docketStatuses.has(normalizedStatus)) {
-      const isAssigned = Boolean(caseData.assignedToXID);
-      if (!isValidTransition(String(caseData.status || '').toUpperCase(), normalizedStatus, isAssigned)) {
+      if (!isValidTransition(
+        toLifecycleFromStatus(caseData.status),
+        toLifecycleFromStatus(normalizedStatus),
+      )) {
         return res.status(400).json({ success: false, message: 'Invalid transition' });
       }
     }
