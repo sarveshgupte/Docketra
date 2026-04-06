@@ -11,11 +11,14 @@ import { ROUTES } from '../src/constants/routes';
 
 const MEANINGFUL_TYPES = new Set([
   'ASSIGNED',
+  'DOCKET_ASSIGNED',
   'LIFECYCLE_CHANGED',
+  'DOCKET_ACTIVATED',
   'COMMENT_ADDED',
   'MENTION',
   'BLOCKED',
   'COMPLETED',
+  'DOCKET_COMPLETED',
   'DUE_SOON',
 ]);
 
