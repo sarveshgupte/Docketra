@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const { randomUUID } = require('crypto');
 const CaseStatus = require('../domain/case/caseStatus');
-const { DocketLifecycle, deriveLifecycle, lifecycleRequiresAssignment } = require('../domain/docketLifecycle');
+const { DocketLifecycle, deriveLifecycle, lifecycleRequiresAssignment, normalizeLifecycle } = require('../domain/docketLifecycle');
 const softDeletePlugin = require('../utils/softDelete.plugin');
 const { tenantScopeGuardPlugin } = require('./plugins/tenantScopeGuard.plugin');
 const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -329,7 +329,9 @@ const caseSchema = new mongoose.Schema({
   lifecycle: {
     type: String,
     enum: Object.values(DocketLifecycle),
-    default: DocketLifecycle.CREATED,
+    default: DocketLifecycle.WL,
+    required: true,
+    set: (value) => normalizeLifecycle(value),
   },
 
   // Budget estimates used for reporting variance
