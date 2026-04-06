@@ -14,7 +14,7 @@ const categoryRepository = require('../repositories/category.repository');
 const { detectDuplicates, generateDuplicateOverrideComment } = require('../services/clientDuplicateDetector');
 const { CASE_CATEGORIES, CASE_LOCK_CONFIG, COMMENT_PREVIEW_LENGTH, CLIENT_STATUS } = require('../config/constants');
 const CaseStatus = require('../domain/case/caseStatus');
-const { DocketLifecycle, toLifecycleFromStatus } = require('../domain/docketLifecycle');
+const { DocketLifecycle, toLifecycleFromStatus, normalizeLifecycle, isValidState } = require('../domain/docketLifecycle');
 const { isValidTransition } = require('./docketWorkflow.controller');
 const { activateOnOpen } = require('../services/docketWorkflow.service');
 const { isProduction } = require('../config/config');
@@ -95,6 +95,15 @@ const sanitizeOutput = (value) => String(value ?? '')
   .replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;')
   .replace(/'/g, '&#39;');
+
+const enforceDocketLifecycleDefault = (docket) => {
+  if (!docket || typeof docket !== 'object') return docket;
+  docket.lifecycle = normalizeLifecycle(docket.lifecycle);
+  if (!isValidState(docket.lifecycle)) {
+    docket.lifecycle = DocketLifecycle.WL;
+  }
+  return docket;
+};
 
 const buildAddCommentErrorResponse = (error, context = {}) => {
   const validationDetails = error?.errors
@@ -1613,6 +1622,7 @@ const getCaseByCaseId = async (req, res) => {
       typeof caseData.toObject === 'function'
         ? caseData.toObject()
         : caseData;
+    enforceDocketLifecycleDefault(caseObject);
 
     let assignedUser = null;
     if (caseObject.assignedTo) {
@@ -1621,7 +1631,7 @@ const getCaseByCaseId = async (req, res) => {
       assignedUser = await User.findOne({ xID: caseObject.assignedToXID, firmId: scopedFirmId }).select('_id name email xID').lean();
     }
     const canonicalAssignmentXID = caseObject.assignedToXID || assignedUser?.xID || null;
-    const lifecycle = caseObject.lifecycle;
+    const lifecycle = normalizeLifecycle(caseObject.lifecycle);
 
     console.log('DOCKET_STATE_DEBUG', {
       caseId: displayCaseId,
@@ -1807,6 +1817,7 @@ const getCases = async (req, res) => {
     }
 
     const casesWithClients = decryptedCases.map(caseItem => {
+      enforceDocketLifecycleDefault(caseItem);
       const client = clientsMap.get(caseItem.clientId);
       return {
         ...caseItem,
