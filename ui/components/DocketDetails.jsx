@@ -54,9 +54,9 @@ function assignmentLabel(docket) {
   if (!docket) return null;
   const name = docket.assignedToName;
   const xid = docket.assignedToXID;
-  const parts = [name, xid].filter((p) => p != null && String(p).trim() !== '');
-  if (parts.length === 0) return null;
-  return parts.join(' · ');
+  if (name != null && String(name).trim() !== '') return String(name).trim();
+  if (xid != null && String(xid).trim() !== '') return String(xid).trim();
+  return null;
 }
 
 /**
@@ -425,7 +425,11 @@ export function DocketDetails({
     return null;
   }
 
-  const assigned = openedFromWorklist ? 'You' : (assignmentLabel(docket) || 'You');
+  const isWorklistLifecycle = String(docket.lifecycle || '').trim().toUpperCase() === 'WL'
+    || String(docket.lifecycle || '').trim().toLowerCase() === 'in_worklist';
+  const assigned = openedFromWorklist
+    ? (user?.name || user?.xID || 'You')
+    : (assignmentLabel(docket) || (isWorklistLifecycle ? '—' : 'Unassigned'));
   const title = docket.title || formatCaseName(docket.caseName);
 
   return (
