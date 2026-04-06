@@ -49,6 +49,7 @@ const extractActivityPayload = (response) => {
 };
 
 const commentIdentity = (comment) => comment?._id || comment?.id;
+const asDisplayValue = (value) => (!value || value === 'N/A' ? '—' : value);
 
 function assignmentLabel(docket) {
   if (!docket) return null;
@@ -431,6 +432,7 @@ export function DocketDetails({
     ? (user?.name || user?.xID || 'You')
     : (assignmentLabel(docket) || (isWorklistLifecycle ? '—' : 'Unassigned'));
   const title = docket.title || formatCaseName(docket.caseName);
+  const lastUpdatedLabel = asDisplayValue(formatDateTime(docket.updatedAt));
 
   return (
     <>
@@ -444,10 +446,10 @@ export function DocketDetails({
             ) : null}
           </div>
           <div className="case-detail-header__secondary">
-            <p className="case-detail-header__subtitle">{title === 'N/A' ? 'Untitled docket' : title}</p>
+            <p className="case-detail-header__subtitle">{asDisplayValue(title) === '—' ? 'Untitled docket' : title}</p>
             <div className="case-detail-header__meta">Assigned to: {assigned}</div>
           </div>
-          <div className="case-detail-header__meta">Updated {formatDateTime(docket.updatedAt)}</div>
+          <div className="case-detail-header__meta">Last updated: {lastUpdatedLabel}</div>
         </div>
 
         {children ? (
