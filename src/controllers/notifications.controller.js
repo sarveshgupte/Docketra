@@ -14,6 +14,7 @@ function toLegacyMessage(notification) {
 function normalizeNotification(notification) {
   return {
     ...notification,
+    read: Boolean(notification?.read),
     message: toLegacyMessage(notification),
     docket_id: notification.docketId,
     created_at: notification.timestamp,
@@ -24,12 +25,17 @@ async function getNotifications(req, res) {
   try {
     const firmId = req.user?.firmId;
     const userId = String(req.user?.xID || '').toUpperCase();
+    const limit = Number(req.query.limit) || 10;
 
     const notifications = await Notification.find({ firmId, userId })
       .sort({ timestamp: -1 })
+      .limit(limit)
       .lean();
 
-    return res.json({ success: true, data: notifications.map(normalizeNotification) });
+    return res.json({
+      success: true,
+      data: notifications.map(normalizeNotification),
+    });
   } catch (error) {
     return res.status(500).json({
       success: false,
@@ -38,6 +44,49 @@ async function getNotifications(req, res) {
   }
 }
 
+async function getAllNotifications(req, res) {
+  try {
+    const firmId = req.user?.firmId;
+    const userId = String(req.user?.xID || '').toUpperCase();
+
+    const notifications = await Notification.find({ firmId, userId })
+      .sort({ timestamp: -1 })
+      .lean();
+
+    return res.json({
+      success: true,
+      data: notifications.map(normalizeNotification),
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to load notifications',
+    });
+  }
+}
+
+async function markAsRead(req, res) {
+  try {
+    const firmId = req.user?.firmId;
+    const userId = String(req.user?.xID || '').toUpperCase();
+    const { id } = req.params;
+
+    await Notification.updateOne(
+      { _id: id, firmId, userId },
+      { $set: { read: true } },
+    );
+
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to mark notification as read',
+    });
+  }
+}
+
 module.exports = {
   getNotifications,
+  getAllNotifications,
+  markAsRead,
 };
