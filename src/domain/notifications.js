@@ -1,18 +1,26 @@
 const Notification = require('../models/Notification.model');
 
 const NotificationTypes = Object.freeze({
-  DOCKET_ASSIGNED: 'DOCKET_ASSIGNED',
+  ASSIGNED: 'ASSIGNED',
+  REASSIGNED: 'REASSIGNED',
   DOCKET_ACTIVATED: 'DOCKET_ACTIVATED',
-  DOCKET_COMPLETED: 'DOCKET_COMPLETED',
+  LIFECYCLE_CHANGED: 'LIFECYCLE_CHANGED',
 });
+
+function normalizeActor(actor = {}) {
+  return {
+    xID: String(actor?.xID || actor?.userId || actor?.id || 'SYSTEM').toUpperCase(),
+    role: String(actor?.role || 'SYSTEM').toUpperCase(),
+  };
+}
 
 async function createNotification({
   firmId,
-  user_id,
+  userId,
   type,
-  docket_id,
-  message,
-  created_at = new Date(),
+  docketId,
+  actor,
+  timestamp = new Date(),
 }) {
   if (!NotificationTypes[type]) {
     const error = new Error(`Unsupported notification type: ${type}`);
@@ -23,11 +31,11 @@ async function createNotification({
 
   return Notification.create({
     firmId,
-    user_id,
+    userId: String(userId || '').toUpperCase(),
     type,
-    docket_id,
-    message,
-    created_at,
+    docketId,
+    actor: normalizeActor(actor),
+    timestamp,
   });
 }
 
