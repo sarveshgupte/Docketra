@@ -6,31 +6,15 @@ const {
   reassign,
   reopenDuePending,
 } = require('../services/docketWorkflow.service');
+const { isValidTransition: isValidLifecycleTransition } = require('../domain/docketLifecycle');
 
 function isAdmin(req) {
   return String(req.user?.role || '').toUpperCase() === 'ADMIN';
 }
 
 
-function isValidTransition(fromState, toState, isAssigned = true) {
-  const from = String(fromState || '').toUpperCase();
-  const to = String(toState || '').toUpperCase();
-
-  if (!isAssigned && from === 'OPEN') {
-    return to === 'FILED';
-  }
-
-  const allowed = {
-    OPEN: ['PENDING', 'RESOLVED', 'FILED', 'IN_PROGRESS'],
-    PENDING: ['OPEN', 'IN_PROGRESS', 'FILED'],
-    IN_PROGRESS: ['PENDING', 'RESOLVED', 'FILED', 'QC_PENDING'],
-    QC_PENDING: ['ASSIGNED', 'RESOLVED'],
-    ASSIGNED: ['IN_PROGRESS'],
-    RESOLVED: [],
-    FILED: [],
-  };
-
-  return (allowed[from] || []).includes(to);
+function isValidTransition(fromState, toState) {
+  return isValidLifecycleTransition(fromState, toState);
 }
 
 function handleError(res, error) {
