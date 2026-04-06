@@ -92,21 +92,21 @@ async function testNotificationCreation() {
 
     await createNotification({
       firmId: 'FIRM-1',
-      user_id: 'X100',
-      type: NotificationTypes.DOCKET_ASSIGNED,
-      docket_id: 'CASE-9',
-      message: 'Assigned',
+      userId: 'X100',
+      type: NotificationTypes.ASSIGNED,
+      docketId: 'CASE-9',
+      actor: { xID: 'X200', role: 'ADMIN' },
     });
 
-    assert.strictEqual(captured.type, NotificationTypes.DOCKET_ASSIGNED);
+    assert.strictEqual(captured.type, NotificationTypes.ASSIGNED);
 
     await assert.rejects(
       () => createNotification({
         firmId: 'FIRM-1',
-        user_id: 'X100',
+        userId: 'X100',
         type: 'RANDOM_EVENT',
-        docket_id: 'CASE-9',
-        message: 'Assigned',
+        docketId: 'CASE-9',
+        actor: { xID: 'X200', role: 'ADMIN' },
       }),
       (error) => error && error.code === 'INVALID_NOTIFICATION_TYPE',
     );
