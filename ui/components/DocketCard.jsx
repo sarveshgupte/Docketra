@@ -18,6 +18,8 @@ export function DocketCard({
   title,
   lifecycle,
   assignedTo,
+  assignedToName,
+  assignedToXID,
   lastUpdated,
   onOpen,
   focused = false,
@@ -25,6 +27,12 @@ export function DocketCard({
 }) {
   const displayDocketId = formatDocketId(docketId);
   const displayTitle = formatCaseName(title);
+  const isWorklistLifecycle = String(lifecycle || '').trim().toUpperCase() === 'WL'
+    || String(lifecycle || '').trim().toLowerCase() === 'in_worklist';
+  const normalizedAssignedTo = String(assignedTo || '').trim();
+  const normalizedAssignedToName = String(assignedToName || '').trim();
+  const normalizedAssignedToXID = String(assignedToXID || '').trim();
+  const assignmentDisplay = normalizedAssignedToName || normalizedAssignedToXID || normalizedAssignedTo || (isWorklistLifecycle ? '—' : 'Unassigned');
 
   return (
     <button
@@ -55,7 +63,7 @@ export function DocketCard({
 
       <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, color: '#374151', fontSize: '0.84rem' }}>
         <span aria-hidden="true">👤</span>
-        <span style={{ fontWeight: 500 }}>{assignedTo || 'You'}</span>
+        <span style={{ fontWeight: 500 }}>{assignmentDisplay}</span>
       </div>
 
       <div style={{ marginTop: 8, fontSize: '0.75rem', color: '#9ca3af' }}>

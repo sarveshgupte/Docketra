@@ -43,6 +43,9 @@ function transitionLifecycle(docket, targetLifecycle) {
   if (fromLifecycle !== toLifecycle) {
     assertValidLifecycleTransition(fromLifecycle, toLifecycle);
   }
+  if (toLifecycle === DocketLifecycle.WL && !String(docket.assignedToXID || '').trim()) {
+    throw makeError('Cannot move to WL without assignment', 400, 'WL_ASSIGNMENT_REQUIRED');
+  }
   docket.lifecycle = toLifecycle;
   return toLifecycle;
 }
@@ -351,8 +354,12 @@ async function reassign({ docketId, firmId, actor, toUserXID, comment }) {
   requireComment(comment, 'Reassignment');
   const docket = await Case.findOne({ caseId: docketId, firmId });
   if (!docket) throw makeError('Docket not found', 404, 'DOCKET_NOT_FOUND');
+  const nextAssignee = String(toUserXID || '').toUpperCase().trim();
+  if (!nextAssignee && normalizeLifecycle(docket.lifecycle) === DocketLifecycle.WL) {
+    throw makeError('Cannot move to WL without assignment', 400, 'WL_ASSIGNMENT_REQUIRED');
+  }
   const fromAssignee = docket.assignedToXID || null;
-  docket.assignedToXID = String(toUserXID || '').toUpperCase();
+  docket.assignedToXID = nextAssignee;
   docket.assignedAt = new Date();
   docket.lastActionByXID = actor.xID;
   docket.lastActionAt = new Date();

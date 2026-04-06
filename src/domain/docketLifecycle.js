@@ -107,7 +107,7 @@ function normalizeLifecycle(value) {
 
 function lifecycleRequiresAssignment(lifecycle) {
   const normalized = normalizeLifecycle(lifecycle);
-  return normalized !== DocketLifecycle.WL;
+  return normalized === DocketLifecycle.WL;
 }
 
 function assertValidLifecycleTransition(fromState, toState) {
