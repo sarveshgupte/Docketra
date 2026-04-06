@@ -1621,6 +1621,7 @@ const getCaseByCaseId = async (req, res) => {
         ? caseData.toObject()
         : caseData;
     enforceDocketLifecycleDefault(caseObject);
+    caseObject.updatedAt = caseObject.updatedAt || new Date();
 
     let assignedUser = null;
     if (caseObject.assignedTo) {
