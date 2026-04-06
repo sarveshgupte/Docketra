@@ -25,8 +25,10 @@ export function DocketCard({
   focused = false,
   isOpening = false,
 }) {
+  const asDisplayValue = (value) => (!value || value === 'N/A' ? '—' : value);
   const displayDocketId = formatDocketId(docketId);
-  const displayTitle = formatCaseName(title);
+  const displayTitle = asDisplayValue(formatCaseName(title));
+  const lastUpdatedLabel = asDisplayValue(formatDate(lastUpdated));
   const isWorklistLifecycle = String(lifecycle || '').trim().toUpperCase() === 'WL'
     || String(lifecycle || '').trim().toLowerCase() === 'in_worklist';
   const normalizedAssignedTo = String(assignedTo || '').trim();
@@ -55,7 +57,7 @@ export function DocketCard({
         <div style={{ minWidth: 0, display: 'grid', gap: 4 }}>
           <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, letterSpacing: '0.03em' }}>{displayDocketId}</div>
           <div style={{ fontSize: '1rem', fontWeight: 700, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {displayTitle === 'N/A' ? 'Untitled docket' : displayTitle}
+            {displayTitle === '—' ? 'Untitled docket' : displayTitle}
           </div>
         </div>
         <LifecycleBadge lifecycle={lifecycle} />
@@ -67,7 +69,7 @@ export function DocketCard({
       </div>
 
       <div style={{ marginTop: 8, fontSize: '0.75rem', color: '#9ca3af' }}>
-        Updated {lastUpdated ? formatDate(lastUpdated) : '—'}
+        Last updated: {lastUpdatedLabel}
       </div>
     </button>
   );

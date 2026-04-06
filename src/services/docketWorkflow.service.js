@@ -66,6 +66,7 @@ function assignToUser(docket, userId) {
   docket.assignedToXID = String(userId || '').toUpperCase();
   docket.queueType = 'PERSONAL';
   docket.assignedAt = new Date();
+  docket.updatedAt = new Date();
   docket.status = toPersistenceState(DocketStatus.ASSIGNED);
   docket.lifecycle = DocketLifecycle.IN_WORKLIST;
   return docket;
@@ -135,6 +136,7 @@ async function pullFromWorkbench({ docketId, firmId, userId, userObjectId = null
       assignedAt: new Date(),
       lastActionByXID: String(userId || '').toUpperCase(),
       lastActionAt: new Date(),
+      updatedAt: new Date(),
       queueType: 'PERSONAL',
     },
     $inc: { version: 1 },
@@ -218,6 +220,7 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
       });
       docket.lastActionByXID = actor.xID;
       docket.lastActionAt = new Date();
+      docket.updatedAt = new Date();
 
       if (finalTarget === DocketStatus.PENDING) {
         docket.reopenAt = reopenAt ? new Date(reopenAt) : null;
@@ -333,6 +336,7 @@ async function qcDecision({ docketId, firmId, actor, decision, comment }) {
   });
   docket.lastActionByXID = actor.xID;
   docket.lastActionAt = new Date();
+  docket.updatedAt = new Date();
   await docket.save();
 
   await writeAudit({
@@ -358,6 +362,7 @@ async function reopenDuePending() {
     docket.pendingUntil = null;
     docket.lastActionAt = now;
     docket.lastActionByXID = 'SYSTEM';
+    docket.updatedAt = now;
     await docket.save();
     await writeAudit({ docketId: docket.caseId, fromState: DocketStatus.PENDING, toState: DocketStatus.IN_PROGRESS, userId: 'SYSTEM', comment: 'Auto reopened', action: 'PENDING_REOPEN', firmId: docket.firmId });
     emitDocketEvent(EVENT_NAMES.PENDING_REOPEN, { docketId: docket.caseId, firmId: docket.firmId });
@@ -379,6 +384,7 @@ async function reassign({ docketId, firmId, actor, toUserXID, comment }) {
   docket.assignedAt = new Date();
   docket.lastActionByXID = actor.xID;
   docket.lastActionAt = new Date();
+  docket.updatedAt = new Date();
   docket.queueType = docket.assignedToXID ? 'PERSONAL' : 'GLOBAL';
   await docket.save();
   await writeAudit({ docketId, fromState: toDocketState(docket.status), toState: toDocketState(docket.status), userId: actor.xID, firmId, comment, action: 'REASSIGNED', metadata: { fromAssignee, toAssignee: docket.assignedToXID } });
@@ -407,6 +413,7 @@ async function activateOnOpen({ docketId, firmId, actor }) {
     docket.status = toPersistenceState(DocketStatus.IN_PROGRESS);
     docket.lastActionByXID = actor?.xID || docket.assignedToXID || 'SYSTEM';
     docket.lastActionAt = new Date();
+    docket.updatedAt = new Date();
     await docket.save();
 
     await createDocketNotification({
