@@ -100,10 +100,7 @@ function deriveLifecycle({ lifecycle, assignedToXID, status } = {}) {
 function normalizeLifecycle(value) {
   const normalized = coerceLifecycleToDocket(value);
   if (!normalized) {
-    const error = new Error(`Unknown docket lifecycle state: ${value}`);
-    error.statusCode = 400;
-    error.code = 'INVALID_DOCKET_LIFECYCLE';
-    throw error;
+    return DocketLifecycle.WL;
   }
   return normalized;
 }
@@ -116,6 +113,7 @@ function lifecycleRequiresAssignment(lifecycle) {
 function assertValidLifecycleTransition(fromState, toState) {
   const from = normalizeLifecycle(fromState);
   const to = normalizeLifecycle(toState);
+  if (from === to) return true;
   if (isValidTransition(from, to)) return true;
 
   const error = new Error(`Invalid docket lifecycle transition: ${from} -> ${to}`);

@@ -3,6 +3,10 @@ const LEGACY_TO_CANONICAL = {
   UNASSIGNED: 'CREATED',
   ASSIGNED: 'IN_WORKLIST',
   OPEN: 'ACTIVE',
+  WL: 'WL',
+  ACTIVE: 'ACTIVE',
+  WAITING: 'WAITING',
+  DONE: 'DONE',
   IN_PROGRESS: 'ACTIVE',
   PENDING: 'ACTIVE',
   PENDED: 'ACTIVE',
@@ -14,14 +18,17 @@ const LEGACY_TO_CANONICAL = {
   FILED: 'ARCHIVED',
   ARCHIVED: 'ARCHIVED',
   created: 'CREATED',
+  wl: 'WL',
   in_worklist: 'IN_WORKLIST',
   active: 'ACTIVE',
+  waiting: 'WAITING',
+  done: 'DONE',
   completed: 'COMPLETED',
   archived: 'ARCHIVED',
 };
 
 export const normalizeLifecycle = (lifecycle) => {
   const key = String(lifecycle || '').trim();
-  if (!key) return 'CREATED';
-  return LEGACY_TO_CANONICAL[key] || 'CREATED';
+  if (!key) return 'WL';
+  return LEGACY_TO_CANONICAL[key] || 'WL';
 };
