@@ -1,12 +1,25 @@
 import React from 'react';
 import { Button } from '../common/Button';
 
-export const DocketActions = React.memo(({ actions = [], loadingAction }) => {
+const ALLOWED_LIFECYCLE_ACTIONS = {
+  WL: [],
+  ACTIVE: ['mark_waiting', 'mark_done'],
+  WAITING: ['resume_work'],
+  DONE: [],
+};
+
+const LIFECYCLE_ACTION_KEYS = new Set(['mark_waiting', 'mark_done', 'resume_work', 'pend', 'resolve', 'file', 'move_wl']);
+const OWNERSHIP_ACTION_KEYS = new Set(['assign', 'move_wb']);
+
+export const DocketActions = React.memo(({ actions = [], loadingAction, lifecycle = 'WL' }) => {
   if (!actions.length) return null;
-  const lifecycleKeys = ['pend', 'resolve', 'file'];
-  const ownershipKeys = ['assign', 'move_wb'];
-  const lifecycleActions = actions.filter((action) => lifecycleKeys.includes(action.key));
-  const ownershipActions = actions.filter((action) => ownershipKeys.includes(action.key) || !lifecycleKeys.includes(action.key));
+
+  const lifecycleKey = String(lifecycle || 'WL').trim().toUpperCase();
+  const allowedLifecycleActions = ALLOWED_LIFECYCLE_ACTIONS[lifecycleKey] || [];
+  const lifecycleActions = actions.filter((action) => allowedLifecycleActions.includes(action.key));
+  const ownershipActions = actions.filter(
+    (action) => OWNERSHIP_ACTION_KEYS.has(action.key) || !LIFECYCLE_ACTION_KEYS.has(action.key),
+  );
 
   return (
     <div className="docket-action-bar sticky bottom-4 z-20 mt-6" aria-label="Docket quick actions">
