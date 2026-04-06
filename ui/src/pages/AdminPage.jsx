@@ -61,6 +61,13 @@ const normalizeCategory = (category) => {
   };
 };
 
+const parseDelimitedLine = (line = '') => {
+  if (line.includes('\t')) {
+    return line.split('\t').map((value) => value.trim());
+  }
+  return line.split(',').map((value) => value.trim());
+};
+
 const getApiErrorType = (error) => {
   if (!error?.response) return 'network';
 
@@ -121,6 +128,10 @@ export const AdminPage = () => {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showSubcategoryModal, setShowSubcategoryModal] = useState(false);
   const [showClientModal, setShowClientModal] = useState(false);
+  const [showBulkPasteModal, setShowBulkPasteModal] = useState(false);
+  const [bulkPasteMode, setBulkPasteMode] = useState('categories');
+  const [bulkPasteInput, setBulkPasteInput] = useState('');
+  const [bulkPasteInProgress, setBulkPasteInProgress] = useState(false);
   const [showChangeNameModal, setShowChangeNameModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedClient, setSelectedClient] = useState(null);
@@ -617,6 +628,172 @@ export const AdminPage = () => {
     }
   };
 
+  const handleOpenBulkPaste = (mode) => {
+    setBulkPasteMode(mode);
+    setBulkPasteInput('');
+    setShowBulkPasteModal(true);
+  };
+
+  const handleBulkPasteSubmit = async (event) => {
+    event.preventDefault();
+    const rows = bulkPasteInput
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    if (rows.length === 0) {
+      showToast('Paste at least one row before saving.', 'error');
+      return;
+    }
+
+    setBulkPasteInProgress(true);
+    let createdCount = 0;
+    let skippedCount = 0;
+    let failedCount = 0;
+
+    try {
+      if (bulkPasteMode === 'categories') {
+        const existingCategoryNames = new Set(categories.map((entry) => entry.name.trim().toLowerCase()));
+
+        for (const row of rows) {
+          const [rawName] = parseDelimitedLine(row);
+          const name = rawName?.trim();
+          if (!name) {
+            skippedCount += 1;
+            continue;
+          }
+          const key = name.toLowerCase();
+          if (existingCategoryNames.has(key)) {
+            skippedCount += 1;
+            continue;
+          }
+
+          try {
+            await categoryService.createCategory(name);
+            existingCategoryNames.add(key);
+            createdCount += 1;
+          } catch {
+            failedCount += 1;
+          }
+        }
+      }
+
+      if (bulkPasteMode === 'subcategories') {
+        const categoryIndex = new Map(
+          categories.map((entry) => [entry.name.trim().toLowerCase(), entry])
+        );
+        const subcategoryIndex = new Map(
+          categories.map((entry) => [
+            entry.name.trim().toLowerCase(),
+            new Set((entry.subcategories || []).map((sub) => sub.name.trim().toLowerCase())),
+          ])
+        );
+
+        for (const row of rows) {
+          const [rawCategoryName, rawSubcategoryName] = parseDelimitedLine(row);
+          const categoryName = rawCategoryName?.trim();
+          const subcategoryName = rawSubcategoryName?.trim();
+
+          if (!categoryName || !subcategoryName) {
+            skippedCount += 1;
+            continue;
+          }
+
+          const categoryKey = categoryName.toLowerCase();
+          let category = categoryIndex.get(categoryKey);
+
+          if (!category) {
+            try {
+              await categoryService.createCategory(categoryName);
+              const refreshed = await categoryService.getAdminCategories(false);
+              const refreshedCategories = Array.isArray(refreshed?.data) ? refreshed.data.map(normalizeCategory).filter(Boolean) : [];
+              refreshedCategories.forEach((entry) => {
+                categoryIndex.set(entry.name.trim().toLowerCase(), entry);
+                subcategoryIndex.set(
+                  entry.name.trim().toLowerCase(),
+                  new Set((entry.subcategories || []).map((sub) => sub.name.trim().toLowerCase()))
+                );
+              });
+              category = categoryIndex.get(categoryKey);
+            } catch {
+              failedCount += 1;
+              continue;
+            }
+          }
+
+          const knownSubcategories = subcategoryIndex.get(categoryKey) || new Set();
+          const subcategoryKey = subcategoryName.toLowerCase();
+          if (knownSubcategories.has(subcategoryKey)) {
+            skippedCount += 1;
+            continue;
+          }
+
+          try {
+            await categoryService.addSubcategory(category._id, subcategoryName);
+            knownSubcategories.add(subcategoryKey);
+            subcategoryIndex.set(categoryKey, knownSubcategories);
+            createdCount += 1;
+          } catch {
+            failedCount += 1;
+          }
+        }
+      }
+
+      if (bulkPasteMode === 'clients') {
+        const existingClientNames = new Set(clients.map((entry) => String(entry.businessName || '').trim().toLowerCase()));
+        const rowsWithoutHeader = rows.filter((row, index) => {
+          if (index !== 0) return true;
+          const [firstCell] = parseDelimitedLine(row);
+          return String(firstCell || '').trim().toLowerCase() !== 'businessname';
+        });
+
+        for (const row of rowsWithoutHeader) {
+          const [businessName, businessAddress, primaryContactNumber, businessEmail, secondaryContactNumber, PAN, GST, TAN, CIN] = parseDelimitedLine(row);
+          const requiredValues = [businessName, businessAddress, primaryContactNumber, businessEmail].map((value) => value?.trim());
+          const [trimmedName, trimmedAddress, trimmedPrimary, trimmedEmail] = requiredValues;
+
+          if (!trimmedName || !trimmedAddress || !trimmedPrimary || !trimmedEmail) {
+            skippedCount += 1;
+            continue;
+          }
+
+          const clientKey = trimmedName.toLowerCase();
+          if (existingClientNames.has(clientKey)) {
+            skippedCount += 1;
+            continue;
+          }
+
+          try {
+            await clientApi.createClient({
+              businessName: trimmedName,
+              businessAddress: trimmedAddress,
+              primaryContactNumber: trimmedPrimary,
+              businessEmail: trimmedEmail,
+              ...(secondaryContactNumber?.trim() && { secondaryContactNumber: secondaryContactNumber.trim() }),
+              ...(PAN?.trim() && { PAN: PAN.trim() }),
+              ...(GST?.trim() && { GST: GST.trim() }),
+              ...(TAN?.trim() && { TAN: TAN.trim() }),
+              ...(CIN?.trim() && { CIN: CIN.trim() }),
+            });
+            existingClientNames.add(clientKey);
+            createdCount += 1;
+          } catch {
+            failedCount += 1;
+          }
+        }
+      }
+
+      await loadAdminData();
+      showToast(`Bulk save complete: ${createdCount} created, ${skippedCount} skipped, ${failedCount} failed.`, failedCount > 0 ? 'warning' : 'success');
+      if (createdCount > 0) {
+        setShowBulkPasteModal(false);
+        setBulkPasteInput('');
+      }
+    } finally {
+      setBulkPasteInProgress(false);
+    }
+  };
+
   // Client Management Handlers
   const handleCreateClient = async (e) => {
     e.preventDefault();
@@ -1088,26 +1265,31 @@ export const AdminPage = () => {
           <Card>
             <div className="admin__section-header">
               <h2 className="neo-section__header">Client Management</h2>
-              <Button
-                variant="primary"
-                onClick={() => {
-                  setSelectedClient(null);
-                  setClientForm({
-                    businessName: '',
-                    businessAddress: '',
-                    primaryContactNumber: '',
-                    secondaryContactNumber: '',
-                    businessEmail: '',
-                    PAN: '',
-                    GST: '',
-                    TAN: '',
-                    CIN: '',
-                  });
-                  setShowClientModal(true);
-                }}
-              >
-                + Create Client
-              </Button>
+              <div className="admin__section-actions">
+                <Button variant="default" onClick={() => handleOpenBulkPaste('clients')}>
+                  Bulk Paste
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    setSelectedClient(null);
+                    setClientForm({
+                      businessName: '',
+                      businessAddress: '',
+                      primaryContactNumber: '',
+                      secondaryContactNumber: '',
+                      businessEmail: '',
+                      PAN: '',
+                      GST: '',
+                      TAN: '',
+                      CIN: '',
+                    });
+                    setShowClientModal(true);
+                  }}
+                >
+                  + Create Client
+                </Button>
+              </div>
             </div>
             
             {tabError?.tab === 'clients' ? (
@@ -1205,12 +1387,20 @@ export const AdminPage = () => {
           <Card>
             <div className="admin__section-header">
               <h2 className="neo-section__header">Category Management</h2>
-              <Button
-                variant="primary"
-                onClick={() => setShowCategoryModal(true)}
-              >
-                + Create Category
-              </Button>
+              <div className="admin__section-actions">
+                <Button variant="default" onClick={() => handleOpenBulkPaste('categories')}>
+                  Bulk Categories
+                </Button>
+                <Button variant="default" onClick={() => handleOpenBulkPaste('subcategories')}>
+                  Bulk Subcategories
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => setShowCategoryModal(true)}
+                >
+                  + Create Category
+                </Button>
+              </div>
             </div>
             
             {categories.length === 0 ? (
@@ -1444,6 +1634,46 @@ export const AdminPage = () => {
         </div>
       </Modal>
       
+      {/* Create Category Modal */}
+      <Modal
+        isOpen={showBulkPasteModal}
+        onClose={() => {
+          if (bulkPasteInProgress) return;
+          setShowBulkPasteModal(false);
+        }}
+        title={bulkPasteMode === 'clients' ? 'Bulk Paste Clients' : bulkPasteMode === 'subcategories' ? 'Bulk Paste Subcategories' : 'Bulk Paste Categories'}
+      >
+        <form onSubmit={handleBulkPasteSubmit} className="admin__create-form">
+          <div className="neo-info-text">
+            {bulkPasteMode === 'clients'
+              ? 'Paste rows from Excel/Sheets. Columns: BusinessName, BusinessAddress, PrimaryContactNumber, BusinessEmail, SecondaryContactNumber, PAN, GST, TAN, CIN.'
+              : bulkPasteMode === 'subcategories'
+                ? 'Paste 2 columns: CategoryName and SubcategoryName. If a category does not exist, it is created first.'
+                : 'Paste one category name per line (or first column). Duplicate names are skipped.'}
+          </div>
+          <Textarea
+            label="Paste Data"
+            rows={10}
+            value={bulkPasteInput}
+            onChange={(event) => setBulkPasteInput(event.target.value)}
+            placeholder={bulkPasteMode === 'clients'
+              ? 'Acme Pvt Ltd\tMumbai\t9876543210\tops@acme.com'
+              : bulkPasteMode === 'subcategories'
+                ? 'Tax\tGST Filing'
+                : 'Tax'}
+            required
+          />
+          <div className="neo-form-actions">
+            <Button type="button" variant="default" onClick={() => setShowBulkPasteModal(false)} disabled={bulkPasteInProgress}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" disabled={bulkPasteInProgress}>
+              {bulkPasteInProgress ? 'Saving...' : 'Save Bulk Data'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
       {/* Create Category Modal */}
       <Modal
         isOpen={showCategoryModal}
