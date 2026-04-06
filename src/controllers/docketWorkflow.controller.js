@@ -22,6 +22,13 @@ function handleError(res, error) {
   return res.status(status).json({ success: false, message: error.message || 'Unable to process docket action', code: error.code || 'DOCKET_ACTION_FAILED' });
 }
 
+function ensureUpdatedAt(docket) {
+  if (docket && !docket.updatedAt) {
+    docket.updatedAt = new Date();
+  }
+  return docket;
+}
+
 async function assignDocket(req, res) {
   try {
     const { caseId } = req.params;
@@ -38,7 +45,7 @@ async function assignDocket(req, res) {
       assignToXID: assigneeXID,
     });
 
-    return res.json({ success: true, data: updated, message: 'Docket assigned' });
+    return res.json({ success: true, data: ensureUpdatedAt(updated), message: 'Docket assigned' });
   } catch (error) {
     return handleError(res, error);
   }
@@ -60,7 +67,7 @@ async function transitionDocket(req, res) {
       duplicateOf,
     });
 
-    return res.json({ success: true, data: updated, message: 'Docket transitioned' });
+    return res.json({ success: true, data: ensureUpdatedAt(updated), message: 'Docket transitioned' });
   } catch (error) {
     return handleError(res, error);
   }
@@ -76,7 +83,7 @@ async function reopenPendingDocket(req, res) {
       toState: DocketStatus.IN_PROGRESS,
       comment: req.body?.comment || 'Manually reopened',
     });
-    return res.json({ success: true, data: updated, message: 'Docket reopened' });
+    return res.json({ success: true, data: ensureUpdatedAt(updated), message: 'Docket reopened' });
   } catch (error) {
     return handleError(res, error);
   }
@@ -88,7 +95,7 @@ async function qcAction(req, res) {
     const { caseId } = req.params;
     const { decision, comment } = req.body || {};
     const updated = await qcDecision({ docketId: caseId, firmId: req.user.firmId, actor: req.user, decision, comment });
-    return res.json({ success: true, data: updated, message: 'QC action applied' });
+    return res.json({ success: true, data: ensureUpdatedAt(updated), message: 'QC action applied' });
   } catch (error) {
     return handleError(res, error);
   }
@@ -100,7 +107,7 @@ async function reassignDocket(req, res) {
     const { caseId } = req.params;
     const { assigneeXID, comment } = req.body || {};
     const updated = await reassign({ docketId: caseId, firmId: req.user.firmId, actor: req.user, toUserXID: assigneeXID, comment });
-    return res.json({ success: true, data: updated, message: 'Docket reassigned' });
+    return res.json({ success: true, data: ensureUpdatedAt(updated), message: 'Docket reassigned' });
   } catch (error) {
     return handleError(res, error);
   }
