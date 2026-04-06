@@ -50,6 +50,10 @@ const extractActivityPayload = (response) => {
 };
 
 const commentIdentity = (comment) => comment?._id || comment?.id;
+const newestCommentIdentity = (comments = []) => {
+  if (!Array.isArray(comments) || comments.length === 0) return null;
+  return commentIdentity(comments[comments.length - 1]) || null;
+};
 
 const mergeComments = (existing = [], latestPage = []) => {
   const latest = Array.isArray(latestPage) ? latestPage : [];
@@ -123,7 +127,7 @@ export function DocketDetails({
       const response = await caseApi.getCaseById(docketId, getCommentParams(page));
       const payload = extractCommentsPayload(response);
       const normalized = payload.comments.map((comment, index) => normalizeComment(comment, index));
-      latestCommentHeadRef.current = commentIdentity(normalized[0]) || latestCommentHeadRef.current;
+      latestCommentHeadRef.current = newestCommentIdentity(normalized) || latestCommentHeadRef.current;
       setComments((prev) => {
         if (!append) return normalized;
         return [...prev, ...normalized.filter((next) => !prev.some((existing) => (existing._id || existing.id) === (next._id || next.id)))];
@@ -144,21 +148,29 @@ export function DocketDetails({
     try {
       const response = await caseApi.getCaseById(docketId, {
         commentsPage: 1,
-        commentsLimit: COMMENT_PAGE_SIZE,
+        commentsLimit: 1,
         activityPage: 1,
         activityLimit: 1,
       });
 
-      const latestCommentsPayload = extractCommentsPayload(response);
-      const latestComments = latestCommentsPayload.comments.map((comment, index) => normalizeComment(comment, index));
-      const latestCommentHeadId = commentIdentity(latestComments[0]) || null;
+      const latestCommentsMeta = extractCommentsPayload(response);
+      const totalComments = Number(latestCommentsMeta?.pagination?.totalCount || 0);
+      const latestCommentsPage = totalComments > 0 ? Math.ceil(totalComments / COMMENT_PAGE_SIZE) : 1;
+
+      let latestComments = latestCommentsMeta.comments.map((comment, index) => normalizeComment(comment, index));
+      if (totalComments > 1 || latestCommentsPage > 1) {
+        const latestCommentsResponse = await caseApi.getCaseById(docketId, getCommentParams(latestCommentsPage));
+        const latestCommentsPayload = extractCommentsPayload(latestCommentsResponse);
+        latestComments = latestCommentsPayload.comments.map((comment, index) => normalizeComment(comment, index));
+      }
+      const latestCommentHeadId = newestCommentIdentity(latestComments);
 
       if (latestCommentHeadId && latestCommentHeadId !== latestCommentHeadRef.current) {
         setComments((prev) => mergeComments(prev, latestComments));
         latestCommentHeadRef.current = latestCommentHeadId;
       }
 
-      setCommentsHasMore(Boolean(latestCommentsPayload.pagination?.hasMore));
+      setCommentsHasMore(Boolean(latestCommentsMeta.pagination?.hasMore));
 
       const latestActivity = extractActivityPayload(response);
       const latestActivityHeadId = latestActivity[0]?._id || latestActivity[0]?.id || null;
