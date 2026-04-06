@@ -1418,13 +1418,11 @@ const getCaseByCaseId = async (req, res) => {
     
     console.log(`[GET_CASE] Authorization passed for userXID=${req.user.xID}`);
 
-    if (String(caseData.assignedToXID || '').toUpperCase() === String(req.user?.xID || '').toUpperCase()) {
-      caseData = await activateOnOpen({
-        docketId: caseData.caseId,
-        firmId: req.user.firmId,
-        actor: req.user,
-      });
-    }
+    caseData = await activateOnOpen({
+      docketId: caseData.caseId,
+      firmId: req.user.firmId,
+      actor: req.user,
+    });
     
     // Get related data - use caseId from database (display number)
     const displayCaseId = caseData.caseId;

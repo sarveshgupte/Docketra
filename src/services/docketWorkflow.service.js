@@ -374,21 +374,21 @@ async function activateOnOpen({ docketId, firmId, actor }) {
   if (!docket) throw makeError('Docket not found', 404, 'DOCKET_NOT_FOUND');
 
   const lifecycle = normalizeLifecycle(docket.lifecycle || DocketLifecycle.CREATED);
-  if (lifecycle !== DocketLifecycle.IN_WORKLIST) return docket;
+  if (lifecycle === DocketLifecycle.WL) {
+    transitionLifecycle(docket, DocketLifecycle.ACTIVE);
+    docket.status = toPersistenceState(DocketStatus.IN_PROGRESS);
+    docket.lastActionByXID = actor?.xID || docket.assignedToXID || 'SYSTEM';
+    docket.lastActionAt = new Date();
+    await docket.save();
 
-  transitionLifecycle(docket, DocketLifecycle.ACTIVE);
-  docket.status = toPersistenceState(DocketStatus.IN_PROGRESS);
-  docket.lastActionByXID = actor?.xID || docket.assignedToXID || 'SYSTEM';
-  docket.lastActionAt = new Date();
-  await docket.save();
-
-  await createDocketNotification({
-    firmId,
-    userId: docket.assignedToXID,
-    type: NotificationTypes.DOCKET_ACTIVATED,
-    docketId,
-    message: `Docket ${docketId} is now active.`,
-  });
+    await createDocketNotification({
+      firmId,
+      userId: docket.assignedToXID,
+      type: NotificationTypes.DOCKET_ACTIVATED,
+      docketId,
+      message: `Docket ${docketId} is now active.`,
+    });
+  }
 
   return docket;
 }
