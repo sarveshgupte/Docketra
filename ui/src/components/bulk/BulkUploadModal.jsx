@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { bulkUploadApi } from '../../api/bulkUpload.api';
@@ -9,14 +9,58 @@ const TEMPLATES = {
   team: ['name', 'email', 'role'],
 };
 
+const DUPLICATE_MODES = [
+  { value: 'skip', label: 'Skip duplicates' },
+  { value: 'update', label: 'Update existing' },
+  { value: 'fail', label: 'Fail on duplicates' },
+];
+
 const buildTemplateCsv = (type) => `${(TEMPLATES[type] || []).join(',')}\n`;
+
+const fileToBase64 = async (file) => {
+  const arrayBuffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
+  let binary = '';
+  bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+  return btoa(binary);
+};
 
 export const BulkUploadModal = ({ isOpen, onClose, type, title, onImported, showToast }) => {
   const [fileName, setFileName] = useState('');
   const [preview, setPreview] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [duplicateMode, setDuplicateMode] = useState('skip');
+  const [headerMapping, setHeaderMapping] = useState({});
+  const [lastPayload, setLastPayload] = useState(null);
+  const [job, setJob] = useState(null);
 
   const typeLabel = useMemo(() => title || 'Bulk Upload', [title]);
+
+  useEffect(() => {
+    if (!job?.jobId || job?.status === 'completed' || job?.status === 'failed') return undefined;
+
+    const interval = setInterval(async () => {
+      try {
+        const response = await bulkUploadApi.jobStatus(job.jobId);
+        const data = response?.data;
+        setJob({ ...data, jobId: job.jobId });
+        if (['completed', 'failed'].includes(data?.status)) {
+          clearInterval(interval);
+          if (data?.status === 'completed') {
+            showToast('Bulk import completed', 'success');
+            onImported?.();
+          } else {
+            showToast('Bulk import failed', 'error');
+          }
+        }
+      } catch (error) {
+        clearInterval(interval);
+        showToast(error?.response?.data?.message || 'Failed to track job status', 'error');
+      }
+    }, 1200);
+
+    return () => clearInterval(interval);
+  }, [job?.jobId, job?.status, onImported, showToast]);
 
   const handleDownloadTemplate = () => {
     const csv = buildTemplateCsv(type);
@@ -31,18 +75,39 @@ export const BulkUploadModal = ({ isOpen, onClose, type, title, onImported, show
     window.URL.revokeObjectURL(url);
   };
 
+  const runPreview = async (payload) => {
+    const response = await bulkUploadApi.preview(type, payload);
+    setPreview(response?.data || null);
+    setHeaderMapping(response?.data?.receivedHeaders?.reduce((acc, header) => {
+      const selectedField = Object.entries(response?.data?.fieldIndexMap || {}).find(([, idx]) => response?.data?.receivedHeaders?.[idx] === header)?.[0];
+      return { ...acc, [header]: selectedField || '' };
+    }, {}) || {});
+    setLastPayload(payload);
+  };
+
   const handleFileUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
     setFileName(file.name);
 
     try {
-      const csvContent = await file.text();
-      const response = await bulkUploadApi.preview(type, csvContent);
-      setPreview(response?.data || null);
+      const isCsv = file.name.toLowerCase().endsWith('.csv');
+      const payload = isCsv
+        ? { csvContent: await file.text(), duplicateMode }
+        : { fileName: file.name, fileContentBase64: await fileToBase64(file), duplicateMode };
+      await runPreview(payload);
     } catch (error) {
       setPreview(null);
-      showToast(error?.response?.data?.error || error?.response?.data?.message || 'CSV preview failed', 'error');
+      showToast(error?.response?.data?.error || error?.response?.data?.message || 'Preview failed', 'error');
+    }
+  };
+
+  const handleRemap = async () => {
+    if (!lastPayload) return;
+    try {
+      await runPreview({ ...lastPayload, duplicateMode, headerMapping });
+    } catch (error) {
+      showToast(error?.response?.data?.error || error?.response?.data?.message || 'Remapping failed', 'error');
     }
   };
 
@@ -54,12 +119,16 @@ export const BulkUploadModal = ({ isOpen, onClose, type, title, onImported, show
 
     setSubmitting(true);
     try {
-      const response = await bulkUploadApi.confirm(type, preview.valid);
-      showToast(response?.message || 'Import completed', 'success');
-      onImported?.();
-      setPreview(null);
-      setFileName('');
-      onClose();
+      const response = await bulkUploadApi.confirm(type, preview.valid, duplicateMode, true);
+      const jobId = response?.data?.jobId;
+      if (jobId) {
+        setJob({ jobId, status: 'processing', progress: 0, success: 0, failed: 0 });
+        showToast('Import started. Tracking progress...', 'success');
+      } else {
+        showToast(response?.message || 'Import completed', 'success');
+        onImported?.();
+        onClose();
+      }
     } catch (error) {
       showToast(error?.response?.data?.message || 'Import failed', 'error');
     } finally {
@@ -67,21 +136,48 @@ export const BulkUploadModal = ({ isOpen, onClose, type, title, onImported, show
     }
   };
 
+  const progress = job?.progress || 0;
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={typeLabel}>
       <div className="admin__create-form">
-        <div className="neo-info-text">CSV headers must exactly match the template.</div>
+        <div className="neo-info-text">Supports CSV and XLSX. Column order can vary.</div>
         <div className="neo-form-actions">
           <Button type="button" variant="default" onClick={handleDownloadTemplate}>Download Template</Button>
-          <input type="file" accept=".csv,text/csv" onChange={handleFileUpload} />
+          <input type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={handleFileUpload} />
         </div>
+        <div style={{ marginTop: 8 }}>
+          <label htmlFor="duplicateMode">Duplicate handling: </label>
+          <select id="duplicateMode" value={duplicateMode} onChange={(e) => setDuplicateMode(e.target.value)}>
+            {DUPLICATE_MODES.map((mode) => <option key={mode.value} value={mode.value}>{mode.label}</option>)}
+          </select>
+        </div>
+
         {fileName ? <div className="neo-info-text">Selected: {fileName}</div> : null}
 
         {preview ? (
           <div>
             <div className="neo-info-text">
-              Valid: {preview.summary?.validRows || 0} | Invalid: {preview.summary?.invalidRows || 0}
+              Valid: {preview.summary?.validRows || 0} | Invalid: {preview.summary?.invalidRows || 0} | Skipped: {preview.summary?.skippedRows || 0}
             </div>
+            {preview.receivedHeaders?.length ? (
+              <div style={{ marginTop: 8 }}>
+                <div className="neo-info-text">Column mapping</div>
+                {preview.receivedHeaders.map((sourceHeader) => (
+                  <div key={sourceHeader} style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                    <span style={{ minWidth: 180 }}>{sourceHeader}</span>
+                    <select
+                      value={headerMapping[sourceHeader] || ''}
+                      onChange={(e) => setHeaderMapping((prev) => ({ ...prev, [sourceHeader]: e.target.value }))}
+                    >
+                      <option value="">Ignore</option>
+                      {(TEMPLATES[type] || []).map((field) => <option key={field} value={field}>{field}</option>)}
+                    </select>
+                  </div>
+                ))}
+                <Button type="button" variant="default" onClick={handleRemap} style={{ marginTop: 8 }}>Apply Mapping</Button>
+              </div>
+            ) : null}
             {preview.invalid?.length > 0 ? (
               <div style={{ maxHeight: 140, overflow: 'auto', marginTop: 8 }}>
                 {preview.invalid.slice(0, 20).map((row) => (
@@ -89,6 +185,14 @@ export const BulkUploadModal = ({ isOpen, onClose, type, title, onImported, show
                 ))}
               </div>
             ) : null}
+          </div>
+        ) : null}
+
+        {job ? (
+          <div style={{ marginTop: 12 }}>
+            <div className="neo-info-text">Job status: {job.status} ({progress}%)</div>
+            <progress value={progress} max="100" style={{ width: '100%' }} />
+            <div className="neo-info-text">Success: {job.success || 0} | Failed: {job.failed || 0}</div>
           </div>
         ) : null}
 
