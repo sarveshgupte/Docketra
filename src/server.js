@@ -117,6 +117,7 @@ const { getSecurityMetrics } = require('./controllers/security.controller');
 const tenantRoutes = require('./routes/tenant.routes');  // Tenant storage settings routes
 const docketFileStorageRoutes = require('./routes/docketFileStorage.routes');
 const notificationsRoutes = require('./routes/notifications.routes');
+const bulkUploadRoutes = require('./routes/bulkUpload.routes');
 const tenantResolver = require('./middleware/tenantResolver');
 const { login } = require('./controllers/auth.controller');
 const mutatingMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
@@ -397,6 +398,7 @@ app.use('/api/files', authLimiter, ...tenantScopedApiAccess, writeGuardChain, fi
 app.use('/api/tenant', authLimiter, ...tenantScopedApiAccess, writeGuardChain, tenantRoutes);
 app.use('/api/docket-storage', authLimiter, ...tenantScopedApiAccess, writeGuardChain, docketFileStorageRoutes);
 app.use('/api/notifications', ...tenantScopedApiAccess, writeGuardChain, notificationsRoutes);
+app.use('/api/bulk-upload', ...adminTenantScopedApiAccess, writeGuardChain, adminAuditTrail('admin'), bulkUploadRoutes);
 
 // Firm-scoped API auth routes for tenant login and OTP verification
 app.use('/api/:firmSlug', firmRoutes);
