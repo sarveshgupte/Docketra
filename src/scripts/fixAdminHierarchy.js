@@ -65,7 +65,7 @@ async function fixSingleAdmin(admin) {
     return { fixed: false, reason: 'no_change' };
   }
 
-  await User.updateOne({ _id: admin._id }, { $set: updates });
+  await User.collection.updateOne({ _id: admin._id }, { $set: updates });
 
   console.log(
     `[MIGRATION] [${timestamp()}] Fixed ${admin.role} ${admin.xID} ` +

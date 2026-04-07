@@ -53,7 +53,7 @@ async function setupFirmWithClient() {
     firmId: 'FIRM001',
     name: 'Test Firm One',
     firmSlug: 'test-firm-one',
-    status: 'ACTIVE',
+    status: 'active',
     bootstrapStatus: 'PENDING',
   });
 
@@ -65,10 +65,13 @@ async function setupFirmWithClient() {
     businessEmail: 'firm001@test.com',
     firmId: firm._id,
     isSystemClient: true,
+    isDefaultClient: true,
+    isDefaultClient: true,
     isInternal: true,
     createdBySystem: true,
     status: 'ACTIVE',
     isActive: true,
+    deletedAt: null,
     createdByXid: 'SUPERADMIN',
     createdBy: 'superadmin@test.com',
   });
@@ -89,14 +92,15 @@ async function shouldBackfillLegacyAdmin() {
     role: 'Admin',
     firmId: firm._id,
     defaultClientId: null,
-    status: 'INVITED',
+    status: 'invited',
     isActive: true,
+    deletedAt: null,
   });
 
-  await runAdminHierarchyBackfill({ useExistingConnection: true });
+  const result = await runAdminHierarchyBackfill({ useExistingConnection: true });
 
   const updated = await User.findOne({ email: 'legacy-admin@test.com' });
-  assert(updated.defaultClientId, 'Migration should set defaultClientId');
+  assert(updated.defaultClientId, `Migration should set defaultClientId (Processed: ${result.processed}, Fixed: ${result.fixed})`);
   assert.strictEqual(updated.defaultClientId.toString(), client._id.toString(), 'defaultClientId should match firm default');
   console.log('✓ Migration backfills legacy admin defaultClientId correctly');
 }
@@ -110,21 +114,25 @@ async function shouldIgnoreSuperadminInPreflight() {
     xID: 'X000777',
     name: 'Scoped Admin',
     email: 'scoped-admin@test.com',
+    authProviders: { google: { googleId: undefined } },
     role: 'Admin',
     firmId: firm._id,
     defaultClientId: client._id,
-    status: 'INVITED',
+    status: 'invited',
     isActive: true,
+    deletedAt: null,
   });
 
   // Create SUPER_ADMIN without firm/defaultClient
   await User.create({
-    xID: 'XSU001',
+    xID: 'X999999',
     name: 'Platform Admin',
     email: 'platform-admin@test.com',
+    authProviders: { google: { googleId: undefined } },
     role: 'SUPER_ADMIN',
-    status: 'INVITED',
+    status: 'invited',
     isActive: true,
+    deletedAt: null,
   });
 
   const report = await runPreflightChecks();
