@@ -15,6 +15,7 @@ import { useToast } from '../hooks/useToast';
 import { clientApi } from '../api/client.api';
 import { formatDate } from '../utils/formatters';
 import { formatDateTime } from '../utils/formatDateTime';
+import { BulkUploadModal } from '../components/bulk/BulkUploadModal';
 
 export const ClientsPage = () => {
   const { user } = useAuth();
@@ -30,6 +31,7 @@ export const ClientsPage = () => {
   const [showClientModal, setShowClientModal] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const [savingClient, setSavingClient] = useState(false);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [clientForm, setClientForm] = useState({
     businessName: '',
     businessAddress: '',
@@ -354,7 +356,23 @@ export const ClientsPage = () => {
       <PageHeader
         title="All Clients"
         description="View and manage all registered client workspaces."
-        actions={isAdmin ? <Button onClick={openCreateClientModal}>+ Add Client</Button> : null}
+        actions={isAdmin ? (
+          <div className="flex items-center gap-2">
+            <Button variant="default" onClick={() => setShowBulkUpload(true)}>Bulk Upload</Button>
+            <Button variant="default" onClick={() => {
+              const blob = new Blob(['businessName,businessAddress,primaryContactNumber,businessEmail,secondaryContactNumber,PAN,TAN,GST,CIN,contactPersonName,contactPersonDesignation,contactPersonPhoneNumber,contactPersonEmailAddress\n'], { type: 'text/csv;charset=utf-8;' });
+              const url = window.URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.setAttribute('download', 'clients-bulk-template.csv');
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              window.URL.revokeObjectURL(url);
+            }}>Download Template</Button>
+            <Button onClick={openCreateClientModal}>+ Add Client</Button>
+          </div>
+        ) : null}
       />
       <Card>
         {loading ? <Loading message="Loading clients..." /> : (
@@ -373,6 +391,14 @@ export const ClientsPage = () => {
           />
         )}
       </Card>
+      <BulkUploadModal
+        isOpen={showBulkUpload}
+        onClose={() => setShowBulkUpload(false)}
+        type="clients"
+        title="Bulk Upload Clients"
+        onImported={loadClients}
+        showToast={(message, level) => (level === 'error' ? showError(message) : showSuccess(message))}
+      />
       <Modal
         isOpen={showClientModal}
         onClose={closeClientModal}
