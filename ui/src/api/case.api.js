@@ -178,6 +178,15 @@ export const caseApi = {
   ),
 
   getDocketComments: (caseId) => request((http) => http.get(`/cases/${caseId}/comments`), 'Failed to load comments'),
+  generateUploadLink: (caseId, payload) => withCaseInvalidation(
+    caseId,
+    () => request((http) => http.post(`/cases/${caseId}/upload-link`, payload), 'Failed to generate upload link'),
+  ),
+  getUploadLinkStatus: (caseId) => request((http) => http.get(`/cases/${caseId}/upload-link`), 'Failed to load upload link status'),
+  revokeUploadLink: (caseId) => withCaseInvalidation(
+    caseId,
+    () => request((http) => http.post(`/cases/${caseId}/upload-link/revoke`, {}), 'Failed to revoke upload link'),
+  ),
 
   viewAttachment: (caseId, attachmentId) => {
     window.open(`${window.location.origin}/api/cases/${caseId}/attachments/${attachmentId}/view`, '_blank');
