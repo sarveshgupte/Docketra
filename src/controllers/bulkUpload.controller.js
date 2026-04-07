@@ -1,11 +1,14 @@
 const mongoose = require('mongoose');
+const XLSX = require('xlsx');
 const Client = require('../models/Client.model');
 const Category = require('../models/Category.model');
 const User = require('../models/User.model');
+const BulkUploadJob = require('../models/BulkUploadJob.model');
 const { generateNextClientId } = require('../services/clientIdGenerator');
 const xIDGenerator = require('../services/xIDGenerator');
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const ASYNC_ROW_THRESHOLD = 500;
 
 const TYPE_CONFIG = {
   clients: {
@@ -42,9 +45,35 @@ const TYPE_CONFIG = {
   },
 };
 
+const HEADER_ALIASES = {
+  clients: {
+    businessName: ['businessname', 'name', 'client_name'],
+    businessAddress: ['businessaddress', 'address', 'client_address'],
+    primaryContactNumber: ['primarycontactnumber', 'phone', 'mobile'],
+    businessEmail: ['businessemail', 'email', 'client_email'],
+    secondaryContactNumber: ['secondarycontactnumber', 'alt_phone', 'alternate_phone'],
+    PAN: ['pan'],
+    TAN: ['tan'],
+    GST: ['gst', 'gstin'],
+    CIN: ['cin'],
+    contactPersonName: ['contactpersonname', 'contact_name'],
+    contactPersonDesignation: ['contactpersondesignation', 'designation'],
+    contactPersonPhoneNumber: ['contactpersonphonenumber', 'contact_phone'],
+    contactPersonEmailAddress: ['contactpersonemailaddress', 'contact_email'],
+  },
+  categories: {
+    name: ['name', 'category_name'],
+  },
+  team: {
+    name: ['name', 'full_name'],
+    email: ['email', 'work_email'],
+    role: ['role', 'user_role'],
+  },
+};
+
 const EMAIL_REGEX = /^\S+@\S+\.\S+$/;
 
-const normalizeHeader = (value) => String(value || '').trim().toLowerCase();
+const normalizeHeader = (value) => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
 
 const splitCsvLine = (line, delimiter) => {
   const cells = [];
@@ -90,64 +119,110 @@ const detectDelimiter = (headerLine) => {
 
 const parseCsv = (content) => {
   const text = String(content || '').replace(/^\uFEFF/, '').trim();
-  if (!text) {
-    return { headers: [], rows: [], delimiter: ',' };
-  }
+  if (!text) return { headers: [], rows: [] };
 
   const lines = text.split(/\r?\n/).filter((line) => line.trim().length > 0);
-  if (lines.length === 0) {
-    return { headers: [], rows: [], delimiter: ',' };
-  }
+  if (lines.length === 0) return { headers: [], rows: [] };
 
   const delimiter = detectDelimiter(lines[0]);
   const headers = splitCsvLine(lines[0], delimiter);
-  const rows = lines.slice(1).map((line, index) => ({
+  const rows = lines.slice(1).map((line, index) => ({ rowNumber: index + 2, values: splitCsvLine(line, delimiter) }));
+
+  return { headers, rows };
+};
+
+const parseXlsx = (buffer) => {
+  const workbook = XLSX.read(buffer, { type: 'buffer' });
+  const sheetName = workbook.SheetNames[0];
+  const sheet = workbook.Sheets[sheetName];
+  const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
+
+  if (!Array.isArray(matrix) || matrix.length === 0) return { headers: [], rows: [] };
+
+  const headers = (matrix[0] || []).map((cell) => String(cell || '').trim());
+  const rows = matrix.slice(1).map((row, index) => ({
     rowNumber: index + 2,
-    values: splitCsvLine(line, delimiter),
+    values: headers.map((_, colIndex) => String(row?.[colIndex] || '').trim()),
   }));
 
-  return { headers, rows, delimiter };
+  return { headers, rows };
 };
 
-const isEmptyRow = (rowObj, headers) => headers.every((header) => !String(rowObj[header] || '').trim());
+const resolveInputData = (body) => {
+  const csvContent = String(body?.csvContent || '');
+  if (csvContent.trim()) return { fileType: 'csv', sizeBytes: Buffer.byteLength(csvContent, 'utf8'), parsed: parseCsv(csvContent) };
 
-const hasExactHeaders = (receivedHeaders, expectedHeaders) => {
-  if (receivedHeaders.length !== expectedHeaders.length) return false;
+  const base64 = String(body?.fileContentBase64 || '');
+  if (!base64) return { fileType: null, sizeBytes: 0, parsed: { headers: [], rows: [] } };
+
+  const fileBuffer = Buffer.from(base64, 'base64');
+  const fileName = String(body?.fileName || '').toLowerCase();
+  const fileType = fileName.endsWith('.xlsx') ? 'xlsx' : 'csv';
+
+  if (fileType === 'xlsx') return { fileType, sizeBytes: fileBuffer.length, parsed: parseXlsx(fileBuffer) };
+  return { fileType: 'csv', sizeBytes: fileBuffer.length, parsed: parseCsv(fileBuffer.toString('utf8')) };
+};
+
+const mapHeaders = ({ type, receivedHeaders, cfg, manualMapping = {} }) => {
+  const aliases = HEADER_ALIASES[type] || {};
   const normalizedReceived = receivedHeaders.map(normalizeHeader);
-  const normalizedExpected = expectedHeaders.map(normalizeHeader);
-  return normalizedReceived.every((header, index) => header === normalizedExpected[index]);
-};
+  const usedIndexes = new Set();
+  const fieldIndexMap = {};
 
-const buildRowObject = (headers, values) => {
-  const row = {};
-  headers.forEach((header, index) => {
-    row[header] = String(values[index] || '').trim();
+  Object.entries(manualMapping || {}).forEach(([sourceHeader, targetField]) => {
+    if (!cfg.headers.includes(targetField)) return;
+    const sourceIndex = receivedHeaders.findIndex((header) => header === sourceHeader);
+    if (sourceIndex >= 0 && !usedIndexes.has(sourceIndex)) {
+      usedIndexes.add(sourceIndex);
+      fieldIndexMap[targetField] = sourceIndex;
+    }
   });
-  return row;
+
+  cfg.headers.forEach((field) => {
+    if (typeof fieldIndexMap[field] === 'number') return;
+    const normalizedCandidates = [field, ...(aliases[field] || [])].map(normalizeHeader);
+    const index = normalizedReceived.findIndex((header, idx) => !usedIndexes.has(idx) && normalizedCandidates.includes(header));
+    if (index >= 0) {
+      usedIndexes.add(index);
+      fieldIndexMap[field] = index;
+    }
+  });
+
+  const missingRequired = cfg.required.filter((field) => typeof fieldIndexMap[field] !== 'number');
+  return { fieldIndexMap, missingRequired };
 };
 
-const validateRows = async ({ type, headers, parsedRows, firmId }) => {
+const buildRowObject = (fieldIndexMap, values) => Object.entries(fieldIndexMap).reduce((acc, [field, index]) => {
+  acc[field] = String(values[index] || '').trim();
+  return acc;
+}, {});
+
+const isEmptyRow = (rowObj) => Object.values(rowObj).every((value) => !String(value || '').trim());
+
+const fetchExistingLookup = async ({ type, firmId }) => {
+  if (type === 'clients') {
+    const existing = await Client.find({ firmId, status: { $ne: 'deleted' } }).select('businessEmail').lean();
+    return new Set(existing.map((entry) => String(entry.businessEmail || '').trim().toLowerCase()).filter(Boolean));
+  }
+  if (type === 'categories') {
+    const existing = await Category.find({ firmId, isDeleted: { $ne: true } }).select('name').lean();
+    return new Set(existing.map((entry) => String(entry.name || '').trim().toLowerCase()).filter(Boolean));
+  }
+  const existing = await User.find({ firmId, status: { $ne: 'deleted' } }).select('email').lean();
+  return new Set(existing.map((entry) => String(entry.email || '').trim().toLowerCase()).filter(Boolean));
+};
+
+const validateRows = async ({ type, parsedRows, fieldIndexMap, firmId, duplicateMode = 'skip' }) => {
   const cfg = TYPE_CONFIG[type];
   const valid = [];
   const invalid = [];
+  const skipped = [];
   const seen = new Set();
-
-  let existingLookup = new Set();
-  if (type === 'clients') {
-    const existing = await Client.find({ firmId, status: { $ne: 'deleted' } }).select('businessEmail').lean();
-    existingLookup = new Set(existing.map((entry) => String(entry.businessEmail || '').trim().toLowerCase()).filter(Boolean));
-  } else if (type === 'categories') {
-    const existing = await Category.find({ firmId, isDeleted: { $ne: true } }).select('name').lean();
-    existingLookup = new Set(existing.map((entry) => String(entry.name || '').trim().toLowerCase()));
-  } else {
-    const existing = await User.find({ firmId, status: { $ne: 'deleted' } }).select('email').lean();
-    existingLookup = new Set(existing.map((entry) => String(entry.email || '').trim().toLowerCase()).filter(Boolean));
-  }
+  const existingLookup = await fetchExistingLookup({ type, firmId });
 
   parsedRows.forEach(({ rowNumber, values }) => {
-    const row = buildRowObject(headers, values);
-
-    if (isEmptyRow(row, headers)) return;
+    const row = buildRowObject(fieldIndexMap, values);
+    if (isEmptyRow(row)) return;
 
     for (const reqField of cfg.required) {
       if (!String(row[reqField] || '').trim()) {
@@ -160,12 +235,10 @@ const validateRows = async ({ type, headers, parsedRows, firmId }) => {
       invalid.push({ row: rowNumber, error: 'Invalid email in businessEmail' });
       return;
     }
-
     if (type === 'team' && !EMAIL_REGEX.test(String(row.email || '').trim())) {
       invalid.push({ row: rowNumber, error: 'Invalid email' });
       return;
     }
-
     if (type === 'team') {
       const role = String(row.role || '').trim();
       if (!['Admin', 'Employee'].includes(role)) {
@@ -176,27 +249,31 @@ const validateRows = async ({ type, headers, parsedRows, firmId }) => {
 
     const dedupeField = cfg.duplicateKey;
     const dedupeKey = String(row[dedupeField] || '').trim().toLowerCase();
-
     if (!dedupeKey) {
       invalid.push({ row: rowNumber, error: `Missing dedupe field: ${dedupeField}` });
       return;
     }
 
     if (seen.has(dedupeKey)) {
-      invalid.push({ row: rowNumber, error: `Duplicate row in CSV (${dedupeField})` });
+      invalid.push({ row: rowNumber, error: `Duplicate row in file (${dedupeField})` });
       return;
     }
 
-    if (existingLookup.has(dedupeKey)) {
+    const exists = existingLookup.has(dedupeKey);
+    if (exists && duplicateMode === 'fail') {
       invalid.push({ row: rowNumber, error: `Already exists (${dedupeField})` });
+      return;
+    }
+    if (exists && duplicateMode === 'skip') {
+      skipped.push({ row: rowNumber, reason: `Skipped existing (${dedupeField})` });
       return;
     }
 
     seen.add(dedupeKey);
-    valid.push({ rowNumber, data: row });
+    valid.push({ rowNumber, data: row, dedupeKey, action: exists ? 'update' : 'create' });
   });
 
-  return { valid, invalid };
+  return { valid, invalid, skipped };
 };
 
 const ensureTypeAndPermission = (req, res) => {
@@ -216,55 +293,179 @@ const ensureTypeAndPermission = (req, res) => {
   return { type, cfg };
 };
 
+const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }) => {
+  const updateProgress = async (patch) => {
+    if (!jobId) return;
+    await BulkUploadJob.findByIdAndUpdate(jobId, patch);
+  };
+
+  await updateProgress({ status: 'processing' });
+
+  let successCount = 0;
+  let failureCount = 0;
+  const results = [];
+
+  for (let index = 0; index < rows.length; index += 1) {
+    const row = rows[index];
+
+    try {
+      if (type === 'categories') {
+        if (row.action === 'update') {
+          await Category.updateOne(
+            { firmId: user.firmId, name: row.dedupeKey, isDeleted: { $ne: true } },
+            { $set: { name: row.data.name.trim(), isActive: true } },
+          );
+        } else {
+          await Category.create({ firmId: user.firmId, name: row.data.name.trim(), isActive: true, subcategories: [] });
+        }
+      }
+
+      if (type === 'clients') {
+        if (row.action === 'update') {
+          await Client.updateOne(
+            { firmId: user.firmId, businessEmail: row.dedupeKey, status: { $ne: 'deleted' } },
+            {
+              $set: {
+                ...row.data,
+                businessEmail: row.data.businessEmail.trim().toLowerCase(),
+              },
+            },
+          );
+        } else {
+          const clientId = await generateNextClientId(user.firmId);
+          await Client.create({
+            ...row.data,
+            clientId,
+            firmId: user.firmId,
+            createdByXid: user.xID,
+            createdBy: user.email,
+            businessEmail: row.data.businessEmail.trim().toLowerCase(),
+            isSystemClient: false,
+            isActive: true,
+            status: 'ACTIVE',
+            previousBusinessNames: [],
+          });
+        }
+      }
+
+      if (type === 'team') {
+        if (row.action === 'update') {
+          await User.updateOne(
+            { firmId: user.firmId, email: row.dedupeKey, status: { $ne: 'deleted' } },
+            { $set: { name: row.data.name.trim(), role: row.data.role } },
+          );
+        } else {
+          const xID = await xIDGenerator.generateNextXID(user.firmId);
+          await User.create({
+            xID,
+            name: row.data.name.trim(),
+            email: row.data.email.trim().toLowerCase(),
+            role: row.data.role,
+            firmId: user.firmId,
+            defaultClientId: user.defaultClientId || null,
+            allowedCategories: [],
+            isActive: false,
+            status: 'invited',
+            mustSetPassword: true,
+            passwordSet: false,
+            inviteSentAt: null,
+          });
+        }
+      }
+
+      successCount += 1;
+      results.push({ row: row.rowNumber, status: row.action });
+    } catch (error) {
+      failureCount += 1;
+      results.push({ row: row.rowNumber, status: 'failed', error: error.message });
+    }
+
+    await updateProgress({
+      processed: index + 1,
+      successCount,
+      failureCount,
+      results: results.slice(-200),
+    });
+  }
+
+  if (jobId) {
+    await updateProgress({
+      status: failureCount > 0 && successCount === 0 ? 'failed' : 'completed',
+      processed: rows.length,
+      successCount,
+      failureCount,
+      duplicateMode,
+      results: results.slice(-500),
+    });
+  }
+
+  return { successCount, failureCount, results };
+};
+
 const previewBulkUpload = async (req, res) => {
   const resolved = ensureTypeAndPermission(req, res);
   if (!resolved) return;
 
   const { type, cfg } = resolved;
-  const csvContent = String(req.body?.csvContent || '');
+  const duplicateMode = ['skip', 'update', 'fail'].includes(String(req.body?.duplicateMode || '').toLowerCase())
+    ? String(req.body.duplicateMode).toLowerCase()
+    : 'skip';
 
-  if (!csvContent.trim()) {
-    return res.status(400).json({ success: false, message: 'CSV content is required' });
+  const { sizeBytes, fileType, parsed } = resolveInputData(req.body || {});
+
+  if (!fileType) {
+    return res.status(400).json({ success: false, message: 'CSV/XLSX content is required' });
   }
 
-  const sizeBytes = Buffer.byteLength(csvContent, 'utf8');
   if (sizeBytes > MAX_FILE_SIZE_BYTES) {
-    return res.status(400).json({ success: false, message: 'CSV file exceeds 5MB limit' });
+    return res.status(400).json({ success: false, message: 'File exceeds 5MB limit' });
   }
 
-  const { headers, rows } = parseCsv(csvContent);
+  const { headers, rows } = parsed;
 
   if (!headers.length) {
-    return res.status(400).json({ success: false, message: 'Missing CSV headers' });
+    return res.status(400).json({ success: false, message: 'Missing file headers' });
   }
 
-  if (!hasExactHeaders(headers, cfg.headers)) {
+  const { fieldIndexMap, missingRequired } = mapHeaders({
+    type,
+    receivedHeaders: headers,
+    cfg,
+    manualMapping: req.body?.headerMapping || {},
+  });
+  if (missingRequired.length) {
     return res.status(400).json({
       success: false,
-      error: 'Invalid CSV headers',
-      expected: cfg.headers,
+      error: 'Missing required fields',
+      missing: missingRequired,
       received: headers,
     });
   }
 
-  const { valid, invalid } = await validateRows({
+  const { valid, invalid, skipped } = await validateRows({
     type,
-    headers: cfg.headers,
     parsedRows: rows,
+    fieldIndexMap,
     firmId: req.user.firmId,
+    duplicateMode,
   });
 
   return res.json({
     success: true,
     data: {
       type,
+      fileType,
       headers: cfg.headers,
+      receivedHeaders: headers,
+      fieldIndexMap,
       valid,
       invalid,
+      skipped,
       summary: {
         totalRows: rows.length,
         validRows: valid.length,
         invalidRows: invalid.length,
+        skippedRows: skipped.length,
       },
     },
   });
@@ -275,110 +476,102 @@ const confirmBulkUpload = async (req, res) => {
   if (!resolved) return;
 
   const { type } = resolved;
+  const duplicateMode = ['skip', 'update', 'fail'].includes(String(req.body?.duplicateMode || '').toLowerCase())
+    ? String(req.body.duplicateMode).toLowerCase()
+    : 'skip';
   const rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
 
   if (!rows.length) {
     return res.status(400).json({ success: false, message: 'No valid rows provided for import' });
   }
 
-  const normalizedRows = rows.map((entry, index) => ({ rowNumber: Number(entry.rowNumber || index + 2), values: Object.values(entry.data || {}) }));
-  const { valid, invalid } = await validateRows({
-    type,
-    headers: TYPE_CONFIG[type].headers,
-    parsedRows: normalizedRows,
-    firmId: req.user.firmId,
-  });
+  const shouldAsync = Boolean(req.body?.async) || rows.length >= ASYNC_ROW_THRESHOLD;
 
-  if (!valid.length) {
-    return res.status(400).json({ success: false, message: 'No importable rows after validation', invalid });
-  }
-
-  const session = await mongoose.startSession();
-  let insertedCount = 0;
-
-  try {
-    await session.withTransaction(async () => {
-      if (type === 'categories') {
-        const docs = valid.map((row) => ({
-          firmId: req.user.firmId,
-          name: row.data.name.trim(),
-          isActive: true,
-          subcategories: [],
-        }));
-        const inserted = await Category.insertMany(docs, { session, ordered: false });
-        insertedCount = inserted.length;
-      }
-
-      if (type === 'clients') {
-        const docs = [];
-        for (const row of valid) {
-          // keep ID generation aligned with existing client creation behavior
-          const clientId = await generateNextClientId(req.user.firmId, session);
-          docs.push({
-            ...row.data,
-            clientId,
-            firmId: req.user.firmId,
-            createdByXid: req.user.xID,
-            createdBy: req.user.email,
-            businessEmail: row.data.businessEmail.trim().toLowerCase(),
-            isSystemClient: false,
-            isActive: true,
-            status: 'ACTIVE',
-            previousBusinessNames: [],
-          });
-        }
-        const inserted = await Client.insertMany(docs, { session, ordered: false });
-        insertedCount = inserted.length;
-      }
-
-      if (type === 'team') {
-        const docs = [];
-        for (const row of valid) {
-          const xID = await xIDGenerator.generateNextXID(req.user.firmId, session);
-          docs.push({
-            xID,
-            name: row.data.name.trim(),
-            email: row.data.email.trim().toLowerCase(),
-            role: row.data.role,
-            firmId: req.user.firmId,
-            defaultClientId: req.user.defaultClientId || null,
-            allowedCategories: [],
-            isActive: false,
-            status: 'invited',
-            mustSetPassword: true,
-            passwordSet: false,
-            inviteSentAt: null,
-          });
-        }
-        const inserted = await User.insertMany(docs, { session, ordered: false });
-        insertedCount = inserted.length;
-      }
-    });
-
+  if (!shouldAsync) {
+    const { successCount, results } = await processBulkRows({ type, rows, user: req.user, duplicateMode });
     return res.status(201).json({
       success: true,
       data: {
-        inserted: insertedCount,
-        invalid,
+        inserted: successCount,
+        invalid: results.filter((entry) => entry.status === 'failed'),
       },
-      message: insertedCount < rows.length
+      message: successCount < rows.length
         ? 'Bulk import completed with partial success'
         : 'Bulk import completed successfully',
     });
-  } catch (error) {
-    return res.status(400).json({
-      success: false,
-      message: 'Bulk import failed',
-      error: error.message,
-      invalid,
-    });
-  } finally {
-    await session.endSession();
   }
+
+  const job = await BulkUploadJob.create({
+    type,
+    status: 'pending',
+    total: rows.length,
+    processed: 0,
+    successCount: 0,
+    failureCount: 0,
+    duplicateMode,
+    results: [],
+    createdBy: {
+      userId: req.user._id,
+      firmId: req.user.firmId,
+      email: req.user.email,
+      xID: req.user.xID,
+    },
+  });
+
+  setImmediate(async () => {
+    try {
+      await processBulkRows({ type, rows, user: req.user, duplicateMode, jobId: job._id });
+    } catch (error) {
+      await BulkUploadJob.findByIdAndUpdate(job._id, {
+        status: 'failed',
+        errorMessage: error.message,
+      });
+    }
+  });
+
+  return res.status(202).json({
+    success: true,
+    data: {
+      jobId: job._id,
+      status: 'processing',
+    },
+    message: 'Bulk import started',
+  });
+};
+
+const getBulkUploadJobStatus = async (req, res) => {
+  const { jobId } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(jobId)) {
+    return res.status(400).json({ success: false, message: 'Invalid job id' });
+  }
+
+  const job = await BulkUploadJob.findOne({
+    _id: jobId,
+    'createdBy.firmId': req.user.firmId,
+  }).lean();
+
+  if (!job) {
+    return res.status(404).json({ success: false, message: 'Job not found' });
+  }
+
+  const progress = job.total > 0 ? Math.round((job.processed / job.total) * 100) : 0;
+  return res.json({
+    success: true,
+    data: {
+      status: job.status,
+      progress,
+      success: job.successCount,
+      failed: job.failureCount,
+      total: job.total,
+      processed: job.processed,
+      results: job.results || [],
+    },
+  });
 };
 
 module.exports = {
   previewBulkUpload,
   confirmBulkUpload,
+  getBulkUploadJobStatus,
   TYPE_CONFIG,
 };
