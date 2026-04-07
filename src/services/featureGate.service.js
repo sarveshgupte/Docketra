@@ -24,7 +24,6 @@ const flagStatus = (flagName, envVar) => {
 const isFirmCreationDisabled = () => flagStatus('firmCreation', process.env.DISABLE_FIRM_CREATION).disabled;
 const isGoogleAuthDisabled = () => flagStatus('googleAuth', process.env.DISABLE_GOOGLE_AUTH).disabled;
 const areFileUploadsDisabled = () => flagStatus('fileUploads', process.env.DISABLE_FILE_UPLOADS).disabled;
-const isInboundEmailEnabled = () => normalize(process.env.ENABLE_INBOUND_EMAIL);
 const isExternalStorageEnabled = () => normalize(process.env.ENABLE_EXTERNAL_STORAGE);
 
 const ensureFeatureEnabled = (flagName, envVar) => {
@@ -45,7 +44,6 @@ module.exports = {
   isFirmCreationDisabled,
   isGoogleAuthDisabled,
   areFileUploadsDisabled,
-  isInboundEmailEnabled,
   isExternalStorageEnabled,
   ensureFirmCreationEnabled,
   ensureGoogleAuthEnabled,

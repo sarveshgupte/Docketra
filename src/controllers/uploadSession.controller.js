@@ -6,6 +6,7 @@ const { resolveCaseIdentifier } = require('../utils/caseIdentifier');
 const CaseFile = require('../models/CaseFile.model');
 const { enqueueStorageJob, JOB_TYPES } = require('../queues/storage.queue');
 const cfsDriveService = require('../services/cfsDrive.service');
+const UploadSession = require('../models/UploadSession.model');
 
 async function generateUploadLink(req, res) {
   try {
@@ -38,6 +39,31 @@ async function generateUploadLink(req, res) {
     });
   } catch (err) {
     return res.status(400).json({ success: false, message: err.message });
+  }
+}
+
+
+async function getUploadMeta(req, res) {
+  try {
+    const { token } = req.params;
+
+    const session = await UploadSession.findOne({ token, isActive: true });
+
+    if (!session) {
+      return res.status(404).json({ success: false });
+    }
+
+    const expired = new Date() > session.expiresAt;
+
+    return res.json({
+      success: true,
+      data: {
+        requiresPin: !!session.pinHash,
+        expired,
+      },
+    });
+  } catch (err) {
+    return res.status(400).json({ success: false });
   }
 }
 
@@ -106,5 +132,6 @@ async function uploadDocument(req, res) {
 
 module.exports = {
   generateUploadLink,
+  getUploadMeta,
   uploadDocument,
 };

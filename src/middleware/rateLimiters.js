@@ -363,13 +363,6 @@ const debugLimiter = createLimiter({
   keyGenerator: userOrIpKeyGenerator,
 });
 
-const inboundEmailLimiter = createLimiter({
-  name: 'inboundEmailLimiter',
-  windowMs: config.security.rateLimit.inboundEmailWindowSeconds * 1000,
-  max: config.security.rateLimit.inboundEmailPerMinute,
-  keyGenerator: ipKeyGenerator,
-});
-
 const superadminAdminResendLimiter = superadminLimiter;
 const superadminAdminLifecycleLimiter = superadminLimiter;
 const superadminAdminManagementLimiter = superadminLimiter;
@@ -399,7 +392,6 @@ module.exports = {
   commentLimiter,
   fileUploadLimiter,
   debugLimiter,
-  inboundEmailLimiter,
   superadminAdminResendLimiter,
   superadminAdminLifecycleLimiter,
   superadminAdminManagementLimiter,

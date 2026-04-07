@@ -1,5 +1,4 @@
 const log = require('../utils/log');
-const { isInboundEmailEnabled } = require('./featureFlags.service');
 
 const workerModules = [
   { name: 'STORAGE_WORKER', path: '../workers/storage.worker' },
@@ -21,11 +20,6 @@ const startWorkerModule = ({ name, path }) => {
 
 const startBackgroundWorkers = () => {
   workerModules.forEach(startWorkerModule);
-  if (isInboundEmailEnabled()) {
-    startWorkerModule({ name: 'INBOUND_EMAIL_WORKER', path: '../workers/inboundEmail.worker' });
-  } else {
-    log.info('INBOUND_EMAIL_DISABLED');
-  }
 };
 
 const startBackgroundSchedules = () => {
