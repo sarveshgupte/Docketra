@@ -36,6 +36,9 @@ const {
   downloadClientCFSFileForCase,
   getDocketSummaryPdf,
 } = require('../controllers/case.controller');
+const {
+  generateUploadLink,
+} = require('../controllers/uploadSession.controller');
 
 // PR #44: Import xID ownership validation middleware
 const {
@@ -146,6 +149,10 @@ router.get('/:caseId', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, ch
 router.post('/:caseId/comments', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, commentLimiter, checkCaseClientAccess, validateCaseCommentPayload, addComment);
 router.post('/:caseId/comment', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, commentLimiter, checkCaseClientAccess, validateCaseCommentPayload, addComment);
 router.get('/:caseId/comments', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, getCaseComments);
+
+
+// POST /api/cases/:caseId/upload-link - Generate secure client upload link
+router.post('/:caseId/upload-link', authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, userWriteLimiter, checkCaseClientAccess, generateUploadLink);
 
 // POST /api/cases/:caseId/attachments - Upload attachment to case
 router.post('/:caseId/attachments', upload.single('file'), enforceUploadSecurity, authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, attachmentLimiter, fileUploadLimiter, checkCaseClientAccess, addAttachment);
