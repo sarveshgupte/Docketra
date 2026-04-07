@@ -57,15 +57,32 @@ async function fixSingleAdmin(admin) {
   if (!admin.firmId) {
     updates.firmId = firm._id;
   }
-  if (!admin.defaultClientId && firm.defaultClientId) {
-    updates.defaultClientId = firm.defaultClientId;
+
+  // Ensure we get the latest defaultClientId in case ensureDefaultClientForFirm just created it
+  let reloadedFirm;
+  if (admin.firmId) {
+      reloadedFirm = await Firm.findById(admin.firmId);
+  } else {
+      reloadedFirm = await Firm.findById(updates.firmId);
+  }
+
+  let defaultClientId;
+  if (reloadedFirm && reloadedFirm.defaultClientId) {
+      defaultClientId = reloadedFirm.defaultClientId;
+  } else if (firm.defaultClientId) {
+      defaultClientId = firm.defaultClientId;
+  }
+
+  if (defaultClientId && (!admin.defaultClientId || admin.defaultClientId.toString() !== defaultClientId.toString())) {
+      updates.defaultClientId = defaultClientId;
   }
 
   if (Object.keys(updates).length === 0) {
     return { fixed: false, reason: 'no_change' };
   }
 
-  await User.updateOne({ _id: admin._id }, { $set: updates });
+  // Use collection.updateOne directly to completely bypass Mongoose schema layers and bugs in scripts updating invalid data
+  await mongoose.connection.db.collection('users').updateOne({ _id: admin._id }, { $set: updates });
 
   console.log(
     `[MIGRATION] [${timestamp()}] Fixed ${admin.role} ${admin.xID} ` +

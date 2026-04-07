@@ -36,6 +36,7 @@ async function testConcurrentPauseConflictIsRejected() {
       lean: async () => ({
         caseId: 'CASE-20260301-00002',
         status: 'IN_PROGRESS',
+        lifecycle: 'ACTIVE',
         docketState: 'IN_PROGRESS',
         tatPaused: false,
         tatLastStartedAt: fixedStart,
