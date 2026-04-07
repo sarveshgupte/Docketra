@@ -128,10 +128,6 @@ export const CaseDetailPage = () => {
   const [pendComment, setPendComment] = useState('');
   const [pendingUntil, setPendingUntil] = useState('');
   const [isDragActive, setIsDragActive] = useState(false);
-  const inboundEmailDomain = import.meta.env.VITE_INBOUND_EMAIL_DOMAIN || 'inbound.docketra.com';
-  const inboundAddress = caseData?.publicEmailToken
-    ? `case-${caseData.publicEmailToken}@${inboundEmailDomain}`
-    : '';
   const [pendingCase, setPendingCase] = useState(false);
 
   // State for Resolve action modal
@@ -784,16 +780,6 @@ export const CaseDetailPage = () => {
     const file = event.dataTransfer?.files?.[0];
     if (file) {
       setSelectedFile(file);
-    }
-  };
-
-  const handleCopyInboundAddress = async () => {
-    if (!inboundAddress || !navigator?.clipboard) return;
-    try {
-      await navigator.clipboard.writeText(inboundAddress);
-      showSuccess('Inbound email address copied');
-    } catch (error) {
-      showError('Unable to copy inbound email address');
     }
   };
 
@@ -1630,11 +1616,9 @@ export const CaseDetailPage = () => {
           attachmentComment={fileDescription}
           uploadingAttachment={uploadingFile}
           uploadProgress={uploadProgress}
-          inboundAddress={inboundAddress}
           onAttachmentFileChange={setSelectedFile}
           onAttachmentCommentChange={setFileDescription}
           onUploadAttachment={handleUploadFile}
-          onCopyInboundAddress={handleCopyInboundAddress}
         />
 
         {/* ─── Modals (positioned outside split pane) ─────────────── */}
