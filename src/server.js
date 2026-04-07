@@ -13,11 +13,9 @@ const { maskSensitiveObject, sanitizeErrorForLog } = require('./utils/pii');
 const { validateEnv } = require('./config/validateEnv');
 const { loadEnv, maskEnvForLog } = require('./config/env');
 const { logBuildMetadata } = require('./services/buildInfo.service');
-const { isInboundEmailEnabled } = require('./services/featureFlags.service');
 require('./utils/transactionSessionEnforcer');
 
 const env = loadEnv();
-const inboundEmailEnabled = isInboundEmailEnabled();
 log.info('API_RUNTIME_WORKERS_DISABLED');
 
 // Global error log sanitizer: ensure every console.error invocation masks PII (tokens, emails, phone numbers, auth headers).
@@ -105,7 +103,6 @@ const firmMetricsRoutes = require('./routes/firmMetrics.routes');
 const adminRoutes = require('./routes/admin.routes');  // Admin routes (PR #41)
 const superadminRoutes = require('./routes/superadmin.routes');  // Superadmin routes
 const debugRoutes = require('./routes/debug.routes');  // Debug routes (PR #43)
-const inboundRoutes = require('./routes/inbound.routes');  // Inbound email routes
 const contactRoutes = require('./routes/contact.routes');  // Public contact form route
 const publicRoutes = require('./routes/public.routes');  // Public routes (firm lookup)
 const publicSignupRoutes = require('./routes/publicSignup.routes');  // Public self-serve signup routes
@@ -156,13 +153,11 @@ ensureUploadRoot();
 log.info('ENV_CONFIG_LOADED', {
   env: env.NODE_ENV,
   superadminXID: env.SUPERADMIN_XID_NORMALIZED,
-  inboundEmailEnabled,
   snapshot: maskEnvForLog({
     NODE_ENV: env.NODE_ENV,
     MONGODB_URI: env.MONGODB_URI,
     SUPERADMIN_EMAIL: env.SUPERADMIN_EMAIL_NORMALIZED,
     ENCRYPTION_PROVIDER: env.ENCRYPTION_PROVIDER,
-    ENABLE_INBOUND_EMAIL: String(env.ENABLE_INBOUND_EMAIL),
   }),
 });
 
@@ -255,9 +250,6 @@ const corsOptions = {
 app.use(optionsPreflight(allowedOrigins, CORS_ALLOWED_HEADERS, CORS_ALLOWED_METHODS));
 app.use(cors(corsOptions));
 app.use(compression());
-if (inboundEmailEnabled) {
-  app.use('/api/inbound/email', express.raw({ type: '*/*', limit: '30mb' }));
-}
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '100kb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -324,7 +316,6 @@ app.get('/api', (req, res) => {
       superadmin: '/api/superadmin',
       superadminLegacy: '/superadmin',
       debug: '/api/debug',
-      ...(inboundEmailEnabled ? { inbound: '/api/inbound' } : {}),
     },
   });
 });
@@ -385,11 +376,6 @@ app.use('/api/security', authenticate, securityRoutes);
 // SECURITY: Debug routes must never be reachable in production environments.
 if (!isProduction) {
   app.use('/api/debug', authenticate, firmContext, requireTenant, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, requireAdmin, debugRoutes);
-}
-
-// Inbound email routes (webhook - no authentication required)
-if (inboundEmailEnabled) {
-  app.use('/api/inbound', writeGuardChain, inboundRoutes);
 }
 
 // Protected routes - require authentication
