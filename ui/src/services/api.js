@@ -38,21 +38,18 @@ function generateIdempotencyKey() {
   if (window.crypto?.randomUUID) {
     return window.crypto.randomUUID();
   }
-  if (window.crypto?.getRandomValues) {
-    const buffer = new Uint8Array(16);
-    window.crypto.getRandomValues(buffer);
-    buffer[6] = (buffer[6] & 0x0f) | 0x40;
-    buffer[8] = (buffer[8] & 0x3f) | 0x80;
-    const segments = [
-      Array.from(buffer.slice(0, 4)),
-      Array.from(buffer.slice(4, 6)),
-      Array.from(buffer.slice(6, 8)),
-      Array.from(buffer.slice(8, 10)),
-      Array.from(buffer.slice(10)),
-    ].map((segment) => segment.map((b) => b.toString(16).padStart(2, '0')).join(''));
-    return segments.join('-');
-  }
-  return 'idemp-' + Math.random().toString(36).substring(2) + Date.now();
+  const buffer = new Uint8Array(16);
+  window.crypto.getRandomValues(buffer);
+  buffer[6] = (buffer[6] & 0x0f) | 0x40;
+  buffer[8] = (buffer[8] & 0x3f) | 0x80;
+  const segments = [
+    Array.from(buffer.slice(0, 4)),
+    Array.from(buffer.slice(4, 6)),
+    Array.from(buffer.slice(6, 8)),
+    Array.from(buffer.slice(8, 10)),
+    Array.from(buffer.slice(10)),
+  ].map((segment) => segment.map((b) => b.toString(16).padStart(2, '0')).join(''));
+  return segments.join('-');
 }
 
 // Request interceptor - Add JWT Bearer token
