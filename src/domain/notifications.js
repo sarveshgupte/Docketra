@@ -5,6 +5,7 @@ const NotificationTypes = Object.freeze({
   REASSIGNED: 'REASSIGNED',
   DOCKET_ACTIVATED: 'DOCKET_ACTIVATED',
   LIFECYCLE_CHANGED: 'LIFECYCLE_CHANGED',
+  CLIENT_UPLOAD: 'CLIENT_UPLOAD',
 });
 
 function normalizeActor(actor = {}) {

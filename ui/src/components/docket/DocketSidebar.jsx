@@ -169,6 +169,9 @@ export const DocketSidebar = ({
                 <p className="text-sm font-medium text-gray-900">{attachment.fileName || attachment.filename || 'Attachment'}</p>
                 <p className="mt-1 text-xs text-gray-500">Attached on {formatDateTime(attachment.createdAt || attachment.uploadedAt)}</p>
                 <p className="mt-1 text-xs text-gray-500">Attached by {uploaderLabel(attachment)}</p>
+                {String(attachment.source || '').toUpperCase() === 'CLIENT_UPLOAD' ? (
+                  <p className="mt-1 text-xs font-semibold text-blue-700">Uploaded via client link</p>
+                ) : null}
                 {attachment.description ? <p className="mt-1 text-xs text-gray-500">Comment: {attachment.description}</p> : null}
               </li>
             ))}

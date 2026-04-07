@@ -8,6 +8,7 @@ function toLegacyMessage(notification) {
   if (type === 'REASSIGNED') return `Docket ${docketId} was reassigned.`;
   if (type === 'DOCKET_ACTIVATED') return `Docket ${docketId} is now active.`;
   if (type === 'LIFECYCLE_CHANGED') return `Docket ${docketId} lifecycle changed.`;
+  if (type === 'CLIENT_UPLOAD') return 'Client uploaded documents';
   return `Docket ${docketId} updated.`;
 }
 
