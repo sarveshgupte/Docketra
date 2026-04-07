@@ -38,6 +38,8 @@ const {
 } = require('../controllers/case.controller');
 const {
   generateUploadLink,
+  getUploadLinkStatus,
+  revokeUploadLink,
 } = require('../controllers/uploadSession.controller');
 
 // PR #44: Import xID ownership validation middleware
@@ -153,6 +155,8 @@ router.get('/:caseId/comments', authorizeFirmPermission('CASE_VIEW'), userReadLi
 
 // POST /api/cases/:caseId/upload-link - Generate secure client upload link
 router.post('/:caseId/upload-link', authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, userWriteLimiter, checkCaseClientAccess, generateUploadLink);
+router.get('/:caseId/upload-link', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, getUploadLinkStatus);
+router.post('/:caseId/upload-link/revoke', authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, userWriteLimiter, checkCaseClientAccess, revokeUploadLink);
 
 // POST /api/cases/:caseId/attachments - Upload attachment to case
 router.post('/:caseId/attachments', upload.single('file'), enforceUploadSecurity, authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, attachmentLimiter, fileUploadLimiter, checkCaseClientAccess, addAttachment);

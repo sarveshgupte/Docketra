@@ -79,7 +79,16 @@ module.exports = {
     body: z.object({
       requirePin: queryBoolean.optional(),
       expiry: z.enum(['24h', '7d']).optional(),
+      sendEmail: queryBoolean.optional(),
     }).strict(),
+  },
+  'GET /:caseId/upload-link': {
+    params: caseIdParams,
+    query: strictEmpty,
+  },
+  'POST /:caseId/upload-link/revoke': {
+    params: caseIdParams,
+    body: strictEmpty,
   },
   'POST /:caseId/attachments': {
     params: caseIdParams,
