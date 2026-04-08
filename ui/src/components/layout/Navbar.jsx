@@ -52,15 +52,18 @@ export default function Navbar() {
           <button
             type="button"
             onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden inline-flex items-center justify-center p-2 rounded-lg border border-gray-200"
+            className="md:hidden inline-flex items-center justify-center p-2 rounded-lg border border-gray-200 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/30 transition-colors"
+            aria-expanded={isOpen}
+            aria-controls="mobile-menu"
+            aria-label={isOpen ? "Close main menu" : "Open main menu"}
           >
-            ☰
+            {isOpen ? '✕' : '☰'}
           </button>
         </div>
       </div>
 
       {isOpen && (
-        <div className="md:hidden border-t border-gray-100 bg-white px-4 py-4 space-y-4">
+        <div id="mobile-menu" className="md:hidden border-t border-gray-100 bg-white px-4 py-4 space-y-4">
           <button
             type="button"
             className="block text-sm text-gray-700"
