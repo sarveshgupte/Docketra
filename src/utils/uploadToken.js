@@ -5,7 +5,11 @@ function generateToken() {
 }
 
 function generatePin() {
-  return crypto.randomInt(1000, 10000).toString();
+  let num;
+  do {
+    num = crypto.randomBytes(2).readUInt16BE(0);
+  } while (num >= 63000); // 9000 * 7 = 63000, reject to avoid modulo bias
+  return (1000 + (num % 9000)).toString();
 }
 
 module.exports = { generateToken, generatePin };
