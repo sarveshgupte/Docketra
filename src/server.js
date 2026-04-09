@@ -59,7 +59,6 @@ const errorHandler = require('./middleware/errorHandler');
 const notFound = require('./middleware/notFound');
 const { authenticate } = require('./middleware/auth.middleware');
 const degradedGuard = require('./middleware/degradedGuard');
-const { timingSafeEqual } = require('crypto');
 const { firmContext } = require('./middleware/firmContext.middleware');
 const requireTenant = require('./middleware/requireTenant');
 const { requireAdmin, requireSuperadmin } = require('./middleware/permission.middleware');
@@ -289,11 +288,15 @@ app.get('/metrics', async (req, res) => {
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
 
   let authorized = false;
-  if (configuredMetricsToken && token) {
-    const configuredBuf = Buffer.from(configuredMetricsToken);
-    const providedBuf = Buffer.from(token);
-    if (configuredBuf.length === providedBuf.length && timingSafeEqual(configuredBuf, providedBuf)) {
-      authorized = true;
+  if (configuredMetricsToken && typeof token === 'string') {
+    if (configuredMetricsToken.length === token.length) {
+      let mismatch = 0;
+      for (let i = 0; i < configuredMetricsToken.length; i++) {
+        mismatch |= configuredMetricsToken.charCodeAt(i) ^ token.charCodeAt(i);
+      }
+      if (mismatch === 0) {
+        authorized = true;
+      }
     }
   }
 

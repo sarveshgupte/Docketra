@@ -1,6 +1,5 @@
 'use strict';
 
-const { timingSafeEqual } = require('crypto');
 const { authenticate } = require('./auth.middleware');
 const { requireSuperadmin } = require('./permission.middleware');
 
@@ -15,13 +14,16 @@ const allowInternalTokenOrSuperadmin = (req, res, next) => {
   const configuredToken = process.env.METRICS_TOKEN?.trim();
   const bearerToken = resolveBearerToken(req.headers.authorization);
 
-  if (configuredToken && bearerToken) {
-    const configuredBuf = Buffer.from(configuredToken);
-    const providedBuf = Buffer.from(bearerToken);
-
-    if (configuredBuf.length === providedBuf.length && timingSafeEqual(configuredBuf, providedBuf)) {
-      req.isInternalMetricsRequest = true;
-      return next();
+  if (configuredToken && typeof bearerToken === 'string') {
+    if (configuredToken.length === bearerToken.length) {
+      let mismatch = 0;
+      for (let i = 0; i < configuredToken.length; i++) {
+        mismatch |= configuredToken.charCodeAt(i) ^ bearerToken.charCodeAt(i);
+      }
+      if (mismatch === 0) {
+        req.isInternalMetricsRequest = true;
+        return next();
+      }
     }
   }
 
