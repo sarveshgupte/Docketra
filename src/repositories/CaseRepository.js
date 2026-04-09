@@ -295,7 +295,7 @@ const CaseRepository = {
                 $expr: {
                   $and: [
                     { $eq: ['$clientId', '$caseClientId'] },
-                    { $eq: ['$firmId', { $toObjectId: '$caseFirmId' }] },
+                    { $eq: ['$firmId', '$caseFirmId'] },
                   ],
                 },
               },
@@ -358,7 +358,7 @@ const CaseRepository = {
     }
 
     if (options.includeClient) {
-      return this._findWithClient({ firmId: String(firmId), caseInternalId: internalId }, firmId, role);
+      return this._findWithClient({ firmId, caseInternalId: internalId }, firmId, role);
     }
 
     const doc = await Case.findOne({ firmId, caseInternalId: internalId });
@@ -405,7 +405,7 @@ const CaseRepository = {
     _guardSuperadmin(role);
 
     if (options.includeClient) {
-      return this._findWithClient({ firmId: String(firmId), caseId: String(caseId) }, firmId, role);
+      return this._findWithClient({ firmId, caseId: String(caseId) }, firmId, role);
     }
 
     // During transition, caseId = caseNumber
