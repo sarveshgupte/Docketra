@@ -59,6 +59,7 @@ const errorHandler = require('./middleware/errorHandler');
 const notFound = require('./middleware/notFound');
 const { authenticate } = require('./middleware/auth.middleware');
 const degradedGuard = require('./middleware/degradedGuard');
+const { timingSafeEqual } = require('crypto');
 const { firmContext } = require('./middleware/firmContext.middleware');
 const requireTenant = require('./middleware/requireTenant');
 const { requireAdmin, requireSuperadmin } = require('./middleware/permission.middleware');
@@ -287,7 +288,16 @@ app.get('/metrics', async (req, res) => {
   const authHeader = req.headers.authorization || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
 
-  if (!configuredMetricsToken || !token || token !== configuredMetricsToken) {
+  let authorized = false;
+  if (configuredMetricsToken && token) {
+    const configuredBuf = Buffer.from(configuredMetricsToken);
+    const providedBuf = Buffer.from(token);
+    if (configuredBuf.length === providedBuf.length && timingSafeEqual(configuredBuf, providedBuf)) {
+      authorized = true;
+    }
+  }
+
+  if (!authorized) {
     return res.status(401).json({ error: 'unauthorized' });
   }
 
