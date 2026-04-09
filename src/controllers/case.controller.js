@@ -14,7 +14,7 @@ const categoryRepository = require('../repositories/category.repository');
 const { detectDuplicates, generateDuplicateOverrideComment } = require('../services/clientDuplicateDetector');
 const { CASE_CATEGORIES, CASE_LOCK_CONFIG, COMMENT_PREVIEW_LENGTH, CLIENT_STATUS } = require('../config/constants');
 const CaseStatus = require('../domain/case/caseStatus');
-const { DocketLifecycle } = require('../domain/docketLifecycle');
+const { DocketLifecycle, toLifecycleFromStatus, normalizeLifecycle, isValidState } = require('../domain/docketLifecycle');
 const { isValidTransition } = require('./docketWorkflow.controller');
 const { activateOnOpen } = require('../services/docketWorkflow.service');
 const { isProduction } = require('../config/config');
@@ -95,6 +95,15 @@ const sanitizeOutput = (value) => String(value ?? '')
   .replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;')
   .replace(/'/g, '&#39;');
+
+const enforceDocketLifecycleDefault = (docket) => {
+  if (!docket || typeof docket !== 'object') return docket;
+  docket.lifecycle = normalizeLifecycle(docket.lifecycle);
+  if (!isValidState(docket.lifecycle)) {
+    docket.lifecycle = DocketLifecycle.WL;
+  }
+  return docket;
+};
 
 const buildAddCommentErrorResponse = (error, context = {}) => {
   const validationDetails = error?.errors
@@ -1303,8 +1312,10 @@ const updateCaseStatus = async (req, res) => {
     }
 
     if (docketStatuses.has(String(caseData.status || '').toUpperCase()) && docketStatuses.has(normalizedStatus)) {
-      const isAssigned = Boolean(caseData.assignedToXID);
-      if (!isValidTransition(String(caseData.status || '').toUpperCase(), normalizedStatus, isAssigned)) {
+      if (!isValidTransition(
+        toLifecycleFromStatus(caseData.status),
+        toLifecycleFromStatus(normalizedStatus),
+      )) {
         return res.status(400).json({ success: false, message: 'Invalid transition' });
       }
     }
@@ -1407,13 +1418,11 @@ const getCaseByCaseId = async (req, res) => {
     
     console.log(`[GET_CASE] Authorization passed for userXID=${req.user.xID}`);
 
-    if (String(caseData.assignedToXID || '').toUpperCase() === String(req.user?.xID || '').toUpperCase()) {
-      caseData = await activateOnOpen({
-        docketId: caseData.caseId,
-        firmId: req.user.firmId,
-        actor: req.user,
-      });
-    }
+    caseData = await activateOnOpen({
+      docketId: caseData.caseId,
+      firmId: req.user.firmId,
+      actor: req.user,
+    });
     
     // Get related data - use caseId from database (display number)
     const displayCaseId = caseData.caseId;
@@ -1611,6 +1620,8 @@ const getCaseByCaseId = async (req, res) => {
       typeof caseData.toObject === 'function'
         ? caseData.toObject()
         : caseData;
+    enforceDocketLifecycleDefault(caseObject);
+    caseObject.updatedAt = caseObject.updatedAt || new Date();
 
     let assignedUser = null;
     if (caseObject.assignedTo) {
@@ -1619,7 +1630,7 @@ const getCaseByCaseId = async (req, res) => {
       assignedUser = await User.findOne({ xID: caseObject.assignedToXID, firmId: scopedFirmId }).select('_id name email xID').lean();
     }
     const canonicalAssignmentXID = caseObject.assignedToXID || assignedUser?.xID || null;
-    const lifecycle = caseObject.lifecycle;
+    const lifecycle = normalizeLifecycle(caseObject.lifecycle);
 
     console.log('DOCKET_STATE_DEBUG', {
       caseId: displayCaseId,
@@ -1805,6 +1816,7 @@ const getCases = async (req, res) => {
     }
 
     const casesWithClients = decryptedCases.map(caseItem => {
+      enforceDocketLifecycleDefault(caseItem);
       const client = clientsMap.get(caseItem.clientId);
       return {
         ...caseItem,

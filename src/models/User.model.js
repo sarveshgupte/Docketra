@@ -690,7 +690,10 @@ userSchema.index({ firmId: 1, isActive: 1 });
 userSchema.index({ firmId: 1, role: 1 }); // Firm-scoped role queries
 userSchema.index({ firmId: 1 });
 userSchema.index({ firmId: 1, createdAt: -1 });
-userSchema.index({ 'authProviders.google.googleId': 1 }, { unique: true, sparse: true }); // One Google account -> one user
+userSchema.index(
+  { 'authProviders.google.googleId': 1 },
+  { unique: true, sparse: true, partialFilterExpression: { 'authProviders.google.googleId': { $type: 'string' } } }
+); // One Google account -> one user
 
 // Virtual property to check if account is locked
 userSchema.virtual('isLocked').get(function() {

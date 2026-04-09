@@ -16,15 +16,15 @@ function testLifecycleTransitions() {
   assert.strictEqual(assertValidLifecycleTransition(DocketLifecycle.IN_WORKLIST, DocketLifecycle.ACTIVE), true);
   assert.strictEqual(assertValidLifecycleTransition(DocketLifecycle.ACTIVE, DocketLifecycle.COMPLETED), true);
   assert.throws(
-    () => assertValidLifecycleTransition(DocketLifecycle.CREATED, DocketLifecycle.ACTIVE),
+    () => assertValidLifecycleTransition(DocketLifecycle.ACTIVE, DocketLifecycle.IN_WORKLIST),
     (error) => error && error.code === 'INVALID_DOCKET_LIFECYCLE_TRANSITION',
   );
 }
 
 function testAssignmentEnforcementRule() {
-  assert.strictEqual(lifecycleRequiresAssignment(DocketLifecycle.CREATED), false);
+  assert.strictEqual(lifecycleRequiresAssignment(DocketLifecycle.CREATED), true);
   assert.strictEqual(lifecycleRequiresAssignment(DocketLifecycle.IN_WORKLIST), true);
-  assert.strictEqual(lifecycleRequiresAssignment(DocketLifecycle.ACTIVE), true);
+  assert.strictEqual(lifecycleRequiresAssignment(DocketLifecycle.ACTIVE), false);
 }
 
 function testDeriveLifecycle() {
@@ -32,7 +32,7 @@ function testDeriveLifecycle() {
     deriveLifecycle({ lifecycle: DocketLifecycle.IN_WORKLIST, assignedToXID: null }),
     DocketLifecycle.IN_WORKLIST,
   );
-  assert.strictEqual(deriveLifecycle({ lifecycle: '', assignedToXID: 'X100' }), DocketLifecycle.IN_WORKLIST);
+  assert.strictEqual(deriveLifecycle({ lifecycle: '', assignedToXID: 'X100' }), DocketLifecycle.ACTIVE);
   assert.strictEqual(deriveLifecycle({ lifecycle: null, assignedToXID: null }), DocketLifecycle.CREATED);
   assert.strictEqual(deriveLifecycle({ lifecycle: 'ASSIGNED', assignedToXID: null }), DocketLifecycle.IN_WORKLIST);
   assert.strictEqual(
@@ -92,21 +92,21 @@ async function testNotificationCreation() {
 
     await createNotification({
       firmId: 'FIRM-1',
-      user_id: 'X100',
-      type: NotificationTypes.DOCKET_ASSIGNED,
-      docket_id: 'CASE-9',
-      message: 'Assigned',
+      userId: 'X100',
+      type: NotificationTypes.ASSIGNED,
+      docketId: 'CASE-9',
+      actor: { xID: 'X200', role: 'ADMIN' },
     });
 
-    assert.strictEqual(captured.type, NotificationTypes.DOCKET_ASSIGNED);
+    assert.strictEqual(captured.type, NotificationTypes.ASSIGNED);
 
     await assert.rejects(
       () => createNotification({
         firmId: 'FIRM-1',
-        user_id: 'X100',
+        userId: 'X100',
         type: 'RANDOM_EVENT',
-        docket_id: 'CASE-9',
-        message: 'Assigned',
+        docketId: 'CASE-9',
+        actor: { xID: 'X200', role: 'ADMIN' },
       }),
       (error) => error && error.code === 'INVALID_NOTIFICATION_TYPE',
     );

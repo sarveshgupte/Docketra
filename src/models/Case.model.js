@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const { randomUUID } = require('crypto');
 const CaseStatus = require('../domain/case/caseStatus');
-const { DocketLifecycle, deriveLifecycle, lifecycleRequiresAssignment } = require('../domain/docketLifecycle');
+const { DocketLifecycle, deriveLifecycle, normalizeLifecycle } = require('../domain/docketLifecycle');
 const softDeletePlugin = require('../utils/softDelete.plugin');
 const { tenantScopeGuardPlugin } = require('./plugins/tenantScopeGuard.plugin');
 const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -329,7 +329,9 @@ const caseSchema = new mongoose.Schema({
   lifecycle: {
     type: String,
     enum: Object.values(DocketLifecycle),
-    default: DocketLifecycle.CREATED,
+    default: DocketLifecycle.WL,
+    required: true,
+    set: (value) => normalizeLifecycle(value),
   },
 
   // Budget estimates used for reporting variance
@@ -843,13 +845,21 @@ caseSchema.path('status').validate(function(value) {
 
 
 caseSchema.pre('validate', function enforceAssignedUserForWorklistLifecycle(next) {
-  const lifecycle = String(this.lifecycle || '').trim().toLowerCase();
-  if (!lifecycleRequiresAssignment(lifecycle)) return next();
+  const lifecycle = normalizeLifecycle(this.lifecycle);
+  if (lifecycle !== DocketLifecycle.WL) return next();
 
   if (!this.assignedToXID) {
-    this.invalidate('assignedToXID', 'assignedToXID is required once a docket enters worklist lifecycle');
+    this.invalidate('assignedToXID', 'WL docket must have assignedToXID');
   }
 
+  return next();
+});
+
+caseSchema.pre('save', function enforceAssignedUserForWlOnSave(next) {
+  const lifecycle = normalizeLifecycle(this.lifecycle);
+  if (lifecycle === DocketLifecycle.WL && !this.assignedToXID) {
+    return next(new Error('WL docket must have assignedToXID'));
+  }
   return next();
 });
 
