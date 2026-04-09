@@ -6,6 +6,9 @@ const User = require('../models/User.model');
 const BulkUploadJob = require('../models/BulkUploadJob.model');
 const { generateNextClientId } = require('../services/clientIdGenerator');
 const xIDGenerator = require('../services/xIDGenerator');
+const { bulkUploadQueue } = require('../queues/bulkUpload.queue');
+const { eventBus } = require('../events/eventBus');
+require('../automations/bulkUpload.handlers');
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 const ASYNC_ROW_THRESHOLD = 500;
@@ -304,6 +307,8 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
   let successCount = 0;
   let failureCount = 0;
   const results = [];
+  const createdClients = [];
+  const createdUsers = [];
 
   for (let index = 0; index < rows.length; index += 1) {
     const row = rows[index];
@@ -345,6 +350,7 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
             status: 'ACTIVE',
             previousBusinessNames: [],
           });
+          createdClients.push({ clientId, businessEmail: row.data.businessEmail.trim().toLowerCase() });
         }
       }
 
@@ -356,7 +362,7 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
           );
         } else {
           const xID = await xIDGenerator.generateNextXID(user.firmId);
-          await User.create({
+          const createdUser = await User.create({
             xID,
             name: row.data.name.trim(),
             email: row.data.email.trim().toLowerCase(),
@@ -370,6 +376,7 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
             passwordSet: false,
             inviteSentAt: null,
           });
+          createdUsers.push({ _id: createdUser._id, xID, email: createdUser.email });
         }
       }
 
@@ -398,6 +405,25 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
       results: results.slice(-500),
     });
   }
+
+  setImmediate(() => {
+    try {
+      eventBus.emit('bulkUpload.completed', {
+        type,
+        successCount,
+        failureCount,
+        user,
+        createdClients,
+        createdUsers,
+      });
+    } catch (error) {
+      console.error('[BULK_UPLOAD] Failed to emit completion event', {
+        type,
+        firmId: user?.firmId,
+        error: error.message,
+      });
+    }
+  });
 
   return { successCount, failureCount, results };
 };
@@ -518,16 +544,41 @@ const confirmBulkUpload = async (req, res) => {
     },
   });
 
-  setImmediate(async () => {
-    try {
-      await processBulkRows({ type, rows, user: req.user, duplicateMode, jobId: job._id });
-    } catch (error) {
-      await BulkUploadJob.findByIdAndUpdate(job._id, {
-        status: 'failed',
-        errorMessage: error.message,
-      });
-    }
-  });
+  if (!bulkUploadQueue) {
+    await BulkUploadJob.findByIdAndUpdate(job._id, {
+      status: 'failed',
+      errorMessage: 'Queue unavailable: REDIS_URL is not configured',
+    });
+    return res.status(503).json({
+      success: false,
+      message: 'Bulk import queue is unavailable',
+    });
+  }
+
+  try {
+    await bulkUploadQueue.add('bulk-upload-job', {
+      type,
+      rows,
+      user: {
+        firmId: req.user.firmId,
+        email: req.user.email,
+        xID: req.user.xID,
+        defaultClientId: req.user.defaultClientId,
+      },
+      duplicateMode,
+      jobId: job._id,
+    });
+  } catch (error) {
+    await BulkUploadJob.findByIdAndUpdate(job._id, {
+      status: 'failed',
+      errorMessage: error.message,
+    });
+
+    return res.status(503).json({
+      success: false,
+      message: 'Failed to enqueue bulk import job',
+    });
+  }
 
   return res.status(202).json({
     success: true,
@@ -574,4 +625,5 @@ module.exports = {
   confirmBulkUpload,
   getBulkUploadJobStatus,
   TYPE_CONFIG,
+  processBulkRows,
 };
