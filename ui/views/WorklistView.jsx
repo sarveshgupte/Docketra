@@ -38,6 +38,7 @@ function isAllowedWorklistLifecycle(record) {
 const dateSortKeys = new Set(['createdAt', 'updatedAt', 'pendingUntil', 'dueDate']);
 
 const matchText = (value, query) => String(value || '').toLowerCase().includes(query);
+const formatDocketNumber = (value) => String(value || '').replace(/^CASE-/i, '');
 
 export function WorklistView({
   variant = 'worklist',
@@ -216,7 +217,9 @@ export function WorklistView({
       header: 'Docket#',
       sortable: true,
       render: (row) => (
-        <div className="font-semibold text-gray-900">{row.docketNumber || row.caseId || '—'}</div>
+        <div className="font-semibold text-gray-900">
+          {formatDocketNumber(row.docketNumber || row.caseId || '—')}
+        </div>
       ),
     },
     {

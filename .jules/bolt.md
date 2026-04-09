@@ -1,3 +1,3 @@
-## 2026-04-07 - [Optimization with $facet]
-**Learning:** Consolidating concurrent MongoDB queries using the $facet aggregation stage is effective for reducing network roundtrips, but I must ensure the result is correctly destructured and handled when empty.
-**Action:** Use optional chaining with fallback values (e.g., `resultDoc.overdueComplianceItems?.[0]?.count || 0`) when extracting counts from a $facet aggregation result.
+## 2024-05-10 - O(N) Sequential Query Elimination in Tenant-Scoped APIs
+**Learning:** In tenant-scoped APIs where parent and child models (e.g., `WorkType` and `SubWorkType`) both share a `firmId` for tenancy isolation, it's often an anti-pattern to query the parent first and then query the child using an `$in` array of parent IDs. If both models also share the exact same status filters (e.g., `isActive: true`), you can fetch all matching parents and children concurrently via `Promise.all` using just the `firmId` and status filter. The application logic can safely group the results in-memory.
+**Action:** Always scrutinize sequential queries where the second query uses IDs from the first query. If both queries are strictly tenant-bound (using the same `firmId` and filters), convert them to concurrent `Promise.all` queries to reduce database roundtrips from O(N) to O(1).
