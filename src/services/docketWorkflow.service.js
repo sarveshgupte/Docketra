@@ -2,8 +2,15 @@ const mongoose = require('mongoose');
 const Case = require('../models/Case.model');
 const Category = require('../models/Category.model');
 const DocketAuditLog = require('../models/DocketAuditLog.model');
-const { DocketStatus, assertValidDocketTransition, toDocketState, toPersistenceState } = require('../domain/docket/docketStateMachine');
-const { DocketLifecycle, assertValidLifecycleTransition, normalizeLifecycle } = require('../domain/docketLifecycle');
+const { DocketStatus, toDocketState, toPersistenceState } = require('../domain/docket/docketStateMachine');
+const {
+  DocketLifecycle,
+  assertValidLifecycleTransition,
+  normalizeLifecycle,
+  isValidTransition,
+  getNextStates,
+  toLifecycleFromStatus,
+} = require('../domain/docketLifecycle');
 const { EVENT_NAMES, emitDocketEvent } = require('./docketEvents.service');
 const { NotificationTypes, createNotification } = require('../domain/notifications');
 
@@ -30,13 +37,28 @@ function normalizeActorRole(actor = {}) {
 }
 
 
-function transitionLifecycle(docket, targetLifecycle) {
+function transitionLifecycle(docket, targetLifecycle, context = {}) {
+  const { firmId, actor, docketId, suppressLifecycleNotification = false } = context;
   const fromLifecycle = normalizeLifecycle(docket.lifecycle || DocketLifecycle.CREATED);
   const toLifecycle = normalizeLifecycle(targetLifecycle);
   if (fromLifecycle !== toLifecycle) {
     assertValidLifecycleTransition(fromLifecycle, toLifecycle);
   }
+  if (toLifecycle === DocketLifecycle.WL && !String(docket.assignedToXID || '').trim()) {
+    throw makeError('Cannot move to WL without assignment', 400, 'WL_ASSIGNMENT_REQUIRED');
+  }
   docket.lifecycle = toLifecycle;
+
+  if (!suppressLifecycleNotification && fromLifecycle !== toLifecycle && firmId && docketId) {
+    createDocketNotification({
+      firmId,
+      userId: docket.assignedToXID || actor?.xID,
+      type: NotificationTypes.LIFECYCLE_CHANGED,
+      docketId,
+      actor: actor || { xID: 'SYSTEM', role: 'SYSTEM' },
+    });
+  }
+
   return toLifecycle;
 }
 
@@ -44,49 +66,38 @@ function assignToUser(docket, userId) {
   docket.assignedToXID = String(userId || '').toUpperCase();
   docket.queueType = 'PERSONAL';
   docket.assignedAt = new Date();
+  docket.updatedAt = new Date();
   docket.status = toPersistenceState(DocketStatus.ASSIGNED);
   docket.lifecycle = DocketLifecycle.IN_WORKLIST;
   return docket;
 }
 
-async function createDocketNotification({ firmId, userId, type, docketId, message }) {
+async function createDocketNotification({ firmId, userId, type, docketId, actor }) {
   if (!userId) return;
   await createNotification({
     firmId,
-    user_id: String(userId || '').toUpperCase(),
+    userId: String(userId || '').toUpperCase(),
     type,
-    docket_id: docketId,
-    message,
-    created_at: new Date(),
+    docketId,
+    actor,
+    timestamp: new Date(),
   });
 }
 
-const ALLOWED_LIFECYCLE_TRANSITIONS = Object.freeze({
-  OPEN: Object.freeze(['PENDING', 'RESOLVED', 'FILED', 'QC_PENDING']),
-  PENDING: Object.freeze(['OPEN']),
-  QC_PENDING: Object.freeze(['RESOLVED', 'OPEN']),
-  RESOLVED: Object.freeze([]),
-  FILED: Object.freeze([]),
-});
-
-function normalizeLifecycleState(status) {
-  const normalized = String(toDocketState(status) || '').toUpperCase();
-  if (['ASSIGNED', 'IN_PROGRESS', 'AVAILABLE', 'CREATED'].includes(normalized)) return 'OPEN';
-  return normalized;
-}
-
-function validateLifecycleAccess({ actor, fromState, toState }) {
+function validateLifecycleAccess({ actor, fromLifecycle, toLifecycle, fromStatus }) {
   const role = normalizeActorRole(actor);
-  const from = normalizeLifecycleState(fromState);
-  const to = normalizeLifecycleState(toState);
 
-  if (role === 'USER' && from === 'QC_PENDING') {
+  if (role === 'USER' && String(toDocketState(fromStatus) || '').toUpperCase() === DocketStatus.QC_PENDING) {
     throw makeError('Permission denied', 403, 'DOCKET_PERMISSION_DENIED');
   }
 
-  const allowed = ALLOWED_LIFECYCLE_TRANSITIONS[from] || [];
-  if (!allowed.includes(to)) {
-    throw makeError('Invalid lifecycle transition', 400, 'INVALID_DOCKET_TRANSITION');
+  if (!isValidTransition(fromLifecycle, toLifecycle)) {
+    const allowedTargets = getNextStates(fromLifecycle);
+    throw makeError(
+      `Invalid lifecycle transition from ${fromLifecycle} to ${toLifecycle}. Allowed: ${allowedTargets.join(', ') || 'none'}`,
+      400,
+      'INVALID_DOCKET_TRANSITION',
+    );
   }
 }
 
@@ -125,6 +136,7 @@ async function pullFromWorkbench({ docketId, firmId, userId, userObjectId = null
       assignedAt: new Date(),
       lastActionByXID: String(userId || '').toUpperCase(),
       lastActionAt: new Date(),
+      updatedAt: new Date(),
       queueType: 'PERSONAL',
     },
     $inc: { version: 1 },
@@ -153,7 +165,13 @@ async function pullFromWorkbench({ docketId, firmId, userId, userObjectId = null
   });
 
   emitDocketEvent(EVENT_NAMES.ASSIGNMENT, { docketId, firmId, assigneeXID, assignedBy: userId });
-  await createDocketNotification({ firmId, userId: assigneeXID, type: NotificationTypes.DOCKET_ASSIGNED, docketId, message: `Docket ${docketId} was assigned to you.` });
+  await createDocketNotification({
+    firmId,
+    userId: assigneeXID,
+    type: NotificationTypes.ASSIGNED,
+    docketId,
+    actor: { xID: userId, role: 'USER' },
+  });
   return updated;
 }
 
@@ -185,21 +203,24 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
         docket.forceQc = Boolean(forceQC || sendToQC);
       }
 
-      assertValidDocketTransition(fromState, finalTarget);
-      validateLifecycleAccess({ actor, fromState, toState: finalTarget });
+      const fromLifecycle = normalizeLifecycle(docket.lifecycle || DocketLifecycle.WL);
+      const targetLifecycle = toLifecycleFromStatus(finalTarget);
+      validateLifecycleAccess({
+        actor,
+        fromLifecycle,
+        toLifecycle: targetLifecycle,
+        fromStatus: fromState,
+      });
 
       docket.status = toPersistenceState(finalTarget);
-      if (finalTarget === DocketStatus.IN_PROGRESS || finalTarget === DocketStatus.PENDING || finalTarget === DocketStatus.QC_PENDING) {
-        transitionLifecycle(docket, DocketLifecycle.ACTIVE);
-      }
-      if (finalTarget === DocketStatus.RESOLVED) {
-        transitionLifecycle(docket, DocketLifecycle.COMPLETED);
-      }
-      if (finalTarget === DocketStatus.FILED) {
-        transitionLifecycle(docket, DocketLifecycle.ARCHIVED);
-      }
+      transitionLifecycle(docket, targetLifecycle, {
+        firmId,
+        actor,
+        docketId,
+      });
       docket.lastActionByXID = actor.xID;
       docket.lastActionAt = new Date();
+      docket.updatedAt = new Date();
 
       if (finalTarget === DocketStatus.PENDING) {
         docket.reopenAt = reopenAt ? new Date(reopenAt) : null;
@@ -246,16 +267,6 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
         metadata: { duplicateOf: duplicateOf || null, reopenAt: docket.reopenAt || null },
         session,
       });
-
-      if (finalTarget === DocketStatus.RESOLVED) {
-        await createDocketNotification({
-          firmId,
-          userId: docket.assignedToXID || actor.xID,
-          type: NotificationTypes.DOCKET_COMPLETED,
-          docketId,
-          message: `Docket ${docketId} was completed.`,
-        });
-      }
 
       result = docket;
     });
@@ -309,17 +320,29 @@ async function qcDecision({ docketId, firmId, actor, decision, comment }) {
     docket.qc = { ...(docket.qc || {}), status: 'CORRECTED', handledBy: actor.xID, handledAt: new Date(), comment };
   }
 
-  assertValidDocketTransition(fromState, toState);
-  validateLifecycleAccess({ actor, fromState, toState });
+  const fromLifecycle = normalizeLifecycle(docket.lifecycle || DocketLifecycle.WL);
+  const targetLifecycle = toLifecycleFromStatus(toState);
+  validateLifecycleAccess({
+    actor,
+    fromLifecycle,
+    toLifecycle: targetLifecycle,
+    fromStatus: fromState,
+  });
   docket.status = toPersistenceState(toState);
+  transitionLifecycle(docket, targetLifecycle, {
+    firmId,
+    actor,
+    docketId,
+  });
   docket.lastActionByXID = actor.xID;
   docket.lastActionAt = new Date();
+  docket.updatedAt = new Date();
   await docket.save();
 
   await writeAudit({
     docketId,
     fromState,
-    toState: normalizeLifecycleState(toState) === 'OPEN' ? 'OPEN' : toState,
+    toState: targetLifecycle,
     userId: actor.xID,
     performedByRole: normalizeActorRole(actor),
     firmId,
@@ -339,6 +362,7 @@ async function reopenDuePending() {
     docket.pendingUntil = null;
     docket.lastActionAt = now;
     docket.lastActionByXID = 'SYSTEM';
+    docket.updatedAt = now;
     await docket.save();
     await writeAudit({ docketId: docket.caseId, fromState: DocketStatus.PENDING, toState: DocketStatus.IN_PROGRESS, userId: 'SYSTEM', comment: 'Auto reopened', action: 'PENDING_REOPEN', firmId: docket.firmId });
     emitDocketEvent(EVENT_NAMES.PENDING_REOPEN, { docketId: docket.caseId, firmId: docket.firmId });
@@ -351,14 +375,26 @@ async function reassign({ docketId, firmId, actor, toUserXID, comment }) {
   requireComment(comment, 'Reassignment');
   const docket = await Case.findOne({ caseId: docketId, firmId });
   if (!docket) throw makeError('Docket not found', 404, 'DOCKET_NOT_FOUND');
+  const nextAssignee = String(toUserXID || '').toUpperCase().trim();
+  if (!nextAssignee && normalizeLifecycle(docket.lifecycle) === DocketLifecycle.WL) {
+    throw makeError('Cannot move to WL without assignment', 400, 'WL_ASSIGNMENT_REQUIRED');
+  }
   const fromAssignee = docket.assignedToXID || null;
-  docket.assignedToXID = String(toUserXID || '').toUpperCase();
+  docket.assignedToXID = nextAssignee;
   docket.assignedAt = new Date();
   docket.lastActionByXID = actor.xID;
   docket.lastActionAt = new Date();
+  docket.updatedAt = new Date();
   docket.queueType = docket.assignedToXID ? 'PERSONAL' : 'GLOBAL';
   await docket.save();
   await writeAudit({ docketId, fromState: toDocketState(docket.status), toState: toDocketState(docket.status), userId: actor.xID, firmId, comment, action: 'REASSIGNED', metadata: { fromAssignee, toAssignee: docket.assignedToXID } });
+  await createDocketNotification({
+    firmId,
+    userId: docket.assignedToXID,
+    type: NotificationTypes.REASSIGNED,
+    docketId,
+    actor,
+  });
   return docket;
 }
 
@@ -367,21 +403,27 @@ async function activateOnOpen({ docketId, firmId, actor }) {
   if (!docket) throw makeError('Docket not found', 404, 'DOCKET_NOT_FOUND');
 
   const lifecycle = normalizeLifecycle(docket.lifecycle || DocketLifecycle.CREATED);
-  if (lifecycle !== DocketLifecycle.IN_WORKLIST) return docket;
+  if (lifecycle === DocketLifecycle.WL) {
+    transitionLifecycle(docket, DocketLifecycle.ACTIVE, {
+      firmId,
+      actor,
+      docketId,
+      suppressLifecycleNotification: true,
+    });
+    docket.status = toPersistenceState(DocketStatus.IN_PROGRESS);
+    docket.lastActionByXID = actor?.xID || docket.assignedToXID || 'SYSTEM';
+    docket.lastActionAt = new Date();
+    docket.updatedAt = new Date();
+    await docket.save();
 
-  transitionLifecycle(docket, DocketLifecycle.ACTIVE);
-  docket.status = toPersistenceState(DocketStatus.IN_PROGRESS);
-  docket.lastActionByXID = actor?.xID || docket.assignedToXID || 'SYSTEM';
-  docket.lastActionAt = new Date();
-  await docket.save();
-
-  await createDocketNotification({
-    firmId,
-    userId: docket.assignedToXID,
-    type: NotificationTypes.DOCKET_ACTIVATED,
-    docketId,
-    message: `Docket ${docketId} is now active.`,
-  });
+    await createDocketNotification({
+      firmId,
+      userId: docket.assignedToXID,
+      type: NotificationTypes.DOCKET_ACTIVATED,
+      docketId,
+      actor: actor || { xID: docket.assignedToXID || 'SYSTEM', role: 'SYSTEM' },
+    });
+  }
 
   return docket;
 }

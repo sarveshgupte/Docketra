@@ -33,6 +33,13 @@
   margin-bottom: var(--spacing-md);
 }
 
+.admin__section-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .admin__actions {
   display: flex;
   gap: var(--spacing-xs);

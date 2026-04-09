@@ -1,4 +1,4 @@
-const { z, nonEmptyString, caseIdString, clientIdString, xidString, objectIdString } = require('./common');
+const { z, nonEmptyString, caseIdString, clientIdString, xidString, objectIdString, queryBoolean } = require('./common');
 
 const caseIdParams = z.object({ caseId: caseIdString });
 const caseAndAttachmentParams = z.object({ caseId: caseIdString, attachmentId: nonEmptyString });
@@ -73,6 +73,22 @@ module.exports = {
       text: z.string().trim().min(1).max(2000),
       note: z.string().trim().min(1).max(500).optional(),
     }).strict(),
+  },
+  'POST /:caseId/upload-link': {
+    params: caseIdParams,
+    body: z.object({
+      requirePin: queryBoolean.optional(),
+      expiry: z.enum(['24h', '7d']).optional(),
+      sendEmail: queryBoolean.optional(),
+    }).strict(),
+  },
+  'GET /:caseId/upload-link': {
+    params: caseIdParams,
+    query: strictEmpty,
+  },
+  'POST /:caseId/upload-link/revoke': {
+    params: caseIdParams,
+    body: strictEmpty,
   },
   'POST /:caseId/attachments': {
     params: caseIdParams,

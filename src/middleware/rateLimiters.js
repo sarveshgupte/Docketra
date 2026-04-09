@@ -223,6 +223,14 @@ const publicLimiter = createLimiter({
   keyGenerator: ipKeyGenerator,
 });
 
+
+const publicUploadLimiter = createLimiter({
+  name: 'publicUploadLimiter',
+  windowMs: config.security.rateLimit.publicWindowSeconds * 1000,
+  max: Math.max(1, Math.floor(config.security.rateLimit.publicPerMinute / 2)),
+  keyGenerator: ipKeyGenerator,
+});
+
 const signupLimiter = createLimiter({
   name: 'signupLimiter',
   windowMs: config.security.rateLimit.signupWindowSeconds * 1000,
@@ -355,13 +363,6 @@ const debugLimiter = createLimiter({
   keyGenerator: userOrIpKeyGenerator,
 });
 
-const inboundEmailLimiter = createLimiter({
-  name: 'inboundEmailLimiter',
-  windowMs: config.security.rateLimit.inboundEmailWindowSeconds * 1000,
-  max: config.security.rateLimit.inboundEmailPerMinute,
-  keyGenerator: ipKeyGenerator,
-});
-
 const superadminAdminResendLimiter = superadminLimiter;
 const superadminAdminLifecycleLimiter = superadminLimiter;
 const superadminAdminManagementLimiter = superadminLimiter;
@@ -373,6 +374,7 @@ module.exports = {
   forgotPasswordLimiter,
   publicLimiter,
   signupLimiter,
+  publicUploadLimiter,
   authBlockEnforcer,
   sensitiveLimiter,
   otpVerifyLimiter,
@@ -390,7 +392,6 @@ module.exports = {
   commentLimiter,
   fileUploadLimiter,
   debugLimiter,
-  inboundEmailLimiter,
   superadminAdminResendLimiter,
   superadminAdminLifecycleLimiter,
   superadminAdminManagementLimiter,

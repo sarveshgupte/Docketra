@@ -66,7 +66,7 @@ export function NotificationPanel({ firmSlug, limit = 8 }) {
     setLoading(true);
     setError(null);
     try {
-      const response = await notificationsApi.getNotifications();
+      const response = await notificationsApi.getNotifications({ limit });
       setItems(normalizeList(response));
     } catch (err) {
       setError(err?.message || 'Failed to load notifications');
@@ -78,7 +78,7 @@ export function NotificationPanel({ firmSlug, limit = 8 }) {
 
   useEffect(() => {
     void loadNotifications();
-  }, []);
+  }, [limit]);
 
   const grouped = useMemo(() => {
     const meaningful = items.filter((item) => isMeaningful(item) && !dismissed.includes(item._id));
@@ -139,7 +139,7 @@ export function NotificationPanel({ firmSlug, limit = 8 }) {
         {visible.map((item) => (
           <li key={`${item._id}-${item.latestAt}`} className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-              <p className="text-sm font-medium text-gray-900" style={{ margin: 0 }}>{item.message}</p>
+              <p className="text-sm text-gray-900" style={{ margin: 0, fontWeight: item.read ? 500 : 700 }}>{item.message}{!item.read ? " · Unread" : ""}</p>
               <Button type="button" variant="ghost" onClick={() => dismissGroup(item.ids)} aria-label="Dismiss notification group">Dismiss</Button>
             </div>
             <p className="mt-1 text-xs text-gray-500">
@@ -167,7 +167,7 @@ export function NotificationPanel({ firmSlug, limit = 8 }) {
           variant="outline"
           onClick={() => navigate(ROUTES.NOTIFICATIONS_HISTORY(firmSlug))}
         >
-          Notification History
+          View All
         </Button>
       </div>
     </Card>

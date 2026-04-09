@@ -97,6 +97,8 @@ async function shouldBackfillLegacyAdmin() {
   await runAdminHierarchyBackfill({ useExistingConnection: true });
 
   const updated = await User.findOne({ email: 'legacy-admin@test.com' });
+
+
   assert(updated.defaultClientId, 'Migration should set defaultClientId');
   assert.strictEqual(updated.defaultClientId.toString(), client._id.toString(), 'defaultClientId should match firm default');
   console.log('✓ Migration backfills legacy admin defaultClientId correctly');
@@ -121,10 +123,9 @@ async function shouldIgnoreSuperadminInPreflight() {
 
   // Create SUPER_ADMIN without firm/defaultClient
   await User.create({
-    authProviders: { google: { googleId: 'random2' } },
     xID: 'X000002',
     name: 'Platform Admin',
-    email: 'platform-admin@test.com',
+    email: 'platform-admin2@test.com',
     role: 'SUPER_ADMIN',
     status: 'invited',
     isActive: true,
