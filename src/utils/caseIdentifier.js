@@ -73,7 +73,11 @@ const resolveCaseIdentifier = async (firmId, identifier, role) => {
   
   // Case 2: Case number (CASE-YYYYMMDD-XXXXX) - resolve to internal ID
   if (isValidCaseNumberFormat(identifier)) {
-    const caseDoc = await CaseRepository.findByCaseNumber(firmId, identifier, role);
+    let caseDoc = await CaseRepository.findByCaseNumber(firmId, identifier, role);
+    if (!caseDoc) {
+      // Backward-compat: some deployments still store display identifier in caseId
+      caseDoc = await CaseRepository.findByCaseId(firmId, identifier, role);
+    }
     if (!caseDoc) {
       throw new Error('Case not found');
     }
