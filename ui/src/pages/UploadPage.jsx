@@ -25,9 +25,12 @@ export const UploadPage = () => {
   const { token } = useParams();
   const [requiresPin, setRequiresPin] = useState(false);
   const [pin, setPin] = useState('');
-  const [file, setFile] = useState(null);
-  const [status, setStatus] = useState('loading');
+  const [files, setFiles] = useState([]);
+  const [pageStatus, setPageStatus] = useState('loading');
+  const [status, setStatus] = useState('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   const uploadEndpoint = useMemo(() => `${API_BASE_URL}/public/upload/${token}`, [token]);
 
@@ -35,7 +38,8 @@ export const UploadPage = () => {
     let isMounted = true;
 
     const loadMeta = async () => {
-      setStatus('loading');
+      setPageStatus('loading');
+      setStatus('idle');
       setErrorMessage('');
       try {
         const response = await fetch(`${uploadEndpoint}/meta`);
@@ -47,17 +51,17 @@ export const UploadPage = () => {
 
         if (payload?.data?.expired) {
           if (!isMounted) return;
-          setStatus('error');
+          setPageStatus('error');
           setErrorMessage('This upload link has expired.');
           return;
         }
 
         if (!isMounted) return;
         setRequiresPin(Boolean(payload?.data?.requiresPin));
-        setStatus('ready');
+        setPageStatus('ready');
       } catch (error) {
         if (!isMounted) return;
-        setStatus('error');
+        setPageStatus('error');
         setErrorMessage(error?.message || 'Unable to load upload link metadata.');
       }
     };
@@ -65,7 +69,7 @@ export const UploadPage = () => {
     if (token) {
       loadMeta();
     } else {
-      setStatus('error');
+      setPageStatus('error');
       setErrorMessage('Missing upload token.');
     }
 
@@ -76,35 +80,47 @@ export const UploadPage = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!file) {
-      setErrorMessage('Please choose a file first.');
+    if (!files.length) {
+      setStatus('error');
+      setErrorMessage('Please choose at least one file first.');
       return;
     }
 
     if (requiresPin && !/^\d{4}$/.test(pin)) {
+      setStatus('error');
       setErrorMessage('Please enter a valid 4-digit code.');
       return;
     }
 
+    setStatus('idle');
     setErrorMessage('');
+    setUploading(true);
+    setProgress(0);
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      if (requiresPin) formData.append('pin', pin);
+      for (const [index, file] of files.entries()) {
+        const formData = new FormData();
+        formData.append('file', file);
+        if (requiresPin) formData.append('pin', pin);
 
-      const response = await fetch(uploadEndpoint, {
-        method: 'POST',
-        body: formData,
-      });
-      const payload = await response.json();
+        const response = await fetch(uploadEndpoint, {
+          method: 'POST',
+          body: formData,
+        });
+        const payload = await response.json();
 
-      if (!response.ok || !payload?.success) {
-        throw new Error(payload?.message || 'Upload failed. Please try again.');
+        if (!response.ok || !payload?.success) {
+          throw new Error(payload?.message || 'Upload failed. Please try again.');
+        }
+
+        setProgress(Math.round(((index + 1) / files.length) * 100));
       }
 
+      setUploading(false);
       setStatus('success');
     } catch (error) {
+      setUploading(false);
+      setStatus('error');
       setErrorMessage(error?.message || 'Upload failed. Please try again.');
     }
   };
@@ -112,17 +128,20 @@ export const UploadPage = () => {
   return (
     <div style={pageStyle}>
       <main style={cardStyle}>
-        {status === 'loading' ? <p>Loading upload link...</p> : null}
+        {pageStatus === 'loading' ? <p>Loading upload link...</p> : null}
 
-        {status === 'error' ? (
+        {pageStatus === 'error' ? (
           <p style={{ color: '#b91c1c', margin: 0 }}>{errorMessage || 'This upload link has expired.'}</p>
         ) : null}
 
         {status === 'success' ? (
-          <p style={{ color: '#15803d', margin: 0 }}>✔ Files uploaded successfully</p>
+          <div style={{ color: '#15803d', margin: 0 }}>
+            <p style={{ margin: 0, fontWeight: 600 }}>✅ Documents received</p>
+            <p style={{ marginTop: '8px' }}>Our team will review your documents and get back to you.</p>
+          </div>
         ) : null}
 
-        {status === 'ready' ? (
+        {pageStatus === 'ready' ? (
           <form onSubmit={handleSubmit}>
             {requiresPin ? (
               <div style={{ marginBottom: '16px' }}>
@@ -144,17 +163,45 @@ export const UploadPage = () => {
 
             <div style={{ marginBottom: '16px' }}>
               <h1 style={{ fontSize: '20px', marginBottom: '10px' }}>Upload documents</h1>
+              <p style={{ marginBottom: '10px', color: '#334155', fontSize: '14px', fontWeight: 600 }}>
+                Secure upload • No login required
+              </p>
+              <div
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  setFiles([...event.dataTransfer.files]);
+                  setStatus('idle');
+                  setErrorMessage('');
+                }}
+                style={{
+                  border: '1px dashed #94a3b8',
+                  borderRadius: '8px',
+                  padding: '14px',
+                  marginBottom: '10px',
+                }}
+              >
+                Drag & Drop files here or click to upload
+              </div>
               <input
                 type="file"
-                onChange={(event) => setFile(event.target.files?.[0] || null)}
+                multiple
+                onChange={(event) => {
+                  setFiles([...(event.target.files || [])]);
+                  setStatus('idle');
+                  setErrorMessage('');
+                }}
               />
-              <p style={{ marginTop: '8px', color: '#64748b', fontSize: '14px' }}>
-                {file ? file.name : 'No file selected'}
-              </p>
+              <div style={{ marginTop: '8px', color: '#64748b', fontSize: '14px' }}>
+                {files.length
+                  ? files.map((file, index) => <div key={`${file.name}-${index}`}>{file.name}</div>)
+                  : 'No files selected'}
+              </div>
             </div>
 
             <button
               type="submit"
+              disabled={uploading}
               style={{
                 background: '#2563eb',
                 color: '#fff',
@@ -162,13 +209,24 @@ export const UploadPage = () => {
                 borderRadius: '8px',
                 padding: '10px 16px',
                 fontWeight: 600,
-                cursor: 'pointer',
+                cursor: uploading ? 'not-allowed' : 'pointer',
+                opacity: uploading ? 0.8 : 1,
               }}
             >
               Upload
             </button>
 
-            {errorMessage ? <p style={{ color: '#b91c1c', marginTop: '12px' }}>{errorMessage}</p> : null}
+            {uploading ? (
+              <p style={{ color: '#1e293b', marginTop: '12px' }}>
+                Uploading... please wait ({progress}%)
+              </p>
+            ) : null}
+
+            {status === 'error' ? (
+              <p style={{ color: '#b91c1c', marginTop: '12px' }}>
+                {errorMessage || 'Upload failed. Please try again.'}
+              </p>
+            ) : null}
           </form>
         ) : null}
       </main>
