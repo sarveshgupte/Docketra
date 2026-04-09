@@ -1,0 +1,4 @@
+## 2025-02-18 - [Security] Prevent Timing Attack in Metrics Token Verification
+**Vulnerability:** The metrics endpoint and internal metrics access middleware were using standard equality operators (`===` and `!==`) to verify the `METRICS_TOKEN`. Standard equality operators can return early when a character mismatch is found, allowing attackers to infer the expected token character by character through analyzing the response time (a timing attack).
+**Learning:** Even internal or admin-focused configuration secrets are vulnerable to timing attacks when verifying them against HTTP headers using short-circuit equality operations.
+**Prevention:** Always use `crypto.timingSafeEqual` along with constant-time length checks when comparing sensitive tokens, secrets, or API keys to ensure the comparison process execution time does not reveal partial secrets.
