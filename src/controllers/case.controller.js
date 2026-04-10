@@ -7,6 +7,7 @@ const CaseHistory = require('../models/CaseHistory.model');
 const CaseAudit = require('../models/CaseAudit.model');
 const Client = require('../models/Client.model');
 const User = require('../models/User.model');
+const Team = require('../models/Team.model');
 const WorkType = require('../models/WorkType.model');
 const SubWorkType = require('../models/SubWorkType.model');
 const { CaseRepository, ClientRepository, AttachmentRepository } = require('../repositories');
@@ -520,12 +521,17 @@ const createCase = async (req, res) => {
         createdByXID, // Set from authenticated user context
         createdBy: req.user.email || req.user.xID, // Legacy field - use email or xID as fallback
         priority: normalizedPriority,
-        status: 'UNASSIGNED', // New cases default to UNASSIGNED for global worklist
+        status: 'OPEN',
         lifecycle: assignedTo ? DocketLifecycle.IN_WORKLIST : DocketLifecycle.CREATED,
         assignedToXID: assignedTo ? assignedTo.toUpperCase() : null, // PR: xID Canonicalization - Store in assignedToXID
         assignedTo: null,
         assignedBy: null,
         queueType: assignedTo ? 'PERSONAL' : 'GLOBAL',
+        ownerTeamId: req.user.teamId || null,
+        routedToTeamId: null,
+        routedByUserId: null,
+        routedAt: null,
+        routingNote: null,
         slaDueAt: slaState.slaDueAt,
         tatPaused: slaState.tatPaused,
         tatLastStartedAt: slaState.tatLastStartedAt,
@@ -563,7 +569,7 @@ const createCase = async (req, res) => {
         firmId: newCase.firmId,
         actionType: CASE_ACTION_TYPES.CASE_CREATED,
         actionLabel: `Case created by ${req.user.name || req.user.xID}`,
-        description: `Case created with status: UNASSIGNED, Client: ${finalClientId}, Category: ${actualCategory}`,
+        description: `Case created with status: OPEN, Client: ${finalClientId}, Category: ${actualCategory}`,
         performedBy: req.user.email,
         performedByXID: createdByXID,
         actorRole: req.user.role === 'Admin' ? 'ADMIN' : 'USER',
@@ -1058,6 +1064,11 @@ const cloneCase = async (req, res) => {
         assignedTo: null,
         assignedToXID: null,
         queueType: 'GLOBAL',
+        ownerTeamId: existingCase.ownerTeamId || req.user.teamId || null,
+        routedToTeamId: null,
+        routedByUserId: null,
+        routedAt: null,
+        routingNote: null,
         pendingUntil: null,
         reopenAt: null,
         duplicateOf: originalCase.duplicateOf || null,
@@ -1631,6 +1642,10 @@ const getCaseByCaseId = async (req, res) => {
     }
     const canonicalAssignmentXID = caseObject.assignedToXID || assignedUser?.xID || null;
     const lifecycle = normalizeLifecycle(caseObject.lifecycle);
+    const [ownerTeam, routedTeam] = await Promise.all([
+      caseObject.ownerTeamId ? Team.findOne({ _id: caseObject.ownerTeamId, firmId: scopedFirmId }).select('_id name').lean() : null,
+      caseObject.routedToTeamId ? Team.findOne({ _id: caseObject.routedToTeamId, firmId: scopedFirmId }).select('_id name').lean() : null,
+    ]);
 
     console.log('DOCKET_STATE_DEBUG', {
       caseId: displayCaseId,
@@ -1671,6 +1686,8 @@ const getCaseByCaseId = async (req, res) => {
         history,
         auditLog, // PR #45: Include audit log for UI
         // PR #45: Include access mode information for UI
+        ownerTeamName: ownerTeam?.name || null,
+        routedToTeamName: routedTeam?.name || null,
         accessMode: {
           isViewOnlyMode,
           isOwner,
