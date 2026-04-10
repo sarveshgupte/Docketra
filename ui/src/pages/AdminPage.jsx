@@ -451,7 +451,14 @@ export const AdminPage = () => {
     }
   };
 
-  const handleOpenAccessModal = (user) => {
+  const handleOpenAccessModal = async (user) => {
+    try {
+      await fetchClients();
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Failed to load clients', 'error');
+      return;
+    }
+
     setSelectedUserForAccess(user);
     setRestrictedClientDraft(Array.isArray(user.restrictedClientIds) ? user.restrictedClientIds : []);
     setShowAccessModal(true);
