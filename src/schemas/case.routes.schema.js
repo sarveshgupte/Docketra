@@ -113,6 +113,23 @@ module.exports = {
   'POST /:caseId/pend': { params: caseIdParams, body: z.object({ comment: nonEmptyString, reopenDate: nonEmptyString }).strict() },
   'POST /:caseId/file': { params: caseIdParams, body: z.object({ comment: nonEmptyString }).strict() },
   'POST /:caseId/unassign': { params: caseIdParams, body: strictEmpty },
+
+  'POST /:caseId/route': {
+    params: caseIdParams,
+    body: z.object({
+      toTeamId: objectIdString,
+      note: z.string().trim().max(500).optional(),
+    }).strict(),
+  },
+  'POST /:caseId/accept': { params: caseIdParams, body: strictEmpty },
+  'POST /:caseId/return': {
+    params: caseIdParams,
+    body: z.object({ note: z.string().trim().max(500).optional() }).strict(),
+  },
+  'POST /:caseId/routed-status': {
+    params: caseIdParams,
+    body: z.object({ status: z.enum(['IN_PROGRESS', 'PENDING', 'FILED']) }).strict(),
+  },
   'GET /:caseId/client-fact-sheet': { params: caseIdParams, query: strictEmpty },
   'GET /:caseId/client-fact-sheet/files/:fileId/view': {
     params: z.object({ caseId: caseIdString, fileId: nonEmptyString }),
