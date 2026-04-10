@@ -54,6 +54,12 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Name is required'],
   },
+
+  department: {
+    type: String,
+    trim: true,
+    default: null,
+  },
   
   // Email address - REQUIRED for password setup emails
   // Used for notifications, contact, and password setup
