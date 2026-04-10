@@ -1804,11 +1804,15 @@ const getCases = async (req, res) => {
     
     const scopedCaseQuery = enforceTenantScope(query, req, { source: 'case.getCases.list' });
 
-    const cases = await Case.find(scopedCaseQuery)
-      .limit(parseInt(limit))
-      .skip((parseInt(page) - 1) * parseInt(limit))
-      .sort({ createdAt: -1 })
-      .lean();
+    // PERFORMANCE: Execute independent queries concurrently
+    const [cases, total] = await Promise.all([
+      Case.find(scopedCaseQuery)
+        .limit(parseInt(limit))
+        .skip((parseInt(page) - 1) * parseInt(limit))
+        .sort({ createdAt: -1 })
+        .lean(),
+      Case.countDocuments(scopedCaseQuery)
+    ]);
 
     // Decrypt case documents
     // Note: CaseRepository.decryptDocs handles decryption and normalization
@@ -1847,8 +1851,6 @@ const getCases = async (req, res) => {
         } : null,
       };
     });
-    
-    const total = await Case.countDocuments(scopedCaseQuery);
     
     // Log case list view for audit
     if (req.user?.xID) {
