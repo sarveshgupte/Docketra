@@ -36,7 +36,27 @@ const isValidObjectId = (id) => {
  */
 const isValidCaseNumberFormat = (id) => {
   if (!id) return false;
-  return /^CASE-\d{8}-\d{5}$/i.test(id);
+  const normalized = String(id).trim();
+  return /^CASE-\d{8}-\d{5}$/i.test(normalized) || /^\d{8}-\d{5}$/.test(normalized);
+};
+
+const getCaseNumberCandidates = (id) => {
+  const normalized = String(id || '').trim();
+  if (!normalized) return [];
+
+  const bareMatch = normalized.match(/^(\d{8}-\d{5})$/);
+  if (bareMatch) {
+    const bare = bareMatch[1];
+    return [bare, `CASE-${bare}`];
+  }
+
+  const prefixedMatch = normalized.match(/^CASE-(\d{8}-\d{5})$/i);
+  if (prefixedMatch) {
+    const bare = prefixedMatch[1];
+    return [`CASE-${bare}`, bare];
+  }
+
+  return [normalized];
 };
 
 /**
@@ -71,13 +91,19 @@ const resolveCaseIdentifier = async (firmId, identifier, role) => {
     return caseDoc.caseInternalId.toString();
   }
   
-  // Case 2: Case number (CASE-YYYYMMDD-XXXXX) - resolve to internal ID
+  // Case 2: Case number (CASE-YYYYMMDD-XXXXX or YYYYMMDD-XXXXX) - resolve to internal ID
   if (isValidCaseNumberFormat(identifier)) {
-    let caseDoc = await CaseRepository.findByCaseNumber(firmId, identifier, role);
-    if (!caseDoc) {
+    let caseDoc = null;
+    const candidates = getCaseNumberCandidates(identifier);
+
+    for (const candidate of candidates) {
+      caseDoc = await CaseRepository.findByCaseNumber(firmId, candidate, role);
+      if (caseDoc) break;
       // Backward-compat: some deployments still store display identifier in caseId
-      caseDoc = await CaseRepository.findByCaseId(firmId, identifier, role);
+      caseDoc = await CaseRepository.findByCaseId(firmId, candidate, role);
+      if (caseDoc) break;
     }
+
     if (!caseDoc) {
       throw new Error('Case not found');
     }
@@ -85,7 +111,7 @@ const resolveCaseIdentifier = async (firmId, identifier, role) => {
   }
   
   // Case 3: Invalid format
-  throw new Error('Invalid case identifier format. Expected ObjectId or CASE-YYYYMMDD-XXXXX format.');
+  throw new Error('Invalid case identifier format. Expected ObjectId, CASE-YYYYMMDD-XXXXX, or YYYYMMDD-XXXXX format.');
 };
 
 /**

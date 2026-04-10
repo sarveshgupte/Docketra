@@ -19,6 +19,7 @@ const normalizeRecords = (records = []) => {
     .map((record) => ({
       ...record,
       caseId: record.caseId || record.caseNumber || record._id,
+      routeCaseId: record.caseInternalId || record._id || record.caseId || record.caseNumber,
       docketNumber: record.caseNumber || record.docketNumber || record.caseId || record._id,
       clientId: record.clientId || '—',
       clientName: record.clientName || record.client?.businessName || '—',
@@ -152,7 +153,7 @@ export function WorklistView({
       if (!caseId) return;
       onOpenDocket?.({
         caseId,
-        sourceList: sorted.map((row) => row.caseId).filter(Boolean),
+        sourceList: sorted.map((row) => row.routeCaseId || row.caseId).filter(Boolean),
         index,
         origin: 'worklist',
       });
@@ -161,8 +162,8 @@ export function WorklistView({
   );
 
   const handleRowClick = useCallback((row) => {
-    const index = sorted.findIndex((item) => item.caseId === row.caseId);
-    handleOpen(row.caseId, index >= 0 ? index : 0);
+    const index = sorted.findIndex((item) => (item.routeCaseId || item.caseId) === (row.routeCaseId || row.caseId));
+    handleOpen(row.routeCaseId || row.caseId, index >= 0 ? index : 0);
   }, [handleOpen, sorted]);
 
   useKeyboardShortcuts({
@@ -170,7 +171,7 @@ export function WorklistView({
     onPrev: () => setFocusedIndex((idx) => Math.max(idx - 1, 0)),
     onOpen: () => {
       const target = sorted[focusedIndex];
-      if (target?.caseId) handleOpen(target.caseId, focusedIndex);
+      if (target?.routeCaseId || target?.caseId) handleOpen(target.routeCaseId || target.caseId, focusedIndex);
     },
   });
 
