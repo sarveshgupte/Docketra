@@ -4,9 +4,21 @@ import { Button } from '../common/Button';
 import { bulkUploadApi } from '../../api/bulkUpload.api';
 
 const TEMPLATES = {
-  clients: ['businessName', 'businessAddress', 'primaryContactNumber', 'businessEmail', 'secondaryContactNumber', 'PAN', 'TAN', 'GST', 'CIN', 'contactPersonName', 'contactPersonDesignation', 'contactPersonPhoneNumber', 'contactPersonEmailAddress'],
-  categories: ['name'],
-  team: ['name', 'email', 'role'],
+  clients: ['businessName', 'businessEmail', 'primaryContactNumber', 'contactPersonName'],
+  categories: ['category', 'subcategory'],
+  team: ['name', 'email', 'role', 'department'],
+};
+
+const TYPE_HELPER_TEXT = {
+  team: ['Role must be Admin/User'],
+  categories: ['Subcategory optional'],
+  clients: ['Email required'],
+};
+
+const TYPE_FIELD_DESCRIPTIONS = {
+  team: ['name: full name', 'email: work email', 'role: Admin or User', 'department: optional'],
+  categories: ['category: top-level category', 'subcategory: optional nested value'],
+  clients: ['businessName: client legal name', 'businessEmail: required', 'primaryContactNumber: optional', 'contactPersonName: optional'],
 };
 
 const DUPLICATE_MODES = [
@@ -142,6 +154,17 @@ export const BulkUploadModal = ({ isOpen, onClose, type, title, onImported, show
     <Modal isOpen={isOpen} onClose={onClose} title={typeLabel}>
       <div className="admin__create-form">
         <div className="neo-info-text">Supports CSV and XLSX. Column order can vary.</div>
+        {(TYPE_HELPER_TEXT[type] || []).map((text) => (
+          <div key={text} className="neo-info-text">{text}</div>
+        ))}
+        {(TYPE_FIELD_DESCRIPTIONS[type] || []).length ? (
+          <div style={{ marginTop: 8 }}>
+            <div className="neo-info-text">Template fields</div>
+            {(TYPE_FIELD_DESCRIPTIONS[type] || []).map((entry) => (
+              <div key={entry} className="neo-info-text">• {entry}</div>
+            ))}
+          </div>
+        ) : null}
         <div className="neo-form-actions">
           <Button type="button" variant="default" onClick={handleDownloadTemplate}>Download Template</Button>
           <input type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={handleFileUpload} />
