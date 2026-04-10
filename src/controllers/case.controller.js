@@ -2464,6 +2464,13 @@ const viewAttachment = async (req, res) => {
     }
     
 
+    if (!attachment.filePath) {
+      return res.status(404).json({
+        success: false,
+        message: 'File location not found',
+      });
+    }
+
     const resolvedPath = path.resolve(attachment.filePath);
     const safeBaseDir = path.resolve(__dirname, '../../uploads');
     if (!resolvedPath.startsWith(safeBaseDir)) {
