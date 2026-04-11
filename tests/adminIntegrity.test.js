@@ -116,6 +116,7 @@ async function shouldIgnoreSuperadminInPreflight() {
 
   // Create a compliant admin to avoid violations
   await User.create({
+    authProviders: { google: { googleId: 'random2' } },
     xID: 'X000777',
     name: 'Scoped Admin',
     email: 'scoped-admin@test.com',
@@ -130,7 +131,7 @@ async function shouldIgnoreSuperadminInPreflight() {
   await User.create({
     xID: 'X000999',
     name: 'Platform Admin',
-    email: 'platform-admin@test.com',
+    email: 'platform-admin2@test.com',
     role: 'SUPER_ADMIN',
     status: 'invited',
     isActive: true,

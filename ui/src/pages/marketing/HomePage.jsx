@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import Container from '../../components/layout/Container';
+import { ClientUploadFeature } from '../../../components/ClientUploadFeature';
 
 const CAPABILITIES = [
   {
@@ -174,6 +175,8 @@ export const HomePage = () => {
           </div>
         </Container>
       </section>
+
+      <ClientUploadFeature />
 
       {/* FEATURES */}
       <section id="features" className="w-full bg-gray-50 py-20 md:py-24 border-t border-gray-100">

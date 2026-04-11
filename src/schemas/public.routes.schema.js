@@ -11,4 +11,13 @@ module.exports = {
       goLiveTimeline: nonEmptyString,
     }),
   },
+  'GET /upload/:token/meta': {
+    params: z.object({ token: z.string().trim().min(8).max(128) }).strict(),
+  },
+  'POST /upload/:token': {
+    params: z.object({ token: z.string().trim().min(8).max(128) }).strict(),
+    body: z.object({
+      pin: z.string().trim().regex(/^\d{4}$/).optional(),
+    }).passthrough(),
+  },
 };
