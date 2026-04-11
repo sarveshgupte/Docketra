@@ -78,6 +78,7 @@ export const ClientFactSheetModal = ({ isOpen, onClose, factSheet, caseId, clien
                     </div>
                   </div>
                   <button
+                    type="button"
                     className="btn-view-file"
                     onClick={() => handleViewFile(file.fileId)}
                     title="View or download file (opens in new tab)"

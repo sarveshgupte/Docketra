@@ -62,12 +62,14 @@ export class ErrorBoundary extends React.Component {
                 A rendering error occurred. Retry now or go back to continue working.
               </p>
               <button
+                type="button"
                 onClick={() => window.location.reload()}
                 className="mt-6 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
               >
                 Retry
               </button>
               <button
+                type="button"
                 onClick={() => window.history.back()}
                 className="mt-3 inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
               >

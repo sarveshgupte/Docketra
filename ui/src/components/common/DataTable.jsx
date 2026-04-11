@@ -56,6 +56,7 @@ export const DataTable = ({
               <div className="flex items-center gap-2 flex-wrap">
                 {activeFilters.map((f) => (
                   <button
+                    type="button"
                     key={f.key}
                     onClick={() => onRemoveFilter?.(f.key)}
                     className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-700 hover:bg-slate-200 transition-colors"

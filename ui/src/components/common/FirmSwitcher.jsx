@@ -76,7 +76,8 @@ export const FirmSwitcher = ({ onFirmSwitch }) => {
           <div className="firm-switcher__dropdown">
             <div className="firm-switcher__header">
               <h3>Select a Firm</h3>
-              <button 
+              <button
+                type="button"
                 className="firm-switcher__close"
                 onClick={() => setShowDropdown(false)}
                 aria-label="Close firm switcher"
@@ -112,6 +113,7 @@ export const FirmSwitcher = ({ onFirmSwitch }) => {
               ) : (
                 firms.map((firm) => (
                   <button
+                    type="button"
                     key={firm._id}
                     className="firm-switcher__item"
                     onClick={() => handleSwitchFirm(firm._id)}

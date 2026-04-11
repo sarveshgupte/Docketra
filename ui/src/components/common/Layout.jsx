@@ -589,6 +589,7 @@ export const Layout = ({ children }) => {
         <header className="enterprise-header" role="banner">
           {/* Mobile sidebar toggle */}
           <button
+            type="button"
             className="enterprise-header__sidebar-toggle"
             onClick={handleSidebarToggle}
             aria-label={isMobileViewport ? 'Toggle sidebar' : (sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar')}
@@ -619,6 +620,7 @@ export const Layout = ({ children }) => {
                 </div>
                 {searchResults.cases.slice(0, 3).map((item) => (
                   <button
+                    type="button"
                     key={`case-${item.caseId}`}
                     className="dropdown-item"
                     onClick={() => openDocket({ caseId: item.caseId, navigate, to: safeRoute(ROUTES.CASE_DETAIL(currentFirmSlug, item.caseId), ROUTES.CASES(currentFirmSlug)) })}
@@ -632,6 +634,7 @@ export const Layout = ({ children }) => {
 
           {/* Create Docket CTA */}
           <button
+            type="button"
             className="btn btn-primary enterprise-header__new-case"
             onClick={() => navigate(safeRoute(ROUTES.CREATE_CASE(currentFirmSlug), ROUTES.CASES(currentFirmSlug)))}
             aria-label="Create new docket"
@@ -644,7 +647,7 @@ export const Layout = ({ children }) => {
           <div className="enterprise-header__right">
             {/* Notification Bell */}
             <div className="dropdown" ref={notificationDropdownRef}>
-              <button className="enterprise-header__icon-btn" aria-label="Notifications" onClick={() => setNotificationOpen((v) => !v)}>
+              <button type="button" className="enterprise-header__icon-btn" aria-label="Notifications" onClick={() => setNotificationOpen((v) => !v)}>
                 <IconBell />
                 {unreadCount > 0 ? <span className="enterprise-header__notif-dot" aria-hidden="true">{unreadCount}</span> : null}
               </button>
@@ -730,8 +733,8 @@ export const Layout = ({ children }) => {
             {/* User Profile Dropdown */}
             <div className="dropdown" ref={profileDropdownRef}>
               <button
-                className="enterprise-header__profile"
                 type="button"
+                className="enterprise-header__profile"
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                 aria-expanded={profileDropdownOpen}
                 aria-haspopup="true"
@@ -750,7 +753,7 @@ export const Layout = ({ children }) => {
                   >
                     Profile
                   </Link>
-                  <button className="dropdown-item" role="menuitem" onClick={handleLogout}>
+                  <button type="button" className="dropdown-item" role="menuitem" onClick={handleLogout}>
                     Logout
                   </button>
                 </div>

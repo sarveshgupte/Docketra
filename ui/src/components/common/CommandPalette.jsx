@@ -2,7 +2,9 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 export const CommandPalette = ({ isOpen, onClose, onToggle, commands = [] }) => {
   const [query, setQuery] = useState('');
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef(null);
+  const listRef = useRef(null);
 
   if (!Array.isArray(commands)) {
     console.error('[CommandPalette] commands prop must be an array', commands);
@@ -29,6 +31,7 @@ export const CommandPalette = ({ isOpen, onClose, onToggle, commands = [] }) => 
   useEffect(() => {
     if (!isOpen) {
       setQuery('');
+      setSelectedIndex(0);
       return;
     }
 
@@ -53,6 +56,35 @@ export const CommandPalette = ({ isOpen, onClose, onToggle, commands = [] }) => 
     return validCommands.filter((command) => command.label.toLowerCase().includes(term));
   }, [validCommands, query]);
 
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [query, isOpen]);
+
+  useEffect(() => {
+    if (isOpen && listRef.current) {
+      const selectedEl = listRef.current.querySelector('[aria-selected="true"]');
+      if (selectedEl) {
+        selectedEl.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [selectedIndex, isOpen]);
+
+  const handleInputKeyDown = (e) => {
+    if (filtered.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev + 1) % filtered.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev - 1 + filtered.length) % filtered.length);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      filtered[selectedIndex].action();
+      onClose();
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -66,17 +98,26 @@ export const CommandPalette = ({ isOpen, onClose, onToggle, commands = [] }) => 
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={handleInputKeyDown}
             placeholder="Jump to a page or action"
             aria-label="Search commands"
+            role="combobox"
+            aria-expanded={filtered.length > 0}
+            aria-controls="command-palette-results"
+            aria-activedescendant={filtered.length > 0 ? `command-item-${filtered[selectedIndex].id}` : undefined}
           />
           <kbd className="command-palette__shortcut" aria-hidden="true">⌘K</kbd>
         </div>
-        <ul className="command-palette__results" role="listbox" aria-label="Command results">
-          {filtered.map((command) => (
-            <li key={command.id}>
+        <ul id="command-palette-results" ref={listRef} className="command-palette__results" role="listbox" aria-label="Command results">
+          {filtered.map((command, index) => (
+            <li key={command.id} role="presentation">
               <button
                 type="button"
-                className="command-palette__item"
+                id={`command-item-${command.id}`}
+                role="option"
+                aria-selected={index === selectedIndex}
+                className={`command-palette__item ${index === selectedIndex ? 'bg-slate-100' : ''}`}
+                onMouseEnter={() => setSelectedIndex(index)}
                 onClick={() => {
                   command.action();
                   onClose();
