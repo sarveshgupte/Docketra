@@ -1664,6 +1664,16 @@ const getCaseByCaseId = async (req, res) => {
       timestamp: new Date().toISOString(),
     });
 
+    // Prevent client/proxy caching and conditional GET short-circuit (304) for
+    // dynamic docket detail payloads.
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      Pragma: 'no-cache',
+      Expires: '0',
+      'Surrogate-Control': 'no-store',
+    });
+    res.removeHeader('ETag');
+
     return res.status(200).json({
       success: true,
       data: {
