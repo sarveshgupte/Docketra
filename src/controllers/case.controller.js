@@ -7,6 +7,7 @@ const CaseHistory = require('../models/CaseHistory.model');
 const CaseAudit = require('../models/CaseAudit.model');
 const Client = require('../models/Client.model');
 const User = require('../models/User.model');
+const Team = require('../models/Team.model');
 const WorkType = require('../models/WorkType.model');
 const SubWorkType = require('../models/SubWorkType.model');
 const { CaseRepository, ClientRepository, AttachmentRepository } = require('../repositories');
@@ -25,7 +26,7 @@ const caseSlaService = require('../services/caseSla.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { getMimeType, sanitizeFilename } = require('../utils/fileUtils');
 const { cleanupTempFile } = require('../utils/tempFile');
-const { resolveCaseIdentifier, resolveCaseDocument } = require('../utils/caseIdentifier');
+const { resolveCaseIdentifier } = require('../utils/caseIdentifier');
 const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
 const { areFileUploadsDisabled } = require('../services/featureFlags.service');
 const { enqueueStorageJob, JOB_TYPES } = require('../queues/storage.queue');
@@ -520,12 +521,17 @@ const createCase = async (req, res) => {
         createdByXID, // Set from authenticated user context
         createdBy: req.user.email || req.user.xID, // Legacy field - use email or xID as fallback
         priority: normalizedPriority,
-        status: 'UNASSIGNED', // New cases default to UNASSIGNED for global worklist
+        status: 'OPEN',
         lifecycle: assignedTo ? DocketLifecycle.IN_WORKLIST : DocketLifecycle.CREATED,
         assignedToXID: assignedTo ? assignedTo.toUpperCase() : null, // PR: xID Canonicalization - Store in assignedToXID
         assignedTo: null,
         assignedBy: null,
         queueType: assignedTo ? 'PERSONAL' : 'GLOBAL',
+        ownerTeamId: req.user.teamId || null,
+        routedToTeamId: null,
+        routedByUserId: null,
+        routedAt: null,
+        routingNote: null,
         slaDueAt: slaState.slaDueAt,
         tatPaused: slaState.tatPaused,
         tatLastStartedAt: slaState.tatLastStartedAt,
@@ -563,7 +569,7 @@ const createCase = async (req, res) => {
         firmId: newCase.firmId,
         actionType: CASE_ACTION_TYPES.CASE_CREATED,
         actionLabel: `Case created by ${req.user.name || req.user.xID}`,
-        description: `Case created with status: UNASSIGNED, Client: ${finalClientId}, Category: ${actualCategory}`,
+        description: `Case created with status: OPEN, Client: ${finalClientId}, Category: ${actualCategory}`,
         performedBy: req.user.email,
         performedByXID: createdByXID,
         actorRole: req.user.role === 'Admin' ? 'ADMIN' : 'USER',
@@ -1058,6 +1064,11 @@ const cloneCase = async (req, res) => {
         assignedTo: null,
         assignedToXID: null,
         queueType: 'GLOBAL',
+        ownerTeamId: existingCase.ownerTeamId || req.user.teamId || null,
+        routedToTeamId: null,
+        routedByUserId: null,
+        routedAt: null,
+        routingNote: null,
         pendingUntil: null,
         reopenAt: null,
         duplicateOf: originalCase.duplicateOf || null,
@@ -1631,6 +1642,10 @@ const getCaseByCaseId = async (req, res) => {
     }
     const canonicalAssignmentXID = caseObject.assignedToXID || assignedUser?.xID || null;
     const lifecycle = normalizeLifecycle(caseObject.lifecycle);
+    const [ownerTeam, routedTeam] = await Promise.all([
+      caseObject.ownerTeamId ? Team.findOne({ _id: caseObject.ownerTeamId, firmId: scopedFirmId }).select('_id name').lean() : null,
+      caseObject.routedToTeamId ? Team.findOne({ _id: caseObject.routedToTeamId, firmId: scopedFirmId }).select('_id name').lean() : null,
+    ]);
 
     console.log('DOCKET_STATE_DEBUG', {
       caseId: displayCaseId,
@@ -1671,6 +1686,8 @@ const getCaseByCaseId = async (req, res) => {
         history,
         auditLog, // PR #45: Include audit log for UI
         // PR #45: Include access mode information for UI
+        ownerTeamName: ownerTeam?.name || null,
+        routedToTeamName: routedTeam?.name || null,
         accessMode: {
           isViewOnlyMode,
           isOwner,
@@ -1787,11 +1804,15 @@ const getCases = async (req, res) => {
     
     const scopedCaseQuery = enforceTenantScope(query, req, { source: 'case.getCases.list' });
 
-    const cases = await Case.find(scopedCaseQuery)
-      .limit(parseInt(limit))
-      .skip((parseInt(page) - 1) * parseInt(limit))
-      .sort({ createdAt: -1 })
-      .lean();
+    // PERFORMANCE: Execute independent queries concurrently
+    const [cases, total] = await Promise.all([
+      Case.find(scopedCaseQuery)
+        .limit(parseInt(limit))
+        .skip((parseInt(page) - 1) * parseInt(limit))
+        .sort({ createdAt: -1 })
+        .lean(),
+      Case.countDocuments(scopedCaseQuery)
+    ]);
 
     // Decrypt case documents
     // Note: CaseRepository.decryptDocs handles decryption and normalization
@@ -1830,8 +1851,6 @@ const getCases = async (req, res) => {
         } : null,
       };
     });
-    
-    const total = await Case.countDocuments(scopedCaseQuery);
     
     // Log case list view for audit
     if (req.user?.xID) {
@@ -2446,9 +2465,27 @@ const viewAttachment = async (req, res) => {
       });
     }
     
+
+    if (!attachment.filePath) {
+      return res.status(404).json({
+        success: false,
+        message: 'File location not found',
+      });
+    }
+
+    const resolvedPath = path.resolve(attachment.filePath);
+    const safeBaseDir = path.resolve(__dirname, '../../uploads');
+    if (!resolvedPath.startsWith(safeBaseDir)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Invalid file path',
+      });
+    }
+
     // Check if file exists
     try {
-      await fs.access(attachment.filePath);
+      await fs.access(resolvedPath);
+
     } catch (err) {
       return res.status(404).json({
         success: false,
@@ -2465,7 +2502,7 @@ const viewAttachment = async (req, res) => {
     res.setHeader('Content-Disposition', `inline; filename="${safeFilename}"`);
     
     // Send file
-    res.sendFile(path.resolve(attachment.filePath));
+    res.sendFile(resolvedPath);
   } catch (error) {
     console.error('[viewAttachment] Error:', error);
     res.status(500).json({
@@ -2557,16 +2594,27 @@ const downloadAttachment = async (req, res) => {
         });
       }
     } else if (attachment.filePath) {
+
       // Legacy: Handle old attachments stored locally
       try {
-        await fs.access(attachment.filePath);
+        const resolvedPath = path.resolve(attachment.filePath);
+        const safeBaseDir = path.resolve(__dirname, '../../uploads');
+        if (!resolvedPath.startsWith(safeBaseDir)) {
+          return res.status(403).json({
+            success: false,
+            message: 'Invalid file path',
+          });
+        }
+
+        await fs.access(resolvedPath);
+
         
         // Set headers for download
         res.setHeader('Content-Type', mimeType);
         res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
         
         // Send file
-        res.sendFile(path.resolve(attachment.filePath));
+        res.sendFile(resolvedPath);
       } catch (err) {
         return res.status(404).json({
           success: false,

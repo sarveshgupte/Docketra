@@ -451,7 +451,14 @@ export const AdminPage = () => {
     }
   };
 
-  const handleOpenAccessModal = (user) => {
+  const handleOpenAccessModal = async (user) => {
+    try {
+      await fetchClients();
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Failed to load clients', 'error');
+      return;
+    }
+
     setSelectedUserForAccess(user);
     setRestrictedClientDraft(Array.isArray(user.restrictedClientIds) ? user.restrictedClientIds : []);
     setShowAccessModal(true);
@@ -1160,7 +1167,7 @@ export const AdminPage = () => {
                 <Button
                   variant="default"
                   onClick={() => {
-                    const blob = new Blob(['name,email,role\n'], { type: 'text/csv;charset=utf-8;' });
+                    const blob = new Blob(['name,email,role,department\n'], { type: 'text/csv;charset=utf-8;' });
                     const url = window.URL.createObjectURL(blob);
                     const link = document.createElement('a');
                     link.href = url;
@@ -1299,7 +1306,7 @@ export const AdminPage = () => {
                   Bulk Upload
                 </Button>
                 <Button variant="default" onClick={() => {
-                  const blob = new Blob(['businessName,businessAddress,primaryContactNumber,businessEmail,secondaryContactNumber,PAN,TAN,GST,CIN,contactPersonName,contactPersonDesignation,contactPersonPhoneNumber,contactPersonEmailAddress\n'], { type: 'text/csv;charset=utf-8;' });
+                  const blob = new Blob(['businessName,businessEmail,primaryContactNumber,contactPersonName\n'], { type: 'text/csv;charset=utf-8;' });
                   const url = window.URL.createObjectURL(blob);
                   const link = document.createElement('a');
                   link.href = url;
@@ -1437,7 +1444,7 @@ export const AdminPage = () => {
                   Bulk Upload
                 </Button>
                 <Button variant="default" onClick={() => {
-                  const blob = new Blob(['name\n'], { type: 'text/csv;charset=utf-8;' });
+                  const blob = new Blob(['category,subcategory\n'], { type: 'text/csv;charset=utf-8;' });
                   const url = window.URL.createObjectURL(blob);
                   const link = document.createElement('a');
                   link.href = url;

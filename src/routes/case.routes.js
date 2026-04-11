@@ -55,6 +55,7 @@ const {
   applyClientAccessFilter,
 } = require('../middleware/clientAccess.middleware');
 const { validateCaseCommentPayload } = require('../middleware/commentValidation.middleware');
+const { requireDocketAccess } = require('../middleware/docketAccess.middleware');
 
 const upload = createSecureUpload();
 
@@ -67,6 +68,12 @@ const {
   runPendingReopen,
 } = require('../controllers/docketWorkflow.controller');
 
+const {
+  routeCaseToTeam,
+  acceptRoutedCase,
+  returnRoutedCase,
+  updateRoutedCaseStatus,
+} = require('../controllers/docketRouting.controller');
 
 /**
  * Case Routes
@@ -223,7 +230,10 @@ router.post('/:caseId/transition', authorizeFirmPermission('CASE_UPDATE'), userW
 router.post('/:caseId/reopen-pending', authorizeFirmPermission('CASE_ACTION'), userWriteLimiter, checkCaseClientAccess, reopenPendingDocket);
 router.post('/:caseId/qc-action', authorizeFirmPermission('CASE_ASSIGN'), sensitiveLimiter, userWriteLimiter, checkCaseClientAccess, qcAction);
 router.post('/:caseId/reassign', authorizeFirmPermission('CASE_ASSIGN'), sensitiveLimiter, userWriteLimiter, checkCaseClientAccess, reassignDocket);
-router.post('/pending/reopen-due', authorizeFirmPermission('CASE_ADMIN_VIEW'), sensitiveLimiter, userWriteLimiter, runPendingReopen);
+router.post('/:caseId/route', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, requireDocketAccess, routeCaseToTeam);
+router.post('/:caseId/accept', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, requireDocketAccess, acceptRoutedCase);
+router.post('/:caseId/return', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, requireDocketAccess, returnRoutedCase);
+router.post('/:caseId/routed-status', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, requireDocketAccess, updateRoutedCaseStatus);
 
 
 // Client Fact Sheet routes (Read-Only from Case view)

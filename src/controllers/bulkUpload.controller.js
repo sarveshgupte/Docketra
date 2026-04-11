@@ -6,6 +6,9 @@ const User = require('../models/User.model');
 const BulkUploadJob = require('../models/BulkUploadJob.model');
 const { generateNextClientId } = require('../services/clientIdGenerator');
 const xIDGenerator = require('../services/xIDGenerator');
+const { bulkUploadQueue } = require('../queues/bulkUpload.queue');
+const { eventBus } = require('../events/eventBus');
+require('../automations/bulkUpload.handlers');
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 const ASYNC_ROW_THRESHOLD = 500;
@@ -14,31 +17,22 @@ const TYPE_CONFIG = {
   clients: {
     headers: [
       'businessName',
-      'businessAddress',
-      'primaryContactNumber',
       'businessEmail',
-      'secondaryContactNumber',
-      'PAN',
-      'TAN',
-      'GST',
-      'CIN',
       'contactPersonName',
-      'contactPersonDesignation',
-      'contactPersonPhoneNumber',
-      'contactPersonEmailAddress',
+      'primaryContactNumber',
     ],
-    required: ['businessName', 'businessAddress', 'primaryContactNumber', 'businessEmail'],
+    required: ['businessName', 'businessEmail'],
     duplicateKey: 'businessEmail',
     permission: 'CLIENT_MANAGE',
   },
   categories: {
-    headers: ['name'],
-    required: ['name'],
-    duplicateKey: 'name',
+    headers: ['category', 'subcategory'],
+    required: ['category'],
+    duplicateKey: 'category',
     permission: 'CATEGORY_MANAGE',
   },
   team: {
-    headers: ['name', 'email', 'role'],
+    headers: ['name', 'email', 'role', 'department'],
     required: ['name', 'email', 'role'],
     duplicateKey: 'email',
     permission: 'USER_MANAGE',
@@ -48,26 +42,19 @@ const TYPE_CONFIG = {
 const HEADER_ALIASES = {
   clients: {
     businessName: ['businessname', 'name', 'client_name'],
-    businessAddress: ['businessaddress', 'address', 'client_address'],
-    primaryContactNumber: ['primarycontactnumber', 'phone', 'mobile'],
     businessEmail: ['businessemail', 'email', 'client_email'],
-    secondaryContactNumber: ['secondarycontactnumber', 'alt_phone', 'alternate_phone'],
-    PAN: ['pan'],
-    TAN: ['tan'],
-    GST: ['gst', 'gstin'],
-    CIN: ['cin'],
     contactPersonName: ['contactpersonname', 'contact_name'],
-    contactPersonDesignation: ['contactpersondesignation', 'designation'],
-    contactPersonPhoneNumber: ['contactpersonphonenumber', 'contact_phone'],
-    contactPersonEmailAddress: ['contactpersonemailaddress', 'contact_email'],
+    primaryContactNumber: ['primarycontactnumber', 'phone', 'mobile'],
   },
   categories: {
-    name: ['name', 'category_name'],
+    category: ['category', 'name', 'category_name'],
+    subcategory: ['subcategory', 'sub_category', 'sub category'],
   },
   team: {
     name: ['name', 'full_name'],
     email: ['email', 'work_email'],
     role: ['role', 'user_role'],
+    department: ['department', 'team_department'],
   },
 };
 
@@ -198,6 +185,13 @@ const buildRowObject = (fieldIndexMap, values) => Object.entries(fieldIndexMap).
 }, {});
 
 const isEmptyRow = (rowObj) => Object.values(rowObj).every((value) => !String(value || '').trim());
+const escapeRegExp = (value) => String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const normalizeTeamRole = (role) => {
+  const normalizedRole = String(role || '').trim().toLowerCase();
+  if (normalizedRole === 'admin') return 'Admin';
+  if (normalizedRole === 'user' || normalizedRole === 'employee') return 'Employee';
+  return null;
+};
 
 const fetchExistingLookup = async ({ type, firmId }) => {
   if (type === 'clients') {
@@ -240,11 +234,35 @@ const validateRows = async ({ type, parsedRows, fieldIndexMap, firmId, duplicate
       return;
     }
     if (type === 'team') {
-      const role = String(row.role || '').trim();
-      if (!['Admin', 'Employee'].includes(role)) {
-        invalid.push({ row: rowNumber, error: 'Invalid role. Allowed: Admin, Employee' });
+      const normalizedRole = normalizeTeamRole(row.role);
+      if (!normalizedRole) {
+        invalid.push({ row: rowNumber, error: 'Invalid role. Allowed: Admin, User' });
         return;
       }
+      row.role = normalizedRole;
+    }
+
+    if (type === 'categories') {
+      const categoryKey = String(row.category || '').trim().toLowerCase();
+      const subcategoryKey = String(row.subcategory || '').trim().toLowerCase();
+      const pairKey = `${categoryKey}::${subcategoryKey}`;
+
+      if (seen.has(pairKey)) {
+        invalid.push({ row: rowNumber, error: 'Duplicate category/subcategory row in file' });
+        return;
+      }
+
+      seen.add(pairKey);
+      valid.push({
+        rowNumber,
+        data: {
+          category: String(row.category || '').trim(),
+          subcategory: String(row.subcategory || '').trim(),
+        },
+        dedupeKey: categoryKey,
+        action: existingLookup.has(categoryKey) ? 'update' : 'create',
+      });
+      return;
     }
 
     const dedupeField = cfg.duplicateKey;
@@ -304,19 +322,55 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
   let successCount = 0;
   let failureCount = 0;
   const results = [];
+  const createdClients = [];
+  const createdUsers = [];
+  const categoryCache = new Map();
 
   for (let index = 0; index < rows.length; index += 1) {
     const row = rows[index];
 
     try {
       if (type === 'categories') {
-        if (row.action === 'update') {
-          await Category.updateOne(
-            { firmId: user.firmId, name: row.dedupeKey, isDeleted: { $ne: true } },
-            { $set: { name: row.data.name.trim(), isActive: true } },
-          );
-        } else {
-          await Category.create({ firmId: user.firmId, name: row.data.name.trim(), isActive: true, subcategories: [] });
+        const categoryName = String(row.data.category || '').trim();
+        const subcategoryName = String(row.data.subcategory || '').trim();
+        const categoryKey = categoryName.toLowerCase();
+
+        let categoryDoc = categoryCache.get(categoryKey);
+        if (!categoryDoc) {
+          categoryDoc = await Category.findOne({
+            firmId: user.firmId,
+            isDeleted: { $ne: true },
+            name: { $regex: new RegExp(`^${escapeRegExp(categoryName)}$`, 'i') },
+          });
+          if (!categoryDoc) {
+            categoryDoc = await Category.create({
+              firmId: user.firmId,
+              name: categoryName,
+              isActive: true,
+              subcategories: [],
+            });
+          } else if (!categoryDoc.isActive) {
+            categoryDoc.isActive = true;
+            await categoryDoc.save();
+          }
+          categoryCache.set(categoryKey, categoryDoc);
+        }
+
+        if (subcategoryName) {
+          const existingSubcategory = (categoryDoc.subcategories || [])
+            .find((entry) => String(entry.name || '').trim().toLowerCase() === subcategoryName.toLowerCase());
+
+          if (!existingSubcategory) {
+            categoryDoc.subcategories.push({
+              id: new mongoose.Types.ObjectId().toString(),
+              name: subcategoryName,
+              isActive: true,
+            });
+            await categoryDoc.save();
+          } else if (existingSubcategory.isActive === false) {
+            existingSubcategory.isActive = true;
+            await categoryDoc.save();
+          }
         }
       }
 
@@ -327,6 +381,8 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
             {
               $set: {
                 ...row.data,
+                businessAddress: row.data.businessAddress || 'N/A',
+                primaryContactNumber: row.data.primaryContactNumber || 'N/A',
                 businessEmail: row.data.businessEmail.trim().toLowerCase(),
               },
             },
@@ -339,12 +395,15 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
             firmId: user.firmId,
             createdByXid: user.xID,
             createdBy: user.email,
+            businessAddress: row.data.businessAddress || 'N/A',
+            primaryContactNumber: row.data.primaryContactNumber || 'N/A',
             businessEmail: row.data.businessEmail.trim().toLowerCase(),
             isSystemClient: false,
             isActive: true,
             status: 'ACTIVE',
             previousBusinessNames: [],
           });
+          createdClients.push({ clientId, businessEmail: row.data.businessEmail.trim().toLowerCase() });
         }
       }
 
@@ -356,13 +415,15 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
           );
         } else {
           const xID = await xIDGenerator.generateNextXID(user.firmId);
-          await User.create({
+          const createdUser = await User.create({
             xID,
             name: row.data.name.trim(),
             email: row.data.email.trim().toLowerCase(),
             role: row.data.role,
+            department: String(row.data.department || '').trim() || undefined,
             firmId: user.firmId,
             defaultClientId: user.defaultClientId || null,
+            restrictedClientIds: [],
             allowedCategories: [],
             isActive: false,
             status: 'invited',
@@ -370,6 +431,7 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
             passwordSet: false,
             inviteSentAt: null,
           });
+          createdUsers.push({ _id: createdUser._id, xID, email: createdUser.email });
         }
       }
 
@@ -398,6 +460,25 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
       results: results.slice(-500),
     });
   }
+
+  setImmediate(() => {
+    try {
+      eventBus.emit('bulkUpload.completed', {
+        type,
+        successCount,
+        failureCount,
+        user,
+        createdClients,
+        createdUsers,
+      });
+    } catch (error) {
+      console.error('[BULK_UPLOAD] Failed to emit completion event', {
+        type,
+        firmId: user?.firmId,
+        error: error.message,
+      });
+    }
+  });
 
   return { successCount, failureCount, results };
 };
@@ -518,16 +599,41 @@ const confirmBulkUpload = async (req, res) => {
     },
   });
 
-  setImmediate(async () => {
-    try {
-      await processBulkRows({ type, rows, user: req.user, duplicateMode, jobId: job._id });
-    } catch (error) {
-      await BulkUploadJob.findByIdAndUpdate(job._id, {
-        status: 'failed',
-        errorMessage: error.message,
-      });
-    }
-  });
+  if (!bulkUploadQueue) {
+    await BulkUploadJob.findByIdAndUpdate(job._id, {
+      status: 'failed',
+      errorMessage: 'Queue unavailable: REDIS_URL is not configured',
+    });
+    return res.status(503).json({
+      success: false,
+      message: 'Bulk import queue is unavailable',
+    });
+  }
+
+  try {
+    await bulkUploadQueue.add('bulk-upload-job', {
+      type,
+      rows,
+      user: {
+        firmId: req.user.firmId,
+        email: req.user.email,
+        xID: req.user.xID,
+        defaultClientId: req.user.defaultClientId,
+      },
+      duplicateMode,
+      jobId: job._id,
+    });
+  } catch (error) {
+    await BulkUploadJob.findByIdAndUpdate(job._id, {
+      status: 'failed',
+      errorMessage: error.message,
+    });
+
+    return res.status(503).json({
+      success: false,
+      message: 'Failed to enqueue bulk import job',
+    });
+  }
 
   return res.status(202).json({
     success: true,
@@ -574,4 +680,5 @@ module.exports = {
   confirmBulkUpload,
   getBulkUploadJobStatus,
   TYPE_CONFIG,
+  processBulkRows,
 };

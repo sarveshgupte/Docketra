@@ -54,6 +54,20 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Name is required'],
   },
+
+  department: {
+    type: String,
+    trim: true,
+    default: null,
+  },
+
+
+  teamId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Team',
+    index: true,
+    default: null,
+  },
   
   // Email address - REQUIRED for password setup emails
   // Used for notifications, contact, and password setup
@@ -159,9 +173,6 @@ const userSchema = new mongoose.Schema({
   defaultClientId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Client',
-    required: function() {
-      return this.role !== 'SUPER_ADMIN' && this.isOnboarded === true;
-    },
     default: null,
     immutable: true, // Cannot change default client after creation
     index: true,
