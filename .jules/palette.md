@@ -1,0 +1,3 @@
+## 2026-04-09 - Added Notification Bell Accessibility Attributes
+**Learning:** React components acting as dropdown triggers should always accurately communicate their open/closed state and purpose to screen readers using `aria-expanded` and `aria-haspopup`. When these are missing, users navigating via keyboard and screen reader don't get the feedback that they just opened or closed a menu.
+**Action:** Always include `aria-expanded={isOpen}` and `aria-haspopup="menu"` (or `"true"`) on any button that acts as a dropdown or popover trigger. Verify this manually when building out interactive layout components.
