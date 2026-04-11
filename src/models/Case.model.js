@@ -874,23 +874,20 @@ caseSchema.path('status').validate(function(value) {
 }, 'pendingReason is required when status is PENDING');
 
 
-caseSchema.pre('validate', function enforceAssignedUserForWorklistLifecycle(next) {
+caseSchema.pre('validate', function enforceAssignedUserForWorklistLifecycle() {
   const lifecycle = normalizeLifecycle(this.lifecycle);
-  if (lifecycle !== DocketLifecycle.WL) return next();
+  if (lifecycle !== DocketLifecycle.WL) return;
 
   if (!this.assignedToXID) {
     this.invalidate('assignedToXID', 'WL docket must have assignedToXID');
   }
-
-  return next();
 });
 
-caseSchema.pre('save', function enforceAssignedUserForWlOnSave(next) {
+caseSchema.pre('save', function enforceAssignedUserForWlOnSave() {
   const lifecycle = normalizeLifecycle(this.lifecycle);
   if (lifecycle === DocketLifecycle.WL && !this.assignedToXID) {
-    return next(new Error('WL docket must have assignedToXID'));
+    throw new Error('WL docket must have assignedToXID');
   }
-  return next();
 });
 
 /**
