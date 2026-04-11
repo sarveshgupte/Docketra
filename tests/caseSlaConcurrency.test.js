@@ -22,6 +22,8 @@ async function testStatusTransitionRequiresSession() {
 }
 
 async function testConcurrentPauseConflictIsRejected() {
+  const CaseRepository = require('../src/repositories/CaseRepository');
+  const originalFindByCaseId = CaseRepository.findByCaseId;
   const originalFindOne = Case.findOne;
   const originalUpdateOne = Case.updateOne;
   const originalCaseAuditCreate = CaseAudit.create;
@@ -32,10 +34,21 @@ async function testConcurrentPauseConflictIsRejected() {
   let updateOneAttempts = 0;
 
   try {
+    CaseRepository.findByCaseId = async () => ({
+      caseId: 'CASE-20260301-00002',
+      status: 'IN_PROGRESS',
+      lifecycle: 'ACTIVE',
+      docketState: 'IN_PROGRESS',
+      tatPaused: false,
+      tatLastStartedAt: fixedStart,
+      tatAccumulatedMinutes: 0,
+      firmId: 'firm-a',
+    });
     Case.findOne = () => ({
       lean: async () => ({
         caseId: 'CASE-20260301-00002',
         status: 'IN_PROGRESS',
+        lifecycle: 'ACTIVE',
         docketState: 'IN_PROGRESS',
         tatPaused: false,
         tatLastStartedAt: fixedStart,
@@ -79,6 +92,7 @@ async function testConcurrentPauseConflictIsRejected() {
     );
     console.log('✓ Concurrent pause attempts reject stale writer');
   } finally {
+    CaseRepository.findByCaseId = originalFindByCaseId;
     Case.findOne = originalFindOne;
     Case.updateOne = originalUpdateOne;
     CaseAudit.create = originalCaseAuditCreate;

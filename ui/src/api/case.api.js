@@ -162,6 +162,27 @@ export const caseApi = {
     () => request((http) => http.post(`/cases/${caseId}/transition`, payload), 'Failed to transition case'),
   ),
 
+
+  routeToTeam: (caseId, toTeamId, note = '') => withCaseInvalidation(
+    caseId,
+    () => request((http) => http.post(`/cases/${caseId}/route`, { toTeamId, note }), 'Failed to route case'),
+  ),
+
+  acceptRoutedCase: (caseId) => withCaseInvalidation(
+    caseId,
+    () => request((http) => http.post(`/cases/${caseId}/accept`, {}), 'Failed to accept routed case'),
+  ),
+
+  returnRoutedCase: (caseId, note = '') => withCaseInvalidation(
+    caseId,
+    () => request((http) => http.post(`/cases/${caseId}/return`, { note }), 'Failed to return routed case'),
+  ),
+
+  updateRoutedStatus: (caseId, status) => withCaseInvalidation(
+    caseId,
+    () => request((http) => http.post(`/cases/${caseId}/routed-status`, { status }), 'Failed to update routed status'),
+  ),
+
   qcAction: (caseId, decision, comment) => withCaseInvalidation(
     caseId,
     () => request((http) => http.post(`/cases/${caseId}/qc-action`, { decision, comment }), 'Failed to perform QC action'),

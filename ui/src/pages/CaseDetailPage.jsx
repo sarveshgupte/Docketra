@@ -38,6 +38,7 @@ import { useActiveDocket } from '../hooks/useActiveDocket';
 import { normalizeLifecycle } from '../utils/lifecycle';
 import { invalidateCaseCache } from '../utils/caseCache';
 import { getLifecycleMeta } from '../../utils/lifecycleMap';
+import api from '../services/api';
 import { DocketDetails } from '../../components/DocketDetails';
 
 /**
@@ -162,6 +163,9 @@ export const CaseDetailPage = () => {
   const [showUnpendModal, setShowUnpendModal] = useState(false);
   const [unpendComment, setUnpendComment] = useState('');
   const [unpendingCase, setUnpendingCase] = useState(false);
+  const [routingTeams, setRoutingTeams] = useState([]);
+  const [routeTeamId, setRouteTeamId] = useState('');
+  const [routingNote, setRoutingNote] = useState('');
 
   // Track case view session
   // PR: Comprehensive CaseHistory & Audit Trail
@@ -178,6 +182,23 @@ export const CaseDetailPage = () => {
     () => (caseData ? normalizeCase(caseData) : null),
     [caseData]
   );
+
+  useEffect(() => {
+    const loadTeams = async () => {
+      try {
+        const response = await api.get('/teams');
+        const teams = Array.isArray(response?.data?.data) ? response.data.data : [];
+        setRoutingTeams(teams);
+      } catch (error) {
+        console.warn('Failed to load teams', error);
+      }
+    };
+    loadTeams();
+  }, []);
+
+  const isRoutedToMyTeam = Boolean(caseInfo?.routedToTeamId) && String(caseInfo?.routedToTeamId) === String(user?.teamId || '');
+  const isOwnerTeam = Boolean(caseInfo?.ownerTeamId) && String(caseInfo?.ownerTeamId) === String(user?.teamId || '');
+  const routedTeamCannotResolve = isRoutedToMyTeam && !isOwnerTeam;
   const comments = Array.isArray(caseData?.comments) ? caseData.comments.filter(Boolean) : [];
   const attachments = Array.isArray(caseData?.attachments) ? caseData.attachments.filter(Boolean) : [];
   const auditLog = Array.isArray(caseData?.auditLog) ? caseData.auditLog.filter(Boolean) : [];
@@ -1178,8 +1199,12 @@ export const CaseDetailPage = () => {
 
   const lifecycleQuickActions = useMemo(() => {
     if (isViewOnlyMode) return [];
-    return lifecycleActionMap[lifecycleStatus] || [];
-  }, [isViewOnlyMode, lifecycleActionMap, lifecycleStatus]);
+    const actions = lifecycleActionMap[lifecycleStatus] || [];
+    if (routedTeamCannotResolve) {
+      return actions.filter((action) => action.key !== 'mark_done');
+    }
+    return actions;
+  }, [isViewOnlyMode, lifecycleActionMap, lifecycleStatus, routedTeamCannotResolve]);
 
   const canPerformLifecycleActions = lifecycleQuickActions.length > 0;
   const showQcActions = false;
@@ -1199,6 +1224,32 @@ export const CaseDetailPage = () => {
     () => (selectedCloneCategory?.subcategories || []).filter((entry) => entry?.isActive !== false),
     [selectedCloneCategory]
   );
+
+
+  const handleRouteToTeam = async () => {
+    if (!routeTeamId) {
+      showWarning('Select a team to route.');
+      return;
+    }
+    await caseApi.routeToTeam(caseId, routeTeamId, routingNote);
+    showSuccess('Docket routed successfully.');
+    setRouteTeamId('');
+    setRoutingNote('');
+    loadCaseData({ silent: false });
+  };
+
+  const handleAcceptRouted = async () => {
+    await caseApi.acceptRoutedCase(caseId);
+    showSuccess('Docket accepted.');
+    loadCaseData({ silent: false });
+  };
+
+  const handleReturnRouted = async () => {
+    await caseApi.returnRoutedCase(caseId, routingNote);
+    showSuccess('Docket returned to origin team.');
+    setRoutingNote('');
+    loadCaseData({ silent: false });
+  };
 
   const handleCloneDocket = async () => {
     if (!cloneCategoryId || !cloneSubcategoryId) {
@@ -1599,6 +1650,39 @@ export const CaseDetailPage = () => {
         </div>
 
         <DocketActions actions={headerActions} lifecycle={lifecycleStatus} />
+
+        {caseInfo && (
+          <Card>
+            <div style={{ display: 'grid', gap: 8 }}>
+              <div>
+                <strong>Routing:</strong> {caseInfo?.ownerTeamName || '—'}
+                {caseInfo?.routedToTeamName ? ` → ${caseInfo.routedToTeamName}` : ''}
+              </div>
+              {caseInfo?.routingNote && <div><strong>Routing note:</strong> {caseInfo.routingNote}</div>}
+              {isOwnerTeam && !caseInfo?.routedToTeamId && (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <select value={routeTeamId} onChange={(e) => setRouteTeamId(e.target.value)} className={formClasses.inputBase}>
+                    <option value="">Route to team</option>
+                    {routingTeams.filter((team) => String(team._id) !== String(caseInfo?.ownerTeamId || '')).map((team) => (
+                      <option key={team._id} value={team._id}>{team.name}</option>
+                    ))}
+                  </select>
+                  <Input value={routingNote} onChange={(e) => setRoutingNote(e.target.value)} placeholder="Routing note (optional)" />
+                  <Button onClick={handleRouteToTeam}>Route to Team</Button>
+                </div>
+              )}
+              {isRoutedToMyTeam && (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <Button variant="secondary" onClick={handleAcceptRouted}>Accept</Button>
+                  <Button variant="secondary" onClick={() => caseApi.updateRoutedStatus(caseId, 'PENDING').then(() => loadCaseData({ silent: false }))}>Mark Pending</Button>
+                  <Button variant="secondary" onClick={() => caseApi.updateRoutedStatus(caseId, 'FILED').then(() => loadCaseData({ silent: false }))}>File</Button>
+                  <Button variant="outline" onClick={handleReturnRouted}>Return</Button>
+                </div>
+              )}
+              {routedTeamCannotResolve && <Badge variant="warning">Resolve is disabled for routed team</Badge>}
+            </div>
+          </Card>
+        )}
 
         <DocketSidebar
           isOpen={sidebarOpen && Boolean(sidebarType)}

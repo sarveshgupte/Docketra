@@ -647,7 +647,14 @@ export const Layout = ({ children }) => {
           <div className="enterprise-header__right">
             {/* Notification Bell */}
             <div className="dropdown" ref={notificationDropdownRef}>
-              <button type="button" className="enterprise-header__icon-btn" aria-label="Notifications" onClick={() => setNotificationOpen((v) => !v)}>
+              <button
+                type="button"
+                className="enterprise-header__icon-btn"
+                aria-label="Notifications"
+                aria-expanded={notificationOpen}
+                aria-haspopup="menu"
+                onClick={() => setNotificationOpen((v) => !v)}
+              >
                 <IconBell />
                 {unreadCount > 0 ? <span className="enterprise-header__notif-dot" aria-hidden="true">{unreadCount}</span> : null}
               </button>

@@ -14,9 +14,17 @@ const allowInternalTokenOrSuperadmin = (req, res, next) => {
   const configuredToken = process.env.METRICS_TOKEN?.trim();
   const bearerToken = resolveBearerToken(req.headers.authorization);
 
-  if (configuredToken && bearerToken && bearerToken === configuredToken) {
-    req.isInternalMetricsRequest = true;
-    return next();
+  if (configuredToken && typeof bearerToken === 'string') {
+    if (configuredToken.length === bearerToken.length) {
+      let mismatch = 0;
+      for (let i = 0; i < configuredToken.length; i++) {
+        mismatch |= configuredToken.charCodeAt(i) ^ bearerToken.charCodeAt(i);
+      }
+      if (mismatch === 0) {
+        req.isInternalMetricsRequest = true;
+        return next();
+      }
+    }
   }
 
   return authenticate(req, res, () => requireSuperadmin(req, res, next));

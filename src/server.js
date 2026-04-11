@@ -59,7 +59,7 @@ const { authenticate } = require('./middleware/auth.middleware');
 const degradedGuard = require('./middleware/degradedGuard');
 const { firmContext } = require('./middleware/firmContext.middleware');
 const requireTenant = require('./middleware/requireTenant');
-const { requireAdmin, requireSuperadmin } = require('./middleware/permission.middleware');
+const { requireAdmin } = require('./middleware/permission.middleware');
 const responseContract = require('./middleware/responseContract.middleware');
 const invariantGuard = require('./middleware/invariantGuard');
 const domainInvariantGuard = require('./middleware/domainInvariantGuard');
@@ -117,6 +117,7 @@ const { getSecurityMetrics } = require('./controllers/security.controller');
 const tenantRoutes = require('./routes/tenant.routes');  // Tenant storage settings routes
 const docketFileStorageRoutes = require('./routes/docketFileStorage.routes');
 const notificationsRoutes = require('./routes/notifications.routes');
+const teamRoutes = require('./routes/team.routes');
 const bulkUploadRoutes = require('./routes/bulkUpload.routes');
 const tenantResolver = require('./middleware/tenantResolver');
 const { login } = require('./controllers/auth.controller');
@@ -280,7 +281,20 @@ app.get('/metrics', async (req, res) => {
   const authHeader = req.headers.authorization || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
 
-  if (!configuredMetricsToken || !token || token !== configuredMetricsToken) {
+  let authorized = false;
+  if (configuredMetricsToken && typeof token === 'string') {
+    if (configuredMetricsToken.length === token.length) {
+      let mismatch = 0;
+      for (let i = 0; i < configuredMetricsToken.length; i++) {
+        mismatch |= configuredMetricsToken.charCodeAt(i) ^ token.charCodeAt(i);
+      }
+      if (mismatch === 0) {
+        authorized = true;
+      }
+    }
+  }
+
+  if (!authorized) {
     return res.status(401).json({ error: 'unauthorized' });
   }
 
@@ -398,6 +412,7 @@ app.use('/api/files', authLimiter, ...tenantScopedApiAccess, writeGuardChain, fi
 app.use('/api/tenant', authLimiter, ...tenantScopedApiAccess, writeGuardChain, tenantRoutes);
 app.use('/api/docket-storage', authLimiter, ...tenantScopedApiAccess, writeGuardChain, docketFileStorageRoutes);
 app.use('/api/notifications', ...tenantScopedApiAccess, writeGuardChain, notificationsRoutes);
+app.use('/api/teams', ...tenantScopedApiAccess, writeGuardChain, teamRoutes);
 app.use('/api/bulk-upload', ...adminTenantScopedApiAccess, writeGuardChain, adminAuditTrail('admin'), bulkUploadRoutes);
 
 // Firm-scoped API auth routes for tenant login and OTP verification
