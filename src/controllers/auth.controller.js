@@ -24,7 +24,6 @@ const { isActiveStatus, getFirmInactiveCode } = require('../utils/status.utils')
 const { validatePasswordStrength, PASSWORD_POLICY_MESSAGE } = require('../utils/passwordPolicy');
 const { getSession } = require('../utils/getSession');
 const { handleUserDeactivation } = require('../services/docketWorkflow.service');
-const { ensureDefaultClientForFirm } = require('../services/defaultClient.service');
 const { getOrCreateDefaultClient } = require('../services/defaultClient.guard');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const config = require('../config/config');
