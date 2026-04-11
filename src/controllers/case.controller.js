@@ -2540,7 +2540,7 @@ const viewAttachment = async (req, res) => {
     }
 
     const resolvedPath = path.resolve(attachment.filePath);
-    const safeBaseDir = path.resolve(__dirname, '../../uploads');
+    const safeBaseDir = path.resolve(__dirname, '../../uploads') + path.sep;
     if (!resolvedPath.startsWith(safeBaseDir)) {
       return res.status(403).json({
         success: false,
@@ -2664,7 +2664,7 @@ const downloadAttachment = async (req, res) => {
       // Legacy: Handle old attachments stored locally
       try {
         const resolvedPath = path.resolve(attachment.filePath);
-        const safeBaseDir = path.resolve(__dirname, '../../uploads');
+        const safeBaseDir = path.resolve(__dirname, '../../uploads') + path.sep;
         if (!resolvedPath.startsWith(safeBaseDir)) {
           return res.status(403).json({
             success: false,
