@@ -1,10 +1,13 @@
 import React from 'react';
-import { formatDateTime } from '../../utils/formatDateTime';
+import { formatDateTime, formatRelativeTime } from '../../utils/formatDateTime';
 
 export function ActivityItem({ event, className = '', itemRef = null }) {
   const actor = event?.actor || 'System';
   const timestamp = formatDateTime(event?.createdAt);
-  const secondary = `${actor} • ${timestamp}`;
+  const relativeTime = formatRelativeTime(event?.createdAt);
+  const readableTime = relativeTime || timestamp;
+  const primaryLabel = event?.count > 1 ? `${event.count} updates · ${event.action}` : event?.action;
+  const summary = `${primaryLabel} by ${actor} · ${readableTime}`;
   const itemClassName = ['docket-activity-item', className].filter(Boolean).join(' ');
 
   return (
@@ -13,10 +16,8 @@ export function ActivityItem({ event, className = '', itemRef = null }) {
         <span className="docket-activity-item__dot" />
       </div>
       <div className="docket-activity-item__content">
-        <p className="docket-activity-item__primary">
-          {event?.count > 1 ? `${event.count} updates · ${event.action}` : event?.action}
-        </p>
-        <p className="docket-activity-item__secondary">{secondary}</p>
+        <p className="docket-activity-item__primary">{summary}</p>
+        <p className="docket-activity-item__secondary">At {timestamp}</p>
       </div>
     </li>
   );

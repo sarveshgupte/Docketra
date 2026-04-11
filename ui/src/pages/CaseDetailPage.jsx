@@ -28,6 +28,7 @@ import { formatClientDisplay, formatDocketId } from '../utils/formatters';
 import { USER_ROLES } from '../utils/constants';
 import { LifecycleBadge } from '../../components/LifecycleBadge';
 import { DocketSidebar } from '../components/docket/DocketSidebar';
+import { DocketActions } from '../components/docket/DocketActions';
 import { DocketComments } from '../components/docket/DocketComments';
 import { ActionModal } from '../components/docket/ActionModal';
 import './CaseDetailPage.css';
@@ -37,6 +38,7 @@ import { useActiveDocket } from '../hooks/useActiveDocket';
 import { normalizeLifecycle } from '../utils/lifecycle';
 import { invalidateCaseCache } from '../utils/caseCache';
 import { getLifecycleMeta } from '../../utils/lifecycleMap';
+import api from '../services/api';
 import { DocketDetails } from '../../components/DocketDetails';
 
 /**
@@ -122,20 +124,11 @@ export const CaseDetailPage = () => {
   // Confirm modal state (replaces window.confirm)
   const [confirmModal, setConfirmModal] = useState(null);
 
-  // State for File action modal
-  const [showFileModal, setShowFileModal] = useState(false);
-  const [fileComment, setFileComment] = useState('');
-  const [filingCase, setFilingCase] = useState(false);
-
   // State for Pend action modal
   const [showPendModal, setShowPendModal] = useState(false);
   const [pendComment, setPendComment] = useState('');
   const [pendingUntil, setPendingUntil] = useState('');
   const [isDragActive, setIsDragActive] = useState(false);
-  const inboundEmailDomain = import.meta.env.VITE_INBOUND_EMAIL_DOMAIN || 'inbound.docketra.com';
-  const inboundAddress = caseData?.publicEmailToken
-    ? `case-${caseData.publicEmailToken}@${inboundEmailDomain}`
-    : '';
   const [pendingCase, setPendingCase] = useState(false);
 
   // State for Resolve action modal
@@ -170,6 +163,9 @@ export const CaseDetailPage = () => {
   const [showUnpendModal, setShowUnpendModal] = useState(false);
   const [unpendComment, setUnpendComment] = useState('');
   const [unpendingCase, setUnpendingCase] = useState(false);
+  const [routingTeams, setRoutingTeams] = useState([]);
+  const [routeTeamId, setRouteTeamId] = useState('');
+  const [routingNote, setRoutingNote] = useState('');
 
   // Track case view session
   // PR: Comprehensive CaseHistory & Audit Trail
@@ -186,6 +182,23 @@ export const CaseDetailPage = () => {
     () => (caseData ? normalizeCase(caseData) : null),
     [caseData]
   );
+
+  useEffect(() => {
+    const loadTeams = async () => {
+      try {
+        const response = await api.get('/teams');
+        const teams = Array.isArray(response?.data?.data) ? response.data.data : [];
+        setRoutingTeams(teams);
+      } catch (error) {
+        console.warn('Failed to load teams', error);
+      }
+    };
+    loadTeams();
+  }, []);
+
+  const isRoutedToMyTeam = Boolean(caseInfo?.routedToTeamId) && String(caseInfo?.routedToTeamId) === String(user?.teamId || '');
+  const isOwnerTeam = Boolean(caseInfo?.ownerTeamId) && String(caseInfo?.ownerTeamId) === String(user?.teamId || '');
+  const routedTeamCannotResolve = isRoutedToMyTeam && !isOwnerTeam;
   const comments = Array.isArray(caseData?.comments) ? caseData.comments.filter(Boolean) : [];
   const attachments = Array.isArray(caseData?.attachments) ? caseData.attachments.filter(Boolean) : [];
   const auditLog = Array.isArray(caseData?.auditLog) ? caseData.auditLog.filter(Boolean) : [];
@@ -791,16 +804,6 @@ export const CaseDetailPage = () => {
     }
   };
 
-  const handleCopyInboundAddress = async () => {
-    if (!inboundAddress || !navigator?.clipboard) return;
-    try {
-      await navigator.clipboard.writeText(inboundAddress);
-      showSuccess('Inbound email address copied');
-    } catch (error) {
-      showError('Unable to copy inbound email address');
-    }
-  };
-
   const handleUploadFile = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     if (!selectedFile || !fileDescription.trim()) {
@@ -848,46 +851,6 @@ export const CaseDetailPage = () => {
       setUploadingFile(false);
       setUploadProgress(0);
     }
-  };
-
-  const handleFileCase = async (e) => {
-    if (e && e.preventDefault) e.preventDefault();
-    if (!fileComment.trim()) {
-      showWarning('Comment is mandatory for filing a case');
-      return;
-    }
-
-    const confirmationTimestamp = new Date().toISOString();
-    setConfirmModal({
-      title: 'File Case',
-      description: `Stage change: ${toLifecycleStage(lifecycleStatus)} → Marked as Executed\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
-      confirmText: 'File Case',
-      onConfirm: async () => {
-        setConfirmModal(null);
-        setFilingCase(true);
-        try {
-          const response = await caseApi.transitionDocket(caseId, {
-            toState: 'FILED',
-            comment: fileComment.trim(),
-          });
-          if (response.success) {
-            const message = `Docket ${caseId} filed • ${formatDateTime(new Date())}`;
-            showSuccess(message);
-            setActionConfirmation(message);
-            setActionError(null);
-            setShowFileModal(false);
-            setFileComment('');
-            loadCase({ background: true });
-          }
-        } catch (error) {
-          const errorMessage = extractErrorMessage(error, 'Failed to file case. Please try again.');
-          showError(errorMessage);
-          setActionError({ message: errorMessage, retry: handleFileCase });
-        } finally {
-          setFilingCase(false);
-        }
-      },
-    });
   };
 
   const handlePendCase = async () => {
@@ -1190,7 +1153,7 @@ export const CaseDetailPage = () => {
     return warnings;
   }, [caseInfo, comments, lifecycleStatus]);
 
-  const actionInFlight = assigningCase || pendingCase || resolvingCase || filingCase || unpendingCase;
+  const actionInFlight = assigningCase || pendingCase || resolvingCase || unpendingCase;
   const canRunDocketAction = Boolean(actionComment.trim()) && !actionInFlight;
 
   const openActionModal = (type) => {
@@ -1207,11 +1170,6 @@ export const CaseDetailPage = () => {
     if (type === 'resolve') {
       setResolveComment(seedComment);
       setShowResolveModal(true);
-      return;
-    }
-    if (type === 'file') {
-      setFileComment(seedComment);
-      setShowFileModal(true);
     }
   };
 
@@ -1223,20 +1181,35 @@ export const CaseDetailPage = () => {
   }, [actionInFlight, isViewOnlyMode]);
 
   const shouldShowActions = useMemo(() => {
-    const hiddenLifecycleStates = new Set(['FILED', 'RESOLVED', 'CLOSED', 'ARCHIVED']);
+    const hiddenLifecycleStates = new Set(['DONE', 'COMPLETED', 'ARCHIVED']);
     return !hiddenLifecycleStates.has(lifecycleStatus);
   }, [lifecycleStatus]);
 
-  // Case action buttons (File, Pend, Resolve) - PR: Fix Case Lifecycle
-  // Action Visibility Rules:
-  // - OPEN: Show File, Pend, Resolve (no Unpend)
-  // - PENDED: Show ONLY Unpend (no File, Pend, Resolve)
-  // - FILED or RESOLVED: Show nothing (terminal states, read-only)
-  const canPerformLifecycleActions = (lifecycleStatus === 'OPEN' || lifecycleStatus === 'IN_PROGRESS') && !isViewOnlyMode;
+  const lifecycleActionMap = useMemo(() => ({
+    WL: [],
+    ACTIVE: [
+      { key: 'mark_waiting', label: 'Mark as Waiting', variant: 'secondary', onClick: () => openActionModal('pend') },
+      { key: 'mark_done', label: 'Mark as Done', variant: 'primary', onClick: () => openActionModal('resolve') },
+    ],
+    WAITING: [
+      { key: 'resume_work', label: 'Resume Work', variant: 'primary', onClick: () => setShowUnpendModal(true) },
+    ],
+    DONE: [],
+  }), [openActionModal]);
+
+  const lifecycleQuickActions = useMemo(() => {
+    if (isViewOnlyMode) return [];
+    const actions = lifecycleActionMap[lifecycleStatus] || [];
+    if (routedTeamCannotResolve) {
+      return actions.filter((action) => action.key !== 'mark_done');
+    }
+    return actions;
+  }, [isViewOnlyMode, lifecycleActionMap, lifecycleStatus, routedTeamCannotResolve]);
+
+  const canPerformLifecycleActions = lifecycleQuickActions.length > 0;
   const showQcActions = false;
   const isAnyModalOpen = Boolean(
-    showFileModal
-    || showPendModal
+    showPendModal
     || showResolveModal
     || showAssignModal
     || showUnpendModal
@@ -1251,6 +1224,32 @@ export const CaseDetailPage = () => {
     () => (selectedCloneCategory?.subcategories || []).filter((entry) => entry?.isActive !== false),
     [selectedCloneCategory]
   );
+
+
+  const handleRouteToTeam = async () => {
+    if (!routeTeamId) {
+      showWarning('Select a team to route.');
+      return;
+    }
+    await caseApi.routeToTeam(caseId, routeTeamId, routingNote);
+    showSuccess('Docket routed successfully.');
+    setRouteTeamId('');
+    setRoutingNote('');
+    loadCaseData({ silent: false });
+  };
+
+  const handleAcceptRouted = async () => {
+    await caseApi.acceptRoutedCase(caseId);
+    showSuccess('Docket accepted.');
+    loadCaseData({ silent: false });
+  };
+
+  const handleReturnRouted = async () => {
+    await caseApi.returnRoutedCase(caseId, routingNote);
+    showSuccess('Docket returned to origin team.');
+    setRoutingNote('');
+    loadCaseData({ silent: false });
+  };
 
   const handleCloneDocket = async () => {
     if (!cloneCategoryId || !cloneSubcategoryId) {
@@ -1309,14 +1308,14 @@ export const CaseDetailPage = () => {
       }
       if (key === 'r' && canPerformLifecycleActions) {
         event.preventDefault();
-        setShowResolveModal(true);
+        openActionModal('resolve');
       }
     };
     const container = pageContainerRef.current;
     if (!container) return undefined;
     container.addEventListener('keydown', handleKeyboardShortcuts);
     return () => container.removeEventListener('keydown', handleKeyboardShortcuts);
-  }, [canPerformLifecycleActions, commentComposerId, isAnyModalOpen]);
+  }, [canPerformLifecycleActions, commentComposerId, isAnyModalOpen, openActionModal]);
 
   if (!firmSlug) {
     return <RouteErrorFallback title="Invalid firm" message="Unable to open this docket because firm context is missing." backTo={ROUTES.SUPERADMIN_LOGIN} />;
@@ -1562,24 +1561,18 @@ export const CaseDetailPage = () => {
                         className="mt-2"
                       />
                       <div className="case-detail__composer-actions mt-3">
-                        <Button variant="secondary" onClick={() => openActionModal('pend')} disabled={!canRunDocketAction}>
-                          Pend
-                        </Button>
-                        <Button variant="primary" onClick={() => openActionModal('resolve')} disabled={!canRunDocketAction}>
-                          Resolve
-                        </Button>
-                        <Button variant="danger" onClick={() => openActionModal('file')} disabled={!canRunDocketAction}>
-                          File
-                        </Button>
+                        {lifecycleQuickActions.map((action) => (
+                          <Button
+                            key={action.key}
+                            variant={action.variant}
+                            onClick={action.onClick}
+                            disabled={!canRunDocketAction}
+                          >
+                            {action.label}
+                          </Button>
+                        ))}
                       </div>
                     </>
-                  ) : null}
-                  {canShowUnpendAction ? (
-                    <div className="case-detail__composer-actions mt-3">
-                      <Button variant="primary" onClick={() => setShowUnpendModal(true)} disabled={actionInFlight}>
-                        Unpend
-                      </Button>
-                    </div>
                   ) : null}
                 </section>
               ) : null}
@@ -1656,7 +1649,40 @@ export const CaseDetailPage = () => {
 
         </div>
 
-        <DocketActions actions={headerActions} />
+        <DocketActions actions={headerActions} lifecycle={lifecycleStatus} />
+
+        {caseInfo && (
+          <Card>
+            <div style={{ display: 'grid', gap: 8 }}>
+              <div>
+                <strong>Routing:</strong> {caseInfo?.ownerTeamName || '—'}
+                {caseInfo?.routedToTeamName ? ` → ${caseInfo.routedToTeamName}` : ''}
+              </div>
+              {caseInfo?.routingNote && <div><strong>Routing note:</strong> {caseInfo.routingNote}</div>}
+              {isOwnerTeam && !caseInfo?.routedToTeamId && (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <select value={routeTeamId} onChange={(e) => setRouteTeamId(e.target.value)} className={formClasses.inputBase}>
+                    <option value="">Route to team</option>
+                    {routingTeams.filter((team) => String(team._id) !== String(caseInfo?.ownerTeamId || '')).map((team) => (
+                      <option key={team._id} value={team._id}>{team.name}</option>
+                    ))}
+                  </select>
+                  <Input value={routingNote} onChange={(e) => setRoutingNote(e.target.value)} placeholder="Routing note (optional)" />
+                  <Button onClick={handleRouteToTeam}>Route to Team</Button>
+                </div>
+              )}
+              {isRoutedToMyTeam && (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <Button variant="secondary" onClick={handleAcceptRouted}>Accept</Button>
+                  <Button variant="secondary" onClick={() => caseApi.updateRoutedStatus(caseId, 'PENDING').then(() => loadCaseData({ silent: false }))}>Mark Pending</Button>
+                  <Button variant="secondary" onClick={() => caseApi.updateRoutedStatus(caseId, 'FILED').then(() => loadCaseData({ silent: false }))}>File</Button>
+                  <Button variant="outline" onClick={handleReturnRouted}>Return</Button>
+                </div>
+              )}
+              {routedTeamCannotResolve && <Badge variant="warning">Resolve is disabled for routed team</Badge>}
+            </div>
+          </Card>
+        )}
 
         <DocketSidebar
           isOpen={sidebarOpen && Boolean(sidebarType)}
@@ -1674,11 +1700,9 @@ export const CaseDetailPage = () => {
           attachmentComment={fileDescription}
           uploadingAttachment={uploadingFile}
           uploadProgress={uploadProgress}
-          inboundAddress={inboundAddress}
           onAttachmentFileChange={setSelectedFile}
           onAttachmentCommentChange={setFileDescription}
           onUploadAttachment={handleUploadFile}
-          onCopyInboundAddress={handleCopyInboundAddress}
         />
 
         {/* ─── Modals (positioned outside split pane) ─────────────── */}
@@ -1744,48 +1768,6 @@ export const CaseDetailPage = () => {
                 ))}
               </Select>
             </div>
-          </div>
-        </Modal>
-
-        {/* File Docket Modal */}
-        <Modal
-          isOpen={showFileModal}
-          onClose={() => { setShowFileModal(false); setFileComment(''); }}
-          title="File Docket"
-          actions={
-            <>
-              <Button variant="outline" onClick={() => { setShowFileModal(false); setFileComment(''); }} disabled={filingCase}>
-                Cancel
-              </Button>
-              <Button variant="primary" onClick={handleFileCase} disabled={!fileComment.trim() || filingCase}>
-                {filingCase ? 'Filing…' : 'File Docket'}
-              </Button>
-            </>
-          }
-        >
-          <div style={{ padding: 'var(--spacing-md)' }}>
-            {/* Task 3: Smart lifecycle warnings */}
-            {lifecycleWarnings.length > 0 && (
-              <div className="case-detail__lifecycle-warnings" role="note">
-                <strong>⚠ Heads up before filing:</strong>
-                <ul className="case-detail__lifecycle-warnings-list">
-                  {lifecycleWarnings.map((w) => <li key={w}>{w}</li>)}
-                </ul>
-              </div>
-            )}
-            <p style={{ marginBottom: 'var(--spacing-md)', color: 'var(--text-secondary)' }}>
-              Filing a case indicates it was opened in error, is a duplicate, or was incorrectly created.
-              The case will become read-only after filing.
-            </p>
-            <Textarea
-              label="Comment (Required)"
-              value={fileComment}
-              onChange={(e) => setFileComment(e.target.value)}
-              placeholder="Explain why this case is being filed…"
-              rows={4}
-              required
-              disabled={filingCase}
-            />
           </div>
         </Modal>
 

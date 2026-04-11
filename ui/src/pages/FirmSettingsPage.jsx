@@ -11,7 +11,6 @@ import { caseApi } from '../api/case.api';
 import { adminApi } from '../api/admin.api';
 import { getFirmConfig, setFirmConfig } from '../utils/firmConfig';
 import { formatDateTime } from '../utils/formatDateTime';
-import { ROUTES } from '../constants/routes';
 
 const enabledDisabledOptions = [
   { value: 'true', label: 'Enabled' },
@@ -141,16 +140,6 @@ export const FirmSettingsPage = () => {
             description="Configure operational defaults and feature visibility for this firm."
           />
 
-          <Card className="lg:max-w-4xl">
-            <div className="flex flex-wrap items-center gap-3">
-              <Button type="button" variant="outline" onClick={() => navigate(ROUTES.FIRM_SETTINGS(firmSlug))}>Firm</Button>
-              <Button type="button" variant="outline" onClick={() => navigate(ROUTES.WORK_SETTINGS(firmSlug))}>Work</Button>
-              <Button type="button" variant="outline" onClick={() => navigate(ROUTES.STORAGE_SETTINGS(firmSlug))}>Storage</Button>
-              <Button type="button" variant="outline" onClick={() => navigate(`${ROUTES.ADMIN(firmSlug)}?tab=users`)}>Security</Button>
-              <Button type="button" variant="outline" onClick={() => navigate('/app/firm/' + firmSlug + '/admin/reports/detailed')}>Audit</Button>
-            </div>
-          </Card>
-
           <section className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:items-start">
             <div className="space-y-2 lg:col-span-1">
               <h2 className="text-lg font-medium text-gray-900">Operational Configuration</h2>
@@ -248,22 +237,6 @@ export const FirmSettingsPage = () => {
             </Card>
           </section>
 
-          <section className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:items-start">
-            <div className="space-y-2 lg:col-span-1">
-              <h2 className="text-lg font-medium text-gray-900">Storage Settings</h2>
-              <p className="text-sm text-gray-500">Manage storage mode, provider connection, and verification from the dedicated storage settings page.</p>
-            </div>
-            <Card className="lg:col-span-2 lg:max-w-4xl">
-              <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-                Storage configuration is now managed in one place to avoid duplicate settings paths.
-                <div className="mt-3">
-                  <Button type="button" variant="outline" onClick={() => navigate(ROUTES.STORAGE_SETTINGS(firmSlug))}>
-                    Open Storage Settings
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          </section>
 
           <Card className="max-w-4xl">
             <div className="space-y-5">

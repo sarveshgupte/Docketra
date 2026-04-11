@@ -18,7 +18,6 @@ const xIDGenerator = require('../services/xIDGenerator');
 const signupService = require('../services/signup.service');
 const jwtService = require('../services/jwt.service');
 const { isSuperAdminRole, normalizeRole, toLegacyUserRole } = require('../utils/role.utils');
-const { getCookieValue } = require('../utils/requestCookies');
 const { normalizeFirmSlug } = require('../utils/slugify');
 const { isActiveStatus, getFirmInactiveCode } = require('../utils/status.utils');
 const { validatePasswordStrength, PASSWORD_POLICY_MESSAGE } = require('../utils/passwordPolicy');

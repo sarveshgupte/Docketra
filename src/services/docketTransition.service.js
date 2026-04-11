@@ -1,10 +1,10 @@
 const Case = require('../models/Case.model');
 const DocketAuditLog = require('../models/DocketAuditLog.model');
 const {
-  assertValidDocketTransition,
   toDocketState,
   toPersistenceState,
 } = require('../domain/docket/docketStateMachine');
+const { isValidTransition, toLifecycleFromStatus } = require('../domain/docketLifecycle');
 
 async function transitionDocket(docketId, newState, userId, options = {}) {
   const {
@@ -44,6 +44,8 @@ async function transitionDocket(docketId, newState, userId, options = {}) {
 
   const fromState = toDocketState(docket.status);
   const toState = toDocketState(newState);
+  const currentState = docket.lifecycle;
+  const nextState = toLifecycleFromStatus(newState);
 
   if (toState === 'PENDING' && !reason) {
     const err = new Error('PENDING transition requires reason');
@@ -57,7 +59,9 @@ async function transitionDocket(docketId, newState, userId, options = {}) {
     throw err;
   }
 
-  assertValidDocketTransition(fromState, toState);
+  if (!isValidTransition(currentState, nextState)) {
+    throw new Error(`Invalid transition from ${currentState} to ${nextState}`);
+  }
 
   const persistenceState = toPersistenceState(toState);
   const currentVersion = Number.isInteger(docket.version) ? docket.version : 0;

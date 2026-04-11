@@ -8,6 +8,7 @@ import { ActivityTimeline } from '../src/components/docket/ActivityTimeline';
 import { CommentList } from '../src/components/docket/CommentList';
 import { CommentInput } from '../src/components/docket/CommentInput';
 import { useAuth } from '../src/hooks/useAuth';
+import { RequestDocumentsModal } from './RequestDocumentsModal';
 
 const normalizeDoc = (data) => data?.case || data;
 
@@ -49,14 +50,15 @@ const extractActivityPayload = (response) => {
 };
 
 const commentIdentity = (comment) => comment?._id || comment?.id;
+const asDisplayValue = (value) => (!value || value === 'N/A' ? '—' : value);
 
 function assignmentLabel(docket) {
   if (!docket) return null;
   const name = docket.assignedToName;
   const xid = docket.assignedToXID;
-  const parts = [name, xid].filter((p) => p != null && String(p).trim() !== '');
-  if (parts.length === 0) return null;
-  return parts.join(' · ');
+  if (name != null && String(name).trim() !== '') return String(name).trim();
+  if (xid != null && String(xid).trim() !== '') return String(xid).trim();
+  return null;
 }
 
 /**
@@ -97,6 +99,10 @@ export function DocketDetails({
   const [firstNewCommentId, setFirstNewCommentId] = useState(null);
   const [newActivityCount, setNewActivityCount] = useState(0);
   const [newCommentCount, setNewCommentCount] = useState(0);
+  const [requestDocumentsOpen, setRequestDocumentsOpen] = useState(false);
+  const [uploadLinkGenerating, setUploadLinkGenerating] = useState(false);
+  const [uploadLinkResult, setUploadLinkResult] = useState(null);
+  const [uploadLinkStatus, setUploadLinkStatus] = useState(null);
   const commentHighlightTimeoutRef = useRef(null);
   const handledCommentRefreshTokenRef = useRef(0);
   const latestActivityHeadRef = useRef(null);
@@ -405,6 +411,39 @@ export function DocketDetails({
     setNewCommentCount(0);
   }, []);
 
+  const loadUploadLinkStatus = useCallback(async () => {
+    if (!docketId) return;
+    try {
+      const response = await caseApi.getUploadLinkStatus(docketId);
+      setUploadLinkStatus(response?.data || null);
+    } catch (statusError) {
+      setUploadLinkStatus(null);
+    }
+  }, [docketId]);
+
+  useEffect(() => {
+    void loadUploadLinkStatus();
+  }, [loadUploadLinkStatus]);
+
+  const handleGenerateUploadLink = useCallback(async (payload) => {
+    if (!docketId) return;
+    setUploadLinkGenerating(true);
+    try {
+      const response = await caseApi.generateUploadLink(docketId, payload);
+      setUploadLinkResult(response?.data || null);
+      await loadUploadLinkStatus();
+    } finally {
+      setUploadLinkGenerating(false);
+    }
+  }, [docketId, loadUploadLinkStatus]);
+
+  const handleRevokeUploadLink = useCallback(async () => {
+    if (!docketId) return;
+    await caseApi.revokeUploadLink(docketId);
+    setUploadLinkResult(null);
+    await loadUploadLinkStatus();
+  }, [docketId, loadUploadLinkStatus]);
+
   if (error) {
     return (
       <header className="case-detail-header" style={{ borderBottom: '1px solid #fecaca', paddingBottom: 16 }}>
@@ -425,8 +464,13 @@ export function DocketDetails({
     return null;
   }
 
-  const assigned = openedFromWorklist ? 'You' : (assignmentLabel(docket) || 'You');
+  const isWorklistLifecycle = String(docket.lifecycle || '').trim().toUpperCase() === 'WL'
+    || String(docket.lifecycle || '').trim().toLowerCase() === 'in_worklist';
+  const assigned = openedFromWorklist
+    ? (user?.name || user?.xID || 'You')
+    : (assignmentLabel(docket) || (isWorklistLifecycle ? '—' : 'Unassigned'));
   const title = docket.title || formatCaseName(docket.caseName);
+  const lastUpdatedLabel = asDisplayValue(formatDateTime(docket.updatedAt));
 
   return (
     <>
@@ -440,10 +484,10 @@ export function DocketDetails({
             ) : null}
           </div>
           <div className="case-detail-header__secondary">
-            <p className="case-detail-header__subtitle">{title === 'N/A' ? 'Untitled docket' : title}</p>
+            <p className="case-detail-header__subtitle">{asDisplayValue(title) === '—' ? 'Untitled docket' : title}</p>
             <div className="case-detail-header__meta">Assigned to: {assigned}</div>
           </div>
-          <div className="case-detail-header__meta">Updated {formatDateTime(docket.updatedAt)}</div>
+          <div className="case-detail-header__meta">Last updated: {lastUpdatedLabel}</div>
         </div>
 
         {children ? (
@@ -452,6 +496,30 @@ export function DocketDetails({
           </div>
         ) : null}
       </header>
+      <section style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 12, marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between', flexWrap: 'wrap' }}>
+          <strong>Upload Link</strong>
+          <button type="button" className="btn btn-primary" onClick={() => setRequestDocumentsOpen(true)}>
+            Request Documents
+          </button>
+        </div>
+        <p style={{ margin: '8px 0 0', color: '#4b5563' }}>
+          Status: {uploadLinkStatus?.status || '—'}
+        </p>
+        <p style={{ margin: '4px 0 0', color: '#4b5563' }}>
+          Expires At: {uploadLinkStatus?.expiresAt ? formatDateTime(uploadLinkStatus.expiresAt) : '—'}
+        </p>
+        {uploadLinkStatus?.expiresAt ? (
+          <p style={{ margin: '4px 0 0', color: '#6b7280' }}>
+            Expires in {Math.max(0, Math.ceil((new Date(uploadLinkStatus.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60)))}h
+          </p>
+        ) : null}
+        <div style={{ marginTop: 8 }}>
+          <button type="button" className="btn btn-danger" onClick={handleRevokeUploadLink}>
+            Revoke Link
+          </button>
+        </div>
+      </section>
 
       <ActivityTimeline
         docketId={docketId}
@@ -486,6 +554,14 @@ export function DocketDetails({
         />
         <CommentInput onSubmit={handleAddComment} disabled={commentSubmitting} />
       </section>
+      <RequestDocumentsModal
+        isOpen={requestDocumentsOpen}
+        onClose={() => setRequestDocumentsOpen(false)}
+        clientEmail={docket?.clientEmail || docket?.client?.email || docket?.clientData?.email || ''}
+        generating={uploadLinkGenerating}
+        generatedLink={uploadLinkResult}
+        onGenerate={handleGenerateUploadLink}
+      />
     </>
   );
 }

@@ -2,12 +2,14 @@ const express = require('express');
 const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
 const routeSchemas = require('../schemas/public.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
-const { signupLimiter } = require('../middleware/rateLimiters');
+const { signupLimiter, publicUploadLimiter } = require('../middleware/rateLimiters');
 const { getFirmBySlug } = require('../controllers/superadmin.controller');
 const { submitEnterpriseInquiry } = require('../controllers/contact.controller');
 const EarlyAccessRequest = require('../models/EarlyAccessRequest.model');
 const { executeWrite } = require('../utils/executeWrite');
 const log = require('../utils/log');
+const { createSecureUpload, enforceUploadSecurity } = require('../middleware/uploadProtection.middleware');
+const { uploadDocument, getUploadMeta } = require('../controllers/uploadSession.controller');
 
 const LOG_LENGTHS = {
   FIRM_NAME: 120,
@@ -33,6 +35,8 @@ const sanitizeLogValue = (value, maxLength = 160) =>
 /**
  * Public API Routes
  */
+
+const upload = createSecureUpload();
 
 router.get('/firms/:firmSlug', getFirmBySlug);
 
@@ -84,5 +88,8 @@ router.post('/signup', signupLimiter, async (req, res, next) => {
 });
 
 router.post('/contact', submitEnterpriseInquiry);
+
+router.get('/upload/:token/meta', getUploadMeta);
+router.post('/upload/:token', publicUploadLimiter, upload.single('file'), enforceUploadSecurity, uploadDocument);
 
 module.exports = router;
