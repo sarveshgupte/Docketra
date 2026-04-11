@@ -160,6 +160,15 @@ const formatDocketIdentifier = (caseItem = {}) => {
   return caseName && caseName !== 'N/A' ? caseName : 'DOCKET-UNKNOWN';
 };
 
+const formatAssignmentLabel = (caseItem = {}) => {
+  const explicit = [caseItem.assignedToName, caseItem.assignedToXID, caseItem.assignedTo]
+    .map((value) => (value == null ? '' : String(value).trim()))
+    .find(Boolean);
+
+  if (explicit) return explicit;
+  return 'Unassigned';
+};
+
 export const DashboardPage = () => {
   const { user } = useAuth();
   const { isAdmin } = usePermissions();
@@ -685,6 +694,7 @@ export const DashboardPage = () => {
                     <tr>
                       <TableHeader className="w-full max-w-lg">Docket Name</TableHeader>
                       <TableHeader className="w-[1px] whitespace-nowrap">Category</TableHeader>
+                      <TableHeader className="w-[1px] whitespace-nowrap">Assigned To</TableHeader>
                       <TableHeader className="w-[1px] whitespace-nowrap text-center">Status</TableHeader>
                       <TableHeader className="w-[1px] whitespace-nowrap text-center">Priority</TableHeader>
                       <TableHeader className="w-[1px] whitespace-nowrap text-right">Last Action Timestamp</TableHeader>
@@ -710,6 +720,7 @@ export const DashboardPage = () => {
                           </div>
                         </TableCell>
                         <TableCell className="w-[1px] whitespace-nowrap">{caseItem.category}</TableCell>
+                        <TableCell className="w-[1px] whitespace-nowrap text-sm text-gray-600">{formatAssignmentLabel(caseItem)}</TableCell>
                         <TableCell className="w-[1px] whitespace-nowrap text-center">
                           <Badge status={caseItem.status}>{getStatusLabel(caseItem.status)}</Badge>
                         </TableCell>
