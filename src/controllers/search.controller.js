@@ -597,6 +597,13 @@ const globalWorklist = async (req, res) => {
     // Build the base query without slaDueAt modifications for separation
     const baseQuery = { ...query };
     
+    // PERFORMANCE: Execute count query concurrently with data fetch
+    const totalQuery = { ...baseQuery };
+    // We attach a no-op catch immediately to prevent UnhandledPromiseRejection in case of an early throw.
+    // The error will still be caught when we await it later or if we want to handle it.
+    const totalPromise = Case.countDocuments(enforceTenantScope(totalQuery, req, { source: 'search.globalWorklist.total' }));
+    totalPromise.catch(() => {}); // prevent UnhandledPromiseRejection
+
     // Handle null slaDueAt - put them at the end
     let casesWithSLA = [];
     let casesWithoutSLA = [];
@@ -673,10 +680,8 @@ const globalWorklist = async (req, res) => {
       };
     });
     
-    // Count total for pagination
-    const totalQuery = { ...baseQuery };
-    // Don't exclude null slaDueAt from count unless slaStatus filter is applied
-    const total = await Case.countDocuments(enforceTenantScope(totalQuery, req, { source: 'search.globalWorklist.total' }));
+    // Await the total count
+    const total = await totalPromise;
     
     // Log case list view for audit (if user is authenticated)
     if (req.user?.xID) {
