@@ -363,9 +363,28 @@ const employeeWorklist = async (req, res) => {
       });
     }
     
-    // Auto-reopen expired pending cases for this user
+    const requestedAssignee = String(req.query?.assigneeXID || '').trim().toUpperCase();
+    const isAdmin = ['ADMIN', 'Admin'].includes(String(user?.role || ''));
+    const targetAssigneeXID = requestedAssignee || String(user.xID || '').trim().toUpperCase();
+
+    if (!targetAssigneeXID) {
+      return res.status(400).json({
+        success: false,
+        message: 'Assignee xID is required',
+      });
+    }
+
+    const isViewingOwnWorklist = targetAssigneeXID === String(user.xID || '').trim().toUpperCase();
+    if (!isViewingOwnWorklist && !isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only admins can view another user worklist',
+      });
+    }
+
+    // Auto-reopen expired pending cases for this user/assignee
     try {
-      await caseActionService.autoReopenExpiredPendingCases(user.xID, firmId);
+      await caseActionService.autoReopenExpiredPendingCases(targetAssigneeXID, firmId);
     } catch (error) {
       console.warn('[WORKLIST] Failed to auto-reopen expired pending cases:', error.message);
     }
@@ -380,7 +399,7 @@ const employeeWorklist = async (req, res) => {
     }
 
     const query = {
-      assignedToXID: user.xID, // CANONICAL: Query by xID in assignedToXID field
+      assignedToXID: targetAssigneeXID, // CANONICAL: Query by xID in assignedToXID field
       // Assignment flow writes ASSIGNED; legacy/older records may still be OPEN/IN_PROGRESS.
       // PENDING must be excluded because pending dockets are shown via /cases/my-pending.
       status: { $in: worklistStatuses },
@@ -421,8 +440,8 @@ const employeeWorklist = async (req, res) => {
     // Log case list view for audit
     await logCaseListViewed({
       viewerXID: user.xID,
-      filters: { status: worklistStatuses },
-      listType: 'MY_WORKLIST',
+      filters: { status: worklistStatuses, assigneeXID: targetAssigneeXID },
+      listType: isViewingOwnWorklist ? 'MY_WORKLIST' : 'TEAM_WORKLIST',
       resultCount: cases.length,
       req,
     });

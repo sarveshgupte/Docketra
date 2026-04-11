@@ -261,6 +261,13 @@ export const CaseDetailPage = () => {
     .filter((v) => v != null && String(v).trim() !== '')
     .join(' · ') || null;
   const isAssignedToCurrentUser = Boolean(user?.xID) && caseInfo?.assignedToXID === user.xID;
+  const isAdmin = ['ADMIN', 'Admin'].includes(String(user?.role || ''));
+  const isMoveLockedByAnotherUser = Boolean(caseInfo?.lockStatus?.isLocked)
+    && String(caseInfo?.lockStatus?.activeUserXID || '').trim().toUpperCase() !== String(user?.xID || '').trim().toUpperCase();
+  const lockOwnerLabel = [caseInfo?.lockStatus?.activeUserDisplayName, caseInfo?.lockStatus?.activeUserXID]
+    .filter((value) => value != null && String(value).trim() !== '')
+    .join(' · ') || caseInfo?.lockStatus?.activeUserXID || caseInfo?.lockStatus?.activeUserEmail || 'another user';
+  const canAdminMoveAssignedDocket = isAdmin && Boolean(caseInfo?.assignedToXID);
 
   const mergeUniqueComments = useCallback((inputComments = []) => {
     const map = new Map();
@@ -1075,13 +1082,21 @@ export const CaseDetailPage = () => {
       showWarning('Please select a user to assign.');
       return;
     }
+    if (canAdminMoveAssignedDocket && !String(assignComment || '').trim()) {
+      showWarning('Comment is mandatory when moving a docket between worklists.');
+      return;
+    }
 
     if (assigningCase) return;
     setAssigningCase(true);
     const selectedAssignee = availableAssignees.find((option) => option.value === assignUser);
 
     try {
-      await caseApi.assignDocket(caseId, assignUser);
+      if (canAdminMoveAssignedDocket) {
+        await caseApi.reassignDocket(caseId, assignUser, String(assignComment || '').trim());
+      } else {
+        await caseApi.assignDocket(caseId, assignUser);
+      }
       setShowAssignModal(false);
       setAssignComment('');
       setActionError(null);
@@ -1096,6 +1111,39 @@ export const CaseDetailPage = () => {
       setAssigningCase(false);
     }
   };
+
+  const handleMoveToWorkbasket = async () => {
+    if (!canAdminMoveAssignedDocket || actionInFlight) return;
+    if (isMoveLockedByAnotherUser) {
+      showWarning(`Docket is locked by ${lockOwnerLabel}. Ask them to exit/close before moving.`);
+      return;
+    }
+
+    setConfirmModal({
+      title: 'Move docket to Workbasket',
+      description: 'This removes the current assignee and returns the docket to Global Workbasket.',
+      confirmText: 'Move to Workbasket',
+      danger: true,
+      onConfirm: async () => {
+        try {
+          setConfirmModal(null);
+          await caseApi.unassignDocket(caseId);
+          showSuccess('Docket moved to Workbasket.');
+          await loadCase({ background: true });
+        } catch (error) {
+          const message = extractErrorMessage(error, 'Failed to move docket to Workbasket.');
+          showError(message);
+          setActionError({ message, retry: handleMoveToWorkbasket });
+        }
+      },
+    });
+  };
+
+  const handleViewUserWorklist = useCallback((targetXID) => {
+    const normalized = String(targetXID || '').trim().toUpperCase();
+    if (!normalized) return;
+    navigate(`${ROUTES.WORKLIST(firmSlug)}?assigneeXID=${encodeURIComponent(normalized)}`);
+  }, [firmSlug, navigate]);
 
   const handleTakeOwnership = async () => {
     if (!user?.xID || actionInFlight) return;
@@ -1118,9 +1166,6 @@ export const CaseDetailPage = () => {
   const accessMode = caseData?.accessMode || {};
   const isViewOnlyMode = accessMode.isViewOnlyMode;
   const canCloneDocket = permissions.canCloneCase?.(caseData) !== false;
-
-  // Determine if user is admin
-  const isAdmin = user?.role === 'Admin';
 
   // Task 2: Inactivity warning — OPEN case not updated in 3+ days (not pended)
   const isInactiveWarning = useMemo(() => {
@@ -1422,6 +1467,23 @@ export const CaseDetailPage = () => {
         {caseInfo?.stage?.requiresApproval === true && isViewOnlyMode && (
           <div className="neo-alert neo-alert--info case-detail__alert">
             <strong>Role Restricted Action</strong> — Action restricted: Only Partners can approve this lifecycle stage.
+          </div>
+        )}
+        {canAdminMoveAssignedDocket && (
+          <div className="neo-alert neo-alert--info case-detail__alert">
+            <strong>Admin Worklist Movement</strong> — Move this docket between user worklists or back to workbasket.
+            {isMoveLockedByAnotherUser ? ` Movement is locked while ${lockOwnerLabel} is active in this docket.` : ''}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button variant="outline" onClick={() => setShowAssignModal(true)} disabled={isMoveLockedByAnotherUser || assigningCase}>
+                Move to another WL
+              </Button>
+              <Button variant="outline" onClick={handleMoveToWorkbasket} disabled={isMoveLockedByAnotherUser || assigningCase}>
+                Move WL → WB
+              </Button>
+              <Button variant="ghost" onClick={() => handleViewUserWorklist(caseInfo?.assignedToXID)}>
+                View {caseInfo?.assignedToXID || 'owner'} WL
+              </Button>
+            </div>
           </div>
         )}
         {caseInfo.lockStatus?.isLocked &&
@@ -1890,11 +1952,11 @@ export const CaseDetailPage = () => {
         <ActionModal
           isOpen={showAssignModal}
           onClose={() => setShowAssignModal(false)}
-          title="Assign Docket"
+          title={canAdminMoveAssignedDocket ? 'Move Docket to Another Worklist' : 'Assign Docket'}
           comment={assignComment}
           setComment={setAssignComment}
-          commentRequired={false}
-          submitLabel="Assign Docket"
+          commentRequired={canAdminMoveAssignedDocket}
+          submitLabel={canAdminMoveAssignedDocket ? 'Move Docket' : 'Assign Docket'}
           submitting={assigningCase}
           onSubmit={handleAssignDocket}
           disabled={!assignUser}

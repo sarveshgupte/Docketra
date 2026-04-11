@@ -2348,6 +2348,30 @@ const unassignCase = async (req, res) => {
         message: 'Case not found',
       });
     }
+
+    const lockStatus = caseData.lockStatus || {};
+    const lockOwnerXID = String(lockStatus.activeUserXID || '').trim().toUpperCase();
+    const actorXID = String(user.xID || '').trim().toUpperCase();
+    const lockTs = new Date(lockStatus.lastActivityAt || lockStatus.lockedAt || 0).getTime();
+    const isActiveLock = Boolean(lockStatus.isLocked)
+      && Number.isFinite(lockTs)
+      && lockTs > 0
+      && (Date.now() - lockTs) < CASE_LOCK_CONFIG.INACTIVITY_TIMEOUT_MS;
+    if (isActiveLock && lockOwnerXID && lockOwnerXID !== actorXID) {
+      const lockOwnerLabel = lockStatus.activeUserDisplayName && lockOwnerXID
+        ? `${lockStatus.activeUserDisplayName} (${lockOwnerXID})`
+        : lockOwnerXID;
+      return res.status(409).json({
+        success: false,
+        message: `Docket is locked by ${lockOwnerLabel || 'another user'}. Ask them to exit or close the docket before moving it.`,
+        code: 'DOCKET_LOCKED_ACTIVE',
+        lockStatus: {
+          activeUserXID: lockOwnerXID || null,
+          activeUserDisplayName: lockStatus.activeUserDisplayName || null,
+          lastActivityAt: lockStatus.lastActivityAt || lockStatus.lockedAt || null,
+        },
+      });
+    }
     
     // Store previous assignment for audit log
     const previousAssignedToXID = caseData.assignedToXID;
