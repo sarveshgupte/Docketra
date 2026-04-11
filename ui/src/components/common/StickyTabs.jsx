@@ -24,21 +24,48 @@ export const StickyTabs = ({ tabs = [], defaultTab = 'overview', onTabChange }) 
     onTabChange?.(tabName);
   };
 
+  const handleKeyDown = (event, index) => {
+    let newIndex;
+    if (event.key === 'ArrowRight') {
+      newIndex = (index + 1) % tabs.length;
+    } else if (event.key === 'ArrowLeft') {
+      newIndex = (index - 1 + tabs.length) % tabs.length;
+    }
+
+    if (newIndex !== undefined) {
+      event.preventDefault();
+      const tabName = tabs[newIndex].name;
+      handleTabChange(tabName);
+
+      const tabElement = document.getElementById(`tab-${tabName}`);
+      if (tabElement) {
+        tabElement.focus();
+      }
+    }
+  };
+
   return (
     <nav className="sticky-tabs" role="tablist" aria-label="Case detail tabs">
-      {tabs.map((tab) => (
-        <button
-          key={tab.name}
-          type="button"
-          className={`sticky-tabs__item ${activeTab === tab.name ? 'active' : ''}`}
-          onClick={() => handleTabChange(tab.name)}
-          role="tab"
-          aria-selected={activeTab === tab.name}
-        >
-          {tab.label}
-          {tab.badge ? <span className="badge">{tab.badge}</span> : null}
-        </button>
-      ))}
+      {tabs.map((tab, index) => {
+        const isActive = activeTab === tab.name;
+        return (
+          <button
+            key={tab.name}
+            id={`tab-${tab.name}`}
+            type="button"
+            className={`sticky-tabs__item ${isActive ? 'active' : ''}`}
+            onClick={() => handleTabChange(tab.name)}
+            onKeyDown={(e) => handleKeyDown(e, index)}
+            role="tab"
+            aria-selected={isActive}
+            aria-controls={`panel-${tab.name}`}
+            tabIndex={isActive ? 0 : -1}
+          >
+            {tab.label}
+            {tab.badge ? <span className="badge">{tab.badge}</span> : null}
+          </button>
+        );
+      })}
     </nav>
   );
 };
