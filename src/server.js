@@ -281,7 +281,20 @@ app.get('/metrics', async (req, res) => {
   const authHeader = req.headers.authorization || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
 
-  if (!configuredMetricsToken || !token || token !== configuredMetricsToken) {
+  let authorized = false;
+  if (configuredMetricsToken && typeof token === 'string') {
+    if (configuredMetricsToken.length === token.length) {
+      let mismatch = 0;
+      for (let i = 0; i < configuredMetricsToken.length; i++) {
+        mismatch |= configuredMetricsToken.charCodeAt(i) ^ token.charCodeAt(i);
+      }
+      if (mismatch === 0) {
+        authorized = true;
+      }
+    }
+  }
+
+  if (!authorized) {
     return res.status(401).json({ error: 'unauthorized' });
   }
 
