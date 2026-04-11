@@ -3,7 +3,7 @@ import { buildQueryString } from '../utils/queryParams';
 
 export const worklistApi = {
   getEmployeeWorklist: (filters = {}) =>
-    request((http) => http.get(`/worklists/employee/me${buildQueryString({ limit: filters.limit })}`), 'Failed to load employee worklist'),
+    request((http) => http.get(`/worklists/employee/me${buildQueryString({ limit: filters.limit, assigneeXID: filters.assigneeXID })}`), 'Failed to load employee worklist'),
 
   getGlobalWorklist: (filters = {}) =>
     request((http) => http.get(`/worklists/global${buildQueryString(filters)}`), 'Failed to load global worklist'),

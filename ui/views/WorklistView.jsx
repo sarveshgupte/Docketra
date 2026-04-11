@@ -45,6 +45,7 @@ const formatDocketNumber = (value) => String(value || '').replace(/^CASE-/i, '')
 
 export function WorklistView({
   variant = 'worklist',
+  assigneeXID = '',
   sortState = { key: 'updatedAt', direction: 'desc' },
   onSortChange,
   onOpenDocket,
@@ -76,7 +77,7 @@ export function WorklistView({
         const pendingData = response?.data?.data;
         setRecords(normalizeRecords(pendingData));
       } else {
-        const response = await worklistApi.getEmployeeWorklist();
+        const response = await worklistApi.getEmployeeWorklist({ assigneeXID });
         const worklistPayload = Array.isArray(response?.data)
           ? response.data
           : response?.data?.data;
@@ -89,7 +90,7 @@ export function WorklistView({
     } finally {
       setLoading(false);
     }
-  }, [isPendingView]);
+  }, [assigneeXID, isPendingView]);
 
   useEffect(() => {
     void load();

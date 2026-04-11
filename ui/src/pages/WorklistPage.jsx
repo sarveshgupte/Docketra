@@ -15,16 +15,20 @@ import { useActiveDocket } from '../hooks/useActiveDocket';
 import { ROUTES } from '../constants/routes';
 import { WorklistView } from '../../views/WorklistView';
 import './WorklistPage.css';
+import { useAuth } from '../hooks/useAuth';
 
 export const WorklistPage = () => {
   const navigate = useNavigate();
-  const { query, setQuery } = useQueryState({ status: '', sort: 'updatedAt', order: 'desc' });
+  const { query, setQuery } = useQueryState({ status: '', sort: 'updatedAt', order: 'desc', assigneeXID: '' });
   const { firmSlug } = useParams();
   const { openDocket } = useActiveDocket();
+  const { user } = useAuth();
 
   const [sortState, setSortState] = useState({ key: query.sort, direction: query.order });
 
   const statusParam = query.status;
+  const assigneeXID = String(query.assigneeXID || '').trim().toUpperCase();
+  const isAdmin = ['ADMIN', 'Admin'].includes(String(user?.role || ''));
   const isPendingView = statusParam && (
     statusParam === 'PENDING'
     || statusParam.split(',').includes('PENDING')
@@ -61,7 +65,9 @@ export const WorklistPage = () => {
     }
     : {
       title: 'My Worklist',
-      description: 'Your open dockets assigned to you. Pending dockets appear in My Pending Dockets.',
+      description: isAdmin && assigneeXID
+        ? `Viewing ${assigneeXID} worklist. Pending dockets appear in My Pending Dockets.`
+        : 'Your open dockets assigned to you. Pending dockets appear in My Pending Dockets.',
     };
 
   return (
@@ -78,6 +84,7 @@ export const WorklistPage = () => {
         />
         <WorklistView
           variant={isPendingView ? 'pending' : 'worklist'}
+          assigneeXID={!isPendingView ? assigneeXID : ''}
           sortState={sortState}
           onSortChange={setSortState}
           onOpenDocket={handleCaseClick}
