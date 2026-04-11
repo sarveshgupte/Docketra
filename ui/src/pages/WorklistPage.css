@@ -172,6 +172,23 @@
 .worklist-toolbar__actions {
   display: flex;
   align-items: flex-end;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.worklist-toolbar__checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.2rem;
+}
+
+.worklist-toolbar__checkbox input {
+  width: 1rem;
+  height: 1rem;
 }
 
 @media (max-width: 1024px) {
