@@ -167,15 +167,20 @@ const getPlatformStats = async (req, res) => {
     const firmFilter = firmId ? { _id: firmId } : {};
     const firmScope = firmId ? { firmId } : {};
 
-    // Get total firms
-    const totalFirms = await Firm.countDocuments(firmFilter);
-    const activeFirms = await Firm.countDocuments({ ...firmFilter, status: 'active' });
-    
-    // Get total clients across all firms
-    const totalClients = await Client.countDocuments(firmScope);
-    
-    // Get total users across all firms (excluding SUPER_ADMIN)
-    const totalUsers = await User.countDocuments({ ...firmScope, role: { $ne: 'SuperAdmin' } });
+    // ⚡ Bolt Performance Optimization:
+    // Replaced sequential database queries with concurrent Promise.all() execution.
+    // Impact: Reduces latency by executing totalFirms, activeFirms, totalClients, and totalUsers queries in parallel.
+    const [
+      totalFirms,
+      activeFirms,
+      totalClients,
+      totalUsers,
+    ] = await Promise.all([
+      Firm.countDocuments(firmFilter),
+      Firm.countDocuments({ ...firmFilter, status: 'active' }),
+      Client.countDocuments(firmScope),
+      User.countDocuments({ ...firmScope, role: { $ne: 'SuperAdmin' } }),
+    ]);
     
     res.json({
       success: true,

@@ -22,7 +22,7 @@ let redisConnectionAttempted = false;
  * 
  * @returns {Redis|null} Redis client or null
  */
-const getRedisClient = () => { return null;
+const getRedisClient = () => {
   // Return existing client if already created
   if (redisConnectionAttempted) {
     return redisClient;
