@@ -38,6 +38,7 @@ const { getOrCreateDefaultClient } = require('../services/defaultClient.guard');
 const fs = require('fs').promises;
 const fsSync = require('fs');
 const path = require('path');
+const uploadRoot = path.join(__dirname, '../../uploads/private') + path.sep;
 const PDFDocument = require('pdfkit');
 
 /**
@@ -2446,9 +2447,18 @@ const viewAttachment = async (req, res) => {
       });
     }
     
+    // Security: Prevent path traversal
+    const resolvedPath = path.resolve(attachment.filePath);
+    if (!resolvedPath.startsWith(uploadRoot)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access to this path is forbidden',
+      });
+    }
+
     // Check if file exists
     try {
-      await fs.access(attachment.filePath);
+      await fs.access(resolvedPath);
     } catch (err) {
       return res.status(404).json({
         success: false,
@@ -2465,7 +2475,7 @@ const viewAttachment = async (req, res) => {
     res.setHeader('Content-Disposition', `inline; filename="${safeFilename}"`);
     
     // Send file
-    res.sendFile(path.resolve(attachment.filePath));
+    res.sendFile(resolvedPath);
   } catch (error) {
     console.error('[viewAttachment] Error:', error);
     res.status(500).json({
@@ -2558,15 +2568,23 @@ const downloadAttachment = async (req, res) => {
       }
     } else if (attachment.filePath) {
       // Legacy: Handle old attachments stored locally
+      const resolvedPath = path.resolve(attachment.filePath);
+      if (!resolvedPath.startsWith(uploadRoot)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access to this path is forbidden',
+        });
+      }
+
       try {
-        await fs.access(attachment.filePath);
+        await fs.access(resolvedPath);
         
         // Set headers for download
         res.setHeader('Content-Type', mimeType);
         res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
         
         // Send file
-        res.sendFile(path.resolve(attachment.filePath));
+        res.sendFile(resolvedPath);
       } catch (err) {
         return res.status(404).json({
           success: false,
