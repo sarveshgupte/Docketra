@@ -6,7 +6,7 @@ const notificationSchema = new mongoose.Schema({
     required: true,
     index: true,
   },
-  user_id: {
+  userId: {
     type: String,
     required: true,
     trim: true,
@@ -16,29 +16,43 @@ const notificationSchema = new mongoose.Schema({
   type: {
     type: String,
     required: true,
-    enum: ['DOCKET_ASSIGNED', 'DOCKET_ACTIVATED', 'DOCKET_COMPLETED'],
+    enum: ['ASSIGNED', 'REASSIGNED', 'DOCKET_ACTIVATED', 'LIFECYCLE_CHANGED', 'CLIENT_UPLOAD'],
     index: true,
   },
-  docket_id: {
+  docketId: {
     type: String,
     required: true,
     trim: true,
     index: true,
   },
-  message: {
-    type: String,
-    required: true,
-    trim: true,
+  actor: {
+    xID: {
+      type: String,
+      required: true,
+      trim: true,
+      uppercase: true,
+    },
+    role: {
+      type: String,
+      required: true,
+      trim: true,
+      uppercase: true,
+    },
   },
-  created_at: {
+  timestamp: {
     type: Date,
     default: Date.now,
+    index: true,
+  },
+  read: {
+    type: Boolean,
+    default: false,
     index: true,
   },
 }, {
   timestamps: false,
 });
 
-notificationSchema.index({ firmId: 1, user_id: 1, created_at: -1 });
+notificationSchema.index({ firmId: 1, userId: 1, timestamp: -1 });
 
 module.exports = mongoose.model('Notification', notificationSchema);

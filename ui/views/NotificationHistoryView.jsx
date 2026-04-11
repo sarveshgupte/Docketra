@@ -19,29 +19,6 @@ function normalizeList(response) {
   return Array.isArray(raw) ? raw : [];
 }
 
-function toGroupKey(item) {
-  return [item.type || 'GENERIC', item.docket_id || 'global', item.message || ''].join('::');
-}
-
-function groupNotifications(items) {
-  const grouped = new Map();
-  items.forEach((item) => {
-    const key = toGroupKey(item);
-    const existing = grouped.get(key);
-    const createdAtMs = item.created_at ? new Date(item.created_at).getTime() : 0;
-    if (!existing) {
-      grouped.set(key, { ...item, count: 1, latestAtMs: createdAtMs });
-      return;
-    }
-    grouped.set(key, {
-      ...existing,
-      count: existing.count + 1,
-      latestAtMs: Math.max(existing.latestAtMs, createdAtMs),
-    });
-  });
-  return [...grouped.values()].sort((a, b) => b.latestAtMs - a.latestAtMs);
-}
-
 export function NotificationHistoryView() {
   const { firmSlug } = useParams();
   const navigate = useNavigate();
@@ -54,7 +31,7 @@ export function NotificationHistoryView() {
     setLoading(true);
     setError(null);
     try {
-      const response = await notificationsApi.getNotifications();
+      const response = await notificationsApi.getAllNotifications();
       setItems(normalizeList(response));
     } catch (err) {
       setError(err?.message || 'Failed to load notifications');
@@ -68,16 +45,24 @@ export function NotificationHistoryView() {
     void load();
   }, []);
 
-  const grouped = useMemo(() => groupNotifications(items), [items]);
-
-  const totalPages = Math.max(1, Math.ceil(grouped.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const sliceStart = (safePage - 1) * PAGE_SIZE;
-  const pageRows = grouped.slice(sliceStart, sliceStart + PAGE_SIZE);
+  const pageRows = useMemo(() => items.slice(sliceStart, sliceStart + PAGE_SIZE), [items, sliceStart]);
 
   const goToDocket = (docketId) => {
     if (!firmSlug || !docketId) return;
     navigate(ROUTES.CASE_DETAIL(firmSlug, docketId));
+  };
+
+  const markNotificationRead = async (id) => {
+    if (!id) return;
+    try {
+      await notificationsApi.markAsRead(id);
+      setItems((prev) => prev.map((item) => (item._id === id ? { ...item, read: true } : item)));
+    } catch {
+      // no-op; optimistic UI isn't needed here
+    }
   };
 
   return (
@@ -85,7 +70,7 @@ export function NotificationHistoryView() {
       <Stack space={16}>
         <PageHeader
           title="Notification history"
-          subtitle="Meaningful updates, grouped to reduce noise."
+          subtitle="All notifications, sorted by latest activity."
           actions={(
             <Button type="button" variant="outline" onClick={() => navigate(ROUTES.DASHBOARD(firmSlug))}>
               Back to dashboard
@@ -101,23 +86,33 @@ export function NotificationHistoryView() {
               onRetry={load}
             />
           ) : null}
-          {!loading && !error && grouped.length === 0 ? (
+          {!loading && !error && items.length === 0 ? (
             <EmptyState
               title="No notification history"
-              description="Once activity occurs, grouped updates will show here."
+              description="Once activity occurs, updates will show here."
               icon
             />
           ) : null}
-          {!loading && !error && grouped.length > 0 ? (
+          {!loading && !error && items.length > 0 ? (
             <>
               <ul className="space-y-3" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                 {pageRows.map((item) => (
                   <li key={item._id} className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
-                    <p className="text-sm font-medium text-gray-900" style={{ margin: 0 }}>{item.message}</p>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                      <p className="text-sm text-gray-900" style={{ margin: 0, fontWeight: item.read ? 500 : 700 }}>
+                        {item.message}
+                      </p>
+                      {!item.read ? (
+                        <Button type="button" variant="ghost" onClick={() => markNotificationRead(item._id)}>
+                          Mark as read
+                        </Button>
+                      ) : null}
+                    </div>
                     <p className="mt-1 text-xs text-gray-500">
                       {item.type ? `${item.type} · ` : ''}
                       {item.created_at ? formatDate(item.created_at) : '—'}
-                      {item.count > 1 ? ` · ${item.count} similar` : ''}
+                      {' · '}
+                      {item.read ? 'Read' : 'Unread'}
                       {item.docket_id ? (
                         <>
                           {' · '}
@@ -136,7 +131,7 @@ export function NotificationHistoryView() {
               </ul>
               <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
                 <span className="text-sm text-gray-600">
-                  Page {safePage} of {totalPages} ({grouped.length} grouped)
+                  Page {safePage} of {totalPages} ({items.length} notifications)
                 </span>
                 <div className="flex gap-2">
                   <Button

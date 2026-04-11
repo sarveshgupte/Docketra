@@ -42,6 +42,17 @@ const resolveCase = async (req, res) => {
       });
     }
     
+    const targetCase = await Case.findOne({ caseId, firmId: req.user.firmId }).select('ownerTeamId routedToTeamId').lean();
+    if (!targetCase) {
+      return res.status(404).json({ success: false, message: 'Case not found' });
+    }
+    if (String(targetCase.ownerTeamId || '') !== String(req.user.teamId || '')) {
+      return res.status(403).json({ success: false, message: 'Only owner team can resolve' });
+    }
+    if (targetCase.routedToTeamId) {
+      return res.status(409).json({ success: false, message: 'Cannot resolve while routed' });
+    }
+
     // Call service to resolve case - with firm scoping
     const caseData = await caseActionService.resolveCase(req.user.firmId, caseId, comment, req.user, req);
     

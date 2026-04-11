@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const { randomUUID } = require('crypto');
 const CaseStatus = require('../domain/case/caseStatus');
-const { DocketLifecycle, deriveLifecycle, lifecycleRequiresAssignment } = require('../domain/docketLifecycle');
+const { DocketLifecycle, deriveLifecycle, normalizeLifecycle } = require('../domain/docketLifecycle');
 const softDeletePlugin = require('../utils/softDelete.plugin');
 const { tenantScopeGuardPlugin } = require('./plugins/tenantScopeGuard.plugin');
 const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -329,7 +329,9 @@ const caseSchema = new mongoose.Schema({
   lifecycle: {
     type: String,
     enum: Object.values(DocketLifecycle),
-    default: DocketLifecycle.CREATED,
+    default: DocketLifecycle.WL,
+    required: true,
+    set: (value) => normalizeLifecycle(value),
   },
 
   // Budget estimates used for reporting variance
@@ -466,6 +468,36 @@ const caseSchema = new mongoose.Schema({
     uppercase: true,
     trim: true,
     immutable: true,
+  },
+
+
+  ownerTeamId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Team',
+    default: null,
+    index: true,
+    immutable: true,
+  },
+  routedToTeamId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Team',
+    default: null,
+    index: true,
+  },
+  routedByUserId: {
+    type: String,
+    trim: true,
+    uppercase: true,
+    default: null,
+  },
+  routedAt: {
+    type: Date,
+    default: null,
+  },
+  routingNote: {
+    type: String,
+    trim: true,
+    default: null,
   },
   
   /**
@@ -842,15 +874,20 @@ caseSchema.path('status').validate(function(value) {
 }, 'pendingReason is required when status is PENDING');
 
 
-caseSchema.pre('validate', function enforceAssignedUserForWorklistLifecycle(next) {
-  const lifecycle = String(this.lifecycle || '').trim().toLowerCase();
-  if (!lifecycleRequiresAssignment(lifecycle)) return next();
+caseSchema.pre('validate', function enforceAssignedUserForWorklistLifecycle() {
+  const lifecycle = normalizeLifecycle(this.lifecycle);
+  if (lifecycle !== DocketLifecycle.WL) return;
 
   if (!this.assignedToXID) {
-    this.invalidate('assignedToXID', 'assignedToXID is required once a docket enters worklist lifecycle');
+    this.invalidate('assignedToXID', 'WL docket must have assignedToXID');
   }
+});
 
-  return next();
+caseSchema.pre('save', function enforceAssignedUserForWlOnSave() {
+  const lifecycle = normalizeLifecycle(this.lifecycle);
+  if (lifecycle === DocketLifecycle.WL && !this.assignedToXID) {
+    throw new Error('WL docket must have assignedToXID');
+  }
 });
 
 /**
@@ -1067,6 +1104,8 @@ caseSchema.index({ firmId: 1, slaDueAt: 1 }); // Firm-scoped SLA due lookups
 caseSchema.index({ firmId: 1, status: 1 }); // Firm-scoped status queries
 caseSchema.index({ firmId: 1, assignedToXID: 1 }); // Firm-scoped assignment queries
 caseSchema.index({ firmId: 1, assignedToXID: 1, status: 1 }); // Firm-scoped assignment + status workbasket queries
+caseSchema.index({ firmId: 1, ownerTeamId: 1, routedToTeamId: 1, status: 1 });
+caseSchema.index({ firmId: 1, routedToTeamId: 1, status: 1 });
 caseSchema.index({ firmId: 1, dueDate: 1, status: 1 }); // Firm-scoped overdue metrics queries
 caseSchema.index({ firmId: 1, status: 1, dueDate: 1 }); // Firm-scoped status-filtered due-date ordering queries
 caseSchema.index({ firmId: 1, resolvedAt: 1 }); // Firm-scoped resolution metrics queries

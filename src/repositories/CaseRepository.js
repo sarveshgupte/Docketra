@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const { softDelete } = require('../services/softDelete.service');
 const { decrypt, ensureTenantKey, ForbiddenError } = require('../security/encryption.service');
 const { looksEncrypted } = require('../security/encryption.utils');
+const { normalizeLifecycle } = require('../domain/docketLifecycle');
 /**
  * ⚠️ SECURITY: Case Repository - Firm-Scoped Data Access Layer ⚠️
  * 
@@ -63,7 +64,11 @@ function _guardSuperadmin(role) {
  * @returns {Promise<Object|null>}
  */
 async function _decryptCaseDoc(doc, firmId, { logContext } = {}) {
-  if (!doc || !process.env.MASTER_ENCRYPTION_KEY || !firmId) return doc;
+  if (!doc) return doc;
+  if (!process.env.MASTER_ENCRYPTION_KEY || !firmId) {
+    doc.lifecycle = normalizeLifecycle(doc.lifecycle);
+    return doc;
+  }
   const tenantId = String(firmId);
   for (const field of CASE_ENCRYPTED_FIELDS) {
     if (doc[field] != null && looksEncrypted(doc[field])) {
@@ -103,6 +108,7 @@ async function _decryptCaseDoc(doc, firmId, { logContext } = {}) {
       }
     }
   }
+  doc.lifecycle = normalizeLifecycle(doc.lifecycle);
   return doc;
 }
 
@@ -115,7 +121,14 @@ async function _decryptCaseDoc(doc, firmId, { logContext } = {}) {
  * @returns {Promise<Array>}
  */
 async function _decryptCaseDocs(docs, firmId, { logContext } = {}) {
-  if (!docs || !docs.length || !process.env.MASTER_ENCRYPTION_KEY || !firmId) return docs;
+  if (!docs || !docs.length) return docs;
+  if (!process.env.MASTER_ENCRYPTION_KEY || !firmId) {
+    for (const doc of docs) {
+      if (!doc) continue;
+      doc.lifecycle = normalizeLifecycle(doc.lifecycle);
+    }
+    return docs;
+  }
   const tenantId = String(firmId);
 
   for (const doc of docs) {
@@ -162,6 +175,7 @@ async function _decryptCaseDocs(docs, firmId, { logContext } = {}) {
         }
       }
     }
+    doc.lifecycle = normalizeLifecycle(doc.lifecycle);
   }
 
   return docs;
@@ -281,7 +295,7 @@ const CaseRepository = {
                 $expr: {
                   $and: [
                     { $eq: ['$clientId', '$caseClientId'] },
-                    { $eq: ['$firmId', { $toObjectId: '$caseFirmId' }] },
+                    { $eq: ['$firmId', '$caseFirmId'] },
                   ],
                 },
               },
@@ -344,7 +358,7 @@ const CaseRepository = {
     }
 
     if (options.includeClient) {
-      return this._findWithClient({ firmId: String(firmId), caseInternalId: internalId }, firmId, role);
+      return this._findWithClient({ firmId, caseInternalId: internalId }, firmId, role);
     }
 
     const doc = await Case.findOne({ firmId, caseInternalId: internalId });
@@ -391,7 +405,7 @@ const CaseRepository = {
     _guardSuperadmin(role);
 
     if (options.includeClient) {
-      return this._findWithClient({ firmId: String(firmId), caseId: String(caseId) }, firmId, role);
+      return this._findWithClient({ firmId, caseId: String(caseId) }, firmId, role);
     }
 
     // During transition, caseId = caseNumber

@@ -13,11 +13,9 @@ const { maskSensitiveObject, sanitizeErrorForLog } = require('./utils/pii');
 const { validateEnv } = require('./config/validateEnv');
 const { loadEnv, maskEnvForLog } = require('./config/env');
 const { logBuildMetadata } = require('./services/buildInfo.service');
-const { isInboundEmailEnabled } = require('./services/featureFlags.service');
 require('./utils/transactionSessionEnforcer');
 
 const env = loadEnv();
-const inboundEmailEnabled = isInboundEmailEnabled();
 log.info('API_RUNTIME_WORKERS_DISABLED');
 
 // Global error log sanitizer: ensure every console.error invocation masks PII (tokens, emails, phone numbers, auth headers).
@@ -61,7 +59,7 @@ const { authenticate } = require('./middleware/auth.middleware');
 const degradedGuard = require('./middleware/degradedGuard');
 const { firmContext } = require('./middleware/firmContext.middleware');
 const requireTenant = require('./middleware/requireTenant');
-const { requireAdmin, requireSuperadmin } = require('./middleware/permission.middleware');
+const { requireAdmin } = require('./middleware/permission.middleware');
 const responseContract = require('./middleware/responseContract.middleware');
 const invariantGuard = require('./middleware/invariantGuard');
 const domainInvariantGuard = require('./middleware/domainInvariantGuard');
@@ -105,7 +103,6 @@ const firmMetricsRoutes = require('./routes/firmMetrics.routes');
 const adminRoutes = require('./routes/admin.routes');  // Admin routes (PR #41)
 const superadminRoutes = require('./routes/superadmin.routes');  // Superadmin routes
 const debugRoutes = require('./routes/debug.routes');  // Debug routes (PR #43)
-const inboundRoutes = require('./routes/inbound.routes');  // Inbound email routes
 const contactRoutes = require('./routes/contact.routes');  // Public contact form route
 const publicRoutes = require('./routes/public.routes');  // Public routes (firm lookup)
 const publicSignupRoutes = require('./routes/publicSignup.routes');  // Public self-serve signup routes
@@ -120,6 +117,8 @@ const { getSecurityMetrics } = require('./controllers/security.controller');
 const tenantRoutes = require('./routes/tenant.routes');  // Tenant storage settings routes
 const docketFileStorageRoutes = require('./routes/docketFileStorage.routes');
 const notificationsRoutes = require('./routes/notifications.routes');
+const teamRoutes = require('./routes/team.routes');
+const bulkUploadRoutes = require('./routes/bulkUpload.routes');
 const tenantResolver = require('./middleware/tenantResolver');
 const { login } = require('./controllers/auth.controller');
 const mutatingMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
@@ -156,13 +155,11 @@ ensureUploadRoot();
 log.info('ENV_CONFIG_LOADED', {
   env: env.NODE_ENV,
   superadminXID: env.SUPERADMIN_XID_NORMALIZED,
-  inboundEmailEnabled,
   snapshot: maskEnvForLog({
     NODE_ENV: env.NODE_ENV,
     MONGODB_URI: env.MONGODB_URI,
     SUPERADMIN_EMAIL: env.SUPERADMIN_EMAIL_NORMALIZED,
     ENCRYPTION_PROVIDER: env.ENCRYPTION_PROVIDER,
-    ENABLE_INBOUND_EMAIL: String(env.ENABLE_INBOUND_EMAIL),
   }),
 });
 
@@ -255,9 +252,6 @@ const corsOptions = {
 app.use(optionsPreflight(allowedOrigins, CORS_ALLOWED_HEADERS, CORS_ALLOWED_METHODS));
 app.use(cors(corsOptions));
 app.use(compression());
-if (inboundEmailEnabled) {
-  app.use('/api/inbound/email', express.raw({ type: '*/*', limit: '30mb' }));
-}
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '100kb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -287,7 +281,20 @@ app.get('/metrics', async (req, res) => {
   const authHeader = req.headers.authorization || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
 
-  if (!configuredMetricsToken || !token || token !== configuredMetricsToken) {
+  let authorized = false;
+  if (configuredMetricsToken && typeof token === 'string') {
+    if (configuredMetricsToken.length === token.length) {
+      let mismatch = 0;
+      for (let i = 0; i < configuredMetricsToken.length; i++) {
+        mismatch |= configuredMetricsToken.charCodeAt(i) ^ token.charCodeAt(i);
+      }
+      if (mismatch === 0) {
+        authorized = true;
+      }
+    }
+  }
+
+  if (!authorized) {
     return res.status(401).json({ error: 'unauthorized' });
   }
 
@@ -324,7 +331,6 @@ app.get('/api', (req, res) => {
       superadmin: '/api/superadmin',
       superadminLegacy: '/superadmin',
       debug: '/api/debug',
-      ...(inboundEmailEnabled ? { inbound: '/api/inbound' } : {}),
     },
   });
 });
@@ -387,11 +393,6 @@ if (!isProduction) {
   app.use('/api/debug', authenticate, firmContext, requireTenant, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, requireAdmin, debugRoutes);
 }
 
-// Inbound email routes (webhook - no authentication required)
-if (inboundEmailEnabled) {
-  app.use('/api/inbound', writeGuardChain, inboundRoutes);
-}
-
 // Protected routes - require authentication
 // Firm context must be attached for all tenant-scoped operations
 app.use('/api/users', ...tenantScopedApiAccess, writeGuardChain, userRoutes);
@@ -411,6 +412,8 @@ app.use('/api/files', authLimiter, ...tenantScopedApiAccess, writeGuardChain, fi
 app.use('/api/tenant', authLimiter, ...tenantScopedApiAccess, writeGuardChain, tenantRoutes);
 app.use('/api/docket-storage', authLimiter, ...tenantScopedApiAccess, writeGuardChain, docketFileStorageRoutes);
 app.use('/api/notifications', ...tenantScopedApiAccess, writeGuardChain, notificationsRoutes);
+app.use('/api/teams', ...tenantScopedApiAccess, writeGuardChain, teamRoutes);
+app.use('/api/bulk-upload', ...adminTenantScopedApiAccess, writeGuardChain, adminAuditTrail('admin'), bulkUploadRoutes);
 
 // Firm-scoped API auth routes for tenant login and OTP verification
 app.use('/api/:firmSlug', firmRoutes);

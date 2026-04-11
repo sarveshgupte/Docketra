@@ -162,6 +162,27 @@ export const caseApi = {
     () => request((http) => http.post(`/cases/${caseId}/transition`, payload), 'Failed to transition case'),
   ),
 
+
+  routeToTeam: (caseId, toTeamId, note = '') => withCaseInvalidation(
+    caseId,
+    () => request((http) => http.post(`/cases/${caseId}/route`, { toTeamId, note }), 'Failed to route case'),
+  ),
+
+  acceptRoutedCase: (caseId) => withCaseInvalidation(
+    caseId,
+    () => request((http) => http.post(`/cases/${caseId}/accept`, {}), 'Failed to accept routed case'),
+  ),
+
+  returnRoutedCase: (caseId, note = '') => withCaseInvalidation(
+    caseId,
+    () => request((http) => http.post(`/cases/${caseId}/return`, { note }), 'Failed to return routed case'),
+  ),
+
+  updateRoutedStatus: (caseId, status) => withCaseInvalidation(
+    caseId,
+    () => request((http) => http.post(`/cases/${caseId}/routed-status`, { status }), 'Failed to update routed status'),
+  ),
+
   qcAction: (caseId, decision, comment) => withCaseInvalidation(
     caseId,
     () => request((http) => http.post(`/cases/${caseId}/qc-action`, { decision, comment }), 'Failed to perform QC action'),
@@ -178,6 +199,15 @@ export const caseApi = {
   ),
 
   getDocketComments: (caseId) => request((http) => http.get(`/cases/${caseId}/comments`), 'Failed to load comments'),
+  generateUploadLink: (caseId, payload) => withCaseInvalidation(
+    caseId,
+    () => request((http) => http.post(`/cases/${caseId}/upload-link`, payload), 'Failed to generate upload link'),
+  ),
+  getUploadLinkStatus: (caseId) => request((http) => http.get(`/cases/${caseId}/upload-link`), 'Failed to load upload link status'),
+  revokeUploadLink: (caseId) => withCaseInvalidation(
+    caseId,
+    () => request((http) => http.post(`/cases/${caseId}/upload-link/revoke`, {}), 'Failed to revoke upload link'),
+  ),
 
   viewAttachment: (caseId, attachmentId) => {
     window.open(`${window.location.origin}/api/cases/${caseId}/attachments/${attachmentId}/view`, '_blank');

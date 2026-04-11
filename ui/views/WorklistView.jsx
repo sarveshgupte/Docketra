@@ -19,6 +19,9 @@ const normalizeRecords = (records = []) => {
     .map((record) => ({
       ...record,
       caseId: record.caseId || record.caseNumber || record._id,
+      // Deep-link routing must prefer external docket identifiers.
+      // Using internal Mongo _id in URL can fail identifier resolution in GET /api/cases/:caseId.
+      routeCaseId: record.caseId || record.caseNumber || record.caseInternalId || record._id,
       docketNumber: record.caseNumber || record.docketNumber || record.caseId || record._id,
       clientId: record.clientId || '—',
       clientName: record.clientName || record.client?.businessName || '—',
@@ -38,6 +41,7 @@ function isAllowedWorklistLifecycle(record) {
 const dateSortKeys = new Set(['createdAt', 'updatedAt', 'pendingUntil', 'dueDate']);
 
 const matchText = (value, query) => String(value || '').toLowerCase().includes(query);
+const formatDocketNumber = (value) => String(value || '').replace(/^CASE-/i, '');
 
 export function WorklistView({
   variant = 'worklist',
@@ -151,7 +155,7 @@ export function WorklistView({
       if (!caseId) return;
       onOpenDocket?.({
         caseId,
-        sourceList: sorted.map((row) => row.caseId).filter(Boolean),
+        sourceList: sorted.map((row) => row.routeCaseId || row.caseId).filter(Boolean),
         index,
         origin: 'worklist',
       });
@@ -160,8 +164,8 @@ export function WorklistView({
   );
 
   const handleRowClick = useCallback((row) => {
-    const index = sorted.findIndex((item) => item.caseId === row.caseId);
-    handleOpen(row.caseId, index >= 0 ? index : 0);
+    const index = sorted.findIndex((item) => (item.routeCaseId || item.caseId) === (row.routeCaseId || row.caseId));
+    handleOpen(row.routeCaseId || row.caseId, index >= 0 ? index : 0);
   }, [handleOpen, sorted]);
 
   useKeyboardShortcuts({
@@ -169,7 +173,7 @@ export function WorklistView({
     onPrev: () => setFocusedIndex((idx) => Math.max(idx - 1, 0)),
     onOpen: () => {
       const target = sorted[focusedIndex];
-      if (target?.caseId) handleOpen(target.caseId, focusedIndex);
+      if (target?.routeCaseId || target?.caseId) handleOpen(target.routeCaseId || target.caseId, focusedIndex);
     },
   });
 
@@ -216,7 +220,9 @@ export function WorklistView({
       header: 'Docket#',
       sortable: true,
       render: (row) => (
-        <div className="font-semibold text-gray-900">{row.docketNumber || row.caseId || '—'}</div>
+        <div className="font-semibold text-gray-900">
+          {formatDocketNumber(row.docketNumber || row.caseId || '—')}
+        </div>
       ),
     },
     {

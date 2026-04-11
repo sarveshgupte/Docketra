@@ -88,6 +88,7 @@ export const WorkbasketPage = () => {
   const [assignTo, setAssignTo] = useState('');
   const [confirmModal, setConfirmModal] = useState(null);
   const [categories, setCategories] = useState([]);
+  const [activeTab, setActiveTab] = useState('own');
   const isAdmin = ['ADMIN', 'Admin'].includes(user?.role);
   const allSelected = cases.length > 0 && selectedCases.length === cases.length;
   const partiallySelected = selectedCases.length > 0 && !allSelected;
@@ -107,7 +108,7 @@ export const WorkbasketPage = () => {
 
   useEffect(() => {
     loadGlobalWorklist();
-  }, [filters]);
+  }, [filters, activeTab]);
 
   useEffect(() => {
     const nextFilters = {
@@ -168,7 +169,7 @@ export const WorkbasketPage = () => {
   const loadGlobalWorklist = async () => {
     setLoading(true);
     try {
-      const response = await worklistApi.getGlobalWorklist(filters);
+      const response = await worklistApi.getGlobalWorklist({ ...filters, tab: activeTab });
       
       if (response.success) {
         setCases(response.data || []);
@@ -540,13 +541,21 @@ export const WorkbasketPage = () => {
       <div className="global-worklist">
         <PageHeader
           title="Workbasket"
-          subtitle="Unassigned dockets ready to be moved into a worklist."
+          subtitle="Team-owned and routed dockets for your workbasket."
           actions={(
             <Button variant="primary" onClick={() => navigate(ROUTES.CREATE_CASE(firmSlug))}>
               Create Docket
             </Button>
           )}
         />
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+          <Button variant={activeTab === 'own' ? 'primary' : 'secondary'} onClick={() => setActiveTab('own')}>
+            My Team WB
+          </Button>
+          <Button variant={activeTab === 'routed' ? 'primary' : 'secondary'} onClick={() => setActiveTab('routed')}>
+            Routed to My Team
+          </Button>
+        </div>
         <Card>
           <form className="global-worklist__filters" role="search" aria-label="Workbasket filters">
             <div className="filter-group">
@@ -569,6 +578,11 @@ export const WorkbasketPage = () => {
                 <option value="">All statuses</option>
                 <option value="UNASSIGNED">Unassigned</option>
                 <option value="OPEN">Open</option>
+                <option value="ROUTED">Routed</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="PENDING">Pending</option>
+                <option value="RETURNED">Returned</option>
+                <option value="FILED">Filed</option>
               </select>
             </div>
             <div className="filter-group">
