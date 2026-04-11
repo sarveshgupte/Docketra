@@ -1378,6 +1378,7 @@ const updateCaseStatus = async (req, res) => {
 const getCaseByCaseId = async (req, res) => {
   try {
     console.time('[GET_CASE]');
+    console.log('STEP 1 start');
     const { caseId } = req.params;
     
     // PR: Fix Case Visibility - Enhanced logging for debugging
@@ -1475,7 +1476,7 @@ const getCaseByCaseId = async (req, res) => {
             totalCount: [{ $count: 'count' }],
           },
         },
-      ], { role: req.user.role });
+      ], { role: req.user.role, maxTimeMS: 8000 });
       const first = Array.isArray(facetResult) ? facetResult[0] || {} : {};
       const rows = Array.isArray(first.data) ? first.data : [];
       const totalCount = first.totalCount?.[0]?.count || 0;
@@ -1507,6 +1508,7 @@ const getCaseByCaseId = async (req, res) => {
       Attachment.find(enforceTenantScope({ caseId: scopedCaseId }, req, { source: 'case.getCase.attachments' }))
         .select('_id fileName description createdAt uploadedAt uploadedBy createdByXID isAvailable uploadStatus')
         .sort({ createdAt: 1 })
+        .maxTimeMS(8000)
         .lean(),
       runPaginatedFacet({
         model: CaseHistory,
@@ -1568,7 +1570,7 @@ const getCaseByCaseId = async (req, res) => {
         const users = await User.find({
           xID: { $in: auditXids },
           firmId: scopedFirmId,
-        }).select('xID name').lean();
+        }).select('xID name').maxTimeMS(8000).lean();
         const namesByXid = new Map(users.map((user) => [user.xID, user.name]));
         auditLog = auditLog.map((entry) => ({
           ...entry,
@@ -1645,15 +1647,26 @@ const getCaseByCaseId = async (req, res) => {
 
     let assignedUser = null;
     if (caseObject.assignedTo) {
-      assignedUser = await User.findOne({ _id: caseObject.assignedTo, firmId: scopedFirmId }).select('_id name email xID').lean();
+      assignedUser = await User.findOne({ _id: caseObject.assignedTo, firmId: scopedFirmId })
+        .select('_id name email xID')
+        .maxTimeMS(8000)
+        .lean();
     } else if (caseObject.assignedToXID) {
-      assignedUser = await User.findOne({ xID: caseObject.assignedToXID, firmId: scopedFirmId }).select('_id name email xID').lean();
+      assignedUser = await User.findOne({ xID: caseObject.assignedToXID, firmId: scopedFirmId })
+        .select('_id name email xID')
+        .maxTimeMS(8000)
+        .lean();
     }
+    console.log('STEP 2 after assignedUser');
     const canonicalAssignmentXID = caseObject.assignedToXID || assignedUser?.xID || null;
     const lifecycle = normalizeLifecycle(caseObject.lifecycle);
     const [ownerTeam, routedTeam] = await Promise.all([
-      caseObject.ownerTeamId ? Team.findOne({ _id: caseObject.ownerTeamId, firmId: scopedFirmId }).select('_id name').lean() : null,
-      caseObject.routedToTeamId ? Team.findOne({ _id: caseObject.routedToTeamId, firmId: scopedFirmId }).select('_id name').lean() : null,
+      caseObject.ownerTeamId
+        ? Team.findOne({ _id: caseObject.ownerTeamId, firmId: scopedFirmId }).select('_id name').maxTimeMS(8000).lean()
+        : null,
+      caseObject.routedToTeamId
+        ? Team.findOne({ _id: caseObject.routedToTeamId, firmId: scopedFirmId }).select('_id name').maxTimeMS(8000).lean()
+        : null,
     ]);
 
     console.log('DOCKET_STATE_DEBUG', {
@@ -1674,7 +1687,8 @@ const getCaseByCaseId = async (req, res) => {
     });
     res.removeHeader('ETag');
 
-    return res.status(200).json({
+    console.log('STEP 3 before response');
+    const payload = {
       success: true,
       data: {
         ...caseObject,
@@ -1688,10 +1702,15 @@ const getCaseByCaseId = async (req, res) => {
           xID: assignedUser.xID,
         } : (canonicalAssignmentXID ? {
           _id: null,
-          name: caseObject.assignedToName || canonicalAssignmentXID,
+          name: caseObject.assignedToName || canonicalAssignmentXID || 'Unknown',
           email: null,
           xID: canonicalAssignmentXID,
-        } : null),
+        } : (caseObject.assignedTo || caseObject.assignedToXID || caseObject.assignedToName ? {
+          _id: null,
+          name: 'Unknown',
+          email: null,
+          xID: null,
+        } : null)),
         client: client ? {
           clientId: client.clientId,
           businessName: client.businessName,
@@ -1729,7 +1748,11 @@ const getCaseByCaseId = async (req, res) => {
           },
         },
       },
-    });
+    };
+
+    const response = res.status(200).json(payload);
+    console.log('RESPONSE SENT');
+    return response;
   } catch (error) {
     console.error('[GET_CASE] Unexpected error:', error);
 
