@@ -25,33 +25,44 @@ const getFirmMetrics = async (req, res) => {
     const now = new Date();
     const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-    const [overdueComplianceItems, dueInSevenDays, awaitingPartnerReview, totalOpenCases, totalExecutedCases] = await Promise.all([
-      Case.countDocuments({
-        firmId,
-        dueDate: { $lt: now },
-        status: { $nin: TERMINAL_STATUSES },
-      }),
-      Case.countDocuments({
-        firmId,
-        dueDate: { $gte: now, $lte: sevenDaysFromNow },
-        status: { $nin: TERMINAL_STATUSES },
-      }),
-      Case.countDocuments({
-        firmId,
-        $or: [
-          { approvalStatus: 'PENDING' },
-          { status: { $in: PARTNER_REVIEW_STATUSES } },
-        ],
-      }),
-      Case.countDocuments({
-        firmId,
-        status: 'OPEN',
-      }),
-      Case.countDocuments({
-        firmId,
-        status: { $in: EXECUTED_STATUSES },
-      }),
+    // ⚡ Bolt: Optimize dashboard metrics with $facet aggregation
+    // 💡 What: Replaced 5 concurrent countDocuments() queries with a single aggregate pipeline.
+    // 🎯 Why: Reduces DB network round-trips from 5 to 1 and avoids redundant index scans for the same firmId.
+    // 📊 Impact: Decreases database query latency and overhead. Expected load time improvement for the metrics endpoint.
+    const aggregationResult = await Case.aggregate([
+      { $match: { firmId } },
+      {
+        $facet: {
+          overdueComplianceItems: [
+            { $match: { dueDate: { $lt: now }, status: { $nin: TERMINAL_STATUSES } } },
+            { $count: "count" }
+          ],
+          dueInSevenDays: [
+            { $match: { dueDate: { $gte: now, $lte: sevenDaysFromNow }, status: { $nin: TERMINAL_STATUSES } } },
+            { $count: "count" }
+          ],
+          awaitingPartnerReview: [
+            { $match: { $or: [{ approvalStatus: 'PENDING' }, { status: { $in: PARTNER_REVIEW_STATUSES } }] } },
+            { $count: "count" }
+          ],
+          totalOpenCases: [
+            { $match: { status: 'OPEN' } },
+            { $count: "count" }
+          ],
+          totalExecutedCases: [
+            { $match: { status: { $in: EXECUTED_STATUSES } } },
+            { $count: "count" }
+          ]
+        }
+      }
     ]);
+
+    const resultDoc = aggregationResult[0] || {};
+    const overdueComplianceItems = resultDoc.overdueComplianceItems?.[0]?.count || 0;
+    const dueInSevenDays = resultDoc.dueInSevenDays?.[0]?.count || 0;
+    const awaitingPartnerReview = resultDoc.awaitingPartnerReview?.[0]?.count || 0;
+    const totalOpenCases = resultDoc.totalOpenCases?.[0]?.count || 0;
+    const totalExecutedCases = resultDoc.totalExecutedCases?.[0]?.count || 0;
 
     return res.json({
       success: true,
