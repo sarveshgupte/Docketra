@@ -1,7 +1,0 @@
-require('./src/workers/bulkUpload.worker.js');
-require('./src/workers/audit.worker.js');
-require('./src/workers/email.worker.js');
-require('./src/workers/outbox.worker.js');
-require('./src/workers/storage.worker.js');
-require('./src/workers/storageIntegrity.worker.js');
-require('./src/workers/tenantCaseMetrics.worker.js');
