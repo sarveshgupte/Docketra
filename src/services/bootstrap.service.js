@@ -426,13 +426,16 @@ const recoverFirmBootstrap = async (firmId) => {
       if (adminsWithoutClient.length > 0) {
         console.log(`[BOOTSTRAP_RECOVERY] Found ${adminsWithoutClient.length} admin(s) without defaultClientId`);
         
-        // Link admins to default client
+        // Optimization: bulk update to link admins to default client
+        const adminIds = adminsWithoutClient.map(admin => admin._id);
+        await User.updateMany(
+          { _id: { $in: adminIds } },
+          { $set: { defaultClientId: defaultClient._id } },
+          { session }
+        );
+
+        // Keep logging and tracking exact actions for backwards compatibility
         for (const admin of adminsWithoutClient) {
-          await User.updateOne(
-            { _id: admin._id },
-            { $set: { defaultClientId: defaultClient._id } },
-            { session }
-          );
           console.log(`[BOOTSTRAP_RECOVERY] Linked admin ${admin.xID} to default client`);
           recoveryActions.push(`Linked admin ${admin.xID} to default client`);
         }
