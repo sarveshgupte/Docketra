@@ -54,6 +54,20 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Name is required'],
   },
+
+  department: {
+    type: String,
+    trim: true,
+    default: null,
+  },
+
+
+  teamId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Team',
+    index: true,
+    default: null,
+  },
   
   // Email address - REQUIRED for password setup emails
   // Used for notifications, contact, and password setup
@@ -159,9 +173,6 @@ const userSchema = new mongoose.Schema({
   defaultClientId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Client',
-    required: function() {
-      return this.role !== 'SUPER_ADMIN' && this.isOnboarded === true;
-    },
     default: null,
     immutable: true, // Cannot change default client after creation
     index: true,
@@ -690,7 +701,10 @@ userSchema.index({ firmId: 1, isActive: 1 });
 userSchema.index({ firmId: 1, role: 1 }); // Firm-scoped role queries
 userSchema.index({ firmId: 1 });
 userSchema.index({ firmId: 1, createdAt: -1 });
-userSchema.index({ 'authProviders.google.googleId': 1 }, { unique: true, sparse: true }); // One Google account -> one user
+userSchema.index(
+  { 'authProviders.google.googleId': 1 },
+  { unique: true, sparse: true, partialFilterExpression: { 'authProviders.google.googleId': { $type: 'string' } } }
+); // One Google account -> one user
 
 // Virtual property to check if account is locked
 userSchema.virtual('isLocked').get(function() {

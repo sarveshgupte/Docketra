@@ -429,18 +429,18 @@ const getCasesByDateRange = async (req, res) => {
     if (status) matchStage.status = status;
     if (category) matchStage.category = category;
     
-    // Get total count
-    // SECURITY: Enforcing tenant isolation (firm-scoped query)
-    const total = await Case.countDocuments(matchStage);
-    
-    // Get paginated cases
     const skip = (pageNum - 1) * limitNum;
+
+    // PERFORMANCE: Execute independent queries concurrently
     // SECURITY: Enforcing tenant isolation (firm-scoped query)
-    const cases = await Case.find(matchStage)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limitNum)
-      .lean();
+    const [total, cases] = await Promise.all([
+      Case.countDocuments(matchStage),
+      Case.find(matchStage)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean()
+    ]);
     
     const casesWithClientNames = await hydrateCasesForReport(firmId, cases);
     

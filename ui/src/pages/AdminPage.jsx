@@ -23,6 +23,7 @@ import { clientApi } from '../api/client.api';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
 import { formatDate } from '../utils/formatters';
+import { BulkUploadModal } from '../components/bulk/BulkUploadModal';
 import './AdminPage.css';
 
 const EMPTY_ADMIN_STATS = {
@@ -129,6 +130,8 @@ export const AdminPage = () => {
   const [showSubcategoryModal, setShowSubcategoryModal] = useState(false);
   const [showClientModal, setShowClientModal] = useState(false);
   const [showBulkPasteModal, setShowBulkPasteModal] = useState(false);
+  const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
+  const [bulkUploadType, setBulkUploadType] = useState('clients');
   const [bulkPasteMode, setBulkPasteMode] = useState('categories');
   const [bulkPasteInput, setBulkPasteInput] = useState('');
   const [bulkPasteInProgress, setBulkPasteInProgress] = useState(false);
@@ -448,7 +451,14 @@ export const AdminPage = () => {
     }
   };
 
-  const handleOpenAccessModal = (user) => {
+  const handleOpenAccessModal = async (user) => {
+    try {
+      await fetchClients();
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Failed to load clients', 'error');
+      return;
+    }
+
     setSelectedUserForAccess(user);
     setRestrictedClientDraft(Array.isArray(user.restrictedClientIds) ? user.restrictedClientIds : []);
     setShowAccessModal(true);
@@ -632,6 +642,11 @@ export const AdminPage = () => {
     setBulkPasteMode(mode);
     setBulkPasteInput('');
     setShowBulkPasteModal(true);
+  };
+
+  const handleOpenBulkUpload = (type) => {
+    setBulkUploadType(type);
+    setShowBulkUploadModal(true);
   };
 
   const handleBulkPasteSubmit = async (event) => {
@@ -1145,12 +1160,33 @@ export const AdminPage = () => {
           <Card>
             <div className="admin__section-header">
               <h2 className="neo-section__header">User Management</h2>
-              <Button
-                variant="primary"
-                onClick={() => setShowCreateModal(true)}
-              >
-                + Create User
-              </Button>
+              <div className="admin__section-actions">
+                <Button variant="default" onClick={() => handleOpenBulkUpload('team')}>
+                  Bulk Upload
+                </Button>
+                <Button
+                  variant="default"
+                  onClick={() => {
+                    const blob = new Blob(['name,email,role,department\n'], { type: 'text/csv;charset=utf-8;' });
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.setAttribute('download', 'team-bulk-template.csv');
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+                  }}
+                >
+                  Download Template
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => setShowCreateModal(true)}
+                >
+                  + Create User
+                </Button>
+              </div>
             </div>
             
             {users.length === 0 ? (
@@ -1266,6 +1302,22 @@ export const AdminPage = () => {
             <div className="admin__section-header">
               <h2 className="neo-section__header">Client Management</h2>
               <div className="admin__section-actions">
+                <Button variant="default" onClick={() => handleOpenBulkUpload('clients')}>
+                  Bulk Upload
+                </Button>
+                <Button variant="default" onClick={() => {
+                  const blob = new Blob(['businessName,businessEmail,primaryContactNumber,contactPersonName\n'], { type: 'text/csv;charset=utf-8;' });
+                  const url = window.URL.createObjectURL(blob);
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.setAttribute('download', 'clients-bulk-template.csv');
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  window.URL.revokeObjectURL(url);
+                }}>
+                  Download Template
+                </Button>
                 <Button variant="default" onClick={() => handleOpenBulkPaste('clients')}>
                   Bulk Paste
                 </Button>
@@ -1388,6 +1440,22 @@ export const AdminPage = () => {
             <div className="admin__section-header">
               <h2 className="neo-section__header">Category Management</h2>
               <div className="admin__section-actions">
+                <Button variant="default" onClick={() => handleOpenBulkUpload('categories')}>
+                  Bulk Upload
+                </Button>
+                <Button variant="default" onClick={() => {
+                  const blob = new Blob(['category,subcategory\n'], { type: 'text/csv;charset=utf-8;' });
+                  const url = window.URL.createObjectURL(blob);
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.setAttribute('download', 'categories-bulk-template.csv');
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  window.URL.revokeObjectURL(url);
+                }}>
+                  Download Template
+                </Button>
                 <Button variant="default" onClick={() => handleOpenBulkPaste('categories')}>
                   Bulk Categories
                 </Button>
@@ -1499,6 +1567,15 @@ export const AdminPage = () => {
       </div>
 
       {/* Create User Modal */}
+      <BulkUploadModal
+        isOpen={showBulkUploadModal}
+        onClose={() => setShowBulkUploadModal(false)}
+        type={bulkUploadType}
+        title={`Bulk Upload ${bulkUploadType === 'team' ? 'Team' : bulkUploadType.charAt(0).toUpperCase() + bulkUploadType.slice(1)}`}
+        onImported={loadAdminData}
+        showToast={(message, level) => showToast(message, level === 'error' ? 'error' : 'success')}
+      />
+
       <Modal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}

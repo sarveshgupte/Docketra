@@ -16,7 +16,7 @@ const notificationSchema = new mongoose.Schema({
   type: {
     type: String,
     required: true,
-    enum: ['ASSIGNED', 'REASSIGNED', 'DOCKET_ACTIVATED', 'LIFECYCLE_CHANGED'],
+    enum: ['ASSIGNED', 'REASSIGNED', 'DOCKET_ACTIVATED', 'LIFECYCLE_CHANGED', 'CLIENT_UPLOAD'],
     index: true,
   },
   docketId: {
