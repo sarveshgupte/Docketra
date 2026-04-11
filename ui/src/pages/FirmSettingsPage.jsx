@@ -140,16 +140,6 @@ export const FirmSettingsPage = () => {
             description="Configure operational defaults and feature visibility for this firm."
           />
 
-          <Card className="lg:max-w-4xl">
-            <div className="flex flex-wrap items-center gap-3">
-              <Button type="button" variant="outline" onClick={() => navigate(ROUTES.FIRM_SETTINGS(firmSlug))}>Firm</Button>
-              <Button type="button" variant="outline" onClick={() => navigate(ROUTES.WORK_SETTINGS(firmSlug))}>Work</Button>
-              <Button type="button" variant="outline" onClick={() => navigate(ROUTES.STORAGE_SETTINGS(firmSlug))}>Storage</Button>
-              <Button type="button" variant="outline" onClick={() => navigate(`${ROUTES.ADMIN(firmSlug)}?tab=users`)}>Security</Button>
-              <Button type="button" variant="outline" onClick={() => navigate('/app/firm/' + firmSlug + '/admin/reports/detailed')}>Audit</Button>
-            </div>
-          </Card>
-
           <section className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:items-start">
             <div className="space-y-2 lg:col-span-1">
               <h2 className="text-lg font-medium text-gray-900">Operational Configuration</h2>
