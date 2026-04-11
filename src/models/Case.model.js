@@ -469,6 +469,36 @@ const caseSchema = new mongoose.Schema({
     trim: true,
     immutable: true,
   },
+
+
+  ownerTeamId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Team',
+    default: null,
+    index: true,
+    immutable: true,
+  },
+  routedToTeamId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Team',
+    default: null,
+    index: true,
+  },
+  routedByUserId: {
+    type: String,
+    trim: true,
+    uppercase: true,
+    default: null,
+  },
+  routedAt: {
+    type: Date,
+    default: null,
+  },
+  routingNote: {
+    type: String,
+    trim: true,
+    default: null,
+  },
   
   /**
    * Email of user who created the case
@@ -1077,6 +1107,8 @@ caseSchema.index({ firmId: 1, slaDueAt: 1 }); // Firm-scoped SLA due lookups
 caseSchema.index({ firmId: 1, status: 1 }); // Firm-scoped status queries
 caseSchema.index({ firmId: 1, assignedToXID: 1 }); // Firm-scoped assignment queries
 caseSchema.index({ firmId: 1, assignedToXID: 1, status: 1 }); // Firm-scoped assignment + status workbasket queries
+caseSchema.index({ firmId: 1, ownerTeamId: 1, routedToTeamId: 1, status: 1 });
+caseSchema.index({ firmId: 1, routedToTeamId: 1, status: 1 });
 caseSchema.index({ firmId: 1, dueDate: 1, status: 1 }); // Firm-scoped overdue metrics queries
 caseSchema.index({ firmId: 1, status: 1, dueDate: 1 }); // Firm-scoped status-filtered due-date ordering queries
 caseSchema.index({ firmId: 1, resolvedAt: 1 }); // Firm-scoped resolution metrics queries

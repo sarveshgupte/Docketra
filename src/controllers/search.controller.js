@@ -2,6 +2,7 @@ const Case = require('../models/Case.model');
 const Client = require('../models/Client.model');
 const Comment = require('../models/Comment.model');
 const Attachment = require('../models/Attachment.model');
+const Team = require('../models/Team.model');
 const { enforceTenantScope } = require('../utils/tenantScope');
 const CaseStatus = require('../domain/case/caseStatus');
 const { logCaseListViewed } = require('../services/auditLog.service');
@@ -490,6 +491,7 @@ const globalWorklist = async (req, res) => {
       sortOrder = 'asc',
       page = 1,
       limit = 20,
+      tab = 'own',
     } = req.query;
     const firmId = req.user?.firmId;
 
@@ -500,12 +502,20 @@ const globalWorklist = async (req, res) => {
       });
     }
     
-    // Build query for unassigned cases in workbasket states.
-    const globalWorklistStatuses = [CaseStatus.UNASSIGNED, CaseStatus.OPEN].filter(Boolean);
+    const userTeamId = req.user?.teamId ? String(req.user.teamId) : null;
+    const normalizedTab = String(tab || 'own').toLowerCase();
     const query = {
-      status: globalWorklistStatuses.length > 1 ? { $in: globalWorklistStatuses } : (globalWorklistStatuses[0] || 'Open'),
       assignedToXID: null,
     };
+
+    if (normalizedTab === 'routed') {
+      query.routedToTeamId = userTeamId;
+      query.status = { $in: [CaseStatus.ROUTED, CaseStatus.IN_PROGRESS, CaseStatus.PENDING, CaseStatus.FILED] };
+    } else {
+      query.ownerTeamId = userTeamId;
+      query.routedToTeamId = null;
+      query.status = { $in: [CaseStatus.OPEN, CaseStatus.RETURNED, CaseStatus.UNASSIGNED] };
+    }
     
     // Apply filters
     if (clientId) {
@@ -581,7 +591,7 @@ const globalWorklist = async (req, res) => {
       }
       
       casesWithSLA = await Case.find(enforceTenantScope(queryWithSLA, req, { source: 'search.globalWorklist.withSLA' }))
-        .select('caseId caseName clientId category status slaDueAt createdAt createdBy')
+        .select('caseId caseName clientId category status slaDueAt createdAt createdBy ownerTeamId routedToTeamId routingNote')
         .sort(sort)
         .limit(parseInt(limit))
         .skip((parseInt(page) - 1) * parseInt(limit))
@@ -592,7 +602,7 @@ const globalWorklist = async (req, res) => {
         const queryWithoutSLA = { ...baseQuery, slaDueAt: null };
         
         casesWithoutSLA = await Case.find(enforceTenantScope(queryWithoutSLA, req, { source: 'search.globalWorklist.withoutSLA' }))
-          .select('caseId caseName clientId category status slaDueAt createdAt createdBy')
+          .select('caseId caseName clientId category status slaDueAt createdAt createdBy ownerTeamId routedToTeamId routingNote')
           .sort({ createdAt: sortDirection })
           .limit(parseInt(limit) - casesWithSLA.length)
           .skip(Math.max(0, (parseInt(page) - 1) * parseInt(limit) - casesWithSLA.length))
@@ -601,7 +611,7 @@ const globalWorklist = async (req, res) => {
     } else {
       // For other sort fields, just execute the query normally
       casesWithSLA = await Case.find(enforceTenantScope(baseQuery, req, { source: 'search.globalWorklist.base' }))
-        .select('caseId caseName clientId category status slaDueAt createdAt createdBy')
+        .select('caseId caseName clientId category status slaDueAt createdAt createdBy ownerTeamId routedToTeamId routingNote')
         .sort(sort)
         .limit(parseInt(limit))
         .skip((parseInt(page) - 1) * parseInt(limit))
@@ -610,6 +620,11 @@ const globalWorklist = async (req, res) => {
     
     // Merge results
     const allCases = [...casesWithSLA, ...casesWithoutSLA];
+    const teamIds = [...new Set(allCases.flatMap((c) => [c.ownerTeamId, c.routedToTeamId]).filter(Boolean).map((id) => String(id)))];
+    const teams = teamIds.length > 0
+      ? await Team.find({ _id: { $in: teamIds }, firmId }).select('_id name').lean()
+      : [];
+    const teamNameMap = new Map(teams.map((team) => [String(team._id), team.name]));
     
     // Calculate SLA days remaining for each case
     const now = new Date();
@@ -631,6 +646,11 @@ const globalWorklist = async (req, res) => {
         slaDaysRemaining,
         createdAt: c.createdAt,
         createdBy: c.createdBy,
+        ownerTeamId: c.ownerTeamId || null,
+        ownerTeamName: c.ownerTeamId ? (teamNameMap.get(String(c.ownerTeamId)) || null) : null,
+        routedToTeamId: c.routedToTeamId || null,
+        routedToTeamName: c.routedToTeamId ? (teamNameMap.get(String(c.routedToTeamId)) || null) : null,
+        routingNote: c.routingNote || null,
       };
     });
     
@@ -649,6 +669,7 @@ const globalWorklist = async (req, res) => {
           slaStatus,
           createdAtFrom,
           createdAtTo,
+          tab: normalizedTab,
         },
         listType: 'GLOBAL_WORKLIST',
         resultCount: casesWithSLAInfo.length,

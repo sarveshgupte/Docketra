@@ -81,8 +81,6 @@ const config = {
       fileUploadWindowSeconds: Number(process.env.SECURITY_RATE_LIMIT_FILE_UPLOAD_WINDOW_SECONDS || 60),
       debugPerMinute: Number(process.env.SECURITY_RATE_LIMIT_DEBUG_PER_MINUTE || 30),
       debugWindowSeconds: Number(process.env.SECURITY_RATE_LIMIT_DEBUG_WINDOW_SECONDS || 60),
-      inboundEmailPerMinute: Number(process.env.SECURITY_RATE_LIMIT_INBOUND_EMAIL_PER_MINUTE || 120),
-      inboundEmailWindowSeconds: Number(process.env.SECURITY_RATE_LIMIT_INBOUND_EMAIL_WINDOW_SECONDS || 60),
       accountLockAttempts: Number(process.env.SECURITY_ACCOUNT_LOCK_ATTEMPTS || 5),
       accountLockSeconds: Number(process.env.SECURITY_ACCOUNT_LOCK_SECONDS || 1800),
     },
