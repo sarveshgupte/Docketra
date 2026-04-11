@@ -56,8 +56,16 @@ export function WorklistView({
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [subcategoryFilter, setSubcategoryFilter] = useState('');
+  const [showActiveOnly, setShowActiveOnly] = useState(false);
 
   const isPendingView = variant === 'pending';
+
+  const isPendingDocket = useCallback((row) => {
+    const status = String(row?.status || '').toUpperCase();
+    if (status === 'PENDING') return true;
+    const lifecycleKey = resolveLifecycleKey(row?.lifecycle);
+    return lifecycleKey === 'pending';
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -91,6 +99,7 @@ export function WorklistView({
     const normalizedQuery = searchQuery.trim().toLowerCase();
     return records
       .filter((row) => isAllowedWorklistLifecycle(row))
+      .filter((row) => (showActiveOnly && !isPendingView ? !isPendingDocket(row) : true))
       .filter((row) => (categoryFilter ? row.category === categoryFilter : true))
       .filter((row) => (subcategoryFilter ? row.subcategory === subcategoryFilter : true))
       .filter((row) => {
@@ -104,7 +113,7 @@ export function WorklistView({
           || matchText(row.subcategory, normalizedQuery)
         );
       });
-  }, [records, searchQuery, categoryFilter, subcategoryFilter]);
+  }, [records, searchQuery, categoryFilter, subcategoryFilter, showActiveOnly, isPendingView, isPendingDocket]);
 
   const sorted = useMemo(() => {
     if (!sortState?.key || !sortState?.direction) return [...filtered];
@@ -143,8 +152,9 @@ export function WorklistView({
     if (searchQuery.trim()) filters.push({ key: 'search', label: 'Search', value: searchQuery.trim() });
     if (categoryFilter) filters.push({ key: 'category', label: 'Category', value: categoryFilter });
     if (subcategoryFilter) filters.push({ key: 'subcategory', label: 'Sub category', value: subcategoryFilter });
+    if (showActiveOnly && !isPendingView) filters.push({ key: 'activeOnly', label: 'Show', value: 'Active dockets only' });
     return filters;
-  }, [searchQuery, categoryFilter, subcategoryFilter]);
+  }, [searchQuery, categoryFilter, subcategoryFilter, showActiveOnly, isPendingView]);
 
   useEffect(() => {
     setFocusedIndex((idx) => Math.min(idx, Math.max(sorted.length - 1, 0)));
@@ -187,6 +197,7 @@ export function WorklistView({
     if (key === 'search') setSearchQuery('');
     if (key === 'category') setCategoryFilter('');
     if (key === 'subcategory') setSubcategoryFilter('');
+    if (key === 'activeOnly') setShowActiveOnly(false);
   }, []);
 
   const columns = useMemo(() => [
@@ -326,6 +337,17 @@ export function WorklistView({
           </select>
         </div>
         <div className="worklist-toolbar__actions">
+          {!isPendingView && (
+            <label className="worklist-toolbar__checkbox" htmlFor="worklist-active-only">
+              <input
+                id="worklist-active-only"
+                type="checkbox"
+                checked={showActiveOnly}
+                onChange={(event) => setShowActiveOnly(event.target.checked)}
+              />
+              <span>Show active dockets</span>
+            </label>
+          )}
           <Button variant="outline" onClick={resetFilters}>Clear Filters</Button>
         </div>
       </div>
