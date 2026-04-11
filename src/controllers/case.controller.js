@@ -1388,12 +1388,21 @@ const getCaseByCaseId = async (req, res) => {
     // for backward compatibility with internal IDs.
     // Refactor: Use MongoDB aggregation with $lookup to join client data in a single query
     let caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role, { includeClient: true });
+    if (!caseData) {
+      // Defensive fallback: if aggregation-backed includeClient lookup misses a row,
+      // retry plain repository lookup so the docket can still open.
+      caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
+    }
 
     if (!caseData) {
       try {
         const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
         console.log(`[GET_CASE] Resolved identifier: ${caseId} -> ${internalId}`);
         caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role, { includeClient: true });
+        if (!caseData) {
+          // Defensive fallback to non-aggregation lookup.
+          caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
+        }
       } catch (error) {
         console.error(`[GET_CASE] Case not found or identifier resolution failed: caseId=${caseId}, error=${error.message}`);
         return res.status(404).json({
