@@ -2463,9 +2463,27 @@ const viewAttachment = async (req, res) => {
       });
     }
     
+
+    if (!attachment.filePath) {
+      return res.status(404).json({
+        success: false,
+        message: 'File location not found',
+      });
+    }
+
+    const resolvedPath = path.resolve(attachment.filePath);
+    const safeBaseDir = path.resolve(__dirname, '../../uploads');
+    if (!resolvedPath.startsWith(safeBaseDir)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Invalid file path',
+      });
+    }
+
     // Check if file exists
     try {
-      await fs.access(attachment.filePath);
+      await fs.access(resolvedPath);
+
     } catch (err) {
       return res.status(404).json({
         success: false,
@@ -2482,7 +2500,7 @@ const viewAttachment = async (req, res) => {
     res.setHeader('Content-Disposition', `inline; filename="${safeFilename}"`);
     
     // Send file
-    res.sendFile(path.resolve(attachment.filePath));
+    res.sendFile(resolvedPath);
   } catch (error) {
     console.error('[viewAttachment] Error:', error);
     res.status(500).json({
@@ -2574,16 +2592,27 @@ const downloadAttachment = async (req, res) => {
         });
       }
     } else if (attachment.filePath) {
+
       // Legacy: Handle old attachments stored locally
       try {
-        await fs.access(attachment.filePath);
+        const resolvedPath = path.resolve(attachment.filePath);
+        const safeBaseDir = path.resolve(__dirname, '../../uploads');
+        if (!resolvedPath.startsWith(safeBaseDir)) {
+          return res.status(403).json({
+            success: false,
+            message: 'Invalid file path',
+          });
+        }
+
+        await fs.access(resolvedPath);
+
         
         // Set headers for download
         res.setHeader('Content-Type', mimeType);
         res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
         
         // Send file
-        res.sendFile(path.resolve(attachment.filePath));
+        res.sendFile(resolvedPath);
       } catch (err) {
         return res.status(404).json({
           success: false,
