@@ -1,0 +1,57 @@
+.client-upload-feature {
+  padding: 60px 20px;
+}
+
+.client-upload-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  align-items: center;
+}
+
+.client-upload-text h2 {
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.client-upload-text p {
+  margin-top: 10px;
+  color: #555;
+}
+
+.client-upload-steps {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.client-upload-trust {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #777;
+}
+
+.client-upload-visual {
+  display: flex;
+  justify-content: center;
+}
+
+.client-upload-flow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  background: #fafafa;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .client-upload-container {
+    grid-template-columns: 1fr;
+  }
+}

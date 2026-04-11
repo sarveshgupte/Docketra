@@ -1,4 +1,4 @@
-const { z, nonEmptyString, caseIdString, clientIdString, xidString, objectIdString } = require('./common');
+const { z, nonEmptyString, caseIdString, clientIdString, xidString, objectIdString, queryBoolean } = require('./common');
 
 const caseIdParams = z.object({ caseId: caseIdString });
 const caseAndAttachmentParams = z.object({ caseId: caseIdString, attachmentId: nonEmptyString });
@@ -74,6 +74,22 @@ module.exports = {
       note: z.string().trim().min(1).max(500).optional(),
     }).strict(),
   },
+  'POST /:caseId/upload-link': {
+    params: caseIdParams,
+    body: z.object({
+      requirePin: queryBoolean.optional(),
+      expiry: z.enum(['24h', '7d']).optional(),
+      sendEmail: queryBoolean.optional(),
+    }).strict(),
+  },
+  'GET /:caseId/upload-link': {
+    params: caseIdParams,
+    query: strictEmpty,
+  },
+  'POST /:caseId/upload-link/revoke': {
+    params: caseIdParams,
+    body: strictEmpty,
+  },
   'POST /:caseId/attachments': {
     params: caseIdParams,
     body: z.object({
@@ -97,6 +113,23 @@ module.exports = {
   'POST /:caseId/pend': { params: caseIdParams, body: z.object({ comment: nonEmptyString, reopenDate: nonEmptyString }).strict() },
   'POST /:caseId/file': { params: caseIdParams, body: z.object({ comment: nonEmptyString }).strict() },
   'POST /:caseId/unassign': { params: caseIdParams, body: strictEmpty },
+
+  'POST /:caseId/route': {
+    params: caseIdParams,
+    body: z.object({
+      toTeamId: objectIdString,
+      note: z.string().trim().max(500).optional(),
+    }).strict(),
+  },
+  'POST /:caseId/accept': { params: caseIdParams, body: strictEmpty },
+  'POST /:caseId/return': {
+    params: caseIdParams,
+    body: z.object({ note: z.string().trim().max(500).optional() }).strict(),
+  },
+  'POST /:caseId/routed-status': {
+    params: caseIdParams,
+    body: z.object({ status: z.enum(['IN_PROGRESS', 'PENDING', 'FILED']) }).strict(),
+  },
   'GET /:caseId/client-fact-sheet': { params: caseIdParams, query: strictEmpty },
   'GET /:caseId/client-fact-sheet/files/:fileId/view': {
     params: z.object({ caseId: caseIdString, fileId: nonEmptyString }),

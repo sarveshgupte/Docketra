@@ -72,7 +72,7 @@ const caseFileSchema = new mongoose.Schema(
     },
     source: {
       type: String,
-      enum: ['upload', 'client_cfs'],
+      enum: ['upload', 'client_cfs', 'CLIENT_UPLOAD'],
       default: 'upload',
     },
   },

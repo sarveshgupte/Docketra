@@ -38,9 +38,6 @@ const envSchema = z
     GOOGLE_CLIENT_SECRET: z.string().trim().optional(),
     GOOGLE_OAUTH_REDIRECT_URI: z.string().trim().optional(),
 
-    ENABLE_INBOUND_EMAIL: boolFromEnv,
-    INBOUND_EMAIL_WEBHOOK_SECRET: z.string().trim().optional(),
-
     ENCRYPTION_PROVIDER: z.enum(['local', 'kms', 'disabled']).default('local'),
     MASTER_ENCRYPTION_KEY: z.string().trim().optional(),
 
@@ -88,9 +85,6 @@ const envSchema = z
         }
       });
 
-      if (env.ENABLE_INBOUND_EMAIL && !env.INBOUND_EMAIL_WEBHOOK_SECRET) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['INBOUND_EMAIL_WEBHOOK_SECRET'], message: 'required when inbound email is enabled in production' });
-      }
     }
 
     if (env.MONGO_URI && !env.MONGO_URI.startsWith('mongodb')) {
