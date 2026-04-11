@@ -19,7 +19,9 @@ const normalizeRecords = (records = []) => {
     .map((record) => ({
       ...record,
       caseId: record.caseId || record.caseNumber || record._id,
-      routeCaseId: record.caseInternalId || record._id || record.caseId || record.caseNumber,
+      // Deep-link routing must prefer external docket identifiers.
+      // Using internal Mongo _id in URL can fail identifier resolution in GET /api/cases/:caseId.
+      routeCaseId: record.caseId || record.caseNumber || record.caseInternalId || record._id,
       docketNumber: record.caseNumber || record.docketNumber || record.caseId || record._id,
       clientId: record.clientId || '—',
       clientName: record.clientName || record.client?.businessName || '—',
