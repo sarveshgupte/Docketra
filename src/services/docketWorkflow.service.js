@@ -13,6 +13,7 @@ const {
 } = require('../domain/docketLifecycle');
 const { EVENT_NAMES, emitDocketEvent } = require('./docketEvents.service');
 const { NotificationTypes, createNotification } = require('../domain/notifications');
+const { CASE_LOCK_CONFIG } = require('../config/constants');
 
 const QC_DECISIONS = Object.freeze({ APPROVED: 'APPROVED', FAILED: 'FAILED', CORRECTED: 'CORRECTED' });
 
@@ -27,6 +28,35 @@ function requireComment(comment, context) {
   if (!String(comment || '').trim()) {
     throw makeError(`${context} requires comment`, 400, 'COMMENT_REQUIRED');
   }
+}
+
+function lockHolderLabel(lockStatus = {}) {
+  const display = String(lockStatus?.activeUserDisplayName || '').trim();
+  const xid = String(lockStatus?.activeUserXID || '').trim().toUpperCase();
+  const email = String(lockStatus?.activeUserEmail || '').trim().toLowerCase();
+  if (display && xid) return `${display} (${xid})`;
+  return display || xid || email || 'another user';
+}
+
+function assertNotLockedByAnotherActiveUser(docket, actor = {}) {
+  const lockStatus = docket?.lockStatus || {};
+  if (!lockStatus?.isLocked) return;
+
+  const actorXID = String(actor?.xID || '').trim().toUpperCase();
+  const ownerXID = String(lockStatus?.activeUserXID || '').trim().toUpperCase();
+  if (actorXID && ownerXID && actorXID === ownerXID) return;
+
+  const lockTs = new Date(lockStatus?.lastActivityAt || lockStatus?.lockedAt || 0).getTime();
+  const isActiveLock = Number.isFinite(lockTs)
+    && lockTs > 0
+    && (Date.now() - lockTs) < CASE_LOCK_CONFIG.INACTIVITY_TIMEOUT_MS;
+  if (!isActiveLock) return;
+
+  throw makeError(
+    `Docket is locked by ${lockHolderLabel(lockStatus)}. Ask them to exit or close the docket before moving it.`,
+    409,
+    'DOCKET_LOCKED_ACTIVE',
+  );
 }
 
 function normalizeActorRole(actor = {}) {
@@ -411,6 +441,7 @@ async function reassign({ docketId, firmId, actor, toUserXID, comment }) {
   requireComment(comment, 'Reassignment');
   const docket = await Case.findOne({ caseId: docketId, firmId });
   if (!docket) throw makeError('Docket not found', 404, 'DOCKET_NOT_FOUND');
+  assertNotLockedByAnotherActiveUser(docket, actor);
   const nextAssignee = String(toUserXID || '').toUpperCase().trim();
   if (!nextAssignee && normalizeLifecycle(docket.lifecycle) === DocketLifecycle.WL) {
     throw makeError('Cannot move to WL without assignment', 400, 'WL_ASSIGNMENT_REQUIRED');
