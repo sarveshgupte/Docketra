@@ -78,11 +78,18 @@ const mockMongoose = {
   Schema: class {
     constructor() {}
     index() {}
+    pre() {}
+    post() {}
+    virtual() {}
   },
   model: () => mockFirmStorage,
   Types: { ObjectId: class {} },
 };
 mockMongoose.Schema.Types = { ObjectId: class {} };
+mockMongoose.Schema.prototype.pre = function() {};
+mockMongoose.Schema.prototype.post = function() {};
+mockMongoose.Schema.prototype.virtual = function() { return { get: () => {} } };
+mockMongoose.Schema.prototype.index = function() {};
 
 Module._load = function (request, parent, isMain) {
   if (request === 'googleapis') {
@@ -133,7 +140,7 @@ Module._load = function (request, parent, isMain) {
 // ──────────────────────────────────────────────────────────────────
 // Pull in the real TokenEncryption to verify we can encrypt/decrypt
 // ──────────────────────────────────────────────────────────────────
-const { encrypt, decrypt } = require('../src/storage/services/TokenEncryption.service');
+const { encrypt, decrypt } = require('../src/services/storage/services/TokenEncryption.service');
 
 // ──────────────────────────────────────────────────────────────────
 // Helper: build a mock res object
@@ -244,7 +251,13 @@ async function testVerifyStateToken() {
       expectedBuffer = Buffer.from(expectedSig, 'hex');
     } catch { return null; }
     if (sigBuffer.length !== expectedBuffer.length) return null;
-    if (!crypto.timingSafeEqual(sigBuffer, expectedBuffer)) return null;
+
+    let mismatch = 0;
+    for (let i = 0; i < sigBuffer.length; i++) {
+      mismatch |= sigBuffer[i] ^ expectedBuffer[i];
+    }
+    if (mismatch !== 0) return null;
+
     try { return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')); }
     catch { return null; }
   }

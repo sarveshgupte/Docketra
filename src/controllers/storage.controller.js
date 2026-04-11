@@ -126,7 +126,12 @@ function verifyStateToken(cookieValue, stateParam) {
   }
 
   if (sigBuffer.length !== expectedBuffer.length) return null;
-  if (!crypto.timingSafeEqual(sigBuffer, expectedBuffer)) return null;
+
+  let mismatch = 0;
+  for (let i = 0; i < sigBuffer.length; i++) {
+    mismatch |= sigBuffer[i] ^ expectedBuffer[i];
+  }
+  if (mismatch !== 0) return null;
 
   try {
     return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
