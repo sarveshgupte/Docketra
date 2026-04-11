@@ -100,6 +100,7 @@ export const CaseDetailPage = () => {
   };
 
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [sectionLoading, setSectionLoading] = useState({ comments: false, history: false, attachments: false });
   const [caseData, setCaseData] = useState(null);
   const [newComment, setNewComment] = useState('');
@@ -383,6 +384,9 @@ export const CaseDetailPage = () => {
     }
     try {
       if (!background) {
+        setLoadError(null);
+      }
+      if (!background) {
         invalidateCaseCache(caseId);
       }
       const response = await caseApi.getCaseById(caseId, {
@@ -394,6 +398,7 @@ export const CaseDetailPage = () => {
       
       if (response.success && requestId === loadSequenceRef.current) {
         const normalized = response.data?.case || response.data;
+        console.log('API response:', normalized);
         console.log('DOCKET_DEBUG', {
           caseId,
           activeDocketId,
@@ -406,6 +411,9 @@ export const CaseDetailPage = () => {
         setActiveDocketData(normalized);
       }
     } catch (error) {
+      if (!background) {
+        setLoadError(extractErrorMessage(error, 'Unable to load docket details. Please try again.'));
+      }
       showError(extractErrorMessage(error, 'Unable to load docket details. Please try again.'));
     } finally {
       if (!background) {
@@ -472,16 +480,19 @@ export const CaseDetailPage = () => {
 
   useEffect(() => {
     beginDocketOpen(caseId);
-    if (activeDocketId === caseId && activeDocketData?.caseId === caseId) {
-      setCaseData((prev) => mergeCaseData(prev, activeDocketData, { source: 'active-context' }));
-      setLoading(false);
-    }
     loadCase();
     void caseApi.trackCaseOpen(caseId);
     return () => {
       void caseApi.trackCaseExit(caseId);
     };
-  }, [activeDocketData, activeDocketId, beginDocketOpen, caseId, loadCase, mergeCaseData]);
+  }, [beginDocketOpen, caseId, loadCase]);
+
+  useEffect(() => {
+    if (activeDocketId === caseId && activeDocketData?.caseId === caseId) {
+      setCaseData((prev) => mergeCaseData(prev, activeDocketData, { source: 'active-context' }));
+      setLoading(false);
+    }
+  }, [activeDocketData, activeDocketId, caseId, mergeCaseData]);
 
   useEffect(() => {
     if (!caseData) return;
@@ -1379,7 +1390,11 @@ export const CaseDetailPage = () => {
       <Layout>
         <div className="container">
           <Card>
+            {loadError ? <p>{loadError}</p> : null}
             <p>Docket not found</p>
+            <Button variant="outline" onClick={() => loadCase()}>
+              Retry
+            </Button>
           </Card>
         </div>
       </Layout>
