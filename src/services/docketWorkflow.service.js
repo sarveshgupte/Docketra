@@ -355,20 +355,56 @@ async function qcDecision({ docketId, firmId, actor, decision, comment }) {
 async function reopenDuePending() {
   const now = new Date();
   const dueCases = await Case.find({ status: toPersistenceState(DocketStatus.PENDING), reopenAt: { $lte: now } });
-  let count = 0;
-  for (const docket of dueCases) {
-    docket.status = toPersistenceState(DocketStatus.IN_PROGRESS);
-    docket.reopenAt = null;
-    docket.pendingUntil = null;
-    docket.lastActionAt = now;
-    docket.lastActionByXID = 'SYSTEM';
-    docket.updatedAt = now;
-    await docket.save();
-    await writeAudit({ docketId: docket.caseId, fromState: DocketStatus.PENDING, toState: DocketStatus.IN_PROGRESS, userId: 'SYSTEM', comment: 'Auto reopened', action: 'PENDING_REOPEN', firmId: docket.firmId });
-    emitDocketEvent(EVENT_NAMES.PENDING_REOPEN, { docketId: docket.caseId, firmId: docket.firmId });
-    count += 1;
+
+  if (!dueCases || dueCases.length === 0) {
+    return { count: 0, docketIds: [] };
   }
-  return { count, docketIds: dueCases.map((d) => d.caseId) };
+
+  const caseIdsForUpdate = [];
+  const writeAuditPromises = [];
+  const docketIds = [];
+
+  for (const docket of dueCases) {
+    caseIdsForUpdate.push(docket._id);
+    docketIds.push(docket.caseId);
+
+    writeAuditPromises.push(
+      writeAudit({
+        docketId: docket.caseId,
+        fromState: DocketStatus.PENDING,
+        toState: DocketStatus.IN_PROGRESS,
+        userId: 'SYSTEM',
+        comment: 'Auto reopened',
+        action: 'PENDING_REOPEN',
+        firmId: docket.firmId,
+      })
+    );
+  }
+
+  // Execute bulk DB updates and parallel writes simultaneously
+  await Promise.all([
+    Case.updateMany(
+      { _id: { $in: caseIdsForUpdate } },
+      {
+        $set: {
+          status: toPersistenceState(DocketStatus.IN_PROGRESS),
+          reopenAt: null,
+          pendingUntil: null,
+          lastActionAt: now,
+          lastActionByXID: 'SYSTEM',
+          updatedAt: now,
+        },
+      }
+    ),
+    ...writeAuditPromises,
+  ]);
+
+  // Safely emit events ONLY after persistence is complete
+  for (const docket of dueCases) {
+    emitDocketEvent(EVENT_NAMES.PENDING_REOPEN, { docketId: docket.caseId, firmId: docket.firmId });
+  }
+
+  return { count: dueCases.length, docketIds };
 }
 
 async function reassign({ docketId, firmId, actor, toUserXID, comment }) {
