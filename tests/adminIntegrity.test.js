@@ -74,11 +74,8 @@ async function setupFirmWithClient() {
     createdBy: 'superadmin@test.com',
   });
 
-  firm.defaultClientId = client._id;
-  await firm.save();
-
-  const updatedFirm = await Firm.findOneAndUpdate({ _id: firm._id }, { $set: { defaultClientId: client._id, bootstrapStatus: 'COMPLETED' } }, { new: true });
-  return { firm: updatedFirm, client };
+  await Firm.updateOne({ _id: firm._id }, { $set: { defaultClientId: client._id, bootstrapStatus: 'COMPLETED' } });
+  return { firm, client };
 }
 
 async function shouldBackfillLegacyAdmin() {
@@ -86,7 +83,7 @@ async function shouldBackfillLegacyAdmin() {
   const { firm, client } = await setupFirmWithClient();
 
   // Insert legacy admin with missing defaultClientId (bypassing validation)
-  const legacyAdmin = await User.collection.insertOne({
+  await User.collection.insertOne({
     xID: 'X000001',
     name: 'Legacy Admin',
     email: 'legacy-admin@test.com',
@@ -99,14 +96,11 @@ async function shouldBackfillLegacyAdmin() {
 
   await runAdminHierarchyBackfill({ useExistingConnection: true });
 
-  const updated = await User.findById(legacyAdmin.insertedId);
-  assert(updated, 'User should be found');
+  const updated = await User.findOne({ email: 'legacy-admin@test.com' });
 
-  // Reload firm directly as the migration might have populated the firm doc but the memory variable is out of date
-  const finalFirm = await Firm.findById(firm._id);
 
-  assert(updated.defaultClientId, `Migration should set defaultClientId (found ${updated.defaultClientId}, expected ${finalFirm.defaultClientId})`);
-  assert.strictEqual(updated.defaultClientId.toString(), finalFirm.defaultClientId.toString(), 'defaultClientId should match firm default');
+  assert(updated.defaultClientId, 'Migration should set defaultClientId');
+  assert.strictEqual(updated.defaultClientId.toString(), client._id.toString(), 'defaultClientId should match firm default');
   console.log('✓ Migration backfills legacy admin defaultClientId correctly');
 }
 
@@ -129,7 +123,7 @@ async function shouldIgnoreSuperadminInPreflight() {
 
   // Create SUPER_ADMIN without firm/defaultClient
   await User.create({
-    xID: 'X000999',
+    xID: 'X000002',
     name: 'Platform Admin',
     email: 'platform-admin2@test.com',
     role: 'SUPER_ADMIN',
