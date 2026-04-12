@@ -502,12 +502,25 @@ async function handleUserDeactivation({ firmId, userXID }) {
     { $set: { assignedToXID: null, assignedTo: null, queueType: 'GLOBAL' } },
   );
 
+  const pended = await Case.updateMany(
+    { firmId, assignedToXID: normalized, status: toPersistenceState(DocketStatus.PENDING) },
+    { $set: { assignedToXID: null, assignedTo: null, queueType: 'GLOBAL' } },
+  );
+
   const rest = await Case.updateMany(
-    { firmId, assignedToXID: normalized, status: { $ne: toPersistenceState(DocketStatus.QC_PENDING) } },
+    {
+      firmId,
+      assignedToXID: normalized,
+      status: { $nin: [toPersistenceState(DocketStatus.QC_PENDING), toPersistenceState(DocketStatus.PENDING)] },
+    },
     { $set: { assignedToXID: null, assignedTo: null, queueType: 'GLOBAL', status: toPersistenceState(DocketStatus.AVAILABLE) } },
   );
 
-  return { qcPendingMoved: qcp.modifiedCount || 0, workbasketMoved: rest.modifiedCount || 0 };
+  return {
+    qcPendingMoved: qcp.modifiedCount || 0,
+    pendingMoved: pended.modifiedCount || 0,
+    workbasketMoved: rest.modifiedCount || 0,
+  };
 }
 
 module.exports = {

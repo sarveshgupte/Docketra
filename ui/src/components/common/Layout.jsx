@@ -146,6 +146,10 @@ export const Layout = ({ children }) => {
 
   const currentFirmSlug = firmSlug || user?.firmSlug;
   const hasAdminAccess = user?.role === USER_ROLES.ADMIN;
+  const taggedWorkbasketName = Array.isArray(user?.teamNames) && user.teamNames.length > 0
+    ? String(user.teamNames[0] || '').trim()
+    : '';
+  const workbasketNavLabel = taggedWorkbasketName || 'Workbasket';
   const firmLabel = user?.firm?.name || currentFirmSlug || 'Firm';
   const firmType = typeof user?.firm?.type === 'string' ? user.firm.type.trim() : '';
   const configuredFirmLogoUrl = getFirmConfig()?.brandLogoUrl || '';
@@ -417,7 +421,7 @@ export const Layout = ({ children }) => {
         },
         {
           to: ROUTES.GLOBAL_WORKLIST(currentFirmSlug),
-          label: 'Workbasket',
+          label: workbasketNavLabel,
           icon: <IconWorkbasket />,
           active: isActive(ROUTES.GLOBAL_WORKLIST(currentFirmSlug)),
           badge: countsFetched ? workbasketCount : 'loading',

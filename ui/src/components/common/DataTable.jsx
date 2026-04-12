@@ -7,6 +7,8 @@ const joinClasses = (...classes) => classes.filter(Boolean).join(' ');
 export const DataTable = ({
   columns,
   rows,
+  data,
+  rowKey,
   sortState,
   onSortChange,
   activeFilters = [],
@@ -40,6 +42,9 @@ export const DataTable = ({
 
   const cellPaddingClass = dense ? 'px-4 py-2.5' : 'px-6 py-4';
   const headerPaddingClass = dense ? 'px-4 py-3' : 'px-6 py-3';
+  const normalizedRows = Array.isArray(rows)
+    ? rows
+    : (Array.isArray(data) ? data : []);
 
   return (
     <div className="flex flex-col space-y-3">
@@ -96,7 +101,7 @@ export const DataTable = ({
                 style={{ width: col.width }}
               >
                 <div className={joinClasses("flex items-center", col.align === 'right' ? 'justify-end' : 'justify-start')}>
-                  {col.label}
+                  {col.label || col.header || col.key}
                   {getSortIcon(col.key, col.sortable)}
                 </div>
               </th>
@@ -104,12 +109,17 @@ export const DataTable = ({
           </TableRow>
         </TableHead>
         <TableBody>
-          {rows.length === 0 && !loading ? (
+          {normalizedRows.length === 0 && !loading ? (
             <TableEmptyState colSpan={columns.length} message={emptyMessage} />
           ) : (
-            rows.map((row, rowIndex) => (
+            normalizedRows.map((row, rowIndex) => (
               <TableRow
-                key={row.id || rowIndex}
+                key={
+                  (rowKey && typeof rowKey === 'string' ? row?.[rowKey] : null)
+                  || row?.id
+                  || row?._id
+                  || rowIndex
+                }
                 onClick={() => onRowClick?.(row)}
                 className={onRowClick ? 'cursor-pointer hover:bg-slate-50 transition-colors' : ''}
               >
