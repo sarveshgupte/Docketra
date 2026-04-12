@@ -8,6 +8,7 @@ const { generateNextClientId } = require('../services/clientIdGenerator');
 const xIDGenerator = require('../services/xIDGenerator');
 const { bulkUploadQueue } = require('../queues/bulkUpload.queue');
 const { eventBus } = require('../events/eventBus');
+const { logAuthEvent } = require('../services/audit.service');
 require('../automations/bulkUpload.handlers');
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
@@ -59,6 +60,26 @@ const HEADER_ALIASES = {
 };
 
 const EMAIL_REGEX = /^\S+@\S+\.\S+$/;
+
+const safeLogBulkMutation = async (req, { description, metadata = {} }) => {
+  try {
+    await logAuthEvent({
+      actionType: 'AdminMutation',
+      xID: req.user?.xID || req.user?.xid || 'UNKNOWN',
+      performedBy: req.user?.xID || req.user?.xid || 'UNKNOWN',
+      firmId: req.user?.firmId,
+      userId: req.user?._id,
+      description,
+      req,
+      metadata: {
+        domain: 'BULK_UPLOAD',
+        ...metadata,
+      },
+    });
+  } catch (error) {
+    console.error('[BULK_UPLOAD] Failed to write audit entry', error.message);
+  }
+};
 
 const normalizeHeader = (value) => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
 
@@ -741,6 +762,17 @@ const confirmBulkUpload = async (req, res) => {
 
   if (!shouldAsync) {
     const { successCount, results } = await processBulkRows({ type, rows, user: req.user, duplicateMode });
+    await safeLogBulkMutation(req, {
+      description: `Bulk upload completed (${type}) with ${successCount}/${rows.length} successful row(s)`,
+      metadata: {
+        action: 'BULK_UPLOAD_COMPLETED_SYNC',
+        type,
+        duplicateMode,
+        totalRows: rows.length,
+        successCount,
+        failureCount: results.filter((entry) => entry.status === 'failed').length,
+      },
+    });
     return res.status(201).json({
       success: true,
       data: {
@@ -805,6 +837,17 @@ const confirmBulkUpload = async (req, res) => {
       message: 'Failed to enqueue bulk import job',
     });
   }
+
+  await safeLogBulkMutation(req, {
+    description: `Bulk upload queued (${type}) with ${rows.length} row(s)`,
+    metadata: {
+      action: 'BULK_UPLOAD_QUEUED',
+      type,
+      duplicateMode,
+      totalRows: rows.length,
+      jobId: job._id?.toString(),
+    },
+  });
 
   return res.status(202).json({
     success: true,
