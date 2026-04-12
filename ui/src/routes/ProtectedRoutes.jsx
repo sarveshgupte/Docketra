@@ -18,6 +18,7 @@ import {
   NotFoundPage,
   PlatformDashboard,
   ProfilePage,
+  ProductUpdatesHistoryPage,
   ReportsDashboard,
   StorageSettingsPage,
   WorkbasketPage,
@@ -216,6 +217,14 @@ export const ProtectedRoutes = () => (
           element={(
             <ProtectedRoute>
               <ProfilePage />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="updates"
+          element={(
+            <ProtectedRoute>
+              <ProductUpdatesHistoryPage />
             </ProtectedRoute>
           )}
         />
