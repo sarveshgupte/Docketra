@@ -115,6 +115,17 @@ const getRoleBadgePresentation = (user) => {
   return { tone: 'Pending', label: normalizedRole ? normalizedRole.charAt(0) + normalizedRole.slice(1).toLowerCase() : 'User' };
 };
 
+const StatusBadge = ({ status }) => {
+  const normalizedStatus = String(status || '').toUpperCase();
+  const map = {
+    ACTIVE: 'Approved',
+    INVITED: 'Pending',
+    INACTIVE: 'Rejected',
+    DISABLED: 'Rejected',
+  };
+  return <Badge status={map[normalizedStatus] || 'Pending'}>{normalizedStatus || EMPTY_FIELD_PLACEHOLDER}</Badge>;
+};
+
 export const AdminPage = () => {
   const navigate = useNavigate();
   const { firmSlug } = useParams();
@@ -212,6 +223,8 @@ export const AdminPage = () => {
   const [restrictedClientDraft, setRestrictedClientDraft] = useState([]);
   const [workbaskets, setWorkbaskets] = useState([]);
   const [selectedWorkbasketDraft, setSelectedWorkbasketDraft] = useState([]);
+  const filteredUsers = useMemo(() => users, [users]);
+  const filteredClientsList = useMemo(() => clients, [clients]);
 
   useEffect(() => {
     loadAdminStats();
@@ -1147,6 +1160,19 @@ export const AdminPage = () => {
     });
   };
 
+  const formatRole = (role) => getRoleBadgePresentation({ role }).label;
+
+  const handleEditUser = (user) => {
+    handleOpenAccessModal(user);
+  };
+
+  const handleDeleteClick = (xID) => {
+    const matchedUser = users.find((entry) => entry.xID === xID);
+    if (matchedUser) {
+      handleToggleUserStatus(matchedUser);
+    }
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -1429,21 +1455,33 @@ export const AdminPage = () => {
                         <h4>Subcategories:</h4>
                         <DataTable
                           columns={[
-                            { key: 'name', header: 'Member Name', render: (m) => <div className="font-medium text-gray-900">{m.name}</div> },
-                            { key: 'xID', header: 'xID', render: (m) => <div className="text-gray-500">{m.xID}</div> },
-                            { key: 'actions', header: 'Action', align: 'right', render: (m) => (
-                              <Button
-                                size="sm"
-                                variant="danger"
-                                onClick={() => handleRemoveMemberFromTeam(m.xID)}
-                                disabled={selectedTeam.id === 'workbasket'}
-                              >
-                                Remove
-                              </Button>
-                            ) }
+                            { key: 'name', label: 'Subcategory', render: (sub) => <div className="font-medium text-gray-900">{sub.name}</div> },
+                            { key: 'status', label: 'Status', render: (sub) => <StatusBadge status={sub.isActive ? 'ACTIVE' : 'INACTIVE'} /> },
+                            {
+                              key: 'actions',
+                              label: 'Action',
+                              align: 'right',
+                              render: (sub) => (
+                                <div className="flex gap-2 justify-end">
+                                  <Button
+                                    size="sm"
+                                    variant={sub.isActive ? 'outline' : 'primary'}
+                                    onClick={() => handleToggleSubcategoryStatus(category, sub)}
+                                  >
+                                    {sub.isActive ? 'Disable' : 'Enable'}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="danger"
+                                    onClick={() => handleDeleteSubcategory(category, sub)}
+                                  >
+                                    Delete
+                                  </Button>
+                                </div>
+                              ),
+                            },
                           ]}
-                          rows={selectedTeam.members}
-                          rowKey="xID"
+                          rows={category.subcategories}
                         />
                       </div>
                     )}
