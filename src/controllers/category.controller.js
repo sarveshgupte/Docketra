@@ -3,6 +3,7 @@ const Case = require('../models/Case.model');
 const mongoose = require('mongoose');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { parseBooleanQuery } = require('../utils/query.utils');
+const { logAuthEvent } = require('../services/audit.service');
 
 /**
  * Category Controller for Admin-Managed Categories
@@ -21,6 +22,27 @@ const resolveCategoryFirmScope = (req, res) => {
     return null;
   }
   return { firmId: req.user.firmId };
+};
+
+const safeLogCategoryMutation = async (req, { description, metadata = {} }) => {
+  try {
+    await logAuthEvent({
+      actionType: 'AdminMutation',
+      xID: req.user?.xID || req.user?.xid || 'UNKNOWN',
+      performedBy: req.user?.xID || req.user?.xid || 'UNKNOWN',
+      firmId: req.user?.firmId,
+      userId: req.user?._id,
+      description,
+      req,
+      metadata: {
+        domain: 'CATEGORY',
+        ...metadata,
+      },
+    });
+  } catch (error) {
+    // Best-effort logging only
+    console.error('[CATEGORY] Failed to write audit entry', error.message);
+  }
 };
 
 /**
@@ -126,6 +148,15 @@ const createCategory = async (req, res) => {
     });
     
     await category.save();
+    await safeLogCategoryMutation(req, {
+      description: `Category created: ${category.name}`,
+      metadata: {
+        action: 'CATEGORY_CREATED',
+        categoryId: category._id?.toString(),
+        categoryName: category.name,
+        defaultSlaDays: category.defaultSlaDays,
+      },
+    });
     
     res.status(201).json({
       success: true,
@@ -188,6 +219,15 @@ const updateCategory = async (req, res) => {
       category.defaultSlaDays = Math.max(0, Number(defaultSlaDays) || 0);
     }
     await category.save();
+    await safeLogCategoryMutation(req, {
+      description: `Category updated: ${category.name}`,
+      metadata: {
+        action: 'CATEGORY_UPDATED',
+        categoryId: category._id?.toString(),
+        categoryName: category.name,
+        defaultSlaDays: category.defaultSlaDays,
+      },
+    });
     
     res.json({
       success: true,
@@ -238,6 +278,15 @@ const toggleCategoryStatus = async (req, res) => {
     // Only hide from new case creation dropdowns
     category.isActive = isActive;
     await category.save();
+    await safeLogCategoryMutation(req, {
+      description: `Category ${isActive ? 'enabled' : 'disabled'}: ${category.name}`,
+      metadata: {
+        action: 'CATEGORY_STATUS_UPDATED',
+        categoryId: category._id?.toString(),
+        categoryName: category.name,
+        isActive,
+      },
+    });
     
     res.json({
       success: true,
@@ -303,6 +352,17 @@ const addSubcategory = async (req, res) => {
     });
     
     await category.save();
+    await safeLogCategoryMutation(req, {
+      description: `Subcategory added: ${category.name} / ${name.trim()}`,
+      metadata: {
+        action: 'SUBCATEGORY_CREATED',
+        categoryId: category._id?.toString(),
+        categoryName: category.name,
+        subcategoryId,
+        subcategoryName: name.trim(),
+        defaultSlaDays: Math.max(0, Number(defaultSlaDays) || 0),
+      },
+    });
     
     res.status(201).json({
       success: true,
@@ -371,6 +431,17 @@ const updateSubcategory = async (req, res) => {
       subcategory.defaultSlaDays = Math.max(0, Number(defaultSlaDays) || 0);
     }
     await category.save();
+    await safeLogCategoryMutation(req, {
+      description: `Subcategory updated: ${category.name} / ${subcategory.name}`,
+      metadata: {
+        action: 'SUBCATEGORY_UPDATED',
+        categoryId: category._id?.toString(),
+        categoryName: category.name,
+        subcategoryId: subcategory.id,
+        subcategoryName: subcategory.name,
+        defaultSlaDays: subcategory.defaultSlaDays,
+      },
+    });
     
     res.json({
       success: true,
@@ -424,6 +495,17 @@ const toggleSubcategoryStatus = async (req, res) => {
     
     subcategory.isActive = isActive;
     await category.save();
+    await safeLogCategoryMutation(req, {
+      description: `Subcategory ${isActive ? 'enabled' : 'disabled'}: ${category.name} / ${subcategory.name}`,
+      metadata: {
+        action: 'SUBCATEGORY_STATUS_UPDATED',
+        categoryId: category._id?.toString(),
+        categoryName: category.name,
+        subcategoryId: subcategory.id,
+        subcategoryName: subcategory.name,
+        isActive,
+      },
+    });
     
     res.json({
       success: true,
@@ -464,6 +546,14 @@ const deleteCategory = async (req, res) => {
     // Soft delete - set isActive to false
     category.isActive = false;
     await category.save();
+    await safeLogCategoryMutation(req, {
+      description: `Category deleted (soft): ${category.name}`,
+      metadata: {
+        action: 'CATEGORY_DELETED_SOFT',
+        categoryId: category._id?.toString(),
+        categoryName: category.name,
+      },
+    });
     
     res.json({
       success: true,
@@ -513,6 +603,16 @@ const deleteSubcategory = async (req, res) => {
     // Soft delete - set isActive to false
     subcategory.isActive = false;
     await category.save();
+    await safeLogCategoryMutation(req, {
+      description: `Subcategory deleted (soft): ${category.name} / ${subcategory.name}`,
+      metadata: {
+        action: 'SUBCATEGORY_DELETED_SOFT',
+        categoryId: category._id?.toString(),
+        categoryName: category.name,
+        subcategoryId: subcategory.id,
+        subcategoryName: subcategory.name,
+      },
+    });
     
     res.json({
       success: true,

@@ -15,6 +15,7 @@ const {
   getAllResolvedCases,
   updateRestrictedClients,
   getFirmSettings,
+  getFirmSettingsActivity,
   updateFirmSettings,
   getStorageConfig,
   updateStorageConfig,
@@ -104,6 +105,7 @@ router.post('/users/:xID/resend-invite', ...adminBaseAccess, authorizeFirmPermis
 router.patch('/users/:xID/restrict-clients', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateRestrictedClients);
 router.patch('/users/:xID/workbaskets', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateUserWorkbaskets);
 router.get('/firm-settings', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userReadLimiter, getFirmSettings);
+router.get('/firm-settings/activity', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userReadLimiter, getFirmSettingsActivity);
 router.put('/firm-settings', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userWriteLimiter, updateFirmSettings);
 router.get('/workbaskets', ...adminBaseAccess, authorizeFirmPermission('CASE_VIEW'), userReadLimiter, listWorkbaskets);
 router.post('/workbaskets', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, createWorkbasket);

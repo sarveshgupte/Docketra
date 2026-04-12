@@ -3,6 +3,8 @@ const User = require('../models/User.model');
 const Case = require('../models/Case.model');
 const Task = require('../models/Task');
 const Firm = require('../models/Firm.model');
+const AuthAudit = require('../models/AuthAudit.model');
+const CaseAudit = require('../models/CaseAudit.model');
 const emailService = require('../services/email.service');
 const CaseStatus = require('../domain/case/caseStatus');
 const { logAdminAction, logCaseListViewed } = require('../services/auditLog.service');
@@ -785,6 +787,107 @@ const updateFirmSettings = async (req, res) => {
 };
 
 /**
+ * Get firm-scoped admin activity feed for settings/governance surfaces
+ * GET /api/admin/firm-settings/activity
+ */
+const getFirmSettingsActivity = async (req, res) => {
+  try {
+    const firmId = req.user?.firmId;
+    if (!firmId) {
+      return res.status(403).json({ success: false, message: 'Firm context is required' });
+    }
+
+    const rawLimit = parseInt(req.query?.limit, 10);
+    const limit = Number.isInteger(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 100) : 25;
+
+    const caseActionTypes = [
+      'USER_CLIENT_ACCESS_UPDATED',
+      'FIRM_SETTINGS_UPDATED',
+      'STORAGE_CONFIGURATION_UPDATED',
+      'STORAGE_CONFIGURATION_DISCONNECTED',
+      'ADMIN_FILED_CASES_VIEWED',
+      'ADMIN_APPROVAL_QUEUE_VIEWED',
+      'ADMIN_RESOLVED_CASES_VIEWED',
+    ];
+
+    const authActionTypes = [
+      'AdminMutation',
+      'UserCreated',
+      'AccountActivated',
+      'AccountDeactivated',
+      'InviteEmailResent',
+      'PasswordResetByAdmin',
+      'SetupLinkResent',
+    ];
+
+    const fetchLimit = Math.min(limit * 4, 250);
+    const [caseAuditRows, authAuditRows] = await Promise.all([
+      CaseAudit.find({
+        firmId,
+        actionType: { $in: caseActionTypes },
+      })
+        .sort({ timestamp: -1 })
+        .limit(fetchLimit)
+        .lean(),
+      AuthAudit.find({
+        firmId,
+        actionType: { $in: authActionTypes },
+      })
+        .sort({ timestamp: -1 })
+        .limit(fetchLimit)
+        .lean(),
+    ]);
+
+    const mutationMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+    const authMapped = authAuditRows
+      .filter((row) => {
+        if (row.actionType !== 'AdminMutation') return true;
+        const route = String(row.metadata?.route || '');
+        const method = String(row.metadata?.method || '').toUpperCase();
+        const isAdminMutationRoute = (route.startsWith('/api/admin') || route.startsWith('/api/bulk-upload'))
+          && mutationMethods.has(method);
+        return isAdminMutationRoute;
+      })
+      .map((row) => ({
+        id: `auth-${row._id}`,
+        source: 'AuthAudit',
+        xID: row.xID || row.performedBy || 'UNKNOWN',
+        action: row.actionType,
+        description: row.description,
+        timestamp: row.timestamp,
+        metadata: row.metadata || {},
+      }));
+
+    const caseMapped = caseAuditRows.map((row) => ({
+      id: `case-${row._id}`,
+      source: 'CaseAudit',
+      xID: row.performedByXID || 'UNKNOWN',
+      action: row.actionType,
+      description: row.description,
+      timestamp: row.timestamp,
+      metadata: row.metadata || {},
+    }));
+
+    const data = [...caseMapped, ...authMapped]
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .slice(0, limit);
+
+    return res.json({
+      success: true,
+      count: data.length,
+      data,
+    });
+  } catch (error) {
+    console.error('[ADMIN] Error fetching firm settings activity:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching firm settings activity',
+      error: error.message,
+    });
+  }
+};
+
+/**
  * Get firm storage configuration (Admin only)
  * GET /api/admin/storage
  */
@@ -1111,6 +1214,7 @@ module.exports = {
   getAllResolvedCases,
   updateRestrictedClients: wrapWriteHandler(updateRestrictedClients),
   getFirmSettings,
+  getFirmSettingsActivity,
   updateFirmSettings: wrapWriteHandler(updateFirmSettings),
   getStorageConfig,
   updateStorageConfig: wrapWriteHandler(updateStorageConfig),
