@@ -1,5 +1,6 @@
 const Case = require('../models/Case.model');
 const Team = require('../models/Team.model');
+const User = require('../models/User.model');
 const DocketRoute = require('../models/DocketRoute.model');
 const CaseStatus = require('../domain/case/caseStatus');
 const { NotificationTypes, createNotification } = require('../domain/notifications');
@@ -118,10 +119,43 @@ async function resolveDocketWithTeamRestriction({ docketId, actor, firmId }) {
   return docket;
 }
 
+
+
+async function managerMoveDocket({ docketId, actor, firmId, to }) {
+  const docket = await findDocket({ docketId, firmId });
+  if (String(actor.role || '').toUpperCase() !== 'MANAGER') {
+    throw makeError('Manager role required', 403);
+  }
+  if (String(docket.ownerTeamId || '') !== String(actor.teamId || '')) {
+    throw makeError('Cross-team movement is forbidden', 403);
+  }
+
+  const targetType = String(to?.type || '').toUpperCase();
+  if (!['WL', 'WB'].includes(targetType)) {
+    throw makeError('Invalid target type. Use WL or WB', 400);
+  }
+
+  if (targetType === 'WL') {
+    const targetUserXid = String(to.userXID || '').toUpperCase();
+    const targetUser = await User.findOne({ xID: targetUserXid, firmId, teamId: actor.teamId, status: { $ne: 'deleted' } });
+    if (!targetUser) throw makeError('Target user must be in manager team', 400);
+    docket.assignedToXID = targetUserXid;
+    docket.status = CaseStatus.IN_PROGRESS;
+  } else {
+    docket.assignedToXID = null;
+    docket.status = CaseStatus.UNASSIGNED || 'UNASSIGNED';
+  }
+
+  docket.routedToTeamId = actor.teamId;
+  await docket.save();
+  return docket;
+}
+
 module.exports = {
   routeDocket,
   acceptRoutedDocket,
   returnRoutedDocket,
   transitionRoutedTeamStatus,
   resolveDocketWithTeamRestriction,
+  managerMoveDocket,
 };

@@ -112,9 +112,10 @@ const requireFirmContext = async (req, res, next) => {
 };
 
 /**
- * Firm-scoped permission guard.
- * Resolves role via firm membership and enforces capability-based access.
- * Explicit SuperAdmin bypass (non-firm data) while blocking missing firm context.
+ * Legacy RBAC layer (firm capability guard).
+ *
+ * NOTE: keep for backward compatibility while newer routes use requireRole()
+ * for direct role checks. This guard continues to enforce firm capability checks.
  */
 const authorizeFirmPermission = (requiredPermission) => {
   return async (req, res, next) => {

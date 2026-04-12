@@ -186,9 +186,15 @@ const userSchema = new mongoose.Schema({
   // Determines access level: SUPER_ADMIN manages platform, Admin has full firm access, Employee has category-restricted access
   role: {
     type: String,
-    enum: ['SUPER_ADMIN', 'Admin', 'Employee'],
-    default: 'Employee',
+    enum: ['SUPER_ADMIN', 'PRIMARY_ADMIN', 'ADMIN', 'MANAGER', 'USER'],
+    default: 'USER',
     required: true,
+    set: (value) => {
+      const normalized = String(value || '').trim();
+      if (normalized === 'Admin') return 'ADMIN';
+      if (normalized === 'Employee') return 'USER';
+      return normalized;
+    },
   },
   
   // Controls which case categories an Employee can access; empty array for Admin means access to all
@@ -444,6 +450,12 @@ const userSchema = new mongoose.Schema({
     ref: 'User',
     default: null,
   },
+
+  reportsToUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
+  },
   
   /**
    * Client approval permission flag
@@ -504,7 +516,7 @@ const userSchema = new mongoose.Schema({
   isSystem: {
     type: Boolean,
     default: false,
-    immutable: true, // Cannot change after creation
+    immutable: true,
     index: true,
   },
 
@@ -517,7 +529,6 @@ const userSchema = new mongoose.Schema({
   isPrimaryAdmin: {
     type: Boolean,
     default: false,
-    immutable: true, // Cannot change after creation
     index: true,
   },
   
@@ -609,7 +620,7 @@ userSchema.pre('save', async function() {
   }
 
   // GUARDRAIL: Prevent saving non-superadmin users without firm/default client context
-  if (this.role !== 'SUPER_ADMIN') {
+  if (!['SUPER_ADMIN'].includes(String(this.role || '').toUpperCase())) {
     if (!this.firmId) {
       const error = new Error('Non-superadmin users must have firmId set');
       error.name = 'ValidationError';
@@ -618,6 +629,12 @@ userSchema.pre('save', async function() {
 
     if (!this.defaultClientId) {
       const error = new Error('DEFAULT_CLIENT_NOT_SET');
+      error.name = 'ValidationError';
+      throw error;
+    }
+
+    if (process.env.ENFORCE_TEAM_NOT_NULL === 'true' && this.isOnboarded === true && !this.teamId) {
+      const error = new Error('TEAM_NOT_SET');
       error.name = 'ValidationError';
       throw error;
     }
@@ -668,6 +685,14 @@ userSchema.pre('save', async function() {
   } else {
     this.passwordSet = false;
   }
+
+  // Keep reporting hierarchy aliases in sync
+  if (this.reportsToUserId && !this.managerId) {
+    this.managerId = this.reportsToUserId;
+  }
+  if (this.managerId && !this.reportsToUserId) {
+    this.reportsToUserId = this.managerId;
+  }
 });
 
 // Indexes for performance
@@ -716,6 +741,7 @@ userSchema.index({ firmId: 1, status: 1 });
 userSchema.index({ firmId: 1, isActive: 1 });
 // REMOVED: { firmId: 1 } - redundant with compound index (firmId, xID) above
 userSchema.index({ firmId: 1, role: 1 }); // Firm-scoped role queries
+userSchema.index({ firmId: 1, isPrimaryAdmin: 1 }, { unique: true, partialFilterExpression: { isPrimaryAdmin: true, status: { $ne: 'deleted' } }, name: 'firm_primary_admin_unique' });
 userSchema.index({ firmId: 1 });
 userSchema.index({ firmId: 1, createdAt: -1 });
 userSchema.index(

@@ -11,6 +11,7 @@ const { noteAdminPrivilegeChange } = require('../services/securityTelemetry.serv
 const jwtService = require('../services/jwt.service');
 const { generateFirmSlug } = require('../utils/firmSlug');
 const { sendWelcomeEmail } = require('../services/email/sendWelcomeEmail');
+const { normalizeRole } = require('../utils/role.utils');
 
 const resolveUserFirmScope = (req, res) => {
   if (req.user?.role === 'SUPER_ADMIN') return {};
@@ -479,6 +480,105 @@ const completeProfile = async (req, res) => {
   });
 };
 
+
+
+const ROLE_HIERARCHY = ['USER', 'MANAGER', 'ADMIN', 'PRIMARY_ADMIN', 'SUPER_ADMIN'];
+
+const patchUserRole = async (req, res) => {
+  try {
+    const actorRole = normalizeRole(req.user?.role);
+    const targetRole = normalizeRole(req.body?.role);
+    const target = await User.findOne({ _id: req.params.id, firmId: req.user?.firmId, status: { $ne: 'deleted' } });
+    if (!target) return res.status(404).json({ success: false, message: 'User not found' });
+
+    if (!ROLE_HIERARCHY.includes(targetRole) || targetRole === 'SUPER_ADMIN') {
+      return res.status(400).json({ success: false, message: 'Invalid target role' });
+    }
+
+    const targetCurrentRole = normalizeRole(target.role);
+    if (targetRole === 'PRIMARY_ADMIN' && targetCurrentRole !== 'PRIMARY_ADMIN') {
+      const existingPrimary = await User.findOne({
+        firmId: req.user?.firmId,
+        role: 'PRIMARY_ADMIN',
+        status: { $ne: 'deleted' },
+        _id: { $ne: target._id },
+      }).select('_id');
+      if (existingPrimary) {
+        return res.status(409).json({ success: false, message: 'Firm already has a PRIMARY_ADMIN' });
+      }
+    }
+
+    if (targetCurrentRole === 'PRIMARY_ADMIN' && targetRole !== 'PRIMARY_ADMIN') {
+      return res.status(403).json({ success: false, message: 'PRIMARY_ADMIN cannot be demoted in this operation' });
+    }
+
+    if (ROLE_HIERARCHY.indexOf(targetRole) > ROLE_HIERARCHY.indexOf(actorRole)) {
+      return res.status(403).json({ success: false, message: 'Role escalation above self is not allowed' });
+    }
+
+    target.role = targetRole;
+    target.isPrimaryAdmin = targetRole === 'PRIMARY_ADMIN';
+    await target.save();
+    return res.json({ success: true, data: target.toSafeObject?.() || target });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message || 'Failed to update role' });
+  }
+};
+
+const hasCircularManager = async (userId, reportsToUserId) => {
+  let current = reportsToUserId;
+  const visited = new Set([String(userId)]);
+  while (current) {
+    const key = String(current);
+    if (visited.has(key)) return true;
+    visited.add(key);
+    // eslint-disable-next-line no-await-in-loop
+    const node = await User.findById(current).select('reportsToUserId').lean();
+    current = node?.reportsToUserId || null;
+  }
+  return false;
+};
+
+const patchUserReporting = async (req, res) => {
+  try {
+    const target = await User.findOne({ _id: req.params.id, firmId: req.user?.firmId, status: { $ne: 'deleted' } });
+    if (!target) return res.status(404).json({ success: false, message: 'User not found' });
+
+    const reportsToUserId = req.body?.reportsToUserId || null;
+    if (!reportsToUserId) {
+      target.reportsToUserId = null;
+      target.managerId = null;
+      await target.save();
+      return res.json({ success: true, data: target.toSafeObject?.() || target });
+    }
+
+    const parent = await User.findOne({ _id: reportsToUserId, firmId: req.user?.firmId, status: { $ne: 'deleted' } });
+    if (!parent) return res.status(400).json({ success: false, message: 'Reporting manager not found in firm' });
+    if (String(parent.teamId || '') !== String(target.teamId || '')) {
+      return res.status(400).json({ success: false, message: 'Reporting relation must stay inside same team' });
+    }
+    if (await hasCircularManager(target._id, parent._id)) {
+      return res.status(400).json({ success: false, message: 'Circular reporting chain is not allowed' });
+    }
+
+    if (normalizeRole(req.user?.role) === 'MANAGER') {
+      if (String(req.user?.teamId || '') !== String(target.teamId || '')) {
+        return res.status(403).json({ success: false, message: 'Managers can only update reporting within their team' });
+      }
+      if (String(req.user?.teamId || '') !== String(parent.teamId || '')) {
+        return res.status(403).json({ success: false, message: 'Managers can only assign reporting managers in their team' });
+      }
+    }
+
+    target.reportsToUserId = parent._id;
+    target.managerId = parent._id;
+    await target.save();
+    return res.json({ success: true, data: target.toSafeObject?.() || target });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message || 'Failed to update reporting' });
+  }
+};
+
 module.exports = {
   getCurrentUser,
   getUsers,
@@ -486,6 +586,8 @@ module.exports = {
   createUser: wrapWriteHandler(createUser),
   updateUser: wrapWriteHandler(updateUser),
   deleteUser: wrapWriteHandler(deleteUser),
+  patchUserRole: wrapWriteHandler(patchUserRole),
+  patchUserReporting: wrapWriteHandler(patchUserReporting),
   completeProfile: wrapWriteHandler(completeProfile),
   completeTutorial: wrapWriteHandler(completeTutorial),
 };
