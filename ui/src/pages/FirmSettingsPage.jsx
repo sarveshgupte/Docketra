@@ -7,8 +7,8 @@ import { Input } from '../components/common/Input';
 import { Select } from '../components/common/Select';
 import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
-import { caseApi } from '../api/case.api';
 import { adminApi } from '../api/admin.api';
+import { reportsService } from '../services/reports.service';
 import { getFirmConfig, setFirmConfig } from '../utils/firmConfig';
 import { formatDateTime } from '../utils/formatDateTime';
 
@@ -16,6 +16,36 @@ const enabledDisabledOptions = [
   { value: 'true', label: 'Enabled' },
   { value: 'false', label: 'Disabled' },
 ];
+
+const ADMIN_ACTIVITY_ACTIONS = new Set([
+  'AdminMutation',
+  'UserCreated',
+  'AccountActivated',
+  'AccountDeactivated',
+  'InviteEmailResent',
+  'PasswordResetByAdmin',
+  'SetupLinkResent',
+  'USER_CLIENT_ACCESS_UPDATED',
+  'FIRM_SETTINGS_UPDATED',
+  'STORAGE_CONFIGURATION_UPDATED',
+  'STORAGE_CONFIGURATION_DISCONNECTED',
+]);
+
+const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+const isAdminSettingsAuditEvent = (entry = {}) => {
+  const action = String(entry.action || '').trim();
+  const route = String(entry.metadata?.route || '');
+  const method = String(entry.metadata?.method || '').toUpperCase();
+  const isKnownAction = ADMIN_ACTIVITY_ACTIONS.has(action);
+  const isAdminMutationRoute = (
+    (route.startsWith('/api/admin') || route.startsWith('/api/bulk-upload'))
+    && MUTATION_METHODS.has(method)
+  );
+  const isAdminCaseAudit = entry.source === 'CaseAudit' && action.startsWith('ADMIN_');
+
+  return isKnownAction || isAdminMutationRoute || isAdminCaseAudit;
+};
 
 export const FirmSettingsPage = () => {
   const navigate = useNavigate();
@@ -49,33 +79,23 @@ export const FirmSettingsPage = () => {
     setLoadingActivity(true);
     setActivityError('');
     try {
-      const response = await caseApi.getCases();
-      const records = response?.data || [];
-      const mockActivity = records
-        .flatMap((record) => {
-          const auditLog = record.auditLog || [];
-          if (auditLog.length) {
-            return auditLog.map((entry) => ({
-              id: entry._id || `${entry.timestamp}-${entry.performedByXID || entry.actorXID || 'user'}`,
-              actor: entry.performedByName || entry.actorXID || entry.performedByXID || 'User',
-              timestamp: entry.timestamp || entry.createdAt,
-            }));
-          }
-          return [
-            {
-              id: record.caseId,
-              actor: record.updatedByName || record.assignedToName || 'User',
-              timestamp: record.updatedAt,
-            },
-          ];
-        })
+      const response = await reportsService.getAuditLogs({ limit: 150 });
+      const records = response?.data?.data || [];
+      const normalizedActivity = records
+        .filter((entry) => isAdminSettingsAuditEvent(entry))
+        .map((entry) => ({
+          id: `${entry.source || 'audit'}-${entry.timestamp || ''}-${entry.action || ''}-${entry.xID || ''}`,
+          actor: entry.xID || 'SYSTEM',
+          timestamp: entry.timestamp,
+          description: entry.description || entry.action || 'Admin activity recorded',
+        }))
         .filter((entry) => entry.timestamp)
         .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
         .slice(0, 10);
-      setActivity(mockActivity);
+      setActivity(normalizedActivity);
     } catch {
       setActivity([]);
-      setActivityError('Could not load recent activity. You can retry without losing settings changes.');
+      setActivityError('Could not load admin audit activity. You can retry without losing settings changes.');
     } finally {
       setLoadingActivity(false);
     }
@@ -241,8 +261,8 @@ export const FirmSettingsPage = () => {
           <Card className="max-w-4xl">
             <div className="space-y-5">
               <div>
-                <h2 className="text-lg font-medium text-gray-900 mb-4">Recent User Activity</h2>
-                <p className="text-sm text-gray-500">Last 10 activity records derived from the most recent available audit events.</p>
+                <h2 className="text-lg font-medium text-gray-900 mb-4">Admin Settings Change Log</h2>
+                <p className="text-sm text-gray-500">Last 10 admin configuration changes from firm-scoped audit logs (xID + timestamp).</p>
               </div>
               {loadingActivity ? (
                 <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
@@ -259,16 +279,19 @@ export const FirmSettingsPage = () => {
                 <ul className="space-y-3">
                   {activity.map((entry) => (
                     <li key={entry.id} className="rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-600">
-                      <span className="font-medium text-gray-900">{entry.actor}</span>
-                      <span className="mx-2 text-gray-300">•</span>
-                      <span>{formatDateTime(entry.timestamp)}</span>
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <span className="font-medium text-gray-900">{entry.actor}</span>
+                        <span className="text-gray-300">•</span>
+                        <span>{formatDateTime(entry.timestamp)}</span>
+                      </div>
+                      <p className="mt-1 text-sm text-gray-600">{entry.description}</p>
                     </li>
                   ))}
                 </ul>
               ) : (
                 <EmptyState
-                  title="No recent activity available"
-                  description="Recent audit events will appear here as your team works on dockets."
+                  title="No admin audit activity available"
+                  description="Admin configuration actions (users, categories, settings, storage, bulk uploads) will appear here."
                 />
               )}
             </div>
