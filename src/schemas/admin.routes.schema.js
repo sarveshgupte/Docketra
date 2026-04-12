@@ -89,6 +89,7 @@ module.exports = {
     body: z.object({ teamIds: z.array(objectIdOrString).min(1) }).passthrough(),
   },
   'GET /firm-settings': { query: passthroughQuery },
+  'GET /firm-settings/activity': { query: passthroughQuery },
   'PUT /firm-settings': { body: passthroughBody },
   'GET /workbaskets': { query: passthroughQuery },
   'POST /workbaskets': { body: z.object({ name: nonEmptyString }).passthrough() },

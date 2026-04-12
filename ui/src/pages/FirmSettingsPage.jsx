@@ -8,7 +8,6 @@ import { Select } from '../components/common/Select';
 import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
 import { adminApi } from '../api/admin.api';
-import { reportsService } from '../services/reports.service';
 import { getFirmConfig, setFirmConfig } from '../utils/firmConfig';
 import { formatDateTime } from '../utils/formatDateTime';
 
@@ -16,36 +15,6 @@ const enabledDisabledOptions = [
   { value: 'true', label: 'Enabled' },
   { value: 'false', label: 'Disabled' },
 ];
-
-const ADMIN_ACTIVITY_ACTIONS = new Set([
-  'AdminMutation',
-  'UserCreated',
-  'AccountActivated',
-  'AccountDeactivated',
-  'InviteEmailResent',
-  'PasswordResetByAdmin',
-  'SetupLinkResent',
-  'USER_CLIENT_ACCESS_UPDATED',
-  'FIRM_SETTINGS_UPDATED',
-  'STORAGE_CONFIGURATION_UPDATED',
-  'STORAGE_CONFIGURATION_DISCONNECTED',
-]);
-
-const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
-
-const isAdminSettingsAuditEvent = (entry = {}) => {
-  const action = String(entry.action || '').trim();
-  const route = String(entry.metadata?.route || '');
-  const method = String(entry.metadata?.method || '').toUpperCase();
-  const isKnownAction = ADMIN_ACTIVITY_ACTIONS.has(action);
-  const isAdminMutationRoute = (
-    (route.startsWith('/api/admin') || route.startsWith('/api/bulk-upload'))
-    && MUTATION_METHODS.has(method)
-  );
-  const isAdminCaseAudit = entry.source === 'CaseAudit' && action.startsWith('ADMIN_');
-
-  return isKnownAction || isAdminMutationRoute || isAdminCaseAudit;
-};
 
 export const FirmSettingsPage = () => {
   const navigate = useNavigate();
@@ -79,12 +48,11 @@ export const FirmSettingsPage = () => {
     setLoadingActivity(true);
     setActivityError('');
     try {
-      const response = await reportsService.getAuditLogs({ limit: 150 });
-      const records = response?.data?.data || [];
+      const response = await adminApi.getFirmSettingsActivity({ limit: 50 });
+      const records = response?.data || [];
       const normalizedActivity = records
-        .filter((entry) => isAdminSettingsAuditEvent(entry))
         .map((entry) => ({
-          id: `${entry.source || 'audit'}-${entry.timestamp || ''}-${entry.action || ''}-${entry.xID || ''}`,
+          id: entry.id || `${entry.source || 'audit'}-${entry.timestamp || ''}-${entry.action || ''}-${entry.xID || ''}`,
           actor: entry.xID || 'SYSTEM',
           timestamp: entry.timestamp,
           description: entry.description || entry.action || 'Admin activity recorded',
