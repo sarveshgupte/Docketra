@@ -4,7 +4,6 @@ import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
-import { Select } from '../components/common/Select';
 import { PageHeader } from '../components/layout/PageHeader';
 import { adminApi } from '../api/admin.api';
 import { ROUTES } from '../constants/routes';
@@ -12,33 +11,9 @@ import { ROUTES } from '../constants/routes';
 export const WorkSettingsPage = () => {
   const navigate = useNavigate();
   const { firmSlug } = useParams();
-  const [settings, setSettings] = useState({
-    assignmentStrategy: 'manual',
-    statusWorkflowMode: 'flexible',
-    autoAssignmentEnabled: false,
-    highPrioritySlaDays: 1,
-    dueSoonWarningDays: 2,
-  });
-  const [saveState, setSaveState] = useState({ loading: true, message: '', type: '' });
   const [workbaskets, setWorkbaskets] = useState([]);
   const [workbasketName, setWorkbasketName] = useState('');
   const [workbasketSaving, setWorkbasketSaving] = useState(false);
-
-  useEffect(() => {
-    const loadSettings = async () => {
-      setSaveState({ loading: true, message: '', type: '' });
-      try {
-        const response = await adminApi.getFirmSettings();
-        setSettings((prev) => ({ ...prev, ...(response?.data?.work || {}) }));
-      } catch {
-        setSaveState({ loading: false, message: 'Could not load work settings. You can still edit defaults locally.', type: 'error' });
-        return;
-      }
-      setSaveState({ loading: false, message: '', type: '' });
-    };
-
-    loadSettings();
-  }, []);
 
   const loadWorkbaskets = async () => {
     try {
@@ -52,21 +27,6 @@ export const WorkSettingsPage = () => {
   useEffect(() => {
     loadWorkbaskets();
   }, []);
-
-  const handleChange = (field, value) => {
-    setSettings((prev) => ({ ...prev, [field]: value }));
-    setSaveState((prev) => ({ ...prev, message: '', type: '' }));
-  };
-
-  const handleSave = async () => {
-    try {
-      const response = await adminApi.updateFirmSettings({ work: settings });
-      setSettings((prev) => ({ ...prev, ...(response?.data?.work || {}) }));
-      setSaveState({ loading: false, message: 'Work settings saved successfully.', type: 'success' });
-    } catch {
-      setSaveState({ loading: false, message: 'Could not save work settings.', type: 'error' });
-    }
-  };
 
   const handleCreateWorkbasket = async () => {
     if (!workbasketName.trim()) return;
@@ -141,56 +101,19 @@ export const WorkSettingsPage = () => {
       </Card>
 
       <Card className="neo-card">
-        <div className="grid gap-4 p-6 md:grid-cols-2">
-          <Select
-            label="Assignment Strategy"
-            value={settings.assignmentStrategy}
-            onChange={(event) => handleChange('assignmentStrategy', event.target.value)}
-            options={[
-              { value: 'manual', label: 'Manual Assignment' },
-              { value: 'balanced', label: 'Balanced Auto Distribution' },
-            ]}
-          />
-          <Select
-            label="Status Workflow"
-            value={settings.statusWorkflowMode}
-            onChange={(event) => handleChange('statusWorkflowMode', event.target.value)}
-            options={[
-              { value: 'flexible', label: 'Flexible' },
-              { value: 'strict', label: 'Strict' },
-            ]}
-          />
-          <Select
-            label="Auto-assignment"
-            value={String(Boolean(settings.autoAssignmentEnabled))}
-            onChange={(event) => handleChange('autoAssignmentEnabled', event.target.value === 'true')}
-            options={[
-              { value: 'false', label: 'Disabled' },
-              { value: 'true', label: 'Enabled' },
-            ]}
-          />
-          <Input
-            label="High priority SLA (days)"
-            type="number"
-            min="1"
-            value={settings.highPrioritySlaDays}
-            onChange={(event) => handleChange('highPrioritySlaDays', Number(event.target.value))}
-          />
-          <Input
-            label="Due-soon warning (days)"
-            type="number"
-            min="1"
-            value={settings.dueSoonWarningDays}
-            onChange={(event) => handleChange('dueSoonWarningDays', Number(event.target.value))}
-          />
-        </div>
-        <div className="flex items-center justify-end gap-3 px-6 pb-6">
-          {saveState.message ? (
-            <span className={`text-sm ${saveState.type === 'success' ? 'text-green-700' : 'text-red-700'}`}>{saveState.message}</span>
-          ) : null}
-          <Button type="button" variant="primary" onClick={handleSave} disabled={saveState.loading}>
-            {saveState.loading ? 'Loading…' : 'Save Work Settings'}
-          </Button>
+        <div className="p-6">
+          <h2 className="text-lg font-semibold text-gray-900">Automation & Workflow Controls</h2>
+          <p className="mt-1 text-sm text-gray-600">
+            Assignment strategy and workflow automation settings are currently not wired to active execution paths.
+            To avoid misleading controls, these options have been temporarily hidden from this page.
+          </p>
+          <p className="mt-3 text-sm text-gray-600">
+            Today, your enforceable work configuration in this section is:
+          </p>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-700">
+            <li>Workbasket lifecycle management (add, rename, activate/deactivate).</li>
+            <li>Category and subcategory management.</li>
+          </ul>
         </div>
       </Card>
 
