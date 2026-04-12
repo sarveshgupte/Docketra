@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Case = require('../models/Case.model');
 const Client = require('../models/Client.model');
 const Comment = require('../models/Comment.model');
@@ -7,6 +8,19 @@ const { enforceTenantScope } = require('../utils/tenantScope');
 const CaseStatus = require('../domain/case/caseStatus');
 const { logCaseListViewed } = require('../services/auditLog.service');
 const caseActionService = require('../services/caseAction.service');
+
+const toObjectIdStringOrNull = (value) => {
+  if (!value) {
+    return null;
+  }
+
+  const normalizedValue = String(value).trim();
+  if (!normalizedValue || !mongoose.isValidObjectId(normalizedValue)) {
+    return null;
+  }
+
+  return normalizedValue;
+};
 
 /**
  * Search Controller for Global Search and Worklists
@@ -521,7 +535,7 @@ const globalWorklist = async (req, res) => {
       });
     }
     
-    const userTeamId = req.user?.teamId ? String(req.user.teamId) : null;
+    const userTeamId = toObjectIdStringOrNull(req.user?.teamId);
     const normalizedTab = String(tab || 'own').toLowerCase();
     const parsedPage = Math.max(1, Number.parseInt(page, 10) || 1);
     const parsedLimit = Math.min(100, Math.max(1, Number.parseInt(limit, 10) || 20));
@@ -650,7 +664,12 @@ const globalWorklist = async (req, res) => {
     
     // Merge results
     const allCases = [...casesWithSLA, ...casesWithoutSLA];
-    const teamIds = [...new Set(allCases.flatMap((c) => [c.ownerTeamId, c.routedToTeamId]).filter(Boolean).map((id) => String(id)))];
+    const teamIds = [...new Set(
+      allCases
+        .flatMap((c) => [c.ownerTeamId, c.routedToTeamId])
+        .map((id) => toObjectIdStringOrNull(id))
+        .filter(Boolean),
+    )];
     const teams = teamIds.length > 0
       ? await Team.find({ _id: { $in: teamIds }, firmId }).select('_id name').lean()
       : [];
