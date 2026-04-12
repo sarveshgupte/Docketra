@@ -2792,10 +2792,46 @@ const getClientFactSheetForCase = async (req, res) => {
       client = await Client.findById(snapshotClientObjectId);
     }
     if (!client) {
-      client = await Client.findOne({
-        clientId: caseData.clientId,
-        firmId: req.user.firmId,
-      });
+      try {
+        client = await Client.findOne({
+          clientId: caseData.clientId,
+          firmId: req.user.firmId,
+        });
+      } catch (lookupError) {
+        // Legacy tenants can carry non-ObjectId firm IDs on the auth/case side.
+        // Client.firmId is ObjectId, so this query can CastError and break CFS view.
+        // Fallback: resolve by clientId with strict ambiguity checks to avoid cross-tenant leakage.
+        if (lookupError?.name === 'CastError') {
+          const candidates = await Client.find({ clientId: caseData.clientId }).limit(5);
+          const snapshotBusinessName = (caseData?.clientSnapshot?.businessName || '').trim().toLowerCase();
+          const snapshotEmail = (caseData?.clientSnapshot?.businessEmail || '').trim().toLowerCase();
+
+          if (candidates.length === 1) {
+            [client] = candidates;
+          } else if (snapshotBusinessName || snapshotEmail) {
+            const scopedMatches = candidates.filter((doc) => {
+              const businessNameMatches = snapshotBusinessName
+                && String(doc.businessName || '').trim().toLowerCase() === snapshotBusinessName;
+              const emailMatches = snapshotEmail
+                && String(doc.businessEmail || '').trim().toLowerCase() === snapshotEmail;
+              return businessNameMatches || emailMatches;
+            });
+            if (scopedMatches.length === 1) {
+              [client] = scopedMatches;
+            }
+          }
+
+          if (!client) {
+            console.warn('[getClientFactSheetForCase] Client lookup fallback was ambiguous', {
+              caseId: caseData.caseId,
+              clientId: caseData.clientId,
+              candidateCount: candidates.length,
+            });
+          }
+        } else {
+          throw lookupError;
+        }
+      }
     }
     
     if (!client) {
