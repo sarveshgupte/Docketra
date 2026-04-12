@@ -291,6 +291,7 @@ const logAdminAction = async ({ adminXID, actionType, targetXID, metadata = {}, 
 
     await CaseAudit.create({
       caseId: `ADMIN_ACTION:${actionType}`,
+      firmId: req?.user?.firmId || req?.firmId || metadata?.firmId || null,
       actionType,
       description,
       performedByXID: adminXID.toUpperCase(),
