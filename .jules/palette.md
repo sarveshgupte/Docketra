@@ -5,3 +5,6 @@
 ## 2024-04-11 - Dynamic Sort Header Accessibility
 **Learning:** Icon-only states indicating complex toggle behaviors (like sorting directions) can lack context for screen readers if only aria-hidden characters are used.
 **Action:** When implementing tri-state toggle buttons, provide dynamic `aria-label`s and tooltips that explicitly describe the *next* action the click will perform.
+## 2025-04-12 - Prevent overriding native aria roles with aria-label
+**Learning:** Adding `aria-label` to a container (like `<th>`) that already has visible text (like column names) entirely overrides that text for screen reader users, causing them to hear only the label ("Sort ascending") instead of the label *and* the text ("Sort ascending, Email").
+**Action:** Always append assistive text in a visually hidden span (e.g. `<span className="sr-only">`) rather than overriding the container's accessible name via `aria-label`.
