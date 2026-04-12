@@ -286,6 +286,7 @@ const hashToken = (token) => {
  */
 const resolveInviteRoleLabel = (role) => {
   const normalized = String(role || '').trim().toUpperCase();
+  if (normalized === 'USER') return 'User';
   if (normalized === 'ADMIN') return 'Admin';
   if (normalized === 'EMPLOYEE') return 'Employee';
   if (normalized === 'STAFF') return 'Staff';
@@ -300,7 +301,7 @@ const sendPasswordSetupEmail = async ({
   firmSlug = null, 
   frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000',
   context = null,
-  role = 'ADMIN',
+  role = 'STAFF',
   firmName = null,
   invitedBy = null,
 }) => {
@@ -371,7 +372,7 @@ const sendPasswordSetupReminderEmail = async ({
   firmSlug = null, 
   frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000',
   req = null,
-  role = 'ADMIN',
+  role = 'STAFF',
   firmName = null,
   invitedBy = null,
 }) => {

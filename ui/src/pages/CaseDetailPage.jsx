@@ -35,6 +35,7 @@ import './CaseDetailPage.css';
 import { ROUTES } from '../constants/routes';
 import { RouteErrorFallback } from '../components/routing/RouteErrorFallback';
 import { useActiveDocket } from '../hooks/useActiveDocket';
+import { useCaseQuery } from '../hooks/useCaseQuery';
 import { normalizeLifecycle } from '../utils/lifecycle';
 import { invalidateCaseCache } from '../utils/caseCache';
 import { getLifecycleMeta } from '../../utils/lifecycleMap';
@@ -176,9 +177,19 @@ export const CaseDetailPage = () => {
   // PR: Comprehensive CaseHistory & Audit Trail
   const [viewTracked, setViewTracked] = useState(false);
   const loadSequenceRef = useRef(0);
-  const pollSequenceRef = useRef(0);
   const previousRealtimeRef = useRef(null);
   const notificationPermissionRequestedRef = useRef(false);
+  const {
+    data: caseQueryResponse,
+    error: caseQueryError,
+    refetch: refetchCaseQuery,
+  } = useCaseQuery(caseId, {
+    refetchInterval: () => {
+      if (typeof document !== 'undefined' && document.hidden) return false;
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return false;
+      return REALTIME_POLL_MS;
+    },
+  });
   
   // Configuration for view tracking
   const VIEW_TRACKING_DEBOUNCE_MS = 2000; // 2 seconds
@@ -370,15 +381,8 @@ export const CaseDetailPage = () => {
       if (!background) {
         setLoadError(null);
       }
-      if (!background) {
-        invalidateCaseCache(caseId);
-      }
-      const response = await caseApi.getCaseById(caseId, {
-        commentsPage: 1,
-        commentsLimit: 25,
-        activityPage: 1,
-        activityLimit: 25,
-      });
+      if (!background) invalidateCaseCache(caseId);
+      const { data: response } = await refetchCaseQuery();
       
       if (response.success && requestId === loadSequenceRef.current) {
         const normalized = response.data?.case || response.data;
@@ -406,7 +410,7 @@ export const CaseDetailPage = () => {
         setSectionLoading({ comments: false, history: false, attachments: false });
       }
     }
-  }, [caseId, showError]);
+  }, [caseId, refetchCaseQuery, showError]);
 
   const queueFailedAction = useCallback((action) => {
     setRetryQueue((prev) => {
@@ -464,12 +468,26 @@ export const CaseDetailPage = () => {
 
   useEffect(() => {
     beginDocketOpen(caseId);
-    loadCase();
     void caseApi.trackCaseOpen(caseId);
     return () => {
       void caseApi.trackCaseExit(caseId);
     };
-  }, [beginDocketOpen, caseId, loadCase]);
+  }, [beginDocketOpen, caseId]);
+
+  useEffect(() => {
+    if (!caseQueryResponse?.success) return;
+    const normalized = caseQueryResponse.data?.case || caseQueryResponse.data;
+    setCaseData((prev) => mergeCaseData(prev, normalized, { source: 'case-query' }));
+    setActiveDocketData(normalized);
+    setLoading(false);
+    setLoadError(null);
+  }, [caseQueryResponse, mergeCaseData, setActiveDocketData]);
+
+  useEffect(() => {
+    if (!caseQueryError) return;
+    setLoading(false);
+    setLoadError(extractErrorMessage(caseQueryError, 'Unable to load docket details. Please try again.'));
+  }, [caseQueryError]);
 
   useEffect(() => {
     if (activeDocketId === caseId && activeDocketData?.caseId === caseId) {
@@ -488,60 +506,32 @@ export const CaseDetailPage = () => {
   }, [caseData, lifecycleStatus, caseInfo?.assignedToXID, caseInfo?.assignedToName, comments.length]);
 
   useEffect(() => {
-    const pollForUpdates = async () => {
-      const pollRequestId = pollSequenceRef.current + 1;
-      pollSequenceRef.current = pollRequestId;
-      try {
-        if (document.hidden || !navigator.onLine) {
-          return;
+    if (!caseQueryResponse?.success || !caseData) return;
+    try {
+      const updated = caseQueryResponse.data?.case || caseQueryResponse.data;
+      const previous = previousRealtimeRef.current;
+      const nextInfo = normalizeCase(updated);
+      const nextCommentsCount = updated?.comments?.length || 0;
+      const nextAssignee = nextInfo?.assignedToXID || nextInfo?.assignedToName || user?.xID || null;
+      if (previous) {
+        if (nextCommentsCount > previous.commentsCount) {
+          showSuccess('New comment update received.');
+          sendBrowserNotification('Docketra update', 'A new comment was added to this docket.');
         }
-
-        const response = await caseApi.getCaseById(caseId, {
-          commentsPage: 1,
-          commentsLimit: 50,
-          activityPage: 1,
-          activityLimit: 50,
-        });
-        if (!response?.success) return;
-        const updated = response.data?.case || response.data;
-        if (pollRequestId !== pollSequenceRef.current) return;
-        console.log('DOCKET_DEBUG', {
-          caseId,
-          activeDocketId,
-          lifecycle: normalizeLifecycleForUi(updated?.lifecycle),
-          assignedTo: updated?.assignedToXID || updated?.assignedTo?.xID || null,
-          responseSource: 'polling',
-          timestamp: new Date().toISOString(),
-        });
-        const previous = previousRealtimeRef.current;
-        const nextInfo = normalizeCase(updated);
-        const nextCommentsCount = updated?.comments?.length || 0;
-        const nextAssignee = nextInfo?.assignedToXID || nextInfo?.assignedToName || user?.xID || null;
-
-        if (previous) {
-          if (nextCommentsCount > previous.commentsCount) {
-            showSuccess('New comment update received.');
-            sendBrowserNotification('Docketra update', 'A new comment was added to this docket.');
-          }
-          const nextLifecycle = normalizeLifecycleForUi(nextInfo?.lifecycle);
-          if (nextLifecycle && previous.lifecycle && nextLifecycle !== previous.lifecycle) {
-            showSuccess(`Lifecycle updated: ${previous.lifecycle} → ${nextLifecycle}`);
-            sendBrowserNotification('Docket lifecycle changed', `${previous.lifecycle} → ${nextLifecycle}`);
-          }
-          if (nextAssignee && previous.assignee && nextAssignee !== previous.assignee) {
-            showWarning(`Assignment updated: ${previous.assignee} → ${nextAssignee}`);
-          }
+        const nextLifecycle = normalizeLifecycleForUi(nextInfo?.lifecycle);
+        if (nextLifecycle && previous.lifecycle && nextLifecycle !== previous.lifecycle) {
+          showSuccess(`Lifecycle updated: ${previous.lifecycle} → ${nextLifecycle}`);
+          sendBrowserNotification('Docket lifecycle changed', `${previous.lifecycle} → ${nextLifecycle}`);
         }
-        setCaseData((prev) => mergeCaseData(prev, updated, { source: 'polling' }));
-        setRealtimeStatus('live');
-      } catch (error) {
-        setRealtimeStatus('reconnecting');
+        if (nextAssignee && previous.assignee && nextAssignee !== previous.assignee) {
+          showWarning(`Assignment updated: ${previous.assignee} → ${nextAssignee}`);
+        }
       }
-    };
-
-    const timer = setInterval(pollForUpdates, REALTIME_POLL_MS);
-    return () => clearInterval(timer);
-  }, [caseId, mergeCaseData, sendBrowserNotification, showSuccess, showWarning]);
+      setRealtimeStatus('live');
+    } catch (error) {
+      setRealtimeStatus('reconnecting');
+    }
+  }, [caseData, caseQueryResponse, sendBrowserNotification, showSuccess, showWarning, user?.xID]);
 
   useEffect(() => {
     localStorage.setItem(ACTION_RETRY_KEY, JSON.stringify(retryQueue));
