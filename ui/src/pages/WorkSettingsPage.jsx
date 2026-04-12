@@ -4,7 +4,6 @@ import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
-import { Select } from '../components/common/Select';
 import { PageHeader } from '../components/layout/PageHeader';
 import { adminApi } from '../api/admin.api';
 import { ROUTES } from '../constants/routes';
@@ -12,44 +11,45 @@ import { ROUTES } from '../constants/routes';
 export const WorkSettingsPage = () => {
   const navigate = useNavigate();
   const { firmSlug } = useParams();
-  const [settings, setSettings] = useState({
-    assignmentStrategy: 'manual',
-    statusWorkflowMode: 'flexible',
-    autoAssignmentEnabled: false,
-    highPrioritySlaDays: 1,
-    dueSoonWarningDays: 2,
-  });
-  const [saveState, setSaveState] = useState({ loading: true, message: '', type: '' });
+  const [workbaskets, setWorkbaskets] = useState([]);
+  const [workbasketName, setWorkbasketName] = useState('');
+  const [workbasketSaving, setWorkbasketSaving] = useState(false);
 
-  useEffect(() => {
-    const loadSettings = async () => {
-      setSaveState({ loading: true, message: '', type: '' });
-      try {
-        const response = await adminApi.getFirmSettings();
-        setSettings((prev) => ({ ...prev, ...(response?.data?.work || {}) }));
-      } catch {
-        setSaveState({ loading: false, message: 'Could not load work settings. You can still edit defaults locally.', type: 'error' });
-        return;
-      }
-      setSaveState({ loading: false, message: '', type: '' });
-    };
-
-    loadSettings();
-  }, []);
-
-  const handleChange = (field, value) => {
-    setSettings((prev) => ({ ...prev, [field]: value }));
-    setSaveState((prev) => ({ ...prev, message: '', type: '' }));
+  const loadWorkbaskets = async () => {
+    try {
+      const response = await adminApi.listWorkbaskets({ includeInactive: true });
+      setWorkbaskets(response?.success ? (response.data || []) : []);
+    } catch {
+      setWorkbaskets([]);
+    }
   };
 
-  const handleSave = async () => {
+  useEffect(() => {
+    loadWorkbaskets();
+  }, []);
+
+  const handleCreateWorkbasket = async () => {
+    if (!workbasketName.trim()) return;
+    setWorkbasketSaving(true);
     try {
-      const response = await adminApi.updateFirmSettings({ work: settings });
-      setSettings((prev) => ({ ...prev, ...(response?.data?.work || {}) }));
-      setSaveState({ loading: false, message: 'Work settings saved successfully.', type: 'success' });
-    } catch {
-      setSaveState({ loading: false, message: 'Could not save work settings.', type: 'error' });
+      await adminApi.createWorkbasket(workbasketName.trim());
+      setWorkbasketName('');
+      await loadWorkbaskets();
+    } finally {
+      setWorkbasketSaving(false);
     }
+  };
+
+  const handleRenameWorkbasket = async (workbasket) => {
+    const nextName = window.prompt('Rename workbasket', workbasket.name || '');
+    if (!nextName || !nextName.trim() || nextName.trim() === workbasket.name) return;
+    await adminApi.renameWorkbasket(workbasket._id, nextName.trim());
+    await loadWorkbaskets();
+  };
+
+  const handleToggleWorkbasket = async (workbasket) => {
+    await adminApi.toggleWorkbasketStatus(workbasket._id, !workbasket.isActive);
+    await loadWorkbaskets();
   };
 
   return (
@@ -70,56 +70,50 @@ export const WorkSettingsPage = () => {
       </Card>
 
       <Card className="neo-card">
-        <div className="grid gap-4 p-6 md:grid-cols-2">
-          <Select
-            label="Assignment Strategy"
-            value={settings.assignmentStrategy}
-            onChange={(event) => handleChange('assignmentStrategy', event.target.value)}
-            options={[
-              { value: 'manual', label: 'Manual Assignment' },
-              { value: 'balanced', label: 'Balanced Auto Distribution' },
-            ]}
-          />
-          <Select
-            label="Status Workflow"
-            value={settings.statusWorkflowMode}
-            onChange={(event) => handleChange('statusWorkflowMode', event.target.value)}
-            options={[
-              { value: 'flexible', label: 'Flexible' },
-              { value: 'strict', label: 'Strict' },
-            ]}
-          />
-          <Select
-            label="Auto-assignment"
-            value={String(Boolean(settings.autoAssignmentEnabled))}
-            onChange={(event) => handleChange('autoAssignmentEnabled', event.target.value === 'true')}
-            options={[
-              { value: 'false', label: 'Disabled' },
-              { value: 'true', label: 'Enabled' },
-            ]}
-          />
-          <Input
-            label="High priority SLA (days)"
-            type="number"
-            min="1"
-            value={settings.highPrioritySlaDays}
-            onChange={(event) => handleChange('highPrioritySlaDays', Number(event.target.value))}
-          />
-          <Input
-            label="Due-soon warning (days)"
-            type="number"
-            min="1"
-            value={settings.dueSoonWarningDays}
-            onChange={(event) => handleChange('dueSoonWarningDays', Number(event.target.value))}
-          />
+        <div className="p-6">
+          <h2 className="text-lg font-semibold text-gray-900">Workbasket Management</h2>
+          <p className="mt-1 text-sm text-gray-600">Add, rename, and activate/deactivate workbaskets for docket routing.</p>
+          <div className="mt-4 flex gap-3">
+            <Input
+              label="New workbasket"
+              value={workbasketName}
+              onChange={(event) => setWorkbasketName(event.target.value)}
+              placeholder="e.g. Compliance WB"
+            />
+            <Button type="button" variant="primary" onClick={handleCreateWorkbasket} disabled={workbasketSaving || !workbasketName.trim()}>
+              Add Workbasket
+            </Button>
+          </div>
+          <div className="mt-4 space-y-2">
+            {workbaskets.map((workbasket) => (
+              <div key={workbasket._id} className="flex items-center justify-between rounded border px-3 py-2">
+                <div className="text-sm font-medium text-gray-900">{workbasket.name} <span className="text-xs text-gray-500">({workbasket.isActive ? 'Active' : 'Inactive'})</span></div>
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" onClick={() => handleRenameWorkbasket(workbasket)}>Rename</Button>
+                  <Button type="button" variant={workbasket.isActive ? 'danger' : 'success'} onClick={() => handleToggleWorkbasket(workbasket)}>
+                    {workbasket.isActive ? 'Deactivate' : 'Activate'}
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="flex items-center justify-end gap-3 px-6 pb-6">
-          {saveState.message ? (
-            <span className={`text-sm ${saveState.type === 'success' ? 'text-green-700' : 'text-red-700'}`}>{saveState.message}</span>
-          ) : null}
-          <Button type="button" variant="primary" onClick={handleSave} disabled={saveState.loading}>
-            {saveState.loading ? 'Loading…' : 'Save Work Settings'}
-          </Button>
+      </Card>
+
+      <Card className="neo-card">
+        <div className="p-6">
+          <h2 className="text-lg font-semibold text-gray-900">Automation & Workflow Controls</h2>
+          <p className="mt-1 text-sm text-gray-600">
+            Assignment strategy and workflow automation settings are currently not wired to active execution paths.
+            To avoid misleading controls, these options have been temporarily hidden from this page.
+          </p>
+          <p className="mt-3 text-sm text-gray-600">
+            Today, your enforceable work configuration in this section is:
+          </p>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-700">
+            <li>Workbasket lifecycle management (add, rename, activate/deactivate).</li>
+            <li>Category and subcategory management.</li>
+          </ul>
         </div>
       </Card>
 
