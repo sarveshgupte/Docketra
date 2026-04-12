@@ -349,11 +349,6 @@ export const CaseDetailPage = () => {
     };
   }, [mergeUniqueComments]);
 
-  const handleDocketDetailsUpdated = useCallback((doc) => {
-    setCaseData((prev) => mergeCaseData(prev, doc, { source: 'DocketDetails.activate' }));
-    setActiveDocketData(doc);
-  }, [mergeCaseData, setActiveDocketData]);
-
   const appendTimelineEvent = useCallback((event) => {
     setCaseData((prev) => ({
       ...prev,
@@ -1419,8 +1414,6 @@ export const CaseDetailPage = () => {
         <DocketDetails
           docketId={caseId}
           prefetchedCase={caseInfo}
-          prefetchedSyncKey={`${caseInfo?.lifecycle ?? ''}:${caseInfo?.updatedAt ?? ''}:${caseInfo?.assignedToXID ?? ''}`}
-          onDocketUpdated={handleDocketDetailsUpdated}
           openedFromWorklist={location.state?.origin === 'worklist'}
         >
           {caseInfo?.qc?.status || caseInfo?.qcStatus ? (
