@@ -165,6 +165,7 @@ export const AdminPage = () => {
     name: '',
     email: '',
     role: '',
+    teamIds: [],
   });
   
   // Category form state
@@ -203,6 +204,8 @@ export const AdminPage = () => {
     reason: '',
   });
   const [restrictedClientDraft, setRestrictedClientDraft] = useState([]);
+  const [workbaskets, setWorkbaskets] = useState([]);
+  const [selectedWorkbasketDraft, setSelectedWorkbasketDraft] = useState([]);
 
   useEffect(() => {
     loadAdminStats();
@@ -317,12 +320,18 @@ export const AdminPage = () => {
     return response;
   };
 
+  const fetchWorkbaskets = async () => {
+    const response = await adminApi.listWorkbaskets({ includeInactive: false });
+    setWorkbaskets(response?.success ? (response.data || []) : []);
+    return response;
+  };
+
   const loadAdminData = async () => {
     setLoading(true);
     setTabError(null);
     try {
       if (activeTab === 'users') {
-        const response = await adminApi.getUsers();
+        const [response] = await Promise.all([adminApi.getUsers(), fetchWorkbaskets()]);
         const apiUsers = response?.success ? (response.data || []) : [];
         setUsers(ensureLoggedInAdminVisible(apiUsers));
       } else if (activeTab === 'categories') {
@@ -364,7 +373,7 @@ export const AdminPage = () => {
     e.preventDefault();
     
     // PR 32: Only name and email are required (xID is auto-generated)
-    if (!newUser.name || !newUser.email || !newUser.role) {
+    if (!newUser.name || !newUser.email || !newUser.role || !Array.isArray(newUser.teamIds) || newUser.teamIds.length === 0) {
       showToast('Please fill in all required fields', 'error');
       return;
     }
@@ -377,7 +386,7 @@ export const AdminPage = () => {
       if (response.success) {
         showToast(`User invited successfully! xID: ${response.data?.xID}.`, 'success');
         setShowCreateModal(false);
-        setNewUser({ name: '', email: '', role: '' });
+        setNewUser({ name: '', email: '', role: '', teamIds: [] });
         await Promise.all([loadAdminStats(), loadAdminData()]);
       } else {
         showToast(response.message || 'Failed to create user', 'error');
@@ -454,7 +463,7 @@ export const AdminPage = () => {
 
   const handleOpenAccessModal = async (user) => {
     try {
-      await fetchClients();
+      await Promise.all([fetchClients(), fetchWorkbaskets()]);
     } catch (error) {
       showToast(error.response?.data?.message || 'Failed to load clients', 'error');
       return;
@@ -462,6 +471,11 @@ export const AdminPage = () => {
 
     setSelectedUserForAccess(user);
     setRestrictedClientDraft(Array.isArray(user.restrictedClientIds) ? user.restrictedClientIds : []);
+    setSelectedWorkbasketDraft(
+      Array.isArray(user.teamIds) && user.teamIds.length > 0
+        ? user.teamIds.map((id) => String(id))
+        : (user.teamId ? [String(user.teamId)] : [])
+    );
     setShowAccessModal(true);
   };
 
@@ -479,11 +493,15 @@ export const AdminPage = () => {
     if (!selectedUserForAccess) return;
     setSavingUserAccess(true);
     try {
-      const response = await adminApi.updateRestrictedClients(selectedUserForAccess.xID, restrictedClientDraft);
-      if (response.success) {
+      const [response, wbResponse] = await Promise.all([
+        adminApi.updateRestrictedClients(selectedUserForAccess.xID, restrictedClientDraft),
+        adminApi.updateUserWorkbaskets(selectedUserForAccess.xID, selectedWorkbasketDraft),
+      ]);
+      if (response.success && wbResponse.success) {
         showToast('User client docket access updated', 'success');
         setShowAccessModal(false);
         setSelectedUserForAccess(null);
+        setSelectedWorkbasketDraft([]);
         await loadAdminData();
       } else {
         showToast(response.message || 'Failed to update user access', 'error');
@@ -1469,6 +1487,31 @@ export const AdminPage = () => {
             ]}
             required
           />
+          <div className="neo-form-group">
+            <FormLabel>Workbaskets (at least one)</FormLabel>
+            <div className="admin__client-access-list">
+              {workbaskets.map((workbasket) => (
+                <label key={workbasket._id} className="admin__client-access-item">
+                  <input
+                    type="checkbox"
+                    checked={(newUser.teamIds || []).includes(String(workbasket._id))}
+                    onChange={() => {
+                      setNewUser((prev) => {
+                        const current = Array.isArray(prev.teamIds) ? prev.teamIds : [];
+                        return {
+                          ...prev,
+                          teamIds: current.includes(String(workbasket._id))
+                            ? current.filter((id) => id !== String(workbasket._id))
+                            : [...current, String(workbasket._id)],
+                        };
+                      });
+                    }}
+                  />
+                  <span>{workbasket.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
 
           <div className="admin__form-actions">
             <Button
@@ -1482,7 +1525,7 @@ export const AdminPage = () => {
             <Button
               type="submit"
               variant="primary"
-              disabled={creatingUser}
+              disabled={creatingUser || (newUser.teamIds || []).length === 0}
             >
               {creatingUser ? 'Creating...' : 'Create User'}
             </Button>
@@ -1496,12 +1539,32 @@ export const AdminPage = () => {
           setShowAccessModal(false);
           setSelectedUserForAccess(null);
           setRestrictedClientDraft([]);
+          setSelectedWorkbasketDraft([]);
         }}
-        title={`Client Access Control${selectedUserForAccess ? ` — ${selectedUserForAccess.name}` : ''}`}
+        title={`User Access & Workbasket Mapping${selectedUserForAccess ? ` — ${selectedUserForAccess.name}` : ''}`}
       >
         <div className="admin__create-form">
           <div className="neo-info-text">
-            Select which clients this user can access. Checked clients are allowed; unchecked clients are blocked.
+            Select workbaskets and clients for this user. At least one workbasket is required.
+          </div>
+          <div className="neo-form-group">
+            <FormLabel>Workbaskets (at least one)</FormLabel>
+            <div className="admin__client-access-list">
+              {workbaskets.map((workbasket) => (
+                <label key={workbasket._id} className="admin__client-access-item">
+                  <input
+                    type="checkbox"
+                    checked={selectedWorkbasketDraft.includes(String(workbasket._id))}
+                    onChange={() => {
+                      setSelectedWorkbasketDraft((prev) => prev.includes(String(workbasket._id))
+                        ? prev.filter((id) => id !== String(workbasket._id))
+                        : [...prev, String(workbasket._id)]);
+                    }}
+                  />
+                  <span>{workbasket.name}</span>
+                </label>
+              ))}
+            </div>
           </div>
 
           <div className="admin__access-summary">
@@ -1546,6 +1609,7 @@ export const AdminPage = () => {
                 setShowAccessModal(false);
                 setSelectedUserForAccess(null);
                 setRestrictedClientDraft([]);
+                setSelectedWorkbasketDraft([]);
               }}
             >
               Cancel
@@ -1553,7 +1617,7 @@ export const AdminPage = () => {
             <Button
               type="button"
               variant="primary"
-              disabled={savingUserAccess}
+              disabled={savingUserAccess || selectedWorkbasketDraft.length === 0}
               onClick={handleSaveUserAccess}
             >
               {savingUserAccess ? 'Saving...' : 'Save Access'}

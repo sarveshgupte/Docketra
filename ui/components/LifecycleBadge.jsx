@@ -10,6 +10,8 @@ export function LifecycleBadge({ lifecycle, className = '' }) {
       className={className}
       style={{
         display: 'inline-flex',
+        alignSelf: 'flex-start',
+        width: 'fit-content',
         alignItems: 'center',
         gap: 6,
         padding: '4px 10px',
