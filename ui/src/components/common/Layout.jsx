@@ -576,7 +576,16 @@ export const Layout = ({ children }) => {
               {sidebarCollapsed ? 'Expand' : 'Collapse'}
             </span>
           </button>
-          <div className="enterprise-sidebar__version">{`${APP_NAME} v${APP_VERSION}`}</div>
+          {currentFirmSlug ? (
+            <Link
+              to={safeRoute(ROUTES.UPDATES(currentFirmSlug), ROUTES.DASHBOARD(currentFirmSlug))}
+              className="enterprise-sidebar__version"
+            >
+              {`${APP_NAME} v${APP_VERSION}`}
+            </Link>
+          ) : (
+            <div className="enterprise-sidebar__version">{`${APP_NAME} v${APP_VERSION}`}</div>
+          )}
         </div>
       </aside>
 
