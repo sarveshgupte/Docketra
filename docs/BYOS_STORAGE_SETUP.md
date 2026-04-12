@@ -1,6 +1,11 @@
-# BYOS Storage Setup (Google Drive Only)
+# BYOS Storage Setup
 
-## 1) Google Drive OAuth setup
+## 1) Supported providers
+- Google Drive (OAuth connect flow in-app)
+- Microsoft OneDrive (manual refresh-token + optional driveId entry)
+- Amazon S3 / S3-compatible (bucket + region, optional IAM credentials)
+
+## 2) Google Drive OAuth setup
 1. Open Google Cloud Console: https://console.cloud.google.com/
 2. Create/select a project.
 3. Enable Google Drive API.
@@ -12,13 +17,14 @@
    - `GOOGLE_OAUTH_REDIRECT_URI`
    - `STORAGE_TOKEN_SECRET`
 
-## 2) Runtime behavior
-- Docketra BYOS currently supports only **Google Drive**.
+## 3) Runtime behavior
+- Default mode is Docketra-managed storage.
+- BYOS providers can be changed from Storage Settings (OTP verification required).
 - Folder layout for new case attachments:
   - `/Docketra/{firmName}/Cases/{caseId}/Attachments/`
 - Existing legacy attachments using `driveFileId` remain readable.
 
-## 3) Troubleshooting
+## 4) Troubleshooting
 - **Error: oauth_failed**
   - Verify OAuth client ID/secret and redirect URI match Google configuration.
 - **Error: no_refresh_token**

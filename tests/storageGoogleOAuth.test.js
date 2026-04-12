@@ -78,6 +78,7 @@ const mockMongoose = {
   Schema: class {
     constructor() {}
     index() {}
+    pre() {}
   },
   model: () => mockFirmStorage,
   Types: { ObjectId: class {} },
@@ -133,7 +134,7 @@ Module._load = function (request, parent, isMain) {
 // ──────────────────────────────────────────────────────────────────
 // Pull in the real TokenEncryption to verify we can encrypt/decrypt
 // ──────────────────────────────────────────────────────────────────
-const { encrypt, decrypt } = require('../src/storage/services/TokenEncryption.service');
+const { encrypt, decrypt } = require('../src/services/storage/services/TokenEncryption.service');
 
 // ──────────────────────────────────────────────────────────────────
 // Helper: build a mock res object
