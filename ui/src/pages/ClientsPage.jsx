@@ -8,7 +8,7 @@ import { Modal } from '../components/common/Modal';
 import { Input } from '../components/common/Input';
 import { Textarea } from '../components/common/Textarea';
 import { PageHeader } from '../components/layout/PageHeader';
-import { DataTable } from '../components/layout/DataTable';
+import { DataTable } from '../components/common/DataTable';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
@@ -380,7 +380,7 @@ export const ClientsPage = () => {
             columns={columns}
             data={clients}
             rowKey="clientId"
-            emptyContent={(
+            emptyMessage={(
               <div className="p-8">
                 <EmptyState
                   title="No clients available yet"

@@ -5,7 +5,7 @@ import { Button } from '../components/common/Button';
 import { TableSkeleton } from '../components/common/Skeleton';
 import { PageHeader } from '../components/layout/PageHeader';
 import { SectionCard } from '../components/layout/SectionCard';
-import { DataTable } from '../components/layout/DataTable';
+import { DataTable } from '../components/common/DataTable';
 import { StatusBadge } from '../components/layout/StatusBadge';
 import { EmptyState } from '../components/ui/EmptyState';
 import { AuditTimelineDrawer } from '../components/common/AuditTimelineDrawer';
@@ -992,7 +992,7 @@ export const CasesPage = () => {
         <SectionCard title="Docket Registry" subtitle={`${searchedCases.length} records`}>
           <DataTable
             columns={columns}
-            data={sortedCases}
+            rows={sortedCases}
             rowKey="caseId"
             onRowClick={handleCaseClick}
             sortState={sortState}
@@ -1002,7 +1002,7 @@ export const CasesPage = () => {
             onResetFilters={handleResetFilters}
             toolbarLeft={toolbarLeft}
             dense
-            emptyContent={
+            emptyMessage={
               <EmptyState
                 title={
                   activeView === CASE_VIEWS.OVERDUE.id
