@@ -18,6 +18,7 @@ import { productUpdatesService } from '../services/productUpdatesService';
 import { APP_VERSION } from '../utils/constants';
 
 export const PlatformDashboard = () => {
+  const MAX_UPDATE_BULLETS = 5;
   const navigate = useNavigate();
   const toast = useToast();
   
@@ -108,6 +109,10 @@ export const PlatformDashboard = () => {
       toast.error('Add a title and at least one bullet point.');
       return;
     }
+    if (content.length > MAX_UPDATE_BULLETS) {
+      toast.error(`Use ${MAX_UPDATE_BULLETS} bullet points or fewer.`);
+      return;
+    }
 
     try {
       setPublishingUpdate(true);
@@ -124,7 +129,7 @@ export const PlatformDashboard = () => {
         toast.error(response?.message || 'Failed to publish update.');
       }
     } catch (error) {
-      toast.error('Failed to publish update.');
+      toast.error(error?.response?.data?.message || 'Failed to publish update.');
     } finally {
       setPublishingUpdate(false);
     }
@@ -139,6 +144,10 @@ export const PlatformDashboard = () => {
   };
 
   const handleAddBullet = () => {
+    if (updateForm.bullets.length >= MAX_UPDATE_BULLETS) {
+      toast.error(`Maximum ${MAX_UPDATE_BULLETS} bullet points allowed.`);
+      return;
+    }
     setUpdateForm((prev) => ({ ...prev, bullets: [...prev.bullets, ''] }));
   };
 
@@ -270,6 +279,9 @@ export const PlatformDashboard = () => {
                 <Button type="button" variant="secondary" onClick={handleAddBullet}>
                   Add bullet point
                 </Button>
+                <p className="mt-1 text-xs text-gray-500">
+                  Up to {MAX_UPDATE_BULLETS} bullet points.
+                </p>
               </div>
               <label className="flex items-center gap-2 text-sm text-gray-700">
                 <input
