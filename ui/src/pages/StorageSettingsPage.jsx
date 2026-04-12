@@ -25,7 +25,14 @@ export function StorageSettingsPage() {
   const [provider, setProvider] = useState('docketra_managed');
   const [otpCode, setOtpCode] = useState('');
   const [verificationToken, setVerificationToken] = useState('');
-  const [googleRefreshToken, setGoogleRefreshToken] = useState('');
+  const [oneDriveRefreshToken, setOneDriveRefreshToken] = useState('');
+  const [oneDriveDriveId, setOneDriveDriveId] = useState('');
+  const [s3Bucket, setS3Bucket] = useState('');
+  const [s3Region, setS3Region] = useState('');
+  const [s3Prefix, setS3Prefix] = useState('');
+  const [s3AccessKeyId, setS3AccessKeyId] = useState('');
+  const [s3SecretAccessKey, setS3SecretAccessKey] = useState('');
+  const [s3SessionToken, setS3SessionToken] = useState('');
   const { user } = useAuth();
 
   const loadConfiguration = async () => {
@@ -88,10 +95,27 @@ export function StorageSettingsPage() {
 
   const onSaveStorageSettings = async () => {
     try {
+      let credentials = {};
+      if (provider === 'onedrive') {
+        credentials = {
+          refreshToken: oneDriveRefreshToken,
+          driveId: oneDriveDriveId || null,
+        };
+      } else if (provider === 's3') {
+        credentials = {
+          bucket: s3Bucket,
+          region: s3Region,
+          prefix: s3Prefix || '',
+          accessKeyId: s3AccessKeyId || undefined,
+          secretAccessKey: s3SecretAccessKey || undefined,
+          sessionToken: s3SessionToken || undefined,
+        };
+      }
+
       await changeStorageProvider({
         provider,
         verificationToken,
-        credentials: provider === 'google-drive' ? { googleRefreshToken } : {},
+        credentials,
       });
       toast?.showSuccess?.('Storage settings updated.');
       await loadConfiguration();
@@ -120,6 +144,8 @@ export function StorageSettingsPage() {
 
   const connected = config?.isConfigured;
   const isGoogleProvider = provider === 'google-drive';
+  const isOneDriveProvider = provider === 'onedrive';
+  const isS3Provider = provider === 's3';
   const canSwitchProvider = provider !== (config?.provider || 'docketra_managed');
 
   return (
@@ -146,19 +172,29 @@ export function StorageSettingsPage() {
                   options={[
                     { value: 'docketra_managed', label: 'Default (Docketra Storage)' },
                     { value: 'google-drive', label: 'Google Drive' },
+                    { value: 'onedrive', label: 'Microsoft OneDrive' },
+                    { value: 's3', label: 'Amazon S3 (or compatible)' },
                   ]}
                 />
                 <Input label="Status" value={connected ? 'Active' : 'Not Connected'} readOnly />
                 <Input label="Connected email" value={config?.connectedEmail || 'N/A'} readOnly />
                 <Input label="Folder path" value={config?.folderPath || config?.rootFolderId || 'N/A'} readOnly />
                 <Input label="Connected since" value={formatDateTime(config?.createdAt)} readOnly />
-                {isGoogleProvider ? (
-                  <Input
-                    label="Google Refresh Token"
-                    value={googleRefreshToken}
-                    onChange={(event) => setGoogleRefreshToken(event.target.value)}
-                    placeholder="Paste encrypted-source refresh token"
-                  />
+                {isOneDriveProvider ? (
+                  <>
+                    <Input label="OneDrive Refresh Token" value={oneDriveRefreshToken} onChange={(event) => setOneDriveRefreshToken(event.target.value)} />
+                    <Input label="OneDrive Drive ID (optional)" value={oneDriveDriveId} onChange={(event) => setOneDriveDriveId(event.target.value)} />
+                  </>
+                ) : null}
+                {isS3Provider ? (
+                  <>
+                    <Input label="S3 Bucket" value={s3Bucket} onChange={(event) => setS3Bucket(event.target.value)} />
+                    <Input label="S3 Region" value={s3Region} onChange={(event) => setS3Region(event.target.value)} />
+                    <Input label="S3 Prefix (optional)" value={s3Prefix} onChange={(event) => setS3Prefix(event.target.value)} />
+                    <Input label="S3 Access Key ID (optional)" value={s3AccessKeyId} onChange={(event) => setS3AccessKeyId(event.target.value)} />
+                    <Input label="S3 Secret Access Key (optional)" value={s3SecretAccessKey} onChange={(event) => setS3SecretAccessKey(event.target.value)} />
+                    <Input label="S3 Session Token (optional)" value={s3SessionToken} onChange={(event) => setS3SessionToken(event.target.value)} />
+                  </>
                 ) : null}
                 <div className={`grid grid-cols-1 md:grid-cols-3 ${spacingClasses.formActionsGap} items-end`}>
                   <Input label="OTP Code" value={otpCode} onChange={(event) => setOtpCode(event.target.value)} />
@@ -170,7 +206,7 @@ export function StorageSettingsPage() {
               <div className={`${spacingClasses.formActions} ${spacingClasses.formActionsGap}`}>
                 {isGoogleProvider ? (
                   <Button type="button" variant="primary" onClick={onConnectGoogleDrive} disabled={testing}>
-                    Connect Google Drive
+                    Connect / Refresh Google Drive
                   </Button>
                 ) : null}
                 {connected ? (
