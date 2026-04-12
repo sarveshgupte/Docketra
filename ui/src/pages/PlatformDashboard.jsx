@@ -40,6 +40,23 @@ export const PlatformDashboard = () => {
   const isFetchingRef = useRef(false);
   const hasLoadedRef = useRef(false);
   const hasShownErrorRef = useRef(false);
+  const normalizeStats = (data) => {
+    const safeData = (data && typeof data === 'object') ? data : {};
+    const toNumber = (value) => {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+    const totalFirms = toNumber(safeData.totalFirms);
+    const activeFirms = toNumber(safeData.activeFirms);
+    const inactiveFirms = toNumber(safeData.inactiveFirms);
+    return {
+      totalFirms,
+      activeFirms,
+      inactiveFirms,
+      totalClients: toNumber(safeData.totalClients),
+      totalUsers: toNumber(safeData.totalUsers),
+    };
+  };
 
   // Load platform stats once per dashboard load
   useEffect(() => {
@@ -60,18 +77,11 @@ export const PlatformDashboard = () => {
       // HTTP 304 means cached data is still valid - keep current state
       if (response?.status !== 304) {
         if (response?.success) {
-          const data = response.data || emptyStats;
-          if (!response.data) {
-            console.warn('PlatformDashboard: API returned success but no data, using emptyStats');
-          }
-          setStats(data);
+          setStats(normalizeStats(response.data));
         } else if (response?.degraded) {
-          const data = response?.data || emptyStats;
-          if (!response.data) {
-            console.warn('PlatformDashboard: API returned degraded but no data, using emptyStats');
-          }
-          setStats(data);
+          setStats(normalizeStats(response.data));
         } else if (!hasShownErrorRef.current) {
+          setStats(emptyStats);
           toast.error('Failed to load platform statistics');
           hasShownErrorRef.current = true;
         }
@@ -79,6 +89,7 @@ export const PlatformDashboard = () => {
     } catch (error) {
       // Don't reset stats on error - preserve existing data
       if (!hasShownErrorRef.current) {
+        setStats(emptyStats);
         toast.error('Failed to load platform statistics');
         hasShownErrorRef.current = true;
       }
