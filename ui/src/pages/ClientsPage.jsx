@@ -393,7 +393,7 @@ export const ClientsPage = () => {
         {loading ? <Loading message="Loading clients..." /> : (
           <DataTable
             columns={columns}
-            data={clients}
+            rows={clients}
             rowKey="clientId"
             emptyMessage={(
               <div className="p-8">
