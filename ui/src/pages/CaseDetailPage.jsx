@@ -136,6 +136,9 @@ export const CaseDetailPage = () => {
   const [showResolveModal, setShowResolveModal] = useState(false);
   const [resolveComment, setResolveComment] = useState('');
   const [resolvingCase, setResolvingCase] = useState(false);
+  const [showFileModal, setShowFileModal] = useState(false);
+  const [fileComment, setFileComment] = useState('');
+  const [filingCase, setFilingCase] = useState(false);
   const [forceQcReview, setForceQcReview] = useState(false);
   const [showQcModal, setShowQcModal] = useState(false);
   const [qcDecisionType, setQcDecisionType] = useState('');
@@ -277,6 +280,10 @@ export const CaseDetailPage = () => {
       caseInfo?.categorySnapshot?.subcategory,
       caseData?.subcategory,
       caseData?.subCategory,
+      caseData?.caseSubCategory,
+      caseData?.case?.caseSubCategory,
+      caseData?.case?.subCategory,
+      caseData?.case?.subCategoryName,
     ];
     const firstValid = candidateValues.find((value) => {
       if (value == null) return false;
@@ -304,6 +311,8 @@ export const CaseDetailPage = () => {
       caseInfo?.categorySnapshot?.slaDays,
       caseInfo?.tatDays,
       caseData?.slaDays,
+      caseInfo?.slaConfigSnapshot?.tatDurationMinutes != null ? Math.ceil(Number(caseInfo.slaConfigSnapshot.tatDurationMinutes) / 1440) : null,
+      caseData?.slaConfigSnapshot?.tatDurationMinutes != null ? Math.ceil(Number(caseData.slaConfigSnapshot.tatDurationMinutes) / 1440) : null,
     ];
     const firstValid = candidateValues.find((value) => Number.isFinite(Number(value)) && Number(value) >= 0);
     return firstValid != null ? String(Number(firstValid)) : '-';
@@ -1063,9 +1072,6 @@ export const CaseDetailPage = () => {
       || ''
     ).trim();
     if (!value) return '-';
-    if (/^v\d+:[A-Za-z0-9+/=_-]+:[A-Za-z0-9+/=_-]+:[A-Za-z0-9+/=_-]+$/.test(value)) {
-      return '-';
-    }
     return value;
   }, [
     caseInfo?.description,
@@ -1245,6 +1251,10 @@ export const CaseDetailPage = () => {
 
   const lifecycleActionMap = useMemo(() => ({
     WL: [],
+    IN_WORKLIST: [
+      { key: 'pend', label: 'Pend', variant: 'secondary', onClick: () => openActionModal('pend') },
+      { key: 'resolve', label: 'Resolve', variant: 'primary', onClick: () => openActionModal('resolve') },
+    ],
     OPEN: [
       { key: 'pend', label: 'Pend', variant: 'secondary', onClick: () => openActionModal('pend') },
       { key: 'resolve', label: 'Resolve', variant: 'primary', onClick: () => openActionModal('resolve') },
@@ -1286,6 +1296,7 @@ export const CaseDetailPage = () => {
     || showResolveModal
     || showAssignModal
     || showUnpendModal
+    || showFileModal
     || confirmModal
   );
 
@@ -1321,6 +1332,11 @@ export const CaseDetailPage = () => {
   };
 
   const handleFileCase = async () => {
+    if (!String(fileComment || '').trim()) {
+      showWarning('Comment is mandatory for filing a case');
+      return;
+    }
+
     const confirmationTimestamp = new Date().toISOString();
     setConfirmModal({
       title: 'File Case',
@@ -1328,14 +1344,19 @@ export const CaseDetailPage = () => {
       confirmText: 'File Case',
       onConfirm: async () => {
         setConfirmModal(null);
-        setResolvingCase(true);
+        setFilingCase(true);
         try {
-          const response = await caseApi.fileCase(caseId, 'Filed from case details');
+          const response = await caseApi.transitionDocket(caseId, {
+            toState: 'FILED',
+            comment: fileComment.trim(),
+          });
           if (response.success) {
             const message = `Case ${caseId} filed • ${formatDateTime()}`;
             showSuccess(message);
             setActionConfirmation(message);
             setActionError(null);
+            setShowFileModal(false);
+            setFileComment('');
             loadCase({ background: true });
           }
         } catch (error) {
@@ -1343,31 +1364,10 @@ export const CaseDetailPage = () => {
           showError(errorMessage);
           setActionError({ message: errorMessage, retry: handleFileCase });
         } finally {
-          setResolvingCase(false);
+          setFilingCase(false);
         }
       },
     });
-  };
-
-  const handleAcceptRouted = async () => {
-    try {
-      await caseApi.acceptRoutedCase(caseId);
-      showSuccess('Docket accepted.');
-      loadCaseData({ silent: false });
-    } catch(err) {
-      showError(err?.response?.data?.message || 'Failed to accept docket');
-    }
-  };
-
-  const handleReturnRouted = async () => {
-    try {
-      await caseApi.returnRoutedCase(caseId, routingNote);
-      showSuccess('Docket returned to origin team.');
-      setRoutingNote('');
-      loadCaseData({ silent: false });
-    } catch(err) {
-      showError(err?.response?.data?.message || 'Failed to return docket');
-    }
   };
 
   const handleCloneDocket = async () => {
@@ -1671,7 +1671,7 @@ export const CaseDetailPage = () => {
                 </div>
               )}
               {shouldShowActions ? (
-                <section className="mt-4 border-t pt-4" aria-label="Case actions">
+                <section className="case-detail__actions-panel mt-4 border-t pt-4" aria-label="Case actions">
                   <div className="case-detail__composer-actions mt-3">
                     {canPerformLifecycleActions ? lifecycleQuickActions.map((action) => (
                       <Button
@@ -1684,7 +1684,7 @@ export const CaseDetailPage = () => {
                       </Button>
                     )) : null}
                     {!isViewOnlyMode ? (
-                      <Button variant="secondary" onClick={handleFileCase} disabled={actionInFlight}>
+                      <Button variant="secondary" onClick={() => { setFileComment(''); setShowFileModal(true); }} disabled={actionInFlight}>
                         File
                       </Button>
                     ) : null}
@@ -1778,30 +1778,6 @@ export const CaseDetailPage = () => {
           </main>
 
         </div>
-
-        {caseInfo && (
-          <Card>
-            <div style={{ display: 'grid', gap: 8 }}>
-              <div>
-                <strong>Routing:</strong> {caseInfo?.ownerTeamName || '—'}
-                {caseInfo?.routedToTeamName ? ` → ${caseInfo.routedToTeamName}` : ''}
-              </div>
-              <div>
-                <strong>Available workbaskets:</strong> {routingTeams.map((team) => team.name).join(', ') || '—'}
-              </div>
-              {caseInfo?.routingNote && <div><strong>Routing note:</strong> {caseInfo.routingNote}</div>}
-              {isRoutedToMyTeam && (
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <Button variant="secondary" onClick={handleAcceptRouted}>Accept</Button>
-                  <Button variant="secondary" onClick={() => caseApi.updateRoutedStatus(caseId, 'PENDING').then(() => { showSuccess('Docket status marked as Pending'); loadCaseData({ silent: false }); }).catch((err) => showError(err?.response?.data?.message || 'Failed to update docket status'))}>Mark Pending</Button>
-                  <Button variant="secondary" onClick={() => caseApi.updateRoutedStatus(caseId, 'FILED').then(() => { showSuccess('Docket status marked as Filed'); loadCaseData({ silent: false }); }).catch((err) => showError(err?.response?.data?.message || 'Failed to update docket status'))}>File</Button>
-                  <Button variant="outline" onClick={handleReturnRouted}>Return</Button>
-                </div>
-              )}
-              {routedTeamCannotResolve && <Badge variant="warning">Resolve is disabled for routed team</Badge>}
-            </div>
-          </Card>
-        )}
 
         <DocketSidebar
           isOpen={sidebarOpen && Boolean(sidebarType)}
@@ -2072,6 +2048,36 @@ export const CaseDetailPage = () => {
                 rows={4}
               />
             </div>
+          </div>
+        </Modal>
+
+
+
+        <Modal
+          isOpen={showFileModal}
+          onClose={() => { setShowFileModal(false); setFileComment(''); }}
+          title="File Case"
+          actions={
+            <>
+              <Button variant="outline" onClick={() => { setShowFileModal(false); setFileComment(''); }} disabled={filingCase}>
+                Cancel
+              </Button>
+              <Button variant="primary" onClick={handleFileCase} disabled={!String(fileComment || '').trim() || filingCase}>
+                {filingCase ? 'Filing…' : 'File Case'}
+              </Button>
+            </>
+          }
+        >
+          <div style={{ padding: 'var(--spacing-md)' }}>
+            <Textarea
+              label="Comment (Required)"
+              value={fileComment}
+              onChange={(e) => setFileComment(e.target.value)}
+              placeholder="Add the filing note/comment..."
+              rows={4}
+              required
+              disabled={filingCase}
+            />
           </div>
         </Modal>
 
