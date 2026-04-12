@@ -199,8 +199,27 @@ const fetchExistingLookup = async ({ type, firmId }) => {
     return new Set(existing.map((entry) => String(entry.businessEmail || '').trim().toLowerCase()).filter(Boolean));
   }
   if (type === 'categories') {
-    const existing = await Category.find({ firmId, isDeleted: { $ne: true } }).select('name').lean();
-    return new Set(existing.map((entry) => String(entry.name || '').trim().toLowerCase()).filter(Boolean));
+    const existing = await Category.find({ firmId, isDeleted: { $ne: true } })
+      .select('name isActive subcategories.name')
+      .lean();
+    const categorySet = new Set();
+    const categoryStateMap = new Map();
+    const categorySubcategorySet = new Set();
+
+    existing.forEach((entry) => {
+      const categoryKey = String(entry.name || '').trim().toLowerCase();
+      if (!categoryKey) return;
+      categorySet.add(categoryKey);
+      categoryStateMap.set(categoryKey, Boolean(entry.isActive));
+
+      (entry.subcategories || []).forEach((subcategory) => {
+        const subcategoryKey = String(subcategory?.name || '').trim().toLowerCase();
+        if (!subcategoryKey) return;
+        categorySubcategorySet.add(`${categoryKey}::${subcategoryKey}`);
+      });
+    });
+
+    return { categorySet, categoryStateMap, categorySubcategorySet };
   }
   const existing = await User.find({ firmId, status: { $ne: 'deleted' } }).select('email').lean();
   return new Set(existing.map((entry) => String(entry.email || '').trim().toLowerCase()).filter(Boolean));
@@ -246,10 +265,32 @@ const validateRows = async ({ type, parsedRows, fieldIndexMap, firmId, duplicate
       const categoryKey = String(row.category || '').trim().toLowerCase();
       const subcategoryKey = String(row.subcategory || '').trim().toLowerCase();
       const pairKey = `${categoryKey}::${subcategoryKey}`;
+      const categoryExists = existingLookup.categorySet.has(categoryKey);
+      const subcategoryExists = subcategoryKey ? existingLookup.categorySubcategorySet.has(pairKey) : false;
+      const categoryIsActive = existingLookup.categoryStateMap.get(categoryKey);
 
       if (seen.has(pairKey)) {
         invalid.push({ row: rowNumber, error: 'Duplicate category/subcategory row in file' });
         return;
+      }
+
+      if (categoryExists && categoryIsActive === false) {
+        invalid.push({
+          row: rowNumber,
+          error: 'Category already exists but is inactive. Activate it from Category Management.',
+        });
+        return;
+      }
+
+      if ((categoryExists && !subcategoryKey) || subcategoryExists) {
+        if (duplicateMode === 'fail') {
+          invalid.push({ row: rowNumber, error: 'Category/subcategory already exists' });
+          return;
+        }
+        if (duplicateMode === 'skip') {
+          skipped.push({ row: rowNumber, reason: 'Skipped existing category/subcategory' });
+          return;
+        }
       }
 
       seen.add(pairKey);
@@ -260,7 +301,7 @@ const validateRows = async ({ type, parsedRows, fieldIndexMap, firmId, duplicate
           subcategory: String(row.subcategory || '').trim(),
         },
         dedupeKey: categoryKey,
-        action: existingLookup.has(categoryKey) ? 'update' : 'create',
+        action: categoryExists ? 'add_subcategory' : 'create_category',
       });
       return;
     }
@@ -361,9 +402,6 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
             subcategories: [],
           });
           categoryCache.set(categoryKey, categoryDoc);
-        } else if (!categoryDoc.isActive) {
-          categoryDoc.isActive = true;
-          await categoryDoc.save();
         }
 
         if (subcategoryName) {
@@ -376,9 +414,6 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
               name: subcategoryName,
               isActive: true,
             });
-            await categoryDoc.save();
-          } else if (existingSubcategory.isActive === false) {
-            existingSubcategory.isActive = true;
             await categoryDoc.save();
           }
         }
@@ -662,6 +697,7 @@ const previewBulkUpload = async (req, res) => {
   const duplicateMode = ['skip', 'update', 'fail'].includes(String(req.body?.duplicateMode || '').toLowerCase())
     ? String(req.body.duplicateMode).toLowerCase()
     : 'skip';
+  const effectiveDuplicateMode = type === 'categories' && duplicateMode === 'update' ? 'skip' : duplicateMode;
 
   const { sizeBytes, fileType, parsed } = resolveInputData(req.body || {});
 
@@ -699,7 +735,7 @@ const previewBulkUpload = async (req, res) => {
     parsedRows: rows,
     fieldIndexMap,
     firmId: req.user.firmId,
-    duplicateMode,
+    duplicateMode: effectiveDuplicateMode,
   });
 
   return res.json({
@@ -731,6 +767,7 @@ const confirmBulkUpload = async (req, res) => {
   const duplicateMode = ['skip', 'update', 'fail'].includes(String(req.body?.duplicateMode || '').toLowerCase())
     ? String(req.body.duplicateMode).toLowerCase()
     : 'skip';
+  const effectiveDuplicateMode = type === 'categories' && duplicateMode === 'update' ? 'skip' : duplicateMode;
   const rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
 
   if (!rows.length) {
@@ -740,7 +777,7 @@ const confirmBulkUpload = async (req, res) => {
   const shouldAsync = Boolean(req.body?.async) || rows.length >= ASYNC_ROW_THRESHOLD;
 
   if (!shouldAsync) {
-    const { successCount, results } = await processBulkRows({ type, rows, user: req.user, duplicateMode });
+    const { successCount, results } = await processBulkRows({ type, rows, user: req.user, duplicateMode: effectiveDuplicateMode });
     return res.status(201).json({
       success: true,
       data: {
@@ -760,7 +797,7 @@ const confirmBulkUpload = async (req, res) => {
     processed: 0,
     successCount: 0,
     failureCount: 0,
-    duplicateMode,
+    duplicateMode: effectiveDuplicateMode,
     results: [],
     createdBy: {
       userId: req.user._id,
@@ -791,7 +828,7 @@ const confirmBulkUpload = async (req, res) => {
         xID: req.user.xID,
         defaultClientId: req.user.defaultClientId,
       },
-      duplicateMode,
+      duplicateMode: effectiveDuplicateMode,
       jobId: job._id,
     });
   } catch (error) {

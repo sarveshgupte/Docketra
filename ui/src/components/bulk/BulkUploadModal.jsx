@@ -47,6 +47,12 @@ export const BulkUploadModal = ({ isOpen, onClose, type, title, onImported, show
   const [job, setJob] = useState(null);
 
   const typeLabel = useMemo(() => title || 'Bulk Upload', [title]);
+  const duplicateModes = useMemo(
+    () => (type === 'categories'
+      ? DUPLICATE_MODES.filter((mode) => mode.value !== 'update')
+      : DUPLICATE_MODES),
+    [type],
+  );
 
   useEffect(() => {
     if (!job?.jobId || job?.status === 'completed' || job?.status === 'failed') return undefined;
@@ -73,6 +79,12 @@ export const BulkUploadModal = ({ isOpen, onClose, type, title, onImported, show
 
     return () => clearInterval(interval);
   }, [job?.jobId, job?.status, onImported, showToast]);
+
+  useEffect(() => {
+    if (type === 'categories' && duplicateMode === 'update') {
+      setDuplicateMode('skip');
+    }
+  }, [type, duplicateMode]);
 
   const handleDownloadTemplate = () => {
     const csv = buildTemplateCsv(type);
@@ -172,7 +184,7 @@ export const BulkUploadModal = ({ isOpen, onClose, type, title, onImported, show
         <div style={{ marginTop: 8 }}>
           <label htmlFor="duplicateMode">Duplicate handling: </label>
           <select id="duplicateMode" value={duplicateMode} onChange={(e) => setDuplicateMode(e.target.value)}>
-            {DUPLICATE_MODES.map((mode) => <option key={mode.value} value={mode.value}>{mode.label}</option>)}
+            {duplicateModes.map((mode) => <option key={mode.value} value={mode.value}>{mode.label}</option>)}
           </select>
         </div>
 
