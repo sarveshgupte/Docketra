@@ -45,6 +45,57 @@ const sanitizeEntityList = (value) => {
   return value.filter((item) => item && typeof item === 'object');
 };
 
+const safeText = (value, fallback = 'N/A') => {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed || fallback;
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  return fallback;
+};
+
+const safeCount = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0);
+
+const normalizeFirm = (firm, index) => {
+  const safeFirm = (firm && typeof firm === 'object') ? firm : {};
+  const fallbackId = `firm-${index}`;
+  return {
+    _id: safeText(safeFirm._id, fallbackId),
+    firmId: safeText(safeFirm.firmId),
+    name: safeText(safeFirm.name),
+    adminEmail: safeText(safeFirm.adminEmail),
+    status: safeText(safeFirm.status, 'UNKNOWN'),
+    firmSlug: typeof safeFirm.firmSlug === 'string' && safeFirm.firmSlug.trim() ? safeFirm.firmSlug.trim() : null,
+    emailVerified: safeFirm.emailVerified,
+    verificationMethod: safeFirm.verificationMethod,
+    emailVerifiedAt: safeFirm.emailVerifiedAt,
+    termsAccepted: safeFirm.termsAccepted,
+    termsVersion: safeFirm.termsVersion,
+    termsAcceptedAt: safeFirm.termsAcceptedAt,
+    clientCount: safeCount(safeFirm.clientCount),
+    userCount: safeCount(safeFirm.userCount),
+    createdAt: safeFirm.createdAt,
+    signupIP: safeText(safeFirm.signupIP, 'Unknown'),
+    signupUserAgent: safeText(safeFirm.signupUserAgent, 'Unknown'),
+  };
+};
+
+const normalizeAdmin = (admin, index) => {
+  const safeAdmin = (admin && typeof admin === 'object') ? admin : {};
+  return {
+    _id: safeText(safeAdmin._id, `admin-${index}`),
+    name: safeText(safeAdmin.name),
+    emailMasked: safeText(safeAdmin.emailMasked, safeText(safeAdmin.email)),
+    status: safeText(safeAdmin.status, 'UNKNOWN'),
+    isSystem: safeAdmin.isSystem === true,
+    lastLoginAt: safeAdmin.lastLoginAt,
+  };
+};
+
+const hasValidId = (value) => typeof value === 'string' && value.trim().length > 0;
+
 export const FirmsManagement = () => {
   const toast = useToast();
   const navigate = useNavigate();
@@ -80,15 +131,17 @@ export const FirmsManagement = () => {
 
   // Load firms
   useEffect(() => {
-    console.log('API BASE:', import.meta.env.VITE_API_BASE_URL);
     loadFirms();
   }, []);
 
   // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
+      if (!(e?.target instanceof Element)) {
+        setOpenDropdownId(null);
+        return;
+      }
       const clickedInsideDropdown = Boolean(
-        e?.target &&
         typeof e.target.closest === 'function' &&
         e.target.closest('.firm-actions__dropdown-wrap')
       );
@@ -183,7 +236,10 @@ export const FirmsManagement = () => {
 
   const handleResendAdminAccess = async () => {
     const firm = resendConfirm.firm;
-    if (!firm) return;
+    if (!firm || !hasValidId(firm._id)) {
+      toast.error('Firm information is unavailable');
+      return;
+    }
 
     try {
       setIsResending(true);
@@ -201,6 +257,10 @@ export const FirmsManagement = () => {
   };
 
   const openAdminModal = async (firm) => {
+      if (!firm || !hasValidId(firm._id)) {
+        toast.error('Firm information is unavailable');
+        return;
+      }
       setAdminModal({
         open: true,
         loading: true,
@@ -224,6 +284,14 @@ export const FirmsManagement = () => {
   };
 
   const handleForceReset = async (targetFirm, adminId) => {
+    if (!targetFirm || !hasValidId(targetFirm._id)) {
+      toast.error('Firm information is unavailable');
+      return;
+    }
+    if (adminId !== undefined && !hasValidId(adminId)) {
+      toast.error('Admin information is unavailable');
+      return;
+    }
     try {
       setIsForcingReset(true);
       const response = await superadminService.forceResetFirmAdmin(targetFirm._id, adminId);
@@ -238,6 +306,10 @@ export const FirmsManagement = () => {
   };
 
   const handleSetAdminStatus = async (firm, adminId, nextStatus) => {
+    if (!firm || !hasValidId(firm._id) || !hasValidId(adminId)) {
+      toast.error('Admin information is unavailable');
+      return;
+    }
     try {
       setIsUpdatingAdminStatus(true);
       const response = await superadminService.updateFirmAdminStatus(firm._id, nextStatus, adminId);
@@ -258,6 +330,10 @@ export const FirmsManagement = () => {
   };
 
   const handleSetDefaultAdminStatus = async (firm, nextStatus) => {
+    if (!firm || !hasValidId(firm._id)) {
+      toast.error('Firm information is unavailable');
+      return;
+    }
     try {
       setIsUpdatingAdminStatus(true);
       const response = await superadminService.updateFirmAdminStatus(firm._id, nextStatus);
@@ -277,6 +353,10 @@ export const FirmsManagement = () => {
   };
 
   const handleCreateAdditionalAdmin = async () => {
+    if (!adminModal.firm || !hasValidId(adminModal.firm._id)) {
+      toast.error('Firm information is unavailable');
+      return;
+    }
     if (!adminModal.addForm.name.trim() || !adminModal.addForm.email.trim()) {
       toast.error('Name and email are required');
       return;
@@ -303,6 +383,10 @@ export const FirmsManagement = () => {
   };
 
   const handleDeleteAdmin = async (adminId) => {
+    if (!adminModal.firm || !hasValidId(adminModal.firm._id) || !hasValidId(adminId)) {
+      toast.error('Admin information is unavailable');
+      return;
+    }
     try {
       setIsDeletingAdmin(true);
       const response = await superadminService.deleteFirmAdmin(adminModal.firm._id, adminId);
@@ -355,7 +439,9 @@ export const FirmsManagement = () => {
     );
   }
 
-  const admins = sanitizeEntityList(adminModal.details);
+  const normalizedFirms = sanitizeEntityList(firms).map(normalizeFirm);
+  const normalizedAdmins = sanitizeEntityList(adminModal.details).map(normalizeAdmin);
+  const modalFirm = normalizeFirm(adminModal.firm, 0);
 
   return (
     <ErrorBoundary name="FirmsManagementPage">
@@ -443,7 +529,7 @@ export const FirmsManagement = () => {
         <ConfirmDialog
           isOpen={resendConfirm.open}
           title="Resend Admin Access Email"
-          message={`Send a new access email to the admin of "${resendConfirm.firm?.name}"? This will invalidate any previously sent links.`}
+          message={`Send a new access email to the admin of "${safeText(resendConfirm.firm?.name)}"? This will invalidate any previously sent links.`}
           confirmText="Resend"
           cancelText="Cancel"
           loading={isResending}
@@ -471,21 +557,21 @@ export const FirmsManagement = () => {
                     <div className="admin-audit-grid">
                       <div className="admin-audit-card">
                         <h3>Admin Account</h3>
-                        <p><strong>Email:</strong> {adminModal.firm?.adminEmail || 'N/A'}</p>
-                        <p><strong>Email Verified:</strong> {formatYesNoUnknown(adminModal.firm?.emailVerified)}</p>
-                        <p><strong>Verification Method:</strong> {formatVerificationMethod(adminModal.firm?.verificationMethod)}</p>
-                        <p><strong>Verified At:</strong> {formatDate(adminModal.firm?.emailVerifiedAt)}</p>
+                        <p><strong>Email:</strong> {modalFirm.adminEmail}</p>
+                        <p><strong>Email Verified:</strong> {formatYesNoUnknown(modalFirm.emailVerified)}</p>
+                        <p><strong>Verification Method:</strong> {formatVerificationMethod(modalFirm.verificationMethod)}</p>
+                        <p><strong>Verified At:</strong> {formatDate(modalFirm.emailVerifiedAt)}</p>
                       </div>
                       <div className="admin-audit-card">
                         <h3>Legal Consent</h3>
-                        <p><strong>Terms Accepted:</strong> {formatTermsAccepted(adminModal.firm?.termsAccepted)}</p>
-                        <p><strong>Terms Version:</strong> {formatTermsVersion(adminModal.firm?.termsVersion, adminModal.firm?.termsAccepted)}</p>
-                        <p><strong>Accepted At:</strong> {formatDate(adminModal.firm?.termsAcceptedAt)}</p>
+                        <p><strong>Terms Accepted:</strong> {formatTermsAccepted(modalFirm.termsAccepted)}</p>
+                        <p><strong>Terms Version:</strong> {formatTermsVersion(modalFirm.termsVersion, modalFirm.termsAccepted)}</p>
+                        <p><strong>Accepted At:</strong> {formatDate(modalFirm.termsAcceptedAt)}</p>
                       </div>
                       <div className="admin-audit-card">
                         <h3>Signup Metadata</h3>
-                        <p><strong>Signup IP:</strong> {adminModal.firm?.signupIP || 'Unknown'}</p>
-                        <p><strong>User Agent:</strong> {adminModal.firm?.signupUserAgent || 'Unknown'}</p>
+                        <p><strong>Signup IP:</strong> {modalFirm.signupIP}</p>
+                        <p><strong>User Agent:</strong> {modalFirm.signupUserAgent}</p>
                       </div>
                     </div>
                     <div className="w-full overflow-x-auto">
@@ -501,7 +587,7 @@ export const FirmsManagement = () => {
                          </tr>
                        </thead>
                        <tbody>
-                         {admins.map((admin) => {
+                         {normalizedAdmins.map((admin) => {
                            const isAdminDisabled = admin.status === 'DISABLED';
                            return (
                              <tr key={admin._id}>
@@ -618,7 +704,7 @@ export const FirmsManagement = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {sanitizeEntityList(firms).map(firm => {
+                  {normalizedFirms.map((firm) => {
                     const statusInfo = getFirmStatusInfo(firm.status);
                     const { label: statusLabel, key: statusKey, isActive } = statusInfo;
                     const canActivate = statusInfo.normalizedStatus === 'INACTIVE' || statusInfo.normalizedStatus === 'SUSPENDED';
