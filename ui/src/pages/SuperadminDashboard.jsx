@@ -184,19 +184,19 @@ export const SuperadminDashboard = () => {
                 placeholder="Enter firm name"
               />
               <Input
-                label="Admin Name"
+                label="Primary Admin Name"
                 value={newFirmData.adminName}
                 onChange={(e) => setNewFirmData({ ...newFirmData, adminName: e.target.value })}
                 required
-                placeholder="Enter admin name"
+                placeholder="Enter primary admin name"
               />
               <Input
-                label="Admin Email"
+                label="Primary Admin Email"
                 type="email"
                 value={newFirmData.adminEmail}
                 onChange={(e) => setNewFirmData({ ...newFirmData, adminEmail: e.target.value })}
                 required
-                placeholder="Enter admin email"
+                placeholder="Enter primary admin email"
               />
               <div className="modal-actions">
                 <Button type="submit">Create Firm</Button>
