@@ -23,6 +23,19 @@ const withCaseInvalidation = async (caseId, requestFn) => {
   return response;
 };
 
+const trackingThrottleMap = new Map();
+const TRACKING_THROTTLE_MS = 10_000;
+const shouldThrottleTracking = (action, caseId) => {
+  const key = `${action}:${caseId}`;
+  const now = Date.now();
+  const previous = trackingThrottleMap.get(key);
+  if (previous && (now - previous) < TRACKING_THROTTLE_MS) {
+    return true;
+  }
+  trackingThrottleMap.set(key, now);
+  return false;
+};
+
 export const caseApi = {
   getCases: (filters = {}) =>
     request((http) => http.get(`/cases${buildQueryString(filters)}`), 'Failed to load cases'),
@@ -229,12 +242,14 @@ export const caseApi = {
   },
 
   trackCaseOpen: async (caseId) => {
+    if (shouldThrottleTracking('open', caseId)) return;
     try { await api.post(`/cases/${caseId}/track-open`); } catch (error) { console.debug('[Tracking] Failed to track case open:', error.message); }
   },
   trackCaseView: async (caseId) => {
     try { await api.post(`/cases/${caseId}/track-view`); } catch (error) { console.debug('[Tracking] Failed to track case view:', error.message); }
   },
   trackCaseExit: async (caseId) => {
+    if (shouldThrottleTracking('exit', caseId)) return;
     try { await api.post(`/cases/${caseId}/track-exit`); } catch (error) { console.debug('[Tracking] Failed to track case exit:', error.message); }
   },
 
