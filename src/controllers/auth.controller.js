@@ -26,6 +26,7 @@ const { getSession } = require('../utils/getSession');
 const { handleUserDeactivation } = require('../services/docketWorkflow.service');
 const { ensureDefaultClientForFirm } = require('../services/defaultClient.service');
 const { getOrCreateDefaultClient } = require('../services/defaultClient.guard');
+const { getLatestPublishedUpdate } = require('../services/productUpdate.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const config = require('../config/config');
 const { loadEnv } = require('../config/env');
@@ -1994,6 +1995,25 @@ const getProfile = async (req, res) => {
       };
     }
     
+    const latestUpdate = await getLatestPublishedUpdate();
+    const shouldShowWhatsNew = Boolean(
+      latestUpdate?._id
+      && String(dbUser.lastSeenUpdateId || '') !== String(latestUpdate._id || ''),
+    );
+
+    const tutorialRole = dbUser.role === ROLE_ADMIN ? 'admin' : 'user';
+    const tutorialSteps = tutorialRole === 'admin'
+      ? [
+        'Review your dashboard and invite your team members.',
+        'Configure categories, work types, and firm settings.',
+        'Create your first docket workflow and assign ownership.',
+      ]
+      : [
+        'Open your worklist to see assigned dockets and priorities.',
+        'Update docket status and add comments to keep progress visible.',
+        'Use search and filters to find work quickly across clients.',
+      ];
+
     res.json({
       success: true,
       data: {
@@ -2025,6 +2045,15 @@ const getProfile = async (req, res) => {
         address: typeof profile.address === 'string' ? profile.address : '',
         panMasked: profile.pan || profile.panMasked,
         aadhaarMasked: profile.aadhaar || profile.aadhaarMasked,
+        welcomeTutorial: {
+          show: !dbUser.tutorialCompletedAt,
+          role: tutorialRole,
+          steps: tutorialSteps,
+        },
+        whatsNew: {
+          show: shouldShowWhatsNew,
+          update: latestUpdate || null,
+        },
       },
     });
   } catch (error) {
