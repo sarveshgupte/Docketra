@@ -81,6 +81,23 @@ const safeLogBulkMutation = async (req, { description, metadata = {} }) => {
   }
 };
 
+const resolveDuplicateMode = (value) => {
+  const normalized = String(value || '').toLowerCase();
+  return ['skip', 'update', 'fail'].includes(normalized) ? normalized : 'skip';
+};
+
+const resolveEffectiveDuplicateMode = ({ type, duplicateMode, effectiveDuplicateMode }) => {
+  const requestedMode = typeof effectiveDuplicateMode === 'undefined'
+    ? resolveDuplicateMode(duplicateMode)
+    : resolveDuplicateMode(effectiveDuplicateMode);
+
+  if (type === 'categories' && requestedMode === 'update') {
+    return 'skip';
+  }
+
+  return requestedMode;
+};
+
 const normalizeHeader = (value) => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
 
 const splitCsvLine = (line, delimiter) => {
@@ -715,10 +732,8 @@ const previewBulkUpload = async (req, res) => {
   if (!resolved) return;
 
   const { type, cfg } = resolved;
-  const duplicateMode = ['skip', 'update', 'fail'].includes(String(req.body?.duplicateMode || '').toLowerCase())
-    ? String(req.body.duplicateMode).toLowerCase()
-    : 'skip';
-  const effectiveDuplicateMode = type === 'categories' && duplicateMode === 'update' ? 'skip' : duplicateMode;
+  const duplicateMode = resolveDuplicateMode(req.body?.duplicateMode);
+  const effectiveDuplicateMode = resolveEffectiveDuplicateMode({ type, duplicateMode });
 
   const { sizeBytes, fileType, parsed } = resolveInputData(req.body || {});
 
@@ -785,13 +800,12 @@ const confirmBulkUpload = async (req, res) => {
   if (!resolved) return;
 
   const { type } = resolved;
-  const duplicateMode = ['skip', 'update', 'fail'].includes(String(req.body?.duplicateMode || '').toLowerCase())
-    ? String(req.body.duplicateMode).toLowerCase()
-    : 'skip';
-  const effectiveDuplicateMode = ['skip', 'update', 'fail'].includes(String(req.body?.effectiveDuplicateMode || '').toLowerCase())
-    ? String(req.body.effectiveDuplicateMode).toLowerCase()
-    : duplicateMode;
-  const effectiveDuplicateMode = type === 'categories' && duplicateMode === 'update' ? 'skip' : duplicateMode;
+  const duplicateMode = resolveDuplicateMode(req.body?.duplicateMode);
+  const effectiveDuplicateMode = resolveEffectiveDuplicateMode({
+    type,
+    duplicateMode,
+    effectiveDuplicateMode: req.body?.effectiveDuplicateMode,
+  });
   const rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
 
   if (!rows.length) {
@@ -818,7 +832,6 @@ const confirmBulkUpload = async (req, res) => {
         failureCount: results.filter((entry) => entry.status === 'failed').length,
       },
     });
-    const { successCount, results } = await processBulkRows({ type, rows, user: req.user, duplicateMode: effectiveDuplicateMode });
     return res.status(201).json({
       success: true,
       data: {
