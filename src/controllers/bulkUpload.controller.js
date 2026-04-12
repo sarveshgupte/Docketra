@@ -752,6 +752,9 @@ const confirmBulkUpload = async (req, res) => {
   const duplicateMode = ['skip', 'update', 'fail'].includes(String(req.body?.duplicateMode || '').toLowerCase())
     ? String(req.body.duplicateMode).toLowerCase()
     : 'skip';
+  const effectiveDuplicateMode = ['skip', 'update', 'fail'].includes(String(req.body?.effectiveDuplicateMode || '').toLowerCase())
+    ? String(req.body.effectiveDuplicateMode).toLowerCase()
+    : duplicateMode;
   const rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
 
   if (!rows.length) {
@@ -761,13 +764,18 @@ const confirmBulkUpload = async (req, res) => {
   const shouldAsync = Boolean(req.body?.async) || rows.length >= ASYNC_ROW_THRESHOLD;
 
   if (!shouldAsync) {
-    const { successCount, results } = await processBulkRows({ type, rows, user: req.user, duplicateMode });
+    const { successCount, results } = await processBulkRows({
+      type,
+      rows,
+      user: req.user,
+      duplicateMode: effectiveDuplicateMode,
+    });
     await safeLogBulkMutation(req, {
       description: `Bulk upload completed (${type}) with ${successCount}/${rows.length} successful row(s)`,
       metadata: {
         action: 'BULK_UPLOAD_COMPLETED_SYNC',
         type,
-        duplicateMode,
+        duplicateMode: effectiveDuplicateMode,
         totalRows: rows.length,
         successCount,
         failureCount: results.filter((entry) => entry.status === 'failed').length,
@@ -792,7 +800,7 @@ const confirmBulkUpload = async (req, res) => {
     processed: 0,
     successCount: 0,
     failureCount: 0,
-    duplicateMode,
+    duplicateMode: effectiveDuplicateMode,
     results: [],
     createdBy: {
       userId: req.user._id,
@@ -823,7 +831,7 @@ const confirmBulkUpload = async (req, res) => {
         xID: req.user.xID,
         defaultClientId: req.user.defaultClientId,
       },
-      duplicateMode,
+      duplicateMode: effectiveDuplicateMode,
       jobId: job._id,
     });
   } catch (error) {
@@ -843,7 +851,7 @@ const confirmBulkUpload = async (req, res) => {
     metadata: {
       action: 'BULK_UPLOAD_QUEUED',
       type,
-      duplicateMode,
+      duplicateMode: effectiveDuplicateMode,
       totalRows: rows.length,
       jobId: job._id?.toString(),
     },
