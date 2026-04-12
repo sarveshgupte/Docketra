@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { formatDateOnly, formatDateTime, formatTimeOnly } from '../../utils/formatDateTime';
 
 const TITLES = {
@@ -28,9 +28,18 @@ export const DocketSidebar = ({
   onAttachmentFileChange,
   onAttachmentCommentChange,
   onUploadAttachment,
-  onRequestDocuments,
+  onGenerateUploadLink,
+  uploadLinkGenerating = false,
+  uploadLinkResult = null,
+  clientEmail = '',
 }) => {
   const attachmentFileInputRef = useRef(null);
+  const [requestPanelOpen, setRequestPanelOpen] = useState(false);
+  const [requestExpiry, setRequestExpiry] = useState('24h');
+  const [requestRequirePin, setRequestRequirePin] = useState(false);
+  const [requestSendEmail, setRequestSendEmail] = useState(true);
+  const [showGeneratedPin, setShowGeneratedPin] = useState(false);
+  const expiryLabel = useMemo(() => (requestExpiry === '7d' ? '7 days' : '24 hours'), [requestExpiry]);
   const formatDatePart = (value) => {
     const formatted = formatDateOnly(value);
     return formatted === 'N/A' ? '—' : formatted;
@@ -164,10 +173,73 @@ export const DocketSidebar = ({
             <button
               type="button"
               className="mt-3 inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
-              onClick={onRequestDocuments}
+              onClick={() => setRequestPanelOpen((open) => !open)}
             >
-              Request Documents
+              {requestPanelOpen ? 'Hide request options' : 'Request Documents'}
             </button>
+            {requestPanelOpen ? (
+              <div className="mt-3 rounded-lg border border-blue-100 bg-white p-3">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Request details</p>
+                <p className="mb-2 text-xs text-gray-500">Expiry</p>
+                <label className="mb-1 flex items-center gap-2 text-sm text-gray-700">
+                  <input type="radio" checked={requestExpiry === '24h'} onChange={() => setRequestExpiry('24h')} />
+                  <span>24 hours</span>
+                </label>
+                <label className="mb-2 flex items-center gap-2 text-sm text-gray-700">
+                  <input type="radio" checked={requestExpiry === '7d'} onChange={() => setRequestExpiry('7d')} />
+                  <span>7 days</span>
+                </label>
+
+                <label className="mb-2 flex items-center gap-2 text-sm text-gray-700">
+                  <input type="checkbox" checked={requestRequirePin} onChange={(event) => setRequestRequirePin(event.target.checked)} />
+                  <span>Require PIN</span>
+                </label>
+                <label className="mb-1 flex items-center gap-2 text-sm text-gray-700">
+                  <input type="checkbox" checked={requestSendEmail} onChange={(event) => setRequestSendEmail(event.target.checked)} />
+                  <span>Send email to client</span>
+                </label>
+                <p className="mb-3 text-xs text-gray-500">To: {clientEmail || 'No client email available'}</p>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={() => onGenerateUploadLink?.({ requirePin: requestRequirePin, expiry: requestExpiry, sendEmail: requestSendEmail })}
+                    disabled={uploadLinkGenerating}
+                  >
+                    {uploadLinkGenerating ? 'Generating…' : 'Generate Link'}
+                  </button>
+                  <span className="text-xs text-gray-500">Expires in {expiryLabel}</span>
+                </div>
+
+                {uploadLinkResult?.link ? (
+                  <div className="mt-3 rounded-md border border-gray-200 bg-gray-50 p-2">
+                    <p className="text-xs font-semibold text-gray-700">Upload link ready</p>
+                    <p className="mt-1 break-all font-mono text-xs text-gray-600">{uploadLinkResult.link}</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100"
+                        onClick={() => navigator.clipboard.writeText(uploadLinkResult.link)}
+                      >
+                        Copy link
+                      </button>
+                      {uploadLinkResult.pin ? (
+                        <button
+                          type="button"
+                          className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100"
+                          onClick={() => setShowGeneratedPin((visible) => !visible)}
+                        >
+                          {showGeneratedPin ? 'Hide PIN' : 'Show PIN'}
+                        </button>
+                      ) : null}
+                    </div>
+                    {uploadLinkResult.pin ? <p className="mt-1 text-xs text-gray-500">PIN: {showGeneratedPin ? uploadLinkResult.pin : '••••'}</p> : null}
+                    {uploadLinkResult.expiresAt ? <p className="mt-1 text-xs text-gray-500">Expires at: {new Date(uploadLinkResult.expiresAt).toLocaleString()}</p> : null}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
           {!attachments.length ? <p className="docket-sidebar__empty">{EMPTY_STATES.attachments}</p> : null}
