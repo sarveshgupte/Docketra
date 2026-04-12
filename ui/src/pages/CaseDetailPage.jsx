@@ -393,7 +393,9 @@ export const CaseDetailPage = () => {
       });
       
       if (response.success && requestId === loadSequenceRef.current) {
+        if (response.notModified && !response.data) return;
         const normalized = response.data?.case || response.data;
+
         console.log('DOCKET_DEBUG', {
           caseId,
           activeDocketId,
@@ -508,6 +510,7 @@ export const CaseDetailPage = () => {
           activityLimit: 50,
         });
         if (!response?.success) return;
+        if (response.notModified && !response.data) return;
         const updated = response.data?.case || response.data;
         if (pollRequestId !== pollSequenceRef.current) return;
         console.log('DOCKET_DEBUG', {

@@ -19,6 +19,8 @@ async function generateUploadLink(req, res) {
     const caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
 
     if (!caseData) {
+      res.set({ "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate", Pragma: "no-cache", Expires: "0", "Surrogate-Control": "no-store" });
+      res.removeHeader("ETag");
       return res.status(404).json({ success: false, message: 'Case not found' });
     }
 
@@ -79,6 +81,8 @@ async function getUploadLinkStatus(req, res) {
     const caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
 
     if (!caseData) {
+      res.set({ "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate", Pragma: "no-cache", Expires: "0", "Surrogate-Control": "no-store" });
+      res.removeHeader("ETag");
       return res.status(404).json({ success: false, message: 'Case not found' });
     }
 
@@ -88,6 +92,8 @@ async function getUploadLinkStatus(req, res) {
     }).sort({ createdAt: -1 }).lean();
 
     if (!latestSession) {
+      res.set({ "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate", Pragma: "no-cache", Expires: "0", "Surrogate-Control": "no-store" });
+      res.removeHeader("ETag");
       return res.json({ success: true, data: null });
     }
 
@@ -96,6 +102,8 @@ async function getUploadLinkStatus(req, res) {
     if (!latestSession.isActive) status = 'REVOKED';
     else if (now > new Date(latestSession.expiresAt)) status = 'EXPIRED';
 
+    res.set({ "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate", Pragma: "no-cache", Expires: "0", "Surrogate-Control": "no-store" });
+    res.removeHeader("ETag");
     return res.json({
       success: true,
       data: {
@@ -115,6 +123,8 @@ async function revokeUploadLink(req, res) {
     const caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
 
     if (!caseData) {
+      res.set({ "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate", Pragma: "no-cache", Expires: "0", "Surrogate-Control": "no-store" });
+      res.removeHeader("ETag");
       return res.status(404).json({ success: false, message: 'Case not found' });
     }
 

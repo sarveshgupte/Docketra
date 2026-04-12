@@ -47,7 +47,8 @@ export const caseApi = {
             setCachedCase(caseId, params, latest);
             return latest;
           }
-          return response;
+          // Return undefined data explicitly to avoid overriding with empty
+          return { ...response, data: undefined };
         }
         if (response?.data) {
           setLatestCaseSnapshot(caseId, response);

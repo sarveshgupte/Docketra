@@ -28,7 +28,9 @@ export const ActiveDocketProvider = ({ children }) => {
         activityPage: 1,
         activityLimit: 25,
       });
+      if (response.notModified && !response.data) return activeDocketData;
       const normalized = normalizeCasePayload(response);
+
       if (requestId === requestRef.current && normalized && normalized.caseId === activeIdRef.current) {
         setActiveDocketData(normalized);
       }
