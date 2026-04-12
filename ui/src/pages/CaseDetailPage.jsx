@@ -28,7 +28,6 @@ import { formatDocketId } from '../utils/formatters';
 import { USER_ROLES } from '../utils/constants';
 import { LifecycleBadge } from '../../components/LifecycleBadge';
 import { DocketSidebar } from '../components/docket/DocketSidebar';
-import { DocketActions } from '../components/docket/DocketActions';
 import { DocketComments } from '../components/docket/DocketComments';
 import { ActionModal } from '../components/docket/ActionModal';
 import { RequestDocumentsModal } from '../../components/RequestDocumentsModal';
@@ -138,7 +137,6 @@ export const CaseDetailPage = () => {
   const [showResolveModal, setShowResolveModal] = useState(false);
   const [resolveComment, setResolveComment] = useState('');
   const [resolvingCase, setResolvingCase] = useState(false);
-  const [actionComment, setActionComment] = useState('');
   const [forceQcReview, setForceQcReview] = useState(false);
   const [showQcModal, setShowQcModal] = useState(false);
   const [qcDecisionType, setQcDecisionType] = useState('');
@@ -267,25 +265,50 @@ export const CaseDetailPage = () => {
     || caseInfo?.workTypeName
     || caseData?.category
     || '—';
-  const subcategoryLabel = caseInfo?.subcategory
-    || caseInfo?.caseSubCategory
-    || caseInfo?.subCategory
-    || caseInfo?.subCategoryName
-    || caseInfo?.subcategoryName
-    || caseInfo?.subWorkType
-    || caseInfo?.subWorkTypeName
-    || caseData?.subcategory
-    || '—';
+  const subcategoryLabel = (() => {
+    const candidateValues = [
+      caseInfo?.subcategory,
+      caseInfo?.caseSubCategory,
+      caseInfo?.subCategory,
+      caseInfo?.subCategoryName,
+      caseInfo?.subcategoryName,
+      caseInfo?.subWorkType,
+      caseInfo?.subWorkTypeName,
+      caseInfo?.subCategorySnapshot,
+      caseInfo?.subCategoryConfig?.name,
+      caseInfo?.categorySnapshot?.subcategory,
+      caseData?.subcategory,
+      caseData?.subCategory,
+    ];
+    const firstValid = candidateValues.find((value) => {
+      if (value == null) return false;
+      if (typeof value === 'object') {
+        const label = value?.name || value?.label || value?.title || value?.value;
+        return Boolean(String(label || '').trim());
+      }
+      return Boolean(String(value).trim());
+    });
+    if (!firstValid) return '—';
+    if (typeof firstValid === 'object') {
+      return String(firstValid?.name || firstValid?.label || firstValid?.title || firstValid?.value || '—');
+    }
+    return String(firstValid);
+  })();
   const slaDaysLabel = (() => {
     const candidateValues = [
       caseInfo?.slaDays,
       caseInfo?.tatDaysSnapshot,
       caseInfo?.slaConfigSnapshot?.slaDays,
       caseInfo?.slaConfigSnapshot?.tatDays,
+      caseInfo?.sla?.days,
+      caseInfo?.sla?.tatDays,
+      caseInfo?.slaSnapshot?.days,
+      caseInfo?.categorySnapshot?.slaDays,
+      caseInfo?.tatDays,
       caseData?.slaDays,
     ];
-    const firstValid = candidateValues.find((value) => Number.isFinite(Number(value)) && Number(value) > 0);
-    return firstValid ? String(Number(firstValid)) : '-';
+    const firstValid = candidateValues.find((value) => Number.isFinite(Number(value)) && Number(value) >= 0);
+    return firstValid != null ? String(Number(firstValid)) : '-';
   })();
   const lifecycleStatus = normalizeLifecycleForUi(caseInfo?.lifecycle);
   const isAdmin = ['ADMIN', 'Admin'].includes(String(user?.role || ''));
@@ -1033,7 +1056,12 @@ export const CaseDetailPage = () => {
       caseInfo?.description
       || caseInfo?.caseDescription
       || caseInfo?.details
+      || caseInfo?.summary
+      || caseInfo?.notes
+      || caseInfo?.intake?.description
+      || caseData?.case?.description
       || caseData?.description
+      || caseData?.details
       || ''
     ).trim();
     if (!value) return '-';
@@ -1041,7 +1069,17 @@ export const CaseDetailPage = () => {
       return '-';
     }
     return value;
-  }, [caseInfo?.description, caseInfo?.caseDescription, caseInfo?.details, caseData?.description]);
+  }, [
+    caseInfo?.description,
+    caseInfo?.caseDescription,
+    caseInfo?.details,
+    caseInfo?.summary,
+    caseInfo?.notes,
+    caseInfo?.intake?.description,
+    caseData?.case?.description,
+    caseData?.description,
+    caseData?.details,
+  ]);
   const docketState = lifecycleStatus;
   const statusVersion = Number.isFinite(Number(caseInfo?.version)) ? Number(caseInfo.version) : 0;
   const performedBy = user?.email || user?.xID || 'system';
@@ -1190,37 +1228,17 @@ export const CaseDetailPage = () => {
   }, [caseInfo, comments, lifecycleStatus]);
 
   const actionInFlight = assigningCase || pendingCase || resolvingCase || unpendingCase;
-  const canRunDocketAction = Boolean(actionComment.trim()) && !actionInFlight;
-
   const openActionModal = (type) => {
-    const seedComment = actionComment.trim();
-    if (!seedComment) {
-      showWarning('Comment is mandatory for docket actions');
-      return;
-    }
     if (type === 'pend') {
-      setPendComment(seedComment);
+      setPendComment('');
       setShowPendModal(true);
       return;
     }
     if (type === 'resolve') {
-      setResolveComment(seedComment);
+      setResolveComment('');
       setShowResolveModal(true);
     }
   };
-
-  const canRouteDocket = Boolean(caseInfo)
-    && !isViewOnlyMode
-    && !caseInfo?.routedToTeamId
-    && routingTeams.length > 0;
-  const headerActions = canRouteDocket
-    ? [{
-      key: 'route_workbasket',
-      label: 'Route',
-      variant: 'outline',
-      onClick: () => setShowRouteModal(true),
-    }]
-    : [];
 
   const shouldShowActions = useMemo(() => {
     const hiddenLifecycleStates = new Set(['DONE', 'COMPLETED', 'ARCHIVED']);
@@ -1229,12 +1247,23 @@ export const CaseDetailPage = () => {
 
   const lifecycleActionMap = useMemo(() => ({
     WL: [],
+    OPEN: [
+      { key: 'pend', label: 'Pend', variant: 'secondary', onClick: () => openActionModal('pend') },
+      { key: 'resolve', label: 'Resolve', variant: 'primary', onClick: () => openActionModal('resolve') },
+    ],
     ACTIVE: [
-      { key: 'mark_waiting', label: 'Mark as Waiting', variant: 'secondary', onClick: () => openActionModal('pend') },
-      { key: 'mark_done', label: 'Mark as Done', variant: 'primary', onClick: () => openActionModal('resolve') },
+      { key: 'pend', label: 'Pend', variant: 'secondary', onClick: () => openActionModal('pend') },
+      { key: 'resolve', label: 'Resolve', variant: 'primary', onClick: () => openActionModal('resolve') },
+    ],
+    IN_PROGRESS: [
+      { key: 'unpend', label: 'Resume', variant: 'primary', onClick: () => setShowUnpendModal(true) },
+      { key: 'resolve', label: 'Resolve', variant: 'primary', onClick: () => openActionModal('resolve') },
     ],
     WAITING: [
-      { key: 'resume_work', label: 'Resume Work', variant: 'primary', onClick: () => setShowUnpendModal(true) },
+      { key: 'unpend', label: 'Resume', variant: 'primary', onClick: () => setShowUnpendModal(true) },
+    ],
+    PENDING: [
+      { key: 'unpend', label: 'Resume', variant: 'primary', onClick: () => setShowUnpendModal(true) },
     ],
     DONE: [],
   }), [openActionModal]);
@@ -1243,12 +1272,16 @@ export const CaseDetailPage = () => {
     if (isViewOnlyMode) return [];
     const actions = lifecycleActionMap[lifecycleStatus] || [];
     if (routedTeamCannotResolve) {
-      return actions.filter((action) => action.key !== 'mark_done');
+      return actions.filter((action) => action.key !== 'resolve');
     }
     return actions;
   }, [isViewOnlyMode, lifecycleActionMap, lifecycleStatus, routedTeamCannotResolve]);
 
   const canPerformLifecycleActions = lifecycleQuickActions.length > 0;
+  const canRouteDocket = Boolean(caseInfo)
+    && !isViewOnlyMode
+    && !caseInfo?.routedToTeamId
+    && routingTeams.length > 0;
   const showQcActions = false;
   const isAnyModalOpen = Boolean(
     showPendModal
@@ -1287,6 +1320,35 @@ export const CaseDetailPage = () => {
     } catch(err) {
       showError(err?.response?.data?.message || 'Failed to route docket');
     }
+  };
+
+  const handleFileCase = async () => {
+    const confirmationTimestamp = new Date().toISOString();
+    setConfirmModal({
+      title: 'File Case',
+      description: `Mark this case as filed.\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
+      confirmText: 'File Case',
+      onConfirm: async () => {
+        setConfirmModal(null);
+        setResolvingCase(true);
+        try {
+          const response = await caseApi.fileCase(caseId, 'Filed from case details');
+          if (response.success) {
+            const message = `Case ${caseId} filed • ${formatDateTime()}`;
+            showSuccess(message);
+            setActionConfirmation(message);
+            setActionError(null);
+            loadCase({ background: true });
+          }
+        } catch (error) {
+          const errorMessage = extractErrorMessage(error, 'Failed to file case. Please try again.');
+          showError(errorMessage);
+          setActionError({ message: errorMessage, retry: handleFileCase });
+        } finally {
+          setResolvingCase(false);
+        }
+      },
+    });
   };
 
   const handleAcceptRouted = async () => {
@@ -1448,7 +1510,6 @@ export const CaseDetailPage = () => {
         <DocketDetails
           docketId={caseId}
           prefetchedCase={caseInfo}
-          openedFromWorklist={location.state?.origin === 'worklist'}
         >
           {caseInfo?.qc?.status || caseInfo?.qcStatus ? (
             <Badge variant={String(caseInfo?.qc?.status || caseInfo?.qcStatus).toUpperCase() === 'FAILED' ? 'danger' : 'info'}>
@@ -1463,11 +1524,6 @@ export const CaseDetailPage = () => {
           <Button variant="ghost" onClick={() => runGuardedAction(() => openSidebar('history'), 'Unable to open history panel right now.')} title="History" className="h-10 w-10 rounded-full p-0" aria-label="Open history sidebar">🕒</Button>
           {canCloneDocket ? (
             <Button variant="ghost" onClick={() => runGuardedAction(() => setCloneModalOpen(true), 'Unable to open clone docket right now.')} title="Clone Docket" className="h-10 w-10 rounded-full p-0" aria-label="Clone docket">⧉</Button>
-          ) : null}
-          {!isViewOnlyMode && isOwnerTeam ? (
-            <Button variant="outline" onClick={() => setShowRouteModal(true)} disabled={actionInFlight}>
-              Route Docket
-            </Button>
           ) : null}
         </DocketDetails>
         {actionConfirmation ? <div className="case-detail__confirmation">{actionConfirmation}</div> : null}
@@ -1534,7 +1590,7 @@ export const CaseDetailPage = () => {
           <main className="case-detail-main min-w-0">
             <section className="case-card" aria-labelledby="snapshot-heading">
               <div className="case-card__heading">
-                <h2 id="snapshot-heading">Docket Snapshot</h2>
+                <h2 id="snapshot-heading">Snapshot</h2>
               </div>
               <div className="field-grid">
                 <div className="field-group min-w-0">
@@ -1564,9 +1620,24 @@ export const CaseDetailPage = () => {
               </div>
             </section>
 
+            <section className={`case-card ${lifecycleStatus === 'IN_PROGRESS' ? 'opacity-90' : ''}`} aria-labelledby="overview-heading">
+              <div className="case-card__heading">
+                <h2 id="overview-heading">Details</h2>
+              </div>
+              {lifecycleStatus === 'IN_PROGRESS' && (caseInfo?.pendingUntil || caseInfo?.reopenDate) ? (
+                <Badge variant="warning" className="mt-3 inline-flex">
+                  In progress until {formatDateTime(caseInfo.pendingUntil || caseInfo.reopenDate)}
+                </Badge>
+              ) : null}
+              <div className="field-group mt-4">
+                <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Description</span>
+                <span className="field-value case-detail__description-text whitespace-pre-wrap break-words text-sm font-medium text-gray-900">{descriptionContent}</span>
+              </div>
+            </section>
+
             <section className="case-card case-detail-section case-detail-section--comments" aria-labelledby="comments-heading">
               <div className="case-card__heading case-detail-section__heading">
-                <h2 id="comments-heading">Docket Comments</h2>
+                <h2 id="comments-heading">Comments</h2>
                 <p className="case-detail-section__subheading">Discussion, notes, and decision context.</p>
               </div>
               <div className="case-detail__comments" ref={commentsListRef}>
@@ -1602,7 +1673,29 @@ export const CaseDetailPage = () => {
                 </div>
               )}
               {shouldShowActions ? (
-                <section className="mt-4 border-t pt-4" aria-label="Docket actions">
+                <section className="mt-4 border-t pt-4" aria-label="Case actions">
+                  <div className="case-detail__composer-actions mt-3">
+                    {canPerformLifecycleActions ? lifecycleQuickActions.map((action) => (
+                      <Button
+                        key={action.key}
+                        variant={action.variant}
+                        onClick={action.onClick}
+                        disabled={actionInFlight}
+                      >
+                        {action.label}
+                      </Button>
+                    )) : null}
+                    {!isViewOnlyMode ? (
+                      <Button variant="secondary" onClick={handleFileCase} disabled={actionInFlight}>
+                        File
+                      </Button>
+                    ) : null}
+                    {canRouteDocket ? (
+                      <Button variant="outline" onClick={() => setShowRouteModal(true)} disabled={actionInFlight}>
+                        Route
+                      </Button>
+                    ) : null}
+                  </div>
                   {canPerformLifecycleActions ? (
                     <label className="mt-3 flex items-center gap-2 text-sm text-gray-700">
                       <input
@@ -1612,31 +1705,6 @@ export const CaseDetailPage = () => {
                       />
                       Force QC Review
                     </label>
-                  ) : null}
-                  <h3 className="mt-3 text-sm font-semibold text-gray-900">Docket Actions</h3>
-                  {canPerformLifecycleActions ? (
-                    <>
-                      <Textarea
-                        label="Action Comment (Required)"
-                        value={actionComment}
-                        onChange={(e) => setActionComment(e.target.value)}
-                        placeholder="Enter mandatory action comment…"
-                        rows={3}
-                        className="mt-2"
-                      />
-                      <div className="case-detail__composer-actions mt-3">
-                        {lifecycleQuickActions.map((action) => (
-                          <Button
-                            key={action.key}
-                            variant={action.variant}
-                            onClick={action.onClick}
-                            disabled={!canRunDocketAction}
-                          >
-                            {action.label}
-                          </Button>
-                        ))}
-                      </div>
-                    </>
                   ) : null}
                 </section>
               ) : null}
@@ -1658,29 +1726,14 @@ export const CaseDetailPage = () => {
               ) : null}
             </section>
 
-            <section className={`case-card ${lifecycleStatus === 'IN_PROGRESS' ? 'opacity-90' : ''}`} aria-labelledby="overview-heading">
-              <div className="case-card__heading">
-                <h2 id="overview-heading">Docket Details</h2>
-              </div>
-              {lifecycleStatus === 'IN_PROGRESS' && (caseInfo?.pendingUntil || caseInfo?.reopenDate) ? (
-                <Badge variant="warning" className="mt-3 inline-flex">
-                  In progress until {formatDateTime(caseInfo.pendingUntil || caseInfo.reopenDate)}
-                </Badge>
-              ) : null}
-              <div className="field-group mt-4">
-                <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Description</span>
-                <span className="field-value case-detail__description-text whitespace-pre-wrap break-words text-sm font-medium text-gray-900">{descriptionContent}</span>
-              </div>
-            </section>
-
             <section className="case-card" aria-labelledby="past-dockets-heading">
               <div className="case-card__heading">
-                <h2 id="past-dockets-heading">Past Dockets</h2>
+                <h2 id="past-dockets-heading">History</h2>
               </div>
               {loadingClientDockets ? (
-                <p className="case-detail__empty-note">Loading past dockets…</p>
+                <p className="case-detail__empty-note">Loading history…</p>
               ) : clientDockets.length === 0 ? (
-                <p className="case-detail__empty-note">No past dockets found for this client.</p>
+                <p className="case-detail__empty-note">No history found for this client.</p>
               ) : (
                 <div className="case-detail-table-wrap">
                   <table className="case-detail-table">
@@ -1727,8 +1780,6 @@ export const CaseDetailPage = () => {
           </main>
 
         </div>
-
-        <DocketActions actions={headerActions} lifecycle={lifecycleStatus} />
 
         {caseInfo && (
           <Card>
