@@ -60,16 +60,6 @@ export const WorkSettingsPage = () => {
       />
 
       <Card className="neo-card">
-        <div className="flex flex-wrap items-center gap-3 p-6">
-          <Button type="button" variant="outline" onClick={() => navigate(ROUTES.FIRM_SETTINGS(firmSlug))}>Firm</Button>
-          <Button type="button" variant="outline" onClick={() => navigate(ROUTES.WORK_SETTINGS(firmSlug))}>Work</Button>
-          <Button type="button" variant="outline" onClick={() => navigate(ROUTES.STORAGE_SETTINGS(firmSlug))}>Storage</Button>
-          <Button type="button" variant="outline" onClick={() => navigate(`${ROUTES.ADMIN(firmSlug)}?tab=users`)}>Security</Button>
-          <Button type="button" variant="outline" onClick={() => navigate('/app/firm/' + firmSlug + '/admin/reports/detailed')}>Audit</Button>
-        </div>
-      </Card>
-
-      <Card className="neo-card">
         <div className="grid gap-4 p-6 md:grid-cols-2">
           <Select
             label="Assignment Strategy"
