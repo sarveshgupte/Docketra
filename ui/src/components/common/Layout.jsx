@@ -13,7 +13,7 @@ import { CommandPalette } from './CommandPalette';
 import { ErrorBoundary } from './ErrorBoundary';
 import api from '../../services/api';
 import { worklistApi } from '../../api/worklist.api';
-import { USER_ROLES } from '../../utils/constants';
+import { APP_NAME, APP_VERSION, USER_ROLES } from '../../utils/constants';
 import { useActiveDocket } from '../../hooks/useActiveDocket';
 import { formatDateTime } from '../../utils/formatDateTime';
 import { getFirmConfig } from '../../utils/firmConfig';
@@ -576,7 +576,16 @@ export const Layout = ({ children }) => {
               {sidebarCollapsed ? 'Expand' : 'Collapse'}
             </span>
           </button>
-          <div className="enterprise-sidebar__version">Docketra v1.0</div>
+          {currentFirmSlug ? (
+            <Link
+              to={safeRoute(ROUTES.UPDATES(currentFirmSlug), ROUTES.DASHBOARD(currentFirmSlug))}
+              className="enterprise-sidebar__version"
+            >
+              {`${APP_NAME} v${APP_VERSION}`}
+            </Link>
+          ) : (
+            <div className="enterprise-sidebar__version">{`${APP_NAME} v${APP_VERSION}`}</div>
+          )}
         </div>
       </aside>
 

@@ -23,6 +23,7 @@ export const ComplianceCalendarPage = lazyPage(() => import('../pages/Compliance
 export const CaseDetailPage = lazyPage(() => import('../pages/CaseDetailPage'), 'CaseDetailPage');
 export const CreateCasePage = lazyPage(() => import('../pages/CreateCasePage'), 'CreateCasePage');
 export const ProfilePage = lazyPage(() => import('../pages/ProfilePage'), 'ProfilePage');
+export const ProductUpdatesHistoryPage = lazyPage(() => import('../pages/ProductUpdatesHistoryPage'), 'ProductUpdatesHistoryPage');
 export const AdminPage = lazyPage(() => import('../pages/AdminPage'), 'AdminPage');
 export const FirmSettingsPage = FirmSettingsPageComponent;
 export const WorkSettingsPage = WorkSettingsPageComponent;
