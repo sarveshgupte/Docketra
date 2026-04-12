@@ -523,15 +523,19 @@ const globalWorklist = async (req, res) => {
     
     const userTeamId = req.user?.teamId ? String(req.user.teamId) : null;
     const normalizedTab = String(tab || 'own').toLowerCase();
+    const parsedPage = Math.max(1, Number.parseInt(page, 10) || 1);
+    const parsedLimit = Math.min(100, Math.max(1, Number.parseInt(limit, 10) || 20));
     const query = {
       assignedToXID: null,
     };
 
-    if (normalizedTab === 'routed') {
+    if (normalizedTab === 'routed' && userTeamId) {
       query.routedToTeamId = userTeamId;
       query.status = { $in: [CaseStatus.ROUTED, CaseStatus.IN_PROGRESS, CaseStatus.PENDING, CaseStatus.FILED] };
     } else {
-      query.ownerTeamId = userTeamId;
+      if (userTeamId) {
+        query.ownerTeamId = userTeamId;
+      }
       query.routedToTeamId = null;
       query.status = { $in: [CaseStatus.OPEN, CaseStatus.RETURNED, CaseStatus.UNASSIGNED] };
     }
@@ -619,19 +623,19 @@ const globalWorklist = async (req, res) => {
       casesWithSLA = await Case.find(enforceTenantScope(queryWithSLA, req, { source: 'search.globalWorklist.withSLA' }))
         .select('caseId caseName clientId category status slaDueAt createdAt createdBy ownerTeamId routedToTeamId routingNote')
         .sort(sort)
-        .limit(parseInt(limit))
-        .skip((parseInt(page) - 1) * parseInt(limit))
+        .limit(parsedLimit)
+        .skip((parsedPage - 1) * parsedLimit)
         .lean();
       
       // Query for cases WITHOUT slaDueAt (null) - only if no slaStatus filter
-      if (!slaStatus && casesWithSLA.length < parseInt(limit)) {
+      if (!slaStatus && casesWithSLA.length < parsedLimit) {
         const queryWithoutSLA = { ...baseQuery, slaDueAt: null };
         
         casesWithoutSLA = await Case.find(enforceTenantScope(queryWithoutSLA, req, { source: 'search.globalWorklist.withoutSLA' }))
           .select('caseId caseName clientId category status slaDueAt createdAt createdBy ownerTeamId routedToTeamId routingNote')
           .sort({ createdAt: sortDirection })
-          .limit(parseInt(limit) - casesWithSLA.length)
-          .skip(Math.max(0, (parseInt(page) - 1) * parseInt(limit) - casesWithSLA.length))
+          .limit(parsedLimit - casesWithSLA.length)
+          .skip(Math.max(0, (parsedPage - 1) * parsedLimit - casesWithSLA.length))
           .lean();
       }
     } else {
@@ -639,8 +643,8 @@ const globalWorklist = async (req, res) => {
       casesWithSLA = await Case.find(enforceTenantScope(baseQuery, req, { source: 'search.globalWorklist.base' }))
         .select('caseId caseName clientId category status slaDueAt createdAt createdBy ownerTeamId routedToTeamId routingNote')
         .sort(sort)
-        .limit(parseInt(limit))
-        .skip((parseInt(page) - 1) * parseInt(limit))
+        .limit(parsedLimit)
+        .skip((parsedPage - 1) * parsedLimit)
         .lean();
     }
     
@@ -705,10 +709,10 @@ const globalWorklist = async (req, res) => {
       success: true,
       data: casesWithSLAInfo,
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
+        page: parsedPage,
+        limit: parsedLimit,
         total,
-        pages: Math.ceil(total / parseInt(limit)),
+        pages: Math.ceil(total / parsedLimit),
       },
     });
   } catch (error) {

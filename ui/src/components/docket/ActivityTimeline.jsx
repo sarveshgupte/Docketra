@@ -7,21 +7,14 @@ import {
 } from '../../utils/activityMap';
 import { ActivityItem } from './ActivityItem';
 
-const ACTIVITY_ONLY_PARAMS = {
-  activityPage: 1,
-  activityLimit: 50,
-  commentsPage: 1,
-  commentsLimit: 1,
-};
-
 const normalizeFeed = (input) => {
   if (!Array.isArray(input)) return [];
   return input.map((event, index) => normalizeActivityEvent(event, index));
 };
 
 const extractActivity = (response) => {
-  const payload = response?.data?.case || response?.data || {};
-  return payload?.activity || payload?.events || [];
+  const payload = response?.data || [];
+  return Array.isArray(payload) ? payload : (payload?.activity || payload?.events || []);
 };
 
 export function ActivityTimeline({
@@ -66,7 +59,7 @@ export function ActivityTimeline({
       setError('');
     }
     try {
-      const response = await caseApi.getCaseById(docketId, ACTIVITY_ONLY_PARAMS);
+      const response = await caseApi.getCaseHistory(docketId);
       const events = normalizeFeed(extractActivity(response));
       const latestHeadId = events[0]?.id || events[0]?._id || null;
       const previousHeadId = previousHeadIdRef.current;
