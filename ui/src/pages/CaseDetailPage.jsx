@@ -574,11 +574,6 @@ export const CaseDetailPage = () => {
           showSuccess('New comment update received.');
           sendBrowserNotification('Docketra update', 'A new comment was added to this docket.');
         }
-        const nextLifecycle = normalizeLifecycleForUi(nextInfo?.lifecycle);
-        if (nextLifecycle && previous.lifecycle && nextLifecycle !== previous.lifecycle) {
-          showSuccess(`Lifecycle updated: ${previous.lifecycle} → ${nextLifecycle}`);
-          sendBrowserNotification('Docket lifecycle changed', `${previous.lifecycle} → ${nextLifecycle}`);
-        }
         if (nextAssignee && previous.assignee && nextAssignee !== previous.assignee) {
           showWarning(`Assignment updated: ${previous.assignee} → ${nextAssignee}`);
         }
