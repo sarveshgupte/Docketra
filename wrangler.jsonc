@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "docketra",
+  "compatibility_date": "2026-04-12",
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": "ui"
+  },
+  "compatibility_flags": [
+    "nodejs_compat"
+  ]
+}
