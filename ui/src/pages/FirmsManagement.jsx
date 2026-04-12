@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { superadminService } from '../services/superadminService';
 import { SuperAdminLayout } from '../components/common/SuperAdminLayout';
 import { Card } from '../components/common/Card';
@@ -46,6 +47,7 @@ const sanitizeEntityList = (value) => {
 
 export const FirmsManagement = () => {
   const toast = useToast();
+  const navigate = useNavigate();
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -363,11 +365,16 @@ export const FirmsManagement = () => {
           <div className="page-header">
             <div>
               <h1>Firms Management</h1>
-            <p className="text-secondary">Admin-created firms</p>
+              <p className="text-secondary">Admin-created firms</p>
             </div>
-            <Button onClick={() => setShowCreateModal(true)}>
-            + Create Firm
-            </Button>
+            <div className="page-header-actions">
+              <Button variant="secondary" onClick={() => navigate('/app/superadmin')}>
+                Platform Dashboard
+              </Button>
+              <Button onClick={() => setShowCreateModal(true)}>
+                + Create Firm
+              </Button>
+            </div>
           </div>
 
         {/* Create Firm Modal */}
