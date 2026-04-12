@@ -85,7 +85,12 @@ export const FirmsManagement = () => {
   // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (!e.target.closest('.firm-actions__dropdown-wrap')) {
+      const clickedInsideDropdown = Boolean(
+        e?.target &&
+        typeof e.target.closest === 'function' &&
+        e.target.closest('.firm-actions__dropdown-wrap')
+      );
+      if (!clickedInsideDropdown) {
         setOpenDropdownId(null);
       }
     };
