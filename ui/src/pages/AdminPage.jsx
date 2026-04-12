@@ -100,6 +100,8 @@ const getUserStatusBadge = (user) => {
   return { tone: 'Rejected', label: status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Inactive' };
 };
 
+const getNormalizedUserStatus = (user) => String(user?.status || '').toLowerCase();
+
 const getRoleBadgePresentation = (user) => {
   const normalizedRole = String(user?.role || '').trim().toUpperCase();
   const isPrimaryOrSystemAdmin = user?.isPrimaryAdmin || user?.isSystem;
@@ -433,8 +435,9 @@ export const AdminPage = () => {
   };
 
   const handleToggleUserStatus = async (user) => {
-    const isInvited = user.status === 'invited';
-    const shouldActivate = isInvited ? false : user.status !== 'active';
+    const normalizedStatus = getNormalizedUserStatus(user);
+    const isInvited = normalizedStatus === 'invited';
+    const shouldActivate = isInvited ? false : normalizedStatus !== 'active';
     const action = isInvited ? 'cancel invite for' : (shouldActivate ? 'activate' : 'deactivate');
 
     try {
@@ -1270,7 +1273,18 @@ export const AdminPage = () => {
                     { key: 'actions', header: 'Actions', render: (u) => (
                       <div className="flex gap-2">
                         <Button size="sm" variant="outline" onClick={() => handleEditUser(u)}>Edit</Button>
-                        <Button size="sm" variant="danger" onClick={() => handleDeleteClick(u.xID)}>Delete</Button>
+                        {getNormalizedUserStatus(u) === 'invited' && (
+                          <Button size="sm" variant="default" onClick={() => handleResendSetupEmail(u.xID)}>
+                            Resend Invite
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant={getNormalizedUserStatus(u) === 'active' ? 'danger' : 'default'}
+                          onClick={() => handleDeleteClick(u.xID)}
+                        >
+                          {getNormalizedUserStatus(u) === 'invited' ? 'Cancel Invite' : (getNormalizedUserStatus(u) === 'active' ? 'Deactivate' : 'Activate')}
+                        </Button>
                       </div>
                     ) }
                   ]}
