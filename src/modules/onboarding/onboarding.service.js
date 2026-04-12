@@ -155,6 +155,7 @@ const createStarterWorkspace = async (payload = {}) => {
         token: setupToken,
         xID: result.admin.xID,
         firmSlug: result.defaultClient.firmSlug,
+        role: result.admin.role,
       }),
     });
 

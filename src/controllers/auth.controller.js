@@ -1844,6 +1844,7 @@ const resetPassword = async (req, res) => {
         token: token,
         xID: user.xID,
         firmSlug: firmSlug, // Pass firmSlug for firm-specific URL in email
+        role: user.role,
         req,
       });
 
@@ -3005,6 +3006,7 @@ const resendSetup = async (req, res) => {
     name: user.name,
     token,
     xID: user.xID,
+    role: user.role,
     customMessage: 'This link will expire in 48 hours.',
   });
 
