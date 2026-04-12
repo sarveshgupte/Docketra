@@ -261,8 +261,32 @@ export const CaseDetailPage = () => {
   const clientName = caseData?.client?.businessName || caseInfo?.clientName || caseInfo?.businessName || '—';
   const clientIdLabel = caseData?.client?.clientId || caseInfo?.clientId || caseData?.clientId || '—';
 
-  const categoryLabel = caseInfo?.category || caseInfo?.caseCategory || caseInfo?.workType || caseData?.category || '—';
-  const subcategoryLabel = caseInfo?.subcategory || caseInfo?.caseSubCategory || caseInfo?.subCategory || caseInfo?.subCategoryName || caseData?.subcategory || '—';
+  const categoryLabel = caseInfo?.category
+    || caseInfo?.caseCategory
+    || caseInfo?.workType
+    || caseInfo?.workTypeName
+    || caseData?.category
+    || '—';
+  const subcategoryLabel = caseInfo?.subcategory
+    || caseInfo?.caseSubCategory
+    || caseInfo?.subCategory
+    || caseInfo?.subCategoryName
+    || caseInfo?.subcategoryName
+    || caseInfo?.subWorkType
+    || caseInfo?.subWorkTypeName
+    || caseData?.subcategory
+    || '—';
+  const slaDaysLabel = (() => {
+    const candidateValues = [
+      caseInfo?.slaDays,
+      caseInfo?.tatDaysSnapshot,
+      caseInfo?.slaConfigSnapshot?.slaDays,
+      caseInfo?.slaConfigSnapshot?.tatDays,
+      caseData?.slaDays,
+    ];
+    const firstValid = candidateValues.find((value) => Number.isFinite(Number(value)) && Number(value) > 0);
+    return firstValid ? String(Number(firstValid)) : '-';
+  })();
   const lifecycleStatus = normalizeLifecycleForUi(caseInfo?.lifecycle);
   const isAdmin = ['ADMIN', 'Admin'].includes(String(user?.role || ''));
   const isMoveLockedByAnotherUser = Boolean(caseInfo?.lockStatus?.isLocked)
@@ -1013,11 +1037,11 @@ export const CaseDetailPage = () => {
       || ''
     ).trim();
     if (!value) return '-';
-    if (/^v\d+:[A-Za-z0-9+/=_-]+$/.test(value)) {
+    if (/^v\d+:[A-Za-z0-9+/=_-]+:[A-Za-z0-9+/=_-]+:[A-Za-z0-9+/=_-]+$/.test(value)) {
       return '-';
     }
     return value;
-  }, [caseInfo?.description]);
+  }, [caseInfo?.description, caseInfo?.caseDescription, caseInfo?.details, caseData?.description]);
   const docketState = lifecycleStatus;
   const statusVersion = Number.isFinite(Number(caseInfo?.version)) ? Number(caseInfo.version) : 0;
   const performedBy = user?.email || user?.xID || 'system';
@@ -1075,17 +1099,12 @@ export const CaseDetailPage = () => {
       showWarning('Please select a user to move this docket.');
       return;
     }
-    if (!String(assignComment || '').trim()) {
-      showWarning('Comment is mandatory when moving a docket between worklists.');
-      return;
-    }
-
     if (assigningCase) return;
     setAssigningCase(true);
     const selectedAssignee = availableAssignees.find((option) => option.value === assignUser);
 
     try {
-      await caseApi.reassignDocket(caseId, assignUser, String(assignComment || '').trim());
+      await caseApi.reassignDocket(caseId, assignUser);
       setShowAssignModal(false);
       setAssignComment('');
       setActionError(null);
@@ -1197,7 +1216,7 @@ export const CaseDetailPage = () => {
   const headerActions = canRouteDocket
     ? [{
       key: 'route_workbasket',
-      label: 'Route to WB',
+      label: 'Route',
       variant: 'outline',
       onClick: () => setShowRouteModal(true),
     }]
@@ -1524,7 +1543,7 @@ export const CaseDetailPage = () => {
                 </div>
                 <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">SLA (days)</span>
-                  <span className="field-value text-sm font-medium text-gray-900">{Number(caseInfo?.slaDays || 0) > 0 ? String(caseInfo.slaDays) : '-'}</span>
+                  <span className="field-value text-sm font-medium text-gray-900">{slaDaysLabel}</span>
                 </div>
                 <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Lifecycle</span>
@@ -1933,7 +1952,7 @@ export const CaseDetailPage = () => {
           title="Move Docket to Another Worklist"
           comment={assignComment}
           setComment={setAssignComment}
-          commentRequired
+          commentRequired={false}
           submitLabel="Move Docket"
           submitting={assigningCase}
           onSubmit={handleAssignDocket}
