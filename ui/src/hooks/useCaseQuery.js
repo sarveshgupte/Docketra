@@ -19,7 +19,10 @@ export const useCaseQuery = (caseId, options = {}) => {
 
   const fetchCase = useCallback(async () => {
     if (!caseId) return { data: null };
-    if (inFlightRef.current) return { data: inFlightRef.current };
+    if (inFlightRef.current) {
+      const response = await inFlightRef.current;
+      return { data: response };
+    }
 
     const promise = caseApi.getCaseById(caseId, CASE_QUERY_PARAMS);
     inFlightRef.current = promise;

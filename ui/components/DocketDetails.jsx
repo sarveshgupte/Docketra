@@ -20,6 +20,7 @@ const CASE_FETCH_PARAMS = {
 };
 
 const POLL_INTERVAL_MS = 12000;
+const COMMENTS_PAGE_SIZE = 25;
 
 const normalizeComment = (comment, index = 0) => ({
   ...comment,
@@ -34,6 +35,12 @@ const extractCommentsPayload = (response) => {
     return {
       comments: payload,
       pagination: { hasMore: false },
+    };
+  }
+  if (Array.isArray(payload?.data)) {
+    return {
+      comments: payload.data,
+      pagination: payload.pagination || {},
     };
   }
   return {
@@ -127,7 +134,10 @@ export function DocketDetails({
     }
 
     try {
-      const response = await caseApi.getDocketComments(docketId);
+      const response = await caseApi.getDocketComments(docketId, {
+        page,
+        limit: COMMENTS_PAGE_SIZE,
+      });
       const payload = extractCommentsPayload(response);
       const normalized = payload.comments.map((comment, index) => normalizeComment(comment, index));
       const nextHeadId = commentIdentity(normalized[0]) || null;
@@ -179,7 +189,10 @@ export function DocketDetails({
 
     try {
       const [commentsResponse, activityResponse] = await Promise.all([
-        caseApi.getDocketComments(docketId),
+        caseApi.getDocketComments(docketId, {
+          page: 1,
+          limit: COMMENTS_PAGE_SIZE,
+        }),
         caseApi.getCaseHistory(docketId),
       ]);
 

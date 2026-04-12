@@ -813,20 +813,36 @@ const addComment = async (req, res) => {
 const getCaseComments = async (req, res) => {
   try {
     const { caseId } = req.params;
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, Number.parseInt(req.query.limit, 10) || 25));
+    const skip = (page - 1) * limit;
     const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
     const caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
     if (!caseData) {
       return res.status(404).json({ success: false, message: 'Case not found' });
     }
 
-    const comments = await Comment.find(
-      enforceTenantScope({ caseId: caseData.caseId }, req, { source: 'case.getCaseComments' })
-    )
-      .select('_id caseId text note createdBy createdByXID createdByName createdAt')
-      .sort({ createdAt: 1 })
-      .lean();
+    const scopedQuery = enforceTenantScope({ caseId: caseData.caseId }, req, { source: 'case.getCaseComments' });
+    const [comments, total] = await Promise.all([
+      Comment.find(scopedQuery)
+        .select('_id caseId text note createdBy createdByXID createdByName createdAt')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Comment.countDocuments(scopedQuery),
+    ]);
 
-    return res.status(200).json({ success: true, data: comments });
+    return res.status(200).json({
+      success: true,
+      data: comments.reverse(),
+      pagination: {
+        page,
+        limit,
+        totalCount: total,
+        hasMore: skip + comments.length < total,
+      },
+    });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Failed to load comments', error: error.message });
   }
