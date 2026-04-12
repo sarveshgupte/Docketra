@@ -2835,17 +2835,24 @@ const getClientFactSheetForCase = async (req, res) => {
     }));
     factSheetData.files = factSheetData.attachments;
     
-    // Log audit event for viewing
-    const { logFactSheetViewed } = require('../services/clientFactSheetAudit.service');
-    await logFactSheetViewed({
-      clientId: client.clientId,
-      firmId: req.user.firmId,
-      performedByXID: req.user.xID,
-      caseId: caseData.caseId, // Use display caseId
-      metadata: {
-        fileCount: factSheetData.files.length,
-      },
-    });
+    // Log audit event for viewing.
+    // NOTE: Read-only CFS fetch from dockets must not fail if audit logging has a transient issue.
+    // CFS updates are intentionally restricted to Client Management flows only.
+    try {
+      const { logFactSheetViewed } = require('../services/clientFactSheetAudit.service');
+      await logFactSheetViewed({
+        clientId: client.clientId,
+        firmId: req.user.firmId,
+        performedByXID: req.user.xID,
+        caseId: caseData.caseId, // Use display caseId
+        metadata: {
+          fileCount: factSheetData.files.length,
+        },
+        req,
+      });
+    } catch (auditError) {
+      console.warn('[getClientFactSheetForCase] Non-blocking audit log failure:', auditError?.message || auditError);
+    }
     
     res.json({
       success: true,
