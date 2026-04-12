@@ -15,6 +15,7 @@ import { Loading } from '../components/common/Loading';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useToast } from '../hooks/useToast';
 import { productUpdatesService } from '../services/productUpdatesService';
+import { APP_VERSION } from '../utils/constants';
 
 export const PlatformDashboard = () => {
   const navigate = useNavigate();
@@ -118,6 +119,25 @@ export const PlatformDashboard = () => {
     }
   };
 
+  const handleBulletChange = (index, value) => {
+    setUpdateForm((prev) => {
+      const nextBullets = [...prev.bullets];
+      nextBullets[index] = value;
+      return { ...prev, bullets: nextBullets };
+    });
+  };
+
+  const handleAddBullet = () => {
+    setUpdateForm((prev) => ({ ...prev, bullets: [...prev.bullets, ''] }));
+  };
+
+  const handleRemoveBullet = (indexToRemove) => {
+    setUpdateForm((prev) => ({
+      ...prev,
+      bullets: prev.bullets.filter((_, index) => index !== indexToRemove),
+    }));
+  };
+
   if (loading) {
     return (
       <SuperAdminLayout>
@@ -211,24 +231,35 @@ export const PlatformDashboard = () => {
               <input
                 value={updateForm.version}
                 onChange={(event) => setUpdateForm((prev) => ({ ...prev, version: event.target.value }))}
-                placeholder="Version (optional, e.g. v1.4)"
+                placeholder={`Version (optional, e.g. v${APP_VERSION})`}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
                 maxLength={32}
               />
               {updateForm.bullets.map((bullet, index) => (
-                <input
-                  key={index}
-                  value={bullet}
-                  onChange={(event) => setUpdateForm((prev) => {
-                    const nextBullets = [...prev.bullets];
-                    nextBullets[index] = event.target.value;
-                    return { ...prev, bullets: nextBullets };
-                  })}
-                  placeholder={`Bullet point ${index + 1}`}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  maxLength={180}
-                />
+                <div key={index} className="flex items-center gap-2">
+                  <input
+                    value={bullet}
+                    onChange={(event) => handleBulletChange(index, event.target.value)}
+                    placeholder={`Bullet point ${index + 1}`}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                    maxLength={180}
+                  />
+                  {updateForm.bullets.length > 1 ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => handleRemoveBullet(index)}
+                    >
+                      Remove
+                    </Button>
+                  ) : null}
+                </div>
               ))}
+              <div>
+                <Button type="button" variant="secondary" onClick={handleAddBullet}>
+                  Add bullet point
+                </Button>
+              </div>
               <label className="flex items-center gap-2 text-sm text-gray-700">
                 <input
                   type="checkbox"
