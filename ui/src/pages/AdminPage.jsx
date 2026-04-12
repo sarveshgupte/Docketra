@@ -1296,6 +1296,15 @@ export const AdminPage = () => {
                         {!isPrimaryOrSystemAdmin && (
                           <Button
                             size="small"
+                            variant="default"
+                            onClick={() => handleOpenAccessModal(user)}
+                          >
+                            Map Workbaskets
+                          </Button>
+                        )}
+                        {!isPrimaryOrSystemAdmin && (
+                          <Button
+                            size="small"
                             variant="warning"
                             onClick={() => handleSendPasswordReset(user)}
                           >
@@ -1696,11 +1705,11 @@ export const AdminPage = () => {
           setRestrictedClientDraft([]);
           setSelectedWorkbasketDraft([]);
         }}
-        title={`User Access Control${selectedUserForAccess ? ` — ${selectedUserForAccess.name}` : ''}`}
+        title={`User Access & Workbasket Mapping${selectedUserForAccess ? ` — ${selectedUserForAccess.name}` : ''}`}
       >
         <div className="admin__create-form">
           <div className="neo-info-text">
-            Select which clients this user can access. Checked clients are allowed; unchecked clients are blocked.
+            Select workbaskets and clients for this user. At least one workbasket is required.
           </div>
           <div className="neo-form-group">
             <FormLabel>Workbaskets (at least one)</FormLabel>
