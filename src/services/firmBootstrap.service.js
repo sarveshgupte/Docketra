@@ -234,6 +234,7 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
       token: setupToken,
       xID: adminXID,
       firmSlug,
+      role: adminUser.role,
       context,
     });
     if (!emailResult.success) {
