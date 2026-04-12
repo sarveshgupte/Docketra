@@ -17,6 +17,15 @@ import { formatDate } from '../utils/formatters';
 import { formatDateTime } from '../utils/formatDateTime';
 import { BulkUploadModal } from '../components/bulk/BulkUploadModal';
 
+const toDisplayString = (value, fallback = '—') => {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed || fallback;
+  }
+  if (typeof value === 'number') return String(value);
+  return fallback;
+};
+
 export const ClientsPage = () => {
   const { user } = useAuth();
   const { showError, showSuccess } = useToast();
@@ -59,12 +68,18 @@ export const ClientsPage = () => {
           ? response.clients
           : [];
 
-      const normalizedClients = payload.filter((client) => (
-        client
-        && typeof client === 'object'
-        && typeof client.clientId === 'string'
-        && client.clientId.trim().length > 0
-      ));
+      const normalizedClients = payload
+        .filter((client) => (
+          client
+          && typeof client === 'object'
+          && typeof client.clientId === 'string'
+          && client.clientId.trim().length > 0
+        ))
+        .map((client) => ({
+          ...client,
+          businessEmail: toDisplayString(client.businessEmail, ''),
+          contactPersonEmailAddress: toDisplayString(client.contactPersonEmailAddress, ''),
+        }));
 
       setClients(normalizedClients);
     } catch (error) {
@@ -244,7 +259,7 @@ export const ClientsPage = () => {
       headerClassName: 'min-w-[14rem]',
       cellClassName: 'min-w-[14rem]',
       contentClassName: 'truncate',
-      render: (client) => client.businessEmail || '—',
+      render: (client) => toDisplayString(client.businessEmail),
     },
     {
       key: 'status',

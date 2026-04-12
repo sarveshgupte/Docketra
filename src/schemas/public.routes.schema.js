@@ -20,4 +20,8 @@ module.exports = {
       pin: z.string().trim().regex(/^\d{4}$/).optional(),
     }).passthrough(),
   },
+  'POST /upload/:token/request-pin': {
+    params: z.object({ token: z.string().trim().min(8).max(128) }).strict(),
+    body: z.object({}).passthrough(),
+  },
 };
