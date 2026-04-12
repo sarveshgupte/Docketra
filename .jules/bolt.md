@@ -7,3 +7,6 @@
 ## 2024-05-10 - UnhandledPromiseRejection when Parallelizing Queries
 **Learning:** When parallelizing independent MongoDB queries by initiating a promise early (e.g., `const countPromise = Model.countDocuments()`) and awaiting it later in the function, if the early promise rejects before it is reached by the `await` statement, it will trigger an `UnhandledPromiseRejection` which crashes the Node.js process.
 **Action:** Immediately attach a no-op catch handler to the un-awaited promise (e.g., `countPromise.catch(() => {})`). This suppresses the fatal process warning, while preserving the rejection state so the error is correctly thrown and caught when you eventually call `await countPromise`.
+## 2024-05-10 - Avoiding N+1 Queries with Promise.all in Batch Jobs
+**Learning:** Sequential await loops processing batched operations (e.g., `performAutoReopen` called iteratively over `pendedCases`) introduce N+1 query and transaction latency. Because `performAutoReopen` emits events and uses a session transaction, rewriting to pure bulk DB updates is highly risky.
+**Action:** The safest and most effective optimization for looping over complex single-document transaction functions is wrapping the loop map in a `Promise.all` to allow concurrent execution of independent DB connections and transactions, drastically reducing total execution time.
