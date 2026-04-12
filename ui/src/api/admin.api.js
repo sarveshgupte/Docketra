@@ -21,6 +21,7 @@ export const adminApi = {
     'Failed to update user workbasket access'
   ),
   getFirmSettings: () => request((http) => http.get('/admin/firm-settings'), 'Failed to load firm settings'),
+  getFirmSettingsActivity: (params = {}) => request((http) => http.get('/admin/firm-settings/activity', { params }), 'Failed to load admin settings activity'),
   updateFirmSettings: (payload) => request((http) => http.put('/admin/firm-settings', payload), 'Failed to save firm settings'),
   listWorkbaskets: (params = {}) => request((http) => http.get('/admin/workbaskets', { params }), 'Failed to load workbaskets'),
   createWorkbasket: (name) => request((http) => http.post('/admin/workbaskets', { name }), 'Failed to create workbasket'),
