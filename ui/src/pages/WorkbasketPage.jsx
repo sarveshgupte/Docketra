@@ -12,7 +12,7 @@ import { Button } from '../components/common/Button';
 import { Loading } from '../components/common/Loading';
 import { PageHeader } from '../components/layout/PageHeader';
 import { StatusBadge } from '../components/layout/StatusBadge';
-import { DataTable } from '../components/layout/DataTable';
+import { DataTable } from '../components/common/DataTable';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ActionConfirmModal } from '../components/common/ActionConfirmModal';
 import { useAuth } from '../hooks/useAuth';
@@ -231,7 +231,7 @@ export const WorkbasketPage = () => {
         const message = response.pulled < response.requested
           ? `${response.pulled} of ${response.requested} dockets pulled. Some were already assigned.`
           : `All ${response.pulled} dockets pulled successfully!`;
-        showInfo(message);
+        showSuccess(message);
         loadGlobalWorklist();
       }
     } catch (error) {
@@ -651,7 +651,7 @@ export const WorkbasketPage = () => {
 
           <DataTable
             columns={columns}
-            data={cases}
+            rows={cases}
             rowKey="caseId"
             sortState={{ key: filters.sortBy, direction: filters.sortOrder }}
             onSortChange={handleSortChange}
@@ -660,7 +660,7 @@ export const WorkbasketPage = () => {
             onResetFilters={handleResetFilters}
             loading={loading}
             loadingMessage="Loading workbasket..."
-            emptyContent={(
+            emptyMessage={(
               <EmptyState
                 title="No dockets in backlog"
                 description="New unassigned dockets will appear here as soon as they enter the shared queue."
