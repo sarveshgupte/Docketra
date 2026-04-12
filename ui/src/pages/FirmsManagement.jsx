@@ -491,19 +491,19 @@ export const FirmsManagement = () => {
                   placeholder="Enter firm name"
                 />
                 <Input
-                  label="Admin Name"
+                  label="Primary Admin Name"
                   value={formData.adminName}
                   onChange={(e) => setFormData({ ...formData, adminName: e.target.value })}
                   required
-                  placeholder="Enter admin name"
+                  placeholder="Enter primary admin name"
                 />
                 <Input
-                  label="Admin Email"
+                  label="Primary Admin Email"
                   type="email"
                   value={formData.adminEmail}
                   onChange={(e) => setFormData({ ...formData, adminEmail: e.target.value })}
                   required
-                  placeholder="admin@example.com"
+                  placeholder="primary.admin@example.com"
                 />
                 <div className="modal-actions">
                   <Button type="submit" disabled={isSubmitting}>
