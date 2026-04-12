@@ -3,6 +3,7 @@
  */
 
 export const APP_NAME = 'Docketra';
+export const APP_VERSION = '1.1';
 
 /**
  * API Base URL Configuration with Runtime Validation
