@@ -131,7 +131,7 @@ export const SuperadminDashboard = () => {
   const handleLogout = async () => {
     try {
       await logout();
-      navigate('/superadmin');
+      navigate('/superadmin', { state: { message: 'You have been signed out safely.', messageType: 'success' } });
     } catch (error) {
       console.error('Logout error:', error);
       navigate('/superadmin');
