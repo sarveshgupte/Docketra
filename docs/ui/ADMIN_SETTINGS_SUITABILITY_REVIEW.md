@@ -41,7 +41,7 @@ Current features:
   - Escalation View
   - Bulk Actions
 - Save feedback and unsaved-change affordance.
-- A read-only BYOS placeholder panel.
+- Storage settings are managed on the dedicated `StorageSettingsPage` (OTP + provider switching + connection test).
 - Recent user activity panel (derived from recent case/audit activity).
 
 ### 4) Work Settings page (`/settings/work`)
