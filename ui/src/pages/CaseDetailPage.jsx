@@ -1268,7 +1268,14 @@ export const CaseDetailPage = () => {
   }, [lifecycleStatus]);
 
   const lifecycleActionMap = useMemo(() => ({
-    WL: [],
+    WL: [
+      { key: 'pend', label: 'Pend', variant: 'secondary', onClick: () => openActionModal('pend') },
+      { key: 'resolve', label: 'Resolve', variant: 'primary', onClick: () => openActionModal('resolve') },
+    ],
+    CREATED: [
+      { key: 'pend', label: 'Pend', variant: 'secondary', onClick: () => openActionModal('pend') },
+      { key: 'resolve', label: 'Resolve', variant: 'primary', onClick: () => openActionModal('resolve') },
+    ],
     IN_WORKLIST: [
       { key: 'pend', label: 'Pend', variant: 'secondary', onClick: () => openActionModal('pend') },
       { key: 'resolve', label: 'Resolve', variant: 'primary', onClick: () => openActionModal('resolve') },
@@ -1690,7 +1697,7 @@ export const CaseDetailPage = () => {
               )}
               {shouldShowActions ? (
                 <section className="case-detail__actions-panel mt-4 border-t pt-4" aria-label="Case actions">
-                  <div className="case-detail__composer-actions mt-3">
+                  <div className="case-detail__composer-actions case-detail__lifecycle-actions mt-3">
                     {canPerformLifecycleActions ? lifecycleQuickActions.map((action) => (
                       <Button
                         key={action.key}
@@ -1727,7 +1734,7 @@ export const CaseDetailPage = () => {
               {showQcActions ? (
                 <section className="mt-4 border-t pt-4" aria-label="QC actions">
                   <h3 className="text-sm font-semibold text-gray-900">QC Actions</h3>
-                  <div className="case-detail__composer-actions mt-3">
+                  <div className="case-detail__composer-actions case-detail__lifecycle-actions mt-3">
                     <Button variant="primary" onClick={() => { setQcDecisionType('APPROVED'); setQcComment(''); setShowQcModal(true); }}>
                       Approve
                     </Button>

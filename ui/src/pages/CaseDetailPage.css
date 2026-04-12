@@ -463,11 +463,16 @@
   justify-content: flex-end;
 }
 
+.case-detail__lifecycle-actions {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+}
 
 .case-detail__actions-panel {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 10px;
 }
 
