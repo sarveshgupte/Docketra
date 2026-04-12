@@ -7,3 +7,6 @@
 ## 2024-05-10 - UnhandledPromiseRejection when Parallelizing Queries
 **Learning:** When parallelizing independent MongoDB queries by initiating a promise early (e.g., `const countPromise = Model.countDocuments()`) and awaiting it later in the function, if the early promise rejects before it is reached by the `await` statement, it will trigger an `UnhandledPromiseRejection` which crashes the Node.js process.
 **Action:** Immediately attach a no-op catch handler to the un-awaited promise (e.g., `countPromise.catch(() => {})`). This suppresses the fatal process warning, while preserving the rejection state so the error is correctly thrown and caught when you eventually call `await countPromise`.
+## 2025-02-12 - Bulk Upload N+1 Optimization
+**Learning:** Using iterative `updateOne` and `create` operations inside a loop with hundreds of items introduces significant network latency and blocks execution.
+**Action:** Replaced iterative document creation and updates with `Model.bulkWrite()` batched operations, accumulating commands into an array and periodically writing to the database (with `BATCH_SIZE = 500`). Execution time for 1000 items dropped from ~5238ms to ~16ms (simulated pure Javascript latency).
