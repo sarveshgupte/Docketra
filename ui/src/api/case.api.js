@@ -198,7 +198,10 @@ export const caseApi = {
     () => request((http) => http.post(`/cases/${caseId}/reopen-pending`, { comment }), 'Failed to reopen docket'),
   ),
 
-  getDocketComments: (caseId) => request((http) => http.get(`/cases/${caseId}/comments`), 'Failed to load comments'),
+  getDocketComments: (caseId, params = {}) => request(
+    (http) => http.get(`/cases/${caseId}/comments`, { params }),
+    'Failed to load comments',
+  ),
   generateUploadLink: (caseId, payload) => withCaseInvalidation(
     caseId,
     () => request((http) => http.post(`/cases/${caseId}/upload-link`, payload), 'Failed to generate upload link'),
