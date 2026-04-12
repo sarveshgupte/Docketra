@@ -166,6 +166,7 @@ log.info('ENV_CONFIG_LOADED', {
 // Initialize Express app
 const app = express();
 app.set('trust proxy', 1);
+app.disable('etag');
 
 const configuredOrigins = (process.env.FRONTEND_ORIGINS || process.env.FRONTEND_URL || '')
   .split(',')
