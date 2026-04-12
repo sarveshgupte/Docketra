@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
@@ -41,8 +41,12 @@ const getWorkspaceStatusMessage = (status) => {
 export const FirmLoginPage = () => {
   const { firmSlug } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { fetchProfile, resolvePostAuthRoute } = useAuth();
   const { showError, showSuccess } = useToast();
+
+  const successMessage = location.state?.message;
+  const messageType = location.state?.messageType;
 
   const [xid, setXid] = useState('');
   const [password, setPassword] = useState('');
@@ -282,6 +286,22 @@ export const FirmLoginPage = () => {
           <p className="text-sm text-gray-500 text-center">{step === 'credentials' ? 'Enter your XID and password' : 'Enter the 6-digit code sent to your email'}</p>
           <p className="text-xs text-gray-500 text-center">{`Firm login URL: /${firmSlug}/login`}</p>
         </Stack>
+
+        {successMessage && (
+          <div
+            className={`rounded-md px-3 py-2 text-sm ${
+              messageType === 'warning'
+                ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                : messageType === 'info'
+                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                  : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+            }`}
+            role={messageType === 'warning' ? 'alert' : 'status'}
+            aria-live="polite"
+          >
+            {successMessage}
+          </div>
+        )}
 
         {error && <ErrorState title="Sign in failed" description={error} />}
 
