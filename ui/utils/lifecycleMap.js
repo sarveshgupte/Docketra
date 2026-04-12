@@ -1,5 +1,5 @@
 export const lifecycleMeta = {
-  open_active: { label: 'Active', color: 'blue', icon: '◉' },
+  open_active: { label: 'Open / Active', color: 'blue', icon: '◉' },
   in_progress: { label: 'In Progress', color: 'amber', icon: '↻' },
   blocked: { label: 'Blocked', color: 'red', icon: '⛔' },
   completed: { label: 'Completed', color: 'green', icon: '✓' },

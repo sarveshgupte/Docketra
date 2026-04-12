@@ -4,7 +4,6 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const speakeasy = require('speakeasy');
 const User = require('../models/User.model');
-const Team = require('../models/Team.model');
 const Firm = require('../models/Firm.model');
 const Client = require('../models/Client.model');
 const UserProfile = require('../models/UserProfile.model');
@@ -2181,7 +2180,7 @@ const updateProfile = async (req, res) => {
  */
 const createUser = async (req, res) => {
   try {
-    const { name, role, allowedCategories, email, teamIds } = req.body;
+    const { name, role, allowedCategories, email } = req.body;
     
     // Prevent creation of SUPER_ADMIN users
     const normalizedRequestedRole = normalizeRole(role || ROLE_EMPLOYEE);
@@ -2202,17 +2201,6 @@ const createUser = async (req, res) => {
       });
     }
     
-    const normalizedTeamIds = Array.isArray(teamIds)
-      ? [...new Set(teamIds.map((entry) => String(entry || '').trim()).filter(Boolean))]
-      : [];
-
-    if (normalizedTeamIds.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'At least one workbasket is required',
-      });
-    }
-
     // Get admin from authenticated request
     const admin = req.user;
     const normalizedEmail = email.trim().toLowerCase();
@@ -2360,21 +2348,6 @@ const createUser = async (req, res) => {
       && mongoose.Types.ObjectId.isValid(firm.defaultClientId)
     ) ? firm.defaultClientId : null;
 
-    const teams = await Team.find({
-      _id: { $in: normalizedTeamIds },
-      firmId: admin.firmId,
-      isActive: true,
-    }).select('_id').lean();
-
-    if (teams.length !== normalizedTeamIds.length) {
-      return res.status(400).json({
-        success: false,
-        message: 'One or more selected workbaskets are invalid or inactive',
-      });
-    }
-
-    const resolvedTeamIds = teams.map((team) => team._id);
-
     await assertFirmPlanCapacity({ firmId: admin.firmId, session, role: persistedRole });
 
     // Create user without password (invite-based onboarding)
@@ -2386,8 +2359,6 @@ const createUser = async (req, res) => {
       ...(inheritedDefaultClientId ? { defaultClientId: inheritedDefaultClientId } : {}),
       role: persistedRole,
       allowedCategories: allowedCategories || [],
-      teamId: resolvedTeamIds[0] || null,
-      teamIds: resolvedTeamIds,
       isActive: false,
       passwordHash: null, // No password until user sets it
       passwordSet: false, // Password not set yet

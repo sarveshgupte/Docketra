@@ -68,11 +68,6 @@ const userSchema = new mongoose.Schema({
     index: true,
     default: null,
   },
-  teamIds: {
-    type: [mongoose.Schema.Types.ObjectId],
-    ref: 'Team',
-    default: [],
-  },
   
   // Email address - REQUIRED for password setup emails
   // Used for notifications, contact, and password setup
