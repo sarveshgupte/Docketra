@@ -499,6 +499,7 @@ const createFirmAdmin = async (req, res) => {
         token: setupToken,
         xID: normalizedXID,
         firmSlug: firm.firmSlug, // Pass firmSlug for firm-specific URL in email
+        role: adminUser.role,
         req,
       });
       if (!emailResult.success) {
@@ -1365,6 +1366,7 @@ const resendAdminAccess = async (req, res) => {
         token: newToken,
         xID: admin.xID,
         firmSlug: firm.firmSlug,
+        role: admin.role,
         req,
       });
     } else {
