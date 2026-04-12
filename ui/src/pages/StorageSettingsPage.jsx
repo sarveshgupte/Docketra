@@ -119,6 +119,8 @@ export function StorageSettingsPage() {
   }
 
   const connected = config?.isConfigured;
+  const isGoogleProvider = provider === 'google-drive';
+  const canSwitchProvider = provider !== (config?.provider || 'docketra_managed');
 
   return (
     <Layout>
@@ -144,14 +146,13 @@ export function StorageSettingsPage() {
                   options={[
                     { value: 'docketra_managed', label: 'Default (Docketra Storage)' },
                     { value: 'google-drive', label: 'Google Drive' },
-                    { value: 's3', label: 'AWS S3 (future)' },
                   ]}
                 />
                 <Input label="Status" value={connected ? 'Active' : 'Not Connected'} readOnly />
                 <Input label="Connected email" value={config?.connectedEmail || 'N/A'} readOnly />
                 <Input label="Folder path" value={config?.folderPath || config?.rootFolderId || 'N/A'} readOnly />
                 <Input label="Connected since" value={formatDateTime(config?.createdAt)} readOnly />
-                {provider === 'google-drive' ? (
+                {isGoogleProvider ? (
                   <Input
                     label="Google Refresh Token"
                     value={googleRefreshToken}
@@ -167,20 +168,34 @@ export function StorageSettingsPage() {
               </div>
 
               <div className={`${spacingClasses.formActions} ${spacingClasses.formActionsGap}`}>
-                {!connected ? (
+                {isGoogleProvider ? (
                   <Button type="button" variant="primary" onClick={onConnectGoogleDrive} disabled={testing}>
                     Connect Google Drive
                   </Button>
-                ) : (
-                  <>
-                    <Button type="button" variant="outline" onClick={onTestConnection} disabled={testing} loading={testing}>
-                      {testing ? 'Testing' : 'Test Connection'}
-                    </Button>
-                    <Button type="button" variant="primary" onClick={onSaveStorageSettings} disabled={!verificationToken || testing}>
-                      Save Provider
-                    </Button>
-                  </>
-                )}
+                ) : null}
+                {connected ? (
+                  <Button type="button" variant="outline" onClick={onTestConnection} disabled={testing} loading={testing}>
+                    {testing ? 'Testing' : 'Test Connection'}
+                  </Button>
+                ) : null}
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={onSaveStorageSettings}
+                  disabled={!verificationToken || testing || !canSwitchProvider}
+                >
+                  {canSwitchProvider ? 'Save Provider' : 'Provider Unchanged'}
+                </Button>
+                {!canSwitchProvider ? (
+                  <p className="text-xs text-gray-500">
+                    Select a different provider before saving.
+                  </p>
+                ) : null}
+                {!verificationToken ? (
+                  <p className="text-xs text-gray-500">
+                    OTP verification is required before provider changes.
+                  </p>
+                ) : null}
               </div>
             </div>
           </Card>
