@@ -25,7 +25,9 @@
     "migration:rollback_starter_plan_fields": "node scripts/migrations/add_starter_plan_fields.js down",
     "worker": "node src/workers/bulkUpload.worker.js",
     "deploy": "wrangler deploy",
-    "preview": "wrangler dev"
+    "preview": "wrangler dev",
+    "migrate:rbac-team": "node src/scripts/migrateRbacTeamHierarchy.js",
+    "seed:rbac-team": "node src/scripts/seedRbacHierarchy.js"
   },
   "keywords": [
     "task-management",

@@ -12,6 +12,14 @@ const teamSchema = new mongoose.Schema({
     required: [true, 'Firm is required'],
     index: true,
   },
+
+  managerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
+    index: true,
+  },
+
   isActive: {
     type: Boolean,
     default: true,
