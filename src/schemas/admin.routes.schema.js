@@ -84,8 +84,22 @@ module.exports = {
     params: z.object({ xID: xidString }),
     body: passthroughBody,
   },
+  'PATCH /users/:xID/workbaskets': {
+    params: z.object({ xID: xidString }),
+    body: z.object({ teamIds: z.array(objectIdOrString).min(1) }).passthrough(),
+  },
   'GET /firm-settings': { query: passthroughQuery },
   'PUT /firm-settings': { body: passthroughBody },
+  'GET /workbaskets': { query: passthroughQuery },
+  'POST /workbaskets': { body: z.object({ name: nonEmptyString }).passthrough() },
+  'PUT /workbaskets/:workbasketId': {
+    params: z.object({ workbasketId: objectIdOrString }),
+    body: z.object({ name: nonEmptyString }).passthrough(),
+  },
+  'PATCH /workbaskets/:workbasketId/status': {
+    params: z.object({ workbasketId: objectIdOrString }),
+    body: z.object({ isActive: z.boolean() }).passthrough(),
+  },
   'POST /users/:id/restore': {
     params: z.object({ id: objectIdOrString }),
     body: passthroughBody,

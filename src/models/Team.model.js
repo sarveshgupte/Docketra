@@ -12,6 +12,11 @@ const teamSchema = new mongoose.Schema({
     required: [true, 'Firm is required'],
     index: true,
   },
+  isActive: {
+    type: Boolean,
+    default: true,
+    index: true,
+  },
 }, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
 
 teamSchema.index({ firmId: 1, name: 1 }, { unique: true });
