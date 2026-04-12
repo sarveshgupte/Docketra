@@ -99,6 +99,14 @@ const firmSchema = new mongoose.Schema({
    * SUSPENDED - Firm is temporarily blocked from login (Superadmin action)
    * INACTIVE - Firm is disabled (soft delete)
    */
+
+  billingOwnerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
+    index: true,
+  },
+
   status: {
     type: String,
     enum: ['pending_setup', 'active', 'suspended'],

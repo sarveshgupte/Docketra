@@ -3,6 +3,7 @@ const {
   acceptRoutedDocket,
   returnRoutedDocket,
   transitionRoutedTeamStatus,
+  managerMoveDocket,
 } = require('../services/docketRouting.service');
 
 const handleError = (res, error) => {
@@ -62,9 +63,26 @@ const updateRoutedCaseStatus = async (req, res) => {
   }
 };
 
+
+
+const managerMoveCase = async (req, res) => {
+  try {
+    const docket = await managerMoveDocket({
+      docketId: req.params.caseId,
+      actor: req.user,
+      firmId: req.user.firmId,
+      to: req.body?.to,
+    });
+    return res.json({ success: true, data: docket, message: 'Docket moved' });
+  } catch (error) {
+    return handleError(res, error);
+  }
+};
+
 module.exports = {
   routeCaseToTeam,
   acceptRoutedCase,
   returnRoutedCase,
   updateRoutedCaseStatus,
+  managerMoveCase,
 };
