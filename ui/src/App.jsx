@@ -9,6 +9,7 @@ import { ToastProvider } from './contexts/ToastContext';
 import { ActiveDocketProvider } from './contexts/ActiveDocketContext';
 import { Router } from './Router';
 import { ScrollToTop } from './components/routing/ScrollToTop';
+import { FirstLoginExperience } from './components/onboarding/FirstLoginExperience';
 import { useAuth } from './hooks/useAuth';
 import { bootstrapAuth } from './auth/authBootstrap';
 
@@ -22,10 +23,11 @@ const AppBootstrap = () => {
   }, [fetchProfile]);
 
   return (
-    <ToastProvider>
-      <ScrollToTop />
-      <Router />
-    </ToastProvider>
+      <ToastProvider>
+        <ScrollToTop />
+        <Router />
+        <FirstLoginExperience />
+      </ToastProvider>
   );
 };
 

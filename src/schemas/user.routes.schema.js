@@ -1,6 +1,14 @@
 const { z, nonEmptyString } = require('./common');
 
 module.exports = {
+  'PATCH /mark-update-seen': {
+    body: z.object({
+      updateId: nonEmptyString,
+    }).strip(),
+  },
+  'PATCH /tutorial/complete': {
+    body: z.object({}).strip(),
+  },
   'GET /': {
     query: z.object({
       page: z.coerce.number().int().positive().optional(),
