@@ -686,6 +686,7 @@ const previewBulkUpload = async (req, res) => {
 
   const { type, cfg } = resolved;
   const duplicateMode = resolveDuplicateMode(req.body?.duplicateMode, 'skip');
+  const effectiveDuplicateMode = type === 'categories' && duplicateMode === 'update' ? 'skip' : duplicateMode;
 
   const { sizeBytes, fileType, parsed } = resolveInputData(req.body || {});
 
@@ -723,7 +724,7 @@ const previewBulkUpload = async (req, res) => {
     parsedRows: rows,
     fieldIndexMap,
     firmId: req.user.firmId,
-    duplicateMode,
+    duplicateMode: effectiveDuplicateMode,
   });
 
   return res.json({
@@ -753,7 +754,10 @@ const confirmBulkUpload = async (req, res) => {
 
   const { type } = resolved;
   const duplicateMode = resolveDuplicateMode(req.body?.duplicateMode, 'skip');
-  const effectiveDuplicateMode = resolveDuplicateMode(req.body?.effectiveDuplicateMode, duplicateMode);
+  const resolvedEffectiveDuplicateMode = resolveDuplicateMode(req.body?.effectiveDuplicateMode, duplicateMode);
+  const effectiveDuplicateMode = type === 'categories' && resolvedEffectiveDuplicateMode === 'update'
+    ? 'skip'
+    : resolvedEffectiveDuplicateMode;
   const rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
 
   if (!rows.length) {
