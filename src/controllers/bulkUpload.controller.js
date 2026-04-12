@@ -326,6 +326,20 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
   const createdUsers = [];
   const categoryCache = new Map();
 
+  if (type === 'categories' && rows.length > 0) {
+    const categoryNames = [...new Set(rows.map(r => String(r.data && r.data.category ? r.data.category : '').trim()).filter(Boolean))];
+    if (categoryNames.length > 0) {
+      const existingCategories = await Category.find({
+        firmId: user.firmId,
+        isDeleted: { $ne: true },
+        name: { $in: categoryNames.map(name => new RegExp(`^${escapeRegExp(name)}$`, 'i')) },
+      });
+      for (const cat of existingCategories) {
+        categoryCache.set(String(cat.name).toLowerCase(), cat);
+      }
+    }
+  }
+
   for (let index = 0; index < rows.length; index += 1) {
     const row = rows[index];
 
@@ -337,23 +351,16 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
 
         let categoryDoc = categoryCache.get(categoryKey);
         if (!categoryDoc) {
-          categoryDoc = await Category.findOne({
+          categoryDoc = await Category.create({
             firmId: user.firmId,
-            isDeleted: { $ne: true },
-            name: { $regex: new RegExp(`^${escapeRegExp(categoryName)}$`, 'i') },
+            name: categoryName,
+            isActive: true,
+            subcategories: [],
           });
-          if (!categoryDoc) {
-            categoryDoc = await Category.create({
-              firmId: user.firmId,
-              name: categoryName,
-              isActive: true,
-              subcategories: [],
-            });
-          } else if (!categoryDoc.isActive) {
-            categoryDoc.isActive = true;
-            await categoryDoc.save();
-          }
           categoryCache.set(categoryKey, categoryDoc);
+        } else if (!categoryDoc.isActive) {
+          categoryDoc.isActive = true;
+          await categoryDoc.save();
         }
 
         if (subcategoryName) {
