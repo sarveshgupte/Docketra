@@ -16,8 +16,16 @@ export const adminApi = {
     (http) => http.patch(`/admin/users/${xID}/restrict-clients`, { restrictedClientIds }),
     'Failed to update user client access'
   ),
+  updateUserWorkbaskets: (xID, teamIds = []) => request(
+    (http) => http.patch(`/admin/users/${xID}/workbaskets`, { teamIds }),
+    'Failed to update user workbasket access'
+  ),
   getFirmSettings: () => request((http) => http.get('/admin/firm-settings'), 'Failed to load firm settings'),
   updateFirmSettings: (payload) => request((http) => http.put('/admin/firm-settings', payload), 'Failed to save firm settings'),
+  listWorkbaskets: (params = {}) => request((http) => http.get('/admin/workbaskets', { params }), 'Failed to load workbaskets'),
+  createWorkbasket: (name) => request((http) => http.post('/admin/workbaskets', { name }), 'Failed to create workbasket'),
+  renameWorkbasket: (workbasketId, name) => request((http) => http.put(`/admin/workbaskets/${workbasketId}`, { name }), 'Failed to rename workbasket'),
+  toggleWorkbasketStatus: (workbasketId, isActive) => request((http) => http.patch(`/admin/workbaskets/${workbasketId}/status`, { isActive }), 'Failed to update workbasket status'),
   unlockAccount: (xID) => request((http) => http.post('/auth/unlock-account', { xID }), 'Failed to unlock account'),
 
   getPendingApprovals: () => request((http) => http.get('/cases?status=UNDER_REVIEW,Reviewed,Pending'), 'Failed to load pending approvals'),

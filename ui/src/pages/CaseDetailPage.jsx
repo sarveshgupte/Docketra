@@ -261,7 +261,8 @@ export const CaseDetailPage = () => {
   const clientName = caseData?.client?.businessName || caseInfo?.clientName || caseInfo?.businessName || '—';
   const clientIdLabel = caseData?.client?.clientId || caseInfo?.clientId || caseData?.clientId || '—';
 
-  const subcategoryLabel = caseInfo?.subcategory || caseInfo?.caseSubCategory || caseInfo?.subCategory || '—';
+  const categoryLabel = caseInfo?.category || caseInfo?.caseCategory || caseInfo?.workType || caseData?.category || '—';
+  const subcategoryLabel = caseInfo?.subcategory || caseInfo?.caseSubCategory || caseInfo?.subCategory || caseInfo?.subCategoryName || caseData?.subcategory || '—';
   const lifecycleStatus = normalizeLifecycleForUi(caseInfo?.lifecycle);
   const isAdmin = ['ADMIN', 'Admin'].includes(String(user?.role || ''));
   const isMoveLockedByAnotherUser = Boolean(caseInfo?.lockStatus?.isLocked)
@@ -1004,7 +1005,13 @@ export const CaseDetailPage = () => {
   };
 
   const descriptionContent = useMemo(() => {
-    const value = String(caseInfo?.description || '').trim();
+    const value = String(
+      caseInfo?.description
+      || caseInfo?.caseDescription
+      || caseInfo?.details
+      || caseData?.description
+      || ''
+    ).trim();
     if (!value) return '-';
     if (/^v\d+:[A-Za-z0-9+/=_-]+$/.test(value)) {
       return '-';
@@ -1183,7 +1190,18 @@ export const CaseDetailPage = () => {
     }
   };
 
-  const headerActions = [];
+  const canRouteDocket = Boolean(caseInfo)
+    && !isViewOnlyMode
+    && !caseInfo?.routedToTeamId
+    && routingTeams.length > 0;
+  const headerActions = canRouteDocket
+    ? [{
+      key: 'route_workbasket',
+      label: 'Route to WB',
+      variant: 'outline',
+      onClick: () => setShowRouteModal(true),
+    }]
+    : [];
 
   const shouldShowActions = useMemo(() => {
     const hiddenLifecycleStates = new Set(['DONE', 'COMPLETED', 'ARCHIVED']);
@@ -1498,7 +1516,7 @@ export const CaseDetailPage = () => {
                 </div>
                 <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Category</span>
-                  <span className="field-value text-sm font-medium text-gray-900">{caseInfo.category || '—'}</span>
+                  <span className="field-value text-sm font-medium text-gray-900">{categoryLabel}</span>
                 </div>
                 <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Subcategory</span>
@@ -1687,6 +1705,9 @@ export const CaseDetailPage = () => {
               <div>
                 <strong>Routing:</strong> {caseInfo?.ownerTeamName || '—'}
                 {caseInfo?.routedToTeamName ? ` → ${caseInfo.routedToTeamName}` : ''}
+              </div>
+              <div>
+                <strong>Available workbaskets:</strong> {routingTeams.map((team) => team.name).join(', ') || '—'}
               </div>
               {caseInfo?.routingNote && <div><strong>Routing note:</strong> {caseInfo.routingNote}</div>}
               {isRoutedToMyTeam && (
@@ -1936,7 +1957,7 @@ export const CaseDetailPage = () => {
         <Modal
           isOpen={showRouteModal}
           onClose={() => setShowRouteModal(false)}
-          title="Route Docket"
+          title="Route Docket to Workbasket"
           actions={(
             <>
               <Button variant="outline" onClick={() => setShowRouteModal(false)}>
@@ -1954,7 +1975,7 @@ export const CaseDetailPage = () => {
               value={routeTeamId}
               onChange={(event) => setRouteTeamId(event.target.value)}
             >
-              <option value="">Select team</option>
+              <option value="">Select workbasket</option>
               {routingTeams.filter((team) => String(team._id) !== String(caseInfo?.ownerTeamId || '')).map((team) => (
                 <option key={team._id} value={team._id}>{team.name}</option>
               ))}

@@ -20,6 +20,9 @@ export const WorkSettingsPage = () => {
     dueSoonWarningDays: 2,
   });
   const [saveState, setSaveState] = useState({ loading: true, message: '', type: '' });
+  const [workbaskets, setWorkbaskets] = useState([]);
+  const [workbasketName, setWorkbasketName] = useState('');
+  const [workbasketSaving, setWorkbasketSaving] = useState(false);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -37,6 +40,19 @@ export const WorkSettingsPage = () => {
     loadSettings();
   }, []);
 
+  const loadWorkbaskets = async () => {
+    try {
+      const response = await adminApi.listWorkbaskets({ includeInactive: true });
+      setWorkbaskets(response?.success ? (response.data || []) : []);
+    } catch {
+      setWorkbaskets([]);
+    }
+  };
+
+  useEffect(() => {
+    loadWorkbaskets();
+  }, []);
+
   const handleChange = (field, value) => {
     setSettings((prev) => ({ ...prev, [field]: value }));
     setSaveState((prev) => ({ ...prev, message: '', type: '' }));
@@ -50,6 +66,30 @@ export const WorkSettingsPage = () => {
     } catch {
       setSaveState({ loading: false, message: 'Could not save work settings.', type: 'error' });
     }
+  };
+
+  const handleCreateWorkbasket = async () => {
+    if (!workbasketName.trim()) return;
+    setWorkbasketSaving(true);
+    try {
+      await adminApi.createWorkbasket(workbasketName.trim());
+      setWorkbasketName('');
+      await loadWorkbaskets();
+    } finally {
+      setWorkbasketSaving(false);
+    }
+  };
+
+  const handleRenameWorkbasket = async (workbasket) => {
+    const nextName = window.prompt('Rename workbasket', workbasket.name || '');
+    if (!nextName || !nextName.trim() || nextName.trim() === workbasket.name) return;
+    await adminApi.renameWorkbasket(workbasket._id, nextName.trim());
+    await loadWorkbaskets();
+  };
+
+  const handleToggleWorkbasket = async (workbasket) => {
+    await adminApi.toggleWorkbasketStatus(workbasket._id, !workbasket.isActive);
+    await loadWorkbaskets();
   };
 
   return (
@@ -66,6 +106,37 @@ export const WorkSettingsPage = () => {
           <Button type="button" variant="outline" onClick={() => navigate(ROUTES.STORAGE_SETTINGS(firmSlug))}>Storage</Button>
           <Button type="button" variant="outline" onClick={() => navigate(`${ROUTES.ADMIN(firmSlug)}?tab=users`)}>Security</Button>
           <Button type="button" variant="outline" onClick={() => navigate('/app/firm/' + firmSlug + '/admin/reports/detailed')}>Audit</Button>
+        </div>
+      </Card>
+
+      <Card className="neo-card">
+        <div className="p-6">
+          <h2 className="text-lg font-semibold text-gray-900">Workbasket Management</h2>
+          <p className="mt-1 text-sm text-gray-600">Add, rename, and activate/deactivate workbaskets for docket routing.</p>
+          <div className="mt-4 flex gap-3">
+            <Input
+              label="New workbasket"
+              value={workbasketName}
+              onChange={(event) => setWorkbasketName(event.target.value)}
+              placeholder="e.g. Compliance WB"
+            />
+            <Button type="button" variant="primary" onClick={handleCreateWorkbasket} disabled={workbasketSaving || !workbasketName.trim()}>
+              Add Workbasket
+            </Button>
+          </div>
+          <div className="mt-4 space-y-2">
+            {workbaskets.map((workbasket) => (
+              <div key={workbasket._id} className="flex items-center justify-between rounded border px-3 py-2">
+                <div className="text-sm font-medium text-gray-900">{workbasket.name} <span className="text-xs text-gray-500">({workbasket.isActive ? 'Active' : 'Inactive'})</span></div>
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" onClick={() => handleRenameWorkbasket(workbasket)}>Rename</Button>
+                  <Button type="button" variant={workbasket.isActive ? 'danger' : 'success'} onClick={() => handleToggleWorkbasket(workbasket)}>
+                    {workbasket.isActive ? 'Deactivate' : 'Activate'}
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </Card>
 
