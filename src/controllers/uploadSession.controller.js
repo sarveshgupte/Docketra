@@ -1,6 +1,6 @@
 const path = require('path');
 const fs = require('fs/promises');
-const { createUploadSession, validateUploadSession } = require('../services/uploadSession.service');
+const { createUploadSession, validateUploadSession, rotateUploadSessionPin } = require('../services/uploadSession.service');
 const { CaseRepository } = require('../repositories');
 const { resolveCaseIdentifier } = require('../utils/caseIdentifier');
 const CaseFile = require('../models/CaseFile.model');
@@ -9,6 +9,31 @@ const cfsDriveService = require('../services/cfsDrive.service');
 const UploadSession = require('../models/UploadSession.model');
 const { sendEmail } = require('../services/email.service');
 const { createNotification, NotificationTypes } = require('../domain/notifications');
+const Client = require('../models/Client.model');
+
+async function resolveClientEmail(caseData, firmId) {
+  const candidates = [
+    caseData?.clientEmail,
+    caseData?.client?.email,
+    caseData?.client?.businessEmail,
+    caseData?.clientData?.email,
+    caseData?.clientData?.businessEmail,
+  ];
+
+  let clientEmail = candidates.find((value) => typeof value === 'string' && value.trim());
+
+  if (!clientEmail && caseData?.clientId) {
+    const clientRecord = await Client.findOne({
+      firmId,
+      clientId: caseData.clientId,
+      status: { $ne: 'deleted' },
+    }).select('businessEmail contactPersonEmailAddress');
+
+    clientEmail = clientRecord?.businessEmail || clientRecord?.contactPersonEmailAddress || '';
+  }
+
+  return String(clientEmail || '').trim().toLowerCase();
+}
 
 async function generateUploadLink(req, res) {
   try {
@@ -16,7 +41,12 @@ async function generateUploadLink(req, res) {
     const { requirePin = false, expiry = '24h', sendEmail: shouldSendEmail = false } = req.body;
 
     const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
-    const caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
+    const caseData = await CaseRepository.findByInternalId(
+      req.user.firmId,
+      internalId,
+      req.user.role,
+      { includeClient: true }
+    );
 
     if (!caseData) {
       return res.status(404).json({ success: false, message: 'Case not found' });
@@ -32,12 +62,7 @@ async function generateUploadLink(req, res) {
     });
 
     const uploadLink = `${process.env.APP_URL}/upload/${result.token}`;
-    const clientEmail = String(
-      caseData?.clientEmail
-      || caseData?.client?.email
-      || caseData?.clientData?.email
-      || '',
-    ).trim().toLowerCase();
+    const clientEmail = await resolveClientEmail(caseData, req.user.firmId);
 
     if (shouldSendEmail && clientEmail) {
       const expiresInLabel = expiry === '7d' ? '7 days' : '24 hours';
@@ -47,13 +72,11 @@ async function generateUploadLink(req, res) {
         html: `
           <p>Please upload documents:</p>
           <p><a href="${uploadLink}">${uploadLink}</a></p>
-          ${result.pin ? `<p><strong>PIN:</strong> ${result.pin}</p>` : ''}
           <p>Expires in ${expiresInLabel}</p>
         `,
         text: [
           'Please upload documents:',
           uploadLink,
-          result.pin ? `PIN: ${result.pin}` : null,
           `Expires in ${expiresInLabel}`,
         ].filter(Boolean).join('\n\n'),
       });
@@ -66,6 +89,56 @@ async function generateUploadLink(req, res) {
         pin: result.pin || null,
         expiresAt: result.expiresAt,
       },
+    });
+  } catch (err) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+}
+
+async function requestUploadPin(req, res) {
+  try {
+    const { token } = req.params;
+    const session = await UploadSession.findOne({ token, isActive: true });
+
+    if (!session) {
+      return res.status(404).json({ success: false, message: 'Invalid upload link.' });
+    }
+
+    if (new Date() > session.expiresAt) {
+      await UploadSession.updateOne({ _id: session._id }, { $set: { isActive: false } });
+      return res.status(400).json({ success: false, message: 'This upload link has expired.' });
+    }
+
+    if (!session.pinHash) {
+      return res.status(400).json({ success: false, message: 'PIN is not required for this upload link.' });
+    }
+
+    const caseData = await CaseRepository.findByCaseId(session.firmId, session.docketId, 'admin', { includeClient: true });
+    const clientEmail = await resolveClientEmail(caseData, session.firmId);
+    if (!clientEmail) {
+      return res.status(400).json({ success: false, message: 'No client email is configured for this docket.' });
+    }
+
+    const rotatedPin = await rotateUploadSessionPin(session);
+
+    await sendEmail({
+      to: clientEmail,
+      subject: 'Your secure upload PIN',
+      html: `
+        <p>Your one-time upload PIN is:</p>
+        <p><strong>${rotatedPin}</strong></p>
+        <p>This PIN works only with your current secure upload link.</p>
+      `,
+      text: [
+        'Your one-time upload PIN is:',
+        rotatedPin,
+        'This PIN works only with your current secure upload link.',
+      ].join('\n\n'),
+    });
+
+    return res.json({
+      success: true,
+      message: 'PIN has been sent to the client email.',
     });
   } catch (err) {
     return res.status(400).json({ success: false, message: err.message });
@@ -233,4 +306,5 @@ module.exports = {
   revokeUploadLink,
   getUploadMeta,
   uploadDocument,
+  requestUploadPin,
 };

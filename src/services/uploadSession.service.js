@@ -64,7 +64,24 @@ async function validateUploadSession({ token, pin }) {
   return session;
 }
 
+async function rotateUploadSessionPin(session) {
+  if (!session || !session._id || !session.pinHash) {
+    throw new Error('PIN is not enabled for this upload link');
+  }
+
+  const pin = generatePin();
+  const pinHash = await bcrypt.hash(pin, 10);
+
+  await UploadSession.updateOne(
+    { _id: session._id },
+    { $set: { pinHash } }
+  );
+
+  return pin;
+}
+
 module.exports = {
   createUploadSession,
   validateUploadSession,
+  rotateUploadSessionPin,
 };

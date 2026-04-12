@@ -9,7 +9,7 @@ const EarlyAccessRequest = require('../models/EarlyAccessRequest.model');
 const { executeWrite } = require('../utils/executeWrite');
 const log = require('../utils/log');
 const { createSecureUpload, enforceUploadSecurity } = require('../middleware/uploadProtection.middleware');
-const { uploadDocument, getUploadMeta } = require('../controllers/uploadSession.controller');
+const { uploadDocument, getUploadMeta, requestUploadPin } = require('../controllers/uploadSession.controller');
 
 const LOG_LENGTHS = {
   FIRM_NAME: 120,
@@ -91,5 +91,6 @@ router.post('/contact', submitEnterpriseInquiry);
 
 router.get('/upload/:token/meta', getUploadMeta);
 router.post('/upload/:token', publicUploadLimiter, upload.single('file'), enforceUploadSecurity, uploadDocument);
+router.post('/upload/:token/request-pin', publicUploadLimiter, requestUploadPin);
 
 module.exports = router;
