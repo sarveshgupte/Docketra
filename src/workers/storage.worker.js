@@ -15,6 +15,7 @@ const { createHash } = require('crypto');
 const FirmStorage = require('../models/FirmStorage.model');
 const CaseFile = require('../models/CaseFile.model');
 const Attachment = require('../models/Attachment.model');
+const Comment = require('../models/Comment.model');
 const CaseAudit = require('../models/CaseAudit.model');
 const CaseHistory = require('../models/CaseHistory.model');
 const Firm = require('../models/Firm.model');
@@ -317,14 +318,30 @@ const storageWorker = new Worker(
             }
           }
 
-          // Create audit records for case-level uploads
-          if (caseFile.caseId && caseFile.createdByXID) {
+          // Create comments/audit records for case-level uploads
+          if (caseFile.caseId) {
             try {
+              const isClientUpload = String(caseFile.source || '').toUpperCase() === 'CLIENT_UPLOAD';
+              const actorXID = caseFile.createdByXID || (isClientUpload ? 'CLIENT' : 'SYSTEM');
+              const commentText = isClientUpload
+                ? `📎 Attachment received from client: ${caseFile.originalName}`
+                : `📎 Attachment added by ${actorXID}: ${caseFile.originalName}`;
+
+              await Comment.create({
+                firmId: caseFile.firmId,
+                caseId: caseFile.caseId,
+                text: commentText,
+                createdBy: caseFile.createdBy || 'system@docketra.local',
+                createdByXID: actorXID,
+                createdByName: caseFile.createdByName || (isClientUpload ? 'Client Upload Link' : 'System'),
+                note: 'AUTO_ATTACHMENT_EVENT',
+              });
+
               await CaseAudit.create({
                 caseId: caseFile.caseId,
                 actionType: 'CASE_FILE_ATTACHED',
-                description: `File attached by ${caseFile.createdByXID}: ${caseFile.originalName}`,
-                performedByXID: caseFile.createdByXID,
+                description: `File attached by ${actorXID}: ${caseFile.originalName}`,
+                performedByXID: actorXID,
                 metadata: {
                   fileName: caseFile.originalName,
                   fileSize: caseFile.size,
@@ -335,9 +352,11 @@ const storageWorker = new Worker(
               await CaseHistory.create({
                 caseId: caseFile.caseId,
                 actionType: 'CASE_ATTACHMENT_ADDED',
-                description: `Attachment uploaded by ${caseFile.createdBy}: ${caseFile.originalName}`,
+                description: isClientUpload
+                  ? `Attachment received from client: ${caseFile.originalName}`
+                  : `Attachment uploaded by ${caseFile.createdBy}: ${caseFile.originalName}`,
                 performedBy: caseFile.createdBy,
-                performedByXID: caseFile.createdByXID?.toUpperCase(),
+                performedByXID: actorXID?.toUpperCase(),
               });
             } catch (auditErr) {
               // Audit failure is non-fatal

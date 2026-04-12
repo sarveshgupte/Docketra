@@ -30,7 +30,6 @@ import { LifecycleBadge } from '../../components/LifecycleBadge';
 import { DocketSidebar } from '../components/docket/DocketSidebar';
 import { DocketComments } from '../components/docket/DocketComments';
 import { ActionModal } from '../components/docket/ActionModal';
-import { RequestDocumentsModal } from '../../components/RequestDocumentsModal';
 import './CaseDetailPage.css';
 import { ROUTES } from '../constants/routes';
 import { RouteErrorFallback } from '../components/routing/RouteErrorFallback';
@@ -168,7 +167,6 @@ export const CaseDetailPage = () => {
   const [routeTeamId, setRouteTeamId] = useState('');
   const [routingNote, setRoutingNote] = useState('');
   const [showRouteModal, setShowRouteModal] = useState(false);
-  const [requestDocumentsOpen, setRequestDocumentsOpen] = useState(false);
   const [uploadLinkGenerating, setUploadLinkGenerating] = useState(false);
   const [uploadLinkResult, setUploadLinkResult] = useState(null);
 
@@ -1824,7 +1822,10 @@ export const CaseDetailPage = () => {
           onAttachmentFileChange={setSelectedFile}
           onAttachmentCommentChange={setFileDescription}
           onUploadAttachment={handleUploadFile}
-          onRequestDocuments={() => setRequestDocumentsOpen(true)}
+          onGenerateUploadLink={handleGenerateUploadLink}
+          uploadLinkGenerating={uploadLinkGenerating}
+          uploadLinkResult={uploadLinkResult}
+          clientEmail={caseInfo?.clientEmail || caseInfo?.client?.email || caseData?.client?.email || ''}
         />
 
         {/* ─── Modals (positioned outside split pane) ─────────────── */}
@@ -2073,15 +2074,6 @@ export const CaseDetailPage = () => {
             </div>
           </div>
         </Modal>
-
-        <RequestDocumentsModal
-          isOpen={requestDocumentsOpen}
-          onClose={() => setRequestDocumentsOpen(false)}
-          clientEmail={caseInfo?.clientEmail || caseInfo?.client?.email || caseData?.client?.email || ''}
-          generating={uploadLinkGenerating}
-          generatedLink={uploadLinkResult}
-          onGenerate={handleGenerateUploadLink}
-        />
 
         {/* Unpend Case Modal */}
         <Modal
