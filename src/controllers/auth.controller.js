@@ -2014,6 +2014,29 @@ const getProfile = async (req, res) => {
         'Use search and filters to find work quickly across clients.',
       ];
 
+    const resolvedTeamIds = Array.isArray(dbUser.teamIds) && dbUser.teamIds.length > 0
+      ? dbUser.teamIds.map((entry) => String(entry))
+      : (dbUser.teamId ? [String(dbUser.teamId)] : []);
+
+    const mappedWorkbaskets = resolvedTeamIds.length > 0
+      ? await Team.find({
+          _id: { $in: resolvedTeamIds },
+          firmId: userFirmId,
+        })
+          .select('_id name')
+          .lean()
+      : [];
+
+    const workbasketLookup = new Map(mappedWorkbaskets.map((workbasket) => [String(workbasket._id), workbasket]));
+    const orderedWorkbaskets = resolvedTeamIds
+      .map((id) => workbasketLookup.get(String(id)))
+      .filter(Boolean)
+      .map((workbasket) => ({
+        id: String(workbasket._id),
+        name: String(workbasket.name || '').trim(),
+      }))
+      .filter((workbasket) => workbasket.name);
+
     res.json({
       success: true,
       data: {
@@ -2027,6 +2050,10 @@ const getProfile = async (req, res) => {
         passwordSetAt: dbUser.passwordSetAt,
         allowedCategories: dbUser.allowedCategories,
         isActive: dbUser.isActive,
+        teamId: resolvedTeamIds[0] || null,
+        teamIds: orderedWorkbaskets.map((workbasket) => workbasket.id),
+        teamNames: orderedWorkbaskets.map((workbasket) => workbasket.name),
+        workbaskets: orderedWorkbaskets,
         // OBJECTIVE 2: Include firm context (JWT-first approach)
         // Use JWT claims as primary source, DB as fallback for display
         // Firm metadata (read-only, admin-controlled)
