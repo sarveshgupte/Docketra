@@ -12,6 +12,8 @@ const { logCaseHistory } = require('./auditLog.service');
 
 const LIFECYCLE_TRANSITIONS = Object.freeze({
   OPEN: Object.freeze([CaseStatus.PENDING, CaseStatus.QC_PENDING, CaseStatus.RESOLVED, CaseStatus.FILED]),
+  ACTIVE: Object.freeze([CaseStatus.PENDING, CaseStatus.QC_PENDING, CaseStatus.RESOLVED, CaseStatus.FILED]),
+  IN_PROGRESS: Object.freeze([CaseStatus.PENDING, CaseStatus.QC_PENDING, CaseStatus.RESOLVED, CaseStatus.FILED]),
   PENDING: Object.freeze([CaseStatus.OPEN]),
   QC_PENDING: Object.freeze([CaseStatus.RESOLVED, CaseStatus.OPEN]),
   RESOLVED: Object.freeze([]),
