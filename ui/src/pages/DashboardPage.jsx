@@ -18,7 +18,8 @@ import { DashboardSkeleton, SkeletonBlock } from '../components/common/Skeleton'
 import { EmptyState } from '../components/ui/EmptyState';
 import { PageHeader } from '../components/layout/PageHeader';
 import { PriorityPill } from '../components/common/PriorityPill';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/common/Table';
+import { DataTable } from '../components/common/DataTable';
+
 import { SetupChecklist } from '../components/onboarding/SetupChecklist';
 import { MetricCard } from '../components/reports/MetricCard';
 import { useAuth } from '../hooks/useAuth';
@@ -29,7 +30,7 @@ import { adminApi } from '../api/admin.api';
 import { clientApi } from '../api/client.api';
 import { metricsApi } from '../api/metrics.api';
 import { NotificationPanel } from '../../components/NotificationPanel';
-import { formatCaseName, formatDate } from '../utils/formatters';
+import { formatCaseName, formatDateTime } from '../utils/formatters';
 import { getStatusLabel } from '../utils/statusDisplay';
 import { UX_COPY } from '../constants/uxCopy';
 import { ROUTES, safeRoute } from '../constants/routes';
@@ -689,47 +690,30 @@ export const DashboardPage = () => {
                   />
                 </div>
               ) : (
-                <Table className="border-0 rounded-none shadow-none">
-                  <TableHead>
-                    <tr>
-                      <TableHeader className="w-full max-w-lg">Docket Name</TableHeader>
-                      <TableHeader className="w-[1px] whitespace-nowrap">Category</TableHeader>
-                      <TableHeader className="w-[1px] whitespace-nowrap">Assigned To</TableHeader>
-                      <TableHeader className="w-[1px] whitespace-nowrap text-center">Status</TableHeader>
-                      <TableHeader className="w-[1px] whitespace-nowrap text-center">Priority</TableHeader>
-                      <TableHeader className="w-[1px] whitespace-nowrap text-right">Last Action Timestamp</TableHeader>
-                    </tr>
-                  </TableHead>
-                  <TableBody>
-                    {recentCases.map((caseItem) => (
-                      <TableRow
-                        key={caseItem._id}
-                        onClick={() => handleCaseClick(caseItem.caseId)}
-                        className="focus-within:bg-gray-50"
-                      >
-                        <TableCell className="w-full max-w-lg">
-                          <div className="flex flex-col">
-                            <span className="block overflow-hidden text-ellipsis whitespace-nowrap font-semibold text-gray-900" title={formatDocketIdentifier(caseItem)}>
-                              {formatDocketIdentifier(caseItem)}
-                            </span>
-                            {caseItem.title ? (
-                              <span className="block overflow-hidden text-ellipsis whitespace-nowrap text-xs text-gray-500" title={caseItem.title}>
-                                {caseItem.title}
-                              </span>
-                            ) : null}
-                          </div>
-                        </TableCell>
-                        <TableCell className="w-[1px] whitespace-nowrap">{caseItem.category}</TableCell>
-                        <TableCell className="w-[1px] whitespace-nowrap text-sm text-gray-600">{formatAssignmentLabel(caseItem)}</TableCell>
-                        <TableCell className="w-[1px] whitespace-nowrap text-center">
-                          <Badge status={caseItem.status}>{getStatusLabel(caseItem.status)}</Badge>
-                        </TableCell>
-                        <TableCell className="w-[1px] whitespace-nowrap text-center"><PriorityPill caseRecord={caseItem} /></TableCell>
-                        <TableCell className="w-[1px] whitespace-nowrap text-right tabular-nums">{formatDate(caseItem.updatedAt)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <DataTable
+                  columns={[
+                    { key: 'docketName', header: 'Docket Name', render: (caseItem) => (
+                      <div className="flex flex-col">
+                        <span className="block overflow-hidden text-ellipsis whitespace-nowrap font-semibold text-gray-900" title={formatDocketIdentifier(caseItem)}>
+                          {formatDocketIdentifier(caseItem)}
+                        </span>
+                        {caseItem.title && (
+                          <span className="block overflow-hidden text-ellipsis whitespace-nowrap text-xs text-gray-500" title={caseItem.title}>
+                            {caseItem.title}
+                          </span>
+                        )}
+                      </div>
+                    ) },
+                    { key: 'category', header: 'Category' },
+                    { key: 'assignedTo', header: 'Assigned To', render: (caseItem) => <span className="text-sm text-gray-600">{formatAssignmentLabel(caseItem)}</span> },
+                    { key: 'status', header: 'Status', align: 'center', render: (caseItem) => <Badge status={caseItem.status}>{getStatusLabel(caseItem.status)}</Badge> },
+                    { key: 'priority', header: 'Priority', align: 'center', render: (caseItem) => <PriorityPill caseRecord={caseItem} /> },
+                    { key: 'updatedAt', header: 'Last Action Timestamp', align: 'right', tabular: true, render: (caseItem) => formatDateTime(caseItem.updatedAt) }
+                  ]}
+                  rows={recentCases}
+                  onRowClick={(row) => handleCaseClick(row.caseId)}
+                  rowKey="_id"
+                />
               )}
             </Card>
           </section>

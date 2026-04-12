@@ -8,6 +8,7 @@ import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
+import { DataTable } from '../components/common/DataTable';
 import { Input } from '../components/common/Input';
 import { Textarea } from '../components/common/Textarea';
 import { Select } from '../components/common/Select';
@@ -1195,104 +1196,22 @@ export const AdminPage = () => {
                 description="Invite your team to start collaborating."
               />
             ) : (
-              <table className="neo-table">
-                <thead>
-                  <tr>
-                    <th>xID</th>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Firm</th>
-                    <th>Client Docket Access</th>
-                    <th>Status</th>
-                    <th>Password Set</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((user) => {
-                    const isPrimaryOrSystemAdmin = user.isPrimaryAdmin || user.isSystem;
-                    const userStatus = getUserStatusBadge(user);
-                    const roleBadge = getRoleBadgePresentation(user);
-                    const isInvited = user.status === 'invited';
-                    return (
-                    <tr key={user.xID}>
-                      <td>{user.xID}</td>
-                      <td>{user.name || EMPTY_FIELD_PLACEHOLDER}</td>
-                      <td>{user.email}</td>
-                      <td>
-                        <Badge status={roleBadge.tone}>{roleBadge.label}</Badge>
-                      </td>
-                      <td>{user.firm?.name || 'N/A'}</td>
-                      <td>
-                        <Badge status={(user.restrictedClientIds || []).length === 0 ? 'Approved' : 'Pending'}>
-                          {(user.restrictedClientIds || []).length === 0 ? 'Full Access (Default)' : `Restricted (${(user.restrictedClientIds || []).length})`}
-                        </Badge>
-                      </td>
-                      <td>
-                        <Badge status={userStatus.tone}>
-                          {userStatus.label}
-                        </Badge>
-                      </td>
-                      <td>
-                        <Badge status={user.passwordConfigured ? 'Approved' : 'Pending'}>
-                          {user.passwordConfigured ? 'Yes' : 'No'}
-                        </Badge>
-                      </td>
-                      <td className="admin__actions">
-                        {isPrimaryOrSystemAdmin ? (
-                          <span className="admin__primary-label">Primary Admin</span>
-                        ) : (
-                          <Button
-                            size="small"
-                            variant={isInvited || user.isActive ? 'danger' : 'success'}
-                            onClick={() => handleToggleUserStatus(user)}
-                          >
-                            {isInvited ? 'Cancel Invite' : (user.isActive ? 'Deactivate' : 'Activate')}
-                          </Button>
-                        )}
-                        {isInvited && (
-                          <Button
-                            size="small"
-                            variant="default"
-                            onClick={() => handleResendSetupEmail(user.xID)}
-                          >
-                            Resend Invite
-                          </Button>
-                        )}
-                        {!isPrimaryOrSystemAdmin && (
-                          <Button
-                            size="small"
-                            variant="default"
-                            onClick={() => handleOpenAccessModal(user)}
-                          >
-                            Client Access
-                          </Button>
-                        )}
-                        {!isPrimaryOrSystemAdmin && (
-                          <Button
-                            size="small"
-                            variant="warning"
-                            onClick={() => handleSendPasswordReset(user)}
-                          >
-                            Send Reset Link
-                          </Button>
-                        )}
-                        {user.lockUntil && new Date(user.lockUntil) > new Date() && (
-                          <Button
-                            size="small"
-                            variant="warning"
-                            onClick={() => handleUnlockAccount(user.xID)}
-                          >
-                            Unlock
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <DataTable
+                  columns={[
+                    { key: 'name', header: 'User Name', render: (u) => <span className="font-medium text-gray-900">{u.name}</span> },
+                    { key: 'email', header: 'Email' },
+                    { key: 'role', header: 'Role', render: (u) => <span className="inline-flex items-center rounded-md bg-gray-100 px-2.5 py-0.5 text-sm font-medium text-gray-800">{formatRole(u.role)}</span> },
+                    { key: 'status', header: 'Status', render: (u) => <StatusBadge status={u.status || 'ACTIVE'} /> },
+                    { key: 'actions', header: 'Actions', render: (u) => (
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => handleEditUser(u)}>Edit</Button>
+                        <Button size="sm" variant="danger" onClick={() => handleDeleteClick(u.xID)}>Delete</Button>
+                      </div>
+                    ) }
+                  ]}
+                  rows={filteredUsers}
+                  rowKey="xID"
+                />
             )}
           </Card>
         )}
@@ -1364,71 +1283,22 @@ export const AdminPage = () => {
                   </p>
                 )}
                 <div className="admin__clients-table-wrap">
-                  <table className="neo-table admin__clients-table">
-                    <thead>
-                      <tr>
-                        <th className="admin__col-id">Client ID</th>
-                        <th className="admin__col-business">Business Name</th>
-                        <th className="admin__col-email">Email</th>
-                        <th className="admin__col-status">Status</th>
-                        <th className="admin__col-created">Created</th>
-                        <th className="admin__col-actions">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {clients.map((client) => {
-                        const isProtectedClient = client.isDefaultClient || client.isSystemClient || client.isInternal;
-                        return (
-                          <tr key={client.clientId}>
-                            <td className="admin__cell-truncate" title={client.clientId}>
-                              {client.clientId}
-                              {isProtectedClient && (
-                                <span style={{ marginLeft: '8px' }}>
-                                  <Badge status="Approved">Default</Badge>
-                                </span>
-                              )}
-                            </td>
-                            <td className="admin__cell-business" title={client.businessName}>{client.businessName}</td>
-                            <td className="admin__cell-truncate" title={client.businessEmail || EMPTY_FIELD_PLACEHOLDER}>
-                              {looksEncryptedToken(client.businessEmail) ? EMPTY_FIELD_PLACEHOLDER : (client.businessEmail || EMPTY_FIELD_PLACEHOLDER)}
-                            </td>
-                            <td>
-                              <Badge status={client.status === 'ACTIVE' ? 'Approved' : 'Rejected'}>
-                                {client.status === 'ACTIVE' ? 'Active' : 'Inactive'}
-                              </Badge>
-                            </td>
-                            <td>{formatDate(client.createdAt)}</td>
-                            <td className="admin__actions admin__actions--compact">
-                              <Button
-                                size="small"
-                                variant="default"
-                                onClick={() => handleEditClient(client)}
-                                disabled={false}
-                              >
-                                Edit
-                              </Button>
-                              <Button
-                                size="small"
-                                variant="default"
-                                onClick={() => navigate(`/app/firm/${firmSlug}/clients/${client.clientId}/cfs`)}
-                              >
-                                Fact Sheet
-                              </Button>
-                              {!isProtectedClient && (
-                                <Button
-                                  size="small"
-                                  variant={client.status === 'ACTIVE' ? 'danger' : 'success'}
-                                  onClick={() => handleToggleClientStatus(client)}
-                                >
-                                  {client.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
-                                </Button>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                  <DataTable
+                    columns={[
+                      { key: 'clientId', header: 'Client ID', render: (c) => <span className="font-medium text-gray-900">{c.clientId}</span> },
+                      { key: 'clientName', header: 'Client Name', render: (c) => c.clientName || '—' },
+                      { key: 'entityType', header: 'Entity Type', render: (c) => c.entityType || '—' },
+                      { key: 'status', header: 'Status', render: (c) => <StatusBadge status={c.status} /> },
+                      { key: 'createdAt', header: 'Added On', render: (c) => formatDate(c.createdAt) },
+                      { key: 'actions', header: 'Actions', render: (c) => (
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" onClick={() => handleEditClient(c)}>Edit</Button>
+                        </div>
+                      ) }
+                    ]}
+                    rows={filteredClientsList}
+                    rowKey="_id"
+                  />
                 </div>
               </>
             )}
@@ -1518,43 +1388,24 @@ export const AdminPage = () => {
                     {category.subcategories && category.subcategories.length > 0 && (
                       <div className="subcategories-list">
                         <h4>Subcategories:</h4>
-                        <table className="neo-table">
-                          <thead>
-                            <tr>
-                              <th>Name</th>
-                              <th>Status</th>
-                              <th>Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {category.subcategories.map((sub) => (
-                              <tr key={sub.id}>
-                                <td>{sub.name}</td>
-                                <td>
-                                  <Badge status={sub.isActive ? 'Approved' : 'Rejected'}>
-                                    {sub.isActive ? 'Active' : 'Inactive'}
-                                  </Badge>
-                                </td>
-                                <td>
-                                  <Button
-                                    size="small"
-                                    variant={sub.isActive ? 'danger' : 'success'}
-                                    onClick={() => handleToggleSubcategoryStatus(category, sub)}
-                                  >
-                                    {sub.isActive ? 'Disable' : 'Enable'}
-                                  </Button>
-                                  <Button
-                                    size="small"
-                                    variant="danger"
-                                    onClick={() => handleDeleteSubcategory(category, sub)}
-                                  >
-                                    Delete
-                                  </Button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                        <DataTable
+                          columns={[
+                            { key: 'name', header: 'Member Name', render: (m) => <div className="font-medium text-gray-900">{m.name}</div> },
+                            { key: 'xID', header: 'xID', render: (m) => <div className="text-gray-500">{m.xID}</div> },
+                            { key: 'actions', header: 'Action', align: 'right', render: (m) => (
+                              <Button
+                                size="sm"
+                                variant="danger"
+                                onClick={() => handleRemoveMemberFromTeam(m.xID)}
+                                disabled={selectedTeam.id === 'workbasket'}
+                              >
+                                Remove
+                              </Button>
+                            ) }
+                          ]}
+                          rows={selectedTeam.members}
+                          rowKey="xID"
+                        />
                       </div>
                     )}
                   </Card>

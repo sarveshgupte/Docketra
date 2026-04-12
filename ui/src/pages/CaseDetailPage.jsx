@@ -754,7 +754,7 @@ export const CaseDetailPage = () => {
         ),
       }));
       localStorage.removeItem(commentDraftKey);
-      const message = `Comment added to docket ${caseId} • ${formatDateTime(new Date())}`;
+      const message = `Comment added to docket ${caseId} • ${formatDateTime()}`;
       showSuccess(message);
       setActionConfirmation(message);
       setActionError(null);
@@ -835,7 +835,7 @@ export const CaseDetailPage = () => {
       }));
       setSelectedFile(null);
       setFileDescription('');
-      const message = `Attachment added to docket ${caseId} • ${formatDateTime(new Date())}`;
+      const message = `Attachment added to docket ${caseId} • ${formatDateTime()}`;
       showSuccess(message);
       setActionConfirmation(message);
       setActionError(null);
@@ -891,7 +891,7 @@ export const CaseDetailPage = () => {
             reopenAt,
           });
           if (response.success) {
-            const message = `Docket ${caseId} pended • ${formatDateTime(new Date())}`;
+            const message = `Docket ${caseId} pended • ${formatDateTime()}`;
             showSuccess(message);
             setActionConfirmation(message);
             setActionError(null);
@@ -940,8 +940,8 @@ export const CaseDetailPage = () => {
           });
           if (response.success) {
             const message = forceQcReview
-              ? `Docket ${caseId} sent to QC review • ${formatDateTime(new Date())}`
-              : `Docket ${caseId} resolved • ${formatDateTime(new Date())}`;
+              ? `Docket ${caseId} sent to QC review • ${formatDateTime()}`
+              : `Docket ${caseId} resolved • ${formatDateTime()}`;
             showSuccess(message);
             setActionConfirmation(message);
             setActionError(null);
@@ -989,7 +989,7 @@ export const CaseDetailPage = () => {
         try {
           const response = await caseApi.unpendCase(caseId, unpendComment);
           if (response.success) {
-            const message = `Docket ${caseId} unpended • ${formatDateTime(new Date())}`;
+            const message = `Docket ${caseId} unpended • ${formatDateTime()}`;
             showSuccess(message);
             setActionConfirmation(message);
             setActionError(null);
@@ -1249,25 +1249,37 @@ export const CaseDetailPage = () => {
       showWarning('Comment is compulsory while routing a docket.');
       return;
     }
-    await caseApi.routeToTeam(caseId, routeTeamId, routingNote.trim());
-    showSuccess('Docket routed successfully.');
-    setRouteTeamId('');
-    setRoutingNote('');
-    setShowRouteModal(false);
-    loadCaseData({ silent: false });
+    try {
+      await caseApi.routeToTeam(caseId, routeTeamId, routingNote.trim());
+      showSuccess('Docket routed successfully.');
+      setRouteTeamId('');
+      setRoutingNote('');
+      setShowRouteModal(false);
+      loadCaseData({ silent: false });
+    } catch(err) {
+      showError(err?.response?.data?.message || 'Failed to route docket');
+    }
   };
 
   const handleAcceptRouted = async () => {
-    await caseApi.acceptRoutedCase(caseId);
-    showSuccess('Docket accepted.');
-    loadCaseData({ silent: false });
+    try {
+      await caseApi.acceptRoutedCase(caseId);
+      showSuccess('Docket accepted.');
+      loadCaseData({ silent: false });
+    } catch(err) {
+      showError(err?.response?.data?.message || 'Failed to accept docket');
+    }
   };
 
   const handleReturnRouted = async () => {
-    await caseApi.returnRoutedCase(caseId, routingNote);
-    showSuccess('Docket returned to origin team.');
-    setRoutingNote('');
-    loadCaseData({ silent: false });
+    try {
+      await caseApi.returnRoutedCase(caseId, routingNote);
+      showSuccess('Docket returned to origin team.');
+      setRoutingNote('');
+      loadCaseData({ silent: false });
+    } catch(err) {
+      showError(err?.response?.data?.message || 'Failed to return docket');
+    }
   };
 
   const handleCloneDocket = async () => {
@@ -1721,8 +1733,8 @@ export const CaseDetailPage = () => {
               {isRoutedToMyTeam && (
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <Button variant="secondary" onClick={handleAcceptRouted}>Accept</Button>
-                  <Button variant="secondary" onClick={() => caseApi.updateRoutedStatus(caseId, 'PENDING').then(() => loadCaseData({ silent: false }))}>Mark Pending</Button>
-                  <Button variant="secondary" onClick={() => caseApi.updateRoutedStatus(caseId, 'FILED').then(() => loadCaseData({ silent: false }))}>File</Button>
+                  <Button variant="secondary" onClick={() => caseApi.updateRoutedStatus(caseId, 'PENDING').then(() => { showSuccess('Docket status marked as Pending'); loadCaseData({ silent: false }); }).catch((err) => showError(err?.response?.data?.message || 'Failed to update docket status'))}>Mark Pending</Button>
+                  <Button variant="secondary" onClick={() => caseApi.updateRoutedStatus(caseId, 'FILED').then(() => { showSuccess('Docket status marked as Filed'); loadCaseData({ silent: false }); }).catch((err) => showError(err?.response?.data?.message || 'Failed to update docket status'))}>File</Button>
                   <Button variant="outline" onClick={handleReturnRouted}>Return</Button>
                 </div>
               )}

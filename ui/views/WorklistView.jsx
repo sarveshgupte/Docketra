@@ -6,7 +6,7 @@ import { Button } from '../src/components/common/Button';
 import { ErrorState } from '../src/components/feedback/ErrorState';
 import { EmptyState } from '../src/components/ui/EmptyState';
 import { TableSkeleton } from '../src/components/common/Skeleton';
-import { DataTable } from '../src/components/layout/DataTable';
+import { DataTable } from '../src/components/common/DataTable';
 import { formClasses } from '../src/theme/tokens';
 import { useKeyboardShortcuts } from '../src/hooks/useKeyboardShortcuts';
 import { formatDate } from '../src/utils/formatters';
@@ -355,7 +355,7 @@ export function WorklistView({
 
       <DataTable
         columns={columns}
-        data={sorted}
+        rows={sorted}
         rowKey="caseId"
         onRowClick={handleRowClick}
         sortState={sortState}
@@ -363,7 +363,7 @@ export function WorklistView({
         activeFilters={activeFilters}
         onRemoveFilter={removeFilter}
         onResetFilters={resetFilters}
-        emptyContent={(
+        emptyMessage={(
           <EmptyState
             title="No matching dockets"
             description="Try changing your filters or clear them to see all assigned dockets."

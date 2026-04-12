@@ -29,11 +29,13 @@ export const Button = ({
   variant = 'secondary',
   disabled = false,
   loading = false,
+  size,
   fullWidth = false,
   className = '',
   ...props
 }) => {
   const baseClasses =
+    size === 'sm' ? 'inline-flex min-h-8 items-center justify-center rounded-md border font-medium leading-4 transition-colors duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-xs px-3 py-1.5' :
     'inline-flex min-h-11 items-center justify-center rounded-md border font-medium leading-5 transition-colors duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-sm px-4 py-2.5';
 
   const variantClasses = {
