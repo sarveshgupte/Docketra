@@ -38,6 +38,36 @@ const { getSession } = require('../utils/getSession');
 const { getOrCreateDefaultClient } = require('../services/defaultClient.guard');
 const fs = require('fs').promises;
 const fsSync = require('fs');
+
+const inFlightCaseRecordLoads = new Map();
+
+const loadCaseRecordCoalesced = async ({ firmId, caseId, role }) => {
+  const key = `${firmId}:${String(caseId || '').trim()}`;
+  if (inFlightCaseRecordLoads.has(key)) {
+    return inFlightCaseRecordLoads.get(key);
+  }
+
+  const promise = (async () => {
+    let caseData = await CaseRepository.findByCaseId(firmId, caseId, role, { includeClient: true });
+    if (!caseData) {
+      caseData = await CaseRepository.findByCaseId(firmId, caseId, role);
+    }
+
+    if (caseData) return caseData;
+
+    const internalId = await resolveCaseIdentifier(firmId, caseId, role);
+    let resolvedCaseData = await CaseRepository.findByInternalId(firmId, internalId, role, { includeClient: true });
+    if (!resolvedCaseData) {
+      resolvedCaseData = await CaseRepository.findByInternalId(firmId, internalId, role);
+    }
+    return resolvedCaseData;
+  })().finally(() => {
+    inFlightCaseRecordLoads.delete(key);
+  });
+
+  inFlightCaseRecordLoads.set(key, promise);
+  return promise;
+};
 const path = require('path');
 const PDFDocument = require('pdfkit');
 
@@ -1376,8 +1406,10 @@ const updateCaseStatus = async (req, res) => {
  * PR: Case Identifier Semantics - Uses internal ID resolution
  */
 const getCaseByCaseId = async (req, res) => {
+  const requestId = req.id || req.requestId || randomUUID().slice(0, 8);
+  const getCaseTimerLabel = `[GET_CASE:${requestId}]`;
   try {
-    console.time('[GET_CASE]');
+    console.time(getCaseTimerLabel);
     console.log('STEP 1 start');
     const { caseId } = req.params;
     
@@ -1388,29 +1420,19 @@ const getCaseByCaseId = async (req, res) => {
     // are decrypted before reaching the UI. Fallback to identifier resolution
     // for backward compatibility with internal IDs.
     // Refactor: Use MongoDB aggregation with $lookup to join client data in a single query
-    let caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role, { includeClient: true });
-    if (!caseData) {
-      // Defensive fallback: if aggregation-backed includeClient lookup misses a row,
-      // retry plain repository lookup so the docket can still open.
-      caseData = await CaseRepository.findByCaseId(req.user.firmId, caseId, req.user.role);
-    }
-
-    if (!caseData) {
-      try {
-        const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
-        console.log(`[GET_CASE] Resolved identifier: ${caseId} -> ${internalId}`);
-        caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role, { includeClient: true });
-        if (!caseData) {
-          // Defensive fallback to non-aggregation lookup.
-          caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
-        }
-      } catch (error) {
-        console.error(`[GET_CASE] Case not found or identifier resolution failed: caseId=${caseId}, error=${error.message}`);
-        return res.status(404).json({
-          success: false,
-          message: 'Case not found',
-        });
-      }
+    let caseData = null;
+    try {
+      caseData = await loadCaseRecordCoalesced({
+        firmId: req.user.firmId,
+        caseId,
+        role: req.user.role,
+      });
+    } catch (error) {
+      console.error(`[GET_CASE] Case not found or identifier resolution failed: caseId=${caseId}, error=${error.message}`);
+      return res.status(404).json({
+        success: false,
+        message: 'Case not found',
+      });
     }
     
     if (!caseData) {
@@ -1762,7 +1784,7 @@ const getCaseByCaseId = async (req, res) => {
       error: error.message,
     });
   } finally {
-    console.timeEnd('[GET_CASE]');
+    console.timeEnd(getCaseTimerLabel);
   }
 };
 

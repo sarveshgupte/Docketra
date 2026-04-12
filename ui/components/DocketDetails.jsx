@@ -19,15 +19,7 @@ const CASE_FETCH_PARAMS = {
   activityLimit: 25,
 };
 
-const COMMENT_PAGE_SIZE = 10;
 const POLL_INTERVAL_MS = 12000;
-
-const getCommentParams = (page = 1) => ({
-  commentsPage: page,
-  commentsLimit: COMMENT_PAGE_SIZE,
-  activityPage: 1,
-  activityLimit: 1,
-});
 
 const normalizeComment = (comment, index = 0) => ({
   ...comment,
@@ -38,6 +30,12 @@ const normalizeComment = (comment, index = 0) => ({
 
 const extractCommentsPayload = (response) => {
   const payload = response?.data?.case || response?.data || {};
+  if (Array.isArray(payload)) {
+    return {
+      comments: payload,
+      pagination: { hasMore: false },
+    };
+  }
   return {
     comments: Array.isArray(payload?.comments) ? payload.comments : [],
     pagination: payload?.pagination?.comments || {},
@@ -45,7 +43,8 @@ const extractCommentsPayload = (response) => {
 };
 
 const extractActivityPayload = (response) => {
-  const payload = response?.data?.case || response?.data || {};
+  const payload = response?.data || {};
+  if (Array.isArray(payload)) return payload;
   return Array.isArray(payload?.activity) ? payload.activity : [];
 };
 
@@ -128,7 +127,7 @@ export function DocketDetails({
     }
 
     try {
-      const response = await caseApi.getCaseById(docketId, getCommentParams(page));
+      const response = await caseApi.getDocketComments(docketId);
       const payload = extractCommentsPayload(response);
       const normalized = payload.comments.map((comment, index) => normalizeComment(comment, index));
       const nextHeadId = commentIdentity(normalized[0]) || null;
@@ -179,14 +178,12 @@ export function DocketDetails({
     if (!docketId || typeof document === 'undefined' || document.visibilityState !== 'visible') return;
 
     try {
-      const response = await caseApi.getCaseById(docketId, {
-        commentsPage: 1,
-        commentsLimit: COMMENT_PAGE_SIZE,
-        activityPage: 1,
-        activityLimit: 1,
-      });
+      const [commentsResponse, activityResponse] = await Promise.all([
+        caseApi.getDocketComments(docketId),
+        caseApi.getCaseHistory(docketId),
+      ]);
 
-      const latestCommentsPayload = extractCommentsPayload(response);
+      const latestCommentsPayload = extractCommentsPayload(commentsResponse);
       const latestComments = latestCommentsPayload.comments.map((comment, index) => normalizeComment(comment, index));
       const latestCommentHeadId = commentIdentity(latestComments[0]) || null;
 
@@ -197,7 +194,7 @@ export function DocketDetails({
 
       setCommentsHasMore(Boolean(latestCommentsPayload.pagination?.hasMore));
 
-      const latestActivity = extractActivityPayload(response);
+      const latestActivity = extractActivityPayload(activityResponse);
       const latestActivityHeadId = latestActivity[0]?._id || latestActivity[0]?.id || null;
       if (latestActivityHeadId && latestActivityHeadId !== latestActivityHeadRef.current) {
         latestActivityHeadRef.current = latestActivityHeadId;
