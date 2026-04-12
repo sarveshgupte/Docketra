@@ -66,6 +66,12 @@ export const DocketSidebar = ({
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    if (uploadLinkResult?.pin) {
+      setShowGeneratedPin(true);
+    }
+  }, [uploadLinkResult?.pin]);
+
   if (!isOpen || !type) return null;
 
   const renderContent = () => {
