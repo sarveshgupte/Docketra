@@ -23,7 +23,9 @@
     "migration:status_to_lowercase": "node src/scripts/migrateStatusToLowercase.js",
     "migration:add_starter_plan_fields": "node scripts/migrations/add_starter_plan_fields.js up",
     "migration:rollback_starter_plan_fields": "node scripts/migrations/add_starter_plan_fields.js down",
-    "worker": "node src/workers/bulkUpload.worker.js"
+    "worker": "node src/workers/bulkUpload.worker.js",
+    "deploy": "wrangler deploy",
+    "preview": "wrangler dev"
   },
   "keywords": [
     "task-management",
@@ -68,7 +70,8 @@
   "devDependencies": {
     "mongodb-memory-server": "^10.4.3",
     "nodemon": "^3.1.11",
-    "supertest": "^7.1.4"
+    "supertest": "^7.1.4",
+    "wrangler": "^4.81.1"
   },
   "pnpm": {
     "overrides": {
