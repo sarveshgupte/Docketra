@@ -297,6 +297,7 @@ export const Layout = ({ children }) => {
   useEffect(() => {
     let cancelled = false;
     const COUNT_FETCH_TIMEOUT_MS = 8000;
+    const shouldSkipWorklistCountFetch = location.pathname.includes('/admin');
 
     const withTimeout = (promise, fallbackValue) => Promise.race([
       promise,
@@ -318,6 +319,15 @@ export const Layout = ({ children }) => {
       if (!cancelled) {
         setWorkbasketCount('loading');
         setWorklistCount('loading');
+      }
+
+      if (shouldSkipWorklistCountFetch) {
+        if (!cancelled) {
+          setWorkbasketCount(0);
+          setWorklistCount(0);
+          setCountsFetched(true);
+        }
+        return;
       }
 
       try {
@@ -348,7 +358,7 @@ export const Layout = ({ children }) => {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, location.pathname]);
   useEffect(() => {
     let cancelled = false;
     const fetchStorageHealth = async () => {
