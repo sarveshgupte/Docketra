@@ -41,6 +41,12 @@ const looksEncryptedToken = (value) => (
   typeof value === 'string' && value.includes(':')
 );
 
+const toSafeText = (value, fallback = '') => {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  return fallback;
+};
+
 const normalizeSubcategory = (subcategory) => {
   if (!subcategory || typeof subcategory !== 'object') return null;
   return {
@@ -316,7 +322,15 @@ export const AdminPage = () => {
 
   const fetchClients = async () => {
     const response = await adminApi.listClients({ activeOnly: false });
-    setClients(response?.success ? (response.data || []) : []);
+    const rawClients = response?.success ? (response.data || []) : [];
+    const normalizedClients = Array.isArray(rawClients)
+      ? rawClients.map((client) => ({
+        ...client,
+        businessEmail: toSafeText(client?.businessEmail, ''),
+        contactPersonEmailAddress: toSafeText(client?.contactPersonEmailAddress, ''),
+      }))
+      : [];
+    setClients(normalizedClients);
     return response;
   };
 
@@ -333,7 +347,14 @@ export const AdminPage = () => {
       if (activeTab === 'users') {
         const [response] = await Promise.all([adminApi.getUsers(), fetchWorkbaskets()]);
         const apiUsers = response?.success ? (response.data || []) : [];
-        setUsers(ensureLoggedInAdminVisible(apiUsers));
+        const normalizedUsers = Array.isArray(apiUsers)
+          ? apiUsers.map((entry) => ({
+            ...entry,
+            email: toSafeText(entry?.email, ''),
+            name: toSafeText(entry?.name, ''),
+          }))
+          : [];
+        setUsers(ensureLoggedInAdminVisible(normalizedUsers));
       } else if (activeTab === 'categories') {
         const response = await categoryService.getAdminCategories(false); // Get all categories including inactive
         const normalizedCategories = (response?.success ? (response.data || []) : [])

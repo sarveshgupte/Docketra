@@ -31,6 +31,8 @@ export const UploadPage = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [requestingPin, setRequestingPin] = useState(false);
+  const [pinHelpMessage, setPinHelpMessage] = useState('');
 
   const uploadEndpoint = useMemo(() => `${API_BASE_URL}/public/upload/${token}`, [token]);
 
@@ -41,6 +43,7 @@ export const UploadPage = () => {
       setPageStatus('loading');
       setStatus('idle');
       setErrorMessage('');
+      setPinHelpMessage('');
       try {
         const response = await fetch(`${uploadEndpoint}/meta`);
         const payload = await response.json();
@@ -125,6 +128,24 @@ export const UploadPage = () => {
     }
   };
 
+  const handleRequestPin = async () => {
+    setRequestingPin(true);
+    setPinHelpMessage('');
+    setErrorMessage('');
+    try {
+      const response = await fetch(`${uploadEndpoint}/request-pin`, { method: 'POST' });
+      const payload = await response.json();
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.message || 'Unable to send PIN. Please contact your advisor.');
+      }
+      setPinHelpMessage('PIN has been sent to your registered email address.');
+    } catch (error) {
+      setErrorMessage(error?.message || 'Unable to send PIN. Please contact your advisor.');
+    } finally {
+      setRequestingPin(false);
+    }
+  };
+
   return (
     <div style={pageStyle}>
       <main style={cardStyle}>
@@ -158,6 +179,23 @@ export const UploadPage = () => {
                   placeholder="____"
                   style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '8px' }}
                 />
+                <button
+                  type="button"
+                  onClick={handleRequestPin}
+                  disabled={requestingPin}
+                  style={{
+                    marginTop: '8px',
+                    fontSize: '13px',
+                    color: '#2563eb',
+                    background: 'transparent',
+                    border: 'none',
+                    padding: 0,
+                    cursor: requestingPin ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {requestingPin ? 'Sending PIN…' : 'Request PIN on email'}
+                </button>
+                {pinHelpMessage ? <p style={{ color: '#15803d', marginTop: '8px', marginBottom: 0 }}>{pinHelpMessage}</p> : null}
               </div>
             ) : null}
 

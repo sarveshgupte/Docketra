@@ -1825,7 +1825,16 @@ export const CaseDetailPage = () => {
           onGenerateUploadLink={handleGenerateUploadLink}
           uploadLinkGenerating={uploadLinkGenerating}
           uploadLinkResult={uploadLinkResult}
-          clientEmail={caseInfo?.clientEmail || caseInfo?.client?.email || caseData?.client?.email || ''}
+          clientEmail={
+            caseInfo?.clientEmail
+            || caseInfo?.client?.email
+            || caseInfo?.client?.businessEmail
+            || caseInfo?.clientData?.email
+            || caseInfo?.clientData?.businessEmail
+            || caseData?.client?.email
+            || caseData?.client?.businessEmail
+            || ''
+          }
         />
 
         {/* ─── Modals (positioned outside split pane) ─────────────── */}
