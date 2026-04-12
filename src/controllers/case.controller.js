@@ -2790,11 +2790,20 @@ const getClientFactSheetForCase = async (req, res) => {
       });
     }
     
-    // Get client for this case
-    const client = await Client.findOne({ 
-      clientId: caseData.clientId,
-      firmId: req.user.firmId 
-    });
+    // Get client for this case.
+    // Prefer snapshot ObjectId when available to avoid firmId type-cast mismatches
+    // (legacy tenants may carry firm identifiers that are not ObjectId-castable).
+    const snapshotClientObjectId = caseData?.clientSnapshot?.clientObjectId || null;
+    let client = null;
+    if (snapshotClientObjectId) {
+      client = await Client.findById(snapshotClientObjectId);
+    }
+    if (!client) {
+      client = await Client.findOne({
+        clientId: caseData.clientId,
+        firmId: req.user.firmId,
+      });
+    }
     
     if (!client) {
       return res.status(404).json({
@@ -2803,34 +2812,44 @@ const getClientFactSheetForCase = async (req, res) => {
       });
     }
     
-    // Check if client has fact sheet
-    if (!client.clientFactSheet) {
-      const attachments = await AttachmentRepository.findByClientSource(req.user.firmId, client.clientId, 'client_cfs');
+    const attachments = await AttachmentRepository.findByClientSource(req.user.firmId, client.clientId, 'client_cfs');
+    const rawBasicInfo = client.clientFactSheet?.basicInfo || {};
+    const normalizedBasicInfo = {
+      clientName: rawBasicInfo.clientName || client.businessName || '',
+      entityType: rawBasicInfo.entityType || '',
+      PAN: rawBasicInfo.PAN || client.PAN || '',
+      CIN: rawBasicInfo.CIN || client.CIN || '',
+      GSTIN: rawBasicInfo.GSTIN || client.GST || '',
+      address: rawBasicInfo.address || client.businessAddress || '',
+      contactPerson: rawBasicInfo.contactPerson || '',
+      email: rawBasicInfo.email || client.businessEmail || '',
+      phone: rawBasicInfo.phone || client.primaryContactNumber || '',
+    };
+    const documents = (client.clientFactSheet?.documents || []).map((doc) => ({
+      fileName: doc.fileName,
+      fileUrl: doc.fileUrl,
+      uploadedBy: doc.uploadedBy,
+      uploadedAt: doc.uploadedAt,
+    }));
+    const hasFactSheetContent = Boolean(
+      (client.clientFactSheet?.description || '').trim()
+      || (client.clientFactSheet?.notes || '').trim()
+      || documents.length > 0
+      || Object.values(normalizedBasicInfo).some((value) => String(value || '').trim())
+    );
+
+    if (!hasFactSheetContent && attachments.length === 0) {
       return res.json({
         success: true,
         data: {
           clientId: client.clientId,
           businessName: client.businessName,
-          basicInfo: {
-            clientName: client.businessName,
-            PAN: client.PAN || '',
-            CIN: client.CIN || '',
-            GSTIN: client.GST || '',
-            address: client.businessAddress || '',
-            email: client.businessEmail || '',
-            phone: client.primaryContactNumber || '',
-          },
+          basicInfo: normalizedBasicInfo,
           description: '',
           notes: '',
           updatedAt: null,
           files: [],
-          attachments: attachments.map((file) => ({
-            fileId: file._id,
-            fileName: file.fileName,
-            mimeType: file.mimeType,
-            uploadedAt: file.createdAt,
-            size: file.size || 0,
-          })),
+          attachments: [],
           documents: [],
         },
         message: 'No fact sheet available for this client',
@@ -2841,29 +2860,14 @@ const getClientFactSheetForCase = async (req, res) => {
     const factSheetData = {
       clientId: client.clientId,
       businessName: client.businessName,
-      basicInfo: client.clientFactSheet.basicInfo || {
-        clientName: client.businessName,
-        PAN: client.PAN || '',
-        CIN: client.CIN || '',
-        GSTIN: client.GST || '',
-        address: client.businessAddress || '',
-        email: client.businessEmail || '',
-        phone: client.primaryContactNumber || '',
-      },
+      basicInfo: normalizedBasicInfo,
       description: client.clientFactSheet.description || '',
       notes: client.clientFactSheet.notes || '',
       updatedAt: client.clientFactSheet.updatedAt || null,
       files: [],
       attachments: [],
-      documents: (client.clientFactSheet.documents || []).map((doc) => ({
-        fileName: doc.fileName,
-        fileUrl: doc.fileUrl,
-        uploadedBy: doc.uploadedBy,
-        uploadedAt: doc.uploadedAt,
-      })),
+      documents,
     };
-
-    const attachments = await AttachmentRepository.findByClientSource(req.user.firmId, client.clientId, 'client_cfs');
     factSheetData.attachments = attachments.map((file) => ({
       fileId: file._id,
       fileName: file.fileName,
