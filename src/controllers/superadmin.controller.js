@@ -26,6 +26,7 @@ const { getSession } = require('../utils/getSession');
 // Constants
 const FIRM_ID_PATTERN = /^FIRM\d{3,}$/i;
 const PASSWORD_SETUP_TOKEN_EXPIRY = '24h';
+const ADMIN_ROLE_VALUES = ['ADMIN', 'PRIMARY_ADMIN', 'Admin'];
 
 /**
  * Resolve the default system admin for a firm.
@@ -33,7 +34,12 @@ const PASSWORD_SETUP_TOKEN_EXPIRY = '24h';
  * @returns {Promise<Object|null>}
  */
 const findFirmAdmin = async (firmObjectId) => {
-  return User.findOne({ firmId: firmObjectId, isSystem: true, role: 'Admin', status: { $ne: 'deleted' } });
+  return User.findOne({
+    firmId: firmObjectId,
+    isSystem: true,
+    role: { $in: ADMIN_ROLE_VALUES },
+    status: { $ne: 'deleted' },
+  });
 };
 
 const findFirmAdminById = async (firmObjectId, adminId) => {
@@ -43,7 +49,7 @@ const findFirmAdminById = async (firmObjectId, adminId) => {
   return User.findOne({
     _id: adminId,
     firmId: firmObjectId,
-    role: 'Admin',
+    role: { $in: ADMIN_ROLE_VALUES },
     status: { $ne: 'deleted' },
   });
 };
@@ -225,7 +231,7 @@ const listFirms = async (req, res) => {
       User.find({
         firmId: { $in: firmIds },
         isSystem: true,
-        role: 'Admin',
+        role: { $in: ADMIN_ROLE_VALUES },
         status: { $ne: 'deleted' },
       })
         .select('firmId email emailVerified emailVerifiedAt verificationMethod termsAccepted termsAcceptedAt termsVersion signupIP signupUserAgent')
@@ -833,7 +839,7 @@ const listFirmAdmins = async (req, res) => {
     });
   }
 
-  const admins = await User.find({ firmId: firm._id, role: 'Admin', status: { $ne: 'deleted' } })
+  const admins = await User.find({ firmId: firm._id, role: { $in: ADMIN_ROLE_VALUES }, status: { $ne: 'deleted' } })
     .select('name email xID status isSystem lockUntil passwordSetAt inviteSentAt')
     .sort({ isSystem: -1, createdAt: 1 });
 
@@ -955,7 +961,7 @@ const updateFirmAdminStatus = async (req, res) => {
     const session = getSession(req);
     const activeAdminsCountQuery = User.countDocuments({
       firmId: firm._id,
-      role: 'Admin',
+      role: { $in: ADMIN_ROLE_VALUES },
       status: 'active',
     });
     const activeAdminsCount = await resolveSessionQuery(activeAdminsCountQuery, session);
@@ -974,7 +980,7 @@ const updateFirmAdminStatus = async (req, res) => {
     const adminForUpdateQuery = User.findOne({
       _id: admin._id,
       firmId: firm._id,
-      role: 'Admin',
+      role: { $in: ADMIN_ROLE_VALUES },
       status: { $ne: 'deleted' },
     });
     const adminForUpdate = await resolveSessionQuery(adminForUpdateQuery, session);
@@ -1195,7 +1201,7 @@ const deleteFirmAdmin = async (req, res) => {
   const adminForDeleteQuery = User.findOne({
     _id: admin._id,
     firmId: firm._id,
-    role: 'Admin',
+    role: { $in: ADMIN_ROLE_VALUES },
     status: { $ne: 'deleted' },
   });
   const adminForDelete = await resolveSessionQuery(adminForDeleteQuery, session);
@@ -1222,7 +1228,7 @@ const deleteFirmAdmin = async (req, res) => {
   if (adminForDelete.status === 'active') {
     const activeAdminsCountQuery = User.countDocuments({
       firmId: firm._id,
-      role: 'Admin',
+      role: { $in: ADMIN_ROLE_VALUES },
       status: 'active',
     });
     const activeAdminsCount = await resolveSessionQuery(activeAdminsCountQuery, session);
@@ -1295,8 +1301,13 @@ const resendAdminAccess = async (req, res) => {
     });
   }
 
-  // Find the default admin for this firm (isSystem=true, role=Admin)
-  const admin = await User.findOne({ firmId: firm._id, isSystem: true, role: 'Admin', status: { $ne: 'deleted' } });
+  // Find the default admin for this firm (isSystem=true, admin role variants supported)
+  const admin = await User.findOne({
+    firmId: firm._id,
+    isSystem: true,
+    role: { $in: ADMIN_ROLE_VALUES },
+    status: { $ne: 'deleted' },
+  });
   if (!admin) {
     return res.status(404).json({
       success: false,
