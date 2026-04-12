@@ -53,13 +53,6 @@ const {
   uploadFactSheetFile,
   deleteFactSheetFile,
 } = require('../controllers/client.controller');
-const {
-  listWorkbaskets,
-  createWorkbasket,
-  renameWorkbasket,
-  toggleWorkbasketStatus,
-  updateUserWorkbaskets,
-} = require('../controllers/workbasket.controller');
 
 const upload = createSecureUpload({ memory: true });
 
@@ -102,13 +95,8 @@ router.put('/users/:xID/deactivate', ...adminBaseAccess, authorizeFirmPermission
 router.post('/users/:xID/resend-invite', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, resendInviteEmail);
 
 router.patch('/users/:xID/restrict-clients', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateRestrictedClients);
-router.patch('/users/:xID/workbaskets', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateUserWorkbaskets);
 router.get('/firm-settings', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userReadLimiter, getFirmSettings);
 router.put('/firm-settings', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userWriteLimiter, updateFirmSettings);
-router.get('/workbaskets', ...adminBaseAccess, authorizeFirmPermission('CASE_VIEW'), userReadLimiter, listWorkbaskets);
-router.post('/workbaskets', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, createWorkbasket);
-router.put('/workbaskets/:workbasketId', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, renameWorkbasket);
-router.patch('/workbaskets/:workbasketId/status', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, toggleWorkbasketStatus);
 
 router.post('/users/:id/restore', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, restoreUser);
 
