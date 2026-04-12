@@ -28,6 +28,7 @@ export const DocketSidebar = ({
   onAttachmentFileChange,
   onAttachmentCommentChange,
   onUploadAttachment,
+  onRequestDocuments,
 }) => {
   const attachmentFileInputRef = useRef(null);
   const formatDatePart = (value) => {
@@ -160,6 +161,13 @@ export const DocketSidebar = ({
           <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Upload via secure link</p>
             <p className="mt-1 text-xs text-gray-500">Share a client upload link from this docket to collect documents securely.</p>
+            <button
+              type="button"
+              className="mt-3 inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
+              onClick={onRequestDocuments}
+            >
+              Request Documents
+            </button>
           </div>
 
           {!attachments.length ? <p className="docket-sidebar__empty">{EMPTY_STATES.attachments}</p> : null}

@@ -1,14 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { caseApi } from '../src/api/case.api';
 import { invalidateCaseCache } from '../src/utils/caseCache';
 import { formatDateTime } from '../src/utils/formatDateTime';
 import { formatCaseName, formatDocketId } from '../src/utils/formatters';
 import { LifecycleBadge } from './LifecycleBadge';
-import { ActivityTimeline } from '../src/components/docket/ActivityTimeline';
-import { CommentList } from '../src/components/docket/CommentList';
-import { CommentInput } from '../src/components/docket/CommentInput';
 import { useAuth } from '../src/hooks/useAuth';
-import { RequestDocumentsModal } from './RequestDocumentsModal';
 
 const normalizeDoc = (data) => data?.case || data;
 
@@ -75,10 +71,8 @@ function assignmentLabel(docket) {
 export function DocketDetails({
   docketId,
   prefetchedCase = null,
-  /** Stable string so parent identity changes do not retrigger network (e.g. `${lifecycle}:${updatedAt}`). */
   prefetchedSyncKey = '',
   onDocketUpdated,
-  /** If true, details should be treated as opened from worklist context. */
   openedFromWorklist = false,
   children,
 }) {
@@ -268,40 +262,32 @@ export function DocketDetails({
     const run = async () => {
       setError(null);
       const snapshot = prefetchedCase ? normalizeDoc(prefetchedCase) : null;
-      const needsActivationPass = snapshot && String(snapshot.lifecycle || '').toLowerCase() === 'in_worklist';
-
-      if (snapshot && !needsActivationPass) {
+      if (snapshot) {
         setDocket(snapshot);
+      } else {
+        setLoading(true);
+      }
+
+      const isInWorklist = String(snapshot?.lifecycle || '').toLowerCase() === 'in_worklist';
+      const shouldForceRefresh = !snapshot || isInWorklist;
+
+      if (!shouldForceRefresh) {
         setLoading(false);
         return;
       }
 
-      if (snapshot) {
-        setDocket(snapshot);
-      }
-
-      setLoading(true);
       try {
         invalidateCaseCache(docketId);
-        let res = await caseApi.getCaseById(docketId, CASE_FETCH_PARAMS);
-        if (!res?.success) {
-          throw new Error(res?.message || 'Failed to load docket');
-        }
-        let doc = normalizeDoc(res.data);
+        const response = await caseApi.getCaseById(docketId, CASE_FETCH_PARAMS);
+        const payload = normalizeDoc(response?.data?.case || response?.data || response?.case || response);
         if (cancelled) return;
-
-        if (String(doc?.lifecycle || '').toLowerCase() === 'in_worklist') {
-          invalidateCaseCache(docketId);
-          res = await caseApi.getCaseById(docketId, CASE_FETCH_PARAMS);
-          doc = normalizeDoc(res.data);
+        if (payload) {
+          setDocket(payload);
+          onDocketUpdated?.(payload);
         }
-
-        if (cancelled) return;
-        setDocket(doc);
-        onDocketUpdated?.(doc);
-      } catch (e) {
+      } catch (fetchError) {
         if (!cancelled) {
-          setError(e?.message || 'Failed to load docket');
+          setError('Unable to refresh docket details right now.');
         }
       } finally {
         if (!cancelled) {
@@ -311,153 +297,38 @@ export function DocketDetails({
     };
 
     void run();
-    return () => {
-      cancelled = true;
-    };
-  }, [docketId, prefetchedSyncKey, onDocketUpdated]);
-
-  useEffect(() => {
-    if (!docketId) return undefined;
-
-    setComments([]);
-    setCommentsPage(1);
-    setCommentsHasMore(false);
-    setCommentsError('');
-    setCommentsLoading(true);
-    setNewCommentCount(0);
-    setNewActivityCount(0);
-    clearCommentHighlights();
-
-    let cancelled = false;
-    const shouldFocusNewItems = commentUserRefreshToken > handledCommentRefreshTokenRef.current;
-    if (shouldFocusNewItems) {
-      handledCommentRefreshTokenRef.current = commentUserRefreshToken;
-    }
-    const canIdleSchedule = typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function';
-    const trigger = canIdleSchedule
-      ? window.requestIdleCallback(() => {
-        if (!cancelled) {
-          void loadComments({ page: 1, append: false, shouldFocusNewItems });
-        }
-      })
-      : window.setTimeout(() => {
-        if (!cancelled) {
-          void loadComments({ page: 1, append: false, shouldFocusNewItems });
-        }
-      }, 0);
 
     return () => {
       cancelled = true;
-      if (canIdleSchedule && typeof window.cancelIdleCallback === 'function') {
-        window.cancelIdleCallback(trigger);
-      } else {
-        window.clearTimeout(trigger);
-      }
     };
-  }, [clearCommentHighlights, docketId, commentRefreshKey, commentUserRefreshToken, loadComments]);
+  }, [docketId, onDocketUpdated, prefetchedCase, prefetchedSyncKey]);
 
-  useEffect(() => () => {
-    if (commentHighlightTimeoutRef.current) {
-      window.clearTimeout(commentHighlightTimeoutRef.current);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!docketId || typeof document === 'undefined') return undefined;
-
-    let intervalId = null;
-    let disposed = false;
-
-    const stopPolling = () => {
-      if (intervalId) {
-        window.clearInterval(intervalId);
-        intervalId = null;
-      }
-    };
-
-    const startPolling = () => {
-      if (disposed || document.visibilityState !== 'visible' || intervalId) return;
-      intervalId = window.setInterval(() => {
-        void pollLatestUpdates();
-      }, POLL_INTERVAL_MS);
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        void pollLatestUpdates();
-        startPolling();
-      } else {
-        stopPolling();
-      }
-    };
-
-    void pollLatestUpdates();
-    startPolling();
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      disposed = true;
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      stopPolling();
-    };
-  }, [docketId, pollLatestUpdates]);
-
-  useEffect(() => {
-    const initialActivityHeadId = docket?.activity?.[0]?._id || docket?.activity?.[0]?.id || null;
-    if (initialActivityHeadId) {
-      latestActivityHeadRef.current = initialActivityHeadId;
-    }
-  }, [docket?.activity]);
-
-  const handleRefreshActivity = useCallback(() => {
-    setActivityRefreshKey((prev) => prev + 1);
-    setActivityUserRefreshToken((prev) => prev + 1);
-    setNewActivityCount(0);
-  }, []);
-
-  const handleRefreshComments = useCallback(() => {
-    setCommentRefreshKey((prev) => prev + 1);
-    setCommentUserRefreshToken((prev) => prev + 1);
-    setNewCommentCount(0);
-  }, []);
-
-  const loadUploadLinkStatus = useCallback(async () => {
+  const handleRetry = useCallback(async () => {
     if (!docketId) return;
+    setLoading(true);
+    setError(null);
     try {
-      const response = await caseApi.getUploadLinkStatus(docketId);
-      setUploadLinkStatus(response?.data || null);
-    } catch (statusError) {
-      setUploadLinkStatus(null);
-    }
-  }, [docketId]);
-
-  useEffect(() => {
-    void loadUploadLinkStatus();
-  }, [loadUploadLinkStatus]);
-
-  const handleGenerateUploadLink = useCallback(async (payload) => {
-    if (!docketId) return;
-    setUploadLinkGenerating(true);
-    try {
-      const response = await caseApi.generateUploadLink(docketId, payload);
-      setUploadLinkResult(response?.data || null);
-      await loadUploadLinkStatus();
+      invalidateCaseCache(docketId);
+      const response = await caseApi.getCaseById(docketId, CASE_FETCH_PARAMS);
+      const payload = normalizeDoc(response?.data?.case || response?.data || response?.case || response);
+      if (payload) {
+        setDocket(payload);
+        onDocketUpdated?.(payload);
+      }
+    } catch (retryError) {
+      setError('Unable to refresh docket details right now.');
     } finally {
-      setUploadLinkGenerating(false);
+      setLoading(false);
     }
-  }, [docketId, loadUploadLinkStatus]);
-
-  const handleRevokeUploadLink = useCallback(async () => {
-    if (!docketId) return;
-    await caseApi.revokeUploadLink(docketId);
-    setUploadLinkResult(null);
-    await loadUploadLinkStatus();
-  }, [docketId, loadUploadLinkStatus]);
+  }, [docketId, onDocketUpdated]);
 
   if (error) {
     return (
       <header className="case-detail-header" style={{ borderBottom: '1px solid #fecaca', paddingBottom: 16 }}>
         <p style={{ color: '#b91c1c', margin: 0 }}>{error}</p>
+        <button type="button" className="btn btn-secondary" onClick={handleRetry} style={{ marginTop: 12 }}>
+          Retry
+        </button>
       </header>
     );
   }
@@ -470,9 +341,7 @@ export function DocketDetails({
     );
   }
 
-  if (!docket) {
-    return null;
-  }
+  if (!docket) return null;
 
   const isWorklistLifecycle = String(docket.lifecycle || '').trim().toUpperCase() === 'WL'
     || String(docket.lifecycle || '').trim().toLowerCase() === 'in_worklist';
@@ -483,95 +352,22 @@ export function DocketDetails({
   const lastUpdatedLabel = asDisplayValue(formatDateTime(docket.updatedAt));
 
   return (
-    <>
-      <header className="case-detail-header">
-        <div className="case-detail-header__identity">
-          <div className="case-detail-header__title-row">
-            <h1 className="case-detail-header__title">{formatDocketId(docket.caseId || docketId)}</h1>
-            <LifecycleBadge lifecycle={docket.lifecycle} />
-            {loading ? (
-              <span className="case-detail-header__sync">Syncing…</span>
-            ) : null}
-          </div>
-          <div className="case-detail-header__secondary">
-            <p className="case-detail-header__subtitle">{asDisplayValue(title) === '—' ? 'Untitled docket' : title}</p>
-            <div className="case-detail-header__meta">Assigned to: {assigned}</div>
-          </div>
-          <div className="case-detail-header__meta">Last updated: {lastUpdatedLabel}</div>
+    <header className="case-detail-header">
+      <div className="case-detail-header__identity">
+        <div className="case-detail-header__title-row">
+          <h1 className="case-detail-header__title">{formatDocketId(docket.caseId || docketId)}</h1>
+          <LifecycleBadge lifecycle={docket.lifecycle} />
+          {loading ? (
+            <span className="case-detail-header__sync">Syncing…</span>
+          ) : null}
         </div>
-
-        {children ? (
-          <div className="case-detail-header__actions">
-            {children}
-          </div>
-        ) : null}
-      </header>
-      <section style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 12, marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between', flexWrap: 'wrap' }}>
-          <strong>Upload Link</strong>
-          <button type="button" className="btn btn-primary" onClick={() => setRequestDocumentsOpen(true)}>
-            Request Documents
-          </button>
+        <div className="case-detail-header__secondary">
+          <p className="case-detail-header__subtitle">{asDisplayValue(title) === '—' ? 'Untitled docket' : title}</p>
+          <div className="case-detail-header__meta">Assigned to: {assigned}</div>
         </div>
-        <p style={{ margin: '8px 0 0', color: '#4b5563' }}>
-          Status: {uploadLinkStatus?.status || '—'}
-        </p>
-        <p style={{ margin: '4px 0 0', color: '#4b5563' }}>
-          Expires At: {uploadLinkStatus?.expiresAt ? formatDateTime(uploadLinkStatus.expiresAt) : '—'}
-        </p>
-        {uploadLinkStatus?.expiresAt ? (
-          <p style={{ margin: '4px 0 0', color: '#6b7280' }}>
-            Expires in {Math.max(0, Math.ceil((new Date(uploadLinkStatus.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60)))}h
-          </p>
-        ) : null}
-        <div style={{ marginTop: 8 }}>
-          <button type="button" className="btn btn-danger" onClick={handleRevokeUploadLink}>
-            Revoke Link
-          </button>
-        </div>
-      </section>
-
-      <ActivityTimeline
-        docketId={docketId}
-        initialActivity={docket.activity}
-        refreshKey={activityRefreshKey}
-        userRefreshToken={activityUserRefreshToken}
-      />
-      {newActivityCount > 0 ? (
-        <button type="button" className="docket-updates-indicator" onClick={handleRefreshActivity}>
-          🔔 {newActivityCount} new update{newActivityCount > 1 ? 's' : ''} — Click to refresh
-        </button>
-      ) : null}
-
-      <section className="docket-comments-section" aria-labelledby="docket-comments-heading">
-        <h2 id="docket-comments-heading" className="docket-comments-section__heading">Comments</h2>
-        {newCommentCount > 0 ? (
-          <button type="button" className="docket-updates-indicator" onClick={handleRefreshComments}>
-            🔔 {newCommentCount} new comment{newCommentCount > 1 ? 's' : ''} — Click to refresh
-          </button>
-        ) : null}
-        <CommentList
-          comments={comments}
-          loading={commentsLoading}
-          loadingMore={commentsLoadingMore}
-          error={commentsError}
-          hasMore={commentsHasMore}
-          onRetry={() => loadComments({ page: commentsPage, append: commentsPage > 1 })}
-          onLoadMore={handleLoadMoreComments}
-          highlightedCommentIds={highlightedCommentIds}
-          scrollToCommentId={firstNewCommentId}
-          scrollRequestToken={commentUserRefreshToken}
-        />
-        <CommentInput onSubmit={handleAddComment} disabled={commentSubmitting} />
-      </section>
-      <RequestDocumentsModal
-        isOpen={requestDocumentsOpen}
-        onClose={() => setRequestDocumentsOpen(false)}
-        clientEmail={docket?.clientEmail || docket?.client?.email || docket?.clientData?.email || ''}
-        generating={uploadLinkGenerating}
-        generatedLink={uploadLinkResult}
-        onGenerate={handleGenerateUploadLink}
-      />
-    </>
+        <div className="case-detail-header__meta">Last updated: {lastUpdatedLabel}</div>
+      </div>
+      {children ? <div className="case-detail-header__actions">{children}</div> : null}
+    </header>
   );
 }

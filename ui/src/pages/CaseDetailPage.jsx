@@ -24,13 +24,14 @@ import { clientApi } from '../api/client.api';
 import { categoryService } from '../services/categoryService';
 import { extractErrorMessage } from '../services/apiResponse';
 import { formatDateTime, getISODateInTimezone } from '../utils/formatDateTime';
-import { formatClientDisplay, formatDocketId } from '../utils/formatters';
+import { formatDocketId } from '../utils/formatters';
 import { USER_ROLES } from '../utils/constants';
 import { LifecycleBadge } from '../../components/LifecycleBadge';
 import { DocketSidebar } from '../components/docket/DocketSidebar';
 import { DocketActions } from '../components/docket/DocketActions';
 import { DocketComments } from '../components/docket/DocketComments';
 import { ActionModal } from '../components/docket/ActionModal';
+import { RequestDocumentsModal } from '../../components/RequestDocumentsModal';
 import './CaseDetailPage.css';
 import { ROUTES } from '../constants/routes';
 import { RouteErrorFallback } from '../components/routing/RouteErrorFallback';
@@ -168,6 +169,10 @@ export const CaseDetailPage = () => {
   const [routingTeams, setRoutingTeams] = useState([]);
   const [routeTeamId, setRouteTeamId] = useState('');
   const [routingNote, setRoutingNote] = useState('');
+  const [showRouteModal, setShowRouteModal] = useState(false);
+  const [requestDocumentsOpen, setRequestDocumentsOpen] = useState(false);
+  const [uploadLinkGenerating, setUploadLinkGenerating] = useState(false);
+  const [uploadLinkResult, setUploadLinkResult] = useState(null);
 
   // Track case view session
   // PR: Comprehensive CaseHistory & Audit Trail
@@ -253,26 +258,11 @@ export const CaseDetailPage = () => {
     return mapped;
   }, [caseData?.assignableUsers, caseData?.users, user?.xID, user?.name]);
 
-  const clientSnapshotLabel = useMemo(() => {
-    const clientPayload = caseData?.client;
-    if (clientPayload) {
-      return formatClientDisplay(clientPayload, true);
-    }
-
-    const fallbackClientId = caseInfo?.clientId || caseData?.clientId || '';
-    const fallbackClientName = caseInfo?.clientName || caseData?.clientName || caseInfo?.businessName || '';
-    if (fallbackClientId && fallbackClientName) return `${fallbackClientId} – ${fallbackClientName}`;
-    if (fallbackClientName) return fallbackClientName;
-    if (fallbackClientId) return fallbackClientId;
-    return '—';
-  }, [caseData?.client, caseData?.clientId, caseData?.clientName, caseInfo?.businessName, caseInfo?.clientId, caseInfo?.clientName]);
+  const clientName = caseData?.client?.businessName || caseInfo?.clientName || caseInfo?.businessName || '—';
+  const clientIdLabel = caseData?.client?.clientId || caseInfo?.clientId || caseData?.clientId || '—';
 
   const subcategoryLabel = caseInfo?.subcategory || caseInfo?.caseSubCategory || caseInfo?.subCategory || '—';
   const lifecycleStatus = normalizeLifecycleForUi(caseInfo?.lifecycle);
-  const assignedToLabel = [caseInfo?.assignedToName, caseInfo?.assignedToXID]
-    .filter((v) => v != null && String(v).trim() !== '')
-    .join(' · ') || null;
-  const isAssignedToCurrentUser = Boolean(user?.xID) && caseInfo?.assignedToXID === user.xID;
   const isAdmin = ['ADMIN', 'Admin'].includes(String(user?.role || ''));
   const isMoveLockedByAnotherUser = Boolean(caseInfo?.lockStatus?.isLocked)
     && String(caseInfo?.lockStatus?.activeUserXID || '').trim().toUpperCase() !== String(user?.xID || '').trim().toUpperCase();
@@ -1146,23 +1136,6 @@ export const CaseDetailPage = () => {
     navigate(`${ROUTES.WORKLIST(firmSlug)}?assigneeXID=${encodeURIComponent(normalized)}`);
   }, [firmSlug, navigate]);
 
-  const handleTakeOwnership = async () => {
-    if (!user?.xID || actionInFlight) return;
-    try {
-      setAssigningCase(true);
-      await caseApi.assignDocket(caseId, user.xID);
-      showSuccess('You now own this docket.');
-      setActionConfirmation('Ownership updated to you.');
-      await loadCase({ background: true });
-    } catch (error) {
-      const message = extractErrorMessage(error, 'Failed to take ownership. Please try again.');
-      showError(message);
-      setActionError({ message, retry: handleTakeOwnership });
-    } finally {
-      setAssigningCase(false);
-    }
-  };
-
   // PR #45: Extract access mode information from API response
   const accessMode = caseData?.accessMode || {};
   const isViewOnlyMode = accessMode.isViewOnlyMode;
@@ -1219,12 +1192,7 @@ export const CaseDetailPage = () => {
     }
   };
 
-  const headerActions = useMemo(() => {
-    if (isViewOnlyMode) return [];
-    return [
-      { key: 'assign', label: 'Assign', variant: 'primary', onClick: () => setShowAssignModal(true), disabled: actionInFlight },
-    ];
-  }, [actionInFlight, isViewOnlyMode]);
+  const headerActions = [];
 
   const shouldShowActions = useMemo(() => {
     const hiddenLifecycleStates = new Set(['DONE', 'COMPLETED', 'ARCHIVED']);
@@ -1277,10 +1245,15 @@ export const CaseDetailPage = () => {
       showWarning('Select a team to route.');
       return;
     }
-    await caseApi.routeToTeam(caseId, routeTeamId, routingNote);
+    if (!String(routingNote || '').trim()) {
+      showWarning('Comment is compulsory while routing a docket.');
+      return;
+    }
+    await caseApi.routeToTeam(caseId, routeTeamId, routingNote.trim());
     showSuccess('Docket routed successfully.');
     setRouteTeamId('');
     setRoutingNote('');
+    setShowRouteModal(false);
     loadCaseData({ silent: false });
   };
 
@@ -1321,6 +1294,20 @@ export const CaseDetailPage = () => {
       setActionError({ message, retry: handleCloneDocket });
     } finally {
       setCloningCase(false);
+    }
+  };
+
+  const handleGenerateUploadLink = async (payload) => {
+    if (!caseId) return;
+    setUploadLinkGenerating(true);
+    try {
+      const response = await caseApi.generateUploadLink(caseId, payload);
+      setUploadLinkResult(response?.data || null);
+      showSuccess('Document request link generated.');
+    } catch (error) {
+      showError(extractErrorMessage(error, 'Unable to generate document request link.'));
+    } finally {
+      setUploadLinkGenerating(false);
     }
   };
 
@@ -1437,19 +1424,16 @@ export const CaseDetailPage = () => {
           {caseInfo.approvalStatus === 'PENDING' && <Badge variant="warning">Awaiting Partner Approval</Badge>}
           {caseInfo.lockStatus?.isLocked && <Badge variant="warning">Lifecycle Locked</Badge>}
           {caseInfo?.stage?.requiresApproval === true && isViewOnlyMode && <Badge variant="warning">Role Restricted Action</Badge>}
-          {!isViewOnlyMode && !caseInfo?.assignedToXID && (
-            <Button variant="primary" onClick={handleTakeOwnership} disabled={assigningCase}>
-              {assigningCase ? 'Taking ownership…' : 'Take Ownership'}
-            </Button>
-          )}
-          {!isViewOnlyMode && caseInfo?.assignedToXID && !isAssignedToCurrentUser && (
-            <Badge variant="info">Assigned: {assignedToLabel || '—'}</Badge>
-          )}
           <Button variant="ghost" onClick={() => runGuardedAction(() => openSidebar('cfs'), 'Unable to open CFS panel right now.')} title="CFS" className="h-10 w-10 rounded-full p-0" aria-label="Open CFS sidebar">ⓘ</Button>
           <Button variant="ghost" onClick={() => runGuardedAction(() => openSidebar('attachments'), 'Unable to open attachments panel right now.')} title="Attachments" className="h-10 w-10 rounded-full p-0" aria-label="Open attachments sidebar">📎</Button>
           <Button variant="ghost" onClick={() => runGuardedAction(() => openSidebar('history'), 'Unable to open history panel right now.')} title="History" className="h-10 w-10 rounded-full p-0" aria-label="Open history sidebar">🕒</Button>
           {canCloneDocket ? (
             <Button variant="ghost" onClick={() => runGuardedAction(() => setCloneModalOpen(true), 'Unable to open clone docket right now.')} title="Clone Docket" className="h-10 w-10 rounded-full p-0" aria-label="Clone docket">⧉</Button>
+          ) : null}
+          {!isViewOnlyMode && isOwnerTeam && !caseInfo?.routedToTeamId ? (
+            <Button variant="outline" onClick={() => setShowRouteModal(true)} disabled={actionInFlight}>
+              Route Docket
+            </Button>
           ) : null}
         </DocketDetails>
         {actionConfirmation ? <div className="case-detail__confirmation">{actionConfirmation}</div> : null}
@@ -1520,20 +1504,28 @@ export const CaseDetailPage = () => {
               </div>
               <div className="field-grid">
                 <div className="field-group min-w-0">
-                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Client</span>
-                  <span className="field-value text-sm font-medium text-gray-900 break-words">{clientSnapshotLabel}</span>
+                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Client Name</span>
+                  <span className="field-value text-sm font-medium text-gray-900 break-words">{clientName}</span>
+                </div>
+                <div className="field-group min-w-0">
+                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Client ID</span>
+                  <span className="field-value text-sm font-medium text-gray-900 break-words">{clientIdLabel}</span>
+                </div>
+                <div className="field-group min-w-0">
+                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Category</span>
+                  <span className="field-value text-sm font-medium text-gray-900">{caseInfo.category || '—'}</span>
+                </div>
+                <div className="field-group min-w-0">
+                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Subcategory</span>
+                  <span className="field-value text-sm font-medium text-gray-900">{subcategoryLabel}</span>
+                </div>
+                <div className="field-group min-w-0">
+                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">SLA (days)</span>
+                  <span className="field-value text-sm font-medium text-gray-900">{Number(caseInfo?.slaDays || 0) > 0 ? String(caseInfo.slaDays) : '-'}</span>
                 </div>
                 <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Lifecycle</span>
-                  {getLifecycleMeta(caseInfo?.lifecycle) ? (
-                    <LifecycleBadge lifecycle={caseInfo?.lifecycle} />
-                  ) : (
-                    <span className="field-value text-sm font-medium text-gray-900">—</span>
-                  )}
-                </div>
-                <div className="field-group min-w-0">
-                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Due Date</span>
-                  <span className="field-value text-sm font-medium text-gray-900 break-words">{caseInfo.dueDate ? formatDateTime(caseInfo.dueDate) : '-'}</span>
+                  {getLifecycleMeta(caseInfo?.lifecycle) ? <LifecycleBadge lifecycle={caseInfo?.lifecycle} /> : <span className="field-value text-sm font-medium text-gray-900">—</span>}
                 </div>
               </div>
             </section>
@@ -1726,18 +1718,6 @@ export const CaseDetailPage = () => {
                 {caseInfo?.routedToTeamName ? ` → ${caseInfo.routedToTeamName}` : ''}
               </div>
               {caseInfo?.routingNote && <div><strong>Routing note:</strong> {caseInfo.routingNote}</div>}
-              {isOwnerTeam && !caseInfo?.routedToTeamId && (
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <select value={routeTeamId} onChange={(e) => setRouteTeamId(e.target.value)} className={formClasses.inputBase}>
-                    <option value="">Route to team</option>
-                    {routingTeams.filter((team) => String(team._id) !== String(caseInfo?.ownerTeamId || '')).map((team) => (
-                      <option key={team._id} value={team._id}>{team.name}</option>
-                    ))}
-                  </select>
-                  <Input value={routingNote} onChange={(e) => setRoutingNote(e.target.value)} placeholder="Routing note (optional)" />
-                  <Button onClick={handleRouteToTeam}>Route to Team</Button>
-                </div>
-              )}
               {isRoutedToMyTeam && (
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <Button variant="secondary" onClick={handleAcceptRouted}>Accept</Button>
@@ -1770,6 +1750,7 @@ export const CaseDetailPage = () => {
           onAttachmentFileChange={setSelectedFile}
           onAttachmentCommentChange={setFileDescription}
           onUploadAttachment={handleUploadFile}
+          onRequestDocuments={() => setRequestDocumentsOpen(true)}
         />
 
         {/* ─── Modals (positioned outside split pane) ─────────────── */}
@@ -1980,6 +1961,53 @@ export const CaseDetailPage = () => {
             </select>
           </div>
         </ActionModal>
+
+        <Modal
+          isOpen={showRouteModal}
+          onClose={() => setShowRouteModal(false)}
+          title="Route Docket"
+          actions={(
+            <>
+              <Button variant="outline" onClick={() => setShowRouteModal(false)}>
+                Cancel
+              </Button>
+              <Button variant="primary" onClick={handleRouteToTeam} disabled={!routeTeamId || !String(routingNote || '').trim()}>
+                Route Docket
+              </Button>
+            </>
+          )}
+        >
+          <div style={{ padding: 'var(--spacing-md)' }}>
+            <Select
+              label="Route to workbasket"
+              value={routeTeamId}
+              onChange={(event) => setRouteTeamId(event.target.value)}
+            >
+              <option value="">Select team</option>
+              {routingTeams.filter((team) => String(team._id) !== String(caseInfo?.ownerTeamId || '')).map((team) => (
+                <option key={team._id} value={team._id}>{team.name}</option>
+              ))}
+            </Select>
+            <div style={{ marginTop: 'var(--spacing-md)' }}>
+              <Textarea
+                label="Routing Comment (Required)"
+                value={routingNote}
+                onChange={(event) => setRoutingNote(event.target.value)}
+                placeholder="Add the reason/context for routing this docket..."
+                rows={4}
+              />
+            </div>
+          </div>
+        </Modal>
+
+        <RequestDocumentsModal
+          isOpen={requestDocumentsOpen}
+          onClose={() => setRequestDocumentsOpen(false)}
+          clientEmail={caseInfo?.clientEmail || caseInfo?.client?.email || caseData?.client?.email || ''}
+          generating={uploadLinkGenerating}
+          generatedLink={uploadLinkResult}
+          onGenerate={handleGenerateUploadLink}
+        />
 
         {/* Unpend Case Modal */}
         <Modal
