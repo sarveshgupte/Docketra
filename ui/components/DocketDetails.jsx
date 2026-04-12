@@ -2,19 +2,9 @@ import React from 'react';
 import { formatDateTime } from '../src/utils/formatDateTime';
 import { formatCaseName, formatDocketId } from '../src/utils/formatters';
 import { LifecycleBadge } from './LifecycleBadge';
-import { useAuth } from '../src/hooks/useAuth';
 
 const normalizeDoc = (data) => data?.case || data;
 const asDisplayValue = (value) => (!value || value === 'N/A' ? '—' : value);
-
-function assignmentLabel(docket) {
-  if (!docket) return null;
-  const name = docket.assignedToName;
-  const xid = docket.assignedToXID;
-  if (name != null && String(name).trim() !== '') return String(name).trim();
-  if (xid != null && String(xid).trim() !== '') return String(xid).trim();
-  return null;
-}
 
 /**
  * Canonical docket header renderer.
@@ -24,9 +14,7 @@ export function DocketDetails({
   docketId,
   prefetchedCase = null,
   children,
-  openedFromWorklist = false,
 }) {
-  const { user } = useAuth();
   const docket = prefetchedCase ? normalizeDoc(prefetchedCase) : null;
 
   if (!docket) {
@@ -37,11 +25,6 @@ export function DocketDetails({
     );
   }
 
-  const isWorklistLifecycle = String(docket.lifecycle || '').trim().toUpperCase() === 'WL'
-    || String(docket.lifecycle || '').trim().toLowerCase() === 'in_worklist';
-  const assigned = openedFromWorklist
-    ? (user?.name || user?.xID || 'You')
-    : (assignmentLabel(docket) || (isWorklistLifecycle ? '—' : 'Unassigned'));
   const title = docket.title || formatCaseName(docket.caseName);
   const lastUpdatedLabel = asDisplayValue(formatDateTime(docket.updatedAt));
 
@@ -53,8 +36,9 @@ export function DocketDetails({
           <LifecycleBadge lifecycle={docket.lifecycle} />
         </div>
         <div className="case-detail-header__secondary">
-          <p className="case-detail-header__subtitle">{asDisplayValue(title) === '—' ? 'Untitled docket' : title}</p>
-          <div className="case-detail-header__meta">Assigned to: {assigned}</div>
+          {asDisplayValue(title) !== '—' ? (
+            <p className="case-detail-header__subtitle">{title}</p>
+          ) : null}
         </div>
         <div className="case-detail-header__meta">Last updated: {lastUpdatedLabel}</div>
       </div>
