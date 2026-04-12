@@ -6,6 +6,7 @@ const { getCookieValue } = require('../utils/requestCookies');
 const { isAdminRole } = require('../utils/role.utils');
 const { encrypt, decrypt } = require('../services/storage/services/TokenEncryption.service');
 const GoogleDriveProvider = require('../services/storage/providers/GoogleDriveProvider');
+const OneDriveProvider = require('../services/storage/providers/OneDriveProvider');
 const { StorageValidationError } = require('../services/storage/errors/StorageErrors');
 const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
 const { S3Adapter } = require('../services/storageAdapter.service');
@@ -17,7 +18,7 @@ const GOOGLE_SCOPES = [
 const STATE_COOKIE_NAME = 'storage_oauth_state';
 const STATE_TTL_SECONDS = 10 * 60;
 const MANAGED_STORAGE_MODE = 'docketra_managed';
-const SUPPORTED_STORAGE_PROVIDERS = new Set(['docketra_managed', 'google-drive', 's3']);
+const SUPPORTED_STORAGE_PROVIDERS = new Set(['docketra_managed', 'google-drive', 'onedrive', 's3']);
 const usedStorageOtpJti = new Map();
 
 function decodeFirmStorageConfig(firm, firmId) {
@@ -33,6 +34,11 @@ function decodeFirmStorageConfig(firm, firmId) {
     });
     return {};
   }
+}
+
+function toUiProvider(provider) {
+  if (provider === 'google_drive') return 'google-drive';
+  return provider || 'docketra_managed';
 }
 
 function ensureFirmAdmin(req, res) {
@@ -326,7 +332,7 @@ const getStorageConfiguration = async (req, res) => {
     }
 
     return res.json({
-      provider: config.provider,
+      provider: toUiProvider(config.provider),
       isConfigured: true,
       status: 'ACTIVE',
       connectedEmail: credentials.connectedEmail || null,
@@ -366,15 +372,32 @@ const changeFirmStorage = async (req, res) => {
 
   try {
     let adapter = null;
+    let effectiveRefreshToken = null;
     if (provider === 'docketra_managed') {
       adapter = { providerName: 'docketra_managed' };
     } else if (provider === 'google-drive') {
-      if (!rawCredentials?.googleRefreshToken) {
-        return res.status(400).json({ success: false, message: 'googleRefreshToken is required for Google Drive' });
+      const existingFirm = await Firm.findById(firmId).select('storageConfig').lean();
+      const existingCredentials = decodeFirmStorageConfig(existingFirm, firmId);
+      effectiveRefreshToken = rawCredentials?.googleRefreshToken || existingCredentials?.refreshToken || existingCredentials?.googleRefreshToken;
+
+      if (!effectiveRefreshToken) {
+        return res.status(400).json({ success: false, message: 'Connect Google Drive first, then save provider.' });
       }
+
       const oauthClient = getStorageOAuthClient();
-      oauthClient.setCredentials({ refresh_token: rawCredentials.googleRefreshToken });
+      oauthClient.setCredentials({ refresh_token: effectiveRefreshToken });
       adapter = new GoogleDriveProvider({ oauthClient, driveId: rawCredentials.driveId || null });
+      if (typeof adapter.testConnection === 'function') {
+        await adapter.testConnection();
+      }
+    } else if (provider === 'onedrive') {
+      if (!rawCredentials?.refreshToken) {
+        return res.status(400).json({ success: false, message: 'refreshToken is required for OneDrive' });
+      }
+      adapter = new OneDriveProvider({
+        refreshToken: rawCredentials.refreshToken,
+        driveId: rawCredentials.driveId || null,
+      });
       if (typeof adapter.testConnection === 'function') {
         await adapter.testConnection();
       }
@@ -383,9 +406,17 @@ const changeFirmStorage = async (req, res) => {
       await adapter.testConnection();
     }
 
+    const normalizedCredentials = provider === 'google-drive'
+      ? {
+          ...rawCredentials,
+          refreshToken: rawCredentials?.googleRefreshToken || rawCredentials?.refreshToken || effectiveRefreshToken || null,
+          googleRefreshToken: undefined,
+        }
+      : rawCredentials;
+
     const encryptedCredentials = provider === 'docketra_managed'
       ? null
-      : encrypt(JSON.stringify(rawCredentials || {}));
+      : encrypt(JSON.stringify(normalizedCredentials || {}));
 
     const canonicalProvider = provider === 'google-drive' ? 'google_drive' : provider;
     await Firm.findByIdAndUpdate(firmId, {
