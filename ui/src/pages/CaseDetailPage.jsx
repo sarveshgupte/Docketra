@@ -301,6 +301,8 @@ export const CaseDetailPage = () => {
   })();
   const slaDaysLabel = (() => {
     const candidateValues = [
+      caseInfo?.slaConfigSnapshot?.tatDurationMinutes != null ? Math.ceil(Number(caseInfo.slaConfigSnapshot.tatDurationMinutes) / 1440) : null,
+      caseData?.slaConfigSnapshot?.tatDurationMinutes != null ? Math.ceil(Number(caseData.slaConfigSnapshot.tatDurationMinutes) / 1440) : null,
       caseInfo?.slaDays,
       caseInfo?.tatDaysSnapshot,
       caseInfo?.slaConfigSnapshot?.slaDays,
@@ -311,11 +313,18 @@ export const CaseDetailPage = () => {
       caseInfo?.categorySnapshot?.slaDays,
       caseInfo?.tatDays,
       caseData?.slaDays,
-      caseInfo?.slaConfigSnapshot?.tatDurationMinutes != null ? Math.ceil(Number(caseInfo.slaConfigSnapshot.tatDurationMinutes) / 1440) : null,
-      caseData?.slaConfigSnapshot?.tatDurationMinutes != null ? Math.ceil(Number(caseData.slaConfigSnapshot.tatDurationMinutes) / 1440) : null,
     ];
-    const firstValid = candidateValues.find((value) => Number.isFinite(Number(value)) && Number(value) >= 0);
-    return firstValid != null ? String(Number(firstValid)) : '-';
+    const validNumbers = candidateValues
+      .map((value) => Number(value))
+      .filter((value) => Number.isFinite(value) && value >= 0);
+
+    const positiveValue = validNumbers.find((value) => value > 0);
+    if (positiveValue != null) return String(positiveValue);
+
+    const zeroValue = validNumbers.find((value) => value === 0);
+    if (zeroValue != null) return '0';
+
+    return '-';
   })();
   const lifecycleStatus = normalizeLifecycleForUi(caseInfo?.lifecycle);
   const isAdmin = ['ADMIN', 'Admin'].includes(String(user?.role || ''));
@@ -1058,6 +1067,14 @@ export const CaseDetailPage = () => {
     });
   };
 
+  const looksEncryptedPayload = (value) => {
+    if (typeof value !== 'string') return false;
+    const parts = value.split(':');
+    const payloadParts = parts[0] === 'v1' ? parts.slice(1) : parts;
+    if (payloadParts.length !== 3) return false;
+    return payloadParts.every((segment) => segment.length > 0 && /^[A-Za-z0-9+/=]+$/.test(segment));
+  };
+
   const descriptionContent = useMemo(() => {
     const value = String(
       caseInfo?.description
@@ -1072,6 +1089,7 @@ export const CaseDetailPage = () => {
       || ''
     ).trim();
     if (!value) return '-';
+    if (looksEncryptedPayload(value)) return '—';
     return value;
   }, [
     caseInfo?.description,
