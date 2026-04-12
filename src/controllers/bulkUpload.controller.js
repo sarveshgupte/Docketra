@@ -61,6 +61,11 @@ const HEADER_ALIASES = {
 
 const EMAIL_REGEX = /^\S+@\S+\.\S+$/;
 
+const resolveDuplicateMode = (value, fallback = 'skip') => {
+  const normalized = String(value || '').toLowerCase();
+  return ['skip', 'update', 'fail'].includes(normalized) ? normalized : fallback;
+};
+
 const safeLogBulkMutation = async (req, { description, metadata = {} }) => {
   try {
     await logAuthEvent({
@@ -680,9 +685,7 @@ const previewBulkUpload = async (req, res) => {
   if (!resolved) return;
 
   const { type, cfg } = resolved;
-  const duplicateMode = ['skip', 'update', 'fail'].includes(String(req.body?.duplicateMode || '').toLowerCase())
-    ? String(req.body.duplicateMode).toLowerCase()
-    : 'skip';
+  const duplicateMode = resolveDuplicateMode(req.body?.duplicateMode, 'skip');
 
   const { sizeBytes, fileType, parsed } = resolveInputData(req.body || {});
 
@@ -749,12 +752,8 @@ const confirmBulkUpload = async (req, res) => {
   if (!resolved) return;
 
   const { type } = resolved;
-  const duplicateMode = ['skip', 'update', 'fail'].includes(String(req.body?.duplicateMode || '').toLowerCase())
-    ? String(req.body.duplicateMode).toLowerCase()
-    : 'skip';
-  const effectiveDuplicateMode = ['skip', 'update', 'fail'].includes(String(req.body?.effectiveDuplicateMode || '').toLowerCase())
-    ? String(req.body.effectiveDuplicateMode).toLowerCase()
-    : duplicateMode;
+  const duplicateMode = resolveDuplicateMode(req.body?.duplicateMode, 'skip');
+  const effectiveDuplicateMode = resolveDuplicateMode(req.body?.effectiveDuplicateMode, duplicateMode);
   const rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
 
   if (!rows.length) {
