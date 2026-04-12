@@ -1405,12 +1405,6 @@ export const AdminPage = () => {
                 }}>
                   Download Template
                 </Button>
-                <Button variant="default" onClick={() => handleOpenBulkPaste('categories')}>
-                  Bulk Categories
-                </Button>
-                <Button variant="default" onClick={() => handleOpenBulkPaste('subcategories')}>
-                  Bulk Subcategories
-                </Button>
                 <Button
                   variant="primary"
                   onClick={() => setShowCategoryModal(true)}
