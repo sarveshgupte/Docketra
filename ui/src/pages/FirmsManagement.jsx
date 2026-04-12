@@ -137,7 +137,8 @@ export const FirmsManagement = () => {
   // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (!(e?.target instanceof Element)) {
+      const hasElementApi = typeof Element !== 'undefined';
+      if (!hasElementApi || !(e?.target instanceof Element)) {
         setOpenDropdownId(null);
         return;
       }
@@ -708,8 +709,11 @@ export const FirmsManagement = () => {
                     const statusInfo = getFirmStatusInfo(firm.status);
                     const { label: statusLabel, key: statusKey, isActive } = statusInfo;
                     const canActivate = statusInfo.normalizedStatus === 'INACTIVE' || statusInfo.normalizedStatus === 'SUSPENDED';
-                    const loginUrl = firm.firmSlug
-                      ? `${window.location.origin}/${firm.firmSlug}/login`
+                    const origin = typeof window !== 'undefined' && window.location?.origin
+                      ? window.location.origin
+                      : '';
+                    const loginUrl = firm.firmSlug && origin
+                      ? `${origin}/${firm.firmSlug}/login`
                       : null;
                     return (
                       <tr key={firm._id}>
