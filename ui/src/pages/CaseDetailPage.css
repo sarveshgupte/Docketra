@@ -463,6 +463,14 @@
   justify-content: flex-end;
 }
 
+
+.case-detail__actions-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
 .case-detail__upload {
   display: flex;
   flex-direction: column;
