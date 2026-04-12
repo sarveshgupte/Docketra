@@ -232,6 +232,18 @@ const userSchema = new mongoose.Schema({
     default: null,
   },
 
+  // Product update modal tracking (latest "What's New" seen by this user)
+  lastSeenUpdateId: {
+    type: String,
+    default: null,
+  },
+
+  // First-login tutorial completion marker
+  tutorialCompletedAt: {
+    type: Date,
+    default: null,
+  },
+
   /**
    * Authentication providers
    * LOCAL: password-based auth (authoritative for SuperAdmin and platform users)
