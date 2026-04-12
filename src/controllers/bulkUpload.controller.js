@@ -325,6 +325,9 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
   const createdClients = [];
   const createdUsers = [];
   const categoryCache = new Map();
+  const clientBulkOps = [];
+  const teamBulkOps = [];
+  const BATCH_SIZE = 500;
 
   if (type === 'categories' && rows.length > 0) {
     const categoryNames = [...new Set(rows.map(r => String(r.data && r.data.category ? r.data.category : '').trim()).filter(Boolean))];
@@ -383,78 +386,239 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
 
       if (type === 'clients') {
         if (row.action === 'update') {
-          await Client.updateOne(
-            { firmId: user.firmId, businessEmail: row.dedupeKey, status: { $ne: 'deleted' } },
-            {
-              $set: {
-                ...row.data,
-                businessAddress: row.data.businessAddress || 'N/A',
-                primaryContactNumber: row.data.primaryContactNumber || 'N/A',
-                businessEmail: row.data.businessEmail.trim().toLowerCase(),
-              },
-            },
-          );
+          clientBulkOps.push({
+            meta: { rowNumber: row.rowNumber, action: row.action },
+            op: {
+              updateOne: {
+                filter: { firmId: user.firmId, businessEmail: row.dedupeKey, status: { $ne: 'deleted' } },
+                update: {
+                  $set: {
+                    ...row.data,
+                    businessAddress: row.data.businessAddress || 'N/A',
+                    primaryContactNumber: row.data.primaryContactNumber || 'N/A',
+                    businessEmail: row.data.businessEmail.trim().toLowerCase(),
+                  },
+                },
+              }
+            }
+          });
         } else {
           const clientId = await generateNextClientId(user.firmId);
-          await Client.create({
-            ...row.data,
-            clientId,
-            firmId: user.firmId,
-            createdByXid: user.xID,
-            createdBy: user.email,
-            businessAddress: row.data.businessAddress || 'N/A',
-            primaryContactNumber: row.data.primaryContactNumber || 'N/A',
-            businessEmail: row.data.businessEmail.trim().toLowerCase(),
-            isSystemClient: false,
-            isActive: true,
-            status: 'ACTIVE',
-            previousBusinessNames: [],
+          clientBulkOps.push({
+            meta: { rowNumber: row.rowNumber, action: row.action, clientId, email: row.data.businessEmail.trim().toLowerCase() },
+            op: {
+              insertOne: {
+                document: {
+                  ...row.data,
+                  clientId,
+                  firmId: user.firmId,
+                  createdByXid: user.xID,
+                  createdBy: user.email,
+                  businessAddress: row.data.businessAddress || 'N/A',
+                  primaryContactNumber: row.data.primaryContactNumber || 'N/A',
+                  businessEmail: row.data.businessEmail.trim().toLowerCase(),
+                  isSystemClient: false,
+                  isActive: true,
+                  status: 'ACTIVE',
+                  previousBusinessNames: [],
+                }
+              }
+            }
           });
-          createdClients.push({ clientId, businessEmail: row.data.businessEmail.trim().toLowerCase() });
         }
       }
 
       if (type === 'team') {
         if (row.action === 'update') {
-          await User.updateOne(
-            { firmId: user.firmId, email: row.dedupeKey, status: { $ne: 'deleted' } },
-            { $set: { name: row.data.name.trim(), role: row.data.role } },
-          );
+          teamBulkOps.push({
+            meta: { rowNumber: row.rowNumber, action: row.action },
+            op: {
+              updateOne: {
+                filter: { firmId: user.firmId, email: row.dedupeKey, status: { $ne: 'deleted' } },
+                update: { $set: { name: row.data.name.trim(), role: row.data.role } },
+              }
+            }
+          });
         } else {
           const xID = await xIDGenerator.generateNextXID(user.firmId);
-          const createdUser = await User.create({
-            xID,
-            name: row.data.name.trim(),
-            email: row.data.email.trim().toLowerCase(),
-            role: row.data.role,
-            department: String(row.data.department || '').trim() || undefined,
-            firmId: user.firmId,
-            defaultClientId: user.defaultClientId || null,
-            restrictedClientIds: [],
-            allowedCategories: [],
-            isActive: false,
-            status: 'invited',
-            mustSetPassword: true,
-            passwordSet: false,
-            inviteSentAt: null,
+          const newUserId = new mongoose.Types.ObjectId();
+          teamBulkOps.push({
+            meta: { rowNumber: row.rowNumber, action: row.action, _id: newUserId, xID, email: row.data.email.trim().toLowerCase() },
+            op: {
+              insertOne: {
+                document: {
+                  _id: newUserId,
+                  xID,
+                  name: row.data.name.trim(),
+                  email: row.data.email.trim().toLowerCase(),
+                  role: row.data.role,
+                  department: String(row.data.department || '').trim() || undefined,
+                  firmId: user.firmId,
+                  defaultClientId: user.defaultClientId || null,
+                  restrictedClientIds: [],
+                  allowedCategories: [],
+                  isActive: false,
+                  status: 'invited',
+                  mustSetPassword: true,
+                  passwordSet: false,
+                  inviteSentAt: null,
+                }
+              }
+            }
           });
-          createdUsers.push({ _id: createdUser._id, xID, email: createdUser.email });
         }
       }
 
-      successCount += 1;
-      results.push({ row: row.rowNumber, status: row.action });
+      if (type === 'categories') {
+        successCount += 1;
+        results.push({ row: row.rowNumber, status: row.action });
+      }
     } catch (error) {
       failureCount += 1;
       results.push({ row: row.rowNumber, status: 'failed', error: error.message });
     }
 
-    await updateProgress({
-      processed: index + 1,
-      successCount,
-      failureCount,
-      results: results.slice(-200),
-    });
+    if (type === 'clients' && clientBulkOps.length >= BATCH_SIZE) {
+      try {
+        const ops = clientBulkOps.map(item => item.op);
+        const res = await Client.bulkWrite(ops, { ordered: false });
+        // Since we map strictly 1:1, we will approximate success/failures.
+        // In ordered: false, if there are errors, an exception is thrown with writeErrors.
+        // Mongoose 6+ and Mongo driver 4+ return detailed results on success
+        successCount += (res.insertedCount || 0) + (res.modifiedCount || 0) + (res.upsertedCount || 0);
+        clientBulkOps.forEach(item => {
+           results.push({ row: item.meta.rowNumber, status: item.meta.action });
+           if (item.meta.action === 'create') {
+              createdClients.push({ clientId: item.meta.clientId, businessEmail: item.meta.email });
+           }
+        });
+        clientBulkOps.length = 0;
+      } catch (error) {
+        console.error('[BULK_UPLOAD] Batch bulkWrite failed for clients', error);
+        if (error.writeErrors) {
+          failureCount += error.writeErrors.length;
+          const successfulOps = clientBulkOps.length - error.writeErrors.length;
+          successCount += successfulOps > 0 ? successfulOps : 0;
+          // Approximate pushing results
+          clientBulkOps.forEach((item, i) => {
+             // simplified handling for batch errors to avoid mapping exact indexes which is complex
+             if (i < successfulOps) {
+                 results.push({ row: item.meta.rowNumber, status: item.meta.action });
+             } else {
+                 results.push({ row: item.meta.rowNumber, status: 'failed', error: 'Bulk write error' });
+             }
+          });
+        } else {
+          failureCount += clientBulkOps.length;
+          clientBulkOps.forEach(item => results.push({ row: item.meta.rowNumber, status: 'failed', error: error.message }));
+        }
+        clientBulkOps.length = 0;
+      }
+    }
+
+    if (type === 'team' && teamBulkOps.length >= BATCH_SIZE) {
+      try {
+        const ops = teamBulkOps.map(item => item.op);
+        const res = await User.bulkWrite(ops, { ordered: false });
+        successCount += (res.insertedCount || 0) + (res.modifiedCount || 0) + (res.upsertedCount || 0);
+        teamBulkOps.forEach(item => {
+           results.push({ row: item.meta.rowNumber, status: item.meta.action });
+           if (item.meta.action === 'create') {
+              createdUsers.push({ _id: item.meta._id, xID: item.meta.xID, email: item.meta.email });
+           }
+        });
+        teamBulkOps.length = 0;
+      } catch (error) {
+        console.error('[BULK_UPLOAD] Batch bulkWrite failed for team', error);
+        if (error.writeErrors) {
+          failureCount += error.writeErrors.length;
+          const successfulOps = teamBulkOps.length - error.writeErrors.length;
+          successCount += successfulOps > 0 ? successfulOps : 0;
+          teamBulkOps.forEach((item, i) => {
+             if (i < successfulOps) {
+                 results.push({ row: item.meta.rowNumber, status: item.meta.action });
+             } else {
+                 results.push({ row: item.meta.rowNumber, status: 'failed', error: 'Bulk write error' });
+             }
+          });
+        } else {
+          failureCount += teamBulkOps.length;
+          teamBulkOps.forEach(item => results.push({ row: item.meta.rowNumber, status: 'failed', error: error.message }));
+        }
+        teamBulkOps.length = 0;
+      }
+    }
+
+    if (type === 'categories' || (index + 1) % BATCH_SIZE === 0) {
+      await updateProgress({
+        processed: index + 1,
+        successCount,
+        failureCount,
+        results: results.slice(-200),
+      });
+    }
+  }
+
+  if (type === 'clients' && clientBulkOps.length > 0) {
+    try {
+      const ops = clientBulkOps.map(item => item.op);
+      const res = await Client.bulkWrite(ops, { ordered: false });
+      successCount += (res.insertedCount || 0) + (res.modifiedCount || 0) + (res.upsertedCount || 0);
+      clientBulkOps.forEach(item => {
+         results.push({ row: item.meta.rowNumber, status: item.meta.action });
+         if (item.meta.action === 'create') {
+            createdClients.push({ clientId: item.meta.clientId, businessEmail: item.meta.email });
+         }
+      });
+    } catch (error) {
+      console.error('[BULK_UPLOAD] Final bulkWrite failed for clients', error);
+      if (error.writeErrors) {
+        failureCount += error.writeErrors.length;
+        const successfulOps = clientBulkOps.length - error.writeErrors.length;
+        successCount += successfulOps > 0 ? successfulOps : 0;
+        clientBulkOps.forEach((item, i) => {
+           if (i < successfulOps) {
+               results.push({ row: item.meta.rowNumber, status: item.meta.action });
+           } else {
+               results.push({ row: item.meta.rowNumber, status: 'failed', error: 'Bulk write error' });
+           }
+        });
+      } else {
+        failureCount += clientBulkOps.length;
+        clientBulkOps.forEach(item => results.push({ row: item.meta.rowNumber, status: 'failed', error: error.message }));
+      }
+    }
+  }
+
+  if (type === 'team' && teamBulkOps.length > 0) {
+    try {
+      const ops = teamBulkOps.map(item => item.op);
+      const res = await User.bulkWrite(ops, { ordered: false });
+      successCount += (res.insertedCount || 0) + (res.modifiedCount || 0) + (res.upsertedCount || 0);
+      teamBulkOps.forEach(item => {
+         results.push({ row: item.meta.rowNumber, status: item.meta.action });
+         if (item.meta.action === 'create') {
+            createdUsers.push({ _id: item.meta._id, xID: item.meta.xID, email: item.meta.email });
+         }
+      });
+    } catch (error) {
+      console.error('[BULK_UPLOAD] Final bulkWrite failed for team', error);
+      if (error.writeErrors) {
+        failureCount += error.writeErrors.length;
+        const successfulOps = teamBulkOps.length - error.writeErrors.length;
+        successCount += successfulOps > 0 ? successfulOps : 0;
+        teamBulkOps.forEach((item, i) => {
+           if (i < successfulOps) {
+               results.push({ row: item.meta.rowNumber, status: item.meta.action });
+           } else {
+               results.push({ row: item.meta.rowNumber, status: 'failed', error: 'Bulk write error' });
+           }
+        });
+      } else {
+        failureCount += teamBulkOps.length;
+        teamBulkOps.forEach(item => results.push({ row: item.meta.rowNumber, status: 'failed', error: error.message }));
+      }
+    }
   }
 
   if (jobId) {
