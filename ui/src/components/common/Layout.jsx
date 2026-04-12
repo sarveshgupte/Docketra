@@ -165,11 +165,10 @@ export const Layout = ({ children }) => {
   const handleLogout = async () => {
     setProfileDropdownOpen(false);
     await logout({ preserveFirmSlug: !!currentFirmSlug });
-    showSuccess('You have been signed out safely.');
     if (currentFirmSlug) {
-      navigate(ROUTES.FIRM_LOGIN(currentFirmSlug));
+      navigate(ROUTES.FIRM_LOGIN(currentFirmSlug), { state: { message: 'You have been signed out safely.', messageType: 'success' } });
     } else {
-      navigate(ROUTES.SUPERADMIN_LOGIN);
+      navigate(ROUTES.SUPERADMIN_LOGIN, { state: { message: 'You have been signed out safely.', messageType: 'success' } });
     }
   };
 

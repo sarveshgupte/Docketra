@@ -115,6 +115,24 @@ export const LoginPage = () => {
           Sign in to your workspace using your xID and password.
         </p>
 
+        {successMessage && (
+          <div
+            className={`rounded-md px-3 py-2 text-sm ${
+              messageType === 'warning'
+                ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                : messageType === 'info'
+                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                  : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+            }`}
+            role={messageType === 'warning' ? 'alert' : 'status'}
+            aria-live="polite"
+          >
+            {successMessage}
+          </div>
+        )}
+
+        {error && (<ErrorState title="Sign-in failed" description={error} />)}
+
         <form onSubmit={handleLogin} noValidate className={`mt-4 ${spacingClasses.formFieldSpacing}`}>
           <p className="text-sm text-gray-500">Fields marked with * are required.</p>
           <Input
@@ -142,24 +160,6 @@ export const LoginPage = () => {
             autoComplete="current-password"
             disabled={loading}
           />
-
-          {successMessage && (
-            <div
-              className={`rounded-md px-3 py-2 text-sm ${
-                messageType === 'warning'
-                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                  : messageType === 'info'
-                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                    : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-              }`}
-              role={messageType === 'warning' ? 'alert' : 'status'}
-              aria-live="polite"
-            >
-              {successMessage}
-            </div>
-          )}
-
-          {error && (<ErrorState title="Sign-in failed" description={error} />)}
 
           <Button
             type="submit"
