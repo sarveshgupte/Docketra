@@ -11,12 +11,17 @@ const {
   createUser,
   updateUser,
   deleteUser,
+  completeTutorial,
 } = require('../controllers/user.controller');
+const { markUpdateSeen } = require('../controllers/productUpdate.controller');
 
 /**
  * User Routes
  * RESTful API endpoints for user management
  */
+
+router.patch('/mark-update-seen', userWriteLimiter, markUpdateSeen);
+router.patch('/tutorial/complete', userWriteLimiter, completeTutorial);
 
 // GET /api/users - Get all users
 router.get('/', authorizeFirmPermission('USER_VIEW'), userReadLimiter, getUsers);

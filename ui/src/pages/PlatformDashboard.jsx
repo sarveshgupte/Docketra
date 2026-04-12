@@ -14,6 +14,7 @@ import { MetricCard } from '../components/reports/MetricCard';
 import { Loading } from '../components/common/Loading';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useToast } from '../hooks/useToast';
+import { productUpdatesService } from '../services/productUpdatesService';
 
 export const PlatformDashboard = () => {
   const navigate = useNavigate();
@@ -27,6 +28,13 @@ export const PlatformDashboard = () => {
     totalUsers: 0,
   };
   const [loading, setLoading] = useState(true);
+  const [updateForm, setUpdateForm] = useState({
+    title: '',
+    bullets: ['', '', ''],
+    isPublished: true,
+    version: '',
+  });
+  const [publishingUpdate, setPublishingUpdate] = useState(false);
   const [stats, setStats] = useState(emptyStats);
   const isFetchingRef = useRef(false);
   const hasLoadedRef = useRef(false);
@@ -78,6 +86,35 @@ export const PlatformDashboard = () => {
       hasLoadedRef.current = true;
       setLoading(false);
       isFetchingRef.current = false;
+    }
+  };
+
+  const handleCreateUpdate = async (event) => {
+    event.preventDefault();
+    const content = updateForm.bullets.map((item) => item.trim()).filter(Boolean);
+    if (!updateForm.title.trim() || content.length === 0) {
+      toast.error('Add a title and at least one bullet point.');
+      return;
+    }
+
+    try {
+      setPublishingUpdate(true);
+      const response = await productUpdatesService.create({
+        title: updateForm.title.trim(),
+        content,
+        isPublished: updateForm.isPublished,
+        version: updateForm.version.trim() || undefined,
+      });
+      if (response?.success) {
+        toast.success('Product update published.');
+        setUpdateForm({ title: '', bullets: ['', '', ''], isPublished: true, version: '' });
+      } else {
+        toast.error(response?.message || 'Failed to publish update.');
+      }
+    } catch (error) {
+      toast.error('Failed to publish update.');
+    } finally {
+      setPublishingUpdate(false);
     }
   };
 
@@ -153,6 +190,57 @@ export const PlatformDashboard = () => {
                 Go to Firms Management
               </Button>
             </div>
+          </Card>
+
+          <Card className="space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-gray-900 tracking-tight">Product Updates</h2>
+              <Badge>What&apos;s New</Badge>
+            </div>
+            <p className="text-sm text-gray-500">
+              Publish the latest release note shown to users on their next login.
+            </p>
+            <form className="space-y-3" onSubmit={handleCreateUpdate}>
+              <input
+                value={updateForm.title}
+                onChange={(event) => setUpdateForm((prev) => ({ ...prev, title: event.target.value }))}
+                placeholder="Update title"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                maxLength={160}
+              />
+              <input
+                value={updateForm.version}
+                onChange={(event) => setUpdateForm((prev) => ({ ...prev, version: event.target.value }))}
+                placeholder="Version (optional, e.g. v1.4)"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                maxLength={32}
+              />
+              {updateForm.bullets.map((bullet, index) => (
+                <input
+                  key={index}
+                  value={bullet}
+                  onChange={(event) => setUpdateForm((prev) => {
+                    const nextBullets = [...prev.bullets];
+                    nextBullets[index] = event.target.value;
+                    return { ...prev, bullets: nextBullets };
+                  })}
+                  placeholder={`Bullet point ${index + 1}`}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  maxLength={180}
+                />
+              ))}
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={updateForm.isPublished}
+                  onChange={(event) => setUpdateForm((prev) => ({ ...prev, isPublished: event.target.checked }))}
+                />
+                Publish immediately
+              </label>
+              <Button type="submit" variant="primary" disabled={publishingUpdate}>
+                {publishingUpdate ? 'Publishing…' : 'Publish update'}
+              </Button>
+            </form>
           </Card>
       </div>
     </SuperAdminLayout>

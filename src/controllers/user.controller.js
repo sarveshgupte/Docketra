@@ -360,6 +360,24 @@ const getCurrentUser = async (req, res) => {
   }
 };
 
+const completeTutorial = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
+    await User.updateOne(
+      { _id: userId },
+      { $set: { tutorialCompletedAt: new Date() } },
+    );
+
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message || 'Unable to complete tutorial' });
+  }
+};
+
 const completeProfile = async (req, res) => {
   const { name, firmName, phone } = req.body || {};
   const userId = req.user?._id;
@@ -469,4 +487,5 @@ module.exports = {
   updateUser: wrapWriteHandler(updateUser),
   deleteUser: wrapWriteHandler(deleteUser),
   completeProfile: wrapWriteHandler(completeProfile),
+  completeTutorial: wrapWriteHandler(completeTutorial),
 };
