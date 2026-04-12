@@ -53,6 +53,7 @@ router.get('/health', requireSuperadmin, getOperationalHealth);
 router.post('/firms', authorize(FirmPolicy.canCreate), createFirm);
 router.get('/firms', authorize(FirmPolicy.canView), listFirms);
 router.patch('/firms/:id', authorize(FirmPolicy.canManageStatus), updateFirmStatus);
+router.patch('/firms/:id/status', authorize(FirmPolicy.canManageStatus), updateFirmStatus);
 router.patch('/firms/:id/activate', authorize(FirmPolicy.canManageStatus), activateFirm);
 router.patch('/firms/:id/deactivate', authorize(FirmPolicy.canManageStatus), deactivateFirm);
 router.post('/firms/:id/disable', authorize(FirmPolicy.canManageStatus), disableFirmImmediately);
