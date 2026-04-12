@@ -16,6 +16,19 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { useToast } from '../hooks/useToast';
 import { productUpdatesService } from '../services/productUpdatesService';
 
+const toSafeNumber = (value) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : 0;
+};
+
+const normalizePlatformStats = (value = {}) => ({
+  totalFirms: toSafeNumber(value.totalFirms),
+  activeFirms: toSafeNumber(value.activeFirms),
+  inactiveFirms: toSafeNumber(value.inactiveFirms),
+  totalClients: toSafeNumber(value.totalClients),
+  totalUsers: toSafeNumber(value.totalUsers),
+});
+
 export const PlatformDashboard = () => {
   const navigate = useNavigate();
   const toast = useToast();
@@ -35,7 +48,7 @@ export const PlatformDashboard = () => {
     version: '',
   });
   const [publishingUpdate, setPublishingUpdate] = useState(false);
-  const [stats, setStats] = useState(emptyStats);
+  const [stats, setStats] = useState(normalizePlatformStats(emptyStats));
   const isFetchingRef = useRef(false);
   const hasLoadedRef = useRef(false);
   const hasShownErrorRef = useRef(false);
@@ -63,13 +76,13 @@ export const PlatformDashboard = () => {
           if (!response.data) {
             console.warn('PlatformDashboard: API returned success but no data, using emptyStats');
           }
-          setStats(data);
+          setStats(normalizePlatformStats(data));
         } else if (response?.degraded) {
           const data = response?.data || emptyStats;
           if (!response.data) {
             console.warn('PlatformDashboard: API returned degraded but no data, using emptyStats');
           }
-          setStats(data);
+          setStats(normalizePlatformStats(data));
         } else if (!hasShownErrorRef.current) {
           toast.error('Failed to load platform statistics');
           hasShownErrorRef.current = true;

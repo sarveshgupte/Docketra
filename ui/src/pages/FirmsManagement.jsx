@@ -44,6 +44,30 @@ const sanitizeEntityList = (value) => {
   return value.filter((item) => item && typeof item === 'object');
 };
 
+const getSafeText = (value, fallback = 'N/A') => {
+  if (value === null || value === undefined || value === '') return fallback;
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  return fallback;
+};
+
+const normalizeFirm = (firm) => ({
+  ...firm,
+  name: getSafeText(firm?.name, 'Unnamed firm'),
+  firmId: getSafeText(firm?.firmId, 'N/A'),
+  adminEmail: getSafeText(firm?.adminEmail, 'N/A'),
+  firmSlug: typeof firm?.firmSlug === 'string' ? firm.firmSlug : '',
+});
+
+const normalizeAdmin = (admin) => ({
+  ...admin,
+  name: getSafeText(admin?.name, 'N/A'),
+  emailMasked: getSafeText(admin?.emailMasked, 'N/A'),
+  status: getSafeText(admin?.status, 'UNKNOWN'),
+  isSystem: admin?.isSystem === true,
+});
+
 export const FirmsManagement = () => {
   const toast = useToast();
   
@@ -78,14 +102,14 @@ export const FirmsManagement = () => {
 
   // Load firms
   useEffect(() => {
-    console.log('API BASE:', import.meta.env.VITE_API_BASE_URL);
     loadFirms();
   }, []);
 
   // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (!e.target.closest('.firm-actions__dropdown-wrap')) {
+      const target = e.target;
+      if (!(target instanceof Element) || !target.closest('.firm-actions__dropdown-wrap')) {
         setOpenDropdownId(null);
       }
     };
@@ -102,7 +126,7 @@ export const FirmsManagement = () => {
       // HTTP 304 means cached data is still valid - keep current state
       if (response?.status !== 304) {
         if (response?.success) {
-          setFirms(sanitizeEntityList(response.data));
+          setFirms(sanitizeEntityList(response.data).map(normalizeFirm));
         } else {
           // Ensure UI can render with safe defaults even on API failure
           setFirms([]);
@@ -207,7 +231,7 @@ export const FirmsManagement = () => {
         setAdminModal((prev) => ({
           ...prev,
           loading: false,
-          details: sanitizeEntityList(response.data),
+          details: sanitizeEntityList(response.data).map(normalizeAdmin),
         }));
       }
     } catch (error) {
@@ -348,7 +372,8 @@ export const FirmsManagement = () => {
     );
   }
 
-  const admins = sanitizeEntityList(adminModal.details);
+  const admins = sanitizeEntityList(adminModal.details).map(normalizeAdmin);
+  const safeFirms = sanitizeEntityList(firms).map(normalizeFirm);
 
   return (
     <ErrorBoundary name="FirmsManagementPage">
@@ -459,7 +484,7 @@ export const FirmsManagement = () => {
                     <div className="admin-audit-grid">
                       <div className="admin-audit-card">
                         <h3>Admin Account</h3>
-                        <p><strong>Email:</strong> {adminModal.firm?.adminEmail || 'N/A'}</p>
+                        <p><strong>Email:</strong> {getSafeText(adminModal.firm?.adminEmail, 'N/A')}</p>
                         <p><strong>Email Verified:</strong> {formatYesNoUnknown(adminModal.firm?.emailVerified)}</p>
                         <p><strong>Verification Method:</strong> {formatVerificationMethod(adminModal.firm?.verificationMethod)}</p>
                         <p><strong>Verified At:</strong> {formatDate(adminModal.firm?.emailVerifiedAt)}</p>
@@ -472,8 +497,8 @@ export const FirmsManagement = () => {
                       </div>
                       <div className="admin-audit-card">
                         <h3>Signup Metadata</h3>
-                        <p><strong>Signup IP:</strong> {adminModal.firm?.signupIP || 'Unknown'}</p>
-                        <p><strong>User Agent:</strong> {adminModal.firm?.signupUserAgent || 'Unknown'}</p>
+                        <p><strong>Signup IP:</strong> {getSafeText(adminModal.firm?.signupIP, 'Unknown')}</p>
+                        <p><strong>User Agent:</strong> {getSafeText(adminModal.firm?.signupUserAgent, 'Unknown')}</p>
                       </div>
                     </div>
                     <div className="w-full overflow-x-auto">
@@ -606,7 +631,7 @@ export const FirmsManagement = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {sanitizeEntityList(firms).map(firm => {
+                  {safeFirms.map(firm => {
                     const statusInfo = getFirmStatusInfo(firm.status);
                     const { label: statusLabel, key: statusKey, isActive } = statusInfo;
                     const canActivate = statusInfo.normalizedStatus === 'INACTIVE' || statusInfo.normalizedStatus === 'SUSPENDED';
