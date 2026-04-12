@@ -39,6 +39,11 @@ const formatTermsVersion = (termsVersion, termsAccepted) => {
   return 'Unknown';
 };
 
+const sanitizeEntityList = (value) => {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item) => item && typeof item === 'object');
+};
+
 export const FirmsManagement = () => {
   const toast = useToast();
   
@@ -97,7 +102,7 @@ export const FirmsManagement = () => {
       // HTTP 304 means cached data is still valid - keep current state
       if (response?.status !== 304) {
         if (response?.success) {
-          setFirms(Array.isArray(response.data) ? response.data : []);
+          setFirms(sanitizeEntityList(response.data));
         } else {
           // Ensure UI can render with safe defaults even on API failure
           setFirms([]);
@@ -202,7 +207,7 @@ export const FirmsManagement = () => {
         setAdminModal((prev) => ({
           ...prev,
           loading: false,
-          details: Array.isArray(response.data) ? response.data : [],
+          details: sanitizeEntityList(response.data),
         }));
       }
     } catch (error) {
@@ -343,7 +348,7 @@ export const FirmsManagement = () => {
     );
   }
 
-  const admins = Array.isArray(adminModal.details) ? adminModal.details : [];
+  const admins = sanitizeEntityList(adminModal.details);
 
   return (
     <ErrorBoundary name="FirmsManagementPage">
@@ -601,7 +606,7 @@ export const FirmsManagement = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {firms.map(firm => {
+                  {sanitizeEntityList(firms).map(firm => {
                     const statusInfo = getFirmStatusInfo(firm.status);
                     const { label: statusLabel, key: statusKey, isActive } = statusInfo;
                     const canActivate = statusInfo.normalizedStatus === 'INACTIVE' || statusInfo.normalizedStatus === 'SUSPENDED';
