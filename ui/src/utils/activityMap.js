@@ -7,7 +7,7 @@ const EVENT_LABELS = {
 };
 
 const TITLE_CASE_OVERRIDES = {
-  open_active: 'Active',
+  open_active: 'Open / Active',
   in_progress: 'In Progress',
 };
 

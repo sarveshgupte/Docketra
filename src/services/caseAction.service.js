@@ -593,11 +593,10 @@ const autoReopenExpiredPendingCases = async (userXid, firmId = null) => {
   
   const reopenedCases = [];
   
-  await Promise.all(pendedCases.map(async (caseData) => {
-    // Intentionally run concurrently to prevent N+1 sequencing overhead
+  for (const caseData of pendedCases) {
     await performAutoReopen(caseData);
     reopenedCases.push(caseData.caseId);
-  }));
+  }
   
   return {
     success: true,
@@ -628,11 +627,10 @@ const autoReopenPendedCases = async (firmId = null) => {
   
   const reopenedCases = [];
   
-  await Promise.all(pendedCases.map(async (caseData) => {
-    // Intentionally run concurrently to prevent N+1 sequencing overhead
+  for (const caseData of pendedCases) {
     await performAutoReopen(caseData);
     reopenedCases.push(caseData.caseId);
-  }));
+  }
   
   return {
     success: true,

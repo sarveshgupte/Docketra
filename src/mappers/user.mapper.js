@@ -29,8 +29,6 @@ const mapUserResponse = (user) => {
     passwordConfigured: derivePasswordConfigured(user),
     allowedCategories: Array.isArray(user.allowedCategories) ? user.allowedCategories : [],
     restrictedClientIds: Array.isArray(user.restrictedClientIds) ? user.restrictedClientIds : [],
-    teamId: user.teamId ?? null,
-    teamIds: Array.isArray(user.teamIds) ? user.teamIds : (user.teamId ? [user.teamId] : []),
     defaultClientId: user.defaultClientId ?? null,
     firmId: resolvedFirmId,
     firm: user?.firmId && typeof user.firmId === 'object'

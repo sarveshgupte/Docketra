@@ -261,32 +261,7 @@ export const CaseDetailPage = () => {
   const clientName = caseData?.client?.businessName || caseInfo?.clientName || caseInfo?.businessName || '—';
   const clientIdLabel = caseData?.client?.clientId || caseInfo?.clientId || caseData?.clientId || '—';
 
-  const categoryLabel = caseInfo?.category
-    || caseInfo?.caseCategory
-    || caseInfo?.workType
-    || caseInfo?.workTypeName
-    || caseData?.category
-    || '—';
-  const subcategoryLabel = caseInfo?.subcategory
-    || caseInfo?.caseSubCategory
-    || caseInfo?.subCategory
-    || caseInfo?.subCategoryName
-    || caseInfo?.subcategoryName
-    || caseInfo?.subWorkType
-    || caseInfo?.subWorkTypeName
-    || caseData?.subcategory
-    || '—';
-  const slaDaysLabel = (() => {
-    const candidateValues = [
-      caseInfo?.slaDays,
-      caseInfo?.tatDaysSnapshot,
-      caseInfo?.slaConfigSnapshot?.slaDays,
-      caseInfo?.slaConfigSnapshot?.tatDays,
-      caseData?.slaDays,
-    ];
-    const firstValid = candidateValues.find((value) => Number.isFinite(Number(value)) && Number(value) > 0);
-    return firstValid ? String(Number(firstValid)) : '-';
-  })();
+  const subcategoryLabel = caseInfo?.subcategory || caseInfo?.caseSubCategory || caseInfo?.subCategory || '—';
   const lifecycleStatus = normalizeLifecycleForUi(caseInfo?.lifecycle);
   const isAdmin = ['ADMIN', 'Admin'].includes(String(user?.role || ''));
   const isMoveLockedByAnotherUser = Boolean(caseInfo?.lockStatus?.isLocked)
@@ -385,6 +360,11 @@ export const CaseDetailPage = () => {
       auditLog: mergedAudit,
     };
   }, [mergeUniqueComments]);
+
+  const handleDocketDetailsUpdated = useCallback((doc) => {
+    setCaseData((prev) => mergeCaseData(prev, doc, { source: 'DocketDetails.activate' }));
+    setActiveDocketData(doc);
+  }, [mergeCaseData, setActiveDocketData]);
 
   const appendTimelineEvent = useCallback((event) => {
     setCaseData((prev) => ({
@@ -1029,19 +1009,13 @@ export const CaseDetailPage = () => {
   };
 
   const descriptionContent = useMemo(() => {
-    const value = String(
-      caseInfo?.description
-      || caseInfo?.caseDescription
-      || caseInfo?.details
-      || caseData?.description
-      || ''
-    ).trim();
+    const value = String(caseInfo?.description || '').trim();
     if (!value) return '-';
-    if (/^v\d+:[A-Za-z0-9+/=_-]+:[A-Za-z0-9+/=_-]+:[A-Za-z0-9+/=_-]+$/.test(value)) {
+    if (/^v\d+:[A-Za-z0-9+/=_-]+$/.test(value)) {
       return '-';
     }
     return value;
-  }, [caseInfo?.description, caseInfo?.caseDescription, caseInfo?.details, caseData?.description]);
+  }, [caseInfo?.description]);
   const docketState = lifecycleStatus;
   const statusVersion = Number.isFinite(Number(caseInfo?.version)) ? Number(caseInfo.version) : 0;
   const performedBy = user?.email || user?.xID || 'system';
@@ -1096,23 +1070,32 @@ export const CaseDetailPage = () => {
 
   const handleAssignDocket = async () => {
     if (!assignUser) {
-      showWarning('Please select a user to move this docket.');
+      showWarning('Please select a user to assign.');
       return;
     }
+    if (canAdminMoveAssignedDocket && !String(assignComment || '').trim()) {
+      showWarning('Comment is mandatory when moving a docket between worklists.');
+      return;
+    }
+
     if (assigningCase) return;
     setAssigningCase(true);
     const selectedAssignee = availableAssignees.find((option) => option.value === assignUser);
 
     try {
-      await caseApi.reassignDocket(caseId, assignUser);
+      if (canAdminMoveAssignedDocket) {
+        await caseApi.reassignDocket(caseId, assignUser, String(assignComment || '').trim());
+      } else {
+        await caseApi.assignDocket(caseId, assignUser);
+      }
       setShowAssignModal(false);
       setAssignComment('');
       setActionError(null);
-      setActionConfirmation(`Docket moved to ${selectedAssignee?.label || assignUser}.`);
+      setActionConfirmation(`Docket assigned to ${selectedAssignee?.label || assignUser}.`);
       showSuccess(`Docket owner updated to ${selectedAssignee?.label || assignUser}`);
       loadCase({ background: true });
     } catch (error) {
-      const message = extractErrorMessage(error, 'Failed to move docket. Please try again.');
+      const message = extractErrorMessage(error, 'Failed to assign docket. Please try again.');
       showError(message);
       setActionError({ message, retry: handleAssignDocket });
     } finally {
@@ -1209,18 +1192,7 @@ export const CaseDetailPage = () => {
     }
   };
 
-  const canRouteDocket = Boolean(caseInfo)
-    && !isViewOnlyMode
-    && !caseInfo?.routedToTeamId
-    && routingTeams.length > 0;
-  const headerActions = canRouteDocket
-    ? [{
-      key: 'route_workbasket',
-      label: 'Route',
-      variant: 'outline',
-      onClick: () => setShowRouteModal(true),
-    }]
-    : [];
+  const headerActions = [];
 
   const shouldShowActions = useMemo(() => {
     const hiddenLifecycleStates = new Set(['DONE', 'COMPLETED', 'ARCHIVED']);
@@ -1375,6 +1347,10 @@ export const CaseDetailPage = () => {
         event.preventDefault();
         document.getElementById(commentComposerId)?.focus?.();
       }
+      if (key === 'a') {
+        event.preventDefault();
+        setShowAssignModal(true);
+      }
       if (key === 'r' && canPerformLifecycleActions) {
         event.preventDefault();
         openActionModal('resolve');
@@ -1448,6 +1424,8 @@ export const CaseDetailPage = () => {
         <DocketDetails
           docketId={caseId}
           prefetchedCase={caseInfo}
+          prefetchedSyncKey={`${caseInfo?.lifecycle ?? ''}:${caseInfo?.updatedAt ?? ''}:${caseInfo?.assignedToXID ?? ''}`}
+          onDocketUpdated={handleDocketDetailsUpdated}
           openedFromWorklist={location.state?.origin === 'worklist'}
         >
           {caseInfo?.qc?.status || caseInfo?.qcStatus ? (
@@ -1464,7 +1442,7 @@ export const CaseDetailPage = () => {
           {canCloneDocket ? (
             <Button variant="ghost" onClick={() => runGuardedAction(() => setCloneModalOpen(true), 'Unable to open clone docket right now.')} title="Clone Docket" className="h-10 w-10 rounded-full p-0" aria-label="Clone docket">⧉</Button>
           ) : null}
-          {!isViewOnlyMode && isOwnerTeam ? (
+          {!isViewOnlyMode && isOwnerTeam && !caseInfo?.routedToTeamId ? (
             <Button variant="outline" onClick={() => setShowRouteModal(true)} disabled={actionInFlight}>
               Route Docket
             </Button>
@@ -1547,7 +1525,7 @@ export const CaseDetailPage = () => {
                 </div>
                 <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Category</span>
-                  <span className="field-value text-sm font-medium text-gray-900">{categoryLabel}</span>
+                  <span className="field-value text-sm font-medium text-gray-900">{caseInfo.category || '—'}</span>
                 </div>
                 <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Subcategory</span>
@@ -1555,12 +1533,41 @@ export const CaseDetailPage = () => {
                 </div>
                 <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">SLA (days)</span>
-                  <span className="field-value text-sm font-medium text-gray-900">{slaDaysLabel}</span>
+                  <span className="field-value text-sm font-medium text-gray-900">{Number(caseInfo?.slaDays || 0) > 0 ? String(caseInfo.slaDays) : '-'}</span>
                 </div>
                 <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Lifecycle</span>
                   {getLifecycleMeta(caseInfo?.lifecycle) ? <LifecycleBadge lifecycle={caseInfo?.lifecycle} /> : <span className="field-value text-sm font-medium text-gray-900">—</span>}
                 </div>
+              </div>
+            </section>
+
+            <section className={`case-card ${lifecycleStatus === 'IN_PROGRESS' ? 'opacity-90' : ''}`} aria-labelledby="overview-heading">
+              <div className="case-card__heading">
+                <h2 id="overview-heading">Docket Details</h2>
+              </div>
+              <div className="field-grid">
+                <div className="field-group min-w-0">
+                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Category</span>
+                  <span className="field-value text-sm font-medium text-gray-900">{caseInfo.category || '—'}</span>
+                </div>
+                <div className="field-group min-w-0">
+                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Subcategory</span>
+                  <span className="field-value text-sm font-medium text-gray-900">{subcategoryLabel}</span>
+                </div>
+                <div className="field-group min-w-0">
+                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">SLA (days)</span>
+                  <span className="field-value text-sm font-medium text-gray-900">{Number(caseInfo?.slaDays || 0) > 0 ? String(caseInfo.slaDays) : '-'}</span>
+                </div>
+              </div>
+              {lifecycleStatus === 'IN_PROGRESS' && (caseInfo?.pendingUntil || caseInfo?.reopenDate) ? (
+                <Badge variant="warning" className="mt-3 inline-flex">
+                  In progress until {formatDateTime(caseInfo.pendingUntil || caseInfo.reopenDate)}
+                </Badge>
+              ) : null}
+              <div className="field-group mt-4">
+                <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Description</span>
+                <span className="field-value case-detail__description-text whitespace-pre-wrap break-words text-sm font-medium text-gray-900">{descriptionContent}</span>
               </div>
             </section>
 
@@ -1658,21 +1665,6 @@ export const CaseDetailPage = () => {
               ) : null}
             </section>
 
-            <section className={`case-card ${lifecycleStatus === 'IN_PROGRESS' ? 'opacity-90' : ''}`} aria-labelledby="overview-heading">
-              <div className="case-card__heading">
-                <h2 id="overview-heading">Docket Details</h2>
-              </div>
-              {lifecycleStatus === 'IN_PROGRESS' && (caseInfo?.pendingUntil || caseInfo?.reopenDate) ? (
-                <Badge variant="warning" className="mt-3 inline-flex">
-                  In progress until {formatDateTime(caseInfo.pendingUntil || caseInfo.reopenDate)}
-                </Badge>
-              ) : null}
-              <div className="field-group mt-4">
-                <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Description</span>
-                <span className="field-value case-detail__description-text whitespace-pre-wrap break-words text-sm font-medium text-gray-900">{descriptionContent}</span>
-              </div>
-            </section>
-
             <section className="case-card" aria-labelledby="past-dockets-heading">
               <div className="case-card__heading">
                 <h2 id="past-dockets-heading">Past Dockets</h2>
@@ -1736,9 +1728,6 @@ export const CaseDetailPage = () => {
               <div>
                 <strong>Routing:</strong> {caseInfo?.ownerTeamName || '—'}
                 {caseInfo?.routedToTeamName ? ` → ${caseInfo.routedToTeamName}` : ''}
-              </div>
-              <div>
-                <strong>Available workbaskets:</strong> {routingTeams.map((team) => team.name).join(', ') || '—'}
               </div>
               {caseInfo?.routingNote && <div><strong>Routing note:</strong> {caseInfo.routingNote}</div>}
               {isRoutedToMyTeam && (
@@ -1961,11 +1950,11 @@ export const CaseDetailPage = () => {
         <ActionModal
           isOpen={showAssignModal}
           onClose={() => setShowAssignModal(false)}
-          title="Move Docket to Another Worklist"
+          title={canAdminMoveAssignedDocket ? 'Move Docket to Another Worklist' : 'Assign Docket'}
           comment={assignComment}
           setComment={setAssignComment}
-          commentRequired={false}
-          submitLabel="Move Docket"
+          commentRequired={canAdminMoveAssignedDocket}
+          submitLabel={canAdminMoveAssignedDocket ? 'Move Docket' : 'Assign Docket'}
           submitting={assigningCase}
           onSubmit={handleAssignDocket}
           disabled={!assignUser}
@@ -1988,7 +1977,7 @@ export const CaseDetailPage = () => {
         <Modal
           isOpen={showRouteModal}
           onClose={() => setShowRouteModal(false)}
-          title="Route Docket to Workbasket"
+          title="Route Docket"
           actions={(
             <>
               <Button variant="outline" onClick={() => setShowRouteModal(false)}>
@@ -2006,7 +1995,7 @@ export const CaseDetailPage = () => {
               value={routeTeamId}
               onChange={(event) => setRouteTeamId(event.target.value)}
             >
-              <option value="">Select workbasket</option>
+              <option value="">Select team</option>
               {routingTeams.filter((team) => String(team._id) !== String(caseInfo?.ownerTeamId || '')).map((team) => (
                 <option key={team._id} value={team._id}>{team.name}</option>
               ))}
