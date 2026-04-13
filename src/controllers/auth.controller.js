@@ -18,7 +18,8 @@ const authOtpService = require('../services/authOtp.service');
 const xIDGenerator = require('../services/xIDGenerator');
 const signupService = require('../services/signup.service');
 const jwtService = require('../services/jwt.service');
-const { isSuperAdminRole, normalizeRole, toLegacyUserRole } = require('../utils/role.utils');
+const { isSuperAdminRole, normalizeRole } = require('../utils/role.utils');
+const { canInviteRole, getTagValidationError, normalizeId } = require('../utils/hierarchy.utils');
 const { normalizeFirmSlug } = require('../utils/slugify');
 const { isActiveStatus, getFirmInactiveCode } = require('../utils/status.utils');
 const { validatePasswordStrength, PASSWORD_POLICY_MESSAGE } = require('../utils/passwordPolicy');
@@ -69,6 +70,7 @@ const SUPERADMIN_ROLE = 'SUPERADMIN';
 const ROLE_SUPER_ADMIN = 'SUPER_ADMIN';
 const ROLE_ADMIN = 'Admin';
 const ROLE_EMPLOYEE = 'Employee';
+const HIERARCHY_TAG_FIELDS = ['primaryAdminId', 'adminId', 'managerId'];
 const isSuperAdminRequest = (req) => (
   req?.isSuperAdmin === true
   || req?.jwt?.isSuperAdmin === true
@@ -192,6 +194,16 @@ const findExistingInviteUser = async ({ firmId, normalizedEmail, session }) => {
     status: { $ne: 'deleted' },
   });
   return await applySessionToQuery(query, session);
+};
+
+const resolveFirmPrimaryAdmin = async ({ firmId, session }) => {
+  const query = User.findOne({
+    firmId,
+    role: 'PRIMARY_ADMIN',
+    status: { $ne: 'deleted' },
+  }).select('_id');
+  const primaryAdmin = await applySessionToQuery(query, session);
+  return primaryAdmin || null;
 };
 
 const buildInviteResponse = (user, { statusCode, message }) => ({
@@ -2241,7 +2253,7 @@ const createUser = async (req, res) => {
     
     // Prevent creation of SUPER_ADMIN users
     const normalizedRequestedRole = normalizeRole(role || ROLE_EMPLOYEE);
-    const persistedRole = toLegacyUserRole(role || ROLE_EMPLOYEE);
+    const persistedRole = normalizedRequestedRole;
 
     if (normalizedRequestedRole === 'SUPER_ADMIN') {
       return res.status(403).json({
@@ -2271,8 +2283,24 @@ const createUser = async (req, res) => {
 
     // Get admin from authenticated request
     const admin = req.user;
+    const inviterRole = normalizeRole(admin?.role);
     const normalizedEmail = email.trim().toLowerCase();
     const session = getSession(req);
+
+    if (!canInviteRole(inviterRole, normalizedRequestedRole)) {
+      return res.status(403).json({
+        success: false,
+        message: `Role ${inviterRole} cannot invite ${normalizedRequestedRole}`,
+      });
+    }
+
+    const hasExplicitTagPatch = HIERARCHY_TAG_FIELDS.some((field) => Object.prototype.hasOwnProperty.call(req.body || {}, field));
+    if (hasExplicitTagPatch && inviterRole !== 'PRIMARY_ADMIN') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only PRIMARY_ADMIN can assign hierarchy tags',
+      });
+    }
 
     log.info('ADMIN_INVITE_REQUEST_RECEIVED', {
       req: {
@@ -2430,6 +2458,50 @@ const createUser = async (req, res) => {
     }
 
     const resolvedTeamIds = teams.map((team) => team._id);
+    const firmPrimaryAdmin = await resolveFirmPrimaryAdmin({ firmId: admin.firmId, session });
+    if (!firmPrimaryAdmin) {
+      return res.status(409).json({
+        success: false,
+        message: 'Firm is missing PRIMARY_ADMIN',
+      });
+    }
+
+    const requesterPrimaryAdminId = normalizeId(admin.primaryAdminId) || normalizeId(firmPrimaryAdmin._id);
+    let primaryAdminId = normalizeId(req.body?.primaryAdminId) || requesterPrimaryAdminId;
+    let adminId = normalizeId(req.body?.adminId) || null;
+    let managerId = normalizeId(req.body?.managerId) || null;
+
+    if (inviterRole !== 'PRIMARY_ADMIN') {
+      primaryAdminId = requesterPrimaryAdminId;
+      if (inviterRole === 'ADMIN') {
+        adminId = normalizeId(admin._id);
+        managerId = null;
+      } else if (inviterRole === 'MANAGER') {
+        adminId = normalizeId(admin.adminId) || null;
+        managerId = normalizeId(admin._id);
+      }
+    }
+
+    if (normalizedRequestedRole === 'ADMIN') {
+      adminId = null;
+      managerId = null;
+    }
+    if (normalizedRequestedRole === 'MANAGER') {
+      managerId = null;
+    }
+
+    const hierarchyError = getTagValidationError({
+      role: normalizedRequestedRole,
+      primaryAdminId,
+      adminId,
+      managerId,
+    });
+    if (hierarchyError) {
+      return res.status(400).json({
+        success: false,
+        message: hierarchyError,
+      });
+    }
 
     await assertFirmPlanCapacity({ firmId: admin.firmId, session, role: persistedRole });
 
@@ -2441,6 +2513,9 @@ const createUser = async (req, res) => {
       firmId: admin.firmId, // Inherit firmId from admin
       ...(inheritedDefaultClientId ? { defaultClientId: inheritedDefaultClientId } : {}),
       role: persistedRole,
+      primaryAdminId,
+      adminId,
+      managerId,
       allowedCategories: allowedCategories || [],
       teamId: resolvedTeamIds[0] || null,
       teamIds: resolvedTeamIds,

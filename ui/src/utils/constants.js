@@ -102,6 +102,7 @@ export const CLIENT_STATUS = {
 
 export const USER_ROLES = {
   SUPER_ADMIN: 'SuperAdmin',
+  PRIMARY_ADMIN: 'PRIMARY_ADMIN',
   ADMIN: 'Admin',
   EMPLOYEE: 'Employee',
   PARTNER: 'Partner',

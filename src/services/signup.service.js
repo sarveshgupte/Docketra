@@ -98,7 +98,7 @@ const isEmailFirmOwner = async (email) => {
   const existing = await User.findOne({
     email: email.toLowerCase().trim(),
     isSystem: true,
-    role: 'Admin',
+    role: 'PRIMARY_ADMIN',
     status: { $ne: 'deleted' },
   }).lean();
   return !!existing;
@@ -323,7 +323,7 @@ const verifyOtp = async ({ email, otp, session = null, req = null }) => {
     log.info('SIGNUP_COMPLETED', { req, email: normalizedEmail, firmSlug: tenant.firmSlug, xid: tenant.xid });
     const token = jwtService.generateAccessToken({
       userId: String(tenant.userId),
-      role: 'Admin',
+      role: 'PRIMARY_ADMIN',
       firmId: String(tenant.firmId),
       firmSlug: tenant.firmSlug,
       defaultClientId: String(tenant.defaultClientId),
@@ -614,7 +614,8 @@ const createFirmAndAdmin = async ({
     firmId: firm._id,
     defaultClientId: defaultClient._id,
     isOnboarded: authProvider === 'password',
-    role: 'Admin',
+    role: 'PRIMARY_ADMIN',
+    primaryAdminId: null,
     status: 'active',
     isActive: true,
     isSystem: true,
@@ -776,7 +777,7 @@ const resendCredentialsEmail = async ({ email, req = null }) => {
   const adminUser = await User.findOne({
     email: normalizedEmail,
     isSystem: true,
-    role: 'Admin',
+    role: 'PRIMARY_ADMIN',
     status: { $ne: 'deleted' },
   }).select('name email xID firmId').lean();
 
