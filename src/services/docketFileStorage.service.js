@@ -1,50 +1,117 @@
-const DocketAttachmentMetadata = require('../models/DocketAttachmentMetadata.model');
-const { resolveFirmStorage, getProviderAdapter } = require('./storageAdapters/providerFactory');
+const Attachment = require('../models/Attachment.model');
+const Case = require('../models/Case.model');
+const { googleDriveService } = require('./googleDrive.service');
 
 class DocketFileStorageService {
-  async uploadFile({ file, fileName, fileType, docketId, firmId, uploadedBy }) {
-    const storageConfig = await resolveFirmStorage(firmId);
-    const provider = getProviderAdapter(storageConfig);
+  static toPublicAttachment(attachment) {
+    return {
+      id: attachment._id,
+      docketId: attachment.caseId,
+      firmId: attachment.firmId,
+      fileName: attachment.fileName,
+      mimeType: attachment.mimeType,
+      size: attachment.size,
+      storageProvider: attachment.storageProvider,
+      uploadedBy: attachment.uploadedBy || attachment.createdByXID,
+      uploadedByName: attachment.uploadedByName || attachment.createdByName || 'Unknown',
+      uploadedAtReadable: attachment.uploadedAtReadable,
+      createdAt: attachment.createdAt,
+      version: attachment.version || 1,
+      webViewLink: attachment.webViewLink || null,
+    };
+  }
 
-    const uploadResult = await provider.uploadFile({
-      file,
+  async assertDocketOwnership({ docketId, firmId }) {
+    const caseRecord = await Case.findOne({
+      firmId: String(firmId),
+      $or: [{ caseId: String(docketId) }, { caseNumber: String(docketId) }],
+    }).select('_id caseId caseNumber firmId').lean();
+
+    if (!caseRecord) {
+      const error = new Error('Docket not found for firm');
+      error.code = 'DOCKET_NOT_FOUND';
+      error.status = 404;
+      throw error;
+    }
+
+    return caseRecord;
+  }
+
+  async uploadFile({ file, fileName, fileType, docketId, firmId, uploadedBy, uploadedByName }) {
+    const caseRecord = await this.assertDocketOwnership({ docketId, firmId });
+    const normalizedDocketId = caseRecord.caseId;
+
+    const latest = await Attachment.findOne({
+      caseId: normalizedDocketId,
+      firmId: String(firmId),
       fileName,
-      mimeType: fileType,
-      parentFolderId: storageConfig.rootFolderId,
+    })
+      .sort({ version: -1, createdAt: -1 })
+      .select('version')
+      .lean();
+
+    const version = Number(latest?.version || 0) + 1;
+
+    const uploadResult = await googleDriveService.uploadFile(firmId, {
+      buffer: file,
+      originalname: fileName,
+      mimetype: fileType,
     });
 
-    const metadata = await DocketAttachmentMetadata.create({
-      docketId,
-      firmId,
-      fileName: uploadResult.fileName || fileName,
-      fileType: uploadResult.fileType || fileType,
-      storageProvider: storageConfig.provider,
-      storageConfigId: storageConfig._id,
-      fileId: uploadResult.providerFileId,
+    const createdAt = new Date();
+    const metadata = await Attachment.create({
+      caseId: normalizedDocketId,
+      firmId: String(firmId),
+      fileName: uploadResult.name || fileName,
+      mimeType: uploadResult.mimeType || fileType,
+      size: Number(uploadResult.size || file.length || 0),
+      storageFileId: uploadResult.id,
+      storageProvider: 'google-drive',
+      driveFileId: uploadResult.id,
       uploadedBy,
-      createdAt: new Date(),
+      uploadedByName,
+      createdBy: `${uploadedBy || 'unknown'}@docketra.internal`,
+      createdByXID: uploadedBy,
+      createdByName: uploadedByName,
+      description: `Attachment uploaded to docket ${normalizedDocketId}`,
+      uploadedAtReadable: createdAt.toISOString(),
+      webViewLink: uploadResult.webViewLink || null,
+      createdAt,
+      version,
     });
 
-    return metadata;
+    return DocketFileStorageService.toPublicAttachment(metadata.toObject());
+  }
+
+  async listAttachments({ docketId, firmId }) {
+    const caseRecord = await this.assertDocketOwnership({ docketId, firmId });
+    const attachments = await Attachment.find({
+      caseId: caseRecord.caseId,
+      firmId: String(firmId),
+      storageProvider: 'google-drive',
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return attachments.map((item) => DocketFileStorageService.toPublicAttachment(item));
   }
 
   async getFile({ attachmentId, firmId }) {
-    const metadata = await DocketAttachmentMetadata.findOne({ _id: attachmentId, firmId }).lean();
-    if (!metadata) {
+    const metadata = await Attachment.findOne({ _id: attachmentId, firmId: String(firmId) }).lean();
+    if (!metadata || !metadata.storageFileId) {
       const error = new Error('Attachment metadata not found');
       error.code = 'ATTACHMENT_NOT_FOUND';
       error.status = 404;
       throw error;
     }
 
-    const storageConfig = await resolveFirmStorage(firmId);
-    const provider = getProviderAdapter(storageConfig);
+    await this.assertDocketOwnership({ docketId: metadata.caseId, firmId });
 
-    const file = await provider.getFile({ providerFileId: metadata.fileId });
+    const stream = await googleDriveService.downloadFile(firmId, metadata.storageFileId);
 
     return {
-      metadata,
-      ...file,
+      metadata: DocketFileStorageService.toPublicAttachment(metadata),
+      stream,
     };
   }
 }
