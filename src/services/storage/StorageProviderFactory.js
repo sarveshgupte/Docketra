@@ -4,6 +4,7 @@ const { decrypt } = require('./services/TokenEncryption.service');
 const GoogleDriveProvider = require('./providers/GoogleDriveProvider');
 const OneDriveProvider = require('./providers/OneDriveProvider');
 const { S3Provider } = require('./providers/S3Provider');
+const { googleDriveService } = require('../googleDrive.service');
 const {
   StorageConfigMissingError,
   StorageAccessError,
@@ -45,7 +46,13 @@ async function getProviderForTenant(firmId) {
     throw new StorageConfigMissingError('unknown');
   }
 
-  const config = await getFirmStorageConfig(firmId);
+  let config = null;
+  try {
+    config = await getFirmStorageConfig(firmId);
+  } catch (error) {
+    if (!(error instanceof StorageConfigMissingError)) throw error;
+    config = { provider: 'docketra_drive', credentials: {}, source: 'managed_default' };
+  }
   const provider = String(config.provider || '').toLowerCase();
   if (!provider) {
     throw new Error(`Invalid storage provider for firm ${firmId}`);
@@ -70,6 +77,14 @@ async function getProviderForTenant(firmId) {
       );
       oauthClient.setCredentials({ refresh_token: refreshToken });
       return new GoogleDriveProvider({ oauthClient, driveId: config.credentials.driveId || null });
+    }
+    case 'docketra_drive':
+    case 'docketra_managed': {
+      const managed = await googleDriveService.getClient(firmId);
+      return new GoogleDriveProvider({
+        driveClient: managed.drive,
+        driveId: null,
+      });
     }
     case 'onedrive':
       return new OneDriveProvider({

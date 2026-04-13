@@ -3,6 +3,7 @@ const Case = require('../models/Case.model');
 const Firm = require('../models/Firm.model');
 const { StorageProviderFactory } = require('./storage/StorageProviderFactory');
 const { decrypt } = require('./storage/services/TokenEncryption.service');
+const { googleDriveService } = require('./googleDrive.service');
 
 class StorageService {
   /**
@@ -36,11 +37,11 @@ class StorageService {
     const storageCredentials = firm?.storageConfig?.credentials
       ? JSON.parse(decrypt(firm.storageConfig.credentials))
       : {};
-    const rootFolderId = storageCredentials?.rootFolderId || null;
+    const context = await googleDriveService.getClient(firmId);
+    const rootFolderId = storageCredentials?.rootFolderId || context.rootFolderId || null;
     const firmName = (firm?.name || `Firm-${firmId}`).trim();
 
-    const docketraFolderId = await provider.getOrCreateFolder(rootFolderId, 'Docketra');
-    const firmFolderId = await provider.getOrCreateFolder(docketraFolderId, firmName);
+    const firmFolderId = rootFolderId || await provider.getOrCreateFolder(null, firmName);
     const casesFolderId = await provider.getOrCreateFolder(firmFolderId, 'Cases');
     const caseFolderId = await provider.getOrCreateFolder(casesFolderId, String(caseId));
     const attachmentsFolderId = await provider.getOrCreateFolder(caseFolderId, 'Attachments');
