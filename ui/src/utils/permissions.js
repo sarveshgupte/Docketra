@@ -9,7 +9,8 @@ export const isSuperadmin = (user) => {
 };
 
 export const isAdmin = (user) => {
-  return user?.role === USER_ROLES.ADMIN;
+  const normalizedRole = String(user?.role || '').trim().toUpperCase();
+  return user?.role === USER_ROLES.ADMIN || normalizedRole === 'PRIMARY_ADMIN';
 };
 
 export const isEmployee = (user) => {

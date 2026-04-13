@@ -130,11 +130,13 @@ const createStarterWorkspace = async (payload = {}) => {
         phoneNumber: phoneNumber.trim(),
         firmId: defaultClient._id,
         defaultClientId: defaultClient._id,
-        role: 'Admin',
+        role: 'PRIMARY_ADMIN',
+        primaryAdminId: null,
         status: 'invited',
         mustSetPassword: false,
         mustChangePassword: true,
         isActive: false,
+        isPrimaryAdmin: true,
       }], { session });
 
       setupToken = generatePasswordSetupToken({ userId: user._id.toString(), firmId: defaultClient._id.toString() });

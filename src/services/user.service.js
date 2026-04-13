@@ -35,7 +35,8 @@ class PrimaryAdminActionError extends Error {
  * @param {object} user - User document
  */
 const assertCanDeactivateUser = (user) => {
-  const isFirmDefaultAdmin = String(user?.role || '').toLowerCase() === 'admin'
+  const normalizedRole = String(user?.role || '').toUpperCase();
+  const isFirmDefaultAdmin = ['ADMIN', 'PRIMARY_ADMIN'].includes(normalizedRole)
     && user?.defaultClientId
     && user?.firmId
     && String(user.defaultClientId) === String(user.firmId);
@@ -82,10 +83,10 @@ const assertFirmPlanCapacity = async ({ firmId, session, incrementBy = 1, role =
       throw new PlanLimitExceededError(maxUsers);
     }
 
-    if (String(role || '').toLowerCase() === 'admin' && incrementBy > 0) {
+    if (['ADMIN', 'PRIMARY_ADMIN'].includes(String(role || '').toUpperCase()) && incrementBy > 0) {
       const adminCount = await attachSession(User.countDocuments({
         firmId,
-        role: 'Admin',
+        role: { $in: ['ADMIN', 'PRIMARY_ADMIN'] },
         status: { $in: ['active', 'invited'] },
       }));
 
