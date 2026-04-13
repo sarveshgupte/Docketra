@@ -5,9 +5,38 @@ import { WorkbasketPage as WorkbasketPageComponent } from '../pages/WorkbasketPa
 import { FirmSettingsPage as FirmSettingsPageComponent } from '../pages/FirmSettingsPage';
 import { WorkSettingsPage as WorkSettingsPageComponent } from '../pages/WorkSettingsPage';
 
-const lazyPage = (importer, exportName) => lazy(
-  () => importer().then((module) => ({ default: module[exportName] }))
-);
+const importWithRetry = async (importer, attempts = 2) => {
+  let lastError;
+
+  for (let index = 0; index < attempts; index += 1) {
+    try {
+      return await importer();
+    } catch (error) {
+      lastError = error;
+      const isLastAttempt = index === attempts - 1;
+      if (isLastAttempt) {
+        throw lastError;
+      }
+
+      // Brief delay helps when CDN propagation lags after a fresh deploy.
+      // Common symptom: "Failed to fetch dynamically imported module".
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    }
+  }
+
+  throw lastError;
+};
+
+const lazyPage = (importer, exportName) => lazy(async () => {
+  const module = await importWithRetry(importer);
+  const pageExport = module?.[exportName];
+
+  if (!pageExport) {
+    throw new Error(`Missing expected export "${exportName}" in lazy module.`);
+  }
+
+  return { default: pageExport };
+});
 
 export const LoginPage = lazyPage(() => import('../pages/LoginPage'), 'LoginPage');
 export const FirmLoginPage = lazyPage(() => import('../pages/FirmLoginPage'), 'FirmLoginPage');
