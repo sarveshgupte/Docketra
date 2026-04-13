@@ -9,6 +9,7 @@ const { generateNextClientId } = require('../../services/clientIdGenerator');
 const { generatePasswordSetupToken } = require('../../services/passwordSetupToken.service');
 const { safeQueueEmail } = require('../../services/safeSideEffects.service');
 const { ensureTenantKey } = require('../../security/encryption.service');
+const { googleDriveService } = require('../../services/googleDrive.service');
 
 const RESERVED_SLUGS = [
   'superadmin',
@@ -66,6 +67,7 @@ const createStarterWorkspace = async (payload = {}) => {
     email,
     phoneNumber,
     companyName,
+    connectGoogleDrive = false,
   } = payload;
 
   if (!fullName || !email || !phoneNumber || !companyName) {
@@ -160,6 +162,17 @@ const createStarterWorkspace = async (payload = {}) => {
         role: result.admin.role,
       }),
     });
+
+    if (!connectGoogleDrive) {
+      try {
+        await googleDriveService.getClient(result.defaultClient._id.toString());
+      } catch (storageError) {
+        console.error('[ONBOARDING] managed_storage_setup_failed', {
+          firmId: result.defaultClient._id.toString(),
+          message: storageError.message,
+        });
+      }
+    }
 
     console.log('[ONBOARDING] createStarterWorkspace completed', {
       clientId: result.defaultClient._id.toString(),

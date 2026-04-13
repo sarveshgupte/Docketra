@@ -11,6 +11,7 @@ const {
   googleConfirmDrive,
   getStorageConfiguration,
   testStorageConnection,
+  exportFirmStorage,
 } = require('../controllers/storage.controller');
 
 const router = applyRouteValidation(express.Router(), routeSchemas);
@@ -24,5 +25,6 @@ router.post('/google/confirm-drive', oauthLimiter, googleConfirmDrive);
 
 router.get('/configuration', userReadLimiter, getStorageConfiguration);
 router.post('/test-connection', userReadLimiter, testStorageConnection);
+router.get('/export', userReadLimiter, exportFirmStorage);
 
 module.exports = router;
