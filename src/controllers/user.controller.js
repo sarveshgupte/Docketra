@@ -457,6 +457,7 @@ const completeProfile = async (req, res) => {
         name: updatedUser.name,
         xid: updatedUser.xid || updatedUser.xID,
         firmId: createdFirm?._id?.toString?.() || updatedUser.firmId?.toString?.(),
+        role: updatedUser.role,
       });
     } catch (emailError) {
       console.error('[ONBOARDING] Failed to send welcome email', {
