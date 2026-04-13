@@ -3,18 +3,50 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { pipeline } = require('stream/promises');
-const { execFile } = require('child_process');
-const { promisify } = require('util');
+const archiver = require('archiver');
 const { googleDriveService } = require('./googleDrive.service');
 const User = require('../models/User.model');
 const emailService = require('./email.service');
-const execFileAsync = promisify(execFile);
+
+const linkRegistry = new Map();
+const LINK_TTL_MS = 30 * 60 * 1000;
 
 function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
 }
 
 class StorageBackupService {
+  constructor() {
+    this.cleanupTimer = setInterval(() => this.cleanupExpiredLinks(), 5 * 60 * 1000);
+    this.cleanupTimer.unref?.();
+  }
+
+  cleanupExpiredLinks() {
+    const now = Date.now();
+    for (const [token, entry] of linkRegistry.entries()) {
+      if (entry.expiresAt <= now) {
+        linkRegistry.delete(token);
+      }
+    }
+  }
+
+  async generateZipArchive(sourceDir, zipPath) {
+    await new Promise((resolve, reject) => {
+      const output = fs.createWriteStream(zipPath);
+      const archive = archiver('zip', { zlib: { level: 9 } });
+
+      output.on('close', resolve);
+      output.on('error', reject);
+      archive.on('warning', reject);
+      archive.on('error', reject);
+
+      archive.pipe(output);
+      archive.directory(path.join(sourceDir, 'documents'), 'documents');
+      archive.file(path.join(sourceDir, 'metadata.json'), { name: 'metadata.json' });
+      archive.finalize();
+    });
+  }
+
   async runBackupForFirm(firmId) {
     const files = await googleDriveService.listFiles(firmId);
     const exportId = crypto.randomUUID();
@@ -52,13 +84,35 @@ class StorageBackupService {
       )
     );
 
-    await execFileAsync('python3', ['-m', 'zipfile', '-c', zipPath, 'documents', 'metadata.json'], { cwd: workingDir });
+    await this.generateZipArchive(workingDir, zipPath);
 
     return {
       exportId,
       zipPath,
       fileCount: files.length,
     };
+  }
+
+  createSignedDownloadToken({ firmId, zipPath, exportId }) {
+    const token = crypto.randomBytes(24).toString('hex');
+    linkRegistry.set(token, {
+      firmId: String(firmId),
+      zipPath,
+      exportId,
+      expiresAt: Date.now() + LINK_TTL_MS,
+    });
+    return token;
+  }
+
+  resolveSignedDownloadToken(token, firmId) {
+    const entry = linkRegistry.get(token);
+    if (!entry) return null;
+    if (entry.expiresAt <= Date.now()) {
+      linkRegistry.delete(token);
+      return null;
+    }
+    if (String(entry.firmId) !== String(firmId)) return null;
+    return entry;
   }
 
   async emailBackupLinkToPrimaryAdmin(firmId, downloadUrl) {
