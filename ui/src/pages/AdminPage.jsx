@@ -411,6 +411,10 @@ export const AdminPage = () => {
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
+    if (!isPrimaryAdminActor) {
+      showToast('Only PRIMARY_ADMIN can modify hierarchy', 'error');
+      return;
+    }
     
     // PR 32: Only name and email are required (xID is auto-generated)
     if (!newUser.name || !newUser.email || !newUser.role || !Array.isArray(newUser.teamIds) || newUser.teamIds.length === 0) {
@@ -439,6 +443,10 @@ export const AdminPage = () => {
   };
 
   const handleToggleUserStatus = async (user) => {
+    if (!isPrimaryAdminActor) {
+      showToast('Only PRIMARY_ADMIN can modify hierarchy', 'error');
+      return;
+    }
     const normalizedStatus = getNormalizedUserStatus(user);
     const isInvited = normalizedStatus === 'invited';
     const shouldActivate = isInvited ? false : normalizedStatus !== 'active';
@@ -1256,6 +1264,7 @@ export const AdminPage = () => {
                 <Button
                   variant="primary"
                   onClick={() => setShowCreateModal(true)}
+                  disabled={!isPrimaryAdminActor}
                 >
                   + Create User
                 </Button>

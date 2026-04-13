@@ -9,6 +9,7 @@ const { generateNextXID } = require('./xIDGenerator');
 const { slugify } = require('../utils/slugify');
 const { isFirmCreationDisabled } = require('./featureFlags.service');
 const { loadEnv } = require('../config/env');
+const { coercePrimaryAdminCreationFields } = require('../utils/hierarchy.utils');
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SYSTEM_EMAIL_DOMAIN = 'system.local';
 const DEFAULT_BUSINESS_ADDRESS = 'Default Address';
@@ -179,12 +180,10 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
       email: adminEmail.trim().toLowerCase(),
       firmId: defaultClient._id,
       defaultClientId: defaultClient._id,
-      role: 'PRIMARY_ADMIN',
-      primaryAdminId: null,
+      ...coercePrimaryAdminCreationFields({ role: 'PRIMARY_ADMIN' }),
       status: 'invited',
       isActive: false,
       isSystem: true,
-      isPrimaryAdmin: true,
       passwordSet: false,
       mustSetPassword: false,
       passwordSetAt: null,

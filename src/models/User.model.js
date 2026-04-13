@@ -712,6 +712,11 @@ userSchema.pre('save', async function() {
   }
 
   const normalizedRole = normalizeRole(this.role);
+  if (normalizedRole !== 'PRIMARY_ADMIN' && !normalizeId(this.primaryAdminId)) {
+    const error = new Error('Invalid hierarchy: missing primaryAdminId');
+    error.name = 'ValidationError';
+    throw error;
+  }
   const tagValidationError = getTagValidationError({
     role: normalizedRole,
     primaryAdminId: this.primaryAdminId,
@@ -801,6 +806,48 @@ userSchema.pre('save', async function() {
   }
 });
 
+const assertHierarchyUpdatePayload = (update = {}) => {
+  const mergedSet = update.$set || {};
+  const nextRole = normalizeRole(update.role ?? mergedSet.role);
+  const nextPrimaryAdminId = normalizeId(update.primaryAdminId ?? mergedSet.primaryAdminId);
+  const nextAdminId = normalizeId(update.adminId ?? mergedSet.adminId);
+  const nextManagerId = normalizeId(update.managerId ?? mergedSet.managerId);
+  const hasHierarchyField = ['role', 'primaryAdminId', 'adminId', 'managerId']
+    .some((key) => Object.prototype.hasOwnProperty.call(update, key) || Object.prototype.hasOwnProperty.call(mergedSet, key));
+
+  if (!hasHierarchyField) return;
+
+  const tagValidationError = getTagValidationError({
+    role: nextRole || 'USER',
+    primaryAdminId: nextPrimaryAdminId,
+    adminId: nextAdminId,
+    managerId: nextManagerId,
+  });
+  if (tagValidationError) {
+    const error = new Error(tagValidationError);
+    error.name = 'ValidationError';
+    throw error;
+  }
+};
+
+userSchema.pre('findOneAndUpdate', function(next) {
+  try {
+    assertHierarchyUpdatePayload(this.getUpdate() || {});
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
+userSchema.pre('updateMany', function(next) {
+  try {
+    assertHierarchyUpdatePayload(this.getUpdate() || {});
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Indexes for performance
 // CRITICAL: Firm-scoped unique index on (firmId, xID)
 // - Each firm has its own X000001, X000002, etc.
@@ -847,7 +894,6 @@ userSchema.index({ firmId: 1, status: 1 });
 userSchema.index({ firmId: 1, isActive: 1 });
 // REMOVED: { firmId: 1 } - redundant with compound index (firmId, xID) above
 userSchema.index({ firmId: 1, role: 1 }); // Firm-scoped role queries
-userSchema.index({ firmId: 1, isPrimaryAdmin: 1 }, { unique: true, partialFilterExpression: { isPrimaryAdmin: true, status: { $ne: 'deleted' } }, name: 'firm_primary_admin_unique' });
 userSchema.index({ firmId: 1, role: 1 }, { unique: true, partialFilterExpression: { role: 'PRIMARY_ADMIN', status: { $ne: 'deleted' } }, name: 'firm_primary_admin_role_unique' });
 userSchema.index({ firmId: 1 });
 userSchema.index({ firmId: 1, createdAt: -1 });
