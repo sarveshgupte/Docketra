@@ -529,6 +529,12 @@ const createFirmAndAdmin = async ({
   session = null,
   req = null,
 }) => {
+  if (config.strictByos) {
+    const byosError = new Error('Cloud storage must be connected');
+    byosError.code = 'STORAGE_NOT_CONNECTED';
+    byosError.statusCode = 400;
+    throw byosError;
+  }
   if (!session) {
     throw new Error('Transaction session is required');
   }

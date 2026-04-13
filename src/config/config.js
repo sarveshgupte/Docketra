@@ -16,6 +16,7 @@ const config = {
   env: env.NODE_ENV,
   appName: process.env.APP_NAME || 'Docketra',
   mongodbUri: env.MONGODB_URI,
+  strictByos: Boolean(env.STRICT_BYOS),
   
   // Pagination defaults
   pagination: {

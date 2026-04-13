@@ -43,6 +43,7 @@ const envSchema = z
 
     METRICS_TOKEN: z.string().trim().optional(),
     STORAGE_TOKEN_SECRET: z.string().trim().optional(),
+    STRICT_BYOS: boolFromEnv,
 
     BREVO_API_KEY: z.string().trim().optional(),
     MAIL_FROM: z.string().trim().optional(),
