@@ -1,6 +1,9 @@
 const storageService = require('../services/docketFileStorage.service');
 
 function mapStorageError(error, res) {
+  if (error?.code === 'STORAGE_NOT_CONNECTED') {
+    return res.status(400).json({ code: 'STORAGE_NOT_CONNECTED', message: 'Cloud storage must be connected' });
+  }
   if (error?.code === 'TOKEN_EXPIRED') {
     return res.status(401).json({ success: false, code: error.code, message: 'Storage authentication expired. Please reconnect storage.' });
   }

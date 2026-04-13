@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
 const { requireCaseAccess } = require('../middleware/authorization.middleware');
+const { requireStorageConnected } = require('../middleware/requireStorageConnected');
 const { uploadDocketFile, listDocketAttachments, getDocketFile } = require('../controllers/docketFileStorage.controller');
 
 const router = express.Router();
@@ -14,6 +15,7 @@ const upload = multer({
 
 router.post(
   '/dockets/:docketId/attachments',
+  requireStorageConnected,
   authorizeFirmPermission('CASE_UPDATE'),
   requireCaseAccess({ source: 'params', field: 'docketId' }),
   upload.single('file'),
@@ -22,6 +24,7 @@ router.post(
 
 router.get(
   '/dockets/:docketId/attachments',
+  requireStorageConnected,
   authorizeFirmPermission('CASE_VIEW'),
   requireCaseAccess({ source: 'params', field: 'docketId' }),
   listDocketAttachments
@@ -29,6 +32,7 @@ router.get(
 
 router.get(
   '/attachments/:attachmentId/download',
+  requireStorageConnected,
   authorizeFirmPermission('CASE_VIEW'),
   getDocketFile
 );

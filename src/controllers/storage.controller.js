@@ -168,7 +168,7 @@ const getStorageStatus = async (req, res) => {
 
     return res.json({
       connected: Boolean(context.rootFolderId),
-      provider: context.providerType || PROVIDER_TYPES.DOCKETRA_DRIVE,
+      provider: context.providerType || PROVIDER_TYPES.USER_GOOGLE_DRIVE,
       status,
       rootFolderId: context.rootFolderId || null,
       connectedEmail: credentials.connectedEmail || null,
@@ -476,7 +476,7 @@ const disconnectStorage = async (req, res) => {
     const context = await googleDriveService.getClient(req.firmId);
     return res.json({
       success: true,
-      provider: context.providerType || PROVIDER_TYPES.DOCKETRA_DRIVE,
+      provider: context.providerType || PROVIDER_TYPES.USER_GOOGLE_DRIVE,
       rootFolderId: context.rootFolderId || null,
     });
   } catch (error) {

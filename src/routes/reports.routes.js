@@ -4,6 +4,7 @@ const routeSchemas = require('../schemas/reports.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
 const { userReadLimiter } = require('../middleware/rateLimiters');
+const { requireStorageConnected } = require('../middleware/requireStorageConnected');
 const {
   getCaseMetrics,
   getPendingCasesReport,
@@ -38,8 +39,8 @@ router.get('/pending-cases', getPendingCasesReport);
 router.get('/cases-by-date', getCasesByDateRange);
 
 // Export routes
-router.get('/export/csv', exportCasesCSV);
-router.get('/export/excel', exportCasesExcel);
+router.get('/export/csv', requireStorageConnected, exportCasesCSV);
+router.get('/export/excel', requireStorageConnected, exportCasesExcel);
 router.get('/export-history', getExportHistory);
 router.get('/audit-logs', getAuditLogs);
 router.get('/client-fact-sheet/:clientId/pdf', generateClientFactSheetPdf);
