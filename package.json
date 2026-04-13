@@ -45,6 +45,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.999.0",
     "@aws-sdk/s3-request-presigner": "^3.999.0",
+    "archiver": "^5.3.2",
     "bcrypt": "^5.1.1",
     "bullmq": "^5.70.0",
     "compression": "^1.8.1",
