@@ -231,6 +231,17 @@ export const DashboardPage = () => {
 
   useEffect(() => {
     if (loading || !user?.xID || !firmSlug) return;
+
+    const hasRoleBasedTutorial = Boolean(
+      user?.welcomeTutorial?.role
+      || (Array.isArray(user?.welcomeTutorial?.steps) && user.welcomeTutorial.steps.length > 0),
+    );
+
+    if (hasRoleBasedTutorial) {
+      setShowProductTour(false);
+      return;
+    }
+
     const tourCompletedKey = `productTourCompleted:${user.xID}:${firmSlug}`;
     const hasCompletedTour = localStorage.getItem(tourCompletedKey) === 'true';
     if (!hasCompletedTour) {
