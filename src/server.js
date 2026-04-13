@@ -413,6 +413,7 @@ app.use('/api/firm', ...tenantScopedApiAccess, writeGuardChain, firmStorageRoute
 app.use('/api/files', authLimiter, ...tenantScopedApiAccess, writeGuardChain, filesRoutes);
 app.use('/api/tenant', authLimiter, ...tenantScopedApiAccess, writeGuardChain, tenantRoutes);
 app.use('/api/docket-storage', authLimiter, ...tenantScopedApiAccess, writeGuardChain, docketFileStorageRoutes);
+app.use('/api', authLimiter, ...tenantScopedApiAccess, writeGuardChain, docketFileStorageRoutes);
 app.use('/api/notifications', ...tenantScopedApiAccess, writeGuardChain, notificationsRoutes);
 app.use('/api/teams', ...tenantScopedApiAccess, writeGuardChain, teamRoutes);
 app.use('/api/bulk-upload', ...adminTenantScopedApiAccess, writeGuardChain, adminAuditTrail('admin'), bulkUploadRoutes);

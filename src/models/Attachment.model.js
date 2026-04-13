@@ -61,6 +61,27 @@ const attachmentSchema = new mongoose.Schema({
     uppercase: true,
     trim: true,
   },
+
+  uploadedByName: {
+    type: String,
+    trim: true,
+  },
+
+  uploadedAtReadable: {
+    type: String,
+    trim: true,
+  },
+
+  version: {
+    type: Number,
+    default: 1,
+    min: 1,
+  },
+
+  webViewLink: {
+    type: String,
+    trim: true,
+  },
   
   /**
    * Local storage path for the file
@@ -349,6 +370,7 @@ attachmentSchema.index({ firmId: 1, clientId: 1 }); // Firm-scoped client attach
 attachmentSchema.index({ firmId: 1, caseId: 1, checksum: 1 }, { sparse: true });
 attachmentSchema.index({ firmId: 1, clientId: 1, checksum: 1 }, { sparse: true });
 attachmentSchema.index({ firmId: 1, contentHash: 1 });
+attachmentSchema.index({ firmId: 1, caseId: 1, fileName: 1, version: -1 });
 
 attachmentSchema.plugin(softDeletePlugin);
 attachmentSchema.plugin(tenantScopeGuardPlugin);

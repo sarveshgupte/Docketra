@@ -19,9 +19,10 @@ async function uploadDocketFile(req, res) {
       return res.status(400).json({ success: false, message: 'File is required' });
     }
 
-    const docketId = req.body.docketId || req.caseRecord?.caseId;
-    const firmId = req.firmId;
+    const docketId = req.params.docketId || req.body.docketId || req.caseRecord?.caseId;
+    const firmId = req.firmId || req.user?.firmId;
     const uploadedBy = req.user?.xID || req.user?.email || 'unknown';
+    const uploadedByName = req.user?.name || req.user?.xID || 'Unknown';
 
     const metadata = await storageService.uploadFile({
       file: req.file.buffer,
@@ -30,6 +31,7 @@ async function uploadDocketFile(req, res) {
       docketId,
       firmId,
       uploadedBy,
+      uploadedByName,
     });
 
     return res.status(201).json({ success: true, data: metadata });
@@ -38,14 +40,25 @@ async function uploadDocketFile(req, res) {
   }
 }
 
+async function listDocketAttachments(req, res) {
+  try {
+    const docketId = req.params.docketId;
+    const firmId = req.firmId || req.user?.firmId;
+    const items = await storageService.listAttachments({ docketId, firmId });
+    return res.json({ success: true, data: items });
+  } catch (error) {
+    return mapStorageError(error, res);
+  }
+}
+
 async function getDocketFile(req, res) {
   try {
     const { attachmentId } = req.params;
-    const firmId = req.firmId;
+    const firmId = req.firmId || req.user?.firmId;
 
     const result = await storageService.getFile({ attachmentId, firmId });
 
-    res.setHeader('Content-Type', result.metadata.fileType || 'application/octet-stream');
+    res.setHeader('Content-Type', result.metadata.mimeType || 'application/octet-stream');
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(result.metadata.fileName || 'file')}"`);
 
     result.stream.on('error', () => {
@@ -62,5 +75,6 @@ async function getDocketFile(req, res) {
 
 module.exports = {
   uploadDocketFile,
+  listDocketAttachments,
   getDocketFile,
 };
