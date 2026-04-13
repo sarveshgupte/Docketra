@@ -857,6 +857,10 @@ const getCaseComments = async (req, res) => {
  */
 const addAttachment = async (req, res) => {
   try {
+    if (!req.storageContext?.rootFolderId) {
+      console.warn('[STORAGE] blocked_operation: upload_attempt_without_storage');
+      return res.status(400).json({ code: 'STORAGE_NOT_CONNECTED', message: 'Cloud storage must be connected' });
+    }
     if (areFileUploadsDisabled()) {
       return res.status(503).json({
         success: false,
@@ -2520,6 +2524,10 @@ const unassignCase = async (req, res) => {
  */
 const viewAttachment = async (req, res) => {
   try {
+    if (!req.storageContext?.rootFolderId) {
+      console.warn('[STORAGE] blocked_operation: view_attempt_without_storage');
+      return res.status(400).json({ code: 'STORAGE_NOT_CONNECTED', message: 'Cloud storage must be connected' });
+    }
     const { caseId, attachmentId } = req.params;
     
     // Validate authentication
@@ -2562,31 +2570,10 @@ const viewAttachment = async (req, res) => {
       });
     }
     
-
-    if (!attachment.filePath) {
+    if (!attachment.driveFileId) {
       return res.status(404).json({
-        success: false,
-        message: 'File location not found',
-      });
-    }
-
-    const resolvedPath = path.resolve(attachment.filePath);
-    const safeBaseDir = path.resolve(__dirname, '../../uploads') + path.sep;
-    if (!resolvedPath.startsWith(safeBaseDir)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Invalid file path',
-      });
-    }
-
-    // Check if file exists
-    try {
-      await fs.access(resolvedPath);
-
-    } catch (err) {
-      return res.status(404).json({
-        success: false,
-        message: 'File not found on server',
+        code: 'STORAGE_NOT_CONNECTED',
+        message: 'Cloud storage must be connected',
       });
     }
     
@@ -2598,8 +2585,9 @@ const viewAttachment = async (req, res) => {
     res.setHeader('Content-Type', mimeType);
     res.setHeader('Content-Disposition', `inline; filename="${safeFilename}"`);
     
-    // Send file
-    res.sendFile(resolvedPath);
+    const provider = await StorageProviderFactory.getProvider(req.user.firmId);
+    const fileStream = await provider.downloadFile(attachment.driveFileId);
+    return fileStream.pipe(res);
   } catch (error) {
     console.error('[viewAttachment] Error:', error);
     res.status(500).json({
@@ -2622,6 +2610,10 @@ const viewAttachment = async (req, res) => {
  */
 const downloadAttachment = async (req, res) => {
   try {
+    if (!req.storageContext?.rootFolderId) {
+      console.warn('[STORAGE] blocked_operation: download_attempt_without_storage');
+      return res.status(400).json({ code: 'STORAGE_NOT_CONNECTED', message: 'Cloud storage must be connected' });
+    }
     const { caseId, attachmentId } = req.params;
     
     // Validate authentication
@@ -2668,7 +2660,7 @@ const downloadAttachment = async (req, res) => {
     const mimeType = attachment.mimeType || getMimeType(attachment.fileName);
     const safeFilename = sanitizeFilename(attachment.fileName);
     
-    // Download from Google Drive if driveFileId exists, otherwise fallback to local file
+    // Download from firm-connected cloud storage only
     if (attachment.driveFileId) {
       try {
         const provider = await StorageProviderFactory.getProvider(req.user.firmId);
@@ -2690,38 +2682,10 @@ const downloadAttachment = async (req, res) => {
           error: error.message,
         });
       }
-    } else if (attachment.filePath) {
-
-      // Legacy: Handle old attachments stored locally
-      try {
-        const resolvedPath = path.resolve(attachment.filePath);
-        const safeBaseDir = path.resolve(__dirname, '../../uploads') + path.sep;
-        if (!resolvedPath.startsWith(safeBaseDir)) {
-          return res.status(403).json({
-            success: false,
-            message: 'Invalid file path',
-          });
-        }
-
-        await fs.access(resolvedPath);
-
-        
-        // Set headers for download
-        res.setHeader('Content-Type', mimeType);
-        res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
-        
-        // Send file
-        res.sendFile(resolvedPath);
-      } catch (err) {
-        return res.status(404).json({
-          success: false,
-          message: 'File not found',
-        });
-      }
     } else {
-      return res.status(404).json({
-        success: false,
-        message: 'File location not found',
+      return res.status(400).json({
+        code: 'STORAGE_NOT_CONNECTED',
+        message: 'Cloud storage must be connected',
       });
     }
   } catch (error) {

@@ -9,7 +9,7 @@ const { generateNextClientId } = require('../../services/clientIdGenerator');
 const { generatePasswordSetupToken } = require('../../services/passwordSetupToken.service');
 const { safeQueueEmail } = require('../../services/safeSideEffects.service');
 const { ensureTenantKey } = require('../../security/encryption.service');
-const { googleDriveService } = require('../../services/googleDrive.service');
+const config = require('../../config/config');
 
 const RESERVED_SLUGS = [
   'superadmin',
@@ -73,6 +73,12 @@ const createStarterWorkspace = async (payload = {}) => {
   if (!fullName || !email || !phoneNumber || !companyName) {
     const err = new Error('fullName, email, phoneNumber and companyName are required');
     err.statusCode = 400;
+    throw err;
+  }
+  if (config.strictByos && !connectGoogleDrive) {
+    const err = new Error('Cloud storage must be connected');
+    err.statusCode = 400;
+    err.code = 'STORAGE_NOT_CONNECTED';
     throw err;
   }
 
@@ -163,15 +169,10 @@ const createStarterWorkspace = async (payload = {}) => {
       }),
     });
 
-    if (!connectGoogleDrive) {
-      try {
-        await googleDriveService.getClient(result.defaultClient._id.toString());
-      } catch (storageError) {
-        console.error('[ONBOARDING] managed_storage_setup_failed', {
-          firmId: result.defaultClient._id.toString(),
-          message: storageError.message,
-        });
-      }
+    if (connectGoogleDrive) {
+      console.info('[ONBOARDING] awaiting_user_storage_connection', {
+        firmId: result.defaultClient._id.toString(),
+      });
     }
 
     console.log('[ONBOARDING] createStarterWorkspace completed', {
