@@ -90,7 +90,7 @@ async function runAdminHierarchyBackfill(options = {}) {
 
   try {
     const candidates = await User.find({
-      role: { $in: ['Admin', 'Employee'] },
+      role: { $in: ['Admin', 'ADMIN', 'Employee', 'USER', 'MANAGER'] },
       $or: [
         { firmId: { $exists: false } },
         { firmId: null },

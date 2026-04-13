@@ -32,7 +32,7 @@ async function shouldRejectAdminWithoutFirm() {
     xID: 'X000123',
     name: 'Admin Missing Context',
     email: 'admin-missing@test.com',
-    role: 'Admin',
+    role: 'ADMIN',
     isOnboarded: true, // firmId is only strictly required via schema validation if isOnboarded is true
   });
 
@@ -87,7 +87,7 @@ async function shouldBackfillLegacyAdmin() {
     xID: 'X000001',
     name: 'Legacy Admin',
     email: 'legacy-admin@test.com',
-    role: 'Admin',
+    role: 'ADMIN',
     firmId: firm._id,
     defaultClientId: null,
     status: 'invited',
@@ -114,7 +114,7 @@ async function shouldIgnoreSuperadminInPreflight() {
     xID: 'X000777',
     name: 'Scoped Admin',
     email: 'scoped-admin@test.com',
-    role: 'Admin',
+    role: 'ADMIN',
     firmId: firm._id,
     defaultClientId: client._id,
     status: 'invited',
