@@ -57,6 +57,7 @@ const {
 } = require('../middleware/clientAccess.middleware');
 const { validateCaseCommentPayload } = require('../middleware/commentValidation.middleware');
 const { requireDocketAccess } = require('../middleware/docketAccess.middleware');
+const { requireStorageConnected } = require('../middleware/requireStorageConnected');
 
 const upload = createSecureUpload();
 
@@ -168,13 +169,13 @@ router.get('/:caseId/upload-link', authorizeFirmPermission('CASE_VIEW'), userRea
 router.post('/:caseId/upload-link/revoke', authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, userWriteLimiter, checkCaseClientAccess, revokeUploadLink);
 
 // POST /api/cases/:caseId/attachments - Upload attachment to case
-router.post('/:caseId/attachments', upload.single('file'), enforceUploadSecurity, authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, attachmentLimiter, fileUploadLimiter, checkCaseClientAccess, addAttachment);
+router.post('/:caseId/attachments', requireStorageConnected, upload.single('file'), enforceUploadSecurity, authorizeFirmPermission('CASE_UPDATE'), sensitiveLimiter, attachmentLimiter, fileUploadLimiter, checkCaseClientAccess, addAttachment);
 
 // GET /api/cases/:caseId/attachments/:attachmentId/view - View attachment inline
-router.get('/:caseId/attachments/:attachmentId/view', authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, viewAttachment);
+router.get('/:caseId/attachments/:attachmentId/view', requireStorageConnected, authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, viewAttachment);
 
 // GET /api/cases/:caseId/attachments/:attachmentId/download - Download attachment
-router.get('/:caseId/attachments/:attachmentId/download', authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, downloadAttachment);
+router.get('/:caseId/attachments/:attachmentId/download', requireStorageConnected, authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, downloadAttachment);
 
 // POST /api/cases/:caseId/clone - Clone case with comments and attachments
 // PR #44: Apply xID validation for assignment fields
@@ -244,13 +245,13 @@ router.post('/:caseId/manager-move', requireRole(['MANAGER']), userWriteLimiter,
 router.get('/:caseId/client-fact-sheet', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, getClientFactSheetForCase);
 
 // GET /api/cases/:caseId/client-fact-sheet/files/:fileId/view - View client fact sheet file (view-only, no download)
-router.get('/:caseId/client-fact-sheet/files/:fileId/view', authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, viewClientFactSheetFile);
+router.get('/:caseId/client-fact-sheet/files/:fileId/view', requireStorageConnected, authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, viewClientFactSheetFile);
 
 // Client CFS access from case context (read-only)
 // GET /api/cases/:caseId/client-cfs/files - List client CFS files for this case's client
-router.get('/:caseId/client-cfs/files', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, listClientCFSFilesForCase);
+router.get('/:caseId/client-cfs/files', requireStorageConnected, authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, listClientCFSFilesForCase);
 
 // GET /api/cases/:caseId/client-cfs/files/:attachmentId/download - Download client CFS file
-router.get('/:caseId/client-cfs/files/:attachmentId/download', authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, downloadClientCFSFileForCase);
+router.get('/:caseId/client-cfs/files/:attachmentId/download', requireStorageConnected, authorizeFirmPermission('CASE_VIEW'), attachmentLimiter, checkCaseClientAccess, downloadClientCFSFileForCase);
 
 module.exports = router;

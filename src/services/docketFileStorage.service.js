@@ -1,8 +1,24 @@
 const Attachment = require('../models/Attachment.model');
 const Case = require('../models/Case.model');
+const Firm = require('../models/Firm.model');
 const { googleDriveService } = require('./googleDrive.service');
+const { decrypt } = require('./storage/services/TokenEncryption.service');
 
 class DocketFileStorageService {
+  async assertFirmStorageConnected(firmId) {
+    const firm = await Firm.findById(firmId).select('storageConfig storage').lean();
+    const encrypted = firm?.storageConfig?.credentials;
+    const credentials = encrypted ? JSON.parse(decrypt(encrypted)) : {};
+    const refreshToken = credentials.refreshToken || credentials.googleRefreshToken;
+    const rootFolderId = credentials.rootFolderId || firm?.storage?.google?.rootFolderId;
+    if (!refreshToken || !rootFolderId) {
+      const error = new Error('Cloud storage must be connected');
+      error.code = 'STORAGE_NOT_CONNECTED';
+      error.status = 400;
+      throw error;
+    }
+  }
+
   static toPublicAttachment(attachment) {
     return {
       id: attachment._id,
@@ -38,6 +54,7 @@ class DocketFileStorageService {
   }
 
   async uploadFile({ file, fileName, fileType, docketId, firmId, uploadedBy, uploadedByName }) {
+    await this.assertFirmStorageConnected(firmId);
     const caseRecord = await this.assertDocketOwnership({ docketId, firmId });
     const normalizedDocketId = caseRecord.caseId;
 
@@ -84,6 +101,7 @@ class DocketFileStorageService {
   }
 
   async listAttachments({ docketId, firmId }) {
+    await this.assertFirmStorageConnected(firmId);
     const caseRecord = await this.assertDocketOwnership({ docketId, firmId });
     const attachments = await Attachment.find({
       caseId: caseRecord.caseId,
@@ -97,6 +115,7 @@ class DocketFileStorageService {
   }
 
   async getFile({ attachmentId, firmId }) {
+    await this.assertFirmStorageConnected(firmId);
     const metadata = await Attachment.findOne({ _id: attachmentId, firmId: String(firmId) }).lean();
     if (!metadata || !metadata.storageFileId) {
       const error = new Error('Attachment metadata not found');
