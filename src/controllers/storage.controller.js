@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const Firm = require('../models/Firm.model');
 const { getCookieValue } = require('../utils/requestCookies');
-const { isAdminRole } = require('../utils/role.utils');
+const { isAdminRole, isPrimaryAdminRole } = require('../utils/role.utils');
 const { encrypt, decrypt } = require('../services/storage/services/TokenEncryption.service');
 const { googleDriveService, PROVIDER_TYPES } = require('../services/googleDrive.service');
 const { storageBackupService } = require('../services/storageBackup.service');
@@ -44,6 +44,14 @@ function toUiProvider(provider) {
 function ensureFirmAdmin(req, res) {
   if (!isAdminRole(req.user?.role)) {
     res.status(403).json({ error: 'Only firm admin can manage storage connection' });
+    return false;
+  }
+  return true;
+}
+
+function ensurePrimaryAdmin(req, res) {
+  if (!isPrimaryAdminRole(req.user?.role)) {
+    res.status(403).json({ error: 'Only Primary Admin can perform this action' });
     return false;
   }
   return true;
@@ -146,18 +154,25 @@ function buildStateCookie(value, maxAge) {
 function mapProviderErrorToStatus(error) {
   const message = (error?.message || '').toLowerCase();
   if (error?.status === 401 || message.includes('invalid_grant')) return 'DISCONNECTED';
+  if (error?.status === 403 && (message.includes('permission') || message.includes('insufficient'))) return 'DISCONNECTED';
   if (error?.status === 403 && message.includes('quota')) return 'QUOTA_EXCEEDED';
   return 'ERROR';
 }
 
 const getStorageStatus = async (req, res) => {
   try {
+    const firm = await Firm.findById(req.firmId).select('storageConfig').lean();
+    const credentials = decodeFirmStorageConfig(firm, req.firmId);
     const context = await googleDriveService.getClient(req.firmId);
+    const status = credentials.status || (context.rootFolderId ? 'ACTIVE' : 'DISCONNECTED');
+
     return res.json({
       connected: Boolean(context.rootFolderId),
       provider: context.providerType || PROVIDER_TYPES.DOCKETRA_DRIVE,
-      status: context.rootFolderId ? 'ACTIVE' : 'DISCONNECTED',
+      status,
       rootFolderId: context.rootFolderId || null,
+      connectedEmail: credentials.connectedEmail || null,
+      lastCheckedAt: credentials.lastCheckedAt || new Date().toISOString(),
     });
   } catch {
     return res.status(500).json({ error: 'Failed to retrieve storage status' });
@@ -187,7 +202,7 @@ const getStorageHealth = async (req, res) => {
 };
 
 const googleConnect = (req, res) => {
-  if (!ensureFirmAdmin(req, res)) return;
+  if (!ensurePrimaryAdmin(req, res)) return;
   try {
     const oauthClient = getStorageOAuthClient();
     const stateToken = buildStateToken(req.firmId);
@@ -207,7 +222,7 @@ const googleConnect = (req, res) => {
 };
 
 const googleCallback = async (req, res) => {
-  if (!ensureFirmAdmin(req, res)) return;
+  if (!ensurePrimaryAdmin(req, res)) return;
   try {
     const { code, state } = req.query;
     if (!code) return res.status(400).json({ error: 'missing_oauth_code' });
@@ -238,7 +253,7 @@ const googleCallback = async (req, res) => {
 };
 
 const googleConfirmDrive = async (req, res) => {
-  if (!ensureFirmAdmin(req, res)) return;
+  if (!ensurePrimaryAdmin(req, res)) return;
   if (!ensureStorageOtpVerification(req, res)) return;
   const firmId = req.firmId;
   const { driveId } = req.body || {};
@@ -418,10 +433,99 @@ const changeFirmStorage = async (req, res) => {
 
 const exportFirmStorage = async (req, res) => {
   try {
+    if (!ensurePrimaryAdmin(req, res)) return;
     const backup = await storageBackupService.runBackupForFirm(req.firmId);
-    return res.download(backup.zipPath, `docketra-export-${req.firmId}-${backup.exportId}.zip`);
+    const token = storageBackupService.createSignedDownloadToken({
+      firmId: req.firmId,
+      zipPath: backup.zipPath,
+      exportId: backup.exportId,
+    });
+    const downloadUrl = `${req.protocol}://${req.get('host')}/api/storage/export/download/${token}`;
+
+    try {
+      await storageBackupService.emailBackupLinkToPrimaryAdmin(req.firmId, downloadUrl);
+    } catch (emailError) {
+      console.error('[STORAGE]', { event: 'backup_email_failed', firmId: req.firmId, message: emailError.message });
+    }
+
+    console.info('[STORAGE]', { event: 'backup_generated', firmId: req.firmId, exportId: backup.exportId });
+    return res.json({
+      success: true,
+      exportId: backup.exportId,
+      fileCount: backup.fileCount,
+      downloadUrl,
+      expiresInSeconds: 1800,
+    });
   } catch (error) {
     return res.status(500).json({ error: 'export_failed', message: error.message });
+  }
+};
+
+const downloadFirmStorageExport = async (req, res) => {
+  const { token } = req.params;
+  const entry = storageBackupService.resolveSignedDownloadToken(token, req.firmId);
+  if (!entry) return res.status(404).json({ error: 'invalid_or_expired_export_link' });
+
+  return res.download(entry.zipPath, `docketra-export-${req.firmId}-${entry.exportId}.zip`);
+};
+
+const disconnectStorage = async (req, res) => {
+  if (!ensurePrimaryAdmin(req, res)) return;
+  try {
+    await googleDriveService.markStorageDisconnected(req.firmId, 'Disconnected by primary admin');
+    const context = await googleDriveService.getClient(req.firmId);
+    return res.json({
+      success: true,
+      provider: context.providerType || PROVIDER_TYPES.DOCKETRA_DRIVE,
+      rootFolderId: context.rootFolderId || null,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: 'disconnect_failed', message: error.message });
+  }
+};
+
+const storageHealthCheck = async (req, res) => {
+  try {
+    const { drive } = await googleDriveService.getClient(req.firmId);
+    await drive.files.list({ pageSize: 1, fields: 'files(id)', supportsAllDrives: true, includeItemsFromAllDrives: true });
+
+    const firm = await Firm.findById(req.firmId).select('storageConfig').lean();
+    const credentials = decodeFirmStorageConfig(firm, req.firmId);
+    await Firm.findByIdAndUpdate(req.firmId, {
+      $set: {
+        storageConfig: {
+          provider: 'google_drive',
+          credentials: encrypt(JSON.stringify({
+            ...credentials,
+            status: 'ACTIVE',
+            lastError: null,
+            lastCheckedAt: new Date().toISOString(),
+          })),
+        },
+      },
+    });
+    return res.json({ healthy: true });
+  } catch (error) {
+    const mappedStatus = mapProviderErrorToStatus(error);
+    if (mappedStatus === 'DISCONNECTED') {
+      await googleDriveService.markStorageDisconnected(req.firmId, error.message);
+    } else {
+      await googleDriveService.markStorageError(req.firmId, error.message);
+    }
+    return res.status(502).json({ healthy: false, error: error.message || 'health_check_failed' });
+  }
+};
+
+const storageUsage = async (req, res) => {
+  try {
+    const files = await googleDriveService.listFiles(req.firmId);
+    const totalSizeBytes = files.reduce((acc, file) => acc + Number(file.size || 0), 0);
+    return res.json({
+      totalFiles: files.length,
+      totalSizeBytes,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: 'usage_failed', message: error.message });
   }
 };
 
@@ -434,6 +538,10 @@ module.exports = {
   getStorageConfiguration,
   testStorageConnection,
   exportFirmStorage,
+  downloadFirmStorageExport,
+  disconnectStorage,
+  storageHealthCheck,
+  storageUsage,
   changeFirmStorage,
   buildStateCookie,
   mapProviderErrorToStatus,
