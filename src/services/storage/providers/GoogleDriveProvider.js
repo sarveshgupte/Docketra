@@ -4,11 +4,12 @@ const StorageProvider = require('./StorageProvider');
 const { StorageAccessError } = require('../errors');
 
 class GoogleDriveProvider extends StorageProvider {
-  constructor({ oauthClient, driveId } = {}) {
+  constructor({ oauthClient, driveId, driveClient } = {}) {
     super();
     this.providerName = 'google-drive';
     this.oauthClient = oauthClient;
     this.driveId = driveId || null;
+    this.driveClient = driveClient || null;
   }
 
   async authenticate(credentials = {}) {
@@ -25,6 +26,9 @@ class GoogleDriveProvider extends StorageProvider {
   }
 
   getClient() {
+    if (this.driveClient) {
+      return this.driveClient;
+    }
     if (!this.oauthClient) {
       throw new StorageAccessError('Google Drive OAuth client is not initialized', 'unknown');
     }

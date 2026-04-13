@@ -1,10 +1,11 @@
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-const { google } = require('googleapis');
 const Firm = require('../models/Firm.model');
 const { getCookieValue } = require('../utils/requestCookies');
 const { isAdminRole } = require('../utils/role.utils');
 const { encrypt, decrypt } = require('../services/storage/services/TokenEncryption.service');
+const { googleDriveService, PROVIDER_TYPES } = require('../services/googleDrive.service');
+const { storageBackupService } = require('../services/storageBackup.service');
 const GoogleDriveProvider = require('../services/storage/providers/GoogleDriveProvider');
 const OneDriveProvider = require('../services/storage/providers/OneDriveProvider');
 const { StorageValidationError } = require('../services/storage/errors/StorageErrors');
@@ -13,7 +14,6 @@ const { S3Adapter } = require('../services/storageAdapter.service');
 
 const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/drive.file',
-  'https://www.googleapis.com/auth/drive.metadata.readonly',
 ];
 const STATE_COOKIE_NAME = 'storage_oauth_state';
 const STATE_TTL_SECONDS = 10 * 60;
@@ -99,11 +99,7 @@ function ensureStorageOtpVerification(req, res) {
   }
 }
 function getStorageOAuthClient() {
-  const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_OAUTH_REDIRECT_URI } = process.env;
-  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_OAUTH_REDIRECT_URI) {
-    throw new Error('Google OAuth for storage is not fully configured');
-  }
-  return new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_OAUTH_REDIRECT_URI);
+  return googleDriveService.getOAuthClient();
 }
 
 function buildStateToken(tenantId) {
@@ -156,13 +152,12 @@ function mapProviderErrorToStatus(error) {
 
 const getStorageStatus = async (req, res) => {
   try {
-    const firm = await Firm.findById(req.firmId).select('storageConfig').lean();
-    if (!firm?.storageConfig?.provider) return res.json({ connected: false, provider: null, status: null });
-
+    const context = await googleDriveService.getClient(req.firmId);
     return res.json({
-      connected: true,
-      provider: firm.storageConfig.provider,
-      status: 'ACTIVE',
+      connected: Boolean(context.rootFolderId),
+      provider: context.providerType || PROVIDER_TYPES.DOCKETRA_DRIVE,
+      status: context.rootFolderId ? 'ACTIVE' : 'DISCONNECTED',
+      rootFolderId: context.rootFolderId || null,
     });
   } catch {
     return res.status(500).json({ error: 'Failed to retrieve storage status' });
@@ -215,7 +210,8 @@ const googleCallback = async (req, res) => {
   if (!ensureFirmAdmin(req, res)) return;
   try {
     const { code, state } = req.query;
-    if (!code || !state) return res.status(400).json({ error: 'missing_params' });
+    if (!code) return res.status(400).json({ error: 'missing_oauth_code' });
+    if (!state) return res.status(400).json({ error: 'missing_state' });
 
     const cookieValue = req.cookies?.[STATE_COOKIE_NAME] || getCookieValue(req.headers.cookie, STATE_COOKIE_NAME);
     const stateData = verifyStateToken(cookieValue, state);
@@ -228,40 +224,16 @@ const googleCallback = async (req, res) => {
     const tokens = result.tokens || {};
     if (!tokens.refresh_token) return res.status(400).json({ error: 'no_refresh_token' });
 
-    oauthClient.setCredentials({ refresh_token: tokens.refresh_token });
-    const drive = google.drive({ version: 'v3', auth: oauthClient });
-    const about = await drive.about.get({ fields: 'user(emailAddress)' });
-    const drives = await drive.drives.list({ pageSize: 100, fields: 'drives(id,name)' });
-
-    const storageCredentials = {
-      refreshToken: tokens.refresh_token,
-      connectedEmail: about?.data?.user?.emailAddress || null,
-      driveId: null,
-      rootFolderId: null,
-    };
-    await Firm.findByIdAndUpdate(req.firmId, {
-      $set: {
-        storageConfig: {
-          provider: 'google_drive',
-          credentials: encrypt(JSON.stringify(storageCredentials)),
-        },
-        'storage.mode': 'firm_connected',
-        'storage.provider': 'google_drive',
-      },
-    });
+    const connection = await googleDriveService.saveUserDriveConnection({ firmId: req.firmId, tokens });
 
     res.setHeader('Set-Cookie', buildStateCookie('', 0));
-
-    return res.json({
-      success: true,
-      provider: 'google-drive',
-      drives: (drives.data.drives || []).map((d) => ({ id: d.id, name: d.name })),
-    });
+    const successUrl = `${process.env.FRONTEND_URL || ''}/storage/success?provider=google-drive&connected=1&rootFolderId=${encodeURIComponent(connection.rootFolderId || '')}`;
+    return res.redirect(successUrl);
   } catch (error) {
     if (error instanceof StorageValidationError) {
       return res.status(400).json({ error: 'storage_configuration_invalid', message: error.message });
     }
-    return res.status(500).json({ error: 'oauth_failed' });
+    return res.status(500).json({ error: 'oauth_failed', message: error.message });
   }
 };
 
@@ -444,6 +416,15 @@ const changeFirmStorage = async (req, res) => {
   }
 };
 
+const exportFirmStorage = async (req, res) => {
+  try {
+    const backup = await storageBackupService.runBackupForFirm(req.firmId);
+    return res.download(backup.zipPath, `docketra-export-${req.firmId}-${backup.exportId}.zip`);
+  } catch (error) {
+    return res.status(500).json({ error: 'export_failed', message: error.message });
+  }
+};
+
 module.exports = {
   getStorageStatus,
   getStorageHealth,
@@ -452,6 +433,7 @@ module.exports = {
   googleConfirmDrive,
   getStorageConfiguration,
   testStorageConnection,
+  exportFirmStorage,
   changeFirmStorage,
   buildStateCookie,
   mapProviderErrorToStatus,
