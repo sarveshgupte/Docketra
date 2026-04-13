@@ -23,6 +23,14 @@ const requireRole = (roles = []) => (req, res, next) => {
   return next();
 };
 
+const requirePrimaryAdmin = (req, res, next) => {
+  const currentRole = normalizeRole(req.user?.role);
+  if (currentRole !== 'PRIMARY_ADMIN') {
+    return res.status(403).json({ success: false, message: 'Primary admin access required' });
+  }
+  return next();
+};
+
 const requireFirmScope = (resourceResolver) => (req, res, next) => {
   const resource = typeof resourceResolver === 'function' ? resourceResolver(req) : req.resource;
   if (!resource?.firmId || !req.user?.firmId || String(resource.firmId) !== String(req.user.firmId)) {
@@ -42,6 +50,7 @@ const requireTeamScope = (resourceResolver) => (req, res, next) => {
 module.exports = {
   requireAuth,
   requireRole,
+  requirePrimaryAdmin,
   requireFirmScope,
   requireTeamScope,
 };

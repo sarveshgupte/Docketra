@@ -518,6 +518,21 @@ const patchUserRole = async (req, res) => {
 
     target.role = targetRole;
     target.isPrimaryAdmin = targetRole === 'PRIMARY_ADMIN';
+    if (targetRole === 'PRIMARY_ADMIN') {
+      target.primaryAdminId = null;
+      target.adminId = null;
+      target.managerId = null;
+      target.reportsToUserId = null;
+    } else if (targetRole === 'ADMIN') {
+      target.primaryAdminId = target.primaryAdminId || req.user?._id || null;
+      target.adminId = null;
+      target.managerId = null;
+      target.reportsToUserId = null;
+    } else if (targetRole === 'MANAGER') {
+      target.primaryAdminId = target.primaryAdminId || req.user?._id || null;
+      target.managerId = null;
+      target.reportsToUserId = null;
+    }
     await target.save();
     return res.json({ success: true, data: target.toSafeObject?.() || target });
   } catch (error) {
@@ -544,34 +559,29 @@ const patchUserReporting = async (req, res) => {
     const target = await User.findOne({ _id: req.params.id, firmId: req.user?.firmId, status: { $ne: 'deleted' } });
     if (!target) return res.status(404).json({ success: false, message: 'User not found' });
 
-    const reportsToUserId = req.body?.reportsToUserId || null;
-    if (!reportsToUserId) {
-      target.reportsToUserId = null;
-      target.managerId = null;
-      await target.save();
-      return res.json({ success: true, data: target.toSafeObject?.() || target });
+    const role = normalizeRole(target.role);
+    const primaryAdminId = req.body?.primaryAdminId ?? target.primaryAdminId ?? null;
+    const adminId = req.body?.adminId ?? target.adminId ?? null;
+    const managerId = req.body?.managerId ?? req.body?.reportsToUserId ?? target.managerId ?? null;
+
+    if (role !== 'PRIMARY_ADMIN' && !primaryAdminId) {
+      return res.status(400).json({ success: false, message: 'primaryAdminId is required for non-primary-admin users' });
+    }
+    if (role === 'ADMIN' && (adminId || managerId)) {
+      return res.status(400).json({ success: false, message: 'ADMIN cannot have adminId or managerId' });
+    }
+    if (role === 'MANAGER' && managerId) {
+      return res.status(400).json({ success: false, message: 'MANAGER cannot have managerId' });
     }
 
-    const parent = await User.findOne({ _id: reportsToUserId, firmId: req.user?.firmId, status: { $ne: 'deleted' } });
-    if (!parent) return res.status(400).json({ success: false, message: 'Reporting manager not found in firm' });
-    if (String(parent.teamId || '') !== String(target.teamId || '')) {
-      return res.status(400).json({ success: false, message: 'Reporting relation must stay inside same team' });
-    }
-    if (await hasCircularManager(target._id, parent._id)) {
+    if (managerId && await hasCircularManager(target._id, managerId)) {
       return res.status(400).json({ success: false, message: 'Circular reporting chain is not allowed' });
     }
 
-    if (normalizeRole(req.user?.role) === 'MANAGER') {
-      if (String(req.user?.teamId || '') !== String(target.teamId || '')) {
-        return res.status(403).json({ success: false, message: 'Managers can only update reporting within their team' });
-      }
-      if (String(req.user?.teamId || '') !== String(parent.teamId || '')) {
-        return res.status(403).json({ success: false, message: 'Managers can only assign reporting managers in their team' });
-      }
-    }
-
-    target.reportsToUserId = parent._id;
-    target.managerId = parent._id;
+    target.primaryAdminId = role === 'PRIMARY_ADMIN' ? null : primaryAdminId;
+    target.adminId = role === 'ADMIN' ? null : adminId;
+    target.managerId = role === 'PRIMARY_ADMIN' || role === 'ADMIN' || role === 'MANAGER' ? null : managerId;
+    target.reportsToUserId = target.managerId || null;
     await target.save();
     return res.json({ success: true, data: target.toSafeObject?.() || target });
   } catch (error) {

@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 const crypto = require('crypto');
 const softDeletePlugin = require('../utils/softDelete.plugin');
 const { encrypt: encryptProtectedValue, isEncrypted } = require('../utils/encryption');
+const { normalizeRole } = require('../utils/role.utils');
+const { getTagValidationError, normalizeId } = require('../utils/hierarchy.utils');
 // NOTE: If upgrading from previous version,
 // ensure MongoDB global unique index on { email: 1 } is dropped:
 // db.users.dropIndex("email_1")
@@ -445,10 +447,25 @@ const userSchema = new mongoose.Schema({
   
   // Manager reference for hierarchical reporting structure (nullable)
   // Supports organizational hierarchy - employees can have a manager
+  primaryAdminId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
+    index: true,
+  },
+
+  adminId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
+    index: true,
+  },
+
   managerId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     default: null,
+    index: true,
   },
 
   reportsToUserId: {
@@ -693,6 +710,25 @@ userSchema.pre('save', async function() {
   if (this.managerId && !this.reportsToUserId) {
     this.reportsToUserId = this.managerId;
   }
+
+  const normalizedRole = normalizeRole(this.role);
+  const tagValidationError = getTagValidationError({
+    role: normalizedRole,
+    primaryAdminId: this.primaryAdminId,
+    adminId: this.adminId,
+    managerId: this.managerId,
+  });
+  if (tagValidationError) {
+    const error = new Error(tagValidationError);
+    error.name = 'ValidationError';
+    throw error;
+  }
+
+  if (normalizeId(this._id) && normalizeId(this.primaryAdminId) && normalizeId(this._id) === normalizeId(this.primaryAdminId) && normalizedRole !== 'PRIMARY_ADMIN') {
+    const error = new Error('Only PRIMARY_ADMIN may self-reference primaryAdminId');
+    error.name = 'ValidationError';
+    throw error;
+  }
 });
 
 // Indexes for performance
@@ -715,7 +751,7 @@ userSchema.index(
     unique: true,
     partialFilterExpression: {
       isSystem: true,
-      role: 'Admin',
+      role: { $in: ['ADMIN', 'PRIMARY_ADMIN'] },
       status: { $ne: 'deleted' },
     },
     name: 'system_admin_email_unique',
@@ -727,7 +763,7 @@ userSchema.index(
     unique: true,
     partialFilterExpression: {
       isSystem: true,
-      role: 'Admin',
+      role: { $in: ['ADMIN', 'PRIMARY_ADMIN'] },
       status: { $ne: 'deleted' },
       phoneNumber: { $type: 'string' },
     },
@@ -742,6 +778,7 @@ userSchema.index({ firmId: 1, isActive: 1 });
 // REMOVED: { firmId: 1 } - redundant with compound index (firmId, xID) above
 userSchema.index({ firmId: 1, role: 1 }); // Firm-scoped role queries
 userSchema.index({ firmId: 1, isPrimaryAdmin: 1 }, { unique: true, partialFilterExpression: { isPrimaryAdmin: true, status: { $ne: 'deleted' } }, name: 'firm_primary_admin_unique' });
+userSchema.index({ firmId: 1, role: 1 }, { unique: true, partialFilterExpression: { role: 'PRIMARY_ADMIN', status: { $ne: 'deleted' } }, name: 'firm_primary_admin_role_unique' });
 userSchema.index({ firmId: 1 });
 userSchema.index({ firmId: 1, createdAt: -1 });
 userSchema.index(
