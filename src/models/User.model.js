@@ -729,6 +729,76 @@ userSchema.pre('save', async function() {
     error.name = 'ValidationError';
     throw error;
   }
+
+  if (normalizedRole !== 'SUPER_ADMIN') {
+    const hierarchyRefs = new Map();
+    const refDescriptors = [
+      { field: 'primaryAdminId', expectedRole: 'PRIMARY_ADMIN' },
+      { field: 'adminId', expectedRole: 'ADMIN' },
+      { field: 'managerId', expectedRole: 'MANAGER' },
+    ];
+
+    for (const descriptor of refDescriptors) {
+      const rawValue = this[descriptor.field];
+      const normalizedValue = normalizeId(rawValue);
+      if (!normalizedValue) continue;
+
+      if (normalizeId(this._id) && normalizedValue === normalizeId(this._id)) {
+        const error = new Error(`${descriptor.field} cannot reference the same user`);
+        error.name = 'ValidationError';
+        throw error;
+      }
+
+      // eslint-disable-next-line no-await-in-loop
+      const referencedUser = await mongoose.models.User.findOne({
+        _id: rawValue,
+        status: { $ne: 'deleted' },
+      }).select('_id firmId role primaryAdminId adminId').lean();
+
+      if (!referencedUser) {
+        const error = new Error(`${descriptor.field} references a missing user`);
+        error.name = 'ValidationError';
+        throw error;
+      }
+
+      if (normalizeId(referencedUser.firmId) !== normalizeId(this.firmId)) {
+        const error = new Error(`${descriptor.field} must reference a user from the same firm`);
+        error.name = 'ValidationError';
+        throw error;
+      }
+
+      if (normalizeRole(referencedUser.role) !== descriptor.expectedRole) {
+        const error = new Error(`${descriptor.field} must reference a ${descriptor.expectedRole} user`);
+        error.name = 'ValidationError';
+        throw error;
+      }
+
+      hierarchyRefs.set(descriptor.field, referencedUser);
+    }
+
+    const referencedAdmin = hierarchyRefs.get('adminId');
+    const referencedManager = hierarchyRefs.get('managerId');
+
+    if (referencedAdmin && normalizeId(referencedAdmin.primaryAdminId) !== normalizeId(this.primaryAdminId)) {
+      const error = new Error('adminId must belong to the provided primaryAdminId');
+      error.name = 'ValidationError';
+      throw error;
+    }
+
+    if (referencedManager) {
+      if (normalizeId(referencedManager.primaryAdminId) !== normalizeId(this.primaryAdminId)) {
+        const error = new Error('managerId must belong to the provided primaryAdminId');
+        error.name = 'ValidationError';
+        throw error;
+      }
+
+      if (this.adminId && normalizeId(referencedManager.adminId) !== normalizeId(this.adminId)) {
+        const error = new Error('managerId must belong to the provided adminId');
+        error.name = 'ValidationError';
+        throw error;
+      }
+    }
+  }
 });
 
 // Indexes for performance
