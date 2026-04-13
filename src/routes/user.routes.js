@@ -3,7 +3,7 @@ const { applyRouteValidation } = require('../middleware/requestValidation.middle
 const routeSchemas = require('../schemas/user.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
-const { requireRole } = require('../middleware/rbac.middleware');
+const { requirePrimaryAdmin } = require('../middleware/rbac.middleware');
 const { userReadLimiter, userWriteLimiter } = require('../middleware/rateLimiters');
 const { updateUserStatus } = require('../controllers/auth.controller');
 const {
@@ -43,9 +43,9 @@ router.patch('/:xID/status', authorizeFirmPermission('USER_MANAGE'), userWriteLi
 
 // DELETE /api/users/:id - Deactivate user
 
-router.patch('/:id/role', requireRole(['PRIMARY_ADMIN', 'ADMIN']), userWriteLimiter, patchUserRole);
-router.patch('/:id/reporting', requireRole(['PRIMARY_ADMIN', 'ADMIN', 'MANAGER']), userWriteLimiter, patchUserReporting);
+router.patch('/:id/role', requirePrimaryAdmin, userWriteLimiter, patchUserRole);
+router.patch('/:id/reporting', requirePrimaryAdmin, userWriteLimiter, patchUserReporting);
 
-router.delete('/:id', requireRole(['PRIMARY_ADMIN', 'ADMIN']), authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, deleteUser);
+router.delete('/:id', requirePrimaryAdmin, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, deleteUser);
 
 module.exports = router;

@@ -106,8 +106,8 @@ const getRoleBadgePresentation = (user) => {
   const normalizedRole = String(user?.role || '').trim().toUpperCase();
   const isPrimaryOrSystemAdmin = user?.isPrimaryAdmin || user?.isSystem;
 
-  if (isPrimaryOrSystemAdmin || normalizedRole === 'ADMIN') {
-    return { tone: 'InProgress', label: isPrimaryOrSystemAdmin ? 'Admin (Primary)' : 'Admin' };
+  if (isPrimaryOrSystemAdmin || normalizedRole === 'PRIMARY_ADMIN' || normalizedRole === 'ADMIN') {
+    return { tone: 'InProgress', label: (isPrimaryOrSystemAdmin || normalizedRole === 'PRIMARY_ADMIN') ? 'Primary Admin' : 'Admin' };
   }
 
   if (['STAFF', 'EMPLOYEE', 'USER'].includes(normalizedRole)) {
@@ -135,6 +135,10 @@ export const AdminPage = () => {
   const { user: loggedInUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const isWorkSettingsContext = searchParams.get('context') === 'work-settings';
+  const isPrimaryAdminActor = useMemo(() => {
+    const normalizedRole = String(loggedInUser?.role || '').trim().toUpperCase();
+    return normalizedRole === 'PRIMARY_ADMIN' || Boolean(loggedInUser?.isPrimaryAdmin);
+  }, [loggedInUser]);
   
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(() => {
@@ -1272,19 +1276,23 @@ export const AdminPage = () => {
                     { key: 'status', header: 'Status', render: (u) => <StatusBadge status={u.status || 'ACTIVE'} /> },
                     { key: 'actions', header: 'Actions', render: (u) => (
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => handleEditUser(u)}>Edit</Button>
+                        {isPrimaryAdminActor ? (
+                          <Button size="sm" variant="outline" onClick={() => handleEditUser(u)}>Edit</Button>
+                        ) : null}
                         {getNormalizedUserStatus(u) === 'invited' && (
                           <Button size="sm" variant="default" onClick={() => handleResendSetupEmail(u.xID)}>
                             Resend Invite
                           </Button>
                         )}
-                        <Button
-                          size="sm"
-                          variant={getNormalizedUserStatus(u) === 'active' ? 'danger' : 'default'}
-                          onClick={() => handleDeleteClick(u.xID)}
-                        >
-                          {getNormalizedUserStatus(u) === 'invited' ? 'Cancel Invite' : (getNormalizedUserStatus(u) === 'active' ? 'Deactivate' : 'Activate')}
-                        </Button>
+                        {isPrimaryAdminActor ? (
+                          <Button
+                            size="sm"
+                            variant={getNormalizedUserStatus(u) === 'active' ? 'danger' : 'default'}
+                            onClick={() => handleDeleteClick(u.xID)}
+                          >
+                            {getNormalizedUserStatus(u) === 'invited' ? 'Cancel Invite' : (getNormalizedUserStatus(u) === 'active' ? 'Deactivate' : 'Activate')}
+                          </Button>
+                        ) : null}
                       </div>
                     ) }
                   ]}

@@ -145,7 +145,8 @@ export const Layout = ({ children }) => {
   const seenNotificationIdsRef = useRef(new Set());
 
   const currentFirmSlug = firmSlug || user?.firmSlug;
-  const hasAdminAccess = user?.role === USER_ROLES.ADMIN;
+  const normalizedRole = String(user?.role || '').trim().toUpperCase();
+  const hasAdminAccess = user?.role === USER_ROLES.ADMIN || normalizedRole === 'PRIMARY_ADMIN';
   const taggedWorkbasketName = Array.isArray(user?.teamNames) && user.teamNames.length > 0
     ? String(user.teamNames[0] || '').trim()
     : '';

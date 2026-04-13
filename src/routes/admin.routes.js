@@ -3,6 +3,7 @@ const { applyRouteValidation } = require('../middleware/requestValidation.middle
 const routeSchemas = require('../schemas/admin.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
+const { requirePrimaryAdmin } = require('../middleware/rbac.middleware');
 const { createSecureUpload, enforceUploadSecurity } = require('../middleware/uploadProtection.middleware');
 const { superadminLimiter, userReadLimiter, userWriteLimiter, sensitiveLimiter } = require('../middleware/rateLimiters');
 const { adminBaseAccess } = require('./routeGroups');
@@ -98,8 +99,8 @@ router.delete('/categories/:id/subcategories/:subcategoryId', ...adminBaseAccess
 
 router.get('/users', ...adminBaseAccess, authorizeFirmPermission('USER_VIEW'), userReadLimiter, getAllUsers);
 router.post('/users', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), sensitiveLimiter, createUser);
-router.put('/users/:xID/activate', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), sensitiveLimiter, activateUser);
-router.put('/users/:xID/deactivate', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), sensitiveLimiter, deactivateUser);
+router.put('/users/:xID/activate', ...adminBaseAccess, requirePrimaryAdmin, authorizeFirmPermission('USER_MANAGE'), sensitiveLimiter, activateUser);
+router.put('/users/:xID/deactivate', ...adminBaseAccess, requirePrimaryAdmin, authorizeFirmPermission('USER_MANAGE'), sensitiveLimiter, deactivateUser);
 router.post('/users/:xID/resend-invite', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, resendInviteEmail);
 
 router.patch('/users/:xID/restrict-clients', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateRestrictedClients);
