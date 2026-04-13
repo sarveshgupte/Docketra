@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 const Team = require('../models/Team.model');
 const User = require('../models/User.model');
 const { isAdminRole, isManagerRole } = require('../utils/role.utils');
+const { assertPrimaryAdmin } = require('../utils/hierarchy.utils');
+const log = require('../utils/log');
 
 const ensureSameFirm = (doc, firmId) => doc && String(doc.firmId) === String(firmId);
 
@@ -16,6 +18,7 @@ const listTeams = async (req, res) => {
 
 const createTeam = async (req, res) => {
   try {
+    assertPrimaryAdmin(req.user);
     const name = String(req.body?.name || '').trim();
     const managerId = req.body?.managerId || null;
     if (!name) return res.status(400).json({ success: false, message: 'Team name is required' });
@@ -29,6 +32,7 @@ const createTeam = async (req, res) => {
 
 const updateTeam = async (req, res) => {
   try {
+    assertPrimaryAdmin(req.user);
     const team = await Team.findOne({ _id: req.params.id, firmId: req.user.firmId });
     if (!team) return res.status(404).json({ success: false, message: 'Team not found' });
 
@@ -43,6 +47,7 @@ const updateTeam = async (req, res) => {
     }
 
     await team.save();
+    log.info('HIERARCHY_UPDATED', { actorId: req.user?._id, targetId: team._id, changes: { managerId: team.managerId } });
     return res.json({ success: true, data: team });
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message || 'Failed to update team' });
@@ -51,6 +56,7 @@ const updateTeam = async (req, res) => {
 
 const assignUserToTeam = async (req, res) => {
   try {
+    assertPrimaryAdmin(req.user);
     const actor = req.user;
     const team = await Team.findOne({ _id: req.params.id, firmId: actor.firmId });
     if (!team) return res.status(404).json({ success: false, message: 'Team not found' });
@@ -75,6 +81,7 @@ const assignUserToTeam = async (req, res) => {
 
     user.teamId = team._id;
     await user.save();
+    log.info('HIERARCHY_UPDATED', { actorId: actor?._id, targetId: user._id, changes: { teamId: team._id } });
 
     return res.json({ success: true, data: { userId: user._id, teamId: team._id } });
   } catch (error) {
