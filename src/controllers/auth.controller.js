@@ -2018,10 +2018,14 @@ const getProfile = async (req, res) => {
       ? [
         'Review your dashboard and invite your team members.',
         'Configure categories, work types, and firm settings.',
+        'Open Firm Settings to configure compliance defaults and storage controls for your firm.',
+        'Check your welcome email for your login link and support contact details.',
         'Create your first docket workflow and assign ownership.',
       ]
       : [
         'Open your worklist to see assigned dockets and priorities.',
+        'Open My Settings to confirm your profile details before starting execution.',
+        'Check your welcome email for your workspace link and sign-in options.',
         'Update docket status and add comments to keep progress visible.',
         'Use search and filters to find work quickly across clients.',
       ];
