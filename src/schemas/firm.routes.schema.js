@@ -45,3 +45,6 @@ module.exports['POST /resend-otp'] = {
   params: tenantRouteParamsSchema,
   body: resendOtpBodySchema,
 };
+module.exports['GET /setup-status'] = {
+  params: tenantRouteParamsSchema,
+};

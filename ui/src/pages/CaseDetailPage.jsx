@@ -172,6 +172,11 @@ export const CaseDetailPage = () => {
   const [showRouteModal, setShowRouteModal] = useState(false);
   const [uploadLinkGenerating, setUploadLinkGenerating] = useState(false);
   const [uploadLinkResult, setUploadLinkResult] = useState(null);
+  const [timelineFilter, setTimelineFilter] = useState('ALL');
+  const [timelinePage, setTimelinePage] = useState(1);
+  const [timelineLoading, setTimelineLoading] = useState(false);
+  const [timelineApiData, setTimelineApiData] = useState([]);
+  const [timelineHasNextPage, setTimelineHasNextPage] = useState(false);
 
   // Track case view session
   // PR: Comprehensive CaseHistory & Audit Trail
@@ -241,6 +246,53 @@ export const CaseDetailPage = () => {
     }),
     [timelineEvents]
   );
+  const mergedTimelineEvents = useMemo(() => {
+    const fromApi = Array.isArray(timelineApiData) ? timelineApiData : [];
+    const fallback = sortedTimelineEvents || [];
+    return (fromApi.length ? fromApi : fallback).map((entry) => ({
+      ...entry,
+      actorLabel: entry.performedByName || entry.performedByXID || entry.performedBy || 'System',
+      icon: ({
+        DOCKET_CREATED: '🆕',
+        STATUS_CHANGED: '🔄',
+        ASSIGNED: '👤',
+        WORKBASKET_CHANGED: '🗂️',
+        PRIORITY_CHANGED: '⚡',
+        COMMENT_ADDED: '💬',
+        UPDATED: '✏️',
+      }[String(entry.type || entry.actionType || '').toUpperCase()] || '•'),
+    }));
+  }, [timelineApiData, sortedTimelineEvents]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadTimeline = async () => {
+      if (!caseId) return;
+      setTimelineLoading(true);
+      try {
+        const params = {
+          page: timelinePage,
+          limit: 10,
+          ...(timelineFilter !== 'ALL' ? { type: timelineFilter } : {}),
+        };
+        const result = await caseApi.getDocketTimeline(caseId, params);
+        if (cancelled) return;
+        setTimelineApiData(Array.isArray(result?.data) ? result.data : []);
+        setTimelineHasNextPage(Boolean(result?.pagination?.hasNextPage));
+      } catch (_error) {
+        if (!cancelled) {
+          setTimelineApiData([]);
+          setTimelineHasNextPage(false);
+        }
+      } finally {
+        if (!cancelled) setTimelineLoading(false);
+      }
+    };
+    loadTimeline();
+    return () => {
+      cancelled = true;
+    };
+  }, [caseId, timelineFilter, timelinePage]);
   const visibleComments = useMemo(() => comments.slice(-commentWindowSize), [comments, commentWindowSize]);
   const commentDraftKey = `docketra_case_comment_draft_${firmSlug || 'firm'}_${caseId}`;
   const availableAssignees = useMemo(() => {
@@ -1794,6 +1846,48 @@ export const CaseDetailPage = () => {
                   </table>
                 </div>
               )}
+            </section>
+            <section className="case-card" aria-labelledby="activity-timeline-heading">
+              <div className="case-card__heading">
+                <h2 id="activity-timeline-heading">Activity Timeline</h2>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={timelineFilter}
+                    onChange={(event) => {
+                      setTimelineFilter(event.target.value);
+                      setTimelinePage(1);
+                    }}
+                  >
+                    <option value="ALL">All</option>
+                    <option value="STATUS_CHANGED">Status Changes</option>
+                    <option value="ASSIGNED">Assignments</option>
+                    <option value="COMMENT_ADDED">Comments</option>
+                  </select>
+                </div>
+              </div>
+              {timelineLoading ? <p className="case-detail__empty-note">Loading timeline…</p> : null}
+              {!timelineLoading && !mergedTimelineEvents.length ? <p className="case-detail__empty-note">No timeline events yet.</p> : null}
+              {!timelineLoading && mergedTimelineEvents.length ? (
+                <ul className="space-y-3">
+                  {mergedTimelineEvents.map((event, index) => (
+                    <li key={`${event._id || event.id || index}`} className="flex items-start gap-3 border-l-2 border-gray-200 pl-3">
+                      <span>{event.icon}</span>
+                      <div>
+                        <div className="text-sm font-medium">{event.description || event.action || event.actionType || 'Updated'}</div>
+                        <div className="text-xs text-gray-500">{event.actorLabel} • {formatDateTime(event.createdAt || event.timestamp)}</div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <div className="mt-3 flex items-center justify-end gap-2">
+                <Button variant="outline" disabled={timelinePage <= 1} onClick={() => setTimelinePage((value) => Math.max(1, value - 1))}>
+                  Previous
+                </Button>
+                <Button variant="outline" disabled={!timelineHasNextPage} onClick={() => setTimelinePage((value) => value + 1)}>
+                  Next
+                </Button>
+              </div>
             </section>
           </main>
 
