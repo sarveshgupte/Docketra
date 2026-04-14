@@ -66,6 +66,7 @@ module.exports = {
     params: z.object({ id: objectIdOrString, subcategoryId: nonEmptyString }),
   },
 
+  'GET /hierarchy': { query: passthroughQuery },
   'GET /users': { query: passthroughQuery },
   'POST /users': { body: passthroughBody },
   'PUT /users/:xID/activate': {
@@ -87,6 +88,13 @@ module.exports = {
   'PATCH /users/:xID/workbaskets': {
     params: z.object({ xID: xidString }),
     body: z.object({ teamIds: z.array(objectIdOrString).min(1) }).passthrough(),
+  },
+  'PATCH /users/:id/hierarchy': {
+    params: z.object({ id: objectIdOrString }),
+    body: z.object({
+      adminId: objectIdOrString.nullish(),
+      managerId: objectIdOrString.nullish(),
+    }).passthrough(),
   },
   'GET /firm-settings': { query: passthroughQuery },
   'GET /firm-settings/activity': { query: passthroughQuery },

@@ -17,6 +17,7 @@ export const ROUTES = {
   PROFILE: (firmSlug) => `/app/firm/${firmSlug}/profile`,
   UPDATES: (firmSlug) => `/app/firm/${firmSlug}/updates`,
   ADMIN: (firmSlug) => `/app/firm/${firmSlug}/admin`,
+  HIERARCHY: (firmSlug) => `/app/firm/${firmSlug}/admin/hierarchy`,
   WORK_CATEGORY_MANAGEMENT: (firmSlug) => `/app/firm/${firmSlug}/admin?tab=categories&context=work-settings`,
   FIRM_SETTINGS: (firmSlug) => `/app/firm/${firmSlug}/settings/firm`,
   WORK_SETTINGS: (firmSlug) => `/app/firm/${firmSlug}/settings/work`,
