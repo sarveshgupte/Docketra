@@ -498,7 +498,7 @@ export const Layout = ({ children }) => {
       title: 'ACCOUNT',
       defaultOpen: false,
       items: [
-        { to: ROUTES.PROFILE(currentFirmSlug), label: hasAdminAccess ? 'Profile & Preferences' : 'My Settings', icon: <IconSettings />, active: isActivePrefix(ROUTES.PROFILE(currentFirmSlug)) },
+        { to: ROUTES.PROFILE(currentFirmSlug), label: hasAdminAccess ? 'Profile' : 'My Settings', icon: <IconSettings />, active: isActivePrefix(ROUTES.PROFILE(currentFirmSlug)) },
       ],
     },
   ].filter((section) => !section.hidden);
