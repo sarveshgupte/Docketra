@@ -59,6 +59,7 @@ export const AuditLogsPage = lazyPage(() => import('../pages/AuditLogsPage'), 'A
 export const FirmSettingsPage = FirmSettingsPageComponent;
 export const WorkSettingsPage = WorkSettingsPageComponent;
 export const StorageSettingsPage = lazyPage(() => import('../pages/StorageSettingsPage'), 'StorageSettingsPage');
+export const AiSettingsPage = lazyPage(() => import('../pages/AiSettingsPage'), 'AiSettingsPage');
 export const PlatformDashboard = lazyPage(() => import('../pages/PlatformDashboard'), 'PlatformDashboard');
 export const FirmsManagement = lazyPage(() => import('../pages/FirmsManagement'), 'FirmsManagement');
 export const ReportsDashboard = lazyPage(() => import('../pages/reports/ReportsDashboard'), 'ReportsDashboard');
