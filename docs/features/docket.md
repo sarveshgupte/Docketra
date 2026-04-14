@@ -106,6 +106,57 @@ The firm dashboard is now action-oriented and loaded from `GET /api/dashboard/su
 - SLA badges per docket: `GREEN`, `YELLOW`, `RED`.
 - List pagination with page-aware API params (`page`, `limit`).
 - Loading and empty states with safe fallback rendering.
+- Sort controls: `NEWEST`, `PRIORITY`, `SLA`.
+- Workbasket filter dropdown for focused dashboard views.
+- Widget-level lazy loading via `only` query option (each widget can load independently).
+- "View All" links for every dashboard widget to jump into the full docket list.
+
+### Dashboard caching
+
+- `GET /api/dashboard/summary` now uses Redis caching with a 30 second TTL.
+- Cache key includes firm, user, filter, sort, workbasket, page, limit, and widget scope:
+  - `dashboard:{firmId}:{userId}:{filter}:{sort}:{workbasket}:{page}:{limit}:{only}`
+- Only successful responses are cached.
+- Redis failures are non-blocking and fail silently (request still succeeds).
+
+## Activity Timeline
+
+Each docket now has a lightweight, paginated activity timeline exposed at:
+
+- `GET /api/dockets/:id/timeline`
+
+### Timeline events
+
+Supported activity types:
+
+- `DOCKET_CREATED`
+- `STATUS_CHANGED`
+- `ASSIGNED`
+- `WORKBASKET_CHANGED`
+- `PRIORITY_CHANGED`
+- `COMMENT_ADDED`
+- `UPDATED`
+
+### Timeline UX
+
+- Vertical timeline on docket detail page.
+- Latest-first ordering.
+- Event icon per activity type.
+- Actor display with xID and resolved user name when available.
+- Filter tabs for:
+  - Status changes
+  - Assignments
+  - Comments
+- Pagination support for long timelines.
+
+### Naming standard
+
+To reduce confusion during the Docket/Case transition:
+
+- API payloads for list/detail surfaces should expose:
+  - `docketId`
+  - `title`
+- UI should avoid depending on legacy `caseName` / `caseId` fields directly where mapped docket fields are available.
 
 ## Firm Setup Observability
 

@@ -8,6 +8,7 @@ import { ROUTES } from '../constants/routes';
 
 const FILTERS = ['MY', 'TEAM', 'ALL'];
 const PAGE_SIZE = 10;
+const SORT_OPTIONS = ['NEWEST', 'PRIORITY', 'SLA'];
 
 const badgeClassBySla = {
   GREEN: 'bg-green-100 text-green-700',
@@ -82,6 +83,9 @@ export const DashboardPage = () => {
   const [filter, setFilter] = useState('MY');
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [widgetLoading, setWidgetLoading] = useState({});
+  const [sort, setSort] = useState('NEWEST');
+  const [workbasketId, setWorkbasketId] = useState('');
   const [setupLoading, setSetupLoading] = useState(true);
   const [summary, setSummary] = useState({
     myDockets: { items: [], total: 0, hasNextPage: false },
@@ -96,19 +100,30 @@ export const DashboardPage = () => {
     navigate(ROUTES.CASE_DETAIL(firmSlug, docket.caseInternalId));
   };
 
+  const loadWidget = async (only) => {
+    setWidgetLoading((prev) => ({ ...prev, [only]: true }));
+    try {
+      const result = await dashboardApi.getSummary({ filter, page, sort, workbasketId, limit: PAGE_SIZE, only });
+      setSummary((prev) => ({ ...prev, ...(result?.data || {}) }));
+    } finally {
+      setWidgetLoading((prev) => ({ ...prev, [only]: false }));
+    }
+  };
+
   const loadDashboard = async () => {
     setLoading(true);
-    try {
-      const result = await dashboardApi.getSummary({ filter, page, limit: PAGE_SIZE });
-      setSummary(result?.data || summary);
-    } finally {
-      setLoading(false);
-    }
+    await Promise.all([
+      loadWidget('myDockets'),
+      loadWidget('overdueDockets'),
+      loadWidget('recentDockets'),
+      loadWidget('workbasketLoad'),
+    ]);
+    setLoading(false);
   };
 
   useEffect(() => {
     loadDashboard();
-  }, [filter, page]);
+  }, [filter, page, sort, workbasketId]);
 
   useEffect(() => {
     const loadStatus = async () => {
@@ -154,37 +169,46 @@ export const DashboardPage = () => {
 
           <Button onClick={() => navigate(ROUTES.CREATE_CASE(firmSlug))}>Create Docket</Button>
         </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <select value={sort} onChange={(event) => setSort(event.target.value)} className="rounded-md border border-gray-300 px-2 py-1 text-sm">
+            {SORT_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
+          </select>
+          <select value={workbasketId} onChange={(event) => setWorkbasketId(event.target.value)} className="rounded-md border border-gray-300 px-2 py-1 text-sm">
+            <option value="">All workbaskets</option>
+            {(summary?.workbasketLoad || []).map((item) => <option key={item.workbasketId} value={item.workbasketId}>{item.name}</option>)}
+          </select>
+        </div>
 
         <div className="grid gap-4 lg:grid-cols-2">
-          <DashboardCard title="My Dockets">
+          <DashboardCard title="My Dockets" actions={<Button variant="outline" onClick={() => navigate(ROUTES.CASES(firmSlug))}>View All</Button>}>
             <DocketList
               items={summary?.myDockets?.items || []}
-              loading={loading}
+              loading={loading || widgetLoading.myDockets}
               emptyLabel="No dockets assigned"
               onSelect={goToDocket}
             />
           </DashboardCard>
 
-          <DashboardCard title="Overdue Dockets">
+          <DashboardCard title="Overdue Dockets" actions={<Button variant="outline" onClick={() => navigate(ROUTES.CASES(firmSlug))}>View All</Button>}>
             <DocketList
               items={summary?.overdueDockets?.items || []}
-              loading={loading}
+              loading={loading || widgetLoading.overdueDockets}
               emptyLabel="No overdue dockets"
               onSelect={goToDocket}
             />
           </DashboardCard>
 
-          <DashboardCard title="Recently Created">
+          <DashboardCard title="Recently Created" actions={<Button variant="outline" onClick={() => navigate(ROUTES.CASES(firmSlug))}>View All</Button>}>
             <DocketList
               items={summary?.recentDockets?.items || []}
-              loading={loading}
+              loading={loading || widgetLoading.recentDockets}
               emptyLabel="No recent dockets"
               onSelect={goToDocket}
             />
           </DashboardCard>
 
-          <DashboardCard title="Workbasket Load">
-            <WorkbasketChart items={summary?.workbasketLoad || []} loading={loading} />
+          <DashboardCard title="Workbasket Load" actions={<Button variant="outline" onClick={() => navigate(ROUTES.CASES(firmSlug))}>View All</Button>}>
+            <WorkbasketChart items={summary?.workbasketLoad || []} loading={loading || widgetLoading.workbasketLoad} />
           </DashboardCard>
         </div>
 

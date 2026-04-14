@@ -38,6 +38,7 @@ const { getOrCreateDefaultClient } = require('../services/defaultClient.guard');
 const { normalizeCreateInput, validateStructuredInput, resolveAssigneeFromWorkbasketRules } = require('../services/docket.service');
 const fs = require('fs').promises;
 const fsSync = require('fs');
+const { logActivitySafe } = require('../services/docketActivity.service');
 
 const inFlightCaseRecordLoads = new Map();
 
@@ -660,6 +661,14 @@ const createCase = async (req, res) => {
         step('after duplicate override comment insert');
       }
 
+      logActivitySafe({
+        docketId: newCase.caseInternalId,
+        firmId: newCase.firmId,
+        type: 'DOCKET_CREATED',
+        description: `Docket created: ${newCase.caseNumber || newCase.caseId || 'Unknown'}`,
+        performedByXID: req.user?.xID,
+      });
+
       return res.status(201).json({
         success: true,
         data: { ...newCase.toObject(), docketId: newCase.caseId },
@@ -807,6 +816,14 @@ const addComment = async (req, res) => {
       description: `Comment added by ${req.user.email}: ${text.substring(0, COMMENT_PREVIEW_LENGTH)}${text.length > COMMENT_PREVIEW_LENGTH ? '...' : ''}`,
       performedBy: req.user.email.toLowerCase(),
       performedByXID: req.user.xID.toUpperCase(), // Canonical identifier (uppercase)
+    });
+
+    logActivitySafe({
+      docketId: caseData.caseInternalId,
+      firmId: tenantFirmId,
+      type: 'COMMENT_ADDED',
+      description: `Comment added`,
+      performedByXID: req.user?.xID,
     });
     
     const comments = await Comment.find(
@@ -1431,6 +1448,15 @@ const updateCaseStatus = async (req, res) => {
     });
 
     caseData = await CaseRepository.findByInternalId(req.user.firmId, caseData.caseInternalId, req.user.role);
+
+    logActivitySafe({
+      docketId: caseData.caseInternalId,
+      firmId: req.user.firmId,
+      type: 'STATUS_CHANGED',
+      description: `Status changed to ${normalizedStatus}`,
+      metadata: { status: normalizedStatus },
+      performedByXID: req.user?.xID,
+    });
     
     res.json({
       success: true,
@@ -2504,6 +2530,15 @@ const unassignCase = async (req, res) => {
       },
     });
     caseData = await CaseRepository.findByInternalId(req.user.firmId, caseData.caseInternalId, req.user.role);
+
+    logActivitySafe({
+      docketId: caseData.caseInternalId,
+      firmId: req.user.firmId,
+      type: 'STATUS_CHANGED',
+      description: `Status changed to ${normalizedStatus}`,
+      metadata: { status: normalizedStatus },
+      performedByXID: req.user?.xID,
+    });
     
     // Now create the audit log entry (validation already passed)
     await auditDoc.save();
