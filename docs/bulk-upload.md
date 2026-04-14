@@ -1,10 +1,11 @@
 # Bulk Upload
 
-## Bulk Upload Config
+## CSV Schema Validation
 
-Helper text and field descriptions are centralized in `ui/src/constants/bulkUploadConfig.js`.
+Bulk upload now uses a centralized schema at `ui/src/constants/bulkUploadSchema.js`.
 
 This ensures:
-- No duplication
-- Easier updates
-- Consistent CSV guidance across UI
+- Templates match backend-expected headers and required fields.
+- Required fields are enforced on the client before preview/upload.
+- Header normalization + alias mapping is consistent across template generation and upload validation.
+- Fewer avoidable upload errors and support tickets.
