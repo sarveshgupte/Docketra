@@ -22,10 +22,12 @@ export const ReportsDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState(null);
   const [pendingReport, setPendingReport] = useState(null);
+  const [slaWeeklySummary, setSlaWeeklySummary] = useState(null);
   const [error, setError] = useState(null);
   const hasAnyReportData = (
     (metrics && Object.keys(metrics).length > 0) ||
-    (pendingReport && Object.keys(pendingReport).length > 0)
+    (pendingReport && Object.keys(pendingReport).length > 0) ||
+    (slaWeeklySummary && Object.keys(slaWeeklySummary).length > 0)
   );
 
   useEffect(() => {
@@ -47,6 +49,11 @@ export const ReportsDashboard = () => {
       const pendingResponse = await reportsService.getPendingCases();
       if (pendingResponse.data.success) {
         setPendingReport(pendingResponse.data.data);
+      }
+
+      const slaResponse = await reportsService.getSlaWeeklySummary();
+      if (slaResponse.data.success) {
+        setSlaWeeklySummary(slaResponse.data.data);
       }
     } catch (err) {
       console.error('Error loading dashboard data:', err);
@@ -136,6 +143,14 @@ export const ReportsDashboard = () => {
             value={pendingReport?.totalPending || 0}
             subtitle={`Critical: ${pendingReport?.byAgeing?.['30+ days'] || 0} overdue`}
             warning={pendingReport?.byAgeing?.['30+ days'] > 0}
+            onClick={handleViewDetailedReports}
+          />
+
+          <MetricCard
+            title="Weekly SLA Summary"
+            value={slaWeeklySummary?.currentlyOverdue || 0}
+            subtitle={`Due soon: ${slaWeeklySummary?.dueSoon || 0} | Within SLA: ${slaWeeklySummary?.resolvedWithinSla || 0}`}
+            warning={(slaWeeklySummary?.currentlyOverdue || 0) > 0 || (slaWeeklySummary?.resolvedAfterBreach || 0) > 0}
             onClick={handleViewDetailedReports}
           />
 

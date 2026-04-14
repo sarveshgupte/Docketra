@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
@@ -8,6 +8,8 @@ import { Select } from '../components/common/Select';
 import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
 import { adminApi } from '../api/admin.api';
+import { slaApi } from '../api/sla.api';
+import { categoryService } from '../services/categoryService';
 import { getFirmConfig, setFirmConfig } from '../utils/firmConfig';
 import { formatDateTime } from '../utils/formatDateTime';
 
@@ -15,6 +17,24 @@ const enabledDisabledOptions = [
   { value: 'true', label: 'Enabled' },
   { value: 'false', label: 'Disabled' },
 ];
+
+const defaultSlaForm = {
+  id: '',
+  category: '',
+  subcategory: '',
+  workbasketId: '',
+  slaHours: '',
+  isActive: true,
+};
+
+const getRuleScopeLabel = (rule) => {
+  const scopes = [];
+  if (rule.subcategory) scopes.push(rule.subcategory);
+  else if (rule.category) scopes.push(rule.category);
+  if (rule.workbasketName || rule.workbasketId) scopes.push(rule.workbasketName || rule.workbasketId);
+  if (scopes.length === 0) return 'Default';
+  return scopes.join(' • ');
+};
 
 export const FirmSettingsPage = () => {
   const navigate = useNavigate();
@@ -26,6 +46,42 @@ export const FirmSettingsPage = () => {
   const [activityError, setActivityError] = useState('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [loadingConfig, setLoadingConfig] = useState(true);
+  const [categories, setCategories] = useState([]);
+  const [workbaskets, setWorkbaskets] = useState([]);
+  const [slaRules, setSlaRules] = useState([]);
+  const [loadingSlaData, setLoadingSlaData] = useState(true);
+  const [savingSlaRule, setSavingSlaRule] = useState(false);
+  const [deletingRuleId, setDeletingRuleId] = useState('');
+  const [slaMessage, setSlaMessage] = useState({ type: '', text: '' });
+  const [slaForm, setSlaForm] = useState(defaultSlaForm);
+
+  const categoryOptions = useMemo(() => ([
+    { value: '', label: 'All categories' },
+    ...categories.map((category) => ({
+      value: category.name,
+      label: category.name,
+    })),
+  ]), [categories]);
+
+  const selectedCategory = useMemo(
+    () => categories.find((category) => category.name === slaForm.category),
+    [categories, slaForm.category],
+  );
+
+  const subcategoryOptions = useMemo(() => ([
+    { value: '', label: 'All subcategories' },
+    ...((selectedCategory?.subcategories || [])
+      .filter((subcategory) => subcategory?.isActive !== false)
+      .map((subcategory) => ({ value: subcategory.name, label: subcategory.name }))),
+  ]), [selectedCategory]);
+
+  const workbasketOptions = useMemo(() => ([
+    { value: '', label: 'All workbaskets' },
+    ...workbaskets.map((workbasket) => ({
+      value: String(workbasket._id),
+      label: workbasket.name,
+    })),
+  ]), [workbaskets]);
 
   const loadFirmSettings = async () => {
     setLoadingConfig(true);
@@ -37,7 +93,6 @@ export const FirmSettingsPage = () => {
         setConfig(merged);
       }
     } catch {
-      // Fall back to locally cached config to keep UI functional.
       setConfig(getFirmConfig());
     } finally {
       setLoadingConfig(false);
@@ -69,12 +124,32 @@ export const FirmSettingsPage = () => {
     }
   };
 
-  useEffect(() => {
-    loadActivity();
-  }, []);
+  const loadSlaData = async () => {
+    setLoadingSlaData(true);
+    setSlaMessage({ type: '', text: '' });
+    try {
+      const [categoryResponse, workbasketResponse, slaResponse] = await Promise.all([
+        categoryService.getAdminCategories(false),
+        adminApi.listWorkbaskets({ includeInactive: true }),
+        slaApi.getRules({ includeInactive: true }),
+      ]);
+      setCategories(Array.isArray(categoryResponse?.data) ? categoryResponse.data : []);
+      setWorkbaskets(Array.isArray(workbasketResponse?.data) ? workbasketResponse.data : []);
+      setSlaRules(Array.isArray(slaResponse?.data) ? slaResponse.data : []);
+    } catch {
+      setCategories([]);
+      setWorkbaskets([]);
+      setSlaRules([]);
+      setSlaMessage({ type: 'error', text: 'Could not load SLA configuration.' });
+    } finally {
+      setLoadingSlaData(false);
+    }
+  };
 
   useEffect(() => {
+    loadActivity();
     loadFirmSettings();
+    loadSlaData();
   }, []);
 
   const handleNumberChange = (event) => {
@@ -116,6 +191,77 @@ export const FirmSettingsPage = () => {
       setSaveMessage({ type: 'success', text: 'Firm settings saved successfully.' });
     } catch {
       setSaveMessage({ type: 'error', text: 'Could not save settings. Please retry.' });
+    }
+  };
+
+  const handleSlaFormChange = (event) => {
+    const { name, value } = event.target;
+    setSlaMessage({ type: '', text: '' });
+    setSlaForm((prev) => ({
+      ...prev,
+      [name]: name === 'isActive' ? value === 'true' : value,
+      ...(name === 'category' ? { subcategory: '' } : {}),
+    }));
+  };
+
+  const resetSlaForm = () => {
+    setSlaForm(defaultSlaForm);
+    setSlaMessage({ type: '', text: '' });
+  };
+
+  const handleEditRule = (rule) => {
+    setSlaForm({
+      id: rule._id || rule.id || '',
+      category: rule.category || '',
+      subcategory: rule.subcategory || '',
+      workbasketId: rule.workbasketId || '',
+      slaHours: String(rule.slaHours || ''),
+      isActive: rule.isActive !== false,
+    });
+    setSlaMessage({ type: '', text: '' });
+  };
+
+  const handleSaveRule = async () => {
+    if (!slaForm.slaHours || Number(slaForm.slaHours) <= 0) {
+      setSlaMessage({ type: 'error', text: 'Enter a valid SLA hour value.' });
+      return;
+    }
+
+    setSavingSlaRule(true);
+    try {
+      await slaApi.saveRule({
+        ...(slaForm.id ? { id: slaForm.id } : {}),
+        category: slaForm.category || null,
+        subcategory: slaForm.subcategory || null,
+        workbasketId: slaForm.workbasketId || null,
+        slaHours: Number(slaForm.slaHours),
+        isActive: Boolean(slaForm.isActive),
+      });
+      await loadSlaData();
+      resetSlaForm();
+      setSlaMessage({ type: 'success', text: 'SLA rule saved.' });
+    } catch {
+      setSlaMessage({ type: 'error', text: 'Could not save the SLA rule.' });
+    } finally {
+      setSavingSlaRule(false);
+    }
+  };
+
+  const handleDeleteRule = async (ruleId) => {
+    if (!ruleId) return;
+    setDeletingRuleId(ruleId);
+    setSlaMessage({ type: '', text: '' });
+    try {
+      await slaApi.deleteRule(ruleId);
+      await loadSlaData();
+      if (slaForm.id === ruleId) {
+        resetSlaForm();
+      }
+      setSlaMessage({ type: 'success', text: 'SLA rule deleted.' });
+    } catch {
+      setSlaMessage({ type: 'error', text: 'Could not delete the SLA rule.' });
+    } finally {
+      setDeletingRuleId('');
     }
   };
 
@@ -225,6 +371,122 @@ export const FirmSettingsPage = () => {
             </Card>
           </section>
 
+          <section className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:items-start">
+            <div className="space-y-2 lg:col-span-1">
+              <h2 className="text-lg font-medium text-gray-900">SLA Rules</h2>
+              <p className="text-sm text-gray-500">Create simple default, category, subcategory, or workbasket SLA rules. The most specific rule wins.</p>
+            </div>
+            <Card className="lg:col-span-2 lg:max-w-4xl">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <Select
+                  label="Category"
+                  name="category"
+                  value={slaForm.category}
+                  onChange={handleSlaFormChange}
+                  options={categoryOptions}
+                />
+                <Select
+                  label="Subcategory"
+                  name="subcategory"
+                  value={slaForm.subcategory}
+                  onChange={handleSlaFormChange}
+                  options={subcategoryOptions}
+                />
+                <Select
+                  label="Workbasket"
+                  name="workbasketId"
+                  value={slaForm.workbasketId}
+                  onChange={handleSlaFormChange}
+                  options={workbasketOptions}
+                />
+                <Input
+                  label="SLA hours"
+                  name="slaHours"
+                  type="number"
+                  min="1"
+                  value={slaForm.slaHours}
+                  onChange={handleSlaFormChange}
+                />
+                <Select
+                  label="Status"
+                  name="isActive"
+                  value={String(Boolean(slaForm.isActive))}
+                  onChange={handleSlaFormChange}
+                  options={enabledDisabledOptions}
+                />
+              </div>
+
+              {slaMessage.text ? (
+                <div
+                  className={`mt-4 rounded-lg px-4 py-3 text-sm ${
+                    slaMessage.type === 'success'
+                      ? 'border border-green-200 bg-green-50 text-green-700'
+                      : 'border border-red-200 bg-red-50 text-red-700'
+                  }`}
+                >
+                  {slaMessage.text}
+                </div>
+              ) : null}
+
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Button type="button" variant="primary" onClick={handleSaveRule} disabled={savingSlaRule || loadingSlaData}>
+                  {savingSlaRule ? 'Saving…' : (slaForm.id ? 'Update Rule' : 'Add Rule')}
+                </Button>
+                <Button type="button" variant="outline" onClick={resetSlaForm} disabled={savingSlaRule}>
+                  Reset
+                </Button>
+              </div>
+
+              <div className="mt-6 overflow-x-auto rounded-lg border border-gray-200">
+                {loadingSlaData ? (
+                  <div className="px-4 py-6 text-sm text-gray-500">Loading SLA rules…</div>
+                ) : slaRules.length ? (
+                  <table className="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead className="bg-gray-50 text-left text-xs uppercase tracking-wider text-gray-500">
+                      <tr>
+                        <th className="px-4 py-3">Category / Workbasket</th>
+                        <th className="px-4 py-3">SLA hours</th>
+                        <th className="px-4 py-3">Status</th>
+                        <th className="px-4 py-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 bg-white text-gray-700">
+                      {slaRules.map((rule) => (
+                        <tr key={rule._id || rule.id}>
+                          <td className="px-4 py-3 font-medium text-gray-900">{getRuleScopeLabel(rule)}</td>
+                          <td className="px-4 py-3">{rule.slaHours}</td>
+                          <td className="px-4 py-3">{rule.isActive === false ? 'Disabled' : 'Active'}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex justify-end gap-2">
+                              <Button type="button" variant="outline" size="small" onClick={() => handleEditRule(rule)}>
+                                Edit
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="small"
+                                onClick={() => handleDeleteRule(rule._id || rule.id)}
+                                disabled={deletingRuleId === (rule._id || rule.id)}
+                              >
+                                {deletingRuleId === (rule._id || rule.id) ? 'Deleting…' : 'Delete'}
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div className="px-4 py-6">
+                    <EmptyState
+                      title="No SLA rules configured"
+                      description="Add a default rule first, then layer category, subcategory, or workbasket overrides."
+                    />
+                  </div>
+                )}
+              </div>
+            </Card>
+          </section>
 
           <Card className="max-w-4xl">
             <div className="space-y-5">

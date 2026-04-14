@@ -299,3 +299,25 @@ Response shape:
 - Grouping support merges rapid repeated updates into a single unread item.
 - Real-time push updates can be added later with WebSocket/SSE.
 - Email notification toggle is supported at model/service level for phased rollout.
+## SLA Tracking System
+
+Dockets now support firm-scoped SLA rules with automatic deadline tracking.
+
+### Rule resolution
+
+- Rules are configured per firm.
+- Supported scopes: default, workbasket, category, and subcategory.
+- Resolution order: `subcategory` → `category` → `workbasket` → `default`.
+
+### Runtime behavior
+
+- Docket creation resolves the active SLA rule and stores `slaDueAt`.
+- Due dates are calculated in working hours and skip weekends.
+- SLA status is exposed as `GREEN`, `YELLOW`, or `RED`.
+- Overdue dockets can trigger breach notifications in the dashboard workflow.
+
+### Reporting
+
+- Weekly SLA summaries are available from the reports dashboard.
+- Managers can see current overdue items, due-soon items, and resolved-within-SLA totals at a glance.
+

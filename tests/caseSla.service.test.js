@@ -3,7 +3,9 @@ const assert = require('assert');
 
 const Case = require('../src/models/Case.model');
 const TenantSlaConfig = require('../src/models/TenantSlaConfig.model');
+const SlaRule = require('../src/models/SlaRule.model');
 const caseSlaService = require('../src/services/caseSla.service');
+const slaService = require('../src/services/sla.service');
 
 function testCreationInsideBusinessHours() {
   const config = {
@@ -140,6 +142,69 @@ async function testCrossTenantIsolation() {
   }
 }
 
+async function testResolveSlaRulePriority() {
+  const originalFind = SlaRule.find;
+  SlaRule.find = () => ({
+    lean: async () => ([
+      { firmId: 'firm-a', slaHours: 72, updatedAt: '2026-03-01T00:00:00.000Z' },
+      { firmId: 'firm-a', category: 'Tax', slaHours: 24, updatedAt: '2026-03-02T00:00:00.000Z' },
+      { firmId: 'firm-a', workbasketId: 'wb-1', slaHours: 12, updatedAt: '2026-03-03T00:00:00.000Z' },
+      { firmId: 'firm-a', category: 'Tax', subcategory: 'GST Filing', slaHours: 8, updatedAt: '2026-03-04T00:00:00.000Z' },
+    ]),
+  });
+
+  try {
+    const rule = await slaService.resolveSlaRule({
+      firmId: 'firm-a',
+      category: 'Tax',
+      subcategory: 'GST Filing',
+      workbasketId: 'wb-1',
+    });
+    assert.strictEqual(rule.slaHours, 8);
+
+    const categoryRule = await slaService.resolveSlaRule({
+      firmId: 'firm-a',
+      category: 'Tax',
+      subcategory: 'Other',
+      workbasketId: 'wb-1',
+    });
+    assert.strictEqual(categoryRule.slaHours, 24);
+  } finally {
+    SlaRule.find = originalFind;
+  }
+}
+
+async function testCalculateDocketSlaDueDate() {
+  const due = await slaService.calculateSlaDueDate({
+    createdAt: new Date('2026-03-06T17:00:00.000Z'),
+  }, { rule: { slaHours: 2 } });
+  assert.strictEqual(due.toISOString(), '2026-03-09T11:00:00.000Z');
+}
+
+function testSlaStatusTrafficLight() {
+  assert.strictEqual(slaService.getSlaStatus({ status: 'OPEN', slaDueAt: new Date(Date.now() + (48 * 60 * 60 * 1000)) }), 'GREEN');
+  assert.strictEqual(slaService.getSlaStatus({ status: 'OPEN', slaDueAt: new Date(Date.now() + (2 * 60 * 60 * 1000)) }), 'YELLOW');
+  assert.strictEqual(slaService.getSlaStatus({ status: 'OPEN', slaDueAt: new Date(Date.now() - (2 * 60 * 60 * 1000)) }), 'RED');
+}
+
+async function testWeeklySlaSummary() {
+  const originalCountDocuments = Case.countDocuments;
+  const counts = [5, 2, 3, 4, 6, 1];
+  Case.countDocuments = async () => counts.shift();
+
+  try {
+    const summary = await slaService.getWeeklySlaSummary('firm-a', { now: new Date('2026-03-06T12:00:00.000Z') });
+    assert.strictEqual(summary.createdThisWeek, 5);
+    assert.strictEqual(summary.currentlyOverdue, 2);
+    assert.strictEqual(summary.dueSoon, 3);
+    assert.strictEqual(summary.onTrack, 4);
+    assert.strictEqual(summary.resolvedWithinSla, 6);
+    assert.strictEqual(summary.resolvedAfterBreach, 1);
+  } finally {
+    Case.countDocuments = originalCountDocuments;
+  }
+}
+
 async function run() {
   try {
     testCreationInsideBusinessHours();
@@ -150,6 +215,10 @@ async function run() {
     testBreachDetection();
     testSingleSlaFieldContract();
     await testCrossTenantIsolation();
+    await testResolveSlaRulePriority();
+    await testCalculateDocketSlaDueDate();
+    testSlaStatusTrafficLight();
+    await testWeeklySlaSummary();
     console.log('Case SLA service tests passed.');
   } catch (error) {
     console.error('Case SLA service tests failed:', error);
