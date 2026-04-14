@@ -419,14 +419,15 @@ app.use('/api/firm', ...tenantScopedApiAccess, writeGuardChain, firmStorageRoute
 app.use('/api/files', authLimiter, ...tenantScopedApiAccess, writeGuardChain, filesRoutes);
 app.use('/api/tenant', authLimiter, ...tenantScopedApiAccess, writeGuardChain, tenantRoutes);
 app.use('/api/docket-storage', authLimiter, ...tenantScopedApiAccess, writeGuardChain, docketFileStorageRoutes);
+// Firm-scoped API auth routes for tenant login and OTP verification.
+// IMPORTANT: Register before generic '/api' mounts so '/api/:firmSlug/*'
+// requests are not intercepted by tenant-authenticated API middleware.
+app.use('/api/:firmSlug', firmRoutes);
 app.use('/api', authLimiter, ...tenantScopedApiAccess, writeGuardChain, docketFileStorageRoutes);
 app.use('/api/notifications', ...tenantScopedApiAccess, writeGuardChain, notificationsRoutes);
 app.use('/api/teams', ...tenantScopedApiAccess, writeGuardChain, teamRoutes);
 app.use('/api/bulk-upload', ...adminTenantScopedApiAccess, writeGuardChain, adminAuditTrail('admin'), bulkUploadRoutes);
 app.use('/api/product-updates', authenticate, writeGuardChain, productUpdateRoutes);
-
-// Firm-scoped API auth routes for tenant login and OTP verification
-app.use('/api/:firmSlug', firmRoutes);
 
 // Legacy /f routes removed: tenant login is available only on /:firmSlug/login and /api/:firmSlug/login
 
