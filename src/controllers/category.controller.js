@@ -1,5 +1,6 @@
 const Category = require('../models/Category.model');
 const Case = require('../models/Case.model');
+const Team = require('../models/Team.model');
 const mongoose = require('mongoose');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { parseBooleanQuery } = require('../utils/query.utils');
@@ -309,7 +310,7 @@ const toggleCategoryStatus = async (req, res) => {
 const addSubcategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, defaultSlaDays = 0 } = req.body;
+    const { name, defaultSlaDays = 0, workbasketId } = req.body;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
     
@@ -319,6 +320,12 @@ const addSubcategory = async (req, res) => {
         message: 'Subcategory name is required',
       });
     }
+    if (!workbasketId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Workbasket required',
+      });
+    }
     
     const category = await Category.findOne({ _id: id, ...firmScope });
     
@@ -326,6 +333,19 @@ const addSubcategory = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Category not found',
+      });
+    }
+
+    const workbasket = await Team.findOne({
+      _id: workbasketId,
+      ...firmScope,
+      isActive: true,
+      type: 'PRIMARY',
+    }).select('_id');
+    if (!workbasket) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid active primary workbasket is required',
       });
     }
     
@@ -347,6 +367,7 @@ const addSubcategory = async (req, res) => {
     category.subcategories.push({
       id: subcategoryId,
       name: name.trim(),
+      workbasketId: workbasket._id,
       isActive: true,
       defaultSlaDays: Math.max(0, Number(defaultSlaDays) || 0),
     });
@@ -360,6 +381,7 @@ const addSubcategory = async (req, res) => {
         categoryName: category.name,
         subcategoryId,
         subcategoryName: name.trim(),
+        workbasketId: String(workbasket._id),
         defaultSlaDays: Math.max(0, Number(defaultSlaDays) || 0),
       },
     });
@@ -385,7 +407,7 @@ const addSubcategory = async (req, res) => {
 const updateSubcategory = async (req, res) => {
   try {
     const { id, subcategoryId } = req.params;
-    const { name, defaultSlaDays } = req.body;
+    const { name, defaultSlaDays, workbasketId } = req.body;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
     
@@ -427,6 +449,27 @@ const updateSubcategory = async (req, res) => {
     }
     
     subcategory.name = name.trim();
+    if (typeof workbasketId !== 'undefined') {
+      if (!workbasketId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Workbasket required',
+        });
+      }
+      const workbasket = await Team.findOne({
+        _id: workbasketId,
+        ...firmScope,
+        isActive: true,
+        type: 'PRIMARY',
+      }).select('_id');
+      if (!workbasket) {
+        return res.status(400).json({
+          success: false,
+          message: 'Valid active primary workbasket is required',
+        });
+      }
+      subcategory.workbasketId = workbasket._id;
+    }
     if (typeof defaultSlaDays !== 'undefined') {
       subcategory.defaultSlaDays = Math.max(0, Number(defaultSlaDays) || 0);
     }
@@ -439,6 +482,7 @@ const updateSubcategory = async (req, res) => {
         categoryName: category.name,
         subcategoryId: subcategory.id,
         subcategoryName: subcategory.name,
+        workbasketId: subcategory.workbasketId ? String(subcategory.workbasketId) : null,
         defaultSlaDays: subcategory.defaultSlaDays,
       },
     });

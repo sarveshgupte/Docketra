@@ -32,6 +32,11 @@ const subcategorySchema = new mongoose.Schema({
     required: [true, 'Subcategory name is required'],
     trim: true,
   },
+  workbasketId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Team',
+    required: [true, 'Workbasket required'],
+  },
   
   /**
    * Soft delete mechanism for subcategories
