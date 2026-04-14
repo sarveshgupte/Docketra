@@ -20,6 +20,7 @@ const {
   consumeOtpResendQuota,
   clearOtpAttempts,
 } = require('./signupRateLimit.service');
+const { coercePrimaryAdminCreationFields } = require('../utils/hierarchy.utils');
 
 const SALT_ROUNDS = 10;
 const OTP_EXPIRY_MINUTES = 5;
@@ -620,12 +621,10 @@ const createFirmAndAdmin = async ({
     firmId: firm._id,
     defaultClientId: defaultClient._id,
     isOnboarded: authProvider === 'password',
-    role: 'PRIMARY_ADMIN',
-    primaryAdminId: null,
+    ...coercePrimaryAdminCreationFields({ role: 'PRIMARY_ADMIN' }),
     status: 'active',
     isActive: true,
     isSystem: true,
-    isPrimaryAdmin: true,
     emailVerified: true,
     emailVerifiedAt: now,
     verificationMethod: isGoogleAuth ? 'GOOGLE' : 'OTP',

@@ -19,7 +19,7 @@ const xIDGenerator = require('../services/xIDGenerator');
 const signupService = require('../services/signup.service');
 const jwtService = require('../services/jwt.service');
 const { isSuperAdminRole, normalizeRole } = require('../utils/role.utils');
-const { canInviteRole, getTagValidationError, normalizeId } = require('../utils/hierarchy.utils');
+const { assertPrimaryAdmin, canInviteRole, getTagValidationError, normalizeId } = require('../utils/hierarchy.utils');
 const { normalizeFirmSlug } = require('../utils/slugify');
 const { isActiveStatus, getFirmInactiveCode } = require('../utils/status.utils');
 const { validatePasswordStrength, PASSWORD_POLICY_MESSAGE } = require('../utils/passwordPolicy');
@@ -2749,6 +2749,7 @@ const createUser = async (req, res) => {
  */
 const activateUser = async (req, res) => {
   try {
+    assertPrimaryAdmin(req.user);
     const { xID } = req.params;
     
     // Get admin from authenticated request
@@ -2772,6 +2773,11 @@ const activateUser = async (req, res) => {
     // Activate user
     user.status = 'active';
     await user.save(session ? { session } : undefined);
+    log.info('HIERARCHY_UPDATED', {
+      actorId: admin?._id,
+      targetId: user._id,
+      changes: { status: user.status, isActive: user.isActive },
+    });
     
     // Log activation
     await logAuthAudit({
@@ -2814,6 +2820,7 @@ const activateUser = async (req, res) => {
  */
 const deactivateUser = async (req, res) => {
   try {
+    assertPrimaryAdmin(req.user);
     const { xID } = req.params;
     
     // Get admin from authenticated request
@@ -2863,6 +2870,11 @@ const deactivateUser = async (req, res) => {
     // Soft-disable user (never hard delete)
     user.status = 'disabled';
     await user.save();
+    log.info('HIERARCHY_UPDATED', {
+      actorId: admin?._id,
+      targetId: user._id,
+      changes: { status: user.status, isActive: user.isActive },
+    });
     
     await handleUserDeactivation({ firmId: admin.firmId, userXID: user.xID });
 
@@ -3463,6 +3475,7 @@ const resendSetupEmail = async (req, res) => {
  */
 const updateUserStatus = async (req, res) => {
   try {
+    assertPrimaryAdmin(req.user);
     const { xID } = req.params;
     const { active, status } = req.body;
     
@@ -3533,6 +3546,11 @@ const updateUserStatus = async (req, res) => {
     // Update status
     user.status = resolvedStatus;
     await user.save();
+    log.info('HIERARCHY_UPDATED', {
+      actorId: admin?._id,
+      targetId: user._id,
+      changes: { status: user.status, isActive: user.isActive },
+    });
     
     if (resolvedStatus === 'disabled') {
       await handleUserDeactivation({ firmId: admin.firmId, userXID: user.xID });

@@ -9,6 +9,8 @@ const { generateNextClientId } = require('../../services/clientIdGenerator');
 const { generatePasswordSetupToken } = require('../../services/passwordSetupToken.service');
 const { safeQueueEmail } = require('../../services/safeSideEffects.service');
 const { ensureTenantKey } = require('../../security/encryption.service');
+const { googleDriveService } = require('../../services/googleDrive.service');
+const { coercePrimaryAdminCreationFields } = require('../../utils/hierarchy.utils');
 const config = require('../../config/config');
 
 const RESERVED_SLUGS = [
@@ -138,13 +140,11 @@ const createStarterWorkspace = async (payload = {}) => {
         phoneNumber: phoneNumber.trim(),
         firmId: defaultClient._id,
         defaultClientId: defaultClient._id,
-        role: 'PRIMARY_ADMIN',
-        primaryAdminId: null,
+        ...coercePrimaryAdminCreationFields({ role: 'PRIMARY_ADMIN' }),
         status: 'invited',
         mustSetPassword: false,
         mustChangePassword: true,
         isActive: false,
-        isPrimaryAdmin: true,
       }], { session });
 
       setupToken = generatePasswordSetupToken({ userId: user._id.toString(), firmId: defaultClient._id.toString() });

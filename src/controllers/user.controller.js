@@ -12,9 +12,11 @@ const jwtService = require('../services/jwt.service');
 const { generateFirmSlug } = require('../utils/firmSlug');
 const { sendWelcomeEmail } = require('../services/email/sendWelcomeEmail');
 const { normalizeRole } = require('../utils/role.utils');
+const log = require('../utils/log');
+const { assertPrimaryAdmin, getTagValidationError, normalizeId } = require('../utils/hierarchy.utils');
 
 const resolveUserFirmScope = (req, res) => {
-  if (req.user?.role === 'SUPER_ADMIN') return {};
+  if (normalizeRole(req.user?.role) === 'SUPER_ADMIN') return {};
   if (!req.user?.firmId) {
     res.status(403).json({
       success: false,
@@ -487,10 +489,14 @@ const ROLE_HIERARCHY = ['USER', 'MANAGER', 'ADMIN', 'PRIMARY_ADMIN', 'SUPER_ADMI
 
 const patchUserRole = async (req, res) => {
   try {
+    assertPrimaryAdmin(req.user);
     const actorRole = normalizeRole(req.user?.role);
     const targetRole = normalizeRole(req.body?.role);
     const target = await User.findOne({ _id: req.params.id, firmId: req.user?.firmId, status: { $ne: 'deleted' } });
     if (!target) return res.status(404).json({ success: false, message: 'User not found' });
+    if (normalizeId(req.user?._id) === normalizeId(target._id)) {
+      return res.status(403).json({ success: false, message: 'Cannot modify your own role' });
+    }
 
     if (!ROLE_HIERARCHY.includes(targetRole) || targetRole === 'SUPER_ADMIN') {
       return res.status(400).json({ success: false, message: 'Invalid target role' });
@@ -525,16 +531,26 @@ const patchUserRole = async (req, res) => {
       target.managerId = null;
       target.reportsToUserId = null;
     } else if (targetRole === 'ADMIN') {
-      target.primaryAdminId = target.primaryAdminId || req.user?._id || null;
+      target.primaryAdminId = target.primaryAdminId || req.user?.primaryAdminId || req.user?._id || null;
       target.adminId = null;
       target.managerId = null;
       target.reportsToUserId = null;
     } else if (targetRole === 'MANAGER') {
-      target.primaryAdminId = target.primaryAdminId || req.user?._id || null;
+      target.primaryAdminId = target.primaryAdminId || req.user?.primaryAdminId || req.user?._id || null;
       target.managerId = null;
       target.reportsToUserId = null;
     }
     await target.save();
+    log.info('HIERARCHY_UPDATED', {
+      actorId: req.user?._id,
+      targetId: target._id,
+      changes: {
+        role: target.role,
+        primaryAdminId: target.primaryAdminId,
+        adminId: target.adminId,
+        managerId: target.managerId,
+      },
+    });
     return res.json({ success: true, data: target.toSafeObject?.() || target });
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message || 'Failed to update role' });
@@ -557,6 +573,7 @@ const hasCircularManager = async (userId, reportsToUserId) => {
 
 const patchUserReporting = async (req, res) => {
   try {
+    assertPrimaryAdmin(req.user);
     const target = await User.findOne({ _id: req.params.id, firmId: req.user?.firmId, status: { $ne: 'deleted' } });
     if (!target) return res.status(404).json({ success: false, message: 'User not found' });
 
@@ -565,25 +582,37 @@ const patchUserReporting = async (req, res) => {
     const adminId = req.body?.adminId ?? target.adminId ?? null;
     const managerId = req.body?.managerId ?? req.body?.reportsToUserId ?? target.managerId ?? null;
 
-    if (role !== 'PRIMARY_ADMIN' && !primaryAdminId) {
-      return res.status(400).json({ success: false, message: 'primaryAdminId is required for non-primary-admin users' });
-    }
-    if (role === 'ADMIN' && (adminId || managerId)) {
-      return res.status(400).json({ success: false, message: 'ADMIN cannot have adminId or managerId' });
-    }
-    if (role === 'MANAGER' && managerId) {
-      return res.status(400).json({ success: false, message: 'MANAGER cannot have managerId' });
+    const hierarchyError = getTagValidationError({
+      role,
+      primaryAdminId,
+      adminId,
+      managerId,
+    });
+    if (hierarchyError) {
+      return res.status(400).json({ success: false, message: hierarchyError });
     }
 
     if (managerId && await hasCircularManager(target._id, managerId)) {
       return res.status(400).json({ success: false, message: 'Circular reporting chain is not allowed' });
     }
 
-    target.primaryAdminId = role === 'PRIMARY_ADMIN' ? null : primaryAdminId;
+    target.primaryAdminId = role === 'PRIMARY_ADMIN'
+      ? null
+      : (normalizeId(primaryAdminId) || normalizeId(req.user?.primaryAdminId) || normalizeId(req.user?._id) || null);
     target.adminId = role === 'ADMIN' ? null : adminId;
     target.managerId = role === 'PRIMARY_ADMIN' || role === 'ADMIN' || role === 'MANAGER' ? null : managerId;
     target.reportsToUserId = target.managerId || null;
     await target.save();
+    log.info('HIERARCHY_UPDATED', {
+      actorId: req.user?._id,
+      targetId: target._id,
+      changes: {
+        role: target.role,
+        primaryAdminId: target.primaryAdminId,
+        adminId: target.adminId,
+        managerId: target.managerId,
+      },
+    });
     return res.json({ success: true, data: target.toSafeObject?.() || target });
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message || 'Failed to update reporting' });
