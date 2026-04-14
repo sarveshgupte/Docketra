@@ -10,6 +10,7 @@ const xIDGenerator = require('../services/xIDGenerator');
 const { bulkUploadQueue } = require('../queues/bulkUpload.queue');
 const { eventBus } = require('../events/eventBus');
 const { logAuthEvent } = require('../services/audit.service');
+const { BULK_UPLOAD_SCHEMA, validateRow: validateSchemaRow } = require('../constants/bulkUploadSchema');
 require('../automations/bulkUpload.handlers');
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
@@ -46,6 +47,10 @@ const TYPE_CONFIG = {
   },
 };
 
+const getRequiredFields = (type) => (BULK_UPLOAD_SCHEMA[type]?.fields || [])
+  .filter((field) => field.required)
+  .map((field) => field.key);
+
 const HEADER_ALIASES = {
   clients: {
     businessName: ['businessname', 'name', 'client_name'],
@@ -72,8 +77,6 @@ const HEADER_ALIASES = {
     clients: ['clients', 'client_ids', 'clientids', 'client_emails'],
   },
 };
-
-const EMAIL_REGEX = /^\S+@\S+\.\S+$/;
 
 const safeLogBulkMutation = async (req, { description, metadata = {} }) => {
   try {
@@ -227,7 +230,8 @@ const mapHeaders = ({ type, receivedHeaders, cfg, manualMapping = {} }) => {
     }
   });
 
-  const missingRequired = cfg.required.filter((field) => typeof fieldIndexMap[field] !== 'number');
+  const requiredFields = getRequiredFields(type);
+  const missingRequired = requiredFields.filter((field) => typeof fieldIndexMap[field] !== 'number');
   return { fieldIndexMap, missingRequired };
 };
 
@@ -241,7 +245,7 @@ const escapeRegExp = (value) => String(value || '').replace(/[.*+?^${}()|[\]\\]/
 const normalizeTeamRole = (role) => {
   const normalizedRole = String(role || '').trim().toLowerCase();
   if (normalizedRole === 'admin') return 'Admin';
-  if (normalizedRole === 'user' || normalizedRole === 'employee') return 'Employee';
+  if (normalizedRole === 'user') return 'Employee';
   return null;
 };
 
@@ -343,19 +347,9 @@ const validateRows = async ({ type, parsedRows, fieldIndexMap, firmId, duplicate
     const row = buildRowObject(fieldIndexMap, values);
     if (isEmptyRow(row)) return;
 
-    for (const reqField of cfg.required) {
-      if (!String(row[reqField] || '').trim()) {
-        invalid.push({ row: rowNumber, error: `Missing required field: ${reqField}` });
-        return;
-      }
-    }
-
-    if (type === 'clients' && !EMAIL_REGEX.test(String(row.businessEmail || '').trim())) {
-      invalid.push({ row: rowNumber, error: 'Invalid email in businessEmail' });
-      return;
-    }
-    if (type === 'team' && !EMAIL_REGEX.test(String(row.email || '').trim())) {
-      invalid.push({ row: rowNumber, error: 'Invalid email' });
+    const schemaErrors = validateSchemaRow(row, type);
+    if (schemaErrors.length > 0) {
+      invalid.push({ row: rowNumber, error: schemaErrors.join(', ') });
       return;
     }
     if (type === 'team') {

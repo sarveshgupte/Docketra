@@ -18,3 +18,11 @@ If validation fails, users can download a CSV containing:
 - Error message
 
 This allows quick correction in Excel before re-uploading.
+
+## Backend Validation
+
+All bulk uploads are validated on the server using a schema mirror at `src/constants/bulkUploadSchema.js`.
+
+This ensures:
+- Data integrity even if frontend validation is bypassed
+- Consistent validation rules across system

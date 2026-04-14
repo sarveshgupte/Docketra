@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { bulkUploadApi } from '../../api/bulkUpload.api';
+import Papa from '../../../vendor/papaparse';
 import { TYPE_FIELD_DESCRIPTIONS, TYPE_HELPER_TEXT } from '../../constants/bulkUploadConfig';
 import { BULK_UPLOAD_SCHEMA, buildTemplateCsv, getBulkUploadFields, mapHeadersToSchema, validateRow } from '../../constants/bulkUploadSchema';
 
@@ -99,15 +100,17 @@ export const BulkUploadModal = ({ isOpen, onClose, type, title, onImported, show
   };
 
   const parseCsvRows = (csvContent) => {
-    const lines = String(csvContent || '').split(/\r?\n/).filter((line) => line.trim());
-    if (!lines.length) return { headers: [], rows: [] };
-
-    const headers = lines[0].split(',').map((item) => item.trim());
-    const rows = lines.slice(1).map((line, rowIndex) => {
-      const values = line.split(',').map((item) => item.trim());
-      const row = headers.reduce((acc, header, colIndex) => ({ ...acc, [header]: values[colIndex] || '' }), {});
-      return { row, rowIndex: rowIndex + 2 };
+    const result = Papa.parse(String(csvContent || ''), {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: (header) => String(header || '').trim(),
     });
+
+    const headers = result.meta.fields || [];
+    const rows = (result.data || []).map((row, index) => ({
+      row,
+      rowIndex: index + 2,
+    }));
 
     return { headers, rows };
   };

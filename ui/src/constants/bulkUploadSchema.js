@@ -12,7 +12,7 @@ export const BULK_UPLOAD_SCHEMA = {
     fields: [
       { key: 'name', required: true, description: 'full name', aliases: ['full_name'] },
       { key: 'email', required: true, description: 'work email', aliases: ['work_email'], validator: (value) => EMAIL_REGEX.test(String(value || '').trim()), validatorMessage: 'must be a valid email' },
-      { key: 'role', required: true, description: 'Admin or User', aliases: ['user_role'], validator: (value) => ['admin', 'user', 'employee'].includes(String(value || '').trim().toLowerCase()), validatorMessage: 'must be Admin or User' },
+      { key: 'role', required: true, description: 'Admin or User', aliases: ['user_role'], validator: (value) => ['admin', 'user'].includes(String(value || '').trim().toLowerCase()), validatorMessage: 'must be admin or user' },
       { key: 'department', required: false, description: 'optional', aliases: ['team_department'] },
       { key: 'workbaskets', required: true, description: 'pipe-separated names/ids', aliases: ['workbasket', 'work_baskets', 'workbasket_names'] },
       { key: 'clients', required: false, description: 'optional, pipe-separated clientId/businessEmail', aliases: ['client_ids', 'clientids', 'client_emails'] },
