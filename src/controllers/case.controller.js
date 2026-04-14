@@ -36,6 +36,7 @@ const { incrementTenantMetric } = require('../services/tenantMetrics.service');
 const { getSession } = require('../utils/getSession');
 const { getOrCreateDefaultClient } = require('../services/defaultClient.guard');
 const { normalizeCreateInput, validateStructuredInput, resolveAssigneeFromWorkbasketRules } = require('../services/docket.service');
+const { createNotification, NotificationTypes } = require('../domain/notifications');
 const fs = require('fs').promises;
 const fsSync = require('fs');
 const { logActivitySafe } = require('../services/docketActivity.service');
@@ -825,6 +826,30 @@ const addComment = async (req, res) => {
       description: `Comment added`,
       performedByXID: req.user?.xID,
     });
+
+    const participantXIDs = new Set();
+    if (caseData.assignedToXID) participantXIDs.add(String(caseData.assignedToXID).toUpperCase());
+    if (caseData.createdByXID) participantXIDs.add(String(caseData.createdByXID).toUpperCase());
+    const commenterXIDs = await Comment.distinct('createdByXID', {
+      caseId: caseData.caseId,
+      firmId: tenantFirmId,
+    });
+    commenterXIDs.forEach((xid) => {
+      if (xid) participantXIDs.add(String(xid).toUpperCase());
+    });
+    participantXIDs.delete(String(req.user.xID || '').toUpperCase());
+
+    await Promise.all(
+      [...participantXIDs].map((participantXID) => createNotification({
+        firmId: tenantFirmId,
+        userId: participantXID,
+        type: NotificationTypes.COMMENT_ADDED,
+        docketId: caseData.caseId,
+        actor: { xID: req.user.xID, role: req.user.role },
+        title: 'Comment added',
+        message: `${req.user.name || req.user.xID} commented on docket ${caseData.caseId}.`,
+      })),
+    );
     
     const comments = await Comment.find(
       enforceTenantScope({ caseId: caseData.caseId }, req, { source: 'case.addComment.comments' })
@@ -1457,6 +1482,24 @@ const updateCaseStatus = async (req, res) => {
       metadata: { status: normalizedStatus },
       performedByXID: req.user?.xID,
     });
+
+    const statusRecipients = new Set([
+      caseData?.assignedToXID,
+      caseData?.createdByXID,
+    ].filter(Boolean).map((id) => String(id).toUpperCase()));
+    statusRecipients.delete(String(req.user?.xID || '').toUpperCase());
+
+    await Promise.all(
+      [...statusRecipients].map((recipient) => createNotification({
+        firmId: req.user.firmId,
+        userId: recipient,
+        type: NotificationTypes.STATUS_CHANGED,
+        docketId: caseData.caseId,
+        actor: { xID: req.user.xID, role: req.user.role },
+        title: 'Docket status changed',
+        message: `${req.user.name || req.user.xID} changed docket ${caseData.caseId} to ${normalizedStatus}.`,
+      })),
+    );
     
     res.json({
       success: true,

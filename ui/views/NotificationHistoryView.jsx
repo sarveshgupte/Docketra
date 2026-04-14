@@ -103,10 +103,10 @@ export function NotificationHistoryView() {
                 {pageRows.map((item) => (
                   <li key={item._id} className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-                      <p className="text-sm text-gray-900" style={{ margin: 0, fontWeight: item.read ? 500 : 700 }}>
+                      <p className="text-sm text-gray-900" style={{ margin: 0, fontWeight: (item.read || item.isRead) ? 500 : 700 }}>
                         {item.message}
                       </p>
-                      {!item.read ? (
+                      {!(item.read || item.isRead) ? (
                         <Button type="button" variant="ghost" onClick={() => markNotificationRead(item._id)}>
                           Mark as read
                         </Button>
@@ -114,18 +114,18 @@ export function NotificationHistoryView() {
                     </div>
                     <p className="mt-1 text-xs text-gray-500">
                       {item.type ? `${item.type} · ` : ''}
-                      {item.created_at ? formatDate(item.created_at) : '—'}
+                      {(item.created_at || item.createdAt) ? formatDate(item.created_at || item.createdAt) : '—'}
                       {' · '}
-                      {item.read ? 'Read' : 'Unread'}
-                      {item.docket_id ? (
+                      {(item.read || item.isRead) ? 'Read' : 'Unread'}
+                      {(item.docket_id || item.docketId) ? (
                         <>
                           {' · '}
                           <button
                             type="button"
                             className="text-primary underline-offset-2 hover:underline"
-                            onClick={() => goToDocket(item.docket_id)}
+                            onClick={() => goToDocket(item.docket_id || item.docketId)}
                           >
-                            {item.docket_id}
+                            {item.docket_id || item.docketId}
                           </button>
                         </>
                       ) : null}

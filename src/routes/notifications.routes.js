@@ -11,5 +11,6 @@ const router = express.Router();
 router.get('/', userReadLimiter, getNotifications);
 router.get('/all', userReadLimiter, getAllNotifications);
 router.patch('/:id/read', userReadLimiter, markAsRead);
+router.post('/:id/read', userReadLimiter, markAsRead);
 
 module.exports = router;

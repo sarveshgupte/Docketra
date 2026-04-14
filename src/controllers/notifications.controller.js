@@ -1,24 +1,22 @@
-const Notification = require('../models/Notification.model');
-
-function toLegacyMessage(notification) {
-  const type = String(notification?.type || '').toUpperCase();
-  const docketId = notification?.docketId;
-  if (!docketId) return 'Docket updated.';
-  if (type === 'ASSIGNED') return `Docket ${docketId} was assigned to you.`;
-  if (type === 'REASSIGNED') return `Docket ${docketId} was reassigned.`;
-  if (type === 'DOCKET_ACTIVATED') return `Docket ${docketId} is now active.`;
-  if (type === 'LIFECYCLE_CHANGED') return `Docket ${docketId} lifecycle changed.`;
-  if (type === 'CLIENT_UPLOAD') return 'Client uploaded documents';
-  return `Docket ${docketId} updated.`;
-}
+const {
+  getUserNotifications,
+  markAsRead: markNotificationAsRead,
+} = require('../services/notification.service');
 
 function normalizeNotification(notification) {
   return {
-    ...notification,
-    read: Boolean(notification?.read),
-    message: toLegacyMessage(notification),
+    _id: notification._id,
+    id: notification._id,
+    type: notification.type,
+    title: notification.title,
+    message: notification.message,
     docket_id: notification.docketId,
-    created_at: notification.timestamp,
+    docketId: notification.docketId,
+    isRead: Boolean(notification?.isRead),
+    read: Boolean(notification?.isRead),
+    groupCount: Number(notification?.groupCount || 1),
+    createdAt: notification.createdAt,
+    created_at: notification.createdAt,
   };
 }
 
@@ -32,12 +30,9 @@ async function getNotifications(req, res) {
         data: [],
       });
     }
-    const limit = Number(req.query.limit) || 10;
-
-    const notifications = await Notification.find({ firmId, userId })
-      .sort({ timestamp: -1 })
-      .limit(limit)
-      .lean();
+    const notifications = await getUserNotifications(userId, firmId, {
+      limit: Number(req.query.limit) || 10,
+    });
 
     return res.json({
       success: true,
@@ -62,9 +57,9 @@ async function getAllNotifications(req, res) {
       });
     }
 
-    const notifications = await Notification.find({ firmId, userId })
-      .sort({ timestamp: -1 })
-      .lean();
+    const notifications = await getUserNotifications(userId, firmId, {
+      limit: Number(req.query.limit) || 100,
+    });
 
     return res.json({
       success: true,
@@ -84,10 +79,7 @@ async function markAsRead(req, res) {
     const userId = String(req.user?.xID || '').toUpperCase();
     const { id } = req.params;
 
-    await Notification.updateOne(
-      { _id: id, firmId, userId },
-      { $set: { read: true } },
-    );
+    await markNotificationAsRead(id, userId, firmId);
 
     return res.json({ success: true });
   } catch (error) {
