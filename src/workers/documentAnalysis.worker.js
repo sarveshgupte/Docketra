@@ -67,6 +67,7 @@ if (!redisUrl || !isAnalysisEnabled) {
           extractedFields: insight.extractedFields,
           tags: insight.tags,
           suggestedTeam: insight.suggestedTeam,
+          confidence: Number.isFinite(Number(insight.confidence)) ? Number(insight.confidence) : 0,
           status: 'COMPLETED',
           updatedAt: new Date(),
         };
