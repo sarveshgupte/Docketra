@@ -37,6 +37,7 @@ const { moveToDLQ, getDLQSize } = require('../queues/storage.dlq');
 const { getQueueDepth } = require('../queues/storage.queue');
 const { updateTenantStorageUsage } = require('../utils/updateTenantStorageUsage');
 const { setWorkerStatus } = require('../services/workerRegistry.service');
+const { analyzeDocument } = require('../queues/documentAnalysis.queue');
 
 // Wire up dynamic metric providers so getSnapshot() reflects live queue state
 setDLQSizeProvider(getDLQSize);
@@ -286,7 +287,7 @@ const storageWorker = new Worker(
           // Create the immutable Attachment record now that we have a Drive file ID
           if (caseFile.caseId || caseFile.clientId) {
             try {
-              await Attachment.create({
+              const attachment = await Attachment.create({
                 firmId: caseFile.firmId,
                 caseId: caseFile.caseId || undefined,
                 clientId: caseFile.clientId || undefined,
@@ -307,6 +308,10 @@ const storageWorker = new Worker(
                 note: caseFile.note,
                 source: caseFile.source || 'upload',
               });
+
+              if (String(process.env.ENABLE_AI_ANALYSIS || 'false').toLowerCase() === 'true') {
+                await analyzeDocument(String(attachment._id), String(caseFile.firmId));
+              }
             } catch (attachErr) {
               // Attachment creation failure is non-fatal for the upload itself
               console.error('[StorageWorker]', {

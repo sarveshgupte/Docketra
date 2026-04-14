@@ -48,6 +48,10 @@ const envSchema = z
     BREVO_API_KEY: z.string().trim().optional(),
     MAIL_FROM: z.string().trim().optional(),
     SMTP_FROM: z.string().trim().optional(),
+    ENABLE_AI_ANALYSIS: boolFromEnv,
+    AI_PROVIDER: z.string().trim().optional(),
+    OPENAI_API_KEY: z.string().trim().optional(),
+    OPENAI_MODEL: z.string().trim().optional(),
   })
   .superRefine((env, ctx) => {
     if (!env.MONGO_URI && !env.MONGODB_URI) {

@@ -285,6 +285,34 @@ const attachmentSchema = new mongoose.Schema({
   note: {
     type: String,
   },
+
+  analysis: {
+    documentType: {
+      type: String,
+      trim: true,
+    },
+    extractedFields: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+    tags: {
+      type: [String],
+      default: [],
+    },
+    suggestedTeam: {
+      type: String,
+      trim: true,
+    },
+    status: {
+      type: String,
+      enum: ['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED'],
+      default: 'PENDING',
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
 }, {
   // Strict mode: Prevents adding arbitrary fields
   strict: true,
