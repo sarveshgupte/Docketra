@@ -672,7 +672,7 @@ export const WorkbasketPage = () => {
 
           {/* Bulk Actions Toolbar — only shown when rows are selected */}
           {selectedCases.length > 0 && (
-            <div className="workbasket-bulk-bar">
+            <div className="global-worklist__bulk-bar">
               <Button
                 variant="outline"
                 onClick={handleBulkPull}
