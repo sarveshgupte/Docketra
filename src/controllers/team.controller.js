@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 const Team = require('../models/Team.model');
 const User = require('../models/User.model');
-const { isAdminRole, isManagerRole } = require('../utils/role.utils');
 const { assertPrimaryAdmin } = require('../utils/hierarchy.utils');
 const log = require('../utils/log');
 
@@ -64,19 +63,6 @@ const assignUserToTeam = async (req, res) => {
     const user = await User.findOne({ _id: req.body?.userId, status: { $ne: 'deleted' } });
     if (!user || !ensureSameFirm(user, actor.firmId)) {
       return res.status(404).json({ success: false, message: 'User not found in firm' });
-    }
-
-    if (isManagerRole(actor.role)) {
-      if (String(actor.teamId || '') !== String(team._id)) {
-        return res.status(403).json({ success: false, message: 'Managers can only assign users within own team' });
-      }
-      if (String(user.teamId || '') !== String(actor.teamId || '')) {
-        return res.status(403).json({ success: false, message: 'Managers cannot perform cross-team assignments' });
-      }
-    }
-
-    if (!isAdminRole(actor.role) && !isManagerRole(actor.role)) {
-      return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
     user.teamId = team._id;
