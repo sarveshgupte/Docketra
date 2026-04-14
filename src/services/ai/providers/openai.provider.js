@@ -27,7 +27,7 @@ async function analyze(text, options = {}) {
       messages: [
         {
           role: 'system',
-          content: 'Return strict JSON with keys: documentType, extractedFields, suggestedTeam, tags. No markdown.',
+          content: 'Return strict JSON with keys: documentType, extractedFields, suggestedTeam, tags, confidence. No markdown.',
         },
         {
           role: 'user',
@@ -61,6 +61,7 @@ async function analyze(text, options = {}) {
     extractedFields: parsed.extractedFields || {},
     suggestedTeam: parsed.suggestedTeam || 'Legal',
     tags: Array.isArray(parsed.tags) ? parsed.tags.slice(0, 10) : [],
+    confidence: Number.isFinite(Number(parsed?.confidence)) ? Number(parsed.confidence) : 0,
   };
 }
 
