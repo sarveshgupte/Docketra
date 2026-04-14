@@ -5,6 +5,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@tanstack/react-query": "^5.99.0",
     "axios": "^1.6.2",
     "framer-motion": "file:vendor/framer-motion",
     "react": "^18.2.0",
