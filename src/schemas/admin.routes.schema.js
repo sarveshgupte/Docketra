@@ -67,6 +67,15 @@ module.exports = {
   },
 
   'GET /hierarchy': { query: passthroughQuery },
+  'GET /audit-logs': {
+    query: z.object({
+      userId: objectIdOrString.optional(),
+      action: nonEmptyString.optional(),
+      startDate: z.string().optional(),
+      endDate: z.string().optional(),
+      limit: z.coerce.number().int().positive().max(500).optional(),
+    }).passthrough(),
+  },
   'GET /users': { query: passthroughQuery },
   'POST /users': { body: passthroughBody },
   'PUT /users/:xID/activate': {

@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const Team = require('../models/Team.model');
 const User = require('../models/User.model');
 const { assertPrimaryAdmin } = require('../utils/hierarchy.utils');
-const log = require('../utils/log');
+const { logAuditEvent } = require('../services/adminActionAudit.service');
 
 const ensureSameFirm = (doc, firmId) => doc && String(doc.firmId) === String(firmId);
 
@@ -46,7 +46,13 @@ const updateTeam = async (req, res) => {
     }
 
     await team.save();
-    log.info('HIERARCHY_UPDATED', { actorId: req.user?._id, targetId: team._id, changes: { managerId: team.managerId } });
+    await logAuditEvent({
+      firmId: req.user?.firmId,
+      actorId: req.user?._id,
+      targetId: team._id,
+      action: 'HIERARCHY_UPDATED',
+      metadata: { managerId: team.managerId },
+    });
     return res.json({ success: true, data: team });
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message || 'Failed to update team' });
@@ -67,7 +73,13 @@ const assignUserToTeam = async (req, res) => {
 
     user.teamId = team._id;
     await user.save();
-    log.info('HIERARCHY_UPDATED', { actorId: actor?._id, targetId: user._id, changes: { teamId: team._id } });
+    await logAuditEvent({
+      firmId: actor?.firmId,
+      actorId: actor?._id,
+      targetId: user._id,
+      action: 'HIERARCHY_UPDATED',
+      metadata: { teamId: team._id },
+    });
 
     return res.json({ success: true, data: { userId: user._id, teamId: team._id } });
   } catch (error) {

@@ -5,6 +5,7 @@ import { FirmLayout } from '../components/routing/FirmLayout';
 import { RouteErrorBoundary } from '../components/routing/RouteErrorBoundary';
 import {
   AdminPage,
+  AuditLogsPage,
   CaseDetailPage,
   CasesPage,
   ClientWorkspacePage,
@@ -267,6 +268,14 @@ export const ProtectedRoutes = () => (
           element={(
             <ProtectedRoute requireAdmin>
               <HierarchyPage />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="admin/audit-logs"
+          element={(
+            <ProtectedRoute requireAdmin>
+              <AuditLogsPage />
             </ProtectedRoute>
           )}
         />
