@@ -69,6 +69,10 @@ export function NotificationPanel({ firmSlug, limit = 8 }) {
       const response = await notificationsApi.getNotifications({ limit });
       setItems(normalizeList(response));
     } catch (err) {
+      if (err?.status === 404) {
+        setItems([]);
+        return;
+      }
       setError(err?.message || 'Failed to load notifications');
       setItems([]);
     } finally {
