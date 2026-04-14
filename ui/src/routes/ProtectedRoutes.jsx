@@ -30,6 +30,7 @@ import {
 } from './lazyPages';
 import { RouteSuspenseOutlet } from './RouteSuspenseOutlet';
 import { NotificationHistoryView } from '../../views/NotificationHistoryView';
+import { DefaultRoute } from '../components/routing/DefaultRoute';
 
 export const ProtectedRoutes = () => (
   <>
@@ -47,6 +48,16 @@ export const ProtectedRoutes = () => (
       element={(
         <ProtectedRoute requireSuperadmin>
           <FirmsManagement />
+        </ProtectedRoute>
+      )}
+    />
+
+
+    <Route
+      path="/app/dashboard"
+      element={(
+        <ProtectedRoute>
+          <DefaultRoute />
         </ProtectedRoute>
       )}
     />

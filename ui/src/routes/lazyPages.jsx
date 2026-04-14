@@ -1,5 +1,5 @@
 import { lazy } from 'react';
-import { DashboardPage as DashboardPageComponent } from '../pages/DashboardPage';
+import { DashboardPage as DashboardPageComponent } from '../pages/Dashboard';
 import { WorklistPage as WorklistPageComponent } from '../pages/WorklistPage';
 import { WorkbasketPage as WorkbasketPageComponent } from '../pages/WorkbasketPage';
 import { FirmSettingsPage as FirmSettingsPageComponent } from '../pages/FirmSettingsPage';

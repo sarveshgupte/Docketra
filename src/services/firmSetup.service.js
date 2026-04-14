@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 const Category = require('../models/Category.model');
 const Team = require('../models/Team.model');
 const FirmSetupTemplate = require('../models/FirmSetupTemplate.model');
+const Firm = require('../models/Firm.model');
+const { logAuthEvent } = require('./audit.service');
 
 const DEFAULT_FIRM_SETUP_TEMPLATE_KEY = 'SYSTEM_DEFAULT';
 
@@ -209,33 +211,93 @@ const setupDefaultFirm = async (firmId, primaryAdminUser, {
     return { skipped: true, reason: 'INVALID_FIRM_ID' };
   }
 
+  const actorXid = primaryAdminUser?.xID || primaryAdminUser?.xid || 'SYSTEM';
+
   const execute = async (activeSession) => {
-    const [categoryCount, workbasketCount] = await Promise.all([
+    const [categoryCount, workbasketCount, firm] = await Promise.all([
       Category.countDocuments({ firmId }).session(activeSession),
       Team.countDocuments({ firmId, parentWorkbasketId: null }).session(activeSession),
+      Firm.findById(firmId).session(activeSession),
     ]);
 
+    console.info('[FIRM_SETUP] setup started', {
+      firmId: String(firmId),
+      categoryCount,
+      workbasketCount,
+      force,
+    });
+
     if (!force && categoryCount > 0 && workbasketCount > 0) {
+      const skipReason = 'FIRM_ALREADY_CONFIGURED';
+      console.info('[FIRM_SETUP] setup skipped', {
+        firmId: String(firmId),
+        reason: skipReason,
+        categoryCount,
+        workbasketCount,
+      });
       return {
         skipped: true,
-        reason: 'FIRM_ALREADY_CONFIGURED',
+        reason: skipReason,
         categoryCount,
         workbasketCount,
       };
     }
 
     const resolvedTemplate = normalizeTemplate(template || await getFirmSetupTemplate(templateKey, { session: activeSession }));
-    const result = await runSetup({ firmId, primaryAdminUser, session: activeSession, template: resolvedTemplate });
 
-    return {
-      skipped: false,
-      categoryCountBefore: categoryCount,
-      workbasketCountBefore: workbasketCount,
-      categoriesCreatedOrUpdated: result.categories.length,
-      workbasketsCreatedOrUpdated: result.workbasketMap.size,
-      mapping: mapSubcategoriesToWorkbaskets(resolvedTemplate),
-      templateKey: resolvedTemplate.key,
-    };
+    try {
+      const result = await runSetup({ firmId, primaryAdminUser, session: activeSession, template: resolvedTemplate });
+
+      if (firm) {
+        firm.isSetupComplete = true;
+        firm.setupMetadata = {
+          categories: result.categories.length,
+          workbaskets: result.workbasketMap.size,
+          templateKey: resolvedTemplate.key,
+          completedAt: new Date(),
+        };
+        await firm.save({ session: activeSession || undefined });
+      }
+
+      await logAuthEvent({
+        eventType: 'FIRM_SETUP_COMPLETED',
+        firmId: String(firmId),
+        xID: actorXid,
+        performedBy: actorXid,
+        description: 'Firm initialized with default setup',
+        metadata: {
+          categoriesCreated: result.categories.length,
+          workbasketsCreated: result.workbasketMap.size,
+          templateKey: resolvedTemplate.key,
+        },
+        session: activeSession || null,
+      }).catch(() => null);
+
+      console.info('[FIRM_SETUP] setup completed', {
+        firmId: String(firmId),
+        categoriesCreated: result.categories.length,
+        workbasketsCreated: result.workbasketMap.size,
+        templateKey: resolvedTemplate.key,
+      });
+
+      return {
+        skipped: false,
+        categoryCountBefore: categoryCount,
+        workbasketCountBefore: workbasketCount,
+        categoriesCreatedOrUpdated: result.categories.length,
+        workbasketsCreatedOrUpdated: result.workbasketMap.size,
+        mapping: mapSubcategoriesToWorkbaskets(resolvedTemplate),
+        templateKey: resolvedTemplate.key,
+      };
+    } catch (error) {
+      console.info('[FIRM_SETUP] setup failed', {
+        firmId: String(firmId),
+        reason: error.message,
+        categoryCount,
+        workbasketCount,
+      });
+      throw error;
+    }
   };
 
   if (session) {
