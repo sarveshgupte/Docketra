@@ -252,7 +252,7 @@ const getClientById = async (req, res) => {
  * - status: Defaults to ACTIVE
  * 
  * Business fields (required from frontend):
- * - businessName, businessAddress, primaryContactNumber, businessEmail
+ * - businessName, primaryContactNumber, businessEmail
  * 
  * Optional fields:
  * - secondaryContactNumber, PAN, GST, TAN, CIN, latitude, longitude
@@ -296,9 +296,9 @@ const createClient = async (req, res) => {
     // STEP 5: Extract and validate required business fields
     const {
       businessName,
-      businessAddress,
       primaryContactNumber,
       businessEmail,
+      businessAddress,
       secondaryContactNumber,
       PAN,
       GST,
@@ -315,13 +315,6 @@ const createClient = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Business name is required',
-      });
-    }
-    
-    if (!businessAddress || !businessAddress.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Business address is required',
       });
     }
     
@@ -367,7 +360,7 @@ const createClient = async (req, res) => {
         clientId,
         // Business fields from sanitized request
         businessName: businessName.trim(),
-        businessAddress: businessAddress.trim(),
+        businessAddress: businessAddress ? businessAddress.trim() : undefined,
         primaryContactNumber: primaryContactNumber.trim(),
         secondaryContactNumber: secondaryContactNumber ? secondaryContactNumber.trim() : undefined,
         businessEmail: businessEmail.trim().toLowerCase(),

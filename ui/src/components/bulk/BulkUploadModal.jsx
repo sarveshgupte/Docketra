@@ -4,7 +4,7 @@ import { Button } from '../common/Button';
 import { bulkUploadApi } from '../../api/bulkUpload.api';
 
 const TEMPLATES = {
-  clients: ['businessName', 'businessEmail', 'primaryContactNumber', 'contactPersonName'],
+  clients: ['businessName', 'businessEmail', 'primaryContactNumber', 'businessAddress', 'PAN', 'CIN', 'TAN', 'GST'],
   categories: ['category', 'subcategory'],
   team: ['name', 'email', 'role', 'department'],
 };
@@ -12,13 +12,19 @@ const TEMPLATES = {
 const TYPE_HELPER_TEXT = {
   team: ['Role must be Admin/User'],
   categories: ['Subcategory optional'],
-  clients: ['Email required'],
+  clients: ['Required: businessName, businessEmail, primaryContactNumber'],
 };
 
 const TYPE_FIELD_DESCRIPTIONS = {
   team: ['name: full name', 'email: work email', 'role: Admin or User', 'department: optional'],
   categories: ['category: top-level category', 'subcategory: optional nested value'],
-  clients: ['businessName: client legal name', 'businessEmail: required', 'primaryContactNumber: optional', 'contactPersonName: optional'],
+  clients: [
+    'businessName: required',
+    'businessEmail: required',
+    'primaryContactNumber: required',
+    'businessAddress: optional',
+    'PAN/CIN/TAN/GST: optional',
+  ],
 };
 
 const DUPLICATE_MODES = [

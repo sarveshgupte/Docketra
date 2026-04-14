@@ -850,11 +850,35 @@ export const AdminPage = () => {
         });
 
         for (const row of rowsWithoutHeader) {
-          const [businessName, businessAddress, primaryContactNumber, businessEmail, secondaryContactNumber, PAN, GST, TAN, CIN] = parseDelimitedLine(row);
-          const requiredValues = [businessName, businessAddress, primaryContactNumber, businessEmail].map((value) => value?.trim());
-          const [trimmedName, trimmedAddress, trimmedPrimary, trimmedEmail] = requiredValues;
+          const parsed = parseDelimitedLine(row);
+          const isNewOrder = String(parsed[1] || '').includes('@');
+          const [
+            businessName,
+            businessEmail,
+            primaryContactNumber,
+            businessAddress,
+            PAN,
+            CIN,
+            TAN,
+            GST,
+            secondaryContactNumber,
+          ] = isNewOrder
+            ? parsed
+            : [
+              parsed[0],
+              parsed[3],
+              parsed[2],
+              parsed[1],
+              parsed[5],
+              parsed[8],
+              parsed[7],
+              parsed[6],
+              parsed[4],
+            ];
+          const requiredValues = [businessName, primaryContactNumber, businessEmail].map((value) => value?.trim());
+          const [trimmedName, trimmedPrimary, trimmedEmail] = requiredValues;
 
-          if (!trimmedName || !trimmedAddress || !trimmedPrimary || !trimmedEmail) {
+          if (!trimmedName || !trimmedPrimary || !trimmedEmail) {
             skippedCount += 1;
             continue;
           }
@@ -868,9 +892,9 @@ export const AdminPage = () => {
           try {
             await clientApi.createClient({
               businessName: trimmedName,
-              businessAddress: trimmedAddress,
               primaryContactNumber: trimmedPrimary,
               businessEmail: trimmedEmail,
+              ...(businessAddress?.trim() && { businessAddress: businessAddress.trim() }),
               ...(secondaryContactNumber?.trim() && { secondaryContactNumber: secondaryContactNumber.trim() }),
               ...(PAN?.trim() && { PAN: PAN.trim() }),
               ...(GST?.trim() && { GST: GST.trim() }),
@@ -900,8 +924,7 @@ export const AdminPage = () => {
   const handleCreateClient = async (e) => {
     e.preventDefault();
     
-    if (!clientForm.businessName || !clientForm.businessAddress || 
-        !clientForm.primaryContactNumber || !clientForm.businessEmail) {
+    if (!clientForm.businessName || !clientForm.primaryContactNumber || !clientForm.businessEmail) {
       showToast('Please fill in all required fields', 'error');
       return;
     }
@@ -912,9 +935,9 @@ export const AdminPage = () => {
       // Explicit payload construction - DO NOT spread form state
       const payload = {
         businessName: clientForm.businessName,
-        businessAddress: clientForm.businessAddress,
         businessEmail: clientForm.businessEmail,
         primaryContactNumber: clientForm.primaryContactNumber,
+        ...(clientForm.businessAddress && { businessAddress: clientForm.businessAddress }),
         ...(clientForm.secondaryContactNumber && { secondaryContactNumber: clientForm.secondaryContactNumber }),
         ...(clientForm.PAN && { PAN: clientForm.PAN }),
         ...(clientForm.TAN && { TAN: clientForm.TAN }),
@@ -1341,7 +1364,7 @@ export const AdminPage = () => {
                   Bulk Upload
                 </Button>
                 <Button variant="default" onClick={() => {
-                  const blob = new Blob(['businessName,businessEmail,primaryContactNumber,contactPersonName\n'], { type: 'text/csv;charset=utf-8;' });
+                  const blob = new Blob(['businessName,businessEmail,primaryContactNumber,businessAddress,PAN,CIN,TAN,GST\n'], { type: 'text/csv;charset=utf-8;' });
                   const url = window.URL.createObjectURL(blob);
                   const link = document.createElement('a');
                   link.href = url;
@@ -1750,7 +1773,7 @@ export const AdminPage = () => {
         <form onSubmit={handleBulkPasteSubmit} className="admin__create-form">
           <div className="neo-info-text">
             {bulkPasteMode === 'clients'
-              ? 'Paste rows from Excel/Sheets. Columns: BusinessName, BusinessAddress, PrimaryContactNumber, BusinessEmail, SecondaryContactNumber, PAN, GST, TAN, CIN.'
+              ? 'Paste rows from Excel/Sheets. Columns: BusinessName, BusinessEmail, PrimaryContactNumber, BusinessAddress (optional), PAN (optional), CIN (optional), TAN (optional), GST (optional).'
               : bulkPasteMode === 'subcategories'
                 ? 'Paste 2 columns: CategoryName and SubcategoryName. If a category does not exist, it is created first.'
                 : 'Paste one category name per line (or first column). Duplicate names are skipped.'}
@@ -1761,7 +1784,7 @@ export const AdminPage = () => {
             value={bulkPasteInput}
             onChange={(event) => setBulkPasteInput(event.target.value)}
             placeholder={bulkPasteMode === 'clients'
-              ? 'Acme Pvt Ltd\tMumbai\t9876543210\tops@acme.com'
+              ? 'Acme Pvt Ltd\tops@acme.com\t9876543210\tMumbai'
               : bulkPasteMode === 'subcategories'
                 ? 'Tax\tGST Filing'
                 : 'Tax'}
@@ -1877,11 +1900,11 @@ export const AdminPage = () => {
           )}
 
           <Input
-            label="Business Name"
+            label="Client Name"
             name="businessName"
             value={clientForm.businessName}
             onChange={(e) => setClientForm({ ...clientForm, businessName: e.target.value })}
-            placeholder="Enter business name"
+            placeholder="Enter client name"
             required
             disabled={!!selectedClient}
             title={selectedClient ? 'Business name cannot be edited inline. Use "Change Legal Name" action.' : ''}
@@ -1894,23 +1917,22 @@ export const AdminPage = () => {
           )}
 
           <Input
-            label="Business Address"
+            label="Business Address (Optional)"
             name="businessAddress"
             value={clientForm.businessAddress}
             onChange={(e) => setClientForm({ ...clientForm, businessAddress: e.target.value })}
             placeholder="Enter business address"
-            required={!selectedClient}
             disabled={!!selectedClient}
             title={selectedClient ? 'Address cannot be changed after creation' : ''}
           />
 
           <Input
-            label="Primary Contact Number"
+            label="Client Phone Number"
             name="primaryContactNumber"
             type="tel"
             value={clientForm.primaryContactNumber}
             onChange={(e) => setClientForm({ ...clientForm, primaryContactNumber: e.target.value })}
-            placeholder="Enter primary contact number"
+            placeholder="Enter client phone number"
             required
           />
 
@@ -1924,12 +1946,12 @@ export const AdminPage = () => {
           />
 
           <Input
-            label="Business Email"
+            label="Client Email"
             name="businessEmail"
             type="email"
             value={clientForm.businessEmail}
             onChange={(e) => setClientForm({ ...clientForm, businessEmail: e.target.value })}
-            placeholder="Enter business email"
+            placeholder="Enter client email"
             required
           />
 

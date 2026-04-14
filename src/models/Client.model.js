@@ -363,9 +363,6 @@ const clientSchema = new mongoose.Schema({
    */
   businessAddress: {
     type: String,
-    required: function requiredBusinessAddress() {
-      return this.isDefaultClient !== true;
-    },
     default: null,
     trim: true,
   },
