@@ -55,6 +55,11 @@ const listCrmClients = async (req, res) => {
   }
 };
 
+// Includes both canonical (UPPER) and legacy (mixed-case) status values from CaseStatus enum.
+const COMPLETED_DOCKET_STATUSES = new Set([
+  'CLOSED', 'FILED', 'Filed', 'RESOLVED', 'APPROVED', 'Archived',
+]);
+
 const getCrmClientById = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -71,7 +76,7 @@ const getCrmClientById = async (req, res) => {
       ).sort({ createdAt: -1 }).lean(),
       Case.find(
         { firmId: req.user.firmId, crmClientId: client._id },
-        { caseId: 1, caseNumber: 1, title: 1, status: 1, priority: 1, createdAt: 1, dealId: 1 }
+        { caseNumber: 1, title: 1, status: 1, assignedTo: 1, dueDate: 1, createdAt: 1 }
       ).sort({ createdAt: -1 }).lean(),
       Invoice.find(
         { firmId: req.user.firmId, clientId: client._id },
@@ -83,6 +88,24 @@ const getCrmClientById = async (req, res) => {
       .filter((inv) => inv.status === 'paid')
       .reduce((sum, inv) => sum + (inv.amount || 0), 0);
 
+    const unpaidRevenue = invoices
+      .filter((inv) => inv.status === 'unpaid')
+      .reduce((sum, inv) => sum + (inv.amount || 0), 0);
+
+    const completedDeals = deals.filter((d) => d.stage === 'completed').length;
+    const completedDockets = dockets.filter((d) => COMPLETED_DOCKET_STATUSES.has(d.status)).length;
+
+    const summary = {
+      totalDeals: deals.length,
+      activeDeals: deals.length - completedDeals,
+      completedDeals,
+      totalDockets: dockets.length,
+      pendingDockets: dockets.length - completedDockets,
+      completedDockets,
+      totalRevenue,
+      unpaidRevenue,
+    };
+
     return res.json({
       success: true,
       data: {
@@ -90,7 +113,7 @@ const getCrmClientById = async (req, res) => {
         deals,
         dockets,
         invoices,
-        totalRevenue,
+        summary,
       },
     });
   } catch (error) {
