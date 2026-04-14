@@ -4,6 +4,9 @@ export const authApi = {
   getFirmLoginDetails: (firmSlug) =>
     request((http) => http.get(`/${firmSlug}/login`), 'Invalid workspace URL'),
 
+  getFirmPublicDetails: (firmSlug) =>
+    request((http) => http.get(`/public/firms/${firmSlug}`), 'Invalid workspace URL'),
+
   loginInit: ({ firmSlug, xid, password }) =>
     request((http) => http.post('/auth/login/init', { firmSlug, xid, password }), 'Sign-in failed. Please try again.'),
 
