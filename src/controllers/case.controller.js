@@ -610,9 +610,7 @@ const createCase = async (req, res) => {
       }
 
       if (!resolvedSlaDueAt && defaultSlaDays > 0 && !hasValidRequestedSla) {
-        const computedDefault = new Date(createdAt);
-        computedDefault.setDate(computedDefault.getDate() + defaultSlaDays);
-        slaState.slaDueAt = computedDefault;
+        slaState.slaDueAt = slaService.calculateFallbackDueDateFromDays(createdAt, defaultSlaDays);
       }
 
       if (hasValidRequestedSla) {

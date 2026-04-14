@@ -130,17 +130,18 @@ const handleClientPostCreate = async ({ type, user, createdClients = [] }) => {
       if (existingCase) continue;
 
       const createdAt = new Date();
+      const fallbackDueDate = slaService.calculateFallbackDueDateFromDays(
+        createdAt,
+        Math.max(0, Number(subcategory.defaultSlaDays || category.defaultSlaDays || 3)),
+      );
+
       const dueDate = await slaService.calculateSlaDueDate({
         firmId: user.firmId,
         category: category.name,
         subcategory: subcategory.name,
         workbasketId: subcategory.workbasketId || null,
         createdAt,
-      }) || (() => {
-        const fallbackDueDate = new Date(createdAt);
-        fallbackDueDate.setUTCDate(fallbackDueDate.getUTCDate() + Math.max(0, Number(subcategory.defaultSlaDays || category.defaultSlaDays || 3)));
-        return fallbackDueDate;
-      })();
+      }) || fallbackDueDate;
 
       await Case.create({
         title: 'Initial Setup',
