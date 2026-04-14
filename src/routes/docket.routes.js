@@ -10,8 +10,12 @@ const {
 } = require('../controllers/docketAi.controller');
 const { createCase } = require('../controllers/case.controller');
 const { getTimeline } = require('../controllers/docketActivity.controller');
+const { previewDocketBulkUpload, uploadDocketBulk } = require('../controllers/docketBulkUpload.controller');
 
 const router = express.Router();
+
+router.post('/bulk/preview', authorizeFirmPermission('CASE_CREATE'), userWriteLimiter, previewDocketBulkUpload);
+router.post('/bulk/upload', authorizeFirmPermission('CASE_CREATE'), userWriteLimiter, uploadDocketBulk);
 
 router.get('/ai-suggestions/:attachmentId', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, getDocketAiSuggestions);
 router.post('/create', authorizeFirmPermission('CASE_CREATE'), userWriteLimiter, createCase);
