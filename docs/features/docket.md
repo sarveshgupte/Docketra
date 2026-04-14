@@ -49,6 +49,39 @@ Response:
 }
 ```
 
+## Default Firm Setup
+
+When a new firm is created (or a firm has no category/workbasket setup), the platform auto-provisions a zero-configuration docket setup so teams can create dockets immediately.
+
+### Default categories and subcategories
+
+- **Compliance**
+  - GST Filing → Compliance Team
+  - ROC Filing → Compliance Team
+- **Tax**
+  - Income Tax Return → Tax Team
+  - TDS Filing → Tax Team
+- **Internal**
+  - Admin Task → General
+  - Follow-up → General
+
+All default categories/subcategories are created as active. Subcategories are created with explicit workbasket mappings to guarantee guided routing works from day one.
+
+### Default workbaskets
+
+- **General**
+- **Compliance Team**
+- **Tax Team**
+
+All default workbaskets are created as active under the firm and are auto-managed by the primary admin user created during onboarding.
+
+### Mapping logic and safety
+
+- Setup is idempotent: re-running firm setup does not create duplicates.
+- Setup executes transactionally when called inside an existing transaction/session.
+- Existing firms are not disrupted: setup only auto-runs for new firms or firms missing category/workbasket setup, unless explicitly forced by reset/clone flows.
+- Superadmin template customization and clone/reset flows are supported by the firm setup service layer for controlled rollout.
+
 ### Notes
 
 - Existing `POST /api/cases` continues to work for backward compatibility.
