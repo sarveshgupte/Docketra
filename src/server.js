@@ -111,6 +111,7 @@ const firmStorageRoutes = require('./routes/firmStorage.routes');
 const healthRoutes = require('./routes/health.routes');  // Health endpoints
 const { apiHealth } = require('./controllers/health.controller');
 const storageRoutes = require('./routes/storage.routes');  // Storage BYOS routes
+const aiRoutes = require('./routes/ai.routes');
 const filesRoutes = require('./routes/files.routes');  // Tenant BYOS signed URL routes
 const securityRoutes = require('./routes/security.routes');
 const { getSecurityMetrics } = require('./controllers/security.controller');
@@ -409,6 +410,7 @@ app.use('/api/clients', ...tenantScopedApiAccess, writeGuardChain, clientRoutes)
 app.use('/api/reports', ...tenantScopedApiAccess, writeGuardChain, reportsRoutes);  // Reports routes
 app.use('/api/firm/:firmId', ...tenantScopedApiAccess, writeGuardChain, firmMetricsRoutes);
 app.use('/api/storage', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), storageRoutes);  // BYOS storage routes (read-only, no writeGuardChain needed)
+app.use('/api/ai', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), aiRoutes);
 app.use('/api/firm', ...tenantScopedApiAccess, writeGuardChain, firmStorageRoutes);
 app.use('/api/files', authLimiter, ...tenantScopedApiAccess, writeGuardChain, filesRoutes);
 app.use('/api/tenant', authLimiter, ...tenantScopedApiAccess, writeGuardChain, tenantRoutes);

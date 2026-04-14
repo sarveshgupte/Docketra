@@ -52,6 +52,10 @@ const envSchema = z
     AI_PROVIDER: z.string().trim().optional(),
     OPENAI_API_KEY: z.string().trim().optional(),
     OPENAI_MODEL: z.string().trim().optional(),
+    GEMINI_API_KEY: z.string().trim().optional(),
+    GEMINI_MODEL: z.string().trim().optional(),
+    CLAUDE_API_KEY: z.string().trim().optional(),
+    CLAUDE_MODEL: z.string().trim().optional(),
   })
   .superRefine((env, ctx) => {
     if (!env.MONGO_URI && !env.MONGODB_URI) {
