@@ -7,6 +7,7 @@ const workerModules = [
   { name: 'EMAIL_WORKER', path: '../workers/email.worker' },
   { name: 'AUDIT_WORKER', path: '../workers/audit.worker' },
   { name: 'OUTBOX_WORKER', path: '../workers/outbox.worker' },
+  { name: 'DOCUMENT_ANALYSIS_WORKER', path: '../workers/documentAnalysis.worker' },
 ];
 
 const startWorkerModule = ({ name, path }) => {
