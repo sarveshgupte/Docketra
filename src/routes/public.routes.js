@@ -6,6 +6,7 @@ const { signupLimiter, publicUploadLimiter, formSubmitLimiter } = require('../mi
 const { getFirmBySlug } = require('../controllers/superadmin.controller');
 const { submitEnterpriseInquiry } = require('../controllers/contact.controller');
 const { submitForm } = require('../controllers/form.controller');
+const { getPublicLandingPage } = require('../controllers/landingPage.controller');
 const EarlyAccessRequest = require('../models/EarlyAccessRequest.model');
 const { executeWrite } = require('../utils/executeWrite');
 const log = require('../utils/log');
@@ -40,6 +41,8 @@ const sanitizeLogValue = (value, maxLength = 160) =>
 const upload = createSecureUpload();
 
 router.get('/firms/:firmSlug', getFirmBySlug);
+
+router.get('/pages/:slug', getPublicLandingPage);
 
 router.post('/forms/:id/submit', formSubmitLimiter, submitForm);
 
