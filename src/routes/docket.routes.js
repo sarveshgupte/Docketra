@@ -1,4 +1,6 @@
 const express = require('express');
+const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
+const routeSchemas = require('../schemas/docket.routes.schema');
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
 const { userReadLimiter, userWriteLimiter } = require('../middleware/rateLimiters');
 const {
@@ -13,7 +15,7 @@ const { getTimeline } = require('../controllers/docketActivity.controller');
 const { previewDocketBulkUpload, uploadDocketBulk } = require('../controllers/docketBulkUpload.controller');
 const { applyClientAccessFilter } = require('../middleware/clientAccess.middleware');
 
-const router = express.Router();
+const router = applyRouteValidation(express.Router(), routeSchemas);
 
 router.post('/bulk/preview', authorizeFirmPermission('CASE_CREATE'), userWriteLimiter, previewDocketBulkUpload);
 router.post('/bulk/upload', authorizeFirmPermission('CASE_CREATE'), userWriteLimiter, uploadDocketBulk);
@@ -28,3 +30,4 @@ router.post('/:docketId/reject-ai-routing', authorizeFirmPermission('CASE_UPDATE
 router.get('/:id/timeline', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, getTimeline);
 
 module.exports = router;
+

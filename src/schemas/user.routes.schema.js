@@ -41,6 +41,18 @@ module.exports = {
     params: z.object({ xID: z.string().trim().regex(/^X\d{6}$/i) }),
     body: z.object({ status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']) }).passthrough(),
   },
+  'PATCH /:id/role': {
+    params: z.object({ id: nonEmptyString }),
+    body: z.object({
+      role: z.enum(['Admin', 'Employee']),
+    }).passthrough(),
+  },
+  'PATCH /:id/reporting': {
+    params: z.object({ id: nonEmptyString }),
+    body: z.object({
+      reportsTo: nonEmptyString.optional(),
+    }).passthrough(),
+  },
   'DELETE /:id': {
     params: z.object({ id: nonEmptyString }),
   },
