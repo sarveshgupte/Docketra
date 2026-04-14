@@ -4,7 +4,9 @@ const Attachment = require('../models/Attachment.model');
 const Client = require('../models/Client.model');
 const Category = require('../models/Category.model');
 const Case = require('../models/Case.model');
+const Team = require('../models/Team.model');
 const aiService = require('../services/ai/ai.service');
+const { resolveCaseIdentifier } = require('../utils/caseIdentifier');
 
 function normalizeConfidence(value) {
   const numeric = Number(value);
@@ -18,6 +20,12 @@ function getConfidenceLevel(score) {
   if (score > 0.8) return 'HIGH';
   if (score > 0.5) return 'MEDIUM';
   return 'LOW';
+}
+
+function getRoutingConfidenceLevel(score) {
+  if (score > 0.8) return 'HIGH';
+  if (score < 0.5) return 'LOW';
+  return 'MEDIUM';
 }
 
 function parsePreviewFlag(value) {
@@ -265,6 +273,16 @@ async function createDocketFromAttachment(req, res) {
     return res.status(400).json({ success: false, message: 'User xID is required to create docket' });
   }
 
+  const suggestedTeam = String(attachmentResult.attachment?.analysis?.suggestedTeam || '').trim() || null;
+  const confidence = normalizeConfidence(attachmentResult.attachment?.analysis?.confidence);
+  const workbasketMatch = suggestedTeam
+    ? await Team.findOne({
+      firmId: req.user?.firmId,
+      name: new RegExp(`^${suggestedTeam.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+      isActive: true,
+    }).select('_id name').lean()
+    : null;
+
   const docket = await Case.create({
     firmId: attachmentResult.firmId,
     clientId: result.suggestions.clientId || result.fallback.clientId,
@@ -279,6 +297,21 @@ async function createDocketFromAttachment(req, res) {
     status: 'DRAFT',
     createdByXID: creatorXid,
     createdBy: req.user?.email || req.user?.xID || 'system@docketra.local',
+    aiRouting: {
+      suggestedTeam,
+      suggestedWorkbasketId: workbasketMatch?._id || null,
+      confidence,
+      status: 'PENDING',
+    },
+  });
+
+  console.info('[AI] routing_suggested', {
+    docketId: docket.caseId || docket.caseNumber,
+    caseInternalId: String(docket.caseInternalId),
+    firmId: attachmentResult.firmId,
+    suggestedTeam,
+    suggestedWorkbasketId: workbasketMatch?._id ? String(workbasketMatch._id) : null,
+    confidence,
   });
 
   attachmentResult.attachment.caseId = docket.caseId || docket.caseNumber;
@@ -298,9 +331,164 @@ async function createDocketFromAttachment(req, res) {
   });
 }
 
+async function resolveDocketByIdentifier(req, docketId) {
+  const internalId = await resolveCaseIdentifier(req.user?.firmId, docketId, req.user?.role);
+  const docket = await Case.findOne({ caseInternalId: internalId, firmId: req.user?.firmId });
+  if (!docket) {
+    return null;
+  }
+  return docket;
+}
+
+async function ensureAiRoutingSuggestion(docket, req) {
+  const existingTeam = String(docket?.aiRouting?.suggestedTeam || '').trim();
+  if (existingTeam) return docket;
+
+  const analyzedAttachment = await Attachment.findOne({
+    firmId: req.user?.firmId,
+    caseId: docket.caseId,
+    'analysis.status': 'COMPLETED',
+    'analysis.suggestedTeam': { $exists: true, $ne: null },
+  }).sort({ updatedAt: -1 });
+
+  if (!analyzedAttachment) return docket;
+
+  const suggestedTeam = String(analyzedAttachment.analysis?.suggestedTeam || '').trim();
+  const confidence = normalizeConfidence(analyzedAttachment.analysis?.confidence);
+  const matchedWorkbasket = suggestedTeam
+    ? await Team.findOne({
+      firmId: req.user?.firmId,
+      name: new RegExp(`^${suggestedTeam.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+      isActive: true,
+    }).select('_id name').lean()
+    : null;
+
+  docket.aiRouting = docket.aiRouting || {};
+  docket.aiRouting.suggestedTeam = suggestedTeam || null;
+  docket.aiRouting.suggestedWorkbasketId = matchedWorkbasket?._id || null;
+  docket.aiRouting.confidence = confidence;
+  docket.aiRouting.status = docket.aiRouting.status || 'PENDING';
+  await docket.save();
+
+  console.info('[AI] routing_suggested', {
+    docketId: docket.caseId || docket.caseNumber,
+    caseInternalId: String(docket.caseInternalId),
+    firmId: String(docket.firmId),
+    suggestedTeam: docket.aiRouting.suggestedTeam,
+    suggestedWorkbasketId: docket.aiRouting.suggestedWorkbasketId ? String(docket.aiRouting.suggestedWorkbasketId) : null,
+    confidence,
+  });
+
+  return docket;
+}
+
+async function getAiRoutingSuggestion(req, res) {
+  try {
+    let docket = await resolveDocketByIdentifier(req, req.params.docketId);
+    if (!docket) {
+      return res.status(404).json({ success: false, message: 'Docket not found' });
+    }
+    docket = await ensureAiRoutingSuggestion(docket, req);
+
+    const confidence = normalizeConfidence(docket?.aiRouting?.confidence);
+    const confidenceLevel = getRoutingConfidenceLevel(confidence);
+
+    return res.json({
+      suggestedTeam: docket?.aiRouting?.suggestedTeam || null,
+      workbasketId: docket?.aiRouting?.suggestedWorkbasketId ? String(docket.aiRouting.suggestedWorkbasketId) : null,
+      confidence,
+      confidenceLevel,
+      status: docket?.aiRouting?.status || 'PENDING',
+      requiresManualRouting: confidence < 0.5,
+    });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error?.message || 'Unable to load AI routing suggestion' });
+  }
+}
+
+async function applyAiRouting(req, res) {
+  try {
+    let docket = await resolveDocketByIdentifier(req, req.params.docketId);
+    if (!docket) {
+      return res.status(404).json({ success: false, message: 'Docket not found' });
+    }
+    docket = await ensureAiRoutingSuggestion(docket, req);
+
+    docket.aiRouting = docket.aiRouting || {};
+    const suggestedWorkbasketId = docket.aiRouting.suggestedWorkbasketId;
+    if (!suggestedWorkbasketId) {
+      return res.status(409).json({ success: false, message: 'No AI workbasket suggestion available to apply' });
+    }
+
+    const workbasket = await Team.findOne({
+      _id: suggestedWorkbasketId,
+      firmId: req.user?.firmId,
+      isActive: true,
+    }).select('_id name').lean();
+
+    if (!workbasket) {
+      return res.status(409).json({ success: false, message: 'Suggested workbasket is no longer available' });
+    }
+
+    docket.workbasketId = workbasket._id;
+    docket.routedToTeamId = workbasket._id;
+    docket.aiRouting.status = 'APPLIED';
+    await docket.save();
+
+    console.info('[AI] routing_applied', {
+      docketId: docket.caseId || docket.caseNumber,
+      caseInternalId: String(docket.caseInternalId),
+      firmId: String(docket.firmId),
+      appliedWorkbasketId: String(workbasket._id),
+      appliedByXID: req.user?.xID || null,
+    });
+
+    return res.json({
+      success: true,
+      docketId: docket.caseId || docket.caseNumber,
+      workbasketId: String(workbasket._id),
+      status: docket.aiRouting.status,
+    });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error?.message || 'Unable to apply AI routing' });
+  }
+}
+
+async function rejectAiRouting(req, res) {
+  try {
+    let docket = await resolveDocketByIdentifier(req, req.params.docketId);
+    if (!docket) {
+      return res.status(404).json({ success: false, message: 'Docket not found' });
+    }
+    docket = await ensureAiRoutingSuggestion(docket, req);
+
+    docket.aiRouting = docket.aiRouting || {};
+    docket.aiRouting.status = 'REJECTED';
+    await docket.save();
+
+    console.info('[AI] routing_rejected', {
+      docketId: docket.caseId || docket.caseNumber,
+      caseInternalId: String(docket.caseInternalId),
+      firmId: String(docket.firmId),
+      rejectedByXID: req.user?.xID || null,
+    });
+
+    return res.json({
+      success: true,
+      docketId: docket.caseId || docket.caseNumber,
+      status: docket.aiRouting.status,
+    });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error?.message || 'Unable to reject AI routing' });
+  }
+}
+
 module.exports = {
+  applyAiRouting,
   createDocketFromAttachment,
+  getAiRoutingSuggestion,
   getAttachmentAiInsights,
   getDocketAiSuggestions,
   getConfidenceLevel,
+  rejectAiRouting,
 };
