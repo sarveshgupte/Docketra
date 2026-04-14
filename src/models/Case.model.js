@@ -740,6 +740,27 @@ const caseSchema = new mongoose.Schema({
     required: [true, 'Client ID is required - every case must have a client'],
     trim: true,
   },
+
+  /**
+   * Optional CRM client linkage (ObjectId) for CRM module integration.
+   * Backward-compatible with legacy string clientId above.
+   */
+  crmClientId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'CrmClient',
+    default: null,
+    index: true,
+  },
+
+  /**
+   * Optional CRM deal linkage (ObjectId) for CRM module integration.
+   */
+  dealId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Deal',
+    default: null,
+    index: true,
+  },
   
   /**
    * Snapshot of client data at case creation
@@ -1144,6 +1165,8 @@ caseSchema.index({ firmId: 1, createdAt: 1 }); // Firm-scoped daily creation met
 caseSchema.index({ firmId: 1, status: 1, createdAt: -1 }); // Firm-scoped status dashboards sorted by recency
 caseSchema.index({ firmId: 1, createdAt: -1 });
 caseSchema.index({ firmId: 1, clientId: 1 });
+caseSchema.index({ firmId: 1, crmClientId: 1 });
+caseSchema.index({ firmId: 1, dealId: 1 });
 
 caseSchema.plugin(softDeletePlugin);
 caseSchema.plugin(tenantScopeGuardPlugin);
