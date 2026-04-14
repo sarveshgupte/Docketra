@@ -3,7 +3,7 @@ const Client = require('../../models/Client.model');
 const User = require('../../models/User.model');
 const emailService = require('../../services/email.service');
 const xIDGenerator = require('../../services/xIDGenerator');
-const { ensureDefaultWorkbasketForFirm } = require('../../services/defaultWorkbasket.service');
+const { setupDefaultFirm } = require('../../services/firmSetup.service');
 const { slugify } = require('../../utils/slugify');
 const { assertFirmPlanCapacity } = require('../../services/user.service');
 const { generateNextClientId } = require('../../services/clientIdGenerator');
@@ -148,7 +148,7 @@ const createStarterWorkspace = async (payload = {}) => {
         isActive: false,
       }], { session });
 
-      await ensureDefaultWorkbasketForFirm(defaultClient._id, { session });
+      await setupDefaultFirm(defaultClient._id, user, { session });
 
       setupToken = generatePasswordSetupToken({ userId: user._id.toString(), firmId: defaultClient._id.toString() });
 
