@@ -5,3 +5,7 @@ require('./src/workers/outbox.worker.js');
 require('./src/workers/storage.worker.js');
 require('./src/workers/storageIntegrity.worker.js');
 require('./src/workers/tenantCaseMetrics.worker.js');
+require('./src/workers/slaCheck.worker.js');
+require('./src/workers/notification.worker.js');
+require('./src/workers/reportGeneration.worker.js');
+require('./src/workers/bulkProcess.worker.js');
