@@ -9,6 +9,7 @@ const {
   rejectAiRouting,
 } = require('../controllers/docketAi.controller');
 const { createCase } = require('../controllers/case.controller');
+const { getTimeline } = require('../controllers/docketActivity.controller');
 
 const router = express.Router();
 
@@ -18,5 +19,6 @@ router.post('/from-attachment/:attachmentId', authorizeFirmPermission('CASE_CREA
 router.get('/:docketId/ai-routing', authorizeFirmPermission('CASE_UPDATE'), userReadLimiter, getAiRoutingSuggestion);
 router.post('/:docketId/apply-ai-routing', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, applyAiRouting);
 router.post('/:docketId/reject-ai-routing', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, rejectAiRouting);
+router.get('/:id/timeline', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, getTimeline);
 
 module.exports = router;
