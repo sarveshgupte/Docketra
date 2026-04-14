@@ -96,6 +96,7 @@ const authRoutes = require('./routes/auth.routes');  // Authentication routes
 const clientApprovalRoutes = require('./routes/clientApproval.routes');  // Client approval routes
 const clientRoutes = require('./routes/client.routes');  // Client management routes (PR #39)
 const leadRoutes = require('./routes/lead.routes');
+const formRoutes = require('./routes/form.routes');
 const crmClientRoutes = require('./routes/crmClient.routes');
 const dealRoutes = require('./routes/deal.routes');
 const invoiceRoutes = require('./routes/invoice.routes');
@@ -417,6 +418,7 @@ app.use('/api/client-approval', ...tenantScopedApiAccess, writeGuardChain, clien
 app.use('/api/clients', ...tenantScopedApiAccess, writeGuardChain, clientRoutes);  // Client management (PR #39)
 app.use('/api/crm/clients', ...tenantScopedApiAccess, writeGuardChain, crmClientRoutes);
 app.use('/api/leads', ...tenantScopedApiAccess, writeGuardChain, leadRoutes);
+app.use('/api/forms', ...tenantScopedApiAccess, writeGuardChain, formRoutes);
 app.use('/api/deals', ...tenantScopedApiAccess, writeGuardChain, dealRoutes);
 app.use('/api/invoices', ...tenantScopedApiAccess, writeGuardChain, invoiceRoutes);
 app.use('/api/reports', ...tenantScopedApiAccess, writeGuardChain, reportsRoutes);  // Reports routes
