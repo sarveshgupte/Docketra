@@ -4,6 +4,14 @@ const CrmClient = require('../models/CrmClient.model');
 
 const ALLOWED_STATUSES = new Set(['new', 'contacted', 'converted']);
 
+const parsePagination = (query = {}) => {
+  const rawLimit = Number.parseInt(query.limit, 10);
+  const rawSkip = Number.parseInt(query.skip, 10);
+  const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 100) : 50;
+  const skip = Number.isFinite(rawSkip) ? Math.max(rawSkip, 0) : 0;
+  return { limit, skip };
+};
+
 const createLead = async (req, res) => {
   try {
     const name = String(req.body?.name || '').trim();
@@ -26,7 +34,12 @@ const createLead = async (req, res) => {
 
 const listLeads = async (req, res) => {
   try {
-    const leads = await Lead.find({ firmId: req.user.firmId }).sort({ createdAt: -1 }).lean();
+    const { limit, skip } = parsePagination(req.query);
+    const leads = await Lead.find({ firmId: req.user.firmId })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
     return res.json({ success: true, data: leads });
   } catch (_error) {
     return res.status(500).json({ success: false, message: 'Failed to list leads' });
@@ -66,7 +79,11 @@ const convertLead = async (req, res) => {
       }
 
       if (lead.linkedClientId) {
-        response = { status: 200, payload: { success: true, data: { lead } } };
+        const existingClient = await CrmClient.findOne({
+          _id: lead.linkedClientId,
+          firmId: req.user.firmId,
+        }).session(session);
+        response = { status: 200, payload: { success: true, data: { lead, client: existingClient || null } } };
         return;
       }
 
