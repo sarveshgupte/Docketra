@@ -2,9 +2,10 @@ const express = require('express');
 const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
 const routeSchemas = require('../schemas/public.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
-const { signupLimiter, publicUploadLimiter } = require('../middleware/rateLimiters');
+const { signupLimiter, publicUploadLimiter, formSubmitLimiter } = require('../middleware/rateLimiters');
 const { getFirmBySlug } = require('../controllers/superadmin.controller');
 const { submitEnterpriseInquiry } = require('../controllers/contact.controller');
+const { submitForm } = require('../controllers/form.controller');
 const EarlyAccessRequest = require('../models/EarlyAccessRequest.model');
 const { executeWrite } = require('../utils/executeWrite');
 const log = require('../utils/log');
@@ -39,6 +40,8 @@ const sanitizeLogValue = (value, maxLength = 160) =>
 const upload = createSecureUpload();
 
 router.get('/firms/:firmSlug', getFirmBySlug);
+
+router.post('/forms/:id/submit', formSubmitLimiter, submitForm);
 
 router.post('/signup', signupLimiter, async (req, res, next) => {
   try {

@@ -40,6 +40,11 @@ const leadSchema = new mongoose.Schema({
     default: null,
     index: true,
   },
+  metadata: {
+    utm_source: { type: String, default: null },
+    utm_campaign: { type: String, default: null },
+    referrer: { type: String, default: null },
+  },
 }, { timestamps: { createdAt: true, updatedAt: false } });
 
 leadSchema.index({ firmId: 1, status: 1, createdAt: -1 });

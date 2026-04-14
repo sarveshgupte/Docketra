@@ -77,6 +77,8 @@ const config = {
       internalMetricsWindowSeconds: Number(process.env.SECURITY_RATE_LIMIT_INTERNAL_METRICS_WINDOW_SECONDS || 60),
       contactPerWindow: Number(process.env.SECURITY_RATE_LIMIT_CONTACT_PER_WINDOW || 20),
       contactWindowSeconds: Number(process.env.SECURITY_RATE_LIMIT_CONTACT_WINDOW_SECONDS || 900),
+      formSubmitPerWindow: Number(process.env.SECURITY_RATE_LIMIT_FORM_SUBMIT_PER_WINDOW || 10),
+      formSubmitWindowSeconds: Number(process.env.SECURITY_RATE_LIMIT_FORM_SUBMIT_WINDOW_SECONDS || 60),
       commentPerMinute: Number(process.env.SECURITY_RATE_LIMIT_COMMENT_PER_MINUTE || 45),
       commentWindowSeconds: Number(process.env.SECURITY_RATE_LIMIT_COMMENT_WINDOW_SECONDS || 60),
       fileUploadPerMinute: Number(process.env.SECURITY_RATE_LIMIT_FILE_UPLOAD_PER_MINUTE || 20),

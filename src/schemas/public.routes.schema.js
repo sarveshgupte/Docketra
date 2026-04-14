@@ -1,6 +1,14 @@
-const { z, nonEmptyString } = require('./common');
+const { z, nonEmptyString, objectIdString } = require('./common');
 
 module.exports = {
+  'POST /forms/:id/submit': {
+    params: z.object({ id: objectIdString }).strict(),
+    body: z.object({
+      name: nonEmptyString.max(200),
+      email: z.string().trim().email().max(254).optional(),
+      phone: z.string().trim().max(30).optional(),
+    }).strict(),
+  },
   'POST /signup': {
     body: z.object({
       firmName: nonEmptyString,

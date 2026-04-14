@@ -342,6 +342,13 @@ const contactLimiter = createLimiter({
   keyGenerator: ipKeyGenerator,
 });
 
+const formSubmitLimiter = createLimiter({
+  name: 'formSubmitLimiter',
+  windowMs: config.security.rateLimit.formSubmitWindowSeconds * 1000,
+  max: config.security.rateLimit.formSubmitPerWindow,
+  keyGenerator: ipKeyGenerator,
+});
+
 const commentLimiter = createLimiter({
   name: 'commentLimiter',
   windowMs: config.security.rateLimit.commentWindowSeconds * 1000,
@@ -389,6 +396,7 @@ module.exports = {
   refreshUserLimiter,
   internalMetricsLimiter,
   contactLimiter,
+  formSubmitLimiter,
   commentLimiter,
   fileUploadLimiter,
   debugLimiter,
