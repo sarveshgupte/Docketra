@@ -3,20 +3,13 @@ import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { bulkUploadApi } from '../../api/bulkUpload.api';
 import { TYPE_FIELD_DESCRIPTIONS, TYPE_HELPER_TEXT } from '../../constants/bulkUploadConfig';
-
-const TEMPLATES = {
-  clients: ['businessName', 'businessEmail', 'primaryContactNumber', 'contactPersonName'],
-  categories: ['category', 'subcategory', 'workbasket'],
-  team: ['name', 'email', 'role', 'department', 'workbaskets', 'clients'],
-};
+import { BULK_UPLOAD_SCHEMA, buildTemplateCsv, getBulkUploadFields, mapHeadersToSchema, validateRow } from '../../constants/bulkUploadSchema';
 
 const DUPLICATE_MODES = [
   { value: 'skip', label: 'Skip duplicates' },
   { value: 'update', label: 'Update existing' },
   { value: 'fail', label: 'Fail on duplicates' },
 ];
-
-const buildTemplateCsv = (type) => `${(TEMPLATES[type] || []).join(',')}\n`;
 
 const fileToBase64 = async (file) => {
   const arrayBuffer = await file.arrayBuffer();
@@ -34,8 +27,10 @@ export const BulkUploadModal = ({ isOpen, onClose, type, title, onImported, show
   const [headerMapping, setHeaderMapping] = useState({});
   const [lastPayload, setLastPayload] = useState(null);
   const [job, setJob] = useState(null);
+  const [clientValidationErrors, setClientValidationErrors] = useState([]);
 
   const typeLabel = useMemo(() => title || 'Bulk Upload', [title]);
+  const schema = useMemo(() => BULK_UPLOAD_SCHEMA[type], [type]);
   const duplicateModes = useMemo(
     () => (type === 'categories'
       ? DUPLICATE_MODES.filter((mode) => mode.value !== 'update')
@@ -88,12 +83,54 @@ export const BulkUploadModal = ({ isOpen, onClose, type, title, onImported, show
     window.URL.revokeObjectURL(url);
   };
 
+  const parseCsvRows = (csvContent) => {
+    const lines = String(csvContent || '').split(/\r?\n/).filter((line) => line.trim());
+    if (!lines.length) return { headers: [], rows: [] };
+
+    const headers = lines[0].split(',').map((item) => item.trim());
+    const rows = lines.slice(1).map((line, rowIndex) => {
+      const values = line.split(',').map((item) => item.trim());
+      const row = headers.reduce((acc, header, colIndex) => ({ ...acc, [header]: values[colIndex] || '' }), {});
+      return { row, rowIndex: rowIndex + 2 };
+    });
+
+    return { headers, rows };
+  };
+
+  const runClientValidation = (csvContent) => {
+    const { headers, rows } = parseCsvRows(csvContent);
+    const { indexByField, missingRequired } = mapHeadersToSchema(type, headers);
+
+    if (missingRequired.length) {
+      return {
+        blockingErrors: [`Missing required column(s): ${missingRequired.join(', ')}`],
+        rowErrors: [],
+      };
+    }
+
+    const rowErrors = rows
+      .map(({ row, rowIndex }) => {
+        const normalizedRow = Object.entries(indexByField).reduce((acc, [fieldKey, sourceIndex]) => {
+          const sourceHeader = headers[sourceIndex];
+          return { ...acc, [fieldKey]: row[sourceHeader] };
+        }, {});
+
+        const errors = validateRow(normalizedRow, type);
+        if (!errors.length) return null;
+        return { row: rowIndex, error: errors.join(', ') };
+      })
+      .filter(Boolean);
+
+    return { blockingErrors: [], rowErrors };
+  };
+
   const runPreview = async (payload) => {
     const response = await bulkUploadApi.preview(type, payload);
     setPreview(response?.data || null);
+    const fieldKeys = (schema?.fields || []).map((field) => field.key);
     setHeaderMapping(response?.data?.receivedHeaders?.reduce((acc, header) => {
       const selectedField = Object.entries(response?.data?.fieldIndexMap || {}).find(([, idx]) => response?.data?.receivedHeaders?.[idx] === header)?.[0];
-      return { ...acc, [header]: selectedField || '' };
+      return { ...acc, [header]: fieldKeys.includes(selectedField) ? selectedField : '' };
     }, {}) || {});
     setLastPayload(payload);
   };
@@ -108,6 +145,23 @@ export const BulkUploadModal = ({ isOpen, onClose, type, title, onImported, show
       const payload = isCsv
         ? { csvContent: await file.text(), duplicateMode }
         : { fileName: file.name, fileContentBase64: await fileToBase64(file), duplicateMode };
+
+      if (isCsv) {
+        const validationResult = runClientValidation(payload.csvContent);
+        setClientValidationErrors(validationResult.rowErrors.slice(0, 5));
+        if (validationResult.blockingErrors.length) {
+          setPreview(null);
+          showToast(validationResult.blockingErrors.join(' | '), 'error');
+          return;
+        }
+        if (validationResult.rowErrors.length) {
+          showToast(`CSV validation found ${validationResult.rowErrors.length} row issue(s).`, 'error');
+          return;
+        }
+      } else {
+        setClientValidationErrors([]);
+      }
+
       await runPreview(payload);
     } catch (error) {
       setPreview(null);
@@ -165,6 +219,11 @@ export const BulkUploadModal = ({ isOpen, onClose, type, title, onImported, show
         {(TYPE_HELPER_TEXT[type] || []).map((text) => (
           <div key={text} className="neo-info-text">{text}</div>
         ))}
+        {getBulkUploadFields(type).length ? (
+          <div style={{ marginTop: 8 }}>
+            <div className="neo-info-text">Required fields: {getBulkUploadFields(type).filter((field) => field.required).map((field) => field.key).join(', ') || 'None'}</div>
+          </div>
+        ) : null}
         {(TYPE_FIELD_DESCRIPTIONS[type] || []).length ? (
           <div style={{ marginTop: 8 }}>
             <div className="neo-info-text">Template fields</div>
@@ -186,6 +245,15 @@ export const BulkUploadModal = ({ isOpen, onClose, type, title, onImported, show
 
         {fileName ? <div className="neo-info-text">Selected: {fileName}</div> : null}
 
+        {clientValidationErrors.length ? (
+          <div style={{ maxHeight: 140, overflow: 'auto', marginTop: 8 }}>
+            <div className="neo-info-text">Missing/invalid fields detected (top 5)</div>
+            {clientValidationErrors.map((entry) => (
+              <div key={`${entry.row}-${entry.error}`}>Row {entry.row}: {entry.error}</div>
+            ))}
+          </div>
+        ) : null}
+
         {preview ? (
           <div>
             <div className="neo-info-text">
@@ -202,7 +270,7 @@ export const BulkUploadModal = ({ isOpen, onClose, type, title, onImported, show
                       onChange={(e) => setHeaderMapping((prev) => ({ ...prev, [sourceHeader]: e.target.value }))}
                     >
                       <option value="">Ignore</option>
-                      {(TEMPLATES[type] || []).map((field) => <option key={field} value={field}>{field}</option>)}
+                      {getBulkUploadFields(type).map((field) => <option key={field.key} value={field.key}>{field.key}</option>)}
                     </select>
                   </div>
                 ))}
@@ -229,7 +297,7 @@ export const BulkUploadModal = ({ isOpen, onClose, type, title, onImported, show
 
         <div className="neo-form-actions" style={{ marginTop: 16 }}>
           <Button type="button" variant="default" onClick={onClose}>Cancel</Button>
-          <Button type="button" variant="primary" onClick={handleImport} disabled={submitting || !preview?.valid?.length}>
+          <Button type="button" variant="primary" onClick={handleImport} disabled={submitting || !preview?.valid?.length || clientValidationErrors.length > 0}>
             {submitting ? 'Importing...' : 'Import Valid Rows'}
           </Button>
         </div>

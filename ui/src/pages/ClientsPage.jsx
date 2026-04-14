@@ -16,6 +16,7 @@ import { clientApi } from '../api/client.api';
 import { formatDate } from '../utils/formatters';
 import { formatDateTime } from '../utils/formatDateTime';
 import { BulkUploadModal } from '../components/bulk/BulkUploadModal';
+import { buildTemplateCsv } from '../constants/bulkUploadSchema';
 
 const toDisplayString = (value, fallback = '—') => {
   if (typeof value === 'string') {
@@ -381,7 +382,7 @@ export const ClientsPage = () => {
           <div className="flex items-center gap-2">
             <Button variant="default" onClick={() => setShowBulkUpload(true)}>Bulk Upload</Button>
             <Button variant="default" onClick={() => {
-              const blob = new Blob(['businessName,businessEmail,primaryContactNumber,businessAddress,PAN,CIN,TAN,GST\n'], { type: 'text/csv;charset=utf-8;' });
+              const blob = new Blob([buildTemplateCsv('clients')], { type: 'text/csv;charset=utf-8;' });
               const url = window.URL.createObjectURL(blob);
               const link = document.createElement('a');
               link.href = url;

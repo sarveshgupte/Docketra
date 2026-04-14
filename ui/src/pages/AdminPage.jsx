@@ -25,6 +25,7 @@ import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
 import { formatDate } from '../utils/formatters';
 import { BulkUploadModal } from '../components/bulk/BulkUploadModal';
+import { buildTemplateCsv } from '../constants/bulkUploadSchema';
 import './AdminPage.css';
 
 const EMPTY_ADMIN_STATS = {
@@ -74,6 +75,18 @@ const parseDelimitedLine = (line = '') => {
     return line.split('\t').map((value) => value.trim());
   }
   return line.split(',').map((value) => value.trim());
+};
+
+const downloadBulkTemplate = (type) => {
+  const blob = new Blob([buildTemplateCsv(type)], { type: 'text/csv;charset=utf-8;' });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `${type}-bulk-template.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
 };
 
 const getApiErrorType = (error) => {
@@ -1310,17 +1323,7 @@ export const AdminPage = () => {
                 </Button>
                 <Button
                   variant="default"
-                  onClick={() => {
-                    const blob = new Blob(['name,email,role,department,workbaskets,clients\n'], { type: 'text/csv;charset=utf-8;' });
-                    const url = window.URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.setAttribute('download', 'team-bulk-template.csv');
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    window.URL.revokeObjectURL(url);
-                  }}
+                  onClick={() => downloadBulkTemplate('team')}
                 >
                   Download Template
                 </Button>
@@ -1384,17 +1387,7 @@ export const AdminPage = () => {
                 <Button variant="default" onClick={() => handleOpenBulkUpload('clients')}>
                   Bulk Upload
                 </Button>
-                <Button variant="default" onClick={() => {
-                  const blob = new Blob(['businessName,businessEmail,primaryContactNumber,businessAddress,PAN,CIN,TAN,GST\n'], { type: 'text/csv;charset=utf-8;' });
-                  const url = window.URL.createObjectURL(blob);
-                  const link = document.createElement('a');
-                  link.href = url;
-                  link.setAttribute('download', 'clients-bulk-template.csv');
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                  window.URL.revokeObjectURL(url);
-                }}>
+                <Button variant="default" onClick={() => downloadBulkTemplate('clients')}>
                   Download Template
                 </Button>
                 <Button variant="default" onClick={() => handleOpenBulkPaste('clients')}>
@@ -1473,17 +1466,7 @@ export const AdminPage = () => {
                 <Button variant="default" onClick={() => handleOpenBulkUpload('categories')}>
                   Bulk Upload
                 </Button>
-                <Button variant="default" onClick={() => {
-                  const blob = new Blob(['category,subcategory,workbasket\n'], { type: 'text/csv;charset=utf-8;' });
-                  const url = window.URL.createObjectURL(blob);
-                  const link = document.createElement('a');
-                  link.href = url;
-                  link.setAttribute('download', 'categories-bulk-template.csv');
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                  window.URL.revokeObjectURL(url);
-                }}>
+                <Button variant="default" onClick={() => downloadBulkTemplate('categories')}>
                   Download Template
                 </Button>
                 <Button
