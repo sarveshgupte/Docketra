@@ -35,7 +35,7 @@ const createInvoice = async (req, res) => {
 
     const client = await CrmClient.findOne({ _id: clientId, firmId }).lean();
     if (!client) {
-      return res.status(400).json({ success: false, message: 'Invalid clientId' });
+      return res.status(400).json({ success: false, message: 'Client not found' });
     }
 
     let resolvedDealId = null;
@@ -45,7 +45,7 @@ const createInvoice = async (req, res) => {
       }
       const deal = await Deal.findOne({ _id: dealId, firmId }).lean();
       if (!deal) {
-        return res.status(400).json({ success: false, message: 'Invalid dealId' });
+        return res.status(400).json({ success: false, message: 'Deal not found' });
       }
       resolvedDealId = dealId;
     }
@@ -57,7 +57,7 @@ const createInvoice = async (req, res) => {
       }
       const docket = await Case.findOne({ _id: docketId, firmId }).lean();
       if (!docket) {
-        return res.status(400).json({ success: false, message: 'Invalid docketId' });
+        return res.status(400).json({ success: false, message: 'Docket not found' });
       }
       resolvedDocketId = docketId;
     }
@@ -86,14 +86,14 @@ const listInvoices = async (req, res) => {
       if (!mongoose.Types.ObjectId.isValid(req.query.clientId)) {
         return res.status(400).json({ success: false, message: 'Invalid clientId' });
       }
-      query.clientId = req.query.clientId;
+      query.clientId = new mongoose.Types.ObjectId(req.query.clientId);
     }
 
     if (req.query.dealId) {
       if (!mongoose.Types.ObjectId.isValid(req.query.dealId)) {
         return res.status(400).json({ success: false, message: 'Invalid dealId' });
       }
-      query.dealId = req.query.dealId;
+      query.dealId = new mongoose.Types.ObjectId(req.query.dealId);
     }
 
     if (req.query.status) {
@@ -125,6 +125,10 @@ const markAsPaid = async (req, res) => {
     const invoice = await Invoice.findOne({ _id: id, firmId: req.user.firmId });
     if (!invoice) {
       return res.status(404).json({ success: false, message: 'Invoice not found' });
+    }
+
+    if (invoice.status === 'paid') {
+      return res.json({ success: true, data: invoice });
     }
 
     invoice.status = 'paid';

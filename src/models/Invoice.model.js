@@ -28,6 +28,7 @@ const invoiceSchema = new mongoose.Schema({
   amount: {
     type: Number,
     required: [true, 'Amount is required'],
+    min: [0, 'Amount must be non-negative'],
   },
   status: {
     type: String,
