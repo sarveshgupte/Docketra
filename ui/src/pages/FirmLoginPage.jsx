@@ -70,7 +70,10 @@ export const FirmLoginPage = () => {
         headers: { Accept: 'application/json' },
       });
 
-      const payload = await response.json().catch(() => null);
+      const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+      const payload = contentType.includes('application/json')
+        ? await response.json().catch(() => null)
+        : null;
       if (!response.ok || !payload?.success) {
         const error = new Error(payload?.message || 'Workspace lookup failed');
         error.status = response.status;
@@ -87,7 +90,10 @@ export const FirmLoginPage = () => {
         headers: { Accept: 'application/json' },
       });
 
-      const payload = await response.json().catch(() => null);
+      const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+      const payload = contentType.includes('application/json')
+        ? await response.json().catch(() => null)
+        : null;
       if (!response.ok || !payload?.success) {
         const error = new Error(payload?.message || 'Workspace lookup failed');
         error.status = response.status;
@@ -106,8 +112,20 @@ export const FirmLoginPage = () => {
         } catch (primaryLookupError) {
           try {
             response = await fetchFirmLoginDetailsFromApiPath(firmSlug);
-          } catch (_sameOriginApiFallbackError) {
-            response = await fetchLegacyFirmLoginDetails(firmSlug);
+          } catch (sameOriginApiFallbackError) {
+            try {
+              response = await authApi.getFirmPublicDetails(firmSlug);
+            } catch (_publicLookupError) {
+              response = await fetchLegacyFirmLoginDetails(firmSlug);
+            }
+            if (import.meta.env.DEV) {
+              // Keep fallback instrumentation in development only.
+              // eslint-disable-next-line no-console
+              console.info('[FirmLoginPage] Same-origin API lookup failed', {
+                firmSlug,
+                status: sameOriginApiFallbackError?.status || null,
+              });
+            }
           }
           if (import.meta.env.DEV) {
             // Keep fallback instrumentation in development only.
