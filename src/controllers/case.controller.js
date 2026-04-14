@@ -10,6 +10,8 @@ const User = require('../models/User.model');
 const Team = require('../models/Team.model');
 const WorkType = require('../models/WorkType.model');
 const SubWorkType = require('../models/SubWorkType.model');
+const CrmClient = require('../models/CrmClient.model');
+const Deal = require('../models/Deal.model');
 const { CaseRepository, ClientRepository, AttachmentRepository } = require('../repositories');
 const categoryRepository = require('../repositories/category.repository');
 const { detectDuplicates, generateDuplicateOverrideComment } = require('../services/clientDuplicateDetector');
@@ -372,8 +374,52 @@ const createCase = async (req, res) => {
       routedWorkbasketId = fallbackWorkbasket?._id ? String(fallbackWorkbasket._id) : null;
     }
     
-    // Default to the tenant's default client when caller does not specify clientId
+    // Backward compatibility:
+    // - legacy clientId (String, e.g., C123456) continues to map to core clientId
+    // - ObjectId-shaped clientId is treated as CRM client linkage (crmClientId)
+    let crmClientId = null;
     let finalClientId = clientId || null;
+    if (clientId && mongoose.Types.ObjectId.isValid(clientId)) {
+      crmClientId = String(clientId);
+      finalClientId = null;
+    }
+
+    const requestedDealId = req.body?.dealId;
+    let dealId = null;
+    if (requestedDealId != null) {
+      if (!mongoose.Types.ObjectId.isValid(requestedDealId)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid dealId',
+          ...responseMeta,
+        });
+      }
+      dealId = String(requestedDealId);
+    }
+
+    if (crmClientId) {
+      const crmClient = await CrmClient.findOne({ _id: crmClientId, firmId }).select('_id').lean();
+      if (!crmClient) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid clientId',
+          ...responseMeta,
+        });
+      }
+    }
+
+    if (dealId) {
+      const deal = await Deal.findOne({ _id: dealId, firmId }).select('_id').lean();
+      if (!deal) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid dealId',
+          ...responseMeta,
+        });
+      }
+    }
+
+    // Default to the tenant's default client when caller does not specify legacy clientId
     if (!finalClientId) {
       const defaultClient = await getOrCreateDefaultClient(firmId, {
         requestId,
@@ -579,6 +625,8 @@ const createCase = async (req, res) => {
         caseSubCategory: subcategoryDoc?.name || caseSubCategory || '',
         subcategory: subcategoryDoc?.name || caseSubCategory || '',
         clientId: finalClientId,
+        crmClientId: crmClientId || null,
+        dealId: dealId || null,
         firmId, // PR 2: Explicitly set firmId for atomic counter scoping
         createdByXID, // Set from authenticated user context
         createdBy: req.user.email || req.user.xID, // Legacy field - use email or xID as fallback
@@ -1886,6 +1934,7 @@ const getCases = async (req, res) => {
       slaDueDate,
       createdBy,
       clientId,
+      dealId,
       page = 1,
       limit = 20,
     } = req.query;
@@ -1930,7 +1979,23 @@ const getCases = async (req, res) => {
       query.createdBy = createdBy.toLowerCase();
     }
     
-    if (clientId) query.clientId = clientId;
+    if (clientId) {
+      if (mongoose.Types.ObjectId.isValid(clientId)) {
+        query.crmClientId = clientId;
+      } else {
+        query.clientId = clientId;
+      }
+    }
+
+    if (dealId) {
+      if (!mongoose.Types.ObjectId.isValid(dealId)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid dealId',
+        });
+      }
+      query.dealId = dealId;
+    }
     
     // Apply client access filter from middleware (restrictedClientIds)
     if (req.clientAccessFilter) {
