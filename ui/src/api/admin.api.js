@@ -5,6 +5,7 @@ export const adminApi = {
   getAdminStats: () => request((http) => http.get('/admin/stats'), 'Failed to load admin stats'),
   createUser: (userData) => request((http) => http.post('/admin/users', userData), 'Failed to create user'),
   getUsers: (params = {}) => request((http) => http.get(`/admin/users${buildQueryString(params)}`), 'Failed to load users'),
+  getHierarchy: () => request((http) => http.get('/admin/hierarchy'), 'Failed to load hierarchy tree'),
 
   activateUser: (xID) => request((http) => http.put(`/admin/users/${xID}/activate`), 'Failed to activate user'),
   deactivateUser: (xID) => request((http) => http.put(`/admin/users/${xID}/deactivate`), 'Failed to deactivate user'),
@@ -20,6 +21,7 @@ export const adminApi = {
     (http) => http.patch(`/admin/users/${xID}/workbaskets`, { teamIds }),
     'Failed to update user workbasket access'
   ),
+  updateUserHierarchy: (id, payload) => request((http) => http.patch(`/admin/users/${id}/hierarchy`, payload), 'Failed to update hierarchy'),
   getFirmSettings: () => request((http) => http.get('/admin/firm-settings'), 'Failed to load firm settings'),
   getFirmSettingsActivity: (params = {}) => request((http) => http.get('/admin/firm-settings/activity', { params }), 'Failed to load admin settings activity'),
   updateFirmSettings: (payload) => request((http) => http.put('/admin/firm-settings', payload), 'Failed to save firm settings'),

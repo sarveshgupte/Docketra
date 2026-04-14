@@ -18,6 +18,7 @@ const categoryRepository = require('../repositories/category.repository');
 const { assertFirmContext } = require('../utils/tenantGuard');
 const { logAuthEvent } = require('../services/audit.service');
 const { isExternalStorageEnabled } = require('../services/featureFlags.service');
+const { assertPrimaryAdmin, getTagValidationError, normalizeId } = require('../utils/hierarchy.utils');
 const log = require('../utils/log');
 
 /**
@@ -1191,6 +1192,202 @@ const restoreTask = async (req, res) => {
   }
 };
 
+
+const normalizeHierarchyRole = (role) => String(role || 'USER').trim().toUpperCase();
+
+const toHierarchyUserNode = (user) => ({
+  id: String(user._id),
+  xID: user.xID || null,
+  name: user.name || '',
+  email: user.email || '',
+  role: normalizeHierarchyRole(user.role),
+  status: user.status || null,
+  isActive: Boolean(user.isActive),
+  primaryAdminId: normalizeId(user.primaryAdminId),
+  adminId: normalizeId(user.adminId),
+  managerId: normalizeId(user.managerId),
+});
+
+const getHierarchyTree = async (req, res) => {
+  try {
+    assertPrimaryAdmin(req.user);
+
+    const users = await User.find({
+      firmId: req.user?.firmId,
+      status: { $ne: 'deleted' },
+    })
+      .select('_id xID name email role status isActive primaryAdminId adminId managerId')
+      .lean();
+
+    const primaryAdminDoc = users.find((user) => normalizeHierarchyRole(user.role) === 'PRIMARY_ADMIN' && String(user._id) === String(req.user?._id))
+      || users.find((user) => normalizeHierarchyRole(user.role) === 'PRIMARY_ADMIN');
+
+    const primaryAdmin = primaryAdminDoc ? toHierarchyUserNode(primaryAdminDoc) : null;
+
+    const tree = {
+      primaryAdmin,
+      admins: [],
+      unassignedUsers: [],
+    };
+
+    if (!primaryAdmin) {
+      return res.json({ success: true, data: tree });
+    }
+
+    const userNodes = users
+      .filter((user) => String(user._id) !== String(primaryAdminDoc._id))
+      .map(toHierarchyUserNode);
+
+    const admins = userNodes.filter((node) => node.role === 'ADMIN');
+    const managers = userNodes.filter((node) => node.role === 'MANAGER');
+    const usersOnly = userNodes.filter((node) => node.role === 'USER');
+
+    const adminsById = new Map(admins.map((admin) => [admin.id, { ...admin, managers: [], users: [] }]));
+    const managersById = new Map(managers.map((manager) => [manager.id, { ...manager, users: [] }]));
+
+    managersById.forEach((manager) => {
+      const admin = manager.adminId ? adminsById.get(manager.adminId) : null;
+      if (admin) {
+        admin.managers.push(manager);
+      } else {
+        tree.unassignedUsers.push(manager);
+      }
+    });
+
+    usersOnly.forEach((user) => {
+      if (user.managerId) {
+        const manager = managersById.get(user.managerId);
+        if (manager) {
+          manager.users.push(user);
+          return;
+        }
+      }
+
+      if (user.adminId) {
+        const admin = adminsById.get(user.adminId);
+        if (admin) {
+          admin.users.push(user);
+          return;
+        }
+      }
+
+      tree.unassignedUsers.push(user);
+    });
+
+    tree.admins = Array.from(adminsById.values()).filter((admin) => !admin.primaryAdminId || admin.primaryAdminId === primaryAdmin.id);
+
+    return res.json({ success: true, data: tree });
+  } catch (error) {
+    return res.status(403).json({
+      success: false,
+      message: error.message || 'Failed to load hierarchy',
+    });
+  }
+};
+
+const updateUserHierarchy = async (req, res) => {
+  try {
+    assertPrimaryAdmin(req.user);
+
+    const lookup = [
+      { xID: String(req.params.id || '').toUpperCase() },
+    ];
+    if (mongoose.Types.ObjectId.isValid(req.params.id)) {
+      lookup.push({ _id: req.params.id });
+    }
+
+    const target = await User.findOne({
+      firmId: req.user?.firmId,
+      status: { $ne: 'deleted' },
+      $or: lookup,
+    });
+
+    if (!target) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const role = normalizeHierarchyRole(target.role);
+    const requestedAdminId = req.body?.adminId === undefined ? target.adminId : normalizeId(req.body?.adminId);
+    const requestedManagerId = req.body?.managerId === undefined ? target.managerId : normalizeId(req.body?.managerId);
+
+    const primaryAdminId = role === 'PRIMARY_ADMIN'
+      ? null
+      : (normalizeId(target.primaryAdminId) || normalizeId(req.user?._id));
+
+    const hierarchyError = getTagValidationError({
+      role,
+      primaryAdminId,
+      adminId: requestedAdminId,
+      managerId: requestedManagerId,
+    });
+
+    if (hierarchyError) {
+      return res.status(400).json({ success: false, message: hierarchyError });
+    }
+
+    const refIds = [requestedAdminId, requestedManagerId].filter(Boolean);
+    const referenced = refIds.length
+      ? await User.find({ _id: { $in: refIds }, firmId: req.user?.firmId, status: { $ne: 'deleted' } })
+        .select('_id role adminId')
+        .lean()
+      : [];
+    const refById = new Map(referenced.map((entry) => [String(entry._id), entry]));
+
+    if (requestedAdminId) {
+      const adminUser = refById.get(String(requestedAdminId));
+      if (!adminUser || normalizeHierarchyRole(adminUser.role) !== 'ADMIN') {
+        return res.status(400).json({ success: false, message: 'adminId must reference an ADMIN in the same firm' });
+      }
+    }
+
+    if (requestedManagerId) {
+      const managerUser = refById.get(String(requestedManagerId));
+      if (!managerUser || normalizeHierarchyRole(managerUser.role) !== 'MANAGER') {
+        return res.status(400).json({ success: false, message: 'managerId must reference a MANAGER in the same firm' });
+      }
+      if (requestedAdminId && normalizeId(managerUser.adminId) !== normalizeId(requestedAdminId)) {
+        return res.status(400).json({ success: false, message: 'managerId must belong to the selected adminId' });
+      }
+    }
+
+    if (role === 'PRIMARY_ADMIN') {
+      target.adminId = null;
+      target.managerId = null;
+      target.reportsToUserId = null;
+    } else if (role === 'ADMIN') {
+      target.adminId = null;
+      target.managerId = null;
+      target.reportsToUserId = null;
+    } else if (role === 'MANAGER') {
+      target.adminId = requestedAdminId || null;
+      target.managerId = null;
+      target.reportsToUserId = null;
+    } else {
+      target.adminId = requestedAdminId || null;
+      target.managerId = requestedManagerId || null;
+      target.reportsToUserId = target.managerId || null;
+    }
+
+    await target.save();
+
+    log.info('HIERARCHY_UPDATED', {
+      actorId: req.user?._id,
+      targetId: target._id,
+      changes: {
+        adminId: target.adminId,
+        managerId: target.managerId,
+      },
+    });
+
+    return res.json({ success: true, data: toHierarchyUserNode(target) });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message || 'Failed to update hierarchy',
+    });
+  }
+};
+
 const getRetentionPreview = async (req, res) => {
   try {
     const data = await buildDiagnostics();
@@ -1212,6 +1409,8 @@ module.exports = {
   getAllPendingCases,
   getAllFiledCases,
   getAllResolvedCases,
+  getHierarchyTree,
+  updateUserHierarchy: wrapWriteHandler(updateUserHierarchy),
   updateRestrictedClients: wrapWriteHandler(updateRestrictedClients),
   getFirmSettings,
   getFirmSettingsActivity,

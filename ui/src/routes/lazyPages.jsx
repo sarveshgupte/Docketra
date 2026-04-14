@@ -54,6 +54,7 @@ export const CreateCasePage = lazyPage(() => import('../pages/CreateCasePage'), 
 export const ProfilePage = lazyPage(() => import('../pages/ProfilePage'), 'ProfilePage');
 export const ProductUpdatesHistoryPage = lazyPage(() => import('../pages/ProductUpdatesHistoryPage'), 'ProductUpdatesHistoryPage');
 export const AdminPage = lazyPage(() => import('../pages/AdminPage'), 'AdminPage');
+export const HierarchyPage = lazyPage(() => import('../pages/HierarchyPage'), 'HierarchyPage');
 export const FirmSettingsPage = FirmSettingsPageComponent;
 export const WorkSettingsPage = WorkSettingsPageComponent;
 export const StorageSettingsPage = lazyPage(() => import('../pages/StorageSettingsPage'), 'StorageSettingsPage');
