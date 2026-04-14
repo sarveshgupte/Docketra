@@ -14,6 +14,7 @@ import {
   DashboardPage,
   DetailedReports,
   FirmSettingsPage,
+  HierarchyPage,
   FirmsManagement,
   NotFoundPage,
   PlatformDashboard,
@@ -257,6 +258,15 @@ export const ProtectedRoutes = () => (
           element={(
             <ProtectedRoute requireAdmin>
               <AdminPage />
+            </ProtectedRoute>
+          )}
+        />
+
+        <Route
+          path="admin/hierarchy"
+          element={(
+            <ProtectedRoute requireAdmin>
+              <HierarchyPage />
             </ProtectedRoute>
           )}
         />

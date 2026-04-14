@@ -14,6 +14,8 @@ const {
   getAllPendingCases,
   getAllFiledCases,
   getAllResolvedCases,
+  getHierarchyTree,
+  updateUserHierarchy,
   updateRestrictedClients,
   getFirmSettings,
   getFirmSettingsActivity,
@@ -97,6 +99,7 @@ router.put('/categories/:id/subcategories/:subcategoryId', ...adminBaseAccess, a
 router.patch('/categories/:id/subcategories/:subcategoryId/status', ...adminBaseAccess, authorizeFirmPermission('CATEGORY_MANAGE'), userWriteLimiter, toggleSubcategoryStatus);
 router.delete('/categories/:id/subcategories/:subcategoryId', ...adminBaseAccess, authorizeFirmPermission('CATEGORY_MANAGE'), userWriteLimiter, deleteSubcategory);
 
+router.get('/hierarchy', ...adminBaseAccess, authorizeFirmPermission('USER_VIEW'), userReadLimiter, getHierarchyTree);
 router.get('/users', ...adminBaseAccess, authorizeFirmPermission('USER_VIEW'), userReadLimiter, getAllUsers);
 router.post('/users', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), sensitiveLimiter, createUser);
 router.put('/users/:xID/activate', ...adminBaseAccess, requirePrimaryAdmin, authorizeFirmPermission('USER_MANAGE'), sensitiveLimiter, activateUser);
@@ -105,6 +108,7 @@ router.post('/users/:xID/resend-invite', ...adminBaseAccess, authorizeFirmPermis
 
 router.patch('/users/:xID/restrict-clients', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateRestrictedClients);
 router.patch('/users/:xID/workbaskets', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateUserWorkbaskets);
+router.patch('/users/:id/hierarchy', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateUserHierarchy);
 router.get('/firm-settings', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userReadLimiter, getFirmSettings);
 router.get('/firm-settings/activity', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userReadLimiter, getFirmSettingsActivity);
 router.put('/firm-settings', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userWriteLimiter, updateFirmSettings);
