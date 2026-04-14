@@ -536,6 +536,7 @@ const globalWorklist = async (req, res) => {
       page = 1,
       limit = 20,
       tab = 'own',
+      workbasketId = '',
     } = req.query;
     const firmId = req.user?.firmId;
 
@@ -547,6 +548,16 @@ const globalWorklist = async (req, res) => {
     }
     
     const userTeamId = toObjectIdStringOrNull(req.user?.teamId);
+    const requestedWorkbasketId = toObjectIdStringOrNull(workbasketId);
+    const permittedTeamIds = new Set(
+      (Array.isArray(req.user?.teamIds) ? req.user.teamIds : [])
+        .map((entry) => toObjectIdStringOrNull(entry))
+        .filter(Boolean),
+    );
+    if (userTeamId) permittedTeamIds.add(userTeamId);
+    const selectedTeamId = requestedWorkbasketId && permittedTeamIds.has(requestedWorkbasketId)
+      ? requestedWorkbasketId
+      : userTeamId;
     const normalizedTab = String(tab || 'own').toLowerCase();
     const parsedPage = Math.max(1, Number.parseInt(page, 10) || 1);
     const parsedLimit = Math.min(100, Math.max(1, Number.parseInt(limit, 10) || 20));
@@ -554,12 +565,12 @@ const globalWorklist = async (req, res) => {
       assignedToXID: null,
     };
 
-    if (normalizedTab === 'routed' && userTeamId) {
-      query.routedToTeamId = userTeamId;
+    if (normalizedTab === 'routed' && selectedTeamId) {
+      query.routedToTeamId = selectedTeamId;
       query.status = { $in: [CaseStatus.ROUTED, CaseStatus.IN_PROGRESS, CaseStatus.PENDING, CaseStatus.FILED] };
     } else {
-      if (userTeamId) {
-        query.ownerTeamId = userTeamId;
+      if (selectedTeamId) {
+        query.ownerTeamId = selectedTeamId;
       }
       query.routedToTeamId = null;
       query.status = { $in: [CaseStatus.OPEN, CaseStatus.RETURNED, CaseStatus.UNASSIGNED] };
