@@ -64,6 +64,73 @@ async function analyze(text, options = {}) {
   };
 }
 
+async function generateDocketFields(input, options = {}) {
+  const apiKey = options.apiKey || process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY is required for docket field generation');
+  }
+
+  const response = await fetch(OPENAI_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: options.model || OPENAI_MODEL,
+      temperature: 0,
+      response_format: { type: 'json_object' },
+      messages: [
+        {
+          role: 'system',
+          content: [
+            'Return JSON only.',
+            'Select ONLY ids from provided clients/categories/subCategories.',
+            'Do not invent new ids, names, or values.',
+            'If uncertain for any selection, return null for that field.',
+            'Return exactly these keys:',
+            'clientId, categoryId, subCategoryId, title, description, confidence.',
+            'confidence must be a number between 0 and 1.',
+          ].join(' '),
+        },
+        {
+          role: 'user',
+          content: JSON.stringify(input),
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    const error = new Error(`OpenAI request failed (${response.status})`);
+    if (response.status === 401) {
+      error.code = 'AI_INVALID_API_KEY';
+    }
+    error.status = response.status;
+    error.provider = 'openai';
+    error.details = body.slice(0, 250);
+    throw error;
+  }
+
+  const payload = await response.json();
+  const content = payload?.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error('OpenAI response missing content');
+  }
+
+  const parsed = JSON.parse(content);
+  return {
+    clientId: parsed?.clientId || null,
+    categoryId: parsed?.categoryId || null,
+    subCategoryId: parsed?.subCategoryId || null,
+    title: String(parsed?.title || '').trim(),
+    description: String(parsed?.description || '').trim(),
+    confidence: Number.isFinite(Number(parsed?.confidence)) ? Number(parsed.confidence) : 0,
+  };
+}
+
 module.exports = {
   analyze,
+  generateDocketFields,
 };
