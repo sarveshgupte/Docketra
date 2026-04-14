@@ -8,10 +8,12 @@ const {
   getDocketAiSuggestions,
   rejectAiRouting,
 } = require('../controllers/docketAi.controller');
+const { createCase } = require('../controllers/case.controller');
 
 const router = express.Router();
 
 router.get('/ai-suggestions/:attachmentId', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, getDocketAiSuggestions);
+router.post('/create', authorizeFirmPermission('CASE_CREATE'), userWriteLimiter, createCase);
 router.post('/from-attachment/:attachmentId', authorizeFirmPermission('CASE_CREATE'), userWriteLimiter, createDocketFromAttachment);
 router.get('/:docketId/ai-routing', authorizeFirmPermission('CASE_UPDATE'), userReadLimiter, getAiRoutingSuggestion);
 router.post('/:docketId/apply-ai-routing', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, applyAiRouting);
