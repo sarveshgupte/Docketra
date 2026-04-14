@@ -7,8 +7,8 @@ const { deleteRule, listRules, saveRule } = require('../controllers/sla.controll
 
 const router = applyRouteValidation(express.Router(), routeSchemas);
 
-router.get('/rules', requireAdmin, authorizeFirmPermission('ADMIN_STATS'), userReadLimiter, listRules);
-router.post('/rules', requireAdmin, authorizeFirmPermission('ADMIN_STATS'), userWriteLimiter, saveRule);
-router.delete('/rules/:ruleId', requireAdmin, authorizeFirmPermission('ADMIN_STATS'), userWriteLimiter, deleteRule);
+router.get('/rules', userReadLimiter, requireAdmin, authorizeFirmPermission('ADMIN_STATS'), listRules);
+router.post('/rules', userWriteLimiter, requireAdmin, authorizeFirmPermission('ADMIN_STATS'), saveRule);
+router.delete('/rules/:ruleId', userWriteLimiter, requireAdmin, authorizeFirmPermission('ADMIN_STATS'), deleteRule);
 
 module.exports = router;

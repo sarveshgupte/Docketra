@@ -29,8 +29,8 @@ const defaultSlaForm = {
 
 const getRuleScopeLabel = (rule) => {
   const scopes = [];
+  if (rule.category) scopes.push(rule.category);
   if (rule.subcategory) scopes.push(rule.subcategory);
-  else if (rule.category) scopes.push(rule.category);
   if (rule.workbasketName || rule.workbasketId) scopes.push(rule.workbasketName || rule.workbasketId);
   if (scopes.length === 0) return 'Default';
   return scopes.join(' • ');
@@ -93,6 +93,7 @@ export const FirmSettingsPage = () => {
         setConfig(merged);
       }
     } catch {
+      // Fall back to locally cached config to keep UI functional.
       setConfig(getFirmConfig());
     } finally {
       setLoadingConfig(false);

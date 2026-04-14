@@ -4,6 +4,7 @@ const { DEFAULT_SLA_CONFIG, calculateDueDate } = require('./caseSla.service');
 const { createNotification, NotificationTypes } = require('./notification.service');
 
 const MS_PER_HOUR = 60 * 60 * 1000;
+const DEFAULT_WORKDAY_HOURS = 8;
 const TERMINAL_STATUSES = new Set(['RESOLVED', 'FILED', 'CLOSED']);
 const ACTIVE_STATUS_EXCLUSIONS = Array.from(TERMINAL_STATUSES);
 
@@ -24,8 +25,11 @@ const getWorkbasketId = (docket = {}) => (
   || null
 );
 
-const getRuleSelectorCount = (rule = {}) => [rule.subcategory, rule.category, rule.workbasketId]
-  .filter((value) => normalizeString(value) || normalizeIdentifier(value)).length;
+const getRuleSelectorCount = (rule = {}) => ([
+  normalizeString(rule.subcategory),
+  normalizeString(rule.category),
+  normalizeIdentifier(rule.workbasketId),
+].filter(Boolean).length);
 
 const getRulePriority = (rule = {}) => {
   if (normalizeString(rule.subcategory)) return 4;
@@ -49,6 +53,7 @@ const compareRules = (left = {}, right = {}) => {
   const priorityDiff = getRulePriority(right) - getRulePriority(left);
   if (priorityDiff !== 0) return priorityDiff;
 
+  // Break priority ties by preferring rules that also scope additional matching selectors.
   const selectorDiff = getRuleSelectorCount(right) - getRuleSelectorCount(left);
   if (selectorDiff !== 0) return selectorDiff;
 
@@ -85,6 +90,16 @@ async function calculateSlaDueDate(docket = {}, options = {}) {
   if (!slaHours) return null;
 
   return calculateDueDate(startAt, Math.round(slaHours * 60), options.calendarConfig || DEFAULT_SLA_CONFIG);
+}
+
+function calculateFallbackDueDateFromDays(startAt, days, options = {}) {
+  const normalizedDays = Number(days);
+  if (!Number.isFinite(normalizedDays) || normalizedDays <= 0) return null;
+  return calculateDueDate(
+    startAt,
+    Math.round(normalizedDays * DEFAULT_WORKDAY_HOURS * 60),
+    options.calendarConfig || DEFAULT_SLA_CONFIG,
+  );
 }
 
 function getSlaStatus(docket = {}, options = {}) {
@@ -194,6 +209,7 @@ async function getWeeklySlaSummary(firmId, options = {}) {
 }
 
 module.exports = {
+  calculateFallbackDueDateFromDays,
   calculateSlaDueDate,
   getSlaStatus,
   getWeeklySlaSummary,
