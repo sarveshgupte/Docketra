@@ -303,6 +303,12 @@ const attachmentSchema = new mongoose.Schema({
       type: String,
       trim: true,
     },
+    confidence: {
+      type: Number,
+      min: 0,
+      max: 1,
+      default: 0,
+    },
     status: {
       type: String,
       enum: ['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED'],

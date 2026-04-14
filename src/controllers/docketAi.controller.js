@@ -14,28 +14,49 @@ function normalizeConfidence(value) {
   return numeric;
 }
 
-async function createDocketFromAttachment(req, res) {
-  const featureFlagRaw = process.env.ENABLE_AI_DOCKET_CREATION;
-  const isFeatureEnabled = featureFlagRaw == null || String(featureFlagRaw).toLowerCase() === 'true';
-  if (!isFeatureEnabled) {
-    return res.status(403).json({ success: false, message: 'AI docket creation is disabled' });
+function getConfidenceLevel(score) {
+  if (score > 0.8) return 'HIGH';
+  if (score > 0.5) return 'MEDIUM';
+  return 'LOW';
+}
+
+function parsePreviewFlag(value) {
+  return String(value || '').toLowerCase() === 'true';
+}
+
+function buildWarnings({ confidenceLevel, missingFields }) {
+  const warnings = [];
+
+  if (confidenceLevel === 'LOW') {
+    warnings.push('Low confidence in client selection');
   }
 
-  const { attachmentId } = req.params;
+  if (Array.isArray(missingFields) && missingFields.includes('subCategoryId')) {
+    warnings.push('Missing subcategory');
+  }
+
+  return warnings;
+}
+
+async function findAnalyzedAttachment({ attachmentId, req }) {
   const attachment = await Attachment.findById(attachmentId);
   if (!attachment) {
-    return res.status(404).json({ success: false, message: 'Attachment not found' });
+    return { error: { status: 404, body: { success: false, message: 'Attachment not found' } } };
   }
 
   const firmId = String(attachment.firmId);
   if (req.firmId && String(req.firmId) !== firmId) {
-    return res.status(403).json({ success: false, message: 'Attachment not found in this firm context' });
+    return { error: { status: 403, body: { success: false, message: 'Attachment not found in this firm context' } } };
   }
 
   if (attachment?.analysis?.status !== 'COMPLETED') {
-    return res.status(409).json({ success: false, message: 'Attachment analysis is not completed yet' });
+    return { error: { status: 409, body: { success: false, message: 'Attachment analysis is not completed yet' } } };
   }
 
+  return { attachment, firmId };
+}
+
+async function generateSuggestions({ attachment, firmId }) {
   const clients = await Client.find({ firmId, status: 'ACTIVE' })
     .select('clientId businessName')
     .lean();
@@ -45,11 +66,11 @@ async function createDocketFromAttachment(req, res) {
     .lean();
 
   if (!clients.length) {
-    return res.status(400).json({ success: false, message: 'No active clients found for this firm' });
+    return { error: { status: 400, body: { success: false, message: 'No active clients found for this firm' } } };
   }
 
   if (!categories.length) {
-    return res.status(400).json({ success: false, message: 'No categories found for this firm' });
+    return { error: { status: 400, body: { success: false, message: 'No categories found for this firm' } } };
   }
 
   const categoriesWithSubcategories = categories
@@ -63,7 +84,7 @@ async function createDocketFromAttachment(req, res) {
     .filter((category) => category.subCategories.length > 0);
 
   if (!categoriesWithSubcategories.length) {
-    return res.status(400).json({ success: false, message: 'No active subcategories found for this firm' });
+    return { error: { status: 400, body: { success: false, message: 'No active subcategories found for this firm' } } };
   }
 
   let aiOutput;
@@ -77,11 +98,16 @@ async function createDocketFromAttachment(req, res) {
     }, firmId);
   } catch (error) {
     const status = error?.code === 'AI_API_KEY_NOT_CONFIGURED' ? 400 : 502;
-    return res.status(status).json({
-      success: false,
-      message: 'AI failed to generate docket suggestions',
-      code: error?.code || 'AI_DOCKET_GENERATION_FAILED',
-    });
+    return {
+      error: {
+        status,
+        body: {
+          success: false,
+          message: 'AI failed to generate docket suggestions',
+          code: error?.code || 'AI_DOCKET_GENERATION_FAILED',
+        },
+      },
+    };
   }
 
   const validClientIds = new Set(clients.map((client) => String(client.clientId)));
@@ -102,7 +128,12 @@ async function createDocketFromAttachment(req, res) {
     : fallbackCategory.subCategories[0];
 
   if (!fallbackSubCategory) {
-    return res.status(400).json({ success: false, message: 'No valid subcategory available to create draft docket' });
+    return {
+      error: {
+        status: 400,
+        body: { success: false, message: 'No valid subcategory available to create draft docket' },
+      },
+    };
   }
 
   const missingFields = [];
@@ -110,42 +141,166 @@ async function createDocketFromAttachment(req, res) {
   if (!suggestedCategoryId) missingFields.push('categoryId');
   if (!suggestedSubCategoryId) missingFields.push('subCategoryId');
 
+  const confidence = normalizeConfidence(aiOutput?.confidence);
+  const confidenceLevel = getConfidenceLevel(confidence);
+  const warnings = buildWarnings({ confidenceLevel, missingFields });
+
+  const payload = {
+    clientId: suggestedClientId,
+    categoryId: suggestedCategoryId,
+    subCategoryId: suggestedSubCategoryId,
+    title: String(aiOutput?.title || '').trim() || `Draft from ${attachment.fileName || 'attachment'}`,
+    description: String(aiOutput?.description || '').trim() || 'AI-generated draft docket from analyzed attachment.',
+    confidence,
+    confidenceLevel,
+    missingFields,
+    warnings,
+  };
+
+  console.info('[AI] suggestions_generated', {
+    attachmentId: String(attachment._id),
+    firmId,
+    confidence,
+    confidenceLevel,
+    missingFieldsCount: missingFields.length,
+  });
+
+  return {
+    suggestions: payload,
+    fallback: {
+      clientId: clients[0].clientId,
+      categoryId: fallbackCategory.id,
+      category: fallbackCategory.name,
+      subcategoryId: fallbackSubCategory.id,
+      subcategory: fallbackSubCategory.name,
+    },
+  };
+}
+
+async function getAttachmentAiInsights(req, res) {
+  const { attachmentId } = req.params;
+  const attachment = await Attachment.findById(attachmentId).lean();
+
+  if (!attachment) {
+    return res.status(404).json({ success: false, message: 'Attachment not found' });
+  }
+
+  const firmId = String(attachment.firmId);
+  if (req.firmId && String(req.firmId) !== firmId) {
+    return res.status(403).json({ success: false, message: 'Attachment not found in this firm context' });
+  }
+
+  const confidence = normalizeConfidence(attachment?.analysis?.confidence);
+  const confidenceLevel = getConfidenceLevel(confidence);
+
+  console.info('[AI] insights_viewed', {
+    attachmentId: String(attachment._id),
+    firmId,
+    status: attachment?.analysis?.status || 'PENDING',
+  });
+
+  return res.json({
+    documentType: attachment?.analysis?.documentType || null,
+    extractedFields: attachment?.analysis?.extractedFields || {},
+    tags: Array.isArray(attachment?.analysis?.tags) ? attachment.analysis.tags : [],
+    suggestedTeam: attachment?.analysis?.suggestedTeam || null,
+    confidence,
+    confidenceLevel,
+    status: attachment?.analysis?.status || 'PENDING',
+  });
+}
+
+async function getDocketAiSuggestions(req, res) {
+  const { attachmentId } = req.params;
+  const attachmentResult = await findAnalyzedAttachment({ attachmentId, req });
+  if (attachmentResult.error) {
+    return res.status(attachmentResult.error.status).json(attachmentResult.error.body);
+  }
+
+  const result = await generateSuggestions({
+    attachment: attachmentResult.attachment,
+    firmId: attachmentResult.firmId,
+  });
+
+  if (result.error) {
+    return res.status(result.error.status).json(result.error.body);
+  }
+
+  return res.json(result.suggestions);
+}
+
+async function createDocketFromAttachment(req, res) {
+  const featureFlagRaw = process.env.ENABLE_AI_DOCKET_CREATION;
+  const isFeatureEnabled = featureFlagRaw == null || String(featureFlagRaw).toLowerCase() === 'true';
+  if (!isFeatureEnabled) {
+    return res.status(403).json({ success: false, message: 'AI docket creation is disabled' });
+  }
+
+  const isPreview = parsePreviewFlag(req.query.preview);
+  const { attachmentId } = req.params;
+
+  const attachmentResult = await findAnalyzedAttachment({ attachmentId, req });
+  if (attachmentResult.error) {
+    return res.status(attachmentResult.error.status).json(attachmentResult.error.body);
+  }
+
+  const result = await generateSuggestions({
+    attachment: attachmentResult.attachment,
+    firmId: attachmentResult.firmId,
+  });
+
+  if (result.error) {
+    return res.status(result.error.status).json(result.error.body);
+  }
+
+  if (isPreview) {
+    return res.json({
+      preview: true,
+      ...result.suggestions,
+    });
+  }
+
   const creatorXid = req.user?.xID || null;
   if (!creatorXid) {
     return res.status(400).json({ success: false, message: 'User xID is required to create docket' });
   }
 
   const docket = await Case.create({
-    firmId,
-    clientId: suggestedClientId || clients[0].clientId,
-    categoryId: fallbackCategory.id,
-    subcategoryId: fallbackSubCategory.id,
-    category: fallbackCategory.name,
-    caseCategory: fallbackCategory.name,
-    subcategory: fallbackSubCategory.name,
-    caseSubCategory: fallbackSubCategory.name,
-    title: String(aiOutput?.title || '').trim() || `Draft from ${attachment.fileName || 'attachment'}`,
-    description: String(aiOutput?.description || '').trim() || 'AI-generated draft docket from analyzed attachment.',
+    firmId: attachmentResult.firmId,
+    clientId: result.suggestions.clientId || result.fallback.clientId,
+    categoryId: result.fallback.categoryId,
+    subcategoryId: result.fallback.subcategoryId,
+    category: result.fallback.category,
+    caseCategory: result.fallback.category,
+    subcategory: result.fallback.subcategory,
+    caseSubCategory: result.fallback.subcategory,
+    title: result.suggestions.title,
+    description: result.suggestions.description,
     status: 'DRAFT',
     createdByXID: creatorXid,
     createdBy: req.user?.email || req.user?.xID || 'system@docketra.local',
   });
 
-  attachment.caseId = docket.caseId || docket.caseNumber;
-  await attachment.save();
+  attachmentResult.attachment.caseId = docket.caseId || docket.caseNumber;
+  await attachmentResult.attachment.save();
 
   return res.status(201).json({
     docketId: docket.caseId || docket.caseNumber,
     suggested: {
-      clientId: suggestedClientId,
-      categoryId: suggestedCategoryId,
-      subCategoryId: suggestedSubCategoryId,
+      clientId: result.suggestions.clientId,
+      categoryId: result.suggestions.categoryId,
+      subCategoryId: result.suggestions.subCategoryId,
     },
-    confidence: normalizeConfidence(aiOutput?.confidence),
-    missingFields,
+    confidence: result.suggestions.confidence,
+    confidenceLevel: result.suggestions.confidenceLevel,
+    missingFields: result.suggestions.missingFields,
+    warnings: result.suggestions.warnings,
   });
 }
 
 module.exports = {
   createDocketFromAttachment,
+  getAttachmentAiInsights,
+  getDocketAiSuggestions,
+  getConfidenceLevel,
 };
