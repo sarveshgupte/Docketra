@@ -274,11 +274,11 @@ const logAdminAction = async ({ adminXID, actionType, targetXID, targetFirmId, m
     // Build description
     let description = '';
     if (actionType === 'ADMIN_FILED_CASES_VIEWED') {
-      description = `Admin ${adminXID} viewed filed cases list`;
+      description = `Admin ${adminXID} viewed filed dockets list`;
     } else if (actionType === 'ADMIN_APPROVAL_QUEUE_VIEWED') {
       description = `Admin ${adminXID} viewed pending approval queue`;
     } else if (actionType === 'ADMIN_RESOLVED_CASES_VIEWED') {
-      description = `Admin ${adminXID} viewed resolved cases list`;
+      description = `Admin ${adminXID} viewed resolved dockets list`;
     } else if (actionType === 'USER_CLIENT_ACCESS_UPDATED') {
       description = `Admin ${adminXID} updated client access restrictions for user ${targetXID}`;
     } else {

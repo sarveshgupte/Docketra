@@ -807,9 +807,6 @@ const getFirmSettingsActivity = async (req, res) => {
       'FIRM_SETTINGS_UPDATED',
       'STORAGE_CONFIGURATION_UPDATED',
       'STORAGE_CONFIGURATION_DISCONNECTED',
-      'ADMIN_FILED_CASES_VIEWED',
-      'ADMIN_APPROVAL_QUEUE_VIEWED',
-      'ADMIN_RESOLVED_CASES_VIEWED',
     ];
 
     const authActionTypes = [
