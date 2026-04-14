@@ -10,6 +10,7 @@ const { generateCasesExcelWorkbook } = require('../services/excel.service');
 const PDFDocument = require('pdfkit');
 const { getLatestTenantMetrics, getTenantMetricsByRange } = require('../services/tenantCaseMetrics.service');
 const { mapAuditResponse } = require('../mappers/audit.mapper');
+const { getWeeklySlaSummary } = require('../services/sla.service');
 
 const DEFAULT_AUDIT_LOG_LIMIT = 100;
 const MAX_AUDIT_LOG_LIMIT = 250;
@@ -229,6 +230,23 @@ const getCaseMetrics = async (req, res) => {
   }
 };
 
+
+const getSlaWeeklySummary = async (req, res) => {
+  try {
+    const firmId = resolveFirmIdFromAuthContext(req, res);
+    if (!firmId) return;
+
+    const data = await getWeeklySlaSummary(firmId);
+    return res.json({ success: true, data });
+  } catch (error) {
+    console.error('Error in getSlaWeeklySummary:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch weekly SLA summary',
+      error: error.message,
+    });
+  }
+};
 
 const calculateAgeingForCases = (cases) => {
   const today = new Date();
@@ -882,6 +900,7 @@ const generateClientFactSheetPdf = async (req, res) => {
 module.exports = {
   getCaseMetrics,
   getPendingCasesReport,
+  getSlaWeeklySummary,
   getCasesByDateRange,
   exportCasesCSV,
   exportCasesExcel,

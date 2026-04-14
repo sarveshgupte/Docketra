@@ -25,6 +25,7 @@ const { logCaseListViewed, logAdminAction } = require('../services/auditLog.serv
 const caseActionService = require('../services/caseAction.service');
 const CaseService = require('../services/case.service');
 const caseSlaService = require('../services/caseSla.service');
+const slaService = require('../services/sla.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { getMimeType, sanitizeFilename } = require('../utils/fileUtils');
 const { cleanupTempFile } = require('../utils/tempFile');
@@ -585,18 +586,31 @@ const createCase = async (req, res) => {
       }
       const requestedSlaDueDate = isAdminUser && slaDueDate ? new Date(slaDueDate) : null;
       const hasValidRequestedSla = requestedSlaDueDate && !Number.isNaN(requestedSlaDueDate.getTime());
+      const createdAt = new Date();
 
       step('before SLA initialization');
       const slaState = await caseSlaService.initializeCaseSla({
         tenantId: firmId,
         caseType: actualCategory,
-        now: new Date(),
+        now: createdAt,
         session,
       });
       step('after SLA initialization');
 
-      if (defaultSlaDays > 0 && !hasValidRequestedSla) {
-        const computedDefault = new Date();
+      const resolvedSlaDueAt = await slaService.calculateSlaDueDate({
+        firmId,
+        category: actualCategory,
+        subcategory: subcategoryDoc?.name || caseSubCategory || '',
+        workbasketId: routedWorkbasketId,
+        createdAt,
+      });
+
+      if (resolvedSlaDueAt && !hasValidRequestedSla) {
+        slaState.slaDueAt = resolvedSlaDueAt;
+      }
+
+      if (!resolvedSlaDueAt && defaultSlaDays > 0 && !hasValidRequestedSla) {
+        const computedDefault = new Date(createdAt);
         computedDefault.setDate(computedDefault.getDate() + defaultSlaDays);
         slaState.slaDueAt = computedDefault;
       }
@@ -1219,6 +1233,14 @@ const cloneCase = async (req, res) => {
         ? originalCase.priority.toLowerCase()
         : 'medium';
 
+      const clonedSlaDueAt = await slaService.calculateSlaDueDate({
+        firmId: req.user.firmId,
+        category: categoryDoc?.name || originalCase.category || '',
+        subcategory: subcategoryDoc?.name || originalCase.subcategory || '',
+        workbasketId: existingCase.ownerTeamId || req.user.teamId || null,
+        createdAt: now,
+      });
+
       clonedCase = new Case({
         title: originalCase.title,
         description: originalCase.description,
@@ -1244,7 +1266,7 @@ const cloneCase = async (req, res) => {
         pendingUntil: null,
         reopenAt: null,
         duplicateOf: originalCase.duplicateOf || null,
-        slaDueAt: originalCase.slaDueAt || now,
+        slaDueAt: clonedSlaDueAt || originalCase.slaDueAt || now,
         slaDays: Number(originalCase.slaDays || originalCase.tatDaysSnapshot || 0),
         dueDate: originalCase.dueDate || null,
         tatPaused: false,
@@ -1882,6 +1904,8 @@ const getCaseByCaseId = async (req, res) => {
       data: {
         ...caseObject,
         lifecycle,
+        slaDueDate: caseObject.slaDueAt || null,
+        slaStatus: slaService.getSlaStatus(caseObject),
         assignedToXID: canonicalAssignmentXID,
         assignedToName: assignedUser?.name || caseObject.assignedToName || null,
         assignedTo: assignedUser ? {
@@ -2090,6 +2114,8 @@ const getCases = async (req, res) => {
       const client = clientsMap.get(caseItem.clientId);
       return {
         ...caseItem,
+        slaDueDate: caseItem.slaDueAt || null,
+        slaStatus: slaService.getSlaStatus(caseItem),
         client: client ? {
           clientId: client.clientId,
           businessName: client.businessName,

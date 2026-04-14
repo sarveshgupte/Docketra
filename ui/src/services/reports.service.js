@@ -22,6 +22,10 @@ export const reportsService = {
     return api.get('/reports/pending-cases', { params: filters });
   },
 
+  getSlaWeeklySummary: () => {
+    return api.get('/reports/sla-weekly-summary');
+  },
+
   /**
    * Get cases by date range with pagination
    * @param {Object} filters - Filters (fromDate, toDate, status, category, page, limit)

@@ -1296,6 +1296,17 @@ export const CaseDetailPage = () => {
     return warnings;
   }, [caseInfo, comments, lifecycleStatus]);
 
+  const docketSlaStatus = useMemo(() => {
+    if (!caseInfo) return 'GREEN';
+    if (caseInfo.slaStatus) return String(caseInfo.slaStatus).toUpperCase();
+    const dueAt = caseInfo.slaDueAt || caseInfo.slaDueDate;
+    const dueTs = new Date(dueAt || '').getTime();
+    if (!Number.isFinite(dueTs)) return 'GREEN';
+    if (dueTs < Date.now()) return 'RED';
+    if ((dueTs - Date.now()) < (24 * 60 * 60 * 1000)) return 'YELLOW';
+    return 'GREEN';
+  }, [caseInfo]);
+
   const actionInFlight = assigningCase || pendingCase || resolvingCase || unpendingCase;
   const openActionModal = (type) => {
     if (type === 'pend') {
@@ -1655,6 +1666,16 @@ export const CaseDetailPage = () => {
             ⚠ No activity in 3 days
           </div>
         )}
+        {docketSlaStatus === 'RED' ? (
+          <div className="neo-alert neo-alert--danger case-detail__alert" role="status">
+            <strong>SLA breached</strong> — This docket is overdue and needs attention.
+          </div>
+        ) : null}
+        {docketSlaStatus === 'YELLOW' ? (
+          <div className="neo-alert neo-alert--warning case-detail__alert" role="status">
+            <strong>SLA at risk</strong> — Less than 24 hours remain on this docket.
+          </div>
+        ) : null}
 
         <div className="case-detail-layout-grid flex w-full flex-col gap-6">
           <main className="case-detail-main min-w-0">
