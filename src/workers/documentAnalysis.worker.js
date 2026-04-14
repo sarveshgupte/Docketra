@@ -78,7 +78,11 @@ if (!redisUrl || !isAnalysisEnabled) {
           updatedAt: new Date(),
         };
         await attachment.save();
-        console.error('[AI] document_analysis_failed', { attachmentId, firmId, message: error.message });
+        const safeMessage = error?.code === 'AI_INVALID_API_KEY' ? 'invalid_ai_credentials' : error.message;
+        console.error('[AI] document_analysis_failed', { attachmentId, firmId, message: safeMessage });
+        if (error?.code === 'AI_INVALID_API_KEY') {
+          throw new UnrecoverableError('Invalid AI provider credentials');
+        }
         throw error;
       }
     },

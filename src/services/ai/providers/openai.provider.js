@@ -3,8 +3,8 @@
 const OPENAI_ENDPOINT = process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1/chat/completions';
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 
-async function analyze(text) {
-  const apiKey = process.env.OPENAI_API_KEY;
+async function analyze(text, options = {}) {
+  const apiKey = options.apiKey || process.env.OPENAI_API_KEY;
   if (!apiKey) {
     throw new Error('OPENAI_API_KEY is required for document analysis');
   }
@@ -21,7 +21,7 @@ async function analyze(text) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: OPENAI_MODEL,
+      model: options.model || OPENAI_MODEL,
       temperature: 0,
       response_format: { type: 'json_object' },
       messages: [
@@ -39,7 +39,14 @@ async function analyze(text) {
 
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(`OpenAI request failed (${response.status}): ${body.slice(0, 250)}`);
+    const error = new Error(`OpenAI request failed (${response.status})`);
+    if (response.status === 401) {
+      error.code = 'AI_INVALID_API_KEY';
+    }
+    error.status = response.status;
+    error.provider = 'openai';
+    error.details = body.slice(0, 250);
+    throw error;
   }
 
   const payload = await response.json();
