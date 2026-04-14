@@ -494,10 +494,39 @@ const caseSchema = new mongoose.Schema({
     type: Date,
     default: null,
   },
+  workbasketId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Team',
+    default: null,
+    index: true,
+  },
   routingNote: {
     type: String,
     trim: true,
     default: null,
+  },
+  aiRouting: {
+    suggestedTeam: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    suggestedWorkbasketId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Team',
+      default: null,
+    },
+    confidence: {
+      type: Number,
+      min: 0,
+      max: 1,
+      default: 0,
+    },
+    status: {
+      type: String,
+      enum: ['PENDING', 'APPLIED', 'REJECTED'],
+      default: 'PENDING',
+    },
   },
   
   /**
