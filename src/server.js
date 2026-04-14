@@ -384,7 +384,7 @@ app.use('/api/work-types', ...tenantScopedApiAccess, writeGuardChain, workTypeRo
 
 // Admin routes (firm-scoped) - enforce auth + firm context + admin role boundary
 app.use('/api/admin', ...adminTenantScopedApiAccess, writeGuardChain, adminAuditTrail('admin'), adminRoutes);
-app.use('/api/dashboard', ...adminTenantScopedApiAccess, writeGuardChain, dashboardRoutes);
+app.use('/api/dashboard', ...tenantScopedApiAccess, writeGuardChain, dashboardRoutes);
 
 // Superadmin routes - platform scope only (no firm context)
 // Include legacy /superadmin to prevent SPA fallback when UI calls API without /api prefix.
