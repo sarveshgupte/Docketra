@@ -117,7 +117,7 @@ const getInsightsOverview = async (req, res) => {
       totalLeads += bucket.count;
     }
     const conversionRate = totalLeads > 0
-      ? Math.round((leadsByStatus.converted / totalLeads) * 10000) / 100
+      ? parseFloat(((leadsByStatus.converted / totalLeads) * 100).toFixed(2))
       : 0;
 
     // Build revenue metrics
