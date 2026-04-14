@@ -17,6 +17,15 @@ const NotificationTypes = Object.freeze({
   COMMENT_ADDED: ServiceNotificationTypes.COMMENT_ADDED,
 });
 
+function assertNotificationType(type) {
+  if (!Object.values(ServiceNotificationTypes).includes(type)) {
+    const error = new Error(`Unsupported notification type: ${type}`);
+    error.statusCode = 400;
+    error.code = 'INVALID_NOTIFICATION_TYPE';
+    throw error;
+  }
+}
+
 function buildMessage({ type, docketId, actor }) {
   const actorLabel = String(actor?.xID || actor?.name || 'A user').trim();
   if (type === NotificationTypes.DOCKET_ASSIGNED) {
@@ -77,6 +86,7 @@ function dispatchNotification(notificationPayload) {
 
 function createNotification(payload = {}) {
   const mappedType = NotificationTypes[payload.type] || payload.type;
+  assertNotificationType(mappedType);
   const content = buildMessage({ type: mappedType, docketId: payload.docketId, actor: payload.actor });
 
   const notificationPayload = {
