@@ -310,6 +310,20 @@ const firmSchema = new mongoose.Schema({
    * Admin login is blocked until bootstrapStatus = COMPLETED
    * This prevents ghost firms and ensures data integrity
    */
+
+
+  isSetupComplete: {
+    type: Boolean,
+    default: false,
+    index: true,
+  },
+
+  setupMetadata: {
+    categories: { type: Number, default: 0 },
+    workbaskets: { type: Number, default: 0 },
+    templateKey: { type: String, default: null, trim: true },
+    completedAt: { type: Date, default: null },
+  },
   bootstrapStatus: {
     type: String,
     enum: ['PENDING', 'COMPLETED', 'FAILED'],
