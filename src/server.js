@@ -98,6 +98,7 @@ const clientRoutes = require('./routes/client.routes');  // Client management ro
 const leadRoutes = require('./routes/lead.routes');
 const crmClientRoutes = require('./routes/crmClient.routes');
 const dealRoutes = require('./routes/deal.routes');
+const invoiceRoutes = require('./routes/invoice.routes');
 const reportsRoutes = require('./routes/reports.routes');  // Reports routes
 const categoryRoutes = require('./routes/category.routes');  // Category routes
 const workTypeRoutes = require('./routes/workType.routes');
@@ -417,6 +418,7 @@ app.use('/api/clients', ...tenantScopedApiAccess, writeGuardChain, clientRoutes)
 app.use('/api/crm/clients', ...tenantScopedApiAccess, writeGuardChain, crmClientRoutes);
 app.use('/api/leads', ...tenantScopedApiAccess, writeGuardChain, leadRoutes);
 app.use('/api/deals', ...tenantScopedApiAccess, writeGuardChain, dealRoutes);
+app.use('/api/invoices', ...tenantScopedApiAccess, writeGuardChain, invoiceRoutes);
 app.use('/api/reports', ...tenantScopedApiAccess, writeGuardChain, reportsRoutes);  // Reports routes
 app.use('/api/firm/:firmId', ...tenantScopedApiAccess, writeGuardChain, firmMetricsRoutes);
 app.use('/api/storage', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), storageRoutes);  // BYOS storage routes (read-only, no writeGuardChain needed)

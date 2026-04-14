@@ -12,6 +12,7 @@ const WorkType = require('../models/WorkType.model');
 const SubWorkType = require('../models/SubWorkType.model');
 const CrmClient = require('../models/CrmClient.model');
 const Deal = require('../models/Deal.model');
+const Invoice = require('../models/Invoice.model');
 const { CaseRepository, ClientRepository, AttachmentRepository } = require('../repositories');
 const categoryRepository = require('../repositories/category.repository');
 const { detectDuplicates, generateDuplicateOverrideComment } = require('../services/clientDuplicateDetector');
@@ -1844,13 +1845,17 @@ const getCaseByCaseId = async (req, res) => {
     console.log('STEP 2 after assignedUser');
     const canonicalAssignmentXID = caseObject.assignedToXID || assignedUser?.xID || null;
     const lifecycle = normalizeLifecycle(caseObject.lifecycle);
-    const [ownerTeam, routedTeam] = await Promise.all([
+    const [ownerTeam, routedTeam, docketInvoices] = await Promise.all([
       caseObject.ownerTeamId
         ? Team.findOne({ _id: caseObject.ownerTeamId, firmId: scopedFirmId }).select('_id name').maxTimeMS(8000).lean()
         : null,
       caseObject.routedToTeamId
         ? Team.findOne({ _id: caseObject.routedToTeamId, firmId: scopedFirmId }).select('_id name').maxTimeMS(8000).lean()
         : null,
+      Invoice.find(
+        { firmId: scopedFirmId, docketId: caseData._id },
+        { amount: 1, status: 1, issuedAt: 1, paidAt: 1, clientId: 1, dealId: 1, createdAt: 1 }
+      ).sort({ createdAt: -1 }).maxTimeMS(8000).lean(),
     ]);
 
     console.log('DOCKET_STATE_DEBUG', {
@@ -1910,6 +1915,7 @@ const getCaseByCaseId = async (req, res) => {
         // PR #45: Include access mode information for UI
         ownerTeamName: ownerTeam?.name || null,
         routedToTeamName: routedTeam?.name || null,
+        invoices: docketInvoices,
         accessMode: {
           isViewOnlyMode,
           isOwner,

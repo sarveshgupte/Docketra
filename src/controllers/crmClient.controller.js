@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const CrmClient = require('../models/CrmClient.model');
 const Deal = require('../models/Deal.model');
 const Case = require('../models/Case.model');
+const Invoice = require('../models/Invoice.model');
 
 const parsePagination = (query = {}) => {
   const rawLimit = Number.parseInt(query.limit, 10);
@@ -63,7 +64,7 @@ const getCrmClientById = async (req, res) => {
     const client = await CrmClient.findOne({ _id: req.params.id, firmId: req.user.firmId }).lean();
     if (!client) return res.status(404).json({ success: false, message: 'Client not found' });
 
-    const [deals, dockets] = await Promise.all([
+    const [deals, dockets, invoices] = await Promise.all([
       Deal.find(
         { firmId: req.user.firmId, clientId: client._id },
         { title: 1, stage: 1, value: 1, createdAt: 1 }
@@ -72,7 +73,15 @@ const getCrmClientById = async (req, res) => {
         { firmId: req.user.firmId, crmClientId: client._id },
         { caseId: 1, caseNumber: 1, title: 1, status: 1, priority: 1, createdAt: 1, dealId: 1 }
       ).sort({ createdAt: -1 }).lean(),
+      Invoice.find(
+        { firmId: req.user.firmId, clientId: client._id },
+        { amount: 1, status: 1, issuedAt: 1, paidAt: 1, dealId: 1, docketId: 1, createdAt: 1 }
+      ).sort({ createdAt: -1 }).lean(),
     ]);
+
+    const totalRevenue = invoices
+      .filter((inv) => inv.status === 'paid')
+      .reduce((sum, inv) => sum + (inv.amount || 0), 0);
 
     return res.json({
       success: true,
@@ -80,6 +89,8 @@ const getCrmClientById = async (req, res) => {
         ...client,
         deals,
         dockets,
+        invoices,
+        totalRevenue,
       },
     });
   } catch (error) {

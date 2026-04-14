@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Deal = require('../models/Deal.model');
 const CrmClient = require('../models/CrmClient.model');
 const Case = require('../models/Case.model');
+const Invoice = require('../models/Invoice.model');
 
 const ALLOWED_STAGES = new Set(['new', 'in_progress', 'completed']);
 const DEFAULT_STAGE = 'new';
@@ -69,11 +70,15 @@ const getDealById = async (req, res) => {
     ).lean();
     if (!deal) return res.status(404).json({ success: false, message: 'Deal not found' });
 
-    const [client, dockets] = await Promise.all([
+    const [client, dockets, invoices] = await Promise.all([
       CrmClient.findOne({ _id: deal.clientId, firmId: req.user.firmId }, { name: 1, type: 1, email: 1, phone: 1 }).lean(),
       Case.find(
         { firmId: req.user.firmId, dealId: deal._id },
         { caseId: 1, caseNumber: 1, title: 1, status: 1, priority: 1, createdAt: 1, crmClientId: 1 }
+      ).sort({ createdAt: -1 }).lean(),
+      Invoice.find(
+        { firmId: req.user.firmId, dealId: deal._id },
+        { amount: 1, status: 1, issuedAt: 1, paidAt: 1, clientId: 1, docketId: 1, createdAt: 1 }
       ).sort({ createdAt: -1 }).lean(),
     ]);
 
@@ -83,6 +88,7 @@ const getDealById = async (req, res) => {
         deal,
         client,
         dockets,
+        invoices,
       },
     });
   } catch (error) {
