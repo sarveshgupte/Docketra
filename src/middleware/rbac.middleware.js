@@ -31,6 +31,14 @@ const requirePrimaryAdmin = (req, res, next) => {
   return next();
 };
 
+const requireManagerOrPrimaryAdmin = (req, res, next) => {
+  const currentRole = normalizeRole(req.user?.role);
+  if (!['MANAGER', 'PRIMARY_ADMIN'].includes(currentRole)) {
+    return res.status(403).json({ success: false, message: 'Manager access required' });
+  }
+  return next();
+};
+
 const requireFirmScope = (resourceResolver) => (req, res, next) => {
   const resource = typeof resourceResolver === 'function' ? resourceResolver(req) : req.resource;
   if (!resource?.firmId || !req.user?.firmId || String(resource.firmId) !== String(req.user.firmId)) {
@@ -51,6 +59,7 @@ module.exports = {
   requireAuth,
   requireRole,
   requirePrimaryAdmin,
+  requireManagerOrPrimaryAdmin,
   requireFirmScope,
   requireTeamScope,
 };

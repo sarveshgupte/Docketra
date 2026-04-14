@@ -184,6 +184,12 @@ const userSchema = new mongoose.Schema({
     immutable: true, // Cannot change default client after creation
     index: true,
   },
+
+  clientAccess: {
+    type: [mongoose.Schema.Types.ObjectId],
+    ref: 'Client',
+    default: [],
+  },
   
   // Determines access level: SUPER_ADMIN manages platform, Admin has full firm access, Employee has category-restricted access
   role: {

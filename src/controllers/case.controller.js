@@ -334,6 +334,27 @@ const createCase = async (req, res) => {
         ...responseMeta,
       });
     }
+
+    let routedWorkbasketId = subcategoryDoc?.workbasketId ? String(subcategoryDoc.workbasketId) : null;
+    if (subcategoryId && !routedWorkbasketId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Selected subcategory is missing a workbasket mapping',
+        ...responseMeta,
+      });
+    }
+
+    if (!routedWorkbasketId) {
+      routedWorkbasketId = req.user?.teamId ? String(req.user.teamId) : null;
+    }
+    if (!routedWorkbasketId) {
+      const fallbackWorkbasket = await Team.findOne({
+        firmId,
+        isActive: true,
+        type: 'PRIMARY',
+      }).sort({ created_at: 1 }).select('_id').lean();
+      routedWorkbasketId = fallbackWorkbasket?._id ? String(fallbackWorkbasket._id) : null;
+    }
     
     // Default to the tenant's default client when caller does not specify clientId
     let finalClientId = clientId || null;
@@ -556,8 +577,8 @@ const createCase = async (req, res) => {
         assignedTo: null,
         assignedBy: null,
         queueType: assignedTo ? 'PERSONAL' : 'GLOBAL',
-        ownerTeamId: req.user.teamId || null,
-        routedToTeamId: null,
+        ownerTeamId: routedWorkbasketId || null,
+        routedToTeamId: routedWorkbasketId || null,
         routedByUserId: null,
         routedAt: null,
         routingNote: null,
