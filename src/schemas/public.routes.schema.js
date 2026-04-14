@@ -1,6 +1,9 @@
-const { z, nonEmptyString, objectIdString } = require('./common');
+const { z, nonEmptyString, objectIdString, slugString } = require('./common');
 
 module.exports = {
+  'GET /pages/:slug': {
+    params: z.object({ slug: slugString }).strict(),
+  },
   'POST /forms/:id/submit': {
     params: z.object({ id: objectIdString }).strict(),
     body: z.object({
