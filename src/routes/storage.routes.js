@@ -4,6 +4,7 @@ const routeSchemas = require('../schemas/storage.routes.schema');
 const { userReadLimiter } = require('../middleware/rateLimiters');
 const { oauthLimiter } = require('../services/storage/middleware/oauthLimiter');
 const { requirePrimaryAdmin } = require('../middleware/rbac.middleware');
+const { requireStorageConnected } = require('../middleware/requireStorageConnected');
 const {
   getStorageStatus,
   getStorageHealth,
@@ -33,7 +34,7 @@ router.post('/test-connection', userReadLimiter, testStorageConnection);
 router.get('/health-check', userReadLimiter, storageHealthCheck);
 router.get('/usage', userReadLimiter, storageUsage);
 router.post('/disconnect', userReadLimiter, requirePrimaryAdmin, disconnectStorage);
-router.get('/export', userReadLimiter, requirePrimaryAdmin, exportFirmStorage);
-router.get('/export/download/:token', userReadLimiter, requirePrimaryAdmin, downloadFirmStorageExport);
+router.get('/export', userReadLimiter, requirePrimaryAdmin, requireStorageConnected, exportFirmStorage);
+router.get('/export/download/:token', userReadLimiter, requirePrimaryAdmin, requireStorageConnected, downloadFirmStorageExport);
 
 module.exports = router;

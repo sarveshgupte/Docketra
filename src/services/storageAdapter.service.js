@@ -8,16 +8,6 @@ const {
   UnsupportedProviderError,
 } = require('./storage/errors');
 
-class DocketraGoogleAdapter {
-  constructor() {
-    this.providerName = 'docketra_managed';
-  }
-
-  async testConnection() {
-    return true;
-  }
-}
-
 class S3Adapter {
   constructor(credentials = {}) {
     this.providerName = 's3';
@@ -63,7 +53,7 @@ const getStorageAdapter = async (firm) => {
 
   const firmDoc = await Firm.findById(firmId).select('storageConfig').lean();
   if (!firmDoc?.storageConfig?.provider || firmDoc.storageConfig.provider === 'docketra_managed') {
-    return new DocketraGoogleAdapter();
+    throw new StorageAccessError('Cloud storage must be connected', firmId);
   }
   const provider = String(firmDoc.storageConfig.provider).toLowerCase();
   const credentials = firmDoc.storageConfig.credentials
@@ -85,7 +75,6 @@ const getStorageAdapter = async (firm) => {
 };
 
 module.exports = {
-  DocketraGoogleAdapter,
   S3Adapter,
   getStorageAdapter,
 };
