@@ -197,13 +197,31 @@ const updateUserWorkbaskets = async (req, res) => {
       _id: { $in: normalizedTeamIds },
       firmId: req.user?.firmId,
       isActive: true,
-    }).select('_id').lean();
+    }).select('_id type').lean();
 
     if (teams.length !== normalizedTeamIds.length) {
       return res.status(400).json({ success: false, message: 'One or more selected workbaskets are invalid or inactive' });
     }
 
-    user.teamIds = teams.map((entry) => entry._id);
+    const resolvedTeamIds = teams.map((entry) => entry._id);
+    const primaryTeamIds = teams
+      .filter((entry) => String(entry?.type || 'PRIMARY').toUpperCase() !== 'QC')
+      .map((entry) => entry._id);
+
+    if (primaryTeamIds.length > 0) {
+      const linkedQcTeams = await Team.find({
+        firmId: req.user?.firmId,
+        isActive: true,
+        type: 'QC',
+        parentWorkbasketId: { $in: primaryTeamIds },
+      }).select('_id').lean();
+
+      for (const qcTeam of linkedQcTeams) {
+        resolvedTeamIds.push(qcTeam._id);
+      }
+    }
+
+    user.teamIds = [...new Set(resolvedTeamIds.map((entry) => String(entry)))];
     user.teamId = user.teamIds[0] || null;
     await user.save();
 
