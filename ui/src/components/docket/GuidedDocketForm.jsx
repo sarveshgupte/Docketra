@@ -7,6 +7,7 @@ import { Card } from '../common/Card';
 import { categoryService } from '../../services/categoryService';
 import { adminApi } from '../../api/admin.api';
 import { caseApi } from '../../api/case.api';
+import { clientApi } from '../../api/client.api';
 
 const STEPS = [
   'Basic Info',
@@ -21,6 +22,7 @@ const defaultForm = {
   description: '',
   categoryId: '',
   subcategoryId: '',
+  clientId: '',
   workbasketId: '',
   priority: 'medium',
   assignedTo: '',
@@ -34,29 +36,36 @@ export const GuidedDocketForm = ({ onCreated }) => {
   const [subcategories, setSubcategories] = useState([]);
   const [workbaskets, setWorkbaskets] = useState([]);
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState({ categories: true, workbaskets: true, users: true, submit: false });
+  const [clients, setClients] = useState([]);
+  const [loading, setLoading] = useState({ categories: true, workbaskets: true, users: true, clients: true, submit: false });
 
   useEffect(() => {
     const loadDeps = async () => {
       try {
-        const [categoryResponse, workbasketResponse, usersResponse] = await Promise.all([
+        const [categoryResponse, workbasketResponse, usersResponse, clientResponse] = await Promise.all([
           categoryService.getCategories(true),
           adminApi.listWorkbaskets({ activeOnly: true }),
           adminApi.getUsers({ limit: 200, status: 'active' }),
+          clientApi.getClients(true, true),
         ]);
 
         const nextCategories = categoryResponse?.data || [];
         const nextWorkbaskets = workbasketResponse?.data || [];
         const nextUsers = usersResponse?.data || [];
+        const nextClients = clientResponse?.data || [];
 
         setCategories(nextCategories);
         setWorkbaskets(nextWorkbaskets);
         setUsers(nextUsers);
-        if (nextWorkbaskets[0]?._id) {
-          setFormData((prev) => ({ ...prev, workbasketId: prev.workbasketId || nextWorkbaskets[0]._id }));
-        }
+        setClients(nextClients);
+
+        setFormData((prev) => ({
+          ...prev,
+          clientId: prev.clientId || nextClients[0]?.clientId || '',
+          workbasketId: prev.workbasketId || nextWorkbaskets[0]?._id || '',
+        }));
       } finally {
-        setLoading({ categories: false, workbaskets: false, users: false, submit: false });
+        setLoading({ categories: false, workbaskets: false, users: false, clients: false, submit: false });
       }
     };
 
@@ -67,14 +76,26 @@ export const GuidedDocketForm = ({ onCreated }) => {
     const selected = categories.find((item) => item._id === formData.categoryId);
     const nextSubcategories = (selected?.subcategories || []).filter((item) => item.isActive);
     setSubcategories(nextSubcategories);
+
+    let nextSubcategoryId = formData.subcategoryId;
     if (!nextSubcategories.find((item) => item.id === formData.subcategoryId)) {
-      setFormData((prev) => ({ ...prev, subcategoryId: '' }));
+      nextSubcategoryId = '';
     }
-  }, [categories, formData.categoryId, formData.subcategoryId]);
+
+    const selectedSubcategory = nextSubcategories.find((item) => item.id === nextSubcategoryId);
+    const mappedWorkbasketId = selectedSubcategory?.workbasketId ? String(selectedSubcategory.workbasketId) : '';
+
+    setFormData((prev) => ({
+      ...prev,
+      subcategoryId: nextSubcategoryId,
+      workbasketId: mappedWorkbasketId || prev.workbasketId || workbaskets[0]?._id || '',
+    }));
+  }, [categories, formData.categoryId, formData.subcategoryId, workbaskets]);
 
   const validateStep = (stepIndex = step) => {
     const nextErrors = {};
     if (stepIndex === 0 && !formData.title.trim()) nextErrors.title = 'Title is required';
+    if (stepIndex === 0 && !formData.clientId) nextErrors.clientId = 'Client is required';
     if (stepIndex === 2 && !formData.workbasketId) nextErrors.workbasketId = 'Workbasket is required';
     if (formData.categoryId && formData.subcategoryId) {
       const isValidSub = subcategories.some((item) => item.id === formData.subcategoryId);
@@ -86,10 +107,10 @@ export const GuidedDocketForm = ({ onCreated }) => {
   };
 
   const canProceed = useMemo(() => {
-    if (step === 0) return Boolean(formData.title.trim());
+    if (step === 0) return Boolean(formData.title.trim()) && Boolean(formData.clientId);
     if (step === 2) return Boolean(formData.workbasketId);
     return true;
-  }, [formData.title, formData.workbasketId, step]);
+  }, [formData.clientId, formData.title, formData.workbasketId, step]);
 
   const updateField = (name, value) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -106,6 +127,7 @@ export const GuidedDocketForm = ({ onCreated }) => {
         description: formData.description,
         categoryId: formData.categoryId || undefined,
         subcategoryId: formData.subcategoryId || undefined,
+        clientId: formData.clientId,
         workbasketId: formData.workbasketId,
         priority: formData.priority || 'medium',
         assignedTo: formData.assignedTo || undefined,
@@ -135,6 +157,21 @@ export const GuidedDocketForm = ({ onCreated }) => {
       {step === 0 && (
         <>
           <Input label="Title" required value={formData.title} onChange={(e) => updateField('title', e.target.value)} error={errors.title} />
+          <Select
+            label="Client"
+            required
+            value={formData.clientId}
+            onChange={(e) => updateField('clientId', e.target.value)}
+            error={errors.clientId}
+            disabled={loading.clients}
+            options={[
+              { value: '', label: loading.clients ? 'Loading clients...' : 'Select client' },
+              ...clients.map((item) => ({
+                value: item.clientId,
+                label: `${item.clientId} - ${item.businessName || 'Unnamed client'}`,
+              })),
+            ]}
+          />
           <Textarea label="Description (optional)" rows={4} value={formData.description} onChange={(e) => updateField('description', e.target.value)} />
         </>
       )}
@@ -161,14 +198,11 @@ export const GuidedDocketForm = ({ onCreated }) => {
 
       {step === 2 && (
         <>
-          <Select
+          <Input
             label="Workbasket"
-            required
-            value={formData.workbasketId}
-            onChange={(e) => updateField('workbasketId', e.target.value)}
-            error={errors.workbasketId}
-            disabled={loading.workbaskets}
-            options={[{ value: '', label: loading.workbaskets ? 'Loading workbaskets...' : 'Select workbasket' }, ...workbaskets.map((item) => ({ value: item._id, label: item.name }))]}
+            readOnly
+            value={(workbaskets.find((item) => item._id === formData.workbasketId)?.name) || (loading.workbaskets ? 'Loading workbasket...' : 'Auto-selected by category/subcategory')}
+            helpText="Workbasket is auto-mapped from Category/Subcategory settings."
           />
           <Select
             label="Priority"
@@ -195,6 +229,7 @@ export const GuidedDocketForm = ({ onCreated }) => {
           <h3>Review</h3>
           <p><strong>Title:</strong> {formData.title || '—'}</p>
           <p><strong>Description:</strong> {formData.description || '—'}</p>
+          <p><strong>Client:</strong> {(clients.find((item) => item.clientId === formData.clientId)?.businessName && `${formData.clientId} - ${clients.find((item) => item.clientId === formData.clientId)?.businessName}`) || formData.clientId || '—'}</p>
           <p><strong>Category:</strong> {(categories.find((item) => item._id === formData.categoryId)?.name) || '—'}</p>
           <p><strong>Subcategory:</strong> {(subcategories.find((item) => item.id === formData.subcategoryId)?.name) || '—'}</p>
           <p><strong>Workbasket:</strong> {(workbaskets.find((item) => item._id === formData.workbasketId)?.name) || '—'}</p>
