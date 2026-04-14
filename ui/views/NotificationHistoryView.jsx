@@ -34,6 +34,10 @@ export function NotificationHistoryView() {
       const response = await notificationsApi.getAllNotifications();
       setItems(normalizeList(response));
     } catch (err) {
+      if (err?.status === 404) {
+        setItems([]);
+        return;
+      }
       setError(err?.message || 'Failed to load notifications');
       setItems([]);
     } finally {

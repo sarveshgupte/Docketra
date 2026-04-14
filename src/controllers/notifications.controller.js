@@ -26,6 +26,12 @@ async function getNotifications(req, res) {
   try {
     const firmId = req.user?.firmId;
     const userId = String(req.user?.xID || '').toUpperCase();
+    if (!firmId || !userId) {
+      return res.json({
+        success: true,
+        data: [],
+      });
+    }
     const limit = Number(req.query.limit) || 10;
 
     const notifications = await Notification.find({ firmId, userId })
@@ -49,6 +55,12 @@ async function getAllNotifications(req, res) {
   try {
     const firmId = req.user?.firmId;
     const userId = String(req.user?.xID || '').toUpperCase();
+    if (!firmId || !userId) {
+      return res.json({
+        success: true,
+        data: [],
+      });
+    }
 
     const notifications = await Notification.find({ firmId, userId })
       .sort({ timestamp: -1 })
