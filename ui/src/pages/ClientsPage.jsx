@@ -48,6 +48,7 @@ export const ClientsPage = () => {
     secondaryContactNumber: '',
     businessEmail: '',
     PAN: '',
+    GST: '',
     TAN: '',
     CIN: '',
     contactPersonName: '',
@@ -56,7 +57,8 @@ export const ClientsPage = () => {
     contactPersonEmailAddress: '',
   });
   const fileInputRef = useRef(null);
-  const isAdmin = user?.role === 'Admin';
+  const normalizedRole = String(user?.role || '').trim().toUpperCase();
+  const isAdmin = normalizedRole === 'ADMIN' || normalizedRole === 'PRIMARY_ADMIN' || Boolean(user?.isPrimaryAdmin);
 
   const loadClients = useCallback(async () => {
     setLoading(true);
@@ -109,6 +111,7 @@ export const ClientsPage = () => {
       secondaryContactNumber: '',
       businessEmail: '',
       PAN: '',
+      GST: '',
       TAN: '',
       CIN: '',
       contactPersonName: '',
@@ -132,6 +135,7 @@ export const ClientsPage = () => {
       secondaryContactNumber: client.secondaryContactNumber || '',
       businessEmail: client.businessEmail || '',
       PAN: client.PAN || '',
+      GST: client.GST || '',
       TAN: client.TAN || '',
       CIN: client.CIN || '',
       contactPersonName: client.contactPersonName || '',
@@ -150,8 +154,8 @@ export const ClientsPage = () => {
   const handleSaveClient = async (event) => {
     event.preventDefault();
     if (!isAdmin) return;
-    if (!clientForm.businessName || !clientForm.businessAddress || !clientForm.primaryContactNumber || !clientForm.businessEmail) {
-      showError('Please fill in business name, address, primary contact number, and business email');
+    if (!clientForm.businessName || !clientForm.primaryContactNumber || !clientForm.businessEmail) {
+      showError('Please fill in client name, client email, and client phone number');
       return;
     }
     setSavingClient(true);
@@ -159,11 +163,12 @@ export const ClientsPage = () => {
       if (selectedClient?.clientId) {
         const response = await clientApi.updateClient(selectedClient.clientId, {
           businessName: clientForm.businessName,
-          businessAddress: clientForm.businessAddress,
+          ...(clientForm.businessAddress ? { businessAddress: clientForm.businessAddress } : {}),
           businessEmail: clientForm.businessEmail,
           primaryContactNumber: clientForm.primaryContactNumber,
           secondaryContactNumber: clientForm.secondaryContactNumber,
           PAN: clientForm.PAN,
+          GST: clientForm.GST,
           TAN: clientForm.TAN,
           CIN: clientForm.CIN,
           contactPersonName: clientForm.contactPersonName,
@@ -176,11 +181,12 @@ export const ClientsPage = () => {
       } else {
         const response = await clientApi.createClient({
           businessName: clientForm.businessName,
-          businessAddress: clientForm.businessAddress,
           businessEmail: clientForm.businessEmail,
           primaryContactNumber: clientForm.primaryContactNumber,
+          ...(clientForm.businessAddress ? { businessAddress: clientForm.businessAddress } : {}),
           ...(clientForm.secondaryContactNumber ? { secondaryContactNumber: clientForm.secondaryContactNumber } : {}),
           ...(clientForm.PAN ? { PAN: clientForm.PAN } : {}),
+          ...(clientForm.GST ? { GST: clientForm.GST } : {}),
           ...(clientForm.TAN ? { TAN: clientForm.TAN } : {}),
           ...(clientForm.CIN ? { CIN: clientForm.CIN } : {}),
           ...(clientForm.contactPersonName ? { contactPersonName: clientForm.contactPersonName } : {}),
@@ -298,7 +304,7 @@ export const ClientsPage = () => {
                   {client.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
                 </Button>
               )}
-              <Button size="small" variant="warning" onClick={() => openEditCfsModal(client)}>Edit Fact Sheet</Button>
+              <Button size="small" variant="warning" onClick={() => openEditCfsModal(client)}>Edit CFS</Button>
             </>
           ) : null}
         </div>
@@ -375,7 +381,7 @@ export const ClientsPage = () => {
           <div className="flex items-center gap-2">
             <Button variant="default" onClick={() => setShowBulkUpload(true)}>Bulk Upload</Button>
             <Button variant="default" onClick={() => {
-              const blob = new Blob(['businessName,businessEmail,primaryContactNumber,contactPersonName\n'], { type: 'text/csv;charset=utf-8;' });
+              const blob = new Blob(['businessName,businessEmail,primaryContactNumber,businessAddress,PAN,CIN,TAN,GST\n'], { type: 'text/csv;charset=utf-8;' });
               const url = window.URL.createObjectURL(blob);
               const link = document.createElement('a');
               link.href = url;
@@ -422,21 +428,20 @@ export const ClientsPage = () => {
       >
         <form onSubmit={handleSaveClient} style={{ display: 'grid', gap: '1rem' }}>
           <Input
-            label="Business Name"
+            label="Client Name"
             value={clientForm.businessName}
             onChange={(event) => setClientForm((prev) => ({ ...prev, businessName: event.target.value }))}
             required
             disabled={!isAdmin}
           />
           <Input
-            label="Business Address"
+            label="Business Address (Optional)"
             value={clientForm.businessAddress}
             onChange={(event) => setClientForm((prev) => ({ ...prev, businessAddress: event.target.value }))}
-            required
             disabled={!isAdmin}
           />
           <Input
-            label="Primary Contact Number"
+            label="Client Phone Number"
             value={clientForm.primaryContactNumber}
             onChange={(event) => setClientForm((prev) => ({ ...prev, primaryContactNumber: event.target.value }))}
             required
@@ -447,7 +452,7 @@ export const ClientsPage = () => {
             onChange={(event) => setClientForm((prev) => ({ ...prev, secondaryContactNumber: event.target.value }))}
           />
           <Input
-            label="Business Email"
+            label="Client Email"
             type="email"
             value={clientForm.businessEmail}
             onChange={(event) => setClientForm((prev) => ({ ...prev, businessEmail: event.target.value }))}
@@ -458,6 +463,11 @@ export const ClientsPage = () => {
             label="PAN"
             value={clientForm.PAN}
             onChange={(event) => setClientForm((prev) => ({ ...prev, PAN: event.target.value }))}
+          />
+          <Input
+            label="GST Number"
+            value={clientForm.GST}
+            onChange={(event) => setClientForm((prev) => ({ ...prev, GST: event.target.value }))}
           />
           <Input
             label="TAN"
