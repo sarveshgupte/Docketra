@@ -2014,16 +2014,27 @@ const getProfile = async (req, res) => {
       && String(dbUser.lastSeenUpdateId || '') !== String(latestUpdate._id || ''),
     );
 
-    const tutorialRole = dbUser.role === ROLE_ADMIN ? 'admin' : 'user';
-    const tutorialSteps = tutorialRole === 'admin'
+    const normalizedTutorialRole = normalizeRole(dbUser.role);
+    const tutorialRole = normalizedTutorialRole === 'PRIMARY_ADMIN'
+      ? 'primary_admin'
+      : (normalizedTutorialRole === 'ADMIN' ? 'admin' : 'user');
+    const tutorialSteps = tutorialRole === 'primary_admin'
       ? [
-        'Review your dashboard and invite your team members.',
-        'Configure categories, work types, and firm settings.',
-        'Open Firm Settings to configure compliance defaults and storage controls for your firm.',
-        'Check your welcome email for your login link and support contact details.',
-        'Create your first docket workflow and assign ownership.',
+        'Review your dashboard risk cards and open the Primary Admin setup checklist.',
+        'Complete firm profile, storage configuration, and work settings before inviting the wider team.',
+        'Define hierarchy and invite admins/managers/users for ownership and review flow.',
+        'Create and assign your first docket to validate your end-to-end firm workflow.',
+        'Check your welcome email for workspace links, support contact details, and security setup reminders.',
       ]
-      : [
+      : tutorialRole === 'admin'
+        ? [
+        'Review your dashboard risk cards and open the setup checklist for guided first-time actions.',
+        'Configure firm profile, storage settings, and work settings before scaling operations.',
+        'Invite your team members and define hierarchy so ownership and approvals are clear.',
+        'Create your first docket, assign an owner, and track movement from Workbasket to Worklist.',
+        'Check your welcome email for workspace links, support contact details, and security setup reminders.',
+      ]
+        : [
         'Open your worklist to see assigned dockets and priorities.',
         'Open My Settings to confirm your profile details before starting execution.',
         'Check your welcome email for your workspace link and sign-in options.',

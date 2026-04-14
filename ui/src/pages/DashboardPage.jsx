@@ -77,6 +77,29 @@ const ADMIN_PRODUCT_TOUR_STEPS = [
   },
 ];
 
+const PRIMARY_ADMIN_PRODUCT_TOUR_STEPS = [
+  {
+    title: 'Confirm firm profile and compliance defaults',
+    description: 'Open Firm Settings and finalize your firm profile, operating defaults, and foundational compliance configuration.',
+  },
+  {
+    title: 'Connect storage provider',
+    description: 'Set up your storage integration so every docket attachment and evidence upload is backed by your chosen provider.',
+  },
+  {
+    title: 'Define categories and work types',
+    description: 'Configure category taxonomy and work types to standardize intake, routing, and reporting across practice areas.',
+  },
+  {
+    title: 'Invite admins and execution team',
+    description: 'Invite your first users and establish hierarchy so ownership, approvals, and accountability are clear from day one.',
+  },
+  {
+    title: 'Create and assign your first docket',
+    description: 'Create a real docket and assign ownership to validate your full workflow from intake to execution.',
+  },
+];
+
 const USER_PRODUCT_TOUR_STEPS = [
   {
     title: 'Review your assigned worklist',
@@ -101,6 +124,10 @@ const USER_PRODUCT_TOUR_STEPS = [
 ];
 
 const ADMIN_FAQ_ITEMS = [
+  {
+    question: 'What should a PRIMARY ADMIN do immediately after first login?',
+    answer: 'Complete firm profile, connect storage, configure categories/work types, invite team members, and create the first assigned docket.',
+  },
   {
     question: 'How do I set up Docketra for a new firm?',
     answer: 'Follow this sequence: add a client, invite users, define categories, create your first docket, then route it via Workbasket to Worklist.',
@@ -175,8 +202,12 @@ export const DashboardPage = () => {
   const { isAdmin } = usePermissions();
   const navigate = useNavigate();
   const { firmSlug } = useParams();
+  const normalizedRole = String(user?.role || '').trim().toUpperCase();
+  const isPrimaryAdmin = normalizedRole === 'PRIMARY_ADMIN' || Boolean(user?.isPrimaryAdmin);
   const { openDocket } = useActiveDocket();
-  const productTourSteps = isAdmin ? ADMIN_PRODUCT_TOUR_STEPS : USER_PRODUCT_TOUR_STEPS;
+  const productTourSteps = isAdmin
+    ? (isPrimaryAdmin ? PRIMARY_ADMIN_PRODUCT_TOUR_STEPS : ADMIN_PRODUCT_TOUR_STEPS)
+    : USER_PRODUCT_TOUR_STEPS;
   const faqItems = isAdmin ? ADMIN_FAQ_ITEMS : USER_FAQ_ITEMS;
   
   const [loading, setLoading] = useState(true);
@@ -506,6 +537,21 @@ export const DashboardPage = () => {
 
     if (stepId === 'configure-firm') {
       navigate(safeRoute(ROUTES.FIRM_SETTINGS(firmSlug)));
+      return;
+    }
+
+    if (stepId === 'firm-profile') {
+      navigate(safeRoute(ROUTES.FIRM_SETTINGS(firmSlug)));
+      return;
+    }
+
+    if (stepId === 'storage-setup') {
+      navigate(safeRoute(ROUTES.STORAGE_SETTINGS(firmSlug)));
+      return;
+    }
+
+    if (stepId === 'configure-categories') {
+      navigate(safeRoute(ROUTES.WORK_SETTINGS(firmSlug)));
     }
   };
 
@@ -609,6 +655,7 @@ export const DashboardPage = () => {
               storageKey={`setupChecklist:${user.xID}:${firmSlug}`}
               recentCases={recentCases}
               onAction={handleChecklistAction}
+              mode={isPrimaryAdmin ? 'primary-admin' : 'admin'}
             />
           ) : null}
 
