@@ -1,9 +1,4 @@
-const { z, nonEmptyString, objectIdString } = require('./common');
-
-const slugString = z.string().trim().toLowerCase().min(1).max(100).regex(
-  /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-  'slug must be lowercase alphanumeric with hyphens only',
-);
+const { z, nonEmptyString, objectIdString, slugString } = require('./common');
 
 module.exports = {
   'GET /pages/:slug': {
