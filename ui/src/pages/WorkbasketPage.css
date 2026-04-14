@@ -2,8 +2,9 @@
  * Workbasket Page Styles (formerly Global Worklist)
  */
 
+/* enterprise-content already provides horizontal padding; only add bottom spacing here */
 .global-worklist {
-  padding: 2rem;
+  padding: 0 0 2rem;
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
@@ -148,7 +149,7 @@
 /* Responsive */
 @media (max-width: 768px) {
   .global-worklist {
-    padding: 1rem;
+    padding: 0 0 1rem;
   }
 
   .global-worklist__filters {
@@ -177,4 +178,25 @@
 
 .docket-link:hover {
   color: var(--accent-primary-hover, #1d4ed8);
+}
+
+/* Workbasket view-switcher tabs */
+.workbasket-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* Bulk actions bar — only rendered when rows are selected */
+.global-worklist__bulk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.625rem 1rem;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
 }
