@@ -35,6 +35,7 @@ import { useFirm } from '../hooks/useFirm';
 import { ROUTES } from '../constants/routes';
 import { RouteErrorFallback } from '../components/routing/RouteErrorFallback';
 import { useActiveDocket } from '../hooks/useActiveDocket';
+import { DocketBulkUploadModal } from '../components/bulk/DocketBulkUploadModal';
 import './CasesPage.css';
 
 // Keep date-sort keys explicit so additional date columns can be added safely.
@@ -93,7 +94,7 @@ export const CasesPage = () => {
     { enableEscalationView }
   );
 
-  const { showSuccess } = useToast();
+  const { showSuccess, showToast } = useToast();
   const { openDocket } = useActiveDocket();
   // Use a stable, unique identifier per user for saved-views storage.
   // _id is the MongoDB ObjectId; id is an alias used in some API responses.
@@ -116,6 +117,7 @@ export const CasesPage = () => {
   // Task 6: Bulk selection state
   const [selectedCaseIds, setSelectedCaseIds] = useState(new Set());
   const [bulkActionInProgress, setBulkActionInProgress] = useState(false);
+  const [showDocketBulkUpload, setShowDocketBulkUpload] = useState(false);
   const [categoryCount, setCategoryCount] = useState(0);
   const onboardingStorageKey = `docketra_onboarding_dismissed_${firmSlug || 'firm'}`;
   const [onboardingDismissed, setOnboardingDismissed] = useState(
@@ -797,6 +799,7 @@ export const CasesPage = () => {
                   {showPerformance ? 'Hide Performance View' : 'Show Performance View'}
                 </Button>
               )}
+              {isAdmin && <Button variant="outline" onClick={() => setShowDocketBulkUpload(true)}>Bulk Upload</Button>}
               {isAdmin && <Button variant="primary" onClick={handleCreateCase}>Create Docket</Button>}
             </div>
           }
@@ -1098,6 +1101,12 @@ export const CasesPage = () => {
         </SectionCard>
       </div>
       <AuditTimelineDrawer isOpen={Boolean(timelineCaseId)} caseId={timelineCaseId} onClose={() => setTimelineCaseId(null)} />
+      <DocketBulkUploadModal
+        isOpen={showDocketBulkUpload}
+        onClose={() => setShowDocketBulkUpload(false)}
+        showToast={showToast}
+        onUploaded={loadCases}
+      />
       {confirmModal && (
         <ActionConfirmModal
           isOpen={true}
