@@ -19,10 +19,8 @@ import { useToast } from '../hooks/useToast';
 import { useCaseView, CASE_VIEWS, isEscalatedCase } from '../hooks/useCaseView';
 import { useSavedViews } from '../hooks/useSavedViews';
 import { caseApi } from '../api/case.api';
-import { worklistApi } from '../api/worklist.api';
-import { categoryService } from '../services/categoryService';
+import { useCasesListQuery } from '../hooks/useCasesListQuery';
 import { CASE_STATUS, USER_ROLES } from '../utils/constants';
-import { getCaseListRecords } from '../utils/caseResponse';
 import { getFirmConfig } from '../utils/firmConfig';
 import { useFeatureFlag } from '../hooks/useFeatureFlag';
 import { formatDateTime, getISODateInTimezone } from '../utils/formatDateTime';
@@ -114,12 +112,9 @@ export const CasesPage = () => {
   const savedViewsUserId = user?._id || user?.id || user?.email || null;
   const { savedViews, saveView, removeView, applySavedView } = useSavedViews(savedViewsUserId);
 
-  const [loading, setLoading] = useState(true);
-  const [cases, setCases] = useState([]);
   const [statusFilter, setStatusFilter] = useState(query.status || 'ALL');
   const [sortState, setSortState] = useState({ key: query.sort || 'updatedAt', direction: query.order || 'desc' });
   const [timelineCaseId, setTimelineCaseId] = useState(null);
-  const [error, setError] = useState(null);
   const [assigningCaseId, setAssigningCaseId] = useState(null);
   // Task 6: Search & Quick Jump
   const [searchInput, setSearchInput] = useState(query.q || '');
@@ -131,7 +126,6 @@ export const CasesPage = () => {
   const [selectedCaseIds, setSelectedCaseIds] = useState(new Set());
   const [bulkActionInProgress, setBulkActionInProgress] = useState(false);
   const [showDocketBulkUpload, setShowDocketBulkUpload] = useState(false);
-  const [categoryCount, setCategoryCount] = useState(0);
   const onboardingStorageKey = `docketra_onboarding_dismissed_${firmSlug || 'firm'}`;
   const [onboardingDismissed, setOnboardingDismissed] = useState(
     () => localStorage.getItem(onboardingStorageKey) === 'true'
@@ -163,18 +157,30 @@ export const CasesPage = () => {
       .filter((item) => item.id);
   }, [user?.workbaskets, user?.teamIds, user?.teamNames]);
 
+  // React Query: fetch cases list and category count
+  const {
+    data: casesQueryData,
+    isLoading: loading,
+    error,
+    refetch: refetchCases,
+  } = useCasesListQuery({ isAdmin, enabled: Boolean(user) });
+
+  const cases = casesQueryData?.cases ?? [];
+  const categoryCount = casesQueryData?.categoryCount ?? 0;
+
+  // Task 5: apply smart default view after initial data load
+  useEffect(() => {
+    if (cases.length > 0) {
+      applySmartDefault(cases);
+    }
+  }, [cases, applySmartDefault]);
+
   // Cleanup debounce timer on unmount (Task 6)
   useEffect(() => {
     return () => {
       if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     };
   }, []);
-
-  const normalizeCases = useCallback((records = []) =>
-    records.map((record) => ({
-      ...record,
-      caseId: record.caseId || record._id,
-    })), []);
 
   const loadCases = useCallback(async () => {
     setLoading(true);
