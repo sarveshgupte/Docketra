@@ -584,6 +584,11 @@
   border-bottom: 1px solid var(--color-border);
 }
 
+.enterprise-header__notification-item--unread .enterprise-header__notification-title,
+.enterprise-header__notification-item--unread .enterprise-header__notification-description {
+  font-weight: 700;
+}
+
 .enterprise-header__notification-item:last-child {
   border-bottom: none;
 }

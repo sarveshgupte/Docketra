@@ -13,6 +13,7 @@ import { CommandPalette } from './CommandPalette';
 import { ErrorBoundary } from './ErrorBoundary';
 import api from '../../services/api';
 import { worklistApi } from '../../api/worklist.api';
+import { notificationsApi } from '../../api/notifications.api';
 import { APP_NAME, APP_VERSION, USER_ROLES } from '../../utils/constants';
 import { useActiveDocket } from '../../hooks/useActiveDocket';
 import { formatDateTime } from '../../utils/formatDateTime';
@@ -121,7 +122,6 @@ const IconPlus = () => (
   </svg>
 );
 
-const ALLOWED_NOTIFICATION_EVENTS = new Set(['assignment', 'comment', 'status_change', 'mention']);
 const sortNotificationsLatestFirst = (items) => [...items].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
 export const Layout = ({ children }) => {
@@ -282,24 +282,43 @@ export const Layout = ({ children }) => {
   }, [notificationItems, playNotificationTone]);
 
   useEffect(() => {
-    const handleIncomingNotification = (event) => {
-      const payload = event.detail || {};
-      const eventType = String(payload.eventType || payload.type || '').trim().toLowerCase();
-      if (!ALLOWED_NOTIFICATION_EVENTS.has(eventType)) return;
-      const incoming = {
-        id: payload.id || `notif-${Date.now()}`,
-        eventType,
-        category: payload.category || eventType.replace('_', ' '),
-        title: payload.title || 'New update',
-        description: payload.description || 'You received a new notification.',
-        timestamp: payload.timestamp ? new Date(payload.timestamp) : new Date(),
-        docketNumber: payload.docketNumber || payload.docketId || null,
-        unread: true,
-      };
-      setNotificationItems((items) => sortNotificationsLatestFirst([...items, incoming]));
+    let cancelled = false;
+
+    const normalizeNotification = (item) => ({
+      id: item.id || item._id,
+      eventType: String(item.type || '').toLowerCase(),
+      category: String(item.type || '').replaceAll('_', ' '),
+      title: item.title || 'New update',
+      description: item.message || 'You received a new notification.',
+      timestamp: item.createdAt || item.created_at || new Date().toISOString(),
+      docketNumber: item.docketId || item.docket_id || null,
+      unread: !(item.isRead ?? item.read),
+      groupCount: Number(item.groupCount || 1),
+    });
+
+    const fetchNotifications = async () => {
+      try {
+        const response = await notificationsApi.getNotifications({ limit: 20 });
+        const rows = Array.isArray(response?.data) ? response.data.map(normalizeNotification) : [];
+        if (!cancelled) {
+          setNotificationItems(sortNotificationsLatestFirst(rows));
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.warn('[Layout] Failed to load notifications', error?.message || error);
+        }
+      }
     };
-    window.addEventListener('docketra:new-notification', handleIncomingNotification);
-    return () => window.removeEventListener('docketra:new-notification', handleIncomingNotification);
+
+    void fetchNotifications();
+    const pollId = setInterval(() => {
+      void fetchNotifications();
+    }, 30000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(pollId);
+    };
   }, []);
 
 
@@ -508,7 +527,14 @@ export const Layout = ({ children }) => {
 
   const unreadCount = notificationItems.filter((item) => item.unread).length;
   const clearNotification = (id) => setNotificationItems((items) => items.filter((item) => item.id !== id));
-  const markNotificationRead = (id) => setNotificationItems((items) => items.map((item) => (item.id === id ? { ...item, unread: false } : item)));
+  const markNotificationRead = async (id) => {
+    try {
+      await notificationsApi.markAsRead(id);
+    } catch (error) {
+      console.warn('[Layout] Failed to mark notification as read', error?.message || error);
+    }
+    setNotificationItems((items) => items.map((item) => (item.id === id ? { ...item, unread: false } : item)));
+  };
   const markAllRead = () => setNotificationItems((items) => items.map((item) => ({ ...item, unread: false })));
 
   const commandPaletteCommands = [
@@ -714,10 +740,10 @@ export const Layout = ({ children }) => {
                   </div>
                   <div className="enterprise-header__notification-list" role="presentation">
                     {notificationItems.length === 0 ? (
-                      <div className="enterprise-header__notification-empty">No notifications yet.</div>
+                      <div className="enterprise-header__notification-empty">No notifications</div>
                     ) : (
                       notificationItems.map((item) => (
-                        <div key={item.id} className="dropdown-item enterprise-header__notification-item" role="menuitem">
+                        <div key={item.id} className={`dropdown-item enterprise-header__notification-item ${item.unread ? 'enterprise-header__notification-item--unread' : ''}`} role="menuitem">
                           <div className="enterprise-header__notification-title-row">
                             <span className="enterprise-header__notification-title">{item.title}</span>
                             <div className="enterprise-header__notification-actions">
@@ -728,7 +754,7 @@ export const Layout = ({ children }) => {
                                 title="Mark as read"
                                 onClick={(event) => {
                                   event.stopPropagation();
-                                  markNotificationRead(item.id);
+                                  void markNotificationRead(item.id);
                                 }}
                               >
                                 ✓
@@ -748,7 +774,10 @@ export const Layout = ({ children }) => {
                               {item.unread ? <span className="enterprise-header__notification-unread-badge">New</span> : null}
                             </div>
                           </div>
-                          <div className="enterprise-header__notification-description">{item.description}</div>
+                          <div className="enterprise-header__notification-description">
+                            {item.description}
+                            {item.groupCount > 1 ? ` (${item.groupCount} updates)` : ''}
+                          </div>
                           <div className="enterprise-header__notification-meta">
                             <span>{item.category}</span>
                             <span>{formatDateTime(item.timestamp)}</span>
@@ -757,7 +786,7 @@ export const Layout = ({ children }) => {
                             <Link
                               to={safeRoute(ROUTES.CASE_DETAIL(currentFirmSlug, item.docketNumber), ROUTES.CASES(currentFirmSlug))}
                               className="enterprise-header__notification-link"
-                              onClick={() => { markNotificationRead(item.id); setNotificationOpen(false); }}
+                              onClick={() => { void markNotificationRead(item.id); setNotificationOpen(false); }}
                             >
                               Open docket #{item.docketNumber}
                             </Link>
