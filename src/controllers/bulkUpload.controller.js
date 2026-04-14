@@ -3,6 +3,7 @@ const XLSX = require('xlsx');
 const Client = require('../models/Client.model');
 const Category = require('../models/Category.model');
 const User = require('../models/User.model');
+const Team = require('../models/Team.model');
 const BulkUploadJob = require('../models/BulkUploadJob.model');
 const { generateNextClientId } = require('../services/clientIdGenerator');
 const xIDGenerator = require('../services/xIDGenerator');
@@ -32,14 +33,14 @@ const TYPE_CONFIG = {
     permission: 'CLIENT_MANAGE',
   },
   categories: {
-    headers: ['category', 'subcategory'],
-    required: ['category'],
+    headers: ['category', 'subcategory', 'workbasket'],
+    required: ['category', 'workbasket'],
     duplicateKey: 'category',
     permission: 'CATEGORY_MANAGE',
   },
   team: {
-    headers: ['name', 'email', 'role', 'department'],
-    required: ['name', 'email', 'role'],
+    headers: ['name', 'email', 'role', 'department', 'workbaskets', 'clients'],
+    required: ['name', 'email', 'role', 'workbaskets'],
     duplicateKey: 'email',
     permission: 'USER_MANAGE',
   },
@@ -60,12 +61,15 @@ const HEADER_ALIASES = {
   categories: {
     category: ['category', 'name', 'category_name'],
     subcategory: ['subcategory', 'sub_category', 'sub category'],
+    workbasket: ['workbasket', 'workbasket_name', 'work_basket'],
   },
   team: {
     name: ['name', 'full_name'],
     email: ['email', 'work_email'],
     role: ['role', 'user_role'],
     department: ['department', 'team_department'],
+    workbaskets: ['workbaskets', 'workbasket', 'work_baskets', 'workbasket_names'],
+    clients: ['clients', 'client_ids', 'clientids', 'client_emails'],
   },
 };
 
@@ -241,18 +245,30 @@ const normalizeTeamRole = (role) => {
   return null;
 };
 
+const parsePipeList = (value) => [...new Set(
+  String(value || '')
+    .split('|')
+    .map((entry) => String(entry || '').trim())
+    .filter(Boolean),
+)];
+
 const fetchExistingLookup = async ({ type, firmId }) => {
   if (type === 'clients') {
     const existing = await Client.find({ firmId, status: { $ne: 'deleted' } }).select('businessEmail').lean();
     return new Set(existing.map((entry) => String(entry.businessEmail || '').trim().toLowerCase()).filter(Boolean));
   }
   if (type === 'categories') {
-    const existing = await Category.find({ firmId, isDeleted: { $ne: true } })
-      .select('name isActive subcategories.name')
-      .lean();
+    const [existing, teams] = await Promise.all([
+      Category.find({ firmId, isDeleted: { $ne: true } })
+        .select('name isActive subcategories.name subcategories.workbasketId')
+        .lean(),
+      Team.find({ firmId, isActive: true, type: 'PRIMARY' }).select('_id name').lean(),
+    ]);
     const categorySet = new Set();
     const categoryStateMap = new Map();
     const categorySubcategorySet = new Set();
+    const workbasketByName = new Map();
+    const workbasketById = new Map();
 
     existing.forEach((entry) => {
       const categoryKey = String(entry.name || '').trim().toLowerCase();
@@ -267,7 +283,49 @@ const fetchExistingLookup = async ({ type, firmId }) => {
       });
     });
 
-    return { categorySet, categoryStateMap, categorySubcategorySet };
+    teams.forEach((team) => {
+      const nameKey = String(team.name || '').trim().toLowerCase();
+      if (nameKey) workbasketByName.set(nameKey, String(team._id));
+      workbasketById.set(String(team._id), String(team._id));
+    });
+
+    return {
+      categorySet, categoryStateMap, categorySubcategorySet, workbasketByName, workbasketById,
+    };
+  }
+  if (type === 'team') {
+    const [existingUsers, teams, clients] = await Promise.all([
+      User.find({ firmId, status: { $ne: 'deleted' } }).select('email').lean(),
+      Team.find({ firmId, isActive: true, type: 'PRIMARY' }).select('_id name').lean(),
+      Client.find({ firmId, status: { $ne: 'deleted' }, isActive: true }).select('_id clientId businessEmail').lean(),
+    ]);
+
+    const userEmailSet = new Set(existingUsers.map((entry) => String(entry.email || '').trim().toLowerCase()).filter(Boolean));
+    const workbasketByName = new Map();
+    const workbasketById = new Map();
+    teams.forEach((team) => {
+      const id = String(team._id);
+      const key = String(team.name || '').trim().toLowerCase();
+      if (key) workbasketByName.set(key, id);
+      workbasketById.set(id, id);
+    });
+    const clientByClientId = new Map();
+    const clientByEmail = new Map();
+    clients.forEach((client) => {
+      const id = String(client._id);
+      const clientIdKey = String(client.clientId || '').trim().toLowerCase();
+      const emailKey = String(client.businessEmail || '').trim().toLowerCase();
+      if (clientIdKey) clientByClientId.set(clientIdKey, id);
+      if (emailKey) clientByEmail.set(emailKey, id);
+    });
+
+    return {
+      userEmailSet,
+      workbasketByName,
+      workbasketById,
+      clientByClientId,
+      clientByEmail,
+    };
   }
   const existing = await User.find({ firmId, status: { $ne: 'deleted' } }).select('email').lean();
   return new Set(existing.map((entry) => String(entry.email || '').trim().toLowerCase()).filter(Boolean));
@@ -312,10 +370,19 @@ const validateRows = async ({ type, parsedRows, fieldIndexMap, firmId, duplicate
     if (type === 'categories') {
       const categoryKey = String(row.category || '').trim().toLowerCase();
       const subcategoryKey = String(row.subcategory || '').trim().toLowerCase();
+      const workbasketRaw = String(row.workbasket || '').trim();
+      const workbasketKey = workbasketRaw.toLowerCase();
       const pairKey = `${categoryKey}::${subcategoryKey}`;
       const categoryExists = existingLookup.categorySet.has(categoryKey);
       const subcategoryExists = subcategoryKey ? existingLookup.categorySubcategorySet.has(pairKey) : false;
       const categoryIsActive = existingLookup.categoryStateMap.get(categoryKey);
+      const mappedWorkbasketId = existingLookup.workbasketById.get(workbasketRaw)
+        || existingLookup.workbasketByName.get(workbasketKey);
+
+      if (!mappedWorkbasketId) {
+        invalid.push({ row: rowNumber, error: `Workbasket "${workbasketRaw}" does not exist or is inactive` });
+        return;
+      }
 
       if (seen.has(pairKey)) {
         invalid.push({ row: rowNumber, error: 'Duplicate category/subcategory row in file' });
@@ -347,11 +414,44 @@ const validateRows = async ({ type, parsedRows, fieldIndexMap, firmId, duplicate
         data: {
           category: String(row.category || '').trim(),
           subcategory: String(row.subcategory || '').trim(),
+          workbasketId: mappedWorkbasketId,
+          workbasket: workbasketRaw,
         },
         dedupeKey: categoryKey,
         action: categoryExists ? 'add_subcategory' : 'create_category',
       });
       return;
+    }
+
+    if (type === 'team') {
+      const workbasketValues = parsePipeList(row.workbaskets);
+      const mappedTeamIds = workbasketValues.map((entry) => {
+        const normalized = entry.toLowerCase();
+        return existingLookup.workbasketById.get(entry) || existingLookup.workbasketByName.get(normalized) || null;
+      });
+      if (mappedTeamIds.length === 0 || mappedTeamIds.some((entry) => !entry)) {
+        invalid.push({
+          row: rowNumber,
+          error: `Invalid workbaskets. Use active workbasket names or ids separated by "|".`,
+        });
+        return;
+      }
+
+      const clientValues = parsePipeList(row.clients);
+      const mappedClientIds = clientValues.map((entry) => {
+        const normalized = entry.toLowerCase();
+        return existingLookup.clientByClientId.get(normalized) || existingLookup.clientByEmail.get(normalized) || null;
+      });
+      if (mappedClientIds.some((entry) => !entry)) {
+        invalid.push({
+          row: rowNumber,
+          error: 'One or more clients are invalid. Use active clientId or businessEmail values separated by "|".',
+        });
+        return;
+      }
+
+      row.teamIds = mappedTeamIds;
+      row.restrictedClientIds = mappedClientIds;
     }
 
     const dedupeField = cfg.duplicateKey;
@@ -366,7 +466,9 @@ const validateRows = async ({ type, parsedRows, fieldIndexMap, firmId, duplicate
       return;
     }
 
-    const exists = existingLookup.has(dedupeKey);
+    const exists = type === 'team'
+      ? existingLookup.userEmailSet.has(dedupeKey)
+      : existingLookup.has(dedupeKey);
     if (exists && duplicateMode === 'fail') {
       invalid.push({ row: rowNumber, error: `Already exists (${dedupeField})` });
       return;
@@ -460,6 +562,7 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
             categoryDoc.subcategories.push({
               id: new mongoose.Types.ObjectId().toString(),
               name: subcategoryName,
+              workbasketId: row.data.workbasketId || null,
               isActive: true,
             });
             await categoryDoc.save();
@@ -518,7 +621,16 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
             op: {
               updateOne: {
                 filter: { firmId: user.firmId, email: row.dedupeKey, status: { $ne: 'deleted' } },
-                update: { $set: { name: row.data.name.trim(), role: row.data.role } },
+                update: {
+                  $set: {
+                    name: row.data.name.trim(),
+                    role: row.data.role,
+                    department: String(row.data.department || '').trim() || undefined,
+                    teamIds: row.data.teamIds || [],
+                    teamId: Array.isArray(row.data.teamIds) && row.data.teamIds.length > 0 ? row.data.teamIds[0] : null,
+                    restrictedClientIds: row.data.restrictedClientIds || [],
+                  },
+                },
               }
             }
           });
@@ -536,9 +648,11 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
                   email: row.data.email.trim().toLowerCase(),
                   role: row.data.role,
                   department: String(row.data.department || '').trim() || undefined,
+                  teamIds: row.data.teamIds || [],
+                  teamId: Array.isArray(row.data.teamIds) && row.data.teamIds.length > 0 ? row.data.teamIds[0] : null,
                   firmId: user.firmId,
                   defaultClientId: user.defaultClientId || null,
-                  restrictedClientIds: [],
+                  restrictedClientIds: row.data.restrictedClientIds || [],
                   allowedCategories: [],
                   isActive: false,
                   status: 'invited',
@@ -816,7 +930,54 @@ const confirmBulkUpload = async (req, res) => {
     duplicateMode,
     effectiveDuplicateMode: req.body?.effectiveDuplicateMode,
   });
-  const rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
+  let rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
+
+  if (req.body?.sourcePayload && typeof req.body.sourcePayload === 'object') {
+    const { sizeBytes, fileType, parsed } = resolveInputData(req.body.sourcePayload);
+    if (!fileType) {
+      return res.status(400).json({ success: false, message: 'CSV/XLSX content is required' });
+    }
+    if (sizeBytes > MAX_FILE_SIZE_BYTES) {
+      return res.status(400).json({ success: false, message: 'File exceeds 5MB limit' });
+    }
+    const { headers, rows: parsedRows } = parsed;
+    const { fieldIndexMap, missingRequired } = mapHeaders({
+      type,
+      receivedHeaders: headers,
+      cfg: TYPE_CONFIG[type],
+      manualMapping: req.body?.sourcePayload?.headerMapping || {},
+    });
+    if (missingRequired.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields',
+        missing: missingRequired,
+      });
+    }
+    const validated = await validateRows({
+      type,
+      parsedRows,
+      fieldIndexMap,
+      firmId: req.user.firmId,
+      duplicateMode: effectiveDuplicateMode,
+    });
+    if (validated.invalid.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Bulk upload validation failed. Fix all invalid rows before importing.',
+        errors: validated.invalid.slice(0, 100),
+      });
+    }
+    rows = validated.valid;
+  }
+
+  const invalidCount = Number(req.body?.validationSummary?.invalidRows || 0);
+  if (invalidCount > 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Bulk upload validation failed. Fix all invalid rows before importing.',
+    });
+  }
 
   if (!rows.length) {
     return res.status(400).json({ success: false, message: 'No valid rows provided for import' });

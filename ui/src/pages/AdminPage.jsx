@@ -153,6 +153,7 @@ export const AdminPage = () => {
     const normalizedRole = String(loggedInUser?.role || '').trim().toUpperCase();
     return normalizedRole === 'PRIMARY_ADMIN' || Boolean(loggedInUser?.isPrimaryAdmin);
   }, [loggedInUser]);
+  const isManagerActor = useMemo(() => String(loggedInUser?.role || '').trim().toUpperCase() === 'MANAGER', [loggedInUser]);
   
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(() => {
@@ -204,6 +205,7 @@ export const AdminPage = () => {
     role: '',
     department: '',
     teamIds: [],
+    assignQcWorkbaskets: false,
   });
   
   // Category form state
@@ -214,6 +216,7 @@ export const AdminPage = () => {
   // Subcategory form state
   const [subcategoryForm, setSubcategoryForm] = useState({
     name: '',
+    workbasketId: '',
   });
 
   // Client form state
@@ -445,7 +448,9 @@ export const AdminPage = () => {
       if (response.success) {
         showToast(`User invited successfully! xID: ${response.data?.xID}.`, 'success');
         setShowCreateModal(false);
-        setNewUser({ name: '', email: '', role: '', department: '', teamIds: [] });
+        setNewUser({
+          name: '', email: '', role: '', department: '', teamIds: [], assignQcWorkbaskets: false,
+        });
         await Promise.all([loadAdminStats(), loadAdminData()]);
       } else {
         showToast(response.message || 'Failed to create user', 'error');
@@ -640,19 +645,24 @@ export const AdminPage = () => {
       showToast('No category selected', 'error');
       return;
     }
+    if (!subcategoryForm.workbasketId) {
+      showToast('Please select a workbasket', 'error');
+      return;
+    }
     
     setSubmitting(true);
     
     try {
       const response = await categoryService.addSubcategory(
         selectedCategory._id,
-        subcategoryForm.name.trim()
+        subcategoryForm.name.trim(),
+        subcategoryForm.workbasketId,
       );
       
       if (response.success) {
         showToast('Subcategory added successfully', 'success');
         setShowSubcategoryModal(false);
-        setSubcategoryForm({ name: '' });
+        setSubcategoryForm({ name: '', workbasketId: '' });
         setSelectedCategory(null);
         loadAdminData();
       } else {
@@ -792,12 +802,23 @@ export const AdminPage = () => {
         );
 
         for (const row of rows) {
-          const [rawCategoryName, rawSubcategoryName] = parseDelimitedLine(row);
+          const [rawCategoryName, rawSubcategoryName, rawWorkbasket] = parseDelimitedLine(row);
           const categoryName = rawCategoryName?.trim();
           const subcategoryName = rawSubcategoryName?.trim();
+          const workbasketValue = rawWorkbasket?.trim();
 
-          if (!categoryName || !subcategoryName) {
+          if (!categoryName || !subcategoryName || !workbasketValue) {
             skippedCount += 1;
+            continue;
+          }
+          const normalizedWorkbasket = workbasketValue.toLowerCase();
+          const matchedWorkbasket = workbaskets.find((workbasket) => {
+            const byId = String(workbasket._id) === workbasketValue;
+            const byName = String(workbasket.name || '').trim().toLowerCase() === normalizedWorkbasket;
+            return byId || byName;
+          });
+          if (!matchedWorkbasket) {
+            failedCount += 1;
             continue;
           }
 
@@ -831,7 +852,7 @@ export const AdminPage = () => {
           }
 
           try {
-            await categoryService.addSubcategory(category._id, subcategoryName);
+            await categoryService.addSubcategory(category._id, subcategoryName, String(matchedWorkbasket._id));
             knownSubcategories.add(subcategoryKey);
             subcategoryIndex.set(categoryKey, knownSubcategories);
             createdCount += 1;
@@ -1290,7 +1311,7 @@ export const AdminPage = () => {
                 <Button
                   variant="default"
                   onClick={() => {
-                    const blob = new Blob(['name,email,role,department\n'], { type: 'text/csv;charset=utf-8;' });
+                    const blob = new Blob(['name,email,role,department,workbaskets,clients\n'], { type: 'text/csv;charset=utf-8;' });
                     const url = window.URL.createObjectURL(blob);
                     const link = document.createElement('a');
                     link.href = url;
@@ -1453,7 +1474,7 @@ export const AdminPage = () => {
                   Bulk Upload
                 </Button>
                 <Button variant="default" onClick={() => {
-                  const blob = new Blob(['category,subcategory\n'], { type: 'text/csv;charset=utf-8;' });
+                  const blob = new Blob(['category,subcategory,workbasket\n'], { type: 'text/csv;charset=utf-8;' });
                   const url = window.URL.createObjectURL(blob);
                   const link = document.createElement('a');
                   link.href = url;
@@ -1647,6 +1668,18 @@ export const AdminPage = () => {
               ))}
             </div>
           </div>
+          {isManagerActor ? (
+            <div className="neo-form-group">
+              <label className="admin__client-access-item">
+                <input
+                  type="checkbox"
+                  checked={Boolean(newUser.assignQcWorkbaskets)}
+                  onChange={(e) => setNewUser((prev) => ({ ...prev, assignQcWorkbaskets: e.target.checked }))}
+                />
+                <span>Assign linked QC workbaskets</span>
+              </label>
+            </div>
+          ) : null}
 
           <div className="admin__form-actions">
             <Button
@@ -1775,7 +1808,7 @@ export const AdminPage = () => {
             {bulkPasteMode === 'clients'
               ? 'Paste rows from Excel/Sheets. Columns: BusinessName, BusinessEmail, PrimaryContactNumber, BusinessAddress (optional), PAN (optional), CIN (optional), TAN (optional), GST (optional).'
               : bulkPasteMode === 'subcategories'
-                ? 'Paste 2 columns: CategoryName and SubcategoryName. If a category does not exist, it is created first.'
+                ? 'Paste 3 columns: CategoryName, SubcategoryName, Workbasket (name or id).'
                 : 'Paste one category name per line (or first column). Duplicate names are skipped.'}
           </div>
           <Textarea
@@ -1847,7 +1880,7 @@ export const AdminPage = () => {
         isOpen={showSubcategoryModal}
         onClose={() => {
           setShowSubcategoryModal(false);
-          setSubcategoryForm({ name: '' });
+          setSubcategoryForm({ name: '', workbasketId: '' });
           setSelectedCategory(null);
         }}
         title={`Add Subcategory to ${selectedCategory?.name || ''}`}
@@ -1861,6 +1894,16 @@ export const AdminPage = () => {
             placeholder="Enter subcategory name"
             required
           />
+          <Select
+            label="Workbasket"
+            value={subcategoryForm.workbasketId}
+            onChange={(e) => setSubcategoryForm({ ...subcategoryForm, workbasketId: e.target.value })}
+            options={[
+              { value: '', label: 'Select workbasket', disabled: true },
+              ...workbaskets.map((workbasket) => ({ value: String(workbasket._id), label: workbasket.name })),
+            ]}
+            required
+          />
 
           <div className="neo-form-actions">
             <Button
@@ -1868,7 +1911,7 @@ export const AdminPage = () => {
               variant="default"
               onClick={() => {
                 setShowSubcategoryModal(false);
-                setSubcategoryForm({ name: '' });
+                setSubcategoryForm({ name: '', workbasketId: '' });
                 setSelectedCategory(null);
               }}
             >
