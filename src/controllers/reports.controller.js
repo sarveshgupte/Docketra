@@ -521,21 +521,25 @@ const exportCasesCSV = async (req, res) => {
     if (status) matchStage.status = status;
     if (category) matchStage.category = category;
     
-    const total = await Case.countDocuments(matchStage);
-    if (total > MAX_EXPORT_ROWS) {
+    // ⚡ Bolt Performance Optimization:
+    // Replaced sequential countDocuments() and find() queries with a single find() using limit(MAX_EXPORT_ROWS + 1).
+    // Impact: Eliminates an entire database count operation, reducing latency and DB load.
+    // Expected improvement: 50% reduction in database queries for this endpoint.
+
+    // Get all matching cases (bounded for export)
+    // SECURITY: Enforcing tenant isolation (firm-scoped query)
+    const cases = await Case.find(matchStage)
+      .sort({ createdAt: -1 })
+      .limit(MAX_EXPORT_ROWS + 1)
+      .lean();
+
+    if (cases.length > MAX_EXPORT_ROWS) {
       // PERFORMANCE: Hard cap enforced to prevent memory exhaustion
       return res.status(400).json({
         success: false,
         message: `Export exceeds maximum row limit of ${MAX_EXPORT_ROWS}. Narrow your filters.`,
       });
     }
-
-    // Get all matching cases (bounded for export)
-    // SECURITY: Enforcing tenant isolation (firm-scoped query)
-    const cases = await Case.find(matchStage)
-      .sort({ createdAt: -1 })
-      .limit(MAX_EXPORT_ROWS)
-      .lean();
     
     const hydratedCases = await hydrateCasesForReport(firmId, cases);
     const casesWithClientNames = hydratedCases.map((item) => ({ ...item, createdAt: item.createdAt.toISOString() }));
@@ -610,20 +614,24 @@ const exportCasesExcel = async (req, res) => {
     if (status) matchStage.status = status;
     if (category) matchStage.category = category;
     
-    const total = await Case.countDocuments(matchStage);
-    if (total > MAX_EXPORT_ROWS) {
+    // ⚡ Bolt Performance Optimization:
+    // Replaced sequential countDocuments() and find() queries with a single find() using limit(MAX_EXPORT_ROWS + 1).
+    // Impact: Eliminates an entire database count operation, reducing latency and DB load.
+    // Expected improvement: 50% reduction in database queries for this endpoint.
+
+    // Get all matching cases (bounded for export)
+    const cases = await Case.find(matchStage)
+      .sort({ createdAt: -1 })
+      .limit(MAX_EXPORT_ROWS + 1)
+      .lean();
+
+    if (cases.length > MAX_EXPORT_ROWS) {
       // PERFORMANCE: Hard cap enforced to prevent memory exhaustion
       return res.status(400).json({
         success: false,
         message: `Export exceeds maximum row limit of ${MAX_EXPORT_ROWS}. Narrow your filters.`,
       });
     }
-
-    // Get all matching cases (bounded for export)
-    const cases = await Case.find(matchStage)
-      .sort({ createdAt: -1 })
-      .limit(MAX_EXPORT_ROWS)
-      .lean();
     
     const casesWithClientNames = await hydrateCasesForReport(firmId, cases);
     
