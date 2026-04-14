@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from '../common/Button';
 import './SetupChecklist.css';
 
-const CHECKLIST_STEPS = [
+const ADMIN_CHECKLIST_STEPS = [
   {
     id: 'create-case',
     title: 'Create your first docket',
@@ -40,6 +40,44 @@ const CHECKLIST_STEPS = [
   },
 ];
 
+const PRIMARY_ADMIN_CHECKLIST_STEPS = [
+  {
+    id: 'firm-profile',
+    title: 'Confirm firm profile and defaults',
+    description: 'Review firm details, operating defaults, and compliance preferences before inviting the wider team.',
+    hint: 'Open Firm Settings to finalize your foundation.',
+    actionLabel: 'Open firm settings',
+  },
+  {
+    id: 'storage-setup',
+    title: 'Connect document storage',
+    description: 'Configure your storage provider so docket files, evidences, and uploads are handled in your preferred environment.',
+    hint: 'Open Storage Settings and connect your provider.',
+    actionLabel: 'Open storage settings',
+  },
+  {
+    id: 'configure-categories',
+    title: 'Configure categories and work types',
+    description: 'Define docket categories and work type structure to keep intake, filters, and reporting consistent across the firm.',
+    hint: 'Use Work Settings to set your service taxonomy.',
+    actionLabel: 'Open work settings',
+  },
+  {
+    id: 'invite-team',
+    title: 'Invite admins and team members',
+    description: 'Set up your execution team so work can be assigned, reviewed, and closed without bottlenecks.',
+    hint: 'Open Admin and invite your first users.',
+    actionLabel: 'Open team management',
+  },
+  {
+    id: 'create-case',
+    title: 'Create and assign first docket',
+    description: 'Launch your first docket and assign ownership to validate your end-to-end operating workflow.',
+    hint: 'Create a docket, then assign owner from docket registry.',
+    actionLabel: 'Create docket',
+  },
+];
+
 const readStoredState = (storageKey) => {
   if (!storageKey) return { dismissed: false, manualSteps: {} };
 
@@ -56,7 +94,7 @@ const readStoredState = (storageKey) => {
   }
 };
 
-export const SetupChecklist = ({ storageKey, recentCases = [], onAction }) => {
+export const SetupChecklist = ({ storageKey, recentCases = [], onAction, mode = 'admin' }) => {
   const [{ dismissed, manualSteps }, setChecklistState] = useState(readStoredState(storageKey));
 
   useEffect(() => {
@@ -75,15 +113,14 @@ export const SetupChecklist = ({ storageKey, recentCases = [], onAction }) => {
       Boolean(caseItem.assignedToName || caseItem.assignedTo || caseItem.assignedToXID)
     );
 
-    return CHECKLIST_STEPS.map((step) => {
+    const checklistSteps = mode === 'primary-admin' ? PRIMARY_ADMIN_CHECKLIST_STEPS : ADMIN_CHECKLIST_STEPS;
+    return checklistSteps.map((step) => {
       let autoComplete = false;
 
       if (step.id === 'create-case') {
         autoComplete = hasCases;
       } else if (step.id === 'assign-owner') {
         autoComplete = hasAssignedCase;
-      } else if (step.id === 'review-insights') {
-        autoComplete = true;
       }
 
       return {
@@ -91,7 +128,7 @@ export const SetupChecklist = ({ storageKey, recentCases = [], onAction }) => {
         complete: autoComplete || Boolean(manualSteps[step.id]),
       };
     });
-  }, [manualSteps, recentCases]);
+  }, [manualSteps, recentCases, mode]);
 
   const completedSteps = steps.filter((step) => step.complete).length;
   const progress = Math.round((completedSteps / steps.length) * 100);
