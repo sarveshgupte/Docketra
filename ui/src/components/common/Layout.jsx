@@ -145,6 +145,9 @@ export const Layout = ({ children }) => {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [notificationItems, setNotificationItems] = useState([]);
+  const [isMobileViewport, setIsMobileViewport] = useState(
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 1024px)').matches
+  );
 
   const profileDropdownRef = useRef(null);
   const notificationDropdownRef = useRef(null);
@@ -161,7 +164,6 @@ export const Layout = ({ children }) => {
   const firmLogoUrl = typeof configuredFirmLogoUrl === 'string' ? configuredFirmLogoUrl.trim() : '';
   const firmInitials = firmLabel.substring(0, 2).toUpperCase();
   const reportsRoute = `${ROUTES.FIRM_BASE(currentFirmSlug)}/admin/reports`;
-  const isMobileViewport = typeof window !== 'undefined' && window.matchMedia('(max-width: 1024px)').matches;
 
   const handleSidebarToggle = () => {
     if (isMobileViewport) {
@@ -203,6 +205,15 @@ export const Layout = ({ children }) => {
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Keep isMobileViewport in sync with window size
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const mq = window.matchMedia('(max-width: 1024px)');
+    const handleChange = (e) => setIsMobileViewport(e.matches);
+    mq.addEventListener('change', handleChange);
+    return () => mq.removeEventListener('change', handleChange);
   }, []);
 
   // Close dropdowns on route change
