@@ -19,6 +19,7 @@ const { assertFirmContext } = require('../utils/tenantGuard');
 const { logAuthEvent } = require('../services/audit.service');
 const { isExternalStorageEnabled } = require('../services/featureFlags.service');
 const { assertPrimaryAdmin, getTagValidationError, normalizeId } = require('../utils/hierarchy.utils');
+const { logAuditEvent, getAuditLogs } = require('../services/adminActionAudit.service');
 const log = require('../utils/log');
 
 /**
@@ -1370,10 +1371,12 @@ const updateUserHierarchy = async (req, res) => {
 
     await target.save();
 
-    log.info('HIERARCHY_UPDATED', {
+    await logAuditEvent({
+      firmId: req.user?.firmId,
       actorId: req.user?._id,
       targetId: target._id,
-      changes: {
+      action: 'HIERARCHY_UPDATED',
+      metadata: {
         adminId: target.adminId,
         managerId: target.managerId,
       },
@@ -1384,6 +1387,27 @@ const updateUserHierarchy = async (req, res) => {
     return res.status(400).json({
       success: false,
       message: error.message || 'Failed to update hierarchy',
+    });
+  }
+};
+
+const getAdminAuditLogs = async (req, res) => {
+  try {
+    assertPrimaryAdmin(req.user);
+    const logs = await getAuditLogs({
+      firmId: req.user?.firmId,
+      userId: req.query?.userId,
+      action: req.query?.action,
+      startDate: req.query?.startDate,
+      endDate: req.query?.endDate,
+      limit: req.query?.limit,
+    });
+
+    return res.json({ success: true, data: logs });
+  } catch (error) {
+    return res.status(error.statusCode || 400).json({
+      success: false,
+      message: error.message || 'Failed to fetch audit logs',
     });
   }
 };
@@ -1424,4 +1448,5 @@ module.exports = {
   restoreCase: wrapWriteHandler(restoreCase),
   restoreTask: wrapWriteHandler(restoreTask),
   getRetentionPreview,
+  getAdminAuditLogs,
 };
