@@ -3,10 +3,10 @@ import { formatDateTime } from '../../utils/formatDateTime';
 
 const ACTION_LABELS = {
   DOCK_EXITED: 'Exited from system',
-  CASE_PULLED: 'Case pulled for review',
+  CASE_PULLED: 'Docket pulled for review',
   DOCK_VIEWED: 'Viewed docket',
   CASE_CREATED: 'New docket created',
-  CASE_UPDATED: 'Case updated',
+  CASE_UPDATED: 'Docket updated',
   STATUS_CHANGED: 'Status changed',
   CASE_CLOSED: 'Docket closed',
 };
