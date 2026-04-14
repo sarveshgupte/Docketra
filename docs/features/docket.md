@@ -260,3 +260,42 @@ Prepare ROC forms,Q1 filing pack,Compliance,ROC Filing,Compliance Team,MEDIUM
 - Upload endpoint accepts previewable rows and always re-validates server-side.
 - Invalid rows can be skipped (`uploadValidRowsOnly=true`) or upload can be rejected (`rejectOnInvalid=true`).
 - Response includes `created`, `failed`, and `errors` for full transparency.
+
+## Notifications System
+
+The docket workflow now includes lightweight in-app notifications (polling based, no WebSocket requirement yet).
+
+### Event coverage
+
+- Docket assigned → assignee receives `DOCKET_ASSIGNED`.
+- Docket status changed → relevant users receive `STATUS_CHANGED`.
+- Comment added → docket participants receive `COMMENT_ADDED`.
+- Docket reassigned → new assignee receives `DOCKET_REASSIGNED`.
+
+### API
+
+- `GET /api/notifications`
+- `POST /api/notifications/:id/read`
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "data": []
+}
+```
+
+### UX
+
+- Notification bell in the top navbar.
+- Unread count badge.
+- Dropdown with latest-first notifications and empty state text: `No notifications`.
+- Notification rows can be marked read and navigate to docket detail.
+- Read vs unread state is visually differentiated (bold for unread).
+
+### Enhancements roadmap
+
+- Grouping support merges rapid repeated updates into a single unread item.
+- Real-time push updates can be added later with WebSocket/SSE.
+- Email notification toggle is supported at model/service level for phased rollout.

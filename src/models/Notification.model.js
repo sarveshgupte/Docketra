@@ -1,11 +1,6 @@
 const mongoose = require('mongoose');
 
 const notificationSchema = new mongoose.Schema({
-  firmId: {
-    type: String,
-    required: true,
-    index: true,
-  },
   userId: {
     type: String,
     required: true,
@@ -13,46 +8,66 @@ const notificationSchema = new mongoose.Schema({
     uppercase: true,
     index: true,
   },
+  firmId: {
+    type: String,
+    required: true,
+    index: true,
+  },
   type: {
     type: String,
     required: true,
-    enum: ['ASSIGNED', 'REASSIGNED', 'DOCKET_ACTIVATED', 'LIFECYCLE_CHANGED', 'CLIENT_UPLOAD'],
+    enum: ['DOCKET_ASSIGNED', 'STATUS_CHANGED', 'COMMENT_ADDED', 'DOCKET_REASSIGNED', 'CLIENT_UPLOAD'],
     index: true,
   },
-  docketId: {
+  title: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  message: {
     type: String,
     required: true,
     trim: true,
     index: true,
   },
-  actor: {
-    xID: {
-      type: String,
-      required: true,
-      trim: true,
-      uppercase: true,
-    },
-    role: {
-      type: String,
-      required: true,
-      trim: true,
-      uppercase: true,
-    },
+  docketId: {
+    type: String,
+    required: false,
+    trim: true,
+    index: true,
   },
-  timestamp: {
+  isRead: {
+    type: Boolean,
+    default: false,
+    index: true,
+  },
+  createdAt: {
     type: Date,
     default: Date.now,
     index: true,
   },
-  read: {
+  groupCount: {
+    type: Number,
+    default: 1,
+    min: 1,
+  },
+  emailEnabled: {
     type: Boolean,
     default: false,
-    index: true,
   },
 }, {
   timestamps: false,
 });
 
-notificationSchema.index({ firmId: 1, userId: 1, timestamp: -1 });
+notificationSchema.virtual('read').get(function read() {
+  return this.isRead;
+});
+
+notificationSchema.virtual('timestamp').get(function timestamp() {
+  return this.createdAt;
+});
+
+notificationSchema.index({ firmId: 1, userId: 1, createdAt: -1 });
+notificationSchema.index({ firmId: 1, userId: 1, type: 1, docketId: 1, isRead: 1 });
 
 module.exports = mongoose.model('Notification', notificationSchema);
