@@ -89,6 +89,7 @@ export const WorkbasketPage = () => {
   const [confirmModal, setConfirmModal] = useState(null);
   const [categories, setCategories] = useState([]);
   const [activeTab, setActiveTab] = useState('own');
+  const [activeWorkbasketId, setActiveWorkbasketId] = useState('');
   const isAdmin = ['ADMIN', 'Admin'].includes(user?.role);
   const allSelected = cases.length > 0 && selectedCases.length === cases.length;
   const partiallySelected = selectedCases.length > 0 && !allSelected;
@@ -105,10 +106,41 @@ export const WorkbasketPage = () => {
   }), []);
 
   const { query, setQuery } = useQueryState(queryDefaults);
+  const accessibleWorkbaskets = useMemo(() => {
+    const explicitWorkbaskets = Array.isArray(user?.workbaskets) ? user.workbaskets : [];
+    if (explicitWorkbaskets.length > 0) {
+      return explicitWorkbaskets
+        .map((item) => ({
+          id: String(item?.id || item?._id || '').trim(),
+          name: String(item?.name || '').trim(),
+        }))
+        .filter((item) => item.id && item.name);
+    }
+
+    const teamIds = Array.isArray(user?.teamIds) ? user.teamIds : [];
+    const teamNames = Array.isArray(user?.teamNames) ? user.teamNames : [];
+    return teamIds
+      .map((id, index) => ({
+        id: String(id || '').trim(),
+        name: String(teamNames[index] || '').trim() || `Workbasket ${index + 1}`,
+      }))
+      .filter((item) => item.id);
+  }, [user?.workbaskets, user?.teamIds, user?.teamNames]);
+
+  useEffect(() => {
+    if (accessibleWorkbaskets.length === 0) {
+      setActiveWorkbasketId('');
+      return;
+    }
+    setActiveWorkbasketId((previous) => {
+      if (previous && accessibleWorkbaskets.some((item) => item.id === previous)) return previous;
+      return accessibleWorkbaskets[0].id;
+    });
+  }, [accessibleWorkbaskets]);
 
   useEffect(() => {
     loadGlobalWorklist();
-  }, [filters, activeTab]);
+  }, [filters, activeTab, activeWorkbasketId]);
 
   useEffect(() => {
     const nextFilters = {
@@ -169,7 +201,11 @@ export const WorkbasketPage = () => {
   const loadGlobalWorklist = async () => {
     setLoading(true);
     try {
-      const response = await worklistApi.getGlobalWorklist({ ...filters, tab: activeTab });
+      const response = await worklistApi.getGlobalWorklist({
+        ...filters,
+        tab: activeTab,
+        ...(activeWorkbasketId ? { workbasketId: activeWorkbasketId } : {}),
+      });
       
       if (response.success) {
         setCases(response.data || []);
@@ -548,7 +584,16 @@ export const WorkbasketPage = () => {
             </Button>
           )}
         />
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+          {accessibleWorkbaskets.length > 1 && accessibleWorkbaskets.map((workbasket) => (
+            <Button
+              key={workbasket.id}
+              variant={activeWorkbasketId === workbasket.id ? 'primary' : 'secondary'}
+              onClick={() => setActiveWorkbasketId(workbasket.id)}
+            >
+              {workbasket.name}
+            </Button>
+          ))}
           <Button variant={activeTab === 'own' ? 'primary' : 'secondary'} onClick={() => setActiveTab('own')}>
             My Team WB
           </Button>

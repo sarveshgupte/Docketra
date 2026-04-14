@@ -154,10 +154,7 @@ export const Layout = ({ children }) => {
   const currentFirmSlug = firmSlug || user?.firmSlug;
   const normalizedRole = String(user?.role || '').trim().toUpperCase();
   const hasAdminAccess = user?.role === USER_ROLES.ADMIN || normalizedRole === 'PRIMARY_ADMIN';
-  const taggedWorkbasketName = Array.isArray(user?.teamNames) && user.teamNames.length > 0
-    ? String(user.teamNames[0] || '').trim()
-    : '';
-  const workbasketNavLabel = taggedWorkbasketName || 'Workbasket';
+  const workbasketNavLabel = 'Workbasket';
   const firmLabel = user?.firm?.name || currentFirmSlug || 'Firm';
   const firmType = typeof user?.firm?.type === 'string' ? user.firm.type.trim() : '';
   const configuredFirmLogoUrl = getFirmConfig()?.brandLogoUrl || '';
