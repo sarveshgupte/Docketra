@@ -5,7 +5,6 @@ const { encrypt, decrypt } = require('./storage/services/TokenEncryption.service
 
 const PROVIDER_TYPES = {
   USER_GOOGLE_DRIVE: 'USER_GOOGLE_DRIVE',
-  DOCKETRA_DRIVE: 'DOCKETRA_DRIVE',
 };
 
 class GoogleDriveService {
@@ -37,8 +36,9 @@ class GoogleDriveService {
 
     await Firm.findByIdAndUpdate(firmId, {
       $set: {
-        'storage.mode': 'docketra_managed',
+        'storage.mode': 'firm_connected',
         'storage.provider': 'google_drive',
+        'storage.google.rootFolderId': null,
         'storage.google.encryptedRefreshToken': null,
       },
     });
@@ -92,25 +92,6 @@ class GoogleDriveService {
     return new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_OAUTH_REDIRECT_URI);
   }
 
-  getServiceAccountAuth() {
-    const raw = process.env.DOCKETRA_GOOGLE_SERVICE_ACCOUNT;
-    if (!raw) {
-      throw new Error('DOCKETRA_GOOGLE_SERVICE_ACCOUNT is not configured');
-    }
-
-    let credentials = null;
-    try {
-      credentials = JSON.parse(raw);
-    } catch {
-      throw new Error('DOCKETRA_GOOGLE_SERVICE_ACCOUNT must be valid JSON');
-    }
-
-    return new google.auth.GoogleAuth({
-      credentials,
-      scopes: ['https://www.googleapis.com/auth/drive'],
-    });
-  }
-
   decodeStorageCredentials(firm) {
     if (!firm?.storageConfig?.credentials) return {};
     try {
@@ -120,47 +101,6 @@ class GoogleDriveService {
     }
   }
 
-  async ensureDocketraRootFolder(firm) {
-    const driveRootFolderId = process.env.DRIVE_ROOT_FOLDER_ID;
-    if (!driveRootFolderId) {
-      throw new Error('DRIVE_ROOT_FOLDER_ID is not configured');
-    }
-
-    const auth = this.getServiceAccountAuth();
-    const drive = google.drive({ version: 'v3', auth });
-
-    const existingFolderId = firm?.storage?.google?.rootFolderId
-      || this.decodeStorageCredentials(firm)?.rootFolderId
-      || null;
-
-    if (existingFolderId) {
-      return { drive, rootFolderId: existingFolderId };
-    }
-
-    const firmId = firm?._id?.toString?.() || firm?.firmId;
-    const folder = await drive.files.create({
-      requestBody: {
-        name: `Firm-${firmId}`,
-        mimeType: 'application/vnd.google-apps.folder',
-        parents: [driveRootFolderId],
-      },
-      supportsAllDrives: true,
-      fields: 'id',
-    });
-
-    const rootFolderId = folder.data.id;
-
-    await Firm.findByIdAndUpdate(firmId, {
-      $set: {
-        'storage.mode': 'docketra_managed',
-        'storage.provider': 'google_drive',
-        'storage.google.rootFolderId': rootFolderId,
-      },
-    });
-
-    return { drive, rootFolderId };
-  }
-
   async getClient(firmId) {
     const firm = await Firm.findById(firmId).select('storage storageConfig firmId').lean();
     if (!firm) {
@@ -168,31 +108,35 @@ class GoogleDriveService {
     }
 
     const credentials = this.decodeStorageCredentials(firm);
-    const hasRefreshToken = Boolean(credentials.refreshToken || credentials.googleRefreshToken);
-
-    if (hasRefreshToken) {
-      const oauthClient = this.getOAuthClient();
-      oauthClient.setCredentials({
-        refresh_token: credentials.refreshToken || credentials.googleRefreshToken,
-        access_token: credentials.accessToken || undefined,
-        expiry_date: credentials.expiryDate || undefined,
-      });
-
-      const drive = google.drive({ version: 'v3', auth: oauthClient });
-      return {
-        drive,
-        firm,
-        providerType: PROVIDER_TYPES.USER_GOOGLE_DRIVE,
-        rootFolderId: credentials.rootFolderId || firm?.storage?.google?.rootFolderId,
-      };
+    const refreshToken = credentials.refreshToken || credentials.googleRefreshToken;
+    if (!refreshToken) {
+      const error = new Error('Cloud storage must be connected');
+      error.code = 'STORAGE_NOT_CONNECTED';
+      error.status = 400;
+      throw error;
     }
 
-    const managed = await this.ensureDocketraRootFolder(firm);
+    const oauthClient = this.getOAuthClient();
+    oauthClient.setCredentials({
+      refresh_token: refreshToken,
+      access_token: credentials.accessToken || undefined,
+      expiry_date: credentials.expiryDate || undefined,
+    });
+
+    const rootFolderId = credentials.rootFolderId || firm?.storage?.google?.rootFolderId || null;
+    if (!rootFolderId) {
+      const error = new Error('Cloud storage must be connected');
+      error.code = 'STORAGE_NOT_CONNECTED';
+      error.status = 400;
+      throw error;
+    }
+
+    const drive = google.drive({ version: 'v3', auth: oauthClient });
     return {
-      drive: managed.drive,
+      drive,
       firm,
-      providerType: PROVIDER_TYPES.DOCKETRA_DRIVE,
-      rootFolderId: managed.rootFolderId,
+      providerType: PROVIDER_TYPES.USER_GOOGLE_DRIVE,
+      rootFolderId,
     };
   }
 

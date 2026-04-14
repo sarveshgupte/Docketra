@@ -4,7 +4,6 @@ const { decrypt } = require('./services/TokenEncryption.service');
 const GoogleDriveProvider = require('./providers/GoogleDriveProvider');
 const OneDriveProvider = require('./providers/OneDriveProvider');
 const { S3Provider } = require('./providers/S3Provider');
-const { googleDriveService } = require('../googleDrive.service');
 const {
   StorageConfigMissingError,
   StorageAccessError,
@@ -51,7 +50,7 @@ async function getProviderForTenant(firmId) {
     config = await getFirmStorageConfig(firmId);
   } catch (error) {
     if (!(error instanceof StorageConfigMissingError)) throw error;
-    config = { provider: 'docketra_drive', credentials: {}, source: 'managed_default' };
+    throw new StorageAccessError('Cloud storage must be connected', firmId, error);
   }
   const provider = String(config.provider || '').toLowerCase();
   if (!provider) {
@@ -79,13 +78,8 @@ async function getProviderForTenant(firmId) {
       return new GoogleDriveProvider({ oauthClient, driveId: config.credentials.driveId || null });
     }
     case 'docketra_drive':
-    case 'docketra_managed': {
-      const managed = await googleDriveService.getClient(firmId);
-      return new GoogleDriveProvider({
-        driveClient: managed.drive,
-        driveId: null,
-      });
-    }
+    case 'docketra_managed':
+      throw new StorageAccessError('Cloud storage must be connected', firmId);
     case 'onedrive':
       return new OneDriveProvider({
         refreshToken: config.credentials.refreshToken,
