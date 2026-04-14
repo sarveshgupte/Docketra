@@ -71,7 +71,8 @@ const applyRouteValidation = (router, routeSchemas = {}) => {
         throw new Error(
           `[Validation] Missing schema for route: ${key}. ` +
           'Every route must have an explicit validation schema. ' +
-          'Add an entry to the corresponding schema file in src/schemas/.',
+          'Add an entry to the corresponding src/schemas/<route-file>.routes.schema.js file. ' +
+          'See docs/VALIDATION.md for guidance.',
         );
       }
       return original(path, validateRequest(routeSchema), ...handlers);

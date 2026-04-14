@@ -1,18 +1,16 @@
-const { z, nonEmptyString, objectIdString, xidString, clientIdString } = require('./common');
+const { z, nonEmptyString, objectIdString, xidString, clientIdString, paginationQuery } = require('./common');
 
 module.exports = {
   'GET /stats': {
     query: z.object({}).passthrough(),
   },
   'GET /': {
-    query: z.object({
+    query: paginationQuery.and(z.object({
       status: z.string().trim().optional(),
       assignedTo: xidString.optional(),
       clientId: clientIdString.optional(),
       priority: z.enum(['Low', 'Medium', 'High', 'Urgent']).optional(),
-      page: z.coerce.number().int().min(1).optional(),
-      limit: z.coerce.number().int().min(1).max(100).optional(),
-    }).passthrough(),
+    })),
   },
   'GET /:id': {
     params: z.object({ id: objectIdString }),

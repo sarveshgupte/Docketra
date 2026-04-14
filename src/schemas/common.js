@@ -35,4 +35,9 @@ module.exports = {
     /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
     'slug must be lowercase alphanumeric with hyphens only',
   ),
+  // Reusable pagination query schema for list endpoints
+  paginationQuery: z.object({
+    page: z.coerce.number().int().min(1).optional(),
+    limit: z.coerce.number().int().min(1).max(100).optional(),
+  }).passthrough(),
 };

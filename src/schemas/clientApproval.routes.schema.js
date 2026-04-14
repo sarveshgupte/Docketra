@@ -1,11 +1,8 @@
-const { z, nonEmptyString, caseIdString, clientIdString } = require('./common');
+const { z, caseIdString, clientIdString, paginationQuery } = require('./common');
 
 module.exports = {
   'GET /clients': {
-    query: z.object({
-      page: z.coerce.number().int().min(1).optional(),
-      limit: z.coerce.number().int().min(1).max(100).optional(),
-    }).passthrough(),
+    query: paginationQuery,
   },
   'GET /clients/:clientId': {
     params: z.object({ clientId: clientIdString }),
