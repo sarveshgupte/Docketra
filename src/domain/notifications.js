@@ -2,6 +2,8 @@ const {
   NotificationTypes: ServiceNotificationTypes,
   createNotification: createNotificationEntry,
 } = require('../services/notification.service');
+const { enqueueNotificationJob } = require('../queues/notification.queue');
+const log = require('../utils/log');
 
 const NotificationTypes = Object.freeze({
   ASSIGNED: ServiceNotificationTypes.DOCKET_ASSIGNED,
@@ -47,11 +49,37 @@ function buildMessage({ type, docketId, actor }) {
   };
 }
 
-async function createNotification(payload = {}) {
+function dispatchNotification(notificationPayload) {
+  Promise.resolve(enqueueNotificationJob(notificationPayload))
+    .then((result) => {
+      if (result?.queued) {
+        return result;
+      }
+
+      return createNotificationEntry(notificationPayload);
+    })
+    .catch((error) => {
+      log.warn('NOTIFICATION_JOB_DISPATCH_FAILED', {
+        error: error.message,
+        userId: notificationPayload.userId,
+        type: notificationPayload.type,
+      });
+      return createNotificationEntry(notificationPayload);
+    })
+    .catch((error) => {
+      log.error('NOTIFICATION_JOB_FAILED', {
+        error: error.message,
+        userId: notificationPayload.userId,
+        type: notificationPayload.type,
+      });
+    });
+}
+
+function createNotification(payload = {}) {
   const mappedType = NotificationTypes[payload.type] || payload.type;
   const content = buildMessage({ type: mappedType, docketId: payload.docketId, actor: payload.actor });
 
-  return createNotificationEntry({
+  const notificationPayload = {
     firmId: payload.firmId,
     userId: payload.userId,
     type: mappedType,
@@ -61,7 +89,10 @@ async function createNotification(payload = {}) {
     createdAt: payload.timestamp || payload.createdAt || new Date(),
     group: payload.group,
     emailEnabled: payload.emailEnabled,
-  });
+  };
+
+  dispatchNotification(notificationPayload);
+  return notificationPayload;
 }
 
 module.exports = { NotificationTypes, createNotification };
