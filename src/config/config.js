@@ -17,6 +17,7 @@ const config = {
   appName: process.env.APP_NAME || 'Docketra',
   mongodbUri: env.MONGODB_URI,
   strictByos: Boolean(env.STRICT_BYOS),
+  aiAnalysisEnabled: Boolean(env.ENABLE_AI_ANALYSIS),
   
   // Pagination defaults
   pagination: {
