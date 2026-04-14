@@ -34,7 +34,7 @@ export const ProfilePage = () => {
       <div className="min-h-screen w-full flex-1 bg-gray-50">
         <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 space-y-8">
           <div className="space-y-2">
-            <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">My Profile</h1>
+            <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Profile</h1>
             <p className="text-sm text-gray-500">View your account information.</p>
           </div>
 
