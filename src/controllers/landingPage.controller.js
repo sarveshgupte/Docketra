@@ -2,21 +2,15 @@ const mongoose = require('mongoose');
 const LandingPage = require('../models/LandingPage.model');
 const Form = require('../models/Form.model');
 
-const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
 const createLandingPage = async (req, res) => {
   try {
     const firmId = req.user.firmId;
     const title = String(req.body?.title || '').trim();
     const slug = String(req.body?.slug || '').trim().toLowerCase();
     const description = req.body?.description ? String(req.body.description).trim() : null;
-    const formId = req.body?.formId;
+    const formId = new mongoose.Types.ObjectId(String(req.body?.formId || ''));
     const headerText = req.body?.headerText ? String(req.body.headerText).trim() : null;
     const subText = req.body?.subText ? String(req.body.subText).trim() : null;
-
-    if (!SLUG_PATTERN.test(slug)) {
-      return res.status(400).json({ success: false, message: 'slug must be lowercase alphanumeric with hyphens only' });
-    }
 
     const form = await Form.findOne({ _id: formId, firmId }).lean();
     if (!form) return res.status(400).json({ success: false, message: 'Form not found or does not belong to this firm' });
@@ -67,10 +61,6 @@ const getLandingPage = async (req, res) => {
 const getPublicLandingPage = async (req, res) => {
   try {
     const slug = String(req.params.slug || '').trim().toLowerCase();
-
-    if (!SLUG_PATTERN.test(slug)) {
-      return res.status(404).json({ success: false, message: 'Page not found' });
-    }
 
     const page = await LandingPage.findOne({ slug, isActive: true }).lean();
     if (!page) return res.status(404).json({ success: false, message: 'Page not found' });
