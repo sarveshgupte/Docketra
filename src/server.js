@@ -102,6 +102,7 @@ const crmClientRoutes = require('./routes/crmClient.routes');
 const dealRoutes = require('./routes/deal.routes');
 const invoiceRoutes = require('./routes/invoice.routes');
 const reportsRoutes = require('./routes/reports.routes');  // Reports routes
+const insightsRoutes = require('./routes/insights.routes');
 const categoryRoutes = require('./routes/category.routes');  // Category routes
 const workTypeRoutes = require('./routes/workType.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
@@ -337,6 +338,7 @@ app.get('/api', (req, res) => {
       clientApproval: '/api/client-approval',
       clients: '/api/clients',
       reports: '/api/reports',
+      insights: '/api/insights',
       categories: '/api/categories',
       admin: '/api/admin',
       dashboard: '/api/dashboard',
@@ -426,6 +428,7 @@ app.use('/api/landing-pages', ...tenantScopedApiAccess, writeGuardChain, landing
 app.use('/api/deals', ...tenantScopedApiAccess, writeGuardChain, dealRoutes);
 app.use('/api/invoices', ...tenantScopedApiAccess, writeGuardChain, invoiceRoutes);
 app.use('/api/reports', ...tenantScopedApiAccess, writeGuardChain, reportsRoutes);  // Reports routes
+app.use('/api/insights', ...tenantScopedApiAccess, writeGuardChain, insightsRoutes);
 app.use('/api/firm/:firmId', ...tenantScopedApiAccess, writeGuardChain, firmMetricsRoutes);
 app.use('/api/storage', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), storageRoutes);  // BYOS storage routes (read-only, no writeGuardChain needed)
 app.use('/api/ai', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), aiRoutes);
