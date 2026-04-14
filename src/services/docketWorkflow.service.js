@@ -15,6 +15,7 @@ const {
 const { EVENT_NAMES, emitDocketEvent } = require('./docketEvents.service');
 const { NotificationTypes, createNotification } = require('../domain/notifications');
 const { CASE_LOCK_CONFIG } = require('../config/constants');
+const { logActivitySafe } = require('./docketActivity.service');
 
 const QC_DECISIONS = Object.freeze({ APPROVED: 'APPROVED', FAILED: 'FAILED', CORRECTED: 'CORRECTED' });
 
@@ -203,6 +204,16 @@ async function pullFromWorkbench({ docketId, firmId, userId, userObjectId = null
     docketId,
     actor: { xID: userId, role: 'USER' },
   });
+
+  logActivitySafe({
+    docketId: updated.caseInternalId,
+    firmId,
+    type: 'ASSIGNED',
+    description: `Assigned to ${assigneeXID}`,
+    metadata: { assigneeXID },
+    performedByXID: userId,
+  });
+
   return updated;
 }
 
@@ -312,6 +323,15 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
         action: 'STATE_TRANSITION',
         metadata: { duplicateOf: duplicateOf || null, reopenAt: docket.reopenAt || null },
         session,
+      });
+
+      logActivitySafe({
+        docketId: docket.caseInternalId,
+        firmId,
+        type: 'STATUS_CHANGED',
+        description: `Status changed from ${fromState} to ${finalTarget}`,
+        metadata: { from: fromState, to: finalTarget },
+        performedByXID: actor?.xID,
       });
 
       result = docket;
@@ -477,6 +497,15 @@ async function reassign({ docketId, firmId, actor, toUserXID, comment }) {
     type: NotificationTypes.REASSIGNED,
     docketId,
     actor,
+  });
+
+  logActivitySafe({
+    docketId: docket.caseInternalId,
+    firmId,
+    type: 'ASSIGNED',
+    description: `Reassigned from ${fromAssignee || 'unassigned'} to ${docket.assignedToXID || 'unassigned'}`,
+    metadata: { fromAssignee, toAssignee: docket.assignedToXID || null },
+    performedByXID: actor?.xID,
   });
   return docket;
 }

@@ -262,6 +262,8 @@ export const caseApi = {
 
   getCaseHistory: (caseId) => request((http) => http.get(`/cases/${caseId}/history`), 'Failed to load case history'),
 
+  getDocketTimeline: (caseId, params = {}) => request((http) => http.get(`/dockets/${caseId}/timeline`, { params }), 'Failed to load docket timeline'),
+
   getMyPendingCases: () => request((http) => http.get('/cases/my-pending'), 'Failed to load pending cases.'),
   getAdminFiledCases: () => request((http) => http.get('/admin/cases/filed'), 'Failed to load filed cases.'),
 };
