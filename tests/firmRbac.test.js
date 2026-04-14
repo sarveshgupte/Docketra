@@ -207,6 +207,8 @@ async function shouldNotAllowAdminToEscalateToSuperadmin() {
   assert.strictEqual(res.statusCode, null, 'Admin should be evaluated by firm membership, not JWT role');
   assert.strictEqual(nextCalled, true, 'Guard should allow Admin based on firm role');
   assert.strictEqual(findOneCalls, 0, 'Guard should not query membership when request role is already trusted');
+  assert.strictEqual(req.jwt.role, 'SuperAdmin', 'Test should preserve the elevated JWT claim to verify it is ignored');
+  assert.notStrictEqual(req.firmRole, req.jwt.role, 'Guard should ignore the SuperAdmin JWT claim for firm authorization');
   assert.strictEqual(req.firmRole, 'Admin', 'Resolved firm role should remain Admin');
   console.log('✓ Admin cannot escalate to SuperAdmin via JWT claims');
 

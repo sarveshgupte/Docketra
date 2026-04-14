@@ -71,6 +71,11 @@ const resolveFirmRole = async (userId, firmId) => {
     return null;
   }
 
+  if (isSuperAdminRole(membership.role)) {
+    // Defensive: firm membership must never authorize SuperAdmin (platform-scoped)
+    return null;
+  }
+
   return buildRoleContext(membership.role);
 };
 
