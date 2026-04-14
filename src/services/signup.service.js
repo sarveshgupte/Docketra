@@ -21,6 +21,7 @@ const {
   clearOtpAttempts,
 } = require('./signupRateLimit.service');
 const { coercePrimaryAdminCreationFields } = require('../utils/hierarchy.utils');
+const { ensureDefaultWorkbasketForFirm } = require('./defaultWorkbasket.service');
 
 const SALT_ROUNDS = 10;
 const OTP_EXPIRY_MINUTES = 5;
@@ -649,6 +650,8 @@ const createFirmAndAdmin = async ({
       },
     },
   }], { session });
+
+  await ensureDefaultWorkbasketForFirm(firm._id, { session });
 
   firm.bootstrapStatus = 'COMPLETED';
   await firm.save({ session });

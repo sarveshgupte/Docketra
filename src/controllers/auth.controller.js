@@ -2265,7 +2265,9 @@ const updateProfile = async (req, res) => {
  */
 const createUser = async (req, res) => {
   try {
-    const { name, role, allowedCategories, email, teamIds, department } = req.body;
+    const {
+      name, role, allowedCategories, email, teamIds, department, assignQcWorkbaskets,
+    } = req.body;
     
     // Prevent creation of SUPER_ADMIN users
     const normalizedRequestedRole = normalizeRole(role || ROLE_EMPLOYEE);
@@ -2474,6 +2476,18 @@ const createUser = async (req, res) => {
     }
 
     const resolvedTeamIds = teams.map((team) => team._id);
+    if (Boolean(assignQcWorkbaskets) && inviterRole === 'MANAGER') {
+      const qcTeams = await Team.find({
+        firmId: admin.firmId,
+        isActive: true,
+        type: 'QC',
+        parentWorkbasketId: { $in: resolvedTeamIds },
+      }).select('_id').lean();
+      for (const qcTeam of qcTeams) {
+        resolvedTeamIds.push(qcTeam._id);
+      }
+    }
+    const finalTeamIds = [...new Set(resolvedTeamIds.map((entry) => String(entry)))].map((entry) => new mongoose.Types.ObjectId(entry));
     const firmPrimaryAdmin = await resolveFirmPrimaryAdmin({ firmId: admin.firmId, session });
     if (!firmPrimaryAdmin) {
       return res.status(409).json({
@@ -2534,8 +2548,8 @@ const createUser = async (req, res) => {
       adminId,
       managerId,
       allowedCategories: allowedCategories || [],
-      teamId: resolvedTeamIds[0] || null,
-      teamIds: resolvedTeamIds,
+      teamId: finalTeamIds[0] || null,
+      teamIds: finalTeamIds,
       isActive: false,
       passwordHash: null, // No password until user sets it
       passwordSet: false, // Password not set yet
