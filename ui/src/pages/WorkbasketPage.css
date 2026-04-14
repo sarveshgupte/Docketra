@@ -189,7 +189,7 @@
 }
 
 /* Bulk actions bar — only rendered when rows are selected */
-.workbasket-bulk-bar {
+.global-worklist__bulk-bar {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
