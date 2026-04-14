@@ -1,89 +1,56 @@
-const userRepository = require('../repositories/user.repository');
-const clientRepository = require('../repositories/client.repository');
-const caseRepository = require('../repositories/case.repository');
-const categoryRepository = require('../repositories/category.repository');
 const { assertFirmContext } = require('../utils/tenantGuard');
-const { getRedisClient } = require('../config/redis');
-const { getTenantMetrics, upsertTenantMetrics } = require('../services/tenantMetrics.service');
+const dashboardService = require('../services/dashboard.service');
 
-const DASHBOARD_CACHE_TTL_SECONDS = 30;
-const EMPTY_DASHBOARD_SUMMARY = {
-  users: 0,
-  clients: 0,
-  cases: 0,
-  categories: 0,
+const parsePagination = (value, fallback) => {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+  return parsed;
 };
 
 const getDashboardSummary = async (req, res) => {
   try {
     assertFirmContext(req);
+
     const firmId = req.user.firmId;
-    const cacheKey = `dashboard:${firmId}`;
-    let redisClient = null;
+    const userId = req.user.xID || req.user.xid || req.user.userId;
+    const filter = String(req.query.filter || 'MY').toUpperCase();
+    const page = parsePagination(req.query.page, 1);
+    const limit = parsePagination(req.query.limit, 10);
 
-    try {
-      redisClient = getRedisClient();
-      if (redisClient) {
-        const cached = await redisClient.get(cacheKey);
-        if (cached) {
-          return res.json(JSON.parse(cached));
-        }
-      }
-    } catch (_error) {
-      // Non-fatal: Redis failures should not affect request flow
-    }
+    const [myDockets, overdueDockets, recentDockets, workbasketLoad] = await Promise.all([
+      dashboardService.getMyDockets(userId, firmId, { filter, page, limit }),
+      dashboardService.getOverdueDockets(firmId, { page, limit }),
+      dashboardService.getRecentDockets(firmId, { page, limit }),
+      dashboardService.getWorkbasketLoad(firmId),
+    ]);
 
-    const cachedMetrics = await getTenantMetrics(firmId).catch(() => null);
-    let users = cachedMetrics?.users;
-    let clients = cachedMetrics?.clients;
-    let cases = cachedMetrics?.cases;
-    let categories = cachedMetrics?.categories;
-
-    if (users === undefined || clients === undefined || cases === undefined || categories === undefined) {
-      [users, clients, cases, categories] = await Promise.all([
-        userRepository.countUsers(firmId, { isActive: true }),
-        clientRepository.countClients(firmId),
-        caseRepository.countCases(firmId),
-        categoryRepository.countCategories(firmId),
-      ]);
-      await upsertTenantMetrics(firmId, { users, clients, cases, categories }).catch(() => null);
-    }
-
-    const data = {
-      ...EMPTY_DASHBOARD_SUMMARY,
-      users: users || 0,
-      clients: clients || 0,
-      cases: cases || 0,
-      categories: categories || 0,
-    };
-
-    const response = {
+    return res.json({
       success: true,
-      data,
-      count: Object.values(data).reduce((sum, value) => sum + value, 0),
-    };
-
-    if (redisClient) {
-      await redisClient
-        .set(cacheKey, JSON.stringify(response), 'EX', DASHBOARD_CACHE_TTL_SECONDS)
-        .catch(() => null);
-    }
-
-    return res.json(response);
+      data: {
+        myDockets,
+        overdueDockets,
+        recentDockets,
+        workbasketLoad,
+      },
+    });
   } catch (error) {
     if (error.statusCode === 403) {
       return res.status(403).json({
         success: false,
         message: error.message || 'Error fetching dashboard summary',
         data: {},
-        count: 0,
       });
     }
 
-    return res.json({
-      success: true,
-      data: EMPTY_DASHBOARD_SUMMARY,
-      count: 0,
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to load dashboard summary',
+      data: {
+        myDockets: { items: [], page: 1, limit: 10, total: 0, hasNextPage: false, filter: 'MY' },
+        overdueDockets: { items: [], page: 1, limit: 10, total: 0, hasNextPage: false },
+        recentDockets: { items: [], page: 1, limit: 10, total: 0, hasNextPage: false },
+        workbasketLoad: [],
+      },
     });
   }
 };

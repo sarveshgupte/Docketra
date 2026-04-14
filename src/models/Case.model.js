@@ -1134,6 +1134,8 @@ caseSchema.index({ firmId: 1, status: 1 }); // Firm-scoped status queries
 caseSchema.index({ firmId: 1, assignedToXID: 1 }); // Firm-scoped assignment queries
 caseSchema.index({ firmId: 1, assignedToXID: 1, status: 1 }); // Firm-scoped assignment + status workbasket queries
 caseSchema.index({ firmId: 1, ownerTeamId: 1, routedToTeamId: 1, status: 1 });
+caseSchema.index({ firmId: 1, status: 1, createdAt: -1 });
+caseSchema.index({ firmId: 1, status: 1, dueDate: 1, slaDueAt: 1 });
 caseSchema.index({ firmId: 1, routedToTeamId: 1, status: 1 });
 caseSchema.index({ firmId: 1, dueDate: 1, status: 1 }); // Firm-scoped overdue metrics queries
 caseSchema.index({ firmId: 1, status: 1, dueDate: 1 }); // Firm-scoped status-filtered due-date ordering queries

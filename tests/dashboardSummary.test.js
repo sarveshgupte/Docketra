@@ -1,10 +1,6 @@
 const assert = require('assert');
 
-const userRepository = require('../src/repositories/user.repository');
-const clientRepository = require('../src/repositories/client.repository');
-const caseRepository = require('../src/repositories/case.repository');
-const categoryRepository = require('../src/repositories/category.repository');
-const tenantMetricsService = require('../src/services/tenantMetrics.service');
+const dashboardService = require('../src/services/dashboard.service');
 
 const createMockRes = () => ({
   statusCode: 200,
@@ -21,57 +17,47 @@ const createMockRes = () => ({
 
 const run = async () => {
   const original = {
-    countUsers: userRepository.countUsers,
-    countClients: clientRepository.countClients,
-    countCases: caseRepository.countCases,
-    countCategories: categoryRepository.countCategories,
-    getTenantMetrics: tenantMetricsService.getTenantMetrics,
-    upsertTenantMetrics: tenantMetricsService.upsertTenantMetrics,
+    getMyDockets: dashboardService.getMyDockets,
+    getOverdueDockets: dashboardService.getOverdueDockets,
+    getRecentDockets: dashboardService.getRecentDockets,
+    getWorkbasketLoad: dashboardService.getWorkbasketLoad,
   };
 
   try {
-    userRepository.countUsers = async () => 1;
-    clientRepository.countClients = async () => 0;
-    caseRepository.countCases = async () => 0;
-    categoryRepository.countCategories = async () => 0;
-    tenantMetricsService.getTenantMetrics = async () => null;
-    tenantMetricsService.upsertTenantMetrics = async () => null;
+    dashboardService.getMyDockets = async () => ({ items: [], page: 1, limit: 10, total: 0, hasNextPage: false, filter: 'MY' });
+    dashboardService.getOverdueDockets = async () => ({ items: [], page: 1, limit: 10, total: 0, hasNextPage: false });
+    dashboardService.getRecentDockets = async () => ({ items: [], page: 1, limit: 10, total: 0, hasNextPage: false });
+    dashboardService.getWorkbasketLoad = async () => ([]);
+
     delete require.cache[require.resolve('../src/controllers/dashboard.controller')];
     const dashboardController = require('../src/controllers/dashboard.controller');
 
-    const req = { user: { firmId: 'firm-1', role: 'Admin' } };
+    const req = { user: { firmId: '67e95f7642adf77d7f4e1834', xID: 'X0001', role: 'Admin' }, query: {} };
     const res = createMockRes();
     await dashboardController.getDashboardSummary(req, res);
 
     assert.strictEqual(res.statusCode, 200);
     assert.strictEqual(res.payload.success, true);
-    assert.deepStrictEqual(Object.keys(res.payload.data), ['users', 'clients', 'cases', 'categories']);
-    assert.strictEqual(typeof res.payload.data.users, 'number');
-    assert.strictEqual(typeof res.payload.data.clients, 'number');
-    assert.strictEqual(typeof res.payload.data.cases, 'number');
-    assert.strictEqual(typeof res.payload.data.categories, 'number');
-    assert.strictEqual(
-      res.payload.count,
-      res.payload.data.users + res.payload.data.clients + res.payload.data.cases + res.payload.data.categories
-    );
-    console.log('✓ dashboard summary returns a safe aggregate response shape');
+    assert.deepStrictEqual(Object.keys(res.payload.data), ['myDockets', 'overdueDockets', 'recentDockets', 'workbasketLoad']);
+    assert.ok(Array.isArray(res.payload.data.myDockets.items));
+    assert.ok(Array.isArray(res.payload.data.overdueDockets.items));
+    assert.ok(Array.isArray(res.payload.data.recentDockets.items));
+    assert.ok(Array.isArray(res.payload.data.workbasketLoad));
+    console.log('✓ dashboard summary returns the action-oriented response shape');
 
-    const missingFirmReq = { user: { role: 'Admin' } };
+    const missingFirmReq = { user: { role: 'Admin' }, query: {} };
     const missingFirmRes = createMockRes();
     await dashboardController.getDashboardSummary(missingFirmReq, missingFirmRes);
 
     assert.strictEqual(missingFirmRes.statusCode, 403);
     assert.strictEqual(missingFirmRes.payload.success, false);
-    assert.strictEqual(missingFirmRes.payload.count, 0);
     assert.deepStrictEqual(missingFirmRes.payload.data, {});
     console.log('✓ dashboard summary enforces tenant guard');
   } finally {
-    userRepository.countUsers = original.countUsers;
-    clientRepository.countClients = original.countClients;
-    caseRepository.countCases = original.countCases;
-    categoryRepository.countCategories = original.countCategories;
-    tenantMetricsService.getTenantMetrics = original.getTenantMetrics;
-    tenantMetricsService.upsertTenantMetrics = original.upsertTenantMetrics;
+    dashboardService.getMyDockets = original.getMyDockets;
+    dashboardService.getOverdueDockets = original.getOverdueDockets;
+    dashboardService.getRecentDockets = original.getRecentDockets;
+    dashboardService.getWorkbasketLoad = original.getWorkbasketLoad;
   }
 };
 

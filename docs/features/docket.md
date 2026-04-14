@@ -87,3 +87,83 @@ All default workbaskets are created as active under the firm and are auto-manage
 - Existing `POST /api/cases` continues to work for backward compatibility.
 - Database collection names and historical identifiers may still use `Case` naming where migration risk is high.
 - Screenshots should be captured during manual QA in environments where browser tooling is available.
+
+## Dashboard Overview
+
+The firm dashboard is now action-oriented and loaded from `GET /api/dashboard/summary`.
+
+### Widgets
+
+- **My Dockets**: current-user or filtered (`MY`, `TEAM`, `ALL`) open/in-progress dockets (paginated).
+- **Overdue Dockets**: SLA-breached dockets highlighted with red SLA indicators.
+- **Recently Created**: latest firm-wide dockets (paginated).
+- **Workbasket Load**: lightweight list of open docket count per workbasket.
+
+### UX enhancements
+
+- Filter tabs: **My / Team / All**.
+- Quick action: **Create Docket** button on dashboard header.
+- SLA badges per docket: `GREEN`, `YELLOW`, `RED`.
+- List pagination with page-aware API params (`page`, `limit`).
+- Loading and empty states with safe fallback rendering.
+
+## Firm Setup Observability
+
+Firm setup now exposes explicit completion state and setup metadata.
+
+### Persistence
+
+`Firm` model now tracks:
+
+- `isSetupComplete` (indexed boolean)
+- `setupMetadata.categories`
+- `setupMetadata.workbaskets`
+- `setupMetadata.templateKey`
+- `setupMetadata.completedAt`
+
+### Setup lifecycle behavior
+
+`setupDefaultFirm` now emits structured logs and state transitions:
+
+- `setup started`
+- `setup skipped`
+- `setup completed`
+- `setup failed`
+
+Each log includes `firmId`, relevant counts, and reason/context.
+
+On successful setup, the system sets `isSetupComplete=true` and persists setup metadata. On failure, the setup-complete flag is not set.
+
+### Audit trail
+
+A setup completion audit entry is recorded with description:
+
+`Firm initialized with default setup`
+
+Metadata includes:
+
+- `categoriesCreated`
+- `workbasketsCreated`
+- `templateKey`
+
+### Setup status endpoint
+
+`GET /api/firm/setup-status`
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "data": {
+    "isSetupComplete": true,
+    "lastSetup": {
+      "categories": 3,
+      "workbaskets": 3,
+      "templateKey": "SYSTEM_DEFAULT"
+    }
+  }
+}
+```
+
+UI can use this endpoint to surface a non-blocking banner when setup is incomplete: **"Your workspace is being prepared..."**.
