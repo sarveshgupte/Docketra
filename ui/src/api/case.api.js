@@ -77,8 +77,15 @@ export const caseApi = {
     return pendingPromise;
   },
 
-  createCase: (caseData, forceCreate = false) =>
-    request((http) => http.post('/cases', { ...caseData, forceCreate }), 'Failed to create case'),
+  createDocket: async (docketData, forceCreate = false) => {
+    try {
+      return await request((http) => http.post('/dockets/create', { ...docketData, forceCreate }), 'Failed to create docket');
+    } catch (error) {
+      return request((http) => http.post('/cases', { ...docketData, forceCreate }), 'Failed to create docket');
+    }
+  },
+
+  createCase: (caseData, forceCreate = false) => caseApi.createDocket(caseData, forceCreate),
 
   addComment: (caseId, commentText) => withCaseInvalidation(
     caseId,

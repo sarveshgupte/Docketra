@@ -35,6 +35,7 @@ const CaseFile = require('../models/CaseFile.model');
 const { incrementTenantMetric } = require('../services/tenantMetrics.service');
 const { getSession } = require('../utils/getSession');
 const { getOrCreateDefaultClient } = require('../services/defaultClient.guard');
+const { normalizeCreateInput, validateStructuredInput, resolveAssigneeFromWorkbasketRules } = require('../services/docket.service');
 const fs = require('fs').promises;
 const fsSync = require('fs');
 
@@ -289,6 +290,7 @@ const createCase = async (req, res) => {
       workTypeId,
       subWorkTypeId,
     } = req.body;
+    const guidedInput = normalizeCreateInput(req.body);
     
     // Get creator xID from authenticated user (req.user is set by auth middleware)
     const createdByXID = req.user.xID;
@@ -311,23 +313,36 @@ const createCase = async (req, res) => {
       });
     }
     
-    // Verify category exists and is active
-    const categoryDoc = await categoryRepository.findActiveCategory(categoryId, firmId);
-    
-    if (!categoryDoc) {
-      return res.status(404).json({
-        success: false,
-        message: 'Category not found or inactive',
-        ...responseMeta,
-      });
+    const resolvedWorkbasketId = guidedInput.workbasketId || req.user?.teamId || null;
+    const resolvedTitle = guidedInput.title || (typeof title === 'string' ? title.trim() : '');
+    const resolvedCategoryId = guidedInput.categoryId || categoryId;
+    const resolvedSubcategoryId = guidedInput.subcategoryId || subcategoryId;
+
+    validateStructuredInput({
+      title: resolvedTitle || 'Untitled Docket',
+      workbasketId: resolvedWorkbasketId,
+      categoryId: resolvedCategoryId,
+      subcategoryId: resolvedSubcategoryId,
+    });
+
+    let categoryDoc = null;
+    if (resolvedCategoryId) {
+      categoryDoc = await categoryRepository.findActiveCategory(resolvedCategoryId, firmId);
+      if (!categoryDoc) {
+        return res.status(404).json({
+          success: false,
+          message: 'Category not found or inactive',
+          ...responseMeta,
+        });
+      }
     }
     
     // Resolve selected subcategory from category document and validate if provided
-    const subcategoryDoc = categoryDoc.subcategories?.find(
-      (sub) => String(sub.id) === String(subcategoryId)
+    const subcategoryDoc = categoryDoc?.subcategories?.find(
+      (sub) => String(sub.id) === String(resolvedSubcategoryId)
     );
 
-    if (subcategoryId && (!subcategoryDoc || !subcategoryDoc.isActive)) {
+    if (resolvedSubcategoryId && (!subcategoryDoc || !subcategoryDoc.isActive)) {
       return res.status(400).json({
         success: false,
         message: 'Invalid subcategory selected.',
@@ -336,7 +351,7 @@ const createCase = async (req, res) => {
     }
 
     let routedWorkbasketId = subcategoryDoc?.workbasketId ? String(subcategoryDoc.workbasketId) : null;
-    if (subcategoryId && !routedWorkbasketId) {
+    if (resolvedSubcategoryId && !routedWorkbasketId) {
       return res.status(400).json({
         success: false,
         message: 'Selected subcategory is missing a workbasket mapping',
@@ -345,7 +360,7 @@ const createCase = async (req, res) => {
     }
 
     if (!routedWorkbasketId) {
-      routedWorkbasketId = req.user?.teamId ? String(req.user.teamId) : null;
+      routedWorkbasketId = resolvedWorkbasketId ? String(resolvedWorkbasketId) : null;
     }
     if (!routedWorkbasketId) {
       const fallbackWorkbasket = await Team.findOne({
@@ -396,7 +411,7 @@ const createCase = async (req, res) => {
     }
     
     // Determine the actual category name to use (for backward compatibility)
-    const actualCategory = caseCategory || category || categoryDoc.name;
+    const actualCategory = caseCategory || category || categoryDoc?.name || 'General';
     const isAdminUser = ['ADMIN', 'Admin'].includes(req.user?.role);
 
     // Optional: resolve firm-scoped work type and sub-work type.
@@ -541,27 +556,23 @@ const createCase = async (req, res) => {
         slaState.slaDueAt = requestedSlaDueDate;
       }
 
-      const normalizedTitle = typeof title === 'string' && title.trim().length > 0
-        ? title.trim()
-        : 'Untitled Docket';
+      const normalizedTitle = resolvedTitle || 'Untitled Docket';
       const normalizedDescription = typeof description === 'string' ? description.trim() : '';
-      if (!normalizedDescription) {
-        return res.status(400).json({
-          success: false,
-          message: 'Description is required',
-          ...responseMeta,
-        });
-      }
 
-      const normalizedPriority = typeof priority === 'string' && priority.trim().length > 0
+      const normalizedPriority = guidedInput.priority || (typeof priority === 'string' && priority.trim().length > 0
         ? priority.trim().toLowerCase()
-        : 'medium';
+        : 'medium');
+      const resolvedAssignee = await resolveAssigneeFromWorkbasketRules({
+        firmId,
+        workbasketId: routedWorkbasketId,
+        assignedTo: guidedInput.assignedTo || assignedTo,
+      });
 
       const newCase = new Case({
         title: normalizedTitle,
         description: normalizedDescription,
-        categoryId,
-        subcategoryId,
+        categoryId: resolvedCategoryId,
+        subcategoryId: resolvedSubcategoryId,
         category: actualCategory, // Legacy field
         caseCategory: actualCategory,
         caseSubCategory: subcategoryDoc?.name || caseSubCategory || '',
@@ -572,11 +583,11 @@ const createCase = async (req, res) => {
         createdBy: req.user.email || req.user.xID, // Legacy field - use email or xID as fallback
         priority: normalizedPriority,
         status: 'OPEN',
-        lifecycle: assignedTo ? DocketLifecycle.IN_WORKLIST : DocketLifecycle.CREATED,
-        assignedToXID: assignedTo ? assignedTo.toUpperCase() : null, // PR: xID Canonicalization - Store in assignedToXID
+        lifecycle: resolvedAssignee ? DocketLifecycle.IN_WORKLIST : DocketLifecycle.CREATED,
+        assignedToXID: resolvedAssignee || null, // PR: xID Canonicalization - Store in assignedToXID
         assignedTo: null,
         assignedBy: null,
-        queueType: assignedTo ? 'PERSONAL' : 'GLOBAL',
+        queueType: resolvedAssignee ? 'PERSONAL' : 'GLOBAL',
         ownerTeamId: routedWorkbasketId || null,
         routedToTeamId: routedWorkbasketId || null,
         routedByUserId: null,
@@ -651,8 +662,8 @@ const createCase = async (req, res) => {
 
       return res.status(201).json({
         success: true,
-        data: newCase,
-        message: 'Case created successfully',
+        data: { ...newCase.toObject(), docketId: newCase.caseId },
+        message: 'Docket created successfully',
         duplicateWarning: systemComment ? {
           message: 'Case created with duplicate warning',
           matchCount: duplicateMatches.length,
@@ -702,7 +713,7 @@ const createCase = async (req, res) => {
     const statusCode = error?.statusCode || 400;
     res.status(statusCode).json({
       success: false,
-      message: 'Error creating case',
+      message: 'Error creating docket',
       error: error.message,
       ...responseMeta,
     });
