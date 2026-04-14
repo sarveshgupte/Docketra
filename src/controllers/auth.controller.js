@@ -2265,7 +2265,7 @@ const updateProfile = async (req, res) => {
  */
 const createUser = async (req, res) => {
   try {
-    const { name, role, allowedCategories, email, teamIds } = req.body;
+    const { name, role, allowedCategories, email, teamIds, department } = req.body;
     
     // Prevent creation of SUPER_ADMIN users
     const normalizedRequestedRole = normalizeRole(role || ROLE_EMPLOYEE);
@@ -2529,6 +2529,7 @@ const createUser = async (req, res) => {
       firmId: admin.firmId, // Inherit firmId from admin
       ...(inheritedDefaultClientId ? { defaultClientId: inheritedDefaultClientId } : {}),
       role: persistedRole,
+      department: String(department || '').trim() || undefined,
       primaryAdminId,
       adminId,
       managerId,

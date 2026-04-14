@@ -185,7 +185,9 @@ module.exports = {
       name: nonEmptyString,
       email: z.string().trim().email(),
       role: z.string().optional(),
+      department: z.string().trim().optional(),
       allowedCategories: z.array(nonEmptyString).optional(),
+      teamIds: z.array(nonEmptyString).optional(),
     }).strip(),
   },
   'PUT /admin/users/:xID/activate': {
