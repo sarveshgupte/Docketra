@@ -101,6 +101,20 @@ const getUserStatusBadge = (user) => {
 };
 
 const getNormalizedUserStatus = (user) => String(user?.status || '').toLowerCase();
+const isPrimaryAdminUser = (user) => {
+  const normalizedRole = String(user?.role || '').trim().toUpperCase();
+  const isFirmDefaultAdmin = ['ADMIN', 'PRIMARY_ADMIN'].includes(normalizedRole)
+    && user?.defaultClientId
+    && user?.firmId
+    && String(user.defaultClientId) === String(user.firmId);
+
+  return Boolean(
+    user?.isPrimaryAdmin
+    || user?.isSystem
+    || normalizedRole === 'PRIMARY_ADMIN'
+    || isFirmDefaultAdmin
+  );
+};
 
 const getRoleBadgePresentation = (user) => {
   const normalizedRole = String(user?.role || '').trim().toUpperCase();
@@ -445,6 +459,10 @@ export const AdminPage = () => {
   const handleToggleUserStatus = async (user) => {
     if (!isPrimaryAdminActor) {
       showToast('Only PRIMARY_ADMIN can modify hierarchy', 'error');
+      return;
+    }
+    if (isPrimaryAdminUser(user)) {
+      showToast('Primary admin cannot be deactivated', 'error');
       return;
     }
     const normalizedStatus = getNormalizedUserStatus(user);
@@ -1297,6 +1315,7 @@ export const AdminPage = () => {
                           <Button
                             size="sm"
                             variant={getNormalizedUserStatus(u) === 'active' ? 'danger' : 'default'}
+                            disabled={isPrimaryAdminUser(u)}
                             onClick={() => handleDeleteClick(u.xID)}
                           >
                             {getNormalizedUserStatus(u) === 'invited' ? 'Cancel Invite' : (getNormalizedUserStatus(u) === 'active' ? 'Deactivate' : 'Activate')}
