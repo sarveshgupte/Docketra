@@ -9,7 +9,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
-import { Loading } from '../components/common/Loading';
+import { TableSkeleton } from '../components/common/Skeleton';
 import { PageHeader } from '../components/layout/PageHeader';
 import { StatusBadge } from '../components/layout/StatusBadge';
 import { DataTable } from '../components/common/DataTable';
@@ -567,7 +567,9 @@ export const WorkbasketPage = () => {
   if (!initialLoadComplete && loading && cases.length === 0) {
     return (
       <Layout>
-        <Loading message="Loading workbasket..." />
+        <div className="global-worklist">
+          <TableSkeleton rows={10} />
+        </div>
       </Layout>
     );
   }
@@ -584,7 +586,7 @@ export const WorkbasketPage = () => {
             </Button>
           )}
         />
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+        <div className="workbasket-tabs">
           {accessibleWorkbaskets.length > 1 && accessibleWorkbaskets.map((workbasket) => (
             <Button
               key={workbasket.id}
@@ -668,31 +670,32 @@ export const WorkbasketPage = () => {
             {resultSummary}
           </div>
 
-          {/* Bulk Actions Toolbar */}
-          <div className="global-worklist__bulk-actions">
-            <Button
-              variant="outline"
-              onClick={handleBulkPull}
-              disabled={selectedCases.length === 0 || bulkPulling}
-            >
-              {bulkPulling ? 'Assigning...' : `Assign Dockets (${selectedCases.length})`}
-            </Button>
-            <span className="text-secondary">
-              {selectedCases.length} of {cases.length} selected
-            </span>
-            {isAdmin && (
-              <>
-                <label htmlFor={filterIds.assignTo}>Assign to:</label>
-                <select id={filterIds.assignTo} value={assignTo} onChange={(e) => setAssignTo(e.target.value)} className={formClasses.inputBase}>
-                  <option value="">My Worklist</option>
-                  {assignableUsers.map((member) => (
-                    <option key={member._id} value={member._id}>{member.name || member.xID}</option>
-                  ))}
-                </select>
-              </>
-            )}
-
-          </div>
+          {/* Bulk Actions Toolbar — only shown when rows are selected */}
+          {selectedCases.length > 0 && (
+            <div className="global-worklist__bulk-bar">
+              <Button
+                variant="outline"
+                onClick={handleBulkPull}
+                disabled={bulkPulling}
+              >
+                {bulkPulling ? 'Assigning...' : `Assign ${selectedCases.length} docket${selectedCases.length === 1 ? '' : 's'}`}
+              </Button>
+              <span className="text-secondary">
+                {selectedCases.length} of {cases.length} selected
+              </span>
+              {isAdmin && (
+                <>
+                  <label htmlFor={filterIds.assignTo}>Assign to:</label>
+                  <select id={filterIds.assignTo} value={assignTo} onChange={(e) => setAssignTo(e.target.value)} className={formClasses.inputBase}>
+                    <option value="">My Worklist</option>
+                    {assignableUsers.map((member) => (
+                      <option key={member._id} value={member._id}>{member.name || member.xID}</option>
+                    ))}
+                  </select>
+                </>
+              )}
+            </div>
+          )}
 
           <DataTable
             columns={columns}
