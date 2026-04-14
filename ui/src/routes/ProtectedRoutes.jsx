@@ -6,6 +6,7 @@ import { RouteErrorBoundary } from '../components/routing/RouteErrorBoundary';
 import {
   AdminPage,
   AuditLogsPage,
+  AiSettingsPage,
   CaseDetailPage,
   CasesPage,
   ClientWorkspacePage,
@@ -251,6 +252,14 @@ export const ProtectedRoutes = () => (
           element={(
             <ProtectedRoute requireAdmin>
               <StorageSettingsPage />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="ai-settings"
+          element={(
+            <ProtectedRoute requireAdmin>
+              <AiSettingsPage />
             </ProtectedRoute>
           )}
         />
