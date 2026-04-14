@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { encrypt: encryptProtectedValue, isEncrypted } = require('../utils/encryption');
 
 /**
  * Firm Model for Multi-Tenancy
@@ -207,6 +208,29 @@ const firmSchema = new mongoose.Schema({
   },
 
   /**
+   * Firm-level BYOAI configuration.
+   * API keys are always encrypted at rest.
+   */
+  aiConfig: {
+    provider: {
+      type: String,
+      enum: ['openai', 'gemini', 'claude'],
+      default: 'openai',
+      lowercase: true,
+      trim: true,
+    },
+    apiKey: {
+      type: String,
+      default: null,
+    },
+    model: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+  },
+
+  /**
    * Firm-level admin settings (persisted server-side).
    * These values are used to drive UI defaults and workflow behavior.
    */
@@ -325,6 +349,10 @@ firmSchema.pre('save', async function() {
     );
     error.name = 'ValidationError';
     throw error;
+  }
+
+  if (this.aiConfig?.apiKey && !isEncrypted(this.aiConfig.apiKey)) {
+    this.aiConfig.apiKey = encryptProtectedValue(this.aiConfig.apiKey);
   }
 });
 
