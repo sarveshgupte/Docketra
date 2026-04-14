@@ -4,6 +4,9 @@ module.exports = {
   'GET /me': {
     query: z.object({}).strip(),
   },
+  'GET /core-work': {
+    query: z.object({}).strip(),
+  },
   'POST /complete-profile': {
     body: z.object({
       name: nonEmptyString.optional(),

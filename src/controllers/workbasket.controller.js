@@ -2,6 +2,22 @@ const Team = require('../models/Team.model');
 const User = require('../models/User.model');
 const { mapUserResponse } = require('../mappers/user.mapper');
 
+const buildWorkbasketWarnings = async (firmId, workbasketIds = []) => {
+  if (!firmId || workbasketIds.length === 0) return {};
+  const counts = await Promise.all(workbasketIds.map((id) => User.countDocuments({
+    firmId,
+    status: { $ne: 'deleted' },
+    isActive: true,
+    teamIds: id,
+  })));
+  return Object.fromEntries(
+    workbasketIds.map((id, index) => [
+      String(id),
+      Number(counts[index] || 0) === 0 ? ['No users assigned to this workbasket'] : [],
+    ]),
+  );
+};
+
 const listWorkbaskets = async (req, res) => {
   try {
     const includeInactive = String(req.query?.includeInactive || '').toLowerCase() === 'true';
@@ -9,7 +25,14 @@ const listWorkbaskets = async (req, res) => {
     if (!includeInactive) query.isActive = true;
 
     const teams = await Team.find(query).sort({ name: 1 }).lean();
-    return res.json({ success: true, data: teams });
+    const warnings = await buildWorkbasketWarnings(req.user?.firmId, teams.map((entry) => entry._id));
+    return res.json({
+      success: true,
+      data: teams.map((team) => ({
+        ...team,
+        warnings: warnings[String(team._id)] || [],
+      })),
+    });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Failed to load workbaskets' });
   }
@@ -23,10 +46,58 @@ const createWorkbasket = async (req, res) => {
     const existing = await Team.findOne({ firmId: req.user?.firmId, name: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') });
     if (existing) return res.status(409).json({ success: false, message: 'Workbasket already exists' });
 
-    const created = await Team.create({ firmId: req.user?.firmId, name, isActive: true });
-    return res.status(201).json({ success: true, data: created, message: 'Workbasket created' });
+    const created = await Team.create({
+      firmId: req.user?.firmId,
+      name,
+      isActive: true,
+      type: 'PRIMARY',
+      parentWorkbasketId: null,
+    });
+    const qcWorkbasket = await Team.create({
+      firmId: req.user?.firmId,
+      name: `${name} - QC`,
+      isActive: true,
+      type: 'QC',
+      parentWorkbasketId: created._id,
+    });
+
+    return res.status(201).json({
+      success: true,
+      data: created,
+      qcWorkbasket,
+      warnings: ['No users assigned to this workbasket'],
+      message: 'Workbasket created',
+    });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Failed to create workbasket' });
+  }
+};
+
+const getCoreWork = async (req, res) => {
+  try {
+    const teamIds = Array.isArray(req.user?.teamIds) && req.user.teamIds.length > 0
+      ? req.user.teamIds
+      : (req.user?.teamId ? [req.user.teamId] : []);
+
+    const workbaskets = await Team.find({
+      _id: { $in: teamIds },
+      firmId: req.user?.firmId,
+      isActive: true,
+    })
+      .select('_id name type')
+      .sort({ name: 1 })
+      .lean();
+
+    return res.json({
+      success: true,
+      workbaskets: workbaskets.map((workbasket) => ({
+        id: String(workbasket._id),
+        name: workbasket.name,
+        type: workbasket.type || 'PRIMARY',
+      })),
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Failed to load core work' });
   }
 };
 
@@ -145,6 +216,7 @@ const updateUserWorkbaskets = async (req, res) => {
 module.exports = {
   listWorkbaskets,
   createWorkbasket,
+  getCoreWork,
   renameWorkbasket,
   toggleWorkbasketStatus,
   updateUserWorkbaskets,

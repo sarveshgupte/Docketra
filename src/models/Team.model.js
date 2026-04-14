@@ -25,8 +25,32 @@ const teamSchema = new mongoose.Schema({
     default: true,
     index: true,
   },
+
+  type: {
+    type: String,
+    enum: ['PRIMARY', 'QC'],
+    default: 'PRIMARY',
+    index: true,
+  },
+
+  parentWorkbasketId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Team',
+    default: null,
+    index: true,
+  },
 }, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
 
 teamSchema.index({ firmId: 1, name: 1 }, { unique: true });
+teamSchema.index(
+  { firmId: 1, parentWorkbasketId: 1, type: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      type: 'QC',
+      parentWorkbasketId: { $type: 'objectId' },
+    },
+  },
+);
 
 module.exports = mongoose.model('Team', teamSchema);

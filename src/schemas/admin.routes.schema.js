@@ -52,11 +52,11 @@ module.exports = {
   },
   'POST /categories/:id/subcategories': {
     params: z.object({ id: objectIdOrString }),
-    body: z.object({ name: nonEmptyString }).passthrough(),
+    body: z.object({ name: nonEmptyString, workbasketId: objectIdString }).passthrough(),
   },
   'PUT /categories/:id/subcategories/:subcategoryId': {
     params: z.object({ id: objectIdOrString, subcategoryId: nonEmptyString }),
-    body: z.object({ name: nonEmptyString.optional() }).passthrough(),
+    body: z.object({ name: nonEmptyString.optional(), workbasketId: objectIdString.optional() }).passthrough(),
   },
   'PATCH /categories/:id/subcategories/:subcategoryId/status': {
     params: z.object({ id: objectIdOrString, subcategoryId: nonEmptyString }),

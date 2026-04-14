@@ -3,7 +3,7 @@ const { applyRouteValidation } = require('../middleware/requestValidation.middle
 const routeSchemas = require('../schemas/admin.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
-const { requirePrimaryAdmin } = require('../middleware/rbac.middleware');
+const { requirePrimaryAdmin, requireManagerOrPrimaryAdmin } = require('../middleware/rbac.middleware');
 const { createSecureUpload, enforceUploadSecurity } = require('../middleware/uploadProtection.middleware');
 const { superadminLimiter, userReadLimiter, userWriteLimiter, sensitiveLimiter } = require('../middleware/rateLimiters');
 const { adminBaseAccess } = require('./routeGroups');
@@ -109,15 +109,15 @@ router.put('/users/:xID/deactivate', ...adminBaseAccess, requirePrimaryAdmin, au
 router.post('/users/:xID/resend-invite', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, resendInviteEmail);
 
 router.patch('/users/:xID/restrict-clients', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateRestrictedClients);
-router.patch('/users/:xID/workbaskets', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateUserWorkbaskets);
+router.patch('/users/:xID/workbaskets', ...adminBaseAccess, requireManagerOrPrimaryAdmin, authorizeFirmPermission('WORKBASKET_MANAGE'), userWriteLimiter, updateUserWorkbaskets);
 router.patch('/users/:id/hierarchy', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateUserHierarchy);
 router.get('/firm-settings', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userReadLimiter, getFirmSettings);
 router.get('/firm-settings/activity', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userReadLimiter, getFirmSettingsActivity);
 router.put('/firm-settings', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userWriteLimiter, updateFirmSettings);
 router.get('/workbaskets', ...adminBaseAccess, authorizeFirmPermission('CASE_VIEW'), userReadLimiter, listWorkbaskets);
-router.post('/workbaskets', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, createWorkbasket);
-router.put('/workbaskets/:workbasketId', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, renameWorkbasket);
-router.patch('/workbaskets/:workbasketId/status', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, toggleWorkbasketStatus);
+router.post('/workbaskets', ...adminBaseAccess, requireManagerOrPrimaryAdmin, authorizeFirmPermission('WORKBASKET_MANAGE'), userWriteLimiter, createWorkbasket);
+router.put('/workbaskets/:workbasketId', ...adminBaseAccess, requireManagerOrPrimaryAdmin, authorizeFirmPermission('WORKBASKET_MANAGE'), userWriteLimiter, renameWorkbasket);
+router.patch('/workbaskets/:workbasketId/status', ...adminBaseAccess, requireManagerOrPrimaryAdmin, authorizeFirmPermission('WORKBASKET_MANAGE'), userWriteLimiter, toggleWorkbasketStatus);
 
 router.post('/users/:id/restore', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, restoreUser);
 

@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Case = require('../models/Case.model');
 const Category = require('../models/Category.model');
+const Team = require('../models/Team.model');
 const DocketAuditLog = require('../models/DocketAuditLog.model');
 const { DocketStatus, toDocketState, toPersistenceState } = require('../domain/docket/docketStateMachine');
 const {
@@ -231,6 +232,21 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
           requireComment(comment, 'QC request');
         }
         docket.forceQc = Boolean(forceQC || sendToQC);
+      }
+
+      if (finalTarget === DocketStatus.QC_PENDING) {
+        const currentWorkbasketId = docket.routedToTeamId || docket.ownerTeamId || null;
+        if (currentWorkbasketId) {
+          const qcWorkbasket = await Team.findOne({
+            firmId,
+            type: 'QC',
+            parentWorkbasketId: currentWorkbasketId,
+            isActive: true,
+          }).session(session).select('_id').lean();
+          if (qcWorkbasket?._id) {
+            docket.routedToTeamId = qcWorkbasket._id;
+          }
+        }
       }
 
       const fromLifecycle = normalizeLifecycle(docket.lifecycle || DocketLifecycle.WL);
