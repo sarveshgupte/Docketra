@@ -6,6 +6,9 @@ const workerModules = [
   { name: 'TENANT_CASE_METRICS_WORKER', path: '../workers/tenantCaseMetrics.worker' },
   { name: 'EMAIL_WORKER', path: '../workers/email.worker' },
   { name: 'AUDIT_WORKER', path: '../workers/audit.worker' },
+  { name: 'NOTIFICATION_WORKER', path: '../workers/notification.worker' },
+  { name: 'SLA_WORKER', path: '../workers/sla.worker' },
+  { name: 'BULK_UPLOAD_WORKER', path: '../workers/bulkUpload.worker' },
   { name: 'OUTBOX_WORKER', path: '../workers/outbox.worker' },
   { name: 'DOCUMENT_ANALYSIS_WORKER', path: '../workers/documentAnalysis.worker' },
 ];

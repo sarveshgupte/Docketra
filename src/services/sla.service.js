@@ -2,6 +2,8 @@ const Case = require('../models/Case.model');
 const SlaRule = require('../models/SlaRule.model');
 const { DEFAULT_SLA_CONFIG, calculateDueDate } = require('./caseSla.service');
 const { createNotification, NotificationTypes } = require('./notification.service');
+const { enqueueSlaBreachCheckJob } = require('../queues/sla.queue');
+const log = require('../utils/log');
 
 const MS_PER_HOUR = 60 * 60 * 1000;
 const DEFAULT_WORKDAY_HOURS = 8;
@@ -149,6 +151,44 @@ async function syncSlaBreachNotifications(dockets = [], options = {}) {
   }
 }
 
+function dispatchSlaBreachNotifications(dockets = [], options = {}) {
+  const payload = {
+    dockets: Array.isArray(dockets) ? dockets : [],
+    firmId: normalizeIdentifier(options.firmId),
+    now: options.now || new Date(),
+  };
+
+  Promise.resolve(enqueueSlaBreachCheckJob(payload))
+    .then((result) => {
+      if (result?.queued) {
+        return result;
+      }
+
+      return syncSlaBreachNotifications(payload.dockets, {
+        firmId: payload.firmId,
+        now: payload.now,
+      });
+    })
+    .catch((error) => {
+      log.warn('SLA_BREACH_JOB_DISPATCH_FAILED', {
+        error: error.message,
+        firmId: payload.firmId,
+        docketCount: payload.dockets.length,
+      });
+      return syncSlaBreachNotifications(payload.dockets, {
+        firmId: payload.firmId,
+        now: payload.now,
+      });
+    })
+    .catch((error) => {
+      log.error('SLA_BREACH_JOB_FAILED', {
+        error: error.message,
+        firmId: payload.firmId,
+        docketCount: payload.dockets.length,
+      });
+    });
+}
+
 function getWeekWindow(now = new Date()) {
   const end = new Date(now);
   end.setUTCHours(23, 59, 59, 999);
@@ -211,6 +251,7 @@ async function getWeeklySlaSummary(firmId, options = {}) {
 module.exports = {
   calculateFallbackDueDateFromDays,
   calculateSlaDueDate,
+  dispatchSlaBreachNotifications,
   getSlaStatus,
   getWeeklySlaSummary,
   resolveSlaRule,
