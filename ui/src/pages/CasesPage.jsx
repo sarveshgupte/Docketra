@@ -126,6 +126,27 @@ export const CasesPage = () => {
   // Saved views UI state
   const [savedViewsOpen, setSavedViewsOpen] = useState(false);
   const [saveViewName, setSaveViewName] = useState('');
+  const [activeWorkbasketId, setActiveWorkbasketId] = useState('');
+  const accessibleWorkbaskets = useMemo(() => {
+    const explicitWorkbaskets = Array.isArray(user?.workbaskets) ? user.workbaskets : [];
+    if (explicitWorkbaskets.length > 0) {
+      return explicitWorkbaskets
+        .map((item) => ({
+          id: String(item?.id || item?._id || '').trim(),
+          name: String(item?.name || '').trim(),
+        }))
+        .filter((item) => item.id && item.name);
+    }
+
+    const teamIds = Array.isArray(user?.teamIds) ? user.teamIds : [];
+    const teamNames = Array.isArray(user?.teamNames) ? user.teamNames : [];
+    return teamIds
+      .map((id, index) => ({
+        id: String(id || '').trim(),
+        name: String(teamNames[index] || '').trim() || `Workbasket ${index + 1}`,
+      }))
+      .filter((item) => item.id);
+  }, [user?.workbaskets, user?.teamIds, user?.teamNames]);
 
   // Cleanup debounce timer on unmount (Task 6)
   useEffect(() => {
@@ -197,6 +218,19 @@ export const CasesPage = () => {
     }
   }, [query.status, query.q, query.sort, query.order]);
 
+  useEffect(() => {
+    const requestedWorkbasketId = String(query.workbasketId || '').trim();
+    if (!requestedWorkbasketId) {
+      if (accessibleWorkbaskets.length > 0 && statusFilter === CASE_STATUS.QC_PENDING) {
+        setActiveWorkbasketId(accessibleWorkbaskets[0].id);
+      } else {
+        setActiveWorkbasketId('');
+      }
+      return;
+    }
+    setActiveWorkbasketId(requestedWorkbasketId);
+  }, [query.workbasketId, accessibleWorkbaskets, statusFilter]);
+
   // When the preset view changes, apply its default sort.
   useEffect(() => {
     if (query.sort && query.order) return;
@@ -212,8 +246,9 @@ export const CasesPage = () => {
       q: searchInput || null,
       sort: sortState?.key || null,
       order: sortState?.direction || null,
+      workbasketId: statusFilter === CASE_STATUS.QC_PENDING && activeWorkbasketId ? activeWorkbasketId : null,
     });
-  }, [statusFilter, searchInput, sortState, setQuery]);
+  }, [statusFilter, searchInput, sortState, activeWorkbasketId, setQuery]);
 
 
   const dismissOnboarding = () => {
@@ -370,9 +405,18 @@ export const CasesPage = () => {
 
   // Step 1: apply status filter (manual), then step 2: apply preset view predicate.
   const manuallyFilteredCases = useMemo(() => {
-    if (statusFilter === 'ALL') return cases;
-    return cases.filter((item) => item.status === statusFilter);
-  }, [statusFilter, cases]);
+    const byStatus = statusFilter === 'ALL'
+      ? cases
+      : cases.filter((item) => item.status === statusFilter);
+    if (statusFilter !== CASE_STATUS.QC_PENDING || !activeWorkbasketId) {
+      return byStatus;
+    }
+    return byStatus.filter((item) => {
+      const ownerTeamId = String(item?.ownerTeamId || '').trim();
+      const routedToTeamId = String(item?.routedToTeamId || '').trim();
+      return ownerTeamId === activeWorkbasketId || routedToTeamId === activeWorkbasketId;
+    });
+  }, [statusFilter, cases, activeWorkbasketId]);
 
   const viewFilteredCases = useMemo(
     () => applyView(manuallyFilteredCases, activeView),
@@ -505,19 +549,31 @@ export const CasesPage = () => {
     return { avgDays, pctBreach, pctWithinSla, resolvedCount: resolved.length };
   }, [cases]);
 
-  const activeFilters = useMemo(
-    () => (statusFilter === 'ALL' ? [] : [{ key: 'status', label: 'Status', value: statusFilter }]),
-    [statusFilter],
-  );
+  const activeFilters = useMemo(() => {
+    const items = statusFilter === 'ALL'
+      ? []
+      : [{ key: 'status', label: 'Status', value: statusFilter }];
+    if (statusFilter === CASE_STATUS.QC_PENDING && activeWorkbasketId) {
+      const selectedWorkbasket = accessibleWorkbaskets.find((item) => item.id === activeWorkbasketId);
+      if (selectedWorkbasket) {
+        items.push({ key: 'workbasketId', label: 'QC Workbasket', value: selectedWorkbasket.name });
+      }
+    }
+    return items;
+  }, [statusFilter, activeWorkbasketId, accessibleWorkbaskets]);
 
   const handleRemoveFilter = useCallback((key) => {
     if (key === 'status') {
       setStatusFilter('ALL');
     }
-  }, []);
+    if (key === 'workbasketId') {
+      setActiveWorkbasketId(accessibleWorkbaskets[0]?.id || '');
+    }
+  }, [accessibleWorkbaskets]);
 
   const handleResetFilters = useCallback(() => {
     setStatusFilter('ALL');
+    setActiveWorkbasketId('');
   }, []);
 
   const toolbarLeft = useMemo(
@@ -912,6 +968,25 @@ export const CasesPage = () => {
         )}
 
         <SectionCard className="cases-page__filters cases-page__control-section" title="Filters" subtitle="Narrow down the docket list by workflow status.">
+          {statusFilter === CASE_STATUS.QC_PENDING && accessibleWorkbaskets.length > 1 && (
+            <>
+              <label className="cases-page__filter-label">QC Workbasket</label>
+              <div className="cases-page__views" role="tablist" aria-label="QC workbasket selector">
+                {accessibleWorkbaskets.map((workbasket) => (
+                  <button
+                    key={workbasket.id}
+                    role="tab"
+                    aria-selected={activeWorkbasketId === workbasket.id}
+                    className={`cases-page__view-tab${activeWorkbasketId === workbasket.id ? ' cases-page__view-tab--active' : ''}`}
+                    onClick={() => setActiveWorkbasketId(workbasket.id)}
+                    type="button"
+                  >
+                    {workbasket.name}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
           <label className="cases-page__filter-label" htmlFor="status-filter">Status</label>
           <select
             id="status-filter"
@@ -922,6 +997,7 @@ export const CasesPage = () => {
             <option value="ALL">All statuses</option>
             <option value={CASE_STATUS.OPEN}>{UX_COPY.statusLabels.OPEN}</option>
             <option value={CASE_STATUS.PENDING}>{UX_COPY.statusLabels.PENDING}</option>
+            <option value={CASE_STATUS.QC_PENDING}>QC Pending</option>
             <option value={CASE_STATUS.RESOLVED}>{UX_COPY.statusLabels.RESOLVED}</option>
             <option value={CASE_STATUS.FILED}>{UX_COPY.statusLabels.FILED}</option>
           </select>
