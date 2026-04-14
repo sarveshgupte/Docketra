@@ -1,18 +1,13 @@
-const { z, nonEmptyString } = require('./common');
+const { z, nonEmptyString, paginationQuery } = require('./common');
 
 module.exports = {
   'GET /': {
-    query: z.object({
-      page: z.coerce.number().int().min(1).optional(),
-      limit: z.coerce.number().int().min(1).max(100).optional(),
+    query: paginationQuery.and(z.object({
       unread: z.enum(['true', 'false']).optional(),
-    }).passthrough(),
+    })),
   },
   'GET /all': {
-    query: z.object({
-      page: z.coerce.number().int().min(1).optional(),
-      limit: z.coerce.number().int().min(1).max(100).optional(),
-    }).passthrough(),
+    query: paginationQuery,
   },
   'PATCH /:id/read': {
     params: z.object({ id: nonEmptyString }),

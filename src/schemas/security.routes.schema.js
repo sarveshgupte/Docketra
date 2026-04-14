@@ -1,11 +1,8 @@
-const { z } = require('./common');
+const { z, paginationQuery } = require('./common');
 
 module.exports = {
   'GET /alerts': {
-    query: z.object({
-      page: z.coerce.number().int().min(1).optional(),
-      limit: z.coerce.number().int().min(1).max(100).optional(),
-    }).passthrough(),
+    query: paginationQuery,
   },
   'GET /summary': {
     query: z.object({}).passthrough(),

@@ -1,4 +1,4 @@
-const { z, nonEmptyString, objectIdString } = require('./common');
+const { z, nonEmptyString, objectIdString, paginationQuery } = require('./common');
 
 module.exports = {
   'POST /': {
@@ -10,10 +10,7 @@ module.exports = {
     }).passthrough(),
   },
   'GET /': {
-    query: z.object({
-      page: z.coerce.number().int().min(1).optional(),
-      limit: z.coerce.number().int().min(1).max(100).optional(),
-    }).passthrough(),
+    query: paginationQuery,
   },
   'PATCH /:id/pay': {
     params: z.object({ id: objectIdString }),

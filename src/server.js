@@ -173,7 +173,7 @@ ensureUploadRoot();
   const schemasDir = path.join(__dirname, 'schemas');
 
   const routeFiles = fs.readdirSync(routesDir)
-    .filter((f) => f.endsWith('.routes.js') && f !== 'routeGroups.js');
+    .filter((f) => f.endsWith('.routes.js') && f !== 'routeGroups.js'); // routeGroups.js exports middleware arrays, not an Express router
 
   const missingSchemas = routeFiles.filter((routeFile) => {
     const base = routeFile.replace('.routes.js', '');
