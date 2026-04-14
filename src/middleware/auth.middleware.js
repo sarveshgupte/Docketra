@@ -2,7 +2,7 @@ const User = require('../models/User.model');
 const Client = require('../models/Client.model');
 const jwtService = require('../services/jwt.service');
 const { getOrCreateDefaultClient } = require('../services/defaultClient.guard');
-const { isSuperAdminRole } = require('../utils/role.utils');
+const { isSuperAdminRole, normalizeRole } = require('../utils/role.utils');
 const { loadEnv } = require('../config/env');
 const metricsService = require('../services/metrics.service');
 const { getCookieValue } = require('../utils/requestCookies');
@@ -292,6 +292,23 @@ const authenticate = async (req, res, next) => {
       throw new Error('Authentication failed: role missing');
     }
 
+    const tokenRole = decoded.role || null;
+    const databaseRole = user.role || null;
+    const hasRoleMismatch = tokenRole
+      && databaseRole
+      && normalizeRole(tokenRole) !== normalizeRole(databaseRole);
+    const effectiveRole = hasRoleMismatch
+      ? databaseRole
+      : (tokenRole || databaseRole);
+
+    if (hasRoleMismatch) {
+      console.warn('[AUTH] JWT role claim out of date, falling back to database role', {
+        userId: decoded.userId,
+        tokenRole,
+        databaseRole,
+      });
+    }
+
     try {
       await ensureTenantDefaultClient(req, user);
     } catch (defaultClientError) {
@@ -311,7 +328,7 @@ const authenticate = async (req, res, next) => {
       id: user?._id ? user._id.toString() : decoded.userId,
       xID: user.xID,
       email: user.email,
-      role: user.role || decoded.role,
+      role: effectiveRole,
       firmId: user.firmId || decoded.firmId || null,
       defaultClientId: user.defaultClientId || decoded.defaultClientId || null,
     };
@@ -331,14 +348,14 @@ const authenticate = async (req, res, next) => {
       firmId: decoded.firmId || null, // May be null for SUPER_ADMIN
       firmSlug: decoded.firmSlug || null, // NEW: Make firmSlug available from token
       defaultClientId: decoded.defaultClientId || null, // NEW: Make defaultClientId available from token
-      role: decoded.role,
+      role: effectiveRole,
     };
     // Canonical identity attachment: use Mongo _id as the single source of truth
     req.userId = user?._id ? user._id.toString() : decoded.userId;
     req.identity = {
       userId: req.userId,
       firmId: req.jwt.firmId || (user?.firmId ? user.firmId.toString() : null),
-      role: req.jwt.role || user?.role || null,
+      role: effectiveRole,
     };
     req.context = {
       ...(req.context || {}),
