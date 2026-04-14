@@ -262,6 +262,11 @@ export const AdminPage = () => {
   const [selectedWorkbasketDraft, setSelectedWorkbasketDraft] = useState([]);
   const filteredUsers = useMemo(() => users, [users]);
   const filteredClientsList = useMemo(() => clients, [clients]);
+  const workbasketNameById = useMemo(() => (
+    new Map(
+      (workbaskets || []).map((workbasket) => [String(workbasket?._id), String(workbasket?.name || '')]),
+    )
+  ), [workbaskets]);
 
   useEffect(() => {
     loadAdminStats();
@@ -406,7 +411,10 @@ export const AdminPage = () => {
           : [];
         setUsers(ensureLoggedInAdminVisible(normalizedUsers));
       } else if (activeTab === 'categories') {
-        const response = await categoryService.getAdminCategories(false); // Get all categories including inactive
+        const [response] = await Promise.all([
+          categoryService.getAdminCategories(false), // Get all categories including inactive
+          fetchWorkbaskets(),
+        ]);
         const normalizedCategories = (response?.success ? (response.data || []) : [])
           .map(normalizeCategory)
           .filter(Boolean);
@@ -1528,6 +1536,14 @@ export const AdminPage = () => {
                         <DataTable
                           columns={[
                             { key: 'name', label: 'Subcategory', render: (sub) => <div className="font-medium text-gray-900">{sub.name}</div> },
+                            {
+                              key: 'workbasketId',
+                              label: 'Workbasket',
+                              render: (sub) => {
+                                const linkedWorkbasketName = workbasketNameById.get(String(sub?.workbasketId || ''));
+                                return linkedWorkbasketName || '—';
+                              },
+                            },
                             { key: 'status', label: 'Status', render: (sub) => <StatusBadge status={sub.isActive ? 'ACTIVE' : 'INACTIVE'} /> },
                             {
                               key: 'actions',
