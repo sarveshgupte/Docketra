@@ -188,6 +188,7 @@ export const AdminPage = () => {
     name: '',
     email: '',
     role: '',
+    department: '',
     teamIds: [],
   });
   
@@ -430,7 +431,7 @@ export const AdminPage = () => {
       if (response.success) {
         showToast(`User invited successfully! xID: ${response.data?.xID}.`, 'success');
         setShowCreateModal(false);
-        setNewUser({ name: '', email: '', role: '', teamIds: [] });
+        setNewUser({ name: '', email: '', role: '', department: '', teamIds: [] });
         await Promise.all([loadAdminStats(), loadAdminData()]);
       } else {
         showToast(response.message || 'Failed to create user', 'error');
@@ -1570,6 +1571,14 @@ export const AdminPage = () => {
               { value: 'Admin', label: 'Admin' },
             ]}
             required
+          />
+
+          <Input
+            label="Department"
+            type="text"
+            value={newUser.department}
+            onChange={(e) => setNewUser({ ...newUser, department: e.target.value })}
+            placeholder="e.g., Operations"
           />
           <div className="neo-form-group">
             <FormLabel>Workbaskets (at least one)</FormLabel>
