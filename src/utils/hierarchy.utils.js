@@ -47,8 +47,27 @@ const getTagValidationError = ({ role, primaryAdminId, adminId, managerId }) => 
   return null;
 };
 
+const assertPrimaryAdmin = (user) => {
+  if (normalizeRole(user?.role) !== 'PRIMARY_ADMIN') {
+    throw new Error('Only PRIMARY_ADMIN can perform this action');
+  }
+};
+
+const coercePrimaryAdminCreationFields = (payload = {}) => {
+  const normalizedRole = normalizeRole(payload.role);
+  const coercedRole = normalizedRole === 'ADMIN' ? 'PRIMARY_ADMIN' : normalizedRole;
+  return {
+    ...payload,
+    role: coercedRole || 'PRIMARY_ADMIN',
+    primaryAdminId: null,
+    isPrimaryAdmin: true,
+  };
+};
+
 module.exports = {
+  assertPrimaryAdmin,
   canInviteRole,
+  coercePrimaryAdminCreationFields,
   getTagValidationError,
   normalizeId,
 };
