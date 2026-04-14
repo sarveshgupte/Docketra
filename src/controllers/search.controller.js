@@ -358,6 +358,12 @@ const employeeWorklist = async (req, res) => {
     const normalizedLimit = Number.isFinite(requestedLimit)
       ? Math.min(Math.max(requestedLimit, 1), 100)
       : null;
+    const requestedStatuses = Array.isArray(req.query?.status)
+      ? req.query.status.flatMap((value) => String(value).split(','))
+      : (typeof req.query?.status === 'string' ? req.query.status.split(',') : []);
+    const normalizedRequestedStatuses = requestedStatuses
+      .map((value) => String(value || '').trim().toUpperCase())
+      .filter(Boolean);
 
     // Get authenticated user from req.user (set by auth middleware)
     const user = req.user;
@@ -406,17 +412,22 @@ const employeeWorklist = async (req, res) => {
     // CANONICAL QUERY: assignedToXID = xID AND status IN (ASSIGNED, IN_PROGRESS, OPEN)
     // This is the ONLY correct query for "My Worklist"
     // Dashboard counts MUST use the same query
-    const worklistStatuses = [CaseStatus.ASSIGNED, CaseStatus.IN_PROGRESS, CaseStatus.OPEN].filter(Boolean);
+    const worklistStatuses = [CaseStatus.ASSIGNED, CaseStatus.IN_PROGRESS, CaseStatus.OPEN, CaseStatus.QC_PENDING].filter(Boolean);
     // Legacy test/migration compatibility when only OPEN/PENDING constants are available.
     if (worklistStatuses.length <= 1 && CaseStatus.PENDING) {
       worklistStatuses.push(CaseStatus.PENDING);
     }
 
+    const defaultStatuses = worklistStatuses.map((statusValue) => String(statusValue || '').trim().toUpperCase());
+    const filteredStatuses = normalizedRequestedStatuses.length > 0
+      ? defaultStatuses.filter((statusValue) => normalizedRequestedStatuses.includes(statusValue))
+      : defaultStatuses;
+
     const query = {
       assignedToXID: targetAssigneeXID, // CANONICAL: Query by xID in assignedToXID field
       // Assignment flow writes ASSIGNED; legacy/older records may still be OPEN/IN_PROGRESS.
       // PENDING must be excluded because pending dockets are shown via /cases/my-pending.
-      status: { $in: worklistStatuses },
+      status: { $in: filteredStatuses },
     };
     
     const casesQuery = Case.find(enforceTenantScope(query, req, { source: 'search.employeeWorklist' }))
@@ -454,7 +465,7 @@ const employeeWorklist = async (req, res) => {
     // Log case list view for audit
     await logCaseListViewed({
       viewerXID: user.xID,
-      filters: { status: worklistStatuses, assigneeXID: targetAssigneeXID },
+      filters: { status: filteredStatuses, assigneeXID: targetAssigneeXID },
       listType: isViewingOwnWorklist ? 'MY_WORKLIST' : 'TEAM_WORKLIST',
       resultCount: cases.length,
       req,

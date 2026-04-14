@@ -2466,7 +2466,7 @@ const createUser = async (req, res) => {
       _id: { $in: normalizedTeamIds },
       firmId: admin.firmId,
       isActive: true,
-    }).select('_id').lean();
+    }).select('_id type parentWorkbasketId').lean();
 
     if (teams.length !== normalizedTeamIds.length) {
       return res.status(400).json({
@@ -2476,12 +2476,20 @@ const createUser = async (req, res) => {
     }
 
     const resolvedTeamIds = teams.map((team) => team._id);
-    if (Boolean(assignQcWorkbaskets) && inviterRole === 'MANAGER') {
+    const primaryTeamIds = teams
+      .filter((team) => String(team?.type || 'PRIMARY').toUpperCase() !== 'QC')
+      .map((team) => team._id);
+
+    // Always include linked QC workbaskets for selected primary workbaskets
+    // so users can access both primary and QC queues consistently.
+    // Kept backward-compatible with assignQcWorkbaskets payload by treating it
+    // as a no-op hint rather than a gate.
+    if (primaryTeamIds.length > 0 || Boolean(assignQcWorkbaskets)) {
       const qcTeams = await Team.find({
         firmId: admin.firmId,
         isActive: true,
         type: 'QC',
-        parentWorkbasketId: { $in: resolvedTeamIds },
+        parentWorkbasketId: { $in: primaryTeamIds },
       }).select('_id').lean();
       for (const qcTeam of qcTeams) {
         resolvedTeamIds.push(qcTeam._id);
