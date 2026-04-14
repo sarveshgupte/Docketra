@@ -218,3 +218,45 @@ Response shape:
 ```
 
 UI can use this endpoint to surface a non-blocking banner when setup is incomplete: **"Your workspace is being prepared..."**.
+
+## Bulk Upload Flow
+
+Bulk upload for dockets now follows a safer workflow:
+
+1. **Upload CSV** (`title`, `description`, `category`, `subcategory`, `workbasket`, `priority`)
+2. **Preview & Validation** using `POST /api/dockets/bulk/preview`
+3. **Fix Errors** (download row-level error report or re-upload corrected CSV)
+4. **Confirm Upload** using `POST /api/dockets/bulk/upload`
+
+### Validation rules
+
+Per row:
+
+- Required:
+  - `title`
+  - `workbasket` (must exist and be active)
+- Optional:
+  - `category` (must exist and be active if provided)
+  - `subcategory` (must belong to selected category if provided)
+  - `priority` (`LOW`, `MEDIUM`, `HIGH`)
+
+Preview returns each row with:
+
+- `rowIndex`
+- `isValid`
+- `normalizedData` (for valid rows)
+- `errors[]` (for invalid rows)
+
+### Sample CSV
+
+```csv
+title,description,category,subcategory,workbasket,priority
+GST filing follow-up,Follow up with client,Compliance,GST Filing,Compliance Team,HIGH
+Prepare ROC forms,Q1 filing pack,Compliance,ROC Filing,Compliance Team,MEDIUM
+```
+
+### Upload behavior
+
+- Upload endpoint accepts previewable rows and always re-validates server-side.
+- Invalid rows can be skipped (`uploadValidRowsOnly=true`) or upload can be rejected (`rejectOnInvalid=true`).
+- Response includes `created`, `failed`, and `errors` for full transparency.
