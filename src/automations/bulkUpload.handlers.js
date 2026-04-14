@@ -1,4 +1,5 @@
 const Case = require('../models/Case.model');
+const slaService = require('../services/sla.service');
 const Category = require('../models/Category.model');
 const Firm = require('../models/Firm.model');
 const User = require('../models/User.model');
@@ -128,8 +129,19 @@ const handleClientPostCreate = async ({ type, user, createdClients = [] }) => {
       const existingCase = await Case.findOne({ firmId: user.firmId, idempotencyKey }).select('_id').lean();
       if (existingCase) continue;
 
-      const dueDate = new Date();
-      dueDate.setUTCDate(dueDate.getUTCDate() + Math.max(0, Number(subcategory.defaultSlaDays || category.defaultSlaDays || 3)));
+      const createdAt = new Date();
+      const fallbackDueDate = slaService.calculateFallbackDueDateFromDays(
+        createdAt,
+        Math.max(0, Number(subcategory.defaultSlaDays || category.defaultSlaDays || 3)),
+      );
+
+      const dueDate = await slaService.calculateSlaDueDate({
+        firmId: user.firmId,
+        category: category.name,
+        subcategory: subcategory.name,
+        workbasketId: subcategory.workbasketId || null,
+        createdAt,
+      }) || fallbackDueDate;
 
       await Case.create({
         title: 'Initial Setup',

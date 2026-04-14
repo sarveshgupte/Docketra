@@ -5,16 +5,11 @@ import { Button } from '../components/common/Button';
 import { EmptyState } from '../components/ui/EmptyState';
 import { dashboardApi } from '../api/dashboard.api';
 import { ROUTES } from '../constants/routes';
+import { SlaBadge } from '../components/common/SlaBadge';
 
 const FILTERS = ['MY', 'TEAM', 'ALL'];
 const PAGE_SIZE = 10;
 const SORT_OPTIONS = ['NEWEST', 'PRIORITY', 'SLA'];
-
-const badgeClassBySla = {
-  GREEN: 'bg-green-100 text-green-700',
-  YELLOW: 'bg-yellow-100 text-yellow-700',
-  RED: 'bg-red-100 text-red-700',
-};
 
 const DashboardCard = ({ title, children, actions = null }) => (
   <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
@@ -38,7 +33,7 @@ const DocketList = ({ items = [], loading = false, emptyLabel, onSelect }) => {
   return (
     <ul className="space-y-2">
       {items.map((item) => {
-        const slaBadge = String(item.slaBadge || 'GREEN').toUpperCase();
+        const slaBadge = String(item.slaStatus || item.slaBadge || 'GREEN').toUpperCase();
         return (
           <li key={item.caseInternalId || item._id}>
             <button
@@ -50,9 +45,7 @@ const DocketList = ({ items = [], loading = false, emptyLabel, onSelect }) => {
                 <span className="block text-sm font-medium text-gray-900">{item.title || item.docketId || 'Untitled docket'}</span>
                 <span className="text-xs text-gray-500">{item.docketId || 'DOCKET'}</span>
               </span>
-              <span className={`rounded-full px-2 py-1 text-xs font-medium ${badgeClassBySla[slaBadge] || badgeClassBySla.GREEN}`}>
-                SLA {slaBadge}
-              </span>
+              <SlaBadge status={slaBadge} />
             </button>
           </li>
         );

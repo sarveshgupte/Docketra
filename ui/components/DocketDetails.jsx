@@ -2,6 +2,7 @@ import React from 'react';
 import { formatDateTime } from '../src/utils/formatDateTime';
 import { formatCaseName, formatDocketId } from '../src/utils/formatters';
 import { LifecycleBadge } from './LifecycleBadge';
+import { SlaBadge } from '../src/components/common/SlaBadge';
 
 const normalizeDoc = (data) => data?.case || data;
 const asDisplayValue = (value) => (!value || value === 'N/A' ? '—' : value);
@@ -34,6 +35,7 @@ export function DocketDetails({
         <div className="case-detail-header__title-row">
           <h1 className="case-detail-header__title">{formatDocketId(docket.caseId || docketId)}</h1>
           <LifecycleBadge lifecycle={docket.lifecycle} />
+          <SlaBadge status={docket.slaStatus || (docket.slaDueAt ? undefined : 'GREEN')} />
         </div>
         <div className="case-detail-header__secondary">
           {asDisplayValue(title) !== '—' ? (

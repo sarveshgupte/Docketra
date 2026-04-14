@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Case = require('../models/Case.model');
 const Team = require('../models/Team.model');
+const { getSlaStatus, syncSlaBreachNotifications } = require('./sla.service');
 
 const ACTIVE_DOCKET_STATUSES = ['OPEN', 'IN_PROGRESS'];
 const ACTIVE_DOCKET_STATUS_SET = new Set(ACTIVE_DOCKET_STATUSES);
@@ -23,16 +24,7 @@ const resolveSort = (sort = 'NEWEST') => {
   return { createdAt: -1 };
 };
 
-const resolveSlaBadge = (docket = {}) => {
-  const now = Date.now();
-  const dueAt = docket.slaDueAt || docket.dueDate;
-  const dueTs = new Date(dueAt || '').getTime();
-
-  if (!Number.isFinite(dueTs)) return 'GREEN';
-  if (dueTs < now) return 'RED';
-  if (dueTs - now <= 24 * 60 * 60 * 1000) return 'YELLOW';
-  return 'GREEN';
-};
+const resolveSlaBadge = (docket = {}) => getSlaStatus(docket);
 
 const normalizePriorityRank = (priority) => {
   const normalized = String(priority || '').toUpperCase();
@@ -51,6 +43,8 @@ const mapDocket = (docket = {}) => ({
   priority: docket.priority,
   dueDate: docket.dueDate,
   slaDueAt: docket.slaDueAt,
+  slaDueDate: docket.slaDueAt || docket.dueDate || null,
+  slaStatus: resolveSlaBadge(docket),
   slaBadge: resolveSlaBadge(docket),
   workbasketId: docket.workbasketId || docket.ownerTeamId || docket.routedToTeamId || null,
   createdAt: docket.createdAt,
@@ -111,7 +105,10 @@ const getOverdueDockets = async (firmId, { page = 1, limit = 10, sort = 'NEWEST'
     Case.countDocuments({ firmId: new mongoose.Types.ObjectId(firmId), ...query }),
   ]);
 
-  return { items: items.map((docket) => ({ ...mapDocket(docket), isOverdue: true })), page: pageNumber, limit: pageLimit, total, hasNextPage: skip + items.length < total, sort: normalizeSort(sort) };
+  const mappedItems = items.map((docket) => ({ ...mapDocket(docket), isOverdue: true }));
+  await syncSlaBreachNotifications(mappedItems, { firmId, now });
+
+  return { items: mappedItems, page: pageNumber, limit: pageLimit, total, hasNextPage: skip + items.length < total, sort: normalizeSort(sort) };
 };
 
 const getRecentDockets = async (firmId, { page = 1, limit = 10, sort = 'NEWEST', workbasketId = null } = {}) => {
