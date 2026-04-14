@@ -65,7 +65,15 @@ const applyRouteValidation = (router, routeSchemas = {}) => {
   methods.forEach((method) => {
     const original = router[method].bind(router);
     router[method] = (path, ...handlers) => {
-      const routeSchema = routeSchemas[`${method.toUpperCase()} ${path}`] || {};
+      const key = `${method.toUpperCase()} ${path}`;
+      const routeSchema = routeSchemas[key];
+      if (routeSchema === undefined) {
+        throw new Error(
+          `[Validation] Missing schema for route: ${key}. ` +
+          'Every route must have an explicit validation schema. ' +
+          'Add an entry to the corresponding schema file in src/schemas/.',
+        );
+      }
       return original(path, validateRequest(routeSchema), ...handlers);
     };
   });

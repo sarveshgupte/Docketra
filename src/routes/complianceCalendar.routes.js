@@ -1,11 +1,13 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const Task = require('../models/Task');
+const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
+const routeSchemas = require('../schemas/complianceCalendar.routes.schema');
 const { authorizeFirmPermission, requireAdmin } = require('../middleware/permission.middleware');
 const { userReadLimiter, userWriteLimiter } = require('../middleware/rateLimiters');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 
-const router = express.Router();
+const router = applyRouteValidation(express.Router(), routeSchemas);
 const CALENDAR_TAG = 'compliance-calendar';
 
 const getUserId = (req) => req.userId || req.user?._id;
