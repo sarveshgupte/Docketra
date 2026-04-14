@@ -8,6 +8,7 @@ import { SectionCard } from '../components/layout/SectionCard';
 import { DataTable } from '../components/common/DataTable';
 import { StatusBadge } from '../components/layout/StatusBadge';
 import { EmptyState } from '../components/ui/EmptyState';
+import { SlaBadge } from '../components/common/SlaBadge';
 import { AuditTimelineDrawer } from '../components/common/AuditTimelineDrawer';
 import { PriorityPill } from '../components/common/PriorityPill';
 import { ActionConfirmModal } from '../components/common/ActionConfirmModal';
@@ -61,6 +62,18 @@ const isDueToday = (row) => {
 };
 
 /** Returns a recency label if the case was updated within 2 hours. */
+const getSlaBadgeStatus = (row) => {
+  if (row?.slaStatus) return String(row.slaStatus).toUpperCase();
+  if (isSlaBreached(row)) return 'RED';
+  if (row?.slaDueDate) {
+    const due = new Date(row.slaDueDate).getTime();
+    if (Number.isFinite(due) && (due - Date.now()) < (24 * 60 * 60 * 1000)) {
+      return 'YELLOW';
+    }
+  }
+  return 'GREEN';
+};
+
 const getRecencyLabel = (updatedAt) => {
   if (!updatedAt) return null;
   const diffMs = Date.now() - new Date(updatedAt).getTime();
@@ -640,10 +653,12 @@ export const CasesPage = () => {
       headerClassName: 'w-full max-w-lg',
       cellClassName: 'w-full max-w-lg',
       render: (row) => {
-        const breached = isSlaBreached(row);
+        const slaStatus = getSlaBadgeStatus(row);
+        const breached = slaStatus === 'RED';
+        const warning = slaStatus === 'YELLOW';
         const recency = getRecencyLabel(row.updatedAt);
         return (
-          <div className={`cases-page__name-cell${breached ? ' cases-page__name-cell--sla-breach' : ''}`}>
+          <div className={`cases-page__name-cell${breached ? ' cases-page__name-cell--sla-breach' : ''}${warning ? ' cases-page__name-cell--sla-warning' : ''}`}>
             <span className="cases-page__case-title">{formatCaseName(row.caseName)}</span>
             <AuditMetadata
               className="cases-page__case-meta"
@@ -653,7 +668,10 @@ export const CasesPage = () => {
             {recency && (
               <span className="cases-page__recency" aria-label={recency}>{recency}</span>
             )}
-            <PriorityPill caseRecord={row} inactivityThresholdHours={firmConfig.escalationInactivityThresholdHours} />
+            <div className="cases-page__pill-row">
+              <PriorityPill caseRecord={row} inactivityThresholdHours={firmConfig.escalationInactivityThresholdHours} />
+              <SlaBadge status={slaStatus} className="cases-page__sla-badge" />
+            </div>
           </div>
         );
       },

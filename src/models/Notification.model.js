@@ -16,7 +16,7 @@ const notificationSchema = new mongoose.Schema({
   type: {
     type: String,
     required: true,
-    enum: ['DOCKET_ASSIGNED', 'STATUS_CHANGED', 'COMMENT_ADDED', 'DOCKET_REASSIGNED', 'CLIENT_UPLOAD'],
+    enum: ['DOCKET_ASSIGNED', 'STATUS_CHANGED', 'COMMENT_ADDED', 'DOCKET_REASSIGNED', 'CLIENT_UPLOAD', 'SLA_BREACHED'],
     index: true,
   },
   title: {

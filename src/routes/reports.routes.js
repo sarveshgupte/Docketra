@@ -8,6 +8,7 @@ const { requireStorageConnected } = require('../middleware/requireStorageConnect
 const {
   getCaseMetrics,
   getPendingCasesReport,
+  getSlaWeeklySummary,
   getCasesByDateRange,
   exportCasesCSV,
   exportCasesExcel,
@@ -34,6 +35,7 @@ router.get('/case-metrics', getCaseMetrics);
 
 // Pending cases report with ageing
 router.get('/pending-cases', getPendingCasesReport);
+router.get('/sla-weekly-summary', getSlaWeeklySummary);
 
 // Cases by date range with pagination
 router.get('/cases-by-date', getCasesByDateRange);

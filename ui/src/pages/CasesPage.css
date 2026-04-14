@@ -61,6 +61,11 @@
   padding-left: 8px;
 }
 
+.cases-page__name-cell--sla-warning {
+  border-left: 3px solid #fbbf24;
+  padding-left: 8px;
+}
+
 .cases-page__case-title {
   font-weight: 600;
 }
@@ -70,6 +75,16 @@
   font-size: 12px;
 }
 
+.cases-page__pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.cases-page__sla-badge {
+  width: fit-content;
+}
 
 .cases-page__toolbar-copy {
   font-size: 12px;
