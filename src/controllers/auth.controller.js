@@ -112,6 +112,7 @@ const log = require('../utils/log');
 const logger = log;
 const { safeLogForensicAudit, getRequestIp, getRequestUserAgent } = require('../services/forensicAudit.service');
 const { safeAuditLog, safeQueueEmail, safeAnalyticsEvent } = require('../services/safeSideEffects.service');
+const { logAuditEvent } = require('../services/adminActionAudit.service');
 
 const resolveInviteRequestState = async ({ req, admin, normalizedEmail, session, existingXID = null }) => {
   const cachedState = req._inviteRequestState;
@@ -2646,6 +2647,19 @@ const createUser = async (req, res) => {
         xID: newUser.xID,
       },
     }, req);
+
+    await logAuditEvent({
+      firmId: newUser.firmId,
+      actorId: admin?._id,
+      targetId: newUser._id,
+      action: 'USER_INVITED',
+      metadata: {
+        invitedRole: newUser.role,
+        adminId: newUser.adminId,
+        managerId: newUser.managerId,
+        inviteXID: newUser.xID,
+      },
+    });
     
     return buildInviteResponse(newUser, {
       statusCode: 201,
@@ -2773,10 +2787,15 @@ const activateUser = async (req, res) => {
     // Activate user
     user.status = 'active';
     await user.save(session ? { session } : undefined);
-    log.info('HIERARCHY_UPDATED', {
+    await logAuditEvent({
+      firmId: admin?.firmId,
       actorId: admin?._id,
       targetId: user._id,
-      changes: { status: user.status, isActive: user.isActive },
+      action: 'USER_ACTIVATED',
+      metadata: {
+        status: user.status,
+        isActive: user.isActive,
+      },
     });
     
     // Log activation
@@ -2870,10 +2889,15 @@ const deactivateUser = async (req, res) => {
     // Soft-disable user (never hard delete)
     user.status = 'disabled';
     await user.save();
-    log.info('HIERARCHY_UPDATED', {
+    await logAuditEvent({
+      firmId: admin?.firmId,
       actorId: admin?._id,
       targetId: user._id,
-      changes: { status: user.status, isActive: user.isActive },
+      action: 'USER_DEACTIVATED',
+      metadata: {
+        status: user.status,
+        isActive: user.isActive,
+      },
     });
     
     await handleUserDeactivation({ firmId: admin.firmId, userXID: user.xID });
@@ -3546,10 +3570,15 @@ const updateUserStatus = async (req, res) => {
     // Update status
     user.status = resolvedStatus;
     await user.save();
-    log.info('HIERARCHY_UPDATED', {
+    await logAuditEvent({
+      firmId: admin?.firmId,
       actorId: admin?._id,
       targetId: user._id,
-      changes: { status: user.status, isActive: user.isActive },
+      action: resolvedStatus === 'active' ? 'USER_ACTIVATED' : 'USER_DEACTIVATED',
+      metadata: {
+        status: user.status,
+        isActive: user.isActive,
+      },
     });
     
     if (resolvedStatus === 'disabled') {
