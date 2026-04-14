@@ -35,6 +35,7 @@ module.exports = {
     params: z.object({ id: z.union([objectIdString, nonEmptyString]) }),
     body: z.object({
       name: nonEmptyString,
+      workbasketId: objectIdString,
       description: z.string().trim().optional(),
       isActive: z.boolean().optional(),
     }).passthrough(),
@@ -46,6 +47,7 @@ module.exports = {
     }),
     body: z.object({
       name: nonEmptyString.optional(),
+      workbasketId: objectIdString.optional(),
       description: z.string().trim().optional(),
       isActive: z.boolean().optional(),
     }).passthrough(),
