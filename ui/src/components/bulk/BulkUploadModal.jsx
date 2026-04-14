@@ -19,6 +19,18 @@ const fileToBase64 = async (file) => {
   return btoa(binary);
 };
 
+const escapeCsvValue = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+
+const generateErrorCsv = (errors, rows, headers) => {
+  const csvHeaders = ['row', ...headers, 'error'];
+  const content = errors.map((entry) => {
+    const rowData = rows.find((row) => row.rowIndex === entry.row)?.row || {};
+    const rowValues = headers.map((header) => escapeCsvValue(rowData[header] || ''));
+    return [entry.row, ...rowValues, escapeCsvValue(entry.error)].join(',');
+  });
+  return [csvHeaders.join(','), ...content].join('\n');
+};
+
 export const BulkUploadModal = ({ isOpen, onClose, type, title, onImported, showToast }) => {
   const [fileName, setFileName] = useState('');
   const [preview, setPreview] = useState(null);
@@ -28,6 +40,9 @@ export const BulkUploadModal = ({ isOpen, onClose, type, title, onImported, show
   const [lastPayload, setLastPayload] = useState(null);
   const [job, setJob] = useState(null);
   const [clientValidationErrors, setClientValidationErrors] = useState([]);
+  const [allValidationErrors, setAllValidationErrors] = useState([]);
+  const [parsedRows, setParsedRows] = useState([]);
+  const [parsedHeaders, setParsedHeaders] = useState([]);
 
   const typeLabel = useMemo(() => title || 'Bulk Upload', [title]);
   const schema = useMemo(() => BULK_UPLOAD_SCHEMA[type], [type]);
@@ -147,7 +162,11 @@ export const BulkUploadModal = ({ isOpen, onClose, type, title, onImported, show
         : { fileName: file.name, fileContentBase64: await fileToBase64(file), duplicateMode };
 
       if (isCsv) {
+        const { headers, rows } = parseCsvRows(payload.csvContent);
+        setParsedHeaders(headers);
+        setParsedRows(rows);
         const validationResult = runClientValidation(payload.csvContent);
+        setAllValidationErrors(validationResult.rowErrors);
         setClientValidationErrors(validationResult.rowErrors.slice(0, 5));
         if (validationResult.blockingErrors.length) {
           setPreview(null);
@@ -155,10 +174,13 @@ export const BulkUploadModal = ({ isOpen, onClose, type, title, onImported, show
           return;
         }
         if (validationResult.rowErrors.length) {
-          showToast(`CSV validation found ${validationResult.rowErrors.length} row issue(s).`, 'error');
+          showToast(`CSV validation found ${validationResult.rowErrors.length} issue(s). Download error report to fix.`, 'error');
           return;
         }
       } else {
+        setAllValidationErrors([]);
+        setParsedRows([]);
+        setParsedHeaders([]);
         setClientValidationErrors([]);
       }
 
@@ -253,6 +275,28 @@ export const BulkUploadModal = ({ isOpen, onClose, type, title, onImported, show
             ))}
           </div>
         ) : null}
+        {allValidationErrors.length ? (
+          <div style={{ marginTop: 8 }}>
+            <Button
+              type="button"
+              variant="default"
+              onClick={() => {
+                const csv = generateErrorCsv(allValidationErrors, parsedRows, parsedHeaders);
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', `${type}-bulk-errors.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+              }}
+            >
+              Download Error Report
+            </Button>
+          </div>
+        ) : null}
 
         {preview ? (
           <div>
@@ -297,7 +341,7 @@ export const BulkUploadModal = ({ isOpen, onClose, type, title, onImported, show
 
         <div className="neo-form-actions" style={{ marginTop: 16 }}>
           <Button type="button" variant="default" onClick={onClose}>Cancel</Button>
-          <Button type="button" variant="primary" onClick={handleImport} disabled={submitting || !preview?.valid?.length || clientValidationErrors.length > 0}>
+          <Button type="button" variant="primary" onClick={handleImport} disabled={submitting || !preview?.valid?.length || allValidationErrors.length > 0}>
             {submitting ? 'Importing...' : 'Import Valid Rows'}
           </Button>
         </div>
