@@ -49,6 +49,32 @@ async function analyzeDocument(text, firmId) {
   return provider.analyze(text, { apiKey, model, firmId });
 }
 
+async function generateDocketFields(input, firmId) {
+  const isAiEnabled = String(process.env.ENABLE_AI_DOCKET_CREATION || 'true').toLowerCase() === 'true';
+  if (!isAiEnabled) {
+    throw new Error('AI_DOCKET_CREATION_DISABLED');
+  }
+
+  const firm = await Firm.findById(firmId).select('aiConfig').lean();
+  const firmProvider = String(firm?.aiConfig?.provider || '').trim().toLowerCase();
+  const providerName = firmProvider || String(process.env.AI_PROVIDER || 'openai').toLowerCase();
+  const provider = providers[providerName];
+  if (!provider || typeof provider.generateDocketFields !== 'function') {
+    throw new Error(`Unsupported AI provider for docket generation: ${providerName}`);
+  }
+
+  const encryptedApiKey = firm?.aiConfig?.apiKey || null;
+  const apiKey = encryptedApiKey ? decrypt(encryptedApiKey) : resolveSystemApiKey(providerName);
+  const model = String(firm?.aiConfig?.model || '').trim() || resolveSystemModel(providerName);
+
+  if (!apiKey) {
+    throw new Error('AI_API_KEY_NOT_CONFIGURED');
+  }
+
+  return provider.generateDocketFields(input, { apiKey, model, firmId });
+}
+
 module.exports = {
   analyzeDocument,
+  generateDocketFields,
 };
