@@ -8,7 +8,7 @@ const createLandingPage = async (req, res) => {
     const title = String(req.body?.title || '').trim();
     const slug = String(req.body?.slug || '').trim().toLowerCase();
     const description = req.body?.description ? String(req.body.description).trim() : null;
-    const formId = new mongoose.Types.ObjectId(String(req.body?.formId || ''));
+    const formId = new mongoose.Types.ObjectId(String(req.body?.formId));
     const headerText = req.body?.headerText ? String(req.body.headerText).trim() : null;
     const subText = req.body?.subText ? String(req.body.subText).trim() : null;
 
