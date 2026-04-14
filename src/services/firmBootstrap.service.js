@@ -10,7 +10,7 @@ const { slugify } = require('../utils/slugify');
 const { isFirmCreationDisabled } = require('./featureFlags.service');
 const { loadEnv } = require('../config/env');
 const { coercePrimaryAdminCreationFields } = require('../utils/hierarchy.utils');
-const { ensureDefaultWorkbasketForFirm } = require('./defaultWorkbasket.service');
+const { setupDefaultFirm } = require('./firmSetup.service');
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SYSTEM_EMAIL_DOMAIN = 'system.local';
 const DEFAULT_BUSINESS_ADDRESS = 'Default Address';
@@ -192,7 +192,7 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
       inviteSentAt: new Date(),
     }], { session });
 
-    await ensureDefaultWorkbasketForFirm(defaultClient._id, { session });
+    await setupDefaultFirm(defaultClient._id, adminUser, { session });
 
     const setupToken = jwt.sign(
       {
