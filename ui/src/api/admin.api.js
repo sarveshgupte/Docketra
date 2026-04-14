@@ -6,6 +6,7 @@ export const adminApi = {
   createUser: (userData) => request((http) => http.post('/admin/users', userData), 'Failed to create user'),
   getUsers: (params = {}) => request((http) => http.get(`/admin/users${buildQueryString(params)}`), 'Failed to load users'),
   getHierarchy: () => request((http) => http.get('/admin/hierarchy'), 'Failed to load hierarchy tree'),
+  getAuditLogs: (params = {}) => request((http) => http.get('/admin/audit-logs', { params }), 'Failed to load audit logs'),
 
   activateUser: (xID) => request((http) => http.put(`/admin/users/${xID}/activate`), 'Failed to activate user'),
   deactivateUser: (xID) => request((http) => http.put(`/admin/users/${xID}/deactivate`), 'Failed to deactivate user'),

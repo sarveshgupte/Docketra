@@ -14,6 +14,7 @@ const { sendWelcomeEmail } = require('../services/email/sendWelcomeEmail');
 const { normalizeRole } = require('../utils/role.utils');
 const log = require('../utils/log');
 const { assertPrimaryAdmin, getTagValidationError, normalizeId } = require('../utils/hierarchy.utils');
+const { logAuditEvent } = require('../services/adminActionAudit.service');
 
 const resolveUserFirmScope = (req, res) => {
   if (normalizeRole(req.user?.role) === 'SUPER_ADMIN') return {};
@@ -541,10 +542,12 @@ const patchUserRole = async (req, res) => {
       target.reportsToUserId = null;
     }
     await target.save();
-    log.info('HIERARCHY_UPDATED', {
+    await logAuditEvent({
+      firmId: req.user?.firmId,
       actorId: req.user?._id,
       targetId: target._id,
-      changes: {
+      action: 'ROLE_UPDATED',
+      metadata: {
         role: target.role,
         primaryAdminId: target.primaryAdminId,
         adminId: target.adminId,
@@ -603,10 +606,12 @@ const patchUserReporting = async (req, res) => {
     target.managerId = role === 'PRIMARY_ADMIN' || role === 'ADMIN' || role === 'MANAGER' ? null : managerId;
     target.reportsToUserId = target.managerId || null;
     await target.save();
-    log.info('HIERARCHY_UPDATED', {
+    await logAuditEvent({
+      firmId: req.user?.firmId,
       actorId: req.user?._id,
       targetId: target._id,
-      changes: {
+      action: 'HIERARCHY_UPDATED',
+      metadata: {
         role: target.role,
         primaryAdminId: target.primaryAdminId,
         adminId: target.adminId,
