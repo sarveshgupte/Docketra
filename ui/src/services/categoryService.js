@@ -57,8 +57,8 @@ export const categoryService = {
   /**
    * Add subcategory to category (Admin only)
    */
-  addSubcategory: async (categoryId, name) => {
-    const response = await api.post(`/admin/categories/${categoryId}/subcategories`, { name });
+  addSubcategory: async (categoryId, name, workbasketId) => {
+    const response = await api.post(`/admin/categories/${categoryId}/subcategories`, { name, workbasketId });
     return response.data;
   },
 

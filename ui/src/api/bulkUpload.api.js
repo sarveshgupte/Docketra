@@ -5,8 +5,8 @@ export const bulkUploadApi = {
     (http) => http.post(`/bulk-upload/${type}`, payload),
     'Failed to preview bulk upload',
   ),
-  confirm: (type, rows, duplicateMode = 'skip', isAsync = true) => request(
-    (http) => http.post(`/bulk-upload/${type}/confirm`, { rows, duplicateMode, async: isAsync }),
+  confirm: (type, rows, duplicateMode = 'skip', isAsync = true, extra = {}) => request(
+    (http) => http.post(`/bulk-upload/${type}/confirm`, { rows, duplicateMode, async: isAsync, ...extra }),
     'Failed to import bulk data',
   ),
   jobStatus: (jobId) => request(
