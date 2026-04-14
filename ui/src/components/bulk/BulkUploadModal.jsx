@@ -2,44 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { bulkUploadApi } from '../../api/bulkUpload.api';
+import { TYPE_FIELD_DESCRIPTIONS, TYPE_HELPER_TEXT } from '../../constants/bulkUploadConfig';
 
 const TEMPLATES = {
-  clients: ['businessName', 'businessEmail', 'primaryContactNumber', 'businessAddress', 'PAN', 'CIN', 'TAN', 'GST'],
-  categories: ['category', 'subcategory'],
-  team: ['name', 'email', 'role', 'department'],
-};
-
-const TYPE_HELPER_TEXT = {
-  team: ['Role must be Admin/User'],
-  categories: ['Subcategory optional'],
-  clients: ['Required: businessName, businessEmail, primaryContactNumber'],
-};
-
-const TYPE_FIELD_DESCRIPTIONS = {
-  team: ['name: full name', 'email: work email', 'role: Admin or User', 'department: optional'],
-  categories: ['category: top-level category', 'subcategory: optional nested value'],
-  clients: [
-    'businessName: required',
-    'businessEmail: required',
-    'primaryContactNumber: required',
-    'businessAddress: optional',
-    'PAN/CIN/TAN/GST: optional',
-  ],
   clients: ['businessName', 'businessEmail', 'primaryContactNumber', 'contactPersonName'],
   categories: ['category', 'subcategory', 'workbasket'],
   team: ['name', 'email', 'role', 'department', 'workbaskets', 'clients'],
-};
-
-const TYPE_HELPER_TEXT = {
-  team: ['Role must be Admin/User', 'Workbaskets support multi-value pipe format: WB A|WB B', 'Clients column optional (pipe-separated clientId or businessEmail)'],
-  categories: ['Subcategory optional', 'Workbasket is required for each row'],
-  clients: ['Email required'],
-};
-
-const TYPE_FIELD_DESCRIPTIONS = {
-  team: ['name: full name', 'email: work email', 'role: Admin or User', 'department: optional', 'workbaskets: required, pipe-separated names/ids', 'clients: optional, pipe-separated clientId/businessEmail'],
-  categories: ['category: top-level category', 'subcategory: optional nested value', 'workbasket: required active workbasket (name or id)'],
-  clients: ['businessName: client legal name', 'businessEmail: required', 'primaryContactNumber: optional', 'contactPersonName: optional'],
 };
 
 const DUPLICATE_MODES = [
