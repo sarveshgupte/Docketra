@@ -1,6 +1,9 @@
 const { z, nonEmptyString, objectIdString, slugString } = require('./common');
 
 module.exports = {
+  'GET /firms/:firmSlug': {
+    params: z.object({ firmSlug: slugString }).strict(),
+  },
   'GET /pages/:slug': {
     params: z.object({ slug: slugString }).strict(),
   },
@@ -34,5 +37,13 @@ module.exports = {
   'POST /upload/:token/request-pin': {
     params: z.object({ token: z.string().trim().min(8).max(128) }).strict(),
     body: z.object({}).passthrough(),
+  },
+  'POST /contact': {
+    body: z.object({
+      name: nonEmptyString,
+      email: z.string().trim().email(),
+      company: z.string().trim().optional(),
+      message: z.string().trim().min(1).max(2000),
+    }).passthrough(),
   },
 };

@@ -47,4 +47,8 @@ module.exports = {
     params: z.object({ clientId: clientIdString, attachmentId: nonEmptyString }),
     query: z.object({}).passthrough(),
   },
+  'GET /:clientId/dockets': {
+    params: z.object({ clientId: clientIdString }),
+    query: z.object({ page: z.coerce.number().int().min(1).optional(), limit: z.coerce.number().int().min(1).max(100).optional() }).passthrough(),
+  },
 };

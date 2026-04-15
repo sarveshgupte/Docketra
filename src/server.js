@@ -164,6 +164,34 @@ validateEnv();
 logBuildMetadata();
 ensureUploadRoot();
 
+// STARTUP CHECK: Verify every route file has a corresponding schema file.
+// This catches schema coverage gaps at startup before any request is served.
+(function verifyRouteSchemaCoverage() {
+  const fs = require('fs');
+  const path = require('path');
+  const routesDir = path.join(__dirname, 'routes');
+  const schemasDir = path.join(__dirname, 'schemas');
+
+  const routeFiles = fs.readdirSync(routesDir)
+    .filter((f) => f.endsWith('.routes.js') && f !== 'routeGroups.js'); // routeGroups.js exports middleware arrays, not an Express router
+
+  const missingSchemas = routeFiles.filter((routeFile) => {
+    const base = routeFile.replace('.routes.js', '');
+    const schemaFile = `${base}.routes.schema.js`;
+    return !fs.existsSync(path.join(schemasDir, schemaFile));
+  });
+
+  if (missingSchemas.length > 0) {
+    const list = missingSchemas.map((f) => `  - ${f}`).join('\n');
+    throw new Error(
+      `[Startup] Missing validation schema files for the following route files:\n${list}\n` +
+      'Create a corresponding schema file in src/schemas/ for each route file.',
+    );
+  }
+
+  log.info('ROUTE_SCHEMA_COVERAGE_OK', { routeFiles: routeFiles.length });
+}());
+
 log.info('ENV_CONFIG_LOADED', {
   env: env.NODE_ENV,
   superadminXID: env.SUPERADMIN_XID_NORMALIZED,
