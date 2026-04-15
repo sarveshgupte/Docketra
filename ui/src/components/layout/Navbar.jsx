@@ -35,6 +35,12 @@ export default function Navbar() {
             <button type="button" onClick={() => handleSectionNavigation('features')} className="hover:text-gray-900">
               Features
             </button>
+            <button type="button" onClick={() => handleSectionNavigation('how-it-works')} className="hover:text-gray-900">
+              How it Works
+            </button>
+            <button type="button" onClick={() => handleSectionNavigation('use-cases')} className="hover:text-gray-900">
+              Use Cases
+            </button>
             <button type="button" onClick={() => handleSectionNavigation('pricing')} className="hover:text-gray-900">
               Pricing
             </button>
@@ -42,12 +48,17 @@ export default function Navbar() {
             <Link to="/about" className="hover:text-gray-900">About</Link>
           </nav>
 
-          <Link
-            to="/signup"
-            className="hidden md:inline-flex items-center justify-center h-9 px-4 rounded-lg bg-black text-white text-sm font-medium shadow-sm transition-all hover:bg-gray-800 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate900/30 focus-visible:ring-offset-2"
-          >
-            Create your workspace
-          </Link>
+          <div className="hidden md:flex items-center gap-3">
+            <Link to="/login" className="text-sm text-gray-600 hover:text-gray-900">
+              Log in
+            </Link>
+            <Link
+              to="/signup"
+              className="inline-flex items-center justify-center h-9 px-4 rounded-lg bg-black text-white text-sm font-medium shadow-sm transition-all hover:bg-gray-800 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate900/30 focus-visible:ring-offset-2"
+            >
+              Create your workspace
+            </Link>
+          </div>
 
           <button
             type="button"
@@ -75,6 +86,22 @@ export default function Navbar() {
           <button
             type="button"
             className="block text-sm text-gray-700"
+            onClick={() => handleSectionNavigation('how-it-works')}
+          >
+            How it Works
+          </button>
+
+          <button
+            type="button"
+            className="block text-sm text-gray-700"
+            onClick={() => handleSectionNavigation('use-cases')}
+          >
+            Use Cases
+          </button>
+
+          <button
+            type="button"
+            className="block text-sm text-gray-700"
             onClick={() => handleSectionNavigation('pricing')}
           >
             Pricing
@@ -86,6 +113,10 @@ export default function Navbar() {
 
           <Link to="/about" className="block text-sm text-gray-700" onClick={() => setIsOpen(false)}>
             About
+          </Link>
+
+          <Link to="/login" className="block text-sm text-gray-700" onClick={() => setIsOpen(false)}>
+            Log in
           </Link>
 
           <Link
