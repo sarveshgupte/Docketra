@@ -2,23 +2,39 @@
 const assert = require('assert');
 
 // 1. Setup Mock Implementations
+let lastCaseFindQuery = null;
+let lastCaseCountQuery = null;
+let mockCaseFindResult = [{
+  _id: 'pending1',
+  title: 'Case 1',
+  status: 'PENDING',
+  clientId: 'client1',
+  pendingUntil: new Date('2023-01-01'),
+  createdAt: new Date('2023-01-01')
+}];
+
 const mockCaseModel = {
-  aggregate: async () => [],
-  countDocuments: async () => 0,
-  find: () => {
+  aggregate: async (pipeline = []) => {
+    const groupStage = Array.isArray(pipeline) ? pipeline.find((stage) => stage.$group) : null;
+    const groupBy = groupStage?.$group?._id;
+    if (groupBy && typeof groupBy === 'object' && groupBy.$toUpper === '$status') {
+      return [{ _id: 'OPEN', count: 10 }];
+    }
+    return [];
+  },
+  countDocuments: async (query = {}) => {
+    lastCaseCountQuery = query;
+    return 0;
+  },
+  find: (query = {}) => {
+    lastCaseFindQuery = query;
     const chain = {
       sort: () => chain,
+      skip: () => chain,
       limit: () => chain,
       select: () => chain,
       distinct: async () => [],
-      lean: async () => [{
-        _id: 'pending1',
-        title: 'Case 1',
-        status: 'PENDING',
-        clientId: 'client1',
-        pendingUntil: new Date('2023-01-01'),
-        createdAt: new Date('2023-01-01')
-      }]
+      lean: async () => mockCaseFindResult
     };
     return chain;
   }
@@ -73,7 +89,6 @@ const mockAuthAuditModel = {
   })
 };
 
-const mockTenantCaseMetricsDaily = {};
 const mockTenantMetricsService = {
   getLatestTenantMetrics: async () => ({
     openCases: 10,
@@ -232,12 +247,13 @@ async function runTests() {
   {
     const { req, res } = createMockHttp();
     req.query.category = 'Immigration';
-    // mock behavior for Case.aggregate
-    mockCaseModel.aggregate = async () => [{
+    mockCaseFindResult = [{
       _id: 'pending1',
       title: 'Case 1',
       status: 'PENDING',
-      clientId: 'client1'
+      clientId: 'client1',
+      pendingUntil: new Date('2023-01-01'),
+      createdAt: new Date('2023-01-01')
     }];
     mockClientModel.find = () => ({
       select: () => ({
@@ -270,11 +286,23 @@ async function runTests() {
     const { req, res } = createMockHttp();
     req.query.fromDate = '2023-01-01';
     req.query.toDate = '2023-12-31';
+    req.query.clientId = 'client1';
+    req.query.assignedTo = 'X123';
+    mockCaseFindResult = [{
+      _id: 'pending1',
+      title: 'Case 1',
+      status: 'PENDING',
+      clientId: 'client1',
+      pendingUntil: new Date('2023-01-01'),
+      createdAt: new Date('2023-01-01')
+    }];
     await reportsController.exportCasesCSV(req, res);
     assert.strictEqual(res.statusCode, 200);
     assert.strictEqual(res.headers['Content-Type'], 'text/csv');
     assert.ok(res.headers['Content-Disposition'].includes('attachment; filename="docketra-report-'));
     assert.strictEqual(res.sentData, 'mock,csv,data');
+    assert.strictEqual(lastCaseFindQuery.clientId, 'client1');
+    assert.ok(Array.isArray(lastCaseFindQuery.$or));
     console.log('✅ exportCasesCSV: success scenario handled');
   }
 
@@ -283,7 +311,13 @@ async function runTests() {
     const { req, res } = createMockHttp();
     req.query.fromDate = '2023-01-01';
     req.query.toDate = '2023-12-31';
-    mockCaseModel.countDocuments = async () => 6000; // > MAX_EXPORT_ROWS
+    mockCaseFindResult = Array.from({ length: 5001 }, (_, index) => ({
+      _id: `case-${index}`,
+      title: `Case ${index}`,
+      status: 'OPEN',
+      clientId: 'client1',
+      createdAt: new Date('2023-01-01')
+    }));
     await reportsController.exportCasesExcel(req, res);
     assert.strictEqual(res.statusCode, 400);
     assert.strictEqual(res.jsonData.success, false);
@@ -296,7 +330,14 @@ async function runTests() {
     const { req, res } = createMockHttp();
     req.query.fromDate = '2023-01-01';
     req.query.toDate = '2023-12-31';
-    mockCaseModel.countDocuments = async () => 10;
+    mockCaseFindResult = [{
+      _id: 'pending1',
+      title: 'Case 1',
+      status: 'PENDING',
+      clientId: 'client1',
+      pendingUntil: new Date('2023-01-01'),
+      createdAt: new Date('2023-01-01')
+    }];
     await reportsController.exportCasesExcel(req, res);
     assert.strictEqual(res.statusCode, 200);
     assert.strictEqual(res.headers['Content-Type'], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -306,7 +347,22 @@ async function runTests() {
     console.log('✅ exportCasesExcel: success scenario handled');
   }
 
-  // Test 8: getAuditLogs - Invalid limit
+  // Test 8: getCasesByDateRange - Supports client and assignee filters
+  {
+    const { req, res } = createMockHttp();
+    req.query.fromDate = '2023-01-01';
+    req.query.toDate = '2023-12-31';
+    req.query.clientId = 'client1';
+    req.query.assignedTo = 'X123';
+    mockCaseFindResult = [];
+    await reportsController.getCasesByDateRange(req, res);
+    assert.strictEqual(res.statusCode, 200);
+    assert.strictEqual(lastCaseCountQuery.clientId, 'client1');
+    assert.ok(Array.isArray(lastCaseCountQuery.$or));
+    console.log('✅ getCasesByDateRange: filter propagation handled');
+  }
+
+  // Test 9: getAuditLogs - Invalid limit
   {
     const { req, res } = createMockHttp();
     req.query.limit = '1000'; // > MAX_AUDIT_LOG_LIMIT
@@ -317,7 +373,7 @@ async function runTests() {
     console.log('✅ getAuditLogs: max limit handled');
   }
 
-  // Test 9: generateClientFactSheetPdf - Client not found
+  // Test 10: generateClientFactSheetPdf - Client not found
   {
     const { req, res } = createMockHttp();
     req.params.clientId = 'nonexistent';
@@ -331,7 +387,7 @@ async function runTests() {
     console.log('✅ generateClientFactSheetPdf: client not found handled');
   }
 
-  // Test 10: generateClientFactSheetPdf - Success
+  // Test 11: generateClientFactSheetPdf - Success
   {
     const { req, res } = createMockHttp();
     req.params.clientId = 'client123';

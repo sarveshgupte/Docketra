@@ -34,6 +34,8 @@ export const DetailedReports = () => {
     toDate: '',
     status: '',
     category: '',
+    clientId: '',
+    assignedTo: '',
     page: 1,
     limit: 50,
   });
@@ -123,6 +125,8 @@ export const DetailedReports = () => {
       toDate: '',
       status: '',
       category: '',
+      clientId: '',
+      assignedTo: '',
       page: 1,
       limit: 50,
     });
@@ -163,6 +167,8 @@ export const DetailedReports = () => {
         toDate: filters.toDate,
         status: filters.status,
         category: filters.category,
+        clientId: filters.clientId,
+        assignedTo: filters.assignedTo,
       };
 
       const response =
@@ -314,6 +320,8 @@ export const DetailedReports = () => {
                         <div>To: {entry.filters?.toDate || 'N/A'}</div>
                         <div>Status: {entry.filters?.status || 'All'}</div>
                         <div>Category: {entry.filters?.category || 'All'}</div>
+                        <div>Client: {entry.filters?.clientId || 'All'}</div>
+                        <div>Assignee: {entry.filters?.assignedTo || 'All'}</div>
                       </td>
                       <td>{entry.filename || 'N/A'}</td>
                     </tr>

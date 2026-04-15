@@ -44,6 +44,28 @@ export const FilterPanel = ({
             />
           </div>
         </div>
+
+        <div className="filter-panel__row">
+          <div className="filter-panel__field">
+            <label>Client ID</label>
+            <Input
+              type="text"
+              placeholder="e.g. C123456"
+              value={filters.clientId || ''}
+              onChange={(e) => onFilterChange('clientId', e.target.value)}
+            />
+          </div>
+
+          <div className="filter-panel__field">
+            <label>Assigned To (xID or email)</label>
+            <Input
+              type="text"
+              placeholder="e.g. X100001 or user@firm.com"
+              value={filters.assignedTo || ''}
+              onChange={(e) => onFilterChange('assignedTo', e.target.value)}
+            />
+          </div>
+        </div>
         
         <div className="filter-panel__row">
           <div className="filter-panel__field">

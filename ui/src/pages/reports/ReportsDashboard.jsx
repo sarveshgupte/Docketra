@@ -133,7 +133,7 @@ export const ReportsDashboard = () => {
           <MetricCard
             title="Total Cases"
             value={metrics?.totalCases || 0}
-            subtitle={`Open: ${metrics?.byStatus?.Open || 0} | Pending: ${metrics?.byStatus?.Pending || 0} | Closed: ${metrics?.byStatus?.Closed || 0}`}
+            subtitle={`Open: ${metrics?.byStatus?.OPEN || 0} | Pending: ${metrics?.byStatus?.PENDING || 0} | Filed: ${metrics?.byStatus?.FILED || 0} | Resolved: ${metrics?.byStatus?.RESOLVED || 0}`}
             onClick={handleViewDetailedReports}
           />
 

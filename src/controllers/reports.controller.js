@@ -19,6 +19,7 @@ const MAX_REPORT_PAGE_LIMIT = 250;
 const MAX_REPORT_RANGE_DAYS = 366;
 const DEFAULT_EXPORT_HISTORY_LIMIT = 25;
 const MAX_EXPORT_HISTORY_LIMIT = 200;
+const TOP_BREAKDOWN_LIMIT = 10;
 
 const isValidDate = (value) => {
   const date = new Date(value);
@@ -43,6 +44,153 @@ const validateDateRangeWindow = (fromDate, toDate) => {
   }
 
   return { valid: true, start, end };
+};
+
+const normalizeStatusValue = (status) => String(status || '').trim().toUpperCase();
+
+const buildStatusFilter = (status) => {
+  const normalized = normalizeStatusValue(status);
+  if (!normalized) return null;
+  const titleCase = `${normalized.charAt(0)}${normalized.slice(1).toLowerCase()}`;
+  const raw = String(status).trim();
+  const variants = [...new Set([raw, normalized, titleCase].filter(Boolean))];
+  return variants.length === 1 ? variants[0] : { $in: variants };
+};
+
+const buildAssignedToFilter = (assignedTo) => {
+  const raw = String(assignedTo || '').trim();
+  if (!raw) return null;
+  const lower = raw.toLowerCase();
+  const values = [...new Set([raw, lower])];
+  return { $or: [{ assignedToXID: raw }, { assignedTo: { $in: values } }] };
+};
+
+const buildReportCaseMatchStage = ({
+  firmId,
+  rangeValidation = null,
+  status,
+  category,
+  clientId,
+  assignedTo,
+}) => {
+  const matchStage = { firmId };
+  if (rangeValidation) {
+    matchStage.createdAt = {
+      $gte: rangeValidation.start,
+      $lte: rangeValidation.end,
+    };
+  }
+  const statusFilter = buildStatusFilter(status);
+  if (statusFilter) matchStage.status = statusFilter;
+  if (category) matchStage.category = String(category).trim();
+  if (clientId) matchStage.clientId = String(clientId).trim();
+  const assignedToFilter = buildAssignedToFilter(assignedTo);
+  if (assignedToFilter) Object.assign(matchStage, assignedToFilter);
+  return matchStage;
+};
+
+const buildStatusMap = (rows) => {
+  const byStatus = {};
+  rows.forEach((row) => {
+    const key = normalizeStatusValue(row._id);
+    if (key) byStatus[key] = row.count;
+  });
+  return byStatus;
+};
+
+const getCaseBreakdowns = async (firmId, matchStage) => {
+  const [totalCases, byStatusRows, byCategoryRows, byClientRows, byEmployeeRows] = await Promise.all([
+    Case.countDocuments(matchStage),
+    Case.aggregate([
+      { $match: matchStage },
+      { $group: { _id: { $toUpper: '$status' }, count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ]),
+    Case.aggregate([
+      { $match: { ...matchStage, category: { $exists: true, $ne: null } } },
+      { $group: { _id: '$category', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: TOP_BREAKDOWN_LIMIT },
+    ]),
+    Case.aggregate([
+      { $match: { ...matchStage, clientId: { $exists: true, $ne: null } } },
+      { $group: { _id: '$clientId', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: TOP_BREAKDOWN_LIMIT },
+    ]),
+    Case.aggregate([
+      { $match: matchStage },
+      {
+        $project: {
+          assignedTo: {
+            $ifNull: ['$assignedToXID', '$assignedTo'],
+          },
+        },
+      },
+      { $match: { assignedTo: { $exists: true, $nin: [null, ''] } } },
+      { $group: { _id: '$assignedTo', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: TOP_BREAKDOWN_LIMIT },
+    ]),
+  ]);
+
+  const clientIds = byClientRows.map((row) => row._id).filter(Boolean);
+  const employeeLookupValues = byEmployeeRows.map((row) => row._id).filter(Boolean);
+  const normalizedEmails = employeeLookupValues.map((value) => String(value).trim().toLowerCase());
+
+  const [clients, employeeUsersByXid, employeeUsersByEmail] = await Promise.all([
+    clientIds.length
+      ? Client.find({ firmId, clientId: { $in: clientIds } }).select('clientId businessName').lean()
+      : Promise.resolve([]),
+    employeeLookupValues.length
+      ? User.find({
+        firmId,
+        xID: { $in: employeeLookupValues },
+        status: { $ne: 'deleted' },
+      }).select('xID email name').lean()
+      : Promise.resolve([]),
+    normalizedEmails.length
+      ? User.find({
+        firmId,
+        email: { $in: normalizedEmails },
+        status: { $ne: 'deleted' },
+      }).select('xID email name').lean()
+      : Promise.resolve([]),
+  ]);
+
+  const clientMap = new Map(clients.map((item) => [item.clientId, item.businessName]));
+  const byXidMap = new Map(employeeUsersByXid.map((user) => [user.xID, user]));
+  const byEmailMap = new Map(employeeUsersByEmail.map((user) => [String(user.email).trim().toLowerCase(), user]));
+
+  const byCategory = byCategoryRows.reduce((acc, row) => {
+    acc[row._id || 'Unknown'] = row.count;
+    return acc;
+  }, {});
+
+  const byClient = byClientRows.map((row) => ({
+    clientId: row._id,
+    clientName: clientMap.get(row._id) || row._id || 'Unknown',
+    count: row.count,
+  }));
+
+  const byEmployee = byEmployeeRows.map((row) => {
+    const key = String(row._id).trim();
+    const user = byXidMap.get(key) || byEmailMap.get(key.toLowerCase());
+    return {
+      xID: user?.xID || key,
+      email: user?.email || (key.includes('@') ? key : 'Unknown'),
+      name: user?.name || 'Unknown',
+      count: row.count,
+    };
+  });
+
+  return {
+    totalCases,
+    byStatus: buildStatusMap(byStatusRows),
+    byCategory,
+    byClient,
+    byEmployee,
+  };
 };
 
 const hydrateCasesForReport = async (firmId, cases) => {
@@ -140,10 +288,17 @@ const getCaseMetrics = async (req, res) => {
   try {
     const tenantId = resolveFirmIdFromAuthContext(req, res);
     if (!tenantId) return;
-    const { fromDate, toDate, allowLongRange } = req.query;
-
-    let payload;
-
+    const {
+      fromDate,
+      toDate,
+      allowLongRange,
+      status,
+      category,
+      clientId,
+      assignedTo,
+    } = req.query;
+    const hasExplicitFilters = Boolean(status || category || clientId || assignedTo);
+    let rangeValidation = null;
     if (fromDate || toDate) {
       if (!fromDate || !toDate) {
         return res.status(400).json({
@@ -151,7 +306,26 @@ const getCaseMetrics = async (req, res) => {
           message: 'Both fromDate and toDate are required for range reporting',
         });
       }
+      rangeValidation = validateDateRangeWindow(fromDate, toDate);
+      if (!rangeValidation.valid) {
+        return res.status(400).json({ success: false, message: rangeValidation.message });
+      }
+    }
 
+    const breakdownMatchStage = buildReportCaseMatchStage({
+      firmId: tenantId,
+      rangeValidation,
+      status,
+      category,
+      clientId,
+      assignedTo,
+    });
+    const breakdowns = await getCaseBreakdowns(tenantId, breakdownMatchStage);
+    const byStatus = breakdowns.byStatus;
+
+    let payload;
+
+    if ((fromDate || toDate) && !hasExplicitFilters) {
       const rangeData = await getTenantMetricsByRange(
         tenantId,
         fromDate,
@@ -160,13 +334,8 @@ const getCaseMetrics = async (req, res) => {
       );
 
       payload = {
-        totalCases: rangeData.aggregate.totalCases,
-        byStatus: {
-          OPEN: rangeData.aggregate.openCases,
-          PENDING: rangeData.aggregate.pendedCases,
-          FILED: rangeData.aggregate.filedCases,
-          RESOLVED: rangeData.aggregate.resolvedCases,
-        },
+        totalCases: breakdowns.totalCases,
+        byStatus,
         overdueCases: rangeData.aggregate.overdueCases,
         avgResolutionTimeSeconds: rangeData.aggregate.avgResolutionTimeSeconds,
         casesCreatedToday: rangeData.aggregate.casesCreatedToday,
@@ -174,9 +343,29 @@ const getCaseMetrics = async (req, res) => {
         pendingApprovals: rangeData.aggregate.pendingApprovals,
         range: rangeData.range,
         rowsCount: rangeData.rowsCount,
-        byCategory: {},
-        byClient: [],
-        byEmployee: [],
+        byCategory: breakdowns.byCategory,
+        byClient: breakdowns.byClient,
+        byEmployee: breakdowns.byEmployee,
+        profitability: {
+          totalEstimatedBudget: 0,
+          totalActualCost: 0,
+          variance: 0,
+        },
+      };
+    } else if (!hasExplicitFilters) {
+      const latest = await getLatestTenantMetrics(tenantId);
+      payload = {
+        totalCases: breakdowns.totalCases || latest?.totalCases || 0,
+        byStatus,
+        overdueCases: latest?.overdueCases || 0,
+        avgResolutionTimeSeconds: latest?.avgResolutionTimeSeconds || 0,
+        casesCreatedToday: latest?.casesCreatedToday || 0,
+        casesResolvedToday: latest?.casesResolvedToday || 0,
+        pendingApprovals: latest?.pendingApprovals || 0,
+        metricsDate: latest?.date || null,
+        byCategory: breakdowns.byCategory,
+        byClient: breakdowns.byClient,
+        byEmployee: breakdowns.byEmployee,
         profitability: {
           totalEstimatedBudget: 0,
           totalActualCost: 0,
@@ -184,24 +373,25 @@ const getCaseMetrics = async (req, res) => {
         },
       };
     } else {
-      const latest = await getLatestTenantMetrics(tenantId);
       payload = {
-        totalCases: latest?.totalCases || 0,
-        byStatus: {
-          OPEN: latest?.openCases || 0,
-          PENDING: latest?.pendedCases || 0,
-          FILED: latest?.filedCases || 0,
-          RESOLVED: latest?.resolvedCases || 0,
+        totalCases: breakdowns.totalCases,
+        byStatus,
+        overdueCases: 0,
+        avgResolutionTimeSeconds: 0,
+        casesCreatedToday: 0,
+        casesResolvedToday: 0,
+        pendingApprovals: 0,
+        byCategory: breakdowns.byCategory,
+        byClient: breakdowns.byClient,
+        byEmployee: breakdowns.byEmployee,
+        filtersApplied: {
+          status: status || null,
+          category: category || null,
+          clientId: clientId || null,
+          assignedTo: assignedTo || null,
+          fromDate: fromDate || null,
+          toDate: toDate || null,
         },
-        overdueCases: latest?.overdueCases || 0,
-        avgResolutionTimeSeconds: latest?.avgResolutionTimeSeconds || 0,
-        casesCreatedToday: latest?.casesCreatedToday || 0,
-        casesResolvedToday: latest?.casesResolvedToday || 0,
-        pendingApprovals: latest?.pendingApprovals || 0,
-        metricsDate: latest?.date || null,
-        byCategory: {},
-        byClient: [],
-        byEmployee: [],
         profitability: {
           totalEstimatedBudget: 0,
           totalActualCost: 0,
@@ -410,7 +600,16 @@ const getCasesByDateRange = async (req, res) => {
   try {
     const firmId = resolveFirmIdFromAuthContext(req, res);
     if (!firmId) return;
-    const { fromDate, toDate, status, category, page = 1, limit = 50 } = req.query;
+    const {
+      fromDate,
+      toDate,
+      status,
+      category,
+      clientId,
+      assignedTo,
+      page = 1,
+      limit = 50,
+    } = req.query;
 
     const pageNum = parseInt(page, 10);
     const limitNum = parseInt(limit, 10);
@@ -436,17 +635,15 @@ const getCasesByDateRange = async (req, res) => {
 
     // Build match stage
     // SECURITY: Enforcing tenant isolation (firm-scoped query)
-    const matchStage = {
+    const matchStage = buildReportCaseMatchStage({
       firmId,
-      createdAt: {
-        $gte: rangeValidation.start,
-        $lte: rangeValidation.end,
-      },
-    };
-    
-    if (status) matchStage.status = status;
-    if (category) matchStage.category = category;
-    
+      rangeValidation,
+      status,
+      category,
+      clientId,
+      assignedTo,
+    });
+
     const skip = (pageNum - 1) * limitNum;
 
     // PERFORMANCE: Execute independent queries concurrently
@@ -493,7 +690,7 @@ const exportCasesCSV = async (req, res) => {
   try {
     const firmId = resolveFirmIdFromAuthContext(req, res);
     if (!firmId) return;
-    const { fromDate, toDate, status, category } = req.query;
+    const { fromDate, toDate, status, category, clientId, assignedTo } = req.query;
     
     // Validate required parameters
     if (!fromDate || !toDate) {
@@ -510,32 +707,26 @@ const exportCasesCSV = async (req, res) => {
 
     // Build match stage
     // SECURITY: Enforcing tenant isolation (firm-scoped query)
-    const matchStage = {
+    const matchStage = buildReportCaseMatchStage({
       firmId,
-      createdAt: {
-        $gte: rangeValidation.start,
-        $lte: rangeValidation.end,
-      },
-    };
-    
-    if (status) matchStage.status = status;
-    if (category) matchStage.category = category;
-    
-    const total = await Case.countDocuments(matchStage);
-    if (total > MAX_EXPORT_ROWS) {
+      rangeValidation,
+      status,
+      category,
+      clientId,
+      assignedTo,
+    });
+
+    const cases = await Case.find(matchStage)
+      .sort({ createdAt: -1 })
+      .limit(MAX_EXPORT_ROWS + 1)
+      .lean();
+    if (cases.length > MAX_EXPORT_ROWS) {
       // PERFORMANCE: Hard cap enforced to prevent memory exhaustion
       return res.status(400).json({
         success: false,
         message: `Export exceeds maximum row limit of ${MAX_EXPORT_ROWS}. Narrow your filters.`,
       });
     }
-
-    // Get all matching cases (bounded for export)
-    // SECURITY: Enforcing tenant isolation (firm-scoped query)
-    const cases = await Case.find(matchStage)
-      .sort({ createdAt: -1 })
-      .limit(MAX_EXPORT_ROWS)
-      .lean();
     
     const hydratedCases = await hydrateCasesForReport(firmId, cases);
     const casesWithClientNames = hydratedCases.map((item) => ({ ...item, createdAt: item.createdAt.toISOString() }));
@@ -558,7 +749,14 @@ const exportCasesCSV = async (req, res) => {
       req,
       exportType: 'csv',
       filename,
-      filters: { fromDate, toDate, status: status || null, category: category || null },
+      filters: {
+        fromDate,
+        toDate,
+        status: status || null,
+        category: category || null,
+        clientId: clientId || null,
+        assignedTo: assignedTo || null,
+      },
       totalRecords: casesWithClientNames.length,
     });
 
@@ -582,7 +780,7 @@ const exportCasesExcel = async (req, res) => {
   try {
     const firmId = resolveFirmIdFromAuthContext(req, res);
     if (!firmId) return;
-    const { fromDate, toDate, status, category } = req.query;
+    const { fromDate, toDate, status, category, clientId, assignedTo } = req.query;
     
     // Validate required parameters
     if (!fromDate || !toDate) {
@@ -599,31 +797,26 @@ const exportCasesExcel = async (req, res) => {
 
     // Build match stage
     // SECURITY: Enforcing tenant isolation (firm-scoped query)
-    const matchStage = {
+    const matchStage = buildReportCaseMatchStage({
       firmId,
-      createdAt: {
-        $gte: rangeValidation.start,
-        $lte: rangeValidation.end,
-      },
-    };
-    
-    if (status) matchStage.status = status;
-    if (category) matchStage.category = category;
-    
-    const total = await Case.countDocuments(matchStage);
-    if (total > MAX_EXPORT_ROWS) {
+      rangeValidation,
+      status,
+      category,
+      clientId,
+      assignedTo,
+    });
+
+    const cases = await Case.find(matchStage)
+      .sort({ createdAt: -1 })
+      .limit(MAX_EXPORT_ROWS + 1)
+      .lean();
+    if (cases.length > MAX_EXPORT_ROWS) {
       // PERFORMANCE: Hard cap enforced to prevent memory exhaustion
       return res.status(400).json({
         success: false,
         message: `Export exceeds maximum row limit of ${MAX_EXPORT_ROWS}. Narrow your filters.`,
       });
     }
-
-    // Get all matching cases (bounded for export)
-    const cases = await Case.find(matchStage)
-      .sort({ createdAt: -1 })
-      .limit(MAX_EXPORT_ROWS)
-      .lean();
     
     const casesWithClientNames = await hydrateCasesForReport(firmId, cases);
     
@@ -644,7 +837,14 @@ const exportCasesExcel = async (req, res) => {
       req,
       exportType: 'excel',
       filename,
-      filters: { fromDate, toDate, status: status || null, category: category || null },
+      filters: {
+        fromDate,
+        toDate,
+        status: status || null,
+        category: category || null,
+        clientId: clientId || null,
+        assignedTo: assignedTo || null,
+      },
       totalRecords: casesWithClientNames.length,
     });
 
