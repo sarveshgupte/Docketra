@@ -11,6 +11,10 @@ const workerModules = [
   { name: 'BULK_UPLOAD_WORKER', path: '../workers/bulkUpload.worker' },
   { name: 'OUTBOX_WORKER', path: '../workers/outbox.worker' },
   { name: 'DOCUMENT_ANALYSIS_WORKER', path: '../workers/documentAnalysis.worker' },
+  { name: 'SLA_CHECK_WORKER', path: '../workers/slaCheck.worker' },
+  { name: 'NOTIFICATION_WORKER', path: '../workers/notification.worker' },
+  { name: 'REPORT_GENERATION_WORKER', path: '../workers/reportGeneration.worker' },
+  { name: 'BULK_PROCESS_WORKER', path: '../workers/bulkProcess.worker' },
 ];
 
 const startWorkerModule = ({ name, path }) => {

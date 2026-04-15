@@ -64,6 +64,7 @@ export const DataTable = ({
                     key={f.key}
                     onClick={() => onRemoveFilter?.(f.key)}
                     className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-700 hover:bg-slate-200 transition-colors"
+                    aria-label={`Remove filter: ${f.label} ${f.value}`}
                   >
                     <span className="font-medium">{f.label}:</span> {f.value}
                     <span aria-hidden className="ml-0.5 text-slate-500 hover:text-slate-900">&times;</span>
@@ -88,24 +89,36 @@ export const DataTable = ({
       <Table loading={loading} loadingMessage={loadingMessage}>
         <TableHead>
           <TableRow>
-            {columns.map((col) => (
-              <th
-                key={String(col.key)}
-                onClick={() => handleSortClick(col.key, col.sortable)}
-                className={joinClasses(
-                  headerPaddingClass,
-                  'text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap bg-slate-50',
-                  col.sortable ? 'cursor-pointer select-none group hover:text-slate-700 hover:bg-slate-100 transition-colors' : '',
-                  col.headerClassName
-                )}
-                style={{ width: col.width }}
-              >
-                <div className={joinClasses("flex items-center", col.align === 'right' ? 'justify-end' : 'justify-start')}>
-                  {col.label || col.header || col.key}
-                  {getSortIcon(col.key, col.sortable)}
-                </div>
-              </th>
-            ))}
+            {columns.map((col) => {
+              const isSortedByThis = sortState?.key === col.key;
+              const nextDirection = isSortedByThis && sortState?.direction === 'asc' ? 'descending' : 'ascending';
+              const ariaSort = !col.sortable ? undefined : (isSortedByThis ? (sortState.direction === 'asc' ? 'ascending' : 'descending') : 'none');
+
+              return (
+                <th
+                  key={String(col.key)}
+                  onClick={() => handleSortClick(col.key, col.sortable)}
+                  className={joinClasses(
+                    headerPaddingClass,
+                    'text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap bg-slate-50',
+                    col.sortable ? 'cursor-pointer select-none group hover:text-slate-700 hover:bg-slate-100 transition-colors' : '',
+                    col.headerClassName
+                  )}
+                  style={{ width: col.width }}
+                  aria-sort={ariaSort}
+                >
+                  <div className={joinClasses("flex items-center", col.align === 'right' ? 'justify-end' : 'justify-start')}>
+                    {col.label || col.header || col.key}
+                    {getSortIcon(col.key, col.sortable)}
+                    {col.sortable && (
+                      <span className="sr-only">
+                        {`Sort ${nextDirection}`}
+                      </span>
+                    )}
+                  </div>
+                </th>
+              );
+            })}
           </TableRow>
         </TableHead>
         <TableBody>

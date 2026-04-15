@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
 const Case = require('../models/Case.model');
 const Team = require('../models/Team.model');
-const { getSlaStatus, dispatchSlaBreachNotifications } = require('./sla.service');
+const { getSlaStatus } = require('./sla.service');
+const { enqueueSlaCheckJob } = require('../queues/slaCheck.queue');
 
 const ACTIVE_DOCKET_STATUSES = ['OPEN', 'IN_PROGRESS'];
 const ACTIVE_DOCKET_STATUS_SET = new Set(ACTIVE_DOCKET_STATUSES);
@@ -106,7 +107,10 @@ const getOverdueDockets = async (firmId, { page = 1, limit = 10, sort = 'NEWEST'
   ]);
 
   const mappedItems = items.map((docket) => ({ ...mapDocket(docket), isOverdue: true }));
-  dispatchSlaBreachNotifications(mappedItems, { firmId, now });
+  enqueueSlaCheckJob({ firmId }).catch((err) => {
+    const log = require('../utils/log');
+    log.warn('SLA_CHECK_ENQUEUE_FAILED', { firmId, error: err.message });
+  });
 
   return { items: mappedItems, page: pageNumber, limit: pageLimit, total, hasNextPage: skip + items.length < total, sort: normalizeSort(sort) };
 };

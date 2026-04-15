@@ -1,11 +1,13 @@
 const express = require('express');
 const multer = require('multer');
+const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
+const routeSchemas = require('../schemas/docketFileStorage.routes.schema');
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
 const { requireCaseAccess } = require('../middleware/authorization.middleware');
 const { requireStorageConnected } = require('../middleware/requireStorageConnected');
 const { uploadDocketFile, listDocketAttachments, getDocketFile } = require('../controllers/docketFileStorage.controller');
 
-const router = express.Router();
+const router = applyRouteValidation(express.Router(), routeSchemas);
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {

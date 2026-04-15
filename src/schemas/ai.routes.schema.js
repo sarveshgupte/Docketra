@@ -8,4 +8,8 @@ module.exports = {
       model: z.string().trim().min(1).max(120).optional(),
     }).strict(),
   },
+  'GET /status': {
+    query: z.object({}).passthrough(),
+  },
+  'DELETE /config': {},
 };

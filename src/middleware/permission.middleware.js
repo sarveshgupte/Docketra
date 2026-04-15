@@ -1,9 +1,7 @@
 const User = require('../models/User.model');
-const { resolveFirmRole } = require('../services/authorization.service');
+const { resolveRequestFirmRole } = require('../services/authorization.service');
 const { isSuperAdminRole } = require('../utils/role.utils');
 const { requireAdmin: centralizedRequireAdmin } = require('./authorization.middleware');
-
-const getRequestUserId = (req) => req.userId || req.user?._id?.toString();
 
 /**
  * Permission Middleware for Docketra Case Management System
@@ -134,8 +132,7 @@ const authorizeFirmPermission = (requiredPermission) => {
         });
       }
 
-      const userId = getRequestUserId(req);
-      const membership = await resolveFirmRole(userId, req.firm.id);
+      const membership = await resolveRequestFirmRole(req, req.firm.id);
 
       if (!membership) {
         return res.status(403).json({
