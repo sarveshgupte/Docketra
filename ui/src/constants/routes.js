@@ -23,6 +23,9 @@ export const ROUTES = {
   WORK_SETTINGS: (firmSlug) => `/app/firm/${firmSlug}/settings/work`,
   STORAGE_SETTINGS: (firmSlug) => `/app/firm/${firmSlug}/storage-settings`,
   AI_SETTINGS: (firmSlug) => `/app/firm/${firmSlug}/ai-settings`,
+  CRM_CLIENTS: (firmSlug) => `/app/firm/${firmSlug}/crm/clients`,
+  CRM_CLIENT_DETAIL: (firmSlug, id) => `/app/firm/${firmSlug}/crm/clients/${id}`,
+  CRM_LEADS: (firmSlug) => `/app/firm/${firmSlug}/crm/leads`,
 };
 
 export const hasValidFirmSlug = (firmSlug) => Boolean(firmSlug && !String(firmSlug).includes('undefined'));
