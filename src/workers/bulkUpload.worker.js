@@ -2,42 +2,32 @@
 
 require('dotenv').config();
 
-const { Worker } = require('bullmq');
+const { Worker, UnrecoverableError } = require('bullmq');
 const connectDB = require('../config/database');
 const BulkUploadJob = require('../models/BulkUploadJob.model');
-const { processBulkRows } = require('../controllers/bulkUpload.controller');
+const { processBulkUploadJob } = require('../jobs/bulkUpload.job');
+const { BULK_UPLOAD_QUEUE_NAME, BULK_UPLOAD_JOB_NAME } = require('../queues/bulkUpload.queue');
+const { setWorkerStatus } = require('../services/workerRegistry.service');
 
 const redisUrl = process.env.REDIS_URL;
-
-if (!redisUrl) {
-  console.warn('[bulkUploadWorker] REDIS_URL is not configured; worker is disabled.');
-  process.exit(0);
-}
+let bulkUploadWorker = null;
 
 const startWorker = async () => {
+  if (!redisUrl) {
+    setWorkerStatus('bulkUpload', 'disabled');
+    return null;
+  }
+
+  setWorkerStatus('bulkUpload', 'starting');
   await connectDB();
 
-  const worker = new Worker(
-    'bulk-upload',
+  bulkUploadWorker = new Worker(
+    BULK_UPLOAD_QUEUE_NAME,
     async (job) => {
-      const { type, rows, user, duplicateMode, jobId } = job.data;
-
-      const existingJob = await BulkUploadJob.findById(jobId).lean();
-      if (!existingJob) {
-        return;
+      if (job.name !== BULK_UPLOAD_JOB_NAME) {
+        throw new UnrecoverableError(`Unknown bulk upload job type: ${job.name}`);
       }
-
-      if (existingJob.status === 'completed') {
-        return;
-      }
-
-      await processBulkRows({
-        type,
-        rows,
-        user,
-        duplicateMode,
-        jobId,
-      });
+      await processBulkUploadJob(job.data);
     },
     {
       connection: { url: redisUrl },
@@ -45,11 +35,15 @@ const startWorker = async () => {
     }
   );
 
-  worker.on('completed', (job) => {
+  bulkUploadWorker.on('ready', () => {
+    setWorkerStatus('bulkUpload', 'running');
+  });
+
+  bulkUploadWorker.on('completed', (job) => {
     console.log('Bulk job completed:', job.id);
   });
 
-  worker.on('failed', async (job, err) => {
+  bulkUploadWorker.on('failed', async (job, err) => {
     console.error('Bulk job failed:', job?.id, err.message);
 
     const jobId = job?.data?.jobId;
@@ -61,14 +55,18 @@ const startWorker = async () => {
     });
   });
 
-  worker.on('error', (err) => {
+  bulkUploadWorker.on('error', (err) => {
+    setWorkerStatus('bulkUpload', 'error');
     console.error('[bulkUploadWorker] Worker error:', err.message);
   });
 
   console.log('[bulkUploadWorker] Worker started with concurrency=3');
+  return bulkUploadWorker;
 };
 
 startWorker().catch((error) => {
+  setWorkerStatus('bulkUpload', 'error');
   console.error('[bulkUploadWorker] Failed to start:', error);
-  process.exit(1);
 });
+
+module.exports = bulkUploadWorker;

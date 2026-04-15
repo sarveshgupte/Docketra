@@ -11,6 +11,8 @@ const { createNotification, NotificationTypes } = require('../src/domain/notific
 const Case = require('../src/models/Case.model');
 const Notification = require('../src/models/Notification.model');
 
+const wait = (ms = 0) => new Promise((resolve) => setTimeout(resolve, ms));
+
 function testLifecycleTransitions() {
   assert.strictEqual(assertValidLifecycleTransition(DocketLifecycle.CREATED, DocketLifecycle.IN_WORKLIST), true);
   assert.strictEqual(assertValidLifecycleTransition(DocketLifecycle.IN_WORKLIST, DocketLifecycle.ACTIVE), true);
@@ -47,6 +49,7 @@ function testDeriveLifecycle() {
 
 async function testAutoActivationOnOpen() {
   const originalFindOne = Case.findOne;
+  const originalNotificationFindOne = Notification.findOne;
   const originalCreate = Notification.create;
   let saved = false;
   let notificationStored = false;
@@ -60,6 +63,9 @@ async function testAutoActivationOnOpen() {
       save: async () => { saved = true; },
     });
 
+    Notification.findOne = () => ({
+      sort: async () => null,
+    });
     Notification.create = async (payload) => {
       notificationStored = payload?.type === NotificationTypes.DOCKET_ACTIVATED;
       return payload;
@@ -70,21 +76,27 @@ async function testAutoActivationOnOpen() {
       firmId: 'FIRM-1',
       actor: { xID: 'X100' },
     });
+    await wait(20);
 
     assert.strictEqual(updated.lifecycle, DocketLifecycle.ACTIVE);
     assert.strictEqual(saved, true);
     assert.strictEqual(notificationStored, true);
   } finally {
     Case.findOne = originalFindOne;
+    Notification.findOne = originalNotificationFindOne;
     Notification.create = originalCreate;
   }
 }
 
 async function testNotificationCreation() {
+  const originalFindOne = Notification.findOne;
   const originalCreate = Notification.create;
   let captured = null;
 
   try {
+    Notification.findOne = () => ({
+      sort: async () => null,
+    });
     Notification.create = async (payload) => {
       captured = payload;
       return payload;
@@ -97,10 +109,11 @@ async function testNotificationCreation() {
       docketId: 'CASE-9',
       actor: { xID: 'X200', role: 'ADMIN' },
     });
+    await wait(20);
 
     assert.strictEqual(captured.type, NotificationTypes.ASSIGNED);
 
-    await assert.rejects(
+    assert.throws(
       () => createNotification({
         firmId: 'FIRM-1',
         userId: 'X100',
@@ -111,6 +124,7 @@ async function testNotificationCreation() {
       (error) => error && error.code === 'INVALID_NOTIFICATION_TYPE',
     );
   } finally {
+    Notification.findOne = originalFindOne;
     Notification.create = originalCreate;
   }
 }

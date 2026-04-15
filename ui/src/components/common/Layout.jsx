@@ -6,6 +6,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
+import { io } from 'socket.io-client';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { SidebarSection } from '../navigation/SidebarSection';
@@ -14,7 +15,7 @@ import { ErrorBoundary } from './ErrorBoundary';
 import api from '../../services/api';
 import { worklistApi } from '../../api/worklist.api';
 import { notificationsApi } from '../../api/notifications.api';
-import { APP_NAME, APP_VERSION, USER_ROLES } from '../../utils/constants';
+import { API_BASE_URL, APP_NAME, APP_VERSION, STORAGE_KEYS, USER_ROLES } from '../../utils/constants';
 import { useActiveDocket } from '../../hooks/useActiveDocket';
 import { formatDateTime } from '../../utils/formatDateTime';
 import { getFirmConfig } from '../../utils/firmConfig';
@@ -294,6 +295,14 @@ export const Layout = ({ children }) => {
 
   useEffect(() => {
     let cancelled = false;
+    let socket = null;
+
+    const resolveSocketUrl = () => {
+      if (!API_BASE_URL || API_BASE_URL.startsWith('/')) {
+        return undefined;
+      }
+      return API_BASE_URL.replace(/\/api$/, '');
+    };
 
     const normalizeNotification = (item) => ({
       id: item.id || item._id,
@@ -326,9 +335,30 @@ export const Layout = ({ children }) => {
       void fetchNotifications();
     }, 30000);
 
+    const accessToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+    if (accessToken) {
+      socket = io(resolveSocketUrl(), {
+        path: '/socket.io',
+        auth: { token: accessToken },
+        transports: ['websocket', 'polling'],
+      });
+
+      socket.on('notification:new', (payload) => {
+        if (cancelled || !payload) return;
+        setNotificationItems((current) => {
+          const normalized = normalizeNotification(payload);
+          const deduped = current.filter((item) => item.id !== normalized.id);
+          return sortNotificationsLatestFirst([normalized, ...deduped]);
+        });
+      });
+    }
+
     return () => {
       cancelled = true;
       clearInterval(pollId);
+      if (socket) {
+        socket.disconnect();
+      }
     };
   }, []);
 
@@ -497,6 +527,26 @@ export const Layout = ({ children }) => {
       items: [
         { to: ROUTES.FIRM_BASE(currentFirmSlug) + '/clients', label: 'All Clients', icon: <IconCases />, active: isActivePrefix(ROUTES.FIRM_BASE(currentFirmSlug) + '/clients') },
         { to: ROUTES.COMPLIANCE_CALENDAR(currentFirmSlug), label: 'Compliance Calendar', icon: <IconWorklist />, active: isActive(ROUTES.COMPLIANCE_CALENDAR(currentFirmSlug)) },
+      ],
+    },
+    {
+      id: 'crm',
+      title: 'CRM',
+      defaultOpen: false,
+      hidden: !hasAdminAccess,
+      items: [
+        {
+          to: ROUTES.CRM_CLIENTS(currentFirmSlug),
+          label: 'CRM Clients',
+          icon: <IconCases />,
+          active: isActivePrefix(ROUTES.CRM_CLIENTS(currentFirmSlug)),
+        },
+        {
+          to: ROUTES.CRM_LEADS(currentFirmSlug),
+          label: 'Leads',
+          icon: <IconWorklist />,
+          active: isActivePrefix(ROUTES.CRM_LEADS(currentFirmSlug)),
+        },
       ],
     },
     {

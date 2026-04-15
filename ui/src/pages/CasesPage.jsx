@@ -19,10 +19,8 @@ import { useToast } from '../hooks/useToast';
 import { useCaseView, CASE_VIEWS, isEscalatedCase } from '../hooks/useCaseView';
 import { useSavedViews } from '../hooks/useSavedViews';
 import { caseApi } from '../api/case.api';
-import { worklistApi } from '../api/worklist.api';
-import { categoryService } from '../services/categoryService';
+import { useCasesListQuery } from '../hooks/useCasesListQuery';
 import { CASE_STATUS, USER_ROLES } from '../utils/constants';
-import { getCaseListRecords } from '../utils/caseResponse';
 import { getFirmConfig } from '../utils/firmConfig';
 import { useFeatureFlag } from '../hooks/useFeatureFlag';
 import { formatDateTime, getISODateInTimezone } from '../utils/formatDateTime';
@@ -114,12 +112,9 @@ export const CasesPage = () => {
   const savedViewsUserId = user?._id || user?.id || user?.email || null;
   const { savedViews, saveView, removeView, applySavedView } = useSavedViews(savedViewsUserId);
 
-  const [loading, setLoading] = useState(true);
-  const [cases, setCases] = useState([]);
   const [statusFilter, setStatusFilter] = useState(query.status || 'ALL');
   const [sortState, setSortState] = useState({ key: query.sort || 'updatedAt', direction: query.order || 'desc' });
   const [timelineCaseId, setTimelineCaseId] = useState(null);
-  const [error, setError] = useState(null);
   const [assigningCaseId, setAssigningCaseId] = useState(null);
   // Task 6: Search & Quick Jump
   const [searchInput, setSearchInput] = useState(query.q || '');
@@ -131,7 +126,6 @@ export const CasesPage = () => {
   const [selectedCaseIds, setSelectedCaseIds] = useState(new Set());
   const [bulkActionInProgress, setBulkActionInProgress] = useState(false);
   const [showDocketBulkUpload, setShowDocketBulkUpload] = useState(false);
-  const [categoryCount, setCategoryCount] = useState(0);
   const onboardingStorageKey = `docketra_onboarding_dismissed_${firmSlug || 'firm'}`;
   const [onboardingDismissed, setOnboardingDismissed] = useState(
     () => localStorage.getItem(onboardingStorageKey) === 'true'
@@ -142,8 +136,6 @@ export const CasesPage = () => {
   const [savedViewsOpen, setSavedViewsOpen] = useState(false);
   const [saveViewName, setSaveViewName] = useState('');
   const [activeWorkbasketId, setActiveWorkbasketId] = useState('');
-
-  // Primary workbaskets for filtering on non-QC pages
   const accessibleWorkbaskets = useMemo(() => {
     const explicitWorkbaskets = Array.isArray(user?.workbaskets) ? user.workbaskets : [];
     if (explicitWorkbaskets.length > 0) {
@@ -165,7 +157,7 @@ export const CasesPage = () => {
       .filter((item) => item.id);
   }, [user?.workbaskets, user?.teamIds, user?.teamNames]);
 
-  // QC workbaskets for the QC Queue
+  // QC workbaskets for the QC Queue — distinct from primary workbaskets
   const qcWorkbaskets = useMemo(() => {
     const explicit = Array.isArray(user?.qcWorkbaskets) ? user.qcWorkbaskets : [];
     return explicit
@@ -176,6 +168,25 @@ export const CasesPage = () => {
       .filter((item) => item.id && item.name);
   }, [user?.qcWorkbaskets]);
 
+  // React Query: fetch cases list and category count
+  const hasQcAccess = qcWorkbaskets.length > 0;
+  const {
+    data: casesQueryData,
+    isLoading: loading,
+    error,
+    refetch: refetchCases,
+  } = useCasesListQuery({ isAdmin, hasQcAccess, enabled: Boolean(user) });
+
+  const cases = casesQueryData?.cases ?? [];
+  const categoryCount = casesQueryData?.categoryCount ?? 0;
+
+  // Task 5: apply smart default view after initial data load
+  useEffect(() => {
+    if (cases.length > 0) {
+      applySmartDefault(cases);
+    }
+  }, [cases, applySmartDefault]);
+
   // Cleanup debounce timer on unmount (Task 6)
   useEffect(() => {
     return () => {
@@ -183,69 +194,9 @@ export const CasesPage = () => {
     };
   }, []);
 
-  const normalizeCases = useCallback((records = []) =>
-    records.map((record) => ({
-      ...record,
-      caseId: record.caseId || record._id,
-    })), []);
-
-  const loadCases = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      let casesData = [];
-      if (isAdmin) {
-        const response = await caseApi.getCases();
-        if (response.success) {
-          casesData = getCaseListRecords(response);
-        }
-      } else if (Array.isArray(user?.qcWorkbaskets) && user.qcWorkbaskets.length > 0) {
-        // Non-admin users with QC access: load QC_PENDING cases via the cases API
-        // plus their regular worklist cases
-        const [qcResponse, worklistResponse] = await Promise.all([
-          caseApi.getCases({ status: CASE_STATUS.QC_PENDING }),
-          worklistApi.getEmployeeWorklist(),
-        ]);
-        const qcCases = qcResponse.success ? getCaseListRecords(qcResponse) : [];
-        const worklistCases = worklistResponse.success ? (worklistResponse.data || []) : [];
-        // Merge, deduplicating by caseId
-        const seenIds = new Set();
-        casesData = [...qcCases, ...worklistCases].filter((c) => {
-          const id = c.caseId || c._id;
-          if (!id || seenIds.has(String(id))) return false;
-          seenIds.add(String(id));
-          return true;
-        });
-      } else {
-        const response = await worklistApi.getEmployeeWorklist();
-        if (response.success) {
-          casesData = response.data || [];
-        }
-      }
-      let resolvedCategoryCount = 0;
-      if (isAdmin) {
-        const categoriesResponse = await categoryService.getCategories(false);
-        resolvedCategoryCount = categoriesResponse?.data?.length || 0;
-      }
-      const normalized = normalizeCases(casesData);
-      setCases(normalized);
-      setCategoryCount(resolvedCategoryCount);
-      // Task 5: apply smart default view if no manual selection stored
-      applySmartDefault(normalized);
-    } catch (err) {
-      console.error('Failed to load cases:', err);
-      setError(err);
-      setCases([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [isAdmin, user?.qcWorkbaskets, normalizeCases, applySmartDefault]);
-
-  useEffect(() => {
-    if (user) {
-      loadCases();
-    }
-  }, [user, loadCases]);
+  const refreshCases = useCallback(async () => {
+    await refetchCases();
+  }, [refetchCases]);
 
   useEffect(() => {
     if (query.status && query.status !== statusFilter) {
@@ -373,7 +324,7 @@ export const CasesPage = () => {
             const response = await caseApi.pullCase(caseRecord.caseId);
             if (response.success) {
               showSuccess(`Docket assigned to you`);
-              await loadCases();
+              await refreshCases();
             }
           } catch (err) {
             console.error('Failed to assign case:', err);
@@ -389,14 +340,14 @@ export const CasesPage = () => {
       const response = await caseApi.pullCase(caseRecord.caseId);
       if (response.success) {
         showSuccess(`Docket assigned to you`);
-        await loadCases();
+        await refreshCases();
       }
     } catch (err) {
       console.error('Failed to assign case:', err);
     } finally {
       setAssigningCaseId(null);
     }
-  }, [showSuccess, loadCases]);
+  }, [showSuccess, refreshCases]);
 
   // Task 6: Bulk action handlers
   const handleToggleSelectCase = useCallback((caseId, isLocked) => {
@@ -429,7 +380,7 @@ export const CasesPage = () => {
         await Promise.all(selectedList.map((c) => caseApi.pullCase(c.caseId)));
         setSelectedCaseIds(new Set());
         showSuccess(`${selectedList.length} docket${selectedList.length !== 1 ? 's' : ''} assigned to you`);
-        await loadCases();
+        await refreshCases();
       } catch (err) {
         console.error('Bulk assign failed:', err);
       } finally {
@@ -1153,7 +1104,7 @@ export const CasesPage = () => {
         isOpen={showDocketBulkUpload}
         onClose={() => setShowDocketBulkUpload(false)}
         showToast={showToast}
-        onUploaded={loadCases}
+        onUploaded={refreshCases}
       />
       {confirmModal && (
         <ActionConfirmModal
