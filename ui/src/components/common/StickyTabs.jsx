@@ -45,7 +45,7 @@ export const StickyTabs = ({ tabs = [], defaultTab = 'overview', onTabChange }) 
   };
 
   return (
-    <nav className="sticky-tabs" role="tablist" aria-label="Case detail tabs">
+    <nav className="sticky-tabs" role="tablist" aria-label="Docket detail tabs">
       {tabs.map((tab, index) => {
         const isActive = activeTab === tab.name;
         return (

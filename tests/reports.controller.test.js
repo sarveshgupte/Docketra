@@ -311,6 +311,7 @@ async function runTests() {
     const { req, res } = createMockHttp();
     req.query.fromDate = '2023-01-01';
     req.query.toDate = '2023-12-31';
+    const oldFind = mockCaseModel.find;
     mockCaseFindResult = Array.from({ length: 5001 }, (_, index) => ({
       _id: `case-${index}`,
       title: `Case ${index}`,
@@ -323,6 +324,7 @@ async function runTests() {
     assert.strictEqual(res.jsonData.success, false);
     assert.ok(res.jsonData.message.includes('Export exceeds maximum row limit'));
     console.log('✅ exportCasesExcel: max export rows limit handled');
+    mockCaseModel.find = oldFind;
   }
 
   // Test 7: exportCasesExcel - Success

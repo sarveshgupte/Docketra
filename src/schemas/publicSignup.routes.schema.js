@@ -27,4 +27,12 @@ module.exports = {
       email: emailString,
     }).strip(),
   },
+  'POST /complete-signup': {
+    body: z.object({
+      email: emailString,
+      otp: nonEmptyString.optional(),
+      firmName: nonEmptyString.optional(),
+      password: passwordString.optional(),
+    }).strip(),
+  },
 };

@@ -7,7 +7,7 @@ const Team = require('../models/Team.model');
 const BulkUploadJob = require('../models/BulkUploadJob.model');
 const { generateNextClientId } = require('../services/clientIdGenerator');
 const xIDGenerator = require('../services/xIDGenerator');
-const { bulkUploadQueue } = require('../queues/bulkUpload.queue');
+const { enqueueBulkUploadJob } = require('../queues/bulkUpload.queue');
 const { eventBus } = require('../events/eventBus');
 const { logAuthEvent } = require('../services/audit.service');
 const { BULK_UPLOAD_SCHEMA, validateRow: validateSchemaRow } = require('../constants/bulkUploadSchema');
@@ -1026,34 +1026,23 @@ const confirmBulkUpload = async (req, res) => {
     },
   });
 
-  if (!bulkUploadQueue) {
-    await BulkUploadJob.findByIdAndUpdate(job._id, {
-      status: 'failed',
-      errorMessage: 'Queue unavailable: REDIS_URL is not configured',
-    });
-    return res.status(503).json({
-      success: false,
-      message: 'Bulk import queue is unavailable',
-    });
-  }
+  const enqueueResult = await enqueueBulkUploadJob({
+    type,
+    rows,
+    user: {
+      firmId: req.user.firmId,
+      email: req.user.email,
+      xID: req.user.xID,
+      defaultClientId: req.user.defaultClientId,
+    },
+    duplicateMode: effectiveDuplicateMode,
+    jobId: job._id,
+  });
 
-  try {
-    await bulkUploadQueue.add('bulk-upload-job', {
-      type,
-      rows,
-      user: {
-        firmId: req.user.firmId,
-        email: req.user.email,
-        xID: req.user.xID,
-        defaultClientId: req.user.defaultClientId,
-      },
-      duplicateMode: effectiveDuplicateMode,
-      jobId: job._id,
-    });
-  } catch (error) {
+  if (!enqueueResult?.queued) {
     await BulkUploadJob.findByIdAndUpdate(job._id, {
       status: 'failed',
-      errorMessage: error.message,
+      errorMessage: enqueueResult?.error?.message || 'Queue unavailable: REDIS_URL is not configured',
     });
 
     return res.status(503).json({

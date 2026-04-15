@@ -715,7 +715,6 @@ const exportCasesCSV = async (req, res) => {
       clientId,
       assignedTo,
     });
-
     const cases = await Case.find(matchStage)
       .sort({ createdAt: -1 })
       .limit(MAX_EXPORT_ROWS + 1)
@@ -805,7 +804,6 @@ const exportCasesExcel = async (req, res) => {
       clientId,
       assignedTo,
     });
-
     const cases = await Case.find(matchStage)
       .sort({ createdAt: -1 })
       .limit(MAX_EXPORT_ROWS + 1)

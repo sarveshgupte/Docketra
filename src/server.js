@@ -84,13 +84,14 @@ const cookieParser = require('./middleware/cookieParser.middleware');
 const { uploadErrorHandler, ensureUploadRoot } = require('./middleware/uploadProtection.middleware');
 const { allowInternalTokenOrSuperadmin } = require('./middleware/internalMetricsAccess.middleware');
 const { tenantScopedApiAccess, adminTenantScopedApiAccess } = require('./routes/routeGroups');
+const { initNotificationSocket } = require('./services/notificationSocket.service');
 
 // Routes
 const userRoutes = require('./routes/user.routes');
 const selfUserRoutes = require('./routes/selfUser.routes');
 const taskRoutes = require('./routes/task.routes');
 const complianceCalendarRoutes = require('./routes/complianceCalendar.routes');
-const caseRoutes = require('./routes/case.routes');
+const caseRoutes = require('./routes/docket.routes'); // backward-compat alias for /api/cases
 const searchRoutes = require('./routes/search.routes');  // Search and worklist routes
 const authRoutes = require('./routes/auth.routes');  // Authentication routes
 const clientApprovalRoutes = require('./routes/clientApproval.routes');  // Client approval routes
@@ -163,6 +164,34 @@ const isProduction = env.NODE_ENV === 'production';
 validateEnv();
 logBuildMetadata();
 ensureUploadRoot();
+
+// STARTUP CHECK: Verify every route file has a corresponding schema file.
+// This catches schema coverage gaps at startup before any request is served.
+(function verifyRouteSchemaCoverage() {
+  const fs = require('fs');
+  const path = require('path');
+  const routesDir = path.join(__dirname, 'routes');
+  const schemasDir = path.join(__dirname, 'schemas');
+
+  const routeFiles = fs.readdirSync(routesDir)
+    .filter((f) => f.endsWith('.routes.js') && f !== 'routeGroups.js'); // routeGroups.js exports middleware arrays, not an Express router
+
+  const missingSchemas = routeFiles.filter((routeFile) => {
+    const base = routeFile.replace('.routes.js', '');
+    const schemaFile = `${base}.routes.schema.js`;
+    return !fs.existsSync(path.join(schemasDir, schemaFile));
+  });
+
+  if (missingSchemas.length > 0) {
+    const list = missingSchemas.map((f) => `  - ${f}`).join('\n');
+    throw new Error(
+      `[Startup] Missing validation schema files for the following route files:\n${list}\n` +
+      'Create a corresponding schema file in src/schemas/ for each route file.',
+    );
+  }
+
+  log.info('ROUTE_SCHEMA_COVERAGE_OK', { routeFiles: routeFiles.length });
+}());
 
 log.info('ENV_CONFIG_LOADED', {
   env: env.NODE_ENV,
@@ -414,8 +443,8 @@ app.use('/api/users', ...tenantScopedApiAccess, writeGuardChain, userRoutes);
 app.use('/api/user', authenticate, selfUserRoutes);
 app.use('/api/tasks', ...tenantScopedApiAccess, writeGuardChain, taskRoutes);
 app.use('/api/compliance-calendar', ...tenantScopedApiAccess, writeGuardChain, complianceCalendarRoutes);
-app.use('/api/cases', ...tenantScopedApiAccess, writeGuardChain, caseRoutes);
-app.use('/api/dockets', ...tenantScopedApiAccess, writeGuardChain, docketRoutes);
+app.use('/api/cases', ...tenantScopedApiAccess, writeGuardChain, caseRoutes);  // backward-compat alias for /api/dockets
+app.use('/api/dockets', ...tenantScopedApiAccess, writeGuardChain, docketRoutes);  // canonical docket API
 app.use('/api/attachments', ...tenantScopedApiAccess, writeGuardChain, attachmentRoutes);
 app.use('/api/search', ...tenantScopedApiAccess, writeGuardChain, searchRoutes);
 app.use('/api/worklists', ...tenantScopedApiAccess, writeGuardChain, searchRoutes);
@@ -482,6 +511,7 @@ const server = app.listen(PORT, () => {
 ╚════════════════════════════════════════════╝
   `);
 });
+initNotificationSocket(server, { allowedOrigins });
 
 // Handle unhandled promise rejections (mask to prevent PII leakage in logs)
 process.on('unhandledRejection', (err) => {
