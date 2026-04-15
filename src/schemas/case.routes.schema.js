@@ -78,11 +78,12 @@ module.exports = {
   'GET /my-unassigned-created': { query: strictEmpty },
   'GET /ai-suggestions/:attachmentId': {
     params: z.object({ attachmentId: nonEmptyString }),
-    query: z.object({}).passthrough(),
+    query: strictEmpty,
   },
   'POST /from-attachment/:attachmentId': {
     params: z.object({ attachmentId: nonEmptyString }),
-    body: z.object({}).passthrough(),
+    query: z.object({ preview: queryBoolean.optional() }).strict(),
+    body: strictEmpty,
   },
   'POST /auto-reopen-pended': { body: strictEmpty },
   'POST /:caseId/track-open': { params: caseIdParams, body: strictEmpty },
@@ -99,7 +100,7 @@ module.exports = {
   },
   'GET /:caseId/ai-routing': {
     params: caseIdParams,
-    query: z.object({}).passthrough(),
+    query: strictEmpty,
   },
   'GET /:caseId': { params: caseIdParams, query: paginationQuery },
   'POST /:caseId/comments': {
@@ -182,7 +183,7 @@ module.exports = {
   'POST /:caseId/reopen-pending': { params: caseIdParams, body: z.object({}).passthrough() },
   'POST /:caseId/qc-action': { params: caseIdParams, body: z.object({ action: nonEmptyString }).passthrough() },
   'POST /:caseId/reassign': { params: caseIdParams, body: z.object({ assignTo: xidString }).passthrough() },
-  'POST /:caseId/apply-ai-routing': { params: caseIdParams, body: z.object({}).passthrough() },
-  'POST /:caseId/reject-ai-routing': { params: caseIdParams, body: z.object({}).passthrough() },
+  'POST /:caseId/apply-ai-routing': { params: caseIdParams, body: strictEmpty },
+  'POST /:caseId/reject-ai-routing': { params: caseIdParams, body: strictEmpty },
   'POST /:caseId/manager-move': { params: caseIdParams, body: z.object({ targetTeamId: objectIdString.optional() }).passthrough() },
 };
