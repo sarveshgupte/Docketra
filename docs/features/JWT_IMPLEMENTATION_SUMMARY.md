@@ -128,6 +128,8 @@ Added `firmId` field to all core models:
 - Requires `Authorization: Bearer <token>` header
 - Validates JWT signature and expiry
 - Extracts userId, firmId, role from token
+- Reuses the JWT role claim for firm RBAC checks to avoid per-request membership lookups
+- Falls back to the database role if the token role is missing or stale
 - Verifies user exists and is active
 - Enforces firm-level access control
 - Attaches to `req.user` and `req.jwt`

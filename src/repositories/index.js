@@ -12,8 +12,13 @@ const TaskRepository = require('./TaskRepository');
 const UserRepository = require('./UserRepository');
 const AttachmentRepository = require('./AttachmentRepository');
 
+// DocketRepository is the canonical name going forward.
+// CaseRepository is kept for backward compatibility.
+const DocketRepository = CaseRepository;
+
 module.exports = {
   CaseRepository,
+  DocketRepository,
   ClientRepository,
   categoryRepository,
   TaskRepository,
