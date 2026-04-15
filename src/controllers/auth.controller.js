@@ -2051,17 +2051,29 @@ const getProfile = async (req, res) => {
           _id: { $in: resolvedTeamIds },
           firmId: userFirmId,
         })
-          .select('_id name')
+          .select('_id name type parentWorkbasketId')
           .lean()
       : [];
 
     const workbasketLookup = new Map(mappedWorkbaskets.map((workbasket) => [String(workbasket._id), workbasket]));
-    const orderedWorkbaskets = resolvedTeamIds
+    const orderedAll = resolvedTeamIds
       .map((id) => workbasketLookup.get(String(id)))
-      .filter(Boolean)
+      .filter(Boolean);
+
+    const orderedWorkbaskets = orderedAll
+      .filter((workbasket) => String(workbasket.type || 'PRIMARY').toUpperCase() !== 'QC')
       .map((workbasket) => ({
         id: String(workbasket._id),
         name: String(workbasket.name || '').trim(),
+      }))
+      .filter((workbasket) => workbasket.name);
+
+    const orderedQcWorkbaskets = orderedAll
+      .filter((workbasket) => String(workbasket.type || '').toUpperCase() === 'QC')
+      .map((workbasket) => ({
+        id: String(workbasket._id),
+        name: String(workbasket.name || '').trim(),
+        parentWorkbasketId: workbasket.parentWorkbasketId ? String(workbasket.parentWorkbasketId) : null,
       }))
       .filter((workbasket) => workbasket.name);
 
@@ -2079,9 +2091,10 @@ const getProfile = async (req, res) => {
         allowedCategories: dbUser.allowedCategories,
         isActive: dbUser.isActive,
         teamId: resolvedTeamIds[0] || null,
-        teamIds: orderedWorkbaskets.map((workbasket) => workbasket.id),
-        teamNames: orderedWorkbaskets.map((workbasket) => workbasket.name),
+        teamIds: orderedAll.map((workbasket) => String(workbasket._id)),
+        teamNames: orderedAll.map((workbasket) => String(workbasket.name || '').trim()),
         workbaskets: orderedWorkbaskets,
+        qcWorkbaskets: orderedQcWorkbaskets,
         // OBJECTIVE 2: Include firm context (JWT-first approach)
         // Use JWT claims as primary source, DB as fallback for display
         // Firm metadata (read-only, admin-controlled)
@@ -2480,11 +2493,9 @@ const createUser = async (req, res) => {
       .filter((team) => String(team?.type || 'PRIMARY').toUpperCase() !== 'QC')
       .map((team) => team._id);
 
-    // Always include linked QC workbaskets for selected primary workbaskets
-    // so users can access both primary and QC queues consistently.
-    // Kept backward-compatible with assignQcWorkbaskets payload by treating it
-    // as a no-op hint rather than a gate.
-    if (primaryTeamIds.length > 0 || Boolean(assignQcWorkbaskets)) {
+    // Only include linked QC workbaskets when explicitly requested via assignQcWorkbaskets.
+    // QC access is managed separately in Team Management and is not granted by default.
+    if (Boolean(assignQcWorkbaskets)) {
       const qcTeams = await Team.find({
         firmId: admin.firmId,
         isActive: true,
