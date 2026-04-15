@@ -1,9 +1,4 @@
 import { lazy } from 'react';
-import { DashboardPage as DashboardPageComponent } from '../pages/Dashboard';
-import { WorklistPage as WorklistPageComponent } from '../pages/WorklistPage';
-import { WorkbasketPage as WorkbasketPageComponent } from '../pages/WorkbasketPage';
-import { FirmSettingsPage as FirmSettingsPageComponent } from '../pages/FirmSettingsPage';
-import { WorkSettingsPage as WorkSettingsPageComponent } from '../pages/WorkSettingsPage';
 
 const importWithRetry = async (importer, attempts = 2) => {
   let lastError;
@@ -45,9 +40,9 @@ export const SetPasswordPage = lazyPage(() => import('../pages/SetPasswordPage')
 export const ForgotPasswordPage = lazyPage(() => import('../pages/ForgotPasswordPage'), 'ForgotPasswordPage');
 export const ResetPasswordPage = lazyPage(() => import('../pages/ResetPasswordPage'), 'ResetPasswordPage');
 export const CompleteProfile = lazyPage(() => import('../pages/CompleteProfile'), 'CompleteProfile');
-export const DashboardPage = DashboardPageComponent;
-export const WorklistPage = WorklistPageComponent;
-export const WorkbasketPage = WorkbasketPageComponent;
+export const DashboardPage = lazyPage(() => import('../pages/Dashboard'), 'DashboardPage');
+export const WorklistPage = lazyPage(() => import('../pages/WorklistPage'), 'WorklistPage');
+export const WorkbasketPage = lazyPage(() => import('../pages/WorkbasketPage'), 'WorkbasketPage');
 export const ComplianceCalendarPage = lazyPage(() => import('../pages/ComplianceCalendarPage'), 'ComplianceCalendarPage');
 export const CaseDetailPage = lazyPage(() => import('../pages/CaseDetailPage'), 'CaseDetailPage');
 export const CreateCasePage = lazyPage(() => import('../pages/CreateCasePage'), 'CreateCasePage');
@@ -56,8 +51,8 @@ export const ProductUpdatesHistoryPage = lazyPage(() => import('../pages/Product
 export const AdminPage = lazyPage(() => import('../pages/AdminPage'), 'AdminPage');
 export const HierarchyPage = lazyPage(() => import('../pages/HierarchyPage'), 'HierarchyPage');
 export const AuditLogsPage = lazyPage(() => import('../pages/AuditLogsPage'), 'AuditLogsPage');
-export const FirmSettingsPage = FirmSettingsPageComponent;
-export const WorkSettingsPage = WorkSettingsPageComponent;
+export const FirmSettingsPage = lazyPage(() => import('../pages/FirmSettingsPage'), 'FirmSettingsPage');
+export const WorkSettingsPage = lazyPage(() => import('../pages/WorkSettingsPage'), 'WorkSettingsPage');
 export const StorageSettingsPage = lazyPage(() => import('../pages/StorageSettingsPage'), 'StorageSettingsPage');
 export const AiSettingsPage = lazyPage(() => import('../pages/AiSettingsPage'), 'AiSettingsPage');
 export const PlatformDashboard = lazyPage(() => import('../pages/PlatformDashboard'), 'PlatformDashboard');
@@ -78,3 +73,6 @@ export const MarketingSignupPage = lazy(() => import('../pages/marketing/Signup'
 export const NotFoundPage = lazyPage(() => import('../pages/NotFoundPage'), 'NotFoundPage');
 export const OtpVerificationPage = lazyPage(() => import('../pages/OtpVerificationPage'), 'OtpVerificationPage');
 export const UploadPage = lazyPage(() => import('../pages/UploadPage'), 'UploadPage');
+export const CrmClientsPage = lazyPage(() => import('../pages/crm/CrmClientsPage'), 'CrmClientsPage');
+export const CrmClientDetailPage = lazyPage(() => import('../pages/crm/CrmClientDetailPage'), 'CrmClientDetailPage');
+export const LeadsPage = lazyPage(() => import('../pages/crm/LeadsPage'), 'LeadsPage');

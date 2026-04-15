@@ -84,6 +84,7 @@ const cookieParser = require('./middleware/cookieParser.middleware');
 const { uploadErrorHandler, ensureUploadRoot } = require('./middleware/uploadProtection.middleware');
 const { allowInternalTokenOrSuperadmin } = require('./middleware/internalMetricsAccess.middleware');
 const { tenantScopedApiAccess, adminTenantScopedApiAccess } = require('./routes/routeGroups');
+const { initNotificationSocket } = require('./services/notificationSocket.service');
 
 // Routes
 const userRoutes = require('./routes/user.routes');
@@ -510,6 +511,7 @@ const server = app.listen(PORT, () => {
 ╚════════════════════════════════════════════╝
   `);
 });
+initNotificationSocket(server, { allowedOrigins });
 
 // Handle unhandled promise rejections (mask to prevent PII leakage in logs)
 process.on('unhandledRejection', (err) => {
