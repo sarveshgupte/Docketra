@@ -1,0 +1,12 @@
+const NotificationTypes = Object.freeze({
+  DOCKET_ASSIGNED: 'DOCKET_ASSIGNED',
+  STATUS_CHANGED: 'STATUS_CHANGED',
+  COMMENT_ADDED: 'COMMENT_ADDED',
+  DOCKET_REASSIGNED: 'DOCKET_REASSIGNED',
+  CLIENT_UPLOAD: 'CLIENT_UPLOAD',
+  SLA_BREACHED: 'SLA_BREACHED',
+});
+
+module.exports = {
+  NotificationTypes,
+};
