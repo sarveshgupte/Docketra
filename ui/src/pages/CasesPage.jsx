@@ -183,45 +183,8 @@ export const CasesPage = () => {
   }, []);
 
   const loadCases = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      let casesData = [];
-      if (isAdmin) {
-        const response = await caseApi.getCases();
-        if (response.success) {
-          casesData = getCaseListRecords(response);
-        }
-      } else {
-        const response = await worklistApi.getEmployeeWorklist();
-        if (response.success) {
-          casesData = response.data || [];
-        }
-      }
-      let resolvedCategoryCount = 0;
-      if (isAdmin) {
-        const categoriesResponse = await categoryService.getCategories(false);
-        resolvedCategoryCount = categoriesResponse?.data?.length || 0;
-      }
-      const normalized = normalizeCases(casesData);
-      setCases(normalized);
-      setCategoryCount(resolvedCategoryCount);
-      // Task 5: apply smart default view if no manual selection stored
-      applySmartDefault(normalized);
-    } catch (err) {
-      console.error('Failed to load cases:', err);
-      setError(err);
-      setCases([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [isAdmin, normalizeCases, applySmartDefault]);
-
-  useEffect(() => {
-    if (user) {
-      loadCases();
-    }
-  }, [user, loadCases]);
+    await refetchCases();
+  }, [refetchCases]);
 
   useEffect(() => {
     if (query.status && query.status !== statusFilter) {
