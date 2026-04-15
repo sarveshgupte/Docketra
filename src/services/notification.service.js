@@ -47,12 +47,17 @@ function normalizePayload(payload = {}) {
 
 async function createNotification(payload) {
   const normalized = normalizePayload(payload);
-  const deliveryChannels = await resolveDeliveryChannels({
-    userId: normalized.userId,
-    firmId: normalized.firmId,
-    type: normalized.type,
-    fallbackEmailEnabled: Boolean(payload?.emailEnabled),
-  });
+  let deliveryChannels = { inApp: true, email: Boolean(payload?.emailEnabled) };
+  try {
+    deliveryChannels = await resolveDeliveryChannels({
+      userId: normalized.userId,
+      firmId: normalized.firmId,
+      type: normalized.type,
+      fallbackEmailEnabled: Boolean(payload?.emailEnabled),
+    });
+  } catch (_error) {
+    deliveryChannels = { inApp: true, email: Boolean(payload?.emailEnabled) };
+  }
   normalized.emailEnabled = Boolean(deliveryChannels.email);
   const groupingEnabled = payload?.group !== false;
   let notificationDoc = null;
@@ -116,7 +121,7 @@ function escapeHtml(value) {
 }
 
 function buildNotificationEmail({ title, message, docketId, type, createdAt }) {
-  const safeTitle = toTextValue(title) || 'Docketra notification';
+  const safeTitle = toTextValue(title) || 'Notification';
   const safeMessage = toTextValue(message) || 'A new update is available.';
   const safeType = toTextValue(type) || 'UPDATE';
   const safeDocketId = toTextValue(docketId);
@@ -127,7 +132,7 @@ function buildNotificationEmail({ title, message, docketId, type, createdAt }) {
     safeMessage,
     '',
     `Type: ${safeType}`,
-    safeDocketId ? `Docket: ${safeDocketId}` : null,
+    safeDocketId ? `Case: ${safeDocketId}` : null,
     `When: ${safeTimestamp}`,
   ].filter(Boolean);
   const text = textLines.join('\n');
@@ -137,7 +142,7 @@ function buildNotificationEmail({ title, message, docketId, type, createdAt }) {
       <p>${escapeHtml(safeMessage)}</p>
       <p style="color: #555; font-size: 14px;">
         <strong>Type:</strong> ${escapeHtml(safeType)}<br/>
-        ${safeDocketId ? `<strong>Docket:</strong> ${escapeHtml(safeDocketId)}<br/>` : ''}
+        ${safeDocketId ? `<strong>Case:</strong> ${escapeHtml(safeDocketId)}<br/>` : ''}
         <strong>When:</strong> ${escapeHtml(safeTimestamp)}
       </p>
     </div>

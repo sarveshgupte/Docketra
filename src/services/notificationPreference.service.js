@@ -57,6 +57,16 @@ async function getOrCreateNotificationPreferences(userId, firmId) {
     };
   }
 
+  if (NotificationPreference?.db?.readyState !== 1) {
+    return {
+      userId: normalizedUserId,
+      firmId: normalizedFirmId,
+      defaultChannels: { ...DEFAULT_CHANNELS },
+      typeChannels: {},
+      updatedAt: new Date(),
+    };
+  }
+
   let doc = await NotificationPreference.findOne({
     userId: normalizedUserId,
     firmId: normalizedFirmId,
@@ -86,6 +96,15 @@ async function updateNotificationPreferences(userId, firmId, patch = {}) {
     ...current.typeChannels,
     ...patchedTypeChannels,
   };
+
+  if (NotificationPreference?.db?.readyState !== 1) {
+    return {
+      ...current,
+      defaultChannels: nextDefaults,
+      typeChannels: mergedTypeChannels,
+      updatedAt: new Date(),
+    };
+  }
 
   const updated = await NotificationPreference.findOneAndUpdate(
     {
