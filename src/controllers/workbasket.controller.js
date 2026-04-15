@@ -204,22 +204,6 @@ const updateUserWorkbaskets = async (req, res) => {
     }
 
     const resolvedTeamIds = teams.map((entry) => entry._id);
-    const primaryTeamIds = teams
-      .filter((entry) => String(entry?.type || 'PRIMARY').toUpperCase() !== 'QC')
-      .map((entry) => entry._id);
-
-    if (primaryTeamIds.length > 0) {
-      const linkedQcTeams = await Team.find({
-        firmId: req.user?.firmId,
-        isActive: true,
-        type: 'QC',
-        parentWorkbasketId: { $in: primaryTeamIds },
-      }).select('_id').lean();
-
-      for (const qcTeam of linkedQcTeams) {
-        resolvedTeamIds.push(qcTeam._id);
-      }
-    }
 
     user.teamIds = [...new Set(resolvedTeamIds.map((entry) => String(entry)))];
     user.teamId = user.teamIds[0] || null;
