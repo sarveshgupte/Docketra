@@ -530,6 +530,26 @@ export const Layout = ({ children }) => {
       ],
     },
     {
+      id: 'crm',
+      title: 'CRM',
+      defaultOpen: false,
+      hidden: !hasAdminAccess,
+      items: [
+        {
+          to: ROUTES.CRM_CLIENTS(currentFirmSlug),
+          label: 'CRM Clients',
+          icon: <IconCases />,
+          active: isActivePrefix(ROUTES.CRM_CLIENTS(currentFirmSlug)),
+        },
+        {
+          to: ROUTES.CRM_LEADS(currentFirmSlug),
+          label: 'Leads',
+          icon: <IconWorklist />,
+          active: isActivePrefix(ROUTES.CRM_LEADS(currentFirmSlug)),
+        },
+      ],
+    },
+    {
       id: 'insights',
       title: 'INSIGHTS',
       defaultOpen: false,
