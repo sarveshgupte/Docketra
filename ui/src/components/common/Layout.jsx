@@ -503,7 +503,7 @@ export const Layout = ({ children }) => {
           label: 'QC Queue',
           icon: <IconAdmin />,
           active: location.pathname === ROUTES.CASES(currentFirmSlug) && new URLSearchParams(location.search).get('status') === 'QC_PENDING',
-          hidden: !hasAdminAccess,
+          hidden: !hasAdminAccess && !(Array.isArray(user?.qcWorkbaskets) && user.qcWorkbaskets.length > 0),
         },
         {
           to: `${ROUTES.CASES(currentFirmSlug)}?status=RESOLVED`,
