@@ -182,7 +182,7 @@ export const CasesPage = () => {
     };
   }, []);
 
-  const loadCases = useCallback(async () => {
+  const refreshCases = useCallback(async () => {
     await refetchCases();
   }, [refetchCases]);
 
@@ -312,7 +312,7 @@ export const CasesPage = () => {
             const response = await caseApi.pullCase(caseRecord.caseId);
             if (response.success) {
               showSuccess(`Docket assigned to you`);
-              await loadCases();
+              await refreshCases();
             }
           } catch (err) {
             console.error('Failed to assign case:', err);
@@ -328,14 +328,14 @@ export const CasesPage = () => {
       const response = await caseApi.pullCase(caseRecord.caseId);
       if (response.success) {
         showSuccess(`Docket assigned to you`);
-        await loadCases();
+        await refreshCases();
       }
     } catch (err) {
       console.error('Failed to assign case:', err);
     } finally {
       setAssigningCaseId(null);
     }
-  }, [showSuccess, loadCases]);
+  }, [showSuccess, refreshCases]);
 
   // Task 6: Bulk action handlers
   const handleToggleSelectCase = useCallback((caseId, isLocked) => {
@@ -368,7 +368,7 @@ export const CasesPage = () => {
         await Promise.all(selectedList.map((c) => caseApi.pullCase(c.caseId)));
         setSelectedCaseIds(new Set());
         showSuccess(`${selectedList.length} docket${selectedList.length !== 1 ? 's' : ''} assigned to you`);
-        await loadCases();
+        await refreshCases();
       } catch (err) {
         console.error('Bulk assign failed:', err);
       } finally {
@@ -1092,7 +1092,7 @@ export const CasesPage = () => {
         isOpen={showDocketBulkUpload}
         onClose={() => setShowDocketBulkUpload(false)}
         showToast={showToast}
-        onUploaded={loadCases}
+        onUploaded={refreshCases}
       />
       {confirmModal && (
         <ActionConfirmModal
