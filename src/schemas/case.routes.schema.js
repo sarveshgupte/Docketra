@@ -137,4 +137,15 @@ module.exports = {
   },
   'GET /:caseId/client-cfs/files': { params: caseIdParams, query: strictEmpty },
   'GET /:caseId/client-cfs/files/:attachmentId/download': { params: caseAndAttachmentParams, query: strictEmpty },
+
+  'GET /:caseId/summary-pdf': { params: caseIdParams, query: strictEmpty },
+  'GET /:caseId/comments': { params: caseIdParams, query: z.object({ page: z.coerce.number().int().min(1).optional(), limit: z.coerce.number().int().min(1).max(100).optional() }).passthrough() },
+  'POST /:caseId/comment': { params: caseIdParams, body: z.object({ text: z.string().trim().min(1).max(2000), note: z.string().trim().min(1).max(500).optional() }).strict() },
+  'POST /:caseId/assign': { params: caseIdParams, body: z.object({ assignTo: xidString.optional(), assignedTo: xidString.optional() }).passthrough() },
+  'PATCH /:caseId/assign': { params: caseIdParams, body: z.object({ assignTo: xidString.optional(), assignedTo: xidString.optional() }).passthrough() },
+  'POST /:caseId/transition': { params: caseIdParams, body: z.object({ status: nonEmptyString }).passthrough() },
+  'POST /:caseId/reopen-pending': { params: caseIdParams, body: z.object({}).passthrough() },
+  'POST /:caseId/qc-action': { params: caseIdParams, body: z.object({ action: nonEmptyString }).passthrough() },
+  'POST /:caseId/reassign': { params: caseIdParams, body: z.object({ assignTo: xidString }).passthrough() },
+  'POST /:caseId/manager-move': { params: caseIdParams, body: z.object({ targetTeamId: objectIdString.optional() }).passthrough() },
 };
