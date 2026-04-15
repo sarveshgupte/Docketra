@@ -1,6 +1,9 @@
 const Team = require('../models/Team.model');
 const User = require('../models/User.model');
 
+// Re-export updateStatus from case.service so callers can import either file.
+const { updateStatus } = require('./case.service');
+
 const normalizeCreateInput = (body = {}) => ({
   title: typeof body.title === 'string' ? body.title.trim() : '',
   description: typeof body.description === 'string' ? body.description.trim() : '',
@@ -46,4 +49,6 @@ module.exports = {
   normalizeCreateInput,
   validateStructuredInput,
   resolveAssigneeFromWorkbasketRules,
+  // Docket lifecycle management
+  updateStatus,
 };

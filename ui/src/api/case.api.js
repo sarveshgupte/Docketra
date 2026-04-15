@@ -12,9 +12,9 @@ import {
 import { buildQueryString } from '../utils/queryParams';
 
 const caseRoute = {
-  detail: (caseId) => `/cases/${caseId}`,
-  comments: (caseId) => `/cases/${caseId}/comments`,
-  attachments: (caseId) => `/cases/${caseId}/attachments`,
+  detail: (caseId) => `/dockets/${caseId}`,
+  comments: (caseId) => `/dockets/${caseId}/comments`,
+  attachments: (caseId) => `/dockets/${caseId}/attachments`,
 };
 
 const withCaseInvalidation = async (caseId, requestFn) => {
@@ -38,7 +38,7 @@ const shouldThrottleTracking = (action, caseId) => {
 
 export const caseApi = {
   getCases: (filters = {}) =>
-    request((http) => http.get(`/cases${buildQueryString(filters)}`), 'Failed to load cases'),
+    request((http) => http.get(`/dockets${buildQueryString(filters)}`), 'Failed to load dockets'),
 
   getCaseById: async (caseId, params = {}) => {
     const cached = getCachedCase(caseId, params);
@@ -78,11 +78,7 @@ export const caseApi = {
   },
 
   createDocket: async (docketData, forceCreate = false) => {
-    try {
-      return await request((http) => http.post('/dockets/create', { ...docketData, forceCreate }), 'Failed to create docket');
-    } catch (error) {
-      return request((http) => http.post('/cases', { ...docketData, forceCreate }), 'Failed to create docket');
-    }
+    return request((http) => http.post('/dockets', { ...docketData, forceCreate }), 'Failed to create docket');
   },
 
   createCase: (caseData, forceCreate = false) => caseApi.createDocket(caseData, forceCreate),
@@ -120,19 +116,19 @@ export const caseApi = {
 
   updateStatus: (caseId, payload) => withCaseInvalidation(
     caseId,
-    () => request((http) => http.put(`/cases/${caseId}/status`, payload), 'Failed to update case status'),
+    () => request((http) => http.put(`/dockets/${caseId}/status`, payload), 'Failed to update docket status'),
   ),
 
-  cloneCase: (caseId, payload = {}) => request((http) => http.post(`/cases/${caseId}/clone`, payload), 'Failed to clone case'),
-  lockCase: (caseId) => request((http) => http.post(`/cases/${caseId}/lock`), 'Failed to lock case'),
-  unlockCase: (caseId) => request((http) => http.post(`/cases/${caseId}/unlock`), 'Failed to unlock case'),
+  cloneCase: (caseId, payload = {}) => request((http) => http.post(`/dockets/${caseId}/clone`, payload), 'Failed to clone docket'),
+  lockCase: (caseId) => request((http) => http.post(`/dockets/${caseId}/lock`), 'Failed to lock docket'),
+  unlockCase: (caseId) => request((http) => http.post(`/dockets/${caseId}/unlock`), 'Failed to unlock docket'),
 
   pullCase: (caseId) => withCaseInvalidation(
     caseId,
-    () => request((http) => http.post('/cases/pull', { caseIds: [caseId] }), 'Failed to pull case'),
+    () => request((http) => http.post('/dockets/pull', { caseIds: [caseId] }), 'Failed to pull docket'),
   ),
 
-  getSummaryPdfUrl: (caseId) => `${window.location.origin}/api/cases/${caseId}/summary-pdf`,
+  getSummaryPdfUrl: (caseId) => `${window.location.origin}/api/dockets/${caseId}/summary-pdf`,
 
   getClientDockets: (clientId) => request(
     (http) => http.get(`/clients/${clientId}/dockets?sort=createdAt&order=desc&limit=20`),
@@ -141,103 +137,103 @@ export const caseApi = {
 
   moveCaseToGlobal: (caseId) => withCaseInvalidation(
     caseId,
-    () => request((http) => http.post(`/cases/${caseId}/unassign`), 'Failed to move case to global worklist'),
+    () => request((http) => http.post(`/dockets/${caseId}/unassign`), 'Failed to move docket to global worklist'),
   ),
 
   fileCase: (caseId, comment) => withCaseInvalidation(
     caseId,
-    () => request((http) => http.post(`/cases/${caseId}/file`, { comment }), 'Failed to file case'),
+    () => request((http) => http.post(`/dockets/${caseId}/file`, { comment }), 'Failed to file docket'),
   ),
 
   pendCase: (caseId, comment, reopenDate) => withCaseInvalidation(
     caseId,
-    () => request((http) => http.post(`/cases/${caseId}/pend`, { comment, reopenDate }), 'Failed to pend case'),
+    () => request((http) => http.post(`/dockets/${caseId}/pend`, { comment, reopenDate }), 'Failed to pend docket'),
   ),
 
   resolveCase: (caseId, comment) => withCaseInvalidation(
     caseId,
-    () => request((http) => http.post(`/cases/${caseId}/resolve`, { comment }), 'Failed to resolve case'),
+    () => request((http) => http.post(`/dockets/${caseId}/resolve`, { comment }), 'Failed to resolve docket'),
   ),
 
   unpendCase: (caseId, comment = '') => withCaseInvalidation(
     caseId,
-    () => request((http) => http.post(`/cases/${caseId}/unpend`, { comment }), 'Failed to unpend case'),
+    () => request((http) => http.post(`/dockets/${caseId}/unpend`, { comment }), 'Failed to unpend docket'),
   ),
 
-  getMyResolvedCases: () => request((http) => http.get('/cases/my-resolved'), 'Failed to load resolved cases'),
-  getMyUnassignedCreatedCases: () => request((http) => http.get('/cases/my-unassigned-created'), 'Failed to load unassigned cases'),
+  getMyResolvedCases: () => request((http) => http.get('/dockets/my-resolved'), 'Failed to load resolved dockets'),
+  getMyUnassignedCreatedCases: () => request((http) => http.get('/dockets/my-unassigned-created'), 'Failed to load unassigned dockets'),
 
   assignDocket: (caseId, assigneeXID) => withCaseInvalidation(
     caseId,
-    () => request((http) => http.patch(`/cases/${caseId}/assign`, { assigneeXID }), 'Failed to assign case'),
+    () => request((http) => http.patch(`/dockets/${caseId}/assign`, { assigneeXID }), 'Failed to assign docket'),
   ),
 
   unassignDocket: (caseId) => withCaseInvalidation(
     caseId,
-    () => request((http) => http.post(`/cases/${caseId}/unassign`), 'Failed to unassign case'),
+    () => request((http) => http.post(`/dockets/${caseId}/unassign`), 'Failed to unassign docket'),
   ),
 
   transitionDocket: (caseId, payload) => withCaseInvalidation(
     caseId,
-    () => request((http) => http.post(`/cases/${caseId}/transition`, payload), 'Failed to transition case'),
+    () => request((http) => http.post(`/dockets/${caseId}/transition`, payload), 'Failed to transition docket'),
   ),
 
 
   routeToTeam: (caseId, toTeamId, note = '') => withCaseInvalidation(
     caseId,
-    () => request((http) => http.post(`/cases/${caseId}/route`, { toTeamId, note }), 'Failed to route case'),
+    () => request((http) => http.post(`/dockets/${caseId}/route`, { toTeamId, note }), 'Failed to route docket'),
   ),
 
   acceptRoutedCase: (caseId) => withCaseInvalidation(
     caseId,
-    () => request((http) => http.post(`/cases/${caseId}/accept`, {}), 'Failed to accept routed case'),
+    () => request((http) => http.post(`/dockets/${caseId}/accept`, {}), 'Failed to accept routed docket'),
   ),
 
   returnRoutedCase: (caseId, note = '') => withCaseInvalidation(
     caseId,
-    () => request((http) => http.post(`/cases/${caseId}/return`, { note }), 'Failed to return routed case'),
+    () => request((http) => http.post(`/dockets/${caseId}/return`, { note }), 'Failed to return routed docket'),
   ),
 
   updateRoutedStatus: (caseId, status) => withCaseInvalidation(
     caseId,
-    () => request((http) => http.post(`/cases/${caseId}/routed-status`, { status }), 'Failed to update routed status'),
+    () => request((http) => http.post(`/dockets/${caseId}/routed-status`, { status }), 'Failed to update routed status'),
   ),
 
   qcAction: (caseId, decision, comment) => withCaseInvalidation(
     caseId,
-    () => request((http) => http.post(`/cases/${caseId}/qc-action`, { decision, comment }), 'Failed to perform QC action'),
+    () => request((http) => http.post(`/dockets/${caseId}/qc-action`, { decision, comment }), 'Failed to perform QC action'),
   ),
 
   reassignDocket: (caseId, assigneeXID, comment) => withCaseInvalidation(
     caseId,
-    () => request((http) => http.post(`/cases/${caseId}/reassign`, { assigneeXID, comment }), 'Failed to reassign docket'),
+    () => request((http) => http.post(`/dockets/${caseId}/reassign`, { assigneeXID, comment }), 'Failed to reassign docket'),
   ),
 
   reopenPendingDocket: (caseId, comment) => withCaseInvalidation(
     caseId,
-    () => request((http) => http.post(`/cases/${caseId}/reopen-pending`, { comment }), 'Failed to reopen docket'),
+    () => request((http) => http.post(`/dockets/${caseId}/reopen-pending`, { comment }), 'Failed to reopen docket'),
   ),
 
   getDocketComments: (caseId, params = {}) => request(
-    (http) => http.get(`/cases/${caseId}/comments`, { params }),
+    (http) => http.get(`/dockets/${caseId}/comments`, { params }),
     'Failed to load comments',
   ),
   generateUploadLink: (caseId, payload) => withCaseInvalidation(
     caseId,
-    () => request((http) => http.post(`/cases/${caseId}/upload-link`, payload), 'Failed to generate upload link'),
+    () => request((http) => http.post(`/dockets/${caseId}/upload-link`, payload), 'Failed to generate upload link'),
   ),
-  getUploadLinkStatus: (caseId) => request((http) => http.get(`/cases/${caseId}/upload-link`), 'Failed to load upload link status'),
+  getUploadLinkStatus: (caseId) => request((http) => http.get(`/dockets/${caseId}/upload-link`), 'Failed to load upload link status'),
   revokeUploadLink: (caseId) => withCaseInvalidation(
     caseId,
-    () => request((http) => http.post(`/cases/${caseId}/upload-link/revoke`, {}), 'Failed to revoke upload link'),
+    () => request((http) => http.post(`/dockets/${caseId}/upload-link/revoke`, {}), 'Failed to revoke upload link'),
   ),
 
   viewAttachment: (caseId, attachmentId) => {
-    window.open(`${window.location.origin}/api/cases/${caseId}/attachments/${attachmentId}/view`, '_blank');
+    window.open(`${window.location.origin}/api/dockets/${caseId}/attachments/${attachmentId}/view`, '_blank');
   },
 
   downloadAttachment: async (caseId, attachmentId, filename) => {
-    const response = await api.get(`/cases/${caseId}/attachments/${attachmentId}/download`, { responseType: 'blob' });
+    const response = await api.get(`/dockets/${caseId}/attachments/${attachmentId}/download`, { responseType: 'blob' });
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
     link.href = url;
@@ -250,20 +246,20 @@ export const caseApi = {
 
   trackCaseOpen: async (caseId) => {
     if (shouldThrottleTracking('open', caseId)) return;
-    try { await api.post(`/cases/${caseId}/track-open`); } catch (error) { console.debug('[Tracking] Failed to track case open:', error.message); }
+    try { await api.post(`/dockets/${caseId}/track-open`); } catch (error) { console.debug('[Tracking] Failed to track docket open:', error.message); }
   },
   trackCaseView: async (caseId) => {
-    try { await api.post(`/cases/${caseId}/track-view`); } catch (error) { console.debug('[Tracking] Failed to track case view:', error.message); }
+    try { await api.post(`/dockets/${caseId}/track-view`); } catch (error) { console.debug('[Tracking] Failed to track docket view:', error.message); }
   },
   trackCaseExit: async (caseId) => {
     if (shouldThrottleTracking('exit', caseId)) return;
-    try { await api.post(`/cases/${caseId}/track-exit`); } catch (error) { console.debug('[Tracking] Failed to track case exit:', error.message); }
+    try { await api.post(`/dockets/${caseId}/track-exit`); } catch (error) { console.debug('[Tracking] Failed to track docket exit:', error.message); }
   },
 
-  getCaseHistory: (caseId) => request((http) => http.get(`/cases/${caseId}/history`), 'Failed to load case history'),
+  getCaseHistory: (caseId) => request((http) => http.get(`/dockets/${caseId}/history`), 'Failed to load docket history'),
 
   getDocketTimeline: (caseId, params = {}) => request((http) => http.get(`/dockets/${caseId}/timeline`, { params }), 'Failed to load docket timeline'),
 
-  getMyPendingCases: () => request((http) => http.get('/cases/my-pending'), 'Failed to load pending cases.'),
-  getAdminFiledCases: () => request((http) => http.get('/admin/cases/filed'), 'Failed to load filed cases.'),
+  getMyPendingCases: () => request((http) => http.get('/dockets/my-pending'), 'Failed to load pending dockets.'),
+  getAdminFiledCases: () => request((http) => http.get('/admin/cases/filed'), 'Failed to load filed dockets.'),
 };

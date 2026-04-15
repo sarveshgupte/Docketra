@@ -1,5 +1,6 @@
 const User = require('../models/User.model');
-const { resolveFirmRole } = require('../services/authorization.service');
+const { resolveRequestFirmRole } = require('../services/authorization.service');
+const { isAdminRole } = require('../utils/role.utils');
 
 /**
  * Admin Approval Middleware
@@ -28,9 +29,9 @@ const checkClientApprovalPermission = async (req, res, next) => {
       });
     }
 
-    const membership = await resolveFirmRole(userId, firmId);
+    const membership = await resolveRequestFirmRole(req, firmId);
 
-    if (!membership || membership.role !== 'Admin') {
+    if (!membership || !isAdminRole(membership.canonicalRole || membership.role)) {
       return res.status(403).json({
         success: false,
         message: 'Only firm Admin users can approve client cases',

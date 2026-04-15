@@ -959,12 +959,12 @@ export const CaseDetailPage = () => {
 
   const handlePendCase = async () => {
     if (!pendComment.trim()) {
-      showWarning('Comment is mandatory for pending a case');
+      showWarning('Comment is mandatory for pending a docket');
       return;
     }
 
     if (!pendingUntil) {
-      showWarning('Reopen date is mandatory for pending a case');
+      showWarning('Reopen date is mandatory for pending a docket');
       return;
     }
 
@@ -982,9 +982,9 @@ export const CaseDetailPage = () => {
 
     const confirmationTimestamp = new Date().toISOString();
     setConfirmModal({
-      title: 'Pend Case',
+      title: 'Pend Docket',
       description: `Stage change: ${toLifecycleStage(lifecycleStatus)} → Awaiting Partner Approval\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
-      confirmText: 'Pend Case',
+      confirmText: 'Pend Docket',
       onConfirm: async () => {
         setConfirmModal(null);
         setPendingCase(true);
@@ -1019,15 +1019,15 @@ export const CaseDetailPage = () => {
 
   const handleResolveCase = async () => {
     if (!resolveComment.trim()) {
-      showWarning('Comment is mandatory for resolving a case');
+      showWarning('Comment is mandatory for resolving a docket');
       return;
     }
 
     const confirmationTimestamp = new Date().toISOString();
     setConfirmModal({
-      title: 'Resolve Case',
+      title: 'Resolve Docket',
       description: `Stage change: ${toLifecycleStage(lifecycleStatus)} → Executed\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
-      confirmText: 'Resolve Case',
+      confirmText: 'Resolve Docket',
       onConfirm: async () => {
         setConfirmModal(null);
         const previousState = caseData;
@@ -1064,7 +1064,7 @@ export const CaseDetailPage = () => {
           }
         } catch (error) {
           setCaseData(previousState);
-          const errorMessage = extractErrorMessage(error, 'Failed to resolve case. Please try again.');
+          const errorMessage = extractErrorMessage(error, 'Failed to resolve docket. Please try again.');
           showError(errorMessage);
           if (!navigator.onLine) {
             queueFailedAction({ type: 'RESOLVE_CASE', payload: { comment: resolveComment } });
@@ -1080,15 +1080,15 @@ export const CaseDetailPage = () => {
 
   const handleUnpendCase = async () => {
     if (!unpendComment.trim()) {
-      showWarning('Comment is mandatory for unpending a case');
+      showWarning('Comment is mandatory for unpending a docket');
       return;
     }
 
     const confirmationTimestamp = new Date().toISOString();
     setConfirmModal({
-      title: 'Unpend Case',
+      title: 'Unpend Docket',
       description: `Stage change: Awaiting Partner Approval → Under Execution\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
-      confirmText: 'Unpend Case',
+      confirmText: 'Unpend Docket',
       onConfirm: async () => {
         setConfirmModal(null);
         setUnpendingCase(true);
@@ -1291,7 +1291,7 @@ export const CaseDetailPage = () => {
       lifecycleStatus !== 'RESOLVED' &&
       lifecycleStatus !== 'CLOSED';
     if (isSlaBreach) {
-      warnings.push('SLA has been breached for this case.');
+      warnings.push('SLA has been breached for this docket.');
     }
     return warnings;
   }, [caseInfo, comments, lifecycleStatus]);
@@ -1416,15 +1416,15 @@ export const CaseDetailPage = () => {
 
   const handleFileCase = async () => {
     if (!String(fileComment || '').trim()) {
-      showWarning('Comment is mandatory for filing a case');
+      showWarning('Comment is mandatory for filing a docket');
       return;
     }
 
     const confirmationTimestamp = new Date().toISOString();
     setConfirmModal({
-      title: 'File Case',
-      description: `Mark this case as filed.\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
-      confirmText: 'File Case',
+      title: 'File Docket',
+      description: `Mark this docket as filed.\nTimestamp: ${confirmationTimestamp}\nThis transition will create an audit record.`,
+      confirmText: 'File Docket',
       onConfirm: async () => {
         setConfirmModal(null);
         setFilingCase(true);
@@ -1764,7 +1764,7 @@ export const CaseDetailPage = () => {
                 </div>
               )}
               {shouldShowActions ? (
-                <section className="case-detail__actions-panel mt-4 border-t pt-4" aria-label="Case actions">
+                <section className="case-detail__actions-panel mt-4 border-t pt-4" aria-label="Docket actions">
                   <div className="case-detail__composer-actions case-detail__lifecycle-actions mt-3">
                     {canPerformLifecycleActions ? lifecycleQuickActions.map((action) => (
                       <Button
@@ -2200,14 +2200,14 @@ export const CaseDetailPage = () => {
         <Modal
           isOpen={showFileModal}
           onClose={() => { setShowFileModal(false); setFileComment(''); }}
-          title="File Case"
+          title="File Docket"
           actions={
             <>
               <Button variant="outline" onClick={() => { setShowFileModal(false); setFileComment(''); }} disabled={filingCase}>
                 Cancel
               </Button>
               <Button variant="primary" onClick={handleFileCase} disabled={!String(fileComment || '').trim() || filingCase}>
-                {filingCase ? 'Filing…' : 'File Case'}
+                {filingCase ? 'Filing…' : 'File Docket'}
               </Button>
             </>
           }
@@ -2225,32 +2225,32 @@ export const CaseDetailPage = () => {
           </div>
         </Modal>
 
-        {/* Unpend Case Modal */}
+        {/* Unpend Docket Modal */}
         <Modal
           isOpen={showUnpendModal}
           onClose={() => { setShowUnpendModal(false); setUnpendComment(''); }}
-          title="Unpend Case"
+          title="Unpend Docket"
           actions={
             <>
               <Button variant="outline" onClick={() => { setShowUnpendModal(false); setUnpendComment(''); }} disabled={unpendingCase}>
                 Cancel
               </Button>
               <Button variant="primary" onClick={handleUnpendCase} disabled={!unpendComment.trim() || unpendingCase}>
-                {unpendingCase ? 'Unpending…' : 'Unpend Case'}
+                {unpendingCase ? 'Unpending…' : 'Unpend Docket'}
               </Button>
             </>
           }
         >
           <div style={{ padding: 'var(--spacing-md)' }}>
             <p style={{ marginBottom: 'var(--spacing-md)', color: 'var(--text-secondary)' }}>
-              Unpending a case will move it back to OPEN lifecycle and return it to your worklist.
+              Unpending a docket will move it back to OPEN lifecycle and return it to your worklist.
               Use this when you no longer need to wait for external input.
             </p>
             <Textarea
               label="Comment (Required)"
               value={unpendComment}
               onChange={(e) => setUnpendComment(e.target.value)}
-              placeholder="Explain why this case is being unpended…"
+              placeholder="Explain why this docket is being unpended…"
               rows={4}
               required
               disabled={unpendingCase}
