@@ -267,6 +267,14 @@ export const AdminPage = () => {
       (workbaskets || []).map((workbasket) => [String(workbasket?._id), String(workbasket?.name || '')]),
     )
   ), [workbaskets]);
+  const primaryWorkbaskets = useMemo(
+    () => (workbaskets || []).filter((wb) => String(wb?.type || 'PRIMARY').toUpperCase() !== 'QC'),
+    [workbaskets],
+  );
+  const qcOnlyWorkbaskets = useMemo(
+    () => (workbaskets || []).filter((wb) => String(wb?.type || '').toUpperCase() === 'QC'),
+    [workbaskets],
+  );
 
   useEffect(() => {
     loadAdminStats();
@@ -1645,7 +1653,7 @@ export const AdminPage = () => {
           <div className="neo-form-group">
             <FormLabel>Workbaskets (at least one)</FormLabel>
             <div className="admin__client-access-list">
-              {workbaskets.map((workbasket) => (
+              {primaryWorkbaskets.map((workbasket) => (
                 <label key={workbasket._id} className="admin__client-access-item">
                   <input
                     type="checkbox"
@@ -1667,16 +1675,31 @@ export const AdminPage = () => {
               ))}
             </div>
           </div>
-          {isManagerActor ? (
+          {qcOnlyWorkbaskets.length > 0 ? (
             <div className="neo-form-group">
-              <label className="admin__client-access-item">
-                <input
-                  type="checkbox"
-                  checked={Boolean(newUser.assignQcWorkbaskets)}
-                  onChange={(e) => setNewUser((prev) => ({ ...prev, assignQcWorkbaskets: e.target.checked }))}
-                />
-                <span>Assign linked QC workbaskets</span>
-              </label>
+              <FormLabel>QC Access (optional)</FormLabel>
+              <div className="admin__client-access-list">
+                {qcOnlyWorkbaskets.map((workbasket) => (
+                  <label key={workbasket._id} className="admin__client-access-item">
+                    <input
+                      type="checkbox"
+                      checked={(newUser.teamIds || []).includes(String(workbasket._id))}
+                      onChange={() => {
+                        setNewUser((prev) => {
+                          const current = Array.isArray(prev.teamIds) ? prev.teamIds : [];
+                          return {
+                            ...prev,
+                            teamIds: current.includes(String(workbasket._id))
+                              ? current.filter((id) => id !== String(workbasket._id))
+                              : [...current, String(workbasket._id)],
+                          };
+                        });
+                      }}
+                    />
+                    <span>{workbasket.name}</span>
+                  </label>
+                ))}
+              </div>
             </div>
           ) : null}
 
@@ -1717,7 +1740,7 @@ export const AdminPage = () => {
           <div className="neo-form-group">
             <FormLabel>Workbaskets (at least one)</FormLabel>
             <div className="admin__client-access-list">
-              {workbaskets.map((workbasket) => (
+              {primaryWorkbaskets.map((workbasket) => (
                 <label key={workbasket._id} className="admin__client-access-item">
                   <input
                     type="checkbox"
@@ -1733,6 +1756,28 @@ export const AdminPage = () => {
               ))}
             </div>
           </div>
+
+          {qcOnlyWorkbaskets.length > 0 ? (
+            <div className="neo-form-group">
+              <FormLabel>QC Access (optional)</FormLabel>
+              <div className="admin__client-access-list">
+                {qcOnlyWorkbaskets.map((workbasket) => (
+                  <label key={workbasket._id} className="admin__client-access-item">
+                    <input
+                      type="checkbox"
+                      checked={selectedWorkbasketDraft.includes(String(workbasket._id))}
+                      onChange={() => {
+                        setSelectedWorkbasketDraft((prev) => prev.includes(String(workbasket._id))
+                          ? prev.filter((id) => id !== String(workbasket._id))
+                          : [...prev, String(workbasket._id)]);
+                      }}
+                    />
+                    <span>{workbasket.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           <div className="admin__access-summary">
             {clients.length === 0 ? (

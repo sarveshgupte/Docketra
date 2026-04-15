@@ -31,6 +31,7 @@ export const designTokens = {
 export const caseStatusAppearance = {
   OPEN: { label: '🟢 Open', tone: 'open' },
   IN_PROGRESS: { label: '🟡 In Progress', tone: 'review' },
+  QC_PENDING: { label: '🔍 QC Pending', tone: 'review' },
   RESOLVED: { label: '🔵 Resolved', tone: 'success' },
   CLOSED: { label: '⚫ Closed', tone: 'closed' },
 };

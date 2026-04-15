@@ -157,13 +157,25 @@ export const CasesPage = () => {
       .filter((item) => item.id);
   }, [user?.workbaskets, user?.teamIds, user?.teamNames]);
 
+  // QC workbaskets for the QC Queue — distinct from primary workbaskets
+  const qcWorkbaskets = useMemo(() => {
+    const explicit = Array.isArray(user?.qcWorkbaskets) ? user.qcWorkbaskets : [];
+    return explicit
+      .map((item) => ({
+        id: String(item?.id || item?._id || '').trim(),
+        name: String(item?.name || '').trim(),
+      }))
+      .filter((item) => item.id && item.name);
+  }, [user?.qcWorkbaskets]);
+
   // React Query: fetch cases list and category count
+  const hasQcAccess = qcWorkbaskets.length > 0;
   const {
     data: casesQueryData,
     isLoading: loading,
     error,
     refetch: refetchCases,
-  } = useCasesListQuery({ isAdmin, enabled: Boolean(user) });
+  } = useCasesListQuery({ isAdmin, hasQcAccess, enabled: Boolean(user) });
 
   const cases = casesQueryData?.cases ?? [];
   const categoryCount = casesQueryData?.categoryCount ?? 0;
@@ -205,15 +217,15 @@ export const CasesPage = () => {
   useEffect(() => {
     const requestedWorkbasketId = String(query.workbasketId || '').trim();
     if (!requestedWorkbasketId) {
-      if (accessibleWorkbaskets.length > 0 && statusFilter === CASE_STATUS.QC_PENDING) {
-        setActiveWorkbasketId(accessibleWorkbaskets[0].id);
+      if (qcWorkbaskets.length > 0 && statusFilter === CASE_STATUS.QC_PENDING) {
+        setActiveWorkbasketId(qcWorkbaskets[0].id);
       } else {
         setActiveWorkbasketId('');
       }
       return;
     }
     setActiveWorkbasketId(requestedWorkbasketId);
-  }, [query.workbasketId, accessibleWorkbaskets, statusFilter]);
+  }, [query.workbasketId, qcWorkbaskets, statusFilter]);
 
   // When the preset view changes, apply its default sort.
   useEffect(() => {
@@ -538,22 +550,22 @@ export const CasesPage = () => {
       ? []
       : [{ key: 'status', label: 'Status', value: statusFilter }];
     if (statusFilter === CASE_STATUS.QC_PENDING && activeWorkbasketId) {
-      const selectedWorkbasket = accessibleWorkbaskets.find((item) => item.id === activeWorkbasketId);
+      const selectedWorkbasket = qcWorkbaskets.find((item) => item.id === activeWorkbasketId);
       if (selectedWorkbasket) {
         items.push({ key: 'workbasketId', label: 'QC Workbasket', value: selectedWorkbasket.name });
       }
     }
     return items;
-  }, [statusFilter, activeWorkbasketId, accessibleWorkbaskets]);
+  }, [statusFilter, activeWorkbasketId, qcWorkbaskets]);
 
   const handleRemoveFilter = useCallback((key) => {
     if (key === 'status') {
       setStatusFilter('ALL');
     }
     if (key === 'workbasketId') {
-      setActiveWorkbasketId(accessibleWorkbaskets[0]?.id || '');
+      setActiveWorkbasketId(qcWorkbaskets[0]?.id || '');
     }
-  }, [accessibleWorkbaskets]);
+  }, [qcWorkbaskets]);
 
   const handleResetFilters = useCallback(() => {
     setStatusFilter('ALL');
@@ -958,11 +970,11 @@ export const CasesPage = () => {
         )}
 
         <SectionCard className="cases-page__filters cases-page__control-section" title="Filters" subtitle="Narrow down the docket list by workflow status.">
-          {statusFilter === CASE_STATUS.QC_PENDING && accessibleWorkbaskets.length > 1 && (
+          {statusFilter === CASE_STATUS.QC_PENDING && qcWorkbaskets.length > 1 && (
             <>
               <label className="cases-page__filter-label">QC Workbasket</label>
               <div className="cases-page__views" role="tablist" aria-label="QC workbasket selector">
-                {accessibleWorkbaskets.map((workbasket) => (
+                {qcWorkbaskets.map((workbasket) => (
                   <button
                     key={workbasket.id}
                     role="tab"
