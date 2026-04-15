@@ -73,3 +73,6 @@ export const MarketingSignupPage = lazy(() => import('../pages/marketing/Signup'
 export const NotFoundPage = lazyPage(() => import('../pages/NotFoundPage'), 'NotFoundPage');
 export const OtpVerificationPage = lazyPage(() => import('../pages/OtpVerificationPage'), 'OtpVerificationPage');
 export const UploadPage = lazyPage(() => import('../pages/UploadPage'), 'UploadPage');
+export const CrmClientsPage = lazyPage(() => import('../pages/crm/CrmClientsPage'), 'CrmClientsPage');
+export const CrmClientDetailPage = lazyPage(() => import('../pages/crm/CrmClientDetailPage'), 'CrmClientDetailPage');
+export const LeadsPage = lazyPage(() => import('../pages/crm/LeadsPage'), 'LeadsPage');

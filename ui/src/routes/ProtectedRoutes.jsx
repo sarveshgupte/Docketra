@@ -13,11 +13,14 @@ import {
   ComplianceCalendarPage,
   ClientsPage,
   CreateCasePage,
+  CrmClientsPage,
+  CrmClientDetailPage,
   DashboardPage,
   DetailedReports,
   FirmSettingsPage,
   HierarchyPage,
   FirmsManagement,
+  LeadsPage,
   NotFoundPage,
   PlatformDashboard,
   ProfilePage,
@@ -167,6 +170,30 @@ export const ProtectedRoutes = () => (
           element={(
             <ProtectedRoute>
               <ClientWorkspacePage />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="crm/clients"
+          element={(
+            <ProtectedRoute requireAdmin>
+              <CrmClientsPage />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="crm/clients/:crmClientId"
+          element={(
+            <ProtectedRoute requireAdmin>
+              <CrmClientDetailPage />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="crm/leads"
+          element={(
+            <ProtectedRoute requireAdmin>
+              <LeadsPage />
             </ProtectedRoute>
           )}
         />
