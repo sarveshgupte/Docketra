@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Layout } from '../../components/common/Layout';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
@@ -19,7 +19,6 @@ import { ROUTES, safeRoute } from '../../constants/routes';
 const TYPE_LABELS = { individual: 'Individual', company: 'Company' };
 
 export const CrmClientsPage = () => {
-  const { firmSlug } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { showError, showSuccess } = useToast();
