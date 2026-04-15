@@ -37,6 +37,20 @@ const cloneCaseBody = z.object({
 }).strict();
 
 module.exports = {
+  'POST /bulk/preview': {
+    body: z.object({
+      rows: z.array(z.record(z.string(), z.string())).max(1000).optional(),
+      csvContent: z.string().max(500_000).optional(),
+    }).strict(),
+  },
+  'POST /bulk/upload': {
+    body: z.object({
+      rows: z.array(z.record(z.string(), z.string())).max(1000).optional(),
+      csvContent: z.string().max(500_000).optional(),
+      rejectOnInvalid: z.boolean().optional(),
+      uploadValidRowsOnly: z.boolean().optional(),
+    }).strict(),
+  },
   'GET /': {
     query: z.object({
       status: z.union([z.string(), z.array(z.string())]).optional(),
@@ -52,6 +66,7 @@ module.exports = {
   },
   'GET /search': { query: z.object({ q: z.string().optional() }).strict() },
   'POST /': { body: createCaseBody },
+  'POST /create': { body: createCaseBody },
   'POST /pull': {
     body: z.object({
       caseIds: z.array(caseIdString).optional(),
@@ -61,11 +76,32 @@ module.exports = {
   'GET /my-pending': { query: strictEmpty },
   'GET /my-resolved': { query: strictEmpty },
   'GET /my-unassigned-created': { query: strictEmpty },
+  'GET /ai-suggestions/:attachmentId': {
+    params: z.object({ attachmentId: nonEmptyString }),
+    query: strictEmpty,
+  },
+  'POST /from-attachment/:attachmentId': {
+    params: z.object({ attachmentId: nonEmptyString }),
+    query: z.object({ preview: queryBoolean.optional() }).strict(),
+    body: strictEmpty,
+  },
   'POST /auto-reopen-pended': { body: strictEmpty },
   'POST /:caseId/track-open': { params: caseIdParams, body: strictEmpty },
   'POST /:caseId/track-view': { params: caseIdParams, body: strictEmpty },
   'POST /:caseId/track-exit': { params: caseIdParams, body: strictEmpty },
   'GET /:caseId/history': { params: caseIdParams, query: strictEmpty },
+  'GET /:caseId/timeline': {
+    params: caseIdParams,
+    query: z.object({
+      type: z.string().trim().optional(),
+      page: z.coerce.number().int().min(1).optional(),
+      limit: z.coerce.number().int().min(1).max(100).optional(),
+    }).strict(),
+  },
+  'GET /:caseId/ai-routing': {
+    params: caseIdParams,
+    query: strictEmpty,
+  },
   'GET /:caseId': { params: caseIdParams, query: paginationQuery },
   'POST /:caseId/comments': {
     params: caseIdParams,
@@ -147,5 +183,7 @@ module.exports = {
   'POST /:caseId/reopen-pending': { params: caseIdParams, body: z.object({}).passthrough() },
   'POST /:caseId/qc-action': { params: caseIdParams, body: z.object({ action: nonEmptyString }).passthrough() },
   'POST /:caseId/reassign': { params: caseIdParams, body: z.object({ assignTo: xidString }).passthrough() },
+  'POST /:caseId/apply-ai-routing': { params: caseIdParams, body: strictEmpty },
+  'POST /:caseId/reject-ai-routing': { params: caseIdParams, body: strictEmpty },
   'POST /:caseId/manager-move': { params: caseIdParams, body: z.object({ targetTeamId: objectIdString.optional() }).passthrough() },
 };
