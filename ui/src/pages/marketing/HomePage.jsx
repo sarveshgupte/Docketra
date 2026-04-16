@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Container from '../../components/layout/Container';
-import { assertNoEscapedUnicode, decodeUnicode } from '../../utils/decodeUnicode';
+import { decodeUnicode, warnIfEscapedUnicode } from '../../utils/decodeUnicode';
 
 const HERO_DOCKETS = [
   { name: 'GST filing package for Acme Foods', status: 'In Progress', assignee: 'AR', tone: 'text-amber-700 bg-amber-50 border-amber-200' },
@@ -75,13 +75,39 @@ const FEATURES = [
   },
 ];
 
+const STARTER_FEATURES = [
+  'Up to 2 users (enforced)',
+  'Max 1 Admin / Primary Admin (enforced)',
+  'Dockets across workbasket/worklist flow',
+  'Workflow transitions + approvals',
+  'Docketra-managed storage with provider quota handling',
+  'Immutable audit logs',
+];
+
+const PROFESSIONAL_FEATURES = [
+  'Higher user capacity',
+  'Advanced role permissions',
+  'Custom workflow templates',
+  'Priority support',
+  'Expanded analytics & reporting',
+];
+
+const ENTERPRISE_FEATURES = [
+  'Everything in Professional',
+  'Multi-office coordination',
+  'Dedicated account manager',
+  'Custom API access',
+  'SSO & advanced security',
+];
+
+const decodeMarketingText = (value, scope) => {
+  warnIfEscapedUnicode(value, scope);
+  return decodeUnicode(value);
+};
+
 export const HomePage = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const decodeText = (value, scope) => {
-    assertNoEscapedUnicode(value, scope);
-    return decodeUnicode(value);
-  };
 
   useEffect(() => {
     if (!location.hash) return;
@@ -157,7 +183,7 @@ export const HomePage = () => {
                   <div key={docket.name} className="rounded-lg border border-gray-100 bg-white p-3 sm:p-3.5">
                     <div className="flex items-start justify-between gap-3">
                       <p className="min-w-0 text-sm font-medium text-gray-900 leading-snug">
-                        {decodeText(docket.name, 'hero')}
+                        {decodeMarketingText(docket.name, 'hero')}
                       </p>
                       <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-900 text-[11px] font-semibold text-white">
                         {docket.assignee}
@@ -350,11 +376,11 @@ export const HomePage = () => {
                 viewport={{ once: true }}
               >
                 <div className="bg-blue-50 rounded-lg h-10 w-10 flex items-center justify-center text-blue-600 font-bold text-xl mb-6">
-                  {decodeText(feature.icon, 'features')}
+                  {decodeMarketingText(feature.icon, 'features')}
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">{decodeText(feature.title, 'features')}</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">{decodeText(feature.body, 'features')}</p>
-                <p className="mt-4 text-xs font-medium text-blue-600">{decodeText(feature.benefit, 'features')}</p>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">{decodeMarketingText(feature.title, 'features')}</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">{decodeMarketingText(feature.body, 'features')}</p>
+                <p className="mt-4 text-xs font-medium text-blue-600">{decodeMarketingText(feature.benefit, 'features')}</p>
               </motion.div>
             ))}
           </div>
@@ -484,7 +510,7 @@ export const HomePage = () => {
             ].map((t) => (
               <div key={t.name} className="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm">
                 <p className="text-amber-400 text-sm mb-4">★★★★★</p>
-                <p className="text-sm text-gray-700 leading-relaxed">“{decodeText(t.quote, 'testimonials')}”</p>
+                <p className="text-sm text-gray-700 leading-relaxed">“{decodeMarketingText(t.quote, 'testimonials')}”</p>
                 <div className="mt-6 flex items-center gap-3">
                   <div className="h-10 w-10 rounded-full bg-gray-900 text-white flex items-center justify-center text-sm font-semibold shrink-0">
                     {t.name.slice(0, 2)}
@@ -525,9 +551,9 @@ export const HomePage = () => {
               <p className="text-3xl font-bold text-gray-900">Free</p>
               <p className="text-sm text-gray-500 mt-1">/ forever</p>
               <ul className="mt-6 space-y-2 flex-1">
-                {['Up to 2 users (enforced)', 'Max 1 Admin / Primary Admin (enforced)', 'Dockets across workbasket/worklist flow', 'Workflow transitions + approvals', 'Docketra-managed storage with provider quota handling', 'Immutable audit logs'].map((f) => (
+                {STARTER_FEATURES.map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm text-gray-600">
-                    <span className="text-emerald-500 mt-0.5">✓</span>{decodeText(f, 'pricing')}
+                    <span className="text-emerald-500 mt-0.5">✓</span>{decodeMarketingText(f, 'pricing')}
                   </li>
                 ))}
               </ul>
@@ -544,9 +570,9 @@ export const HomePage = () => {
               <p className="text-3xl font-bold text-gray-900">TBA</p>
               <p className="text-sm text-gray-500 mt-1">/ coming soon</p>
               <ul className="mt-6 space-y-2 flex-1">
-                {['Higher user capacity', 'Advanced role permissions', 'Custom workflow templates', 'Priority support', 'Expanded analytics & reporting'].map((f) => (
+                {PROFESSIONAL_FEATURES.map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm text-gray-600">
-                    <span className="text-gray-400 mt-0.5">✓</span>{decodeText(f, 'pricing')}
+                    <span className="text-gray-400 mt-0.5">✓</span>{decodeMarketingText(f, 'pricing')}
                   </li>
                 ))}
               </ul>
@@ -564,9 +590,9 @@ export const HomePage = () => {
               <p className="text-3xl font-bold text-gray-900">Custom</p>
               <p className="text-sm text-gray-500 mt-1">/ tailored</p>
               <ul className="mt-6 space-y-2 flex-1">
-                {['Everything in Professional', 'Multi-office coordination', 'Dedicated account manager', 'Custom API access', 'SSO & advanced security'].map((f) => (
+                {ENTERPRISE_FEATURES.map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm text-gray-600">
-                    <span className="text-gray-400 mt-0.5">✓</span>{decodeText(f, 'pricing')}
+                    <span className="text-gray-400 mt-0.5">✓</span>{decodeMarketingText(f, 'pricing')}
                   </li>
                 ))}
               </ul>
