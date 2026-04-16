@@ -7,7 +7,7 @@ export function decodeUnicode(str = '') {
   );
 }
 
-export function assertNoEscapedUnicode(str = '', scope = 'copy') {
+export function warnIfEscapedUnicode(str = '', scope = 'copy') {
   if (!import.meta.env.DEV) return;
   if (ESCAPED_UNICODE_ASSERT_REGEX.test(String(str))) {
     // eslint-disable-next-line no-console
