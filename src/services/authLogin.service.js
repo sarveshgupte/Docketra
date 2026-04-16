@@ -1,5 +1,5 @@
 const { createResponseCapture, sendSuccessResponse, sendErrorResponse } = require('../utils/response.util');
-const { getRequiredFieldValidation } = require('../utils/validation.util');
+const { validateRequiredFields } = require('../utils/validation.util');
 
 const createAuthLoginService = (deps) => {
   const models = deps.models || {};
@@ -44,7 +44,7 @@ const createAuthLoginService = (deps) => {
 
       const normalizedXID = (xid || xID || XID)?.trim().toUpperCase();
 
-      if (!getRequiredFieldValidation({ xID: normalizedXID, password }, ['xID', 'password']).isValid) {
+      if (!validateRequiredFields({ xID: normalizedXID, password }, ['xID', 'password']).isValid) {
         console.warn('[AUTH] Missing credentials in login attempt', {
           hasXID: !!(xid || xID || XID),
           hasPassword: !!password,
@@ -136,7 +136,7 @@ const createAuthLoginService = (deps) => {
     try {
       const otpConfig = getLoginOtpConfig();
       const loginToken = String(req.body?.loginToken || '').trim();
-      if (!getRequiredFieldValidation({ loginToken }, ['loginToken']).isValid) {
+      if (!validateRequiredFields({ loginToken }, ['loginToken']).isValid) {
         return sendErrorResponse(res, { statusCode: 400, message: 'loginToken is required' });
       }
 
@@ -215,7 +215,7 @@ const createAuthLoginService = (deps) => {
       if (!/^\d{6}$/.test(otp)) {
         return sendErrorResponse(res, { statusCode: 400, message: 'OTP must be a 6 digit code' });
       }
-      if (!getRequiredFieldValidation({ loginToken }, ['loginToken']).isValid) {
+      if (!validateRequiredFields({ loginToken }, ['loginToken']).isValid) {
         return sendErrorResponse(res, { statusCode: 400, message: 'loginToken is required' });
       }
 

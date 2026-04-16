@@ -16,7 +16,7 @@ const getValidationDetails = (error) => {
     .join('; ');
 };
 
-const getRequiredFieldValidation = (payload = {}, requiredFields = [], options = {}) => {
+const validateRequiredFields = (payload = {}, requiredFields = [], options = {}) => {
   const missingFields = getMissingRequiredFields(payload, requiredFields, options);
   return {
     isValid: missingFields.length === 0,
@@ -33,6 +33,6 @@ module.exports = {
   getMissingRequiredFields,
   hasRequiredFields,
   getValidationDetails,
-  getRequiredFieldValidation,
+  validateRequiredFields,
   buildMissingFieldsMessage,
 };
