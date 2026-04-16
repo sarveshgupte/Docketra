@@ -9,7 +9,6 @@ const createAuthSessionService = (deps) => {
     noteRefreshTokenUse,
     logAuthAudit,
     getFirmSlug,
-    generateAndStoreRefreshToken: generateAndStoreRefreshTokenFallback,
     isSuperAdminRole,
     DEFAULT_FIRM_ID,
   } = deps;
@@ -189,8 +188,7 @@ const createAuthSessionService = (deps) => {
         role: user.role,
       });
 
-      const tokenGenerator = generateAndStoreRefreshTokenFallback || generateAndStoreRefreshToken;
-      const { refreshToken: newRefreshToken } = await tokenGenerator({
+      const { refreshToken: newRefreshToken } = await generateAndStoreRefreshToken({
         req,
         userId: user._id,
         firmId: user.firmId,
