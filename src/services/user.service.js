@@ -1,6 +1,7 @@
 const Firm = require('../models/Firm.model');
 const Plan = require('../models/Plan.model');
 const User = require('../models/User.model');
+const log = require('../utils/log');
 
 class PlanLimitExceededError extends Error {
   constructor(limit) {
@@ -74,7 +75,7 @@ const assertFirmPlanCapacity = async ({ firmId, session, incrementBy = 1, role =
   if (normalizedPlan === 'starter') {
     const maxUsers = firm.maxUsers || 2;
     if ((count + incrementBy) > maxUsers) {
-      console.warn('[PLAN_LIMIT] starter capacity exceeded', {
+      log.warn('[PLAN_LIMIT] starter capacity exceeded', {
         firmId: firmId?.toString?.() || firmId,
         maxUsers,
         currentCount: count,
@@ -91,7 +92,7 @@ const assertFirmPlanCapacity = async ({ firmId, session, incrementBy = 1, role =
       }));
 
       if ((adminCount + incrementBy) > 1) {
-        console.warn('[PLAN_LIMIT] starter admin capacity exceeded', {
+        log.warn('[PLAN_LIMIT] starter admin capacity exceeded', {
           firmId: firmId?.toString?.() || firmId,
           adminLimit: 1,
           currentCount: adminCount,
@@ -109,7 +110,7 @@ const assertFirmPlanCapacity = async ({ firmId, session, incrementBy = 1, role =
   if (!plan || plan.maxUsers == null) return;
 
   if ((count + incrementBy) > plan.maxUsers) {
-    console.warn('[PLAN_LIMIT] capacity exceeded', { firmId: firmId?.toString?.() || firmId, planId: plan._id?.toString?.() || plan._id, maxUsers: plan.maxUsers, currentCount: count, incrementBy });
+    log.warn('[PLAN_LIMIT] capacity exceeded', { firmId: firmId?.toString?.() || firmId, planId: plan._id?.toString?.() || plan._id, maxUsers: plan.maxUsers, currentCount: count, incrementBy });
     throw new PlanLimitExceededError(plan.maxUsers);
   }
 };

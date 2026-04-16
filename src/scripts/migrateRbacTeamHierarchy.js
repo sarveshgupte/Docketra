@@ -5,6 +5,7 @@ const User = require('../models/User.model');
 const Firm = require('../models/Firm.model');
 const Team = require('../models/Team.model');
 const { normalizeRole } = require('../utils/role.utils');
+const log = require('../utils/log');
 
 const MIGRATION_ROLES = ['PRIMARY_ADMIN', 'ADMIN', 'Admin', 'Employee'];
 
@@ -77,14 +78,14 @@ async function run() {
   for (const firm of firms) {
     const primary = await ensurePrimaryAdminForFirm(firm);
     const team = await ensureGeneralTeamForFirm(firm);
-    console.log(`[RBAC_MIGRATION] firm=${firm.firmId} primary=${primary?.xID || 'none'} team=${team._id}`);
+    log.info(`[RBAC_MIGRATION] firm=${firm.firmId} primary=${primary?.xID || 'none'} team=${team._id}`);
   }
 
   await mongoose.connection.close();
 }
 
 run().catch(async (error) => {
-  console.error('[RBAC_MIGRATION] failed', error);
+  log.error('[RBAC_MIGRATION] failed', error);
   await mongoose.connection.close();
   process.exit(1);
 });

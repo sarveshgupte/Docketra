@@ -1,7 +1,8 @@
+const log = require('../utils/log');
 const optionsPreflight = (allowedOrigins = [], allowedHeaders = [], allowedMethods = []) => {
   const originAllowlist = new Set(allowedOrigins.filter(Boolean));
   if (originAllowlist.size === 0) {
-    console.warn('[CORS] OPTIONS preflight allowlist is empty; preflight responses will omit Access-Control-Allow-Origin.');
+    log.warn('[CORS] OPTIONS preflight allowlist is empty; preflight responses will omit Access-Control-Allow-Origin.');
   }
   const headerList = allowedHeaders.length > 0
     ? allowedHeaders.join(', ')

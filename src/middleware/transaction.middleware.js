@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const { recordTransactionFailure } = require('../services/transactionMonitor.service');
 const { setSession } = require('../utils/getSession');
+const log = require('../utils/log');
 
 const mutatingMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
@@ -19,7 +20,7 @@ const transactionMiddleware = async (req, res, next) => {
   try {
     session = await mongoose.startSession();
   } catch (err) {
-    console.warn('[transactionMiddleware] Unable to start MongoDB session:', err.message);
+    log.warn('[transactionMiddleware] Unable to start MongoDB session:', err.message);
     recordTransactionFailure('start');
     session = null;
     req.transactionStartFailed = true;

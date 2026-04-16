@@ -1,3 +1,4 @@
+const log = require('../utils/log');
 /**
  * Migration Script: assignedTo → assignedToXID
  * 
@@ -48,9 +49,9 @@ async function connectDB() {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
-    console.log('✅ Connected to MongoDB');
+    log.info('✅ Connected to MongoDB');
   } catch (error) {
-    console.error('❌ MongoDB connection error:', error);
+    log.error('❌ MongoDB connection error:', error);
     process.exit(1);
   }
 }
@@ -59,8 +60,8 @@ async function connectDB() {
  * Migrate assignedTo to assignedToXID
  */
 async function migrateAssignedToXID() {
-  console.log('\n📋 Step 1: Migrating assignedTo → assignedToXID');
-  console.log('═══════════════════════════════════════════════\n');
+  log.info('\n📋 Step 1: Migrating assignedTo → assignedToXID');
+  log.info('═══════════════════════════════════════════════\n');
   
   // Find all cases where assignedTo contains an xID pattern but assignedToXID is not set
   const query = {
@@ -70,18 +71,18 @@ async function migrateAssignedToXID() {
   
   const casesToMigrate = await Case.find(query);
   
-  console.log(`Found ${casesToMigrate.length} cases to migrate\n`);
+  log.info(`Found ${casesToMigrate.length} cases to migrate\n`);
   
   if (casesToMigrate.length === 0) {
-    console.log('✅ No cases need migration for assignedTo → assignedToXID');
+    log.info('✅ No cases need migration for assignedTo → assignedToXID');
     return 0;
   }
   
   if (DRY_RUN) {
-    console.log('🔍 DRY RUN MODE - Showing first 10 examples:\n');
+    log.info('🔍 DRY RUN MODE - Showing first 10 examples:\n');
     casesToMigrate.slice(0, 10).forEach((caseData, idx) => {
-      console.log(`${idx + 1}. Case ${caseData.caseId}:`);
-      console.log(`   assignedTo: ${caseData.assignedTo} → assignedToXID: ${caseData.assignedTo}`);
+      log.info(`${idx + 1}. Case ${caseData.caseId}:`);
+      log.info(`   assignedTo: ${caseData.assignedTo} → assignedToXID: ${caseData.assignedTo}`);
     });
     return casesToMigrate.length;
   }
@@ -97,11 +98,11 @@ async function migrateAssignedToXID() {
     migratedCount++;
     
     if (migratedCount % BATCH_SIZE === 0) {
-      console.log(`✅ Migrated ${migratedCount} / ${casesToMigrate.length} cases`);
+      log.info(`✅ Migrated ${migratedCount} / ${casesToMigrate.length} cases`);
     }
   }
   
-  console.log(`\n✅ Successfully migrated ${migratedCount} cases`);
+  log.info(`\n✅ Successfully migrated ${migratedCount} cases`);
   return migratedCount;
 }
 
@@ -109,8 +110,8 @@ async function migrateAssignedToXID() {
  * Normalize queueType based on assignedToXID
  */
 async function normalizeQueueType() {
-  console.log('\n📋 Step 2: Normalizing queueType');
-  console.log('═══════════════════════════════════════════════\n');
+  log.info('\n📋 Step 2: Normalizing queueType');
+  log.info('═══════════════════════════════════════════════\n');
   
   // Cases with assignedToXID should have queueType = PERSONAL
   const assignedCases = await Case.countDocuments({
@@ -124,11 +125,11 @@ async function normalizeQueueType() {
     queueType: { $ne: 'GLOBAL' },
   });
   
-  console.log(`Found ${assignedCases} assigned cases to normalize (→ PERSONAL)`);
-  console.log(`Found ${unassignedCases} unassigned cases to normalize (→ GLOBAL)\n`);
+  log.info(`Found ${assignedCases} assigned cases to normalize (→ PERSONAL)`);
+  log.info(`Found ${unassignedCases} unassigned cases to normalize (→ GLOBAL)\n`);
   
   if (DRY_RUN) {
-    console.log('🔍 DRY RUN MODE - No changes applied');
+    log.info('🔍 DRY RUN MODE - No changes applied');
     return assignedCases + unassignedCases;
   }
   
@@ -144,8 +145,8 @@ async function normalizeQueueType() {
     { $set: { queueType: 'GLOBAL' } }
   );
   
-  console.log(`✅ Updated ${result1.modifiedCount} cases to PERSONAL queue`);
-  console.log(`✅ Updated ${result2.modifiedCount} cases to GLOBAL queue`);
+  log.info(`✅ Updated ${result1.modifiedCount} cases to PERSONAL queue`);
+  log.info(`✅ Updated ${result2.modifiedCount} cases to GLOBAL queue`);
   
   return result1.modifiedCount + result2.modifiedCount;
 }
@@ -154,8 +155,8 @@ async function normalizeQueueType() {
  * Normalize status values
  */
 async function normalizeStatus() {
-  console.log('\n📋 Step 3: Normalizing status values');
-  console.log('═══════════════════════════════════════════════\n');
+  log.info('\n📋 Step 3: Normalizing status values');
+  log.info('═══════════════════════════════════════════════\n');
   
   let totalNormalized = 0;
   
@@ -163,14 +164,14 @@ async function normalizeStatus() {
     const count = await Case.countDocuments({ status: oldStatus });
     
     if (count > 0) {
-      console.log(`Found ${count} cases with status '${oldStatus}' (will normalize to '${newStatus}')`);
+      log.info(`Found ${count} cases with status '${oldStatus}' (will normalize to '${newStatus}')`);
       
       if (!DRY_RUN) {
         const result = await Case.updateMany(
           { status: oldStatus },
           { $set: { status: newStatus } }
         );
-        console.log(`✅ Updated ${result.modifiedCount} cases`);
+        log.info(`✅ Updated ${result.modifiedCount} cases`);
         totalNormalized += result.modifiedCount;
       } else {
         totalNormalized += count;
@@ -179,11 +180,11 @@ async function normalizeStatus() {
   }
   
   if (totalNormalized === 0) {
-    console.log('✅ No status values need normalization');
+    log.info('✅ No status values need normalization');
   } else if (DRY_RUN) {
-    console.log(`\n🔍 DRY RUN MODE - Would normalize ${totalNormalized} cases`);
+    log.info(`\n🔍 DRY RUN MODE - Would normalize ${totalNormalized} cases`);
   } else {
-    console.log(`\n✅ Successfully normalized ${totalNormalized} cases`);
+    log.info(`\n✅ Successfully normalized ${totalNormalized} cases`);
   }
   
   return totalNormalized;
@@ -198,10 +199,10 @@ async function normalizeStatus() {
  * By default, this step is COMMENTED OUT for safety.
  */
 async function removeLegacyField() {
-  console.log('\n📋 Step 4: Removing legacy assignedTo field');
-  console.log('═══════════════════════════════════════════════\n');
-  console.log('⚠️  This step is SKIPPED by default for safety');
-  console.log('⚠️  Uncomment in the code to enable after validation\n');
+  log.info('\n📋 Step 4: Removing legacy assignedTo field');
+  log.info('═══════════════════════════════════════════════\n');
+  log.info('⚠️  This step is SKIPPED by default for safety');
+  log.info('⚠️  Uncomment in the code to enable after validation\n');
   
   return 0;
   
@@ -209,10 +210,10 @@ async function removeLegacyField() {
   /*
   const count = await Case.countDocuments({ assignedTo: { $exists: true } });
   
-  console.log(`Found ${count} cases with legacy assignedTo field`);
+  log.info(`Found ${count} cases with legacy assignedTo field`);
   
   if (DRY_RUN) {
-    console.log('🔍 DRY RUN MODE - Would remove assignedTo from these cases');
+    log.info('🔍 DRY RUN MODE - Would remove assignedTo from these cases');
     return count;
   }
   
@@ -221,7 +222,7 @@ async function removeLegacyField() {
     { $unset: { assignedTo: "" } }
   );
   
-  console.log(`✅ Removed legacy field from ${result.modifiedCount} cases`);
+  log.info(`✅ Removed legacy field from ${result.modifiedCount} cases`);
   return result.modifiedCount;
   */
 }
@@ -230,8 +231,8 @@ async function removeLegacyField() {
  * Validation: Verify migration results
  */
 async function validateMigration() {
-  console.log('\n📋 Step 5: Validating migration results');
-  console.log('═══════════════════════════════════════════════\n');
+  log.info('\n📋 Step 5: Validating migration results');
+  log.info('═══════════════════════════════════════════════\n');
   
   // Check for cases with assignedTo but no assignedToXID
   const missingXID = await Case.countDocuments({
@@ -255,43 +256,43 @@ async function validateMigration() {
     status: { $in: ['Open', 'open', 'Pending', 'pending', 'Filed', 'filed'] },
   });
   
-  console.log('Validation Results:');
-  console.log('───────────────────');
+  log.info('Validation Results:');
+  log.info('───────────────────');
   
   if (missingXID === 0) {
-    console.log('✅ All assigned cases have assignedToXID field');
+    log.info('✅ All assigned cases have assignedToXID field');
   } else {
-    console.log(`❌ ${missingXID} cases missing assignedToXID (need migration)`);
+    log.info(`❌ ${missingXID} cases missing assignedToXID (need migration)`);
   }
   
   if (personalWithoutXID === 0) {
-    console.log('✅ All PERSONAL queue cases have assignedToXID');
+    log.info('✅ All PERSONAL queue cases have assignedToXID');
   } else {
-    console.log(`❌ ${personalWithoutXID} PERSONAL cases missing assignedToXID (data inconsistency)`);
+    log.info(`❌ ${personalWithoutXID} PERSONAL cases missing assignedToXID (data inconsistency)`);
   }
   
   if (globalWithXID === 0) {
-    console.log('✅ No GLOBAL queue cases have assignedToXID');
+    log.info('✅ No GLOBAL queue cases have assignedToXID');
   } else {
-    console.log(`❌ ${globalWithXID} GLOBAL cases have assignedToXID (data inconsistency)`);
+    log.info(`❌ ${globalWithXID} GLOBAL cases have assignedToXID (data inconsistency)`);
   }
   
   if (legacyStatuses === 0) {
-    console.log('✅ All status values normalized');
+    log.info('✅ All status values normalized');
   } else {
-    console.log(`❌ ${legacyStatuses} cases with legacy status values`);
+    log.info(`❌ ${legacyStatuses} cases with legacy status values`);
   }
   
   // Overall status
   const allValid = missingXID === 0 && personalWithoutXID === 0 && globalWithXID === 0 && legacyStatuses === 0;
   
-  console.log('\n' + '═'.repeat(50));
+  log.info('\n' + '═'.repeat(50));
   if (allValid) {
-    console.log('✅ VALIDATION PASSED - Migration successful!');
+    log.info('✅ VALIDATION PASSED - Migration successful!');
   } else {
-    console.log('❌ VALIDATION FAILED - Please review issues above');
+    log.info('❌ VALIDATION FAILED - Please review issues above');
   }
-  console.log('═'.repeat(50) + '\n');
+  log.info('═'.repeat(50) + '\n');
   
   return allValid;
 }
@@ -300,17 +301,17 @@ async function validateMigration() {
  * Main migration function
  */
 async function runMigration() {
-  console.log('\n' + '═'.repeat(50));
-  console.log('  xID CANONICALIZATION MIGRATION');
-  console.log('  assignedTo → assignedToXID');
-  console.log('═'.repeat(50));
+  log.info('\n' + '═'.repeat(50));
+  log.info('  xID CANONICALIZATION MIGRATION');
+  log.info('  assignedTo → assignedToXID');
+  log.info('═'.repeat(50));
   
   if (DRY_RUN) {
-    console.log('\n🔍 RUNNING IN DRY RUN MODE');
-    console.log('   Set DRY_RUN=false to apply changes\n');
+    log.info('\n🔍 RUNNING IN DRY RUN MODE');
+    log.info('   Set DRY_RUN=false to apply changes\n');
   } else {
-    console.log('\n⚠️  RUNNING IN LIVE MODE');
-    console.log('   Changes will be applied to the database\n');
+    log.info('\n⚠️  RUNNING IN LIVE MODE');
+    log.info('   Changes will be applied to the database\n');
   }
   
   try {
@@ -321,24 +322,24 @@ async function runMigration() {
     const step3Count = await normalizeStatus();
     const step4Count = await removeLegacyField();
     
-    console.log('\n' + '═'.repeat(50));
-    console.log('  MIGRATION SUMMARY');
-    console.log('═'.repeat(50) + '\n');
-    console.log(`Cases migrated to assignedToXID: ${step1Count}`);
-    console.log(`QueueType normalized: ${step2Count}`);
-    console.log(`Status values normalized: ${step3Count}`);
-    console.log(`Legacy fields removed: ${step4Count}`);
+    log.info('\n' + '═'.repeat(50));
+    log.info('  MIGRATION SUMMARY');
+    log.info('═'.repeat(50) + '\n');
+    log.info(`Cases migrated to assignedToXID: ${step1Count}`);
+    log.info(`QueueType normalized: ${step2Count}`);
+    log.info(`Status values normalized: ${step3Count}`);
+    log.info(`Legacy fields removed: ${step4Count}`);
     
     if (!DRY_RUN) {
       await validateMigration();
     }
     
   } catch (error) {
-    console.error('\n❌ Migration failed:', error);
+    log.error('\n❌ Migration failed:', error);
     process.exit(1);
   } finally {
     await mongoose.connection.close();
-    console.log('\n✅ Database connection closed');
+    log.info('\n✅ Database connection closed');
   }
 }
 

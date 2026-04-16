@@ -26,6 +26,7 @@
 const LocalEncryptionProvider = require('./encryption.local.provider');
 const KmsEncryptionProvider = require('./encryption.kms.provider');
 const { looksEncrypted } = require('./encryption.utils');
+const log = require('../utils/log');
 
 /** Lazy-initialised singleton provider instance. */
 let _provider = null;
@@ -119,7 +120,7 @@ async function decrypt(value, tenantId, role, { session, logContext } = {}) {
 
   if (!tenantId) {
     const err = new Error('[EncryptionService] tenantId is required for decryption');
-    console.error('DECRYPTION_TENANT_ID_MISSING', {
+    log.error('DECRYPTION_TENANT_ID_MISSING', {
       valueStart: String(value).substring(0, 50),
       error: err.message,
       logContext,
@@ -131,7 +132,7 @@ async function decrypt(value, tenantId, role, { session, logContext } = {}) {
     const plaintext = await getProvider().decrypt(String(value), tenantId, { session });
 
     if (plaintext == null) {
-      console.warn('[EncryptionService] DECRYPTION_RETURNED_NULL', {
+      log.warn('[EncryptionService] DECRYPTION_RETURNED_NULL', {
         tenantId,
         valueLength: String(value).length,
         valueStart: String(value).substring(0, 50),
@@ -142,7 +143,7 @@ async function decrypt(value, tenantId, role, { session, logContext } = {}) {
 
     return plaintext;
   } catch (err) {
-    console.error('[EncryptionService] DECRYPTION_ERROR', {
+    log.error('[EncryptionService] DECRYPTION_ERROR', {
       tenantId,
       requestId: logContext?.requestId || null,
       field: logContext?.field || null,

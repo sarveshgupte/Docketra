@@ -1,6 +1,7 @@
 const signupService = require('../services/signup.service');
 const { validatePasswordStrength, PASSWORD_POLICY_MESSAGE } = require('../utils/passwordPolicy');
 const { getSession } = require('../utils/getSession');
+const log = require('../utils/log');
 
 const phoneRegex = /^[0-9]{10}$/;
 const otpRegex = /^[0-9]{6}$/;
@@ -60,7 +61,7 @@ const initiateSignup = async (req, res) => {
       requiresOtpVerification: true,
     };
   } catch (error) {
-    console.error('[PUBLIC_SIGNUP] initiateSignup error:', error.message);
+    log.error('[PUBLIC_SIGNUP] initiateSignup error:', error.message);
     return { success: false, statusCode: 500, message: 'An error occurred. Please try again.' };
   }
 };
@@ -101,7 +102,7 @@ const verifyOtp = async (req, res) => {
       redirectPath: result.redirectPath,
     };
   } catch (error) {
-    console.error('[PUBLIC_SIGNUP] verifyOtp error:', error.message);
+    log.error('[PUBLIC_SIGNUP] verifyOtp error:', error.message);
     const verificationError = new Error('Verification failed');
     verificationError.statusCode = error.statusCode || 500;
     throw verificationError;
@@ -128,7 +129,7 @@ const resendOtp = async (req, res) => {
 
     return res.status(200).json({ success: true, message: result.message });
   } catch (error) {
-    console.error('[PUBLIC_SIGNUP] resendOtp error:', error.message);
+    log.error('[PUBLIC_SIGNUP] resendOtp error:', error.message);
     return res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 };
@@ -160,7 +161,7 @@ const completeSignup = async (req, res) => {
       redirectPath: result.redirectPath,
     };
   } catch (error) {
-    console.error('[PUBLIC_SIGNUP] completeSignup error:', error.message);
+    log.error('[PUBLIC_SIGNUP] completeSignup error:', error.message);
     return { success: false, statusCode: 500, message: 'An error occurred. Please try again.' };
   }
 };
@@ -180,7 +181,7 @@ const resendCredentials = async (req, res) => {
     const result = await signupService.resendCredentialsEmail({ email, req });
     return res.status(200).json({ success: true, message: result.message || 'Credentials email sent.' });
   } catch (error) {
-    console.error('[PUBLIC_SIGNUP] resendCredentials error:', error.message);
+    log.error('[PUBLIC_SIGNUP] resendCredentials error:', error.message);
     return res.status(500).json({ success: false, message: 'Unable to resend credentials right now.' });
   }
 };

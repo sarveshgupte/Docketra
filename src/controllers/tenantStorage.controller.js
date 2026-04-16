@@ -2,6 +2,7 @@ const TenantStorageConfig = require('../models/TenantStorageConfig.model');
 const Firm = require('../models/Firm.model');
 const { encrypt } = require('../services/storage/services/TokenEncryption.service');
 const { UnsupportedProviderError } = require('../services/storage/errors');
+const log = require('../utils/log');
 
 function maskCredentialLog(tenantId, provider) {
   return { tenantId, provider };
@@ -66,7 +67,7 @@ async function updateTenantStorage(req, res) {
       },
     });
 
-    console.info('[TenantStorage] Updated storage config', maskCredentialLog(tenantId, provider));
+    log.info('[TenantStorage] Updated storage config', maskCredentialLog(tenantId, provider));
 
     return res.json({
       success: true,
@@ -82,7 +83,7 @@ async function updateTenantStorage(req, res) {
       },
     });
   } catch (error) {
-    console.error('[TenantStorage] Failed to update storage config', {
+    log.error('[TenantStorage] Failed to update storage config', {
       tenantId,
       message: error.message,
     });

@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const connectDB = require('../config/database');
 const User = require('../models/User.model');
 const Team = require('../models/Team.model');
+const log = require('../utils/log');
 
 async function run() {
   await connectDB();
@@ -19,12 +20,12 @@ async function run() {
     }
   }
 
-  console.log(`[RBAC_SEED] Processed ${firmUsers.length} admin users`);
+  log.info(`[RBAC_SEED] Processed ${firmUsers.length} admin users`);
   await mongoose.connection.close();
 }
 
 run().catch(async (error) => {
-  console.error('[RBAC_SEED] failed', error);
+  log.error('[RBAC_SEED] failed', error);
   await mongoose.connection.close();
   process.exit(1);
 });

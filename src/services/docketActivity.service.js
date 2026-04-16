@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const { DocketActivity, DOCKET_ACTIVITY_TYPES } = require('../models/DocketActivity.model');
 const User = require('../models/User.model');
+const log = require('../utils/log');
 
 const ACTIVITY_TYPE_SET = new Set(DOCKET_ACTIVITY_TYPES);
 
@@ -33,7 +34,7 @@ const logActivity = async ({ docketId, firmId, type, description, metadata, perf
 const logActivitySafe = (payload) => {
   setImmediate(() => {
     logActivity(payload).catch((error) => {
-      console.warn('[DocketActivity] Failed to log activity', {
+      log.warn('[DocketActivity] Failed to log activity', {
         type: payload?.type,
         docketId: payload?.docketId,
         firmId: payload?.firmId,

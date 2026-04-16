@@ -8,6 +8,7 @@ const User = require('../models/User.model');
 const { recordAdminAudit } = require('./adminAudit.service');
 const { enqueueAfterCommit } = require('./sideEffectQueue.service');
 const { getSession } = require('../utils/getSession');
+const log = require('../utils/log');
 
 const getCaseKey = (caseDoc) => caseDoc?.caseId || caseDoc?.caseNumber;
 
@@ -31,7 +32,7 @@ const emitAudit = async ({ action, modelName, doc, req, reason }) => {
       reason,
     });
   } catch (err) {
-    console.warn('[SOFT_DELETE][AUDIT] Failed to record audit:', err.message);
+    log.warn('[SOFT_DELETE][AUDIT] Failed to record audit:', err.message);
   }
 };
 

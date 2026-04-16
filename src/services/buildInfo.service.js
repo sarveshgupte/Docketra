@@ -1,3 +1,4 @@
+const log = require('../utils/log');
 const getBuildMetadata = () => {
   return {
     version: process.env.BUILD_VERSION || 'unknown',
@@ -8,7 +9,7 @@ const getBuildMetadata = () => {
 
 const logBuildMetadata = () => {
   const meta = getBuildMetadata();
-  console.log('[BUILD] Metadata', meta);
+  log.info('[BUILD] Metadata', meta);
 };
 
 module.exports = {

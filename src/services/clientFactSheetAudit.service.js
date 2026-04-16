@@ -1,5 +1,6 @@
 const ClientAudit = require('../models/ClientAudit.model');
 const { CLIENT_FACT_SHEET_ACTION_TYPES } = require('../config/constants');
+const log = require('../utils/log');
 
 /**
  * Client Fact Sheet Audit Service
@@ -33,7 +34,7 @@ const logClientFactSheetAction = async ({
   try {
     // Validate required fields
     if (!clientId || !firmId || !actionType || !description || !performedByXID) {
-      console.error('[CLIENT_AUDIT] Missing required fields for audit log:', { 
+      log.error('[CLIENT_AUDIT] Missing required fields for audit log:', { 
         clientId, 
         firmId, 
         actionType, 
@@ -60,7 +61,7 @@ const logClientFactSheetAction = async ({
 
     return auditEntry;
   } catch (error) {
-    console.error('[CLIENT_AUDIT] Failed to create audit log:', error.message);
+    log.error('[CLIENT_AUDIT] Failed to create audit log:', error.message);
     throw error;
   }
 };

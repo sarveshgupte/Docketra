@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const AdminAuditLog = require('../models/AdminAuditLog.model');
+const log = require('../utils/log');
 
 const normalizeObjectId = (value) => {
   if (!value) return null;
@@ -26,7 +27,7 @@ const logAuditEvent = async ({ firmId, actorId, targetId = null, action, metadat
       metadata,
     });
   } catch (error) {
-    console.error('[ADMIN_AUDIT_LOG] Failed to persist audit event:', error.message);
+    log.error('[ADMIN_AUDIT_LOG] Failed to persist audit event:', error.message);
     return null;
   }
 };

@@ -3,6 +3,7 @@ const Case = require('../models/Case.model');
 const Team = require('../models/Team.model');
 const { getSlaStatus } = require('./sla.service');
 const { enqueueSlaCheckJob } = require('../queues/slaCheck.queue');
+const log = require('../utils/log');
 
 const ACTIVE_DOCKET_STATUSES = ['OPEN', 'IN_PROGRESS'];
 const ACTIVE_DOCKET_STATUS_SET = new Set(ACTIVE_DOCKET_STATUSES);
@@ -108,7 +109,6 @@ const getOverdueDockets = async (firmId, { page = 1, limit = 10, sort = 'NEWEST'
 
   const mappedItems = items.map((docket) => ({ ...mapDocket(docket), isOverdue: true }));
   enqueueSlaCheckJob({ firmId }).catch((err) => {
-    const log = require('../utils/log');
     log.warn('SLA_CHECK_ENQUEUE_FAILED', { firmId, error: err.message });
   });
 

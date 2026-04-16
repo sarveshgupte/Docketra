@@ -6,6 +6,7 @@ const User = require('../models/User.model');
 const { eventBus } = require('../events/eventBus');
 const { AUTOMATION_RULES } = require('./rules');
 const emailService = require('../services/email.service');
+const log = require('../utils/log');
 
 const AUTOMATION_EMAIL_RATE_LIMIT_MS = Number(process.env.AUTOMATION_EMAIL_RATE_LIMIT_MS || 250);
 
@@ -72,14 +73,14 @@ const handleTeamInvite = async ({ user, createdUsers = [] }) => {
       });
 
       if (!result?.success) {
-        console.warn('[AUTOMATION] Invite email returned unsuccessful result', {
+        log.warn('[AUTOMATION] Invite email returned unsuccessful result', {
           firmId: user.firmId,
           email: freshUser.email,
           error: result?.error || 'unknown_error',
         });
       }
     } catch (error) {
-      console.error('[AUTOMATION] Failed to process team invite automation', {
+      log.error('[AUTOMATION] Failed to process team invite automation', {
         firmId: user.firmId,
         userId: createdUser._id,
         error: error.message,
@@ -115,7 +116,7 @@ const handleClientPostCreate = async ({ type, user, createdClients = [] }) => {
 
   const categoryBundle = await selectDefaultCategoryAndSubcategory(user.firmId);
   if (!categoryBundle) {
-    console.warn('[AUTOMATION] Skipping default docket creation: no active category/subcategory found', {
+    log.warn('[AUTOMATION] Skipping default docket creation: no active category/subcategory found', {
       firmId: user.firmId,
     });
     return;
@@ -166,7 +167,7 @@ const handleClientPostCreate = async ({ type, user, createdClients = [] }) => {
       });
     } catch (error) {
       if (error?.code === 11000) continue;
-      console.error('[AUTOMATION] Failed to create default docket for imported client', {
+      log.error('[AUTOMATION] Failed to create default docket for imported client', {
         firmId: user.firmId,
         clientId: createdClient.clientId,
         error: error.message,
@@ -176,7 +177,7 @@ const handleClientPostCreate = async ({ type, user, createdClients = [] }) => {
 };
 
 const handleCategorySetup = async ({ user }) => {
-  console.log('[AUTOMATION] Category post-import setup placeholder executed', {
+  log.info('[AUTOMATION] Category post-import setup placeholder executed', {
     firmId: user?.firmId,
   });
 };
@@ -205,7 +206,7 @@ eventBus.on('bulkUpload.completed', (payload) => {
   Promise.resolve()
     .then(() => runAutomations(payload?.type, payload))
     .catch((error) => {
-      console.error('[AUTOMATION] Bulk upload automation failed', {
+      log.error('[AUTOMATION] Bulk upload automation failed', {
         type: payload?.type,
         firmId: payload?.user?.firmId,
         error: error.message,

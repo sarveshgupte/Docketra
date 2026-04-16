@@ -26,6 +26,7 @@ const Plan = require('../models/Plan.model');
 const mongoose = require('mongoose');
 const { runAdminHierarchyBackfill } = require('../scripts/fixAdminHierarchy');
 const { loadEnv } = require('../config/env');
+const log = require('../utils/log');
 
 /**
  * REMOVED: seedSystemAdmin
@@ -79,7 +80,7 @@ const seedPlans = async ({ session } = {}) => {
 
 const runPreflightChecks = async ({ session } = {}) => {
   try {
-    console.log('\n🔍 Running preflight data validation checks...');
+    log.info('\n🔍 Running preflight data validation checks...');
     
     const violations = {};
     const info = {};
@@ -90,26 +91,26 @@ const runPreflightChecks = async ({ session } = {}) => {
     const totalFirms = await Firm.countDocuments();
     
     if (totalFirms === 0) {
-      console.log('ℹ️  No firms exist yet. Firms can be created by SuperAdmin or during user signup.');
-      console.log('✓ All preflight checks passed (empty database is valid)');
+      log.info('ℹ️  No firms exist yet. Firms can be created by SuperAdmin or during user signup.');
+      log.info('✓ All preflight checks passed (empty database is valid)');
       return { hasViolations: false, violations: {}, info: {} };
     }
     
-    console.log(`ℹ️  Found ${totalFirms} firm(s) in database. Validating integrity...`);
+    log.info(`ℹ️  Found ${totalFirms} firm(s) in database. Validating integrity...`);
     
     // Optional: auto-run admin hierarchy backfill before validation (one-time per process)
     if (autoRunBackfill && !adminBackfillRan) {
       adminBackfillRan = true;
-      console.log('🔧 RUN_ADMIN_HIERARCHY_MIGRATION_ON_START=true detected. Running backfill...');
+      log.info('🔧 RUN_ADMIN_HIERARCHY_MIGRATION_ON_START=true detected. Running backfill...');
       const backfillTimeoutMs = parseInt(process.env.ADMIN_BACKFILL_TIMEOUT_MS, 10) || 30000;
       try {
         await Promise.race([
           runAdminHierarchyBackfill({ useExistingConnection: true }),
           new Promise((_, reject) => setTimeout(() => reject(new Error(`Admin backfill exceeded ${backfillTimeoutMs}ms`)), backfillTimeoutMs))
         ]);
-        console.log('🔧 Admin hierarchy backfill completed');
+        log.info('🔧 Admin hierarchy backfill completed');
       } catch (backfillError) {
-        console.error('⚠️  Admin hierarchy backfill failed or timed out:', backfillError.message);
+        log.error('⚠️  Admin hierarchy backfill failed or timed out:', backfillError.message);
       }
     }
     
@@ -122,11 +123,11 @@ const runPreflightChecks = async ({ session } = {}) => {
     }).select('firmId name defaultClientId');
     
     if (firmsWithoutBootstrapStatus.length > 0) {
-      console.log(`ℹ️  Found ${firmsWithoutBootstrapStatus.length} firm(s) without bootstrapStatus - applying backward compatibility...`);
+      log.info(`ℹ️  Found ${firmsWithoutBootstrapStatus.length} firm(s) without bootstrapStatus - applying backward compatibility...`);
       
       const bulkOps = firmsWithoutBootstrapStatus.map(firm => {
         const status = firm.defaultClientId ? 'COMPLETED' : 'PENDING';
-        console.log(`   ✓ Set ${firm.firmId} bootstrapStatus to ${status}`);
+        log.info(`   ✓ Set ${firm.firmId} bootstrapStatus to ${status}`);
         return {
           updateOne: {
             filter: { _id: firm._id },
@@ -152,11 +153,11 @@ const runPreflightChecks = async ({ session } = {}) => {
         name: f.name,
         bootstrapStatus: f.bootstrapStatus
       }));
-      console.warn(`⚠️  WARNING: Found ${pendingFirms.length} firm(s) with incomplete bootstrap:`);
+      log.warn(`⚠️  WARNING: Found ${pendingFirms.length} firm(s) with incomplete bootstrap:`);
       pendingFirms.forEach(firm => {
-        console.warn(`   - Firm: ${firm.firmId} (${firm.name}) - Status: ${firm.bootstrapStatus}`);
+        log.warn(`   - Firm: ${firm.firmId} (${firm.name}) - Status: ${firm.bootstrapStatus}`);
       });
-      console.warn(`   → These firms may need manual recovery via recoverFirmBootstrap()`);
+      log.warn(`   → These firms may need manual recovery via recoverFirmBootstrap()`);
     }
     
     // Check for firms without defaultClientId (excluding PENDING firms)
@@ -175,9 +176,9 @@ const runPreflightChecks = async ({ session } = {}) => {
         name: f.name,
         bootstrapStatus: f.bootstrapStatus
       }));
-      console.warn(`⚠️  WARNING: Found ${firmsWithoutDefaultClient.length} firm(s) without defaultClientId:`);
+      log.warn(`⚠️  WARNING: Found ${firmsWithoutDefaultClient.length} firm(s) without defaultClientId:`);
       firmsWithoutDefaultClient.forEach(firm => {
-        console.warn(`   - Firm: ${firm.firmId} (${firm.name}) - Status: ${firm.bootstrapStatus || 'N/A'}`);
+        log.warn(`   - Firm: ${firm.firmId} (${firm.name}) - Status: ${firm.bootstrapStatus || 'N/A'}`);
       });
     }
     
@@ -195,9 +196,9 @@ const runPreflightChecks = async ({ session } = {}) => {
         clientId: c.clientId,
         businessName: c.businessName
       }));
-      console.warn(`⚠️  WARNING: Found ${clientsWithoutFirm.length} client(s) without firmId:`);
+      log.warn(`⚠️  WARNING: Found ${clientsWithoutFirm.length} client(s) without firmId:`);
       clientsWithoutFirm.forEach(client => {
-        console.warn(`   - Client: ${client.clientId} (${client.businessName})`);
+        log.warn(`   - Client: ${client.clientId} (${client.businessName})`);
       });
     }
     
@@ -224,10 +225,10 @@ const runPreflightChecks = async ({ session } = {}) => {
       violations.superAdminsMissingContext = info.superAdminsMissingContext;
       violations.byRole = violations.byRole || {};
       violations.byRole.SUPER_ADMIN = info.superAdminsMissingContext;
-      console.info(`ℹ️  ${superAdminsMissingContext.length} SUPER_ADMIN account(s) without firm/defaultClient detected (allowed):`);
+      log.info(`ℹ️  ${superAdminsMissingContext.length} SUPER_ADMIN account(s) without firm/defaultClient detected (allowed):`);
       superAdminsMissingContext.forEach(sa => {
-        if (!sa.firmId) console.info(`   - ${sa.xID}: missing firmId (allowed for SUPER_ADMIN)`);
-        if (!sa.defaultClientId) console.info(`   - ${sa.xID}: missing defaultClientId (allowed for SUPER_ADMIN)`);
+        if (!sa.firmId) log.info(`   - ${sa.xID}: missing firmId (allowed for SUPER_ADMIN)`);
+        if (!sa.defaultClientId) log.info(`   - ${sa.xID}: missing defaultClientId (allowed for SUPER_ADMIN)`);
       });
     }
 
@@ -259,19 +260,19 @@ const runPreflightChecks = async ({ session } = {}) => {
       violations.byRole = violations.byRole || {};
       violations.byRole.ADMIN = violations.adminsWithoutFirmOrClient;
 
-      console.error(`❌  ERROR: Found ${adminsWithoutFirm.length} admin/employee account(s) missing firm/defaultClient context:`);
+      log.error(`❌  ERROR: Found ${adminsWithoutFirm.length} admin/employee account(s) missing firm/defaultClient context:`);
       adminsWithoutFirm.forEach(admin => {
-        console.error(`   - ${admin.role}: ${admin.xID} (${admin.name})`);
-        if (!admin.firmId) console.error(`     Missing: firmId`);
-        if (!admin.defaultClientId) console.error(`     Missing: defaultClientId`);
+        log.error(`   - ${admin.role}: ${admin.xID} (${admin.name})`);
+        if (!admin.firmId) log.error(`     Missing: firmId`);
+        if (!admin.defaultClientId) log.error(`     Missing: defaultClientId`);
       });
-      console.error('   ↳ Remediation: run "node src/scripts/fixAdminHierarchy.js" after taking a backup.');
+      log.error('   ↳ Remediation: run "node src/scripts/fixAdminHierarchy.js" after taking a backup.');
     }
 
     // Send email if violations exist
     if (hasViolations) {
-      console.warn('⚠️  Preflight checks found data inconsistencies (see warnings above)');
-      console.warn('⚠️  These issues should be resolved through data migration');
+      log.warn('⚠️  Preflight checks found data inconsistencies (see warnings above)');
+      log.warn('⚠️  These issues should be resolved through data migration');
       
       // Send Tier-1 email: System Integrity Warning (rate-limited per process start)
       const superadminEmail = process.env.SUPERADMIN_EMAIL;
@@ -279,21 +280,21 @@ const runPreflightChecks = async ({ session } = {}) => {
         try {
           const emailService = require('./email.service');
           await emailService.sendSystemIntegrityEmail(superadminEmail, violations);
-          console.log('✓ System integrity warning email sent to SuperAdmin');
+          log.info('✓ System integrity warning email sent to SuperAdmin');
         } catch (emailError) {
-          console.error('✗ Failed to send integrity warning email:', emailError.message);
+          log.error('✗ Failed to send integrity warning email:', emailError.message);
           // Don't throw - email failure should not block startup
         }
       } else {
-        console.warn('⚠️  SUPERADMIN_EMAIL not configured - cannot send integrity warning email');
+        log.warn('⚠️  SUPERADMIN_EMAIL not configured - cannot send integrity warning email');
       }
     } else {
-      console.log('✓ All preflight checks passed - data hierarchy is consistent');
+      log.info('✓ All preflight checks passed - data hierarchy is consistent');
     }
 
     return { hasViolations, violations, info };
   } catch (error) {
-    console.error('✗ Error running preflight checks:', error.message);
+    log.error('✗ Error running preflight checks:', error.message);
     // Don't throw - preflight checks should never block startup
     return { hasViolations: true, violations: { error: error.message } };
   }
@@ -321,7 +322,7 @@ const recoverFirmBootstrap = async (firmId) => {
   const { generateNextXID } = require('./xIDGenerator');
   
   try {
-    console.log(`[BOOTSTRAP_RECOVERY] Starting recovery for firm: ${firmId}`);
+    log.info(`[BOOTSTRAP_RECOVERY] Starting recovery for firm: ${firmId}`);
     
     // Find firm (by _id or firmId string)
     let firm;
@@ -340,7 +341,7 @@ const recoverFirmBootstrap = async (firmId) => {
     
     // Check if already completed
     if (firm.bootstrapStatus === 'COMPLETED') {
-      console.log(`[BOOTSTRAP_RECOVERY] Firm ${firm.firmId} already completed`);
+      log.info(`[BOOTSTRAP_RECOVERY] Firm ${firm.firmId} already completed`);
       return {
         success: true,
         message: 'Firm bootstrap already completed',
@@ -358,7 +359,7 @@ const recoverFirmBootstrap = async (firmId) => {
       // Check 1: Does firm have a default client?
       let defaultClient = null;
       if (!firm.defaultClientId) {
-        console.log(`[BOOTSTRAP_RECOVERY] Missing default client for firm ${firm.firmId}`);
+        log.info(`[BOOTSTRAP_RECOVERY] Missing default client for firm ${firm.firmId}`);
         
         // Check if a client exists but isn't linked
         defaultClient = await Client.findOne({ 
@@ -385,14 +386,14 @@ const recoverFirmBootstrap = async (firmId) => {
             createdBy: env.SUPERADMIN_EMAIL_NORMALIZED || process.env.SUPERADMIN_EMAIL || 'superadmin@system.local',
           });
           await defaultClient.save({ session });
-          console.log(`[BOOTSTRAP_RECOVERY] Created default client: ${clientId}`);
+          log.info(`[BOOTSTRAP_RECOVERY] Created default client: ${clientId}`);
           recoveryActions.push(`Created default client ${clientId}`);
         }
         
         // Link firm to default client
         firm.defaultClientId = defaultClient._id;
         await firm.save({ session });
-        console.log(`[BOOTSTRAP_RECOVERY] Linked firm to default client`);
+        log.info(`[BOOTSTRAP_RECOVERY] Linked firm to default client`);
         recoveryActions.push('Linked firm to default client');
       } else {
         defaultClient = await Client.findById(firm.defaultClientId).session(session);
@@ -409,7 +410,7 @@ const recoverFirmBootstrap = async (firmId) => {
       }).session(session);
       
       if (adminCount === 0) {
-        console.log(`[BOOTSTRAP_RECOVERY] Missing system admin for firm ${firm.firmId}`);
+        log.info(`[BOOTSTRAP_RECOVERY] Missing system admin for firm ${firm.firmId}`);
         throw new Error('Missing system admin - manual intervention required (cannot auto-create without email)');
       }
       
@@ -424,7 +425,7 @@ const recoverFirmBootstrap = async (firmId) => {
       }).session(session);
       
       if (adminsWithoutClient.length > 0) {
-        console.log(`[BOOTSTRAP_RECOVERY] Found ${adminsWithoutClient.length} admin(s) without defaultClientId`);
+        log.info(`[BOOTSTRAP_RECOVERY] Found ${adminsWithoutClient.length} admin(s) without defaultClientId`);
         
         // Optimization: bulk update to link admins to default client
         const adminIds = adminsWithoutClient.map(admin => admin._id);
@@ -436,7 +437,7 @@ const recoverFirmBootstrap = async (firmId) => {
 
         // Keep logging and tracking exact actions for backwards compatibility
         for (const admin of adminsWithoutClient) {
-          console.log(`[BOOTSTRAP_RECOVERY] Linked admin ${admin.xID} to default client`);
+          log.info(`[BOOTSTRAP_RECOVERY] Linked admin ${admin.xID} to default client`);
           recoveryActions.push(`Linked admin ${admin.xID} to default client`);
         }
       }
@@ -444,14 +445,14 @@ const recoverFirmBootstrap = async (firmId) => {
       // Mark bootstrap as completed
       firm.bootstrapStatus = 'COMPLETED';
       await firm.save({ session });
-      console.log(`[BOOTSTRAP_RECOVERY] Marked firm ${firm.firmId} as COMPLETED`);
+      log.info(`[BOOTSTRAP_RECOVERY] Marked firm ${firm.firmId} as COMPLETED`);
       recoveryActions.push('Marked bootstrap as COMPLETED');
       
       // Commit transaction
       await session.commitTransaction();
       session?.endSession();
       
-      console.log(`[BOOTSTRAP_RECOVERY] ✓ Recovery successful for firm ${firm.firmId}`);
+      log.info(`[BOOTSTRAP_RECOVERY] ✓ Recovery successful for firm ${firm.firmId}`);
       
       return {
         success: true,
@@ -469,7 +470,7 @@ const recoverFirmBootstrap = async (firmId) => {
     }
     
   } catch (error) {
-    console.error(`[BOOTSTRAP_RECOVERY] ✗ Recovery failed for firm ${firmId}:`, error.message);
+    log.error(`[BOOTSTRAP_RECOVERY] ✗ Recovery failed for firm ${firmId}:`, error.message);
     return {
       success: false,
       message: 'Recovery failed',
@@ -502,8 +503,8 @@ const runBootstrap = async () => {
 
   try {
     session = await mongoose.startSession();
-    console.log('BOOTSTRAP_STARTED');
-    console.log('🔧 Running system bootstrap...');
+    log.info('BOOTSTRAP_STARTED');
+    log.info('🔧 Running system bootstrap...');
     session.startTransaction();
 
     // Run preflight data validation checks
@@ -515,17 +516,17 @@ const runBootstrap = async () => {
 
     await session.commitTransaction();
 
-    console.log('BOOTSTRAP_COMPLETED');
-    console.log('✓ Bootstrap completed successfully');
+    log.info('BOOTSTRAP_COMPLETED');
+    log.info('✓ Bootstrap completed successfully');
   } catch (error) {
     if (session?.inTransaction()) {
       await session.abortTransaction();
     }
-    console.error('BOOTSTRAP_FAILED', { message: error.message });
-    console.error('✗ Bootstrap failed:', error.message);
+    log.error('BOOTSTRAP_FAILED', { message: error.message });
+    log.error('✗ Bootstrap failed:', error.message);
     // Don't exit process - let server continue but log the error
     // This allows investigation without blocking startup
-    console.error('⚠ Server will continue to run but system may be partially initialized');
+    log.error('⚠ Server will continue to run but system may be partially initialized');
   } finally {
     session?.endSession();
   }
