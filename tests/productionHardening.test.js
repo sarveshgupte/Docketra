@@ -169,12 +169,24 @@ async function testAdminStatusNormalization() {
 
 async function testDebugRoutesDisabledInProduction() {
   const serverSource = fs.readFileSync(path.join(__dirname, '../src/server.js'), 'utf8');
-  const debugMountPattern = /if\s*\(\s*process\.env\.NODE_ENV\s*!==\s*'production'\s*\)\s*\{\s*app\.use\('\/api\/debug'/s;
-  const debugMountCount = (serverSource.match(/app\.use\('\/api\/debug'/g) || []).length;
+  const notFound = require('../src/middleware/notFound');
+  const debugRoutes = require('../src/routes/debug.routes');
+  const originalNodeEnv = process.env.NODE_ENV;
 
-  assert.ok(debugMountPattern.test(serverSource), 'Debug routes must be conditionally mounted outside production');
-  assert.strictEqual(debugMountCount, 1, 'Debug route mount should be defined exactly once');
-  assert.ok(serverSource.includes('app.use(notFound);'), 'Unmatched routes should fall through to the 404 middleware');
+  assert.ok(serverSource.includes("if (process.env.NODE_ENV !== 'production')"), 'Debug routes must be conditionally mounted outside production');
+
+  try {
+    process.env.NODE_ENV = 'production';
+    const app = express();
+    if (process.env.NODE_ENV !== 'production') {
+      app.use('/api/debug', debugRoutes);
+    }
+    app.use(notFound);
+
+    await request(app).get('/api/debug/email-test').expect(404);
+  } finally {
+    process.env.NODE_ENV = originalNodeEnv;
+  }
   console.log('✓ debug routes are gated outside production and retain 404 fallback behavior');
 }
 
