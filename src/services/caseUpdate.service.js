@@ -1,6 +1,7 @@
 const { sendSuccessResponse, sendErrorResponse, sendServiceResponse } = require('../utils/response.util');
 const { validateRequiredFields } = require('../utils/validation.util');
 const { mapErrorToServiceResponse } = require('../utils/error.util');
+const log = require('../utils/log');
 
 module.exports = (deps) => {
   const {
@@ -147,6 +148,11 @@ module.exports = (deps) => {
 
   const updateCaseStatus = async (req, res) => {
     try {
+      log.info('CASE_UPDATE_SERVICE_START', {
+        req,
+        caseId: req.params?.caseId || null,
+        tenantId: req.user?.firmId || null,
+      });
       const { caseId } = req.params;
       const {
         status,
@@ -232,6 +238,13 @@ module.exports = (deps) => {
           message: `${req.user.name || req.user.xID} changed docket ${caseData.caseId} to ${normalizedStatus}.`,
         })),
       );
+      log.info('CASE_UPDATED', {
+        req,
+        tenantId: req.user?.firmId || null,
+        caseId: caseData.caseId,
+        status: normalizedStatus,
+        userXID: req.user?.xID || null,
+      });
       
       return sendSuccessResponse(res, {
         body: {
@@ -241,6 +254,7 @@ module.exports = (deps) => {
       });
     } catch (error) {
       const statusCode = Number.isInteger(error.statusCode) ? error.statusCode : 400;
+      log.error('CASE_UPDATE_FAILED', { req, caseId: req.params?.caseId || null, error });
       return sendErrorResponse(res, {
         statusCode,
         message: 'Error updating case status',
@@ -273,7 +287,12 @@ module.exports = (deps) => {
         
         if (lastActivity && (now - lastActivity) > inactivityTimeout) {
           // Auto-unlock due to inactivity
-          console.log(`Auto-unlocking case ${caseId} due to ${CASE_LOCK_CONFIG.INACTIVITY_TIMEOUT_HOURS}-hour inactivity`);
+          log.info('CASE_AUTO_UNLOCKED', {
+            req,
+            tenantId: req.user?.firmId || null,
+            caseId,
+            inactivityHours: CASE_LOCK_CONFIG.INACTIVITY_TIMEOUT_HOURS,
+          });
           
           // Log the auto-unlock in history
           await CaseHistory.create({
@@ -326,6 +345,7 @@ module.exports = (deps) => {
         },
       });
     } catch (error) {
+      log.error('CASE_LOCK_FAILED', { req, caseId: req.params?.caseId || null, error });
       return sendErrorResponse(res, {
         statusCode: 500,
         message: 'Error locking case',
@@ -370,6 +390,7 @@ module.exports = (deps) => {
         },
       });
     } catch (error) {
+      log.error('CASE_UNLOCK_FAILED', { req, caseId: req.params?.caseId || null, error });
       return sendErrorResponse(res, {
         statusCode: 500,
         message: 'Error unlocking case',
@@ -494,20 +515,20 @@ module.exports = (deps) => {
         req,
       });
       
-       return sendSuccessResponse(res, {
-         body: {
-           data: caseData,
-           message: 'Case moved to Global Worklist successfully',
-         },
-       });
-     } catch (error) {
-       console.error('[unassignCase] Error:', error);
-       return sendErrorResponse(res, {
-         statusCode: 500,
-         message: 'Error moving case to global worklist',
-       });
-     }
-   };
+      return sendSuccessResponse(res, {
+        body: {
+          data: caseData,
+          message: 'Case moved to Global Worklist successfully',
+        },
+      });
+    } catch (error) {
+      log.error('CASE_UNASSIGN_FAILED', { req, caseId: req.params?.caseId || null, error });
+      return sendErrorResponse(res, {
+        statusCode: 500,
+        message: 'Error moving case to global worklist',
+      });
+    }
+  };
 
   return {
     unpendCase,

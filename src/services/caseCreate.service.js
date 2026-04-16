@@ -1,3 +1,5 @@
+const log = require('../utils/log');
+
 module.exports = (deps) => {
   const {
     mongoose,
@@ -78,12 +80,24 @@ module.exports = (deps) => {
     const requestId = req.requestId || randomUUID();
     req.requestId = requestId;
     const step = (label) => {
-      console.log(`[CASE_CREATE][${requestId}] STEP -> ${label}`);
+      if (process.env.LOG_LEVEL === 'debug') {
+        log.info('CASE_CREATE_STEP', {
+          req,
+          step: label,
+          requestId,
+          tenantId: req.user?.firmId || null,
+        });
+      }
     };
     let responseMeta = { requestId, firmId: req.user?.firmId || null };
 
     try {
       assertFirmContext(req);
+      log.info('CASE_CREATE_SERVICE_START', {
+        req,
+        requestId,
+        tenantId: req.user?.firmId || null,
+      });
       const {
         title,
         description,
@@ -370,7 +384,12 @@ module.exports = (deps) => {
       if (idempotencyKey) {
         const existingCase = await CaseRepository.findOne(firmId, { idempotencyKey }, req.user.role);
         if (existingCase) {
-          console.warn(`[CASE_CREATE][${requestId}] Idempotent replay detected`, { firmId, caseId: existingCase.caseId });
+          log.warn('CASE_CREATE_IDEMPOTENT_REPLAY', {
+            req,
+            requestId,
+            tenantId: firmId,
+            caseId: existingCase.caseId,
+          });
           return res.status(200).json({
             success: true,
             data: existingCase,
@@ -536,6 +555,13 @@ module.exports = (deps) => {
           description: `Docket created: ${newCase.caseNumber || newCase.caseId || 'Unknown'}`,
           performedByXID: req.user?.xID,
         });
+        log.info('CASE_CREATED', {
+          req,
+          requestId,
+          tenantId: newCase.firmId,
+          caseId: newCase.caseId,
+          userXID: req.user?.xID || null,
+        });
 
         return res.status(201).json({
           success: true,
@@ -549,7 +575,12 @@ module.exports = (deps) => {
         });
       } catch (error) {
         if (error?.code === 11000) {
-          console.error(`[CASE_CREATE][${requestId}] Duplicate key detected during case creation`, { firmId, error: error.message });
+          log.error('CASE_CREATE_DUPLICATE_KEY', {
+            req,
+            requestId,
+            tenantId: firmId,
+            error,
+          });
           let existingCase = null;
           if (idempotencyKey) {
             existingCase = await CaseRepository.findOne(firmId, { idempotencyKey }, req.user.role);
@@ -575,10 +606,11 @@ module.exports = (deps) => {
           });
         }
 
-        console.error(`[CASE_CREATE][${requestId}] Create docket failed`, {
-          firmId: firmId?.toString(),
-          error: error.message,
-          stack: error.stack,
+        log.error('CASE_CREATE_FAILED', {
+          req,
+          requestId,
+          tenantId: firmId?.toString(),
+          error,
         });
         return res.status(400).json({
           success: false,
@@ -588,6 +620,7 @@ module.exports = (deps) => {
       }
     } catch (error) {
       const statusCode = error?.statusCode || 400;
+      log.error('CASE_CREATE_SERVICE_FAILED', { req, requestId, error });
       res.status(statusCode).json({
         success: false,
         message: 'Error creating docket',
