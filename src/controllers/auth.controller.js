@@ -15,6 +15,10 @@ const LoginSession = require('../models/LoginSession.model');
 const { sendOtp: sendCentralOtp, verifyOtp: verifyCentralOtp } = require('../services/otp.service');
 const emailService = require('../services/email.service');
 const authOtpService = require('../services/authOtp.service');
+const createAuthLoginService = require('../services/authLogin.service');
+const createAuthSignupService = require('../services/authSignup.service');
+const createAuthSessionService = require('../services/authSession.service');
+const createAuthPasswordService = require('../services/authPassword.service');
 const xIDGenerator = require('../services/xIDGenerator');
 const signupService = require('../services/signup.service');
 const jwtService = require('../services/jwt.service');
@@ -563,36 +567,7 @@ const getFirmSlug = async (firmId) => {
  * @returns {Promise<{refreshToken: string, expiresAt: Date}>} Raw refresh token (unhashed) and its expiry timestamp
  * @throws {Error} When request context is missing or refresh token persistence fails
  */
-const generateAndStoreRefreshToken = async ({ req, userId = null, firmId = null }) => {
-  if (!req) {
-    throw new Error('Request object is required to capture client IP and user agent for refresh token security');
-  }
-
-  const refreshToken = jwtService.generateRefreshToken();
-  const refreshTokenHash = jwtService.hashRefreshToken(refreshToken);
-  const expiresAt = jwtService.getRefreshTokenExpiry();
-  const session = getSession(req);
-
-  if (!refreshTokenHash || !expiresAt) {
-    throw new Error('[AUTH][refresh-token] Refresh token generation failed: missing required fields');
-  }
-  if (!(expiresAt instanceof Date) || Number.isNaN(expiresAt.getTime())) {
-    throw new Error('[AUTH][refresh-token] Failed to generate refresh token payload (expiresAt invalid)');
-  }
-
-  const refreshTokenDoc = {
-    tokenHash: refreshTokenHash,
-    userId,
-    firmId,
-    expiresAt,
-    ipAddress: req.ip,
-    userAgent: req.get('user-agent'),
-  };
-
-  await RefreshToken.create([refreshTokenDoc], session ? { session } : undefined);
-
-  return { refreshToken, expiresAt };
-};
+const generateAndStoreRefreshToken = async ({ req, userId = null, firmId = null }) => authSessionDomainService.generateAndStoreRefreshToken({ req, userId, firmId });
 
 /**
  * Build tokens + audit entry for successful login
@@ -1238,423 +1213,17 @@ const handlePostPasswordChecks = async (req, res, user) => {
  * Login with xID and password
  * POST /superadmin/login or POST /:firmSlug/login
  */
-const login = async (req, res) => {
-  try {
-    const loginScope = req.loginScope || 'tenant';
-    const requestedFirmSlug = req.params?.firmSlug || req.firmSlug || null;
-    const { xid, xID, XID, password } = req.body;
+const login = async (req, res) => authLoginDomainService.login(req, res);
 
-    const normalizedXID = (xid || xID || XID)?.trim().toUpperCase();
+const resendLoginOtp = async (req, res) => authLoginDomainService.resendLoginOtp(req, res);
 
-    if (!normalizedXID || !password) {
-      console.warn('[AUTH] Missing credentials in login attempt', {
-        hasXID: !!(xid || xID || XID),
-        hasPassword: !!password,
-        ip: req.ip,
-      });
-      
-      return res.status(400).json({
-        success: false,
-        message: 'xID and password are required',
-      });
-    }
-    
-    const { normalizedXID: superadminXID } = getSuperadminEnv();
-
-    if (superadminXID && normalizedXID === superadminXID) {
-      return await handleSuperadminLogin(req, res, normalizedXID, password, loginScope);
-    }
-
-    if (loginScope === 'superadmin') {
-      return res.status(401).json({ success: false, message: 'Invalid xID or password' });
-    }
-
-    if (!req.firmId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Firm context is required for login.',
-      });
-    }
-
-    console.log('[AUTH][tenant] login attempt', { firmSlug: requestedFirmSlug, xID: normalizedXID });
-    const user = await User.findOne({
-      firmId: req.firmId,
-      xID: normalizedXID,
-      status: { $ne: 'deleted' },
-    });
-
-    if (await validateTenantUserPreconditions(req, res, user, requestedFirmSlug, normalizedXID)) {
-      return;
-    }
-
-    if (!(await handlePasswordVerification(req, res, user, password))) {
-      return;
-    }
-
-    if (await handlePostPasswordChecks(req, res, user)) {
-      return;
-    }
-    
-    try {
-      const loginToken = await sendLoginOtpChallenge(req, user);
-      const otpConfig = getLoginOtpConfig();
-      return res.json({
-        success: true,
-        otpRequired: true,
-        loginToken,
-        otpDeliveryHint: user.email ? `Code sent to ${user.email.replace(/(.{2}).+(@.+)/, '$1***$2')}` : 'Code sent to your registered email',
-        resendCooldownSeconds: otpConfig.resendCooldownSeconds,
-      });
-    } catch (otpError) {
-      if (otpError?.code === 'LOGIN_OTP_COOLDOWN_ACTIVE') {
-        return res.status(429).json({
-          success: false,
-          message: 'OTP recently sent. Please wait before requesting a new code.',
-          retryAfter: otpError.retryAfter || LOGIN_OTP_COOLDOWN_SECONDS,
-        });
-      }
-      console.error('[AUTH] Failed to send login OTP email:', otpError.message);
-      return res.status(500).json({
-        success: false,
-        message: 'Unable to send login verification code. Please try again.',
-      });
-    }
-  } catch (error) {
-    console.error('[AUTH] Login error:', error);
-    return res.status(500).json({
-      success: false,
-      code: 'AUTH_LOGIN_FAILED',
-      message: 'Error during login',
-    });
-  }
-};
-
-const resendLoginOtp = async (req, res) => {
-  try {
-    const otpConfig = getLoginOtpConfig();
-    const loginToken = String(req.body?.loginToken || '').trim();
-    if (!loginToken) {
-      return res.status(400).json({ success: false, message: 'loginToken is required' });
-    }
-
-    const tokenHash = hashLoginSessionToken(loginToken);
-    const loginSession = await LoginSession.findOne({ tokenHash, consumedAt: null });
-    if (!loginSession || !loginSession.expiresAt || loginSession.expiresAt.getTime() < Date.now()) {
-      return res.status(401).json({ success: false, message: 'Invalid or expired login token' });
-    }
-    if (req.firmId && String(req.firmId) !== String(loginSession.firmId)) {
-      return res.status(401).json({ success: false, message: 'Invalid or expired login token' });
-    }
-
-    const user = await User.findOne({
-      _id: loginSession.userId,
-      firmId: loginSession.firmId,
-      status: 'active',
-      isActive: true,
-    });
-    if (!user) {
-      return res.status(401).json({ success: false, message: 'Invalid or expired login token' });
-    }
-
-    await clearExpiredLoginOtpLock(user);
-
-    const activeLockSeconds = getLoginOtpLockSeconds(user);
-    if (activeLockSeconds > 0) {
-      logLoginOtpEvent('OTP_LOCKED', req, user, {
-        retryAfter: activeLockSeconds,
-        reason: 'verify_lock_active',
-      });
-      return res.status(429).json({ success: false, message: 'Too many attempts. Try again later.' });
-    }
-
-    const lastSentAtMs = user.loginOtpLastSentAt ? new Date(user.loginOtpLastSentAt).getTime() : 0;
-    const resendCooldownEndsAt = lastSentAtMs + (otpConfig.resendCooldownSeconds * 1000);
-    const retryAfter = Math.max(0, Math.ceil((resendCooldownEndsAt - Date.now()) / 1000));
-    if (retryAfter > 0) {
-      return res.status(429).json({ success: false, message: 'Too many attempts. Try again later.', retryAfter });
-    }
-
-    if (Number(user.loginOtpResendCount || 0) >= otpConfig.maxResends) {
-      return res.status(429).json({ success: false, message: 'Too many attempts. Try again later.' });
-    }
-
-    await sendLoginOtpChallenge(req, user, { isResend: true, returnLoginToken: false });
-
-    return res.json({
-      success: true,
-      message: 'Verification code resent.',
-      resendCooldownSeconds: otpConfig.resendCooldownSeconds,
-    });
-  } catch (error) {
-    if (error?.code === 'LOGIN_OTP_COOLDOWN_ACTIVE') {
-      return res.status(429).json({
-        success: false,
-        message: 'OTP recently sent. Please wait before requesting a new code.',
-        retryAfter: error.retryAfter || LOGIN_OTP_COOLDOWN_SECONDS,
-      });
-    }
-    console.error('[AUTH] Resend OTP error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Unable to resend OTP right now. Please try again.',
-    });
-  }
-};
-
-const verifyLoginOtp = async (req, res) => {
-  try {
-    const otpConfig = getLoginOtpConfig();
-    const requestedFirmSlug = req.params?.firmSlug || req.firmSlug || null;
-    const otp = String(req.body?.otp || '').trim();
-    const loginToken = String(req.body?.loginToken || '').trim();
-
-    if (!/^\d{6}$/.test(otp)) {
-      return res.status(400).json({
-        success: false,
-        message: 'OTP must be a 6 digit code',
-      });
-    }
-    if (!loginToken) {
-      return res.status(400).json({
-        success: false,
-        message: 'loginToken is required',
-      });
-    }
-
-    const tokenHash = hashLoginSessionToken(loginToken);
-    const loginSession = await LoginSession.findOne({ tokenHash, consumedAt: null });
-    if (!loginSession || !loginSession.expiresAt || loginSession.expiresAt.getTime() < Date.now()) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid or expired login token',
-      });
-    }
-
-    const normalizedRequestedFirmSlug = normalizeFirmSlug(requestedFirmSlug);
-    if (req.firmId && String(req.firmId) !== String(loginSession.firmId)) {
-      return res.status(401).json({ success: false, message: 'Invalid or expired login token' });
-    }
-    if (normalizedRequestedFirmSlug && normalizeFirmSlug(req.firmSlug) && normalizedRequestedFirmSlug !== normalizeFirmSlug(req.firmSlug)) {
-      return res.status(401).json({ success: false, message: 'Invalid or expired login token' });
-    }
-
-    const user = await User.findOne({
-      _id: loginSession.userId,
-      firmId: loginSession.firmId,
-      status: 'active',
-      isActive: true,
-    });
-
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid authentication token',
-      });
-    }
-
-    await clearExpiredLoginOtpLock(user);
-
-    const activeLockSeconds = getLoginOtpLockSeconds(user);
-    if (activeLockSeconds > 0) {
-      logLoginOtpEvent('OTP_LOCKED', req, user, {
-        retryAfter: activeLockSeconds,
-        reason: 'verify_lock_active',
-      });
-      return res.status(429).json({
-        success: false,
-        error: 'Too many attempts. Try again later.',
-        message: 'Too many attempts. Try again later.',
-        retryAfter: activeLockSeconds,
-      });
-    }
-
-    if (!user.loginOtpHash || !user.loginOtpExpiresAt || user.loginOtpExpiresAt.getTime() < Date.now()) {
-      clearLoginOtpState(user);
-      await persistLoginOtpState(user);
-      return res.status(401).json({
-        success: false,
-        message: 'OTP expired. Please request a new one.',
-      });
-    }
-
-    const currentAttempts = Number(user.loginOtpAttempts || 0);
-    if (currentAttempts >= otpConfig.maxAttempts) {
-      user.loginOtpLockedUntil = new Date(Date.now() + (otpConfig.lockMinutes * 60 * 1000));
-      await persistLoginOtpState(user);
-      logLoginOtpEvent('OTP_LOCKED', req, user, {
-        retryAfter: getLoginOtpLockSeconds(user),
-        reason: 'attempts_exhausted_before_verify',
-      });
-      return res.status(429).json({
-        success: false,
-        error: 'Too many attempts. Try again later.',
-        message: 'Too many attempts. Try again later.',
-        retryAfter: getLoginOtpLockSeconds(user),
-      });
-    }
-
-    const isValidOtp = await authOtpService.verifyOtp(otp, user.loginOtpHash);
-    if (!isValidOtp) {
-      user.loginOtpAttempts = currentAttempts + 1;
-      const exhaustedAttempts = user.loginOtpAttempts >= otpConfig.maxAttempts;
-      if (exhaustedAttempts) {
-        user.loginOtpLockedUntil = new Date(Date.now() + (otpConfig.lockMinutes * 60 * 1000));
-      }
-      await persistLoginOtpState(user);
-      logLoginOtpEvent('OTP_FAILED_ATTEMPT', req, user, {
-        attempts: user.loginOtpAttempts,
-        maxAttempts: otpConfig.maxAttempts,
-        remainingAttempts: exhaustedAttempts
-          ? 0
-          : Math.max(0, otpConfig.maxAttempts - user.loginOtpAttempts),
-      });
-      if (exhaustedAttempts) {
-        logLoginOtpEvent('OTP_LOCKED', req, user, {
-          retryAfter: getLoginOtpLockSeconds(user),
-          reason: 'attempt_limit_reached',
-        });
-      }
-
-      try {
-        await logAuthAudit({
-          xID: user.xID || DEFAULT_XID,
-          firmId: user.firmId || DEFAULT_FIRM_ID,
-          userId: user._id,
-          actionType: 'LOGIN_FAILURE',
-          description: `Invalid login OTP supplied (attempt ${user.loginOtpAttempts})`,
-          performedBy: user.xID || DEFAULT_XID,
-          ipAddress: req.ip,
-          userAgent: req.get('user-agent'),
-          metadata: {
-            eventType: 'LOGIN_FAILURE',
-            firmSlug: requestedFirmSlug,
-            attempts: user.loginOtpAttempts,
-            timestamp: new Date().toISOString(),
-          },
-        }, req);
-        await noteLoginFailure({
-          req,
-          xID: user.xID || DEFAULT_XID,
-          userId: user._id,
-          firmId: user.firmId || DEFAULT_FIRM_ID,
-        });
-      } catch (auditError) {
-        console.error('[AUTH AUDIT] Failed to record login OTP failure event', auditError);
-      }
-
-      return res.status(exhaustedAttempts ? 429 : 401).json({
-        success: false,
-        error: exhaustedAttempts ? 'Too many attempts. Try again later.' : undefined,
-        message: exhaustedAttempts
-          ? 'Too many attempts. Try again later.'
-          : 'Invalid OTP. Please try again.',
-        remainingAttempts: exhaustedAttempts
-          ? 0
-          : Math.max(0, otpConfig.maxAttempts - user.loginOtpAttempts),
-        retryAfter: exhaustedAttempts ? getLoginOtpLockSeconds(user) : undefined,
-      });
-    }
-
-    clearLoginOtpState(user);
-    await persistLoginOtpState(user);
-    await clearCachedLoginOtpState(user);
-    if (loginSession?._id) {
-      await LoginSession.updateOne({ _id: loginSession._id, consumedAt: null }, { $set: { consumedAt: new Date() } });
-    }
-    logLoginOtpEvent('OTP_VERIFIED', req, user);
-
-    try {
-      await logAuthAudit({
-        xID: user.xID || DEFAULT_XID,
-        firmId: user.firmId || DEFAULT_FIRM_ID,
-        userId: user._id,
-        actionType: 'OTP_VERIFIED',
-        description: 'Login OTP verified successfully',
-        performedBy: user.xID || DEFAULT_XID,
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent'),
-        metadata: {
-          eventType: 'OTP_VERIFIED',
-          firmSlug: requestedFirmSlug,
-          timestamp: new Date().toISOString(),
-        },
-      }, req);
-    } catch (auditError) {
-      console.error('[AUTH AUDIT] Failed to record login OTP verification event', auditError);
-    }
-
-    const response = await buildSuccessfulLoginPayload(req, user, {
-      authMethod: 'Email OTP',
-      resource: 'auth/verify-otp',
-      mfaRequired: true,
-    });
-
-    return res.json(response);
-  } catch (error) {
-    console.error('[AUTH] Verify login OTP error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Error verifying login OTP',
-    });
-  }
-};
+const verifyLoginOtp = async (req, res) => authLoginDomainService.verifyLoginOtp(req, res);
 
 /**
  * Logout
  * POST /api/auth/logout
  */
-const logout = async (req, res) => {
-  try {
-    // Get user from authenticated request
-    const user = req.user;
-    const userId = user?._id;
-    const isSuperAdmin = isSuperAdminRole(user?.role);
-    const shouldBypassUserDbUpdates = isSuperAdmin;
-    
-    // SUPERADMIN doesn't have a User document
-    // Skip any userId-based DB writes to avoid unnecessary persistence
-    if (!shouldBypassUserDbUpdates) {
-      // Revoke all refresh tokens for this user
-      await RefreshToken.updateMany(
-        { userId: user._id, isRevoked: false },
-        { isRevoked: true }
-      );
-    }
-
-    const secureCookies = process.env.NODE_ENV === 'production';
-    res.clearCookie('accessToken', { httpOnly: true, secure: secureCookies, sameSite: 'lax', path: '/' });
-    res.clearCookie('refreshToken', { httpOnly: true, secure: secureCookies, sameSite: 'lax', path: '/' });
-    
-    // Log logout (non-blocking)
-    try {
-      if (!shouldBypassUserDbUpdates) {
-        await logAuthAudit({
-          xID: user.xID,
-          firmId: user.firmId || DEFAULT_FIRM_ID,
-          userId: user._id,
-          actionType: 'Logout',
-          description: `User logged out`,
-          performedBy: user.xID,
-          ipAddress: req.ip,
-          userAgent: req.get('user-agent'),
-        }, req);
-      }
-    } catch (auditError) {
-      console.error('[AUTH AUDIT] Failed to record logout event', auditError);
-    }
-    
-    res.json({
-      success: true,
-      message: 'Logout successful',
-    });
-  } catch (error) {
-    console.error('[AUTH] Logout error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error during logout',
-    });
-  }
-};
+const logout = async (req, res) => authSessionDomainService.logout(req, res);
 
 /**
  * Change password
@@ -3733,307 +3302,13 @@ const loginResend = async (req, res) => {
  * POST /api/auth/forgot-password
  * Public endpoint - does not require authentication
  */
-const forgotPassword = async (req, res) => {
-  try {
-    const { email, firmSlug } = req.body;
-    
-    if (!email) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email is required',
-      });
-    }
-    
-    const normalizedEmail = email.trim().toLowerCase();
-    const normalizedFirmSlug = normalizeFirmSlug(firmSlug);
-    let resolvedFirmId = req.firmId || null;
+const forgotPassword = async (req, res) => authPasswordDomainService.forgotPassword(req, res);
 
-    if (!resolvedFirmId && normalizedFirmSlug) {
-      const firm = await Firm.findOne({ firmSlug: normalizedFirmSlug }).select('_id firmSlug').lean();
-      if (!firm) {
-        return res.status(404).json({
-          success: false,
-          error: 'Firm not found. Please check your firm login URL.',
-          message: 'Firm not found. Please check your firm login URL.',
-        });
-      }
-      resolvedFirmId = String(firm._id);
-      req.firmId = resolvedFirmId;
-      req.firmSlug = firm.firmSlug;
-    }
+const forgotPasswordInit = async (req, res) => authPasswordDomainService.forgotPasswordInit(req, res);
 
-    // Find user by firm-scoped email where possible (exclude soft-deleted users)
-    // Falls back to non-firm context for legacy callers.
-    let user;
-    if (resolvedFirmId) {
-      user = await User.findOne({
-        firmId: resolvedFirmId,
-        email: normalizedEmail,
-        status: { $ne: 'deleted' },
-      });
-    } else {
-      const candidateUsers = await User.find({
-        email: normalizedEmail,
-        status: { $ne: 'deleted' },
-      })
-        .limit(2);
-      if (candidateUsers.length > 1) {
-        console.warn(`[AUTH] Forgot password email is ambiguous across firms: ${emailService.maskEmail(normalizedEmail)}`);
-        return res.json({
-          success: true,
-          message: 'If an account exists with this email, you will receive a password reset link.',
-        });
-      }
-      user = candidateUsers.length === 1 ? candidateUsers[0] : null;
-    }
-    
-    // Always return success to prevent email enumeration attacks
-    // This is a security best practice - don't reveal if email exists
-    if (!user) {
-      // Mask email for logging
-      const emailParts = email.split('@');
-      const maskedEmail = emailParts[0].substring(0, 2) + '***@' + (emailParts[1] || '');
-      console.log(`[AUTH] Forgot password requested for non-existent email: ${maskedEmail}`);
-      
-      return res.json({
-        success: true,
-        message: 'If an account exists with this email, you will receive a password reset link.',
-      });
-    }
-    
-    // Check if user is active
-    if (!isActiveStatus(user.status)) {
-      console.log(`[AUTH] Forgot password requested for inactive user (xID: ${user.xID})`);
-      
-      return res.json({
-        success: true,
-        message: 'If an account exists with this email, you will receive a password reset link.',
-      });
-    }
-    
-    // Generate secure password reset token
-    const token = emailService.generateSecureToken();
-    const tokenHash = emailService.hashToken(token);
-    const tokenExpiry = new Date(Date.now() + FORGOT_PASSWORD_TOKEN_EXPIRY_MINUTES * 60 * 1000);
-    
-    // Update user with reset token
-    user.passwordResetTokenHash = tokenHash;
-    user.passwordResetExpires = tokenExpiry;
-    await user.save();
-    
-    // Send password reset email
-    try {
-      const emailResult = await emailService.sendForgotPasswordEmail(user.email, user.name, token);
-      
-      // Log password reset request
-      await logAuthAudit({
-        xID: user.xID,
-        firmId: user.firmId,
-        userId: user._id,
-        actionType: 'ForgotPasswordRequested',
-        description: emailResult.success 
-          ? `Password reset link sent to ${emailService.maskEmail(user.email)}` 
-          : `Password reset link failed to send to ${emailService.maskEmail(user.email)}: ${emailResult.error}`,
-        performedBy: user.xID,
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent'),
-      });
-    } catch (emailError) {
-      console.error('[AUTH] Failed to send forgot password email:', emailError.message);
-      // Continue even if email fails - we don't want to reveal if email exists
-    }
-    
-    res.json({
-      success: true,
-      message: 'If an account exists with this email, you will receive a password reset link.',
-    });
-  } catch (error) {
-    console.error('[AUTH] Error in forgot password:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error processing password reset request',
-    });
-  }
-};
+const forgotPasswordVerify = async (req, res) => authPasswordDomainService.forgotPasswordVerify(req, res);
 
-const forgotPasswordInit = async (req, res) => {
-  const email = String(req.body?.email || '').trim().toLowerCase();
-  if (!email) {
-    return res.status(400).json({ success: false, message: 'email is required' });
-  }
-  const firm = req.firm;
-  const now = Date.now();
-
-  const user = await User.findOne({ firmId: firm._id, email, status: 'active', isActive: true });
-  const genericResponse = { success: true, message: 'If the account exists, an OTP has been sent to email.' };
-  if (!user) return res.json(genericResponse);
-
-  const lastSentAtMs = user.forgotPasswordOtpLastSentAt ? new Date(user.forgotPasswordOtpLastSentAt).getTime() : 0;
-  const resendCooldownEndsAt = lastSentAtMs + (FORGOT_PASSWORD_OTP_RESEND_COOLDOWN_SECONDS * 1000);
-  if (now < resendCooldownEndsAt) {
-    return res.status(429).json({
-      success: false,
-      message: 'Too many attempts',
-      retryAfter: Math.ceil((resendCooldownEndsAt - now) / 1000),
-    });
-  }
-
-  const otp = authOtpService.generateOtp();
-  user.forgotPasswordOtpHash = await authOtpService.hashOtp(otp, SALT_ROUNDS);
-  user.forgotPasswordOtpExpiresAt = new Date(Date.now() + FORGOT_PASSWORD_OTP_EXPIRY_MINUTES * 60 * 1000);
-  user.forgotPasswordOtpAttempts = 0;
-  user.forgotPasswordOtpLastSentAt = new Date();
-  user.forgotPasswordOtpLockedUntil = null;
-  user.forgotPasswordOtpResendCount = Number(user.forgotPasswordOtpResendCount || 0) + 1;
-  user.forgotPasswordResetTokenHash = null;
-  user.forgotPasswordResetTokenExpiresAt = null;
-  await user.save();
-
-  await emailService.sendLoginOtpEmail({
-    email: user.email,
-    name: user.name,
-    otp,
-    firmName: firm.name,
-    firmSlug: firm.firmSlug,
-    expiryMinutes: FORGOT_PASSWORD_OTP_EXPIRY_MINUTES,
-  });
-  await logAuthAudit({
-    xID: user.xID || DEFAULT_XID,
-    firmId: user.firmId || DEFAULT_FIRM_ID,
-    userId: user._id,
-    actionType: 'FORGOT_PASSWORD_OTP_SENT',
-    description: 'Forgot-password OTP issued',
-    performedBy: user.xID || DEFAULT_XID,
-    ipAddress: req.ip,
-    userAgent: req.get('user-agent'),
-    metadata: {
-      eventType: 'FORGOT_PASSWORD_OTP_SENT',
-      firmSlug: req.firmSlug || null,
-    },
-  }, req);
-
-  return res.json({
-    ...genericResponse,
-    resendCooldownSeconds: FORGOT_PASSWORD_OTP_RESEND_COOLDOWN_SECONDS,
-  });
-};
-
-const forgotPasswordVerify = async (req, res) => {
-  const email = String(req.body?.email || '').trim().toLowerCase();
-  const otp = String(req.body?.otp || '').trim();
-
-  if (!email || !/^\d{6}$/.test(otp)) {
-    return res.status(400).json({ success: false, message: 'email and valid OTP are required' });
-  }
-  const firm = req.firm;
-
-  const user = await User.findOne({ firmId: firm._id, email, status: 'active', isActive: true });
-  if (!user || !user.forgotPasswordOtpHash || !user.forgotPasswordOtpExpiresAt || user.forgotPasswordOtpExpiresAt.getTime() < Date.now()) {
-    return res.status(401).json({ success: false, message: 'Invalid or expired OTP' });
-  }
-
-  const activeLockSeconds = user.forgotPasswordOtpLockedUntil
-    ? Math.max(0, Math.ceil((new Date(user.forgotPasswordOtpLockedUntil).getTime() - Date.now()) / 1000))
-    : 0;
-  if (activeLockSeconds > 0) {
-    return res.status(429).json({ success: false, message: 'Too many attempts', retryAfter: activeLockSeconds });
-  }
-
-  const attempts = Number(user.forgotPasswordOtpAttempts || 0);
-  if (attempts >= 5) {
-    user.forgotPasswordOtpLockedUntil = new Date(Date.now() + (FORGOT_PASSWORD_OTP_LOCK_MINUTES * 60 * 1000));
-    await user.save();
-    return res.status(429).json({ success: false, message: 'Too many attempts' });
-  }
-
-  const ok = await authOtpService.verifyOtp(otp, user.forgotPasswordOtpHash);
-  if (!ok) {
-    const attemptState = authOtpService.incrementAttempts(attempts, 5);
-    user.forgotPasswordOtpAttempts = attemptState.attempts;
-    if (attemptState.exhausted) {
-      user.forgotPasswordOtpLockedUntil = new Date(Date.now() + (FORGOT_PASSWORD_OTP_LOCK_MINUTES * 60 * 1000));
-    }
-    await user.save();
-    await logAuthAudit({
-      xID: user.xID || DEFAULT_XID,
-      firmId: user.firmId || DEFAULT_FIRM_ID,
-      userId: user._id,
-      actionType: 'FORGOT_PASSWORD_OTP_FAILED',
-      description: 'Forgot-password OTP verification failed',
-      performedBy: user.xID || DEFAULT_XID,
-      ipAddress: req.ip,
-      userAgent: req.get('user-agent'),
-      metadata: {
-        eventType: 'FORGOT_PASSWORD_OTP_FAILED',
-        attempts: user.forgotPasswordOtpAttempts,
-      },
-    }, req);
-    return res.status(attemptState.exhausted ? 429 : 401).json({
-      success: false,
-      message: attemptState.exhausted ? 'Too many attempts' : 'Invalid or expired OTP',
-    });
-  }
-
-  clearForgotPasswordOtpState(user);
-  const resetToken = generateLoginSessionToken();
-  user.forgotPasswordResetTokenHash = hashLoginSessionToken(resetToken);
-  user.forgotPasswordResetTokenExpiresAt = new Date(Date.now() + FORGOT_PASSWORD_OTP_EXPIRY_MINUTES * 60 * 1000);
-  await user.save();
-  await logAuthAudit({
-    xID: user.xID || DEFAULT_XID,
-    firmId: user.firmId || DEFAULT_FIRM_ID,
-    userId: user._id,
-    actionType: 'FORGOT_PASSWORD_OTP_VERIFIED',
-    description: 'Forgot-password OTP verified',
-    performedBy: user.xID || DEFAULT_XID,
-    ipAddress: req.ip,
-    userAgent: req.get('user-agent'),
-    metadata: {
-      eventType: 'FORGOT_PASSWORD_OTP_VERIFIED',
-    },
-  }, req);
-  return res.json({ success: true, message: 'OTP verified', resetToken });
-};
-
-const forgotPasswordResetWithOtp = async (req, res) => {
-  const email = String(req.body?.email || '').trim().toLowerCase();
-  const resetToken = String(req.body?.resetToken || '').trim();
-  const password = String(req.body?.password || '');
-
-  if (!validatePasswordStrength(password)) {
-    return res.status(400).json({ success: false, message: PASSWORD_POLICY_MESSAGE });
-  }
-
-  const firm = req.firm;
-
-  const user = await User.findOne({ firmId: firm._id, email, status: 'active', isActive: true });
-  if (!user || !user.forgotPasswordResetTokenHash || !user.forgotPasswordResetTokenExpiresAt || user.forgotPasswordResetTokenExpiresAt.getTime() < Date.now()) {
-    return res.status(401).json({ success: false, message: 'Invalid or expired reset session' });
-  }
-  if (!resetToken || hashLoginSessionToken(resetToken) !== user.forgotPasswordResetTokenHash) {
-    return res.status(401).json({ success: false, message: 'Invalid or expired reset session' });
-  }
-
-  user.passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
-  user.passwordSet = true;
-  user.passwordSetAt = new Date();
-  user.forcePasswordReset = false;
-  user.forgotPasswordResetTokenHash = null;
-  user.forgotPasswordResetTokenExpiresAt = null;
-  await user.save();
-  await logAuthAudit({
-    xID: user.xID || DEFAULT_XID,
-    firmId: user.firmId || DEFAULT_FIRM_ID,
-    userId: user._id,
-    actionType: 'FORGOT_PASSWORD_RESET_SUCCESS',
-    description: 'Password reset completed via OTP flow',
-    performedBy: user.xID || DEFAULT_XID,
-    ipAddress: req.ip,
-    userAgent: req.get('user-agent'),
-  }, req);
-
-  return res.json({ success: true, message: 'Password reset successful' });
-};
+const forgotPasswordResetWithOtp = async (req, res) => authPasswordDomainService.forgotPasswordResetWithOtp(req, res);
 
 /**
  * Get all users (Admin only)
@@ -4084,391 +3359,15 @@ const getAllUsers = async (req, res) => {
  * 
  * CRITICAL: Refresh flow must rebuild all claims from trusted DB state.
  */
-const refreshAccessToken = async (req, res) => {
-  try {
-    const refreshToken =
-      req.body.refreshToken ||
-      req.cookies?.refreshToken;
-    
-    if (!refreshToken) {
-      return res.status(400).json({
-        success: false,
-        message: 'Refresh token is required',
-      });
-    }
-    
-    // Hash the provided refresh token
-    const tokenHash = jwtService.hashRefreshToken(refreshToken);
-    
-    // Find the refresh token in database, preserving revoked-token visibility for abuse monitoring.
-    // We intentionally query all matching hashes first so revoked-token reuse can be detected and
-    // alerted on before the request is rejected.
-    const storedToken = await RefreshToken.findOne({ tokenHash });
-    const now = new Date();
-
-    if (!storedToken || storedToken.expiresAt <= now) {
-      await noteRefreshTokenFailure({
-        req,
-        userId: storedToken?.userId || null,
-        firmId: storedToken?.firmId || null,
-        reason: 'invalid_refresh_token',
-      });
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid or expired refresh token',
-      });
-    }
-
-    if (storedToken.isRevoked) {
-      await noteRefreshTokenFailure({
-        req,
-        userId: storedToken.userId,
-        firmId: storedToken.firmId,
-        reason: 'revoked_refresh_token',
-      });
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid or expired refresh token',
-      });
-    }
-    
-    // SuperAdmin refresh tokens use null userId because SuperAdmin is not stored in MongoDB.
-    const isSuperAdminToken = !storedToken.userId;
-    const isTokenMissingFirmContext = !storedToken.firmId;
-    if (isSuperAdminToken || isTokenMissingFirmContext) {
-      // Use the SuperAdmin message for missing firm context to avoid exposing tenant details.
-      await noteRefreshTokenFailure({
-        req,
-        reason: 'refresh_not_supported',
-      });
-      return res.status(401).json({
-        success: false,
-        code: 'REFRESH_NOT_SUPPORTED',
-        message: 'Session refresh is not supported for SuperAdmin accounts',
-      });
-    }
-    
-    // Get the user
-    const user = await User.findOne({
-      _id: storedToken.userId,
-      firmId: storedToken.firmId,
-    });
-    
-    if (!user || !isActiveStatus(user.status)) {
-      await noteRefreshTokenFailure({
-        req,
-        userId: storedToken.userId,
-        firmId: storedToken.firmId,
-        reason: 'refresh_user_not_found',
-      });
-      return res.status(401).json({
-        success: false,
-        message: 'User not found or inactive',
-      });
-    }
-
-    await noteRefreshTokenUse({
-      req,
-      userId: storedToken.userId,
-      firmId: storedToken.firmId,
-      tokenIpAddress: storedToken.ipAddress || null,
-    });
-    
-    // Revoke the old refresh token (token rotation)
-    storedToken.isRevoked = true;
-    storedToken.lastUsedAt = now;
-    await storedToken.save();
-    
-    // Rebuild token claims from trusted DB state (never reuse untrusted token payloads).
-    const firmSlug = await getFirmSlug(user.firmId);
-    const defaultClientId = user.defaultClientId ? user.defaultClientId.toString() : undefined;
-    
-    // Generate new access token with current authoritative firm context.
-    const newAccessToken = jwtService.generateAccessToken({
-      userId: user._id.toString(),
-      firmId: user.firmId ? user.firmId.toString() : undefined,
-      firmSlug: firmSlug || undefined,
-      defaultClientId: defaultClientId,
-      role: user.role,
-    });
-    
-    // Generate new refresh token
-    const { refreshToken: newRefreshToken } = await generateAndStoreRefreshToken({
-      req,
-      userId: user._id,
-      firmId: user.firmId,
-    });
-
-    const secureCookies = process.env.NODE_ENV === 'production';
-    const fifteenMinutesMs = 15 * 60 * 1000;
-    const refreshMs = jwtService.getRefreshTokenExpiryMs();
-
-    res.cookie('accessToken', newAccessToken, {
-      httpOnly: true,
-      secure: secureCookies,
-      sameSite: 'lax',
-      maxAge: fifteenMinutesMs,
-      path: '/',
-    });
-
-    res.cookie('refreshToken', newRefreshToken, {
-      httpOnly: true,
-      secure: secureCookies,
-      sameSite: 'lax',
-      maxAge: refreshMs,
-      path: '/',
-    });
-    
-    // Log token refresh
-    await logAuthAudit({
-      xID: user.xID,
-      firmId: user.firmId,
-      userId: user._id,
-      actionType: 'TokenRefreshed',
-      description: 'Access token refreshed successfully',
-      performedBy: user.xID,
-      ipAddress: req.ip,
-      userAgent: req.get('user-agent'),
-    });
-    
-    res.json({
-      success: true,
-      message: 'Token refreshed successfully',
-      accessToken: newAccessToken,
-      refreshToken: newRefreshToken,
-    });
-  } catch (error) {
-    console.error('[AUTH] Refresh token error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error refreshing token',
-    });
-  }
-};
+const refreshAccessToken = async (req, res) => authSessionDomainService.refreshAccessToken(req, res);
 
 /**
  * Verify TOTP code for MFA
  * POST /api/auth/verify-totp
  */
-const verifyTotp = async (req, res) => {
-  try {
-    const xID = String(req.body?.xID || '').trim().toUpperCase();
-    const token = String(req.body?.token || '').trim();
+const verifyTotp = async (req, res) => authOtpDomainService.verifyTotp(req, res);
 
-    if (!xID || !token) {
-      return res.status(400).json({
-        success: false,
-        message: 'xID and token are required',
-      });
-    }
-
-    const firmId = getRequestFirmId(req);
-    const userQuery = { xID, status: 'active' };
-    if (firmId) {
-      userQuery.firmId = firmId;
-    }
-    const user = await User.findOne(userQuery).select('xID twoFactorSecret');
-    if (!user || !user.twoFactorSecret) {
-      return res.status(404).json({
-        success: false,
-        message: 'MFA is not configured for this user',
-      });
-    }
-
-    const decryptedSecret = getTwoFactorSecret(user);
-    const verified = speakeasy.totp.verify({
-      secret: decryptedSecret,
-      encoding: 'base32',
-      token,
-      // Allow adjacent 30s time step to tolerate small clock drift without over-broad acceptance
-      window: 1,
-    });
-
-    if (!verified) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid TOTP token',
-      });
-    }
-
-    return res.json({
-      success: true,
-      message: 'TOTP verified successfully',
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: 'Error verifying TOTP',
-    });
-  }
-};
-
-/**
- * Complete MFA login and issue JWT tokens
- * POST /api/auth/complete-mfa-login
- */
-const completeMfaLogin = async (req, res) => {
-  try {
-    const token = String(req.body?.token || '').trim();
-    const preAuthToken = String(req.body?.preAuthToken || '').trim();
-
-    if (!preAuthToken) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid or expired pre-authentication token',
-      });
-    }
-
-    if (!token) {
-      return res.status(400).json({
-        success: false,
-        message: 'token is required',
-      });
-    }
-
-    let decodedPreAuthToken;
-    try {
-      // SECURITY: Explicit JWT algorithm allowlist
-      decodedPreAuthToken = jwt.verify(preAuthToken, process.env.JWT_SECRET, {
-        algorithms: ['HS256'],
-      });
-    } catch (error) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid or expired pre-authentication token',
-      });
-    }
-
-    if (!decodedPreAuthToken?.mfaStage || !decodedPreAuthToken?.userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid or expired pre-authentication token',
-      });
-    }
-
-    if (!mongoose.Types.ObjectId.isValid(decodedPreAuthToken.userId)) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid or expired pre-authentication token',
-      });
-    }
-
-    const user = await User.findOne({
-      _id: decodedPreAuthToken.userId,
-      ...(decodedPreAuthToken.firmId ? { firmId: decodedPreAuthToken.firmId } : {}),
-      isActive: true,
-      status: 'active',
-    });
-
-    if (!user || !user.twoFactorSecret) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid authentication token',
-      });
-    }
-
-    const decryptedSecret = getTwoFactorSecret(user);
-    const verified = speakeasy.totp.verify({
-      secret: decryptedSecret,
-      encoding: 'base32',
-      token,
-      window: 1,
-    });
-
-    if (!verified) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid authentication token',
-      });
-    }
-
-    const firmSlug = await getFirmSlug(user.firmId);
-    await ensureCanonicalXid(user);
-
-  const accessToken = jwtService.generateAccessToken({
-      userId: user._id.toString(),
-      firmId: user.firmId ? user.firmId.toString() : undefined,
-      firmSlug: firmSlug || undefined,
-      defaultClientId: user.defaultClientId ? user.defaultClientId.toString() : undefined,
-      role: user.role,
-    });
-
-    let refreshToken = null;
-    try {
-      ({ refreshToken } = await generateAndStoreRefreshToken({
-        userId: user._id,
-        firmId: user.firmId || null,
-        req,
-      }));
-    } catch (tokenError) {
-      console.error('[AUTH] Refresh token persistence failed', tokenError);
-    }
-
-    try {
-      await handleSuccessfulLoginMonitoring(req, user, {
-        resource: 'auth/complete-mfa-login',
-        mfaRequired: true,
-      });
-      await logAuthAudit({
-        xID: user.xID || DEFAULT_XID,
-        firmId: user.firmId || DEFAULT_FIRM_ID,
-        userId: user._id,
-        actionType: 'MFA_LOGIN_SUCCESS',
-        description: 'User completed MFA login successfully',
-        performedBy: user.xID,
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent'),
-      }, req);
-      await logSecurityAuditEvent({
-        req,
-        action: SECURITY_AUDIT_ACTIONS.LOGIN_SUCCESS,
-        resource: 'auth/complete-mfa-login',
-        userId: user._id,
-        firmId: user.firmId || DEFAULT_FIRM_ID,
-        xID: user.xID || DEFAULT_XID,
-        performedBy: user.xID || DEFAULT_XID,
-        metadata: {
-          mfaRequired: true,
-        },
-        description: 'User completed MFA login successfully',
-      }).catch(() => null);
-    } catch (auditError) {
-      console.error('[AUTH AUDIT] Failed to record MFA login success event', auditError);
-    }
-
-    const response = {
-      success: true,
-      message: user.forcePasswordReset ? 'Password reset required' : 'Login successful',
-      accessToken,
-      refreshToken,
-      data: {
-        id: user._id.toString(),
-        xID: user.xID,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        firmId: user.firmId ? user.firmId.toString() : null,
-        firmSlug,
-        allowedCategories: user.allowedCategories,
-        isActive: user.isActive,
-        mustSetPassword: !!user.mustSetPassword,
-        passwordSetAt: user.passwordSetAt,
-      },
-    };
-
-    if (user.forcePasswordReset) {
-      response.mustChangePassword = true;
-      response.forcePasswordReset = true;
-    }
-
-    return res.json(response);
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: 'Error completing MFA login',
-    });
-  }
-};
+const completeMfaLogin = async (req, res) => authOtpDomainService.completeMfaLogin(req, res);
 
 const generatePrimaryXid = async () => {
   for (let i = 0; i < 20; i += 1) {
@@ -4519,157 +3418,108 @@ const issueAuthTokens = async (req, user) => {
   return { accessToken, refreshToken };
 };
 
-const signupInit = async (req, res) => {
-  try {
-    const name = String(req.body?.name || '').trim();
-    const email = String(req.body?.email || '').trim().toLowerCase();
-    const password = String(req.body?.password || '');
-    const firmName = String(req.body?.firmName || '').trim();
-    const phone = String(req.body?.phone || '').trim();
+const authLoginDomainService = createAuthLoginService({
+  getSuperadminEnv,
+  handleSuperadminLogin,
+  User,
+  validateTenantUserPreconditions,
+  handlePasswordVerification,
+  handlePostPasswordChecks,
+  sendLoginOtpChallenge,
+  getLoginOtpConfig,
+  LOGIN_OTP_COOLDOWN_SECONDS,
+  hashLoginSessionToken,
+  LoginSession,
+  clearExpiredLoginOtpLock,
+  getLoginOtpLockSeconds,
+  logLoginOtpEvent,
+  clearLoginOtpState,
+  persistLoginOtpState,
+  authOtpService,
+  logAuthAudit,
+  DEFAULT_XID,
+  DEFAULT_FIRM_ID,
+  noteLoginFailure,
+  clearCachedLoginOtpState,
+  buildSuccessfulLoginPayload,
+  normalizeFirmSlug,
+});
 
-    if (!name || !email || !password || !firmName || !phone) {
-      return res.status(400).json({ success: false, message: 'name, email, password, firmName and phone are required' });
-    }
+const authSessionDomainService = createAuthSessionService({
+  jwtService,
+  getSession,
+  RefreshToken,
+  User,
+  isActiveStatus,
+  noteRefreshTokenFailure,
+  noteRefreshTokenUse,
+  logAuthAudit,
+  getFirmSlug,
+  isSuperAdminRole,
+  DEFAULT_FIRM_ID,
+});
 
-    const result = await signupService.initiateSignup({
-      name,
-      email,
-      password,
-      firmName,
-      phone,
-      session: getSession(req),
-      req,
-    });
+const authPasswordDomainService = createAuthPasswordService({
+  normalizeFirmSlug,
+  Firm,
+  User,
+  emailService,
+  isActiveStatus,
+  FORGOT_PASSWORD_TOKEN_EXPIRY_MINUTES,
+  logAuthAudit,
+  FORGOT_PASSWORD_OTP_RESEND_COOLDOWN_SECONDS,
+  FORGOT_PASSWORD_OTP_EXPIRY_MINUTES,
+  FORGOT_PASSWORD_OTP_LOCK_MINUTES,
+  authOtpService,
+  SALT_ROUNDS,
+  DEFAULT_XID,
+  DEFAULT_FIRM_ID,
+  clearForgotPasswordOtpState,
+  generateLoginSessionToken,
+  hashLoginSessionToken,
+  validatePasswordStrength,
+  PASSWORD_POLICY_MESSAGE,
+  bcrypt,
+});
 
-    if (!result.success) {
-      return res.status(result.status || 400).json({ success: false, message: result.message });
-    }
+const authOtpDomainService = authOtpService.createAuthOtpControllerService({
+  getRequestFirmId,
+  User,
+  getTwoFactorSecret,
+  speakeasy,
+  jwt,
+  mongoose,
+  getFirmSlug,
+  ensureCanonicalXid,
+  jwtService,
+  generateAndStoreRefreshToken,
+  handleSuccessfulLoginMonitoring,
+  logAuthAudit,
+  logSecurityAuditEvent,
+  SECURITY_AUDIT_ACTIONS,
+  DEFAULT_XID,
+  DEFAULT_FIRM_ID,
+  sendCentralOtp,
+  verifyCentralOtp,
+  issueAuthTokens,
+});
 
-    return res.status(201).json({
-      success: true,
-      message: result.message,
-      data: { email },
-    });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: 'Unable to start signup right now.' });
-  }
-};
+const authSignupDomainService = createAuthSignupService({
+  signupService,
+  getSession,
+  mongoose,
+  User,
+});
 
-const signupVerify = async (req, res) => {
-  const session = await mongoose.startSession();
-  try {
-    const email = String(req.body?.email || '').trim().toLowerCase();
-    const otp = String(req.body?.otp || '').trim();
+const signupInit = async (req, res) => authSignupDomainService.signupInit(req, res);
 
-    if (!email || !otp) {
-      return res.status(400).json({ success: false, message: 'email and otp are required' });
-    }
+const signupVerify = async (req, res) => authSignupDomainService.signupVerify(req, res);
 
-    let result = null;
-    await session.withTransaction(async () => {
-      const existingUser = await User.findOne({ email, status: { $ne: 'deleted' } }).session(session);
-      if (existingUser) {
-        result = { success: false, status: 409, message: 'Account already exists' };
-        return;
-      }
+const signupResend = async (req, res) => authSignupDomainService.signupResend(req, res);
 
-      result = await signupService.verifyOtp({
-        email,
-        otp,
-        session,
-        req,
-      });
-    });
+const sendOtpEndpoint = async (req, res) => authOtpDomainService.sendOtpEndpoint(req, res);
 
-    if (!result?.success) {
-      return res.status(result?.status || 400).json({ success: false, message: result?.message || 'Unable to verify signup OTP.' });
-    }
-
-    return res.status(201).json({
-      success: true,
-      message: result.message,
-      data: {
-        xid: result.xid,
-        firmSlug: result.firmSlug,
-        firmUrl: result.firmUrl,
-        redirectPath: result.redirectPath,
-      },
-    });
-  } catch (_error) {
-    return res.status(500).json({ success: false, message: 'Unable to verify signup OTP right now.' });
-  } finally {
-    await session.endSession();
-  }
-};
-
-const signupResend = async (req, res) => {
-  try {
-    const email = String(req.body?.email || '').trim().toLowerCase();
-    if (!email) {
-      return res.status(400).json({ success: false, message: 'email is required' });
-    }
-
-    const result = await signupService.resendOtp({ email, req });
-    return res.status(result.success ? 200 : (result.status || 400)).json({
-      success: result.success,
-      message: result.message,
-    });
-  } catch (_error) {
-    return res.status(500).json({ success: false, message: 'Unable to resend OTP right now.' });
-  }
-};
-
-const sendOtpEndpoint = async (req, res) => {
-  try {
-    const email = req.body?.email ? String(req.body.email).trim().toLowerCase() : null;
-    const xid = req.body?.xid ? String(req.body.xid).trim().toUpperCase() : null;
-    const purpose = String(req.body?.purpose || 'login').trim();
-    const result = await sendCentralOtp({ email, xid, purpose });
-    return res.status(202).json({ success: true, data: result });
-  } catch (error) {
-    const statusCode = error.message === 'OTP_RATE_LIMITED' ? 429 : 400;
-    return res.status(statusCode).json({ success: false, message: error.message });
-  }
-};
-
-const verifyOtpEndpoint = async (req, res) => {
-  try {
-    const email = String(req.body?.email || req.body?.identifier || '').trim().toLowerCase();
-    const otp = String(req.body?.otp || req.body?.code || '').trim();
-    const purpose = String(req.body?.purpose || 'login').trim();
-    const result = await verifyCentralOtp({ identifier: email, code: otp, purpose });
-
-    const user = await User.findOne({
-      $or: [{ primary_email: result.identifier }, { email: result.identifier }],
-      status: { $ne: 'deleted' },
-    });
-
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'Account not found' });
-    }
-
-    if (!user.emailVerified) {
-      user.emailVerified = true;
-      user.is_verified = true;
-      user.emailVerifiedAt = new Date();
-      user.verificationMethod = 'OTP';
-      await user.save();
-    }
-
-    const tokens = await issueAuthTokens(req, user);
-    return res.json({
-      success: true,
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      data: {
-        ...tokens,
-        user,
-      },
-    });
-  } catch (error) {
-    return res.status(400).json({ success: false, message: error.message });
-  }
-};
+const verifyOtpEndpoint = async (req, res) => authOtpDomainService.verifyOtpEndpoint(req, res);
 
 module.exports = {
   login: wrapWriteHandler(login),
