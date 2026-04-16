@@ -1,17 +1,12 @@
 const Case = require('../models/Case.model');
 const DocketAuditLog = require('../models/DocketAuditLog.model');
 const { randomUUID } = require('crypto');
+const { normalizeRole } = require('./productAudit.service');
 const {
   toDocketState,
   toPersistenceState,
 } = require('../domain/docket/docketStateMachine');
 const { isValidTransition, toLifecycleFromStatus } = require('../domain/docketLifecycle');
-
-const normalizeActorRole = (role) => {
-  const value = String(role || '').toUpperCase().replace('SUPERADMIN', 'SUPER_ADMIN');
-  if (value === 'ADMIN' || value === 'SUPER_ADMIN' || value === 'MANAGER' || value === 'SYSTEM') return value;
-  return 'USER';
-};
 
 async function transitionDocket(docketId, newState, userId, options = {}) {
   const {
@@ -118,7 +113,7 @@ async function transitionDocket(docketId, newState, userId, options = {}) {
     tenantId: firmId,
     performedBy: {
       userId: String(userId || 'SYSTEM'),
-      role: normalizeActorRole(options?.req?.user?.role || options?.actorRole),
+      role: normalizeRole(options?.req?.user?.role || options?.actorRole),
     },
     firmId,
     timestamp: new Date(),
