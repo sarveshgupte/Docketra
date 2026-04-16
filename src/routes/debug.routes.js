@@ -1,6 +1,7 @@
 const express = require('express');
 const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
 const routeSchemas = require('../schemas/debug.routes.schema.js');
+const log = require('../utils/log');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { requireAdmin } = require('../middleware/permission.middleware');
 const { debugLimiter } = require('../middleware/rateLimiters');
@@ -33,7 +34,7 @@ router.get('/email-test', debugLimiter, requireAdmin, async (req, res) => {
       });
     }
     
-    console.log(`[DEBUG] Sending test email to ${testEmail} (requested by ${req.user.xID})`);
+    log.info(`[DEBUG] Sending test email to ${testEmail} (requested by ${req.user.xID})`);
     
     // Send test email
     const result = await sendTestEmail(testEmail);
@@ -61,7 +62,7 @@ router.get('/email-test', debugLimiter, requireAdmin, async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('[DEBUG] Error sending test email:', error);
+    log.error('[DEBUG] Error sending test email:', error);
     res.status(500).json({
       success: false,
       message: 'Error sending test email',

@@ -7,6 +7,7 @@
 const Firm = require('../models/Firm.model');
 const { normalizeFirmSlug } = require('../utils/slugify');
 const { getFirmInactiveCode, isActiveStatus } = require('../utils/status.utils');
+const log = require('../utils/log');
 
 /**
  * Resolve firmSlug to firmId and attach to request
@@ -47,7 +48,7 @@ const resolveFirmSlug = async (req, res, next) => {
     // Resolve firmSlug to firm
     const firm = await Firm.findOne({ firmSlug: normalizedSlug });
 
-    console.log({
+    log.info({
       event: 'firm_login_attempt',
       slug: normalizedSlug,
       found: !!firm,
@@ -91,7 +92,7 @@ const resolveFirmSlug = async (req, res, next) => {
     
     next();
   } catch (error) {
-    console.error('[FIRM_RESOLUTION] Error resolving firmSlug:', error);
+    log.error('[FIRM_RESOLUTION] Error resolving firmSlug:', error);
     res.status(500).json({
       success: false,
       code: 'FIRM_RESOLUTION_FAILED',
@@ -135,7 +136,7 @@ const optionalFirmResolution = async (req, res, next) => {
     next();
   } catch (error) {
     // Don't fail on optional resolution
-    console.warn('[FIRM_RESOLUTION] Error in optional resolution:', error);
+    log.warn('[FIRM_RESOLUTION] Error in optional resolution:', error);
     next();
   }
 };

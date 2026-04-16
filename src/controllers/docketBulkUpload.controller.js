@@ -1,6 +1,7 @@
 const { randomUUID } = require('crypto');
 const { createCase } = require('./case.controller');
 const { validateBulkDockets, mapValidationErrors } = require('../services/bulkUpload.service');
+const log = require('../utils/log');
 
 const BULK_ASYNC_THRESHOLD = 750;
 
@@ -50,7 +51,7 @@ const previewDocketBulkUpload = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('[DOCKET_BULK_PREVIEW] Failed to preview bulk upload', error);
+    log.error('[DOCKET_BULK_PREVIEW] Failed to preview bulk upload', error);
     return res.status(500).json({ success: false, message: 'Failed to preview docket bulk upload' });
   }
 };
@@ -143,7 +144,7 @@ const uploadDocketBulk = async (req, res) => {
       errors,
     });
   } catch (error) {
-    console.error('[DOCKET_BULK_UPLOAD] Failed to upload dockets', error);
+    log.error('[DOCKET_BULK_UPLOAD] Failed to upload dockets', error);
     return res.status(500).json({ success: false, message: 'Failed to upload dockets in bulk' });
   }
 };

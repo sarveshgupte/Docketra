@@ -2,8 +2,8 @@
 
 const AuthAudit = require('../models/AuthAudit.model');
 const RefreshToken = require('../models/RefreshToken.model');
-const log = require('../utils/log');
 const { getSecurityMetricsSnapshot, SECURITY_METRIC_WINDOWS } = require('../services/securityTelemetry.service');
+const log = require('../utils/log');
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;

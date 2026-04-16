@@ -36,12 +36,12 @@ const startBackgroundSchedules = () => {
 
   setInterval(() => {
     runStorageHealthCheck().catch((err) =>
-      console.error('[storageHealthCheck] failed', { message: err.message })
+      log.error('[storageHealthCheck] failed', { message: err.message })
     );
   }, 8 * 60 * 60 * 1000);
 
   enqueueDailyStorageIntegrityJob().catch((err) =>
-    console.error('[storageIntegritySchedule] registration failed', { message: err.message })
+    log.error('[storageIntegritySchedule] registration failed', { message: err.message })
   );
 };
 

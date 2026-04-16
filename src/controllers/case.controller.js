@@ -51,6 +51,7 @@ const buildCaseUpdateService = require('../services/caseUpdate.service');
 const buildCaseQueryService = require('../services/caseQuery.service');
 const buildCaseActivityService = require('../services/caseActivity.service');
 const buildCaseBulkService = require('../services/caseBulk.service');
+const log = require('../utils/log');
 const docketAuditService = require('../services/docketAudit.service');
 
 const inFlightCaseRecordLoads = new Map();
@@ -151,7 +152,7 @@ const enforceDocketLifecycleDefault = (docket) => {
 };
 
 const buildAddCommentErrorResponse = (error, context = {}) => {
-  console.error('[ADD_COMMENT_ERROR]', {
+  log.error('[ADD_COMMENT_ERROR]', {
     error,
     message: error?.message,
     name: error?.name,
@@ -371,7 +372,7 @@ const getCaseComments = async (req, res) => caseActivityService.getCaseComments(
 const addAttachment = async (req, res) => {
   try {
     if (!req.storageContext?.rootFolderId) {
-      console.warn('[STORAGE] blocked_operation: upload_attempt_without_storage');
+      log.warn('[STORAGE] blocked_operation: upload_attempt_without_storage');
       return res.status(400).json({ code: 'STORAGE_NOT_CONNECTED', message: 'Cloud storage must be connected' });
     }
     if (areFileUploadsDisabled()) {
@@ -647,7 +648,7 @@ const unassignCase = async (req, res) => caseUpdateService.unassignCase(req, res
 const viewAttachment = async (req, res) => {
   try {
     if (!req.storageContext?.rootFolderId) {
-      console.warn('[STORAGE] blocked_operation: view_attempt_without_storage');
+      log.warn('[STORAGE] blocked_operation: view_attempt_without_storage');
       return res.status(400).json({ code: 'STORAGE_NOT_CONNECTED', message: 'Cloud storage must be connected' });
     }
     const { caseId, attachmentId } = req.params;
@@ -711,7 +712,7 @@ const viewAttachment = async (req, res) => {
     const fileStream = await provider.downloadFile(attachment.driveFileId);
     return fileStream.pipe(res);
   } catch (error) {
-    console.error('[viewAttachment] Error:', error);
+    log.error('[viewAttachment] Error:', error);
     res.status(500).json({
       success: false,
       message: 'Error viewing attachment',
@@ -733,7 +734,7 @@ const viewAttachment = async (req, res) => {
 const downloadAttachment = async (req, res) => {
   try {
     if (!req.storageContext?.rootFolderId) {
-      console.warn('[STORAGE] blocked_operation: download_attempt_without_storage');
+      log.warn('[STORAGE] blocked_operation: download_attempt_without_storage');
       return res.status(400).json({ code: 'STORAGE_NOT_CONNECTED', message: 'Cloud storage must be connected' });
     }
     const { caseId, attachmentId } = req.params;
@@ -797,7 +798,7 @@ const downloadAttachment = async (req, res) => {
         // Pipe the stream to response
         fileStream.pipe(res);
       } catch (error) {
-        console.error('[downloadAttachment] Error downloading from Google Drive:', error);
+        log.error('[downloadAttachment] Error downloading from Google Drive:', error);
         return res.status(500).json({
           success: false,
           message: 'Error downloading file from Google Drive',
@@ -811,7 +812,7 @@ const downloadAttachment = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('[downloadAttachment] Error:', error);
+    log.error('[downloadAttachment] Error:', error);
     res.status(500).json({
       success: false,
       message: 'Error downloading attachment',
@@ -908,7 +909,7 @@ const getClientFactSheetForCase = async (req, res) => {
           }
 
           if (!client) {
-            console.warn('[getClientFactSheetForCase] Client lookup fallback was ambiguous', {
+            log.warn('[getClientFactSheetForCase] Client lookup fallback was ambiguous', {
               caseId: caseData.caseId,
               clientId: caseData.clientId,
               candidateCount: candidates.length,
@@ -1008,7 +1009,7 @@ const getClientFactSheetForCase = async (req, res) => {
         req,
       });
     } catch (auditError) {
-      console.warn('[getClientFactSheetForCase] Non-blocking audit log failure:', auditError?.message || auditError);
+      log.warn('[getClientFactSheetForCase] Non-blocking audit log failure:', auditError?.message || auditError);
     }
     
     res.json({
@@ -1016,7 +1017,7 @@ const getClientFactSheetForCase = async (req, res) => {
       data: factSheetData,
     });
   } catch (error) {
-    console.error('[getClientFactSheetForCase] Error:', error);
+    log.error('[getClientFactSheetForCase] Error:', error);
     res.status(500).json({
       success: false,
       message: 'Error retrieving client fact sheet',
@@ -1105,7 +1106,7 @@ const viewClientFactSheetFile = async (req, res) => {
 
     fileStream.pipe(res);
   } catch (error) {
-    console.error('[viewClientFactSheetFile] Error:', error);
+    log.error('[viewClientFactSheetFile] Error:', error);
     res.status(500).json({
       success: false,
       message: 'Error viewing file',
@@ -1176,7 +1177,7 @@ const listClientCFSFilesForCase = async (req, res) => {
       })),
     });
   } catch (error) {
-    console.error('Error listing client CFS files for case:', error);
+    log.error('Error listing client CFS files for case:', error);
     res.status(500).json({
       success: false,
       message: 'Error listing client CFS files',
@@ -1259,7 +1260,7 @@ const downloadClientCFSFileForCase = async (req, res) => {
     // Stream file to response
     fileStream.pipe(res);
   } catch (error) {
-    console.error('Error downloading client CFS file for case:', error);
+    log.error('Error downloading client CFS file for case:', error);
     res.status(500).json({
       success: false,
       message: 'Error downloading file from client CFS',

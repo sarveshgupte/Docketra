@@ -7,6 +7,7 @@ const metricsService = require('../services/metrics.service');
 const jwtService = require('../services/jwt.service');
 const { getCookieValue } = require('../utils/requestCookies');
 const { logSecurityEvent } = require('./securityAudit.middleware');
+const log = require('../utils/log');
 
 const DEFAULT_RATE_LIMIT_MESSAGE = 'Too many requests. Please wait a moment before trying again.';
 const FORGOT_PASSWORD_RATE_LIMIT_MESSAGE = 'Too many password reset requests. Please wait a few minutes before trying again.';
@@ -32,7 +33,7 @@ const createRedisStore = () => {
   if (!redis) {
     if (process.env.NODE_ENV === 'production' && !hasWarnedRedisRateLimitFallback) {
       hasWarnedRedisRateLimitFallback = true;
-      console.warn('[RATE_LIMIT] Redis unavailable in production; falling back to in-memory rate limiting for this instance.');
+      log.warn('[RATE_LIMIT] Redis unavailable in production; falling back to in-memory rate limiting for this instance.');
     }
     return null;
   }

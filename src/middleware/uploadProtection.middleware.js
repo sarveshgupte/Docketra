@@ -4,6 +4,7 @@ const fs = require('fs');
 const net = require('net');
 const { randomUUID } = require('crypto');
 const config = require('../config/config');
+const log = require('../utils/log');
 
 const uploadRoot = path.join(__dirname, '../../uploads/private');
 const ensureUploadRoot = () => {
@@ -97,7 +98,7 @@ const virusScanHook = async (file) => {
     if (enforceScanStrictly) {
       throw new Error('Malware scanner is not configured');
     }
-    console.warn('[uploadProtection] Skipping malware scan because CLAMAV_HOST is not configured');
+    log.warn('[uploadProtection] Skipping malware scan because CLAMAV_HOST is not configured');
     return { passed: true, skipped: true, reason: 'scanner_not_configured' };
   }
 
@@ -163,7 +164,7 @@ const enforceUploadSecurity = async (req, res, next) => {
     }
 
     const result = await virusScanHook(req.file);
-    console.info('[uploadProtection] Virus scan completed', {
+    log.info('[uploadProtection] Virus scan completed', {
       fileName: req.file.originalname,
       size: req.file.size,
       passed: result.passed,
@@ -179,7 +180,7 @@ const enforceUploadSecurity = async (req, res, next) => {
       });
     }
   } catch (error) {
-    console.error('[uploadProtection] Virus scan error', {
+    log.error('[uploadProtection] Virus scan error', {
       fileName: req.file.originalname,
       message: error.message,
     });

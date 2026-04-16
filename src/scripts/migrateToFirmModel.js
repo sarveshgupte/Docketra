@@ -10,6 +10,7 @@
  */
 
 const mongoose = require('mongoose');
+const log = require('../utils/log');
 require('dotenv').config();
 
 // Import models
@@ -25,24 +26,24 @@ const DEFAULT_FIRM_NAME = process.env.DEFAULT_FIRM_NAME || "Sarvesh's Org";
 
 async function runMigration() {
   try {
-    console.log('[MIGRATION] Connecting to MongoDB...');
+    log.info('[MIGRATION] Connecting to MongoDB...');
     await mongoose.connect(MONGODB_URI);
-    console.log('[MIGRATION] Connected to MongoDB');
+    log.info('[MIGRATION] Connected to MongoDB');
 
     // Step 1: Create or find default firm
-    console.log('\n[MIGRATION] Step 1: Creating/Finding default firm...');
+    log.info('\n[MIGRATION] Step 1: Creating/Finding default firm...');
     let defaultFirm = await Firm.findOne({ firmId: DEFAULT_FIRM_ID });
     
     if (!defaultFirm) {
-      console.log(`[MIGRATION] Creating default firm: ${DEFAULT_FIRM_ID} - ${DEFAULT_FIRM_NAME}`);
+      log.info(`[MIGRATION] Creating default firm: ${DEFAULT_FIRM_ID} - ${DEFAULT_FIRM_NAME}`);
       defaultFirm = await Firm.create({
         firmId: DEFAULT_FIRM_ID,
         name: DEFAULT_FIRM_NAME,
         status: 'active',
       });
-      console.log(`[MIGRATION] ✓ Default firm created: ${defaultFirm._id}`);
+      log.info(`[MIGRATION] ✓ Default firm created: ${defaultFirm._id}`);
     } else {
-      console.log(`[MIGRATION] ✓ Default firm already exists: ${defaultFirm._id}`);
+      log.info(`[MIGRATION] ✓ Default firm already exists: ${defaultFirm._id}`);
     }
 
     // Ensure default client exists for the firm
@@ -51,7 +52,7 @@ async function runMigration() {
     }
 
     // Step 2: Update users - migrate string firmId to ObjectId reference
-    console.log('\n[MIGRATION] Step 2: Updating users...');
+    log.info('\n[MIGRATION] Step 2: Updating users...');
     const usersToUpdate = await User.find({ 
       $or: [
         { firmId: DEFAULT_FIRM_ID }, // String format
@@ -59,7 +60,7 @@ async function runMigration() {
       ]
     });
     
-    console.log(`[MIGRATION] Found ${usersToUpdate.length} users to update`);
+    log.info(`[MIGRATION] Found ${usersToUpdate.length} users to update`);
     
     let updatedUsers = 0;
     if (usersToUpdate.length > 0) {
@@ -80,21 +81,21 @@ async function runMigration() {
         
         updatedUsers = usersToUpdate.length;
         for (const user of usersToUpdate) {
-          console.log(`[MIGRATION]   ✓ Updated user: ${user.xID}`);
+          log.info(`[MIGRATION]   ✓ Updated user: ${user.xID}`);
         }
       } catch (err) {
-        console.error(`[MIGRATION]   ✗ Failed to perform bulk update on users:`, err.message);
+        log.error(`[MIGRATION]   ✗ Failed to perform bulk update on users:`, err.message);
       }
     }
     
-    console.log(`[MIGRATION] ✓ Updated ${updatedUsers} users`);
+    log.info(`[MIGRATION] ✓ Updated ${updatedUsers} users`);
 
     // Step 3: Verify migration
-    console.log('\n[MIGRATION] Step 3: Verifying migration...');
+    log.info('\n[MIGRATION] Step 3: Verifying migration...');
     const verifyUsers = await User.find({ firmId: defaultFirm._id }).limit(5);
-    console.log(`[MIGRATION] Sample users with new firmId ObjectId:`);
+    log.info(`[MIGRATION] Sample users with new firmId ObjectId:`);
     verifyUsers.forEach(user => {
-      console.log(`[MIGRATION]   - ${user.xID}: firmId type = ${typeof user.firmId}, value = ${user.firmId}`);
+      log.info(`[MIGRATION]   - ${user.xID}: firmId type = ${typeof user.firmId}, value = ${user.firmId}`);
     });
 
     // Count users with string firmId (should be 0)
@@ -103,23 +104,23 @@ async function runMigration() {
     });
     
     if (remainingStringFirmIds > 0) {
-      console.warn(`[MIGRATION] ⚠️  Warning: ${remainingStringFirmIds} users still have string firmId`);
+      log.warn(`[MIGRATION] ⚠️  Warning: ${remainingStringFirmIds} users still have string firmId`);
     } else {
-      console.log('[MIGRATION] ✓ All users have ObjectId firmId references');
+      log.info('[MIGRATION] ✓ All users have ObjectId firmId references');
     }
 
-    console.log('\n[MIGRATION] ✓ Migration completed successfully');
-    console.log('[MIGRATION] Summary:');
-    console.log(`[MIGRATION]   - Firm created/found: ${defaultFirm.firmId} (${defaultFirm.name})`);
-    console.log(`[MIGRATION]   - Users updated: ${updatedUsers}`);
-    console.log(`[MIGRATION]   - Remaining string firmIds: ${remainingStringFirmIds}`);
+    log.info('\n[MIGRATION] ✓ Migration completed successfully');
+    log.info('[MIGRATION] Summary:');
+    log.info(`[MIGRATION]   - Firm created/found: ${defaultFirm.firmId} (${defaultFirm.name})`);
+    log.info(`[MIGRATION]   - Users updated: ${updatedUsers}`);
+    log.info(`[MIGRATION]   - Remaining string firmIds: ${remainingStringFirmIds}`);
 
   } catch (error) {
-    console.error('[MIGRATION] ✗ Migration failed:', error);
+    log.error('[MIGRATION] ✗ Migration failed:', error);
     throw error;
   } finally {
     await mongoose.disconnect();
-    console.log('\n[MIGRATION] Disconnected from MongoDB');
+    log.info('\n[MIGRATION] Disconnected from MongoDB');
   }
 }
 
@@ -127,11 +128,11 @@ async function runMigration() {
 if (require.main === module) {
   runMigration()
     .then(() => {
-      console.log('[MIGRATION] Script completed successfully');
+      log.info('[MIGRATION] Script completed successfully');
       process.exit(0);
     })
     .catch((error) => {
-      console.error('[MIGRATION] Script failed:', error);
+      log.error('[MIGRATION] Script failed:', error);
       process.exit(1);
     });
 }

@@ -2,6 +2,7 @@ const Case = require('../models/Case.model');
 const Client = require('../models/Client.model');
 const { CaseRepository } = require('../repositories');
 const { resolveCaseIdentifier } = require('../utils/caseIdentifier');
+const log = require('../utils/log');
 
 /**
  * Client Access Control Middleware
@@ -51,7 +52,7 @@ const checkClientAccess = async (req, res, next) => {
     
     next();
   } catch (error) {
-    console.error('[CLIENT_ACCESS] Error checking client access:', error);
+    log.error('[CLIENT_ACCESS] Error checking client access:', error);
     res.status(500).json({
       success: false,
       message: 'Error checking client access',
@@ -90,7 +91,7 @@ const checkCaseClientAccess = async (req, res, next) => {
     // This ensures the middleware uses the same lookup logic as the controller
     let caseData;
     try {
-      console.info('[CLIENT_ACCESS] Resolving case identifier', {
+      log.info('[CLIENT_ACCESS] Resolving case identifier', {
         caseId,
         firmId: user.firmId,
         userId: user.xID,
@@ -103,7 +104,7 @@ const checkCaseClientAccess = async (req, res, next) => {
       // Fetch case with firm scoping via repository
       caseData = await CaseRepository.findByInternalId(user.firmId, internalId, user.role);
 
-      console.info('[CLIENT_ACCESS] Case identifier resolved', {
+      log.info('[CLIENT_ACCESS] Case identifier resolved', {
         requestedCaseId: caseId,
         resolvedCaseId: caseData?.caseId || null,
         internalId,
@@ -113,7 +114,7 @@ const checkCaseClientAccess = async (req, res, next) => {
     } catch (error) {
       // Case not found or invalid identifier - let the controller handle it
       // This ensures consistent error handling between middleware and controller
-      console.error('[CLIENT_ACCESS] Case identifier resolution failed', {
+      log.error('[CLIENT_ACCESS] Case identifier resolution failed', {
         caseId,
         firmId: user.firmId,
         userId: user.xID,
@@ -139,7 +140,7 @@ const checkCaseClientAccess = async (req, res, next) => {
     
     next();
   } catch (error) {
-    console.error('[CLIENT_ACCESS] Error checking case client access:', error);
+    log.error('[CLIENT_ACCESS] Error checking case client access:', error);
     res.status(500).json({
       success: false,
       message: 'Error checking case access',
@@ -170,7 +171,7 @@ const applyClientAccessFilter = (req, res, next) => {
     
     next();
   } catch (error) {
-    console.error('[CLIENT_ACCESS] Error applying client access filter:', error);
+    log.error('[CLIENT_ACCESS] Error applying client access filter:', error);
     res.status(500).json({
       success: false,
       message: 'Error applying client access filter',

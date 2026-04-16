@@ -12,9 +12,9 @@ const jwtService = require('../services/jwt.service');
 const { generateFirmSlug } = require('../utils/firmSlug');
 const { sendWelcomeEmail } = require('../services/email/sendWelcomeEmail');
 const { normalizeRole } = require('../utils/role.utils');
-const log = require('../utils/log');
 const { assertPrimaryAdmin, getTagValidationError, normalizeId } = require('../utils/hierarchy.utils');
 const { logAuditEvent } = require('../services/adminActionAudit.service');
+const log = require('../utils/log');
 const settingsAuditService = require('../services/settingsAudit.service');
 
 const resolveUserFirmScope = (req, res) => {
@@ -464,7 +464,7 @@ const completeProfile = async (req, res) => {
         role: updatedUser.role,
       });
     } catch (emailError) {
-      console.error('[ONBOARDING] Failed to send welcome email', {
+      log.error('[ONBOARDING] Failed to send welcome email', {
         userId: updatedUser._id?.toString?.(),
         firmId: createdFirm?._id?.toString?.() || updatedUser.firmId?.toString?.(),
         error: emailError.message,

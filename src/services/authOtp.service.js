@@ -1,5 +1,6 @@
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
+const log = require('../utils/log');
 
 const generateOtp = () => crypto.randomInt(100000, 1000000).toString();
 
@@ -84,7 +85,7 @@ const createAuthOtpService = (deps) => {
         message: 'TOTP verified successfully',
       });
     } catch (error) {
-      console.error('[AUTH][verifyTotp] Error verifying TOTP', error);
+      log.error('[AUTH][verifyTotp] Error verifying TOTP', error);
       return res.status(500).json({
         success: false,
         message: 'Error verifying TOTP',
@@ -185,7 +186,7 @@ const createAuthOtpService = (deps) => {
           req,
         }));
       } catch (tokenError) {
-        console.error('[AUTH] Refresh token persistence failed', tokenError);
+        log.error('[AUTH] Refresh token persistence failed', tokenError);
       }
 
       try {
@@ -217,7 +218,7 @@ const createAuthOtpService = (deps) => {
           description: 'User completed MFA login successfully',
         }).catch(() => null);
       } catch (auditError) {
-        console.error('[AUTH AUDIT] Failed to record MFA login success event', auditError);
+        log.error('[AUTH AUDIT] Failed to record MFA login success event', auditError);
       }
 
       const response = {
@@ -247,7 +248,7 @@ const createAuthOtpService = (deps) => {
 
       return res.json(response);
     } catch (error) {
-      console.error('[AUTH][completeMfaLogin] Error completing MFA login', error);
+      log.error('[AUTH][completeMfaLogin] Error completing MFA login', error);
       return res.status(500).json({
         success: false,
         message: 'Error completing MFA login',

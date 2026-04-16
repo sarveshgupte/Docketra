@@ -1,3 +1,4 @@
+const log = require('../utils/log');
 module.exports = (deps) => {
   const {
     mongoose,
@@ -79,11 +80,11 @@ module.exports = (deps) => {
     const getCaseTimerLabel = `[GET_CASE:${requestId}]`;
     try {
       console.time(getCaseTimerLabel);
-      console.log('STEP 1 start');
+      log.info('STEP 1 start');
       const { caseId } = req.params;
       
       // PR: Fix Case Visibility - Enhanced logging for debugging
-      console.log(`[GET_CASE] Attempting to fetch case: caseId=${caseId}, firmId=${req.user.firmId}, userXID=${req.user.xID}`);
+      log.info(`[GET_CASE] Attempting to fetch case: caseId=${caseId}, firmId=${req.user.firmId}, userXID=${req.user.xID}`);
       
       // Prefer repository-backed lookup for docket deep-links so encrypted fields
       // are decrypted before reaching the UI. Fallback to identifier resolution
@@ -97,7 +98,7 @@ module.exports = (deps) => {
           role: req.user.role,
         });
       } catch (error) {
-        console.error(`[GET_CASE] Case not found or identifier resolution failed: caseId=${caseId}, error=${error.message}`);
+        log.error(`[GET_CASE] Case not found or identifier resolution failed: caseId=${caseId}, error=${error.message}`);
         return res.status(404).json({
           success: false,
           message: 'Case not found',
@@ -105,14 +106,14 @@ module.exports = (deps) => {
       }
       
       if (!caseData) {
-        console.error(`[GET_CASE] Case not found in database: caseId=${caseId}, firmId=${req.user.firmId}`);
+        log.error(`[GET_CASE] Case not found in database: caseId=${caseId}, firmId=${req.user.firmId}`);
         return res.status(404).json({
           success: false,
           message: 'Case not found',
         });
       }
       
-      console.log(`[GET_CASE] Case found: caseInternalId=${caseData.caseInternalId}, caseNumber=${caseData.caseNumber}, caseId=${caseData.caseId}`);
+      log.info(`[GET_CASE] Case found: caseInternalId=${caseData.caseInternalId}, caseNumber=${caseData.caseNumber}, caseId=${caseData.caseId}`);
       
       // Step 2: Apply authorization AFTER fetch
       // Allow access if user is:
@@ -120,7 +121,7 @@ module.exports = (deps) => {
       // - Case creator (createdByXID matches user xID)
       // - Assigned employee (assignedToXID matches user xID)
       if (!checkCaseAccess(caseData, req.user)) {
-        console.error(`[GET_CASE] Access denied: userXID=${req.user.xID}, createdByXID=${caseData.createdByXID}, assignedToXID=${caseData.assignedToXID}, role=${req.user.role}`);
+        log.error(`[GET_CASE] Access denied: userXID=${req.user.xID}, createdByXID=${caseData.createdByXID}, assignedToXID=${caseData.assignedToXID}, role=${req.user.role}`);
         return res.status(403).json({
           success: false,
           message: 'Access denied: You do not have permission to view this case',
@@ -128,7 +129,7 @@ module.exports = (deps) => {
         });
       }
       
-      console.log(`[GET_CASE] Authorization passed for userXID=${req.user.xID}`);
+      log.info(`[GET_CASE] Authorization passed for userXID=${req.user.xID}`);
 
       // Get related data - use caseId from database (display number)
       const displayCaseId = caseData.caseId;
@@ -228,7 +229,7 @@ module.exports = (deps) => {
       ]);
 
       if (commentsResult.status === 'rejected' || attachmentsResult.status === 'rejected' || historyResult.status === 'rejected' || auditResult.status === 'rejected') {
-        console.error('[GET_CASE] Related data load failed', {
+        log.error('[GET_CASE] Related data load failed', {
           comments: commentsResult.status,
           attachments: attachmentsResult.status,
           history: historyResult.status,
@@ -272,7 +273,7 @@ module.exports = (deps) => {
         try {
           client = await ClientRepository.findByClientId(scopedFirmId, caseData.clientId, req.user.role);
         } catch (error) {
-          console.warn('[GET_CASE] Failed to load fallback client', {
+          log.warn('[GET_CASE] Failed to load fallback client', {
             caseId: displayCaseId,
             clientId: caseData.clientId,
             message: error?.message,
@@ -290,9 +291,9 @@ module.exports = (deps) => {
       
       // PR #44: Runtime assertion - warn if xID is missing from auth context
       if (!req.user.xID && !isProduction()) {
-        console.warn(`[xID Guardrail] Case accessed without xID in auth context`);
-        console.warn(`[xID Guardrail] Case: ${displayCaseId}, User email: ${req.user.email}`);
-        console.warn(`[xID Guardrail] This should not happen - auth middleware should always provide xID`);
+        log.warn(`[xID Guardrail] Case accessed without xID in auth context`);
+        log.warn(`[xID Guardrail] Case: ${displayCaseId}, User email: ${req.user.email}`);
+        log.warn(`[xID Guardrail] This should not happen - auth middleware should always provide xID`);
       }
       
       // PR #45: Determine if user is viewing in view-only mode
@@ -342,7 +343,7 @@ module.exports = (deps) => {
           .maxTimeMS(8000)
           .lean();
       }
-      console.log('STEP 2 after assignedUser');
+      log.info('STEP 2 after assignedUser');
       const canonicalAssignmentXID = caseObject.assignedToXID || assignedUser?.xID || null;
       const lifecycle = normalizeLifecycle(caseObject.lifecycle);
       const [ownerTeam, routedTeam, docketInvoices] = await Promise.all([
@@ -358,7 +359,7 @@ module.exports = (deps) => {
         ).sort({ createdAt: -1 }).maxTimeMS(8000).lean(),
       ]);
 
-      console.log('DOCKET_STATE_DEBUG', {
+      log.info('DOCKET_STATE_DEBUG', {
         caseId: displayCaseId,
         lifecycle,
         assignedTo: canonicalAssignmentXID,
@@ -376,7 +377,7 @@ module.exports = (deps) => {
       });
       res.removeHeader('ETag');
 
-      console.log('STEP 3 before response');
+      log.info('STEP 3 before response');
       const payload = {
         success: true,
         data: {
@@ -443,10 +444,10 @@ module.exports = (deps) => {
       };
 
       const response = res.status(200).json(payload);
-      console.log('RESPONSE SENT');
+      log.info('RESPONSE SENT');
       return response;
     } catch (error) {
-      console.error('[GET_CASE] Unexpected error:', error);
+      log.error('[GET_CASE] Unexpected error:', error);
 
       return res.status(500).json({
         success: false,
@@ -518,8 +519,8 @@ module.exports = (deps) => {
       // PR #44: Log warning if createdBy query is used (deprecated)
       if (createdBy) {
         if (!isProduction()) {
-          console.warn(`[xID Guardrail] Email-based creator query detected: createdBy="${createdBy}"`);
-          console.warn(`[xID Guardrail] This is deprecated. Please use createdByXID for ownership queries.`);
+          log.warn(`[xID Guardrail] Email-based creator query detected: createdBy="${createdBy}"`);
+          log.warn(`[xID Guardrail] This is deprecated. Please use createdByXID for ownership queries.`);
         }
         query.createdBy = createdBy.toLowerCase();
       }

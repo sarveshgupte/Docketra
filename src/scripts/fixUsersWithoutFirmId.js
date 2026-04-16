@@ -1,3 +1,4 @@
+const log = require('../utils/log');
 /**
  * Migration safety script for users missing firmId.
  *
@@ -23,9 +24,9 @@ const mode = modeArg.split('=')[1];
 const fallbackFirmId = fallbackArg ? fallbackArg.split('=')[1] : null;
 
 async function runFixUsersWithoutFirmId() {
-  console.log(`[MIGRATION] Connecting to MongoDB at ${MONGODB_URI}...`);
+  log.info(`[MIGRATION] Connecting to MongoDB at ${MONGODB_URI}...`);
   await mongoose.connect(MONGODB_URI);
-  console.log('[MIGRATION] Connected');
+  log.info('[MIGRATION] Connected');
 
   try {
     const query = {
@@ -36,7 +37,7 @@ async function runFixUsersWithoutFirmId() {
     const users = await User.find(query).select('_id xID email role firmId isOnboarded');
 
     if (users.length === 0) {
-      console.log('[MIGRATION] No users with missing firmId found.');
+      log.info('[MIGRATION] No users with missing firmId found.');
       return { scanned: 0, updated: 0, mode };
     }
 
@@ -50,7 +51,7 @@ async function runFixUsersWithoutFirmId() {
         throw new Error(`fallback firm not found: ${fallbackFirmId}`);
       }
       resolvedFallbackFirmId = fallbackFirm._id;
-      console.log(`[MIGRATION] Using fallback firm ${fallbackFirm.firmId} (${fallbackFirm.name})`);
+      log.info(`[MIGRATION] Using fallback firm ${fallbackFirm.firmId} (${fallbackFirm.name})`);
     }
 
     let updated = 0;
@@ -63,20 +64,20 @@ async function runFixUsersWithoutFirmId() {
       }
       await user.save();
       updated += 1;
-      console.log(`[MIGRATION] Updated user ${user.xID || user.email} (mode=${mode})`);
+      log.info(`[MIGRATION] Updated user ${user.xID || user.email} (mode=${mode})`);
     }
 
-    console.log(`[MIGRATION] Completed. scanned=${users.length}, updated=${updated}, mode=${mode}`);
+    log.info(`[MIGRATION] Completed. scanned=${users.length}, updated=${updated}, mode=${mode}`);
     return { scanned: users.length, updated, mode };
   } finally {
     await mongoose.disconnect();
-    console.log('[MIGRATION] Disconnected from MongoDB');
+    log.info('[MIGRATION] Disconnected from MongoDB');
   }
 }
 
 if (require.main === module) {
   runFixUsersWithoutFirmId().catch((error) => {
-    console.error('[MIGRATION] Failed:', error.message);
+    log.error('[MIGRATION] Failed:', error.message);
     process.exit(1);
   });
 }

@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const connectDB = require('../config/database');
 const Firm = require('../models/Firm.model');
 const User = require('../models/User.model');
+const log = require('../utils/log');
 
 const FIRM_STATUS_MAP = {
   ACTIVE: 'active',
@@ -39,13 +40,13 @@ const run = async () => {
   const userResult = await User.bulkWrite(userBulkOps);
   const userUpdates = userResult.modifiedCount || 0;
 
-  console.log(`[status-migration] Updated firms: ${firmUpdates}`);
-  console.log(`[status-migration] Updated users: ${userUpdates}`);
+  log.info(`[status-migration] Updated firms: ${firmUpdates}`);
+  log.info(`[status-migration] Updated users: ${userUpdates}`);
 
   await mongoose.connection.close();
 };
 
 run().catch((error) => {
-  console.error('[status-migration] failed', error);
+  log.error('[status-migration] failed', error);
   process.exit(1);
 });

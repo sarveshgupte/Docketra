@@ -1,3 +1,4 @@
+const log = require('../utils/log');
 /**
  * Seed Admin Script for Docketra
  * 
@@ -30,26 +31,26 @@ const seedAdmin = async () => {
   try {
     // Check if seeding is enabled
     if (process.env.SEED_ADMIN !== 'true') {
-      console.log('ℹ Admin seeding is disabled.');
-      console.log('  To enable admin seeding, set SEED_ADMIN=true in your environment.');
-      console.log('  This prevents accidental password resets on deploy.');
+      log.info('ℹ Admin seeding is disabled.');
+      log.info('  To enable admin seeding, set SEED_ADMIN=true in your environment.');
+      log.info('  This prevents accidental password resets on deploy.');
       return;
     }
 
     // Connect to MongoDB
-    console.log('Connecting to MongoDB...');
+    log.info('Connecting to MongoDB...');
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log('✓ MongoDB Connected');
+    log.info('✓ MongoDB Connected');
 
     // Check if admin already exists
     const existingAdmin = await User.findOne({ xID: ADMIN_XID });
     
     if (existingAdmin) {
-      console.log('ℹ Admin user already exists. Updating password hash if needed...');
-      console.log(`  xID: ${existingAdmin.xID}`);
-      console.log(`  Name: ${existingAdmin.name}`);
-      console.log(`  Role: ${existingAdmin.role}`);
-      console.log(`  Active: ${existingAdmin.isActive}`);
+      log.info('ℹ Admin user already exists. Updating password hash if needed...');
+      log.info(`  xID: ${existingAdmin.xID}`);
+      log.info(`  Name: ${existingAdmin.name}`);
+      log.info(`  Role: ${existingAdmin.role}`);
+      log.info(`  Active: ${existingAdmin.isActive}`);
       
       // Update password hash to ensure it's valid
       const passwordHash = await bcrypt.hash(DEFAULT_PASSWORD, SALT_ROUNDS);
@@ -62,7 +63,7 @@ const seedAdmin = async () => {
       existingAdmin.status = 'active'; // Admin is immediately active with default password
       
       await existingAdmin.save();
-      console.log('✓ Admin password hash updated successfully!');
+      log.info('✓ Admin password hash updated successfully!');
     } else {
       // Hash the default password
       const passwordHash = await bcrypt.hash(DEFAULT_PASSWORD, SALT_ROUNDS);
@@ -86,27 +87,27 @@ const seedAdmin = async () => {
       });
 
       await adminUser.save();
-      console.log('✓ Admin user created successfully!');
-      console.log(`  xID: ${adminUser.xID}`);
-      console.log(`  Name: ${adminUser.name}`);
-      console.log(`  Role: ${adminUser.role}`);
-      console.log(`  Active: ${adminUser.isActive}`);
+      log.info('✓ Admin user created successfully!');
+      log.info(`  xID: ${adminUser.xID}`);
+      log.info(`  Name: ${adminUser.name}`);
+      log.info(`  Role: ${adminUser.role}`);
+      log.info(`  Active: ${adminUser.isActive}`);
     }
     
-    console.log('\n📋 Default Admin Credentials:');
-    console.log(`   xID: ${ADMIN_XID}`);
-    console.log(`   Password: ${DEFAULT_PASSWORD}`);
-    console.log('\n⚠️  WARNING: Change the default password immediately after first login!');
+    log.info('\n📋 Default Admin Credentials:');
+    log.info(`   xID: ${ADMIN_XID}`);
+    log.info(`   Password: ${DEFAULT_PASSWORD}`);
+    log.info('\n⚠️  WARNING: Change the default password immediately after first login!');
 
   } catch (error) {
-    console.error('✗ Error seeding admin user:', error.message);
-    console.error(error);
+    log.error('✗ Error seeding admin user:', error.message);
+    log.error(error);
     process.exit(1);
   } finally {
     // Close the database connection if connected
     if (mongoose.connection.readyState !== 0) {
       await mongoose.connection.close();
-      console.log('\n✓ Database connection closed');
+      log.info('\n✓ Database connection closed');
     }
     process.exit(0);
   }

@@ -1,8 +1,9 @@
 const Firm = require('../models/Firm.model');
 const { decrypt } = require('../services/storage/services/TokenEncryption.service');
+const log = require('../utils/log');
 
 function storageNotConnectedResponse(res, operation = 'storage_operation_without_connection') {
-  console.warn('[STORAGE] blocked_operation:', operation);
+  log.warn('[STORAGE] blocked_operation:', operation);
   return res.status(400).json({
     code: 'STORAGE_NOT_CONNECTED',
     message: 'Cloud storage must be connected',
@@ -48,7 +49,7 @@ async function requireStorageConnected(req, res, next) {
     };
     return next();
   } catch (error) {
-    console.error('[STORAGE] blocked_operation: require_storage_connected_failed', { message: error.message });
+    log.error('[STORAGE] blocked_operation: require_storage_connected_failed', { message: error.message });
     return res.status(400).json({
       code: 'STORAGE_NOT_CONNECTED',
       message: 'Cloud storage must be connected',

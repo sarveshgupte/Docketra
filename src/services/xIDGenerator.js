@@ -17,6 +17,7 @@
 
 const Counter = require('../models/Counter.model');
 const User = require('../models/User.model');
+const log = require('../utils/log');
 
 /**
  * Generate the next available xID using an atomic global counter.
@@ -40,11 +41,11 @@ const generateNextXID = async (_firmId = null, legacySession = null) => {
 
     const xID = `X${String(counter.seq).padStart(6, '0')}`;
     
-    console.log(`[xID Generator] Generated xID: ${xID}`);
+    log.info(`[xID Generator] Generated xID: ${xID}`);
     
     return xID;
   } catch (error) {
-    console.error('[xID Generator] Error generating xID:', error);
+    log.error('[xID Generator] Error generating xID:', error);
     throw new Error('Failed to generate xID during firm provisioning');
   }
 };
@@ -73,7 +74,7 @@ const xIDExists = async (xID) => {
     const user = await User.findOne({ xID: xID.toUpperCase() }).lean();
     return !!user;
   } catch (error) {
-    console.error('[xID Generator] Error checking xID existence:', error);
+    log.error('[xID Generator] Error checking xID existence:', error);
     throw new Error('Failed to check xID existence');
   }
 };

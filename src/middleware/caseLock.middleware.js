@@ -1,6 +1,7 @@
 const Case = require('../models/Case.model');
 const { CaseRepository } = require('../repositories');
 const { CASE_LOCK_CONFIG } = require('../config/constants');
+const log = require('../utils/log');
 
 const maskEmail = (email) => {
   if (!email || typeof email !== 'string') return null;
@@ -59,7 +60,7 @@ const checkCaseLock = async (req, res, next) => {
       
       if (lastActivity && (now - lastActivity) > inactivityTimeout) {
         // Auto-unlock due to inactivity
-        console.log(`Auto-unlocking case ${caseId} due to ${CASE_LOCK_CONFIG.INACTIVITY_TIMEOUT_HOURS}-hour inactivity`);
+        log.info(`Auto-unlocking case ${caseId} due to ${CASE_LOCK_CONFIG.INACTIVITY_TIMEOUT_HOURS}-hour inactivity`);
         
         const CaseHistory = require('../models/CaseHistory.model');
         
