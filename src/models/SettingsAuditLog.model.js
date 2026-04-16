@@ -23,17 +23,12 @@ const changeSchema = new mongoose.Schema({
   newValue: { type: mongoose.Schema.Types.Mixed, default: null },
 }, { _id: false });
 
-const docketAuditLogSchema = new mongoose.Schema({
-  docketId: {
-    type: String,
-    required: true,
-    index: true,
-  },
-  action: {
+const settingsAuditLogSchema = new mongoose.Schema({
+  tenantId: {
     type: String,
     required: true,
     trim: true,
-    uppercase: true,
+    index: true,
   },
   requestId: {
     type: String,
@@ -42,27 +37,21 @@ const docketAuditLogSchema = new mongoose.Schema({
     default: () => randomUUID(),
     index: true,
   },
-  tenantId: {
+  settingsKey: {
     type: String,
     required: true,
     trim: true,
     index: true,
   },
+  action: {
+    type: String,
+    required: true,
+    trim: true,
+    uppercase: true,
+  },
   performedBy: {
     type: actorSchema,
     required: true,
-  },
-  fromState: {
-    type: String,
-    default: null,
-  },
-  toState: {
-    type: String,
-    default: null,
-  },
-  comment: {
-    type: String,
-    default: null,
   },
   changes: {
     type: [changeSchema],
@@ -83,30 +72,19 @@ const docketAuditLogSchema = new mongoose.Schema({
     default: Date.now,
     index: true,
   },
-  firmId: {
-    type: String,
-    required: true,
-    index: true,
-  },
 }, {
-  collection: 'docket_audit_logs',
+  collection: 'settings_audit_logs',
   versionKey: false,
 });
 
-docketAuditLogSchema.pre('validate', function applyTenantAlias(next) {
-  if (!this.tenantId && this.firmId) this.tenantId = this.firmId;
-  if (!this.firmId && this.tenantId) this.firmId = this.tenantId;
-  next();
-});
-
-docketAuditLogSchema.index({ tenantId: 1, docketId: 1, timestamp: -1 });
-docketAuditLogSchema.index(
-  { tenantId: 1, docketId: 1, action: 1, requestId: 1, dedupeKey: 1 },
+settingsAuditLogSchema.index({ tenantId: 1, settingsKey: 1, timestamp: -1 });
+settingsAuditLogSchema.index(
+  { tenantId: 1, settingsKey: 1, action: 1, requestId: 1, dedupeKey: 1 },
   {
     unique: true,
     partialFilterExpression: { dedupeKey: { $type: 'string' } },
-    name: 'uniq_docket_audit_dedupe',
+    name: 'uniq_settings_audit_dedupe',
   },
 );
 
-module.exports = mongoose.models.DocketAuditLog || mongoose.model('DocketAuditLog', docketAuditLogSchema);
+module.exports = mongoose.models.SettingsAuditLog || mongoose.model('SettingsAuditLog', settingsAuditLogSchema);

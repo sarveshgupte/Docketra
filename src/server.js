@@ -110,6 +110,7 @@ const dashboardRoutes = require('./routes/dashboard.routes');
 const slaRoutes = require('./routes/sla.routes');
 const firmMetricsRoutes = require('./routes/firmMetrics.routes');
 const adminRoutes = require('./routes/admin.routes');  // Admin routes (PR #41)
+const settingsRoutes = require('./routes/settings.routes');
 const superadminRoutes = require('./routes/superadmin.routes');  // Superadmin routes
 const debugRoutes = require('./routes/debug.routes');  // Debug routes (PR #43)
 const contactRoutes = require('./routes/contact.routes');  // Public contact form route
@@ -422,6 +423,7 @@ app.use('/api/work-types', ...tenantScopedApiAccess, writeGuardChain, workTypeRo
 
 // Admin routes (firm-scoped) - enforce auth + firm context + admin role boundary
 app.use('/api/admin', ...adminTenantScopedApiAccess, writeGuardChain, adminAuditTrail('admin'), adminRoutes);
+app.use('/api/settings', ...adminTenantScopedApiAccess, writeGuardChain, adminAuditTrail('admin'), settingsRoutes);
 app.use('/api/dashboard', ...tenantScopedApiAccess, writeGuardChain, dashboardRoutes);
 app.use('/api/sla', ...tenantScopedApiAccess, writeGuardChain, slaRoutes);
 

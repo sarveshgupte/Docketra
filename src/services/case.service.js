@@ -87,6 +87,7 @@ async function updateStatus(caseId, newStatus, context = {}) {
   await transitionDocket(caseId, normalizedNewStatus, context.userId || context.performedByXID || 'SYSTEM', {
     firmId: tenantId,
     session,
+    skipAudit: Boolean(context.skipDocketAudit),
     expectedVersion: Number.isInteger(context.expectedVersion) ? context.expectedVersion : existingCase.version,
     reason: context.reason || context.auditMetadata?.reason || null,
     notes: context.notes || context.auditMetadata?.notes || null,
