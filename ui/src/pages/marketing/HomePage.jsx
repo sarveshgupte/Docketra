@@ -78,7 +78,7 @@ const FEATURES = [
 export const HomePage = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const copy = (value, scope) => {
+  const decodeText = (value, scope) => {
     assertNoEscapedUnicode(value, scope);
     return decodeUnicode(value);
   };
@@ -157,7 +157,7 @@ export const HomePage = () => {
                   <div key={docket.name} className="rounded-lg border border-gray-100 bg-white p-3 sm:p-3.5">
                     <div className="flex items-start justify-between gap-3">
                       <p className="min-w-0 text-sm font-medium text-gray-900 leading-snug">
-                        {copy(docket.name, 'hero')}
+                        {decodeText(docket.name, 'hero')}
                       </p>
                       <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-900 text-[11px] font-semibold text-white">
                         {docket.assignee}
@@ -350,11 +350,11 @@ export const HomePage = () => {
                 viewport={{ once: true }}
               >
                 <div className="bg-blue-50 rounded-lg h-10 w-10 flex items-center justify-center text-blue-600 font-bold text-xl mb-6">
-                  {copy(feature.icon, 'features')}
+                  {decodeText(feature.icon, 'features')}
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">{copy(feature.title, 'features')}</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">{copy(feature.body, 'features')}</p>
-                <p className="mt-4 text-xs font-medium text-blue-600">{copy(feature.benefit, 'features')}</p>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">{decodeText(feature.title, 'features')}</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">{decodeText(feature.body, 'features')}</p>
+                <p className="mt-4 text-xs font-medium text-blue-600">{decodeText(feature.benefit, 'features')}</p>
               </motion.div>
             ))}
           </div>
@@ -484,7 +484,7 @@ export const HomePage = () => {
             ].map((t) => (
               <div key={t.name} className="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm">
                 <p className="text-amber-400 text-sm mb-4">★★★★★</p>
-                <p className="text-sm text-gray-700 leading-relaxed">“{copy(t.quote, 'testimonials')}”</p>
+                <p className="text-sm text-gray-700 leading-relaxed">“{decodeText(t.quote, 'testimonials')}”</p>
                 <div className="mt-6 flex items-center gap-3">
                   <div className="h-10 w-10 rounded-full bg-gray-900 text-white flex items-center justify-center text-sm font-semibold shrink-0">
                     {t.name.slice(0, 2)}
@@ -527,7 +527,7 @@ export const HomePage = () => {
               <ul className="mt-6 space-y-2 flex-1">
                 {['Up to 2 users (enforced)', 'Max 1 Admin / Primary Admin (enforced)', 'Dockets across workbasket/worklist flow', 'Workflow transitions + approvals', 'Docketra-managed storage with provider quota handling', 'Immutable audit logs'].map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm text-gray-600">
-                    <span className="text-emerald-500 mt-0.5">✓</span>{copy(f, 'pricing')}
+                    <span className="text-emerald-500 mt-0.5">✓</span>{decodeText(f, 'pricing')}
                   </li>
                 ))}
               </ul>
@@ -546,7 +546,7 @@ export const HomePage = () => {
               <ul className="mt-6 space-y-2 flex-1">
                 {['Higher user capacity', 'Advanced role permissions', 'Custom workflow templates', 'Priority support', 'Expanded analytics & reporting'].map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm text-gray-600">
-                    <span className="text-gray-400 mt-0.5">✓</span>{copy(f, 'pricing')}
+                    <span className="text-gray-400 mt-0.5">✓</span>{decodeText(f, 'pricing')}
                   </li>
                 ))}
               </ul>
@@ -566,7 +566,7 @@ export const HomePage = () => {
               <ul className="mt-6 space-y-2 flex-1">
                 {['Everything in Professional', 'Multi-office coordination', 'Dedicated account manager', 'Custom API access', 'SSO & advanced security'].map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm text-gray-600">
-                    <span className="text-gray-400 mt-0.5">✓</span>{copy(f, 'pricing')}
+                    <span className="text-gray-400 mt-0.5">✓</span>{decodeText(f, 'pricing')}
                   </li>
                 ))}
               </ul>

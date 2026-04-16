@@ -11,6 +11,6 @@ export function assertNoEscapedUnicode(str = '', scope = 'copy') {
   if (!import.meta.env.DEV) return;
   if (ESCAPED_UNICODE_ASSERT_REGEX.test(String(str))) {
     // eslint-disable-next-line no-console
-    console.warn(`[unicode] Escaped unicode sequence detected in ${scope}`);
+    console.warn(`[unicode] Escaped unicode sequence detected in ${scope}:`, String(str));
   }
 }
