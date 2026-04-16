@@ -51,6 +51,7 @@ const buildCaseUpdateService = require('../services/caseUpdate.service');
 const buildCaseQueryService = require('../services/caseQuery.service');
 const buildCaseActivityService = require('../services/caseActivity.service');
 const buildCaseBulkService = require('../services/caseBulk.service');
+const docketAuditService = require('../services/docketAudit.service');
 
 const inFlightCaseRecordLoads = new Map();
 
@@ -337,6 +338,7 @@ const caseServiceDependencies = {
   computeDeadlineFromTatDays,
   findScopedCaseAttachment,
   checkCaseAccess,
+  docketAuditService,
 };
 
 const caseCreateService = buildCaseCreateService(caseServiceDependencies);
@@ -1271,6 +1273,41 @@ const searchCases = async (req, res) => caseQueryService.searchCases(req, res);
 
 const getDocketSummaryPdf = async (req, res) => caseQueryService.getDocketSummaryPdf(req, res);
 
+const getDocketAudit = async (req, res) => {
+  try {
+    const { caseId } = req.params;
+    const { page = 1, limit = 50 } = req.query || {};
+    const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
+    const caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
+
+    if (!caseData) {
+      return res.status(404).json({
+        success: false,
+        message: 'Case not found',
+      });
+    }
+
+    const result = await docketAuditService.getAuditTrail({
+      firmId: req.user.firmId,
+      docketId: caseData.caseId,
+      page,
+      limit,
+    });
+
+    return res.json({
+      success: true,
+      data: result.rows,
+      pagination: result.pagination,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching docket audit logs',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createCase: wrapWriteHandler(createCase),
   addComment: wrapWriteHandler(addComment),
@@ -1281,6 +1318,7 @@ module.exports = {
   getCaseByCaseId,
   getCaseComments,
   getDocketSummaryPdf,
+  getDocketAudit,
   getCases,
   searchCases,
   lockCaseEndpoint: wrapWriteHandler(lockCaseEndpoint),

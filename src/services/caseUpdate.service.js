@@ -72,6 +72,7 @@ module.exports = (deps) => {
     computeDeadlineFromTatDays,
     findScopedCaseAttachment,
     checkCaseAccess,
+    docketAuditService,
   } = deps;
 
   const unpendCase = async (req, res) => {
@@ -333,6 +334,11 @@ module.exports = (deps) => {
       
       // Lock the case — store rich user identity for display
       const now = new Date();
+      const previousLockSnapshot = {
+        isLocked: Boolean(caseData.lockStatus?.isLocked),
+        activeUserEmail: caseData.lockStatus?.activeUserEmail || null,
+        activeUserXID: caseData.lockStatus?.activeUserXID || null,
+      };
       const lockerDisplayName = req.user?.name ||
         [req.user?.firstName, req.user?.lastName].filter(Boolean).join(' ') ||
         req.user?.email ||
@@ -347,6 +353,28 @@ module.exports = (deps) => {
       };
       
       await caseData.save();
+
+      await docketAuditService.logUpdate({
+        firmId: req.user.firmId,
+        docketId: caseData.caseId,
+        performedBy: req.user?.xID || userEmail,
+        performedByRole: req.user?.role,
+        action: 'LOCK_UPDATED',
+        before: {
+          status: caseData.status,
+          ...previousLockSnapshot,
+        },
+        after: {
+          status: caseData.status,
+          isLocked: true,
+          activeUserEmail: userEmail.toLowerCase(),
+          activeUserXID: req.user?.xID || null,
+        },
+        fields: ['isLocked', 'activeUserEmail', 'activeUserXID'],
+        metadata: {
+          source: 'caseUpdate.service.lockCaseEndpoint',
+        },
+      });
       
       res.json({
         success: true,
@@ -403,6 +431,11 @@ module.exports = (deps) => {
       }
       
       // Unlock the case
+      const previousLockSnapshot = {
+        isLocked: Boolean(caseData.lockStatus?.isLocked),
+        activeUserEmail: caseData.lockStatus?.activeUserEmail || null,
+        activeUserXID: caseData.lockStatus?.activeUserXID || null,
+      };
       caseData.lockStatus = {
         isLocked: false,
         activeUserEmail: null,
@@ -411,6 +444,28 @@ module.exports = (deps) => {
       };
       
       await caseData.save();
+
+      await docketAuditService.logUpdate({
+        firmId: req.user.firmId,
+        docketId: caseData.caseId,
+        performedBy: req.user?.xID || userEmail,
+        performedByRole: req.user?.role,
+        action: 'LOCK_UPDATED',
+        before: {
+          status: caseData.status,
+          ...previousLockSnapshot,
+        },
+        after: {
+          status: caseData.status,
+          isLocked: false,
+          activeUserEmail: null,
+          activeUserXID: null,
+        },
+        fields: ['isLocked', 'activeUserEmail', 'activeUserXID'],
+        metadata: {
+          source: 'caseUpdate.service.unlockCaseEndpoint',
+        },
+      });
       
       res.json({
         success: true,
@@ -526,6 +581,22 @@ module.exports = (deps) => {
       caseData = await CaseRepository.findByInternalId(req.user.firmId, caseData.caseInternalId, req.user.role);
 
       const statusAfterUnassign = CaseStatus.UNASSIGNED;
+
+      await docketAuditService.logAssignment({
+        firmId: req.user.firmId,
+        docketId: displayCaseId,
+        performedBy: user.xID,
+        performedByRole: user.role,
+        fromAssignee: previousAssignedToXID || null,
+        toAssignee: null,
+        fromStatus: previousStatus || null,
+        toStatus: statusAfterUnassign,
+        action: 'UNASSIGNED',
+        metadata: {
+          source: 'caseUpdate.service.unassignCase',
+          actionReason: 'Admin moved case to global worklist',
+        },
+      });
 
       logActivitySafe({
         docketId: caseData.caseInternalId,

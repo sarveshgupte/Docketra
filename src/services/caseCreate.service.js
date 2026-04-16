@@ -72,6 +72,7 @@ module.exports = (deps) => {
     computeDeadlineFromTatDays,
     findScopedCaseAttachment,
     checkCaseAccess,
+    docketAuditService,
   } = deps;
 
   const createCase = async (req, res) => {
@@ -535,6 +536,28 @@ module.exports = (deps) => {
           type: 'DOCKET_CREATED',
           description: `Docket created: ${newCase.caseNumber || newCase.caseId || 'Unknown'}`,
           performedByXID: req.user?.xID,
+        });
+
+        await docketAuditService.logCreation({
+          firmId: newCase.firmId,
+          docketId: newCase.caseId,
+          performedBy: req.user?.xID || createdByXID,
+          performedByRole: req.user?.role,
+          initialData: {
+            status: newCase.status,
+            priority: newCase.priority,
+            category: newCase.caseCategory || newCase.category || null,
+            subcategory: newCase.caseSubCategory || newCase.subcategory || null,
+            queueType: newCase.queueType || null,
+            lifecycle: newCase.lifecycle || null,
+            assignedToXID: newCase.assignedToXID || null,
+            ownerTeamId: newCase.ownerTeamId ? String(newCase.ownerTeamId) : null,
+          },
+          metadata: {
+            source: 'caseCreate.service.createCase',
+            createdByXID,
+          },
+          session,
         });
 
         return res.status(201).json({
