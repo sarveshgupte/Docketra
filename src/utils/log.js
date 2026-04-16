@@ -1,3 +1,4 @@
+const { randomUUID } = require('crypto');
 const pino = require('pino');
 const { maskSensitiveObject } = require('./pii');
 
@@ -50,7 +51,11 @@ const pickSafeRequestMeta = ({ meta = {}, req = null, res = null } = {}) => {
 const buildContext = (level, event, meta = {}) => {
   const req = meta?.req || null;
   const res = meta?.res || null;
-  const resolvedRequestId = meta.requestId || req?.requestId || req?.id || null;
+  const resolvedRequestId = meta.requestId || req?.requestId || req?.id || randomUUID();
+
+  if (req && !req.requestId) {
+    req.requestId = resolvedRequestId;
+  }
 
   const { safeMeta, method, url, statusCode, message } = pickSafeRequestMeta({ meta, req, res });
   const severity = safeMeta.severity || level;
