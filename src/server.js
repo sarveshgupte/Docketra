@@ -433,7 +433,7 @@ app.use('/api/sla', ...tenantScopedApiAccess, writeGuardChain, slaRoutes);
 app.use('/api/security', authenticate, securityRoutes);
 
 // SECURITY: Debug routes must never be reachable in production environments.
-if (!isProduction) {
+if (process.env.NODE_ENV !== 'production') {
   app.use('/api/debug', authenticate, firmContext, requireTenant, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, requireAdmin, debugRoutes);
 }
 
