@@ -20,6 +20,7 @@ const { logAuthEvent } = require('../services/audit.service');
 const { isExternalStorageEnabled } = require('../services/featureFlags.service');
 const { assertPrimaryAdmin, getTagValidationError, normalizeId } = require('../utils/hierarchy.utils');
 const { logAuditEvent, getAuditLogs } = require('../services/adminActionAudit.service');
+const settingsAuditService = require('../services/settingsAudit.service');
 const log = require('../utils/log');
 
 /**
@@ -773,6 +774,31 @@ const updateFirmSettings = async (req, res) => {
       req,
     });
 
+    await Promise.all([
+      settingsAuditService.logConfigChange({
+        firmId: req.user?.firmId,
+        action: 'FIRM_CONFIG_UPDATED',
+        entityType: 'firm.settings.firm',
+        entityId: firm.firmId,
+        performedBy: req.user?.xID,
+        performedByRole: req.user?.role,
+        before: previousSettings.firm,
+        after: nextSettings.firm,
+        metadata: { source: 'admin.controller.updateFirmSettings' },
+      }),
+      settingsAuditService.logWorkflowChange({
+        firmId: req.user?.firmId,
+        action: 'WORKFLOW_SETTINGS_UPDATED',
+        entityType: 'firm.settings.work',
+        entityId: firm.firmId,
+        performedBy: req.user?.xID,
+        performedByRole: req.user?.role,
+        before: previousSettings.work,
+        after: nextSettings.work,
+        metadata: { source: 'admin.controller.updateFirmSettings' },
+      }),
+    ]);
+
     return res.json({
       success: true,
       message: 'Firm settings updated successfully',
@@ -954,6 +980,10 @@ const updateStorageConfig = async (req, res) => {
     }
 
     const storageConfig = firm.storage || {};
+    const previousStorage = {
+      mode: storageConfig.mode || DEFAULT_STORAGE_MODE,
+      provider: storageConfig.provider || null,
+    };
     const newMode = mode || storageConfig.mode || DEFAULT_STORAGE_MODE;
 
     if (newMode === 'firm_connected') {
@@ -1005,6 +1035,23 @@ const updateStorageConfig = async (req, res) => {
       req,
     });
 
+    await settingsAuditService.logIntegrationChange({
+      firmId: req.user?.firmId,
+      action: 'INTEGRATION_SETTINGS_UPDATED',
+      entityType: 'firm.storage',
+      entityId: firm.firmId,
+      performedBy: req.user?.xID,
+      performedByRole: req.user?.role,
+      before: previousStorage,
+      after: {
+        mode: firm.storage.mode,
+        provider: firm.storage.provider,
+      },
+      metadata: {
+        source: 'admin.controller.updateStorageConfig',
+      },
+    });
+
     res.json({
       success: true,
       message: 'Storage configuration updated',
@@ -1043,6 +1090,11 @@ const disconnectStorage = async (req, res) => {
       });
     }
 
+    const previousStorage = {
+      mode: firm.storage?.mode || DEFAULT_STORAGE_MODE,
+      provider: firm.storage?.provider || null,
+    };
+
     firm.storage = {
       mode: 'docketra_managed',
       provider: null,
@@ -1058,6 +1110,23 @@ const disconnectStorage = async (req, res) => {
       targetFirmId: firm.firmId,
       metadata: {},
       req,
+    });
+
+    await settingsAuditService.logIntegrationChange({
+      firmId: req.user?.firmId,
+      action: 'INTEGRATION_DISCONNECTED',
+      entityType: 'firm.storage',
+      entityId: firm.firmId,
+      performedBy: req.user?.xID,
+      performedByRole: req.user?.role,
+      before: previousStorage,
+      after: {
+        mode: firm.storage.mode,
+        provider: firm.storage.provider,
+      },
+      metadata: {
+        source: 'admin.controller.disconnectStorage',
+      },
     });
 
     res.json({

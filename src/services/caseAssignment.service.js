@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const { CaseRepository } = require('../repositories');
 const CaseStatus = require('../domain/case/caseStatus');
 const { DocketLifecycle } = require('../domain/docketLifecycle');
+const docketAuditService = require('./docketAudit.service');
 
 /**
  * Case Assignment Service
@@ -84,6 +85,22 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObject
     }).catch((error) => {
       console.error('[pullCaseFromWorkbasket] Non-blocking audit write failed:', error?.message || error);
     });
+  });
+
+  await docketAuditService.logAssignment({
+    firmId: tenantId,
+    docketId: caseId,
+    performedBy: normalizedUserId,
+    performedByRole: 'USER',
+    fromAssignee: null,
+    toAssignee: normalizedUserId,
+    fromStatus: CaseStatus.UNASSIGNED,
+    toStatus: CaseStatus.ASSIGNED,
+    action: 'ASSIGNMENT',
+    metadata: {
+      source: 'caseAssignment.service.pullCaseFromWorkbasket',
+    },
+    session,
   });
 
   return {
@@ -251,6 +268,28 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
       caseId: { $in: updatedCases.map((caseData) => caseData.caseId) },
     }, null, { session });
 
+    await docketAuditService.logBulkAction({
+      firmId,
+      docketIds: updatedCases.map((caseData) => caseData.caseId),
+      performedBy: user.xID.toUpperCase(),
+      performedByRole: user.role,
+      action: 'BULK_ASSIGNMENT',
+      metadata: {
+        source: 'caseAssignment.service.bulkAssignCasesToUser',
+        assigneeXID: user.xID.toUpperCase(),
+      },
+      buildPerDocketPayload: () => ({
+        fromState: CaseStatus.UNASSIGNED,
+        toState: CaseStatus.ASSIGNED,
+        changes: [{
+          field: 'assignedToXID',
+          from: null,
+          to: user.xID.toUpperCase(),
+        }],
+      }),
+      session,
+    });
+
     if (ownsSession && useTransaction) {
       await session.commitTransaction();
     }
@@ -352,6 +391,21 @@ const reassignCase = async (firmId, caseId, newUserXID, performedBy) => {
     description: `Case reassigned from ${previousAssignee || 'unassigned'} to ${newUserXID}`,
     performedBy: performedBy.email.toLowerCase(),
     performedByXID: performedBy.xID.toUpperCase(), // Canonical identifier (uppercase)
+  });
+
+  await docketAuditService.logAssignment({
+    firmId,
+    docketId: caseId,
+    performedBy: performedBy.xID,
+    performedByRole: performedBy.role,
+    fromAssignee: previousAssignee || null,
+    toAssignee: newUserXID.toUpperCase(),
+    fromStatus: caseData.status,
+    toStatus: caseData.status,
+    action: 'REASSIGNED',
+    metadata: {
+      source: 'caseAssignment.service.reassignCase',
+    },
   });
   
   return caseData;

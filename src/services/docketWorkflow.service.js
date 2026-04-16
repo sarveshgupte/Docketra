@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const Case = require('../models/Case.model');
 const Category = require('../models/Category.model');
 const Team = require('../models/Team.model');
-const DocketAuditLog = require('../models/DocketAuditLog.model');
+const docketAuditService = require('./docketAudit.service');
 const { DocketStatus, toDocketState, toPersistenceState } = require('../domain/docket/docketStateMachine');
 const {
   DocketLifecycle,
@@ -133,8 +133,20 @@ function validateLifecycleAccess({ actor, fromLifecycle, toLifecycle, fromStatus
   }
 }
 
-async function writeAudit({ docketId, fromState, toState, userId, comment = null, performedByRole = 'USER', firmId, action, metadata = {}, session = null }) {
-  await DocketAuditLog.create([{
+async function writeAudit({
+  docketId,
+  fromState,
+  toState,
+  userId,
+  comment = null,
+  performedByRole = 'USER',
+  firmId,
+  action,
+  metadata = {},
+  changes = [],
+  session = null,
+}) {
+  await docketAuditService.createLog({
     docketId,
     action,
     fromState,
@@ -142,10 +154,11 @@ async function writeAudit({ docketId, fromState, toState, userId, comment = null
     comment,
     performedByRole,
     performedBy: userId,
-    timestamp: new Date(),
-    metadata: { ...metadata, comment },
+    changes,
+    metadata: { ...metadata, comment, source: 'docketWorkflow.service.writeAudit' },
     firmId,
-  }], session ? { session } : {});
+    session,
+  });
 }
 
 async function pullFromWorkbench({ docketId, firmId, userId, userObjectId = null, assignToXID = null, session = null }) {
@@ -192,6 +205,11 @@ async function pullFromWorkbench({ docketId, firmId, userId, userObjectId = null
     userId,
     firmId,
     action: 'ASSIGNMENT',
+    changes: [{
+      field: 'assignedToXID',
+      from: null,
+      to: assigneeXID,
+    }],
     metadata: { assigneeXID },
     session,
   });
@@ -321,6 +339,11 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
         firmId,
         comment,
         action: 'STATE_TRANSITION',
+        changes: [{
+          field: 'status',
+          from: fromState,
+          to: finalTarget,
+        }],
         metadata: { duplicateOf: duplicateOf || null, reopenAt: docket.reopenAt || null },
         session,
       });
@@ -414,6 +437,11 @@ async function qcDecision({ docketId, firmId, actor, decision, comment }) {
     firmId,
     comment,
     action: `QC_${normalizedDecision}`,
+    changes: [{
+      field: 'status',
+      from: fromState,
+      to: toState,
+    }],
   });
   return docket;
 }
@@ -443,6 +471,11 @@ async function reopenDuePending() {
         comment: 'Auto reopened',
         action: 'PENDING_REOPEN',
         firmId: docket.firmId,
+        changes: [{
+          field: 'status',
+          from: DocketStatus.PENDING,
+          to: DocketStatus.IN_PROGRESS,
+        }],
       })
     );
   }
@@ -490,7 +523,21 @@ async function reassign({ docketId, firmId, actor, toUserXID, comment }) {
   docket.updatedAt = new Date();
   docket.queueType = docket.assignedToXID ? 'PERSONAL' : 'GLOBAL';
   await docket.save();
-  await writeAudit({ docketId, fromState: toDocketState(docket.status), toState: toDocketState(docket.status), userId: actor.xID, firmId, comment, action: 'REASSIGNED', metadata: { fromAssignee, toAssignee: docket.assignedToXID } });
+  await writeAudit({
+    docketId,
+    fromState: toDocketState(docket.status),
+    toState: toDocketState(docket.status),
+    userId: actor.xID,
+    firmId,
+    comment,
+    action: 'REASSIGNED',
+    changes: [{
+      field: 'assignedToXID',
+      from: fromAssignee,
+      to: docket.assignedToXID,
+    }],
+    metadata: { fromAssignee, toAssignee: docket.assignedToXID },
+  });
   await createDocketNotification({
     firmId,
     userId: docket.assignedToXID,
