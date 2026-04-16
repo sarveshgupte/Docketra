@@ -1,4 +1,5 @@
-const { createResponseCapture } = require('../utils/response.util');
+const { createResponseCapture, sendSuccessResponse, sendErrorResponse } = require('../utils/response.util');
+const { getRequiredFieldValidation } = require('../utils/validation.util');
 
 const createAuthLoginService = (deps) => {
   const models = deps.models || {};
@@ -43,17 +44,14 @@ const createAuthLoginService = (deps) => {
 
       const normalizedXID = (xid || xID || XID)?.trim().toUpperCase();
 
-      if (!normalizedXID || !password) {
+      if (!getRequiredFieldValidation({ xID: normalizedXID, password }, ['xID', 'password']).isValid) {
         console.warn('[AUTH] Missing credentials in login attempt', {
           hasXID: !!(xid || xID || XID),
           hasPassword: !!password,
           ip: req.ip,
         });
 
-        return res.status(400).json({
-          success: false,
-          message: 'xID and password are required',
-        });
+        return sendErrorResponse(res, { statusCode: 400, message: 'xID and password are required' });
       }
 
       const { normalizedXID: superadminXID } = getSuperadminEnv();
@@ -63,14 +61,11 @@ const createAuthLoginService = (deps) => {
       }
 
       if (loginScope === 'superadmin') {
-        return res.status(401).json({ success: false, message: 'Invalid xID or password' });
+        return sendErrorResponse(res, { statusCode: 401, message: 'Invalid xID or password' });
       }
 
       if (!req.firmId) {
-        return res.status(400).json({
-          success: false,
-          message: 'Firm context is required for login.',
-        });
+        return sendErrorResponse(res, { statusCode: 400, message: 'Firm context is required for login.' });
       }
 
       console.log('[AUTH][tenant] login attempt', { firmSlug: requestedFirmSlug, xID: normalizedXID });
@@ -95,31 +90,32 @@ const createAuthLoginService = (deps) => {
       try {
         const loginToken = await sendLoginOtpChallenge(req, user);
         const otpConfig = getLoginOtpConfig();
-        return res.json({
-          success: true,
-          otpRequired: true,
-          loginToken,
-          otpDeliveryHint: user.email ? `Code sent to ${user.email.replace(/(.{2}).+(@.+)/, '$1***$2')}` : 'Code sent to your registered email',
-          resendCooldownSeconds: otpConfig.resendCooldownSeconds,
+        return sendSuccessResponse(res, {
+          body: {
+            otpRequired: true,
+            loginToken,
+            otpDeliveryHint: user.email ? `Code sent to ${user.email.replace(/(.{2}).+(@.+)/, '$1***$2')}` : 'Code sent to your registered email',
+            resendCooldownSeconds: otpConfig.resendCooldownSeconds,
+          },
         });
       } catch (otpError) {
         if (otpError?.code === 'LOGIN_OTP_COOLDOWN_ACTIVE') {
-          return res.status(429).json({
-            success: false,
+          return sendErrorResponse(res, {
+            statusCode: 429,
             message: 'OTP recently sent. Please wait before requesting a new code.',
             retryAfter: otpError.retryAfter || LOGIN_OTP_COOLDOWN_SECONDS,
           });
         }
         console.error('[AUTH] Failed to send login OTP email:', otpError.message);
-        return res.status(500).json({
-          success: false,
+        return sendErrorResponse(res, {
+          statusCode: 500,
           message: 'Unable to send login verification code. Please try again.',
         });
       }
     } catch (error) {
       console.error('[AUTH] Login error:', error);
-      return res.status(500).json({
-        success: false,
+      return sendErrorResponse(res, {
+        statusCode: 500,
         code: 'AUTH_LOGIN_FAILED',
         message: 'Error during login',
       });
@@ -140,17 +136,17 @@ const createAuthLoginService = (deps) => {
     try {
       const otpConfig = getLoginOtpConfig();
       const loginToken = String(req.body?.loginToken || '').trim();
-      if (!loginToken) {
-        return res.status(400).json({ success: false, message: 'loginToken is required' });
+      if (!getRequiredFieldValidation({ loginToken }, ['loginToken']).isValid) {
+        return sendErrorResponse(res, { statusCode: 400, message: 'loginToken is required' });
       }
 
       const tokenHash = hashLoginSessionToken(loginToken);
       const loginSession = await LoginSession.findOne({ tokenHash, consumedAt: null });
       if (!loginSession || !loginSession.expiresAt || loginSession.expiresAt.getTime() < Date.now()) {
-        return res.status(401).json({ success: false, message: 'Invalid or expired login token' });
+        return sendErrorResponse(res, { statusCode: 401, message: 'Invalid or expired login token' });
       }
       if (req.firmId && String(req.firmId) !== String(loginSession.firmId)) {
-        return res.status(401).json({ success: false, message: 'Invalid or expired login token' });
+        return sendErrorResponse(res, { statusCode: 401, message: 'Invalid or expired login token' });
       }
 
       const user = await User.findOne({
@@ -160,7 +156,7 @@ const createAuthLoginService = (deps) => {
         isActive: true,
       });
       if (!user) {
-        return res.status(401).json({ success: false, message: 'Invalid or expired login token' });
+        return sendErrorResponse(res, { statusCode: 401, message: 'Invalid or expired login token' });
       }
 
       await clearExpiredLoginOtpLock(user);
@@ -171,38 +167,39 @@ const createAuthLoginService = (deps) => {
           retryAfter: activeLockSeconds,
           reason: 'verify_lock_active',
         });
-        return res.status(429).json({ success: false, message: 'Too many attempts. Try again later.' });
+        return sendErrorResponse(res, { statusCode: 429, message: 'Too many attempts. Try again later.' });
       }
 
       const lastSentAtMs = user.loginOtpLastSentAt ? new Date(user.loginOtpLastSentAt).getTime() : 0;
       const resendCooldownEndsAt = lastSentAtMs + (otpConfig.resendCooldownSeconds * 1000);
       const retryAfter = Math.max(0, Math.ceil((resendCooldownEndsAt - Date.now()) / 1000));
       if (retryAfter > 0) {
-        return res.status(429).json({ success: false, message: 'Too many attempts. Try again later.', retryAfter });
+        return sendErrorResponse(res, { statusCode: 429, message: 'Too many attempts. Try again later.', retryAfter });
       }
 
       if (Number(user.loginOtpResendCount || 0) >= otpConfig.maxResends) {
-        return res.status(429).json({ success: false, message: 'Too many attempts. Try again later.' });
+        return sendErrorResponse(res, { statusCode: 429, message: 'Too many attempts. Try again later.' });
       }
 
       await sendLoginOtpChallenge(req, user, { isResend: true, returnLoginToken: false });
 
-      return res.json({
-        success: true,
-        message: 'Verification code resent.',
-        resendCooldownSeconds: otpConfig.resendCooldownSeconds,
+      return sendSuccessResponse(res, {
+        body: {
+          message: 'Verification code resent.',
+          resendCooldownSeconds: otpConfig.resendCooldownSeconds,
+        },
       });
     } catch (error) {
       if (error?.code === 'LOGIN_OTP_COOLDOWN_ACTIVE') {
-        return res.status(429).json({
-          success: false,
+        return sendErrorResponse(res, {
+          statusCode: 429,
           message: 'OTP recently sent. Please wait before requesting a new code.',
           retryAfter: error.retryAfter || LOGIN_OTP_COOLDOWN_SECONDS,
         });
       }
       console.error('[AUTH] Resend OTP error:', error);
-      return res.status(500).json({
-        success: false,
+      return sendErrorResponse(res, {
+        statusCode: 500,
         message: 'Unable to resend OTP right now. Please try again.',
       });
     }
@@ -216,33 +213,24 @@ const createAuthLoginService = (deps) => {
       const loginToken = String(req.body?.loginToken || '').trim();
 
       if (!/^\d{6}$/.test(otp)) {
-        return res.status(400).json({
-          success: false,
-          message: 'OTP must be a 6 digit code',
-        });
+        return sendErrorResponse(res, { statusCode: 400, message: 'OTP must be a 6 digit code' });
       }
-      if (!loginToken) {
-        return res.status(400).json({
-          success: false,
-          message: 'loginToken is required',
-        });
+      if (!getRequiredFieldValidation({ loginToken }, ['loginToken']).isValid) {
+        return sendErrorResponse(res, { statusCode: 400, message: 'loginToken is required' });
       }
 
       const tokenHash = hashLoginSessionToken(loginToken);
       const loginSession = await LoginSession.findOne({ tokenHash, consumedAt: null });
       if (!loginSession || !loginSession.expiresAt || loginSession.expiresAt.getTime() < Date.now()) {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid or expired login token',
-        });
+        return sendErrorResponse(res, { statusCode: 401, message: 'Invalid or expired login token' });
       }
 
       const normalizedRequestedFirmSlug = normalizeFirmSlug(requestedFirmSlug);
       if (req.firmId && String(req.firmId) !== String(loginSession.firmId)) {
-        return res.status(401).json({ success: false, message: 'Invalid or expired login token' });
+        return sendErrorResponse(res, { statusCode: 401, message: 'Invalid or expired login token' });
       }
       if (normalizedRequestedFirmSlug && normalizeFirmSlug(req.firmSlug) && normalizedRequestedFirmSlug !== normalizeFirmSlug(req.firmSlug)) {
-        return res.status(401).json({ success: false, message: 'Invalid or expired login token' });
+        return sendErrorResponse(res, { statusCode: 401, message: 'Invalid or expired login token' });
       }
 
       const user = await User.findOne({
@@ -253,10 +241,7 @@ const createAuthLoginService = (deps) => {
       });
 
       if (!user) {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid authentication token',
-        });
+        return sendErrorResponse(res, { statusCode: 401, message: 'Invalid authentication token' });
       }
 
       await clearExpiredLoginOtpLock(user);
@@ -267,8 +252,8 @@ const createAuthLoginService = (deps) => {
           retryAfter: activeLockSeconds,
           reason: 'verify_lock_active',
         });
-        return res.status(429).json({
-          success: false,
+        return sendErrorResponse(res, {
+          statusCode: 429,
           error: 'Too many attempts. Try again later.',
           message: 'Too many attempts. Try again later.',
           retryAfter: activeLockSeconds,
@@ -278,10 +263,7 @@ const createAuthLoginService = (deps) => {
       if (!user.loginOtpHash || !user.loginOtpExpiresAt || user.loginOtpExpiresAt.getTime() < Date.now()) {
         clearLoginOtpState(user);
         await persistLoginOtpState(user);
-        return res.status(401).json({
-          success: false,
-          message: 'OTP expired. Please request a new one.',
-        });
+        return sendErrorResponse(res, { statusCode: 401, message: 'OTP expired. Please request a new one.' });
       }
 
       const currentAttempts = Number(user.loginOtpAttempts || 0);
@@ -292,8 +274,8 @@ const createAuthLoginService = (deps) => {
           retryAfter: getLoginOtpLockSeconds(user),
           reason: 'attempts_exhausted_before_verify',
         });
-        return res.status(429).json({
-          success: false,
+        return sendErrorResponse(res, {
+          statusCode: 429,
           error: 'Too many attempts. Try again later.',
           message: 'Too many attempts. Try again later.',
           retryAfter: getLoginOtpLockSeconds(user),
@@ -349,8 +331,8 @@ const createAuthLoginService = (deps) => {
           console.error('[AUTH AUDIT] Failed to record login OTP failure event', auditError);
         }
 
-        return res.status(exhaustedAttempts ? 429 : 401).json({
-          success: false,
+        return sendErrorResponse(res, {
+          statusCode: exhaustedAttempts ? 429 : 401,
           error: exhaustedAttempts ? 'Too many attempts. Try again later.' : undefined,
           message: exhaustedAttempts
             ? 'Too many attempts. Try again later.'
@@ -399,10 +381,7 @@ const createAuthLoginService = (deps) => {
       return res.json(response);
     } catch (error) {
       console.error('[AUTH] Verify login OTP error:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Error verifying login OTP',
-      });
+      return sendErrorResponse(res, { statusCode: 500, message: 'Error verifying login OTP' });
     }
   };
 
