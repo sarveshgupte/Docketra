@@ -1,3 +1,6 @@
+const { sendSuccessResponse, sendErrorResponse, sendServiceResponse } = require('../utils/response.util');
+const { validateRequiredFields } = require('../utils/validation.util');
+const { mapErrorToServiceResponse } = require('../utils/error.util');
 const log = require('../utils/log');
 
 module.exports = (deps) => {
@@ -74,7 +77,23 @@ module.exports = (deps) => {
     computeDeadlineFromTatDays,
     findScopedCaseAttachment,
     checkCaseAccess,
+    docketAuditService,
   } = deps;
+
+  const findCaseByIdentifierOrSendNotFound = async (req, res, caseId) => {
+    try {
+      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
+      const caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
+      if (!caseData) {
+        sendErrorResponse(res, { statusCode: 404, message: 'Case not found' });
+        return null;
+      }
+      return caseData;
+    } catch (error) {
+      sendErrorResponse(res, { statusCode: 404, message: 'Case not found' });
+      return null;
+    }
+  };
 
   const unpendCase = async (req, res) => {
     try {
@@ -83,55 +102,48 @@ module.exports = (deps) => {
       
       // Validate user authentication
       if (!req.user || !req.user.xID) {
-        return res.status(401).json({
-          success: false,
-          message: 'Authentication required',
-        });
+        return sendErrorResponse(res, { statusCode: 401, message: 'Authentication required' });
       }
       
       // Call service to unpend case - with firm scoping
       const caseData = await caseActionService.unpendCase(req.user.firmId, caseId, comment, req.user, req);
       
-      res.json({
-        success: true,
-        data: caseData,
-        message: 'Case unpended successfully',
+      return sendSuccessResponse(res, {
+        body: {
+          data: caseData,
+          message: 'Case unpended successfully',
+        },
       });
     } catch (error) {
-      // Handle specific errors
-      if (error.message === 'Comment is mandatory for this action') {
-        return res.status(400).json({
-          success: false,
-          message: error.message,
-        });
-      }
-      
-      if (error.message === 'Case not found') {
-        return res.status(404).json({
-          success: false,
-          message: error.message,
-        });
-      }
-      
-      if (error.message === 'Permission denied') {
-        return res.status(403).json({
-          success: false,
-          message: error.message,
-        });
-      }
-
-      if (error.message.startsWith('Cannot change case from') || error.message === 'Invalid lifecycle transition') {
-        return res.status(400).json({
-          success: false,
-          message: error.message,
-        });
-      }
-      
-      res.status(500).json({
-        success: false,
-        message: 'Error unpending case',
-        error: error.message,
+      const serviceResponse = mapErrorToServiceResponse(error, {
+        mappings: [
+          {
+            matches: (err) => err?.message === 'Comment is mandatory for this action',
+            result: (err) => ({ status: 400, body: { success: false, message: err.message } }),
+          },
+          {
+            matches: (err) => err?.message === 'Case not found',
+            result: (err) => ({ status: 404, body: { success: false, message: err.message } }),
+          },
+          {
+            matches: (err) => err?.message === 'Permission denied',
+            result: (err) => ({ status: 403, body: { success: false, message: err.message } }),
+          },
+          {
+            matches: (err) => err?.message?.startsWith('Cannot change case from') || err?.message === 'Invalid lifecycle transition',
+            result: (err) => ({ status: 400, body: { success: false, message: err.message } }),
+          },
+        ],
+        fallback: (err) => ({
+          status: 500,
+          body: {
+            success: false,
+            message: 'Error unpending case',
+            error: err?.message,
+          },
+        }),
       });
+      return sendServiceResponse(res, serviceResponse);
     }
   };
 
@@ -153,57 +165,33 @@ module.exports = (deps) => {
       } = req.body;
       
       // Validate required fields
-      if (!status) {
-        return res.status(400).json({
-          success: false,
-          message: 'Status is required',
-        });
+      if (!validateRequiredFields({ status }, ['status']).isValid) {
+        return sendErrorResponse(res, { statusCode: 400, message: 'Status is required' });
       }
       
-      if (!performedBy) {
-        return res.status(400).json({
-          success: false,
-          message: 'Performed by email is required',
-        });
+      if (!validateRequiredFields({ performedBy }, ['performedBy']).isValid) {
+        return sendErrorResponse(res, { statusCode: 400, message: 'Performed by email is required' });
       }
       
       // PR: Case Identifier Semantics - Resolve identifier to internal ID
-      let caseData;
-      try {
-        const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
-        caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
-      } catch (error) {
-        return res.status(404).json({
-          success: false,
-          message: 'Case not found',
-        });
-      }
-      
-      if (!caseData) {
-        return res.status(404).json({
-          success: false,
-          message: 'Case not found',
-        });
-      }
+      let caseData = await findCaseByIdentifierOrSendNotFound(req, res, caseId);
+      if (!caseData) return;
       
       const normalizedStatus = String(status || '').toUpperCase();
       const docketStatuses = new Set(['OPEN', 'PENDING', 'RESOLVED', 'FILED']);
 
       if (normalizedStatus === 'PENDING' && !reason) {
-        return res.status(400).json({
-          success: false,
-          message: 'pendingReason is required when status is PENDING',
-        });
-      }
+         return sendErrorResponse(res, { statusCode: 400, message: 'pendingReason is required when status is PENDING' });
+       }
 
       if (docketStatuses.has(String(caseData.status || '').toUpperCase()) && docketStatuses.has(normalizedStatus)) {
         if (!isValidTransition(
           toLifecycleFromStatus(caseData.status),
           toLifecycleFromStatus(normalizedStatus),
         )) {
-          return res.status(400).json({ success: false, message: 'Invalid transition' });
-        }
-      }
+           return sendErrorResponse(res, { statusCode: 400, message: 'Invalid transition' });
+         }
+       }
 
       await CaseService.updateStatus(caseData.caseId, normalizedStatus, {
         tenantId: req.user.firmId,
@@ -259,16 +247,17 @@ module.exports = (deps) => {
         userXID: req.user?.xID || null,
       });
       
-      res.json({
-        success: true,
-        data: caseData,
-        message: 'Case status updated successfully',
+      return sendSuccessResponse(res, {
+        body: {
+          data: caseData,
+          message: 'Case status updated successfully',
+        },
       });
     } catch (error) {
       const statusCode = Number.isInteger(error.statusCode) ? error.statusCode : 400;
       log.error('CASE_UPDATE_FAILED', { req, caseId: req.params?.caseId || null, error });
-      res.status(statusCode).json({
-        success: false,
+      return sendErrorResponse(res, {
+        statusCode,
         message: 'Error updating case status',
         error: error.message,
       });
@@ -280,31 +269,13 @@ module.exports = (deps) => {
       const { caseId } = req.params;
       const { userEmail } = req.body;
       
-      if (!userEmail) {
-        return res.status(400).json({
-          success: false,
-          message: 'User email is required',
-        });
+      if (!validateRequiredFields({ userEmail }, ['userEmail']).isValid) {
+        return sendErrorResponse(res, { statusCode: 400, message: 'User email is required' });
       }
       
       // PR: Case Identifier Semantics - Resolve identifier to internal ID
-      let caseData;
-      try {
-        const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
-        caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
-      } catch (error) {
-        return res.status(404).json({
-          success: false,
-          message: 'Case not found',
-        });
-      }
-      
-      if (!caseData) {
-        return res.status(404).json({
-          success: false,
-          message: 'Case not found',
-        });
-      }
+      let caseData = await findCaseByIdentifierOrSendNotFound(req, res, caseId);
+      if (!caseData) return;
       
       // Check if already locked by another user
       if (caseData.lockStatus.isLocked && 
@@ -353,6 +324,11 @@ module.exports = (deps) => {
       
       // Lock the case — store rich user identity for display
       const now = new Date();
+      const previousLockSnapshot = {
+        isLocked: Boolean(caseData.lockStatus?.isLocked),
+        activeUserEmail: caseData.lockStatus?.activeUserEmail || null,
+        activeUserXID: caseData.lockStatus?.activeUserXID || null,
+      };
       const lockerDisplayName = req.user?.name ||
         [req.user?.firstName, req.user?.lastName].filter(Boolean).join(' ') ||
         req.user?.email ||
@@ -367,16 +343,39 @@ module.exports = (deps) => {
       };
       
       await caseData.save();
+
+      await docketAuditService.logUpdate({
+        firmId: req.user.firmId,
+        docketId: caseData.caseId,
+        performedBy: req.user?.xID || userEmail,
+        performedByRole: req.user?.role,
+        action: 'LOCK_UPDATED',
+        before: {
+          status: caseData.status,
+          ...previousLockSnapshot,
+        },
+        after: {
+          status: caseData.status,
+          isLocked: true,
+          activeUserEmail: userEmail.toLowerCase(),
+          activeUserXID: req.user?.xID || null,
+        },
+        fields: ['isLocked', 'activeUserEmail', 'activeUserXID'],
+        metadata: {
+          source: 'caseUpdate.service.lockCaseEndpoint',
+        },
+      });
       
-      res.json({
-        success: true,
-        data: caseData,
-        message: 'Case locked successfully',
+      return sendSuccessResponse(res, {
+        body: {
+          data: caseData,
+          message: 'Case locked successfully',
+        },
       });
     } catch (error) {
       log.error('CASE_LOCK_FAILED', { req, caseId: req.params?.caseId || null, error });
-      res.status(500).json({
-        success: false,
+      return sendErrorResponse(res, {
+        statusCode: 500,
         message: 'Error locking case',
         error: error.message,
       });
@@ -388,42 +387,26 @@ module.exports = (deps) => {
       const { caseId } = req.params;
       const { userEmail } = req.body;
       
-      if (!userEmail) {
-        return res.status(400).json({
-          success: false,
-          message: 'User email is required',
-        });
+      if (!validateRequiredFields({ userEmail }, ['userEmail']).isValid) {
+        return sendErrorResponse(res, { statusCode: 400, message: 'User email is required' });
       }
       
       // PR: Case Identifier Semantics - Resolve identifier to internal ID
-      let caseData;
-      try {
-        const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
-        caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
-      } catch (error) {
-        return res.status(404).json({
-          success: false,
-          message: 'Case not found',
-        });
-      }
-      
-      if (!caseData) {
-        return res.status(404).json({
-          success: false,
-          message: 'Case not found',
-        });
-      }
+      let caseData = await findCaseByIdentifierOrSendNotFound(req, res, caseId);
+      if (!caseData) return;
       
       // Check if locked by this user
       if (caseData.lockStatus.isLocked && 
           caseData.lockStatus.activeUserEmail !== userEmail.toLowerCase()) {
-        return res.status(403).json({
-          success: false,
-          message: 'You can only unlock cases that you have locked',
-        });
+        return sendErrorResponse(res, { statusCode: 403, message: 'You can only unlock cases that you have locked' });
       }
       
       // Unlock the case
+      const previousLockSnapshot = {
+        isLocked: Boolean(caseData.lockStatus?.isLocked),
+        activeUserEmail: caseData.lockStatus?.activeUserEmail || null,
+        activeUserXID: caseData.lockStatus?.activeUserXID || null,
+      };
       caseData.lockStatus = {
         isLocked: false,
         activeUserEmail: null,
@@ -432,16 +415,39 @@ module.exports = (deps) => {
       };
       
       await caseData.save();
+
+      await docketAuditService.logUpdate({
+        firmId: req.user.firmId,
+        docketId: caseData.caseId,
+        performedBy: req.user?.xID || userEmail,
+        performedByRole: req.user?.role,
+        action: 'LOCK_UPDATED',
+        before: {
+          status: caseData.status,
+          ...previousLockSnapshot,
+        },
+        after: {
+          status: caseData.status,
+          isLocked: false,
+          activeUserEmail: null,
+          activeUserXID: null,
+        },
+        fields: ['isLocked', 'activeUserEmail', 'activeUserXID'],
+        metadata: {
+          source: 'caseUpdate.service.unlockCaseEndpoint',
+        },
+      });
       
-      res.json({
-        success: true,
-        data: caseData,
-        message: 'Case unlocked successfully',
+      return sendSuccessResponse(res, {
+        body: {
+          data: caseData,
+          message: 'Case unlocked successfully',
+        },
       });
     } catch (error) {
       log.error('CASE_UNLOCK_FAILED', { req, caseId: req.params?.caseId || null, error });
-      res.status(500).json({
-        success: false,
+      return sendErrorResponse(res, {
+        statusCode: 500,
         message: 'Error unlocking case',
         error: error.message,
       });
@@ -456,30 +462,12 @@ module.exports = (deps) => {
       const user = req.user;
       
       if (!user || !user.xID) {
-        return res.status(401).json({
-          success: false,
-          message: 'Authentication required - user identity not found',
-        });
+        return sendErrorResponse(res, { statusCode: 401, message: 'Authentication required - user identity not found' });
       }
       
       // PR: Case Identifier Semantics - Resolve identifier to internal ID
-      let caseData;
-      try {
-        const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
-        caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
-      } catch (error) {
-        return res.status(404).json({
-          success: false,
-          message: 'Case not found',
-        });
-      }
-      
-      if (!caseData) {
-        return res.status(404).json({
-          success: false,
-          message: 'Case not found',
-        });
-      }
+      let caseData = await findCaseByIdentifierOrSendNotFound(req, res, caseId);
+      if (!caseData) return;
 
       const lockStatus = caseData.lockStatus || {};
       const lockOwnerXID = String(lockStatus.activeUserXID || '').trim().toUpperCase();
@@ -549,6 +537,22 @@ module.exports = (deps) => {
 
       const statusAfterUnassign = CaseStatus.UNASSIGNED;
 
+      await docketAuditService.logAssignment({
+        firmId: req.user.firmId,
+        docketId: displayCaseId,
+        performedBy: user.xID,
+        performedByRole: user.role,
+        fromAssignee: previousAssignedToXID || null,
+        toAssignee: null,
+        fromStatus: previousStatus || null,
+        toStatus: statusAfterUnassign,
+        action: 'UNASSIGNED',
+        metadata: {
+          source: 'caseUpdate.service.unassignCase',
+          actionReason: 'Admin moved case to global worklist',
+        },
+      });
+
       logActivitySafe({
         docketId: caseData.caseInternalId,
         firmId: req.user.firmId,
@@ -582,15 +586,16 @@ module.exports = (deps) => {
         req,
       });
       
-      res.json({
-        success: true,
-        data: caseData,
-        message: 'Case moved to Global Worklist successfully',
+      return sendSuccessResponse(res, {
+        body: {
+          data: caseData,
+          message: 'Case moved to Global Worklist successfully',
+        },
       });
     } catch (error) {
       log.error('CASE_UNASSIGN_FAILED', { req, caseId: req.params?.caseId || null, error });
-      res.status(500).json({
-        success: false,
+      return sendErrorResponse(res, {
+        statusCode: 500,
         message: 'Error moving case to global worklist',
       });
     }

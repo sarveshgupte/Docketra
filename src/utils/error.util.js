@@ -31,8 +31,20 @@ const mapErrorToResult = (error, { mappings = [], fallback = null } = {}) => {
   return buildErrorResult();
 };
 
+const mapErrorToServiceResponse = (error, { mappings = [], fallback = null } = {}) => {
+  const mappedResult = mapErrorToResult(error, { mappings, fallback });
+  const statusCode = Number.isInteger(mappedResult?.statusCode)
+    ? mappedResult.statusCode
+    : (Number.isInteger(mappedResult?.status) ? mappedResult.status : 500);
+  return {
+    statusCode,
+    body: mappedResult?.body || buildErrorBody(),
+  };
+};
+
 module.exports = {
   buildErrorBody,
   buildErrorResult,
   mapErrorToResult,
+  mapErrorToServiceResponse,
 };

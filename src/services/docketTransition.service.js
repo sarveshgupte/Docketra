@@ -1,5 +1,5 @@
 const Case = require('../models/Case.model');
-const DocketAuditLog = require('../models/DocketAuditLog.model');
+const docketAuditService = require('./docketAudit.service');
 const {
   toDocketState,
   toPersistenceState,
@@ -93,22 +93,25 @@ async function transitionDocket(docketId, newState, userId, options = {}) {
     throw err;
   }
 
-  await DocketAuditLog.create([{
-    docketId,
-    action,
-    fromState,
-    toState,
-    performedBy: userId,
+  await docketAuditService.logStatusChange({
     firmId,
-    timestamp: new Date(),
+    docketId,
+    performedBy: userId,
+    performedByRole: metadata?.actorRole || 'USER',
+    fromStatus: fromState,
+    toStatus: toState,
     metadata: {
       ...metadata,
       reason: reason || null,
       notes: notes || null,
       versionFrom: expected,
       versionTo: expected + 1,
+      transitionAction: action,
+      source: 'docketTransition.service.transitionDocket',
     },
-  }], session ? { session } : {});
+    comment: notes || reason || null,
+    session,
+  });
 
   return {
     docketId,

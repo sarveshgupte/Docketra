@@ -15,6 +15,7 @@ const { normalizeRole } = require('../utils/role.utils');
 const { assertPrimaryAdmin, getTagValidationError, normalizeId } = require('../utils/hierarchy.utils');
 const { logAuditEvent } = require('../services/adminActionAudit.service');
 const log = require('../utils/log');
+const settingsAuditService = require('../services/settingsAudit.service');
 
 const resolveUserFirmScope = (req, res) => {
   if (normalizeRole(req.user?.role) === 'SUPER_ADMIN') return {};
@@ -552,6 +553,18 @@ const patchUserRole = async (req, res) => {
         primaryAdminId: target.primaryAdminId,
         adminId: target.adminId,
         managerId: target.managerId,
+      },
+    });
+    await settingsAuditService.logRoleChange({
+      firmId: req.user?.firmId,
+      performedBy: req.user?.xID,
+      performedByRole: req.user?.role,
+      targetUserId: String(target._id),
+      targetXID: target.xID,
+      beforeRole: targetCurrentRole,
+      afterRole: targetRole,
+      metadata: {
+        source: 'user.controller.patchUserRole',
       },
     });
     return res.json({ success: true, data: target.toSafeObject?.() || target });
