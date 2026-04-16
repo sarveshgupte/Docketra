@@ -1,4 +1,4 @@
-const { randomUUID } = require('crypto');
+const pino = require('pino');
 const { maskSensitiveObject } = require('./pii');
 
 const OMITTED_KEYS = new Set(['req', 'res', 'socket']);
@@ -50,17 +50,22 @@ const pickSafeRequestMeta = ({ meta = {}, req = null, res = null } = {}) => {
 const buildContext = (level, event, meta = {}) => {
   const req = meta?.req || null;
   const res = meta?.res || null;
-  const resolvedRequestId = meta.requestId || req?.requestId || req?.id || randomUUID();
-
-  if (req && !req.requestId) {
-    req.requestId = resolvedRequestId;
-  }
+  const resolvedRequestId = meta.requestId || req?.requestId || req?.id || null;
 
   const { safeMeta, method, url, statusCode, message } = pickSafeRequestMeta({ meta, req, res });
   const severity = safeMeta.severity || level;
+  const tenantId = safeMeta.tenantId || safeMeta.firmId || req?.context?.tenantId || req?.context?.firmId || req?.firmId || req?.firm?.id || req?.user?.firmId || null;
+  const userId = safeMeta.userId || req?.context?.userId || req?.user?._id || req?.user?.id || null;
+  const errorPayload = safeMeta.error instanceof Error
+    ? {
+      name: safeMeta.error.name,
+      message: safeMeta.error.message,
+      stack: safeMeta.error.stack,
+    }
+    : safeMeta.error;
+  const { error: _ignoredError, ...safeMetaWithoutError } = safeMeta;
 
   return {
-    timestamp: new Date().toISOString(),
     severity: String(severity).toUpperCase(),
     event,
     requestId: resolvedRequestId,
@@ -68,13 +73,22 @@ const buildContext = (level, event, meta = {}) => {
     url,
     statusCode,
     message,
-    firmId: safeMeta.firmId || req?.context?.firmId || req?.firmId || req?.firm?.id || req?.user?.firmId || null,
-    userId: safeMeta.userId || req?.context?.userId || req?.user?._id || req?.user?.id || null,
+    tenantId,
+    firmId: tenantId,
+    userId,
     userXID: safeMeta.userXID || req?.context?.userXID || req?.user?.xID || null,
     route: safeMeta.route || req?.context?.route || req?.originalUrl || req?.url || null,
-    ...safeMeta,
+    error: errorPayload,
+    ...safeMetaWithoutError,
   };
 };
+
+const baseLogger = pino({
+  level: process.env.LOG_LEVEL || 'info',
+  timestamp: pino.stdTimeFunctions.isoTime,
+  base: null,
+  messageKey: 'message',
+});
 
 const fallbackLogger = (level, event, error) => {
   const logger = level === 'error' ? console.error : level === 'warn' ? console.warn : console.log;
@@ -89,14 +103,7 @@ const fallbackLogger = (level, event, error) => {
 const logAtLevel = (level, event, meta = {}) => {
   try {
     const context = maskSensitiveObject(buildContext(level, event, meta));
-    const logger = level === 'error' ? console.error : level === 'warn' ? console.warn : console.log;
-
-    if (process.env.NODE_ENV === 'production') {
-      logger(safeStringify(context));
-      return;
-    }
-
-    logger(`[${context.severity}][${context.requestId}] ${event}`, context);
+    baseLogger[level](context, event);
   } catch (error) {
     fallbackLogger(level, event, error);
   }
