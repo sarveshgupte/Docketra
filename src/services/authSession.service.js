@@ -108,18 +108,14 @@ const createAuthSessionService = (deps) => {
     }
   };
 
-  const applyLogoutResponse = (res, response) => {
-    for (const cookieConfig of (response.clearCookies || [])) {
-      res.clearCookie(cookieConfig.name, cookieConfig.options);
-    }
-    return res.status(response.statusCode || 200).json(response.body);
-  };
-
   const logout = async (reqOrData, maybeRes) => {
     const req = maybeRes ? reqOrData : (reqOrData?.req || reqOrData);
     const response = await logoutHandler(req);
     if (maybeRes) {
-      return applyLogoutResponse(maybeRes, response);
+      for (const cookieConfig of (response.clearCookies || [])) {
+        maybeRes.clearCookie(cookieConfig.name, cookieConfig.options);
+      }
+      return maybeRes.status(response.statusCode || 200).json(response.body);
     }
     return response;
   };

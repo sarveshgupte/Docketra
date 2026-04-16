@@ -613,6 +613,16 @@ const buildTokenResponse = async (user, req, authMethod = 'Password') => {
 };
 
 const applyServiceResponse = (res, serviceResponse = {}) => {
+  for (const [headerName, headerValue] of Object.entries(serviceResponse.headers || {})) {
+    if (typeof res.setHeader === 'function') {
+      res.setHeader(headerName, headerValue);
+    } else if (typeof res.set === 'function') {
+      res.set(headerName, headerValue);
+    }
+  }
+  for (const cookieConfig of (serviceResponse.cookies || [])) {
+    res.cookie(cookieConfig.name, cookieConfig.value, cookieConfig.options);
+  }
   for (const cookieConfig of (serviceResponse.clearCookies || [])) {
     res.clearCookie(cookieConfig.name, cookieConfig.options);
   }
