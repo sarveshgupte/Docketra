@@ -1,5 +1,5 @@
 const { sendSuccessResponse, sendErrorResponse, sendServiceResponse } = require('../utils/response.util');
-const { getRequiredFieldValidation } = require('../utils/validation.util');
+const { validateRequiredFields } = require('../utils/validation.util');
 const { mapErrorToServiceResponse } = require('../utils/error.util');
 
 module.exports = (deps) => {
@@ -78,6 +78,21 @@ module.exports = (deps) => {
     checkCaseAccess,
   } = deps;
 
+  const findCaseByIdentifierOrSendNotFound = async (req, res, caseId) => {
+    try {
+      const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
+      const caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
+      if (!caseData) {
+        sendErrorResponse(res, { statusCode: 404, message: 'Case not found' });
+        return null;
+      }
+      return caseData;
+    } catch (error) {
+      sendErrorResponse(res, { statusCode: 404, message: 'Case not found' });
+      return null;
+    }
+  };
+
   const unpendCase = async (req, res) => {
     try {
       const { caseId } = req.params;
@@ -143,26 +158,17 @@ module.exports = (deps) => {
       } = req.body;
       
       // Validate required fields
-      if (!getRequiredFieldValidation({ status }, ['status']).isValid) {
+      if (!validateRequiredFields({ status }, ['status']).isValid) {
         return sendErrorResponse(res, { statusCode: 400, message: 'Status is required' });
       }
       
-      if (!getRequiredFieldValidation({ performedBy }, ['performedBy']).isValid) {
+      if (!validateRequiredFields({ performedBy }, ['performedBy']).isValid) {
         return sendErrorResponse(res, { statusCode: 400, message: 'Performed by email is required' });
       }
       
       // PR: Case Identifier Semantics - Resolve identifier to internal ID
-      let caseData;
-      try {
-        const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
-        caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
-      } catch (error) {
-         return sendErrorResponse(res, { statusCode: 404, message: 'Case not found' });
-       }
-       
-       if (!caseData) {
-         return sendErrorResponse(res, { statusCode: 404, message: 'Case not found' });
-       }
+      let caseData = await findCaseByIdentifierOrSendNotFound(req, res, caseId);
+      if (!caseData) return;
       
       const normalizedStatus = String(status || '').toUpperCase();
       const docketStatuses = new Set(['OPEN', 'PENDING', 'RESOLVED', 'FILED']);
@@ -248,22 +254,13 @@ module.exports = (deps) => {
       const { caseId } = req.params;
       const { userEmail } = req.body;
       
-      if (!getRequiredFieldValidation({ userEmail }, ['userEmail']).isValid) {
+      if (!validateRequiredFields({ userEmail }, ['userEmail']).isValid) {
         return sendErrorResponse(res, { statusCode: 400, message: 'User email is required' });
       }
       
       // PR: Case Identifier Semantics - Resolve identifier to internal ID
-      let caseData;
-      try {
-        const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
-        caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
-      } catch (error) {
-         return sendErrorResponse(res, { statusCode: 404, message: 'Case not found' });
-       }
-       
-       if (!caseData) {
-         return sendErrorResponse(res, { statusCode: 404, message: 'Case not found' });
-       }
+      let caseData = await findCaseByIdentifierOrSendNotFound(req, res, caseId);
+      if (!caseData) return;
       
       // Check if already locked by another user
       if (caseData.lockStatus.isLocked && 
@@ -342,22 +339,13 @@ module.exports = (deps) => {
       const { caseId } = req.params;
       const { userEmail } = req.body;
       
-      if (!getRequiredFieldValidation({ userEmail }, ['userEmail']).isValid) {
+      if (!validateRequiredFields({ userEmail }, ['userEmail']).isValid) {
         return sendErrorResponse(res, { statusCode: 400, message: 'User email is required' });
       }
       
       // PR: Case Identifier Semantics - Resolve identifier to internal ID
-      let caseData;
-      try {
-        const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
-        caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
-      } catch (error) {
-         return sendErrorResponse(res, { statusCode: 404, message: 'Case not found' });
-       }
-       
-       if (!caseData) {
-         return sendErrorResponse(res, { statusCode: 404, message: 'Case not found' });
-       }
+      let caseData = await findCaseByIdentifierOrSendNotFound(req, res, caseId);
+      if (!caseData) return;
       
       // Check if locked by this user
       if (caseData.lockStatus.isLocked && 
@@ -402,17 +390,8 @@ module.exports = (deps) => {
       }
       
       // PR: Case Identifier Semantics - Resolve identifier to internal ID
-      let caseData;
-      try {
-        const internalId = await resolveCaseIdentifier(req.user.firmId, caseId, req.user.role);
-        caseData = await CaseRepository.findByInternalId(req.user.firmId, internalId, req.user.role);
-      } catch (error) {
-         return sendErrorResponse(res, { statusCode: 404, message: 'Case not found' });
-       }
-       
-       if (!caseData) {
-         return sendErrorResponse(res, { statusCode: 404, message: 'Case not found' });
-       }
+      let caseData = await findCaseByIdentifierOrSendNotFound(req, res, caseId);
+      if (!caseData) return;
 
       const lockStatus = caseData.lockStatus || {};
       const lockOwnerXID = String(lockStatus.activeUserXID || '').trim().toUpperCase();
