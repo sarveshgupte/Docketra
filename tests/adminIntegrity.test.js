@@ -87,7 +87,7 @@ async function shouldBackfillLegacyAdmin() {
     xID: 'X000001',
     name: 'Legacy Admin',
     email: 'legacy-admin@test.com',
-    role: 'Admin',
+    role: 'ADMIN',
     firmId: firm._id,
     defaultClientId: null,
     status: 'invited',
@@ -108,14 +108,27 @@ async function shouldIgnoreSuperadminInPreflight() {
   await mongoose.connection.db.dropDatabase();
   const { firm, client } = await setupFirmWithClient();
 
+  const primaryAdmin = await User.create({
+    authProviders: { google: { googleId: 'random0' } },
+    xID: 'X000776',
+    name: 'Primary Admin',
+    email: 'primary-admin@test.com',
+    role: 'PRIMARY_ADMIN',
+    firmId: firm._id,
+    defaultClientId: client._id,
+    status: 'invited',
+    isActive: true,
+  });
+
   // Create a compliant admin to avoid violations
   await User.create({
     authProviders: { google: { googleId: 'random2' } },
     xID: 'X000777',
     name: 'Scoped Admin',
     email: 'scoped-admin@test.com',
-    role: 'Admin',
+    role: 'ADMIN',
     firmId: firm._id,
+    primaryAdminId: primaryAdmin._id,
     defaultClientId: client._id,
     status: 'invited',
     isActive: true,
@@ -128,6 +141,7 @@ async function shouldIgnoreSuperadminInPreflight() {
     email: 'platform-admin2@test.com',
     role: 'SUPER_ADMIN',
     status: 'invited',
+    primaryAdminId: new mongoose.Types.ObjectId(),
     isActive: true,
   });
 
