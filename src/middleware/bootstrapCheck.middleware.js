@@ -1,3 +1,4 @@
+const log = require('../utils/log');
 /**
  * Bootstrap Completion Check Middleware
  * 
@@ -43,7 +44,6 @@ const requireCompletedFirm = async (req, res, next) => {
 
     // ── New architecture: default client ─────────────────────────────────
     const Client = require('../models/Client.model');
-const log = require('../utils/log');
     const defaultClient = await Client.findOne({ _id: req.user.firmId, isDefaultClient: true })
       .select('status').lean();
 

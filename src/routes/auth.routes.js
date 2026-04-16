@@ -1,12 +1,12 @@
 const express = require('express');
 const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
 const routeSchemas = require('../schemas/auth.routes.schema.js');
+const log = require('../utils/log');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { authenticate } = require('../middleware/auth.middleware');
 const { attachFirmFromSlug } = require('../middleware/attachFirmFromSlug.middleware');
 const { attachFirmContext } = require('../middleware/firmContext.middleware');
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
-const log = require('../utils/log');
 const {
   authLimiter,
   authBlockEnforcer,

@@ -1,3 +1,4 @@
+const log = require('../utils/log');
 /**
  * Backfill Script: Repair user.defaultClientId for all tenant users.
  *
@@ -13,7 +14,6 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const User = require('../models/User.model');
 const Client = require('../models/Client.model');
-const log = require('../utils/log');
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/docketra';
 

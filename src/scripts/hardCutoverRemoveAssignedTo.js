@@ -1,3 +1,4 @@
+const log = require('../utils/log');
 /**
  * Hard Cutover Script: Remove Legacy assignedTo Field
  * 
@@ -29,7 +30,6 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const Case = require('../models/Case.model');
-const log = require('../utils/log');
 
 // Configuration
 const DRY_RUN = process.env.DRY_RUN !== 'false';

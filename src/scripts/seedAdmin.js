@@ -1,3 +1,4 @@
+const log = require('../utils/log');
 /**
  * Seed Admin Script for Docketra
  * 
@@ -20,7 +21,6 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const User = require('../models/User.model');
-const log = require('../utils/log');
 
 const SALT_ROUNDS = 10;
 const DEFAULT_PASSWORD = 'ChangeMe@123';

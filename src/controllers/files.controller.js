@@ -4,6 +4,7 @@ const File = require('../models/File.model');
 const TenantStorageConfig = require('../models/TenantStorageConfig.model');
 const { getProviderForTenant } = require('../services/storage/StorageProviderFactory');
 const { mapProviderErrorToStatus } = require('./storage.controller');
+const log = require('../utils/log');
 const {
   StorageConfigMissingError,
   StorageAccessError,
@@ -13,7 +14,6 @@ const { safeLogForensicAudit, getRequestIp, getRequestUserAgent } = require('../
 const { enqueueStorageJob, JOB_TYPES } = require('../queues/storage.queue');
 const { logSecurityAuditEvent, SECURITY_AUDIT_ACTIONS } = require('../services/securityAudit.service');
 const { noteFileDownload } = require('../services/securityTelemetry.service');
-const log = require('../utils/log');
 
 const URL_EXPIRY_SECONDS = 10 * 60;
 

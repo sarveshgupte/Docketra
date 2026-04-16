@@ -1,3 +1,4 @@
+const log = require('../utils/log');
 /**
  * Backfill Script: Fix legacy admins missing firmId/defaultClientId
  *
@@ -20,7 +21,6 @@ const User = require('../models/User.model');
 const Firm = require('../models/Firm.model');
 const Client = require('../models/Client.model');
 const { ensureDefaultClientForFirm } = require('../services/defaultClient.service');
-const log = require('../utils/log');
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/docketra';
 

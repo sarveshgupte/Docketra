@@ -1,3 +1,4 @@
+const log = require('../utils/log');
 /**
  * Migration safety script for users missing firmId.
  *
@@ -14,7 +15,6 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const User = require('../models/User.model');
 const Firm = require('../models/Firm.model');
-const log = require('../utils/log');
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/docketra';
 const args = process.argv.slice(2);

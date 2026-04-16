@@ -44,6 +44,7 @@ const { mapUserResponse } = require('../mappers/user.mapper');
 const { decrypt: decryptProtectedValue } = require('../utils/encryption');
 const { logSecurityAuditEvent, SECURITY_AUDIT_ACTIONS } = require('../services/securityAudit.service');
 const { getRedisClient } = require('../config/redis');
+const log = require('../utils/log');
 const {
   noteLoginFailure,
   noteLockedAccountAttempt,
@@ -113,7 +114,6 @@ const ensureUserDefaultClientLink = async (user, req = null) => {
   return defaultClient;
 };
 
-const log = require('../utils/log');
 const logger = log;
 const { safeLogForensicAudit, getRequestIp, getRequestUserAgent } = require('../services/forensicAudit.service');
 const { safeAuditLog, safeQueueEmail, safeAnalyticsEvent } = require('../services/safeSideEffects.service');

@@ -1,6 +1,6 @@
 const { randomUUID } = require('crypto');
-const log = require('../utils/log');
 const { recordInvariantViolation } = require('../utils/operationalMetrics');
+const log = require('../utils/log');
 
 /**
  * Invariant Guard Middleware

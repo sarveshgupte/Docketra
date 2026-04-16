@@ -3,9 +3,9 @@
  * Centralized error handling for the application
  */
 
-const log = require('../utils/log');
 const { recordError } = require('../utils/operationalMetrics');
 const metricsService = require('../services/metrics.service');
+const log = require('../utils/log');
 
 const sendError = (req, res, status, payload) => {
   const { code, message, action, details } = payload;

@@ -1,3 +1,4 @@
+const log = require('../utils/log');
 /**
  * Seed Organization Client Script
  * 
@@ -21,7 +22,6 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const Client = require('../models/Client.model');
-const log = require('../utils/log');
 
 const seedOrganizationClient = async () => {
   try {

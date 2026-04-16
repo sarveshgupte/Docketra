@@ -2,10 +2,10 @@
 
 const { randomUUID } = require('crypto');
 const mongoose = require('mongoose');
-const log = require('../utils/log');
 const { getIpRange } = require('../utils/ipRange');
 const { logAuthEvent } = require('./audit.service');
 const { getRequestIp, getRequestUserAgent } = require('./forensicAudit.service');
+const log = require('../utils/log');
 
 const SECURITY_AUDIT_ACTIONS = Object.freeze({
   LOGIN_SUCCESS: 'LOGIN_SUCCESS',

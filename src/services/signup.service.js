@@ -11,9 +11,9 @@ const { slugify } = require('../utils/slugify');
 const emailService = require('./email.service');
 const jwtService = require('./jwt.service');
 const config = require('../config/config');
-const log = require('../utils/log');
 const { acquireLock, releaseLock } = require('./redisLock.service');
 const { safeAuditLog, safeQueueEmail } = require('./safeSideEffects.service');
+const log = require('../utils/log');
 const {
   consumeSignupQuota,
   consumeOtpAttempt,

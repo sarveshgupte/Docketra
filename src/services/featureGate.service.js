@@ -1,5 +1,5 @@
-const log = require('../utils/log');
 const { markDegraded } = require('./systemState.service');
+const log = require('../utils/log');
 
 const normalize = (value) => {
   if (value === undefined || value === null) return false;
