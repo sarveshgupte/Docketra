@@ -1,17 +1,24 @@
 const createAuthSessionService = (deps) => {
+  const models = deps.models || {};
+  const utils = deps.utils || {};
+  const services = deps.services || {};
   const {
-    jwtService,
-    getSession,
-    RefreshToken,
-    User,
-    isActiveStatus,
-    noteRefreshTokenFailure,
-    noteRefreshTokenUse,
-    logAuthAudit,
-    getFirmSlug,
-    isSuperAdminRole,
-    DEFAULT_FIRM_ID,
-  } = deps;
+    RefreshToken = deps.RefreshToken,
+    User = deps.User,
+  } = models;
+  const {
+    isActiveStatus = deps.isActiveStatus,
+    noteRefreshTokenFailure = deps.noteRefreshTokenFailure,
+    noteRefreshTokenUse = deps.noteRefreshTokenUse,
+    logAuthAudit = deps.logAuthAudit,
+    getFirmSlug = deps.getFirmSlug,
+    isSuperAdminRole = deps.isSuperAdminRole,
+    DEFAULT_FIRM_ID = deps.DEFAULT_FIRM_ID,
+    getSession = deps.getSession,
+  } = utils;
+  const {
+    jwtService = deps.jwtService,
+  } = services;
 
   const generateAndStoreRefreshToken = async ({ req, userId = null, firmId = null }) => {
     if (!req) {
@@ -44,7 +51,7 @@ const createAuthSessionService = (deps) => {
     return { refreshToken, expiresAt };
   };
 
-  const logout = async (req, res) => {
+  const logoutHandler = async (req) => {
     try {
       const user = req.user;
       const isSuperAdmin = isSuperAdminRole(user?.role);
@@ -58,8 +65,10 @@ const createAuthSessionService = (deps) => {
       }
 
       const secureCookies = process.env.NODE_ENV === 'production';
-      res.clearCookie('accessToken', { httpOnly: true, secure: secureCookies, sameSite: 'lax', path: '/' });
-      res.clearCookie('refreshToken', { httpOnly: true, secure: secureCookies, sameSite: 'lax', path: '/' });
+      const clearCookies = [
+        { name: 'accessToken', options: { httpOnly: true, secure: secureCookies, sameSite: 'lax', path: '/' } },
+        { name: 'refreshToken', options: { httpOnly: true, secure: secureCookies, sameSite: 'lax', path: '/' } },
+      ];
 
       try {
         if (!shouldBypassUserDbUpdates) {
@@ -78,17 +87,37 @@ const createAuthSessionService = (deps) => {
         console.error('[AUTH AUDIT] Failed to record logout event', auditError);
       }
 
-      return res.json({
-        success: true,
-        message: 'Logout successful',
-      });
+      return {
+        statusCode: 200,
+        body: {
+          success: true,
+          message: 'Logout successful',
+        },
+        clearCookies,
+      };
     } catch (error) {
       console.error('[AUTH] Logout error:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Error during logout',
-      });
+      return {
+        statusCode: 500,
+        body: {
+          success: false,
+          message: 'Error during logout',
+        },
+        clearCookies: [],
+      };
     }
+  };
+
+  const logout = async (reqOrData, maybeRes) => {
+    const req = maybeRes ? reqOrData : (reqOrData?.req || reqOrData);
+    const response = await logoutHandler(req);
+    if (maybeRes) {
+      for (const cookieConfig of (response.clearCookies || [])) {
+        maybeRes.clearCookie(cookieConfig.name, cookieConfig.options);
+      }
+      return maybeRes.status(response.statusCode || 200).json(response.body);
+    }
+    return response;
   };
 
   const refreshAccessToken = async (req, res) => {

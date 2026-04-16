@@ -567,7 +567,7 @@ const getFirmSlug = async (firmId) => {
  * @returns {Promise<{refreshToken: string, expiresAt: Date}>} Raw refresh token (unhashed) and its expiry timestamp
  * @throws {Error} When request context is missing or refresh token persistence fails
  */
-const generateAndStoreRefreshToken = async ({ req, userId = null, firmId = null }) => authSessionDomainService.generateAndStoreRefreshToken({ req, userId, firmId });
+const generateAndStoreRefreshToken = async ({ req, userId = null, firmId = null }) => authSessionService.generateAndStoreRefreshToken({ req, userId, firmId });
 
 /**
  * Build tokens + audit entry for successful login
@@ -610,6 +610,23 @@ const buildTokenResponse = async (user, req, authMethod = 'Password') => {
   }, req);
 
   return { accessToken, refreshToken, firmSlug };
+};
+
+const applyServiceResponse = (res, serviceResponse = {}) => {
+  for (const [headerName, headerValue] of Object.entries(serviceResponse.headers || {})) {
+    if (typeof res.setHeader === 'function') {
+      res.setHeader(headerName, headerValue);
+    } else if (typeof res.set === 'function') {
+      res.set(headerName, headerValue);
+    }
+  }
+  for (const cookieConfig of (serviceResponse.cookies || [])) {
+    res.cookie(cookieConfig.name, cookieConfig.value, cookieConfig.options);
+  }
+  for (const cookieConfig of (serviceResponse.clearCookies || [])) {
+    res.clearCookie(cookieConfig.name, cookieConfig.options);
+  }
+  return res.status(serviceResponse.statusCode || 200).json(serviceResponse.body);
 };
 
 const sendLoginOtpChallenge = async (req, user, { isResend = false, returnLoginToken = true } = {}) => {
@@ -1213,17 +1230,17 @@ const handlePostPasswordChecks = async (req, res, user) => {
  * Login with xID and password
  * POST /superadmin/login or POST /:firmSlug/login
  */
-const login = async (req, res) => authLoginDomainService.login(req, res);
+const login = async (req, res) => applyServiceResponse(res, await authLoginService.login({ req }));
 
-const resendLoginOtp = async (req, res) => authLoginDomainService.resendLoginOtp(req, res);
+const resendLoginOtp = async (req, res) => authLoginService.resendLoginOtp(req, res);
 
-const verifyLoginOtp = async (req, res) => authLoginDomainService.verifyLoginOtp(req, res);
+const verifyLoginOtp = async (req, res) => authLoginService.verifyLoginOtp(req, res);
 
 /**
  * Logout
  * POST /api/auth/logout
  */
-const logout = async (req, res) => authSessionDomainService.logout(req, res);
+const logout = async (req, res) => applyServiceResponse(res, await authSessionService.logout({ req }));
 
 /**
  * Change password
@@ -3302,13 +3319,13 @@ const loginResend = async (req, res) => {
  * POST /api/auth/forgot-password
  * Public endpoint - does not require authentication
  */
-const forgotPassword = async (req, res) => authPasswordDomainService.forgotPassword(req, res);
+const forgotPassword = async (req, res) => authPasswordService.forgotPassword(req, res);
 
-const forgotPasswordInit = async (req, res) => authPasswordDomainService.forgotPasswordInit(req, res);
+const forgotPasswordInit = async (req, res) => authPasswordService.forgotPasswordInit(req, res);
 
-const forgotPasswordVerify = async (req, res) => authPasswordDomainService.forgotPasswordVerify(req, res);
+const forgotPasswordVerify = async (req, res) => authPasswordService.forgotPasswordVerify(req, res);
 
-const forgotPasswordResetWithOtp = async (req, res) => authPasswordDomainService.forgotPasswordResetWithOtp(req, res);
+const forgotPasswordResetWithOtp = async (req, res) => authPasswordService.forgotPasswordResetWithOtp(req, res);
 
 /**
  * Get all users (Admin only)
@@ -3359,15 +3376,15 @@ const getAllUsers = async (req, res) => {
  * 
  * CRITICAL: Refresh flow must rebuild all claims from trusted DB state.
  */
-const refreshAccessToken = async (req, res) => authSessionDomainService.refreshAccessToken(req, res);
+const refreshAccessToken = async (req, res) => authSessionService.refreshAccessToken(req, res);
 
 /**
  * Verify TOTP code for MFA
  * POST /api/auth/verify-totp
  */
-const verifyTotp = async (req, res) => authOtpDomainService.verifyTotp(req, res);
+const verifyTotp = async (req, res) => authOtpServiceFacade.verifyTotp(req, res);
 
-const completeMfaLogin = async (req, res) => authOtpDomainService.completeMfaLogin(req, res);
+const completeMfaLogin = async (req, res) => authOtpServiceFacade.completeMfaLogin(req, res);
 
 const generatePrimaryXid = async () => {
   for (let i = 0; i < 20; i += 1) {
@@ -3418,48 +3435,60 @@ const issueAuthTokens = async (req, user) => {
   return { accessToken, refreshToken };
 };
 
-const authLoginDomainService = createAuthLoginService({
-  getSuperadminEnv,
-  handleSuperadminLogin,
-  User,
-  validateTenantUserPreconditions,
-  handlePasswordVerification,
-  handlePostPasswordChecks,
-  sendLoginOtpChallenge,
-  getLoginOtpConfig,
-  LOGIN_OTP_COOLDOWN_SECONDS,
-  hashLoginSessionToken,
-  LoginSession,
-  clearExpiredLoginOtpLock,
-  getLoginOtpLockSeconds,
-  logLoginOtpEvent,
-  clearLoginOtpState,
-  persistLoginOtpState,
-  authOtpService,
-  logAuthAudit,
-  DEFAULT_XID,
-  DEFAULT_FIRM_ID,
-  noteLoginFailure,
-  clearCachedLoginOtpState,
-  buildSuccessfulLoginPayload,
-  normalizeFirmSlug,
+const authLoginService = createAuthLoginService({
+  models: {
+    User,
+    LoginSession,
+  },
+  utils: {
+    getSuperadminEnv,
+    handleSuperadminLogin,
+    validateTenantUserPreconditions,
+    handlePasswordVerification,
+    handlePostPasswordChecks,
+    sendLoginOtpChallenge,
+    getLoginOtpConfig,
+    LOGIN_OTP_COOLDOWN_SECONDS,
+    hashLoginSessionToken,
+    clearExpiredLoginOtpLock,
+    getLoginOtpLockSeconds,
+    logLoginOtpEvent,
+    clearLoginOtpState,
+    persistLoginOtpState,
+    logAuthAudit,
+    DEFAULT_XID,
+    DEFAULT_FIRM_ID,
+    noteLoginFailure,
+    clearCachedLoginOtpState,
+    buildSuccessfulLoginPayload,
+    normalizeFirmSlug,
+  },
+  services: {
+    authOtpService,
+  },
 });
 
-const authSessionDomainService = createAuthSessionService({
-  jwtService,
-  getSession,
-  RefreshToken,
-  User,
-  isActiveStatus,
-  noteRefreshTokenFailure,
-  noteRefreshTokenUse,
-  logAuthAudit,
-  getFirmSlug,
-  isSuperAdminRole,
-  DEFAULT_FIRM_ID,
+const authSessionService = createAuthSessionService({
+  models: {
+    RefreshToken,
+    User,
+  },
+  utils: {
+    getSession,
+    isActiveStatus,
+    noteRefreshTokenFailure,
+    noteRefreshTokenUse,
+    logAuthAudit,
+    getFirmSlug,
+    isSuperAdminRole,
+    DEFAULT_FIRM_ID,
+  },
+  services: {
+    jwtService,
+  },
 });
 
-const authPasswordDomainService = createAuthPasswordService({
+const authPasswordService = createAuthPasswordService({
   normalizeFirmSlug,
   Firm,
   User,
@@ -3482,7 +3511,7 @@ const authPasswordDomainService = createAuthPasswordService({
   bcrypt,
 });
 
-const authOtpDomainService = authOtpService.createAuthOtpDomainService({
+const authOtpServiceFacade = authOtpService.createAuthOtpService({
   getRequestFirmId,
   User,
   getTwoFactorSecret,
@@ -3492,7 +3521,7 @@ const authOtpDomainService = authOtpService.createAuthOtpDomainService({
   getFirmSlug,
   ensureCanonicalXid,
   jwtService,
-  generateAndStoreRefreshToken: (params) => authSessionDomainService.generateAndStoreRefreshToken(params),
+  generateAndStoreRefreshToken: (params) => authSessionService.generateAndStoreRefreshToken(params),
   handleSuccessfulLoginMonitoring,
   logAuthAudit,
   logSecurityAuditEvent,
@@ -3504,22 +3533,22 @@ const authOtpDomainService = authOtpService.createAuthOtpDomainService({
   issueAuthTokens,
 });
 
-const authSignupDomainService = createAuthSignupService({
+const authSignupService = createAuthSignupService({
   signupService,
   getSession,
   mongoose,
   User,
 });
 
-const signupInit = async (req, res) => authSignupDomainService.signupInit(req, res);
+const signupInit = async (req, res) => authSignupService.signupInit(req, res);
 
-const signupVerify = async (req, res) => authSignupDomainService.signupVerify(req, res);
+const signupVerify = async (req, res) => authSignupService.signupVerify(req, res);
 
-const signupResend = async (req, res) => authSignupDomainService.signupResend(req, res);
+const signupResend = async (req, res) => authSignupService.signupResend(req, res);
 
-const sendOtpEndpoint = async (req, res) => authOtpDomainService.sendOtpEndpoint(req, res);
+const sendOtpEndpoint = async (req, res) => authOtpServiceFacade.sendOtpEndpoint(req, res);
 
-const verifyOtpEndpoint = async (req, res) => authOtpDomainService.verifyOtpEndpoint(req, res);
+const verifyOtpEndpoint = async (req, res) => authOtpServiceFacade.verifyOtpEndpoint(req, res);
 
 module.exports = {
   login: wrapWriteHandler(login),

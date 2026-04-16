@@ -1,32 +1,81 @@
 const createAuthLoginService = (deps) => {
+  const models = deps.models || {};
+  const utils = deps.utils || {};
+  const services = deps.services || {};
   const {
-    getSuperadminEnv,
-    handleSuperadminLogin,
-    User,
-    validateTenantUserPreconditions,
-    handlePasswordVerification,
-    handlePostPasswordChecks,
-    sendLoginOtpChallenge,
-    getLoginOtpConfig,
-    LOGIN_OTP_COOLDOWN_SECONDS,
-    hashLoginSessionToken,
-    LoginSession,
-    clearExpiredLoginOtpLock,
-    getLoginOtpLockSeconds,
-    logLoginOtpEvent,
-    clearLoginOtpState,
-    persistLoginOtpState,
-    authOtpService,
-    logAuthAudit,
-    DEFAULT_XID,
-    DEFAULT_FIRM_ID,
-    noteLoginFailure,
-    clearCachedLoginOtpState,
-    buildSuccessfulLoginPayload,
-    normalizeFirmSlug,
-  } = deps;
+    User = deps.User,
+    LoginSession = deps.LoginSession,
+  } = models;
+  const {
+    getSuperadminEnv = deps.getSuperadminEnv,
+    handleSuperadminLogin = deps.handleSuperadminLogin,
+    validateTenantUserPreconditions = deps.validateTenantUserPreconditions,
+    handlePasswordVerification = deps.handlePasswordVerification,
+    handlePostPasswordChecks = deps.handlePostPasswordChecks,
+    sendLoginOtpChallenge = deps.sendLoginOtpChallenge,
+    getLoginOtpConfig = deps.getLoginOtpConfig,
+    LOGIN_OTP_COOLDOWN_SECONDS = deps.LOGIN_OTP_COOLDOWN_SECONDS,
+    hashLoginSessionToken = deps.hashLoginSessionToken,
+    clearExpiredLoginOtpLock = deps.clearExpiredLoginOtpLock,
+    getLoginOtpLockSeconds = deps.getLoginOtpLockSeconds,
+    logLoginOtpEvent = deps.logLoginOtpEvent,
+    clearLoginOtpState = deps.clearLoginOtpState,
+    persistLoginOtpState = deps.persistLoginOtpState,
+    logAuthAudit = deps.logAuthAudit,
+    DEFAULT_XID = deps.DEFAULT_XID,
+    DEFAULT_FIRM_ID = deps.DEFAULT_FIRM_ID,
+    noteLoginFailure = deps.noteLoginFailure,
+    clearCachedLoginOtpState = deps.clearCachedLoginOtpState,
+    buildSuccessfulLoginPayload = deps.buildSuccessfulLoginPayload,
+    normalizeFirmSlug = deps.normalizeFirmSlug,
+  } = utils;
+  const {
+    authOtpService = deps.authOtpService,
+  } = services;
 
-  const login = async (req, res) => {
+  const createResponseCapture = () => {
+    let statusCode = 200;
+    let body;
+    const cookies = [];
+    const clearCookies = [];
+    const headers = {};
+    const res = {
+      status: (code) => {
+        statusCode = code;
+        return res;
+      },
+      cookie: (name, value, options) => {
+        cookies.push({ name, value, options });
+        return res;
+      },
+      clearCookie: (name, options) => {
+        clearCookies.push({ name, options });
+        return res;
+      },
+      set: (key, value) => {
+        if (key && typeof key === 'object') {
+          Object.assign(headers, key);
+        } else if (key) {
+          headers[key] = value;
+        }
+        return res;
+      },
+      setHeader: (key, value) => {
+        headers[key] = value;
+        return res;
+      },
+      json: (payload) => {
+        body = payload;
+        return payload;
+      },
+    };
+    return {
+      res,
+      getResult: () => ({ statusCode, body, cookies, clearCookies, headers }),
+    };
+  };
+
+  const loginHandler = async (req, res) => {
     try {
       const loginScope = req.loginScope || 'tenant';
       const requestedFirmSlug = req.params?.firmSlug || req.firmSlug || null;
@@ -115,6 +164,16 @@ const createAuthLoginService = (deps) => {
         message: 'Error during login',
       });
     }
+  };
+
+  const login = async (reqOrData, maybeRes) => {
+    const req = maybeRes ? reqOrData : (reqOrData?.req || reqOrData);
+    if (maybeRes) {
+      return loginHandler(req, maybeRes);
+    }
+    const responseCapture = createResponseCapture();
+    await loginHandler(req, responseCapture.res);
+    return responseCapture.getResult();
   };
 
   const resendLoginOtp = async (req, res) => {
