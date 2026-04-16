@@ -20,6 +20,7 @@ const { logAuthEvent } = require('../services/audit.service');
 const { isExternalStorageEnabled } = require('../services/featureFlags.service');
 const { assertPrimaryAdmin, getTagValidationError, normalizeId } = require('../utils/hierarchy.utils');
 const { logAuditEvent, getAuditLogs } = require('../services/adminActionAudit.service');
+const { writeSettingsAudit, listSettingsAudit } = require('../services/productAudit.service');
 const log = require('../utils/log');
 
 /**
@@ -761,6 +762,15 @@ const updateFirmSettings = async (req, res) => {
       firm: normalizeFirmSettings(firm.settings?.firm || {}),
       work: normalizeWorkSettings(firm.settings?.work || {}),
     };
+    await writeSettingsAudit({
+      req,
+      settingsKey: 'firm-settings',
+      action: 'CONFIG_CHANGED',
+      oldDoc: previousSettings,
+      newDoc: nextSettings,
+      metadata: { source: 'admin.updateFirmSettings' },
+      dedupeKey: 'firm-settings-update',
+    });
 
     await logAdminAction({
       adminXID: req.user?.xID,
@@ -886,6 +896,40 @@ const getFirmSettingsActivity = async (req, res) => {
   }
 };
 
+const getSettingsAudit = async (req, res) => {
+  try {
+    const tenantId = req.user?.firmId;
+    if (!tenantId) {
+      return res.status(403).json({ success: false, message: 'Firm context is required' });
+    }
+
+    const { page = 1, limit = 50, key } = req.query || {};
+    const result = await listSettingsAudit({
+      tenantId,
+      settingsKey: key || null,
+      page,
+      limit,
+    });
+
+    return res.json({
+      success: true,
+      data: result.items,
+      pagination: {
+        page: result.page,
+        limit: result.limit,
+        total: result.total,
+        hasNextPage: (result.page * result.limit) < result.total,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching settings audit',
+      error: error.message,
+    });
+  }
+};
+
 /**
  * Get firm storage configuration (Admin only)
  * GET /api/admin/storage
@@ -953,6 +997,10 @@ const updateStorageConfig = async (req, res) => {
       });
     }
 
+    const previousStorage = {
+      mode: firm.storage?.mode || DEFAULT_STORAGE_MODE,
+      provider: firm.storage?.provider || null,
+    };
     const storageConfig = firm.storage || {};
     const newMode = mode || storageConfig.mode || DEFAULT_STORAGE_MODE;
 
@@ -1004,6 +1052,18 @@ const updateStorageConfig = async (req, res) => {
       },
       req,
     });
+    await writeSettingsAudit({
+      req,
+      settingsKey: 'storage-config',
+      action: 'CONFIG_CHANGED',
+      oldDoc: previousStorage,
+      newDoc: {
+        mode: firm.storage.mode,
+        provider: firm.storage.provider,
+      },
+      metadata: { source: 'admin.updateStorageConfig' },
+      dedupeKey: 'storage-config-update',
+    });
 
     res.json({
       success: true,
@@ -1043,6 +1103,10 @@ const disconnectStorage = async (req, res) => {
       });
     }
 
+    const previousStorage = {
+      mode: firm.storage?.mode || DEFAULT_STORAGE_MODE,
+      provider: firm.storage?.provider || null,
+    };
     firm.storage = {
       mode: 'docketra_managed',
       provider: null,
@@ -1058,6 +1122,15 @@ const disconnectStorage = async (req, res) => {
       targetFirmId: firm.firmId,
       metadata: {},
       req,
+    });
+    await writeSettingsAudit({
+      req,
+      settingsKey: 'storage-config',
+      action: 'CONFIG_CHANGED',
+      oldDoc: previousStorage,
+      newDoc: { mode: 'docketra_managed', provider: null },
+      metadata: { source: 'admin.disconnectStorage' },
+      dedupeKey: 'storage-config-disconnect',
     });
 
     res.json({
@@ -1435,6 +1508,7 @@ module.exports = {
   updateRestrictedClients: wrapWriteHandler(updateRestrictedClients),
   getFirmSettings,
   getFirmSettingsActivity,
+  getSettingsAudit,
   updateFirmSettings: wrapWriteHandler(updateFirmSettings),
   getStorageConfig,
   updateStorageConfig: wrapWriteHandler(updateStorageConfig),

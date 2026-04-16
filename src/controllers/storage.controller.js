@@ -11,6 +11,7 @@ const OneDriveProvider = require('../services/storage/providers/OneDriveProvider
 const { StorageValidationError } = require('../services/storage/errors/StorageErrors');
 const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
 const { S3Adapter } = require('../services/storageAdapter.service');
+const { writeSettingsAudit } = require('../services/productAudit.service');
 
 const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/drive.file',
@@ -358,6 +359,10 @@ const changeFirmStorage = async (req, res) => {
   }
 
   try {
+    const existingFirmForAudit = await Firm.findById(firmId).select('storage storageConfig').lean();
+    const previousProvider = existingFirmForAudit?.storage?.provider || 'docketra_managed';
+    const previousMode = existingFirmForAudit?.storage?.mode || 'docketra_managed';
+
     let adapter = null;
     let effectiveRefreshToken = null;
     if (provider === 'docketra_managed') {
@@ -419,6 +424,26 @@ const changeFirmStorage = async (req, res) => {
       },
     });
 
+    await writeSettingsAudit({
+      req,
+      tenantId: firmId,
+      settingsKey: 'storage-config',
+      action: 'CONFIG_CHANGED',
+      oldDoc: {
+        mode: previousMode,
+        provider: previousProvider,
+      },
+      newDoc: {
+        mode: provider === 'docketra_managed' ? 'docketra_managed' : 'firm_connected',
+        provider: canonicalProvider,
+      },
+      metadata: {
+        source: 'storage.changeFirmStorage',
+        provider: canonicalProvider,
+      },
+      dedupeKey: `firm-storage-change:${canonicalProvider}`,
+    });
+
     return res.json({ success: true, data: { provider, isActive: true, tested: Boolean(adapter) } });
   } catch (error) {
     console.error('[STORAGE]', {
@@ -472,7 +497,24 @@ const downloadFirmStorageExport = async (req, res) => {
 const disconnectStorage = async (req, res) => {
   if (!ensurePrimaryAdmin(req, res)) return;
   try {
+    const previous = await Firm.findById(req.firmId).select('storage').lean();
     await googleDriveService.markStorageDisconnected(req.firmId, 'Disconnected by primary admin');
+    await writeSettingsAudit({
+      req,
+      tenantId: req.firmId,
+      settingsKey: 'storage-config',
+      action: 'CONFIG_CHANGED',
+      oldDoc: {
+        mode: previous?.storage?.mode || null,
+        provider: previous?.storage?.provider || null,
+      },
+      newDoc: {
+        mode: 'firm_connected',
+        provider: 'google_drive',
+      },
+      metadata: { source: 'storage.disconnectStorage' },
+      dedupeKey: 'storage-disconnect',
+    });
     const context = await googleDriveService.getClient(req.firmId);
     return res.json({
       success: true,

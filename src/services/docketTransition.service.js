@@ -1,10 +1,17 @@
 const Case = require('../models/Case.model');
 const DocketAuditLog = require('../models/DocketAuditLog.model');
+const { randomUUID } = require('crypto');
 const {
   toDocketState,
   toPersistenceState,
 } = require('../domain/docket/docketStateMachine');
 const { isValidTransition, toLifecycleFromStatus } = require('../domain/docketLifecycle');
+
+const normalizeActorRole = (role) => {
+  const value = String(role || '').toUpperCase().replace('SUPERADMIN', 'SUPER_ADMIN');
+  if (value === 'ADMIN' || value === 'SUPER_ADMIN' || value === 'MANAGER' || value === 'SYSTEM') return value;
+  return 'USER';
+};
 
 async function transitionDocket(docketId, newState, userId, options = {}) {
   const {
@@ -93,12 +100,26 @@ async function transitionDocket(docketId, newState, userId, options = {}) {
     throw err;
   }
 
+  if (options.skipAudit) {
+    return {
+      docketId,
+      fromState,
+      toState,
+      version: expected + 1,
+    };
+  }
+
   await DocketAuditLog.create([{
     docketId,
     action,
     fromState,
     toState,
-    performedBy: userId,
+    requestId: String(options?.req?.context?.requestId || options?.req?.requestId || options?.metadata?.requestId || randomUUID()),
+    tenantId: firmId,
+    performedBy: {
+      userId: String(userId || 'SYSTEM'),
+      role: normalizeActorRole(options?.req?.user?.role || options?.actorRole),
+    },
     firmId,
     timestamp: new Date(),
     metadata: {

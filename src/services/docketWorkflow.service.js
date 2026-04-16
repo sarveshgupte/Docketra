@@ -133,15 +133,31 @@ function validateLifecycleAccess({ actor, fromLifecycle, toLifecycle, fromStatus
   }
 }
 
-async function writeAudit({ docketId, fromState, toState, userId, comment = null, performedByRole = 'USER', firmId, action, metadata = {}, session = null }) {
+async function writeAudit({
+  docketId,
+  fromState,
+  toState,
+  userId,
+  comment = null,
+  performedByRole = 'USER',
+  firmId,
+  action,
+  metadata = {},
+  requestId = null,
+  session = null,
+}) {
   await DocketAuditLog.create([{
     docketId,
     action,
+    requestId: requestId || metadata?.requestId || `wf-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    tenantId: firmId,
     fromState,
     toState,
     comment,
-    performedByRole,
-    performedBy: userId,
+    performedBy: {
+      userId: String(userId || 'SYSTEM'),
+      role: normalizeActorRole({ role: performedByRole }),
+    },
     timestamp: new Date(),
     metadata: { ...metadata, comment },
     firmId,

@@ -46,6 +46,7 @@ const { createNotification, NotificationTypes } = require('../domain/notificatio
 const fs = require('fs').promises;
 const fsSync = require('fs');
 const { logActivitySafe } = require('../services/docketActivity.service');
+const { writeDocketAudit, getFieldChanges, listDocketAudit } = require('../services/productAudit.service');
 const buildCaseCreateService = require('../services/caseCreate.service');
 const buildCaseUpdateService = require('../services/caseUpdate.service');
 const buildCaseQueryService = require('../services/caseQuery.service');
@@ -337,6 +338,8 @@ const caseServiceDependencies = {
   computeDeadlineFromTatDays,
   findScopedCaseAttachment,
   checkCaseAccess,
+  writeDocketAudit,
+  getFieldChanges,
 };
 
 const caseCreateService = buildCaseCreateService(caseServiceDependencies);
@@ -1270,6 +1273,46 @@ const searchCases = async (req, res) => caseQueryService.searchCases(req, res);
 
 
 const getDocketSummaryPdf = async (req, res) => caseQueryService.getDocketSummaryPdf(req, res);
+const getDocketAudit = async (req, res) => {
+  try {
+    const { caseId } = req.params;
+    const { page = 1, limit = 50 } = req.query;
+    const firmId = req.user?.firmId;
+    if (!firmId) {
+      return res.status(403).json({ success: false, message: 'Firm context is required' });
+    }
+
+    const internalId = await resolveCaseIdentifier(firmId, caseId, req.user?.role);
+    const caseData = await CaseRepository.findByInternalId(firmId, internalId, req.user?.role);
+    if (!caseData) {
+      return res.status(404).json({ success: false, message: 'Docket not found' });
+    }
+
+    const timeline = await listDocketAudit({
+      tenantId: firmId,
+      docketId: caseData.caseId,
+      page,
+      limit,
+    });
+
+    return res.json({
+      success: true,
+      data: timeline.items,
+      pagination: {
+        page: timeline.page,
+        limit: timeline.limit,
+        total: timeline.total,
+        hasNextPage: (timeline.page * timeline.limit) < timeline.total,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to load docket audit timeline',
+      error: error.message,
+    });
+  }
+};
 
 module.exports = {
   createCase: wrapWriteHandler(createCase),
@@ -1280,6 +1323,7 @@ module.exports = {
   updateCaseStatus: wrapWriteHandler(updateCaseStatus),
   getCaseByCaseId,
   getCaseComments,
+  getDocketAudit,
   getDocketSummaryPdf,
   getCases,
   searchCases,
