@@ -2,6 +2,7 @@
 
 const { DateTime } = require('luxon');
 const { runDailyAggregationJob } = require('../services/tenantCaseMetrics.service');
+const log = require('../utils/log');
 
 const DAILY_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const SCHEDULE_HOUR = 0;
@@ -19,9 +20,9 @@ const getMsUntilNextRun = () => {
 const runSafely = async () => {
   try {
     await runDailyAggregationJob();
-    console.log('[TenantCaseMetricsWorker] Daily summary aggregation completed');
+    log.info('[TenantCaseMetricsWorker] Daily summary aggregation completed');
   } catch (error) {
-    console.error('[TenantCaseMetricsWorker] Aggregation run failed (non-fatal)', {
+    log.error('[TenantCaseMetricsWorker] Aggregation run failed (non-fatal)', {
       message: error.message,
     });
   }

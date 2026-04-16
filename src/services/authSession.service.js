@@ -1,3 +1,4 @@
+const log = require('../utils/log');
 const createAuthSessionService = (deps) => {
   const models = deps.models || {};
   const utils = deps.utils || {};
@@ -84,7 +85,7 @@ const createAuthSessionService = (deps) => {
           }, req);
         }
       } catch (auditError) {
-        console.error('[AUTH AUDIT] Failed to record logout event', auditError);
+        log.error('[AUTH AUDIT] Failed to record logout event', auditError);
       }
 
       return {
@@ -96,7 +97,7 @@ const createAuthSessionService = (deps) => {
         clearCookies,
       };
     } catch (error) {
-      console.error('[AUTH] Logout error:', error);
+      log.error('[AUTH] Logout error:', error);
       return {
         statusCode: 500,
         body: {
@@ -261,7 +262,7 @@ const createAuthSessionService = (deps) => {
         refreshToken: newRefreshToken,
       });
     } catch (error) {
-      console.error('[AUTH] Refresh token error:', error);
+      log.error('[AUTH] Refresh token error:', error);
       return res.status(500).json({
         success: false,
         message: 'Error refreshing token',

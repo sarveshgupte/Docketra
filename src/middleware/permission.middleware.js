@@ -2,6 +2,7 @@ const User = require('../models/User.model');
 const { resolveRequestFirmRole } = require('../services/authorization.service');
 const { isSuperAdminRole } = require('../utils/role.utils');
 const { requireAdmin: centralizedRequireAdmin } = require('./authorization.middleware');
+const log = require('../utils/log');
 
 /**
  * Permission Middleware for Docketra Case Management System
@@ -86,7 +87,7 @@ const requireFirmContext = async (req, res, next) => {
     
     // All other users MUST have firmId
     if (!req.user || !req.user.firmId) {
-      console.error('[PERMISSION] Firm context missing for non-SuperAdmin user', {
+      log.error('[PERMISSION] Firm context missing for non-SuperAdmin user', {
         xID: req.user?.xID || 'unknown',
         role: req.user?.role || 'unknown',
         path: req.path,
@@ -100,7 +101,7 @@ const requireFirmContext = async (req, res, next) => {
     
     next();
   } catch (error) {
-    console.error('[PERMISSION] Error checking firm context:', error);
+    log.error('[PERMISSION] Error checking firm context:', error);
     res.status(500).json({
       success: false,
       message: 'Error checking permissions',
@@ -152,7 +153,7 @@ const authorizeFirmPermission = (requiredPermission) => {
       req.firmPermissions = membership.permissions;
       return next();
     } catch (error) {
-      console.error('[PERMISSION] Firm permission check failed:', error);
+      log.error('[PERMISSION] Firm permission check failed:', error);
       return res.status(500).json({
         success: false,
         message: 'Error checking permissions',

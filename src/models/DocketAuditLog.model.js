@@ -1,26 +1,10 @@
 const { randomUUID } = require('crypto');
 const mongoose = require('mongoose');
 
-const actorSchema = new mongoose.Schema({
-  userId: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  role: {
-    type: String,
-    required: true,
-    trim: true,
-    uppercase: true,
-    enum: ['USER', 'ADMIN', 'SUPER_ADMIN', 'MANAGER', 'SYSTEM'],
-    default: 'USER',
-  },
-}, { _id: false });
-
 const changeSchema = new mongoose.Schema({
   field: { type: String, required: true, trim: true },
-  oldValue: { type: mongoose.Schema.Types.Mixed, default: null },
-  newValue: { type: mongoose.Schema.Types.Mixed, default: null },
+  from: { type: mongoose.Schema.Types.Mixed, default: null },
+  to: { type: mongoose.Schema.Types.Mixed, default: null },
 }, { _id: false });
 
 const docketAuditLogSchema = new mongoose.Schema({
@@ -37,20 +21,14 @@ const docketAuditLogSchema = new mongoose.Schema({
   },
   requestId: {
     type: String,
-    required: true,
     trim: true,
     default: () => randomUUID(),
     index: true,
   },
   tenantId: {
     type: String,
-    required: true,
     trim: true,
     index: true,
-  },
-  performedBy: {
-    type: actorSchema,
-    required: true,
   },
   fromState: {
     type: String,
@@ -59,6 +37,17 @@ const docketAuditLogSchema = new mongoose.Schema({
   toState: {
     type: String,
     default: null,
+  },
+  performedBy: {
+    type: mongoose.Schema.Types.Mixed,
+    required: true,
+    index: true,
+  },
+  performedByRole: {
+    type: String,
+    enum: ['USER', 'ADMIN', 'SUPER_ADMIN', 'MANAGER', 'SYSTEM'],
+    default: 'USER',
+    index: true,
   },
   comment: {
     type: String,
@@ -93,15 +82,26 @@ const docketAuditLogSchema = new mongoose.Schema({
   versionKey: false,
 });
 
-docketAuditLogSchema.pre('validate', function applyTenantAlias(next) {
+docketAuditLogSchema.pre('validate', function normalizeAuditFields(next) {
   if (!this.tenantId && this.firmId) this.tenantId = this.firmId;
   if (!this.firmId && this.tenantId) this.firmId = this.tenantId;
+
+  if (this.performedBy && typeof this.performedBy === 'object' && !Array.isArray(this.performedBy)) {
+    const userId = String(this.performedBy.userId || this.performedBy.xID || this.performedBy.id || 'SYSTEM').toUpperCase();
+    const role = String(this.performedBy.role || 'USER').toUpperCase().replace('SUPERADMIN', 'SUPER_ADMIN');
+    this.performedBy = userId;
+    this.performedByRole = ['USER', 'ADMIN', 'SUPER_ADMIN', 'MANAGER', 'SYSTEM'].includes(role) ? role : 'USER';
+  } else {
+    this.performedBy = String(this.performedBy || 'SYSTEM').toUpperCase();
+  }
+
   next();
 });
 
+docketAuditLogSchema.index({ firmId: 1, docketId: 1, timestamp: -1 });
 docketAuditLogSchema.index({ tenantId: 1, docketId: 1, timestamp: -1 });
 docketAuditLogSchema.index(
-  { tenantId: 1, docketId: 1, action: 1, requestId: 1, dedupeKey: 1 },
+  { firmId: 1, docketId: 1, action: 1, requestId: 1, dedupeKey: 1 },
   {
     unique: true,
     partialFilterExpression: { dedupeKey: { $type: 'string' } },

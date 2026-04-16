@@ -1,3 +1,4 @@
+const log = require('../utils/log');
 module.exports = (deps) => {
   const {
     mongoose,
@@ -104,7 +105,7 @@ module.exports = (deps) => {
       }
 
       for (const caseId of caseIds) {
-        console.log(`[CASE_PULL] ${user.xID} pulling case ${caseId}`);
+        log.info(`[CASE_PULL] ${user.xID} pulling case ${caseId}`);
       }
 
       let effectiveAssigneeXID = user.xID;
@@ -121,7 +122,7 @@ module.exports = (deps) => {
         effectiveAssigneeUserId = targetUser._id;
       }
 
-      console.log('[USER_DEBUG]', req.user);
+      log.info('[USER_DEBUG]', req.user);
 
       const normalizedUserContext = {
         ...(typeof user?.toObject === 'function' ? user.toObject() : user),

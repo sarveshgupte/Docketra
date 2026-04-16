@@ -1,5 +1,6 @@
 const User = require('../models/User.model');
 const { requireFirmScopedQuery } = require('../utils/firmScope');
+const log = require('../utils/log');
 
 /**
  * ⚠️ SECURITY: User Repository - Firm-Scoped Data Access Layer ⚠️
@@ -163,7 +164,7 @@ const UserRepository = {
   findByEmailUnsafe(email) {
     const normalizedEmail = email?.trim().toLowerCase();
     if (typeof email === 'string' && email.length > 0 && !normalizedEmail) {
-      console.warn('[UserRepository] Ignoring empty normalized email in findByEmailUnsafe');
+      log.warn('[UserRepository] Ignoring empty normalized email in findByEmailUnsafe');
     }
     if (!normalizedEmail) {
       return null;

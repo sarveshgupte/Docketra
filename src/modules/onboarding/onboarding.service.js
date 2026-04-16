@@ -13,6 +13,7 @@ const { ensureTenantKey } = require('../../security/encryption.service');
 const { googleDriveService } = require('../../services/googleDrive.service');
 const { coercePrimaryAdminCreationFields } = require('../../utils/hierarchy.utils');
 const config = require('../../config/config');
+const log = require('../../utils/log');
 
 const RESERVED_SLUGS = [
   'superadmin',
@@ -85,7 +86,7 @@ const createStarterWorkspace = async (payload = {}) => {
     throw err;
   }
 
-  console.log('[ONBOARDING] createStarterWorkspace started', { email, companyName });
+  log.info('[ONBOARDING] createStarterWorkspace started', { email, companyName });
 
   const session = await mongoose.startSession();
   try {
@@ -173,12 +174,12 @@ const createStarterWorkspace = async (payload = {}) => {
     });
 
     if (connectGoogleDrive) {
-      console.info('[ONBOARDING] awaiting_user_storage_connection', {
+      log.info('[ONBOARDING] awaiting_user_storage_connection', {
         firmId: result.defaultClient._id.toString(),
       });
     }
 
-    console.log('[ONBOARDING] createStarterWorkspace completed', {
+    log.info('[ONBOARDING] createStarterWorkspace completed', {
       clientId: result.defaultClient._id.toString(),
       adminId: result.admin._id.toString(),
     });

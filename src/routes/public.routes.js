@@ -1,6 +1,7 @@
 const express = require('express');
 const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
 const routeSchemas = require('../schemas/public.routes.schema.js');
+const log = require('../utils/log');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { signupLimiter, publicUploadLimiter, formSubmitLimiter } = require('../middleware/rateLimiters');
 const { getFirmBySlug } = require('../controllers/superadmin.controller');
@@ -9,7 +10,6 @@ const { submitForm } = require('../controllers/form.controller');
 const { getPublicLandingPage } = require('../controllers/landingPage.controller');
 const EarlyAccessRequest = require('../models/EarlyAccessRequest.model');
 const { executeWrite } = require('../utils/executeWrite');
-const log = require('../utils/log');
 const { createSecureUpload, enforceUploadSecurity } = require('../middleware/uploadProtection.middleware');
 const { uploadDocument, getUploadMeta, requestUploadPin } = require('../controllers/uploadSession.controller');
 

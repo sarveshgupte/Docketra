@@ -12,6 +12,7 @@ const { StorageValidationError } = require('../services/storage/errors/StorageEr
 const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
 const { S3Adapter } = require('../services/storageAdapter.service');
 const { writeSettingsAudit } = require('../services/productAudit.service');
+const log = require('../utils/log');
 
 const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/drive.file',
@@ -28,7 +29,7 @@ function decodeFirmStorageConfig(firm, firmId) {
   try {
     return JSON.parse(decrypt(encrypted));
   } catch (error) {
-    console.error('[STORAGE]', {
+    log.error('[STORAGE]', {
       event: 'storage_credentials_decrypt_failed',
       firmId,
       message: error.message,
@@ -446,7 +447,7 @@ const changeFirmStorage = async (req, res) => {
 
     return res.json({ success: true, data: { provider, isActive: true, tested: Boolean(adapter) } });
   } catch (error) {
-    console.error('[STORAGE]', {
+    log.error('[STORAGE]', {
       event: 'change_provider_failed',
       firmId,
       provider,
@@ -470,10 +471,10 @@ const exportFirmStorage = async (req, res) => {
     try {
       await storageBackupService.emailBackupLinkToPrimaryAdmin(req.firmId, downloadUrl);
     } catch (emailError) {
-      console.error('[STORAGE]', { event: 'backup_email_failed', firmId: req.firmId, message: emailError.message });
+      log.error('[STORAGE]', { event: 'backup_email_failed', firmId: req.firmId, message: emailError.message });
     }
 
-    console.info('[STORAGE]', { event: 'backup_generated', firmId: req.firmId, exportId: backup.exportId });
+    log.info('[STORAGE]', { event: 'backup_generated', firmId: req.firmId, exportId: backup.exportId });
     return res.json({
       success: true,
       exportId: backup.exportId,

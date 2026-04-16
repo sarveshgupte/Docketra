@@ -4,10 +4,10 @@
  */
 
 const { randomUUID } = require('crypto');
-const log = require('../utils/log');
 const { recordRequest } = require('../utils/operationalMetrics');
 const metricsService = require('../services/metrics.service');
 const { enqueueAfterCommit } = require('../services/sideEffectQueue.service');
+const log = require('../utils/log');
 
 const requestLogger = (req, res, next) => {
   if (!req.requestId) {

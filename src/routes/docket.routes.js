@@ -21,6 +21,7 @@ const {
   unpendCase,
   updateCaseStatus,
   getCaseByCaseId,
+  getDocketAudit,
   getCaseComments,
   getCases,
   searchCases,
@@ -36,7 +37,6 @@ const {
   listClientCFSFilesForCase,
   downloadClientCFSFileForCase,
   getDocketSummaryPdf,
-  getDocketAudit,
 } = require('../controllers/case.controller');
 const {
   generateUploadLink,

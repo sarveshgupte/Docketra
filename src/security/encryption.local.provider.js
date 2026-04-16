@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const EncryptionProvider = require('./encryption.interface');
 const TenantKey = require('./tenantKey.model');
+const log = require('../utils/log');
 
 /**
  * LocalEncryptionProvider — AES-256-GCM envelope encryption using a local KEK.

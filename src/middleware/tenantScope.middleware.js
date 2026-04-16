@@ -1,3 +1,4 @@
+const log = require('../utils/log');
 /**
  * Tenant Scoping Middleware for Docketra Case Management System
  * 
@@ -32,7 +33,7 @@ const addTenantContext = (req, res, next) => {
   
   // Log tenant context for audit (in development)
   if (process.env.NODE_ENV === 'development') {
-    console.log(`[TENANT] Request scoped to firm: ${req.firmId} by user: ${req.user.xID}`);
+    log.info(`[TENANT] Request scoped to firm: ${req.firmId} by user: ${req.user.xID}`);
   }
   
   next();
@@ -71,7 +72,7 @@ const validateFirmAccess = (document, userFirmId) => {
   }
   
   if (!document.firmId) {
-    console.warn('[TENANT] Document missing firmId field - possible data integrity issue');
+    log.warn('[TENANT] Document missing firmId field - possible data integrity issue');
     return false;
   }
   

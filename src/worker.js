@@ -1,7 +1,7 @@
+const log = require('./utils/log');
 require('dotenv').config();
 
 const connectDB = require('./config/database');
-const log = require('./utils/log');
 const { validateEnv } = require('./config/validateEnv');
 const { logBuildMetadata } = require('./services/buildInfo.service');
 const { startBackgroundWorkers, startBackgroundSchedules } = require('./services/workerBootstrap.service');
@@ -16,6 +16,6 @@ const bootstrapWorker = async () => {
 };
 
 bootstrapWorker().catch((error) => {
-  console.error('Failed to start worker runtime:', error);
+  log.error('Failed to start worker runtime:', error);
   process.exit(1);
 });

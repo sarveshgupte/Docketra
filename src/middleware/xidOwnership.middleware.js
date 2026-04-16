@@ -14,6 +14,7 @@
  */
 
 const { isProduction } = require('../config/config');
+const log = require('../utils/log');
 
 /**
  * Reject payloads containing deprecated email-based ownership fields
@@ -36,9 +37,9 @@ const rejectEmailOwnershipFields = (req, res, next) => {
   if (foundForbidden.length > 0) {
     // Log warning in non-production environments
     if (!isProduction()) {
-      console.warn(`[xID Guardrail] Attempt to use deprecated email-based ownership fields: ${foundForbidden.join(', ')}`);
-      console.warn(`[xID Guardrail] Request path: ${req.method} ${req.path}`);
-      console.warn(`[xID Guardrail] User: ${req.user?.xID || 'Unknown'}`);
+      log.warn(`[xID Guardrail] Attempt to use deprecated email-based ownership fields: ${foundForbidden.join(', ')}`);
+      log.warn(`[xID Guardrail] Request path: ${req.method} ${req.path}`);
+      log.warn(`[xID Guardrail] User: ${req.user?.xID || 'Unknown'}`);
     }
     
     return res.status(400).json({
@@ -66,8 +67,8 @@ const validateCreatorXid = (req, res, next) => {
   if (!req.user || !req.user.xID) {
     // Log warning in non-production environments
     if (!isProduction()) {
-      console.warn(`[xID Guardrail] Case creation attempted without authenticated xID context`);
-      console.warn(`[xID Guardrail] Request path: ${req.method} ${req.path}`);
+      log.warn(`[xID Guardrail] Case creation attempted without authenticated xID context`);
+      log.warn(`[xID Guardrail] Request path: ${req.method} ${req.path}`);
     }
     
     return res.status(401).json({
@@ -80,8 +81,8 @@ const validateCreatorXid = (req, res, next) => {
   // Block if payload attempts to specify createdByXID (should always be from auth context)
   if (req.body.createdByXID || req.body.createdByXid) {
     if (!isProduction()) {
-      console.warn(`[xID Guardrail] Attempt to override createdByXID in payload`);
-      console.warn(`[xID Guardrail] User: ${req.user.xID}`);
+      log.warn(`[xID Guardrail] Attempt to override createdByXID in payload`);
+      log.warn(`[xID Guardrail] User: ${req.user.xID}`);
     }
     
     return res.status(400).json({
@@ -117,9 +118,9 @@ const validateAssignmentXid = (req, res, next) => {
   // Check if it looks like an email (contains @)
   if (trimmedValue.includes('@')) {
     if (!isProduction()) {
-      console.warn(`[xID Guardrail] Attempt to assign case using email address: ${trimmedValue}`);
-      console.warn(`[xID Guardrail] Request path: ${req.method} ${req.path}`);
-      console.warn(`[xID Guardrail] User: ${req.user?.xID || 'Unknown'}`);
+      log.warn(`[xID Guardrail] Attempt to assign case using email address: ${trimmedValue}`);
+      log.warn(`[xID Guardrail] Request path: ${req.method} ${req.path}`);
+      log.warn(`[xID Guardrail] User: ${req.user?.xID || 'Unknown'}`);
     }
     
     return res.status(400).json({
@@ -134,8 +135,8 @@ const validateAssignmentXid = (req, res, next) => {
   const xidPattern = /^X\d{6}$/i;
   if (!xidPattern.test(trimmedValue)) {
     if (!isProduction()) {
-      console.warn(`[xID Guardrail] Invalid xID format for assignment: ${trimmedValue}`);
-      console.warn(`[xID Guardrail] Request path: ${req.method} ${req.path}`);
+      log.warn(`[xID Guardrail] Invalid xID format for assignment: ${trimmedValue}`);
+      log.warn(`[xID Guardrail] Request path: ${req.method} ${req.path}`);
     }
     
     return res.status(400).json({

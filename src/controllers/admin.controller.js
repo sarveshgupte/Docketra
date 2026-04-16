@@ -21,6 +21,7 @@ const { isExternalStorageEnabled } = require('../services/featureFlags.service')
 const { assertPrimaryAdmin, getTagValidationError, normalizeId } = require('../utils/hierarchy.utils');
 const { logAuditEvent, getAuditLogs } = require('../services/adminActionAudit.service');
 const { writeSettingsAudit, listSettingsAudit } = require('../services/productAudit.service');
+const settingsAuditService = require('../services/settingsAudit.service');
 const log = require('../utils/log');
 
 /**
@@ -70,7 +71,7 @@ const safeAuditLog = async (auditData) => {
       timestamp: auditData.timestamp,
     });
   } catch (auditError) {
-    console.error('[ADMIN] Failed to log audit event:', auditError.message);
+    log.error('[ADMIN] Failed to log audit event:', auditError.message);
   }
 };
 
@@ -355,7 +356,7 @@ const resendInviteEmail = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('[ADMIN] Error resending invite email:', error);
+    log.error('[ADMIN] Error resending invite email:', error);
     res.status(500).json({
       success: false,
       message: 'Error resending invite email',
@@ -686,7 +687,7 @@ const updateRestrictedClients = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('[ADMIN] Error updating restricted clients:', error);
+    log.error('[ADMIN] Error updating restricted clients:', error);
     res.status(500).json({
       success: false,
       message: 'Error updating client access restrictions',
@@ -719,7 +720,7 @@ const getFirmSettings = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('[ADMIN] Error fetching firm settings:', error);
+    log.error('[ADMIN] Error fetching firm settings:', error);
     return res.status(500).json({
       success: false,
       message: 'Error fetching firm settings',
@@ -783,13 +784,38 @@ const updateFirmSettings = async (req, res) => {
       req,
     });
 
+    await Promise.all([
+      settingsAuditService.logConfigChange({
+        firmId: req.user?.firmId,
+        action: 'FIRM_CONFIG_UPDATED',
+        entityType: 'firm.settings.firm',
+        entityId: firm.firmId,
+        performedBy: req.user?.xID,
+        performedByRole: req.user?.role,
+        before: previousSettings.firm,
+        after: nextSettings.firm,
+        metadata: { source: 'admin.controller.updateFirmSettings' },
+      }),
+      settingsAuditService.logWorkflowChange({
+        firmId: req.user?.firmId,
+        action: 'WORKFLOW_SETTINGS_UPDATED',
+        entityType: 'firm.settings.work',
+        entityId: firm.firmId,
+        performedBy: req.user?.xID,
+        performedByRole: req.user?.role,
+        before: previousSettings.work,
+        after: nextSettings.work,
+        metadata: { source: 'admin.controller.updateFirmSettings' },
+      }),
+    ]);
+
     return res.json({
       success: true,
       message: 'Firm settings updated successfully',
       data: nextSettings,
     });
   } catch (error) {
-    console.error('[ADMIN] Error updating firm settings:', error);
+    log.error('[ADMIN] Error updating firm settings:', error);
     return res.status(500).json({
       success: false,
       message: 'Error updating firm settings',
@@ -887,7 +913,7 @@ const getFirmSettingsActivity = async (req, res) => {
       data,
     });
   } catch (error) {
-    console.error('[ADMIN] Error fetching firm settings activity:', error);
+    log.error('[ADMIN] Error fetching firm settings activity:', error);
     return res.status(500).json({
       success: false,
       message: 'Error fetching firm settings activity',
@@ -964,7 +990,7 @@ const getStorageConfig = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('[ADMIN] Error fetching storage config:', error);
+    log.error('[ADMIN] Error fetching storage config:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching storage configuration',
@@ -1065,13 +1091,30 @@ const updateStorageConfig = async (req, res) => {
       dedupeKey: 'storage-config-update',
     });
 
+    await settingsAuditService.logIntegrationChange({
+      firmId: req.user?.firmId,
+      action: 'INTEGRATION_SETTINGS_UPDATED',
+      entityType: 'firm.storage',
+      entityId: firm.firmId,
+      performedBy: req.user?.xID,
+      performedByRole: req.user?.role,
+      before: previousStorage,
+      after: {
+        mode: firm.storage.mode,
+        provider: firm.storage.provider,
+      },
+      metadata: {
+        source: 'admin.controller.updateStorageConfig',
+      },
+    });
+
     res.json({
       success: true,
       message: 'Storage configuration updated',
       data: firm.storage,
     });
   } catch (error) {
-    console.error('[ADMIN] Error updating storage config:', error);
+    log.error('[ADMIN] Error updating storage config:', error);
     res.status(500).json({
       success: false,
       message: 'Error updating storage configuration',
@@ -1133,13 +1176,30 @@ const disconnectStorage = async (req, res) => {
       dedupeKey: 'storage-config-disconnect',
     });
 
+    await settingsAuditService.logIntegrationChange({
+      firmId: req.user?.firmId,
+      action: 'INTEGRATION_DISCONNECTED',
+      entityType: 'firm.storage',
+      entityId: firm.firmId,
+      performedBy: req.user?.xID,
+      performedByRole: req.user?.role,
+      before: previousStorage,
+      after: {
+        mode: firm.storage.mode,
+        provider: firm.storage.provider,
+      },
+      metadata: {
+        source: 'admin.controller.disconnectStorage',
+      },
+    });
+
     res.json({
       success: true,
       message: 'Storage disconnected. Docketra-managed storage is now active.',
       data: firm.storage,
     });
   } catch (error) {
-    console.error('[ADMIN] Error disconnecting storage:', error);
+    log.error('[ADMIN] Error disconnecting storage:', error);
     res.status(500).json({
       success: false,
       message: 'Error disconnecting storage',
@@ -1156,7 +1216,7 @@ const getSystemDiagnostics = async (req, res) => {
       data: diagnostics,
     });
   } catch (error) {
-    console.error('[ADMIN] Failed to load system diagnostics:', error);
+    log.error('[ADMIN] Failed to load system diagnostics:', error);
     return res.status(500).json({
       success: false,
       code: 'DIAGNOSTICS_FAILED',
@@ -1182,7 +1242,7 @@ const restoreUser = async (req, res) => {
     }
     return res.json({ success: true, data: restored, message: 'User restored' });
   } catch (error) {
-    console.error('[ADMIN] Failed to restore user', error);
+    log.error('[ADMIN] Failed to restore user', error);
     return res.status(error.statusCode || 500).json({
       success: false,
       message: error.message || 'Failed to restore user',
@@ -1207,7 +1267,7 @@ const restoreClient = async (req, res) => {
     }
     return res.json({ success: true, data: restored, message: 'Client restored' });
   } catch (error) {
-    console.error('[ADMIN] Failed to restore client', error);
+    log.error('[ADMIN] Failed to restore client', error);
     return res.status(error.statusCode || 500).json({
       success: false,
       message: error.message || 'Failed to restore client',
@@ -1232,7 +1292,7 @@ const restoreCase = async (req, res) => {
     }
     return res.json({ success: true, data: restored, message: 'Case restored' });
   } catch (error) {
-    console.error('[ADMIN] Failed to restore case', error);
+    log.error('[ADMIN] Failed to restore case', error);
     return res.status(error.statusCode || 500).json({
       success: false,
       message: error.message || 'Failed to restore case',
@@ -1255,7 +1315,7 @@ const restoreTask = async (req, res) => {
     }
     return res.json({ success: true, data: restored, message: 'Task restored' });
   } catch (error) {
-    console.error('[ADMIN] Failed to restore task', error);
+    log.error('[ADMIN] Failed to restore task', error);
     return res.status(error.statusCode || 500).json({
       success: false,
       message: error.message || 'Failed to restore task',
@@ -1487,7 +1547,7 @@ const getRetentionPreview = async (req, res) => {
     const data = await buildDiagnostics();
     return res.json({ success: true, data });
   } catch (error) {
-    console.error('[ADMIN] Failed to build retention preview', error);
+    log.error('[ADMIN] Failed to build retention preview', error);
     return res.status(500).json({
       success: false,
       message: 'Failed to build retention preview',

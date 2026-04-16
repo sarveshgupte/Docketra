@@ -3,6 +3,7 @@ const { Readable } = require('stream');
 const BaseStorageProvider = require('./BaseStorageProvider');
 const { encrypt, decrypt } = require('../../storage/services/TokenEncryption.service');
 const FirmStorageConfig = require('../../../models/FirmStorageConfig.model');
+const log = require('../../../utils/log');
 
 class GoogleDriveStorageProvider extends BaseStorageProvider {
   constructor(storageConfig) {
@@ -26,7 +27,7 @@ class GoogleDriveStorageProvider extends BaseStorageProvider {
 
     this.oauthClient.on('tokens', (tokens) => {
       this.persistTokenRefresh(tokens).catch((error) => {
-        console.error('[GoogleDriveStorageProvider] Failed to persist refreshed token metadata', {
+        log.error('[GoogleDriveStorageProvider] Failed to persist refreshed token metadata', {
           storageConfigId: storageConfig._id?.toString?.(),
           message: error.message,
         });

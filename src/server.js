@@ -1,3 +1,4 @@
+const log = require('./utils/log');
 // Load environment variables FIRST (before any other imports)
 require('dotenv').config();
 
@@ -7,7 +8,6 @@ const compression = require('compression');
 const helmet = require('helmet');
 const connectDB = require('./config/database');
 const config = require('./config/config');
-const log = require('./utils/log');
 const { runBootstrap } = require('./services/bootstrap.service');
 const { maskSensitiveObject, sanitizeErrorForLog } = require('./utils/pii');
 const { validateEnv } = require('./config/validateEnv');
@@ -224,7 +224,7 @@ log.info('CORS_ALLOWED_ORIGINS', { allowedOrigins });
 connectDB()
   .then(() => runBootstrap())
   .catch((error) => {
-    console.error('Failed to start server:', error);
+    log.error('Failed to start server:', error);
     process.exit(1);
   });
 
@@ -423,7 +423,6 @@ app.use('/api/work-types', ...tenantScopedApiAccess, writeGuardChain, workTypeRo
 
 // Admin routes (firm-scoped) - enforce auth + firm context + admin role boundary
 app.use('/api/admin', ...adminTenantScopedApiAccess, writeGuardChain, adminAuditTrail('admin'), adminRoutes);
-app.use('/api/settings', ...adminTenantScopedApiAccess, writeGuardChain, adminAuditTrail('admin'), settingsRoutes);
 app.use('/api/dashboard', ...tenantScopedApiAccess, writeGuardChain, dashboardRoutes);
 app.use('/api/sla', ...tenantScopedApiAccess, writeGuardChain, slaRoutes);
 
@@ -476,6 +475,7 @@ app.use('/api/notifications', ...tenantScopedApiAccess, writeGuardChain, notific
 app.use('/api/teams', ...tenantScopedApiAccess, writeGuardChain, teamRoutes);
 app.use('/api/bulk-upload', ...adminTenantScopedApiAccess, writeGuardChain, adminAuditTrail('admin'), bulkUploadRoutes);
 app.use('/api/product-updates', authenticate, writeGuardChain, productUpdateRoutes);
+app.use('/api/settings', ...tenantScopedApiAccess, writeGuardChain, settingsRoutes);
 
 // Legacy /f routes removed: tenant login is available only on /:firmSlug/login and /api/:firmSlug/login
 
@@ -496,10 +496,10 @@ const server = app.listen(PORT, () => {
   const { cleanupStaleTmpUploads } = require('./utils/cleanupTmpUploads');
   setInterval(() => {
     cleanupStaleTmpUploads().catch(err =>
-      console.error('[cleanupTmpUploads] failed', { message: err.message })
+      log.error('[cleanupTmpUploads] failed', { message: err.message })
     );
   }, 6 * 60 * 60 * 1000); // 6 hours
-  console.log(`
+  log.info(`
 ╔════════════════════════════════════════════╗
 ║         Docketra API Server                ║
 ║                                            ║
@@ -518,7 +518,7 @@ initNotificationSocket(server, { allowedOrigins });
 // Handle unhandled promise rejections (mask to prevent PII leakage in logs)
 process.on('unhandledRejection', (err) => {
   const sanitizedError = sanitizeErrorForLog(err);
-  console.error('Unhandled Promise Rejection:', sanitizedError);
+  log.error('Unhandled Promise Rejection:', sanitizedError);
   server.close(() => process.exit(1));
 });
 

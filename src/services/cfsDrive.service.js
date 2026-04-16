@@ -31,6 +31,7 @@ const CaseFile = require('../models/CaseFile.model');
 const Attachment = require('../models/Attachment.model');
 const { enqueueStorageJob, JOB_TYPES } = require('../queues/storage.queue');
 const { softDelete } = require('./softDelete.service');
+const log = require('../utils/log');
 
 class CFSDriveService {
   /**
@@ -105,7 +106,7 @@ class CFSDriveService {
     // Guard folder ID logging in production
     const isDevelopment = process.env.NODE_ENV !== 'production';
     if (isDevelopment) {
-      console.log(`[CFSDriveService] Creating CFS folder structure for firm=${firmId}, case=${caseId}`);
+      log.info(`[CFSDriveService] Creating CFS folder structure for firm=${firmId}, case=${caseId}`);
     }
 
     try {
@@ -135,12 +136,12 @@ class CFSDriveService {
       };
 
       if (isDevelopment) {
-        console.log(`[CFSDriveService] Successfully created CFS structure for case ${caseId}`);
+        log.info(`[CFSDriveService] Successfully created CFS structure for case ${caseId}`);
       }
 
       return folderIds;
     } catch (error) {
-      console.error(`[CFSDriveService] Error creating CFS structure:`, error.message);
+      log.error(`[CFSDriveService] Error creating CFS structure:`, error.message);
       throw new Error(`Failed to create CFS folder structure: ${error.message}`);
     }
   }
@@ -202,7 +203,7 @@ class CFSDriveService {
     // Check all required folder IDs are present
     for (const folderKey of requiredFolders) {
       if (!folderIds[folderKey]) {
-        console.error(`[CFSDriveService] Missing folder ID: ${folderKey}`);
+        log.error(`[CFSDriveService] Missing folder ID: ${folderKey}`);
         return false;
       }
     }
@@ -238,7 +239,7 @@ class CFSDriveService {
     // Guard folder ID logging in production
     const isDevelopment = process.env.NODE_ENV !== 'production';
     if (isDevelopment) {
-      console.log(`[CFSDriveService] Creating Client CFS folder structure for firm=${firmId}, client=${clientId}`);
+      log.info(`[CFSDriveService] Creating Client CFS folder structure for firm=${firmId}, client=${clientId}`);
     }
 
     try {
@@ -273,12 +274,12 @@ class CFSDriveService {
       };
 
       if (isDevelopment) {
-        console.log(`[CFSDriveService] Successfully created Client CFS structure for ${clientId}`);
+        log.info(`[CFSDriveService] Successfully created Client CFS structure for ${clientId}`);
       }
 
       return folderIds;
     } catch (error) {
-      console.error(`[CFSDriveService] Error creating Client CFS structure:`, error.message);
+      log.error(`[CFSDriveService] Error creating Client CFS structure:`, error.message);
       throw new Error(`Failed to create Client CFS folder structure: ${error.message}`);
     }
   }
@@ -349,7 +350,7 @@ class CFSDriveService {
     // Check all required folder IDs are present
     for (const folderKey of requiredFolders) {
       if (!folderIds[folderKey]) {
-        console.error(`[CFSDriveService] Missing client folder ID: ${folderKey}`);
+        log.error(`[CFSDriveService] Missing client folder ID: ${folderKey}`);
         return false;
       }
     }
@@ -463,10 +464,10 @@ class CFSDriveService {
         try {
           await provider.deleteFile(attachment.driveFileId);
         } catch (error) {
-          console.error('[CFSDriveService] Error deleting Drive file:', error.message);
+          log.error('[CFSDriveService] Error deleting Drive file:', error.message);
         }
       } else {
-        console.info('[CFSDriveService] Skipping Drive file deletion due to reference counting', {
+        log.info('[CFSDriveService] Skipping Drive file deletion due to reference counting', {
           driveFileId: attachment.driveFileId,
           duplicateCount,
           caseFileCount,

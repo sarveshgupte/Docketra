@@ -6,6 +6,7 @@
 const mongoose = require('mongoose');
 const { runWithSession, runWithoutTransaction } = require('./transactionContext');
 const { setSession } = require('./getSession');
+const log = require('../utils/log');
 
 class TransactionRollback extends Error {
   constructor(result) {
@@ -44,7 +45,7 @@ const executeWrite = async (req, handler) => {
   try {
     session = await mongoose.startSession();
   } catch (error) {
-    console.warn(`[TXN] optional transaction unavailable for ${routeLabel}: ${error.message}`);
+    log.warn(`[TXN] optional transaction unavailable for ${routeLabel}: ${error.message}`);
     req.transactionStartFailed = true;
     req.transactionState = 'start_failed';
   }
@@ -69,7 +70,7 @@ const executeWrite = async (req, handler) => {
     req.transactionSkipped = false;
     req.transactionCommitted = false;
     req.transactionState = 'started';
-    console.info(`[TXN] start ${routeLabel}`);
+    log.info(`[TXN] start ${routeLabel}`);
     await session.withTransaction(async () => {
       result = await runWithSession(session, async () => {
         const handlerResult = await handler(session);
@@ -83,7 +84,7 @@ const executeWrite = async (req, handler) => {
 
     req.transactionCommitted = true;
     req.transactionState = 'committed';
-    console.info(`[TXN] commit ${routeLabel}`);
+    log.info(`[TXN] commit ${routeLabel}`);
   } catch (error) {
     req.transactionState = 'rolled_back';
     if (error instanceof TransactionRollback) {

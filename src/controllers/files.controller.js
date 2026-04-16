@@ -4,6 +4,7 @@ const File = require('../models/File.model');
 const TenantStorageConfig = require('../models/TenantStorageConfig.model');
 const { getProviderForTenant } = require('../services/storage/StorageProviderFactory');
 const { mapProviderErrorToStatus } = require('./storage.controller');
+const log = require('../utils/log');
 const {
   StorageConfigMissingError,
   StorageAccessError,
@@ -21,7 +22,7 @@ function normalizePrefix(prefix = '') {
 }
 
 function logFileAction({ tenantId, userId, caseId, objectKey, action }) {
-  console.info('[FileAudit]', {
+  log.info('[FileAudit]', {
     tenantId,
     userId,
     caseId,
@@ -36,7 +37,7 @@ function handleStorageError(error, tenantId, res) {
     error instanceof UnsupportedProviderError ||
     error instanceof StorageAccessError
   ) {
-    console.error('[StorageError]', {
+    log.error('[StorageError]', {
       tenantId,
       code: error.code,
       message: error.message,
@@ -129,7 +130,7 @@ async function requestUpload(req, res) {
       ]);
     } catch (queueError) {
       queueWarning = 'Background processing delayed';
-      console.error('[STORAGE]', {
+      log.error('[STORAGE]', {
         event: 'upload_queue_failed',
         tenantId,
         fileId: file._id.toString(),
@@ -142,7 +143,7 @@ async function requestUpload(req, res) {
           enqueueStorageJob(JOB_TYPES.FILE_METADATA, storagePayload),
         ]);
       } catch (retryError) {
-        console.error('[STORAGE]', {
+        log.error('[STORAGE]', {
           event: 'upload_queue_retry_failed',
           tenantId,
           fileId: file._id.toString(),
@@ -184,7 +185,7 @@ async function requestUpload(req, res) {
     const handled = handleStorageError(error, tenantId, res);
     if (handled) return handled;
 
-    console.error('[requestUpload] Error', { tenantId, message: error.message });
+    log.error('[requestUpload] Error', { tenantId, message: error.message });
     return res.status(500).json({
       success: false,
       message: 'Failed to request upload URL',
@@ -223,7 +224,7 @@ async function downloadFile(req, res) {
     } catch (metadataError) {
       if (metadataError?.status === 404) {
         await File.updateOne({ _id: file._id }, { status: 'MISSING' });
-        console.warn('[FileAudit]', { tenantId, fileId, action: 'FILE_DRIFT_MISSING' });
+        log.warn('[FileAudit]', { tenantId, fileId, action: 'FILE_DRIFT_MISSING' });
         return res.status(410).json({
           success: false,
           message: 'File is missing from configured storage provider',
@@ -287,7 +288,7 @@ async function downloadFile(req, res) {
         { tenantId, isActive: true },
         { status: mapProviderErrorToStatus(error) }
       ).catch((statusUpdateError) => {
-        console.error('[downloadFile] Failed to update storage status', {
+        log.error('[downloadFile] Failed to update storage status', {
           tenantId,
           message: statusUpdateError.message,
         });
@@ -296,7 +297,7 @@ async function downloadFile(req, res) {
     const handled = handleStorageError(error, tenantId, res);
     if (handled) return handled;
 
-    console.error('[downloadFile] Error', { tenantId, message: error.message });
+    log.error('[downloadFile] Error', { tenantId, message: error.message });
     return res.status(500).json({
       success: false,
       message: 'Failed to generate download URL',
