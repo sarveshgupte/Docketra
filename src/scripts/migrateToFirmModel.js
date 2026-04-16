@@ -10,6 +10,7 @@
  */
 
 const mongoose = require('mongoose');
+const log = require('../utils/log');
 require('dotenv').config();
 
 // Import models
@@ -18,7 +19,6 @@ const User = require('../models/User.model');
 const Client = require('../models/Client.model');
 const Case = require('../models/Case.model');
 const { ensureDefaultClientForFirm } = require('../services/defaultClient.service');
-const log = require('../utils/log');
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/docketra';
 const DEFAULT_FIRM_ID = 'FIRM001';

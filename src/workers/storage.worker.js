@@ -25,6 +25,7 @@ const { decrypt } = require('../services/storage/services/TokenEncryption.servic
 const { getStorageProvider } = require('../services/storage/StorageFactory');
 const { google } = require('googleapis');
 const { allow, recordFailure: circuitFailure, recordSuccess: circuitSuccess } = require('../services/circuitBreaker.service');
+const log = require('../utils/log');
 const {
   recordStorageJobStarted,
   recordStorageJobSuccess,
@@ -38,7 +39,6 @@ const { getQueueDepth } = require('../queues/storage.queue');
 const { updateTenantStorageUsage } = require('../utils/updateTenantStorageUsage');
 const { setWorkerStatus } = require('../services/workerRegistry.service');
 const { analyzeDocument } = require('../queues/documentAnalysis.queue');
-const log = require('../utils/log');
 
 // Wire up dynamic metric providers so getSnapshot() reflects live queue state
 setDLQSizeProvider(getDLQSize);

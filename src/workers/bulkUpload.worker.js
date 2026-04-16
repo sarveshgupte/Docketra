@@ -1,3 +1,4 @@
+const log = require('../utils/log');
 'use strict';
 
 require('dotenv').config();
@@ -8,7 +9,6 @@ const BulkUploadJob = require('../models/BulkUploadJob.model');
 const { processBulkUploadJob } = require('../jobs/bulkUpload.job');
 const { BULK_UPLOAD_QUEUE_NAME, BULK_UPLOAD_JOB_NAME } = require('../queues/bulkUpload.queue');
 const { setWorkerStatus } = require('../services/workerRegistry.service');
-const log = require('../utils/log');
 
 const redisUrl = process.env.REDIS_URL;
 let bulkUploadWorker = null;

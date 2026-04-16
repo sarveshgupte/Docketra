@@ -13,6 +13,7 @@
 const express = require('express');
 const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
 const routeSchemas = require('../schemas/firm.routes.schema');
+const log = require('../utils/log');
 const router = applyRouteValidation(express.Router({ mergeParams: true }), routeSchemas);
 
 const tenantResolver = require('../middleware/tenantResolver');
@@ -21,7 +22,6 @@ const { login, verifyLoginOtp, resendLoginOtp } = require('../controllers/auth.c
 const { getFirmSetupStatus } = require('../controllers/firm.controller');
 const { noFirmNoTransaction } = require('../middleware/noFirmNoTransaction.middleware');
 const { isActiveStatus } = require('../utils/status.utils');
-const log = require('../utils/log');
 const setTenantLoginScope = (req, _res, next) => {
   req.loginScope = 'tenant';
   next();

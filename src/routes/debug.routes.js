@@ -1,11 +1,11 @@
 const express = require('express');
 const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
 const routeSchemas = require('../schemas/debug.routes.schema.js');
+const log = require('../utils/log');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { requireAdmin } = require('../middleware/permission.middleware');
 const { debugLimiter } = require('../middleware/rateLimiters');
 const { sendTestEmail } = require('../services/email.service');
-const log = require('../utils/log');
 
 /**
  * Debug Routes

@@ -1,3 +1,4 @@
+const log = require('../utils/log');
 /**
  * Data Migration Script: Convert assignedTo from email to xID
  * PR #42: Standardize case assignment to use xID
@@ -19,7 +20,6 @@ const mongoose = require('mongoose');
 const Case = require('../models/Case.model');
 const User = require('../models/User.model');
 const CaseHistory = require('../models/CaseHistory.model');
-const log = require('../utils/log');
 
 async function migrateAssignedToXID() {
   try {

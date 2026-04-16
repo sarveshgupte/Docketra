@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const log = require('../utils/log');
 /**
  * Migration: Normalize firmSlug to lowercase for all Firm documents
  *
@@ -16,7 +17,6 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const Firm = require('../models/Firm.model');
-const log = require('../utils/log');
 
 async function run() {
   const uri = process.env.MONGODB_URI;

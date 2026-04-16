@@ -3,6 +3,7 @@ const ClientRepository = require('../repositories/ClientRepository');
 const AttachmentRepository = require('../repositories/AttachmentRepository');
 const { mapClientResponse } = require('../mappers/client.mapper');
 const { generateNextClientId } = require('../services/clientIdGenerator');
+const log = require('../utils/log');
 const { 
   logFactSheetCreated, 
   logFactSheetUpdated, 
@@ -21,7 +22,6 @@ const { ensureDefaultClientForFirm } = require('../services/defaultClient.servic
 const { parseBooleanQuery } = require('../utils/query.utils');
 const { sanitizePayload, enforceAllowedFields, PayloadValidationError } = require('../utils/payloadValidation');
 const cfsDriveService = require('../services/cfsDrive.service');
-const log = require('../utils/log');
 
 const getClientAccessContext = (req, res, message) => {
   const firmId = req.user?.firmId;

@@ -12,9 +12,9 @@ const jwtService = require('../services/jwt.service');
 const { generateFirmSlug } = require('../utils/firmSlug');
 const { sendWelcomeEmail } = require('../services/email/sendWelcomeEmail');
 const { normalizeRole } = require('../utils/role.utils');
-const log = require('../utils/log');
 const { assertPrimaryAdmin, getTagValidationError, normalizeId } = require('../utils/hierarchy.utils');
 const { logAuditEvent } = require('../services/adminActionAudit.service');
+const log = require('../utils/log');
 
 const resolveUserFirmScope = (req, res) => {
   if (normalizeRole(req.user?.role) === 'SUPER_ADMIN') return {};

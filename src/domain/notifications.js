@@ -1,9 +1,9 @@
+const log = require('../utils/log');
 const {
   NotificationTypes: ServiceNotificationTypes,
   createNotification: createNotificationEntry,
 } = require('../services/notification.service');
 const { enqueueNotificationJob } = require('../queues/notification.queue');
-const log = require('../utils/log');
 
 const NotificationTypes = Object.freeze({
   ASSIGNED: ServiceNotificationTypes.DOCKET_ASSIGNED,

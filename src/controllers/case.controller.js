@@ -51,6 +51,7 @@ const buildCaseUpdateService = require('../services/caseUpdate.service');
 const buildCaseQueryService = require('../services/caseQuery.service');
 const buildCaseActivityService = require('../services/caseActivity.service');
 const buildCaseBulkService = require('../services/caseBulk.service');
+const log = require('../utils/log');
 
 const inFlightCaseRecordLoads = new Map();
 
@@ -83,7 +84,6 @@ const loadCaseRecordCoalesced = async ({ firmId, caseId, role }) => {
 };
 const path = require('path');
 const PDFDocument = require('pdfkit');
-const log = require('../utils/log');
 
 /**
  * Case Controller for Core Case APIs

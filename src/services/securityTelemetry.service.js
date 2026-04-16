@@ -1,9 +1,9 @@
 'use strict';
 
-const log = require('../utils/log');
 const { getIpRange } = require('../utils/ipRange');
 const { logSecurityAuditEvent, SECURITY_AUDIT_ACTIONS } = require('./securityAudit.service');
 const { getRequestIp } = require('./forensicAudit.service');
+const log = require('../utils/log');
 
 const counters = new Map();
 const eventWindows = new Map();

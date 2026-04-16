@@ -138,6 +138,9 @@ const toMetaObject = (value) => {
   if (value instanceof Error) {
     return { error: value, message: value.message };
   }
+  if (value && typeof value === 'object' && (value.method || value.originalUrl || value.url) && !value.req) {
+    return { req: value };
+  }
   if (value && typeof value === 'object' && !Array.isArray(value)) {
     return value;
   }

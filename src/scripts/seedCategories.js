@@ -1,3 +1,4 @@
+const log = require('../utils/log');
 /**
  * Seed Categories Script for Docketra
  * 
@@ -20,7 +21,6 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const Category = require('../models/Category.model');
-const log = require('../utils/log');
 
 // Default system categories
 const defaultCategories = [

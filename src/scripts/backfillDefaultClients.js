@@ -10,13 +10,13 @@
  */
 
 const mongoose = require('mongoose');
+const log = require('../utils/log');
 require('dotenv').config();
 
 const Firm = require('../models/Firm.model');
 const Client = require('../models/Client.model');
 const User = require('../models/User.model');
 const { generateNextClientId } = require('../services/clientIdGenerator');
-const log = require('../utils/log');
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/docketra';
 

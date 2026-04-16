@@ -2,6 +2,7 @@ const { randomUUID } = require('crypto');
 const mongoose = require('mongoose');
 const { isSuperAdminRole } = require('../utils/role.utils');
 const { isActiveStatus } = require('../utils/status.utils');
+const log = require('../utils/log');
 
 /**
  * Resolve the tenant context from the request.
@@ -62,7 +63,6 @@ const firmContext = async (req, res, next) => {
 
     // ── Client-first lookup (new architecture) ──────────────────────────────
     const Client = require('../models/Client.model');
-const log = require('../utils/log');
     let tenantId = null;
     let tenantStatus = 'active';
     let tenantSlug = null;

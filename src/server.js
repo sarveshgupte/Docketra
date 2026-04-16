@@ -1,3 +1,4 @@
+const log = require('./utils/log');
 // Load environment variables FIRST (before any other imports)
 require('dotenv').config();
 
@@ -7,7 +8,6 @@ const compression = require('compression');
 const helmet = require('helmet');
 const connectDB = require('./config/database');
 const config = require('./config/config');
-const log = require('./utils/log');
 const { runBootstrap } = require('./services/bootstrap.service');
 const { maskSensitiveObject, sanitizeErrorForLog } = require('./utils/pii');
 const { validateEnv } = require('./config/validateEnv');
