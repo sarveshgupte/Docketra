@@ -696,7 +696,7 @@ module.exports = (deps) => {
           firmId: req.user.firmId,
           category: categoryDoc?.name || originalCase.category || '',
           subcategory: subcategoryDoc?.name || originalCase.subcategory || '',
-          workbasketId: existingCase.ownerTeamId || req.user.teamId || null,
+          workbasketId: originalCase.ownerTeamId || req.user.teamId || null,
           createdAt: now,
         });
 
@@ -717,7 +717,7 @@ module.exports = (deps) => {
           assignedTo: null,
           assignedToXID: null,
           queueType: 'GLOBAL',
-          ownerTeamId: existingCase.ownerTeamId || req.user.teamId || null,
+          ownerTeamId: originalCase.ownerTeamId || req.user.teamId || null,
           routedToTeamId: null,
           routedByUserId: null,
           routedAt: null,
