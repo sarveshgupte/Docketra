@@ -1,5 +1,4 @@
 const { createResponseCapture } = require('../utils/response.util');
-const { hasRequiredFields } = require('../utils/validation.util');
 
 const createAuthLoginService = (deps) => {
   const models = deps.models || {};
@@ -44,7 +43,7 @@ const createAuthLoginService = (deps) => {
 
       const normalizedXID = (xid || xID || XID)?.trim().toUpperCase();
 
-      if (!hasRequiredFields({ normalizedXID, password }, ['normalizedXID', 'password'])) {
+      if (!normalizedXID || !password) {
         console.warn('[AUTH] Missing credentials in login attempt', {
           hasXID: !!(xid || xID || XID),
           hasPassword: !!password,

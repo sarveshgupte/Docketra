@@ -150,8 +150,6 @@ const enforceDocketLifecycleDefault = (docket) => {
 };
 
 const buildAddCommentErrorResponse = (error, context = {}) => {
-  const validationDetails = getValidationDetails(error);
-
   console.error('[ADD_COMMENT_ERROR]', {
     error,
     message: error?.message,
@@ -163,7 +161,7 @@ const buildAddCommentErrorResponse = (error, context = {}) => {
     firmId: context.firmId,
     lockStatus: context.lockStatus,
     requestBody: context.requestBody,
-    validationDetails,
+    validationDetails: getValidationDetails(error),
   });
 
   return mapErrorToResult(error, {
@@ -188,12 +186,15 @@ const buildAddCommentErrorResponse = (error, context = {}) => {
       },
       {
         matches: (err) => err?.name === 'ValidationError',
-        result: (err) => buildErrorResult({
-          status: 400,
-          message: 'Comment validation failed',
-          details: validationDetails || err.message,
-          code: 'COMMENT_VALIDATION_ERROR',
-        }),
+        result: (err) => {
+          const validationDetails = getValidationDetails(err);
+          return buildErrorResult({
+            status: 400,
+            message: 'Comment validation failed',
+            details: validationDetails || err.message,
+            code: 'COMMENT_VALIDATION_ERROR',
+          });
+        },
       },
     ],
     fallback: (err) => buildErrorResult({
