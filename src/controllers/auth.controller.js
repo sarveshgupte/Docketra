@@ -3482,7 +3482,7 @@ const authPasswordDomainService = createAuthPasswordService({
   bcrypt,
 });
 
-const authOtpDomainService = authOtpService.createAuthOtpControllerService({
+const authOtpDomainService = authOtpService.createAuthOtpDomainService({
   getRequestFirmId,
   User,
   getTwoFactorSecret,
@@ -3492,7 +3492,7 @@ const authOtpDomainService = authOtpService.createAuthOtpControllerService({
   getFirmSlug,
   ensureCanonicalXid,
   jwtService,
-  generateAndStoreRefreshToken,
+  generateAndStoreRefreshToken: (params) => authSessionDomainService.generateAndStoreRefreshToken(params),
   handleSuccessfulLoginMonitoring,
   logAuthAudit,
   logSecurityAuditEvent,

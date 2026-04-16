@@ -16,7 +16,7 @@ const incrementAttempts = (currentAttempts = 0, maxAttempts = 5) => {
   };
 };
 
-const createAuthOtpControllerService = (deps) => {
+const createAuthOtpDomainService = (deps) => {
   const {
     getRequestFirmId,
     User,
@@ -83,7 +83,8 @@ const createAuthOtpControllerService = (deps) => {
         success: true,
         message: 'TOTP verified successfully',
       });
-    } catch (_error) {
+    } catch (error) {
+      console.error('[AUTH][verifyTotp] Error verifying TOTP', error);
       return res.status(500).json({
         success: false,
         message: 'Error verifying TOTP',
@@ -245,7 +246,8 @@ const createAuthOtpControllerService = (deps) => {
       }
 
       return res.json(response);
-    } catch (_error) {
+    } catch (error) {
+      console.error('[AUTH][completeMfaLogin] Error completing MFA login', error);
       return res.status(500).json({
         success: false,
         message: 'Error completing MFA login',
@@ -318,5 +320,6 @@ module.exports = {
   hashOtp,
   verifyOtp,
   incrementAttempts,
-  createAuthOtpControllerService,
+  createAuthOtpDomainService,
+  createAuthOtpControllerService: createAuthOtpDomainService,
 };

@@ -37,7 +37,8 @@ const createAuthSignupService = (deps) => {
         message: result.message,
         data: { email },
       });
-    } catch (_error) {
+    } catch (error) {
+      console.error('[AUTH][signupInit] Unable to start signup', error);
       return res.status(500).json({ success: false, message: 'Unable to start signup right now.' });
     }
   };
@@ -82,7 +83,8 @@ const createAuthSignupService = (deps) => {
           redirectPath: result.redirectPath,
         },
       });
-    } catch (_error) {
+    } catch (error) {
+      console.error('[AUTH][signupVerify] Unable to verify signup OTP', error);
       return res.status(500).json({ success: false, message: 'Unable to verify signup OTP right now.' });
     } finally {
       await session.endSession();
@@ -101,7 +103,8 @@ const createAuthSignupService = (deps) => {
         success: result.success,
         message: result.message,
       });
-    } catch (_error) {
+    } catch (error) {
+      console.error('[AUTH][signupResend] Unable to resend signup OTP', error);
       return res.status(500).json({ success: false, message: 'Unable to resend OTP right now.' });
     }
   };
