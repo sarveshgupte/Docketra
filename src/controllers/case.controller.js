@@ -46,7 +46,7 @@ const { createNotification, NotificationTypes } = require('../domain/notificatio
 const fs = require('fs').promises;
 const fsSync = require('fs');
 const { logActivitySafe } = require('../services/docketActivity.service');
-const { writeDocketAudit, getFieldChanges, listDocketAudit } = require('../services/productAudit.service');
+const { writeDocketAudit, listDocketAudit } = require('../services/productAudit.service');
 const buildCaseCreateService = require('../services/caseCreate.service');
 const buildCaseUpdateService = require('../services/caseUpdate.service');
 const buildCaseQueryService = require('../services/caseQuery.service');
@@ -339,7 +339,6 @@ const caseServiceDependencies = {
   findScopedCaseAttachment,
   checkCaseAccess,
   writeDocketAudit,
-  getFieldChanges,
 };
 
 const caseCreateService = buildCaseCreateService(caseServiceDependencies);

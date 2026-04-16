@@ -499,6 +499,7 @@ const disconnectStorage = async (req, res) => {
   try {
     const previous = await Firm.findById(req.firmId).select('storage').lean();
     await googleDriveService.markStorageDisconnected(req.firmId, 'Disconnected by primary admin');
+    const next = await Firm.findById(req.firmId).select('storage').lean();
     await writeSettingsAudit({
       req,
       tenantId: req.firmId,
@@ -509,8 +510,8 @@ const disconnectStorage = async (req, res) => {
         provider: previous?.storage?.provider || null,
       },
       newDoc: {
-        mode: 'firm_connected',
-        provider: 'google_drive',
+        mode: next?.storage?.mode || null,
+        provider: next?.storage?.provider || null,
       },
       metadata: { source: 'storage.disconnectStorage' },
       dedupeKey: 'storage-disconnect',

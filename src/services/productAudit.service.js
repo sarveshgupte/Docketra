@@ -47,6 +47,12 @@ const buildBasePayload = ({ req, tenantId, requestId, performedBy }) => ({
   performedBy: performedBy || resolveActor(req),
 });
 
+const normalizeAuditKey = (value) => {
+  const normalized = String(value || '').trim();
+  if (!normalized) return '';
+  return /^[A-Za-z0-9:_-]+$/.test(normalized) ? normalized : '';
+};
+
 const buildDedupeFilter = (baseFilter, dedupeKey) => (dedupeKey
   ? { ...baseFilter, dedupeKey }
   : baseFilter);
@@ -161,10 +167,15 @@ const writeSettingsAudit = async ({
 };
 
 const listDocketAudit = async ({ tenantId, docketId, page = 1, limit = 50 }) => {
+  const safeTenantId = normalizeAuditKey(tenantId);
+  const safeDocketId = normalizeAuditKey(docketId);
+  if (!safeTenantId || !safeDocketId) {
+    return { items: [], total: 0, page: 1, limit: 1 };
+  }
   const safeLimit = Math.max(1, Math.min(Number(limit) || 50, 100));
   const safePage = Math.max(1, Number(page) || 1);
   const skip = (safePage - 1) * safeLimit;
-  const query = { tenantId, docketId };
+  const query = { tenantId: safeTenantId, docketId: safeDocketId };
 
   const [items, total] = await Promise.all([
     DocketAuditLog.find(query).sort({ timestamp: -1 }).skip(skip).limit(safeLimit).lean(),
@@ -174,11 +185,16 @@ const listDocketAudit = async ({ tenantId, docketId, page = 1, limit = 50 }) => 
 };
 
 const listSettingsAudit = async ({ tenantId, settingsKey = null, page = 1, limit = 50 }) => {
+  const safeTenantId = normalizeAuditKey(tenantId);
+  if (!safeTenantId) {
+    return { items: [], total: 0, page: 1, limit: 1 };
+  }
   const safeLimit = Math.max(1, Math.min(Number(limit) || 50, 100));
   const safePage = Math.max(1, Number(page) || 1);
   const skip = (safePage - 1) * safeLimit;
-  const query = { tenantId };
-  if (settingsKey) query.settingsKey = settingsKey;
+  const query = { tenantId: safeTenantId };
+  const safeSettingsKey = normalizeAuditKey(settingsKey);
+  if (safeSettingsKey) query.settingsKey = safeSettingsKey;
 
   const [items, total] = await Promise.all([
     SettingsAuditLog.find(query).sort({ timestamp: -1 }).skip(skip).limit(safeLimit).lean(),
@@ -189,6 +205,7 @@ const listSettingsAudit = async ({ tenantId, settingsKey = null, page = 1, limit
 
 module.exports = {
   getFieldChanges,
+  normalizeRole,
   writeDocketAudit,
   writeSettingsAudit,
   listDocketAudit,

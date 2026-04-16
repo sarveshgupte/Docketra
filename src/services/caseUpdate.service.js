@@ -75,7 +75,6 @@ module.exports = (deps) => {
     findScopedCaseAttachment,
     checkCaseAccess,
     writeDocketAudit,
-    getFieldChanges,
   } = deps;
 
   const unpendCase = async (req, res) => {
@@ -228,11 +227,6 @@ module.exports = (deps) => {
       });
 
       caseData = await CaseRepository.findByInternalId(req.user.firmId, caseData.caseInternalId, req.user.role);
-      const statusChanges = getFieldChanges(
-        { status: previousStatus },
-        { status: caseData.status },
-      );
-
       await writeDocketAudit({
         req,
         docketId: caseData.caseId,
@@ -245,7 +239,7 @@ module.exports = (deps) => {
         },
         oldDoc: { status: previousStatus },
         newDoc: { status: caseData.status },
-        dedupeKey: `status:${caseData.caseId}:${previousStatus}:${caseData.status}:${statusChanges.length}`,
+        dedupeKey: `status:${caseData.caseId}:${previousStatus}:${caseData.status}`,
       });
 
       logActivitySafe({
