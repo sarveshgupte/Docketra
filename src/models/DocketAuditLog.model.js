@@ -20,6 +20,14 @@ const docketAuditLogSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
+  changes: {
+    type: [{
+      field: { type: String, required: true },
+      from: { type: mongoose.Schema.Types.Mixed, default: null },
+      to: { type: mongoose.Schema.Types.Mixed, default: null },
+    }],
+    default: [],
+  },
   performedBy: {
     type: String,
     required: true,
@@ -45,6 +53,11 @@ const docketAuditLogSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.Mixed,
     default: {},
   },
+  dedupeKey: {
+    type: String,
+    default: null,
+    index: true,
+  },
   firmId: {
     type: String,
     required: true,
@@ -56,5 +69,9 @@ const docketAuditLogSchema = new mongoose.Schema({
 });
 
 docketAuditLogSchema.index({ firmId: 1, docketId: 1, timestamp: -1 });
+docketAuditLogSchema.index(
+  { firmId: 1, docketId: 1, dedupeKey: 1 },
+  { unique: true, sparse: true }
+);
 
 module.exports = mongoose.models.DocketAuditLog || mongoose.model('DocketAuditLog', docketAuditLogSchema);
