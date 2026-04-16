@@ -30,6 +30,8 @@ const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { getMimeType, sanitizeFilename } = require('../utils/fileUtils');
 const { cleanupTempFile } = require('../utils/tempFile');
 const { resolveCaseIdentifier } = require('../utils/caseIdentifier');
+const { buildErrorResult, mapErrorToResult } = require('../utils/error.util');
+const { getValidationDetails } = require('../utils/validation.util');
 const { StorageProviderFactory } = require('../services/storage/StorageProviderFactory');
 const { areFileUploadsDisabled } = require('../services/featureFlags.service');
 const { enqueueStorageJob, JOB_TYPES } = require('../queues/storage.queue');
@@ -148,12 +150,6 @@ const enforceDocketLifecycleDefault = (docket) => {
 };
 
 const buildAddCommentErrorResponse = (error, context = {}) => {
-  const validationDetails = error?.errors
-    ? Object.values(error.errors)
-      .map((validationError) => validationError.message)
-      .join('; ')
-    : undefined;
-
   console.error('[ADD_COMMENT_ERROR]', {
     error,
     message: error?.message,
@@ -165,54 +161,49 @@ const buildAddCommentErrorResponse = (error, context = {}) => {
     firmId: context.firmId,
     lockStatus: context.lockStatus,
     requestBody: context.requestBody,
-    validationDetails,
+    validationDetails: getValidationDetails(error),
   });
 
-  if (error?.message?.includes('Case is locked')) {
-    return {
-      status: 423,
-      body: {
-        success: false,
-        message: 'Case is locked',
-        details: error.message,
-        code: 'CASE_LOCKED',
+  return mapErrorToResult(error, {
+    mappings: [
+      {
+        matches: (err) => err?.message?.includes('Case is locked'),
+        result: (err) => buildErrorResult({
+          status: 423,
+          message: 'Case is locked',
+          details: err.message,
+          code: 'CASE_LOCKED',
+        }),
       },
-    };
-  }
-
-  if (error?.message?.includes('Case not found')) {
-    return {
-      status: 404,
-      body: {
-        success: false,
-        message: 'Case not found',
-        details: error.message,
-        code: 'CASE_NOT_FOUND',
+      {
+        matches: (err) => err?.message?.includes('Case not found'),
+        result: (err) => buildErrorResult({
+          status: 404,
+          message: 'Case not found',
+          details: err.message,
+          code: 'CASE_NOT_FOUND',
+        }),
       },
-    };
-  }
-
-  if (error?.name === 'ValidationError') {
-    return {
-      status: 400,
-      body: {
-        success: false,
-        message: 'Comment validation failed',
-        details: validationDetails || error.message,
-        code: 'COMMENT_VALIDATION_ERROR',
+      {
+        matches: (err) => err?.name === 'ValidationError',
+        result: (err) => {
+          const validationDetails = getValidationDetails(err);
+          return buildErrorResult({
+            status: 400,
+            message: 'Comment validation failed',
+            details: validationDetails || err.message,
+            code: 'COMMENT_VALIDATION_ERROR',
+          });
+        },
       },
-    };
-  }
-
-  return {
-    status: 500,
-    body: {
-      success: false,
+    ],
+    fallback: (err) => buildErrorResult({
+      status: 500,
       message: 'Unexpected error while adding comment',
-      details: error?.message || 'Unknown server error',
+      details: err?.message || 'Unknown server error',
       code: 'ADD_COMMENT_ERROR',
-    },
-  };
+    }),
+  });
 };
 
 const computeDeadlineFromTatDays = (tatDays) => {
