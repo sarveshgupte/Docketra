@@ -173,7 +173,7 @@ async function testDebugRoutesDisabledInProduction() {
   const debugRoutes = require('../src/routes/debug.routes');
   const originalNodeEnv = process.env.NODE_ENV;
 
-  assert.ok(serverSource.includes("if (process.env.NODE_ENV !== 'production')"), 'Debug routes must be conditionally mounted outside production');
+  assert.ok(/if\s*\(\s*process\.env\.NODE_ENV\s*!==\s*['"]production['"]\s*\)/.test(serverSource), 'Debug routes must be conditionally mounted outside production');
 
   try {
     process.env.NODE_ENV = 'production';
