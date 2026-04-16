@@ -27,6 +27,7 @@ const { assertPrimaryAdmin, canInviteRole, getTagValidationError, normalizeId } 
 const { normalizeFirmSlug } = require('../utils/slugify');
 const { isActiveStatus, getFirmInactiveCode } = require('../utils/status.utils');
 const { validatePasswordStrength, PASSWORD_POLICY_MESSAGE } = require('../utils/passwordPolicy');
+const { applyServiceResponse } = require('../utils/response.util');
 const { getSession } = require('../utils/getSession');
 const { handleUserDeactivation } = require('../services/docketWorkflow.service');
 const { ensureDefaultClientForFirm } = require('../services/defaultClient.service');
@@ -610,23 +611,6 @@ const buildTokenResponse = async (user, req, authMethod = 'Password') => {
   }, req);
 
   return { accessToken, refreshToken, firmSlug };
-};
-
-const applyServiceResponse = (res, serviceResponse = {}) => {
-  for (const [headerName, headerValue] of Object.entries(serviceResponse.headers || {})) {
-    if (typeof res.setHeader === 'function') {
-      res.setHeader(headerName, headerValue);
-    } else if (typeof res.set === 'function') {
-      res.set(headerName, headerValue);
-    }
-  }
-  for (const cookieConfig of (serviceResponse.cookies || [])) {
-    res.cookie(cookieConfig.name, cookieConfig.value, cookieConfig.options);
-  }
-  for (const cookieConfig of (serviceResponse.clearCookies || [])) {
-    res.clearCookie(cookieConfig.name, cookieConfig.options);
-  }
-  return res.status(serviceResponse.statusCode || 200).json(serviceResponse.body);
 };
 
 const sendLoginOtpChallenge = async (req, user, { isResend = false, returnLoginToken = true } = {}) => {

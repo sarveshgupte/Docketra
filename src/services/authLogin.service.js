@@ -1,3 +1,6 @@
+const { createResponseCapture } = require('../utils/response.util');
+const { hasRequiredFields } = require('../utils/validation.util');
+
 const createAuthLoginService = (deps) => {
   const models = deps.models || {};
   const utils = deps.utils || {};
@@ -33,48 +36,6 @@ const createAuthLoginService = (deps) => {
     authOtpService = deps.authOtpService,
   } = services;
 
-  const createResponseCapture = () => {
-    let statusCode = 200;
-    let body;
-    const cookies = [];
-    const clearCookies = [];
-    const headers = {};
-    const res = {
-      status: (code) => {
-        statusCode = code;
-        return res;
-      },
-      cookie: (name, value, options) => {
-        cookies.push({ name, value, options });
-        return res;
-      },
-      clearCookie: (name, options) => {
-        clearCookies.push({ name, options });
-        return res;
-      },
-      set: (key, value) => {
-        if (key && typeof key === 'object') {
-          Object.assign(headers, key);
-        } else if (key) {
-          headers[key] = value;
-        }
-        return res;
-      },
-      setHeader: (key, value) => {
-        headers[key] = value;
-        return res;
-      },
-      json: (payload) => {
-        body = payload;
-        return payload;
-      },
-    };
-    return {
-      res,
-      getResult: () => ({ statusCode, body, cookies, clearCookies, headers }),
-    };
-  };
-
   const loginHandler = async (req, res) => {
     try {
       const loginScope = req.loginScope || 'tenant';
@@ -83,7 +44,7 @@ const createAuthLoginService = (deps) => {
 
       const normalizedXID = (xid || xID || XID)?.trim().toUpperCase();
 
-      if (!normalizedXID || !password) {
+      if (!hasRequiredFields({ normalizedXID, password }, ['normalizedXID', 'password'])) {
         console.warn('[AUTH] Missing credentials in login attempt', {
           hasXID: !!(xid || xID || XID),
           hasPassword: !!password,
