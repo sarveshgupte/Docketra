@@ -3,11 +3,11 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Container from '../../components/layout/Container';
 
-const HERO_TASKS = [
-  { name: 'Review monthly filing checklist', status: 'In Progress', assignee: 'AR', tone: 'text-amber-700 bg-amber-50 border-amber-200' },
-  { name: 'Collect final sign-off from approver', status: 'Pending', assignee: 'KP', tone: 'text-slate-700 bg-slate-100 border-slate-200' },
-  { name: 'Submit compliance packet', status: 'Done', assignee: 'SJ', tone: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
-  { name: 'Attach supporting documents', status: 'In Progress', assignee: 'MN', tone: 'text-amber-700 bg-amber-50 border-amber-200' },
+const HERO_DOCKETS = [
+  { name: 'GST filing package for Acme Foods', status: 'In Progress', assignee: 'AR', tone: 'text-amber-700 bg-amber-50 border-amber-200' },
+  { name: 'ROC annual return sign-off', status: 'Pending', assignee: 'KP', tone: 'text-slate-700 bg-slate-100 border-slate-200' },
+  { name: 'TDS reconciliation closure', status: 'Done', assignee: 'SJ', tone: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
+  { name: 'Audit query response packet', status: 'In Progress', assignee: 'MN', tone: 'text-amber-700 bg-amber-50 border-amber-200' },
 ];
 
 const statusDotMap = {
@@ -25,41 +25,78 @@ const SECTION_REVEAL = {
 
 const FEATURES = [
   {
-    icon: '\u2726',
-    title: 'Centralized Firm Dashboard',
-    body: 'Manage all your clients, cases, and team members from a single, secure platform. No more scattered spreadsheets or isolated WhatsApp groups.',
-    benefit: '\u2192 One source of truth for every engagement',
+    icon: '✦',
+    title: 'Workbasket → Worklist execution model',
+    body: 'Incoming dockets are triaged in firm workbaskets, then pulled into user worklists for execution with clear ownership.',
+    benefit: '→ Structured flow from intake to closure',
   },
   {
-    icon: '\u2a3f',
-    title: 'Granular Role-Based Access',
-    body: "Assign roles to Partners, Admins, Managers, and team members. Each person sees exactly what they're authorized to see \u2014 enforced server-side, not client-side.",
-    benefit: '\u2192 Data privacy built in by design',
+    icon: '⨿',
+    title: 'Immutable audit logs',
+    body: 'Every action is timestamped with actor identity, and audit records are immutable by design.',
+    benefit: '→ Audit-ready evidence for every docket',
   },
   {
-    icon: '\u27f3',
-    title: 'Standardized Workflow Engine',
-    body: 'Turn chaotic processes into repeatable, stage-gated workflows. Set clear checkpoints from intake to resolution with SLA-aware tracking and due-date enforcement.',
-    benefit: '\u2192 Every engagement runs to the same standard',
+    icon: '⟳',
+    title: 'Server-enforced RBAC',
+    body: 'Role permissions are validated on backend APIs so access control cannot be bypassed from the client.',
+    benefit: '→ Role safety enforced where it matters',
   },
   {
-    icon: '\u23f1',
-    title: 'Automated Audit Trails',
-    body: 'Every action \u2014 status change, document upload, approval decision \u2014 is automatically logged with a user ID and timestamp you cannot edit or delete.',
-    benefit: '\u2192 \u201cWho approved this?\u201d answered in seconds',
+    icon: '⏱',
+    title: 'Multi-client docket tracking',
+    body: 'Track every client docket in one workspace with clear status, ownership, and lifecycle visibility.',
+    benefit: '→ One operational layer across engagements',
   },
   {
-    icon: '\u2b21',
-    title: 'Workbasket \u2192 Worklist Triage',
-    body: 'Incoming work lands in a firm-level Workbasket for prioritization. Admins pull dockets into execution Worklists with clear ownership and due dates assigned.',
-    benefit: '\u2192 Nothing falls through the cracks',
+    icon: '⬡',
+    title: 'Workflow automation with state transitions',
+    body: 'Dockets move through configured lifecycle states with transition rules, QC paths, approvals, and closure controls.',
+    benefit: '→ Consistent execution every time',
   },
   {
-    icon: '\u25c8',
-    title: 'Real-Time Operational Metrics',
-    body: 'Partners and Primary Admins get a live dashboard view of overdue items, approval-risk dockets, and team workload \u2014 updated in real time.',
-    benefit: '\u2192 Manage by signal, not by surprise',
+    icon: '◈',
+    title: 'Bulk docket upload (CSV)',
+    body: 'Import dockets in bulk with preview validation, error reporting, and controlled upload behavior.',
+    benefit: '→ Faster intake for recurring operations',
   },
+  {
+    icon: '✓',
+    title: 'SLA and deadline tracking',
+    body: 'SLA policies, due dates, overdue detection, and escalation signals keep deadline-driven teams on track.',
+    benefit: '→ Fewer surprises near filing cutoffs',
+  },
+  {
+    icon: '◉',
+    title: 'Operational dashboards and notifications',
+    body: 'Live dashboard summaries and user notifications surface overdue work, workload hotspots, and lifecycle events.',
+    benefit: '→ Actionable visibility for managers',
+  },
+];
+
+const STARTER_FEATURES = [
+  'Up to 2 users (enforced)',
+  'Max 1 Admin / Primary Admin (enforced)',
+  'Dockets across workbasket/worklist flow',
+  'Workflow transitions + approvals',
+  'Docketra-managed storage with provider quota handling',
+  'Immutable audit logs',
+];
+
+const PROFESSIONAL_FEATURES = [
+  'Higher user capacity',
+  'Advanced role permissions',
+  'Custom workflow templates',
+  'Priority support',
+  'Expanded analytics & reporting',
+];
+
+const ENTERPRISE_FEATURES = [
+  'Everything in Professional',
+  'Multi-office coordination',
+  'Dedicated account manager',
+  'Custom API access',
+  'SSO & advanced security',
 ];
 
 export const HomePage = () => {
@@ -98,28 +135,28 @@ export const HomePage = () => {
           {/* LEFT */}
           <motion.div className="w-full min-w-0 md:col-span-7" {...SECTION_REVEAL}>
             <p className="text-xs uppercase tracking-widest text-gray-500 mb-4">
-              Purpose-built for compliance, tax &amp; audit teams
+              Built for compliance teams
             </p>
             <h1 className="text-5xl sm:text-6xl font-semibold tracking-tight leading-[1.06]">
-              Your firm runs on deadlines. Docketra makes sure nothing slips.
+              Audit-ready, deadline-driven docket operations for multi-client firms.
             </h1>
             <p className="mt-6 text-lg text-gray-600 leading-relaxed">
-              Docketra gives your firm a single place to assign work, track every docket from intake to resolution, and maintain an immutable audit trail \u2014 without chasing updates on WhatsApp.
+              Docketra is a compliance workflow system that routes dockets from workbasket intake to worklist execution, approvals, and closure—with immutable audit logs at every step.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row sm:items-center gap-3">
               <Link
                 to="/signup"
                 className="inline-flex items-center justify-center h-11 px-6 rounded-lg bg-black text-white text-sm font-medium shadow-md hover:shadow-lg hover:bg-gray-900 transition-colors"
               >
-                Create your free workspace \u2192
+                Create your first docket in minutes →
               </Link>
             </div>
             <p className="mt-3 text-sm text-gray-500">
-              No credit card required \u00b7 Free during Early Access \u00b7 Ready in minutes
+              No credit card required · Free during Early Access · Ready in minutes
             </p>
           </motion.div>
 
-          {/* RIGHT \u2014 live workflow card */}
+          {/* RIGHT — live workflow card */}
           <div className="w-full min-w-0 md:col-span-5">
             <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-4 sm:p-5 md:p-6">
               <div className="flex items-center justify-between pb-3 border-b border-gray-100">
@@ -132,24 +169,24 @@ export const HomePage = () => {
                   </h3>
                 </div>
                 <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
-                  4 active tasks
+                  4 active dockets
                 </span>
               </div>
               <div className="mt-4 space-y-3">
-                {HERO_TASKS.map((task) => (
-                  <div key={task.name} className="rounded-lg border border-gray-100 bg-white p-3 sm:p-3.5">
+                {HERO_DOCKETS.map((docket) => (
+                  <div key={docket.name} className="rounded-lg border border-gray-100 bg-white p-3 sm:p-3.5">
                     <div className="flex items-start justify-between gap-3">
                       <p className="min-w-0 text-sm font-medium text-gray-900 leading-snug">
-                        {task.name}
+                        {docket.name}
                       </p>
                       <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-900 text-[11px] font-semibold text-white">
-                        {task.assignee}
+                        {docket.assignee}
                       </span>
                     </div>
                     <div className="mt-3 flex items-center gap-2">
-                      <span className={`h-2 w-2 rounded-full ${statusDotMap[task.status]}`} />
-                      <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${task.tone}`}>
-                        {task.status}
+                      <span className={`h-2 w-2 rounded-full ${statusDotMap[docket.status]}`} />
+                      <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${docket.tone}`}>
+                        {docket.status}
                       </span>
                     </div>
                   </div>
@@ -183,22 +220,22 @@ export const HomePage = () => {
           <motion.div {...SECTION_REVEAL}>
             <p className="text-sm uppercase tracking-widest text-gray-400 mb-4">The problem</p>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight max-w-3xl">
-              Your team is capable. Your operations process is what\u2019s holding you back.
+              Teams fail audits and deadlines when ownership and approvals are unclear.
             </h2>
           </motion.div>
           <motion.div className="grid md:grid-cols-3 gap-6 mt-12" {...SECTION_REVEAL}>
             {[
               {
                 title: 'Work lives in WhatsApp',
-                body: 'Approvals get missed. Nobody knows the current status. Partners chase updates manually \u2014 and accountability disappears when something goes wrong.',
+                body: 'Approval requests get buried, status stays ambiguous, and decisions become impossible to trace when clients ask for evidence.',
               },
               {
                 title: 'Spreadsheets as the system of record',
-                body: 'No ownership chain, no audit trail, no way to prove who did what and when. Reconstructing what happened after a missed deadline is painful and unreliable.',
+                body: 'Without a real ownership chain and immutable log, proving who changed what and when is painful after a missed deadline.',
               },
               {
                 title: 'Every deadline is a fire drill',
-                body: 'Without a structured queue, overdue items surface only after damage is done. Urgency becomes the default mode \u2014 and it burns out good teams.',
+                body: 'Broken approval chains and unstructured queues surface work late. Teams scramble, quality drops, and burnout follows.',
               },
             ].map((card) => (
               <div key={card.title} className="rounded-xl border border-gray-700 bg-gray-800 p-6">
@@ -216,7 +253,7 @@ export const HomePage = () => {
               onClick={() => handleSectionNavigation('solution')}
               className="text-white underline underline-offset-4 text-sm mt-4 inline-block hover:text-gray-300"
             >
-              See how Docketra fixes this \u2193
+              See how Docketra fixes this ↓
             </button>
           </motion.div>
         </Container>
@@ -231,23 +268,23 @@ export const HomePage = () => {
               One platform. Every docket. Complete clarity from intake to resolution.
             </h2>
             <p className="mt-4 text-lg text-gray-600 max-w-2xl leading-relaxed">
-              Docketra gives your firm a structured, role-aware operations layer \u2014 so work gets assigned, tracked, approved, and completed the same way every time.
+              Docketra gives your firm a structured, role-aware operating layer so dockets are assigned, routed, approved, and closed the same way every time.
             </p>
           </motion.div>
           <motion.div className="grid md:grid-cols-3 gap-8 mt-12" {...SECTION_REVEAL}>
             {[
               {
-                icon: '\u2699\ufe0f',
+                icon: '⚙️',
                 title: 'Standardized Operations',
-                body: 'Every docket follows a repeatable workflow \u2014 from Workbasket triage to Worklist execution to final sign-off. Consistency is built in, not enforced by memory.',
+                body: 'Every docket follows a repeatable workflow—from workbasket triage to worklist execution to final sign-off.',
               },
               {
-                icon: '\ud83d\udee1\ufe0f',
+                icon: '🛡️',
                 title: 'Role-Aware Access Controls',
-                body: 'Partners, Admins, Managers, and team members each operate within clearly defined permissions. No accidental exposure, no confusion about who can do what.',
+                body: 'SuperAdmin, Primary Admin, Admin, Manager, and Member permissions are enforced on server-side APIs.',
               },
               {
-                icon: '\ud83d\udccb',
+                icon: '📋',
                 title: 'Immutable Audit Trail',
                 body: 'Status changes, approvals, comments, and uploads are automatically logged with a timestamp and user ID. Your compliance trail is always complete and always ready.',
               },
@@ -267,26 +304,26 @@ export const HomePage = () => {
         <Container>
           <motion.div {...SECTION_REVEAL}>
             <p className="text-sm uppercase tracking-widest text-gray-400 mb-4">How it works</p>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight">
-              From signup to fully operational in minutes.
-            </h2>
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight">
+               From workspace setup to closed docket in minutes.
+              </h2>
           </motion.div>
           <motion.div className="grid md:grid-cols-3 gap-8 mt-12" {...SECTION_REVEAL}>
             {[
               {
                 num: '01',
-                title: 'Create your workspace',
-                body: 'Sign up with your firm name and email. Docketra automatically provisions default categories, workbaskets, and a compliance-ready operating structure.',
+                title: 'Create workspace and structure',
+                body: 'Sign up your firm and bootstrap a compliance-ready structure with default categories, workbaskets, and role hierarchy.',
               },
               {
                 num: '02',
-                title: 'Invite your team & assign roles',
-                body: 'Invite Partners, Admins, Managers, and team members. Each role comes with pre-configured permissions. Assign a reporting hierarchy so accountability is clear from day one.',
+                title: 'Configure workbaskets and workflows',
+                body: 'Define workbasket ownership, workflow transitions, SLA defaults, and approval checkpoints that match your operating model.',
               },
               {
                 num: '03',
-                title: 'Create dockets, track & approve',
-                body: 'Create dockets with title, category, priority, and due date. Route them through the Workbasket \u2192 Worklist flow. Every status change and approval is automatically recorded in the audit trail.',
+                title: 'Create, route, approve, close',
+                body: 'Create dockets, route through workbasket → worklist, process approvals, and close with complete immutable audit evidence.',
               },
             ].map((step) => (
               <div key={step.num} className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -299,12 +336,12 @@ export const HomePage = () => {
             ))}
           </motion.div>
           <motion.div className="mt-12 text-center" {...SECTION_REVEAL}>
-            <Link
-              to="/signup"
-              className="inline-flex items-center justify-center h-11 px-6 rounded-lg bg-black text-white text-sm font-medium shadow-md hover:shadow-lg hover:bg-gray-900 transition-colors"
-            >
-              Create your workspace for free \u2192
-            </Link>
+              <Link
+                to="/signup"
+                className="inline-flex items-center justify-center h-11 px-6 rounded-lg bg-black text-white text-sm font-medium shadow-md hover:shadow-lg hover:bg-gray-900 transition-colors"
+              >
+              Create your workspace for free →
+              </Link>
             <p className="mt-3 text-sm text-gray-500">No setup complexity. No credit card. Start in minutes.</p>
           </motion.div>
         </Container>
@@ -316,7 +353,7 @@ export const HomePage = () => {
           <motion.div {...SECTION_REVEAL}>
             <p className="text-sm uppercase tracking-widest text-gray-400 mb-4">What Docketra does</p>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight max-w-3xl">
-              Everything your firm needs. Nothing your team doesn\u2019t.
+              Everything your firm needs. Nothing your team doesn’t.
             </h2>
             <p className="mt-4 text-lg text-gray-600 max-w-2xl leading-relaxed">
               Built for compliance, tax, and audit teams who operate under strict deadlines, multi-client workloads, and regulatory scrutiny.
@@ -360,21 +397,21 @@ export const HomePage = () => {
                 eyebrow: 'CA & TAX PRACTICES',
                 heading: 'Run GST, ITR, and ROC filings without a single missed deadline',
                 body: 'Docketra gives CA firms a structured queue for every client engagement. Assign filings to team members, track SLA timelines, and produce a complete audit trail for each submission.',
-                quote: '\u201cIntake to filing, tracked at every step.\u201d',
+                quote: '“Intake to filing, tracked at every step.”',
               },
               {
                 borderColor: 'border-l-blue-500',
                 eyebrow: 'COMPLIANCE & AUDIT TEAMS',
                 heading: 'Make every compliance checkpoint visible and accountable',
-                body: 'Route intake through a Workbasket, assign ownership in a structured Worklist, and close every item with an immutable activity log \u2014 no more reconstructing what happened after the fact.',
-                quote: '\u201cEvery status change. Every approval. Timestamped and signed.\u201d',
+                body: 'Route intake through a Workbasket, assign ownership in a structured Worklist, and close every item with an immutable activity log—no more reconstructing what happened after the fact.',
+                quote: '“Every status change. Every approval. Timestamped and signed.”',
               },
               {
                 borderColor: 'border-l-emerald-500',
                 eyebrow: 'CONSULTANCIES',
                 heading: 'Replace scattered tools with one operational platform',
                 body: 'Consolidate work spread across WhatsApp, email, and spreadsheets into Docketra. Partners get real-time visibility. Team members get clear assignments. Clients get faster, more reliable delivery.',
-                quote: '\u201cOne workspace. Every client. Full visibility.\u201d',
+                quote: '“One workspace. Every client. Full visibility.”',
               },
             ].map((card) => (
               <div
@@ -403,22 +440,22 @@ export const HomePage = () => {
           <motion.div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-12" {...SECTION_REVEAL}>
             {[
               {
-                icon: '\ud83d\udd12',
+                icon: '🔒',
                 title: 'Multi-Tenant Isolation',
-                body: "Every firm\u2019s data is fully isolated. Cross-firm data access is architecturally prevented \u2014 not just policy-blocked.",
+                body: 'Firm-scoped data boundaries and tenant guards prevent cross-tenant access by design.',
               },
               {
-                icon: '\ud83d\udee1\ufe0f',
+                icon: '🛡️',
                 title: 'Role-Gated APIs',
-                body: 'Every permission is enforced server-side. From SuperAdmin to team member, access is explicitly defined and cannot be bypassed client-side.',
+                body: 'Permissions are enforced on backend routes. From SuperAdmin to Member, every action is role-checked server-side.',
               },
               {
-                icon: '\ud83d\udccb',
+                icon: '📋',
                 title: 'Immutable Audit Logs',
-                body: 'All actions are logged with an immutable timestamp and user ID. No one can edit or delete the audit trail \u2014 including admins.',
+                body: 'Audit records are immutable with timestamp and actor identity, including admin actions.',
               },
               {
-                icon: '\ud83d\udd11',
+                icon: '🔑',
                 title: 'Secure Authentication',
                 body: 'xID-based login with bcrypt hashing, 60-day password expiry, 5-generation password history, and forced first-login password change.',
               },
@@ -432,7 +469,7 @@ export const HomePage = () => {
           </motion.div>
           <motion.div className="mt-8 text-center" {...SECTION_REVEAL}>
             <Link to="/security" className="text-sm text-gray-600 underline underline-offset-4 hover:text-gray-900">
-              Read our full security documentation \u2192
+              Read our full security documentation →
             </Link>
           </motion.div>
         </Container>
@@ -450,12 +487,12 @@ export const HomePage = () => {
           <motion.div className="grid md:grid-cols-3 gap-8 mt-12" {...SECTION_REVEAL}>
             {[
               {
-                quote: "Before Docketra, I\u2019d spend the first hour of my day figuring out where things stood. Now I open the dashboard and the entire picture is there \u2014 overdue items, who owns what, what\u2019s waiting on approval.",
+                quote: 'Before Docketra, I spent the first hour of my day figuring out status. Now the dashboard shows overdue dockets, ownership, and pending approvals instantly.',
                 name: 'A.R.',
                 role: 'Operations Lead, CA Firm',
               },
               {
-                quote: 'The audit trail feature alone justifies the switch. When a client questions a filing, I can show them exactly who acted, what changed, and when \u2014 down to the minute.',
+                quote: 'The immutable audit trail alone justifies the switch. When a client questions a filing, we can show who acted, what changed, and when.',
                 name: 'K.P.',
                 role: 'Partner, Tax Consultancy',
               },
@@ -466,8 +503,8 @@ export const HomePage = () => {
               },
             ].map((t) => (
               <div key={t.name} className="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm">
-                <p className="text-amber-400 text-sm mb-4">\u2605\u2605\u2605\u2605\u2605</p>
-                <p className="text-sm text-gray-700 leading-relaxed">\u201c{t.quote}\u201d</p>
+                <p className="text-amber-400 text-sm mb-4">★★★★★</p>
+                <p className="text-sm text-gray-700 leading-relaxed">“{t.quote}”</p>
                 <div className="mt-6 flex items-center gap-3">
                   <div className="h-10 w-10 rounded-full bg-gray-900 text-white flex items-center justify-center text-sm font-semibold shrink-0">
                     {t.name.slice(0, 2)}
@@ -495,7 +532,7 @@ export const HomePage = () => {
               Start free. Scale as your firm grows.
             </h2>
             <p className="mt-4 text-lg text-gray-600 max-w-2xl leading-relaxed">
-              We\u2019re in Early Access. Join now to lock in your free Starter workspace and help shape the future of Docketra.
+              We’re in Early Access. Starter is aligned to current backend limits and enforcement.
             </p>
           </motion.div>
           <motion.div className="grid md:grid-cols-3 gap-8 mt-12" {...SECTION_REVEAL}>
@@ -508,9 +545,9 @@ export const HomePage = () => {
               <p className="text-3xl font-bold text-gray-900">Free</p>
               <p className="text-sm text-gray-500 mt-1">/ forever</p>
               <ul className="mt-6 space-y-2 flex-1">
-                {['Up to 2 users (1 Admin + 1 Member)', 'Core docket management', 'Standard workflows', 'Immutable audit trail', 'Community support'].map((f) => (
+                {STARTER_FEATURES.map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm text-gray-600">
-                    <span className="text-emerald-500 mt-0.5">\u2713</span>{f}
+                    <span className="text-emerald-500 mt-0.5">✓</span>{f}
                   </li>
                 ))}
               </ul>
@@ -518,7 +555,7 @@ export const HomePage = () => {
                 to="/signup"
                 className="mt-8 inline-flex items-center justify-center h-11 px-6 rounded-lg bg-black text-white text-sm font-medium hover:bg-gray-900 transition-colors"
               >
-                Get Early Access \u2192
+                Get Early Access →
               </Link>
             </div>
             {/* Professional */}
@@ -527,9 +564,9 @@ export const HomePage = () => {
               <p className="text-3xl font-bold text-gray-900">TBA</p>
               <p className="text-sm text-gray-500 mt-1">/ coming soon</p>
               <ul className="mt-6 space-y-2 flex-1">
-                {['Unlimited users', 'Advanced role permissions', 'Custom workflow templates', 'Priority support', 'Analytics & reporting'].map((f) => (
+                {PROFESSIONAL_FEATURES.map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm text-gray-600">
-                    <span className="text-gray-400 mt-0.5">\u2713</span>{f}
+                    <span className="text-gray-400 mt-0.5">✓</span>{f}
                   </li>
                 ))}
               </ul>
@@ -547,9 +584,9 @@ export const HomePage = () => {
               <p className="text-3xl font-bold text-gray-900">Custom</p>
               <p className="text-sm text-gray-500 mt-1">/ tailored</p>
               <ul className="mt-6 space-y-2 flex-1">
-                {['Everything in Professional', 'Multi-office coordination', 'Dedicated account manager', 'Custom API access', 'SSO & advanced security'].map((f) => (
+                {ENTERPRISE_FEATURES.map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm text-gray-600">
-                    <span className="text-gray-400 mt-0.5">\u2713</span>{f}
+                    <span className="text-gray-400 mt-0.5">✓</span>{f}
                   </li>
                 ))}
               </ul>
@@ -572,17 +609,17 @@ export const HomePage = () => {
         <Container>
           <motion.div className="text-center" {...SECTION_REVEAL}>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight max-w-3xl mx-auto">
-              Your firm\u2019s operations deserve a system built for the work you do.
+              Your firm’s operations deserve a system built for compliance work.
             </h2>
             <p className="text-lg text-gray-300 mt-4 max-w-2xl mx-auto leading-relaxed">
-              Join the firms already running on Docketra. Create your free workspace in minutes \u2014 no credit card, no setup complexity, no lock-in.
+              Join the firms already running on Docketra. Create your first docket in minutes—no credit card, no setup complexity, no lock-in.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mt-10">
               <Link
                 to="/signup"
                 className="inline-flex items-center justify-center h-12 px-8 rounded-lg bg-white text-gray-900 text-sm font-semibold hover:bg-gray-100 transition-colors"
               >
-                Create your free workspace \u2192
+                Create your first docket in minutes →
               </Link>
               <Link
                 to="/#features"
@@ -592,7 +629,7 @@ export const HomePage = () => {
               </Link>
             </div>
             <p className="text-sm text-gray-400 mt-6">
-              \u2713 Free during Early Access \u00b7 \u2713 No credit card required \u00b7 \u2713 Workspace ready in minutes
+              ✓ Free during Early Access · ✓ No credit card required · ✓ Workspace ready in minutes
             </p>
           </motion.div>
         </Container>
@@ -640,9 +677,9 @@ export const HomePage = () => {
             </div>
           </div>
           <div className="border-t border-gray-100 mt-8 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-gray-400">\u00a9 2026 Docketra. All rights reserved.</p>
+            <p className="text-sm text-gray-400">© 2026 Docketra. All rights reserved.</p>
             <Link to="/signup" className="text-sm font-medium text-gray-900 hover:underline">
-              Create your workspace \u2192
+              Create your workspace →
             </Link>
           </div>
         </Container>
