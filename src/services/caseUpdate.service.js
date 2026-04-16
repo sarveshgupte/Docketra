@@ -525,12 +525,14 @@ module.exports = (deps) => {
       });
       caseData = await CaseRepository.findByInternalId(req.user.firmId, caseData.caseInternalId, req.user.role);
 
+      const statusAfterUnassign = CaseStatus.UNASSIGNED;
+
       logActivitySafe({
         docketId: caseData.caseInternalId,
         firmId: req.user.firmId,
         type: 'STATUS_CHANGED',
-        description: `Status changed to ${normalizedStatus}`,
-        metadata: { status: normalizedStatus },
+        description: `Status changed to ${statusAfterUnassign}`,
+        metadata: { status: statusAfterUnassign },
         performedByXID: req.user?.xID,
       });
       
