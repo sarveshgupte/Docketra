@@ -1,8 +1,9 @@
+const log = require('../utils/log');
 const validateCaseCommentPayload = (req, res, next) => {
   const { text } = req.body || {};
 
   if (typeof text !== 'string' || !text.trim()) {
-    console.error('[COMMENT_PAYLOAD_VALIDATION] Invalid comment payload', {
+    log.error('[COMMENT_PAYLOAD_VALIDATION] Invalid comment payload', {
       caseId: req.params?.caseId || req.params?.id || null,
       userId: req.user?.xID || null,
       bodyKeys: Object.keys(req.body || {}),
@@ -17,7 +18,7 @@ const validateCaseCommentPayload = (req, res, next) => {
   }
 
   req.body.text = text.trim();
-  console.info('[COMMENT_PAYLOAD_VALIDATION] Comment payload accepted', {
+  log.info('[COMMENT_PAYLOAD_VALIDATION] Comment payload accepted', {
     caseId: req.params?.caseId || req.params?.id || null,
     userId: req.user?.xID || null,
     textLength: req.body.text.length,

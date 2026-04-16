@@ -4,6 +4,7 @@ const Case = require('../models/Case.model');
 const Firm = require('../models/Firm.model');
 const TenantCaseMetricsDaily = require('../models/TenantCaseMetricsDaily.model');
 const CaseStatus = require('../domain/case/caseStatus');
+const log = require('../utils/log');
 
 const MAX_DASHBOARD_RANGE_DAYS = 365;
 
@@ -198,7 +199,7 @@ async function runTenantAggregation(tenantId, dateInput) {
       await upsertTenantDailyMetrics(tenantId, dateInput, session);
     });
   } catch (error) {
-    console.error('[METRICS] Tenant aggregation failed', { tenantId, message: error.message });
+    log.error('[METRICS] Tenant aggregation failed', { tenantId, message: error.message });
   } finally {
     await session.endSession();
   }

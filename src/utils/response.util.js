@@ -40,6 +40,18 @@ const applyServiceResponse = (res, serviceResponse = {}) => {
   return res.status(serviceResponse.statusCode || 200).json(serviceResponse.body);
 };
 
+const sendServiceResponse = (res, serviceResponse = {}) => applyServiceResponse(res, serviceResponse);
+
+const sendSuccessResponse = (res, { statusCode = 200, body = {} } = {}) => sendServiceResponse(
+  res,
+  buildSuccessResponse({ statusCode, body }),
+);
+
+const sendErrorResponse = (res, { statusCode = 500, message = 'Unexpected error', ...rest } = {}) => sendServiceResponse(
+  res,
+  buildErrorResponse({ statusCode, message, ...rest }),
+);
+
 const createResponseCapture = () => {
   let statusCode = 200;
   let body;
@@ -87,5 +99,8 @@ module.exports = {
   buildSuccessResponse,
   buildErrorResponse,
   applyServiceResponse,
+  sendServiceResponse,
+  sendSuccessResponse,
+  sendErrorResponse,
   createResponseCapture,
 };

@@ -16,8 +16,23 @@ const getValidationDetails = (error) => {
     .join('; ');
 };
 
+const validateRequiredFields = (payload = {}, requiredFields = [], options = {}) => {
+  const missingFields = getMissingRequiredFields(payload, requiredFields, options);
+  return {
+    isValid: missingFields.length === 0,
+    missingFields,
+  };
+};
+
+const buildMissingFieldsMessage = (missingFields = [], { suffix = 'are required' } = {}) => {
+  if (!Array.isArray(missingFields) || missingFields.length === 0) return '';
+  return `${missingFields.join(', ')} ${suffix}`;
+};
+
 module.exports = {
   getMissingRequiredFields,
   hasRequiredFields,
   getValidationDetails,
+  validateRequiredFields,
+  buildMissingFieldsMessage,
 };

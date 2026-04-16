@@ -11,6 +11,7 @@ const PDFDocument = require('pdfkit');
 const { getLatestTenantMetrics, getTenantMetricsByRange } = require('../services/tenantCaseMetrics.service');
 const { mapAuditResponse } = require('../mappers/audit.mapper');
 const { getWeeklySlaSummary } = require('../services/sla.service');
+const log = require('../utils/log');
 
 const DEFAULT_AUDIT_LOG_LIMIT = 100;
 const MAX_AUDIT_LOG_LIMIT = 250;
@@ -111,7 +112,7 @@ const logReportExport = async ({
       exportedAt: new Date(),
     });
   } catch (error) {
-    console.error('Failed to persist report export log:', error);
+    log.error('Failed to persist report export log:', error);
   }
 };
 
@@ -215,7 +216,7 @@ const getCaseMetrics = async (req, res) => {
       data: payload,
     });
   } catch (error) {
-    console.error('Error in getCaseMetrics:', error);
+    log.error('Error in getCaseMetrics:', error);
     if (error.message?.includes('Date range exceeds')) {
       return res.status(400).json({
         success: false,
@@ -239,7 +240,7 @@ const getSlaWeeklySummary = async (req, res) => {
     const data = await getWeeklySlaSummary(firmId);
     return res.json({ success: true, data });
   } catch (error) {
-    console.error('Error in getSlaWeeklySummary:', error);
+    log.error('Error in getSlaWeeklySummary:', error);
     return res.status(500).json({
       success: false,
       message: 'Failed to fetch weekly SLA summary',
@@ -392,7 +393,7 @@ const getPendingCasesReport = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error in getPendingCasesReport:', error);
+    log.error('Error in getPendingCasesReport:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch pending cases report',
@@ -475,7 +476,7 @@ const getCasesByDateRange = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error in getCasesByDateRange:', error);
+    log.error('Error in getCasesByDateRange:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch cases by date range',
@@ -568,7 +569,7 @@ const exportCasesCSV = async (req, res) => {
 
     res.send(csv);
   } catch (error) {
-    console.error('Error in exportCasesCSV:', error);
+    log.error('Error in exportCasesCSV:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to export cases as CSV',
@@ -659,7 +660,7 @@ const exportCasesExcel = async (req, res) => {
     await workbook.xlsx.write(res);
     res.end();
   } catch (error) {
-    console.error('Error in exportCasesExcel:', error);
+    log.error('Error in exportCasesExcel:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to export cases as Excel',

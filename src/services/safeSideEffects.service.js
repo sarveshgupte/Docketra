@@ -1,6 +1,6 @@
-const log = require('../utils/log');
 const { enqueueAfterCommit } = require('./sideEffectQueue.service');
 const { logAuthEvent } = require('./audit.service');
+const log = require('../utils/log');
 
 const resolveContext = (context, fallback = null) => context || fallback || null;
 

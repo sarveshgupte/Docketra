@@ -1,7 +1,6 @@
-const Case = require('../models/Case.model');
-const DocketAuditLog = require('../models/DocketAuditLog.model');
 const { randomUUID } = require('crypto');
-const { normalizeRole } = require('./productAudit.service');
+const Case = require('../models/Case.model');
+const docketAuditService = require('./docketAudit.service');
 const {
   toDocketState,
   toPersistenceState,
@@ -95,36 +94,28 @@ async function transitionDocket(docketId, newState, userId, options = {}) {
     throw err;
   }
 
-  if (options.skipAudit) {
-    return {
+  if (!options.skipAudit) {
+    await docketAuditService.logStatusChange({
+      firmId,
       docketId,
-      fromState,
-      toState,
-      version: expected + 1,
-    };
+      performedBy: userId,
+      performedByRole: metadata?.actorRole || 'USER',
+      fromStatus: fromState,
+      toStatus: toState,
+      metadata: {
+        ...metadata,
+        requestId: String(options?.req?.context?.requestId || options?.req?.requestId || metadata?.requestId || randomUUID()),
+        reason: reason || null,
+        notes: notes || null,
+        versionFrom: expected,
+        versionTo: expected + 1,
+        transitionAction: action,
+        source: 'docketTransition.service.transitionDocket',
+      },
+      comment: notes || reason || null,
+      session,
+    });
   }
-
-  await DocketAuditLog.create([{
-    docketId,
-    action,
-    fromState,
-    toState,
-    requestId: String(options?.req?.context?.requestId || options?.req?.requestId || options?.metadata?.requestId || randomUUID()),
-    tenantId: firmId,
-    performedBy: {
-      userId: String(userId || 'SYSTEM'),
-      role: normalizeRole(options?.req?.user?.role || options?.actorRole),
-    },
-    firmId,
-    timestamp: new Date(),
-    metadata: {
-      ...metadata,
-      reason: reason || null,
-      notes: notes || null,
-      versionFrom: expected,
-      versionTo: expected + 1,
-    },
-  }], session ? { session } : {});
 
   return {
     docketId,

@@ -5,22 +5,23 @@
  */
 
 const { generateCaseId, isValidCaseIdFormat, extractDateFromCaseId } = require('../services/caseIdGenerator');
+const log = require('../utils/log');
 
 async function testCaseIdGenerator() {
-  console.log('Testing Case ID Generator...\n');
+  log.info('Testing Case ID Generator...\n');
   
   // Test 1: Generate case ID
-  console.log('Test 1: Generate Case ID');
+  log.info('Test 1: Generate Case ID');
   try {
     // Note: This will fail without a DB connection, but we can test the format validation
-    console.log('✓ Case ID generator imported successfully');
+    log.info('✓ Case ID generator imported successfully');
   } catch (error) {
-    console.error('✗ Failed to import case ID generator:', error.message);
+    log.error('✗ Failed to import case ID generator:', error.message);
     process.exit(1);
   }
   
   // Test 2: Validate format
-  console.log('\nTest 2: Validate Case ID Format');
+  log.info('\nTest 2: Validate Case ID Format');
   const validIds = [
     'CASE-20260108-00001',
     'CASE-20260108-00012',
@@ -37,26 +38,26 @@ async function testCaseIdGenerator() {
   
   validIds.forEach(id => {
     const result = isValidCaseIdFormat(id);
-    console.log(`  ${result ? '✓' : '✗'} ${id} - ${result ? 'Valid' : 'Invalid (should be valid)'}`);
+    log.info(`  ${result ? '✓' : '✗'} ${id} - ${result ? 'Valid' : 'Invalid (should be valid)'}`);
   });
   
   invalidIds.forEach(id => {
     const result = isValidCaseIdFormat(id);
-    console.log(`  ${!result ? '✓' : '✗'} ${id} - ${result ? 'Valid (should be invalid)' : 'Invalid'}`);
+    log.info(`  ${!result ? '✓' : '✗'} ${id} - ${result ? 'Valid (should be invalid)' : 'Invalid'}`);
   });
   
   // Test 3: Extract date
-  console.log('\nTest 3: Extract Date from Case ID');
+  log.info('\nTest 3: Extract Date from Case ID');
   const testId = 'CASE-20260108-00012';
   const date = extractDateFromCaseId(testId);
   if (date) {
-    console.log(`  ✓ Extracted date from ${testId}: ${date.toISOString()}`);
-    console.log(`    Year: ${date.getFullYear()}, Month: ${date.getMonth() + 1}, Day: ${date.getDate()}`);
+    log.info(`  ✓ Extracted date from ${testId}: ${date.toISOString()}`);
+    log.info(`    Year: ${date.getFullYear()}, Month: ${date.getMonth() + 1}, Day: ${date.getDate()}`);
   } else {
-    console.log(`  ✗ Failed to extract date from ${testId}`);
+    log.info(`  ✗ Failed to extract date from ${testId}`);
   }
   
-  console.log('\n✓ All tests completed!');
+  log.info('\n✓ All tests completed!');
 }
 
 // Run tests

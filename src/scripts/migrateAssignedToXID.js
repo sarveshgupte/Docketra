@@ -1,3 +1,4 @@
+const log = require('../utils/log');
 /**
  * Data Migration Script: Convert assignedTo from email to xID
  * PR #42: Standardize case assignment to use xID
@@ -22,23 +23,23 @@ const CaseHistory = require('../models/CaseHistory.model');
 
 async function migrateAssignedToXID() {
   try {
-    console.log('🔄 Starting migration: assignedTo email → xID');
-    console.log('================================================\n');
+    log.info('🔄 Starting migration: assignedTo email → xID');
+    log.info('================================================\n');
     
     // Connect to database
     const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/caseflow';
     await mongoose.connect(mongoURI);
-    console.log('✅ Connected to MongoDB\n');
+    log.info('✅ Connected to MongoDB\n');
     
     // Find all cases with assignedTo containing @ (email format)
     const casesWithEmail = await Case.find({
       assignedTo: { $regex: '@', $options: 'i' }
     }).lean();
     
-    console.log(`📊 Found ${casesWithEmail.length} cases with email in assignedTo field\n`);
+    log.info(`📊 Found ${casesWithEmail.length} cases with email in assignedTo field\n`);
     
     if (casesWithEmail.length === 0) {
-      console.log('✅ No migration needed - all cases already use xID\n');
+      log.info('✅ No migration needed - all cases already use xID\n');
       await mongoose.disconnect();
       return;
     }
@@ -69,7 +70,7 @@ async function migrateAssignedToXID() {
         const user = userMap.get(email);
         
         if (!user) {
-          console.log(`⚠️  Case ${caseData.caseId}: User not found for email ${email}`);
+          log.info(`⚠️  Case ${caseData.caseId}: User not found for email ${email}`);
           failedCount++;
           failedCases.push({
             caseId: caseData.caseId,
@@ -95,11 +96,11 @@ async function migrateAssignedToXID() {
           performedBy: 'system',
         });
         
-        console.log(`✅ Case ${caseData.caseId}: ${email} → ${user.xID}`);
+        log.info(`✅ Case ${caseData.caseId}: ${email} → ${user.xID}`);
         successCount++;
         
       } catch (error) {
-        console.error(`❌ Case ${caseData.caseId}: Migration failed - ${error.message}`);
+        log.error(`❌ Case ${caseData.caseId}: Migration failed - ${error.message}`);
         failedCount++;
         failedCases.push({
           caseId: caseData.caseId,
@@ -111,38 +112,38 @@ async function migrateAssignedToXID() {
 
     if (bulkCaseUpdates.length > 0) {
       try {
-        console.log(`\n💾 Executing ${bulkCaseUpdates.length} database updates...`);
+        log.info(`\n💾 Executing ${bulkCaseUpdates.length} database updates...`);
         await Case.bulkWrite(bulkCaseUpdates);
         await CaseHistory.insertMany(bulkHistoryInserts);
-        console.log('✅ Database updates successful\n');
+        log.info('✅ Database updates successful\n');
       } catch (error) {
-        console.error('❌ Database update failed:', error.message);
+        log.error('❌ Database update failed:', error.message);
         throw error;
       }
     }
     
     // Print summary
-    console.log('\n================================================');
-    console.log('📊 Migration Summary:');
-    console.log(`   Total cases processed: ${casesWithEmail.length}`);
-    console.log(`   ✅ Successful: ${successCount}`);
-    console.log(`   ❌ Failed: ${failedCount}`);
+    log.info('\n================================================');
+    log.info('📊 Migration Summary:');
+    log.info(`   Total cases processed: ${casesWithEmail.length}`);
+    log.info(`   ✅ Successful: ${successCount}`);
+    log.info(`   ❌ Failed: ${failedCount}`);
     
     if (failedCases.length > 0) {
-      console.log('\n⚠️  Failed cases:');
+      log.info('\n⚠️  Failed cases:');
       failedCases.forEach(fc => {
-        console.log(`   - ${fc.caseId} (${fc.email}): ${fc.reason}`);
+        log.info(`   - ${fc.caseId} (${fc.email}): ${fc.reason}`);
       });
     }
     
-    console.log('\n✅ Migration complete!\n');
+    log.info('\n✅ Migration complete!\n');
     
     // Disconnect from database
     await mongoose.disconnect();
-    console.log('✅ Disconnected from MongoDB');
+    log.info('✅ Disconnected from MongoDB');
     
   } catch (error) {
-    console.error('❌ Migration failed:', error);
+    log.error('❌ Migration failed:', error);
     await mongoose.disconnect();
     process.exit(1);
   }

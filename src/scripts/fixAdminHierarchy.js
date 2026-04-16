@@ -1,3 +1,4 @@
+const log = require('../utils/log');
 /**
  * Backfill Script: Fix legacy admins missing firmId/defaultClientId
  *
@@ -43,7 +44,7 @@ async function resolveFirm(admin) {
 async function fixSingleAdmin(admin) {
   const firm = await resolveFirm(admin);
   if (!firm) {
-    console.warn(`[MIGRATION] [${timestamp()}] Skipping ${admin.xID} - unable to resolve firm context`);
+    log.warn(`[MIGRATION] [${timestamp()}] Skipping ${admin.xID} - unable to resolve firm context`);
     return { fixed: false, reason: 'firm_unresolved' };
   }
 
@@ -71,7 +72,7 @@ async function fixSingleAdmin(admin) {
 
   await User.collection.updateOne({ _id: admin._id }, { $set: updates });
 
-  console.log(
+  log.info(
     `[MIGRATION] [${timestamp()}] Fixed ${admin.role} ${admin.xID} ` +
     `(firmId: ${updates.firmId ? 'set' : 'ok'}, defaultClientId: ${updates.defaultClientId ? 'set' : 'ok'})`
   );
@@ -83,9 +84,9 @@ async function runAdminHierarchyBackfill(options = {}) {
   const { useExistingConnection = false } = options;
 
   if (!useExistingConnection) {
-    console.log(`[MIGRATION] Connecting to MongoDB at ${MONGODB_URI}...`);
+    log.info(`[MIGRATION] Connecting to MongoDB at ${MONGODB_URI}...`);
     await mongoose.connect(MONGODB_URI);
-    console.log('[MIGRATION] Connected');
+    log.info('[MIGRATION] Connected');
   }
 
   try {
@@ -100,11 +101,11 @@ async function runAdminHierarchyBackfill(options = {}) {
     }).select('xID role firmId defaultClientId');
 
     if (candidates.length === 0) {
-      console.log('[MIGRATION] No admins/users require backfill. Nothing to do.');
+      log.info('[MIGRATION] No admins/users require backfill. Nothing to do.');
       return { processed: 0, fixed: 0 };
     }
 
-    console.log(`[MIGRATION] Found ${candidates.length} admin/user record(s) to evaluate`);
+    log.info(`[MIGRATION] Found ${candidates.length} admin/user record(s) to evaluate`);
     let fixed = 0;
 
     for (const admin of candidates) {
@@ -112,19 +113,19 @@ async function runAdminHierarchyBackfill(options = {}) {
       if (result.fixed) fixed += 1;
     }
 
-    console.log(`[MIGRATION] Completed. Fixed ${fixed}/${candidates.length} record(s).`);
+    log.info(`[MIGRATION] Completed. Fixed ${fixed}/${candidates.length} record(s).`);
     return { processed: candidates.length, fixed };
   } finally {
     if (!useExistingConnection) {
       await mongoose.disconnect();
-      console.log('[MIGRATION] Disconnected from MongoDB');
+      log.info('[MIGRATION] Disconnected from MongoDB');
     }
   }
 }
 
 if (require.main === module) {
   runAdminHierarchyBackfill().catch((err) => {
-    console.error('[MIGRATION] Failed:', err.message);
+    log.error('[MIGRATION] Failed:', err.message);
     process.exit(1);
   });
 }

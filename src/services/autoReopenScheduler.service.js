@@ -1,4 +1,5 @@
 const { reopenDuePending } = require('./docketWorkflow.service');
+const log = require('../utils/log');
 
 /**
  * Pending Case Auto-Reopen Scheduler
@@ -22,20 +23,20 @@ const { reopenDuePending } = require('./docketWorkflow.service');
  */
 const runAutoReopenJob = async () => {
   try {
-    console.log('[AutoReopen] Starting auto-reopen job...');
+    log.info('[AutoReopen] Starting auto-reopen job...');
     
     const result = await reopenDuePending();
     
     if (result.count > 0) {
-      console.log(`[AutoReopen] Successfully reopened ${result.count} case(s)`);
-      console.log(`[AutoReopen] Case IDs: ${result.docketIds.join(', ')}`);
+      log.info(`[AutoReopen] Successfully reopened ${result.count} case(s)`);
+      log.info(`[AutoReopen] Case IDs: ${result.docketIds.join(', ')}`);
     } else {
-      console.log('[AutoReopen] No cases to reopen');
+      log.info('[AutoReopen] No cases to reopen');
     }
     
     return result;
   } catch (error) {
-    console.error('[AutoReopen] Error running auto-reopen job:', error);
+    log.error('[AutoReopen] Error running auto-reopen job:', error);
     throw error;
   }
 };
@@ -50,14 +51,14 @@ const runAutoReopenJob = async () => {
  */
 const startScheduler = (intervalMinutes = 60) => {
   if (process.env.NODE_ENV === 'production') {
-    console.warn('[AutoReopen] Scheduler disabled in production to prevent background loops');
+    log.warn('[AutoReopen] Scheduler disabled in production to prevent background loops');
     return;
   }
-  console.log(`[AutoReopen] Scheduler started (runs every ${intervalMinutes} minutes)`);
+  log.info(`[AutoReopen] Scheduler started (runs every ${intervalMinutes} minutes)`);
   
   // Run immediately on startup
   runAutoReopenJob().catch(err => {
-    console.error('[AutoReopen] Initial run failed:', err);
+    log.error('[AutoReopen] Initial run failed:', err);
   });
   
   // Then run at specified intervals
@@ -66,7 +67,7 @@ const startScheduler = (intervalMinutes = 60) => {
     try {
       await runAutoReopenJob();
     } catch (error) {
-      console.error('[AutoReopen] Scheduled run failed:', error);
+      log.error('[AutoReopen] Scheduled run failed:', error);
     }
   }, intervalMs);
 };

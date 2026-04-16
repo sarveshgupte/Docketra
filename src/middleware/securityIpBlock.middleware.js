@@ -1,8 +1,8 @@
 'use strict';
 
-const log = require('../utils/log');
 const { getRequestIp } = require('../services/forensicAudit.service');
 const { getIpBlockStatus } = require('../services/securityTelemetry.service');
+const log = require('../utils/log');
 
 // Superadmin login is a single explicit endpoint, while tenant logins are slug-based
 // and therefore matched with a route-shaped regex.

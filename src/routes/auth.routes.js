@@ -1,6 +1,7 @@
 const express = require('express');
 const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
 const routeSchemas = require('../schemas/auth.routes.schema.js');
+const log = require('../utils/log');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { authenticate } = require('../middleware/auth.middleware');
 const { attachFirmFromSlug } = require('../middleware/attachFirmFromSlug.middleware');
@@ -55,7 +56,7 @@ let profileHitCount = 0;
 const detectProfileLoop = (req, res, next) => {
   profileHitCount += 1;
   if (profileHitCount > 3) {
-    console.error('🚨 AUTH PROFILE LOOP DETECTED');
+    log.error('🚨 AUTH PROFILE LOOP DETECTED');
   }
   next();
 };

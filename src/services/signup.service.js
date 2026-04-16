@@ -11,9 +11,9 @@ const { slugify } = require('../utils/slugify');
 const emailService = require('./email.service');
 const jwtService = require('./jwt.service');
 const config = require('../config/config');
-const log = require('../utils/log');
 const { acquireLock, releaseLock } = require('./redisLock.service');
 const { safeAuditLog, safeQueueEmail } = require('./safeSideEffects.service');
+const log = require('../utils/log');
 const {
   consumeSignupQuota,
   consumeOtpAttempt,
@@ -66,7 +66,7 @@ const logSignupAuthEvent = async ({
       },
     });
   } catch (error) {
-    console.error(`[PUBLIC_SIGNUP][AUDIT] Failed to record ${eventType}:`, error.message);
+    log.error(`[PUBLIC_SIGNUP][AUDIT] Failed to record ${eventType}:`, error.message);
   }
 };
 
@@ -500,11 +500,11 @@ const sendSignupWelcomeEmail = async ({
 
     if (!emailResult?.success) {
       const failureMessage = emailResult.error || 'Unknown email error';
-      console.error('[PUBLIC_SIGNUP] Failed to send welcome email:', failureMessage);
+      log.error('[PUBLIC_SIGNUP] Failed to send welcome email:', failureMessage);
       return { success: false, error: failureMessage };
     }
 
-    console.info('[PUBLIC_SIGNUP] Welcome email sent successfully', {
+    log.info('[PUBLIC_SIGNUP] Welcome email sent successfully', {
       email,
       firmSlug,
       xid,
@@ -515,7 +515,7 @@ const sendSignupWelcomeEmail = async ({
       messageId: emailResult?.messageId || null,
     };
   } catch (emailError) {
-    console.error('[PUBLIC_SIGNUP] Failed to send welcome email:', emailError.message);
+    log.error('[PUBLIC_SIGNUP] Failed to send welcome email:', emailError.message);
     return { success: false, error: emailError.message };
   }
 };
@@ -773,7 +773,7 @@ const completeSignup = async ({ email, firmName, session, req = null }) => {
       redirectPath: `/${result.firmSlug}/login`,
     };
   } catch (error) {
-    console.error('[PUBLIC_SIGNUP] Complete signup failed:', error.message);
+    log.error('[PUBLIC_SIGNUP] Complete signup failed:', error.message);
     return { success: false, status: 500, message: 'Signup failed. Please try again.' };
   }
 };
@@ -790,13 +790,13 @@ const resendCredentialsEmail = async ({ email, req = null }) => {
   }).select('name email xID firmId').lean();
 
   if (!adminUser) {
-    console.warn('[PUBLIC_SIGNUP] resendCredentials requested for unknown email');
+    log.warn('[PUBLIC_SIGNUP] resendCredentials requested for unknown email');
     return { success: true, message: responseMessage };
   }
 
   const firm = await Firm.findById(adminUser.firmId).select('name firmSlug').lean();
   if (!firm || !firm.firmSlug) {
-    console.error('[PUBLIC_SIGNUP] Unable to resend credentials email. Firm context missing.', {
+    log.error('[PUBLIC_SIGNUP] Unable to resend credentials email. Firm context missing.', {
       firmId: adminUser.firmId ? String(adminUser.firmId) : null,
     });
     return { success: true, message: responseMessage };
@@ -811,7 +811,7 @@ const resendCredentialsEmail = async ({ email, req = null }) => {
     req,
   });
   if (!emailResult.success) {
-    console.error('[PUBLIC_SIGNUP] resendCredentials email delivery failed', {
+    log.error('[PUBLIC_SIGNUP] resendCredentials email delivery failed', {
       firmId: adminUser.firmId ? String(adminUser.firmId) : null,
       reason: emailResult.error || 'Unknown email error',
     });

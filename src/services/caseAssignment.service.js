@@ -5,6 +5,8 @@ const mongoose = require('mongoose');
 const { CaseRepository } = require('../repositories');
 const CaseStatus = require('../domain/case/caseStatus');
 const { DocketLifecycle } = require('../domain/docketLifecycle');
+const log = require('../utils/log');
+const docketAuditService = require('./docketAudit.service');
 
 /**
  * Case Assignment Service
@@ -55,7 +57,7 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObject
   );
 
   if (!updatedCase) {
-    console.warn('[AtomicPullConflict]', {
+    log.warn('[AtomicPullConflict]', {
       caseId,
       tenantId,
       reason: 'No row modified',
@@ -82,8 +84,24 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObject
         timestamp: assignedAt,
       },
     }).catch((error) => {
-      console.error('[pullCaseFromWorkbasket] Non-blocking audit write failed:', error?.message || error);
+      log.error('[pullCaseFromWorkbasket] Non-blocking audit write failed:', error?.message || error);
     });
+  });
+
+  await docketAuditService.logAssignment({
+    firmId: tenantId,
+    docketId: caseId,
+    performedBy: normalizedUserId,
+    performedByRole: 'USER',
+    fromAssignee: null,
+    toAssignee: normalizedUserId,
+    fromStatus: CaseStatus.UNASSIGNED,
+    toStatus: CaseStatus.ASSIGNED,
+    action: 'ASSIGNMENT',
+    metadata: {
+      source: 'caseAssignment.service.pullCaseFromWorkbasket',
+    },
+    session,
   });
 
   return {
@@ -203,7 +221,7 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
       { session }
     );
 
-    console.log('[CASE_PULL_DEBUG]', {
+    log.info('[CASE_PULL_DEBUG]', {
       requested: caseIds,
       matched: result.matchedCount,
       modified: result.modifiedCount,
@@ -251,6 +269,28 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
       caseId: { $in: updatedCases.map((caseData) => caseData.caseId) },
     }, null, { session });
 
+    await docketAuditService.logBulkAction({
+      firmId,
+      docketIds: updatedCases.map((caseData) => caseData.caseId),
+      performedBy: user.xID.toUpperCase(),
+      performedByRole: user.role,
+      action: 'BULK_ASSIGNMENT',
+      metadata: {
+        source: 'caseAssignment.service.bulkAssignCasesToUser',
+        assigneeXID: user.xID.toUpperCase(),
+      },
+      buildPerDocketPayload: () => ({
+        fromState: CaseStatus.UNASSIGNED,
+        toState: CaseStatus.ASSIGNED,
+        changes: [{
+          field: 'assignedToXID',
+          from: null,
+          to: user.xID.toUpperCase(),
+        }],
+      }),
+      session,
+    });
+
     if (ownsSession && useTransaction) {
       await session.commitTransaction();
     }
@@ -268,7 +308,7 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
     } catch (_) {
       // noop
     }
-    console.error('[CASE_PULL_ERROR]', {
+    log.error('[CASE_PULL_ERROR]', {
       message: error.message,
       stack: error.stack,
       caseIds,
@@ -352,6 +392,21 @@ const reassignCase = async (firmId, caseId, newUserXID, performedBy) => {
     description: `Case reassigned from ${previousAssignee || 'unassigned'} to ${newUserXID}`,
     performedBy: performedBy.email.toLowerCase(),
     performedByXID: performedBy.xID.toUpperCase(), // Canonical identifier (uppercase)
+  });
+
+  await docketAuditService.logAssignment({
+    firmId,
+    docketId: caseId,
+    performedBy: performedBy.xID,
+    performedByRole: performedBy.role,
+    fromAssignee: previousAssignee || null,
+    toAssignee: newUserXID.toUpperCase(),
+    fromStatus: caseData.status,
+    toStatus: caseData.status,
+    action: 'REASSIGNED',
+    metadata: {
+      source: 'caseAssignment.service.reassignCase',
+    },
   });
   
   return caseData;

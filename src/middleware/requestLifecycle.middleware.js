@@ -1,8 +1,8 @@
 const { randomUUID } = require('crypto');
-const log = require('../utils/log');
 const metricsService = require('../services/metrics.service');
 const { attachRecorder, flushRequestEffects } = require('../services/sideEffectQueue.service');
 const { noteApiActivity } = require('../services/securityTelemetry.service');
+const log = require('../utils/log');
 
 const LOGIN_PATHS = new Set(['/superadmin/login']);
 const TENANT_LOGIN_PATH = /^\/[^/]+\/login$/;

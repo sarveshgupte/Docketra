@@ -1,3 +1,4 @@
+const log = require('../utils/log');
 'use strict';
 
 require('dotenv').config();
@@ -40,11 +41,11 @@ const startWorker = async () => {
   });
 
   bulkUploadWorker.on('completed', (job) => {
-    console.log('Bulk job completed:', job.id);
+    log.info('Bulk job completed:', job.id);
   });
 
   bulkUploadWorker.on('failed', async (job, err) => {
-    console.error('Bulk job failed:', job?.id, err.message);
+    log.error('Bulk job failed:', job?.id, err.message);
 
     const jobId = job?.data?.jobId;
     if (!jobId) return;
@@ -57,16 +58,16 @@ const startWorker = async () => {
 
   bulkUploadWorker.on('error', (err) => {
     setWorkerStatus('bulkUpload', 'error');
-    console.error('[bulkUploadWorker] Worker error:', err.message);
+    log.error('[bulkUploadWorker] Worker error:', err.message);
   });
 
-  console.log('[bulkUploadWorker] Worker started with concurrency=3');
+  log.info('[bulkUploadWorker] Worker started with concurrency=3');
   return bulkUploadWorker;
 };
 
 startWorker().catch((error) => {
   setWorkerStatus('bulkUpload', 'error');
-  console.error('[bulkUploadWorker] Failed to start:', error);
+  log.error('[bulkUploadWorker] Failed to start:', error);
 });
 
 module.exports = bulkUploadWorker;

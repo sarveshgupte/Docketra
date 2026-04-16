@@ -4,6 +4,7 @@ const { softDelete } = require('../services/softDelete.service');
 const { decrypt, ensureTenantKey, ForbiddenError } = require('../security/encryption.service');
 const { looksEncrypted } = require('../security/encryption.utils');
 const { normalizeLifecycle } = require('../domain/docketLifecycle');
+const log = require('../utils/log');
 /**
  * ⚠️ SECURITY: Case Repository - Firm-Scoped Data Access Layer ⚠️
  * 
@@ -83,7 +84,7 @@ async function _decryptCaseDoc(doc, firmId, { logContext } = {}) {
         });
 
         if (decrypted == null) {
-          console.error('[CaseRepository] DECRYPTION_FAILED - FALLBACK', {
+          log.error('[CaseRepository] DECRYPTION_FAILED - FALLBACK', {
             field,
             firmId: tenantId,
             encryptedValueLength: String(encryptedValue).length,
@@ -95,7 +96,7 @@ async function _decryptCaseDoc(doc, firmId, { logContext } = {}) {
           doc[field] = decrypted;
         }
       } catch (err) {
-        console.error('[CaseRepository] DECRYPTION_ERROR', {
+        log.error('[CaseRepository] DECRYPTION_ERROR', {
           field,
           firmId: tenantId,
           error: err.message,
@@ -148,7 +149,7 @@ async function _decryptCaseDocs(docs, firmId, { logContext } = {}) {
           });
 
           if (decrypted == null) {
-            console.error('[CaseRepository] DECRYPTION_FAILED_IN_BATCH', {
+            log.error('[CaseRepository] DECRYPTION_FAILED_IN_BATCH', {
               field,
               firmId: tenantId,
               docId: doc._id,
@@ -161,7 +162,7 @@ async function _decryptCaseDocs(docs, firmId, { logContext } = {}) {
             doc[field] = decrypted;
           }
         } catch (err) {
-          console.error('[CaseRepository] DECRYPTION_ERROR_IN_BATCH', {
+          log.error('[CaseRepository] DECRYPTION_ERROR_IN_BATCH', {
             field,
             firmId: tenantId,
             docId: doc._id,
@@ -249,7 +250,7 @@ async function diagnoseDescriptionDecryption(firmId, caseId) {
     report.checks.decryptionErrorStack = err.stack;
   }
 
-  console.log('[CaseRepository] DIAGNOSTIC_REPORT', report);
+  log.info('[CaseRepository] DIAGNOSTIC_REPORT', report);
   return report;
 }
 
@@ -269,7 +270,7 @@ const validateQuery = (query) => {
 
   // Allow caseId during transition period but log warning
   if (query.caseId && process.env.NODE_ENV !== 'production') {
-    console.warn('[CaseRepository] WARNING: caseId usage detected. This is deprecated. Use caseInternalId for internal lookups.');
+    log.warn('[CaseRepository] WARNING: caseId usage detected. This is deprecated. Use caseInternalId for internal lookups.');
   }
 };
 
@@ -664,9 +665,9 @@ const CaseRepository = {
 
     try {
       await ensureTenantKey(tenantId);
-      console.info('[CaseRepository.create] Tenant key ensured', { tenantId });
+      log.info('[CaseRepository.create] Tenant key ensured', { tenantId });
     } catch (err) {
-      console.error('[CaseRepository.create] TENANT_KEY_BOOTSTRAP_FAILED', {
+      log.error('[CaseRepository.create] TENANT_KEY_BOOTSTRAP_FAILED', {
         tenantId,
         error: err.message,
         errorStack: err.stack,
@@ -675,13 +676,13 @@ const CaseRepository = {
     }
 
     if (!process.env.MASTER_ENCRYPTION_KEY) {
-      console.error('[CaseRepository.create] MASTER_ENCRYPTION_KEY_MISSING', { tenantId });
+      log.error('[CaseRepository.create] MASTER_ENCRYPTION_KEY_MISSING', { tenantId });
       throw new Error('System is not properly configured for case creation. Contact support.');
     }
 
     try {
       const doc = await Case.create(caseData);
-      console.info('[CaseRepository.create] Case created with encrypted description', {
+      log.info('[CaseRepository.create] Case created with encrypted description', {
         tenantId,
         caseId: doc._id,
         descriptionEncrypted: !!doc.description && looksEncrypted(doc.description),
@@ -691,7 +692,7 @@ const CaseRepository = {
         logContext: { operation: 'create', caseId: doc._id },
       });
     } catch (err) {
-      console.error('[CaseRepository.create] CASE_CREATION_FAILED', {
+      log.error('[CaseRepository.create] CASE_CREATION_FAILED', {
         tenantId,
         error: err.message,
         errorStack: err.stack,

@@ -13,6 +13,7 @@
 const express = require('express');
 const { applyRouteValidation } = require('../middleware/requestValidation.middleware');
 const routeSchemas = require('../schemas/firm.routes.schema');
+const log = require('../utils/log');
 const router = applyRouteValidation(express.Router({ mergeParams: true }), routeSchemas);
 
 const tenantResolver = require('../middleware/tenantResolver');
@@ -49,7 +50,7 @@ router.use(tenantResolver);
 router.get('/login', publicLimiter, (req, res) => {
   // Debug log: confirms route resolution with firmSlug params (Step 1 requirement)
   if (process.env.NODE_ENV !== 'production') {
-    console.log('Firm login route hit:', req.params);
+    log.info('Firm login route hit:', req.params);
   }
   return res.json({
     success: true,

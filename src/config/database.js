@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
-const log = require('../utils/log');
 const config = require('./config');
+const log = require('../utils/log');
 
 /**
  * Database connection configuration
