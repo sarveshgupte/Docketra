@@ -2,6 +2,7 @@ const { google } = require('googleapis');
 const { Readable } = require('stream');
 const Firm = require('../models/Firm.model');
 const { encrypt, decrypt } = require('./storage/services/TokenEncryption.service');
+const log = require('../utils/log');
 
 const PROVIDER_TYPES = {
   USER_GOOGLE_DRIVE: 'USER_GOOGLE_DRIVE',
@@ -72,7 +73,7 @@ class GoogleDriveService {
 
     if (isDisconnectedError || isPermissionError) {
       await this.markStorageDisconnected(firmId, error?.message || 'Storage token disconnected');
-      console.error('[STORAGE]', {
+      log.error('[STORAGE]', {
         event: 'token_expired',
         firmId,
         status: error?.status || null,
@@ -177,7 +178,7 @@ class GoogleDriveService {
 
       return upload.data;
     } catch (error) {
-      console.error('[STORAGE]', { event: 'upload_failed', firmId, message: error.message });
+      log.error('[STORAGE]', { event: 'upload_failed', firmId, message: error.message });
       await this.handleProviderError(firmId, error);
       throw error;
     }

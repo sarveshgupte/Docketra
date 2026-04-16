@@ -1,6 +1,7 @@
 const CaseAudit = require('../models/CaseAudit.model');
 const CaseHistory = require('../models/CaseHistory.model');
 const { CASE_ACTION_TYPES } = require('../config/constants');
+const log = require('../utils/log');
 
 /**
  * Audit Logging Service
@@ -81,7 +82,7 @@ const logCaseHistory = async ({
 
     // Validate required fields
     if (!caseId || !actionType || !description) {
-      console.error('[AUDIT] Missing required fields for case history:', { caseId, actionType });
+      log.error('[AUDIT] Missing required fields for case history:', { caseId, actionType });
       if (inTransaction) {
         throw new Error('Invalid CaseHistory payload');
       }
@@ -90,7 +91,7 @@ const logCaseHistory = async ({
     
     // Validate firmId is provided
     if (!firmId) {
-      console.error('[AUDIT] firmId is required for case history');
+      log.error('[AUDIT] firmId is required for case history');
       if (inTransaction) {
         throw new Error('Invalid CaseHistory payload');
       }
@@ -124,7 +125,7 @@ const logCaseHistory = async ({
 
     return entry || null;
   } catch (error) {
-    console.error('[AUDIT] Failed to create case history entry', {
+    log.error('[AUDIT] Failed to create case history entry', {
       error: error.message,
       stack: error.stack,
       historyEntry: {
@@ -163,7 +164,7 @@ const logCaseAction = async ({ caseId, firmId, actionType, description, performe
   try {
     // Validate required fields
     if (!caseId || !actionType || !description || !performedByXID) {
-      console.error('[AUDIT] Missing required fields for audit log:', { caseId, actionType, performedByXID });
+      log.error('[AUDIT] Missing required fields for audit log:', { caseId, actionType, performedByXID });
       throw new Error('Missing required fields for audit log');
     }
 
@@ -189,7 +190,7 @@ const logCaseAction = async ({ caseId, firmId, actionType, description, performe
 
     return auditEntry;
   } catch (error) {
-    console.error('[AUDIT] Failed to create audit log:', error.message);
+    log.error('[AUDIT] Failed to create audit log:', error.message);
     throw error;
   }
 };
@@ -208,7 +209,7 @@ const logCaseAction = async ({ caseId, firmId, actionType, description, performe
 const logCaseListViewed = async ({ viewerXID, firmId, filters = {}, listType, resultCount = 0, req }) => {
   try {
     if (!viewerXID || !listType) {
-      console.error('[AUDIT] Missing required fields for list view audit');
+      log.error('[AUDIT] Missing required fields for list view audit');
       return;
     }
 
@@ -242,7 +243,7 @@ const logCaseListViewed = async ({ viewerXID, firmId, filters = {}, listType, re
       impersonationSessionId,
     });
   } catch (error) {
-    console.error('[AUDIT] Failed to log case list view:', error.message);
+    log.error('[AUDIT] Failed to log case list view:', error.message);
     // Don't throw - list view audit failures shouldn't block the request
   }
 };
@@ -267,7 +268,7 @@ const logCaseListViewed = async ({ viewerXID, firmId, filters = {}, listType, re
 const logAdminAction = async ({ adminXID, actionType, targetXID, targetFirmId, metadata = {}, req }) => {
   try {
     if (!adminXID || !actionType) {
-      console.error('[AUDIT] Missing required fields for admin action audit');
+      log.error('[AUDIT] Missing required fields for admin action audit');
       return;
     }
 
@@ -305,7 +306,7 @@ const logAdminAction = async ({ adminXID, actionType, targetXID, targetFirmId, m
       impersonationSessionId,
     });
   } catch (error) {
-    console.error('[AUDIT] Failed to log admin action:', error.message);
+    log.error('[AUDIT] Failed to log admin action:', error.message);
     // Don't throw - audit failures shouldn't block the request
   }
 };

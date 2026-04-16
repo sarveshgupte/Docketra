@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const EncryptionProvider = require('./encryption.interface');
 const TenantKey = require('./tenantKey.model');
+const log = require('../utils/log');
 
 /**
  * LocalEncryptionProvider — AES-256-GCM envelope encryption using a local KEK.
@@ -44,7 +45,7 @@ function loadMasterKey() {
   if (!raw) {
     throw new Error(
       'MASTER_ENCRYPTION_KEY environment variable is required but not set. ' +
-      'Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'base64\'))"'
+      'Generate one with: node -e "log.info(require(\'crypto\').randomBytes(32).toString(\'base64\'))"'
     );
   }
 

@@ -18,6 +18,7 @@
 const Firm = require('../models/Firm.model');
 const { normalizeFirmSlug } = require('../utils/slugify');
 const { getFirmInactiveCode, isActiveStatus } = require('../utils/status.utils');
+const log = require('../utils/log');
 
 const TENANT_CACHE_TTL_MS = 60 * 1000;
 const tenantCache = new Map();
@@ -65,7 +66,7 @@ module.exports = async function tenantResolver(req, res, next) {
   const normalizedSlug = normalizeFirmSlug(rawSlug);
 
   if (!normalizedSlug) {
-    console.warn('[TENANT_RESOLVER] Invalid firmSlug — empty after normalization', { rawSlug });
+    log.warn('[TENANT_RESOLVER] Invalid firmSlug — empty after normalization', { rawSlug });
     return res.status(404).json(FIRM_NOT_FOUND_RESPONSE);
   }
 
@@ -119,7 +120,7 @@ module.exports = async function tenantResolver(req, res, next) {
 
     return next();
   } catch (error) {
-    console.error('[TENANT_RESOLVER] Error resolving firmSlug:', error);
+    log.error('[TENANT_RESOLVER] Error resolving firmSlug:', error);
     return res.status(500).json({
       success: false,
       code: 'FIRM_RESOLUTION_FAILED',

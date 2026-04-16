@@ -1,3 +1,4 @@
+const log = require('../utils/log');
 const createAuthSignupService = (deps) => {
   const {
     signupService,
@@ -38,7 +39,7 @@ const createAuthSignupService = (deps) => {
         data: { email },
       });
     } catch (error) {
-      console.error('[AUTH][signupInit] Unable to start signup', error);
+      log.error('[AUTH][signupInit] Unable to start signup', error);
       return res.status(500).json({ success: false, message: 'Unable to start signup right now.' });
     }
   };
@@ -84,7 +85,7 @@ const createAuthSignupService = (deps) => {
         },
       });
     } catch (error) {
-      console.error('[AUTH][signupVerify] Unable to verify signup OTP', error);
+      log.error('[AUTH][signupVerify] Unable to verify signup OTP', error);
       return res.status(500).json({ success: false, message: 'Unable to verify signup OTP right now.' });
     } finally {
       await session.endSession();
@@ -104,7 +105,7 @@ const createAuthSignupService = (deps) => {
         message: result.message,
       });
     } catch (error) {
-      console.error('[AUTH][signupResend] Unable to resend signup OTP', error);
+      log.error('[AUTH][signupResend] Unable to resend signup OTP', error);
       return res.status(500).json({ success: false, message: 'Unable to resend OTP right now.' });
     }
   };

@@ -18,6 +18,28 @@ const safeStringify = (value) => {
   });
 };
 
+const normalizeEventName = (event, level = 'info') => {
+  const raw = typeof event === 'string' ? event : String(event || '');
+  const normalized = raw
+    .trim()
+    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toUpperCase();
+
+  if (!normalized) {
+    return `SYSTEM_LOG_${String(level || 'info').toUpperCase()}`;
+  }
+
+  const tokenCount = normalized.split('_').filter(Boolean).length;
+  if (tokenCount >= 3) {
+    return normalized;
+  }
+
+  return `SYSTEM_${normalized}_${String(level || 'info').toUpperCase()}`;
+};
+
 /**
  * Keep only safe request metadata from potentially unsafe payloads.
  */
@@ -72,12 +94,19 @@ const buildContext = (level, event, meta = {}) => {
 
   return {
     severity: String(severity).toUpperCase(),
-    event,
+    event: normalizeEventName(event, level),
     requestId: resolvedRequestId,
     method,
     url,
     statusCode,
     message,
+    req: req
+      ? {
+        id: req.requestId || req.id || null,
+        method: req.method || null,
+        url: req.originalUrl || req.url || null,
+      }
+      : null,
     tenantId,
     firmId: tenantId,
     userId,
@@ -96,27 +125,80 @@ const baseLogger = pino({
 });
 
 const fallbackLogger = (level, event, error) => {
-  const logger = level === 'error' ? console.error : level === 'warn' ? console.warn : console.log;
-  logger(`[${String(level || 'error').toUpperCase()}] ${event}`, {
+  process.stderr.write(`${JSON.stringify({
+    severity: String(level || 'error').toUpperCase(),
     event,
     message: 'Logging failure recovered by fallback logger',
     error: error?.message || String(error),
     timestamp: new Date().toISOString(),
-  });
+  })}\n`);
 };
 
-const logAtLevel = (level, event, meta = {}) => {
+const toMetaObject = (value) => {
+  if (value instanceof Error) {
+    return { error: value, message: value.message };
+  }
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    return { message: value };
+  }
+  if (value === undefined || value === null) {
+    return {};
+  }
+  return { value };
+};
+
+const parseLogArgs = (level, args = []) => {
+  if (!Array.isArray(args) || args.length === 0) {
+    return {
+      event: `SYSTEM_LOG_${String(level || 'info').toUpperCase()}`,
+      meta: {},
+    };
+  }
+
+  const [first, second, ...rest] = args;
+
+  if (typeof first === 'string') {
+    const event = first;
+    const secondMeta = toMetaObject(second);
+    if (rest.length === 0) {
+      return { event, meta: secondMeta };
+    }
+    return {
+      event,
+      meta: {
+        ...secondMeta,
+        extra: [second, ...rest].map((arg) => (arg instanceof Error ? { name: arg.name, message: arg.message, stack: arg.stack } : arg)),
+      },
+    };
+  }
+
+  const firstMeta = toMetaObject(first);
+  return {
+    event: firstMeta.event || `SYSTEM_LOG_${String(level || 'info').toUpperCase()}`,
+    meta: {
+      ...firstMeta,
+      ...(second !== undefined ? { extra: [second, ...rest] } : {}),
+    },
+  };
+};
+
+const logAtLevel = (level, ...args) => {
   try {
-    const context = maskSensitiveObject(buildContext(level, event, meta));
-    baseLogger[level](context, event);
+    const { event, meta } = parseLogArgs(level, args);
+    const normalizedEvent = normalizeEventName(event, level);
+    const context = maskSensitiveObject(buildContext(level, normalizedEvent, meta));
+    baseLogger[level](context, normalizedEvent);
   } catch (error) {
-    fallbackLogger(level, event, error);
+    fallbackLogger(level, args?.[0], error);
   }
 };
 
 module.exports = {
   safeStringify,
-  info: (event, meta) => logAtLevel('info', event, meta),
-  warn: (event, meta) => logAtLevel('warn', event, meta),
-  error: (event, meta) => logAtLevel('error', event, meta),
+  info: (...args) => logAtLevel('info', ...args),
+  warn: (...args) => logAtLevel('warn', ...args),
+  error: (...args) => logAtLevel('error', ...args),
 };

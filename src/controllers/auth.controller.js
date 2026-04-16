@@ -554,7 +554,7 @@ const getFirmSlug = async (firmId) => {
     const firm = await Firm.findOne({ _id: firmId });
     return firm?.firmSlug || null;
   } catch (error) {
-    console.error('[AUTH] Error fetching firm slug:', error);
+    log.error('[AUTH] Error fetching firm slug:', error);
     return null; // Gracefully handle errors, don't crash
   }
 };
@@ -787,11 +787,11 @@ const handleSuperadminLogin = async (req, res, normalizedXID, password, loginSco
   if (loginScope !== 'superadmin') {
     return res.status(401).json({ success: false, message: 'Invalid xID or password' });
   }
-  console.log('[AUTH][superadmin] login attempt', { xID: normalizedXID });
+  log.info('[AUTH][superadmin] login attempt', { xID: normalizedXID });
 
   const superadminPasswordHash = process.env.SUPERADMIN_PASSWORD_HASH;
   if (!superadminPasswordHash) {
-    console.error('[AUTH][superadmin] SUPERADMIN_PASSWORD_HASH not configured in environment');
+    log.error('[AUTH][superadmin] SUPERADMIN_PASSWORD_HASH not configured in environment');
     return res.status(500).json({
       success: false,
       message: 'SuperAdmin authentication not configured',
@@ -802,7 +802,7 @@ const handleSuperadminLogin = async (req, res, normalizedXID, password, loginSco
 
   if (!isSuperadminPasswordValid) {
     await recordFailedLoginAttempt(req);
-    console.warn('[AUTH][superadmin] SuperAdmin login failed - invalid credentials');
+    log.warn('[AUTH][superadmin] SuperAdmin login failed - invalid credentials');
     await logAuthAudit({
       xID: normalizedXID || DEFAULT_XID,
       firmId: DEFAULT_FIRM_ID,
@@ -819,7 +819,7 @@ const handleSuperadminLogin = async (req, res, normalizedXID, password, loginSco
     });
   }
 
-  console.log('[AUTH][superadmin] SuperAdmin login successful');
+  log.info('[AUTH][superadmin] SuperAdmin login successful');
   await clearFailedLoginAttempts(req);
   await logAuthAudit({
     xID: normalizedXID || DEFAULT_XID,
@@ -842,7 +842,7 @@ const handleSuperadminLogin = async (req, res, normalizedXID, password, loginSco
   };
 
   try {
-    console.log('[DEBUG] user object:', user);
+    log.info('[DEBUG] user object:', user);
 
     const accessToken = jwtService.generateAccessToken({
       userId: user.id,
@@ -863,7 +863,7 @@ const handleSuperadminLogin = async (req, res, normalizedXID, password, loginSco
       data: user,
     });
   } catch (postAuthError) {
-    console.error('[AUTH][superadmin] Post-auth token/response failure', {
+    log.error('[AUTH][superadmin] Post-auth token/response failure', {
       message: postAuthError.message,
       xID: normalizedXID || DEFAULT_XID,
     });
@@ -878,7 +878,7 @@ const validateTenantUserPreconditions = async (req, res, user, requestedFirmSlug
   const loginScope = req.loginScope || 'tenant';
   if (!user || !isActiveStatus(user.status)) {
     await recordFailedLoginAttempt(req);
-    console.warn(`[AUTH] Invalid login attempt for xID=${normalizedXID} in firm context ${req.firmSlug || req.firmId}`);
+    log.warn(`[AUTH] Invalid login attempt for xID=${normalizedXID} in firm context ${req.firmSlug || req.firmId}`);
     try {
       await logAuthAudit({
         xID: normalizedXID || 'UNKNOWN',
@@ -913,7 +913,7 @@ const validateTenantUserPreconditions = async (req, res, user, requestedFirmSlug
         firmId: req.firmIdString || req.firmId || null,
       });
     } catch (auditError) {
-      console.error('[AUTH AUDIT] Failed to record login failure event', auditError);
+      log.error('[AUTH AUDIT] Failed to record login failure event', auditError);
     }
     res.status(401).json({
       success: false,
@@ -925,7 +925,7 @@ const validateTenantUserPreconditions = async (req, res, user, requestedFirmSlug
   if (user.role !== 'SUPER_ADMIN') {
     const firmCount = await Firm.countDocuments();
     if (firmCount === 0) {
-      console.warn(`[AUTH] Login blocked for ${user.xID} - system not initialized (no firms exist)`);
+      log.warn(`[AUTH] Login blocked for ${user.xID} - system not initialized (no firms exist)`);
       res.status(403).json({
         success: false,
         message: 'System not initialized. Contact SuperAdmin.',
@@ -935,7 +935,7 @@ const validateTenantUserPreconditions = async (req, res, user, requestedFirmSlug
   }
 
   if (!isSuperAdminRole(user.role) && !user.firmId) {
-    console.error(`[AUTH] User ${user.xID} missing firmId - login rejected`);
+    log.error(`[AUTH] User ${user.xID} missing firmId - login rejected`);
     res.status(403).json({
       success: false,
       message: 'Account is not linked to a firm. Please complete onboarding or contact administrator.',
@@ -944,11 +944,11 @@ const validateTenantUserPreconditions = async (req, res, user, requestedFirmSlug
   }
 
   if (user.role === ROLE_ADMIN) {
-    console.log(`[AUTH] Admin ${user.xID} validation - firmId: ${user.firmId}, defaultClientId: ${user.defaultClientId}`);
+    log.info(`[AUTH] Admin ${user.xID} validation - firmId: ${user.firmId}, defaultClientId: ${user.defaultClientId}`);
     try {
       await ensureUserDefaultClientLink(user, req);
     } catch (defaultClientError) {
-      console.error(`[AUTH] Failed to enforce default client invariant for ${user.xID}:`, defaultClientError.message);
+      log.error(`[AUTH] Failed to enforce default client invariant for ${user.xID}:`, defaultClientError.message);
       res.status(500).json({
         success: false,
         message: 'Account configuration error. Please contact administrator.',
@@ -1059,7 +1059,7 @@ const handlePasswordVerification = async (req, res, user, password) => {
           userAgent: req.get('user-agent'),
         }, req);
       } catch (auditError) {
-        console.error('[AUTH AUDIT] Failed to record account lock event', auditError);
+        log.error('[AUTH AUDIT] Failed to record account lock event', auditError);
       }
 
       res.status(403).json({
@@ -1107,7 +1107,7 @@ const handlePasswordVerification = async (req, res, user, password) => {
         firmId: user.firmId || DEFAULT_FIRM_ID,
       });
     } catch (auditError) {
-      console.error('[AUTH AUDIT] Failed to record login failure event', auditError);
+      log.error('[AUTH AUDIT] Failed to record login failure event', auditError);
     }
 
     res.status(401).json({
@@ -1142,7 +1142,7 @@ const handlePostPasswordChecks = async (req, res, user) => {
         userAgent: req.get('user-agent'),
       }, req);
     } catch (auditError) {
-      console.error('[AUTH AUDIT] Failed to record password expiry event', auditError);
+      log.error('[AUTH AUDIT] Failed to record password expiry event', auditError);
     }
 
     res.status(403).json({
@@ -1154,7 +1154,7 @@ const handlePostPasswordChecks = async (req, res, user) => {
   }
 
   if (user.forcePasswordReset) {
-    console.log(`[AUTH] First login detected for user ${user.xID}, generating password reset token`);
+    log.info(`[AUTH] First login detected for user ${user.xID}, generating password reset token`);
 
     const token = emailService.generateSecureToken();
     const tokenHash = emailService.hashToken(token);
@@ -1162,10 +1162,10 @@ const handlePostPasswordChecks = async (req, res, user) => {
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
-    console.log('PASSWORD RESET LINK:', resetUrl);
+    log.info('PASSWORD RESET LINK:', resetUrl);
 
     if (!process.env.FRONTEND_URL) {
-      console.warn('[AUTH] FRONTEND_URL not configured. Using default http://localhost:3000.');
+      log.warn('[AUTH] FRONTEND_URL not configured. Using default http://localhost:3000.');
     }
     
     user.passwordResetTokenHash = tokenHash;
@@ -1174,7 +1174,7 @@ const handlePostPasswordChecks = async (req, res, user) => {
     try {
       await user.save();
     } catch (saveError) {
-      console.error('[AUTH] Failed to save password reset token:', saveError.message);
+      log.error('[AUTH] Failed to save password reset token:', saveError.message);
     }
     
     let emailSent = false;
@@ -1182,12 +1182,12 @@ const handlePostPasswordChecks = async (req, res, user) => {
       const emailResult = await emailService.sendPasswordResetEmail(user.email, user.name, token);
       emailSent = emailResult.success;
       if (emailSent) {
-        console.log(`[AUTH] Password reset email sent successfully`);
+        log.info(`[AUTH] Password reset email sent successfully`);
       } else {
-        console.error(`[AUTH] Password reset email failed:`, emailResult.error);
+        log.error(`[AUTH] Password reset email failed:`, emailResult.error);
       }
     } catch (emailError) {
-      console.error('[AUTH] Failed to send password reset email:', emailError.message);
+      log.error('[AUTH] Failed to send password reset email:', emailError.message);
     }
 
     try {
@@ -1204,7 +1204,7 @@ const handlePostPasswordChecks = async (req, res, user) => {
         userAgent: req.get('user-agent'),
       }, req);
     } catch (auditError) {
-      console.error('[AUTH AUDIT] Failed to record password reset email event', auditError);
+      log.error('[AUTH AUDIT] Failed to record password reset email event', auditError);
     }
   }
   return false;
@@ -1351,7 +1351,7 @@ const changePassword = async (req, res) => {
       message: 'Password changed successfully',
     });
   } catch (error) {
-    console.error('[AUTH] Change password error:', error);
+    log.error('[AUTH] Change password error:', error);
     res.status(500).json({
       success: false,
       message: 'Error changing password',
@@ -1434,7 +1434,7 @@ const resetPassword = async (req, res) => {
       });
 
       if (!emailResult.success) {
-        console.warn('[AUTH] Password setup email not sent:', emailResult.error);
+        log.warn('[AUTH] Password setup email not sent:', emailResult.error);
       }
       
       // Log password setup email sent
@@ -1451,7 +1451,7 @@ const resetPassword = async (req, res) => {
         userAgent: req.get('user-agent'),
       });
     } catch (emailError) {
-      console.warn('[AUTH] Failed to send password setup email:', emailError.message);
+      log.warn('[AUTH] Failed to send password setup email:', emailError.message);
       // Continue even if email fails
     }
     
@@ -1551,7 +1551,7 @@ const getProfile = async (req, res) => {
     try {
       await ensureUserDefaultClientLink(dbUser, req);
     } catch (defaultClientError) {
-      console.error('[AUTH] Failed to self-heal default client during profile fetch:', defaultClientError.message);
+      log.error('[AUTH] Failed to self-heal default client during profile fetch:', defaultClientError.message);
       return res.status(503).json({
         success: false,
         message: 'Unable to resolve account context. Please try again.',
@@ -2282,7 +2282,7 @@ const createUser = async (req, res) => {
     });
   } catch (error) {
     if (error instanceof PlanLimitExceededError || error instanceof PlanAdminLimitExceededError) {
-      console.warn('[PLAN_LIMIT] createUser blocked', { firmId: req.user?.firmId?.toString?.() || req.user?.firmId, message: error.message });
+      log.warn('[PLAN_LIMIT] createUser blocked', { firmId: req.user?.firmId?.toString?.() || req.user?.firmId, message: error.message });
       return res.status(403).json({
         success: false,
         error: error.code,
@@ -2335,7 +2335,7 @@ const createUser = async (req, res) => {
 
       // Check which field caused the duplicate
       if (error.keyPattern && error.keyPattern.email) {
-        console.error('[AUTH] Duplicate email error:', error.message);
+        log.error('[AUTH] Duplicate email error:', error.message);
         return res.status(409).json({
           success: false,
           message: 'User with this email already exists',
@@ -2345,9 +2345,9 @@ const createUser = async (req, res) => {
       if (error.keyPattern && error.keyPattern.xID) {
         // This should never happen with atomic counter operations
         // If this occurs, it indicates a critical system issue
-        console.error('[AUTH] CRITICAL: Duplicate xID error (identity collision):', error.message);
-        console.error('[AUTH] Counter value:', error.keyValue?.xID);
-        console.error('[AUTH] This should be investigated immediately');
+        log.error('[AUTH] CRITICAL: Duplicate xID error (identity collision):', error.message);
+        log.error('[AUTH] Counter value:', error.keyValue?.xID);
+        log.error('[AUTH] This should be investigated immediately');
         return res.status(500).json({
           success: false,
           message: 'Identity generation collision. Please try again or contact support.',
@@ -2355,7 +2355,7 @@ const createUser = async (req, res) => {
       }
       
       // Generic duplicate key error
-      console.error('[AUTH] Duplicate key error:', error.message);
+      log.error('[AUTH] Duplicate key error:', error.message);
       return res.status(409).json({
         success: false,
         message: 'A user with this information already exists',
@@ -2363,7 +2363,7 @@ const createUser = async (req, res) => {
     }
     
     // Log all other errors for debugging
-    console.error('[AUTH] Error creating user:', error);
+    log.error('[AUTH] Error creating user:', error);
     
     res.status(500).json({
       success: false,
@@ -2431,7 +2431,7 @@ const activateUser = async (req, res) => {
     });
   } catch (error) {
     if (error instanceof PlanLimitExceededError || error instanceof PlanAdminLimitExceededError) {
-      console.warn('[PLAN_LIMIT] activateUser blocked', { firmId: req.user?.firmId?.toString?.() || req.user?.firmId, message: error.message });
+      log.warn('[PLAN_LIMIT] activateUser blocked', { firmId: req.user?.firmId?.toString?.() || req.user?.firmId, message: error.message });
       return res.status(403).json({
         success: false,
         error: error.code,
@@ -2706,7 +2706,7 @@ const setupAccount = async (req, res) => {
 
   const tokenExpiresAt = existingUser.setupTokenExpiresAt || existingUser.passwordSetupExpires || null;
   if (!tokenExpiresAt || tokenExpiresAt < now) {
-    console.warn('[AUTH][setup] setup token expired', { userId: existingUser._id.toString() });
+    log.warn('[AUTH][setup] setup token expired', { userId: existingUser._id.toString() });
     return res.status(400).json({ success: false, code: 'SETUP_TOKEN_EXPIRED', message: 'Setup token expired. This link will expire in 48 hours.' });
   }
 
@@ -2833,7 +2833,7 @@ const resendSetup = async (req, res) => {
     description: 'Setup link resent',
     performedBy: user.xID,
   }, req);
-  console.log('[AUTH][setup] setup link resent', { userId: user._id.toString(), firmId: user.firmId?.toString?.() || user.firmId });
+  log.info('[AUTH][setup] setup link resent', { userId: user._id.toString(), firmId: user.firmId?.toString?.() || user.firmId });
   return res.json(genericResponse);
 };
 
@@ -2974,7 +2974,7 @@ const resetPasswordWithToken = async (req, res) => {
       message: 'Password reset successfully. You can now log in with your new password.',
     });
   } catch (error) {
-    console.error('[AUTH] Error resetting password:', error);
+    log.error('[AUTH] Error resetting password:', error);
     res.status(500).json({
       success: false,
       message: 'Error resetting password',
@@ -3056,7 +3056,7 @@ const resendSetupEmail = async (req, res) => {
       });
       
       if (!emailResult.success) {
-        console.warn('[AUTH] Failed to send invite reminder email:', emailResult.error);
+        log.warn('[AUTH] Failed to send invite reminder email:', emailResult.error);
         await logAuthAudit({
           xID: user.xID,
           firmId: user.firmId,
@@ -3087,7 +3087,7 @@ const resendSetupEmail = async (req, res) => {
         userAgent: req.get('user-agent'),
       });
     } catch (emailError) {
-      console.warn('[AUTH] Failed to send invite email:', emailError.message);
+      log.warn('[AUTH] Failed to send invite email:', emailError.message);
       return res.status(500).json({
         success: false,
         code: 'FIRM_RESOLUTION_FAILED',

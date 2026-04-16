@@ -36,7 +36,7 @@ const firmContext = async (req, res, next) => {
 
     // SuperAdmin is never allowed on firm-scoped routes
     if (isSuperAdmin) {
-      console.warn(`[FIRM_CONTEXT][${requestId}] SuperAdmin boundary violation on ${req.method} ${req.originalUrl}`);
+      log.warn(`[FIRM_CONTEXT][${requestId}] SuperAdmin boundary violation on ${req.method} ${req.originalUrl}`);
       return res.status(403).json({
         success: false,
         message: 'Superadmin cannot access firm-scoped routes',
@@ -52,7 +52,7 @@ const firmContext = async (req, res, next) => {
       : (sessionFirmId && mongoose.Types.ObjectId.isValid(sessionFirmId) ? sessionFirmId : null);
 
     if (!candidateId) {
-      console.error(`[FIRM_CONTEXT][${requestId}] No tenant ID found in token or session`, {
+      log.error(`[FIRM_CONTEXT][${requestId}] No tenant ID found in token or session`, {
         path: req.originalUrl,
       });
       const error = new Error('Tenant context missing');
@@ -62,6 +62,7 @@ const firmContext = async (req, res, next) => {
 
     // ── Client-first lookup (new architecture) ──────────────────────────────
     const Client = require('../models/Client.model');
+const log = require('../utils/log');
     let tenantId = null;
     let tenantStatus = 'active';
     let tenantSlug = null;
@@ -105,7 +106,7 @@ const firmContext = async (req, res, next) => {
     }
 
     if (!tenantId) {
-      console.error(`[FIRM_CONTEXT][${requestId}] Tenant context missing or unresolved`, {
+      log.error(`[FIRM_CONTEXT][${requestId}] Tenant context missing or unresolved`, {
         path: req.originalUrl,
         candidateId,
       });
@@ -115,7 +116,7 @@ const firmContext = async (req, res, next) => {
     }
 
     if (!isActiveStatus(tenantStatus)) {
-      console.warn(`[FIRM_CONTEXT][${requestId}] Tenant disabled`, { tenantId, status: tenantStatus });
+      log.warn(`[FIRM_CONTEXT][${requestId}] Tenant disabled`, { tenantId, status: tenantStatus });
       return res.status(403).json({
         success: false,
         message: 'Your account is disabled. Please contact support.',
@@ -124,7 +125,7 @@ const firmContext = async (req, res, next) => {
 
     // Validate ownership against JWT claim
     if (jwtFirmId && tenantId !== jwtFirmId.toString()) {
-      console.error(`[FIRM_CONTEXT][${requestId}] Tenant mismatch detected`, {
+      log.error(`[FIRM_CONTEXT][${requestId}] Tenant mismatch detected`, {
         tokenFirmId: jwtFirmId,
         resolvedTenantId: tenantId,
       });
@@ -155,7 +156,7 @@ const firmContext = async (req, res, next) => {
 
     req._firmContextResolved = true;
     if (!req._firmContextLogged) {
-      console.log(`[FIRM_CONTEXT][${requestId}] Tenant context resolved`, {
+      log.info(`[FIRM_CONTEXT][${requestId}] Tenant context resolved`, {
         firmId: req.firmId,
       });
       req._firmContextLogged = true;
@@ -164,7 +165,7 @@ const firmContext = async (req, res, next) => {
     return next();
   } catch (error) {
     const statusCode = error.statusCode || 500;
-    console.error(`[FIRM_CONTEXT][${requestId}] Error attaching tenant context:`, error);
+    log.error(`[FIRM_CONTEXT][${requestId}] Error attaching tenant context:`, error);
     return res.status(statusCode).json({
       success: false,
       message: statusCode === 400 ? 'Tenant context missing' : 'Failed to resolve tenant context',

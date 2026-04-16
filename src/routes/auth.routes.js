@@ -6,6 +6,7 @@ const { authenticate } = require('../middleware/auth.middleware');
 const { attachFirmFromSlug } = require('../middleware/attachFirmFromSlug.middleware');
 const { attachFirmContext } = require('../middleware/firmContext.middleware');
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
+const log = require('../utils/log');
 const {
   authLimiter,
   authBlockEnforcer,
@@ -55,7 +56,7 @@ let profileHitCount = 0;
 const detectProfileLoop = (req, res, next) => {
   profileHitCount += 1;
   if (profileHitCount > 3) {
-    console.error('🚨 AUTH PROFILE LOOP DETECTED');
+    log.error('🚨 AUTH PROFILE LOOP DETECTED');
   }
   next();
 };

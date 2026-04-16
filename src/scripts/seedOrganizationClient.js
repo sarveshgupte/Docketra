@@ -21,22 +21,23 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const Client = require('../models/Client.model');
+const log = require('../utils/log');
 
 const seedOrganizationClient = async () => {
   try {
     // Connect to MongoDB
-    console.log('Connecting to MongoDB...');
+    log.info('Connecting to MongoDB...');
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log('✓ MongoDB Connected');
+    log.info('✓ MongoDB Connected');
 
     // Check if organization client already exists
     const existingOrgClient = await Client.findOne({ clientId: 'C000001' });
     
     if (existingOrgClient) {
-      console.log('ℹ Organization client (C000001) already exists.');
-      console.log('  Business Name:', existingOrgClient.businessName);
-      console.log('  System Client:', existingOrgClient.isSystemClient);
-      console.log('  Created:', existingOrgClient.createdAt);
+      log.info('ℹ Organization client (C000001) already exists.');
+      log.info('  Business Name:', existingOrgClient.businessName);
+      log.info('  System Client:', existingOrgClient.isSystemClient);
+      log.info('  Created:', existingOrgClient.createdAt);
     } else {
       // Create the organization client
       const organizationClient = new Client({
@@ -53,22 +54,22 @@ const seedOrganizationClient = async () => {
       });
 
       await organizationClient.save();
-      console.log('✓ Organization client created successfully!');
-      console.log('  Client ID:', organizationClient.clientId);
-      console.log('  Business Name:', organizationClient.businessName);
-      console.log('  System Client:', organizationClient.isSystemClient);
-      console.log('  Created By:', organizationClient.createdBy);
+      log.info('✓ Organization client created successfully!');
+      log.info('  Client ID:', organizationClient.clientId);
+      log.info('  Business Name:', organizationClient.businessName);
+      log.info('  System Client:', organizationClient.isSystemClient);
+      log.info('  Created By:', organizationClient.createdBy);
     }
 
-    console.log('\n✓ Seed completed successfully');
+    log.info('\n✓ Seed completed successfully');
 
   } catch (error) {
-    console.error('✗ Error seeding organization client:', error);
+    log.error('✗ Error seeding organization client:', error);
     process.exit(1);
   } finally {
     // Close the database connection
     await mongoose.connection.close();
-    console.log('✓ Database connection closed');
+    log.info('✓ Database connection closed');
     process.exit(0);
   }
 };

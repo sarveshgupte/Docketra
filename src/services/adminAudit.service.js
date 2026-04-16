@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { logAuthEvent } = require('./audit.service');
+const log = require('../utils/log');
 
 const buffer = [];
 
@@ -77,7 +78,7 @@ const recordAdminAudit = async ({
         },
       });
     } catch (err) {
-      console.error('[ADMIN_AUDIT] Failed to persist audit log:', err.message);
+      log.error('[ADMIN_AUDIT] Failed to persist audit log:', err.message);
       process.emitWarning('[ADMIN_AUDIT] Persistence failure', { cause: err });
     }
   }

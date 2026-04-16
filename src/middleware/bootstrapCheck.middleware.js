@@ -34,7 +34,7 @@ const requireCompletedFirm = async (req, res, next) => {
     
     // Admin must have firmId (tenant scope)
     if (!req.user.firmId) {
-      console.error(`[BOOTSTRAP] Admin user ${req.user.xID} missing firmId`);
+      log.error(`[BOOTSTRAP] Admin user ${req.user.xID} missing firmId`);
       return res.status(500).json({
         success: false,
         message: 'Account configuration error. Please contact administrator.',
@@ -43,6 +43,7 @@ const requireCompletedFirm = async (req, res, next) => {
 
     // ── New architecture: default client ─────────────────────────────────
     const Client = require('../models/Client.model');
+const log = require('../utils/log');
     const defaultClient = await Client.findOne({ _id: req.user.firmId, isDefaultClient: true })
       .select('status').lean();
 
@@ -59,7 +60,7 @@ const requireCompletedFirm = async (req, res, next) => {
       const firm = await Firm.findById(req.user.firmId).select('bootstrapStatus').lean();
       if (firm) {
         if (firm.bootstrapStatus !== 'COMPLETED') {
-          console.warn(`[BOOTSTRAP] Access blocked for ${req.user.xID} - firm bootstrap not completed (status: ${firm.bootstrapStatus})`);
+          log.warn(`[BOOTSTRAP] Access blocked for ${req.user.xID} - firm bootstrap not completed (status: ${firm.bootstrapStatus})`);
           return res.status(403).json({
             success: false,
             code: 'FIRM_BOOTSTRAP_INCOMPLETE',
@@ -73,10 +74,10 @@ const requireCompletedFirm = async (req, res, next) => {
 
     // Neither a default client nor a Firm was found — allow access so the user
     // can trigger the auto-creation of the default client on the first request.
-    console.warn(`[BOOTSTRAP] No organization record found for admin ${req.user.xID}, firmId: ${req.user.firmId} — allowing through`);
+    log.warn(`[BOOTSTRAP] No organization record found for admin ${req.user.xID}, firmId: ${req.user.firmId} — allowing through`);
     return next();
   } catch (error) {
-    console.error('[BOOTSTRAP] Error checking organization bootstrap status:', error);
+    log.error('[BOOTSTRAP] Error checking organization bootstrap status:', error);
     res.status(500).json({
       success: false,
       message: 'Error checking organization setup status',

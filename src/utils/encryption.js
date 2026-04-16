@@ -1,6 +1,7 @@
 'use strict';
 
 const { createCipheriv, createDecipheriv, createHash, randomBytes } = require('crypto');
+const log = require('../utils/log');
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12;
@@ -44,7 +45,7 @@ function safeDecrypt(value) {
   try {
     return decrypt(value);
   } catch (err) {
-    console.warn('TENANT_DECRYPTION_FAILED', {
+    log.warn('TENANT_DECRYPTION_FAILED', {
       tenantId: null,
       requestId: null,
       route: null,

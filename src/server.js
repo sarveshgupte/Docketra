@@ -223,7 +223,7 @@ log.info('CORS_ALLOWED_ORIGINS', { allowedOrigins });
 connectDB()
   .then(() => runBootstrap())
   .catch((error) => {
-    console.error('Failed to start server:', error);
+    log.error('Failed to start server:', error);
     process.exit(1);
   });
 
@@ -494,10 +494,10 @@ const server = app.listen(PORT, () => {
   const { cleanupStaleTmpUploads } = require('./utils/cleanupTmpUploads');
   setInterval(() => {
     cleanupStaleTmpUploads().catch(err =>
-      console.error('[cleanupTmpUploads] failed', { message: err.message })
+      log.error('[cleanupTmpUploads] failed', { message: err.message })
     );
   }, 6 * 60 * 60 * 1000); // 6 hours
-  console.log(`
+  log.info(`
 ╔════════════════════════════════════════════╗
 ║         Docketra API Server                ║
 ║                                            ║
@@ -516,7 +516,7 @@ initNotificationSocket(server, { allowedOrigins });
 // Handle unhandled promise rejections (mask to prevent PII leakage in logs)
 process.on('unhandledRejection', (err) => {
   const sanitizedError = sanitizeErrorForLog(err);
-  console.error('Unhandled Promise Rejection:', sanitizedError);
+  log.error('Unhandled Promise Rejection:', sanitizedError);
   server.close(() => process.exit(1));
 });
 

@@ -4,6 +4,7 @@ const Case = require('../models/Case.model');
 const CaseHistory = require('../models/CaseHistory.model');
 const { CaseRepository } = require('../repositories');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
+const log = require('../utils/log');
 
 /**
  * Case Tracking Controller
@@ -100,7 +101,7 @@ const trackCaseOpen = async (req, res) => {
       },
       req,
     }).catch(err => {
-      console.error('[TRACKING] Failed to log case open:', err.message);
+      log.error('[TRACKING] Failed to log case open:', err.message);
     });
     
     // Return immediately - don't wait for logging
@@ -109,7 +110,7 @@ const trackCaseOpen = async (req, res) => {
       message: 'Case open tracked',
     });
   } catch (error) {
-    console.error('[TRACKING] Error in trackCaseOpen:', error);
+    log.error('[TRACKING] Error in trackCaseOpen:', error);
     // Never block the UI for tracking failures
     return res.status(200).json({
       success: true,
@@ -179,7 +180,7 @@ const trackCaseView = async (req, res) => {
       },
       req,
     }).catch(err => {
-      console.error('[TRACKING] Failed to log case view:', err.message);
+      log.error('[TRACKING] Failed to log case view:', err.message);
     });
     
     // Return immediately - don't wait for logging
@@ -188,7 +189,7 @@ const trackCaseView = async (req, res) => {
       message: 'Case view tracked',
     });
   } catch (error) {
-    console.error('[TRACKING] Error in trackCaseView:', error);
+    log.error('[TRACKING] Error in trackCaseView:', error);
     // Never block the UI for tracking failures
     return res.status(200).json({
       success: true,
@@ -225,7 +226,7 @@ const trackCaseExit = async (req, res) => {
     const caseData = await Case.findOne(query).select('caseId firmId createdByXID assignedToXID');
     if (!caseData) {
       // Case might have been deleted, but still log the exit attempt
-      console.warn(`[TRACKING] Case ${caseId} not found during exit tracking`);
+      log.warn(`[TRACKING] Case ${caseId} not found during exit tracking`);
     } else {
       // Check authorization if case exists
       if (!checkCaseAccess(caseData, user)) {
@@ -257,7 +258,7 @@ const trackCaseExit = async (req, res) => {
       },
       req,
     }).catch(err => {
-      console.error('[TRACKING] Failed to log case exit:', err.message);
+      log.error('[TRACKING] Failed to log case exit:', err.message);
     });
     
     // Return immediately - don't wait for logging
@@ -266,7 +267,7 @@ const trackCaseExit = async (req, res) => {
       message: 'Case exit tracked',
     });
   } catch (error) {
-    console.error('[TRACKING] Error in trackCaseExit:', error);
+    log.error('[TRACKING] Error in trackCaseExit:', error);
     // Never block the UI for tracking failures
     return res.status(200).json({
       success: true,
@@ -364,7 +365,7 @@ const getCaseHistory = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('[TRACKING] Error fetching case history:', error);
+    log.error('[TRACKING] Error fetching case history:', error);
     return res.status(500).json({
       success: false,
       message: 'Failed to fetch case history',

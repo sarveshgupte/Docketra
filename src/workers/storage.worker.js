@@ -38,6 +38,7 @@ const { getQueueDepth } = require('../queues/storage.queue');
 const { updateTenantStorageUsage } = require('../utils/updateTenantStorageUsage');
 const { setWorkerStatus } = require('../services/workerRegistry.service');
 const { analyzeDocument } = require('../queues/documentAnalysis.queue');
+const log = require('../utils/log');
 
 // Wire up dynamic metric providers so getSnapshot() reflects live queue state
 setDLQSizeProvider(getDLQSize);
@@ -129,7 +130,7 @@ const storageWorker = new Worker(
     // Phase 6 — Observability: track job started
     recordStorageJobStarted();
 
-    console.info('[StorageWorker]', { event: 'job_started', jobType: job.name, firmId, attempt: job.attemptsMade + 1 });
+    log.info('[StorageWorker]', { event: 'job_started', jobType: job.name, firmId, attempt: job.attemptsMade + 1 });
 
     // Track retries beyond the first attempt
     if (job.attemptsMade > 0) {
@@ -176,7 +177,7 @@ const storageWorker = new Worker(
             { firmId },
             { rootFolderId: folderId, status: 'active' }
           );
-          console.info('[StorageWorker]', { event: 'root_folder_created', jobType: job.name, firmId });
+          log.info('[StorageWorker]', { event: 'root_folder_created', jobType: job.name, firmId });
           break;
         }
 
@@ -186,7 +187,7 @@ const storageWorker = new Worker(
             throw new Error('Firm rootFolderId missing for case folder creation');
           }
           await provider.createCaseFolder(firmId, caseId, record.rootFolderId);
-          console.info('[StorageWorker]', { event: 'case_folder_created', jobType: job.name, firmId, caseId });
+          log.info('[StorageWorker]', { event: 'case_folder_created', jobType: job.name, firmId, caseId });
           break;
         }
 
@@ -206,15 +207,15 @@ const storageWorker = new Worker(
           // succeeded but before the status update was committed. Reconcile by updating
           // the status — no re-upload is needed because the file is already in Drive.
           if (caseFile.storageFileId && caseFile.uploadStatus !== 'uploaded') {
-            console.info('[StorageWorker]', { event: 'partial_state_reconcile', jobType: job.name, firmId, fileId });
+            log.info('[StorageWorker]', { event: 'partial_state_reconcile', jobType: job.name, firmId, fileId });
             await CaseFile.findByIdAndUpdate(fileId, { uploadStatus: 'uploaded' });
-            console.info('[StorageWorker]', { event: 'reconcile_complete', jobType: job.name, firmId, fileId });
+            log.info('[StorageWorker]', { event: 'reconcile_complete', jobType: job.name, firmId, fileId });
             break;
           }
 
           // Phase 1 — Idempotency: skip if already uploaded
           if (caseFile.uploadStatus === 'uploaded') {
-            console.info('[StorageWorker]', { event: 'idempotent_skip', jobType: job.name, firmId, fileId });
+            log.info('[StorageWorker]', { event: 'idempotent_skip', jobType: job.name, firmId, fileId });
             break;
           }
 
@@ -271,7 +272,7 @@ const storageWorker = new Worker(
             await updateTenantStorageUsage(caseFile.firmId, finalSize);
           }
 
-          console.info('[AttachmentDedup]', {
+          log.info('[AttachmentDedup]', {
             firmId: caseFile.firmId,
             caseId: caseFile.caseId || caseId,
             contentHash,
@@ -314,7 +315,7 @@ const storageWorker = new Worker(
               }
             } catch (attachErr) {
               // Attachment creation failure is non-fatal for the upload itself
-              console.error('[StorageWorker]', {
+              log.error('[StorageWorker]', {
                 event: 'attachment_create_failed',
                 jobType: job.name,
                 firmId,
@@ -365,7 +366,7 @@ const storageWorker = new Worker(
               });
             } catch (auditErr) {
               // Audit failure is non-fatal
-              console.error('[StorageWorker]', {
+              log.error('[StorageWorker]', {
                 event: 'audit_create_failed',
                 jobType: job.name,
                 firmId,
@@ -379,7 +380,7 @@ const storageWorker = new Worker(
             await fs.unlink(caseFile.localPath);
           } catch (unlinkErr) {
             // Non-fatal: log and continue
-            console.warn('[StorageWorker]', {
+            log.warn('[StorageWorker]', {
               event: 'local_file_delete_failed',
               jobType: job.name,
               path: caseFile.localPath,
@@ -387,14 +388,14 @@ const storageWorker = new Worker(
             });
           }
 
-          console.info('[StorageWorker]', { event: 'file_uploaded', jobType: job.name, firmId, folderId: targetFolderId });
+          log.info('[StorageWorker]', { event: 'file_uploaded', jobType: job.name, firmId, folderId: targetFolderId });
           break;
         }
 
         case 'DELETE_FILE': {
           const { folderId } = job.data;
           await provider.deleteFile(firmId, folderId);
-          console.info('[StorageWorker]', { event: 'file_deleted', jobType: job.name, firmId });
+          log.info('[StorageWorker]', { event: 'file_deleted', jobType: job.name, firmId });
           break;
         }
 
@@ -499,7 +500,7 @@ storageWorker.on('failed', async (job, err) => {
   recordStorageJobFailure();
 
   const { firmId, caseId, provider: providerName, idempotencyKey } = job.data || {};
-  console.error('[StorageWorker]', {
+  log.error('[StorageWorker]', {
     event: 'job_permanently_failed',
     jobType: job.name,
     firmId,
@@ -511,7 +512,7 @@ storageWorker.on('failed', async (job, err) => {
     try {
       await FirmStorage.findOneAndUpdate({ firmId }, { status: 'error' });
     } catch (updateErr) {
-      console.error('[StorageWorker]', { event: 'status_update_failed', firmId });
+      log.error('[StorageWorker]', { event: 'status_update_failed', firmId });
     }
   }
 
@@ -526,16 +527,16 @@ storageWorker.on('failed', async (job, err) => {
       retryCount: job.attemptsMade,
       idempotencyKey,
     });
-    console.info('[StorageWorker]', { event: 'job_moved_to_dlq', jobType: job.name, firmId });
+    log.info('[StorageWorker]', { event: 'job_moved_to_dlq', jobType: job.name, firmId });
   } catch (dlqErr) {
-    console.error('[StorageWorker]', { event: 'dlq_move_failed', firmId, message: dlqErr.message });
+    log.error('[StorageWorker]', { event: 'dlq_move_failed', firmId, message: dlqErr.message });
   }
 });
 
 storageWorker.on('error', (err) => {
   // Prevent unhandled error from crashing the process
   setWorkerStatus('storage', 'error');
-  console.error('[StorageWorker]', { event: 'worker_error', message: err.message });
+  log.error('[StorageWorker]', { event: 'worker_error', message: err.message });
 });
 
 module.exports = storageWorker;

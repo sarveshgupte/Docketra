@@ -10,6 +10,7 @@
 
 const { Queue } = require('bullmq');
 const { createHash } = require('crypto');
+const log = require('../utils/log');
 
 // Job type constants
 const JOB_TYPES = {
@@ -84,7 +85,7 @@ async function enqueueStorageJob(type, payload) {
     const idempotencyKey = buildIdempotencyKey(type, payload);
     return await storageQueue.add(type, { ...payload, idempotencyKey }, { jobId: idempotencyKey });
   } catch (error) {
-    console.warn('[StorageQueue] Failed to enqueue job', { type, message: error.message });
+    log.warn('[StorageQueue] Failed to enqueue job', { type, message: error.message });
     return null;
   }
 }

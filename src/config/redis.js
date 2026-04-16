@@ -1,6 +1,7 @@
 const Redis = require('ioredis');
 const { recordFailure, recordSuccess } = require('../services/circuitBreaker.service');
 const { validateRedisEvictionPolicy } = require('./redisPolicyCheck');
+const log = require('../utils/log');
 
 /**
  * Redis Configuration for Rate Limiting
@@ -34,8 +35,8 @@ const getRedisClient = () => {
   
   // No Redis URL configured - use in-memory store
   if (!redisUrl) {
-    console.log('[REDIS] No REDIS_URL configured - using in-memory rate limiting (single instance only)');
-    console.log('[REDIS] For production, set REDIS_URL for distributed rate limiting');
+    log.info('[REDIS] No REDIS_URL configured - using in-memory rate limiting (single instance only)');
+    log.info('[REDIS] For production, set REDIS_URL for distributed rate limiting');
     return null;
   }
   
@@ -48,51 +49,51 @@ const getRedisClient = () => {
       lazyConnect: false,
       retryStrategy: (times) => {
         if (process.env.NODE_ENV === 'production') {
-          console.warn('[REDIS] Retry disabled in production for predictability');
+          log.warn('[REDIS] Retry disabled in production for predictability');
           return null;
         }
         // Retry with exponential backoff, max 30 seconds
         const delay = Math.min(times * 100, 30000);
-        console.log(`[REDIS] Retry attempt ${times}, waiting ${delay}ms`);
+        log.info(`[REDIS] Retry attempt ${times}, waiting ${delay}ms`);
         return delay;
       },
     });
     
     // Handle connection events
     redisClient.on('connect', () => {
-      console.log('[REDIS] Connected to Redis for rate limiting');
+      log.info('[REDIS] Connected to Redis for rate limiting');
       recordSuccess('redis');
     });
     
     redisClient.on('ready', async () => {
-      console.log('[REDIS] Redis client ready');
+      log.info('[REDIS] Redis client ready');
       recordSuccess('redis');
       try {
         await validateRedisEvictionPolicy(redisClient);
       } catch (err) {
         const errorMessage = `[REDIS] Eviction policy validation failed: ${err.message}`;
         if (process.env.NODE_ENV === 'production') {
-          console.error(errorMessage);
+          log.error(errorMessage);
           process.exit(1);
         }
-        console.warn(errorMessage);
+        log.warn(errorMessage);
       }
     });
     
     redisClient.on('error', (err) => {
-      console.error('[REDIS] Redis connection error:', err.message);
+      log.error('[REDIS] Redis connection error:', err.message);
       recordFailure('redis');
     });
     
     redisClient.on('close', () => {
-      console.warn('[REDIS] Redis connection closed');
+      log.warn('[REDIS] Redis connection closed');
       recordFailure('redis');
     });
     
     return redisClient;
   } catch (error) {
-    console.error('[REDIS] Failed to initialize Redis client:', error.message);
-    console.warn('[REDIS] Falling back to in-memory rate limiting');
+    log.error('[REDIS] Failed to initialize Redis client:', error.message);
+    log.warn('[REDIS] Falling back to in-memory rate limiting');
     redisClient = null;
     return null;
   }
@@ -106,9 +107,9 @@ const closeRedisConnection = async () => {
   if (redisClient) {
     try {
       await redisClient.quit();
-      console.log('[REDIS] Redis connection closed gracefully');
+      log.info('[REDIS] Redis connection closed gracefully');
     } catch (error) {
-      console.error('[REDIS] Error closing Redis connection:', error.message);
+      log.error('[REDIS] Error closing Redis connection:', error.message);
     }
   }
 };

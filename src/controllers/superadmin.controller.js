@@ -22,6 +22,7 @@ const { safeLogForensicAudit, getRequestIp, getRequestUserAgent, PLATFORM_TENANT
 const { createFirmWithAdmin } = require('../modules/onboarding/onboarding.service');
 const { safeAuditLog } = require('../services/safeSideEffects.service');
 const { getSession } = require('../utils/getSession');
+const log = require('../utils/log');
 
 // Constants
 const FIRM_ID_PATTERN = /^FIRM\d{3,}$/i;
@@ -126,7 +127,7 @@ const logSuperadminAction = async ({ actionType, description, performedBy, perfo
       await SuperadminAudit.create(auditEntry);
     }
   } catch (error) {
-    console.error('[SUPERADMIN_AUDIT] Failed to log action:', error.message);
+    log.error('[SUPERADMIN_AUDIT] Failed to log action:', error.message);
     // Don't throw - audit failures shouldn't block the request
   }
 };
@@ -192,7 +193,7 @@ const getPlatformStats = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('[SUPERADMIN] Error getting platform stats:', error);
+    log.error('[SUPERADMIN] Error getting platform stats:', error);
     res.status(200).json({
       success: false,
       degraded: true,
@@ -279,7 +280,7 @@ const listFirms = async (req, res) => {
       count: firmsWithCounts.length,
     });
   } catch (error) {
-    console.error('[SUPERADMIN] Error listing firms:', error);
+    log.error('[SUPERADMIN] Error listing firms:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to list firms',
@@ -341,7 +342,7 @@ const updateFirmStatus = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('[SUPERADMIN] Error updating firm status:', error);
+    log.error('[SUPERADMIN] Error updating firm status:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to update firm status',
@@ -391,7 +392,7 @@ const disableFirmImmediately = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('[SUPERADMIN] Error disabling firm immediately:', error);
+    log.error('[SUPERADMIN] Error disabling firm immediately:', error);
     return res.status(500).json({
       success: false,
       message: 'Failed to disable firm',
@@ -509,10 +510,10 @@ const createFirmAdmin = async (req, res) => {
         req,
       });
       if (!emailResult.success) {
-        console.warn('[SUPERADMIN] Password setup email not sent:', emailResult.error);
+        log.warn('[SUPERADMIN] Password setup email not sent:', emailResult.error);
       }
     } catch (emailError) {
-      console.warn('[SUPERADMIN] Failed to send password setup email:', emailError.message);
+      log.warn('[SUPERADMIN] Failed to send password setup email:', emailError.message);
       // Don't fail the request - admin was created successfully
     }
     
@@ -559,7 +560,7 @@ const createFirmAdmin = async (req, res) => {
         message: 'Admin with this email already exists',
       });
     }
-    console.error('[SUPERADMIN] Error creating firm admin:', error);
+    log.error('[SUPERADMIN] Error creating firm admin:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to create firm admin',
@@ -613,7 +614,7 @@ const getFirmBySlug = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('[SUPERADMIN] Error getting firm by slug:', error);
+    log.error('[SUPERADMIN] Error getting firm by slug:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to get firm',
@@ -642,7 +643,7 @@ const getOperationalHealth = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('[SUPERADMIN] Error generating operational health:', error);
+    log.error('[SUPERADMIN] Error generating operational health:', error);
     return res.status(500).json({
       success: false,
       message: 'Failed to generate health snapshot',
@@ -739,7 +740,7 @@ const exitFirm = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('[SUPERADMIN] Error exiting firm context:', error);
+    log.error('[SUPERADMIN] Error exiting firm context:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to exit firm context',
@@ -789,7 +790,7 @@ const getFirmAdminDetails = async (req, res) => {
     }).select('timestamp').sort({ timestamp: -1 });
     lastLoginAt = lastLoginAudit?.timestamp || null;
   } catch (error) {
-    console.warn('[SUPERADMIN] Failed to fetch admin last login audit:', error.message);
+    log.warn('[SUPERADMIN] Failed to fetch admin last login audit:', error.message);
   }
 
   return res.status(200).json({
@@ -967,7 +968,7 @@ const updateFirmAdminStatus = async (req, res) => {
     const activeAdminsCount = await resolveSessionQuery(activeAdminsCountQuery, session);
 
     if (activeAdminsCount <= 1) {
-      console.warn('[SUPERADMIN] Blocked disable: last active admin protection', {
+      log.warn('[SUPERADMIN] Blocked disable: last active admin protection', {
         firmId: firm.firmId,
         adminXID: admin.xID,
       });
@@ -1115,11 +1116,11 @@ const forceResetFirmAdmin = async (req, res) => {
     });
     if (emailResult && emailResult.success === false) {
       emailSuccess = false;
-      console.warn('[SUPERADMIN] Admin force-reset email not sent:', emailResult.error);
+      log.warn('[SUPERADMIN] Admin force-reset email not sent:', emailResult.error);
     }
   } catch (emailError) {
     emailSuccess = false;
-    console.warn('[SUPERADMIN] Failed to send admin force-reset email:', emailError.message);
+    log.warn('[SUPERADMIN] Failed to send admin force-reset email:', emailError.message);
   }
 
   await logSuperadminAction({
@@ -1234,7 +1235,7 @@ const deleteFirmAdmin = async (req, res) => {
     const activeAdminsCount = await resolveSessionQuery(activeAdminsCountQuery, session);
 
     if (activeAdminsCount <= 1) {
-      console.warn('[SUPERADMIN] Blocked delete: last active admin protection', {
+      log.warn('[SUPERADMIN] Blocked delete: last active admin protection', {
         firmId: firm.firmId,
         adminXID: admin.xID,
       });
@@ -1392,11 +1393,11 @@ const resendAdminAccess = async (req, res) => {
     }
     if (emailResult && emailResult.success === false) {
       emailSuccess = false;
-      console.warn('[SUPERADMIN] Admin access resend email not sent:', emailResult.error);
+      log.warn('[SUPERADMIN] Admin access resend email not sent:', emailResult.error);
     }
   } catch (emailError) {
     emailSuccess = false;
-    console.warn('[SUPERADMIN] Failed to send admin access resend email:', emailError.message);
+    log.warn('[SUPERADMIN] Failed to send admin access resend email:', emailError.message);
   }
 
   // Log audit entry
@@ -1452,7 +1453,7 @@ const deactivateFirm = async (req, res) => {
     });
     return res.json({ success: true, data: { _id: firm._id, firmId: firm.firmId, name: firm.name, status: firm.status } });
   } catch (error) {
-    console.error('[SUPERADMIN] Error deactivating firm:', error);
+    log.error('[SUPERADMIN] Error deactivating firm:', error);
     return res.status(500).json({ success: false, message: 'Failed to deactivate firm' });
   }
 };

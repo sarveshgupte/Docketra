@@ -4,6 +4,7 @@ const Team = require('../models/Team.model');
 const FirmSetupTemplate = require('../models/FirmSetupTemplate.model');
 const Firm = require('../models/Firm.model');
 const { logAuthEvent } = require('./audit.service');
+const log = require('../utils/log');
 
 const DEFAULT_FIRM_SETUP_TEMPLATE_KEY = 'SYSTEM_DEFAULT';
 
@@ -220,7 +221,7 @@ const setupDefaultFirm = async (firmId, primaryAdminUser, {
       Firm.findById(firmId).session(activeSession),
     ]);
 
-    console.info('[FIRM_SETUP] setup started', {
+    log.info('[FIRM_SETUP] setup started', {
       firmId: String(firmId),
       categoryCount,
       workbasketCount,
@@ -229,7 +230,7 @@ const setupDefaultFirm = async (firmId, primaryAdminUser, {
 
     if (!force && categoryCount > 0 && workbasketCount > 0) {
       const skipReason = 'FIRM_ALREADY_CONFIGURED';
-      console.info('[FIRM_SETUP] setup skipped', {
+      log.info('[FIRM_SETUP] setup skipped', {
         firmId: String(firmId),
         reason: skipReason,
         categoryCount,
@@ -273,7 +274,7 @@ const setupDefaultFirm = async (firmId, primaryAdminUser, {
         session: activeSession || null,
       }).catch(() => null);
 
-      console.info('[FIRM_SETUP] setup completed', {
+      log.info('[FIRM_SETUP] setup completed', {
         firmId: String(firmId),
         categoriesCreated: result.categories.length,
         workbasketsCreated: result.workbasketMap.size,
@@ -290,7 +291,7 @@ const setupDefaultFirm = async (firmId, primaryAdminUser, {
         templateKey: resolvedTemplate.key,
       };
     } catch (error) {
-      console.info('[FIRM_SETUP] setup failed', {
+      log.info('[FIRM_SETUP] setup failed', {
         firmId: String(firmId),
         reason: error.message,
         categoryCount,

@@ -1,6 +1,7 @@
 const TenantStorageConfig = require('../models/TenantStorageConfig.model');
 const { getProviderForTenant } = require('../services/storage/StorageProviderFactory');
 const { mapProviderErrorToStatus } = require('../controllers/storage.controller');
+const log = require('../utils/log');
 
 async function runStorageHealthCheck() {
   const activeTenants = await TenantStorageConfig.find({ isActive: true, status: 'ACTIVE' }).select('_id tenantId rootFolderId');
@@ -15,7 +16,7 @@ async function runStorageHealthCheck() {
         mappedStatus = 'DEGRADED';
       }
       await TenantStorageConfig.findByIdAndUpdate(config._id, { status: mappedStatus });
-      console.error('[StorageHealthCheck] Provider unhealthy', {
+      log.error('[StorageHealthCheck] Provider unhealthy', {
         tenantId: config.tenantId,
         status: mappedStatus,
         message: error.message,

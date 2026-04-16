@@ -100,8 +100,8 @@ const sendTransactionalEmail = async ({ to, subject, html, text }) => {
   // Parse sender from MAIL_FROM format
   const sender = parseSender(mailFrom);
   
-  console.log(`[EMAIL] Using sender: ${sender.name} <${sender.email}>`);
-  console.log(`[EMAIL] Sending email via Brevo API`);
+  log.info(`[EMAIL] Using sender: ${sender.name} <${sender.email}>`);
+  log.info(`[EMAIL] Sending email via Brevo API`);
   
   const payload = JSON.stringify({
     sender: {
@@ -179,7 +179,7 @@ const sendEmailNow = async (mailOptions) => {
 
   if (isProduction) {
     try {
-      console.log(`[EMAIL] Sending email via Brevo API to ${maskedEmail}`);
+      log.info(`[EMAIL] Sending email via Brevo API to ${maskedEmail}`);
       const result = await sendTransactionalEmail({
         to: mailOptions.to,
         subject: mailOptions.subject,
@@ -187,24 +187,24 @@ const sendEmailNow = async (mailOptions) => {
         text: mailOptions.text
       });
       recordSuccess('smtp');
-      console.log(`[EMAIL] Email sent successfully via Brevo: ${result.messageId || 'sent'}`);
+      log.info(`[EMAIL] Email sent successfully via Brevo: ${result.messageId || 'sent'}`);
       return result;
     } catch (error) {
       recordFailure('smtp');
-      console.error(`[EMAIL] Failed to send email via Brevo: ${error.message}`);
+      log.error(`[EMAIL] Failed to send email via Brevo: ${error.message}`);
       throw new Error('Failed to send email. Please check server logs for details.');
     }
   }
 
-  console.log('\n========================================');
-  console.log('📧 EMAIL (Development Mode - Console Only)');
-  console.log('========================================');
-  console.log(`To: ${maskedEmail}`);
-  console.log(`Subject: ${mailOptions.subject}`);
-  console.log('');
-  console.log('Note: Development mode active. Emails are logged to console only.');
-  console.log('Set NODE_ENV=production and configure Brevo API to enable email delivery.');
-  console.log('========================================\n');
+  log.info('\n========================================');
+  log.info('📧 EMAIL (Development Mode - Console Only)');
+  log.info('========================================');
+  log.info(`To: ${maskedEmail}`);
+  log.info(`Subject: ${mailOptions.subject}`);
+  log.info('');
+  log.info('Note: Development mode active. Emails are logged to console only.');
+  log.info('Set NODE_ENV=production and configure Brevo API to enable email delivery.');
+  log.info('========================================\n');
   recordSuccess('smtp');
   return { success: true, console: true };
 };
@@ -559,7 +559,7 @@ const sentEmailKeys = new Set();
  */
 const sendOnce = async (key, fn) => {
   if (sentEmailKeys.has(key)) {
-    console.log(`[EMAIL] Rate limit: Email key "${key}" already sent in this session`);
+    log.info(`[EMAIL] Rate limit: Email key "${key}" already sent in this session`);
     return { success: true, rateLimited: true };
   }
   sentEmailKeys.add(key);

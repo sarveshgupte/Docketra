@@ -1,6 +1,7 @@
 const EnterpriseInquiry = require('../models/EnterpriseInquiry.model');
 const emailService = require('../services/email.service');
 const { executeWrite } = require('../utils/executeWrite');
+const log = require('../utils/log');
 
 const submitEnterpriseInquiry = async (req, res) => {
   const {
@@ -55,7 +56,7 @@ const submitEnterpriseInquiry = async (req, res) => {
         context: req,
       });
     } catch (error) {
-      console.warn('[CONTACT] Failed to send enterprise inquiry notification:', error.message);
+      log.warn('[CONTACT] Failed to send enterprise inquiry notification:', error.message);
       notificationFailed = true;
     }
 

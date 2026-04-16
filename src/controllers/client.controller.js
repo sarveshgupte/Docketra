@@ -21,6 +21,7 @@ const { ensureDefaultClientForFirm } = require('../services/defaultClient.servic
 const { parseBooleanQuery } = require('../utils/query.utils');
 const { sanitizePayload, enforceAllowedFields, PayloadValidationError } = require('../utils/payloadValidation');
 const cfsDriveService = require('../services/cfsDrive.service');
+const log = require('../utils/log');
 
 const getClientAccessContext = (req, res, message) => {
   const firmId = req.user?.firmId;
@@ -82,7 +83,7 @@ const buildClientLogContext = (req, extra = {}) => ({
 });
 
 const logClientError = (event, req, error, extra = {}) => {
-  console.error(event, buildClientLogContext(req, {
+  log.error(event, buildClientLogContext(req, {
     ...extra,
     error: error.message,
     ...(error.stack ? { stack: error.stack } : {}),
@@ -90,7 +91,7 @@ const logClientError = (event, req, error, extra = {}) => {
 };
 
 const logClientWarn = (event, req, extra = {}) => {
-  console.warn(event, buildClientLogContext(req, extra));
+  log.warn(event, buildClientLogContext(req, extra));
 };
 
 const isStorageDisabled = async (firmId) => {
@@ -99,7 +100,7 @@ const isStorageDisabled = async (firmId) => {
 };
 
 const setupClientStorage = async ({ req, userFirmId, clientId, clientMongoId }) => {
-  console.info('CLIENT_STORAGE_SETUP_STARTED', buildClientLogContext(req, {
+  log.info('CLIENT_STORAGE_SETUP_STARTED', buildClientLogContext(req, {
     clientId,
     clientMongoId,
   }));
@@ -385,7 +386,7 @@ const createClient = async (req, res) => {
 
     await incrementTenantMetric(userFirmId, 'clients').catch(() => null);
 
-    console.info('CLIENT_CREATED', buildClientLogContext(req, {
+    log.info('CLIENT_CREATED', buildClientLogContext(req, {
       clientId: client.clientId,
       clientMongoId: client._id,
     }));
@@ -597,7 +598,7 @@ const toggleClientStatus = async (req, res) => {
     client.status = isActive ? 'ACTIVE' : 'INACTIVE';
     await client.save();
     
-    console.log(`[CLIENT_STATUS] Client ${clientId} ${isActive ? 'activated' : 'deactivated'} by ${req.user?.xID}`);
+    log.info(`[CLIENT_STATUS] Client ${clientId} ${isActive ? 'activated' : 'deactivated'} by ${req.user?.xID}`);
     
     res.json({
       success: true,
@@ -838,7 +839,7 @@ const updateClientFactSheet = async (req, res) => {
       message: 'Client Fact Sheet updated successfully',
     });
   } catch (error) {
-    console.error('Error updating client fact sheet:', error);
+    log.error('Error updating client fact sheet:', error);
     res.status(500).json({
       success: false,
       message: 'Error updating client fact sheet',
@@ -932,7 +933,7 @@ const uploadFactSheetFile = async (req, res) => {
       message: 'File upload queued for processing',
     });
   } catch (error) {
-    console.error('Error uploading fact sheet file:', error);
+    log.error('Error uploading fact sheet file:', error);
     res.status(500).json({
       success: false,
       message: 'Error uploading file',
@@ -988,7 +989,7 @@ const deleteFactSheetFile = async (req, res) => {
       message: 'File deleted successfully',
     });
   } catch (error) {
-    console.error('Error deleting fact sheet file:', error);
+    log.error('Error deleting fact sheet file:', error);
     res.status(500).json({
       success: false,
       message: 'Error deleting file',
@@ -1066,7 +1067,7 @@ const uploadClientCFSFile = async (req, res) => {
       message: 'File upload queued for processing',
     });
   } catch (error) {
-    console.error('Error uploading client CFS file:', error);
+    log.error('Error uploading client CFS file:', error);
 
     res.status(500).json({
       success: false,
@@ -1121,7 +1122,7 @@ const listClientCFSFiles = async (req, res) => {
       })),
     });
   } catch (error) {
-    console.error('Error listing client CFS files:', error);
+    log.error('Error listing client CFS files:', error);
     res.status(500).json({
       success: false,
       message: 'Error listing client CFS files',
@@ -1173,7 +1174,7 @@ const deleteClientCFSFile = async (req, res) => {
       message: 'File deleted from client CFS successfully',
     });
   } catch (error) {
-    console.error('Error deleting client CFS file:', error);
+    log.error('Error deleting client CFS file:', error);
     res.status(500).json({
       success: false,
       message: 'Error deleting file from client CFS',
@@ -1246,7 +1247,7 @@ const downloadClientCFSFile = async (req, res) => {
     // Stream file to response
     fileStream.pipe(res);
   } catch (error) {
-    console.error('Error downloading client CFS file:', error);
+    log.error('Error downloading client CFS file:', error);
     res.status(500).json({
       success: false,
       message: 'Error downloading file from client CFS',

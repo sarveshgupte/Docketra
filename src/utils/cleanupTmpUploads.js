@@ -12,6 +12,7 @@
 
 const fs = require('fs').promises;
 const path = require('path');
+const log = require('../utils/log');
 
 const TMP_DIR = path.join(__dirname, '../../uploads/tmp');
 const DEFAULT_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -59,7 +60,7 @@ async function cleanupStaleTmpUploads(maxAgeMs = DEFAULT_MAX_AGE_MS) {
   }
 
   if (deleted > 0) {
-    console.info(`[cleanupTmpUploads] Deleted ${deleted} stale temp file(s)`);
+    log.info(`[cleanupTmpUploads] Deleted ${deleted} stale temp file(s)`);
   }
   return deleted;
 }

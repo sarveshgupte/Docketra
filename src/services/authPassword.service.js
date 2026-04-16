@@ -1,3 +1,4 @@
+const log = require('../utils/log');
 const createAuthPasswordService = (deps) => {
   const {
     normalizeFirmSlug,
@@ -65,7 +66,7 @@ const createAuthPasswordService = (deps) => {
         })
           .limit(2);
         if (candidateUsers.length > 1) {
-          console.warn(`[AUTH] Forgot password email is ambiguous across firms: ${emailService.maskEmail(normalizedEmail)}`);
+          log.warn(`[AUTH] Forgot password email is ambiguous across firms: ${emailService.maskEmail(normalizedEmail)}`);
           return res.json({
             success: true,
             message: 'If an account exists with this email, you will receive a password reset link.',
@@ -77,7 +78,7 @@ const createAuthPasswordService = (deps) => {
       if (!user) {
         const emailParts = email.split('@');
         const maskedEmail = emailParts[0].substring(0, 2) + '***@' + (emailParts[1] || '');
-        console.log(`[AUTH] Forgot password requested for non-existent email: ${maskedEmail}`);
+        log.info(`[AUTH] Forgot password requested for non-existent email: ${maskedEmail}`);
 
         return res.json({
           success: true,
@@ -86,7 +87,7 @@ const createAuthPasswordService = (deps) => {
       }
 
       if (!isActiveStatus(user.status)) {
-        console.log(`[AUTH] Forgot password requested for inactive user (xID: ${user.xID})`);
+        log.info(`[AUTH] Forgot password requested for inactive user (xID: ${user.xID})`);
 
         return res.json({
           success: true,
@@ -118,7 +119,7 @@ const createAuthPasswordService = (deps) => {
           userAgent: req.get('user-agent'),
         });
       } catch (emailError) {
-        console.error('[AUTH] Failed to send forgot password email:', emailError.message);
+        log.error('[AUTH] Failed to send forgot password email:', emailError.message);
       }
 
       return res.json({
@@ -126,7 +127,7 @@ const createAuthPasswordService = (deps) => {
         message: 'If an account exists with this email, you will receive a password reset link.',
       });
     } catch (error) {
-      console.error('[AUTH] Error in forgot password:', error);
+      log.error('[AUTH] Error in forgot password:', error);
       return res.status(500).json({
         success: false,
         message: 'Error processing password reset request',

@@ -8,6 +8,7 @@ const metricsService = require('../services/metrics.service');
 const { getCookieValue } = require('../utils/requestCookies');
 const { isActiveStatus, getFirmInactiveCode } = require('../utils/status.utils');
 const { buildRequestContext } = require('./attachRequestContext');
+const log = require('../utils/log');
 
 const env = loadEnv({ exitOnError: false }) || {};
 
@@ -128,7 +129,7 @@ const authenticate = async (req, res, next) => {
     // They never have firmId or defaultClientId
     const superadminObjectId = env.SUPERADMIN_OBJECT_ID;
     if (decoded.userId === superadminObjectId && isSuperAdminRole(decoded.role)) {
-      console.log('[AUTH][superadmin] SuperAdmin token authenticated');
+      log.info('[AUTH][superadmin] SuperAdmin token authenticated');
       
       const normalizedRole = 'SuperAdmin';
       const superadminXID = env.SUPERADMIN_XID_NORMALIZED;
@@ -277,7 +278,7 @@ const authenticate = async (req, res, next) => {
     if (user.mustChangePassword && !isChangePasswordEndpoint && !isProfileEndpoint && !isRefreshEndpoint) {
       if (user.role === 'Admin') {
         // Log admin exemption for audit purposes
-        console.log(`[AUTH] Admin user ${user.xID} accessing ${req.method} ${req.path} with mustChangePassword=true (exempted from password enforcement)`);
+        log.info(`[AUTH] Admin user ${user.xID} accessing ${req.method} ${req.path} with mustChangePassword=true (exempted from password enforcement)`);
       } else {
         noteAuthFailure();
         return res.status(403).json({
@@ -302,7 +303,7 @@ const authenticate = async (req, res, next) => {
       : (tokenRole || databaseRole);
 
     if (hasRoleMismatch) {
-      console.warn('[AUTH] JWT role claim out of date, falling back to database role', {
+      log.warn('[AUTH] JWT role claim out of date, falling back to database role', {
         userId: decoded.userId,
         tokenRole,
         databaseRole,
@@ -313,7 +314,7 @@ const authenticate = async (req, res, next) => {
       await ensureTenantDefaultClient(req, user);
     } catch (defaultClientError) {
       noteAuthFailure();
-      console.error('[AUTH] Failed to enforce tenant default client invariant:', defaultClientError.message);
+      log.error('[AUTH] Failed to enforce tenant default client invariant:', defaultClientError.message);
       return res.status(500).json({
         success: false,
         message: 'Account configuration error. Please contact administrator.',
@@ -334,7 +335,7 @@ const authenticate = async (req, res, next) => {
     };
 
     if (!req._authLogged) {
-      console.log('[AUTH_USER]', {
+      log.info('[AUTH_USER]', {
         xID: req.user.xID,
         role: req.user.role,
       });
@@ -365,7 +366,7 @@ const authenticate = async (req, res, next) => {
 
     const authDurationMs = Date.now() - authStartedAt;
     if (authDurationMs > 250) {
-      console.warn('[AUTH_TIMING]', {
+      log.warn('[AUTH_TIMING]', {
         durationMs: authDurationMs,
         path: req.originalUrl || req.url,
       });
@@ -373,7 +374,7 @@ const authenticate = async (req, res, next) => {
 
     return next();
   } catch (error) {
-    console.error('[AUTH] Authentication error:', error);
+    log.error('[AUTH] Authentication error:', error);
     if (error.message === 'Authentication failed: role missing') {
       return res.status(401).json({
         success: false,

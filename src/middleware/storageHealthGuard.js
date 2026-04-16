@@ -1,4 +1,5 @@
 const TenantStorageHealth = require('../models/TenantStorageHealth.model');
+const log = require('../utils/log');
 async function storageHealthGuard(req, res, next) {
   const tenantId = req.firmId || req.storageTenantId;
   if (!tenantId) return next();
@@ -16,12 +17,12 @@ async function storageHealthGuard(req, res, next) {
     }
 
     if (health.status === 'DEGRADED') {
-      console.warn('[StorageHealthGuard] Tenant storage degraded', { tenantId, route: req.originalUrl || req.url });
+      log.warn('[StorageHealthGuard] Tenant storage degraded', { tenantId, route: req.originalUrl || req.url });
     }
 
     return next();
   } catch (error) {
-    console.error('[StorageHealthGuard] Failed to query storage health', { tenantId, message: error.message });
+    log.error('[StorageHealthGuard] Failed to query storage health', { tenantId, message: error.message });
     return next();
   }
 }

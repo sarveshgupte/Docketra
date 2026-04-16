@@ -1,3 +1,4 @@
+const log = require('../utils/log');
 /**
  * Authorization Guard Middleware
  * 
@@ -58,7 +59,7 @@ const authorize = (policyFn) => {
       next();
     } catch (error) {
       // Fail-closed: deny if policy throws error
-      console.error('[AUTHORIZE] Policy execution error:', error);
+      log.error('[AUTHORIZE] Policy execution error:', error);
       return res.status(403).json({
         success: false,
         message: 'Forbidden - authorization check failed',
@@ -105,7 +106,7 @@ const authorizeWithMessage = (policyFn, errorMessage) => {
       
       next();
     } catch (error) {
-      console.error('[AUTHORIZE] Policy execution error:', error);
+      log.error('[AUTHORIZE] Policy execution error:', error);
       return res.status(403).json({
         success: false,
         message: errorMessage || 'Forbidden - authorization check failed',
