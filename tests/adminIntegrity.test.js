@@ -87,7 +87,7 @@ async function shouldBackfillLegacyAdmin() {
     xID: 'X000001',
     name: 'Legacy Admin',
     email: 'legacy-admin@test.com',
-    role: 'Admin',
+    role: 'ADMIN',
     firmId: firm._id,
     defaultClientId: null,
     status: 'invited',
@@ -114,7 +114,7 @@ async function shouldIgnoreSuperadminInPreflight() {
     xID: 'X000777',
     name: 'Scoped Admin',
     email: 'scoped-admin@test.com',
-    role: 'Admin',
+    role: 'PRIMARY_ADMIN',
     firmId: firm._id,
     defaultClientId: client._id,
     status: 'invited',
@@ -122,7 +122,7 @@ async function shouldIgnoreSuperadminInPreflight() {
   });
 
   // Create SUPER_ADMIN without firm/defaultClient
-  await User.create({
+  await User.collection.insertOne({
     xID: 'X000002',
     name: 'Platform Admin',
     email: 'platform-admin2@test.com',
