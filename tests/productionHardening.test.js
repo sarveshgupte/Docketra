@@ -170,7 +170,6 @@ async function testAdminStatusNormalization() {
 async function testDebugRoutesDisabledInProduction() {
   const serverSource = fs.readFileSync(path.join(__dirname, '../src/server.js'), 'utf8');
   const notFound = require('../src/middleware/notFound');
-  const debugRoutes = require('../src/routes/debug.routes');
   const originalNodeEnv = process.env.NODE_ENV;
 
   assert.ok(/if\s*\(\s*process\.env\.NODE_ENV\s*!==\s*['"]production['"]\s*\)/.test(serverSource), 'Debug routes must be conditionally mounted outside production');
@@ -178,9 +177,6 @@ async function testDebugRoutesDisabledInProduction() {
   try {
     process.env.NODE_ENV = 'production';
     const app = express();
-    if (process.env.NODE_ENV !== 'production') {
-      app.use('/api/debug', debugRoutes);
-    }
     app.use(notFound);
 
     await request(app).get('/api/debug/email-test').expect(404);
