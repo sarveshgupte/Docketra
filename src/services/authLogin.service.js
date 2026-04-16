@@ -1,5 +1,6 @@
 const { createResponseCapture, sendSuccessResponse, sendErrorResponse } = require('../utils/response.util');
 const { validateRequiredFields } = require('../utils/validation.util');
+const log = require('../utils/log');
 
 const createAuthLoginService = (deps) => {
   const models = deps.models || {};
@@ -41,14 +42,20 @@ const createAuthLoginService = (deps) => {
       const loginScope = req.loginScope || 'tenant';
       const requestedFirmSlug = req.params?.firmSlug || req.firmSlug || null;
       const { xid, xID, XID, password } = req.body;
+      log.info('AUTH_LOGIN_SERVICE_START', {
+        req,
+        loginScope,
+        firmSlug: requestedFirmSlug,
+        tenantId: req.firmId || req.user?.firmId || null,
+      });
 
       const normalizedXID = (xid || xID || XID)?.trim().toUpperCase();
 
       if (!validateRequiredFields({ xID: normalizedXID, password }, ['xID', 'password']).isValid) {
-        console.warn('[AUTH] Missing credentials in login attempt', {
+        log.warn('AUTH_LOGIN_VALIDATION_FAILED', {
+          req,
           hasXID: !!(xid || xID || XID),
           hasPassword: !!password,
-          ip: req.ip,
         });
 
         return sendErrorResponse(res, { statusCode: 400, message: 'xID and password are required' });
@@ -68,7 +75,12 @@ const createAuthLoginService = (deps) => {
         return sendErrorResponse(res, { statusCode: 400, message: 'Firm context is required for login.' });
       }
 
-      console.log('[AUTH][tenant] login attempt', { firmSlug: requestedFirmSlug, xID: normalizedXID });
+      log.info('AUTH_LOGIN_ATTEMPT', {
+        req,
+        firmSlug: requestedFirmSlug,
+        xID: normalizedXID,
+        tenantId: req.firmId,
+      });
       const user = await User.findOne({
         firmId: req.firmId,
         xID: normalizedXID,
@@ -90,6 +102,12 @@ const createAuthLoginService = (deps) => {
       try {
         const loginToken = await sendLoginOtpChallenge(req, user);
         const otpConfig = getLoginOtpConfig();
+        log.info('AUTH_LOGIN_CHALLENGE_SENT', {
+          req,
+          tenantId: req.firmId,
+          userId: user?._id || null,
+          userXID: user?.xID || null,
+        });
         return sendSuccessResponse(res, {
           body: {
             otpRequired: true,
@@ -106,14 +124,20 @@ const createAuthLoginService = (deps) => {
             retryAfter: otpError.retryAfter || LOGIN_OTP_COOLDOWN_SECONDS,
           });
         }
-        console.error('[AUTH] Failed to send login OTP email:', otpError.message);
+        log.error('AUTH_LOGIN_CHALLENGE_FAILED', {
+          req,
+          tenantId: req.firmId,
+          userId: user?._id || null,
+          userXID: user?.xID || null,
+          error: otpError,
+        });
         return sendErrorResponse(res, {
           statusCode: 500,
           message: 'Unable to send login verification code. Please try again.',
         });
       }
     } catch (error) {
-      console.error('[AUTH] Login error:', error);
+      log.error('AUTH_LOGIN_SERVICE_FAILED', { req, error });
       return sendErrorResponse(res, {
         statusCode: 500,
         code: 'AUTH_LOGIN_FAILED',
@@ -197,7 +221,7 @@ const createAuthLoginService = (deps) => {
           retryAfter: error.retryAfter || LOGIN_OTP_COOLDOWN_SECONDS,
         });
       }
-      console.error('[AUTH] Resend OTP error:', error);
+      log.error('AUTH_LOGIN_RESEND_OTP_FAILED', { req, error });
       return sendErrorResponse(res, {
         statusCode: 500,
         message: 'Unable to resend OTP right now. Please try again.',
@@ -328,7 +352,11 @@ const createAuthLoginService = (deps) => {
             firmId: user.firmId || DEFAULT_FIRM_ID,
           });
         } catch (auditError) {
-          console.error('[AUTH AUDIT] Failed to record login OTP failure event', auditError);
+          log.error('AUTH_AUDIT_LOG_FAILURE', {
+            req,
+            eventType: 'LOGIN_FAILURE',
+            error: auditError,
+          });
         }
 
         return sendErrorResponse(res, {
@@ -368,10 +396,20 @@ const createAuthLoginService = (deps) => {
             timestamp: new Date().toISOString(),
           },
         }, req);
-      } catch (auditError) {
-        console.error('[AUTH AUDIT] Failed to record login OTP verification event', auditError);
-      }
+        } catch (auditError) {
+          log.error('AUTH_AUDIT_LOG_FAILURE', {
+            req,
+            eventType: 'OTP_VERIFIED',
+            error: auditError,
+          });
+        }
 
+      log.info('AUTH_LOGIN_SUCCESS', {
+        req,
+        tenantId: user?.firmId || req.firmId || null,
+        userId: user?._id || null,
+        userXID: user?.xID || null,
+      });
       const response = await buildSuccessfulLoginPayload(req, user, {
         authMethod: 'Email OTP',
         resource: 'auth/verify-otp',
@@ -380,7 +418,7 @@ const createAuthLoginService = (deps) => {
 
       return res.json(response);
     } catch (error) {
-      console.error('[AUTH] Verify login OTP error:', error);
+      log.error('AUTH_LOGIN_VERIFY_OTP_FAILED', { req, error });
       return sendErrorResponse(res, { statusCode: 500, message: 'Error verifying login OTP' });
     }
   };
