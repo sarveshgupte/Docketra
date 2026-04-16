@@ -46,6 +46,7 @@ const requestLifecycle = (req, res, next) => {
       route: req.originalUrl || req.url || null,
       actor: req.user?.xID || req.user?.id || null,
       role: req.user?.role || null,
+      tenantId: req.firmId || req.firm?.id || req.user?.firmId || null,
       firmId: req.firmId || req.firm?.id || req.user?.firmId || null,
       startTime: new Date(startTime).toISOString(),
       durationMs,
