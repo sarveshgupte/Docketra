@@ -82,6 +82,12 @@ async function testAdminStatusNormalization() {
     if (requestName === '../middleware/wrapWriteHandler') {
       return (fn) => fn;
     }
+    if (requestName === 'bcrypt') {
+      return {
+        compare: async () => true,
+        hash: async () => 'hash'
+      };
+    }
     return originalLoad.apply(this, arguments);
   };
   const controller = require('../src/controllers/superadmin.controller');
@@ -172,7 +178,7 @@ async function testDebugRoutesDisabledInProduction() {
   const notFound = require('../src/middleware/notFound');
   const originalNodeEnv = process.env.NODE_ENV;
 
-  assert.ok(/if\s*\(\s*process\.env\.NODE_ENV\s*!==\s*['"]production['"]\s*\)/.test(serverSource), 'Debug routes must be conditionally mounted outside production');
+  assert.ok(/if\s*\(\s*!isProduction\s*\)/.test(serverSource) || /if\s*\(\s*process\.env\.NODE_ENV\s*!==\s*['"]production['"]\s*\)/.test(serverSource), 'Debug routes must be conditionally mounted outside production');
 
   try {
     process.env.NODE_ENV = 'production';
