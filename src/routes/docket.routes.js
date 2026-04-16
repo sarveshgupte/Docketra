@@ -21,6 +21,7 @@ const {
   unpendCase,
   updateCaseStatus,
   getCaseByCaseId,
+  getDocketAudit,
   getCaseComments,
   getCases,
   searchCases,
@@ -159,6 +160,7 @@ router.post('/:caseId/track-exit', authorizeFirmPermission('CASE_VIEW'), userWri
 
 // ── Single docket — reads ─────────────────────────────────────────────────────
 router.get('/:caseId/history', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, getCaseHistory);
+router.get('/:caseId/audit', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, getDocketAudit);
 router.get('/:caseId/summary-pdf', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, getDocketSummaryPdf);
 router.get('/:caseId/timeline', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, getTimeline);
 router.get('/:caseId/ai-routing', authorizeFirmPermission('CASE_UPDATE'), userReadLimiter, getAiRoutingSuggestion);

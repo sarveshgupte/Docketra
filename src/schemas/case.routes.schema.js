@@ -90,6 +90,13 @@ module.exports = {
   'POST /:caseId/track-view': { params: caseIdParams, body: strictEmpty },
   'POST /:caseId/track-exit': { params: caseIdParams, body: strictEmpty },
   'GET /:caseId/history': { params: caseIdParams, query: strictEmpty },
+  'GET /:caseId/audit': {
+    params: caseIdParams,
+    query: z.object({
+      page: z.coerce.number().int().min(1).optional(),
+      limit: z.coerce.number().int().min(1).max(100).optional(),
+    }).strict(),
+  },
   'GET /:caseId/timeline': {
     params: caseIdParams,
     query: z.object({

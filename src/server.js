@@ -132,6 +132,7 @@ const bulkUploadRoutes = require('./routes/bulkUpload.routes');
 const productUpdateRoutes = require('./routes/productUpdate.routes');
 const docketRoutes = require('./routes/docket.routes');
 const attachmentRoutes = require('./routes/attachment.routes');
+const settingsRoutes = require('./routes/settings.routes');
 const tenantResolver = require('./middleware/tenantResolver');
 const { login } = require('./controllers/auth.controller');
 const mutatingMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
@@ -474,6 +475,7 @@ app.use('/api/notifications', ...tenantScopedApiAccess, writeGuardChain, notific
 app.use('/api/teams', ...tenantScopedApiAccess, writeGuardChain, teamRoutes);
 app.use('/api/bulk-upload', ...adminTenantScopedApiAccess, writeGuardChain, adminAuditTrail('admin'), bulkUploadRoutes);
 app.use('/api/product-updates', authenticate, writeGuardChain, productUpdateRoutes);
+app.use('/api/settings', ...tenantScopedApiAccess, writeGuardChain, settingsRoutes);
 
 // Legacy /f routes removed: tenant login is available only on /:firmSlug/login and /api/:firmSlug/login
 
