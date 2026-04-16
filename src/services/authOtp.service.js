@@ -16,7 +16,7 @@ const incrementAttempts = (currentAttempts = 0, maxAttempts = 5) => {
   };
 };
 
-const createAuthOtpDomainService = (deps) => {
+const createAuthOtpService = (deps) => {
   const {
     getRequestFirmId,
     User,
@@ -320,6 +320,7 @@ module.exports = {
   hashOtp,
   verifyOtp,
   incrementAttempts,
-  createAuthOtpDomainService,
-  createAuthOtpControllerService: createAuthOtpDomainService,
+  createAuthOtpService,
+  createAuthOtpDomainService: createAuthOtpService,
+  createAuthOtpControllerService: createAuthOtpService,
 };
