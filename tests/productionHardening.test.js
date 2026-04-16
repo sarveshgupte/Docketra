@@ -6,6 +6,8 @@ const assert = require('assert');
 const express = require('express');
 const request = require('supertest');
 const Module = require('module');
+const fs = require('fs');
+const path = require('path');
 
 const originalLoad = Module._load;
 
@@ -165,11 +167,23 @@ async function testAdminStatusNormalization() {
   console.log('✓ superadmin admin lifecycle normalizes DISABLED status consistently');
 }
 
+async function testDebugRoutesDisabledInProduction() {
+  const serverSource = fs.readFileSync(path.join(__dirname, '../src/server.js'), 'utf8');
+  const debugMountPattern = /if\s*\(\s*process\.env\.NODE_ENV\s*!==\s*'production'\s*\)\s*\{\s*app\.use\('\/api\/debug'/s;
+  const debugMountCount = (serverSource.match(/app\.use\('\/api\/debug'/g) || []).length;
+
+  assert.ok(debugMountPattern.test(serverSource), 'Debug routes must be conditionally mounted outside production');
+  assert.strictEqual(debugMountCount, 1, 'Debug route mount should be defined exactly once');
+  assert.ok(serverSource.includes('app.use(notFound);'), 'Unmatched routes should fall through to the 404 middleware');
+  console.log('✓ debug routes are gated outside production and retain 404 fallback behavior');
+}
+
 async function run() {
   try {
     await testIpv4MappedIpv6RateLimitNormalization();
     await testPrometheusMetricsRendering();
     await testAdminStatusNormalization();
+    await testDebugRoutesDisabledInProduction();
     delete process.env.SECURITY_RATE_LIMIT_GLOBAL;
     Module._load = originalLoad;
     console.log('Production hardening tests passed.');
