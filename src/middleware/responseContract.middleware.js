@@ -1,3 +1,4 @@
+const log = require('../utils/log');
 /**
  * Response Contract Middleware
  * 
@@ -59,7 +60,7 @@ const responseContract = (req, res, next) => {
       try {
         return originalJson(response);
       } catch (err) {
-        console.error('[responseContract] Failed to send response:', err);
+        log.error('[responseContract] Failed to send response:', err);
         throw err;
       }
     }

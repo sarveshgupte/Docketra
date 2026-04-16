@@ -29,6 +29,7 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const Case = require('../models/Case.model');
+const log = require('../utils/log');
 
 // Configuration
 const DRY_RUN = process.env.DRY_RUN !== 'false';
@@ -42,9 +43,9 @@ async function connectDB() {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
-    console.log('✅ Connected to MongoDB');
+    log.info('✅ Connected to MongoDB');
   } catch (error) {
-    console.error('❌ MongoDB connection error:', error);
+    log.error('❌ MongoDB connection error:', error);
     process.exit(1);
   }
 }
@@ -53,8 +54,8 @@ async function connectDB() {
  * Pre-validation: Ensure all cases are ready for hard cutover
  */
 async function preValidation() {
-  console.log('\n📋 Pre-Validation: Checking data integrity');
-  console.log('═══════════════════════════════════════════════\n');
+  log.info('\n📋 Pre-Validation: Checking data integrity');
+  log.info('═══════════════════════════════════════════════\n');
   
   // Check 1: Cases with assignedTo (xID pattern) but no assignedToXID
   const missingXID = await Case.countDocuments({
@@ -78,42 +79,42 @@ async function preValidation() {
     assignedToXID: { $exists: true, $ne: null, $ne: '' },
   });
   
-  console.log('Pre-Validation Results:');
-  console.log('───────────────────────');
+  log.info('Pre-Validation Results:');
+  log.info('───────────────────────');
   
   let allValid = true;
   
   if (missingXID === 0) {
-    console.log('✅ All assigned cases have assignedToXID field');
+    log.info('✅ All assigned cases have assignedToXID field');
   } else {
-    console.log(`❌ ${missingXID} cases missing assignedToXID`);
-    console.log('   → Run migrateToAssignedToXID.js first');
+    log.info(`❌ ${missingXID} cases missing assignedToXID`);
+    log.info('   → Run migrateToAssignedToXID.js first');
     allValid = false;
   }
   
   if (personalWithoutXID === 0) {
-    console.log('✅ All PERSONAL queue cases have assignedToXID');
+    log.info('✅ All PERSONAL queue cases have assignedToXID');
   } else {
-    console.log(`❌ ${personalWithoutXID} PERSONAL cases missing assignedToXID`);
-    console.log('   → Data inconsistency - needs manual review');
+    log.info(`❌ ${personalWithoutXID} PERSONAL cases missing assignedToXID`);
+    log.info('   → Data inconsistency - needs manual review');
     allValid = false;
   }
   
   if (globalWithXID === 0) {
-    console.log('✅ No GLOBAL queue cases have assignedToXID');
+    log.info('✅ No GLOBAL queue cases have assignedToXID');
   } else {
-    console.log(`⚠️  ${globalWithXID} GLOBAL cases have assignedToXID`);
-    console.log('   → This is unusual but not critical');
+    log.info(`⚠️  ${globalWithXID} GLOBAL cases have assignedToXID`);
+    log.info('   → This is unusual but not critical');
   }
   
-  console.log('\n' + '═'.repeat(50));
+  log.info('\n' + '═'.repeat(50));
   if (allValid) {
-    console.log('✅ PRE-VALIDATION PASSED - Ready for hard cutover');
+    log.info('✅ PRE-VALIDATION PASSED - Ready for hard cutover');
   } else {
-    console.log('❌ PRE-VALIDATION FAILED - Fix issues before proceeding');
-    console.log('   Aborting hard cutover to prevent data loss');
+    log.info('❌ PRE-VALIDATION FAILED - Fix issues before proceeding');
+    log.info('   Aborting hard cutover to prevent data loss');
   }
-  console.log('═'.repeat(50) + '\n');
+  log.info('═'.repeat(50) + '\n');
   
   return allValid;
 }
@@ -122,8 +123,8 @@ async function preValidation() {
  * Migrate any remaining cases with assignedTo to assignedToXID
  */
 async function finalMigration() {
-  console.log('\n📋 Final Migration: Copying remaining assignedTo → assignedToXID');
-  console.log('═══════════════════════════════════════════════\n');
+  log.info('\n📋 Final Migration: Copying remaining assignedTo → assignedToXID');
+  log.info('═══════════════════════════════════════════════\n');
   
   // Find cases with assignedTo (xID pattern) but no assignedToXID
   const query = {
@@ -137,18 +138,18 @@ async function finalMigration() {
   
   const casesToMigrate = await Case.find(query);
   
-  console.log(`Found ${casesToMigrate.length} cases to migrate\n`);
+  log.info(`Found ${casesToMigrate.length} cases to migrate\n`);
   
   if (casesToMigrate.length === 0) {
-    console.log('✅ No cases need final migration');
+    log.info('✅ No cases need final migration');
     return 0;
   }
   
   if (DRY_RUN) {
-    console.log('🔍 DRY RUN MODE - Showing first 10 examples:\n');
+    log.info('🔍 DRY RUN MODE - Showing first 10 examples:\n');
     casesToMigrate.slice(0, 10).forEach((caseData, idx) => {
-      console.log(`${idx + 1}. Case ${caseData.caseId}:`);
-      console.log(`   assignedTo: ${caseData.assignedTo} → assignedToXID: ${caseData.assignedTo.toUpperCase()}`);
+      log.info(`${idx + 1}. Case ${caseData.caseId}:`);
+      log.info(`   assignedTo: ${caseData.assignedTo} → assignedToXID: ${caseData.assignedTo.toUpperCase()}`);
     });
     return casesToMigrate.length;
   }
@@ -159,7 +160,7 @@ async function finalMigration() {
     [{ $set: { assignedToXID: { $toUpper: '$assignedTo' } } }]
   );
   
-  console.log(`✅ Migrated ${result.modifiedCount} cases`);
+  log.info(`✅ Migrated ${result.modifiedCount} cases`);
   return result.modifiedCount;
 }
 
@@ -167,34 +168,34 @@ async function finalMigration() {
  * Remove legacy assignedTo field
  */
 async function removeLegacyField() {
-  console.log('\n📋 Hard Cutover: Removing legacy assignedTo field');
-  console.log('═══════════════════════════════════════════════\n');
-  console.log('⚠️  THIS IS AN IRREVERSIBLE OPERATION');
-  console.log('⚠️  After this, all code MUST use assignedToXID\n');
+  log.info('\n📋 Hard Cutover: Removing legacy assignedTo field');
+  log.info('═══════════════════════════════════════════════\n');
+  log.info('⚠️  THIS IS AN IRREVERSIBLE OPERATION');
+  log.info('⚠️  After this, all code MUST use assignedToXID\n');
   
   const count = await Case.countDocuments({ assignedTo: { $exists: true } });
   
-  console.log(`Found ${count} cases with legacy assignedTo field`);
+  log.info(`Found ${count} cases with legacy assignedTo field`);
   
   if (count === 0) {
-    console.log('✅ No cases have assignedTo field - cutover already complete');
+    log.info('✅ No cases have assignedTo field - cutover already complete');
     return 0;
   }
   
   if (DRY_RUN) {
-    console.log('🔍 DRY RUN MODE - Would remove assignedTo from these cases');
+    log.info('🔍 DRY RUN MODE - Would remove assignedTo from these cases');
     
     // Show sample cases that would be affected
     const samples = await Case.find({ assignedTo: { $exists: true } })
       .select('caseId assignedTo assignedToXID status queueType')
       .limit(10);
     
-    console.log('\nFirst 10 examples:');
+    log.info('\nFirst 10 examples:');
     samples.forEach((caseData, idx) => {
-      console.log(`${idx + 1}. ${caseData.caseId}:`);
-      console.log(`   assignedTo: ${caseData.assignedTo || '(null)'}`);
-      console.log(`   assignedToXID: ${caseData.assignedToXID || '(null)'}`);
-      console.log(`   status: ${caseData.status}, queueType: ${caseData.queueType}`);
+      log.info(`${idx + 1}. ${caseData.caseId}:`);
+      log.info(`   assignedTo: ${caseData.assignedTo || '(null)'}`);
+      log.info(`   assignedToXID: ${caseData.assignedToXID || '(null)'}`);
+      log.info(`   status: ${caseData.status}, queueType: ${caseData.queueType}`);
     });
     
     return count;
@@ -205,7 +206,7 @@ async function removeLegacyField() {
     { $unset: { assignedTo: "" } }
   );
   
-  console.log(`✅ Removed legacy field from ${result.modifiedCount} cases`);
+  log.info(`✅ Removed legacy field from ${result.modifiedCount} cases`);
   return result.modifiedCount;
 }
 
@@ -213,8 +214,8 @@ async function removeLegacyField() {
  * Post-validation: Verify hard cutover results
  */
 async function postValidation() {
-  console.log('\n📋 Post-Validation: Verifying hard cutover');
-  console.log('═══════════════════════════════════════════════\n');
+  log.info('\n📋 Post-Validation: Verifying hard cutover');
+  log.info('═══════════════════════════════════════════════\n');
   
   // Check that no cases have assignedTo field
   const withAssignedTo = await Case.countDocuments({
@@ -239,42 +240,42 @@ async function postValidation() {
     ],
   });
   
-  console.log('Post-Validation Results:');
-  console.log('────────────────────────');
+  log.info('Post-Validation Results:');
+  log.info('────────────────────────');
   
   let allValid = true;
   
   if (withAssignedTo === 0) {
-    console.log('✅ No cases have legacy assignedTo field');
+    log.info('✅ No cases have legacy assignedTo field');
   } else {
-    console.log(`❌ ${withAssignedTo} cases still have assignedTo field`);
+    log.info(`❌ ${withAssignedTo} cases still have assignedTo field`);
     allValid = false;
   }
   
-  console.log(`\n📊 PERSONAL Queue: ${personalCases} cases`);
+  log.info(`\n📊 PERSONAL Queue: ${personalCases} cases`);
   if (personalWithXID === personalCases) {
-    console.log('✅ All PERSONAL cases have assignedToXID');
+    log.info('✅ All PERSONAL cases have assignedToXID');
   } else {
-    console.log(`❌ ${personalCases - personalWithXID} PERSONAL cases missing assignedToXID`);
+    log.info(`❌ ${personalCases - personalWithXID} PERSONAL cases missing assignedToXID`);
     allValid = false;
   }
   
-  console.log(`\n📊 GLOBAL Queue: ${globalCases} cases`);
+  log.info(`\n📊 GLOBAL Queue: ${globalCases} cases`);
   if (globalWithoutXID === globalCases) {
-    console.log('✅ All GLOBAL cases correctly unassigned');
+    log.info('✅ All GLOBAL cases correctly unassigned');
   } else {
-    console.log(`⚠️  ${globalCases - globalWithoutXID} GLOBAL cases have assignedToXID`);
+    log.info(`⚠️  ${globalCases - globalWithoutXID} GLOBAL cases have assignedToXID`);
   }
   
-  console.log('\n' + '═'.repeat(50));
+  log.info('\n' + '═'.repeat(50));
   if (allValid) {
-    console.log('✅ POST-VALIDATION PASSED - Hard cutover successful!');
-    console.log('\n🎉 xID ownership migration complete!');
-    console.log('   All pull, worklist, and dashboard queries now use assignedToXID');
+    log.info('✅ POST-VALIDATION PASSED - Hard cutover successful!');
+    log.info('\n🎉 xID ownership migration complete!');
+    log.info('   All pull, worklist, and dashboard queries now use assignedToXID');
   } else {
-    console.log('❌ POST-VALIDATION FAILED - Please review issues above');
+    log.info('❌ POST-VALIDATION FAILED - Please review issues above');
   }
-  console.log('═'.repeat(50) + '\n');
+  log.info('═'.repeat(50) + '\n');
   
   return allValid;
 }
@@ -283,17 +284,17 @@ async function postValidation() {
  * Main execution function
  */
 async function main() {
-  console.log('\n╔════════════════════════════════════════════════╗');
-  console.log('║   Hard Cutover: Remove Legacy assignedTo      ║');
-  console.log('╚════════════════════════════════════════════════╝\n');
+  log.info('\n╔════════════════════════════════════════════════╗');
+  log.info('║   Hard Cutover: Remove Legacy assignedTo      ║');
+  log.info('╚════════════════════════════════════════════════╝\n');
   
   if (DRY_RUN) {
-    console.log('🔍 Running in DRY RUN mode (no changes will be made)');
-    console.log('   Set DRY_RUN=false to apply changes\n');
+    log.info('🔍 Running in DRY RUN mode (no changes will be made)');
+    log.info('   Set DRY_RUN=false to apply changes\n');
   } else {
-    console.log('⚠️  WARNING: Running in LIVE mode');
-    console.log('   Changes will be applied to the database');
-    console.log('   THIS IS IRREVERSIBLE\n');
+    log.info('⚠️  WARNING: Running in LIVE mode');
+    log.info('   Changes will be applied to the database');
+    log.info('   THIS IS IRREVERSIBLE\n');
   }
   
   try {
@@ -302,8 +303,8 @@ async function main() {
     // Step 1: Pre-validation
     const validForCutover = await preValidation();
     if (!validForCutover) {
-      console.log('\n❌ Aborting: Pre-validation failed');
-      console.log('   Fix issues and run again\n');
+      log.info('\n❌ Aborting: Pre-validation failed');
+      log.info('   Fix issues and run again\n');
       process.exit(1);
     }
     
@@ -318,14 +319,14 @@ async function main() {
       await postValidation();
     }
     
-    console.log('\n✅ Script completed successfully\n');
+    log.info('\n✅ Script completed successfully\n');
     
   } catch (error) {
-    console.error('\n❌ Error during hard cutover:', error);
+    log.error('\n❌ Error during hard cutover:', error);
     process.exit(1);
   } finally {
     await mongoose.connection.close();
-    console.log('Disconnected from MongoDB');
+    log.info('Disconnected from MongoDB');
   }
 }
 

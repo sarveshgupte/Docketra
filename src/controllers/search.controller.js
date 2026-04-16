@@ -8,6 +8,7 @@ const { enforceTenantScope } = require('../utils/tenantScope');
 const CaseStatus = require('../domain/case/caseStatus');
 const { logCaseListViewed } = require('../services/auditLog.service');
 const caseActionService = require('../services/caseAction.service');
+const log = require('../utils/log');
 
 const toObjectIdStringOrNull = (value) => {
   if (!value) {
@@ -406,7 +407,7 @@ const employeeWorklist = async (req, res) => {
     try {
       await caseActionService.autoReopenExpiredPendingCases(targetAssigneeXID, firmId);
     } catch (error) {
-      console.warn('[WORKLIST] Failed to auto-reopen expired pending cases:', error.message);
+      log.warn('[WORKLIST] Failed to auto-reopen expired pending cases:', error.message);
     }
     
     // CANONICAL QUERY: assignedToXID = xID AND status IN (ASSIGNED, IN_PROGRESS, OPEN)

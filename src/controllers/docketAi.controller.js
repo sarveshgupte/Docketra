@@ -7,6 +7,7 @@ const Case = require('../models/Case.model');
 const Team = require('../models/Team.model');
 const aiService = require('../services/ai/ai.service');
 const { resolveCaseIdentifier } = require('../utils/caseIdentifier');
+const log = require('../utils/log');
 
 function normalizeConfidence(value) {
   const numeric = Number(value);
@@ -165,7 +166,7 @@ async function generateSuggestions({ attachment, firmId }) {
     warnings,
   };
 
-  console.info('[AI] suggestions_generated', {
+  log.info('[AI] suggestions_generated', {
     attachmentId: String(attachment._id),
     firmId,
     confidence,
@@ -201,7 +202,7 @@ async function getAttachmentAiInsights(req, res) {
   const confidence = normalizeConfidence(attachment?.analysis?.confidence);
   const confidenceLevel = getConfidenceLevel(confidence);
 
-  console.info('[AI] insights_viewed', {
+  log.info('[AI] insights_viewed', {
     attachmentId: String(attachment._id),
     firmId,
     status: attachment?.analysis?.status || 'PENDING',
@@ -305,7 +306,7 @@ async function createDocketFromAttachment(req, res) {
     },
   });
 
-  console.info('[AI] routing_suggested', {
+  log.info('[AI] routing_suggested', {
     docketId: docket.caseId || docket.caseNumber,
     caseInternalId: String(docket.caseInternalId),
     firmId: attachmentResult.firmId,
@@ -370,7 +371,7 @@ async function ensureAiRoutingSuggestion(docket, req) {
   docket.aiRouting.status = docket.aiRouting.status || 'PENDING';
   await docket.save();
 
-  console.info('[AI] routing_suggested', {
+  log.info('[AI] routing_suggested', {
     docketId: docket.caseId || docket.caseNumber,
     caseInternalId: String(docket.caseInternalId),
     firmId: String(docket.firmId),
@@ -435,7 +436,7 @@ async function applyAiRouting(req, res) {
     docket.aiRouting.status = 'APPLIED';
     await docket.save();
 
-    console.info('[AI] routing_applied', {
+    log.info('[AI] routing_applied', {
       docketId: docket.caseId || docket.caseNumber,
       caseInternalId: String(docket.caseInternalId),
       firmId: String(docket.firmId),
@@ -466,7 +467,7 @@ async function rejectAiRouting(req, res) {
     docket.aiRouting.status = 'REJECTED';
     await docket.save();
 
-    console.info('[AI] routing_rejected', {
+    log.info('[AI] routing_rejected', {
       docketId: docket.caseId || docket.caseNumber,
       caseInternalId: String(docket.caseInternalId),
       firmId: String(docket.firmId),

@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const { CaseRepository } = require('../repositories');
 const CaseStatus = require('../domain/case/caseStatus');
 const { DocketLifecycle } = require('../domain/docketLifecycle');
+const log = require('../utils/log');
 
 /**
  * Case Assignment Service
@@ -55,7 +56,7 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObject
   );
 
   if (!updatedCase) {
-    console.warn('[AtomicPullConflict]', {
+    log.warn('[AtomicPullConflict]', {
       caseId,
       tenantId,
       reason: 'No row modified',
@@ -82,7 +83,7 @@ const pullCaseFromWorkbasket = async ({ caseId, tenantId, userId, assigneeObject
         timestamp: assignedAt,
       },
     }).catch((error) => {
-      console.error('[pullCaseFromWorkbasket] Non-blocking audit write failed:', error?.message || error);
+      log.error('[pullCaseFromWorkbasket] Non-blocking audit write failed:', error?.message || error);
     });
   });
 
@@ -203,7 +204,7 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
       { session }
     );
 
-    console.log('[CASE_PULL_DEBUG]', {
+    log.info('[CASE_PULL_DEBUG]', {
       requested: caseIds,
       matched: result.matchedCount,
       modified: result.modifiedCount,
@@ -268,7 +269,7 @@ const bulkAssignCasesToUser = async (firmId, caseIds, user, assignerObjectId = n
     } catch (_) {
       // noop
     }
-    console.error('[CASE_PULL_ERROR]', {
+    log.error('[CASE_PULL_ERROR]', {
       message: error.message,
       stack: error.stack,
       caseIds,

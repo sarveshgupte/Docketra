@@ -20,6 +20,7 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const Category = require('../models/Category.model');
+const log = require('../utils/log');
 
 // Default system categories
 const defaultCategories = [
@@ -40,9 +41,9 @@ const defaultCategories = [
 const seedCategories = async () => {
   try {
     // Connect to MongoDB
-    console.log('Connecting to MongoDB...');
+    log.info('Connecting to MongoDB...');
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log('✓ MongoDB Connected');
+    log.info('✓ MongoDB Connected');
 
     let createdCount = 0;
     let skippedCount = 0;
@@ -53,7 +54,7 @@ const seedCategories = async () => {
       const existingCategory = await Category.findOne({ name: categoryName });
       
       if (existingCategory) {
-        console.log(`ℹ Category "${categoryName}" already exists. Skipping.`);
+        log.info(`ℹ Category "${categoryName}" already exists. Skipping.`);
         skippedCount++;
       } else {
         // Create new system category
@@ -64,24 +65,24 @@ const seedCategories = async () => {
         });
 
         await category.save();
-        console.log(`✓ Created system category: "${categoryName}"`);
+        log.info(`✓ Created system category: "${categoryName}"`);
         createdCount++;
       }
     }
 
     // Summary
-    console.log('\n--- Summary ---');
-    console.log(`✓ Categories created: ${createdCount}`);
-    console.log(`ℹ Categories skipped: ${skippedCount}`);
-    console.log(`✓ Total categories processed: ${defaultCategories.length}`);
+    log.info('\n--- Summary ---');
+    log.info(`✓ Categories created: ${createdCount}`);
+    log.info(`ℹ Categories skipped: ${skippedCount}`);
+    log.info(`✓ Total categories processed: ${defaultCategories.length}`);
 
   } catch (error) {
-    console.error('✗ Error seeding categories:', error);
+    log.error('✗ Error seeding categories:', error);
     process.exit(1);
   } finally {
     // Close the database connection
     await mongoose.connection.close();
-    console.log('\n✓ Database connection closed');
+    log.info('\n✓ Database connection closed');
     process.exit(0);
   }
 };

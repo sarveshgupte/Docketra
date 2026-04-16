@@ -3,6 +3,7 @@
 const { Worker } = require('bullmq');
 const TenantStorageConfig = require('../models/TenantStorageConfig.model');
 const { verifyTenantStorage } = require('../utils/verifyTenantStorage');
+const log = require('../utils/log');
 
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
 
@@ -14,7 +15,7 @@ const storageIntegrityWorker = new Worker(
       try {
         await verifyTenantStorage(config.tenantId);
       } catch (error) {
-        console.error('[StorageIntegrityWorker] Tenant verification failed', {
+        log.error('[StorageIntegrityWorker] Tenant verification failed', {
           tenantId: config.tenantId,
           message: error.message,
         });
@@ -25,7 +26,7 @@ const storageIntegrityWorker = new Worker(
 );
 
 storageIntegrityWorker.on('error', (error) => {
-  console.error('[StorageIntegrityWorker] Worker error', { message: error.message });
+  log.error('[StorageIntegrityWorker] Worker error', { message: error.message });
 });
 
 module.exports = storageIntegrityWorker;

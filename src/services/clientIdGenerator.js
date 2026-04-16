@@ -24,6 +24,7 @@
 
 const Client = require('../models/Client.model');
 const { getActiveSession } = require('../utils/transactionContext');
+const log = require('../utils/log');
 
 /**
  * Generate the next available clientId within a transaction
@@ -55,7 +56,7 @@ const generateNextClientId = async (firmId, session = null) => {
     
     // Bootstrap case: no clients exist yet for this firm
     if (!lastClient || !lastClient.clientId) {
-      console.log(`[Client ID Generator] Bootstrap: Generated first clientId: C000001 for firm: ${firmId}`);
+      log.info(`[Client ID Generator] Bootstrap: Generated first clientId: C000001 for firm: ${firmId}`);
       return 'C000001';
     }
     
@@ -66,11 +67,11 @@ const generateNextClientId = async (firmId, session = null) => {
     const nextNumber = lastNumber + 1;
     const clientId = `C${String(nextNumber).padStart(6, '0')}`;
     
-    console.log(`[Client ID Generator] Generated clientId: ${clientId} for firm: ${firmId}`);
+    log.info(`[Client ID Generator] Generated clientId: ${clientId} for firm: ${firmId}`);
     
     return clientId;
   } catch (error) {
-    console.error('[Client ID Generator] Error generating clientId:', error);
+    log.error('[Client ID Generator] Error generating clientId:', error);
     throw new Error('Failed to generate clientId during firm provisioning');
   }
 };
@@ -99,12 +100,12 @@ const clientIdExists = async (clientId, firmId) => {
   try {
     const query = firmId ? { clientId, firmId } : { clientId };
     if (!firmId) {
-      console.warn('[Client ID Generator] clientIdExists called without firmId; falling back to legacy global lookup');
+      log.warn('[Client ID Generator] clientIdExists called without firmId; falling back to legacy global lookup');
     }
     const client = await Client.findOne(query).lean();
     return !!client;
   } catch (error) {
-    console.error('[Client ID Generator] Error checking clientId existence:', error);
+    log.error('[Client ID Generator] Error checking clientId existence:', error);
     throw new Error('Failed to check clientId existence');
   }
 };

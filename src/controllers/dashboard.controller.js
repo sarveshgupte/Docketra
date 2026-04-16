@@ -1,6 +1,7 @@
 const { assertFirmContext } = require('../utils/tenantGuard');
 const dashboardService = require('../services/dashboard.service');
 const { getRedisClient } = require('../config/redis');
+const log = require('../utils/log');
 
 const DASHBOARD_TTL_SECONDS = 30;
 
@@ -33,7 +34,7 @@ const getDashboardSummary = async (req, res) => {
           return res.json(JSON.parse(cached));
         }
       } catch (error) {
-        console.warn('[Dashboard] Cache read failed', { message: error?.message });
+        log.warn('[Dashboard] Cache read failed', { message: error?.message });
       }
     }
 
@@ -55,7 +56,7 @@ const getDashboardSummary = async (req, res) => {
       try {
         await redis.set(cacheKey, JSON.stringify(payload), 'EX', DASHBOARD_TTL_SECONDS);
       } catch (error) {
-        console.warn('[Dashboard] Cache write failed', { message: error?.message });
+        log.warn('[Dashboard] Cache write failed', { message: error?.message });
       }
     }
 

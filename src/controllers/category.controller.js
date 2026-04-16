@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { parseBooleanQuery } = require('../utils/query.utils');
 const { logAuthEvent } = require('../services/audit.service');
+const log = require('../utils/log');
 
 /**
  * Category Controller for Admin-Managed Categories
@@ -42,7 +43,7 @@ const safeLogCategoryMutation = async (req, { description, metadata = {} }) => {
     });
   } catch (error) {
     // Best-effort logging only
-    console.error('[CATEGORY] Failed to write audit entry', error.message);
+    log.error('[CATEGORY] Failed to write audit entry', error.message);
   }
 };
 

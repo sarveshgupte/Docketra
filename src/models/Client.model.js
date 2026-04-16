@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const softDeletePlugin = require('../utils/softDelete.plugin');
 const { encrypt: encryptProtectedValue, isEncrypted } = require('../utils/encryption');
+const log = require('../utils/log');
 
 const isEncryptedStorageConfig = (value) => (
   !!value
@@ -624,7 +625,7 @@ const clientSchema = new mongoose.Schema({
 clientSchema.pre('save', async function() {
   // Only generate clientId if it's not already set (fallback for legacy/emergency use)
   if (!this.clientId) {
-    console.warn('[Client Model] Pre-save hook generating clientId (fallback). Should be generated in controller.');
+    log.warn('[Client Model] Pre-save hook generating clientId (fallback). Should be generated in controller.');
     // Find the client with the highest clientId number
     // The regex ensures we only match our format: C followed by digits
     const lastClient = await this.constructor.findOne(
@@ -679,7 +680,7 @@ clientSchema.pre('save', async function() {
       if (error.name === 'ValidationError') {
         throw error;
       }
-      console.warn('[Client Validation] Could not verify isSystemClient constraint:', error.message);
+      log.warn('[Client Validation] Could not verify isSystemClient constraint:', error.message);
     }
   }
 });

@@ -11,6 +11,7 @@ const { enqueueBulkUploadJob } = require('../queues/bulkUpload.queue');
 const { eventBus } = require('../events/eventBus');
 const { logAuthEvent } = require('../services/audit.service');
 const { BULK_UPLOAD_SCHEMA, validateRow: validateSchemaRow } = require('../constants/bulkUploadSchema');
+const log = require('../utils/log');
 require('../automations/bulkUpload.handlers');
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
@@ -94,7 +95,7 @@ const safeLogBulkMutation = async (req, { description, metadata = {} }) => {
       },
     });
   } catch (error) {
-    console.error('[BULK_UPLOAD] Failed to write audit entry', error.message);
+    log.error('[BULK_UPLOAD] Failed to write audit entry', error.message);
   }
 };
 
@@ -685,7 +686,7 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
         });
         clientBulkOps.length = 0;
       } catch (error) {
-        console.error('[BULK_UPLOAD] Batch bulkWrite failed for clients', error);
+        log.error('[BULK_UPLOAD] Batch bulkWrite failed for clients', error);
         if (error.writeErrors) {
           failureCount += error.writeErrors.length;
           const successfulOps = clientBulkOps.length - error.writeErrors.length;
@@ -720,7 +721,7 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
         });
         teamBulkOps.length = 0;
       } catch (error) {
-        console.error('[BULK_UPLOAD] Batch bulkWrite failed for team', error);
+        log.error('[BULK_UPLOAD] Batch bulkWrite failed for team', error);
         if (error.writeErrors) {
           failureCount += error.writeErrors.length;
           const successfulOps = teamBulkOps.length - error.writeErrors.length;
@@ -762,7 +763,7 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
          }
       });
     } catch (error) {
-      console.error('[BULK_UPLOAD] Final bulkWrite failed for clients', error);
+      log.error('[BULK_UPLOAD] Final bulkWrite failed for clients', error);
       if (error.writeErrors) {
         failureCount += error.writeErrors.length;
         const successfulOps = clientBulkOps.length - error.writeErrors.length;
@@ -793,7 +794,7 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
          }
       });
     } catch (error) {
-      console.error('[BULK_UPLOAD] Final bulkWrite failed for team', error);
+      log.error('[BULK_UPLOAD] Final bulkWrite failed for team', error);
       if (error.writeErrors) {
         failureCount += error.writeErrors.length;
         const successfulOps = teamBulkOps.length - error.writeErrors.length;
@@ -834,7 +835,7 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
         createdUsers,
       });
     } catch (error) {
-      console.error('[BULK_UPLOAD] Failed to emit completion event', {
+      log.error('[BULK_UPLOAD] Failed to emit completion event', {
         type,
         firmId: user?.firmId,
         error: error.message,

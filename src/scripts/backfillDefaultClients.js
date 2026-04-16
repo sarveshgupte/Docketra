@@ -16,6 +16,7 @@ const Firm = require('../models/Firm.model');
 const Client = require('../models/Client.model');
 const User = require('../models/User.model');
 const { generateNextClientId } = require('../services/clientIdGenerator');
+const log = require('../utils/log');
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/docketra';
 
@@ -43,11 +44,11 @@ async function backfillFirm(firm) {
     });
 
     await internalClient.save({ session });
-    console.log(`[MIGRATION] Internal client created for firm ${firm.firmId} (${internalClient.clientId})`);
+    log.info(`[MIGRATION] Internal client created for firm ${firm.firmId} (${internalClient.clientId})`);
 
     firm.defaultClientId = internalClient._id;
     await firm.save({ session });
-    console.log(`[MIGRATION] defaultClientId linked for firm ${firm.firmId}`);
+    log.info(`[MIGRATION] defaultClientId linked for firm ${firm.firmId}`);
 
     const updatedUsers = await User.updateMany(
       { firmId: firm._id, $or: [{ defaultClientId: { $exists: false } }, { defaultClientId: null }] },
@@ -55,7 +56,7 @@ async function backfillFirm(firm) {
       { session }
     );
     if (updatedUsers.modifiedCount > 0) {
-      console.log(`[MIGRATION] Updated ${updatedUsers.modifiedCount} user(s) for firm ${firm.firmId}`);
+      log.info(`[MIGRATION] Updated ${updatedUsers.modifiedCount} user(s) for firm ${firm.firmId}`);
     }
 
     await session.commitTransaction();
@@ -63,38 +64,38 @@ async function backfillFirm(firm) {
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
-    console.error(`[MIGRATION] Failed to backfill firm ${firm.firmId}:`, err.message);
+    log.error(`[MIGRATION] Failed to backfill firm ${firm.firmId}:`, err.message);
     throw err;
   }
 }
 
 async function runBackfill() {
   try {
-    console.log('[MIGRATION] Connecting to MongoDB...');
+    log.info('[MIGRATION] Connecting to MongoDB...');
     await mongoose.connect(MONGODB_URI);
-    console.log('[MIGRATION] Connected to MongoDB');
+    log.info('[MIGRATION] Connected to MongoDB');
 
     const firmsToBackfill = await Firm.find({
       $or: [{ defaultClientId: { $exists: false } }, { defaultClientId: null }],
     });
 
     if (firmsToBackfill.length === 0) {
-      console.log('[MIGRATION] All firms already have defaultClientId. No action needed.');
+      log.info('[MIGRATION] All firms already have defaultClientId. No action needed.');
       return;
     }
 
-    console.log(`[MIGRATION] Found ${firmsToBackfill.length} firm(s) to backfill`);
+    log.info(`[MIGRATION] Found ${firmsToBackfill.length} firm(s) to backfill`);
 
     for (const firm of firmsToBackfill) {
       await backfillFirm(firm);
     }
 
-    console.log('[MIGRATION] Backfill completed successfully');
+    log.info('[MIGRATION] Backfill completed successfully');
   } catch (error) {
-    console.error('[MIGRATION] Backfill failed:', error.message);
+    log.error('[MIGRATION] Backfill failed:', error.message);
   } finally {
     await mongoose.disconnect();
-    console.log('[MIGRATION] Disconnected from MongoDB');
+    log.info('[MIGRATION] Disconnected from MongoDB');
   }
 }
 

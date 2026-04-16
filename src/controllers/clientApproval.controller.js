@@ -7,6 +7,7 @@ const { CASE_CATEGORIES, CLIENT_STATUS } = require('../config/constants');
 const CaseStatus = require('../domain/case/caseStatus');
 const CaseService = require('../services/case.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
+const log = require('../utils/log');
 
 const normalizeClientList = (clients) => (Array.isArray(clients) ? clients : []);
 
@@ -628,7 +629,7 @@ const listClients = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('CLIENT_LIST_ERROR', {
+    log.error('CLIENT_LIST_ERROR', {
       firmId: req.user?.firmId || null,
       requestId: req.requestId || req.headers?.['x-request-id'] || null,
       userId: req.user?._id || req.user?.id || null,

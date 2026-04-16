@@ -7,6 +7,7 @@ const { googleDriveService } = require('../services/googleDrive.service');
 const { extractTextFromFile } = require('../services/documentIntelligence/textExtraction.service');
 const { sanitizeTextForAI } = require('../services/documentIntelligence/textSanitizer.service');
 const aiService = require('../services/ai/ai.service');
+const log = require('../utils/log');
 
 const redisUrl = process.env.REDIS_URL;
 const isAnalysisEnabled = String(process.env.ENABLE_AI_ANALYSIS || 'false').toLowerCase() === 'true';
@@ -39,7 +40,7 @@ if (!redisUrl || !isAnalysisEnabled) {
         throw new UnrecoverableError('Attachment missing storage reference');
       }
 
-      console.info('[AI] document_analysis_started', { attachmentId, firmId });
+      log.info('[AI] document_analysis_started', { attachmentId, firmId });
       try {
         attachment.analysis = {
           status: 'PROCESSING',
@@ -57,7 +58,7 @@ if (!redisUrl || !isAnalysisEnabled) {
             updatedAt: new Date(),
           };
           await attachment.save();
-          console.warn('[AI] document_analysis_failed', { attachmentId, firmId, reason: 'empty_text' });
+          log.warn('[AI] document_analysis_failed', { attachmentId, firmId, reason: 'empty_text' });
           return;
         }
 
@@ -72,7 +73,7 @@ if (!redisUrl || !isAnalysisEnabled) {
           updatedAt: new Date(),
         };
         await attachment.save();
-        console.info('[AI] document_analysis_completed', { attachmentId, firmId });
+        log.info('[AI] document_analysis_completed', { attachmentId, firmId });
       } catch (error) {
         attachment.analysis = {
           status: 'FAILED',
@@ -80,7 +81,7 @@ if (!redisUrl || !isAnalysisEnabled) {
         };
         await attachment.save();
         const safeMessage = error?.code === 'AI_INVALID_API_KEY' ? 'invalid_ai_credentials' : error.message;
-        console.error('[AI] document_analysis_failed', { attachmentId, firmId, message: safeMessage });
+        log.error('[AI] document_analysis_failed', { attachmentId, firmId, message: safeMessage });
         if (error?.code === 'AI_INVALID_API_KEY') {
           throw new UnrecoverableError('Invalid AI provider credentials');
         }

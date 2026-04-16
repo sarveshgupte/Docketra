@@ -4,6 +4,7 @@ const { decrypt } = require('./services/TokenEncryption.service');
 const GoogleDriveProvider = require('./providers/GoogleDriveProvider');
 const OneDriveProvider = require('./providers/OneDriveProvider');
 const { S3Provider } = require('./providers/S3Provider');
+const log = require('../../utils/log');
 const {
   StorageConfigMissingError,
   StorageAccessError,
@@ -26,7 +27,7 @@ async function getFirmStorageConfig(firmId) {
   }
 
   if (!firm.storageConfig) {
-    console.error('[STORAGE] Missing storageConfig for firm', firmId);
+    log.error('[STORAGE] Missing storageConfig for firm', firmId);
   }
 
   if (!firm.storageConfig?.provider) {
@@ -56,7 +57,7 @@ async function getProviderForTenant(firmId) {
   if (!provider) {
     throw new Error(`Invalid storage provider for firm ${firmId}`);
   }
-  console.info('[STORAGE]', {
+  log.info('[STORAGE]', {
     event: 'provider_resolution',
     firmId: String(firmId),
     provider,

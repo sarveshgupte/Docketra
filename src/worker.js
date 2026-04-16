@@ -16,6 +16,6 @@ const bootstrapWorker = async () => {
 };
 
 bootstrapWorker().catch((error) => {
-  console.error('Failed to start worker runtime:', error);
+  log.error('Failed to start worker runtime:', error);
   process.exit(1);
 });

@@ -1,5 +1,6 @@
 const Client = require('../models/Client.model');
 const { generateNextClientId } = require('./clientIdGenerator');
+const log = require('../utils/log');
 
 /**
  * Build a non-routable internal email address for system-created default clients.
@@ -80,7 +81,7 @@ const getOrCreateDefaultClient = async (firmId, options = {}) => {
       }
     }
 
-    console.error('[DEFAULT_CLIENT] getOrCreateDefaultClient failed', {
+    log.error('[DEFAULT_CLIENT] getOrCreateDefaultClient failed', {
       firmId,
       requestId,
       userId,

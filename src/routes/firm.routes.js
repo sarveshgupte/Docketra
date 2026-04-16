@@ -21,6 +21,7 @@ const { login, verifyLoginOtp, resendLoginOtp } = require('../controllers/auth.c
 const { getFirmSetupStatus } = require('../controllers/firm.controller');
 const { noFirmNoTransaction } = require('../middleware/noFirmNoTransaction.middleware');
 const { isActiveStatus } = require('../utils/status.utils');
+const log = require('../utils/log');
 const setTenantLoginScope = (req, _res, next) => {
   req.loginScope = 'tenant';
   next();
@@ -49,7 +50,7 @@ router.use(tenantResolver);
 router.get('/login', publicLimiter, (req, res) => {
   // Debug log: confirms route resolution with firmSlug params (Step 1 requirement)
   if (process.env.NODE_ENV !== 'production') {
-    console.log('Firm login route hit:', req.params);
+    log.info('Firm login route hit:', req.params);
   }
   return res.json({
     success: true,

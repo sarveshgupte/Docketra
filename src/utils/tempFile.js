@@ -5,6 +5,7 @@
  */
 
 const fs = require('fs').promises;
+const log = require('../utils/log');
 
 /**
  * Clean up a temporary file
@@ -20,9 +21,9 @@ const cleanupTempFile = async (filePath) => {
   
   try {
     await fs.unlink(filePath);
-    console.log(`[TempFile] Cleaned up temporary file: ${filePath}`);
+    log.info(`[TempFile] Cleaned up temporary file: ${filePath}`);
   } catch (error) {
-    console.error(`[TempFile] Error deleting temp file ${filePath}:`, error.message);
+    log.error(`[TempFile] Error deleting temp file ${filePath}:`, error.message);
   }
 };
 

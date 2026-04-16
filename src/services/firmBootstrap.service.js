@@ -11,6 +11,7 @@ const { isFirmCreationDisabled } = require('./featureFlags.service');
 const { loadEnv } = require('../config/env');
 const { coercePrimaryAdminCreationFields } = require('../utils/hierarchy.utils');
 const { setupDefaultFirm } = require('./firmSetup.service');
+const log = require('../utils/log');
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SYSTEM_EMAIL_DOMAIN = 'system.local';
 const DEFAULT_BUSINESS_ADDRESS = 'Default Address';
@@ -114,7 +115,7 @@ const buildSlug = async (deps, session, name) => {
  * @returns {Promise<Object>} Created entities (defaultClient, adminUser)
  */
 const createFirmHierarchy = async ({ payload, performedBy, requestId, context = null, session, deps = defaultDeps }) => {
-  console.log('createFirmHierarchy invoked', requestId);
+  log.info('createFirmHierarchy invoked', requestId);
   if (isFirmCreationDisabled()) {
     throw new FirmBootstrapError('Organization creation is temporarily disabled', 503);
   }
@@ -125,7 +126,7 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
   try {
     const topologyType = mongoose.connection.client?.topology?.description?.type;
     if (topologyType && !topologyType.includes('ReplicaSet')) {
-      console.warn('[BOOTSTRAP] MongoDB is not a replica set. Transactions may not work.');
+      log.warn('[BOOTSTRAP] MongoDB is not a replica set. Transactions may not work.');
     }
   } catch (_topologyErr) {
     // Never block creation due to topology detection failure
@@ -167,7 +168,7 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
       throw new FirmBootstrapError('Default client creation failed - no _id returned', 500);
     }
 
-    console.log('Default client created:', defaultClient._id);
+    log.info('Default client created:', defaultClient._id);
 
     const adminXID = await deps.generateNextXID(defaultClient._id, session);
     const passwordSetupSecret = process.env.JWT_PASSWORD_SETUP_SECRET;
@@ -226,11 +227,11 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
       }, context);
     }
   } catch (emailError) {
-    console.error('[BOOTSTRAP] Failed to send organization created email:', emailError.message);
+    log.error('[BOOTSTRAP] Failed to send organization created email:', emailError.message);
   }
 
   try {
-    console.log(`[BOOTSTRAP] Sending password setup email to ${adminUser.email} (xID: ${adminXID})`);
+    log.info(`[BOOTSTRAP] Sending password setup email to ${adminUser.email} (xID: ${adminXID})`);
     const emailResult = await deps.emailService.sendPasswordSetupEmail({
       email: adminUser.email,
       name: adminUser.name,
@@ -241,12 +242,12 @@ const createFirmHierarchy = async ({ payload, performedBy, requestId, context = 
       context,
     });
     if (!emailResult.success) {
-      console.warn('[BOOTSTRAP] Password setup email not sent:', emailResult.error);
+      log.warn('[BOOTSTRAP] Password setup email not sent:', emailResult.error);
     } else {
-      console.log('[BOOTSTRAP] Password setup email queued successfully');
+      log.info('[BOOTSTRAP] Password setup email queued successfully');
     }
   } catch (emailError) {
-    console.warn('[BOOTSTRAP] Failed to send admin invite email:', emailError.message);
+    log.warn('[BOOTSTRAP] Failed to send admin invite email:', emailError.message);
   }
 
   return {

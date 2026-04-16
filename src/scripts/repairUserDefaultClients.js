@@ -13,6 +13,7 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const User = require('../models/User.model');
 const Client = require('../models/Client.model');
+const log = require('../utils/log');
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/docketra';
 
@@ -20,9 +21,9 @@ const timestamp = () => new Date().toISOString();
 
 async function runRepairUserDefaultClients({ useExistingConnection = false } = {}) {
   if (!useExistingConnection) {
-    console.log(`[MIGRATION] Connecting to MongoDB at ${MONGODB_URI}...`);
+    log.info(`[MIGRATION] Connecting to MongoDB at ${MONGODB_URI}...`);
     await mongoose.connect(MONGODB_URI);
-    console.log('[MIGRATION] Connected');
+    log.info('[MIGRATION] Connected');
   }
 
   try {
@@ -46,7 +47,7 @@ async function runRepairUserDefaultClients({ useExistingConnection = false } = {
 
       if (!defaultClient) {
         skipped += 1;
-        console.warn(`[MIGRATION] [${timestamp()}] Skipping ${user.xID} - no default client found for firm ${String(user.firmId)}`);
+        log.warn(`[MIGRATION] [${timestamp()}] Skipping ${user.xID} - no default client found for firm ${String(user.firmId)}`);
         continue;
       }
 
@@ -63,25 +64,25 @@ async function runRepairUserDefaultClients({ useExistingConnection = false } = {
       await user.save();
       repaired += 1;
 
-      console.log(
+      log.info(
         `[MIGRATION] [${timestamp()}] Repaired user ${user.xID} ` +
         `(firmId=${String(user.firmId)}, defaultClientId=${String(defaultClient._id)})`
       );
     }
 
-    console.log(`[MIGRATION] Completed. scanned=${scanned}, repaired=${repaired}, skipped=${skipped}`);
+    log.info(`[MIGRATION] Completed. scanned=${scanned}, repaired=${repaired}, skipped=${skipped}`);
     return { scanned, repaired, skipped };
   } finally {
     if (!useExistingConnection) {
       await mongoose.disconnect();
-      console.log('[MIGRATION] Disconnected from MongoDB');
+      log.info('[MIGRATION] Disconnected from MongoDB');
     }
   }
 }
 
 if (require.main === module) {
   runRepairUserDefaultClients().catch((error) => {
-    console.error('[MIGRATION] Failed:', error.message);
+    log.error('[MIGRATION] Failed:', error.message);
     process.exit(1);
   });
 }
