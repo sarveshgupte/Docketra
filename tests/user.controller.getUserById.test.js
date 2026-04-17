@@ -40,6 +40,11 @@ Module._load = function (request, parent, isMain) {
   // 3. Gracefully handle environment-missing dependencies or side-effect heavy imports.
   // Returning a Proxy ensures that property access or function calls on these mocks don't crash
   // during the controller's initialization phase.
+  if (request === '../utils/role.utils') {
+    return {
+      normalizeRole: (r) => r
+    };
+  }
   if (request === 'mongoose' || request === 'crypto' || request.includes('model') ||
       request.includes('service') || request.includes('utils')) {
      return new Proxy(() => ({}), {

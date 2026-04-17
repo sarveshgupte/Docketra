@@ -135,7 +135,7 @@ async function shouldIgnoreSuperadminInPreflight() {
   });
 
   // Create SUPER_ADMIN without firm/defaultClient
-  await User.create({
+  await User.collection.insertOne({
     xID: 'X000002',
     name: 'Platform Admin',
     email: 'platform-admin2@test.com',
