@@ -175,7 +175,13 @@ export const CasesPage = () => {
     isLoading: loading,
     error,
     refetch: refetchCases,
-  } = useCasesListQuery({ isAdmin, hasQcAccess, enabled: Boolean(user) });
+  } = useCasesListQuery({
+    isAdmin,
+    hasQcAccess,
+    statusFilter,
+    activeWorkbasketId,
+    enabled: Boolean(user),
+  });
 
   const cases = casesQueryData?.cases ?? [];
   const categoryCount = casesQueryData?.categoryCount ?? 0;
