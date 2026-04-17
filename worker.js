@@ -1,3 +1,5 @@
+const log = require('./src/utils/log');
+
 const workerModules = [
   './src/workers/bulkUpload.worker.js',
   './src/workers/audit.worker.js',
@@ -15,4 +17,7 @@ const workerModules = [
 
 workerModules.forEach((workerModulePath) => require(workerModulePath));
 
-console.info('[worker] Registered workers:', workerModules.map((modulePath) => modulePath.split('/').pop()).join(', '));
+log.info('WORKER_REGISTRATION_SUCCESS', {
+  workerCount: workerModules.length,
+  workers: workerModules.map((modulePath) => modulePath.split('/').pop()),
+});

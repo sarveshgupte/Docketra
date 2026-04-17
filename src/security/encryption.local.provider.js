@@ -45,7 +45,7 @@ function loadMasterKey() {
   if (!raw) {
     throw new Error(
       'MASTER_ENCRYPTION_KEY environment variable is required but not set. ' +
-      'Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'base64\'))"'
+      'Generate one with: node -e "process.stdout.write(require(\'crypto\').randomBytes(32).toString(\'base64\'))"'
     );
   }
 
