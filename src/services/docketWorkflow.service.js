@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const { randomUUID } = require('crypto');
 const Case = require('../models/Case.model');
 const Category = require('../models/Category.model');
 const Team = require('../models/Team.model');
@@ -144,15 +143,12 @@ async function writeAudit({
   firmId,
   action,
   metadata = {},
-  requestId = null,
   changes = [],
   session = null,
 }) {
   await docketAuditService.createLog({
     docketId,
     action,
-    requestId: requestId || metadata?.requestId || randomUUID(),
-    tenantId: firmId,
     fromState,
     toState,
     comment,

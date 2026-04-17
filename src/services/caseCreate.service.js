@@ -74,7 +74,6 @@ module.exports = (deps) => {
     computeDeadlineFromTatDays,
     findScopedCaseAttachment,
     checkCaseAccess,
-    writeDocketAudit,
     docketAuditService,
   } = deps;
 
@@ -556,28 +555,6 @@ module.exports = (deps) => {
           type: 'DOCKET_CREATED',
           description: `Docket created: ${newCase.caseNumber || newCase.caseId || 'Unknown'}`,
           performedByXID: req.user?.xID,
-        });
-        await writeDocketAudit({
-          req,
-          session,
-          docketId: newCase.caseId,
-          action: 'CREATED',
-          toState: 'OPEN',
-          metadata: {
-            category: actualCategory,
-            clientId: finalClientId,
-            priority: normalizedPriority,
-            assignedToXID: newCase.assignedToXID || null,
-          },
-          oldDoc: {},
-          newDoc: {
-            status: 'OPEN',
-            category: actualCategory,
-            clientId: finalClientId,
-            priority: normalizedPriority,
-            assignedToXID: newCase.assignedToXID || null,
-          },
-          dedupeKey: `case-create:${newCase.caseId}`,
         });
         log.info('CASE_CREATED', {
           req,

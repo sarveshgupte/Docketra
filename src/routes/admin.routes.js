@@ -19,7 +19,6 @@ const {
   updateRestrictedClients,
   getFirmSettings,
   getFirmSettingsActivity,
-  getSettingsAudit,
   updateFirmSettings,
   getStorageConfig,
   updateStorageConfig,
@@ -114,7 +113,6 @@ router.patch('/users/:xID/workbaskets', ...adminBaseAccess, requireManagerOrPrim
 router.patch('/users/:id/hierarchy', ...adminBaseAccess, authorizeFirmPermission('USER_MANAGE'), userWriteLimiter, updateUserHierarchy);
 router.get('/firm-settings', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userReadLimiter, getFirmSettings);
 router.get('/firm-settings/activity', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userReadLimiter, getFirmSettingsActivity);
-router.get('/settings/audit', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userReadLimiter, getSettingsAudit);
 router.put('/firm-settings', ...adminBaseAccess, authorizeFirmPermission('ADMIN_STATS'), userWriteLimiter, updateFirmSettings);
 router.get('/workbaskets', ...adminBaseAccess, authorizeFirmPermission('CASE_VIEW'), userReadLimiter, listWorkbaskets);
 router.post('/workbaskets', ...adminBaseAccess, requireManagerOrPrimaryAdmin, authorizeFirmPermission('WORKBASKET_MANAGE'), userWriteLimiter, createWorkbasket);

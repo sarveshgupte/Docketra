@@ -22,21 +22,6 @@ Module._load = function (request, parent, isMain) {
     };
   }
 
-  if (request === '../utils/role.utils') {
-    return {
-      normalizeRole: (role) => {
-        if (!role) return null;
-        const normalized = String(role).trim().toUpperCase().replace(/[\s-]+/g, '_');
-        if (normalized === 'SUPERADMIN' || normalized === 'SUPER_ADMIN') return 'SUPER_ADMIN';
-        if (normalized === 'PRIMARY_ADMIN') return 'PRIMARY_ADMIN';
-        if (normalized === 'ADMIN') return 'ADMIN';
-        if (normalized === 'MANAGER') return 'MANAGER';
-        if (normalized === 'EMPLOYEE' || normalized === 'STAFF' || normalized === 'USER') return 'USER';
-        return normalized;
-      }
-    };
-  }
-
   // 3. Gracefully handle environment-missing dependencies or side-effect heavy imports.
   // Returning a Proxy ensures that property access or function calls on these mocks don't crash
   // during the controller's initialization phase.

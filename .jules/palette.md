@@ -9,7 +9,3 @@
 ## 2024-04-14 - DataTable Filter Chip Accessibility
 **Learning:** Adding `aria-label`s to filter removal buttons is crucial for screen readers, but the label must include *both* the filter key and its active value. Overriding the content with just the action and the key (e.g., `aria-label="Remove filter: Status"`) causes visually impaired users to lose the context of what value they are actually removing (e.g., "Active").
 **Action:** When adding `aria-label`s to action buttons that represent data states, always interpolate both the label and the value into the accessible description (e.g., `aria-label={\`Remove filter: \${f.label} \${f.value}\`}`).
-
-## 2024-04-16 - Dynamic Aria-Labels for Repeated Action Buttons
-**Learning:** When rendering lists of items where each item has an identical, generic action button (e.g., 'Open', 'View'), screen reader users lose context as to which item they are interacting with. Also, adjacent decorative emojis can create unwanted audio clutter if not explicitly hidden.
-**Action:** Always inject specific item identifiers (like `fileName`) into the action button's `aria-label` (e.g., `aria-label={\`Open document \${file.fileName}\`}`), and ensure nearby decorative icons have `aria-hidden="true"`.

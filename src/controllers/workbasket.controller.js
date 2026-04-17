@@ -5,6 +5,7 @@ const { mapUserResponse } = require('../mappers/user.mapper');
 const buildWorkbasketWarnings = async (firmId, workbasketIds = []) => {
   if (!firmId || workbasketIds.length === 0) return {};
 
+
   // ⚡ Bolt: Optimize workbasket user counts
   // 💡 What: Replaced Promise.all(workbasketIds.map(...countDocuments)) with a single aggregate pipeline.
   // 🎯 Why: Reduces DB network round-trips from N (one per workbasket) to 1 and improves database concurrency limits.

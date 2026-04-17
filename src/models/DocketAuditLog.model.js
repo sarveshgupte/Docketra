@@ -1,11 +1,4 @@
-const { randomUUID } = require('crypto');
 const mongoose = require('mongoose');
-
-const changeSchema = new mongoose.Schema({
-  field: { type: String, required: true, trim: true },
-  from: { type: mongoose.Schema.Types.Mixed, default: null },
-  to: { type: mongoose.Schema.Types.Mixed, default: null },
-}, { _id: false });
 
 const docketAuditLogSchema = new mongoose.Schema({
   docketId: {
@@ -19,17 +12,6 @@ const docketAuditLogSchema = new mongoose.Schema({
     trim: true,
     uppercase: true,
   },
-  requestId: {
-    type: String,
-    trim: true,
-    default: () => randomUUID(),
-    index: true,
-  },
-  tenantId: {
-    type: String,
-    trim: true,
-    index: true,
-  },
   fromState: {
     type: String,
     default: null,
@@ -38,14 +20,22 @@ const docketAuditLogSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
+  changes: {
+    type: [{
+      field: { type: String, required: true },
+      from: { type: mongoose.Schema.Types.Mixed, default: null },
+      to: { type: mongoose.Schema.Types.Mixed, default: null },
+    }],
+    default: [],
+  },
   performedBy: {
-    type: mongoose.Schema.Types.Mixed,
+    type: String,
     required: true,
     index: true,
   },
   performedByRole: {
     type: String,
-    enum: ['USER', 'ADMIN', 'SUPER_ADMIN', 'MANAGER', 'SYSTEM'],
+    enum: ['USER', 'ADMIN', 'SYSTEM'],
     default: 'USER',
     index: true,
   },
@@ -53,9 +43,11 @@ const docketAuditLogSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
-  changes: {
-    type: [changeSchema],
-    default: [],
+  timestamp: {
+    type: Date,
+    required: true,
+    default: Date.now,
+    index: true,
   },
   metadata: {
     type: mongoose.Schema.Types.Mixed,
@@ -64,12 +56,6 @@ const docketAuditLogSchema = new mongoose.Schema({
   dedupeKey: {
     type: String,
     default: null,
-    index: true,
-  },
-  timestamp: {
-    type: Date,
-    required: true,
-    default: Date.now,
     index: true,
   },
   firmId: {
@@ -82,31 +68,10 @@ const docketAuditLogSchema = new mongoose.Schema({
   versionKey: false,
 });
 
-docketAuditLogSchema.pre('validate', function normalizeAuditFields(next) {
-  if (!this.tenantId && this.firmId) this.tenantId = this.firmId;
-  if (!this.firmId && this.tenantId) this.firmId = this.tenantId;
-
-  if (this.performedBy && typeof this.performedBy === 'object' && !Array.isArray(this.performedBy)) {
-    const userId = String(this.performedBy.userId || this.performedBy.xID || this.performedBy.id || 'SYSTEM').toUpperCase();
-    const role = String(this.performedBy.role || 'USER').toUpperCase().replace('SUPERADMIN', 'SUPER_ADMIN');
-    this.performedBy = userId;
-    this.performedByRole = ['USER', 'ADMIN', 'SUPER_ADMIN', 'MANAGER', 'SYSTEM'].includes(role) ? role : 'USER';
-  } else {
-    this.performedBy = String(this.performedBy || 'SYSTEM').toUpperCase();
-  }
-
-  next();
-});
-
 docketAuditLogSchema.index({ firmId: 1, docketId: 1, timestamp: -1 });
-docketAuditLogSchema.index({ tenantId: 1, docketId: 1, timestamp: -1 });
 docketAuditLogSchema.index(
-  { firmId: 1, docketId: 1, action: 1, requestId: 1, dedupeKey: 1 },
-  {
-    unique: true,
-    partialFilterExpression: { dedupeKey: { $type: 'string' } },
-    name: 'uniq_docket_audit_dedupe',
-  },
+  { firmId: 1, docketId: 1, dedupeKey: 1 },
+  { unique: true, sparse: true }
 );
 
 module.exports = mongoose.models.DocketAuditLog || mongoose.model('DocketAuditLog', docketAuditLogSchema);

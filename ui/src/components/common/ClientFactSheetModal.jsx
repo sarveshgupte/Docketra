@@ -69,7 +69,7 @@ export const ClientFactSheetModal = ({ isOpen, onClose, factSheet, caseId, clien
               {attachments.length === 0 ? <p className="file-date">No documents attached.</p> : attachments.map((file) => (
                 <div key={file.fileId} className="file-item">
                   <div className="file-info">
-                    <span className="file-icon" aria-hidden="true">📄</span>
+                    <span className="file-icon">📄</span>
                     <div className="file-details">
                       <span className="file-name">{file.fileName}</span>
                       <span className="file-date">
@@ -81,7 +81,6 @@ export const ClientFactSheetModal = ({ isOpen, onClose, factSheet, caseId, clien
                     className="btn-view-file"
                     onClick={() => handleViewFile(file.fileId)}
                     title="View or download file (opens in new tab)"
-                    aria-label={`Open document ${file.fileName}`}
                   >
                     Open
                   </button>

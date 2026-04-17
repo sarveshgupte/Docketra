@@ -1,4 +1,3 @@
-const { randomUUID } = require('crypto');
 const Case = require('../models/Case.model');
 const docketAuditService = require('./docketAudit.service');
 const {
@@ -94,28 +93,25 @@ async function transitionDocket(docketId, newState, userId, options = {}) {
     throw err;
   }
 
-  if (!options.skipAudit) {
-    await docketAuditService.logStatusChange({
-      firmId,
-      docketId,
-      performedBy: userId,
-      performedByRole: metadata?.actorRole || 'USER',
-      fromStatus: fromState,
-      toStatus: toState,
-      metadata: {
-        ...metadata,
-        requestId: String(options?.req?.context?.requestId || options?.req?.requestId || metadata?.requestId || randomUUID()),
-        reason: reason || null,
-        notes: notes || null,
-        versionFrom: expected,
-        versionTo: expected + 1,
-        transitionAction: action,
-        source: 'docketTransition.service.transitionDocket',
-      },
-      comment: notes || reason || null,
-      session,
-    });
-  }
+  await docketAuditService.logStatusChange({
+    firmId,
+    docketId,
+    performedBy: userId,
+    performedByRole: metadata?.actorRole || 'USER',
+    fromStatus: fromState,
+    toStatus: toState,
+    metadata: {
+      ...metadata,
+      reason: reason || null,
+      notes: notes || null,
+      versionFrom: expected,
+      versionTo: expected + 1,
+      transitionAction: action,
+      source: 'docketTransition.service.transitionDocket',
+    },
+    comment: notes || reason || null,
+    session,
+  });
 
   return {
     docketId,
