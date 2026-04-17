@@ -36,6 +36,7 @@ const {
   listClientCFSFilesForCase,
   downloadClientCFSFileForCase,
   getDocketSummaryPdf,
+  getDocketAudit,
 } = require('../controllers/case.controller');
 const {
   generateUploadLink,
@@ -150,6 +151,7 @@ router.post('/:caseId/track-exit', authorizeFirmPermission('CASE_VIEW'), userWri
 
 // GET /api/cases/:caseId/history - Get case audit history
 router.get('/:caseId/history', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, getCaseHistory);
+router.get('/:caseId/audit', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, getDocketAudit);
 
 router.get('/:caseId/summary-pdf', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, checkCaseClientAccess, getDocketSummaryPdf);
 
