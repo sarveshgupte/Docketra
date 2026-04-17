@@ -13,15 +13,20 @@ const normalizeCases = (records = []) =>
 
 export const useCasesListQuery = ({
   isAdmin,
+  userRole = '',
   hasQcAccess = false,
   statusFilter = 'ALL',
   activeWorkbasketId = '',
   enabled = true,
 }) =>
+  // Roles in product terms: PRIMARY_ADMIN, ADMIN, MANAGER, USER.
+  // "isAdmin" is a convenience boolean, but query keys should stay role-aware
+  // and avoid generic "employee" wording.
   useQuery({
     queryKey: [
       'cases-list',
-      isAdmin ? 'admin' : 'employee',
+      isAdmin ? 'admin-scope' : 'non-admin-scope',
+      String(userRole || '').toUpperCase() || 'UNKNOWN_ROLE',
       hasQcAccess ? 'qc' : 'no-qc',
       statusFilter || 'ALL',
       activeWorkbasketId || 'no-workbasket',
