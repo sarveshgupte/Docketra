@@ -9,7 +9,7 @@
 
 const crypto = require('crypto');
 const https = require('https');
-const logger = require('../utils/log');
+const log = require('../utils/log');
 const { getSession } = require('../utils/getSession');
 const { enqueueOutbox } = require('./outbox.service');
 
@@ -238,12 +238,12 @@ const sendDirectAuthEmail = async ({
   otp = false,
 }) => {
   if (otp) {
-    logger.info('OTP_EMAIL_DIRECT_SEND', {
+    log.info('OTP_EMAIL_DIRECT_SEND', {
       email: to,
       provider: 'brevo',
     });
   } else {
-    logger.info('AUTH_EMAIL_DIRECT_SEND', {
+    log.info('AUTH_EMAIL_DIRECT_SEND', {
       email: to,
       subject,
       provider: 'brevo',
