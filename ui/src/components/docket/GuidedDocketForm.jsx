@@ -8,6 +8,7 @@ import { categoryService } from '../../services/categoryService';
 import { adminApi } from '../../api/admin.api';
 import { caseApi } from '../../api/case.api';
 import { clientApi } from '../../api/client.api';
+import { useToast } from '../../hooks/useToast';
 
 const STEPS = [
   'Basic Info',
@@ -29,6 +30,7 @@ const defaultForm = {
 };
 
 export const GuidedDocketForm = ({ onCreated }) => {
+  const { showError } = useToast();
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState(defaultForm);
   const [errors, setErrors] = useState({});
@@ -135,7 +137,11 @@ export const GuidedDocketForm = ({ onCreated }) => {
 
       if (response?.success) {
         onCreated?.(response);
+        return;
       }
+      showError(response?.message || 'Failed to create docket');
+    } catch (error) {
+      showError(error?.message || 'Failed to create docket');
     } finally {
       setLoading((prev) => ({ ...prev, submit: false }));
     }
@@ -219,8 +225,8 @@ export const GuidedDocketForm = ({ onCreated }) => {
           value={formData.assignedTo}
           onChange={(e) => updateField('assignedTo', e.target.value)}
           disabled={loading.users}
-          helpText="If empty, assignment falls back to workbasket rules."
-          options={[{ value: '', label: loading.users ? 'Loading users...' : 'Auto-assign from workbasket' }, ...users.map((item) => ({ value: item.xID, label: `${item.xID} - ${item.name || item.email || 'User'}` }))]}
+          helpText="If empty, docket stays in the workbasket queue for pull/manager assignment."
+          options={[{ value: '', label: loading.users ? 'Loading users...' : 'Keep unassigned in workbasket' }, ...users.map((item) => ({ value: item.xID, label: `${item.xID} - ${item.name || item.email || 'User'}` }))]}
         />
       )}
 
@@ -234,7 +240,7 @@ export const GuidedDocketForm = ({ onCreated }) => {
           <p><strong>Subcategory:</strong> {(subcategories.find((item) => item.id === formData.subcategoryId)?.name) || '—'}</p>
           <p><strong>Workbasket:</strong> {(workbaskets.find((item) => item._id === formData.workbasketId)?.name) || '—'}</p>
           <p><strong>Priority:</strong> {formData.priority || 'medium'}</p>
-          <p><strong>Assignee:</strong> {formData.assignedTo || 'Auto-assign'}</p>
+          <p><strong>Assignee:</strong> {formData.assignedTo || 'Unassigned (workbasket queue)'}</p>
         </div>
       )}
 

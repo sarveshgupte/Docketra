@@ -16,8 +16,12 @@ export const CreateCasePage = () => {
         <GuidedDocketForm
           onCreated={(response) => {
             const docketId = response?.data?.docketId || response?.data?.caseId;
-            showSuccess(`Docket ${docketId} created successfully`);
-            navigate(`/app/firm/${firmSlug}/global-worklist`);
+            const routedWorkbasketId = response?.data?.ownerTeamId || response?.data?.routedToTeamId || response?.data?.workbasketId;
+            showSuccess(`Docket ${docketId || 'created'} created successfully`);
+            const destination = routedWorkbasketId
+              ? `/app/firm/${firmSlug}/global-worklist?workbasketId=${encodeURIComponent(String(routedWorkbasketId))}`
+              : `/app/firm/${firmSlug}/global-worklist`;
+            navigate(destination);
           }}
         />
       </div>
