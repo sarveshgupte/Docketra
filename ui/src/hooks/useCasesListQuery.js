@@ -11,9 +11,21 @@ const normalizeCases = (records = []) =>
     caseId: record.caseId || record._id,
   }));
 
-export const useCasesListQuery = ({ isAdmin, hasQcAccess = false, enabled = true }) =>
+export const useCasesListQuery = ({
+  isAdmin,
+  hasQcAccess = false,
+  statusFilter = 'ALL',
+  activeWorkbasketId = '',
+  enabled = true,
+}) =>
   useQuery({
-    queryKey: ['cases-list', isAdmin ? 'admin' : 'employee', hasQcAccess ? 'qc' : 'no-qc'],
+    queryKey: [
+      'cases-list',
+      isAdmin ? 'admin' : 'employee',
+      hasQcAccess ? 'qc' : 'no-qc',
+      statusFilter || 'ALL',
+      activeWorkbasketId || 'no-workbasket',
+    ],
     queryFn: async () => {
       let casesData = [];
       if (isAdmin) {
@@ -21,22 +33,22 @@ export const useCasesListQuery = ({ isAdmin, hasQcAccess = false, enabled = true
         if (response.success) {
           casesData = getCaseListRecords(response);
         }
-      } else if (hasQcAccess) {
-        // Non-admin users with QC access: fetch both their regular worklist
-        // and QC_PENDING cases, then merge deduplicating by caseId.
-        const [qcResponse, worklistResponse] = await Promise.all([
-          caseApi.getCases({ status: CASE_STATUS.QC_PENDING }),
-          worklistApi.getEmployeeWorklist(),
-        ]);
-        const qcCases = qcResponse.success ? getCaseListRecords(qcResponse) : [];
-        const worklistCases = worklistResponse.success ? (worklistResponse.data || []) : [];
-        const seenIds = new Set();
-        casesData = [...qcCases, ...worklistCases].filter((c) => {
-          const id = c.caseId || c._id;
-          if (!id || seenIds.has(String(id))) return false;
-          seenIds.add(String(id));
-          return true;
-        });
+      } else if (statusFilter === CASE_STATUS.QC_PENDING) {
+        if (!hasQcAccess) {
+          casesData = [];
+        } else {
+          const qcFilters = { status: CASE_STATUS.QC_PENDING };
+          if (activeWorkbasketId) qcFilters.workbasketId = activeWorkbasketId;
+          const response = await caseApi.getCases(qcFilters);
+          if (response.success) {
+            casesData = getCaseListRecords(response);
+          }
+        }
+      } else if (statusFilter === CASE_STATUS.RESOLVED || statusFilter === CASE_STATUS.FILED) {
+        const response = await caseApi.getCases({ status: statusFilter });
+        if (response.success) {
+          casesData = getCaseListRecords(response);
+        }
       } else {
         const response = await worklistApi.getEmployeeWorklist();
         if (response.success) {
