@@ -177,6 +177,7 @@ export const CasesPage = () => {
     refetch: refetchCases,
   } = useCasesListQuery({
     isAdmin,
+    userRole: user?.role,
     hasQcAccess,
     statusFilter,
     activeWorkbasketId,
