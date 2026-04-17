@@ -1,6 +1,3 @@
-const Team = require('../models/Team.model');
-const User = require('../models/User.model');
-
 // Re-export updateStatus from case.service so callers can import either file.
 const { updateStatus } = require('./case.service');
 
@@ -37,12 +34,10 @@ const validateStructuredInput = ({ title, workbasketId, categoryId, subcategoryI
 const resolveAssigneeFromWorkbasketRules = async ({ firmId, workbasketId, assignedTo }) => {
   if (assignedTo) return assignedTo;
 
-  const team = await Team.findOne({ _id: workbasketId, firmId, isActive: true }).select('managerId').lean();
-  if (!team) return null;
-  if (!team.managerId) return null;
-
-  const manager = await User.findOne({ _id: team.managerId, firmId, status: { $ne: 'deleted' } }).select('xID').lean();
-  return manager?.xID ? String(manager.xID).toUpperCase() : null;
+  // Keep newly created dockets in the workbasket/global queue unless the creator
+  // explicitly selects an assignee. This supports pull-to-worklist and manager-led
+  // assignment flows from the workbasket.
+  return null;
 };
 
 module.exports = {
