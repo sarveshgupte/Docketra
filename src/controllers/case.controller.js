@@ -46,6 +46,7 @@ const { createNotification, NotificationTypes } = require('../domain/notificatio
 const fs = require('fs').promises;
 const fsSync = require('fs');
 const { logActivitySafe } = require('../services/docketActivity.service');
+const { writeDocketAudit } = require('../services/productAudit.service');
 const buildCaseCreateService = require('../services/caseCreate.service');
 const buildCaseUpdateService = require('../services/caseUpdate.service');
 const buildCaseQueryService = require('../services/caseQuery.service');
@@ -339,6 +340,7 @@ const caseServiceDependencies = {
   computeDeadlineFromTatDays,
   findScopedCaseAttachment,
   checkCaseAccess,
+  writeDocketAudit,
   docketAuditService,
 };
 
@@ -1273,7 +1275,6 @@ const searchCases = async (req, res) => caseQueryService.searchCases(req, res);
 
 
 const getDocketSummaryPdf = async (req, res) => caseQueryService.getDocketSummaryPdf(req, res);
-
 const getDocketAudit = async (req, res) => {
   try {
     const { caseId } = req.params;
@@ -1318,8 +1319,8 @@ module.exports = {
   updateCaseStatus: wrapWriteHandler(updateCaseStatus),
   getCaseByCaseId,
   getCaseComments,
-  getDocketSummaryPdf,
   getDocketAudit,
+  getDocketSummaryPdf,
   getCases,
   searchCases,
   lockCaseEndpoint: wrapWriteHandler(lockCaseEndpoint),

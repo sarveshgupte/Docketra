@@ -77,6 +77,7 @@ module.exports = (deps) => {
     computeDeadlineFromTatDays,
     findScopedCaseAttachment,
     checkCaseAccess,
+    writeDocketAudit,
     docketAuditService,
   } = deps;
 
@@ -176,6 +177,7 @@ module.exports = (deps) => {
       // PR: Case Identifier Semantics - Resolve identifier to internal ID
       let caseData = await findCaseByIdentifierOrSendNotFound(req, res, caseId);
       if (!caseData) return;
+      const previousStatus = caseData.status;
       
       const normalizedStatus = String(status || '').toUpperCase();
       const docketStatuses = new Set(['OPEN', 'PENDING', 'RESOLVED', 'FILED']);
@@ -197,6 +199,7 @@ module.exports = (deps) => {
         tenantId: req.user.firmId,
         role: req.user.role,
         userId: req.user.xID,
+        skipDocketAudit: true,
         performedByXID: req.user.xID,
         performedBy: performedBy.toLowerCase(),
         actorRole: req.user.role === 'Admin' ? 'ADMIN' : 'USER',
@@ -212,6 +215,20 @@ module.exports = (deps) => {
       });
 
       caseData = await CaseRepository.findByInternalId(req.user.firmId, caseData.caseInternalId, req.user.role);
+      await writeDocketAudit({
+        req,
+        docketId: caseData.caseId,
+        action: 'STATUS_CHANGED',
+        fromState: String(previousStatus || '').toUpperCase() || null,
+        toState: String(caseData.status || '').toUpperCase() || null,
+        metadata: {
+          reason: reason || null,
+          notes: notes || null,
+        },
+        oldDoc: { status: previousStatus },
+        newDoc: { status: caseData.status },
+        dedupeKey: `status:${caseData.caseId}:${previousStatus}:${caseData.status}`,
+      });
 
       logActivitySafe({
         docketId: caseData.caseInternalId,
@@ -520,6 +537,7 @@ module.exports = (deps) => {
         tenantId: req.user.firmId,
         role: req.user.role,
         userId: user.xID,
+        skipDocketAudit: true,
         performedBy: user.email,
         actorRole: 'ADMIN',
         req,
@@ -534,6 +552,25 @@ module.exports = (deps) => {
         },
       });
       caseData = await CaseRepository.findByInternalId(req.user.firmId, caseData.caseInternalId, req.user.role);
+      await writeDocketAudit({
+        req,
+        docketId: caseData.caseId,
+        action: 'UPDATED',
+        metadata: {
+          previousAssignedToXID: previousAssignedToXID || null,
+          previousStatus,
+          nextStatus: caseData.status,
+        },
+        oldDoc: {
+          assignedToXID: previousAssignedToXID || null,
+          status: previousStatus,
+        },
+        newDoc: {
+          assignedToXID: null,
+          status: caseData.status,
+        },
+        dedupeKey: `unassign:${caseData.caseId}:${previousAssignedToXID || 'NONE'}`,
+      });
 
       const statusAfterUnassign = CaseStatus.UNASSIGNED;
 
