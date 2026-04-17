@@ -520,14 +520,16 @@ const cacheLoginOtpState = async (user, { otpHash, otpExpiresAt }) => {
     createdAt: new Date().toISOString(),
   });
 
+  const otpTtlSeconds = Math.max(1, Math.ceil((otpExpiresAt.getTime() - Date.now()) / 1000));
+
   if (redis) {
-    await redis.set(otpKey, payload, 'EX', LOGIN_OTP_COOLDOWN_SECONDS);
+    await redis.set(otpKey, payload, 'EX', otpTtlSeconds);
     return;
   }
 
   loginOtpCacheFallback.set(otpKey, {
     value: payload,
-    expiresAt: Date.now() + (LOGIN_OTP_COOLDOWN_SECONDS * 1000),
+    expiresAt: otpExpiresAt.getTime(),
   });
 };
 
