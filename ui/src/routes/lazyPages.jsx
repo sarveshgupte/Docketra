@@ -67,6 +67,7 @@ export const MarketingFeaturesPage = lazyPage(() => import('../pages/marketing/F
 export const MarketingTermsPage = lazyPage(() => import('../pages/marketing/Terms'), 'TermsPage');
 export const MarketingPrivacyPage = lazyPage(() => import('../pages/marketing/Privacy'), 'PrivacyPage');
 export const MarketingSecurityPage = lazyPage(() => import('../pages/marketing/Security'), 'SecurityPage');
+export const MarketingAcceptableUsePage = lazyPage(() => import('../pages/marketing/AcceptableUse'), 'AcceptableUsePage');
 export const MarketingAboutPage = lazyPage(() => import('../pages/marketing/About'), 'AboutPage');
 export const MarketingContactPage = lazyPage(() => import('../pages/marketing/Contact'), 'ContactPage');
 export const MarketingSignupPage = lazy(() => import('../pages/marketing/Signup'));

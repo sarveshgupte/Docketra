@@ -1,5 +1,13 @@
 # What's New
 
+## April 2026: Legal & Compliance Pages
+
+- Added a new **Terms of Use** page with clear coverage for service scope, account responsibilities, acceptable use, data ownership, early-stage availability, liability limits, terms updates, and contact details.
+- Added a rewritten **Privacy Policy** in plain language covering data categories, usage purpose, sharing boundaries, storage approach, safeguards, user controls, cookies/tracking, and broad alignment with applicable Indian IT/data protection expectations.
+- Added a practical **Data & Security Overview** page describing Docketra's firm-owned data model, BYOS/BYOAI direction, intake-to-CRM-to-task data flow, shared responsibility on backups, and baseline security approach.
+- Added an **Acceptable Use Policy** page to state clear prohibitions on illegal activity, harmful content, and platform exploitation attempts.
+- Added legal/compliance footer links across marketing and in-app layouts to improve trust, transparency, and discoverability.
+
 ## April 2026: Performance and Speed Improvements
 
 - Reduced unnecessary frontend refetching in CRM lead workflows by applying local state patching for lead creation and updates, including optimistic stage transitions with failure rollback.
