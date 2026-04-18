@@ -6,7 +6,7 @@
   "type": "module",
   "dependencies": {
     "@tanstack/react-query": "^5.99.0",
-    "axios": "^1.6.2",
+    "axios": "^1.15.0",
     "framer-motion": "file:vendor/framer-motion",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
