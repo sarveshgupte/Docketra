@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const Form = require('../models/Form.model');
-const Lead = require('../models/Lead.model');
+const { processCmsSubmission } = require('../services/cmsIntake.service');
 
 const DEFAULT_FIELDS = [
   { key: 'name', label: 'Name', type: 'text' },
@@ -70,24 +70,26 @@ const submitForm = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid submission' });
     }
 
-    const email = req.body?.email ? String(req.body.email).trim().toLowerCase() : null;
-    const phone = req.body?.phone ? String(req.body.phone).trim() : null;
-
-    const utm_source = req.query?.utm_source ? String(req.query.utm_source).trim().slice(0, 200) : null;
-    const utm_campaign = req.query?.utm_campaign ? String(req.query.utm_campaign).trim().slice(0, 200) : null;
-    const referrer = req.query?.referrer ? String(req.query.referrer).trim().slice(0, 500) : null;
-
-    const lead = await Lead.create({
+    const result = await processCmsSubmission({
       firmId: form.firmId,
-      name,
-      email,
-      phone,
-      source: 'form',
-      status: 'new',
-      metadata: { utm_source, utm_campaign, referrer },
+      payload: {
+        ...req.body,
+        source: 'form',
+        formSlug: form.slug || String(form._id),
+      },
+      requestMeta: {
+        query: req.query,
+        headers: req.headers,
+        ipAddress: req.socket?.remoteAddress || req.ip || null,
+      },
+      submissionMode: 'public_form',
+      intakeConfig: {
+        autoCreateClient: false,
+        autoCreateDocket: false,
+      },
     });
 
-    return res.status(201).json({ success: true, data: { id: lead._id } });
+    return res.status(201).json({ success: true, data: { id: result.lead._id } });
   } catch (error) {
     if (error instanceof mongoose.Error.CastError) {
       return res.status(404).json({ success: false, message: 'Form not found' });
