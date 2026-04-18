@@ -73,7 +73,7 @@ export const LoginPage = () => {
       const response = await login(normalizedIdentifier, password, '/superadmin/login');
 
       if (response.success) {
-        showSuccess('Signed in successfully.');
+        showSuccess('✅ Login successful. Redirecting to your workspace.');
 
         const profileResult = await fetchProfile();
 
@@ -92,11 +92,11 @@ export const LoginPage = () => {
       } else if (errorData?.lockedUntil) {
         setError(errorData?.message || 'Account is locked. Please try again later or contact an administrator.');
       } else if (statusCode === 401) {
-        setError('Invalid xID or password');
+        setError('Invalid xID or password. Please verify and try again.');
       } else if (statusCode >= 500) {
-        setError('Something went wrong. Try again');
+        setError('Sign-in is temporarily unavailable. Please retry in a moment.');
       } else {
-        setError(errorData?.message || 'Invalid xID or password');
+        setError(errorData?.message || 'Unable to sign in. Please verify your credentials and try again.');
       }
     } finally {
       setLoading(false);

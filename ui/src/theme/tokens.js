@@ -23,9 +23,12 @@ export const formClasses = {
     'min-h-11 w-full rounded-md border border-gray-300 bg-white px-3.5 py-2.5 text-sm leading-5 text-gray-900 shadow-sm transition-[border-color,box-shadow,background-color] duration-150 placeholder:text-gray-400 hover:border-gray-400 focus:border-blue-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600/15 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-500',
   inputError:
     'border-red-400 bg-red-50/60 text-red-900 placeholder:text-red-400 focus:border-red-500 focus:ring-red-500/20',
+  inputSuccess:
+    'border-emerald-400 bg-emerald-50/40 text-emerald-900 focus:border-emerald-500 focus:ring-emerald-500/20',
   textareaBase:
     'w-full rounded-md border border-gray-300 bg-white px-3.5 py-2.5 text-sm leading-5 text-gray-900 shadow-sm transition-colors hover:border-gray-400 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/15 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500',
   errorText: `${spacingClasses.formMessageSpacing} text-sm text-red-500`,
+  successText: `${spacingClasses.formMessageSpacing} flex items-center gap-1 text-sm text-emerald-600`,
   helpText: `${spacingClasses.formMessageSpacing} text-xs leading-5 text-gray-500`,
 };
 

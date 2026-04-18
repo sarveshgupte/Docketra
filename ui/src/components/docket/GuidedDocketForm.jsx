@@ -30,10 +30,10 @@ const defaultForm = {
   assignedTo: '',
 };
 
-export const GuidedDocketForm = ({ onCreated }) => {
+export const GuidedDocketForm = ({ onCreated, initialWorkType = 'client' }) => {
   const { showError } = useToast();
   const [step, setStep] = useState(0);
-  const [formData, setFormData] = useState(defaultForm);
+  const [formData, setFormData] = useState({ ...defaultForm, workType: initialWorkType === 'internal' ? 'internal' : 'client' });
   const [errors, setErrors] = useState({});
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
@@ -142,9 +142,9 @@ export const GuidedDocketForm = ({ onCreated }) => {
         onCreated?.(response);
         return;
       }
-      showError(response?.message || 'Failed to create docket');
+      showError(response?.message || 'Failed to create docket. Please check required fields and try again.');
     } catch (error) {
-      showError(error?.message || 'Failed to create docket');
+      showError(error?.message || 'Failed to create docket. Please check required fields and try again.');
     } finally {
       setLoading((prev) => ({ ...prev, submit: false }));
     }
@@ -166,23 +166,31 @@ export const GuidedDocketForm = ({ onCreated }) => {
       {step === 0 && (
         <>
           <Input label="Title" required value={formData.title} onChange={(e) => updateField('title', e.target.value)} error={errors.title} />
-          <Select
-            label="Work Type"
-            value={formData.workType}
-            onChange={(e) => {
-              const nextWorkType = e.target.value;
-              setFormData((prev) => ({
-                ...prev,
-                workType: nextWorkType,
-                clientId: nextWorkType === 'internal' ? '' : (prev.clientId || clients[0]?.clientId || ''),
-              }));
-              setErrors((prev) => ({ ...prev, clientId: '' }));
-            }}
-            options={[
-              { value: 'client', label: 'Client Work' },
-              { value: 'internal', label: 'Internal Work' },
-            ]}
-          />
+          <div>
+            <p className="mb-2 block text-sm font-medium text-gray-800">Work Type <span className="ml-1 text-red-500">*</span></p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant={formData.workType === 'client' ? 'primary' : 'outline'}
+                onClick={() => {
+                  setFormData((prev) => ({ ...prev, workType: 'client', clientId: prev.clientId || clients[0]?.clientId || '' }));
+                  setErrors((prev) => ({ ...prev, clientId: '' }));
+                }}
+              >
+                Client Work
+              </Button>
+              <Button
+                type="button"
+                variant={formData.workType === 'internal' ? 'primary' : 'outline'}
+                onClick={() => {
+                  setFormData((prev) => ({ ...prev, workType: 'internal', clientId: '' }));
+                  setErrors((prev) => ({ ...prev, clientId: '' }));
+                }}
+              >
+                Internal Task
+              </Button>
+            </div>
+          </div>
           <Select
             label={formData.workType === 'internal' ? 'Client (not required for internal)' : 'Client'}
             required={formData.workType !== 'internal'}
