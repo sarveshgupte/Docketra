@@ -1,5 +1,13 @@
 # What's New
 
+## April 2026: Unified CMS Intake Submission Pipeline
+
+- CMS and public intake submissions now run through a shared orchestration service: `Submission -> Lead -> optional Client -> optional Docket`.
+- Every CMS/public submission now creates a Lead first for consistent top-of-funnel tracking.
+- Client and docket auto-creation are now config-driven via firm-level intake settings with safe defaults.
+- CMS/public controllers were slimmed down so they parse request/response only; orchestration now lives in `cmsIntake.service`.
+- Intake responses now return normalized status details (`lead`, `client`, `docket`, `submissionMode`, `metadata`) to support CRM/CMS/Task Manager consistency.
+
 ## Workflow + RBAC Core Architecture Upgrade
 
 ### Multi-workbasket user support

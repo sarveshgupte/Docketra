@@ -208,6 +208,25 @@ const firmSchema = new mongoose.Schema({
   },
 
   /**
+   * CMS/public intake configuration for lead -> client -> docket orchestration.
+   */
+  intakeConfig: {
+    cms: {
+      autoCreateClient: { type: Boolean, default: true },
+      autoCreateDocket: { type: Boolean, default: true },
+      defaultWorkbasketId: { type: mongoose.Schema.Types.ObjectId, ref: 'Team', default: null },
+      defaultCategoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', default: null },
+      defaultSubcategoryId: { type: String, default: null, trim: true },
+      defaultPriority: {
+        type: String,
+        enum: ['LOW', 'MEDIUM', 'HIGH', null],
+        default: null,
+      },
+      defaultAssignee: { type: String, default: null, trim: true, uppercase: true },
+    },
+  },
+
+  /**
    * Firm-level BYOAI configuration.
    * API keys are always encrypted at rest.
    */

@@ -44,6 +44,13 @@ const leadSchema = new mongoose.Schema({
     utm_source: { type: String, default: null },
     utm_campaign: { type: String, default: null },
     referrer: { type: String, default: null },
+    pageSlug: { type: String, default: null },
+    formSlug: { type: String, default: null },
+    service: { type: String, default: null },
+    message: { type: String, default: null },
+    ipAddress: { type: String, default: null },
+    userAgent: { type: String, default: null },
+    submissionMode: { type: String, default: null },
   },
 }, { timestamps: { createdAt: true, updatedAt: false } });
 
