@@ -1,5 +1,14 @@
 # What's New
 
+## April 2026: Fix Lead Metadata Persistence + Dynamic Public/Embed Form Rendering
+
+- Lead metadata schema now explicitly includes all intake attribution fields used by CMS/public/embed intake (`utm_source`, `utm_campaign`, `utm_medium`, `referrer`, `pageUrl`, `pageSlug`, `formSlug`, `formId`, `service`, `message`, `ipAddress`, `userAgent`, `submissionMode`).
+- Public/embed submit validation now accepts dynamic configured field payloads while preserving anti-pollution sanitization and compatibility with existing intake keys.
+- Public form rendering now uses stored `form.fields` as the source of truth (with safe defaults when no explicit config exists), instead of relying on a fixed hardcoded field layout.
+- Public/embed submit payload construction is now field-driven and still appends intake attribution metadata (`pageUrl`, `referrer`, UTM params, `submissionMode`) plus honeypot signal.
+- Added conservative misconfiguration guardrails so public/embed forms require a `name` field; forms without `name` are safely rejected for public submission.
+- CMS module embed tooling now shows which configured fields are rendered publicly to reduce admin/operator confusion.
+
 ## April 2026: CRM Pipeline + Lead Ownership + Follow-up System
 
 - Lead records now support a conservative CRM lifecycle with stage/status compatibility (`new`, `contacted`, `qualified`, `converted`, `lost`).

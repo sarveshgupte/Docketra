@@ -11,6 +11,21 @@ const DEFAULT_FIELDS = [
 const SPAM_NAME_PATTERN = /https?:\/\//i;
 const EMBEDDED_SUBMISSION_MODE = 'embedded_form';
 const EMBEDDED_SOURCE = 'website_embed';
+const REQUIRED_PUBLIC_FIELD_KEY = 'name';
+
+function normalizeFieldKey(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function hasRequiredPublicField(fields = []) {
+  return fields.some((field) => normalizeFieldKey(field?.key) === REQUIRED_PUBLIC_FIELD_KEY);
+}
+
+function ensurePublicFormFieldRequirements(fields = []) {
+  if (!hasRequiredPublicField(fields)) {
+    throw new Error('Form must include a name field for public/embed submissions');
+  }
+}
 
 function normalizeAllowedDomains(domains = []) {
   return domains
@@ -71,6 +86,7 @@ const createForm = async (req, res) => {
 
     const rawFields = req.body?.fields;
     const fields = Array.isArray(rawFields) && rawFields.length > 0 ? rawFields : DEFAULT_FIELDS;
+    ensurePublicFormFieldRequirements(fields);
 
     const form = await Form.create({
       firmId: req.user.firmId,
@@ -120,6 +136,7 @@ const updateForm = async (req, res) => {
     }
     if (Array.isArray(req.body.fields)) {
       updates.fields = req.body.fields.length > 0 ? req.body.fields : DEFAULT_FIELDS;
+      ensurePublicFormFieldRequirements(updates.fields);
     }
 
     const settings = normalizeFormSettings(req.body);
@@ -157,6 +174,9 @@ const getPublicForm = async (req, res) => {
     if (embedMode && !form.allowEmbed) {
       return res.status(403).json({ success: false, message: 'Embed is not enabled for this form' });
     }
+    if (!hasRequiredPublicField(form.fields || [])) {
+      return res.status(409).json({ success: false, message: 'Form is misconfigured: name field is required for public/embed use' });
+    }
 
     return res.json({
       success: true,
@@ -193,6 +213,9 @@ const submitForm = async (req, res) => {
     }
     if (embedMode && !isAllowedOrigin(form, req)) {
       return res.status(403).json({ success: false, message: 'Submission origin is not allowed' });
+    }
+    if (!hasRequiredPublicField(form.fields || [])) {
+      return res.status(409).json({ success: false, message: 'Form is misconfigured: name field is required for public/embed use' });
     }
     if (String(req.body?.website || '').trim()) {
       return res.status(400).json({ success: false, message: 'Invalid submission' });

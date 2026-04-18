@@ -28,6 +28,18 @@ Embedded submissions capture source metadata for attribution and reporting:
 - `referrer`
 - `pageUrl`
 - UTM tags when present (`utm_source`, `utm_campaign`, `utm_medium`)
+- intake/user context (`service`, `message`, `ipAddress`, `userAgent`, `pageSlug` when available)
+
+This attribution metadata is persisted directly on `Lead.metadata` for CRM listing/detail usage and reporting.
+
+### Public/embed field rendering behavior
+
+Public and embedded forms render from each form record’s configured `fields` array.
+
+- `form.fields` is the source of truth for render order, labels, and field type.
+- Supported field types are currently: `text`, `email`, `phone` (unknown types fall back safely to text input).
+- Default fallback fields (`name`, `email`, `phone`) are used only if no explicit fields were configured.
+- Public/embed forms require a `name` field for compatibility with the unified intake pipeline.
 
 ### Guardrails
 

@@ -151,6 +151,16 @@ export const PlatformCmsPage = () => {
               <p style={{ marginTop: 12, color: '#475569' }}>
                 Optional auto-docket creation follows your intake configuration.
               </p>
+              <div style={{ marginTop: 8 }}>
+                <strong>Fields rendered publicly</strong>
+                <ul style={{ marginTop: 6, marginBottom: 0, paddingLeft: 18 }}>
+                  {(selectedForm?.fields || []).map((field, index) => (
+                    <li key={`${field.key || 'field'}-${index}`}>
+                      {(field.label || field.key || `Field ${index + 1}`)} ({field.type || 'text'})
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </>
         ) : (
