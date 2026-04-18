@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 const Form = require('../models/Form.model');
 const Lead = require('../models/Lead.model');
+const User = require('../models/User.model');
+const { createNotification, NotificationTypes } = require('../domain/notifications');
 
 const DEFAULT_FIELDS = [
   { key: 'name', label: 'Name', type: 'text' },
@@ -9,6 +11,27 @@ const DEFAULT_FIELDS = [
 ];
 
 const SPAM_NAME_PATTERN = /https?:\/\//i;
+
+const notifyCmsLead = async (firmId, leadName) => {
+  try {
+    const recipients = await User.find({
+      firmId,
+      role: { $in: ['ADMIN', 'PRIMARY_ADMIN'] },
+    }).select('xID').lean();
+
+    await Promise.allSettled(recipients.map((recipient) => createNotification({
+      firmId,
+      userId: recipient.xID,
+      type: NotificationTypes.CMS_LEAD_CREATED,
+      actor: { xID: 'CMS', role: 'SYSTEM' },
+      title: 'New CMS lead',
+      message: `${leadName} submitted a CMS intake form.`,
+      group: false,
+    })));
+  } catch (_error) {
+    // Non-blocking UX signal.
+  }
+};
 
 const createForm = async (req, res) => {
   try {
@@ -86,6 +109,8 @@ const submitForm = async (req, res) => {
       status: 'new',
       metadata: { utm_source, utm_campaign, referrer },
     });
+
+    await notifyCmsLead(form.firmId, name);
 
     return res.status(201).json({ success: true, data: { id: lead._id } });
   } catch (error) {

@@ -53,7 +53,7 @@ const hydrateCasesForReport = async (firmId, cases) => {
 
   // PERFORMANCE: Eliminated N+1 query pattern
   const [clients, users] = await Promise.all([
-    Client.find({ firmId, clientId: { $in: clientIds } }).select('clientId businessName').lean(),
+    Client.find({ firmId, clientId: { $in: clientIds } }).select('clientId businessName isInternal isDefaultClient isSystemClient').lean(),
     User.find({ firmId, xID: { $in: assignedToXids } }).select('xID email').lean(),
   ]);
 
@@ -72,6 +72,7 @@ const hydrateCasesForReport = async (firmId, cases) => {
       category: caseItem.category,
       clientId: caseItem.clientId,
       clientName: client ? client.businessName : 'Unknown',
+      clientType: (client?.isInternal || client?.isDefaultClient || client?.isSystemClient) ? 'INTERNAL' : 'EXTERNAL',
       assignedTo: assignedUser ? assignedUser.email : (caseItem.assignedToXID || ''),
       createdAt: caseItem.createdAt,
       createdBy: caseItem.createdBy,
@@ -80,6 +81,25 @@ const hydrateCasesForReport = async (firmId, cases) => {
       ageingBucket: caseItem.ageingBucket,
     };
   });
+};
+
+const buildClientTypeMatch = async (firmId, clientType) => {
+  const normalizedClientType = String(clientType || '').trim().toUpperCase();
+  if (!normalizedClientType) return null;
+
+  const isInternalFilter = normalizedClientType === 'INTERNAL';
+  if (!isInternalFilter && normalizedClientType !== 'EXTERNAL') {
+    const error = new Error('Invalid clientType filter');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const clientQuery = isInternalFilter
+    ? { $or: [{ isInternal: true }, { isDefaultClient: true }, { isSystemClient: true }] }
+    : { isInternal: { $ne: true }, isDefaultClient: { $ne: true }, isSystemClient: { $ne: true } };
+
+  const matchingClientIds = await Client.find({ firmId, ...clientQuery }).distinct('clientId');
+  return matchingClientIds.length > 0 ? matchingClientIds : ['__NO_MATCHING_CLIENTS__'];
 };
 
 const resolveFirmIdFromAuthContext = (req, res) => {
@@ -339,7 +359,7 @@ const getPendingCasesReport = async (req, res) => {
   try {
     const firmId = resolveFirmIdFromAuthContext(req, res);
     if (!firmId) return;
-    const { category, assignedTo, ageingBucket } = req.query;
+    const { category, assignedTo, ageingBucket, clientType } = req.query;
     
     // Build match stage for pending cases
     // SECURITY: Enforcing tenant isolation (firm-scoped query)
@@ -348,6 +368,7 @@ const getPendingCasesReport = async (req, res) => {
     
     if (category) matchStage.category = category;
     if (assignedTo) matchStage.assignedToXID = assignedTo; // Use assignedToXID for canonical queries
+    if (clientType) matchStage.clientId = { $in: await buildClientTypeMatch(firmId, clientType) };
     
     // Fetch all pending cases
     // SECURITY: Enforcing tenant isolation (firm-scoped query)
@@ -412,7 +433,7 @@ const getCasesByDateRange = async (req, res) => {
   try {
     const firmId = resolveFirmIdFromAuthContext(req, res);
     if (!firmId) return;
-    const { fromDate, toDate, status, category, page = 1, limit = 50 } = req.query;
+    const { fromDate, toDate, status, category, clientType, page = 1, limit = 50 } = req.query;
 
     const pageNum = parseInt(page, 10);
     const limitNum = parseInt(limit, 10);
@@ -448,6 +469,7 @@ const getCasesByDateRange = async (req, res) => {
     
     if (status) matchStage.status = status;
     if (category) matchStage.category = category;
+    if (clientType) matchStage.clientId = { $in: await buildClientTypeMatch(firmId, clientType) };
     
     const skip = (pageNum - 1) * limitNum;
 
@@ -495,7 +517,7 @@ const exportCasesCSV = async (req, res) => {
   try {
     const firmId = resolveFirmIdFromAuthContext(req, res);
     if (!firmId) return;
-    const { fromDate, toDate, status, category } = req.query;
+    const { fromDate, toDate, status, category, clientType } = req.query;
     
     // Validate required parameters
     if (!fromDate || !toDate) {
@@ -522,6 +544,7 @@ const exportCasesCSV = async (req, res) => {
     
     if (status) matchStage.status = status;
     if (category) matchStage.category = category;
+    if (clientType) matchStage.clientId = { $in: await buildClientTypeMatch(firmId, clientType) };
     
     // ⚡ Bolt Performance Optimization:
     // Replaced sequential countDocuments() and find() queries with a single find() using limit(MAX_EXPORT_ROWS + 1).
@@ -547,7 +570,7 @@ const exportCasesCSV = async (req, res) => {
     const casesWithClientNames = hydratedCases.map((item) => ({ ...item, createdAt: item.createdAt.toISOString() }));
     
     // Convert to CSV
-    const fields = ['caseId', 'caseName', 'title', 'status', 'category', 'clientId', 'clientName', 'assignedTo', 'createdAt', 'createdBy'];
+    const fields = ['caseId', 'caseName', 'title', 'status', 'category', 'clientId', 'clientName', 'clientType', 'assignedTo', 'createdAt', 'createdBy'];
     const parser = new Parser({ fields });
     const csv = parser.parse(casesWithClientNames);
     
@@ -564,7 +587,7 @@ const exportCasesCSV = async (req, res) => {
       req,
       exportType: 'csv',
       filename,
-      filters: { fromDate, toDate, status: status || null, category: category || null },
+      filters: { fromDate, toDate, status: status || null, category: category || null, clientType: clientType || null },
       totalRecords: casesWithClientNames.length,
     });
 
@@ -588,7 +611,7 @@ const exportCasesExcel = async (req, res) => {
   try {
     const firmId = resolveFirmIdFromAuthContext(req, res);
     if (!firmId) return;
-    const { fromDate, toDate, status, category } = req.query;
+    const { fromDate, toDate, status, category, clientType } = req.query;
     
     // Validate required parameters
     if (!fromDate || !toDate) {
@@ -615,6 +638,7 @@ const exportCasesExcel = async (req, res) => {
     
     if (status) matchStage.status = status;
     if (category) matchStage.category = category;
+    if (clientType) matchStage.clientId = { $in: await buildClientTypeMatch(firmId, clientType) };
     
     // ⚡ Bolt Performance Optimization:
     // Replaced sequential countDocuments() and find() queries with a single find() using limit(MAX_EXPORT_ROWS + 1).
@@ -654,7 +678,7 @@ const exportCasesExcel = async (req, res) => {
       req,
       exportType: 'excel',
       filename,
-      filters: { fromDate, toDate, status: status || null, category: category || null },
+      filters: { fromDate, toDate, status: status || null, category: category || null, clientType: clientType || null },
       totalRecords: casesWithClientNames.length,
     });
 

@@ -90,12 +90,14 @@ export const formatClientDisplay = (client, showInactiveLabel = false) => {
   
   const clientId = client.clientId || '';
   const businessName = client.businessName || '';
+  const isInternal = Boolean(client.isDefaultClient || client.isSystemClient || client.isInternal);
+  const clientName = isInternal && businessName ? `${businessName} (Internal)` : businessName;
   
-  if (!clientId && !businessName) return 'N/A';
-  if (!clientId) return businessName;
-  if (!businessName) return clientId;
+  if (!clientId && !clientName) return 'N/A';
+  if (!clientId) return clientName;
+  if (!clientName) return clientId;
   
-  let display = `${clientId} – ${businessName}`;
+  let display = `${clientId} – ${clientName}`;
   
   // Append inactive label if client is not active
   // Use status field as the canonical field (per Client model)

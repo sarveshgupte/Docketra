@@ -16,10 +16,25 @@
 .platform__topbar p{font-size:14px;color:#64748b}
 .platform__actions{display:flex;gap:8px}
 .platform__actions button{border:1px solid #cbd5e1;background:#fff;padding:8px 12px;border-radius:10px}
+.platform__notifications{position:relative}
+.platform__icon-button{position:relative;min-width:44px}
+.platform__notification-count{position:absolute;top:-8px;right:-8px;display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;border-radius:999px;background:#2563eb;color:#fff;font-size:11px;font-weight:700}
+.platform__notification-menu{position:absolute;right:0;top:calc(100% + 8px);width:min(360px,80vw);padding:12px;border:1px solid #dbe3ef;border-radius:14px;background:#fff;box-shadow:0 18px 40px rgba(15,23,42,.12);z-index:20}
+.platform__notification-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.platform__notification-header button{padding:6px 10px;font-size:12px}
+.platform__notification-list{display:grid;gap:8px;max-height:420px;overflow:auto}
+.platform__notification-item{width:100%;text-align:left;padding:10px;border:1px solid #e2e8f0;border-radius:12px;background:#fff}
+.platform__notification-item.is-unread{border-color:#bfdbfe;background:#eff6ff}
+.platform__notification-item p{margin:6px 0;color:#334155;font-size:13px}
+.platform__notification-item small{color:#64748b;font-size:12px}
+.platform__notification-item-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.platform__notification-pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;background:#dbeafe;color:#1d4ed8;font-size:11px;font-weight:700}
 .platform__content{padding:22px;display:grid;gap:14px}
 .grid-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
 .panel{background:#fff;border:1px solid #dbe3ef;border-radius:14px;padding:14px}
 .platform--dark .panel{background:#111827;border-color:#334155}
+.platform--dark .platform__notification-menu,.platform--dark .platform__notification-item{background:#111827;border-color:#334155;color:#e2e8f0}
+.platform--dark .platform__notification-item p,.platform--dark .platform__notification-item small{color:#cbd5e1}
 .kpi{font-size:24px;font-weight:700}
 .muted{color:#6b7280;font-size:13px}
 .table-wrap{overflow:auto}

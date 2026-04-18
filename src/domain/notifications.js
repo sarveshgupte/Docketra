@@ -15,6 +15,9 @@ const NotificationTypes = Object.freeze({
   DOCKET_REASSIGNED: ServiceNotificationTypes.DOCKET_REASSIGNED,
   STATUS_CHANGED: ServiceNotificationTypes.STATUS_CHANGED,
   COMMENT_ADDED: ServiceNotificationTypes.COMMENT_ADDED,
+  QC_FAILED: ServiceNotificationTypes.QC_FAILED,
+  QC_CORRECTED: ServiceNotificationTypes.QC_CORRECTED,
+  CMS_LEAD_CREATED: ServiceNotificationTypes.CMS_LEAD_CREATED,
 });
 
 function assertNotificationType(type) {
@@ -50,6 +53,24 @@ function buildMessage({ type, docketId, actor }) {
     return {
       title: 'Client upload',
       message: `${actorLabel} uploaded documents.`,
+    };
+  }
+  if (type === NotificationTypes.QC_FAILED) {
+    return {
+      title: 'QC failed',
+      message: `${actorLabel} sent docket ${docketId} back after QC failure.`,
+    };
+  }
+  if (type === NotificationTypes.QC_CORRECTED) {
+    return {
+      title: 'QC corrected',
+      message: `${actorLabel} marked docket ${docketId} as corrected.`,
+    };
+  }
+  if (type === NotificationTypes.CMS_LEAD_CREATED) {
+    return {
+      title: 'New CMS lead',
+      message: `${actorLabel} created a new CMS lead.`,
     };
   }
   return {

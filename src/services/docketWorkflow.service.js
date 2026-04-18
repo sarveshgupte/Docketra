@@ -607,6 +607,28 @@ async function qcDecision({ docketId, firmId, actor, decision, comment }) {
     }],
   });
 
+  if (normalizedDecision === QC_DECISIONS.FAILED && docket.assignedToXID) {
+    await createNotification({
+      firmId,
+      userId: docket.assignedToXID,
+      type: NotificationTypes.QC_FAILED,
+      docketId,
+      actor,
+      group: false,
+    });
+  }
+
+  if (normalizedDecision === QC_DECISIONS.CORRECTED && docket.assignedToXID) {
+    await createNotification({
+      firmId,
+      userId: docket.assignedToXID,
+      type: NotificationTypes.QC_CORRECTED,
+      docketId,
+      actor,
+      group: false,
+    });
+  }
+
   return docket;
 }
 

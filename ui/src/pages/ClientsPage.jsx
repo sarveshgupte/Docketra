@@ -60,6 +60,7 @@ export const ClientsPage = () => {
   const fileInputRef = useRef(null);
   const normalizedRole = String(user?.role || '').trim().toUpperCase();
   const isAdmin = normalizedRole === 'ADMIN' || normalizedRole === 'PRIMARY_ADMIN' || Boolean(user?.isPrimaryAdmin);
+  const isInternalClient = useCallback((client) => Boolean(client?.isDefaultClient || client?.isSystemClient || client?.isInternal), []);
 
   const loadClients = useCallback(async () => {
     setLoading(true);
@@ -80,9 +81,14 @@ export const ClientsPage = () => {
         ))
         .map((client) => ({
           ...client,
+          clientType: (client.isDefaultClient || client.isSystemClient || client.isInternal) ? 'INTERNAL' : 'EXTERNAL',
+          displayBusinessName: (client.isDefaultClient || client.isSystemClient || client.isInternal)
+            ? `${client.businessName || 'Internal'} (Internal)`
+            : client.businessName,
           businessEmail: toDisplayString(client.businessEmail, ''),
           contactPersonEmailAddress: toDisplayString(client.contactPersonEmailAddress, ''),
-        }));
+        }))
+        .sort((a, b) => Number(isInternalClient(b)) - Number(isInternalClient(a)));
 
       setClients(normalizedClients);
     } catch (error) {
@@ -259,6 +265,12 @@ export const ClientsPage = () => {
       headerClassName: 'min-w-[16rem]',
       cellClassName: 'min-w-[16rem]',
       contentClassName: 'truncate',
+      render: (client) => (
+        <div className="flex items-center gap-2">
+          <span>{client.displayBusinessName || client.businessName}</span>
+          {isInternalClient(client) ? <Badge variant="info">INTERNAL</Badge> : null}
+        </div>
+      ),
     },
     {
       key: 'businessEmail',
@@ -311,7 +323,7 @@ export const ClientsPage = () => {
         </div>
       ),
     },
-  ], [isAdmin, openEditCfsModal, openEditClientModal, handleToggleClientStatus]);
+  ], [isAdmin, isInternalClient, openEditCfsModal, openEditClientModal, handleToggleClientStatus]);
 
   const refreshSelectedClient = async () => {
     if (!editCfsClient?.clientId) return;
@@ -405,8 +417,8 @@ export const ClientsPage = () => {
             emptyMessage={(
               <div className="p-8">
                 <EmptyState
-                  title="No clients available yet"
-                  description="Create your first client to begin organizing dockets and workspaces."
+                  title="No clients yet (except internal)"
+                  description="Your INTERNAL workspace client already exists. Add an EXTERNAL client when you are ready."
                 />
               </div>
             )}

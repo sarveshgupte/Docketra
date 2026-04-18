@@ -1369,6 +1369,23 @@ export const CaseDetailPage = () => {
   }, [isViewOnlyMode, lifecycleActionMap, lifecycleStatus, routedTeamCannotResolve]);
 
   const canPerformLifecycleActions = lifecycleQuickActions.length > 0;
+  const nextActionLabel = useMemo(() => {
+    if (String(caseInfo?.qc?.status || caseInfo?.qcStatus || '').toUpperCase() === 'FAILED') {
+      return 'Rework docket and send it back to QC';
+    }
+    if (String(caseInfo?.qc?.status || caseInfo?.qcStatus || '').toUpperCase() === 'CORRECTED') {
+      return 'Confirm correction details and close the review loop';
+    }
+    if (lifecycleQuickActions[0]?.label) {
+      return lifecycleQuickActions[0].label === 'Resume'
+        ? 'Resume execution'
+        : lifecycleQuickActions[0].label;
+    }
+    if (!isViewOnlyMode) {
+      return 'Review details and update the docket when work starts';
+    }
+    return 'Review the latest activity and status updates';
+  }, [caseInfo?.qc?.status, caseInfo?.qcStatus, isViewOnlyMode, lifecycleQuickActions]);
   const canRouteDocket = Boolean(caseInfo)
     && !isViewOnlyMode
     && !caseInfo?.routedToTeamId
@@ -1682,6 +1699,10 @@ export const CaseDetailPage = () => {
             <section className="case-card" aria-labelledby="snapshot-heading">
               <div className="case-card__heading">
                 <h2 id="snapshot-heading">Snapshot</h2>
+              </div>
+              <div className="mb-4 flex flex-wrap gap-2">
+                <Badge variant="info">Current: {String(docketState || 'WL').replaceAll('_', ' ')}</Badge>
+                <Badge variant="warning">Next: {nextActionLabel}</Badge>
               </div>
               <div className="field-grid">
                 <div className="field-group min-w-0">
@@ -2117,7 +2138,7 @@ export const CaseDetailPage = () => {
             try {
               const response = await caseApi.qcAction(caseId, qcDecisionType, qcComment.trim());
               if (response.success) {
-                showSuccess(`QC action ${qcDecisionType} recorded.`);
+                showSuccess(qcDecisionType === 'FAILED' ? 'QC failed.' : (qcDecisionType === 'CORRECTED' ? 'QC correction recorded.' : `QC action ${qcDecisionType} recorded.`));
                 setShowQcModal(false);
                 setQcComment('');
                 loadCase({ background: true });

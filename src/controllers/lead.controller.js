@@ -1,8 +1,31 @@
 const mongoose = require('mongoose');
 const Lead = require('../models/Lead.model');
 const CrmClient = require('../models/CrmClient.model');
+const User = require('../models/User.model');
+const { createNotification, NotificationTypes } = require('../domain/notifications');
 
 const ALLOWED_STATUSES = new Set(['new', 'contacted', 'converted']);
+
+const notifyLeadCreated = async (firmId, actor, lead) => {
+  try {
+    const recipients = await User.find({
+      firmId,
+      role: { $in: ['ADMIN', 'PRIMARY_ADMIN'] },
+    }).select('xID').lean();
+
+    await Promise.allSettled(recipients.map((recipient) => createNotification({
+      firmId,
+      userId: recipient.xID,
+      type: NotificationTypes.CMS_LEAD_CREATED,
+      actor,
+      title: 'New CMS lead',
+      message: `${lead.name} was added to CMS intake.`,
+      group: false,
+    })));
+  } catch (_error) {
+    // Non-blocking UX signal.
+  }
+};
 
 const parsePagination = (query = {}) => {
   const rawLimit = Number.parseInt(query.limit, 10);
@@ -26,6 +49,7 @@ const createLead = async (req, res) => {
     };
 
     const lead = await Lead.create(payload);
+    await notifyLeadCreated(req.user.firmId, { xID: req.user?.xID || req.user?.email || 'SYSTEM' }, lead);
     return res.status(201).json({ success: true, data: lead });
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message || 'Failed to create lead' });

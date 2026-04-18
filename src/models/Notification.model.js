@@ -13,12 +13,12 @@ const notificationSchema = new mongoose.Schema({
     required: true,
     index: true,
   },
-  type: {
-    type: String,
-    required: true,
-    enum: ['DOCKET_ASSIGNED', 'STATUS_CHANGED', 'COMMENT_ADDED', 'DOCKET_REASSIGNED', 'CLIENT_UPLOAD', 'SLA_BREACHED'],
-    index: true,
-  },
+    type: {
+      type: String,
+      required: true,
+      enum: ['DOCKET_ASSIGNED', 'STATUS_CHANGED', 'COMMENT_ADDED', 'DOCKET_REASSIGNED', 'CLIENT_UPLOAD', 'SLA_BREACHED', 'QC_FAILED', 'QC_CORRECTED', 'CMS_LEAD_CREATED'],
+      index: true,
+    },
   title: {
     type: String,
     required: true,
