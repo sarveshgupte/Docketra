@@ -85,10 +85,10 @@ export const SecurityPage = () => (
         security issue in the Docketra platform, please report it directly to our security team
         at{' '}
         <a
-          href="mailto:security@docketra.com"
+          href="mailto:sarveshgupte@gmail.com"
           className="text-gray-700 underline hover:no-underline"
         >
-          security@docketra.com
+          sarveshgupte@gmail.com
         </a>
         . Please do not disclose vulnerabilities publicly until we have had a reasonable opportunity
         to investigate and respond.
