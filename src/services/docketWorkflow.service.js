@@ -219,6 +219,29 @@ async function writeAudit({
   changes = [],
   session = null,
 }) {
+  const canonicalEvent = String(metadata?.event || '').toUpperCase() === 'QC_ACTION'
+    ? 'QC_ACTION'
+    : 'STATE_CHANGED';
+  const canonicalMetadata = canonicalEvent === 'QC_ACTION'
+    ? { comment: comment || null, source: 'qcDecision' }
+    : {
+      action: action || null,
+      requestId: requestId || metadata?.requestId || null,
+    };
+
+  await docketAuditService.logDocketEvent({
+    docketId,
+    firmId,
+    event: canonicalEvent,
+    userId,
+    userRole: performedByRole,
+    fromState,
+    toState,
+    qcOutcome: metadata?.qcOutcome || null,
+    metadata: canonicalMetadata,
+    session,
+  });
+
   await docketAuditService.createLog({
     docketId,
     action,
@@ -583,6 +606,7 @@ async function qcDecision({ docketId, firmId, actor, decision, comment }) {
       to: docket.qcOutcome,
     }],
   });
+
   return docket;
 }
 

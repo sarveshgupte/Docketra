@@ -1,5 +1,6 @@
 const DocketSession = require('../models/DocketSession.model');
 const { logCaseHistory } = require('./auditLog.service');
+const { logDocketEvent } = require('./docketAudit.service');
 
 const HEARTBEAT_COUNT_THRESHOLD_SECONDS = 30;
 const HEARTBEAT_STALE_THRESHOLD_SECONDS = 60;
@@ -42,6 +43,18 @@ async function startSession({ docketId, firmId, userId, req, userRole, userEmail
       startedAt: session.startedAt,
     },
     req,
+  });
+
+  await logDocketEvent({
+    docketId,
+    firmId,
+    event: 'SESSION_STARTED',
+    userId,
+    userRole,
+    metadata: {
+      sessionId: String(session._id),
+      activeSeconds: session.activeSeconds,
+    },
   });
 
   return session;
@@ -107,6 +120,15 @@ async function endSession({ docketId, firmId, userId, req, userRole, userEmail, 
       endedAt: session.endedAt,
     },
     req,
+  });
+
+  await logDocketEvent({
+    docketId,
+    firmId,
+    event: 'SESSION_ENDED',
+    userId,
+    userRole,
+    metadata: { activeSeconds: session.activeSeconds, sessionId: String(session._id) },
   });
 
   return session;
