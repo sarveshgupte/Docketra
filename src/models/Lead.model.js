@@ -154,5 +154,7 @@ leadSchema.pre('validate', function syncStatusAndStage(next) {
 
 leadSchema.index({ firmId: 1, status: 1, createdAt: -1 });
 leadSchema.index({ firmId: 1, stage: 1, createdAt: -1 });
+leadSchema.index({ firmId: 1, ownerXid: 1, createdAt: -1 });
+leadSchema.index({ firmId: 1, stage: 1, nextFollowUpAt: 1 });
 
 module.exports = mongoose.model('Lead', leadSchema);

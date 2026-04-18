@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { caseApi } from '../api/case.api';
 import { worklistApi } from '../api/worklist.api';
 import { categoryService } from '../services/categoryService';
@@ -79,13 +79,22 @@ export const useCasesListQuery = ({
         }
       }
 
-      let categoryCount = 0;
-      if (isAdmin) {
-        const categoriesResponse = await categoryService.getCategories(false);
-        categoryCount = categoriesResponse?.data?.length || 0;
-      }
-
-      return { cases: normalizeCases(casesData), categoryCount };
+      return { cases: normalizeCases(casesData) };
     },
     enabled: Boolean(enabled),
+    placeholderData: keepPreviousData,
+    staleTime: 45 * 1000,
+  });
+
+export const useCategoryCountQuery = ({ isAdmin, enabled = true }) =>
+  useQuery({
+    queryKey: ['reference-data', 'categories', isAdmin ? 'admin' : 'non-admin'],
+    queryFn: async () => {
+      if (!isAdmin) return 0;
+      const categoriesResponse = await categoryService.getCategories(false);
+      return categoriesResponse?.data?.length || 0;
+    },
+    enabled: Boolean(enabled && isAdmin),
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });

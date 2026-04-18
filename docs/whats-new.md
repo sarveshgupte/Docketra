@@ -1,5 +1,15 @@
 # What's New
 
+## April 2026: Performance and Speed Improvements
+
+- Reduced unnecessary frontend refetching in CRM lead workflows by applying local state patching for lead creation and updates, including optimistic stage transitions with failure rollback.
+- Improved perceived speed in CRM/CMS surfaces by keeping existing data visible during background refreshes and moving to button-level refresh indicators instead of hard page-blocking loaders.
+- Tuned React Query defaults and key dashboard/list hooks with practical stale/cache windows to avoid excessive remount/navigation refetches for stable data.
+- Split category-count fetching from docket list fetching so category metadata is cached independently and not re-requested on every list filter change.
+- Added backend lead-list projection to trim list payload size, plus no-op lead update write-skipping to avoid unnecessary database writes on unchanged updates.
+- Added targeted lead query indexes for common firm-scoped owner/stage/follow-up list paths to improve hot-path query efficiency on free-tier MongoDB.
+- Improved route-level loading copy to better explain startup latency during backend wake-up on Render free-tier cold starts.
+
 ## April 2026: Landing Page Visual Improvements
 
 - Replaced all placeholder “Mock UI panel” blocks on the marketing landing page with realistic product-driven visuals based on Docketra workflows.
