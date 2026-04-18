@@ -18,18 +18,43 @@ const DEFAULT_INTAKE_CONFIG = Object.freeze({
   defaultPriority: null,
   defaultAssignee: null,
 });
+const RESERVED_INTAKE_KEYS = new Set([
+  'name',
+  'email',
+  'phone',
+  'source',
+  'service',
+  'message',
+  'notes',
+  'pageUrl',
+  'referrer',
+  'utm_source',
+  'utm_campaign',
+  'utm_medium',
+  'pageSlug',
+  'slug',
+  'formSlug',
+  'formId',
+  'website',
+  'submissionMode',
+  'externalSubmissionId',
+  'idempotencyKey',
+]);
 
 function normalizeTrimmedString(value) {
   const trimmed = String(value || '').trim();
   return trimmed || null;
 }
 
-function normalizeMetadata(payload = {}, requestMeta = {}) {
+function normalizeMetadata(payload = {}, requestMeta = {}, options = {}) {
   const query = requestMeta.query || {};
   const headers = requestMeta.headers || {};
+  const defaultSource = normalizeTrimmedString(options.defaultSource) || 'CMS_FORM';
+  const externalSubmissionId = normalizeTrimmedString(payload.externalSubmissionId);
+  const idempotencyKey = normalizeTrimmedString(payload.idempotencyKey || requestMeta.idempotencyKey);
 
   return {
-    source: normalizeTrimmedString(payload.source) || 'CMS_FORM',
+    source: normalizeTrimmedString(payload.source) || defaultSource,
     pageSlug: normalizeTrimmedString(payload.pageSlug || payload.slug),
     formSlug: normalizeTrimmedString(payload.formSlug || payload.formId),
     formId: normalizeTrimmedString(payload.formId),
@@ -43,7 +68,34 @@ function normalizeMetadata(payload = {}, requestMeta = {}) {
     utm_source: normalizeTrimmedString(payload.utm_source || query.utm_source),
     utm_campaign: normalizeTrimmedString(payload.utm_campaign || query.utm_campaign),
     utm_medium: normalizeTrimmedString(payload.utm_medium || query.utm_medium),
+    externalSubmissionId,
+    idempotencyKey: idempotencyKey || externalSubmissionId,
   };
+}
+
+function normalizeExtraFieldValue(value) {
+  if (value === null || value === undefined) return null;
+  if (['string', 'number', 'boolean'].includes(typeof value)) return value;
+  if (Array.isArray(value)) return value.slice(0, 20).map((item) => normalizeExtraFieldValue(item));
+  if (typeof value === 'object') {
+    try {
+      return JSON.parse(JSON.stringify(value));
+    } catch (_error) {
+      return String(value);
+    }
+  }
+  return String(value);
+}
+
+function extractExtraFields(payload = {}) {
+  const extras = {};
+  Object.entries(payload).forEach(([key, value]) => {
+    if (RESERVED_INTAKE_KEYS.has(key)) return;
+    const safeKey = normalizeTrimmedString(key);
+    if (!safeKey) return;
+    extras[safeKey] = normalizeExtraFieldValue(value);
+  });
+  return Object.keys(extras).length > 0 ? extras : null;
 }
 
 function validateSubmission(payload = {}) {
@@ -148,8 +200,39 @@ async function processCmsSubmission({
   }
 
   const { name, email, phone } = validateSubmission(payload);
-  const metadata = normalizeMetadata(payload, requestMeta);
+  const metadata = normalizeMetadata(payload, requestMeta, {
+    defaultSource: submissionMode === 'api_intake' ? 'api_integration' : 'CMS_FORM',
+  });
+  const extraFields = extractExtraFields(payload);
   const config = await resolveIntakeConfig({ firmId, overrides: intakeConfigOverrides });
+
+  if (submissionMode === 'api_intake' && metadata.idempotencyKey) {
+    const existingLead = await Lead.findOne({
+      firmId,
+      'metadata.submissionMode': 'api_intake',
+      $or: [
+        { 'metadata.idempotencyKey': metadata.idempotencyKey },
+        { 'metadata.externalSubmissionId': metadata.idempotencyKey },
+      ],
+    }).sort({ createdAt: -1 }).lean();
+
+    if (existingLead) {
+      return {
+        lead: existingLead,
+        client: null,
+        docket: null,
+        submissionMode,
+        metadata: {
+          source: existingLead.source || metadata.source,
+          pageSlug: existingLead?.metadata?.pageSlug || metadata.pageSlug,
+          formSlug: existingLead?.metadata?.formSlug || metadata.formSlug,
+          timestamp: metadata.timestamp,
+          warnings: ['Duplicate idempotency key detected. Existing lead returned.'],
+          idempotentReplay: true,
+        },
+      };
+    }
+  }
 
   log.info('cms_submission_received', {
     firmId,
@@ -180,6 +263,9 @@ async function processCmsSubmission({
       ipAddress: metadata.ipAddress,
       userAgent: metadata.userAgent,
       submissionMode,
+      externalSubmissionId: metadata.externalSubmissionId,
+      idempotencyKey: metadata.idempotencyKey,
+      extraFields,
     },
   });
 

@@ -1,5 +1,15 @@
 # What's New
 
+## April 2026: API / Webhook Intake Mode for CMS
+
+- Added direct integration endpoint for CMS intake: `POST /public/cms/:firmSlug/intake` (also available under `/api/public/...`).
+- Added conservative integration auth using firm-level `intakeConfig.cms.intakeApiEnabled` + `intakeConfig.cms.intakeApiKey`, verified through `x-docketra-intake-key`.
+- Direct API intake now routes through the existing unified intake orchestration service (no business-flow fork): `Submission -> Lead -> optional Client -> optional Docket`.
+- API-origin submissions are now tagged with `submissionMode=api_intake` and default `source=api_integration` when source is not explicitly supplied.
+- Added practical idempotency support for retries using `idempotencyKey`/`externalSubmissionId` (and optional `idempotency-key` header fallback) to prevent duplicate lead creation.
+- Added stable API integration response contract with `success`, `leadId`, `clientId`, `docketId`, `warnings`, and `idempotentReplay`.
+- Added `docs/product/CMS_API_INTAKE.md` with endpoint/auth/payload/response/failure examples and downstream mapping details.
+
 ## April 2026: Fix Lead Metadata Persistence + Dynamic Public/Embed Form Rendering
 
 - Lead metadata schema now explicitly includes all intake attribution fields used by CMS/public/embed intake (`utm_source`, `utm_campaign`, `utm_medium`, `referrer`, `pageUrl`, `pageSlug`, `formSlug`, `formId`, `service`, `message`, `ipAddress`, `userAgent`, `submissionMode`).

@@ -193,6 +193,49 @@ async function testBackwardCompatibleHandleFormSubmission() {
   }
 }
 
+async function testApiIntakeIdempotencyAndMetadata() {
+  const originalLeadCreate = Lead.create;
+  const originalLeadFindOne = Lead.findOne;
+  const originalFirmFindById = Firm.findById;
+
+  Lead.create = async (payload) => ({ _id: 'lead-api-1', ...payload });
+  Lead.findOne = () => ({ sort: () => ({ lean: async () => null }) });
+  Firm.findById = () => ({ select: () => ({ lean: async () => null }) });
+
+  try {
+    const created = await cmsIntakeService.processCmsSubmission({
+      firmId: '507f1f77bcf86cd799439011',
+      payload: {
+        name: 'API User',
+        email: 'api@example.com',
+        idempotencyKey: 'idem-123',
+        customStatus: 'urgent',
+      },
+      intakeConfig: { autoCreateClient: false, autoCreateDocket: false },
+      submissionMode: 'api_intake',
+    });
+
+    assert.strictEqual(created.lead.source, 'api_integration');
+    assert.strictEqual(created.lead.metadata.submissionMode, 'api_intake');
+    assert.strictEqual(created.lead.metadata.idempotencyKey, 'idem-123');
+    assert.strictEqual(created.lead.metadata.extraFields.customStatus, 'urgent');
+
+    Lead.findOne = () => ({ sort: () => ({ lean: async () => ({ _id: 'lead-existing', source: 'api_integration', metadata: { pageSlug: null, formSlug: null } }) }) });
+    const replay = await cmsIntakeService.processCmsSubmission({
+      firmId: '507f1f77bcf86cd799439011',
+      payload: { name: 'API User', idempotencyKey: 'idem-123' },
+      intakeConfig: { autoCreateClient: false, autoCreateDocket: false },
+      submissionMode: 'api_intake',
+    });
+    assert.strictEqual(replay.lead._id, 'lead-existing');
+    assert.strictEqual(replay.metadata.idempotentReplay, true);
+  } finally {
+    Lead.create = originalLeadCreate;
+    Lead.findOne = originalLeadFindOne;
+    Firm.findById = originalFirmFindById;
+  }
+}
+
 async function run() {
   try {
     await testLeadOnlyFlow();
@@ -200,6 +243,7 @@ async function run() {
     await testLeadClientAndDocketFlow();
     await testInvalidRoutingConfigGracefulFailure();
     await testBackwardCompatibleHandleFormSubmission();
+    await testApiIntakeIdempotencyAndMetadata();
     console.log('CMS intake service tests passed.');
   } catch (error) {
     console.error('CMS intake service tests failed:', error);
