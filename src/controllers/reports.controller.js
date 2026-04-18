@@ -47,6 +47,25 @@ const validateDateRangeWindow = (fromDate, toDate) => {
   return { valid: true, start, end };
 };
 
+const FILTER_PATTERNS = Object.freeze({
+  status: /^[A-Za-z_]+$/,
+  category: /^[\w\s.&()/-]{1,120}$/u,
+  assignedTo: /^[A-Za-z0-9_-]{1,40}$/,
+  ageingBucket: /^[A-Za-z0-9+\- ]{1,40}$/,
+});
+
+const normalizeFilterValue = (value, label, pattern) => {
+  if (value === undefined || value === null || value === '') return null;
+  const normalized = String(value).trim();
+  if (!normalized) return null;
+  if (!pattern.test(normalized)) {
+    const error = new Error(`Invalid ${label} filter`);
+    error.statusCode = 400;
+    throw error;
+  }
+  return normalized;
+};
+
 const hydrateCasesForReport = async (firmId, cases) => {
   const clientIds = [...new Set(cases.map((item) => item.clientId).filter(Boolean))];
   const assignedToXids = [...new Set(cases.map((item) => item.assignedToXID).filter(Boolean))];
@@ -359,7 +378,10 @@ const getPendingCasesReport = async (req, res) => {
   try {
     const firmId = resolveFirmIdFromAuthContext(req, res);
     if (!firmId) return;
-    const { category, assignedTo, ageingBucket, clientType } = req.query;
+    const category = normalizeFilterValue(req.query.category, 'category', FILTER_PATTERNS.category);
+    const assignedTo = normalizeFilterValue(req.query.assignedTo, 'assignedTo', FILTER_PATTERNS.assignedTo);
+    const ageingBucket = normalizeFilterValue(req.query.ageingBucket, 'ageingBucket', FILTER_PATTERNS.ageingBucket);
+    const clientType = normalizeFilterValue(req.query.clientType, 'clientType', /^(INTERNAL|EXTERNAL)$/i);
     
     // Build match stage for pending cases
     // SECURITY: Enforcing tenant isolation (firm-scoped query)
@@ -433,7 +455,15 @@ const getCasesByDateRange = async (req, res) => {
   try {
     const firmId = resolveFirmIdFromAuthContext(req, res);
     if (!firmId) return;
-    const { fromDate, toDate, status, category, clientType, page = 1, limit = 50 } = req.query;
+    const {
+      fromDate,
+      toDate,
+      page = 1,
+      limit = 50,
+    } = req.query;
+    const status = normalizeFilterValue(req.query.status, 'status', FILTER_PATTERNS.status);
+    const category = normalizeFilterValue(req.query.category, 'category', FILTER_PATTERNS.category);
+    const clientType = normalizeFilterValue(req.query.clientType, 'clientType', /^(INTERNAL|EXTERNAL)$/i);
 
     const pageNum = parseInt(page, 10);
     const limitNum = parseInt(limit, 10);
@@ -517,7 +547,10 @@ const exportCasesCSV = async (req, res) => {
   try {
     const firmId = resolveFirmIdFromAuthContext(req, res);
     if (!firmId) return;
-    const { fromDate, toDate, status, category, clientType } = req.query;
+    const { fromDate, toDate } = req.query;
+    const status = normalizeFilterValue(req.query.status, 'status', FILTER_PATTERNS.status);
+    const category = normalizeFilterValue(req.query.category, 'category', FILTER_PATTERNS.category);
+    const clientType = normalizeFilterValue(req.query.clientType, 'clientType', /^(INTERNAL|EXTERNAL)$/i);
     
     // Validate required parameters
     if (!fromDate || !toDate) {
@@ -611,7 +644,10 @@ const exportCasesExcel = async (req, res) => {
   try {
     const firmId = resolveFirmIdFromAuthContext(req, res);
     if (!firmId) return;
-    const { fromDate, toDate, status, category, clientType } = req.query;
+    const { fromDate, toDate } = req.query;
+    const status = normalizeFilterValue(req.query.status, 'status', FILTER_PATTERNS.status);
+    const category = normalizeFilterValue(req.query.category, 'category', FILTER_PATTERNS.category);
+    const clientType = normalizeFilterValue(req.query.clientType, 'clientType', /^(INTERNAL|EXTERNAL)$/i);
     
     // Validate required parameters
     if (!fromDate || !toDate) {

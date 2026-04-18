@@ -64,6 +64,7 @@ export const PlatformShell = ({ title, subtitle, children }) => {
   useEffect(() => {
     let cancelled = false;
     let socket = null;
+    let pollId = null;
 
     const loadNotifications = async () => {
       try {
@@ -81,10 +82,21 @@ export const PlatformShell = ({ title, subtitle, children }) => {
       return API_BASE_URL.replace(/\/api$/, '');
     };
 
+    const startPolling = () => {
+      if (pollId != null) return;
+      pollId = window.setInterval(() => {
+        void loadNotifications();
+      }, 30000);
+    };
+
+    const stopPolling = () => {
+      if (pollId == null) return;
+      window.clearInterval(pollId);
+      pollId = null;
+    };
+
     void loadNotifications();
-    const pollId = window.setInterval(() => {
-      void loadNotifications();
-    }, 30000);
+    startPolling();
 
     const accessToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
     if (accessToken) {
@@ -99,11 +111,13 @@ export const PlatformShell = ({ title, subtitle, children }) => {
         const normalized = normalizeNotification(payload);
         setNotificationItems((current) => [normalized, ...current.filter((item) => item.id !== normalized.id)].slice(0, 10));
       });
+      socket.on('connect', stopPolling);
+      socket.on('disconnect', startPolling);
     }
 
     return () => {
       cancelled = true;
-      window.clearInterval(pollId);
+      stopPolling();
       socket?.disconnect();
     };
   }, [normalizeNotification, showError]);
