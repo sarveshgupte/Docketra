@@ -7,128 +7,108 @@ const SECTIONS = [
   { id: 'account-eligibility', label: 'Account & Eligibility' },
   { id: 'tenant-isolation', label: 'Tenant Isolation' },
   { id: 'data-ownership', label: 'Data Ownership' },
-  { id: 'security-measures', label: 'Security Measures' },
-  { id: 'subscription-billing', label: 'Subscription & Billing' },
+  { id: 'current-pricing-status', label: 'Early Access Status' },
   { id: 'acceptable-use', label: 'Acceptable Use' },
   { id: 'termination', label: 'Termination' },
   { id: 'limitation-of-liability', label: 'Limitation of Liability' },
   { id: 'governing-law', label: 'Governing Law' },
+  { id: 'contact', label: 'Contact' },
 ];
 
 export const TermsPage = () => (
   <LegalLayout
     title="Terms &amp; Conditions"
-    description="Enterprise SaaS Terms of Service for Docketra."
+    description="Terms of use for Docketra early access users."
     sections={SECTIONS}
   >
     <section id="introduction">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">1. Introduction</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        These Terms and Conditions ("Terms") govern your access to and use of Docketra, a
-        multi-tenant B2B SaaS platform operated by GUPTE ENTERPRISES (OPC) PRIVATE LIMITED
-        ("Company", "we", "us", or "our"). By accessing or using Docketra, you agree to be bound
-        by these Terms. If you do not agree, you must not use the platform.
+        These Terms and Conditions govern your use of Docketra. By accessing or using Docketra,
+        you agree to these Terms.
       </p>
     </section>
 
     <section id="nature-of-service">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">2. Nature of Service</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        Docketra is a B2B Software-as-a-Service (SaaS) platform built on a multi-tenant
-        architecture. It provides structured workflow management, case tracking, role-based access
-        control, and secure document handling for service-oriented organizations. Each subscribing
-        organization ("Tenant") operates within a fully isolated environment with dedicated data
-        boundaries.
+        Docketra is a B2B SaaS platform for firms and operations teams. It combines CMS, CRM,
+        and Tasks to support lead capture, relationship management, and execution workflows.
       </p>
     </section>
 
     <section id="account-eligibility">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">3. Account &amp; Eligibility</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        You must be at least 18 years of age and represent a duly authorized legal entity to create
-        an account. You are responsible for maintaining the confidentiality of your credentials and
-        for all activities that occur under your account. You must notify us immediately of any
-        unauthorized use.
+        You must be authorized to create and manage your workspace account, and you are responsible
+        for safeguarding your credentials and account activity.
       </p>
     </section>
 
     <section id="tenant-isolation">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">4. Tenant Isolation &amp; Architecture</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        Docketra enforces strict tenant isolation at every layer of the stack. Tenants cannot
-        access, view, or interfere with another tenant's data, workflows, or configurations.
-        All data queries are scoped to the authenticated tenant context and validated server-side
-        on every request.
+        Docketra enforces tenant isolation and server-side authorization checks to prevent
+        cross-tenant access.
       </p>
     </section>
 
     <section id="data-ownership">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">5. Data Ownership</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        You retain full ownership of all data you input into Docketra. We do not sell, license, or
-        share your data with third parties except as required to deliver the service or comply with
-        applicable law. Upon termination, your data is available for export for a period specified
-        in your subscription agreement.
+        You retain ownership of your business data. Docketra processes data to operate the service
+        and maintain security.
       </p>
     </section>
 
-    <section id="security-measures">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">6. Security Measures</h2>
+    <section id="current-pricing-status">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">6. Early Access Status</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        We implement industry-standard security controls including encrypted data transmission
-        (TLS), encrypted storage, role-based access control, audit logging, and regular security
-        reviews. Details are available on our{' '}
-        <a href="/security" className="text-gray-700 underline hover:no-underline">
-          Security page
-        </a>
-        .
-      </p>
-    </section>
-
-    <section id="subscription-billing">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">7. Subscription &amp; Billing</h2>
-      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        Access to Docketra is provided on a subscription basis. Pricing and billing terms are
-        agreed upon at the time of onboarding. Subscriptions auto-renew unless cancelled in
-        accordance with the agreed notice period. All fees are non-refundable except as required
-        by applicable law.
+        Docketra is currently in testing and early access. Access is free at this stage.
+        Billing and subscription systems are not live yet.
       </p>
     </section>
 
     <section id="acceptable-use">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">8. Acceptable Use</h2>
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">7. Acceptable Use</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        You agree not to use Docketra to transmit unlawful content, attempt to circumvent
-        authentication or access controls, reverse-engineer the platform, or engage in activities
-        that disrupt service availability. Violations may result in immediate account suspension.
+        You agree not to misuse the platform, attempt unauthorized access, or interfere with
+        service integrity and availability.
       </p>
     </section>
 
     <section id="termination">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">9. Termination</h2>
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">8. Termination</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        Either party may terminate the subscription upon the agreed notice period. We reserve the
-        right to suspend or terminate accounts that violate these Terms without prior notice. Upon
-        termination, your access to the platform is revoked and your data is handled in accordance
-        with our data retention policy.
+        We may suspend or terminate access for abuse, security risk, or material violation of these
+        Terms.
       </p>
     </section>
 
     <section id="limitation-of-liability">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">10. Limitation of Liability</h2>
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">9. Limitation of Liability</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        To the maximum extent permitted by applicable law, the Company shall not be liable for
-        indirect, incidental, special, consequential, or punitive damages arising from your use of
-        the platform. Our total cumulative liability shall not exceed the fees paid by you in the
-        three months preceding the claim.
+        To the maximum extent permitted by law, Docketra is not liable for indirect,
+        incidental, or consequential damages arising from platform use.
       </p>
     </section>
 
     <section id="governing-law">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">11. Governing Law</h2>
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">10. Governing Law</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        These Terms are governed by the laws of India. Any disputes shall be subject to the
-        exclusive jurisdiction of the courts of Mumbai, Maharashtra, India.
+        These Terms are governed by applicable laws of India. Jurisdiction details may be provided
+        during formal contracting when commercial plans go live.
+      </p>
+    </section>
+
+    <section id="contact">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">11. Contact</h2>
+      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
+        For questions about these Terms, contact{' '}
+        <a href="mailto:sarveshgupte@gmail.com" className="text-gray-700 underline hover:no-underline">
+          sarveshgupte@gmail.com
+        </a>
+        .
       </p>
     </section>
   </LegalLayout>

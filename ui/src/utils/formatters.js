@@ -79,7 +79,7 @@ export const truncate = (text, maxLength = 50) => {
 
 /**
  * Format client display as: <ClientID> – <BusinessName>
- * Example: C000002 – Gupte Enterprises OPC Pvt Ltd
+ * Example: C000002 – Example Client Firm
  * 
  * @param {Object} client - Client object with clientId and businessName
  * @param {boolean} showInactiveLabel - Whether to append (Inactive) for inactive clients
