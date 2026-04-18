@@ -11,6 +11,17 @@ Docketra is a multi-tenant Node.js + Express SaaS application backed by MongoDB 
 - **Repositories**: firm-scoped persistence access.
 - **Models**: Mongoose schemas and persistence contracts.
 
+
+## Product Module Topology
+
+Docketra is presented as three connected modules in the UI and navigation shell:
+
+- **CMS**: acquisition and intake (landing pages, forms, submissions).
+- **CRM**: relationship and pipeline management (leads, clients/accounts, deals, invoices).
+- **Tasks**: execution and operations (dockets, worklists, QC, internal work).
+
+The architecture remains service-oriented and route-compatible; this topology is a UX/product-clarity layer over existing backend ownership.
+
 ## Multi-Tenant Boundaries
 
 - Tenant context is resolved through middleware and made available via `req.firmId` / `req.user.firmId`.

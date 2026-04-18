@@ -32,6 +32,7 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { AuditMetadata } from '../components/ui/AuditMetadata';
 import { useFirm } from '../hooks/useFirm';
 import { ROUTES } from '../constants/routes';
+import { WORK_TYPE, getWorkTypeLabel, normalizeWorkTypeFilter } from '../utils/workType';
 import { RouteErrorFallback } from '../components/routing/RouteErrorFallback';
 import { useActiveDocket } from '../hooks/useActiveDocket';
 import { DocketBulkUploadModal } from '../components/bulk/DocketBulkUploadModal';
@@ -114,7 +115,7 @@ export const CasesPage = () => {
   const { savedViews, saveView, removeView, applySavedView } = useSavedViews(savedViewsUserId);
 
   const [statusFilter, setStatusFilter] = useState(query.status || 'ALL');
-  const [workTypeFilter, setWorkTypeFilter] = useState(query.workType || 'ALL');
+  const [workTypeFilter, setWorkTypeFilter] = useState(normalizeWorkTypeFilter(query.workType || WORK_TYPE.ALL));
   const [sortState, setSortState] = useState({ key: query.sort || 'updatedAt', direction: query.order || 'desc' });
   const [timelineCaseId, setTimelineCaseId] = useState(null);
   const [assigningCaseId, setAssigningCaseId] = useState(null);
@@ -213,7 +214,7 @@ export const CasesPage = () => {
       setStatusFilter(query.status);
     }
     if ((query.workType || 'ALL') !== workTypeFilter) {
-      setWorkTypeFilter(query.workType || 'ALL');
+      setWorkTypeFilter(normalizeWorkTypeFilter(query.workType || WORK_TYPE.ALL));
     }
     if ((query.q || '') !== searchInput) {
       setSearchInput(query.q || '');
@@ -443,6 +444,7 @@ export const CasesPage = () => {
       if (!filters) return;
       if (filters.viewId) setActiveView(filters.viewId);
       if (filters.statusFilter) setStatusFilter(filters.statusFilter);
+      if (filters.workTypeFilter != null) setWorkTypeFilter(normalizeWorkTypeFilter(filters.workTypeFilter));
       if (filters.searchQuery != null) {
         setSearchInput(filters.searchQuery);
         setSearchQuery(filters.searchQuery.trim().toLowerCase());
@@ -456,10 +458,10 @@ export const CasesPage = () => {
   const handleSaveCurrentView = useCallback(() => {
     const name = saveViewName.trim();
     if (!name) return;
-    saveView(name, { viewId: activeView, statusFilter, searchQuery });
+    saveView(name, { viewId: activeView, statusFilter, workTypeFilter, searchQuery });
     setSaveViewName('');
     setSavedViewsOpen(false);
-  }, [saveViewName, saveView, activeView, statusFilter, searchQuery]);
+  }, [saveViewName, saveView, activeView, statusFilter, workTypeFilter, searchQuery]);
 
   // Task 6: debounced search filter (250ms, no external library)
   const handleSearchChange = (e) => {
@@ -567,7 +569,7 @@ export const CasesPage = () => {
       ? []
       : [{ key: 'status', label: 'Status', value: statusFilter }];
     if (workTypeFilter !== 'ALL') {
-      items.push({ key: 'workType', label: 'Work Type', value: workTypeFilter === 'internal' ? 'Internal Work' : 'Client Work' });
+      items.push({ key: 'workType', label: 'Work Type', value: getWorkTypeLabel(workTypeFilter) });
     }
     if (statusFilter === CASE_STATUS.QC_PENDING && activeWorkbasketId) {
       const selectedWorkbasket = qcWorkbaskets.find((item) => item.id === activeWorkbasketId);
@@ -817,7 +819,8 @@ export const CasesPage = () => {
       <div className="cases-page">
         <PageHeader
           title="Dockets"
-          subtitle="Manage lifecycle, assignments, and status transitions."
+          subtitle="Manage client work and internal work across lifecycle, assignments, and queues."
+          meta="Tasks / Dockets"
           actions={
             <div className="cases-page__header-actions">
               {/* Task 4: High workload indicator */}
@@ -1044,9 +1047,9 @@ export const CasesPage = () => {
             value={workTypeFilter}
             onChange={(event) => setWorkTypeFilter(event.target.value)}
           >
-            <option value="ALL">All work</option>
-            <option value="client">Client work</option>
-            <option value="internal">Internal work</option>
+            <option value="ALL">All Work</option>
+            <option value="client">Client Work</option>
+            <option value="internal">Internal Work</option>
           </select>
         </SectionCard>
 

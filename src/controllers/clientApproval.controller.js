@@ -8,6 +8,7 @@ const CaseStatus = require('../domain/case/caseStatus');
 const CaseService = require('../services/case.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const log = require('../utils/log');
+const { buildClientStatusQuery, CANONICAL_CLIENT_STATUSES } = require('../utils/clientStatus');
 
 const normalizeClientList = (clients) => (Array.isArray(clients) ? clients : []);
 
@@ -145,7 +146,7 @@ const approveNewClient = async (req, res) => {
       CIN: clientData.CIN || null,
       isSystemClient: false,
       isActive: true,
-      status: 'ACTIVE',
+      status: CANONICAL_CLIENT_STATUSES.ACTIVE,
       createdByXid: approverXid, // CANONICAL - set from approver's xID
       createdBy: approverEmail.toLowerCase(), // DEPRECATED - backward compatibility only
     });
@@ -583,7 +584,7 @@ const getClientById = async (req, res) => {
  * No mutations allowed - for display purposes only
  * 
  * PR: Client Lifecycle Enforcement
- * - Only returns clients with status: 'ACTIVE' by default
+ * - Only returns active clients by default (legacy ACTIVE + canonical active)
  * - Sorted by clientId (ascending) for predictable ordering
  * - Minimal field projection for performance
  * 
@@ -601,7 +602,7 @@ const listClients = async (req, res) => {
     // This enforces client lifecycle rules - deactivated clients cannot be used for new cases
     const query = {
       firmId: adminFirmId,
-      ...(includeInactive === 'true' ? {} : { status: CLIENT_STATUS.ACTIVE }),
+      ...(includeInactive === 'true' ? {} : { status: buildClientStatusQuery(CLIENT_STATUS.ACTIVE) }),
     };
     
     // PERFORMANCE: Execute independent queries concurrently

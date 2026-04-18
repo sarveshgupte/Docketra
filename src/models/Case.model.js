@@ -5,6 +5,7 @@ const { DocketLifecycle, deriveLifecycle, normalizeLifecycle } = require('../dom
 const softDeletePlugin = require('../utils/softDelete.plugin');
 const { tenantScopeGuardPlugin } = require('./plugins/tenantScopeGuard.plugin');
 const { getCanonicalDocketState } = require('../utils/docketStateMapper');
+const { normalizeWorkMode } = require('../utils/workType');
 const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
@@ -957,6 +958,30 @@ caseSchema.path('status').validate(function(value) {
   return true;
 }, 'pendingReason is required when status is PENDING');
 
+
+
+caseSchema.pre('validate', function normalizeWorkTypeFields() {
+  const normalized = normalizeWorkMode({
+    isInternal: this.isInternal,
+    workType: this.workType,
+  });
+  this.isInternal = normalized.isInternal;
+  this.workType = normalized.workType;
+});
+
+const normalizeWorkModeUpdatePayload = function normalizeWorkModeUpdatePayload() {
+  const update = this.getUpdate() || {};
+  const target = update.$set || update;
+  if (!target || (typeof target.isInternal === 'undefined' && typeof target.workType === 'undefined')) {
+    return;
+  }
+  const normalized = normalizeWorkMode({ isInternal: target.isInternal, workType: target.workType });
+  target.isInternal = normalized.isInternal;
+  target.workType = normalized.workType;
+};
+
+caseSchema.pre('findOneAndUpdate', normalizeWorkModeUpdatePayload);
+caseSchema.pre('updateOne', normalizeWorkModeUpdatePayload);
 
 caseSchema.pre('validate', function enforceAssignedUserForWorklistLifecycle() {
   const lifecycle = normalizeLifecycle(this.lifecycle);

@@ -191,7 +191,7 @@ export const GuidedDocketForm = ({ onCreated }) => {
             error={errors.clientId}
             disabled={loading.clients || formData.workType === 'internal'}
             options={[
-              { value: '', label: formData.workType === 'internal' ? 'Internal task (no client)' : (loading.clients ? 'Loading clients...' : 'Select client') },
+              { value: '', label: formData.workType === 'internal' ? 'Internal Work (no client)' : (loading.clients ? 'Loading clients...' : 'Select client') },
               ...clients.map((item) => ({
                 value: item.clientId,
                 label: `${item.clientId} - ${item.businessName || 'Unnamed client'}`,
@@ -255,7 +255,7 @@ export const GuidedDocketForm = ({ onCreated }) => {
           <h3>Review</h3>
           <p><strong>Title:</strong> {formData.title || '—'}</p>
           <p><strong>Description:</strong> {formData.description || '—'}</p>
-          <p><strong>Work Type:</strong> {formData.workType === 'internal' ? 'Internal Task' : 'Client Work'}</p>
+          <p><strong>Work Type:</strong> {formData.workType === 'internal' ? 'Internal Work' : 'Client Work'}</p>
           <p><strong>Client:</strong> {formData.workType === 'internal' ? 'Not linked (internal)' : ((clients.find((item) => item.clientId === formData.clientId)?.businessName && `${formData.clientId} - ${clients.find((item) => item.clientId === formData.clientId)?.businessName}`) || formData.clientId || '—')}</p>
           <p><strong>Category:</strong> {(categories.find((item) => item._id === formData.categoryId)?.name) || '—'}</p>
           <p><strong>Subcategory:</strong> {(subcategories.find((item) => item.id === formData.subcategoryId)?.name) || '—'}</p>
