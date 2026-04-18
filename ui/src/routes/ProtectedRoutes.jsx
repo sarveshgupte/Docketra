@@ -30,6 +30,14 @@ import {
   WorkbasketPage,
   WorkSettingsPage,
   WorklistPage,
+  PlatformDashboardPage,
+  PlatformWorkbasketsPage,
+  PlatformWorklistPage,
+  PlatformQcQueuePage,
+  PlatformReportsPage,
+  PlatformCrmPage,
+  PlatformCmsPage,
+  PlatformSettingsPage,
 } from './lazyPages';
 import { RouteSuspenseOutlet } from './RouteSuspenseOutlet';
 import { NotificationHistoryView } from '../../views/NotificationHistoryView';
@@ -72,7 +80,7 @@ export const ProtectedRoutes = () => (
           element={(
             <RouteErrorBoundary title="Unable to load dashboard" message="Please retry or return to your previous page.">
               <ProtectedRoute>
-                <DashboardPage />
+                <PlatformDashboardPage />
               </ProtectedRoute>
             </RouteErrorBoundary>
           )}
@@ -89,7 +97,7 @@ export const ProtectedRoutes = () => (
           path="worklist"
           element={(
             <ProtectedRoute>
-              <WorklistPage />
+              <PlatformWorklistPage />
             </ProtectedRoute>
           )}
         />
@@ -97,7 +105,7 @@ export const ProtectedRoutes = () => (
           path="my-worklist"
           element={(
             <ProtectedRoute>
-              <WorklistPage />
+              <PlatformWorklistPage />
             </ProtectedRoute>
           )}
         />
@@ -105,7 +113,15 @@ export const ProtectedRoutes = () => (
           path="global-worklist"
           element={(
             <ProtectedRoute>
-              <WorkbasketPage />
+              <PlatformWorkbasketsPage />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="qc-queue"
+          element={(
+            <ProtectedRoute>
+              <PlatformQcQueuePage />
             </ProtectedRoute>
           )}
         />
@@ -177,7 +193,7 @@ export const ProtectedRoutes = () => (
           path="crm/clients"
           element={(
             <ProtectedRoute requireAdmin>
-              <CrmClientsPage />
+              <PlatformCrmPage />
             </ProtectedRoute>
           )}
         />
@@ -194,6 +210,14 @@ export const ProtectedRoutes = () => (
           element={(
             <ProtectedRoute requireAdmin>
               <LeadsPage />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="cms"
+          element={(
+            <ProtectedRoute requireAdmin>
+              <PlatformCmsPage />
             </ProtectedRoute>
           )}
         />
@@ -286,6 +310,14 @@ export const ProtectedRoutes = () => (
           )}
         />
         <Route
+          path="settings"
+          element={(
+            <ProtectedRoute requireAdmin>
+              <PlatformSettingsPage />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
           path="storage-settings"
           element={(
             <ProtectedRoute requireAdmin>
@@ -330,7 +362,7 @@ export const ProtectedRoutes = () => (
           path="admin/reports"
           element={(
             <ProtectedRoute requireAdmin>
-              <ReportsDashboard />
+              <PlatformReportsPage />
             </ProtectedRoute>
           )}
         />
