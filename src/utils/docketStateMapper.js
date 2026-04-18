@@ -35,7 +35,9 @@ function getCanonicalDocketState(docket = {}) {
     return 'PENDED';
   }
 
-  if (['ASSIGNED', 'IN_PROGRESS', 'QC_FAILED', 'QC_CORRECTED'].includes(status)) {
+  // QC outcome should NOT affect state mapping
+  // Only state and assignment should determine IN_PROGRESS
+  if (['ASSIGNED', 'IN_PROGRESS'].includes(status)) {
     return 'IN_PROGRESS';
   }
 
