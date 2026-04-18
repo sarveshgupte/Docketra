@@ -43,6 +43,7 @@ export const LeadsPage = () => {
   const [loading, setLoading] = useState(true);
   const [leads, setLeads] = useState([]);
   const [users, setUsers] = useState([]);
+  const [viewMode, setViewMode] = useState('list');
   const [showModal, setShowModal] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -207,6 +208,11 @@ export const LeadsPage = () => {
     return acc;
   }, {}), [leads]);
 
+  const leadsByStage = useMemo(() => STAGES.reduce((acc, stage) => {
+    acc[stage] = leads.filter((lead) => (lead.stage || lead.status) === stage);
+    return acc;
+  }, {}), [leads]);
+
   const columns = [
     {
       key: 'name',
@@ -282,15 +288,93 @@ export const LeadsPage = () => {
     },
   ];
 
+  const renderPipelineView = () => (
+    <Card className="p-4 overflow-x-auto">
+      <div className="flex gap-4 min-w-max">
+        {STAGES.map((stage) => (
+          <div key={stage} className="w-72 rounded-lg border border-gray-200 bg-gray-50 p-3">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-sm font-semibold text-gray-800">{LEAD_STAGE_LABEL[stage]}</p>
+              <span className="rounded bg-white px-2 py-0.5 text-xs font-medium text-gray-700 border border-gray-200">{leadsByStage[stage]?.length || 0}</span>
+            </div>
+            <div className="space-y-2">
+              {leadsByStage[stage]?.length ? leadsByStage[stage].map((lead) => {
+                const id = lead._id || lead.id;
+                const currentStage = lead.stage || lead.status;
+                const isUpdating = updatingId === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => openDetail(lead)}
+                    className="w-full text-left rounded-md border border-gray-200 bg-white p-3 shadow-sm hover:border-gray-300"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-sm font-semibold text-gray-900">{lead.name || '—'}</p>
+                      {isOverdue(lead) ? <span className="inline-flex h-2.5 w-2.5 rounded-full bg-red-500 mt-1" title="Follow-up overdue" /> : null}
+                    </div>
+                    <p className="mt-1 text-xs text-gray-600">Owner: {lead.owner?.name || lead.ownerXid || 'Unassigned'}</p>
+                    {lead.nextFollowUpAt ? (
+                      <p className="mt-1 text-xs text-gray-600">Follow-up: {formatDate(lead.nextFollowUpAt)}</p>
+                    ) : (
+                      <p className="mt-1 text-xs text-gray-400">No follow-up set</p>
+                    )}
+                    {isAdmin ? (
+                      <div className="mt-2 flex items-center justify-between gap-2">
+                        <label className="text-xs text-gray-500" htmlFor={`move-${id}`}>Move</label>
+                        <select
+                          id={`move-${id}`}
+                          value={currentStage}
+                          onClick={(event) => event.stopPropagation()}
+                          onChange={(event) => {
+                            event.stopPropagation();
+                            handleQuickStageUpdate(id, event.target.value);
+                          }}
+                          disabled={isUpdating}
+                          className="w-32 border border-gray-200 rounded px-2 py-1 text-xs bg-white"
+                        >
+                          {STAGES.map((option) => <option key={option} value={option}>{LEAD_STAGE_LABEL[option]}</option>)}
+                        </select>
+                      </div>
+                    ) : null}
+                  </button>
+                );
+              }) : (
+                <div className="rounded-md border border-dashed border-gray-300 bg-white p-3 text-xs text-gray-500">No leads in this stage</div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+
   return (
     <Layout>
       <PageHeader
         title="Leads"
         description="Run your CRM pipeline from intake to conversion and downstream handoff."
         actions={isAdmin ? (
-          <Button onClick={openModal}>+ Add Lead</Button>
+          <Button onClick={openModal}>+ New Lead</Button>
         ) : null}
       />
+
+      <div className="mb-4 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setViewMode('list')}
+          className={`rounded-md border px-3 py-1.5 text-sm ${viewMode === 'list' ? 'border-primary bg-primary text-white' : 'border-gray-200 bg-white text-gray-700'}`}
+        >
+          List View
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewMode('pipeline')}
+          className={`rounded-md border px-3 py-1.5 text-sm ${viewMode === 'pipeline' ? 'border-primary bg-primary text-white' : 'border-gray-200 bg-white text-gray-700'}`}
+        >
+          Pipeline View
+        </button>
+      </div>
 
       <div className="grid gap-3 md:grid-cols-5 mb-4">
         {STAGES.map((stage) => (
@@ -342,10 +426,10 @@ export const LeadsPage = () => {
         </div>
       </Card>
 
-      <Card>
-        {loading ? (
-          <Loading message="Loading leads..." />
-        ) : (
+      {loading ? (
+        <Card><Loading message="Loading leads..." /></Card>
+      ) : viewMode === 'pipeline' ? renderPipelineView() : (
+        <Card>
           <DataTable
             columns={columns}
             rows={leads}
@@ -359,8 +443,8 @@ export const LeadsPage = () => {
               </div>
             )}
           />
-        )}
-      </Card>
+        </Card>
+      )}
 
       <Modal isOpen={showModal} onClose={closeModal} title="Add New Lead" maxWidth="lg">
         <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1rem' }}>
