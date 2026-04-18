@@ -3,6 +3,7 @@ require('dotenv').config();
 const assert = require('assert');
 const express = require('express');
 const request = require('supertest');
+const rateLimit = require('express-rate-limit');
 
 const redisModule = require('../src/config/redis');
 
@@ -116,7 +117,13 @@ async function testAccountLockout() {
   const { enforceAccountLockout, recordFailedLoginAttempt } = require('../src/middleware/accountLockout.middleware');
   const app = express();
   app.use(express.json());
-  app.post('/login', enforceAccountLockout, async (req, res) => {
+  const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false
+  });
+  app.post('/login', loginLimiter, enforceAccountLockout, async (req, res) => {
     await recordFailedLoginAttempt(req);
     res.status(401).json({ success: false });
   });
