@@ -24,10 +24,19 @@ export const AppLayout = ({ children }) => {
               <Link to="/#features" className="text-gray-600 hover:text-gray-900">
                 Features
               </Link>
-              <Link to="/#pricing" className="text-gray-600 hover:text-gray-900">
-                Pricing
+              <Link to="/terms" className="text-gray-600 hover:text-gray-900">
+                Terms of Use
               </Link>
-              <a href="mailto:hello@docketra.com" className="text-gray-600 hover:text-gray-900">
+              <Link to="/privacy" className="text-gray-600 hover:text-gray-900">
+                Privacy Policy
+              </Link>
+              <Link to="/security" className="text-gray-600 hover:text-gray-900">
+                Data &amp; Security
+              </Link>
+              <Link to="/acceptable-use" className="text-gray-600 hover:text-gray-900">
+                Acceptable Use
+              </Link>
+              <a href="mailto:sarveshgupte@gmail.com" className="text-gray-600 hover:text-gray-900">
                 Contact
               </a>
             </div>

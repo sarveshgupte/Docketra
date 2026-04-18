@@ -248,6 +248,26 @@
   display: none;
 }
 
+.enterprise-sidebar__legal-links {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.enterprise-sidebar__legal-link {
+  color: var(--text-muted);
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.enterprise-sidebar__legal-link:hover {
+  color: var(--text-primary);
+}
+
+.enterprise-sidebar--collapsed .enterprise-sidebar__legal-links {
+  display: none;
+}
+
 /* =====================================================
    MAIN CONTENT AREA (right of sidebar)
    ===================================================== */
@@ -968,6 +988,26 @@
 
 .enterprise-sidebar--collapsed .enterprise-sidebar__footer-toggle-label,
 .enterprise-sidebar--collapsed .enterprise-sidebar__version {
+  display: none;
+}
+
+.enterprise-sidebar__legal-links {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.enterprise-sidebar__legal-link {
+  color: var(--text-muted);
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.enterprise-sidebar__legal-link:hover {
+  color: var(--text-primary);
+}
+
+.enterprise-sidebar--collapsed .enterprise-sidebar__legal-links {
   display: none;
 }
 
