@@ -4,11 +4,13 @@ const assert = require('assert');
 const servicePath = require.resolve('../src/services/docketSession.service');
 const modelPath = require.resolve('../src/models/DocketSession.model');
 const auditServicePath = require.resolve('../src/services/auditLog.service');
+const docketAuditServicePath = require.resolve('../src/services/docketAudit.service');
 
-const loadService = ({ modelMock, auditMock }) => {
+const loadService = ({ modelMock, auditMock, docketAuditMock = { logDocketEvent: async () => null } }) => {
   delete require.cache[servicePath];
   require.cache[modelPath] = { exports: modelMock };
   require.cache[auditServicePath] = { exports: auditMock };
+  require.cache[docketAuditServicePath] = { exports: docketAuditMock };
   return require(servicePath);
 };
 
@@ -152,6 +154,7 @@ async function run() {
     delete require.cache[servicePath];
     delete require.cache[modelPath];
     delete require.cache[auditServicePath];
+    delete require.cache[docketAuditServicePath];
   }
 }
 
