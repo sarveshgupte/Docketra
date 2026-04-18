@@ -13,3 +13,7 @@
 ## 2024-04-16 - Dynamic Aria-Labels for Repeated Action Buttons
 **Learning:** When rendering lists of items where each item has an identical, generic action button (e.g., 'Open', 'View'), screen reader users lose context as to which item they are interacting with. Also, adjacent decorative emojis can create unwanted audio clutter if not explicitly hidden.
 **Action:** Always inject specific item identifiers (like `fileName`) into the action button's `aria-label` (e.g., `aria-label={\`Open document \${file.fileName}\`}`), and ensure nearby decorative icons have `aria-hidden="true"`.
+
+## 2025-04-17 - Added `aria-pressed` to Password Visibility Toggle
+**Learning:** Found an accessibility issue where the password visibility toggle button was using an `aria-label` to communicate state (e.g., "Show password" vs. "Hide password"), but lacked the crucial `aria-pressed` attribute which is standard for toggle buttons. Without `aria-pressed`, screen readers don't explicitly treat it as a stateful toggle, leaving the user guessing if the action was correctly registered.
+**Action:** When implementing icon-only toggle buttons (like password visibility, or "favorite" toggles), ensure that they not only have descriptive, dynamic `aria-label`s, but also include an explicit `aria-pressed={state}` attribute to robustly communicate their toggle nature to assistive technologies.
