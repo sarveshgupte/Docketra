@@ -6,6 +6,7 @@ const { authorizeFirmPermission } = require('../middleware/permission.middleware
 const { requireCaseAccess } = require('../middleware/authorization.middleware');
 const { requireStorageConnected } = require('../middleware/requireStorageConnected');
 const { uploadDocketFile, listDocketAttachments, getDocketFile } = require('../controllers/docketFileStorage.controller');
+const { userReadLimiter, userWriteLimiter, attachmentLimiter } = require('../middleware/rateLimiters');
 
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const upload = multer({
@@ -20,6 +21,8 @@ router.post(
   requireStorageConnected,
   authorizeFirmPermission('CASE_UPDATE'),
   requireCaseAccess({ source: 'params', field: 'docketId' }),
+  userWriteLimiter,
+  attachmentLimiter,
   upload.single('file'),
   uploadDocketFile
 );
@@ -29,6 +32,7 @@ router.get(
   requireStorageConnected,
   authorizeFirmPermission('CASE_VIEW'),
   requireCaseAccess({ source: 'params', field: 'docketId' }),
+  userReadLimiter,
   listDocketAttachments
 );
 
@@ -36,6 +40,8 @@ router.get(
   '/attachments/:attachmentId/download',
   requireStorageConnected,
   authorizeFirmPermission('CASE_VIEW'),
+  userReadLimiter,
+  attachmentLimiter,
   getDocketFile
 );
 

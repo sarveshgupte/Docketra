@@ -16,3 +16,8 @@
 **Vulnerability:** Debug routes were globally imported and advertised in the public-facing root `/api` discovery endpoint, even if they were gated for mounting.
 **Learning:** Top-level `require` statements load modules into memory regardless of runtime conditions, and static endpoint maps in API discovery routes can leak internal infrastructure details.
 **Prevention:** Use conditional lazy loading (`require` inside an environment check) to reduce production footprint and ensure discovery endpoints dynamically reflect available routes based on the environment.
+
+## 2024-04-18 - Added Missing Rate Limiters to Production Routes
+**Vulnerability:** CodeQL flagged several API routes as missing rate limiting middleware. Missing rate limiting exposes the application to denial-of-service (DoS) attacks, brute force attempts, and increased infrastructure costs due to unthrottled API abuse. Some routes (e.g., category routes) were flagged as false positives due to limits being applied within arrays through spread operators, but several routes genuinely lacked limits.
+**Learning:** Newly created routes (like CRM clients, deals, leads, teams, and specialized storage/session routes) were directly defining their handlers without importing and applying the centralized limiters available in `src/middleware/rateLimiters.js`.
+**Prevention:** During code review, explicitly check for the presence of rate limiting middleware (like `userReadLimiter`, `userWriteLimiter`, `attachmentLimiter`, or `publicLimiter`) on all new API endpoints, even internal or authenticated ones, to ensure defense-in-depth.

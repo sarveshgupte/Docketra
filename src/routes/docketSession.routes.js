@@ -4,6 +4,7 @@ const routeSchemas = require('../schemas/docketSession.routes.schema');
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
 const { checkCaseClientAccess } = require('../middleware/clientAccess.middleware');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
+const { userWriteLimiter } = require('../middleware/rateLimiters');
 const {
   startSession,
   heartbeat,
@@ -21,7 +22,7 @@ const resolveActor = (req) => ({
   req,
 });
 
-router.post('/dockets/:id/session/start', authorizeFirmPermission('CASE_VIEW'), checkCaseClientAccess, wrapWriteHandler(async (req) => {
+router.post('/dockets/:id/session/start', authorizeFirmPermission('CASE_VIEW'), userWriteLimiter, checkCaseClientAccess, wrapWriteHandler(async (req) => {
   const session = await startSession(resolveActor(req));
   return {
     success: true,
@@ -29,7 +30,7 @@ router.post('/dockets/:id/session/start', authorizeFirmPermission('CASE_VIEW'), 
   };
 }));
 
-router.post('/dockets/:id/session/heartbeat', authorizeFirmPermission('CASE_VIEW'), checkCaseClientAccess, wrapWriteHandler(async (req) => {
+router.post('/dockets/:id/session/heartbeat', authorizeFirmPermission('CASE_VIEW'), userWriteLimiter, checkCaseClientAccess, wrapWriteHandler(async (req) => {
   const session = await heartbeat(resolveActor(req));
   return {
     success: true,
@@ -37,7 +38,7 @@ router.post('/dockets/:id/session/heartbeat', authorizeFirmPermission('CASE_VIEW
   };
 }));
 
-router.post('/dockets/:id/session/end', authorizeFirmPermission('CASE_VIEW'), checkCaseClientAccess, wrapWriteHandler(async (req) => {
+router.post('/dockets/:id/session/end', authorizeFirmPermission('CASE_VIEW'), userWriteLimiter, checkCaseClientAccess, wrapWriteHandler(async (req) => {
   const session = await endSession(resolveActor(req));
   return {
     success: true,
