@@ -1,3 +1,10 @@
+## [1.1.1] - 2026-04-18
+### Changed
+- Redesigned the marketing landing page for non-technical firm owners with a shorter conversion-first structure.
+- Replaced technical module-first copy with plain business language focused on managing clients, work, documents, ownership, and follow-ups.
+- Refactored `HomePage` into modular section components (hero, problem/solution, feature highlights, how it works, visual proof, use cases, final call to action) for maintainability.
+- Added lightweight visual storytelling elements (before/after comparison, animated stat cards, hover interactions, and clean operational preview cards) without introducing new dependencies.
+
 ## [1.1.0] - 2026-04-18
 ### Added
 - Introduced metadata-only backup tracking with `BackupJob` records (status, checksum, size, archive key, notification status).
