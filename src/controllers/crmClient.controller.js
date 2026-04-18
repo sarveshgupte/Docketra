@@ -1,8 +1,14 @@
 const mongoose = require('mongoose');
 const CrmClient = require('../models/CrmClient.model');
+const Client = require('../models/Client.model');
 const Deal = require('../models/Deal.model');
 const Case = require('../models/Case.model');
 const Invoice = require('../models/Invoice.model');
+const { generateNextClientId } = require('../services/clientIdGenerator');
+const {
+  mapCrmClientToClient,
+  resolveClientAndLegacyCrm,
+} = require('../services/crmClientMapping.service');
 
 const parsePagination = (query = {}) => {
   const rawLimit = Number.parseInt(query.limit, 10);
@@ -26,16 +32,42 @@ const createCrmClient = async (req, res) => {
       ? req.body.tags.map((tag) => String(tag).trim()).filter(Boolean)
       : [];
 
-    const client = await CrmClient.create({
+    const [client] = await Client.create([{
+      clientId: await generateNextClientId(req.user.firmId),
+      firmId: req.user.firmId,
+      businessName: name,
+      businessEmail: req.body?.email || `crm-${Date.now()}@docketra.local`,
+      primaryContactNumber: req.body?.phone || `crm-${Date.now()}`,
+      createdByXid: String(req.user?.xid || req.user?.xID || 'SYSTEM').toUpperCase(),
+      createdBy: req.user?.email || 'system@docketra.local',
+      leadSource: req.body?.leadSource || null,
+      status: req.body?.status || 'lead',
+      stage: req.body?.stage || 'new',
+      assignedTo: req.body?.assignedTo || null,
+      tags,
+      notes: req.body?.notes || null,
+    }]);
+
+    const legacyClient = await CrmClient.create({
       firmId: req.user.firmId,
       name,
       type,
       email: req.body?.email || null,
       phone: req.body?.phone || null,
       tags,
+      canonicalClientId: client._id,
     });
+    client.legacyCrmClientId = legacyClient._id;
+    await client.save();
 
-    return res.status(201).json({ success: true, data: client });
+    return res.status(201).json({
+      success: true,
+      data: {
+        ...client.toObject(),
+        crmType: type,
+        legacyCrmClientId: legacyClient._id,
+      },
+    });
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message || 'Failed to create client' });
   }
@@ -44,12 +76,34 @@ const createCrmClient = async (req, res) => {
 const listCrmClients = async (req, res) => {
   try {
     const { limit, skip } = parsePagination(req.query);
-    const clients = await CrmClient.find({ firmId: req.user.firmId })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean();
-    return res.json({ success: true, data: clients });
+    const [clients, crmClients] = await Promise.all([
+      Client.find({
+        firmId: req.user.firmId,
+        isDefaultClient: { $ne: true },
+        isInternal: { $ne: true },
+      })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      CrmClient.find({ firmId: req.user.firmId })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
+
+    const byLegacyId = new Set(
+      clients
+        .filter((c) => c.legacyCrmClientId)
+        .map((c) => String(c.legacyCrmClientId))
+    );
+
+    const mappedLegacyClients = crmClients
+      .filter((crm) => !byLegacyId.has(String(crm._id)))
+      .map((crm) => mapCrmClientToClient(crm));
+
+    return res.json({ success: true, data: [...clients, ...mappedLegacyClients] });
   } catch (_error) {
     return res.status(500).json({ success: false, message: 'Failed to list clients' });
   }
@@ -67,24 +121,29 @@ const getCrmClientById = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Client not found' });
     }
 
-    // ⚡ Bolt: Fetch client and related entities concurrently since clientId is known
-    const [client, deals, dockets, invoices] = await Promise.all([
-      CrmClient.findOne({ _id: clientId, firmId: req.user.firmId }).lean(),
+    const { client, crmClient } = await resolveClientAndLegacyCrm({
+      firmId: req.user.firmId,
+      inputId: clientId,
+      createdByXid: req.user?.xid || req.user?.xID || 'SYSTEM',
+    });
+    if (!client && !crmClient) return res.status(404).json({ success: false, message: 'Client not found' });
+
+    const resolvedCrmClientId = crmClient?._id || client?.legacyCrmClientId || null;
+    const [deals, dockets, invoices] = await Promise.all([
       Deal.find(
-        { firmId: req.user.firmId, clientId: clientId },
+        { firmId: req.user.firmId, ...(resolvedCrmClientId ? { clientId: resolvedCrmClientId } : { _id: null }) },
         { title: 1, stage: 1, value: 1, createdAt: 1 }
       ).sort({ createdAt: -1 }).lean(),
       Case.find(
-        { firmId: req.user.firmId, crmClientId: clientId },
+        { firmId: req.user.firmId, ...(resolvedCrmClientId ? { crmClientId: resolvedCrmClientId } : { _id: null }) },
         { caseNumber: 1, title: 1, status: 1, assignedTo: 1, dueDate: 1, createdAt: 1 }
       ).sort({ createdAt: -1 }).lean(),
       Invoice.find(
-        { firmId: req.user.firmId, clientId: clientId },
+        { firmId: req.user.firmId, ...(resolvedCrmClientId ? { clientId: resolvedCrmClientId } : { _id: null }) },
         { amount: 1, status: 1, issuedAt: 1, paidAt: 1, dealId: 1, docketId: 1, createdAt: 1 }
       ).sort({ createdAt: -1 }).lean(),
     ]);
-
-    if (!client) return res.status(404).json({ success: false, message: 'Client not found' });
+    const canonicalClient = client?.toObject ? client.toObject() : client || mapCrmClientToClient(crmClient);
 
     const totalRevenue = invoices
       .filter((inv) => inv.status === 'paid')
@@ -111,7 +170,9 @@ const getCrmClientById = async (req, res) => {
     return res.json({
       success: true,
       data: {
-        ...client,
+        ...canonicalClient,
+        crmClient: crmClient || null,
+        legacyCrmClientId: resolvedCrmClientId,
         deals,
         dockets,
         invoices,
