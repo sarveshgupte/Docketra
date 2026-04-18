@@ -94,6 +94,7 @@ export const CasesPage = () => {
   const enableEscalationView = useFeatureFlag('ESCALATION_VIEW');
   const { query, setQuery } = useQueryState({
     status: 'ALL',
+    workType: 'ALL',
     sort: 'updatedAt',
     order: 'desc',
     q: '',
@@ -113,6 +114,7 @@ export const CasesPage = () => {
   const { savedViews, saveView, removeView, applySavedView } = useSavedViews(savedViewsUserId);
 
   const [statusFilter, setStatusFilter] = useState(query.status || 'ALL');
+  const [workTypeFilter, setWorkTypeFilter] = useState(query.workType || 'ALL');
   const [sortState, setSortState] = useState({ key: query.sort || 'updatedAt', direction: query.order || 'desc' });
   const [timelineCaseId, setTimelineCaseId] = useState(null);
   const [assigningCaseId, setAssigningCaseId] = useState(null);
@@ -180,6 +182,7 @@ export const CasesPage = () => {
     userRole: user?.role,
     hasQcAccess,
     statusFilter,
+    workTypeFilter,
     activeWorkbasketId,
     enabled: Boolean(user),
   });
@@ -209,6 +212,9 @@ export const CasesPage = () => {
     if (query.status && query.status !== statusFilter) {
       setStatusFilter(query.status);
     }
+    if ((query.workType || 'ALL') !== workTypeFilter) {
+      setWorkTypeFilter(query.workType || 'ALL');
+    }
     if ((query.q || '') !== searchInput) {
       setSearchInput(query.q || '');
       setSearchQuery((query.q || '').trim().toLowerCase());
@@ -219,7 +225,7 @@ export const CasesPage = () => {
         setSortState(nextSort);
       }
     }
-  }, [query.status, query.q, query.sort, query.order]);
+  }, [query.status, query.workType, query.q, query.sort, query.order]);
 
   useEffect(() => {
     const requestedWorkbasketId = String(query.workbasketId || '').trim();
@@ -246,12 +252,13 @@ export const CasesPage = () => {
   useEffect(() => {
     setQuery({
       status: statusFilter !== 'ALL' ? statusFilter : null,
+      workType: workTypeFilter !== 'ALL' ? workTypeFilter : null,
       q: searchInput || null,
       sort: sortState?.key || null,
       order: sortState?.direction || null,
       workbasketId: statusFilter === CASE_STATUS.QC_PENDING && activeWorkbasketId ? activeWorkbasketId : null,
     });
-  }, [statusFilter, searchInput, sortState, activeWorkbasketId, setQuery]);
+  }, [statusFilter, workTypeFilter, searchInput, sortState, activeWorkbasketId, setQuery]);
 
 
   const dismissOnboarding = () => {
@@ -411,15 +418,18 @@ export const CasesPage = () => {
     const byStatus = statusFilter === 'ALL'
       ? cases
       : cases.filter((item) => item.status === statusFilter);
+    const byWorkType = workTypeFilter === 'ALL'
+      ? byStatus
+      : byStatus.filter((item) => (workTypeFilter === 'internal' ? Boolean(item.isInternal) : !item.isInternal));
     if (statusFilter !== CASE_STATUS.QC_PENDING || !activeWorkbasketId) {
-      return byStatus;
+      return byWorkType;
     }
-    return byStatus.filter((item) => {
+    return byWorkType.filter((item) => {
       const ownerTeamId = String(item?.ownerTeamId || '').trim();
       const routedToTeamId = String(item?.routedToTeamId || '').trim();
       return ownerTeamId === activeWorkbasketId || routedToTeamId === activeWorkbasketId;
     });
-  }, [statusFilter, cases, activeWorkbasketId]);
+  }, [statusFilter, workTypeFilter, cases, activeWorkbasketId]);
 
   const viewFilteredCases = useMemo(
     () => applyView(manuallyFilteredCases, activeView),
@@ -556,6 +566,9 @@ export const CasesPage = () => {
     const items = statusFilter === 'ALL'
       ? []
       : [{ key: 'status', label: 'Status', value: statusFilter }];
+    if (workTypeFilter !== 'ALL') {
+      items.push({ key: 'workType', label: 'Work Type', value: workTypeFilter === 'internal' ? 'Internal Work' : 'Client Work' });
+    }
     if (statusFilter === CASE_STATUS.QC_PENDING && activeWorkbasketId) {
       const selectedWorkbasket = qcWorkbaskets.find((item) => item.id === activeWorkbasketId);
       if (selectedWorkbasket) {
@@ -563,7 +576,7 @@ export const CasesPage = () => {
       }
     }
     return items;
-  }, [statusFilter, activeWorkbasketId, qcWorkbaskets]);
+  }, [statusFilter, workTypeFilter, activeWorkbasketId, qcWorkbaskets]);
 
   const handleRemoveFilter = useCallback((key) => {
     if (key === 'status') {
@@ -572,10 +585,14 @@ export const CasesPage = () => {
     if (key === 'workbasketId') {
       setActiveWorkbasketId(qcWorkbaskets[0]?.id || '');
     }
+    if (key === 'workType') {
+      setWorkTypeFilter('ALL');
+    }
   }, [qcWorkbaskets]);
 
   const handleResetFilters = useCallback(() => {
     setStatusFilter('ALL');
+    setWorkTypeFilter('ALL');
     setActiveWorkbasketId('');
   }, []);
 
@@ -670,6 +687,16 @@ export const CasesPage = () => {
       sortable: true,
       headerClassName: 'w-[1px] whitespace-nowrap',
       cellClassName: 'w-[1px] whitespace-nowrap',
+    },
+    {
+      key: 'workType',
+      header: 'Work Type',
+      sortable: true,
+      headerClassName: 'w-[1px] whitespace-nowrap',
+      cellClassName: 'w-[1px] whitespace-nowrap',
+      render: (row) => (
+        <StatusBadge status={row.isInternal ? 'INTERNAL' : 'CLIENT'} />
+      ),
     },
     {
       key: 'status',
@@ -1009,6 +1036,17 @@ export const CasesPage = () => {
             <option value={CASE_STATUS.QC_PENDING}>QC Pending</option>
             <option value={CASE_STATUS.RESOLVED}>{UX_COPY.statusLabels.RESOLVED}</option>
             <option value={CASE_STATUS.FILED}>{UX_COPY.statusLabels.FILED}</option>
+          </select>
+          <label className="cases-page__filter-label" htmlFor="work-type-filter">Work Type</label>
+          <select
+            id="work-type-filter"
+            className="cases-page__filter-select"
+            value={workTypeFilter}
+            onChange={(event) => setWorkTypeFilter(event.target.value)}
+          >
+            <option value="ALL">All work</option>
+            <option value="client">Client work</option>
+            <option value="internal">Internal work</option>
           </select>
         </SectionCard>
 

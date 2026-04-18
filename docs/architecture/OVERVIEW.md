@@ -42,6 +42,16 @@ Docketra is a multi-tenant Node.js + Express SaaS application backed by MongoDB 
   - `defaultPriority`
   - `defaultAssignee`
 
+## Task Manager Work Modes (Client + Internal)
+
+- Task Manager uses one unified docket engine (`Case` model/services) for both external and internal operations.
+- Work mode is explicit on the docket domain:
+  - `isInternal: boolean` (default `false`)
+  - `workType: 'client' | 'internal'` (default `'client'`)
+- Client work keeps canonical client linkage behavior.
+- Internal work is first-class and may be created without `clientId` while still using standard routing, assignment, QC, SLA, comments, and audit flows.
+- List/report surfaces can filter by `isInternal`/`workType` without forking core workflow logic.
+
 ## BYOAI Architecture (Data-Minimal / Firm-Controlled)
 
 Docketra treats AI as an **orchestration layer**, not a long-term storage layer for AI content.

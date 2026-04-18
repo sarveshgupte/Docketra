@@ -1708,6 +1708,10 @@ export const CaseDetailPage = () => {
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Lifecycle</span>
                   {getLifecycleMeta(caseInfo?.lifecycle) ? <LifecycleBadge lifecycle={caseInfo?.lifecycle} /> : <span className="field-value text-sm font-medium text-gray-900">—</span>}
                 </div>
+                <div className="field-group min-w-0">
+                  <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Work Type</span>
+                  <Badge variant={caseInfo?.isInternal ? 'info' : 'success'}>{caseInfo?.isInternal ? 'Internal' : 'Client'}</Badge>
+                </div>
               </div>
             </section>
 
