@@ -5,6 +5,7 @@ const { decrypt, ensureTenantKey, ForbiddenError } = require('../security/encryp
 const { looksEncrypted } = require('../security/encryption.utils');
 const { normalizeLifecycle } = require('../domain/docketLifecycle');
 const log = require('../utils/log');
+const { getCanonicalDocketState } = require('../utils/docketStateMapper');
 /**
  * ⚠️ SECURITY: Case Repository - Firm-Scoped Data Access Layer ⚠️
  * 
@@ -56,6 +57,18 @@ function _guardSuperadmin(role) {
   }
 }
 
+function _applyCanonicalDocketState(doc) {
+  if (!doc) return doc;
+  if (!doc.state) {
+    doc.state = getCanonicalDocketState(doc);
+  }
+  if (doc.qcOutcome === undefined) {
+    doc.qcOutcome = null;
+  }
+  return doc;
+}
+
+
 /**
  * Decrypt sensitive fields on a single Case document (in-place).
  * No-op when encryption is not configured or doc is null.
@@ -68,7 +81,7 @@ async function _decryptCaseDoc(doc, firmId, { logContext } = {}) {
   if (!doc) return doc;
   if (!process.env.MASTER_ENCRYPTION_KEY || !firmId) {
     doc.lifecycle = normalizeLifecycle(doc.lifecycle);
-    return doc;
+    return _applyCanonicalDocketState(doc);
   }
   const tenantId = String(firmId);
   for (const field of CASE_ENCRYPTED_FIELDS) {
@@ -110,7 +123,7 @@ async function _decryptCaseDoc(doc, firmId, { logContext } = {}) {
     }
   }
   doc.lifecycle = normalizeLifecycle(doc.lifecycle);
-  return doc;
+  return _applyCanonicalDocketState(doc);
 }
 
 /**
@@ -127,6 +140,7 @@ async function _decryptCaseDocs(docs, firmId, { logContext } = {}) {
     for (const doc of docs) {
       if (!doc) continue;
       doc.lifecycle = normalizeLifecycle(doc.lifecycle);
+      _applyCanonicalDocketState(doc);
     }
     return docs;
   }
@@ -177,6 +191,7 @@ async function _decryptCaseDocs(docs, firmId, { logContext } = {}) {
       }
     }
     doc.lifecycle = normalizeLifecycle(doc.lifecycle);
+    _applyCanonicalDocketState(doc);
   }
 
   return docs;

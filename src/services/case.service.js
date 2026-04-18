@@ -8,6 +8,7 @@ const CaseStatus = require('../domain/case/caseStatus');
 const { DocketLifecycle, coerceLifecycleToDocket, deriveLifecycle } = require('../domain/docketLifecycle');
 const { transitionDocket } = require('./docketTransition.service');
 const caseSlaService = require('./caseSla.service');
+const { getCanonicalDocketState } = require('../utils/docketStateMapper');
 
 /**
  * Compute lifecycle for CaseRepository.updateStatus from workflow status + patch.
@@ -100,6 +101,14 @@ async function updateStatus(caseId, newStatus, context = {}) {
 
   const mergedPatch = { ...(context.statusPatch || {}), ...(slaTransition.patch || {}) };
   mergedPatch.lifecycle = inferLifecycleAfterStatusChange(existingCase, normalizedNewStatus, mergedPatch);
+  mergedPatch.state = getCanonicalDocketState({
+    ...existingCase,
+    ...mergedPatch,
+    status: normalizedNewStatus,
+  });
+  if (mergedPatch.qcOutcome === undefined) {
+    mergedPatch.qcOutcome = existingCase.qcOutcome ?? null;
+  }
 
   await CaseRepository.updateStatus(
     caseId,
