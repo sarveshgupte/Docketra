@@ -5,7 +5,7 @@ import { Textarea } from '../../components/common/Textarea';
 import { Button } from '../../components/common/Button';
 import { spacingClasses } from '../../theme/tokens';
 
-const SECTIONS = [{ id: 'contact-form', label: 'Enterprise Inquiry' }];
+const SECTIONS = [{ id: 'contact-form', label: 'Early Access Contact' }];
 
 const initialForm = {
   name: '',
@@ -49,11 +49,12 @@ export const ContactPage = () => {
   };
 
   return (
-    <LegalLayout title="Contact" description="Contact our enterprise team." sections={SECTIONS}>
+    <LegalLayout title="Contact" description="Request early access or contact the Docketra team." sections={SECTIONS}>
       <section id="contact-form" className="max-w-2xl">
-        <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">Enterprise Inquiry</h2>
+        <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">Early Access Contact</h2>
+        <p className="mt-4 text-sm text-gray-600">Prefer email? Reach us directly at <a className="underline" href="mailto:sarveshgupte@gmail.com">sarveshgupte@gmail.com</a>.</p>
         {status === 'success' ? (
-          <div className="mt-12 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">Inquiry received. Our enterprise team will contact you soon.</div>
+          <div className="mt-12 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">Inquiry received. We will get back to you soon.</div>
         ) : (
           <form onSubmit={handleSubmit} className={`mt-12 ${spacingClasses.formFieldSpacing}`} aria-label="Contact form">
             <Input name="name" value={form.name} onChange={handleChange} label="Your name" required />
@@ -64,7 +65,7 @@ export const ContactPage = () => {
             <Textarea name="requirements" value={form.requirements} onChange={handleChange} label="Requirements" rows={5} required />
             <div className={`${spacingClasses.formActions} ${spacingClasses.formActionsGap}`}>
               <Button type="submit" variant="primary" disabled={status === 'submitting'} loading={status === 'submitting'}>
-                {status === 'submitting' ? 'Submitting' : 'Send Inquiry'}
+                {status === 'submitting' ? 'Submitting' : 'Send Request'}
               </Button>
             </div>
           </form>

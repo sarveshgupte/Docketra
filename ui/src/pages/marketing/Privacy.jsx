@@ -21,11 +21,7 @@ export const PrivacyPage = () => (
     <section id="introduction">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">1. Introduction</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        This Privacy Policy describes how GUPTE ENTERPRISES (OPC) PRIVATE LIMITED ("Company",
-        "we", "us") collects, uses, and protects information when you use Docketra. We are
-        committed to protecting the privacy of our customers and their end-users. This policy is
-        aligned with the Digital Personal Data Protection Act, 2023 (DPDP Act) and applicable
-        GDPR principles.
+        This Privacy Policy describes how Docketra collects, uses, and protects information when you use the platform. We are committed to protecting the privacy of our customers and their end-users. This policy is aligned with applicable Indian privacy obligations and generally accepted privacy principles.
       </p>
     </section>
 
@@ -89,10 +85,10 @@ export const PrivacyPage = () => (
         your personal data, and to restrict or object to its processing. To exercise these rights,
         contact us at{' '}
         <a
-          href="mailto:privacy@docketra.com"
+          href="mailto:sarveshgupte@gmail.com"
           className="text-gray-700 underline hover:no-underline"
         >
-          privacy@docketra.com
+          sarveshgupte@gmail.com
         </a>
         .
       </p>
@@ -108,19 +104,19 @@ export const PrivacyPage = () => (
         <li>
           Privacy enquiries:{' '}
           <a
-            href="mailto:privacy@docketra.com"
+            href="mailto:sarveshgupte@gmail.com"
             className="text-gray-700 underline hover:no-underline"
           >
-            privacy@docketra.com
+            sarveshgupte@gmail.com
           </a>
         </li>
         <li>
           Grievance escalations:{' '}
           <a
-            href="mailto:grievance@docketra.com"
+            href="mailto:sarveshgupte@gmail.com"
             className="text-gray-700 underline hover:no-underline"
           >
-            grievance@docketra.com
+            sarveshgupte@gmail.com
           </a>
         </li>
       </ul>

@@ -46,3 +46,21 @@ Use Tasks to run operations:
 - Tasks executes delivery work while preserving CRM linkage and internal-work support.
 
 This structure keeps route compatibility while improving user orientation in navigation, dashboards, and page-level context headers.
+
+
+---
+
+## Positioning summary for marketing
+
+Docketra is positioned as a connected operating system for firms that need to:
+- get clients (CMS),
+- manage clients (CRM), and
+- execute work (Tasks).
+
+This message should stay simple and explicit on public pages to reduce ambiguity for first-time visitors.
+
+## Current go-to-market status
+
+- Early access is currently free.
+- Billing and subscription setup are not live yet.
+- Public contact: `sarveshgupte@gmail.com`

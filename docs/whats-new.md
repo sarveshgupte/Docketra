@@ -121,3 +121,13 @@
 - Action layouts are standardized: primary entry first, secondary actions grouped, destructive actions visually distinct.
 - Inline success notices were added to key queue actions (Worklist, Workbaskets, QC) for faster operator feedback.
 - Accessibility improved with focus-visible styling and better disabled-state handling for controls.
+
+## April 2026: Marketing Landing Page Redesign for Clarity + Trial Conversion
+
+- Rebuilt the public homepage information architecture to clearly explain: what Docketra is, who it is for, how it works, feature modules, outcomes, and why teams should try it now.
+- Repositioned homepage messaging around the connected operating model: `CMS -> CRM -> Tasks`.
+- Added cleaner conversion structure: Hero CTAs, problem section, simple operating flow, grouped feature cards, outcomes, onboarding steps, FAQ, and final conversion CTA.
+- Updated public pricing narrative to match current product status: **Early Access is free**, **no billing/subscriptions live yet**, and transparent testing-phase messaging.
+- Updated public-facing contact touchpoints to use `sarveshgupte@gmail.com`.
+- Removed outdated/incorrect company references from public marketing/legal pages where landing visitors are likely to evaluate trust.
+- Added new positioning documentation at `docs/product/LANDING_PAGE_POSITIONING.md` for future copy/design consistency.
