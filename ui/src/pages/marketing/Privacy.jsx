@@ -2,88 +2,97 @@ import React from 'react';
 import { LegalLayout } from '../../components/legal/LegalLayout';
 
 const SECTIONS = [
-  { id: 'introduction', label: 'Introduction' },
-  { id: 'information-we-collect', label: 'Information We Collect' },
-  { id: 'legal-basis', label: 'Legal Basis' },
-  { id: 'data-security', label: 'Data Security' },
+  { id: 'data-collected', label: 'What We Collect' },
+  { id: 'data-use', label: 'How We Use Data' },
   { id: 'data-sharing', label: 'Data Sharing' },
-  { id: 'data-retention', label: 'Data Retention' },
-  { id: 'user-rights', label: 'User Rights' },
-  { id: 'grievance-officer', label: 'Grievance Officer' },
+  { id: 'data-storage', label: 'Data Storage' },
+  { id: 'security', label: 'Security' },
+  { id: 'user-control', label: 'User Control' },
+  { id: 'cookies', label: 'Cookies & Tracking' },
+  { id: 'compliance-alignment', label: 'Compliance Alignment' },
+  { id: 'contact', label: 'Contact' },
 ];
 
 export const PrivacyPage = () => (
   <LegalLayout
     title="Privacy Policy"
-    description="How Docketra collects, uses, and protects your information."
+    description="How Docketra handles data in early-stage testing."
     sections={SECTIONS}
   >
-    <section id="introduction">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">1. Introduction</h2>
-      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        This Privacy Policy describes how Docketra collects, uses, and protects information when you use the platform. We are committed to protecting the privacy of our customers and their end-users. This policy is aligned with applicable Indian privacy obligations and generally accepted privacy principles.
-      </p>
+    <section id="data-collected">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">1. What We Collect</h2>
+      <p className="mt-3 text-sm text-gray-600 leading-relaxed">We collect limited categories of data needed to run Docketra, including:</p>
+      <ul className="mt-3 list-disc pl-5 space-y-1 text-sm text-gray-600">
+        <li>Account information (such as name and email).</li>
+        <li>Firm workspace data (such as clients, tasks, dockets, forms, and related records).</li>
+        <li>Usage and operational data (such as logs, performance events, and security events).</li>
+        <li>Optional intake data submitted through forms or API intake routes.</li>
+      </ul>
     </section>
 
-    <section id="information-we-collect">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">2. Information We Collect</h2>
-      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        We collect information you provide directly (such as account registration details, case
-        data, and uploaded documents), information generated through your use of the platform
-        (such as activity logs and session metadata), and technical data (such as IP addresses,
-        browser type, and device identifiers) to operate and improve the service.
-      </p>
-    </section>
-
-    <section id="legal-basis">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">3. Legal Basis</h2>
-      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        Processing of personal data is conducted on the following legal bases: performance of a
-        contract (to deliver the SaaS service), legitimate interests (to maintain security and
-        improve the platform), compliance with legal obligations, and consent where explicitly
-        obtained. We process only the minimum data necessary for each purpose.
-      </p>
-    </section>
-
-    <section id="data-security">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">4. Data Security</h2>
-      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        We apply technical and organizational measures to protect personal data against unauthorized
-        access, loss, or disclosure. These include TLS encryption in transit, encryption at rest,
-        role-based access controls, and audit logging. Our security posture is described in detail
-        on our{' '}
-        <a href="/security" className="text-gray-700 underline hover:no-underline">
-          Security page
-        </a>
-        .
-      </p>
+    <section id="data-use">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">2. How We Use Data</h2>
+      <p className="mt-3 text-sm text-gray-600 leading-relaxed">We use data to:</p>
+      <ul className="mt-3 list-disc pl-5 space-y-1 text-sm text-gray-600">
+        <li>Provide and maintain the service.</li>
+        <li>Authenticate users and manage accounts.</li>
+        <li>Improve product reliability, usability, and security.</li>
+      </ul>
     </section>
 
     <section id="data-sharing">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">5. Data Sharing</h2>
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">3. Data Sharing</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        We do not sell personal data. We share data only with trusted sub-processors required to
-        operate the service (such as cloud infrastructure and email delivery providers), under
-        contractual obligations that enforce equivalent data protection standards. We may disclose
-        data where required by law or court order.
+        We do not sell your data. We share data only when needed to run Docketra (for example,
+        with hosting or database infrastructure providers) or when required by applicable law.
       </p>
     </section>
 
-    <section id="data-retention">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">6. Data Retention</h2>
+    <section id="data-storage">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">4. Data Storage</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        We retain personal data for the duration of the subscription and for a reasonable period
-        thereafter to comply with legal obligations and resolve disputes. Tenant data is purged in
-        accordance with the agreed data retention schedule following account termination.
+        Data is stored using our infrastructure providers. In BYOS-style setups, if enabled for
+        your firm, data may also be stored in infrastructure controlled by your firm.
       </p>
     </section>
 
-    <section id="user-rights">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">7. User Rights</h2>
+    <section id="security">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">5. Security</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        Depending on applicable law, you may have the right to access, correct, delete, or port
-        your personal data, and to restrict or object to its processing. To exercise these rights,
-        contact us at{' '}
+        We apply reasonable technical and operational safeguards to protect data. No system can
+        guarantee absolute security, and you should also follow your own internal security controls.
+      </p>
+    </section>
+
+    <section id="user-control">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">6. User Control</h2>
+      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
+        Firms control their workspace data. You may request export or deletion of your data,
+        subject to product support and legal/operational constraints.
+      </p>
+    </section>
+
+    <section id="cookies">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">7. Cookies &amp; Tracking</h2>
+      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
+        Docketra may use essential cookies and similar technologies for session management,
+        security, and basic analytics.
+      </p>
+    </section>
+
+    <section id="compliance-alignment">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">8. Compliance Alignment</h2>
+      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
+        Our privacy practices are designed to align broadly with applicable Indian IT and data
+        protection obligations. This policy is informational and should not be read as a claim of
+        full certification or full compliance with any specific framework.
+      </p>
+    </section>
+
+    <section id="contact">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">9. Contact</h2>
+      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
+        Privacy questions can be sent to{' '}
         <a
           href="mailto:sarveshgupte@gmail.com"
           className="text-gray-700 underline hover:no-underline"
@@ -91,37 +100,6 @@ export const PrivacyPage = () => (
           sarveshgupte@gmail.com
         </a>
         .
-      </p>
-    </section>
-
-    <section id="grievance-officer">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">8. Grievance Officer</h2>
-      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        In accordance with the Digital Personal Data Protection Act, 2023, a Grievance Officer is
-        available to address privacy-related concerns. You may contact the Grievance Officer at:
-      </p>
-      <ul className="mt-3 space-y-1 text-sm">
-        <li>
-          Privacy enquiries:{' '}
-          <a
-            href="mailto:sarveshgupte@gmail.com"
-            className="text-gray-700 underline hover:no-underline"
-          >
-            sarveshgupte@gmail.com
-          </a>
-        </li>
-        <li>
-          Grievance escalations:{' '}
-          <a
-            href="mailto:sarveshgupte@gmail.com"
-            className="text-gray-700 underline hover:no-underline"
-          >
-            sarveshgupte@gmail.com
-          </a>
-        </li>
-      </ul>
-      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        We aim to acknowledge complaints within 48 hours and resolve them within 30 days.
       </p>
     </section>
   </LegalLayout>

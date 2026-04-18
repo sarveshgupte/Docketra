@@ -706,6 +706,12 @@ export const Layout = ({ children }) => {
           ) : (
             <div className="enterprise-sidebar__version">{`${APP_NAME} v${APP_VERSION}`}</div>
           )}
+          <div className="enterprise-sidebar__legal-links" aria-label="Legal links">
+            <Link to="/terms" className="enterprise-sidebar__legal-link">Terms</Link>
+            <Link to="/privacy" className="enterprise-sidebar__legal-link">Privacy</Link>
+            <Link to="/security" className="enterprise-sidebar__legal-link">Data &amp; Security</Link>
+            <Link to="/acceptable-use" className="enterprise-sidebar__legal-link">Acceptable Use</Link>
+          </div>
         </div>
       </aside>
 

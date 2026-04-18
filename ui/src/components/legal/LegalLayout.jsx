@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { LEGAL_VERSION, LAST_UPDATED, COMPANY_NAME, COMPANY_CIN } from '../../lib/legalVersion';
+import { LEGAL_VERSION, LAST_UPDATED, COMPANY_NAME } from '../../lib/legalVersion';
 import { PageContainer } from '../layout/PageContainer';
 import { PageHeader } from '../layout/PageHeader';
 import { spacingClasses } from '../../theme/tokens';
@@ -73,7 +73,6 @@ export const LegalLayout = ({ title, description, sections, children }) => {
 
           <footer className="mt-12 border-t border-gray-200 pt-6 text-xs text-gray-400">
             <p>Operated by <strong className="text-gray-700">{COMPANY_NAME}</strong></p>
-            <p className="mt-1">CIN: {COMPANY_CIN}</p>
             <p className="mt-1">Legal Version {LEGAL_VERSION} &mdash; {LAST_UPDATED}</p>
           </footer>
         </main>
