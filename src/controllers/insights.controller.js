@@ -39,8 +39,13 @@ const getInsightsOverview = async (req, res) => {
       Lead.aggregate([
         { $match: leadMatch },
         {
+          $project: {
+            lifecycle: { $ifNull: ['$stage', '$status'] },
+          },
+        },
+        {
           $group: {
-            _id: '$status',
+            _id: '$lifecycle',
             count: { $sum: 1 },
           },
         },
@@ -107,7 +112,7 @@ const getInsightsOverview = async (req, res) => {
     ]);
 
     // Build lead metrics
-    const leadsByStatus = { new: 0, contacted: 0, converted: 0 };
+    const leadsByStatus = { new: 0, contacted: 0, qualified: 0, converted: 0, lost: 0 };
     let totalLeads = 0;
     for (const bucket of leadAgg) {
       const status = bucket._id;
