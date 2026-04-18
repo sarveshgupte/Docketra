@@ -1,0 +1,32 @@
+.platform{display:grid;grid-template-columns:260px 1fr;min-height:100vh;background:#f5f7fb;color:#111827}
+.platform--dark{background:#0f172a;color:#e2e8f0}
+.platform__sidebar{border-right:1px solid #dbe3ef;padding:14px;background:#fff;position:sticky;top:0;height:100vh;overflow:auto}
+.platform--dark .platform__sidebar{background:#111827;border-color:#334155}
+.platform__sidebar--collapsed{width:72px}
+.platform__brand{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.platform__brand p{font-size:12px;color:#6b7280}
+.platform__collapse{border:1px solid #cbd5e1;background:#fff;border-radius:8px;padding:4px 8px}
+.platform__section-title{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin:10px 0;color:#6b7280}
+.platform__nav-link{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;color:inherit;text-decoration:none;margin-bottom:4px}
+.platform__nav-link:hover{background:#eef2ff}
+.platform__nav-link.is-active{background:#1d4ed8;color:#fff}
+.platform__topbar{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid #dbe3ef;background:rgba(255,255,255,.75);backdrop-filter:blur(6px)}
+.platform--dark .platform__topbar{background:rgba(15,23,42,.8);border-color:#334155}
+.platform__topbar h1{font-size:24px;font-weight:700}
+.platform__topbar p{font-size:14px;color:#64748b}
+.platform__actions{display:flex;gap:8px}
+.platform__actions button{border:1px solid #cbd5e1;background:#fff;padding:8px 12px;border-radius:10px}
+.platform__content{padding:22px;display:grid;gap:14px}
+.grid-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.panel{background:#fff;border:1px solid #dbe3ef;border-radius:14px;padding:14px}
+.platform--dark .panel{background:#111827;border-color:#334155}
+.kpi{font-size:24px;font-weight:700}
+.muted{color:#6b7280;font-size:13px}
+.table-wrap{overflow:auto}
+.table{width:100%;border-collapse:collapse;font-size:14px}
+.table th,.table td{padding:10px;border-bottom:1px solid #e2e8f0;text-align:left}
+.action-row{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:5px 8px;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:12px}
+.bar{height:9px;background:#dbeafe;border-radius:999px;overflow:hidden}
+.bar span{display:block;height:100%;background:linear-gradient(90deg,#2563eb,#7c3aed)}
+@media (max-width: 980px){.platform{grid-template-columns:1fr}.platform__sidebar{height:auto;position:relative}}
