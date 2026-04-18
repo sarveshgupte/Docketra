@@ -17,7 +17,7 @@ const parseCookieHeader = (cookieHeader) => {
         return cookies;
       }
 
-      const rawValue = separatorIndex === -1 ? '' : cookie.slice(separatorIndex + 1);
+      const rawValue = (separatorIndex === -1 ? '' : cookie.slice(separatorIndex + 1)).trim();
       try {
         cookies[key] = decodeURIComponent(rawValue);
       } catch (_) {
