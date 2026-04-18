@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 
+// DEPRECATED: CrmClient is maintained temporarily for backward compatibility.
+// Canonical CRM identity now lives in Client.
 const crmClientSchema = new mongoose.Schema({
   firmId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -32,6 +34,12 @@ const crmClientSchema = new mongoose.Schema({
   tags: {
     type: [String],
     default: [],
+  },
+  canonicalClientId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Client',
+    default: null,
+    index: true,
   },
 }, { timestamps: { createdAt: true, updatedAt: false } });
 

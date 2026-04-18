@@ -37,6 +37,8 @@ export const CrmClientsPage = () => {
     email: '',
     phone: '',
     tags: '',
+    leadSource: '',
+    notes: '',
   });
 
   const loadClients = useCallback(async () => {
@@ -58,7 +60,7 @@ export const CrmClientsPage = () => {
   }, [loadClients]);
 
   const resetForm = () => {
-    setForm({ name: '', type: 'individual', email: '', phone: '', tags: '' });
+    setForm({ name: '', type: 'individual', email: '', phone: '', tags: '', leadSource: '', notes: '' });
   };
 
   const openModal = () => {
@@ -80,6 +82,8 @@ export const CrmClientsPage = () => {
         type: form.type,
         email: form.email.trim() || undefined,
         phone: form.phone.trim() || undefined,
+        leadSource: form.leadSource.trim() || undefined,
+        notes: form.notes.trim() || undefined,
         tags: form.tags
           ? form.tags.split(',').map((t) => t.trim()).filter(Boolean)
           : [],
@@ -99,26 +103,26 @@ export const CrmClientsPage = () => {
     {
       key: 'name',
       header: 'Name',
-      render: (c) => <span className="font-medium">{c.name || '—'}</span>,
+      render: (c) => <span className="font-medium">{c.businessName || c.name || '—'}</span>,
     },
     {
       key: 'type',
       header: 'Type',
       render: (c) => (
-        <Badge status={c.type === 'company' ? 'Approved' : 'Pending'}>
-          {TYPE_LABELS[c.type] || c.type || '—'}
+        <Badge status={c.crmType === 'company' ? 'Approved' : 'Pending'}>
+          {TYPE_LABELS[c.crmType] || c.crmType || '—'}
         </Badge>
       ),
     },
     {
       key: 'email',
       header: 'Email',
-      render: (c) => c.email || '—',
+      render: (c) => c.businessEmail || c.email || '—',
     },
     {
       key: 'phone',
       header: 'Phone',
-      render: (c) => c.phone || '—',
+      render: (c) => c.primaryContactNumber || c.phone || '—',
     },
     {
       key: 'tags',
@@ -228,6 +232,18 @@ export const CrmClientsPage = () => {
             value={form.tags}
             onChange={(e) => setForm((prev) => ({ ...prev, tags: e.target.value }))}
             placeholder="e.g. vip, gst-only, priority"
+          />
+          <Input
+            label="Lead Source"
+            value={form.leadSource}
+            onChange={(e) => setForm((prev) => ({ ...prev, leadSource: e.target.value }))}
+            placeholder="e.g. referral, website"
+          />
+          <Input
+            label="Notes"
+            value={form.notes}
+            onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
+            placeholder="Optional CRM notes"
           />
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
             <Button type="button" variant="outline" onClick={closeModal}>Cancel</Button>

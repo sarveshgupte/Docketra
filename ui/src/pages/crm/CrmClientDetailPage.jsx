@@ -41,6 +41,7 @@ export const CrmClientDetailPage = () => {
   const [dockets, setDockets] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [summary, setSummary] = useState({});
+  const [legacyCrmClientId, setLegacyCrmClientId] = useState(null);
   const [activeTab, setActiveTab] = useState('deals');
 
   // Deal modal state
@@ -60,6 +61,7 @@ export const CrmClientDetailPage = () => {
       const response = await crmApi.getClientById(crmClientId);
       const data = response?.data || {};
       setClient(data.client || data);
+      setLegacyCrmClientId(data.legacyCrmClientId || data.client?.legacyCrmClientId || data.legacyCrmClient?._id || null);
       setDeals(Array.isArray(data.deals) ? data.deals : []);
       setDockets(Array.isArray(data.dockets) ? data.dockets : []);
       setInvoices(Array.isArray(data.invoices) ? data.invoices : []);
@@ -80,7 +82,7 @@ export const CrmClientDetailPage = () => {
     setSavingDeal(true);
     try {
       await crmApi.createDeal({
-        clientId: crmClientId,
+        clientId: legacyCrmClientId || client?._id || crmClientId,
         title: dealForm.title.trim(),
         value: dealForm.value ? Number(dealForm.value) : undefined,
         stage: dealForm.stage,
@@ -101,7 +103,7 @@ export const CrmClientDetailPage = () => {
     setSavingInvoice(true);
     try {
       await crmApi.createInvoice({
-        clientId: crmClientId,
+        clientId: legacyCrmClientId || client?._id || crmClientId,
         amount: Number(invoiceForm.amount),
         dealId: invoiceForm.dealId || undefined,
       });
@@ -137,7 +139,7 @@ export const CrmClientDetailPage = () => {
     );
   }
 
-  const clientName = client?.name || crmClientId;
+  const clientName = client?.businessName || client?.name || crmClientId;
   const clientTags = Array.isArray(client?.tags) ? client.tags : [];
 
   return (
@@ -153,19 +155,19 @@ export const CrmClientDetailPage = () => {
         </Button>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', flexWrap: 'wrap' }}>
           <h1 className="neo-page__title" style={{ margin: 0 }}>{clientName}</h1>
-          {client?.type && (
-            <Badge status={client.type === 'company' ? 'Approved' : 'Pending'}>
-              {client.type === 'company' ? 'Company' : 'Individual'}
+          {client?.crmType && (
+            <Badge status={client.crmType === 'company' ? 'Approved' : 'Pending'}>
+              {client.crmType === 'company' ? 'Company' : 'Individual'}
             </Badge>
           )}
           {clientTags.map((tag) => (
             <Badge key={tag} status="Draft">{tag}</Badge>
           ))}
         </div>
-        {(client?.email || client?.phone) && (
+        {(client?.businessEmail || client?.email || client?.primaryContactNumber || client?.phone) && (
           <div style={{ color: '#6b7280', marginTop: '0.5rem', display: 'flex', gap: '1rem' }}>
-            {client.email && <span>✉ {client.email}</span>}
-            {client.phone && <span>📞 {client.phone}</span>}
+            {(client.businessEmail || client.email) && <span>✉ {client.businessEmail || client.email}</span>}
+            {(client.primaryContactNumber || client.phone) && <span>📞 {client.primaryContactNumber || client.phone}</span>}
           </div>
         )}
       </div>
