@@ -3,6 +3,8 @@
 - Introduced metadata-only backup tracking with `BackupJob` records (status, checksum, size, archive key, notification status).
 - Added backup run listing endpoint: `GET /api/storage/exports`.
 - Added firm-level backup admin settings under `settings.storageBackup` (enable flag, recipients, policy, retention days).
+- Added firm-level BYOAI admin controls for feature toggles, role access, retention/privacy behavior, and credential references.
+- Added `AiAuditLog` metadata-only telemetry (request id, feature, provider, model, latency, token counts, status) without raw payload persistence.
 
 ### Changed
 - Refactored storage backup flow to:
@@ -11,10 +13,14 @@
   - avoid persisting backup payloads in MongoDB.
 - Updated storage export API responses to return metadata + secure retrieval link details instead of serving local ZIP files directly.
 - Added nightly backup scheduler bootstrap in API server startup.
+- Refactored AI orchestration to enforce firm-level enablement, role/feature gates, and graceful fallback behavior when AI is disabled or unconfigured.
+- Hardened BYOAI credential semantics: no silent system-key fallback, provider switch now requires provider-valid credentials, and credential reference state is reflected in AI status responses.
 
 ### Security
 - Added model-level guardrails that reject binary payload persistence for attachment/file metadata documents.
 - Added backup audit events for creation/failure and download-link issuance.
+- Hardened BYOAI with privacy-first retention defaults (zero-retention on, save prompts/outputs off by default) and redacted AI error logging.
+- Fixed a docket AI runtime bug where request metadata was referenced outside scope during suggestions generation.
 
 ## [1.0.0] - 2026-03-01
 ### Added

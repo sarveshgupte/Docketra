@@ -62,6 +62,14 @@ async function analyze(text, options = {}) {
     suggestedTeam: parsed.suggestedTeam || 'Legal',
     tags: Array.isArray(parsed.tags) ? parsed.tags.slice(0, 10) : [],
     confidence: Number.isFinite(Number(parsed?.confidence)) ? Number(parsed.confidence) : 0,
+    _providerMeta: {
+      providerRequestId: payload?.id || null,
+      tokenUsage: {
+        inputTokens: Number(payload?.usage?.prompt_tokens || 0),
+        outputTokens: Number(payload?.usage?.completion_tokens || 0),
+        totalTokens: Number(payload?.usage?.total_tokens || 0),
+      },
+    },
   };
 }
 
@@ -128,6 +136,14 @@ async function generateDocketFields(input, options = {}) {
     title: String(parsed?.title || '').trim(),
     description: String(parsed?.description || '').trim(),
     confidence: Number.isFinite(Number(parsed?.confidence)) ? Number(parsed.confidence) : 0,
+    _providerMeta: {
+      providerRequestId: payload?.id || null,
+      tokenUsage: {
+        inputTokens: Number(payload?.usage?.prompt_tokens || 0),
+        outputTokens: Number(payload?.usage?.completion_tokens || 0),
+        totalTokens: Number(payload?.usage?.total_tokens || 0),
+      },
+    },
   };
 }
 
