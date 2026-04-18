@@ -22,7 +22,11 @@ const handleTeamInvite = async ({ user, createdUsers = [] }) => {
 
   const firm = await Firm.findOne({ firmId: user.firmId }).select('name firmSlug').lean();
 
-  for (const createdUser of createdUsers) {
+  const processInvite = async (createdUser, index) => {
+    if (AUTOMATION_EMAIL_RATE_LIMIT_MS > 0 && index > 0) {
+      await sleep(index * AUTOMATION_EMAIL_RATE_LIMIT_MS);
+    }
+
     try {
       const freshUser = await User.findOne({
         _id: createdUser._id,
@@ -31,7 +35,7 @@ const handleTeamInvite = async ({ user, createdUsers = [] }) => {
       }).select('email name xID role inviteSentAt').lean();
 
       if (!freshUser || freshUser.inviteSentAt) {
-        continue;
+        return;
       }
 
       const token = emailService.generateSecureToken();
@@ -58,7 +62,7 @@ const handleTeamInvite = async ({ user, createdUsers = [] }) => {
       );
 
       if (!updateResult.modifiedCount) {
-        continue;
+        return;
       }
 
       const result = await emailService.sendPasswordSetupEmail({
@@ -86,11 +90,11 @@ const handleTeamInvite = async ({ user, createdUsers = [] }) => {
         error: error.message,
       });
     }
+  };
 
-    if (AUTOMATION_EMAIL_RATE_LIMIT_MS > 0) {
-      await sleep(AUTOMATION_EMAIL_RATE_LIMIT_MS);
-    }
-  }
+  // Process all invites in parallel with staggered starts
+  // We await all promises to ensure the handler doesn't return before all work is done
+  await Promise.all(createdUsers.map((createdUser, index) => processInvite(createdUser, index)));
 };
 
 const selectDefaultCategoryAndSubcategory = async (firmId) => {
