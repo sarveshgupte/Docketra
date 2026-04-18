@@ -25,10 +25,12 @@ async function testLeadOnlyFlow() {
         phone: '999',
         source: 'website_embed',
         pageUrl: 'https://firm.com/intake',
+        formId: '507f1f77bcf86cd799439099',
+        formSlug: 'tax-intake',
       },
       requestMeta: {
         headers: { referer: 'https://firm.com/intake', 'user-agent': 'Mozilla/5.0 test' },
-        query: { utm_source: 'google', utm_campaign: 'spring' },
+        query: { utm_source: 'google', utm_campaign: 'spring', utm_medium: 'cpc' },
       },
       intakeConfig: { autoCreateClient: false, autoCreateDocket: false },
       submissionMode: 'embedded_form',
@@ -41,6 +43,10 @@ async function testLeadOnlyFlow() {
     assert.strictEqual(result.lead.source, 'website_embed');
     assert.strictEqual(result.lead.metadata.pageUrl, 'https://firm.com/intake');
     assert.strictEqual(result.lead.metadata.utm_source, 'google');
+    assert.strictEqual(result.lead.metadata.utm_campaign, 'spring');
+    assert.strictEqual(result.lead.metadata.utm_medium, 'cpc');
+    assert.strictEqual(result.lead.metadata.formId, '507f1f77bcf86cd799439099');
+    assert.strictEqual(result.lead.metadata.formSlug, 'tax-intake');
     assert.strictEqual(result.lead.metadata.submissionMode, 'embedded_form');
   } finally {
     Lead.create = originalLeadCreate;

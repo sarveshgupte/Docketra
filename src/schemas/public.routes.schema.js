@@ -19,9 +19,10 @@ module.exports = {
       pageUrl: z.string().trim().max(1000).optional(),
       utm_source: z.string().trim().max(120).optional(),
       utm_campaign: z.string().trim().max(120).optional(),
+      utm_medium: z.string().trim().max(120).optional(),
       website: z.string().trim().max(200).optional(),
       submissionMode: z.enum(['public_form', 'embedded_form']).optional(),
-    }).strict(),
+    }).passthrough(),
   },
   'GET /forms/:id': {
     params: z.object({ id: objectIdString }).strict(),

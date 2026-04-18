@@ -129,9 +129,12 @@ const leadSchema = new mongoose.Schema({
   metadata: {
     utm_source: { type: String, default: null },
     utm_campaign: { type: String, default: null },
+    utm_medium: { type: String, default: null },
     referrer: { type: String, default: null },
+    pageUrl: { type: String, default: null },
     pageSlug: { type: String, default: null },
     formSlug: { type: String, default: null },
+    formId: { type: String, default: null },
     service: { type: String, default: null },
     message: { type: String, default: null },
     ipAddress: { type: String, default: null },
