@@ -3,6 +3,7 @@ const Deal = require('../models/Deal.model');
 const CrmClient = require('../models/CrmClient.model');
 const Case = require('../models/Case.model');
 const Invoice = require('../models/Invoice.model');
+const { resolveClientAndLegacyCrm } = require('../services/crmClientMapping.service');
 
 const ALLOWED_STAGES = new Set(['new', 'in_progress', 'completed']);
 const DEFAULT_STAGE = 'new';
@@ -23,15 +24,21 @@ const createDeal = async (req, res) => {
     if (!clientId) return res.status(400).json({ success: false, message: 'clientId is required' });
     if (!title) return res.status(400).json({ success: false, message: 'title is required' });
 
-    const client = await CrmClient.findOne({ _id: clientId, firmId: req.user.firmId }).lean();
-    if (!client) return res.status(400).json({ success: false, message: 'Invalid clientId' });
+    const { client, crmClient } = await resolveClientAndLegacyCrm({
+      firmId: req.user.firmId,
+      inputId: clientId,
+      createdByXid: req.user?.xid || req.user?.xID || 'SYSTEM',
+    });
+    if (!client && !crmClient) return res.status(400).json({ success: false, message: 'Invalid clientId' });
+    const resolvedCrmClientId = crmClient?._id || client?.legacyCrmClientId;
+    if (!resolvedCrmClientId) return res.status(400).json({ success: false, message: 'Invalid clientId' });
 
     const requestedStage = String(req.body?.stage || '').trim();
     const stage = ALLOWED_STAGES.has(requestedStage) ? requestedStage : DEFAULT_STAGE;
 
     const deal = await Deal.create({
       firmId: req.user.firmId,
-      clientId,
+      clientId: resolvedCrmClientId,
       title,
       stage,
       value: typeof req.body?.value === 'number' ? req.body.value : null,

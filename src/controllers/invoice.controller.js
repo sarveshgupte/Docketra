@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
 const Invoice = require('../models/Invoice.model');
-const CrmClient = require('../models/CrmClient.model');
 const Deal = require('../models/Deal.model');
 const Case = require('../models/Case.model');
+const { resolveClientAndLegacyCrm } = require('../services/crmClientMapping.service');
 
 const ALLOWED_STATUSES = new Set(['unpaid', 'paid']);
 
@@ -33,8 +33,13 @@ const createInvoice = async (req, res) => {
       return res.status(400).json({ success: false, message: 'amount must be a number' });
     }
 
-    const client = await CrmClient.findOne({ _id: clientId, firmId }).lean();
-    if (!client) {
+    const { client, crmClient } = await resolveClientAndLegacyCrm({
+      firmId,
+      inputId: clientId,
+      createdByXid: req.user?.xid || req.user?.xID || 'SYSTEM',
+    });
+    const resolvedCrmClientId = crmClient?._id || client?.legacyCrmClientId;
+    if (!resolvedCrmClientId) {
       return res.status(400).json({ success: false, message: 'Client not found' });
     }
 
@@ -64,7 +69,7 @@ const createInvoice = async (req, res) => {
 
     const invoice = await Invoice.create({
       firmId,
-      clientId,
+      clientId: resolvedCrmClientId,
       dealId: resolvedDealId,
       docketId: resolvedDocketId,
       amount: parsedAmount,

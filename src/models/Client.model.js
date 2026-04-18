@@ -525,8 +525,43 @@ const clientSchema = new mongoose.Schema({
    */
   status: {
     type: String,
-    enum: ['ACTIVE', 'INACTIVE'],
+    enum: ['ACTIVE', 'INACTIVE', 'lead', 'active', 'inactive'],
     default: 'ACTIVE',
+  },
+
+  /**
+   * CRM metadata (canonical on Client during CRM/Task unification).
+   * All fields are optional for migration-safe backward compatibility.
+   */
+  leadSource: {
+    type: String,
+    trim: true,
+    default: null,
+  },
+  stage: {
+    type: String,
+    enum: ['new', 'contacted', 'qualified', 'converted', null],
+    default: null,
+  },
+  assignedTo: {
+    type: String,
+    trim: true,
+    default: null,
+  },
+  tags: {
+    type: [String],
+    default: [],
+  },
+  notes: {
+    type: String,
+    trim: true,
+    default: null,
+  },
+  legacyCrmClientId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'CrmClient',
+    default: null,
+    index: true,
   },
 
   storageType: {

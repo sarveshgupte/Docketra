@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Lead = require('../models/Lead.model');
 const CrmClient = require('../models/CrmClient.model');
+const { upsertCanonicalClientFromCrm } = require('../services/crmClientMapping.service');
 
 const ALLOWED_STATUSES = new Set(['new', 'contacted', 'converted']);
 
@@ -79,15 +80,33 @@ const convertLead = async (req, res) => {
       }
 
       if (lead.linkedClientId) {
-        const existingClient = await CrmClient.findOne({
+        const existingCrmClient = await CrmClient.findOne({
           _id: lead.linkedClientId,
           firmId: req.user.firmId,
         }).session(session);
-        response = { status: 200, payload: { success: true, data: { lead, client: existingClient || null } } };
+        const existingClient = existingCrmClient
+          ? await upsertCanonicalClientFromCrm({
+            crmClient: existingCrmClient,
+            firmId: req.user.firmId,
+            createdByXid: req.user?.xid || req.user?.xID || 'SYSTEM',
+            session,
+          })
+          : null;
+        response = {
+          status: 200,
+          payload: {
+            success: true,
+            data: {
+              lead,
+              client: existingClient || null,
+              legacyCrmClientId: existingCrmClient?._id || null,
+            },
+          },
+        };
         return;
       }
 
-      const client = await CrmClient.create([{
+      const crmClient = await CrmClient.create([{
         firmId: req.user.firmId,
         name: lead.name,
         type: 'individual',
@@ -95,12 +114,28 @@ const convertLead = async (req, res) => {
         phone: lead.phone,
         tags: [],
       }], { session });
+      const client = await upsertCanonicalClientFromCrm({
+        crmClient: crmClient[0],
+        firmId: req.user.firmId,
+        createdByXid: req.user?.xid || req.user?.xID || 'SYSTEM',
+        session,
+      });
 
       lead.status = 'converted';
-      lead.linkedClientId = client[0]._id;
+      lead.linkedClientId = crmClient[0]._id;
       await lead.save({ session });
 
-      response = { status: 200, payload: { success: true, data: { lead, client: client[0] } } };
+      response = {
+        status: 200,
+        payload: {
+          success: true,
+          data: {
+            lead,
+            client,
+            legacyCrmClientId: crmClient[0]._id,
+          },
+        },
+      };
     });
 
     if (!response) {
