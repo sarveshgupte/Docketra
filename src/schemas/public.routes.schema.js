@@ -30,6 +30,24 @@ module.exports = {
       embed: z.enum(['true', 'false']).optional(),
     }).passthrough(),
   },
+  'POST /cms/:firmSlug/intake': {
+    params: z.object({ firmSlug: slugString }).strict(),
+    body: z.object({
+      name: nonEmptyString.max(200),
+      email: z.string().trim().email().max(254).optional(),
+      phone: z.string().trim().max(30).optional(),
+      source: z.string().trim().max(120).optional(),
+      service: z.string().trim().max(200).optional(),
+      message: z.string().trim().max(2000).optional(),
+      pageUrl: z.string().trim().max(1000).optional(),
+      referrer: z.string().trim().max(1000).optional(),
+      utm_source: z.string().trim().max(120).optional(),
+      utm_campaign: z.string().trim().max(120).optional(),
+      utm_medium: z.string().trim().max(120).optional(),
+      externalSubmissionId: z.string().trim().max(200).optional(),
+      idempotencyKey: z.string().trim().max(200).optional(),
+    }).passthrough(),
+  },
   'POST /signup': {
     body: z.object({
       firmName: nonEmptyString,

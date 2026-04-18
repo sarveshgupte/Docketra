@@ -49,9 +49,17 @@ Public and embedded forms render from each form record’s configured `fields` a
 
 ## 3) Direct API/webhook intake
 
-- Firms can send leads/intake directly into Docketra via integration endpoints.
-- Intake still maps into the same CMS orchestration and CRM/Tasks handoff model.
-- This mode is intended for custom websites, automation tools, and middleware platforms.
+- Firms can send leads/intake directly into Docketra via integration endpoint:
+  - `POST /public/cms/:firmSlug/intake`
+- Requests must include firm-level intake auth header:
+  - `x-docketra-intake-key`
+- Intake is validated, rate-limited, and routed through shared orchestration:
+  - `Lead -> optional Client -> optional Docket`
+- API intake metadata is labeled for attribution/reporting:
+  - `submissionMode = api_intake`
+  - default `source = api_integration` (explicit source preserved if provided)
+- Optional idempotency support is available via:
+  - `idempotencyKey` / `externalSubmissionId` (or `idempotency-key` header)
 
 ---
 

@@ -214,6 +214,8 @@ const firmSchema = new mongoose.Schema({
     cms: {
       autoCreateClient: { type: Boolean, default: true },
       autoCreateDocket: { type: Boolean, default: true },
+      intakeApiEnabled: { type: Boolean, default: false },
+      intakeApiKey: { type: String, default: null, trim: true },
       defaultWorkbasketId: { type: mongoose.Schema.Types.ObjectId, ref: 'Team', default: null },
       defaultCategoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', default: null },
       defaultSubcategoryId: { type: String, default: null, trim: true },
@@ -458,6 +460,10 @@ firmSchema.pre('save', async function() {
 
   if (this.aiConfig?.apiKey && !isEncrypted(this.aiConfig.apiKey)) {
     this.aiConfig.apiKey = encryptProtectedValue(this.aiConfig.apiKey);
+  }
+
+  if (this.intakeConfig?.cms?.intakeApiKey && !isEncrypted(this.intakeConfig.cms.intakeApiKey)) {
+    this.intakeConfig.cms.intakeApiKey = encryptProtectedValue(this.intakeConfig.cms.intakeApiKey);
   }
 });
 
