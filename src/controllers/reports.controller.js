@@ -11,6 +11,7 @@ const PDFDocument = require('pdfkit');
 const { getLatestTenantMetrics, getTenantMetricsByRange } = require('../services/tenantCaseMetrics.service');
 const { mapAuditResponse } = require('../mappers/audit.mapper');
 const { getWeeklySlaSummary } = require('../services/sla.service');
+const reportsService = require('../services/reports.service');
 const log = require('../utils/log');
 
 const DEFAULT_AUDIT_LOG_LIMIT = 100;
@@ -906,6 +907,93 @@ const generateClientFactSheetPdf = async (req, res) => {
   }
 };
 
+
+const buildReportsFilter = (req) => ({
+  firmId: req.firmId || req.user?.firmId,
+  fromDate: req.query?.fromDate,
+  toDate: req.query?.toDate,
+  userId: req.query?.userId,
+  clientId: req.query?.clientId,
+  limit: req.query?.limit,
+  sortBy: req.query?.sortBy,
+  order: req.query?.order,
+});
+
+const validateReportsFirmScope = (res, filter) => {
+  if (!filter.firmId) {
+    res.status(400).json({ error: 'Missing firmId' });
+    return false;
+  }
+
+  return true;
+};
+
+const userProductivity = async (req, res) => {
+  try {
+    const filter = buildReportsFilter(req);
+    if (!validateReportsFirmScope(res, filter)) return;
+    const data = await reportsService.getUserProductivity(filter);
+    return res.json({ success: true, data });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Failed to fetch user productivity', error: error.message });
+  }
+};
+
+const docketStats = async (req, res) => {
+  try {
+    const filter = buildReportsFilter(req);
+    if (!validateReportsFirmScope(res, filter)) return;
+    const data = await reportsService.getDocketStats(filter);
+    return res.json({ success: true, data });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Failed to fetch docket stats', error: error.message });
+  }
+};
+
+const qcPerformance = async (req, res) => {
+  try {
+    const filter = buildReportsFilter(req);
+    if (!validateReportsFirmScope(res, filter)) return;
+    const data = await reportsService.getQCPerformance(filter);
+    return res.json({ success: true, data });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Failed to fetch QC performance', error: error.message });
+  }
+};
+
+const timePerUser = async (req, res) => {
+  try {
+    const filter = buildReportsFilter(req);
+    if (!validateReportsFirmScope(res, filter)) return;
+    const data = await reportsService.getTimePerUser(filter);
+    return res.json({ success: true, data });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Failed to fetch user time analytics', error: error.message });
+  }
+};
+
+const clientWorkload = async (req, res) => {
+  try {
+    const filter = buildReportsFilter(req);
+    if (!validateReportsFirmScope(res, filter)) return;
+    const data = await reportsService.getClientWorkload(filter);
+    return res.json({ success: true, data });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Failed to fetch client workload', error: error.message });
+  }
+};
+
+const docketTimeStats = async (req, res) => {
+  try {
+    const filter = buildReportsFilter(req);
+    if (!validateReportsFirmScope(res, filter)) return;
+    const data = await reportsService.getDocketTimeStats(filter);
+    return res.json({ success: true, data });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Failed to fetch docket time analytics', error: error.message });
+  }
+};
+
 module.exports = {
   getCaseMetrics,
   getPendingCasesReport,
@@ -916,4 +1004,10 @@ module.exports = {
   getAuditLogs,
   getExportHistory,
   generateClientFactSheetPdf,
+  userProductivity,
+  docketStats,
+  qcPerformance,
+  timePerUser,
+  clientWorkload,
+  docketTimeStats,
 };
