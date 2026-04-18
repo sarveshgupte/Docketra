@@ -4,10 +4,10 @@ Docketra is organized as three connected product modules.
 
 ## 1) CMS (Acquisition)
 Use CMS to capture demand and intake:
-- Landing pages
-- Forms
-- Submission intake queue
-- Public intake tools
+- Docketra-hosted landing pages
+- Embeddable forms for external firm websites
+- Direct API/webhook intake path (integration mode)
+- Submission intake queue and public intake tools
 
 **Outcome:** creates structured leads and optional client/docket handoff.
 
@@ -37,6 +37,7 @@ Use Tasks to run operations:
 `CMS -> CRM -> Tasks`
 
 - CMS captures and normalizes intake.
+- CMS supports multiple acquisition channels without changing downstream intake orchestration.
 - CRM manages relationship state and client readiness.
 - Tasks executes delivery work while preserving CRM linkage and internal-work support.
 

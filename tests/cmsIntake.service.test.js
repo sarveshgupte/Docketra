@@ -19,15 +19,29 @@ async function testLeadOnlyFlow() {
   try {
     const result = await cmsIntakeService.processCmsSubmission({
       firmId: '507f1f77bcf86cd799439011',
-      payload: { name: 'Alice', email: 'alice@example.com', phone: '999', source: 'form' },
+      payload: {
+        name: 'Alice',
+        email: 'alice@example.com',
+        phone: '999',
+        source: 'website_embed',
+        pageUrl: 'https://firm.com/intake',
+      },
+      requestMeta: {
+        headers: { referer: 'https://firm.com/intake', 'user-agent': 'Mozilla/5.0 test' },
+        query: { utm_source: 'google', utm_campaign: 'spring' },
+      },
       intakeConfig: { autoCreateClient: false, autoCreateDocket: false },
-      submissionMode: 'public_form',
+      submissionMode: 'embedded_form',
     });
 
     assert.strictEqual(result.lead._id, 'lead-1');
     assert.strictEqual(result.client, null);
     assert.strictEqual(result.docket, null);
-    assert.strictEqual(result.submissionMode, 'public_form');
+    assert.strictEqual(result.submissionMode, 'embedded_form');
+    assert.strictEqual(result.lead.source, 'website_embed');
+    assert.strictEqual(result.lead.metadata.pageUrl, 'https://firm.com/intake');
+    assert.strictEqual(result.lead.metadata.utm_source, 'google');
+    assert.strictEqual(result.lead.metadata.submissionMode, 'embedded_form');
   } finally {
     Lead.create = originalLeadCreate;
     Firm.findById = originalFirmFindById;

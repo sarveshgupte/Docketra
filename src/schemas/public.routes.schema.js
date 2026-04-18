@@ -13,7 +13,21 @@ module.exports = {
       name: nonEmptyString.max(200),
       email: z.string().trim().email().max(254).optional(),
       phone: z.string().trim().max(30).optional(),
+      message: z.string().trim().max(2000).optional(),
+      service: z.string().trim().max(200).optional(),
+      referrer: z.string().trim().max(1000).optional(),
+      pageUrl: z.string().trim().max(1000).optional(),
+      utm_source: z.string().trim().max(120).optional(),
+      utm_campaign: z.string().trim().max(120).optional(),
+      website: z.string().trim().max(200).optional(),
+      submissionMode: z.enum(['public_form', 'embedded_form']).optional(),
     }).strict(),
+  },
+  'GET /forms/:id': {
+    params: z.object({ id: objectIdString }).strict(),
+    query: z.object({
+      embed: z.enum(['true', 'false']).optional(),
+    }).passthrough(),
   },
   'POST /signup': {
     body: z.object({
