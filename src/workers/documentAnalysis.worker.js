@@ -62,7 +62,7 @@ if (!redisUrl || !isAnalysisEnabled) {
           return;
         }
 
-        const insight = await aiService.analyzeDocument(sanitizedText, firmId);
+        const insight = await aiService.analyzeDocument(sanitizedText, firmId, { requestId: String(job.id || '') || null, userRole: 'SYSTEM' });
         attachment.analysis = {
           documentType: insight.documentType,
           extractedFields: insight.extractedFields,
