@@ -335,6 +335,12 @@ const attachmentSchema = new mongoose.Schema({
  * - All attachments must have at least one of clientId or caseId
  */
 attachmentSchema.pre('save', function(next) {
+  for (const value of Object.values(this.toObject({ depopulate: true }))) {
+    if (Buffer.isBuffer(value)) {
+      return next(new Error('Attachment metadata cannot store binary payloads'));
+    }
+  }
+
   // Validate client_cfs attachments must have clientId
   if (this.source === 'client_cfs' && !this.clientId) {
     return next(new Error('Client CFS attachments must have a clientId'));
