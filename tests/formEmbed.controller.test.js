@@ -40,6 +40,7 @@ async function testEmbedSubmissionUsesUnifiedIntakeFlow() {
         firmId: '507f1f77bcf86cd799439012',
         isActive: true,
         allowEmbed: true,
+        fields: [{ key: 'name', type: 'text' }, { key: 'email', type: 'email' }],
         successMessage: 'Done',
         redirectUrl: '',
         allowedEmbedDomains: ['firm.com'],
@@ -57,7 +58,14 @@ async function testEmbedSubmissionUsesUnifiedIntakeFlow() {
     params: { id: '507f1f77bcf86cd799439011' },
     query: { embed: 'true' },
     headers: { referer: 'https://portal.firm.com/intake' },
-    body: { name: 'Alice', email: 'alice@example.com', pageUrl: 'https://portal.firm.com/intake' },
+    body: {
+      name: 'Alice',
+      email: 'alice@example.com',
+      pageUrl: 'https://portal.firm.com/intake',
+      utm_source: 'google',
+      utm_campaign: 'spring-launch',
+      utm_medium: 'cpc',
+    },
     socket: { remoteAddress: '127.0.0.1' },
     ip: '127.0.0.1',
   };
@@ -69,6 +77,10 @@ async function testEmbedSubmissionUsesUnifiedIntakeFlow() {
   assert.strictEqual(captured.submissionMode, 'embedded_form');
   assert.strictEqual(captured.payload.source, 'website_embed');
   assert.strictEqual(captured.payload.formId, '507f1f77bcf86cd799439011');
+  assert.strictEqual(captured.payload.pageUrl, 'https://portal.firm.com/intake');
+  assert.strictEqual(captured.payload.utm_source, 'google');
+  assert.strictEqual(captured.payload.utm_campaign, 'spring-launch');
+  assert.strictEqual(captured.payload.utm_medium, 'cpc');
 }
 
 async function testInactiveOrEmbedDisabledFormsAreRejected() {
@@ -123,11 +135,80 @@ async function testGetPublicFormSupportsEmbedMode() {
   assert.strictEqual(res.payload.data.redirectUrl, 'https://firm.com/thanks');
 }
 
+async function testPublicSubmissionModeStillWorks() {
+  let captured = null;
+  const formController = loadController({
+    formMock: {
+      findById: createFindByIdMock({
+        _id: '507f1f77bcf86cd799439011',
+        firmId: '507f1f77bcf86cd799439012',
+        isActive: true,
+        allowEmbed: true,
+        fields: [{ key: 'name', type: 'text' }, { key: 'email', type: 'email' }],
+        successMessage: 'Done',
+      }),
+    },
+    cmsMock: {
+      processCmsSubmission: async (payload) => {
+        captured = payload;
+        return { lead: { _id: 'lead-public' } };
+      },
+    },
+  });
+
+  const req = {
+    params: { id: '507f1f77bcf86cd799439011' },
+    query: {},
+    headers: {},
+    body: { name: 'Public User', email: 'public@example.com', website: '' },
+    socket: { remoteAddress: '127.0.0.1' },
+    ip: '127.0.0.1',
+  };
+  const res = mockResponse();
+
+  await formController.submitForm(req, res);
+  assert.strictEqual(res.statusCode, 201);
+  assert.strictEqual(res.payload.data.submissionMode, 'public_form');
+  assert.strictEqual(captured.submissionMode, 'public_form');
+  assert.strictEqual(captured.payload.source, 'form');
+}
+
+async function testMisconfiguredFormWithoutNameFieldIsRejected() {
+  const formController = loadController({
+    formMock: {
+      findById: createFindByIdMock({
+        _id: '507f1f77bcf86cd799439011',
+        firmId: '507f1f77bcf86cd799439012',
+        isActive: true,
+        allowEmbed: true,
+        fields: [{ key: 'email', type: 'email' }],
+      }),
+    },
+    cmsMock: {
+      processCmsSubmission: async () => ({ lead: { _id: 'x' } }),
+    },
+  });
+
+  const req = {
+    params: { id: '507f1f77bcf86cd799439011' },
+    query: {},
+    headers: {},
+    body: { email: 'only@example.com' },
+    socket: {},
+  };
+  const res = mockResponse();
+  await formController.submitForm(req, res);
+  assert.strictEqual(res.statusCode, 409);
+  assert.match(res.payload.message, /misconfigured/i);
+}
+
 async function run() {
   try {
     await testEmbedSubmissionUsesUnifiedIntakeFlow();
     await testInactiveOrEmbedDisabledFormsAreRejected();
     await testGetPublicFormSupportsEmbedMode();
+    await testPublicSubmissionModeStillWorks();
+    await testMisconfiguredFormWithoutNameFieldIsRejected();
     console.log('Form embed controller tests passed.');
   } catch (error) {
     console.error('Form embed controller tests failed:', error);
