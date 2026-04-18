@@ -27,3 +27,20 @@
 ### Operational guardrails
 - Workbasket listing now returns a warning when no users are assigned:
   - `"No users assigned to this workbasket"`
+
+## April 2026: Platform UI/UX Productivity Refresh
+
+- Upgraded firm platform shell with improved sidebar grouping, sticky topbar clarity, and consistent primary actions.
+- Added reusable platform UI primitives for page sections, filters, notices, metric grids, and resilient tables.
+- Improved daily execution surfaces (My Worklist, Workbaskets, QC Queue) with filter/search, refresh controls, and better loading/empty/error states.
+- Refined Dashboard, Reports, CRM, CMS Intake, and Settings pages for stronger information hierarchy and faster scanning.
+- Standardized visible workflow terminology around **Docket** for better enterprise consistency and trust.
+
+### April 2026: Platform UX refinement pass
+
+- Topbar actions are now page-owned (no hardcoded shell actions), improving context clarity.
+- Platform tables now include lightweight pagination with Previous/Next controls.
+- Filter bars now include a consistent "Clear filters" action.
+- Action layouts are standardized: primary entry first, secondary actions grouped, destructive actions visually distinct.
+- Inline success notices were added to key queue actions (Worklist, Workbaskets, QC) for faster operator feedback.
+- Accessibility improved with focus-visible styling and better disabled-state handling for controls.
