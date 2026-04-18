@@ -1,5 +1,3 @@
-const path = require('path');
-const os = require('os');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const Firm = require('../models/Firm.model');
@@ -304,7 +302,7 @@ const googleConfirmDrive = async (req, res) => {
 const getStorageConfiguration = async (req, res) => {
   try {
     const firmId = req.firmId;
-    const firm = await Firm.findById(firmId).select('storageConfig').lean();
+    const firm = await Firm.findById(firmId).select('storageConfig settings.storageBackup').lean();
     const config = firm?.storageConfig;
 
     if (!config) {
@@ -322,6 +320,7 @@ const getStorageConfiguration = async (req, res) => {
       }
     }
 
+    const backupSettings = firm?.settings?.storageBackup || {};
     return res.json({
       provider: toUiProvider(config.provider),
       isConfigured: true,
@@ -331,6 +330,12 @@ const getStorageConfiguration = async (req, res) => {
       folderPath,
       createdAt: firm?.storageConfig?.createdAt || null,
       updatedAt: firm?.storageConfig?.updatedAt || null,
+      backup: {
+        enabled: Boolean(backupSettings.enabled),
+        notificationRecipients: backupSettings.notificationRecipients || [],
+        deliveryPolicy: backupSettings.deliveryPolicy || 'link_only',
+        retentionDays: Number(backupSettings.retentionDays || 30),
+      },
     });
   } catch {
     return res.status(500).json({ error: 'configuration_fetch_failed' });
@@ -356,6 +361,7 @@ const changeFirmStorage = async (req, res) => {
   const firmId = String(req.firmId || '');
   const provider = String(req.body?.provider || '').trim();
   const rawCredentials = req.body?.credentials || {};
+  const backupSettings = req.body?.backupSettings || null;
 
   if (!SUPPORTED_STORAGE_PROVIDERS.has(provider)) {
     return res.status(400).json({ success: false, message: 'Unsupported storage provider' });
@@ -424,6 +430,14 @@ const changeFirmStorage = async (req, res) => {
               provider: canonicalProvider,
               credentials: encryptedCredentials,
             },
+        ...(backupSettings ? {
+          'settings.storageBackup.enabled': Boolean(backupSettings.enabled),
+          'settings.storageBackup.notificationRecipients': Array.isArray(backupSettings.notificationRecipients)
+            ? backupSettings.notificationRecipients
+            : [],
+          'settings.storageBackup.deliveryPolicy': backupSettings.deliveryPolicy === 'attachment' ? 'attachment' : 'link_only',
+          'settings.storageBackup.retentionDays': Math.min(Math.max(Number(backupSettings.retentionDays || 30), 1), 3650),
+        } : {}),
       },
     });
 
@@ -462,18 +476,23 @@ const changeFirmStorage = async (req, res) => {
 const exportFirmStorage = async (req, res) => {
   try {
     if (!ensurePrimaryAdmin(req, res)) return;
-    const backup = await storageBackupService.runBackupForFirm(req.firmId);
-    const token = storageBackupService.createSignedDownloadToken({
+    const backup = await storageBackupService.runBackupForFirm(req.firmId, { sendEmail: true });
+    const access = await storageBackupService.buildBackupAccess({
       firmId: req.firmId,
-      zipPath: backup.zipPath,
       exportId: backup.exportId,
     });
-    const downloadUrl = `${req.protocol}://${req.get('host')}/api/storage/export/download/${token}`;
-
-    try {
-      await storageBackupService.emailBackupLinkToPrimaryAdmin(req.firmId, downloadUrl);
-    } catch (emailError) {
-      log.error('[STORAGE]', { event: 'backup_email_failed', firmId: req.firmId, message: emailError.message });
+    const downloadUrl = access?.downloadUrl || null;
+    if (downloadUrl) {
+      try {
+        await storageBackupService.emailBackupNotification({
+          firmId: req.firmId,
+          exportId: backup.exportId,
+          downloadUrl,
+          success: true,
+        });
+      } catch (emailError) {
+        log.error('[STORAGE]', { event: 'backup_email_failed', firmId: req.firmId, message: emailError.message });
+      }
     }
 
     log.info('[STORAGE]', { event: 'backup_generated', firmId: req.firmId, exportId: backup.exportId });
@@ -481,8 +500,12 @@ const exportFirmStorage = async (req, res) => {
       success: true,
       exportId: backup.exportId,
       fileCount: backup.fileCount,
+      archiveObjectKey: backup.archiveObjectKey,
+      checksum: backup.checksum,
+      size: backup.size,
       downloadUrl,
-      expiresInSeconds: 1800,
+      expiresInSeconds: access?.expiresInSeconds || null,
+      deliveryPolicy: 'link_only',
     });
   } catch (error) {
     return res.status(500).json({ error: 'export_failed', message: error.message });
@@ -491,22 +514,26 @@ const exportFirmStorage = async (req, res) => {
 
 const downloadFirmStorageExport = async (req, res) => {
   const { token } = req.params;
-  const entry = storageBackupService.resolveSignedDownloadToken(token, req.firmId);
+  const entry = await storageBackupService.buildBackupAccess({ firmId: req.firmId, exportId: token });
   if (!entry) return res.status(404).json({ error: 'invalid_or_expired_export_link' });
 
-  const exportBaseDir = path.resolve(os.tmpdir(), 'docketra-exports', String(req.firmId));
-  const resolvedPath = path.resolve(entry.zipPath);
-
-  if (!resolvedPath.startsWith(exportBaseDir + path.sep)) {
-    log.error('[SECURITY]', {
-      event: 'potential_path_traversal_export',
-      firmId: req.firmId,
-      path: resolvedPath,
-    });
-    return res.status(403).json({ error: 'access_denied' });
+  if (!entry.downloadUrl) {
+    return res.status(409).json({ error: 'download_link_unavailable_for_provider' });
   }
+  return res.redirect(entry.downloadUrl);
+};
 
-  return res.download(entry.zipPath, `docketra-export-${req.firmId}-${entry.exportId}.zip`);
+const listBackupRuns = async (req, res) => {
+  try {
+    if (!ensurePrimaryAdmin(req, res)) return;
+    const items = await storageBackupService.listBackups(req.firmId, req.query?.limit || 20);
+    return res.json({
+      success: true,
+      data: items,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: 'backup_runs_fetch_failed', message: error.message });
+  }
 };
 
 const disconnectStorage = async (req, res) => {
@@ -601,6 +628,7 @@ module.exports = {
   storageHealthCheck,
   storageUsage,
   changeFirmStorage,
+  listBackupRuns,
   buildStateCookie,
   mapProviderErrorToStatus,
 };

@@ -62,4 +62,13 @@ const fileSchema = new mongoose.Schema(
 
 fileSchema.index({ tenantId: 1, caseId: 1, createdAt: -1 });
 
+fileSchema.pre('save', function(next) {
+  for (const value of Object.values(this.toObject({ depopulate: true }))) {
+    if (Buffer.isBuffer(value)) {
+      return next(new Error('File metadata cannot include binary payloads'));
+    }
+  }
+  return next();
+});
+
 module.exports = mongoose.model('File', fileSchema);

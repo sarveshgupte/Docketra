@@ -40,9 +40,13 @@ module.exports = {
   'GET /export': {
     query: z.object({}).passthrough(),
   },
+  'GET /exports': {
+    query: z.object({
+      limit: z.coerce.number().int().min(1).max(100).optional(),
+    }).passthrough(),
+  },
   'GET /export/download/:token': {
     params: z.object({ token: nonEmptyString }),
     query: z.object({}).passthrough(),
   },
 };
-

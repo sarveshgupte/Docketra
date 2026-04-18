@@ -15,6 +15,7 @@ const {
   testStorageConnection,
   exportFirmStorage,
   downloadFirmStorageExport,
+  listBackupRuns,
   disconnectStorage,
   storageHealthCheck,
   storageUsage,
@@ -35,6 +36,7 @@ router.get('/health-check', userReadLimiter, storageHealthCheck);
 router.get('/usage', userReadLimiter, storageUsage);
 router.post('/disconnect', userReadLimiter, requirePrimaryAdmin, disconnectStorage);
 router.get('/export', userReadLimiter, requirePrimaryAdmin, requireStorageConnected, exportFirmStorage);
+router.get('/exports', userReadLimiter, requirePrimaryAdmin, requireStorageConnected, listBackupRuns);
 router.get('/export/download/:token', userReadLimiter, requirePrimaryAdmin, requireStorageConnected, downloadFirmStorageExport);
 
 module.exports = router;
