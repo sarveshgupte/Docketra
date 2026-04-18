@@ -2,106 +2,95 @@ import React from 'react';
 import { LegalLayout } from '../../components/legal/LegalLayout';
 
 const SECTIONS = [
-  { id: 'security-overview', label: 'Security Overview' },
-  { id: 'tenant-isolation', label: 'Tenant Isolation Model' },
-  { id: 'encryption', label: 'Encryption Standards' },
-  { id: 'access-control', label: 'Access Control & RBAC' },
-  { id: 'audit-logging', label: 'Audit Logging' },
-  { id: 'incident-response', label: 'Incident Response' },
-  { id: 'vulnerability-disclosure', label: 'Vulnerability Disclosure' },
-  { id: 'compliance', label: 'Compliance Alignment' },
+  { id: 'about-this-page', label: 'About This Page' },
+  { id: 'data-ownership-model', label: 'Data Ownership Model' },
+  { id: 'byos-model', label: 'BYOS Direction' },
+  { id: 'byoai-model', label: 'BYOAI Direction' },
+  { id: 'data-flow', label: 'Data Flow' },
+  { id: 'backups-responsibility', label: 'Backups & Responsibility' },
+  { id: 'security-approach', label: 'Security Approach' },
+  { id: 'contact', label: 'Contact' },
 ];
 
 export const SecurityPage = () => (
   <LegalLayout
-    title="Security"
-    description="How Docketra protects your data and maintains platform integrity."
+    title="Data & Security Overview"
+    description="Practical overview of how data flows and how security is handled in Docketra."
     sections={SECTIONS}
   >
-    <section id="security-overview">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">1. Security Overview</h2>
+    <section id="about-this-page">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">1. About This Page</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        Security is a foundational principle of the Docketra platform. We apply defence-in-depth
-        across every layer — from network transport and application logic to data storage and
-        identity management. Our security posture is designed to meet the expectations of
-        enterprise procurement teams and compliance reviewers.
+        This page is a product overview, not a legal contract. It explains how Docketra currently
+        handles data and security in early-stage testing.
       </p>
     </section>
 
-    <section id="tenant-isolation">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">2. Multi-Tenant Isolation Model</h2>
+    <section id="data-ownership-model">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">2. Data Ownership Model</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        Each tenant operates in a fully isolated logical environment. All data queries, API
-        responses, and background operations are scoped to the authenticated tenant context.
-        Cross-tenant data access is architecturally prevented through server-side enforcement —
-        there is no mechanism by which one tenant can access another's data, even through
-        manipulation of client-side requests.
+        Firms own their workspace data. Docketra processes that data to provide core product
+        workflows and maintain service operations.
       </p>
     </section>
 
-    <section id="encryption">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">3. Encryption Standards</h2>
+    <section id="byos-model">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">3. BYOS Direction</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        All data in transit is encrypted using TLS 1.2 or higher. Data at rest is encrypted using
-        AES-256 or equivalent. Authentication tokens are signed using asymmetric cryptography with
-        short expiry windows. Sensitive fields are individually encrypted within the data layer.
+        Docketra is designed with a BYOS (Bring Your Own Storage) direction. Where available and
+        configured, firms may keep storage in their own cloud environment.
       </p>
     </section>
 
-    <section id="access-control">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">4. Access Control &amp; RBAC</h2>
+    <section id="byoai-model">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">4. BYOAI Direction</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        Docketra enforces role-based access control (RBAC) at every layer of the stack. Permissions
-        are evaluated server-side on every request — there is no reliance on client-side gating.
-        Roles are scoped per tenant and cannot be escalated without explicit administrative action.
-        Superadmin operations are strictly separated from tenant-scoped operations.
+        AI features are optional. In BYOAI-style setups, firms provide and control their own AI API
+        keys. If AI is not configured, core CRM/CMS/task workflows continue to operate.
       </p>
     </section>
 
-    <section id="audit-logging">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">5. Audit Logging</h2>
+    <section id="data-flow">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">5. Data Flow</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        All platform actions — including authentication events, data modifications, role changes,
-        and file operations — are recorded in an immutable, timestamped audit log. Logs are
-        scoped by tenant and retained in accordance with our data retention policy. Audit records
-        are available to tenant administrators through the reporting interface.
+        A common flow is: intake (forms/API) → CRM lead records → task/docket execution.
+      </p>
+      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
+        This keeps client intake and downstream delivery connected in a single operating flow.
       </p>
     </section>
 
-    <section id="incident-response">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">6. Incident Response</h2>
+    <section id="backups-responsibility">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">6. Backups &amp; Responsibility</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        We maintain an incident response plan aligned with industry best practices. In the event
-        of a confirmed data breach, affected customers will be notified within the timeframes
-        mandated by applicable law. We conduct post-incident reviews and implement remediation
-        measures to prevent recurrence.
+        Docketra maintains operational safeguards for service continuity. Firms remain responsible
+        for their own internal retention, backup, and recovery decisions, especially in BYOS setups
+        where firm-managed storage controls apply.
       </p>
     </section>
 
-    <section id="vulnerability-disclosure">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">7. Vulnerability Disclosure</h2>
+    <section id="security-approach">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">7. Security Approach</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        We welcome responsible disclosure of security vulnerabilities. If you discover a potential
-        security issue in the Docketra platform, please report it directly to our security team
-        at{' '}
+        Our baseline approach includes authenticated access, role-based access control, request-level
+        authorization checks, and operational monitoring.
+      </p>
+      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
+        We continuously improve security controls, but no platform can promise zero risk.
+      </p>
+    </section>
+
+    <section id="contact">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">8. Contact</h2>
+      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
+        Security or data-handling questions can be sent to{' '}
         <a
           href="mailto:sarveshgupte@gmail.com"
           className="text-gray-700 underline hover:no-underline"
         >
           sarveshgupte@gmail.com
         </a>
-        . Please do not disclose vulnerabilities publicly until we have had a reasonable opportunity
-        to investigate and respond.
-      </p>
-    </section>
-
-    <section id="compliance">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">8. Compliance Alignment</h2>
-      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        Our security and data handling practices are designed to align with the requirements of
-        the Digital Personal Data Protection Act, 2023 (DPDP Act) and the general principles of
-        the General Data Protection Regulation (GDPR). We continuously review our controls to
-        remain aligned with evolving regulatory requirements in India and international markets.
+        .
       </p>
     </section>
   </LegalLayout>

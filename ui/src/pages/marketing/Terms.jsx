@@ -2,109 +2,97 @@ import React from 'react';
 import { LegalLayout } from '../../components/legal/LegalLayout';
 
 const SECTIONS = [
-  { id: 'introduction', label: 'Introduction' },
-  { id: 'nature-of-service', label: 'Nature of Service' },
-  { id: 'account-eligibility', label: 'Account & Eligibility' },
-  { id: 'tenant-isolation', label: 'Tenant Isolation' },
-  { id: 'data-ownership', label: 'Data Ownership' },
-  { id: 'current-pricing-status', label: 'Early Access Status' },
+  { id: 'service-description', label: 'Service Description' },
+  { id: 'account-responsibility', label: 'Account Responsibility' },
   { id: 'acceptable-use', label: 'Acceptable Use' },
-  { id: 'termination', label: 'Termination' },
-  { id: 'limitation-of-liability', label: 'Limitation of Liability' },
-  { id: 'governing-law', label: 'Governing Law' },
+  { id: 'data-ownership', label: 'Data Ownership' },
+  { id: 'availability', label: 'Availability & Changes' },
+  { id: 'liability', label: 'Limitation of Liability' },
+  { id: 'updates-to-terms', label: 'Updates to Terms' },
   { id: 'contact', label: 'Contact' },
 ];
 
 export const TermsPage = () => (
   <LegalLayout
-    title="Terms &amp; Conditions"
-    description="Terms of use for Docketra early access users."
+    title="Terms of Use"
+    description="Simple terms for using Docketra in early-stage testing."
     sections={SECTIONS}
   >
-    <section id="introduction">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">1. Introduction</h2>
+    <section id="service-description">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">1. Service Description</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        These Terms and Conditions govern your use of Docketra. By accessing or using Docketra,
-        you agree to these Terms.
+        Docketra is a SaaS platform that provides CRM, CMS, and task management tools for firms
+        and organizations.
+      </p>
+      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
+        The platform is in early-stage testing, and features may change as the product evolves.
       </p>
     </section>
 
-    <section id="nature-of-service">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">2. Nature of Service</h2>
+    <section id="account-responsibility">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">2. Account Responsibility</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        Docketra is a B2B SaaS platform for firms and operations teams. It combines CMS, CRM,
-        and Tasks to support lead capture, relationship management, and execution workflows.
+        You are responsible for your login credentials, actions taken through your account, and
+        data uploaded or submitted in your workspace.
       </p>
-    </section>
-
-    <section id="account-eligibility">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">3. Account &amp; Eligibility</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        You must be authorized to create and manage your workspace account, and you are responsible
-        for safeguarding your credentials and account activity.
-      </p>
-    </section>
-
-    <section id="tenant-isolation">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">4. Tenant Isolation &amp; Architecture</h2>
-      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        Docketra enforces tenant isolation and server-side authorization checks to prevent
-        cross-tenant access.
-      </p>
-    </section>
-
-    <section id="data-ownership">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">5. Data Ownership</h2>
-      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        You retain ownership of your business data. Docketra processes data to operate the service
-        and maintain security.
-      </p>
-    </section>
-
-    <section id="current-pricing-status">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">6. Early Access Status</h2>
-      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        Docketra is currently in testing and early access. Access is free at this stage.
-        Billing and subscription systems are not live yet.
+        Please keep your credentials secure and notify us promptly if you believe your account has
+        been accessed without authorization.
       </p>
     </section>
 
     <section id="acceptable-use">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">7. Acceptable Use</h2>
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">3. Acceptable Use</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        You agree not to misuse the platform, attempt unauthorized access, or interfere with
-        service integrity and availability.
+        You must not use Docketra for illegal activity, abuse the platform, or attempt to bypass,
+        probe, or break service security controls.
       </p>
     </section>
 
-    <section id="termination">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">8. Termination</h2>
+    <section id="data-ownership">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">4. Data Ownership</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        We may suspend or terminate access for abuse, security risk, or material violation of these
-        Terms.
+        Your firm owns its business data. Docketra processes your data only to provide, secure,
+        and improve the service.
       </p>
     </section>
 
-    <section id="limitation-of-liability">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">9. Limitation of Liability</h2>
+    <section id="availability">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">5. Availability &amp; Changes</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        To the maximum extent permitted by law, Docketra is not liable for indirect,
-        incidental, or consequential damages arising from platform use.
+        We may update, improve, or change features at any time. Because Docketra is in early-stage
+        testing, temporary downtime, maintenance windows, or interruptions may occur.
+      </p>
+      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
+        We do not provide guaranteed uptime at this stage.
       </p>
     </section>
 
-    <section id="governing-law">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">10. Governing Law</h2>
+    <section id="liability">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">6. Limitation of Liability</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        These Terms are governed by applicable laws of India. Jurisdiction details may be provided
-        during formal contracting when commercial plans go live.
+        Docketra is provided on an "as available" basis. To the extent permitted by applicable
+        law, Docketra is not liable for indirect or consequential losses resulting from use of the
+        platform.
+      </p>
+      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
+        Our aggregate liability for direct claims relating to the service is limited to a reasonable
+        amount under applicable law.
+      </p>
+    </section>
+
+    <section id="updates-to-terms">
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">7. Updates to Terms</h2>
+      <p className="mt-3 text-sm text-gray-600 leading-relaxed">
+        We may update these Terms from time to time. If you continue using Docketra after updates
+        are posted, you agree to the revised Terms.
       </p>
     </section>
 
     <section id="contact">
-      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">11. Contact</h2>
+      <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">8. Contact</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        For questions about these Terms, contact{' '}
+        Questions about these Terms can be sent to{' '}
         <a href="mailto:sarveshgupte@gmail.com" className="text-gray-700 underline hover:no-underline">
           sarveshgupte@gmail.com
         </a>

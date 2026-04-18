@@ -14,6 +14,7 @@ import {
   MarketingHomePage,
   MarketingPrivacyPage,
   MarketingSecurityPage,
+  MarketingAcceptableUsePage,
   MarketingSignupPage,
   MarketingTermsPage,
   OtpVerificationPage,
@@ -55,6 +56,7 @@ export const PublicRoutes = () => (
         <Route path="/terms" element={<MarketingTermsPage />} />
         <Route path="/privacy" element={<MarketingPrivacyPage />} />
         <Route path="/security" element={<MarketingSecurityPage />} />
+        <Route path="/acceptable-use" element={<MarketingAcceptableUsePage />} />
         <Route path="/about" element={<MarketingAboutPage />} />
         <Route path="/contact" element={<MarketingContactPage />} />
         <Route path="/superadmin" element={<LoginPage />} />

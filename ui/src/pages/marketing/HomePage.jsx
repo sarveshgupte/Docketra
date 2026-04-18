@@ -566,7 +566,10 @@ export const HomePage = () => {
             <div className="flex flex-wrap items-center gap-6 text-sm text-gray-500">
               <button type="button" onClick={() => handleSectionNavigation('features')} className="hover:text-gray-900">Features</button>
               <button type="button" onClick={() => handleSectionNavigation('pricing')} className="hover:text-gray-900">Early Access</button>
-              <Link to="/security" className="hover:text-gray-900">Security</Link>
+              <Link to="/terms" className="hover:text-gray-900">Terms of Use</Link>
+              <Link to="/privacy" className="hover:text-gray-900">Privacy Policy</Link>
+              <Link to="/security" className="hover:text-gray-900">Data &amp; Security</Link>
+              <Link to="/acceptable-use" className="hover:text-gray-900">Acceptable Use</Link>
               <Link to="/about" className="hover:text-gray-900">About</Link>
             </div>
           </div>
