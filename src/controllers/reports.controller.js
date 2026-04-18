@@ -914,6 +914,7 @@ const buildReportsFilter = (req) => ({
   toDate: req.query?.toDate,
   userId: req.query?.userId,
   clientId: req.query?.clientId,
+  isInternal: req.query?.isInternal,
   limit: req.query?.limit,
   sortBy: req.query?.sortBy,
   order: req.query?.order,

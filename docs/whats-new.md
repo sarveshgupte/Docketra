@@ -1,5 +1,14 @@
 # What's New
 
+## April 2026: First-Class Internal Task Support
+
+- Task Manager now supports both **Client Work** and **Internal Work** as first-class docket modes.
+- Docket (`Case`) records now persist explicit work mode metadata (`isInternal`, `workType`) with backward-compatible defaults.
+- Internal dockets can now be created without a `clientId`; client-linked creation remains unchanged for external work.
+- Docket list and query APIs now accept work-mode filters (`isInternal` / `workType`) for operational views and reporting slices.
+- Create Docket UI now allows users to choose **Client Work** vs **Internal Work** and conditionally requires client selection.
+- Docket list/detail UI now surfaces work-type labels so teams can distinguish internal vs client queues quickly.
+
 ## April 2026: Unified CMS Intake Submission Pipeline
 
 - CMS and public intake submissions now run through a shared orchestration service: `Submission -> Lead -> optional Client -> optional Docket`.

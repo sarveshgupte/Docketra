@@ -19,6 +19,7 @@ const STEPS = [
 ];
 
 const defaultForm = {
+  workType: 'client',
   title: '',
   description: '',
   categoryId: '',
@@ -97,7 +98,7 @@ export const GuidedDocketForm = ({ onCreated }) => {
   const validateStep = (stepIndex = step) => {
     const nextErrors = {};
     if (stepIndex === 0 && !formData.title.trim()) nextErrors.title = 'Title is required';
-    if (stepIndex === 0 && !formData.clientId) nextErrors.clientId = 'Client is required';
+    if (stepIndex === 0 && formData.workType !== 'internal' && !formData.clientId) nextErrors.clientId = 'Client is required';
     if (stepIndex === 2 && !formData.workbasketId) nextErrors.workbasketId = 'Workbasket is required';
     if (formData.categoryId && formData.subcategoryId) {
       const isValidSub = subcategories.some((item) => item.id === formData.subcategoryId);
@@ -109,10 +110,10 @@ export const GuidedDocketForm = ({ onCreated }) => {
   };
 
   const canProceed = useMemo(() => {
-    if (step === 0) return Boolean(formData.title.trim()) && Boolean(formData.clientId);
+    if (step === 0) return Boolean(formData.title.trim()) && (formData.workType === 'internal' || Boolean(formData.clientId));
     if (step === 2) return Boolean(formData.workbasketId);
     return true;
-  }, [formData.clientId, formData.title, formData.workbasketId, step]);
+  }, [formData.clientId, formData.title, formData.workType, formData.workbasketId, step]);
 
   const updateField = (name, value) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -129,7 +130,9 @@ export const GuidedDocketForm = ({ onCreated }) => {
         description: formData.description,
         categoryId: formData.categoryId || undefined,
         subcategoryId: formData.subcategoryId || undefined,
-        clientId: formData.clientId,
+        clientId: formData.workType === 'internal' ? undefined : formData.clientId,
+        isInternal: formData.workType === 'internal',
+        workType: formData.workType,
         workbasketId: formData.workbasketId,
         priority: formData.priority || 'medium',
         assignedTo: formData.assignedTo || undefined,
@@ -164,14 +167,31 @@ export const GuidedDocketForm = ({ onCreated }) => {
         <>
           <Input label="Title" required value={formData.title} onChange={(e) => updateField('title', e.target.value)} error={errors.title} />
           <Select
-            label="Client"
-            required
+            label="Work Type"
+            value={formData.workType}
+            onChange={(e) => {
+              const nextWorkType = e.target.value;
+              setFormData((prev) => ({
+                ...prev,
+                workType: nextWorkType,
+                clientId: nextWorkType === 'internal' ? '' : (prev.clientId || clients[0]?.clientId || ''),
+              }));
+              setErrors((prev) => ({ ...prev, clientId: '' }));
+            }}
+            options={[
+              { value: 'client', label: 'Client Work' },
+              { value: 'internal', label: 'Internal Work' },
+            ]}
+          />
+          <Select
+            label={formData.workType === 'internal' ? 'Client (not required for internal)' : 'Client'}
+            required={formData.workType !== 'internal'}
             value={formData.clientId}
             onChange={(e) => updateField('clientId', e.target.value)}
             error={errors.clientId}
-            disabled={loading.clients}
+            disabled={loading.clients || formData.workType === 'internal'}
             options={[
-              { value: '', label: loading.clients ? 'Loading clients...' : 'Select client' },
+              { value: '', label: formData.workType === 'internal' ? 'Internal task (no client)' : (loading.clients ? 'Loading clients...' : 'Select client') },
               ...clients.map((item) => ({
                 value: item.clientId,
                 label: `${item.clientId} - ${item.businessName || 'Unnamed client'}`,
@@ -235,7 +255,8 @@ export const GuidedDocketForm = ({ onCreated }) => {
           <h3>Review</h3>
           <p><strong>Title:</strong> {formData.title || '—'}</p>
           <p><strong>Description:</strong> {formData.description || '—'}</p>
-          <p><strong>Client:</strong> {(clients.find((item) => item.clientId === formData.clientId)?.businessName && `${formData.clientId} - ${clients.find((item) => item.clientId === formData.clientId)?.businessName}`) || formData.clientId || '—'}</p>
+          <p><strong>Work Type:</strong> {formData.workType === 'internal' ? 'Internal Task' : 'Client Work'}</p>
+          <p><strong>Client:</strong> {formData.workType === 'internal' ? 'Not linked (internal)' : ((clients.find((item) => item.clientId === formData.clientId)?.businessName && `${formData.clientId} - ${clients.find((item) => item.clientId === formData.clientId)?.businessName}`) || formData.clientId || '—')}</p>
           <p><strong>Category:</strong> {(categories.find((item) => item._id === formData.categoryId)?.name) || '—'}</p>
           <p><strong>Subcategory:</strong> {(subcategories.find((item) => item.id === formData.subcategoryId)?.name) || '—'}</p>
           <p><strong>Workbasket:</strong> {(workbaskets.find((item) => item._id === formData.workbasketId)?.name) || '—'}</p>

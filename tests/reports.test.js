@@ -60,6 +60,7 @@ async function run() {
       toDate: '2026-01-31T00:00:00.000Z',
       userId: 'xid-1',
       clientId: 'client-1',
+      isInternal: 'true',
       limit: 20,
     });
 
@@ -68,6 +69,7 @@ async function run() {
     assert.strictEqual(capturedCasePipeline[0].$match.firmId, 'firm-1');
     assert.strictEqual(capturedCasePipeline[0].$match.assignedToXID, 'xid-1');
     assert.strictEqual(capturedCasePipeline[0].$match.clientId, 'client-1');
+    assert.strictEqual(capturedCasePipeline[0].$match.isInternal, true);
     assert.ok(capturedCasePipeline[0].$match.createdAt.$gte instanceof Date);
     assert.ok(capturedCasePipeline[0].$match.createdAt.$lte instanceof Date);
     assert.strictEqual(capturedCasePipeline[0].$match.createdAt.$lte.getHours(), 23);
