@@ -15,6 +15,12 @@ const {
   getAuditLogs,
   getExportHistory,
   generateClientFactSheetPdf,
+  userProductivity,
+  docketStats,
+  qcPerformance,
+  timePerUser,
+  clientWorkload,
+  docketTimeStats,
 } = require('../controllers/reports.controller');
 
 /**
@@ -29,6 +35,15 @@ const {
 // Auth + tenant context are provided by app-level tenantScopedApiAccess in server.js
 router.use(authorizeFirmPermission('REPORT_VIEW'));
 router.use(userReadLimiter);
+
+
+// Analytics/reporting routes
+router.get('/users', userProductivity);
+router.get('/dockets', docketStats);
+router.get('/qc', qcPerformance);
+router.get('/time/users', timePerUser);
+router.get('/clients', clientWorkload);
+router.get('/time/dockets', docketTimeStats);
 
 // Case metrics aggregation
 router.get('/case-metrics', getCaseMetrics);
