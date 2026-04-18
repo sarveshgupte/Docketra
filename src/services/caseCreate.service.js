@@ -478,6 +478,8 @@ module.exports = (deps) => {
           assignedTo: null,
           assignedBy: null,
           queueType: resolvedAssignee ? 'PERSONAL' : 'GLOBAL',
+          state: resolvedAssignee ? 'IN_PROGRESS' : 'IN_WB',
+          qcOutcome: null,
           ownerTeamId: routedWorkbasketId || null,
           routedToTeamId: routedWorkbasketId || null,
           routedByUserId: null,

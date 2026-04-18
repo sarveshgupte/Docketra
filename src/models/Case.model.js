@@ -4,6 +4,7 @@ const CaseStatus = require('../domain/case/caseStatus');
 const { DocketLifecycle, deriveLifecycle, normalizeLifecycle } = require('../domain/docketLifecycle');
 const softDeletePlugin = require('../utils/softDelete.plugin');
 const { tenantScopeGuardPlugin } = require('./plugins/tenantScopeGuard.plugin');
+const { getCanonicalDocketState } = require('../utils/docketStateMapper');
 const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
@@ -294,6 +295,16 @@ const caseSchema = new mongoose.Schema({
     },
     default: 'OPEN',
     required: true,
+  },
+  state: {
+    type: String,
+    enum: ['IN_WB', 'IN_PROGRESS', 'IN_QC', 'PENDED', 'RESOLVED', 'FILED'],
+    index: true,
+  },
+  qcOutcome: {
+    type: String,
+    enum: ['PASSED', 'FAILED', 'CORRECTED', null],
+    default: null,
   },
   version: {
     type: Number,
@@ -987,6 +998,14 @@ caseSchema.pre('validate', async function() {
     lifecycle: this.lifecycle,
     status: this.status,
   });
+
+  if (!this.state) {
+    this.state = getCanonicalDocketState(this);
+  }
+
+  if (this.qcOutcome === undefined) {
+    this.qcOutcome = null;
+  }
 
   if (!this.dueDate && Number(this.slaDays) > 0 && this.createdAt) {
     const due = new Date(this.createdAt);
