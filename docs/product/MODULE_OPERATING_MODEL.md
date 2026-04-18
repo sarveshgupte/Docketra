@@ -14,11 +14,14 @@ Use CMS to capture demand and intake:
 ## 2) CRM (Relationship Management)
 Use CRM to manage pipeline and relationships:
 - Leads
+- Lead ownership + follow-up tracking
+- Stage progression (`new -> contacted -> qualified -> converted|lost`)
+- Relationship notes + activity timeline
 - Clients / accounts
 - Deals
 - Invoices (when used as relationship records)
 
-**Outcome:** keeps client context clean before execution.
+**Outcome:** qualifies and converts demand into execution-ready client context.
 
 ## 3) Tasks (Execution)
 Use Tasks to run operations:
@@ -39,6 +42,7 @@ Use Tasks to run operations:
 - CMS captures and normalizes intake.
 - CMS supports multiple acquisition channels without changing downstream intake orchestration.
 - CRM manages relationship state and client readiness.
+- CRM now explicitly tracks conversion metadata and whether downstream work has started.
 - Tasks executes delivery work while preserving CRM linkage and internal-work support.
 
 This structure keeps route compatibility while improving user orientation in navigation, dashboards, and page-level context headers.
