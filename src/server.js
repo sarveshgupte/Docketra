@@ -101,6 +101,7 @@ const bulkUploadRoutes = require('./routes/bulkUpload.routes');
 const productUpdateRoutes = require('./routes/productUpdate.routes');
 const docketRoutes = require('./routes/docket.routes');
 const attachmentRoutes = require('./routes/attachment.routes');
+const docketSessionRoutes = require('./routes/docketSession.routes');
 const tenantResolver = require('./middleware/tenantResolver');
 const { login } = require('./controllers/auth.controller');
 const mutatingMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
@@ -414,6 +415,7 @@ app.use('/api/tasks', ...tenantScopedApiAccess, writeGuardChain, taskRoutes);
 app.use('/api/compliance-calendar', ...tenantScopedApiAccess, writeGuardChain, complianceCalendarRoutes);
 app.use('/api/cases', ...tenantScopedApiAccess, writeGuardChain, caseRoutes);  // backward-compat alias for /api/dockets
 app.use('/api/dockets', ...tenantScopedApiAccess, writeGuardChain, docketRoutes);  // canonical docket API
+app.use('/api', ...tenantScopedApiAccess, writeGuardChain, docketSessionRoutes);
 app.use('/api/attachments', ...tenantScopedApiAccess, writeGuardChain, attachmentRoutes);
 app.use('/api/search', ...tenantScopedApiAccess, writeGuardChain, searchRoutes);
 app.use('/api/worklists', ...tenantScopedApiAccess, writeGuardChain, searchRoutes);
