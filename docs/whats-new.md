@@ -138,3 +138,12 @@
 - Updated public-facing contact touchpoints to use `sarveshgupte@gmail.com`.
 - Removed outdated/incorrect company references from public marketing/legal pages where landing visitors are likely to evaluate trust.
 - Added new positioning documentation at `docs/product/LANDING_PAGE_POSITIONING.md` for future copy/design consistency.
+
+## April 2026: CRM Pipeline View
+
+- Added a new **Pipeline View** toggle in CRM Leads so teams can switch between the existing List View and a new visual Kanban-lite layout.
+- Leads are now grouped by stage (`New`, `Contacted`, `Qualified`, `Converted`, `Lost`) in horizontally scrollable columns with per-stage counts for fast pipeline scanning.
+- Each pipeline card highlights lead owner, follow-up date, and a clear overdue indicator when follow-up is missed.
+- Added lightweight stage movement controls directly on pipeline cards using the existing lead update APIs (no drag-and-drop complexity introduced).
+- Clicking a pipeline card opens the existing lead management detail modal for deeper updates and activity visibility.
+- Added a top-level `+ New Lead` action consistent across CRM views to speed up pipeline intake.
