@@ -1,5 +1,15 @@
 # What's New
 
+## April 2026: Embed Forms + Website Intake Integration for CMS
+
+- Public forms now support explicit embed rendering mode using the same route shape (`/forms/:id?embed=true`) so firms can place Docketra intake on existing websites.
+- Form records now include embed-focused settings: `allowEmbed`, `embedTitle`, `successMessage`, `redirectUrl`, `themeMode`, and optional `allowedEmbedDomains`.
+- Public form submit now captures website-oriented source metadata (`submissionMode=embedded_form`, `source=website_embed`, page URL, referrer, UTM fields, form ID/slug).
+- Embedded submissions continue through the shared CMS intake orchestration (`Lead -> optional Client -> optional Docket`) to preserve pipeline continuity.
+- CMS module now exposes an **Embed on your website** section with public link, embed link, and ready-to-copy iframe embed code.
+- Added conservative guardrails for embed intake: `isActive` + `allowEmbed` enforcement, optional domain allowlist check, and honeypot support.
+- Embed submissions support stable post-submit behavior: inline success message and optional redirect URL when configured.
+
 ## April 2026: Module-Based UX Separation + Cleanup Fixes for CRM / CMS / Tasks
 
 - Navigation now elevates **CMS**, **CRM**, and **Tasks** as first-class modules in the primary shell.

@@ -172,6 +172,15 @@ Task
 - Consistent response format
 - Proper HTTP status codes
 
+### CMS Intake Acquisition Modes
+- CMS intake architecture supports three acquisition channels:
+  - Docketra-hosted landing pages
+  - Embeddable public forms on external websites (`/forms/:id?embed=true`)
+  - Direct API/webhook intake integrations
+- All channels converge into a unified intake orchestration service, preserving a single business flow:
+  `Submission -> Lead -> optional Client -> optional Docket`.
+- Embedded form submissions are tagged with metadata (`submissionMode`, source markers, referrer/page URL, UTM values) for attribution and analytics while maintaining backward compatibility with existing public form behavior.
+
 ### Response Format
 ```json
 {
