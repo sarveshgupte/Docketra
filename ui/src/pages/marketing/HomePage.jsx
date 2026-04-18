@@ -68,6 +68,32 @@ const OUTCOMES = [
   'Improve cross-team visibility with one operating view',
 ];
 
+const DASHBOARD_METRICS = [
+  { label: 'New leads (7d)', value: '42', delta: '+18%' },
+  { label: 'Open dockets', value: '27', delta: '9 high priority' },
+  { label: 'QC due today', value: '6', delta: '2 overdue' },
+];
+
+const DASHBOARD_ACTIONS = ['+ New Lead', '+ New Docket', '+ Internal Task'];
+
+const PIPELINE_LEADS = [
+  { name: 'Apex Finserv LLP', stage: 'Qualified', owner: 'RM · Neha', followUp: 'Follow-up today 5:30 PM', tone: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  { name: 'Bright Ledger Co.', stage: 'Contacted', owner: 'RM · Raghav', followUp: 'Awaiting documents', tone: 'bg-blue-50 text-blue-700 border-blue-200' },
+  { name: 'Crestline Retail Pvt Ltd', stage: 'New', owner: 'RM · Priya', followUp: 'First call due tomorrow', tone: 'bg-amber-50 text-amber-700 border-amber-200' },
+];
+
+const CMS_SUBMISSIONS = [
+  { form: 'GST Filing Intake', contact: 'Tanvi Batra · +91 98XXXXXX01', source: 'Embedded form', status: 'Converted to lead #LD-1843' },
+  { form: 'ROC Return Callback', contact: 'Kunal Mehta · kunal@northarc.in', source: 'Public landing page', status: 'Needs owner assignment' },
+  { form: 'Compliance Review Request', contact: 'Aisha Khan · +91 93XXXXXX08', source: 'API intake', status: 'Auto-routed to Mumbai team' },
+];
+
+const EXECUTION_QUEUE = [
+  { docket: 'DCK-2841 · GST Filing · BluePeak Foods', status: 'In Progress', owner: 'Anita (Accounts)', hint: 'Routed from CRM · QC pending' },
+  { docket: 'DCK-2836 · ROC Return · Crestline Retail', status: 'Ready for QC', owner: 'Rohit (Compliance)', hint: 'QC basket: Corporate Filings - QC' },
+  { docket: 'DCK-2824 · Compliance Review · Apex Finserv', status: 'Blocked', owner: 'Neha (Advisory)', hint: 'Waiting on client docs · reminder sent' },
+];
+
 const FAQS = [
   {
     q: 'What is Docketra?',
@@ -125,6 +151,23 @@ export const HomePage = () => {
     const el = document.getElementById(sectionId);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
+
+  const renderVisualPanel = (title, subtitle, content) => (
+    <motion.div
+      key={title}
+      className="rounded-2xl border border-gray-700 bg-gray-800 p-6 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all"
+      initial={{ opacity: 0, y: 12 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: 'easeOut' }}
+      viewport={{ once: true }}
+    >
+      <h3 className="text-base font-semibold text-white">{title}</h3>
+      <p className="mt-2 text-sm text-gray-300">{subtitle}</p>
+      <div className="mt-5 rounded-xl border border-gray-600 bg-gray-900/70 p-4">
+        {content}
+      </div>
+    </motion.div>
+  );
 
   return (
     <div className="w-full bg-white text-gray-900">
@@ -307,39 +350,101 @@ export const HomePage = () => {
             </h2>
           </motion.div>
           <motion.div className="grid md:grid-cols-2 gap-6 mt-12" {...SECTION_REVEAL}>
-            {[
-              {
-                title: 'Dashboard view',
-                body: 'Track intake volume, active pipelines, and execution health from one summary layer.',
-              },
-              {
-                title: 'Lead pipeline',
-                body: 'Monitor stage movement, owner accountability, and conversion progress without switching tools.',
-              },
-              {
-                title: 'Intake flow',
-                body: 'Capture structured submissions from hosted pages, embedded forms, or API channels.',
-              },
-              {
-                title: 'Task execution',
-                body: 'Run docket queues with workbasket routing, QC checkpoints, and complete audit history.',
-              },
-            ].map((card, index) => (
-              <motion.div
-                key={card.title}
-                className="rounded-2xl border border-gray-700 bg-gray-800 p-6"
-                initial={{ opacity: 0, y: 12 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.06 }}
-                viewport={{ once: true }}
-              >
-                <div className="h-32 rounded-xl border border-gray-600 bg-gradient-to-br from-gray-700 to-gray-800 mb-4 flex items-center justify-center text-gray-400 text-xs uppercase tracking-widest">
-                  Mock UI panel
+            {renderVisualPanel(
+              'Dashboard view',
+              'Quick actions, lead health, and execution status in one summary.',
+              <div className="space-y-4 text-xs text-gray-200">
+                <div className="flex flex-wrap gap-2">
+                  {DASHBOARD_ACTIONS.map((action) => (
+                    <span key={action} className="rounded-md border border-gray-500 bg-gray-800 px-2.5 py-1">{action}</span>
+                  ))}
                 </div>
-                <h3 className="text-base font-semibold text-white">{card.title}</h3>
-                <p className="mt-2 text-sm text-gray-300">{card.body}</p>
-              </motion.div>
-            ))}
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {DASHBOARD_METRICS.map((metric) => (
+                    <div key={metric.label} className="rounded-lg border border-gray-600 bg-gray-800/80 p-3">
+                      <p className="text-gray-400">{metric.label}</p>
+                      <p className="mt-1 text-lg font-semibold text-white">{metric.value}</p>
+                      <p className="text-gray-300">{metric.delta}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-gray-300">Snapshot: 14 dockets moved to QC this week, 11 cleared.</p>
+              </div>,
+            )}
+
+            {renderVisualPanel(
+              'CRM pipeline / lead view',
+              'Track leads with clear stage ownership and follow-up accountability.',
+              <div className="space-y-2">
+                {PIPELINE_LEADS.map((lead) => (
+                  <div key={lead.name} className="rounded-lg border border-gray-600 bg-gray-800/70 p-3 text-xs text-gray-200">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-medium text-white">{lead.name}</p>
+                      <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${lead.tone}`}>{lead.stage}</span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-gray-300">
+                      <span>{lead.owner}</span>
+                      <span>•</span>
+                      <span>{lead.followUp}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>,
+            )}
+
+            {renderVisualPanel(
+              'CMS intake / form submissions',
+              'Capture leads from forms and route submissions without manual copy-paste.',
+              <div className="space-y-2 text-xs text-gray-200">
+                {CMS_SUBMISSIONS.map((entry) => (
+                  <div key={entry.contact} className="rounded-lg border border-gray-600 bg-gray-800/80 p-3">
+                    <p className="font-medium text-white">{entry.form}</p>
+                    <p className="mt-1 text-gray-300">{entry.contact}</p>
+                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-gray-400">
+                      <span>{entry.source}</span>
+                      <span>•</span>
+                      <span>{entry.status}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>,
+            )}
+
+            {renderVisualPanel(
+              'Task / docket execution view',
+              'Run workbaskets with status visibility, owner clarity, and QC routing hints.',
+              <div className="space-y-2 text-xs text-gray-200">
+                {EXECUTION_QUEUE.map((item) => (
+                  <div key={item.docket} className="rounded-lg border border-gray-600 bg-gray-800/75 p-3">
+                    <p className="font-medium text-white">{item.docket}</p>
+                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-gray-300">
+                      <span>Status: {item.status}</span>
+                      <span>•</span>
+                      <span>Owner: {item.owner}</span>
+                    </div>
+                    <p className="mt-1 text-gray-400">{item.hint}</p>
+                  </div>
+                ))}
+              </div>,
+            )}
+          </motion.div>
+
+          <motion.div className="mt-8 rounded-2xl border border-gray-700 bg-gray-800 p-6" {...SECTION_REVEAL}>
+            <p className="text-xs uppercase tracking-widest text-gray-400">Before vs after</p>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <div className="rounded-xl border border-gray-700 bg-gray-900/60 p-4">
+                <p className="text-sm font-semibold text-white">Before: scattered tools</p>
+                <ul className="mt-2 space-y-1 text-sm text-gray-300">
+                  <li>• Website form in one tab</li>
+                  <li>• Follow-ups in personal spreadsheets</li>
+                  <li>• Execution tracked in chat threads</li>
+                </ul>
+              </div>
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-900/10 p-4">
+                <p className="text-sm font-semibold text-white">After: one connected flow</p>
+                <p className="mt-2 text-sm text-gray-200">CMS intake → CRM qualification → Task execution with dockets, routing, and QC in one operational lane.</p>
+              </div>
+            </div>
           </motion.div>
         </Container>
       </section>
