@@ -3,30 +3,70 @@ import { Link, useParams } from 'react-router-dom';
 import { PlatformShell } from '../../components/platform/PlatformShell';
 import { dashboardApi } from '../../api/dashboard.api';
 import { ROUTES } from '../../constants/routes';
+import { InlineNotice, PageSection, StatGrid } from './PlatformShared';
 
 export const PlatformDashboardPage = () => {
   const { firmSlug } = useParams();
   const [summary, setSummary] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    dashboardApi.getSummary({ filter: 'ALL' }).then((res) => setSummary(res?.data?.data || {})).catch(() => setSummary({}));
+    const load = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const res = await dashboardApi.getSummary({ filter: 'ALL' });
+        setSummary(res?.data?.data || {});
+      } catch {
+        setSummary({});
+        setError('Dashboard metrics are temporarily unavailable.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void load();
   }, []);
 
   const cards = [
-    { label: 'Total dockets', value: summary.totalDockets || 0 },
-    { label: 'In progress', value: summary.inProgress || 0 },
-    { label: 'Pending', value: summary.pending || 0 },
-    { label: 'Resolved', value: summary.resolved || 0 },
-    { label: 'QC passed', value: summary.qcPassed || 0 },
-    { label: 'Time spent (hrs)', value: summary.timeSpentHours || 0 },
+    { label: 'Total dockets', value: summary.totalDockets || 0, helpText: 'All dockets tracked across the firm.' },
+    { label: 'In progress', value: summary.inProgress || 0, helpText: 'Active execution work right now.' },
+    { label: 'Pending review', value: summary.pending || 0, helpText: 'Waiting for managerial or partner decision.' },
+    { label: 'Resolved', value: summary.resolved || 0, helpText: 'Successfully completed dockets.' },
+    { label: 'QC passed', value: summary.qcPassed || 0, helpText: 'Dockets approved by quality checks.' },
+    { label: 'Time spent (hrs)', value: summary.timeSpentHours || 0, helpText: 'Tracked effort across assigned work.' },
   ];
 
   return (
-    <PlatformShell title="Dashboard" subtitle="Operations analytics and live audit timeline">
-      <section className="grid-cards">{cards.map((c) => <article className="panel" key={c.label}><p className="muted">{c.label}</p><p className="kpi">{c.value}</p></article>)}</section>
-      <section className="panel"><h3>Productivity (bar)</h3><div className="bar"><span style={{ width: `${Math.min(100, Number(summary.productivityScore || 62))}%` }} /></div></section>
-      <section className="panel"><h3>Lifecycle Split (pie approximation)</h3><div className="action-row"><span className="chip">In Progress</span><span className="chip">Pending</span><span className="chip">Resolved</span></div></section>
-      <section className="panel"><h3>Recent Activity</h3><p className="muted">Audit timeline is available in docket details and reports.</p><Link to={ROUTES.ADMIN_REPORTS(firmSlug)}>Open reports timeline</Link></section>
+    <PlatformShell
+      title="Dashboard"
+      subtitle="Operations overview for daily docket execution and control"
+      actions={<Link to={ROUTES.CREATE_CASE(firmSlug)}>Create Docket</Link>}
+    >
+      <InlineNotice tone="error" message={error} />
+      <StatGrid items={cards} />
+
+      <PageSection title="Productivity trend" description="Quick signal of current workload throughput.">
+        {loading ? <p className="muted">Loading productivity signal…</p> : (
+          <div className="bar" aria-label="Productivity score">
+            <span style={{ width: `${Math.min(100, Number(summary.productivityScore || 62))}%` }} />
+          </div>
+        )}
+      </PageSection>
+
+      <PageSection
+        title="Execution shortcuts"
+        description="Jump directly into core operations without searching through navigation."
+        actions={<Link to={ROUTES.CASES(firmSlug)}>Open all dockets</Link>}
+      >
+        <div className="action-row">
+          <Link to={ROUTES.WORKLIST(firmSlug)}>My Worklist</Link>
+          <Link to={ROUTES.GLOBAL_WORKLIST(firmSlug)}>Workbaskets</Link>
+          <Link to={ROUTES.QC_QUEUE(firmSlug)}>QC Queue</Link>
+          <Link to={ROUTES.ADMIN_REPORTS(firmSlug)}>Reports</Link>
+        </div>
+      </PageSection>
     </PlatformShell>
   );
 };
