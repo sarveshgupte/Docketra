@@ -62,27 +62,29 @@ const COMPLETED_DOCKET_STATUSES = new Set([
 
 const getCrmClientById = async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    const clientId = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(clientId)) {
       return res.status(404).json({ success: false, message: 'Client not found' });
     }
 
-    const client = await CrmClient.findOne({ _id: req.params.id, firmId: req.user.firmId }).lean();
-    if (!client) return res.status(404).json({ success: false, message: 'Client not found' });
-
-    const [deals, dockets, invoices] = await Promise.all([
+    // ⚡ Bolt: Fetch client and related entities concurrently since clientId is known
+    const [client, deals, dockets, invoices] = await Promise.all([
+      CrmClient.findOne({ _id: clientId, firmId: req.user.firmId }).lean(),
       Deal.find(
-        { firmId: req.user.firmId, clientId: client._id },
+        { firmId: req.user.firmId, clientId: clientId },
         { title: 1, stage: 1, value: 1, createdAt: 1 }
       ).sort({ createdAt: -1 }).lean(),
       Case.find(
-        { firmId: req.user.firmId, crmClientId: client._id },
+        { firmId: req.user.firmId, crmClientId: clientId },
         { caseNumber: 1, title: 1, status: 1, assignedTo: 1, dueDate: 1, createdAt: 1 }
       ).sort({ createdAt: -1 }).lean(),
       Invoice.find(
-        { firmId: req.user.firmId, clientId: client._id },
+        { firmId: req.user.firmId, clientId: clientId },
         { amount: 1, status: 1, issuedAt: 1, paidAt: 1, dealId: 1, docketId: 1, createdAt: 1 }
       ).sort({ createdAt: -1 }).lean(),
     ]);
+
+    if (!client) return res.status(404).json({ success: false, message: 'Client not found' });
 
     const totalRevenue = invoices
       .filter((inv) => inv.status === 'paid')
