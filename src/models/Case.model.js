@@ -245,6 +245,27 @@ const caseSchema = new mongoose.Schema({
   },
 
   /**
+   * First-class work mode flag.
+   * false => client work, true => internal firm work
+   */
+  isInternal: {
+    type: Boolean,
+    default: false,
+    index: true,
+  },
+
+  /**
+   * Explicit work type for filtering/reporting readability.
+   * Kept in sync with isInternal by service/controller normalization.
+   */
+  workType: {
+    type: String,
+    enum: ['client', 'internal'],
+    default: 'client',
+    index: true,
+  },
+
+  /**
    * TAT snapshot captured when case is created.
    * Ensures audit-friendly deadlines even if master data changes later.
    */
@@ -748,7 +769,9 @@ const caseSchema = new mongoose.Schema({
    */
   clientId: {
     type: String,
-    required: [true, 'Client ID is required - every case must have a client'],
+    required() {
+      return !this.isInternal;
+    },
     trim: true,
   },
 
@@ -1161,6 +1184,8 @@ caseSchema.index({ assignedToXID: 1 }); // CANONICAL - xID-based assignment quer
 caseSchema.index({ assignedTo: 1 }); // Assignment owner lookup
 caseSchema.index({ assignedBy: 1 }); // Assignment actor lookup
 caseSchema.index({ clientId: 1 });
+caseSchema.index({ isInternal: 1 });
+caseSchema.index({ workType: 1 });
 caseSchema.index({ status: 1 });
 caseSchema.index({ createdAt: -1 });
 caseSchema.index({ assignedToXID: 1, status: 1 }); // CANONICAL - xID-based worklist queries

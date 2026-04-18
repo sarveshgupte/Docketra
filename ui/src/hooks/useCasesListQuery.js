@@ -16,6 +16,7 @@ export const useCasesListQuery = ({
   userRole = '',
   hasQcAccess = false,
   statusFilter = 'ALL',
+  workTypeFilter = 'ALL',
   activeWorkbasketId = '',
   enabled = true,
 }) =>
@@ -29,12 +30,15 @@ export const useCasesListQuery = ({
       String(userRole || '').toUpperCase() || 'UNKNOWN_ROLE',
       hasQcAccess ? 'qc' : 'no-qc',
       statusFilter || 'ALL',
+      workTypeFilter || 'ALL',
       activeWorkbasketId || 'no-workbasket',
     ],
     queryFn: async () => {
       let casesData = [];
       if (isAdmin) {
-        const response = await caseApi.getCases();
+        const response = await caseApi.getCases(
+          workTypeFilter !== 'ALL' ? { workType: workTypeFilter } : {}
+        );
         if (response.success) {
           casesData = getCaseListRecords(response);
         }
@@ -43,6 +47,7 @@ export const useCasesListQuery = ({
           casesData = [];
         } else {
           const qcFilters = { status: CASE_STATUS.QC_PENDING };
+          if (workTypeFilter !== 'ALL') qcFilters.workType = workTypeFilter;
           if (activeWorkbasketId) qcFilters.workbasketId = activeWorkbasketId;
           const response = await caseApi.getCases(qcFilters);
           if (response.success) {
@@ -50,9 +55,20 @@ export const useCasesListQuery = ({
           }
         }
       } else if (statusFilter === CASE_STATUS.RESOLVED || statusFilter === CASE_STATUS.FILED) {
-        const response = await caseApi.getCases({ status: statusFilter });
+        const response = await caseApi.getCases({
+          status: statusFilter,
+          ...(workTypeFilter !== 'ALL' ? { workType: workTypeFilter } : {}),
+        });
         if (response.success) {
           casesData = getCaseListRecords(response);
+        }
+      } else if (workTypeFilter !== 'ALL') {
+        const response = await caseApi.getCases({ workType: workTypeFilter });
+        if (response.success) {
+          casesData = getCaseListRecords(response).filter((item) => {
+            if (statusFilter === 'ALL') return true;
+            return item.status === statusFilter;
+          });
         }
       } else {
         const response = await worklistApi.getEmployeeWorklist();

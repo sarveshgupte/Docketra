@@ -480,6 +480,8 @@ module.exports = (deps) => {
         slaDueDate,
         createdBy,
         clientId,
+        isInternal,
+        workType,
         dealId,
         page = 1,
         limit = 20,
@@ -531,6 +533,12 @@ module.exports = (deps) => {
         } else {
           query.clientId = clientId;
         }
+      }
+      if (typeof isInternal !== 'undefined') {
+        query.isInternal = String(isInternal).toLowerCase() === 'true';
+      }
+      if (workType) {
+        query.workType = String(workType).trim().toLowerCase() === 'internal' ? 'internal' : 'client';
       }
 
       if (dealId) {
@@ -587,6 +595,8 @@ module.exports = (deps) => {
         const client = clientsMap.get(caseItem.clientId);
         return {
           ...caseItem,
+          isInternal: Boolean(caseItem.isInternal),
+          workType: caseItem.workType || (caseItem.isInternal ? 'internal' : 'client'),
           slaDueDate: caseItem.slaDueAt || null,
           slaStatus: slaService.getSlaStatus(caseItem),
           client: client ? {
@@ -618,7 +628,7 @@ module.exports = (deps) => {
             adminXID: req.user.xID,
             actionType: 'ADMIN_APPROVAL_QUEUE_VIEWED',
             metadata: {
-              filters: { status, category, priority, assignedTo, clientId },
+              filters: { status, category, priority, assignedTo, clientId, isInternal, workType },
               resultCount: casesWithClients.length,
               total,
             },
@@ -628,7 +638,7 @@ module.exports = (deps) => {
           // Log regular case list view
           await logCaseListViewed({
             viewerXID: req.user.xID,
-            filters: { status, category, priority, assignedTo, clientId },
+            filters: { status, category, priority, assignedTo, clientId, isInternal, workType },
             listType: 'FILTERED_CASES',
             resultCount: casesWithClients.length,
             req,
