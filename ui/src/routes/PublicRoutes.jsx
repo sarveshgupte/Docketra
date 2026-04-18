@@ -20,6 +20,7 @@ import {
   ResetPasswordPage,
   SetPasswordPage,
   UploadPage,
+  PublicFormPage,
 } from './lazyPages';
 import { RouteSuspenseOutlet } from './RouteSuspenseOutlet';
 
@@ -79,6 +80,7 @@ export const PublicRoutes = () => (
       <Route path="/setup-password" element={<SetPasswordPage />} />
       <Route path="/superadmin/*" element={<LegacySuperadminRedirect />} />
       <Route path="/upload/:token" element={<UploadPage />} />
+      <Route path="/forms/:formId" element={<PublicFormPage />} />
     </Route>
   </>
 );

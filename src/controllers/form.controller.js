@@ -9,6 +9,60 @@ const DEFAULT_FIELDS = [
 ];
 
 const SPAM_NAME_PATTERN = /https?:\/\//i;
+const EMBEDDED_SUBMISSION_MODE = 'embedded_form';
+const EMBEDDED_SOURCE = 'website_embed';
+
+function normalizeAllowedDomains(domains = []) {
+  return domains
+    .map((value) => String(value || '').trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function normalizeFormSettings(payload = {}) {
+  const rawDomains = Array.isArray(payload.allowedEmbedDomains) ? payload.allowedEmbedDomains : [];
+  return {
+    allowEmbed: payload.allowEmbed === undefined ? true : Boolean(payload.allowEmbed),
+    embedTitle: String(payload.embedTitle || '').trim(),
+    successMessage: String(payload.successMessage || '').trim() || 'Thank you. Your submission has been received.',
+    redirectUrl: String(payload.redirectUrl || '').trim(),
+    themeMode: payload.themeMode === 'dark' ? 'dark' : 'light',
+    allowedEmbedDomains: normalizeAllowedDomains(rawDomains),
+  };
+}
+
+function getSubmissionOriginCandidates(req) {
+  return [
+    req.headers?.origin,
+    req.headers?.referer,
+    req.headers?.referrer,
+    req.body?.pageUrl,
+    req.body?.referrer,
+  ]
+    .map((value) => String(value || '').trim())
+    .filter(Boolean);
+}
+
+function parseHostname(value) {
+  try {
+    return new URL(value).hostname.toLowerCase();
+  } catch (_error) {
+    return null;
+  }
+}
+
+function isAllowedOrigin(form, req) {
+  const allowlist = normalizeAllowedDomains(form.allowedEmbedDomains || []);
+  if (allowlist.length === 0) return true;
+
+  const candidates = getSubmissionOriginCandidates(req);
+  if (candidates.length === 0) return true;
+
+  return candidates.some((candidate) => {
+    const hostname = parseHostname(candidate);
+    if (!hostname) return false;
+    return allowlist.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`));
+  });
+}
 
 const createForm = async (req, res) => {
   try {
@@ -22,6 +76,7 @@ const createForm = async (req, res) => {
       firmId: req.user.firmId,
       name,
       fields,
+      ...normalizeFormSettings(req.body),
       createdBy: req.user._id,
     });
 
@@ -55,6 +110,76 @@ const getForm = async (req, res) => {
   }
 };
 
+const updateForm = async (req, res) => {
+  try {
+    const updates = {};
+    if (req.body.name !== undefined) {
+      const nextName = String(req.body.name || '').trim();
+      if (!nextName) return res.status(400).json({ success: false, message: 'name is required' });
+      updates.name = nextName;
+    }
+    if (Array.isArray(req.body.fields)) {
+      updates.fields = req.body.fields.length > 0 ? req.body.fields : DEFAULT_FIELDS;
+    }
+
+    const settings = normalizeFormSettings(req.body);
+    ['allowEmbed', 'embedTitle', 'successMessage', 'redirectUrl', 'themeMode', 'allowedEmbedDomains']
+      .forEach((key) => {
+        if (req.body[key] !== undefined) {
+          updates[key] = settings[key];
+        }
+      });
+    if (req.body.isActive !== undefined) updates.isActive = Boolean(req.body.isActive);
+
+    const form = await Form.findOneAndUpdate(
+      { _id: req.params.id, firmId: req.user.firmId },
+      { $set: updates },
+      { new: true, runValidators: true },
+    ).lean();
+
+    if (!form) return res.status(404).json({ success: false, message: 'Form not found' });
+    return res.json({ success: true, data: form });
+  } catch (error) {
+    if (error instanceof mongoose.Error.CastError) {
+      return res.status(404).json({ success: false, message: 'Form not found' });
+    }
+    return res.status(400).json({ success: false, message: error.message || 'Failed to update form' });
+  }
+};
+
+const getPublicForm = async (req, res) => {
+  try {
+    const form = await Form.findById(req.params.id).lean();
+    if (!form) return res.status(404).json({ success: false, message: 'Form not found' });
+    if (!form.isActive) return res.status(403).json({ success: false, message: 'Form is not active' });
+
+    const embedMode = req.query.embed === 'true';
+    if (embedMode && !form.allowEmbed) {
+      return res.status(403).json({ success: false, message: 'Embed is not enabled for this form' });
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        _id: form._id,
+        name: form.name,
+        fields: form.fields,
+        embedMode,
+        embedTitle: form.embedTitle || form.name,
+        successMessage: form.successMessage || 'Thank you. Your submission has been received.',
+        redirectUrl: form.redirectUrl || null,
+        themeMode: form.themeMode || 'light',
+        allowEmbed: Boolean(form.allowEmbed),
+      },
+    });
+  } catch (error) {
+    if (error instanceof mongoose.Error.CastError) {
+      return res.status(404).json({ success: false, message: 'Form not found' });
+    }
+    return res.status(500).json({ success: false, message: 'Failed to load form' });
+  }
+};
+
 const submitForm = async (req, res) => {
   try {
     const formId = req.params.id;
@@ -62,6 +187,16 @@ const submitForm = async (req, res) => {
 
     if (!form) return res.status(404).json({ success: false, message: 'Form not found' });
     if (!form.isActive) return res.status(403).json({ success: false, message: 'Form is not active' });
+    const embedMode = req.query.embed === 'true' || req.body?.submissionMode === EMBEDDED_SUBMISSION_MODE;
+    if (embedMode && !form.allowEmbed) {
+      return res.status(403).json({ success: false, message: 'Embed is not enabled for this form' });
+    }
+    if (embedMode && !isAllowedOrigin(form, req)) {
+      return res.status(403).json({ success: false, message: 'Submission origin is not allowed' });
+    }
+    if (String(req.body?.website || '').trim()) {
+      return res.status(400).json({ success: false, message: 'Invalid submission' });
+    }
 
     const name = String(req.body?.name || '').trim();
     if (!name) return res.status(400).json({ success: false, message: 'name is required' });
@@ -74,22 +209,31 @@ const submitForm = async (req, res) => {
       firmId: form.firmId,
       payload: {
         ...req.body,
-        source: 'form',
+        source: embedMode ? EMBEDDED_SOURCE : 'form',
         formSlug: form.slug || String(form._id),
+        formId: String(form._id),
       },
       requestMeta: {
         query: req.query,
         headers: req.headers,
         ipAddress: req.socket?.remoteAddress || req.ip || null,
       },
-      submissionMode: 'public_form',
+      submissionMode: embedMode ? EMBEDDED_SUBMISSION_MODE : 'public_form',
       intakeConfig: {
         autoCreateClient: false,
         autoCreateDocket: false,
       },
     });
 
-    return res.status(201).json({ success: true, data: { id: result.lead._id } });
+    return res.status(201).json({
+      success: true,
+      data: {
+        id: result.lead._id,
+        successMessage: form.successMessage || 'Thank you. Your submission has been received.',
+        redirectUrl: form.redirectUrl || null,
+        submissionMode: embedMode ? EMBEDDED_SUBMISSION_MODE : 'public_form',
+      },
+    });
   } catch (error) {
     if (error instanceof mongoose.Error.CastError) {
       return res.status(404).json({ success: false, message: 'Form not found' });
@@ -102,5 +246,7 @@ module.exports = {
   createForm,
   listForms,
   getForm,
+  updateForm,
+  getPublicForm,
   submitForm,
 };

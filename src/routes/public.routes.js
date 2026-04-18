@@ -6,7 +6,7 @@ const router = applyRouteValidation(express.Router(), routeSchemas);
 const { signupLimiter, publicUploadLimiter, formSubmitLimiter } = require('../middleware/rateLimiters');
 const { getFirmBySlug } = require('../controllers/superadmin.controller');
 const { submitEnterpriseInquiry } = require('../controllers/contact.controller');
-const { submitForm } = require('../controllers/form.controller');
+const { submitForm, getPublicForm } = require('../controllers/form.controller');
 const { getPublicLandingPage } = require('../controllers/landingPage.controller');
 const EarlyAccessRequest = require('../models/EarlyAccessRequest.model');
 const { executeWrite } = require('../utils/executeWrite');
@@ -45,6 +45,7 @@ router.get('/firms/:firmSlug', getFirmBySlug);
 router.get('/pages/:slug', getPublicLandingPage);
 
 router.post('/forms/:id/submit', formSubmitLimiter, submitForm);
+router.get('/forms/:id', getPublicForm);
 
 router.post('/signup', signupLimiter, async (req, res, next) => {
   try {

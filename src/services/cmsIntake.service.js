@@ -32,14 +32,17 @@ function normalizeMetadata(payload = {}, requestMeta = {}) {
     source: normalizeTrimmedString(payload.source) || 'CMS_FORM',
     pageSlug: normalizeTrimmedString(payload.pageSlug || payload.slug),
     formSlug: normalizeTrimmedString(payload.formSlug || payload.formId),
+    formId: normalizeTrimmedString(payload.formId),
     service: normalizeTrimmedString(payload.service),
     message: normalizeTrimmedString(payload.message || payload.notes),
+    pageUrl: normalizeTrimmedString(payload.pageUrl || query.pageUrl || headers.origin),
     timestamp: requestMeta.receivedAt || new Date().toISOString(),
     ipAddress: normalizeTrimmedString(requestMeta.ipAddress),
     userAgent: normalizeTrimmedString(requestMeta.userAgent || headers['user-agent']),
     referrer: normalizeTrimmedString(payload.referrer || query.referrer || headers.referer || headers.referrer),
     utm_source: normalizeTrimmedString(payload.utm_source || query.utm_source),
     utm_campaign: normalizeTrimmedString(payload.utm_campaign || query.utm_campaign),
+    utm_medium: normalizeTrimmedString(payload.utm_medium || query.utm_medium),
   };
 }
 
@@ -166,9 +169,12 @@ async function processCmsSubmission({
     metadata: {
       utm_source: metadata.utm_source,
       utm_campaign: metadata.utm_campaign,
+      utm_medium: metadata.utm_medium,
       referrer: metadata.referrer,
+      pageUrl: metadata.pageUrl,
       pageSlug: metadata.pageSlug,
       formSlug: metadata.formSlug,
+      formId: metadata.formId,
       service: metadata.service,
       message: metadata.message,
       ipAddress: metadata.ipAddress,

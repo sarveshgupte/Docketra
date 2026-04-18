@@ -43,6 +43,34 @@ const formSchema = new mongoose.Schema({
     default: true,
     index: true,
   },
+  allowEmbed: {
+    type: Boolean,
+    default: true,
+  },
+  embedTitle: {
+    type: String,
+    trim: true,
+    default: '',
+  },
+  successMessage: {
+    type: String,
+    trim: true,
+    default: 'Thank you. Your submission has been received.',
+  },
+  redirectUrl: {
+    type: String,
+    trim: true,
+    default: '',
+  },
+  themeMode: {
+    type: String,
+    enum: ['light', 'dark'],
+    default: 'light',
+  },
+  allowedEmbedDomains: {
+    type: [String],
+    default: [],
+  },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
