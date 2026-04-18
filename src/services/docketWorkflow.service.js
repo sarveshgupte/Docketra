@@ -54,6 +54,40 @@ function hydrateCanonicalDocketFields(docket) {
   return docket;
 }
 
+function validateOwnershipRules(docket) {
+  if (!docket) return docket;
+
+  if (docket.state === 'IN_WB' && docket.assignedToXID) {
+    throw makeError('WB docket cannot have owner');
+  }
+
+  if (['IN_PROGRESS', 'IN_QC'].includes(docket.state) && !docket.assignedToXID) {
+    throw makeError('Active/QC docket must have owner');
+  }
+
+  return docket;
+}
+
+function enforceOwnershipRules(docket) {
+  if (!docket) return docket;
+
+  if (docket.state === 'IN_WB') {
+    docket.assignedToXID = null;
+    docket.assignedTo = null;
+    docket.queueType = 'GLOBAL';
+  }
+
+  if (docket.state === 'IN_PROGRESS') {
+    if (!docket.assignedToXID) {
+      throw makeError('IN_PROGRESS docket must have an owner');
+    }
+    docket.queueType = 'PERSONAL';
+  }
+
+  validateOwnershipRules(docket);
+  return docket;
+}
+
 function makeError(message, statusCode = 400, code = 'VALIDATION_ERROR') {
   const error = new Error(message);
   error.statusCode = statusCode;
@@ -218,7 +252,7 @@ async function pullFromWorkbench({ docketId, firmId, userId, userObjectId = null
       status: toPersistenceState(DocketStatus.ASSIGNED),
       lifecycle: DocketLifecycle.IN_WORKLIST,
       assignedToXID: assigneeXID,
-      ...(userObjectId ? { assignedTo: userObjectId } : {}),
+      assignedTo: userObjectId || null,
       assignedAt: new Date(),
       lastActionByXID: String(userId || '').toUpperCase(),
       lastActionAt: new Date(),
@@ -323,6 +357,9 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
       }
 
       const targetCanonicalState = getCanonicalDocketState({ ...docket.toObject(), status: toPersistenceState(finalTarget) });
+      if (targetCanonicalState === 'IN_PROGRESS') {
+        throw makeError('Use pull/assign APIs to move docket to IN_PROGRESS');
+      }
       if (fromCanonicalState !== targetCanonicalState && !canTransition(fromCanonicalState, targetCanonicalState)) {
         throw makeError(`Invalid docket state transition from ${fromCanonicalState} to ${targetCanonicalState}`, 400, 'INVALID_DOCKET_STATE_TRANSITION');
       }
@@ -375,13 +412,11 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
           originalAssigneeXID: docket.assignedToXID || actor.xID,
           attempts: Number(docket.qc?.attempts || 0) + 1,
         };
-        docket.assignedToXID = null;
-        docket.assignedTo = null;
-        docket.queueType = 'GLOBAL';
         docket.qcOutcome = null;
         emitDocketEvent(EVENT_NAMES.QC_REQUEST, { docketId, firmId, requestedBy: actor.xID });
       }
 
+      enforceOwnershipRules(docket);
       await docket.save({ session });
 
       await writeAudit({
@@ -513,6 +548,7 @@ async function qcDecision({ docketId, firmId, actor, decision, comment }) {
   docket.lastActionByXID = actor.xID;
   docket.lastActionAt = new Date();
   docket.updatedAt = new Date();
+  enforceOwnershipRules(docket);
   await docket.save();
 
   await writeAudit({
@@ -623,18 +659,15 @@ async function reassign({ docketId, firmId, actor, toUserXID, comment }) {
   }
   const fromAssignee = docket.assignedToXID || null;
   docket.assignedToXID = nextAssignee;
+  docket.assignedTo = null;
   docket.assignedAt = new Date();
   docket.lastActionByXID = actor.xID;
   docket.lastActionAt = new Date();
   docket.updatedAt = new Date();
-  docket.queueType = docket.assignedToXID ? 'PERSONAL' : 'GLOBAL';
-  if (docket.assignedToXID) {
-    docket.state = 'IN_PROGRESS';
-    docket.qcOutcome = null;
-  } else {
-    docket.state = 'IN_WB';
-    docket.qcOutcome = null;
-  }
+  docket.state = 'IN_PROGRESS';
+  docket.queueType = 'PERSONAL';
+  docket.qcOutcome = null;
+  enforceOwnershipRules(docket);
   await docket.save();
   await writeAudit({
     docketId,
@@ -688,6 +721,7 @@ async function activateOnOpen({ docketId, firmId, actor }) {
     docket.lastActionByXID = actor?.xID || docket.assignedToXID || 'SYSTEM';
     docket.lastActionAt = new Date();
     docket.updatedAt = new Date();
+    enforceOwnershipRules(docket);
     await docket.save();
 
     await createDocketNotification({
@@ -735,6 +769,9 @@ module.exports = {
   DocketStatus,
   QC_DECISIONS,
   getQcDecisionTransition,
+  enforceOwnershipRules,
+  validateOwnershipRules,
+  makeError,
   pullFromWorkbench,
   assignToUser,
   activateOnOpen,
