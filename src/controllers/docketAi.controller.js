@@ -65,7 +65,7 @@ async function findAnalyzedAttachment({ attachmentId, req }) {
   return { attachment, firmId };
 }
 
-async function generateSuggestions({ attachment, firmId }) {
+async function generateSuggestions({ attachment, firmId, requestId = null, userRole = null }) {
   const clients = await Client.find({ firmId, status: 'ACTIVE' })
     .select('clientId businessName')
     .lean();
@@ -104,16 +104,22 @@ async function generateSuggestions({ attachment, firmId }) {
       tags: Array.isArray(attachment.analysis.tags) ? attachment.analysis.tags : [],
       clients: clients.map((client) => ({ id: client.clientId, name: client.businessName })),
       categories: categoriesWithSubcategories,
-    }, firmId);
+    }, firmId, { requestId, userRole });
   } catch (error) {
-    const status = error?.code === 'AI_API_KEY_NOT_CONFIGURED' ? 400 : 502;
+    const errorCode = error?.code || 'AI_DOCKET_GENERATION_FAILED';
+    const status = (
+      errorCode === 'AI_API_KEY_NOT_CONFIGURED' || errorCode === 'AI_PROVIDER_NOT_CONFIGURED' || errorCode === 'AI_INVALID_API_KEY'
+    ) ? 400 : (
+      errorCode === 'AI_DISABLED_FOR_FIRM' || errorCode === 'AI_FEATURE_DISABLED' || errorCode === 'AI_ROLE_NOT_ALLOWED'
+    ) ? 403 : 502;
+
     return {
       error: {
         status,
         body: {
           success: false,
           message: 'AI failed to generate docket suggestions',
-          code: error?.code || 'AI_DOCKET_GENERATION_FAILED',
+          code: errorCode,
         },
       },
     };
@@ -229,6 +235,8 @@ async function getDocketAiSuggestions(req, res) {
   const result = await generateSuggestions({
     attachment: attachmentResult.attachment,
     firmId: attachmentResult.firmId,
+    requestId: req.requestId || null,
+    userRole: req.user?.role || null,
   });
 
   if (result.error) {
@@ -256,6 +264,8 @@ async function createDocketFromAttachment(req, res) {
   const result = await generateSuggestions({
     attachment: attachmentResult.attachment,
     firmId: attachmentResult.firmId,
+    requestId: req.requestId || null,
+    userRole: req.user?.role || null,
   });
 
   if (result.error) {

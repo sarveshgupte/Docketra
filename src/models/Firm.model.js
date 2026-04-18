@@ -212,10 +212,14 @@ const firmSchema = new mongoose.Schema({
    * API keys are always encrypted at rest.
    */
   aiConfig: {
+    enabled: {
+      type: Boolean,
+      default: false,
+    },
     provider: {
       type: String,
-      enum: ['openai', 'gemini', 'claude'],
-      default: 'openai',
+      enum: ['openai', 'gemini', 'claude', null],
+      default: null,
       lowercase: true,
       trim: true,
     },
@@ -227,6 +231,53 @@ const firmSchema = new mongoose.Schema({
       type: String,
       default: null,
       trim: true,
+    },
+    enabledFeatures: {
+      documentAnalysis: { type: Boolean, default: true },
+      docketDrafting: { type: Boolean, default: true },
+      routingSuggestions: { type: Boolean, default: true },
+    },
+    roleAccess: {
+      PRIMARY_ADMIN: { type: Boolean, default: true },
+      ADMIN: { type: Boolean, default: true },
+      MANAGER: { type: Boolean, default: true },
+      USER: { type: Boolean, default: true },
+    },
+    retention: {
+      zeroRetention: { type: Boolean, default: true },
+      savePrompts: { type: Boolean, default: false },
+      saveOutputs: { type: Boolean, default: false },
+    },
+    privacy: {
+      redactErrors: { type: Boolean, default: true },
+      verboseLogging: { type: Boolean, default: false },
+    },
+    quotas: {
+      monthlyRequestLimit: { type: Number, min: 0, default: 0 },
+      monthlyTokenLimit: { type: Number, min: 0, default: 0 },
+      requestsThisMonth: { type: Number, min: 0, default: 0 },
+      tokensThisMonth: { type: Number, min: 0, default: 0 },
+      lastResetAt: { type: Date, default: null },
+    },
+    rateLimit: {
+      requestsPerMinute: { type: Number, min: 0, default: 0 },
+      burstLimit: { type: Number, min: 0, default: 0 },
+    },
+    credentialProvider: {
+      type: String,
+      enum: ['openai', 'gemini', 'claude', null],
+      default: null,
+      lowercase: true,
+      trim: true,
+    },
+    credentialRef: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    promptTemplates: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
     },
   },
 
