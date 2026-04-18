@@ -22,7 +22,12 @@ const getShellContent = (pathname) => {
 const LoadingBody = ({ children, centered = false }) => (
   <div className="route-loading-shell" aria-busy="true" aria-live="polite">
     <div className="route-loading-shell__progress" aria-hidden="true" />
-    <div className={centered ? 'route-loading-shell__panel' : 'route-loading-shell__content'}>{children}</div>
+    <div className={centered ? 'route-loading-shell__panel' : 'route-loading-shell__content'}>
+      {children}
+      <p className="mt-3 text-xs text-gray-500">
+        Waking up services and loading your workspace…
+      </p>
+    </div>
   </div>
 );
 

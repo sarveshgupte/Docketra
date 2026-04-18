@@ -15,6 +15,23 @@ const parsePagination = (query = {}) => {
   const skip = Number.isFinite(rawSkip) ? Math.max(rawSkip, 0) : 0;
   return { limit, skip };
 };
+const LEAD_LIST_SELECT = [
+  '_id',
+  'name',
+  'email',
+  'phone',
+  'source',
+  'status',
+  'stage',
+  'ownerXid',
+  'nextFollowUpAt',
+  'lastContactAt',
+  'lostReason',
+  'convertedAt',
+  'convertedClientId',
+  'createdAt',
+  'activitySummary',
+].join(' ');
 
 const normalizeActorXid = (user = {}) => String(user?.xid || user?.xID || '').trim().toUpperCase() || null;
 const normalizeStringOrNull = (value) => {
@@ -157,6 +174,7 @@ const listLeads = async (req, res) => {
     }
 
     const leads = await Lead.find(query)
+      .select(LEAD_LIST_SELECT)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -173,6 +191,7 @@ const updateLeadStatus = async (req, res) => {
     const lead = await Lead.findOne({ _id: req.params.id, firmId: req.user.firmId });
     if (!lead) return res.status(404).json({ success: false, message: 'Lead not found' });
 
+    let hasMeaningfulChanges = false;
     const actorXid = normalizeActorXid(req.user);
     const requestedStage = normalizeStringOrNull(req.body?.stage || req.body?.status);
     if (requestedStage && !ALLOWED_STATUSES.has(requestedStage)) {
@@ -182,6 +201,7 @@ const updateLeadStatus = async (req, res) => {
       const previous = lead.stage || lead.status || 'new';
       lead.stage = requestedStage;
       lead.status = requestedStage;
+      hasMeaningfulChanges = true;
       appendActivity(lead, {
         type: requestedStage === 'lost' ? 'lost' : 'stage_changed',
         message: `Stage changed from ${previous} to ${requestedStage}`,
@@ -201,6 +221,7 @@ const updateLeadStatus = async (req, res) => {
         const resolvedOwnerXid = String(owner.xid || owner.xID).toUpperCase();
         if ((lead.ownerXid || null) !== resolvedOwnerXid) {
           lead.ownerXid = resolvedOwnerXid;
+          hasMeaningfulChanges = true;
           appendActivity(lead, {
             type: 'owner_changed',
             message: `Owner updated to ${resolvedOwnerXid}`,
@@ -210,6 +231,7 @@ const updateLeadStatus = async (req, res) => {
         }
       } else if (lead.ownerXid) {
         lead.ownerXid = null;
+        hasMeaningfulChanges = true;
         appendActivity(lead, {
           type: 'owner_changed',
           message: 'Owner unassigned',
@@ -221,28 +243,43 @@ const updateLeadStatus = async (req, res) => {
 
     const nextFollowUpAt = parseDateOrNull(req.body?.nextFollowUpAt);
     if (nextFollowUpAt !== undefined) {
-      lead.nextFollowUpAt = nextFollowUpAt;
-      appendActivity(lead, {
-        type: 'follow_up_updated',
-        message: nextFollowUpAt ? 'Next follow-up date updated' : 'Next follow-up cleared',
-        actorXid,
-        createdAt: new Date(),
-      });
+      const previousFollowUpTs = lead.nextFollowUpAt ? new Date(lead.nextFollowUpAt).getTime() : null;
+      const nextFollowUpTs = nextFollowUpAt ? new Date(nextFollowUpAt).getTime() : null;
+      if (previousFollowUpTs !== nextFollowUpTs) {
+        lead.nextFollowUpAt = nextFollowUpAt;
+        hasMeaningfulChanges = true;
+        appendActivity(lead, {
+          type: 'follow_up_updated',
+          message: nextFollowUpAt ? 'Next follow-up date updated' : 'Next follow-up cleared',
+          actorXid,
+          createdAt: new Date(),
+        });
+      }
     }
 
     const lastContactAt = parseDateOrNull(req.body?.lastContactAt);
     if (lastContactAt !== undefined) {
-      lead.lastContactAt = lastContactAt;
+      const previousLastContactTs = lead.lastContactAt ? new Date(lead.lastContactAt).getTime() : null;
+      const nextLastContactTs = lastContactAt ? new Date(lastContactAt).getTime() : null;
+      if (previousLastContactTs !== nextLastContactTs) {
+        lead.lastContactAt = lastContactAt;
+        hasMeaningfulChanges = true;
+      }
     }
 
     if (Object.prototype.hasOwnProperty.call(req.body || {}, 'lostReason')) {
-      lead.lostReason = normalizeStringOrNull(req.body?.lostReason);
+      const nextLostReason = normalizeStringOrNull(req.body?.lostReason);
+      if ((lead.lostReason || null) !== nextLostReason) {
+        lead.lostReason = nextLostReason;
+        hasMeaningfulChanges = true;
+      }
     }
 
     const noteText = normalizeStringOrNull(req.body?.note);
     if (noteText) {
       const existingNotes = Array.isArray(lead.notes) ? lead.notes : [];
       lead.notes = [...existingNotes, { text: noteText, createdByXid: actorXid, createdAt: new Date() }];
+      hasMeaningfulChanges = true;
       appendActivity(lead, {
         type: 'note_added',
         message: 'Note added',
@@ -251,7 +288,9 @@ const updateLeadStatus = async (req, res) => {
       });
     }
 
-    await lead.save();
+    if (hasMeaningfulChanges) {
+      await lead.save();
+    }
     const [presentedLead] = await attachLeadPresentation(req.user.firmId, [lead.toObject()]);
     return res.json({ success: true, data: presentedLead });
   } catch (error) {

@@ -11,14 +11,19 @@ export const PlatformCmsPage = () => {
   const [leads, setLeads] = useState([]);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [forms, setForms] = useState([]);
   const [formsError, setFormsError] = useState('');
   const [selectedFormId, setSelectedFormId] = useState('');
   const [copyState, setCopyState] = useState('');
 
-  const loadLeads = async () => {
-    setLoading(true);
+  const loadLeads = async ({ background = false } = {}) => {
+    if (background) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     setError('');
     try {
       const res = await crmApi.listLeads({ limit: 50 });
@@ -27,6 +32,7 @@ export const PlatformCmsPage = () => {
       setLeads([]);
       setError('Unable to load CMS intake leads.');
     } finally {
+      setRefreshing(false);
       setLoading(false);
     }
   };
@@ -177,7 +183,9 @@ export const PlatformCmsPage = () => {
             placeholder="Search lead, source, or docket"
             aria-label="Search intake leads"
           />
-          <button type="button" onClick={() => void loadLeads()} disabled={loading}>Refresh</button>
+          <button type="button" onClick={() => void loadLeads({ background: leads.length > 0 })} disabled={loading || refreshing}>
+            {refreshing ? 'Refreshing…' : 'Refresh'}
+          </button>
         </FilterBar>
 
         <DataTable

@@ -6,6 +6,7 @@ const mockLeadModel = {
   create: async (payload) => ({ toObject: () => ({ _id: 'lead-1', ...payload }) }),
   find: () => {
     const chain = {
+      select: () => chain,
       sort: () => chain,
       skip: () => chain,
       limit: () => chain,
@@ -117,6 +118,28 @@ async function testOwnerAssignmentValidation() {
   assert.strictEqual(res.statusCode, 400);
 }
 
+async function testNoopUpdateSkipsWrite() {
+  let saveCalls = 0;
+  const leadDoc = {
+    _id: 'lead-5',
+    stage: 'new',
+    status: 'new',
+    ownerXid: null,
+    notes: [],
+    activitySummary: [],
+    nextFollowUpAt: null,
+    lostReason: null,
+    save: async () => { saveCalls += 1; },
+    toObject: () => ({ _id: 'lead-5', stage: 'new', status: 'new', ownerXid: null, notes: [], activitySummary: [] }),
+  };
+  mockLeadModel.findOne = async () => leadDoc;
+
+  const { req, res } = createReqRes({ params: { id: '507f191e810c19729de860ee' }, body: { stage: 'new' } });
+  await leadController.updateLeadStatus(req, res);
+  assert.strictEqual(res.statusCode, 200);
+  assert.strictEqual(saveCalls, 0);
+}
+
 async function testConvertLeadUpdatesState() {
   mockUserModel.findOne = () => ({ select: () => ({ lean: async () => ({ xid: 'DK-AAAA1', xID: 'X000010' }) }) });
   const leadDoc = {
@@ -156,6 +179,7 @@ async function run() {
     await testCreateLeadDefaults();
     await testStageTransitionAndFollowUpAndLost();
     await testOwnerAssignmentValidation();
+    await testNoopUpdateSkipsWrite();
     await testConvertLeadUpdatesState();
     console.log('Lead controller tests passed.');
   } catch (error) {
