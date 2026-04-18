@@ -1,3 +1,5 @@
+const path = require('path');
+const os = require('os');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const Firm = require('../models/Firm.model');
@@ -491,6 +493,18 @@ const downloadFirmStorageExport = async (req, res) => {
   const { token } = req.params;
   const entry = storageBackupService.resolveSignedDownloadToken(token, req.firmId);
   if (!entry) return res.status(404).json({ error: 'invalid_or_expired_export_link' });
+
+  const exportBaseDir = path.resolve(os.tmpdir(), 'docketra-exports', String(req.firmId));
+  const resolvedPath = path.resolve(entry.zipPath);
+
+  if (!resolvedPath.startsWith(exportBaseDir + path.sep)) {
+    log.error('[SECURITY]', {
+      event: 'potential_path_traversal_export',
+      firmId: req.firmId,
+      path: resolvedPath,
+    });
+    return res.status(403).json({ error: 'access_denied' });
+  }
 
   return res.download(entry.zipPath, `docketra-export-${req.firmId}-${entry.exportId}.zip`);
 };
