@@ -18,6 +18,8 @@ export const useDashboardWidgetQuery = (widgetKey, { filter, page, sort, workbas
       dashboardApi.getSummary({ filter, page, limit: PAGE_SIZE, sort, workbasketId, only: widgetKey }),
     select: (result) => result?.data?.[widgetKey] ?? EMPTY_SUMMARY[widgetKey],
     placeholderData: keepPreviousData,
+    staleTime: 60 * 1000,
+    gcTime: 15 * 60 * 1000,
   });
 
 export const useSetupStatusQuery = () =>
@@ -26,4 +28,5 @@ export const useSetupStatusQuery = () =>
     queryFn: () => dashboardApi.getSetupStatus(),
     select: (result) => Boolean(result?.data?.isSetupComplete),
     staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
