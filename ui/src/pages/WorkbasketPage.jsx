@@ -579,7 +579,8 @@ export const WorkbasketPage = () => {
       <div className="global-worklist">
         <PageHeader
           title="Workbasket"
-          subtitle="Team-owned and routed dockets for your workbasket."
+          subtitle="Operational queue for client work and internal work owned by your team."
+          meta="Tasks / Workbaskets"
           actions={(
             <Button variant="primary" onClick={() => navigate(ROUTES.CREATE_CASE(firmSlug))}>
               Create Docket

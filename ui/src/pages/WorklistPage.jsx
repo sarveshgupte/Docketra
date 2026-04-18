@@ -75,7 +75,8 @@ export const WorklistPage = () => {
       <Stack className="worklist" space={16}>
         <PageHeader
           title={pageInfo.title}
-          subtitle={pageInfo.description}
+          subtitle="Execute assigned client work and internal work from one focused queue."
+          meta="Tasks / My Worklist"
           actions={(
             <Button variant="primary" onClick={() => navigate(ROUTES.CREATE_CASE(firmSlug))}>
               Create Docket

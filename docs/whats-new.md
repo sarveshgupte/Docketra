@@ -1,5 +1,17 @@
 # What's New
 
+## April 2026: Module-Based UX Separation + Cleanup Fixes for CRM / CMS / Tasks
+
+- Navigation now elevates **CMS**, **CRM**, and **Tasks** as first-class modules in the primary shell.
+- Platform pages now include module context labels (for example: `CMS / Lead Capture`, `CRM / Relationship Management`, `Tasks / Dockets`).
+- Dashboard now includes lightweight module entry shortcuts so teams can jump directly into CMS, CRM, or Tasks.
+- Client status handling is now canonicalized to lowercase (`lead`, `active`, `inactive`) with compatibility normalization for legacy values (`ACTIVE`, `INACTIVE`).
+- CMS intake client auto-create now supports canonical creation when **email OR phone** is available, while retaining duplicate-safe lookup first.
+- Docket `isInternal` / `workType` normalization is now centralized to reduce drift and prevent contradictory values on reads/writes.
+- Work-type filtering behavior is now normalized across docket list and reports for more consistent **Client Work** vs **Internal Work** behavior.
+- Task UI copy is standardized to **Client Work** and **Internal Work**, including filters and guided creation text.
+- Saved views now persist and restore `workType` filter state to avoid filter drift when users reload named views.
+
 ## April 2026: First-Class Internal Task Support
 
 - Task Manager now supports both **Client Work** and **Internal Work** as first-class docket modes.

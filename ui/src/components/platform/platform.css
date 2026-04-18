@@ -405,3 +405,13 @@ select:focus-visible {
     top: auto;
   }
 }
+
+.platform__module-label {
+  display: inline-block;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #4b5563;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}

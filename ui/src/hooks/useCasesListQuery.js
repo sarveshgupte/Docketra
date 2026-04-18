@@ -4,6 +4,7 @@ import { worklistApi } from '../api/worklist.api';
 import { categoryService } from '../services/categoryService';
 import { getCaseListRecords } from '../utils/caseResponse';
 import { CASE_STATUS } from '../utils/constants';
+import { WORK_TYPE, normalizeWorkTypeFilter } from '../utils/workType';
 
 const normalizeCases = (records = []) =>
   records.map((record) => ({
@@ -30,14 +31,15 @@ export const useCasesListQuery = ({
       String(userRole || '').toUpperCase() || 'UNKNOWN_ROLE',
       hasQcAccess ? 'qc' : 'no-qc',
       statusFilter || 'ALL',
-      workTypeFilter || 'ALL',
+      normalizeWorkTypeFilter(workTypeFilter),
       activeWorkbasketId || 'no-workbasket',
     ],
     queryFn: async () => {
       let casesData = [];
+      const normalizedWorkTypeFilter = normalizeWorkTypeFilter(workTypeFilter);
       if (isAdmin) {
         const response = await caseApi.getCases(
-          workTypeFilter !== 'ALL' ? { workType: workTypeFilter } : {}
+          normalizedWorkTypeFilter !== WORK_TYPE.ALL ? { workType: normalizedWorkTypeFilter } : {}
         );
         if (response.success) {
           casesData = getCaseListRecords(response);
@@ -47,7 +49,7 @@ export const useCasesListQuery = ({
           casesData = [];
         } else {
           const qcFilters = { status: CASE_STATUS.QC_PENDING };
-          if (workTypeFilter !== 'ALL') qcFilters.workType = workTypeFilter;
+          if (normalizedWorkTypeFilter !== WORK_TYPE.ALL) qcFilters.workType = normalizedWorkTypeFilter;
           if (activeWorkbasketId) qcFilters.workbasketId = activeWorkbasketId;
           const response = await caseApi.getCases(qcFilters);
           if (response.success) {
@@ -57,13 +59,13 @@ export const useCasesListQuery = ({
       } else if (statusFilter === CASE_STATUS.RESOLVED || statusFilter === CASE_STATUS.FILED) {
         const response = await caseApi.getCases({
           status: statusFilter,
-          ...(workTypeFilter !== 'ALL' ? { workType: workTypeFilter } : {}),
+          ...(normalizedWorkTypeFilter !== WORK_TYPE.ALL ? { workType: normalizedWorkTypeFilter } : {}),
         });
         if (response.success) {
           casesData = getCaseListRecords(response);
         }
-      } else if (workTypeFilter !== 'ALL') {
-        const response = await caseApi.getCases({ workType: workTypeFilter });
+      } else if (normalizedWorkTypeFilter !== WORK_TYPE.ALL) {
+        const response = await caseApi.getCases({ workType: normalizedWorkTypeFilter });
         if (response.success) {
           casesData = getCaseListRecords(response).filter((item) => {
             if (statusFilter === 'ALL') return true;

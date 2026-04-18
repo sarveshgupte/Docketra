@@ -33,8 +33,11 @@ const COMMENT_PREVIEW_LENGTH = 50;
  * Use these instead of string literals to ensure consistency
  */
 const CLIENT_STATUS = {
-  ACTIVE: 'ACTIVE',
-  INACTIVE: 'INACTIVE',
+  LEAD: 'lead',
+  ACTIVE: 'active',
+  INACTIVE: 'inactive',
+  LEGACY_ACTIVE: 'ACTIVE',
+  LEGACY_INACTIVE: 'INACTIVE',
 };
 
 /**
