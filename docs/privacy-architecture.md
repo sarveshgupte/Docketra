@@ -174,3 +174,19 @@ This provides:
 Docketra manages workflows.
 
 Firms own their data.
+
+## BYOAI Privacy Posture
+
+Docketra's BYOAI mode is privacy-first:
+
+- AI providers are configured per firm using encrypted credentials at rest.
+- AI processing is transient by default.
+- Prompts and outputs are not persisted by default.
+- Only minimal request telemetry is stored for quota/audit/operations.
+- Accepted final business content can be saved as part of normal product workflows; raw AI generation history is not stored unless explicitly enabled.
+
+- BYOAI execution never silently falls back to platform/system provider keys.
+- Credential references (`credentialRef`) are supported as a configured credential source without exposing secret material.
+- Provider switching requires provider-specific credentials to avoid stale credential carryover.
+- AI remains optional; core non-AI workflows continue when AI is disabled or unconfigured.
+- AI audit logs remain metadata-only and privacy-first (request metadata, status, latency, token counts, redacted errors).
