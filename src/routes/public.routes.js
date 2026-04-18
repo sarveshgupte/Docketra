@@ -7,6 +7,7 @@ const { signupLimiter, publicUploadLimiter, formSubmitLimiter } = require('../mi
 const { getFirmBySlug } = require('../controllers/superadmin.controller');
 const { submitEnterpriseInquiry } = require('../controllers/contact.controller');
 const { submitForm, getPublicForm } = require('../controllers/form.controller');
+const { submitApiIntake } = require('../controllers/publicIntake.controller');
 const { getPublicLandingPage } = require('../controllers/landingPage.controller');
 const EarlyAccessRequest = require('../models/EarlyAccessRequest.model');
 const { executeWrite } = require('../utils/executeWrite');
@@ -46,6 +47,7 @@ router.get('/pages/:slug', getPublicLandingPage);
 
 router.post('/forms/:id/submit', formSubmitLimiter, submitForm);
 router.get('/forms/:id', getPublicForm);
+router.post('/cms/:firmSlug/intake', formSubmitLimiter, submitApiIntake);
 
 router.post('/signup', signupLimiter, async (req, res, next) => {
   try {

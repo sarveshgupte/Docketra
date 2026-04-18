@@ -140,6 +140,9 @@ const leadSchema = new mongoose.Schema({
     ipAddress: { type: String, default: null },
     userAgent: { type: String, default: null },
     submissionMode: { type: String, default: null },
+    externalSubmissionId: { type: String, default: null },
+    idempotencyKey: { type: String, default: null },
+    extraFields: { type: mongoose.Schema.Types.Mixed, default: null },
   },
 }, { timestamps: { createdAt: true, updatedAt: false } });
 
