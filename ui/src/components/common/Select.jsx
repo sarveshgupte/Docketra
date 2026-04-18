@@ -9,6 +9,7 @@ import { formClasses } from '../../theme/tokens';
 export const Select = ({
   label,
   error,
+  success,
   helpText,
   options = [],
   disabled = false,
@@ -32,7 +33,7 @@ export const Select = ({
       <FormLabel htmlFor={selectId} label={label} required={required} />
       <select 
         id={selectId}
-        className={`${formClasses.inputBase} ${error ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500/20' : ''}`}
+        className={`${formClasses.inputBase} pr-9 ${error ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500/20' : ''} ${!error && success ? formClasses.inputSuccess : ''}`}
         disabled={disabled} 
         required={required} 
         aria-invalid={error ? 'true' : undefined}
@@ -40,13 +41,21 @@ export const Select = ({
         aria-required={required || undefined}
         {...props}
       >
-        {children ? children : options.map((option) => (
-          <option key={option.value} value={option.value} disabled={option.disabled}>
-            {option.label}
-          </option>
-        ))}
+        {children ? children : (
+          options.length > 0 ? options.map((option) => (
+            <option key={option.value} value={option.value} disabled={option.disabled}>
+              {option.label}
+            </option>
+          )) : <option value="" disabled>No options found</option>
+        )}
       </select>
       {error && <p className={formClasses.errorText} id={errorId}>{error}</p>}
+      {!error && success && (
+        <p className={formClasses.successText} id={helpId}>
+          <span aria-hidden="true">✓</span>
+          <span>{success}</span>
+        </p>
+      )}
       {!error && helpText && <p className={formClasses.helpText} id={helpId}>{helpText}</p>}
     </div>
   );

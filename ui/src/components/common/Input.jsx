@@ -11,6 +11,7 @@ import { formClasses } from '../../theme/tokens';
 export const Input = forwardRef(({
   label,
   error,
+  success,
   helpText,
   disabled = false,
   readOnly = false,
@@ -57,7 +58,7 @@ export const Input = forwardRef(({
         <input
           ref={ref}
           id={inputId}
-          className={`${formClasses.inputBase} ${error ? formClasses.inputError : ''} ${isPasswordType ? 'pr-11' : ''}`}
+          className={`${formClasses.inputBase} ${error ? formClasses.inputError : ''} ${!error && success ? formClasses.inputSuccess : ''} ${isPasswordType ? 'pr-11' : ''}`}
           disabled={disabled}
           value={value}
           type={resolvedType}
@@ -144,6 +145,12 @@ export const Input = forwardRef(({
         )}
       </div>
       {error && <p className={formClasses.errorText} id={errorId}>{error}</p>}
+      {!error && success && (
+        <p className={formClasses.successText} id={helpId}>
+          <span aria-hidden="true">✓</span>
+          <span>{success}</span>
+        </p>
+      )}
       {!error && helpText && <p className={formClasses.helpText} id={helpId}>{helpText}</p>}
     </div>
   );

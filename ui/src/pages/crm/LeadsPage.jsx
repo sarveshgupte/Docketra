@@ -57,6 +57,7 @@ export const LeadsPage = () => {
     ownerXid: '',
     nextFollowUpAt: '',
   });
+  const [formErrors, setFormErrors] = useState({});
   const [detailForm, setDetailForm] = useState({
     stage: 'new',
     ownerXid: '',
@@ -103,12 +104,14 @@ export const LeadsPage = () => {
 
   const openModal = () => {
     setForm({ name: '', email: '', phone: '', source: 'manual', ownerXid: '', nextFollowUpAt: '' });
+    setFormErrors({});
     setShowModal(true);
   };
 
   const closeModal = () => {
     setShowModal(false);
     setForm({ name: '', email: '', phone: '', source: 'manual', ownerXid: '', nextFollowUpAt: '' });
+    setFormErrors({});
   };
 
   const openDetail = (lead) => {
@@ -131,6 +134,11 @@ export const LeadsPage = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    const nextErrors = {};
+    if (!form.name.trim()) nextErrors.name = 'Lead name is required.';
+    if (!form.email.trim() && !form.phone.trim()) nextErrors.contact = 'Add at least one contact method (email or phone).';
+    setFormErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
     setSaving(true);
     try {
       await crmApi.createLead({
@@ -145,7 +153,7 @@ export const LeadsPage = () => {
       closeModal();
       loadLeads();
     } catch (error) {
-      showError(error?.message || 'Failed to create lead');
+      showError(error?.message || 'Failed to create lead. Please check required fields.');
     } finally {
       setSaving(false);
     }
@@ -184,11 +192,11 @@ export const LeadsPage = () => {
         note: detailForm.note.trim() || undefined,
       };
       await crmApi.updateLead(selectedLead._id, payload);
-      showSuccess('Lead updated');
+      showSuccess('Lead details updated successfully');
       closeDetail();
       loadLeads();
     } catch (error) {
-      showError(error?.message || 'Failed to update lead');
+      showError(error?.message || 'Failed to update lead. Please review the form and try again.');
     } finally {
       setSaving(false);
     }
@@ -220,7 +228,7 @@ export const LeadsPage = () => {
             <Badge status={LEAD_STAGE_MAP[stage] || 'Draft'}>
               {LEAD_STAGE_LABEL[stage] || stage || '—'}
             </Badge>
-            {isOverdue(lead) ? <span className="text-xs text-amber-700">Overdue follow-up</span> : null}
+            {isOverdue(lead) ? <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Overdue follow-up</span> : null}
           </div>
         );
       },
@@ -346,7 +354,7 @@ export const LeadsPage = () => {
               <div className="p-8">
                 <EmptyState
                   title="No leads yet"
-                  description="Add your first lead to start building your pipeline."
+                  description="📭 No leads yet. Submissions will appear here."
                 />
               </div>
             )}
@@ -356,9 +364,9 @@ export const LeadsPage = () => {
 
       <Modal isOpen={showModal} onClose={closeModal} title="Add New Lead" maxWidth="lg">
         <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1rem' }}>
-          <Input label="Name" value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} required />
-          <Input label="Email" type="email" value={form.email} onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))} />
-          <Input label="Phone" value={form.phone} onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))} />
+          <Input label="Name" value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} required error={formErrors.name} placeholder="Enter lead name" />
+          <Input label="Email" type="email" value={form.email} onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))} error={formErrors.contact && form.phone.trim() ? '' : formErrors.contact} placeholder="name@company.com" />
+          <Input label="Phone" value={form.phone} onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))} error={formErrors.contact && form.email.trim() ? '' : formErrors.contact} placeholder="+1 555 000 1234" />
           <Input label="Source" value={form.source} onChange={(e) => setForm((prev) => ({ ...prev, source: e.target.value }))} placeholder="e.g. manual, referral, website" />
           {isAdmin ? (
             <div>
@@ -375,7 +383,7 @@ export const LeadsPage = () => {
           <Input label="Next Follow-up" type="date" value={form.nextFollowUpAt} onChange={(e) => setForm((prev) => ({ ...prev, nextFollowUpAt: e.target.value }))} />
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
             <Button type="button" variant="outline" onClick={closeModal}>Cancel</Button>
-            <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Create Lead'}</Button>
+            <Button type="submit" loading={saving} disabled={saving}>{saving ? 'Saving…' : 'Create Lead'}</Button>
           </div>
         </form>
       </Modal>
@@ -421,7 +429,7 @@ export const LeadsPage = () => {
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
             <Button type="button" variant="outline" onClick={closeDetail}>Cancel</Button>
-            <Button type="button" onClick={handleSaveDetail} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</Button>
+            <Button type="button" onClick={handleSaveDetail} loading={saving} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</Button>
           </div>
         </div>
       </Modal>

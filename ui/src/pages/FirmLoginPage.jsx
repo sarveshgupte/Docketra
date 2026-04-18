@@ -20,11 +20,11 @@ import './LoginPage.css';
 const mapSafeLoginError = (error) => {
   const status = error?.status || error?.response?.status;
   if (status === 429) return 'Too many attempts. Please wait before retrying.';
-  if (status === 401 || status === 403) return 'Invalid credentials or verification code';
+  if (status === 401 || status === 403) return 'Invalid credentials or verification code. Please try again.';
   if (status === 404) return 'Invalid workspace URL';
   if (status === 423) return 'This workspace is inactive. Contact your admin.';
   if (status >= 500) return 'Workspace lookup is temporarily unavailable. Please try again.';
-  return 'Sign-in failed. Please try again.';
+  return 'Sign-in failed. Please review the form and try again.';
 };
 
 const getWorkspaceStatusMessage = (status) => {
@@ -184,7 +184,7 @@ export const FirmLoginPage = () => {
 
     const profileResult = await fetchProfile();
     if (profileResult?.success) {
-      showSuccess('Signed in successfully.');
+      showSuccess('✅ Signed in successfully. Redirecting to your dashboard.');
       navigate(resolvePostAuthRoute(profileResult.data), { replace: true });
     }
   };
@@ -246,7 +246,7 @@ export const FirmLoginPage = () => {
       await completeLogin(response);
     } catch (err) {
       const status = err?.status;
-      const message = status === 400 || status === 401 ? 'Invalid or expired OTP' : toUserFacingError(err, mapSafeLoginError(err));
+      const message = status === 400 || status === 401 ? 'Invalid or expired OTP. Request a new code and try again.' : toUserFacingError(err, mapSafeLoginError(err));
       setError(message);
       showError(message);
     } finally {
