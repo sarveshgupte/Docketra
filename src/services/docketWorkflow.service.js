@@ -17,8 +17,17 @@ const { EVENT_NAMES, emitDocketEvent } = require('./docketEvents.service');
 const { NotificationTypes, createNotification } = require('../domain/notifications');
 const { CASE_LOCK_CONFIG } = require('../config/constants');
 const { logActivitySafe } = require('./docketActivity.service');
+const { getCanonicalDocketState } = require('../utils/docketStateMapper');
+const { canTransition } = require('../utils/docketStateTransitions');
 
 const QC_DECISIONS = Object.freeze({ APPROVED: 'APPROVED', FAILED: 'FAILED', CORRECTED: 'CORRECTED' });
+
+function hydrateCanonicalDocketFields(docket) {
+  if (!docket) return docket;
+  docket.state = docket.state || getCanonicalDocketState(docket);
+  if (docket.qcOutcome === undefined) docket.qcOutcome = null;
+  return docket;
+}
 
 function makeError(message, statusCode = 400, code = 'VALIDATION_ERROR') {
   const error = new Error(message);
@@ -102,6 +111,8 @@ function assignToUser(docket, userId) {
   docket.updatedAt = new Date();
   docket.status = toPersistenceState(DocketStatus.ASSIGNED);
   docket.lifecycle = DocketLifecycle.IN_WORKLIST;
+  docket.state = 'IN_PROGRESS';
+  docket.qcOutcome = null;
   return docket;
 }
 
@@ -187,6 +198,8 @@ async function pullFromWorkbench({ docketId, firmId, userId, userObjectId = null
       lastActionAt: new Date(),
       updatedAt: new Date(),
       queueType: 'PERSONAL',
+      state: 'IN_PROGRESS',
+      qcOutcome: null,
     },
     $inc: { version: 1 },
   };
@@ -197,7 +210,7 @@ async function pullFromWorkbench({ docketId, firmId, userId, userObjectId = null
   });
 
   if (!updated) {
-    const existing = await Case.findOne({ caseId: docketId, firmId }).select('assignedToXID status').lean();
+    const existing = await Case.findOne({ caseId: docketId, firmId }).select('assignedToXID status state').lean();
     if (!existing) throw makeError('Docket not found', 404, 'DOCKET_NOT_FOUND');
     throw makeError('Docket is already assigned', 409, 'DOCKET_ALREADY_ASSIGNED');
   }
@@ -236,7 +249,7 @@ async function pullFromWorkbench({ docketId, firmId, userId, userObjectId = null
     performedByXID: userId,
   });
 
-  return updated;
+  return hydrateCanonicalDocketFields(updated);
 }
 
 async function transition({ docketId, firmId, actor, toState, comment, reopenAt, sendToQC = false, duplicateOf = null }) {
@@ -248,6 +261,7 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
       if (!docket) throw makeError('Docket not found', 404, 'DOCKET_NOT_FOUND');
 
       const fromState = toDocketState(docket.status);
+      const fromCanonicalState = getCanonicalDocketState(docket);
       const normalizedTarget = toDocketState(toState);
 
       if ([DocketStatus.PENDING, DocketStatus.RESOLVED, DocketStatus.FILED].includes(normalizedTarget)) {
@@ -282,6 +296,11 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
         }
       }
 
+      const targetCanonicalState = getCanonicalDocketState({ ...docket.toObject(), status: toPersistenceState(finalTarget) });
+      if (fromCanonicalState !== targetCanonicalState && !canTransition(fromCanonicalState, targetCanonicalState)) {
+        throw makeError(`Invalid docket state transition from ${fromCanonicalState} to ${targetCanonicalState}`, 400, 'INVALID_DOCKET_STATE_TRANSITION');
+      }
+
       const fromLifecycle = normalizeLifecycle(docket.lifecycle || DocketLifecycle.WL);
       const targetLifecycle = toLifecycleFromStatus(finalTarget);
       validateLifecycleAccess({
@@ -292,6 +311,7 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
       });
 
       docket.status = toPersistenceState(finalTarget);
+      docket.state = targetCanonicalState;
       transitionLifecycle(docket, targetLifecycle, {
         firmId,
         actor,
@@ -329,6 +349,7 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
         docket.assignedToXID = null;
         docket.assignedTo = null;
         docket.queueType = 'GLOBAL';
+        docket.qcOutcome = null;
         emitDocketEvent(EVENT_NAMES.QC_REQUEST, { docketId, firmId, requestedBy: actor.xID });
       }
 
@@ -347,8 +368,28 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
           field: 'status',
           from: fromState,
           to: finalTarget,
+        }, {
+          field: 'state',
+          from: fromCanonicalState,
+          to: targetCanonicalState,
         }],
-        metadata: { duplicateOf: duplicateOf || null, reopenAt: docket.reopenAt || null },
+        metadata: {
+          event: 'DOCKET_STATE_CHANGED',
+          from: fromCanonicalState,
+          to: targetCanonicalState,
+          userId: actor.xID,
+          timestamp: new Date().toISOString(),
+          duplicateOf: duplicateOf || null,
+          reopenAt: docket.reopenAt || null,
+          ...(finalTarget === DocketStatus.RESOLVED ? {
+            actionEvent: 'DOCKET_RESOLVED',
+            comment,
+          } : {}),
+          ...(finalTarget === DocketStatus.FILED ? {
+            actionEvent: 'DOCKET_FILED',
+            comment,
+          } : {}),
+        },
         session,
       });
 
@@ -356,7 +397,7 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
         docketId: docket.caseInternalId,
         firmId,
         type: 'STATUS_CHANGED',
-        description: `Status changed from ${fromState} to ${finalTarget}`,
+        description: `State changed from ${fromCanonicalState} to ${targetCanonicalState}`,
         metadata: { from: fromState, to: finalTarget },
         performedByXID: actor?.xID,
       });
@@ -379,16 +420,18 @@ async function qcDecision({ docketId, firmId, actor, decision, comment }) {
   if (!docket) throw makeError('Docket not found', 404, 'DOCKET_NOT_FOUND');
 
   const fromState = toDocketState(docket.status);
+  const fromCanonicalState = getCanonicalDocketState(docket);
   if (fromState !== DocketStatus.QC_PENDING) throw makeError('Only QC_PENDING dockets can be QC handled');
 
   let toState = DocketStatus.RESOLVED;
   if (normalizedDecision === QC_DECISIONS.FAILED) {
-    toState = DocketStatus.ASSIGNED;
+    toState = DocketStatus.IN_PROGRESS;
     docket.assignedToXID = docket.qc?.originalAssigneeXID || docket.assignedToXID;
     docket.queueType = 'PERSONAL';
     docket.qcStatus = 'REJECTED';
     docket.qcBy = actor.xID;
     docket.qcAt = new Date();
+    docket.qcOutcome = 'FAILED';
     docket.qc = {
       ...(docket.qc || {}),
       status: 'FAILED',
@@ -400,6 +443,7 @@ async function qcDecision({ docketId, firmId, actor, decision, comment }) {
   }
 
   if (normalizedDecision === QC_DECISIONS.APPROVED) {
+    docket.qcOutcome = 'PASSED';
     docket.qcStatus = 'APPROVED';
     docket.qcBy = actor.xID;
     docket.qcAt = new Date();
@@ -407,10 +451,16 @@ async function qcDecision({ docketId, firmId, actor, decision, comment }) {
   }
 
   if (normalizedDecision === QC_DECISIONS.CORRECTED) {
+    docket.qcOutcome = 'CORRECTED';
     docket.qcStatus = 'CORRECTED';
     docket.qcBy = actor.xID;
     docket.qcAt = new Date();
     docket.qc = { ...(docket.qc || {}), status: 'CORRECTED', handledBy: actor.xID, handledAt: new Date(), comment };
+  }
+
+  const targetCanonicalState = getCanonicalDocketState({ ...docket.toObject(), status: toPersistenceState(toState) });
+  if (fromCanonicalState !== targetCanonicalState && !canTransition(fromCanonicalState, targetCanonicalState)) {
+    throw makeError(`Invalid docket state transition from ${fromCanonicalState} to ${targetCanonicalState}`, 400, 'INVALID_DOCKET_STATE_TRANSITION');
   }
 
   const fromLifecycle = normalizeLifecycle(docket.lifecycle || DocketLifecycle.WL);
@@ -422,6 +472,7 @@ async function qcDecision({ docketId, firmId, actor, decision, comment }) {
     fromStatus: fromState,
   });
   docket.status = toPersistenceState(toState);
+  docket.state = targetCanonicalState;
   transitionLifecycle(docket, targetLifecycle, {
     firmId,
     actor,
@@ -435,16 +486,32 @@ async function qcDecision({ docketId, firmId, actor, decision, comment }) {
   await writeAudit({
     docketId,
     fromState,
-    toState: targetLifecycle,
+    toState: toState,
     userId: actor.xID,
     performedByRole: normalizeActorRole(actor),
     firmId,
     comment,
     action: `QC_${normalizedDecision}`,
+    metadata: {
+      event: 'DOCKET_STATE_CHANGED',
+      from: fromCanonicalState,
+      to: targetCanonicalState,
+      userId: actor.xID,
+      timestamp: new Date().toISOString(),
+      qcOutcome: docket.qcOutcome,
+    },
     changes: [{
       field: 'status',
       from: fromState,
       to: toState,
+    }, {
+      field: 'state',
+      from: fromCanonicalState,
+      to: targetCanonicalState,
+    }, {
+      field: 'qcOutcome',
+      from: null,
+      to: docket.qcOutcome,
     }],
   });
   return docket;
@@ -491,6 +558,8 @@ async function reopenDuePending() {
       {
         $set: {
           status: toPersistenceState(DocketStatus.IN_PROGRESS),
+          state: 'IN_PROGRESS',
+          qcOutcome: null,
           reopenAt: null,
           pendingUntil: null,
           lastActionAt: now,
@@ -526,6 +595,13 @@ async function reassign({ docketId, firmId, actor, toUserXID, comment }) {
   docket.lastActionAt = new Date();
   docket.updatedAt = new Date();
   docket.queueType = docket.assignedToXID ? 'PERSONAL' : 'GLOBAL';
+  if (docket.assignedToXID) {
+    docket.state = 'IN_PROGRESS';
+    docket.qcOutcome = null;
+  } else {
+    docket.state = 'IN_WB';
+    docket.qcOutcome = null;
+  }
   await docket.save();
   await writeAudit({
     docketId,
@@ -574,6 +650,8 @@ async function activateOnOpen({ docketId, firmId, actor }) {
       suppressLifecycleNotification: true,
     });
     docket.status = toPersistenceState(DocketStatus.IN_PROGRESS);
+    docket.state = 'IN_PROGRESS';
+    docket.qcOutcome = null;
     docket.lastActionByXID = actor?.xID || docket.assignedToXID || 'SYSTEM';
     docket.lastActionAt = new Date();
     docket.updatedAt = new Date();
@@ -609,7 +687,7 @@ async function handleUserDeactivation({ firmId, userXID }) {
       assignedToXID: normalized,
       status: { $nin: [toPersistenceState(DocketStatus.QC_PENDING), toPersistenceState(DocketStatus.PENDING)] },
     },
-    { $set: { assignedToXID: null, assignedTo: null, queueType: 'GLOBAL', status: toPersistenceState(DocketStatus.AVAILABLE) } },
+    { $set: { assignedToXID: null, assignedTo: null, queueType: 'GLOBAL', status: toPersistenceState(DocketStatus.AVAILABLE), state: 'IN_WB', qcOutcome: null } },
   );
 
   return {
