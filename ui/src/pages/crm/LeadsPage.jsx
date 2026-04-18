@@ -3,7 +3,6 @@ import { Layout } from '../../components/common/Layout';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
-import { Loading } from '../../components/common/Loading';
 import { Modal } from '../../components/common/Modal';
 import { Input } from '../../components/common/Input';
 import { PageHeader } from '../../components/layout/PageHeader';
@@ -40,7 +39,8 @@ export const LeadsPage = () => {
   const normalizedRole = String(user?.role || '').trim().toUpperCase();
   const isAdmin = normalizedRole === 'ADMIN' || normalizedRole === 'PRIMARY_ADMIN' || Boolean(user?.isPrimaryAdmin);
 
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [leads, setLeads] = useState([]);
   const [users, setUsers] = useState([]);
   const [viewMode, setViewMode] = useState('list');
@@ -68,8 +68,12 @@ export const LeadsPage = () => {
     note: '',
   });
 
-  const loadLeads = useCallback(async () => {
-    setLoading(true);
+  const loadLeads = useCallback(async ({ background = false } = {}) => {
+    if (background) {
+      setRefreshing(true);
+    } else {
+      setInitialLoading(true);
+    }
     try {
       const response = await crmApi.listLeads({
         ...(filters.stage ? { stage: filters.stage } : {}),
@@ -81,7 +85,8 @@ export const LeadsPage = () => {
       showError(error?.message || 'Failed to load leads');
       setLeads([]);
     } finally {
-      setLoading(false);
+      setRefreshing(false);
+      setInitialLoading(false);
     }
   }, [filters.dueOnly, filters.ownerXid, filters.stage, showError]);
 
@@ -133,6 +138,26 @@ export const LeadsPage = () => {
     setShowDetail(false);
   };
 
+  const patchLeadInState = useCallback((leadId, update) => {
+    setLeads((current) => current.map((lead) => {
+      const id = lead._id || lead.id;
+      if (id !== leadId) return lead;
+      const nextLead = typeof update === 'function' ? update(lead) : update;
+      return { ...lead, ...nextLead };
+    }));
+  }, []);
+
+  const leadMatchesFilters = useCallback((lead) => {
+    if (!lead) return false;
+    const stage = lead.stage || lead.status;
+    if (filters.stage && stage !== filters.stage) return false;
+    if (filters.ownerXid && String(lead.ownerXid || '').toUpperCase() !== String(filters.ownerXid || '').toUpperCase()) {
+      return false;
+    }
+    if (filters.dueOnly && !isOverdue(lead)) return false;
+    return true;
+  }, [filters.dueOnly, filters.ownerXid, filters.stage]);
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     const nextErrors = {};
@@ -142,7 +167,7 @@ export const LeadsPage = () => {
     if (Object.keys(nextErrors).length > 0) return;
     setSaving(true);
     try {
-      await crmApi.createLead({
+      const response = await crmApi.createLead({
         name: form.name.trim(),
         email: form.email.trim() || undefined,
         phone: form.phone.trim() || undefined,
@@ -151,8 +176,11 @@ export const LeadsPage = () => {
         nextFollowUpAt: form.nextFollowUpAt ? new Date(`${form.nextFollowUpAt}T00:00:00.000Z`).toISOString() : undefined,
       });
       showSuccess('Lead created successfully');
+      const createdLead = response?.data;
+      if (leadMatchesFilters(createdLead)) {
+        setLeads((current) => [createdLead, ...current]);
+      }
       closeModal();
-      loadLeads();
     } catch (error) {
       showError(error?.message || 'Failed to create lead. Please check required fields.');
     } finally {
@@ -162,15 +190,32 @@ export const LeadsPage = () => {
 
   const handleQuickStageUpdate = async (leadId, stage) => {
     setUpdatingId(leadId);
+    const previousLead = leads.find((lead) => (lead._id || lead.id) === leadId) || null;
+    const previousStage = previousLead?.stage || previousLead?.status || 'new';
+    if (previousLead) {
+      patchLeadInState(leadId, {
+        stage,
+        status: stage,
+      });
+    }
     try {
       if (stage === 'converted') {
-        await crmApi.convertLead(leadId);
+        const converted = await crmApi.convertLead(leadId);
+        const convertedLead = converted?.data?.lead;
+        if (convertedLead) {
+          patchLeadInState(leadId, convertedLead);
+        }
       } else {
-        await crmApi.updateLead(leadId, { stage });
+        const updated = await crmApi.updateLead(leadId, { stage });
+        if (updated?.data) {
+          patchLeadInState(leadId, updated.data);
+        }
       }
       showSuccess(`Lead updated to ${LEAD_STAGE_LABEL[stage] || stage}`);
-      await loadLeads();
     } catch (error) {
+      if (previousLead) {
+        patchLeadInState(leadId, { ...previousLead, stage: previousStage, status: previousStage });
+      }
       showError(error?.message || 'Failed to update lead');
     } finally {
       setUpdatingId(null);
@@ -181,8 +226,10 @@ export const LeadsPage = () => {
     if (!selectedLead?._id) return;
     setSaving(true);
     try {
+      let convertedLeadPayload = null;
       if (detailForm.stage === 'converted' && (selectedLead.stage || selectedLead.status) !== 'converted') {
-        await crmApi.convertLead(selectedLead._id);
+        const converted = await crmApi.convertLead(selectedLead._id);
+        convertedLeadPayload = converted?.data?.lead || null;
       }
       const payload = {
         ...(detailForm.stage !== 'converted' ? { stage: detailForm.stage } : {}),
@@ -192,10 +239,13 @@ export const LeadsPage = () => {
         lostReason: detailForm.stage === 'lost' ? (detailForm.lostReason || null) : null,
         note: detailForm.note.trim() || undefined,
       };
-      await crmApi.updateLead(selectedLead._id, payload);
+      const response = await crmApi.updateLead(selectedLead._id, payload);
       showSuccess('Lead details updated successfully');
+      const nextLead = response?.data || convertedLeadPayload;
+      if (nextLead) {
+        patchLeadInState(selectedLead._id, nextLead);
+      }
       closeDetail();
-      loadLeads();
     } catch (error) {
       showError(error?.message || 'Failed to update lead. Please review the form and try again.');
     } finally {
@@ -421,13 +471,15 @@ export const LeadsPage = () => {
             Follow-up overdue only
           </label>
           <div className="flex items-end">
-            <Button variant="outline" onClick={loadLeads}>Apply Filters</Button>
+            <Button variant="outline" onClick={() => loadLeads({ background: leads.length > 0 })} loading={refreshing} disabled={refreshing}>
+              {refreshing ? 'Refreshing…' : 'Apply Filters'}
+            </Button>
           </div>
         </div>
       </Card>
 
-      {loading ? (
-        <Card><Loading message="Loading leads..." /></Card>
+      {initialLoading ? (
+        <Card className="p-4 text-sm text-gray-500">Loading leads…</Card>
       ) : viewMode === 'pipeline' ? renderPipelineView() : (
         <Card>
           <DataTable

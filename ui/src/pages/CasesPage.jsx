@@ -19,7 +19,7 @@ import { useToast } from '../hooks/useToast';
 import { useCaseView, CASE_VIEWS, isEscalatedCase } from '../hooks/useCaseView';
 import { useSavedViews } from '../hooks/useSavedViews';
 import { caseApi } from '../api/case.api';
-import { useCasesListQuery } from '../hooks/useCasesListQuery';
+import { useCasesListQuery, useCategoryCountQuery } from '../hooks/useCasesListQuery';
 import { CASE_STATUS, USER_ROLES } from '../utils/constants';
 import { getFirmConfig } from '../utils/firmConfig';
 import { useFeatureFlag } from '../hooks/useFeatureFlag';
@@ -187,9 +187,10 @@ export const CasesPage = () => {
     activeWorkbasketId,
     enabled: Boolean(user),
   });
+  const { data: categoryCountData = 0 } = useCategoryCountQuery({ isAdmin, enabled: Boolean(user) });
 
   const cases = casesQueryData?.cases ?? [];
-  const categoryCount = casesQueryData?.categoryCount ?? 0;
+  const categoryCount = categoryCountData;
 
   // Task 5: apply smart default view after initial data load
   useEffect(() => {
