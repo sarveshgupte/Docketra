@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const softDeletePlugin = require('../utils/softDelete.plugin');
 const { encrypt: encryptProtectedValue, isEncrypted } = require('../utils/encryption');
 const log = require('../utils/log');
+const { normalizeClientStatus } = require('../utils/clientStatus');
 
 const isEncryptedStorageConfig = (value) => (
   !!value
@@ -525,8 +526,9 @@ const clientSchema = new mongoose.Schema({
    */
   status: {
     type: String,
-    enum: ['ACTIVE', 'INACTIVE', 'lead', 'active', 'inactive'],
-    default: 'ACTIVE',
+    enum: ['lead', 'active', 'inactive'],
+    default: 'active',
+    set: (value) => normalizeClientStatus(value),
   },
 
   /**

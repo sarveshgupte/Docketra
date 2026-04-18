@@ -1,5 +1,6 @@
 const Case = require('../models/Case.model');
 const DocketSession = require('../models/DocketSession.model');
+const { applyWorkModeFilter } = require('../utils/workType');
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
@@ -42,16 +43,13 @@ const buildDateRangeFilter = ({ fromDate, toDate, fieldName }) => {
   return { [fieldName]: filter };
 };
 
-const buildCaseMatch = ({ firmId, fromDate, toDate, userId, clientId, isInternal }) => {
+const buildCaseMatch = ({ firmId, fromDate, toDate, userId, clientId, isInternal, workType }) => {
   const match = { firmId };
   const rangeFilter = buildDateRangeFilter({ fromDate, toDate, fieldName: 'createdAt' });
   if (rangeFilter) Object.assign(match, rangeFilter);
   if (userId) match.assignedToXID = String(userId);
   if (clientId) match.clientId = String(clientId);
-  if (typeof isInternal !== 'undefined') {
-    match.isInternal = String(isInternal).toLowerCase() === 'true';
-  }
-  return match;
+  return applyWorkModeFilter(match, { isInternal, workType });
 };
 
 const buildSessionMatch = ({ firmId, fromDate, toDate, userId }) => {
@@ -63,13 +61,13 @@ const buildSessionMatch = ({ firmId, fromDate, toDate, userId }) => {
 };
 
 async function getUserProductivity(params) {
-  const { firmId, fromDate, toDate, userId, clientId, isInternal } = params;
+  const { firmId, fromDate, toDate, userId, clientId, isInternal, workType } = params;
   const limit = resolveLimit(params);
   const sortField = resolveSortField(params, ['totalDockets', 'resolved', 'filed'], 'totalDockets');
   const order = resolveOrder(params);
 
   return Case.aggregate([
-    { $match: buildCaseMatch({ firmId, fromDate, toDate, userId, clientId, isInternal }) },
+    { $match: buildCaseMatch({ firmId, fromDate, toDate, userId, clientId, isInternal, workType }) },
     {
       $group: {
         _id: '$assignedToXID',
@@ -88,9 +86,9 @@ async function getUserProductivity(params) {
 }
 
 async function getDocketStats(params) {
-  const { firmId, fromDate, toDate, userId, clientId, isInternal } = params;
+  const { firmId, fromDate, toDate, userId, clientId, isInternal, workType } = params;
   const results = await Case.aggregate([
-    { $match: buildCaseMatch({ firmId, fromDate, toDate, userId, clientId, isInternal }) },
+    { $match: buildCaseMatch({ firmId, fromDate, toDate, userId, clientId, isInternal, workType }) },
     {
       $group: {
         _id: '$state',
@@ -109,11 +107,11 @@ async function getDocketStats(params) {
 }
 
 async function getQCPerformance(params) {
-  const { firmId, fromDate, toDate, userId, clientId, isInternal } = params;
+  const { firmId, fromDate, toDate, userId, clientId, isInternal, workType } = params;
   const results = await Case.aggregate([
     {
       $match: {
-        ...buildCaseMatch({ firmId, fromDate, toDate, userId, clientId, isInternal }),
+        ...buildCaseMatch({ firmId, fromDate, toDate, userId, clientId, isInternal, workType }),
         qcOutcome: { $ne: null },
       },
     },
@@ -154,13 +152,13 @@ async function getTimePerUser(params) {
 }
 
 async function getClientWorkload(params) {
-  const { firmId, fromDate, toDate, userId, clientId, isInternal } = params;
+  const { firmId, fromDate, toDate, userId, clientId, isInternal, workType } = params;
   const limit = resolveLimit(params);
   const sortField = resolveSortField(params, ['totalDockets'], 'totalDockets');
   const order = resolveOrder(params);
 
   return Case.aggregate([
-    { $match: buildCaseMatch({ firmId, fromDate, toDate, userId, clientId, isInternal }) },
+    { $match: buildCaseMatch({ firmId, fromDate, toDate, userId, clientId, isInternal, workType }) },
     {
       $group: {
         _id: '$clientId',

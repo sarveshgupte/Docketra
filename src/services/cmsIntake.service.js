@@ -191,7 +191,7 @@ async function processCmsSubmission({
       warnings.push('Client was not created because email or phone is required.');
     } else {
       client = await clientService.findClientByEmailOrPhone({ firmId, email, phone });
-      if (!client && email && phone) {
+      if (!client) {
         client = await clientService.createClient({
           firmId,
           name,
@@ -199,8 +199,6 @@ async function processCmsSubmission({
           phone,
           createdByXid: actor?.xid || actor?.xID || 'SYSTEM',
         });
-      } else if (!client) {
-        warnings.push('Client auto-create skipped because both email and phone are required for canonical client creation.');
       }
 
       if (client) {

@@ -29,7 +29,7 @@ async function createClient({ firmId, name, email, phone, createdByXid = 'SYSTEM
   const businessEmail = String(email || '').trim().toLowerCase();
   const primaryContactNumber = String(phone || '').trim();
 
-  if (!businessName || !businessEmail || !primaryContactNumber) {
+  if (!businessName || (!businessEmail && !primaryContactNumber)) {
     throw new Error('Invalid client payload');
   }
 
@@ -39,8 +39,8 @@ async function createClient({ firmId, name, email, phone, createdByXid = 'SYSTEM
     clientId,
     firmId,
     businessName,
-    businessEmail,
-    primaryContactNumber,
+    businessEmail: businessEmail || null,
+    primaryContactNumber: primaryContactNumber || null,
     createdByXid: String(createdByXid || 'SYSTEM').toUpperCase(),
     createdBy: 'system@docketra.local',
   });

@@ -1,4 +1,5 @@
 const log = require('../utils/log');
+const { applyWorkModeFilter, normalizeWorkMode } = require('../utils/workType');
 module.exports = (deps) => {
   const {
     mongoose,
@@ -534,12 +535,7 @@ module.exports = (deps) => {
           query.clientId = clientId;
         }
       }
-      if (typeof isInternal !== 'undefined') {
-        query.isInternal = String(isInternal).toLowerCase() === 'true';
-      }
-      if (workType) {
-        query.workType = String(workType).trim().toLowerCase() === 'internal' ? 'internal' : 'client';
-      }
+      Object.assign(query, applyWorkModeFilter({}, { isInternal, workType }));
 
       if (dealId) {
         if (!mongoose.Types.ObjectId.isValid(dealId)) {
@@ -595,8 +591,7 @@ module.exports = (deps) => {
         const client = clientsMap.get(caseItem.clientId);
         return {
           ...caseItem,
-          isInternal: Boolean(caseItem.isInternal),
-          workType: caseItem.workType || (caseItem.isInternal ? 'internal' : 'client'),
+          ...normalizeWorkMode({ isInternal: caseItem.isInternal, workType: caseItem.workType }),
           slaDueDate: caseItem.slaDueAt || null,
           slaStatus: slaService.getSlaStatus(caseItem),
           client: client ? {

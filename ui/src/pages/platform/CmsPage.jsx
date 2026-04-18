@@ -45,12 +45,21 @@ export const PlatformCmsPage = () => {
 
   return (
     <PlatformShell
+      moduleLabel="CMS / Lead Capture"
       title="CMS Intake"
-      subtitle="Lead capture, intake operations, and conversion to dockets"
+      subtitle="Landing pages, forms, public intake, and submission-to-docket conversion."
       actions={<Link to={ROUTES.CRM_LEADS(firmSlug)}>Full leads page</Link>}
     >
       <InlineNotice tone="error" message={error} />
       <StatGrid items={cmsStats} />
+      <PageSection title="CMS surfaces" description="Lead-capture assets managed in the CMS module.">
+        <div className="action-row">
+          <span>Landing pages</span>
+          <span>Forms</span>
+          <span>Submissions / Intake</span>
+          <span>Public intake tools</span>
+        </div>
+      </PageSection>
 
       <PageSection title="Intake queue" description="Track form submissions and conversion readiness.">
         <FilterBar onClear={() => setQuery('')} clearDisabled={!query}>
@@ -77,7 +86,7 @@ export const PlatformCmsPage = () => {
           ))}
           loading={loading}
           error={error}
-          emptyLabel="No intake leads are available right now."
+          emptyLabel="No intake submissions yet. Create a form or landing page to start capturing leads."
         />
       </PageSection>
     </PlatformShell>
