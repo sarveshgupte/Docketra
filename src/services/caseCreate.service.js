@@ -117,8 +117,12 @@ module.exports = (deps) => {
         payload, // Payload for client governance cases
         workTypeId,
         subWorkTypeId,
+        isInternal,
       } = req.body;
       const guidedInput = normalizeCreateInput(req.body);
+      const requestedInternal = guidedInput?.isInternal ?? isInternal;
+      const normalizedIsInternal = requestedInternal === true || String(requestedInternal).trim().toLowerCase() === 'true';
+      const normalizedWorkType = normalizedIsInternal ? 'internal' : 'client';
       
       // Get creator xID from authenticated user (req.user is set by auth middleware)
       const createdByXID = req.user.xID;
@@ -244,42 +248,45 @@ module.exports = (deps) => {
         }
       }
 
-      // Default to the tenant's default client when caller does not specify legacy clientId
-      if (!finalClientId) {
+      // Client work continues to default to tenant default client when caller omits clientId.
+      if (!normalizedIsInternal && !finalClientId) {
         const defaultClient = await getOrCreateDefaultClient(firmId, {
           requestId,
           userId: req.user?._id || req.user?.id || null,
         });
         finalClientId = defaultClient?.clientId || 'C000001';
       }
-      
-      // Verify client exists and validate status - with firm scoping
-      // PR: Client Lifecycle Enforcement - only ACTIVE clients can be used for new cases
-      const client = await ClientRepository.findByClientId(firmId, finalClientId, req.user.role);
-      
-      if (!client) {
-        return res.status(404).json({
-          success: false,
-          message: `Client ${finalClientId} not found`,
-          ...responseMeta,
-        });
-      }
+      if (!normalizedIsInternal) {
+        // Verify client exists and validate status - with firm scoping
+        // PR: Client Lifecycle Enforcement - only ACTIVE clients can be used for new cases
+        const client = await ClientRepository.findByClientId(firmId, finalClientId, req.user.role);
+        
+        if (!client) {
+          return res.status(404).json({
+            success: false,
+            message: `Client ${finalClientId} not found`,
+            ...responseMeta,
+          });
+        }
 
-      if (String(client.firmId) !== String(firmId)) {
-        return res.status(403).json({
-          success: false,
-          message: 'Client firm mismatch detected',
-          ...responseMeta,
-        });
-      }
-      
-      // Check client status
-      if (client.status !== CLIENT_STATUS.ACTIVE) {
-        return res.status(400).json({
-          success: false,
-          message: 'This client is no longer active. Please contact your administrator to proceed.',
-          ...responseMeta,
-        });
+        if (String(client.firmId) !== String(firmId)) {
+          return res.status(403).json({
+            success: false,
+            message: 'Client firm mismatch detected',
+            ...responseMeta,
+          });
+        }
+        
+        // Check client status
+        if (client.status !== CLIENT_STATUS.ACTIVE) {
+          return res.status(400).json({
+            success: false,
+            message: 'This client is no longer active. Please contact your administrator to proceed.',
+            ...responseMeta,
+          });
+        }
+      } else {
+        finalClientId = finalClientId || null;
       }
       
       // Determine the actual category name to use (for backward compatibility)
@@ -466,6 +473,8 @@ module.exports = (deps) => {
           caseSubCategory: subcategoryDoc?.name || caseSubCategory || '',
           subcategory: subcategoryDoc?.name || caseSubCategory || '',
           clientId: finalClientId,
+          isInternal: normalizedIsInternal,
+          workType: normalizedWorkType,
           crmClientId: crmClientId || null,
           dealId: dealId || null,
           firmId, // PR 2: Explicitly set firmId for atomic counter scoping
@@ -522,13 +531,15 @@ module.exports = (deps) => {
           firmId: newCase.firmId,
           actionType: CASE_ACTION_TYPES.CASE_CREATED,
           actionLabel: `Case created by ${req.user.name || req.user.xID}`,
-          description: `Case created with status: OPEN, Client: ${finalClientId}, Category: ${actualCategory}`,
+          description: `Case created with status: OPEN, ${normalizedIsInternal ? 'Internal Work' : `Client: ${finalClientId}`}, Category: ${actualCategory}`,
           performedBy: req.user.email,
           performedByXID: createdByXID,
           actorRole: req.user.role === 'Admin' ? 'ADMIN' : 'USER',
           metadata: {
               category: actualCategory,
               clientId: finalClientId,
+              isInternal: normalizedIsInternal,
+              workType: normalizedWorkType,
               priority: normalizedPriority,
               slaDueAt: newCase.slaDueAt,
               assignedToXID: newCase.assignedToXID,
@@ -568,6 +579,8 @@ module.exports = (deps) => {
           metadata: {
             category: actualCategory,
             clientId: finalClientId,
+            isInternal: normalizedIsInternal,
+            workType: normalizedWorkType,
             priority: normalizedPriority,
             assignedToXID: newCase.assignedToXID || null,
           },
@@ -576,6 +589,8 @@ module.exports = (deps) => {
             status: 'OPEN',
             category: actualCategory,
             clientId: finalClientId,
+            isInternal: normalizedIsInternal,
+            workType: normalizedWorkType,
             priority: normalizedPriority,
             assignedToXID: newCase.assignedToXID || null,
           },
@@ -603,6 +618,8 @@ module.exports = (deps) => {
             lifecycle: newCase.lifecycle || null,
             assignedToXID: newCase.assignedToXID || null,
             ownerTeamId: newCase.ownerTeamId ? String(newCase.ownerTeamId) : null,
+            isInternal: Boolean(newCase.isInternal),
+            workType: newCase.workType || (newCase.isInternal ? 'internal' : 'client'),
           },
           metadata: {
             source: 'caseCreate.service.createCase',
