@@ -7,7 +7,9 @@ export const crmApi = {
 
   listLeads: (params) => request((http) => http.get('/leads', { params }), 'Failed to load leads'),
   createLead: (data) => request((http) => http.post('/leads', data), 'Failed to create lead'),
+  updateLead: (id, payload) => request((http) => http.patch(`/leads/${id}`, payload), 'Failed to update lead'),
   updateLeadStatus: (id, status) => request((http) => http.patch(`/leads/${id}/status`, { status }), 'Failed to update lead status'),
+  convertLead: (id) => request((http) => http.post(`/leads/${id}/convert`), 'Failed to convert lead'),
 
   listDeals: (params) => request((http) => http.get('/deals', { params }), 'Failed to load deals'),
   createDeal: (data) => request((http) => http.post('/deals', data), 'Failed to create deal'),

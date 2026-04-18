@@ -8,6 +8,7 @@ const router = applyRouteValidation(express.Router(), routeSchemas);
 router.post('/', createLead);
 router.get('/', listLeads);
 router.patch('/:id', updateLeadStatus);
+router.patch('/:id/status', updateLeadStatus);
 router.post('/:id/convert', convertLead);
 
 module.exports = router;

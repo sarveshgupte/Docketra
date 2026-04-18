@@ -1,5 +1,15 @@
 # What's New
 
+## April 2026: CRM Pipeline + Lead Ownership + Follow-up System
+
+- Lead records now support a conservative CRM lifecycle with stage/status compatibility (`new`, `contacted`, `qualified`, `converted`, `lost`).
+- CRM leads now support ownership (`ownerXid`), follow-up tracking (`nextFollowUpAt`, `lastContactAt`), conversion metadata (`convertedAt`, `convertedClientId`), and optional `lostReason`.
+- Lead relationship context is now first-class with lightweight `notes[]` and `activitySummary[]` timeline entries.
+- Lead conversion flow now persists pipeline conversion state and returns conversion metadata with backward-compatible legacy CRM client linkage.
+- CRM lead APIs now support scoped filtering (stage/owner/due follow-ups) and safe partial lead updates for stage/owner/follow-up/notes.
+- CRM Leads UI now shows stage, owner, follow-up, conversion/downstream status, stage counters, and includes management controls for assignment, updates, and notes.
+- CRM lifecycle documentation added at `docs/product/CRM_PIPELINE_MODEL.md`.
+
 ## April 2026: Embed Forms + Website Intake Integration for CMS
 
 - Public forms now support explicit embed rendering mode using the same route shape (`/forms/:id?embed=true`) so firms can place Docketra intake on existing websites.
