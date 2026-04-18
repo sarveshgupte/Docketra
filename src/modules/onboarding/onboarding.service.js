@@ -10,7 +10,6 @@ const { generateNextClientId } = require('../../services/clientIdGenerator');
 const { generatePasswordSetupToken } = require('../../services/passwordSetupToken.service');
 const { safeQueueEmail } = require('../../services/safeSideEffects.service');
 const { ensureTenantKey } = require('../../security/encryption.service');
-const { googleDriveService } = require('../../services/googleDrive.service');
 const { coercePrimaryAdminCreationFields } = require('../../utils/hierarchy.utils');
 const config = require('../../config/config');
 const log = require('../../utils/log');
