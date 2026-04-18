@@ -84,4 +84,13 @@ const caseFileSchema = new mongoose.Schema(
 caseFileSchema.index({ firmId: 1, caseId: 1 });
 caseFileSchema.index({ firmId: 1, checksum: 1 });
 
+caseFileSchema.pre('save', function(next) {
+  for (const value of Object.values(this.toObject({ depopulate: true }))) {
+    if (Buffer.isBuffer(value)) {
+      return next(new Error('CaseFile cannot persist binary payloads to MongoDB'));
+    }
+  }
+  return next();
+});
+
 module.exports = mongoose.model('CaseFile', caseFileSchema);

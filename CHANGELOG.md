@@ -1,3 +1,21 @@
+## [1.1.0] - 2026-04-18
+### Added
+- Introduced metadata-only backup tracking with `BackupJob` records (status, checksum, size, archive key, notification status).
+- Added backup run listing endpoint: `GET /api/storage/exports`.
+- Added firm-level backup admin settings under `settings.storageBackup` (enable flag, recipients, policy, retention days).
+
+### Changed
+- Refactored storage backup flow to:
+  - create encrypted archives (`.zip.enc`),
+  - upload archives to firm-owned external storage,
+  - avoid persisting backup payloads in MongoDB.
+- Updated storage export API responses to return metadata + secure retrieval link details instead of serving local ZIP files directly.
+- Added nightly backup scheduler bootstrap in API server startup.
+
+### Security
+- Added model-level guardrails that reject binary payload persistence for attachment/file metadata documents.
+- Added backup audit events for creation/failure and download-link issuance.
+
 ## [1.0.0] - 2026-03-01
 ### Added
 - Consolidated documentation structure under `docs/architecture`, `docs/security`, and `docs/features`.

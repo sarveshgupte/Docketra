@@ -183,7 +183,7 @@ const firmSchema = new mongoose.Schema({
       default: null,
       validate: {
         validator: function(value) {
-          const allowedProviders = ['google_drive', 'onedrive'];
+          const allowedProviders = ['google_drive', 'onedrive', 's3'];
         if (this.storage?.mode === 'firm_connected') {
           return value && allowedProviders.includes(value);
         }
@@ -192,7 +192,7 @@ const firmSchema = new mongoose.Schema({
         }
         return allowedProviders.includes(value);
         },
-        message: 'Storage provider must be google_drive or onedrive (required when storage mode is firm_connected)',
+        message: 'Storage provider must be google_drive, onedrive, or s3 (required when storage mode is firm_connected)',
       },
     },
     google: {
@@ -293,6 +293,27 @@ const firmSchema = new mongoose.Schema({
         type: Number,
         min: 1,
         default: 2,
+      },
+    },
+    storageBackup: {
+      enabled: {
+        type: Boolean,
+        default: false,
+      },
+      notificationRecipients: {
+        type: [String],
+        default: [],
+      },
+      deliveryPolicy: {
+        type: String,
+        enum: ['link_only', 'attachment'],
+        default: 'link_only',
+      },
+      retentionDays: {
+        type: Number,
+        min: 1,
+        max: 3650,
+        default: 30,
       },
     },
   },

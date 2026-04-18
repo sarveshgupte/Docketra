@@ -1,33 +1,81 @@
 const fs = require('fs');
+const fsp = require('fs/promises');
 const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { pipeline } = require('stream/promises');
 const archiver = require('archiver');
-const { googleDriveService } = require('./googleDrive.service');
+const Firm = require('../models/Firm.model');
 const User = require('../models/User.model');
+const BackupJob = require('../models/BackupJob.model');
+const AuditLog = require('../models/AuditLog.model');
 const emailService = require('./email.service');
+const { googleDriveService } = require('./googleDrive.service');
+const { StorageProviderFactory } = require('./storage/StorageProviderFactory');
+const log = require('../utils/log');
 
-const linkRegistry = new Map();
-const LINK_TTL_MS = 30 * 60 * 1000;
+const LINK_TTL_SECONDS = 30 * 60;
+const NIGHTLY_RUN_EVERY_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_BACKUP_FOLDER = 'Backups';
+const BACKUP_PATH_PREFIX = 'backups/nightly';
 
 function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
 }
 
+function sanitizeFileName(name) {
+  return String(name || '').replace(/[\\/:*?"<>|]/g, '_').trim() || 'file.bin';
+}
+
+function streamSha256(filePath) {
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash('sha256');
+    const input = fs.createReadStream(filePath);
+    input.on('data', (chunk) => hash.update(chunk));
+    input.on('end', () => resolve(hash.digest('hex')));
+    input.on('error', reject);
+  });
+}
+
+async function encryptFileGcm(inputPath, outputPath, keyMaterial) {
+  const iv = crypto.randomBytes(12);
+  const key = crypto.createHash('sha256').update(String(keyMaterial || '')).digest();
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const output = fs.createWriteStream(outputPath);
+  output.write(iv);
+  await pipeline(fs.createReadStream(inputPath), cipher, output);
+  const authTag = cipher.getAuthTag();
+  await fsp.appendFile(outputPath, authTag);
+}
+
+async function writeAudit({
+  firmId,
+  action,
+  entityId,
+  metadata = {},
+  performedBy = 'SYSTEM',
+  performedByRole = 'SYSTEM',
+}) {
+  try {
+    await AuditLog.create({
+      tenantId: String(firmId),
+      entityType: 'storage_backup',
+      entityId: String(entityId || firmId),
+      action,
+      performedBy,
+      performedByRole,
+      ipAddress: 'system',
+      userAgent: 'system-job',
+      metadata,
+    });
+  } catch (error) {
+    log.warn('[BACKUP]', { event: 'audit_write_failed', firmId, action, message: error.message });
+  }
+}
+
 class StorageBackupService {
   constructor() {
-    this.cleanupTimer = setInterval(() => this.cleanupExpiredLinks(), 5 * 60 * 1000);
-    this.cleanupTimer.unref?.();
-  }
-
-  cleanupExpiredLinks() {
-    const now = Date.now();
-    for (const [token, entry] of linkRegistry.entries()) {
-      if (entry.expiresAt <= now) {
-        linkRegistry.delete(token);
-      }
-    }
+    this.nightlyTimer = null;
   }
 
   async generateZipArchive(sourceDir, zipPath) {
@@ -47,84 +95,286 @@ class StorageBackupService {
     });
   }
 
-  async runBackupForFirm(firmId) {
-    const files = await googleDriveService.listFiles(firmId);
-    const exportId = crypto.randomUUID();
-    const exportDir = path.join(os.tmpdir(), 'docketra-exports', firmId);
-    const docsDir = path.join(exportDir, exportId, 'documents');
-    ensureDir(docsDir);
+  async uploadBackupToProvider({ provider, firmId, archivePath, objectKey }) {
+    if (typeof provider.getOrCreateFolder === 'function' && typeof provider.uploadFile === 'function') {
+      const root = await provider.getOrCreateFolder(null, 'Docketra');
+      const firmFolder = await provider.getOrCreateFolder(root, String(firmId));
+      const backups = await provider.getOrCreateFolder(firmFolder, DEFAULT_BACKUP_FOLDER);
+      const targetName = objectKey.split('/').pop();
+      const uploaded = await provider.uploadFile(
+        backups,
+        targetName,
+        fs.createReadStream(archivePath),
+        'application/octet-stream'
+      );
+      return {
+        archiveObjectKey: `${BACKUP_PATH_PREFIX}/${targetName}`,
+        providerFileId: uploaded?.fileId || null,
+      };
+    }
+    throw new Error('Connected storage provider does not support server-side stream uploads yet');
+  }
 
-    const zipPath = path.join(exportDir, `${exportId}.zip`);
-    const workingDir = path.join(exportDir, exportId);
+  async createProviderDownloadUrl({ provider, providerFileId }) {
+    if (provider && typeof provider.generateDownloadUrl === 'function' && providerFileId) {
+      return provider.generateDownloadUrl(providerFileId, LINK_TTL_SECONDS);
+    }
+    if (provider && provider.providerName === 'google-drive' && providerFileId) {
+      return `https://drive.google.com/file/d/${encodeURIComponent(providerFileId)}/view`;
+    }
+    return null;
+  }
+
+  async createBackupArchiveOnTempDisk(firmId, exportId) {
+    const files = await googleDriveService.listFiles(firmId);
+    const exportDir = path.join(os.tmpdir(), 'docketra-exports', String(firmId), exportId);
+    const docsDir = path.join(exportDir, 'documents');
+    ensureDir(docsDir);
 
     for (const file of files) {
       const stream = await googleDriveService.downloadFile(firmId, file.id);
-      const safeName = (file.name || `${file.id}.bin`).replace(/[\\/:*?"<>|]/g, '_');
-      const outputPath = path.join(docsDir, safeName);
-      const output = fs.createWriteStream(outputPath);
-      await pipeline(stream, output);
+      const outputPath = path.join(docsDir, sanitizeFileName(file.name || `${file.id}.bin`));
+      await pipeline(stream, fs.createWriteStream(outputPath));
     }
 
-    fs.writeFileSync(
-      path.join(workingDir, 'metadata.json'),
+    await fsp.writeFile(
+      path.join(exportDir, 'metadata.json'),
       JSON.stringify(
         {
           generatedAt: new Date().toISOString(),
-          firmId,
+          firmId: String(firmId),
           totalFiles: files.length,
           files: files.map((file) => ({
             id: file.id,
             name: file.name,
             mimeType: file.mimeType,
-            size: file.size,
+            size: Number(file.size || 0),
           })),
         },
         null,
         2
-      )
+      ),
+      'utf8'
     );
 
-    await this.generateZipArchive(workingDir, zipPath);
+    const zipPath = path.join(os.tmpdir(), 'docketra-exports', String(firmId), `${exportId}.zip`);
+    ensureDir(path.dirname(zipPath));
+    await this.generateZipArchive(exportDir, zipPath);
+    return { zipPath, fileCount: files.length, exportDir };
+  }
+
+  async runBackupForFirm(firmId, options = {}) {
+    const exportId = crypto.randomUUID();
+    const startedAt = new Date();
+    const firm = await Firm.findById(firmId).select('storageConfig settings.storageBackup').lean();
+    const provider = await StorageProviderFactory.getProvider(firmId);
+    const objectKey = `${BACKUP_PATH_PREFIX}/${startedAt.toISOString().slice(0, 10)}/${exportId}.zip.enc`;
+
+    const backupJob = await BackupJob.create({
+      jobId: exportId,
+      firmId: String(firmId),
+      storageProvider: String(firm?.storageConfig?.provider || provider?.providerName || 'unknown'),
+      archiveObjectKey: objectKey,
+      checksum: 'pending',
+      size: 0,
+      status: 'running',
+      startedAt,
+      emailNotification: {
+        status: options.sendEmail ? 'pending' : 'not_requested',
+        recipients: options.recipients || [],
+      },
+    });
+
+    let zipPath = null;
+    let encryptedPath = null;
+    let exportDir = null;
+
+    try {
+      const created = await this.createBackupArchiveOnTempDisk(firmId, exportId);
+      zipPath = created.zipPath;
+      exportDir = created.exportDir;
+      encryptedPath = `${zipPath}.enc`;
+
+      const keyMaterial = process.env.BACKUP_ENCRYPTION_KEY || process.env.JWT_SECRET;
+      await encryptFileGcm(zipPath, encryptedPath, keyMaterial);
+      const checksum = await streamSha256(encryptedPath);
+      const size = (await fsp.stat(encryptedPath)).size;
+
+      const uploaded = await this.uploadBackupToProvider({
+        provider,
+        firmId,
+        archivePath: encryptedPath,
+        objectKey,
+      });
+      const archiveObjectKey = uploaded.archiveObjectKey || objectKey;
+      const providerFileId = uploaded.providerFileId || null;
+
+      await BackupJob.updateOne(
+        { _id: backupJob._id },
+        {
+          $set: {
+            checksum,
+            size,
+            status: 'success',
+            completedAt: new Date(),
+            metadata: {
+              providerFileId,
+              fileCount: created.fileCount,
+              encrypted: true,
+            },
+          },
+        }
+      );
+
+      await writeAudit({
+        firmId,
+        action: 'BACKUP_CREATED',
+        entityId: exportId,
+        metadata: { archiveObjectKey, checksum, size, providerFileId },
+      });
+
+      return {
+        exportId,
+        archiveObjectKey,
+        providerFileId,
+        fileCount: created.fileCount,
+        checksum,
+        size,
+      };
+    } catch (error) {
+      await BackupJob.updateOne(
+        { _id: backupJob._id },
+        {
+          $set: {
+            status: 'failed',
+            completedAt: new Date(),
+            metadata: { error: error.message },
+          },
+        }
+      );
+      await writeAudit({
+        firmId,
+        action: 'BACKUP_FAILED',
+        entityId: exportId,
+        metadata: { message: error.message },
+      });
+      throw error;
+    } finally {
+      if (encryptedPath) await fsp.rm(encryptedPath, { force: true }).catch(() => {});
+      if (zipPath) await fsp.rm(zipPath, { force: true }).catch(() => {});
+      if (exportDir) await fsp.rm(exportDir, { recursive: true, force: true }).catch(() => {});
+    }
+  }
+
+  async listBackups(firmId, limit = 20) {
+    return BackupJob.find({ firmId: String(firmId) })
+      .sort({ startedAt: -1 })
+      .limit(Math.min(Number(limit) || 20, 100))
+      .lean();
+  }
+
+  async buildBackupAccess({ firmId, exportId }) {
+    const backup = await BackupJob.findOne({ firmId: String(firmId), jobId: String(exportId) }).lean();
+    if (!backup || backup.status !== 'success') return null;
+
+    const provider = await StorageProviderFactory.getProvider(firmId);
+    const providerFileId = backup?.metadata?.providerFileId || null;
+    const downloadUrl = await this.createProviderDownloadUrl({ provider, providerFileId });
+
+    await writeAudit({
+      firmId,
+      action: 'BACKUP_DOWNLOAD_LINK_ISSUED',
+      entityId: exportId,
+      metadata: { providerFileId, expiresInSeconds: LINK_TTL_SECONDS },
+    });
 
     return {
-      exportId,
-      zipPath,
-      fileCount: files.length,
+      ...backup,
+      downloadUrl,
+      expiresInSeconds: LINK_TTL_SECONDS,
     };
   }
 
-  createSignedDownloadToken({ firmId, zipPath, exportId }) {
-    const token = crypto.randomBytes(24).toString('hex');
-    linkRegistry.set(token, {
-      firmId: String(firmId),
-      zipPath,
-      exportId,
-      expiresAt: Date.now() + LINK_TTL_MS,
-    });
-    return token;
-  }
+  async emailBackupNotification({ firmId, exportId, downloadUrl, success = true, recipients = [] }) {
+    const resolvedRecipients = recipients.length
+      ? recipients
+      : await this.resolveDefaultRecipients(firmId);
 
-  resolveSignedDownloadToken(token, firmId) {
-    const entry = linkRegistry.get(token);
-    if (!entry) return null;
-    if (entry.expiresAt <= Date.now()) {
-      linkRegistry.delete(token);
-      return null;
-    }
-    if (String(entry.firmId) !== String(firmId)) return null;
-    return entry;
-  }
+    if (!resolvedRecipients.length) return { sent: false, reason: 'no_recipients' };
 
-  async emailBackupLinkToPrimaryAdmin(firmId, downloadUrl) {
-    const primaryAdmin = await User.findOne({ firmId, isPrimaryAdmin: true }).select('email name').lean();
-    if (!primaryAdmin?.email) return;
+    const subject = success
+      ? 'Docketra backup completed'
+      : 'Docketra backup failed';
+    const text = success
+      ? `Backup ${exportId} completed. Retrieve it securely here: ${downloadUrl}`
+      : `Backup ${exportId} failed. Review backup status in admin settings.`;
 
     await emailService.sendEmail({
-      to: primaryAdmin.email,
-      subject: 'Your Docketra workspace export is ready',
-      html: `<p>Hello ${primaryAdmin.name || 'Admin'},</p><p>Your backup is ready. Download it securely here:</p><p><a href="${downloadUrl}">${downloadUrl}</a></p>`,
-      text: `Your backup is ready: ${downloadUrl}`,
+      to: resolvedRecipients.join(','),
+      subject,
+      text,
+      html: `<p>${text}</p>`,
     });
+    await BackupJob.updateOne(
+      { firmId: String(firmId), jobId: String(exportId) },
+      {
+        $set: {
+          'emailNotification.status': 'sent',
+          'emailNotification.sentAt': new Date(),
+          'emailNotification.recipients': resolvedRecipients,
+        },
+      }
+    );
+    return { sent: true, recipients: resolvedRecipients };
+  }
+
+  async resolveDefaultRecipients(firmId) {
+    const firm = await Firm.findById(firmId).select('settings.storageBackup').lean();
+    const configured = firm?.settings?.storageBackup?.notificationRecipients || [];
+    if (configured.length) return configured;
+    const primaryAdmin = await User.findOne({ firmId, isPrimaryAdmin: true }).select('email').lean();
+    return primaryAdmin?.email ? [primaryAdmin.email] : [];
+  }
+
+  scheduleNightlyBackups() {
+    if (this.nightlyTimer) return;
+    this.nightlyTimer = setInterval(async () => {
+      try {
+        const firms = await Firm.find({
+          'settings.storageBackup.enabled': true,
+          'storage.mode': 'firm_connected',
+          'storageConfig.provider': { $ne: null },
+        }).select('_id settings.storageBackup').lean();
+
+        for (const firm of firms) {
+          try {
+            const result = await this.runBackupForFirm(firm._id, {
+              sendEmail: true,
+              recipients: firm?.settings?.storageBackup?.notificationRecipients || [],
+            });
+            const access = await this.buildBackupAccess({ firmId: firm._id, exportId: result.exportId });
+            if (access?.downloadUrl) {
+              await this.emailBackupNotification({
+                firmId: firm._id,
+                exportId: result.exportId,
+                downloadUrl: access.downloadUrl,
+                success: true,
+                recipients: firm?.settings?.storageBackup?.notificationRecipients || [],
+              });
+            }
+          } catch (error) {
+            log.error('[BACKUP]', {
+              event: 'nightly_backup_failed',
+              firmId: String(firm._id),
+              message: error.message,
+            });
+          }
+        }
+      } catch (error) {
+        log.error('[BACKUP]', { event: 'nightly_scheduler_failed', message: error.message });
+      }
+    }, NIGHTLY_RUN_EVERY_MS);
+    this.nightlyTimer.unref?.();
   }
 }
 
