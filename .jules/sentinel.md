@@ -11,3 +11,8 @@
 **Vulnerability:** Even when validating paths using `!resolvedPath.startsWith(safeBaseDir)` to protect against Path Traversal (CWE-22) like we did previously, we're still susceptible to matching unintended directories that share the same prefix (e.g., `/uploads_hacked/test.txt` would match `/uploads` prefix).
 **Learning:** Checking `resolvedPath.startsWith(safeBaseDir)` is insufficient if it is not specifically matching exact directories. For instance, `/uploads` will pass if the actual path is `/uploads_hacked/test.txt`.
 **Prevention:** Always append a directory separator (e.g., `path.sep`) to the base directory before using `startsWith()` to guarantee exact directory containment. For example: `safeBaseDir + path.sep`.
+
+## 2026-04-17 - Secure Debug Route Exposure
+**Vulnerability:** Debug routes were globally imported and advertised in the public-facing root `/api` discovery endpoint, even if they were gated for mounting.
+**Learning:** Top-level `require` statements load modules into memory regardless of runtime conditions, and static endpoint maps in API discovery routes can leak internal infrastructure details.
+**Prevention:** Use conditional lazy loading (`require` inside an environment check) to reduce production footprint and ensure discovery endpoints dynamically reflect available routes based on the environment.
