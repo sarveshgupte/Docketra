@@ -9,6 +9,8 @@ const CaseStatus = require('../domain/case/caseStatus');
 const CaseService = require('./case.service');
 const { DateTime } = require('luxon');
 const { logCaseHistory } = require('./auditLog.service');
+const { getCanonicalDocketState } = require('../utils/docketStateMapper');
+const { canResolve, canFile } = require('../utils/docketStateTransitions');
 
 const LIFECYCLE_TRANSITIONS = Object.freeze({
   OPEN: Object.freeze([CaseStatus.PENDING, CaseStatus.QC_PENDING, CaseStatus.RESOLVED, CaseStatus.FILED]),
@@ -141,7 +143,12 @@ const resolveCase = async (firmId, caseId, comment, user, req = null) => {
     throw new Error('Case not found');
   }
 
-  const targetStatus = caseData.forceQc ? CaseStatus.QC_PENDING : CaseStatus.RESOLVED;
+  const currentDocketState = getCanonicalDocketState(caseData);
+  if (!canResolve(currentDocketState)) {
+    throw new Error(`Resolve is allowed only from IN_PROGRESS or IN_QC. Current state: ${currentDocketState}`);
+  }
+
+  const targetStatus = CaseStatus.RESOLVED;
   assertLifecycleTransitionAllowed({
     currentStatus: caseData.status,
     nextStatus: targetStatus,
@@ -347,12 +354,11 @@ const fileCase = async (firmId, caseId, comment, user, req = null) => {
     throw new Error('Case not found');
   }
 
-  assertLifecycleTransitionAllowed({
-    currentStatus: caseData.status,
-    nextStatus: CaseStatus.FILED,
-    actorRole: user?.role,
-  });
-  
+  const currentDocketState = getCanonicalDocketState(caseData);
+  if (!canFile(currentDocketState)) {
+    throw new Error(`Cannot file docket from current state: ${currentDocketState}`);
+  }
+
   // Store previous status for audit
   const previousStatus = caseData.status;
 
