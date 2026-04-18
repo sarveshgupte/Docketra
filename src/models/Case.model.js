@@ -1184,6 +1184,10 @@ caseSchema.index({ firmId: 1, createdAt: 1 }); // Firm-scoped daily creation met
 caseSchema.index({ firmId: 1, status: 1, createdAt: -1 }); // Firm-scoped status dashboards sorted by recency
 caseSchema.index({ firmId: 1, createdAt: -1 });
 caseSchema.index({ firmId: 1, clientId: 1 });
+caseSchema.index({ state: 1 }); // Canonical docket state reporting queries
+caseSchema.index({ qcOutcome: 1 }); // QC outcome reporting queries
+caseSchema.index({ firmId: 1, state: 1 }); // Firm-scoped canonical state analytics
+caseSchema.index({ firmId: 1, qcOutcome: 1 }); // Firm-scoped QC analytics
 caseSchema.index({ firmId: 1, crmClientId: 1 });
 caseSchema.index({ firmId: 1, dealId: 1 });
 
