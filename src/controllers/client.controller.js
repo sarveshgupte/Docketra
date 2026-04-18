@@ -17,6 +17,7 @@ const { areFileUploadsDisabled } = require('../services/featureFlags.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { executeWrite } = require('../utils/executeWrite');
 const { incrementTenantMetric } = require('../services/tenantMetrics.service');
+const { CANONICAL_CLIENT_STATUSES } = require('../utils/clientStatus');
 const Firm = require('../models/Firm.model');
 const { ensureDefaultClientForFirm } = require('../services/defaultClient.service');
 const { parseBooleanQuery } = require('../utils/query.utils');
@@ -379,7 +380,7 @@ const createClient = async (req, res) => {
         createdBy: req.user?.email ? req.user.email.trim().toLowerCase() : undefined,
         isSystemClient: false,
         isActive: true,
-        status: 'ACTIVE',
+        status: CANONICAL_CLIENT_STATUSES.ACTIVE,
         previousBusinessNames: [],
       }, req.user?.role);
     });
@@ -595,7 +596,7 @@ const toggleClientStatus = async (req, res) => {
     
     // Update both legacy and new status fields
     client.isActive = isActive;
-    client.status = isActive ? 'ACTIVE' : 'INACTIVE';
+    client.status = isActive ? CANONICAL_CLIENT_STATUSES.ACTIVE : CANONICAL_CLIENT_STATUSES.INACTIVE;
     await client.save();
     
     log.info(`[CLIENT_STATUS] Client ${clientId} ${isActive ? 'activated' : 'deactivated'} by ${req.user?.xID}`);

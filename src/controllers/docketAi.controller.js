@@ -8,6 +8,7 @@ const Team = require('../models/Team.model');
 const aiService = require('../services/ai/ai.service');
 const { resolveCaseIdentifier } = require('../utils/caseIdentifier');
 const log = require('../utils/log');
+const { buildClientStatusQuery } = require('../utils/clientStatus');
 
 function normalizeConfidence(value) {
   const numeric = Number(value);
@@ -66,7 +67,7 @@ async function findAnalyzedAttachment({ attachmentId, req }) {
 }
 
 async function generateSuggestions({ attachment, firmId, requestId = null, userRole = null }) {
-  const clients = await Client.find({ firmId, status: 'ACTIVE' })
+  const clients = await Client.find({ firmId, status: buildClientStatusQuery('active') })
     .select('clientId businessName')
     .lean();
 

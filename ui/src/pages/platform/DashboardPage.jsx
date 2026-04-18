@@ -40,12 +40,22 @@ export const PlatformDashboardPage = () => {
 
   return (
     <PlatformShell
+      moduleLabel="Dashboard / Firm Ops"
       title="Dashboard"
-      subtitle="Operations overview for daily docket execution and control"
+      subtitle="Unified snapshot across CMS acquisition, CRM relationships, and Tasks execution."
       actions={<Link to={ROUTES.CREATE_CASE(firmSlug)}>Create Docket</Link>}
     >
       <InlineNotice tone="error" message={error} />
       <StatGrid items={cards} />
+
+
+      <PageSection title="Modules" description="Open the right workspace quickly based on your current objective.">
+        <div className="action-row">
+          <Link to={ROUTES.CMS(firmSlug)}>CMS · Forms & Intake</Link>
+          <Link to={ROUTES.CRM_CLIENTS(firmSlug)}>CRM · Leads & Clients</Link>
+          <Link to={ROUTES.CASES(firmSlug)}>Tasks · Dockets & Worklists</Link>
+        </div>
+      </PageSection>
 
       <PageSection title="Productivity trend" description="Quick signal of current workload throughput.">
         {loading ? <p className="muted">Loading productivity signal…</p> : (

@@ -1710,7 +1710,7 @@ export const CaseDetailPage = () => {
                 </div>
                 <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Work Type</span>
-                  <Badge variant={caseInfo?.isInternal ? 'info' : 'success'}>{caseInfo?.isInternal ? 'Internal' : 'Client'}</Badge>
+                  <Badge variant={caseInfo?.isInternal ? 'info' : 'success'}>{caseInfo?.isInternal ? 'Internal Work' : 'Client Work'}</Badge>
                 </div>
               </div>
             </section>

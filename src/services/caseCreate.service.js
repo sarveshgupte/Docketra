@@ -1,4 +1,6 @@
 const log = require('../utils/log');
+const { normalizeWorkMode } = require('../utils/workType');
+const { isClientActive } = require('../utils/clientStatus');
 
 module.exports = (deps) => {
   const {
@@ -121,8 +123,10 @@ module.exports = (deps) => {
       } = req.body;
       const guidedInput = normalizeCreateInput(req.body);
       const requestedInternal = guidedInput?.isInternal ?? isInternal;
-      const normalizedIsInternal = requestedInternal === true || String(requestedInternal).trim().toLowerCase() === 'true';
-      const normalizedWorkType = normalizedIsInternal ? 'internal' : 'client';
+      const { isInternal: normalizedIsInternal, workType: normalizedWorkType } = normalizeWorkMode({
+        isInternal: requestedInternal,
+        workType: req.body?.workType,
+      });
       
       // Get creator xID from authenticated user (req.user is set by auth middleware)
       const createdByXID = req.user.xID;
@@ -278,7 +282,7 @@ module.exports = (deps) => {
         }
         
         // Check client status
-        if (client.status !== CLIENT_STATUS.ACTIVE) {
+        if (!isClientActive(client.status)) {
           return res.status(400).json({
             success: false,
             message: 'This client is no longer active. Please contact your administrator to proceed.',

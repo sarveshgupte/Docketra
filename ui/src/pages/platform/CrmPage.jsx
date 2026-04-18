@@ -39,11 +39,20 @@ export const PlatformCrmPage = () => {
 
   return (
     <PlatformShell
+      moduleLabel="CRM / Relationship Management"
       title="CRM"
-      subtitle="Client portfolio and operational docket relationships"
+      subtitle="Manage leads, clients, deals, and relationship context linked to execution work."
       actions={<Link to={ROUTES.CLIENTS(firmSlug)}>Client workspace</Link>}
     >
       <InlineNotice tone="error" message={error} />
+      <PageSection title="CRM surfaces" description="Relationship-management records linked to delivery execution.">
+        <div className="action-row">
+          <span>Leads</span>
+          <span>Clients / Accounts</span>
+          <span>Deals</span>
+          <span>Invoices</span>
+        </div>
+      </PageSection>
       <PageSection title="Clients" description="Access client records and related dockets quickly.">
         <FilterBar onClear={() => setQuery('')} clearDisabled={!query}>
           <input
@@ -77,7 +86,7 @@ export const PlatformCrmPage = () => {
           ))}
           loading={loading}
           error={error}
-          emptyLabel="No CRM clients match the current filters."
+          emptyLabel="No CRM clients yet. Add a lead or convert a submission into a client."
         />
       </PageSection>
     </PlatformShell>

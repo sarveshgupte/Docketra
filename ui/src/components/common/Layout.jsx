@@ -472,8 +472,8 @@ export const Layout = ({ children }) => {
 
   const navSections = [
     {
-      id: 'core-work',
-      title: 'CORE WORK',
+      id: 'top-level',
+      title: 'MAIN',
       sticky: true,
       defaultOpen: true,
       collapsible: false,
@@ -485,6 +485,33 @@ export const Layout = ({ children }) => {
           active: isActive(ROUTES.DASHBOARD(currentFirmSlug)),
         },
         {
+          to: ROUTES.CMS(currentFirmSlug),
+          label: 'CMS',
+          icon: <IconWorklist />,
+          active: isActivePrefix(ROUTES.CMS(currentFirmSlug)),
+          hidden: !hasAdminAccess,
+        },
+        {
+          to: ROUTES.CRM_CLIENTS(currentFirmSlug),
+          label: 'CRM',
+          icon: <IconCases />,
+          active: isActivePrefix(ROUTES.CRM_CLIENTS(currentFirmSlug)),
+          hidden: !hasAdminAccess,
+        },
+        {
+          to: ROUTES.CASES(currentFirmSlug),
+          label: 'Tasks',
+          icon: <IconWorklist />,
+          active: isActivePrefix(ROUTES.CASES(currentFirmSlug)),
+        },
+      ].filter((item) => !item.hidden),
+    },
+    {
+      id: 'tasks',
+      title: 'TASKS',
+      defaultOpen: true,
+      items: [
+        {
           to: ROUTES.GLOBAL_WORKLIST(currentFirmSlug),
           label: workbasketNavLabel,
           icon: <IconWorkbasket />,
@@ -493,7 +520,7 @@ export const Layout = ({ children }) => {
         },
         {
           to: ROUTES.WORKLIST(currentFirmSlug),
-          label: 'My WL',
+          label: 'My Worklist',
           icon: <IconWorklist />,
           active: isActive(ROUTES.WORKLIST(currentFirmSlug)) || isActive(ROUTES.MY_WORKLIST(currentFirmSlug)),
           badge: countsFetched ? worklistCount : 'loading',
@@ -520,33 +547,24 @@ export const Layout = ({ children }) => {
       ].filter((item) => !item.hidden),
     },
     {
-      id: 'cases-clients',
+      id: 'clients',
       title: 'CLIENTS',
       defaultOpen: true,
       hidden: !hasAdminAccess,
       items: [
-        { to: ROUTES.FIRM_BASE(currentFirmSlug) + '/clients', label: 'All Clients', icon: <IconCases />, active: isActivePrefix(ROUTES.FIRM_BASE(currentFirmSlug) + '/clients') },
+        { to: ROUTES.FIRM_BASE(currentFirmSlug) + '/clients', label: 'Clients', icon: <IconCases />, active: isActivePrefix(ROUTES.FIRM_BASE(currentFirmSlug) + '/clients') },
         { to: ROUTES.COMPLIANCE_CALENDAR(currentFirmSlug), label: 'Compliance Calendar', icon: <IconWorklist />, active: isActive(ROUTES.COMPLIANCE_CALENDAR(currentFirmSlug)) },
       ],
     },
     {
-      id: 'crm',
-      title: 'CRM',
+      id: 'crm-cms',
+      title: 'CRM / CMS',
       defaultOpen: false,
       hidden: !hasAdminAccess,
       items: [
-        {
-          to: ROUTES.CRM_CLIENTS(currentFirmSlug),
-          label: 'CRM Clients',
-          icon: <IconCases />,
-          active: isActivePrefix(ROUTES.CRM_CLIENTS(currentFirmSlug)),
-        },
-        {
-          to: ROUTES.CRM_LEADS(currentFirmSlug),
-          label: 'Leads',
-          icon: <IconWorklist />,
-          active: isActivePrefix(ROUTES.CRM_LEADS(currentFirmSlug)),
-        },
+        { to: ROUTES.CRM_LEADS(currentFirmSlug), label: 'CRM Leads', icon: <IconWorklist />, active: isActivePrefix(ROUTES.CRM_LEADS(currentFirmSlug)) },
+        { to: ROUTES.CRM_CLIENTS(currentFirmSlug), label: 'CRM Clients', icon: <IconCases />, active: isActivePrefix(ROUTES.CRM_CLIENTS(currentFirmSlug)) },
+        { to: ROUTES.CMS(currentFirmSlug), label: 'CMS Intake', icon: <IconWorklist />, active: isActivePrefix(ROUTES.CMS(currentFirmSlug)) },
       ],
     },
     {
@@ -563,7 +581,7 @@ export const Layout = ({ children }) => {
       defaultOpen: false,
       hidden: !hasAdminAccess,
       items: [
-        { to: ROUTES.ADMIN(currentFirmSlug), label: 'Team Management', icon: <IconTeam />, active: isActivePrefix(ROUTES.ADMIN(currentFirmSlug)) && !isActivePrefix(reportsRoute) },
+        { to: ROUTES.ADMIN(currentFirmSlug), label: 'Team', icon: <IconTeam />, active: isActivePrefix(ROUTES.ADMIN(currentFirmSlug)) && !isActivePrefix(reportsRoute) },
         { to: ROUTES.HIERARCHY(currentFirmSlug), label: 'Hierarchy', icon: <IconTeam />, active: isActivePrefix(ROUTES.HIERARCHY(currentFirmSlug)) },
         { to: ROUTES.FIRM_SETTINGS(currentFirmSlug), label: 'Firm Settings', icon: <IconAdmin />, active: isActivePrefix(ROUTES.FIRM_SETTINGS(currentFirmSlug)) },
         { to: ROUTES.WORK_SETTINGS(currentFirmSlug), label: 'Work Settings', icon: <IconWorklist />, active: isActivePrefix(ROUTES.WORK_SETTINGS(currentFirmSlug)) },
@@ -576,7 +594,7 @@ export const Layout = ({ children }) => {
       title: 'ACCOUNT',
       defaultOpen: false,
       items: [
-        { to: ROUTES.PROFILE(currentFirmSlug), label: hasAdminAccess ? 'Profile' : 'My Settings', icon: <IconSettings />, active: isActivePrefix(ROUTES.PROFILE(currentFirmSlug)) },
+        { to: ROUTES.PROFILE(currentFirmSlug), label: hasAdminAccess ? 'Settings' : 'My Settings', icon: <IconSettings />, active: isActivePrefix(ROUTES.PROFILE(currentFirmSlug)) },
       ],
     },
   ].filter((section) => !section.hidden);

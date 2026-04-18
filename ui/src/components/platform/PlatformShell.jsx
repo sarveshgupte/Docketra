@@ -9,24 +9,29 @@ const hasAtLeastRole = (current, minimum) => (roleRank[current] || 0) >= (roleRa
 
 const navForRole = (firmSlug, role) => {
   const all = [
-    { section: 'Workspace', items: [{ to: ROUTES.DASHBOARD(firmSlug), label: 'Dashboard' }] },
     {
-      section: 'Execution',
+      section: 'Core',
       items: [
-        { to: ROUTES.GLOBAL_WORKLIST(firmSlug), label: 'Workbaskets', minRole: 'ADMIN' },
-        { to: ROUTES.WORKLIST(firmSlug), label: 'My Worklist', minRole: 'USER' },
-        { to: ROUTES.QC_QUEUE(firmSlug), label: 'QC Queue', minRole: 'MANAGER' },
-      ],
-    },
-    { section: 'Operations', items: [{ to: ROUTES.ADMIN_REPORTS(firmSlug), label: 'Reports', minRole: 'ADMIN' }] },
-    {
-      section: 'CRM/CMS',
-      items: [
+        { to: ROUTES.DASHBOARD(firmSlug), label: 'Dashboard' },
+        { to: ROUTES.CMS(firmSlug), label: 'CMS', minRole: 'ADMIN' },
         { to: ROUTES.CRM_CLIENTS(firmSlug), label: 'CRM', minRole: 'ADMIN' },
-        { to: ROUTES.CMS(firmSlug), label: 'CMS Intake', minRole: 'ADMIN' },
+        { to: ROUTES.CASES(firmSlug), label: 'Tasks' },
       ],
     },
-    { section: 'Administration', items: [{ to: ROUTES.SETTINGS(firmSlug), label: 'Settings', minRole: 'ADMIN' }] },
+    {
+      section: 'Operations',
+      items: [
+        { to: ROUTES.CLIENTS(firmSlug), label: 'Clients', minRole: 'ADMIN' },
+        { to: ROUTES.ADMIN(firmSlug), label: 'Team', minRole: 'ADMIN' },
+        { to: ROUTES.ADMIN_REPORTS(firmSlug), label: 'Reports', minRole: 'ADMIN' },
+      ],
+    },
+    {
+      section: 'Administration',
+      items: [
+        { to: ROUTES.SETTINGS(firmSlug), label: 'Settings', minRole: 'ADMIN' },
+      ],
+    },
   ];
 
   return all
@@ -34,7 +39,7 @@ const navForRole = (firmSlug, role) => {
     .filter((section) => section.items.length > 0);
 };
 
-export const PlatformShell = ({ title, subtitle, actions, children }) => {
+export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children }) => {
   const [collapsed, setCollapsed] = useState(false);
   const { pathname } = useLocation();
   const { firmSlug } = useParams();
@@ -86,6 +91,7 @@ export const PlatformShell = ({ title, subtitle, actions, children }) => {
       <div className="platform__main">
         <header className="platform__topbar">
           <div>
+            {moduleLabel ? <span className="platform__module-label">{moduleLabel}</span> : null}
             <h1>{title}</h1>
             <p>{subtitle}</p>
           </div>
