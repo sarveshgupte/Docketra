@@ -1,5 +1,14 @@
 # What's New
 
+## April 2026: UI/UX Improvements
+
+- Dashboard usability polish: added quick actions (`+ New Lead`, `+ New Docket`, `+ Internal Task`), cleaner sectioning for Leads/Tasks/Recent Activity, and clearer empty-state guidance for faster first actions.
+- Forms now have more consistent feedback states across inputs/selects/textareas, including success visuals, stronger focus/error treatment, required field clarity, and improved inline guidance.
+- CRM lead flow now provides clearer inline validation during lead creation, stronger overdue follow-up visibility, and more actionable update errors/success messages.
+- Task creation flow now supports faster work-type switching (Client Work vs Internal Task) with fewer clicks and clearer required-field behavior.
+- Login/OTP experience improved with clearer, actionable auth error copy, stronger success feedback, OTP digit-by-digit entry with paste support, and resend timer feedback.
+- Feedback system messaging is more contextual across key actions (lead creation/update, docket creation, login, OTP verification), replacing generic status text with task-specific messages.
+
 ## April 2026: API / Webhook Intake Mode for CMS
 
 - Added direct integration endpoint for CMS intake: `POST /public/cms/:firmSlug/intake` (also available under `/api/public/...`).

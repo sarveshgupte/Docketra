@@ -10,10 +10,10 @@ import { useDashboardWidgetQuery, useSetupStatusQuery } from '../hooks/useDashbo
 const FILTERS = ['MY', 'TEAM', 'ALL'];
 const SORT_OPTIONS = ['NEWEST', 'PRIORITY', 'SLA'];
 
-const DashboardCard = ({ title, children, actions = null }) => (
+const DashboardCard = ({ title, children, actions = null, emoji }) => (
   <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
     <div className="mb-3 flex items-center justify-between gap-3">
-      <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+      <h2 className="text-base font-semibold text-gray-900">{emoji ? `${emoji} ${title}` : title}</h2>
       {actions}
     </div>
     {children}
@@ -98,6 +98,16 @@ export const DashboardPage = () => {
   };
 
   const currentPageTotal = useMemo(() => myDockets?.total || 0, [myDockets]);
+  const leadSummary = useMemo(() => ({
+    new: leadsFromRecent(recentDockets?.items).filter((item) => String(item.stage || '').toLowerCase() === 'new').length,
+    contacted: leadsFromRecent(recentDockets?.items).filter((item) => String(item.stage || '').toLowerCase() === 'contacted').length,
+  }), [recentDockets?.items]);
+  const taskSummary = useMemo(() => ({
+    open: myDockets?.items?.length || 0,
+    qc: myDockets?.items?.filter((item) => String(item.status || '').toUpperCase().includes('QC')).length || 0,
+    overdue: overdueDockets?.items?.length || 0,
+    internal: myDockets?.items?.filter((item) => String(item.workType || '').toLowerCase() === 'internal').length || 0,
+  }), [myDockets?.items, overdueDockets?.items]);
 
   return (
     <Layout title="Dashboard" subtitle="Action-oriented docket view">
@@ -125,7 +135,11 @@ export const DashboardPage = () => {
             ))}
           </div>
 
-          <Button onClick={() => navigate(ROUTES.CREATE_CASE(firmSlug))}>Create Docket</Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button onClick={() => navigate(ROUTES.CREATE_CASE(firmSlug))}>+ New Docket</Button>
+            <Button variant="secondary" onClick={() => navigate(ROUTES.CRM_LEADS(firmSlug))}>+ New Lead</Button>
+            <Button variant="outline" onClick={() => navigate(ROUTES.CREATE_CASE(firmSlug), { state: { initialWorkType: 'internal' } })}>+ Internal Task</Button>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <select value={sort} onChange={(event) => setSort(event.target.value)} className="rounded-md border border-gray-300 px-2 py-1 text-sm">
@@ -138,6 +152,22 @@ export const DashboardPage = () => {
         </div>
 
         <div className="grid gap-4 lg:grid-cols-2">
+          <DashboardCard title="Leads" emoji="📊">
+            <ul className="space-y-2 text-sm text-gray-700">
+              <li className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2"><span>New</span><strong>{leadSummary.new}</strong></li>
+              <li className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2"><span>Contacted</span><strong>{leadSummary.contacted}</strong></li>
+            </ul>
+          </DashboardCard>
+
+          <DashboardCard title="Tasks" emoji="📌">
+            <ul className="space-y-2 text-sm text-gray-700">
+              <li className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2"><span>Open</span><strong>{taskSummary.open}</strong></li>
+              <li className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2"><span>QC</span><strong>{taskSummary.qc}</strong></li>
+              <li className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2"><span>Overdue</span><strong>{taskSummary.overdue}</strong></li>
+              <li className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2"><span>Internal tasks</span><strong>{taskSummary.internal}</strong></li>
+            </ul>
+          </DashboardCard>
+
           <DashboardCard title="My Dockets" actions={<Button variant="outline" onClick={() => navigate(ROUTES.CASES(firmSlug))}>View All</Button>}>
             <DocketList
               items={myDockets?.items || []}
@@ -156,7 +186,7 @@ export const DashboardPage = () => {
             />
           </DashboardCard>
 
-          <DashboardCard title="Recently Created" actions={<Button variant="outline" onClick={() => navigate(ROUTES.CASES(firmSlug))}>View All</Button>}>
+          <DashboardCard title="Recent Activity" emoji="📌" actions={<Button variant="outline" onClick={() => navigate(ROUTES.CASES(firmSlug))}>View All</Button>}>
             <DocketList
               items={recentDockets?.items || []}
               loading={recentDocketsQuery.isFetching}
@@ -189,7 +219,7 @@ export const DashboardPage = () => {
         {!loading && !myDockets?.items?.length && !recentDockets?.items?.length ? (
           <EmptyState
             title="No dockets yet"
-            message="Create your first docket to activate the dashboard."
+            description="📂 No dockets yet. Create your first task to activate the dashboard."
             actionLabel="Create Docket"
             onAction={() => navigate(ROUTES.CREATE_CASE(firmSlug))}
           />
@@ -198,3 +228,5 @@ export const DashboardPage = () => {
     </Layout>
   );
 };
+
+const leadsFromRecent = (items = []) => items.filter((item) => typeof item === 'object' && item !== null);

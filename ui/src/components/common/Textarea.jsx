@@ -9,6 +9,7 @@ import { formClasses } from '../../theme/tokens';
 export const Textarea = ({
   label,
   error,
+  success,
   helpText,
   disabled = false,
   readOnly = false,
@@ -32,7 +33,7 @@ export const Textarea = ({
       <FormLabel htmlFor={textareaId} label={label} required={required} />
       <textarea
         id={textareaId}
-        className={`${formClasses.textareaBase} ${error ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500/20' : ''}`}
+        className={`${formClasses.textareaBase} ${error ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500/20' : ''} ${!error && success ? formClasses.inputSuccess : ''}`}
         disabled={disabled}
         readOnly={readOnly}
         rows={rows}
@@ -44,6 +45,12 @@ export const Textarea = ({
         {...props}
       />
       {error && <p className={formClasses.errorText} id={errorId}>{error}</p>}
+      {!error && success && (
+        <p className={formClasses.successText} id={helpId}>
+          <span aria-hidden="true">✓</span>
+          <span>{success}</span>
+        </p>
+      )}
       {!error && helpText && <p className={formClasses.helpText} id={helpId}>{helpText}</p>}
     </div>
   );
