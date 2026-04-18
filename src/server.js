@@ -81,7 +81,6 @@ const firmMetricsRoutes = require('./routes/firmMetrics.routes');
 const adminRoutes = require('./routes/admin.routes');  // Admin routes (PR #41)
 const settingsRoutes = require('./routes/settings.routes');
 const superadminRoutes = require('./routes/superadmin.routes');  // Superadmin routes
-const debugRoutes = require('./routes/debug.routes');  // Debug routes (PR #43)
 const contactRoutes = require('./routes/contact.routes');  // Public contact form route
 const publicRoutes = require('./routes/public.routes');  // Public routes (firm lookup)
 const publicSignupRoutes = require('./routes/publicSignup.routes');  // Public self-serve signup routes
@@ -321,31 +320,36 @@ app.get('/api/metrics/security', allowInternalTokenOrSuperadmin, internalMetrics
 
 // API routes
 app.get('/api', (req, res) => {
+  const endpoints = {
+    health: '/health',
+    apiHealth: '/api/health',
+    users: '/api/users',
+    tasks: '/api/tasks',
+    cases: '/api/cases',
+    search: '/api/search',
+    worklists: '/api/worklists',
+    auth: '/api/auth',
+    authPublic: '/auth',
+    clientApproval: '/api/client-approval',
+    clients: '/api/clients',
+    reports: '/api/reports',
+    insights: '/api/insights',
+    categories: '/api/categories',
+    admin: '/api/admin',
+    dashboard: '/api/dashboard',
+    superadmin: '/api/superadmin',
+    superadminLegacy: '/superadmin',
+  };
+
+  if (!isProduction) {
+    endpoints.debug = '/api/debug';
+  }
+
   res.json({
     success: true,
     message: 'Welcome to Docketra API',
     version: '1.0.0',
-    endpoints: {
-      health: '/health',
-      apiHealth: '/api/health',
-      users: '/api/users',
-      tasks: '/api/tasks',
-      cases: '/api/cases',
-      search: '/api/search',
-      worklists: '/api/worklists',
-      auth: '/api/auth',
-      authPublic: '/auth',
-      clientApproval: '/api/client-approval',
-      clients: '/api/clients',
-      reports: '/api/reports',
-      insights: '/api/insights',
-      categories: '/api/categories',
-      admin: '/api/admin',
-      dashboard: '/api/dashboard',
-      superadmin: '/api/superadmin',
-      superadminLegacy: '/superadmin',
-      debug: '/api/debug',
-    },
+    endpoints,
   });
 });
 
@@ -406,6 +410,7 @@ app.use('/api/security', authenticate, securityRoutes);
 
 // SECURITY: Debug routes must never be reachable in production environments.
 if (!isProduction) {
+  const debugRoutes = require('./routes/debug.routes');  // Debug routes (PR #43)
   app.use('/api/debug', authenticate, firmContext, requireTenant, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), writeGuardChain, requireAdmin, debugRoutes);
 }
 
