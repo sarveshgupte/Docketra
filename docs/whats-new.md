@@ -1,5 +1,12 @@
 # What's New
 
+## April 2026: Landing Page Visual Improvements
+
+- Replaced all placeholder “Mock UI panel” blocks on the marketing landing page with realistic product-driven visuals based on Docketra workflows.
+- Added visual walkthrough cards for Dashboard, CRM pipeline, CMS intake submissions, and Task/docket execution so new users can quickly understand how the platform works end to end.
+- Added conversion-focused captions and realistic firm-style examples (GST Filing, ROC Return, Compliance Review) to improve trust and product clarity for first-time visitors.
+- Added a lightweight “Before vs After” micro-visual to communicate the shift from scattered tooling to a connected CMS → CRM → Tasks operating flow.
+
 ## April 2026: UI/UX Improvements
 
 - Dashboard usability polish: added quick actions (`+ New Lead`, `+ New Docket`, `+ Internal Task`), cleaner sectioning for Leads/Tasks/Recent Activity, and clearer empty-state guidance for faster first actions.
