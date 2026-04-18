@@ -20,7 +20,32 @@ const { logActivitySafe } = require('./docketActivity.service');
 const { getCanonicalDocketState } = require('../utils/docketStateMapper');
 const { canTransition } = require('../utils/docketStateTransitions');
 
-const QC_DECISIONS = Object.freeze({ APPROVED: 'APPROVED', FAILED: 'FAILED', CORRECTED: 'CORRECTED' });
+const QC_DECISIONS = Object.freeze({
+  APPROVED: 'APPROVED',
+  PASSED: 'PASSED',
+  FAILED: 'FAILED',
+  CORRECTED: 'CORRECTED',
+});
+
+function getQcDecisionTransition(fromCanonicalState, decision) {
+  const fromState = String(fromCanonicalState || '').toUpperCase();
+  const normalizedDecision = String(decision || '').toUpperCase();
+  if (fromState !== 'IN_QC') {
+    throw makeError('QC can only be performed when docket is in QC state');
+  }
+  if (!QC_DECISIONS[normalizedDecision]) {
+    throw makeError('Invalid QC decision');
+  }
+
+  if (normalizedDecision === QC_DECISIONS.FAILED) {
+    return { state: 'IN_PROGRESS', qcOutcome: 'FAILED' };
+  }
+  if (normalizedDecision === QC_DECISIONS.CORRECTED) {
+    return { state: 'RESOLVED', qcOutcome: 'CORRECTED' };
+  }
+
+  return { state: 'RESOLVED', qcOutcome: 'PASSED' };
+}
 
 function hydrateCanonicalDocketFields(docket) {
   if (!docket) return docket;
@@ -130,8 +155,9 @@ async function createDocketNotification({ firmId, userId, type, docketId, actor 
 
 function validateLifecycleAccess({ actor, fromLifecycle, toLifecycle, fromStatus }) {
   const role = normalizeActorRole(actor);
+  const canonicalFromState = getCanonicalDocketState({ status: fromStatus });
 
-  if (role === 'USER' && String(toDocketState(fromStatus) || '').toUpperCase() === DocketStatus.QC_PENDING) {
+  if (role === 'USER' && canonicalFromState === 'IN_QC') {
     throw makeError('Permission denied', 403, 'DOCKET_PERMISSION_DENIED');
   }
 
@@ -312,6 +338,9 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
 
       docket.status = toPersistenceState(finalTarget);
       docket.state = targetCanonicalState;
+      if (['IN_PROGRESS', 'IN_WB'].includes(targetCanonicalState)) {
+        docket.qcOutcome = null;
+      }
       transitionLifecycle(docket, targetLifecycle, {
         firmId,
         actor,
@@ -421,10 +450,13 @@ async function qcDecision({ docketId, firmId, actor, decision, comment }) {
 
   const fromState = toDocketState(docket.status);
   const fromCanonicalState = getCanonicalDocketState(docket);
-  if (fromState !== DocketStatus.QC_PENDING) throw makeError('Only QC_PENDING dockets can be QC handled');
+  if (fromCanonicalState !== 'IN_QC') {
+    throw makeError('QC can only be performed when docket is in QC state');
+  }
 
+  const transitionResult = getQcDecisionTransition(fromCanonicalState, normalizedDecision);
   let toState = DocketStatus.RESOLVED;
-  if (normalizedDecision === QC_DECISIONS.FAILED) {
+  if (transitionResult.state === 'IN_PROGRESS') {
     toState = DocketStatus.IN_PROGRESS;
     docket.assignedToXID = docket.qc?.originalAssigneeXID || docket.assignedToXID;
     docket.queueType = 'PERSONAL';
@@ -442,7 +474,7 @@ async function qcDecision({ docketId, firmId, actor, decision, comment }) {
     emitDocketEvent(EVENT_NAMES.QC_FAILURE, { docketId, firmId, requestedBy: docket.qc?.requestedBy, handledBy: actor.xID });
   }
 
-  if (normalizedDecision === QC_DECISIONS.APPROVED) {
+  if (normalizedDecision === QC_DECISIONS.APPROVED || normalizedDecision === QC_DECISIONS.PASSED) {
     docket.qcOutcome = 'PASSED';
     docket.qcStatus = 'APPROVED';
     docket.qcBy = actor.xID;
@@ -493,12 +525,13 @@ async function qcDecision({ docketId, firmId, actor, decision, comment }) {
     comment,
     action: `QC_${normalizedDecision}`,
     metadata: {
-      event: 'DOCKET_STATE_CHANGED',
-      from: fromCanonicalState,
-      to: targetCanonicalState,
-      userId: actor.xID,
-      timestamp: new Date().toISOString(),
+      event: 'QC_ACTION',
       qcOutcome: docket.qcOutcome,
+      fromState: fromCanonicalState,
+      toState: targetCanonicalState,
+      userId: actor.xID,
+      comment,
+      timestamp: new Date().toISOString(),
     },
     changes: [{
       field: 'status',
@@ -672,7 +705,7 @@ async function activateOnOpen({ docketId, firmId, actor }) {
 async function handleUserDeactivation({ firmId, userXID }) {
   const normalized = String(userXID || '').toUpperCase();
   const qcp = await Case.updateMany(
-    { firmId, assignedToXID: normalized, status: toPersistenceState(DocketStatus.QC_PENDING) },
+    { firmId, assignedToXID: normalized, state: 'IN_QC' },
     { $set: { assignedToXID: null, assignedTo: null, queueType: 'GLOBAL' } },
   );
 
@@ -685,7 +718,8 @@ async function handleUserDeactivation({ firmId, userXID }) {
     {
       firmId,
       assignedToXID: normalized,
-      status: { $nin: [toPersistenceState(DocketStatus.QC_PENDING), toPersistenceState(DocketStatus.PENDING)] },
+      state: { $ne: 'IN_QC' },
+      status: { $ne: toPersistenceState(DocketStatus.PENDING) },
     },
     { $set: { assignedToXID: null, assignedTo: null, queueType: 'GLOBAL', status: toPersistenceState(DocketStatus.AVAILABLE), state: 'IN_WB', qcOutcome: null } },
   );
@@ -700,6 +734,7 @@ async function handleUserDeactivation({ firmId, userXID }) {
 module.exports = {
   DocketStatus,
   QC_DECISIONS,
+  getQcDecisionTransition,
   pullFromWorkbench,
   assignToUser,
   activateOnOpen,
