@@ -66,6 +66,7 @@ const clientApprovalRoutes = require('./routes/clientApproval.routes');  // Clie
 const clientRoutes = require('./routes/client.routes');  // Client management routes (PR #39)
 const leadRoutes = require('./routes/lead.routes');
 const formRoutes = require('./routes/form.routes');
+const cmsRoutes = require('./routes/cms.routes');
 const landingPageRoutes = require('./routes/landingPage.routes');
 const crmClientRoutes = require('./routes/crmClient.routes');
 const dealRoutes = require('./routes/deal.routes');
@@ -385,6 +386,7 @@ app.use('/public', publicLimiter, publicSignupRoutes);
 
 // Contact form route (public, no authentication required)
 app.use('/api/contact', contactLimiter, contactRoutes);
+app.use('/api/cms', contactLimiter, cmsRoutes);
 
 // Category routes (user-facing reads; admin management is also available under /api/admin/categories)
 app.use('/api/categories', writeGuardChain, categoryRoutes);
