@@ -1,5 +1,6 @@
 const CaseAudit = require('../models/CaseAudit.model');
 const CaseHistory = require('../models/CaseHistory.model');
+const { logDocketEvent } = require('./docketAudit.service');
 const { CASE_ACTION_TYPES } = require('../config/constants');
 const log = require('../utils/log');
 
@@ -122,6 +123,26 @@ const logCaseHistory = async ({
 
     const options = session ? { session } : {};
     const [entry] = await CaseHistory.create([historyEntry], options);
+
+    try {
+      await logDocketEvent({
+        docketId: caseId,
+        firmId,
+        event: 'CASE_HISTORY',
+        userId: performedByXID || performedBy || 'SYSTEM',
+        userRole: mapActorRole(actorRole),
+        metadata: {
+          actionType: actionType || null,
+          actionLabel: actionLabel || description,
+          description,
+          source: 'auditLog.service.logCaseHistory',
+          ...(metadata || {}),
+        },
+        session: session || null,
+      });
+    } catch (_) {
+      // Preserve existing behavior: case history logging must remain non-blocking.
+    }
 
     return entry || null;
   } catch (error) {

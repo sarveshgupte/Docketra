@@ -1,7 +1,16 @@
 const { createHash } = require('crypto');
 const DocketAuditLog = require('../models/DocketAuditLog.model');
+const DocketAudit = require('../models/DocketAudit.model');
 
 const MAX_VALUE_LENGTH = 300;
+const AUDIT_EVENTS = Object.freeze({
+  STATE_CHANGED: 'STATE_CHANGED',
+  QC_ACTION: 'QC_ACTION',
+  SESSION_STARTED: 'SESSION_STARTED',
+  SESSION_ENDED: 'SESSION_ENDED',
+  CASE_HISTORY: 'CASE_HISTORY',
+});
+
 const SENSITIVE_FIELD_FRAGMENTS = [
   'password',
   'token',
@@ -77,6 +86,48 @@ const diffFields = (before = {}, after = {}, fields = null) => {
   }, []);
 };
 
+async function logDocketEvent({
+  docketId,
+  firmId,
+  event,
+  userId,
+  userRole,
+  fromState,
+  toState,
+  qcOutcome,
+  metadata = {},
+  session = null,
+}) {
+  if (!event || typeof event !== 'string') return null;
+  if (!docketId || !firmId) return null;
+  const normalizedEvent = String(event).trim().toUpperCase();
+  if (!normalizedEvent) return null;
+  const payload = {
+    docketId: String(docketId),
+    firmId: String(firmId),
+    event: AUDIT_EVENTS[normalizedEvent] || normalizedEvent,
+    userId: userId ? String(userId).toUpperCase() : undefined,
+    userRole: userRole ? normalizeRole(userRole) : undefined,
+    fromState: fromState || undefined,
+    toState: toState || undefined,
+    qcOutcome: qcOutcome || undefined,
+    metadata: sanitizeValue(metadata),
+  };
+  payload.dedupeKey = buildDedupeKey(payload);
+  const created = await DocketAudit.create([payload], session ? { session } : undefined);
+  return Array.isArray(created) ? created[0] : created;
+}
+
+async function getDocketTimeline(docketId, firmId = null) {
+  if (!docketId) return [];
+  return DocketAudit.find({
+    docketId: String(docketId),
+    ...(firmId ? { firmId: String(firmId) } : {}),
+  })
+    .sort({ createdAt: 1 })
+    .lean();
+}
+
 const createLog = async ({
   firmId,
   docketId,
@@ -106,6 +157,31 @@ const createLog = async ({
   });
 
   try {
+    // Bridge legacy docket audit logs into the unified canonical DocketAudit model.
+    // This is intentionally best-effort to preserve backward compatibility.
+    try {
+      await logDocketEvent({
+        docketId,
+        firmId,
+        event: action,
+        userId: performedBy,
+        userRole: performedByRole,
+        fromState,
+        toState,
+        qcOutcome: metadata?.qcOutcome || null,
+        metadata: {
+          ...metadata,
+          comment: comment || null,
+          changes: normalizedChanges,
+          legacyAction: String(action || '').toUpperCase(),
+          source: 'docketAudit.service.createLog',
+        },
+        session,
+      });
+    } catch (_) {
+      // Intentionally swallow canonical logging failures to avoid breaking existing workflows.
+    }
+
     const created = await DocketAuditLog.create([{
       firmId,
       docketId,
@@ -298,8 +374,11 @@ const getAuditTrail = async ({
 };
 
 module.exports = {
+  AUDIT_EVENTS,
   sanitizeValue,
   diffFields,
+  logDocketEvent,
+  getDocketTimeline,
   createLog,
   logCreation,
   logUpdate,
