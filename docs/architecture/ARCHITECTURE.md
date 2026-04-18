@@ -86,6 +86,19 @@ src/
 
 ## Data Models
 
+## BYOS Storage & Backup Architecture (Metadata-Control Plane)
+
+- MongoDB is used for operational metadata only.
+- File payloads (documents, uploads, backup archives) live in firm-owned cloud storage.
+- Application records reference external objects via provider metadata (`storageProvider`, `storageFileId`, checksum, MIME type, size).
+- Backup archives are encrypted before upload and persisted under firm-isolated backup paths.
+- Backup delivery defaults to secure links, not ZIP email attachments.
+- Audit logging captures backup creation, link issuance, and storage configuration changes.
+
+### Control-plane vs data-plane
+- **Control-plane (MongoDB):** identity, RBAC, workflow settings, audit, backup job metadata.
+- **Data-plane (BYOS provider):** all business files and generated archives.
+
 ### User Model
 ```
 User

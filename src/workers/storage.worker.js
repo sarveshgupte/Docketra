@@ -11,6 +11,7 @@
 
 const { Worker, UnrecoverableError } = require('bullmq');
 const fs = require('fs').promises;
+const fsSync = require('fs');
 const { createHash } = require('crypto');
 const FirmStorage = require('../models/FirmStorage.model');
 const CaseFile = require('../models/CaseFile.model');
@@ -228,10 +229,15 @@ const storageWorker = new Worker(
           }
           const targetFolderId = jobFolderId;
 
-          // Read file buffer from local disk — buffer never passed via Redis
-          let fileBuffer;
+          let contentHash;
           try {
-            fileBuffer = await fs.readFile(caseFile.localPath);
+            contentHash = await new Promise((resolve, reject) => {
+              const hash = createHash('sha256');
+              const input = fsSync.createReadStream(caseFile.localPath);
+              input.on('data', (chunk) => hash.update(chunk));
+              input.on('end', () => resolve(hash.digest('hex')));
+              input.on('error', reject);
+            });
           } catch (readErr) {
             await CaseFile.findByIdAndUpdate(fileId, {
               uploadStatus: 'error',
@@ -240,7 +246,6 @@ const storageWorker = new Worker(
             throw readErr;
           }
 
-          const contentHash = createHash('sha256').update(fileBuffer).digest('hex');
           const finalSize = Number(caseFile.size) || 0;
           let driveFileId;
           let isDuplicate = false;
@@ -258,7 +263,7 @@ const storageWorker = new Worker(
               const { fileId: uploadedFileId } = await provider.uploadFile(
                 firmId,
                 targetFolderId,
-                fileBuffer,
+                fsSync.createReadStream(caseFile.localPath),
                 { name: caseFile.originalName, mimeType: caseFile.mimeType }
               );
               driveFileId = uploadedFileId;

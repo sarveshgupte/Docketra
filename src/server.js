@@ -476,6 +476,8 @@ const server = app.listen(PORT, () => {
       log.error('[cleanupTmpUploads] failed', { message: err.message })
     );
   }, 6 * 60 * 60 * 1000); // 6 hours
+  const { storageBackupService } = require('./services/storageBackup.service');
+  storageBackupService.scheduleNightlyBackups();
   log.info(`
 ╔════════════════════════════════════════════╗
 ║         Docketra API Server                ║
