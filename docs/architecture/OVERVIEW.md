@@ -23,6 +23,25 @@ Docketra is a multi-tenant Node.js + Express SaaS application backed by MongoDB 
 - `REPORTS_ARCHITECTURE.md`
 - `FIRM_SCOPED_ROUTING_ARCHITECTURAL_FIXES.md`
 
+## CMS -> CRM -> Task Manager Intake Flow
+
+- Public and CMS-origin form submissions are orchestrated by `src/services/cmsIntake.service.js`.
+- The canonical pipeline is:
+  1. Validate submission payload
+  2. Create `Lead` (always)
+  3. Optionally upsert canonical `Client`
+  4. Optionally create `Docket` (`Case` model)
+  5. Return normalized intake result + metadata/warnings
+- Controller responsibilities are intentionally thin: parse request metadata, call service, return response.
+- Firm-level `intakeConfig.cms` controls auto-create behavior and default routing hints:
+  - `autoCreateClient`
+  - `autoCreateDocket`
+  - `defaultWorkbasketId`
+  - `defaultCategoryId`
+  - `defaultSubcategoryId`
+  - `defaultPriority`
+  - `defaultAssignee`
+
 ## BYOAI Architecture (Data-Minimal / Firm-Controlled)
 
 Docketra treats AI as an **orchestration layer**, not a long-term storage layer for AI content.
