@@ -16,6 +16,7 @@ import { Stack } from '../components/layout/Stack';
 import { Row } from '../components/layout/Row';
 import { ErrorState } from '../components/feedback/ErrorState';
 import { getApiBaseUrl } from '../utils/apiBaseUrl';
+import { resolvePostLoginDestination } from '../utils/authRedirect';
 import './LoginPage.css';
 
 const mapSafeLoginError = (error) => {
@@ -186,7 +187,9 @@ export const FirmLoginPage = () => {
     const profileResult = await fetchProfile();
     if (profileResult?.success) {
       showSuccess('✅ Signed in successfully. Redirecting to your dashboard.');
-      navigate(resolvePostAuthRoute(profileResult.data), { replace: true });
+      const returnTo = new URLSearchParams(location.search).get('returnTo');
+      const nextRoute = resolvePostLoginDestination(returnTo, resolvePostAuthRoute(profileResult.data));
+      navigate(nextRoute, { replace: true });
     }
   };
 
