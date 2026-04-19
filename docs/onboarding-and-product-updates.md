@@ -138,3 +138,36 @@ When users complete real setup actions outside the dashboard, the checklist shou
 - Superadmin can move from blocker summary to exact firm state faster.
 - Firm detail highlights setup gaps, stale users, tutorial-skip risk, and follow-up users in one workflow.
 - Recommended next actions use explicit operations wording to support confident intervention.
+
+## 8) Proactive onboarding alerts for stuck firms/users
+
+### What was added
+- New superadmin API: `GET /api/superadmin/onboarding-alerts`.
+- Alerts are derived from existing onboarding insight/detail signals (firm setup gaps, role assignment blockers, skipped tutorial + incomplete, stale onboarding telemetry).
+- Alerts are deduped to one open alert per `firm + blocker type` to reduce noise and avoid duplicate spam.
+- Resolution is automatic/derived: resolved blockers disappear from open alerts without manual state syncing.
+
+### Severity + prioritization
+- `HIGH`: foundational firm setup blockers (for example zero active clients, missing category/workbasket) and larger stale-assignment risk.
+- `MEDIUM`: manager/user assignment blockers and stale/tutorial follow-up issues.
+- `LOW`: softer follow-up cases.
+
+### Alert filters
+- `status`: `open`, `resolved`, `all`
+- `severity`: `HIGH`, `MEDIUM`, `LOW`
+- `blockerType`
+- `ageBucket`: `0-2d`, `3d+`, `7d+`, `14d+`
+
+### Superadmin UX surfaces
+- Platform Dashboard onboarding observability card now shows top open proactive alerts.
+- Onboarding insights page now includes a dedicated **Proactive onboarding alerts** section with:
+  - alert title + blocker type
+  - firm context
+  - severity and age
+  - suggested next action
+  - deep links to onboarding firm detail and firms management
+
+### Safety + architecture notes
+- No third-party alerting integrations were introduced.
+- No cron-heavy or queue-heavy infrastructure was added.
+- Alerting remains non-blocking and best-effort for existing onboarding/progress/tutorial/dashboard flows.

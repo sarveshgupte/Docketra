@@ -26,6 +26,14 @@ assert.ok(
   insightsPage.includes('useSearchParams'),
   'Insights list should preserve filter state through query params',
 );
+assert.ok(
+  insightsPage.includes('Proactive onboarding alerts'),
+  'Insights page should include proactive onboarding alert surface',
+);
+assert.ok(
+  insightsPage.includes('alertStatus'),
+  'Insights alert filters should preserve status query param context',
+);
 
 const firmPage = fs.readFileSync(path.resolve(__dirname, '../ui/src/pages/SuperadminFirmOnboardingDetailPage.jsx'), 'utf8');
 assert.ok(
