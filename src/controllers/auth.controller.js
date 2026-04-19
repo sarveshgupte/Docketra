@@ -3,7 +3,6 @@ const mongoose = require('mongoose');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const speakeasy = require('speakeasy');
-const { google } = require('googleapis');
 const User = require('../models/User.model');
 const Team = require('../models/Team.model');
 const Firm = require('../models/Firm.model');
@@ -36,6 +35,11 @@ const { ensureDefaultClientForFirm } = require('../services/defaultClient.servic
 const { getOrCreateDefaultClient } = require('../services/defaultClient.guard');
 const { getLatestPublishedUpdate } = require('../services/productUpdate.service');
 const { ensureGoogleAuthEnabled } = require('../services/featureGate.service');
+const {
+  getGoogleOAuthClient,
+  signGoogleState,
+  parseGoogleState,
+} = require('../services/authGoogle.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const config = require('../config/config');
 const { loadEnv } = require('../config/env');
@@ -77,66 +81,6 @@ const env = loadEnv({ exitOnError: false }) || {};
 const GOOGLE_AUTH_STATE_TTL_MS = 10 * 60 * 1000;
 const GOOGLE_EXCHANGE_TOKEN_TTL_MINUTES = 5;
 const FRONTEND_BASE_URL = () => (process.env.FRONTEND_URL || '').replace(/\/+$/, '');
-const getGoogleAuthRedirectUri = () => (
-  env.GOOGLE_AUTH_REDIRECT_URI
-  || env.GOOGLE_CALLBACK_URL
-  || env.GOOGLE_OAUTH_REDIRECT_URI
-  || process.env.GOOGLE_AUTH_REDIRECT_URI
-  || process.env.GOOGLE_CALLBACK_URL
-  || process.env.GOOGLE_OAUTH_REDIRECT_URI
-  || null
-);
-
-const getGoogleOAuthClient = () => {
-  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
-    throw new Error('GOOGLE_OAUTH_CONFIG_MISSING');
-  }
-  const googleAuthRedirectUri = getGoogleAuthRedirectUri();
-  if (!googleAuthRedirectUri) {
-    throw new Error('GOOGLE_AUTH_REDIRECT_URI_MISSING');
-  }
-
-  return new google.auth.OAuth2(
-    env.GOOGLE_CLIENT_ID,
-    env.GOOGLE_CLIENT_SECRET,
-    googleAuthRedirectUri
-  );
-};
-
-const signGoogleState = (payload) => {
-  const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
-  const signature = crypto
-    .createHmac('sha256', process.env.JWT_SECRET || 'docketra-google-auth')
-    .update(encodedPayload)
-    .digest('base64url');
-  return `${encodedPayload}.${signature}`;
-};
-
-const parseGoogleState = (rawState) => {
-  if (!rawState || typeof rawState !== 'string' || !rawState.includes('.')) {
-    return null;
-  }
-
-  const [encodedPayload, providedSig] = rawState.split('.');
-  if (!encodedPayload || !providedSig) {
-    return null;
-  }
-
-  const expectedSig = crypto
-    .createHmac('sha256', process.env.JWT_SECRET || 'docketra-google-auth')
-    .update(encodedPayload)
-    .digest('base64url');
-
-  if (providedSig !== expectedSig) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8'));
-  } catch (_error) {
-    return null;
-  }
-};
 const SUPERADMIN_USER_ID = () => env.SUPERADMIN_OBJECT_ID;
 const SUPERADMIN_ROLE = 'SUPERADMIN';
 const ROLE_SUPER_ADMIN = 'SUPER_ADMIN';
