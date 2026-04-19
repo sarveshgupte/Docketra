@@ -18,7 +18,20 @@ Docketra is presented as three connected modules in the UI and navigation shell:
 
 - **CMS**: acquisition and intake (landing pages, forms, submissions).
 - **CRM**: relationship and pipeline management (leads, clients/accounts, deals, invoices).
-- **Tasks**: execution and operations (dockets, worklists, QC, internal work).
+- **Task Manager**: execution and operations (dockets, worklists, QC, internal work).
+
+Navigation IA follows a workflow-first structure:
+
+- **Overview**: Dashboard
+- **Modules**: CRM, CMS, Task Manager (expandable groups)
+- **Workspace**: Team, Reports
+- **Administration**: Settings
+
+Key product alignment rules in navigation:
+
+- Document collection is not a standalone CMS repository destination.
+- Collected documents remain in **Docket Detail → Attachments** under Task Manager execution context.
+- **Category Management** lives under Task Manager and represents category + subcategory + workbasket linkage configuration.
 
 The architecture remains service-oriented and route-compatible; this topology is a UX/product-clarity layer over existing backend ownership.
 
