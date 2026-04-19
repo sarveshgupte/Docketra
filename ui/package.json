@@ -28,7 +28,8 @@
     "preview": "vite preview",
     "test:dockets-route": "node tests/docketsRouteReliability.test.mjs",
     "test:navigation": "node tests/navigationReliability.test.mjs",
-    "test:forms": "node tests/formReliabilityHardening.test.mjs"
+    "test:forms": "node tests/formReliabilityHardening.test.mjs",
+    "test:shells": "node tests/firmWorkspaceShellUnification.test.mjs"
   },
   "browserslist": {
     "production": [
