@@ -4,6 +4,9 @@
 This feature adds lightweight onboarding telemetry and superadmin-facing friction insight using Docketra's real onboarding progress model.
 
 ## April 2026 refinement: actionable superadmin triage
+- Added firm drill-down route: `/app/superadmin/onboarding-insights/:firmId` for direct tenant triage.
+- Added deep-link query persistence (`blockerType`, `completionState`, `staleAfterDays`, `sinceDays`) between summary and firm detail views.
+- Added firm-level action guidance and recommended next-action panel (for example: first active client, category/workbasket setup, manager queue assignment).
 - Added dedicated superadmin triage page: `/app/superadmin/onboarding-insights`.
 - Added detail API: `GET /api/superadmin/onboarding-insights/details`.
 - Added filter controls for timeframe, role, blocker type, completion state, and stale threshold.
@@ -19,6 +22,7 @@ This feature adds lightweight onboarding telemetry and superadmin-facing frictio
 - **Superadmin detail API**: `GET /api/superadmin/onboarding-insights/details`
 - **Visibility UI**: `ui/src/pages/PlatformDashboard.jsx`
 - **Actionable triage UI**: `ui/src/pages/SuperadminOnboardingInsightsPage.jsx`
+- **Firm drill-down UI**: `ui/src/pages/SuperadminFirmOnboardingDetailPage.jsx`
 
 ## Event contract
 Each event stores only operationally necessary fields:
