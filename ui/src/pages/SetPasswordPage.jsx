@@ -134,6 +134,16 @@ export const SetPasswordPage = () => {
     }
   };
 
+  const handleGoogleSignup = () => {
+    if (!token || !firmSlug) return;
+    const params = new URLSearchParams({
+      intent: 'signup',
+      firmSlug,
+      setupToken: token,
+    });
+    window.location.assign(`/api/auth/google/start?${params.toString()}`);
+  };
+
   if (firmLoading) {
     return (
       <div className="set-password-page">
@@ -243,6 +253,18 @@ export const SetPasswordPage = () => {
           >
             Set Password
           </Button>
+
+          {firmSlug && token && (
+            <Button
+              type="button"
+              variant="secondary"
+              fullWidth
+              disabled={loading}
+              onClick={handleGoogleSignup}
+            >
+              Continue with Google instead
+            </Button>
+          )}
         </form>
       </Card>
     </div>
