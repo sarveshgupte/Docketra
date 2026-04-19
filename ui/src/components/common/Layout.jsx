@@ -188,6 +188,33 @@ export const Layout = ({ children, title, subtitle }) => {
 
   const isActive = (path) => location.pathname === path;
   const isActivePrefix = (prefix) => location.pathname.startsWith(prefix);
+  const isActivePath = (path) => {
+    const normalizedPath = String(path || '').split('?')[0].split('#')[0];
+    return location.pathname === normalizedPath || location.pathname.startsWith(`${normalizedPath}/`);
+  };
+  const isActiveQueryRoute = (path, query = {}) => {
+    if (!isActivePath(path)) return false;
+    const params = new URLSearchParams(location.search);
+    return Object.entries(query).every(([key, value]) => params.get(key) === String(value));
+  };
+  const isExactNavMatch = (to) => {
+    const [pathWithQuery = '', hashFragment = ''] = String(to || '').split('#');
+    const [pathPart = '', queryString = ''] = pathWithQuery.split('?');
+    if (!isActivePath(pathPart)) return false;
+
+    if (queryString) {
+      const expectedQuery = new URLSearchParams(queryString);
+      const currentQuery = new URLSearchParams(location.search);
+      const queryMatches = [...expectedQuery.entries()].every(([key, value]) => currentQuery.get(key) === value);
+      if (!queryMatches) return false;
+    }
+
+    if (hashFragment) {
+      return location.hash === `#${hashFragment}`;
+    }
+
+    return !location.hash;
+  };
 
   const getUserInitials = () => {
     if (user?.name) {
@@ -474,134 +501,130 @@ export const Layout = ({ children, title, subtitle }) => {
 
   const navSections = [
     {
-      id: 'top-level',
-      title: 'MAIN',
+      id: 'overview',
+      title: 'OVERVIEW',
       sticky: true,
       defaultOpen: true,
       collapsible: false,
       items: [
         {
+          id: 'dashboard',
           to: ROUTES.DASHBOARD(currentFirmSlug),
           label: 'Dashboard',
           icon: <IconDashboard />,
-          active: isActive(ROUTES.DASHBOARD(currentFirmSlug)),
+          active: isActivePath(ROUTES.DASHBOARD(currentFirmSlug)),
+        },
+      ],
+    },
+    {
+      id: 'modules',
+      title: 'MODULES',
+      defaultOpen: true,
+      collapsible: false,
+      items: [
+        {
+          id: 'crm',
+          type: 'group',
+          label: 'CRM',
+          icon: <IconCases />,
+          active: isActivePrefix(`/app/firm/${currentFirmSlug}/crm`),
+          hidden: !hasAdminAccess,
+          children: [
+            { id: 'crm-client-management', to: ROUTES.CRM_CLIENTS(currentFirmSlug), label: 'Client Management', icon: <IconCases />, active: isActivePath(ROUTES.CRM_CLIENTS(currentFirmSlug)) },
+            { id: 'crm-leads', to: ROUTES.CRM_LEADS(currentFirmSlug), label: 'Leads', icon: <IconWorklist />, active: isActivePath(ROUTES.CRM_LEADS(currentFirmSlug)) },
+          ],
         },
         {
-          to: ROUTES.CMS(currentFirmSlug),
+          id: 'cms',
+          type: 'group',
           label: 'CMS',
           icon: <IconWorklist />,
           active: isActivePrefix(ROUTES.CMS(currentFirmSlug)),
           hidden: !hasAdminAccess,
+          children: [
+            { id: 'cms-overview', to: ROUTES.CMS(currentFirmSlug), label: 'Overview', icon: <IconDashboard />, active: isActivePath(ROUTES.CMS(currentFirmSlug)) && !location.hash },
+            { id: 'cms-request-links', to: `${ROUTES.CMS(currentFirmSlug)}#intake-queue`, label: 'Request Links / Intake Links', icon: <IconWorklist />, active: isActivePath(ROUTES.CMS(currentFirmSlug)) && location.hash === '#intake-queue' },
+            { id: 'cms-forms', to: `${ROUTES.CMS(currentFirmSlug)}#embed-forms`, label: 'Forms / Templates', icon: <IconCases />, active: isActivePath(ROUTES.CMS(currentFirmSlug)) && location.hash === '#embed-forms' },
+            { id: 'cms-public-intake', to: `${ROUTES.CMS(currentFirmSlug)}#cms-surfaces`, label: 'Public Intake / Submissions', icon: <IconWorkbasket />, active: isActivePath(ROUTES.CMS(currentFirmSlug)) && location.hash === '#cms-surfaces' },
+          ],
         },
         {
-          to: ROUTES.CRM_CLIENTS(currentFirmSlug),
-          label: 'CRM',
-          icon: <IconCases />,
-          active: isActivePrefix(ROUTES.CRM_CLIENTS(currentFirmSlug)),
+          id: 'task-manager',
+          type: 'group',
+          label: 'Task Manager',
+          icon: <IconWorkbasket />,
+          active: (
+            isActivePrefix(ROUTES.GLOBAL_WORKLIST(currentFirmSlug))
+            || isActivePrefix(ROUTES.WORKLIST(currentFirmSlug))
+            || isActivePrefix(ROUTES.MY_WORKLIST(currentFirmSlug))
+            || isActivePrefix(ROUTES.QC_QUEUE(currentFirmSlug))
+            || isActivePrefix(ROUTES.CASES(currentFirmSlug))
+            || isActiveQueryRoute(ROUTES.ADMIN(currentFirmSlug), { tab: 'categories' })
+            || isActivePrefix(ROUTES.WORK_SETTINGS(currentFirmSlug))
+          ),
+          children: [
+            { id: 'tm-workbasket', to: ROUTES.GLOBAL_WORKLIST(currentFirmSlug), label: workbasketNavLabel, icon: <IconWorkbasket />, active: isActivePath(ROUTES.GLOBAL_WORKLIST(currentFirmSlug)), badge: countsFetched ? workbasketCount : 'loading' },
+            { id: 'tm-worklist', to: ROUTES.WORKLIST(currentFirmSlug), label: 'My Worklist', icon: <IconWorklist />, active: isActivePath(ROUTES.WORKLIST(currentFirmSlug)) || isActivePath(ROUTES.MY_WORKLIST(currentFirmSlug)), badge: countsFetched ? worklistCount : 'loading' },
+            { id: 'tm-qc', to: ROUTES.QC_QUEUE(currentFirmSlug), label: 'QC Workbasket', icon: <IconAdmin />, active: isActivePath(ROUTES.QC_QUEUE(currentFirmSlug)), hidden: !hasQcQueueAccess },
+            { id: 'tm-dockets', to: ROUTES.CASES(currentFirmSlug), label: 'All Dockets', icon: <IconCases />, active: isActivePath(ROUTES.CASES(currentFirmSlug)) },
+            {
+              id: 'tm-category-management',
+              to: `${ROUTES.ADMIN(currentFirmSlug)}?tab=categories&context=work-settings`,
+              label: 'Category Management',
+              icon: <IconSettings />,
+              active: isActiveQueryRoute(ROUTES.ADMIN(currentFirmSlug), { tab: 'categories' }) || isActivePrefix(ROUTES.WORK_SETTINGS(currentFirmSlug)),
+              hidden: !hasAdminAccess,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'workspace',
+      title: 'WORKSPACE',
+      defaultOpen: true,
+      items: [
+        {
+          id: 'team',
+          to: ROUTES.ADMIN(currentFirmSlug),
+          label: 'Team',
+          icon: <IconTeam />,
+          active: isActivePrefix(ROUTES.ADMIN(currentFirmSlug))
+            && !isActivePrefix(reportsRoute)
+            && !isActiveQueryRoute(ROUTES.ADMIN(currentFirmSlug), { tab: 'categories' }),
           hidden: !hasAdminAccess,
         },
-        {
-          to: ROUTES.CASES(currentFirmSlug),
-          label: 'Tasks',
-          icon: <IconWorklist />,
-          active: isActivePrefix(ROUTES.CASES(currentFirmSlug)),
-        },
-      ].filter((item) => !item.hidden),
+        { id: 'reports', to: reportsRoute, label: 'Reports', icon: <IconReport />, active: isActivePrefix(reportsRoute), hidden: !hasAdminAccess },
+      ],
     },
     {
-      id: 'tasks',
-      title: 'TASKS',
+      id: 'administration',
+      title: 'ADMINISTRATION',
       defaultOpen: true,
       items: [
-        {
-          to: ROUTES.GLOBAL_WORKLIST(currentFirmSlug),
-          label: workbasketNavLabel,
-          icon: <IconWorkbasket />,
-          active: isActive(ROUTES.GLOBAL_WORKLIST(currentFirmSlug)),
-          badge: countsFetched ? workbasketCount : 'loading',
-        },
-        {
-          to: ROUTES.WORKLIST(currentFirmSlug),
-          label: 'My Worklist',
-          icon: <IconWorklist />,
-          active: isActive(ROUTES.WORKLIST(currentFirmSlug)) || isActive(ROUTES.MY_WORKLIST(currentFirmSlug)),
-          badge: countsFetched ? worklistCount : 'loading',
-        },
-        {
-          to: ROUTES.QC_QUEUE(currentFirmSlug),
-          label: 'QC Queue',
-          icon: <IconAdmin />,
-          active: isActivePrefix(ROUTES.QC_QUEUE(currentFirmSlug)),
-          hidden: !hasQcQueueAccess,
-        },
-        {
-          to: `${ROUTES.CASES(currentFirmSlug)}?status=RESOLVED`,
-          label: 'Resolved',
-          icon: <IconWorklist />,
-          active: location.pathname === ROUTES.CASES(currentFirmSlug) && new URLSearchParams(location.search).get('status') === 'RESOLVED',
-        },
-        {
-          to: `${ROUTES.CASES(currentFirmSlug)}?status=FILED`,
-          label: 'Filed',
-          icon: <IconWorklist />,
-          active: location.pathname === ROUTES.CASES(currentFirmSlug) && new URLSearchParams(location.search).get('status') === 'FILED',
-        },
-      ].filter((item) => !item.hidden),
-    },
-    {
-      id: 'clients',
-      title: 'CLIENTS',
-      defaultOpen: true,
-      hidden: !hasAdminAccess,
-      items: [
-        { to: ROUTES.CLIENTS(currentFirmSlug), label: 'Clients', icon: <IconCases />, active: isActivePrefix(ROUTES.CLIENTS(currentFirmSlug)) },
-        { to: ROUTES.COMPLIANCE_CALENDAR(currentFirmSlug), label: 'Compliance Calendar', icon: <IconWorklist />, active: isActive(ROUTES.COMPLIANCE_CALENDAR(currentFirmSlug)) },
+        { id: 'settings', to: settingsRoute, label: 'Settings', icon: <IconSettings />, active: isActivePrefix(settingsRoute), hidden: !hasAdminAccess },
       ],
     },
-    {
-      id: 'crm-cms',
-      title: 'CRM / CMS',
-      defaultOpen: false,
-      hidden: !hasAdminAccess,
-      items: [
-        { to: ROUTES.CRM_LEADS(currentFirmSlug), label: 'CRM Leads', icon: <IconWorklist />, active: isActivePrefix(ROUTES.CRM_LEADS(currentFirmSlug)) },
-        { to: ROUTES.CRM_CLIENTS(currentFirmSlug), label: 'CRM Clients', icon: <IconCases />, active: isActivePrefix(ROUTES.CRM_CLIENTS(currentFirmSlug)) },
-        { to: ROUTES.CMS(currentFirmSlug), label: 'CMS Intake', icon: <IconWorklist />, active: isActivePrefix(ROUTES.CMS(currentFirmSlug)) },
-      ],
-    },
-    {
-      id: 'insights',
-      title: 'INSIGHTS',
-      defaultOpen: false,
-      hidden: !hasAdminAccess,
-      items: [
-        { to: reportsRoute, label: 'Reports', icon: <IconReport />, active: isActivePrefix(reportsRoute) },
-      ],
-    },
-    {
-      id: 'admin',
-      title: 'ADMIN',
-      defaultOpen: false,
-      hidden: !hasAdminAccess,
-      items: [
-        { to: ROUTES.ADMIN(currentFirmSlug), label: 'Team', icon: <IconTeam />, active: isActivePrefix(ROUTES.ADMIN(currentFirmSlug)) && !isActivePrefix(reportsRoute) },
-        { to: ROUTES.HIERARCHY(currentFirmSlug), label: 'Hierarchy', icon: <IconTeam />, active: isActivePrefix(ROUTES.HIERARCHY(currentFirmSlug)) },
-        { to: ROUTES.FIRM_SETTINGS(currentFirmSlug), label: 'Firm Settings', icon: <IconAdmin />, active: isActivePrefix(ROUTES.FIRM_SETTINGS(currentFirmSlug)) },
-        { to: ROUTES.WORK_SETTINGS(currentFirmSlug), label: 'Work Settings', icon: <IconWorklist />, active: isActivePrefix(ROUTES.WORK_SETTINGS(currentFirmSlug)) },
-        { to: ROUTES.STORAGE_SETTINGS(currentFirmSlug), label: 'Storage Settings', icon: <IconAdmin />, active: isActivePrefix(ROUTES.STORAGE_SETTINGS(currentFirmSlug)) },
-        { to: ROUTES.AI_SETTINGS(currentFirmSlug), label: 'AI Settings', icon: <IconAdmin />, active: isActivePrefix(ROUTES.AI_SETTINGS(currentFirmSlug)) },
-        { to: settingsRoute, label: 'Settings Hub', icon: <IconSettings />, active: isActivePrefix(settingsRoute) },
-      ],
-    },
-    {
-      id: 'account',
-      title: 'ACCOUNT',
-      defaultOpen: false,
-      items: [
-        { to: ROUTES.PROFILE(currentFirmSlug), label: 'My Profile', icon: <IconSettings />, active: isActivePrefix(ROUTES.PROFILE(currentFirmSlug)) },
-      ],
-    },
-  ].filter((section) => !section.hidden);
+  ]
+    .map((section) => ({
+      ...section,
+      items: (section.items || [])
+        .map((item) => (item.type === 'group'
+          ? { ...item, children: (item.children || []).filter((child) => !child.hidden) }
+          : item))
+        .filter((item) => !item.hidden),
+    }))
+    .filter((section) => !section.hidden && section.items.length > 0);
+
+  const moduleSection = navSections.find((section) => section.id === 'modules');
+  const activeModuleId = moduleSection?.items?.find((item) => item.type === 'group' && item.active)?.id || null;
+  const [expandedModuleId, setExpandedModuleId] = useState(activeModuleId || 'task-manager');
+
+  useEffect(() => {
+    if (activeModuleId) {
+      setExpandedModuleId(activeModuleId);
+    }
+  }, [activeModuleId]);
 
   const toggleCommandPalette = useCallback(() => {
     setCommandPaletteOpen((isOpen) => !isOpen);
@@ -629,8 +652,8 @@ export const Layout = ({ children, title, subtitle }) => {
   ];
 
   const activeNavLabel = navSections
-    .flatMap((section) => section.items)
-    .find((item) => location.pathname === String(item.to || '').split('?')[0] || location.pathname.startsWith(`${String(item.to || '').split('?')[0]}/`))
+    .flatMap((section) => section.items.flatMap((item) => (item.type === 'group' ? item.children : item)))
+    .find((item) => isExactNavMatch(item.to) || item.active)
     ?.label;
 
   useEffect(() => {
@@ -692,6 +715,13 @@ export const Layout = ({ children, title, subtitle }) => {
               defaultOpen={section.defaultOpen}
               collapsible={section.collapsible}
               collapsed={sidebarCollapsed}
+              expandedGroupId={section.id === 'modules' ? expandedModuleId : null}
+              onGroupToggle={(groupId) => setExpandedModuleId((previous) => (previous === groupId ? null : groupId))}
+              onNavigate={() => {
+                if (isMobileViewport) {
+                  setMobileSidebarOpen(false);
+                }
+              }}
             />
           ))}
         </nav>
