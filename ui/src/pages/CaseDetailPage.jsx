@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Layout } from '../components/common/Layout';
+import { PlatformShell } from '../components/platform/PlatformShell';
 import { Card } from '../components/common/Card';
 import { Loading } from '../components/common/Loading';
 import { Badge } from '../components/common/Badge';
@@ -78,6 +78,12 @@ export const CaseDetailPage = () => {
   // Next/Previous navigation: read list context passed from CasesPage
   const sourceList = location.state?.sourceList || null; // array of caseIds
   const sourceIndex = location.state?.index ?? -1;
+  const returnToFromQuery = useMemo(() => {
+    const params = new URLSearchParams(location.search || '');
+    const raw = params.get('returnTo');
+    return raw && raw.startsWith('/app/firm/') ? raw : '';
+  }, [location.search]);
+  const returnTo = location.state?.returnTo || returnToFromQuery || ROUTES.CASES(firmSlug);
   const hasPrev = sourceList && sourceIndex > 0;
   const hasNext = sourceList && sourceIndex < sourceList.length - 1;
 
@@ -97,6 +103,10 @@ export const CaseDetailPage = () => {
     navigate(ROUTES.CASE_DETAIL(firmSlug, nextId), {
       state: { sourceList, index: sourceIndex + 1 },
     });
+  };
+
+  const handleBackToQueue = () => {
+    navigate(returnTo, { replace: true });
   };
 
   const [loading, setLoading] = useState(true);
@@ -1535,15 +1545,15 @@ export const CaseDetailPage = () => {
 
   if (loading || (activeDocketId === caseId && isDocketLoading && !caseData)) {
     return (
-      <Layout>
+      <PlatformShell moduleLabel="Operations" title="Docket details" subtitle="Loading docket context and workflow actions.">
         <Loading message="Loading docket..." />
-      </Layout>
+      </PlatformShell>
     );
   }
 
   if (!caseData) {
     return (
-      <Layout>
+      <PlatformShell moduleLabel="Operations" title="Docket details" subtitle="Loading docket context and workflow actions.">
         <div className="container">
           <Card>
             {loadError ? <p>{loadError}</p> : null}
@@ -1553,15 +1563,20 @@ export const CaseDetailPage = () => {
             </Button>
           </Card>
         </div>
-      </Layout>
+      </PlatformShell>
     );
   }
 
   if (!caseInfo) return null;
 
   return (
-    <Layout>
+    <PlatformShell moduleLabel="Operations" title={formatDocketId(caseInfo?.caseId || caseId)} subtitle={caseInfo?.title || caseInfo?.caseName || 'Docket detail and execution controls.'}>
       <div className="case-detail" ref={pageContainerRef} tabIndex={-1}>
+        <div className="case-detail__return">
+          <Button type="button" variant="outline" onClick={handleBackToQueue}>
+            ← Back to queue
+          </Button>
+        </div>
         {/* ─── Next/Previous Docket Navigation ────────────────────────── */}
         {sourceList && (
           <div className="case-detail__nav-bar">
@@ -2275,6 +2290,6 @@ export const CaseDetailPage = () => {
           />
         )}
       </div>
-    </Layout>
+    </PlatformShell>
   );
 };
