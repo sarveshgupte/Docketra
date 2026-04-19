@@ -4,9 +4,11 @@ import { PlatformShell } from '../../components/platform/PlatformShell';
 import { dashboardApi } from '../../api/dashboard.api';
 import { ROUTES } from '../../constants/routes';
 import { InlineNotice, PageSection, StatGrid } from './PlatformShared';
+import { usePermissions } from '../../hooks/usePermissions';
 
 export const PlatformDashboardPage = () => {
   const { firmSlug } = useParams();
+  const { isAdmin } = usePermissions();
   const [summary, setSummary] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -51,10 +53,11 @@ export const PlatformDashboardPage = () => {
 
       <PageSection title="Modules" description="Open the right workspace quickly based on your current objective.">
         <div className="action-row">
-          <Link to={ROUTES.CMS(firmSlug)}>CMS · Forms & Intake</Link>
-          <Link to={ROUTES.CRM_CLIENTS(firmSlug)}>CRM · Leads & Clients</Link>
+          {isAdmin ? <Link to={ROUTES.CMS(firmSlug)}>CMS · Forms & Intake</Link> : null}
+          {isAdmin ? <Link to={ROUTES.CRM_CLIENTS(firmSlug)}>CRM · Leads & Clients</Link> : null}
           <Link to={ROUTES.CASES(firmSlug)}>Tasks · Dockets & Worklists</Link>
         </div>
+        {!isAdmin ? <p className="muted">CMS and CRM modules are available to admin roles.</p> : null}
       </PageSection>
 
       <PageSection title="Productivity trend" description="Quick signal of current workload throughput.">
@@ -74,7 +77,7 @@ export const PlatformDashboardPage = () => {
           <Link to={ROUTES.WORKLIST(firmSlug)}>My Worklist</Link>
           <Link to={ROUTES.GLOBAL_WORKLIST(firmSlug)}>Workbaskets</Link>
           <Link to={ROUTES.QC_QUEUE(firmSlug)}>QC Queue</Link>
-          <Link to={ROUTES.ADMIN_REPORTS(firmSlug)}>Reports</Link>
+          {isAdmin ? <Link to={ROUTES.ADMIN_REPORTS(firmSlug)}>Reports</Link> : null}
         </div>
       </PageSection>
     </PlatformShell>

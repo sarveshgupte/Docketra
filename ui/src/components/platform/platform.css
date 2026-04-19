@@ -118,6 +118,15 @@ a {
   color: #64748b;
 }
 
+.platform__breadcrumbs {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #64748b;
+}
+
 .platform__actions {
   display: flex;
   align-items: center;
