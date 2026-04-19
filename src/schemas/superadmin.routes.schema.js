@@ -10,6 +10,7 @@ module.exports = {
   'GET /stats': { query: passthroughQuery },
   'GET /onboarding-insights': { query: passthroughQuery },
   'GET /onboarding-insights/details': { query: passthroughQuery },
+  'GET /onboarding-alerts': { query: passthroughQuery },
   'GET /health': { query: passthroughQuery },
 
   'POST /firms': {
