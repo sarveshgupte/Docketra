@@ -76,19 +76,29 @@ const env = loadEnv({ exitOnError: false }) || {};
 const GOOGLE_AUTH_STATE_TTL_MS = 10 * 60 * 1000;
 const GOOGLE_EXCHANGE_TOKEN_TTL_MINUTES = 5;
 const FRONTEND_BASE_URL = () => (process.env.FRONTEND_URL || '').replace(/\/+$/, '');
+const getGoogleAuthRedirectUri = () => (
+  env.GOOGLE_AUTH_REDIRECT_URI
+  || env.GOOGLE_CALLBACK_URL
+  || env.GOOGLE_OAUTH_REDIRECT_URI
+  || process.env.GOOGLE_AUTH_REDIRECT_URI
+  || process.env.GOOGLE_CALLBACK_URL
+  || process.env.GOOGLE_OAUTH_REDIRECT_URI
+  || null
+);
 
 const getGoogleOAuthClient = () => {
   if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
     throw new Error('GOOGLE_OAUTH_CONFIG_MISSING');
   }
-  if (!env.GOOGLE_OAUTH_REDIRECT_URI) {
-    throw new Error('GOOGLE_OAUTH_REDIRECT_URI_MISSING');
+  const googleAuthRedirectUri = getGoogleAuthRedirectUri();
+  if (!googleAuthRedirectUri) {
+    throw new Error('GOOGLE_AUTH_REDIRECT_URI_MISSING');
   }
 
   return new google.auth.OAuth2(
     env.GOOGLE_CLIENT_ID,
     env.GOOGLE_CLIENT_SECRET,
-    env.GOOGLE_OAUTH_REDIRECT_URI
+    googleAuthRedirectUri
   );
 };
 

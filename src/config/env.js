@@ -36,6 +36,8 @@ const envSchema = z
     DISABLE_GOOGLE_AUTH: boolFromEnv,
     GOOGLE_CLIENT_ID: z.string().trim().optional(),
     GOOGLE_CLIENT_SECRET: z.string().trim().optional(),
+    GOOGLE_AUTH_REDIRECT_URI: z.string().trim().optional(),
+    GOOGLE_CALLBACK_URL: z.string().trim().optional(),
     GOOGLE_OAUTH_REDIRECT_URI: z.string().trim().optional(),
 
     ENCRYPTION_PROVIDER: z.enum(['local', 'kms', 'disabled']).default('local'),
@@ -68,6 +70,9 @@ const envSchema = z
       }
       if (!env.GOOGLE_CLIENT_SECRET) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['GOOGLE_CLIENT_SECRET'], message: 'required when Google auth is enabled' });
+      }
+      if (!env.GOOGLE_AUTH_REDIRECT_URI && !env.GOOGLE_CALLBACK_URL && !env.GOOGLE_OAUTH_REDIRECT_URI) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['GOOGLE_AUTH_REDIRECT_URI'], message: 'required when Google auth is enabled (or set GOOGLE_CALLBACK_URL/GOOGLE_OAUTH_REDIRECT_URI)' });
       }
     }
 
