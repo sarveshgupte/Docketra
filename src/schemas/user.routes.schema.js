@@ -7,7 +7,11 @@ module.exports = {
     }).strip(),
   },
   'PATCH /tutorial/complete': {
-    body: z.object({}).strip(),
+    body: z.object({
+      status: z.enum(['completed', 'skipped']).optional(),
+      role: nonEmptyString.optional(),
+      stepIndex: z.coerce.number().int().min(0).optional(),
+    }).strip(),
   },
   'GET /': {
     query: z.object({
