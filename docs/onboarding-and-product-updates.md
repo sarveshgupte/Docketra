@@ -84,3 +84,19 @@ The previous checklist could be advanced by local UI state even when real worksp
 
 - Optional onboarding progress fetch is non-blocking and cannot fail core dashboard metrics/recent dockets rendering.
 - For detected steps, backend status is authoritative; CTA clicks do not force manual completion.
+
+## 5) Setup checklist live refresh behavior
+
+### Goal
+When users complete real setup actions outside the dashboard, the checklist should update quickly without requiring a full reload.
+
+### Implementation summary
+- Added a reusable onboarding refresh trigger utility: `ui/src/utils/onboardingProgressRefresh.js`.
+- API success interceptor now emits `docketra:onboarding-progress-refresh` for onboarding-relevant write endpoints.
+- Dashboard subscribes to that event and performs a debounced `GET /api/dashboard/onboarding-progress` refresh.
+
+### Reliability constraints
+- No page reloads.
+- No fake optimistic completion for detected steps.
+- Refresh failures never block the original mutation success flow.
+- Lightweight throttling + debouncing avoids refetch spam during bursty setup operations.

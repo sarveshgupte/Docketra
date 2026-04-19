@@ -123,3 +123,23 @@ The dashboard setup checklist now uses role-aware backend detection instead of r
 
 - CTA navigation is now separated from completion state for detected steps; opening a page does not mark setup complete.
 - Manual acknowledgment is only available for steps explicitly marked `completionMode: manual|hybrid`.
+
+## April 2026: Live onboarding progress refresh after setup mutations
+
+To keep checklist trust high, onboarding progress now refreshes automatically after relevant successful setup mutations.
+
+### Refresh trigger design
+- Frontend API response interceptor (`ui/src/services/api.js`) evaluates successful write mutations and emits a lightweight `window` event (`docketra:onboarding-progress-refresh`) for onboarding-relevant endpoints only.
+- Matching logic is centralized in `ui/src/utils/onboardingProgressRefresh.js` to keep endpoint coverage maintainable.
+- Covered mutation groups include:
+  - firm profile/settings updates
+  - storage/BYOS changes
+  - client creation/updates
+  - category/subcategory and workbasket changes
+  - user invite/team assignment updates
+  - docket create/assign/route/workflow mutation paths
+
+### Dashboard behavior
+- Dashboard listens for the refresh event and triggers a debounced onboarding-progress refetch.
+- Refetch remains optional/non-blocking: if onboarding refresh fails, primary mutations and core dashboard data flows are unaffected.
+- Backend response remains authoritative; no local optimistic completion is applied for detected steps.

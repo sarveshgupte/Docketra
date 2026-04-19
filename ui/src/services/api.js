@@ -7,6 +7,7 @@ import axios from 'axios';
 import { API_BASE_URL, ERROR_CODES, SESSION_KEYS, STORAGE_KEYS } from '../utils/constants';
 import { isAccessTokenOnlySession } from '../utils/authUtils';
 import { resolveFirmLoginPath } from '../utils/tenantRouting';
+import { emitOnboardingProgressRefresh, shouldRefreshOnboardingProgress } from '../utils/onboardingProgressRefresh';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -109,6 +110,12 @@ api.interceptors.request.use(
 // Response interceptor - Handle token expiry and refresh
 api.interceptors.response.use(
   (response) => {
+    if (shouldRefreshOnboardingProgress({ method: response?.config?.method, url: response?.config?.url })) {
+      emitOnboardingProgressRefresh({
+        method: response?.config?.method,
+        url: response?.config?.url,
+      });
+    }
     if (response?.data?.idempotent === true) {
       window.dispatchEvent(new CustomEvent('app:idempotent'));
     }

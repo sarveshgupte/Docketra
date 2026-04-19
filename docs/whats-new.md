@@ -1,5 +1,13 @@
 # What's New
 
+## April 2026: Live onboarding checklist refresh after real setup actions
+
+- Dashboard setup checklist now refreshes automatically after successful onboarding-relevant workspace mutations (firm setup, BYOS/storage changes, client/category/workbasket setup, user invite/mapping changes, and docket routing/assignment/workflow actions).
+- Added a lightweight shared onboarding refresh trigger so update behavior is consistent across setup flows without introducing page reloads or heavy global state.
+- Dashboard now listens for onboarding refresh events and performs a debounced backend progress refetch, so checklist completion feels immediate and trustworthy.
+- Preserved backend-authoritative completion logic: detected setup steps are only marked complete after backend refresh, never via local optimistic toggles.
+- Hardened resilience so onboarding refresh failures remain non-blocking and do not break the successful user action that triggered the refresh.
+
 ## April 2026: Firm workspace async feedback unification
 
 - Standardized async-state UX across major firm workspace modules so loading, empty, no-results, error, retry, and success behavior now follows one consistent pattern.
