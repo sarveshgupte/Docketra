@@ -3,18 +3,29 @@ import { Link, useParams } from 'react-router-dom';
 import { PlatformShell } from '../../components/platform/PlatformShell';
 import { caseApi } from '../../api/case.api';
 import { ROUTES } from '../../constants/routes';
-import { DataTable, FilterBar, InlineNotice, PageSection, formatDocketLabel, toArray } from './PlatformShared';
+import {
+  DataTable,
+  FilterBar,
+  InlineNotice,
+  PageSection,
+  RefreshNotice,
+  formatDocketLabel,
+  toArray,
+} from './PlatformShared';
 
 export const PlatformQcQueuePage = () => {
   const { firmSlug } = useParams();
   const [rows, setRows] = useState([]);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [pendingQcId, setPendingQcId] = useState('');
 
-  const loadRows = async () => {
-    setLoading(true);
+  const loadRows = async ({ background = false } = {}) => {
+    if (background && rows.length > 0) setRefreshing(true);
+    else setLoading(true);
     setError('');
     try {
       const res = await caseApi.getCases({ state: 'IN_QC', limit: 50 });
@@ -23,6 +34,7 @@ export const PlatformQcQueuePage = () => {
       setRows([]);
       setError('Unable to load QC queue.');
     } finally {
+      setRefreshing(false);
       setLoading(false);
     }
   };
@@ -42,12 +54,15 @@ export const PlatformQcQueuePage = () => {
 
   const executeQcAction = async (caseInternalId, action, note) => {
     setSuccess('');
+    setPendingQcId(caseInternalId);
     try {
       await caseApi.qcAction(caseInternalId, action, note);
       setSuccess(`QC action ${action.toLowerCase()} completed.`);
-      await loadRows();
+      await loadRows({ background: true });
     } catch {
       setError('QC action failed. Please retry.');
+    } finally {
+      setPendingQcId('');
     }
   };
 
@@ -59,6 +74,7 @@ export const PlatformQcQueuePage = () => {
     >
       <InlineNotice tone="error" message={error} />
       <InlineNotice tone="success" message={success} />
+      <RefreshNotice refreshing={refreshing} message="Refreshing QC queue in the background…" />
       <PageSection title="Quality decisions" description="Approve, reject, or return dockets to execution.">
         <FilterBar onClear={clearFilters} clearDisabled={!query}>
           <input
@@ -68,7 +84,9 @@ export const PlatformQcQueuePage = () => {
             placeholder="Search docket or assignee"
             aria-label="Search QC queue"
           />
-          <button type="button" onClick={() => void loadRows()} disabled={loading}>Refresh</button>
+          <button type="button" onClick={() => void loadRows({ background: rows.length > 0 })} disabled={loading || refreshing}>
+            {refreshing ? 'Refreshing…' : 'Refresh'}
+          </button>
         </FilterBar>
         <DataTable
           columns={['Docket', 'Assignee', 'Time Spent', 'Actions']}
@@ -83,16 +101,21 @@ export const PlatformQcQueuePage = () => {
               <td>{r.timeSpent || '0m'}</td>
               <td>
                 <div className="action-group-secondary" role="group" aria-label="QC actions">
-                  <button type="button" onClick={() => void executeQcAction(r.caseInternalId, 'PASS', 'Passed from queue')}>Pass</button>
-                  <button type="button" onClick={() => void executeQcAction(r.caseInternalId, 'CORRECT', 'Needs correction')}>Return for correction</button>
-                  <button type="button" className="action-danger" onClick={() => void executeQcAction(r.caseInternalId, 'FAIL', 'Failed from queue')}>Fail</button>
+                  <button type="button" onClick={() => void executeQcAction(r.caseInternalId, 'PASS', 'Passed from queue')} disabled={pendingQcId === r.caseInternalId}>
+                    {pendingQcId === r.caseInternalId ? 'Updating…' : 'Pass'}
+                  </button>
+                  <button type="button" onClick={() => void executeQcAction(r.caseInternalId, 'CORRECT', 'Needs correction')} disabled={pendingQcId === r.caseInternalId}>Return for correction</button>
+                  <button type="button" className="action-danger" onClick={() => void executeQcAction(r.caseInternalId, 'FAIL', 'Failed from queue')} disabled={pendingQcId === r.caseInternalId}>Fail</button>
                 </div>
               </td>
             </tr>
           ))}
           loading={loading}
           error={error}
+          onRetry={() => void loadRows()}
+          hasActiveFilters={Boolean(query.trim())}
           emptyLabel="No dockets are currently waiting for QC."
+          emptyLabelFiltered="No QC dockets match your search."
         />
       </PageSection>
     </PlatformShell>

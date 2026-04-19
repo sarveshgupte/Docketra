@@ -4,18 +4,29 @@ import { PlatformShell } from '../../components/platform/PlatformShell';
 import { worklistApi } from '../../api/worklist.api';
 import { caseApi } from '../../api/case.api';
 import { ROUTES } from '../../constants/routes';
-import { DataTable, FilterBar, InlineNotice, PageSection, formatDocketLabel, toArray } from './PlatformShared';
+import {
+  DataTable,
+  FilterBar,
+  InlineNotice,
+  PageSection,
+  RefreshNotice,
+  formatDocketLabel,
+  toArray,
+} from './PlatformShared';
 
 export const PlatformWorkbasketsPage = () => {
   const { firmSlug } = useParams();
   const [rows, setRows] = useState([]);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [pendingPullId, setPendingPullId] = useState('');
 
-  const loadRows = async () => {
-    setLoading(true);
+  const loadRows = async ({ background = false } = {}) => {
+    if (background && rows.length > 0) setRefreshing(true);
+    else setLoading(true);
     setError('');
     try {
       const res = await worklistApi.getGlobalWorklist({ limit: 50 });
@@ -24,6 +35,7 @@ export const PlatformWorkbasketsPage = () => {
       setRows([]);
       setError('Unable to load workbaskets.');
     } finally {
+      setRefreshing(false);
       setLoading(false);
     }
   };
@@ -43,12 +55,15 @@ export const PlatformWorkbasketsPage = () => {
 
   const pullToWorklist = async (caseInternalId) => {
     setSuccess('');
+    setPendingPullId(caseInternalId);
     try {
       await caseApi.pullCase(caseInternalId);
       setSuccess('Docket pulled to worklist.');
-      await loadRows();
+      await loadRows({ background: true });
     } catch {
       setError('Unable to pull docket to worklist.');
+    } finally {
+      setPendingPullId('');
     }
   };
 
@@ -60,6 +75,7 @@ export const PlatformWorkbasketsPage = () => {
     >
       <InlineNotice tone="error" message={error} />
       <InlineNotice tone="success" message={success} />
+      <RefreshNotice refreshing={refreshing} message="Refreshing workbaskets in the background…" />
       <PageSection title="Unassigned dockets" description="Pull dockets to execution queues as owners are identified.">
         <FilterBar onClear={clearFilters} clearDisabled={!query}>
           <input
@@ -69,7 +85,9 @@ export const PlatformWorkbasketsPage = () => {
             placeholder="Search docket, client, category"
             aria-label="Search workbaskets"
           />
-          <button type="button" onClick={() => void loadRows()} disabled={loading}>Refresh</button>
+          <button type="button" onClick={() => void loadRows({ background: rows.length > 0 })} disabled={loading || refreshing}>
+            {refreshing ? 'Refreshing…' : 'Refresh'}
+          </button>
         </FilterBar>
 
         <DataTable
@@ -87,14 +105,19 @@ export const PlatformWorkbasketsPage = () => {
               <td>{String(r.status || 'NEW').replace('_', ' ')}</td>
               <td>
                 <div className="action-group-secondary" role="group" aria-label="Workbasket actions">
-                  <button onClick={() => void pullToWorklist(r.caseInternalId)} type="button">Pull to Worklist</button>
+                  <button onClick={() => void pullToWorklist(r.caseInternalId)} type="button" disabled={pendingPullId === r.caseInternalId}>
+                    {pendingPullId === r.caseInternalId ? 'Pulling…' : 'Pull to Worklist'}
+                  </button>
                 </div>
               </td>
             </tr>
           ))}
           loading={loading}
           error={error}
+          onRetry={() => void loadRows()}
+          hasActiveFilters={Boolean(query.trim())}
           emptyLabel="No unassigned dockets are available right now."
+          emptyLabelFiltered="No workbasket dockets match your search."
         />
       </PageSection>
     </PlatformShell>

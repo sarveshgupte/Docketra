@@ -1,5 +1,14 @@
 # What's New
 
+## April 2026: Firm workspace async feedback unification
+
+- Standardized async-state UX across major firm workspace modules so loading, empty, no-results, error, retry, and success behavior now follows one consistent pattern.
+- Queue/list pages (`My Worklist`, `Workbaskets`, `QC Queue`, `CRM`, `CMS Intake`, `Reports`) now use recoverable table errors with in-context retry actions.
+- Added explicit first-use empty-state vs filtered no-results copy to reduce “is this broken?” confusion during search/filter workflows.
+- Added non-blocking background refresh notices so users can keep context while data refreshes.
+- Hardened queue action feedback with visible in-flight button states plus clearer success/failure messaging.
+- Improved settings reliability in `AI settings`, `Storage settings`, and `Work settings` with inline load failure recovery (`Retry loading`) and local mutation status banners.
+
 ## April 2026: Sidebar Information Architecture Refactor (Workflow-Aligned)
 
 - Refactored the firm sidebar to preserve the existing compact shell while reorganizing navigation into **Overview**, **Modules**, **Workspace**, and **Administration** sections.

@@ -4,7 +4,7 @@ import { PlatformShell } from '../../components/platform/PlatformShell';
 import { crmApi } from '../../api/crm.api';
 import { formsApi } from '../../api/forms.api';
 import { ROUTES } from '../../constants/routes';
-import { DataTable, FilterBar, InlineNotice, PageSection, StatGrid, toArray } from './PlatformShared';
+import { DataTable, FilterBar, InlineNotice, PageSection, RefreshNotice, StatGrid, toArray } from './PlatformShared';
 
 export const PlatformCmsPage = () => {
   const { firmSlug } = useParams();
@@ -102,6 +102,7 @@ export const PlatformCmsPage = () => {
       <InlineNotice tone="error" message={error} />
       <InlineNotice tone="error" message={formsError} />
       <InlineNotice tone="info" message={copyState} />
+      <RefreshNotice refreshing={refreshing} message="Refreshing intake queue in the background…" />
       <StatGrid items={cmsStats} />
       <PageSection id="cms-surfaces" title="CMS surfaces" description="Lead-capture assets managed in the CMS module.">
         <div className="action-row">
@@ -201,7 +202,10 @@ export const PlatformCmsPage = () => {
           ))}
           loading={loading}
           error={error}
+          onRetry={() => void loadLeads()}
+          hasActiveFilters={Boolean(query.trim())}
           emptyLabel="No intake submissions yet. Create a form or landing page to start capturing leads."
+          emptyLabelFiltered="No intake submissions match your current search."
         />
       </PageSection>
     </PlatformShell>
