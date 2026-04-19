@@ -233,6 +233,37 @@ const getOnboardingInsights = async (req, res) => {
   }
 };
 
+const getOnboardingInsightDetails = async (req, res) => {
+  try {
+    const sinceDays = Number.parseInt(req.query?.sinceDays, 10) || 30;
+    const staleAfterDays = Number.parseInt(req.query?.staleAfterDays, 10) || 7;
+    const completionState = String(req.query?.completionState || 'all').trim().toLowerCase();
+    const role = req.query?.role || null;
+    const blockerType = req.query?.blockerType || null;
+    const limit = Number.parseInt(req.query?.limit, 10) || 50;
+    const firmId = req.query?.firmId || null;
+
+    const details = await onboardingAnalyticsService.getOnboardingInsightDetails({
+      sinceDays: Math.min(Math.max(sinceDays, 7), 120),
+      staleAfterDays: Math.min(Math.max(staleAfterDays, 1), 60),
+      completionState: ['all', 'incomplete', 'completed', 'stale'].includes(completionState) ? completionState : 'all',
+      role,
+      blockerType,
+      limit: Math.min(Math.max(limit, 1), 100),
+      firmId,
+    });
+
+    return res.json({ success: true, data: details });
+  } catch (error) {
+    log.error('[SUPERADMIN] Error loading onboarding insight details:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to load onboarding insight details',
+      data: null,
+    });
+  }
+};
+
 /**
  * List all firms with client and user counts
  * GET /api/superadmin/firms
@@ -1567,6 +1598,7 @@ module.exports = {
   resendAdminAccess: wrapWriteHandler(resendAdminAccess),
   getPlatformStats,
   getOnboardingInsights,
+  getOnboardingInsightDetails,
   getFirmBySlug,
   getOperationalHealth,
   switchFirm,

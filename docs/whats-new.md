@@ -1,5 +1,13 @@
 # What's New
 
+## April 2026: Actionable Superadmin onboarding insights
+
+- Added a dedicated **Onboarding Insights** operational page for superadmin at `/app/superadmin/onboarding-insights`.
+- Upgraded onboarding observability from summary-only cards to practical triage workflows for blocked firms/users.
+- Added drill-down detail API support via `GET /api/superadmin/onboarding-insights/details` with filters for timeframe, role, blocker type, completion state, and stale threshold.
+- Added firm-level and user-level operational rows with progress state, missing steps, tutorial status, staleness visibility, and recent onboarding events.
+- Kept platform dashboard load lightweight while preserving existing summary endpoint compatibility.
+
 ## April 2026: Docket Detail refactored into a tabbed execution workspace
 
 - Reworked **Docket Detail** into a structured operational workspace with a stronger summary header (docket ID, title, status, category/subcategory, linked client, owner, queue/workbasket, timestamps).
