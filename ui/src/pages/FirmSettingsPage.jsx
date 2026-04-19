@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Layout } from '../components/common/Layout';
+import { PlatformShell } from '../components/platform/PlatformShell';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
@@ -267,7 +267,7 @@ export const FirmSettingsPage = () => {
   };
 
   return (
-    <Layout>
+    <PlatformShell moduleLabel="Settings" title="Firm settings" subtitle="Configure operational defaults, SLA policy, and feature visibility for this firm.">
       <div className="min-h-screen w-full flex-1 bg-gray-50">
         <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 space-y-8">
           <PageHeader
@@ -529,6 +529,6 @@ export const FirmSettingsPage = () => {
           </Card>
         </div>
       </div>
-    </Layout>
+    </PlatformShell>
   );
 };

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Layout } from '../components/common/Layout';
+import { PlatformShell } from '../components/platform/PlatformShell';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
@@ -53,7 +53,7 @@ export const WorkSettingsPage = () => {
   };
 
   return (
-    <Layout>
+    <PlatformShell moduleLabel="Settings" title="Work settings" subtitle="Configure work taxonomy and docket structuring rules for your firm.">
       <PageHeader
         title="Work Settings"
         subtitle="Configure work taxonomy and docket structuring rules for your firm."
@@ -123,6 +123,6 @@ export const WorkSettingsPage = () => {
           </Button>
         </div>
       </Card>
-    </Layout>
+    </PlatformShell>
   );
 };

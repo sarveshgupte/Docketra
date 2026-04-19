@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Layout } from '../components/common/Layout';
+import { PlatformShell } from '../components/platform/PlatformShell';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
@@ -1282,14 +1282,18 @@ export const AdminPage = () => {
 
   if (loading) {
     return (
-      <Layout>
+      <PlatformShell moduleLabel="Operations" title="Team" subtitle="Manage users, permissions, and security actions for your firm.">
         <TableSkeleton rows={7} />
-      </Layout>
+      </PlatformShell>
     );
   }
 
   return (
-    <Layout>
+    <PlatformShell
+      moduleLabel={isWorkSettingsContext ? "Settings" : "Operations"}
+      title={isWorkSettingsContext ? "Category Management" : "Team"}
+      subtitle={isWorkSettingsContext ? "Create and manage docket categories and subcategories." : "Manage users, access control, and security actions."}
+    >
       <div className="admin">
         <PageHeader
           title={isWorkSettingsContext ? 'Category Management' : 'Team Management'}
@@ -2233,6 +2237,6 @@ export const AdminPage = () => {
           </div>
         </form>
       </Modal>
-    </Layout>
+    </PlatformShell>
   );
 };

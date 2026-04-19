@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
-import { Layout } from '../components/common/Layout';
+import { PlatformShell } from '../components/platform/PlatformShell';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
@@ -89,7 +89,7 @@ export function AiSettingsPage() {
 
   if (loading) {
     return (
-      <Layout>
+      <PlatformShell moduleLabel="Settings" title="AI settings" subtitle="Manage firm-level BYOAI provider configuration.">
         <div className="min-h-screen bg-gray-50">
           <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-8">
             <div className="space-y-2">
@@ -101,12 +101,12 @@ export function AiSettingsPage() {
             </Card>
           </div>
         </div>
-      </Layout>
+      </PlatformShell>
     );
   }
 
   return (
-    <Layout>
+    <PlatformShell moduleLabel="Settings" title="AI settings" subtitle="Manage firm-level BYOAI provider configuration.">
       <div className="min-h-screen bg-gray-50">
         <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-8">
           <div className="space-y-2">
@@ -179,7 +179,7 @@ export function AiSettingsPage() {
           </Card>
         </div>
       </div>
-    </Layout>
+    </PlatformShell>
   );
 }
 

@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { Layout } from '../components/common/Layout';
+import { PlatformShell } from '../components/platform/PlatformShell';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
@@ -126,7 +126,7 @@ export function StorageSettingsPage() {
 
   if (loading) {
     return (
-      <Layout>
+      <PlatformShell moduleLabel="Settings" title="Storage settings" subtitle="Configure and validate your external document storage integration.">
         <div className="min-h-screen bg-gray-50">
           <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-8">
             <div className="space-y-2">
@@ -138,7 +138,7 @@ export function StorageSettingsPage() {
             </Card>
           </div>
         </div>
-      </Layout>
+      </PlatformShell>
     );
   }
 
@@ -149,7 +149,7 @@ export function StorageSettingsPage() {
   const canSwitchProvider = provider !== (config?.provider || 'docketra_managed');
 
   return (
-    <Layout>
+    <PlatformShell moduleLabel="Settings" title="Storage settings" subtitle="Configure and validate your external document storage integration.">
       <div className="min-h-screen bg-gray-50">
         <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-8">
           <div className="space-y-2">
@@ -237,7 +237,7 @@ export function StorageSettingsPage() {
           </Card>
         </div>
       </div>
-    </Layout>
+    </PlatformShell>
   );
 }
 

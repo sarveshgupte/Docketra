@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Badge } from '../components/common/Badge';
@@ -7,9 +6,9 @@ import { Loading } from '../components/common/Loading';
 import { Modal } from '../components/common/Modal';
 import { Input } from '../components/common/Input';
 import { Textarea } from '../components/common/Textarea';
-import { PageHeader } from '../components/layout/PageHeader';
 import { DataTable } from '../components/common/DataTable';
 import { EmptyState } from '../components/ui/EmptyState';
+import { PlatformShell } from '../components/platform/PlatformShell';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
 import { clientApi } from '../api/client.api';
@@ -35,6 +34,7 @@ export const ClientsPage = () => {
   const { user } = useAuth();
   const { showError, showSuccess } = useToast();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [clients, setClients] = useState([]);
   const [editCfsClient, setEditCfsClient] = useState(null);
   const [descriptionDraft, setDescriptionDraft] = useState('');
@@ -96,6 +96,7 @@ export const ClientsPage = () => {
 
   const loadClients = useCallback(async () => {
     setLoading(true);
+    setLoadError('');
     try {
       const response = await clientApi.getClients(false);
       const payload = Array.isArray(response?.data)
@@ -120,6 +121,7 @@ export const ClientsPage = () => {
       setClients(normalizedClients);
     } catch (error) {
       setClients([]);
+      setLoadError(error?.response?.data?.message || error?.message || 'Failed to load clients');
       showError(error?.response?.data?.message || error?.message || 'Failed to load clients');
     } finally {
       setLoading(false);
@@ -437,11 +439,11 @@ export const ClientsPage = () => {
   };
 
   return (
-    <Layout>
-      <PageHeader
-        title="All Clients"
-        description="View and manage all registered client workspaces."
-        actions={isAdmin ? (
+    <PlatformShell
+      moduleLabel="Operations"
+      title="Clients"
+      subtitle="View and manage registered client workspaces, compliance notes, and attachments."
+      actions={isAdmin ? (
           <div className="flex items-center gap-2">
             <Button variant="default" onClick={() => setShowBulkUpload(true)}>Bulk Upload</Button>
             <Button variant="default" onClick={() => {
@@ -458,9 +460,18 @@ export const ClientsPage = () => {
             <Button onClick={openCreateClientModal}>+ Add Client</Button>
           </div>
         ) : null}
-      />
+    >
       <Card>
-        {loading ? <Loading message="Loading clients..." /> : (
+        {loading ? <Loading message="Loading clients..." /> : loadError ? (
+          <div className="p-8">
+            <EmptyState
+              title="Could not load clients"
+              description="Please retry loading clients. If this continues, verify firm access and network connectivity."
+              actionLabel="Retry"
+              onAction={loadClients}
+            />
+          </div>
+        ) : (
           <DataTable
             columns={columns}
             rows={clients}
@@ -678,6 +689,6 @@ export const ClientsPage = () => {
           </section>
         </div>
       </Modal>
-    </Layout>
+    </PlatformShell>
   );
 };

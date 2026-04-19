@@ -160,3 +160,49 @@ This pass focused on high-impact reliability and trust issues in authentication 
 - [ ] Update hierarchy tagging/roles: verify save, error, and post-save state consistency.
 - [ ] Update workbasket/category/subcategory settings: verify required/dependency messaging and stable save feedback.
 - [ ] Save profile/settings and AI/BYOS settings: verify saving/success/error states and no silent failures.
+
+## Firm workspace shell unification pass (April 2026)
+
+### Shell decision
+
+- Standardized major firm-facing routes on **`PlatformShell`** as the workspace shell contract.
+- Kept `FirmLayout` as the route-guard/context wrapper only (firm scoping + outlet), while page-level UX chrome now converges on one shell system.
+
+### Route-to-shell audit map (`/app/firm/:firmSlug/*`)
+
+| Route | Page type | Previous shell | Target shell | Migration | UX inconsistency observed |
+| --- | --- | --- | --- | --- | --- |
+| `/dashboard` | Module landing | `PlatformShell` | `PlatformShell` | No | Baseline for desired shell language |
+| `/dockets`, `/dockets/:caseId`, `/dockets/create` | Core docket list/detail/create | Mixed (`Layout` + `PlatformShell` for create) | phased | Partial (already in progress) | Context jump when moving between list/detail/create |
+| `/clients` | Major list | `Layout` | `PlatformShell` | **Completed** | Legacy header/card composition vs modern workspace shell |
+| `/clients/:clientId/*` | Detail workspace | `Layout` | `PlatformShell` | **Completed** | Detail flow felt like a separate product surface |
+| `/worklist`, `/global-worklist`, `/qc-queue`, `/admin/reports`, `/settings` | Major module landings | `PlatformShell` | `PlatformShell` | No | Baseline for consistency target |
+| `/admin` (Team) | Team management | `Layout` | `PlatformShell` | **Completed** | Team route looked legacy while adjacent modules were modern |
+| `/settings/firm` | Settings detail | `Layout` | `PlatformShell` | **Completed** | Visual shell flip when opening from Settings hub |
+| `/settings/work` | Settings detail | `Layout` | `PlatformShell` | **Completed** | Header and spacing mismatch vs Settings hub |
+| `/storage-settings` | Settings detail | `Layout` | `PlatformShell` | **Completed** | Legacy page framing and title behavior mismatch |
+| `/ai-settings` | Settings detail | `Layout` | `PlatformShell` | **Completed** | Legacy shell divergence from adjacent settings routes |
+| `/crm/clients/:crmClientId`, `/crm/leads`, `/admin/hierarchy`, `/profile`, `/compliance-calendar` | Adjacent major/supporting routes | `Layout` | `PlatformShell` | Pending | Still create residual mixed-shell transitions |
+
+### Page pattern rules adopted for migrated pages
+
+1. Shell-level module context (`moduleLabel`) + unified workspace breadcrumbs.
+2. Consistent page title + supporting subtitle via `PlatformShell` props.
+3. Page-level action placement in shell action rail (where applicable).
+4. Content framed in section cards/panels with stable spacing hierarchy.
+5. Explicit loading/empty/error handling for high-traffic list/settings surfaces.
+6. Browser document title managed consistently by `PlatformShell`.
+
+### Key migration outcomes
+
+- Migrated **Clients list** and **Client workspace detail** to `PlatformShell`.
+- Migrated **Team (`/admin`)** to `PlatformShell` while preserving category-management context behavior.
+- Migrated major **settings detail surfaces** (`/settings/firm`, `/settings/work`, `/storage-settings`, `/ai-settings`) to `PlatformShell`.
+- Added intentional client-list error recovery UI with a clear retry action, replacing toast-only failure handling.
+
+### Remaining migration candidates (next pass)
+
+1. `/admin/hierarchy` (team-adjacent route still on legacy shell).
+2. CRM detail routes (`/crm/clients/:crmClientId`, `/crm/leads`).
+3. Docket list/detail routes to fully remove legacy shell transitions around core docket operations.
+4. Profile and compliance calendar routes to close remaining shell drift in daily navigation loops.
