@@ -7,7 +7,7 @@
  * Section 3: Recent Cases worklist panel
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { Layout } from '../components/common/Layout';
@@ -38,6 +38,7 @@ import { UX_COPY } from '../constants/uxCopy';
 import { ROUTES, safeRoute } from '../constants/routes';
 import { useActiveDocket } from '../hooks/useActiveDocket';
 import { loadOnboardingProgressSafely } from './dashboardLoadHelpers';
+import { ONBOARDING_PROGRESS_REFRESH_EVENT } from '../utils/onboardingProgressRefresh';
 
 const DASHBOARD_RECENT_CASES_ROW_COUNT = 5;
 const DASHBOARD_RECENT_CASES_MAX_ROWS = 10;
@@ -164,15 +165,55 @@ export const DashboardPage = () => {
   const [tourStepIndex, setTourStepIndex] = useState(0);
   const [loadWarnings, setLoadWarnings] = useState([]);
   const [hasLoadedDashboard, setHasLoadedDashboard] = useState(false);
+  const onboardingRefreshTimerRef = useRef(null);
+  const onboardingRefreshInFlightRef = useRef(false);
   const reportLoadWarning = (message) => {
     setLoadWarnings((current) => (current.includes(message) ? current : [...current, message]));
   };
+
+  const refreshOnboardingProgress = useCallback(async () => {
+    if (!firmSlug || onboardingRefreshInFlightRef.current) return;
+    onboardingRefreshInFlightRef.current = true;
+    try {
+      await loadOnboardingProgressSafely({
+        fetchProgress: dashboardApi.getOnboardingProgress,
+        setProgress: setOnboardingProgress,
+        firmSlug,
+        onWarning: (message) => console.warn('[Dashboard] Optional onboarding progress refresh failed', { message }),
+      });
+    } finally {
+      onboardingRefreshInFlightRef.current = false;
+    }
+  }, [firmSlug]);
 
   useEffect(() => {
     if (user) {
       loadDashboardData();
     }
   }, [user, isAdmin]);
+
+  useEffect(() => {
+    if (!user?.xID || !firmSlug) return undefined;
+
+    const handleOnboardingRefreshSignal = () => {
+      if (onboardingRefreshTimerRef.current) {
+        window.clearTimeout(onboardingRefreshTimerRef.current);
+      }
+
+      onboardingRefreshTimerRef.current = window.setTimeout(() => {
+        refreshOnboardingProgress();
+      }, 250);
+    };
+
+    window.addEventListener(ONBOARDING_PROGRESS_REFRESH_EVENT, handleOnboardingRefreshSignal);
+
+    return () => {
+      if (onboardingRefreshTimerRef.current) {
+        window.clearTimeout(onboardingRefreshTimerRef.current);
+      }
+      window.removeEventListener(ONBOARDING_PROGRESS_REFRESH_EVENT, handleOnboardingRefreshSignal);
+    };
+  }, [firmSlug, refreshOnboardingProgress, user?.xID]);
 
   useEffect(() => {
     if (!firmSlug) {
@@ -447,12 +488,7 @@ export const DashboardPage = () => {
           : Promise.resolve({}),
       ]);
 
-      await loadOnboardingProgressSafely({
-        fetchProgress: dashboardApi.getOnboardingProgress,
-        setProgress: setOnboardingProgress,
-        firmSlug,
-        onWarning: (message) => console.warn('[Dashboard] Optional onboarding progress load failed', { message }),
-      });
+      await refreshOnboardingProgress();
 
       setRecentCases(getRecentCasesSnapshot(casesToDisplay));
       const statsPatch = {
