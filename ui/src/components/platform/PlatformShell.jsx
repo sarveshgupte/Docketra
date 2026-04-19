@@ -14,25 +14,30 @@ const hasAtLeastRole = (current, minimum) => (roleRank[current] || 0) >= (roleRa
 const navForRole = (firmSlug, role) => {
   const all = [
     {
-      section: 'Core',
+      section: 'Daily Operations',
       items: [
-        { to: ROUTES.DASHBOARD(firmSlug), label: 'Dashboard' },
-        { to: ROUTES.CMS(firmSlug), label: 'CMS', minRole: 'ADMIN' },
-        { to: ROUTES.CRM(firmSlug), label: 'CRM', minRole: 'ADMIN' },
         { to: ROUTES.TASK_MANAGER(firmSlug), label: 'Task Manager' },
+        { to: ROUTES.DASHBOARD(firmSlug), label: 'Dashboard' },
       ],
     },
     {
-      section: 'Operations',
+      section: 'Business Modules',
       items: [
+        { to: ROUTES.CMS(firmSlug), label: 'Intake (CMS)', minRole: 'ADMIN' },
+        { to: ROUTES.CRM(firmSlug), label: 'Pipeline (CRM)', minRole: 'ADMIN' },
         { to: ROUTES.CLIENTS(firmSlug), label: 'Clients', minRole: 'ADMIN' },
-        { to: ROUTES.ADMIN(firmSlug), label: 'Team', minRole: 'ADMIN' },
+      ],
+    },
+    {
+      section: 'Oversight',
+      items: [
         { to: ROUTES.ADMIN_REPORTS(firmSlug), label: 'Reports', minRole: 'ADMIN' },
       ],
     },
     {
       section: 'Administration',
       items: [
+        { to: ROUTES.ADMIN(firmSlug), label: 'Team & Access', minRole: 'ADMIN' },
         { to: ROUTES.SETTINGS(firmSlug), label: 'Settings', minRole: 'ADMIN' },
       ],
     },
@@ -196,9 +201,9 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
     const navigationItems = [
       { id: 'go-dashboard', label: 'Go to Dashboard', shortcut: 'Alt+Shift+D', action: () => openRoute(ROUTES.DASHBOARD(firmSlug)), description: 'Open firm dashboard overview.' },
       { id: 'go-task-manager', label: 'Go to Task Manager', shortcut: 'Alt+Shift+T', action: () => openRoute(ROUTES.TASK_MANAGER(firmSlug)), description: 'Jump to execution surfaces.' },
-      { id: 'go-workbasket', label: 'Go to Workbasket', shortcut: 'Alt+Shift+B', action: () => openRoute(ROUTES.GLOBAL_WORKLIST(firmSlug)), description: 'Open pooled docket queue.' },
-      { id: 'go-worklist', label: 'Go to My Worklist', shortcut: 'Alt+Shift+W', action: () => openRoute(ROUTES.WORKLIST(firmSlug)), description: 'Open your assigned dockets.' },
-      { id: 'go-qc', label: 'Go to QC Queue', shortcut: 'Alt+Shift+Q', action: () => openRoute(ROUTES.QC_QUEUE(firmSlug)), description: 'Open quality-control queue.' },
+      { id: 'go-workbasket', label: 'Go to Workbasket', shortcut: 'Alt+Shift+B', action: () => openRoute(ROUTES.GLOBAL_WORKLIST(firmSlug)), description: 'Open team queue dockets available to pull.' },
+      { id: 'go-worklist', label: 'Go to My Worklist', shortcut: 'Alt+Shift+W', action: () => openRoute(ROUTES.WORKLIST(firmSlug)), description: 'Open your active and pended docket workload.' },
+      { id: 'go-qc', label: 'Go to QC Workbasket', shortcut: 'Alt+Shift+Q', action: () => openRoute(ROUTES.QC_QUEUE(firmSlug)), description: 'Open dockets waiting for quality review decisions.' },
       { id: 'go-clients', label: 'Go to Clients', action: () => openRoute(ROUTES.CLIENTS(firmSlug)), description: 'Open client management workspace.', adminOnly: true },
       { id: 'go-crm', label: 'Go to CRM', action: () => openRoute(ROUTES.CRM(firmSlug)), description: 'Open relationship management module.', adminOnly: true },
       { id: 'go-cms', label: 'Go to CMS', action: () => openRoute(ROUTES.CMS(firmSlug)), description: 'Open intake and submissions module.', adminOnly: true },

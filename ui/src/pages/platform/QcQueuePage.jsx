@@ -101,13 +101,13 @@ export const PlatformQcQueuePage = () => {
   return (
     <PlatformShell
       title="QC Workbasket"
-      subtitle="Quality-control queue for review, approval, correction, and rejection decisions."
+      subtitle="Quality-control queue for pass, return-for-correction, and fail review decisions."
       actions={<Link to={ROUTES.ADMIN_REPORTS(firmSlug)}>QC Reports</Link>}
     >
       <InlineNotice tone="error" message={error} />
       <InlineNotice tone="success" message={success} />
       <RefreshNotice refreshing={refreshing} message="Refreshing QC queue in the background…" />
-      <PageSection title="Quality decisions" description={`${filteredRows.length} dockets waiting on QC action.`}>
+      <PageSection title="QC review queue" description={`${filteredRows.length} dockets waiting for QC decisions.`}>
         <FilterBar onClear={clearFilters} clearDisabled={!search && assigneeFilter === 'ALL'}>
           <input
             type="search"
@@ -155,8 +155,8 @@ export const PlatformQcQueuePage = () => {
           error={error}
           onRetry={() => void loadRows()}
           hasActiveFilters={Boolean(search.trim()) || assigneeFilter !== 'ALL'}
-          emptyLabel="No dockets are currently waiting for QC."
-          emptyLabelFiltered="No QC dockets match your search."
+          emptyLabel="No dockets are currently waiting in the QC Workbasket."
+          emptyLabelFiltered="No QC Workbasket dockets match your current search or filters."
         />
       </PageSection>
     </PlatformShell>

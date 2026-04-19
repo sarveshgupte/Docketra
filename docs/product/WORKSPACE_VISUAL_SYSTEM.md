@@ -52,6 +52,36 @@ For all authenticated firm-facing routes (`/app/firm/:firmSlug/*`), **`PlatformS
    - metric labels standardized to compact uppercase treatment,
    - table headers use compact uppercase framing for scan speed.
 
+## Workflow naming contract (PR 1007)
+
+Use these labels exactly on workflow-facing surfaces so users can quickly choose the correct destination:
+
+1. **Workbasket**
+   - Meaning: team workflow queue of dockets available to pull.
+   - Use when work is in shared queue ownership (not yet in a specific user's personal execution list).
+2. **My Worklist**
+   - Meaning: the current user's active and pended docket workload.
+   - Use for day-to-day execution, status updates, and handoff actions.
+3. **QC Workbasket**
+   - Meaning: quality-control queue where reviewers pass, return for correction, or fail dockets.
+   - Use only for review/quality decision flow.
+4. **All Dockets**
+   - Meaning: master oversight list across visible dockets and workflow states.
+   - Use for broad search, monitoring, and operational visibility.
+
+### Navigation/copy clarity principles
+
+1. **Daily work first**
+   - Prioritize Task Manager + queue destinations as primary operational wayfinding.
+2. **Separate administration from execution**
+   - Keep admin/settings destinations in dedicated navigation sections and avoid mixing them with queue execution labels.
+3. **Prefer explicit business wording**
+   - Avoid ambiguous queue names (`Queue`, `List`, `Global`) without context when user-facing space allows clearer wording.
+4. **Use docket terminology in touched copy**
+   - Prefer “docket” over legacy “case” on user-facing workflow copy unless technical constraints require otherwise.
+5. **Keep subtitles and empty states concise**
+   - One sentence that explains what belongs on the page and what action the user should take next.
+
 ## Density decisions
 
 1. Control sizing normalized:

@@ -684,7 +684,7 @@ export const CasesPage = () => {
       <div className="cases-page">
         <PageHeader
           title="All Dockets"
-          subtitle="Search and track all visible dockets with consistent filters and operational scanning."
+          subtitle="Master oversight view across all visible dockets, workflow states, and queue ownership."
           meta="Task Manager / All Dockets"
           actions={(
             <CasesHeaderActions

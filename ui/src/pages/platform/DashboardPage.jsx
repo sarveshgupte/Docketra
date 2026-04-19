@@ -75,8 +75,8 @@ export const PlatformDashboardPage = () => {
       >
         <div className="action-row">
           <Link to={ROUTES.WORKLIST(firmSlug)}>My Worklist</Link>
-          <Link to={ROUTES.GLOBAL_WORKLIST(firmSlug)}>Workbaskets</Link>
-          <Link to={ROUTES.QC_QUEUE(firmSlug)}>QC Queue</Link>
+          <Link to={ROUTES.GLOBAL_WORKLIST(firmSlug)}>Workbasket</Link>
+          <Link to={ROUTES.QC_QUEUE(firmSlug)}>QC Workbasket</Link>
           {isAdmin ? <Link to={ROUTES.ADMIN_REPORTS(firmSlug)}>Reports</Link> : null}
         </div>
       </PageSection>
