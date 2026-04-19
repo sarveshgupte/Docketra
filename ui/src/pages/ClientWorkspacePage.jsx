@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Layout } from '../components/common/Layout';
+import { PlatformShell } from '../components/platform/PlatformShell';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Textarea } from '../components/common/Textarea';
@@ -85,7 +85,7 @@ export const ClientWorkspacePage = () => {
   };
 
   return (
-    <Layout>
+    <PlatformShell moduleLabel="Operations" title={client?.businessName || "Client workspace"} subtitle="Client-level compliance context, documents, dockets, and activity.">
       <div className="admin__header">
         <h1 className="neo-page__title">Client: {client?.businessName || clientId}</h1>
       </div>
@@ -117,6 +117,6 @@ export const ClientWorkspacePage = () => {
       {currentTab === 'dockets' && <Card><table className="neo-table"><thead><tr><th>Docket ID</th><th>Category</th><th>Status</th><th>Created</th></tr></thead><tbody>{dockets.map((d) => <tr key={d.caseId} onClick={() => navigate(`/app/firm/${firmSlug}/dockets/${d.caseId}`)}><td>{d.caseId}</td><td>{d.category}</td><td>{d.status}</td><td>{formatDate(d.createdAt)}</td></tr>)}</tbody></table></Card>}
 
       {currentTab === 'activity' && <Card>{activity.map((entry) => <div key={entry.id}>{entry.description} — {formatDate(entry.timestamp)}</div>)}</Card>}
-    </Layout>
+    </PlatformShell>
   );
 };
