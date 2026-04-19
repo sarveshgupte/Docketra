@@ -100,3 +100,25 @@ When users complete real setup actions outside the dashboard, the checklist shou
 - No fake optimistic completion for detected steps.
 - Refresh failures never block the original mutation success flow.
 - Lightweight throttling + debouncing avoids refetch spam during bursty setup operations.
+
+## 6) Onboarding analytics and observability
+
+### Design goals
+- Keep onboarding analytics operationally useful and privacy-conscious.
+- Avoid third-party SDKs and pageview-style noise.
+- Keep backend onboarding state authoritative.
+
+### Backend components
+- Event storage model: `src/models/OnboardingEvent.model.js`.
+- Analytics service: `src/services/onboardingAnalytics.service.js`.
+- Progress transition detection now runs after `GET /api/dashboard/onboarding-progress` and writes only on state changes.
+
+### Endpoints
+- `POST /api/dashboard/onboarding-event` for lightweight first-party onboarding telemetry from UI interactions.
+- `GET /api/superadmin/onboarding-insights` for aggregated operational visibility.
+
+### UI integrations
+- Welcome tutorial shows and completion/skip tracked.
+- Product tour start/completion tracked.
+- Checklist CTA/open, manual completion, and checklist dismissal tracked.
+- Superadmin Platform Dashboard now includes an onboarding observability card.

@@ -14,6 +14,11 @@ export const superadminService = {
     return response.data;
   },
 
+  getOnboardingInsights: async (params = {}) => {
+    const response = await api.get('/superadmin/onboarding-insights', { params });
+    return response.data;
+  },
+
   /**
    * Create a new firm
    */

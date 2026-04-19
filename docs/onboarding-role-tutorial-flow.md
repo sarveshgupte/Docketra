@@ -143,3 +143,37 @@ To keep checklist trust high, onboarding progress now refreshes automatically af
 - Dashboard listens for the refresh event and triggers a debounced onboarding-progress refetch.
 - Refetch remains optional/non-blocking: if onboarding refresh fails, primary mutations and core dashboard data flows are unaffected.
 - Backend response remains authoritative; no local optimistic completion is applied for detected steps.
+
+## April 2026: Onboarding analytics + blocker observability
+
+Docketra now records lightweight onboarding lifecycle telemetry and exposes superadmin-level onboarding friction insight.
+
+### Event model
+- Persistence: `onboarding_events` collection via `src/models/OnboardingEvent.model.js`.
+- Core event names:
+  - `welcome_tutorial_shown`
+  - `welcome_tutorial_completed`
+  - `welcome_tutorial_skipped`
+  - `product_tour_started`
+  - `product_tour_completed`
+  - `onboarding_progress_refreshed`
+  - `onboarding_step_completed_detected`
+  - `onboarding_step_completed_manual`
+  - `onboarding_step_cta_opened`
+  - `onboarding_checklist_dismissed`
+- Minimal event fields: userId, userXID, firmId, role, eventName, optional stepId/source, createdAt, optional lightweight metadata.
+
+### Anti-spam snapshot strategy
+- User model includes `onboardingTelemetry` snapshot fields (`lastCompletedStepIds`, `lastIncompleteStepIds`, counters, refreshedAt).
+- `GET /api/dashboard/onboarding-progress` now records analytics only on meaningful transitions.
+- If progress state is unchanged, no extra onboarding progress or step completion event is written.
+
+### Visibility surface
+- New superadmin endpoint: `GET /api/superadmin/onboarding-insights`.
+- Summary includes:
+  - role-aware completion vs incomplete counts
+  - top incomplete steps by role
+  - tutorial completion vs skip counts
+  - recent onboarding events
+  - blocker summaries (e.g., managers without queues, users without assigned dockets)
+  - firm-level setup signals (e.g., zero active clients)

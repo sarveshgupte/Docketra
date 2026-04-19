@@ -7,4 +7,6 @@ export const dashboardApi = {
     request((api) => api.get('/firm/setup-status'), 'Failed to load firm setup status'),
   getOnboardingProgress: async () =>
     request((api) => api.get('/dashboard/onboarding-progress'), 'Failed to load onboarding progress'),
+  trackOnboardingEvent: async (payload) =>
+    request((api) => api.post('/dashboard/onboarding-event', payload), 'Failed to record onboarding event'),
 };

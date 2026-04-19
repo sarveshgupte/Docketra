@@ -5,6 +5,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { productUpdatesService } from '../../services/productUpdatesService';
 import { getRoleOnboardingContent, normalizeOnboardingRole } from './roleOnboardingContent';
 import { resolveTutorialPersistenceIntent } from './firstLoginFlowPersistence';
+import { trackOnboardingEvent } from '../../utils/onboardingAnalytics';
 
 const FLOW_STEPS = ['welcome', 'what-is', 'role', 'can-do', 'start-here', 'quick-checklist'];
 
@@ -20,6 +21,14 @@ export const FirstLoginExperience = () => {
   const showWhatsNew = !showTutorial && Boolean(user?.whatsNew?.show && user?.whatsNew?.update?._id);
   const roleKey = normalizeOnboardingRole(user?.welcomeTutorial?.role || user?.role);
   const content = useMemo(() => getRoleOnboardingContent(roleKey), [roleKey]);
+
+  useEffect(() => {
+    if (!showTutorial) return;
+    trackOnboardingEvent({
+      eventName: 'welcome_tutorial_shown',
+      metadata: { mode: isFirstLoginTutorial ? 'first_login' : 'manual_replay' },
+    });
+  }, [isFirstLoginTutorial, showTutorial]);
 
   useEffect(() => {
     const handleReplay = () => {
