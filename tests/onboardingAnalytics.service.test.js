@@ -207,6 +207,33 @@ async function run() {
     assert.ok(typeof filtered.firms[0].nextAction === 'string' && filtered.firms[0].nextAction.length > 0, 'firm guidance should provide actionable next-step text');
   }
 
+  const alerts = await service.getOnboardingAlerts({
+    sinceDays: 30,
+    staleAfterDays: 3,
+    status: 'open',
+    limit: 20,
+  });
+  assert.ok(Array.isArray(alerts.alerts), 'alerts payload should include alert rows');
+  assert.ok(alerts.alerts.length >= 1, 'open blockers should produce at least one alert');
+  const firstAlert = alerts.alerts[0];
+  assert.ok(['HIGH', 'MEDIUM', 'LOW'].includes(firstAlert.severity), 'alert severity should be classified');
+  assert.ok(firstAlert.links?.onboardingDetail?.includes('/app/superadmin/onboarding-insights/'), 'alert should include onboarding detail deep link');
+  assert.equal(new Set(alerts.alerts.map((entry) => entry.id)).size, alerts.alerts.length, 'alerts should be deduped to one open alert per firm/blocker');
+
+  const highOnly = await service.getOnboardingAlerts({
+    sinceDays: 30,
+    staleAfterDays: 3,
+    severity: 'HIGH',
+  });
+  assert.ok(highOnly.alerts.every((entry) => entry.severity === 'HIGH'), 'severity filter should only return requested severity');
+
+  const resolved = await service.getOnboardingAlerts({
+    sinceDays: 30,
+    staleAfterDays: 3,
+    status: 'resolved',
+  });
+  assert.equal(resolved.alerts.length, 0, 'resolved alerts are derived and should disappear when no longer open');
+
   console.log('onboardingAnalytics.service.test.js passed');
 }
 

@@ -572,9 +572,180 @@ const getOnboardingInsightDetails = async ({
   };
 };
 
+const ALERT_SEVERITY_RANK = { HIGH: 3, MEDIUM: 2, LOW: 1 };
+
+const classifyAlertSeverity = ({ blockerType, staleUsers = 0, incompleteUsers = 0, affectedUsers = 0 }) => {
+  if (['zero_active_clients', 'missing_category_or_workbasket'].includes(blockerType)) return 'HIGH';
+  if (blockerType === 'stale_onboarding' && Number(staleUsers) >= 3) return 'HIGH';
+  if (blockerType === 'user_without_dockets' && Number(affectedUsers) >= 5) return 'HIGH';
+  if (['manager_without_queue', 'user_without_dockets', 'tutorial_skipped_incomplete', 'stale_onboarding'].includes(blockerType)) {
+    return 'MEDIUM';
+  }
+  if (Number(incompleteUsers) > 0) return 'MEDIUM';
+  return 'LOW';
+};
+
+const resolveAgeBucket = (ageDays) => {
+  if (ageDays >= 14) return '14d+';
+  if (ageDays >= 7) return '7d+';
+  if (ageDays >= 3) return '3d+';
+  return '0-2d';
+};
+
+const getOnboardingAlerts = async ({
+  sinceDays = 30,
+  staleAfterDays = 7,
+  severity = null,
+  blockerType = null,
+  ageBucket = null,
+  status = 'open',
+  limit = 50,
+} = {}) => {
+  const normalizedStatus = String(status || 'open').trim().toLowerCase();
+  const onlyResolved = normalizedStatus === 'resolved';
+  const includeAll = normalizedStatus === 'all';
+  const normalizedLimit = Math.min(Math.max(Number(limit) || 50, 1), 100);
+  const normalizedBlockerType = BLOCKER_TYPES.has(String(blockerType || '').trim()) ? String(blockerType).trim() : null;
+  const normalizedSeverity = ['HIGH', 'MEDIUM', 'LOW'].includes(String(severity || '').trim().toUpperCase())
+    ? String(severity || '').trim().toUpperCase()
+    : null;
+  const normalizedAgeBucket = ['0-2d', '3d+', '7d+', '14d+'].includes(String(ageBucket || '').trim())
+    ? String(ageBucket).trim()
+    : null;
+
+  if (onlyResolved) {
+    return {
+      timeframe: {
+        sinceDays: Number(sinceDays),
+        staleAfterDays: Number(staleAfterDays),
+        generatedAt: new Date(),
+      },
+      filtersApplied: {
+        status: 'resolved',
+        severity: normalizedSeverity,
+        blockerType: normalizedBlockerType,
+        ageBucket: normalizedAgeBucket,
+      },
+      totals: {
+        open: 0,
+        bySeverity: { HIGH: 0, MEDIUM: 0, LOW: 0 },
+      },
+      alerts: [],
+    };
+  }
+
+  const details = await getOnboardingInsightDetails({
+    sinceDays,
+    staleAfterDays,
+    completionState: 'all',
+    blockerType: normalizedBlockerType,
+    limit: 100,
+  });
+
+  const now = new Date();
+  const userCountByFirmAndBlocker = new Map();
+  for (const user of details.users || []) {
+    const blockers = Array.isArray(user.blockers) ? user.blockers : [];
+    for (const type of blockers) {
+      const key = `${user.firmId}:${type}`;
+      userCountByFirmAndBlocker.set(key, (userCountByFirmAndBlocker.get(key) || 0) + 1);
+    }
+  }
+
+  const blockerActionMap = {
+    zero_active_clients: 'Add first active client',
+    missing_category_or_workbasket: 'Configure category and primary workbasket',
+    manager_without_queue: 'Assign manager to primary queue',
+    user_without_dockets: 'Assign dockets to impacted users',
+    tutorial_skipped_incomplete: 'Follow up on skipped tutorial users',
+    stale_onboarding: 'Refresh onboarding state and confirm blockers',
+  };
+
+  const alerts = [];
+  for (const firm of details.firms || []) {
+    for (const type of firm.blockers || []) {
+      if (normalizedBlockerType && normalizedBlockerType !== type) continue;
+
+      const affectedUsers = Number(userCountByFirmAndBlocker.get(`${firm.firmId}:${type}`) || 0);
+      const ageReference = firm.recentRefreshAt ? new Date(firm.recentRefreshAt) : now;
+      const ageDays = Math.max(0, Math.floor((now.getTime() - ageReference.getTime()) / (24 * 60 * 60 * 1000)));
+      const derivedAgeBucket = resolveAgeBucket(ageDays);
+      const derivedSeverity = classifyAlertSeverity({
+        blockerType: type,
+        staleUsers: firm.staleUsers,
+        incompleteUsers: firm.incompleteUsers,
+        affectedUsers,
+      });
+      if (normalizedSeverity && normalizedSeverity !== derivedSeverity) continue;
+      if (normalizedAgeBucket && normalizedAgeBucket !== derivedAgeBucket) continue;
+
+      const detailParams = new URLSearchParams();
+      detailParams.set('blockerType', type);
+      detailParams.set('completionState', 'all');
+      detailParams.set('sinceDays', String(Number(sinceDays)));
+      detailParams.set('staleAfterDays', String(Number(staleAfterDays)));
+
+      alerts.push({
+        id: `${firm.firmId}:${type}`,
+        status: 'open',
+        title: `${firm.name}: ${type.replace(/_/g, ' ')}`,
+        blockerType: type,
+        severity: derivedSeverity,
+        ageDays,
+        ageBucket: derivedAgeBucket,
+        suggestedNextAction: blockerActionMap[type] || 'Review onboarding detail',
+        affected: {
+          firmId: firm.firmId,
+          firmName: firm.name,
+          firmCode: firm.firmCode || null,
+          affectedUsers,
+        },
+        links: {
+          onboardingDetail: `/app/superadmin/onboarding-insights/${firm.firmId}?${detailParams.toString()}`,
+          firmsManagement: '/app/superadmin/firms',
+        },
+      });
+    }
+  }
+
+  const filteredAlerts = alerts
+    .filter((entry) => includeAll || entry.status === 'open')
+    .sort((a, b) => {
+      const severityDiff = (ALERT_SEVERITY_RANK[b.severity] || 0) - (ALERT_SEVERITY_RANK[a.severity] || 0);
+      if (severityDiff !== 0) return severityDiff;
+      return b.ageDays - a.ageDays;
+    })
+    .slice(0, normalizedLimit);
+
+  const severityCounts = filteredAlerts.reduce((acc, row) => {
+    acc[row.severity] += 1;
+    return acc;
+  }, { HIGH: 0, MEDIUM: 0, LOW: 0 });
+
+  return {
+    timeframe: {
+      sinceDays: Number(sinceDays),
+      staleAfterDays: Number(staleAfterDays),
+      generatedAt: now,
+    },
+    filtersApplied: {
+      status: includeAll ? 'all' : 'open',
+      severity: normalizedSeverity,
+      blockerType: normalizedBlockerType,
+      ageBucket: normalizedAgeBucket,
+    },
+    totals: {
+      open: filteredAlerts.length,
+      bySeverity: severityCounts,
+    },
+    alerts: filteredAlerts,
+  };
+};
+
 module.exports = {
   createEvent,
   recordProgressIfChanged,
   getOnboardingInsights,
   getOnboardingInsightDetails,
+  getOnboardingAlerts,
 };
