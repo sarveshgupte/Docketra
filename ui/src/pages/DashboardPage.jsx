@@ -447,13 +447,6 @@ export const DashboardPage = () => {
           : Promise.resolve({}),
       ]);
 
-      await loadOnboardingProgressSafely({
-        fetchProgress: dashboardApi.getOnboardingProgress,
-        setProgress: setOnboardingProgress,
-        firmSlug,
-        onWarning: (message) => console.warn('[Dashboard] Optional onboarding progress load failed', { message }),
-      });
-
       setRecentCases(getRecentCasesSnapshot(casesToDisplay));
       const statsPatch = {
         ...metricsPatch,
@@ -467,6 +460,13 @@ export const DashboardPage = () => {
         ...activeClientsPatch,
       };
       setStats((prev) => ({ ...prev, ...statsPatch }));
+
+      void loadOnboardingProgressSafely({
+        fetchProgress: dashboardApi.getOnboardingProgress,
+        setProgress: setOnboardingProgress,
+        firmSlug,
+        onWarning: (message) => console.warn('[Dashboard] Optional onboarding progress load failed', { message }),
+      });
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
       reportLoadWarning('Dashboard data');
