@@ -336,7 +336,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
 
       <div className="platform__main">
         <header className="platform__topbar">
-          <div>
+          <div className="platform__title-block">
             {moduleLabel ? <span className="platform__module-label">{moduleLabel}</span> : null}
             <h1>{title}</h1>
             <p>{subtitle || 'Use the sidebar to move between modules and continue your workflow.'}</p>
@@ -346,7 +346,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
               <span>{currentNavItem?.label || title}</span>
             </div>
           </div>
-          <div className="platform__actions">
+          <div className="platform__actions" role="toolbar" aria-label="Page actions">
             <button
               type="button"
               className="platform__command-trigger"

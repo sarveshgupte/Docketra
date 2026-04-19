@@ -42,7 +42,7 @@ export const PageSection = ({ id, title, description, actions, children }) => (
       <header className="section-header">
         <div>
           {title ? <h2 className="section-title">{title}</h2> : null}
-          {description ? <p className="muted">{description}</p> : null}
+          {description ? <p className="muted section-description">{description}</p> : null}
         </div>
         {actions ? <div className="section-actions">{actions}</div> : null}
       </header>
@@ -72,7 +72,7 @@ export const StatGrid = ({ items = [] }) => (
   <section className="grid-cards" aria-label="Key metrics">
     {items.map((item) => (
       <article className="panel metric-card" key={item.label}>
-        <p className="muted">{item.label}</p>
+        <p className="muted metric-label">{item.label}</p>
         <p className="kpi">{item.value}</p>
         {item.helpText ? <p className="metric-note">{item.helpText}</p> : null}
       </article>

@@ -1,5 +1,14 @@
 # What's New
 
+## April 2026: Visual polish + workspace density pass (enterprise fit-and-finish)
+
+- Tightened the unified workspace visual rhythm across sidebar, topbar, page content, panels, and section headers to reduce visual drift between modules.
+- Refined typography hierarchy in the platform shell (module label, page title, subtitle, breadcrumbs) for stronger page anchoring and faster orientation.
+- Increased operational table/list density with compact cell spacing, sticky table headers, smaller but readable type, and better-aligned row actions.
+- Standardized compact control sizing across topbar actions, section action rows, and filter controls to improve alignment and reduce visual noise.
+- Polished panel/card framing with consistent border/radius/shadow treatment suitable for enterprise SaaS usage.
+- Updated empty/error/loading presentation in list tables so feedback states remain clear but do not dominate the workspace.
+
 ## April 2026: Superadmin onboarding insights firm drill-down + deep links
 
 - Added a new firm-specific onboarding drill-down route at `/app/superadmin/onboarding-insights/:firmId` so superadmin can jump directly into one tenant's onboarding state.
