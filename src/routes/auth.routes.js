@@ -50,6 +50,9 @@ const {
   forgotPasswordInit,
   forgotPasswordVerify,
   forgotPasswordResetWithOtp,
+  startGoogleAuth,
+  googleAuthCallback,
+  exchangeGoogleAuth,
   } = require('../controllers/auth.controller');
 
 let profileHitCount = 0;
@@ -91,6 +94,9 @@ router.post('/signup/verify', authBlockEnforcer, authLimiter, otpVerifyLimiter, 
 router.post('/signup/resend', authBlockEnforcer, authLimiter, otpResendLimiter, signupResend);
 router.post('/send-otp', authBlockEnforcer, authLimiter, otpResendLimiter, sendOtpEndpoint);
 router.post('/verify-otp', authBlockEnforcer, authLimiter, otpVerifyLimiter, verifyOtpEndpoint);
+router.get('/google/start', authBlockEnforcer, authLimiter, startGoogleAuth);
+router.get('/google/callback', authBlockEnforcer, authLimiter, googleAuthCallback);
+router.post('/google/exchange', authBlockEnforcer, authLimiter, attachFirmFromSlug, exchangeGoogleAuth);
 
 // Protected authentication endpoints - require authentication
 router.post('/logout', sensitiveLimiter, authenticate, logout);

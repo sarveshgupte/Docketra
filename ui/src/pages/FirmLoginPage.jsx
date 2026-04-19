@@ -273,6 +273,14 @@ export const FirmLoginPage = () => {
     }
   };
 
+  const handleGoogleLogin = () => {
+    const params = new URLSearchParams({
+      intent: 'login',
+      firmSlug: firmSlug || '',
+    });
+    window.location.assign(`/api/auth/google/start?${params.toString()}`);
+  };
+
   if (firmLoading) return <div className="auth-wrapper"><Card className="auth-card max-w-form"><Loading message="Loading firm information..." /></Card></div>;
 
   if (!firmData) {
@@ -322,6 +330,20 @@ export const FirmLoginPage = () => {
         )}
 
         {error && <ErrorState title="Sign in failed" description={error} />}
+
+        {step === 'credentials' && (
+          <div className="google-container mt-3">
+            <Button
+              type="button"
+              variant="secondary"
+              fullWidth
+              disabled={loading}
+              onClick={handleGoogleLogin}
+            >
+              Continue with Google
+            </Button>
+          </div>
+        )}
 
         {step === 'credentials' ? (
           <form onSubmit={handleCredentialSubmit} noValidate className={`mt-4 ${spacingClasses.formFieldSpacing}`}>
