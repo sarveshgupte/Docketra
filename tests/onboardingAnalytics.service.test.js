@@ -5,6 +5,7 @@ const Module = require('module');
 const originalLoad = Module._load;
 
 const createdEvents = [];
+const caseDistinctCalls = [];
 let telemetryDoc = {
   onboardingTelemetry: {
     lastProgressRole: 'ADMIN',
@@ -124,7 +125,14 @@ Module._load = function (request, parent, isMain) {
   if (request === '../models/Client.model') return { distinct: async () => ['f1', 'f2'] };
   if (request === '../models/Category.model') return { distinct: async () => ['f1'] };
   if (request === '../models/Team.model') return { distinct: async (field) => (field === 'firmId' ? ['f1', 'f2'] : ['m1']) };
-  if (request === '../models/Case.model') return { distinct: async () => ['X100001'] };
+  if (request === '../models/Case.model') {
+    return {
+      distinct: async (field, query) => {
+        caseDistinctCalls.push({ field, query });
+        return ['X100001'];
+      },
+    };
+  }
   if (request === '../models/OnboardingEvent.model') {
     return {
       OnboardingEvent: mockOnboardingEventModel,
@@ -190,6 +198,15 @@ async function run() {
   assert.ok(Array.isArray(details.users), 'details should include user rows');
   assert.ok(Array.isArray(details.topBlockers), 'details should include top blockers');
   assert.ok(details.firms.length >= 1, 'should return at least one firm');
+
+  caseDistinctCalls.length = 0;
+  await service.getOnboardingInsightDetails({ sinceDays: 30, staleAfterDays: 3, completionState: 'all', firmId: 'f1' });
+  const assignedDocketQuery = caseDistinctCalls.find((call) => call.field === 'assignedToXID');
+  assert.ok(assignedDocketQuery, 'should fetch assigned dockets');
+  assert.ok(
+    assignedDocketQuery.query?.firmId,
+    'assigned docket lookup should be scoped to requested firm',
+  );
 
   console.log('onboardingAnalytics.service.test.js passed');
 }
