@@ -15,6 +15,7 @@ import { spacingClasses } from '../theme/tokens';
 import { Stack } from '../components/layout/Stack';
 import { Row } from '../components/layout/Row';
 import { ErrorState } from '../components/feedback/ErrorState';
+import { getApiBaseUrl } from '../utils/apiBaseUrl';
 import './LoginPage.css';
 
 const mapSafeLoginError = (error) => {
@@ -274,11 +275,17 @@ export const FirmLoginPage = () => {
   };
 
   const handleGoogleLogin = () => {
+    const apiBase = getApiBaseUrl();
+    if (!apiBase) return;
+
     const params = new URLSearchParams({
       intent: 'login',
       firmSlug: firmSlug || '',
     });
-    window.location.assign(`/api/auth/google/start?${params.toString()}`);
+
+    // Important: use absolute backend URL so React Router (including firm scoped
+    // routes/basenames) never rewrites this to /app/firm/api/...
+    window.location.assign(`${apiBase}/api/auth/google/start?${params.toString()}`);
   };
 
   if (firmLoading) return <div className="auth-wrapper"><Card className="auth-card max-w-form"><Loading message="Loading firm information..." /></Card></div>;
