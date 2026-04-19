@@ -9,14 +9,9 @@ import { adminApi } from '../../api/admin.api';
 import { caseApi } from '../../api/case.api';
 import { clientApi } from '../../api/client.api';
 import { useToast } from '../../hooks/useToast';
+import { useUnsavedChangesPrompt } from '../../hooks/useUnsavedChangesPrompt';
 
-const STEPS = [
-  'Basic Info',
-  'Classification',
-  'Routing',
-  'Assignment',
-  'Review & Create',
-];
+const STEPS = ['Basic Info', 'Classification', 'Routing', 'Assignment', 'Review & Create'];
 
 const defaultForm = {
   workType: 'client',
@@ -30,9 +25,13 @@ const defaultForm = {
   assignedTo: '',
 };
 
-export const GuidedDocketForm = ({ onCreated, initialWorkType = 'client' }) => {
+const isEmailLikeError = (message) => typeof message === 'string' && message.toLowerCase().includes('validation');
+
+export const GuidedDocketForm = ({ onCreated, onCancel, initialWorkType = 'client' }) => {
   const { showError } = useToast();
   const [step, setStep] = useState(0);
+  const [submitError, setSubmitError] = useState('');
+  const [statusMessage, setStatusMessage] = useState('');
   const [formData, setFormData] = useState({ ...defaultForm, workType: initialWorkType === 'internal' ? 'internal' : 'client' });
   const [errors, setErrors] = useState({});
   const [categories, setCategories] = useState([]);
@@ -42,8 +41,26 @@ export const GuidedDocketForm = ({ onCreated, initialWorkType = 'client' }) => {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState({ categories: true, workbaskets: true, users: true, clients: true, submit: false });
 
+  const isDirty = useMemo(() => {
+    return Boolean(
+      formData.title.trim()
+      || formData.description.trim()
+      || formData.categoryId
+      || formData.subcategoryId
+      || formData.assignedTo
+      || (formData.workType === 'client' && formData.clientId)
+    );
+  }, [formData]);
+
+  const { confirmLeaveIfDirty } = useUnsavedChangesPrompt({
+    isDirty,
+    isEnabled: !loading.submit,
+    message: 'You have unsaved docket details. Leave this flow without creating the docket?',
+  });
+
   useEffect(() => {
     const loadDeps = async () => {
+      setStatusMessage('Loading form dependencies…');
       try {
         const [categoryResponse, workbasketResponse, usersResponse, clientResponse] = await Promise.all([
           categoryService.getCategories(true),
@@ -67,7 +84,10 @@ export const GuidedDocketForm = ({ onCreated, initialWorkType = 'client' }) => {
           clientId: prev.clientId || nextClients[0]?.clientId || '',
           workbasketId: prev.workbasketId || nextWorkbaskets[0]?._id || '',
         }));
+      } catch (error) {
+        setSubmitError('Failed to load form options. Please refresh and retry.');
       } finally {
+        setStatusMessage('');
         setLoading({ categories: false, workbaskets: false, users: false, clients: false, submit: false });
       }
     };
@@ -97,12 +117,22 @@ export const GuidedDocketForm = ({ onCreated, initialWorkType = 'client' }) => {
 
   const validateStep = (stepIndex = step) => {
     const nextErrors = {};
-    if (stepIndex === 0 && !formData.title.trim()) nextErrors.title = 'Title is required';
-    if (stepIndex === 0 && formData.workType !== 'internal' && !formData.clientId) nextErrors.clientId = 'Client is required';
-    if (stepIndex === 2 && !formData.workbasketId) nextErrors.workbasketId = 'Workbasket is required';
+    const title = formData.title.trim();
+
+    if (stepIndex === 0) {
+      if (!title) nextErrors.title = 'Enter a title to continue.';
+      else if (title.length < 5) nextErrors.title = 'Title should be at least 5 characters.';
+
+      if (formData.workType !== 'internal' && !formData.clientId) {
+        nextErrors.clientId = 'Select a client for client work.';
+      }
+    }
+
+    if (stepIndex === 2 && !formData.workbasketId) nextErrors.workbasketId = 'Workbasket mapping is required before submit.';
+
     if (formData.categoryId && formData.subcategoryId) {
       const isValidSub = subcategories.some((item) => item.id === formData.subcategoryId);
-      if (!isValidSub) nextErrors.subcategoryId = 'Invalid subcategory for selected category';
+      if (!isValidSub) nextErrors.subcategoryId = 'Selected subcategory is not valid for this category.';
     }
 
     setErrors((prev) => ({ ...prev, ...nextErrors }));
@@ -118,16 +148,25 @@ export const GuidedDocketForm = ({ onCreated, initialWorkType = 'client' }) => {
   const updateField = (name, value) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: '' }));
+    setSubmitError('');
+  };
+
+  const handleCancel = () => {
+    if (!confirmLeaveIfDirty()) return;
+    onCancel?.();
   };
 
   const handleCreate = async () => {
+    if (loading.submit) return;
+    setSubmitError('');
     if (!validateStep(0) || !validateStep(2)) return;
 
     setLoading((prev) => ({ ...prev, submit: true }));
+    setStatusMessage('Creating docket…');
     try {
       const response = await caseApi.createDocket({
-        title: formData.title,
-        description: formData.description,
+        title: formData.title.trim(),
+        description: formData.description.trim(),
         categoryId: formData.categoryId || undefined,
         subcategoryId: formData.subcategoryId || undefined,
         clientId: formData.workType === 'internal' ? undefined : formData.clientId,
@@ -142,10 +181,16 @@ export const GuidedDocketForm = ({ onCreated, initialWorkType = 'client' }) => {
         onCreated?.(response);
         return;
       }
-      showError(response?.message || 'Failed to create docket. Please check required fields and try again.');
+
+      const apiMessage = response?.message || 'Failed to create docket. Please review the fields and try again.';
+      setSubmitError(apiMessage);
+      if (isEmailLikeError(apiMessage)) showError(apiMessage);
     } catch (error) {
-      showError(error?.message || 'Failed to create docket. Please check required fields and try again.');
+      const apiMessage = error?.response?.data?.message || error?.message || 'Failed to create docket. Please review the fields and try again.';
+      setSubmitError(apiMessage);
+      showError(apiMessage);
     } finally {
+      setStatusMessage('');
       setLoading((prev) => ({ ...prev, submit: false }));
     }
   };
@@ -163,9 +208,12 @@ export const GuidedDocketForm = ({ onCreated, initialWorkType = 'client' }) => {
         ))}
       </div>
 
+      {submitError ? <p className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{submitError}</p> : null}
+      {statusMessage ? <p className="mb-4 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">{statusMessage}</p> : null}
+
       {step === 0 && (
         <>
-          <Input label="Title" required value={formData.title} onChange={(e) => updateField('title', e.target.value)} error={errors.title} />
+          <Input label="Title" required value={formData.title} onChange={(e) => updateField('title', e.target.value)} error={errors.title} helpText="Use a clear title your team can recognize quickly." />
           <div>
             <p className="mb-2 block text-sm font-medium text-gray-800">Work Type <span className="ml-1 text-red-500">*</span></p>
             <div className="grid grid-cols-2 gap-2">
@@ -192,21 +240,18 @@ export const GuidedDocketForm = ({ onCreated, initialWorkType = 'client' }) => {
             </div>
           </div>
           <Select
-            label={formData.workType === 'internal' ? 'Client (not required for internal)' : 'Client'}
+            label={formData.workType === 'internal' ? 'Client (optional for internal work)' : 'Client'}
             required={formData.workType !== 'internal'}
             value={formData.clientId}
             onChange={(e) => updateField('clientId', e.target.value)}
             error={errors.clientId}
             disabled={loading.clients || formData.workType === 'internal'}
             options={[
-              { value: '', label: formData.workType === 'internal' ? 'Internal Work (no client)' : (loading.clients ? 'Loading clients...' : 'Select client') },
-              ...clients.map((item) => ({
-                value: item.clientId,
-                label: `${item.clientId} - ${item.businessName || 'Unnamed client'}`,
-              })),
+              { value: '', label: formData.workType === 'internal' ? 'Internal work (no client required)' : (loading.clients ? 'Loading clients...' : 'Select client') },
+              ...clients.map((item) => ({ value: item.clientId, label: `${item.clientId} - ${item.businessName || 'Unnamed client'}` })),
             ]}
           />
-          <Textarea label="Description (optional)" rows={4} value={formData.description} onChange={(e) => updateField('description', e.target.value)} />
+          <Textarea label="Description (optional)" rows={4} value={formData.description} onChange={(e) => updateField('description', e.target.value)} helpText="Include enough context for the assignee and reviewer." />
         </>
       )}
 
@@ -217,6 +262,7 @@ export const GuidedDocketForm = ({ onCreated, initialWorkType = 'client' }) => {
             value={formData.categoryId}
             onChange={(e) => updateField('categoryId', e.target.value)}
             disabled={loading.categories}
+            helpText="Category and subcategory decide routing defaults."
             options={[{ value: '', label: 'Select category' }, ...categories.map((item) => ({ value: item._id, label: item.name }))]}
           />
           <Select
@@ -236,7 +282,8 @@ export const GuidedDocketForm = ({ onCreated, initialWorkType = 'client' }) => {
             label="Workbasket"
             readOnly
             value={(workbaskets.find((item) => item._id === formData.workbasketId)?.name) || (loading.workbaskets ? 'Loading workbasket...' : 'Auto-selected by category/subcategory')}
-            helpText="Workbasket is auto-mapped from Category/Subcategory settings."
+            error={errors.workbasketId}
+            helpText="Workbasket is auto-mapped from category/subcategory settings."
           />
           <Select
             label="Priority"
@@ -253,7 +300,7 @@ export const GuidedDocketForm = ({ onCreated, initialWorkType = 'client' }) => {
           value={formData.assignedTo}
           onChange={(e) => updateField('assignedTo', e.target.value)}
           disabled={loading.users}
-          helpText="If empty, docket stays in the workbasket queue for pull/manager assignment."
+          helpText="Leave empty to keep this docket in queue for assignment."
           options={[{ value: '', label: loading.users ? 'Loading users...' : 'Keep unassigned in workbasket' }, ...users.map((item) => ({ value: item.xID, label: `${item.xID} - ${item.name || item.email || 'User'}` }))]}
         />
       )}
@@ -274,11 +321,12 @@ export const GuidedDocketForm = ({ onCreated, initialWorkType = 'client' }) => {
       )}
 
       <div className="create-case__actions" style={{ marginTop: 16 }}>
+        <Button type="button" variant="outline" onClick={handleCancel} disabled={loading.submit}>Cancel</Button>
         <Button type="button" variant="outline" onClick={() => setStep((prev) => Math.max(0, prev - 1))} disabled={step === 0 || loading.submit}>Back</Button>
         {step < STEPS.length - 1 ? (
           <Button type="button" variant="primary" onClick={() => validateStep() && setStep((prev) => Math.min(STEPS.length - 1, prev + 1))} disabled={!canProceed || loading.submit}>Next</Button>
         ) : (
-          <Button type="button" variant="primary" onClick={handleCreate} disabled={loading.submit}>{loading.submit ? 'Creating...' : 'Create Docket'}</Button>
+          <Button type="button" variant="primary" onClick={handleCreate} disabled={loading.submit}>{loading.submit ? 'Creating…' : 'Create Docket'}</Button>
         )}
       </div>
     </Card>

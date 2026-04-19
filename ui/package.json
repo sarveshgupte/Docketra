@@ -26,7 +26,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test:navigation": "node tests/navigationReliability.test.mjs"
+    "test:navigation": "node tests/navigationReliability.test.mjs",
+    "test:forms": "node tests/formReliabilityHardening.test.mjs"
   },
   "browserslist": {
     "production": [
