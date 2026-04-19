@@ -1,15 +1,24 @@
 import React, { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { VALID_CASE_DETAIL_TAB_NAMES } from '../../utils/constants';
+import { CASE_DETAIL_TABS, VALID_CASE_DETAIL_TAB_NAMES } from '../../utils/constants';
 
 export const StickyTabs = ({ tabs = [], defaultTab = 'overview', onTabChange }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const params = new URLSearchParams(location.search);
   const queryTab = params.get('tab');
-  const activeTab = VALID_CASE_DETAIL_TAB_NAMES.includes(queryTab) ? queryTab : defaultTab;
+  const normalizedQueryTab = queryTab === CASE_DETAIL_TABS.COMMENTS_LEGACY
+    ? CASE_DETAIL_TABS.ACTIVITY
+    : queryTab;
+  const activeTab = VALID_CASE_DETAIL_TAB_NAMES.includes(normalizedQueryTab) ? normalizedQueryTab : defaultTab;
 
   useEffect(() => {
+    if (queryTab === CASE_DETAIL_TABS.COMMENTS_LEGACY) {
+      const next = new URLSearchParams(location.search);
+      next.set('tab', CASE_DETAIL_TABS.ACTIVITY);
+      navigate(`${location.pathname}?${next.toString()}`, { replace: true });
+      return;
+    }
     if (queryTab && !VALID_CASE_DETAIL_TAB_NAMES.includes(queryTab)) {
       const next = new URLSearchParams(location.search);
       next.set('tab', defaultTab);

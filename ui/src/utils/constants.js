@@ -149,9 +149,16 @@ export const HTTP_STATUS = {
 
 export const CASE_DETAIL_TABS = {
   OVERVIEW: 'overview',
-  COMMENTS: 'comments',
+  ACTIVITY: 'activity',
   ATTACHMENTS: 'attachments',
   HISTORY: 'history',
+  COMMENTS_LEGACY: 'comments',
 };
 
-export const VALID_CASE_DETAIL_TAB_NAMES = Object.values(CASE_DETAIL_TABS);
+export const VALID_CASE_DETAIL_TAB_NAMES = [
+  CASE_DETAIL_TABS.OVERVIEW,
+  CASE_DETAIL_TABS.ATTACHMENTS,
+  CASE_DETAIL_TABS.ACTIVITY,
+  CASE_DETAIL_TABS.HISTORY,
+  CASE_DETAIL_TABS.COMMENTS_LEGACY,
+];
