@@ -91,3 +91,35 @@ Dashboard “Recent Dockets” empty states now guide users based on role:
 - Guidance is conservative by role and avoids promising controls that may be restricted.
 - Optional feature references (BYOAI/BYOS/QC) are framed as conditional and do not block onboarding.
 - Existing auth and route behavior remain unchanged.
+
+## April 2026: Data-driven setup checklist progression
+
+The dashboard setup checklist now uses role-aware backend detection instead of relying primarily on localStorage toggles.
+
+### API contract
+- Endpoint: `GET /api/dashboard/onboarding-progress`
+- Response includes:
+  - `role`
+  - `completed`
+  - `total`
+  - `steps[]` with:
+    - `id`
+    - `completed`
+    - `source` (`detected` or `manual`)
+    - `explanation`
+    - `cta` (route intent key)
+
+### Detection model
+- Primary Admin: firm setup complete, BYOS connected, active client, category/workbasket readiness, invited teammate, first docket.
+- Admin: workbasket visibility, active client presence, category/workbasket readiness, first docket, unassigned queue routed.
+- Manager: assigned workbaskets, QC mapping availability, queue visibility with dockets.
+- User: assigned workbasket, assigned docket, first workflow interaction.
+
+### Frontend behavior
+- `SetupChecklist` now merges backend-detected completion with local manual acknowledgements only when needed.
+- Checklist badges explicitly label detected vs manual state.
+- Incomplete steps include role-safe CTA routes.
+- localStorage is now limited to dismissed state + manual acknowledgements.
+
+- CTA navigation is now separated from completion state for detected steps; opening a page does not mark setup complete.
+- Manual acknowledgment is only available for steps explicitly marked `completionMode: manual|hybrid`.
