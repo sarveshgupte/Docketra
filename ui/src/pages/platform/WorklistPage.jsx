@@ -4,7 +4,15 @@ import { PlatformShell } from '../../components/platform/PlatformShell';
 import { worklistApi } from '../../api/worklist.api';
 import { caseApi } from '../../api/case.api';
 import { ROUTES } from '../../constants/routes';
-import { DataTable, FilterBar, InlineNotice, PageSection, formatDocketLabel, toArray } from './PlatformShared';
+import {
+  DataTable,
+  FilterBar,
+  InlineNotice,
+  PageSection,
+  RefreshNotice,
+  formatDocketLabel,
+  toArray,
+} from './PlatformShared';
 
 export const PlatformWorklistPage = () => {
   const { firmSlug } = useParams();
@@ -12,11 +20,14 @@ export const PlatformWorklistPage = () => {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [pendingActionId, setPendingActionId] = useState('');
 
-  const loadRows = async () => {
-    setLoading(true);
+  const loadRows = async ({ background = false } = {}) => {
+    if (background && rows.length > 0) setRefreshing(true);
+    else setLoading(true);
     setError('');
     try {
       const res = await worklistApi.getEmployeeWorklist({ limit: 50 });
@@ -25,6 +36,7 @@ export const PlatformWorklistPage = () => {
       setRows([]);
       setError('Unable to load your worklist right now.');
     } finally {
+      setRefreshing(false);
       setLoading(false);
     }
   };
@@ -55,14 +67,17 @@ export const PlatformWorklistPage = () => {
 
   const transition = async (caseInternalId, action) => {
     setSuccess('');
+    setPendingActionId(caseInternalId);
     try {
       if (action === 'SEND_TO_QC') await caseApi.transitionDocket(caseInternalId, { action: 'SEND_TO_QC' });
       if (action === 'PEND') await caseApi.pendCase(caseInternalId, 'Pending via worklist action');
       if (action === 'RESOLVE') await caseApi.resolveCase(caseInternalId, 'Resolved via worklist action');
       setSuccess('Docket updated successfully.');
-      await loadRows();
+      await loadRows({ background: true });
     } catch {
       setError('Action failed. Refresh and retry.');
+    } finally {
+      setPendingActionId('');
     }
   };
 
@@ -74,6 +89,7 @@ export const PlatformWorklistPage = () => {
     >
       <InlineNotice tone="error" message={error} />
       <InlineNotice tone="success" message={success} />
+      <RefreshNotice refreshing={refreshing} message="Refreshing worklist without interrupting your current view…" />
       <PageSection title="Execution queue" description="Filter quickly and process dockets without leaving the list.">
         <FilterBar onClear={clearFilters} clearDisabled={!query && statusFilter === 'ALL'}>
           <input
@@ -89,7 +105,9 @@ export const PlatformWorklistPage = () => {
             <option value="PENDING">Pending</option>
             <option value="IN_QC">In QC</option>
           </select>
-          <button type="button" onClick={() => void loadRows()} disabled={loading}>Refresh</button>
+          <button type="button" onClick={() => void loadRows({ background: rows.length > 0 })} disabled={loading || refreshing}>
+            {refreshing ? 'Refreshing…' : 'Refresh'}
+          </button>
         </FilterBar>
 
         <DataTable
@@ -106,16 +124,21 @@ export const PlatformWorklistPage = () => {
               <td>{r.timeSpent || '0m'}</td>
               <td>
                 <div className="action-group-secondary" role="group" aria-label="Docket actions">
-                  <button type="button" onClick={() => void transition(r.caseInternalId, 'SEND_TO_QC')}>Send to QC</button>
-                  <button type="button" onClick={() => void transition(r.caseInternalId, 'PEND')}>Pend</button>
-                  <button type="button" onClick={() => void transition(r.caseInternalId, 'RESOLVE')}>Resolve</button>
+                  <button type="button" onClick={() => void transition(r.caseInternalId, 'SEND_TO_QC')} disabled={pendingActionId === r.caseInternalId}>Send to QC</button>
+                  <button type="button" onClick={() => void transition(r.caseInternalId, 'PEND')} disabled={pendingActionId === r.caseInternalId}>Pend</button>
+                  <button type="button" onClick={() => void transition(r.caseInternalId, 'RESOLVE')} disabled={pendingActionId === r.caseInternalId}>
+                    {pendingActionId === r.caseInternalId ? 'Updating…' : 'Resolve'}
+                  </button>
                 </div>
               </td>
             </tr>
           ))}
           loading={loading}
           error={error}
-          emptyLabel="No dockets match the selected filters."
+          onRetry={() => void loadRows()}
+          hasActiveFilters={Boolean(query.trim()) || statusFilter !== 'ALL'}
+          emptyLabel="No dockets are assigned to your worklist yet."
+          emptyLabelFiltered="No dockets match your current filters."
         />
       </PageSection>
     </PlatformShell>

@@ -22,6 +22,7 @@ export function StorageSettingsPage() {
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [testing, setTesting] = useState(false);
+  const [savingProvider, setSavingProvider] = useState(false);
   const [provider, setProvider] = useState('docketra_managed');
   const [otpCode, setOtpCode] = useState('');
   const [verificationToken, setVerificationToken] = useState('');
@@ -33,14 +34,20 @@ export function StorageSettingsPage() {
   const [s3AccessKeyId, setS3AccessKeyId] = useState('');
   const [s3SecretAccessKey, setS3SecretAccessKey] = useState('');
   const [s3SessionToken, setS3SessionToken] = useState('');
+  const [loadError, setLoadError] = useState('');
+  const [statusMessage, setStatusMessage] = useState({ type: '', text: '' });
   const { user } = useAuth();
 
   const loadConfiguration = async () => {
+    setLoading(true);
+    setLoadError('');
     try {
       const data = await getStorageConfiguration();
       setConfig(data);
     } catch (error) {
-      toast?.showError?.(error?.response?.data?.message || 'Failed to load storage configuration.');
+      const message = error?.response?.data?.message || 'Failed to load storage configuration.';
+      setLoadError(message);
+      toast?.showError?.(message);
     } finally {
       setLoading(false);
     }
@@ -63,12 +70,16 @@ export function StorageSettingsPage() {
 
   const onTestConnection = async () => {
     setTesting(true);
+    setStatusMessage({ type: 'info', text: 'Testing storage connection…' });
     try {
       const result = await testStorageConnection();
       toast?.showSuccess?.(result?.message || 'Storage connection is healthy.');
+      setStatusMessage({ type: 'success', text: result?.message || 'Storage connection is healthy.' });
       await loadConfiguration();
     } catch (error) {
-      toast?.showError?.(error?.response?.data?.message || 'Storage connection test failed.');
+      const message = error?.response?.data?.message || 'Storage connection test failed.';
+      setStatusMessage({ type: 'error', text: message });
+      toast?.showError?.(message);
     } finally {
       setTesting(false);
     }
@@ -94,6 +105,8 @@ export function StorageSettingsPage() {
   };
 
   const onSaveStorageSettings = async () => {
+    setSavingProvider(true);
+    setStatusMessage({ type: 'info', text: 'Saving storage provider settings…' });
     try {
       let credentials = {};
       if (provider === 'onedrive') {
@@ -118,9 +131,14 @@ export function StorageSettingsPage() {
         credentials,
       });
       toast?.showSuccess?.('Storage settings updated.');
+      setStatusMessage({ type: 'success', text: 'Storage settings updated.' });
       await loadConfiguration();
     } catch (error) {
-      toast?.showError?.(error?.response?.data?.message || 'Failed to update storage');
+      const message = error?.response?.data?.message || 'Failed to update storage';
+      setStatusMessage({ type: 'error', text: message });
+      toast?.showError?.(message);
+    } finally {
+      setSavingProvider(false);
     }
   };
 
@@ -133,7 +151,7 @@ export function StorageSettingsPage() {
               <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Storage Settings</h1>
               <p className="text-sm text-gray-500">Configure and validate your external document storage integration.</p>
             </div>
-            <Card>
+          <Card>
               <p className="text-sm text-gray-500">Loading storage settings...</p>
             </Card>
           </div>
@@ -159,6 +177,26 @@ export function StorageSettingsPage() {
 
           <Card>
             <div className={spacingClasses.sectionMargin}>
+              {loadError ? (
+                <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  <p>{loadError}</p>
+                  <Button type="button" variant="outline" onClick={loadConfiguration} disabled={loading}>
+                    Retry loading
+                  </Button>
+                </div>
+              ) : null}
+              {statusMessage.text ? (
+                <p className={`rounded border px-3 py-2 text-sm ${
+                  statusMessage.type === 'error'
+                    ? 'border-red-200 bg-red-50 text-red-700'
+                    : statusMessage.type === 'success'
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                      : 'border-blue-200 bg-blue-50 text-blue-700'
+                }`}
+                >
+                  {statusMessage.text}
+                </p>
+              ) : null}
               <div>
                 <h2 className="text-lg font-medium text-gray-900 mb-4">Storage Provider</h2>
                 <p className="text-sm text-gray-500">Default is Docketra managed storage. BYOS changes require OTP verification.</p>
@@ -218,9 +256,9 @@ export function StorageSettingsPage() {
                   type="button"
                   variant="primary"
                   onClick={onSaveStorageSettings}
-                  disabled={!verificationToken || testing || !canSwitchProvider}
+                  disabled={!verificationToken || testing || savingProvider || !canSwitchProvider}
                 >
-                  {canSwitchProvider ? 'Save Provider' : 'Provider Unchanged'}
+                  {savingProvider ? 'Saving…' : canSwitchProvider ? 'Save Provider' : 'Provider Unchanged'}
                 </Button>
                 {!canSwitchProvider ? (
                   <p className="text-xs text-gray-500">

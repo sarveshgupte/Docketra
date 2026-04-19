@@ -14,13 +14,21 @@ export const WorkSettingsPage = () => {
   const [workbaskets, setWorkbaskets] = useState([]);
   const [workbasketName, setWorkbasketName] = useState('');
   const [workbasketSaving, setWorkbasketSaving] = useState(false);
+  const [loadingWorkbaskets, setLoadingWorkbaskets] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [statusMessage, setStatusMessage] = useState({ type: '', text: '' });
 
   const loadWorkbaskets = async () => {
+    setLoadingWorkbaskets(true);
+    setLoadError('');
     try {
       const response = await adminApi.listWorkbaskets({ includeInactive: true });
       setWorkbaskets(response?.success ? (response.data || []) : []);
     } catch {
       setWorkbaskets([]);
+      setLoadError('Unable to load workbaskets. Retry to continue configuring work settings.');
+    } finally {
+      setLoadingWorkbaskets(false);
     }
   };
 
@@ -31,10 +39,14 @@ export const WorkSettingsPage = () => {
   const handleCreateWorkbasket = async () => {
     if (!workbasketName.trim()) return;
     setWorkbasketSaving(true);
+    setStatusMessage({ type: 'info', text: 'Creating workbasket…' });
     try {
       await adminApi.createWorkbasket(workbasketName.trim());
       setWorkbasketName('');
       await loadWorkbaskets();
+      setStatusMessage({ type: 'success', text: 'Workbasket created.' });
+    } catch {
+      setStatusMessage({ type: 'error', text: 'Could not create the workbasket. Retry and confirm the name is unique.' });
     } finally {
       setWorkbasketSaving(false);
     }
@@ -43,13 +55,25 @@ export const WorkSettingsPage = () => {
   const handleRenameWorkbasket = async (workbasket) => {
     const nextName = window.prompt('Rename workbasket', workbasket.name || '');
     if (!nextName || !nextName.trim() || nextName.trim() === workbasket.name) return;
-    await adminApi.renameWorkbasket(workbasket._id, nextName.trim());
-    await loadWorkbaskets();
+    setStatusMessage({ type: 'info', text: 'Updating workbasket name…' });
+    try {
+      await adminApi.renameWorkbasket(workbasket._id, nextName.trim());
+      await loadWorkbaskets();
+      setStatusMessage({ type: 'success', text: 'Workbasket renamed.' });
+    } catch {
+      setStatusMessage({ type: 'error', text: 'Could not rename this workbasket.' });
+    }
   };
 
   const handleToggleWorkbasket = async (workbasket) => {
-    await adminApi.toggleWorkbasketStatus(workbasket._id, !workbasket.isActive);
-    await loadWorkbaskets();
+    setStatusMessage({ type: 'info', text: 'Updating workbasket status…' });
+    try {
+      await adminApi.toggleWorkbasketStatus(workbasket._id, !workbasket.isActive);
+      await loadWorkbaskets();
+      setStatusMessage({ type: 'success', text: 'Workbasket status updated.' });
+    } catch {
+      setStatusMessage({ type: 'error', text: 'Could not update workbasket status.' });
+    }
   };
 
   return (
@@ -61,6 +85,26 @@ export const WorkSettingsPage = () => {
 
       <Card className="neo-card">
         <div className="p-6">
+          {loadError ? (
+            <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              <p>{loadError}</p>
+              <Button type="button" variant="outline" onClick={loadWorkbaskets} disabled={loadingWorkbaskets}>
+                Retry loading
+              </Button>
+            </div>
+          ) : null}
+          {statusMessage.text ? (
+            <p className={`mb-4 rounded border px-3 py-2 text-sm ${
+              statusMessage.type === 'error'
+                ? 'border-red-200 bg-red-50 text-red-700'
+                : statusMessage.type === 'success'
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                  : 'border-blue-200 bg-blue-50 text-blue-700'
+            }`}
+            >
+              {statusMessage.text}
+            </p>
+          ) : null}
           <h2 className="text-lg font-semibold text-gray-900">Workbasket Management</h2>
           <p className="mt-1 text-sm text-gray-600">Add, rename, and activate/deactivate workbaskets for docket routing.</p>
           <div className="mt-4 flex gap-3">
@@ -75,6 +119,10 @@ export const WorkSettingsPage = () => {
             </Button>
           </div>
           <div className="mt-4 space-y-2">
+            {loadingWorkbaskets ? <p className="text-sm text-gray-500">Loading workbaskets…</p> : null}
+            {!loadingWorkbaskets && workbaskets.length === 0 ? (
+              <p className="text-sm text-gray-500">No workbaskets are configured yet. Create one to start docket routing.</p>
+            ) : null}
             {workbaskets.map((workbasket) => (
               <div key={workbasket._id} className="flex items-center justify-between rounded border px-3 py-2">
                 <div className="text-sm font-medium text-gray-900">{workbasket.name} <span className="text-xs text-gray-500">({workbasket.isActive ? 'Active' : 'Inactive'})</span></div>
