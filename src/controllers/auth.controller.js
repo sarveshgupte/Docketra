@@ -24,6 +24,7 @@ const xIDGenerator = require('../services/xIDGenerator');
 const signupService = require('../services/signup.service');
 const jwtService = require('../services/jwt.service');
 const { isSuperAdminRole, normalizeRole } = require('../utils/role.utils');
+const { getTutorialStatus, shouldShowWelcomeTutorial } = require('../utils/tutorialState.utils');
 const { assertPrimaryAdmin, canInviteRole, getTagValidationError, normalizeId } = require('../utils/hierarchy.utils');
 const { normalizeFirmSlug } = require('../utils/slugify');
 const { isActiveStatus, getFirmInactiveCode } = require('../utils/status.utils');
@@ -1652,32 +1653,44 @@ const getProfile = async (req, res) => {
     );
 
     const normalizedTutorialRole = normalizeRole(dbUser.role);
-    const tutorialRole = normalizedTutorialRole === 'PRIMARY_ADMIN'
-      ? 'primary_admin'
-      : (normalizedTutorialRole === 'ADMIN' ? 'admin' : 'user');
-    const tutorialSteps = tutorialRole === 'primary_admin'
-      ? [
-        'Review your dashboard risk cards and open the Primary Admin setup checklist.',
-        'Complete firm profile, storage configuration, and work settings before inviting the wider team.',
-        'Define hierarchy and invite admins/managers/users for ownership and review flow.',
-        'Create and assign your first docket to validate your end-to-end firm workflow.',
-        'Check your welcome email for workspace links, support contact details, and security setup reminders.',
-      ]
-      : tutorialRole === 'admin'
-        ? [
-        'Review your dashboard risk cards and open the setup checklist for guided first-time actions.',
-        'Configure firm profile, storage settings, and work settings before scaling operations.',
-        'Invite your team members and define hierarchy so ownership and approvals are clear.',
-        'Create your first docket, assign an owner, and track movement from Workbasket to Worklist.',
-        'Check your welcome email for workspace links, support contact details, and security setup reminders.',
-      ]
-        : [
-        'Open your worklist to see assigned dockets and priorities.',
-        'Open My Settings to confirm your profile details before starting execution.',
-        'Check your welcome email for your workspace link and sign-in options.',
-        'Update docket status and add comments to keep progress visible.',
-        'Use search and filters to find work quickly across clients.',
-      ];
+    const tutorialRole = normalizedTutorialRole === 'SUPER_ADMIN'
+      ? 'super_admin'
+      : (normalizedTutorialRole === 'PRIMARY_ADMIN'
+        ? 'primary_admin'
+        : (normalizedTutorialRole === 'ADMIN'
+          ? 'admin'
+          : (normalizedTutorialRole === 'MANAGER' ? 'manager' : 'user')));
+
+    const tutorialStepMap = {
+      super_admin: [
+        'Review platform health and tenant activity without editing firm operations unless needed.',
+        'Use Firms Management for support diagnostics and controlled intervention.',
+        'Capture support actions clearly to preserve auditability and trust.',
+      ],
+      primary_admin: [
+        'Complete firm profile, storage/BYOS setup, and work settings before scaling operations.',
+        'Invite admins, managers, and users with clear reporting hierarchy.',
+        'Create clients, categories, sub-categories, and workbaskets including QC mapping.',
+        'Launch a real docket and validate end-to-end workflow plus audit visibility.',
+      ],
+      admin: [
+        'Review assigned teams and active workbasket coverage.',
+        'Route unassigned or pending dockets to the right owners quickly.',
+        'Monitor compliance deadlines and resolve operational bottlenecks daily.',
+      ],
+      manager: [
+        'Open operational queues and identify blocked or overdue dockets first.',
+        'Validate workload distribution and team handoffs across workbaskets.',
+        'Use QC review paths to maintain quality before completion.',
+      ],
+      user: [
+        'Start in My Worklist and prioritize overdue or due-soon dockets.',
+        'Update status, comments, and document requests so next handoff is clean.',
+        'Use categories/sub-categories correctly for clear reporting and audits.',
+      ],
+    };
+
+    const tutorialSteps = tutorialStepMap[tutorialRole] || tutorialStepMap.user;
 
     const resolvedTeamIds = Array.isArray(dbUser.teamIds) && dbUser.teamIds.length > 0
       ? dbUser.teamIds.map((entry) => String(entry))
@@ -1751,8 +1764,9 @@ const getProfile = async (req, res) => {
         panMasked: profile.pan || profile.panMasked,
         aadhaarMasked: profile.aadhaar || profile.aadhaarMasked,
         welcomeTutorial: {
-          show: !dbUser.tutorialCompletedAt,
+          show: shouldShowWelcomeTutorial(dbUser),
           role: tutorialRole,
+          status: getTutorialStatus(dbUser),
           steps: tutorialSteps,
         },
         whatsNew: {
