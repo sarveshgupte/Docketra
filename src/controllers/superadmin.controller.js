@@ -24,114 +24,20 @@ const { safeAuditLog } = require('../services/safeSideEffects.service');
 const { getSession } = require('../utils/getSession');
 const log = require('../utils/log');
 const onboardingAnalyticsService = require('../services/onboardingAnalytics.service');
+const {
+  findFirmAdmin,
+  findFirmAdminById,
+  isAdminCurrentlyLocked,
+  normalizeAdminLifecycleStatus,
+  isAdminDisabledStatus,
+  resolveSessionQuery,
+  logSuperadminAction,
+} = require('../services/superadminLifecycle.service');
 
 // Constants
 const FIRM_ID_PATTERN = /^FIRM\d{3,}$/i;
 const PASSWORD_SETUP_TOKEN_EXPIRY = '24h';
-const ADMIN_ROLE_VALUES = ['ADMIN', 'PRIMARY_ADMIN', 'Admin'];
 
-/**
- * Resolve the default system admin for a firm.
- * @param {string|Object} firmObjectId
- * @returns {Promise<Object|null>}
- */
-const findFirmAdmin = async (firmObjectId) => {
-  return User.findOne({
-    firmId: firmObjectId,
-    isSystem: true,
-    role: { $in: ADMIN_ROLE_VALUES },
-    status: { $ne: 'deleted' },
-  });
-};
-
-const findFirmAdminById = async (firmObjectId, adminId) => {
-  if (!adminId || !mongoose.Types.ObjectId.isValid(adminId)) {
-    return null;
-  }
-  return User.findOne({
-    _id: adminId,
-    firmId: firmObjectId,
-    role: { $in: ADMIN_ROLE_VALUES },
-    status: { $ne: 'deleted' },
-  });
-};
-
-const isAdminCurrentlyLocked = (admin) => {
-  if (!admin?.lockUntil) return false;
-  return admin.lockUntil instanceof Date && admin.lockUntil > new Date();
-};
-
-const normalizeAdminLifecycleStatus = (status) => {
-  const normalized = String(status || '').trim().toLowerCase();
-  if (normalized === 'disabled' || normalized === 'suspended') {
-    return 'disabled';
-  }
-  if (normalized === 'active') {
-    return 'active';
-  }
-  return null;
-};
-
-const isAdminDisabledStatus = (status) => normalizeAdminLifecycleStatus(status) === 'disabled';
-
-const resolveSessionQuery = (query, session) => {
-  if (session && query && typeof query.session === 'function') {
-    query = query.session(session);
-  }
-  if (query && typeof query.exec === 'function') {
-    return query.exec();
-  }
-  return Promise.resolve(query);
-};
-
-/**
- * Log Superadmin action to audit log
- * 
- * Supports both human-performed and system-triggered actions:
- * - For human actions: provide performedById as MongoDB ObjectId
- * - For system actions: performedById can be null,
- *   and performedBySystem will be set to true automatically
- */
-const logSuperadminAction = async ({ actionType, description, performedBy, performedById, targetEntityType, targetEntityId, metadata = {}, req, session = null }) => {
-  try {
-    // Determine if this is a system-triggered action
-    // System actions are identified by:
-    // 1. performedById is null/undefined
-    // 2. performedById is not a valid MongoDB ObjectId
-    const isSystemAction = !performedById ||
-                          (typeof performedById === 'string' && !mongoose.Types.ObjectId.isValid(performedById));
-    
-    // Build audit log entry
-    const auditEntry = {
-      actionType,
-      description,
-      performedBy,
-      targetEntityType,
-      targetEntityId,
-      ipAddress: req?.ip,
-      userAgent: req?.headers?.['user-agent'],
-      metadata,
-    };
-    
-    // Set system flag and performedById based on action type
-    if (isSystemAction) {
-      auditEntry.performedBySystem = true;
-      auditEntry.performedById = null; // Don't pass invalid string to ObjectId field
-    } else {
-      auditEntry.performedById = performedById;
-      auditEntry.performedBySystem = false;
-    }
-    
-    if (session) {
-      await SuperadminAudit.create([auditEntry], { session });
-    } else {
-      await SuperadminAudit.create(auditEntry);
-    }
-  } catch (error) {
-    log.error('[SUPERADMIN_AUDIT] Failed to log action:', error.message);
-    // Don't throw - audit failures shouldn't block the request
-  }
-};
 
 /**
  * Create a new firm with transactional guarantees
