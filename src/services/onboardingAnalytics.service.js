@@ -477,6 +477,23 @@ const getOnboardingInsightDetails = async ({
     byFirm.set(firmKey, currentFirm);
   }
 
+
+  if (resolvedFirmId && firmsRaw[0] && !byFirm.has(String(resolvedFirmId))) {
+    const selectedFirm = firmsRaw[0];
+    byFirm.set(String(resolvedFirmId), {
+      firmId: String(selectedFirm._id),
+      name: selectedFirm.name || 'Unknown firm',
+      firmCode: selectedFirm.firmId || null,
+      firmSlug: selectedFirm.firmSlug || null,
+      status: selectedFirm.status || null,
+      users: 0,
+      incompleteUsers: 0,
+      staleUsers: 0,
+      blockers: new Set(),
+      recentRefreshAt: null,
+    });
+  }
+
   const firms = Array.from(byFirm.values()).map((firm) => {
     const firmKey = String(firm.firmId);
     const firmBlockers = [];
@@ -499,7 +516,17 @@ const getOnboardingInsightDetails = async ({
         hasPrimaryWorkbasket: workbasketFirmSet.has(firmKey),
       },
       recentRefreshAt: firm.recentRefreshAt || null,
-      nextAction: allBlockers.size ? 'Needs follow-up' : 'Healthy',
+      nextAction: !activeClientFirmSet.has(firmKey)
+        ? 'Needs first active client'
+        : (!categoryFirmSet.has(firmKey) || !workbasketFirmSet.has(firmKey))
+          ? 'Needs category/workbasket setup'
+          : (allBlockers.has('manager_without_queue'))
+            ? 'Managers need queue assignment'
+            : (allBlockers.has('user_without_dockets'))
+              ? 'Users have no assigned dockets'
+              : (allBlockers.has('tutorial_skipped_incomplete'))
+                ? 'Tutorial skipped but setup still incomplete'
+                : (allBlockers.size ? 'Needs follow-up' : 'Healthy'),
     };
   })
     .filter((firm) => !normalizedBlockerType || firm.blockers.includes(normalizedBlockerType))
@@ -535,7 +562,7 @@ const getOnboardingInsightDetails = async ({
       firms: firms.length,
       users: users.length,
       staleUsers: users.filter((entry) => entry.isStale).length,
-      needsFollowUpFirms: firms.filter((firm) => firm.nextAction === 'Needs follow-up').length,
+      needsFollowUpFirms: firms.filter((firm) => firm.nextAction !== 'Healthy').length,
     },
     topBlockers,
     firms,
