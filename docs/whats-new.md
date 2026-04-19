@@ -225,3 +225,4 @@
 - Added a dedicated superadmin onboarding insights API (`GET /api/superadmin/onboarding-insights`) with role-aware friction summaries.
 - Added Platform Dashboard onboarding observability cards for key blockers: firms without active clients, missing category/workbasket setup, managers without queues, and users without assigned dockets.
 - Added derived alert metric for users who skipped tutorial but remain onboarding-incomplete after a threshold.
+- Hardened observability paths so telemetry/insight failures are non-blocking and cannot break tutorial completion, onboarding progress responses, or platform stats rendering.

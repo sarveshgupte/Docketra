@@ -43,3 +43,5 @@ No third-party analytics SDK is used.
 - Event writes are best-effort and non-blocking for core product flows.
 - Onboarding completion analytics reflect actual backend-detected/manual transitions only.
 - Role-aware metrics distinguish `PRIMARY_ADMIN`, `ADMIN`, `MANAGER`, and `USER`.
+- If telemetry persistence fails during onboarding progress or tutorial completion, API success responses are preserved and only warning logs are emitted.
+- Platform stats rendering remains authoritative even when optional onboarding-insights loading fails.

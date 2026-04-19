@@ -107,6 +107,7 @@ When users complete real setup actions outside the dashboard, the checklist shou
 - Keep onboarding analytics operationally useful and privacy-conscious.
 - Avoid third-party SDKs and pageview-style noise.
 - Keep backend onboarding state authoritative.
+- Keep telemetry strictly best-effort so primary onboarding/product flows never fail because of analytics writes.
 
 ### Backend components
 - Event storage model: `src/models/OnboardingEvent.model.js`.
