@@ -72,6 +72,30 @@ For all authenticated firm-facing routes (`/app/firm/:firmSlug/*`), **`PlatformS
 - Keep primary and secondary action zones aligned and predictable.
 - Preserve readability by balancing compact spacing with line-height and contrast.
 
+## Large page decomposition pattern (PR 1005)
+
+To prevent high-risk monolith pages from regressing, use this composition contract for large frontend pages:
+
+1. **Shell/container (`pages/...`)**
+   - Keep the page file focused on route params, permission gates, high-level orchestration, and shell framing.
+   - Keep authenticated pages on `PlatformShell`; do not reintroduce `Layout`.
+2. **Header/actions (`components/...`)**
+   - Extract header action rails into focused components (`PageHeader` actions, metrics chips, quick actions).
+3. **Filters/toolbar (`components/...`)**
+   - Move filter forms, view tabs, saved views, and bulk bars into dedicated sections with explicit props.
+4. **Content/table (`components/...` + hooks)**
+   - Keep table column definitions and row action renderers out of giant page files.
+   - Prefer a page-local hook (for example `use*TableColumns`) when table behavior grows complex.
+5. **Dialogs/modals (`components/...`)**
+   - Keep modal state orchestration in the page container when needed, but extract repeated modal UI blocks.
+6. **Hooks/state (`hooks/...` or page-local hooks)**
+   - Extract reusable async orchestration and derived state so page files stay readable.
+   - Keep abstractions concrete and behavior-preserving; avoid speculative framework layers.
+
+### Guardrail
+
+New or refactored large pages should not grow back into “everything files” that mix layout, fetch orchestration, filters, table renderers, and dialog logic in one place.
+
 ## Follow-up items
 
 1. Continue migrating any remaining authenticated pages still using legacy `Layout` wrappers.

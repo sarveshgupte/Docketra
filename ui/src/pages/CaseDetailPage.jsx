@@ -36,36 +36,20 @@ import { ROUTES } from '../constants/routes';
 import { RouteErrorFallback } from '../components/routing/RouteErrorFallback';
 import { useActiveDocket } from '../hooks/useActiveDocket';
 import { useCaseQuery } from '../hooks/useCaseQuery';
-import { normalizeLifecycle } from '../utils/lifecycle';
 import { invalidateCaseCache } from '../utils/caseCache';
 import { getLifecycleMeta } from '../../utils/lifecycleMap';
 import api from '../services/api';
 import { DocketDetails } from '../../components/DocketDetails';
-
-/**
- * Helper function to normalize case data structure
- * Handles both old and new API response formats
- * PR #45: Utility to avoid repeated fallback patterns
- */
-const normalizeCase = (data) => {
-  return data.case || data;
-};
-
-const toLifecycleStage = (lifecycle) => {
-  if (lifecycle === 'OPEN') return 'Open';
-  if (lifecycle === 'IN_PROGRESS') return 'In Progress';
-  if (lifecycle === 'RESOLVED') return 'Resolved';
-  if (lifecycle === 'CLOSED') return 'Closed';
-  return 'Open';
-};
-
-const normalizeLifecycleForUi = (lifecycle) => normalizeLifecycle(lifecycle);
-const REALTIME_POLL_MS = 15000;
-const INITIAL_VIRTUAL_WINDOW = 30;
-const ACTION_RETRY_KEY = 'docketra_case_retry_queue';
-const ACTION_RETRY_MAX_ATTEMPTS = 3;
-const ACTION_RETRY_BASE_DELAY_MS = 1000;
-
+import {
+  ACTION_RETRY_BASE_DELAY_MS,
+  ACTION_RETRY_KEY,
+  ACTION_RETRY_MAX_ATTEMPTS,
+  INITIAL_VIRTUAL_WINDOW,
+  normalizeCase,
+  normalizeLifecycleForUi,
+  REALTIME_POLL_MS,
+  toLifecycleStage,
+} from './caseDetail/caseDetailUtils';
 
 export const CaseDetailPage = () => {
   const { caseId, firmSlug } = useParams();
