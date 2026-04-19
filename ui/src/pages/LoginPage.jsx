@@ -12,6 +12,7 @@ import { validateXID, validatePassword } from '../utils/validators';
 import { useToast } from '../hooks/useToast';
 import { spacingClasses } from '../theme/tokens';
 import { ErrorState } from '../components/feedback/ErrorState';
+import { resolvePostLoginDestination } from '../utils/authRedirect';
 import './LoginPage.css';
 
 export const LoginPage = () => {
@@ -78,7 +79,9 @@ export const LoginPage = () => {
         const profileResult = await fetchProfile();
 
         if (profileResult?.success) {
-          navigate(resolvePostAuthRoute(profileResult.data), { replace: true });
+          const returnTo = new URLSearchParams(location.search).get('returnTo');
+          const nextRoute = resolvePostLoginDestination(returnTo, resolvePostAuthRoute(profileResult.data));
+          navigate(nextRoute, { replace: true });
         }
       }
     } catch (err) {
