@@ -1,5 +1,30 @@
 # Docket Features
 
+## CRM ↔ Task Manager linkage improvements (April 2026)
+
+To strengthen client context while executing dockets, the following UX/data-link upgrades were added without introducing new backend modules:
+
+- **Client Workspace now acts as a client hub** with:
+  - client identity/contact/state summary
+  - docket rollups (`total`, `open`, `filed/resolved`)
+  - recent dockets snapshot
+  - richer client-specific docket table columns (docket ID, title, category/subcategory, status, assignee, updated date, open action)
+  - quick action to **Create Docket for Client**
+- **Create Docket flow now supports prefilled client context** when opened from client workspace:
+  - route supports `?clientId=<id>`
+  - guided create form prefers the provided client when available and valid
+  - default behavior remains backward compatible when no `clientId` is supplied
+- **Docket Detail now surfaces stronger client context**:
+  - linked client name is now clearly navigable to Client Workspace
+  - dedicated Client Context panel with compact summary (ID/email/contact/context)
+  - in-context actions: open client workspace, create new docket for that client, return to client workspace
+  - lightweight related dockets list for the same client in Overview
+- **Internal work behavior remains explicit**:
+  - internal dockets show clear “internal/default client context” messaging
+  - client navigation actions are only shown where client-linked context is valid
+
+These updates preserve existing permissions, existing API surface, and queue→docket navigation behavior while reducing context switching friction.
+
 ## Guided Docket Creation Flow
 
 The Create Docket experience now uses a guided, 5-step workflow designed for faster and clearer docket intake.
@@ -320,4 +345,3 @@ Dockets now support firm-scoped SLA rules with automatic deadline tracking.
 
 - Weekly SLA summaries are available from the reports dashboard.
 - Managers can see current overdue items, due-soon items, and resolved-within-SLA totals at a glance.
-

@@ -1,5 +1,14 @@
 # What's New
 
+## April 2026: CRM ↔ Task Manager cross-linking and workflow handoff enhancements
+
+- Upgraded **Client Workspace** into a stronger client-centered operations hub with clear identity/contact/status context, docket rollups (total/open/filed), recent docket visibility, and direct execution actions.
+- Improved client-specific docket scanning with a more useful table (Docket ID, title, category/subcategory, status, assignee, updated date, and direct open action).
+- Added a smoother **Create Docket from Client** path by supporting prefilled client context in create flow (`?clientId=...`) while keeping the existing create flow backward compatible.
+- Strengthened **Docket Detail** client context by making linked client names clearly navigable, adding a compact client summary section, and surfacing related dockets for the same client directly in Overview.
+- Added clearer cross-navigation cues so users can move **client → docket → client** without losing orientation (including “Open Client Workspace” and “Back to Client” handoff actions where context is available).
+- Preserved internal-work behavior by clearly labeling internal/default-client context and avoiding misleading client navigation on internal dockets.
+
 ## April 2026: Task Manager queue experience unified across Workbasket, My Worklist, QC Workbasket, and All Dockets
 
 - Refactored the Task Manager execution-list pattern so queue pages now share a consistent operating model (header context, filter bar placement, table density, action affordances, and state treatment).
