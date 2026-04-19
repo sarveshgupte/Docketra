@@ -80,9 +80,9 @@ export const PlatformCrmPage = () => {
 
       <PageSection title="Quick actions" description="Use CRM as your summary + routing hub; creation flows remain in Client Management and Leads.">
         <div className="action-row">
-          <Link to={ROUTES.CRM_CLIENTS(firmSlug)}>Add Client</Link>
-          <Link to={ROUTES.CRM_CLIENTS(firmSlug)}>Import Clients CSV</Link>
-          <Link to={ROUTES.CRM_LEADS(firmSlug)}>Go to Leads</Link>
+          <Link to={ROUTES.CRM_CLIENTS(firmSlug)}>New Client</Link>
+          <Link to={ROUTES.CRM_CLIENTS(firmSlug)}>Import Clients (CSV)</Link>
+          <Link to={ROUTES.CRM_LEADS(firmSlug)}>Go to Leads Queue</Link>
         </div>
       </PageSection>
 
