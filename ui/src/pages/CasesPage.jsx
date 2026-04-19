@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Layout } from '../components/common/Layout';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { PlatformShell } from '../components/platform/PlatformShell';
 import { Button } from '../components/common/Button';
 import { TableSkeleton } from '../components/common/Skeleton';
 import { PageHeader } from '../components/layout/PageHeader';
@@ -86,6 +86,7 @@ export const CasesPage = () => {
   const { user } = useAuth();
   const { isAdmin } = usePermissions();
   const navigate = useNavigate();
+  const location = useLocation();
   const { firmSlug, isValidFirm } = useFirm();
   const isPartner = user?.role === USER_ROLES.PARTNER;
 
@@ -320,13 +321,14 @@ export const CasesPage = () => {
 
   const handleCaseClick = useCallback((caseRecord) => {
     const index = sortedCases.findIndex((c) => c.caseId === caseRecord.caseId);
+    const returnTo = `${location.pathname}${location.search || ''}`;
     openDocket({
       caseId: caseRecord.caseId,
       navigate,
-      to: ROUTES.CASE_DETAIL(firmSlug, caseRecord.caseId),
-      state: { sourceList: sortedCases.map((c) => c.caseId), index },
+      to: `${ROUTES.CASE_DETAIL(firmSlug, caseRecord.caseId)}?returnTo=${encodeURIComponent(returnTo)}`,
+      state: { sourceList: sortedCases.map((c) => c.caseId), index, returnTo },
     });
-  }, [sortedCases, navigate, firmSlug]);
+  }, [sortedCases, navigate, firmSlug, location.pathname, location.search]);
 
   const handleCreateCase = useCallback(() => {
     navigate(ROUTES.CREATE_CASE(firmSlug));
@@ -637,7 +639,7 @@ export const CasesPage = () => {
       if (first?.caseId) openDocket({
         caseId: first.caseId,
         navigate,
-        to: `${ROUTES.CASE_DETAIL(firmSlug, first.caseId)}?mode=edit`,
+        to: `${ROUTES.CASE_DETAIL(firmSlug, first.caseId)}?mode=edit&returnTo=${encodeURIComponent(`${location.pathname}${location.search || ''}`)}`,
       });
     },
   });
@@ -774,8 +776,9 @@ export const CasesPage = () => {
                 onClick={(event) => {
                   event.stopPropagation();
                   const index = sortedCases.findIndex((c) => c.caseId === row.caseId);
-                  navigate(ROUTES.CASE_DETAIL(firmSlug, row.caseId), {
-                    state: { sourceList: sortedCases.map((c) => c.caseId), index },
+                  const returnTo = `${location.pathname}${location.search || ''}`;
+                  navigate(`${ROUTES.CASE_DETAIL(firmSlug, row.caseId)}?returnTo=${encodeURIComponent(returnTo)}`, {
+                    state: { sourceList: sortedCases.map((c) => c.caseId), index, returnTo },
                   });
                 }}
               >
@@ -825,14 +828,14 @@ export const CasesPage = () => {
 
   if (loading) {
     return (
-      <Layout title="Dockets">
+      <PlatformShell moduleLabel="Operations" title="Dockets" subtitle="Manage client work and internal work across lifecycle, assignments, and queues.">
         <TableSkeleton rows={8} />
-      </Layout>
+      </PlatformShell>
     );
   }
 
   return (
-    <Layout title="Dockets">
+    <PlatformShell moduleLabel="Operations" title="Dockets" subtitle="Manage client work and internal work across lifecycle, assignments, and queues.">
       <div className="cases-page">
         <PageHeader
           title="Dockets"
@@ -1183,6 +1186,6 @@ export const CasesPage = () => {
           onCancel={() => setConfirmModal(null)}
         />
       )}
-    </Layout>
+    </PlatformShell>
   );
 };

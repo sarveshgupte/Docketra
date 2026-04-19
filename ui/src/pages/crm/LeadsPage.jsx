@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Layout } from '../../components/common/Layout';
+import { PlatformShell } from '../../components/platform/PlatformShell';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
@@ -400,7 +400,7 @@ export const LeadsPage = () => {
   );
 
   return (
-    <Layout>
+    <PlatformShell moduleLabel="Operations" title="CRM leads" subtitle="Track lead pipeline progression and owner follow-up commitments.">
       <PageHeader
         title="Leads"
         description="Run your CRM pipeline from intake to conversion and downstream handoff."
@@ -569,6 +569,6 @@ export const LeadsPage = () => {
           </div>
         </div>
       </Modal>
-    </Layout>
+    </PlatformShell>
   );
 };

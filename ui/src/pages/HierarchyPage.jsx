@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Layout } from '../components/common/Layout';
+import { PlatformShell } from '../components/platform/PlatformShell';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Select } from '../components/common/Select';
@@ -144,7 +144,7 @@ export const HierarchyPage = () => {
   };
 
   return (
-    <Layout>
+    <PlatformShell moduleLabel="Operations" title="Hierarchy management" subtitle="Manage Admin → Manager → User reporting lines across the firm.">
       <div className="space-y-4">
         <Card>
           <div className="space-y-2 p-2">
@@ -210,7 +210,7 @@ export const HierarchyPage = () => {
           </Card>
         )}
       </div>
-    </Layout>
+    </PlatformShell>
   );
 };
 

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Layout } from '../components/common/Layout';
+import { PlatformShell } from '../components/platform/PlatformShell';
 import { Button } from '../components/common/Button';
 import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -273,7 +273,7 @@ export const ComplianceCalendarPage = () => {
   };
 
   return (
-    <Layout>
+    <PlatformShell moduleLabel="Operations" title="Compliance calendar" subtitle="Shared timeline for due dates, reminders, and docket-triggering events.">
       <div className="compliance-calendar-page">
         <PageHeader
           title="Compliance Calendar"
@@ -444,7 +444,7 @@ export const ComplianceCalendarPage = () => {
           </form>
         ) : null}
       </div>
-    </Layout>
+    </PlatformShell>
   );
 };
 
