@@ -78,6 +78,55 @@ const PRIMARY_ADMIN_CHECKLIST_STEPS = [
   },
 ];
 
+
+const MANAGER_CHECKLIST_STEPS = [
+  {
+    id: 'review-workbaskets',
+    title: 'Review assigned workbaskets',
+    description: 'Confirm which queues your team owns so intake and execution responsibilities are clear.',
+    hint: 'Open Worklist/Workbaskets and verify ownership.',
+    actionLabel: 'Open worklist',
+  },
+  {
+    id: 'review-pending',
+    title: 'Review pending and overdue dockets',
+    description: 'Catch bottlenecks early and rebalance workload before turnaround risk grows.',
+    hint: 'Use queue filters to prioritize due-soon items.',
+    actionLabel: 'Open queue filters',
+  },
+  {
+    id: 'qc-handoff',
+    title: 'Validate QC handoff process',
+    description: 'Ensure quality checkpoints are followed before dockets are marked resolved.',
+    hint: 'Open QC queue to check waiting items.',
+    actionLabel: 'Open QC queue',
+  },
+];
+
+const USER_CHECKLIST_STEPS = [
+  {
+    id: 'review-assigned',
+    title: 'Review your assigned dockets',
+    description: 'Start with overdue and due-soon work so deadlines do not slip.',
+    hint: 'Open My Worklist first each day.',
+    actionLabel: 'Open My Worklist',
+  },
+  {
+    id: 'update-status',
+    title: 'Update your first docket cleanly',
+    description: 'Keep status, comments, and evidence current so the next handoff is clear and auditable.',
+    hint: 'Open a docket and add a progress update.',
+    actionLabel: 'Open dockets',
+  },
+  {
+    id: 'check-calendar',
+    title: 'Review compliance timeline',
+    description: 'Use the compliance calendar to avoid last-minute work and missed filings.',
+    hint: 'Track items due this week.',
+    actionLabel: 'Open compliance calendar',
+  },
+];
+
 const readStoredState = (storageKey) => {
   if (!storageKey) return { dismissed: false, manualSteps: {} };
 
@@ -113,7 +162,9 @@ export const SetupChecklist = ({ storageKey, recentCases = [], onAction, mode = 
       Boolean(caseItem.assignedToName || caseItem.assignedTo || caseItem.assignedToXID)
     );
 
-    const checklistSteps = mode === 'primary-admin' ? PRIMARY_ADMIN_CHECKLIST_STEPS : ADMIN_CHECKLIST_STEPS;
+    const checklistSteps = mode === 'primary-admin'
+      ? PRIMARY_ADMIN_CHECKLIST_STEPS
+      : (mode === 'manager' ? MANAGER_CHECKLIST_STEPS : (mode === 'user' ? USER_CHECKLIST_STEPS : ADMIN_CHECKLIST_STEPS));
     return checklistSteps.map((step) => {
       let autoComplete = false;
 
@@ -156,7 +207,7 @@ export const SetupChecklist = ({ storageKey, recentCases = [], onAction, mode = 
           <p className="setup-checklist__eyebrow">First-time setup</p>
           <h2 className="setup-checklist__title" id="setup-checklist-title">Launch your workspace with confidence</h2>
           <p className="setup-checklist__description">
-            Follow this guided checklist to turn a blank workspace into a fully operational firm dashboard.
+            Follow this checklist to move from first login to a reliable daily workflow in Docketra.
           </p>
         </div>
 
