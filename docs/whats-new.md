@@ -243,3 +243,25 @@
 - Added Platform Dashboard onboarding observability cards for key blockers: firms without active clients, missing category/workbasket setup, managers without queues, and users without assigned dockets.
 - Added derived alert metric for users who skipped tutorial but remain onboarding-incomplete after a threshold.
 - Hardened observability paths so telemetry/insight failures are non-blocking and cannot break tutorial completion, onboarding progress responses, or platform stats rendering.
+
+## April 2026: Command center productivity polish (search + keyboard + quick actions)
+
+- Added a stronger workspace command center in `PlatformShell` with clearer global scope language for dockets, clients, module destinations, and quick commands.
+- Upgraded command palette behavior with grouped results, keyboard navigation (`↑/↓`, `Enter`, `Escape`), and no-results guidance.
+- Added role-aware quick commands for core operations: New Docket, Dashboard, Task Manager, CRM, CMS, Workbasket, My Worklist, QC Queue, Clients, Reports, Settings, Open Profile, and Sign out.
+- Introduced a practical keyboard-first shortcut model:
+  - `Cmd/Ctrl + K` open command center
+  - `/` quick focus/open (outside typing contexts)
+  - `Alt + Shift + N/D/T/W/B/Q` for high-frequency jumps
+- Added strict “do-not-trigger-while-typing” shortcut guards across workspace keyboard handlers.
+- Standardized quick-action wording across landing pages to reduce mental translation cost (`New`, `Go to`, and consistent queue naming conventions).
+- Kept logout reachable in both account menu and command flow (`Sign out` command).
+
+## April 2026: Command center reliability hardening follow-up
+
+- Consolidated global keyboard shortcut ownership into `PlatformShell` to avoid split-listener conflicts.
+- Added shared editable-target detection so `Cmd/Ctrl + K`, `/`, and `Alt + Shift + ...` do not fire while typing in inputs/textareas/selects/contenteditable controls.
+- Hardened command-center async search with stale-response guards and open-state/query checks to prevent out-of-order result overwrites.
+- Ensured command center state resets cleanly on close and route change (query, active selection, search status, and record result groups).
+- Added explicit record-search fallback guidance while keeping module/quick commands operational even if record lookup fails.
+- Added command-center test script wiring in `ui/package.json` (`test:command-center`).

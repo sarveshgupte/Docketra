@@ -82,3 +82,44 @@ This message should stay simple and explicit on public pages to reduce ambiguity
 - Early access is currently free.
 - Billing and subscription setup are not live yet.
 - Public contact: `sarveshgupte@gmail.com`
+
+## Workspace productivity model (April 2026)
+
+To support desktop-heavy daily operations, module navigation now follows a shared command-center model:
+
+1. **One entry point for jump/search**
+   - Top workspace command trigger opens a unified command palette.
+   - Scope intentionally combines module destinations + high-frequency quick actions + record lookup.
+
+2. **Keyboard-first but conservative**
+   - Primary open command: `Cmd/Ctrl + K`
+   - Quick open/focus: `/` (only outside editable inputs)
+   - Route jump set: `Alt + Shift + N/D/T/W/B/Q`
+   - No shortcut fires while typing in inputs, textareas, selects, or contenteditable controls.
+
+3. **Naming consistency contract**
+   - Creation actions use `New ...`.
+   - Navigation actions use `Go to ...`.
+   - Queue labels remain canonical (`Workbasket`, `My Worklist`, `QC Queue`, `Intake Queue`).
+
+4. **Role-aware command inventory**
+   - Admin-only module destinations remain hidden for non-admin roles.
+   - Shared baseline commands remain available to all permitted firm users.
+
+5. **Discoverability without clutter**
+   - Helper hint copy lives inside command center instead of heavy onboarding overlays.
+   - Account actions (including `Sign out`) remain available in both menu and command flow.
+
+## Command-center reliability rules (April 2026 follow-up)
+
+1. **Shortcut ownership**
+   - Workspace-level shortcut listeners are owned by `PlatformShell` only.
+   - Command palette component is render/interaction-only (filtering, option navigation, execution).
+
+2. **Typing safety contract**
+   - Global shortcuts must never fire from editable surfaces (`input`, `textarea`, `select`, `contenteditable`).
+
+3. **Async search contract**
+   - Record lookup runs only while the command center is open.
+   - Stale async responses must be ignored via request sequencing checks.
+   - Quick actions and module commands remain usable even when record lookup is degraded.

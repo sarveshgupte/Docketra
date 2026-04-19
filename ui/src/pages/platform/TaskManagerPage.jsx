@@ -83,8 +83,8 @@ export const PlatformTaskManagerPage = () => {
       <PageSection title="Quick actions" description="Start work or route to the correct queue in one click.">
         <div className="action-row">
           <Link to={ROUTES.CREATE_CASE(firmSlug)}>New Docket</Link>
-          <Link to={ROUTES.GLOBAL_WORKLIST(firmSlug)}>Open Workbasket</Link>
-          <Link to={ROUTES.WORKLIST(firmSlug)}>Open My Worklist</Link>
+          <Link to={ROUTES.GLOBAL_WORKLIST(firmSlug)}>Go to Workbasket</Link>
+          <Link to={ROUTES.WORKLIST(firmSlug)}>Go to My Worklist</Link>
         </div>
       </PageSection>
 
