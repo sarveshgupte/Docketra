@@ -7,6 +7,35 @@ export const formatDocketLabel = (item = {}) => {
   return raw ? raw.replace(/^CASE-/i, 'DOCKET-') : 'DOCKET-UNKNOWN';
 };
 
+export const getDocketRouteId = (item = {}) => (
+  item.caseId
+  || item.docketId
+  || item.caseInternalId
+  || item._id
+  || null
+);
+
+export const formatStatusLabel = (value) => String(value || 'UNKNOWN').replace(/_/g, ' ');
+
+export const formatDateLabel = (value) => {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString();
+};
+
+export const buildQueueContext = ({ rows = [], rowId, location, origin }) => {
+  const sourceList = rows.map((item) => getDocketRouteId(item)).filter(Boolean);
+  const index = sourceList.findIndex((item) => String(item) === String(rowId));
+  const returnTo = `${location.pathname}${location.search || ''}`;
+  return {
+    sourceList,
+    index: index >= 0 ? index : 0,
+    returnTo,
+    origin,
+  };
+};
+
 export const PageSection = ({ id, title, description, actions, children }) => (
   <section className="panel section-panel" id={id}>
     {(title || description || actions) && (
