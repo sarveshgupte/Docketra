@@ -16,7 +16,6 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { useToast } from '../hooks/useToast';
 import { productUpdatesService } from '../services/productUpdatesService';
 import { APP_VERSION } from '../utils/constants';
-import { loadPlatformOverviewData } from '../utils/platformOverviewLoader';
 
 export const PlatformDashboard = () => {
   const MAX_UPDATE_BULLETS = 5;
@@ -75,20 +74,12 @@ export const PlatformDashboard = () => {
     isFetchingRef.current = true;
     try {
       setLoading(true);
-      const { statsResponse: response, onboardingResponse } = await loadPlatformOverviewData({
-        getPlatformStats: superadminService.getPlatformStats,
-        getOnboardingInsights: superadminService.getOnboardingInsights,
-      });
-      
+      const response = await superadminService.getPlatformStats();
+
       // HTTP 304 means cached data is still valid - keep current state
       if (response?.status !== 304) {
         if (response?.success) {
           setStats(normalizeStats(response.data));
-          if (onboardingResponse?.success) {
-            setOnboardingInsights(onboardingResponse.data);
-          } else {
-            setOnboardingInsights(null);
-          }
         } else if (response?.degraded) {
           setStats(normalizeStats(response.data));
         } else if (!hasShownErrorRef.current) {
@@ -97,10 +88,26 @@ export const PlatformDashboard = () => {
           hasShownErrorRef.current = true;
         }
       }
+
+      // Insights are best-effort and should never block or fail core stats loading.
+      try {
+        const onboardingResponse = await superadminService.getOnboardingInsights({
+          sinceDays: 30,
+          staleAfterDays: 3,
+          recentLimit: 10,
+        });
+        if (onboardingResponse?.success) {
+          setOnboardingInsights(onboardingResponse.data);
+        } else {
+          setOnboardingInsights(null);
+        }
+      } catch (insightsError) {
+        setOnboardingInsights(null);
+        console.warn('Error loading onboarding insights:', insightsError);
+      }
     } catch (error) {
       // Don't reset stats on error - preserve existing data
       if (!hasShownErrorRef.current) {
-        setStats(emptyStats);
         toast.error('Failed to load platform statistics');
         hasShownErrorRef.current = true;
       }
