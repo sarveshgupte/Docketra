@@ -101,3 +101,62 @@ This pass focused on high-impact reliability and trust issues in authentication 
 - [ ] Hit firm mismatch URL and verify **Go to dashboard** and **Switch workspace** both work.
 - [ ] Confirm back/forward navigation around login does not create redirect loops.
 - [ ] Validate keyboard focus visibility on firm mismatch action buttons.
+
+## Create and edit flow reliability pass (April 2026)
+
+### Root form UX issues found
+
+| Severity | Area | Issue | Impact |
+| --- | --- | --- | --- |
+| High | Docket create | Limited form-level feedback and inconsistent validation language across steps. | Users could miss why create failed and lose confidence in required inputs. |
+| High | Client create/edit modal | Required fields had only toast-level validation and modal close paths discarded edits. | Accidental data loss risk and unclear error recovery path. |
+| Medium | Modal close behavior | ESC/overlay/close icon had no interception hook for dirty forms. | Critical form work could be lost silently. |
+| Medium | Save-state confidence | Some flows lacked explicit in-form saving state and stable error banner area. | Users depended on transient toasts and could retry too quickly. |
+
+### Flows/modules touched
+
+- Create docket guided form (`GuidedDocketForm`) and create docket page wiring.
+- Client create/edit modal form on `ClientsPage`.
+- Shared modal close contract (`Modal`) for guarded close behavior.
+- Shared unsaved-changes hook (`useUnsavedChangesPrompt`) for form-level data-loss protection.
+
+### Validation improvements made
+
+1. Added stronger create-docket step validation messages (title length, client requirement, category/subcategory compatibility, workbasket requirement).
+2. Added client modal field-level validation map for required values + email format checks.
+3. Added stable in-form error banner for both create-docket and client forms to supplement toast notifications.
+
+### Save-state and recovery improvements made
+
+1. Added explicit “Creating docket…” state banner during submit.
+2. Added duplicate-submit guard in docket create (`if (loading.submit) return`).
+3. Added dirty-form close protection for client modal (cancel, ESC, overlay, close icon).
+4. Added beforeunload unsaved-work warning for critical create/edit interactions via shared hook.
+5. Disabled client save when there are no changes, reducing accidental no-op writes.
+
+### Unsaved changes rules adopted
+
+- For create/edit forms marked dirty, closing the form now requires confirmation.
+- Dirty interception is applied uniformly to button cancel and modal-system close events.
+- Browser/tab close prompts appear when form work is dirty and unsaved.
+
+### Remaining follow-up items
+
+1. Expand the same dirty-close + validation banner pattern to team invite/edit, hierarchy role edits, and workbasket/category maintenance modals.
+2. Add browser-level interaction tests (Playwright) for route transition blocking in dirty forms.
+3. Standardize server-side field error mapping format for all admin/settings forms.
+
+### Manual QA checklist — create/edit reliability pass
+
+- [ ] Create docket: required validation blocks submit with clear field-level messages.
+- [ ] Create docket: submit shows immediate saving state and no duplicate creation on repeated clicks.
+- [ ] Create docket: server failure keeps entered values and shows clear in-form error.
+- [ ] Create docket: cancel from dirty form asks for confirmation before leaving.
+- [ ] Edit docket status/assignment: verify save/loading/error toasts and page state refresh (existing behavior).
+- [ ] Create/edit client: required + email validation appears inline at field level.
+- [ ] Create/edit client: save button disables when there are no unsaved changes.
+- [ ] Create/edit client: ESC, overlay click, close icon, and cancel all protect against dirty-data loss.
+- [ ] Invite/edit team member: verify save and error states remain clear (follow-up area for full pattern rollout).
+- [ ] Update hierarchy tagging/roles: verify save, error, and post-save state consistency.
+- [ ] Update workbasket/category/subcategory settings: verify required/dependency messaging and stable save feedback.
+- [ ] Save profile/settings and AI/BYOS settings: verify saving/success/error states and no silent failures.

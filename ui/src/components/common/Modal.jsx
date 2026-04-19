@@ -30,6 +30,7 @@ const sizeClasses = {
 export const Modal = ({
   isOpen,
   onClose,
+  onRequestClose,
   title,
   children,
   actions,
@@ -45,6 +46,13 @@ export const Modal = ({
   useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
+
+  const requestClose = (reason = 'programmatic') => {
+    const shouldClose = onRequestClose ? onRequestClose(reason) : true;
+    if (shouldClose !== false) {
+      onCloseRef.current?.();
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) {
@@ -70,7 +78,7 @@ export const Modal = ({
 
       if (event.key === 'Escape') {
         event.preventDefault();
-        onCloseRef.current?.();
+        requestClose('escape');
         return;
       }
 
@@ -120,7 +128,7 @@ export const Modal = ({
 
   const handleOverlayClick = (event) => {
     if (event.target === event.currentTarget) {
-      onCloseRef.current?.();
+      requestClose('overlay');
     }
   };
 
@@ -142,7 +150,7 @@ export const Modal = ({
           <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
           <button
             type="button"
-            onClick={() => onCloseRef.current?.()}
+            onClick={() => requestClose('close-button')}
             className="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2"
             aria-label="Close modal"
           >

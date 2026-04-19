@@ -23,6 +23,7 @@ export const CreateCasePage = () => {
       <div className="create-case">
         <GuidedDocketForm
           initialWorkType={initialWorkType}
+          onCancel={() => navigate(ROUTES.CASES(firmSlug))}
           onCreated={(response) => {
             const docketId = response?.data?.docketId || response?.data?.caseId;
             const routedWorkbasketId = response?.data?.ownerTeamId || response?.data?.routedToTeamId || response?.data?.workbasketId;

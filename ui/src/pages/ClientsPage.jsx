@@ -17,6 +17,7 @@ import { formatDate } from '../utils/formatters';
 import { formatDateTime } from '../utils/formatDateTime';
 import { BulkUploadModal } from '../components/bulk/BulkUploadModal';
 import { buildTemplateCsv } from '../constants/bulkUploadSchema';
+import { useUnsavedChangesPrompt } from '../hooks/useUnsavedChangesPrompt';
 
 const toDisplayString = (value, fallback = '—') => {
   if (typeof value === 'string') {
@@ -26,6 +27,9 @@ const toDisplayString = (value, fallback = '—') => {
   if (typeof value === 'number') return String(value);
   return fallback;
 };
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 
 export const ClientsPage = () => {
   const { user } = useAuth();
@@ -57,9 +61,38 @@ export const ClientsPage = () => {
     contactPersonPhoneNumber: '',
     contactPersonEmailAddress: '',
   });
+  const [clientFormErrors, setClientFormErrors] = useState({});
+  const [clientFormMessage, setClientFormMessage] = useState({ type: '', text: '' });
   const fileInputRef = useRef(null);
   const normalizedRole = String(user?.role || '').trim().toUpperCase();
   const isAdmin = normalizedRole === 'ADMIN' || normalizedRole === 'PRIMARY_ADMIN' || Boolean(user?.isPrimaryAdmin);
+
+  const initialClientSnapshot = useMemo(() => ({
+    businessName: selectedClient?.businessName || '',
+    businessAddress: selectedClient?.businessAddress || '',
+    primaryContactNumber: selectedClient?.primaryContactNumber || '',
+    secondaryContactNumber: selectedClient?.secondaryContactNumber || '',
+    businessEmail: selectedClient?.businessEmail || '',
+    PAN: selectedClient?.PAN || '',
+    GST: selectedClient?.GST || '',
+    TAN: selectedClient?.TAN || '',
+    CIN: selectedClient?.CIN || '',
+    contactPersonName: selectedClient?.contactPersonName || '',
+    contactPersonDesignation: selectedClient?.contactPersonDesignation || '',
+    contactPersonPhoneNumber: selectedClient?.contactPersonPhoneNumber || '',
+    contactPersonEmailAddress: selectedClient?.contactPersonEmailAddress || '',
+  }), [selectedClient]);
+
+  const isClientFormDirty = useMemo(() => {
+    if (!showClientModal) return false;
+    return Object.keys(clientForm).some((key) => String(clientForm[key] || '').trim() !== String(initialClientSnapshot[key] || '').trim());
+  }, [clientForm, initialClientSnapshot, showClientModal]);
+
+  const { confirmLeaveIfDirty: confirmLeaveClientForm } = useUnsavedChangesPrompt({
+    isDirty: isClientFormDirty,
+    isEnabled: showClientModal && !savingClient,
+    message: 'You have unsaved client changes. Close this form without saving?',
+  });
 
   const loadClients = useCallback(async () => {
     setLoading(true);
@@ -105,6 +138,8 @@ export const ClientsPage = () => {
 
   const resetClientForm = useCallback(() => {
     setSelectedClient(null);
+    setClientFormErrors({});
+    setClientFormMessage({ type: '', text: '' });
     setClientForm({
       businessName: '',
       businessAddress: '',
@@ -152,11 +187,36 @@ export const ClientsPage = () => {
     resetClientForm();
   };
 
+  const requestCloseClientModal = () => confirmLeaveClientForm();
+
+  const validateClientForm = () => {
+    const nextErrors = {};
+    const name = clientForm.businessName.trim();
+    const phone = clientForm.primaryContactNumber.trim();
+    const email = clientForm.businessEmail.trim();
+    const contactEmail = clientForm.contactPersonEmailAddress.trim();
+
+    if (!name) nextErrors.businessName = 'Client name is required.';
+    if (!phone) nextErrors.primaryContactNumber = 'Primary client phone number is required.';
+    if (!email) nextErrors.businessEmail = 'Client email is required.';
+    if (email && !EMAIL_REGEX.test(email)) nextErrors.businessEmail = 'Enter a valid client email address.';
+    if (contactEmail && !EMAIL_REGEX.test(contactEmail)) nextErrors.contactPersonEmailAddress = 'Enter a valid contact person email address.';
+
+    setClientFormErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const handleClientFieldChange = (field, value) => {
+    setClientForm((prev) => ({ ...prev, [field]: value }));
+    setClientFormErrors((prev) => ({ ...prev, [field]: '' }));
+    setClientFormMessage({ type: '', text: '' });
+  };
+
   const handleSaveClient = async (event) => {
     event.preventDefault();
     if (!isAdmin) return;
-    if (!clientForm.businessName || !clientForm.primaryContactNumber || !clientForm.businessEmail) {
-      showError('Please fill in client name, client email, and client phone number');
+    if (!validateClientForm()) {
+      setClientFormMessage({ type: 'error', text: 'Please resolve the highlighted fields before saving.' });
       return;
     }
     setSavingClient(true);
@@ -198,10 +258,13 @@ export const ClientsPage = () => {
         if (!response?.success) throw new Error(response?.message || 'Failed to create client');
         showSuccess(`Client created successfully${response?.data?.clientId ? ` (${response.data.clientId})` : ''}`);
       }
+      setClientFormMessage({ type: 'success', text: 'Client details saved successfully.' });
       await loadClients();
       closeClientModal();
     } catch (error) {
-      showError(error?.response?.data?.message || error?.message || 'Failed to save client');
+      const message = error?.response?.data?.message || error?.message || 'Failed to save client';
+      setClientFormMessage({ type: 'error', text: message });
+      showError(message);
     } finally {
       setSavingClient(false);
     }
@@ -424,87 +487,96 @@ export const ClientsPage = () => {
       <Modal
         isOpen={showClientModal}
         onClose={closeClientModal}
+        onRequestClose={requestCloseClientModal}
         title={selectedClient ? `Edit Client • ${selectedClient.businessName}` : 'Add New Client'}
         maxWidth="2xl"
       >
         <form onSubmit={handleSaveClient} style={{ display: 'grid', gap: '1rem' }}>
+          {clientFormMessage.text ? (
+            <p className={`rounded-md border px-3 py-2 text-sm ${clientFormMessage.type === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>{clientFormMessage.text}</p>
+          ) : null}
           <Input
             label="Client Name"
             value={clientForm.businessName}
-            onChange={(event) => setClientForm((prev) => ({ ...prev, businessName: event.target.value }))}
+            onChange={(event) => handleClientFieldChange('businessName', event.target.value)}
             required
+            error={clientFormErrors.businessName}
             disabled={!isAdmin}
           />
           <Input
             label="Business Address (Optional)"
             value={clientForm.businessAddress}
-            onChange={(event) => setClientForm((prev) => ({ ...prev, businessAddress: event.target.value }))}
+            onChange={(event) => handleClientFieldChange('businessAddress', event.target.value)}
             disabled={!isAdmin}
           />
           <Input
             label="Client Phone Number"
             value={clientForm.primaryContactNumber}
-            onChange={(event) => setClientForm((prev) => ({ ...prev, primaryContactNumber: event.target.value }))}
+            onChange={(event) => handleClientFieldChange('primaryContactNumber', event.target.value)}
             required
+            error={clientFormErrors.primaryContactNumber}
           />
           <Input
             label="Secondary Contact Number"
             value={clientForm.secondaryContactNumber}
-            onChange={(event) => setClientForm((prev) => ({ ...prev, secondaryContactNumber: event.target.value }))}
+            onChange={(event) => handleClientFieldChange('secondaryContactNumber', event.target.value)}
           />
           <Input
             label="Client Email"
             type="email"
             value={clientForm.businessEmail}
-            onChange={(event) => setClientForm((prev) => ({ ...prev, businessEmail: event.target.value }))}
+            onChange={(event) => handleClientFieldChange('businessEmail', event.target.value)}
             required
+            error={clientFormErrors.businessEmail}
+            helpText="We'll use this email for client communication records."
           />
 
           <Input
             label="PAN"
             value={clientForm.PAN}
-            onChange={(event) => setClientForm((prev) => ({ ...prev, PAN: event.target.value }))}
+            onChange={(event) => handleClientFieldChange('PAN', event.target.value)}
           />
           <Input
             label="GST Number"
             value={clientForm.GST}
-            onChange={(event) => setClientForm((prev) => ({ ...prev, GST: event.target.value }))}
+            onChange={(event) => handleClientFieldChange('GST', event.target.value)}
           />
           <Input
             label="TAN"
             value={clientForm.TAN}
-            onChange={(event) => setClientForm((prev) => ({ ...prev, TAN: event.target.value }))}
+            onChange={(event) => handleClientFieldChange('TAN', event.target.value)}
           />
           <Input
             label="CIN"
             value={clientForm.CIN}
-            onChange={(event) => setClientForm((prev) => ({ ...prev, CIN: event.target.value }))}
+            onChange={(event) => handleClientFieldChange('CIN', event.target.value)}
           />
           <Input
             label="Contact Person Name"
             value={clientForm.contactPersonName}
-            onChange={(event) => setClientForm((prev) => ({ ...prev, contactPersonName: event.target.value }))}
+            onChange={(event) => handleClientFieldChange('contactPersonName', event.target.value)}
           />
           <Input
             label="Contact Person Designation"
             value={clientForm.contactPersonDesignation}
-            onChange={(event) => setClientForm((prev) => ({ ...prev, contactPersonDesignation: event.target.value }))}
+            onChange={(event) => handleClientFieldChange('contactPersonDesignation', event.target.value)}
           />
           <Input
             label="Contact Person Phone Number"
             value={clientForm.contactPersonPhoneNumber}
-            onChange={(event) => setClientForm((prev) => ({ ...prev, contactPersonPhoneNumber: event.target.value }))}
+            onChange={(event) => handleClientFieldChange('contactPersonPhoneNumber', event.target.value)}
           />
           <Input
             label="Contact Person Email Address"
             type="email"
             value={clientForm.contactPersonEmailAddress}
-            onChange={(event) => setClientForm((prev) => ({ ...prev, contactPersonEmailAddress: event.target.value }))}
+            onChange={(event) => handleClientFieldChange('contactPersonEmailAddress', event.target.value)}
+            error={clientFormErrors.contactPersonEmailAddress}
           />
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-            <Button type="button" variant="outline" onClick={closeClientModal}>Cancel</Button>
-            <Button type="submit" disabled={savingClient}>{savingClient ? 'Saving…' : 'Save Client'}</Button>
+            <Button type="button" variant="outline" onClick={() => requestCloseClientModal() && closeClientModal()}>Cancel</Button>
+            <Button type="submit" disabled={savingClient || !isClientFormDirty}>{savingClient ? 'Saving…' : 'Save Client'}</Button>
           </div>
         </form>
       </Modal>
