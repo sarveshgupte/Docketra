@@ -1,12 +1,12 @@
 # What's New
 
-## April 2026: Actionable Superadmin onboarding insights
+## April 2026: Task Manager queue experience unified across Workbasket, My Worklist, QC Workbasket, and All Dockets
 
-- Added a dedicated **Onboarding Insights** operational page for superadmin at `/app/superadmin/onboarding-insights`.
-- Upgraded onboarding observability from summary-only cards to practical triage workflows for blocked firms/users.
-- Added drill-down detail API support via `GET /api/superadmin/onboarding-insights/details` with filters for timeframe, role, blocker type, completion state, and stale threshold.
-- Added firm-level and user-level operational rows with progress state, missing steps, tutorial status, staleness visibility, and recent onboarding events.
-- Kept platform dashboard load lightweight while preserving existing summary endpoint compatibility.
+- Refactored the Task Manager execution-list pattern so queue pages now share a consistent operating model (header context, filter bar placement, table density, action affordances, and state treatment).
+- Standardized queue scanning columns around docket identity, client/category context, lifecycle status, assignee/owner, queue cues, and freshness timestamps while preserving queue-specific actions.
+- Improved queue state handling consistency (loading, background refresh, recoverable error + retry, empty state, and filtered no-results messaging).
+- Strengthened queue-to-docket navigation context by passing source list, current index, and return path from Workbasket/My Worklist/QC Workbasket into Docket Detail for more reliable Back + Previous/Next behavior.
+- Clarified queue intent in-page: Workbasket emphasizes pooled shared pull flow, My Worklist emphasizes personal execution, QC Workbasket emphasizes review decisions, and All Dockets remains the strongest oversight/search surface.
 
 ## April 2026: Docket Detail refactored into a tabbed execution workspace
 

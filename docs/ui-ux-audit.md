@@ -1,5 +1,31 @@
 # Docketra UI/UX audit and improvement pass (April 2026)
 
+## Task Manager execution-list unification pass (April 2026)
+
+### Scope
+
+- Unified queue behavior and interaction language across **Workbasket**, **My Worklist**, **QC Workbasket**, and **All Dockets**.
+- Preserved queue-specific purpose while normalizing list architecture, filter ergonomics, row semantics, and state handling.
+
+### Improvements shipped
+
+1. **Shared execution-list pattern**
+   - Queue pages now align on header framing, search/filter bar placement, and table structure.
+   - Core scanning fields are now more consistent (docket ID, client, category/subcategory, status, assignee/owner, updated timestamp, queue context).
+
+2. **State UX consistency**
+   - All queue surfaces now consistently expose loading, background refresh notices, recoverable errors with retry, empty states, and filtered no-results messaging.
+
+3. **Queue-to-docket context preservation**
+   - Opening a docket from queue surfaces now preserves `sourceList`, active index, origin, and `returnTo` path.
+   - Docket Detail Back and Previous/Next now behave more reliably against the user’s currently visible queue subset.
+
+4. **Queue role clarity**
+   - Workbasket: pooled shared work intake and pull actions.
+   - My Worklist: personal execution actions.
+   - QC Workbasket: review/approve/correct/fail actions.
+   - All Dockets: oversight and broad tracking/search context.
+
 ## Scope
 
 This pass focused on high-impact reliability and trust issues in authentication and protected navigation, where users were most likely to lose context or hit dead ends.

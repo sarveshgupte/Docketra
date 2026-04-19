@@ -828,19 +828,19 @@ export const CasesPage = () => {
 
   if (loading) {
     return (
-      <PlatformShell moduleLabel="Operations" title="Dockets" subtitle="Manage client work and internal work across lifecycle, assignments, and queues.">
+      <PlatformShell moduleLabel="Task Manager" title="Dockets" subtitle="Master oversight queue for search, tracking, routing, and lifecycle execution.">
         <TableSkeleton rows={8} />
       </PlatformShell>
     );
   }
 
   return (
-    <PlatformShell moduleLabel="Operations" title="Dockets" subtitle="Manage client work and internal work across lifecycle, assignments, and queues.">
+    <PlatformShell moduleLabel="Task Manager" title="Dockets" subtitle="Master oversight queue for search, tracking, routing, and lifecycle execution.">
       <div className="cases-page">
         <PageHeader
-          title="Dockets"
-          subtitle="Manage client work and internal work across lifecycle, assignments, and queues."
-          meta="Tasks / Dockets"
+          title="All Dockets"
+          subtitle="Search and track all visible dockets with consistent filters and operational scanning."
+          meta="Task Manager / All Dockets"
           actions={
             <div className="cases-page__header-actions">
               {/* Task 4: High workload indicator */}
