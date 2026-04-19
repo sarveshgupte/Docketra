@@ -264,6 +264,37 @@ const getOnboardingInsightDetails = async (req, res) => {
   }
 };
 
+const getOnboardingAlerts = async (req, res) => {
+  try {
+    const sinceDays = Number.parseInt(req.query?.sinceDays, 10) || 30;
+    const staleAfterDays = Number.parseInt(req.query?.staleAfterDays, 10) || 7;
+    const severity = req.query?.severity || null;
+    const blockerType = req.query?.blockerType || null;
+    const ageBucket = req.query?.ageBucket || null;
+    const status = req.query?.status || 'open';
+    const limit = Number.parseInt(req.query?.limit, 10) || 50;
+
+    const alerts = await onboardingAnalyticsService.getOnboardingAlerts({
+      sinceDays: Math.min(Math.max(sinceDays, 7), 120),
+      staleAfterDays: Math.min(Math.max(staleAfterDays, 1), 60),
+      severity,
+      blockerType,
+      ageBucket,
+      status,
+      limit: Math.min(Math.max(limit, 1), 100),
+    });
+
+    return res.json({ success: true, data: alerts });
+  } catch (error) {
+    log.error('[SUPERADMIN] Error loading onboarding alerts:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to load onboarding alerts',
+      data: null,
+    });
+  }
+};
+
 /**
  * List all firms with client and user counts
  * GET /api/superadmin/firms
@@ -1599,6 +1630,7 @@ module.exports = {
   getPlatformStats,
   getOnboardingInsights,
   getOnboardingInsightDetails,
+  getOnboardingAlerts,
   getFirmBySlug,
   getOperationalHealth,
   switchFirm,

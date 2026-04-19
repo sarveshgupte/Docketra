@@ -40,6 +40,7 @@ export const PlatformDashboard = () => {
   const [publishingUpdate, setPublishingUpdate] = useState(false);
   const [stats, setStats] = useState(emptyStats);
   const [onboardingInsights, setOnboardingInsights] = useState(null);
+  const [onboardingAlerts, setOnboardingAlerts] = useState([]);
   const isFetchingRef = useRef(false);
   const hasLoadedRef = useRef(false);
   const hasShownErrorRef = useRef(false);
@@ -79,6 +80,12 @@ export const PlatformDashboard = () => {
         getPlatformStats: superadminService.getPlatformStats,
         getOnboardingInsights: superadminService.getOnboardingInsights,
       });
+      let alertResponse = null;
+      try {
+        alertResponse = await superadminService.getOnboardingAlerts({ status: 'open', limit: 3, staleAfterDays: 7, sinceDays: 30 });
+      } catch (alertError) {
+        alertResponse = null;
+      }
       
       // HTTP 304 means cached data is still valid - keep current state
       if (response?.status !== 304) {
@@ -89,6 +96,7 @@ export const PlatformDashboard = () => {
           } else {
             setOnboardingInsights(null);
           }
+          setOnboardingAlerts(alertResponse?.success ? (alertResponse.data?.alerts || []) : []);
         } else if (response?.degraded) {
           setStats(normalizeStats(response.data));
         } else if (!hasShownErrorRef.current) {
@@ -264,6 +272,21 @@ export const PlatformDashboard = () => {
                   <p><strong>Tutorial completed:</strong> {onboardingInsights?.tutorialFunnel?.completed || 0}</p>
                   <p><strong>Tutorial skipped:</strong> {onboardingInsights?.tutorialFunnel?.skipped || 0}</p>
                   <p><strong>Skipped + still incomplete (&gt;{onboardingInsights?.timeframe?.staleAfterDays || 3} days):</strong> {onboardingInsights?.tutorialFunnel?.skippedStillIncompleteAfterThreshold || 0}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-700">
+                  <p className="font-semibold text-slate-900">Proactive alerts</p>
+                  {!onboardingAlerts.length ? (
+                    <p className="text-xs text-slate-600 mt-1">No onboarding alerts currently need attention.</p>
+                  ) : (
+                    <ul className="mt-2 space-y-1 text-xs">
+                      {onboardingAlerts.map((alert) => (
+                        <li key={alert.id} className="flex items-center justify-between gap-2">
+                          <span>{alert.severity} • {alert.affected?.firmName}: {String(alert.blockerType || '').replace(/_/g, ' ')}</span>
+                          <Button variant="ghost" onClick={() => navigate(alert.links?.onboardingDetail || '/app/superadmin/onboarding-insights')}>Open</Button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </div>
             ) : (
