@@ -1,5 +1,5 @@
 import React from 'react';
-import { Route } from 'react-router-dom';
+import { Navigate, Route, useParams } from 'react-router-dom';
 import { ProtectedRoute } from '../components/auth/ProtectedRoute';
 import { FirmLayout } from '../components/routing/FirmLayout';
 import { RouteErrorBoundary } from '../components/routing/RouteErrorBoundary';
@@ -42,6 +42,11 @@ import {
 import { RouteSuspenseOutlet } from './RouteSuspenseOutlet';
 import { NotificationHistoryView } from '../../views/NotificationHistoryView';
 import { DefaultRoute } from '../components/routing/DefaultRoute';
+
+const LegacyCaseDetailRedirect = () => {
+  const { caseId } = useParams();
+  return <Navigate to={`../dockets/${caseId}`} replace />;
+};
 
 export const ProtectedRoutes = () => (
   <>
@@ -234,11 +239,9 @@ export const ProtectedRoutes = () => (
         <Route
           path="dockets"
           element={(
-            <RouteErrorBoundary title="Unable to load dockets" message="Dockets could not be loaded right now. Please retry.">
-              <ProtectedRoute>
-                <CasesPage />
-              </ProtectedRoute>
-            </RouteErrorBoundary>
+            <ProtectedRoute>
+              <CasesPage />
+            </ProtectedRoute>
           )}
         />
         <Route
@@ -251,23 +254,11 @@ export const ProtectedRoutes = () => (
         />
         <Route
           path="cases/:caseId"
-          element={(
-            <RouteErrorBoundary title="Unable to load docket" message="Docket actions are temporarily unavailable. Please retry from the dockets list.">
-              <ProtectedRoute>
-                <CaseDetailPage />
-              </ProtectedRoute>
-            </RouteErrorBoundary>
-          )}
+          element={<LegacyCaseDetailRedirect />}
         />
         <Route
           path="cases"
-          element={(
-            <RouteErrorBoundary title="Unable to load dockets" message="Dockets could not be loaded right now. Please retry.">
-              <ProtectedRoute>
-                <CasesPage />
-              </ProtectedRoute>
-            </RouteErrorBoundary>
-          )}
+          element={<Navigate to="../dockets" replace />}
         />
         <Route
           path="cases/create"
