@@ -130,8 +130,16 @@ export const CasesPage = () => {
   const [bulkActionInProgress, setBulkActionInProgress] = useState(false);
   const [showDocketBulkUpload, setShowDocketBulkUpload] = useState(false);
   const onboardingStorageKey = `docketra_onboarding_dismissed_${firmSlug || 'firm'}`;
+  const getOnboardingDismissed = useCallback(() => {
+    try {
+      return localStorage.getItem(onboardingStorageKey) === 'true';
+    } catch (error) {
+      console.warn('[CasesPage] Unable to read onboarding dismissal state', { message: error?.message });
+      return false;
+    }
+  }, [onboardingStorageKey]);
   const [onboardingDismissed, setOnboardingDismissed] = useState(
-    () => localStorage.getItem(onboardingStorageKey) === 'true'
+    () => getOnboardingDismissed()
   );
   // Confirm modal state (replaces window.confirm)
   const [confirmModal, setConfirmModal] = useState(null); // { title, description, onConfirm, danger }
@@ -264,9 +272,17 @@ export const CasesPage = () => {
 
 
   const dismissOnboarding = () => {
-    localStorage.setItem(onboardingStorageKey, 'true');
+    try {
+      localStorage.setItem(onboardingStorageKey, 'true');
+    } catch (error) {
+      console.warn('[CasesPage] Unable to persist onboarding dismissal state', { message: error?.message });
+    }
     setOnboardingDismissed(true);
   };
+
+  useEffect(() => {
+    setOnboardingDismissed(getOnboardingDismissed());
+  }, [getOnboardingDismissed]);
 
   const handleExportCsv = () => {
     const headers = [
@@ -809,14 +825,14 @@ export const CasesPage = () => {
 
   if (loading) {
     return (
-      <Layout>
+      <Layout title="Dockets">
         <TableSkeleton rows={8} />
       </Layout>
     );
   }
 
   return (
-    <Layout>
+    <Layout title="Dockets">
       <div className="cases-page">
         <PageHeader
           title="Dockets"
