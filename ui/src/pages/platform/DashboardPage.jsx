@@ -45,7 +45,7 @@ export const PlatformDashboardPage = () => {
       moduleLabel="Dashboard / Firm Ops"
       title="Dashboard"
       subtitle="Unified snapshot across CMS acquisition, CRM relationships, and Tasks execution."
-      actions={<Link to={ROUTES.CREATE_CASE(firmSlug)}>Create Docket</Link>}
+      actions={<Link to={ROUTES.CREATE_CASE(firmSlug)}>New Docket</Link>}
     >
       <InlineNotice tone="error" message={error} />
       <StatGrid items={cards} />

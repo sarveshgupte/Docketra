@@ -1,7 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { ROUTES } from '../../constants/routes';
+import { CommandPalette } from '../common/CommandPalette';
+import api from '../../services/api';
+import { crmApi } from '../../api/crm.api';
+import { isShortcutAllowedTarget } from '../../utils/keyboardShortcuts';
 import './platform.css';
 
 const roleRank = { USER: 1, MANAGER: 2, ADMIN: 3, PRIMARY_ADMIN: 4 };
@@ -15,7 +19,7 @@ const navForRole = (firmSlug, role) => {
         { to: ROUTES.DASHBOARD(firmSlug), label: 'Dashboard' },
         { to: ROUTES.CMS(firmSlug), label: 'CMS', minRole: 'ADMIN' },
         { to: ROUTES.CRM(firmSlug), label: 'CRM', minRole: 'ADMIN' },
-        { to: ROUTES.TASK_MANAGER(firmSlug), label: 'Tasks' },
+        { to: ROUTES.TASK_MANAGER(firmSlug), label: 'Task Manager' },
       ],
     },
     {
@@ -39,17 +43,45 @@ const navForRole = (firmSlug, role) => {
     .filter((section) => section.items.length > 0);
 };
 
+const normalizeClientRows = (payload) => {
+  const rows = Array.isArray(payload?.data?.data)
+    ? payload.data.data
+    : Array.isArray(payload?.data?.items)
+      ? payload.data.items
+      : Array.isArray(payload?.data)
+        ? payload.data
+        : [];
+
+  return rows
+    .map((client) => {
+      const routeId = client?._id || client?.id || client?.crmClientId || client?.clientId;
+      return {
+        routeId,
+        label: client?.businessName || client?.name || 'Client record',
+        description: client?.businessEmail || client?.email || 'Open CRM client detail',
+      };
+    })
+    .filter((client) => Boolean(client.routeId));
+};
+
 export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [commandQuery, setCommandQuery] = useState('');
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState('');
+  const [searchResults, setSearchResults] = useState({ dockets: [], clients: [] });
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { firmSlug } = useParams();
   const { user, logout } = useAuth();
   const menuRef = useRef(null);
+  const searchRequestIdRef = useRef(0);
   const role = String(user?.role || 'USER').toUpperCase();
   const navSections = useMemo(() => navForRole(firmSlug, role), [firmSlug, role]);
   const userName = user?.name || user?.xID || 'User';
+  const hasAdminAccess = hasAtLeastRole(role, 'ADMIN');
   const currentNavItem = useMemo(
     () => navSections.flatMap((section) => section.items).find((item) => pathname === item.to || pathname.startsWith(`${item.to}/`)),
     [navSections, pathname]
@@ -60,6 +92,19 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
     const resolvedTitle = title || currentNavItem?.label || 'Workspace';
     document.title = `${resolvedTitle} • Docketra`;
   }, [title, currentNavItem]);
+
+  const resetCommandCenterState = useCallback(() => {
+    searchRequestIdRef.current += 1;
+    setCommandQuery('');
+    setSearchError('');
+    setSearching(false);
+    setSearchResults({ dockets: [], clients: [] });
+  }, []);
+
+  const closeCommandPalette = useCallback(() => {
+    setCommandPaletteOpen(false);
+    resetCommandCenterState();
+  }, [resetCommandCenterState]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -73,10 +118,12 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
 
   useEffect(() => {
     setMenuOpen(false);
-  }, [pathname]);
+    closeCommandPalette();
+  }, [pathname, closeCommandPalette]);
 
   const handleLogout = async () => {
     setMenuOpen(false);
+    closeCommandPalette();
     await logout({ preserveFirmSlug: !!firmSlug });
     if (firmSlug) {
       navigate(ROUTES.FIRM_LOGIN(firmSlug), { replace: true, state: { message: 'You have been signed out safely.', messageType: 'success' } });
@@ -84,6 +131,168 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
     }
     navigate('/superadmin/login', { replace: true });
   };
+
+  const openRoute = useCallback((route) => {
+    closeCommandPalette();
+    navigate(route);
+  }, [closeCommandPalette, navigate]);
+
+  useEffect(() => {
+    if (!commandPaletteOpen) {
+      setSearching(false);
+      setSearchError('');
+      setSearchResults({ dockets: [], clients: [] });
+      return;
+    }
+
+    const term = commandQuery.trim();
+    if (term.length < 2) {
+      setSearching(false);
+      setSearchError('');
+      setSearchResults({ dockets: [], clients: [] });
+      return;
+    }
+
+    const requestId = searchRequestIdRef.current + 1;
+    searchRequestIdRef.current = requestId;
+
+    const timer = window.setTimeout(async () => {
+      setSearching(true);
+      setSearchError('');
+      try {
+        const [docketRes, clientsRes] = await Promise.allSettled([
+          api.get('/search', { params: { q: term } }),
+          hasAdminAccess ? crmApi.listClients({ limit: 50 }) : Promise.resolve({ data: [] }),
+        ]);
+
+        const isStale = !commandPaletteOpen || requestId !== searchRequestIdRef.current || commandQuery.trim() !== term;
+        if (isStale) return;
+
+        const dockets = docketRes.status === 'fulfilled' ? docketRes.value?.data?.data || [] : [];
+        const clientRows = clientsRes.status === 'fulfilled' ? normalizeClientRows(clientsRes.value) : [];
+        const needle = term.toLowerCase();
+        const clients = clientRows.filter((client) => (`${client.label} ${client.description}`).toLowerCase().includes(needle)).slice(0, 6);
+
+        if (docketRes.status === 'rejected' || clientsRes.status === 'rejected') {
+          setSearchError('Record search is temporarily unavailable. Commands and module jumps are still available.');
+        }
+
+        setSearchResults({ dockets: dockets.slice(0, 6), clients });
+      } catch {
+        if (requestId !== searchRequestIdRef.current) return;
+        setSearchError('Record search is temporarily unavailable. Commands and module jumps are still available.');
+        setSearchResults({ dockets: [], clients: [] });
+      } finally {
+        if (requestId === searchRequestIdRef.current) {
+          setSearching(false);
+        }
+      }
+    }, 220);
+
+    return () => window.clearTimeout(timer);
+  }, [commandPaletteOpen, commandQuery, hasAdminAccess]);
+
+  const commandSections = useMemo(() => {
+    const navigationItems = [
+      { id: 'go-dashboard', label: 'Go to Dashboard', shortcut: 'Alt+Shift+D', action: () => openRoute(ROUTES.DASHBOARD(firmSlug)), description: 'Open firm dashboard overview.' },
+      { id: 'go-task-manager', label: 'Go to Task Manager', shortcut: 'Alt+Shift+T', action: () => openRoute(ROUTES.TASK_MANAGER(firmSlug)), description: 'Jump to execution surfaces.' },
+      { id: 'go-workbasket', label: 'Go to Workbasket', shortcut: 'Alt+Shift+B', action: () => openRoute(ROUTES.GLOBAL_WORKLIST(firmSlug)), description: 'Open pooled docket queue.' },
+      { id: 'go-worklist', label: 'Go to My Worklist', shortcut: 'Alt+Shift+W', action: () => openRoute(ROUTES.WORKLIST(firmSlug)), description: 'Open your assigned dockets.' },
+      { id: 'go-qc', label: 'Go to QC Queue', shortcut: 'Alt+Shift+Q', action: () => openRoute(ROUTES.QC_QUEUE(firmSlug)), description: 'Open quality-control queue.' },
+      { id: 'go-clients', label: 'Go to Clients', action: () => openRoute(ROUTES.CLIENTS(firmSlug)), description: 'Open client management workspace.', adminOnly: true },
+      { id: 'go-crm', label: 'Go to CRM', action: () => openRoute(ROUTES.CRM(firmSlug)), description: 'Open relationship management module.', adminOnly: true },
+      { id: 'go-cms', label: 'Go to CMS', action: () => openRoute(ROUTES.CMS(firmSlug)), description: 'Open intake and submissions module.', adminOnly: true },
+      { id: 'go-reports', label: 'Go to Reports', action: () => openRoute(ROUTES.ADMIN_REPORTS(firmSlug)), description: 'Open operational reports.', adminOnly: true },
+      { id: 'go-team', label: 'Go to Team', action: () => openRoute(ROUTES.ADMIN(firmSlug)), description: 'Open team management.', adminOnly: true },
+      { id: 'go-settings', label: 'Go to Settings', action: () => openRoute(ROUTES.SETTINGS(firmSlug)), description: 'Open workspace settings.', adminOnly: true },
+    ].filter((item) => !item.adminOnly || hasAdminAccess);
+
+    const actionsItems = [
+      { id: 'new-docket', label: 'New Docket', shortcut: 'Alt+Shift+N', action: () => openRoute(ROUTES.CREATE_CASE(firmSlug)), description: 'Create a docket quickly.' },
+      { id: 'open-profile', label: 'Open Profile', action: () => openRoute(ROUTES.PROFILE(firmSlug)), description: 'Open personal profile and preferences.' },
+      { id: 'sign-out', label: 'Sign out', action: () => { void handleLogout(); }, description: 'Sign out from current firm workspace.' },
+    ];
+
+    const docketItems = searchResults.dockets.map((docket) => ({
+      id: `docket-${docket.caseId}`,
+      label: `Docket ${docket.caseId}`,
+      description: docket.title || 'Open docket detail',
+      action: () => openRoute(ROUTES.CASE_DETAIL(firmSlug, docket.caseId)),
+    }));
+
+    const clientItems = searchResults.clients.map((client) => ({
+      id: `client-${client.routeId}`,
+      label: client.label,
+      description: client.description,
+      action: () => openRoute(ROUTES.CRM_CLIENT_DETAIL(firmSlug, client.routeId)),
+    }));
+
+    const sections = [
+      { id: 'actions', label: 'Quick actions', items: actionsItems },
+      { id: 'destinations', label: 'Module destinations', items: navigationItems },
+    ];
+
+    if (docketItems.length) sections.push({ id: 'dockets', label: 'Docket results', items: docketItems });
+    if (clientItems.length) sections.push({ id: 'clients', label: 'Client results', items: clientItems });
+
+    return sections;
+  }, [firmSlug, hasAdminAccess, openRoute, searchResults]);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      const key = event.key.toLowerCase();
+      const modifierPressed = event.metaKey || event.ctrlKey;
+
+      if (modifierPressed && key === 'k') {
+        if (!isShortcutAllowedTarget(event.target)) return;
+        event.preventDefault();
+        setCommandPaletteOpen((open) => {
+          if (open) {
+            resetCommandCenterState();
+            return false;
+          }
+          return true;
+        });
+        return;
+      }
+
+      if (event.key === 'Escape' && commandPaletteOpen) {
+        event.preventDefault();
+        closeCommandPalette();
+        return;
+      }
+
+      if (!isShortcutAllowedTarget(event.target)) return;
+
+      if (key === '/' && !event.metaKey && !event.ctrlKey) {
+        event.preventDefault();
+        setCommandPaletteOpen(true);
+        return;
+      }
+
+      if (!(event.altKey && event.shiftKey)) return;
+
+      const shortcuts = {
+        n: () => openRoute(ROUTES.CREATE_CASE(firmSlug)),
+        d: () => openRoute(ROUTES.DASHBOARD(firmSlug)),
+        t: () => openRoute(ROUTES.TASK_MANAGER(firmSlug)),
+        w: () => openRoute(ROUTES.WORKLIST(firmSlug)),
+        b: () => openRoute(ROUTES.GLOBAL_WORKLIST(firmSlug)),
+        q: () => openRoute(ROUTES.QC_QUEUE(firmSlug)),
+      };
+
+      const action = shortcuts[key];
+      if (!action) return;
+
+      event.preventDefault();
+      action();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [closeCommandPalette, commandPaletteOpen, firmSlug, openRoute, resetCommandCenterState]);
+
+  const shortcutHint = 'Shortcuts: Ctrl/⌘+K open, / quick open, Alt+Shift+N new docket, Alt+Shift+D dashboard';
 
   return (
     <div className="platform">
@@ -138,6 +347,15 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
             </div>
           </div>
           <div className="platform__actions">
+            <button
+              type="button"
+              className="platform__command-trigger"
+              onClick={() => setCommandPaletteOpen(true)}
+              aria-label="Open command center"
+            >
+              <span className="platform__command-trigger-label">Search dockets, clients, modules…</span>
+              <kbd>Ctrl/⌘ K</kbd>
+            </button>
             {actions}
             <div className="platform__account-menu" ref={menuRef}>
               <button
@@ -164,6 +382,16 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
         </header>
         <main id="platform-main" className="platform__content">{children}</main>
       </div>
+
+      <CommandPalette
+        isOpen={commandPaletteOpen}
+        onClose={closeCommandPalette}
+        sections={commandSections}
+        query={commandQuery}
+        onQueryChange={setCommandQuery}
+        queryPlaceholder="Search dockets, clients, queues, modules, and commands"
+        helperText={searching ? 'Searching workspace records…' : (searchError || shortcutHint)}
+      />
     </div>
   );
 };
