@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const speakeasy = require('speakeasy');
+const { google } = require('googleapis');
 const User = require('../models/User.model');
 const Team = require('../models/Team.model');
 const Firm = require('../models/Firm.model');
@@ -33,6 +34,7 @@ const { handleUserDeactivation } = require('../services/docketWorkflow.service')
 const { ensureDefaultClientForFirm } = require('../services/defaultClient.service');
 const { getOrCreateDefaultClient } = require('../services/defaultClient.guard');
 const { getLatestPublishedUpdate } = require('../services/productUpdate.service');
+const { ensureGoogleAuthEnabled } = require('../services/featureGate.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const config = require('../config/config');
 const { loadEnv } = require('../config/env');
@@ -71,6 +73,59 @@ const PRE_AUTH_TOKEN_EXPIRY = '5m';
 const DEFAULT_FIRM_ID = 'PLATFORM'; // Default firmId for SUPER_ADMIN and audit logging
 const DEFAULT_XID = 'SUPERADMIN'; // Default xID for SUPER_ADMIN in audit logs
 const env = loadEnv({ exitOnError: false }) || {};
+const GOOGLE_AUTH_STATE_TTL_MS = 10 * 60 * 1000;
+const GOOGLE_EXCHANGE_TOKEN_TTL_MINUTES = 5;
+const FRONTEND_BASE_URL = () => (process.env.FRONTEND_URL || '').replace(/\/+$/, '');
+
+const getGoogleOAuthClient = () => {
+  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
+    throw new Error('GOOGLE_OAUTH_CONFIG_MISSING');
+  }
+  if (!env.GOOGLE_OAUTH_REDIRECT_URI) {
+    throw new Error('GOOGLE_OAUTH_REDIRECT_URI_MISSING');
+  }
+
+  return new google.auth.OAuth2(
+    env.GOOGLE_CLIENT_ID,
+    env.GOOGLE_CLIENT_SECRET,
+    env.GOOGLE_OAUTH_REDIRECT_URI
+  );
+};
+
+const signGoogleState = (payload) => {
+  const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signature = crypto
+    .createHmac('sha256', process.env.JWT_SECRET || 'docketra-google-auth')
+    .update(encodedPayload)
+    .digest('base64url');
+  return `${encodedPayload}.${signature}`;
+};
+
+const parseGoogleState = (rawState) => {
+  if (!rawState || typeof rawState !== 'string' || !rawState.includes('.')) {
+    return null;
+  }
+
+  const [encodedPayload, providedSig] = rawState.split('.');
+  if (!encodedPayload || !providedSig) {
+    return null;
+  }
+
+  const expectedSig = crypto
+    .createHmac('sha256', process.env.JWT_SECRET || 'docketra-google-auth')
+    .update(encodedPayload)
+    .digest('base64url');
+
+  if (providedSig !== expectedSig) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8'));
+  } catch (_error) {
+    return null;
+  }
+};
 const SUPERADMIN_USER_ID = () => env.SUPERADMIN_OBJECT_ID;
 const SUPERADMIN_ROLE = 'SUPERADMIN';
 const ROLE_SUPER_ADMIN = 'SUPER_ADMIN';
@@ -3536,6 +3591,246 @@ const sendOtpEndpoint = async (req, res) => authOtpServiceFacade.sendOtpEndpoint
 
 const verifyOtpEndpoint = async (req, res) => authOtpServiceFacade.verifyOtpEndpoint(req, res);
 
+const redirectGoogleResult = (res, params = {}) => {
+  const base = FRONTEND_BASE_URL();
+  const target = new URL('/oauth/post-auth', base || 'http://localhost');
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      target.searchParams.set(key, String(value));
+    }
+  });
+
+  const targetPath = base ? `${target.pathname}${target.search}` : `${target.toString()}`;
+  return res.redirect(targetPath);
+};
+
+const startGoogleAuth = async (req, res) => {
+  try {
+    ensureGoogleAuthEnabled();
+    const intent = String(req.query?.intent || 'login').trim().toLowerCase();
+    const firmSlug = normalizeFirmSlug(req.query?.firmSlug || '');
+    const setupToken = String(req.query?.setupToken || '').trim();
+
+    if (!['login', 'signup'].includes(intent)) {
+      return res.status(400).json({ success: false, message: 'Invalid Google auth intent.' });
+    }
+    if (!firmSlug) {
+      return res.status(400).json({ success: false, message: 'firmSlug is required for Google auth.' });
+    }
+    if (intent === 'signup' && !setupToken) {
+      return res.status(400).json({ success: false, message: 'setupToken is required for signup flow.' });
+    }
+
+    const oauthClient = getGoogleOAuthClient();
+    const state = signGoogleState({
+      nonce: crypto.randomUUID(),
+      intent,
+      firmSlug,
+      setupToken: intent === 'signup' ? setupToken : null,
+      issuedAt: Date.now(),
+    });
+
+    const authUrl = oauthClient.generateAuthUrl({
+      access_type: 'offline',
+      prompt: 'consent',
+      scope: ['openid', 'email', 'profile'],
+      state,
+    });
+
+    return res.redirect(authUrl);
+  } catch (error) {
+    if (error?.code === 'FEATURE_DISABLED' || error?.statusCode === 503) {
+      return res.status(503).json({ success: false, message: 'Google auth is currently disabled.' });
+    }
+    return res.status(500).json({ success: false, message: 'Unable to start Google auth flow.' });
+  }
+};
+
+const googleAuthCallback = async (req, res) => {
+  let resolvedFirmSlug = null;
+  try {
+    ensureGoogleAuthEnabled();
+    const code = String(req.query?.code || '').trim();
+    const state = parseGoogleState(req.query?.state);
+
+    if (!code || !state) {
+      return redirectGoogleResult(res, { error: 'INVALID_REQUEST' });
+    }
+
+    if (!state.issuedAt || (Date.now() - Number(state.issuedAt)) > GOOGLE_AUTH_STATE_TTL_MS) {
+      return redirectGoogleResult(res, { error: 'STATE_EXPIRED', firmSlug: state?.firmSlug || null });
+    }
+
+    const intent = String(state.intent || '').toLowerCase();
+    resolvedFirmSlug = normalizeFirmSlug(state.firmSlug || '');
+    if (!['login', 'signup'].includes(intent) || !resolvedFirmSlug) {
+      return redirectGoogleResult(res, { error: 'INVALID_REQUEST' });
+    }
+
+    const oauthClient = getGoogleOAuthClient();
+    const { tokens } = await oauthClient.getToken(code);
+    oauthClient.setCredentials(tokens);
+
+    const ticket = await oauthClient.verifyIdToken({
+      idToken: tokens.id_token,
+      audience: env.GOOGLE_CLIENT_ID,
+    });
+    const profile = ticket.getPayload();
+    const googleSub = String(profile?.sub || '').trim();
+    const googleEmail = String(profile?.email || '').trim().toLowerCase();
+    const emailVerified = profile?.email_verified === true;
+
+    if (!googleSub || !googleEmail || !emailVerified) {
+      return redirectGoogleResult(res, { error: 'GOOGLE_IDENTITY_INVALID', firmSlug: resolvedFirmSlug });
+    }
+
+    const firm = await Firm.findOne({ firmSlug: resolvedFirmSlug }).select('_id firmSlug status');
+    if (!firm || !isActiveStatus(firm.status)) {
+      return redirectGoogleResult(res, { error: 'FIRM_INACTIVE', firmSlug: resolvedFirmSlug });
+    }
+
+    let user = null;
+
+    if (intent === 'signup') {
+      const setupTokenHash = emailService.hashToken(String(state.setupToken || ''));
+      const now = new Date();
+      user = await User.findOne({
+        firmId: firm._id,
+        email: googleEmail,
+        setupTokenUsedAt: null,
+        $or: [
+          { setupTokenHash },
+          { passwordSetupTokenHash: setupTokenHash },
+        ],
+      });
+
+      const tokenExpiresAt = user?.setupTokenExpiresAt || user?.passwordSetupExpires || null;
+      if (!user || !tokenExpiresAt || tokenExpiresAt < now) {
+        return redirectGoogleResult(res, { error: 'SETUP_TOKEN_INVALID', firmSlug: resolvedFirmSlug });
+      }
+
+      user.status = 'active';
+      user.isActive = true;
+      user.setupTokenUsedAt = now;
+      user.setupTokenHash = null;
+      user.setupTokenExpiresAt = null;
+      user.passwordSetupTokenHash = null;
+      user.passwordSetupExpires = null;
+      user.mustSetPassword = false;
+      user.mustChangePassword = false;
+      user.passwordSetAt = now;
+      user.emailVerified = true;
+      user.emailVerifiedAt = now;
+      user.verificationMethod = 'GOOGLE';
+      user.authProviders = {
+        ...(user.authProviders || {}),
+        google: {
+          ...((user.authProviders || {}).google || {}),
+          googleId: googleSub,
+          linkedAt: now,
+        },
+      };
+      await user.save();
+
+      await Firm.updateOne(
+        { _id: user.firmId, status: 'pending_setup' },
+        { $set: { status: 'active' } }
+      );
+    } else {
+      user = await User.findOne({
+        firmId: firm._id,
+        email: googleEmail,
+        status: { $ne: 'deleted' },
+      });
+
+      if (!user || !isActiveStatus(user.status) || !user.isActive) {
+        return redirectGoogleResult(res, { error: 'ACCOUNT_NOT_FOUND', firmSlug: resolvedFirmSlug });
+      }
+
+      const existingGoogleId = String(user?.authProviders?.google?.googleId || '').trim();
+      if (existingGoogleId && existingGoogleId !== googleSub) {
+        return redirectGoogleResult(res, { error: 'GOOGLE_ACCOUNT_MISMATCH', firmSlug: resolvedFirmSlug });
+      }
+
+      if (!existingGoogleId) {
+        user.authProviders = {
+          ...(user.authProviders || {}),
+          google: {
+            ...((user.authProviders || {}).google || {}),
+            googleId: googleSub,
+            linkedAt: new Date(),
+          },
+        };
+        await user.save();
+      }
+    }
+
+    const exchangeToken = generateLoginSessionToken();
+    await ensureCanonicalXid(user);
+    await LoginSession.deleteMany({ userId: user._id, consumedAt: null });
+    await LoginSession.create({
+      tokenHash: hashLoginSessionToken(exchangeToken),
+      userId: user._id,
+      firmId: user.firmId,
+      xID: user.xID || user.xid,
+      expiresAt: new Date(Date.now() + GOOGLE_EXCHANGE_TOKEN_TTL_MINUTES * 60 * 1000),
+      consumedAt: null,
+    });
+
+    return redirectGoogleResult(res, {
+      exchangeToken,
+      firmSlug: resolvedFirmSlug,
+      mode: intent,
+    });
+  } catch (error) {
+    return redirectGoogleResult(res, { error: 'GOOGLE_AUTH_FAILED', firmSlug: resolvedFirmSlug });
+  }
+};
+
+const exchangeGoogleAuth = async (req, res) => {
+  try {
+    const exchangeToken = String(req.body?.exchangeToken || '').trim();
+    if (!exchangeToken) {
+      return res.status(400).json({ success: false, message: 'exchangeToken is required.' });
+    }
+
+    const session = await LoginSession.findOne({
+      tokenHash: hashLoginSessionToken(exchangeToken),
+      consumedAt: null,
+      expiresAt: { $gt: new Date() },
+    });
+
+    if (!session) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired Google login token.' });
+    }
+
+    const user = await User.findOne({
+      _id: session.userId,
+      firmId: session.firmId,
+      status: 'active',
+      isActive: true,
+    });
+
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Invalid authentication token.' });
+    }
+
+    await LoginSession.updateOne(
+      { _id: session._id, consumedAt: null },
+      { $set: { consumedAt: new Date() } }
+    );
+
+    const response = await buildSuccessfulLoginPayload(req, user, {
+      authMethod: 'Google OAuth',
+      resource: 'auth/google/exchange',
+      mfaRequired: false,
+    });
+    return res.json(response);
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Google sign-in failed.' });
+  }
+};
+
 module.exports = {
   login: wrapWriteHandler(login),
   logout: wrapWriteHandler(logout),
@@ -3572,4 +3867,7 @@ module.exports = {
   signupResend: wrapWriteHandler(signupResend),
   sendOtpEndpoint: wrapWriteHandler(sendOtpEndpoint),
   verifyOtpEndpoint: wrapWriteHandler(verifyOtpEndpoint),
+  startGoogleAuth,
+  googleAuthCallback,
+  exchangeGoogleAuth: wrapWriteHandler(exchangeGoogleAuth),
 };
