@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { SuperAdminLayout } from '../components/common/SuperAdminLayout';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
@@ -37,18 +37,28 @@ const SINCE_OPTIONS = [7, 30, 60, 90];
 
 const prettyBlocker = (value) => String(value || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
+const buildFirmDetailQuery = ({ blockerType, completionState, staleAfterDays, sinceDays }) => {
+  const query = new URLSearchParams();
+  if (blockerType) query.set('blockerType', blockerType);
+  if (completionState) query.set('completionState', completionState);
+  if (staleAfterDays) query.set('staleAfterDays', String(staleAfterDays));
+  if (sinceDays) query.set('sinceDays', String(sinceDays));
+  return query.toString();
+};
+
 export const SuperadminOnboardingInsightsPage = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [summary, setSummary] = useState(null);
   const [details, setDetails] = useState(null);
   const [filters, setFilters] = useState({
-    sinceDays: 30,
-    staleAfterDays: 7,
-    role: '',
-    blockerType: '',
-    completionState: 'all',
+    sinceDays: Number(searchParams.get('sinceDays') || 30),
+    staleAfterDays: Number(searchParams.get('staleAfterDays') || 7),
+    role: searchParams.get('role') || '',
+    blockerType: searchParams.get('blockerType') || '',
+    completionState: searchParams.get('completionState') || 'all',
     limit: 50,
   });
 
@@ -84,6 +94,17 @@ export const SuperadminOnboardingInsightsPage = () => {
     void loadInsights();
   }, [filters.sinceDays, filters.staleAfterDays, filters.role, filters.blockerType, filters.completionState]);
 
+
+  useEffect(() => {
+    const next = new URLSearchParams();
+    if (filters.sinceDays) next.set('sinceDays', String(filters.sinceDays));
+    if (filters.staleAfterDays) next.set('staleAfterDays', String(filters.staleAfterDays));
+    if (filters.role) next.set('role', filters.role);
+    if (filters.blockerType) next.set('blockerType', filters.blockerType);
+    if (filters.completionState) next.set('completionState', filters.completionState);
+    setSearchParams(next, { replace: true });
+  }, [filters.sinceDays, filters.staleAfterDays, filters.role, filters.blockerType, filters.completionState, setSearchParams]);
+
   const topPriorities = useMemo(() => {
     if (!details?.topBlockers?.length) return [];
     const total = details.topBlockers.reduce((sum, row) => sum + Number(row.count || 0), 0) || 1;
@@ -92,6 +113,18 @@ export const SuperadminOnboardingInsightsPage = () => {
       priority: Math.round((Number(row.count || 0) / total) * 100),
     }));
   }, [details]);
+
+  const toFirmDetailPath = (firmId, blockerOverride = '') => {
+    const query = buildFirmDetailQuery({
+      blockerType: blockerOverride || filters.blockerType,
+      completionState: filters.completionState,
+      staleAfterDays: filters.staleAfterDays,
+      sinceDays: filters.sinceDays,
+    });
+    return query
+      ? `/app/superadmin/onboarding-insights/${firmId}?${query}`
+      : `/app/superadmin/onboarding-insights/${firmId}`;
+  };
 
   if (loading) {
     return (
@@ -160,7 +193,18 @@ export const SuperadminOnboardingInsightsPage = () => {
                     <div key={row.type} className="rounded-lg border border-slate-200 p-3">
                       <div className="flex items-center justify-between text-sm">
                         <span className="font-medium text-slate-900">{prettyBlocker(row.type)}</span>
-                        <span className="text-slate-600">{row.count} impacted • {row.priority}% priority weight</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-slate-600">{row.count} impacted • {row.priority}% priority weight</span>
+                          <Button
+                            variant="ghost"
+                            onClick={() => {
+                              const matchingFirm = (details?.firms || []).find((firm) => (firm.blockers || []).includes(row.type));
+                              if (matchingFirm?.firmId) navigate(toFirmDetailPath(matchingFirm.firmId, row.type));
+                            }}
+                          >
+                            Open impacted firm
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -180,6 +224,7 @@ export const SuperadminOnboardingInsightsPage = () => {
                           <p className="text-xs text-gray-500">{firm.nextAction} • {firm.incompleteUsers}/{firm.users} users incomplete • {firm.staleUsers} stale</p>
                         </div>
                         <div className="flex gap-2">
+                          <Button variant="primary" onClick={() => navigate(toFirmDetailPath(firm.firmId))}>Open onboarding detail</Button>
                           <Button variant="secondary" onClick={() => navigate('/app/superadmin/firms')}>Open firm controls</Button>
                           {firm.firmSlug ? <Link className="text-sm text-blue-600 underline" to={`/f/${firm.firmSlug}/login`} target="_blank" rel="noreferrer">Firm login URL</Link> : null}
                         </div>
@@ -200,10 +245,12 @@ export const SuperadminOnboardingInsightsPage = () => {
                       <tr className="text-left text-gray-500">
                         <th className="py-2 pr-3">User</th>
                         <th className="py-2 pr-3">Role</th>
+                        <th className="py-2 pr-3">Firm</th>
                         <th className="py-2 pr-3">Progress</th>
                         <th className="py-2 pr-3">Incomplete steps</th>
                         <th className="py-2 pr-3">Tutorial</th>
                         <th className="py-2 pr-3">Refresh</th>
+                        <th className="py-2 pr-3">Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -211,10 +258,14 @@ export const SuperadminOnboardingInsightsPage = () => {
                         <tr key={user.userId} className="border-t border-gray-100 align-top">
                           <td className="py-2 pr-3 font-medium text-gray-900">{user.userXID || user.userId.slice(-6)}</td>
                           <td className="py-2 pr-3 text-gray-700">{user.role}</td>
+                          <td className="py-2 pr-3 text-gray-700">{details.firms?.find((firm) => firm.firmId === user.firmId)?.name || '—'}</td>
                           <td className="py-2 pr-3 text-gray-700">{user.completedSteps}/{user.totalSteps}</td>
                           <td className="py-2 pr-3 text-gray-700">{(user.incompleteStepIds || []).slice(0, 3).join(', ') || '—'}</td>
                           <td className="py-2 pr-3 text-gray-700">{user.tutorial?.skipped ? 'Skipped' : (user.tutorial?.completed ? 'Completed' : 'Pending')}</td>
                           <td className="py-2 pr-3 text-gray-700">{user.lastProgressRefreshedAt ? new Date(user.lastProgressRefreshedAt).toLocaleString() : 'Never'}</td>
+                          <td className="py-2 pr-3">
+                            <Button variant="ghost" onClick={() => navigate(toFirmDetailPath(user.firmId))}>Open firm detail</Button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>

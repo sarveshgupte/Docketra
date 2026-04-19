@@ -124,3 +124,17 @@ When users complete real setup actions outside the dashboard, the checklist shou
 - Checklist CTA/open, manual completion, and checklist dismissal tracked.
 - Superadmin Platform Dashboard now includes an onboarding observability card.
 - Superadmin now also has a dedicated actionable triage view at `/app/superadmin/onboarding-insights` backed by `GET /api/superadmin/onboarding-insights/details` with operational filters.
+
+
+## 7) Superadmin onboarding triage firm-level drill-down
+
+### What was added
+- New superadmin route: `/app/superadmin/onboarding-insights/:firmId`.
+- Existing details endpoint now drives focused firm triage via `GET /api/superadmin/onboarding-insights/details?firmId=...`.
+- Triage list now includes direct `Open onboarding detail` actions per firm plus blocker-aware deep-link actions.
+- Query-string context (`blockerType`, `completionState`, `staleAfterDays`, `sinceDays`) is preserved for safe back-and-forth investigation.
+
+### Operational value
+- Superadmin can move from blocker summary to exact firm state faster.
+- Firm detail highlights setup gaps, stale users, tutorial-skip risk, and follow-up users in one workflow.
+- Recommended next actions use explicit operations wording to support confident intervention.

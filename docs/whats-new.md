@@ -1,5 +1,13 @@
 # What's New
 
+## April 2026: Superadmin onboarding insights firm drill-down + deep links
+
+- Added a new firm-specific onboarding drill-down route at `/app/superadmin/onboarding-insights/:firmId` so superadmin can jump directly into one tenant's onboarding state.
+- Upgraded onboarding triage actions with `Open onboarding detail` per firm and blocker-aware deep links from blocker summary rows.
+- Added firm-focused operational paneling for setup signals (active client, category, workbasket), stale/incomplete counts, top blockers, recent events, and users needing follow-up.
+- Added recommended next-action guidance (for example: first active client, category/workbasket setup, manager queue assignment, unassigned dockets, tutorial skipped but incomplete).
+- Preserved filter context (`blockerType`, `completionState`, `staleAfterDays`, `sinceDays`) in query params for faster investigation loops.
+
 ## April 2026: Task Manager queue experience unified across Workbasket, My Worklist, QC Workbasket, and All Dockets
 
 - Refactored the Task Manager execution-list pattern so queue pages now share a consistent operating model (header context, filter bar placement, table density, action affordances, and state treatment).
