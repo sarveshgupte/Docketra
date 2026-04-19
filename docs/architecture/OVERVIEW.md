@@ -31,6 +31,7 @@ Key product alignment rules in navigation:
 
 - Document collection is not a standalone CMS repository destination.
 - Collected documents remain in **Docket Detail → Attachments** under Task Manager execution context.
+- Docket Detail is a tabbed execution workspace (`Overview`, `Attachments`, `Activity`, `History`) so users can work without leaving Task Manager context.
 - **Category Management** lives under Task Manager and represents category + subcategory + workbasket linkage configuration.
 
 The architecture remains service-oriented and route-compatible; this topology is a UX/product-clarity layer over existing backend ownership.
