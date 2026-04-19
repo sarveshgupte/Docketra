@@ -1,5 +1,16 @@
 # What's New
 
+## April 2026: Sidebar Information Architecture Refactor (Workflow-Aligned)
+
+- Refactored the firm sidebar to preserve the existing compact shell while reorganizing navigation into **Overview**, **Modules**, **Workspace**, and **Administration** sections.
+- Introduced expandable module groups for **CRM**, **CMS**, and **Task Manager** with route-aware open/active behavior and keyboard-accessible toggles.
+- Moved **Client Management** under CRM and removed standalone top-level Clients navigation to align entity management under the CRM module.
+- Renamed **Tasks** navigation concept to **Task Manager** and clarified execution ownership for Workbasket, My Worklist, QC Workbasket, Dockets, and Category Management.
+- Kept CMS navigation focused on intake/request surfaces and avoided exposing any misleading standalone documents repository destination.
+- Reaffirmed product behavior that document collection remains inside **Docket → Attachments**, not as a global CMS “Documents” page.
+- Clarified Category Management as the primary configuration anchor for category/subcategory/workbasket mapping workflows under Task Manager.
+- Improved role-aware visibility so operational configuration entries only appear for authorized users.
+
 
 ## April 2026: Role-specific onboarding tutorial upgrade
 

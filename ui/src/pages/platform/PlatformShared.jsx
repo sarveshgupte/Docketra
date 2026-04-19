@@ -7,8 +7,8 @@ export const formatDocketLabel = (item = {}) => {
   return raw ? raw.replace(/^CASE-/i, 'DOCKET-') : 'DOCKET-UNKNOWN';
 };
 
-export const PageSection = ({ title, description, actions, children }) => (
-  <section className="panel section-panel">
+export const PageSection = ({ id, title, description, actions, children }) => (
+  <section className="panel section-panel" id={id}>
     {(title || description || actions) && (
       <header className="section-header">
         <div>
