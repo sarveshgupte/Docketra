@@ -9,6 +9,7 @@ const passthroughBody = z.object({}).passthrough();
 module.exports = {
   'GET /stats': { query: passthroughQuery },
   'GET /onboarding-insights': { query: passthroughQuery },
+  'GET /onboarding-insights/details': { query: passthroughQuery },
   'GET /health': { query: passthroughQuery },
 
   'POST /firms': {

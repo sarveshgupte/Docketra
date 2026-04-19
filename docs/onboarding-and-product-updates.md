@@ -123,3 +123,4 @@ When users complete real setup actions outside the dashboard, the checklist shou
 - Product tour start/completion tracked.
 - Checklist CTA/open, manual completion, and checklist dismissal tracked.
 - Superadmin Platform Dashboard now includes an onboarding observability card.
+- Superadmin now also has a dedicated actionable triage view at `/app/superadmin/onboarding-insights` backed by `GET /api/superadmin/onboarding-insights/details` with operational filters.
