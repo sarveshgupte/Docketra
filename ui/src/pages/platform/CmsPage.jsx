@@ -103,7 +103,7 @@ export const PlatformCmsPage = () => {
       <InlineNotice tone="error" message={formsError} />
       <InlineNotice tone="info" message={copyState} />
       <StatGrid items={cmsStats} />
-      <PageSection title="CMS surfaces" description="Lead-capture assets managed in the CMS module.">
+      <PageSection id="cms-surfaces" title="CMS surfaces" description="Lead-capture assets managed in the CMS module.">
         <div className="action-row">
           <span>Landing pages</span>
           <span>Forms</span>
@@ -112,7 +112,7 @@ export const PlatformCmsPage = () => {
         </div>
       </PageSection>
 
-      <PageSection title="Embed on your website" description="Use this to place Docketra intake forms on your existing website. Submissions go to CMS intake and appear in CRM.">
+      <PageSection id="embed-forms" title="Embed on your website" description="Use this to place Docketra intake forms on your existing website. Submissions go to CMS intake and appear in CRM.">
         {forms.length > 0 ? (
           <>
             <div className="action-row" style={{ marginBottom: 16 }}>
@@ -174,7 +174,7 @@ export const PlatformCmsPage = () => {
         )}
       </PageSection>
 
-      <PageSection title="Intake queue" description="Track form submissions and conversion readiness.">
+      <PageSection id="intake-queue" title="Intake queue" description="Track form submissions and conversion readiness.">
         <FilterBar onClear={() => setQuery('')} clearDisabled={!query}>
           <input
             type="search"
