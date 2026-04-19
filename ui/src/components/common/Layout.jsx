@@ -628,6 +628,17 @@ export const Layout = ({ children, title, subtitle }) => {
     ...(hasQcQueueAccess ? [{ id: 'qc-queue', label: 'Go to QC Queue', shortcut: '⌘3', action: () => navigate(ROUTES.QC_QUEUE(currentFirmSlug)) }] : []),
   ];
 
+  const activeNavLabel = navSections
+    .flatMap((section) => section.items)
+    .find((item) => location.pathname === String(item.to || '').split('?')[0] || location.pathname.startsWith(`${String(item.to || '').split('?')[0]}/`))
+    ?.label;
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const resolvedTitle = title || activeNavLabel || 'Workspace';
+    document.title = `${resolvedTitle} • Docketra`;
+  }, [title, activeNavLabel]);
+
   return (
     <div className="enterprise-layout">
       <a className="enterprise-skip-link" href="#main-content">
