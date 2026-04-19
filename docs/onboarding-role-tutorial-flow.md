@@ -171,6 +171,7 @@ Docketra now records lightweight onboarding lifecycle telemetry and exposes supe
 
 ### Visibility surface
 - New superadmin endpoint: `GET /api/superadmin/onboarding-insights`.
+- New superadmin drill-down endpoint: `GET /api/superadmin/onboarding-insights/details`.
 - Summary includes:
   - role-aware completion vs incomplete counts
   - top incomplete steps by role
@@ -178,3 +179,8 @@ Docketra now records lightweight onboarding lifecycle telemetry and exposes supe
   - recent onboarding events
   - blocker summaries (e.g., managers without queues, users without assigned dockets)
   - firm-level setup signals (e.g., zero active clients)
+
+### Superadmin operational triage UX
+- Dedicated page: `/app/superadmin/onboarding-insights`.
+- Supports lightweight filters (timeframe, role, blocker type, completion state, stale threshold).
+- Shows firm/user-level triage details (progress state, incomplete steps, tutorial status, stale refresh age, recent events) with safe operational next actions.

@@ -302,8 +302,252 @@ const getOnboardingInsights = async ({ sinceDays = 30, recentLimit = 25, staleAf
   };
 };
 
+const BLOCKER_TYPES = new Set([
+  'zero_active_clients',
+  'missing_category_or_workbasket',
+  'manager_without_queue',
+  'user_without_dockets',
+  'tutorial_skipped_incomplete',
+  'stale_onboarding',
+]);
+
+const safeObjectId = (value) => {
+  if (!value) return null;
+  try {
+    return new mongoose.Types.ObjectId(String(value));
+  } catch (error) {
+    return null;
+  }
+};
+
+const toRoleArray = (value) => {
+  if (!value) return [];
+  const raw = Array.isArray(value) ? value : String(value).split(',');
+  return raw.map((role) => normalizeRole(role)).filter((role) => ['PRIMARY_ADMIN', 'ADMIN', 'MANAGER', 'USER'].includes(role));
+};
+
+const getOnboardingInsightDetails = async ({
+  sinceDays = 30,
+  staleAfterDays = 7,
+  role = null,
+  blockerType = null,
+  completionState = 'all',
+  limit = 50,
+  firmId = null,
+} = {}) => {
+  const now = new Date();
+  const since = new Date(now.getTime() - (Number(sinceDays) * 24 * 60 * 60 * 1000));
+  const staleThreshold = new Date(now.getTime() - (Number(staleAfterDays) * 24 * 60 * 60 * 1000));
+  const normalizedRoleFilter = toRoleArray(role);
+  const normalizedBlockerType = BLOCKER_TYPES.has(String(blockerType || '').trim()) ? String(blockerType).trim() : null;
+  const normalizedLimit = Math.min(Math.max(Number(limit) || 50, 1), 100);
+  const resolvedFirmId = safeObjectId(firmId);
+
+  const userMatch = {
+    role: { $in: ['PRIMARY_ADMIN', 'ADMIN', 'MANAGER', 'USER'] },
+    status: { $ne: 'deleted' },
+  };
+  if (resolvedFirmId) {
+    userMatch.firmId = resolvedFirmId;
+  }
+  if (normalizedRoleFilter.length) {
+    userMatch.role = { $in: normalizedRoleFilter };
+  }
+
+  const [usersRaw, firmsRaw, activeClientFirmIds, categoryFirmIds, workbasketFirmIds, managerIdsWithQueues, usersWithAssignedDockets, recentEvents] = await Promise.all([
+    User.find(userMatch)
+      .select('_id firmId role xID xid onboardingTelemetry tutorialState isActive status')
+      .lean(),
+    Firm.find(resolvedFirmId ? { _id: resolvedFirmId } : { status: { $ne: 'deleted' } })
+      .select('_id name firmId firmSlug status')
+      .lean(),
+    Client.distinct('firmId', resolvedFirmId ? { status: 'active', isActive: { $ne: false }, firmId: resolvedFirmId } : { status: 'active', isActive: { $ne: false } }),
+    Category.distinct('firmId', resolvedFirmId ? { isActive: { $ne: false }, firmId: resolvedFirmId } : { isActive: { $ne: false } }),
+    Team.distinct('firmId', resolvedFirmId ? { isActive: { $ne: false }, type: 'PRIMARY', firmId: resolvedFirmId } : { isActive: { $ne: false }, type: 'PRIMARY' }),
+    Team.distinct('managerId', { isActive: { $ne: false }, type: 'PRIMARY' }),
+    Case.distinct('assignedToXID', { assignedToXID: { $nin: [null, ''] } }),
+    OnboardingEvent.find(resolvedFirmId ? { createdAt: { $gte: since }, firmId: resolvedFirmId } : { createdAt: { $gte: since } })
+      .sort({ createdAt: -1 })
+      .limit(Math.min(normalizedLimit, 30))
+      .select('eventName role stepId source userXID firmId createdAt')
+      .lean(),
+  ]);
+
+  const firmMap = new Map(firmsRaw.map((firm) => [String(firm._id), firm]));
+  const activeClientFirmSet = new Set(activeClientFirmIds.map(String));
+  const categoryFirmSet = new Set(categoryFirmIds.map(String));
+  const workbasketFirmSet = new Set(workbasketFirmIds.map(String));
+  const managerQueueSet = new Set(managerIdsWithQueues.map(String));
+  const assignedDocketSet = new Set(usersWithAssignedDockets.map((xid) => String(xid || '').toUpperCase()));
+
+  const completionStateMatches = (row) => {
+    if (completionState === 'incomplete') return row.completionState !== 'completed';
+    if (completionState === 'completed') return row.completionState === 'completed';
+    if (completionState === 'stale') return row.isStale === true;
+    return true;
+  };
+
+  const users = [];
+  const byFirm = new Map();
+  const stepFrequencyByRole = new Map();
+  const blockerCountMap = new Map();
+  const addBlockerCount = (key) => blockerCountMap.set(key, (blockerCountMap.get(key) || 0) + 1);
+
+  for (const rawUser of usersRaw) {
+    const firmKey = String(rawUser.firmId || '');
+    if (!firmMap.has(firmKey)) continue;
+
+    const telemetry = rawUser.onboardingTelemetry || {};
+    const tutorialState = rawUser.tutorialState || {};
+    const completed = Number(telemetry.lastProgressCompleted || 0);
+    const total = Number(telemetry.lastProgressTotal || 0);
+    const incompleteStepIds = Array.isArray(telemetry.lastIncompleteStepIds) ? telemetry.lastIncompleteStepIds.filter(Boolean) : [];
+    const refreshedAt = telemetry.lastProgressRefreshedAt ? new Date(telemetry.lastProgressRefreshedAt) : null;
+    const isStale = !refreshedAt || refreshedAt <= staleThreshold;
+    const completionStateForUser = total > 0 && completed >= total ? 'completed' : (total > 0 ? 'incomplete' : 'no_progress');
+    const hasSkippedTutorial = Boolean(tutorialState.skippedAt);
+
+    const userBlockers = [];
+    if (isStale) {
+      userBlockers.push('stale_onboarding');
+      addBlockerCount('stale_onboarding');
+    }
+    if (rawUser.role === 'MANAGER' && !managerQueueSet.has(String(rawUser._id))) {
+      userBlockers.push('manager_without_queue');
+      addBlockerCount('manager_without_queue');
+    }
+    if (rawUser.role === 'USER') {
+      const xid = String(rawUser.xID || rawUser.xid || '').toUpperCase();
+      if (!xid || !assignedDocketSet.has(xid)) {
+        userBlockers.push('user_without_dockets');
+        addBlockerCount('user_without_dockets');
+      }
+    }
+    if (hasSkippedTutorial && completionStateForUser !== 'completed' && tutorialState.skippedAt && new Date(tutorialState.skippedAt) <= staleThreshold) {
+      userBlockers.push('tutorial_skipped_incomplete');
+      addBlockerCount('tutorial_skipped_incomplete');
+    }
+
+    for (const stepId of incompleteStepIds) {
+      const key = `${rawUser.role}:${stepId}`;
+      stepFrequencyByRole.set(key, (stepFrequencyByRole.get(key) || 0) + 1);
+    }
+
+    const userRow = {
+      userId: String(rawUser._id),
+      firmId: firmKey,
+      role: rawUser.role,
+      userXID: String(rawUser.xID || rawUser.xid || '').toUpperCase(),
+      completedSteps: completed,
+      totalSteps: total,
+      incompleteStepIds,
+      completionState: completionStateForUser,
+      tutorial: {
+        skipped: hasSkippedTutorial,
+        completed: Boolean(tutorialState.completedAt),
+      },
+      lastProgressRefreshedAt: refreshedAt,
+      isStale,
+      blockers: userBlockers,
+    };
+
+    if (!completionStateMatches(userRow)) continue;
+    if (normalizedBlockerType && !userBlockers.includes(normalizedBlockerType)) continue;
+    users.push(userRow);
+
+    const currentFirm = byFirm.get(firmKey) || {
+      firmId: firmKey,
+      name: firmMap.get(firmKey)?.name || 'Unknown firm',
+      firmCode: firmMap.get(firmKey)?.firmId || null,
+      firmSlug: firmMap.get(firmKey)?.firmSlug || null,
+      status: firmMap.get(firmKey)?.status || null,
+      users: 0,
+      incompleteUsers: 0,
+      staleUsers: 0,
+      blockers: new Set(),
+      recentRefreshAt: null,
+    };
+    currentFirm.users += 1;
+    if (userRow.completionState !== 'completed') currentFirm.incompleteUsers += 1;
+    if (userRow.isStale) currentFirm.staleUsers += 1;
+    userBlockers.forEach((entry) => currentFirm.blockers.add(entry));
+    if (userRow.lastProgressRefreshedAt && (!currentFirm.recentRefreshAt || userRow.lastProgressRefreshedAt > currentFirm.recentRefreshAt)) {
+      currentFirm.recentRefreshAt = userRow.lastProgressRefreshedAt;
+    }
+    byFirm.set(firmKey, currentFirm);
+  }
+
+  const firms = Array.from(byFirm.values()).map((firm) => {
+    const firmKey = String(firm.firmId);
+    const firmBlockers = [];
+    if (!activeClientFirmSet.has(firmKey)) {
+      firmBlockers.push('zero_active_clients');
+      addBlockerCount('zero_active_clients');
+    }
+    if (!categoryFirmSet.has(firmKey) || !workbasketFirmSet.has(firmKey)) {
+      firmBlockers.push('missing_category_or_workbasket');
+      addBlockerCount('missing_category_or_workbasket');
+    }
+    const allBlockers = new Set([...Array.from(firm.blockers), ...firmBlockers]);
+    return {
+      ...firm,
+      blockers: Array.from(allBlockers),
+      priorityScore: (firm.staleUsers * 2) + firm.incompleteUsers + (firmBlockers.length * 2),
+      missingSetup: {
+        hasActiveClient: activeClientFirmSet.has(firmKey),
+        hasCategory: categoryFirmSet.has(firmKey),
+        hasPrimaryWorkbasket: workbasketFirmSet.has(firmKey),
+      },
+      recentRefreshAt: firm.recentRefreshAt || null,
+      nextAction: allBlockers.size ? 'Needs follow-up' : 'Healthy',
+    };
+  })
+    .filter((firm) => !normalizedBlockerType || firm.blockers.includes(normalizedBlockerType))
+    .sort((a, b) => b.priorityScore - a.priorityScore)
+    .slice(0, normalizedLimit);
+
+  const topIncompleteStepsByRole = Array.from(stepFrequencyByRole.entries())
+    .map(([key, usersCount]) => {
+      const [roleValue, stepId] = key.split(':');
+      return { role: roleValue, stepId, users: usersCount };
+    })
+    .sort((a, b) => b.users - a.users)
+    .slice(0, 15);
+
+  const topBlockers = Array.from(blockerCountMap.entries())
+    .map(([type, count]) => ({ type, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8);
+
+  return {
+    timeframe: {
+      sinceDays: Number(sinceDays),
+      staleAfterDays: Number(staleAfterDays),
+      generatedAt: now,
+    },
+    filtersApplied: {
+      role: normalizedRoleFilter,
+      blockerType: normalizedBlockerType,
+      completionState,
+      firmId: resolvedFirmId ? String(resolvedFirmId) : null,
+    },
+    totals: {
+      firms: firms.length,
+      users: users.length,
+      staleUsers: users.filter((entry) => entry.isStale).length,
+      needsFollowUpFirms: firms.filter((firm) => firm.nextAction === 'Needs follow-up').length,
+    },
+    topBlockers,
+    firms,
+    users: users.slice(0, normalizedLimit),
+    topIncompleteStepsByRole,
+    recentEvents,
+  };
+};
+
 module.exports = {
   createEvent,
   recordProgressIfChanged,
   getOnboardingInsights,
+  getOnboardingInsightDetails,
 };
