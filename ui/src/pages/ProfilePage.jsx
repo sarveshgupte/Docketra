@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layout } from '../components/common/Layout';
+import { PlatformShell } from '../components/platform/PlatformShell';
 import { Card } from '../components/common/Card';
 import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
@@ -23,14 +23,14 @@ export const ProfilePage = () => {
 
   if (loading) {
     return (
-      <Layout>
+      <PlatformShell moduleLabel="Workspace" title="Profile" subtitle="View your account and role context.">
         <Loading message="Loading profile..." />
-      </Layout>
+      </PlatformShell>
     );
   }
 
   return (
-    <Layout>
+    <PlatformShell moduleLabel="Workspace" title="Profile" subtitle="View your account and role context.">
       <div className="min-h-screen w-full flex-1 bg-gray-50">
         <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 space-y-8">
           <div className="space-y-2">
@@ -57,6 +57,6 @@ export const ProfilePage = () => {
           </section>
         </div>
       </div>
-    </Layout>
+    </PlatformShell>
   );
 };

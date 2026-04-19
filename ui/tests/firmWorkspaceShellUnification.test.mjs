@@ -5,9 +5,16 @@ import path from 'node:path';
 const read = (relativePath) => fs.readFileSync(path.resolve(process.cwd(), relativePath), 'utf8');
 
 const migratedPages = [
+  { file: 'src/pages/CasesPage.jsx', expectedTitle: 'title="Dockets"' },
+  { file: 'src/pages/CaseDetailPage.jsx', expectedTitle: 'title={formatDocketId(caseInfo?.caseId || caseId)}' },
   { file: 'src/pages/ClientsPage.jsx', expectedTitle: 'title="Clients"' },
   { file: 'src/pages/ClientWorkspacePage.jsx', expectedTitle: 'title={client?.businessName || "Client workspace"}' },
   { file: 'src/pages/AdminPage.jsx', expectedTitle: 'title={isWorkSettingsContext ? "Category Management" : "Team"}' },
+  { file: 'src/pages/HierarchyPage.jsx', expectedTitle: 'title="Hierarchy management"' },
+  { file: 'src/pages/ProfilePage.jsx', expectedTitle: 'title="Profile"' },
+  { file: 'src/pages/ComplianceCalendarPage.jsx', expectedTitle: 'title="Compliance calendar"' },
+  { file: 'src/pages/crm/LeadsPage.jsx', expectedTitle: 'title="CRM leads"' },
+  { file: 'src/pages/crm/CrmClientDetailPage.jsx', expectedTitle: 'title={clientName}' },
   { file: 'src/pages/FirmSettingsPage.jsx', expectedTitle: 'title="Firm settings"' },
   { file: 'src/pages/WorkSettingsPage.jsx', expectedTitle: 'title="Work settings"' },
   { file: 'src/pages/StorageSettingsPage.jsx', expectedTitle: 'title="Storage settings"' },
@@ -28,7 +35,7 @@ assert.ok(clientsSource.includes('title="Could not load clients"'), 'Clients pag
 assert.ok(clientsSource.includes('actionLabel="Retry"'), 'Clients page should provide retry guidance for error recovery');
 
 const routesSource = read('src/routes/ProtectedRoutes.jsx');
-for (const route of ['path="clients"', 'path="admin"', 'path="settings/firm"', 'path="settings/work"', 'path="storage-settings"', 'path="ai-settings"']) {
+for (const route of ['path="clients"', 'path="dockets"', 'path="dockets/:caseId"', 'path="profile"', 'path="compliance-calendar"', 'path="crm/leads"', 'path="crm/clients/:crmClientId"', 'path="admin/hierarchy"', 'path="admin"', 'path="settings/firm"', 'path="settings/work"', 'path="storage-settings"', 'path="ai-settings"']) {
   assert.ok(routesSource.includes(route), `Protected routes should keep migrated route registered: ${route}`);
 }
 

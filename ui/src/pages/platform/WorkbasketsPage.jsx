@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { PlatformShell } from '../../components/platform/PlatformShell';
 import { worklistApi } from '../../api/worklist.api';
 import { caseApi } from '../../api/case.api';
@@ -16,6 +16,7 @@ import {
 
 export const PlatformWorkbasketsPage = () => {
   const { firmSlug } = useParams();
+  const location = useLocation();
   const [rows, setRows] = useState([]);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -95,7 +96,7 @@ export const PlatformWorkbasketsPage = () => {
           rows={filteredRows.map((r) => (
             <tr key={r.caseInternalId || r._id}>
               <td>
-                <Link className="action-primary" to={ROUTES.CASE_DETAIL(firmSlug, r.caseInternalId)}>
+                <Link className="action-primary" to={`${ROUTES.CASE_DETAIL(firmSlug, r.caseInternalId)}?returnTo=${encodeURIComponent(`${location.pathname}${location.search || ''}`)}`}>
                   {formatDocketLabel(r)}
                 </Link>
               </td>
