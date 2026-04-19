@@ -398,13 +398,20 @@ const completeTutorial = async (req, res) => {
     );
 
     if (req.user?.firmId) {
-      await onboardingAnalyticsService.createEvent({
-        user: req.user,
-        firmId: req.user.firmId,
-        role: req.user?.role || role,
-        eventName: status === 'skipped' ? 'welcome_tutorial_skipped' : 'welcome_tutorial_completed',
-        metadata: { stepIndex: safeStepIndex },
-      });
+      try {
+        await onboardingAnalyticsService.createEvent({
+          user: req.user,
+          firmId: req.user.firmId,
+          role: req.user?.role || role,
+          eventName: status === 'skipped' ? 'welcome_tutorial_skipped' : 'welcome_tutorial_completed',
+          metadata: { stepIndex: safeStepIndex },
+        });
+      } catch (analyticsError) {
+        log.warn('[UserController] Non-blocking tutorial analytics write failed', {
+          userId: req.user?._id?.toString?.() || String(req.user?._id || ''),
+          message: analyticsError?.message,
+        });
+      }
     }
 
     return res.json({ success: true });

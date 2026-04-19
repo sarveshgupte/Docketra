@@ -90,12 +90,18 @@ const getOnboardingProgress = async (req, res) => {
       firmId: req.user.firmId,
       user: req.user,
     });
-    await onboardingAnalyticsService.recordProgressIfChanged({
-      user: req.user,
-      firmId: req.user.firmId,
-      role: progress.role,
-      steps: progress.steps,
-    });
+    try {
+      await onboardingAnalyticsService.recordProgressIfChanged({
+        user: req.user,
+        firmId: req.user.firmId,
+        role: progress.role,
+        steps: progress.steps,
+      });
+    } catch (analyticsError) {
+      log.warn('[Dashboard] Non-blocking onboarding analytics write failed', {
+        message: analyticsError?.message,
+      });
+    }
 
     return res.json({ success: true, data: progress });
   } catch (error) {

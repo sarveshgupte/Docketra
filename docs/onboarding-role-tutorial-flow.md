@@ -167,6 +167,7 @@ Docketra now records lightweight onboarding lifecycle telemetry and exposes supe
 - User model includes `onboardingTelemetry` snapshot fields (`lastCompletedStepIds`, `lastIncompleteStepIds`, counters, refreshedAt).
 - `GET /api/dashboard/onboarding-progress` now records analytics only on meaningful transitions.
 - If progress state is unchanged, no extra onboarding progress or step completion event is written.
+- Analytics recording is best-effort and non-blocking; onboarding progress response still returns success if telemetry persistence fails.
 
 ### Visibility surface
 - New superadmin endpoint: `GET /api/superadmin/onboarding-insights`.

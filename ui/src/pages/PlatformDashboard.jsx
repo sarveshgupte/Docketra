@@ -16,6 +16,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { useToast } from '../hooks/useToast';
 import { productUpdatesService } from '../services/productUpdatesService';
 import { APP_VERSION } from '../utils/constants';
+import { loadPlatformOverviewData } from '../utils/platformOverviewLoader';
 
 export const PlatformDashboard = () => {
   const MAX_UPDATE_BULLETS = 5;
@@ -74,10 +75,10 @@ export const PlatformDashboard = () => {
     isFetchingRef.current = true;
     try {
       setLoading(true);
-      const [response, onboardingResponse] = await Promise.all([
-        superadminService.getPlatformStats(),
-        superadminService.getOnboardingInsights({ sinceDays: 30, staleAfterDays: 3, recentLimit: 10 }),
-      ]);
+      const { statsResponse: response, onboardingResponse } = await loadPlatformOverviewData({
+        getPlatformStats: superadminService.getPlatformStats,
+        getOnboardingInsights: superadminService.getOnboardingInsights,
+      });
       
       // HTTP 304 means cached data is still valid - keep current state
       if (response?.status !== 304) {
@@ -85,6 +86,8 @@ export const PlatformDashboard = () => {
           setStats(normalizeStats(response.data));
           if (onboardingResponse?.success) {
             setOnboardingInsights(onboardingResponse.data);
+          } else {
+            setOnboardingInsights(null);
           }
         } else if (response?.degraded) {
           setStats(normalizeStats(response.data));
