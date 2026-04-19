@@ -96,10 +96,10 @@ docketra/
  5. **Run the application**
     ```bash
     # API process
-    node server.js
+    npm start
 
     # Worker process (run separately in another shell/container)
-    node worker.js
+    npm run start:worker
     ```
 
  6. **Verify the server is running**
