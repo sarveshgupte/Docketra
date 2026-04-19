@@ -277,3 +277,69 @@ This pass focused on high-impact reliability and trust issues in authentication 
 - [ ] Confirm background refresh keeps prior data visible and does not reset page framing.
 - [ ] Confirm no raw broken error strips remain on hardened pages.
 - [ ] Confirm async wording is consistent (“Refresh”, “Retry”, “Updating…”, “Saving…”).
+
+## Core docket workflow unification pass (April 2026)
+
+### Routes audited
+
+- `/app/firm/:firmSlug/dockets`
+- `/app/firm/:firmSlug/dockets/:caseId`
+- `/app/firm/:firmSlug/worklist`
+- `/app/firm/:firmSlug/global-worklist`
+- `/app/firm/:firmSlug/qc-queue`
+- `/app/firm/:firmSlug/clients/:clientId`
+- `/app/firm/:firmSlug/admin/hierarchy`
+- `/app/firm/:firmSlug/profile`
+- `/app/firm/:firmSlug/compliance-calendar`
+- `/app/firm/:firmSlug/crm/leads`
+- `/app/firm/:firmSlug/crm/clients/:crmClientId`
+
+### Root workflow inconsistencies found
+
+1. Dockets list/detail still used `Layout`, while adjacent queue pages used `PlatformShell`, causing shell jumps.
+2. Docket detail had no explicit queue/list return affordance, creating context loss after drill-in.
+3. Worklist/workbasket/QC queue detail links did not preserve return path context.
+4. Profile/Hierarchy/Compliance/CRM Leads/CRM Client Detail remained on legacy shell framing.
+5. `PlatformShell` account pill lacked visible logout affordance, unlike legacy `Layout`.
+
+### Docket-flow issues fixed
+
+- Migrated dockets list and docket detail wrappers to `PlatformShell` with consistent module/title/subtitle composition.
+- Added explicit “Back to queue” action in docket detail with safe return-path resolution:
+  - prefer navigation state `returnTo`
+  - fallback to query `returnTo`
+  - final fallback to canonical dockets list.
+- Added `returnTo` context when opening docket detail from:
+  - dockets list
+  - my worklist
+  - global workbaskets
+  - QC queue.
+- Preserved previous/next navigation behavior in detail using existing source-list state.
+
+### Remaining legacy route migration pass
+
+Migrated to `PlatformShell` in this pass:
+
+- `/admin/hierarchy`
+- `/profile`
+- `/compliance-calendar`
+- `/crm/leads`
+- `/crm/clients/:crmClientId`
+
+### Shell/page rules applied
+
+- Unified shell: all routes above now use `PlatformShell` (no legacy `Layout` wrapper).
+- Standardized page identity via `moduleLabel`, `title`, and `subtitle`.
+- Preserved existing permission and business logic behavior; migration focused on shell/frame continuity.
+- Browser title remains managed through shell-level title contract.
+
+### Logout discoverability fix
+
+- Added an explicit account menu in `PlatformShell` top-right with visible chevron affordance.
+- Added keyboard-accessible menu semantics (`aria-haspopup="menu"`, `aria-expanded`, Escape/blur close behavior).
+- Added explicit **Sign out** action that calls AuthContext logout, preserves firm slug for routing hint, and redirects to firm login with success messaging state.
+
+### Follow-up items
+
+- Docket-detail inner section composition is still dense and should be progressively split into dedicated sub-sections in a future refactor pass.
+- Add end-to-end browser assertions for post-logout back-button protection once E2E harness is in place.

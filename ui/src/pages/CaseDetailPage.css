@@ -23,6 +23,10 @@
   background: #f9fafb;
 }
 
+.case-detail__return {
+  padding: 16px 24px 0;
+}
+
 .case-detail__nav-btn {
   min-width: 140px;
 }

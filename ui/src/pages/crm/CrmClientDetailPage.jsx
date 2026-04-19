@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Layout } from '../../components/common/Layout';
+import { PlatformShell } from '../../components/platform/PlatformShell';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
@@ -133,9 +133,9 @@ export const CrmClientDetailPage = () => {
 
   if (loading) {
     return (
-      <Layout>
+      <PlatformShell moduleLabel="Operations" title="CRM client detail" subtitle="Loading client account, deals, invoices, and docket context.">
         <Loading message="Loading client profile..." />
-      </Layout>
+      </PlatformShell>
     );
   }
 
@@ -143,7 +143,7 @@ export const CrmClientDetailPage = () => {
   const clientTags = Array.isArray(client?.tags) ? client.tags : [];
 
   return (
-    <Layout>
+    <PlatformShell moduleLabel="Operations" title={clientName} subtitle="Unified CRM client detail with linked commercial and docket context.">
       {/* Header */}
       <div style={{ marginBottom: '1.5rem' }}>
         <Button
@@ -422,6 +422,6 @@ export const CrmClientDetailPage = () => {
           </div>
         </form>
       </Modal>
-    </Layout>
+    </PlatformShell>
   );
 };

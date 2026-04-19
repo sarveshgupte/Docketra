@@ -217,3 +217,17 @@
 
 - Made onboarding-progress dashboard fetch non-blocking so checklist API issues do not degrade core dashboard load.
 - Separated checklist CTA navigation from completion state for detected steps to preserve backend-driven truth.
+
+## April 2026: Core docket workflow unification + firm-route migration
+
+- Unified the core docket workflow shell by moving both **Dockets list** and **Docket detail** to the shared `PlatformShell` experience.
+- Added list/queue continuity safeguards so docket drill-ins preserve return context from Dockets, My Worklist, Workbaskets, and QC Queue.
+- Added an explicit **Back to queue** affordance in docket detail to reduce "start over" navigation.
+- Migrated remaining high-traffic legacy firm pages into the same workspace shell:
+  - Hierarchy
+  - Profile
+  - Compliance Calendar
+  - CRM Leads
+  - CRM Client Detail
+- Fixed missing logout discoverability in workspace shell by adding a clear account dropdown with visible **Sign out** action and firm-login redirect behavior.
+- Result: daily operations now feel materially more consistent from queues/lists into detail views and adjacent firm workflows.
