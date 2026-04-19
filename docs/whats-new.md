@@ -1,13 +1,12 @@
 # What's New
 
-## April 2026: CRM ↔ Task Manager cross-linking and workflow handoff enhancements
+## April 2026: Superadmin onboarding insights firm drill-down + deep links
 
-- Upgraded **Client Workspace** into a stronger client-centered operations hub with clear identity/contact/status context, docket rollups (total/open/filed), recent docket visibility, and direct execution actions.
-- Improved client-specific docket scanning with a more useful table (Docket ID, title, category/subcategory, status, assignee, updated date, and direct open action).
-- Added a smoother **Create Docket from Client** path by supporting prefilled client context in create flow (`?clientId=...`) while keeping the existing create flow backward compatible.
-- Strengthened **Docket Detail** client context by making linked client names clearly navigable, adding a compact client summary section, and surfacing related dockets for the same client directly in Overview.
-- Added clearer cross-navigation cues so users can move **client → docket → client** without losing orientation (including “Open Client Workspace” and “Back to Client” handoff actions where context is available).
-- Preserved internal-work behavior by clearly labeling internal/default-client context and avoiding misleading client navigation on internal dockets.
+- Added a new firm-specific onboarding drill-down route at `/app/superadmin/onboarding-insights/:firmId` so superadmin can jump directly into one tenant's onboarding state.
+- Upgraded onboarding triage actions with `Open onboarding detail` per firm and blocker-aware deep links from blocker summary rows.
+- Added firm-focused operational paneling for setup signals (active client, category, workbasket), stale/incomplete counts, top blockers, recent events, and users needing follow-up.
+- Added recommended next-action guidance (for example: first active client, category/workbasket setup, manager queue assignment, unassigned dockets, tutorial skipped but incomplete).
+- Preserved filter context (`blockerType`, `completionState`, `staleAfterDays`, `sinceDays`) in query params for faster investigation loops.
 
 ## April 2026: Task Manager queue experience unified across Workbasket, My Worklist, QC Workbasket, and All Dockets
 
@@ -252,3 +251,25 @@
 - Added Platform Dashboard onboarding observability cards for key blockers: firms without active clients, missing category/workbasket setup, managers without queues, and users without assigned dockets.
 - Added derived alert metric for users who skipped tutorial but remain onboarding-incomplete after a threshold.
 - Hardened observability paths so telemetry/insight failures are non-blocking and cannot break tutorial completion, onboarding progress responses, or platform stats rendering.
+
+## April 2026: Command center productivity polish (search + keyboard + quick actions)
+
+- Added a stronger workspace command center in `PlatformShell` with clearer global scope language for dockets, clients, module destinations, and quick commands.
+- Upgraded command palette behavior with grouped results, keyboard navigation (`↑/↓`, `Enter`, `Escape`), and no-results guidance.
+- Added role-aware quick commands for core operations: New Docket, Dashboard, Task Manager, CRM, CMS, Workbasket, My Worklist, QC Queue, Clients, Reports, Settings, Open Profile, and Sign out.
+- Introduced a practical keyboard-first shortcut model:
+  - `Cmd/Ctrl + K` open command center
+  - `/` quick focus/open (outside typing contexts)
+  - `Alt + Shift + N/D/T/W/B/Q` for high-frequency jumps
+- Added strict “do-not-trigger-while-typing” shortcut guards across workspace keyboard handlers.
+- Standardized quick-action wording across landing pages to reduce mental translation cost (`New`, `Go to`, and consistent queue naming conventions).
+- Kept logout reachable in both account menu and command flow (`Sign out` command).
+
+## April 2026: Command center reliability hardening follow-up
+
+- Consolidated global keyboard shortcut ownership into `PlatformShell` to avoid split-listener conflicts.
+- Added shared editable-target detection so `Cmd/Ctrl + K`, `/`, and `Alt + Shift + ...` do not fire while typing in inputs/textareas/selects/contenteditable controls.
+- Hardened command-center async search with stale-response guards and open-state/query checks to prevent out-of-order result overwrites.
+- Ensured command center state resets cleanly on close and route change (query, active selection, search status, and record result groups).
+- Added explicit record-search fallback guidance while keeping module/quick commands operational even if record lookup fails.
+- Added command-center test script wiring in `ui/package.json` (`test:command-center`).
