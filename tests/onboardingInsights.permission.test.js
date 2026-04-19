@@ -8,6 +8,10 @@ assert.ok(
   superadminRoutes.includes("router.get('/onboarding-insights', authorize(SuperAdminPolicy.canViewPlatformStats), getOnboardingInsights);"),
   'Onboarding insights endpoint must be superadmin-authorized',
 );
+assert.ok(
+  superadminRoutes.includes("router.get('/onboarding-insights/details', authorize(SuperAdminPolicy.canViewPlatformStats), getOnboardingInsightDetails);"),
+  'Onboarding insight details endpoint must be superadmin-authorized',
+);
 
 const dashboardRoutes = fs.readFileSync(path.resolve(__dirname, '../src/routes/dashboard.routes.js'), 'utf8');
 assert.ok(

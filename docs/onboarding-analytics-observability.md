@@ -3,13 +3,22 @@
 ## Scope
 This feature adds lightweight onboarding telemetry and superadmin-facing friction insight using Docketra's real onboarding progress model.
 
+## April 2026 refinement: actionable superadmin triage
+- Added dedicated superadmin triage page: `/app/superadmin/onboarding-insights`.
+- Added detail API: `GET /api/superadmin/onboarding-insights/details`.
+- Added filter controls for timeframe, role, blocker type, completion state, and stale threshold.
+- Added firm-level and user-level operational rows with actionable next-step pathways (for example, open firms management / firm controls).
+- Preserved existing summary API (`GET /api/superadmin/onboarding-insights`) for backward compatibility and lightweight dashboard rendering.
+
 ## Architecture
 - **Event persistence**: `src/models/OnboardingEvent.model.js` (`onboarding_events` collection)
 - **Analytics logic**: `src/services/onboardingAnalytics.service.js`
 - **Transition trigger**: `src/controllers/dashboard.controller.js` on `GET /api/dashboard/onboarding-progress`
 - **UI event ingestion**: `POST /api/dashboard/onboarding-event`
 - **Superadmin summary API**: `GET /api/superadmin/onboarding-insights`
+- **Superadmin detail API**: `GET /api/superadmin/onboarding-insights/details`
 - **Visibility UI**: `ui/src/pages/PlatformDashboard.jsx`
+- **Actionable triage UI**: `ui/src/pages/SuperadminOnboardingInsightsPage.jsx`
 
 ## Event contract
 Each event stores only operationally necessary fields:
