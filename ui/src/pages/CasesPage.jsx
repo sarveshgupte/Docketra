@@ -6,11 +6,8 @@ import { TableSkeleton } from '../components/common/Skeleton';
 import { PageHeader } from '../components/layout/PageHeader';
 import { SectionCard } from '../components/layout/SectionCard';
 import { DataTable } from '../components/common/DataTable';
-import { StatusBadge } from '../components/layout/StatusBadge';
 import { EmptyState } from '../components/ui/EmptyState';
-import { SlaBadge } from '../components/common/SlaBadge';
 import { AuditTimelineDrawer } from '../components/common/AuditTimelineDrawer';
-import { PriorityPill } from '../components/common/PriorityPill';
 import { ActionConfirmModal } from '../components/common/ActionConfirmModal';
 import { SmartViewIndicator } from '../components/common/SmartViewIndicator';
 import { useAuth } from '../hooks/useAuth';
@@ -29,13 +26,20 @@ import { buildCsv } from '../utils/csv';
 import { UX_COPY } from '../constants/uxCopy';
 import { useQueryState } from '../hooks/useQueryState';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
-import { AuditMetadata } from '../components/ui/AuditMetadata';
 import { useFirm } from '../hooks/useFirm';
 import { ROUTES } from '../constants/routes';
 import { WORK_TYPE, getWorkTypeLabel, normalizeWorkTypeFilter } from '../utils/workType';
 import { RouteErrorFallback } from '../components/routing/RouteErrorFallback';
 import { useActiveDocket } from '../hooks/useActiveDocket';
 import { DocketBulkUploadModal } from '../components/bulk/DocketBulkUploadModal';
+import {
+  CasesFiltersCard,
+  CasesHeaderActions,
+  CasesPerformancePanel,
+  CasesSavedViews,
+  CasesSlaSummaryBar,
+} from '../components/cases/CasesPageSections';
+import { useCasesTableColumns } from '../components/cases/useCasesTableColumns';
 import './CasesPage.css';
 
 // Keep date-sort keys explicit so additional date columns can be added safely.
@@ -644,183 +648,24 @@ export const CasesPage = () => {
     },
   });
 
-  const columns = useMemo(() => [
-    ...(enableBulkActions ? [{
-      key: '__select',
-      header: (
-        <input
-          type="checkbox"
-          aria-label="Select all"
-          checked={allVisibleSelected}
-          onChange={() => handleSelectAll(sortedCases)}
-        />
-      ),
-      render: (row) => {
-        const isLocked = Boolean(row.lockStatus?.isLocked);
-        return (
-          <input
-            type="checkbox"
-            aria-label={`Select ${formatCaseName(row.caseName)}`}
-            checked={selectedCaseIds.has(row.caseId)}
-            disabled={isLocked}
-            onChange={() => handleToggleSelectCase(row.caseId, isLocked)}
-            onClick={(e) => e.stopPropagation()}
-          />
-        );
-      },
-      align: 'center',
-      headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'w-[1px] whitespace-nowrap',
-    }] : []),
-    {
-      key: 'caseName',
-      header: 'Docket Name',
-      sortable: true,
-      headerClassName: 'w-full max-w-lg',
-      cellClassName: 'w-full max-w-lg',
-      render: (row) => {
-        const slaStatus = getSlaBadgeStatus(row);
-        const breached = slaStatus === 'RED';
-        const warning = slaStatus === 'YELLOW';
-        const recency = getRecencyLabel(row.updatedAt);
-        return (
-          <div className={`cases-page__name-cell${breached ? ' cases-page__name-cell--sla-breach' : ''}${warning ? ' cases-page__name-cell--sla-warning' : ''}`}>
-            <span className="cases-page__case-title">{formatCaseName(row.caseName)}</span>
-            <AuditMetadata
-              className="cases-page__case-meta"
-              actor={row.updatedByName || row.updatedByXID || row.assignedToName || 'System'}
-              timestamp={row.updatedAt}
-            />
-            {recency && (
-              <span className="cases-page__recency" aria-label={recency}>{recency}</span>
-            )}
-            <div className="cases-page__pill-row">
-              <PriorityPill caseRecord={row} inactivityThresholdHours={firmConfig.escalationInactivityThresholdHours} />
-              <SlaBadge status={slaStatus} className="cases-page__sla-badge" />
-            </div>
-          </div>
-        );
-      },
-    },
-    {
-      key: 'category',
-      header: 'Category',
-      sortable: true,
-      headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'w-[1px] whitespace-nowrap',
-    },
-    {
-      key: 'workType',
-      header: 'Work Type',
-      sortable: true,
-      headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'w-[1px] whitespace-nowrap',
-      render: (row) => (
-        <StatusBadge status={row.isInternal ? 'INTERNAL' : 'CLIENT'} />
-      ),
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      sortable: true,
-      align: 'center',
-      headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'w-[1px] whitespace-nowrap',
-      render: (row) => <StatusBadge status={row.status} />,
-    },
-    {
-      key: 'assignedToName',
-      header: 'Assigned To',
-      sortable: true,
-      headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'w-[1px] whitespace-nowrap',
-      render: (row) => row.assignedToName || row.assignedToXID || row.assignedTo || 'Unassigned',
-    },
-    {
-      key: 'updatedAt',
-      header: 'Last Updated',
-      align: 'right',
-      tabular: true,
-      sortable: true,
-      headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'w-[1px] whitespace-nowrap',
-      render: (row) => formatDateTime(row.updatedAt),
-    },
-    {
-      key: 'rowActions',
-      header: '',
-      align: 'right',
-      headerClassName: 'w-[1px] whitespace-nowrap',
-      cellClassName: 'w-[1px] whitespace-nowrap',
-      render: (row) => {
-        const isLocked = Boolean(row.lockStatus?.isLocked);
-        // Non-admin users can assign to themselves for any unlocked case.
-        // If already assigned, handleAssignToMe will prompt confirmation before proceeding.
-        const canAssign = !isAdmin && !isLocked;
-        return (
-          <details className="cases-page__row-menu" onClick={(event) => event.stopPropagation()}>
-            <summary aria-label={`Row actions for ${formatCaseName(row.caseName)}`}>⋯</summary>
-            <div className="cases-page__row-menu-panel">
-              {(row.assignedToName || row.assignedToXID || row.assignedTo) && (
-                <div className="cases-page__row-menu-info">
-                  Assigned: {row.assignedToName || row.assignedToXID || row.assignedTo}
-                </div>
-              )}
-              {isLocked && (
-                <div className="cases-page__row-menu-info cases-page__row-menu-info--locked">
-                  🔒 Docket Locked
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  const index = sortedCases.findIndex((c) => c.caseId === row.caseId);
-                  const returnTo = `${location.pathname}${location.search || ''}`;
-                  navigate(`${ROUTES.CASE_DETAIL(firmSlug, row.caseId)}?returnTo=${encodeURIComponent(returnTo)}`, {
-                    state: { sourceList: sortedCases.map((c) => c.caseId), index, returnTo },
-                  });
-                }}
-              >
-                View Docket
-              </button>
-              {canAssign && (
-                <button
-                  type="button"
-                  disabled={assigningCaseId === row.caseId}
-                  onClick={(event) => handleAssignToMe(row, event)}
-                >
-                  {assigningCaseId === row.caseId ? 'Assigning…' : UX_COPY.actions.ASSIGN_TO_ME}
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setTimelineCaseId(row.caseId);
-                }}
-              >
-                View Timeline
-              </button>
-            </div>
-          </details>
-        );
-      },
-    },
-  ], [
+  const columns = useCasesTableColumns({
     enableBulkActions,
     allVisibleSelected,
     handleSelectAll,
     sortedCases,
     selectedCaseIds,
     handleToggleSelectCase,
-    firmConfig.escalationInactivityThresholdHours,
+    getSlaBadgeStatus,
+    getRecencyLabel,
+    inactivityThresholdHours: firmConfig.escalationInactivityThresholdHours,
     isAdmin,
     assigningCaseId,
     navigate,
     firmSlug,
     handleAssignToMe,
-  ]);
+    location,
+    setTimelineCaseId,
+  });
 
   if (!isValidFirm) {
     return <RouteErrorFallback title="Invalid firm" message="Unable to load dockets without a valid firm context." backTo={ROUTES.SUPERADMIN_LOGIN} />;
@@ -841,79 +686,30 @@ export const CasesPage = () => {
           title="All Dockets"
           subtitle="Search and track all visible dockets with consistent filters and operational scanning."
           meta="Task Manager / All Dockets"
-          actions={
-            <div className="cases-page__header-actions">
-              {/* Task 4: High workload indicator */}
-              {isHighWorkload && (
-                <span className="cases-page__workload-warning" role="status" aria-live="polite">
-                  ⚠ High workload ({openAssignedCount} open)
-                </span>
-              )}
-              <Button variant="outline" onClick={handleExportCsv}>{UX_COPY.actions.EXPORT_CASES}</Button>
-              {!isPartner && enablePerformanceView && (
-                <Button variant="outline" onClick={() => setShowPerformance((v) => !v)}>
-                  {showPerformance ? 'Hide Performance View' : 'Show Performance View'}
-                </Button>
-              )}
-              {isAdmin && <Button variant="outline" onClick={() => setShowDocketBulkUpload(true)}>Bulk Upload</Button>}
-              {isAdmin && <Button variant="primary" onClick={handleCreateCase}>Create Docket</Button>}
-            </div>
-          }
+          actions={(
+            <CasesHeaderActions
+              isHighWorkload={isHighWorkload}
+              openAssignedCount={openAssignedCount}
+              onExportCsv={handleExportCsv}
+              isPartner={isPartner}
+              enablePerformanceView={enablePerformanceView}
+              showPerformance={showPerformance}
+              onTogglePerformance={() => setShowPerformance((v) => !v)}
+              isAdmin={isAdmin}
+              onOpenBulkUpload={() => setShowDocketBulkUpload(true)}
+              onCreateDocket={handleCreateCase}
+              exportLabel="Export Dockets"
+            />
+          )}
         />
 
-        {/* Task 1: SLA Summary Bar — hidden for Partner (Task 8) */}
-        {!isPartner && (
-          <div className="cases-page__sla-bar cases-page__control-section" role="region" aria-label="SLA Summary">
-            <button
-              type="button"
-              className="cases-page__sla-tile"
-              onClick={() => { setStatusFilter('ALL'); setActiveView('MY_OPEN'); }}
-              aria-label={`Total open dockets: ${slaSummary.totalOpen}`}
-            >
-              <span className="cases-page__sla-tile-value">{slaSummary.totalOpen}</span>
-              <span className="cases-page__sla-tile-label">Open Dockets</span>
-            </button>
-            <button
-              type="button"
-              className="cases-page__sla-tile cases-page__sla-tile--warning"
-              onClick={() => { setStatusFilter('ALL'); setActiveView('DUE_TODAY'); }}
-              aria-label={`Due today: ${slaSummary.dueToday}`}
-            >
-              <span className="cases-page__sla-tile-value">{slaSummary.dueToday}</span>
-              <span className="cases-page__sla-tile-label">Due Today</span>
-            </button>
-            <button
-              type="button"
-              className={`cases-page__sla-tile${slaSummary.overdue > 0 ? ' cases-page__sla-tile--danger' : ''}`}
-              onClick={() => { setStatusFilter('ALL'); setActiveView('OVERDUE'); }}
-              aria-label={`Overdue: ${slaSummary.overdue}`}
-            >
-              <span className="cases-page__sla-tile-value">{slaSummary.overdue}</span>
-              <span className="cases-page__sla-tile-label">Overdue</span>
-            </button>
-            {/* Task 1: Escalated metric */}
-            {enableEscalationView && (
-              <button
-                type="button"
-                className={`cases-page__sla-tile${slaSummary.escalated > 0 ? ' cases-page__sla-tile--escalated' : ''}`}
-                onClick={() => { setStatusFilter('ALL'); setActiveView('ESCALATED'); }}
-                aria-label={`Escalated: ${slaSummary.escalated}`}
-              >
-                <span className="cases-page__sla-tile-value">{slaSummary.escalated}</span>
-                <span className="cases-page__sla-tile-label">Escalated</span>
-              </button>
-            )}
-            <button
-              type="button"
-              className="cases-page__sla-tile"
-              onClick={() => { setStatusFilter('ALL'); setActiveView('FILED'); }}
-              aria-label={`Filed last 7 days: ${slaSummary.filedLast7}`}
-            >
-              <span className="cases-page__sla-tile-value">{slaSummary.filedLast7}</span>
-              <span className="cases-page__sla-tile-label">Filed (7d)</span>
-            </button>
-          </div>
-        )}
+        <CasesSlaSummaryBar
+          isPartner={isPartner}
+          slaSummary={slaSummary}
+          setStatusFilter={setStatusFilter}
+          setActiveView={setActiveView}
+          enableEscalationView={enableEscalationView}
+        />
 
         {/* Task 6: Search & Quick Jump */}
         <div className="cases-page__search-bar cases-page__control-section">
@@ -928,59 +724,16 @@ export const CasesPage = () => {
         </div>
 
         {/* Saved Views (user presets) */}
-        <div className="cases-page__saved-views cases-page__control-section">
-          <div className="cases-page__saved-views-row">
-            <button
-              type="button"
-              className="cases-page__saved-views-toggle"
-              onClick={() => setSavedViewsOpen((v) => !v)}
-              aria-expanded={savedViewsOpen}
-            >
-              ⭐ Saved Views {savedViews.length > 0 && `(${savedViews.length})`}
-            </button>
-            {savedViews.map((sv) => (
-              <span key={sv.name} className="cases-page__saved-view-chip">
-                <button
-                  type="button"
-                  className="cases-page__saved-view-load"
-                  onClick={() => handleLoadSavedView(sv.name)}
-                  title={`Load: ${sv.name}`}
-                >
-                  {sv.name}
-                </button>
-                <button
-                  type="button"
-                  className="cases-page__saved-view-remove"
-                  onClick={() => removeView(sv.name)}
-                  aria-label={`Remove saved view: ${sv.name}`}
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-          </div>
-          {savedViewsOpen && (
-            <div className="cases-page__saved-views-form">
-              <input
-                type="text"
-                className="cases-page__saved-views-input"
-                placeholder="Preset name (e.g. My Overdue Dockets)"
-                value={saveViewName}
-                onChange={(e) => setSaveViewName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSaveCurrentView()}
-                maxLength={60}
-                aria-label="Saved view name"
-              />
-              <Button
-                variant="outline"
-                onClick={handleSaveCurrentView}
-                disabled={!saveViewName.trim()}
-              >
-                Save current filters
-              </Button>
-            </div>
-          )}
-        </div>
+        <CasesSavedViews
+          savedViews={savedViews}
+          savedViewsOpen={savedViewsOpen}
+          setSavedViewsOpen={setSavedViewsOpen}
+          handleLoadSavedView={handleLoadSavedView}
+          removeView={removeView}
+          saveViewName={saveViewName}
+          setSaveViewName={setSaveViewName}
+          handleSaveCurrentView={handleSaveCurrentView}
+        />
 
         {/* Preset operational view tabs */}
         <div className="cases-page__views cases-page__control-section" role="tablist" aria-label="Docket views">
@@ -1026,94 +779,23 @@ export const CasesPage = () => {
           </div>
         )}
 
-        <SectionCard className="cases-page__filters cases-page__control-section" title="Filters" subtitle="Narrow down the docket list by workflow status.">
-          {statusFilter === CASE_STATUS.QC_PENDING && qcWorkbaskets.length > 1 && (
-            <>
-              <label className="cases-page__filter-label">QC Workbasket</label>
-              <div className="cases-page__views" role="tablist" aria-label="QC workbasket selector">
-                {qcWorkbaskets.map((workbasket) => (
-                  <button
-                    key={workbasket.id}
-                    role="tab"
-                    aria-selected={activeWorkbasketId === workbasket.id}
-                    className={`cases-page__view-tab${activeWorkbasketId === workbasket.id ? ' cases-page__view-tab--active' : ''}`}
-                    onClick={() => setActiveWorkbasketId(workbasket.id)}
-                    type="button"
-                  >
-                    {workbasket.name}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-          <label className="cases-page__filter-label" htmlFor="status-filter">Status</label>
-          <select
-            id="status-filter"
-            className="cases-page__filter-select"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="ALL">All statuses</option>
-            <option value={CASE_STATUS.OPEN}>{UX_COPY.statusLabels.OPEN}</option>
-            <option value={CASE_STATUS.PENDING}>{UX_COPY.statusLabels.PENDING}</option>
-            <option value={CASE_STATUS.QC_PENDING}>QC Pending</option>
-            <option value={CASE_STATUS.RESOLVED}>{UX_COPY.statusLabels.RESOLVED}</option>
-            <option value={CASE_STATUS.FILED}>{UX_COPY.statusLabels.FILED}</option>
-          </select>
-          <label className="cases-page__filter-label" htmlFor="work-type-filter">Work Type</label>
-          <select
-            id="work-type-filter"
-            className="cases-page__filter-select"
-            value={workTypeFilter}
-            onChange={(event) => setWorkTypeFilter(event.target.value)}
-          >
-            <option value="ALL">All Work</option>
-            <option value="client">Client Work</option>
-            <option value="internal">Internal Work</option>
-          </select>
-        </SectionCard>
+        <CasesFiltersCard
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          workTypeFilter={workTypeFilter}
+          setWorkTypeFilter={setWorkTypeFilter}
+          qcWorkbaskets={qcWorkbaskets}
+          activeWorkbasketId={activeWorkbasketId}
+          setActiveWorkbasketId={setActiveWorkbasketId}
+        />
 
         {/* Task 7: Performance Insight — hidden for Partner (Task 8) */}
-        {!isPartner && enablePerformanceView && (
-          <>
-            {showPerformance && (
-              <div className="cases-page__perf-panel" role="region" aria-label="Performance metrics">
-                {performanceMetrics ? (
-                  <>
-                    {performanceMetrics.avgDays !== null && (
-                      <div className="cases-page__perf-metric">
-                        <span className="cases-page__perf-metric-label">Avg. Time to Resolve</span>
-                        <span className="cases-page__perf-metric-value">{performanceMetrics.avgDays} days</span>
-                      </div>
-                    )}
-                    {performanceMetrics.pctBreach !== null && (
-                      <div className="cases-page__perf-metric">
-                        <span className="cases-page__perf-metric-label">Dockets Breaching SLA</span>
-                        <span className={`cases-page__perf-metric-value${performanceMetrics.pctBreach > 20 ? ' cases-page__perf-metric-value--danger' : ''}`}>
-                          {performanceMetrics.pctBreach}%
-                        </span>
-                      </div>
-                    )}
-                    {performanceMetrics.pctWithinSla !== null && (
-                      <div className="cases-page__perf-metric">
-                        <span className="cases-page__perf-metric-label">Resolved Within SLA</span>
-                        <span className="cases-page__perf-metric-value cases-page__perf-metric-value--good">
-                          {performanceMetrics.pctWithinSla}%
-                        </span>
-                      </div>
-                    )}
-                    <div className="cases-page__perf-metric">
-                      <span className="cases-page__perf-metric-label">Total Resolved/Filed</span>
-                      <span className="cases-page__perf-metric-value">{performanceMetrics.resolvedCount}</span>
-                    </div>
-                  </>
-                ) : (
-                  <p className="cases-page__perf-empty">No resolved dockets to compute metrics.</p>
-                )}
-              </div>
-            )}
-          </>
-        )}
+        <CasesPerformancePanel
+          isPartner={isPartner}
+          enablePerformanceView={enablePerformanceView}
+          showPerformance={showPerformance}
+          performanceMetrics={performanceMetrics}
+        />
 
         {error ? (
           <div className="cases-page__error" role="alert">
@@ -1160,7 +842,7 @@ export const CasesPage = () => {
                         : isAdmin ? 'No dockets yet' : 'No assigned dockets'
                 }
                 description={isAdmin ? 'Use Create Docket to start managing firm workflows.' : 'You do not have assigned dockets right now.'}
-                actionLabel={isAdmin ? UX_COPY.actions.CREATE_CASE : undefined}
+                actionLabel={isAdmin ? 'Create Docket' : undefined}
                 onAction={isAdmin ? () => navigate(ROUTES.CREATE_CASE(firmSlug)) : undefined}
               />
             }
