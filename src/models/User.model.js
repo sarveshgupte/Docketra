@@ -258,6 +258,15 @@ const userSchema = new mongoose.Schema({
     default: null,
   },
 
+  // Role-aware onboarding state (completion + replay analytics)
+  tutorialState: {
+    seenAt: { type: Date, default: null },
+    skippedAt: { type: Date, default: null },
+    completedAt: { type: Date, default: null },
+    role: { type: String, default: null },
+    lastStepIndex: { type: Number, default: 0 },
+  },
+
   /**
    * Authentication providers
    * LOCAL: password-based auth (authoritative for SuperAdmin and platform users)

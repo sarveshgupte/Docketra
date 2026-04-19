@@ -8,22 +8,19 @@ This document defines the first-login onboarding experience and the product-upda
 ### Trigger
 - Returned by `GET /api/auth/profile` as `data.welcomeTutorial`.
 - Modal shows when `welcomeTutorial.show === true`.
-- Current backend rule: `show = !user.tutorialCompletedAt`.
+- Current backend rule: show only when tutorial status is `pending` (no `tutorialCompletedAt`, no `tutorialState.completedAt`, and no `tutorialState.skippedAt`).
 
 ### Audience variants
-- **Admin tutorial**
-  1. Review dashboard and invite team members.
-  2. Configure categories/work types/firm settings.
-  3. Create first docket workflow and assign ownership.
-- **User tutorial**
-  1. Open worklist and review assigned dockets.
-  2. Update docket status + add comments.
-  3. Use search/filters to find work quickly.
+- **Superadmin tutorial**: platform oversight + tenant support controls.
+- **Primary Admin tutorial**: full workspace setup ownership and hierarchy rollout.
+- **Admin tutorial**: operational setup + docket flow support under primary admin.
+- **Manager tutorial**: queue throughput, QC handoff, and allocation control.
+- **User tutorial**: assigned execution workflow and clean handoff discipline.
 
 ### Completion behavior
-- Frontend calls `PATCH /api/users/tutorial/complete`.
-- Backend sets `tutorialCompletedAt`.
-- Tutorial modal is not shown again for that user.
+- Frontend calls `PATCH /api/users/tutorial/complete` with optional `status`, `role`, and `stepIndex`.
+- Backend updates `tutorialState` (seen/skipped/completed metadata) and keeps `tutorialCompletedAt` for backward compatibility.
+- Tutorial remains dismissible and replayable manually from dashboard Help & Onboarding. Manual replay does not call persistence APIs.
 
 ## 2) What's New / Product Updates system
 

@@ -7,7 +7,7 @@
  * Section 3: Recent Cases worklist panel
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { Layout } from '../components/common/Layout';
@@ -21,6 +21,7 @@ import { PriorityPill } from '../components/common/PriorityPill';
 import { DataTable } from '../components/common/DataTable';
 
 import { SetupChecklist } from '../components/onboarding/SetupChecklist';
+import { buildRoleTourSteps, normalizeOnboardingRole } from '../components/onboarding/roleOnboardingContent';
 import { MetricCard } from '../components/reports/MetricCard';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
@@ -50,120 +51,48 @@ const resolveSupportEmail = () => {
 
 const DEFAULT_SUPPORT_EMAIL = resolveSupportEmail();
 
-const ADMIN_PRODUCT_TOUR_STEPS = [
-  {
-    title: 'Add your first client',
-    description: 'Start by creating a client profile so every docket, document, and workflow has a clear reporting entity.',
-  },
-  {
-    title: 'Invite your team members',
-    description: 'Go to Admin and add users so work can be delegated, reviewed, and tracked across partners and employees.',
-  },
-  {
-    title: 'Configure docket categories',
-    description: 'Create categories and subcategories to standardize your docket types and simplify filtering and reporting.',
-  },
-  {
-    title: 'Create your first docket',
-    description: 'Set up a docket with owner, due date, and priority so the team can begin execution immediately.',
-  },
-  {
-    title: 'Use Workbasket for firm-level triage',
-    description: 'Review newly created and unassigned dockets in Workbasket to plan ownership and execution order.',
-  },
-  {
-    title: 'Pull docket from Workbasket to Worklist',
-    description: 'Assign ownership and move dockets into Worklist for day-to-day action, status updates, and completion.',
-  },
-];
-
-const PRIMARY_ADMIN_PRODUCT_TOUR_STEPS = [
-  {
-    title: 'Confirm firm profile and compliance defaults',
-    description: 'Open Firm Settings and finalize your firm profile, operating defaults, and foundational compliance configuration.',
-  },
-  {
-    title: 'Connect storage provider',
-    description: 'Set up your storage integration so every docket attachment and evidence upload is backed by your chosen provider.',
-  },
-  {
-    title: 'Define categories and work types',
-    description: 'Configure category taxonomy and work types to standardize intake, routing, and reporting across practice areas.',
-  },
-  {
-    title: 'Invite admins and execution team',
-    description: 'Invite your first users and establish hierarchy so ownership, approvals, and accountability are clear from day one.',
-  },
-  {
-    title: 'Create and assign your first docket',
-    description: 'Create a real docket and assign ownership to validate your full workflow from intake to execution.',
-  },
-];
-
-const USER_PRODUCT_TOUR_STEPS = [
-  {
-    title: 'Review your assigned worklist',
-    description: 'Open My WL to see the dockets assigned to you and identify what needs action first.',
-  },
-  {
-    title: 'Create your first docket',
-    description: 'Create a docket with due date, category, and priority so your team can begin tracking execution.',
-  },
-  {
-    title: 'Update docket progress',
-    description: 'Move dockets through statuses (open, in review, resolved) to keep timelines and compliance signals accurate.',
-  },
-  {
-    title: 'Use Workbasket for intake visibility',
-    description: 'Monitor incoming or unassigned dockets in Workbasket and coordinate with admins for ownership assignment.',
-  },
-  {
-    title: 'Track risk and due dates daily',
-    description: 'Use the KPI cards on this dashboard every day to prioritize overdue and upcoming compliance items.',
-  },
-];
-
-const ADMIN_FAQ_ITEMS = [
-  {
-    question: 'What should a PRIMARY ADMIN do immediately after first login?',
-    answer: 'Complete firm profile, connect storage, configure categories/work types, invite team members, and create the first assigned docket.',
-  },
-  {
-    question: 'How do I set up Docketra for a new firm?',
-    answer: 'Follow this sequence: add a client, invite users, define categories, create your first docket, then route it via Workbasket to Worklist.',
-  },
-  {
-    question: 'What is the difference between Workbasket and Worklist?',
-    answer: 'Workbasket is the firm-level intake and triage area; Worklist is the execution queue where assigned users do actual task follow-up.',
-  },
-  {
-    question: 'Why should we use categories before creating many dockets?',
-    answer: 'Categories ensure consistent naming, smarter filtering, cleaner reporting, and lower operational confusion as docket volume grows.',
-  },
-  {
-    question: 'Can we replay the guided tour later?',
-    answer: 'Yes. Use the "Replay product tour" button in the Help & Onboarding section on this dashboard anytime.',
-  },
-];
-
-const USER_FAQ_ITEMS = [
-  {
-    question: 'How should a USER start using Docketra on first login?',
-    answer: 'Start with My WL, review assigned dockets, and prioritize overdue or near-due items for immediate follow-up.',
-  },
-  {
-    question: 'Can a USER add clients or invite team members?',
-    answer: 'No. USER accounts focus on docket execution. Client and team setup actions are available to admin roles only.',
-  },
-  {
-    question: 'What should I do if a docket is unassigned?',
-    answer: 'Use Workbasket to identify the docket and coordinate with your admin for assignment before execution.',
-  },
-  {
-    question: 'Can I replay this tutorial later?',
-    answer: 'Yes. Use the "Replay product tour" button in the Help & Onboarding section at any time.',
-  },
-];
+const FAQ_BY_ROLE = {
+  primary_admin: [
+    {
+      question: 'What should I complete first as Primary Admin?',
+      answer: 'Complete firm settings, team hierarchy, category/workbasket mapping, then run one real docket flow end-to-end.',
+    },
+    {
+      question: 'Where can I replay onboarding later?',
+      answer: 'Use “Replay product tour” for route-by-route guidance or “View welcome tutorial again” for role fundamentals.',
+    },
+  ],
+  admin: [
+    {
+      question: 'How is my role different from Primary Admin?',
+      answer: 'Admins execute and stabilize operations; Primary Admin owns full workspace governance and firm-level setup ownership.',
+    },
+    {
+      question: 'What should I check daily?',
+      answer: 'Prioritize unassigned, overdue, and pending dockets, then confirm the right owners and workbasket routing.',
+    },
+  ],
+  manager: [
+    {
+      question: 'What is my daily manager routine?',
+      answer: 'Review queue backlog, rebalance assignments, and run QC checks before final closure.',
+    },
+    {
+      question: 'What if no work is assigned yet?',
+      answer: 'Coordinate with admin/primary admin to confirm your workbasket links and user-to-workbasket mapping.',
+    },
+  ],
+  user: [
+    {
+      question: 'Where should I begin each day?',
+      answer: 'Start in My Worklist, focus on overdue or due-soon dockets, and keep status + comments current.',
+    },
+    {
+      question: 'Can I change team/client setup?',
+      answer: 'No. Team structure and workspace setup are handled by manager/admin roles.',
+    },
+  ],
+};
 
 const getCaseTimestamp = (caseItem) => {
   const timestamp = new Date(caseItem?.updatedAt || caseItem?.createdAt || '').getTime();
@@ -203,12 +132,11 @@ export const DashboardPage = () => {
   const navigate = useNavigate();
   const { firmSlug } = useParams();
   const normalizedRole = String(user?.role || '').trim().toUpperCase();
-  const isPrimaryAdmin = normalizedRole === 'PRIMARY_ADMIN' || Boolean(user?.isPrimaryAdmin);
+  const onboardingRole = normalizeOnboardingRole(normalizedRole);
+  const isPrimaryAdmin = onboardingRole === 'primary_admin' || Boolean(user?.isPrimaryAdmin);
   const { openDocket } = useActiveDocket();
-  const productTourSteps = isAdmin
-    ? (isPrimaryAdmin ? PRIMARY_ADMIN_PRODUCT_TOUR_STEPS : ADMIN_PRODUCT_TOUR_STEPS)
-    : USER_PRODUCT_TOUR_STEPS;
-  const faqItems = isAdmin ? ADMIN_FAQ_ITEMS : USER_FAQ_ITEMS;
+  const productTourSteps = useMemo(() => buildRoleTourSteps(onboardingRole, firmSlug), [onboardingRole, firmSlug]);
+  const faqItems = FAQ_BY_ROLE[onboardingRole] || FAQ_BY_ROLE.user;
   
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -263,12 +191,7 @@ export const DashboardPage = () => {
   useEffect(() => {
     if (loading || !user?.xID || !firmSlug) return;
 
-    const hasRoleBasedTutorial = Boolean(
-      user?.welcomeTutorial?.role
-      || (Array.isArray(user?.welcomeTutorial?.steps) && user.welcomeTutorial.steps.length > 0),
-    );
-
-    if (hasRoleBasedTutorial) {
+    if (user?.welcomeTutorial?.show) {
       setShowProductTour(false);
       return;
     }
@@ -291,6 +214,24 @@ export const DashboardPage = () => {
       document.body.style.overflow = originalOverflow;
     };
   }, [showProductTour, showBookmarkPrompt]);
+
+  useEffect(() => {
+    if (!showProductTour) return undefined;
+
+    const currentStep = productTourSteps[tourStepIndex];
+    const selector = currentStep?.selector;
+    if (!selector) return undefined;
+
+    const target = document.querySelector(selector);
+    if (!(target instanceof HTMLElement)) return undefined;
+
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.classList.add('ring-2', 'ring-blue-400', 'ring-offset-2');
+
+    return () => {
+      target.classList.remove('ring-2', 'ring-blue-400', 'ring-offset-2');
+    };
+  }, [showProductTour, tourStepIndex, productTourSteps]);
 
   const handleDismissBookmarkPrompt = () => {
     setShowBookmarkPrompt(false);
@@ -320,6 +261,17 @@ export const DashboardPage = () => {
   const handleReplayTour = () => {
     setTourStepIndex(0);
     setShowProductTour(true);
+  };
+
+  const handleReplayWelcomeTutorial = () => {
+    window.dispatchEvent(new CustomEvent('docketra:replay-welcome-tutorial'));
+  };
+
+  const handleTourOpenRoute = () => {
+    const route = productTourSteps[tourStepIndex]?.route;
+    if (route) {
+      navigate(route);
+    }
   };
 
   const loadDashboardData = async () => {
@@ -552,6 +504,31 @@ export const DashboardPage = () => {
 
     if (stepId === 'configure-categories') {
       navigate(safeRoute(ROUTES.WORK_SETTINGS(firmSlug)));
+      return;
+    }
+
+    if (stepId === 'review-workbaskets' || stepId === 'review-pending') {
+      navigate(safeRoute(ROUTES.WORKLIST(firmSlug)));
+      return;
+    }
+
+    if (stepId === 'qc-handoff') {
+      navigate(safeRoute(ROUTES.QC_QUEUE(firmSlug)));
+      return;
+    }
+
+    if (stepId === 'review-assigned') {
+      navigate(safeRoute(ROUTES.MY_WORKLIST(firmSlug)));
+      return;
+    }
+
+    if (stepId === 'update-status') {
+      navigate(safeRoute(ROUTES.CASES(firmSlug)));
+      return;
+    }
+
+    if (stepId === 'check-calendar') {
+      navigate(safeRoute(ROUTES.COMPLIANCE_CALENDAR(firmSlug)));
     }
   };
 
@@ -650,12 +627,12 @@ export const DashboardPage = () => {
             )}
           />
 
-          {isAdmin && user?.xID && firmSlug ? (
+          {user?.xID && firmSlug ? (
             <SetupChecklist
               storageKey={`setupChecklist:${user.xID}:${firmSlug}`}
               recentCases={recentCases}
               onAction={handleChecklistAction}
-              mode={isPrimaryAdmin ? 'primary-admin' : 'admin'}
+              mode={onboardingRole === 'primary_admin' ? 'primary-admin' : (onboardingRole === 'admin' ? 'admin' : (onboardingRole === 'manager' ? 'manager' : 'user'))}
             />
           ) : null}
 
@@ -677,7 +654,7 @@ export const DashboardPage = () => {
             </div>
           ) : null}
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4" data-tour-anchor="kpi-strip">
             {kpiCards.map((card) => (
               <MetricCard
                 key={card.title}
@@ -714,7 +691,7 @@ export const DashboardPage = () => {
             </Card>
           </section>
 
-          <section className="space-y-4">
+          <section className="space-y-4" data-tour-anchor="recent-dockets">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <h2 className="text-lg font-semibold text-gray-900 tracking-tight">Recent Dockets</h2>
             </div>
@@ -740,8 +717,10 @@ export const DashboardPage = () => {
                     title={isAdmin ? 'No dockets yet' : 'No assigned dockets yet'}
                     description={
                       isAdmin
-                        ? 'Create your first docket to start tracking deadlines, ownership, and firm workflow health.'
-                        : 'Once work is assigned to you, your recently updated dockets will appear here for quick follow-up.'
+                        ? 'No docket records yet. Start by adding one real docket so dashboards, workbaskets, and compliance tracking become actionable.'
+                        : (onboardingRole === 'manager'
+                          ? 'No dockets are visible yet. Your admin may still be assigning you to workbaskets or queue ownership.'
+                          : 'No assigned dockets yet. Your manager/admin may still be finalizing assignment and workbasket access.')
                     }
                     actionLabel={isAdmin ? UX_COPY.actions.CREATE_CASE : undefined}
                     onAction={isAdmin ? () => navigate(safeRoute(ROUTES.CREATE_CASE(firmSlug))) : undefined}
@@ -802,9 +781,14 @@ export const DashboardPage = () => {
           <section className="space-y-4">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="text-lg font-semibold text-gray-900 tracking-tight">Help & Onboarding</h2>
-              <Button variant="outline" onClick={handleReplayTour}>
-                Replay product tour
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" onClick={handleReplayTour}>
+                  Replay product tour
+                </Button>
+                <Button variant="secondary" onClick={handleReplayWelcomeTutorial}>
+                  View welcome tutorial again
+                </Button>
+              </div>
             </div>
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <Card className="space-y-4">
@@ -838,7 +822,7 @@ export const DashboardPage = () => {
       </div>
 
       {showProductTour ? createPortal(
-        <div className="fixed inset-0 z-[1001] flex min-h-screen items-center justify-center bg-slate-950/50 px-4">
+        <div className="fixed inset-0 z-[1001] flex min-h-screen items-center justify-center bg-slate-950/50 px-4" role="dialog" aria-modal="true" aria-label="Product tour">
           <div className="w-full max-w-2xl rounded-xl border border-gray-200 bg-white p-6 shadow-2xl">
             <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">
               Product tour · Step {tourStepIndex + 1} of {productTourSteps.length}
@@ -849,6 +833,11 @@ export const DashboardPage = () => {
             <p className="mt-3 text-sm text-gray-600">
               {productTourSteps[tourStepIndex]?.description}
             </p>
+            {productTourSteps[tourStepIndex]?.route ? (
+              <Button variant="outline" onClick={handleTourOpenRoute} className="mt-4">
+                {productTourSteps[tourStepIndex]?.actionLabel || "Open location"}
+              </Button>
+            ) : null}
 
             <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
               <button className="btn btn-secondary" onClick={markTourCompleted}>

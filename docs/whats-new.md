@@ -1,5 +1,16 @@
 # What's New
 
+
+## April 2026: Role-specific onboarding tutorial upgrade
+
+- Replaced the first-login single-page tutorial with a multi-step guided flow that explains: what Docketra is, role scope, allowed actions, where to begin, and a role-based quick-start checklist.
+- Added role-specific onboarding content for **Superadmin**, **Primary Admin**, **Admin**, **Manager**, and **User**.
+- Upgraded dashboard product tour to include role-aware, practical steps with direct navigation actions to relevant pages.
+- Added manual relaunch controls in Help & Onboarding for both tour replay and welcome tutorial replay.
+- Improved first-session empty-state guidance to reduce confusion when dockets or assignments are not yet configured.
+- Added richer onboarding persistence (`tutorialState`) while retaining backward compatibility with `tutorialCompletedAt`.
+- Added implementation documentation: `docs/onboarding-role-tutorial-flow.md`.
+
 ## April 2026: Legal & Compliance Pages
 
 - Added a new **Terms of Use** page with clear coverage for service scope, account responsibilities, acceptable use, data ownership, early-stage availability, liability limits, terms updates, and contact details.

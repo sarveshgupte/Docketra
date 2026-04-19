@@ -1,82 +1,68 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { useAuth } from '../../hooks/useAuth';
 import { productUpdatesService } from '../../services/productUpdatesService';
+import { getRoleOnboardingContent, normalizeOnboardingRole } from './roleOnboardingContent';
+import { resolveTutorialPersistenceIntent } from './firstLoginFlowPersistence';
 
-const FEATURE_HIGHLIGHTS = [
-  'Dashboard KPI cards for overdue, upcoming, and approval-risk visibility.',
-  'Workbasket and Worklist flow for firm-level triage and execution ownership.',
-  'Docket lifecycle tracking with status, priority, assignee, and due date controls.',
-  'Centralized notifications and audit-friendly activity visibility.',
-];
-
-const ROLE_SETUP_GUIDANCE = {
-  primary_admin: {
-    label: 'Primary Admin firm setup (after tutorial)',
-    steps: [
-      'Complete Firm Settings (firm profile + compliance defaults).',
-      'Configure Storage Settings so document uploads are production-ready.',
-      'Define categories and work types in Work Settings.',
-      'Invite admins and team members, then validate hierarchy setup.',
-      'Create and assign the first docket to verify the end-to-end workflow.',
-    ],
-  },
-  admin: {
-    label: 'Admin setup sequence (after tutorial)',
-    steps: [
-      'Review assigned hierarchy and operating permissions in Admin.',
-      'Invite/activate your execution users and align ownership model.',
-      'Create the first working dockets and assign owners.',
-      'Use Workbasket for intake triage and move actionable items to Worklist.',
-      'Review dashboard KPIs daily for overdue and approval-risk items.',
-    ],
-  },
-  user: {
-    label: 'User first-week workflow (after tutorial)',
-    steps: [
-      'Start each day from My Worklist and prioritize overdue items.',
-      'Update docket status and add comments for transparent progress.',
-      'Raise unassigned or blocked dockets with your reporting admin.',
-      'Use filters/search to quickly locate due-soon and high-priority dockets.',
-      'Keep profile/contact details current for alerts and audit trails.',
-    ],
-  },
-};
+const FLOW_STEPS = ['welcome', 'what-is', 'role', 'can-do', 'start-here', 'quick-checklist'];
 
 export const FirstLoginExperience = () => {
   const { user, isAuthResolved, isAuthenticated, updateUser } = useAuth();
   const [submitting, setSubmitting] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [stepIndex, setStepIndex] = useState(0);
 
-  const showTutorial = Boolean(user?.welcomeTutorial?.show);
+  const serverShowTutorial = Boolean(user?.welcomeTutorial?.show);
+  const showTutorial = Boolean(serverShowTutorial || manualOpen);
+  const isFirstLoginTutorial = Boolean(serverShowTutorial);
   const showWhatsNew = !showTutorial && Boolean(user?.whatsNew?.show && user?.whatsNew?.update?._id);
+  const roleKey = normalizeOnboardingRole(user?.welcomeTutorial?.role || user?.role);
+  const content = useMemo(() => getRoleOnboardingContent(roleKey), [roleKey]);
 
-  const tutorialSteps = useMemo(
-    () => (Array.isArray(user?.welcomeTutorial?.steps) ? user.welcomeTutorial.steps : []),
-    [user?.welcomeTutorial?.steps],
-  );
-  const tutorialRole = String(user?.welcomeTutorial?.role || 'user').trim().toLowerCase();
-  const setupGuidance = ROLE_SETUP_GUIDANCE[tutorialRole] || ROLE_SETUP_GUIDANCE.user;
-  const tutorialTitleSuffix = tutorialRole === 'primary_admin'
-    ? ' — Primary Admin setup'
-    : (tutorialRole === 'admin' ? ' — Admin setup' : '');
+  useEffect(() => {
+    const handleReplay = () => {
+      setStepIndex(0);
+      setManualOpen(true);
+    };
+
+    window.addEventListener('docketra:replay-welcome-tutorial', handleReplay);
+    return () => window.removeEventListener('docketra:replay-welcome-tutorial', handleReplay);
+  }, []);
 
   if (!isAuthResolved || !isAuthenticated || !user) {
     return null;
   }
 
-  const handleCompleteTutorial = async () => {
+  const completeTutorial = async (status = 'completed') => {
+    const persistencePayload = resolveTutorialPersistenceIntent({
+      serverShowTutorial,
+      action: status,
+      role: roleKey,
+      stepIndex,
+    });
+
+    if (!persistencePayload) {
+      setStepIndex(0);
+      setManualOpen(false);
+      return;
+    }
+
     try {
       setSubmitting(true);
-      await productUpdatesService.completeTutorial();
+      await productUpdatesService.completeTutorial(persistencePayload);
       updateUser({
         welcomeTutorial: {
           ...(user?.welcomeTutorial || {}),
           show: false,
+          status,
         },
       });
     } finally {
       setSubmitting(false);
+      setStepIndex(0);
+      setManualOpen(false);
     }
   };
 
@@ -99,40 +85,101 @@ export const FirstLoginExperience = () => {
     }
   };
 
+  const stepKey = FLOW_STEPS[stepIndex];
+  const totalSteps = FLOW_STEPS.length;
+  const isLastStep = stepIndex === totalSteps - 1;
+
   return (
     <>
       <Modal
         isOpen={showTutorial}
-        onClose={handleCompleteTutorial}
-        title={`Welcome to Docketra${tutorialTitleSuffix}`}
+        onClose={() => completeTutorial(isFirstLoginTutorial ? 'skipped' : 'completed')}
+        title={`Welcome to Docketra · ${content.roleLabel}`}
+        size="lg"
         actions={(
-          <Button variant="primary" onClick={handleCompleteTutorial} disabled={submitting}>
-            Start using Docketra
-          </Button>
+          <>
+            <Button variant="secondary" onClick={() => completeTutorial('skipped')} disabled={submitting}>
+              Skip for now
+            </Button>
+            <Button variant="outline" onClick={() => setStepIndex((current) => Math.max(0, current - 1))} disabled={submitting || stepIndex === 0}>
+              Back
+            </Button>
+            <Button variant="primary" onClick={() => (isLastStep ? completeTutorial('completed') : setStepIndex((current) => current + 1))} disabled={submitting}>
+              {isLastStep ? 'Finish tutorial' : 'Next'}
+            </Button>
+          </>
         )}
       >
-        <p className="mb-4 text-sm text-gray-600">Here is a quick tutorial to help you get value from your first session.</p>
-        <ol className="list-decimal space-y-2 pl-5 text-sm text-gray-700">
-          {tutorialSteps.map((step, index) => (
-            <li key={`${index}-${step}`}>{step}</li>
-          ))}
-        </ol>
-        <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Key product features</p>
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
-            {FEATURE_HIGHLIGHTS.map((feature) => (
-              <li key={feature}>{feature}</li>
-            ))}
-          </ul>
-        </div>
-        <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">{setupGuidance.label}</p>
-          <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-blue-900">
-            {setupGuidance.steps.map((step) => (
-              <li key={step}>{step}</li>
-            ))}
-          </ol>
-        </div>
+        <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-blue-700" aria-live="polite">
+          Step {stepIndex + 1} of {totalSteps}
+        </p>
+
+        {stepKey === 'welcome' ? (
+          <div className="space-y-3 text-sm text-gray-700">
+            <p>Welcome to your Docketra workspace.</p>
+            <p>
+              This short tutorial explains what Docketra is, your role, what actions you can take,
+              and how to start your first productive day without guesswork.
+            </p>
+          </div>
+        ) : null}
+
+        {stepKey === 'what-is' ? (
+          <div className="space-y-3 text-sm text-gray-700">
+            <h3 className="text-base font-semibold text-gray-900">What is Docketra?</h3>
+            <p>{content.whatIsDocketra}</p>
+            <details className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+              <summary className="cursor-pointer text-sm font-medium text-slate-800">Learn more about core terms</summary>
+              <p className="mt-2 text-sm text-slate-700">
+                Dockets are your core work records. Clients, categories, and sub-categories structure the work.
+                Workbaskets and QC workbaskets route operational handoffs. Audit history captures who changed what and when.
+              </p>
+            </details>
+          </div>
+        ) : null}
+
+        {stepKey === 'role' ? (
+          <div className="space-y-3 text-sm text-gray-700">
+            <h3 className="text-base font-semibold text-gray-900">What is your role here?</h3>
+            <p>{content.roleSummary}</p>
+          </div>
+        ) : null}
+
+        {stepKey === 'can-do' ? (
+          <div className="space-y-3">
+            <h3 className="text-base font-semibold text-gray-900">What can you do?</h3>
+            <ul className="list-disc space-y-2 pl-5 text-sm text-gray-700">
+              {content.canDo.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {stepKey === 'start-here' ? (
+          <div className="space-y-3">
+            <h3 className="text-base font-semibold text-gray-900">Where should you start?</h3>
+            <ol className="list-decimal space-y-2 pl-5 text-sm text-gray-700">
+              {content.startHere.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ol>
+          </div>
+        ) : null}
+
+        {stepKey === 'quick-checklist' ? (
+          <div className="space-y-3">
+            <h3 className="text-base font-semibold text-gray-900">Quick start checklist</h3>
+            <ul className="space-y-2 text-sm text-gray-700">
+              {content.checklist.map((item) => (
+                <li key={item} className="flex items-start gap-2">
+                  <span aria-hidden="true" className="mt-0.5 text-green-600">✓</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </Modal>
 
       <Modal

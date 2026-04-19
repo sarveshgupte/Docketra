@@ -372,9 +372,28 @@ const completeTutorial = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Authentication required' });
     }
 
+    const status = String(req.body?.status || 'completed').trim().toLowerCase();
+    const role = typeof req.body?.role === 'string' ? req.body.role.trim().toLowerCase() : null;
+    const stepIndexRaw = Number(req.body?.stepIndex);
+    const safeStepIndex = Number.isFinite(stepIndexRaw) && stepIndexRaw >= 0 ? Math.floor(stepIndexRaw) : 0;
+    const now = new Date();
+
+    const updatePatch = {
+      'tutorialState.seenAt': now,
+      'tutorialState.role': role || null,
+      'tutorialState.lastStepIndex': safeStepIndex,
+    };
+
+    if (status === 'skipped') {
+      updatePatch['tutorialState.skippedAt'] = now;
+    } else {
+      updatePatch.tutorialCompletedAt = now;
+      updatePatch['tutorialState.completedAt'] = now;
+    }
+
     await User.updateOne(
       { _id: userId },
-      { $set: { tutorialCompletedAt: new Date() } },
+      { $set: updatePatch },
     );
 
     return res.json({ success: true });

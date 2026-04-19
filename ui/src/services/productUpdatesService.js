@@ -21,8 +21,8 @@ export const productUpdatesService = {
     return response.data;
   },
 
-  completeTutorial: async () => {
-    const response = await api.patch('/users/tutorial/complete', {});
+  completeTutorial: async (payload = {}) => {
+    const response = await api.patch('/users/tutorial/complete', payload);
     return response.data;
   },
 };
