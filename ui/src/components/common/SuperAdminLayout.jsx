@@ -35,7 +35,7 @@ export const SuperAdminLayout = ({ children }) => {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <aside className="w-72 shrink-0 border-r border-gray-200 bg-white px-6 py-8">
+      <aside aria-label="SuperAdmin Sidebar" className="w-72 shrink-0 border-r border-gray-200 bg-white px-6 py-8">
         <div className="flex items-start justify-between gap-3 md:block">
           <div>
             <h1 className="text-lg font-semibold text-gray-900">Docketra Platform</h1>
@@ -43,19 +43,19 @@ export const SuperAdminLayout = ({ children }) => {
               SuperAdmin
             </span>
           </div>
-          <button onClick={handleLogout} className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 md:hidden">
+          <button aria-label="Logout" onClick={handleLogout} className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2 md:hidden">
             Logout
           </button>
         </div>
 
-        <nav className="mt-6 flex gap-2 md:flex-col">
-          <Link to="/app/superadmin" className={navItemClass(isActive('/app/superadmin'))}>
+        <nav aria-label="SuperAdmin Navigation" className="mt-6 flex gap-2 md:flex-col">
+          <Link to="/app/superadmin" className={navItemClass(isActive('/app/superadmin'))} aria-current={isActive('/app/superadmin') ? 'page' : undefined}>
             Platform Dashboard
           </Link>
-          <Link to="/app/superadmin/firms" className={navItemClass(isActive('/app/superadmin/firms'))}>
+          <Link to="/app/superadmin/firms" className={navItemClass(isActive('/app/superadmin/firms'))} aria-current={isActive('/app/superadmin/firms') ? 'page' : undefined}>
             Firms
           </Link>
-          <Link to="/app/superadmin/onboarding-insights" className={navItemClass(isActive('/app/superadmin/onboarding-insights'))}>
+          <Link to="/app/superadmin/onboarding-insights" className={navItemClass(isActive('/app/superadmin/onboarding-insights'))} aria-current={isActive('/app/superadmin/onboarding-insights') ? 'page' : undefined}>
             Onboarding Insights
           </Link>
         </nav>
@@ -63,13 +63,13 @@ export const SuperAdminLayout = ({ children }) => {
         <div className="mt-6 hidden rounded-xl border border-gray-200 bg-gray-50 p-3 md:block">
           <p className="truncate text-xs text-gray-500">Signed in as</p>
           <p className="truncate text-sm font-medium text-gray-900">{user?.xID || user?.email || 'SuperAdmin'}</p>
-          <button onClick={handleLogout} className="mt-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-white">
+          <button aria-label="Logout from SuperAdmin" onClick={handleLogout} className="mt-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2">
             Logout
           </button>
         </div>
       </aside>
 
-      <main className="flex-1 min-w-0 overflow-x-hidden p-4 md:p-8">{children}</main>
+      <main aria-label="Main Content" className="flex-1 min-w-0 overflow-x-hidden p-4 md:p-8">{children}</main>
     </div>
   );
 };
