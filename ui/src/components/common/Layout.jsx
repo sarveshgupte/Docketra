@@ -125,7 +125,7 @@ const IconPlus = () => (
 
 const sortNotificationsLatestFirst = (items) => [...items].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-export const Layout = ({ children }) => {
+export const Layout = ({ children, title, subtitle }) => {
   const { user, logout } = useAuth();
   const { openDocket } = useActiveDocket();
   const { showSuccess } = useToast();
@@ -158,13 +158,15 @@ export const Layout = ({ children }) => {
   const currentFirmSlug = firmSlug || user?.firmSlug;
   const normalizedRole = String(user?.role || '').trim().toUpperCase();
   const hasAdminAccess = user?.role === USER_ROLES.ADMIN || normalizedRole === 'PRIMARY_ADMIN';
+  const hasQcQueueAccess = hasAdminAccess || (Array.isArray(user?.qcWorkbaskets) && user.qcWorkbaskets.length > 0);
   const workbasketNavLabel = 'Workbasket';
   const firmLabel = user?.firm?.name || currentFirmSlug || 'Firm';
   const firmType = typeof user?.firm?.type === 'string' ? user.firm.type.trim() : '';
   const configuredFirmLogoUrl = getFirmConfig()?.brandLogoUrl || '';
   const firmLogoUrl = typeof configuredFirmLogoUrl === 'string' ? configuredFirmLogoUrl.trim() : '';
   const firmInitials = firmLabel.substring(0, 2).toUpperCase();
-  const reportsRoute = `${ROUTES.FIRM_BASE(currentFirmSlug)}/admin/reports`;
+  const reportsRoute = ROUTES.ADMIN_REPORTS(currentFirmSlug);
+  const settingsRoute = ROUTES.SETTINGS(currentFirmSlug);
 
   const handleSidebarToggle = () => {
     if (isMobileViewport) {
@@ -526,11 +528,11 @@ export const Layout = ({ children }) => {
           badge: countsFetched ? worklistCount : 'loading',
         },
         {
-          to: `${ROUTES.CASES(currentFirmSlug)}?status=QC_PENDING`,
+          to: ROUTES.QC_QUEUE(currentFirmSlug),
           label: 'QC Queue',
           icon: <IconAdmin />,
-          active: location.pathname === ROUTES.CASES(currentFirmSlug) && new URLSearchParams(location.search).get('status') === 'QC_PENDING',
-          hidden: !hasAdminAccess && !(Array.isArray(user?.qcWorkbaskets) && user.qcWorkbaskets.length > 0),
+          active: isActivePrefix(ROUTES.QC_QUEUE(currentFirmSlug)),
+          hidden: !hasQcQueueAccess,
         },
         {
           to: `${ROUTES.CASES(currentFirmSlug)}?status=RESOLVED`,
@@ -552,7 +554,7 @@ export const Layout = ({ children }) => {
       defaultOpen: true,
       hidden: !hasAdminAccess,
       items: [
-        { to: ROUTES.FIRM_BASE(currentFirmSlug) + '/clients', label: 'Clients', icon: <IconCases />, active: isActivePrefix(ROUTES.FIRM_BASE(currentFirmSlug) + '/clients') },
+        { to: ROUTES.CLIENTS(currentFirmSlug), label: 'Clients', icon: <IconCases />, active: isActivePrefix(ROUTES.CLIENTS(currentFirmSlug)) },
         { to: ROUTES.COMPLIANCE_CALENDAR(currentFirmSlug), label: 'Compliance Calendar', icon: <IconWorklist />, active: isActive(ROUTES.COMPLIANCE_CALENDAR(currentFirmSlug)) },
       ],
     },
@@ -571,6 +573,7 @@ export const Layout = ({ children }) => {
       id: 'insights',
       title: 'INSIGHTS',
       defaultOpen: false,
+      hidden: !hasAdminAccess,
       items: [
         { to: reportsRoute, label: 'Reports', icon: <IconReport />, active: isActivePrefix(reportsRoute) },
       ],
@@ -587,6 +590,7 @@ export const Layout = ({ children }) => {
         { to: ROUTES.WORK_SETTINGS(currentFirmSlug), label: 'Work Settings', icon: <IconWorklist />, active: isActivePrefix(ROUTES.WORK_SETTINGS(currentFirmSlug)) },
         { to: ROUTES.STORAGE_SETTINGS(currentFirmSlug), label: 'Storage Settings', icon: <IconAdmin />, active: isActivePrefix(ROUTES.STORAGE_SETTINGS(currentFirmSlug)) },
         { to: ROUTES.AI_SETTINGS(currentFirmSlug), label: 'AI Settings', icon: <IconAdmin />, active: isActivePrefix(ROUTES.AI_SETTINGS(currentFirmSlug)) },
+        { to: settingsRoute, label: 'Settings Hub', icon: <IconSettings />, active: isActivePrefix(settingsRoute) },
       ],
     },
     {
@@ -594,7 +598,7 @@ export const Layout = ({ children }) => {
       title: 'ACCOUNT',
       defaultOpen: false,
       items: [
-        { to: ROUTES.PROFILE(currentFirmSlug), label: hasAdminAccess ? 'Settings' : 'My Settings', icon: <IconSettings />, active: isActivePrefix(ROUTES.PROFILE(currentFirmSlug)) },
+        { to: ROUTES.PROFILE(currentFirmSlug), label: 'My Profile', icon: <IconSettings />, active: isActivePrefix(ROUTES.PROFILE(currentFirmSlug)) },
       ],
     },
   ].filter((section) => !section.hidden);
@@ -621,6 +625,7 @@ export const Layout = ({ children }) => {
     { id: 'workbasket', label: 'Go to Workbasket', shortcut: '⌘1', action: () => navigate(ROUTES.GLOBAL_WORKLIST(currentFirmSlug)) },
     { id: 'worklist', label: 'Go to My Worklist', shortcut: '⌘2', action: () => navigate(ROUTES.WORKLIST(currentFirmSlug)) },
     { id: 'dashboard', label: 'Go to Dashboard', shortcut: '⌘D', action: () => navigate(ROUTES.DASHBOARD(currentFirmSlug)) },
+    ...(hasQcQueueAccess ? [{ id: 'qc-queue', label: 'Go to QC Queue', shortcut: '⌘3', action: () => navigate(ROUTES.QC_QUEUE(currentFirmSlug)) }] : []),
   ];
 
   return (
@@ -915,6 +920,12 @@ export const Layout = ({ children }) => {
             </div>
           </div>
         </header>
+        {(title || subtitle) ? (
+          <section className="enterprise-page-context" aria-label="Current page context">
+            {title ? <h1 className="enterprise-page-context__title">{title}</h1> : null}
+            {subtitle ? <p className="enterprise-page-context__subtitle">{subtitle}</p> : null}
+          </section>
+        ) : null}
 
         {/* Page Content */}
         <main className="enterprise-content" id="main-content">{children}</main>

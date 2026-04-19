@@ -713,6 +713,23 @@
   overflow-x: hidden;
 }
 
+.enterprise-page-context {
+  padding: 12px var(--space-6) 0;
+}
+
+.enterprise-page-context__title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.enterprise-page-context__subtitle {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
 /* =====================================================
    RESPONSIVE
    ===================================================== */
@@ -767,6 +784,10 @@
 
   .enterprise-content {
     padding: var(--space-4);
+  }
+
+  .enterprise-page-context {
+    padding: 10px var(--space-4) 0;
   }
 }
 

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { ROUTES } from '../../constants/routes';
@@ -47,6 +47,16 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
   const role = String(user?.role || 'USER').toUpperCase();
   const navSections = useMemo(() => navForRole(firmSlug, role), [firmSlug, role]);
   const userName = user?.name || user?.xID || 'User';
+  const currentNavItem = useMemo(
+    () => navSections.flatMap((section) => section.items).find((item) => pathname === item.to || pathname.startsWith(`${item.to}/`)),
+    [navSections, pathname]
+  );
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const resolvedTitle = title || currentNavItem?.label || 'Workspace';
+    document.title = `${resolvedTitle} • Docketra`;
+  }, [title, currentNavItem]);
 
   return (
     <div className="platform">
@@ -77,7 +87,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
                 <Link
                   key={item.to}
                   to={item.to}
-                  className={`platform__nav-link ${pathname === item.to ? 'is-active' : ''}`}
+                  className={`platform__nav-link ${pathname === item.to || pathname.startsWith(`${item.to}/`) ? 'is-active' : ''}`}
                   title={item.label}
                 >
                   <span>{item.label}</span>
@@ -93,7 +103,12 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
           <div>
             {moduleLabel ? <span className="platform__module-label">{moduleLabel}</span> : null}
             <h1>{title}</h1>
-            <p>{subtitle}</p>
+            <p>{subtitle || 'Use the sidebar to move between modules and continue your workflow.'}</p>
+            <div className="platform__breadcrumbs" aria-label="Breadcrumb">
+              <span>Workspace</span>
+              <span aria-hidden="true">/</span>
+              <span>{currentNavItem?.label || title}</span>
+            </div>
           </div>
           <div className="platform__actions">
             {actions}
