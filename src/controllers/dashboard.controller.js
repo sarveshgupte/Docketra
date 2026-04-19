@@ -2,6 +2,7 @@ const { assertFirmContext } = require('../utils/tenantGuard');
 const dashboardService = require('../services/dashboard.service');
 const { getRedisClient } = require('../config/redis');
 const log = require('../utils/log');
+const onboardingProgressService = require('../services/onboardingProgress.service');
 
 const DASHBOARD_TTL_SECONDS = 30;
 
@@ -79,4 +80,28 @@ const getDashboardSummary = async (req, res) => {
   }
 };
 
-module.exports = { getDashboardSummary };
+
+const getOnboardingProgress = async (req, res) => {
+  try {
+    assertFirmContext(req);
+
+    const progress = await onboardingProgressService.getOnboardingProgress({
+      firmId: req.user.firmId,
+      user: req.user,
+    });
+
+    return res.json({ success: true, data: progress });
+  } catch (error) {
+    if (error.statusCode === 403) {
+      return res.status(403).json({ success: false, message: error.message || 'Error fetching onboarding progress', data: {} });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to load onboarding progress',
+      data: { role: 'USER', completed: 0, total: 0, steps: [] },
+    });
+  }
+};
+
+module.exports = { getDashboardSummary, getOnboardingProgress };
