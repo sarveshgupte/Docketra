@@ -3,17 +3,19 @@ import { Link, useParams } from 'react-router-dom';
 import { PlatformShell } from '../../components/platform/PlatformShell';
 import { crmApi } from '../../api/crm.api';
 import { ROUTES } from '../../constants/routes';
-import { DataTable, FilterBar, InlineNotice, PageSection, toArray } from './PlatformShared';
+import { DataTable, FilterBar, InlineNotice, PageSection, RefreshNotice, toArray } from './PlatformShared';
 
 export const PlatformCrmPage = () => {
   const { firmSlug } = useParams();
   const [clients, setClients] = useState([]);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 
-  const loadClients = async () => {
-    setLoading(true);
+  const loadClients = async ({ background = false } = {}) => {
+    if (background && clients.length > 0) setRefreshing(true);
+    else setLoading(true);
     setError('');
     try {
       const res = await crmApi.listClients({ limit: 50 });
@@ -22,6 +24,7 @@ export const PlatformCrmPage = () => {
       setClients([]);
       setError('Unable to load CRM clients.');
     } finally {
+      setRefreshing(false);
       setLoading(false);
     }
   };
@@ -45,6 +48,7 @@ export const PlatformCrmPage = () => {
       actions={<Link to={ROUTES.CLIENTS(firmSlug)}>Client workspace</Link>}
     >
       <InlineNotice tone="error" message={error} />
+      <RefreshNotice refreshing={refreshing} message="Refreshing CRM clients in the background…" />
       <PageSection title="CRM surfaces" description="Relationship-management records linked to delivery execution.">
         <div className="action-row">
           <span>Leads</span>
@@ -62,7 +66,9 @@ export const PlatformCrmPage = () => {
             placeholder="Search client name, email, phone"
             aria-label="Search clients"
           />
-          <button type="button" onClick={() => void loadClients()} disabled={loading}>Refresh</button>
+          <button type="button" onClick={() => void loadClients({ background: clients.length > 0 })} disabled={loading || refreshing}>
+            {refreshing ? 'Refreshing…' : 'Refresh'}
+          </button>
         </FilterBar>
 
         <DataTable
@@ -86,7 +92,10 @@ export const PlatformCrmPage = () => {
           ))}
           loading={loading}
           error={error}
+          onRetry={() => void loadClients()}
+          hasActiveFilters={Boolean(query.trim())}
           emptyLabel="No CRM clients yet. Add a lead or convert a submission into a client."
+          emptyLabelFiltered="No CRM clients match your current search."
         />
       </PageSection>
     </PlatformShell>

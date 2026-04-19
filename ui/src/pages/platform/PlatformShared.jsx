@@ -56,6 +56,10 @@ export const InlineNotice = ({ tone = 'info', message }) => {
   return <p className={`inline-notice inline-notice--${tone}`}>{message}</p>;
 };
 
+export const RefreshNotice = ({ refreshing = false, message = 'Refreshing in background…' }) => (
+  <InlineNotice tone="info" message={refreshing ? message : ''} />
+);
+
 export const DataTable = ({
   columns,
   rows,
@@ -63,8 +67,12 @@ export const DataTable = ({
   loadingLabel = 'Loading data…',
   emptyLabel = 'No records found.',
   error,
+  onRetry,
+  retryLabel = 'Retry',
   pageSize = 10,
   paginationLabel = 'Table pagination',
+  hasActiveFilters = false,
+  emptyLabelFiltered = 'No results match the current filters.',
 }) => {
   const safeRows = Array.isArray(rows) ? rows : [];
   const [page, setPage] = useState(1);
@@ -87,6 +95,8 @@ export const DataTable = ({
     return safeRows.slice(start, start + pageSize);
   }, [clampedPage, pageSize, safeRows]);
 
+  const emptyMessage = hasActiveFilters ? emptyLabelFiltered : emptyLabel;
+
   return (
     <div className="table-wrap" aria-live="polite">
       <table className="table">
@@ -101,12 +111,19 @@ export const DataTable = ({
           ) : null}
           {!loading && error ? (
             <tr>
-              <td colSpan={columns.length} className="table-message table-message--error">{error}</td>
+              <td colSpan={columns.length} className="table-message table-message--error">
+                <div className="table-feedback-stack">
+                  <p>{error}</p>
+                  {onRetry ? (
+                    <button type="button" onClick={onRetry}>{retryLabel}</button>
+                  ) : null}
+                </div>
+              </td>
             </tr>
           ) : null}
           {!loading && !error && safeRows.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="table-message">{emptyLabel}</td>
+              <td colSpan={columns.length} className="table-message">{emptyMessage}</td>
             </tr>
           ) : null}
           {!loading && !error && safeRows.length > 0 ? visibleRows : null}

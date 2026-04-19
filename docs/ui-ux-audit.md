@@ -206,3 +206,74 @@ This pass focused on high-impact reliability and trust issues in authentication 
 2. CRM detail routes (`/crm/clients/:crmClientId`, `/crm/leads`).
 3. Docket list/detail routes to fully remove legacy shell transitions around core docket operations.
 4. Profile and compliance calendar routes to close remaining shell drift in daily navigation loops.
+
+## Async feedback and state unification pass (April 2026)
+
+### Root inconsistencies found
+
+| Severity | Area | Issue | Impact |
+| --- | --- | --- | --- |
+| High | Queue/list modules | Table errors rendered as plain text without embedded retry actions. | Operators had to discover refresh manually and pages felt broken under transient failures. |
+| High | Filterable pages | Empty dataset and filtered no-result states used identical wording. | Users interpreted no-results as loading bugs instead of active filter outcomes. |
+| Medium | Background refresh | Some pages blocked full table reload for refresh while others were non-blocking. | Jarring reload behavior and inconsistent trust in list stability. |
+| Medium | Mutation feedback | Key actions (QC, pull, save settings) depended on toast-only success/failure messaging. | Action outcomes were easy to miss and retry confidence was low. |
+| Medium | Settings detail pages | Load failures surfaced toast-only with no in-page recovery. | Settings pages could strand users without explicit recovery controls. |
+
+### Unified async rules adopted
+
+1. **Recoverable table errors** must include a local retry control (`Retry`).
+2. **Empty-state language split**:
+   - no data baseline (`emptyLabel`) for first-use/true empty
+   - filtered no-results (`emptyLabelFiltered`) when search/filter is active.
+3. **Background refresh pattern**:
+   - keep current data visible
+   - show a subtle inline “Refreshing…” notice
+   - avoid blank table reset for non-initial refreshes.
+4. **Mutation feedback pattern**:
+   - button-level in-flight labels (`Updating…`, `Pulling…`, `Saving…`)
+   - local inline status banner/message for save success/failure where appropriate
+   - toasts remain supplemental.
+5. **Settings recovery pattern**:
+   - explicit load-error panel with retry action
+   - inline operational status guidance during save/test actions.
+
+### Shared primitives/helpers introduced
+
+- Extended platform `DataTable` with:
+  - inline error retry action (`onRetry`, `retryLabel`)
+  - filtered empty state messaging (`hasActiveFilters`, `emptyLabelFiltered`).
+- Added `RefreshNotice` helper in `PlatformShared` for non-blocking refresh visibility.
+- Added a table feedback stack style for action-oriented recoverable error messaging.
+
+### Pages/modules updated in this pass
+
+- Clients-adjacent platform workspace pages:
+  - `My Worklist`, `Workbaskets`, `QC Queue`, `CRM`, `CMS Intake`, `Reports`.
+- Settings detail pages:
+  - `AI settings`, `Storage settings`, `Work settings`.
+
+### Tests added/updated
+
+- Added `tests/uiAsyncStateConsistency.test.js` to assert:
+  - retry affordance support in shared platform table
+  - refresh notice + retry usage across queue/list module pages
+  - inline retry and mutation feedback patterns on key settings pages.
+
+### Follow-up items still pending
+
+1. Extend the same async-state contract to legacy-heavy pages (`AdminPage`, `CasesPage`, client detail mutation subflows) with component-level refactors.
+2. Add browser-level test coverage for visual loading/refresh transitions and retry click paths.
+3. Consolidate permission-limited and configuration-incomplete empty-state wrappers for non-platform pages.
+
+### Manual QA checklist — async consistency pass
+
+- [ ] Load dashboard on a cold session and verify shell remains stable while module pages initialize.
+- [ ] Open Clients, QC queue, Worklist, Workbaskets, Reports, and Settings pages.
+- [ ] Verify each page shows intentional loading state copy (not raw placeholders).
+- [ ] Verify first-use empty states differ from filtered no-results copy.
+- [ ] Trigger simulated fetch failures (dev tools/offline or API mock) and confirm retry controls are visible.
+- [ ] Validate queue actions (QC, pull, resolve/pend) show in-flight button state and clear success/error feedback.
+- [ ] Validate settings saves/tests (AI, Storage, Work settings) show inline status and clear failure guidance.
+- [ ] Confirm background refresh keeps prior data visible and does not reset page framing.
+- [ ] Confirm no raw broken error strips remain on hardened pages.
+- [ ] Confirm async wording is consistent (“Refresh”, “Retry”, “Updating…”, “Saving…”).
