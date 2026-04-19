@@ -47,7 +47,10 @@ Docketra requires the following environment variables for production deployment:
 | `PORT` | Server port (auto-set by Render) | `5000` |
 | `MONGODB_URI` | MongoDB connection string | `mongodb+srv://user:pass@cluster.mongodb.net/docketra` |
 | `JWT_SECRET` | Secret key for JWT tokens | `your-super-secure-random-string-min-32-chars` |
-| `FRONTEND_URL` | Production frontend URL for CORS | `https://docketra.onrender.com` |
+| `FRONTEND_URL` | Primary frontend URL (used for links/emails) | `https://docketra.onrender.com` |
+| `FRONTEND_ORIGINS` | Comma-separated frontend origins for CORS | `https://app.example.com,https://admin.example.com` |
+| `GOOGLE_AUTH_REDIRECT_URI` | Google Sign-In callback URL | `https://api.example.com/api/auth/google/callback` |
+| `GOOGLE_OAUTH_REDIRECT_URI` | Google Drive BYOS callback URL | `https://api.example.com/api/storage/google/callback` |
 
 ### Setting Up Environment Variables
 
@@ -63,6 +66,9 @@ Docketra requires the following environment variables for production deployment:
    MONGODB_URI=your_actual_mongodb_connection_string
    JWT_SECRET=your_actual_jwt_secret_key
    FRONTEND_URL=https://your-production-domain.com
+   FRONTEND_ORIGINS=https://your-production-domain.com,https://your-secondary-domain.com
+   GOOGLE_AUTH_REDIRECT_URI=https://your-api-domain.com/api/auth/google/callback
+   GOOGLE_OAUTH_REDIRECT_URI=https://your-api-domain.com/api/storage/google/callback
    ```
 
 3. **Generate a secure JWT secret**:
@@ -214,17 +220,24 @@ In the Render dashboard for your service:
    | `NODE_ENV` | `production` |
    | `MONGODB_URI` | `your-mongodb-atlas-connection-string` |
    | `JWT_SECRET` | `your-secure-jwt-secret` |
-   | `FRONTEND_URL` | (leave empty initially, update after deployment) |
+   | `FRONTEND_URL` | `https://your-primary-frontend-domain.com` |
+   | `FRONTEND_ORIGINS` | `https://your-primary-frontend-domain.com,https://your-secondary-frontend-domain.com` |
+   | `GOOGLE_AUTH_REDIRECT_URI` | `https://your-api-domain.com/api/auth/google/callback` |
+   | `GOOGLE_OAUTH_REDIRECT_URI` | `https://your-api-domain.com/api/storage/google/callback` |
 
 4. Click "Create Web Service"
 
-### Step 5: Update FRONTEND_URL
+### Step 5: Update frontend origins and Google OAuth callback URIs
 
 After your service is deployed:
 
 1. Copy your Render service URL (e.g., `https://docketra.onrender.com`)
 2. Go back to "Environment Variables"
-3. Update or add `FRONTEND_URL` with your service URL
+3. Update or add:
+   - `FRONTEND_URL` with your primary frontend URL
+   - `FRONTEND_ORIGINS` with every browser origin that will call the API (comma-separated, no trailing slash)
+   - `GOOGLE_AUTH_REDIRECT_URI` for Google Sign-In callback (`/api/auth/google/callback`)
+   - `GOOGLE_OAUTH_REDIRECT_URI` for Google Drive callback (`/api/storage/google/callback`)
 4. Click "Save Changes" (this will trigger a redeploy)
 
 ### Step 6: Auto-Deploy Setup
@@ -278,7 +291,9 @@ After deployment, verify the following:
 ### Environment Variables
 - [ ] **All Variables Set**: Confirm all required env vars in Render dashboard
 - [ ] **Correct Values**: Double-check MongoDB URI, JWT secret
-- [ ] **FRONTEND_URL**: Matches actual deployment URL
+- [ ] **FRONTEND_URL**: Matches your primary deployment URL
+- [ ] **FRONTEND_ORIGINS**: Includes all deployed frontend origins (comma-separated)
+- [ ] **Google Redirect URIs**: Auth callback and storage callback are both configured
 
 ---
 
@@ -318,18 +333,21 @@ After deployment, verify the following:
 **Symptoms**: Console shows "Access-Control-Allow-Origin" errors
 
 **Solutions**:
-- Ensure `FRONTEND_URL` is set to your Render URL
-- Confirm `FRONTEND_URL` does NOT have trailing slash
-- Check that origin matches exactly (https vs http)
+- Ensure `FRONTEND_ORIGINS` includes every frontend origin that calls your API
+- Confirm each origin in `FRONTEND_ORIGINS` has no trailing slash
+- Keep `FRONTEND_URL` set to your primary frontend URL for links/emails
+- Check that protocol and host match exactly (https vs http)
 
 **Example Fix**:
 ```
 # Correct
 FRONTEND_URL=https://docketra.onrender.com
+FRONTEND_ORIGINS=https://docketra.onrender.com,https://caseflow-1-tm8i.onrender.com
 
 # Incorrect
 FRONTEND_URL=https://docketra.onrender.com/
 FRONTEND_URL=http://docketra.onrender.com  (wrong protocol)
+FRONTEND_ORIGINS=https://docketra.onrender.com/  (trailing slash)
 ```
 
 #### 4. 404 on Page Refresh (SPA Routing Issue)
