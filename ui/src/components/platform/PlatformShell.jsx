@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { ROUTES } from '../../constants/routes';
 import './platform.css';
@@ -41,9 +41,12 @@ const navForRole = (firmSlug, role) => {
 
 export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children }) => {
   const [collapsed, setCollapsed] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const { firmSlug } = useParams();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const menuRef = useRef(null);
   const role = String(user?.role || 'USER').toUpperCase();
   const navSections = useMemo(() => navForRole(firmSlug, role), [firmSlug, role]);
   const userName = user?.name || user?.xID || 'User';
@@ -57,6 +60,30 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
     const resolvedTitle = title || currentNavItem?.label || 'Workspace';
     document.title = `${resolvedTitle} • Docketra`;
   }, [title, currentNavItem]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
+  const handleLogout = async () => {
+    setMenuOpen(false);
+    await logout({ preserveFirmSlug: !!firmSlug });
+    if (firmSlug) {
+      navigate(ROUTES.FIRM_LOGIN(firmSlug), { replace: true, state: { message: 'You have been signed out safely.', messageType: 'success' } });
+      return;
+    }
+    navigate('/superadmin/login', { replace: true });
+  };
 
   return (
     <div className="platform">
@@ -112,7 +139,27 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
           </div>
           <div className="platform__actions">
             {actions}
-            <div className="platform__user-pill" title={userName}>{userName}</div>
+            <div className="platform__account-menu" ref={menuRef}>
+              <button
+                type="button"
+                className="platform__user-pill platform__user-pill--button"
+                title={userName}
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                onClick={() => setMenuOpen((value) => !value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') setMenuOpen(false);
+                }}
+              >
+                <span>{userName}</span>
+                <span className="platform__user-pill-chevron" aria-hidden="true">▾</span>
+              </button>
+              {menuOpen ? (
+                <div className="platform__account-dropdown" role="menu" aria-label="Account menu">
+                  <button type="button" role="menuitem" onClick={handleLogout}>Sign out</button>
+                </div>
+              ) : null}
+            </div>
           </div>
         </header>
         <main id="platform-main" className="platform__content">{children}</main>
