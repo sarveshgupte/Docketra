@@ -5,20 +5,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Layout } from '../../components/common/Layout';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { PageHeader } from '../../components/layout/PageHeader';
 import { DashboardSkeleton } from '../../components/common/Skeleton';
+import { PlatformShell } from '../../components/platform/PlatformShell';
 import { MetricCard } from '../../components/reports/MetricCard';
 import { AuditLogView } from '../../components/reports/AuditLogView';
-import { useAuth } from '../../hooks/useAuth';
 import { reportsService } from '../../services/reports.service';
 import './ReportsDashboard.css';
 
 export const ReportsDashboard = () => {
   const navigate = useNavigate();
   const { firmSlug } = useParams();
-  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState(null);
   const [pendingReport, setPendingReport] = useState(null);
@@ -39,13 +36,13 @@ export const ReportsDashboard = () => {
     setError(null);
     
     try {
-      // Load case metrics
+      // Load docket metrics
       const metricsResponse = await reportsService.getCaseMetrics();
       if (metricsResponse.data.success) {
         setMetrics(metricsResponse.data.data);
       }
 
-      // Load pending cases report
+      // Load pending dockets report
       const pendingResponse = await reportsService.getPendingCases();
       if (pendingResponse.data.success) {
         setPendingReport(pendingResponse.data.data);
@@ -80,15 +77,23 @@ export const ReportsDashboard = () => {
 
   if (loading) {
     return (
-      <Layout>
+      <PlatformShell
+        moduleLabel="Operations"
+        title="Reports & MIS dashboard"
+        subtitle="Management information system - read-only view."
+      >
         <DashboardSkeleton />
-      </Layout>
+      </PlatformShell>
     );
   }
 
   if (error) {
     return (
-      <Layout>
+      <PlatformShell
+        moduleLabel="Operations"
+        title="Reports & MIS dashboard"
+        subtitle="Management information system - read-only view."
+      >
         <div className="reports-dashboard">
           <EmptyState
             title="We couldn’t load your reports"
@@ -97,49 +102,48 @@ export const ReportsDashboard = () => {
             onAction={loadDashboardData}
           />
         </div>
-      </Layout>
+      </PlatformShell>
     );
   }
 
   if (!hasAnyReportData) {
     return (
-      <Layout>
+      <PlatformShell
+        moduleLabel="Operations"
+        title="Reports & MIS dashboard"
+        subtitle="Management information system - read-only view."
+      >
         <div className="reports-dashboard">
-          <PageHeader
-            title="Reports & MIS Dashboard"
-            description="Management information system - Read-only view"
-          />
           <EmptyState
             title="No reports available yet"
-            description="Once cases and team activity start flowing, your reporting workspace will populate automatically."
-            actionLabel="Review case registry"
+            description="Once dockets and team activity start flowing, your reporting workspace will populate automatically."
+            actionLabel="Review docket registry"
             onAction={() => navigate(`/app/firm/${firmSlug}/dockets`)}
           />
         </div>
-      </Layout>
+      </PlatformShell>
     );
   }
 
   return (
-    <Layout>
+    <PlatformShell
+      moduleLabel="Operations"
+      title="Reports & MIS dashboard"
+      subtitle="Management information system - read-only view."
+    >
       <div className="reports-dashboard">
-        <PageHeader
-          title="Reports & MIS Dashboard"
-          description="Management information system - Read-only view"
-        />
-
         <div className="reports-dashboard__grid">
-          {/* Total Cases Card */}
+          {/* Total dockets card */}
           <MetricCard
-            title="Total Cases"
+            title="Total dockets"
             value={metrics?.totalCases || 0}
             subtitle={`Open: ${metrics?.byStatus?.Open || 0} | Pending: ${metrics?.byStatus?.Pending || 0} | Closed: ${metrics?.byStatus?.Closed || 0}`}
             onClick={handleViewDetailedReports}
           />
 
-          {/* Pending Cases Card */}
+          {/* Pending dockets card */}
           <MetricCard
-            title="Pending Cases"
+            title="Pending dockets"
             value={pendingReport?.totalPending || 0}
             subtitle={`Critical: ${pendingReport?.byAgeing?.['30+ days'] || 0} overdue`}
             warning={pendingReport?.byAgeing?.['30+ days'] > 0}
@@ -200,9 +204,9 @@ export const ReportsDashboard = () => {
             )}
           </div>
 
-          {/* Ageing Breakdown Card */}
+          {/* Ageing breakdown card */}
           <div className="reports-dashboard__card">
-            <h3>Pending Cases Ageing</h3>
+            <h3>Pending dockets ageing</h3>
             {pendingReport?.byAgeing ? (
               <table className="reports-dashboard__table">
                 <tbody>
@@ -230,9 +234,9 @@ export const ReportsDashboard = () => {
             )}
           </div>
 
-          {/* Top Employees Card */}
+          {/* Top employees card */}
           <div className="reports-dashboard__card">
-            <h3>Top Employees by Cases</h3>
+            <h3>Top employees by dockets</h3>
             {metrics?.byEmployee && metrics.byEmployee.length > 0 ? (
               <table className="reports-dashboard__table">
                 <tbody>
@@ -261,6 +265,6 @@ export const ReportsDashboard = () => {
           </button>
         </div>
       </div>
-    </Layout>
+    </PlatformShell>
   );
 };
