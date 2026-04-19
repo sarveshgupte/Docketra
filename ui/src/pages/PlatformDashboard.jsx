@@ -247,6 +247,11 @@ export const PlatformDashboard = () => {
               <h2 className="text-lg font-semibold text-gray-900 tracking-tight">Onboarding Observability</h2>
               <Badge>Superadmin</Badge>
             </div>
+            <div className="flex justify-end">
+              <Button variant="secondary" onClick={() => navigate('/app/superadmin/onboarding-insights')}>
+                Open actionable insights
+              </Button>
+            </div>
             {onboardingInsights ? (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
