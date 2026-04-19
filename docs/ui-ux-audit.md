@@ -1,5 +1,44 @@
 # Docketra UI/UX audit and improvement pass (April 2026)
 
+## Visual polish, density, and enterprise fit-and-finish pass (April 2026)
+
+### Root visual polish issues found
+
+- Spacing rhythm across shell, panels, filters, and tables was directionally good but still uneven for all-day operational use; several surfaces felt either airy or inconsistent in vertical rhythm.
+- Typography hierarchy was not fully normalized in the workspace shell (module label, title, subtitle, and section-level labels competed for attention).
+- Table/list presentation remained readable but could be denser and more scan-efficient (header framing, row compactness, action sizing, and feedback-row containment).
+- Action controls used mixed sizing patterns between topbar actions, section actions, and table actions.
+- Empty/error/loading blocks worked functionally but felt oversized and visually louder than needed on high-traffic queue/list views.
+
+### Shared design/layout rules refined
+
+1. **Spacing rhythm**
+   - Introduced tighter, repeated spacing cadence in `PlatformShell` surfaces (sidebar, topbar, content gutters, section/card internals, filter bars).
+   - Normalized panel/card radius, border strength, and subtle shadow baseline for enterprise seriousness without decorative weight.
+
+2. **Typography hierarchy**
+   - Tightened module label scale and weight to establish stronger information order: module label → title → subtitle → breadcrumbs.
+   - Standardized section title + description rhythm and metric label treatment for better scannability.
+
+3. **Density and controls**
+   - Consolidated control heights and compact button treatments across shell actions, section action rows, and filter controls.
+   - Reduced nav-item, action-chip, and table-action footprint while preserving readability and click confidence.
+
+4. **Tables and operational lists**
+   - Increased table scanning efficiency via smaller text, balanced cell padding, sticky headers, and stronger header framing.
+   - Improved loading/empty/error containment in table feedback rows so state messaging is compact and non-dominant.
+
+### Major pages/components touched
+
+- `PlatformShell` page header/action rail composition and semantics.
+- Shared workspace visual system stylesheet (`platform.css`) used by Dashboard, CRM, CMS, Task Manager, Dockets, Worklist, Workbaskets, QC Queue, Reports, Team, Settings, and related detail/utility pages that render in `PlatformShell`.
+- Shared `PlatformShared` section/stat components used across module landing and queue/list pages.
+
+### Remaining follow-up items
+
+- Audit legacy non-`PlatformShell` screens for the same compact rhythm, then converge them to shared primitives where practical.
+- Add optional table column sizing contracts per queue when domain-specific data density tuning is needed beyond global defaults.
+
 ## Task Manager execution-list unification pass (April 2026)
 
 ### Scope
