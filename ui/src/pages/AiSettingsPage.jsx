@@ -27,17 +27,23 @@ export function AiSettingsPage() {
   const [provider, setProvider] = useState('openai');
   const [model, setModel] = useState('');
   const [apiKey, setApiKey] = useState('');
+  const [loadError, setLoadError] = useState('');
+  const [statusMessage, setStatusMessage] = useState({ type: '', text: '' });
 
   const isPrimaryAdmin = useMemo(() => normalizeRole(user?.role) === 'PRIMARY_ADMIN', [user?.role]);
 
   const loadStatus = async () => {
+    setLoading(true);
+    setLoadError('');
     try {
       const data = await getAiConfigurationStatus();
       setConnected(Boolean(data?.connected));
       setProvider(String(data?.provider || 'openai').trim().toLowerCase());
       setModel(data?.model || '');
     } catch (error) {
-      toast?.showError?.(error?.response?.data?.message || 'Failed to load AI settings.');
+      const message = error?.response?.data?.message || 'Failed to load AI settings.';
+      setLoadError(message);
+      toast?.showError?.(message);
     } finally {
       setLoading(false);
     }
@@ -51,10 +57,12 @@ export function AiSettingsPage() {
   const onSave = async () => {
     if (!apiKey.trim()) {
       toast?.showError?.('API key is required.');
+      setStatusMessage({ type: 'error', text: 'Enter an API key before saving AI settings.' });
       return;
     }
 
     setSaving(true);
+    setStatusMessage({ type: 'info', text: 'Saving AI settings…' });
     try {
       const result = await saveAiConfiguration({
         provider,
@@ -64,9 +72,12 @@ export function AiSettingsPage() {
       setConnected(Boolean(result?.connected));
       setApiKey('');
       toast?.showSuccess?.('AI settings updated.');
+      setStatusMessage({ type: 'success', text: 'AI settings saved successfully.' });
       await loadStatus();
     } catch (error) {
-      toast?.showError?.(error?.response?.data?.message || 'Failed to save AI settings.');
+      const message = error?.response?.data?.message || 'Failed to save AI settings.';
+      setStatusMessage({ type: 'error', text: message });
+      toast?.showError?.(message);
     } finally {
       setSaving(false);
     }
@@ -74,14 +85,18 @@ export function AiSettingsPage() {
 
   const onDisconnect = async () => {
     setDisconnecting(true);
+    setStatusMessage({ type: 'info', text: 'Disconnecting AI provider…' });
     try {
       await disconnectAiConfiguration();
       setConnected(false);
       setApiKey('');
       toast?.showSuccess?.('AI provider disconnected.');
+      setStatusMessage({ type: 'success', text: 'AI provider disconnected.' });
       await loadStatus();
     } catch (error) {
-      toast?.showError?.(error?.response?.data?.message || 'Failed to disconnect AI provider.');
+      const message = error?.response?.data?.message || 'Failed to disconnect AI provider.';
+      setStatusMessage({ type: 'error', text: message });
+      toast?.showError?.(message);
     } finally {
       setDisconnecting(false);
     }
@@ -96,7 +111,7 @@ export function AiSettingsPage() {
               <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">AI Settings</h1>
               <p className="text-sm text-gray-500">Connect your preferred provider for BYOAI features.</p>
             </div>
-            <Card>
+          <Card>
               <p className="text-sm text-gray-500">Loading AI settings...</p>
             </Card>
           </div>
@@ -116,6 +131,26 @@ export function AiSettingsPage() {
 
           <Card>
             <div className={spacingClasses.sectionMargin}>
+              {loadError ? (
+                <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  <p>{loadError}</p>
+                  <Button type="button" variant="outline" onClick={loadStatus} disabled={loading}>
+                    Retry loading
+                  </Button>
+                </div>
+              ) : null}
+              {statusMessage.text ? (
+                <p className={`mb-4 rounded border px-3 py-2 text-sm ${
+                  statusMessage.type === 'error'
+                    ? 'border-red-200 bg-red-50 text-red-700'
+                    : statusMessage.type === 'success'
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                      : 'border-blue-200 bg-blue-50 text-blue-700'
+                }`}
+                >
+                  {statusMessage.text}
+                </p>
+              ) : null}
               <div>
                 <h2 className="text-lg font-medium text-gray-900 mb-4">Provider Configuration</h2>
                 <p className="text-sm text-gray-500">Primary Admin can connect or rotate API credentials.</p>

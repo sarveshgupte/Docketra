@@ -362,6 +362,21 @@ a {
   color: #b91c1c;
 }
 
+.table-feedback-stack {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+
+.table-feedback-stack button {
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fff;
+  color: #b91c1c;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
 .table-pagination {
   display: flex;
   justify-content: space-between;

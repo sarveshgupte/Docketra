@@ -3,29 +3,32 @@ import { Link, useParams } from 'react-router-dom';
 import { PlatformShell } from '../../components/platform/PlatformShell';
 import { reportsService } from '../../services/reports.service';
 import { ROUTES } from '../../constants/routes';
-import { DataTable, InlineNotice, PageSection, StatGrid, toArray } from './PlatformShared';
+import { DataTable, InlineNotice, PageSection, RefreshNotice, StatGrid, toArray } from './PlatformShared';
 
 export const PlatformReportsPage = () => {
   const { firmSlug } = useParams();
   const [metrics, setMetrics] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const res = await reportsService.getCaseMetrics();
-        setMetrics(toArray(res?.data?.data));
-      } catch {
-        setMetrics([]);
-        setError('Unable to load reports metrics.');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const load = async ({ background = false } = {}) => {
+    if (background && metrics.length > 0) setRefreshing(true);
+    else setLoading(true);
+    setError('');
+    try {
+      const res = await reportsService.getCaseMetrics();
+      setMetrics(toArray(res?.data?.data));
+    } catch {
+      setMetrics([]);
+      setError('Unable to load reports metrics.');
+    } finally {
+      setRefreshing(false);
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     void load();
   }, []);
 
@@ -43,12 +46,20 @@ export const PlatformReportsPage = () => {
       actions={<Link to={ROUTES.CASES(firmSlug)}>All Dockets</Link>}
     >
       <InlineNotice tone="error" message={error} />
+      <RefreshNotice refreshing={refreshing} message="Refreshing report metrics in the background…" />
       <StatGrid items={summaryCards} />
 
       <PageSection
         title="Performance trend"
         description="Top report buckets by current value."
-        actions={<Link to={`/app/firm/${firmSlug}/admin/reports/detailed`}>Open detailed reports</Link>}
+        actions={(
+          <>
+            <button type="button" onClick={() => void load({ background: true })} disabled={loading || refreshing}>
+              {refreshing ? 'Refreshing…' : 'Refresh metrics'}
+            </button>
+            <Link to={`/app/firm/${firmSlug}/admin/reports/detailed`}>Open detailed reports</Link>
+          </>
+        )}
       >
         {top.map((m, index) => (
           <div key={`${m.label || m.category || 'bucket'}-${index}`}>
@@ -71,6 +82,7 @@ export const PlatformReportsPage = () => {
           ))}
           loading={loading}
           error={error}
+          onRetry={() => void load()}
           emptyLabel="No metrics are available for the selected period."
         />
       </PageSection>
