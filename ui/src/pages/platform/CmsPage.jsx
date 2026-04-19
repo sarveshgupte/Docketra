@@ -95,7 +95,7 @@ export const PlatformCmsPage = () => {
       moduleLabel="CMS / Intake and Submission"
       title="CMS"
       subtitle="Intake and submission surface hub for request links, forms/templates, and public intake routing."
-      actions={<Link to={ROUTES.CRM_LEADS(firmSlug)}>Open intake queue</Link>}
+      actions={<Link to={ROUTES.CRM_LEADS(firmSlug)}>Go to Intake Queue</Link>}
     >
       <InlineNotice tone="error" message={error} />
       <InlineNotice tone="error" message={formsError} />
@@ -106,8 +106,8 @@ export const PlatformCmsPage = () => {
       <PageSection title="Quick actions" description="Move from intake setup to queue processing quickly.">
         <div className="action-row">
           <button type="button" onClick={() => void handleCopy(publicLink || embedLink, 'Intake link')} disabled={!selectedForm}>Copy intake link</button>
-          <Link to={`${ROUTES.CMS(firmSlug)}#intake-queue`}>Open intake queue</Link>
-          <Link to={`${ROUTES.CMS(firmSlug)}#embed-forms`}>Open forms/templates</Link>
+          <Link to={`${ROUTES.CMS(firmSlug)}#intake-queue`}>Go to Intake Queue</Link>
+          <Link to={`${ROUTES.CMS(firmSlug)}#embed-forms`}>Go to Forms/Templates</Link>
         </div>
       </PageSection>
 
