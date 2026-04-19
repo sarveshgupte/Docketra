@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { PlatformShell } from '../components/platform/PlatformShell';
 import { Card } from '../components/common/Card';
 import { Loading } from '../components/common/Loading';
@@ -334,6 +334,22 @@ export const CaseDetailPage = () => {
 
   const clientName = caseData?.client?.businessName || caseInfo?.clientName || caseInfo?.businessName || '—';
   const clientIdLabel = caseData?.client?.clientId || caseInfo?.clientId || caseData?.clientId || '—';
+  const linkedClientId = caseData?.client?.clientId || caseInfo?.clientId || caseData?.clientId || '';
+  const linkedClientEmail = caseInfo?.clientEmail
+    || caseInfo?.client?.email
+    || caseInfo?.client?.businessEmail
+    || caseData?.client?.email
+    || caseData?.client?.businessEmail
+    || '—';
+  const linkedClientContact = caseData?.client?.contactPersonName
+    || caseData?.client?.primaryContactNumber
+    || caseData?.client?.contactPersonPhoneNumber
+    || caseInfo?.client?.contactPersonName
+    || caseInfo?.client?.primaryContactNumber
+    || '—';
+  const linkedClientRoute = linkedClientId ? ROUTES.CLIENT_WORKSPACE(firmSlug, linkedClientId) : '';
+  const isInternalWork = Boolean(caseInfo?.isInternal || caseInfo?.workType === 'internal');
+  const fromClientRoute = location.state?.fromClientRoute || '';
   const docketStatusLabel = caseInfo?.status || caseInfo?.lifecycle || '—';
   const assigneeLabel = caseInfo?.assignedToName
     || caseInfo?.assignedTo
@@ -1734,7 +1750,14 @@ export const CaseDetailPage = () => {
           <div className="field-grid mt-4">
             <div className="field-group min-w-0"><span className="field-label">Category</span><span className="field-value text-sm">{categoryLabel}</span></div>
             <div className="field-group min-w-0"><span className="field-label">Subcategory</span><span className="field-value text-sm">{subcategoryLabel}</span></div>
-            <div className="field-group min-w-0"><span className="field-label">Linked Client</span><span className="field-value text-sm break-words">{clientName}</span></div>
+            <div className="field-group min-w-0">
+              <span className="field-label">Linked Client</span>
+              <span className="field-value text-sm break-words">
+                {isInternalWork ? 'Internal work (default client context)' : (
+                  linkedClientRoute ? <Link to={linkedClientRoute} className="case-detail-table__link">{clientName}</Link> : clientName
+                )}
+              </span>
+            </div>
             <div className="field-group min-w-0"><span className="field-label">Assignee / Owner</span><span className="field-value text-sm break-words">{assigneeLabel}</span></div>
             <div className="field-group min-w-0"><span className="field-label">Queue / Workbasket</span><span className="field-value text-sm break-words">{queueLabel}</span></div>
             <div className="field-group min-w-0"><span className="field-label">Created / Updated</span><span className="field-value text-sm">{formatDateTime(caseInfo?.createdAt)} • {formatDateTime(caseInfo?.updatedAt)}</span></div>
@@ -1753,7 +1776,11 @@ export const CaseDetailPage = () => {
               <div className="field-grid">
                 <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Client Name</span>
-                  <span className="field-value text-sm font-medium text-gray-900 break-words">{clientName}</span>
+                  <span className="field-value text-sm font-medium text-gray-900 break-words">
+                    {isInternalWork ? 'Internal work (default client)' : (
+                      linkedClientRoute ? <Link to={linkedClientRoute} className="case-detail-table__link">{clientName}</Link> : clientName
+                    )}
+                  </span>
                 </div>
                 <div className="field-group min-w-0">
                   <span className="field-label text-xs font-semibold uppercase tracking-wider text-gray-500">Client ID</span>
@@ -1784,6 +1811,63 @@ export const CaseDetailPage = () => {
                   <Badge variant={caseInfo?.isInternal ? 'info' : 'success'}>{caseInfo?.isInternal ? 'Internal Work' : 'Client Work'}</Badge>
                 </div>
               </div>
+            </section>
+            <section className="case-card" aria-labelledby="client-context-heading">
+              <div className="case-card__heading">
+                <h2 id="client-context-heading">Client Context</h2>
+              </div>
+              <div className="field-grid">
+                <div className="field-group min-w-0"><span className="field-label">Client ID</span><span className="field-value">{clientIdLabel}</span></div>
+                <div className="field-group min-w-0"><span className="field-label">Business Email</span><span className="field-value break-words">{linkedClientEmail}</span></div>
+                <div className="field-group min-w-0"><span className="field-label">Primary Contact</span><span className="field-value">{linkedClientContact}</span></div>
+                <div className="field-group min-w-0"><span className="field-label">Context</span><span className="field-value">{isInternalWork ? 'Internal work' : 'Client work'}</span></div>
+              </div>
+              <div className="case-detail__composer-actions mt-4">
+                {linkedClientRoute && !isInternalWork ? (
+                  <Button variant="outline" onClick={() => navigate(linkedClientRoute)}>Open Client Workspace</Button>
+                ) : null}
+                {linkedClientId && !isInternalWork ? (
+                  <Button variant="secondary" onClick={() => navigate(`${ROUTES.CREATE_CASE(firmSlug)}?clientId=${encodeURIComponent(linkedClientId)}`)}>Create Docket for Client</Button>
+                ) : null}
+                {fromClientRoute ? (
+                  <Button variant="ghost" onClick={() => navigate(fromClientRoute)}>Back to Client</Button>
+                ) : null}
+              </div>
+              {!isInternalWork ? (
+                loadingClientDockets ? <p className="case-detail__empty-note mt-4">Loading related client dockets…</p> : (
+                  clientDockets.length ? (
+                    <div className="case-detail-table-wrap mt-4">
+                      <table className="case-detail-table">
+                        <thead>
+                          <tr>
+                            <th>Docket</th>
+                            <th>Title</th>
+                            <th>Status</th>
+                            <th>Updated</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {clientDockets.slice(0, 5).map((row) => {
+                            const rowId = row.caseId || row.docketId || row._id;
+                            return (
+                              <tr key={rowId}>
+                                <td>
+                                  <button type="button" className="case-detail-table__link" onClick={() => navigate(ROUTES.CASE_DETAIL(firmSlug, rowId), { state: { returnTo: linkedClientRoute || returnTo, fromClientRoute: linkedClientRoute || fromClientRoute } })}>
+                                    {formatDocketId(rowId)}
+                                  </button>
+                                </td>
+                                <td>{row.title || row.caseName || 'Untitled docket'}</td>
+                                <td>{row.lifecycle || row.status || '—'}</td>
+                                <td>{formatDateTime(row.updatedAt || row.createdAt)}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : <p className="case-detail__empty-note mt-4">No related dockets found for this client.</p>
+                )
+              ) : <p className="case-detail__empty-note mt-4">This docket is marked internal and uses your firm default client context.</p>}
             </section>
 
             <section className={`case-card ${lifecycleStatus === 'IN_PROGRESS' ? 'opacity-90' : ''}`} aria-labelledby="overview-heading">
@@ -2041,7 +2125,7 @@ export const CaseDetailPage = () => {
                               <button
                                 type="button"
                                 className="case-detail-table__link"
-                                onClick={() => navigate(ROUTES.CASE_DETAIL(firmSlug, rowId))}
+                                onClick={() => navigate(ROUTES.CASE_DETAIL(firmSlug, rowId), { state: { returnTo: linkedClientRoute || returnTo, fromClientRoute: linkedClientRoute || fromClientRoute } })}
                               >
                                 {formatDocketId(rowId)}
                               </button>

@@ -27,7 +27,7 @@ const defaultForm = {
 
 const isEmailLikeError = (message) => typeof message === 'string' && message.toLowerCase().includes('validation');
 
-export const GuidedDocketForm = ({ onCreated, onCancel, initialWorkType = 'client' }) => {
+export const GuidedDocketForm = ({ onCreated, onCancel, initialWorkType = 'client', initialClientId = '' }) => {
   const { showError } = useToast();
   const [step, setStep] = useState(0);
   const [submitError, setSubmitError] = useState('');
@@ -79,11 +79,16 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialWorkType = 'clien
         setUsers(nextUsers);
         setClients(nextClients);
 
-        setFormData((prev) => ({
-          ...prev,
-          clientId: prev.clientId || nextClients[0]?.clientId || '',
-          workbasketId: prev.workbasketId || nextWorkbaskets[0]?._id || '',
-        }));
+        setFormData((prev) => {
+          const preferredClientId = initialClientId && nextClients.some((item) => item.clientId === initialClientId)
+            ? initialClientId
+            : '';
+          return {
+            ...prev,
+            clientId: prev.clientId || preferredClientId || nextClients[0]?.clientId || '',
+            workbasketId: prev.workbasketId || nextWorkbaskets[0]?._id || '',
+          };
+        });
       } catch (error) {
         setSubmitError('Failed to load form options. Please refresh and retry.');
       } finally {
@@ -93,7 +98,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialWorkType = 'clien
     };
 
     loadDeps();
-  }, []);
+  }, [initialClientId]);
 
   useEffect(() => {
     const selected = categories.find((item) => item._id === formData.categoryId);
