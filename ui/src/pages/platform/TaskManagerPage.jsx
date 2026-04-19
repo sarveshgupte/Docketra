@@ -36,6 +36,11 @@ export const PlatformTaskManagerPage = () => {
 
         if (cancelled) return;
 
+        const hasRejectedMetrics = [summaryRes, worklistRes, globalRes, qcRes].some((result) => result.status === 'rejected');
+        if (hasRejectedMetrics) {
+          throw new Error('One or more Task Manager metric requests failed');
+        }
+
         const summary = summaryRes.status === 'fulfilled' ? (summaryRes.value?.data?.data || {}) : {};
         const myWorklist = worklistRes.status === 'fulfilled' ? worklistRes.value : null;
         const globalWorklist = globalRes.status === 'fulfilled' ? globalRes.value : null;
