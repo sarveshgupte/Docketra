@@ -1,5 +1,17 @@
 # What's New
 
+## April 2026: Proactive superadmin onboarding alerts for stuck firms/users
+
+- Added derived in-app onboarding alerts (`GET /api/superadmin/onboarding-alerts`) so superadmin can proactively spot blocked firms/users without manually scanning each dashboard tile.
+- Alert types now cover core onboarding friction signals: zero active clients, missing category/workbasket setup, managers without queue assignment, users without dockets, skipped tutorial + incomplete onboarding, and stale onboarding state.
+- Added low-noise dedupe behavior with one open alert per firm + blocker type; alerts auto-clear when underlying blockers resolve.
+- Added simple operational severity model (`HIGH`, `MEDIUM`, `LOW`) plus staleness/age bucketing for triage.
+- Added alert filtering by status (`open`/`resolved`/`all`), severity, blocker type, and age bucket.
+- Added proactive alert surfaces in superadmin UI:
+  - Platform Dashboard observability card now shows top open alerts.
+  - Onboarding insights page now includes a dedicated proactive alerts section with recommended next action and deep links.
+- Added deep-link actions from alerts to firm onboarding detail and firms management while preserving onboarding context query params.
+
 ## April 2026: Superadmin onboarding insights firm drill-down + deep links
 
 - Added a new firm-specific onboarding drill-down route at `/app/superadmin/onboarding-insights/:firmId` so superadmin can jump directly into one tenant's onboarding state.

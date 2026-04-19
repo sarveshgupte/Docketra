@@ -13,6 +13,20 @@ This feature adds lightweight onboarding telemetry and superadmin-facing frictio
 - Added firm-level and user-level operational rows with actionable next-step pathways (for example, open firms management / firm controls).
 - Preserved existing summary API (`GET /api/superadmin/onboarding-insights`) for backward compatibility and lightweight dashboard rendering.
 
+## April 2026 refinement: proactive onboarding alerts (derived, low-noise)
+- Added a derived alerts API: `GET /api/superadmin/onboarding-alerts`.
+- Alerts are generated from existing onboarding insight signals (no third-party vendor, no cron/background scheduler dependency).
+- Deduping model is intentionally lightweight: one open alert per `firmId + blockerType`.
+- Alert lifecycle is derived and auto-resolving: when underlying blockers clear, alerts disappear from the open set.
+- Added operational prioritization with simple severities (`HIGH`, `MEDIUM`, `LOW`) and age buckets (`0-2d`, `3d+`, `7d+`, `14d+`).
+- Added alert filtering support for `status`, `severity`, `blockerType`, and `ageBucket`.
+- Added in-app superadmin alert surfaces:
+  - Platform dashboard observability card now shows top open alerts for quick intervention.
+  - Onboarding insights page now includes a dedicated proactive alerts panel with deep links.
+- Alert actions include safe deep links:
+  - Open firm onboarding detail with preserved query context.
+  - Open firms management.
+
 ## Architecture
 - **Event persistence**: `src/models/OnboardingEvent.model.js` (`onboarding_events` collection)
 - **Analytics logic**: `src/services/onboardingAnalytics.service.js`
@@ -20,6 +34,7 @@ This feature adds lightweight onboarding telemetry and superadmin-facing frictio
 - **UI event ingestion**: `POST /api/dashboard/onboarding-event`
 - **Superadmin summary API**: `GET /api/superadmin/onboarding-insights`
 - **Superadmin detail API**: `GET /api/superadmin/onboarding-insights/details`
+- **Superadmin alerts API**: `GET /api/superadmin/onboarding-alerts`
 - **Visibility UI**: `ui/src/pages/PlatformDashboard.jsx`
 - **Actionable triage UI**: `ui/src/pages/SuperadminOnboardingInsightsPage.jsx`
 - **Firm drill-down UI**: `ui/src/pages/SuperadminFirmOnboardingDetailPage.jsx`
