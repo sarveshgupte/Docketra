@@ -65,22 +65,22 @@ export const PlatformTaskManagerPage = () => {
 
   const cards = [
     { label: 'All active dockets', value: loading ? '…' : stats.allActiveDockets, helpText: 'In progress, pending, and in QC right now.' },
-    { label: 'My worklist', value: loading ? '…' : stats.myWorklistCount, helpText: 'Dockets assigned to you for execution.' },
-    { label: 'Workbasket', value: loading ? '…' : stats.workbasketCount, helpText: 'Unassigned/pooled dockets waiting for pull.' },
-    { label: 'QC pending', value: loading ? '…' : stats.qcPendingCount, helpText: 'Dockets waiting in quality-control queue.' },
+    { label: 'My Worklist', value: loading ? '…' : stats.myWorklistCount, helpText: 'Your active and pended docket workload.' },
+    { label: 'Workbasket', value: loading ? '…' : stats.workbasketCount, helpText: 'Team queue dockets available to pull and start.' },
+    { label: 'QC Workbasket', value: loading ? '…' : stats.qcPendingCount, helpText: 'Dockets waiting for pass/correct/fail review.' },
   ];
 
   return (
     <PlatformShell
       moduleLabel="Task Manager / Execution"
       title="Task Manager"
-      subtitle="Execution and routing hub for dockets, worklists, QC handoff, and operational configuration."
+      subtitle="Daily docket execution hub for team intake, personal work, QC review, and oversight."
       actions={<Link to={ROUTES.CREATE_CASE(firmSlug)}>New Docket</Link>}
     >
       <InlineNotice tone="error" message={error} />
       <StatGrid items={cards} />
 
-      <PageSection title="Quick actions" description="Start work or route to the correct queue in one click.">
+      <PageSection title="Quick actions" description="Go straight to the queue that matches your next workflow step.">
         <div className="action-row">
           <Link to={ROUTES.CREATE_CASE(firmSlug)}>New Docket</Link>
           <Link to={ROUTES.GLOBAL_WORKLIST(firmSlug)}>Go to Workbasket</Link>
@@ -92,19 +92,19 @@ export const PlatformTaskManagerPage = () => {
         <div className="tile-grid">
           <Link className="module-tile" to={ROUTES.GLOBAL_WORKLIST(firmSlug)}>
             <strong>Workbasket</strong>
-            <span>Pooled and unassigned docket routing.</span>
+            <span>Team queue dockets available for pull and assignment.</span>
           </Link>
           <Link className="module-tile" to={ROUTES.WORKLIST(firmSlug)}>
             <strong>My Worklist</strong>
-            <span>Assigned execution queue for your day-to-day work.</span>
+            <span>Your own active and pended docket execution workload.</span>
           </Link>
           <Link className="module-tile" to={ROUTES.QC_QUEUE(firmSlug)}>
             <strong>QC Workbasket</strong>
-            <span>Quality review and pass/correct/fail decisions.</span>
+            <span>Dockets awaiting quality-control pass, correction, or fail decisions.</span>
           </Link>
           <Link className="module-tile" to={ROUTES.CASES(firmSlug)}>
             <strong>All Dockets</strong>
-            <span>Firm-wide docket list for search, tracking, and oversight.</span>
+            <span>Master oversight view across workflow states and ownership.</span>
           </Link>
           {isAdmin ? (
             <Link className="module-tile" to={ROUTES.WORK_CATEGORY_MANAGEMENT(firmSlug)}>
