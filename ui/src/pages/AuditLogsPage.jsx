@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Layout } from '../components/common/Layout';
 import { Card } from '../components/common/Card';
 import { Loading } from '../components/common/Loading';
 import { Select } from '../components/common/Select';
 import { Button } from '../components/common/Button';
+import { PlatformShell } from '../components/platform/PlatformShell';
 import { adminApi } from '../api/admin.api';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
@@ -70,17 +70,17 @@ export const AuditLogsPage = () => {
   }, [isPrimaryAdmin, loadLogs]);
 
   return (
-    <Layout>
+    <PlatformShell
+      moduleLabel="Operations"
+      title="Audit logs"
+      subtitle="Firm-level immutable admin actions for hierarchy and user lifecycle changes."
+    >
       <div className="space-y-4">
-        <Card>
-          <div className="space-y-2 p-2">
-            <h1 className="text-xl font-semibold text-slate-900">Audit Logs</h1>
-            <p className="text-sm text-slate-600">Firm-level immutable admin actions for hierarchy and user lifecycle changes.</p>
-            {!isPrimaryAdmin ? (
-              <p className="rounded bg-amber-50 px-3 py-2 text-sm text-amber-800">Only PRIMARY_ADMIN can view audit logs.</p>
-            ) : null}
-          </div>
-        </Card>
+        {!isPrimaryAdmin ? (
+          <Card>
+            <p className="rounded bg-amber-50 px-3 py-2 text-sm text-amber-800">Only PRIMARY_ADMIN can view audit logs.</p>
+          </Card>
+        ) : null}
 
         {isPrimaryAdmin ? (
           <Card>
@@ -149,7 +149,7 @@ export const AuditLogsPage = () => {
           </Card>
         )}
       </div>
-    </Layout>
+    </PlatformShell>
   );
 };
 
