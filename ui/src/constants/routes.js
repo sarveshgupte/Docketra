@@ -24,12 +24,14 @@ export const ROUTES = {
   WORK_SETTINGS: (firmSlug) => `/app/firm/${firmSlug}/settings/work`,
   STORAGE_SETTINGS: (firmSlug) => `/app/firm/${firmSlug}/storage-settings`,
   AI_SETTINGS: (firmSlug) => `/app/firm/${firmSlug}/ai-settings`,
+  CRM: (firmSlug) => `/app/firm/${firmSlug}/crm`,
   CRM_CLIENTS: (firmSlug) => `/app/firm/${firmSlug}/crm/clients`,
   CRM_CLIENT_DETAIL: (firmSlug, id) => `/app/firm/${firmSlug}/crm/clients/${id}`,
   CRM_LEADS: (firmSlug) => `/app/firm/${firmSlug}/crm/leads`,
   QC_QUEUE: (firmSlug) => `/app/firm/${firmSlug}/qc-queue`,
   ADMIN_REPORTS: (firmSlug) => `/app/firm/${firmSlug}/admin/reports`,
   CMS: (firmSlug) => `/app/firm/${firmSlug}/cms`,
+  TASK_MANAGER: (firmSlug) => `/app/firm/${firmSlug}/task-manager`,
   SETTINGS: (firmSlug) => `/app/firm/${firmSlug}/settings`,
 };
 

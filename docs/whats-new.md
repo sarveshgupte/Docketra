@@ -1,5 +1,14 @@
 # What's New
 
+## April 2026: Dedicated module landing pages for CRM, CMS, and Task Manager
+
+- Added first-class module overview pages for **CRM**, **CMS**, and **Task Manager** so each module now opens as a real workspace hub instead of feeling like a grouped-link folder.
+- Parent module clicks in the sidebar now navigate to these module home screens, while chevron controls still support expand/collapse child navigation.
+- CRM landing now includes role-appropriate relationship KPIs, quick actions, recent client widgets, and direct routing tiles for Client Management and Leads.
+- CMS landing now includes intake-focused KPIs, quick actions (including copy-intake-link flow), and clear routing to Request Links/Intake Links, Forms/Templates, and Intake/Submissions.
+- Task Manager landing now clearly owns dockets/worklists/QC/category management with execution KPIs, quick actions, and role-aware configuration shortcuts.
+- Improved onboarding clarity by adding concise purpose copy on each module home, making it easier for users to understand where to start and what each module controls.
+
 ## April 2026: Firm workspace async feedback unification
 
 - Standardized async-state UX across major firm workspace modules so loading, empty, no-results, error, retry, and success behavior now follows one consistent pattern.

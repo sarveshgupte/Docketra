@@ -14,8 +14,8 @@ const navForRole = (firmSlug, role) => {
       items: [
         { to: ROUTES.DASHBOARD(firmSlug), label: 'Dashboard' },
         { to: ROUTES.CMS(firmSlug), label: 'CMS', minRole: 'ADMIN' },
-        { to: ROUTES.CRM_CLIENTS(firmSlug), label: 'CRM', minRole: 'ADMIN' },
-        { to: ROUTES.CASES(firmSlug), label: 'Tasks' },
+        { to: ROUTES.CRM(firmSlug), label: 'CRM', minRole: 'ADMIN' },
+        { to: ROUTES.TASK_MANAGER(firmSlug), label: 'Tasks' },
       ],
     },
     {
