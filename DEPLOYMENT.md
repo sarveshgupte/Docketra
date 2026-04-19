@@ -356,7 +356,7 @@ FRONTEND_ORIGINS=https://docketra.onrender.com/  (trailing slash)
 
 **Solutions**:
 - Verify `ui/dist` folder exists after build
-- Check server.js has SPA fallback route
+- Check src/server.js has SPA fallback route
 - Confirm build command includes `npm run build:ui`
 
 **Verify Build Output**:
