@@ -30,12 +30,14 @@ import { worklistApi } from '../api/worklist.api';
 import { adminApi } from '../api/admin.api';
 import { clientApi } from '../api/client.api';
 import { metricsApi } from '../api/metrics.api';
+import { dashboardApi } from '../api/dashboard.api';
 import { NotificationPanel } from '../../components/NotificationPanel';
 import { formatCaseName, formatDateTime } from '../utils/formatters';
 import { getStatusLabel } from '../utils/statusDisplay';
 import { UX_COPY } from '../constants/uxCopy';
 import { ROUTES, safeRoute } from '../constants/routes';
 import { useActiveDocket } from '../hooks/useActiveDocket';
+import { loadOnboardingProgressSafely } from './dashboardLoadHelpers';
 
 const DASHBOARD_RECENT_CASES_ROW_COUNT = 5;
 const DASHBOARD_RECENT_CASES_MAX_ROWS = 10;
@@ -155,6 +157,7 @@ export const DashboardPage = () => {
     totalExecutedCases: 0,
   });
   const [recentCases, setRecentCases] = useState([]);
+  const [onboardingProgress, setOnboardingProgress] = useState(null);
   const [recentCasesLoading, setRecentCasesLoading] = useState(true);
   const [showBookmarkPrompt, setShowBookmarkPrompt] = useState(false);
   const [showProductTour, setShowProductTour] = useState(false);
@@ -444,6 +447,13 @@ export const DashboardPage = () => {
           : Promise.resolve({}),
       ]);
 
+      await loadOnboardingProgressSafely({
+        fetchProgress: dashboardApi.getOnboardingProgress,
+        setProgress: setOnboardingProgress,
+        firmSlug,
+        onWarning: (message) => console.warn('[Dashboard] Optional onboarding progress load failed', { message }),
+      });
+
       setRecentCases(getRecentCasesSnapshot(casesToDisplay));
       const statsPatch = {
         ...metricsPatch,
@@ -471,65 +481,9 @@ export const DashboardPage = () => {
     openDocket({ caseId, navigate, to: safeRoute(ROUTES.CASE_DETAIL(firmSlug, caseId)) });
   };
 
-  const handleChecklistAction = (stepId) => {
-    if (stepId === 'create-case') {
-      navigate(safeRoute(ROUTES.CREATE_CASE(firmSlug)));
-      return;
-    }
-
-    if (stepId === 'assign-owner') {
-      navigate(safeRoute(ROUTES.CASES(firmSlug)));
-      return;
-    }
-
-    if (stepId === 'invite-team') {
-      navigate(safeRoute(ROUTES.ADMIN(firmSlug)));
-      return;
-    }
-
-    if (stepId === 'configure-firm') {
-      navigate(safeRoute(ROUTES.FIRM_SETTINGS(firmSlug)));
-      return;
-    }
-
-    if (stepId === 'firm-profile') {
-      navigate(safeRoute(ROUTES.FIRM_SETTINGS(firmSlug)));
-      return;
-    }
-
-    if (stepId === 'storage-setup') {
-      navigate(safeRoute(ROUTES.STORAGE_SETTINGS(firmSlug)));
-      return;
-    }
-
-    if (stepId === 'configure-categories') {
-      navigate(safeRoute(ROUTES.WORK_SETTINGS(firmSlug)));
-      return;
-    }
-
-    if (stepId === 'review-workbaskets' || stepId === 'review-pending') {
-      navigate(safeRoute(ROUTES.WORKLIST(firmSlug)));
-      return;
-    }
-
-    if (stepId === 'qc-handoff') {
-      navigate(safeRoute(ROUTES.QC_QUEUE(firmSlug)));
-      return;
-    }
-
-    if (stepId === 'review-assigned') {
-      navigate(safeRoute(ROUTES.MY_WORKLIST(firmSlug)));
-      return;
-    }
-
-    if (stepId === 'update-status') {
-      navigate(safeRoute(ROUTES.CASES(firmSlug)));
-      return;
-    }
-
-    if (stepId === 'check-calendar') {
-      navigate(safeRoute(ROUTES.COMPLIANCE_CALENDAR(firmSlug)));
-    }
+  const handleChecklistAction = (step) => {
+    if (!step?.route) return;
+    navigate(step.route);
   };
 
   if (loading) {
@@ -630,8 +584,8 @@ export const DashboardPage = () => {
           {user?.xID && firmSlug ? (
             <SetupChecklist
               storageKey={`setupChecklist:${user.xID}:${firmSlug}`}
-              recentCases={recentCases}
               onAction={handleChecklistAction}
+              onboardingProgress={onboardingProgress}
               mode={onboardingRole === 'primary_admin' ? 'primary-admin' : (onboardingRole === 'admin' ? 'admin' : (onboardingRole === 'manager' ? 'manager' : 'user'))}
             />
           ) : null}
@@ -717,7 +671,11 @@ export const DashboardPage = () => {
                     title={isAdmin ? 'No dockets yet' : 'No assigned dockets yet'}
                     description={
                       isAdmin
-                        ? 'No docket records yet. Start by adding one real docket so dashboards, workbaskets, and compliance tracking become actionable.'
+                        ? (onboardingProgress?.signals?.activeClientCount === 0
+                          ? 'No dockets yet because no active client exists. Add your first client, then create a docket.'
+                          : (onboardingProgress?.signals?.categoryCount === 0 || onboardingProgress?.signals?.workbasketCount === 0
+                            ? 'No dockets yet because category/workbasket setup is incomplete. Finish work settings to start routing.'
+                            : 'No docket records yet. Start by adding one real docket so dashboards, workbaskets, and compliance tracking become actionable.'))
                         : (onboardingRole === 'manager'
                           ? 'No dockets are visible yet. Your admin may still be assigning you to workbaskets or queue ownership.'
                           : 'No assigned dockets yet. Your manager/admin may still be finalizing assignment and workbasket access.')

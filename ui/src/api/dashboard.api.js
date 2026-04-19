@@ -5,4 +5,6 @@ export const dashboardApi = {
     request((api) => api.get('/dashboard/summary', { params: { filter, page, limit, sort, workbasketId, only } }), 'Failed to load dashboard summary'),
   getSetupStatus: async () =>
     request((api) => api.get('/firm/setup-status'), 'Failed to load firm setup status'),
+  getOnboardingProgress: async () =>
+    request((api) => api.get('/dashboard/onboarding-progress'), 'Failed to load onboarding progress'),
 };
