@@ -65,3 +65,22 @@ When adding features that affect onboarding or release notes:
 2. Update this document (audience steps + API/contract changes).
 3. Ensure superadmin release-note copy is short and value-focused (3-5 bullets).
 4. Keep modal non-intrusive and dismissible.
+
+## 4) Setup checklist trust upgrade (data-driven progress)
+
+### Why
+The previous checklist could be advanced by local UI state even when real workspace setup was incomplete.
+
+### What changed
+- Added backend progress endpoint: `GET /api/dashboard/onboarding-progress`.
+- Checklist completion now defaults to backend-detected truth from firm/client/category/workbasket/docket/user workflow data.
+- Manual completion remains only as a fallback for non-detectable steps.
+- Checklist item metadata now includes `source` and `explanation` to improve credibility.
+
+### UX impact
+- Users now see concise, actionable explanations for incomplete steps (for example, waiting on first client, pending workbasket assignment, or unassigned queue routing).
+- Incomplete steps provide direct role-safe CTAs to the right page.
+- Recent dockets empty state now references onboarding gaps for admin roles (missing clients or missing category/workbasket setup).
+
+- Optional onboarding progress fetch is non-blocking and cannot fail core dashboard metrics/recent dockets rendering.
+- For detected steps, backend status is authoritative; CTA clicks do not force manual completion.

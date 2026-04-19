@@ -187,3 +187,15 @@
 - Added lightweight stage movement controls directly on pipeline cards using the existing lead update APIs (no drag-and-drop complexity introduced).
 - Clicking a pipeline card opens the existing lead management detail modal for deeper updates and activity visibility.
 - Added a top-level `+ New Lead` action consistent across CRM views to speed up pipeline intake.
+
+## April 2026: Data-driven onboarding setup progress
+
+- Upgraded dashboard onboarding checklist to use real backend signals instead of mostly manual/local progress toggles.
+- Added `GET /api/dashboard/onboarding-progress` to return role-aware setup step status with `detected` vs `manual` completion source.
+- Added conservative detection across Primary Admin/Admin/Manager/User for setup readiness (clients, categories/workbaskets, queue visibility, assigned dockets, workflow interaction).
+- Checklist now shows clearer completion reasons and waiting states to improve trust.
+- Incomplete checklist steps now route users directly to role-appropriate setup pages.
+- Dashboard empty state for no dockets now references real setup blockers (for example, missing active client or missing category/workbasket setup).
+
+- Made onboarding-progress dashboard fetch non-blocking so checklist API issues do not degrade core dashboard load.
+- Separated checklist CTA navigation from completion state for detected steps to preserve backend-driven truth.
