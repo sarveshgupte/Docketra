@@ -15,6 +15,7 @@ export const ROUTES = {
   GLOBAL_WORKLIST: (firmSlug) => `/app/firm/${firmSlug}/global-worklist`,
   COMPLIANCE_CALENDAR: (firmSlug) => `/app/firm/${firmSlug}/compliance-calendar`,
   CLIENTS: (firmSlug) => `/app/firm/${firmSlug}/clients`,
+  CLIENT_WORKSPACE: (firmSlug, clientId) => `/app/firm/${firmSlug}/clients/${clientId}`,
   PROFILE: (firmSlug) => `/app/firm/${firmSlug}/profile`,
   UPDATES: (firmSlug) => `/app/firm/${firmSlug}/updates`,
   ADMIN: (firmSlug) => `/app/firm/${firmSlug}/admin`,
