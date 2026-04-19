@@ -40,7 +40,10 @@ const mockUserModel = {
     } else if (query.role === 'USER') {
       records = [{ xID: 'X100001' }, { xID: 'X100002' }];
     } else {
-      records = [
+      const isFirmScoped = Boolean(query && Object.prototype.hasOwnProperty.call(query, 'firmId'));
+      records = isFirmScoped
+        ? []
+        : [
         {
           _id: 'u1',
           firmId: 'f1',
@@ -190,6 +193,19 @@ async function run() {
   assert.ok(Array.isArray(details.users), 'details should include user rows');
   assert.ok(Array.isArray(details.topBlockers), 'details should include top blockers');
   assert.ok(details.firms.length >= 1, 'should return at least one firm');
+
+
+  const filtered = await service.getOnboardingInsightDetails({
+    sinceDays: 30,
+    staleAfterDays: 3,
+    completionState: 'all',
+    firmId: '507f1f77bcf86cd799439011',
+  });
+  assert.ok(filtered.filtersApplied.firmId, 'firm filter should be reflected in response metadata');
+  assert.ok(filtered.firms.length <= 1, 'firm filter should limit firm rows to one tenant');
+  if (filtered.firms[0]) {
+    assert.ok(typeof filtered.firms[0].nextAction === 'string' && filtered.firms[0].nextAction.length > 0, 'firm guidance should provide actionable next-step text');
+  }
 
   console.log('onboardingAnalytics.service.test.js passed');
 }
