@@ -34,9 +34,30 @@ const mockUserModel = {
     ];
   },
   find(query) {
-    const records = query.role === 'MANAGER'
-      ? [{ _id: 'm1' }, { _id: 'm2' }]
-      : [{ xID: 'X100001' }, { xID: 'X100002' }];
+    let records;
+    if (query.role === 'MANAGER') {
+      records = [{ _id: 'm1' }, { _id: 'm2' }];
+    } else if (query.role === 'USER') {
+      records = [{ xID: 'X100001' }, { xID: 'X100002' }];
+    } else {
+      records = [
+        {
+          _id: 'u1',
+          firmId: 'f1',
+          role: 'MANAGER',
+          xID: 'X100001',
+          onboardingTelemetry: {
+            lastProgressCompleted: 1,
+            lastProgressTotal: 3,
+            lastIncompleteStepIds: ['queue-assignment'],
+            lastProgressRefreshedAt: new Date(Date.now() - (5 * 24 * 60 * 60 * 1000)),
+          },
+          tutorialState: {
+            skippedAt: new Date(Date.now() - (5 * 24 * 60 * 60 * 1000)),
+          },
+        },
+      ];
+    }
     return {
       select() {
         return {
@@ -86,7 +107,20 @@ const mockOnboardingEventModel = {
 
 Module._load = function (request, parent, isMain) {
   if (request === '../models/User.model') return mockUserModel;
-  if (request === '../models/Firm.model') return { countDocuments: async () => 5 };
+  if (request === '../models/Firm.model') {
+    return {
+      countDocuments: async () => 5,
+      find() {
+        return {
+          select() {
+            return {
+              lean: async () => [{ _id: 'f1', name: 'Firm One', firmId: 'FIRM001', firmSlug: 'firm-one', status: 'active' }],
+            };
+          },
+        };
+      },
+    };
+  }
   if (request === '../models/Client.model') return { distinct: async () => ['f1', 'f2'] };
   if (request === '../models/Category.model') return { distinct: async () => ['f1'] };
   if (request === '../models/Team.model') return { distinct: async (field) => (field === 'firmId' ? ['f1', 'f2'] : ['m1']) };
@@ -150,6 +184,12 @@ async function run() {
   assert.equal(summary.tutorialFunnel.completed, 4);
   assert.equal(summary.blockers.managersWithoutAssignedQueues, 1);
   assert.equal(summary.blockers.usersWithoutAssignedDockets, 1);
+
+  const details = await service.getOnboardingInsightDetails({ sinceDays: 30, staleAfterDays: 3, completionState: 'all' });
+  assert.ok(Array.isArray(details.firms), 'details should include firm rows');
+  assert.ok(Array.isArray(details.users), 'details should include user rows');
+  assert.ok(Array.isArray(details.topBlockers), 'details should include top blockers');
+  assert.ok(details.firms.length >= 1, 'should return at least one firm');
 
   console.log('onboardingAnalytics.service.test.js passed');
 }
