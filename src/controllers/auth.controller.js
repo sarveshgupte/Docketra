@@ -3610,8 +3610,16 @@ const redirectGoogleResult = (res, params = {}) => {
     }
   });
 
-  const targetPath = base ? `${target.pathname}${target.search}` : `${target.toString()}`;
-  return res.redirect(targetPath);
+  // Must remain absolute so OAuth callback completion can cross from backend origin to frontend origin.
+  if (base) {
+    return res.redirect(target.toString());
+  }
+
+  const level = process.env.NODE_ENV === 'production' ? 'error' : 'warn';
+  logger[level]('GOOGLE_OAUTH_FRONTEND_URL_MISSING', {
+    message: 'FRONTEND_URL is not configured; falling back to localhost for OAuth post-auth redirect.',
+  });
+  return res.redirect(target.toString());
 };
 
 const startGoogleAuth = async (req, res) => {
