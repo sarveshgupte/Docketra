@@ -1,5 +1,14 @@
 # What's New
 
+## April 2026: Docket Detail refactored into a tabbed execution workspace
+
+- Reworked **Docket Detail** into a structured operational workspace with a stronger summary header (docket ID, title, status, category/subcategory, linked client, owner, queue/workbasket, timestamps).
+- Added first-class tabs for **Overview**, **Attachments**, **Activity**, and **History** with URL-driven tab state (`?tab=`) for deep linking.
+- Elevated **Attachments** as the canonical document collection area inside each docket with clear empty-state guidance and direct upload controls.
+- Improved **Activity** visibility by surfacing operational timeline events (status/assignment/QC/comment/edit flows from existing timeline/audit data) alongside working comments.
+- Improved **History** visibility with an audit-style change stream and client-linked docket history for better execution traceability.
+- Preserved role-aware execution controls while reducing page clutter and avoiding full-page reload behavior across tab switches.
+
 ## April 2026: Dedicated module landing pages for CRM, CMS, and Task Manager
 
 - Added first-class module overview pages for **CRM**, **CMS**, and **Task Manager** so each module now opens as a real workspace hub instead of feeling like a grouped-link folder.
