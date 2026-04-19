@@ -365,7 +365,12 @@ const getOnboardingInsightDetails = async ({
     Category.distinct('firmId', resolvedFirmId ? { isActive: { $ne: false }, firmId: resolvedFirmId } : { isActive: { $ne: false } }),
     Team.distinct('firmId', resolvedFirmId ? { isActive: { $ne: false }, type: 'PRIMARY', firmId: resolvedFirmId } : { isActive: { $ne: false }, type: 'PRIMARY' }),
     Team.distinct('managerId', { isActive: { $ne: false }, type: 'PRIMARY' }),
-    Case.distinct('assignedToXID', { assignedToXID: { $nin: [null, ''] } }),
+    Case.distinct(
+      'assignedToXID',
+      resolvedFirmId
+        ? { assignedToXID: { $nin: [null, ''] }, firmId: resolvedFirmId }
+        : { assignedToXID: { $nin: [null, ''] } },
+    ),
     OnboardingEvent.find(resolvedFirmId ? { createdAt: { $gte: since }, firmId: resolvedFirmId } : { createdAt: { $gte: since } })
       .sort({ createdAt: -1 })
       .limit(Math.min(normalizedLimit, 30))
