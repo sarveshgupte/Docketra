@@ -876,11 +876,28 @@
 }
 
 .enterprise-sidebar__group-trigger {
-  width: calc(100% - 16px);
+  width: 100%;
   text-align: left;
   border: none;
   background: transparent;
   cursor: pointer;
+}
+
+.enterprise-sidebar__group-chevron-toggle {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.enterprise-sidebar__group-chevron-toggle:hover {
+  background: var(--color-surface-subtle);
 }
 
 .enterprise-sidebar__group-chevron {
