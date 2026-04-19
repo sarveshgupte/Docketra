@@ -369,3 +369,66 @@ Migrated to `PlatformShell` in this pass:
 
 - Docket-detail inner section composition is still dense and should be progressively split into dedicated sub-sections in a future refactor pass.
 - Add end-to-end browser assertions for post-logout back-button protection once E2E harness is in place.
+
+## Command center productivity polish pass (April 2026)
+
+### Root productivity/workflow issues found
+
+| Severity | Area | Issue | Impact |
+| --- | --- | --- | --- |
+| High | Workspace top search | Search intent and scope were unclear; no grouped command/record outcomes. | Users had to fall back to sidebar hunting for frequent navigation jumps. |
+| High | Keyboard workflow | Shortcut behavior was fragmented and not standardized for cross-module jumps. | Power users could not reliably move between queues/modules without mouse usage. |
+| Medium | Quick-action copy | Action wording diverged between pages (`Create/Open/Add` variants). | Operators had to mentally map equivalent actions before moving quickly. |
+| Medium | Discoverability | No lightweight, in-context shortcut education layer existed. | Command features were underused and speed gains were hidden. |
+
+### Improvements implemented
+
+1. Upgraded `PlatformShell` into a command-center entry surface with a top search trigger that clearly states scope (dockets, clients, modules).
+2. Added grouped command palette sections for quick actions, module destinations, docket results, and client results.
+3. Added role-aware command inventory including: New Docket, Dashboard, Task Manager, CRM, CMS, Workbasket, My Worklist, QC Queue, Clients, Reports, Settings, Open Profile, and Sign out.
+4. Added keyboard-first behavior:
+   - `Cmd/Ctrl + K` to open/close command center
+   - `/` quick focus/open when not typing
+   - `Alt + Shift + N/D/T/W/B/Q` for high-value route jumps
+   - Arrow key navigation + Enter execution + Escape close
+   - explicit typing-target guard to prevent accidental triggering inside form fields/editors.
+5. Standardized quick-action naming on module landing pages:
+   - `New Docket`
+   - `Go to Workbasket`
+   - `Go to My Worklist`
+   - `Go to Intake Queue`
+   - `Go to Forms/Templates`
+   - `New Client`
+   - `Import Clients (CSV)`
+   - `Go to Leads Queue`
+6. Added lightweight shortcut discoverability via command palette helper text (without tutorial clutter).
+
+### Shortcut rules adopted
+
+- Reserve browser-native combos by default; prefer modifier-safe `Alt + Shift + <key>` for workspace jumps.
+- Never fire workspace shortcuts when focused in editable controls.
+- Keep shortcut inventory intentionally small and centered on high-frequency navigation/actions.
+
+### Follow-up items
+
+1. Add backend-backed cross-entity search indexing (documents/attachments references and queue-specific metadata) for deeper record discovery.
+2. Add browser-level interaction tests for arrow navigation, Enter routing, and Escape dismissal in command center overlays.
+3. Add optional role-configurable shortcut remapping for large enterprise teams with strict keyboard conventions.
+
+## Command center reliability hardening follow-up (April 2026)
+
+### Root correctness gaps fixed
+
+1. **Typing-guard gap:** `Cmd/Ctrl + K` could still trigger while typing because shortcut ownership was split.
+2. **Duplicate shortcut ownership:** global key listeners existed in both `PlatformShell` and `CommandPalette`.
+3. **Async search race risk:** stale request responses could overwrite newer query intent.
+4. **Palette lifecycle drift:** close/reopen and route transitions could preserve stale query/searching/results state.
+
+### Reliability hardening decisions
+
+- **Single keyboard owner:** `PlatformShell` now exclusively owns all workspace-level shortcuts (`Cmd/Ctrl+K`, `/`, `Alt+Shift+...`, `Escape`).
+- **Shared typing guard:** introduced a shared shortcut helper (`isEditableTarget` / `isShortcutAllowedTarget`) and applied it to all global shortcut entry points.
+- **Search race protection:** added request-id stale-response protection and query/open-state checks before applying async results.
+- **Search lifecycle constraints:** record search only runs while palette is open and query length is valid; close/reset and route change now clear command-center state deterministically.
+- **Failure fallback:** command palette now shows intentional fallback guidance when record search fails, while quick actions/module commands remain available.
+- **Client route-id normalization:** client search rows now normalize route IDs (`_id`, `id`, `crmClientId`, `clientId`) before generating CRM detail routes.
