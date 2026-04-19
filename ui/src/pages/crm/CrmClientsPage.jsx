@@ -1,15 +1,14 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Layout } from '../../components/common/Layout';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
 import { Loading } from '../../components/common/Loading';
 import { Modal } from '../../components/common/Modal';
 import { Input } from '../../components/common/Input';
-import { PageHeader } from '../../components/layout/PageHeader';
 import { DataTable } from '../../components/common/DataTable';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { PlatformShell } from '../../components/platform/PlatformShell';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { crmApi } from '../../api/crm.api';
@@ -162,14 +161,12 @@ export const CrmClientsPage = () => {
   ];
 
   return (
-    <Layout>
-      <PageHeader
-        title="CRM Clients"
-        description="Manage your sales contacts and client pipeline."
-        actions={isAdmin ? (
-          <Button onClick={openModal}>+ Add Client</Button>
-        ) : null}
-      />
+    <PlatformShell
+      moduleLabel="CRM"
+      title="CRM clients"
+      subtitle="Manage your sales contacts and client pipeline."
+      actions={isAdmin ? <Button onClick={openModal}>+ Add Client</Button> : null}
+    >
       <Card>
         {loading ? (
           <Loading message="Loading CRM clients..." />
@@ -251,6 +248,6 @@ export const CrmClientsPage = () => {
           </div>
         </form>
       </Modal>
-    </Layout>
+    </PlatformShell>
   );
 };

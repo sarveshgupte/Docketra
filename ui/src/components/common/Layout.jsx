@@ -2,6 +2,9 @@
  * Enterprise Sidebar Layout Component
  * Docketra B2B SaaS Platform — 2026 Edition
  * Minimalist collapsible sidebar + glass Omnibar header
+ *
+ * @deprecated For authenticated firm-facing routes, use PlatformShell instead.
+ * This layout remains for legacy/non-firm pages until fully retired.
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';

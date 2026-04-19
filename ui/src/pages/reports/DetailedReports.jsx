@@ -5,14 +5,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Layout } from '../../components/common/Layout';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { FilterPanel } from '../../components/reports/FilterPanel';
 import { ReportsTable } from '../../components/reports/ReportsTable';
 import { ExportModal } from './ExportModal';
 import { Loading } from '../../components/common/Loading';
 import { Button } from '../../components/common/Button';
-import { useAuth } from '../../hooks/useAuth';
+import { PlatformShell } from '../../components/platform/PlatformShell';
 import { reportsService } from '../../services/reports.service';
 import { formatDateTime, formatRelativeTime, getISODateInTimezone } from '../../utils/formatDateTime';
 import './DetailedReports.css';
@@ -20,7 +19,6 @@ import './DetailedReports.css';
 export const DetailedReports = () => {
   const navigate = useNavigate();
   const { firmSlug } = useParams();
-  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [cases, setCases] = useState([]);
   const [pagination, setPagination] = useState(null);
@@ -203,24 +201,22 @@ export const DetailedReports = () => {
   };
 
   return (
-    <Layout>
+    <PlatformShell
+      moduleLabel="Operations"
+      title="Detailed reports"
+      subtitle="Filter and export docket data."
+      actions={(
+        <>
+          <Button onClick={() => handleExport('csv')} disabled={cases.length === 0}>
+            Export as CSV
+          </Button>
+          <Button variant="primary" onClick={() => handleExport('excel')} disabled={cases.length === 0}>
+            Export as Excel
+          </Button>
+        </>
+      )}
+    >
       <div className="detailed-reports">
-        <div className="detailed-reports__header">
-          <div>
-            <h1>Detailed Reports</h1>
-            <p className="text-secondary">Filter and export case data</p>
-          </div>
-
-          <div className="detailed-reports__export-buttons">
-            <Button onClick={() => handleExport('csv')} disabled={cases.length === 0}>
-              Export as CSV
-            </Button>
-            <Button variant="primary" onClick={() => handleExport('excel')} disabled={cases.length === 0}>
-              Export as Excel
-            </Button>
-          </div>
-        </div>
-
         {error && (
           <div className="detailed-reports__error">
             <p>{error}</p>
@@ -236,7 +232,7 @@ export const DetailedReports = () => {
         />
 
         {loading ? (
-          <Loading message="Loading cases..." />
+          <Loading message="Loading dockets..." />
         ) : (
           cases.length === 0 && !error ? (
             <EmptyState
@@ -324,6 +320,6 @@ export const DetailedReports = () => {
           )}
         </section>
       </div>
-    </Layout>
+    </PlatformShell>
   );
 };

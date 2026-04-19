@@ -4,6 +4,30 @@
 
 This document captures the shared visual polish and enterprise-density rules for Docketra's unified workspace surfaces.
 
+## Canonical authenticated shell contract (PR 1004)
+
+For all authenticated firm-facing routes (`/app/firm/:firmSlug/*`), **`PlatformShell` is the single canonical shell**.
+
+- Keep `FirmLayout` as route guard/context only.
+- Keep route-level loading in the same workspace structure by using `PlatformRouteLoadingShell`.
+- Keep page-level structure consistent:
+  1. `PlatformShell` with `moduleLabel`, `title`, `subtitle`, and optional shell-level `actions`.
+  2. Use `PageHeader` inside the body **only for distinct internal sections**, not to repeat shell metadata.
+  3. Content sections in cards/tables below header with consistent spacing (`space-y-4` baseline).
+  4. Empty/loading/error states rendered *inside* `PlatformShell` to avoid shell flashes during navigation.
+
+### Header/action duplication rule
+
+- Do **not** render the same page title/subtitle in both `PlatformShell` and `PageHeader`.
+- Do **not** render the same action CTA in both `PlatformShell.actions` and `PageHeader.actions`.
+- Preferred default: use `PlatformShell` metadata only; add `PageHeader` only when section hierarchy is genuinely different.
+
+### Deprecated pattern
+
+- `components/common/Layout.jsx` is deprecated for authenticated firm-facing pages.
+- Do not introduce new authenticated route pages on `Layout`.
+- Existing remaining `Layout` usage should be treated as migration debt and moved to `PlatformShell` in small, safe follow-up PRs.
+
 ## Spacing rules adopted
 
 1. Use compact, predictable vertical rhythm in platform surfaces:
@@ -50,6 +74,19 @@ This document captures the shared visual polish and enterprise-density rules for
 
 ## Follow-up items
 
-1. Extend these exact contracts to remaining legacy pages not yet fully centered on `PlatformShell`.
+1. Continue migrating any remaining authenticated pages still using legacy `Layout` wrappers.
 2. Add queue-specific column-width contracts only where needed for domain-heavy tables.
 3. Add visual regression checks for shared shell/table primitives when screenshot automation is available.
+
+## PR 1004 migration notes
+
+Migrated to canonical shell in this pass:
+
+1. Audit logs (`/app/firm/:firmSlug/admin/audit-logs`)
+2. CRM clients (`/app/firm/:firmSlug/crm/clients`)
+3. Detailed reports (`/app/firm/:firmSlug/admin/reports/detailed`)
+4. Reports dashboard (legacy reports surface)
+
+Additional shell-stability update:
+
+- `RouteLoadingShell` now uses `PlatformRouteLoadingShell` for firm workspace route loading (including `/app/dashboard` redirect entry) to reduce stale/legacy shell flashes during route transitions.

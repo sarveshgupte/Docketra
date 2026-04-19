@@ -17,8 +17,9 @@ const LoadingBody = ({ children, centered = false }) => (
 
 export const RouteLoadingShell = () => {
   const { pathname } = useLocation();
+  const isFirmWorkspaceRoute = pathname.startsWith('/app/firm') || pathname === '/app/dashboard';
 
-  if (pathname.startsWith('/app/firm/')) {
+  if (isFirmWorkspaceRoute) {
     return <PlatformRouteLoadingShell />;
   }
 
