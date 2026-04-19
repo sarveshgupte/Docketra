@@ -16,6 +16,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { useToast } from '../hooks/useToast';
 import { productUpdatesService } from '../services/productUpdatesService';
 import { APP_VERSION } from '../utils/constants';
+import { loadPlatformOverviewData } from '../utils/platformOverviewLoader';
 
 export const PlatformDashboard = () => {
   const MAX_UPDATE_BULLETS = 5;
@@ -38,6 +39,7 @@ export const PlatformDashboard = () => {
   });
   const [publishingUpdate, setPublishingUpdate] = useState(false);
   const [stats, setStats] = useState(emptyStats);
+  const [onboardingInsights, setOnboardingInsights] = useState(null);
   const isFetchingRef = useRef(false);
   const hasLoadedRef = useRef(false);
   const hasShownErrorRef = useRef(false);
@@ -73,12 +75,20 @@ export const PlatformDashboard = () => {
     isFetchingRef.current = true;
     try {
       setLoading(true);
-      const response = await superadminService.getPlatformStats();
+      const { statsResponse: response, onboardingResponse } = await loadPlatformOverviewData({
+        getPlatformStats: superadminService.getPlatformStats,
+        getOnboardingInsights: superadminService.getOnboardingInsights,
+      });
       
       // HTTP 304 means cached data is still valid - keep current state
       if (response?.status !== 304) {
         if (response?.success) {
           setStats(normalizeStats(response.data));
+          if (onboardingResponse?.success) {
+            setOnboardingInsights(onboardingResponse.data);
+          } else {
+            setOnboardingInsights(null);
+          }
         } else if (response?.degraded) {
           setStats(normalizeStats(response.data));
         } else if (!hasShownErrorRef.current) {
@@ -230,6 +240,30 @@ export const PlatformDashboard = () => {
                 Go to Firms Management
               </Button>
             </div>
+          </Card>
+
+          <Card className="space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-gray-900 tracking-tight">Onboarding Observability</h2>
+              <Badge>Superadmin</Badge>
+            </div>
+            {onboardingInsights ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <MetricCard title="Zero Active Clients" value={onboardingInsights?.firmOverview?.firmsWithZeroActiveClients || 0} subtitle="Firms needing first client setup" />
+                  <MetricCard title="Missing Category/Workbasket" value={onboardingInsights?.firmOverview?.firmsWithoutCategoryOrWorkbasket || 0} subtitle="Firms blocked on workflow setup" />
+                  <MetricCard title="Managers w/o Queue" value={onboardingInsights?.blockers?.managersWithoutAssignedQueues || 0} subtitle="Managers not yet assigned to primary queues" />
+                  <MetricCard title="Users w/o Dockets" value={onboardingInsights?.blockers?.usersWithoutAssignedDockets || 0} subtitle="Users without assigned dockets" />
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                  <p><strong>Tutorial completed:</strong> {onboardingInsights?.tutorialFunnel?.completed || 0}</p>
+                  <p><strong>Tutorial skipped:</strong> {onboardingInsights?.tutorialFunnel?.skipped || 0}</p>
+                  <p><strong>Skipped + still incomplete (&gt;{onboardingInsights?.timeframe?.staleAfterDays || 3} days):</strong> {onboardingInsights?.tutorialFunnel?.skippedStillIncompleteAfterThreshold || 0}</p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">Onboarding insights are not available yet.</p>
+            )}
           </Card>
 
           <Card className="space-y-4">

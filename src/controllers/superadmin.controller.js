@@ -23,6 +23,7 @@ const { createFirmWithAdmin } = require('../modules/onboarding/onboarding.servic
 const { safeAuditLog } = require('../services/safeSideEffects.service');
 const { getSession } = require('../utils/getSession');
 const log = require('../utils/log');
+const onboardingAnalyticsService = require('../services/onboardingAnalytics.service');
 
 // Constants
 const FIRM_ID_PATTERN = /^FIRM\d{3,}$/i;
@@ -205,6 +206,29 @@ const getPlatformStats = async (req, res) => {
         totalClients: 0,
         totalUsers: 0,
       },
+    });
+  }
+};
+
+const getOnboardingInsights = async (req, res) => {
+  try {
+    const sinceDays = Number.parseInt(req.query?.sinceDays, 10) || 30;
+    const staleAfterDays = Number.parseInt(req.query?.staleAfterDays, 10) || 3;
+    const recentLimit = Number.parseInt(req.query?.recentLimit, 10) || 25;
+
+    const insights = await onboardingAnalyticsService.getOnboardingInsights({
+      sinceDays: Math.min(Math.max(sinceDays, 1), 120),
+      staleAfterDays: Math.min(Math.max(staleAfterDays, 1), 30),
+      recentLimit: Math.min(Math.max(recentLimit, 1), 100),
+    });
+
+    return res.json({ success: true, data: insights });
+  } catch (error) {
+    log.error('[SUPERADMIN] Error loading onboarding insights:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to load onboarding insights',
+      data: null,
     });
   }
 };
@@ -1542,6 +1566,7 @@ module.exports = {
   forceResetFirmAdmin: wrapWriteHandler(forceResetFirmAdmin),
   resendAdminAccess: wrapWriteHandler(resendAdminAccess),
   getPlatformStats,
+  getOnboardingInsights,
   getFirmBySlug,
   getOperationalHealth,
   switchFirm,

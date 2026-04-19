@@ -19,7 +19,15 @@ const readStoredState = (storageKey) => {
   }
 };
 
-export const SetupChecklist = ({ storageKey, onAction, mode = 'admin', onboardingProgress = null }) => {
+export const SetupChecklist = ({
+  storageKey,
+  onAction,
+  onManualComplete,
+  onDismiss,
+  onCtaOpen,
+  mode = 'admin',
+  onboardingProgress = null,
+}) => {
   const [{ dismissed, manualSteps }, setChecklistState] = useState(readStoredState(storageKey));
 
   useEffect(() => {
@@ -50,6 +58,7 @@ export const SetupChecklist = ({ storageKey, onAction, mode = 'admin', onboardin
   }
 
   const handleNavigate = (step) => {
+    onCtaOpen?.(step);
     onAction?.(step);
   };
 
@@ -64,6 +73,7 @@ export const SetupChecklist = ({ storageKey, onAction, mode = 'admin', onboardin
       },
     };
     persistState(nextState);
+    onManualComplete?.(step);
   };
 
   return (
@@ -137,7 +147,10 @@ export const SetupChecklist = ({ storageKey, onAction, mode = 'admin', onboardin
       <div className="setup-checklist__dismiss">
         <Button
           variant="secondary"
-          onClick={() => persistState({ dismissed: true, manualSteps })}
+          onClick={() => {
+            persistState({ dismissed: true, manualSteps });
+            onDismiss?.();
+          }}
           style={{ marginTop: 'var(--space-4)' }}
         >
           Dismiss checklist

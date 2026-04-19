@@ -3,6 +3,7 @@ const dashboardService = require('../services/dashboard.service');
 const { getRedisClient } = require('../config/redis');
 const log = require('../utils/log');
 const onboardingProgressService = require('../services/onboardingProgress.service');
+const onboardingAnalyticsService = require('../services/onboardingAnalytics.service');
 
 const DASHBOARD_TTL_SECONDS = 30;
 
@@ -89,6 +90,18 @@ const getOnboardingProgress = async (req, res) => {
       firmId: req.user.firmId,
       user: req.user,
     });
+    try {
+      await onboardingAnalyticsService.recordProgressIfChanged({
+        user: req.user,
+        firmId: req.user.firmId,
+        role: progress.role,
+        steps: progress.steps,
+      });
+    } catch (analyticsError) {
+      log.warn('[Dashboard] Non-blocking onboarding analytics write failed', {
+        message: analyticsError?.message,
+      });
+    }
 
     return res.json({ success: true, data: progress });
   } catch (error) {
@@ -104,4 +117,28 @@ const getOnboardingProgress = async (req, res) => {
   }
 };
 
-module.exports = { getDashboardSummary, getOnboardingProgress };
+const trackOnboardingEvent = async (req, res) => {
+  try {
+    assertFirmContext(req);
+    const { eventName, stepId = null, source = null, metadata = null } = req.body || {};
+
+    await onboardingAnalyticsService.createEvent({
+      user: req.user,
+      firmId: req.user.firmId,
+      role: req.user?.role,
+      eventName,
+      stepId,
+      source,
+      metadata: metadata && typeof metadata === 'object' ? metadata : undefined,
+    });
+
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message || 'Unable to record onboarding event',
+    });
+  }
+};
+
+module.exports = { getDashboardSummary, getOnboardingProgress, trackOnboardingEvent };
