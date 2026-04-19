@@ -16,6 +16,7 @@ const { assertPrimaryAdmin, getTagValidationError, normalizeId } = require('../u
 const { logAuditEvent } = require('../services/adminActionAudit.service');
 const log = require('../utils/log');
 const settingsAuditService = require('../services/settingsAudit.service');
+const onboardingAnalyticsService = require('../services/onboardingAnalytics.service');
 
 const resolveUserFirmScope = (req, res) => {
   if (normalizeRole(req.user?.role) === 'SUPER_ADMIN') return {};
@@ -395,6 +396,23 @@ const completeTutorial = async (req, res) => {
       { _id: userId },
       { $set: updatePatch },
     );
+
+    if (req.user?.firmId) {
+      try {
+        await onboardingAnalyticsService.createEvent({
+          user: req.user,
+          firmId: req.user.firmId,
+          role: req.user?.role || role,
+          eventName: status === 'skipped' ? 'welcome_tutorial_skipped' : 'welcome_tutorial_completed',
+          metadata: { stepIndex: safeStepIndex },
+        });
+      } catch (analyticsError) {
+        log.warn('[UserController] Non-blocking tutorial analytics write failed', {
+          userId: req.user?._id?.toString?.() || String(req.user?._id || ''),
+          message: analyticsError?.message,
+        });
+      }
+    }
 
     return res.json({ success: true });
   } catch (error) {

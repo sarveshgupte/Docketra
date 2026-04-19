@@ -25,6 +25,7 @@ const {
   exitFirm,
   activateFirm,
   deactivateFirm,
+  getOnboardingInsights,
 } = require('../controllers/superadmin.controller');
 
 /**
@@ -47,6 +48,7 @@ const {
 
 // Platform statistics
 router.get('/stats', authorize(SuperAdminPolicy.canViewPlatformStats), getPlatformStats);
+router.get('/onboarding-insights', authorize(SuperAdminPolicy.canViewPlatformStats), getOnboardingInsights);
 router.get('/health', requireSuperadmin, getOperationalHealth);
 
 // Firm management
