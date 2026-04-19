@@ -336,40 +336,44 @@ class StorageBackupService {
     return primaryAdmin?.email ? [primaryAdmin.email] : [];
   }
 
+  async runNightlyBackupsOnce() {
+    const firms = await Firm.find({
+      'settings.storageBackup.enabled': true,
+      'storage.mode': 'firm_connected',
+      'storageConfig.provider': { $ne: null },
+    }).select('_id settings.storageBackup').lean();
+
+    for (const firm of firms) {
+      try {
+        const result = await this.runBackupForFirm(firm._id, {
+          sendEmail: true,
+          recipients: firm?.settings?.storageBackup?.notificationRecipients || [],
+        });
+        const access = await this.buildBackupAccess({ firmId: firm._id, exportId: result.exportId });
+        if (access?.downloadUrl) {
+          await this.emailBackupNotification({
+            firmId: firm._id,
+            exportId: result.exportId,
+            downloadUrl: access.downloadUrl,
+            success: true,
+            recipients: firm?.settings?.storageBackup?.notificationRecipients || [],
+          });
+        }
+      } catch (error) {
+        log.error('[BACKUP]', {
+          event: 'nightly_backup_failed',
+          firmId: String(firm._id),
+          message: error.message,
+        });
+      }
+    }
+  }
+
   scheduleNightlyBackups() {
     if (this.nightlyTimer) return;
     this.nightlyTimer = setInterval(async () => {
       try {
-        const firms = await Firm.find({
-          'settings.storageBackup.enabled': true,
-          'storage.mode': 'firm_connected',
-          'storageConfig.provider': { $ne: null },
-        }).select('_id settings.storageBackup').lean();
-
-        for (const firm of firms) {
-          try {
-            const result = await this.runBackupForFirm(firm._id, {
-              sendEmail: true,
-              recipients: firm?.settings?.storageBackup?.notificationRecipients || [],
-            });
-            const access = await this.buildBackupAccess({ firmId: firm._id, exportId: result.exportId });
-            if (access?.downloadUrl) {
-              await this.emailBackupNotification({
-                firmId: firm._id,
-                exportId: result.exportId,
-                downloadUrl: access.downloadUrl,
-                success: true,
-                recipients: firm?.settings?.storageBackup?.notificationRecipients || [],
-              });
-            }
-          } catch (error) {
-            log.error('[BACKUP]', {
-              event: 'nightly_backup_failed',
-              firmId: String(firm._id),
-              message: error.message,
-            });
-          }
-        }
+        await this.runNightlyBackupsOnce();
       } catch (error) {
         log.error('[BACKUP]', { event: 'nightly_scheduler_failed', message: error.message });
       }
