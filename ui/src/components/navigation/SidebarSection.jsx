@@ -1,5 +1,5 @@
 import React, { useId, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { BadgeCount } from '../common/BadgeCount';
 
 export const SidebarSection = ({
@@ -13,6 +13,7 @@ export const SidebarSection = ({
   onGroupToggle = null,
   onNavigate = null,
 }) => {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const canToggle = collapsible && !sticky;
   const sectionId = useId();
@@ -48,32 +49,40 @@ export const SidebarSection = ({
 
               return (
                 <div key={item.id} className="enterprise-sidebar__group">
-                  <button
-                    type="button"
-                    className={[
-                      'enterprise-sidebar__nav-link enterprise-sidebar__group-trigger text-sm font-medium',
-                      item.active ? 'active bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900',
-                      collapsed ? 'enterprise-sidebar__nav-link--collapsed' : '',
-                    ].filter(Boolean).join(' ')}
-                    onClick={() => handleGroupToggle(item.id)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        handleGroupToggle(item.id);
-                      }
-                    }}
-                    aria-expanded={isGroupOpen}
-                    aria-controls={groupContentId}
-                    aria-label={collapsed ? item.label : undefined}
-                    data-tooltip={collapsed ? item.label : undefined}
-                    title={collapsed ? item.label : undefined}
-                  >
-                    <span className={`enterprise-sidebar__nav-icon ${item.active ? 'text-blue-700' : 'text-gray-500'}`} aria-hidden="true">{item.icon}</span>
-                    {!collapsed ? <span className={`enterprise-sidebar__nav-text ${item.active ? 'text-blue-700' : 'text-gray-700'}`}>{item.label}</span> : null}
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      className={[
+                        'enterprise-sidebar__nav-link enterprise-sidebar__group-trigger text-sm font-medium flex-1',
+                        item.active ? 'active bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900',
+                        collapsed ? 'enterprise-sidebar__nav-link--collapsed' : '',
+                      ].filter(Boolean).join(' ')}
+                      onClick={() => {
+                        if (item.to) {
+                          navigate(item.to);
+                          onNavigate?.();
+                        }
+                      }}
+                      aria-label={collapsed ? item.label : undefined}
+                      data-tooltip={collapsed ? item.label : undefined}
+                      title={collapsed ? item.label : undefined}
+                    >
+                      <span className={`enterprise-sidebar__nav-icon ${item.active ? 'text-blue-700' : 'text-gray-500'}`} aria-hidden="true">{item.icon}</span>
+                      {!collapsed ? <span className={`enterprise-sidebar__nav-text ${item.active ? 'text-blue-700' : 'text-gray-700'}`}>{item.label}</span> : null}
+                    </button>
                     {!collapsed ? (
-                      <span className={`enterprise-sidebar__group-chevron ${isGroupOpen ? 'is-open' : ''}`} aria-hidden="true">▾</span>
+                      <button
+                        type="button"
+                        className="enterprise-sidebar__group-chevron-toggle"
+                        onClick={() => handleGroupToggle(item.id)}
+                        aria-expanded={isGroupOpen}
+                        aria-controls={groupContentId}
+                        aria-label={`${isGroupOpen ? 'Collapse' : 'Expand'} ${item.label}`}
+                      >
+                        <span className={`enterprise-sidebar__group-chevron ${isGroupOpen ? 'is-open' : ''}`} aria-hidden="true">▾</span>
+                      </button>
                     ) : null}
-                  </button>
+                  </div>
                   {!collapsed && isGroupOpen ? (
                     <div id={groupContentId} className="enterprise-sidebar__group-items">
                       {children.map((child) => (

@@ -525,11 +525,13 @@ export const Layout = ({ children, title, subtitle }) => {
         {
           id: 'crm',
           type: 'group',
+          to: ROUTES.CRM(currentFirmSlug),
           label: 'CRM',
           icon: <IconCases />,
           active: isActivePrefix(`/app/firm/${currentFirmSlug}/crm`),
           hidden: !hasAdminAccess,
           children: [
+            { id: 'crm-overview', to: ROUTES.CRM(currentFirmSlug), label: 'Overview', icon: <IconDashboard />, active: isActivePath(ROUTES.CRM(currentFirmSlug)) },
             { id: 'crm-client-management', to: ROUTES.CRM_CLIENTS(currentFirmSlug), label: 'Client Management', icon: <IconCases />, active: isActivePath(ROUTES.CRM_CLIENTS(currentFirmSlug)) },
             { id: 'crm-leads', to: ROUTES.CRM_LEADS(currentFirmSlug), label: 'Leads', icon: <IconWorklist />, active: isActivePath(ROUTES.CRM_LEADS(currentFirmSlug)) },
           ],
@@ -537,6 +539,7 @@ export const Layout = ({ children, title, subtitle }) => {
         {
           id: 'cms',
           type: 'group',
+          to: ROUTES.CMS(currentFirmSlug),
           label: 'CMS',
           icon: <IconWorklist />,
           active: isActivePrefix(ROUTES.CMS(currentFirmSlug)),
@@ -551,9 +554,12 @@ export const Layout = ({ children, title, subtitle }) => {
         {
           id: 'task-manager',
           type: 'group',
+          to: ROUTES.TASK_MANAGER(currentFirmSlug),
           label: 'Task Manager',
           icon: <IconWorkbasket />,
           active: (
+            isActivePrefix(ROUTES.TASK_MANAGER(currentFirmSlug))
+            ||
             isActivePrefix(ROUTES.GLOBAL_WORKLIST(currentFirmSlug))
             || isActivePrefix(ROUTES.WORKLIST(currentFirmSlug))
             || isActivePrefix(ROUTES.MY_WORKLIST(currentFirmSlug))
@@ -563,6 +569,7 @@ export const Layout = ({ children, title, subtitle }) => {
             || isActivePrefix(ROUTES.WORK_SETTINGS(currentFirmSlug))
           ),
           children: [
+            { id: 'tm-overview', to: ROUTES.TASK_MANAGER(currentFirmSlug), label: 'Overview', icon: <IconDashboard />, active: isActivePath(ROUTES.TASK_MANAGER(currentFirmSlug)) },
             { id: 'tm-workbasket', to: ROUTES.GLOBAL_WORKLIST(currentFirmSlug), label: workbasketNavLabel, icon: <IconWorkbasket />, active: isActivePath(ROUTES.GLOBAL_WORKLIST(currentFirmSlug)), badge: countsFetched ? workbasketCount : 'loading' },
             { id: 'tm-worklist', to: ROUTES.WORKLIST(currentFirmSlug), label: 'My Worklist', icon: <IconWorklist />, active: isActivePath(ROUTES.WORKLIST(currentFirmSlug)) || isActivePath(ROUTES.MY_WORKLIST(currentFirmSlug)), badge: countsFetched ? worklistCount : 'loading' },
             { id: 'tm-qc', to: ROUTES.QC_QUEUE(currentFirmSlug), label: 'QC Workbasket', icon: <IconAdmin />, active: isActivePath(ROUTES.QC_QUEUE(currentFirmSlug)), hidden: !hasQcQueueAccess },
