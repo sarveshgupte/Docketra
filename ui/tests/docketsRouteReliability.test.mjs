@@ -6,7 +6,7 @@ const read = (relativePath) => fs.readFileSync(path.resolve(process.cwd(), relat
 
 const protectedRoutesSource = read('src/routes/ProtectedRoutes.jsx');
 const casesPageSource = read('src/pages/CasesPage.jsx');
-const layoutSource = read('src/components/common/Layout.jsx');
+const platformShellSource = read('src/components/platform/PlatformShell.jsx');
 const dashboardSource = read('src/pages/platform/DashboardPage.jsx');
 const worklistSource = read('src/pages/platform/WorklistPage.jsx');
 
@@ -30,8 +30,8 @@ assert.ok(
 );
 
 assert.ok(
-  casesPageSource.includes('<Layout title="Dockets">'),
-  'Cases page should set explicit layout title to keep browser title stable.'
+  casesPageSource.includes('<PlatformShell moduleLabel="Operations" title="Dockets"'),
+  'Cases page should render in PlatformShell with explicit title to keep browser title stable.'
 );
 assert.ok(
   casesPageSource.includes('Failed to load dockets. Refresh the page or try again in a moment.'),
@@ -43,15 +43,15 @@ assert.ok(
 );
 
 assert.ok(
-  layoutSource.includes('document.title = `${resolvedTitle} • Docketra`;'),
-  'Layout must manage document title for legacy pages such as Dockets.'
+  platformShellSource.includes('document.title = `${resolvedTitle} • Docketra`;'),
+  'PlatformShell must manage document title for unified workspace pages such as Dockets.'
 );
 assert.ok(
   dashboardSource.includes('ROUTES.CASES(firmSlug)'),
   'Dashboard entry point must navigate to canonical dockets route.'
 );
 assert.ok(
-  worklistSource.includes('ROUTES.CASE_DETAIL(firmSlug'),
+  worklistSource.includes('?returnTo=${encodeURIComponent(`${location.pathname}${location.search ||'),
   'Worklist entry point must navigate to canonical docket detail route.'
 );
 
