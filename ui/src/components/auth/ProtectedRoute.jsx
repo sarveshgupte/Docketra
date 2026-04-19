@@ -13,6 +13,7 @@ import { resolveFirmLoginPath } from '../../utils/tenantRouting.js';
 import { RouteLoadingShell } from '../routing/RouteLoadingShell';
 import { ROUTES } from '../../constants/routes.js';
 import { AUTH_STATES } from '../../contexts/AuthContext.jsx';
+import { appendReturnTo, buildReturnTo } from '../../utils/authRedirect.js';
 
 // Use sessionStorage to persist toasts across redirects in auth guard flows.
 const setAccessToast = (message) => {
@@ -58,7 +59,8 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireSuperadm
         type: 'info'
       }));
     }
-    return <Navigate to={loginPath} replace />;
+    const loginPathWithReturnTo = appendReturnTo(loginPath, buildReturnTo(location));
+    return <Navigate to={loginPathWithReturnTo} replace />;
   }
 
   if (authState === AUTH_STATES.ONBOARDING_REQUIRED) {
