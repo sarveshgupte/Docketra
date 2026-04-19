@@ -27,7 +27,7 @@ export const PlatformCmsPage = () => {
     setError('');
     try {
       const res = await crmApi.listLeads({ limit: 50 });
-      setLeads(toArray(res?.data?.data || res?.data?.items));
+      setLeads(toArray(res?.data?.data || res?.data?.items || res?.data));
     } catch {
       setLeads([]);
       setError('Unable to load CMS intake leads.');
@@ -64,9 +64,6 @@ export const PlatformCmsPage = () => {
 
   const publicLink = selectedForm ? `${window.location.origin}/forms/${selectedForm._id}` : '';
   const embedLink = selectedForm ? `${publicLink}?embed=true` : '';
-  const iframeCode = selectedForm
-    ? `<iframe src="${embedLink}" width="100%" height="700" frameborder="0" loading="lazy" title="${selectedForm.embedTitle || selectedForm.name}"></iframe>`
-    : '';
 
   const handleCopy = async (text, label) => {
     if (!text) return;
@@ -87,33 +84,51 @@ export const PlatformCmsPage = () => {
   }, [leads, query]);
 
   const cmsStats = [
-    { label: 'Lead submissions', value: leads.length },
-    { label: 'Converted to docket', value: leads.filter((lead) => lead.docketId).length },
+    { label: 'Total submissions', value: leads.length },
     { label: 'Open intake items', value: leads.filter((lead) => !lead.docketId).length },
+    { label: 'Converted to docket', value: leads.filter((lead) => lead.docketId).length },
+    { label: 'Active forms / request links', value: forms.filter((form) => form.isActive).length },
   ];
 
   return (
     <PlatformShell
-      moduleLabel="CMS / Lead Capture"
-      title="CMS Intake"
-      subtitle="Landing pages, forms, public intake, and submission-to-docket conversion."
-      actions={<Link to={ROUTES.CRM_LEADS(firmSlug)}>Full leads page</Link>}
+      moduleLabel="CMS / Intake and Submission"
+      title="CMS"
+      subtitle="Intake and submission surface hub for request links, forms/templates, and public intake routing."
+      actions={<Link to={ROUTES.CRM_LEADS(firmSlug)}>Open intake queue</Link>}
     >
       <InlineNotice tone="error" message={error} />
       <InlineNotice tone="error" message={formsError} />
       <InlineNotice tone="info" message={copyState} />
       <RefreshNotice refreshing={refreshing} message="Refreshing intake queue in the background…" />
       <StatGrid items={cmsStats} />
-      <PageSection id="cms-surfaces" title="CMS surfaces" description="Lead-capture assets managed in the CMS module.">
+
+      <PageSection title="Quick actions" description="Move from intake setup to queue processing quickly.">
         <div className="action-row">
-          <span>Landing pages</span>
-          <span>Forms</span>
-          <span>Submissions / Intake</span>
-          <span>Public intake tools</span>
+          <button type="button" onClick={() => void handleCopy(publicLink || embedLink, 'Intake link')} disabled={!selectedForm}>Copy intake link</button>
+          <Link to={`${ROUTES.CMS(firmSlug)}#intake-queue`}>Open intake queue</Link>
+          <Link to={`${ROUTES.CMS(firmSlug)}#embed-forms`}>Open forms/templates</Link>
         </div>
       </PageSection>
 
-      <PageSection id="embed-forms" title="Embed on your website" description="Use this to place Docketra intake forms on your existing website. Submissions go to CMS intake and appear in CRM.">
+      <PageSection id="cms-surfaces" title="CMS surfaces" description="Public intake surfaces and queue visibility for the CMS module.">
+        <div className="tile-grid">
+          <Link className="module-tile" to={`${ROUTES.CMS(firmSlug)}#intake-queue`}>
+            <strong>Request Links / Intake Links</strong>
+            <span>Share public intake entry points and capture submissions.</span>
+          </Link>
+          <Link className="module-tile" to={`${ROUTES.CMS(firmSlug)}#embed-forms`}>
+            <strong>Forms / Templates</strong>
+            <span>Manage form definitions and embeddable intake surfaces.</span>
+          </Link>
+          <Link className="module-tile" to={`${ROUTES.CMS(firmSlug)}#intake-queue`}>
+            <strong>Public Intake / Submissions</strong>
+            <span>Review submissions and conversion readiness to docket.</span>
+          </Link>
+        </div>
+      </PageSection>
+
+      <PageSection id="embed-forms" title="Embed forms" description="Use these links on your website; submissions route into intake and downstream CRM/Task workflows.">
         {forms.length > 0 ? (
           <>
             <div className="action-row" style={{ marginBottom: 16 }}>
@@ -131,51 +146,18 @@ export const PlatformCmsPage = () => {
               <span>{selectedForm?.isActive ? 'Active' : 'Inactive'}</span>
               <span>{selectedForm?.allowEmbed ? 'Embeddable' : 'Embed disabled'}</span>
             </div>
-            <div className="space-y-3">
-              <div>
-                <strong>Public form link</strong>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6 }}>
-                  <code style={{ overflowWrap: 'anywhere' }}>{publicLink || '-'}</code>
-                  <button type="button" onClick={() => void handleCopy(publicLink, 'Public link')}>Copy</button>
-                </div>
-              </div>
-              <div>
-                <strong>Embed link</strong>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6 }}>
-                  <code style={{ overflowWrap: 'anywhere' }}>{embedLink || '-'}</code>
-                  <button type="button" onClick={() => void handleCopy(embedLink, 'Embed link')}>Copy</button>
-                </div>
-              </div>
-              <div>
-                <strong>Iframe embed code</strong>
-                <div style={{ marginTop: 6 }}>
-                  <pre style={{ whiteSpace: 'pre-wrap', background: '#0F172A', color: '#F8FAFC', padding: 12, borderRadius: 8 }}>
-                    {iframeCode || '-'}
-                  </pre>
-                  <button type="button" onClick={() => void handleCopy(iframeCode, 'Embed code')}>Copy embed code</button>
-                </div>
-              </div>
-              <p style={{ marginTop: 12, color: '#475569' }}>
-                Optional auto-docket creation follows your intake configuration.
-              </p>
-              <div style={{ marginTop: 8 }}>
-                <strong>Fields rendered publicly</strong>
-                <ul style={{ marginTop: 6, marginBottom: 0, paddingLeft: 18 }}>
-                  {(selectedForm?.fields || []).map((field, index) => (
-                    <li key={`${field.key || 'field'}-${index}`}>
-                      {(field.label || field.key || `Field ${index + 1}`)} ({field.type || 'text'})
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            <div className="action-row">
+              <button type="button" onClick={() => void handleCopy(publicLink, 'Public link')}>Copy public link</button>
+              <button type="button" onClick={() => void handleCopy(embedLink, 'Embed link')}>Copy embed link</button>
             </div>
+            <p className="muted" style={{ marginTop: 8 }}>Document collection remains inside Docket → Attachments, not as a standalone CMS repository.</p>
           </>
         ) : (
-          <p>No forms found yet. Create a form first, then copy your embed code here.</p>
+          <p>No forms found yet. Create a form first, then copy your intake links here.</p>
         )}
       </PageSection>
 
-      <PageSection id="intake-queue" title="Intake queue" description="Track form submissions and conversion readiness.">
+      <PageSection id="intake-queue" title="Intake queue summary" description="Track submissions and conversion readiness.">
         <FilterBar onClear={() => setQuery('')} clearDisabled={!query}>
           <input
             type="search"
@@ -204,7 +186,7 @@ export const PlatformCmsPage = () => {
           error={error}
           onRetry={() => void loadLeads()}
           hasActiveFilters={Boolean(query.trim())}
-          emptyLabel="No intake submissions yet. Create a form or landing page to start capturing leads."
+          emptyLabel="No intake submissions yet. Create a form or request link to start intake."
           emptyLabelFiltered="No intake submissions match your current search."
         />
       </PageSection>

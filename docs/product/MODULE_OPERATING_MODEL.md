@@ -47,6 +47,24 @@ Use Tasks to run operations:
 
 This structure keeps route compatibility while improving user orientation in navigation, dashboards, and page-level context headers.
 
+## Module landing hubs (April 2026 enhancement)
+
+Docketra now includes dedicated overview hubs for each primary module route:
+
+- `/crm` → CRM landing page
+- `/cms` → CMS landing page
+- `/task-manager` → Task Manager landing page
+
+Each landing page is now the module “home” with:
+
+- a plain-language summary of module purpose,
+- key KPI cards,
+- quick actions,
+- direct links to sub-features,
+- role-aware visibility for admin/manager-only controls.
+
+Navigation behavior was also improved: parent module labels are now first-class destinations (not expand-only toggles), while a separate chevron target still handles expand/collapse for child links.
+
 
 ---
 

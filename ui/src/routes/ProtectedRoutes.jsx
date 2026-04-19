@@ -37,6 +37,7 @@ import {
   PlatformReportsPage,
   PlatformCrmPage,
   PlatformCmsPage,
+  PlatformTaskManagerPage,
   PlatformSettingsPage,
 } from './lazyPages';
 import { RouteSuspenseOutlet } from './RouteSuspenseOutlet';
@@ -195,10 +196,18 @@ export const ProtectedRoutes = () => (
           )}
         />
         <Route
-          path="crm/clients"
+          path="crm"
           element={(
             <ProtectedRoute requireAdmin>
               <PlatformCrmPage />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="crm/clients"
+          element={(
+            <ProtectedRoute requireAdmin>
+              <CrmClientsPage />
             </ProtectedRoute>
           )}
         />
@@ -223,6 +232,14 @@ export const ProtectedRoutes = () => (
           element={(
             <ProtectedRoute requireAdmin>
               <PlatformCmsPage />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="task-manager"
+          element={(
+            <ProtectedRoute>
+              <PlatformTaskManagerPage />
             </ProtectedRoute>
           )}
         />
