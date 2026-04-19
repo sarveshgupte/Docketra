@@ -107,13 +107,13 @@ export const PlatformWorkbasketsPage = () => {
   return (
     <PlatformShell
       title="Workbasket"
-      subtitle="Shared pooled queue for unassigned work before ownership is pulled into execution."
+      subtitle="Team workflow queue for dockets available to be pulled into individual execution."
       actions={<Link to={ROUTES.CASES(firmSlug)}>All Dockets</Link>}
     >
       <InlineNotice tone="error" message={error} />
       <InlineNotice tone="success" message={success} />
       <RefreshNotice refreshing={refreshing} message="Refreshing workbaskets in the background…" />
-      <PageSection title="Unassigned dockets" description={`${filteredRows.length} dockets in shared queue.`}>
+      <PageSection title="Team queue" description={`${filteredRows.length} dockets available in this shared workflow queue.`}>
         <FilterBar onClear={clearFilters} clearDisabled={!search && statusFilter === 'ALL' && categoryFilter === 'ALL'}>
           <input
             type="search"
@@ -167,8 +167,8 @@ export const PlatformWorkbasketsPage = () => {
           error={error}
           onRetry={() => void loadRows()}
           hasActiveFilters={Boolean(search.trim()) || statusFilter !== 'ALL' || categoryFilter !== 'ALL'}
-          emptyLabel="No unassigned dockets are available right now."
-          emptyLabelFiltered="No workbasket dockets match your search."
+          emptyLabel="No dockets are currently available to pull from this Workbasket."
+          emptyLabelFiltered="No Workbasket dockets match your current search or filters."
         />
       </PageSection>
     </PlatformShell>

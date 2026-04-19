@@ -110,13 +110,13 @@ export const PlatformWorklistPage = () => {
   return (
     <PlatformShell
       title="My Worklist"
-      subtitle="Assigned dockets prioritized for execution"
+      subtitle="Your personal docket workload for active execution and pended follow-up."
       actions={<Link to={ROUTES.CREATE_CASE(firmSlug)}>Create Docket</Link>}
     >
       <InlineNotice tone="error" message={error} />
       <InlineNotice tone="success" message={success} />
       <RefreshNotice refreshing={refreshing} message="Refreshing worklist without interrupting your current view…" />
-      <PageSection title="Execution queue" description={`${filteredRows.length} dockets in your current view.`}>
+      <PageSection title="My active workload" description={`${filteredRows.length} dockets in your current worklist view.`}>
         <FilterBar onClear={clearFilters} clearDisabled={!search && statusFilter === 'ALL' && categoryFilter === 'ALL'}>
           <input
             type="search"
@@ -171,8 +171,8 @@ export const PlatformWorklistPage = () => {
           error={error}
           onRetry={() => void loadRows()}
           hasActiveFilters={Boolean(search.trim()) || statusFilter !== 'ALL' || categoryFilter !== 'ALL'}
-          emptyLabel="No dockets are assigned to your worklist yet."
-          emptyLabelFiltered="No dockets match your current filters."
+          emptyLabel="No dockets are assigned to your worklist right now."
+          emptyLabelFiltered="No worklist dockets match your current search or filters."
         />
       </PageSection>
     </PlatformShell>

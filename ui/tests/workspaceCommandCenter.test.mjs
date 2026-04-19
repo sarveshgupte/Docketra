@@ -30,7 +30,7 @@ for (const requiredCommand of [
   "'Go to CMS'",
   "'Go to Workbasket'",
   "'Go to My Worklist'",
-  "'Go to QC Queue'",
+  "'Go to QC Workbasket'",
   "'Go to Clients'",
   "'Go to Reports'",
   "'Go to Settings'",
