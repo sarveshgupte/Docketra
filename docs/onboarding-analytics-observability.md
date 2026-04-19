@@ -1,0 +1,45 @@
+# Onboarding analytics and blocker observability
+
+## Scope
+This feature adds lightweight onboarding telemetry and superadmin-facing friction insight using Docketra's real onboarding progress model.
+
+## Architecture
+- **Event persistence**: `src/models/OnboardingEvent.model.js` (`onboarding_events` collection)
+- **Analytics logic**: `src/services/onboardingAnalytics.service.js`
+- **Transition trigger**: `src/controllers/dashboard.controller.js` on `GET /api/dashboard/onboarding-progress`
+- **UI event ingestion**: `POST /api/dashboard/onboarding-event`
+- **Superadmin summary API**: `GET /api/superadmin/onboarding-insights`
+- **Visibility UI**: `ui/src/pages/PlatformDashboard.jsx`
+
+## Event contract
+Each event stores only operationally necessary fields:
+- `userId`
+- `userXID`
+- `firmId`
+- `role`
+- `eventName`
+- optional `stepId`
+- optional `source` (`detected`/`manual`)
+- `createdAt`
+- optional small `metadata`
+
+No third-party analytics SDK is used.
+
+## Anti-noise strategy
+- User profile keeps `onboardingTelemetry` snapshot state.
+- Progress refresh writes only when completed/incomplete step sets change.
+- Detected step completion events are emitted only for newly completed steps.
+
+## Insights returned
+`GET /api/superadmin/onboarding-insights` returns:
+- firm-level setup blockers
+- role completion distribution
+- common incomplete steps by role
+- tutorial completion/skip funnel
+- users who skipped tutorial but remain incomplete beyond threshold
+- recent onboarding events
+
+## Operational notes
+- Event writes are best-effort and non-blocking for core product flows.
+- Onboarding completion analytics reflect actual backend-detected/manual transitions only.
+- Role-aware metrics distinguish `PRIMARY_ADMIN`, `ADMIN`, `MANAGER`, and `USER`.

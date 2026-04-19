@@ -39,6 +39,7 @@ import { ROUTES, safeRoute } from '../constants/routes';
 import { useActiveDocket } from '../hooks/useActiveDocket';
 import { loadOnboardingProgressSafely } from './dashboardLoadHelpers';
 import { ONBOARDING_PROGRESS_REFRESH_EVENT } from '../utils/onboardingProgressRefresh';
+import { trackOnboardingEvent } from '../utils/onboardingAnalytics';
 
 const DASHBOARD_RECENT_CASES_ROW_COUNT = 5;
 const DASHBOARD_RECENT_CASES_MAX_ROWS = 10;
@@ -245,6 +246,10 @@ export const DashboardPage = () => {
     if (!hasCompletedTour) {
       setTourStepIndex(0);
       setShowProductTour(true);
+      trackOnboardingEvent({
+        eventName: 'product_tour_started',
+        metadata: { trigger: 'first_auto_open' },
+      });
     }
   }, [loading, user, firmSlug]);
 
@@ -290,6 +295,7 @@ export const DashboardPage = () => {
     }
     setShowProductTour(false);
     setTourStepIndex(0);
+    trackOnboardingEvent({ eventName: 'product_tour_completed' });
   };
 
   const handleTourNext = () => {
@@ -305,6 +311,10 @@ export const DashboardPage = () => {
   const handleReplayTour = () => {
     setTourStepIndex(0);
     setShowProductTour(true);
+    trackOnboardingEvent({
+      eventName: 'product_tour_started',
+      metadata: { trigger: 'manual_replay' },
+    });
   };
 
   const handleReplayWelcomeTutorial = () => {
@@ -522,6 +532,25 @@ export const DashboardPage = () => {
     navigate(step.route);
   };
 
+  const handleChecklistManualComplete = (step) => {
+    trackOnboardingEvent({
+      eventName: 'onboarding_step_completed_manual',
+      stepId: step?.id,
+      source: 'manual',
+    });
+  };
+
+  const handleChecklistDismiss = () => {
+    trackOnboardingEvent({ eventName: 'onboarding_checklist_dismissed' });
+  };
+
+  const handleChecklistCtaOpen = (step) => {
+    trackOnboardingEvent({
+      eventName: 'onboarding_step_cta_opened',
+      stepId: step?.id,
+    });
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -621,6 +650,9 @@ export const DashboardPage = () => {
             <SetupChecklist
               storageKey={`setupChecklist:${user.xID}:${firmSlug}`}
               onAction={handleChecklistAction}
+              onManualComplete={handleChecklistManualComplete}
+              onDismiss={handleChecklistDismiss}
+              onCtaOpen={handleChecklistCtaOpen}
               onboardingProgress={onboardingProgress}
               mode={onboardingRole === 'primary_admin' ? 'primary-admin' : (onboardingRole === 'admin' ? 'admin' : (onboardingRole === 'manager' ? 'manager' : 'user'))}
             />

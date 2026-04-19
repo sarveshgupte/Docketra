@@ -217,3 +217,11 @@
 
 - Made onboarding-progress dashboard fetch non-blocking so checklist API issues do not degrade core dashboard load.
 - Separated checklist CTA navigation from completion state for detected steps to preserve backend-driven truth.
+
+## April 2026: Onboarding analytics + blocker observability
+
+- Added lightweight first-party onboarding telemetry for welcome tutorial, product tour, checklist actions, and progress transitions.
+- Added transition-aware anti-spam tracking so onboarding refresh events are only persisted when progress state actually changes.
+- Added a dedicated superadmin onboarding insights API (`GET /api/superadmin/onboarding-insights`) with role-aware friction summaries.
+- Added Platform Dashboard onboarding observability cards for key blockers: firms without active clients, missing category/workbasket setup, managers without queues, and users without assigned dockets.
+- Added derived alert metric for users who skipped tutorial but remain onboarding-incomplete after a threshold.

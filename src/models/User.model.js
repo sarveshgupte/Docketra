@@ -267,6 +267,16 @@ const userSchema = new mongoose.Schema({
     lastStepIndex: { type: Number, default: 0 },
   },
 
+  // Lightweight onboarding progress snapshot to avoid duplicate analytics writes.
+  onboardingTelemetry: {
+    lastProgressRefreshedAt: { type: Date, default: null },
+    lastProgressRole: { type: String, default: null },
+    lastCompletedStepIds: { type: [String], default: [] },
+    lastIncompleteStepIds: { type: [String], default: [] },
+    lastProgressCompleted: { type: Number, default: 0 },
+    lastProgressTotal: { type: Number, default: 0 },
+  },
+
   /**
    * Authentication providers
    * LOCAL: password-based auth (authoritative for SuperAdmin and platform users)
