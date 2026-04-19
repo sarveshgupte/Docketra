@@ -5,7 +5,9 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "start:worker": "node worker.js",
+    "start:api": "node src/server.js",
+    "start:worker": "node src/worker.js",
+    "start:job": "node src/jobs/cloudRunJob.runner.js",
     "dev": "nodemon src/server.js",
     "build": "npm install --include=dev && npm --prefix ui install --include=dev && npm --prefix ui run build",
     "lint": "find src tests -name '*.js' -print0 | xargs -0 -n1 node --check",
