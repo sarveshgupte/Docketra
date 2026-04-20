@@ -8,6 +8,7 @@ const router = applyRouteValidation(express.Router(), routeSchemas);
 
 router.post('/', userWriteLimiter, createInvoice);
 router.get('/', userReadLimiter, listInvoices);
+router.patch('/:id/paid', userWriteLimiter, markAsPaid);
 router.patch('/:id/pay', userWriteLimiter, markAsPaid);
 
 module.exports = router;

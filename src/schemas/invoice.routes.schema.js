@@ -16,4 +16,8 @@ module.exports = {
     params: z.object({ id: objectIdString }),
     body: z.object({}).passthrough(),
   },
+  'PATCH /:id/paid': {
+    params: z.object({ id: objectIdString }),
+    body: z.object({}).passthrough(),
+  },
 };

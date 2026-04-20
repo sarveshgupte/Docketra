@@ -35,8 +35,13 @@ export const CrmClientsPage = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [tagFilter, setTagFilter] = useState('');
+  const [sourceFilter, setSourceFilter] = useState('');
   const [clients, setClients] = useState([]);
   const [showModal, setShowModal] = useState(false);
+  const [editingClient, setEditingClient] = useState(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     name: '',
@@ -80,13 +85,37 @@ export const CrmClientsPage = () => {
 
   const closeModal = () => {
     setShowModal(false);
+    setEditingClient(null);
     resetForm();
+  };
+
+  const openEditModal = (client) => {
+    setEditingClient(client);
+    setForm({
+      name: client.businessName || client.name || '',
+      type: client.crmType || 'individual',
+      email: client.businessEmail || client.email || '',
+      phone: client.primaryContactNumber || client.phone || '',
+      tags: Array.isArray(client.tags) ? client.tags.join(', ') : '',
+      leadSource: client.leadSource || '',
+      notes: client.notes || '',
+    });
+    setShowModal(true);
   };
 
   const filteredClients = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    if (!needle) return clients;
     return clients.filter((item) => {
+      if (typeFilter && (item.crmType || 'individual') !== typeFilter) return false;
+      if (statusFilter && (item.status || 'active') !== statusFilter) return false;
+      if (tagFilter.trim()) {
+        const tags = Array.isArray(item.tags) ? item.tags.map((tag) => String(tag).toLowerCase()) : [];
+        if (!tags.includes(tagFilter.trim().toLowerCase())) return false;
+      }
+      if (sourceFilter.trim()) {
+        if (String(item.leadSource || '').trim().toLowerCase() !== sourceFilter.trim().toLowerCase()) return false;
+      }
+      if (!needle) return true;
       const searchable = [
         item.businessName,
         item.name,
@@ -98,7 +127,7 @@ export const CrmClientsPage = () => {
       ].filter(Boolean).join(' ').toLowerCase();
       return searchable.includes(needle);
     });
-  }, [clients, query]);
+  }, [clients, query, sourceFilter, statusFilter, tagFilter, typeFilter]);
 
   const cards = useMemo(() => {
     const total = clients.length;
@@ -115,6 +144,11 @@ export const CrmClientsPage = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (saving) return;
+    if (!form.name.trim()) {
+      showError('Client name is required.');
+      return;
+    }
     setSaving(true);
 
     try {
@@ -130,8 +164,13 @@ export const CrmClientsPage = () => {
           : [],
       };
 
-      await crmApi.createClient(payload);
-      showSuccess('New Client added successfully.');
+      if (editingClient?._id || editingClient?.id) {
+        await crmApi.updateClient(editingClient._id || editingClient.id, payload);
+        showSuccess('Client updated successfully.');
+      } else {
+        await crmApi.createClient(payload);
+        showSuccess('New client added successfully.');
+      }
       closeModal();
       await loadClients({ background: true });
     } catch (createError) {
@@ -151,14 +190,48 @@ export const CrmClientsPage = () => {
       >
         <td>{item.businessName || item.name || '—'}</td>
         <td>
-          <Badge status={item.crmType === 'company' ? 'Approved' : 'Pending'}>
-            {TYPE_LABELS[item.crmType] || item.crmType || '—'}
-          </Badge>
-        </td>
+            <Badge status={item.crmType === 'company' ? 'Approved' : 'Pending'}>
+              {TYPE_LABELS[item.crmType] || item.crmType || '—'}
+            </Badge>
+          </td>
         <td>{item.businessEmail || item.email || '—'}</td>
         <td>{item.primaryContactNumber || item.phone || '—'}</td>
         <td>{Array.isArray(item.tags) && item.tags.length > 0 ? item.tags.join(', ') : '—'}</td>
+        <td>
+          <Badge status={(item.status || 'active') === 'inactive' ? 'Rejected' : 'Approved'}>
+            {item.status || 'active'}
+          </Badge>
+        </td>
         <td>{formatDate(item.createdAt)}</td>
+        <td>
+          <div className="action-row">
+            {isAdmin ? (
+              <>
+                <Button variant="outline" size="sm" onClick={(event) => { event.stopPropagation(); openEditModal(item); }}>
+                  Edit
+                </Button>
+                {(item.status || 'active') !== 'inactive' ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async (event) => {
+                      event.stopPropagation();
+                      try {
+                        await crmApi.deactivateClient(clientId);
+                        showSuccess('Client deactivated.');
+                        await loadClients({ background: true });
+                      } catch (deactivateError) {
+                        showError(resolveCrmErrorMessage(deactivateError, 'Failed to deactivate client.'));
+                      }
+                    }}
+                  >
+                    Deactivate
+                  </Button>
+                ) : null}
+              </>
+            ) : null}
+          </div>
+        </td>
       </tr>
     );
   });
@@ -177,7 +250,6 @@ export const CrmClientsPage = () => {
       <PageSection title="Quick actions" description="Use the same CRM language across overview, leads, and client detail.">
         <div className="action-row">
           {isAdmin ? <Button onClick={() => setShowModal(true)}>New Client</Button> : null}
-          <Button variant="outline" onClick={() => navigate(safeRoute(ROUTES.CRM_CLIENTS(firmSlug)))}>Import Clients (CSV)</Button>
           <Button variant="outline" onClick={() => navigate(safeRoute(ROUTES.CRM_LEADS(firmSlug)))}>Go to Leads Queue</Button>
         </div>
       </PageSection>
@@ -190,19 +262,38 @@ export const CrmClientsPage = () => {
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search by name, email, phone, or tag"
           />
+          <div>
+            <label className="block text-xs text-gray-600" htmlFor="crm-client-filter-type">Type</label>
+            <select id="crm-client-filter-type" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)} className="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm">
+              <option value="">All types</option>
+              <option value="individual">Individual</option>
+              <option value="company">Company</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-600" htmlFor="crm-client-filter-status">Status</label>
+            <select id="crm-client-filter-status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm">
+              <option value="">All statuses</option>
+              <option value="active">Active</option>
+              <option value="lead">Lead</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+          <Input label="Tag filter" value={tagFilter} onChange={(event) => setTagFilter(event.target.value)} placeholder="vip" />
+          <Input label="Source filter" value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)} placeholder="referral" />
           <Button variant="outline" onClick={() => void loadClients({ background: clients.length > 0 })} loading={refreshing} disabled={refreshing}>
             {refreshing ? 'Refreshing…' : 'Refresh'}
           </Button>
         </FilterBar>
 
         <DataTable
-          columns={['Client', 'Type', 'Email', 'Phone', 'Tags', 'Created']}
+          columns={['Client', 'Type', 'Email', 'Phone', 'Tags', 'Status', 'Created', 'Actions']}
           rows={rows}
           loading={initialLoading}
           error={error}
           onRetry={() => void loadClients()}
           emptyLabel="No clients yet. Create your first CRM client using New Client."
-          hasActiveFilters={Boolean(query.trim())}
+          hasActiveFilters={Boolean(query.trim() || typeFilter || statusFilter || tagFilter.trim() || sourceFilter.trim())}
           emptyLabelFiltered="No clients match your current search."
         />
       </PageSection>
@@ -210,7 +301,7 @@ export const CrmClientsPage = () => {
       <Modal
         isOpen={showModal}
         onClose={closeModal}
-        title="New Client"
+        title={editingClient ? 'Edit Client' : 'New Client'}
         maxWidth="lg"
       >
         <form onSubmit={handleSubmit} className="grid gap-4">
@@ -263,7 +354,7 @@ export const CrmClientsPage = () => {
           />
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={closeModal}>Cancel</Button>
-            <Button type="submit" loading={saving} disabled={saving}>{saving ? 'Saving…' : 'Create Client'}</Button>
+            <Button type="submit" loading={saving} disabled={saving}>{saving ? 'Saving…' : (editingClient ? 'Save Changes' : 'Create Client')}</Button>
           </div>
         </form>
       </Modal>
