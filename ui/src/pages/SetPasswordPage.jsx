@@ -13,7 +13,6 @@ import { authService } from '../services/authService';
 import api from '../services/api';
 import { APP_NAME, STORAGE_KEYS } from '../utils/constants';
 import { STRONG_PASSWORD_MESSAGE, validateStrongPassword } from '../utils/validators';
-import { getApiBaseUrl } from '../utils/apiBaseUrl';
 import './SetPasswordPage.css';
 
 export const SetPasswordPage = () => {
@@ -135,21 +134,6 @@ export const SetPasswordPage = () => {
     }
   };
 
-  const handleGoogleSignup = () => {
-    if (!token || !firmSlug) return;
-    const apiBase = getApiBaseUrl();
-    if (!apiBase) return;
-
-    const params = new URLSearchParams({
-      intent: 'signup',
-      firmSlug,
-      setupToken: token,
-    });
-
-    // Always redirect to backend origin directly; never use a relative /api path.
-    window.location.assign(`${apiBase}/api/auth/google/start?${params.toString()}`);
-  };
-
   if (firmLoading) {
     return (
       <div className="set-password-page">
@@ -260,17 +244,6 @@ export const SetPasswordPage = () => {
             Set Password
           </Button>
 
-          {firmSlug && token && (
-            <Button
-              type="button"
-              variant="secondary"
-              fullWidth
-              disabled={loading}
-              onClick={handleGoogleSignup}
-            >
-              Continue with Google instead
-            </Button>
-          )}
         </form>
       </Card>
     </div>

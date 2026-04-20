@@ -7,8 +7,7 @@ module.exports = {
   'POST /setup-account': {
     body: z.object({
       token: nonEmptyString,
-      password: strongPassword.optional(),
-      googleId: nonEmptyString.optional(),
+      password: strongPassword,
     }).strip(),
   },
   'POST /signup/init': {
@@ -45,26 +44,6 @@ module.exports = {
     body: z.object({
       email: z.string().trim().email(),
       otp: z.string().trim().regex(/^\d{6}$/),
-    }).strip(),
-  },
-  'GET /google/start': {
-    query: z.object({
-      intent: z.enum(['login', 'signup']).optional(),
-      firmSlug: nonEmptyString,
-      setupToken: z.string().trim().optional(),
-    }).strip(),
-  },
-  'GET /google/callback': {
-    query: z.object({
-      code: z.string().trim().optional(),
-      state: z.string().trim().optional(),
-      error: z.string().trim().optional(),
-    }).strip(),
-  },
-  'POST /google/exchange': {
-    body: z.object({
-      exchangeToken: nonEmptyString,
-      firmSlug: nonEmptyString.optional(),
     }).strip(),
   },
   'POST /resend-setup': {
