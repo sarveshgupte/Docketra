@@ -471,3 +471,37 @@ Migrated to `PlatformShell` in this pass:
 - **Search lifecycle constraints:** record search only runs while palette is open and query length is valid; close/reset and route change now clear command-center state deterministically.
 - **Failure fallback:** command palette now shows intentional fallback guidance when record search fails, while quick actions/module commands remain available.
 - **Client route-id normalization:** client search rows now normalize route IDs (`_id`, `id`, `crmClientId`, `clientId`) before generating CRM detail routes.
+
+## CRM workspace unification + false firm-error correction (April 2026)
+
+### Root causes found
+
+- CRM routes were using mixed composition contracts: CRM overview used `PlatformShared` panels/tables while Clients/Client Detail/Leads used older `Card` + `DataTable` + `neo-*` + inline-style composition.
+- Terminology and quick actions drifted between pages (for example `CRM clients` vs `Client Management`, and inconsistent quick-action wording).
+- CRM error handling surfaced raw backend messages directly into toasts. When tenant/firm middleware returned a firm-resolution message, CRM pages leaked a misleading global message instead of CRM-context recovery copy.
+- Legacy `Layout`-based pages remain in the repo for backward compatibility, but migrated CRM routes are now explicitly isolated from those patterns.
+
+### Changes shipped
+
+- Refactored `CrmClientsPage`, `CrmClientDetailPage`, and `LeadsPage` to the same platform contract:
+  - `PlatformShell` + `PageSection` + `StatGrid` + `FilterBar` + `PlatformShared` `DataTable`
+  - consistent action bars, spacing rhythm, panel framing, and table treatment
+  - removed `neo-*` class usage and route-local inline visual hacks in CRM clients/detail workflows
+- Standardized CRM naming and quick actions:
+  - `CRM`, `Client Management`, `Leads`, `New Client`, `Import Clients (CSV)`, `Go to Leads Queue`
+- Added CRM-scoped error normalization helper (`resolveCrmErrorMessage`) to prevent false tenant/firm copy from appearing on valid firm-scoped CRM routes while preserving actionable CRM recovery text.
+- Added focused regression safeguards in `ui/tests/crmWorkspaceUnification.test.mjs` for:
+  - unified CRM route/page contract checks
+  - quick-action naming checks
+  - false firm-message mapping check
+  - no-legacy composition checks on migrated CRM pages
+
+### Legacy architecture audit outcome
+
+- `DashboardPage`, `WorklistPage`, `WorkbasketPage`, and `FilteredCasesPage` legacy variants still exist for historical compatibility/testing and are not used by the migrated CRM route cluster.
+- CRM route registration in `ProtectedRoutes` now remains explicitly aligned to the migrated pages (`/crm`, `/crm/clients`, `/crm/clients/:crmClientId`, `/crm/leads`) to avoid accidental route drift.
+
+### Follow-ups
+
+- Continue migrating remaining legacy route families to `PlatformShared` contracts to reduce future mixed-language regressions.
+- Add browser/integration-level assertion for tenant middleware failure simulation once e2e harness is available in CI.
