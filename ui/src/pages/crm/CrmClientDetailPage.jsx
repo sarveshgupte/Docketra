@@ -87,6 +87,15 @@ export const CrmClientDetailPage = () => {
 
   const handleCreateDeal = async (event) => {
     event.preventDefault();
+    if (savingDeal) return;
+    if (!dealForm.title.trim()) {
+      showError('Deal title is required.');
+      return;
+    }
+    if (dealForm.value && (!Number.isFinite(Number(dealForm.value)) || Number(dealForm.value) < 0)) {
+      showError('Deal value must be a valid non-negative number.');
+      return;
+    }
     setSavingDeal(true);
     try {
       await crmApi.createDeal({
@@ -108,6 +117,11 @@ export const CrmClientDetailPage = () => {
 
   const handleCreateInvoice = async (event) => {
     event.preventDefault();
+    if (savingInvoice) return;
+    if (!invoiceForm.amount || !Number.isFinite(Number(invoiceForm.amount)) || Number(invoiceForm.amount) < 0) {
+      showError('Invoice amount must be a valid non-negative number.');
+      return;
+    }
     setSavingInvoice(true);
     try {
       await crmApi.createInvoice({
@@ -127,11 +141,25 @@ export const CrmClientDetailPage = () => {
   };
 
   const handleMarkPaid = async (invoiceId) => {
+    if (!invoiceId || markingPaidId) return;
     setMarkingPaidId(invoiceId);
     try {
       await crmApi.markInvoicePaid(invoiceId);
+      setInvoices((current) => current.map((item) => {
+        const id = item._id || item.id;
+        if (id !== invoiceId) return item;
+        return { ...item, status: 'paid', paidAt: new Date().toISOString() };
+      }));
+      setSummary((current) => {
+        const targetInvoice = invoices.find((item) => (item._id || item.id) === invoiceId);
+        const amount = Number(targetInvoice?.amount || 0);
+        return {
+          ...current,
+          totalRevenue: Number(current.totalRevenue || 0) + amount,
+          unpaidRevenue: Math.max(0, Number(current.unpaidRevenue || 0) - amount),
+        };
+      });
       showSuccess('Invoice marked as paid.');
-      await loadData();
     } catch (markError) {
       showError(resolveCrmErrorMessage(markError, 'Failed to mark invoice as paid.'));
     } finally {

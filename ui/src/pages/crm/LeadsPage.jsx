@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Badge } from '../../components/common/Badge';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
@@ -8,6 +9,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { crmApi } from '../../api/crm.api';
 import { adminApi } from '../../api/admin.api';
+import { ROUTES, safeRoute } from '../../constants/routes';
 import { formatDate } from '../../utils/formatters';
 import {
   DataTable,
@@ -38,6 +40,8 @@ const isOverdue = (lead) => {
 };
 
 export const LeadsPage = () => {
+  const navigate = useNavigate();
+  const { firmSlug } = useParams();
   const { user } = useAuth();
   const { showError, showSuccess } = useToast();
 
@@ -115,13 +119,19 @@ export const LeadsPage = () => {
   };
 
   const patchLeadInState = useCallback((leadId, update) => {
+    let patchedLead = null;
     setLeads((current) => current.map((lead) => {
       const id = lead._id || lead.id;
       if (id !== leadId) return lead;
       const nextLead = typeof update === 'function' ? update(lead) : update;
-      return { ...lead, ...nextLead };
+      patchedLead = { ...lead, ...nextLead };
+      return patchedLead;
     }));
-  }, []);
+    if (patchedLead && (selectedLead?._id || selectedLead?.id) === leadId) {
+      setSelectedLead(patchedLead);
+    }
+    return patchedLead;
+  }, [selectedLead]);
 
   const leadMatchesFilters = useCallback((lead) => {
     if (!lead) return false;
@@ -134,6 +144,7 @@ export const LeadsPage = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (saving) return;
     const nextErrors = {};
     if (!form.name.trim()) nextErrors.name = 'Lead name is required.';
     if (!form.email.trim() && !form.phone.trim()) nextErrors.contact = 'Add at least one contact method (email or phone).';
@@ -187,12 +198,16 @@ export const LeadsPage = () => {
 
   const handleSaveDetail = async () => {
     if (!selectedLead?._id) return;
+    if (saving) return;
     setSaving(true);
     try {
       let convertedLeadPayload = null;
       if (detailForm.stage === 'converted' && (selectedLead.stage || selectedLead.status) !== 'converted') {
         const converted = await crmApi.convertLead(selectedLead._id);
         convertedLeadPayload = converted?.data?.lead || null;
+        if (converted?.data?.legacyCrmClientId) {
+          showSuccess('Lead converted. You can open client workspace from this lead now.');
+        }
       }
       const payload = {
         ...(detailForm.stage !== 'converted' ? { stage: detailForm.stage } : {}),
@@ -206,8 +221,7 @@ export const LeadsPage = () => {
       const nextLead = response?.data || convertedLeadPayload;
       if (nextLead) patchLeadInState(selectedLead._id, nextLead);
       showSuccess('Lead details updated successfully.');
-      setShowDetail(false);
-      setSelectedLead(null);
+      setDetailForm((prev) => ({ ...prev, note: '' }));
     } catch (saveError) {
       showError(resolveCrmErrorMessage(saveError, 'Failed to update lead details.'));
     } finally {
@@ -400,6 +414,15 @@ export const LeadsPage = () => {
             ) : <p className="text-xs text-gray-500">No activity yet.</p>}
           </div>
           <div className="flex justify-end gap-2">
+            {selectedLead?.linkedClientId ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigate(safeRoute(ROUTES.CRM_CLIENT_DETAIL(firmSlug, selectedLead.linkedClientId)))}
+              >
+                Open Client Workspace
+              </Button>
+            ) : null}
             <Button type="button" variant="outline" onClick={() => setShowDetail(false)}>Cancel</Button>
             <Button type="button" onClick={handleSaveDetail} loading={saving} disabled={saving}>Save Changes</Button>
           </div>
